@@ -8,7 +8,6 @@ class LatencyWidget : public ToolboxWidget {
     LatencyWidget() = default;
     ~LatencyWidget() override = default;
 
-private:
     GW::HookEntry Ping_Entry;
     int red_threshold = 250;
     bool show_avg_ping = false;

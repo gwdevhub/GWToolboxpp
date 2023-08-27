@@ -10,7 +10,6 @@ class AlcoholWidget : public ToolboxWidget {
     AlcoholWidget() = default;
     ~AlcoholWidget() override = default;
 
-private:
     DWORD alcohol_level = 0;
     time_t last_alcohol = 0;
     long alcohol_time = 0;

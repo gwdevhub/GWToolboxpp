@@ -9,7 +9,6 @@ class FactionLeaderboardWindow : public ToolboxWindow {
     FactionLeaderboardWindow() = default;
     ~FactionLeaderboardWindow() override = default;
 
-private:
     struct LeaderboardEntry {
         LeaderboardEntry() = default;
 

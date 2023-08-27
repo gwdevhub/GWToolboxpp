@@ -17,7 +17,6 @@ class ChatLog : public ToolboxModule {
         Reset();
     };
 
-private:
     struct TBChatMessage {
         TBChatMessage* next{};
         TBChatMessage* prev{};

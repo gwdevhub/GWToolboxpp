@@ -28,6 +28,4 @@ private:
     static void LoadDefaults();
     void SetAliasedPlayerName(GW::Packet::StoC::PlayerJoinInstance* pak);
     std::map<std::wstring, std::wstring> aliased_player_names{};
-
-private:
 };
