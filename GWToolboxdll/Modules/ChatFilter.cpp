@@ -147,7 +147,7 @@ namespace {
     const DWORD GetNumericSegment(const wchar_t* encoded_string)
     {
         const auto found = GetSegment(encoded_string, 0x101);
-        if (!(found && found[1] > 0x100))
+        if (found && found[1] > 0x100)
             return found[1] - 0x100;
         return 0;
     }
