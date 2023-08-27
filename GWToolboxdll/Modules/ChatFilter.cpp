@@ -24,11 +24,11 @@
 #include <Utils/GuiUtils.h>
 
 #include "GWToolbox.h"
+#include "GWCA/Managers/PlayerMgr.h"
 
 //#define PRINT_CHAT_PACKETS
 
 namespace {
-    using namespace ToolboxUtils::EncodedStrings;
 
     bool guild_announcement = false;
     bool self_drop_rare = false;
@@ -112,6 +112,46 @@ namespace {
 #endif
     GW::HookEntry BlockIfApplicable_Entry;
     GW::HookEntry ClearIfApplicable_Entry;
+
+
+    const size_t GetSegmentLength(const wchar_t* encoded_segment)
+    {
+        if (!(encoded_segment && *encoded_segment > 0x100))
+            return 0;
+        size_t length = 0;
+        do {
+            length++;
+        } while (*encoded_segment++ & 0x8000);
+        return length;
+    }
+    const wchar_t* GetSegment(const wchar_t* encoded_string, wchar_t identifier, size_t* segment_length = nullptr)
+    {
+        if (!encoded_string)
+            return nullptr;
+        const auto found = wcschr(encoded_string, identifier);
+        if (!found)
+            return nullptr;
+        if (segment_length)
+            *segment_length = GetSegmentLength(found);
+        return found;
+    }
+
+    const wchar_t* GetFirstSegment(const wchar_t* encoded_string, size_t* segment_length = nullptr)
+    {
+        return GetSegment(encoded_string, 0x10a, segment_length);
+    }
+    const wchar_t* GetSecondSegment(const wchar_t* encoded_string, size_t* segment_length = nullptr)
+    {
+        return GetSegment(encoded_string, 0x10b, segment_length);
+    }
+    const DWORD GetNumericSegment(const wchar_t* encoded_string)
+    {
+        const auto found = GetSegment(encoded_string, 0x101);
+        if (!(found && found[1] > 0x100))
+            return found[1] - 0x100;
+        return 0;
+    }
+
 
 
     void ParseBuffer(const char* text, std::vector<std::wstring>& words)
@@ -215,11 +255,12 @@ namespace {
         if (encoded_string[0] == 0xA40) {
             return true; // don't ignore gold items
         }
-        size_t item_name_len = 0;
-        const auto item_name = GetFirstSegment(encoded_string, nullptr, &item_name_len);
+
+        const auto item_name = GetFirstSegment(encoded_string);
         if (!item_name) {
             return false;
         }
+        const auto item_name_len = GetSegmentLength(item_name);
         for (const auto cmp : rare_item_names) {
             if (wcsncmp(item_name, cmp, item_name_len) == 0) {
                 return true;
@@ -254,13 +295,9 @@ namespace {
         if (!encoded_string) {
             return false;
         }
-        size_t item_name_len = 0;
-        const auto item_name = GetFirstSegment(encoded_string, nullptr, &item_name_len);
-        if (!item_name) {
-            return false;
-        }
+        const auto item_name_length = GetSegmentLength(encoded_string);
         for (const auto cmp : encoded_ashes_names) {
-            if (wcsncmp(item_name, cmp, item_name_len) == 0) {
+            if (wcsncmp(encoded_string, cmp, item_name_length) == 0) {
                 return true;
             }
         }
@@ -273,15 +310,16 @@ namespace {
         return a && a->type == GW::RegionType::Challenge;
     }
 
-    bool ShouldIgnoreByAgentThatDropped(const wchar_t* agent_segment)
+    bool IsPlayerName(const wchar_t* encoded_string)
     {
-        if (agent_segment == nullptr) {
-            return false; // something went wrong, don't ignore
-        }
-        if (agent_segment[0] == 0xBA9 && agent_segment[1] == 0x107) {
+        return encoded_string && wcscmp(encoded_string, L"\xba9\x107") == 0;
+    }
+    bool IsCurrentPlayerName(const wchar_t* encoded_string)
+    {
+        if (!IsPlayerName(encoded_string))
             return false;
-        }
-        return true;
+        const auto player_name = GW::PlayerMgr::GetPlayerName();
+        return player_name && wcsncmp(player_name, &encoded_string[2], wcslen(player_name)) == 0;
     }
 
     // Should this message be ignored by encoded string?
@@ -356,20 +394,12 @@ namespace {
             case 0x7F0: {
                 // monster/player x drops item y (no assignment)
                 // first segment describes the agent who dropped, second segment describes the item dropped
-                const auto agent_name = GetFirstSegment(message);
-                if (!ShouldIgnoreByAgentThatDropped(agent_name)) {
-                    return false;
-                }
                 const auto item_argument = GetSecondSegment(message);
-                if (ShouldIgnoreByAgentThatDropped(agent_name) && self_drop_rare && IsRare(item_argument)) {
-                    return true;
-                }
-                if (!ShouldIgnoreByAgentThatDropped(agent_name)) {
-                    return false;
-                }
-                if (self_drop_rare && IsRare(item_argument)) {
-                    return true;
-                }
+                if(IsAshes(item_argument))
+                    return ashes_dropped;
+                if(IsRare(item_argument))
+                    return self_drop_rare;
+                // @Enhancement: Block drops by other players?
                 return self_drop_common;
             }
             case 0x7F1: {
@@ -377,8 +407,7 @@ namespace {
                 // 0x7F1 0x9A9D 0xE943 0xB33 0x10A <monster> 0x1 0x10B <rarity> 0x10A <item> 0x1 0x1 0x10F <assignee: playernumber + 0x100>
                 // <monster> is wchar_t id of several wchars
                 // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
-                const GW::AgentLiving* me = GW::Agents::GetCharacter();
-                const bool forplayer = me && me->player_number == GetNumericSegment(message);
+                const bool forplayer = GW::PlayerMgr::GetPlayerNumber() == GetNumericSegment(message);
                 const bool rare = IsRare(GetSecondSegment(message));
                 if (forplayer && rare) {
                     return self_drop_rare;
