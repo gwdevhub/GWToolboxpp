@@ -402,7 +402,8 @@ namespace {
                     return self_drop_rare;
                 if(IsAshes(GetFirstSegment(item_argument)))
                     return ashes_dropped;
-                // @Enhancement: Block drops by other players?
+                if (IsPlayerName(GetFirstSegment(message)))
+                    return false; // Don't block other players dropping items
                 return self_drop_common;
             }
             case 0x7F1: {
@@ -427,8 +428,8 @@ namespace {
                 return false;
             }
             case 0x7F2: {
-                if (ashes_dropped && IsAshes(GetFirstSegment(message))) {
-                    return true;
+                if(IsAshes(GetFirstSegment(GetFirstSegment(message)))) {
+                    return ashes_dropped;
                 }
                 return false; // you drop item x
             }
