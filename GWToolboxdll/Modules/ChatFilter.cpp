@@ -128,9 +128,10 @@ namespace {
     {
         if (!encoded_string)
             return nullptr;
-        const auto found = wcschr(encoded_string, identifier);
+        auto found = wcschr(encoded_string, identifier);
         if (!found)
             return nullptr;
+        found++;
         if (segment_length)
             *segment_length = GetSegmentLength(found);
         return found;
