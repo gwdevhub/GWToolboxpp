@@ -27,8 +27,7 @@
 #include <random>
 #include <Modules/Obfuscator.h>
 
-constexpr auto ONLY_CURRENT_PLAYER = 1;
-constexpr auto DETECT_STREAMING_APPLICATION = 1;
+// #define DETECT_STREAMING_APPLICATION
 #ifdef DETECT_STREAMING_APPLICATION
 #include <Psapi.h>
 #endif
@@ -38,6 +37,9 @@ namespace {
     /*IWbemServices* pSvc = 0;
     IWbemLocator* pLoc = 0;
     HRESULT CoInitializeEx_result = -1;*/
+    bool own_player_only = false;
+    char own_player_name[20]{};
+    std::wstring own_player_name_w{};
     MSG msg;
     std::default_random_engine dre = std::default_random_engine(static_cast<uint32_t>(time(nullptr)));
     GW::HookEntry stoc_hook;
@@ -45,18 +47,18 @@ namespace {
     bool running = false;
 
 #ifdef DETECT_STREAMING_APPLICATION
+    HWND streaming_window_handle = 0;
     HWINEVENTHOOK hook = 0;
 #endif
 
-
     // This value won't be obfuscated to is always safe to check against
-    const wchar_t* getPlayerName()
+    const wchar_t* GetPlayerName()
     {
         const GW::CharContext* c = GW::GetCharContext();
         return c ? c->player_name : nullptr;
     }
 
-    const wchar_t* getGuildPlayerName()
+    const wchar_t* GetGuildPlayerName()
     {
         const GW::GuildContext* g = GW::GetGuildContext();
         return g ? g->player_name : nullptr;
@@ -291,7 +293,7 @@ namespace {
     {
         *player_name_start_p = nullptr;
         // Find any other generic instance of the current player name
-        const wchar_t* player_name = getPlayerName();
+        const wchar_t* player_name = GetPlayerName();
         *player_name_start_p = wcsstr(message, player_name);
         if (*player_name_start_p) {
             *player_name_end_p = *player_name_start_p + wcslen(player_name);
@@ -299,39 +301,36 @@ namespace {
         return *player_name_start_p && *player_name_end_p;
     }
 
-    bool ObfuscateName(const std::wstring& _original_name, std::wstring& out, [[maybe_unused]] const bool force = false)
+    bool ObfuscateName(const std::wstring& _original_name, std::wstring& out, const bool in_char_select = false)
     {
         std::wstring original_name = GuiUtils::SanitizePlayerName(_original_name);
         if (_original_name.empty()) {
             return false;
         }
-#ifdef ONLY_CURRENT_PLAYER
-        if (!force && original_name != getPlayerName()) {
+        const auto found_original = obfuscated_by_original.find(original_name);
+        if (found_original != obfuscated_by_original.end()) {
+            out.assign(found_original->second);
+            return true;
+        }
+        if (own_player_only && original_name != GetPlayerName() && !in_char_select) {
             out.assign(_original_name);
             return true;
         }
-#endif
-        auto found = obfuscated_by_original.find(original_name);
-        if (found != obfuscated_by_original.end()) {
-            out.assign(found->second);
-            return true;
-        }
         const wchar_t* res = obfuscated_name_pool[pool_index];
-        pool_index++;
-        if (pool_index >= obfuscated_name_pool.size()) {
+        if (!own_player_name_w.empty() && (original_name == GetPlayerName() || in_char_select)) {
+            res = own_player_name_w.c_str();
+        }
+        if (++pool_index >= obfuscated_name_pool.size()) {
             pool_index = 0;
         }
         wchar_t tmp_out[20] = {0};
         ASSERT(swprintf(tmp_out, _countof(tmp_out), L"%s", res) != -1);
-        for (size_t cnt = 0; cnt < 100; cnt++) {
-            found = obfuscated_by_obfuscation.find(tmp_out);
-            if (found == obfuscated_by_obfuscation.end()) {
-                obfuscated_by_obfuscation.emplace(tmp_out, original_name);
-                obfuscated_by_original.emplace(original_name, tmp_out);
-                break;
-            }
-            ASSERT(swprintf(tmp_out, _countof(tmp_out), L"%.16s %d", res, cnt) != -1);
+        const auto found_obfuscated = obfuscated_by_obfuscation.find(tmp_out);
+        if (found_obfuscated == obfuscated_by_obfuscation.end() && !in_char_select) {
+            obfuscated_by_obfuscation.emplace(tmp_out, original_name);
+            obfuscated_by_original.emplace(original_name, tmp_out);
         }
+        ASSERT(swprintf(tmp_out, _countof(tmp_out), L"%.16s", res) != -1);
         out.assign(tmp_out);
         return true;
     }
@@ -370,7 +369,7 @@ namespace {
                 break;
             }
             if (obfuscate) {
-                ObfuscateName(tmp_name, tmp_name, true);
+                ObfuscateName(tmp_name, tmp_name);
             }
             else {
                 UnobfuscateName(tmp_name, tmp_name);
@@ -388,6 +387,8 @@ namespace {
         return ObfuscateMessage(message, out, false);
     }
 
+    void Reset();
+
     // We do this here instead of in WorldContext to intercept without rewriting memory
     GW::AccountInfo* OnGetAccountInfo()
     {
@@ -395,6 +396,7 @@ namespace {
         GW::AccountInfo* accountInfo = GetAccountData_Ret();
         if (accountInfo && IsObfuscatorEnabled()) {
             account_info_obfuscated = *accountInfo;
+            Reset();
             ObfuscateName(accountInfo->account_name, account_info_obfuscated_name, true);
             account_info_obfuscated.account_name = account_info_obfuscated_name.data();
             accountInfo = &account_info_obfuscated;
@@ -413,6 +415,7 @@ namespace {
             return;
         }
         if (IsObfuscatorEnabled()) {
+            Reset();
             if (ObfuscateName(character_name, character_summary_obfuscated_name, true)) {
                 character_name = character_summary_obfuscated_name.data();
             }
@@ -422,7 +425,7 @@ namespace {
     }
 
     // This should return the original unobfuscated player's invited name
-    std::wstring& getPlayerInvitedName()
+    std::wstring& GetPlayerInvitedName()
     {
         if (!player_guild_invited_name.empty()) {
             return player_guild_invited_name;
@@ -431,7 +434,7 @@ namespace {
         if (!g) {
             return player_guild_invited_name;
         }
-        const wchar_t* player_guild_name = getGuildPlayerName();
+        const wchar_t* player_guild_name = GetGuildPlayerName();
         if (!player_guild_name) {
             return player_guild_invited_name;
         }
@@ -448,7 +451,6 @@ namespace {
         return player_guild_invited_name;
     }
 
-    bool obfuscating_guild_roster = false;
     // Hide or show guild member names. Note that the guild roster persists across map changes so be careful with it
     bool ObfuscateGuildRoster(const bool obfuscate = true)
     {
@@ -465,36 +467,34 @@ namespace {
             Log::Log("Tried to obfuscate guild, but no valid roster");
             return false;
         }
-        const std::wstring& invited_name = getPlayerInvitedName();
+        const std::wstring& invited_name = GetPlayerInvitedName();
         if (invited_name.empty()) {
             Log::Log("Tried to obfuscate guild, failed to find current player in roster");
             return false;
         }
         std::wstring tmp;
         bool guild_member_updated = false;
-        obfuscating_guild_roster = true;
         for (GW::GuildPlayer* player : roster) {
             if (!player) {
                 continue;
             }
-#ifdef ONLY_CURRENT_PLAYER
-            if (obfuscate
+            if (own_player_only && obfuscate
                 && invited_name != player->invited_name
-                && invited_name != player->current_name)
+                && invited_name != player->current_name) {
                 continue;
-#endif
+            }
             guild_member_updated = false;
             if (obfuscate) {
                 if (player->current_name
                     && player->current_name[0]
-                    && ObfuscateName(player->current_name, tmp, true)
+                    && ObfuscateName(player->current_name, tmp)
                     && tmp != player->current_name) {
                     wcscpy(player->current_name, tmp.c_str());
                     guild_member_updated = true;
                 }
                 if (player->invited_name
                     && player->invited_name[0]
-                    && ObfuscateName(player->invited_name, tmp, true)
+                    && ObfuscateName(player->invited_name, tmp)
                     && tmp != player->invited_name) {
                     wcscpy(player->invited_name, tmp.c_str());
                     guild_member_updated = true;
@@ -520,7 +520,6 @@ namespace {
                 SendUIMessage(GW::UI::UIMessage::kGuildMemberUpdated, &player->name_ptr);
             }
         }
-        obfuscating_guild_roster = false;
         guild_roster_obfuscated = obfuscate;
         return true;
     }
@@ -532,7 +531,7 @@ namespace {
 
     void Reset()
     {
-        ObfuscateGuildRoster(false);
+        ObfuscateGuildRoster(pending_state == ObfuscatorState::Enabled);
         const auto c = GW::GetCharContext();
         if (!c || c->player_email != player_email) {
             player_guild_invited_name.clear();
@@ -545,9 +544,9 @@ namespace {
         obfuscated_by_obfuscation.clear();
         obfuscated_by_original.clear();
         // Don't use clear() on this; the game uses the pointer so we don't want to mess with it
-        account_info_obfuscated_name[0] = 0;
+        account_info_obfuscated_name[0] = '\0';
         // Don't use clear() on this; the game uses the pointer so we don't want to mess with it
-        character_summary_obfuscated_name[0] = 0;
+        character_summary_obfuscated_name[0] = '\0';
 
         obfuscator_state = pending_state;
         pending_guild_obfuscate = IsObfuscatorEnabled();
@@ -763,7 +762,7 @@ namespace {
     }
 #ifdef DETECT_STREAMING_APPLICATION
 
-    void CALLBACK Obfuscator::OnWindowEvent(HWINEVENTHOOK _hook, DWORD event, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime) {
+    [[maybe_unused]] void CALLBACK Obfuscator::OnWindowEvent(HWINEVENTHOOK _hook, DWORD event, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime) {
         if (!running)
             return;
                                 switch (event) {
@@ -908,7 +907,7 @@ void Obfuscator::Initialize()
     GW::Chat::CreateCommand(L"obfuscate", CmdObfuscate);
     GW::Chat::CreateCommand(L"hideme", CmdObfuscate);
 
-#if DETECT_STREAMING_APPLICATION
+#ifdef DETECT_STREAMING_APPLICATION
 
     CoInitialize(NULL);
     hook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_OBJECT_DESTROY, NULL, OnWindowEvent, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
@@ -930,27 +929,49 @@ void Obfuscator::Update(float)
     }
 }
 
-void Obfuscator::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxModule::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(obfuscate), pending_state == ObfuscatorState::Enabled);
-}
-
 void Obfuscator::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
-
+    own_player_only = ini->GetBoolValue(Name(), VAR_NAME(own_player_only), own_player_only);
+    const auto own_name = ini->GetValue(Name(), VAR_NAME(own_player_name), own_player_name);
+    if (own_name && own_name[0] != '\0') {
+        strncpy_s(own_player_name, own_name, strnlen_s(own_name, _countof(own_player_name)));
+        own_player_name_w = GuiUtils::StringToWString(own_player_name);
+    }
     if (ini->GetBoolValue(Name(), VAR_NAME(obfuscate), pending_state == ObfuscatorState::Enabled)) {
         Obfuscate(true);
     }
 }
 
+void Obfuscator::SaveSettings(ToolboxIni* ini)
+{
+    ToolboxModule::SaveSettings(ini);
+    ini->SetBoolValue(Name(), VAR_NAME(obfuscate), pending_state == ObfuscatorState::Enabled);
+    ini->SetBoolValue(Name(), VAR_NAME(own_player_only), own_player_only);
+    ini->SetValue(Name(), VAR_NAME(own_player_name), own_player_name);
+}
+
 void Obfuscator::DrawSettingsInternal()
 {
     bool enabled = pending_state == ObfuscatorState::Enabled;
-    if (ImGui::Checkbox("Hide my character names on-screen", &enabled)) {
+    if (ImGui::Checkbox("Randomize character names on-screen", &enabled)) {
+        Obfuscate(enabled);
+        Reset();
+    }
+    ImGui::ShowHelp("Hides and overrides player names at character selection and in-game.\nThis change is applied on next map change.");
+    ImGui::TextDisabled("You can also use the /hideme or /obfuscate command to toggle this at any time");
+
+    if (ImGui::Checkbox("Only own character", &own_player_only)) {
         Obfuscate(enabled);
     }
-    ImGui::ShowHelp("Hides and overrides current player name at character selection and in-game.\nThis change is applied on next map change.");
-    ImGui::TextDisabled("You can also use the /hideme or /obfuscate command to toggle this at any time");
+    if (ImGui::InputText("Set own character name", own_player_name, _countof(own_player_name))) {
+        if (own_player_name[0] != '\0') {
+            own_player_name_w = GuiUtils::StringToWString(own_player_name);
+        }
+        else {
+            own_player_name_w = {};
+        }
+        Obfuscate(enabled);
+    }
+    ImGui::ShowHelp("If empty, a random name will be chosen.");
 }
