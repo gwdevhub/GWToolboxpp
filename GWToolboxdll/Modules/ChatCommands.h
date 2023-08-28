@@ -45,7 +45,7 @@ public:
     };
 
     [[nodiscard]] const char* Name() const override { return "Chat Commands"; }
-    [[nodiscard]] const char* SettingsName() const override { return "Game Settings"; }
+    [[nodiscard]] const char* SettingsName() const override { return "Chat Settings"; }
 
     void Initialize() override;
     void Terminate() override;
