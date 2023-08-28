@@ -483,23 +483,23 @@ namespace GuiUtils {
     }
 
     // Convert a wide Unicode string to an UTF8 string
-    std::string WStringToString(const std::wstring& s)
+    std::string WStringToString(const std::wstring_view str)
     {
         // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!
-        if (s.empty()) {
+        if (str.empty()) {
             return "";
         }
         // NB: GW uses code page 0 (CP_ACP)
-        const auto size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, s.data(), static_cast<int>(s.size()), nullptr, 0, nullptr, nullptr);
+        const auto size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
         ASSERT(size_needed != 0);
-        std::string strTo(size_needed, 0);
-        ASSERT(WideCharToMultiByte(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), strTo.data(), size_needed, NULL, NULL));
-        return std::move(strTo);
+        std::string str_to(size_needed, 0);
+        ASSERT(WideCharToMultiByte(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), str_to.data(), size_needed, NULL, NULL));
+        return std::move(str_to);
     }
 
     // Makes sure the file name doesn't have chars that won't be allowed on disk
     // https://docs.microsoft.com/en-gb/windows/win32/fileio/naming-a-file
-    std::string SanitiseFilename(const std::string& str)
+    std::string SanitiseFilename(const std::string_view str)
     {
         const auto invalid_chars = "<>:\"/\\|?*";
         size_t len = 0;
@@ -516,7 +516,7 @@ namespace GuiUtils {
         return out;
     }
 
-    std::wstring SanitiseFilename(const std::wstring& str)
+    std::wstring SanitiseFilename(const std::wstring_view str)
     {
         const auto invalid_chars = L"<>:\"/\\|?*";
         size_t len = 0;
@@ -555,7 +555,7 @@ namespace GuiUtils {
     }
 
     // Convert an UTF8 string to a wide Unicode String
-    std::wstring StringToWString(const std::string& str)
+    std::wstring StringToWString(const std::string_view str)
     {
         // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!
         if (str.empty()) {
@@ -564,19 +564,19 @@ namespace GuiUtils {
         // NB: GW uses code page 0 (CP_ACP)
         const auto size_needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0);
         ASSERT(size_needed != 0);
-        std::wstring wstrTo(size_needed, 0);
-        ASSERT(MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), wstrTo.data(), size_needed));
-        return std::move(wstrTo);
+        std::wstring wstr_to(size_needed, 0);
+        ASSERT(MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), wstr_to.data(), size_needed));
+        return wstr_to;
     }
 
-    std::wstring SanitizePlayerName(const std::wstring& s)
+    std::wstring SanitizePlayerName(const std::wstring_view str)
     {
         // e.g. "Player Name (2)" => "Player Name", for pvp player names
         // e.g. "Player Name [TAG]" = >"Player Name", for alliance message sender name
         wchar_t out[64]{};
         size_t len = 0;
         wchar_t remove_char_token = 0;
-        for (const auto& wchar : s) {
+        for (const auto& wchar : str) {
             if (remove_char_token) {
                 if (wchar == remove_char_token) {
                     remove_char_token = 0;
@@ -763,7 +763,7 @@ namespace GuiUtils {
         if (timeinfo->tm_year != nowinfo->tm_year) {
             written += snprintf(&out[written], out.capacity() - written, " %d", timeinfo->tm_year + 1900);
         }
-        written += snprintf(&out[written], out.capacity() - written, written > 0 ? ", %02d:%02d" : " %02d:%02d",
+        snprintf(&out[written], out.capacity() - written, written > 0 ? ", %02d:%02d" : " %02d:%02d",
                             timeinfo->tm_hour, timeinfo->tm_min);
         return out.size();
     }
