@@ -89,7 +89,6 @@ namespace {
 
     bool add_npcs_to_party_window = true; // Quick tickbox to disable the module without restarting TB
     bool add_player_numbers_to_party_window = false;
-    bool rename_players_according_to_friends_list_alias = false;
     bool add_elite_skill_to_summons = false;
     bool remove_dead_imperials = false;
 
@@ -433,24 +432,6 @@ namespace {
     }
 }
 
-void PartyWindowModule::SetAliasedPlayerName(GW::Packet::StoC::PlayerJoinInstance* pak)
-{
-    if (!rename_players_according_to_friends_list_alias) {
-        return;
-    }
-    if (pak == nullptr) {
-        return;
-    }
-    const auto friend_ = FriendListWindow::Instance().GetFriend(pak->player_name);
-    if (friend_ != nullptr) {
-        const std::wstring& alias = friend_->getAliasW();
-        if (!alias.empty()) {
-            aliased_player_names[alias] = pak->player_name;
-            wcscpy(pak->player_name, alias.c_str());
-        }
-    }
-}
-
 void PartyWindowModule::Initialize()
 {
     ToolboxModule::Initialize();
@@ -641,8 +622,6 @@ void PartyWindowModule::DrawSettingsInternal()
 {
     ImGui::Checkbox("Add player numbers to party window", &add_player_numbers_to_party_window);
     ImGui::ShowHelp("Will update on next map");
-    ImGui::Checkbox("Rename players according to friends list alias", &rename_players_according_to_friends_list_alias);
-    ImGui::ShowHelp("Will update on next map");
     ImGui::Checkbox("Rename Tengu and Imperial Guard Ally summons to their respective elite skill", &add_elite_skill_to_summons);
     ImGui::ShowHelp("Only works on newly spawned summons.");
     ImGui::Checkbox(
@@ -724,7 +703,6 @@ void PartyWindowModule::SaveSettings(ToolboxIni* ini)
     ini->Delete(Name(), nullptr, NULL);
 
     ini->SetBoolValue(Name(), VAR_NAME(add_player_numbers_to_party_window), add_player_numbers_to_party_window);
-    ini->SetBoolValue(Name(), VAR_NAME(rename_players_according_to_friends_list_alias), rename_players_according_to_friends_list_alias);
     ini->SetBoolValue(Name(), VAR_NAME(add_elite_skill_to_summons), add_elite_skill_to_summons);
     ini->SetBoolValue(Name(), VAR_NAME(remove_dead_imperials), remove_dead_imperials);
 
@@ -753,7 +731,6 @@ void PartyWindowModule::LoadSettings(ToolboxIni* ini)
 
     add_npcs_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(add_npcs_to_party_window), add_npcs_to_party_window);
     add_player_numbers_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(add_player_numbers_to_party_window), add_player_numbers_to_party_window);
-    rename_players_according_to_friends_list_alias = ini->GetBoolValue(Name(), VAR_NAME(rename_players_according_to_friends_list_alias), rename_players_according_to_friends_list_alias);
     add_elite_skill_to_summons = ini->GetBoolValue(Name(), VAR_NAME(add_elite_skill_to_summons), add_elite_skill_to_summons);
     remove_dead_imperials = ini->GetBoolValue(Name(), VAR_NAME(remove_dead_imperials), remove_dead_imperials);
 
