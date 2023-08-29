@@ -128,7 +128,7 @@ namespace {
         }
     }
 
-    const Status GetResignStatus(const size_t index)
+    Status GetResignStatus(const size_t index)
     {
         return index < resign_statuses.size() ? resign_statuses[index] : Status::Unknown;
     }
@@ -139,7 +139,7 @@ namespace {
             return 0;
         }
         const auto player_status = GetResignStatus(index);
-        const char* status_str = GetStatusStr(GetResignStatus(index));
+        const char* status_str = GetStatusStr(player_status);
         return swprintf(buffer, size, L"%zu. %s - %S", index + 1, player_name,
                         player_status == Status::Connected
                         && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
@@ -203,7 +203,7 @@ namespace {
     void OnMessageCore(GW::HookStatus*, GW::Packet::StoC::MessageCore* pak)
     {
         // 0x107 is the "start string" marker
-        if (!(wmemcmp(pak->message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0)) {
+        if (wmemcmp(pak->message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) != 0) {
             return;
         }
 
