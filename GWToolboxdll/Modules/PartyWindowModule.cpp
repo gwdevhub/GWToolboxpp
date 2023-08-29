@@ -502,7 +502,6 @@ void PartyWindowModule::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(
         &GameSrvTransfer_Entry,
         [&](const GW::HookStatus*, GW::Packet::StoC::PlayerJoinInstance* pak) -> void {
-            SetAliasedPlayerName(pak);
             if (!add_player_numbers_to_party_window || !is_explorable || IsPvP()) {
                 return;
             }
