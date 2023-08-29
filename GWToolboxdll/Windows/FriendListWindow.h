@@ -5,12 +5,10 @@
 
 #include <GWCA/GameEntities/Friendslist.h>
 
-#include <GWCA/Managers/UIMgr.h>
-
 #include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
 
-class FriendListWindow : public ToolboxWindow {
+class FriendListWindow final : public ToolboxWindow {
 public:
     static FriendListWindow& Instance()
     {
@@ -18,7 +16,6 @@ public:
         return instance;
     }
 
-protected:
     // Structs because we don't case about public or private; this whole struct is private to this module anyway.
     struct Character {
     private:
@@ -28,7 +25,7 @@ protected:
     public:
         uint8_t profession = 0;
 
-        const std::string& getNameA()
+        const std::string& GetNameA()
         {
             if (name_str.empty() && !name.empty()) {
                 name_str = GuiUtils::WStringToString(name);
@@ -41,7 +38,7 @@ protected:
             return name;
         }
 
-        void setName(std::wstring _name)
+        void SetName(std::wstring _name)
         {
             if (name == _name) {
                 return;
@@ -57,7 +54,6 @@ protected:
         uint32_t channel2;
     };
 
-public:
     struct Friend {
         Friend(FriendListWindow* _parent)
             : parent(_parent) { }
@@ -106,7 +102,7 @@ public:
             return now - last_update > 10000; // 10 Second stale.
         }
 
-        [[nodiscard]] std::string& getAliasA()
+        [[nodiscard]] std::string& GetAliasA()
         {
             if (alias_str.empty() && !alias.empty()) {
                 alias_str = GuiUtils::WStringToString(alias);
@@ -114,7 +110,7 @@ public:
             return alias_str;
         }
 
-        [[nodiscard]] const std::wstring& getAliasW() const
+        [[nodiscard]] const std::wstring& GetAliasW() const
         {
             return alias;
         }
@@ -129,37 +125,16 @@ public:
         }
     };
 
-protected:
-    Friend* SetFriend(const uint8_t*, GW::FriendType, GW::FriendStatus, uint32_t, const wchar_t*, const wchar_t*);
-    Friend* SetFriend(const GW::Friend*);
-
-
-    void LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out) const;
-
-    std::unordered_map<uint32_t, bool> ignored_parties{};
-    bool ignore_trade = false;
-
-public:
-    Friend* GetFriend(const wchar_t*);
-    Friend* GetFriend(const GW::Friend*);
-    Friend* GetFriendByUUID(const std::string&);
-    Friend* GetFriend(const uint8_t*);
-    bool RemoveFriend(const Friend* f);
-
-    // Callback functions
-    static void OnPlayerJoinInstance(const GW::HookStatus* status, const GW::Packet::StoC::PlayerJoinInstance* pak);
-    // Handle friend updated (map change, char change, online status change, added or removed from fl)
-    static void OnFriendUpdated(GW::HookStatus*, const GW::Friend* old_state, const GW::Friend* new_state);
-    static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
-    static void OnPrintChat(GW::HookStatus*, GW::Chat::Channel channel, wchar_t** message_ptr, FILETIME, int);
-    // Ignore party invitations from players on my ignore list
+    static Friend* GetFriend(const wchar_t*);
+    static Friend* GetFriend(const GW::Friend*);
+    static Friend* GetFriendByUUID(const std::string&);
+    static Friend* GetFriend(const uint8_t*);
+    static bool RemoveFriend(const Friend* f);
 
     static bool GetIsPlayerIgnored(GW::Packet::StoC::PacketBase* pak);
     static bool GetIsPlayerIgnored(uint32_t player_number);
     static bool GetIsPlayerIgnored(const std::wstring& player_name);
 
-    static void OnPostPartyInvite(GW::HookStatus* status, GW::Packet::StoC::PartyInviteReceived_Create* pak);
-    static void OnPostTradePacket(GW::HookStatus* status, GW::Packet::StoC::TradeStart* pak);
     static void AddFriendAliasToMessage(wchar_t** message_ptr);
 
     [[nodiscard]] const char* Name() const override { return "Friend List"; }
@@ -195,52 +170,4 @@ public:
 
     void LoadFromFile();
     void SaveToFile();
-
-protected:
-    ToolboxIni* inifile = nullptr;
-    const wchar_t* ini_filename = L"friends.ini";
-    bool loading = false;     // Loading from disk?
-    bool polling = false;     // Polling in progress?
-    bool poll_queued = false; // Used to avoid overloading the thread queue.
-    bool should_stop = false;
-    bool friends_changed = false;
-    bool first_load = false;
-    bool pending_friend_removal = false;
-    bool friend_list_ready = false; // Allow processing when this is true.
-    bool need_to_reorder_friends = true;
-    bool show_alias_on_whisper = false;
-    bool show_my_status = true;
-
-
-    int explorable_show_as = 1;
-    int outpost_show_as = 1;
-    int loading_show_as = 1;
-
-    bool resize_widget = false;
-
-    bool lock_move_as_widget = false;
-    bool lock_size_as_widget = true;
-
-    Color hover_background_color = 0x33999999;
-    bool friend_name_tag_enabled = false;
-    Color friend_name_tag_color = 0xff6060ff;
-
-    clock_t friends_list_checked = 0;
-
-    uint8_t poll_interval_seconds = 10;
-
-    // Mapping of Name > UUID
-    std::unordered_map<std::wstring, Friend*> uuid_by_name{};
-
-    // Main store of Friend info
-    std::unordered_map<std::string, Friend*> friends{};
-
-    bool show_location = true;
-
-    GW::HookEntry FriendStatusUpdate_Entry;
-    GW::HookEntry ErrorMessage_Entry;
-    GW::HookEntry PlayerJoinInstance_Entry;
-    GW::HookEntry SendChat_Entry;
-    GW::HookEntry OnFriendCreated_Entry;
-    GW::HookEntry OnUIMessage_Entry;
 };
