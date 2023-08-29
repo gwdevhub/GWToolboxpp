@@ -28,6 +28,8 @@
 
 #include <Utils/ToolboxUtils.h>
 
+#include "Modules/Obfuscator.h"
+
 
 /* Out of scope namespecey lookups */
 using namespace ToolboxUtils;
@@ -258,9 +260,8 @@ namespace {
             return;
         }
         // Check if pending player has been added.
-        auto& instance = Instance();
-        instance.Poll();
-        const auto lf = instance.GetFriend(pending_whisper.charname.c_str());
+        FriendListWindow::Poll();
+        const auto lf = FriendListWindow::GetFriend(pending_whisper.charname.c_str());
         if (!(lf && lf->ValidUuid())) {
             return;
         }
@@ -282,7 +283,7 @@ namespace {
 
         // ... then remove from GW.
         ASSERT(lf->RemoveGWFriend());
-        ASSERT(instance.RemoveFriend(lf));
+        ASSERT(FriendListWindow::RemoveFriend(lf));
     }
 
     void OnAddFriendError(GW::HookStatus* status, wchar_t*)
@@ -305,7 +306,17 @@ namespace {
         if (!separator_pos) {
             return;
         }
-        pending_whisper.reset(std::wstring(message, separator_pos), std::wstring(&separator_pos[1]));
+        const auto target = std::wstring(message, separator_pos);
+        const auto text = std::wstring(separator_pos+1);
+        if (const auto friend_ = FriendListWindow::GetFriend(target.c_str()))
+        {
+            const auto& friendname = friend_->current_char->getNameW();
+            if (friend_->current_char && friendname != target) {
+                const auto outgoing = friendname + L',' + text;
+                wcscpy(message, outgoing.c_str());
+            }
+        }
+        pending_whisper.reset(target, text);
     }
 
     // Remove from pending whispers when whisper has been sent
@@ -317,8 +328,7 @@ namespace {
     void OnPlayerNotOnline(GW::HookStatus* status, const wchar_t* message)
     {
         const auto player_name = GuiUtils::GetPlayerNameFromEncodedString(message);
-        const auto friend_ = Instance().GetFriend(player_name.c_str());
-        if (friend_) {
+        if (const auto friend_ = FriendListWindow::GetFriend(player_name.c_str())) {
             // If this player is already in my friend list, send the message directly.
             if (!friend_->IsOffline() && friend_->current_char->getNameW() != player_name) {
                 is_redirecting_whisper = true;
@@ -343,8 +353,7 @@ namespace {
     void OnFriendAlreadyAdded(GW::HookStatus* status, const wchar_t* message)
     {
         const auto player_name = GuiUtils::GetPlayerNameFromEncodedString(message);
-        const auto friend_ = Instance().GetFriend(player_name.c_str());
-        if (friend_) {
+        if (const auto friend_ = FriendListWindow::GetFriend(player_name.c_str())) {
             friend_->SetCharacter(player_name.c_str());
         }
         if (!pending_whisper.charname.empty()) {
@@ -353,7 +362,6 @@ namespace {
             status->blocked = true;
         }
     }
-
 
     void OnPrintChat(GW::HookStatus*, GW::Chat::Channel, wchar_t** message_ptr, FILETIME, int)
     {
@@ -375,8 +383,8 @@ namespace {
                 }
                 const auto tag = static_cast<GW::UI::AgentNameTagInfo*>(wparam);
                 const auto player_name = GuiUtils::GetPlayerNameFromEncodedString(tag->name_enc);
-                const FriendListWindow::Friend* f = Instance().GetFriend(player_name.c_str());
-                if (f && f->type == GW::FriendType::Friend) {
+                const auto friend_ = FriendListWindow::GetFriend(player_name.c_str());
+                if (friend_ && friend_->type == GW::FriendType::Friend) {
                     tag->text_color = friend_name_tag_color;
                 }
             }
@@ -409,17 +417,16 @@ namespace {
 
     void OnFriendUpdated(GW::HookStatus*, const GW::Friend* old_state, const GW::Friend* new_state)
     {
-        auto& instance = Instance();
         // Keep a log mapping char name to uuid. This is saved to disk.
         if (!new_state) {
             // Friend removed from friend list.
             if (!old_state) {
                 return; // No old state or new state; ignore this event
             }
-            instance.RemoveFriend(instance.GetFriend(old_state));
+            FriendListWindow::RemoveFriend(FriendListWindow::GetFriend(old_state));
             return;
         }
-        const auto lf = ::SetFriend(new_state);
+        const auto lf = SetFriend(new_state);
         if (!lf) {
             return;
         }
@@ -557,6 +564,21 @@ namespace {
     {
         return SetFriend(f->uuid, f->type, f->status, f->zone_id, &f->charname[0], &f->alias[0]);
     }
+
+    bool CmdInvite(const wchar_t*, int argc, LPWSTR* argv)
+    {
+        const auto player_name = ParsePlayerName(argc - 1, &argv[1]);
+        if (player_name.empty()) {
+            return false;
+        }
+        if (const auto friend_ = FriendListWindow::GetFriend(player_name.c_str())) {
+            if (friend_->current_char && friend_->current_char->getNameW() != player_name) {
+                GW::Chat::SendChat('/', (std::wstring(L"invite ") + friend_->current_char->getNameW()).c_str());
+                return true;
+            }
+        }
+        return false;
+    }
 }
 
 // Find out whether the player related to this packet is on the current player's ignore list.
@@ -644,11 +666,11 @@ GW::Friend* FriendListWindow::Friend::GetFriend()
 // Start whisper to this player via their current char name.
 void FriendListWindow::Friend::StartWhisper() const
 {
-    if (!(current_char && !current_char->getNameW().empty())) {
+    if (!current_char || current_char->getNameW().empty()) {
         return Log::ErrorW(L"Player %s is not logged in", alias.c_str());
     }
     GW::GameThread::Enqueue([charname = current_char->getNameW()] {
-        SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)charname.data());
+        SendUIMessage(GW::UI::UIMessage::kOpenWhisper, const_cast<wchar_t*>(charname.data()));
     });
 }
 
@@ -792,6 +814,7 @@ void FriendListWindow::Initialize()
     GW::Chat::CreateCommand(L"deletefriend", CmdRemoveFriend);
     GW::Chat::CreateCommand(L"tell", CmdWhisper);
     GW::Chat::CreateCommand(L"whisper", CmdWhisper);
+    GW::Chat::CreateCommand(L"invite", static_cast<GW::Chat::CmdCB>(CmdInvite));
     GW::Chat::CreateCommand(L"t", CmdWhisper);
     GW::Chat::CreateCommand(L"w", CmdWhisper);
     GW::Chat::CreateCommand(L"away", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away); });

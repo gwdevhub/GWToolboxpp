@@ -59,6 +59,8 @@
 #include <Defines.h>
 #include <GWCA/Managers/QuestMgr.h>
 
+#include "Windows/FriendListWindow.h"
+
 #pragma warning(disable : 6011)
 
 using namespace GuiUtils;

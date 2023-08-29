@@ -158,7 +158,7 @@ public:
     void Update(float delta) override;
 
     // Check friends list.
-    void Poll();
+    static void Poll();
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;

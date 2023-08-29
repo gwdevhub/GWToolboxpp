@@ -290,18 +290,6 @@ namespace {
     GetAccountData_pt GetAccountData_Func = nullptr;
     GetAccountData_pt GetAccountData_Ret = nullptr;
 
-    bool FindPlayerNameInMessage(const wchar_t* message, const wchar_t** player_name_start_p, const wchar_t** player_name_end_p)
-    {
-        *player_name_start_p = nullptr;
-        // Find any other generic instance of the current player name
-        const wchar_t* player_name = GetPlayerName();
-        *player_name_start_p = wcsstr(message, player_name);
-        if (*player_name_start_p) {
-            *player_name_end_p = *player_name_start_p + wcslen(player_name);
-        }
-        return *player_name_start_p && *player_name_end_p;
-    }
-
     std::wstring GetObfuscatedName(const std::wstring_view original_name, const bool in_char_select)
     {
         if (!own_player_name_w.empty() && (original_name == GetPlayerName() || in_char_select)) {
@@ -363,36 +351,33 @@ namespace {
         return true;
     }
 
-    bool ObfuscateMessage(const wchar_t* message, std::wstring& out, const bool obfuscate = true)
+    bool ObfuscateMessage(std::wstring message, std::wstring& out, const bool obfuscate = true)
     {
-        const wchar_t* player_name_start = nullptr;
-        const wchar_t* player_name_end = nullptr;
-        const wchar_t* offset = message;
-        bool found = FindPlayerNameInMessage(offset, &player_name_start, &player_name_end);
-        if (!found) {
-            return false;
+        if (obfuscate) {
+            for (const auto& [original, obfuscated] : obfuscated_by_original) {
+                if (original.empty()) {
+                    break;
+                }
+                size_t start_pos = 0;
+                while((start_pos = message.find(original, start_pos)) != std::string::npos) {
+                    message.replace(start_pos, original.length(), obfuscated);
+                    start_pos += obfuscated.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
+                }
+            }
         }
-        std::wstring tmp_name;
-        std::wstring tmp_out;
-        while (found) {
-            const size_t player_name_len = player_name_end - player_name_start;
-            tmp_out.append(offset, player_name_start - offset);
-            offset = player_name_start + player_name_len;
-            tmp_name.assign(player_name_start, player_name_len);
-            if (tmp_name.empty()) {
-                break;
+        else {
+            for (const auto& [obfuscated, original] : obfuscated_by_obfuscation) {
+                if (obfuscated.empty()) {
+                    break;
+                }
+                size_t start_pos = 0;
+                while ((start_pos = message.find(obfuscated, start_pos)) != std::string::npos) {
+                    message.replace(start_pos, obfuscated.length(), original);
+                    start_pos += original.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
+                }
             }
-            if (obfuscate) {
-                ObfuscateName(tmp_name, tmp_name);
-            }
-            else {
-                UnobfuscateName(tmp_name, tmp_name);
-            }
-            tmp_out.append(tmp_name);
-            found = FindPlayerNameInMessage(offset, &player_name_start, &player_name_end);
         }
-        tmp_out.append(offset);
-        out = std::move(tmp_out);
+        out = std::move(message);
         return !out.empty();
     }
 
@@ -492,11 +477,6 @@ namespace {
             if (!player) {
                 continue;
             }
-            // if (!rename_all_players && obfuscate
-            //     && invited_name != player->invited_name
-            //     && invited_name != player->current_name) {
-            //     continue;
-            // }
             guild_member_updated = false;
             if (obfuscate) {
                 if (player->current_name
@@ -605,23 +585,6 @@ namespace {
         }
     }
 
-    void OnStoCPacketPost(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet)
-    {
-        if (packet->header == GAME_SMSG_CHAT_MESSAGE_CORE) {
-            // Temporarily obfuscate player name on resign (affected modules: InfoWindow)
-            if (!IsObfuscatorEnabled()) {
-                return;
-            }
-            const auto packet_actual = static_cast<GW::Packet::StoC::MessageCore*>(packet);
-            if (wmemcmp(packet_actual->message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0) {
-                // This hook is called twice - once before resign log module, once after.
-                if (ObfuscateMessage(packet_actual->message, ui_message_temp_message, true)) {
-                    wcscpy(packet_actual->message, ui_message_temp_message.c_str());
-                }
-            }
-        }
-    }
-
     void OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet)
     {
         switch (packet->header) {
@@ -632,8 +595,8 @@ namespace {
                 }
                 const auto packet_actual = static_cast<GW::Packet::StoC::MessageCore*>(packet);
                 if (wmemcmp(packet_actual->message, L"\x7BFF\xC9C4\xAEAA\x1B9B\x107", 5) == 0) {
-                    // This hook is called twice - once before resign log module, once after.
-                    if (ObfuscateMessage(packet_actual->message, ui_message_temp_message, false)) {
+                    // We need to make sure that the resignlog (which holds obfuscated player names) gets the obfuscated name
+                    if (ObfuscateMessage(packet_actual->message, ui_message_temp_message, true)) {
                         wcscpy(packet_actual->message, ui_message_temp_message.c_str());
                     }
                 }
@@ -839,11 +802,11 @@ void Obfuscator::Obfuscate(const bool obfuscate)
     }
     if (obfuscate) {
         pending_state = ObfuscatorState::Enabled;
-        Log::Info("Player name will be hidden on next map change");
+        //Log::Info("Player name will be hidden on next map change");
     }
     else {
         pending_state = ObfuscatorState::Disabled;
-        Log::Info("Player name will be visible on next map change");
+        //Log::Info("Player name will be visible on next map change");
     }
 }
 
@@ -891,7 +854,6 @@ void Obfuscator::Initialize()
     }
 
     constexpr auto pre_hook_altitude = -0x9000;  // Hooks that run before other RegisterPacketCallback hooks
-    constexpr auto post_hook_altitude = -0x7000; // Hooks that run after other RegisterPacketCallback hooks, but BEFORE the game processes the packet
     constexpr auto post_gw_altitude = 0x8000;    // Hooks that run after gw has processed the event
 
     constexpr uint32_t pre_hook_headers[] = {
@@ -908,12 +870,6 @@ void Obfuscator::Initialize()
     };
     for (const auto header : pre_hook_headers) {
         GW::StoC::RegisterPacketCallback(&stoc_hook, header, OnStoCPacket, pre_hook_altitude);
-    }
-    constexpr uint32_t post_hook_headers[] = {
-        GAME_SMSG_CHAT_MESSAGE_CORE // Post resignlog hook
-    };
-    for (const auto header : post_hook_headers) {
-        GW::StoC::RegisterPacketCallback(&stoc_hook, header, OnStoCPacketPost, post_hook_altitude);
     }
     constexpr GW::UI::UIMessage pre_hook_ui_messages[] = {
         GW::UI::UIMessage::kShowMapEntryMessage,
@@ -1010,4 +966,9 @@ void Obfuscator::DrawSettingsInternal()
         Obfuscate(enabled);
     }
     ImGui::ShowHelp("If empty, a random name will be chosen.");
+}
+
+bool Obfuscator::IsObfuscatedName(const std::wstring& name)
+{
+    return obfuscated_by_original.contains(name) || obfuscated_by_obfuscation.contains(name);
 }
