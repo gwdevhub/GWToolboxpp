@@ -43,6 +43,7 @@ ToolboxTheme::ToolboxTheme()
 ImGuiStyle ToolboxTheme::DefaultTheme()
 {
     auto style = ImGuiStyle();
+    style.WindowBorderSize = 0.f;
     style.WindowRounding = 6.0f;
     style.FrameRounding = 2.0f;
     style.ScrollbarSize = 16.0f;

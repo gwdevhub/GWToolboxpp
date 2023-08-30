@@ -147,7 +147,9 @@ namespace {
     {
         static std::unique_ptr<ToolboxIni> inifile = nullptr;
         const auto full_path = Resources::GetSettingFile(GWTOOLBOX_INI_FILENAME);
-        if (!GWToolbox::SettingsFolderChanged() && inifile) return inifile.get();
+        if (!GWToolbox::SettingsFolderChanged() && inifile) {
+            return inifile.get();
+        }
         auto tmp = std::make_unique<ToolboxIni>(false, false, false);
         ASSERT(tmp->LoadIfExists(full_path) == SI_OK);
         tmp->location_on_disk = full_path;

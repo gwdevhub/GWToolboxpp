@@ -78,12 +78,11 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
 
     // === Star ===
     star_offset = offset;
-    constexpr float PI = 3.1415927f;
-    constexpr float star_size_big = 300.0f;
-    constexpr float star_size_small = 150.0f;
     for (auto i = 0u; i < star_ntriangles; i++) {
-        const float angle1 = 2 * (i + 0) * PI / star_ntriangles;
-        const float angle2 = 2 * (i + 1) * PI / star_ntriangles;
+        constexpr float star_size_big = 300.0f;
+        constexpr float star_size_small = 150.0f;
+        const float angle1 = 2 * (i + 0) * DirectX::XM_PI / star_ntriangles;
+        const float angle2 = 2 * (i + 1) * DirectX::XM_PI / star_ntriangles;
         const float size1 = (i + 0) % 2 == 0 ? star_size_small : star_size_big;
         const float size2 = (i + 1) % 2 == 0 ? star_size_small : star_size_big;
         const Color c1 = (i + 0) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier);

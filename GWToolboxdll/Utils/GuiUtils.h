@@ -57,12 +57,11 @@ namespace GuiUtils {
     std::string RemovePunctuation(std::string s);
     std::wstring RemoveDiacritics(const std::wstring& s);
 
-    std::string WStringToString(const std::wstring& s);
-    std::wstring StringToWString(const std::string& s);
-    std::string SanitiseFilename(const std::string& str);
-    std::wstring SanitiseFilename(const std::wstring& str);
-
-    std::wstring SanitizePlayerName(const std::wstring& s);
+    std::string WStringToString(std::wstring_view str);
+    std::wstring StringToWString(std::string_view str);
+    std::string SanitiseFilename(std::string_view str);
+    std::wstring SanitiseFilename(std::wstring_view str);
+    std::wstring SanitizePlayerName(std::wstring_view str);
 
     // Extract first unencoded substring from gw encoded string. Pass second and third args to know where the player name was found in the original string.
     std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out = nullptr, const wchar_t** out_pos_out = nullptr);

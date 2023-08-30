@@ -201,9 +201,6 @@ namespace Missions {
 
 
     class NightfallMission : public Mission {
-    private:
-
-
     protected:
         NightfallMission(const GW::Constants::MapID _outpost,
                          const MissionImageList& _normal_mode_images,

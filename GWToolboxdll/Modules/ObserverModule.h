@@ -288,7 +288,6 @@ public:
         // stats:
         ObservableAgentStats stats;;
 
-    public:
         // name fns with excessive caching & lazy loading
         std::string DisplayName();
         std::string RawName();
@@ -434,7 +433,6 @@ public:
 
     ~ObserverModule() override;
 
-public:
     static ObserverModule& Instance()
     {
         static ObserverModule instance;

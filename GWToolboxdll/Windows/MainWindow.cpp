@@ -129,7 +129,9 @@ void MainWindow::Draw(IDirect3DDevice9*)
                     for (const auto plug : PluginModule::GetPlugins() | std::views::filter([](ToolboxPlugin* p) {
                         return p && p->GetVisiblePtr() && p->ShowInMainMenu();
                     })) {
-                        if (plugin == plug) continue;
+                        if (plugin == plug) {
+                            continue;
+                        }
                         *plug->GetVisiblePtr() = false;
                     }
                 }

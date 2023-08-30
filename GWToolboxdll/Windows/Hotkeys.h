@@ -421,7 +421,6 @@ public:
 };
 
 class HotkeyGWKey : public TBHotkey {
-private:
     GW::UI::ControlAction action = GW::UI::ControlAction::ControlAction_ActivateWeaponSet1;
     int action_idx = 0;
     static std::vector<const char*> labels;

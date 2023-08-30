@@ -240,7 +240,7 @@ void ChatLog::Save() const
         }
         recv = recv->next;
     }
-    inifile->SaveFile(LogPath(L"recv").c_str());
+    ASSERT(inifile->SaveFile(LogPath(L"recv").c_str()) == SI_OK);
     delete inifile;
 
     // Sent log FIFO
@@ -257,7 +257,7 @@ void ChatLog::Save() const
         }
         sent = sent->next;
     }
-    inifile->SaveFile(LogPath(L"sent").c_str());
+    ASSERT(inifile->SaveFile(LogPath(L"sent").c_str()) == SI_OK);
     delete inifile;
 }
 

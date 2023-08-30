@@ -59,6 +59,8 @@
 #include <Defines.h>
 #include <GWCA/Managers/QuestMgr.h>
 
+#include "Windows/FriendListWindow.h"
+
 #pragma warning(disable : 6011)
 
 using namespace GuiUtils;
@@ -1298,7 +1300,7 @@ void GameSettings::Initialize()
     }
 
     address = GW::Scanner::Find("\xdf\xe0\xf6\xc4\x41\x7a\x78", "xxxxxxx", 0x5);
-    if(address) {
+    if (address) {
         remove_skill_warmup_duration_patch.SetPatch(address, "\x90\x90", 2);
     }
 

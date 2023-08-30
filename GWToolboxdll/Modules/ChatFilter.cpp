@@ -1,17 +1,14 @@
 #include "stdafx.h"
 
-
 #include <Defines.h>
 #include <GWCA/Packets/StoC.h>
 
-#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
-#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <ImGuiAddons.h>
@@ -29,7 +26,6 @@
 //#define PRINT_CHAT_PACKETS
 
 namespace {
-
     bool guild_announcement = false;
     bool self_drop_rare = false;
     bool self_drop_common = false;
@@ -114,26 +110,31 @@ namespace {
     GW::HookEntry ClearIfApplicable_Entry;
 
 
-    const size_t GetSegmentLength(const wchar_t* encoded_segment)
+    size_t GetSegmentLength(const wchar_t* encoded_segment)
     {
-        if (!(encoded_segment && *encoded_segment > 0x100))
+        if (!(encoded_segment && *encoded_segment > 0x100)) {
             return 0;
+        }
         size_t length = 0;
         do {
             length++;
         } while (*encoded_segment++ & 0x8000);
         return length;
     }
+
     const wchar_t* GetSegment(const wchar_t* encoded_string, wchar_t identifier, size_t* segment_length = nullptr)
     {
-        if (!encoded_string)
+        if (!encoded_string) {
             return nullptr;
+        }
         auto found = wcschr(encoded_string, identifier);
-        if (!found)
+        if (!found) {
             return nullptr;
+        }
         found++;
-        if (segment_length)
+        if (segment_length) {
             *segment_length = GetSegmentLength(found);
+        }
         return found;
     }
 
@@ -141,15 +142,19 @@ namespace {
     {
         return GetSegment(encoded_string, 0x10a, segment_length);
     }
+
+
     const wchar_t* GetSecondSegment(const wchar_t* encoded_string, size_t* segment_length = nullptr)
     {
         return GetSegment(encoded_string, 0x10b, segment_length);
     }
-    const DWORD GetNumericSegment(const wchar_t* encoded_string)
+
+    DWORD GetNumericSegment(const wchar_t* encoded_string)
     {
         const auto found = GetSegment(encoded_string, 0x101);
-        if (found && found[1] > 0x100)
+        if (found && found[1] > 0x100) {
             return found[1] - 0x100;
+        }
         return 0;
     }
 
@@ -315,10 +320,13 @@ namespace {
     {
         return encoded_string && wcscmp(encoded_string, L"\xba9\x107") == 0;
     }
-    bool IsCurrentPlayerName(const wchar_t* encoded_string)
+
+
+    [[maybe_unused]] bool IsCurrentPlayerName(const wchar_t* encoded_string)
     {
-        if (!IsPlayerName(encoded_string))
+        if (!IsPlayerName(encoded_string)) {
             return false;
+        }
         const auto player_name = GW::PlayerMgr::GetPlayerName();
         return player_name && wcsncmp(player_name, &encoded_string[2], wcslen(player_name)) == 0;
     }
@@ -398,12 +406,15 @@ namespace {
                 // 07f0 fab6 c4e6 1b50 010a <monster> 0001 010b <rarity> 010a <item> 0001 0001
                 // first segment describes the agent who dropped, second segment describes the item dropped
                 const auto item_argument = GetSecondSegment(message);
-                if(IsAshes(GetFirstSegment(item_argument)))
+                if (IsAshes(GetFirstSegment(item_argument))) {
                     return ashes_dropped;
-                if (IsPlayerName(GetFirstSegment(message)))
+                }
+                if (IsPlayerName(GetFirstSegment(message))) {
                     return false; // Don't block other players dropping items
-                if(IsRare(item_argument))
+                }
+                if (IsRare(item_argument)) {
                     return self_drop_rare;
+                }
                 return self_drop_common;
             }
             case 0x7F1: {
@@ -428,7 +439,7 @@ namespace {
                 return false;
             }
             case 0x7F2: {
-                if(IsAshes(GetFirstSegment(GetFirstSegment(message)))) {
+                if (IsAshes(GetFirstSegment(GetFirstSegment(message)))) {
                     return ashes_dropped;
                 }
                 return false; // you drop item x

@@ -112,6 +112,7 @@ private:
             : map_id(m)
             , district(d)
             , district_number(n) { }
+
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
         GW::Constants::District district = GW::Constants::District::Current;
         uint8_t district_number = 0;
@@ -121,6 +122,7 @@ private:
         DistrictAlias(const GW::Constants::District d, const uint8_t n = 0)
             : district(d)
             , district_number(n) { }
+
         GW::Constants::District district = GW::Constants::District::Current;
         uint8_t district_number = 0;
     };

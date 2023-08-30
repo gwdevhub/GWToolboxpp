@@ -202,8 +202,7 @@ namespace {
         }
         show_compass_quest_marker_patch.TogglePatch(enable);
         GW::GameThread::Enqueue([] {
-            const auto quest = GW::QuestMgr::GetActiveQuest();
-            if (quest) {
+            if (const auto quest = GW::QuestMgr::GetActiveQuest()) {
                 struct QuestUIMsg {
                     GW::Constants::QuestID quest_id{};
                     GW::Vec3f marker{};
@@ -511,8 +510,7 @@ void Minimap::DrawSettingsInternal()
     is_movable = is_resizable = !snap_to_compass;
     if (is_resizable) {
         ImVec2 winsize(100.0f, 100.0f);
-        const ImGuiWindow* window = ImGui::FindWindowByName(Name());
-        if (window) {
+        if (const auto window = ImGui::FindWindowByName(Name())) {
             winsize = window->Size;
         }
         if (ImGui::DragFloat("Size", &winsize.x, 1.0f, 0.0f, 0.0f, "%.0f")) {
@@ -1254,8 +1252,7 @@ bool Minimap::FlagHeros(const LPARAM lParam)
     GetPlayerHeroes(GetPlayerParty(), player_heroes, &has_flagall);
     const GW::Vec2f worldpos = InterfaceToWorldPoint(Vec2i(x, y));
 
-    const FlaggingState flag_state = GetFlaggingState();
-    switch (flag_state) {
+    switch (const auto flag_state = GetFlaggingState()) {
         case FlagState_None:
             return false;
         case FlagState_All:

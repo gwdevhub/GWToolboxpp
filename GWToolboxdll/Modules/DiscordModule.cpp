@@ -247,7 +247,7 @@ void DiscordModule::Terminate()
 {
     ToolboxModule::Terminate();
     Disconnect();
-    UnloadDll();
+    ASSERT(UnloadDll());
 }
 
 void DiscordModule::Disconnect()
@@ -506,7 +506,7 @@ bool DiscordModule::LoadDll() const
     // resolve function address here
     discordCreate = (DiscordCreate_pt)(uintptr_t)GetProcAddress(hGetProcIDDLL, "DiscordCreate");
     if (!discordCreate) {
-        UnloadDll();
+        ASSERT(UnloadDll());
         Log::LogW(L"Failed to find address for DiscordCreate\n");
         return false;
     }

@@ -79,20 +79,29 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
             ImGui::ShowHelp(buf);
         }
     }
+    auto count = 0;
     if (is_movable) {
-        ImGui::SameLine();
+        if (++count % 2 == 0) {
+            ImGui::SameLine();
+        }
         ImGui::Checkbox("Lock Position", &lock_move);
     }
     if (is_resizable) {
-        ImGui::SameLine();
+        if (++count % 2 == 0) {
+            ImGui::SameLine();
+        }
         ImGui::Checkbox("Lock Size", &lock_size);
     }
     if (has_closebutton) {
-        ImGui::SameLine();
+        if (++count % 2 == 0) {
+            ImGui::SameLine();
+        }
         ImGui::Checkbox("Show close button", &show_closebutton);
     }
     if (can_show_in_main_window) {
-        ImGui::SameLine();
+        if (++count % 2 == 0) {
+            ImGui::SameLine();
+        }
         if (ImGui::Checkbox("Show in main window", &show_menubutton)) {
             MainWindow::Instance().pending_refresh_buttons = true;
         }
@@ -131,7 +140,8 @@ bool ToolboxUIElement::DrawTabButton(const bool show_icon, const bool show_text,
         text_x = pos.x + img_size + ImGui::GetStyle().ItemSpacing.x;
     }
     const bool clicked = ImGui::Button("", ImVec2(width, ImGui::GetTextLineHeightWithSpacing()));
-    if (show_icon) {if (Icon()) {
+    if (show_icon) {
+        if (Icon()) {
             ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2),
                                                 ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), Icon());
         }

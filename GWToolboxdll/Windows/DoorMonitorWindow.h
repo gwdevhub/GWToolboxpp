@@ -23,7 +23,7 @@ public:
         time_t last_open = 0;   // Most recent time the door was opened
         time_t first_close = 0; // First time the door was closed
         time_t last_close = 0;  // Most recent time the door was closed
-    public:
+
         static void DoorAnimation(const uint32_t object_id, const uint32_t animation_type, const uint32_t animation_stage)
         {
             if (animation_type != 16 && animation_type != 3) {

@@ -74,7 +74,7 @@ namespace DllImporter {
     }
 
     template<typename T>
-    inline HRESULT Wrap_GetActivationFactory(_In_ HSTRING activatableClassId, _Inout_ Details::ComPtrRef<T> factory) noexcept {
+    HRESULT Wrap_GetActivationFactory(_In_ HSTRING activatableClassId, _Inout_ Details::ComPtrRef<T> factory) noexcept {
         return _1_GetActivationFactory(activatableClassId, factory.ReleaseAndGetAddressOf());
     }
 
@@ -117,7 +117,7 @@ public:
         DllImporter::WindowsDeleteString(_hstring);
     }
 
-    inline HSTRING Get() const noexcept {
+    HSTRING Get() const noexcept {
         return _hstring;
     }
 private:

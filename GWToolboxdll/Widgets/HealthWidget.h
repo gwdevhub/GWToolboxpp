@@ -42,7 +42,6 @@ public:
 
 private:
     class Threshold {
-    private:
         static unsigned int cur_ui_id;
 
     public:
