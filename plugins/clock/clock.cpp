@@ -60,7 +60,6 @@ void Clock::Draw(IDirect3DDevice9*)
 
 void Clock::Initialize(ImGuiContext* ctx, const ImGuiAllocFns fns, const HMODULE toolbox_dll)
 {
-    GW::Initialize();
     ToolboxUIPlugin::Initialize(ctx, fns, toolbox_dll);
 
     GW::HookBase::Initialize();
@@ -74,12 +73,11 @@ void Clock::Initialize(ImGuiContext* ctx, const ImGuiAllocFns fns, const HMODULE
     }
 }
 
-void Clock::Terminate()
+void Clock::SignalTerminate()
 {
-    ToolboxUIPlugin::Terminate();
+    ToolboxUIPlugin::SignalTerminate();
     if (SendChat_Func) {
         GW::HookBase::RemoveHook(SendChat_Func);
     }
-
     GW::HookBase::Deinitialize();
 }

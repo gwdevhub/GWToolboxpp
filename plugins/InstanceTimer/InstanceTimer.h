@@ -21,10 +21,6 @@ public:
     void LoadSettings(const wchar_t*) override;
     void SaveSettings(const wchar_t*) override;
     void DrawSettings() override;
-    void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE) override;
-    void Terminate() override;
-    bool CanTerminate() override;
-    void SignalTerminate() override;
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
 
@@ -42,5 +38,4 @@ private:
     char timer_buffer[32] = "";
     char extra_buffer[32] = "";
     ImColor extra_color = 0;
-    CSimpleIniA ini{};
 };

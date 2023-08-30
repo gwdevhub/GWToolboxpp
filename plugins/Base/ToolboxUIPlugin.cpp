@@ -78,6 +78,7 @@ void ToolboxUIPlugin::SignalTerminate()
 void ToolboxUIPlugin::Terminate()
 {
     ToolboxPlugin::Terminate();
+    GW::Terminate();
 }
 
 void ToolboxUIPlugin::DrawSettings()
