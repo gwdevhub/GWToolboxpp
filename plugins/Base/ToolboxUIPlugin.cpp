@@ -59,6 +59,7 @@ bool ToolboxUIPlugin::ShowInMainMenu() const
 void ToolboxUIPlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
 {
     ToolboxPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
+    GW::Initialize();
     GW::Chat::CreateCommand(L"tb", GW::Chat::CmdCB(CmdTB));
 }
 
