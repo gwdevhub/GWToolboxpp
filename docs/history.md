@@ -10,6 +10,8 @@ the latest version, go to the [Home Page](./) instead.
 ## Version 6.11
 
 * [New] Added item upgrade unlocks to completion window
+* [New] Reworked Obfuscator. Added option to rename yourself and friends to their alias (in-game, in-chat, in-party, in-guild).
+* [New] Added option in FriendlistWindow to replace friends character names in chat with their alias.
 * [New] Added chat filter for dropped ashes
 * [New] Added option to remove the 1.5 second minimum for a cast bar to show up for your own casts (Gamesettings).
 * [New] Added GameWorldRenderer to render lines, circles and polygons on the game terrain. This isn't fully fleshed out
