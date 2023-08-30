@@ -116,7 +116,7 @@ namespace {
     }
 
 
-    ToolboxIni* inifile = nullptr;
+    ToolboxIni inifile{};
     const wchar_t* ini_filename = L"friends.ini";
     bool loading = false;     // Loading from disk?
     bool polling = false;     // Polling in progress?
@@ -124,7 +124,19 @@ namespace {
     bool friends_changed = false;
     bool friend_list_ready = false; // Allow processing when this is true.
     bool need_to_reorder_friends = true;
-    bool show_alias_on_whisper = false;
+
+    enum class FriendAliasType {
+        NONE,
+        APPEND,
+        REPLACE
+    };
+
+    constexpr const char* alias_types[] = {
+        "None",
+        "Append",
+        "Replace"
+    };
+    FriendAliasType show_alias_on_whisper = FriendAliasType::NONE;
     bool show_my_status = true;
 
 
@@ -158,11 +170,12 @@ namespace {
 
     void LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out)
     {
-        CSimpleIni::TNamesDepend values;
-        inifile->GetAllValues(section, "charname", values);
-        for (CSimpleIni::TNamesDepend::const_iterator i = values.begin(); i != values.end(); ++i) {
-            std::wstring char_wstr = GuiUtils::StringToWString(i->pItem), temp;
-            std::vector<std::wstring> parts;
+        CSimpleIni::TNamesDepend values{};
+        inifile.GetAllValues(section, "charname", values);
+        for (auto i = values.cbegin(); i != values.cend(); ++i) {
+            std::wstring char_wstr = GuiUtils::StringToWString(i->pItem);
+            std::wstring temp;
+            std::vector<std::wstring> parts{};
             std::wstringstream wss(char_wstr);
             while (std::getline(wss, temp, L',')) {
                 parts.push_back(temp);
@@ -307,9 +320,8 @@ namespace {
             return;
         }
         const auto target = std::wstring(message, separator_pos);
-        const auto text = std::wstring(separator_pos+1);
-        if (const auto friend_ = FriendListWindow::GetFriend(target.c_str()))
-        {
+        const auto text = std::wstring(separator_pos + 1);
+        if (const auto friend_ = FriendListWindow::GetFriend(target.c_str())) {
             const auto& friendname = friend_->current_char->getNameW();
             if (friend_->current_char && friendname != target) {
                 const auto outgoing = friendname + L',' + text;
@@ -373,7 +385,7 @@ namespace {
         }
     }
 
-    void OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
+    void OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void* lparam)
     {
         switch (message_id) {
             case GW::UI::UIMessage::kSetAgentNameTagAttribs:
@@ -410,8 +422,17 @@ namespace {
                         OnPlayerNotOnline(status, message);
                         break;
                 }
+                break;
             }
-            break;
+            case GW::UI::UIMessage::kOpenWhisper: {
+                if (const auto friend_ = FriendListWindow::GetFriend(static_cast<wchar_t*>(wparam))) {
+                    if (!friend_->GetAliasW().empty() && friend_->current_char && friend_->GetAliasW() != static_cast<wchar_t*>(wparam)) {
+                        status->blocked = true;
+                        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWhisper, const_cast<wchar_t*>(friend_->GetAliasW().c_str()), lparam);
+                    }
+                }
+                break;
+            }
         }
     }
 
@@ -807,8 +828,6 @@ void FriendListWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 
-    inifile = new ToolboxIni(false, false, false);
-
     GW::Chat::CreateCommand(L"addfriend", CmdAddFriend);
     GW::Chat::CreateCommand(L"removefriend", CmdRemoveFriend);
     GW::Chat::CreateCommand(L"deletefriend", CmdRemoveFriend);
@@ -831,7 +850,8 @@ void FriendListWindow::Initialize()
     constexpr GW::UI::UIMessage hook_messages[] = {
         GW::UI::UIMessage::kSetAgentNameTagAttribs,
         GW::UI::UIMessage::kShowAgentNameTag,
-        GW::UI::UIMessage::kWriteToChatLog
+        GW::UI::UIMessage::kWriteToChatLog,
+        GW::UI::UIMessage::kOpenWhisper
     };
     for (const auto message_id : hook_messages) {
         RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);
@@ -845,8 +865,7 @@ void FriendListWindow::Initialize()
 // Optionally add friend alias to incoming/outgoing messages
 void FriendListWindow::AddFriendAliasToMessage(wchar_t** message_ptr)
 {
-    FriendListWindow& instance = Instance();
-    if (!show_alias_on_whisper) {
+    if (show_alias_on_whisper == FriendAliasType::NONE) {
         return;
     }
     wchar_t* message = *message_ptr;
@@ -855,16 +874,20 @@ void FriendListWindow::AddFriendAliasToMessage(wchar_t** message_ptr)
     const wchar_t* name_end = wcschr(name_start, 0x1);
     ASSERT(name_end != nullptr);
     const std::wstring player_name(name_start + 1, name_end);
-    const auto friend_ = instance.GetFriend(player_name.c_str());
+    const auto friend_ = GetFriend(player_name.c_str());
     if (!friend_ || friend_->GetAliasW() == player_name) {
         return;
     }
     static std::wstring new_message;
-    new_message = std::wstring(message, name_end - message);
-    new_message += L" (";
-    new_message += friend_->GetAliasW();
-    new_message += L")";
-    new_message.append(name_end);
+    if (show_alias_on_whisper == FriendAliasType::APPEND) {
+        new_message = std::format(L"{} ({}){}", std::wstring(message, name_end - message), friend_->GetAliasW(), name_end);
+    }
+    else if (show_alias_on_whisper == FriendAliasType::REPLACE) {
+        const auto player_name_pos = std::wstring(message).find(player_name);
+        if (player_name_pos != std::wstring::npos) {
+            new_message = std::wstring(message).replace(player_name_pos, player_name.length(), friend_->GetAliasW());
+        }
+    }
     // TODO; Would doing this cause a memory leak on the previous wchar_t* ?
     *message_ptr = const_cast<wchar_t*>(new_message.c_str());
 }
@@ -1184,19 +1207,21 @@ void FriendListWindow::DrawSettingsInternal()
 void FriendListWindow::RegisterSettingsContent()
 {
     ToolboxUIElement::RegisterSettingsContent();
-    ToolboxModule::RegisterSettingsContent("Chat Settings", nullptr,
-                                           [this](const std::string&, const bool is_showing) {
-                                               if (!is_showing) {
-                                                   return;
-                                               }
-                                               DrawChatSettings();
-                                           }, 0.91f);
+    ToolboxModule::RegisterSettingsContent(
+        "Chat Settings", nullptr,
+        [this](const std::string&, const bool is_showing) {
+            if (!is_showing) {
+                return;
+            }
+            DrawChatSettings();
+        }, 0.91f);
 }
 
 void FriendListWindow::DrawChatSettings()
 {
-    ImGui::Checkbox("Show friend aliases when sending/receiving whispers", &show_alias_on_whisper);
-    ImGui::ShowHelp("Only if your friend's alias is different to their character name");
+    ImGui::Text("Show friend aliases when sending/receiving whispers:");
+    ImGui::ShowHelp("Only if your friends alias is different to their character name");
+    ImGui::Combo("###show_alias_on_whisper", reinterpret_cast<int*>(&show_alias_on_whisper), alias_types, _countof(alias_types));
 }
 
 void FriendListWindow::DrawHelp()
@@ -1224,7 +1249,7 @@ void FriendListWindow::LoadSettings(ToolboxIni* ini)
     ToolboxWindow::LoadSettings(ini);
     lock_move_as_widget = ini->GetBoolValue(Name(), VAR_NAME(lock_move_as_widget), lock_move_as_widget);
     lock_size_as_widget = ini->GetBoolValue(Name(), VAR_NAME(lock_size_as_widget), lock_size_as_widget);
-    show_alias_on_whisper = ini->GetBoolValue(Name(), VAR_NAME(show_alias_on_whisper), show_alias_on_whisper);
+    show_alias_on_whisper = static_cast<FriendAliasType>(ini->GetLongValue(Name(), VAR_NAME(show_alias_on_whisper), static_cast<long>(show_alias_on_whisper)));
 
     outpost_show_as = ini->GetLongValue(Name(), VAR_NAME(outpost_show_as), outpost_show_as);
     loading_show_as = ini->GetLongValue(Name(), VAR_NAME(loading_show_as), loading_show_as);
@@ -1243,7 +1268,7 @@ void FriendListWindow::SaveSettings(ToolboxIni* ini)
     ToolboxWindow::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(lock_move_as_widget), lock_move_as_widget);
     ini->SetBoolValue(Name(), VAR_NAME(lock_size_as_widget), lock_size_as_widget);
-    ini->SetBoolValue(Name(), VAR_NAME(show_alias_on_whisper), show_alias_on_whisper);
+    ini->SetLongValue(Name(), VAR_NAME(show_alias_on_whisper), static_cast<long>(show_alias_on_whisper));
 
     ini->SetLongValue(Name(), VAR_NAME(outpost_show_as), outpost_show_as);
     ini->SetLongValue(Name(), VAR_NAME(loading_show_as), loading_show_as);
@@ -1279,10 +1304,6 @@ void FriendListWindow::Terminate()
     if (settings_thread.joinable()) {
         settings_thread.join();
     }
-    if (inifile) {
-        delete inifile;
-        inifile = nullptr;
-    }
 }
 
 void FriendListWindow::LoadFromFile()
@@ -1303,18 +1324,18 @@ void FriendListWindow::LoadFromFile()
         }
         friends.clear();
 
-        inifile->Reset();
-        inifile->SetMultiKey(true);
-        inifile->LoadFile(Resources::GetSettingFile(ini_filename).c_str());
+        inifile.Reset();
+        inifile.SetMultiKey(true);
+        inifile.LoadFile(Resources::GetSettingFile(ini_filename).c_str());
 
         ToolboxIni::TNamesDepend entries;
-        inifile->GetAllSections(entries);
+        inifile.GetAllSections(entries);
         for (const ToolboxIni::Entry& entry : entries) {
             auto lf = new Friend(this);
             lf->uuid = entry.pItem;
             lf->uuid_bytes = StringToGuid(lf->uuid);
-            lf->setAlias(GuiUtils::StringToWString(inifile->GetValue(entry.pItem, "alias", "")));
-            lf->type = static_cast<GW::FriendType>(inifile->GetLongValue(entry.pItem, "type", static_cast<long>(lf->type)));
+            lf->setAlias(GuiUtils::StringToWString(inifile.GetValue(entry.pItem, "alias", "")));
+            lf->type = static_cast<GW::FriendType>(inifile.GetLongValue(entry.pItem, "type", static_cast<long>(lf->type)));
             if (lf->uuid.empty() || lf->GetAliasW().empty()) {
                 delete lf;
                 continue; // Error, alias or uuid empty.
@@ -1352,10 +1373,10 @@ void FriendListWindow::SaveToFile()
     }
     settings_thread = std::thread([this] {
         friends_changed = false;
-        inifile->Reset();
+        inifile.Reset();
         // Load the existing file in, and amend the info
-        inifile->LoadFile(Resources::GetSettingFile(ini_filename).c_str());
-        inifile->SetMultiKey(true);
+        inifile.LoadFile(Resources::GetSettingFile(ini_filename).c_str());
+        inifile.SetMultiKey(true);
         if (friends.empty()) {
             return; // Error, should have at least 1 friend
         }
@@ -1364,8 +1385,8 @@ void FriendListWindow::SaveToFile()
             // do something
             Friend& lf = *it->second;
             const char* uuid = lf.uuid.c_str();
-            inifile->SetLongValue(uuid, "type", static_cast<long>(lf.type), nullptr, false, true);
-            inifile->SetValue(uuid, "alias", lf.GetAliasA().c_str(), nullptr, true);
+            inifile.SetLongValue(uuid, "type", static_cast<long>(lf.type), nullptr, false, true);
+            inifile.SetValue(uuid, "alias", lf.GetAliasA().c_str(), nullptr, true);
             // Append to existing charnames, but don't duplicate. This allows multiple accounts to contribute to the friend list.
             std::unordered_map<std::wstring, uint8_t> charnames;
             LoadCharnames(uuid, &charnames);
@@ -1376,15 +1397,15 @@ void FriendListWindow::SaveToFile()
                     charnames.emplace(char_it.first, char_it.second.profession);
                 }
             }
-            inifile->DeleteValue(uuid, "charname", nullptr);
+            inifile.DeleteValue(uuid, "charname", nullptr);
             for (const auto& char_it : charnames) {
                 char charname[128] = {0};
                 snprintf(charname, 128, "%s,%d",
                          GuiUtils::WStringToString(char_it.first).c_str(),
                          char_it.second);
-                inifile->SetValue(uuid, "charname", charname);
+                inifile.SetValue(uuid, "charname", charname);
             }
         }
-        ASSERT(inifile->SaveFile(Resources::GetSettingFile(ini_filename).c_str()) == SI_OK);
+        ASSERT(inifile.SaveFile(Resources::GetSettingFile(ini_filename).c_str()) == SI_OK);
     });
 }
