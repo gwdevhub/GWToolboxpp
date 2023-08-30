@@ -429,7 +429,6 @@ void MouseFix::DrawSettingsInternal()
         SetCursorSize(cursor_size);
         RedrawCursorIcon();
     }
-    ImGui::SameLine();
     if (ImGui::Button("Reset")) {
         SetCursorSize(32);
         RedrawCursorIcon();
