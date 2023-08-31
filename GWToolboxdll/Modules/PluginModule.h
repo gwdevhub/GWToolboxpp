@@ -29,17 +29,18 @@ public:
     [[nodiscard]] const char* Name() const override { return "Plugins"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_PUZZLE_PIECE; }
 
-    void Initialize() override;
+    [[nodiscard]] bool ShowOnWorldMap() const override { return true; }
 
     void Draw(IDirect3DDevice9*) override;
     void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni*) override;
     void SaveSettings(ToolboxIni*) override;
     void Update(float) override;
+    void Initialize() override;
     void SignalTerminate() override;
     void Terminate() override;
     bool CanTerminate() override;
-    bool ShowOnWorldMap() const override { return true; }
+    bool WndProc(UINT, WPARAM, LPARAM) override;
 
     static std::vector<ToolboxPlugin*> GetPlugins();
 

@@ -197,6 +197,18 @@ bool PluginModule::CanTerminate()
     });
 }
 
+bool PluginModule::WndProc(const UINT msg, const WPARAM wParam, const LPARAM lParam)
+{
+    bool capture = false;
+    for (const auto plugin : loaded_plugins) {
+        if (!plugin->instance) {
+            continue;
+        }
+        capture |= plugin->instance->WndProc(msg, wParam, lParam);
+    }
+    return capture;
+}
+
 std::vector<ToolboxPlugin*> PluginModule::GetPlugins()
 {
     std::vector<ToolboxPlugin*> _plugins;
