@@ -113,30 +113,34 @@ void TimerWidget::Initialize()
 {
     ToolboxWidget::Initialize();
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
-                                                                        [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* packet) -> void {
-                                                                            if (GW::Map::GetMapID() != GW::Constants::MapID::Domain_of_Anguish) {
-                                                                                return;
-                                                                            }
-                                                                            if (packet->message[1] != 0x5765) {
-                                                                                return;
-                                                                            }
-                                                                            cave_start = GW::Map::GetInstanceTime();
-                                                                        });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(
+        &DisplayDialogue_Entry,
+        [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* packet) -> void {
+            if (GW::Map::GetMapID() != GW::Constants::MapID::Domain_of_Anguish) {
+                return;
+            }
+            if (packet->message[1] != 0x5765) {
+                return;
+            }
+            cave_start = GW::Map::GetInstanceTime();
+        });
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&PreGameSrvTransfer_Entry,
-                                                                        [](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
-                                                                            Instance().OnPreGameSrvTransfer(status, pak);
-                                                                        }, -0x10);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(
+        &PreGameSrvTransfer_Entry,
+        [](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
+            Instance().OnPreGameSrvTransfer(status, pak);
+        }, -0x10);
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&PostGameSrvTransfer_Entry,
-                                                                        [](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
-                                                                            Instance().OnPostGameSrvTransfer(status, pak);
-                                                                        }, 0x5);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceTimer>(&InstanceTimer_Entry,
-                                                                      [this](GW::HookStatus*, GW::Packet::StoC::InstanceTimer*) -> void {
-                                                                          instance_timer_valid = true;
-                                                                      }, 5);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(
+        &PostGameSrvTransfer_Entry,
+        [](GW::HookStatus* status, GW::Packet::StoC::GameSrvTransfer* pak) -> void {
+            Instance().OnPostGameSrvTransfer(status, pak);
+        }, 0x5);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceTimer>(
+        &InstanceTimer_Entry,
+        [this](GW::HookStatus*, GW::Packet::StoC::InstanceTimer*) -> void {
+            instance_timer_valid = true;
+        }, 5);
     in_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
     GW::Chat::CreateCommand(L"resettimer", [this](const wchar_t*, int, LPWSTR*) {
         reset_next_loading_screen = true;
@@ -182,10 +186,10 @@ void TimerWidget::LoadSettings(ToolboxIni* ini)
         show_dungeon_traps_timer = ini->GetBoolValue(Name(), VAR_NAME(show_dungeon_traps_timer), show_dungeon_traps_timer);
     }
     show_spirit_timers = ini->GetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
-    for (const auto& it : spirit_effects) {
+    for (const auto& effect_id : spirit_effects | std::views::keys) {
         char ini_name[32];
-        snprintf(ini_name, 32, "spirit_effect_%d", it.first);
-        spirit_effects_enabled[it.first] = ini->GetBoolValue(Name(), ini_name, spirit_effects_enabled[it.first]);
+        snprintf(ini_name, 32, "spirit_effect_%d", effect_id);
+        spirit_effects_enabled[effect_id] = ini->GetBoolValue(Name(), ini_name, spirit_effects_enabled[effect_id]);
     }
 }
 
@@ -207,10 +211,10 @@ void TimerWidget::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(show_urgoz_timer), show_urgoz_timer);
     ini->SetBoolValue(Name(), VAR_NAME(show_dhuum_timer), show_dhuum_timer);
     ini->SetBoolValue(Name(), VAR_NAME(show_dungeon_traps_timer), show_dungeon_traps_timer);
-    for (const auto& it : spirit_effects) {
+    for (const auto& effect_id : spirit_effects | std::views::keys) {
         char ini_name[32];
-        snprintf(ini_name, 32, "spirit_effect_%d", it.first);
-        ini->SetBoolValue(Name(), ini_name, spirit_effects_enabled[it.first]);
+        snprintf(ini_name, 32, "spirit_effect_%d", effect_id);
+        ini->SetBoolValue(Name(), ini_name, spirit_effects_enabled[effect_id]);
     }
 }
 
@@ -289,7 +293,7 @@ milliseconds TimerWidget::GetMapTimeElapsed()
     return duration_cast<milliseconds>(now() - instance_started);
 }
 
-milliseconds TimerWidget::GetTimer() const
+milliseconds TimerWidget::GetTimer()
 {
     if (use_instance_timer) {
         return milliseconds(instance_timer_valid ? GW::Map::GetInstanceTime() : 0);
@@ -297,13 +301,22 @@ milliseconds TimerWidget::GetTimer() const
     return GetRunTimeElapsed();
 }
 
-milliseconds TimerWidget::GetRunTimeElapsed() const
+milliseconds TimerWidget::GetRunTimeElapsed()
 {
     if (!is_valid(run_started)) {
         return milliseconds(0);
     }
     if (is_valid(run_completed)) {
         return duration_cast<milliseconds>(run_completed - run_started);
+    }
+    // rare case that OnPostGameSrvTransfer was not called
+    if (duration_cast<milliseconds>(now() - run_started) - milliseconds{GW::Map::GetInstanceTime()} > 5000ms) {
+        const GW::AreaInfo* info = GW::Map::GetMapInfo(GW::Map::GetMapID());
+        if (info) {
+            if (info->type == GW::RegionType::ExplorableZone) {
+                run_started = now() - milliseconds(GW::Map::GetInstanceTime());
+            }
+        }
     }
     return duration_cast<milliseconds>(now() - run_started);
 }
@@ -318,9 +331,9 @@ unsigned long TimerWidget::GetStartPoint() const
     return static_cast<unsigned long>(ms.count());
 }
 
-unsigned long TimerWidget::GetTimerMs() const { return static_cast<unsigned long>(GetTimer().count()); }
+unsigned long TimerWidget::GetTimerMs() { return static_cast<unsigned long>(GetTimer().count()); }
 unsigned long TimerWidget::GetMapTimeElapsedMs() { return static_cast<unsigned long>(GetMapTimeElapsed().count()); }
-unsigned long TimerWidget::GetRunTimeElapsedMs() const { return static_cast<unsigned long>(GetRunTimeElapsed().count()); }
+unsigned long TimerWidget::GetRunTimeElapsedMs() { return static_cast<unsigned long>(GetRunTimeElapsed().count()); }
 
 
 void TimerWidget::SetRunCompleted(const bool no_print)
@@ -333,7 +346,7 @@ void TimerWidget::SetRunCompleted(const bool no_print)
     }
 }
 
-void TimerWidget::PrintTimer() const
+void TimerWidget::PrintTimer()
 {
     char buf[32];
     print_time(GetTimer(), 2, 32, buf);

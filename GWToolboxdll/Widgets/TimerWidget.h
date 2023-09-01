@@ -41,14 +41,14 @@ public:
     // Time in ms since the current instance was created, based on when the map loading screen was shown.
     std::chrono::milliseconds GetMapTimeElapsed();
     // Time in ms since the current run was started. May be different to when the current instance was created.
-    std::chrono::milliseconds GetRunTimeElapsed() const;
+    std::chrono::milliseconds GetRunTimeElapsed();
     // See GetRunTimeElapsed
-    std::chrono::milliseconds GetTimer() const;
-    unsigned long GetTimerMs() const; // time in milliseconds
+    std::chrono::milliseconds GetTimer();
+    unsigned long GetTimerMs(); // time in milliseconds
     unsigned long GetMapTimeElapsedMs();
-    unsigned long GetRunTimeElapsedMs() const;
+    unsigned long GetRunTimeElapsedMs();
     [[nodiscard]] unsigned long GetStartPoint() const;
-    void PrintTimer() const; // prints current timer to chat
+    void PrintTimer(); // prints current timer to chat
 
     void OnPreGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak);
     void OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak);
