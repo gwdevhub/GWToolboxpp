@@ -37,10 +37,11 @@ namespace {
     /*IWbemServices* pSvc = 0;
     IWbemLocator* pLoc = 0;
     HRESULT CoInitializeEx_result = -1;*/
-    bool rename_all_players = false;
+    bool rename_other_players = false;
     char own_player_name[20]{};
     std::wstring own_player_name_w{};
     bool rename_friends_to_alias = true;
+    bool rename_self = false;
     MSG msg;
     std::default_random_engine dre = std::default_random_engine(static_cast<uint32_t>(time(nullptr)));
     GW::HookEntry stoc_hook;
@@ -292,7 +293,7 @@ namespace {
 
     std::wstring GetObfuscatedName(const std::wstring_view original_name, const bool in_char_select)
     {
-        if (!own_player_name_w.empty() && (original_name == GetPlayerName() || in_char_select)) {
+        if (!own_player_name_w.empty() && rename_self && (original_name == GetPlayerName() || in_char_select)) {
             return own_player_name_w;
         }
         if (rename_friends_to_alias) {
@@ -302,7 +303,10 @@ namespace {
                 }
             }
         }
-        if (!rename_all_players && original_name != GetPlayerName() && !in_char_select) {
+        if (!rename_self && (original_name == GetPlayerName() || in_char_select)) {
+            return {};
+        }
+        if (!rename_other_players && !in_char_select) {
             return {};
         }
         if (pool_index >= obfuscated_name_pool.size()) {
@@ -353,32 +357,21 @@ namespace {
 
     bool ObfuscateMessage(std::wstring message, std::wstring& out, const bool obfuscate = true)
     {
-        if (obfuscate) {
-            for (const auto& [original, obfuscated] : obfuscated_by_original) {
-                if (original.empty()) {
-                    break;
-                }
-                size_t start_pos = 0;
-                while((start_pos = message.find(original, start_pos)) != std::string::npos) {
-                    message.replace(start_pos, original.length(), obfuscated);
-                    start_pos += obfuscated.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
-                }
+        const auto& to_search = obfuscate ? obfuscated_by_original : obfuscated_by_obfuscation;
+        bool was_changed = false;
+        for (const auto& [from, to] : to_search) {
+            if (from.empty()) {
+                break;
+            }
+            size_t start_pos = 0;
+            while((start_pos = message.find(from, start_pos)) != std::string::npos) {
+                message.replace(start_pos, from.length(), to);
+                start_pos += to.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
+                was_changed = true;
             }
         }
-        else {
-            for (const auto& [obfuscated, original] : obfuscated_by_obfuscation) {
-                if (obfuscated.empty()) {
-                    break;
-                }
-                size_t start_pos = 0;
-                while ((start_pos = message.find(obfuscated, start_pos)) != std::string::npos) {
-                    message.replace(start_pos, obfuscated.length(), original);
-                    start_pos += original.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
-                }
-            }
-        }
-        out = std::move(message);
-        return !out.empty();
+        out.assign(message);
+        return !out.empty() && was_changed;
     }
 
     bool UnobfuscateMessage(const wchar_t* message, std::wstring& out)
@@ -917,8 +910,9 @@ void Obfuscator::Update(float)
 void Obfuscator::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
-    rename_all_players = ini->GetBoolValue(Name(), VAR_NAME(rename_all_players), rename_all_players);
+    rename_other_players = ini->GetBoolValue(Name(), VAR_NAME(rename_other_players), rename_other_players);
     rename_friends_to_alias = ini->GetBoolValue(Name(), VAR_NAME(rename_friends_to_alias), rename_friends_to_alias);
+    rename_self = ini->GetBoolValue(Name(), VAR_NAME(rename_self), rename_self);
     const auto own_name = ini->GetValue(Name(), VAR_NAME(own_player_name), own_player_name);
     if (own_name && own_name[0] != '\0') {
         strncpy_s(own_player_name, own_name, strnlen_s(own_name, _countof(own_player_name)));
@@ -933,8 +927,9 @@ void Obfuscator::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(obfuscate), pending_state == ObfuscatorState::Enabled);
-    ini->SetBoolValue(Name(), VAR_NAME(rename_all_players), rename_all_players);
+    ini->SetBoolValue(Name(), VAR_NAME(rename_other_players), rename_other_players);
     ini->SetBoolValue(Name(), VAR_NAME(rename_friends_to_alias), rename_friends_to_alias);
+    ini->SetBoolValue(Name(), VAR_NAME(rename_self), rename_self);
     ini->SetValue(Name(), VAR_NAME(own_player_name), own_player_name);
 }
 
@@ -951,11 +946,17 @@ void Obfuscator::DrawSettingsInternal()
     if (ImGui::Checkbox("Rename friends to their alias", &rename_friends_to_alias)) {
         Obfuscate(enabled);
     }
-    ImGui::ShowHelp("May require a GW restart to take effect.");
-    if (ImGui::Checkbox("Rename all players", &rename_all_players)) {
+#ifdef _DEBUG
+    if (ImGui::Checkbox("Rename other players", &rename_other_players)) {
         Obfuscate(enabled);
     }
-    ImGui::ShowHelp("May be buggy. May require a GW restart to take effect.");
+#endif
+    ImGui::ShowHelp("May lead to bugs. May require a GW restart to take effect.");
+    ImGui::ShowHelp("May require a GW restart to take effect.");
+    if (ImGui::Checkbox("Rename self", &rename_self)) {
+        Obfuscate(enabled);
+    }
+    ImGui::ShowHelp("Renames yourself in-game and in character select.");
     if (ImGui::InputText("Set own character name", own_player_name, _countof(own_player_name))) {
         if (own_player_name[0] != '\0') {
             own_player_name_w = GuiUtils::StringToWString(own_player_name);
