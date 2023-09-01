@@ -297,8 +297,13 @@ namespace {
             return own_player_name_w;
         }
         if (rename_friends_to_alias) {
+            static std::map<std::wstring, std::wstring> friends_aliases;
             if (const auto frnd = FriendListWindow::GetFriend(original_name.data())) {
+                if (friends_aliases.contains(std::wstring{original_name})) {
+                    return {};
+                }
                 if (!frnd->GetAliasW().empty() && frnd->GetAliasW() != original_name) {
+                    friends_aliases.emplace(frnd->GetAliasW(), original_name);
                     return frnd->GetAliasW();
                 }
             }
@@ -329,16 +334,26 @@ namespace {
 
         const auto tmp_out = GetObfuscatedName(original_name, in_char_select);
         if (tmp_out.empty()) {
-            out.assign(tmp_out);
             return false;
         }
-        const auto found_obfuscated = obfuscated_by_obfuscation.find(tmp_out);
-        if (found_obfuscated == obfuscated_by_obfuscation.end() && !in_char_select) {
+        if (obfuscated_by_original.contains(original_name)) {
+            out.assign(obfuscated_by_original.at(original_name));
+            return true;
+        }
+        if (obfuscated_by_obfuscation.contains(original_name)) {
+            const auto& obfuscated_orig = obfuscated_by_obfuscation.at(original_name);
+            if (obfuscated_by_original.contains(obfuscated_orig)) {
+                out.assign(obfuscated_orig);
+                return true;
+            }
+        }
+        if (!obfuscated_by_obfuscation.contains(tmp_out)) {
             obfuscated_by_obfuscation.emplace(tmp_out, original_name);
             obfuscated_by_original.emplace(original_name, tmp_out);
+            out.assign(tmp_out);
+            return true;
         }
-        out.assign(tmp_out);
-        return true;
+        return false;
     }
 
     bool UnobfuscateName(const std::wstring_view _obfuscated_name, std::wstring& out)
@@ -380,6 +395,7 @@ namespace {
     }
 
     void Reset();
+    bool ObfuscateGuildRoster(bool obfuscate = true);
 
     // We do this here instead of in WorldContext to intercept without rewriting memory
     GW::AccountInfo* OnGetAccountInfo()
@@ -387,8 +403,9 @@ namespace {
         GW::HookBase::EnterHook();
         GW::AccountInfo* accountInfo = GetAccountData_Ret();
         if (accountInfo && IsObfuscatorEnabled()) {
-            account_info_obfuscated = *accountInfo;
+            ObfuscateGuildRoster(false);
             Reset();
+            account_info_obfuscated = *accountInfo;
             ObfuscateName(accountInfo->account_name, account_info_obfuscated_name, true);
             account_info_obfuscated.account_name = account_info_obfuscated_name.data();
             accountInfo = &account_info_obfuscated;
@@ -407,6 +424,7 @@ namespace {
             return;
         }
         if (IsObfuscatorEnabled()) {
+            ObfuscateGuildRoster(false);
             Reset();
             if (ObfuscateName(character_name, character_summary_obfuscated_name, true)) {
                 character_name = character_summary_obfuscated_name.data();
@@ -444,7 +462,7 @@ namespace {
     }
 
     // Hide or show guild member names. Note that the guild roster persists across map changes so be careful with it
-    bool ObfuscateGuildRoster(const bool obfuscate = true)
+    bool ObfuscateGuildRoster(const bool obfuscate)
     {
         if (obfuscate == guild_roster_obfuscated) {
             return true;
@@ -464,44 +482,25 @@ namespace {
             Log::Log("Tried to obfuscate guild, failed to find current player in roster");
             return false;
         }
-        std::wstring tmp;
-        bool guild_member_updated = false;
         for (GW::GuildPlayer* player : roster) {
             if (!player) {
                 continue;
             }
-            guild_member_updated = false;
-            if (obfuscate) {
-                if (player->current_name
-                    && player->current_name[0]
-                    && ObfuscateName(player->current_name, tmp)
-                    && tmp != player->current_name) {
-                    wcscpy(player->current_name, tmp.c_str());
-                    guild_member_updated = true;
-                }
-                if (player->invited_name
-                    && player->invited_name[0]
-                    && ObfuscateName(player->invited_name, tmp)
-                    && tmp != player->invited_name) {
-                    wcscpy(player->invited_name, tmp.c_str());
-                    guild_member_updated = true;
-                }
+            std::wstring tmp{};
+            bool guild_member_updated = false;
+            if (player->current_name
+                && player->current_name[0]
+                && (obfuscate ? ObfuscateName(player->current_name, tmp) : UnobfuscateName(player->current_name, tmp))
+                && tmp != player->current_name) {
+                wcscpy(player->current_name, tmp.c_str());
+                guild_member_updated = true;
             }
-            else {
-                if (player->current_name
-                    && player->current_name[0]
-                    && UnobfuscateName(player->current_name, tmp)
-                    && tmp != player->current_name) {
-                    wcscpy(player->current_name, tmp.c_str());
-                    guild_member_updated = true;
-                }
-                if (player->invited_name
-                    && player->invited_name[0]
-                    && UnobfuscateName(player->invited_name, tmp)
-                    && tmp != player->invited_name) {
-                    wcscpy(player->invited_name, tmp.c_str());
-                    guild_member_updated = true;
-                }
+            if (player->invited_name
+                && player->invited_name[0]
+                && (obfuscate ? ObfuscateName(player->invited_name, tmp) : UnobfuscateName(player->invited_name, tmp))
+                && tmp != player->invited_name) {
+                wcscpy(player->invited_name, tmp.c_str());
+                guild_member_updated = true;
             }
             if (guild_member_updated) {
                 SendUIMessage(GW::UI::UIMessage::kGuildMemberUpdated, &player->name_ptr);
@@ -543,7 +542,10 @@ namespace {
     {
         switch (msg_id) {
             case GW::UI::UIMessage::kLogout: {
-                Reset();
+                //Reset();
+                ObfuscateGuildRoster(pending_state == ObfuscatorState::Enabled);
+                obfuscator_state = pending_state;
+                pending_guild_obfuscate = IsObfuscatorEnabled();
             }
             break;
         }
