@@ -296,7 +296,7 @@ namespace {
         if (!own_player_name_w.empty() && rename_self && (original_name == GetPlayerName() || in_char_select)) {
             return own_player_name_w;
         }
-        if (rename_friends_to_alias) {
+        if (rename_friends_to_alias && !in_char_select) {
             static std::map<std::wstring, std::wstring> friends_aliases;
             if (const auto frnd = FriendListWindow::GetFriend(original_name.data())) {
                 if (friends_aliases.contains(std::wstring{original_name})) {
@@ -423,7 +423,7 @@ namespace {
             GW::HookBase::LeaveHook();
             return;
         }
-        if (IsObfuscatorEnabled()) {
+        if (pending_state == ObfuscatorState::Enabled) {
             ObfuscateGuildRoster(false);
             Reset();
             if (ObfuscateName(character_name, character_summary_obfuscated_name, true)) {
