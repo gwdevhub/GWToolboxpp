@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Context/MapContext.h>
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -350,7 +351,12 @@ namespace {
     {
         for (const auto& packet : suppressed_packets) {
             GW::GameThread::Enqueue([cpy = packet]() mutable {
-                GW::StoC::EmulatePacket(reinterpret_cast<GW::Packet::StoC::PacketBase*>(&cpy));
+                // since a user can log out and exit the game with suppressed items still in memory,
+                // only spawn if there is still a valid map context.
+                // note: there is still an ItemContext at this point, so don't rely on that.
+                if (GW::GetMapContext() != nullptr) {
+                    GW::StoC::EmulatePacket(reinterpret_cast<GW::Packet::StoC::PacketBase*>(&cpy));
+                }
             });
         }
 
