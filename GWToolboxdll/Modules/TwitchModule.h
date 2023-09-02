@@ -21,6 +21,7 @@ public:
     }
 
     [[nodiscard]] const char* Name() const override { return "Twitch"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_BROADCAST_TOWER; }
     [[nodiscard]] const char* Description() const override { return " - Show the live chat from a running Twitch stream directly in chat.\n - Send a whisper to 'Twitch' to send a message to Twitch from GW"; }
     [[nodiscard]] const char* SettingsName() const override { return "Third Party Integration"; }
 
