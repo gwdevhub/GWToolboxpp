@@ -282,6 +282,10 @@ namespace {
         return obfuscator_state == ObfuscatorState::Enabled;
     }
 
+    void Reset();
+    bool ObfuscateGuildRoster(bool obfuscate = true);
+    std::wstring& GetPlayerInvitedName();
+
     using GetCharacterSummary_pt = void(__fastcall*)(void* ctx, uint32_t edx, wchar_t* character_name);
     GetCharacterSummary_pt GetCharacterSummary_Func = nullptr;
     GetCharacterSummary_pt RetGetCharacterSummary = nullptr;
@@ -308,7 +312,7 @@ namespace {
                 }
             }
         }
-        if (!rename_self && (original_name == GetPlayerName() || in_char_select)) {
+        if (!rename_self && (original_name == GetPlayerName() || original_name == GetPlayerInvitedName() || in_char_select)) {
             return {};
         }
         if (!rename_other_players && !in_char_select) {
@@ -347,7 +351,7 @@ namespace {
                 return true;
             }
         }
-        if (!obfuscated_by_obfuscation.contains(tmp_out)) {
+        if (!obfuscated_by_original.contains(original_name)) {
             obfuscated_by_obfuscation.emplace(tmp_out, original_name);
             obfuscated_by_original.emplace(original_name, tmp_out);
             out.assign(tmp_out);
@@ -394,9 +398,6 @@ namespace {
         return ObfuscateMessage(message, out, false);
     }
 
-    void Reset();
-    bool ObfuscateGuildRoster(bool obfuscate = true);
-
     // We do this here instead of in WorldContext to intercept without rewriting memory
     GW::AccountInfo* OnGetAccountInfo()
     {
@@ -425,7 +426,9 @@ namespace {
         }
         if (pending_state == ObfuscatorState::Enabled) {
             ObfuscateGuildRoster(false);
-            Reset();
+            if (character_summary_obfuscated_name.at(0) == L'\0') {
+                Reset();
+            }
             if (ObfuscateName(character_name, character_summary_obfuscated_name, true)) {
                 character_name = character_summary_obfuscated_name.data();
             }
@@ -494,13 +497,18 @@ namespace {
                 && tmp != player->current_name) {
                 wcscpy(player->current_name, tmp.c_str());
                 guild_member_updated = true;
+                if (player->invited_name && player->invited_name[0]) {
+                    wcscpy(player->invited_name, tmp.c_str());
+                }
             }
-            if (player->invited_name
-                && player->invited_name[0]
-                && (obfuscate ? ObfuscateName(player->invited_name, tmp) : UnobfuscateName(player->invited_name, tmp))
-                && tmp != player->invited_name) {
-                wcscpy(player->invited_name, tmp.c_str());
-                guild_member_updated = true;
+            else {
+                if (player->invited_name
+                    && player->invited_name[0]
+                    && (obfuscate ? ObfuscateName(player->invited_name, tmp) : UnobfuscateName(player->invited_name, tmp))
+                    && tmp != player->invited_name) {
+                    wcscpy(player->invited_name, tmp.c_str());
+                    guild_member_updated = true;
+                    }
             }
             if (guild_member_updated) {
                 SendUIMessage(GW::UI::UIMessage::kGuildMemberUpdated, &player->name_ptr);
@@ -940,23 +948,24 @@ void Obfuscator::DrawSettingsInternal()
     bool enabled = pending_state == ObfuscatorState::Enabled;
     if (ImGui::Checkbox("Randomize character names on-screen", &enabled)) {
         Obfuscate(enabled);
-        Reset();
+        pending_guild_obfuscate = true;
     }
     ImGui::ShowHelp("Hides and overrides player names at character selection and in-game.\nThis change is applied on next map change.");
     ImGui::TextDisabled("You can also use the /hideme or /obfuscate command to toggle this at any time");
 
     if (ImGui::Checkbox("Rename friends to their alias", &rename_friends_to_alias)) {
         Obfuscate(enabled);
+        pending_guild_obfuscate = true;
     }
-#ifdef _DEBUG
+    ImGui::ShowHelp("May require a GW restart to take effect.");
     if (ImGui::Checkbox("Rename other players", &rename_other_players)) {
         Obfuscate(enabled);
+        pending_guild_obfuscate = true;
     }
-#endif
     ImGui::ShowHelp("May lead to bugs. May require a GW restart to take effect.");
-    ImGui::ShowHelp("May require a GW restart to take effect.");
     if (ImGui::Checkbox("Rename self", &rename_self)) {
         Obfuscate(enabled);
+        pending_guild_obfuscate = true;
     }
     ImGui::ShowHelp("Renames yourself in-game and in character select.");
     if (ImGui::InputText("Set own character name", own_player_name, _countof(own_player_name))) {
@@ -967,8 +976,9 @@ void Obfuscator::DrawSettingsInternal()
             own_player_name_w = {};
         }
         Obfuscate(enabled);
+        Reset();
     }
-    ImGui::ShowHelp("If empty, a random name will be chosen.");
+    ImGui::ShowHelp("If empty, a random name will be chosen. May require a GW restart to take effect.");
 }
 
 bool Obfuscator::IsObfuscatedName(const std::wstring& name)
