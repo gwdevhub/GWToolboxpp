@@ -401,6 +401,7 @@ namespace {
         return ObfuscateMessage(message, out, false);
     }
 
+    // TODO: Jon this is never called, is it needed?
     // We do this here instead of in WorldContext to intercept without rewriting memory
     GW::AccountInfo* OnGetAccountInfo()
     {
@@ -418,6 +419,7 @@ namespace {
         return accountInfo;
     }
 
+    // TODO: Jon occasionally relogging to another character will cause your own name to be duplicated in guild roster
     // We do this here instead of in PreGameContext to intercept without rewriting memory (it would also mess up logging in)
     void __fastcall OnGetCharacterSummary(void* ctx, const uint32_t edx, wchar_t* character_name)
     {
@@ -599,6 +601,13 @@ namespace {
         }
     }
 
+    // TODO: Jon need to hook into gw party window invite and invite current_char rather than the obfuscated name
+    [[maybe_unused]] void OnInvitePlayerInPartyWindow(void* packet)
+    {
+
+    }
+
+
     void OnSpeechBubble(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*)
     {
         const auto player_chat_message = static_cast<PlayerChatMessage*>(wParam);
@@ -737,6 +746,7 @@ namespace {
         }
     }
 
+    // TODO: Jon do we need this?
     [[maybe_unused]] void OnSendChat(GW::HookStatus* status, const GW::Chat::Channel channel, wchar_t* message)
     {
         if (channel != GW::Chat::Channel::CHANNEL_WHISPER) {
