@@ -580,6 +580,14 @@ namespace {
                 const auto packet_actual = static_cast<GW::UI::UIChatMessage*>(wParam);
                 // Because we've already obfuscated the player name in-game, the name in the message will be obfuscated. Unobfuscate it here, and re-obfuscate it later.
                 // This allows the player to toggle obfuscate on/off between map loads and it won't bork up the message log.
+                constexpr std::array channels_to_ignore = {
+                    GW::Chat::CHANNEL_GWCA1,
+                    GW::Chat::CHANNEL_GWCA2,
+                    GW::Chat::CHANNEL_GWCA3,
+                };
+                if (std::ranges::find(channels_to_ignore, packet_actual->channel) != std::ranges::end(channels_to_ignore)) {
+                    break; // do not unobfuscate messages from e.g. twitch
+                }
                 if (packet_actual->message && UnobfuscateMessage(packet_actual->message, ui_message_temp_message)) {
                     packet_actual->message = ui_message_temp_message.data();
                 }
