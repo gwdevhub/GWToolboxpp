@@ -521,7 +521,7 @@ namespace {
         return true;
     }
 
-    void CmdObfuscate(const wchar_t* /*unused*/, int /*unused*/, wchar_t** /*unused*/)
+    void CmdObfuscate(const wchar_t*, int, wchar_t**)
     {
         Obfuscator::Obfuscate(pending_state != ObfuscatorState::Enabled);
     }
@@ -549,7 +549,7 @@ namespace {
         pending_guild_obfuscate = IsObfuscatorEnabled();
     }
 
-    void OnUIMessage(GW::HookStatus* /*unused*/, const GW::UI::UIMessage msg_id, void* wParam, void* /*unused*/)
+    void OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msg_id, void* wParam, void*)
     {
         switch (msg_id) {
             case GW::UI::UIMessage::kLogout: {
@@ -599,7 +599,7 @@ namespace {
         }
     }
 
-    void OnSpeechBubble(GW::HookStatus* /*unused*/, GW::UI::UIMessage /*unused*/, void* wParam, void* /*unused*/)
+    void OnSpeechBubble(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*)
     {
         const auto player_chat_message = static_cast<PlayerChatMessage*>(wParam);
         if (!IsObfuscatorEnabled()) {
@@ -610,7 +610,7 @@ namespace {
         }
     }
 
-    void OnStoCPacket(GW::HookStatus* /*unused*/, GW::Packet::StoC::PacketBase* packet)
+    void OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet)
     {
         switch (packet->header) {
             // Temporarily obfuscate player name on resign (affected modules: InfoWindow)
@@ -766,7 +766,7 @@ namespace {
         }
     }
 
-    void OnPrintChat(GW::HookStatus* /*unused*/, GW::Chat::Channel /*unused*/, wchar_t** message_ptr, FILETIME /*unused*/, int /*unused*/)
+    void OnPrintChat(GW::HookStatus*, GW::Chat::Channel, wchar_t** message_ptr, FILETIME, int)
     {
         if (!IsObfuscatorEnabled()) {
             return;
@@ -928,7 +928,7 @@ void Obfuscator::Initialize()
     running = true;
 }
 
-void Obfuscator::Update(float /*unused*/)
+void Obfuscator::Update(float)
 {
     if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
         TranslateMessage(&msg);
