@@ -10,22 +10,24 @@
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
-#include <GWCA/Utilities/MemoryPatcher.h>
 #include <GWCA/Utilities/Hook.h>
-#include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Utilities/MemoryPatcher.h>
+#include <GWCA/Utilities/Scanner.h>
 
-#include <Utils/GuiUtils.h>
+#include <Modules/ChatSettings.h>
 #include <Modules/Obfuscator.h>
+#include <Utils/GuiUtils.h>
 #include <Windows/FriendListWindow.h>
 
-#include <Logger.h>
-#include <ImGuiAddons.h>
 #include <Defines.h>
+#include <ImGuiAddons.h>
+#include <Logger.h>
+
 
 // #define DETECT_STREAMING_APPLICATION
 #ifdef DETECT_STREAMING_APPLICATION
@@ -256,6 +258,7 @@ namespace {
     std::wstring player_email;
     // Static variable; GW will use a pointer to this object for UI messages
     std::wstring ui_message_temp_message;
+    std::wstring speech_message_temp_message;
 
 
     // List of obfuscated names, keyed by obfuscated
@@ -383,7 +386,7 @@ namespace {
                 break;
             }
             size_t start_pos = 0;
-            while((start_pos = message.find(from, start_pos)) != std::string::npos) {
+            while ((start_pos = message.find(from, start_pos)) != std::string::npos) {
                 message.replace(start_pos, from.length(), to);
                 start_pos += to.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
                 was_changed = true;
@@ -508,7 +511,7 @@ namespace {
                     && tmp != player->invited_name) {
                     wcscpy(player->invited_name, tmp.c_str());
                     guild_member_updated = true;
-                    }
+                }
             }
             if (guild_member_updated) {
                 SendUIMessage(GW::UI::UIMessage::kGuildMemberUpdated, &player->name_ptr);
@@ -518,7 +521,7 @@ namespace {
         return true;
     }
 
-    void CmdObfuscate(const wchar_t*, int, wchar_t**)
+    void CmdObfuscate(const wchar_t* /*unused*/, int /*unused*/, wchar_t** /*unused*/)
     {
         Obfuscator::Obfuscate(pending_state != ObfuscatorState::Enabled);
     }
@@ -546,7 +549,7 @@ namespace {
         pending_guild_obfuscate = IsObfuscatorEnabled();
     }
 
-    void OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msg_id, void* wParam, void*)
+    void OnUIMessage(GW::HookStatus* /*unused*/, const GW::UI::UIMessage msg_id, void* wParam, void* /*unused*/)
     {
         switch (msg_id) {
             case GW::UI::UIMessage::kLogout: {
@@ -580,7 +583,7 @@ namespace {
                 const auto packet_actual = static_cast<GW::UI::UIChatMessage*>(wParam);
                 // Because we've already obfuscated the player name in-game, the name in the message will be obfuscated. Unobfuscate it here, and re-obfuscate it later.
                 // This allows the player to toggle obfuscate on/off between map loads and it won't bork up the message log.
-                constexpr std::array channels_to_ignore = {
+                constexpr std::array<uint32_t, 3> channels_to_ignore = {
                     GW::Chat::CHANNEL_GWCA1,
                     GW::Chat::CHANNEL_GWCA2,
                     GW::Chat::CHANNEL_GWCA3,
@@ -596,7 +599,18 @@ namespace {
         }
     }
 
-    void OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet)
+    void OnSpeechBubble(GW::HookStatus* /*unused*/, GW::UI::UIMessage /*unused*/, void* wParam, void* /*unused*/)
+    {
+        const auto player_chat_message = static_cast<PlayerChatMessage*>(wParam);
+        if (!IsObfuscatorEnabled()) {
+            return;
+        }
+        if (player_chat_message->message && player_chat_message->message[0] && ObfuscateMessage(player_chat_message->message, speech_message_temp_message)) {
+            player_chat_message->message = speech_message_temp_message.data();
+        }
+    }
+
+    void OnStoCPacket(GW::HookStatus* /*unused*/, GW::Packet::StoC::PacketBase* packet)
     {
         switch (packet->header) {
             // Temporarily obfuscate player name on resign (affected modules: InfoWindow)
@@ -752,7 +766,7 @@ namespace {
         }
     }
 
-    void OnPrintChat(GW::HookStatus*, GW::Chat::Channel, wchar_t** message_ptr, FILETIME, int)
+    void OnPrintChat(GW::HookStatus* /*unused*/, GW::Chat::Channel /*unused*/, wchar_t** message_ptr, FILETIME /*unused*/, int /*unused*/)
     {
         if (!IsObfuscatorEnabled()) {
             return;
@@ -864,8 +878,8 @@ void Obfuscator::Initialize()
         GW::HookBase::EnableHooks(GetAccountData_Func);
     }
 
-    constexpr auto pre_hook_altitude = -0x9000;  // Hooks that run before other RegisterPacketCallback hooks
-    constexpr auto post_gw_altitude = 0x8000;    // Hooks that run after gw has processed the event
+    constexpr auto pre_hook_altitude = -0x9000; // Hooks that run before other RegisterPacketCallback hooks
+    constexpr auto post_gw_altitude = 0x8000;   // Hooks that run after gw has processed the event
 
     constexpr uint32_t pre_hook_headers[] = {
         GAME_SMSG_AGENT_CREATE_PLAYER,
@@ -877,12 +891,12 @@ void Obfuscator::Initialize()
         GAME_SMSG_GUILD_PLAYER_CHANGE_COMPLETE,
         GAME_SMSG_GUILD_PLAYER_ROLE,
         GAME_SMSG_CHAT_MESSAGE_CORE, // Pre resignlog hook
-        GAME_SMSG_CINEMATIC_TEXT
+        GAME_SMSG_CINEMATIC_TEXT,
     };
     for (const auto header : pre_hook_headers) {
         GW::StoC::RegisterPacketCallback(&stoc_hook, header, OnStoCPacket, pre_hook_altitude);
     }
-    constexpr GW::UI::UIMessage pre_hook_ui_messages[] = {
+    constexpr std::array pre_hook_ui_messages = {
         GW::UI::UIMessage::kShowMapEntryMessage,
         GW::UI::UIMessage::kDialogBody,
         GW::UI::UIMessage::kWriteToChatLog
@@ -890,13 +904,14 @@ void Obfuscator::Initialize()
     for (const auto header : pre_hook_ui_messages) {
         RegisterUIMessageCallback(&stoc_hook, header, OnUIMessage, pre_hook_altitude);
     }
-    constexpr GW::UI::UIMessage post_gw_ui_messages[] = {
+    constexpr std::array post_gw_ui_messages = {
         GW::UI::UIMessage::kLogout,
         GW::UI::UIMessage::kWriteToChatLog
     };
     for (const auto header : post_gw_ui_messages) {
         RegisterUIMessageCallback(&stoc_hook, header, OnUIMessage, post_gw_altitude);
     }
+    RegisterUIMessageCallback(&stoc_hook, GW::UI::UIMessage::kPlayerChatMessage, OnSpeechBubble, pre_hook_altitude);
 
     RegisterPrintChatCallback(&ctos_hook, OnPrintChat);
 
@@ -913,7 +928,7 @@ void Obfuscator::Initialize()
     running = true;
 }
 
-void Obfuscator::Update(float)
+void Obfuscator::Update(float /*unused*/)
 {
     if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
         TranslateMessage(&msg);
