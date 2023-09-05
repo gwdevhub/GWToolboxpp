@@ -945,16 +945,16 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
 void ObjectiveTimerWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    show_decimal = ini->GetBoolValue(Name(), VAR_NAME(show_decimal), show_decimal);
-    show_start_column = ini->GetBoolValue(Name(), VAR_NAME(show_start_column), show_start_column);
-    show_end_column = ini->GetBoolValue(Name(), VAR_NAME(show_end_column), show_end_column);
-    show_time_column = ini->GetBoolValue(Name(), VAR_NAME(show_time_column), show_time_column);
-    show_current_run_window = ini->GetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
-    auto_send_age = ini->GetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
-    save_to_disk = ini->GetBoolValue(Name(), VAR_NAME(save_to_disk), save_to_disk);
-    show_past_runs = ini->GetBoolValue(Name(), VAR_NAME(show_past_runs), show_past_runs);
-    show_start_date_time = ini->GetBoolValue(Name(), VAR_NAME(show_start_date_time), show_start_date_time);
-    show_detailed_objectives = ini->GetBoolValue(Name(), VAR_NAME(show_detailed_objectives), show_detailed_objectives);
+    LOAD_BOOL(show_decimal);
+    LOAD_BOOL(show_start_column);
+    LOAD_BOOL(show_end_column);
+    LOAD_BOOL(show_time_column);
+    LOAD_BOOL(show_current_run_window);
+    LOAD_BOOL(auto_send_age);
+    LOAD_BOOL(save_to_disk);
+    LOAD_BOOL(show_past_runs);
+    LOAD_BOOL(show_start_date_time);
+    LOAD_BOOL(show_detailed_objectives);
     ComputeNColumns();
     LoadRuns();
 }
@@ -962,16 +962,16 @@ void ObjectiveTimerWindow::LoadSettings(ToolboxIni* ini)
 void ObjectiveTimerWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(show_decimal), show_decimal);
-    ini->SetBoolValue(Name(), VAR_NAME(show_start_column), show_start_column);
-    ini->SetBoolValue(Name(), VAR_NAME(show_end_column), show_end_column);
-    ini->SetBoolValue(Name(), VAR_NAME(show_time_column), show_time_column);
-    ini->SetBoolValue(Name(), VAR_NAME(show_current_run_window), show_current_run_window);
-    ini->SetBoolValue(Name(), VAR_NAME(auto_send_age), auto_send_age);
-    ini->SetBoolValue(Name(), VAR_NAME(show_start_date_time), show_start_date_time);
-    ini->SetBoolValue(Name(), VAR_NAME(save_to_disk), save_to_disk);
-    ini->SetBoolValue(Name(), VAR_NAME(show_past_runs), show_past_runs);
-    ini->SetBoolValue(Name(), VAR_NAME(show_detailed_objectives), show_detailed_objectives);
+    SAVE_BOOL(show_decimal);
+    SAVE_BOOL(show_start_column);
+    SAVE_BOOL(show_end_column);
+    SAVE_BOOL(show_time_column);
+    SAVE_BOOL(show_current_run_window);
+    SAVE_BOOL(auto_send_age);
+    SAVE_BOOL(show_start_date_time);
+    SAVE_BOOL(save_to_disk);
+    SAVE_BOOL(show_past_runs);
+    SAVE_BOOL(show_detailed_objectives);
     SaveRuns();
 }
 

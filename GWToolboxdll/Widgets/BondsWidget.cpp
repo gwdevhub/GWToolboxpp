@@ -422,8 +422,8 @@ void BondsWidget::LoadSettings(ToolboxIni* ini)
 void BondsWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
-    Colors::Save(ini, Name(), VAR_NAME(background), background);
-    Colors::Save(ini, Name(), VAR_NAME(low_attribute_overlay), low_attribute_overlay);
+    SAVE_COLOR(background);
+    SAVE_COLOR(low_attribute_overlay);
     SAVE_BOOL(click_to_cast);
     SAVE_BOOL(click_to_drop);
     SAVE_BOOL(show_allies);

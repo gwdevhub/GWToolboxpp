@@ -861,12 +861,12 @@ void BuildsWindow::Update(const float)
 void BuildsWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
-    order_by_name = ini->GetBoolValue(Name(), VAR_NAME(order_by_name), order_by_name);
-    auto_load_pcons = ini->GetBoolValue(Name(), VAR_NAME(auto_load_pcons), auto_load_pcons);
-    auto_send_pcons = ini->GetBoolValue(Name(), VAR_NAME(auto_send_pcons), auto_send_pcons);
-    hide_when_entering_explorable = ini->GetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
-    one_teambuild_at_a_time = ini->GetBoolValue(Name(), VAR_NAME(one_teambuild_at_a_time), one_teambuild_at_a_time);
+    LOAD_BOOL(show_menubutton);
+    LOAD_BOOL(order_by_name);
+    LOAD_BOOL(auto_load_pcons);
+    LOAD_BOOL(auto_send_pcons);
+    LOAD_BOOL(hide_when_entering_explorable);
+    LOAD_BOOL(one_teambuild_at_a_time);
 
     order_by_index = !order_by_name;
 
@@ -881,11 +881,11 @@ void BuildsWindow::LoadSettings(ToolboxIni* ini)
 void BuildsWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(order_by_name), order_by_name);
-    ini->SetBoolValue(Name(), VAR_NAME(auto_load_pcons), auto_load_pcons);
-    ini->SetBoolValue(Name(), VAR_NAME(auto_send_pcons), auto_send_pcons);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
-    ini->SetBoolValue(Name(), VAR_NAME(one_teambuild_at_a_time), one_teambuild_at_a_time);
+    SAVE_BOOL(order_by_name);
+    SAVE_BOOL(auto_load_pcons);
+    SAVE_BOOL(auto_send_pcons);
+    SAVE_BOOL(hide_when_entering_explorable);
+    SAVE_BOOL(one_teambuild_at_a_time);
     SaveToFile();
 }
 

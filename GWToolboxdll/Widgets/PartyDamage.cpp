@@ -467,16 +467,16 @@ void PartyDamage::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
     width = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(width), 100.0f));
-    bars_left = ini->GetBoolValue(Name(), VAR_NAME(bars_left), true);
+    LOAD_BOOL(bars_left);
     row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), 0);
     recent_max_time = ini->GetLongValue(Name(), VAR_NAME(recent_max_time), 7000);
     color_background = Colors::Load(ini, Name(), VAR_NAME(color_background), Colors::ARGB(76, 0, 0, 0));
     color_damage = Colors::Load(ini, Name(), VAR_NAME(color_damage), Colors::ARGB(102, 205, 102, 51));
     color_recent = Colors::Load(ini, Name(), VAR_NAME(color_recent), Colors::ARGB(205, 102, 153, 230));
-    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    print_by_click = ini->GetBoolValue(Name(), VAR_NAME(print_by_click), print_by_click);
-    snap_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
-    user_offset = ini->GetLongValue(Name(), VAR_NAME(user_offset), user_offset);
+    LOAD_BOOL(hide_in_outpost);
+    LOAD_BOOL(print_by_click);
+    LOAD_BOOL(snap_to_party_window);
+    LOAD_UINT(user_offset);
 
     if (inifile == nullptr) {
         inifile = new ToolboxIni(false, false, false);
@@ -506,16 +506,16 @@ void PartyDamage::SaveSettings(ToolboxIni* ini)
     ToolboxWidget::SaveSettings(ini);
 
     ini->SetDoubleValue(Name(), VAR_NAME(width), width);
-    ini->SetBoolValue(Name(), VAR_NAME(bars_left), bars_left);
-    ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
-    ini->SetLongValue(Name(), VAR_NAME(recent_max_time), recent_max_time);
-    Colors::Save(ini, Name(), VAR_NAME(color_background), color_background);
-    Colors::Save(ini, Name(), VAR_NAME(color_damage), color_damage);
-    Colors::Save(ini, Name(), VAR_NAME(color_recent), color_recent);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(print_by_click), print_by_click);
-    ini->SetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
-    ini->SetLongValue(Name(), VAR_NAME(user_offset), user_offset);
+    SAVE_BOOL(bars_left);
+    SAVE_UINT(row_height);
+    SAVE_UINT(recent_max_time);
+    SAVE_COLOR(color_background);
+    SAVE_COLOR(color_damage);
+    SAVE_COLOR(color_recent);
+    SAVE_BOOL(hide_in_outpost);
+    SAVE_BOOL(print_by_click);
+    SAVE_BOOL(snap_to_party_window);
+    SAVE_UINT(user_offset);
 
     for (const auto& [player_number, hp] : hp_map) {
         std::string key = std::to_string(player_number);

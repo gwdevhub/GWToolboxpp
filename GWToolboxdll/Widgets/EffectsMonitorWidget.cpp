@@ -566,30 +566,30 @@ void EffectsMonitorWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
 
-    decimal_threshold = ini->GetLongValue(Name(), VAR_NAME(decimal_threshold), decimal_threshold);
-    only_under_seconds = ini->GetLongValue(Name(), VAR_NAME(only_under_seconds), only_under_seconds);
-    round_up = ini->GetBoolValue(Name(), VAR_NAME(round_up), round_up);
-    show_vanquish_counter = ini->GetBoolValue(Name(), VAR_NAME(show_vanquish_counter), show_vanquish_counter);
+    LOAD_UINT(decimal_threshold);
+    LOAD_UINT(only_under_seconds);
+    LOAD_BOOL(round_up);
+    LOAD_BOOL(show_vanquish_counter);
     font_effects = static_cast<GuiUtils::FontSize>(
         ini->GetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects)));
-    color_text_effects = Colors::Load(ini, Name(), VAR_NAME(color_text_effects), color_text_effects);
-    color_text_shadow = Colors::Load(ini, Name(), VAR_NAME(color_text_shadow), color_text_shadow);
-    color_background = Colors::Load(ini, Name(), VAR_NAME(color_background), color_background);
+    LOAD_COLOR(color_text_effects);
+    LOAD_COLOR(color_text_shadow);
+    LOAD_COLOR(color_background);
 }
 
 void EffectsMonitorWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
 
-    ini->SetLongValue(Name(), VAR_NAME(decimal_threshold), decimal_threshold);
-    ini->SetLongValue(Name(), VAR_NAME(only_under_seconds), only_under_seconds);
-    ini->SetBoolValue(Name(), VAR_NAME(round_up), round_up);
-    ini->SetBoolValue(Name(), VAR_NAME(show_vanquish_counter), show_vanquish_counter);
+    SAVE_UINT(decimal_threshold);
+    SAVE_UINT(only_under_seconds);
+    SAVE_BOOL(round_up);
+    SAVE_BOOL(show_vanquish_counter);
 
     ini->SetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects));
-    Colors::Save(ini, Name(), VAR_NAME(color_text_effects), color_text_effects);
-    Colors::Save(ini, Name(), VAR_NAME(color_text_shadow), color_text_shadow);
-    Colors::Save(ini, Name(), VAR_NAME(color_background), color_background);
+    SAVE_COLOR(color_text_effects);
+    SAVE_COLOR(color_text_shadow);
+    SAVE_COLOR(color_background);
 }
 
 void EffectsMonitorWidget::DrawSettingsInternal()

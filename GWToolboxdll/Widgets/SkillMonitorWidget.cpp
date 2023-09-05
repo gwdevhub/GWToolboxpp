@@ -226,51 +226,51 @@ void SkillMonitorWidget::Update(const float)
 void SkillMonitorWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
-    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    show_non_party_members = ini->GetBoolValue(Name(), VAR_NAME(show_non_party_members), show_non_party_members);
+    LOAD_BOOL(hide_in_outpost);
+    LOAD_BOOL(show_non_party_members);
 
-    snap_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
-    user_offset = ini->GetLongValue(Name(), VAR_NAME(user_offset), user_offset);
-    row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), row_height);
-    history_flip_direction = ini->GetBoolValue(Name(), VAR_NAME(history_flip_direction), history_flip_direction);
+    LOAD_BOOL(snap_to_party_window);
+    LOAD_UINT(user_offset);
+    LOAD_UINT(row_height);
+    LOAD_BOOL(history_flip_direction);
 
-    cast_indicator_threshold = ini->GetLongValue(Name(), VAR_NAME(cast_indicator_threshold), cast_indicator_threshold);
-    cast_indicator_height = ini->GetLongValue(Name(), VAR_NAME(cast_indicator_height), cast_indicator_height);
-    cast_indicator_color = Colors::Load(ini, Name(), VAR_NAME(cast_indicator_color), cast_indicator_color);
+    LOAD_UINT(cast_indicator_threshold);
+    LOAD_UINT(cast_indicator_height);
+    LOAD_COLOR(cast_indicator_color);
 
-    status_border_thickness = ini->GetLongValue(Name(), VAR_NAME(status_border_thickness), status_border_thickness);
-    status_color_completed = Colors::Load(ini, Name(), VAR_NAME(status_color_completed), status_color_completed);
-    status_color_casting = Colors::Load(ini, Name(), VAR_NAME(status_color_casting), status_color_casting);
-    status_color_cancelled = Colors::Load(ini, Name(), VAR_NAME(status_color_cancelled), status_color_cancelled);
-    status_color_interrupted = Colors::Load(ini, Name(), VAR_NAME(status_color_interrupted), status_color_interrupted);
+    LOAD_UINT(status_border_thickness);
+    LOAD_COLOR(status_color_completed);
+    LOAD_COLOR(status_color_casting);
+    LOAD_COLOR(status_color_cancelled);
+    LOAD_COLOR(status_color_interrupted);
 
-    history_length = ini->GetLongValue(Name(), VAR_NAME(history_length), history_length);
-    history_timeout = ini->GetLongValue(Name(), VAR_NAME(history_timeout), history_timeout);
+    LOAD_UINT(history_length);
+    LOAD_UINT(history_timeout);
 }
 
 void SkillMonitorWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(show_non_party_members), show_non_party_members);
+    SAVE_BOOL(hide_in_outpost);
+    SAVE_BOOL(show_non_party_members);
 
-    ini->SetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
-    ini->SetLongValue(Name(), VAR_NAME(user_offset), user_offset);
-    ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
-    ini->SetBoolValue(Name(), VAR_NAME(history_flip_direction), history_flip_direction);
+    SAVE_BOOL(snap_to_party_window);
+    SAVE_UINT(user_offset);
+    SAVE_UINT(row_height);
+    SAVE_BOOL(history_flip_direction);
 
-    ini->SetLongValue(Name(), VAR_NAME(cast_indicator_threshold), cast_indicator_threshold);
-    ini->SetLongValue(Name(), VAR_NAME(cast_indicator_height), cast_indicator_height);
-    Colors::Save(ini, Name(), VAR_NAME(cast_indicator_color), cast_indicator_color);
+    SAVE_UINT(cast_indicator_threshold);
+    SAVE_UINT(cast_indicator_height);
+    SAVE_COLOR(cast_indicator_color);
 
-    ini->SetLongValue(Name(), VAR_NAME(status_border_thickness), status_border_thickness);
-    Colors::Save(ini, Name(), VAR_NAME(status_color_completed), status_color_completed);
-    Colors::Save(ini, Name(), VAR_NAME(status_color_casting), status_color_casting);
-    Colors::Save(ini, Name(), VAR_NAME(status_color_cancelled), status_color_cancelled);
-    Colors::Save(ini, Name(), VAR_NAME(status_color_interrupted), status_color_interrupted);
+    SAVE_UINT(status_border_thickness);
+    SAVE_COLOR(status_color_completed);
+    SAVE_COLOR(status_color_casting);
+    SAVE_COLOR(status_color_cancelled);
+    SAVE_COLOR(status_color_interrupted);
 
-    ini->SetLongValue(Name(), VAR_NAME(history_length), history_length);
-    ini->SetLongValue(Name(), VAR_NAME(history_timeout), history_timeout);
+    SAVE_UINT(history_length);
+    SAVE_UINT(history_timeout);
 }
 
 void SkillMonitorWidget::DrawSettingsInternal()

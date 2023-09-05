@@ -1541,80 +1541,79 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
 
-    disable_camera_smoothing = ini->GetBoolValue(Name(), VAR_NAME(disable_camera_smoothing), disable_camera_smoothing);
-    tick_is_toggle = ini->GetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
+    LOAD_BOOL(disable_camera_smoothing);
+    LOAD_BOOL(tick_is_toggle);
 
-    shorthand_item_ping = ini->GetBoolValue(Name(), VAR_NAME(shorthand_item_ping), shorthand_item_ping);
-    move_item_on_ctrl_click = ini->GetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
-    move_item_to_current_storage_pane = ini->GetBoolValue(Name(), VAR_NAME(move_item_to_current_storage_pane), move_item_to_current_storage_pane);
-    move_materials_to_current_storage_pane = ini->GetBoolValue(Name(), VAR_NAME(move_materials_to_current_storage_pane), move_materials_to_current_storage_pane);
+    LOAD_BOOL(shorthand_item_ping);
+    LOAD_BOOL(move_item_on_ctrl_click);
+    LOAD_BOOL(move_item_to_current_storage_pane);
+    LOAD_BOOL(move_materials_to_current_storage_pane);
 
-    flash_window_on_party_invite =
-        ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
-    flash_window_on_zoning = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), flash_window_on_zoning);
-    flash_window_on_cinematic = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_cinematic), flash_window_on_cinematic);
-    focus_window_on_launch = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_launch), focus_window_on_launch);
-    focus_window_on_zoning = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_zoning), focus_window_on_zoning);
-    flash_window_on_trade = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_trade), flash_window_on_trade);
-    focus_window_on_trade = ini->GetBoolValue(Name(), VAR_NAME(focus_window_on_trade), focus_window_on_trade);
-    flash_window_on_name_ping = ini->GetBoolValue(Name(), VAR_NAME(flash_window_on_name_ping), flash_window_on_name_ping);
-    set_window_title_as_charname = ini->GetBoolValue(Name(), VAR_NAME(set_window_title_as_charname), set_window_title_as_charname);
+    LOAD_BOOL(flash_window_on_party_invite);
+    LOAD_BOOL(flash_window_on_zoning);
+    LOAD_BOOL(flash_window_on_cinematic);
+    LOAD_BOOL(focus_window_on_launch);
+    LOAD_BOOL(focus_window_on_zoning);
+    LOAD_BOOL(flash_window_on_trade);
+    LOAD_BOOL(focus_window_on_trade);
+    LOAD_BOOL(flash_window_on_name_ping);
+    LOAD_BOOL(set_window_title_as_charname);
 
-    auto_set_away = ini->GetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
-    auto_set_away_delay = ini->GetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
-    auto_set_online = ini->GetBoolValue(Name(), VAR_NAME(auto_set_online), auto_set_online);
-    auto_return_on_defeat = ini->GetBoolValue(Name(), VAR_NAME(auto_return_on_defeat), auto_return_on_defeat);
+    LOAD_BOOL(auto_set_away);
+    LOAD_UINT(auto_set_away_delay);
+    LOAD_BOOL(auto_set_online);
+    LOAD_BOOL(auto_return_on_defeat);
 
-    remove_min_skill_warmup_duration = ini->GetBoolValue(Name(), VAR_NAME(remove_min_for_cast_time_popup), remove_min_skill_warmup_duration);
-    show_unlearned_skill = ini->GetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
-    auto_skip_cinematic = ini->GetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
+    LOAD_BOOL(remove_min_skill_warmup_duration);
+    LOAD_BOOL(show_unlearned_skill);
+    LOAD_BOOL(auto_skip_cinematic);
 
-    faction_warn_percent = ini->GetBoolValue(Name(), VAR_NAME(faction_warn_percent), faction_warn_percent);
-    faction_warn_percent_amount = ini->GetLongValue(Name(), VAR_NAME(faction_warn_percent_amount), faction_warn_percent_amount);
-    stop_screen_shake = ini->GetBoolValue(Name(), VAR_NAME(stop_screen_shake), stop_screen_shake);
+    LOAD_BOOL(faction_warn_percent);
+    LOAD_UINT(faction_warn_percent_amount);
+    LOAD_BOOL(stop_screen_shake);
 
-    disable_gold_selling_confirmation = ini->GetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), disable_gold_selling_confirmation);
-    notify_when_friends_online = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_online), notify_when_friends_online);
-    notify_when_friends_offline = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_offline), notify_when_friends_offline);
-    notify_when_friends_join_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_join_outpost), notify_when_friends_join_outpost);
-    notify_when_friends_leave_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_friends_leave_outpost), notify_when_friends_leave_outpost);
+    LOAD_BOOL(disable_gold_selling_confirmation);
+    LOAD_BOOL(notify_when_friends_online);
+    LOAD_BOOL(notify_when_friends_offline);
+    LOAD_BOOL(notify_when_friends_join_outpost);
+    LOAD_BOOL(notify_when_friends_leave_outpost);
 
-    notify_when_party_member_leaves = ini->GetBoolValue(Name(), VAR_NAME(notify_when_party_member_leaves), notify_when_party_member_leaves);
-    notify_when_party_member_joins = ini->GetBoolValue(Name(), VAR_NAME(notify_when_party_member_joins), notify_when_party_member_joins);
-    notify_when_players_join_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_players_join_outpost), notify_when_players_join_outpost);
-    notify_when_players_leave_outpost = ini->GetBoolValue(Name(), VAR_NAME(notify_when_players_leave_outpost), notify_when_players_leave_outpost);
+    LOAD_BOOL(notify_when_party_member_leaves);
+    LOAD_BOOL(notify_when_party_member_joins);
+    LOAD_BOOL(notify_when_players_join_outpost);
+    LOAD_BOOL(notify_when_players_leave_outpost);
 
-    auto_age_on_vanquish = ini->GetBoolValue(Name(), VAR_NAME(auto_age_on_vanquish), auto_age_on_vanquish);
-    hide_dungeon_chest_popup = ini->GetBoolValue(Name(), VAR_NAME(hide_dungeon_chest_popup), hide_dungeon_chest_popup);
-    auto_age2_on_age = ini->GetBoolValue(Name(), VAR_NAME(auto_age2_on_age), auto_age2_on_age);
-    auto_accept_invites = ini->GetBoolValue(Name(), VAR_NAME(auto_accept_invites), auto_accept_invites);
-    auto_accept_join_requests = ini->GetBoolValue(Name(), VAR_NAME(auto_accept_join_requests), auto_accept_join_requests);
+    LOAD_BOOL(auto_age_on_vanquish);
+    LOAD_BOOL(hide_dungeon_chest_popup);
+    LOAD_BOOL(auto_age2_on_age);
+    LOAD_BOOL(auto_accept_invites);
+    LOAD_BOOL(auto_accept_join_requests);
 
-    skip_entering_name_for_faction_donate = ini->GetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
-    improve_move_to_cast = ini->GetBoolValue(Name(), VAR_NAME(improve_move_to_cast), improve_move_to_cast);
-    drop_ua_on_cast = ini->GetBoolValue(Name(), VAR_NAME(drop_ua_on_cast), drop_ua_on_cast);
+    LOAD_BOOL(skip_entering_name_for_faction_donate);
+    LOAD_BOOL(improve_move_to_cast);
+    LOAD_BOOL(drop_ua_on_cast);
 
-    lazy_chest_looting = ini->GetBoolValue(Name(), VAR_NAME(lazy_chest_looting), lazy_chest_looting);
+    LOAD_BOOL(lazy_chest_looting);
 
-    block_transmogrify_effect = ini->GetBoolValue(Name(), VAR_NAME(block_transmogrify_effect), block_transmogrify_effect);
-    block_sugar_rush_effect = ini->GetBoolValue(Name(), VAR_NAME(block_sugar_rush_effect), block_sugar_rush_effect);
-    block_snowman_summoner = ini->GetBoolValue(Name(), VAR_NAME(block_snowman_summoner), block_snowman_summoner);
-    block_party_poppers = ini->GetBoolValue(Name(), VAR_NAME(block_party_poppers), block_party_poppers);
-    block_bottle_rockets = ini->GetBoolValue(Name(), VAR_NAME(block_bottle_rockets), block_bottle_rockets);
-    block_ghostinthebox_effect = ini->GetBoolValue(Name(), VAR_NAME(block_ghostinthebox_effect), block_ghostinthebox_effect);
-    block_sparkly_drops_effect = ini->GetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
-    limit_signets_of_capture = ini->GetBoolValue(Name(), VAR_NAME(limit_signets_of_capture), limit_signets_of_capture);
-    auto_open_locked_chest = ini->GetBoolValue(Name(), VAR_NAME(auto_open_locked_chest), auto_open_locked_chest);
-    auto_open_locked_chest_with_key = ini->GetBoolValue(Name(), VAR_NAME(auto_open_locked_chest), auto_open_locked_chest_with_key);
-    block_faction_gain = ini->GetBoolValue(Name(), VAR_NAME(block_faction_gain), block_faction_gain);
-    block_experience_gain = ini->GetBoolValue(Name(), VAR_NAME(block_experience_gain), block_experience_gain);
-    block_zero_experience_gain = ini->GetBoolValue(Name(), VAR_NAME(block_zero_experience_gain), block_zero_experience_gain);
+    LOAD_BOOL(block_transmogrify_effect);
+    LOAD_BOOL(block_sugar_rush_effect);
+    LOAD_BOOL(block_snowman_summoner);
+    LOAD_BOOL(block_party_poppers);
+    LOAD_BOOL(block_bottle_rockets);
+    LOAD_BOOL(block_ghostinthebox_effect);
+    LOAD_BOOL(block_sparkly_drops_effect);
+    LOAD_BOOL(limit_signets_of_capture);
+    LOAD_BOOL(auto_open_locked_chest);
+    LOAD_BOOL(auto_open_locked_chest_with_key);
+    LOAD_BOOL(block_faction_gain);
+    LOAD_BOOL(block_experience_gain);
+    LOAD_BOOL(block_zero_experience_gain);
 
-    disable_item_descriptions_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(disable_item_descriptions_in_outpost), disable_item_descriptions_in_outpost);
-    disable_item_descriptions_in_explorable = ini->GetBoolValue(Name(), VAR_NAME(disable_item_descriptions_in_explorable), disable_item_descriptions_in_explorable);
-    hide_email_address = ini->GetBoolValue(Name(), VAR_NAME(hide_email_address), hide_email_address);
-    disable_skill_descriptions_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(disable_skill_descriptions_in_outpost), disable_skill_descriptions_in_outpost);
-    disable_skill_descriptions_in_explorable = ini->GetBoolValue(Name(), VAR_NAME(disable_skill_descriptions_in_explorable), disable_skill_descriptions_in_explorable);
+    LOAD_BOOL(disable_item_descriptions_in_outpost);
+    LOAD_BOOL(disable_item_descriptions_in_explorable);
+    LOAD_BOOL(hide_email_address);
+    LOAD_BOOL(disable_skill_descriptions_in_outpost);
+    LOAD_BOOL(disable_skill_descriptions_in_explorable);
 
     LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1625,15 +1624,15 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LoadChannelColor(ini, Name(), "emotes", GW::Chat::Channel::CHANNEL_EMOTE);
     LoadChannelColor(ini, Name(), "other", GW::Chat::Channel::CHANNEL_GLOBAL);
 
-    nametag_color_enemy = Colors::Load(ini, Name(), VAR_NAME(nametag_color_enemy), nametag_color_enemy);
-    nametag_color_gadget = Colors::Load(ini, Name(), VAR_NAME(nametag_color_gadget), nametag_color_gadget);
-    nametag_color_item = Colors::Load(ini, Name(), VAR_NAME(nametag_color_item), nametag_color_item);
-    nametag_color_npc = Colors::Load(ini, Name(), VAR_NAME(nametag_color_npc), nametag_color_npc);
-    nametag_color_player_in_party = Colors::Load(ini, Name(), VAR_NAME(nametag_color_player_in_party), nametag_color_player_in_party);
-    nametag_color_player_other = Colors::Load(ini, Name(), VAR_NAME(nametag_color_player_other), nametag_color_player_other);
-    nametag_color_player_self = Colors::Load(ini, Name(), VAR_NAME(nametag_color_player_self), nametag_color_player_self);
+    LOAD_COLOR(nametag_color_enemy);
+    LOAD_COLOR(nametag_color_gadget);
+    LOAD_COLOR(nametag_color_item);
+    LOAD_COLOR(nametag_color_npc);
+    LOAD_COLOR(nametag_color_player_in_party);
+    LOAD_COLOR(nametag_color_player_other);
+    LOAD_COLOR(nametag_color_player_self);
 
-    block_enter_area_message = ini->GetBoolValue(Name(), VAR_NAME(block_enter_area_message), block_enter_area_message);
+    LOAD_BOOL(block_enter_area_message);
 
     LOAD_BOOL(keep_current_quest_when_new_quest_added);
 
@@ -1655,21 +1654,23 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
 void GameSettings::RegisterSettingsContent()
 {
     ToolboxModule::RegisterSettingsContent();
-    ToolboxModule::RegisterSettingsContent("Inventory Settings", ICON_FA_BOXES,
-                                           [this](const std::string&, const bool is_showing) {
-                                               if (!is_showing) {
-                                                   return;
-                                               }
-                                               DrawInventorySettings();
-                                           }, 0.9f);
+    ToolboxModule::RegisterSettingsContent(
+        "Inventory Settings", ICON_FA_BOXES,
+        [this](const std::string&, const bool is_showing) {
+            if (!is_showing) {
+                return;
+            }
+            DrawInventorySettings();
+        }, 0.9f);
 
-    ToolboxModule::RegisterSettingsContent("Party Settings", ICON_FA_USERS,
-                                           [this](const std::string&, const bool is_showing) {
-                                               if (!is_showing) {
-                                                   return;
-                                               }
-                                               DrawPartySettings();
-                                           }, 0.9f);
+    ToolboxModule::RegisterSettingsContent(
+        "Party Settings", ICON_FA_USERS,
+        [this](const std::string&, const bool is_showing) {
+            if (!is_showing) {
+                return;
+            }
+            DrawPartySettings();
+        }, 0.9f);
 
     ToolboxModule::RegisterSettingsContent(
         "Notifications", ICON_FA_BULLHORN,
@@ -1698,83 +1699,83 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
 
-    ini->SetBoolValue(Name(), VAR_NAME(tick_is_toggle), tick_is_toggle);
+    SAVE_BOOL(tick_is_toggle);
 
-    ini->SetBoolValue(Name(), VAR_NAME(disable_camera_smoothing), disable_camera_smoothing);
-    ini->SetBoolValue(Name(), VAR_NAME(auto_return_on_defeat), auto_return_on_defeat);
-    ini->SetBoolValue(Name(), VAR_NAME(shorthand_item_ping), shorthand_item_ping);
+    SAVE_BOOL(disable_camera_smoothing);
+    SAVE_BOOL(auto_return_on_defeat);
+    SAVE_BOOL(shorthand_item_ping);
 
-    ini->SetBoolValue(Name(), VAR_NAME(move_item_on_ctrl_click), move_item_on_ctrl_click);
-    ini->SetBoolValue(Name(), VAR_NAME(move_item_to_current_storage_pane), move_item_to_current_storage_pane);
-    ini->SetBoolValue(Name(), VAR_NAME(move_materials_to_current_storage_pane), move_materials_to_current_storage_pane);
-    ini->SetBoolValue(Name(), VAR_NAME(stop_screen_shake), stop_screen_shake);
+    SAVE_BOOL(move_item_on_ctrl_click);
+    SAVE_BOOL(move_item_to_current_storage_pane);
+    SAVE_BOOL(move_materials_to_current_storage_pane);
+    SAVE_BOOL(stop_screen_shake);
 
-    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_party_invite), flash_window_on_party_invite);
-    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_zoning), flash_window_on_zoning);
-    ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_launch), focus_window_on_launch);
-    ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_zoning), focus_window_on_zoning);
-    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_cinematic), flash_window_on_cinematic);
-    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_trade), flash_window_on_trade);
-    ini->SetBoolValue(Name(), VAR_NAME(focus_window_on_trade), focus_window_on_trade);
-    ini->SetBoolValue(Name(), VAR_NAME(flash_window_on_name_ping), flash_window_on_name_ping);
-    ini->SetBoolValue(Name(), VAR_NAME(set_window_title_as_charname), set_window_title_as_charname);
+    SAVE_BOOL(flash_window_on_party_invite);
+    SAVE_BOOL(flash_window_on_zoning);
+    SAVE_BOOL(focus_window_on_launch);
+    SAVE_BOOL(focus_window_on_zoning);
+    SAVE_BOOL(flash_window_on_cinematic);
+    SAVE_BOOL(flash_window_on_trade);
+    SAVE_BOOL(focus_window_on_trade);
+    SAVE_BOOL(flash_window_on_name_ping);
+    SAVE_BOOL(set_window_title_as_charname);
 
-    ini->SetBoolValue(Name(), VAR_NAME(auto_set_away), auto_set_away);
-    ini->SetLongValue(Name(), VAR_NAME(auto_set_away_delay), auto_set_away_delay);
-    ini->SetBoolValue(Name(), VAR_NAME(auto_set_online), auto_set_online);
+    SAVE_BOOL(auto_set_away);
+    SAVE_UINT(auto_set_away_delay);
+    SAVE_BOOL(auto_set_online);
 
-    ini->SetBoolValue(Name(), VAR_NAME(remove_min_for_cast_time_popup), remove_min_skill_warmup_duration);
-    ini->SetBoolValue(Name(), VAR_NAME(show_unlearned_skill), show_unlearned_skill);
-    ini->SetBoolValue(Name(), VAR_NAME(auto_skip_cinematic), auto_skip_cinematic);
+    SAVE_BOOL(remove_min_skill_warmup_duration);
+    SAVE_BOOL(show_unlearned_skill);
+    SAVE_BOOL(auto_skip_cinematic);
 
-    ini->SetBoolValue(Name(), VAR_NAME(faction_warn_percent), faction_warn_percent);
-    ini->SetLongValue(Name(), VAR_NAME(faction_warn_percent_amount), faction_warn_percent_amount);
-    ini->SetBoolValue(Name(), VAR_NAME(disable_gold_selling_confirmation), disable_gold_selling_confirmation);
+    SAVE_BOOL(faction_warn_percent);
+    SAVE_UINT(faction_warn_percent_amount);
+    SAVE_BOOL(disable_gold_selling_confirmation);
 
-    ini->SetBoolValue(Name(), VAR_NAME(notify_when_friends_online), notify_when_friends_online);
-    ini->SetBoolValue(Name(), VAR_NAME(notify_when_friends_offline), notify_when_friends_offline);
-    ini->SetBoolValue(Name(), VAR_NAME(notify_when_friends_join_outpost), notify_when_friends_join_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(notify_when_friends_leave_outpost), notify_when_friends_leave_outpost);
+    SAVE_BOOL(notify_when_friends_online);
+    SAVE_BOOL(notify_when_friends_offline);
+    SAVE_BOOL(notify_when_friends_join_outpost);
+    SAVE_BOOL(notify_when_friends_leave_outpost);
 
-    ini->SetBoolValue(Name(), VAR_NAME(notify_when_party_member_leaves), notify_when_party_member_leaves);
-    ini->SetBoolValue(Name(), VAR_NAME(notify_when_party_member_joins), notify_when_party_member_joins);
-    ini->SetBoolValue(Name(), VAR_NAME(notify_when_players_join_outpost), notify_when_players_join_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(notify_when_players_leave_outpost), notify_when_players_leave_outpost);
+    SAVE_BOOL(notify_when_party_member_leaves);
+    SAVE_BOOL(notify_when_party_member_joins);
+    SAVE_BOOL(notify_when_players_join_outpost);
+    SAVE_BOOL(notify_when_players_leave_outpost);
 
-    ini->SetBoolValue(Name(), VAR_NAME(auto_age_on_vanquish), auto_age_on_vanquish);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_dungeon_chest_popup), hide_dungeon_chest_popup);
-    ini->SetBoolValue(Name(), VAR_NAME(auto_age2_on_age), auto_age2_on_age);
-    ini->SetBoolValue(Name(), VAR_NAME(auto_accept_invites), auto_accept_invites);
-    ini->SetBoolValue(Name(), VAR_NAME(auto_accept_join_requests), auto_accept_join_requests);
-    ini->SetBoolValue(Name(), VAR_NAME(skip_entering_name_for_faction_donate), skip_entering_name_for_faction_donate);
-    ini->SetBoolValue(Name(), VAR_NAME(improve_move_to_cast), improve_move_to_cast);
-    ini->SetBoolValue(Name(), VAR_NAME(drop_ua_on_cast), drop_ua_on_cast);
+    SAVE_BOOL(auto_age_on_vanquish);
+    SAVE_BOOL(hide_dungeon_chest_popup);
+    SAVE_BOOL(auto_age2_on_age);
+    SAVE_BOOL(auto_accept_invites);
+    SAVE_BOOL(auto_accept_join_requests);
+    SAVE_BOOL(skip_entering_name_for_faction_donate);
+    SAVE_BOOL(improve_move_to_cast);
+    SAVE_BOOL(drop_ua_on_cast);
 
-    ini->SetBoolValue(Name(), VAR_NAME(lazy_chest_looting), lazy_chest_looting);
+    SAVE_BOOL(lazy_chest_looting);
 
-    ini->SetBoolValue(Name(), VAR_NAME(block_transmogrify_effect), block_transmogrify_effect);
-    ini->SetBoolValue(Name(), VAR_NAME(block_sugar_rush_effect), block_sugar_rush_effect);
-    ini->SetBoolValue(Name(), VAR_NAME(block_snowman_summoner), block_snowman_summoner);
-    ini->SetBoolValue(Name(), VAR_NAME(block_party_poppers), block_party_poppers);
-    ini->SetBoolValue(Name(), VAR_NAME(block_bottle_rockets), block_bottle_rockets);
-    ini->SetBoolValue(Name(), VAR_NAME(block_ghostinthebox_effect), block_ghostinthebox_effect);
-    ini->SetBoolValue(Name(), VAR_NAME(block_sparkly_drops_effect), block_sparkly_drops_effect);
-    ini->SetBoolValue(Name(), VAR_NAME(limit_signets_of_capture), limit_signets_of_capture);
-    ini->SetBoolValue(Name(), VAR_NAME(auto_open_locked_chest), auto_open_locked_chest);
-    ini->SetBoolValue(Name(), VAR_NAME(auto_open_locked_chest_with_key), auto_open_locked_chest_with_key);
+    SAVE_BOOL(block_transmogrify_effect);
+    SAVE_BOOL(block_sugar_rush_effect);
+    SAVE_BOOL(block_snowman_summoner);
+    SAVE_BOOL(block_party_poppers);
+    SAVE_BOOL(block_bottle_rockets);
+    SAVE_BOOL(block_ghostinthebox_effect);
+    SAVE_BOOL(block_sparkly_drops_effect);
+    SAVE_BOOL(limit_signets_of_capture);
+    SAVE_BOOL(auto_open_locked_chest);
+    SAVE_BOOL(auto_open_locked_chest_with_key);
 
-    ini->SetBoolValue(Name(), VAR_NAME(block_faction_gain), block_faction_gain);
-    ini->SetBoolValue(Name(), VAR_NAME(block_experience_gain), block_experience_gain);
-    ini->SetBoolValue(Name(), VAR_NAME(block_zero_experience_gain), block_zero_experience_gain);
-    ini->SetBoolValue(Name(), VAR_NAME(disable_item_descriptions_in_outpost), disable_item_descriptions_in_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(disable_item_descriptions_in_explorable), disable_item_descriptions_in_explorable);
+    SAVE_BOOL(block_faction_gain);
+    SAVE_BOOL(block_experience_gain);
+    SAVE_BOOL(block_zero_experience_gain);
+    SAVE_BOOL(disable_item_descriptions_in_outpost);
+    SAVE_BOOL(disable_item_descriptions_in_explorable);
 
-    ini->SetBoolValue(Name(), VAR_NAME(hide_email_address), hide_email_address);
+    SAVE_BOOL(hide_email_address);
 
-    ini->SetBoolValue(Name(), VAR_NAME(disable_skill_descriptions_in_outpost), disable_skill_descriptions_in_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(disable_skill_descriptions_in_explorable), disable_skill_descriptions_in_explorable);
+    SAVE_BOOL(disable_skill_descriptions_in_outpost);
+    SAVE_BOOL(disable_skill_descriptions_in_explorable);
 
-    ini->SetBoolValue(Name(), VAR_NAME(block_enter_area_message), block_enter_area_message);
+    SAVE_BOOL(block_enter_area_message);
 
     SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1785,13 +1786,13 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     SaveChannelColor(ini, Name(), "emotes", GW::Chat::Channel::CHANNEL_EMOTE);
     SaveChannelColor(ini, Name(), "other", GW::Chat::Channel::CHANNEL_GLOBAL);
 
-    Colors::Save(ini, Name(), VAR_NAME(nametag_color_enemy), nametag_color_enemy);
-    Colors::Save(ini, Name(), VAR_NAME(nametag_color_gadget), nametag_color_gadget);
-    Colors::Save(ini, Name(), VAR_NAME(nametag_color_item), nametag_color_item);
-    Colors::Save(ini, Name(), VAR_NAME(nametag_color_npc), nametag_color_npc);
-    Colors::Save(ini, Name(), VAR_NAME(nametag_color_player_in_party), nametag_color_player_in_party);
-    Colors::Save(ini, Name(), VAR_NAME(nametag_color_player_other), nametag_color_player_other);
-    Colors::Save(ini, Name(), VAR_NAME(nametag_color_player_self), nametag_color_player_self);
+    SAVE_COLOR(nametag_color_enemy);
+    SAVE_COLOR(nametag_color_gadget);
+    SAVE_COLOR(nametag_color_item);
+    SAVE_COLOR(nametag_color_npc);
+    SAVE_COLOR(nametag_color_player_in_party);
+    SAVE_COLOR(nametag_color_player_other);
+    SAVE_COLOR(nametag_color_player_self);
 
     SAVE_BOOL(keep_current_quest_when_new_quest_added);
 

@@ -86,7 +86,7 @@ private:
     Color color_damage = 0;
     Color color_recent = 0;
     float width = 0.f;
-    bool bars_left = false;
+    bool bars_left = true;
     int recent_max_time = 0;
     int row_height = 0;
     bool hide_in_outpost = false;

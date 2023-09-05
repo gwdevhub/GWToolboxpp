@@ -954,9 +954,9 @@ void InventoryManager::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(wiki_link_on_context_menu);
     SAVE_BOOL(hide_unsellable_items);
     SAVE_BOOL(change_secondary_for_tome);
+    SAVE_BOOL(right_click_context_menu_in_outpost);
+    SAVE_BOOL(right_click_context_menu_in_explorable);
 
-    ini->SetBoolValue(Name(), VAR_NAME(right_click_context_menu_in_explorable), right_click_context_menu_in_explorable);
-    ini->SetBoolValue(Name(), VAR_NAME(right_click_context_menu_in_outpost), right_click_context_menu_in_outpost);
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_backpack), bags_to_salvage_from[GW::Constants::Bag::Backpack]);
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_bag_1), bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
@@ -974,13 +974,13 @@ void InventoryManager::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(wiki_link_on_context_menu);
     LOAD_BOOL(hide_unsellable_items);
     LOAD_BOOL(change_secondary_for_tome);
+    LOAD_BOOL(right_click_context_menu_in_outpost);
+    LOAD_BOOL(right_click_context_menu_in_explorable);
 
     bags_to_salvage_from[GW::Constants::Bag::Backpack] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_backpack), bags_to_salvage_from[GW::Constants::Bag::Backpack]);
     bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
     bags_to_salvage_from[GW::Constants::Bag::Bag_1] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_1), bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
     bags_to_salvage_from[GW::Constants::Bag::Bag_2] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
-    right_click_context_menu_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(right_click_context_menu_in_outpost), right_click_context_menu_in_outpost);
-    right_click_context_menu_in_explorable = ini->GetBoolValue(Name(), VAR_NAME(right_click_context_menu_in_explorable), right_click_context_menu_in_explorable);
 
     hide_from_merchant_items = GuiUtils::IniToMap<std::map<uint32_t, std::string>>(ini, Name(), VAR_NAME(hide_from_merchant_items));
 }

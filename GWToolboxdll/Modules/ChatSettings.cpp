@@ -506,7 +506,7 @@ void ChatSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(openlinks);
     SAVE_BOOL(auto_url);
 
-    Colors::Save(ini, Name(), VAR_NAME(timestamps_color), timestamps_color);
+    SAVE_COLOR(timestamps_color);
 }
 
 bool ChatSettings::WndProc(const UINT Message, const WPARAM wParam, LPARAM)

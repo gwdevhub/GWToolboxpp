@@ -564,21 +564,21 @@ void DiscordModule::DrawSettingsInternal()
 void DiscordModule::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(discord_enabled), discord_enabled);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_activity_when_offline), hide_activity_when_offline);
-    ini->SetBoolValue(Name(), VAR_NAME(show_location_info), show_location_info);
-    ini->SetBoolValue(Name(), VAR_NAME(show_character_info), show_character_info);
-    ini->SetBoolValue(Name(), VAR_NAME(show_party_info), show_party_info);
+    SAVE_BOOL(discord_enabled);
+    SAVE_BOOL(hide_activity_when_offline);
+    SAVE_BOOL(show_location_info);
+    SAVE_BOOL(show_character_info);
+    SAVE_BOOL(show_party_info);
 }
 
 void DiscordModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
-    discord_enabled = ini->GetBoolValue(Name(), VAR_NAME(discord_enabled), discord_enabled);
-    hide_activity_when_offline = ini->GetBoolValue(Name(), VAR_NAME(hide_activity_when_offline), hide_activity_when_offline);
-    show_location_info = ini->GetBoolValue(Name(), VAR_NAME(show_location_info), show_location_info);
-    show_character_info = ini->GetBoolValue(Name(), VAR_NAME(show_character_info), show_character_info);
-    show_party_info = ini->GetBoolValue(Name(), VAR_NAME(show_party_info), show_party_info);
+    LOAD_BOOL(discord_enabled);
+    LOAD_BOOL(hide_activity_when_offline);
+    LOAD_BOOL(show_location_info);
+    LOAD_BOOL(show_character_info);
+    LOAD_BOOL(show_party_info);
 }
 
 void DiscordModule::Update(const float)

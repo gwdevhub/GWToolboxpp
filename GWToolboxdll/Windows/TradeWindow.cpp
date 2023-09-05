@@ -675,11 +675,11 @@ void TradeWindow::DrawSettingsInternal()
 void TradeWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    print_game_chat = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
-    print_game_chat_asc = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat_asc), print_game_chat_asc);
-    filter_alerts = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
-    filter_local_trade = ini->GetBoolValue(Name(), VAR_NAME(filter_local_trade), filter_local_trade);
-    is_kamadan_chat = ini->GetBoolValue(Name(), VAR_NAME(is_kamadan_chat), is_kamadan_chat);
+    LOAD_BOOL(print_game_chat);
+    LOAD_BOOL(print_game_chat_asc);
+    LOAD_BOOL(filter_alerts);
+    LOAD_BOOL(filter_local_trade);
+    LOAD_BOOL(is_kamadan_chat);
 
     std::ifstream alert_file;
     alert_file.open(Resources::GetSettingFile(L"AlertKeywords.txt"));
@@ -696,11 +696,11 @@ void TradeWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
 
-    ini->SetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
-    ini->SetBoolValue(Name(), VAR_NAME(print_game_chat_asc), print_game_chat_asc);
-    ini->SetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
-    ini->SetBoolValue(Name(), VAR_NAME(filter_local_trade), filter_local_trade);
-    ini->SetBoolValue(Name(), VAR_NAME(is_kamadan_chat), is_kamadan_chat);
+    SAVE_BOOL(print_game_chat);
+    SAVE_BOOL(print_game_chat_asc);
+    SAVE_BOOL(filter_alerts);
+    SAVE_BOOL(filter_local_trade);
+    SAVE_BOOL(is_kamadan_chat);
 
     if (alertfile_dirty || GWToolbox::SettingsFolderChanged()) {
         std::ofstream bycontent_file;

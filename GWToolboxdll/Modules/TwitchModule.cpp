@@ -376,18 +376,18 @@ void TwitchModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
 
-    irc_alias = ini->GetValue(Name(), VAR_NAME(irc_alias), irc_alias.c_str());
-    irc_server = ini->GetValue(Name(), VAR_NAME(irc_server), irc_server.c_str());
-    irc_username = ini->GetValue(Name(), VAR_NAME(irc_username), irc_username.c_str());
-    irc_password = ini->GetValue(Name(), VAR_NAME(irc_password), irc_password.c_str());
-    irc_channel = ini->GetValue(Name(), VAR_NAME(irc_channel), irc_channel.c_str());
+    LOAD_STRING(irc_alias);
+    LOAD_STRING(irc_server);
+    LOAD_STRING(irc_username);
+    LOAD_STRING(irc_password);
+    LOAD_STRING(irc_channel);
 
-    twitch_enabled = ini->GetBoolValue(Name(), VAR_NAME(twitch_enabled), twitch_enabled);
-    show_messages = ini->GetBoolValue(Name(), VAR_NAME(show_messages), show_messages);
-    notify_on_user_join = ini->GetBoolValue(Name(), VAR_NAME(notify_on_user_join), notify_on_user_join);
-    notify_on_user_leave = ini->GetBoolValue(Name(), VAR_NAME(notify_on_user_leave), notify_on_user_leave);
+    LOAD_BOOL(twitch_enabled);
+    LOAD_BOOL(show_messages);
+    LOAD_BOOL(notify_on_user_join);
+    LOAD_BOOL(notify_on_user_leave);
 
-    irc_chat_color = Colors::Load(ini, Name(), VAR_NAME(irc_chat_color), irc_chat_color);
+    LOAD_COLOR(irc_chat_color);
     show_irc_password = strcmp(irc_password.c_str(), "oauth:<your_token_here>") == 0;
 
     SetSenderColor(GW::Chat::Channel::CHANNEL_GWCA1, irc_chat_color);
@@ -399,16 +399,16 @@ void TwitchModule::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
 
-    ini->SetValue(Name(), VAR_NAME(irc_alias), irc_alias.c_str());
-    ini->SetValue(Name(), VAR_NAME(irc_server), irc_server.c_str());
-    ini->SetValue(Name(), VAR_NAME(irc_username), irc_username.c_str());
-    ini->SetValue(Name(), VAR_NAME(irc_password), irc_password.c_str());
-    ini->SetValue(Name(), VAR_NAME(irc_channel), irc_channel.c_str());
+    SAVE_STRING(irc_alias);
+    SAVE_STRING(irc_server);
+    SAVE_STRING(irc_username);
+    SAVE_STRING(irc_password);
+    SAVE_STRING(irc_channel);
 
-    ini->SetBoolValue(Name(), VAR_NAME(twitch_enabled), twitch_enabled);
-    ini->SetBoolValue(Name(), VAR_NAME(show_messages), show_messages);
-    ini->SetBoolValue(Name(), VAR_NAME(notify_on_user_join), notify_on_user_join);
-    ini->SetBoolValue(Name(), VAR_NAME(notify_on_user_leave), notify_on_user_leave);
+    SAVE_BOOL(twitch_enabled);
+    SAVE_BOOL(show_messages);
+    SAVE_BOOL(notify_on_user_join);
+    SAVE_BOOL(notify_on_user_leave);
 
-    Colors::Save(ini, Name(), VAR_NAME(irc_chat_color), irc_chat_color);
+    SAVE_COLOR(irc_chat_color);
 }

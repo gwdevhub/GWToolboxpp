@@ -770,8 +770,8 @@ void PartySearchWindow::DrawSettingsInternal()
 void PartySearchWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    print_game_chat = ini->GetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
-    filter_alerts = ini->GetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
+    LOAD_BOOL(print_game_chat);
+    LOAD_BOOL(filter_alerts);
 
     std::ifstream alert_file;
     alert_file.open(Resources::GetSettingFile(L"AlertKeywords.txt"));
@@ -787,8 +787,8 @@ void PartySearchWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
 
-    ini->SetBoolValue(Name(), VAR_NAME(print_game_chat), print_game_chat);
-    ini->SetBoolValue(Name(), VAR_NAME(filter_alerts), filter_alerts);
+    SAVE_BOOL(print_game_chat);
+    SAVE_BOOL(filter_alerts);
 
     if (alertfile_dirty || GWToolbox::SettingsFolderChanged()) {
         std::ofstream bycontent_file;

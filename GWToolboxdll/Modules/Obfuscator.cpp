@@ -48,7 +48,6 @@ namespace {
     std::default_random_engine dre = std::default_random_engine(static_cast<uint32_t>(time(nullptr)));
     GW::HookEntry stoc_hook;
     GW::HookEntry ctos_hook;
-    bool running = false;
 
 #ifdef DETECT_STREAMING_APPLICATION
     HWND streaming_window_handle = 0;
@@ -377,8 +376,9 @@ namespace {
         return true;
     }
 
-    bool ObfuscateMessage(std::wstring message, std::wstring& out, const bool obfuscate = true)
+    bool ObfuscateMessage(const std::wstring_view message, std::wstring& out, const bool obfuscate = true)
     {
+        std::wstring replacemsg{message};
         const auto& to_search = obfuscate ? obfuscated_by_original : obfuscated_by_obfuscation;
         bool was_changed = false;
         for (const auto& [from, to] : to_search) {
@@ -386,13 +386,13 @@ namespace {
                 break;
             }
             size_t start_pos = 0;
-            while ((start_pos = message.find(from, start_pos)) != std::string::npos) {
-                message.replace(start_pos, from.length(), to);
+            while ((start_pos = replacemsg.find(from, start_pos)) != std::string::npos) {
+                replacemsg.replace(start_pos, from.length(), to);
                 start_pos += to.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
                 was_changed = true;
             }
         }
-        out.assign(message);
+        out.assign(replacemsg);
         return !out.empty() && was_changed;
     }
 
@@ -602,10 +602,7 @@ namespace {
     }
 
     // TODO: Jon need to hook into gw party window invite and invite current_char rather than the obfuscated name
-    [[maybe_unused]] void OnInvitePlayerInPartyWindow(void* packet)
-    {
-
-    }
+    [[maybe_unused]] void OnInvitePlayerInPartyWindow([[maybe_unused]] void* packet) { }
 
 
     void OnSpeechBubble(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*)
@@ -853,7 +850,6 @@ void Obfuscator::Terminate()
     }
     Obfuscate(false);
     Reset();
-    running = false;
 
 #ifdef DETECT_STREAMING_APPLICATION
 
@@ -934,8 +930,6 @@ void Obfuscator::Initialize()
     hook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_OBJECT_DESTROY, NULL, OnWindowEvent, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
 
 #endif
-
-    running = true;
 }
 
 void Obfuscator::Update(float)
@@ -953,9 +947,9 @@ void Obfuscator::Update(float)
 void Obfuscator::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
-    rename_other_players = ini->GetBoolValue(Name(), VAR_NAME(rename_other_players), rename_other_players);
-    rename_friends_to_alias = ini->GetBoolValue(Name(), VAR_NAME(rename_friends_to_alias), rename_friends_to_alias);
-    rename_self = ini->GetBoolValue(Name(), VAR_NAME(rename_self), rename_self);
+    LOAD_BOOL(rename_other_players);
+    LOAD_BOOL(rename_friends_to_alias);
+    LOAD_BOOL(rename_self);
     const auto own_name = ini->GetValue(Name(), VAR_NAME(own_player_name), own_player_name);
     if (own_name && own_name[0] != '\0') {
         strncpy_s(own_player_name, own_name, strnlen_s(own_name, _countof(own_player_name)));
@@ -970,9 +964,9 @@ void Obfuscator::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     ini->SetBoolValue(Name(), VAR_NAME(obfuscate), pending_state == ObfuscatorState::Enabled);
-    ini->SetBoolValue(Name(), VAR_NAME(rename_other_players), rename_other_players);
-    ini->SetBoolValue(Name(), VAR_NAME(rename_friends_to_alias), rename_friends_to_alias);
-    ini->SetBoolValue(Name(), VAR_NAME(rename_self), rename_self);
+    SAVE_BOOL(rename_other_players);
+    SAVE_BOOL(rename_friends_to_alias);
+    SAVE_BOOL(rename_self);
     ini->SetValue(Name(), VAR_NAME(own_player_name), own_player_name);
 }
 

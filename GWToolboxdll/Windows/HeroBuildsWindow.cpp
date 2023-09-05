@@ -709,8 +709,8 @@ void HeroBuildsWindow::CmdHeroTeamBuild(const wchar_t*, const int argc, const LP
 void HeroBuildsWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    hide_when_entering_explorable = ini->GetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
-    one_teambuild_at_a_time = ini->GetBoolValue(Name(), VAR_NAME(one_teambuild_at_a_time), one_teambuild_at_a_time);
+    LOAD_BOOL(hide_when_entering_explorable);
+    LOAD_BOOL(one_teambuild_at_a_time);
     LoadFromFile();
 }
 
@@ -724,8 +724,8 @@ void HeroBuildsWindow::DrawSettingsInternal()
 void HeroBuildsWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_when_entering_explorable), hide_when_entering_explorable);
-    ini->SetBoolValue(Name(), VAR_NAME(one_teambuild_at_a_time), one_teambuild_at_a_time);
+    SAVE_BOOL(hide_when_entering_explorable);
+    SAVE_BOOL(one_teambuild_at_a_time);
     SaveToFile();
 }
 

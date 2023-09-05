@@ -444,7 +444,7 @@ void TeamspeakModule::Terminate()
 void TeamspeakModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
-    enabled = ini->GetBoolValue(Name(), VAR_NAME(enabled), enabled);
+    LOAD_BOOL(enabled);
     const char* tmp = ini->GetValue(Name(), VAR_NAME(teamspeak3_api_key), teamspeak3_api_key);
     strncpy(teamspeak3_api_key, tmp, sizeof(teamspeak3_api_key) - 1);
     pending_connect = true;
@@ -453,7 +453,7 @@ void TeamspeakModule::LoadSettings(ToolboxIni* ini)
 void TeamspeakModule::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(enabled), enabled);
+    SAVE_BOOL(enabled);
     ini->SetValue(Name(), VAR_NAME(teamspeak3_api_key), teamspeak3_api_key);
 }
 

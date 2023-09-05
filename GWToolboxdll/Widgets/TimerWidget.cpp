@@ -158,34 +158,23 @@ void TimerWidget::Initialize()
 void TimerWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
-    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    use_instance_timer = ini->GetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);
-    never_reset = ini->GetBoolValue(Name(), VAR_NAME(never_reset), never_reset);
+    LOAD_BOOL(hide_in_outpost);
+    LOAD_BOOL(use_instance_timer);
+    LOAD_BOOL(never_reset);
     stop_at_objective_completion =
         ini->GetBoolValue(Name(), VAR_NAME(stop_at_objective_completion), stop_at_objective_completion);
-    also_show_instance_timer = ini->GetBoolValue(Name(), VAR_NAME(also_show_instance_timer), also_show_instance_timer);
-    show_decimals = ini->GetLongValue(Name(), VAR_NAME(show_decimals), show_decimals);
+    LOAD_BOOL(also_show_instance_timer);
+    LOAD_UINT(show_decimals);
     show_decimals = std::clamp(show_decimals, 0, 3);
-    click_to_print_time = ini->GetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
-    print_time_zoning = ini->GetBoolValue(Name(), VAR_NAME(print_time_zoning), print_time_zoning);
-    print_time_objective = ini->GetBoolValue(Name(), VAR_NAME(print_time_objective), print_time_objective);
-    const bool show_extra_timers = ini->GetBoolValue(Name(), VAR_NAME(show_extra_timers), true);
-    if (!show_extra_timers) {
-        // Legacy
-        show_deep_timer = false;
-        show_urgoz_timer = false;
-        show_doa_timer = false;
-        show_dhuum_timer = false;
-        show_dungeon_traps_timer = false;
-    }
-    else {
-        show_deep_timer = ini->GetBoolValue(Name(), VAR_NAME(show_deep_timer), show_deep_timer);
-        show_urgoz_timer = ini->GetBoolValue(Name(), VAR_NAME(show_urgoz_timer), show_urgoz_timer);
-        show_doa_timer = ini->GetBoolValue(Name(), VAR_NAME(show_doa_timer), show_doa_timer);
-        show_dhuum_timer = ini->GetBoolValue(Name(), VAR_NAME(show_dhuum_timer), show_dhuum_timer);
-        show_dungeon_traps_timer = ini->GetBoolValue(Name(), VAR_NAME(show_dungeon_traps_timer), show_dungeon_traps_timer);
-    }
-    show_spirit_timers = ini->GetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
+    LOAD_BOOL(click_to_print_time);
+    LOAD_BOOL(print_time_zoning);
+    LOAD_BOOL(print_time_objective);
+    LOAD_BOOL(show_deep_timer);
+    LOAD_BOOL(show_urgoz_timer);
+    LOAD_BOOL(show_doa_timer);
+    LOAD_BOOL(show_dhuum_timer);
+    LOAD_BOOL(show_dungeon_traps_timer);
+    LOAD_BOOL(show_spirit_timers);
     for (const auto& effect_id : spirit_effects | std::views::keys) {
         char ini_name[32];
         snprintf(ini_name, 32, "spirit_effect_%d", effect_id);
@@ -196,21 +185,21 @@ void TimerWidget::LoadSettings(ToolboxIni* ini)
 void TimerWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(use_instance_timer), use_instance_timer);
-    ini->SetBoolValue(Name(), VAR_NAME(never_reset), never_reset);
-    ini->SetBoolValue(Name(), VAR_NAME(stop_at_objective_completion), stop_at_objective_completion);
-    ini->SetBoolValue(Name(), VAR_NAME(also_show_instance_timer), also_show_instance_timer);
-    ini->SetLongValue(Name(), VAR_NAME(show_decimals), show_decimals);
-    ini->SetBoolValue(Name(), VAR_NAME(click_to_print_time), click_to_print_time);
-    ini->SetBoolValue(Name(), VAR_NAME(print_time_zoning), print_time_zoning);
-    ini->SetBoolValue(Name(), VAR_NAME(print_time_objective), print_time_objective);
-    ini->SetBoolValue(Name(), VAR_NAME(show_spirit_timers), show_spirit_timers);
-    ini->SetBoolValue(Name(), VAR_NAME(show_deep_timer), show_deep_timer);
-    ini->SetBoolValue(Name(), VAR_NAME(show_doa_timer), show_doa_timer);
-    ini->SetBoolValue(Name(), VAR_NAME(show_urgoz_timer), show_urgoz_timer);
-    ini->SetBoolValue(Name(), VAR_NAME(show_dhuum_timer), show_dhuum_timer);
-    ini->SetBoolValue(Name(), VAR_NAME(show_dungeon_traps_timer), show_dungeon_traps_timer);
+    SAVE_BOOL(hide_in_outpost);
+    SAVE_BOOL(use_instance_timer);
+    SAVE_BOOL(never_reset);
+    SAVE_BOOL(stop_at_objective_completion);
+    SAVE_BOOL(also_show_instance_timer);
+    SAVE_UINT(show_decimals);
+    SAVE_BOOL(click_to_print_time);
+    SAVE_BOOL(print_time_zoning);
+    SAVE_BOOL(print_time_objective);
+    SAVE_BOOL(show_spirit_timers);
+    SAVE_BOOL(show_deep_timer);
+    SAVE_BOOL(show_doa_timer);
+    SAVE_BOOL(show_urgoz_timer);
+    SAVE_BOOL(show_dhuum_timer);
+    SAVE_BOOL(show_dungeon_traps_timer);
     for (const auto& effect_id : spirit_effects | std::views::keys) {
         char ini_name[32];
         snprintf(ini_name, 32, "spirit_effect_%d", effect_id);

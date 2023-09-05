@@ -701,12 +701,12 @@ void PartyWindowModule::SaveSettings(ToolboxIni* ini)
     // Clear existing ini settings
     ini->Delete(Name(), nullptr, NULL);
 
-    ini->SetBoolValue(Name(), VAR_NAME(add_player_numbers_to_party_window), add_player_numbers_to_party_window);
-    ini->SetBoolValue(Name(), VAR_NAME(add_elite_skill_to_summons), add_elite_skill_to_summons);
-    ini->SetBoolValue(Name(), VAR_NAME(remove_dead_imperials), remove_dead_imperials);
+    SAVE_BOOL(add_player_numbers_to_party_window);
+    SAVE_BOOL(add_elite_skill_to_summons);
+    SAVE_BOOL(remove_dead_imperials);
 
     // - Re-fill settings.
-    ini->SetBoolValue(Name(), VAR_NAME(add_npcs_to_party_window), add_npcs_to_party_window);
+    SAVE_BOOL(add_npcs_to_party_window);
     for (const auto& user_defined_npc : user_defined_npcs) {
         if (!user_defined_npc || !user_defined_npc->model_id) {
             continue;
@@ -728,10 +728,10 @@ void PartyWindowModule::LoadSettings(ToolboxIni* ini)
         return LoadDefaults();
     }
 
-    add_npcs_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(add_npcs_to_party_window), add_npcs_to_party_window);
-    add_player_numbers_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(add_player_numbers_to_party_window), add_player_numbers_to_party_window);
-    add_elite_skill_to_summons = ini->GetBoolValue(Name(), VAR_NAME(add_elite_skill_to_summons), add_elite_skill_to_summons);
-    remove_dead_imperials = ini->GetBoolValue(Name(), VAR_NAME(remove_dead_imperials), remove_dead_imperials);
+    LOAD_BOOL(add_npcs_to_party_window);
+    LOAD_BOOL(add_player_numbers_to_party_window);
+    LOAD_BOOL(add_elite_skill_to_summons);
+    LOAD_BOOL(remove_dead_imperials);
 
     ClearSpecialNPCs();
     for (const auto& key : keys) {

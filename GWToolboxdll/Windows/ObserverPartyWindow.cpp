@@ -565,24 +565,24 @@ void ObserverPartyWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
 
-    show_player_number = ini->GetBoolValue(Name(), VAR_NAME(show_player_number), true);
-    show_profession = ini->GetBoolValue(Name(), VAR_NAME(show_profession), true);
-    show_player_guild_tag = ini->GetBoolValue(Name(), VAR_NAME(show_player_guild_tag), true);
-    show_player_guild_rating = ini->GetBoolValue(Name(), VAR_NAME(show_player_guild_rating), false);
-    show_player_guild_rank = ini->GetBoolValue(Name(), VAR_NAME(show_player_guild_rank), false);
-    show_kills = ini->GetBoolValue(Name(), VAR_NAME(show_kills), true);
-    show_deaths = ini->GetBoolValue(Name(), VAR_NAME(show_deaths), true);
-    show_kdr = ini->GetBoolValue(Name(), VAR_NAME(show_kdr), true);
-    show_cancels = ini->GetBoolValue(Name(), VAR_NAME(show_cancels), true);
-    show_interrupts = ini->GetBoolValue(Name(), VAR_NAME(show_interrupts), true);
-    show_knockdowns = ini->GetBoolValue(Name(), VAR_NAME(show_knockdowns), true);
-    show_received_party_attacks = ini->GetBoolValue(Name(), VAR_NAME(show_received_party_attacks), true);
-    show_dealt_party_attacks = ini->GetBoolValue(Name(), VAR_NAME(show_dealt_party_attacks), true);
-    show_received_party_crits = ini->GetBoolValue(Name(), VAR_NAME(show_received_party_crits), true);
-    show_dealt_party_crits = ini->GetBoolValue(Name(), VAR_NAME(show_dealt_party_crits), true);
-    show_received_party_skills = ini->GetBoolValue(Name(), VAR_NAME(show_received_party_skills), true);
-    show_dealt_party_skills = ini->GetBoolValue(Name(), VAR_NAME(show_dealt_party_skills), true);
-    show_skills_used = ini->GetBoolValue(Name(), VAR_NAME(show_skills_used), true);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 
@@ -591,24 +591,24 @@ void ObserverPartyWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
 
-    ini->SetBoolValue(Name(), VAR_NAME(show_player_number), show_player_number);
-    ini->SetBoolValue(Name(), VAR_NAME(show_profession), show_profession);
-    ini->SetBoolValue(Name(), VAR_NAME(show_player_guild_tag), show_player_guild_tag);
-    ini->SetBoolValue(Name(), VAR_NAME(show_player_guild_rank), show_player_guild_rank);
-    ini->SetBoolValue(Name(), VAR_NAME(show_player_guild_rating), show_player_guild_rating);
-    ini->SetBoolValue(Name(), VAR_NAME(show_kills), show_kills);
-    ini->SetBoolValue(Name(), VAR_NAME(show_deaths), show_deaths);
-    ini->SetBoolValue(Name(), VAR_NAME(show_kdr), show_kdr);
-    ini->SetBoolValue(Name(), VAR_NAME(show_cancels), show_cancels);
-    ini->SetBoolValue(Name(), VAR_NAME(show_interrupts), show_interrupts);
-    ini->SetBoolValue(Name(), VAR_NAME(show_knockdowns), show_knockdowns);
-    ini->SetBoolValue(Name(), VAR_NAME(show_received_party_attacks), show_received_party_attacks);
-    ini->SetBoolValue(Name(), VAR_NAME(show_dealt_party_attacks), show_dealt_party_attacks);
-    ini->SetBoolValue(Name(), VAR_NAME(show_received_party_crits), show_received_party_crits);
-    ini->SetBoolValue(Name(), VAR_NAME(show_dealt_party_crits), show_dealt_party_crits);
-    ini->SetBoolValue(Name(), VAR_NAME(show_received_party_skills), show_received_party_skills);
-    ini->SetBoolValue(Name(), VAR_NAME(show_dealt_party_skills), show_dealt_party_skills);
-    ini->SetBoolValue(Name(), VAR_NAME(show_skills_used), show_skills_used);
+    SAVE_BOOL(show_player_number);
+    SAVE_BOOL(show_profession);
+    SAVE_BOOL(show_player_guild_tag);
+    SAVE_BOOL(show_player_guild_rank);
+    SAVE_BOOL(show_player_guild_rating);
+    SAVE_BOOL(show_kills);
+    SAVE_BOOL(show_deaths);
+    SAVE_BOOL(show_kdr);
+    SAVE_BOOL(show_cancels);
+    SAVE_BOOL(show_interrupts);
+    SAVE_BOOL(show_knockdowns);
+    SAVE_BOOL(show_received_party_attacks);
+    SAVE_BOOL(show_dealt_party_attacks);
+    SAVE_BOOL(show_received_party_crits);
+    SAVE_BOOL(show_dealt_party_crits);
+    SAVE_BOOL(show_received_party_skills);
+    SAVE_BOOL(show_dealt_party_skills);
+    SAVE_BOOL(show_skills_used);
 }
 
 // Draw settings

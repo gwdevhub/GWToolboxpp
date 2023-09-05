@@ -499,9 +499,9 @@ void Teamspeak5Module::Terminate()
 void Teamspeak5Module::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
-    enabled = ini->GetBoolValue(Name(), VAR_NAME(enabled), enabled);
-    ws_port = ini->GetLongValue(Name(), VAR_NAME(ws_port), ws_port);
-    gwtoolbox_teamspeak5_api_key = ini->GetValue(Name(), VAR_NAME(gwtoolbox_teamspeak5_api_key), gwtoolbox_teamspeak5_api_key.c_str());
+    LOAD_BOOL(enabled);
+    LOAD_UINT(ws_port);
+    LOAD_STRING(gwtoolbox_teamspeak5_api_key);
     GetWebsocketHost(true);
     pending_connect = true;
 }
@@ -509,9 +509,9 @@ void Teamspeak5Module::LoadSettings(ToolboxIni* ini)
 void Teamspeak5Module::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(enabled), enabled);
-    ini->SetLongValue(Name(), VAR_NAME(ws_port), ws_port);
-    ini->SetValue(Name(), VAR_NAME(gwtoolbox_teamspeak5_api_key), gwtoolbox_teamspeak5_api_key.c_str());
+    SAVE_BOOL(enabled);
+    SAVE_UINT(ws_port);
+    SAVE_STRING(gwtoolbox_teamspeak5_api_key);
 }
 
 void Teamspeak5Module::Update(float)

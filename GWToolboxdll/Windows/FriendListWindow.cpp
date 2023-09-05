@@ -1247,18 +1247,18 @@ void FriendListWindow::DrawHelp()
 void FriendListWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    lock_move_as_widget = ini->GetBoolValue(Name(), VAR_NAME(lock_move_as_widget), lock_move_as_widget);
-    lock_size_as_widget = ini->GetBoolValue(Name(), VAR_NAME(lock_size_as_widget), lock_size_as_widget);
+    LOAD_BOOL(lock_move_as_widget);
+    LOAD_BOOL(lock_size_as_widget);
     show_alias_on_whisper = static_cast<FriendAliasType>(ini->GetLongValue(Name(), VAR_NAME(show_alias_on_whisper), static_cast<long>(show_alias_on_whisper)));
 
-    outpost_show_as = ini->GetLongValue(Name(), VAR_NAME(outpost_show_as), outpost_show_as);
-    loading_show_as = ini->GetLongValue(Name(), VAR_NAME(loading_show_as), loading_show_as);
-    explorable_show_as = ini->GetLongValue(Name(), VAR_NAME(explorable_show_as), explorable_show_as);
-    show_my_status = ini->GetBoolValue(Name(), VAR_NAME(show_my_status), show_my_status);
+    LOAD_UINT(outpost_show_as);
+    LOAD_UINT(loading_show_as);
+    LOAD_UINT(explorable_show_as);
+    LOAD_BOOL(show_my_status);
 
-    hover_background_color = Colors::Load(ini, Name(), VAR_NAME(hover_background_color), hover_background_color);
-    friend_name_tag_enabled = ini->GetBoolValue(Name(), VAR_NAME(friend_name_tag_enabled), friend_name_tag_enabled);
-    friend_name_tag_color = Colors::Load(ini, Name(), VAR_NAME(friend_name_tag_color), friend_name_tag_color);
+    LOAD_COLOR(hover_background_color);
+    LOAD_BOOL(friend_name_tag_enabled);
+    LOAD_COLOR(friend_name_tag_color);
 
     LoadFromFile();
 }
@@ -1266,18 +1266,18 @@ void FriendListWindow::LoadSettings(ToolboxIni* ini)
 void FriendListWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(lock_move_as_widget), lock_move_as_widget);
-    ini->SetBoolValue(Name(), VAR_NAME(lock_size_as_widget), lock_size_as_widget);
+    SAVE_BOOL(lock_move_as_widget);
+    SAVE_BOOL(lock_size_as_widget);
     ini->SetLongValue(Name(), VAR_NAME(show_alias_on_whisper), static_cast<long>(show_alias_on_whisper));
 
-    ini->SetLongValue(Name(), VAR_NAME(outpost_show_as), outpost_show_as);
-    ini->SetLongValue(Name(), VAR_NAME(loading_show_as), loading_show_as);
-    ini->SetLongValue(Name(), VAR_NAME(explorable_show_as), explorable_show_as);
-    ini->SetBoolValue(Name(), VAR_NAME(show_my_status), show_my_status);
+    SAVE_UINT(outpost_show_as);
+    SAVE_UINT(loading_show_as);
+    SAVE_UINT(explorable_show_as);
+    SAVE_BOOL(show_my_status);
 
-    Colors::Save(ini, Name(), VAR_NAME(hover_background_color), hover_background_color);
-    ini->SetBoolValue(Name(), VAR_NAME(friend_name_tag_enabled), friend_name_tag_enabled);
-    Colors::Save(ini, Name(), VAR_NAME(friend_name_tag_color), friend_name_tag_color);
+    SAVE_COLOR(hover_background_color);
+    SAVE_BOOL(friend_name_tag_enabled);
+    SAVE_COLOR(friend_name_tag_color);
 
     SaveToFile();
 }

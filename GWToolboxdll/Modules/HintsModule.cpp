@@ -304,7 +304,7 @@ void HintsModule::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     std::string ini_str;
-    ini->SetBoolValue(Name(), VAR_NAME(only_show_hints_once), only_show_hints_once);
+    SAVE_BOOL(only_show_hints_once);
     ASSERT(GuiUtils::ArrayToIni(hints_shown.data(), hints_shown.size(), &ini_str));
     ini->SetValue(Name(), VAR_NAME(hints_shown), ini_str.c_str());
 }
@@ -312,7 +312,7 @@ void HintsModule::SaveSettings(ToolboxIni* ini)
 void HintsModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
-    only_show_hints_once = ini->GetBoolValue(Name(), VAR_NAME(only_show_hints_once), only_show_hints_once);
+    LOAD_BOOL(only_show_hints_once);
     const std::string ini_str = ini->GetValue(Name(), VAR_NAME(hints_shown), "");
     if (!ini_str.empty()) {
         hints_shown.resize((ini_str.size() + 1) / 9);

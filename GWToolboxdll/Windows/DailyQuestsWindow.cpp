@@ -1332,14 +1332,14 @@ void DailyQuests::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
 
-    show_zaishen_bounty_in_window = ini->GetBoolValue(Name(), VAR_NAME(show_zaishen_bounty_in_window), show_zaishen_bounty_in_window);
-    show_zaishen_combat_in_window = ini->GetBoolValue(Name(), VAR_NAME(show_zaishen_combat_in_window), show_zaishen_combat_in_window);
-    show_zaishen_missions_in_window = ini->GetBoolValue(Name(), VAR_NAME(show_zaishen_missions_in_window), show_zaishen_missions_in_window);
-    show_zaishen_vanquishes_in_window = ini->GetBoolValue(Name(), VAR_NAME(show_zaishen_vanquishes_in_window), show_zaishen_vanquishes_in_window);
-    show_wanted_quests_in_window = ini->GetBoolValue(Name(), VAR_NAME(show_wanted_quests_in_window), show_wanted_quests_in_window);
-    show_nicholas_in_window = ini->GetBoolValue(Name(), VAR_NAME(show_nicholas_in_window), show_nicholas_in_window);
-    show_weekly_bonus_pve_in_window = ini->GetBoolValue(Name(), VAR_NAME(show_weekly_bonus_pve_in_window), show_weekly_bonus_pve_in_window);
-    show_weekly_bonus_pvp_in_window = ini->GetBoolValue(Name(), VAR_NAME(show_weekly_bonus_pvp_in_window), show_weekly_bonus_pvp_in_window);
+    LOAD_BOOL(show_zaishen_bounty_in_window);
+    LOAD_BOOL(show_zaishen_combat_in_window);
+    LOAD_BOOL(show_zaishen_missions_in_window);
+    LOAD_BOOL(show_zaishen_vanquishes_in_window);
+    LOAD_BOOL(show_wanted_quests_in_window);
+    LOAD_BOOL(show_nicholas_in_window);
+    LOAD_BOOL(show_weekly_bonus_pve_in_window);
+    LOAD_BOOL(show_weekly_bonus_pvp_in_window);
 
     const char* zms = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_missions), "0");
     const std::bitset<zm_cnt> zmb(zms);
@@ -1388,14 +1388,14 @@ void DailyQuests::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
 
-    ini->SetBoolValue(Name(), VAR_NAME(show_zaishen_bounty_in_window), show_zaishen_bounty_in_window);
-    ini->SetBoolValue(Name(), VAR_NAME(show_zaishen_combat_in_window), show_zaishen_combat_in_window);
-    ini->SetBoolValue(Name(), VAR_NAME(show_zaishen_missions_in_window), show_zaishen_missions_in_window);
-    ini->SetBoolValue(Name(), VAR_NAME(show_zaishen_vanquishes_in_window), show_zaishen_vanquishes_in_window);
-    ini->SetBoolValue(Name(), VAR_NAME(show_wanted_quests_in_window), show_wanted_quests_in_window);
-    ini->SetBoolValue(Name(), VAR_NAME(show_nicholas_in_window), show_nicholas_in_window);
-    ini->SetBoolValue(Name(), VAR_NAME(show_weekly_bonus_pve_in_window), show_weekly_bonus_pve_in_window);
-    ini->SetBoolValue(Name(), VAR_NAME(show_weekly_bonus_pvp_in_window), show_weekly_bonus_pvp_in_window);
+    SAVE_BOOL(show_zaishen_bounty_in_window);
+    SAVE_BOOL(show_zaishen_combat_in_window);
+    SAVE_BOOL(show_zaishen_missions_in_window);
+    SAVE_BOOL(show_zaishen_vanquishes_in_window);
+    SAVE_BOOL(show_wanted_quests_in_window);
+    SAVE_BOOL(show_nicholas_in_window);
+    SAVE_BOOL(show_weekly_bonus_pve_in_window);
+    SAVE_BOOL(show_weekly_bonus_pvp_in_window);
     std::bitset<zm_cnt> zmb;
     for (auto i = 0u; i < zmb.size(); i++) {
         zmb[i] = subscribed_zaishen_missions[i] ? 1 : 0;

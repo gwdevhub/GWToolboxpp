@@ -402,35 +402,35 @@ void SkillbarWidget::LoadSettings(ToolboxIni* ini)
     layout = static_cast<Layout>(ini->GetLongValue(Name(), VAR_NAME(layout), static_cast<long>(layout)));
     m_skill_height = static_cast<float>(ini->GetDoubleValue(Name(), "height", m_skill_height));
     m_skill_width = static_cast<float>(ini->GetDoubleValue(Name(), "width", m_skill_width));
-    medium_treshold = ini->GetLongValue(Name(), VAR_NAME(medium_treshold), medium_treshold);
-    short_treshold = ini->GetLongValue(Name(), VAR_NAME(short_treshold), short_treshold);
-    color_long = Colors::Load(ini, Name(), VAR_NAME(color_long), color_long);
-    color_medium = Colors::Load(ini, Name(), VAR_NAME(color_medium), color_medium);
-    color_short = Colors::Load(ini, Name(), VAR_NAME(color_short), color_short);
+    LOAD_UINT(medium_treshold);
+    LOAD_UINT(short_treshold);
+    LOAD_COLOR(color_long);
+    LOAD_COLOR(color_medium);
+    LOAD_COLOR(color_short);
 
-    decimal_threshold = ini->GetLongValue(Name(), VAR_NAME(decimal_threshold), decimal_threshold);
-    round_up = ini->GetBoolValue(Name(), VAR_NAME(round_up), round_up);
+    LOAD_UINT(decimal_threshold);
+    LOAD_BOOL(round_up);
 
-    display_skill_overlay = ini->GetBoolValue(Name(), VAR_NAME(display_skill_overlay), display_skill_overlay);
+    LOAD_BOOL(display_skill_overlay);
     font_recharge = static_cast<GuiUtils::FontSize>(ini->GetLongValue(Name(), VAR_NAME(font_recharge), static_cast<long>(font_recharge)));
-    color_text_recharge = Colors::Load(ini, Name(), VAR_NAME(color_text_recharge), color_text_recharge);
-    color_border = Colors::Load(ini, Name(), VAR_NAME(color_border), color_border);
+    LOAD_COLOR(color_text_recharge);
+    LOAD_COLOR(color_border);
 
-    display_effect_monitor = ini->GetBoolValue(Name(), VAR_NAME(display_effect_monitor), display_effect_monitor);
-    effect_monitor_size = ini->GetLongValue(Name(), VAR_NAME(effect_monitor_size), effect_monitor_size);
-    effect_monitor_offset = ini->GetLongValue(Name(), VAR_NAME(effect_monitor_offset), effect_monitor_offset);
-    effects_symmetric = ini->GetBoolValue(Name(), VAR_NAME(effects_symmetric), effects_symmetric);
-    display_multiple_effects = ini->GetBoolValue(Name(), VAR_NAME(display_multiple_effects), display_multiple_effects);
-    effects_flip_order = ini->GetBoolValue(Name(), VAR_NAME(effects_flip_order), effects_flip_order);
-    effects_flip_direction = ini->GetBoolValue(Name(), VAR_NAME(effects_flip_direction), effects_flip_direction);
-    effect_text_color = ini->GetBoolValue(Name(), VAR_NAME(effect_text_color), effect_text_color);
-    effect_progress_bar_color = ini->GetBoolValue(Name(), VAR_NAME(effect_progress_bar_color), effect_progress_bar_color);
+    LOAD_BOOL(display_effect_monitor);
+    LOAD_UINT(effect_monitor_size);
+    LOAD_UINT(effect_monitor_offset);
+    LOAD_BOOL(effects_symmetric);
+    LOAD_BOOL(display_multiple_effects);
+    LOAD_BOOL(effects_flip_order);
+    LOAD_BOOL(effects_flip_direction);
+    LOAD_BOOL(effect_text_color);
+    LOAD_BOOL(effect_progress_bar_color);
     font_effects = static_cast<GuiUtils::FontSize>(ini->GetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects)));
-    color_text_effects = Colors::Load(ini, Name(), VAR_NAME(color_text_effects), color_text_effects);
-    color_effect_background = Colors::Load(ini, Name(), VAR_NAME(color_effect_background), color_effect_background);
-    color_effect_progress = Colors::Load(ini, Name(), VAR_NAME(color_effect_progress), color_effect_progress);
-    color_effect_border = Colors::Load(ini, Name(), VAR_NAME(color_effect_border), color_effect_border);
-    snap_to_skillbar = ini->GetBoolValue(Name(), VAR_NAME(snap_to_skillbar), snap_to_skillbar);
+    LOAD_COLOR(color_text_effects);
+    LOAD_COLOR(color_effect_background);
+    LOAD_COLOR(color_effect_progress);
+    LOAD_COLOR(color_effect_border);
+    LOAD_BOOL(snap_to_skillbar);
     is_movable = is_resizable = !snap_to_skillbar;
 }
 
@@ -441,35 +441,35 @@ void SkillbarWidget::SaveSettings(ToolboxIni* ini)
     ini->SetDoubleValue(Name(), "height", m_skill_height);
     ini->SetDoubleValue(Name(), "width", m_skill_width);
 
-    ini->SetLongValue(Name(), VAR_NAME(medium_treshold), medium_treshold);
-    ini->SetLongValue(Name(), VAR_NAME(short_treshold), short_treshold);
-    Colors::Save(ini, Name(), VAR_NAME(color_long), color_long);
-    Colors::Save(ini, Name(), VAR_NAME(color_medium), color_medium);
-    Colors::Save(ini, Name(), VAR_NAME(color_short), color_short);
+    SAVE_UINT(medium_treshold);
+    SAVE_UINT(short_treshold);
+    SAVE_COLOR(color_long);
+    SAVE_COLOR(color_medium);
+    SAVE_COLOR(color_short);
 
-    ini->SetLongValue(Name(), VAR_NAME(decimal_threshold), decimal_threshold);
-    ini->SetBoolValue(Name(), VAR_NAME(round_up), round_up);
+    SAVE_UINT(decimal_threshold);
+    SAVE_BOOL(round_up);
 
-    ini->SetBoolValue(Name(), VAR_NAME(display_skill_overlay), display_skill_overlay);
+    SAVE_BOOL(display_skill_overlay);
     ini->SetLongValue(Name(), VAR_NAME(font_recharge), static_cast<long>(font_recharge));
-    Colors::Save(ini, Name(), VAR_NAME(color_text_recharge), color_text_recharge);
-    Colors::Save(ini, Name(), VAR_NAME(color_border), color_border);
+    SAVE_COLOR(color_text_recharge);
+    SAVE_COLOR(color_border);
 
-    ini->SetBoolValue(Name(), VAR_NAME(display_effect_monitor), display_effect_monitor);
-    ini->SetLongValue(Name(), VAR_NAME(effect_monitor_size), effect_monitor_size);
-    ini->SetLongValue(Name(), VAR_NAME(effect_monitor_offset), effect_monitor_offset);
-    ini->SetBoolValue(Name(), VAR_NAME(effects_symmetric), effects_symmetric);
-    ini->SetBoolValue(Name(), VAR_NAME(display_multiple_effects), display_multiple_effects);
-    ini->SetBoolValue(Name(), VAR_NAME(effects_flip_order), effects_flip_order);
-    ini->SetBoolValue(Name(), VAR_NAME(effects_flip_direction), effects_flip_direction);
-    ini->SetBoolValue(Name(), VAR_NAME(effect_text_color), effect_text_color);
-    ini->SetBoolValue(Name(), VAR_NAME(effect_progress_bar_color), effect_progress_bar_color);
+    SAVE_BOOL(display_effect_monitor);
+    SAVE_UINT(effect_monitor_size);
+    SAVE_UINT(effect_monitor_offset);
+    SAVE_BOOL(effects_symmetric);
+    SAVE_BOOL(display_multiple_effects);
+    SAVE_BOOL(effects_flip_order);
+    SAVE_BOOL(effects_flip_direction);
+    SAVE_BOOL(effect_text_color);
+    SAVE_BOOL(effect_progress_bar_color);
     ini->SetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects));
-    Colors::Save(ini, Name(), VAR_NAME(color_text_effects), color_text_effects);
-    Colors::Save(ini, Name(), VAR_NAME(color_effect_background), color_effect_background);
-    Colors::Save(ini, Name(), VAR_NAME(color_effect_progress), color_effect_progress);
-    Colors::Save(ini, Name(), VAR_NAME(color_effect_border), color_effect_border);
-    ini->SetBoolValue(Name(), VAR_NAME(snap_to_skillbar), snap_to_skillbar);
+    SAVE_COLOR(color_text_effects);
+    SAVE_COLOR(color_effect_background);
+    SAVE_COLOR(color_effect_progress);
+    SAVE_COLOR(color_effect_border);
+    SAVE_BOOL(snap_to_skillbar);
 }
 
 void SkillbarWidget::DrawDurationThresholds()

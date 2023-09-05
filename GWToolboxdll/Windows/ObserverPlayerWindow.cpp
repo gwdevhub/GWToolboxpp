@@ -219,8 +219,8 @@ void ObserverPlayerWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
 
-    show_tracking = ini->GetBoolValue(Name(), VAR_NAME(show_tracking), true);
-    show_comparison = ini->GetBoolValue(Name(), VAR_NAME(show_comparison), true);
+
+
     show_comparison = ini->GetBoolValue(Name(), VAR_NAME(show_skills_used_on_self), true);
     show_comparison = ini->GetBoolValue(Name(), VAR_NAME(show_attempts), false);
     show_comparison = ini->GetBoolValue(Name(), VAR_NAME(show_cancels), true);
@@ -235,14 +235,14 @@ void ObserverPlayerWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
 
-    ini->SetBoolValue(Name(), VAR_NAME(show_tracking), show_tracking);
-    ini->SetBoolValue(Name(), VAR_NAME(show_comparison), show_comparison);
-    ini->SetBoolValue(Name(), VAR_NAME(show_skills_used_on_self), show_skills_used_on_self);
-    ini->SetBoolValue(Name(), VAR_NAME(show_attempts), show_attempts);
-    ini->SetBoolValue(Name(), VAR_NAME(show_cancels), show_cancels);
-    ini->SetBoolValue(Name(), VAR_NAME(show_interrupts), show_interrupts);
-    ini->SetBoolValue(Name(), VAR_NAME(show_finishes), show_finishes);
-    ini->SetBoolValue(Name(), VAR_NAME(show_integrity), show_integrity);
+    SAVE_BOOL(show_tracking);
+    SAVE_BOOL(show_comparison);
+    SAVE_BOOL(show_skills_used_on_self);
+    SAVE_BOOL(show_attempts);
+    SAVE_BOOL(show_cancels);
+    SAVE_BOOL(show_interrupts);
+    SAVE_BOOL(show_finishes);
+    SAVE_BOOL(show_integrity);
 }
 
 // Draw settings

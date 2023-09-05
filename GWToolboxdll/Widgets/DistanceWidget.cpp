@@ -30,31 +30,31 @@ void DistanceWidget::DrawSettingsInternal()
 void DistanceWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
-    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    show_perc_value = ini->GetBoolValue(Name(), VAR_NAME(show_perc_value), show_perc_value);
-    show_abs_value = ini->GetBoolValue(Name(), VAR_NAME(show_abs_value), show_abs_value);
-    color_adjacent = Colors::Load(ini, Name(), VAR_NAME(color_adjacent), color_adjacent);
-    color_nearby = Colors::Load(ini, Name(), VAR_NAME(color_nearby), color_nearby);
-    color_area = Colors::Load(ini, Name(), VAR_NAME(color_area), color_area);
-    color_earshot = Colors::Load(ini, Name(), VAR_NAME(color_earshot), color_earshot);
-    color_cast = Colors::Load(ini, Name(), VAR_NAME(color_cast), color_cast);
-    color_spirit = Colors::Load(ini, Name(), VAR_NAME(color_spirit), color_spirit);
-    color_compass = Colors::Load(ini, Name(), VAR_NAME(color_compass), color_compass);
+    LOAD_BOOL(hide_in_outpost);
+    LOAD_BOOL(show_perc_value);
+    LOAD_BOOL(show_abs_value);
+    LOAD_COLOR(color_adjacent);
+    LOAD_COLOR(color_nearby);
+    LOAD_COLOR(color_area);
+    LOAD_COLOR(color_earshot);
+    LOAD_COLOR(color_cast);
+    LOAD_COLOR(color_spirit);
+    LOAD_COLOR(color_compass);
 }
 
 void DistanceWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(show_perc_value), show_perc_value);
-    ini->SetBoolValue(Name(), VAR_NAME(show_abs_value), show_abs_value);
-    Colors::Save(ini, Name(), VAR_NAME(color_adjacent), color_adjacent);
-    Colors::Save(ini, Name(), VAR_NAME(color_nearby), color_nearby);
-    Colors::Save(ini, Name(), VAR_NAME(color_area), color_area);
-    Colors::Save(ini, Name(), VAR_NAME(color_earshot), color_earshot);
-    Colors::Save(ini, Name(), VAR_NAME(color_cast), color_cast);
-    Colors::Save(ini, Name(), VAR_NAME(color_spirit), color_spirit);
-    Colors::Save(ini, Name(), VAR_NAME(color_compass), color_compass);
+    SAVE_BOOL(hide_in_outpost);
+    SAVE_BOOL(show_perc_value);
+    SAVE_BOOL(show_abs_value);
+    SAVE_COLOR(color_adjacent);
+    SAVE_COLOR(color_nearby);
+    SAVE_COLOR(color_area);
+    SAVE_COLOR(color_earshot);
+    SAVE_COLOR(color_cast);
+    SAVE_COLOR(color_spirit);
+    SAVE_COLOR(color_compass);
 }
 
 void DistanceWidget::Draw(IDirect3DDevice9*)

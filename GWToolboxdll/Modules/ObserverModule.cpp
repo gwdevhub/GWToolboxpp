@@ -1224,9 +1224,9 @@ bool ObserverModule::SynchroniseParties()
 void ObserverModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
-    is_enabled = ini->GetBoolValue(Name(), VAR_NAME(is_enabled), true);
-    trim_hench_names = ini->GetBoolValue(Name(), VAR_NAME(trim_hench_names), false);
-    enable_in_explorable_areas = ini->GetBoolValue(Name(), VAR_NAME(enable_in_explorable_areas), false);
+    LOAD_BOOL(is_enabled);
+    LOAD_BOOL(trim_hench_names);
+    LOAD_BOOL(enable_in_explorable_areas);
 }
 
 
@@ -1234,9 +1234,9 @@ void ObserverModule::LoadSettings(ToolboxIni* ini)
 void ObserverModule::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(is_enabled), is_enabled);
-    ini->SetBoolValue(Name(), VAR_NAME(trim_hench_names), trim_hench_names);
-    ini->SetBoolValue(Name(), VAR_NAME(enable_in_explorable_areas), enable_in_explorable_areas);
+    SAVE_BOOL(is_enabled);
+    SAVE_BOOL(trim_hench_names);
+    SAVE_BOOL(enable_in_explorable_areas);
 }
 
 

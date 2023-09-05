@@ -612,17 +612,17 @@ void PartyStatisticsWindow::Draw(IDirect3DDevice9*)
 void PartyStatisticsWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    show_abs_values = ini->GetBoolValue(Name(), VAR_NAME(show_abs_values), show_abs_values);
-    show_perc_values = ini->GetBoolValue(Name(), VAR_NAME(show_perc_values), show_perc_values);
-    print_by_click = ini->GetBoolValue(Name(), VAR_NAME(print_by_click), print_by_click);
+    LOAD_BOOL(show_abs_values);
+    LOAD_BOOL(show_perc_values);
+    LOAD_BOOL(print_by_click);
 }
 
 void PartyStatisticsWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(show_abs_values), show_abs_values);
-    ini->SetBoolValue(Name(), VAR_NAME(show_perc_values), show_perc_values);
-    ini->SetBoolValue(Name(), VAR_NAME(print_by_click), print_by_click);
+    SAVE_BOOL(show_abs_values);
+    SAVE_BOOL(show_perc_values);
+    SAVE_BOOL(print_by_click);
 }
 
 void PartyStatisticsWindow::DrawSettingsInternal()

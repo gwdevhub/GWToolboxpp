@@ -265,14 +265,14 @@ void ChatLog::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     Save();
-    ini->SetBoolValue(Name(), VAR_NAME(enabled), enabled);
+    SAVE_BOOL(enabled);
 }
 
 void ChatLog::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
     Save();
-    enabled = ini->GetBoolValue(Name(), VAR_NAME(enabled), enabled);
+    LOAD_BOOL(enabled);
     Init();
 }
 

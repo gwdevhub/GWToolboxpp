@@ -97,10 +97,10 @@ void LatencyWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
 
-    red_threshold = ini->GetLongValue(Name(), VAR_NAME(red_threshold), red_threshold);
-    show_avg_ping = ini->GetBoolValue(Name(), VAR_NAME(show_avg_ping), show_avg_ping);
-    red_threshold = ini->GetLongValue(Name(), VAR_NAME(red_threshold), red_threshold);
-    font_size = ini->GetLongValue(Name(), VAR_NAME(font_size), font_size);
+    LOAD_UINT(red_threshold);
+    LOAD_BOOL(show_avg_ping);
+    LOAD_UINT(red_threshold);
+    LOAD_UINT(font_size);
     switch (font_size) {
         case static_cast<int>(GuiUtils::FontSize::widget_label):
         case static_cast<int>(GuiUtils::FontSize::widget_small):
@@ -115,9 +115,9 @@ void LatencyWidget::LoadSettings(ToolboxIni* ini)
 void LatencyWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
-    ini->SetLongValue(Name(), VAR_NAME(red_threshold), red_threshold);
-    ini->SetBoolValue(Name(), VAR_NAME(show_avg_ping), show_avg_ping);
-    ini->SetLongValue(Name(), VAR_NAME(font_size), font_size);
+    SAVE_UINT(red_threshold);
+    SAVE_BOOL(show_avg_ping);
+    SAVE_UINT(font_size);
 }
 
 void LatencyWidget::DrawSettingsInternal()

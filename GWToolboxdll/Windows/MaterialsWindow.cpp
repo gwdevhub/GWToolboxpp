@@ -215,15 +215,15 @@ void MaterialsWindow::Terminate()
 void MaterialsWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    manage_gold = ini->GetBoolValue(Name(), VAR_NAME(manage_gold), manage_gold);
-    use_stock = ini->GetBoolValue(Name(), VAR_NAME(use_stock), use_stock);
+    LOAD_BOOL(manage_gold);
+    LOAD_BOOL(use_stock);
 }
 
 void MaterialsWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(manage_gold), manage_gold);
-    ini->SetBoolValue(Name(), VAR_NAME(use_stock), use_stock);
+    SAVE_BOOL(manage_gold);
+    SAVE_BOOL(use_stock);
 }
 
 void MaterialsWindow::Draw(IDirect3DDevice9*)

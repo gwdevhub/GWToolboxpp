@@ -169,11 +169,11 @@ void AlcoholWidget::DrawSettingsInternal()
 void AlcoholWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
-    only_show_when_drunk = ini->GetBoolValue(Name(), VAR_NAME(only_show_when_drunk), only_show_when_drunk);
+    LOAD_BOOL(only_show_when_drunk);
 }
 
 void AlcoholWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(only_show_when_drunk), only_show_when_drunk);
+    SAVE_BOOL(only_show_when_drunk);
 }

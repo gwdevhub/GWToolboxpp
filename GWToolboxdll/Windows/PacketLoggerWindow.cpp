@@ -835,10 +835,10 @@ void PacketLoggerWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
 
-    ini->SetBoolValue(Name(), VAR_NAME(timestamp_type), timestamp_type);
-    ini->SetBoolValue(Name(), VAR_NAME(timestamp_show_hours), timestamp_show_hours);
-    ini->SetBoolValue(Name(), VAR_NAME(timestamp_show_seconds), timestamp_show_seconds);
-    ini->SetBoolValue(Name(), VAR_NAME(timestamp_show_milliseconds), timestamp_show_milliseconds);
+    SAVE_BOOL(timestamp_type);
+    SAVE_BOOL(timestamp_show_hours);
+    SAVE_BOOL(timestamp_show_seconds);
+    SAVE_BOOL(timestamp_show_milliseconds);
 
     std::bitset<packet_max> ignored_packets_bitset;
     for (size_t i = 0; i < packet_max; i++) {
@@ -853,10 +853,10 @@ void PacketLoggerWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
 
-    timestamp_type = ini->GetBoolValue(Name(), VAR_NAME(timestamp_type), TimestampType_None);
-    timestamp_show_hours = ini->GetBoolValue(Name(), VAR_NAME(timestamp_show_hours), true);
-    timestamp_show_seconds = ini->GetBoolValue(Name(), VAR_NAME(timestamp_show_seconds), true);
-    timestamp_show_milliseconds = ini->GetBoolValue(Name(), VAR_NAME(timestamp_show_milliseconds), true);
+
+
+
+
 
     const char* ignored_packets_bits = ini->GetValue(Name(), VAR_NAME(ignored_packets), "-");
     if (strcmp(ignored_packets_bits, "-") == 0) {

@@ -624,19 +624,19 @@ void Minimap::LoadSettings(ToolboxIni* ini)
             }
         });
     scale = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(scale), 1.0));
-    hero_flag_controls_show = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), true);
-    hero_flag_window_attach = ini->GetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), true);
+    LOAD_BOOL(hero_flag_controls_show);
+    LOAD_BOOL(hero_flag_window_attach);
     hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background", hero_flag_window_background);
-    mouse_clickthrough_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
-    mouse_clickthrough_in_explorable = ini->GetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_explorable), mouse_clickthrough_in_explorable);
-    rotate_minimap = ini->GetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
-    flip_on_reverse = ini->GetBoolValue(Name(), VAR_NAME(flip_on_reverse), flip_on_reverse);
-    smooth_rotation = ini->GetBoolValue(Name(), VAR_NAME(smooth_rotation), smooth_rotation);
-    circular_map = ini->GetBoolValue(Name(), VAR_NAME(circular_map), circular_map);
-    snap_to_compass = ini->GetBoolValue(Name(), VAR_NAME(snap_to_compass), snap_to_compass);
-    hide_compass_agents = ini->GetBoolValue(Name(), VAR_NAME(hide_compass_agents), hide_compass_agents);
+    LOAD_BOOL(mouse_clickthrough_in_outpost);
+    LOAD_BOOL(mouse_clickthrough_in_explorable);
+    LOAD_BOOL(rotate_minimap);
+    LOAD_BOOL(flip_on_reverse);
+    LOAD_BOOL(smooth_rotation);
+    LOAD_BOOL(circular_map);
+    LOAD_BOOL(snap_to_compass);
+    LOAD_BOOL(hide_compass_agents);
 
-    hide_compass_quest_marker = LOAD_BOOL(hide_compass_quest_marker);
+    LOAD_BOOL(hide_compass_quest_marker);
     ToggleCompassQuestMarker(hide_compass_quest_marker);
 
     key_none_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_none_behavior), 1));
@@ -658,22 +658,22 @@ void Minimap::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
     ini->SetDoubleValue(Name(), VAR_NAME(scale), scale);
-    ini->SetBoolValue(Name(), VAR_NAME(hero_flag_controls_show), hero_flag_controls_show);
-    ini->SetBoolValue(Name(), VAR_NAME(hero_flag_window_attach), hero_flag_window_attach);
-    Colors::Save(ini, Name(), VAR_NAME(hero_flag_window_background), hero_flag_window_background);
-    ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_outpost), mouse_clickthrough_in_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(mouse_clickthrough_in_explorable), mouse_clickthrough_in_explorable);
+    SAVE_BOOL(hero_flag_controls_show);
+    SAVE_BOOL(hero_flag_window_attach);
+    SAVE_COLOR(hero_flag_window_background);
+    SAVE_BOOL(mouse_clickthrough_in_outpost);
+    SAVE_BOOL(mouse_clickthrough_in_explorable);
     ini->SetLongValue(Name(), VAR_NAME(key_none_behavior), static_cast<long>(key_none_behavior));
     ini->SetLongValue(Name(), VAR_NAME(key_ctrl_behavior), static_cast<long>(key_ctrl_behavior));
     ini->SetLongValue(Name(), VAR_NAME(key_shift_behavior), static_cast<long>(key_shift_behavior));
     ini->SetLongValue(Name(), VAR_NAME(key_alt_behavior), static_cast<long>(key_alt_behavior));
 
-    ini->SetBoolValue(Name(), VAR_NAME(rotate_minimap), rotate_minimap);
-    ini->SetBoolValue(Name(), VAR_NAME(flip_on_reverse), flip_on_reverse);
-    ini->SetBoolValue(Name(), VAR_NAME(smooth_rotation), smooth_rotation);
-    ini->SetBoolValue(Name(), VAR_NAME(circular_map), circular_map);
-    ini->SetBoolValue(Name(), VAR_NAME(snap_to_compass), snap_to_compass);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_compass_agents), hide_compass_agents);
+    SAVE_BOOL(rotate_minimap);
+    SAVE_BOOL(flip_on_reverse);
+    SAVE_BOOL(smooth_rotation);
+    SAVE_BOOL(circular_map);
+    SAVE_BOOL(snap_to_compass);
+    SAVE_BOOL(hide_compass_agents);
 
     SAVE_BOOL(hide_compass_quest_marker);
 

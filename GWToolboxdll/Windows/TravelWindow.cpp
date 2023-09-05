@@ -1148,7 +1148,7 @@ void TravelWindow::DrawSettingsInternal()
 void TravelWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+
 
     fav_count = ini->GetLongValue(Name(), VAR_NAME(fav_count), 3);
     fav_index.resize(static_cast<size_t>(fav_count), -1);
@@ -1164,7 +1164,7 @@ void TravelWindow::LoadSettings(ToolboxIni* ini)
 void TravelWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    ini->SetLongValue(Name(), VAR_NAME(fav_count), fav_count);
+    SAVE_UINT(fav_count);
     for (auto i = 0; i < fav_count; i++) {
         const auto ui = static_cast<size_t>(i);
         char key[32];

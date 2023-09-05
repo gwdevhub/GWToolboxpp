@@ -394,15 +394,15 @@ void MouseFix::Initialize()
 
 void MouseFix::LoadSettings(ToolboxIni* ini)
 {
-    enable_cursor_fix = ini->GetBoolValue(Name(), VAR_NAME(enable_cursor_fix), enable_cursor_fix);
+    LOAD_BOOL(enable_cursor_fix);
     SetCursorSize(ini->GetLongValue(Name(), VAR_NAME(cursor_size), cursor_size));
     RedrawCursorIcon();
 }
 
 void MouseFix::SaveSettings(ToolboxIni* ini)
 {
-    ini->SetBoolValue(Name(), VAR_NAME(enable_cursor_fix), enable_cursor_fix);
-    ini->SetLongValue(Name(), VAR_NAME(cursor_size), cursor_size);
+    SAVE_BOOL(enable_cursor_fix);
+    SAVE_UINT(cursor_size);
 }
 
 void MouseFix::Terminate()

@@ -495,7 +495,7 @@ void HotkeysWindow::DrawSettingsInternal()
 void HotkeysWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+
 
     TBHotkey::show_active_in_header = ini->GetBoolValue(Name(), "show_active_in_header", false);
     TBHotkey::show_run_in_header = ini->GetBoolValue(Name(), "show_run_in_header", false);

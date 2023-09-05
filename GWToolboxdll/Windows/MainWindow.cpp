@@ -9,9 +9,9 @@
 void MainWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    one_panel_at_time_only = ini->GetBoolValue(Name(), VAR_NAME(one_panel_at_time_only), one_panel_at_time_only);
-    show_icons = ini->GetBoolValue(Name(), VAR_NAME(show_icons), show_icons);
-    center_align_text = ini->GetBoolValue(Name(), VAR_NAME(center_align_text), center_align_text);
+    LOAD_BOOL(one_panel_at_time_only);
+    LOAD_BOOL(show_icons);
+    LOAD_BOOL(center_align_text);
     show_menubutton = false;
     pending_refresh_buttons = true;
 }
@@ -19,9 +19,9 @@ void MainWindow::LoadSettings(ToolboxIni* ini)
 void MainWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(one_panel_at_time_only), one_panel_at_time_only);
-    ini->SetBoolValue(Name(), VAR_NAME(show_icons), show_icons);
-    ini->SetBoolValue(Name(), VAR_NAME(center_align_text), center_align_text);
+    SAVE_BOOL(one_panel_at_time_only);
+    SAVE_BOOL(show_icons);
+    SAVE_BOOL(center_align_text);
 }
 
 void MainWindow::DrawSettingsInternal()

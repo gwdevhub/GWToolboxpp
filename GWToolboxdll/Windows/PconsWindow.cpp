@@ -641,36 +641,36 @@ void PconsWindow::CheckBossRangeAutoDisable()
 void PconsWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    show_menubutton = ini->GetBoolValue(Name(), VAR_NAME(show_menubutton), true);
+    LOAD_BOOL(show_menubutton);
 
     for (Pcon* pcon : pcons) {
         pcon->LoadSettings(ini, Name());
     }
 
-    tick_with_pcons = ini->GetBoolValue(Name(), VAR_NAME(tick_with_pcons), true);
+    LOAD_BOOL(tick_with_pcons);
+    LOAD_BOOL(show_enable_button);
     items_per_row = ini->GetLongValue(Name(), VAR_NAME(items_per_row), 3);
     Pcon::pcons_delay = ini->GetLongValue(Name(), VAR_NAME(pcons_delay), 5000);
     Pcon::lunar_delay = ini->GetLongValue(Name(), VAR_NAME(lunar_delay), 500);
     Pcon::size = static_cast<float>(ini->GetDoubleValue(Name(), "pconsize", 46.0));
-    Pcon::disable_when_not_found = ini->GetBoolValue(Name(), VAR_NAME(disable_when_not_found), true);
     Pcon::enabled_bg_color = Colors::Load(ini, Name(), VAR_NAME(enabled_bg_color), Pcon::enabled_bg_color);
-    show_enable_button = ini->GetBoolValue(Name(), VAR_NAME(show_enable_button), show_enable_button);
-    Pcon::suppress_drunk_effect = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_effect), false);
-    Pcon::suppress_drunk_text = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_text), false);
-    Pcon::suppress_drunk_emotes = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), false);
-    Pcon::suppress_lunar_skills = ini->GetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), false);
+    Pcon::disable_when_not_found = ini->GetBoolValue(Name(), VAR_NAME(disable_when_not_found), Pcon::disable_when_not_found);
+    Pcon::suppress_drunk_effect = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_effect), Pcon::suppress_drunk_effect);
+    Pcon::suppress_drunk_text = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_text), Pcon::suppress_drunk_text);
+    Pcon::suppress_drunk_emotes = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), Pcon::suppress_drunk_emotes);
+    Pcon::suppress_lunar_skills = ini->GetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), Pcon::suppress_lunar_skills);
     Pcon::pcons_by_character = ini->GetBoolValue(Name(), VAR_NAME(pcons_by_character), Pcon::pcons_by_character);
-    Pcon::refill_if_below_threshold = ini->GetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), false);
-    show_auto_refill_pcons_tickbox = ini->GetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
-    show_auto_disable_pcons_tickbox = ini->GetBoolValue(Name(), VAR_NAME(show_auto_disable_pcons_tickbox), show_auto_disable_pcons_tickbox);
+    Pcon::refill_if_below_threshold = ini->GetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), Pcon::refill_if_below_threshold);
+    LOAD_BOOL(show_auto_refill_pcons_tickbox);
+    LOAD_BOOL(show_auto_disable_pcons_tickbox);
 
-    show_storage_quantity = ini->GetBoolValue(Name(), VAR_NAME(show_storage_quantity), show_storage_quantity);
-    shift_click_toggles_category = ini->GetBoolValue(Name(), VAR_NAME(shift_click_toggles_category), shift_click_toggles_category);
+    LOAD_BOOL(show_storage_quantity);
+    LOAD_BOOL(shift_click_toggles_category);
 
-    disable_pcons_on_map_change = ini->GetBoolValue(Name(), VAR_NAME(disable_pcons_on_map_change), disable_pcons_on_map_change);
-    disable_cons_on_vanquish_completion = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_on_vanquish_completion), disable_cons_on_vanquish_completion);
-    disable_cons_in_final_room = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_in_final_room), disable_cons_in_final_room);
-    disable_cons_on_objective_completion = ini->GetBoolValue(Name(), VAR_NAME(disable_cons_on_objective_completion), disable_cons_on_objective_completion);
+    LOAD_BOOL(disable_pcons_on_map_change);
+    LOAD_BOOL(disable_cons_on_vanquish_completion);
+    LOAD_BOOL(disable_cons_in_final_room);
+    LOAD_BOOL(disable_cons_on_objective_completion);
 
     std::string order = ini->GetValue(Name(), "order", "");
     std::vector<std::string_view> order_vec;
@@ -700,14 +700,14 @@ void PconsWindow::SaveSettings(ToolboxIni* ini)
         pcon->SaveSettings(ini, Name());
     }
 
-    ini->SetBoolValue(Name(), VAR_NAME(tick_with_pcons), tick_with_pcons);
-    ini->SetLongValue(Name(), VAR_NAME(items_per_row), items_per_row);
+    SAVE_BOOL(tick_with_pcons);
+    SAVE_UINT(items_per_row);
     ini->SetLongValue(Name(), VAR_NAME(pcons_delay), Pcon::pcons_delay);
     ini->SetLongValue(Name(), VAR_NAME(lunar_delay), Pcon::lunar_delay);
     ini->SetDoubleValue(Name(), "pconsize", Pcon::size);
     ini->SetBoolValue(Name(), VAR_NAME(disable_when_not_found), Pcon::disable_when_not_found);
     Colors::Save(ini, Name(), VAR_NAME(enabled_bg_color), Pcon::enabled_bg_color);
-    ini->SetBoolValue(Name(), VAR_NAME(show_enable_button), show_enable_button);
+    SAVE_BOOL(show_enable_button);
 
     ini->SetBoolValue(Name(), VAR_NAME(suppress_drunk_effect), Pcon::suppress_drunk_effect);
     ini->SetBoolValue(Name(), VAR_NAME(suppress_drunk_text), Pcon::suppress_drunk_text);
@@ -717,15 +717,15 @@ void PconsWindow::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(hide_city_pcons_in_explorable_areas), Pcon::hide_city_pcons_in_explorable_areas);
 
     ini->SetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), Pcon::refill_if_below_threshold);
-    ini->SetBoolValue(Name(), VAR_NAME(show_auto_refill_pcons_tickbox), show_auto_refill_pcons_tickbox);
-    ini->SetBoolValue(Name(), VAR_NAME(show_auto_disable_pcons_tickbox), show_auto_disable_pcons_tickbox);
-    ini->SetBoolValue(Name(), VAR_NAME(shift_click_toggles_category), shift_click_toggles_category);
-    ini->SetBoolValue(Name(), VAR_NAME(show_storage_quantity), show_storage_quantity);
+    SAVE_BOOL(show_auto_refill_pcons_tickbox);
+    SAVE_BOOL(show_auto_disable_pcons_tickbox);
+    SAVE_BOOL(shift_click_toggles_category);
+    SAVE_BOOL(show_storage_quantity);
 
-    ini->SetBoolValue(Name(), VAR_NAME(disable_pcons_on_map_change), disable_pcons_on_map_change);
-    ini->SetBoolValue(Name(), VAR_NAME(disable_cons_on_vanquish_completion), disable_cons_on_vanquish_completion);
-    ini->SetBoolValue(Name(), VAR_NAME(disable_cons_in_final_room), disable_cons_in_final_room);
-    ini->SetBoolValue(Name(), VAR_NAME(disable_cons_on_objective_completion), disable_cons_on_objective_completion);
+    SAVE_BOOL(disable_pcons_on_map_change);
+    SAVE_BOOL(disable_cons_on_vanquish_completion);
+    SAVE_BOOL(disable_cons_in_final_room);
+    SAVE_BOOL(disable_cons_on_objective_completion);
 
     auto ss = std::stringstream();
     std::ranges::for_each(pcons, [&ss](const auto pcon) {

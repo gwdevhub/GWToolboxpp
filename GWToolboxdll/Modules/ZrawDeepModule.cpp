@@ -319,20 +319,20 @@ void ZrawDeepModule::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
 
-    ini->SetBoolValue(Name(), VAR_NAME(enabled), enabled);
-    ini->SetBoolValue(Name(), VAR_NAME(transmo_team), transmo_team);
-    ini->SetBoolValue(Name(), VAR_NAME(rewrite_npc_dialogs), rewrite_npc_dialogs);
-    ini->SetBoolValue(Name(), VAR_NAME(kanaxais_true_form), kanaxais_true_form);
+    SAVE_BOOL(enabled);
+    SAVE_BOOL(transmo_team);
+    SAVE_BOOL(rewrite_npc_dialogs);
+    SAVE_BOOL(kanaxais_true_form);
 }
 
 void ZrawDeepModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
 
-    enabled = ini->GetBoolValue(Name(), VAR_NAME(enabled), enabled);
-    transmo_team = ini->GetBoolValue(Name(), VAR_NAME(transmo_team), transmo_team);
-    rewrite_npc_dialogs = ini->GetBoolValue(Name(), VAR_NAME(rewrite_npc_dialogs), rewrite_npc_dialogs);
-    kanaxais_true_form = ini->GetBoolValue(Name(), VAR_NAME(kanaxais_true_form), kanaxais_true_form);
+    LOAD_BOOL(enabled);
+    LOAD_BOOL(transmo_team);
+    LOAD_BOOL(rewrite_npc_dialogs);
+    LOAD_BOOL(kanaxais_true_form);
 }
 
 void ZrawDeepModule::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet)
