@@ -227,9 +227,18 @@ void TravelWindow::Draw(IDirect3DDevice9*)
             }
         }
         if (::pending_map_travel.map_id != GW::Constants::MapID::None) {
-            const auto abort_str = std::format("Abort retrying travel to {}", outpost_names[static_cast<size_t>(::pending_map_travel.map_id)]);
-            if (ImGui::Button(abort_str.c_str())) {
-                ::pending_map_travel.map_id = GW::Constants::MapID::None;
+            const auto map_id_it = std::ranges::find(outpost_ids, ::pending_map_travel.map_id);
+            if (map_id_it != std::ranges::end(outpost_ids)) {
+                const auto map_idx = std::distance(outpost_ids.begin(), map_id_it);
+                const auto abort_str = std::format("Abort retrying travel to {}", outpost_names[map_idx]);
+                if (ImGui::Button(abort_str.c_str())) {
+                    ::pending_map_travel.map_id = GW::Constants::MapID::None;
+                }
+            }
+            else {
+                if (ImGui::Button("Abort retrying travel")) {
+                    ::pending_map_travel.map_id = GW::Constants::MapID::None;
+                }
             }
         }
     }
