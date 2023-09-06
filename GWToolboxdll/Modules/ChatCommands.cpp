@@ -513,14 +513,14 @@ void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
     DWORD& npc_id = transmo.npc_id;
     DWORD& scale = transmo.scale;
     const GW::NPCArray& npcs = GW::GetGameContext()->world->npcs;
-    if (npc_id == INT_MAX - 1) {
+    if (npc_id == static_cast<DWORD>(std::numeric_limits<int>::max() - 1)) {
         // Scale only
         npc_id = a->player_number;
         if (a->transmog_npc_id & 0x20000000) {
             npc_id = a->transmog_npc_id ^ 0x20000000;
         }
     }
-    else if (npc_id == INT_MAX) {
+    else if (npc_id == static_cast<DWORD>(std::numeric_limits<int>::max())) {
         // Reset
         npc_id = 0;
         scale = 0x64000000;
@@ -2234,7 +2234,7 @@ void ChatCommands::CmdTransmoParty(const wchar_t*, const int argc, const LPWSTR*
     if (argc > 1) {
         int iscale;
         if (wcsncmp(argv[1], L"reset", 5) == 0) {
-            transmo.npc_id = INT_MAX;
+            transmo.npc_id = std::numeric_limits<int>::max();
         }
         else if (GuiUtils::ParseInt(argv[1], &iscale)) {
             if (!ParseScale(iscale, transmo)) {
@@ -2279,7 +2279,7 @@ bool ChatCommands::ParseScale(const int scale, PendingTransmo& transmo)
     }
     transmo.scale = static_cast<DWORD>(scale) << 24;
     if (!transmo.npc_id) {
-        transmo.npc_id = INT_MAX - 1;
+        transmo.npc_id = std::numeric_limits<int>::max() - 1;
     }
     return true;
 }
@@ -2298,7 +2298,7 @@ void ChatCommands::CmdTransmoTarget(const wchar_t*, const int argc, const LPWSTR
     PendingTransmo transmo;
     int iscale;
     if (wcsncmp(argv[1], L"reset", 5) == 0) {
-        transmo.npc_id = INT_MAX;
+        transmo.npc_id = std::numeric_limits<int>::max();
     }
     else if (GuiUtils::ParseInt(argv[1], &iscale)) {
         if (!ParseScale(iscale, transmo)) {
@@ -2396,7 +2396,7 @@ void ChatCommands::CmdTransmo(const wchar_t*, const int argc, const LPWSTR* argv
     if (argc > 1) {
         int iscale;
         if (wcsncmp(argv[1], L"reset", 5) == 0) {
-            transmo.npc_id = INT_MAX;
+            transmo.npc_id = std::numeric_limits<int>::max();
         }
         else if (GuiUtils::ParseInt(argv[1], &iscale)) {
             if (!ParseScale(iscale, transmo)) {
@@ -2579,7 +2579,7 @@ void ChatCommands::CmdTransmoAgent(const wchar_t*, const int argc, const LPWSTR*
     const auto agent_id = static_cast<uint32_t>(iagent_id);
     int iscale;
     if (wcsncmp(argv[2], L"reset", 5) == 0) {
-        transmo.npc_id = INT_MAX;
+        transmo.npc_id = std::numeric_limits<int>::max();
     }
     else if (GuiUtils::ParseInt(argv[2], &iscale)) {
         if (!ParseScale(iscale, transmo)) {

@@ -283,7 +283,7 @@ void TravelWindow::Update(const float)
 GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID map_to)
 {
     const GW::AreaInfo* this_map = GW::Map::GetMapInfo(map_to);
-    float nearest_distance = FLT_MAX;
+    float nearest_distance = std::numeric_limits<float>::max();
     auto nearest_map_id = GW::Constants::MapID::None;
 
     auto get_pos = [](const GW::AreaInfo* map) {
