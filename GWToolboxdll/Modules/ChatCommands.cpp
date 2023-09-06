@@ -469,7 +469,8 @@ namespace {
     }
 
 
-    const char* withdraw_syntax = "'/withdraw [quantity (1-65535)] model_id1 [model_id2 ...]' tops up your inventory with a minimum quantity of 1 or more items, identified by model_id";
+    constexpr auto withdraw_syntax = "'/withdraw <quantity (1-65535)> [model_id1 model_id2 ...]' tops up your inventory with a minimum quantity of 1 or more items, identified by model_id\n"
+                                     "If no model_ids are passed, withdraws <quantity> gold from storage";
 
     struct CmdAlias {
         char alias_cstr[256] = {0};
@@ -2357,10 +2358,19 @@ void ChatCommands::CmdWithdraw(const wchar_t*, const int argc, const LPWSTR* arg
         Log::Error("Incorrect syntax:");
         Log::Error(withdraw_syntax);
     };
-    if (argc < 3) {
+    if (argc < 2) {
         return syntax_error();
     }
     uint32_t wanted_quantity = 0;
+    if (argc < 3) {
+        if (!(GuiUtils::ParseUInt(argv[1], &wanted_quantity) && wanted_quantity <= 0xFFFF)) {
+            return syntax_error();
+        }
+        if (wanted_quantity < 100) {
+            wanted_quantity *= 1000;
+        }
+        GW::Items::WithdrawGold(wanted_quantity);
+    }
     std::vector<uint32_t> model_ids;
 
     if (!(GuiUtils::ParseUInt(argv[1], &wanted_quantity) && wanted_quantity <= 0xFFFF)) {

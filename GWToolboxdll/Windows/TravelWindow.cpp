@@ -1045,17 +1045,11 @@ bool TravelWindow::Travel(const GW::Constants::MapID MapID, const GW::Constants:
     //return GW::Map::Travel(MapID, District, district_number);
 }
 
-void TravelWindow::UITravel(const GW::Constants::MapID MapID, const GW::Constants::District _district /*= 0*/, const uint32_t _district_number)
+void TravelWindow::UITravel(const GW::Constants::MapID MapID, const GW::Constants::District district, const uint32_t district_number)
 {
-    auto t = new MapStruct();
-    t->map_id = MapID;
-    t->district_number = _district_number;
-    t->region_id = RegionFromDistrict(_district);
-    t->language_id = LanguageFromDistrict(_district);
-
-    GW::GameThread::Enqueue([t] {
-        SendUIMessage(GW::UI::UIMessage::kTravel, t);
-        delete t;
+    GW::GameThread::Enqueue([=] {
+        auto map_struct = MapStruct{MapID,  RegionFromDistrict(district), LanguageFromDistrict(district), district_number};
+        SendUIMessage(GW::UI::UIMessage::kTravel, &map_struct);
     });
 }
 
@@ -1143,6 +1137,7 @@ void TravelWindow::DrawSettingsInternal()
     }
     ImGui::PopItemWidth();
     ImGui::Checkbox("Automatically retry if the district is full", &retry_map_travel);
+    ImGui::ShowHelp("Use /tp stop to stop retrying.");
 }
 
 void TravelWindow::LoadSettings(ToolboxIni* ini)
@@ -1557,6 +1552,11 @@ void TravelWindow::CmdTP(const wchar_t*, const int argc, const LPWSTR* argv)
 
     std::wstring argOutpost = GuiUtils::ToLower(argv[1]);
     const std::wstring argDistrict = GuiUtils::ToLower(argv[argc - 1]);
+    if (argOutpost == L"stop") {
+        ::pending_map_travel.map_id = GW::Constants::MapID::None;
+        Instance().pending_map_travel = false;
+        return;
+    }
     // Guild hall
     if (argOutpost == L"gh") {
         if (IsInGH()) {
