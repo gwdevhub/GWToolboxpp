@@ -469,8 +469,12 @@ namespace {
     }
 
 
-    constexpr auto withdraw_syntax = "'/withdraw <quantity (1-65535)> [model_id1 model_id2 ...]' tops up your inventory with a minimum quantity of 1 or more items, identified by model_id\n"
-                                     "If no model_ids are passed, withdraws <quantity> gold from storage";
+    constexpr auto withdraw_syntax = "'/withdraw <quantity (1-65535)> [model_id1 model_id2 ...]' tops up your inventory "
+        "with a minimum quantity of 1 or more items, identified by model_id\n"
+        "If no model_ids are passed, withdraws <quantity>[k] gold from storage\n"
+        "If quantity is 'all' and you do not pass model_ids, withdraws all gold you have or can hold.";
+    constexpr auto deposit_syntax = "'/deposit <quantity (1-100)>[k]' deposits <quantity> gold [platinum] from your inventory to your storage.\n"
+        "If quantity is 'all', deposits all gold [platinum] from your inventory to your storage.";;
 
     struct CmdAlias {
         char alias_cstr[256] = {0};
@@ -737,6 +741,9 @@ void ChatCommands::DrawHelp()
     ImGui::Text("'/wiki [quest|<search_term>]' search GWW for current quest or search term. By default, will search for the current map.");
     ImGui::Bullet();
     ImGui::Text(withdraw_syntax);
+    ImGui::Bullet();
+    ImGui::Text(deposit_syntax);
+
     ImGui::TreePop();
 }
 
@@ -952,6 +959,7 @@ void ChatCommands::Initialize()
     GW::Chat::CreateCommand(L"settitle", CmdReapplyTitle);
     GW::Chat::CreateCommand(L"title", CmdReapplyTitle);
     GW::Chat::CreateCommand(L"withdraw", CmdWithdraw);
+    GW::Chat::CreateCommand(L"deposit", CmdDeposit);
     GW::Chat::CreateCommand(L"pingitem", CmdPingEquipment);
     GW::Chat::CreateCommand(L"tick", [](const wchar_t*, int, LPWSTR*) -> void {
         GW::PartyMgr::Tick(!GW::PartyMgr::GetIsPlayerTicked());
@@ -2363,11 +2371,21 @@ void ChatCommands::CmdWithdraw(const wchar_t*, const int argc, const LPWSTR* arg
     }
     uint32_t wanted_quantity = 0;
     if (argc < 3) {
-        if (!(GuiUtils::ParseUInt(argv[1], &wanted_quantity) && wanted_quantity <= 0xFFFF)) {
-            return syntax_error();
+        std::wstring amount = argv[1];
+        const auto platinum = amount.ends_with(L'k') || amount.ends_with(L'p');
+        if (amount == L"max" || amount == L"all") {
+            wanted_quantity = GW::Items::GetGoldAmountInStorage();
         }
-        if (wanted_quantity < 100) {
-            wanted_quantity *= 1000;
+        else {
+            if (platinum) {
+                amount.pop_back();
+            }
+            if (!(GuiUtils::ParseUInt(amount.c_str(), &wanted_quantity) && wanted_quantity <= 0xFFFF)) {
+                return syntax_error();
+            }
+            if (platinum) {
+                wanted_quantity *= 1000;
+            }
         }
         GW::Items::WithdrawGold(wanted_quantity);
     }
@@ -2387,6 +2405,38 @@ void ChatCommands::CmdWithdraw(const wchar_t*, const int argc, const LPWSTR* arg
     // NB: uint16_t used already throughout Inv manager, and can't possibly have move than 0xffff of any item anyway.
     const auto to_move = static_cast<uint16_t>(wanted_quantity);
     InventoryManager::Instance().RefillUpToQuantity(to_move, model_ids);
+}
+
+void ChatCommands::CmdDeposit(const wchar_t*, int argc, const LPWSTR* argv)
+{
+    const auto syntax_error = [] {
+        Log::Error("Incorrect syntax:");
+        Log::Error(deposit_syntax);
+    };
+    if (argc != 2) {
+        return syntax_error();
+    }
+
+    uint32_t wanted_quantity = 0;
+    if (argc < 3) {
+        std::wstring amount = argv[1];
+        const auto platinum = amount.ends_with(L'k') || amount.ends_with(L'p');
+        if (amount == L"max" || amount == L"all") {
+            wanted_quantity = GW::Items::GetGoldAmountOnCharacter();
+        }
+        else {
+            if (platinum) {
+                amount.pop_back();
+            }
+            if (!(GuiUtils::ParseUInt(amount.c_str(), &wanted_quantity) && wanted_quantity <= 0xFFFF)) {
+                return syntax_error();
+            }
+            if (platinum) {
+                wanted_quantity *= 1000;
+            }
+        }
+        GW::Items::WithdrawGold(wanted_quantity);
+    }
 }
 
 void ChatCommands::CmdTransmo(const wchar_t*, const int argc, const LPWSTR* argv)
