@@ -299,10 +299,10 @@ namespace {
 
     std::wstring GetObfuscatedName(const std::wstring_view original_name, const bool in_char_select)
     {
-        if (!own_player_name_w.empty() && rename_self && (original_name == GetPlayerName() || in_char_select)) {
+        if (!own_player_name_w.empty() && rename_self && (original_name == GetPlayerName() || in_char_select && !GW::Map::GetIsMapLoaded())) {
             return own_player_name_w;
         }
-        if (rename_friends_to_alias && !in_char_select) {
+        if (rename_friends_to_alias && (!in_char_select || GW::Map::GetIsMapLoaded())) {
             static std::map<std::wstring, std::wstring> friends_aliases;
             if (const auto frnd = FriendListWindow::GetFriend(original_name.data())) {
                 if (friends_aliases.contains(std::wstring{original_name})) {
@@ -314,7 +314,7 @@ namespace {
                 }
             }
         }
-        if (!rename_self && (original_name == GetPlayerName() || original_name == GetPlayerInvitedName() || in_char_select)) {
+        if (!rename_self && (original_name == GetPlayerName() || original_name == GetPlayerInvitedName() || in_char_select && GW::Map::GetIsMapLoaded())) {
             return {};
         }
         if (!rename_other_players && !in_char_select) {
@@ -409,7 +409,9 @@ namespace {
         GW::AccountInfo* accountInfo = GetAccountData_Ret();
         if (accountInfo && IsObfuscatorEnabled()) {
             ObfuscateGuildRoster(false);
-            Reset();
+            if (!GW::Map::GetIsMapLoaded()) {
+                Reset();
+            }
             account_info_obfuscated = *accountInfo;
             ObfuscateName(accountInfo->account_name, account_info_obfuscated_name, true);
             account_info_obfuscated.account_name = account_info_obfuscated_name.data();
@@ -842,26 +844,6 @@ void Obfuscator::Obfuscate(const bool obfuscate)
     }
 }
 
-void Obfuscator::Terminate()
-{
-    if (GetCharacterSummary_Func) {
-        GW::HookBase::RemoveHook(GetCharacterSummary_Func);
-        GetCharacterSummary_AssertionPatch.Reset();
-    }
-    Obfuscate(false);
-    Reset();
-
-#ifdef DETECT_STREAMING_APPLICATION
-
-    if (hook) {
-        ASSERT(UnhookWinEvent(hook));
-        CoUninitialize();
-        hook = 0;
-    }
-
-#endif
-}
-
 void Obfuscator::Initialize()
 {
     ToolboxModule::Initialize();
@@ -930,6 +912,31 @@ void Obfuscator::Initialize()
     hook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_OBJECT_DESTROY, NULL, OnWindowEvent, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
 
 #endif
+}
+
+void Obfuscator::SignalTerminate()
+{
+    if (GetCharacterSummary_Func) {
+        GW::HookBase::RemoveHook(GetCharacterSummary_Func);
+        GetCharacterSummary_AssertionPatch.Reset();
+    }
+    Obfuscate(false);
+    Reset();
+
+#ifdef DETECT_STREAMING_APPLICATION
+
+    if (hook) {
+        ASSERT(UnhookWinEvent(hook));
+        CoUninitialize();
+        hook = 0;
+    }
+
+#endif
+}
+
+bool Obfuscator::CanTerminate()
+{
+    return !GetCharacterSummary_AssertionPatch.GetIsEnable();
 }
 
 void Obfuscator::Update(float)
