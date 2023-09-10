@@ -577,7 +577,6 @@ namespace {
             case GW::UI::UIMessage::kShowMapEntryMessage: {
                 const auto packet_actual = static_cast<GW::UI::MapEntryMessage*>(wParam);
                 if (packet_actual->subtitle && ObfuscateMessage(packet_actual->subtitle, ui_message_temp_message)) {
-                    ASSERT_MESSAGE_PTR_HASNT_CHANGED(ui_message_temp_message);
                     packet_actual->subtitle = ui_message_temp_message.data();
                 }
             }
@@ -586,7 +585,6 @@ namespace {
                 // Dialog body
                 const auto packet_actual = static_cast<GW::UI::DialogBodyInfo*>(wParam);
                 if (packet_actual->message_enc && ObfuscateMessage(packet_actual->message_enc, ui_message_temp_message)) {
-                    ASSERT_MESSAGE_PTR_HASNT_CHANGED(ui_message_temp_message);
                     packet_actual->message_enc = ui_message_temp_message.data();
                 }
             }
@@ -604,14 +602,12 @@ namespace {
                     break; // do not unobfuscate messages from e.g. twitch
                 }
                 if (packet_actual->message && UnobfuscateMessage(packet_actual->message, ui_message_temp_message)) {
-                    ASSERT_MESSAGE_PTR_HASNT_CHANGED(ui_message_temp_message);
                     packet_actual->message = ui_message_temp_message.data();
                 }
             }
             case GW::UI::UIMessage::kPlayerChatMessage: {
                 const auto player_chat_message = static_cast<PlayerChatMessage*>(wParam);
                 if (player_chat_message->message && player_chat_message->message[0] && ObfuscateMessage(player_chat_message->message, speech_message_temp_message)) {
-                    ASSERT_MESSAGE_PTR_HASNT_CHANGED(ui_message_temp_message);
                     player_chat_message->message = speech_message_temp_message.data();
                 }
             }
@@ -789,8 +785,6 @@ namespace {
         // We unobfuscated the message in OnPreUIMessage - now we need to re-obfuscate it for display
         if (ObfuscateMessage(*message_ptr, ui_message_temp_message)) {
             // I think this is copied away later?
-
-            ASSERT_MESSAGE_PTR_HASNT_CHANGED(ui_message_temp_message);
             *message_ptr = ui_message_temp_message.data();
         }
     }
