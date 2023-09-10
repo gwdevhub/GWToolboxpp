@@ -34,6 +34,8 @@
 #include <Psapi.h>
 #endif
 
+#define ASSERT_MESSAGE_PTR_HASNT_CHANGED(var)  static wchar_t* mp = nullptr; ASSERT(mp == nullptr || mp == var.data()); mp = var.data();
+
 
 namespace {
     /*IWbemServices* pSvc = 0;
@@ -378,6 +380,8 @@ namespace {
 
     bool ObfuscateMessage(const std::wstring_view message, std::wstring& out, const bool obfuscate = true)
     {
+        if (message.find(L"\x2ba\x107") == std::wstring_view::npos)
+            return false; // Message contains no player names
         std::wstring replacemsg{message};
         const auto& to_search = obfuscate ? obfuscated_by_original : obfuscated_by_obfuscation;
         bool was_changed = false;
@@ -401,8 +405,8 @@ namespace {
         return ObfuscateMessage(message, out, false);
     }
 
-    // TODO: Jon this is never called, is it needed?
     // We do this here instead of in WorldContext to intercept without rewriting memory
+    // This is called when the game accesses account into via world contect e.g. to find account name when opening hero window
     GW::AccountInfo* OnGetAccountInfo()
     {
         GW::HookBase::EnterHook();
@@ -414,6 +418,7 @@ namespace {
             }
             account_info_obfuscated = *accountInfo;
             ObfuscateName(accountInfo->account_name, account_info_obfuscated_name, true);
+            ASSERT_MESSAGE_PTR_HASNT_CHANGED(account_info_obfuscated_name);
             account_info_obfuscated.account_name = account_info_obfuscated_name.data();
             accountInfo = &account_info_obfuscated;
         }
@@ -421,8 +426,8 @@ namespace {
         return accountInfo;
     }
 
-    // TODO: Jon occasionally relogging to another character will cause your own name to be duplicated in guild roster
     // We do this here instead of in PreGameContext to intercept without rewriting memory (it would also mess up logging in)
+    // This function is called when the login screen wants to display your currently highlighted character name at the top of the screen.
     void __fastcall OnGetCharacterSummary(void* ctx, const uint32_t edx, wchar_t* character_name)
     {
         GW::HookBase::EnterHook();
@@ -437,6 +442,7 @@ namespace {
                 Reset();
             }
             if (ObfuscateName(character_name, character_summary_obfuscated_name, true)) {
+                ASSERT_MESSAGE_PTR_HASNT_CHANGED(character_summary_obfuscated_name);
                 character_name = character_summary_obfuscated_name.data();
             }
         }
@@ -571,6 +577,7 @@ namespace {
             case GW::UI::UIMessage::kShowMapEntryMessage: {
                 const auto packet_actual = static_cast<GW::UI::MapEntryMessage*>(wParam);
                 if (packet_actual->subtitle && ObfuscateMessage(packet_actual->subtitle, ui_message_temp_message)) {
+                    ASSERT_MESSAGE_PTR_HASNT_CHANGED(ui_message_temp_message);
                     packet_actual->subtitle = ui_message_temp_message.data();
                 }
             }
@@ -579,6 +586,7 @@ namespace {
                 // Dialog body
                 const auto packet_actual = static_cast<GW::UI::DialogBodyInfo*>(wParam);
                 if (packet_actual->message_enc && ObfuscateMessage(packet_actual->message_enc, ui_message_temp_message)) {
+                    ASSERT_MESSAGE_PTR_HASNT_CHANGED(ui_message_temp_message);
                     packet_actual->message_enc = ui_message_temp_message.data();
                 }
             }
@@ -596,7 +604,15 @@ namespace {
                     break; // do not unobfuscate messages from e.g. twitch
                 }
                 if (packet_actual->message && UnobfuscateMessage(packet_actual->message, ui_message_temp_message)) {
+                    ASSERT_MESSAGE_PTR_HASNT_CHANGED(ui_message_temp_message);
                     packet_actual->message = ui_message_temp_message.data();
+                }
+            }
+            case GW::UI::UIMessage::kPlayerChatMessage: {
+                const auto player_chat_message = static_cast<PlayerChatMessage*>(wParam);
+                if (player_chat_message->message && player_chat_message->message[0] && ObfuscateMessage(player_chat_message->message, speech_message_temp_message)) {
+                    ASSERT_MESSAGE_PTR_HASNT_CHANGED(ui_message_temp_message);
+                    player_chat_message->message = speech_message_temp_message.data();
                 }
             }
             break;
@@ -608,15 +624,7 @@ namespace {
 
 
     void OnSpeechBubble(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*)
-    {
-        const auto player_chat_message = static_cast<PlayerChatMessage*>(wParam);
-        if (!IsObfuscatorEnabled()) {
-            return;
-        }
-        if (player_chat_message->message && player_chat_message->message[0] && ObfuscateMessage(player_chat_message->message, speech_message_temp_message)) {
-            player_chat_message->message = speech_message_temp_message.data();
-        }
-    }
+
 
     void OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet)
     {
@@ -745,8 +753,8 @@ namespace {
         }
     }
 
-    // TODO: Jon do we need this?
-    [[maybe_unused]] void OnSendChat(GW::HookStatus* status, const GW::Chat::Channel channel, wchar_t* message)
+    // Function called right before GW tries to send a chat message to a player; if the player is obfuscated, we need to unobfuscate it for the server.
+    void OnSendChat(GW::HookStatus* status, const GW::Chat::Channel channel, wchar_t* message)
     {
         if (channel != GW::Chat::Channel::CHANNEL_WHISPER) {
             return;
@@ -783,6 +791,8 @@ namespace {
         // We unobfuscated the message in OnPreUIMessage - now we need to re-obfuscate it for display
         if (ObfuscateMessage(*message_ptr, ui_message_temp_message)) {
             // I think this is copied away later?
+
+            ASSERT_MESSAGE_PTR_HASNT_CHANGED(ui_message_temp_message);
             *message_ptr = ui_message_temp_message.data();
         }
     }
@@ -887,7 +897,8 @@ void Obfuscator::Initialize()
     constexpr std::array pre_hook_ui_messages = {
         GW::UI::UIMessage::kShowMapEntryMessage,
         GW::UI::UIMessage::kDialogBody,
-        GW::UI::UIMessage::kWriteToChatLog
+        GW::UI::UIMessage::kWriteToChatLog,
+        GW::UI::UIMessage::kPlayerChatMessage
     };
     for (const auto header : pre_hook_ui_messages) {
         RegisterUIMessageCallback(&stoc_hook, header, OnUIMessage, pre_hook_altitude);
@@ -902,6 +913,8 @@ void Obfuscator::Initialize()
     RegisterUIMessageCallback(&stoc_hook, GW::UI::UIMessage::kPlayerChatMessage, OnSpeechBubble, pre_hook_altitude);
 
     RegisterPrintChatCallback(&ctos_hook, OnPrintChat);
+
+    RegisterSendChatCallback(&ctos_hook, OnSendChat);
 
     GW::Chat::CreateCommand(L"obfuscate", CmdObfuscate);
     GW::Chat::CreateCommand(L"hideme", CmdObfuscate);
