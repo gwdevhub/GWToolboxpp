@@ -1,22 +1,20 @@
 #include "stdafx.h"
 
-#include <GWCA/Constants/Constants.h>
-#include <GWCA/GameEntities/Skill.h>
-#include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Utilities/Scanner.h>
 
-#include <Color.h>
-#include <Defines.h>
 #include <Logger.h>
-#include "GwImgDxTex.h"
+#include "GwDatTextureModule.h"
+
+#include "Resources.h"
 
 namespace {
+
     class RecObj;
 
-    typedef struct {
-        int x;
-        int y;
-    } Vec2i;
+    struct Vec2i {
+        int x = 0;
+        int y = 0;
+    };
 
     typedef enum : uint32_t {
         GR_FORMAT_A8R8G8B8 = 0, // raw?
@@ -165,27 +163,25 @@ namespace {
         tex->UnlockRect(0);
         return tex;
     }
+
+    struct GwImg {
+        uint32_t m_file_id = 0;
+        Vec2i m_dims;
+        IDirect3DTexture9* m_tex = nullptr;
+    };
+
+    std::map<uint32_t,GwImg*> textures_by_file_id;
 }
 
-class GwImg {
-public:
-    GwImg(IDirect3DDevice9* device, uint32_t file_id) : m_file_id(file_id), m_dims(), m_tex(nullptr) { m_tex = CreateTexture(device, file_id, m_dims); }
-    ~GwImg() {
-        if (m_tex) {
-            m_tex->Release();
-        }
-    }
 
-    uint32_t m_file_id;
-    Vec2i m_dims;
-    IDirect3DTexture9* m_tex;
-};
 
-void GwImgTexture::Initialize()
+void GwDatTextureModule::Initialize()
 {
-    ToolboxWidget::Initialize();
+    ToolboxModule::Initialize();
 
     using namespace GW;
+
+    // @Cleanup: Reduce size of signature and offset jumps
     uintptr_t address = (uintptr_t)Scanner::Find("\x83\xc4\x0c\x33\xc0\x89\x45\xfc\x85\xf6\x74\x14\x8d\x45\xfc", "xxxxxxxxxxxxxxx", 0);
     if (address) {
         FileHashToRecObj_func = (FileIdToRecObj_pt)Scanner::FunctionFromNearCall(address - 7);
@@ -209,52 +205,22 @@ void GwImgTexture::Initialize()
 #endif
 }
 
-void GwImgTexture::ClearIcons()
+IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id)
 {
-    for (auto *icon : icons) {
-        if (icon) {
-            delete icon;
-        }
-    }
-    icons.clear();
+    auto found = textures_by_file_id.find(file_id);
+    if (found != textures_by_file_id.end())
+        return &found->second->m_tex;
+    auto gwimg_ptr = new GwImg(file_id);
+    textures_by_file_id[file_id] = gwimg_ptr;
+    Resources::Instance().EnqueueDxTask([gwimg_ptr](IDirect3DDevice9* device) {
+        gwimg_ptr->m_tex = CreateTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims);
+        });
+    return &gwimg_ptr->m_tex;
 }
-
-void GwImgTexture::Terminate()
+void GwDatTextureModule::Terminate()
 {
-    ClearIcons();
-}
-
-void GwImgTexture::Draw(IDirect3DDevice9* device)
-{
-    if (!visible) {
-        return;
+    for (auto gwimg_ptr : textures_by_file_id) {
+        delete gwimg_ptr.second;
     }
-
-    if (ImGui::Begin(Name(), &visible)) {
-        if (ImGui::Button("Draw Skillbar")) {
-            ClearIcons(); 
-            auto sb = GW::SkillbarMgr::GetPlayerSkillbar();
-            if (!sb) {
-                return;
-            }
-            for (int i = 0; i < 8; ++i) {
-                auto sb_skill = sb->skills[i];
-                auto skill = GW::SkillbarMgr::GetSkillConstantData(sb_skill.skill_id);
-                if (!skill) {
-                    continue;
-                }
-                icons.push_back(new GwImg(device, skill->icon_file_id));
-            }
-        }
-
-        for (auto &icon : icons) {
-            if (!icon->m_tex || !icon->m_dims.x || !icon->m_dims.y) {
-                continue;
-            }
-            ImGui::Image((void*)icon->m_tex, ImVec2((float)icon->m_dims.x, (float)icon->m_dims.y));
-            ImGui::SameLine();
-        }
-    }
-    ImGui::End();
+    textures_by_file_id.clear();
 }
-

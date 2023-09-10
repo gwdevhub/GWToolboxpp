@@ -23,6 +23,10 @@
 #include <nfd_win.cpp>
 #include <wolfssl/wolfcrypt/asn.h>
 
+#include "GwDatTextureModule.h"
+#include "GWCA/GameEntities/Skill.h"
+#include "GWCA/Managers/SkillbarMgr.h"
+
 namespace {
     const char* d3dErrorMessage(HRESULT code)
     {
@@ -848,6 +852,13 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
 }
 
 IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id)
+{
+    const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+    ASSERT(skill && skill->icon_file_id);
+    return GwDatTextureModule::LoadTextureFromFileId(skill->icon_file_id);
+
+}
+IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill_id)
 {
     if (skill_images.contains(skill_id)) {
         return skill_images.at(skill_id);
