@@ -82,6 +82,7 @@
 #include <Widgets/WorldMapWidget.h>
 #include <Widgets/EffectsMonitorWidget.h>
 #include <Widgets/LatencyWidget.h>
+#include <Widgets/GwImgDxTex.h>
 #include "ToolboxSettings.h"
 
 namespace {
@@ -153,7 +154,8 @@ namespace {
         WorldMapWidget::Instance(),
         EffectsMonitorWidget::Instance(),
         LatencyWidget::Instance(),
-        SkillMonitorWidget::Instance()
+        SkillMonitorWidget::Instance(), 
+        GwImgTexture::Instance()
     };
 
     std::vector<WindowToggle> optional_windows = {
