@@ -380,7 +380,7 @@ namespace {
 
     bool ObfuscateMessage(const std::wstring_view message, std::wstring& out, const bool obfuscate = true)
     {
-        if (message.find(L"\x2ba\x107") == std::wstring_view::npos)
+        if (!wcschr(message.data(),0x107))
             return false; // Message contains no player names
         std::wstring replacemsg{message};
         const auto& to_search = obfuscate ? obfuscated_by_original : obfuscated_by_obfuscation;
@@ -622,8 +622,6 @@ namespace {
     // TODO: Jon need to hook into gw party window invite and invite current_char rather than the obfuscated name
     [[maybe_unused]] void OnInvitePlayerInPartyWindow([[maybe_unused]] void* packet) { }
 
-
-    void OnSpeechBubble(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*)
 
 
     void OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet)
@@ -910,7 +908,6 @@ void Obfuscator::Initialize()
     for (const auto header : post_gw_ui_messages) {
         RegisterUIMessageCallback(&stoc_hook, header, OnUIMessage, post_gw_altitude);
     }
-    RegisterUIMessageCallback(&stoc_hook, GW::UI::UIMessage::kPlayerChatMessage, OnSpeechBubble, pre_hook_altitude);
 
     RegisterPrintChatCallback(&ctos_hook, OnPrintChat);
 
