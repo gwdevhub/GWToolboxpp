@@ -21,10 +21,21 @@
 #include <Modules/ToolboxSettings.h>
 #include <Modules/CrashHandler.h>
 #include <Modules/DialogModule.h>
+#include "Modules/AprilFools.h"
+#include "Modules/ChatSettings.h"
+#include "Modules/GameSettings.h"
+#include "Modules/GwDatTextureModule.h"
+#include "Modules/HallOfMonumentsModule.h"
+#include "Modules/InventoryManager.h"
+#include "Modules/LoginModule.h"
+#include "Modules/Updater.h"
+#include "Windows/SettingsWindow.h"
 
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <hidusage.h>
+
+
 
 // declare method here as recommended by imgui
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -514,6 +525,17 @@ void GWToolbox::Initialize()
     ToggleModule(ToolboxSettings::Instance());
     ToggleModule(MainWindow::Instance());
     ToggleModule(DialogModule::Instance());
+
+    ToggleModule(GwDatTextureModule::Instance());
+    ToggleModule(Updater::Instance());
+    ToggleModule(ChatCommands::Instance());
+    ToggleModule(GameSettings::Instance());
+    ToggleModule(ChatSettings::Instance());
+    ToggleModule(InventoryManager::Instance());
+    ToggleModule(HallOfMonumentsModule::Instance());
+    ToggleModule(LoginModule::Instance());
+    ToggleModule(AprilFools::Instance());
+    ToggleModule(SettingsWindow::Instance());
 
     ToolboxSettings::LoadModules(ini); // initialize all other modules as specified by the user
 

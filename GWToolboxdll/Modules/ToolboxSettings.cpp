@@ -34,7 +34,6 @@
 #endif
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/ToastNotifications.h>
-#include <Modules/LoginModule.h>
 #include <Modules/MouseFix.h>
 #include <Modules/GuildWarsSettingsModule.h>
 
@@ -45,7 +44,6 @@
 #include <Windows/TravelWindow.h>
 #include <Windows/InfoWindow.h>
 #include <Windows/MaterialsWindow.h>
-#include <Windows/SettingsWindow.h>
 #include <Windows/NotePadWindow.h>
 #include <Windows/PartyStatisticsWindow.h>
 #include <Windows/TradeWindow.h>
@@ -82,7 +80,6 @@
 #include <Widgets/WorldMapWidget.h>
 #include <Widgets/EffectsMonitorWidget.h>
 #include <Widgets/LatencyWidget.h>
-#include <Widgets/GwImgDxTex.h>
 #include "ToolboxSettings.h"
 
 namespace {
@@ -154,8 +151,7 @@ namespace {
         WorldMapWidget::Instance(),
         EffectsMonitorWidget::Instance(),
         LatencyWidget::Instance(),
-        SkillMonitorWidget::Instance(), 
-        GwImgTexture::Instance()
+        SkillMonitorWidget::Instance()
     };
 
     std::vector<WindowToggle> optional_windows = {
@@ -202,16 +198,6 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini)
     }
 
     inifile = ini;
-
-    GWToolbox::ToggleModule(Updater::Instance());
-    GWToolbox::ToggleModule(ChatCommands::Instance());
-    GWToolbox::ToggleModule(GameSettings::Instance());
-    GWToolbox::ToggleModule(ChatSettings::Instance());
-    GWToolbox::ToggleModule(InventoryManager::Instance());
-    GWToolbox::ToggleModule(HallOfMonumentsModule::Instance());
-    GWToolbox::ToggleModule(LoginModule::Instance());
-    GWToolbox::ToggleModule(AprilFools::Instance());
-    GWToolbox::ToggleModule(SettingsWindow::Instance());
 
 #ifdef _DEBUG
 #if 0
