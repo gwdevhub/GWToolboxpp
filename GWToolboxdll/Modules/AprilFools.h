@@ -2,6 +2,10 @@
 
 #include <ToolboxModule.h>
 
+namespace GW {
+    struct Agent;
+}
+
 class AprilFools : public ToolboxModule {
     AprilFools() = default;
     ~AprilFools() override = default;
