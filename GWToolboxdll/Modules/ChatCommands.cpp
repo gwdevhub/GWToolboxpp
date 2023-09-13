@@ -2374,7 +2374,7 @@ void ChatCommands::CmdWithdraw(const wchar_t*, const int argc, const LPWSTR* arg
         std::wstring amount = argv[1];
         const auto platinum = amount.ends_with(L'k') || amount.ends_with(L'p');
         if (amount == L"max" || amount == L"all") {
-            wanted_quantity = GW::Items::GetGoldAmountInStorage();
+            wanted_quantity = 0; // gwca withdraws maximum then
         }
         else {
             if (platinum) {
@@ -2388,6 +2388,7 @@ void ChatCommands::CmdWithdraw(const wchar_t*, const int argc, const LPWSTR* arg
             }
         }
         GW::Items::WithdrawGold(wanted_quantity);
+        return;
     }
     std::vector<uint32_t> model_ids;
 
@@ -2422,7 +2423,7 @@ void ChatCommands::CmdDeposit(const wchar_t*, int argc, const LPWSTR* argv)
         std::wstring amount = argv[1];
         const auto platinum = amount.ends_with(L'k') || amount.ends_with(L'p');
         if (amount == L"max" || amount == L"all") {
-            wanted_quantity = GW::Items::GetGoldAmountOnCharacter();
+            wanted_quantity = 0; // gwca deposits maximum then
         }
         else {
             if (platinum) {
@@ -2435,7 +2436,7 @@ void ChatCommands::CmdDeposit(const wchar_t*, int argc, const LPWSTR* argv)
                 wanted_quantity *= 1000;
             }
         }
-        GW::Items::WithdrawGold(wanted_quantity);
+        GW::Items::DepositGold(wanted_quantity);
     }
 }
 
