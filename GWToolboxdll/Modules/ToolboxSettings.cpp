@@ -24,7 +24,6 @@
 #include <Modules/TeamspeakModule.h>
 #include <Modules/Teamspeak5Module.h>
 #include <Modules/ObserverModule.h>
-#include <Modules/Obfuscator.h>
 #include <Modules/ChatLog.h>
 #include <Modules/HintsModule.h>
 #include <Modules/PluginModule.h>
@@ -131,7 +130,6 @@ namespace {
         ChatLog::Instance(),
         HintsModule::Instance(),
         MouseFix::Instance(),
-        Obfuscator::Instance(),
         KeyboardLanguageFix::Instance(),
         ZrawDeepModule::Instance(),
         GuildWarsSettingsModule::Instance()
