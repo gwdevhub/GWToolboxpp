@@ -15,6 +15,8 @@ public:
 
     const char* Name() const override { return "GW Dat Texture Module"; };
 
+    bool HasSettings() override { return false; }
+
     void Initialize() override;
     void Terminate() override;
 
