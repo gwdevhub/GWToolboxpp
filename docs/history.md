@@ -32,6 +32,7 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Fixed bug preventing secondary profession switch on tome use.
 * [Fix] Fixed rerolling to characters when you had empty char slots
 * [Fix] Fixed trade window timestamps
+* [Removed] Removed obfuscator for the time being as it was unstable. Might be re-added later.
 * [Developers] Plugins have been reworked in order to more closely integrate into Toolbox. You will have to update your
   plugins in order for them to load.
 
