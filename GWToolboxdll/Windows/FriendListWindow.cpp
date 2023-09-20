@@ -28,8 +28,6 @@
 
 #include <Utils/ToolboxUtils.h>
 
-#include "Modules/Obfuscator.h"
-
 
 /* Out of scope namespecey lookups */
 using namespace ToolboxUtils;

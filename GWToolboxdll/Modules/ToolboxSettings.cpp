@@ -11,16 +11,11 @@
 #include <Modules/Updater.h>
 #include <Modules/Resources.h>
 #include <Modules/ChatFilter.h>
-#include <Modules/ChatSettings.h>
 #include <Modules/ItemFilter.h>
-#include <Modules/ChatCommands.h>
-#include <Modules/GameSettings.h>
 #include <Modules/DiscordModule.h>
 #include <Modules/TwitchModule.h>
 #include <Modules/PartyWindowModule.h>
 #include <Modules/ZrawDeepModule.h>
-#include <Modules/AprilFools.h>
-#include <Modules/InventoryManager.h>
 #include <Modules/TeamspeakModule.h>
 #include <Modules/Teamspeak5Module.h>
 #include <Modules/ObserverModule.h>
@@ -31,7 +26,6 @@
 #if 0
 #include <Modules/GWFileRequester.h>
 #endif
-#include <Modules/HallOfMonumentsModule.h>
 #include <Modules/ToastNotifications.h>
 #include <Modules/MouseFix.h>
 #include <Modules/GuildWarsSettingsModule.h>
@@ -81,6 +75,11 @@
 #include <Widgets/LatencyWidget.h>
 #include "ToolboxSettings.h"
 
+#define USE_OBFUSCATOR _DEBUG
+#if USE_OBFUSCATOR
+#include <Modules/Obfuscator.h>
+#endif
+
 namespace {
     ToolboxIni* inifile = nullptr;
 
@@ -91,7 +90,7 @@ namespace {
         bool enabled;
 
         ModuleToggle(ToolboxModule& m, const bool _enabled = true)
-            : toolbox_module(&m), name(m.Name()), enabled(_enabled) { };
+            : toolbox_module(&m), name(m.Name()), enabled(_enabled) { }
     };
 
     class WidgetToggle {
@@ -101,7 +100,7 @@ namespace {
         bool enabled;
 
         WidgetToggle(ToolboxWidget& m, const bool _enabled = true)
-            : toolbox_module(&m), name(m.Name()), enabled(_enabled) { };
+            : toolbox_module(&m), name(m.Name()), enabled(_enabled) { }
     };
 
     class WindowToggle {
@@ -111,12 +110,15 @@ namespace {
         bool enabled;
 
         WindowToggle(ToolboxWindow& m, const bool _enabled = true)
-            : toolbox_module(&m), name(m.Name()), enabled(_enabled) { };
+            : toolbox_module(&m), name(m.Name()), enabled(_enabled) { }
     };
 
     const char* modules_ini_section = "Toolbox Modules";
 
     std::vector<ModuleToggle> optional_modules = {
+#if USE_OBFUSCATOR
+        Obfuscator::Instance(),
+#endif
         PluginModule::Instance(),
         ChatFilter::Instance(),
         ItemFilter::Instance(),
