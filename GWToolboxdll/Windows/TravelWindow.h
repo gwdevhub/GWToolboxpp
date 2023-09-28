@@ -34,7 +34,7 @@ public:
 
     // Travel via UI interface, allowing "Are you sure" dialogs
     static void UITravel(GW::Constants::MapID MapID, GW::Constants::District district,
-                         uint32_t district_number = 0);
+        uint32_t district_number = 0);
 
     // Travel to relevent outpost, then use scroll to access Urgoz/Deep
     void ScrollToOutpost(
@@ -64,6 +64,8 @@ private:
     static GW::Constants::MapID IndexToOutpostID(int index);
     static bool ParseDistrict(const std::wstring& s, GW::Constants::District& district, uint32_t& number);
     static bool ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, const uint32_t& number);
+    bool PlayerHasAnyMissingOutposts(const bool presearing) const;
+    void DrawMissingOutpostsList(const bool presearing) const;
 
     // ==== Travel variables ====
     GW::Constants::District district = GW::Constants::District::Current;
