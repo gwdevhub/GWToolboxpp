@@ -164,6 +164,53 @@ void TravelWindow::TravelButton(const char* text, const int x_idx, const GW::Con
     }
 }
 
+bool TravelWindow::PlayerHasAnyMissingOutposts(bool presearing) {
+    if(presearing) {
+        if(!GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Ascalon_City_pre_searing))return true;
+        if(!GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Ashford_Abbey_outpost))return true;
+        if(!GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Foibles_Fair_outpost))return true;
+        if(!GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Fort_Ranik_pre_Searing_outpost))return true;
+        if(!GW::Map::GetIsMapUnlocked(GW::Constants::MapID::The_Barradin_Estate_outpost))return true;
+    }
+    else {
+        for (int i = 0; i < (int)outpost_names.size(); ++i) {
+                if(!GW::Map::GetIsMapUnlocked(IndexToOutpostID(i)))return true;
+            }
+    }
+
+    return false;
+}
+
+void TravelWindow::DrawMissingOutpostsList(bool presearing) {
+    auto AddMissingOutpostByIdx = [](int map_idx) {
+        if(map_idx < 0 || map_idx >= (int)outpost_names.size())return;
+        if(!GW::Map::GetIsMapUnlocked(IndexToOutpostID(map_idx)))ImGui::Selectable(outpost_names[map_idx]);
+    };
+
+    auto AddMissingOutpostById = [](const char * name, const GW::Constants::MapID map_id) {
+        if(!GW::Map::GetIsMapUnlocked(map_id))ImGui::Selectable(name);
+    };
+
+    if(presearing) {
+        if (ImGui::BeginCombo("Missing outposts...", NULL, ImGuiComboFlags_NoPreview | ImGuiComboFlags_HeightLargest)) {
+            AddMissingOutpostById("Ascalon City", GW::Constants::MapID::Ascalon_City_pre_searing);
+            AddMissingOutpostById("Ashford Abbey", GW::Constants::MapID::Ashford_Abbey_outpost);
+            AddMissingOutpostById("Foible's Fair", GW::Constants::MapID::Foibles_Fair_outpost);
+            AddMissingOutpostById("Fort Ranik", GW::Constants::MapID::Fort_Ranik_pre_Searing_outpost);
+            AddMissingOutpostById("The Barradin Estate", GW::Constants::MapID::The_Barradin_Estate_outpost);
+            ImGui::EndCombo();
+        }
+    }
+    else {
+        if (ImGui::BeginCombo("Missing outposts...", NULL, ImGuiComboFlags_NoPreview | ImGuiComboFlags_HeightLargest)) {
+            for (int i = 0; i < (int)outpost_names.size(); ++i) {
+                AddMissingOutpostByIdx(i);
+            }
+            ImGui::EndCombo();
+        }
+    }
+}
+
 void TravelWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
@@ -180,6 +227,12 @@ void TravelWindow::Draw(IDirect3DDevice9*)
             TravelButton("Foible's Fair", 0, GW::Constants::MapID::Foibles_Fair_outpost);
             TravelButton("Fort Ranik", 1, GW::Constants::MapID::Fort_Ranik_pre_Searing_outpost);
             TravelButton("The Barradin Estate", 0, GW::Constants::MapID::The_Barradin_Estate_outpost);
+
+            if(PlayerHasAnyMissingOutposts(true)) {
+                ImGui::PushItemWidth(-1.0f);
+                DrawMissingOutpostsList(true);
+                ImGui::PopItemWidth();
+            }
         }
         else {
             ImGui::PushItemWidth(-1.0f);
@@ -191,6 +244,10 @@ void TravelWindow::Draw(IDirect3DDevice9*)
                 if (close_on_travel) {
                     visible = false;
                 }
+            }
+
+            if(PlayerHasAnyMissingOutposts(false)) {
+                DrawMissingOutpostsList(false);
             }
 
             static int district_index = 0;
