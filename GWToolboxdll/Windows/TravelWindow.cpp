@@ -164,7 +164,7 @@ void TravelWindow::TravelButton(const char* text, const int x_idx, const GW::Con
     }
 }
 
-bool TravelWindow::PlayerHasAnyMissingOutposts(bool presearing) {
+bool TravelWindow::PlayerHasAnyMissingOutposts(const bool presearing) const {
     if (presearing) {
         if (!GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Ascalon_City_pre_searing))return true;
         if (!GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Ashford_Abbey_outpost))return true;
@@ -181,9 +181,9 @@ bool TravelWindow::PlayerHasAnyMissingOutposts(bool presearing) {
     return false;
 }
 
-void TravelWindow::DrawMissingOutpostsList(bool presearing) {
+void TravelWindow::DrawMissingOutpostsList(const bool presearing) const {
     auto AddMissingOutpostByIdx = [](int map_idx) {
-        if (map_idx < 0 || map_idx >= (int)outpost_names.size())return;
+        if (map_idx < 0 || map_idx >= static_cast<int>(outpost_names.size()))return;
         if (!GW::Map::GetIsMapUnlocked(IndexToOutpostID(map_idx)))ImGui::Selectable(outpost_names[map_idx]);
         };
 
@@ -203,7 +203,7 @@ void TravelWindow::DrawMissingOutpostsList(bool presearing) {
     }
     else {
         if (ImGui::BeginCombo("Missing outposts...", NULL, ImGuiComboFlags_NoPreview | ImGuiComboFlags_HeightLargest)) {
-            for (int i = 0; i < (int)outpost_names.size(); ++i) {
+            for (int i = 0; i < static_cast<int>(outpost_names.size()); ++i) {
                 AddMissingOutpostByIdx(i);
             }
             ImGui::EndCombo();

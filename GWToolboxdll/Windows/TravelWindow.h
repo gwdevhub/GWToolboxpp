@@ -64,8 +64,8 @@ private:
     static GW::Constants::MapID IndexToOutpostID(int index);
     static bool ParseDistrict(const std::wstring& s, GW::Constants::District& district, uint32_t& number);
     static bool ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, const uint32_t& number);
-    bool PlayerHasAnyMissingOutposts(bool presearing);
-    void DrawMissingOutpostsList(bool presearing);
+    bool PlayerHasAnyMissingOutposts(const bool presearing) const;
+    void DrawMissingOutpostsList(const bool presearing) const;
 
     // ==== Travel variables ====
     GW::Constants::District district = GW::Constants::District::Current;
