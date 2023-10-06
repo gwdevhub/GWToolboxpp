@@ -298,12 +298,12 @@ namespace {
         }
         // If the recipient is in my friend list, but under a different player name, redirect it now...
         const auto target = std::wstring(message, separator_pos);
-        const auto text = std::wstring(separator_pos + 1);
+        const auto text = separator_pos + 1;
         if (const auto friend_ = FriendListWindow::GetFriend(target.c_str())) {
             const auto& friendname = friend_->current_char->getNameW();
             if (!friend_->IsOffline() && friend_->current_char && friendname != target) {
                 is_redirecting_whisper = true;
-                GW::Chat::SendChat(friendname.c_str(), text.c_str());
+                GW::Chat::SendChat(friendname.c_str(), text);
                 is_redirecting_whisper = false;
                 pending_whisper.reset();
                 status->blocked = true;
