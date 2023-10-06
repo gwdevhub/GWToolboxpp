@@ -286,7 +286,7 @@ namespace {
     }
 
     // Record the pending outgoing whisper
-    void OnOutgoingWhisper(GW::HookStatus*, int channel, wchar_t* message)
+    void OnOutgoingWhisper(GW::HookStatus* status, int channel, wchar_t* message)
     {
         // If this outgoing whisper was created due to a redirect, or its not a whisper, drop out here.
         if (is_redirecting_whisper || static_cast<GW::Chat::Channel>(channel) != GW::Chat::CHANNEL_WHISPER) {
@@ -296,15 +296,21 @@ namespace {
         if (!separator_pos) {
             return;
         }
+        // If the recipient is in my friend list, but under a different player name, redirect it now...
         const auto target = std::wstring(message, separator_pos);
         const auto text = std::wstring(separator_pos + 1);
         if (const auto friend_ = FriendListWindow::GetFriend(target.c_str())) {
             const auto& friendname = friend_->current_char->getNameW();
-            if (friend_->current_char && friendname != target) {
-                const auto outgoing = friendname + L',' + text;
-                wcscpy(message, outgoing.c_str());
+            if (!friend_->IsOffline() && friend_->current_char && friendname != target) {
+                is_redirecting_whisper = true;
+                GW::Chat::SendChat(friendname.c_str(), text.c_str());
+                is_redirecting_whisper = false;
+                pending_whisper.reset();
+                status->blocked = true;
+                return;
             }
         }
+        // ...Otherwise carry on with the send
         pending_whisper.reset(target, text);
     }
 
@@ -362,7 +368,7 @@ namespace {
         }
     }
 
-    void OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void* lparam)
+    void OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
             case GW::UI::UIMessage::kSetAgentNameTagAttribs:
@@ -381,7 +387,6 @@ namespace {
             case GW::UI::UIMessage::kWriteToChatLog: {
                 const auto uimsg = static_cast<FriendListWindow::UIChatMessage*>(wparam);
                 wchar_t* message = uimsg->message;
-                std::wstring message_w = message;
                 switch (static_cast<MessageType>(message[0])) {
                     case MessageType::CANNOT_ADD_YOURSELF_AS_A_FRIEND: // You cannot add yourself as a friend.
                     case MessageType::EXCEEDED_MAX_NUMBER_OF_FRIENDS:  // You have exceeded the maximum number of characters on your Friends list.
