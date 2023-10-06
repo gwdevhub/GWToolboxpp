@@ -56,27 +56,6 @@ namespace {
         IM_COL32(0x99, 0x99, 0x99, 255)  // offline
     };
     const char* statuses[] = {"Offline", "Online", "Busy", "Away", "Disconnected"};
-    std::wstring current_map;
-    GW::Constants::MapID current_map_id = GW::Constants::MapID::None;
-
-    [[maybe_unused]] std::wstring* GetCurrentMapName()
-    {
-        const GW::Constants::MapID map_id = GW::Map::GetMapID();
-        if (current_map_id != map_id) {
-            const GW::AreaInfo* i = GW::Map::GetMapInfo(map_id);
-            if (!i) {
-                return nullptr;
-            }
-            wchar_t name_enc[16];
-            if (!GW::UI::UInt32ToEncStr(i->name_id, name_enc, 16)) {
-                return nullptr;
-            }
-            current_map.clear();
-            GW::UI::AsyncDecodeStr(name_enc, &current_map);
-            current_map_id = map_id;
-        }
-        return &current_map;
-    }
 
     const char* GetStatusText(const GW::FriendStatus status)
     {
@@ -419,15 +398,6 @@ namespace {
                     case MessageType::PLAYER_X_NOT_ONLINE: // Player "" is not online. Redirect to the right person if we can find them!
                         OnPlayerNotOnline(status, message);
                         break;
-                }
-                break;
-            }
-            case GW::UI::UIMessage::kOpenWhisper: {
-                if (const auto friend_ = FriendListWindow::GetFriend(static_cast<wchar_t*>(wparam))) {
-                    if (!friend_->GetAliasW().empty() && friend_->current_char && friend_->GetAliasW() != static_cast<wchar_t*>(wparam)) {
-                        status->blocked = true;
-                        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWhisper, const_cast<wchar_t*>(friend_->GetAliasW().c_str()), lparam);
-                    }
                 }
                 break;
             }
