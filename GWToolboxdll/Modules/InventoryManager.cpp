@@ -52,6 +52,7 @@ namespace {
     };
 
     bool hide_unsellable_items = false;
+    bool hide_equipped_and_customized_items = false;
     std::map<uint32_t, std::string> hide_from_merchant_items;
 
 
@@ -763,6 +764,11 @@ namespace {
                     return;
                 }
 
+                if (hide_equipped_and_customized_items && (item->customized || item->equipped)) {
+                    GW::Hook::LeaveHook();
+                    return;
+                }
+
                 if (hide_from_merchant_items.contains(item->model_id)) {
                     GW::Hook::LeaveHook();
                     return;
@@ -962,6 +968,7 @@ void InventoryManager::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(trade_whole_stacks);
     SAVE_BOOL(wiki_link_on_context_menu);
     SAVE_BOOL(hide_unsellable_items);
+    SAVE_BOOL(hide_equipped_and_customized_items);
     SAVE_BOOL(change_secondary_for_tome);
     SAVE_BOOL(right_click_context_menu_in_outpost);
     SAVE_BOOL(right_click_context_menu_in_explorable);
@@ -982,6 +989,7 @@ void InventoryManager::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(trade_whole_stacks);
     LOAD_BOOL(wiki_link_on_context_menu);
     LOAD_BOOL(hide_unsellable_items);
+    LOAD_BOOL(hide_equipped_and_customized_items);
     LOAD_BOOL(change_secondary_for_tome);
     LOAD_BOOL(right_click_context_menu_in_outpost);
     LOAD_BOOL(right_click_context_menu_in_explorable);
@@ -1671,6 +1679,7 @@ void InventoryManager::DrawSettingsInternal()
 {
     ImGui::TextDisabled("This module is responsible for extra item functions via ctrl+click, right click or double click");
     ImGui::Checkbox("Hide unsellable items from merchant window", &hide_unsellable_items);
+    ImGui::Checkbox("Hide equipped and customized items from merchant window", &hide_equipped_and_customized_items);
     ImGui::Checkbox("Move whole stacks into trade by default", &trade_whole_stacks);
     ImGui::ShowHelp("Shift drag to prompt for amount, drag without shift to move the whole stack into trade");
     ImGui::Checkbox("Show 'Guild Wars Wiki' link on item context menu", &wiki_link_on_context_menu);
