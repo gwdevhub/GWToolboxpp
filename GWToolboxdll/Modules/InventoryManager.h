@@ -113,8 +113,6 @@ private:
         {GW::Constants::Bag::Bag_2, true}
     };
 
-    std::map<uint32_t, std::string> hide_from_merchant_items{};
-
     size_t identified_count = 0;
     size_t salvaged_count = 0;
 

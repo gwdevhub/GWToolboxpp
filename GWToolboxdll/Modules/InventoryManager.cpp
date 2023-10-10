@@ -52,6 +52,7 @@ namespace {
     };
 
     bool hide_unsellable_items = false;
+    std::map<uint32_t, std::string> hide_from_merchant_items;
 
 
     bool GetIsProfessionUnlocked(GW::Constants::Profession prof)
@@ -753,11 +754,19 @@ namespace {
     void __fastcall OnAddItemToWindow(void* ecx, void* edx, const uint32_t frame, const uint32_t item_id)
     {
         GW::Hook::EnterHook();
-        if (merchant_list_tab == 0xb && hide_unsellable_items) {
+        if (merchant_list_tab == 0xb) {
             const auto item = GW::Items::GetItemById(item_id);
-            if (item && !item->value) {
-                GW::Hook::LeaveHook();
-                return;
+
+            if (item) {
+                if (hide_unsellable_items && !item->value) {
+                    GW::Hook::LeaveHook();
+                    return;
+                }
+
+                if (hide_from_merchant_items.contains(item->model_id)) {
+                    GW::Hook::LeaveHook();
+                    return;
+                }
             }
         }
         RetAddItemRowToWindow(ecx, edx, frame, item_id);
