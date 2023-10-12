@@ -54,6 +54,7 @@ namespace {
     bool hide_unsellable_items = false;
     bool hide_weapon_sets_and_customized_items = false;
     std::map<uint32_t, std::string> hide_from_merchant_items;
+    std::map<std::string, std::string> locked_items;
 
 
     bool GetIsProfessionUnlocked(GW::Constants::Profession prof)
@@ -603,7 +604,7 @@ namespace {
     time_t tome_pending_timeout = 0;
     uint32_t tome_pending_item_id = 0;
 
-    // Run every frame; if we're pending aa change of secondary profession to use a tome, check and action.
+    // Run every frame; if we're pending a change of secondary profession to use a tome, check and action.
     void DrawPendingTomeUsage()
     {
         if (tome_pending_stage == None) {
@@ -752,6 +753,15 @@ namespace {
 
     uint32_t merchant_list_tab = 0;
 
+    std::string mergeModifiers(const GW::ItemModifier* mod_struct, size_t mod_struct_size)
+    {
+        std::string mergedString;
+        for (size_t i = 0; i < mod_struct_size; i++) {
+            mergedString += std::to_string(mod_struct[i].mod);
+        }
+        return mergedString;
+    }
+
     void __fastcall OnAddItemToWindow(void* ecx, void* edx, const uint32_t frame, const uint32_t item_id)
     {
         GW::Hook::EnterHook();
@@ -759,12 +769,18 @@ namespace {
             const auto item = GW::Items::GetItemById(item_id);
 
             if (item) {
-                if (hide_unsellable_items && !item->value) {
+                if (hide_unsellable_items && (!item->value)) {
                     GW::Hook::LeaveHook();
                     return;
                 }
 
                 if (hide_weapon_sets_and_customized_items && (item->customized || item->equipped)) {
+                    GW::Hook::LeaveHook();
+                    return;
+                }
+
+                std::string mergedString = mergeModifiers(item->mod_struct, item->mod_struct_size);
+                if (locked_items.contains(mergedString)) {
                     GW::Hook::LeaveHook();
                     return;
                 }
@@ -979,6 +995,7 @@ void InventoryManager::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
 
     GuiUtils::MapToIni(ini, Name(), VAR_NAME(hide_from_merchant_items), hide_from_merchant_items);
+    GuiUtils::MapToIni(ini, Name(), VAR_NAME(locked_items), locked_items);
 }
 
 void InventoryManager::LoadSettings(ToolboxIni* ini)
@@ -1000,6 +1017,7 @@ void InventoryManager::LoadSettings(ToolboxIni* ini)
     bags_to_salvage_from[GW::Constants::Bag::Bag_2] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
 
     hide_from_merchant_items = GuiUtils::IniToMap<std::map<uint32_t, std::string>>(ini, Name(), VAR_NAME(hide_from_merchant_items));
+    locked_items = GuiUtils::IniToMap<std::map<std::string, std::string>>(ini, Name(), VAR_NAME(locked_items));
 }
 
 void InventoryManager::ClearSalvageSession(GW::HookStatus* status, void*)
@@ -2115,6 +2133,25 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
             goto end_popup;
         }
     }
+
+    if (context_item_actual->value && (context_item_actual->IsWeapon() || context_item_actual->IsArmor()))
+    {
+        std::string mergedString = mergeModifiers(context_item_actual->mod_struct, context_item_actual->mod_struct_size);
+        
+        if (locked_items.contains(mergedString)) {
+            if (ImGui::Button("Unlock Item", size)) {
+                locked_items.erase(mergedString);
+                goto end_popup;
+            }
+        }
+        else {
+            if (ImGui::Button("Lock Item", size)) {
+                locked_items[mergedString] = context_item.plural_item_name.string().c_str();
+                goto end_popup;
+            }
+        }
+    }
+
     if (context_item_actual->IsIdentificationKit()) {
         auto type = IdentifyAllType::None;
         if (ImGui::Button("Identify All Items", size)) {
@@ -2324,7 +2361,7 @@ bool InventoryManager::Item::IsSalvagable()
     if (item_formula == 0x5da) {
         return false;
     }
-    if (IsUsable() || IsGreen()) {
+    if (IsUsable() || IsGreen() || IsLocked()) {
         return false; // Non-salvagable flag set
     }
     if (!bag) {
@@ -2385,6 +2422,16 @@ bool InventoryManager::Item::IsArmor()
         default:
             return false;
     }
+}
+
+bool InventoryManager::Item::IsLocked()
+{
+    if (!IsArmor() && !IsWeapon()) {
+        return false;
+    }
+
+    std::string mergedString = mergeModifiers(InventoryManager::Item::mod_struct, InventoryManager::Item::mod_struct_size);
+    return locked_items.contains(mergedString);
 }
 
 GW::ItemModifier* InventoryManager::Item::GetModifier(const uint32_t identifier) const
