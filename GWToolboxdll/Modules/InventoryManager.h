@@ -98,6 +98,9 @@ private:
     bool show_salvage_all_popup = true;
     bool salvage_listeners_attached = false;
     bool only_use_superior_salvage_kits = false;
+    bool hide_unsellable_items = false;
+    bool hide_weapon_sets_and_customized_items = false;
+    std::map<uint32_t, std::string> hide_from_merchant_items;
     bool salvage_rare_mats = false;
     bool show_transact_quantity_popup = false;
     bool transaction_listeners_attached = false;
@@ -154,6 +157,7 @@ public:
         bool IsWeapon();
         bool IsArmor();
         bool IsSalvagable();
+        bool IsHiddenFromMerchants();
 
         bool IsRareMaterial() const;
         bool IsWeaponSetItem();
