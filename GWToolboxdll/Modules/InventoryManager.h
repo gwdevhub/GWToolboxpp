@@ -153,6 +153,7 @@ public:
         bool IsPerfectSalvageKit() const;
         bool IsWeapon();
         bool IsArmor();
+        bool IsLocked();
         bool IsSalvagable();
 
         bool IsRareMaterial() const;
