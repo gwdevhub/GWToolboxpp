@@ -753,11 +753,9 @@ namespace {
         if (merchant_list_tab == 0xb) {
             const auto item = reinterpret_cast<InventoryManager::Item*>(GW::Items::GetItemById(item_id));
 
-            if (item) {
-                if (item->IsHiddenFromMerchants()) {
-                    GW::Hook::LeaveHook();
-                    return;
-                }
+            if (item && item->IsHiddenFromMerchants()) {
+                GW::Hook::LeaveHook();
+                return;
             }
         }
         RetAddItemRowToWindow(ecx, edx, frame, item_id);
