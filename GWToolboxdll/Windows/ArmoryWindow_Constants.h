@@ -70,6 +70,7 @@ namespace GWArmory {
         DyeColor color2 = DyeColor::None;
         DyeColor color3 = DyeColor::None;
         DyeColor color4 = DyeColor::None;
+        IDirect3DTexture9* image = nullptr;
     };
 
 
@@ -945,6 +946,13 @@ namespace GWArmory {
         {"Obsidian Gloves", 0x221, GW::Constants::Profession::Elementalist, ItemSlot_Hands, Campaign_Core, 25},
         {"Obsidian Leggings", 0x222, GW::Constants::Profession::Elementalist, ItemSlot_Legs, Campaign_Core, 25},
         {"Obsidian Shoes", 0x21F, GW::Constants::Profession::Elementalist, ItemSlot_Feet, Campaign_Core, 25},
+        // Prophecies, Nightfall, and Eye of the North
+        {"Flame Eye", 0xD18A, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Prophecies, 0x9},
+        {"All-Seeing Eye", 0xD3C3, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Prophecies, 0x9},
+        {"Stone Eye", 0xD184, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Prophecies, 0x9},
+        {"Storm Eye", 0xD181, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Prophecies, 0x9},
+        {"Third Eye", 0xD187, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Prophecies, 0x9},
+        {"Glacial Eye", 0xD18D, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Prophecies, 0x9},
         // Prophecies
         {"Ascalon Robes", 0x1F1, GW::Constants::Profession::Elementalist, ItemSlot_Chest, Campaign_Prophecies, 8},
         {"Ascalon Gloves", 0x1F2, GW::Constants::Profession::Elementalist, ItemSlot_Hands, Campaign_Prophecies, 8},
@@ -991,6 +999,12 @@ namespace GWArmory {
         {"Elite Stormforged Leggings", 0x2E6, GW::Constants::Profession::Elementalist, ItemSlot_Legs, Campaign_Prophecies, 31},
         {"Elite Stormforged Shoes", 0x2E3, GW::Constants::Profession::Elementalist, ItemSlot_Feet, Campaign_Prophecies, 31},
         // Factions
+        {"Storm Aura", 0x2ADF2, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Factions, 8},
+        {"Stone Aura", 0x2ADF5, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Factions, 8},
+        {"Flame Aura", 0x2ADF7, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Factions, 8},
+        {"Glacial Aura", 0x2ADFB, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Factions, 8},
+        {"Everlasting Aura", 0x2ADF6, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Factions, 8},
+        // {"Elementalist's Aura", ???, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Factions, 8},
         {"Shing Jea Robes", 0x378, GW::Constants::Profession::Elementalist, ItemSlot_Chest, Campaign_Factions, 29},
         {"Shing Jea Gloves", 0x379, GW::Constants::Profession::Elementalist, ItemSlot_Hands, Campaign_Factions, 29},
         {"Shing Jea Leggings", 0x37A, GW::Constants::Profession::Elementalist, ItemSlot_Legs, Campaign_Factions, 29},
@@ -1020,6 +1034,12 @@ namespace GWArmory {
         {"Elite Luxon Leggings", 0x38A, GW::Constants::Profession::Elementalist, ItemSlot_Legs, Campaign_Factions, 8},
         {"Elite Luxon Shoes", 0x387, GW::Constants::Profession::Elementalist, ItemSlot_Feet, Campaign_Factions, 8},
         // Nightfall
+        {"Vabbian Storm Eye", 0x3E2F1, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Nightfall, 8},
+        {"Vabbian Stone Eye", 0x2ADF6, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Nightfall, 8},
+        {"Vabbian Everlasting Eye", 0x2ADFB, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Nightfall, 8},
+        {"Vabbian Flame Eye", 0x2ADFE, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Nightfall, 8},
+        {"Vabbian Glacial Eye", 0x2A301, GW::Constants::Profession::Elementalist, ItemSlot_Head, Campaign_Nightfall, 8},
+
         {"Istani Robes", 0x611, GW::Constants::Profession::Elementalist, ItemSlot_Chest, Campaign_Nightfall, 8},
         {"Istani Gloves", 0x612, GW::Constants::Profession::Elementalist, ItemSlot_Hands, Campaign_Nightfall, 8},
         {"Istani Leggings", 0x613, GW::Constants::Profession::Elementalist, ItemSlot_Legs, Campaign_Nightfall, 8},

@@ -18,6 +18,7 @@
 #include <Windows/ArmoryWindow.h>
 #include <ImGuiAddons.h>
 #include <ToolboxWindow.h>
+#include <Modules/GwDatTextureModule.h>
 
 namespace GWArmory {
     struct PlayerArmor {
@@ -541,6 +542,7 @@ namespace GWArmory {
                 state->current_piece = state->pieces[state->current_piece_index];
                 player_piece->model_file_id = state->current_piece->model_file_id;
                 player_piece->unknow1 = state->current_piece->unknow1;
+                player_piece->image = *GwDatTextureModule::LoadTextureFromFileId(player_piece->model_file_id);
             }
             value_changed = true;
         }
