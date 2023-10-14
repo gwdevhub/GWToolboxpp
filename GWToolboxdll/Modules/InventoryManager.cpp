@@ -1474,7 +1474,7 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(const Item* kit,
             if (!item->IsSalvagable()) {
                 continue;
             }
-            if (item->IsWeaponSetItem()) {
+            if (item->equipped) {
                 continue;
             }
             if (item->IsRareMaterial() && !salvage_rare_mats) {
@@ -2258,27 +2258,6 @@ void InventoryManager::ClearPotentialItems()
     potential_salvage_all_items.clear();
 }
 
-bool InventoryManager::Item::IsWeaponSetItem()
-{
-    if (!IsWeapon()) {
-        return false;
-    }
-    const GW::ItemContext* c = GW::GetItemContext();
-    if (!c || !c->inventory) {
-        return false;
-    }
-    const GW::WeaponSet* weapon_sets = c->inventory->weapon_sets;
-    for (size_t i = 0; i < 4; i++) {
-        if (weapon_sets[i].offhand == this) {
-            return true;
-        }
-        if (weapon_sets[i].weapon == this) {
-            return true;
-        }
-    }
-    return false;
-}
-
 bool InventoryManager::Item::IsOfferedInTrade() const
 {
     auto* player_items = GetPlayerTradeItems();
@@ -2372,13 +2351,13 @@ bool InventoryManager::Item::IsArmor()
 
 bool InventoryManager::Item::IsHiddenFromMerchants()
 {
-    if (Instance().hide_unsellable_items && !InventoryManager::Item::value) {
+    if (Instance().hide_unsellable_items && !value) {
         return true;
     }
-    if (Instance().hide_weapon_sets_and_customized_items && (InventoryManager::Item::customized || InventoryManager::Item::IsWeaponSetItem())) {
+    if (Instance().hide_weapon_sets_and_customized_items && (customized || equipped)) {
         return true;
     }
-    if (Instance().hide_from_merchant_items.contains(InventoryManager::Item::model_id)) {
+    if (Instance().hide_from_merchant_items.contains(model_id)) {
         return true;
     }
     return false;

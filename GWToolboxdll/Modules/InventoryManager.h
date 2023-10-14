@@ -160,7 +160,6 @@ public:
         bool IsHiddenFromMerchants();
 
         bool IsRareMaterial() const;
-        bool IsWeaponSetItem();
         bool IsOfferedInTrade() const;
         bool CanOfferToTrade() const;
 
