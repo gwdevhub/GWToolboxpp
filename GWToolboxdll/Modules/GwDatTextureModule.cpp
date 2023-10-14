@@ -71,6 +71,22 @@ namespace {
     // GetLevelWidths_pt GetLevelWidths_func;
 
 
+    const char *sstrstr(const char *haystack, const char *needle, size_t length)
+    {
+        size_t needle_length = strlen(needle);
+        size_t i;
+        for (i = 0; i < length; i++) {
+            if (i + needle_length > length) {
+                return NULL;
+            }
+            if (strncmp(&haystack[i], needle, needle_length) == 0) {
+                return &haystack[i];
+            }
+        }
+        return NULL;
+    }
+
+
     // OpenImage converts any GW format to ARGB. It is possible to skip conversion if gw format is compatible with D3FMT.
     uint32_t OpenImage(int file_id, gw_image_bits* dst_bits, Vec2i& dims, int& levels, GR_FORMAT& format)
     {
@@ -86,13 +102,26 @@ namespace {
         auto rec = FileHashToRecObj_func(fileHash, 1, 0);
         if (!rec) return 0;
 
-        uint8_t* bytes = GetRecObjectBytes_func(rec, &size);
+        const auto bytes = GetRecObjectBytes_func(rec, &size);
         if (!bytes) {
-            if (rec) CloseRecObj_func(rec);
+            CloseRecObj_func(rec);
             return 0;
         }
+        size_t image_offset = 0;
+        if (memcmp((char*)bytes, "ffna", 4) == 0) {
+            // Model file format; try to find first instance of image from this.
+            const auto found = sstrstr((char*)bytes, "ATEX",size);
+            if (!found) {
+                UnkRecObjBytes_func(rec, bytes);
+                CloseRecObj_func(rec);
+                return 0;
+            }
+            image_offset = (uint8_t*)found - bytes;
+        }
+        const auto image_bytes = bytes + image_offset;
+        const auto image_size = size - image_offset;
 
-        uint32_t result = DecodeImage_func(size, bytes, &bits, pallete, &format, &dims, &levels);
+        uint32_t result = DecodeImage_func(image_size, image_bytes, &bits, pallete, &format, &dims, &levels);
         if (rec) {
             UnkRecObjBytes_func(rec, bytes);
             if (levels > 13)                return 0;

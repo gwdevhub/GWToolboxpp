@@ -47,6 +47,7 @@
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Managers/QuestMgr.h>
 #include <Modules/HallOfMonumentsModule.h>
+#include <Modules/Resources.h>
 
 namespace {
     enum class Status {
@@ -367,6 +368,7 @@ namespace {
         InfoField("Bag/Slot", "%s", slot);
         InfoField("ModelID", "%d", item->model_id);
         InfoField("Name", "%s", name->string().c_str());
+        ImGui::Image(*Resources::GetItemImage(item), { 48,48 });
         auto draw_advanced = [&, item] {
             InfoField("Addr", "%p", item);
             InfoField("Id", "%d", item->item_id);

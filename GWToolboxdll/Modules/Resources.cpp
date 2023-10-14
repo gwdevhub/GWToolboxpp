@@ -6,6 +6,7 @@
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/GameEntities/Item.h>
 
 #include <EmbeddedResource.h>
 #include <GWToolbox.h>
@@ -973,6 +974,10 @@ GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id)
     const auto enc_string = new GuiUtils::EncString(enc_str_id, false);
     encoded_string_ids[enc_str_id] = enc_string;
     return enc_string;
+}
+
+IDirect3DTexture9** Resources::GetItemImage(GW::Item* item) {
+    return item ? GwDatTextureModule::LoadTextureFromFileId(item->model_file_id) : nullptr;
 }
 
 IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)

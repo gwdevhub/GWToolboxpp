@@ -12,6 +12,9 @@ namespace GW::Constants {
     enum class MapID;
     enum class SkillID : uint32_t;
 }
+namespace GW {
+    struct Item;
+}
 
 class Resources : public ToolboxModule {
     friend class GWToolbox;
@@ -92,6 +95,8 @@ public:
     // Fetches item page from GWW, parses out the image for the item then downloads that to disk
     // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
+    //static IDirect3DTexture9** GetItemImage(const std::wstring& item_name);
+    static IDirect3DTexture9** GetItemImage(GW::Item* item);
     static IDirect3DTexture9** GetItemImage(const std::wstring& item_name);
     // Fetches File page from GWW, parses out the image for the file given
     // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
