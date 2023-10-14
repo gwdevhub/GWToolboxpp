@@ -51,11 +51,6 @@ namespace {
         "Bag 2"
     };
 
-    bool hide_unsellable_items = false;
-    bool hide_weapon_sets_and_customized_items = false;
-    std::map<uint32_t, std::string> hide_from_merchant_items;
-
-
     bool GetIsProfessionUnlocked(GW::Constants::Profession prof)
     {
         const auto world = GW::GetWorldContext();
@@ -756,23 +751,11 @@ namespace {
     {
         GW::Hook::EnterHook();
         if (merchant_list_tab == 0xb) {
-            const auto item = GW::Items::GetItemById(item_id);
+            const auto item = reinterpret_cast<InventoryManager::Item*>(GW::Items::GetItemById(item_id));
 
-            if (item) {
-                if (hide_unsellable_items && !item->value) {
-                    GW::Hook::LeaveHook();
-                    return;
-                }
-
-                if (hide_weapon_sets_and_customized_items && (item->customized || item->equipped)) {
-                    GW::Hook::LeaveHook();
-                    return;
-                }
-
-                if (hide_from_merchant_items.contains(item->model_id)) {
-                    GW::Hook::LeaveHook();
-                    return;
-                }
+            if (item && item->IsHiddenFromMerchants()) {
+                GW::Hook::LeaveHook();
+                return;
             }
         }
         RetAddItemRowToWindow(ecx, edx, frame, item_id);
@@ -2385,6 +2368,20 @@ bool InventoryManager::Item::IsArmor()
         default:
             return false;
     }
+}
+
+bool InventoryManager::Item::IsHiddenFromMerchants()
+{
+    if (Instance().hide_unsellable_items && !InventoryManager::Item::value) {
+        return true;
+    }
+    if (Instance().hide_weapon_sets_and_customized_items && (InventoryManager::Item::customized || InventoryManager::Item::IsWeaponSetItem())) {
+        return true;
+    }
+    if (Instance().hide_from_merchant_items.contains(InventoryManager::Item::model_id)) {
+        return true;
+    }
+    return false;
 }
 
 GW::ItemModifier* InventoryManager::Item::GetModifier(const uint32_t identifier) const
