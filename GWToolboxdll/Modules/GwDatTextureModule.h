@@ -21,4 +21,5 @@ public:
     void Terminate() override;
 
     static IDirect3DTexture9** LoadTextureFromFileId(uint32_t file_id);
+    static uint32_t FileHashToFileId(const wchar_t* fileHash);
 };

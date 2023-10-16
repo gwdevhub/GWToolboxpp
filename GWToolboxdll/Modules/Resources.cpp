@@ -4,9 +4,12 @@
 #include <WICTextureLoader/WICTextureLoader9.h>
 
 #include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Item.h>
+
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/GameEntities/Item.h>
+#include <GWCA/Managers/ItemMgr.h>
+
 
 #include <EmbeddedResource.h>
 #include <GWToolbox.h>
@@ -977,7 +980,21 @@ GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id)
 }
 
 IDirect3DTexture9** Resources::GetItemImage(GW::Item* item) {
-    return item ? GwDatTextureModule::LoadTextureFromFileId(item->model_file_id) : nullptr;
+    if (!(item && item->model_file_id))
+        return nullptr;
+
+    const bool is_composite_item = (item->interaction & 4) != 0; // e.g. Armor items, some runes
+
+    if (is_composite_item) {
+        // @Cleanup: Pissing in the wind here; how do we get from the "fake" model_file_id to the file_id we want?
+        const auto model_file_info = GW::Items::GetCompositeModelInfo(item->model_file_id);
+        // Armor items get this far, but model_file_info->unk[0xb] is still 0 for armor
+        if (model_file_info->unk[0xb]) {
+            return GwDatTextureModule::LoadTextureFromFileId(model_file_info->unk[0xb]);
+        }
+        // Theres more logic for armor, to do with getting the model depending on gender and profession that I haven't RE'd yet
+    }
+    return GwDatTextureModule::LoadTextureFromFileId(item->model_file_id);
 }
 
 IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)

@@ -2,6 +2,7 @@
 
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
 
 #include <Logger.h>
 #include "GwDatTextureModule.h"
@@ -72,17 +73,25 @@ namespace {
     // GetLevelWidths_pt GetLevelWidths_func;
 
 
-    const char *sstrstr(const char *haystack, const char *needle, size_t length)
+    void FileIdToFileHash(uint32_t file_id, wchar_t* fileHash) {
+        fileHash[0] = static_cast<wchar_t>(((file_id - 1) % 0xff00) + 0x100);
+        fileHash[1] = static_cast<wchar_t>(((file_id - 1) / 0xff00) + 0x100);
+        fileHash[2] = 0;
+    }
+
+    const char* strnstr(char* str, const char* substr, size_t n)
     {
-        size_t needle_length = strlen(needle);
-        size_t i;
-        for (i = 0; i < length; i++) {
-            if (i + needle_length > length) {
-                return NULL;
-            }
-            if (strncmp(&haystack[i], needle, needle_length) == 0) {
-                return &haystack[i];
-            }
+        char* p = str, * pEnd = str + n;
+        size_t substr_len = strlen(substr);
+
+        if (0 == substr_len)
+            return str; // the empty string is contained everywhere.
+
+        pEnd -= (substr_len - 1);
+        for (; p < pEnd; ++p)
+        {
+            if (0 == strncmp(p, substr, substr_len))
+                return p;
         }
         return NULL;
     }
@@ -95,9 +104,8 @@ namespace {
         uint8_t* pallete = nullptr;
         gw_image_bits bits = nullptr;
 
-        wchar_t fileHash[3] = { 0 }; // file id to file hash
-        fileHash[0] = static_cast<wchar_t>(((file_id - 1) % 0xff00) + 0x100);
-        fileHash[1] = static_cast<wchar_t>(((file_id - 1) / 0xff00) + 0x100);
+        wchar_t fileHash[4] = { 0 };
+        FileIdToFileHash(file_id, fileHash);
 
         auto rec = FileHashToRecObj_func(fileHash, 1, 0);
         if (!rec) return 0;
@@ -111,7 +119,7 @@ namespace {
         auto image_bytes = bytes;
         if (memcmp((char*)bytes, "ffna", 4) == 0) {
             // Model file format; try to find first instance of image from this.
-            const auto found = sstrstr((char*)bytes, "ATEX",size);
+            const auto found = strnstr((char*)bytes, "ATEX",size);
             if (!found) {
                 UnkRecObjBytes_func(rec, bytes);
                 CloseRecObj_func(rec);
@@ -252,4 +260,13 @@ void GwDatTextureModule::Terminate()
         delete gwimg_ptr.second;
     }
     textures_by_file_id.clear();
+}
+uint32_t GwDatTextureModule::FileHashToFileId(const wchar_t* fileHash) {
+    if (!fileHash)
+        return 0;
+    if (((0xff < *fileHash) && (0xff < fileHash[1])) &&
+        ((fileHash[2] == 0 || ((0xff < fileHash[2] && (fileHash[3] == 0)))))) {
+        return (*fileHash - 0xff00ff) + (uint32_t)fileHash[1] * 0xff00;
+    }
+    return 0;
 }
