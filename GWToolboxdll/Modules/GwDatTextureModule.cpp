@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <Logger.h>
 #include "GwDatTextureModule.h"
@@ -88,16 +89,15 @@ namespace {
 
 
     // OpenImage converts any GW format to ARGB. It is possible to skip conversion if gw format is compatible with D3FMT.
-    uint32_t OpenImage(int file_id, gw_image_bits* dst_bits, Vec2i& dims, int& levels, GR_FORMAT& format)
+    uint32_t OpenImage(uint32_t file_id, gw_image_bits* dst_bits, Vec2i& dims, int& levels, GR_FORMAT& format)
     {
         int size = 0;
         uint8_t* pallete = nullptr;
         gw_image_bits bits = nullptr;
 
-        wchar_t fileHash[3]; // file id to file hash
-        fileHash[0] = static_cast<wchar_t>((file_id - 1) % 0xff00 + 0x100);
-        fileHash[1] = static_cast<wchar_t>((file_id - 1) / 0xff00 + 0x100);
-        fileHash[2] = 0;
+        wchar_t fileHash[3] = { 0 }; // file id to file hash
+        fileHash[0] = static_cast<wchar_t>(((file_id - 1) % 0xff00) + 0x100);
+        fileHash[1] = static_cast<wchar_t>(((file_id - 1) / 0xff00) + 0x100);
 
         auto rec = FileHashToRecObj_func(fileHash, 1, 0);
         if (!rec) return 0;
@@ -107,7 +107,8 @@ namespace {
             CloseRecObj_func(rec);
             return 0;
         }
-        size_t image_offset = 0;
+        int image_size = size;
+        auto image_bytes = bytes;
         if (memcmp((char*)bytes, "ffna", 4) == 0) {
             // Model file format; try to find first instance of image from this.
             const auto found = sstrstr((char*)bytes, "ATEX",size);
@@ -116,10 +117,9 @@ namespace {
                 CloseRecObj_func(rec);
                 return 0;
             }
-            image_offset = (uint8_t*)found - bytes;
+            image_bytes = (uint8_t*)found;
+            image_size = *(int*)(found - 4);
         }
-        const auto image_bytes = bytes + image_offset;
-        const auto image_size = size - image_offset;
 
         uint32_t result = DecodeImage_func(image_size, image_bytes, &bits, pallete, &format, &dims, &levels);
         if (rec) {
