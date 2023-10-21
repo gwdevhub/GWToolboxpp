@@ -19,36 +19,113 @@
 #include <ImGuiAddons.h>
 #include <ToolboxWindow.h>
 #include <Modules/GwDatTextureModule.h>
+#include <Color.h>
 
 namespace GWArmory {
-    struct PlayerArmor {
-        PlayerArmorPiece head = ItemSlot_Head;
-        PlayerArmorPiece chest = ItemSlot_Chest;
-        PlayerArmorPiece hands = ItemSlot_Hands;
-        PlayerArmorPiece legs = ItemSlot_Legs;
-        PlayerArmorPiece feets = ItemSlot_Feet;
+
+    constexpr size_t costume_count = 0x17;
+    struct CostumeData {
+        // [costume_model_file_id][profession] = { chest file id, legs file id, hands file id, legs file id }
+        uint32_t sets[costume_count][10][4];
     };
 
-    PlayerArmor player_armor;
+    CostumeData* costume_data_ptr = nullptr;
 
-    using SetItem_pt = void(__fastcall *)(GW::Equipment* equip, void* edx, uint32_t model_file_id, uint32_t color, uint32_t arg3, uint32_t agent_id);
-    SetItem_pt SetItem_Func = nullptr;
-    SetItem_pt SetItem_Ret = nullptr;
+    constexpr size_t festival_hat_sets_count = 0x3b;
+    struct FestivalHatData {
+        // [festival_hat_set_id][profession] = { headpiece file id }
+        uint32_t sets[festival_hat_sets_count][10][1];
+    };
+
+    FestivalHatData* festival_hat_data_ptr = nullptr;
+
+    // Returns pointer to the model_file_id for the profession and slot given that matches the costume for the costume_model_file_id
+    // If nullptr, costume_model_file_id isn't a costume.
+    const uint32_t* GetFileIdsForCostume(uint32_t costume_model_file_id, GW::Constants::Profession profession = GW::Constants::Profession::Warrior, ItemSlot slot = ItemSlot::Boots) {
+        if (!costume_data_ptr)
+            return nullptr;
+        uint32_t profession_idx = static_cast<uint32_t>(profession) - 1;
+        uint32_t slot_idx = 0;
+        switch (slot) {
+        case ItemSlot::Boots:
+            slot_idx = 0;
+            break;
+        case ItemSlot::Leggings:
+            slot_idx = 1;
+            break;
+        case ItemSlot::Gloves:
+            slot_idx = 2;
+            break;
+        case ItemSlot::Chestpiece:
+            slot_idx = 3;
+            break;
+        default:
+            return nullptr;
+        }
+        for (const auto& set : costume_data_ptr->sets) {
+            for (const auto& profession_file_ids : set) {
+                for (const auto& file_id : profession_file_ids) {
+                    if (file_id == costume_model_file_id) {
+                        return &set[profession_idx][slot_idx];
+                    }
+                }
+            }
+        }
+        return nullptr;
+    }
+    // Returns pointer to the headpiece model_file_id for the profession given that matches the festival hat for the festival_hat_model_file_id
+    // If nullptr, festival_hat_model_file_id isn't a festival hat.
+    const uint32_t* GetFileIdForFestivalHat(uint32_t festival_hat_model_file_id, GW::Constants::Profession profession = GW::Constants::Profession::Warrior) {
+        if (!festival_hat_data_ptr)
+            return nullptr;
+        uint32_t profession_idx = static_cast<uint32_t>(profession) - 1;
+        for (const auto& set : festival_hat_data_ptr->sets) {
+            for (const auto& profession_file_ids : set) {
+                for (const auto& file_id : profession_file_ids) {
+                    if (file_id == festival_hat_model_file_id) {
+                        return &set[profession_idx][0];
+                    }
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    bool IsEquipmentSlotSupportedByArmory(ItemSlot slot) {
+        switch (slot) {
+        case ItemSlot::LeftHand:
+        case ItemSlot::RightHand:
+            // @Enhancement: atm weapons aren't being redrawn after being set - the hand will change, but the model of the weapon remains.
+
+            // Set this to true to play around
+            return false;
+        case ItemSlot::Unknown:
+            return false;
+        }
+        return true;
+    }
+
+    // Record of armor pieces actually drawn; this will differ from the Equipment because we spoof it.
+    GW::ItemData drawn_pieces[_countof(GW::Equipment::items)];
+
+    GW::ItemData gwarmory_window_pieces[_countof(GW::Equipment::items)];
+
+    GW::ItemData original_armor_pieces[_countof(GW::Equipment::items)];
+
+    ComboListState combo_list_states[_countof(drawn_pieces)];
+
+    GW::Constants::Profession current_profession = GW::Constants::Profession::None;
+    Campaign current_campaign = Campaign::BonusMissionPack;
+
+    using EquipmentSlotAction_pt = void(__fastcall *)(GW::Equipment* equip, void* edx, ItemSlot equipment_slot);
+    EquipmentSlotAction_pt RedrawAgentEquipment_Func = nullptr;
+    EquipmentSlotAction_pt RedrawAgentEquipment_Ret = nullptr;
+
+    EquipmentSlotAction_pt UndrawAgentEquipment_Func = nullptr;
+    EquipmentSlotAction_pt UndrawAgentEquipment_Ret = nullptr;
 
     bool gwarmory_setitem = false;
     bool pending_reset_equipment = false;
-
-    struct ItemModelInfo {
-        uint32_t class_flags;
-        uint32_t file_id_1;
-        uint32_t unk[4];
-        uint32_t file_id_2;
-        uint32_t unk2[5];
-    };
-
-    static_assert(sizeof(ItemModelInfo) == 0x30);
-
-    GW::Array<ItemModelInfo>* item_model_info_array = nullptr;
 
     bool Reset();
 
@@ -57,65 +134,6 @@ namespace GWArmory {
         const auto player = GW::Agents::GetPlayerAsAgentLiving();
         return player && player->equip && *player->equip ? *player->equip : nullptr;
     }
-
-    uint32_t GetEquipmentPieceItemId(const ItemSlot slot)
-    {
-        const auto equip = GetPlayerEquipment();
-        if (!equip) {
-            return 0;
-        }
-        switch (slot) {
-            case ItemSlot_Chest:
-                return equip->item_id_chest;
-            case ItemSlot_Feet:
-                return equip->item_id_feet;
-            case ItemSlot_Hands:
-                return equip->item_id_hands;
-            case ItemSlot_Head:
-                return equip->item_id_head;
-            case ItemSlot_Legs:
-                return equip->item_id_legs;
-            default:
-                return 0;
-        }
-    }
-
-
-    uint32_t GetItemInteraction(const ItemSlot slot)
-    {
-        const auto item = GW::Items::GetItemById(GetEquipmentPieceItemId(slot));
-        return item ? item->interaction : 0;
-    }
-
-    ItemSlot GetItemSlot(uint32_t model_file_id);
-
-    void __fastcall OnSetItem(GW::Equipment* equip, void* edx, const uint32_t model_file_id, const uint32_t color, const uint32_t arg3, const uint32_t agent_id)
-    {
-        GW::Hook::EnterHook();
-
-        SetItem_Ret(equip, edx, model_file_id, color, arg3, agent_id);
-        const auto player_equip = GetPlayerEquipment();
-        if (!gwarmory_setitem && (!player_equip || equip == player_equip)) {
-            // Reset controls - this could be done a little smarter to remember bits that haven't changed.
-            pending_reset_equipment = true;
-        }
-        /*if (equip == player_equip) {
-            const auto slot = GetItemSlot(model_file_id);
-            Log::Info("Item in slot %d changed to model %d", slot, model_file_id);
-        }*/
-        GW::Hook::LeaveHook();
-    }
-
-
-    ComboListState head;
-    ComboListState chest;
-    ComboListState hands;
-    ComboListState legs;
-    ComboListState feets;
-
-    GW::Constants::Profession current_profession = GW::Constants::Profession::None;
-    Campaign current_campaign = Campaign_All;
-
 
     Armor* GetArmorsPerProfession(const GW::Constants::Profession prof, size_t* count)
     {
@@ -157,44 +175,44 @@ namespace GWArmory {
         }
     }
 
-    DyeColor DyeColorFromInt(size_t color)
+    GW::DyeColor DyeColorFromInt(size_t color)
     {
-        const auto col = static_cast<DyeColor>(color);
+        const auto col = static_cast<GW::DyeColor>(color);
         switch (col) {
-            case DyeColor::Blue:
-            case DyeColor::Green:
-            case DyeColor::Purple:
-            case DyeColor::Red:
-            case DyeColor::Yellow:
-            case DyeColor::Brown:
-            case DyeColor::Orange:
-            case DyeColor::Silver:
-            case DyeColor::Black:
-            case DyeColor::Gray:
-            case DyeColor::White:
-            case DyeColor::Pink:
+            case GW::DyeColor::Blue:
+            case GW::DyeColor::Green:
+            case GW::DyeColor::Purple:
+            case GW::DyeColor::Red:
+            case GW::DyeColor::Yellow:
+            case GW::DyeColor::Brown:
+            case GW::DyeColor::Orange:
+            case GW::DyeColor::Silver:
+            case GW::DyeColor::Black:
+            case GW::DyeColor::Gray:
+            case GW::DyeColor::White:
+            case GW::DyeColor::Pink:
                 return col;
             default:
-                return DyeColor::None;
+                return GW::DyeColor::None;
         }
     }
 
-    ImVec4 ImVec4FromDyeColor(DyeColor color)
+    ImVec4 ImVec4FromDyeColor(GW::DyeColor color)
     {
-        const uint32_t color_id = static_cast<uint32_t>(color) - static_cast<uint32_t>(DyeColor::Blue);
+        const uint32_t color_id = static_cast<uint32_t>(color) - static_cast<uint32_t>(GW::DyeColor::Blue);
         switch (color) {
-            case DyeColor::Blue:
-            case DyeColor::Green:
-            case DyeColor::Purple:
-            case DyeColor::Red:
-            case DyeColor::Yellow:
-            case DyeColor::Brown:
-            case DyeColor::Orange:
-            case DyeColor::Silver:
-            case DyeColor::Black:
-            case DyeColor::Gray:
-            case DyeColor::White:
-            case DyeColor::Pink: assert(color_id < _countof(palette));
+            case GW::DyeColor::Blue:
+            case GW::DyeColor::Green:
+            case GW::DyeColor::Purple:
+            case GW::DyeColor::Red:
+            case GW::DyeColor::Yellow:
+            case GW::DyeColor::Brown:
+            case GW::DyeColor::Orange:
+            case GW::DyeColor::Silver:
+            case GW::DyeColor::Black:
+            case GW::DyeColor::Gray:
+            case GW::DyeColor::White:
+            case GW::DyeColor::Pink: assert(color_id < _countof(palette));
                 return palette[color_id];
             default:
                 return {};
@@ -257,29 +275,77 @@ namespace GWArmory {
 
     bool armor_filter_array_getter(void*, const int idx, const char** out_text)
     {
-        switch (idx) {
-            case Campaign_All:
-                *out_text = "All";
-                break;
-            case Campaign_Core:
+        switch (static_cast<GW::Constants::Campaign>(idx)) {
+            case GW::Constants::Campaign::Core:
                 *out_text = "Core";
                 break;
-            case Campaign_Prophecies:
+            case GW::Constants::Campaign::Prophecies:
                 *out_text = "Prophecies";
                 break;
-            case Campaign_Factions:
+            case GW::Constants::Campaign::Factions:
                 *out_text = "Factions";
                 break;
-            case Campaign_Nightfall:
+            case GW::Constants::Campaign::Nightfall:
                 *out_text = "Nightfall";
                 break;
-            case Campaign_EotN:
+            case GW::Constants::Campaign::EyeOfTheNorth:
                 *out_text = "Eye of the North";
                 break;
             default:
-                return false;
+                *out_text = "All";
+                break;
         }
         return true;
+    }
+
+    ItemSlot GetSlotFromItemType(GW::Constants::ItemType type) {
+        switch (type) {
+        case GW::Constants::ItemType::Chestpiece:
+            return ItemSlot::Chestpiece;
+        case GW::Constants::ItemType::Leggings:
+            return ItemSlot::Leggings;
+        case GW::Constants::ItemType::Gloves:
+            return ItemSlot::Gloves;
+        case GW::Constants::ItemType::Boots:
+            return ItemSlot::Boots;
+        case GW::Constants::ItemType::Headpiece:
+            return ItemSlot::Headpiece;
+        case GW::Constants::ItemType::Costume_Headpiece:
+            return ItemSlot::CostumeHead;
+        case GW::Constants::ItemType::Costume:
+            return ItemSlot::CostumeBody;
+        case GW::Constants::ItemType::Sword:
+        case GW::Constants::ItemType::Axe:
+            return ItemSlot::RightHand;
+        case GW::Constants::ItemType::Bow:
+        case GW::Constants::ItemType::Offhand:
+        case GW::Constants::ItemType::Shield:
+            return ItemSlot::LeftHand;
+        }
+        return ItemSlot::Unknown;
+    }
+    const char* GetSlotName(ItemSlot slot) {
+        switch (slot) {
+        case ItemSlot::RightHand:
+            return "Right Hand";
+        case ItemSlot::LeftHand:
+            return "Left Hand";
+        case ItemSlot::Chestpiece:
+            return "Chest";
+        case ItemSlot::Leggings:
+            return "Legs";
+        case ItemSlot::Boots:
+            return "Boots";
+        case ItemSlot::Gloves:
+            return "Gloves";
+        case ItemSlot::Headpiece:
+            return "Head";
+        case ItemSlot::CostumeBody:
+            return "Costume";
+        case ItemSlot::CostumeHead:
+            return "Costume Head";
+        }
+        return "Unknown";
     }
 
     bool armor_pieces_array_getter(void* data, const int idx, const char** out_text)
@@ -289,10 +355,10 @@ namespace GWArmory {
         return true;
     }
 
-    uint32_t CreateColor(DyeColor col1, DyeColor col2 = DyeColor::None, DyeColor col3 = DyeColor::None, DyeColor col4 = DyeColor::None)
+    uint32_t CreateColor(GW::DyeColor col1, GW::DyeColor col2 = GW::DyeColor::None, GW::DyeColor col3 = GW::DyeColor::None, GW::DyeColor col4 = GW::DyeColor::None)
     {
-        if (col1 == DyeColor::None && col2 == DyeColor::None && col3 == DyeColor::None && col4 == DyeColor::None) {
-            col1 = DyeColor::Gray;
+        if (col1 == GW::DyeColor::None && col2 == GW::DyeColor::None && col3 == GW::DyeColor::None && col4 == GW::DyeColor::None) {
+            col1 = GW::DyeColor::Gray;
         }
         const auto c1 = static_cast<uint32_t>(col1);
         const auto c2 = static_cast<uint32_t>(col2);
@@ -302,200 +368,283 @@ namespace GWArmory {
         return composite;
     }
 
-    ItemModelInfo* GetItemModelInfo(const uint32_t model_file_id)
-    {
-        if (!(item_model_info_array && model_file_id && model_file_id < item_model_info_array->size())) {
-            return nullptr;
-        }
-        return &item_model_info_array->m_buffer[model_file_id];
-    }
-
-    ItemSlot GetItemSlot(const uint32_t model_file_id)
-    {
-        if (!model_file_id) {
-            return ItemSlot_Unknown;
-        }
-        const auto info = GetItemModelInfo(model_file_id);
-        if (!info) {
-            return ItemSlot_Unknown;
-        }
-        switch (info->class_flags >> 0x16) {
-            case 0:
-            case 1:
-            case 2:
-                return ItemSlot_Unknown; // 8
-            case 3:
-            case 15:
-                return ItemSlot_Chest;
-            case 4:
-            case 14:
-                return ItemSlot_Feet;
-            case 5:
-            case 16:
-                return ItemSlot_Hands;
-            case 6:
-            case 18:
-                return ItemSlot_Legs;
-            case 7:
-            case 8:
-            case 9:
-                return ItemSlot_Unknown; // 7
-            case 10:
-            case 11:
-                return ItemSlot_Unknown; // 0
-            case 12:
-            case 13:
-                return ItemSlot_Unknown; // 2
-            case 19:
-                return ItemSlot_Head;
-            default:
-                return ItemSlot_Unknown;
-        }
-    }
-
-    void SetArmorItem(const PlayerArmorPiece* piece)
-    {
+    void ClearArmorItem(ItemSlot slot) {
         const auto equip = GetPlayerEquipment();
-        const uint32_t color = CreateColor(piece->color1, piece->color2, piece->color3, piece->color4);
-        // 0x60111109
-        const uint32_t interaction = GetItemInteraction(piece->slot);
-        if (GetItemModelInfo(piece->model_file_id) && interaction && SetItem_Func) {
+        if (!equip)
+            return;
+        if (drawn_pieces[slot].model_file_id && drawn_pieces[slot].interaction) {
+            // Backup via copy
+            auto original = equip->items[slot];
+            equip->items[slot] = drawn_pieces[slot];
+
+            // Clear the slot(s)
             gwarmory_setitem = true;
-            SetItem_Func(equip, nullptr, piece->model_file_id, color, interaction, piece->unknow1);
+            UndrawAgentEquipment_Func(equip, nullptr, slot);
             gwarmory_setitem = false;
+
+            // Swap the data back
+            equip->items[slot] = { 0 };
         }
+        
+    }
+ 
+    GW::Item* GetEquippedItem(ItemSlot slot) {
+        const auto equip = GetPlayerEquipment();
+        if (!equip)
+            return nullptr;
+        const auto bag = GW::Items::GetBag(GW::Constants::Bag::Equipped_Items);
+        return bag ? bag->items[slot] : nullptr;
     }
 
+    void SetArmorItem(ItemSlot slot, uint32_t model_file_id, GW::DyeInfo dye, uint32_t interaction = 0, GW::Constants::ItemType type = GW::Constants::ItemType::Unknown) {      
+        if (slot == ItemSlot::Unknown)
+            return;
+        const auto equip = GetPlayerEquipment();
+        if (!equip)
+            return;
 
-    bool IsEquipmentShowing(const GW::EquipmentType type)
-    {
-        const auto state = GW::Items::GetEquipmentVisibility(type);
-        switch (state) {
-            case GW::EquipmentStatus::AlwaysShow:
-                return true;
-            case GW::EquipmentStatus::AlwaysHide:
-                return false;
-            case GW::EquipmentStatus::HideInCombatAreas:
-                return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable;
-            case GW::EquipmentStatus::HideInTownsAndOutposts:
-                return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost;
+        /*if (model_file_id == drawn_pieces[slot].model_file_id) {
+            return;
+
+        }*/
+        ClearArmorItem(slot);
+        if (!model_file_id)
+            return; // Clearing the slot.
+
+        auto& gameItemData = equip->items[slot];
+
+        // Backup via copy
+        auto original = gameItemData;
+
+        // Swap out model id and dye, keep interaction for now.
+        gameItemData.model_file_id = model_file_id;
+        if (type != GW::Constants::ItemType::Unknown) {
+            gameItemData.type = type;
+        }
+        gameItemData.dye = dye;
+        if (interaction)
+            gameItemData.interaction = interaction;
+
+        // Draw the slot again
+        gwarmory_setitem = true;
+        RedrawAgentEquipment_Func(equip, nullptr, slot);
+        gwarmory_setitem = false;
+
+        // Swap the data back
+        //gameItemData = original;
+
+    }
+    bool IsBothHands(ItemType type) {
+        switch (type) {
+        case ItemType::Staff:
+        case ItemType::Bow:
+        case ItemType::Hammer:
+            return true;
+        default:
+            return false;
+        }
+    }
+    bool IsWeapon(ItemType type) {
+        switch (type) {
+        case ItemType::Wand:
+        case ItemType::Shield:
+        case ItemType::Sword:
+        case ItemType::Axe:
+        case ItemType::Daggers:
+        case ItemType::Scythe:
+        case ItemType::Spear:
+        case ItemType::Staff:
+        case ItemType::Bow:
+        case ItemType::Hammer:
+            return true;
+        default:
+            return false;
+        }
+    }
+    bool IsBodyArmor(ItemSlot slot) {
+        switch (slot) {
+        case ItemSlot::Leggings:
+        case ItemSlot::Boots:
+        case ItemSlot::Chestpiece:
+        case ItemSlot::Gloves:
+            return true;
         }
         return false;
     }
 
+    GW::Constants::Profession GetPlayerProfession() {
+        return GetAgentProfession(static_cast<GW::AgentLiving*>(GW::Agents::GetPlayer()));
+    }
+    bool IsCostumeFileId(uint32_t model_file_id) {
+        return model_file_id && GetFileIdsForCostume(model_file_id) != nullptr;
+    }
 
     void UpdateArmorsFilter()
     {
+
+        for (auto& state : combo_list_states) {
+            state.pieces.clear();
+            state.current_piece_index = -1;
+            state.current_piece = nullptr;
+        }
+        const auto& c = current_campaign;
+        auto appendArmors = [c](Armor* armor_arr, size_t length) {
+            for (size_t i = 0; i < length; i++) {
+                auto& armor = armor_arr[i];
+                const auto slot = GetSlotFromItemType(armor.type);
+                if (!IsEquipmentSlotSupportedByArmory(slot))
+                    continue;
+                if (c != Campaign::BonusMissionPack && armor.campaign != c)
+                    continue;
+                ASSERT(slot != ItemSlot::Unknown);
+                const auto piece = &gwarmory_window_pieces[slot];
+                const auto state = &combo_list_states[slot];
+
+                if (piece->model_file_id == armor.model_file_id) {
+                    state->current_piece = &armor;
+                }
+                state->pieces.push_back(&armor);
+            }
+        };
         size_t count = 0;
-        Armor* armors = GetArmorsPerProfession(current_profession, &count);
+        const auto profession_armors = GetArmorsPerProfession(current_profession, &count);
+        appendArmors(profession_armors, count);
+        appendArmors(costume_heads, _countof(costume_heads));
+        appendArmors(costumes, _countof(costumes));
 
-        head.pieces.clear();
-        chest.pieces.clear();
-        hands.pieces.clear();
-        legs.pieces.clear();
-        feets.pieces.clear();
+        appendArmors(swords, _countof(swords));
+        appendArmors(shields, _countof(shields));
 
-        head.current_piece_index = -1;
-        head.current_piece = nullptr;
-        chest.current_piece_index = -1;
-        chest.current_piece = nullptr;
-        hands.current_piece_index = -1;
-        hands.current_piece = nullptr;
-        legs.current_piece_index = -1;
-        legs.current_piece = nullptr;
-        feets.current_piece_index = -1;
-        feets.current_piece = nullptr;
-
-        for (size_t i = 0; i < count; i++) {
-            ComboListState* state = nullptr;
-            const PlayerArmorPiece* piece = nullptr;
-
-            switch (armors[i].item_slot) {
-                case ItemSlot_Head:
-                    state = &head;
-                    piece = &player_armor.head;
-                    break;
-                case ItemSlot_Chest:
-                    state = &chest;
-                    piece = &player_armor.chest;
-                    break;
-                case ItemSlot_Hands:
-                    state = &hands;
-                    piece = &player_armor.hands;
-                    break;
-                case ItemSlot_Legs:
-                    state = &legs;
-                    piece = &player_armor.legs;
-                    break;
-                case ItemSlot_Feet:
-                    state = &feets;
-                    piece = &player_armor.feets;
-                    break;
-            }
-
-            if (!(state && piece)) {
-                continue;
-            }
-            if (piece->model_file_id == armors[i].model_file_id) {
-                state->current_piece = &armors[i];
-            }
-            if (current_campaign != Campaign_All && armors[i].campaign != current_campaign) {
-                continue;
-            }
-            state->pieces.push_back(&armors[i]);
-
-            if (piece && piece->model_file_id) {
-                // Why is this here?
-                SetArmorItem(piece);
+    }
+    // "Remove" any costume pieces that are drawn, reverting to the armor item worn.
+    void RevertCostumePieces() {
+        const auto equip = GetPlayerEquipment();
+        if (!equip)
+            return;
+        const ItemSlot toCheck[] = {
+            ItemSlot::Chestpiece,
+            ItemSlot::Leggings,
+            ItemSlot::Gloves,
+            ItemSlot::Boots
+        };
+        for (auto slot : toCheck) {
+            if (IsCostumeFileId(drawn_pieces[slot].model_file_id)) {
+                const auto& itemData = equip->items[slot];
+                if (itemData.model_file_id && !IsCostumeFileId(itemData.model_file_id)) {
+                    SetArmorItem(slot, itemData.model_file_id, itemData.dye, itemData.interaction, itemData.type);
+                }
+                else {
+                    const auto item = GW::Items::GetItemById(equip->item_ids[slot]);
+                    if (item && item->model_file_id && !IsCostumeFileId(item->model_file_id)) {
+                        SetArmorItem(slot, item->model_file_id, item->dye, item->interaction, item->type);
+                    }
+                }
             }
         }
+        UpdateArmorsFilter();
     }
-
-    void InitItemPiece(PlayerArmorPiece* piece, const GW::Equipment::ItemData* item_data)
+    void SetArmorItem(const GW::ItemData* piece)
     {
-        piece->model_file_id = item_data->model_file_id;
-        piece->unknow1 = item_data->dye.dye_id;
-        piece->color1 = DyeColorFromInt(item_data->dye.dye1);
-        piece->color2 = DyeColorFromInt(item_data->dye.dye2);
-        piece->color3 = DyeColorFromInt(item_data->dye.dye3);
-        piece->color4 = DyeColorFromInt(item_data->dye.dye4);
-    }
-
-    bool GetPlayerArmor(PlayerArmor& out)
-    {
-        const auto player = static_cast<GW::AgentLiving*>(GW::Agents::GetPlayer());
-        if (!(player && player->equip && player->equip[0])) {
-            return false;
+        const auto slot = GetSlotFromItemType(piece->type);
+        // If its a weapon, figure out if we need to clear left or right hand
+        if (IsWeapon(piece->type)) {
+            if (IsBothHands(piece->type)) {
+                ClearArmorItem(ItemSlot::LeftHand);
+                ClearArmorItem(ItemSlot::RightHand);
+            }
+            else {
+                const auto& leftHand = drawn_pieces[ItemSlot::LeftHand];
+                if (IsBothHands(leftHand.type)) {
+                    ClearArmorItem(ItemSlot::LeftHand);
+                    ClearArmorItem(ItemSlot::RightHand);
+                }
+            }
         }
-        const GW::Equipment* equip = player->equip[0];
-        InitItemPiece(&out.head, &equip->head);
-        InitItemPiece(&out.chest, &equip->chest);
-        InitItemPiece(&out.hands, &equip->hands);
-        InitItemPiece(&out.legs, &equip->legs);
-        InitItemPiece(&out.feets, &equip->feet);
 
-        return true;
+        SetArmorItem(slot, piece->model_file_id, piece->dye, piece->interaction, piece->type);
+        if (slot == ItemSlot::Headpiece) {
+            ClearArmorItem(ItemSlot::CostumeHead);
+        }
+        if (slot == ItemSlot::CostumeHead) {
+            // If we're a festival hat, set the correct model file id for this character's profession
+            if(const auto hat_found = GetFileIdForFestivalHat(piece->model_file_id, current_profession))
+                SetArmorItem(ItemSlot::Headpiece, *hat_found, piece->dye, piece->interaction, piece->type);
+        }
+        else if (slot == ItemSlot::CostumeBody) {
+            if (const auto costume_found = GetFileIdsForCostume(piece->model_file_id, current_profession)) {
+                // If we're a costume, set all of the other armor piece model file ids for this character's profession
+                SetArmorItem(ItemSlot::Boots, costume_found[0], piece->dye, piece->interaction, piece->type);
+                SetArmorItem(ItemSlot::Leggings, costume_found[1], piece->dye, piece->interaction, piece->type);
+                SetArmorItem(ItemSlot::Gloves, costume_found[2], piece->dye, piece->interaction, piece->type);
+                SetArmorItem(ItemSlot::Chestpiece, costume_found[3], piece->dye, piece->interaction, piece->type);
+            }
+        }
+        else if (IsBodyArmor(slot) && !IsCostumeFileId(piece->model_file_id)) {
+            RevertCostumePieces();
+        }
+
+    }
+    void __fastcall OnRedrawAgentEquipment(GW::Equipment* equip, void* edx, const ItemSlot equipment_slot)
+    {
+        GW::Hook::EnterHook();
+        RedrawAgentEquipment_Ret(equip, edx, equipment_slot);
+        GW::Hook::LeaveHook();
+
+        const auto player_equip = GetPlayerEquipment();
+        if (equip != player_equip) {
+            return;
+        }
+
+        drawn_pieces[equipment_slot] = equip->items[equipment_slot];
+        gwarmory_window_pieces[equipment_slot] = drawn_pieces[equipment_slot];
+        //Log::Info("Piece changed for slot %d: model_file_id 0x%08X, dye_tint %d", equipment_slot, equip->items[equipment_slot].model_file_id, equip->items[equipment_slot].dye.dye_tint);
+
+        if (gwarmory_setitem)
+            return;
+        original_armor_pieces[equipment_slot] = drawn_pieces[equipment_slot];
+        UpdateArmorsFilter();
+    }
+
+    void __fastcall OnUndrawAgentEquipment(GW::Equipment* equip, void* edx, const ItemSlot equipment_slot)
+    {
+        GW::Hook::EnterHook();
+        UndrawAgentEquipment_Ret(equip, edx, equipment_slot);
+        GW::Hook::LeaveHook();
+
+        const auto player_equip = GetPlayerEquipment();
+        if (equip != player_equip) {
+            return;
+        }
+
+        drawn_pieces[equipment_slot] = { 0 };
+        gwarmory_window_pieces[equipment_slot] = drawn_pieces[equipment_slot];
+        //Log::Info("Piece cleared for slot %d", equipment_slot);
+
+        if (gwarmory_setitem)
+            return;
+        original_armor_pieces[equipment_slot] = drawn_pieces[equipment_slot];
+        UpdateArmorsFilter();
     }
 
     bool Reset()
     {
-        if (!GetPlayerArmor(player_armor)) {
+        const auto equip = GetPlayerEquipment();
+        if (!equip)
             return false;
-        }
-        SetArmorItem(&player_armor.head);
-        SetArmorItem(&player_armor.chest);
-        SetArmorItem(&player_armor.hands);
-        SetArmorItem(&player_armor.legs);
-        SetArmorItem(&player_armor.feets);
 
-        current_campaign = Campaign_All;
-        current_profession = GetAgentProfession(static_cast<GW::AgentLiving*>(GW::Agents::GetPlayer()));
+        current_campaign = Campaign::BonusMissionPack;
+        current_profession = GetPlayerProfession();
+
+        for (size_t slot = 0; slot < _countof(original_armor_pieces); slot++) {
+            SetArmorItem(&original_armor_pieces[slot]);
+            gwarmory_window_pieces[slot] = drawn_pieces[slot];
+        }
 
         UpdateArmorsFilter();
         return true;
     }
 
-    bool DyePicker(const char* label, DyeColor* color)
+    bool DyePicker(const char* label, GW::DyeColor* color)
     {
         ImGui::PushID(label);
 
@@ -504,7 +653,7 @@ namespace GWArmory {
         bool value_changed = false;
         const char* label_display_end = ImGui::FindRenderedTextEnd(label);
 
-        if (ImGui::ColorButton("##ColorButton", current_color, *color == DyeColor::None ? ImGuiColorEditFlags_AlphaPreview : 0)) {
+        if (ImGui::ColorButton("##ColorButton", current_color, *color == GW::DyeColor::None ? ImGuiColorEditFlags_AlphaPreview : 0)) {
             ImGui::OpenPopup("picker");
         }
 
@@ -516,10 +665,10 @@ namespace GWArmory {
             size_t palette_index;
             if (ImGui::ColorPalette("##picker", &palette_index, palette, _countof(palette), 7, ImGuiColorEditFlags_AlphaPreview)) {
                 if (palette_index < _countof(palette)) {
-                    *color = DyeColorFromInt(palette_index + static_cast<size_t>(DyeColor::Blue));
+                    *color = DyeColorFromInt(palette_index + static_cast<size_t>(GW::DyeColor::Blue));
                 }
                 else {
-                    *color = DyeColor::None;
+                    *color = GW::DyeColor::None;
                 }
                 value_changed = true;
                 ImGui::CloseCurrentPopup();
@@ -531,31 +680,198 @@ namespace GWArmory {
         return value_changed;
     }
 
-    bool DrawArmorPiece(const char* label, PlayerArmorPiece* player_piece, ComboListState* state)
+    bool GetIsFemale() {
+        const auto player = GW::Agents::GetPlayerAsAgentLiving();
+        return player && player->GetIsFemale();
+    }
+
+    IDirect3DTexture9** GetArmorPieceImage(uint32_t model_file_id, uint32_t interaction) {
+        const bool is_composite_item = (interaction & 4) != 0;
+
+        uint32_t model_id_to_load = 0;
+
+        if (is_composite_item) {
+            // Armor/runes
+            const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
+            if (model_file_info) {
+                if(!model_id_to_load)
+                    model_id_to_load = model_file_info->file_ids[0xa];
+                if (!model_id_to_load)
+                    model_id_to_load = GetIsFemale() ? model_file_info->file_ids[5] : model_file_info->file_ids[0];
+
+            }
+        }
+        if (!model_id_to_load)
+            model_id_to_load = model_file_id;
+        if (model_file_id == 0x0F6) {
+            const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
+            //model_id_to_load = 0x00015537;
+            (model_file_info);
+        }
+
+        return GwDatTextureModule::LoadTextureFromFileId(model_id_to_load);
+    }
+
+    bool DrawArmorPieceNew(ItemSlot slot) {
+
+        const auto state = &combo_list_states[slot];
+        const auto player_piece = &gwarmory_window_pieces[slot];
+        bool value_changed = false;
+
+        const float scale = ImGui::GetIO().FontGlobalScale;
+
+        ImGui::Separator();
+        ImGui::TextUnformatted(GetSlotName(slot));
+
+        ImGui::PushID(slot);
+
+        auto tmpDyeColor = player_piece->dye.dye1;
+        ImGui::SameLine(128.f * scale);
+        if (DyePicker("color1", &tmpDyeColor)) {
+            value_changed = true;
+            player_piece->dye.dye1 = tmpDyeColor;
+        }
+
+        tmpDyeColor = player_piece->dye.dye2;
+        ImGui::SameLine();
+        if (DyePicker("color2", &tmpDyeColor)) {
+            value_changed = true;
+            player_piece->dye.dye2 = tmpDyeColor;
+        }
+
+        tmpDyeColor = player_piece->dye.dye3;
+        ImGui::SameLine();
+        if (DyePicker("color3", &tmpDyeColor)) {
+            value_changed = true;
+            player_piece->dye.dye3 = tmpDyeColor;
+        }
+
+        tmpDyeColor = player_piece->dye.dye4;
+        ImGui::SameLine();
+        if (DyePicker("color4", &tmpDyeColor)) {
+            value_changed = true;
+            player_piece->dye.dye4 = tmpDyeColor;
+        }
+
+        ImGui::SameLine(280.f * scale);
+        if (ImGui::SmallButton("None")) {
+            player_piece->model_file_id = 0;
+            value_changed = true;
+        }
+        ImGui::PopID();
+        
+
+        
+        constexpr ImVec4 tint(1, 1, 1, 1);
+        constexpr auto uv0 = ImVec2(0, 0);
+
+        const ImVec2 icon_size = { 48.f, 48.f };
+
+        ImVec2 scaled_size(icon_size.x * scale, icon_size.y * scale);
+
+        const auto equipped_color = ImColor(IM_COL32(0, 0x99, 0, 192));
+        const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
+
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
+
+        ImGui::StartSpacedElements(icon_size.x);
+        for (const auto& piece : state->pieces) {
+            
+            ImGui::PushID(piece);
+
+            if (0 <= state->current_piece_index && static_cast<size_t>(state->current_piece_index) < state->pieces.size()) {
+                state->current_piece = state->pieces[state->current_piece_index];
+
+                player_piece->model_file_id = state->current_piece->model_file_id;
+                player_piece->interaction = state->current_piece->interaction;
+                player_piece->type = state->current_piece->type;
+                player_piece->dye.dye_tint = state->current_piece->dye_tint;
+            }
+
+
+            auto uv1 = ImVec2(1, 1);
+
+            const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction);
+
+            const ImVec2 cursor_pos = ImGui::GetCursorPos();
+
+
+            if (texture && *texture) {
+                uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
+            }
+            const auto& bg = player_piece->model_file_id == piece->model_file_id ? equipped_color : normal_bg;
+            ImGui::NextSpacedElement();
+            if (ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, bg, tint)) {
+                player_piece->model_file_id = piece->model_file_id;
+                player_piece->interaction = piece->interaction;
+                player_piece->type = piece->type;
+                player_piece->dye.dye_tint = piece->dye_tint;
+                value_changed = true;
+            }
+
+
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip(piece->label);
+            }
+            ImGui::PopID();
+        }
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+        ImGui::PopStyleVar();
+        return value_changed;
+    }
+
+    bool DrawArmorPiece(ItemSlot slot)
     {
-        ImGui::PushID(label);
+        const auto state = &combo_list_states[slot];
+        const auto player_piece = &drawn_pieces[slot];
+
+        ImGui::PushID(state);
 
         bool value_changed = false;
         const char* preview = state->current_piece ? state->current_piece->label : "";
         if (ImGui::MyCombo("##armors", preview, &state->current_piece_index, armor_pieces_array_getter, state->pieces.data(), state->pieces.size())) {
             if (0 <= state->current_piece_index && static_cast<size_t>(state->current_piece_index) < state->pieces.size()) {
                 state->current_piece = state->pieces[state->current_piece_index];
+
                 player_piece->model_file_id = state->current_piece->model_file_id;
-                player_piece->unknow1 = state->current_piece->unknow1;
-                player_piece->image = *GwDatTextureModule::LoadTextureFromFileId(player_piece->model_file_id);
+                player_piece->interaction = state->current_piece->interaction;
+                player_piece->type = state->current_piece->type;
+                player_piece->dye.dye_tint = state->current_piece->dye_tint;
             }
             value_changed = true;
         }
 
+        auto tmpDyeColor = player_piece->dye.dye1;
         ImGui::SameLine();
-        value_changed |= DyePicker("color1", &player_piece->color1);
-        ImGui::SameLine();
-        value_changed |= DyePicker("color2", &player_piece->color2);
-        ImGui::SameLine();
-        value_changed |= DyePicker("color3", &player_piece->color3);
-        ImGui::SameLine();
-        value_changed |= DyePicker("color4", &player_piece->color4);
+        if (DyePicker("color1", &tmpDyeColor)) {
+            value_changed = true;
+            player_piece->dye.dye1 = tmpDyeColor;
+        }
 
+        tmpDyeColor = player_piece->dye.dye2;
+        ImGui::SameLine();
+        if (DyePicker("color2", &tmpDyeColor)) {
+            value_changed = true;
+            player_piece->dye.dye2 = tmpDyeColor;
+        }
+
+        tmpDyeColor = player_piece->dye.dye3;
+        ImGui::SameLine();
+        if (DyePicker("color3", &tmpDyeColor)) {
+            value_changed = true;
+            player_piece->dye.dye3 = tmpDyeColor;
+        }
+
+        tmpDyeColor = player_piece->dye.dye4;
+        ImGui::SameLine();
+        if (DyePicker("color4", &tmpDyeColor)) {
+            value_changed = true;
+            player_piece->dye.dye4 = tmpDyeColor;
+        }
         ImGui::PopID();
         return value_changed;
     }
@@ -568,76 +884,32 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
     if (!visible) {
         return;
     }
-    GW::AgentLiving* player_agent = GW::Agents::GetPlayerAsAgentLiving();
-    if (!player_agent) {
-        return;
+    if (GetPlayerProfession() != current_profession) {
+        pending_reset_equipment = true;
     }
 
-    const auto prof = GetAgentProfession(player_agent);
-
-    const auto equip = GetPlayerEquipment();
-    if (!equip) {
-        return;
-    }
-
-    if (pending_reset_equipment) {
-        Reset();
+    if (pending_reset_equipment && Reset()) {
         pending_reset_equipment = false;
     }
 
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        ImGui::Text("Profession: %s", GetProfessionName(prof));
+        ImGui::Text("Profession: %s", GetProfessionName(current_profession));
         ImGui::SameLine(ImGui::GetWindowWidth() - 65.f);
 
         if (ImGui::Button("Reset")) {
             pending_reset_equipment = true;
         }
 
-        if (ImGui::MyCombo("##filter", "All", (int*)&current_campaign, armor_filter_array_getter, nullptr, 5)) {
+        if (ImGui::MyCombo("##filter", "All", (int*)&current_campaign, armor_filter_array_getter, nullptr, 6)) {
             UpdateArmorsFilter();
         }
-        const bool showing_helm = !equip->costume_head.model_file_id && IsEquipmentShowing(GW::EquipmentType::Helm);
-        const bool showing_body = !equip->costume_body.model_file_id;
-
-        if (showing_helm) {
-            if (DrawArmorPiece("##head", &player_armor.head, &head)) {
-                SetArmorItem(&player_armor.head);
-            }
-        }
-        if (showing_body) {
-            if (DrawArmorPiece("##chest", &player_armor.chest, &chest)) {
-                SetArmorItem(&player_armor.chest);
-            }
-            if (DrawArmorPiece("##hands", &player_armor.hands, &hands)) {
-                SetArmorItem(&player_armor.hands);
-            }
-            if (DrawArmorPiece("##legs", &player_armor.legs, &legs)) {
-                SetArmorItem(&player_armor.legs);
-            }
-            if (DrawArmorPiece("##feets", &player_armor.feets, &feets)) {
-                SetArmorItem(&player_armor.feets);
-            }
-        }
-
-        if (!showing_helm) {
-            ImGui::TextUnformatted(ICON_FA_EXCLAMATION_TRIANGLE " Your helm is currently hidden ");
-            ImGui::SameLine();
-            if (ImGui::SmallButton("Show Helm")) {
-                GW::GameThread::Enqueue([] {
-                    GW::Items::SetEquipmentVisibility(GW::EquipmentType::Helm, GW::EquipmentStatus::AlwaysShow);
-                    GW::Items::SetEquipmentVisibility(GW::EquipmentType::CostumeHeadpiece, GW::EquipmentStatus::AlwaysHide);
-                });
-            }
-        }
-        if (!showing_body) {
-            ImGui::TextUnformatted(ICON_FA_EXCLAMATION_TRIANGLE " Your armor is currently hidden ");
-            ImGui::SameLine();
-            if (ImGui::SmallButton("Hide Costume")) {
-                GW::GameThread::Enqueue([] {
-                    GW::Items::SetEquipmentVisibility(GW::EquipmentType::CostumeBody, GW::EquipmentStatus::AlwaysHide);
-                });
+        for (size_t slot = 0; slot < _countof(gwarmory_window_pieces); slot++) {
+            if (!IsEquipmentSlotSupportedByArmory(static_cast<ItemSlot>(slot)))
+                continue;
+            if (DrawArmorPieceNew(static_cast<ItemSlot>(slot))) {
+                SetArmorItem(&gwarmory_window_pieces[slot]);
             }
         }
     }
@@ -648,36 +920,46 @@ void ArmoryWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 
-    uintptr_t address = GW::Scanner::Find("\x8b\x04\xc7\x5f\xc1\xe8\x16", "xxxxxxx", -0x2c);
-    address = GW::Scanner::FunctionFromNearCall(address); // GetModelItemInfo
+    RedrawAgentEquipment_Func = (EquipmentSlotAction_pt)GW::Scanner::FindAssertion("p:\\code\\gw\\composite\\cpsplayer.cpp", "itemData.fileId",-0x1fc);
+    if (RedrawAgentEquipment_Func) {
+        GW::Hook::CreateHook(RedrawAgentEquipment_Func, OnRedrawAgentEquipment, (void**)&RedrawAgentEquipment_Ret);
+        GW::Hook::EnableHooks(RedrawAgentEquipment_Func);
+    }
+    UndrawAgentEquipment_Func = (EquipmentSlotAction_pt)GW::Scanner::Find("\x0f\xb7\x8f\xe0\x03\x00\x00\x0f\xb7\x87\xe2\x03\x00\x00", "xxxxxxxxxxxxxx",-0x2f);
+    if (UndrawAgentEquipment_Func) {
+        GW::Hook::CreateHook(UndrawAgentEquipment_Func, OnUndrawAgentEquipment, (void**)&UndrawAgentEquipment_Ret);
+        GW::Hook::EnableHooks(UndrawAgentEquipment_Func);
+    }
 
+    uintptr_t address = GW::Scanner::Find("\x81\xc6\xa0\x00\x00\x00\x83\xf8\x17", "xxxxxxxxx", -0xb);
+    if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address, GW::Scanner::Section::RDATA)) {
+        address = *(uintptr_t*)address;
+        address -= 0xC;
+        costume_data_ptr = (CostumeData*)address;
+    }
+    address = GW::Scanner::Find("\x83\xc1\x28\x83\xf8\x3b", "xxxxxx", -0xf);
     if (address) {
-        address += 0x27;
-        item_model_info_array = *(GW::Array<ItemModelInfo>**)address;
+        address = *(uintptr_t*)address;
+        address -= 0x28;
+        if (GW::Scanner::IsValidPtr(address, GW::Scanner::Section::RDATA)) {
+            festival_hat_data_ptr = (FestivalHatData*)address;
+        }
     }
-
-    SetItem_Func = (SetItem_pt)GW::Scanner::Find("\x83\xC4\x04\x8B\x08\x8B\xC1\xC1", "xxxxxxxx", -0x24);
-    if (SetItem_Func) {
-        GW::Hook::CreateHook(SetItem_Func, OnSetItem, (void**)&SetItem_Ret);
+    const auto equip = GetPlayerEquipment();
+    if (equip) {
+        memcpy(original_armor_pieces, equip->items, sizeof(original_armor_pieces));
     }
-    else {
-        Log::Error("GWArmory failed to find the SetItem function");
-    }
-#ifdef _DEBUG
-    for (auto& armor : warrior_armors) {
-        const auto buf = new char[100];
-        snprintf(buf, 100, "%s %#04x", armor.label, armor.model_file_id);
-        armor.label = buf;
-    }
-#endif
-    pending_reset_equipment = true;
 }
 
 void ArmoryWindow::Terminate()
 {
     Reset(); // NB: We're on the game thread, so this is ok
-    if (SetItem_Func) {
-        GW::Hook::RemoveHook(SetItem_Func);
-        SetItem_Func = nullptr;
+    if (RedrawAgentEquipment_Func) {
+        GW::Hook::RemoveHook(RedrawAgentEquipment_Func);
+        RedrawAgentEquipment_Func = nullptr;
+    }
+    if (UndrawAgentEquipment_Func) {
+        GW::Hook::RemoveHook(UndrawAgentEquipment_Func);
+        UndrawAgentEquipment_Func = nullptr;
     }
 }
