@@ -982,20 +982,22 @@ GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id)
 IDirect3DTexture9** Resources::GetItemImage(GW::Item* item) {
     if (!(item && item->model_file_id))
         return nullptr;
-    
+    uint32_t model_id_to_load = 0;
     const bool is_composite_item = (item->interaction & 4) != 0;
+
+    const bool is_female = true;
 
     if (is_composite_item) {
         // Armor/runes
         const auto model_file_info = GW::Items::GetCompositeModelInfo(item->model_file_id);
-        if (model_file_info->unk[0xb]) {
-            return GwDatTextureModule::LoadTextureFromFileId(model_file_info->unk[0xb]);
-        }
-        if (model_file_info->unk[6]) {
-            return GwDatTextureModule::LoadTextureFromFileId(model_file_info->unk[6]);
-        }
+        if(!model_id_to_load)
+            model_id_to_load = model_file_info->file_ids[0xa];
+        if (!model_id_to_load)
+            model_id_to_load = is_female ? model_file_info->file_ids[5] : model_file_info->file_ids[0];
     }
-    return GwDatTextureModule::LoadTextureFromFileId(item->model_file_id);
+    if (!model_id_to_load)
+        model_id_to_load = item->model_file_id;
+    return GwDatTextureModule::LoadTextureFromFileId(model_id_to_load);
     // @Enhancement: How to apply dye_info to the result?
 }
 
