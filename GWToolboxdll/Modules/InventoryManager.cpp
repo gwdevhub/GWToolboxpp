@@ -412,7 +412,7 @@ namespace {
     void store_all_upgrades()
     {
         const std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [](const InventoryManager::Item* item) {
-            return item && item->type == 8;
+            return item && item->type == GW::Constants::ItemType::Rune_Mod;
         });
         for (const auto& item : items) {
             move_item_to_storage(item);
@@ -1405,7 +1405,7 @@ InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(const Item* st
             if (item->GetIsIdentified()) {
                 continue;
             }
-            if (item->IsGreen() || item->type == static_cast<uint8_t>(GW::Constants::ItemType::Minipet)) {
+            if (item->IsGreen() || item->type == GW::Constants::ItemType::Minipet) {
                 continue;
             }
             switch (identify_all_type) {
@@ -2078,7 +2078,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
                 goto end_popup;
             }
         }
-        else if (context_item_actual->type == 8 && context_item_actual->bag->IsInventoryBag()) {
+        else if (context_item_actual->type == GW::Constants::ItemType::Rune_Mod && context_item_actual->bag->IsInventoryBag()) {
             if (ImGui::Button("Store All Upgrades", size)) {
                 ImGui::CloseCurrentPopup();
                 store_all_upgrades();
