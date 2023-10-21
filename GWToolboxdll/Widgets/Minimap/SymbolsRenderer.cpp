@@ -113,6 +113,12 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
     buffer->Unlock();
 }
 
+void SymbolsRenderer::Invalidate()
+{
+    VBuffer::Invalidate();
+    this->initialized = false;
+}
+
 void SymbolsRenderer::Render(IDirect3DDevice9* device)
 {
     Initialize(device);

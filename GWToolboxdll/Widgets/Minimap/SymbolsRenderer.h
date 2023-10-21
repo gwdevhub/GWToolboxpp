@@ -6,6 +6,7 @@ class SymbolsRenderer : public VBuffer {
 public:
     SymbolsRenderer() = default;
 
+    void Invalidate() override;
     void Render(IDirect3DDevice9* device) override;
 
     void DrawSettings();
