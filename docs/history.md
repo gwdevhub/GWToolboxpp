@@ -10,7 +10,6 @@ the latest version, go to the [Home Page](./) instead.
 ## Version 6.11
 
 * [New] Added item upgrade unlocks to completion window
-* [New] Reworked Obfuscator. Added option to rename yourself and friends to their alias (in-game, in-chat, in-party, in-guild).
 * [New] Added option in FriendlistWindow to replace friends character names in chat with their alias.
 * [New] Added chat filter for dropped ashes
 * [New] Added option to remove the 1.5 second minimum for a cast bar to show up for your own casts (Gamesettings).
@@ -18,13 +17,18 @@ the latest version, go to the [Home Page](./) instead.
   yet and draws even on parts that are behind walls or agents - might be enhanced in the future.
 * [New] Loading and saving multiple configs (/tb load <configname>, /tb save <configname>) now saves and loads all
   settings.
+* [New] Rewrite of Armory window to use icons instead of dropdowns, fixed bugs, added costumes and missing head pieces.
+* [Minor] Added watchful intervention to bond monitor
 * [Minor] Added default values for the Minimap position if you've never moved the in-game compass
 * [Minor] Toolbox widgets now all remember their lock_move and lock_size settings
 * [Minor] Added option to auto use keys on chests (prioritised before lockpicks)
 * [Minor] Added option to get notified when resurrected
+* [Minor] Adjusted height of damage/bonds monitors against party window to cater for HM/NM buttons in outpost
 * [Minor] Minimap markers will now draw in outposts, unless there's an explorable version with the same ID (e.g. DoA)
 * [Minor] Added "toggle" command to /tb which toggles visibility. E.g. /tb pcons toggle
 * [Minor] Damage monitor, bonds widget and cast widget now account for the different party member height in outposts
+* [Minor] Skill and image icons now load from the GW DAT file instead of downloading from GWW
+* [Minor] Dropdown list of missing outposts added to travel window
 * [Fix] Fixed option to auto-login when no character name parameter is passed to gw. Requires you to launch with GW
   Launcher
 * [Fix] Removed copy hero build button when no builds existed.
@@ -32,6 +36,7 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Fixed bug preventing secondary profession switch on tome use.
 * [Fix] Fixed rerolling to characters when you had empty char slots
 * [Fix] Fixed trade window timestamps
+* [Fix] Fixed bug preventing some minimap colours/symbols from being changed until tb restart.
 * [Removed] Removed obfuscator for the time being as it was unstable. Might be re-added later.
 * [Developers] Plugins have been reworked in order to more closely integrate into Toolbox. You will have to update your
   plugins in order for them to load.
