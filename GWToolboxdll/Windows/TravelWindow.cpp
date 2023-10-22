@@ -211,6 +211,15 @@ void TravelWindow::DrawMissingOutpostsList(const bool presearing) const {
     }
 }
 
+bool outpost_name_array_getter(void* /* _data */, int idx, const char** out_text) {
+    if (idx < 0 || static_cast<size_t>(idx) > outpost_names.size()) {
+        return false;
+    }
+
+    *out_text = outpost_names[idx];
+    return true;
+}
+
 void TravelWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
@@ -237,7 +246,7 @@ void TravelWindow::Draw(IDirect3DDevice9*)
         else {
             ImGui::PushItemWidth(-1.0f);
             static int travelto_index = -1;
-            if (ImGui::Combo("Travel To...", &travelto_index, outpost_names.data(), outpost_names.size())) {
+            if (ImGui::MyCombo("travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, outpost_names.size())) {
                 const auto map_id = IndexToOutpostID(travelto_index);
                 Travel(map_id, district, district_number);
                 travelto_index = -1;
@@ -274,7 +283,7 @@ void TravelWindow::Draw(IDirect3DDevice9*)
             for (auto i = 0; i < fav_count; i++) {
                 ImGui::PushID(i);
                 ImGui::PushItemWidth(-40.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-                ImGui::Combo("Select a favorite", &fav_index[static_cast<size_t>(i)], outpost_names.data(), outpost_names.size());
+                ImGui::MyCombo("", "Select a favorite", &fav_index[static_cast<size_t>(i)], outpost_name_array_getter, nullptr, outpost_names.size());
                 ImGui::PopItemWidth();
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
                 if (ImGui::Button("Go", ImVec2(40.0f, 0))) {
