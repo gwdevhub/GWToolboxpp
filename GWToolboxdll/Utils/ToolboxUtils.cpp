@@ -272,10 +272,12 @@ namespace ToolboxUtils {
 
     bool IsPlayerInParty(const uint32_t login_number)
     {
-        const GW::PartyContext* partyContext = GW::GetPartyContext();
-        GW::PartyInfo* playerParty = partyContext->player_party;
+        const auto* party = GW::PartyMgr::GetPartyInfo();
+        if (!party) {
+            return false;
+        }
 
-        for (const auto& player : playerParty->players) {
+        for (const auto& player : party->players) {
             if (player.login_number == login_number) {
                 return true;
             }
