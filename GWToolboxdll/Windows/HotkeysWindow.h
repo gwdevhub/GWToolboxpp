@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Timer.h>
 #include <ToolboxWindow.h>
 
 #include <Windows/Hotkeys.h>
@@ -8,16 +7,17 @@
 // class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
 class HotkeysWindow : public ToolboxWindow {
     HotkeysWindow() = default;
-    ~HotkeysWindow() = default;
+    ~HotkeysWindow() override = default;
 
 public:
-    static HotkeysWindow& Instance() {
+    static HotkeysWindow& Instance()
+    {
         static HotkeysWindow instance;
         return instance;
     }
 
-    const char* Name() const override { return "Hotkeys"; }
-    const char* Icon() const override { return ICON_FA_KEYBOARD; }
+    [[nodiscard]] const char* Name() const override { return "Hotkeys"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_KEYBOARD; }
 
     void Initialize() override;
     void Terminate() override;
@@ -35,14 +35,7 @@ public:
 
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-
-
-
-private:
-
-
-
 };

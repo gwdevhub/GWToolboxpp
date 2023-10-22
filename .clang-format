@@ -1,237 +1,66 @@
-UseTab: Never
-TabWidth: 4
-IndentWidth: 4
-ContinuationIndentWidth: 4
-ColumnLimit: 256
-
+---
 Language: Cpp
-
-# Extra outdent of access modifiers
-# class Foo
-# {
-# public:
-#     ...
-# };
 AccessModifierOffset: -4
-
-# Align parameters on the open bracket
-# someLongFunction(argument1,
-#                  argument2);
-AlignAfterOpenBracket: false
-
-# Don't align consecutive assignments
-# int aaaa = 12;
-# int b = 14;
+AlignAfterOpenBracket: BlockIndent 
 AlignConsecutiveAssignments: false
-
-# Don't align consecutive declarations
-# int aaaa = 12;
-# double b = 3.14;
 AlignConsecutiveDeclarations: false
-
-# Align escaped newlines as far left as possible
-# #define A   \
-#   int aaaa; \
-#   int b;    \
-#   int cccccccc;
 AlignEscapedNewlines: Left
-
-# Align operands of binary and ternary expressions
-# int aaa = bbbbbbbbbbb +
-#           cccccc;
 AlignOperands: true
-
-# Align trailing comments
-# int a;      // Comment a
-# int b = 2;  // Comment b
-AlignTrailingComments: true
-
-# By default don't allow putting parameters onto the next line
-# myFunction(foo, bar, baz);
 AllowAllParametersOfDeclarationOnNextLine: false
-
-# Don't allow short braced statements to be on a single line
-# if (a)           not       if (a) return;
-#   return;
 AllowShortBlocksOnASingleLine: Empty
-AllowShortCaseLabelsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: true
-AllowShortIfStatementsOnASingleLine: false
-AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: true
 AllowShortLambdasOnASingleLine: false
-
-# By default don't add a line break after the return type of top-level functions
-# int foo();
-AlwaysBreakAfterReturnType: None
-
-AlwaysBreakBeforeMultilineStrings: false
-AlwaysBreakTemplateDeclarations: true
-
-# Pack as many parameters or arguments onto the same line as possible
-# int myFunction(int aaaaaaaaaaaa, int bbbbbbbb,
-#                int cccc);
-BinPackArguments: true
-BinPackParameters: true
-
-# Pretty much break after everything, but no braces indent.
-# We are not savages afterall ;)
-BreakBeforeBraces: Custom
-BraceWrapping:
-  AfterClass:            false
+AlwaysBreakTemplateDeclarations: Yes
+BraceWrapping: 
+  AfterCaseLabel: false
+  AfterClass: false
   AfterControlStatement: false
-  AfterEnum:             true
-  AfterFunction:         true
-  AfterStruct:           false
-  AfterUnion:            false
-  AfterCaseLabel:        false
-  BeforeCatch:           false
-  BeforeElse:            true
-  IndentBraces:          false
-  AfterNamespace:        false
-  AfterObjCDeclaration:  true
-  AfterExternBlock:      true
-  SplitEmptyFunction:    true
-  SplitEmptyRecord:      true
-  SplitEmptyNamespace:   true
-
-# Break after operators
-# int valuve = aaaaaaaaaaaaa +
-#              bbbbbb -
-#              ccccccccccc;
-BreakBeforeBinaryOperators: None
-BreakBeforeTernaryOperators: true
-
-# The constructor & inheritance initializers style to use.
-# Foo::Foo(int a, int b, int c)
-#     : m_a(a)
-#     , m_b(b)
-#     , m_c()
-# {
-# }
-BreakInheritanceList: BeforeComma
-BreakConstructorInitializers: BeforeComma
-ConstructorInitializerIndentWidth: 4
-ConstructorInitializerAllOnOneLineOrOnePerLine: false
-
-# Don't break string literals
+  AfterEnum: false
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: true
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+BreakBeforeBraces: Custom
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: AfterColon
 BreakStringLiterals: false
-
-# Don't do:
-# namespace Foo { namespace Bar {
-# }}
-CompactNamespaces: false
-
-# Use the same indentation level as for the switch statement.
-# Switch statement body is always indented one level more than case labels.
+ColumnLimit: 256
+IncludeCategories: 
+  - Regex: '^<.*'
+    Priority: 1
+  - Regex: '^".*'
+    Priority: 2
+  - Regex: '.*'
+    Priority: 3
+IncludeIsMainRegex: '([-_](test|unittest))?$'
 IndentCaseLabels: true
-
-# Don't indent a function definition or declaration if it is wrapped after the
-# type
-IndentWrappedFunctionNames: false
-
-# Align pointer to the left
-# int* a;
-PointerAlignment: Left
-
-# Don't insert a space after a cast
-# x = (int32)y;    not    x = (int32) y;
-SpaceAfterCStyleCast: false
-
-# Don't insert a space after a cast
-# template <int> void foo();     no     template<int> void foo();
-SpaceAfterTemplateKeyword: true
-
-# Insert spaces before and after assignment operators
-# int a = 5;    not    int a=5;
-# a += 42;             a+=42;
-SpaceBeforeAssignmentOperators: true
-
-# Put a space before opening parentheses only after control statement keywords.
-# void f() {
-#   if (true) {
-#     f();
-#   }
-# }
-SpaceBeforeParens: ControlStatements
-
-# The number of spaces before trailing line comments (// - comments).
-# This does not affect trailing block comments (/* - comments).
-SpacesBeforeTrailingComments: 1
-
-# Don't insert a space before braced list
-# vector<int>{1, 2, 3};    not    vector<int> {1, 2, 3};
-SpaceBeforeCpp11BracedList: false
-
-# Insert space before colon in inheritance or constructor initializer list
-# true:                                  false:
-# class Foo : Bar {}             not     class Foo: Bar {}
-SpaceBeforeInheritanceColon: true
-SpaceBeforeCtorInitializerColon: true
-
-# Insert space before colon in range-based for loop
-# for (auto v : values) {}       not     for(auto v: values) {}
-SpaceBeforeRangeBasedForLoopColon: true
-
-# Don't insert spaces inside empty '()'
-SpaceInEmptyParentheses: false
-
-# Don't insert spaces in casts
-# x = (int32) y;    not    x = ( int32 ) y;
-SpacesInCStyleCastParentheses: false
-
-# Don't insert spaces inside container literals
-# var arr = [1, 2, 3];    not    var arr = [ 1, 2, 3 ];
-SpacesInContainerLiterals: false
-
-# Don't insert spaces after '(' or before ')'
-# f(arg);    not    f( arg );
-SpacesInParentheses: false
-
-# Don't insert spaces after '[' or before ']'
-# int a[5];    not    int a[ 5 ];
-SpacesInSquareBrackets: false
-
-# Don't insert spaces after '[' or before ']'
-# static_cast<int>(arg);    not    static_cast< int >(arg);
-SpacesInAngles: false
-
-# Insert a space after '{' and before '}' in struct initializers
-Cpp11BracedListStyle: true
-
-# The maximum number of consecutive empty lines to keep
-MaxEmptyLinesToKeep: 1
-
-# No empty line at the start of a block.
+IndentWidth: 4
+InsertBraces: false
 KeepEmptyLinesAtTheStartOfBlocks: false
-
-# Indent namespace like any other construct
-# namespace out {
-#     namespace in {
-#     }
-# }
+MacroBlockBegin: ''
+MacroBlockEnd: ''
+MaxEmptyLinesToKeep: 100
 NamespaceIndentation: All
-
-# Add namespace comment at the end of the namespace
-# namespace a {
-# } // namespace a
-FixNamespaceComments: true
-
-# Penalties
-# This decides what order things should be done if a line is too long
 PenaltyBreakAssignment: 10
 PenaltyBreakBeforeFirstCallParameter: 30
 PenaltyBreakComment: 10
 PenaltyBreakFirstLessLess: 0
 PenaltyBreakString: 10
 PenaltyExcessCharacter: 100
-PenaltyReturnTypeOnItsOwnLine: 60
-
-# Sort includes within include block, but preserve the block
-# #include <GWCA/b.h>             #include <GWCA/a.h>
-# #include <GWCA/a.h>             #include <GWCA/b.h>
-#                        --->
-# #include "a.h"                  #include "a.h"
-# #include "c.h"                  #include "b.h"
-# #include "b.h"                  #include "c.h"
-IncludeBlocks: Preserve
+PointerAlignment: Left
+QualifierAlignment: Left
 SortIncludes: true
+SpaceBeforeParens: ControlStatementsExceptControlMacros 
+SpacesInAngles: false
+SpacesInContainerLiterals: false
+TabWidth: 4
+...

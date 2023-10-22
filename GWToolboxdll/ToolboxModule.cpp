@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#include <GWToolbox.h>
 #include <ToolboxModule.h>
 
 namespace {
@@ -20,7 +19,9 @@ void ToolboxModule::Initialize()
 {
     RegisterSettingsContent();
 }
-void ToolboxModule::Terminate() {
+
+void ToolboxModule::Terminate()
+{
     // Remove any settings draw callbacks associated with this module
     auto callbacks_it = settings_draw_callbacks.begin();
     while (callbacks_it != settings_draw_callbacks.end()) {
@@ -31,28 +32,32 @@ void ToolboxModule::Terminate() {
                 modules_it = callbacks_it->second.begin();
                 continue;
             }
-            modules_it++;
+            ++modules_it;
         }
         if (callbacks_it->second.empty()) {
             settings_draw_callbacks.erase(callbacks_it);
             callbacks_it = settings_draw_callbacks.begin();
             continue;
         }
-        callbacks_it++;
+        ++callbacks_it;
     }
 }
+
 void ToolboxModule::RegisterSettingsContent()
 {
-    if (!HasSettings())
+    if (!HasSettings()) {
         return;
+    }
     RegisterSettingsContent(
         SettingsName(), Icon(),
         [this](const std::string&, const bool is_showing) {
-            if (is_showing)
-                DrawSettingInternal();
+            if (is_showing) {
+                DrawSettingsInternal();
+            }
         },
         SettingsWeighting());
 }
+
 void ToolboxModule::RegisterSettingsContent(const char* section, const char* icon, const SectionDrawCallback& callback, float weighting)
 {
     if (!settings_draw_callbacks.contains(section)) {

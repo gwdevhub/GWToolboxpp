@@ -2,13 +2,14 @@
 
 #define ASSERT(expr) ((void)(!!(expr) || (Log::FatalAssert(#expr, __FILE__, (unsigned)__LINE__), 0)))
 #define IM_ASSERT(expr) ASSERT(expr)
+#include <GWCA/Managers/ChatMgr.h>
 
-#define GWTOOLBOX_CHAN GW::Chat::Channel::CHANNEL_GWCA2
-#define GWTOOLBOX_SENDER L"GWToolbox++"
-#define GWTOOLBOX_SENDER_COL 0x00ccff
-#define GWTOOLBOX_WARNING_COL 0xFFFF44
-#define GWTOOLBOX_ERROR_COL 0xFF4444
-#define GWTOOLBOX_INFO_COL 0xFFFFFF
+constexpr auto GWTOOLBOX_CHAN = GW::Chat::Channel::CHANNEL_GWCA2;
+constexpr auto GWTOOLBOX_SENDER = L"GWToolbox++";
+constexpr auto GWTOOLBOX_SENDER_COL = 0x00ccff;
+constexpr auto GWTOOLBOX_WARNING_COL = 0xFFFF44;
+constexpr auto GWTOOLBOX_ERROR_COL = 0xFF4444;
+constexpr auto GWTOOLBOX_INFO_COL = 0xFFFFFF;
 
 namespace Log {
     // === Setup and cleanup ====
@@ -41,5 +42,5 @@ namespace Log {
     void Warning(const char* format, ...);
     void WarningW(const wchar_t* format, ...);
 
-    void FatalAssert(const char *expr, const char *file, unsigned int line);
-};
+    void FatalAssert(const char* expr, const char* file, unsigned int line);
+}

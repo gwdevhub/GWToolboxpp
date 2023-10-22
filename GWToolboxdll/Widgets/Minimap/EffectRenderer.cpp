@@ -7,48 +7,51 @@
 
 #include <GWCA/GameEntities/Agent.h>
 
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
+#include <Color.h>
+#include <Timer.h>
 #include <Utils/GuiUtils.h>
 #include <Widgets/Minimap/EffectRenderer.h>
 
 namespace {
     enum SkillEffect {
-        Chaos_storm = 131,
-        Meteor_Shower = 341,
-        Savannah_heat = 346,
-        Lava_font = 347,
-        Breath_of_fire = 351,
-        Maelstrom = 381,
-        Barbed_Trap = 772,
+        Chaos_storm          = 131,
+        Meteor_Shower        = 341,
+        Savannah_heat        = 346,
+        Lava_font            = 347,
+        Breath_of_fire       = 351,
+        Maelstrom            = 381,
+        Barbed_Trap          = 772,
         Barbed_Trap_Activate = 773,
-        Flame_Trap = 774,
-        Flame_Trap_Activate = 775,
-        Spike_Trap = 777,
-        Spike_Trap_Activate = 778,
-        Bed_of_coals = 875,
-        Churning_earth = 994
+        Flame_Trap           = 774,
+        Flame_Trap_Activate  = 775,
+        Spike_Trap           = 777,
+        Spike_Trap_Activate  = 778,
+        Bed_of_coals         = 875,
+        Churning_earth       = 994
     };
-    const float drawing_scale = 96.0f;
 
     class EffectCircle : public VBuffer {
         void Initialize(IDirect3DDevice9* device) override;
+
     public:
         Color* color = nullptr;
         float range = GW::Constants::Range::Adjacent;
     };
+
     struct Effect {
-        Effect(uint32_t _effect_id, float _x, float _y, uint32_t _duration,
-            float range, Color *_color)
+        Effect(const uint32_t _effect_id, const float _x, const float _y, const uint32_t _duration,
+               const float range, Color* _color)
             : start(TIMER_INIT())
             , effect_id(_effect_id)
-            , pos(_x,_y)
+            , pos(_x, _y)
             , duration(_duration)
         {
             circle.range = range;
             circle.color = _color;
-        };
+        }
         clock_t start;
         const uint32_t effect_id;
         const GW::Vec2f pos;
@@ -56,14 +59,14 @@ namespace {
         EffectCircle circle;
     };
 
-    struct pair_hash
-    {
+    struct pair_hash {
         template <class T1, class T2>
-        std::size_t operator() (const std::pair<T1, T2>& pair) const
+        size_t operator()(const std::pair<T1, T2>& pair) const
         {
             return std::hash<T1>()(pair.first) ^ std::hash<T2>()(pair.second);
         }
     };
+
     bool need_to_clear_effects = false;
 
     std::recursive_mutex effects_mutex;
@@ -75,21 +78,23 @@ namespace {
         float range = GW::Constants::Range::Nearby;
         uint32_t stoc_header = 0;
         uint32_t duration = 10000;
-        EffectSettings(const char* _name, uint32_t _effect_id, float _range, uint32_t _duration, uint32_t _stoc_header = 0)
+
+        EffectSettings(const char* _name, const uint32_t _effect_id, const float _range, const uint32_t _duration, const uint32_t _stoc_header = 0)
             : name(_name)
             , effect_id(_effect_id)
             , range(_range)
             , stoc_header(_stoc_header)
-            , duration(_duration)
-        {
-        }
+            , duration(_duration) { }
     };
+
     struct EffectTrigger {
         uint32_t triggered_effect_id = 0;
         uint32_t duration = 2000;
         float range = GW::Constants::Range::Nearby;
-        std::unordered_map<std::pair<float, float>, clock_t, pair_hash> triggers_handled;
-        EffectTrigger(uint32_t _triggered_effect_id, uint32_t _duration, float _range) : triggered_effect_id(_triggered_effect_id), duration(_duration), range(_range) {};
+        std::unordered_map<std::pair<float, float>, clock_t, pair_hash> triggers_handled{};
+
+        EffectTrigger(const uint32_t _triggered_effect_id, const uint32_t _duration, const float _range)
+            : triggered_effect_id(_triggered_effect_id), duration(_duration), range(_range) { }
     };
 
     std::vector<Effect*> aoe_effects;
@@ -100,7 +105,9 @@ namespace {
 
     unsigned int vertices_max = 0x1000; // max number of vertices to draw in one call
 }
-void EffectRenderer::LoadDefaults() {
+
+void EffectRenderer::LoadDefaults()
+{
     aoe_effect_settings.clear();
     aoe_effect_settings.emplace(Maelstrom, new EffectSettings("Maelstrom", Maelstrom, GW::Constants::Range::Adjacent, 10000));
     aoe_effect_settings.emplace(Chaos_storm, new EffectSettings("Chaos Storm", Chaos_storm, GW::Constants::Range::Adjacent, 10000));
@@ -116,7 +123,9 @@ void EffectRenderer::LoadDefaults() {
     aoe_effect_settings.emplace(Spike_Trap, new EffectSettings("Spike Trap", Barbed_Trap, GW::Constants::Range::Adjacent, 90000, GW::Packet::StoC::GenericValue::STATIC_HEADER));
     aoe_effect_triggers.emplace(Spike_Trap_Activate, new EffectTrigger(Spike_Trap, 2000, GW::Constants::Range::Nearby));
 }
-void EffectRenderer::Terminate() {
+
+void EffectRenderer::Terminate()
+{
     VBuffer::Terminate();
     for (const auto& settings : aoe_effect_settings) {
         delete settings.second;
@@ -127,7 +136,9 @@ void EffectRenderer::Terminate() {
     }
     aoe_effect_triggers.clear();
 }
-void EffectRenderer::Invalidate() {
+
+void EffectRenderer::Invalidate()
+{
     VBuffer::Invalidate();
     for (const auto p : aoe_effects) {
         delete p;
@@ -137,7 +148,9 @@ void EffectRenderer::Invalidate() {
         trigger.second->triggers_handled.clear();
     }
 }
-void EffectRenderer::LoadSettings(ToolboxIni* ini, const char* section) {
+
+void EffectRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
+{
     Invalidate();
     LoadDefaults();
     for (const auto& settings : aoe_effect_settings) {
@@ -146,14 +159,18 @@ void EffectRenderer::LoadSettings(ToolboxIni* ini, const char* section) {
         settings.second->color = Colors::Load(ini, section, color_buf, settings.second->color);
     }
 }
-void EffectRenderer::SaveSettings(ToolboxIni* ini, const char* section) const {
+
+void EffectRenderer::SaveSettings(ToolboxIni* ini, const char* section)
+{
     for (const auto& settings : aoe_effect_settings) {
         char color_buf[64];
         sprintf(color_buf, "color_aoe_effect_%d", settings.first);
         Colors::Save(ini, section, color_buf, settings.second->color);
     }
 }
-void EffectRenderer::DrawSettings() {
+
+void EffectRenderer::DrawSettings()
+{
     bool confirm = false;
     if (ImGui::SmallConfirmButton("Restore Defaults", &confirm)) {
         LoadDefaults();
@@ -165,33 +182,35 @@ void EffectRenderer::DrawSettings() {
         ImGui::Text(s.second->name.c_str());
         ImGui::PopID();
     }
-
 }
-void EffectRenderer::RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos) {
-    auto it1 = aoe_effect_triggers.find(effect_id);
-    if (it1 == aoe_effect_triggers.end())
+
+void EffectRenderer::RemoveTriggeredEffect(const uint32_t effect_id, GW::Vec2f* pos)
+{
+    const auto it1 = aoe_effect_triggers.find(effect_id);
+    if (it1 == aoe_effect_triggers.end()) {
         return;
-    auto trigger = it1->second;
-    auto settings = aoe_effect_settings.find(trigger->triggered_effect_id)->second;
-    std::pair<float, float> posp = { pos->x,pos->y };
-    auto trap_handled = trigger->triggers_handled.find(posp);
+    }
+    const auto trigger = it1->second;
+    const auto settings = aoe_effect_settings.find(trigger->triggered_effect_id)->second;
+    std::pair posp = {pos->x, pos->y};
+    const auto trap_handled = trigger->triggers_handled.find(posp);
     if (trap_handled != trigger->triggers_handled.end() && TIMER_DIFF(trap_handled->second) < 5000) {
         return; // Already handled this trap, e.g. Spike Trap triggers 3 times over 2 seconds; we only care about the first.
     }
     trigger->triggers_handled.emplace(posp, TIMER_INIT());
-    std::lock_guard<std::recursive_mutex> lock(effects_mutex);
+    std::lock_guard lock(effects_mutex);
     Effect* closest = nullptr;
     float closestDistance = GW::Constants::SqrRange::Nearby;
-    uint32_t closest_idx = 0;
-    for (size_t i = 0; i < aoe_effects.size();i++) {
+    for (size_t i = 0; i < aoe_effects.size(); i++) {
         Effect* effect = aoe_effects[i];
-        if (!effect || effect->effect_id != settings->effect_id)
+        if (!effect || effect->effect_id != settings->effect_id) {
             continue;
+        }
         // Need to estimate position; player may have moved on cast slightly.
-        float newDistance = GW::GetSquareDistance(*pos,effect->pos);
-        if (newDistance > closestDistance)
+        const float newDistance = GetSquareDistance(*pos, effect->pos);
+        if (newDistance > closestDistance) {
             continue;
-        closest_idx = i;
+        }
         closest = effect;
         closestDistance = newDistance;
     }
@@ -203,84 +222,124 @@ void EffectRenderer::RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos) {
     }
 }
 
-void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValue* pak) {
-    if (!initialized) return;
-    if (pak->value_id != 21) // Effect on agent
+void EffectRenderer::PacketCallback(const GW::Packet::StoC::GenericValue* pak) const
+{
+    if (!initialized) {
         return;
-    auto it = aoe_effect_settings.find(pak->value);
-    if (it == aoe_effect_settings.end())
+    }
+    if (pak->value_id != 21) {
+        // Effect on agent
         return;
+    }
+    const auto it = aoe_effect_settings.find(pak->value);
+    if (it == aoe_effect_settings.end()) {
+        return;
+    }
     const auto settings = it->second;
-    if (settings->stoc_header && settings->stoc_header != pak->header)
+    if (settings->stoc_header && settings->stoc_header != pak->header) {
         return;
+    }
     const auto* caster = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
-    if (!caster || caster->allegiance != GW::Constants::Allegiance::Enemy) return;
+    if (!caster || caster->allegiance != GW::Constants::Allegiance::Enemy) {
+        return;
+    }
     aoe_effects.push_back(new Effect(pak->value, caster->pos.x, caster->pos.y, settings->duration, settings->range, &settings->color));
 }
-void EffectRenderer::PacketCallback(GW::Packet::StoC::GenericValueTarget* pak) {
-    if (!initialized) return;
-    if (pak->Value_id != 20) // Effect on target
+
+void EffectRenderer::PacketCallback(const GW::Packet::StoC::GenericValueTarget* pak) const
+{
+    if (!initialized) {
         return;
-    auto it = aoe_effect_settings.find(pak->value);
-    if (it == aoe_effect_settings.end())
+    }
+    if (pak->Value_id != 20) {
+        // Effect on target
         return;
-    auto settings = it->second;
-    if (settings->stoc_header && settings->stoc_header != pak->header)
+    }
+    const auto it = aoe_effect_settings.find(pak->value);
+    if (it == aoe_effect_settings.end()) {
         return;
-    if (pak->caster == pak->target) return;
-    GW::AgentLiving* caster = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->caster));
-    if (!caster || caster->allegiance != GW::Constants::Allegiance::Enemy) return;
-    GW::Agent* target = GW::Agents::GetAgentByID(pak->target);
-    if (!target) return;
+    }
+    const auto settings = it->second;
+    if (settings->stoc_header && settings->stoc_header != pak->header) {
+        return;
+    }
+    if (pak->caster == pak->target) {
+        return;
+    }
+    const auto caster = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->caster));
+    if (!caster || caster->allegiance != GW::Constants::Allegiance::Enemy) {
+        return;
+    }
+    const GW::Agent* target = GW::Agents::GetAgentByID(pak->target);
+    if (!target) {
+        return;
+    }
     aoe_effects.push_back(new Effect(pak->value, target->pos.x, target->pos.y, settings->duration, settings->range, &settings->color));
 }
-void EffectRenderer::PacketCallback(GW::Packet::StoC::PlayEffect* pak) {
-    if (!initialized) return;
+
+void EffectRenderer::PacketCallback(GW::Packet::StoC::PlayEffect* pak) const
+{
+    if (!initialized) {
+        return;
+    }
     // TODO: Fire storm and Meteor shower have no caster!
     // Need to record GenericValueTarget with value_id matching these skills, then roughly match the coords after.
     RemoveTriggeredEffect(pak->effect_id, &pak->coords);
-    auto it = aoe_effect_settings.find(pak->effect_id);
-    if (it == aoe_effect_settings.end())
+    const auto it = aoe_effect_settings.find(pak->effect_id);
+    if (it == aoe_effect_settings.end()) {
         return;
-    auto settings = it->second;
-    if (settings->stoc_header && settings->stoc_header != pak->header)
+    }
+    const auto settings = it->second;
+    if (settings->stoc_header && settings->stoc_header != pak->header) {
         return;
-    GW::AgentLiving* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
-    if (!a || a->allegiance != GW::Constants::Allegiance::Enemy) return;
+    }
+    const auto a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
+    if (!a || a->allegiance != GW::Constants::Allegiance::Enemy) {
+        return;
+    }
     aoe_effects.push_back(new Effect(pak->effect_id, pak->coords.x, pak->coords.y, settings->duration, settings->range, &settings->color));
 }
-void EffectRenderer::Initialize(IDirect3DDevice9* device) {
-    if (initialized)
+
+void EffectRenderer::Initialize(IDirect3DDevice9* device)
+{
+    if (initialized) {
         return;
+    }
     initialized = true;
     type = D3DPT_LINELIST;
 
-    HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
-        D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+    const HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
+                                                  D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     if (FAILED(hr)) {
         printf("Error setting up PingsLinesRenderer vertex buffer: HRESULT: 0x%lX\n", hr);
     }
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&StoC_Hook, [&](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*) {
         need_to_clear_effects = true;
-        });
+    });
 }
-void EffectRenderer::Render(IDirect3DDevice9* device) {
+
+void EffectRenderer::Render(IDirect3DDevice9* device)
+{
     Initialize(device);
     DrawAoeEffects(device);
 }
-void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device) {
+
+void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device)
+{
     if (need_to_clear_effects) {
         Invalidate();
         need_to_clear_effects = false;
     }
-    if (aoe_effects.empty())
+    if (aoe_effects.empty()) {
         return;
-    std::lock_guard<std::recursive_mutex> lock(effects_mutex);
+    }
+    std::lock_guard lock(effects_mutex);
     size_t effect_size = aoe_effects.size();
     for (size_t i = 0; i < effect_size; i++) {
         Effect* effect = aoe_effects[i];
-        if (!effect)
+        if (!effect) {
             continue;
+        }
         if (TIMER_DIFF(effect->start) > static_cast<clock_t>(effect->duration)) {
             aoe_effects.erase(aoe_effects.begin() + static_cast<int>(i));
             delete effect;
@@ -296,20 +355,23 @@ void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device) {
     }
 }
 
-void EffectCircle::Initialize(IDirect3DDevice9* device) {
+void EffectCircle::Initialize(IDirect3DDevice9* device)
+{
     type = D3DPT_LINESTRIP;
     count = 16; // polycount
     const auto vertex_count = count + 1;
     D3DVertex* vertices = nullptr;
 
-    if (buffer) buffer->Release();
+    if (buffer) {
+        buffer->Release();
+    }
     device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
-        D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, NULL);
+                               D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
-        (VOID**)&vertices, D3DLOCK_DISCARD);
+                 (VOID**)&vertices, D3DLOCK_DISCARD);
 
-    for (size_t i = 0; i < count; ++i) {
-        float angle = i * (DirectX::XM_2PI / count);
+    for (size_t i = 0; i < count; i++) {
+        const float angle = i * (DirectX::XM_2PI / count);
         vertices[i].x = std::cos(angle);
         vertices[i].y = std::sin(angle);
         vertices[i].z = 0.0f;

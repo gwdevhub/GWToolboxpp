@@ -4,32 +4,33 @@
 
 class WorldMapWidget : public ToolboxWidget {
     WorldMapWidget() = default;
-    ~WorldMapWidget() = default;
+    ~WorldMapWidget() override = default;
 
 public:
-    static WorldMapWidget& Instance() {
+    static WorldMapWidget& Instance()
+    {
         static WorldMapWidget w;
         return w;
     }
 
     void Initialize() override;
 
-    virtual void RegisterSettingsContent() override {};
+    void RegisterSettingsContent() override { };
 
-    bool ShowOnWorldMap() const { return true; }
+    [[nodiscard]] bool ShowOnWorldMap() const override { return true; }
 
-    const char* Name() const override { return "World Map"; }
+    [[nodiscard]] const char* Name() const override { return "World Map"; }
 
-    const char* Icon() const override { return ICON_FA_GLOBE;  }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE; }
 
     void Draw(IDirect3DDevice9* pDevice) override;
 
-    void ShowAllOutposts(bool show);
+    static void ShowAllOutposts(bool show);
 
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
-    bool WndProc(UINT, WPARAM, LPARAM);
+    bool WndProc(UINT, WPARAM, LPARAM) override;
 
 private:
-    void InitializeMapsUnlockedArrays();
+    static void InitializeMapsUnlockedArrays();
 };

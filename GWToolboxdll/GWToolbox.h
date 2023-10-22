@@ -5,6 +5,8 @@
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 
+#include "Windows/HeroBuildsWindow.h"
+
 DWORD __stdcall SafeThreadEntry(LPVOID mod) noexcept;
 DWORD __stdcall ThreadEntry(LPVOID);
 
@@ -17,41 +19,43 @@ class ToolboxModule;
 
 class GWToolbox {
 public:
-    static GWToolbox& Instance() {
+    static GWToolbox& Instance()
+    {
         static GWToolbox instance;
         return instance;
     }
 
     static HMODULE GetDLLModule();
-    void Draw(IDirect3DDevice9* device);
-    void Update(GW::HookStatus *);
+    static void Draw(IDirect3DDevice9* device);
+    static void Update(GW::HookStatus*);
 
-    void Initialize();
-    void Terminate();
+    static void Initialize();
+    static void Terminate();
 
-    bool CanTerminate();
+    static bool CanTerminate();
 
-    std::filesystem::path SaveSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME) const;
-    std::filesystem::path LoadSettings(const std::filesystem::path& config = GWTOOLBOX_INI_FILENAME, bool fresh = false);
+    static std::filesystem::path SaveSettings();
+    static std::filesystem::path LoadSettings();
+    static bool SetSettingsFolder(const std::filesystem::path& path);
 
-    void StartSelfDestruct();
-
+    static void StartSelfDestruct();
 
 
     //const std::vector<ToolboxModule*>& GetModules();
-    const std::vector<ToolboxModule*>& GetAllModules();
+    static const std::vector<ToolboxModule*>& GetAllModules();
     //const std::vector<ToolboxModule*>& GetCoreModules() const { return core_modules; }
-    const std::vector<ToolboxUIElement*>& GetUIElements();
+    static const std::vector<ToolboxUIElement*>& GetUIElements();
 
-    const std::vector<ToolboxModule*>& GetModules();
+    static const std::vector<ToolboxModule*>& GetModules();
 
-    const std::vector<ToolboxWindow*>& GetWindows();
+    static const std::vector<ToolboxWindow*>& GetWindows();
 
-    const std::vector<ToolboxWidget*>& GetWidgets();
+    static const std::vector<ToolboxWidget*>& GetWidgets();
+    static bool SettingsFolderChanged();
 
     bool right_mouse_down = false;
 
-    bool IsInitialized() const;
+    static bool IsInitialized();
 
     static bool ToggleModule(ToolboxWidget& m, bool enable = true);
     static bool ToggleModule(ToolboxWindow& m, bool enable = true);

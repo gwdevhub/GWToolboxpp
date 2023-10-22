@@ -1,12 +1,12 @@
-# This is a dump from what was in the main CMakeLists.txt file. 
-# The plugin system is/was a proof of concept; its here just for an example and not used within gwtoolbox.
-
-
-# Below is for toolbox plugins (WIP):
 add_library(plugin_base INTERFACE)
 target_sources(plugin_base INTERFACE
     "plugins/Base/dllmain.cpp"
-    "plugins/Base/ToolboxPlugin.h")
+    "plugins/Base/stl.h"
+    "plugins/Base/ToolboxPlugin.h"
+    "plugins/Base/ToolboxPlugin.cpp"
+    "plugins/Base/PluginUtils.ixx"
+    "plugins/Base/ToolboxUIPlugin.h"
+    "plugins/Base/ToolboxUIPlugin.cpp")
 target_include_directories(plugin_base INTERFACE
     "plugins/Base"
     "GWToolboxdll" # careful here, we only get access to exported and header functions!
@@ -42,4 +42,3 @@ endmacro()
 
 add_tb_plugin(clock)
 add_tb_plugin(InstanceTimer)
-add_tb_plugin(Armory)

@@ -6,4 +6,5 @@ struct D3DVertex {
     float z;
     D3DCOLOR color;
 };
-#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ | D3DFVF_DIFFUSE)
+
+constexpr auto D3DFVF_CUSTOMVERTEX = D3DFVF_XYZ | D3DFVF_DIFFUSE;

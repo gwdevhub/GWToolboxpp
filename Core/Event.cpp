@@ -2,7 +2,7 @@
 
 #include "Event.h"
 
-Event::Event(bool ManualReset, bool InitialState, const char* Name)
+Event::Event(const bool ManualReset, const bool InitialState, const char* Name)
 {
     // @Enhancement: Ensure "Name" is ascii
 
@@ -18,78 +18,81 @@ Event::~Event()
     CloseHandle(m_Handle);
 }
 
-void Event::Pulse()
+void Event::Pulse() const
 {
     PulseEvent(m_Handle);
 }
 
-void Event::SetDone()
+void Event::SetDone() const
 {
     SetEvent(m_Handle);
 }
 
-void Event::Reset()
+void Event::Reset() const
 {
     ResetEvent(m_Handle);
 }
 
-void Event::WaitUntilDone()
+void Event::WaitUntilDone() const
 {
     WaitForSingleObject(m_Handle, INFINITE);
 }
 
-bool Event::WaitWithTimeout(uint32_t WaitMs)
+bool Event::WaitWithTimeout(const uint32_t WaitMs) const
 {
     return WaitForSingleObject(m_Handle, WaitMs) == WAIT_OBJECT_0;
 }
 
-bool Event::TryWait()
+bool Event::TryWait() const
 {
     return WaitForSingleObject(m_Handle, 0) == WAIT_OBJECT_0;
 }
 
-void Event::WaitAny(Event *Events, size_t Count, Event **EventSignaled)
+void Event::WaitAny(Event* Events, const size_t Count, Event** EventSignaled)
 {
     WaitAnyWithTimeout(Events, Count, INFINITE, EventSignaled);
 }
 
-void Event::WaitAll(Event *Events, size_t Count)
+void Event::WaitAll(Event* Events, const size_t Count)
 {
     WaitAllWithTimeout(Events, Count, INFINITE);
 }
 
-bool Event::WaitAnyWithTimeout(Event *Events, size_t Count, size_t WaitMs, Event **EventSignaled)
+bool Event::WaitAnyWithTimeout(Event* Events, const size_t Count, const size_t WaitMs, Event** EventSignaled)
 {
     assert(Count != 0);
     assert(Count <= MAXIMUM_WAIT_OBJECTS);
 
     HANDLE EventHandles[MAXIMUM_WAIT_OBJECTS];
-    for (size_t i = 0; i < Count; ++i)
+    for (size_t i = 0; i < Count; ++i) {
         EventHandles[i] = Events[i].m_Handle;
+    }
 
-    DWORD dwResult = WaitForMultipleObjects(
-        static_cast<DWORD>(Count),
+    const DWORD dwResult = WaitForMultipleObjects(
+        Count,
         EventHandles,
         FALSE,
         WaitMs);
 
-    bool Success = dwResult >= WAIT_OBJECT_0 && dwResult < (WAIT_OBJECT_0 + Count);
-    if (Success && EventSignaled)
+    const bool Success = dwResult >= WAIT_OBJECT_0 && dwResult < WAIT_OBJECT_0 + Count;
+    if (Success && EventSignaled) {
         *EventSignaled = &Events[dwResult - WAIT_OBJECT_0];
+    }
 
     return Success;
 }
 
-bool Event::WaitAllWithTimeout(Event *Events, size_t Count, size_t WaitMs)
+bool Event::WaitAllWithTimeout(const Event* Events, const size_t Count, const size_t WaitMs)
 {
     assert(Count != 0);
     assert(Count <= MAXIMUM_WAIT_OBJECTS);
 
     HANDLE EventHandles[MAXIMUM_WAIT_OBJECTS];
-    for (size_t i = 0; i < Count; ++i)
+    for (size_t i = 0; i < Count; ++i) {
         EventHandles[i] = Events[i].m_Handle;
+    }
 
-    DWORD dwResult = WaitForMultipleObjects(
+    const DWORD dwResult = WaitForMultipleObjects(
         Count,
         EventHandles,
         TRUE,
@@ -98,12 +101,12 @@ bool Event::WaitAllWithTimeout(Event *Events, size_t Count, size_t WaitMs)
     return dwResult != 0;
 }
 
-bool Event::TryWaitAny(Event *Events, size_t Count, Event **EventSignaled)
+bool Event::TryWaitAny(Event* Events, const size_t Count, Event** EventSignaled)
 {
     return WaitAnyWithTimeout(Events, Count, 0, EventSignaled);
 }
 
-bool Event::TryWaitAll(Event *Events, size_t Count)
+bool Event::TryWaitAll(Event* Events, const size_t Count)
 {
     return WaitAllWithTimeout(Events, Count, 0);
 }

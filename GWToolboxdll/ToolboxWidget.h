@@ -4,16 +4,13 @@
 
 class ToolboxWidget : public ToolboxUIElement {
 public:
-    const bool IsWidget() const override { return true; }
-    const char* TypeName() const override { return "widget"; }
+    ToolboxWidget() { lock_move = lock_size = true; }
+    ~ToolboxWidget() override = default;
 
-    void LoadSettings(ToolboxIni* ini) override {
-        ToolboxUIElement::LoadSettings(ini);
-        lock_move = true;
-        lock_size = true;
-    }
+    [[nodiscard]] bool IsWidget() const override { return true; }
+    [[nodiscard]] const char* TypeName() const override { return "widget"; }
 
-
-    virtual ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0,
-        bool noinput_if_frozen = true) const;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
+    [[nodiscard]] virtual ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, bool noinput_if_frozen = true) const;
 };

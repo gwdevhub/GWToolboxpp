@@ -1,8 +1,6 @@
 #pragma once
 
-class Window
-{
-private:
+class Window {
     static LRESULT CALLBACK MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 public:
@@ -14,13 +12,13 @@ public:
     Window& operator=(const Window&) = delete;
     Window& operator=(Window&&) = delete;
 
-    bool Create();
-    bool WaitMessages();
-    bool PollMessages(uint32_t TimeoutMs);
-    bool ProcessMessages();
+    virtual bool Create();
+    bool WaitMessages() const;
+    bool PollMessages(uint32_t TimeoutMs) const;
+    static bool ProcessMessages();
 
-    void SignalStop();
-    bool ShouldClose();
+    void SignalStop() const;
+    bool ShouldClose() const;
 
     void SetWindowName(LPCWSTR lpName);
     void SetWindowPosition(int X, int Y);

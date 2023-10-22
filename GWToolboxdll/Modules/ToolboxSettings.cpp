@@ -5,27 +5,20 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 
-#include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 
 #include <Modules/Updater.h>
 #include <Modules/Resources.h>
 #include <Modules/ChatFilter.h>
-#include <Modules/ChatSettings.h>
 #include <Modules/ItemFilter.h>
-#include <Modules/ChatCommands.h>
-#include <Modules/GameSettings.h>
 #include <Modules/DiscordModule.h>
 #include <Modules/TwitchModule.h>
 #include <Modules/PartyWindowModule.h>
 #include <Modules/ZrawDeepModule.h>
-#include <Modules/AprilFools.h>
-#include <Modules/InventoryManager.h>
 #include <Modules/TeamspeakModule.h>
 #include <Modules/Teamspeak5Module.h>
 #include <Modules/ObserverModule.h>
-#include <Modules/Obfuscator.h>
 #include <Modules/ChatLog.h>
 #include <Modules/HintsModule.h>
 #include <Modules/PluginModule.h>
@@ -33,9 +26,7 @@
 #if 0
 #include <Modules/GWFileRequester.h>
 #endif
-#include <Modules/HallOfMonumentsModule.h>
 #include <Modules/ToastNotifications.h>
-#include <Modules/LoginModule.h>
 #include <Modules/MouseFix.h>
 #include <Modules/GuildWarsSettingsModule.h>
 
@@ -46,7 +37,6 @@
 #include <Windows/TravelWindow.h>
 #include <Windows/InfoWindow.h>
 #include <Windows/MaterialsWindow.h>
-#include <Windows/SettingsWindow.h>
 #include <Windows/NotePadWindow.h>
 #include <Windows/PartyStatisticsWindow.h>
 #include <Windows/TradeWindow.h>
@@ -85,8 +75,12 @@
 #include <Widgets/LatencyWidget.h>
 #include "ToolboxSettings.h"
 
-namespace {
+#define USE_OBFUSCATOR _DEBUG
+#if USE_OBFUSCATOR
+#include <Modules/Obfuscator.h>
+#endif
 
+namespace {
     ToolboxIni* inifile = nullptr;
 
     class ModuleToggle {
@@ -94,26 +88,37 @@ namespace {
         ToolboxModule* toolbox_module;
         const char* name;
         bool enabled;
-        ModuleToggle(ToolboxModule& m, bool _enabled = true) : name(m.Name()),toolbox_module(&m),enabled(_enabled) {};
+
+        ModuleToggle(ToolboxModule& m, const bool _enabled = true)
+            : toolbox_module(&m), name(m.Name()), enabled(_enabled) { }
     };
+
     class WidgetToggle {
     public:
         ToolboxWidget* toolbox_module;
         const char* name;
         bool enabled;
-        WidgetToggle(ToolboxWidget& m, bool _enabled = true) : name(m.Name()),toolbox_module(&m),enabled(_enabled) {};
+
+        WidgetToggle(ToolboxWidget& m, const bool _enabled = true)
+            : toolbox_module(&m), name(m.Name()), enabled(_enabled) { }
     };
+
     class WindowToggle {
     public:
         ToolboxWindow* toolbox_module;
         const char* name;
         bool enabled;
-        WindowToggle(ToolboxWindow& m, bool _enabled = true) : name(m.Name()),toolbox_module(&m),enabled(_enabled) {};
+
+        WindowToggle(ToolboxWindow& m, const bool _enabled = true)
+            : toolbox_module(&m), name(m.Name()), enabled(_enabled) { }
     };
 
     const char* modules_ini_section = "Toolbox Modules";
 
     std::vector<ModuleToggle> optional_modules = {
+#if USE_OBFUSCATOR
+        Obfuscator::Instance(),
+#endif
         PluginModule::Instance(),
         ChatFilter::Instance(),
         ItemFilter::Instance(),
@@ -127,7 +132,6 @@ namespace {
         ChatLog::Instance(),
         HintsModule::Instance(),
         MouseFix::Instance(),
-        Obfuscator::Instance(),
         KeyboardLanguageFix::Instance(),
         ZrawDeepModule::Instance(),
         GuildWarsSettingsModule::Instance()
@@ -181,10 +185,11 @@ namespace {
 
 bool ToolboxSettings::move_all = false;
 
-void ToolboxSettings::LoadModules(ToolboxIni* ini) {
+void ToolboxSettings::LoadModules(ToolboxIni* ini)
+{
     if (!modules_sorted) {
         modules_sorted = true;
-        auto sort = [](const auto& a, const  auto& b) {
+        auto sort = [](const auto& a, const auto& b) {
             return strcmp(a.toolbox_module->Name(), b.toolbox_module->Name()) < 0;
         };
         std::ranges::sort(optional_modules, sort);
@@ -193,16 +198,6 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini) {
     }
 
     inifile = ini;
-
-    GWToolbox::ToggleModule(Updater::Instance());
-    GWToolbox::ToggleModule(ChatCommands::Instance());
-    GWToolbox::ToggleModule(GameSettings::Instance());
-    GWToolbox::ToggleModule(ChatSettings::Instance());
-    GWToolbox::ToggleModule(InventoryManager::Instance());
-    GWToolbox::ToggleModule(HallOfMonumentsModule::Instance());
-    GWToolbox::ToggleModule(LoginModule::Instance());
-    GWToolbox::ToggleModule(AprilFools::Instance());
-    GWToolbox::ToggleModule(SettingsWindow::Instance());
 
 #ifdef _DEBUG
 #if 0
@@ -224,15 +219,14 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini) {
     for (const auto& m : optional_widgets) {
         GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
     }
-
-
 }
 
-void ToolboxSettings::DrawSettingInternal() {
+void ToolboxSettings::DrawSettingsInternal()
+{
     DrawFreezeSetting();
     ImGui::Separator();
 
-    Updater::Instance().DrawSettingInternal();
+    Updater::Instance().DrawSettingsInternal();
     ImGui::Separator();
 
     ImGui::Checkbox("Save Location Data", &save_location_data);
@@ -243,14 +237,14 @@ void ToolboxSettings::DrawSettingInternal() {
     ImGui::PushID("global_enable");
     ImGui::Text("Enable the following features:");
     ImGui::TextDisabled("Unticking will completely disable a feature from initializing and running. Requires Toolbox restart.");
-    
+
     ImGui::Text("Modules");
     auto items_per_col = static_cast<size_t>(ceil(optional_modules.size() / static_cast<float>(cols)));
     size_t col_count = 0;
     ImGui::Columns(static_cast<int>(cols), "global_enable_cols", false);
     for (auto& m : optional_modules) {
         if (ImGui::Checkbox(m.name, &m.enabled)) {
-            GWToolbox::Instance().SaveSettings();
+            GWToolbox::SaveSettings();
             GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
         }
         if (ImGui::IsItemHovered() && m.toolbox_module->Description()) {
@@ -272,7 +266,7 @@ void ToolboxSettings::DrawSettingInternal() {
     items_per_col = static_cast<size_t>(ceil(optional_windows.size() / static_cast<float>(cols)));
     for (auto& m : optional_windows) {
         if (ImGui::Checkbox(m.name, &m.enabled)) {
-            GWToolbox::Instance().SaveSettings();
+            GWToolbox::SaveSettings();
             GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
         }
         if (ImGui::IsItemHovered() && m.toolbox_module->Description()) {
@@ -294,7 +288,7 @@ void ToolboxSettings::DrawSettingInternal() {
     items_per_col = static_cast<size_t>(ceil(optional_widgets.size() / static_cast<float>(cols)));
     for (auto& m : optional_widgets) {
         if (ImGui::Checkbox(m.name, &m.enabled)) {
-            GWToolbox::Instance().SaveSettings();
+            GWToolbox::SaveSettings();
             GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
         }
         if (ImGui::IsItemHovered() && m.toolbox_module->Description()) {
@@ -313,12 +307,14 @@ void ToolboxSettings::DrawSettingInternal() {
     ImGui::PopID();
 }
 
-void ToolboxSettings::DrawFreezeSetting() {
+void ToolboxSettings::DrawFreezeSetting()
+{
     ImGui::Checkbox("Unlock Move All", &move_all);
     ImGui::ShowHelp("Will allow movement and resize of all widgets and windows");
 }
 
-void ToolboxSettings::LoadSettings(ToolboxIni* ini) {
+void ToolboxSettings::LoadSettings(ToolboxIni* ini)
+{
     ToolboxModule::LoadSettings(ini);
     inifile = ini; // Keep this to load module info
 
@@ -335,9 +331,12 @@ void ToolboxSettings::LoadSettings(ToolboxIni* ini) {
     }
 }
 
-void ToolboxSettings::SaveSettings(ToolboxIni* ini) {
+void ToolboxSettings::SaveSettings(ToolboxIni* ini)
+{
     ToolboxModule::SaveSettings(ini);
-    if (location_file.is_open()) location_file.close();
+    if (location_file.is_open()) {
+        location_file.close();
+    }
 
     for (const auto& m : optional_modules) {
         ini->SetBoolValue(modules_ini_section, m.name, m.enabled);
@@ -350,64 +349,62 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini) {
     }
 }
 
-void ToolboxSettings::Draw(IDirect3DDevice9*) {
-    ImGui::GetStyle().WindowBorderSize = (move_all ? 1.0f : 0.0f);
+void ToolboxSettings::Draw(IDirect3DDevice9*)
+{
+    ImGui::GetStyle().WindowBorderSize = move_all ? 1.0f : 0.0f;
 }
 
-void ToolboxSettings::Update(float delta) {
-    UNREFERENCED_PARAMETER(delta);
-
+void ToolboxSettings::Update(float)
+{
     // save location data
     if (save_location_data && TIMER_DIFF(location_timer) > 1000) {
         location_timer = TIMER_INIT();
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
-            && GW::Agents::GetPlayer() != nullptr
-            && GW::Map::GetInstanceTime() > 3000) {
+            && GW::Agents::GetPlayer() != nullptr) {
             GW::Constants::MapID current = GW::Map::GetMapID();
             if (location_current_map != current) {
                 location_current_map = current;
 
                 std::wstring map_string;
                 switch (current) {
-                case GW::Constants::MapID::Domain_of_Anguish:
-                    map_string = L"DoA";
-                    break;
-                case GW::Constants::MapID::Urgozs_Warren:
-                    map_string = L"Urgoz";
-                    break;
-                case GW::Constants::MapID::The_Deep:
-                    map_string = L"Deep";
-                    break;
-                case GW::Constants::MapID::The_Underworld:
-                    map_string = L"UW";
-                    break;
-                case GW::Constants::MapID::The_Fissure_of_Woe:
-                    map_string = L"FoW";
-                    break;
-                default:
-                    map_string = std::wstring(L"Map-") + std::to_wstring(static_cast<long>(current));
+                    case GW::Constants::MapID::Domain_of_Anguish:
+                        map_string = L"DoA";
+                        break;
+                    case GW::Constants::MapID::Urgozs_Warren:
+                        map_string = L"Urgoz";
+                        break;
+                    case GW::Constants::MapID::The_Deep:
+                        map_string = L"Deep";
+                        break;
+                    case GW::Constants::MapID::The_Underworld:
+                        map_string = L"UW";
+                        break;
+                    case GW::Constants::MapID::The_Fissure_of_Woe:
+                        map_string = L"FoW";
+                        break;
+                    default:
+                        map_string = std::wstring(L"Map-") + std::to_wstring(static_cast<long>(current));
                 }
 
                 std::wstring prof_string;
-                GW::AgentLiving* me = GW::Agents::GetCharacter();
-                if (me) {
+                if (const auto me = GW::Agents::GetCharacter()) {
                     prof_string += L" - ";
-                    prof_string += GW::Constants::GetWProfessionAcronym(
+                    prof_string += GetWProfessionAcronym(
                         static_cast<GW::Constants::Profession>(me->primary));
                     prof_string += L"-";
-                    prof_string += GW::Constants::GetWProfessionAcronym(
+                    prof_string += GetWProfessionAcronym(
                         static_cast<GW::Constants::Profession>(me->secondary));
                 }
 
                 SYSTEMTIME localtime;
                 GetLocalTime(&localtime);
-                std::wstring filename = std::to_wstring(localtime.wYear)
-                    + L"-" + std::to_wstring(localtime.wMonth)
-                    + L"-" + std::to_wstring(localtime.wDay)
-                    + L" - " + std::to_wstring(localtime.wHour)
-                    + L"-" + std::to_wstring(localtime.wMinute)
-                    + L"-" + std::to_wstring(localtime.wSecond)
-                    + L" - " + map_string + prof_string + L".log";
+                const std::wstring filename = std::to_wstring(localtime.wYear)
+                                              + L"-" + std::to_wstring(localtime.wMonth)
+                                              + L"-" + std::to_wstring(localtime.wDay)
+                                              + L" - " + std::to_wstring(localtime.wHour)
+                                              + L"-" + std::to_wstring(localtime.wMinute)
+                                              + L"-" + std::to_wstring(localtime.wSecond)
+                                              + L" - " + map_string + prof_string + L".log";
 
                 if (location_file && location_file.is_open()) {
                     location_file.close();
@@ -416,17 +413,17 @@ void ToolboxSettings::Update(float delta) {
                 location_file.open(path);
             }
 
-            GW::Agent* me = GW::Agents::GetCharacter();
+            const GW::Agent* me = GW::Agents::GetCharacter();
             if (location_file.is_open() && me != nullptr) {
                 location_file << "Time=" << GW::Map::GetInstanceTime();
                 location_file << " X=" << me->pos.x;
                 location_file << " Y=" << me->pos.y;
                 location_file << "\n";
             }
-        } else {
+        }
+        else {
             location_current_map = GW::Constants::MapID::None;
             location_file.close();
         }
     }
 }
-

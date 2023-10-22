@@ -9,16 +9,20 @@
 #include <Utils/GuiUtils.h>
 #include <Widgets/VanquishWidget.h>
 
-void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
-    UNREFERENCED_PARAMETER(pDevice);
-    if (!visible) return;
+void VanquishWidget::Draw(IDirect3DDevice9*)
+{
+    if (!visible) {
+        return;
+    }
 
-    DWORD tokill = GW::Map::GetFoesToKill();
-    DWORD killed = GW::Map::GetFoesKilled();
+    const DWORD tokill = GW::Map::GetFoesToKill();
+    const DWORD killed = GW::Map::GetFoesKilled();
 
-    if ((GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) ||
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable ||
         !GW::PartyMgr::GetIsPartyInHardMode() ||
-        tokill <= 0) return;
+        tokill <= 0) {
+        return;
+    }
 
     const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiKey_ModCtrl);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
@@ -28,7 +32,7 @@ void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
         snprintf(foes_count, 32, "%lu / %lu", killed, tokill + killed);
 
         // vanquished
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::header1));
+        ImGui::PushFont(GetFont(GuiUtils::FontSize::header1));
         ImVec2 cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
         ImGui::TextColored(ImColor(0, 0, 0), "Vanquished");
@@ -37,7 +41,7 @@ void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
         ImGui::PopFont();
 
         // count
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_small));
+        ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_small));
         cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
         ImGui::TextColored(ImColor(0, 0, 0), foes_count);
@@ -46,17 +50,17 @@ void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
         ImGui::PopFont();
 
         // Check if the widget was clicked
-        ImVec2 size = ImGui::GetWindowSize();
-        ImVec2 min = ImGui::GetWindowPos();
-        ImVec2 max(min.x + size.x, min.y + size.y);
+        const ImVec2 size = ImGui::GetWindowSize();
+        const ImVec2 min = ImGui::GetWindowPos();
+        const ImVec2 max(min.x + size.x, min.y + size.y);
         if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
             char buffer[256];
             snprintf(buffer, sizeof(buffer),
-                "We have vanquished %lu %s! %lu %s remaining.",
-                killed,
-                killed == 1 ? "foe" : "foes",
-                tokill,
-                tokill == 1 ? "foe" : "foes");
+                     "We have vanquished %lu %s! %lu %s remaining.",
+                     killed,
+                     killed == 1 ? "foe" : "foes",
+                     tokill,
+                     tokill == 1 ? "foe" : "foes");
             GW::Chat::SendChat('#', buffer);
         }
     }
@@ -64,6 +68,7 @@ void VanquishWidget::Draw(IDirect3DDevice9 *pDevice) {
     ImGui::PopStyleColor();
 }
 
-void VanquishWidget::DrawSettingInternal() {
+void VanquishWidget::DrawSettingsInternal()
+{
     ImGui::Text("Note: only visible in Hard Mode explorable areas.");
 }

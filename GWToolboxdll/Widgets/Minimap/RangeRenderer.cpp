@@ -12,10 +12,10 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 
 #include <Widgets/Minimap/RangeRenderer.h>
-#include <Widgets/Minimap/PingsLinesRenderer.h>
 
 #include "Minimap.h"
-void RangeRenderer::LoadSettings(ToolboxIni *ini, const char *section)
+
+void RangeRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {
     LoadDefaults();
     color_range_hos = Colors::Load(ini, section, "color_range_hos", color_range_hos);
@@ -29,7 +29,9 @@ void RangeRenderer::LoadSettings(ToolboxIni *ini, const char *section)
     line_thickness = static_cast<float>(ini->GetDoubleValue(section, "range_line_thickness", line_thickness));
     Invalidate();
 }
-void RangeRenderer::LoadDefaults() {
+
+void RangeRenderer::LoadDefaults()
+{
     color_range_hos = 0xFF881188;
     color_range_aggro = 0xFF994444;
     color_range_cast = 0xFF117777;
@@ -41,18 +43,20 @@ void RangeRenderer::LoadDefaults() {
     line_thickness = 1.f;
     Invalidate();
 }
-void RangeRenderer::SaveSettings(ToolboxIni *ini, const char *section) const
+
+void RangeRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
 {
     Colors::Save(ini, section, "color_range_hos", color_range_hos);
     Colors::Save(ini, section, "color_range_aggro", color_range_aggro);
     Colors::Save(ini, section, "color_range_cast", color_range_cast);
     Colors::Save(ini, section, "color_range_spirit", color_range_spirit);
     Colors::Save(ini, section, "color_range_compass", color_range_compass);
-    ini->SetDoubleValue(section, "range_line_thickness", static_cast<double>(line_thickness));
+    ini->SetDoubleValue(section, "range_line_thickness", line_thickness);
     Colors::Save(ini, section, "color_range_chain_aggro", color_range_chain_aggro);
     Colors::Save(ini, section, "color_range_res_aggro", color_range_res_aggro);
     Colors::Save(ini, section, "color_range_shadowstep_aggro", color_range_shadowstep_aggro);
 }
+
 void RangeRenderer::DrawSettings()
 {
     bool changed = false;
@@ -69,13 +73,14 @@ void RangeRenderer::DrawSettings()
     changed |= Colors::DrawSettingHueWheel("Res Aggro range", &color_range_res_aggro);
     changed |= Colors::DrawSettingHueWheel("Shadow Step range", &color_range_shadowstep_aggro);
     changed |= ImGui::DragFloat("Line thickness", &line_thickness, 0.1f, 1.f, 10.f, "%.1f");
-    if (changed)
+    if (changed) {
         Invalidate();
+    }
 }
 
-size_t RangeRenderer::CreateCircle(D3DVertex* vertices, float radius, DWORD color) const
+size_t RangeRenderer::CreateCircle(D3DVertex* vertices, const float radius, const DWORD color) const
 {
-    const auto scale = Minimap::Instance().GetGwinchScale();
+    const auto scale = Minimap::GetGwinchScale();
     const auto xdiff = static_cast<float>(line_thickness) / scale.x;
     const auto ydiff = static_cast<float>(line_thickness) / scale.y;
     for (auto i = 0; i <= circle_triangles; i += 2) {
@@ -90,10 +95,11 @@ size_t RangeRenderer::CreateCircle(D3DVertex* vertices, float radius, DWORD colo
     return circle_points;
 }
 
-void RangeRenderer::Initialize(IDirect3DDevice9 *device)
+void RangeRenderer::Initialize(IDirect3DDevice9* device)
 {
-    if (initialized)
+    if (initialized) {
         return;
+    }
     initialized = true;
     count = circle_points * num_circles;
     type = D3DPT_TRIANGLESTRIP;
@@ -105,7 +111,7 @@ void RangeRenderer::Initialize(IDirect3DDevice9 *device)
     const size_t vertex_count = count + 6;
 
     device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
-    buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void **>(&vertices), D3DLOCK_DISCARD);
+    buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&vertices), D3DLOCK_DISCARD);
     ASSERT(vertices != nullptr);
 
     const D3DVertex* vertices_max = vertices + vertex_count;
@@ -162,7 +168,7 @@ void RangeRenderer::Initialize(IDirect3DDevice9 *device)
     buffer->Unlock();
 }
 
-void RangeRenderer::Render(IDirect3DDevice9 *device)
+void RangeRenderer::Render(IDirect3DDevice9* device)
 {
     Initialize(device);
 
@@ -207,17 +213,17 @@ void RangeRenderer::Render(IDirect3DDevice9 *device)
     vertices_offset += circle_points;
 
     // Draw Hos range
-    if (havehos_)
+    if (havehos_) {
         device->DrawPrimitive(type, vertices_offset, circle_triangles);
+    }
     vertices_offset += circle_points;
 
-    const GW::AgentLiving *target = GW::Agents::GetTargetAsAgentLiving();
+    const GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
 
     // Aggro range
     if ((color_range_chain_aggro & IM_COL32_A_MASK) != 0
         && target
         && target->allegiance == GW::Constants::Allegiance::Enemy) {
-
         D3DMATRIX oldworld;
         device->GetTransform(D3DTS_WORLD, &oldworld);
         const auto translate = DirectX::XMMatrixTranslation(target->x, target->y, 0.0f);
@@ -233,7 +239,6 @@ void RangeRenderer::Render(IDirect3DDevice9 *device)
         && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
         && target->allegiance == GW::Constants::Allegiance::Ally_NonAttackable
         && target->GetIsDead()) {
-
         D3DMATRIX oldworld;
         device->GetTransform(D3DTS_WORLD, &oldworld);
         const auto translate = DirectX::XMMatrixTranslation(target->x, target->y, 0.0f);
@@ -244,10 +249,9 @@ void RangeRenderer::Render(IDirect3DDevice9 *device)
     vertices_offset += circle_points;
 
     // Draw shadowstep range i.e. shadowwalk aggro
-    const GW::Vec2f &shadowstep_location = Minimap::Instance().ShadowstepLocation();
-    if ((color_range_shadowstep_aggro & IM_COL32_A_MASK) != 0 
+    const GW::Vec2f& shadowstep_location = Minimap::Instance().ShadowstepLocation();
+    if ((color_range_shadowstep_aggro & IM_COL32_A_MASK) != 0
         && (shadowstep_location.x != 0.f || shadowstep_location.y != 0.f)) {
-
         D3DMATRIX oldworld;
         device->GetTransform(D3DTS_WORLD, &oldworld);
         const auto translate = DirectX::XMMatrixTranslation(shadowstep_location.x, shadowstep_location.y, 0.0f);
@@ -260,9 +264,8 @@ void RangeRenderer::Render(IDirect3DDevice9 *device)
     // Draw hos line
     if (havehos_) {
         const auto me = target ? GW::Agents::GetPlayerAsAgentLiving() : nullptr;
-        
 
-        if (me && me != target && !me->GetIsDead() && !target->GetIsDead() && GW::GetSquareDistance(target->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {
+        if (me && me != target && !me->GetIsDead() && !target->GetIsDead() && GetSquareDistance(target->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {
             GW::Vec2f v = me->pos - target->pos;
             const float angle = std::atan2(v.y, v.x);
 
@@ -287,7 +290,7 @@ void RangeRenderer::Render(IDirect3DDevice9 *device)
 
 bool RangeRenderer::HaveHos()
 {
-    GW::Skillbar *skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+    GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
     if (!skillbar || !skillbar->IsValid()) {
         checkforhos_ = true;
         return false;
@@ -295,10 +298,12 @@ bool RangeRenderer::HaveHos()
 
     for (const auto& skill : skillbar->skills) {
         const auto id = static_cast<GW::Constants::SkillID>(skill.skill_id);
-        if (id == GW::Constants::SkillID::Heart_of_Shadow)
+        if (id == GW::Constants::SkillID::Heart_of_Shadow) {
             return true;
-        if (id == GW::Constants::SkillID::Vipers_Defense)
+        }
+        if (id == GW::Constants::SkillID::Vipers_Defense) {
             return true;
+        }
     }
     return false;
 }

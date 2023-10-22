@@ -7,41 +7,40 @@
 #include <Widgets/Minimap/AgentRenderer.h>
 #include <Widgets/Minimap/CustomRenderer.h>
 #include <Widgets/Minimap/EffectRenderer.h>
+#include <Widgets/Minimap/GameWorldRenderer.h>
 #include <Widgets/Minimap/PingsLinesRenderer.h>
 #include <Widgets/Minimap/PmapRenderer.h>
 #include <Widgets/Minimap/RangeRenderer.h>
 #include <Widgets/Minimap/SymbolsRenderer.h>
 
-class Minimap final : public ToolboxWidget
-{
-    struct Vec2i
-    {
-        Vec2i(int _x, int _y)
+class Minimap final : public ToolboxWidget {
+    struct Vec2i {
+        Vec2i(const int _x, const int _y)
             : x(_x)
-            , y(_y)
-        {
-        }
+            , y(_y) { }
+
         Vec2i() = default;
         int x = 0;
         int y = 0;
     };
+
     Minimap()
     {
         is_resizable = false;
-    };
-    ~Minimap() = default;
+    }
+
+    ~Minimap() override = default;
 
 public:
     Minimap(const Minimap&) = delete;
 
-    static Minimap &Instance()
+    static Minimap& Instance()
     {
         static Minimap instance;
         return instance;
     }
 
-    enum class MinimapModifierBehaviour : int
-    {
+    enum class MinimapModifierBehaviour : int {
         Disabled,
         Draw,
         Target,
@@ -53,37 +52,37 @@ public:
     const float acceleration = 0.5f;
     const float max_speed = 15.0f; // game units per frame
 
-    const char* Name() const override { return "Minimap"; }
-    const char* Icon() const override { return ICON_FA_MAP_MARKED_ALT; }
+    [[nodiscard]] const char* Name() const override { return "Minimap"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_MAP_MARKED_ALT; }
 
-    float Scale() const { return scale; }
+    [[nodiscard]] float Scale() const { return scale; }
 
     void DrawHelp() override;
     void Initialize() override;
     void Terminate() override;
 
-    void Draw(IDirect3DDevice9 *device) override;
-    void RenderSetupProjection(IDirect3DDevice9 *device) const;
+    void Draw(IDirect3DDevice9* device) override;
+    void RenderSetupProjection(IDirect3DDevice9* device) const;
 
     bool FlagHeros(LPARAM lParam);
     bool OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam);
-    bool OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam);
+    [[nodiscard]] bool OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam) const;
     bool OnMouseUp(UINT Message, WPARAM wParam, LPARAM lParam);
     bool OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam);
     bool OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam);
-    static void OnFlagHeroCmd(const wchar_t *message, int argc, LPWSTR *argv);
+    static void OnFlagHeroCmd(const wchar_t* message, int argc, const LPWSTR* argv);
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-    void LoadSettings(ToolboxIni *ini) override;
-    void SaveSettings(ToolboxIni *ini) override;
-    void DrawSettingInternal() override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
+    void DrawSettingsInternal() override;
 
-    float GetMapRotation() const;
-    DirectX::XMFLOAT2 GetGwinchScale() const;
-    GW::Vec2f ShadowstepLocation() const;
+    [[nodiscard]] float GetMapRotation() const;
+    [[nodiscard]] static DirectX::XMFLOAT2 GetGwinchScale();
+    [[nodiscard]] GW::Vec2f ShadowstepLocation() const;
 
     // 0 is 'all' flag, 1 to 7 is each hero
-    bool FlagHero(uint32_t idx);
+    static bool FlagHero(uint32_t idx);
 
     RangeRenderer range_renderer;
     PmapRenderer pmap_renderer;
@@ -92,19 +91,20 @@ public:
     SymbolsRenderer symbols_renderer;
     CustomRenderer custom_renderer;
     EffectRenderer effect_renderer;
+    GameWorldRenderer game_world_renderer;
 
+    static bool ShouldMarkersDrawOnMap();
     static void Render(IDirect3DDevice9* device);
 
 private:
-
-    bool IsInside(int x, int y) const;
+    [[nodiscard]] bool IsInside(int x, int y) const;
     // returns true if the map is visible, valid, not loading, etc
-    bool IsActive() const;
+    [[nodiscard]] bool IsActive() const;
 
-    GW::Vec2f InterfaceToWorldPoint(Vec2i pos) const;
-    GW::Vec2f InterfaceToWorldVector(Vec2i pos) const;
-    void SelectTarget(GW::Vec2f pos) const;
-    bool IsKeyDown(MinimapModifierBehaviour mmb) const;
+    [[nodiscard]] GW::Vec2f InterfaceToWorldPoint(Vec2i pos) const;
+    [[nodiscard]] GW::Vec2f InterfaceToWorldVector(Vec2i pos) const;
+    static void SelectTarget(GW::Vec2f pos);
+    [[nodiscard]] bool IsKeyDown(MinimapModifierBehaviour mmb) const;
 
     bool mousedown = false;
     bool camera_currently_reversed = false;
@@ -114,7 +114,7 @@ private:
     bool snap_to_compass = false;
 
     GW::Vec2f shadowstep_location = {0.f, 0.f};
-    RECT clipping = { 0 };
+    RECT clipping = {0};
 
     Vec2i drag_start;
     GW::Vec2f translation;
@@ -142,7 +142,7 @@ private:
     Color hero_flag_window_background = 0;
     std::vector<GW::AgentID> player_heroes{};
 
-    size_t GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);
+    static size_t GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);
 
     GW::HookEntry AgentPinged_Entry;
     GW::HookEntry CompassEvent_Entry;
@@ -152,5 +152,5 @@ private:
     GW::HookEntry InstanceLoadInfo_Entry;
     GW::HookEntry GameSrvTransfer_Entry;
     GW::HookEntry UIMsg_Entry;
-    static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
+    static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage /*msgid*/, void* /*wParam*/, void*);
 };

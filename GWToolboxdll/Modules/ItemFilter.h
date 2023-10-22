@@ -1,15 +1,12 @@
 #pragma once
 
-#include <vector>
-
-#include <GWCA/GameEntities/Item.h>
-#include <GWCA/Packets/StoC.h>
 #include <ToolboxModule.h>
 
 
 class ItemFilter : public ToolboxModule {
 public:
-    static ItemFilter& Instance() {
+    static ItemFilter& Instance()
+    {
         static ItemFilter instance;
         return instance;
     }
@@ -23,9 +20,7 @@ public:
     bool CanTerminate() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
 private:
-
-    
 };

@@ -3,24 +3,24 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 
+// ReSharper disable once CppUnusedIncludeDirective
 #include <GWCA/GameEntities/Agent.h>
+// ReSharper disable once CppUnusedIncludeDirective
+#include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Guild.h>
-#include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/Utilities/Hook.h>
 
 #include <ToolboxModule.h>
 
-#include <Timer.h>
-
-#define NO_AGENT 0
-#define NO_PARTY 0
-#define NO_SKILL (GW::Constants::SkillID)0
-#define NO_TEAM 0
-#define NO_GUILD 0
-#define NO_RATING 0
-#define NO_RANK 0
+constexpr auto NO_SKILL = static_cast<GW::Constants::SkillID>(0);
+constexpr auto NO_AGENT = 0;
+constexpr auto NO_TEAM = 0;
+constexpr auto NO_PARTY = 0;
+constexpr auto NO_GUILD = 0;
+constexpr auto NO_RANK = 0;
+constexpr auto NO_RATING = 0;
 
 namespace ObserverLabel {
     extern const char* Profession;
@@ -66,17 +66,17 @@ public:
     // Where an action can be a skill and/or attack
     struct TargetAction {
         TargetAction(const uint32_t caster_id,
-            const uint32_t target_id,
-            const bool is_attack,
-            const bool is_skill,
-            const GW::Constants::SkillID skill_id
+                     const uint32_t target_id,
+                     const bool is_attack,
+                     const bool is_skill,
+                     const GW::Constants::SkillID skill_id
         )
             : caster_id(caster_id)
             , target_id(target_id)
             , is_attack(is_attack)
             , is_skill(is_skill)
-            , skill_id(skill_id)
-        {}
+            , skill_id(skill_id) { }
+
         const uint32_t caster_id;
         const uint32_t target_id;
         const bool is_attack;
@@ -99,8 +99,8 @@ public:
         size_t interrupted = 0;
 
         // should be zero at all times except when an action is not yet concluded
-        // used to indicate there may be innacuracies in the stats due to due to
-        // innacuracies in our modelling of the game engine
+        // used to indicate there may be inaccuracies in the stats due to due to
+        // inaccuracies in our modelling of the game engine
         int integrity = 0;
 
         void Reduce(const TargetAction* action, ActionStage stage);
@@ -108,8 +108,9 @@ public:
 
     // an agents statistics for an action (skill)
     struct ObservedSkill : ObservedAction {
-    public:
-        ObservedSkill(const GW::Constants::SkillID skill_id) : skill_id(skill_id) {}
+        ObservedSkill(const GW::Constants::SkillID skill_id)
+            : skill_id(skill_id) { }
+
         const GW::Constants::SkillID skill_id;
     };
 
@@ -286,7 +287,7 @@ public:
 
         // stats:
         ObservableAgentStats stats;;
-    public:
+
         // name fns with excessive caching & lazy loading
         std::string DisplayName();
         std::string RawName();
@@ -337,18 +338,19 @@ public:
         ObserverModule& parent;
         const GW::Skill& gw_skill;
 
-        const wchar_t* DecName() { return name_dec; }
-        const bool HasExhaustion() { return gw_skill.special & 0x1; }
-        const bool IsMaintained() { return gw_skill.duration0 == 0x20000;  }
-        const bool IsPvE() { return (gw_skill.special & 0x80000) != 0;  }
-        const bool IsElite() { return (gw_skill.special & 0x4) != 0; }
+        const wchar_t* DecName() const { return name_dec; }
+        const bool HasExhaustion() const { return gw_skill.special & 0x1; }
+        const bool IsMaintained() const { return gw_skill.duration0 == 0x20000; }
+        const bool IsPvE() const { return (gw_skill.special & 0x80000) != 0; }
+        const bool IsElite() const { return (gw_skill.special & 0x4) != 0; }
         ObservableSkillStats stats = ObservableSkillStats();
 
         const std::string Name();
-        const std::string DebugName();
+        std::string DebugName();
+
     private:
-        wchar_t name_enc[64] = { 0 };
-        wchar_t name_dec[256] = { 0 };
+        wchar_t name_enc[64] = {0};
+        wchar_t name_dec[256] = {0};
 
         std::string _name = "";
     };
@@ -384,7 +386,8 @@ public:
         // agent_ids representing the players
         std::vector<uint32_t> agent_ids = {};
 
-        std::string DebugName() {
+        std::string DebugName() const
+        {
             std::string _debug_name = "(" + std::to_string(party_id) + ") " + display_name;
             return _debug_name;
         }
@@ -405,50 +408,49 @@ public:
 
         std::string Name();
         std::string Description();
-        bool GetIsPvP()          const { return (flags & 0x1) != 0; }
-        bool GetIsGuildHall()    const { return (flags & 0x800000) != 0; }
+        [[nodiscard]] bool GetIsPvP() const { return (flags & 0x1) != 0; }
+        [[nodiscard]] bool GetIsGuildHall() const { return (flags & 0x800000) != 0; }
 
     private:
         std::string name = "";
         std::wstring name_w = L"";
         std::string description = "";
         std::wstring description_w = L"";
-        wchar_t name_enc[8];
-        wchar_t description_enc[8];
+        wchar_t name_enc[8]{};
+        wchar_t description_enc[8]{};
     };
 
     // TODO: push this to GWCA
     // applies to skill.target
     enum class TargetType {
         no_target = 0,
-        anyone = 1,
+        anyone    = 1,
         // 2?
-        ally = 3,
+        ally       = 3,
         other_ally = 4,
-        enemy = 5,
+        enemy      = 5,
     };
 
-    ~ObserverModule();
+    ~ObserverModule() override;
 
-
-public:
-    static ObserverModule& Instance() {
+    static ObserverModule& Instance()
+    {
         static ObserverModule instance;
         return instance;
     }
 
-    const bool IsActive();
+    const bool IsActive() const;
     bool is_enabled = false;
 
-    const char* Name() const override { return "Observer Module"; }
-    const char* Icon() const override { return ICON_FA_EYE; }
+    [[nodiscard]] const char* Name() const override { return "Observer Module"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_EYE; }
 
     void Initialize() override;
     void Terminate() override;
     void Update(float delta) override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
     bool InitializeObserverSession();
     void Reset();
@@ -458,7 +460,7 @@ public:
     ObservableSkill* GetObservableSkillById(GW::Constants::SkillID skill_id);
     ObservableParty* GetObservablePartyById(uint32_t party_id);
 
-    ObservableMap* GetMap() { return map; }
+    ObservableMap* GetMap() const { return map; }
     const std::vector<uint32_t>& GetObservableGuildIds() { return observable_guild_ids; }
     const std::vector<uint32_t>& GetObservableAgentIds() { return observable_agent_ids; }
     const std::vector<uint32_t>& GetObservablePartyIds() { return observable_party_ids; }
@@ -470,10 +472,10 @@ public:
 
     bool match_finished = false;
     uint32_t winning_party_id = NO_PARTY;
-    std::chrono::milliseconds match_duration_ms_total;
-    std::chrono::milliseconds match_duration_ms;
-    std::chrono::seconds match_duration_secs;
-    std::chrono::minutes match_duration_mins;
+    std::chrono::milliseconds match_duration_ms_total{};
+    std::chrono::milliseconds match_duration_ms{};
+    std::chrono::seconds match_duration_secs{};
+    std::chrono::minutes match_duration_mins{};
 
 private:
     ObservableGuild* CreateObservableGuild(const GW::Guild& guild);
@@ -497,7 +499,7 @@ private:
 
     // packet handlers
 
-    void HandleInstanceLoadInfo(GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet);
+    void HandleInstanceLoadInfo(const GW::HookStatus* status, const GW::Packet::StoC::InstanceLoadInfo* packet);
     void HandleJumboMessage(uint8_t type, uint32_t value);
     void HandleAgentProjectileLaunched(const GW::Packet::StoC::AgentProjectileLaunched* packet);
 
@@ -533,11 +535,11 @@ private:
     // return false means action was not assigned and may need freeing by the caller
     bool ReduceAction(ObservableAgent* caster, ActionStage stage, TargetAction* new_action = nullptr);
 
-    uint32_t JumboMessageValueToPartyId(uint32_t value);
-    void HandleMoraleBoost(ObservableParty* boosting_party);
+    static uint32_t JumboMessageValueToPartyId(uint32_t value);
+    static void HandleMoraleBoost(ObservableParty* boosting_party);
     void HandleVictory(ObservableParty* winning_party);
 
-    ObservableMap* map;
+    ObservableMap* map{};
 
     // lazy loaded observed guilds
     std::unordered_map<uint32_t, ObservableGuild*> observable_guilds = {};
@@ -568,4 +570,3 @@ private:
     GW::HookEntry GenericValue_Entry;
     GW::HookEntry GenericFloat_Entry;
 };
-

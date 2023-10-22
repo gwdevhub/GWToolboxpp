@@ -1,3 +1,3 @@
 #pragma once
 
-bool WriteEntireFile(const wchar_t *Path, const void *Content, size_t Length);
+bool WriteEntireFile(const wchar_t* Path, const void* Content, size_t Length);

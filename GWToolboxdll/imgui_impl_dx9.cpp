@@ -31,34 +31,34 @@
 #include <dinput.h>
 
 // DirectX data
-static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
-static LPDIRECT3DVERTEXBUFFER9  g_pVB = NULL;
-static LPDIRECT3DINDEXBUFFER9   g_pIB = NULL;
-static LPDIRECT3DTEXTURE9       g_FontTexture = NULL;
-static int                      g_VertexBufferSize = 5000, g_IndexBufferSize = 10000;
+static LPDIRECT3DDEVICE9 g_pd3dDevice = nullptr;
+static LPDIRECT3DVERTEXBUFFER9 g_pVB = nullptr;
+static LPDIRECT3DINDEXBUFFER9 g_pIB = nullptr;
+static LPDIRECT3DTEXTURE9 g_FontTexture = nullptr;
+static int g_VertexBufferSize = 5000, g_IndexBufferSize = 10000;
 
-struct CUSTOMVERTEX
-{
-    float    pos[3];
+struct CUSTOMVERTEX {
+    float pos[3];
     D3DCOLOR col;
-    float    uv[2];
+    float uv[2];
 };
+
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1)
 
-static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
+static void ImGui_ImplDX9_SetupRenderState(const ImDrawData* draw_data)
 {
     // Setup viewport
     D3DVIEWPORT9 vp;
     vp.X = vp.Y = 0;
-    vp.Width = (DWORD)draw_data->DisplaySize.x;
-    vp.Height = (DWORD)draw_data->DisplaySize.y;
+    vp.Width = static_cast<DWORD>(draw_data->DisplaySize.x);
+    vp.Height = static_cast<DWORD>(draw_data->DisplaySize.y);
     vp.MinZ = 0.0f;
     vp.MaxZ = 1.0f;
     g_pd3dDevice->SetViewport(&vp);
 
     // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing, shade mode (for gradient)
-    g_pd3dDevice->SetPixelShader(NULL);
-    g_pd3dDevice->SetVertexShader(NULL);
+    g_pd3dDevice->SetPixelShader(nullptr);
+    g_pd3dDevice->SetVertexShader(nullptr);
     g_pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
     g_pd3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
     g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, FALSE);
@@ -83,18 +83,18 @@ static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
     // Being agnostic of whether <d3dx9.h> or <DirectXMath.h> can be used, we aren't relying on D3DXMatrixIdentity()/D3DXMatrixOrthoOffCenterLH() or DirectX::XMMatrixIdentity()/DirectX::XMMatrixOrthographicOffCenterLH()
     {
-        float L = draw_data->DisplayPos.x + 0.5f;
-        float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x + 0.5f;
-        float T = draw_data->DisplayPos.y + 0.5f;
-        float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y + 0.5f;
-        D3DMATRIX mat_identity = { { { 1.0f, 0.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f, 0.0f,  0.0f, 0.0f, 1.0f, 0.0f,  0.0f, 0.0f, 0.0f, 1.0f } } };
-        D3DMATRIX mat_projection =
-        { { {
-            2.0f/(R-L),   0.0f,         0.0f,  0.0f,
-            0.0f,         2.0f/(T-B),   0.0f,  0.0f,
-            0.0f,         0.0f,         0.5f,  0.0f,
-            (L+R)/(L-R),  (T+B)/(B-T),  0.5f,  1.0f
-        } } };
+        const float L = draw_data->DisplayPos.x + 0.5f;
+        const float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x + 0.5f;
+        const float T = draw_data->DisplayPos.y + 0.5f;
+        const float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y + 0.5f;
+        constexpr D3DMATRIX mat_identity = {{{1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f}}};
+        const D3DMATRIX mat_projection =
+        {{{
+            2.0f / (R - L), 0.0f, 0.0f, 0.0f,
+            0.0f, 2.0f / (T - B), 0.0f, 0.0f,
+            0.0f, 0.0f, 0.5f, 0.0f,
+            (L + R) / (L - R), (T + B) / (B - T), 0.5f, 1.0f
+        }}};
         g_pd3dDevice->SetTransform(D3DTS_WORLD, &mat_identity);
         g_pd3dDevice->SetTransform(D3DTS_VIEW, &mat_identity);
         g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &mat_projection);
@@ -103,32 +103,40 @@ static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
 
 // Render function.
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
-void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
+void ImGui_ImplDX9_RenderDrawData(const ImDrawData* draw_data)
 {
     // Avoid rendering when minimized
-    if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
+    if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f) {
         return;
+    }
 
     // Create and grow buffers if needed
-    if (!g_pVB || g_VertexBufferSize < draw_data->TotalVtxCount)
-    {
-        if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }
+    if (!g_pVB || g_VertexBufferSize < draw_data->TotalVtxCount) {
+        if (g_pVB) {
+            g_pVB->Release();
+            g_pVB = nullptr;
+        }
         g_VertexBufferSize = draw_data->TotalVtxCount + 5000;
-        if (g_pd3dDevice->CreateVertexBuffer(g_VertexBufferSize * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
+        if (g_pd3dDevice->CreateVertexBuffer(g_VertexBufferSize * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, nullptr) < 0) {
             return;
+        }
     }
-    if (!g_pIB || g_IndexBufferSize < draw_data->TotalIdxCount)
-    {
-        if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
+    if (!g_pIB || g_IndexBufferSize < draw_data->TotalIdxCount) {
+        if (g_pIB) {
+            g_pIB->Release();
+            g_pIB = nullptr;
+        }
         g_IndexBufferSize = draw_data->TotalIdxCount + 10000;
-        if (g_pd3dDevice->CreateIndexBuffer(g_IndexBufferSize * sizeof(ImDrawIdx), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, sizeof(ImDrawIdx) == 2 ? D3DFMT_INDEX16 : D3DFMT_INDEX32, D3DPOOL_DEFAULT, &g_pIB, NULL) < 0)
+        if (g_pd3dDevice->CreateIndexBuffer(g_IndexBufferSize * sizeof(ImDrawIdx), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, D3DPOOL_DEFAULT, &g_pIB, nullptr) < 0) {
             return;
+        }
     }
 
     // Backup the DX9 state
-    IDirect3DStateBlock9* d3d9_state_block = NULL;
-    if (g_pd3dDevice->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0)
+    IDirect3DStateBlock9* d3d9_state_block = nullptr;
+    if (g_pd3dDevice->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0) {
         return;
+    }
 
     // Backup the DX9 transform (DX9 documentation suggests that it is included in the StateBlock but it doesn't appear to)
     D3DMATRIX last_world, last_view, last_projection;
@@ -142,16 +150,17 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     //  2) to avoid repacking vertices: #define IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT struct ImDrawVert { ImVec2 pos; float z; ImU32 col; ImVec2 uv; }
     CUSTOMVERTEX* vtx_dst;
     ImDrawIdx* idx_dst;
-    if (g_pVB->Lock(0, (UINT)(draw_data->TotalVtxCount * sizeof(CUSTOMVERTEX)), (void**)&vtx_dst, D3DLOCK_DISCARD) < 0)
+    if (g_pVB->Lock(0, draw_data->TotalVtxCount * sizeof(CUSTOMVERTEX), (void**)&vtx_dst, D3DLOCK_DISCARD) < 0) {
         return;
-    if (g_pIB->Lock(0, (UINT)(draw_data->TotalIdxCount * sizeof(ImDrawIdx)), (void**)&idx_dst, D3DLOCK_DISCARD) < 0)
+    }
+    if (g_pIB->Lock(0, draw_data->TotalIdxCount * sizeof(ImDrawIdx), (void**)&idx_dst, D3DLOCK_DISCARD) < 0) {
         return;
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
-    {
+    }
+    for (int n = 0; n < draw_data->CmdListsCount; n++) {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
 
         // Set vertex buffer data z value to 0.0f, then copy it over.
-        for (int i = 0; i < cmd_list->VtxBuffer.Size; ++i) {
+        for (int i = 0; i < cmd_list->VtxBuffer.Size; i++) {
             cmd_list->VtxBuffer.Data[i].z = 0.0f;
         }
         memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(CUSTOMVERTEX));
@@ -173,29 +182,27 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     // (Because we merged all buffers into a single one, we maintain our own offset into them)
     int global_vtx_offset = 0;
     int global_idx_offset = 0;
-    ImVec2 clip_off = draw_data->DisplayPos;
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
-    {
+    const ImVec2 clip_off = draw_data->DisplayPos;
+    for (int n = 0; n < draw_data->CmdListsCount; n++) {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
-        {
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++) {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-            if (pcmd->UserCallback != NULL)
-            {
+            if (pcmd->UserCallback != nullptr) {
                 // User callback, registered via ImDrawList::AddCallback()
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState) {
                     ImGui_ImplDX9_SetupRenderState(draw_data);
-                else
+                }
+                else {
                     pcmd->UserCallback(cmd_list, pcmd);
+                }
             }
-            else
-            {
-                const RECT r = { (LONG)(pcmd->ClipRect.x - clip_off.x), (LONG)(pcmd->ClipRect.y - clip_off.y), (LONG)(pcmd->ClipRect.z - clip_off.x), (LONG)(pcmd->ClipRect.w - clip_off.y) };
-                const LPDIRECT3DTEXTURE9 texture = (LPDIRECT3DTEXTURE9)pcmd->TextureId;
+            else {
+                const RECT r = {static_cast<LONG>(pcmd->ClipRect.x - clip_off.x), static_cast<LONG>(pcmd->ClipRect.y - clip_off.y), static_cast<LONG>(pcmd->ClipRect.z - clip_off.x), static_cast<LONG>(pcmd->ClipRect.w - clip_off.y)};
+                const auto texture = static_cast<LPDIRECT3DTEXTURE9>(pcmd->TextureId);
                 g_pd3dDevice->SetTexture(0, texture);
                 g_pd3dDevice->SetScissorRect(&r);
-                g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, pcmd->VtxOffset + global_vtx_offset, 0, (UINT)cmd_list->VtxBuffer.Size, pcmd->IdxOffset + global_idx_offset, pcmd->ElemCount / 3);
+                g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, pcmd->VtxOffset + global_vtx_offset, 0, static_cast<UINT>(cmd_list->VtxBuffer.Size), pcmd->IdxOffset + global_idx_offset, pcmd->ElemCount / 3);
             }
         }
         global_idx_offset += cmd_list->IdxBuffer.Size;
@@ -217,8 +224,8 @@ bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_dx9";
-    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
-    io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard; // we do not want keyboard navigation between imgui windows
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset; // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;     // we do not want keyboard navigation between imgui windows
 
     g_pd3dDevice = device;
     g_pd3dDevice->AddRef();
@@ -230,56 +237,72 @@ void ImGui_ImplDX9_Shutdown()
     ImGui_ImplDX9_InvalidateDeviceObjects();
     // GWToolbox 2020-10-15: Free the texture here instead of in ImGui_ImplDX9_InvalidateDeviceObjects()
     //if (g_FontTexture && g_pd3dDevice) { g_FontTexture->Release(); g_FontTexture = NULL; ImGui::GetIO().Fonts->TexID = NULL; } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
-    if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = NULL; }
+    if (g_pd3dDevice) {
+        g_pd3dDevice->Release();
+        g_pd3dDevice = nullptr;
+    }
 }
 
 static bool ImGui_ImplDX9_CreateFontsTexture()
 {
     // Build texture atlas
-    ImGuiIO& io = ImGui::GetIO();
+    const ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
     int width, height, bytes_per_pixel;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);
 
     // Upload texture to graphics system
-    g_FontTexture = NULL;
+    g_FontTexture = nullptr;
     // GWToolbox 2020-10-15: Changed D3DPOOL_DEFAULT to D3DPOOL_MANAGED, allows us to re-use the texture without having to rebuild across device states.
-    if (g_pd3dDevice->CreateTexture(width, height, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &g_FontTexture, NULL) < 0)
+    if (g_pd3dDevice->CreateTexture(width, height, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &g_FontTexture, nullptr) < 0) {
         return false;
+    }
     D3DLOCKED_RECT tex_locked_rect;
-    if (g_FontTexture->LockRect(0, &tex_locked_rect, NULL, 0) != D3D_OK)
+    if (g_FontTexture->LockRect(0, &tex_locked_rect, nullptr, 0) != D3D_OK) {
         return false;
-    for (int y = 0; y < height; y++)
-        memcpy((unsigned char*)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, pixels + (width * bytes_per_pixel) * y, (width * bytes_per_pixel));
+    }
+    for (int y = 0; y < height; y++) {
+        memcpy(static_cast<unsigned char*>(tex_locked_rect.pBits) + tex_locked_rect.Pitch * y, pixels + width * bytes_per_pixel * y, width * bytes_per_pixel);
+    }
     g_FontTexture->UnlockRect(0);
 
     // Store our identifier
-    io.Fonts->TexID = (ImTextureID)g_FontTexture;
+    io.Fonts->TexID = static_cast<ImTextureID>(g_FontTexture);
 
     return true;
 }
 
 bool ImGui_ImplDX9_CreateDeviceObjects()
 {
-    if (!g_pd3dDevice)
+    if (!g_pd3dDevice) {
         return false;
-    if (!ImGui_ImplDX9_CreateFontsTexture())
+    }
+    if (!ImGui_ImplDX9_CreateFontsTexture()) {
         return false;
+    }
     return true;
 }
 
 void ImGui_ImplDX9_InvalidateDeviceObjects()
 {
-    if (!g_pd3dDevice)
+    if (!g_pd3dDevice) {
         return;
-    if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }
-    if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
+    }
+    if (g_pVB) {
+        g_pVB->Release();
+        g_pVB = nullptr;
+    }
+    if (g_pIB) {
+        g_pIB->Release();
+        g_pIB = nullptr;
+    }
     // GWToolbox 2020-10-15: Changed font texture to use D3DPOOL_MANAGED instead of D3DPOOL_DEFAULT - no need to free the texture here.
-   // if (g_FontTexture) { g_FontTexture->Release(); g_FontTexture = NULL; ImGui::GetIO().Fonts->TexID = NULL; } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
+    // if (g_FontTexture) { g_FontTexture->Release(); g_FontTexture = NULL; ImGui::GetIO().Fonts->TexID = NULL; } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
 }
 
 void ImGui_ImplDX9_NewFrame()
 {
-    if (!g_FontTexture)
+    if (!g_FontTexture) {
         ImGui_ImplDX9_CreateDeviceObjects();
+    }
 }

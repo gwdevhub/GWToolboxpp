@@ -19,14 +19,19 @@ you can call Invalidate() to have the initialize be called again on render
 
 class VBuffer {
 public:
+    virtual ~VBuffer() = default;
 
-    virtual void Invalidate() {
-        if (buffer)
+    virtual void Invalidate()
+    {
+        if (buffer) {
             buffer->Release();
+        }
         buffer = nullptr;
         initialized = false;
     }
-    virtual void Render(IDirect3DDevice9* device) {
+
+    virtual void Render(IDirect3DDevice9* device)
+    {
         if (!initialized) {
             initialized = true;
             Initialize(device);
@@ -36,9 +41,12 @@ public:
         device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
         device->DrawPrimitive(type, 0, count);
     }
-    virtual void Terminate() {
+
+    virtual void Terminate()
+    {
         Invalidate();
     }
+
     virtual void Initialize(IDirect3DDevice9* device) = 0;
 
 protected:

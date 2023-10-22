@@ -9,20 +9,18 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/FriendListMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
 #include <Modules/GameSettings.h>
 #include <Utils/ToolboxUtils.h>
-
+#include <Defines.h>
 #include "ChatSettings.h"
 
-#include "Defines.h"
-#include "GWCA/Managers/FriendListMgr.h"
-#include "GWCA/Managers/StoCMgr.h"
 
 namespace {
     // Settings
     bool show_timestamps = false;
-    bool enable_chat_log = true;
     bool hide_player_speech_bubbles = false;
     bool show_timestamp_seconds = false;
     bool show_timestamp_24h = false;
@@ -53,13 +51,13 @@ namespace {
     constexpr float chat_colors_grid_x[] = {0, 100, 160, 240};
     std::vector<PendingChatMessage*> pending_messages;
 
-    void PrintTime(wchar_t* buffer, size_t n, DWORD time_sec)
+    void PrintTime(wchar_t* buffer, const size_t n, const DWORD time_sec)
     {
         const DWORD secs = time_sec % 60;
-        const DWORD minutes = (time_sec / 60) % 60;
+        const DWORD minutes = time_sec / 60 % 60;
         const DWORD hours = time_sec / 3600;
         DWORD time = 0;
-        const wchar_t* time_unit = L"";
+        auto time_unit = L"";
         if (hours != 0) {
             time_unit = L"hour";
             time = hours;
@@ -80,32 +78,32 @@ namespace {
         }
     }
 
-    void DrawChannelColor(const char* name, GW::Chat::Channel chan)
+    void DrawChannelColor(const char* name, const GW::Chat::Channel chan)
     {
         ImGui::PushID(chan);
         ImGui::Text(name);
         constexpr ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
         GW::Chat::Color color, sender_col, message_col;
-        GW::Chat::GetChannelColors(chan, &sender_col, &message_col);
+        GetChannelColors(chan, &sender_col, &message_col);
 
         ImGui::SameLine(chat_colors_grid_x[1]);
         color = sender_col;
         if (Colors::DrawSettingHueWheel("Sender Color:", &color, flags) && color != sender_col) {
-            GW::Chat::SetSenderColor(chan, color);
+            SetSenderColor(chan, color);
         }
 
         ImGui::SameLine(chat_colors_grid_x[2]);
         color = message_col;
         if (Colors::DrawSettingHueWheel("Message Color:", &color, flags) && color != message_col) {
-            GW::Chat::SetMessageColor(chan, color);
+            SetMessageColor(chan, color);
         }
 
         ImGui::SameLine(chat_colors_grid_x[3]);
         if (ImGui::Button("Reset")) {
             GW::Chat::Color col1, col2;
-            GW::Chat::GetDefaultColors(chan, &col1, &col2);
-            GW::Chat::SetSenderColor(chan, col1);
-            GW::Chat::SetMessageColor(chan, col2);
+            GetDefaultColors(chan, &col1, &col2);
+            SetSenderColor(chan, col1);
+            SetMessageColor(chan, col2);
         }
         ImGui::PopID();
     }
@@ -113,7 +111,9 @@ namespace {
     // Automatically send /age2 on /age.
     void OnServerMessage(GW::HookStatus*, GW::Packet::StoC::MessageServer* pak)
     {
-        if (!GameSettings::GetSettingBool("auto_age2_on_age") || static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GLOBAL) return; // Disabled or message pending
+        if (!GameSettings::GetSettingBool("auto_age2_on_age") || static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GLOBAL) {
+            return; // Disabled or message pending
+        }
         const wchar_t* msg = ToolboxUtils::GetMessageCore();
         // 0x8101 0x641F 0x86C3 0xE149 0x53E8 0x101 0x107 = You have been in this map for n minutes.
         // 0x8101 0x641E 0xE7AD 0xEF64 0x1676 0x101 0x107 0x102 0x107 = You have been in this map for n hours and n minutes.
@@ -123,99 +123,139 @@ namespace {
     }
 
     // Redirect NPC messages from team chat to emote chat (emulate speech bubble instead)
-    void OnNPCChatMessage(GW::HookStatus* status, GW::Packet::StoC::MessageNPC* pak)
+    void OnNPCChatMessage(GW::HookStatus* status, const GW::Packet::StoC::MessageNPC* pak)
     {
-        if (!redirect_npc_messages_to_emote_chat || !pak->sender_name) return; // Disabled or message pending
+        if (!redirect_npc_messages_to_emote_chat || !pak->sender_name) {
+            return; // Disabled or message pending
+        }
         const wchar_t* message = ToolboxUtils::GetMessageCore();
         PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_EMOTE, message, pak->sender_name);
-        if (m) pending_messages.push_back(m);
+        if (m) {
+            pending_messages.push_back(m);
+        }
         if (pak->agent_id) {
             // Then forward the message on to speech bubble
             GW::Packet::StoC::SpeechBubble packet;
             packet.agent_id = pak->agent_id;
             wcscpy(packet.message, message);
-            if (GW::Agents::GetAgentByID(packet.agent_id)) GW::StoC::EmulatePacket(&packet);
+            if (GW::Agents::GetAgentByID(packet.agent_id)) {
+                GW::StoC::EmulatePacket(&packet);
+            }
         }
         ToolboxUtils::ClearMessageCore();
         status->blocked = true; // consume original packet.
     }
 
     // Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
-    void OnLocalChatMessage(GW::HookStatus* status, GW::Packet::StoC::MessageLocal* pak)
+    void OnLocalChatMessage(GW::HookStatus* status, const GW::Packet::StoC::MessageLocal* pak)
     {
-        if (status->blocked) return;                                                                                // Sender blocked, packet handled.
-        if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number) return; // Not team chat or no sender
+        if (status->blocked) {
+            return; // Sender blocked, packet handled.
+        }
+        if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number) {
+            return; // Not team chat or no sender
+        }
         std::wstring message(ToolboxUtils::GetMessageCore());
-        if (message[0] != 0x778 && message[0] != 0x781) return; // Not "I'm Following X" or "I'm Targeting X" message.
+        if (message[0] != 0x778 && message[0] != 0x781) {
+            return; // Not "I'm Following X" or "I'm Targeting X" message.
+        }
         size_t start_idx = message.find(L"\xba9\x107");
-        if (start_idx == std::wstring::npos) return; // Not a player name.
+        if (start_idx == std::wstring::npos) {
+            return; // Not a player name.
+        }
         start_idx += 2;
         const size_t end_idx = message.find(L'\x1', start_idx);
-        if (end_idx == std::wstring::npos) return; // Not a player name, this should never happen.
+        if (end_idx == std::wstring::npos) {
+            return; // Not a player name, this should never happen.
+        }
         const std::wstring player_pinged = GuiUtils::SanitizePlayerName(message.substr(start_idx, end_idx));
-        if (player_pinged.empty()) return; // No recipient
+        if (player_pinged.empty()) {
+            return; // No recipient
+        }
         const auto sender = GW::PlayerMgr::GetPlayerByID(pak->player_number);
-        if (!sender) return;                                                                                                               // No sender
-        if (GameSettings::GetSettingBool("flash_window_on_name_ping") && ToolboxUtils::GetPlayerName() == player_pinged) GuiUtils::FlashWindow(); // Flash window - we've been followed!
+        if (!sender) {
+            return; // No sender
+        }
+        if (GameSettings::GetSettingBool("flash_window_on_name_ping") && ToolboxUtils::GetPlayerName() == player_pinged) {
+            GuiUtils::FlashWindow(); // Flash window - we've been followed!
+        }
         // Allow clickable player name
         message.insert(start_idx, L"<a=1>");
         message.insert(end_idx + 5, L"</a>");
         PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_GROUP, message.c_str(), sender->name_enc);
-        if (m) pending_messages.push_back(m);
+        if (m) {
+            pending_messages.push_back(m);
+        }
         ToolboxUtils::ClearMessageCore();
         status->blocked = true; // consume original packet.
     }
 
     // Print NPC speech bubbles to emote chat.
-    void OnSpeechBubble(GW::HookStatus* status, GW::Packet::StoC::SpeechBubble* pak)
+    void OnSpeechBubble(const GW::HookStatus*, const GW::Packet::StoC::SpeechBubble* pak)
     {
-        UNREFERENCED_PARAMETER(status);
-        if (!npc_speech_bubbles_as_chat || !pak->message || !pak->agent_id) return; // Disabled, invalid, or pending another speech bubble
+        if (!npc_speech_bubbles_as_chat || !pak->message || !pak->agent_id) {
+            return; // Disabled, invalid, or pending another speech bubble
+        }
         size_t len = 0;
-        for (size_t i = 0; pak->message[i] != 0; i++)
+        for (size_t i = 0; pak->message[i] != 0; i++) {
             len = i + 1;
-        if (len < 3) return; // Shout skill etc
+        }
+        if (len < 3) {
+            return; // Shout skill etc
+        }
         const auto agent = reinterpret_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
-        if (!agent || agent->login_number) return; // Agent not found or Speech bubble from player e.g. drunk message.
+        if (!agent || agent->login_number) {
+            return; // Agent not found or Speech bubble from player e.g. drunk message.
+        }
         PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, GW::Agents::GetAgentEncName(agent));
-        if (m) pending_messages.push_back(m);
+        if (m) {
+            pending_messages.push_back(m);
+        }
     }
 
     // NPC dialog messages to emote chat
-    void OnSpeechDialogue(GW::HookStatus* status, GW::Packet::StoC::DisplayDialogue* pak)
+    void OnSpeechDialogue(GW::HookStatus* status, const GW::Packet::StoC::DisplayDialogue* pak)
     {
-        if (!redirect_npc_messages_to_emote_chat) return; // Disabled or message pending
-        GW::Chat::WriteChatEnc(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, pak->name);
+        if (!redirect_npc_messages_to_emote_chat) {
+            return; // Disabled or message pending
+        }
+        WriteChatEnc(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, pak->name);
         status->blocked = true; // consume original packet.
     }
 
     // Disable native timestamps
-    void OnCheckboxPreferenceChanged(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void* lParam)
+    void OnCheckboxPreferenceChanged(GW::HookStatus* status, const GW::UI::UIMessage msgid, void* wParam, const void*)
     {
-        UNREFERENCED_PARAMETER(lParam);
-        if (!(msgid == GW::UI::UIMessage::kCheckboxPreference && wParam)) return;
+        if (!(msgid == GW::UI::UIMessage::kCheckboxPreference && wParam)) {
+            return;
+        }
         const GW::UI::FlagPreference pref = *static_cast<GW::UI::FlagPreference*>(wParam); // { uint32_t pref, uint32_t value } - don't care about value atm.
         if (pref == GW::UI::FlagPreference::ShowChatTimestamps && show_timestamps) {
             status->blocked = true; // Always block because this UI Message will redraw all timestamps later in the call stack
-            if (show_timestamps && GW::UI::GetPreference(GW::UI::FlagPreference::ShowChatTimestamps) == 1) {
+            if (show_timestamps && GetPreference(GW::UI::FlagPreference::ShowChatTimestamps) == 1) {
                 Log::Error("Disable GWToolbox timestamps to enable this setting");
-                GW::UI::SetPreference(GW::UI::FlagPreference::ShowChatTimestamps, 0);
+                SetPreference(GW::UI::FlagPreference::ShowChatTimestamps, false);
             }
         }
     }
 
     // Turn /wiki into /wiki <location>
-    void OnSendChat(GW::HookStatus*, GW::Chat::Channel chan, wchar_t* msg)
+    void OnSendChat(GW::HookStatus*, const GW::Chat::Channel chan, wchar_t* msg)
     {
-        if (!auto_url || !msg) return;
+        if (!auto_url || !msg) {
+            return;
+        }
         size_t len = wcslen(msg);
         size_t max_len = 120;
 
         if (chan == GW::Chat::Channel::CHANNEL_WHISPER) {
             // msg == "Whisper Target Name,msg"
             size_t i;
-            for (i = 0; i < len; i++)
-                if (msg[i] == ',') break;
+            for (i = 0; i < len; i++) {
+                if (msg[i] == ',') {
+                    break;
+                }
+            }
 
             if (i < len) {
                 msg += i + 1;
@@ -224,11 +264,14 @@ namespace {
             }
         }
 
-        if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) return;
+        if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) {
+            return;
+        }
 
         if (len + 5 < max_len) {
-            for (size_t i = len; i != 0; --i)
+            for (size_t i = len; i != 0; --i) {
                 msg[i] = msg[i - 1];
+            }
             msg[0] = '[';
             msg[len + 1] = ';';
             msg[len + 2] = 'x';
@@ -245,15 +288,19 @@ namespace {
             status->blocked = true;
             const auto msg = static_cast<PlayerChatMessage*>(wParam);
             const auto agent = GW::PlayerMgr::GetPlayerByID(msg->player_number);
-            if (!agent) return;
-            GW::Chat::WriteChatEnc(static_cast<GW::Chat::Channel>(msg->channel), msg->message, agent->name_enc);
+            if (!agent) {
+                return;
+            }
+            WriteChatEnc(static_cast<GW::Chat::Channel>(msg->channel), msg->message, agent->name_enc);
         }
     }
 
     // Open links on player name click, Ctrl + click name to target, Ctrl + Shift + click name to invite
     void OnStartWhisper(GW::HookStatus* status, wchar_t* name)
     {
-        if (!name) return;
+        if (!name) {
+            return;
+        }
         switch (name[0]) {
             case 0x200B: {
                 // Zero-Width Space - wiki link
@@ -274,7 +321,9 @@ namespace {
             status->blocked = true;
             return;
         }
-        if (!ImGui::GetIO().KeyCtrl) return; // - Next logic only applicable when Ctrl is held
+        if (!ImGui::GetIO().KeyCtrl) {
+            return; // - Next logic only applicable when Ctrl is held
+        }
 
         const std::wstring _name = GuiUtils::SanitizePlayerName(name);
         if (ImGui::GetIO().KeyShift && GW::PartyMgr::GetIsLeader()) {
@@ -301,10 +350,11 @@ namespace {
             PrintTime(time_buffer, 128, diff_time);
             swprintf(buffer, 120, L"Automatic message: \"%s\" (%s ago)", afk_message.c_str(), time_buffer);
             // Avoid infinite recursion
-            if (ToolboxUtils::GetPlayerName() != from) GW::Chat::SendChat(from, buffer);
+            if (ToolboxUtils::GetPlayerName() != from) {
+                GW::Chat::SendChat(from, buffer);
+            }
         }
     }
-
 }
 
 void ChatSettings::Initialize()
@@ -317,11 +367,11 @@ void ChatSettings::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry, OnSpeechBubble);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, OnSpeechDialogue);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageNPC>(&MessageNPC_Entry, OnNPCChatMessage);
-    GW::UI::RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, GW::UI::UIMessage::kCheckboxPreference, OnCheckboxPreferenceChanged);
-    GW::UI::RegisterUIMessageCallback(&OnPlayerChatMessage_Entry, GW::UI::UIMessage::kPlayerChatMessage, OnPlayerChatMessage);
+    RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, GW::UI::UIMessage::kCheckboxPreference, OnCheckboxPreferenceChanged);
+    RegisterUIMessageCallback(&OnPlayerChatMessage_Entry, GW::UI::UIMessage::kPlayerChatMessage, OnPlayerChatMessage);
 
     GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, OnStartWhisper);
-    GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, OnSendChat);
+    RegisterSendChatCallback(&SendChatCallback_Entry, OnSendChat);
     GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, OnWhisper);
 }
 
@@ -348,20 +398,24 @@ void ChatSettings::Update(float)
     // Try to print any pending messages.
     for (auto it = pending_messages.begin(); it != pending_messages.end(); ++it) {
         PendingChatMessage* m = *it;
-        if (m->IsSend() && PendingChatMessage::Cooldown()) continue;
+        if (m->IsSend() && PendingChatMessage::Cooldown()) {
+            continue;
+        }
         if (m->Consume()) {
             it = pending_messages.erase(it);
             delete m;
-            if (it == pending_messages.end()) break;
+            if (it == pending_messages.end()) {
+                break;
+            }
         }
     }
 }
 
-void ChatSettings::DrawSettingInternal()
+void ChatSettings::DrawSettingsInternal()
 {
-    ToolboxModule::DrawSettingInternal();
+    ToolboxModule::DrawSettingsInternal();
 
-    const ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
+    constexpr ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
     if (ImGui::TreeNodeEx("Chat Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::Text("Channel");
         ImGui::SameLine(chat_colors_grid_x[1]);
@@ -383,17 +437,25 @@ void ChatSettings::DrawSettingInternal()
         ImGui::TreePop();
         ImGui::Spacing();
     }
-    if (ImGui::Checkbox("Show chat messages timestamp", &show_timestamps)) GW::Chat::ToggleTimestamps(show_timestamps);
+    if (ImGui::Checkbox("Show chat messages timestamp", &show_timestamps)) {
+        GW::Chat::ToggleTimestamps(show_timestamps);
+    }
     ImGui::ShowHelp("Show timestamps in message history.");
     if (show_timestamps) {
         ImGui::Indent();
-        if (ImGui::Checkbox("Use 24h", &show_timestamp_24h)) GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
+        if (ImGui::Checkbox("Use 24h", &show_timestamp_24h)) {
+            GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
+        }
         ImGui::SameLine();
-        if (ImGui::Checkbox("Show seconds", &show_timestamp_seconds)) GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
+        if (ImGui::Checkbox("Show seconds", &show_timestamp_seconds)) {
+            GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
+        }
         ImGui::SameLine();
         ImGui::Text("Color:");
         ImGui::SameLine();
-        if (Colors::DrawSettingHueWheel("Color:", &timestamps_color, flags)) GW::Chat::SetTimestampsColor(timestamps_color);
+        if (Colors::DrawSettingHueWheel("Color:", &timestamps_color, flags)) {
+            GW::Chat::SetTimestampsColor(timestamps_color);
+        }
         ImGui::Unindent();
     }
     ImGui::Checkbox("Hide player chat speech bubbles", &hide_player_speech_bubbles);
@@ -444,10 +506,10 @@ void ChatSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(openlinks);
     SAVE_BOOL(auto_url);
 
-    Colors::Save(ini, Name(), VAR_NAME(timestamps_color), timestamps_color);
+    SAVE_COLOR(timestamps_color);
 }
 
-bool ChatSettings::WndProc(UINT Message, WPARAM wParam, LPARAM)
+bool ChatSettings::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
 {
     // Open Whisper to targeted player with Ctrl + Enter
     if (Message == WM_KEYDOWN && wParam == VK_RETURN && !ctrl_enter_whisper && ImGui::GetIO().KeyCtrl && !GW::Chat::GetIsTyping()) {
@@ -456,7 +518,7 @@ bool ChatSettings::WndProc(UINT Message, WPARAM wParam, LPARAM)
             const wchar_t* player_name = GW::PlayerMgr::GetPlayerName(target->login_number);
             ctrl_enter_whisper = true;
             GW::GameThread::Enqueue([player_name] {
-                GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWhisper, const_cast<wchar_t*>(player_name));
+                SendUIMessage(GW::UI::UIMessage::kOpenWhisper, const_cast<wchar_t*>(player_name));
                 ctrl_enter_whisper = false;
             });
             return true;

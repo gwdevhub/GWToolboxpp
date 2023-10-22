@@ -10,14 +10,14 @@ class RangeRenderer : public VBuffer {
 
 public:
     void Render(IDirect3DDevice9* device) override;
-    void SetDrawCenter(bool b) { draw_center_ = b; }
+    void SetDrawCenter(const bool b) { draw_center_ = b; }
 
     void DrawSettings();
-    void LoadSettings(ToolboxIni* ini, const char* section);
+    void LoadSettings(const ToolboxIni* ini, const char* section);
     void SaveSettings(ToolboxIni* ini, const char* section) const;
     void LoadDefaults();
     // Returns number of vertices used.
-    size_t CreateCircle(D3DVertex *vertices, float radius, DWORD color) const;
+    size_t CreateCircle(D3DVertex* vertices, float radius, DWORD color) const;
 
 private:
     void Initialize(IDirect3DDevice9* device) override;

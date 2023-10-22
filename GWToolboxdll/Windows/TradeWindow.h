@@ -11,22 +11,23 @@
 class TradeWindow : public ToolboxWindow {
     TradeWindow() = default;
     TradeWindow(const TradeWindow&) = delete;
-    ~TradeWindow() = default;
+    ~TradeWindow() override = default;
 
 public:
-    static TradeWindow& Instance() {
+    static TradeWindow& Instance()
+    {
         static TradeWindow instance;
         return instance;
     }
 
-    const char* Name() const override { return "Trade"; }
-    const char* Icon() const override { return ICON_FA_BALANCE_SCALE; }
+    [[nodiscard]] const char* Name() const override { return "Trade"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_BALANCE_SCALE; }
 
     void Initialize() override;
-    static void CmdPricecheck(const wchar_t* message, int argc, LPWSTR* argv);
-    static void OnMessageLocal(GW::HookStatus *status, GW::Packet::StoC::MessageLocal *pak);
+    static void CmdPricecheck(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void OnMessageLocal(GW::HookStatus* status, const GW::Packet::StoC::MessageLocal* pak);
 
-    bool IsTradeAlert(std::string &message);
+    bool IsTradeAlert(std::string& message) const;
     void Update(float delta) override;
     void Draw(IDirect3DDevice9* pDevice) override;
     void SignalTerminate() override;
@@ -34,22 +35,22 @@ public:
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     void DrawChatSettings(bool ownwindow = false);
 
     static void FindPlayerPartySearch(GW::HookStatus* status = nullptr, void* packet = nullptr);
 
 private:
     struct Message {
-        uint32_t    timestamp = 0;
+        uint32_t timestamp = 0;
         std::string name;
         std::string message;
     };
 
     GW::HookEntry OnMessageLocal_Entry;
     GW::HookEntry OnPartySearch_Entry;
-    GW::PartySearch player_party_search = { 0 };
-    char player_party_search_text[64] = { 0 };
+    GW::PartySearch player_party_search = {0};
+    char player_party_search_text[64] = {0};
 
     WSAData wsaData = {0};
 
@@ -71,8 +72,8 @@ private:
     // if enabled, will also apply the trade alerts filter to incoming local trade chat messages.
     bool filter_local_trade = false;
 
-    #define ALERT_BUF_SIZE 1024 * 16
-    char alert_buf[ALERT_BUF_SIZE] = "";
+    static constexpr auto ALERT_BUF_SIZE = 1024 * 16;
+    char alert_buf[ALERT_BUF_SIZE]{};
     // set when the alert_buf was modified
     bool alertfile_dirty = false;
 
@@ -80,10 +81,10 @@ private:
     clock_t pending_query_sent = 0;
     bool print_search_results = false;
 
-    char search_buffer[256] = { 0 };
+    char search_buffer[256] = {0};
 
-    std::vector<std::string> alert_words;
-    std::vector<std::string> searched_words;
+    std::vector<std::string> alert_words{};
+    std::vector<std::string> searched_words{};
 
     void DrawAlertsWindowContent(bool ownwindow);
 
@@ -94,7 +95,7 @@ private:
     void AsyncWindowConnect(bool force = false);
     bool ws_window_connecting = false;
 
-    easywsclient::WebSocket *ws_window = NULL;
+    easywsclient::WebSocket* ws_window = nullptr;
 
     RateLimiter window_rate_limiter;
 
@@ -105,13 +106,13 @@ private:
     CircularBuffer<Message> messages;
 
     // tasks to be done async by the worker thread
-    std::queue<std::function<void()>> thread_jobs;
+    std::queue<std::function<void()>> thread_jobs{};
     bool should_stop = false;
     std::thread worker;
 
-    void ParseBuffer(const char *text, std::vector<std::string> &words);
-    void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
+    static void ParseBuffer(const char* text, std::vector<std::string>& words);
+    static void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
 
-    static void DeleteWebSocket(easywsclient::WebSocket *ws);
+    static void DeleteWebSocket(easywsclient::WebSocket* ws);
     void SwitchSockets();
 };

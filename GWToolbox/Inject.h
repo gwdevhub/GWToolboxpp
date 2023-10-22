@@ -4,8 +4,7 @@
 #include "Settings.h"
 #include "Window.h"
 
-enum InjectReply
-{
+enum InjectReply {
     InjectReply_Inject,
     InjectReply_Cancel,
     InjectReply_NoProcess,
@@ -13,23 +12,22 @@ enum InjectReply
     InjectReply_NoValidProcess
 };
 
-class InjectWindow : public Window
-{
+class InjectWindow : public Window {
 public:
-    static InjectReply AskInjectProcess(Process *process);
+    static InjectReply AskInjectProcess(Process* target_process);
 
 public:
     InjectWindow();
     InjectWindow(const InjectWindow&) = delete;
     InjectWindow(InjectWindow&&) = delete;
-    ~InjectWindow();
+    ~InjectWindow() override;
 
     InjectWindow& operator=(const InjectWindow&) = delete;
 
-    bool Create();
+    bool Create() override;
 
     // Returns false if no options were selected, typically when the window was closed.
-    bool GetSelected(size_t *index);
+    bool GetSelected(size_t* index) const;
 
 private:
     LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
@@ -47,4 +45,4 @@ private:
     int m_Selected;
 };
 
-bool InjectRemoteThread(Process *process, LPCWSTR ImagePath, LPDWORD lpExitCode);
+bool InjectRemoteThread(const Process* process, LPCWSTR ImagePath, LPDWORD lpExitCode);

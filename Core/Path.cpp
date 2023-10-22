@@ -9,7 +9,7 @@ static std::error_code errcode; // Not thread safe
 bool PathGetExeFullPath(std::filesystem::path& out)
 {
     wchar_t path[MAX_PATH];
-    const auto result = GetModuleFileNameW(NULL, path, MAX_PATH);
+    const auto result = GetModuleFileNameW(nullptr, path, MAX_PATH);
     if (result >= sizeof(path)) {
         path[0] = 0;
         fwprintf(stderr, L"%S: GetModuleFileNameW failed (%lu)\n", __func__, GetLastError());
@@ -17,7 +17,6 @@ bool PathGetExeFullPath(std::filesystem::path& out)
     }
     out.assign(path);
     return true;
-
 }
 
 bool PathGetExeFileName(std::wstring& out)
@@ -42,7 +41,7 @@ bool PathGetProgramDirectory(std::filesystem::path& out)
 bool PathGetDocumentsPath(fs::path& out, const wchar_t* suffix = nullptr)
 {
     wchar_t temp[MAX_PATH];
-    HRESULT result = SHGetFolderPathW(nullptr, CSIDL_MYDOCUMENTS, NULL, 0, temp);
+    const HRESULT result = SHGetFolderPathW(nullptr, CSIDL_MYDOCUMENTS, nullptr, 0, temp);
 
     if (FAILED(result)) {
         fwprintf(stderr, L"%S: SHGetFolderPathW failed (HRESULT:0x%lX)\n", __func__, result);
@@ -70,7 +69,7 @@ bool PathCreateDirectorySafe(const fs::path& path)
         // Already a valid directory
         return true;
     }
-    result = fs::create_directories(path, errcode);
+    result = create_directories(path, errcode);
     if (errcode.value()) {
         fwprintf(stderr, L"%S: create_directories failed for %s (%lu, %S)\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
         return false;
@@ -98,7 +97,8 @@ bool PathGetComputerName(fs::path& out)
     return true;
 }
 
-bool PathRecursiveRemove(const fs::path& from) {
+bool PathRecursiveRemove(const fs::path& from)
+{
     std::error_code error_code;
     bool result;
     fs::directory_iterator it;
@@ -118,8 +118,9 @@ bool PathRecursiveRemove(const fs::path& from) {
             return false;
         }
         for (const fs::path p : it) {
-            if (!PathRecursiveRemove(from / p.filename()))
+            if (!PathRecursiveRemove(from / p.filename())) {
                 return false;
+            }
         }
     }
     result = fs::remove(from, error_code);
@@ -137,7 +138,8 @@ bool PathRecursiveRemove(const fs::path& from) {
     return true;
 }
 
-bool PathSafeCopy(const fs::path& from, const fs::path& to, bool copy_if_target_is_newer) {
+bool PathSafeCopy(const fs::path& from, const fs::path& to, const bool copy_if_target_is_newer)
+{
     bool result;
     fs::directory_iterator it;
     if (!PathExistsSafe(from, &result)) {
@@ -165,11 +167,12 @@ bool PathSafeCopy(const fs::path& from, const fs::path& to, bool copy_if_target_
         return false;
     }
     auto copyOptions = fs::copy_options::recursive;
-    if (copy_if_target_is_newer)
+    if (copy_if_target_is_newer) {
         copyOptions |= fs::copy_options::update_existing;
+    }
     fs::copy(from, to, copyOptions, errcode);
     // 17 = Already exists; this is ok.
-    switch(errcode.value()) {
+    switch (errcode.value()) {
         case 0:
         case 17: // Already exists
         case 80: // Already exists
@@ -187,16 +190,20 @@ bool PathSafeCopy(const fs::path& from, const fs::path& to, bool copy_if_target_
     }
     return true;
 }
-bool PathExistsSafe(const fs::path& path, bool* out) {
+
+bool PathExistsSafe(const fs::path& path, bool* out)
+{
     std::error_code errcode;
-    *out = fs::exists(path, errcode);
+    *out = exists(path, errcode);
     if (errcode.value()) {
         fwprintf(stderr, L"%S: exists failed %s (%lu, %S).\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
         return false;
     }
     return true;
 }
-bool PathDirectoryIteratorSafe(const fs::path& path, fs::directory_iterator* out) {
+
+bool PathDirectoryIteratorSafe(const fs::path& path, fs::directory_iterator* out)
+{
     *out = fs::directory_iterator(path, errcode);
     if (errcode.value()) {
         fwprintf(stderr, L"%S: directory_iterator failed %s (%lu, %S)\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
@@ -204,19 +211,21 @@ bool PathDirectoryIteratorSafe(const fs::path& path, fs::directory_iterator* out
     }
     return true;
 }
-bool PathIsDirectorySafe(const fs::path& path, bool* out) {
+
+bool PathIsDirectorySafe(const fs::path& path, bool* out)
+{
     std::error_code errcode;
-    *out = fs::is_directory(path, errcode);
+    *out = is_directory(path, errcode);
     switch (errcode.value()) {
-    case 0:
-        break;
-    case 3:
-    case 2:
-        *out = false;
-        return true; // 2 = The system cannot find the file specified
-    default:
-        fwprintf(stderr, L"%S: is_directory failed %s (%lu, %S).\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
-        return false;
+        case 0:
+            break;
+        case 3:
+        case 2:
+            *out = false;
+            return true; // 2 = The system cannot find the file specified
+        default:
+            fwprintf(stderr, L"%S: is_directory failed %s (%lu, %S).\n", __func__, path.wstring().c_str(), errcode.value(), errcode.message().c_str());
+            return false;
     }
     return true;
 }

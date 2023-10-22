@@ -1,13 +1,15 @@
 #pragma once
 
-typedef std::function<void(const std::string& section, bool is_showing)> SectionDrawCallback;
+using SectionDrawCallback = std::function<void(const std::string& section, bool is_showing)>;
 class ToolboxModule;
+
 struct SectionDrawCallbackInfo {
-    float weighting;
+    float weighting{};
     SectionDrawCallback callback;
-    ToolboxModule* module;
+    ToolboxModule* module{};
 };
-typedef std::vector<SectionDrawCallbackInfo> SectionDrawCallbackList;
+
+using SectionDrawCallbackList = std::vector<SectionDrawCallbackInfo>;
 
 class ToolboxModule {
 protected:
@@ -15,25 +17,24 @@ protected:
     virtual ~ToolboxModule() = default;
 
 public:
-
-    virtual const bool IsWidget() const { return false; }
-    virtual const bool IsWindow() const { return false; }
-    virtual const bool IsUIElement() const { return false; }
+    [[nodiscard]] virtual bool IsWidget() const { return false; }
+    [[nodiscard]] virtual bool IsWindow() const { return false; }
+    [[nodiscard]] virtual bool IsUIElement() const { return false; }
 
     // name of the window and the ini section
-    virtual const char* Name() const = 0;
+    [[nodiscard]] virtual const char* Name() const = 0;
 
     // something to make sense of this module to actual human beings that don't have time to read source code
-    virtual const char* Description() const { return nullptr; }
+    [[nodiscard]] virtual const char* Description() const { return nullptr; }
 
     // Icon for this module (if any).
-    virtual const char* Icon() const { return nullptr; }
+    [[nodiscard]] virtual const char* Icon() const { return nullptr; }
 
     // name of the setting section
-    virtual const char* SettingsName() const { return Name(); }
+    [[nodiscard]] virtual const char* SettingsName() const { return Name(); }
 
     // Type of module
-    virtual const char* TypeName() const { return "module"; }
+    [[nodiscard]] virtual const char* TypeName() const { return "module"; }
 
     // register settings callbacks. Override this to add your settings into different sections.
     virtual void RegisterSettingsContent();
@@ -49,10 +50,10 @@ public:
     virtual void Initialize();
 
     // Send termination signal to module.
-    virtual void SignalTerminate() {}
+    virtual void SignalTerminate() { }
 
     // Draw help section
-    virtual void DrawHelp() {}
+    virtual void DrawHelp() { }
 
     // Can we terminate this module?
     virtual bool CanTerminate() { return true; }
@@ -64,20 +65,20 @@ public:
     virtual void Terminate();
 
     // Update. Will always be called once every frame. Delta in seconds
-    virtual void Update(float) {}
+    virtual void Update(float) { }
 
     // This is provided (and called), but use ImGui::GetIO() during update/render if possible.
     virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; }
 
     // Load what is needed from ini
-    virtual void LoadSettings(ToolboxIni*) {}
+    virtual void LoadSettings(ToolboxIni*) { }
 
     // Save what is needed to ini
-    virtual void SaveSettings(ToolboxIni*) {}
+    virtual void SaveSettings(ToolboxIni*) { }
 
     // Draw settings interface. Will be called if the setting panel is visible, calls DrawSettingsInternal()
     //virtual void DrawSettings();
-    virtual void DrawSettingInternal() {}
+    virtual void DrawSettingsInternal() { }
 
     // Register settings content
     void RegisterSettingsContent(

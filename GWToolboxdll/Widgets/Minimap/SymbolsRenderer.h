@@ -6,14 +6,14 @@ class SymbolsRenderer : public VBuffer {
 public:
     SymbolsRenderer() = default;
 
+    void Invalidate() override;
     void Render(IDirect3DDevice9* device) override;
 
     void DrawSettings();
-    void LoadSettings(ToolboxIni* ini, const char* section);
+    void LoadSettings(const ToolboxIni* ini, const char* section);
     void SaveSettings(ToolboxIni* ini, const char* section) const;
 
 private:
-
     void Initialize(IDirect3DDevice9* device) override;
 
     Color color_quest = 0;

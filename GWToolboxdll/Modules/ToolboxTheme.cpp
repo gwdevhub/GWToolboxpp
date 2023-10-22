@@ -5,27 +5,31 @@
 #include <Modules/Resources.h>
 #include <Modules/ToolboxTheme.h>
 
-#define IniFilename L"Theme.ini"
+#include "GWToolbox.h"
+
+constexpr auto IniFilename = L"Theme.ini";
 // @Enhancement: Allow users to save different layouts by changing this variable in settings
-#define WindowPositionsFilename L"Layout.ini"
-#define IniSection "Theme"
+constexpr auto WindowPositionsFilename = L"Layout.ini";
+constexpr auto IniSection = "Theme";
 
 namespace {
-    ToolboxIni* LoadIni(ToolboxIni** out, const wchar_t* filename, bool reload_from_disk = false) {
+    ToolboxIni* LoadIni(ToolboxIni** out, const wchar_t* filename, bool reload_from_disk = false)
+    {
         if (!*out) {
             *out = new ToolboxIni(false, false, false);
             reload_from_disk = true;
         }
-        if (!reload_from_disk)
+        const auto path = Resources::GetSettingFile(filename);
+        if (!reload_from_disk && !GWToolbox::SettingsFolderChanged()) {
             return *out;
-        const auto path = Resources::GetPath(filename);
-        if (!std::filesystem::exists(path)) {
+        }
+        if (!exists(path)) {
             Log::LogW(L"File %s doesn't exist.", path.c_str());
             return *out;
         }
         const auto tmp = new ToolboxIni(false, false, false);
-        ASSERT(Resources::LoadIniFromFile(path, tmp) == 0);
-        delete* out;
+        ASSERT(tmp->LoadIfExists(path) == SI_OK);
+        delete *out;
         *out = tmp;
         return *out;
     }
@@ -38,7 +42,8 @@ ToolboxTheme::ToolboxTheme()
 
 ImGuiStyle ToolboxTheme::DefaultTheme()
 {
-    ImGuiStyle style = ImGuiStyle();
+    auto style = ImGuiStyle();
+    style.WindowBorderSize = 0.f;
     style.WindowRounding = 6.0f;
     style.FrameRounding = 2.0f;
     style.ScrollbarSize = 16.0f;
@@ -106,7 +111,7 @@ void ToolboxTheme::LoadSettings(ToolboxIni* ini)
     ini_style.WindowTitleAlign.y = static_cast<float>(inifile->GetDoubleValue(IniSection, "WindowTitleAlignY", ini_style.WindowTitleAlign.y));
     ini_style.ButtonTextAlign.x = static_cast<float>(inifile->GetDoubleValue(IniSection, "ButtonTextAlignX", ini_style.ButtonTextAlign.x));
     ini_style.ButtonTextAlign.y = static_cast<float>(inifile->GetDoubleValue(IniSection, "ButtonTextAlignY", ini_style.ButtonTextAlign.y));
-    for (int i = 0; i < ImGuiCol_COUNT; ++i) {
+    for (auto i = 0; i < ImGuiCol_COUNT; i++) {
         const char* name = ImGui::GetStyleColorName(i);
         const Color color = Colors::Load(inifile, IniSection, name, ImColor(ini_style.Colors[i]));
         ini_style.Colors[i] = ImColor(color);
@@ -114,10 +119,12 @@ void ToolboxTheme::LoadSettings(ToolboxIni* ini)
 
     layout_dirty = true;
 }
+
 void ToolboxTheme::SaveUILayout()
 {
-    if (!ImGui::GetCurrentContext() || !imgui_style_loaded)
+    if (!ImGui::GetCurrentContext() || !imgui_style_loaded) {
         return;
+    }
     const auto ini = GetLayoutIni(false);
     const auto window_ini_section = "Windows";
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
@@ -134,20 +141,24 @@ void ToolboxTheme::SaveUILayout()
         snprintf(key, 128, "_%s_Collapsed", window->Name);
         ini->SetBoolValue(window_ini_section, key, window->Collapsed);
     }
-    ASSERT(Resources::SaveIniToFile(WindowPositionsFilename, ini) == 0);
+    ASSERT(Resources::SaveIniToFile(Resources::GetSettingFile(WindowPositionsFilename), ini) == 0);
 }
+
 ToolboxIni* ToolboxTheme::GetLayoutIni(const bool reload)
 {
     return LoadIni(&layout_ini, WindowPositionsFilename, reload);
 }
+
 ToolboxIni* ToolboxTheme::GetThemeIni(const bool reload)
 {
     return LoadIni(&theme_ini, IniFilename, reload);
 }
+
 void ToolboxTheme::LoadUILayout()
 {
-    if (!ImGui::GetCurrentContext())
+    if (!ImGui::GetCurrentContext()) {
         return;
+    }
     // Copy theme over
     ImGui::GetStyle() = ini_style;
     // Copy window positions over
@@ -156,8 +167,9 @@ void ToolboxTheme::LoadUILayout()
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     const auto window_ini_section = "Windows";
     for (ImGuiWindow* window : windows) {
-        if (!window)
+        if (!window) {
             continue;
+        }
         ImVec2 pos = window->Pos;
         ImVec2 size = window->Size;
         char key[128];
@@ -183,8 +195,9 @@ void ToolboxTheme::SaveSettings(ToolboxIni* ini)
 {
     ToolboxUIElement::SaveSettings(ini);
 
-    if (!ImGui::GetCurrentContext() || !imgui_style_loaded)
+    if (!ImGui::GetCurrentContext() || !imgui_style_loaded) {
         return; // Imgui not initialised, can happen if destructing before first draw
+    }
 
     const ImGuiStyle& style = ImGui::GetStyle();
     const auto inifile = GetThemeIni(false);
@@ -210,24 +223,25 @@ void ToolboxTheme::SaveSettings(ToolboxIni* ini)
     inifile->SetDoubleValue(IniSection, "WindowTitleAlignY", style.WindowTitleAlign.y);
     inifile->SetDoubleValue(IniSection, "ButtonTextAlignX", style.ButtonTextAlign.x);
     inifile->SetDoubleValue(IniSection, "ButtonTextAlignY", style.ButtonTextAlign.y);
-    for (int i = 0; i < ImGuiCol_COUNT; ++i) {
+    for (auto i = 0; i < ImGuiCol_COUNT; i++) {
         const char* name = ImGui::GetStyleColorName(i);
         const Color color = ImColor(style.Colors[i]);
         Colors::Save(inifile, IniSection, name, color);
     }
 
-    ASSERT(Resources::SaveIniToFile(IniFilename, inifile) == 0);
+    ASSERT(Resources::SaveIniToFile(Resources::GetSettingFile(IniFilename), inifile) == 0);
 
     SaveUILayout();
 }
 
 void ToolboxTheme::Draw(IDirect3DDevice9*)
 {
-    if (layout_dirty)
+    if (layout_dirty) {
         LoadUILayout();
+    }
 }
 
-void ToolboxTheme::DrawSettingInternal()
+void ToolboxTheme::DrawSettingsInternal()
 {
     ImGuiStyle& style = ImGui::GetStyle();
     if (ImGui::SmallButton("Restore Default")) {
@@ -254,7 +268,7 @@ void ToolboxTheme::DrawSettingInternal()
     ImGui::SliderFloat2("Window Title Align", reinterpret_cast<float*>(&style.WindowTitleAlign), 0.0f, 1.0f, "%.2f");
     ImGui::SliderFloat2("Button Text Align", reinterpret_cast<float*>(&style.ButtonTextAlign), 0.0f, 1.0f, "%.2f");
     ImGui::Text("Colors");
-    for (int i = 0; i < ImGuiCol_COUNT; ++i) {
+    for (auto i = 0; i < ImGuiCol_COUNT; i++) {
         const char* name = ImGui::GetStyleColorName(i);
         ImGui::PushID(i);
         ImGui::ColorEdit4(name, reinterpret_cast<float*>(&style.Colors[i]));

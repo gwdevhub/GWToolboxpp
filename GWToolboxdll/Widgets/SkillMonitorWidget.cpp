@@ -15,30 +15,28 @@
 
 #include <GWCA/Packets/StoC.h>
 
+#include <Defines.h>
 #include <Modules/Resources.h>
 #include <Widgets/SkillMonitorWidget.h>
 
-void SkillMonitorWidget::Initialize() {
+void SkillMonitorWidget::Initialize()
+{
     ToolboxWidget::Initialize();
-    party_window_position = GW::UI::GetWindowPosition(GW::UI::WindowID_PartyWindow);
+    party_window_position = GetWindowPosition(GW::UI::WindowID_PartyWindow);
 
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
         &InstanceLoadInfo_Entry, [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadInfo*) {
             history.clear();
             casttime_map.clear();
-    });
+        });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericModifier>(
-        &GenericModifier_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::GenericModifier* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-
+        &GenericModifier_Entry, [this](const GW::HookStatus*, const GW::Packet::StoC::GenericModifier* packet) -> void {
             CasttimeCallback(packet->type, packet->target_id, packet->value);
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(
-        &GenericValueSelf_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-
+        &GenericValueSelf_Entry, [this](const GW::HookStatus*, const GW::Packet::StoC::GenericValue* packet) -> void {
             const uint32_t value_id = packet->value_id;
             const uint32_t caster_id = packet->agent_id;
             const uint32_t value = packet->value;
@@ -46,9 +44,9 @@ void SkillMonitorWidget::Initialize() {
             SkillCallback(value_id, caster_id, value);
         });
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::GenericValueTarget* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(
+        &GenericValueTarget_Entry,
+        [this](const GW::HookStatus*, const GW::Packet::StoC::GenericValueTarget* packet) -> void {
             using namespace GW::Packet::StoC::GenericValueID;
 
             const uint32_t value_id = packet->Value_id;
@@ -61,23 +59,28 @@ void SkillMonitorWidget::Initialize() {
         });
 }
 
-void SkillMonitorWidget::Terminate() {
+void SkillMonitorWidget::Terminate()
+{
     ToolboxWidget::Terminate();
 }
 
-void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
-    UNREFERENCED_PARAMETER(device);
-    if (!visible)
+void SkillMonitorWidget::Draw(IDirect3DDevice9*)
+{
+    if (!visible) {
         return;
-    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+    }
+    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         return;
+    }
     // @Cleanup: This doesn't need to be done every frame - only when the party has been changed
-    if (!FetchPartyInfo()) return;
+    if (!FetchPartyInfo()) {
+        return;
+    }
 
     const float img_size = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
-    const auto num_rows = show_non_party_members ?
-                                                   party_map.size() + (allies_start < 255 ? 1 : 0)
-                                                 : GW::PartyMgr::GetPartySize();
+    const auto num_rows = show_non_party_members
+                              ? party_map.size() + (allies_start < 255 ? 1 : 0)
+                              : GW::PartyMgr::GetPartySize();
     const float height = num_rows * img_size;
     const float width = static_cast<float>(history_length) * img_size;
 
@@ -91,21 +94,27 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
         // NB: Use case to define GW::Vec4f ?
         GW::Vec2f x = party_window_position->xAxis();
         GW::Vec2f y = party_window_position->yAxis();
+
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && GW::PartyMgr::GetIsHardModeUnlocked()) {
+            constexpr int HARD_MODE_BUTTONS_HEIGHT = 30;
+            y.x += HARD_MODE_BUTTONS_HEIGHT;
+        }
+
         // Do the uiscale multiplier
         x *= uiscale_multiply;
         y *= uiscale_multiply;
         // Clamp
         ImVec4 rect(x.x, y.x, x.y, y.y);
-        ImVec4 viewport(0, 0, (float)GW::Render::GetViewportWidth(), (float)GW::Render::GetViewportHeight());
+        const ImVec4 viewport(0, 0, static_cast<float>(GW::Render::GetViewportWidth()), static_cast<float>(GW::Render::GetViewportHeight()));
         // GW Clamps windows to viewport; we need to do the same.
         GuiUtils::ClampRect(rect, viewport);
         // Left placement
         GW::Vec2f internal_offset(
             7.f, GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable ? 31.f : 34.f);
         internal_offset *= uiscale_multiply;
-        int user_offset_x = abs(user_offset);
+        const auto user_offset_x = abs(user_offset);
         float offset_width = width;
-        ImVec2 calculated_pos =
+        auto calculated_pos =
             ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
         if (calculated_pos.x < 0 || user_offset < 0) {
             // Right placement
@@ -120,10 +129,12 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
     if (ImGui::Begin(Name(), &visible, GetWinFlags(0))) {
         const float win_x = ImGui::GetWindowPos().x;
         const float win_y = ImGui::GetWindowPos().y;
-        auto GetGridPos = [&](const size_t _x, const size_t _y, bool topleft) -> ImVec2 {
+        auto GetGridPos = [&](const size_t _x, const size_t _y, const bool topleft) -> ImVec2 {
             size_t x = _x;
             size_t y = _y;
-            if (y >= allies_start) ++y;
+            if (y >= allies_start) {
+                ++y;
+            }
             if (!topleft) {
                 ++x;
                 ++y;
@@ -133,9 +144,11 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
 
         auto party_index = 0u;
         for (auto& [agent_id, party_slot] : party_map) {
-            if (++party_index > num_rows) continue;
+            if (++party_index > num_rows) {
+                continue;
+            }
             auto& skill_history = history[agent_id];
-            size_t y = party_slot;
+            const size_t y = party_slot;
 
             for (size_t i = 0; i < skill_history.size(); i++) {
                 const auto& skill_activation = skill_history.at(i);
@@ -152,7 +165,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
                 if (status_border_thickness != 0) {
                     ImGui::PushClipRect(tl, br, true);
                     ImGui::GetWindowDrawList()->AddRect(tl, br, GetColor(skill_activation.status), 0.f,
-                        ImDrawFlags_RoundCornersNone, static_cast<float>(status_border_thickness));
+                                                        ImDrawFlags_RoundCornersNone, static_cast<float>(status_border_thickness));
                     ImGui::PopClipRect();
                 }
 
@@ -167,14 +180,14 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
                         GW::Vec2f yPartyWindow = party_window_position->yAxis() * uiscale_multiply;
                         yPartyWindow.x += PARTY_OFFSET_TOP_BASE * uiscale_multiply;
 
-                        ImVec2 member_tl(xPartyWindow.x, yPartyWindow.x + y * (GuiUtils::GetPartyHealthbarHeight()));
+                        ImVec2 member_tl(xPartyWindow.x, yPartyWindow.x + y * GuiUtils::GetPartyHealthbarHeight());
 
                         if (party_map_indent[agent_id]) {
                             member_tl.x += PARTY_HERO_INDENT_BASE * uiscale_multiply;
                         }
 
                         ImVec2 member_br(xPartyWindow.y,
-                            member_tl.y + GuiUtils::GetPartyHealthbarHeight() - PARTY_MEMBER_PADDING_FIXED);
+                                         member_tl.y + GuiUtils::GetPartyHealthbarHeight() - PARTY_MEMBER_PADDING_FIXED);
 
                         ImGui::PushClipRect(member_tl, member_br, false);
                         ImGui::GetWindowDrawList()->AddRectFilled(
@@ -193,9 +206,9 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9* device) {
     ImGui::PopStyleVar(3);
 }
 
-void SkillMonitorWidget::Update(float delta) {
-    UNREFERENCED_PARAMETER(delta);
-    for (auto& [agent_id, skill_history] : history) {
+void SkillMonitorWidget::Update(const float)
+{
+    for (auto& skill_history : history | std::views::values) {
         if (skill_history.size() > static_cast<size_t>(history_length)) {
             skill_history.erase(skill_history.begin(), skill_history.begin() + (skill_history.size() - history_length));
         }
@@ -210,55 +223,58 @@ void SkillMonitorWidget::Update(float delta) {
     }
 }
 
-void SkillMonitorWidget::LoadSettings(ToolboxIni* ini) {
+void SkillMonitorWidget::LoadSettings(ToolboxIni* ini)
+{
     ToolboxWidget::LoadSettings(ini);
-    hide_in_outpost = ini->GetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    show_non_party_members = ini->GetBoolValue(Name(), VAR_NAME(show_non_party_members), show_non_party_members);
+    LOAD_BOOL(hide_in_outpost);
+    LOAD_BOOL(show_non_party_members);
 
-    snap_to_party_window = ini->GetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
-    user_offset = ini->GetLongValue(Name(), VAR_NAME(user_offset), user_offset);
-    row_height = ini->GetLongValue(Name(), VAR_NAME(row_height), row_height);
-    history_flip_direction = ini->GetBoolValue(Name(), VAR_NAME(history_flip_direction), history_flip_direction);
+    LOAD_BOOL(snap_to_party_window);
+    LOAD_UINT(user_offset);
+    LOAD_UINT(row_height);
+    LOAD_BOOL(history_flip_direction);
 
-    cast_indicator_threshold = ini->GetLongValue(Name(), VAR_NAME(cast_indicator_threshold), cast_indicator_threshold);
-    cast_indicator_height = ini->GetLongValue(Name(), VAR_NAME(cast_indicator_height), cast_indicator_height);
-    cast_indicator_color = Colors::Load(ini, Name(), VAR_NAME(cast_indicator_color), cast_indicator_color);
+    LOAD_UINT(cast_indicator_threshold);
+    LOAD_UINT(cast_indicator_height);
+    LOAD_COLOR(cast_indicator_color);
 
-    status_border_thickness = ini->GetLongValue(Name(), VAR_NAME(status_border_thickness), status_border_thickness);
-    status_color_completed = Colors::Load(ini, Name(), VAR_NAME(status_color_completed), status_color_completed);
-    status_color_casting = Colors::Load(ini, Name(), VAR_NAME(status_color_casting), status_color_casting);
-    status_color_cancelled = Colors::Load(ini, Name(), VAR_NAME(status_color_cancelled), status_color_cancelled);
-    status_color_interrupted = Colors::Load(ini, Name(), VAR_NAME(status_color_interrupted), status_color_interrupted);
+    LOAD_UINT(status_border_thickness);
+    LOAD_COLOR(status_color_completed);
+    LOAD_COLOR(status_color_casting);
+    LOAD_COLOR(status_color_cancelled);
+    LOAD_COLOR(status_color_interrupted);
 
-    history_length = ini->GetLongValue(Name(), VAR_NAME(history_length), history_length);
-    history_timeout = ini->GetLongValue(Name(), VAR_NAME(history_timeout), history_timeout);
+    LOAD_UINT(history_length);
+    LOAD_UINT(history_timeout);
 }
 
-void SkillMonitorWidget::SaveSettings(ToolboxIni* ini) {
+void SkillMonitorWidget::SaveSettings(ToolboxIni* ini)
+{
     ToolboxWidget::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(hide_in_outpost), hide_in_outpost);
-    ini->SetBoolValue(Name(), VAR_NAME(show_non_party_members), show_non_party_members);
+    SAVE_BOOL(hide_in_outpost);
+    SAVE_BOOL(show_non_party_members);
 
-    ini->SetBoolValue(Name(), VAR_NAME(snap_to_party_window), snap_to_party_window);
-    ini->SetLongValue(Name(), VAR_NAME(user_offset), user_offset);
-    ini->SetLongValue(Name(), VAR_NAME(row_height), row_height);
-    ini->SetBoolValue(Name(), VAR_NAME(history_flip_direction), history_flip_direction);
+    SAVE_BOOL(snap_to_party_window);
+    SAVE_UINT(user_offset);
+    SAVE_UINT(row_height);
+    SAVE_BOOL(history_flip_direction);
 
-    ini->SetLongValue(Name(), VAR_NAME(cast_indicator_threshold), cast_indicator_threshold);
-    ini->SetLongValue(Name(), VAR_NAME(cast_indicator_height), cast_indicator_height);
-    Colors::Save(ini, Name(), VAR_NAME(cast_indicator_color), cast_indicator_color);
+    SAVE_UINT(cast_indicator_threshold);
+    SAVE_UINT(cast_indicator_height);
+    SAVE_COLOR(cast_indicator_color);
 
-    ini->SetLongValue(Name(), VAR_NAME(status_border_thickness), status_border_thickness);
-    Colors::Save(ini, Name(), VAR_NAME(status_color_completed), status_color_completed);
-    Colors::Save(ini, Name(), VAR_NAME(status_color_casting), status_color_casting);
-    Colors::Save(ini, Name(), VAR_NAME(status_color_cancelled), status_color_cancelled);
-    Colors::Save(ini, Name(), VAR_NAME(status_color_interrupted), status_color_interrupted);
+    SAVE_UINT(status_border_thickness);
+    SAVE_COLOR(status_color_completed);
+    SAVE_COLOR(status_color_casting);
+    SAVE_COLOR(status_color_cancelled);
+    SAVE_COLOR(status_color_interrupted);
 
-    ini->SetLongValue(Name(), VAR_NAME(history_length), history_length);
-    ini->SetLongValue(Name(), VAR_NAME(history_timeout), history_timeout);
+    SAVE_UINT(history_length);
+    SAVE_UINT(history_timeout);
 }
 
-void SkillMonitorWidget::DrawSettingInternal() {
+void SkillMonitorWidget::DrawSettingsInternal()
+{
     ImGui::SameLine();
     ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     ImGui::Checkbox("Show non party-members (allies)", &show_non_party_members);
@@ -266,11 +282,14 @@ void SkillMonitorWidget::DrawSettingInternal() {
     if (snap_to_party_window) {
         ImGui::InputInt("Party window offset", &user_offset);
         ImGui::ShowHelp("Distance away from the party window");
-    } else {
+    }
+    else {
         ImGui::InputInt("Row Height", &row_height);
         ImGui::ShowHelp("Height of each row, leave 0 for default");
     }
-    if (row_height < 0) row_height = 0;
+    if (row_height < 0) {
+        row_height = 0;
+    }
 
     ImGui::Checkbox("Flip history direction (left/right)", &history_flip_direction);
 
@@ -297,7 +316,6 @@ void SkillMonitorWidget::DrawSettingInternal() {
         }
     }
 
-
     ImGui::Text("History");
     ImGui::InputInt("Length", &history_length, 0, 25);
     if (history_length < 0) {
@@ -310,14 +328,17 @@ void SkillMonitorWidget::DrawSettingInternal() {
     }
 }
 
-void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t value) {
+void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t value)
+{
     if (!party_map.contains(caster_id)) {
         return;
     }
     using namespace GW::Packet::StoC;
 
     const auto skill_history = &history[caster_id];
-    if (!skill_history) return;
+    if (!skill_history) {
+        return;
+    }
 
     switch (value_id) {
         case GenericValueID::instant_skill_activated:
@@ -344,8 +365,7 @@ void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t c
         }
         case GenericValueID::skill_stopped:
         case GenericValueID::skill_finished:
-        case GenericValueID::attack_skill_finished:
-        {
+        case GenericValueID::attack_skill_finished: {
             const auto casting = find_if(skill_history->begin(), skill_history->end(),
                                          [&](const SkillActivation& skill_activation) { return skill_activation.status == CASTING; });
             if (casting == skill_history->end()) {
@@ -354,7 +374,6 @@ void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t c
             casting->status = value_id == GenericValueID::skill_stopped
                                   ? CANCELLED
                                   : COMPLETED;
-            ;
             casting->last_update = TIMER_INIT();
             break;
         }
@@ -374,21 +393,29 @@ void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t c
     }
 }
 
-void SkillMonitorWidget::CasttimeCallback(const uint32_t value_id, const uint32_t caster_id, const float value) {
-    if (value_id != GW::Packet::StoC::GenericValueID::casttime) return;
+void SkillMonitorWidget::CasttimeCallback(const uint32_t value_id, const uint32_t caster_id, const float value)
+{
+    if (value_id != GW::Packet::StoC::GenericValueID::casttime) {
+        return;
+    }
 
     casttime_map[caster_id] = value;
 }
 
-bool SkillMonitorWidget::FetchPartyInfo() {
+bool SkillMonitorWidget::FetchPartyInfo()
+{
     const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-    if (!info) return false;
+    if (!info) {
+        return false;
+    }
     party_map.clear();
     party_map_indent.clear();
     allies_start = 255;
     for (const GW::PlayerPartyMember& player : info->players) {
         const auto id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
-        if (!id) continue;
+        if (!id) {
+            continue;
+        }
         party_map[id] = party_map.size();
 
         if (info->heroes.valid()) {
@@ -408,10 +435,11 @@ bool SkillMonitorWidget::FetchPartyInfo() {
     if (info->others.valid()) {
         for (const DWORD ally_id : info->others) {
             GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
-            GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
+            const GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
             if (ally && ally->allegiance != GW::Constants::Allegiance::Minion && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
-                if(allies_start == 255)
+                if (allies_start == 255) {
                     allies_start = party_map.size();
+                }
                 party_map[ally_id] = party_map.size();
             }
         }

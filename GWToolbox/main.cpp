@@ -11,26 +11,27 @@
 #include "Process.h"
 #include "Settings.h"
 
-static void ShowError(const wchar_t* message) {
+static void ShowError(const wchar_t* message)
+{
     MessageBoxW(
-        0,
+        nullptr,
         message,
         L"GWToolbox - Error",
         0);
 }
 
-static bool RestartAsAdminForInjection(uint32_t TargetPid)
+static bool RestartAsAdminForInjection(const uint32_t target_pid)
 {
     wchar_t args[64];
-    swprintf(args, 64, L"/pid %u", TargetPid);
+    swprintf(args, 64, L"/pid %u", target_pid);
     return RestartAsAdmin(args);
 }
 
-static bool InjectInstalledDllInProcess(Process *process)
+static bool InjectInstalledDllInProcess(const Process* process)
 {
     ProcessModule module;
     if (process->GetModule(&module, L"GWToolboxdll.dll")) {
-        MessageBoxW(0, L"GWToolbox is already running in this process", L"GWToolbox", 0);
+        MessageBoxW(nullptr, L"GWToolbox is already running in this process", L"GWToolbox", 0);
         return true;
     }
 
@@ -46,9 +47,10 @@ static bool InjectInstalledDllInProcess(Process *process)
         }
     }
     const std::filesystem::path localdll = dllpath / L"GWToolboxdll.dll";
-    if (std::filesystem::exists(localdll)) {
+    if (exists(localdll)) {
         dllpath = localdll;
-    } else if (settings.localdll) {
+    }
+    else if (settings.localdll) {
         return false;
     }
     else if (!PathGetDocumentsPath(dllpath, L"GWToolboxpp\\GWToolboxdll.dll")) {
@@ -56,7 +58,7 @@ static bool InjectInstalledDllInProcess(Process *process)
         return false;
     }
 
-    if (!std::filesystem::exists(dllpath)) {
+    if (!exists(dllpath)) {
         fprintf(stderr, "No GWToolboxdll.dll file exists.\n");
         return false;
     }
@@ -70,7 +72,7 @@ static bool InjectInstalledDllInProcess(Process *process)
     return true;
 }
 
-static bool SetProcessForeground(Process *process)
+static bool SetProcessForeground(const Process* process)
 {
     HWND hWndIt = GetTopWindow(nullptr);
     if (hWndIt == nullptr) {
@@ -107,16 +109,17 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 {
     std::filesystem::path log_file_path;
     if (!PathGetExeFullPath(log_file_path)) {
-        MessageBoxW(0, L"Failed to get qualified path for logs file.", L"GWToolbox", MB_OK | MB_TOPMOST);
+        MessageBoxW(nullptr, L"Failed to get qualified path for logs file.", L"GWToolbox", MB_OK | MB_TOPMOST);
         return 0;
     }
     log_file_path = log_file_path.parent_path() / L"GWToolbox.error.log";
-    if (!freopen(log_file_path.string().c_str(), "w", stderr)) {
+    static FILE* stream;
+    if (freopen_s(&stream, log_file_path.string().c_str(), "w", stderr) != 0) {
         wchar_t buf[MAX_PATH + 128];
         swprintf(buf, MAX_PATH + 128,
-            L"Failed to open log file for writing:\n\n%s\n\nEnsure you have write permissions to this folder.",
-            log_file_path.wstring().c_str());
-        MessageBoxW(0, buf, L"GWToolbox", MB_OK | MB_TOPMOST);
+                 L"Failed to open log file for writing:\n\n%s\n\nEnsure you have write permissions to this folder.",
+                 log_file_path.wstring().c_str());
+        MessageBoxW(nullptr, buf, L"GWToolbox", MB_OK | MB_TOPMOST);
         return 0;
     }
 
@@ -160,8 +163,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             return 1;
         }
 
-        int iRet = MessageBoxW(
-            0,
+        const int iRet = MessageBoxW(
+            nullptr,
             L"GWToolbox doesn't seem to be installed, do you want to install it?",
             L"GWToolbox",
             MB_YESNO);
@@ -178,8 +181,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
                 return 1;
             }
         }
-
-    } else if (!settings.noupdate) {
+    }
+    else if (!settings.noupdate) {
         if (!DownloadWindow::DownloadAllFiles()) {
             ShowError(L"Failed to download GWToolbox DLL");
             fprintf(stderr, "DownloadWindow::DownloadAllFiles failed\n");
@@ -214,7 +217,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     if (reply == InjectReply_PatternError) {
         MessageBoxW(
-            0,
+            nullptr,
             L"Couldn't find character name RVA.\n"
             L"You need to update the launcher or contact the developpers.",
             L"GWToolbox - Error",
@@ -228,32 +231,30 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             fprintf(stderr, "InjectWindow::AskInjectName failed\n");
             return 0;
         }
-        else {
-            // @Enhancement:
-            // Add UAC shield to the yes button
-            int iRet = MessageBoxW(
-                0,
-                L"Couldn't find any valid process to start GWToolboxpp.\n"
-                L"Ensure Guild Wars is running before trying to run GWToolbox.\n"
-                L"If such process exist GWToolbox.exe may require administrator privileges.\n"
-                L"Do you want to restart as administrator?",
-                L"GWToolbox - Error",
-                MB_YESNO | MB_TOPMOST);
+// @Enhancement:
+        // Add UAC shield to the yes button
+        const int iRet = MessageBoxW(
+            nullptr,
+            L"Couldn't find any valid process to start GWToolboxpp.\n"
+            L"Ensure Guild Wars is running before trying to run GWToolbox.\n"
+            L"If such process exist GWToolbox.exe may require administrator privileges.\n"
+            L"Do you want to restart as administrator?",
+            L"GWToolbox - Error",
+            MB_YESNO | MB_TOPMOST);
 
-            if (iRet == IDNO) {
-                fprintf(stderr, "User doesn't want to restart as admin\n");
-                return 1;
-            }
+        if (iRet == IDNO) {
+            fprintf(stderr, "User doesn't want to restart as admin\n");
+            return 1;
+        }
 
-            if (iRet == IDYES) {
-                RestartWithSameArgs(true);
-                return 0;
-            }
+        if (iRet == IDYES) {
+            RestartWithSameArgs(true);
+            return 0;
         }
     }
     if (reply == InjectReply_NoProcess) {
-        int iRet = MessageBoxW(
-            0,
+        const int iRet = MessageBoxW(
+            nullptr,
             L"Couldn't find any valid process to start GWToolboxpp.\n"
             L"Ensure Guild Wars is running before trying to run GWToolbox.\n",
             L"GWToolbox - Error",

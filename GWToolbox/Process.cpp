@@ -2,7 +2,7 @@
 
 #include "Process.h"
 
-Process::Process(uint32_t pid, DWORD rights) noexcept
+Process::Process(const uint32_t pid, const DWORD rights) noexcept
 {
     Open(pid, rights);
 }
@@ -28,12 +28,12 @@ Process& Process::operator=(Process&& other) noexcept
     return *this;
 }
 
-bool Process::IsOpen()
+bool Process::IsOpen() const
 {
     return m_hProcess != nullptr;
 }
 
-bool Process::Open(uint32_t pid, DWORD rights)
+bool Process::Open(const uint32_t pid, const DWORD rights)
 {
     Close();
     m_hProcess = OpenProcess(rights, FALSE, pid);
@@ -55,13 +55,13 @@ void Process::Close()
     m_Rights = 0;
 }
 
-bool Process::Read(uintptr_t address, void *buffer, size_t size)
+bool Process::Read(const uintptr_t address, void* buffer, const size_t size) const
 {
     assert(m_Rights & PROCESS_VM_READ);
 
     SIZE_T NumberOfBytesRead;
-    LPCVOID BaseAddress = reinterpret_cast<LPCVOID>(address);
-    BOOL success = ReadProcessMemory(
+    const auto BaseAddress = reinterpret_cast<LPCVOID>(address);
+    const BOOL success = ReadProcessMemory(
         m_hProcess,
         BaseAddress,
         buffer,
@@ -76,13 +76,13 @@ bool Process::Read(uintptr_t address, void *buffer, size_t size)
     return true;
 }
 
-bool Process::Write(uintptr_t address, void *buffer, size_t size)
+bool Process::Write(const uintptr_t address, const void* buffer, const size_t size) const
 {
     assert(m_Rights & PROCESS_VM_WRITE);
 
     SIZE_T NumberOfBytesWritten;
-    LPVOID BaseAddress = reinterpret_cast<LPVOID>(address);
-    BOOL success = WriteProcessMemory(
+    const auto BaseAddress = reinterpret_cast<LPVOID>(address);
+    const BOOL success = WriteProcessMemory(
         m_hProcess,
         BaseAddress,
         buffer,
@@ -105,22 +105,23 @@ bool Process::GetName(std::wstring& name)
     process_path.resize(1024);
     for (;;) {
         DWORD size = process_path.size();
-        if (!QueryFullProcessImageNameW(m_hProcess, 0, &process_path[0], &size)) {
-            DWORD error = GetLastError();
+        if (!QueryFullProcessImageNameW(m_hProcess, 0, process_path.data(), &size)) {
+            const DWORD error = GetLastError();
             if (error != ERROR_INSUFFICIENT_BUFFER) {
                 fprintf(stderr, "QueryFullProcessImageNameW failed: %lu\n", error);
                 Close();
                 return false;
             }
-            size_t new_size = process_path.size() * 2;
+            const size_t new_size = process_path.size() * 2;
             process_path.resize(new_size);
-        } else {
+        }
+        else {
             process_path.resize(size);
             break;
         }
     }
 
-    std::string::size_type pos = process_path.rfind('\\');
+    const std::string::size_type pos = process_path.rfind('\\');
     if (pos == std::string::npos) {
         fprintf(stderr, "Invalid process path: '%ls'\n", process_path.c_str());
         Close();
@@ -131,15 +132,16 @@ bool Process::GetName(std::wstring& name)
     return true;
 }
 
-bool Process::GetModule(ProcessModule *module)
+bool Process::GetModule(ProcessModule* module)
 {
     std::wstring pname;
-    if (!GetName(pname))
+    if (!GetName(pname)) {
         return false;
+    }
     return GetModule(module, pname.c_str());
 }
 
-bool Process::GetModule(ProcessModule *module, const wchar_t *module_name)
+bool Process::GetModule(ProcessModule* module, const wchar_t* module_name) const
 {
     // Cleanup:
     // Figure out which rights are needed and assert it.
@@ -156,7 +158,7 @@ bool Process::GetModule(ProcessModule *module, const wchar_t *module_name)
         return false;
     }
 
-    for (HMODULE hModule : handles) {
+    for (const HMODULE hModule : handles) {
         wchar_t name[512];
         if (!GetModuleBaseNameW(m_hProcess, hModule, name, _countof(name))) {
             fprintf(stderr, "GetModuleBaseNameW failed: %lu\n", GetLastError());
@@ -180,7 +182,7 @@ bool Process::GetModule(ProcessModule *module, const wchar_t *module_name)
     return false;
 }
 
-bool Process::GetModules(std::vector<ProcessModule>& modules)
+bool Process::GetModules(std::vector<ProcessModule>& modules) const
 {
     // Cleanup:
     // Figure out which rights are needed and assert it.
@@ -197,7 +199,7 @@ bool Process::GetModules(std::vector<ProcessModule>& modules)
         return false;
     }
 
-    for (HMODULE hModule : handles) {
+    for (const HMODULE hModule : handles) {
         wchar_t name[512];
         if (!GetModuleBaseNameW(m_hProcess, hModule, name, 512)) {
             fprintf(stderr, "GetModuleBaseNameW failed: %lu\n", GetLastError());
@@ -226,13 +228,13 @@ DWORD Process::GetProcessId() const
     return ::GetProcessId(m_hProcess);
 }
 
-bool GetProcesses(std::vector<Process>& processes, const wchar_t *name, DWORD rights)
+bool GetProcesses(std::vector<Process>& processes, const wchar_t* name, const DWORD rights)
 {
     assert(name != nullptr);
 
     std::vector<DWORD> pids(1024);
     for (;;) {
-        DWORD size = pids.size() * sizeof(DWORD);
+        const DWORD size = pids.size() * sizeof(DWORD);
         DWORD bytes;
         if (!EnumProcesses(pids.data(), size, &bytes)) {
             fprintf(stderr, "EnumProcesses failed: %lu\n", GetLastError());
@@ -240,22 +242,23 @@ bool GetProcesses(std::vector<Process>& processes, const wchar_t *name, DWORD ri
         }
 
         if (bytes < size) {
-            size_t count = bytes / sizeof(DWORD);
+            const size_t count = bytes / sizeof(DWORD);
             pids.resize(count);
             break;
-        } else {
-            size_t new_size = pids.size() * 2;
-            pids.resize(new_size);
         }
+        const size_t new_size = pids.size() * 2;
+        pids.resize(new_size);
     }
 
-    for (DWORD pid : pids) {
+    for (const DWORD pid : pids) {
         Process proc(pid, rights);
         std::wstring pname;
-        if (!(proc.IsOpen() && proc.GetName(pname)))
+        if (!(proc.IsOpen() && proc.GetName(pname))) {
             continue;
-        if (_wcsicmp(pname.c_str(), name) == 0)
+        }
+        if (_wcsicmp(pname.c_str(), name) == 0) {
             processes.push_back(std::move(proc));
+        }
     }
 
     return true;
@@ -267,14 +270,15 @@ struct EnumWindowUserParam {
     std::vector<Process>* processes{};
 };
 
-static BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam)
+static BOOL CALLBACK EnumWindowsProc(HWND hWnd, const LPARAM lParam)
 {
-    EnumWindowUserParam *UserParam = reinterpret_cast<EnumWindowUserParam *>(lParam);
+    const EnumWindowUserParam* UserParam = reinterpret_cast<EnumWindowUserParam*>(lParam);
 
     WCHAR ClassName[256];
-    int iCopied = GetClassNameW(hWnd, ClassName, _countof(ClassName));
-    if (iCopied <= 0)
+    const int iCopied = GetClassNameW(hWnd, ClassName, _countof(ClassName));
+    if (iCopied <= 0) {
         return TRUE;
+    }
 
     if (wcsncmp(ClassName, UserParam->classname, _countof(ClassName)) == 0) {
         DWORD ProcessId;
@@ -295,7 +299,7 @@ static BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam)
     return TRUE;
 }
 
-bool GetProcessesFromWindowClass(std::vector<Process>& processes, const wchar_t *classname, DWORD rights)
+bool GetProcessesFromWindowClass(std::vector<Process>& processes, const wchar_t* classname, const DWORD rights)
 {
     EnumWindowUserParam UserParam;
     UserParam.rights = rights;
@@ -310,7 +314,7 @@ bool GetProcessesFromWindowClass(std::vector<Process>& processes, const wchar_t 
     return true;
 }
 
-ProcessScanner::ProcessScanner(Process *process)
+ProcessScanner::ProcessScanner(Process* process)
 {
     ProcessModule module;
     process->GetModule(&module);
@@ -323,29 +327,28 @@ ProcessScanner::ProcessScanner(Process *process)
 
 ProcessScanner::~ProcessScanner()
 {
-    if (m_buffer)
-        delete[] m_buffer;
+    delete[] m_buffer;
 }
 
-uintptr_t ProcessScanner::FindPattern(const char *pattern, const char *mask, int offset)
+uintptr_t ProcessScanner::FindPattern(const char* pattern, const char* mask, const int offset) const
 {
     uintptr_t rva;
     if (FindPatternRva(pattern, mask, offset, &rva)) {
         return m_base + rva;
-    } else {
-        return 0;
     }
+    return 0;
 }
 
-bool ProcessScanner::FindPatternRva(const char *pattern, const char *mask, int offset, uintptr_t *rva)
+bool ProcessScanner::FindPatternRva(const char* pattern, const char* mask, const int offset, uintptr_t* rva) const
 {
-    size_t length = strlen(mask);
-    const uint8_t *upattern = reinterpret_cast<const uint8_t *>(pattern);
+    const size_t length = strlen(mask);
+    const auto upattern = reinterpret_cast<const uint8_t*>(pattern);
     for (size_t i = 0; i < m_size; i++) {
         size_t j;
         for (j = 0; j < length; j++) {
-            if (mask[j] == 'x' && m_buffer[i + j] != upattern[j])
+            if (mask[j] == 'x' && m_buffer[i + j] != upattern[j]) {
                 break;
+            }
         }
         if (j == length) {
             *rva = i + offset;

@@ -2,8 +2,7 @@
 
 #include "Window.h"
 
-struct Settings
-{
+struct Settings {
     bool help = false;
     bool version = false;
     bool quiet = false;
@@ -25,14 +24,13 @@ void ParseRegSettings();
 void ParseCommandLine();
 
 bool IsRunningAsAdmin();
-bool CreateProcessInt(const wchar_t *path, const wchar_t *args, const wchar_t *workdir, bool as_admin = false);
+bool CreateProcessInt(const wchar_t* path, const wchar_t* args, const wchar_t* workdir, bool as_admin = false);
 bool Restart(const wchar_t* args, bool force_admin = false);
 bool RestartAsAdmin(const wchar_t* args);
 void RestartWithSameArgs(bool force_admin = false);
 bool EnableDebugPrivilege();
 
-class SettingsWindow : public Window
-{
+class SettingsWindow : public Window {
 public:
     SettingsWindow() = default;
     SettingsWindow(const SettingsWindow&) = delete;
@@ -41,13 +39,13 @@ public:
 
     SettingsWindow& operator=(const SettingsWindow&) = delete;
 
-    bool Create();
+    bool Create() override;
 
 private:
     LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 
     void OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    void OnCommand(HWND hwnd, LONG ControlId, LONG NotificateCode);
+    void OnCommand(HWND hwnd, LONG ControlId, LONG NotificateCode) const;
 
 private:
     HWND m_hNoUpdate = nullptr;

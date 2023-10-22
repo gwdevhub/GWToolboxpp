@@ -3,17 +3,17 @@
 #include "ToolboxWindow.h"
 #include <GWCA/GameEntities/Friendslist.h>
 
-namespace GW {
-    namespace Constants {
-        enum class MapID;
-    }
+namespace GW::Constants {
+    enum class MapID;
 }
 
 class RerollWindow : public ToolboxWindow {
     RerollWindow() = default;
-    ~RerollWindow() {
-        for (const auto& it : account_characters) {
-            delete it.second;
+
+    ~RerollWindow() override
+    {
+        for (const auto& char_name : account_characters | std::views::values) {
+            delete char_name;
         }
         account_characters.clear();
         if (guild_hall_uuid) {
@@ -23,13 +23,14 @@ class RerollWindow : public ToolboxWindow {
     }
 
 public:
-    static RerollWindow& Instance() {
+    static RerollWindow& Instance()
+    {
         static RerollWindow instance;
         return instance;
     }
 
-    const char* Name() const override { return "Reroll"; }
-    const char* Icon() const override { return ICON_FA_USERS; }
+    [[nodiscard]] const char* Name() const override { return "Reroll"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_USERS; }
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
@@ -47,10 +48,10 @@ public:
 
     static void CmdReroll(const wchar_t* message, int argc, LPWSTR* argv);
 
-    bool Reroll(wchar_t* character_name, bool same_map = true, bool same_party = true);
-    bool Reroll(wchar_t* character_name, GW::Constants::MapID _map_id);
-private:
+    bool Reroll(const wchar_t* character_name, bool same_map = true, bool same_party = true);
+    bool Reroll(const wchar_t* character_name, GW::Constants::MapID _map_id);
 
+private:
     bool travel_to_same_location_after_rerolling = true;
     bool rejoin_party_after_rerolling = true;
 
@@ -58,44 +59,59 @@ private:
 
     // Can find out campaign etc from props array
     struct AvailableCharacterInfo {
-        /* + h0000 */ uint32_t h0000[2];
-        /* + h0008 */ uint32_t uuid[4];
-        /* + h0018 */ wchar_t player_name[20];
-        /* + h0040 */ uint32_t props[17];
-        uint32_t map_id() {
-            return (props[0] & 0xffff0000);
+        /* + h0000 */
+        uint32_t h0000[2];
+        /* + h0008 */
+        uint32_t uuid[4];
+        /* + h0018 */
+        wchar_t player_name[20];
+        /* + h0040 */
+        uint32_t props[17];
+
+        uint32_t map_id() const
+        {
+            return props[0] & 0xffff0000;
         }
-        uint32_t primary() {
+
+        uint32_t primary() const
+        {
             return (props[2] & 0x00f00000) >> 20;
         }
-        uint32_t campaign() {
+
+        uint32_t campaign() const
+        {
             return (props[7] & 0x000f0000) >> 16;
         }
-        uint32_t level() {
+
+        uint32_t level() const
+        {
             return ((props[7] & 0x0ff00000) >> 20) - 64;
         }
     };
+
     static_assert(sizeof(AvailableCharacterInfo) == 0x84);
-    GW::Array<AvailableCharacterInfo>* available_chars_ptr = 0;
+    GW::Array<AvailableCharacterInfo>* available_chars_ptr = nullptr;
 
     clock_t reroll_timeout = 0;
+    uint32_t char_sort_order = std::numeric_limits<uint32_t>::max();
     clock_t reroll_stage_set = 0;
     uint32_t reroll_index_needed = 0;
     uint32_t reroll_index_current = 0xffffffdd;
     GW::FriendStatus online_status = GW::FriendStatus::Online;
-    GW::Constants::MapID map_id = (GW::Constants::MapID)0;
+    GW::Constants::MapID map_id = static_cast<GW::Constants::MapID>(0);
     int district_id = 0;
     int region_id = 0;
     int language_id = 0;
-    uint32_t* guild_hall_uuid = 0;
-    wchar_t initial_player_name[20] = { 0 };
-    wchar_t reroll_to_player_name[20] = { 0 };
-    wchar_t party_leader[20] = { 0 };
+    uint32_t* guild_hall_uuid = nullptr;
+    wchar_t initial_player_name[20] = {0};
+    wchar_t reroll_to_player_name[20] = {0};
+    wchar_t party_leader[20] = {0};
     bool same_map = false;
     bool same_party = false;
-    const wchar_t* failed_message = 0;
+    const wchar_t* failed_message = nullptr;
     bool return_on_fail = false;
     bool reverting_reroll = false;
+
     enum RerollStage {
         None,
         PendingLogout,
@@ -110,6 +126,7 @@ private:
         WaitForEmptyParty,
         Done
     } reroll_stage = None;
+
     uint32_t reroll_scroll_from_map_id = 0;
 
     void RerollFailed(const wchar_t* reason);
@@ -118,8 +135,8 @@ private:
 
     std::map<std::wstring, std::vector<std::wstring>*> account_characters{};
 
-    bool IsInMap(bool include_district = true);
-    bool IsCharSelectReady();
+    bool IsInMap(bool include_district = true) const;
+    static bool IsCharSelectReady();
 
     void AddAvailableCharacter(const wchar_t* email, const wchar_t* charname);
 

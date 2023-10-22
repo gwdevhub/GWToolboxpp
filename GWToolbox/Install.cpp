@@ -6,7 +6,7 @@
 
 namespace fs = std::filesystem;
 
-bool GetFileSize(const wchar_t *path, uint64_t *file_size)
+bool GetFileSize(const wchar_t* path, uint64_t* file_size)
 {
     const HANDLE hFile = CreateFileW(
         path,
@@ -67,8 +67,9 @@ bool CopyInstaller()
         return false;
     }
 
-    if (source_path == dest_path)
+    if (source_path == dest_path) {
         return true;
+    }
 
     if (!PathSafeCopy(source_path, dest_path, true)) {
         return false;
@@ -111,10 +112,11 @@ bool DeleteInstallationDirectory()
     return true;
 }
 
-bool Install(bool quiet)
+bool Install(const bool quiet)
 {
-    if (IsInstalled())
+    if (IsInstalled()) {
         return true;
+    }
 
     if (!EnsureInstallationDirectoryExist()) {
         fprintf(stderr, "EnsureInstallationDirectoryExist failed\n");
@@ -132,13 +134,13 @@ bool Install(bool quiet)
     }
 
     if (!quiet) {
-        MessageBoxW(0, L"Installation successful", L"Installation", 0);
+        MessageBoxW(nullptr, L"Installation successful", L"Installation", 0);
     }
 
     return true;
 }
 
-bool Uninstall(bool quiet)
+bool Uninstall(const bool quiet)
 {
     bool DeleteAllFiles = true;
     if (quiet == false) {
@@ -148,8 +150,9 @@ bool Uninstall(bool quiet)
             L"Uninstallation",
             MB_YESNO);
 
-        if (iRet != IDYES)
+        if (iRet != IDYES) {
             DeleteAllFiles = false;
+        }
     }
 
     if (DeleteAllFiles) {
@@ -176,8 +179,12 @@ bool IsInstalled()
     }
     const fs::path computerpath = dllpath / computername;
 
-    if (!fs::exists(dllpath / L"GWToolboxdll.dll")) return false;
-    if (!fs::exists(dllpath / L"GWToolbox.exe")) return false;
+    if (!exists(dllpath / L"GWToolboxdll.dll")) {
+        return false;
+    }
+    if (!exists(dllpath / L"GWToolbox.exe")) {
+        return false;
+    }
 
     return true;
 }

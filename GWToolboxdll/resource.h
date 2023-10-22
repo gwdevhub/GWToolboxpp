@@ -3,7 +3,6 @@
 // Used by GWToolbox.rc
 //
 
-#define IDB_Icon_Cupcake                107
 #define IDB_Missions_MissionIconIncomplete                  154
 #define IDB_Missions_MissionIconBonus                       155
 #define IDB_Missions_MissionIconPrimary                     156

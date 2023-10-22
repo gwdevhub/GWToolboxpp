@@ -74,7 +74,7 @@ namespace DllImporter {
     }
 
     template<typename T>
-    inline HRESULT Wrap_GetActivationFactory(_In_ HSTRING activatableClassId, _Inout_ Details::ComPtrRef<T> factory) noexcept {
+    HRESULT Wrap_GetActivationFactory(_In_ HSTRING activatableClassId, _Inout_ Details::ComPtrRef<T> factory) noexcept {
         return _1_GetActivationFactory(activatableClassId, factory.ReleaseAndGetAddressOf());
     }
 
@@ -117,7 +117,7 @@ public:
         DllImporter::WindowsDeleteString(_hstring);
     }
 
-    inline HSTRING Get() const noexcept {
+    HSTRING Get() const noexcept {
         return _hstring;
     }
 private:
@@ -684,7 +684,7 @@ INT64 WinToast::showToast(_In_ const WinToastTemplate& toast, _In_  IWinToastHan
     }
 
     std::array<WCHAR, 12> buf;
-    for (std::size_t i = 0, actionsCount = toast.actionsCount(); i < actionsCount && SUCCEEDED(hr); i++) {
+    for (size_t i = 0, actionsCount = toast.actionsCount(); i < actionsCount && SUCCEEDED(hr); i++) {
         _snwprintf_s(buf.data(), buf.size(), _TRUNCATE, L"%zd", i);
         hr = addActionHelper(xmlDocument.Get(), toast.actionLabel(i), buf.data());
     }
@@ -1026,7 +1026,7 @@ void WinToast::setError(_Out_opt_ WinToastError* error, _In_ WinToastError value
 }
 
 WinToastTemplate::WinToastTemplate(_In_ WinToastTemplateType type) : _type(type) {
-    static constexpr std::size_t TextFieldsCount[] = { 1, 2, 2, 3, 1, 2, 2, 3};
+    static constexpr size_t TextFieldsCount[] = { 1, 2, 2, 3, 1, 2, 2, 3};
     _textFields = std::vector<std::wstring>(TextFieldsCount[type], L"");
 }
 
@@ -1035,7 +1035,7 @@ WinToastTemplate::~WinToastTemplate() {
 }
 
 void WinToastTemplate::setTextField(_In_ const std::wstring& txt, _In_ WinToastTemplate::TextField pos) {
-    const auto position = static_cast<std::size_t>(pos);
+    const auto position = static_cast<size_t>(pos);
     assert(position < _textFields.size());
     _textFields[position] = txt;
 }
@@ -1123,11 +1123,11 @@ void WinToastTemplate::addAction(_In_ const std::wstring & label) {
 	_actions.push_back(label);
 }
 
-std::size_t WinToastTemplate::textFieldsCount() const {
+size_t WinToastTemplate::textFieldsCount() const {
     return _textFields.size();
 }
 
-std::size_t WinToastTemplate::actionsCount() const {
+size_t WinToastTemplate::actionsCount() const {
     return _actions.size();
 }
 
@@ -1140,12 +1140,12 @@ const std::vector<std::wstring>& WinToastTemplate::textFields() const {
 }
 
 const std::wstring& WinToastTemplate::textField(_In_ TextField pos) const {
-    const auto position = static_cast<std::size_t>(pos);
+    const auto position = static_cast<size_t>(pos);
     assert(position < _textFields.size());
     return _textFields[position];
 }
 
-const std::wstring& WinToastTemplate::actionLabel(_In_ std::size_t position) const {
+const std::wstring& WinToastTemplate::actionLabel(_In_ size_t position) const {
     assert(position < _actions.size());
     return _actions[position];
 }

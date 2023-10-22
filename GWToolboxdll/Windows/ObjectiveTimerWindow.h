@@ -19,7 +19,9 @@ each list of objectives can be either sequential or independent
 
 class ObjectiveTimerWindow : public ToolboxWindow {
     ObjectiveTimerWindow() = default;
-    ~ObjectiveTimerWindow() {
+
+    ~ObjectiveTimerWindow() override
+    {
         if (run_loader.joinable()) {
             run_loader.join();
         }
@@ -27,19 +29,20 @@ class ObjectiveTimerWindow : public ToolboxWindow {
     }
 
 public:
-    static ObjectiveTimerWindow& Instance() {
+    static ObjectiveTimerWindow& Instance()
+    {
         static ObjectiveTimerWindow instance;
         return instance;
     }
 
-    const char* Name() const override { return "Objectives"; }
-    const char* Icon() const override { return ICON_FA_BULLSEYE; }
+    [[nodiscard]] const char* Name() const override { return "Objectives"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_BULLSEYE; }
 
     void Initialize() override;
 
     void Update(float delta) override;
     void Draw(IDirect3DDevice9* pDevice) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
@@ -51,54 +54,65 @@ private:
     bool loading = false;
 
     bool map_load_pending = false;
-    GW::Packet::StoC::InstanceLoadInfo* InstanceLoadInfo = 0;
-    GW::Packet::StoC::InstanceLoadFile* InstanceLoadFile = 0;
-    GW::Packet::StoC::InstanceTimer* InstanceTimer = 0;
+    GW::Packet::StoC::InstanceLoadInfo* InstanceLoadInfo = nullptr;
+    GW::Packet::StoC::InstanceLoadFile* InstanceLoadFile = nullptr;
+    GW::Packet::StoC::InstanceTimer* InstanceTimer = nullptr;
     // Checks that we've received all of the packets needed to start an objective set, then triggers necessary events
     void CheckIsMapLoaded();
 
     // TODO: many of those are not hooked up
     enum class EventType {
-        ServerMessage,      // id1=msg length, id2=pointer to msg
+        ServerMessage,
+        // id1=msg length, id2=pointer to msg
 
         // dialog from owner. Can be in chat or middle of screen.
-        DisplayDialogue,    // id1=msg length, id2=pointer to msg
+        DisplayDialogue,
+        // id1=msg length, id2=pointer to msg
 
-        InstanceLoadInfo,   // id1 is mapid
-        InstanceEnd,        // id1 is mapid we're leaving. Use as "end of instance".
-        DoorOpen,           // id=object_id
-        DoorClose,          // id=object_id
-        ObjectiveStarted,   // id=objective_id
-        ObjectiveDone,      // id=objective_id
+        InstanceLoadInfo,
+        // id1 is mapid
+        InstanceEnd,
+        // id1 is mapid we're leaving. Use as "end of instance".
+        DoorOpen,
+        // id=object_id
+        DoorClose,
+        // id=object_id
+        ObjectiveStarted,
+        // id=objective_id
+        ObjectiveDone,
+        // id=objective_id
 
-        AgentUpdateAllegiance, // id1 = agent model id, id2 = allegiance_bits
-        DoACompleteZone,    // id1 = second wchar of message (doa "id")
-        CountdownStart,     // id1 = mapid
+        AgentUpdateAllegiance,
+        // id1 = agent model id, id2 = allegiance_bits
+        DoACompleteZone,
+        // id1 = second wchar of message (doa "id")
+        CountdownStart,
+        // id1 = mapid
         DungeonReward
     };
 
     class ObjectiveSet;
 
-    class Objective
-    {
+    class Objective {
     public:
         char name[126] = "";
         int indent = 0;
         int starting_completes_n_previous_objectives = 0; // use -1 for all
 
-        ObjectiveSet* parent;
+        ObjectiveSet* parent{};
 
         struct Event {
             EventType type;
             uint32_t id1 = 0;
             uint32_t id2 = 0;
         };
-        std::vector<Event> start_events;
-        std::vector<Event> end_events;
-        std::vector<Objective*> children;
 
-        DWORD    start = 0;
-        DWORD    done = 0;
+        std::vector<Event> start_events{};
+        std::vector<Event> end_events{};
+        std::vector<Objective*> children{};
+
+        DWORD start = 0;
+        DWORD done = 0;
         DWORD start_time_point = 0;
         DWORD done_time_point = 0;
 
@@ -108,6 +122,7 @@ private:
             Completed,
             Failed
         } status = Status::NotStarted;
+
         const char* GetStartTimeStr();
         const char* GetEndTimeStr();
         const char* GetDurationStr();
@@ -125,15 +140,16 @@ private:
         static Objective* FromJson(const nlohmann::json& json);
         nlohmann::json ToJson();
 
-        bool IsStarted() const;
-        bool IsDone() const;
+        [[nodiscard]] bool IsStarted() const;
+        [[nodiscard]] bool IsDone() const;
         void Draw();
-        void Update();
+        static void Update();
+
     private:
         char cached_done[16] = "";
         char cached_start[16] = "";
         char cached_duration[16] = "";
-        DWORD    duration = 0;
+        DWORD duration = 0;
     };
 
     class ObjectiveSet {
@@ -144,7 +160,7 @@ private:
         DWORD system_time;
         // Time point that this objective set was created in ms (i.e. run started)
         DWORD run_start_time_point = 0;
-        DWORD duration = (DWORD)-1;
+        DWORD duration = static_cast<DWORD>(-1);
         DWORD GetDuration();
         const char* GetDurationStr();
         const char* GetStartTimeStr();
@@ -153,23 +169,29 @@ private:
         bool failed = false;
         bool from_disk = false;
         bool need_to_collapse = false;
-        char name[256] = { 0 };
+        char name[256] = {0};
 
-        std::vector<Objective*> objectives;
+        std::vector<Objective*> objectives{};
 
-        Objective* AddObjective(Objective* obj, int starting_completes_num_previous = 0) {
+        Objective* AddObjective(Objective* obj, const int starting_completes_num_previous = 0)
+        {
             obj->starting_completes_n_previous_objectives = starting_completes_num_previous;
             obj->parent = this;
             objectives.push_back(obj);
             return objectives.back();
         }
-        Objective* AddObjectiveAfter(Objective* obj) {
+
+        Objective* AddObjectiveAfter(Objective* obj)
+        {
             return AddObjective(obj, 1);
         }
-        Objective* AddObjectiveAfterAll(Objective* obj) {
+
+        Objective* AddObjectiveAfterAll(Objective* obj)
+        {
             return AddObjective(obj, -1);
         }
-        void AddQuestObjective(const char* obj_name, uint32_t id)
+
+        void AddQuestObjective(const char* obj_name, const uint32_t id)
         {
             AddObjective(new Objective(obj_name))
                 ->AddStartEvent(EventType::ObjectiveStarted, id)
@@ -182,21 +204,20 @@ private:
         void StopObjectives();
         static ObjectiveSet* FromJson(const nlohmann::json& json);
         nlohmann::json ToJson();
-        void Update();
-        void GetStartTime(struct tm* timeinfo);
+        void Update() const;
+        void GetStartTime(tm* timeinfo) const;
 
         const unsigned int ui_id = 0; // an internal id to ensure interface consistency
 
     private:
         static unsigned int cur_ui_id;
-        char cached_start[16] = { 0 };
-        char cached_time[16] = { 0 };
-
+        char cached_start[16] = {0};
+        char cached_time[16] = {0};
     };
 
-    std::map<DWORD, ObjectiveSet*> objective_sets;
+    std::map<DWORD, ObjectiveSet*> objective_sets{};
 
-    ObjectiveSet* GetCurrentObjectiveSet();
+    ObjectiveSet* GetCurrentObjectiveSet() const;
     bool show_current_run_window = false;
     bool clear_cached_times = false;
     bool auto_send_age = false;
@@ -204,8 +225,8 @@ private:
     bool show_debug_events = false;
     ObjectiveSet* current_objective_set = nullptr;
 
-    void Event(EventType type, uint32_t id1 = 0, uint32_t id2 = 0);
-    void Event(EventType type, uint32_t count, const wchar_t* msg);
+    void Event(EventType type, uint32_t id1 = 0, uint32_t id2 = 0) const;
+    void Event(EventType type, uint32_t count, const wchar_t* msg) const;
 
     void AddObjectiveSet(ObjectiveSet* os);
     void AddObjectiveSet(GW::Constants::MapID map_id);

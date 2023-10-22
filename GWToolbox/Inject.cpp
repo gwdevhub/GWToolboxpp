@@ -16,14 +16,11 @@
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
-struct InjectProcess
-{
-    InjectProcess(bool injected, Process&& process, std::wstring&& charname)
+struct InjectProcess {
+    InjectProcess(const bool injected, Process&& process, std::wstring&& charname)
         : m_Injected(injected)
         , m_Process(std::move(process))
-        , m_Charname(std::move(charname))
-    {
-    }
+        , m_Charname(std::move(charname)) { }
 
     InjectProcess(const InjectProcess&) = delete;
     InjectProcess(InjectProcess&&) = default;
@@ -36,7 +33,7 @@ struct InjectProcess
     std::wstring m_Charname;
 };
 
-static bool FindTopMostProcess(std::vector<InjectProcess>& processes, size_t *TopMostIndex)
+static bool FindTopMostProcess(const std::vector<InjectProcess>& processes, size_t* top_most_index)
 {
     if (processes.size() >= 250) {
         fprintf(stderr,
@@ -61,7 +58,7 @@ static bool FindTopMostProcess(std::vector<InjectProcess>& processes, size_t *To
 
         for (size_t i = 0; i < processes.size(); ++i) {
             if (processes[i].m_Process.GetProcessId() == WindowPid) {
-                *TopMostIndex = i;
+                *top_most_index = i;
                 return true;
             }
         }
@@ -80,7 +77,7 @@ static void GetGuildWarsProcesses(std::vector<Process>& processes)
     GetProcessesFromWindowClass(buffer, L"ArenaNet_Dx_Window_Class");
 
     for (Process& process : buffer) {
-        DWORD pid = process.GetProcessId();
+        const DWORD pid = process.GetProcessId();
 
         bool found = false;
         for (Process& it : processes) {
@@ -96,7 +93,7 @@ static void GetGuildWarsProcesses(std::vector<Process>& processes)
     }
 }
 
-InjectReply InjectWindow::AskInjectProcess(Process *target_process)
+InjectReply InjectWindow::AskInjectProcess(Process* target_process)
 {
     std::vector<Process> processes;
     GetGuildWarsProcesses(processes);
@@ -107,7 +104,7 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
     }
 
     uintptr_t charname_rva;
-    ProcessScanner scanner(&processes[0]);
+    const ProcessScanner scanner(processes.data());
     if (!scanner.FindPatternRva("\x8B\xF8\x6A\x03\x68\x0F\x00\x00\xC0\x8B\xCF\xE8", "xxxxxxxxxxxx", -0x42, &charname_rva)) {
         return InjectReply_PatternError;
     }
@@ -123,7 +120,7 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
         ProcessModule module;
 
         if (!process.GetModule(&module)) {
-            fprintf(stderr, "Couldn't get module for process %u\n", process.GetProcessId());
+            fprintf(stderr, "Couldn't get module for process %lu\n", process.GetProcessId());
             continue;
         }
 
@@ -131,33 +128,34 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
         ProcessModule module2;
         if (process.GetModule(&module2, L"GWToolboxdll.dll")) {
             injected = true;
-        } else {
+        }
+        else {
             injected = false;
         }
 
         uint32_t charname_ptr;
         if (!process.Read(module.base + charname_rva, &charname_ptr, 4)) {
-            fprintf(stderr, "Can't read the address 0x%08X in process %u\n",
-                module.base + charname_rva, process.GetProcessId());
+            fprintf(stderr, "Can't read the address 0x%08X in process %lu\n",
+                    module.base + charname_rva, process.GetProcessId());
             continue;
         }
         uint32_t email_ptr = 0;
         if (!process.Read(module.base + email_rva, &email_ptr, 4)) {
-            fprintf(stderr, "Can't read the address 0x%08X in process %u\n",
-                module.base + email_rva, process.GetProcessId());
+            fprintf(stderr, "Can't read the address 0x%08X in process %lu\n",
+                    module.base + email_rva, process.GetProcessId());
             continue;
         }
-        wchar_t charname[128] = { 0 };
+        wchar_t charname[128] = {0};
         if (!process.Read(charname_ptr, charname, 20 * sizeof(wchar_t))) {
-            fprintf(stderr, "Can't read the character name at address 0x%08X in process %u\n",
-                charname_ptr, process.GetProcessId());
+            fprintf(stderr, "Can't read the character name at address 0x%08X in process %lu\n",
+                    charname_ptr, process.GetProcessId());
             continue;
         }
         if (!charname[0]) {
-            char email[_countof(charname)] = { 0 };
+            char email[_countof(charname)] = {0};
             if (!process.Read(email_ptr, email, _countof(email) - 1)) {
-                fprintf(stderr, "Can't read the email at address 0x%08X in process %u\n",
-                    email_ptr, process.GetProcessId());
+                fprintf(stderr, "Can't read the email at address 0x%08X in process %lu\n",
+                        email_ptr, process.GetProcessId());
                 continue;
             }
             for (int i = 0; i < _countof(email) && email[i]; i++) {
@@ -165,11 +163,11 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
             }
         }
         if (!charname[0]) {
-            fprintf(stderr, "Character name in process %u is empty\n", process.GetProcessId());
+            fprintf(stderr, "Character name in process %lu is empty\n", process.GetProcessId());
             continue;
         }
 
-        size_t charname_len = wcsnlen(charname, _countof(charname));
+        const size_t charname_len = wcsnlen(charname, _countof(charname));
         std::wstring charname2(charname, charname + charname_len);
 
         inject_processes.emplace_back(injected, std::move(process), std::wstring(charname2));
@@ -177,7 +175,7 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 
     processes.clear();
 
-    if (!inject_processes.size()) {
+    if (inject_processes.empty()) {
         return InjectReply_NoValidProcess;
     }
 
@@ -188,16 +186,15 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 
     // Sort by name
     std::ranges::sort(inject_processes,
-        [](InjectProcess &proc1, InjectProcess &proc2) {
-            return proc1.m_Charname < proc2.m_Charname;
-        });
+                      [](const InjectProcess& proc1, const InjectProcess& proc2) {
+                          return proc1.m_Charname < proc2.m_Charname;
+                      });
 
     InjectWindow inject;
     inject.Create();
 
-    for (size_t i = 0; i < inject_processes.size(); i++)
-    {
-        InjectProcess *process = &inject_processes[i];
+    for (size_t i = 0; i < inject_processes.size(); i++) {
+        const InjectProcess* process = &inject_processes[i];
 
         wchar_t buffer[128];
         StrCopyW(buffer, _countof(buffer), process->m_Charname.c_str());
@@ -210,8 +207,9 @@ InjectReply InjectWindow::AskInjectProcess(Process *target_process)
 
     size_t TopMostIdx;
     if (FindTopMostProcess(inject_processes, &TopMostIdx)) {
-        SendMessageW(inject.m_hCharacters, CB_SETCURSEL, static_cast<WPARAM>(TopMostIdx), 0);
-    } else {
+        SendMessageW(inject.m_hCharacters, CB_SETCURSEL, TopMostIdx, 0);
+    }
+    else {
         SendMessageW(inject.m_hCharacters, CB_SETCURSEL, 0, 0);
     }
 
@@ -232,13 +230,9 @@ InjectWindow::InjectWindow()
     , m_hLaunchButton(nullptr)
     , m_hRestartAsAdmin(nullptr)
     , m_hSettings(nullptr)
-    , m_Selected(-1)
-{
-}
+    , m_Selected(-1) {}
 
-InjectWindow::~InjectWindow()
-{
-}
+InjectWindow::~InjectWindow() {}
 
 bool InjectWindow::Create()
 {
@@ -247,44 +241,43 @@ bool InjectWindow::Create()
     return Window::Create();
 }
 
-bool InjectWindow::GetSelected(size_t *index)
+bool InjectWindow::GetSelected(size_t* index) const
 {
     if (m_Selected >= 0) {
         *index = static_cast<size_t>(m_Selected);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
-LRESULT InjectWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT InjectWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
-    switch (uMsg)
-    {
-    case WM_CREATE:
-        OnCreate(hWnd, uMsg, wParam, lParam);
-        break;
+    switch (uMsg) {
+        case WM_CREATE:
+            OnCreate(hWnd, uMsg, wParam, lParam);
+            break;
 
-    case WM_CLOSE:
-        DestroyWindow(hWnd);
-        break;
-
-    case WM_DESTROY:
-        SignalStop();
-        break;
-
-    case WM_COMMAND:
-        OnCommand(reinterpret_cast<HWND>(lParam), LOWORD(wParam), HIWORD(wParam));
-        break;
-
-    case WM_KEYUP:
-        if (wParam == VK_ESCAPE) {
+        case WM_CLOSE:
             DestroyWindow(hWnd);
-        } else if (wParam == VK_RETURN) {
-            m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
-            DestroyWindow(hWnd);
-        }
-        break;
+            break;
+
+        case WM_DESTROY:
+            SignalStop();
+            break;
+
+        case WM_COMMAND:
+            OnCommand(reinterpret_cast<HWND>(lParam), LOWORD(wParam), HIWORD(wParam));
+            break;
+
+        case WM_KEYUP:
+            if (wParam == VK_ESCAPE) {
+                DestroyWindow(hWnd);
+            }
+            else if (wParam == VK_RETURN) {
+                m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
+                DestroyWindow(hWnd);
+            }
+            break;
     }
 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
@@ -292,11 +285,7 @@ LRESULT InjectWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    UNREFERENCED_PARAMETER(uMsg);
-    UNREFERENCED_PARAMETER(wParam);
-    UNREFERENCED_PARAMETER(lParam);
-
-    HWND hGroupBox = CreateWindowW(
+    const HWND hGroupBox = CreateWindowW(
         WC_BUTTONW,
         L"Select Character",
         WS_VISIBLE | WS_CHILD | BS_GROUPBOX,
@@ -316,7 +305,7 @@ void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         WS_VISIBLE | WS_CHILD | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST,
         20,  // x
         25,  // y
-        155,// width
+        155, // width
         25,  // height
         hWnd,
         nullptr,
@@ -338,8 +327,7 @@ void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         nullptr);
     SendMessageW(m_hLaunchButton, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
 
-    if (!IsRunningAsAdmin())
-    {
+    if (!IsRunningAsAdmin()) {
         m_hRestartAsAdmin = CreateWindowW(
             WC_BUTTONW,
             L"Can't find your character?",
@@ -371,16 +359,16 @@ void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     SendMessageW(m_hSettings, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
 }
 
-void InjectWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificationCode)
+void InjectWindow::OnCommand(HWND hWnd, const LONG ControlId, LONG NotificationCode)
 {
-    UNREFERENCED_PARAMETER(NotificationCode);
-
-    if ((hWnd == m_hLaunchButton) && (ControlId == STN_CLICKED)) {
+    if (hWnd == m_hLaunchButton && ControlId == STN_CLICKED) {
         m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
         DestroyWindow(m_hWnd);
-    } else if ((hWnd == m_hRestartAsAdmin) && (ControlId == STN_CLICKED)) {
+    }
+    else if (hWnd == m_hRestartAsAdmin && ControlId == STN_CLICKED) {
         RestartWithSameArgs(true);
-    } else if ((hWnd == m_hSettings) && (ControlId == STN_CLICKED)) {
+    }
+    else if (hWnd == m_hSettings && ControlId == STN_CLICKED) {
         m_SettingsWindow.Create();
     }
 }
@@ -388,15 +376,13 @@ void InjectWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificationCode)
 static FARPROC GetLoadLibrary()
 {
     const auto Kernel32 = GetModuleHandleW(L"Kernel32.dll");
-    if (Kernel32 == nullptr)
-    {
+    if (Kernel32 == nullptr) {
         fprintf(stderr, "GetModuleHandleW failed (%lu)\n", GetLastError());
         return nullptr;
     }
 
     const auto pLoadLibraryW = GetProcAddress(Kernel32, "LoadLibraryW");
-    if (pLoadLibraryW == nullptr)
-    {
+    if (pLoadLibraryW == nullptr) {
         fprintf(stderr, "GetProcAddress failed (%lu)\n", GetLastError());
         return nullptr;
     }
@@ -404,33 +390,32 @@ static FARPROC GetLoadLibrary()
     return pLoadLibraryW;
 }
 
-bool InjectRemoteThread(Process* process, LPCWSTR ImagePath, LPDWORD lpExitCode)
+bool InjectRemoteThread(const Process* process, const LPCWSTR ImagePath, LPDWORD lpExitCode)
 {
     *lpExitCode = 0;
 
     const auto ProcessHandle = process->GetHandle();
-    if (ProcessHandle == nullptr)
-    {
+    if (ProcessHandle == nullptr) {
         fprintf(stderr, "Can't inject a dll in a process which is not open\n");
         return FALSE;
     }
 
-    LPVOID pLoadLibraryW = GetLoadLibrary();
-    if (pLoadLibraryW == nullptr)
+    const LPVOID pLoadLibraryW = GetLoadLibrary();
+    if (pLoadLibraryW == nullptr) {
         return FALSE;
+    }
 
-    size_t ImagePathLength = wcslen(ImagePath);
-    size_t ImagePathSize = (ImagePathLength * 2) + 2;
+    const size_t ImagePathLength = wcslen(ImagePath);
+    const size_t ImagePathSize = ImagePathLength * 2 + 2;
 
-    LPVOID ImagePathAddress = VirtualAllocEx(
+    const LPVOID ImagePathAddress = VirtualAllocEx(
         ProcessHandle,
         nullptr,
         ImagePathSize,
         MEM_COMMIT | MEM_RESERVE,
         PAGE_READWRITE);
 
-    if (ImagePathAddress == nullptr)
-    {
+    if (ImagePathAddress == nullptr) {
         fprintf(stderr, "VirtualAllocEx failed (%lu)\n", GetLastError());
         return FALSE;
     }
@@ -443,15 +428,14 @@ bool InjectRemoteThread(Process* process, LPCWSTR ImagePath, LPDWORD lpExitCode)
         ImagePathSize,
         &BytesWritten);
 
-    if (!Success || (ImagePathSize != BytesWritten))
-    {
+    if (!Success || ImagePathSize != BytesWritten) {
         fprintf(stderr, "WriteProcessMemory failed (%lu)\n", GetLastError());
         VirtualFreeEx(ProcessHandle, ImagePathAddress, 0, MEM_RELEASE);
         return FALSE;
     }
 
     DWORD ThreadId;
-    HANDLE hThread = CreateRemoteThreadEx(
+    const HANDLE hThread = CreateRemoteThreadEx(
         ProcessHandle,
         nullptr,
         0,
@@ -461,15 +445,13 @@ bool InjectRemoteThread(Process* process, LPCWSTR ImagePath, LPDWORD lpExitCode)
         nullptr,
         &ThreadId);
 
-    if (hThread == nullptr)
-    {
+    if (hThread == nullptr) {
         fprintf(stderr, "CreateRemoteThreadEx failed (%lu)\n", GetLastError());
         return FALSE;
     }
 
-    DWORD Reason = WaitForSingleObject(hThread, INFINITE);
-    if (Reason != WAIT_OBJECT_0)
-    {
+    const DWORD Reason = WaitForSingleObject(hThread, INFINITE);
+    if (Reason != WAIT_OBJECT_0) {
         fprintf(stderr, "WaitForSingleObject failed {reason: %lu, error: %lu}\n", Reason, GetLastError());
         CloseHandle(hThread);
         return FALSE;
@@ -481,8 +463,7 @@ bool InjectRemoteThread(Process* process, LPCWSTR ImagePath, LPDWORD lpExitCode)
     Success = GetExitCodeThread(hThread, &ExitCode);
     CloseHandle(hThread);
 
-    if (Success == FALSE)
-    {
+    if (Success == FALSE) {
         fprintf(stderr, "GetExitCodeThread failed (%lu)\n", GetLastError());
         return FALSE;
     }

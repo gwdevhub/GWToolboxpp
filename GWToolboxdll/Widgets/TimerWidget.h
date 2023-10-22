@@ -8,27 +8,31 @@
 #include <ToolboxWidget.h>
 
 class TimerWidget : public ToolboxWidget {
-    TimerWidget() {
+    TimerWidget()
+    {
         for (const auto& [skill_id, name] : spirit_effects) {
-            if (!spirit_effects_enabled.contains(skill_id))
+            if (!spirit_effects_enabled.contains(skill_id)) {
                 spirit_effects_enabled[skill_id] = false;
+            }
         }
     };
-    ~TimerWidget() = default;
+    ~TimerWidget() override = default;
 
 public:
-    static TimerWidget& Instance() {
+    static TimerWidget& Instance()
+    {
         static TimerWidget instance;
         return instance;
     }
-    const char* Name() const override { return "Timer"; }
-    const char* Icon() const override { return ICON_FA_STOPWATCH; }
+
+    [[nodiscard]] const char* Name() const override { return "Timer"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_STOPWATCH; }
 
     void Initialize() override;
-    void LoadSettings(ToolboxIni *ini) override;
-    void SaveSettings(ToolboxIni *ini) override;
-    void DrawSettingInternal() override;
-    ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, bool noinput_if_frozen = true) const;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
+    void DrawSettingsInternal() override;
+    [[nodiscard]] ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, bool noinput_if_frozen = true) const override;
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
@@ -43,36 +47,35 @@ public:
     unsigned long GetTimerMs(); // time in milliseconds
     unsigned long GetMapTimeElapsedMs();
     unsigned long GetRunTimeElapsedMs();
-    unsigned long GetStartPoint() const;
+    [[nodiscard]] unsigned long GetStartPoint() const;
     void PrintTimer(); // prints current timer to chat
 
     void OnPreGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak);
     void OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak);
 
 private:
-
     // those function write to extra_buffer and extra_color.
     // they return true if there is something to draw.
     bool GetUrgozTimer();
     bool GetDeepTimer();
-    bool GetDhuumTimer();
+    static bool GetDhuumTimer();
     bool GetTrapTimer();
     bool GetDoATimer();
     bool GetSpiritTimer();
 
     std::map<GW::Constants::SkillID, const char*> spirit_effects{
-        {GW::Constants::SkillID::Edge_of_Extinction,"EoE"},
-        {GW::Constants::SkillID::Quickening_Zephyr,"QZ"},
-        {GW::Constants::SkillID::Famine,"Famine"},
-        {GW::Constants::SkillID::Symbiosis,"Symbiosis"},
-        {GW::Constants::SkillID::Winnowing,"Winnowing"},
-        {GW::Constants::SkillID::Frozen_Soil,"Frozen Soil"},
-        {GW::Constants::SkillID::Union,"Union"},
-        {GW::Constants::SkillID::Shelter,"Shelter"},
-        {GW::Constants::SkillID::Displacement,"Displacement"},
-        {GW::Constants::SkillID::Life,"Life"},
-        {GW::Constants::SkillID::Recuperation,"Recuperation"},
-        {GW::Constants::SkillID::Winds,"Winds"}
+        {GW::Constants::SkillID::Edge_of_Extinction, "EoE"},
+        {GW::Constants::SkillID::Quickening_Zephyr, "QZ"},
+        {GW::Constants::SkillID::Famine, "Famine"},
+        {GW::Constants::SkillID::Symbiosis, "Symbiosis"},
+        {GW::Constants::SkillID::Winnowing, "Winnowing"},
+        {GW::Constants::SkillID::Frozen_Soil, "Frozen Soil"},
+        {GW::Constants::SkillID::Union, "Union"},
+        {GW::Constants::SkillID::Shelter, "Shelter"},
+        {GW::Constants::SkillID::Displacement, "Displacement"},
+        {GW::Constants::SkillID::Life, "Life"},
+        {GW::Constants::SkillID::Recuperation, "Recuperation"},
+        {GW::Constants::SkillID::Winds, "Winds"}
     };
 
     bool hide_in_outpost = false;

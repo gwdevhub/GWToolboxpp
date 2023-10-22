@@ -8,12 +8,13 @@
 
 class ZrawDeepModule : public ToolboxModule {
 public:
-    static ZrawDeepModule& Instance() {
+    static ZrawDeepModule& Instance()
+    {
         static ZrawDeepModule instance;
         return instance;
     }
 
-    const char* Name() const override { return "24h Deep Mode"; }
+    [[nodiscard]] const char* Name() const override { return "24h Deep Mode"; }
     void Initialize() override;
     void Terminate() override;
     void SignalTerminate() override;
@@ -21,14 +22,14 @@ public:
     bool HasSettings() override;
     void SetEnabled(bool enabled);
     void Update(float delta) override;
-    void DrawSettingInternal() override;
-    void DisplayDialogue(GW::Packet::StoC::DisplayDialogue*);
-    void PlayKanaxaiDialog(uint8_t idx);
+    void DrawSettingsInternal() override;
+    static void DisplayDialogue(GW::Packet::StoC::DisplayDialogue*);
+    static void PlayKanaxaiDialog(uint8_t idx);
     void SaveSettings(ToolboxIni* ini) override;
     void LoadSettings(ToolboxIni* ini) override;
 
-    void SetTransmogs();
-    bool IsEnabled();
+    void SetTransmogs() const;
+    static bool IsEnabled();
 
     GW::HookEntry ZrawDeepModule_StoCs;
 };

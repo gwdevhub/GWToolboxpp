@@ -2,10 +2,9 @@
 
 #include <ToolboxWidget.h>
 
-class EffectsMonitorWidget : public ToolboxWidget
-{
+class EffectsMonitorWidget : public ToolboxWidget {
     EffectsMonitorWidget() { is_movable = is_resizable = false; }
-    ~EffectsMonitorWidget() = default;
+    ~EffectsMonitorWidget() override = default;
 
 public:
     static EffectsMonitorWidget& Instance()
@@ -18,12 +17,13 @@ public:
     {
         return "Effect Durations";
     }
+
     [[nodiscard]] const char* Icon() const override { return ICON_FA_HISTORY; }
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     void Initialize() override;
     void Terminate() override;
-    void Draw(IDirect3DDevice9 *pDevice) override;
+    void Draw(IDirect3DDevice9* pDevice) override;
 };

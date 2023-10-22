@@ -3,20 +3,17 @@
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/PartyContext.h>
 
+#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Guild.h>
+#include <GWCA/GameEntities/Player.h>
+#include <GWCA/GameEntities/Skill.h>
+
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-
-#include <GWCA/GameEntities/Map.h>
-#include <GWCA/GameEntities/Guild.h>
-#include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Party.h>
-#include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Skill.h>
 
 #include <GWToolbox.h>
 #include <Utils/GuiUtils.h>
@@ -26,8 +23,8 @@
 
 #include <Logger.h>
 
-#define INI_FILENAME L"observerlog.ini"
-#define IniSection "observer"
+constexpr auto INI_FILENAME = L"observerlog.ini";
+constexpr auto IniSection = "observer";
 
 
 namespace ObserverLabel {
@@ -57,14 +54,14 @@ namespace ObserverLabel {
 
 // TODO: replace with values from GWCA
 namespace JumboMessageType {
-    const uint8_t BASE_UNDER_ATTACK = 0;
-    const uint8_t GUILD_LORD_UNDER_ATTACK = 1;
-    const uint8_t CAPTURED_SHRINE = 3;
-    const uint8_t CAPTURED_TOWER = 5;
-    const uint8_t PARTY_DEFEATED = 6; // received in 3-way Heroes Ascent matches when one party is defeated
-    const uint8_t MORALE_BOOST = 9;
-    const uint8_t VICTORY = 16;
-    const uint8_t FLAWLESS_VICTORY = 17;
+    constexpr uint8_t BASE_UNDER_ATTACK = 0;
+    constexpr uint8_t GUILD_LORD_UNDER_ATTACK = 1;
+    constexpr uint8_t CAPTURED_SHRINE = 3;
+    constexpr uint8_t CAPTURED_TOWER = 5;
+    constexpr uint8_t PARTY_DEFEATED = 6; // received in 3-way Heroes Ascent matches when one party is defeated
+    constexpr uint8_t MORALE_BOOST = 9;
+    constexpr uint8_t VICTORY = 16;
+    constexpr uint8_t FLAWLESS_VICTORY = 17;
 }
 
 
@@ -81,22 +78,24 @@ namespace JumboMessageValue {
     // is not understood.
     // In addition, there may be a danger these variables could change with GW updates...
     // Consider these values as experimental and use with caution
-    const uint32_t PARTY_ONE = 1635021873;
-    const uint32_t PARTY_TWO = 1635021874;
+    constexpr uint32_t PARTY_ONE = 1635021873;
+    constexpr uint32_t PARTY_TWO = 1635021874;
 }
 
 // JumboMessage represents a message strewn across the center of the screen in
 // big red/green characters.
 // Things like moral boosts, flag captures, victory, defeat...
 struct JumboMessage : GW::Packet::StoC::Packet<JumboMessage> {
-    uint8_t type;   // JumboMessageType
-    uint32_t value; // JumboMessageValue
+    uint8_t type{};   // JumboMessageType
+    uint32_t value{}; // JumboMessageValue
 };
-const uint32_t GW::Packet::StoC::Packet<JumboMessage>::STATIC_HEADER = (0x18F); // 399
+
+const uint32_t GW::Packet::StoC::Packet<JumboMessage>::STATIC_HEADER = 0x18F; // 399
 
 
 // Destructor
-ObserverModule::~ObserverModule() {
+ObserverModule::~ObserverModule()
+{
     Reset();
 }
 
@@ -109,100 +108,125 @@ void ObserverModule::Initialize()
     is_observer = GW::Map::GetIsObserving();
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
-        &InstanceLoadInfo_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo* packet) -> void {
+        &InstanceLoadInfo_Entry, [this](const GW::HookStatus* status, const GW::Packet::StoC::InstanceLoadInfo* packet) -> void {
             HandleInstanceLoadInfo(status, packet);
         });
 
     GW::StoC::RegisterPacketCallback<JumboMessage>(
-        &JumboMessage_Entry, [this](GW::HookStatus* status, JumboMessage* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-            UNREFERENCED_PARAMETER(packet);
-            if (!IsActive()) return;
-            if (!InitializeObserverSession()) return;
+        &JumboMessage_Entry, [this](const GW::HookStatus*, const JumboMessage* packet) -> void {
+            if (!IsActive()) {
+                return;
+            }
+            if (!InitializeObserverSession()) {
+                return;
+            }
             HandleJumboMessage(packet->type, packet->value);
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(
-        &AgentState_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::AgentState* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-            if (!IsActive()) return;
-            if (!InitializeObserverSession()) return;
+        &AgentState_Entry, [this](const GW::HookStatus*, const GW::Packet::StoC::AgentState* packet) -> void {
+            if (!IsActive()) {
+                return;
+            }
+            if (!InitializeObserverSession()) {
+                return;
+            }
             HandleAgentState(packet->agent_id, packet->state);
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(
         &AgentAdd_Entry,
-            [this](GW::HookStatus* status, GW::Packet::StoC::AgentAdd* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-            if (!IsActive()) return;
-            if (!InitializeObserverSession()) return;
+        [this](const GW::HookStatus*, const GW::Packet::StoC::AgentAdd* packet) -> void {
+            if (!IsActive()) {
+                return;
+            }
+            if (!InitializeObserverSession()) {
+                return;
+            }
             HandleAgentAdd(packet->agent_id);
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentProjectileLaunched>(
         &AgentProjectileLaunched_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::AgentProjectileLaunched* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-            if (!IsActive()) return;
-            if (!InitializeObserverSession()) return;
+        [this](const GW::HookStatus*, const GW::Packet::StoC::AgentProjectileLaunched* packet) -> void {
+            if (!IsActive()) {
+                return;
+            }
+            if (!InitializeObserverSession()) {
+                return;
+            }
             HandleAgentProjectileLaunched(packet);
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericModifier>(
         &GenericModifier_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::GenericModifier* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-            if (!IsActive()) return;
-            if (!InitializeObserverSession()) return;
+        [this](const GW::HookStatus*, const GW::Packet::StoC::GenericModifier* packet) -> void {
+            if (!IsActive()) {
+                return;
+            }
+            if (!InitializeObserverSession()) {
+                return;
+            }
 
             const uint32_t value_id = packet->type;
             const uint32_t caster_id = packet->cause_id;
             const uint32_t target_id = packet->target_id;
             const float value = packet->value;
-            const bool no_target = false;
+            constexpr bool no_target = false;
             HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
         }
     );
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::GenericValueTarget* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-            if (!IsActive()) return;
-            if (!InitializeObserverSession()) return;
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(
+        &GenericValueTarget_Entry,
+        [this](const GW::HookStatus*, const GW::Packet::StoC::GenericValueTarget* packet) -> void {
+            if (!IsActive()) {
+                return;
+            }
+            if (!InitializeObserverSession()) {
+                return;
+            }
 
             const uint32_t value_id = packet->Value_id;
             const uint32_t caster_id = packet->caster;
             const uint32_t target_id = packet->target;
             const uint32_t value = packet->value;
-            const bool no_target = false;
+            constexpr bool no_target = false;
             HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
-    });
+        });
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-            if (!IsActive()) return;
-            if (!InitializeObserverSession()) return;
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(
+        &GenericValue_Entry,
+        [this](const GW::HookStatus*, const GW::Packet::StoC::GenericValue* packet) -> void {
+            if (!IsActive()) {
+                return;
+            }
+            if (!InitializeObserverSession()) {
+                return;
+            }
 
             const uint32_t value_id = packet->value_id;
             const uint32_t caster_id = packet->agent_id;
-            const uint32_t target_id = NO_AGENT;
+            constexpr uint32_t target_id = NO_AGENT;
             const uint32_t value = packet->value;
-            const bool no_target = true;
+            constexpr bool no_target = true;
             HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
-    });
+        });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericFloat>(
-        &GenericFloat_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::GenericFloat* packet) -> void {
-            UNREFERENCED_PARAMETER(status);
-            if (!IsActive()) return;
-            if (!InitializeObserverSession()) return;
+        &GenericFloat_Entry, [this](const GW::HookStatus*, const GW::Packet::StoC::GenericFloat* packet) -> void {
+            if (!IsActive()) {
+                return;
+            }
+            if (!InitializeObserverSession()) {
+                return;
+            }
 
             const uint32_t value_id = packet->type;
             const uint32_t caster_id = packet->agent_id;
-            const uint32_t target_id = NO_AGENT;
+            constexpr uint32_t target_id = NO_AGENT;
             const float value = packet->value;
-            const bool no_target = true;
+            constexpr bool no_target = true;
             HandleGenericPacket(value_id, caster_id, target_id, value, no_target);
         }
     );
@@ -212,24 +236,24 @@ void ObserverModule::Initialize()
     }
 }
 
-void ObserverModule::Terminate() {
+void ObserverModule::Terminate()
+{
     ToolboxModule::Terminate();
     Reset();
 }
 
 
 // Is the Module actively tracking agents?
-const bool ObserverModule::IsActive() {
+const bool ObserverModule::IsActive() const
+{
     // an observer match is considered an explorable area
     return is_enabled && is_explorable && (enable_in_explorable_areas || is_observer);
 }
 
 
 // Handle InstanceLoadInfo Packet
-void ObserverModule::HandleInstanceLoadInfo(GW::HookStatus* status, GW::Packet::StoC::InstanceLoadInfo *packet) {
-    UNREFERENCED_PARAMETER(status);
-    UNREFERENCED_PARAMETER(packet);
-
+void ObserverModule::HandleInstanceLoadInfo(const GW::HookStatus*, const GW::Packet::StoC::InstanceLoadInfo* packet)
+{
     is_explorable = packet->is_explorable;
     is_observer = packet->is_observer;
 
@@ -238,7 +262,8 @@ void ObserverModule::HandleInstanceLoadInfo(GW::HookStatus* status, GW::Packet::
     if (is_active) {
         Reset();
         InitializeObserverSession();
-    } else {
+    }
+    else {
         // mark false so we initialize next time we load a session
         observer_session_initialized = false;
     }
@@ -246,7 +271,8 @@ void ObserverModule::HandleInstanceLoadInfo(GW::HookStatus* status, GW::Packet::
 
 
 // Handle a JumboMessage packet
-void ObserverModule::HandleJumboMessage(const uint8_t type, const uint32_t value) {
+void ObserverModule::HandleJumboMessage(const uint8_t type, const uint32_t value)
+{
     switch (type) {
         case JumboMessageType::MORALE_BOOST:
             HandleMoraleBoost(GetObservablePartyById(JumboMessageValueToPartyId(value)));
@@ -261,9 +287,8 @@ void ObserverModule::HandleJumboMessage(const uint8_t type, const uint32_t value
 
 // Handle a GenericPacket of type float
 void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t caster_id,
-    const uint32_t target_id, const float value, const bool no_target) {
-    UNREFERENCED_PARAMETER(no_target);
-
+                                         const uint32_t target_id, const float value, const bool)
+{
     switch (value_id) {
         case GW::Packet::StoC::GenericValueID::damage:
             HandleDamageDone(caster_id, target_id, value, false);
@@ -280,13 +305,13 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
         case GW::Packet::StoC::GenericValueID::knocked_down:
             HandleKnockedDown(caster_id, value);
             break;
-    };
+    }
 }
 
 // Handle a Generic Packet of type uint32_t
 void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t caster_id,
-    const uint32_t target_id, const uint32_t value, const bool no_target) {
-
+                                         const uint32_t target_id, const uint32_t value, const bool no_target)
+{
     switch (value_id) {
         case GW::Packet::StoC::GenericValueID::melee_attack_finished:
             HandleAttackFinished(caster_id);
@@ -304,8 +329,9 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
             if (no_target) {
                 // do nothing... caster is correct in this case
                 _caster_id = caster_id;
-                _target_id = target_id;     // 0
-            } else {
+                _target_id = target_id; // 0
+            }
+            else {
                 // caster and target are swapped
                 _caster_id = target_id;
                 _target_id = caster_id;
@@ -324,7 +350,7 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
             break;
 
         case GW::Packet::StoC::GenericValueID::instant_skill_activated:
-            HandleInstantSkillActivated(caster_id, target_id, (GW::Constants::SkillID)value);
+            HandleInstantSkillActivated(caster_id, target_id, static_cast<GW::Constants::SkillID>(value));
             break;
 
         case GW::Packet::StoC::GenericValueID::attack_skill_stopped:
@@ -339,14 +365,15 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
             if (no_target) {
                 // do nothing... caster is correct in this case
                 _caster_id = caster_id;
-                _target_id = target_id;     // 0
-            } else {
+                _target_id = target_id; // 0
+            }
+            else {
                 // caster and target are swapped
                 _caster_id = target_id;
                 _target_id = caster_id;
             }
             // handle
-            HandleAttackSkillStarted(_caster_id, _target_id, (GW::Constants::SkillID)value);
+            HandleAttackSkillStarted(_caster_id, _target_id, static_cast<GW::Constants::SkillID>(value));
             break;
         }
 
@@ -373,94 +400,121 @@ void ObserverModule::HandleGenericPacket(const uint32_t value_id, const uint32_t
             if (no_target) {
                 // do nothing... caster is correct in this case
                 _caster_id = caster_id;
-                _target_id = target_id;     // 0
-            } else {
+                _target_id = target_id; // 0
+            }
+            else {
                 // caster and target are swapped
                 _caster_id = target_id;
                 _target_id = caster_id;
             }
-            HandleSkillActivated(_caster_id, _target_id, (GW::Constants::SkillID)value);
+            HandleSkillActivated(_caster_id, _target_id, static_cast<GW::Constants::SkillID>(value));
             break;
         }
-    };
+    }
 }
-
 
 
 // Handle AgentState Packet
 // Fired when the server notifies us of an agent state change
 // Can tell us if the agent has just died
-void ObserverModule::HandleAgentState(const uint32_t agent_id, const uint32_t state) {
+void ObserverModule::HandleAgentState(const uint32_t agent_id, const uint32_t state)
+{
     // 16 = dead
-    if (state != 16) return;
+    if (state != 16) {
+        return;
+    }
 
     // don't credit kills/deaths on parties that are already defeated
     // after a party is defeated all their players die, but we don't
     // count those deaths / kills
-    if (match_finished) return;
+    if (match_finished) {
+        return;
+    }
 
     ObservableAgent* observable_agent = GetObservableAgentById(agent_id);
-    if (!observable_agent) return;
+    if (!observable_agent) {
+        return;
+    }
 
     ObservableParty* party = GetObservablePartyById(observable_agent->party_id);
-    if (party && party->is_defeated) return;
+    if (party && party->is_defeated) {
+        return;
+    }
 
     // notify the player
     observable_agent->stats.HandleDeath();
 
     // only grant a kill if the victim belonged to a party
     // (don't count footmen/archer/bodyguard/lord/ghostly kills)
-    if (!party) return;
+    if (!party) {
+        return;
+    }
     party->stats.HandleDeath();
 
     // credit the kill to the last-hitter and their party,
     ObservableAgent* killer = GetObservableAgentById(observable_agent->last_hit_by);
-    if (!killer) return;
+    if (!killer) {
+        return;
+    }
     killer->stats.HandleKill();
     ObservableParty* killer_party = GetObservablePartyById(killer->party_id);
-    if (killer_party)
+    if (killer_party) {
         killer_party->stats.HandleKill();
+    }
 }
 
 
 // Handle DamageDone (GenericModifier float Packet)
-void ObserverModule::HandleDamageDone(const uint32_t caster_id, const uint32_t target_id, const float amount_pc, const bool is_crit) {
+void ObserverModule::HandleDamageDone(const uint32_t caster_id, const uint32_t target_id, const float amount_pc, const bool is_crit)
+{
     ObservableAgent* caster = GetObservableAgentById(caster_id);
     ObservableAgent* target = GetObservableAgentById(target_id);
 
     // get last hit to credit the kill
-    if (target && caster && caster->party_id != NO_PARTY && (amount_pc < 0)) {
+    if (target && caster && caster->party_id != NO_PARTY && amount_pc < 0) {
         target->last_hit_by = caster->agent_id;
     }
 
     if (is_crit) {
         ObservableParty* caster_party = nullptr;
         ObservableParty* target_party = nullptr;
-        if (caster) caster_party = GetObservablePartyById(caster->party_id);
-        if (target) target_party = GetObservablePartyById(target->party_id);
+        if (caster) {
+            caster_party = GetObservablePartyById(caster->party_id);
+        }
+        if (target) {
+            target_party = GetObservablePartyById(target->party_id);
+        }
 
         // notify the caster
         if (caster) {
             caster->stats.total_crits_dealt += 1;
-            if (target_party) caster->stats.total_party_crits_dealt += 1;
+            if (target_party) {
+                caster->stats.total_party_crits_dealt += 1;
+            }
         }
 
         // notify the caster_party
         if (caster_party) {
             caster_party->stats.total_crits_dealt += 1;
-            if (target_party) caster_party->stats.total_party_crits_dealt += 1;
+            if (target_party) {
+                caster_party->stats.total_party_crits_dealt += 1;
+            }
         }
 
         // notify the target
         if (target) {
             target->stats.total_crits_received += 1;
-            if (caster_party) target->stats.total_party_crits_received += 1;
+            if (caster_party) {
+                target->stats.total_party_crits_received += 1;
+            }
         }
 
         // notify the target_party
         if (target_party) {
             target_party->stats.total_crits_received += 1;
-            if (caster_party) target_party->stats.total_party_crits_received += 1;
+            if (caster_party) {
+                target_party->stats.total_party_crits_received += 1;
+            }
         }
     }
 }
@@ -468,135 +522,169 @@ void ObserverModule::HandleDamageDone(const uint32_t caster_id, const uint32_t t
 
 // Handle AgentAdd Packet
 // Fired when an Agent is to be loaded into memory
-void ObserverModule::HandleAgentAdd(const uint32_t agent_id) {
+void ObserverModule::HandleAgentAdd(const uint32_t)
+{
     // queue update parties
-    UNREFERENCED_PARAMETER(agent_id);
     party_sync_timer = TIMER_INIT();
 }
 
 
 // Handle AgentProjectileLaunched Packet
 // can be used to determine when a ranged attack has finished
-void ObserverModule::HandleAgentProjectileLaunched(const GW::Packet::StoC::AgentProjectileLaunched* packet) {
-    if (!packet) return;
+void ObserverModule::HandleAgentProjectileLaunched(const GW::Packet::StoC::AgentProjectileLaunched* packet)
+{
+    if (!packet) {
+        return;
+    }
     ObservableAgent* agent = GetObservableAgentById(packet->agent_id);
     // ensure the projectile was from an attack we're currently undertaking
-    if (!agent || !agent->current_target_action || !agent->current_target_action->is_attack) return;
+    if (!agent || !agent->current_target_action || !agent->current_target_action->is_attack) {
+        return;
+    }
     ReduceAction(agent, ActionStage::Finished);
 }
 
 
 // Handle AttackFinished Packet
-void ObserverModule::HandleAttackFinished(const uint32_t agent_id) {
+void ObserverModule::HandleAttackFinished(const uint32_t agent_id)
+{
     ReduceAction(GetObservableAgentById(agent_id), ActionStage::Finished);
 }
 
 // Handle AttackStopped Packet
-void ObserverModule::HandleAttackStopped(const uint32_t agent_id) {
+void ObserverModule::HandleAttackStopped(const uint32_t agent_id)
+{
     ReduceAction(GetObservableAgentById(agent_id), ActionStage::Stopped);
 }
 
 
 // Handle AttackStarted Packet
-void ObserverModule::HandleAttackStarted(const uint32_t caster_id, const uint32_t target_id) {
-    TargetAction* action = new TargetAction(caster_id, target_id, true, false, NO_SKILL);
-    if (!ReduceAction(GetObservableAgentById(caster_id), ActionStage::Started, action))
+void ObserverModule::HandleAttackStarted(const uint32_t caster_id, const uint32_t target_id)
+{
+    const auto action = new TargetAction(caster_id, target_id, true, false, NO_SKILL);
+    if (!ReduceAction(GetObservableAgentById(caster_id), ActionStage::Started, action)) {
         delete action;
+    }
 }
 
 
 // Handle Interrupted Packet
-void ObserverModule::HandleInterrupted(const uint32_t agent_id) {
+void ObserverModule::HandleInterrupted(const uint32_t agent_id)
+{
     ReduceAction(GetObservableAgentById(agent_id), ActionStage::Interrupted);
 }
 
 // Handle Attack SkillFinished Packet
-void ObserverModule::HandleAttackSkillFinished(const uint32_t agent_id) {
+void ObserverModule::HandleAttackSkillFinished(const uint32_t agent_id)
+{
     ReduceAction(GetObservableAgentById(agent_id), ActionStage::Finished);
 }
 
 
 // Handle Attack SkillStopped Packet
-void ObserverModule::HandleAttackSkillStopped(const uint32_t agent_id) {
+void ObserverModule::HandleAttackSkillStopped(const uint32_t agent_id)
+{
     ReduceAction(GetObservableAgentById(agent_id), ActionStage::Stopped);
 }
 
 
-
 // Handle InstantSkillActivated Packet
-void ObserverModule::HandleInstantSkillActivated(const uint32_t caster_id, const uint32_t target_id, const GW::Constants::SkillID skill_id) {
+void ObserverModule::HandleInstantSkillActivated(const uint32_t caster_id, const uint32_t target_id, const GW::Constants::SkillID skill_id)
+{
     // assuming there are no instant attack skills...
-    TargetAction* action = new TargetAction(caster_id, target_id, false, true, skill_id);
-    if (!ReduceAction(GetObservableAgentById(caster_id), ActionStage::Instant, action))
+    const auto action = new TargetAction(caster_id, target_id, false, true, skill_id);
+    if (!ReduceAction(GetObservableAgentById(caster_id), ActionStage::Instant, action)) {
         delete action;
+    }
 }
 
 
 // Handle AttackSkillActivated Packet
-void ObserverModule::HandleAttackSkillStarted(const uint32_t caster_id, const uint32_t target_id, const GW::Constants::SkillID skill_id) {
-    TargetAction* action = new TargetAction(caster_id, target_id, true, true, skill_id);
-    if (!ReduceAction(GetObservableAgentById(caster_id), ActionStage::Started, action))
+void ObserverModule::HandleAttackSkillStarted(const uint32_t caster_id, const uint32_t target_id, const GW::Constants::SkillID skill_id)
+{
+    const auto action = new TargetAction(caster_id, target_id, true, true, skill_id);
+    if (!ReduceAction(GetObservableAgentById(caster_id), ActionStage::Started, action)) {
         delete action;
+    }
 }
 
 
 // Handle AttackSkillFinished Packet
-void ObserverModule::HandleSkillFinished(const uint32_t agent_id) {
+void ObserverModule::HandleSkillFinished(const uint32_t agent_id)
+{
     ReduceAction(GetObservableAgentById(agent_id), ActionStage::Finished);
 }
 
 
 // Handle SkillFinished Packet
-void ObserverModule::HandleSkillStopped(const uint32_t agent_id) {
+void ObserverModule::HandleSkillStopped(const uint32_t agent_id)
+{
     ReduceAction(GetObservableAgentById(agent_id), ActionStage::Stopped);
 }
 
 
 // Handle SkillActivated Packet
-void ObserverModule::HandleSkillActivated(const uint32_t caster_id, const uint32_t target_id, GW::Constants::SkillID skill_id) {
-    TargetAction* action = new TargetAction(caster_id, target_id, false, true, skill_id);
-    if (!ReduceAction(GetObservableAgentById(caster_id), ActionStage::Started, action))
+void ObserverModule::HandleSkillActivated(const uint32_t caster_id, const uint32_t target_id, const GW::Constants::SkillID skill_id)
+{
+    const auto action = new TargetAction(caster_id, target_id, false, true, skill_id);
+    if (!ReduceAction(GetObservableAgentById(caster_id), ActionStage::Started, action)) {
         delete action;
+    }
 }
 
 
 // Handle KnockedDown Packet
-void ObserverModule::HandleKnockedDown(const uint32_t agent_id, const float duration) {
+void ObserverModule::HandleKnockedDown(const uint32_t agent_id, const float duration)
+{
     // notify the agent
     ObservableAgent* agent = GetObservableAgentById(agent_id);
-    if (!agent) return;
+    if (!agent) {
+        return;
+    }
     agent->stats.knocked_down_count += 1;
     agent->stats.knocked_down_duration += duration;
 
     // notify the agents party
     ObservableParty* party = GetObservablePartyById(agent->party_id);
-    if (!party) return;
+    if (!party) {
+        return;
+    }
     party->stats.knocked_down_count += 1;
     party->stats.knocked_down_duration += 1;
 }
 
 
 // Convert a JumboMessage value to a party_id
-uint32_t ObserverModule::JumboMessageValueToPartyId(const uint32_t value) {
+uint32_t ObserverModule::JumboMessageValueToPartyId(const uint32_t value)
+{
     // TODO: handle maps with 3 parties where the JumboMessageValue's are different
     switch (value) {
-        case JumboMessageValue::PARTY_ONE: return 1;
-        case JumboMessageValue::PARTY_TWO: return 2;
-        default: return NO_PARTY;
+        case JumboMessageValue::PARTY_ONE:
+            return 1;
+        case JumboMessageValue::PARTY_TWO:
+            return 2;
+        default:
+            return NO_PARTY;
     }
 }
 
 
 // Fired when a party receives a morale boost
-void ObserverModule::HandleMoraleBoost(ObservableParty* boosting_party) {
-    if (!boosting_party) return;
+void ObserverModule::HandleMoraleBoost(ObservableParty* boosting_party)
+{
+    if (!boosting_party) {
+        return;
+    }
     boosting_party->morale_boosts += 1;
 }
 
 
 // Fired when a party is victorious
-void ObserverModule::HandleVictory(ObservableParty* winning_party) {
-    if (!winning_party) return;
+void ObserverModule::HandleVictory(ObservableParty* winning_party)
+{
+    if (!winning_party) {
+        return;
+    }
 
     // TODO: handle draws
     // There is no JumboMessage for a draw so we don't get notified of it...
@@ -618,7 +706,7 @@ void ObserverModule::HandleVictory(ObservableParty* winning_party) {
 
     // note the final game duration
     // don't count the first minute before the gates open...
-    uint32_t ms = GW::Map::GetInstanceTime() - 1000 * 60;
+    const uint32_t ms = GW::Map::GetInstanceTime() - 1000 * 60;
     match_duration_ms_total = std::chrono::milliseconds(ms);
     match_duration_ms = std::chrono::milliseconds(ms);
     match_duration_secs = std::chrono::duration_cast<std::chrono::seconds>(match_duration_ms);
@@ -628,7 +716,7 @@ void ObserverModule::HandleVictory(ObservableParty* winning_party) {
 
     // notify other parties that they lost
     for (auto& [_, losing_party] : observable_parties) {
-        if (losing_party && (losing_party->party_id != winning_party->party_id)) {
+        if (losing_party && losing_party->party_id != winning_party->party_id) {
             losing_party->is_defeated = true;
             losing_party->is_victorious = false;
         }
@@ -636,13 +724,15 @@ void ObserverModule::HandleVictory(ObservableParty* winning_party) {
 }
 
 
-
-bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, TargetAction* new_action) {
+bool ObserverModule::ReduceAction(ObservableAgent* caster, const ActionStage stage, TargetAction* new_action)
+{
     // if the action ends up owned by the caster, the observermodule is responsible for garbage collecting the action
     // if the action ends up NOT owned by the caster, the caller is responsible for garbage collecting the action
     bool action_ownership_transferred = false;
 
-    if (!caster) return action_ownership_transferred;
+    if (!caster) {
+        return action_ownership_transferred;
+    }
 
     TargetAction* action;
 
@@ -655,8 +745,8 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, Ta
         // and they may be activateable while using other skills (e.g. shouts/stances) so we don't clear the current action
         if (stage != ActionStage::Instant) {
             // delete the previous blocking action
-            if (caster->current_target_action)
-                    delete caster->current_target_action;
+
+            delete caster->current_target_action;
 
             // store the new blocking action
             caster->current_target_action = new_action;
@@ -672,24 +762,31 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, Ta
         action = caster->current_target_action;
     }
 
-    if (!action) return action_ownership_transferred;
+    if (!action) {
+        return action_ownership_transferred;
+    }
 
     // if the action was already "finished" in a previous ReduceAction call, there's nothing else to do
     // this is important for skills like Dual Shot, Barrage, etc, where one skill leads to
     // multiple "AttackFinished" packets (via the "AgentProjectileLaunched" packet)
-    if (action->was_finished) return action_ownership_transferred;
+    if (action->was_finished) {
+        return action_ownership_transferred;
+    }
 
-    if (stage == ActionStage::Stopped) action->was_stopped = true;
-    if (stage == ActionStage::Finished) action->was_finished = true;
+    if (stage == ActionStage::Stopped) {
+        action->was_stopped = true;
+    }
+    if (stage == ActionStage::Finished) {
+        action->was_finished = true;
+    }
 
-    ObserverModule::ObservableAgent* target = GetObservableAgentById(action->target_id);
+    ObservableAgent* target = GetObservableAgentById(action->target_id);
 
     ObservableParty* caster_party = GetObservablePartyById(caster->party_id);
     ObservableParty* target_party = nullptr;
-    if (target) target_party = GetObservablePartyById(target->party_id);
-
-    bool same_team = caster && target && (caster->team_id != NO_TEAM) && (caster->team_id == target->team_id);
-    bool same_party = target_party && caster_party && (target_party->party_id == caster_party->party_id);
+    if (target) {
+        target_party = GetObservablePartyById(target->party_id);
+    }
 
     // notify caster & caster_party of interrupt
     //
@@ -700,20 +797,28 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, Ta
     // we don't count that as "stopped/cancelled"
     if (stage == ActionStage::Interrupted) {
         if (caster) {
-            if (action->was_stopped) caster->stats.cancelled_count -= 1;
+            if (action->was_stopped) {
+                caster->stats.cancelled_count -= 1;
+            }
             caster->stats.interrupted_count += 1;
         }
         if (caster_party) {
-            if (action->was_stopped) caster_party->stats.cancelled_count -= 1;
+            if (action->was_stopped) {
+                caster_party->stats.cancelled_count -= 1;
+            }
             caster_party->stats.interrupted_count += 1;
         }
         if (action->is_skill) {
             if (caster) {
-                if (action->was_stopped) caster->stats.cancelled_skills_count -= 1;
+                if (action->was_stopped) {
+                    caster->stats.cancelled_skills_count -= 1;
+                }
                 caster->stats.interrupted_skills_count += 1;
             }
             if (caster_party) {
-                if (action->was_stopped) caster_party->stats.cancelled_skills_count -= 1;
+                if (action->was_stopped) {
+                    caster_party->stats.cancelled_skills_count -= 1;
+                }
                 caster_party->stats.interrupted_skills_count += 1;
             }
         }
@@ -721,11 +826,19 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, Ta
 
     // notify & caster_party caster of cancel
     if (stage == ActionStage::Stopped) {
-        if (caster) caster->stats.cancelled_count += 1;
-        if (caster_party) caster_party->stats.cancelled_count += 1;
+        if (caster) {
+            caster->stats.cancelled_count += 1;
+        }
+        if (caster_party) {
+            caster_party->stats.cancelled_count += 1;
+        }
         if (action->is_skill) {
-            if (caster) caster->stats.cancelled_skills_count += 1;
-            if (caster_party) caster_party->stats.cancelled_skills_count += 1;
+            if (caster) {
+                caster->stats.cancelled_skills_count += 1;
+            }
+            if (caster_party) {
+                caster_party->stats.cancelled_skills_count += 1;
+            }
         }
     }
 
@@ -734,32 +847,43 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, Ta
         // update the caster
         if (caster) {
             caster->stats.total_attacks_dealt.Reduce(action, stage);
-            if (target) caster->stats.LazyGetAttacksDealedAgainst(target->agent_id).Reduce(action, stage);
+            if (target) {
+                caster->stats.LazyGetAttacksDealedAgainst(target->agent_id).Reduce(action, stage);
+            }
             // if the target belonged to a party, the caster just attacked that other party
-            if (target_party) caster->stats.total_attacks_dealt_to_other_parties.Reduce(action, stage);
-
+            if (target_party) {
+                caster->stats.total_attacks_dealt_to_other_parties.Reduce(action, stage);
+            }
         }
 
         // update the casters party
         if (caster_party) {
             caster_party->stats.total_attacks_dealt.Reduce(action, stage);
             // if the target belonged to a party, the casters party just attacked that other party
-            if (target_party) caster_party->stats.total_attacks_dealt_to_other_parties.Reduce(action, stage);
+            if (target_party) {
+                caster_party->stats.total_attacks_dealt_to_other_parties.Reduce(action, stage);
+            }
         }
 
         // update the target
         if (target) {
             target->stats.total_attacks_received.Reduce(action, stage);
-            if (caster) target->stats.LazyGetAttacksReceivedFrom(caster->agent_id).Reduce(action, stage);
+            if (caster) {
+                target->stats.LazyGetAttacksReceivedFrom(caster->agent_id).Reduce(action, stage);
+            }
             // if the caster belonged to a party, the target was just attacked by that other party
-            if (caster_party) target->stats.total_attacks_received_from_other_parties.Reduce(action, stage);
+            if (caster_party) {
+                target->stats.total_attacks_received_from_other_parties.Reduce(action, stage);
+            }
         }
 
         // update the targets party
         if (target_party) {
             target_party->stats.total_attacks_received.Reduce(action, stage);
             // if the caster belonged to a party, the target_party was just attacked by that other party
-            if (caster_party) target_party->stats.total_attacks_received_from_other_parties.Reduce(action, stage);
+            if (caster_party) {
+                target_party->stats.total_attacks_received_from_other_parties.Reduce(action, stage);
+            }
         }
     }
 
@@ -776,14 +900,14 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, Ta
         // includes a caster and no target.
         // here we effectively set the
         // target to the caster.
-        uint32_t target_type = skill->gw_skill.target;
+        const uint32_t target_type = skill->gw_skill.target;
         switch (target_type) {
-            case (uint32_t) TargetType::no_target: {
+            case static_cast<uint32_t>(TargetType::no_target): {
                 // don't provide a target
                 // e.g. flash enchantments, stances, whirlwind
                 break;
             }
-            case (uint32_t) TargetType::anyone: {
+            case static_cast<uint32_t>(TargetType::anyone): {
                 // Ensure we interpret the target correctly
                 // e.g. Mirror of Ice, Stone Sheath
                 if (action->target_id == NO_AGENT) {
@@ -792,7 +916,7 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, Ta
                 }
                 break;
             }
-            case (uint32_t) TargetType::ally: {
+            case static_cast<uint32_t>(TargetType::ally): {
                 // Ensure we interpret the target correctly
                 // e.g. Healing Burst
                 if (action->target_id == NO_AGENT) {
@@ -801,33 +925,45 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, Ta
                 }
                 break;
             }
-            case (uint32_t) TargetType::other_ally: {
+            case static_cast<uint32_t>(TargetType::other_ally): {
                 // should always have a target
                 break;
             }
-            case (uint32_t) TargetType::enemy: {
+            case static_cast<uint32_t>(TargetType::enemy): {
                 // should always have a target
                 break;
             }
         }
-        same_team = caster && target && (caster->team_id != NO_TEAM) && (caster->team_id == target->team_id);
-        same_party = target_party && caster_party && (target_party->party_id == caster_party->party_id);
+        const bool same_team = caster && target && caster->team_id != NO_TEAM && caster->team_id == target->team_id;
+        const bool same_party = target_party && caster_party && target_party->party_id == caster_party->party_id;
 
         // notify the skill
         skill->stats.total_usages.Reduce(action, stage);
         if (target) {
             // target usages
-            if (caster == target) skill->stats.total_self_usages.Reduce(action, stage);
-            else skill->stats.total_other_usages.Reduce(action, stage);
+            if (caster == target) {
+                skill->stats.total_self_usages.Reduce(action, stage);
+            }
+            else {
+                skill->stats.total_other_usages.Reduce(action, stage);
+            }
 
             // team usages
-            if (same_team) skill->stats.total_own_team_usages.Reduce(action, stage);
-            else skill->stats.total_other_team_usages.Reduce(action, stage);
+            if (same_team) {
+                skill->stats.total_own_team_usages.Reduce(action, stage);
+            }
+            else {
+                skill->stats.total_other_team_usages.Reduce(action, stage);
+            }
         }
         if (target_party) {
             // party usages
-            if (caster_party == target_party) skill->stats.total_own_party_usages.Reduce(action, stage);
-            else skill->stats.total_other_party_usages.Reduce(action, stage);
+            if (caster_party == target_party) {
+                skill->stats.total_own_party_usages.Reduce(action, stage);
+            }
+            else {
+                skill->stats.total_other_party_usages.Reduce(action, stage);
+            }
         }
 
         // notify the caster
@@ -842,17 +978,25 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, Ta
 
                 // team:
                 // same team
-                if (same_team) caster->stats.total_skills_used_on_own_team.Reduce(action, stage);
+                if (same_team) {
+                    caster->stats.total_skills_used_on_own_team.Reduce(action, stage);
+                }
                 // diff team
-                else caster->stats.total_skills_used_on_other_teams.Reduce(action, stage);
+                else {
+                    caster->stats.total_skills_used_on_other_teams.Reduce(action, stage);
+                }
             }
 
             // party:
             if (target_party) {
                 // same party
-                if (same_party) caster->stats.total_skills_used_on_own_party.Reduce(action, stage);
+                if (same_party) {
+                    caster->stats.total_skills_used_on_own_party.Reduce(action, stage);
+                }
                 // diff party
-                else caster->stats.total_skills_used_on_other_parties.Reduce(action, stage);
+                else {
+                    caster->stats.total_skills_used_on_other_parties.Reduce(action, stage);
+                }
             }
         }
 
@@ -862,16 +1006,24 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, Ta
 
             // team
             // same team
-            if (same_team) caster_party->stats.total_skills_used_on_own_team.Reduce(action, stage);
+            if (same_team) {
+                caster_party->stats.total_skills_used_on_own_team.Reduce(action, stage);
+            }
             // diff team
-            else caster_party->stats.total_skills_used_on_other_teams.Reduce(action, stage);
+            else {
+                caster_party->stats.total_skills_used_on_other_teams.Reduce(action, stage);
+            }
 
             // party:
             if (target_party) {
                 // same party
-                if (same_party) caster_party->stats.total_skills_used_on_own_party.Reduce(action, stage);
+                if (same_party) {
+                    caster_party->stats.total_skills_used_on_own_party.Reduce(action, stage);
+                }
                 // diff party
-                else caster_party->stats.total_skills_used_on_other_parties.Reduce(action, stage);
+                else {
+                    caster_party->stats.total_skills_used_on_other_parties.Reduce(action, stage);
+                }
             }
         }
 
@@ -886,17 +1038,25 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, Ta
 
                 // team
                 // same team
-                if (same_team) target->stats.total_skills_received_from_own_team.Reduce(action, stage);
+                if (same_team) {
+                    target->stats.total_skills_received_from_own_team.Reduce(action, stage);
+                }
                 // diff team
-                else target->stats.total_skills_received_from_other_teams.Reduce(action, stage);
+                else {
+                    target->stats.total_skills_received_from_other_teams.Reduce(action, stage);
+                }
             }
 
             // party:
             if (caster_party) {
                 // same party
-                if (same_party) target->stats.total_skills_received_from_own_party.Reduce(action, stage);
+                if (same_party) {
+                    target->stats.total_skills_received_from_own_party.Reduce(action, stage);
+                }
                 // diff party
-                else target->stats.total_skills_received_from_other_parties.Reduce(action, stage);
+                else {
+                    target->stats.total_skills_received_from_other_parties.Reduce(action, stage);
+                }
             }
         }
 
@@ -906,16 +1066,24 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, Ta
 
             // team:
             // same team
-            if (same_team) target_party->stats.total_skills_received_from_own_team.Reduce(action, stage);
+            if (same_team) {
+                target_party->stats.total_skills_received_from_own_team.Reduce(action, stage);
+            }
             // diff team
-            else target_party->stats.total_skills_received_from_other_teams.Reduce(action, stage);
+            else {
+                target_party->stats.total_skills_received_from_other_teams.Reduce(action, stage);
+            }
 
             // party:
             if (caster_party) {
                 // same party
-                if (same_party) target_party->stats.total_skills_received_from_own_party.Reduce(action, stage);
+                if (same_party) {
+                    target_party->stats.total_skills_received_from_own_party.Reduce(action, stage);
+                }
                 // diff party
-                else target_party->stats.total_skills_received_from_other_parties.Reduce(action, stage);
+                else {
+                    target_party->stats.total_skills_received_from_other_parties.Reduce(action, stage);
+                }
             }
         }
     }
@@ -925,7 +1093,8 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, ActionStage stage, Ta
 
 
 // Module: Reset the Modules state
-void ObserverModule::Reset() {
+void ObserverModule::Reset()
+{
     if (map) {
         delete map;
         map = nullptr;
@@ -933,51 +1102,78 @@ void ObserverModule::Reset() {
 
     // clear guild info
     observable_guild_ids.clear();
-    for (const auto& [_, guild] : observable_guilds) if (guild) delete guild;
+    for (const auto& [_, guild] : observable_guilds) {
+        if (guild) {
+            delete guild;
+        }
+    }
     observable_guilds.clear();
 
     // clear skill info
     observable_skill_ids.clear();
-    for (const auto& [_, skill] : observable_skills) if (skill) delete skill;
+    for (const auto& [_, skill] : observable_skills) {
+        if (skill) {
+            delete skill;
+        }
+    }
     observable_skills.clear();
 
     // clear agent info
     observable_agent_ids.clear();
-    for (const auto& [_, agent] : observable_agents) if (agent) delete agent;
+    for (const auto& [_, agent] : observable_agents) {
+        if (agent) {
+            delete agent;
+        }
+    }
     observable_agents.clear();
 
     // clear party info
     observable_party_ids.clear();
-    for (const auto& [_, party] : observable_parties) if (party) delete party;
+    for (const auto& [_, party] : observable_parties) {
+        if (party) {
+            delete party;
+        }
+    }
     observable_parties.clear();
 }
 
 
 // Load all known ObservableAgent's on the current map
 // Returns false if failed to initialise. True if successful
-bool ObserverModule::InitializeObserverSession() {
-    if (observer_session_initialized)
+bool ObserverModule::InitializeObserverSession()
+{
+    if (observer_session_initialized) {
         return true;
+    }
     // load area
-    GW::AreaInfo* map_info = GW::Map::GetCurrentMapInfo();
-    if (!map_info) return false;
+    const GW::AreaInfo* map_info = GW::Map::GetCurrentMapInfo();
+    if (!map_info) {
+        return false;
+    }
 
     // load parties
-    if (!SynchroniseParties()) return false;
+    if (!SynchroniseParties()) {
+        return false;
+    }
 
     // load all other agents
     const GW::AgentArray* agents = GW::Agents::GetAgentArray();
-    if (!agents) return false;
+    if (!agents) {
+        return false;
+    }
 
-    for (GW::Agent* agent : *agents) {
+    for (const GW::Agent* agent : *agents) {
         // not found (maybe hasn't loaded in yet)?
-        if (!agent) continue;
+        if (!agent) {
+            continue;
+        }
         // trigger lazy load
         GetObservableAgentById(agent->agent_id);
     }
 
     // initialise the map
-    if (map) delete map;
+
+    delete map;
     map = new ObservableMap(*map_info);
 
     match_finished = false;
@@ -993,20 +1189,29 @@ bool ObserverModule::InitializeObserverSession() {
 
 
 // Synchronise known parties in the area
-bool ObserverModule::SynchroniseParties() {
+bool ObserverModule::SynchroniseParties()
+{
     GW::PartyContext* party_ctx = GW::GetGameContext()->party;
-    if (!party_ctx) return false;
+    if (!party_ctx) {
+        return false;
+    }
 
     GW::Array<GW::PartyInfo*>& parties = party_ctx->parties;
-    if (!parties.valid()) return false;
+    if (!parties.valid()) {
+        return false;
+    }
 
     for (const GW::PartyInfo* party_info : parties) {
-        if (!party_info) continue;
+        if (!party_info) {
+            continue;
+        }
         // load and synchronize the party
-        ObserverModule::ObservableParty* observable_party = GetObservablePartyByPartyInfo(*party_info);
+        ObservableParty* observable_party = GetObservablePartyByPartyInfo(*party_info);
         if (observable_party) {
-            bool party_synchronised = observable_party->SynchroniseParty();
-            if (!party_synchronised) return false;
+            const bool party_synchronised = observable_party->SynchroniseParty();
+            if (!party_synchronised) {
+                return false;
+            }
         }
     }
 
@@ -1016,26 +1221,28 @@ bool ObserverModule::SynchroniseParties() {
 
 
 // Load settings
-void ObserverModule::LoadSettings(ToolboxIni* ini) {
+void ObserverModule::LoadSettings(ToolboxIni* ini)
+{
     ToolboxModule::LoadSettings(ini);
-    is_enabled                  = ini->GetBoolValue(Name(), VAR_NAME(is_enabled), true);
-    trim_hench_names            = ini->GetBoolValue(Name(), VAR_NAME(trim_hench_names), false);
-    enable_in_explorable_areas  = ini->GetBoolValue(Name(), VAR_NAME(enable_in_explorable_areas), false);
+    LOAD_BOOL(is_enabled);
+    LOAD_BOOL(trim_hench_names);
+    LOAD_BOOL(enable_in_explorable_areas);
 }
 
 
 // Save settings
-void ObserverModule::SaveSettings(ToolboxIni* ini) {
+void ObserverModule::SaveSettings(ToolboxIni* ini)
+{
     ToolboxModule::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(is_enabled), is_enabled);
-    ini->SetBoolValue(Name(), VAR_NAME(trim_hench_names), trim_hench_names);
-    ini->SetBoolValue(Name(), VAR_NAME(enable_in_explorable_areas), enable_in_explorable_areas);
-
+    SAVE_BOOL(is_enabled);
+    SAVE_BOOL(trim_hench_names);
+    SAVE_BOOL(enable_in_explorable_areas);
 }
 
 
 // Draw internal settings
-void ObserverModule::DrawSettingInternal() {
+void ObserverModule::DrawSettingsInternal()
+{
     ImGui::Text("Enable data collection in Observer Mode.");
     ImGui::Text("Disable if not using this feature to avoid using extra CPU and memory in Observer Mode.");
     ImGui::Checkbox("Enabled", &is_enabled);
@@ -1044,13 +1251,15 @@ void ObserverModule::DrawSettingInternal() {
 }
 
 
-void ObserverModule::Update(float delta) {
-    UNREFERENCED_PARAMETER(delta);
-    if (party_sync_timer == 0) return;
+void ObserverModule::Update(const float)
+{
+    if (party_sync_timer == 0) {
+        return;
+    }
     if (!IsActive()) {
         party_sync_timer = 0;
         return;
-    };
+    }
     if (TIMER_DIFF(party_sync_timer) > 1000) {
         SynchroniseParties();
         party_sync_timer = 0;
@@ -1058,73 +1267,94 @@ void ObserverModule::Update(float delta) {
 }
 
 // Lazy load an ObservableGuild using a guild_id
-ObserverModule::ObservableGuild* ObserverModule::GetObservableGuildById(const uint32_t guild_id) {
+ObserverModule::ObservableGuild* ObserverModule::GetObservableGuildById(const uint32_t guild_id)
+{
     // shortcircuit for agent_id = 0
-    if (guild_id == NO_GUILD) return nullptr;
+    if (guild_id == NO_GUILD) {
+        return nullptr;
+    }
 
     // lazy load
-    auto it = observable_guilds.find(guild_id);
+    const auto it = observable_guilds.find(guild_id);
 
     // found
-    if (it != observable_guilds.end()) return it->second;
+    if (it != observable_guilds.end()) {
+        return it->second;
+    }
 
     // create if active
-    if (!IsActive()) return nullptr;
-    GW::Guild* guild = GW::GuildMgr::GetGuildInfo(guild_id);
-    if (!guild) return nullptr;
+    if (!IsActive()) {
+        return nullptr;
+    }
+    const GW::Guild* guild = GW::GuildMgr::GetGuildInfo(guild_id);
+    if (!guild) {
+        return nullptr;
+    }
 
-    ObserverModule::ObservableGuild* observable_guild = CreateObservableGuild(*guild);
+    ObservableGuild* observable_guild = CreateObservableGuild(*guild);
     return observable_guild;
 }
 
 
 // Create an ObservableGuild from a GW::Guild and cache it
 // Do NOT call this if the Agent already exists, it will cause a memory leak
-ObserverModule::ObservableGuild* ObserverModule::CreateObservableGuild(const GW::Guild& guild) {
+ObserverModule::ObservableGuild* ObserverModule::CreateObservableGuild(const GW::Guild& guild)
+{
     // create
-    ObserverModule::ObservableGuild* observable_guild = new ObserverModule::ObservableGuild(*this, guild);
+    auto observable_guild = new ObservableGuild(*this, guild);
     // cache
-    observable_guilds.insert({ observable_guild->guild_id, observable_guild });
+    observable_guilds.insert({observable_guild->guild_id, observable_guild});
     observable_guild_ids.push_back(observable_guild->guild_id);
     std::ranges::sort(observable_guild_ids);
     return observable_guild;
 }
 
 
-
 // Lazy load an ObservableAgent using an agent_id
-ObserverModule::ObservableAgent* ObserverModule::GetObservableAgentById(const uint32_t agent_id) {
+ObserverModule::ObservableAgent* ObserverModule::GetObservableAgentById(const uint32_t agent_id)
+{
     // shortcircuit for agent_id = 0
-    if (agent_id == NO_AGENT) return nullptr;
+    if (agent_id == NO_AGENT) {
+        return nullptr;
+    }
 
     // lazy load
-    auto it = observable_agents.find(agent_id);
+    const auto it = observable_agents.find(agent_id);
 
     // found
-    if (it != observable_agents.end()) return it->second;
+    if (it != observable_agents.end()) {
+        return it->second;
+    }
 
     // create if active
-    if (!IsActive()) return nullptr;
+    if (!IsActive()) {
+        return nullptr;
+    }
     const GW::Agent* agent = GW::Agents::GetAgentByID(agent_id);
-    if (!agent) return nullptr;
+    if (!agent) {
+        return nullptr;
+    }
 
     const GW::AgentLiving* agent_living = agent->GetAsAgentLiving();
-    if (!agent_living) return nullptr;
+    if (!agent_living) {
+        return nullptr;
+    }
 
-    ObserverModule::ObservableAgent* observable_agent = CreateObservableAgent(*agent_living);
+    ObservableAgent* observable_agent = CreateObservableAgent(*agent_living);
     return observable_agent;
 }
 
 
 // Create an ObservableAgent from a GW::AgentLiving and cache it
 // Do NOT call this if the Agent already exists, it will cause a memory leak
-ObserverModule::ObservableAgent* ObserverModule::CreateObservableAgent(const GW::AgentLiving& agent_living) {
+ObserverModule::ObservableAgent* ObserverModule::CreateObservableAgent(const GW::AgentLiving& agent_living)
+{
     // create
     // ensure the guild is loaded...
-    GetObservableGuildById(static_cast<uint32_t>(agent_living.tags->guild_id));
-    ObserverModule::ObservableAgent* observable_agent = new ObserverModule::ObservableAgent(*this, agent_living);
+    GetObservableGuildById(agent_living.tags->guild_id);
+    auto observable_agent = new ObservableAgent(*this, agent_living);
     // cache
-    observable_agents.insert({ observable_agent->agent_id, observable_agent });
+    observable_agents.insert({observable_agent->agent_id, observable_agent});
     observable_agent_ids.push_back(observable_agent->agent_id);
     std::ranges::sort(observable_agent_ids);
     return observable_agent;
@@ -1132,33 +1362,42 @@ ObserverModule::ObservableAgent* ObserverModule::CreateObservableAgent(const GW:
 
 
 // Lazy load an ObservableSkill using a skill_id
-ObserverModule::ObservableSkill* ObserverModule::GetObservableSkillById(GW::Constants::SkillID skill_id) {
+ObserverModule::ObservableSkill* ObserverModule::GetObservableSkillById(const GW::Constants::SkillID skill_id)
+{
     // short circuit for skill_id = 0
-    if (skill_id == NO_SKILL) return nullptr;
+    if (skill_id == NO_SKILL) {
+        return nullptr;
+    }
 
     // find
-    auto it_existing = observable_skills.find(skill_id);
+    const auto it_existing = observable_skills.find(skill_id);
 
     // found
-    if (it_existing != observable_skills.end()) return it_existing->second;
+    if (it_existing != observable_skills.end()) {
+        return it_existing->second;
+    }
 
     // create if active
-    if (!IsActive()) return nullptr;
+    if (!IsActive()) {
+        return nullptr;
+    }
     const GW::Skill* gw_skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-    if (!gw_skill) return nullptr;
+    if (!gw_skill) {
+        return nullptr;
+    }
     ObservableSkill* skill = CreateObservableSkill(*gw_skill);
     return skill;
 }
 
 
-
 // Create an ObservableSkill from a GW::Skill and cache it
 // Do NOT call this is if the Skill already exists, It will cause a memory leak
-ObserverModule::ObservableSkill* ObserverModule::CreateObservableSkill(const GW::Skill& gw_skill) {
+ObserverModule::ObservableSkill* ObserverModule::CreateObservableSkill(const GW::Skill& gw_skill)
+{
     // create
-    ObservableSkill* observable_skill = new ObservableSkill(*this, gw_skill);
+    auto observable_skill = new ObservableSkill(*this, gw_skill);
     // cache
-    observable_skills.insert({ gw_skill.skill_id, observable_skill });
+    observable_skills.insert({gw_skill.skill_id, observable_skill});
     observable_skill_ids.push_back(observable_skill->skill_id);
     std::ranges::sort(observable_skill_ids);
     return observable_skill;
@@ -1166,43 +1405,63 @@ ObserverModule::ObservableSkill* ObserverModule::CreateObservableSkill(const GW:
 
 
 // Lazy load an ObservableParty using a PartyInfo
-ObserverModule::ObservableParty* ObserverModule::GetObservablePartyByPartyInfo(const GW::PartyInfo& party_info) {
+ObserverModule::ObservableParty* ObserverModule::GetObservablePartyByPartyInfo(const GW::PartyInfo& party_info)
+{
     // lazy load
-    auto it_observable_party = observable_parties.find(party_info.party_id);
+    const auto it_observable_party = observable_parties.find(party_info.party_id);
     // found
-    if (it_observable_party != observable_parties.end()) return it_observable_party->second;
+    if (it_observable_party != observable_parties.end()) {
+        return it_observable_party->second;
+    }
 
     // create if active
-    if (!IsActive()) return nullptr;
-    ObserverModule::ObservableParty* observable_party = this->CreateObservableParty(party_info);
+    if (!IsActive()) {
+        return nullptr;
+    }
+    ObservableParty* observable_party = this->CreateObservableParty(party_info);
     return observable_party;
 }
 
 
 // Lazy load an ObservableParty using a party_id
-ObserverModule::ObservableParty* ObserverModule::GetObservablePartyById(const uint32_t party_id) {
+ObserverModule::ObservableParty* ObserverModule::GetObservablePartyById(const uint32_t party_id)
+{
     // shortcircuit for party_id = 0
-    if (party_id == NO_PARTY) return nullptr;
+    if (party_id == NO_PARTY) {
+        return nullptr;
+    }
 
     // try to find
     const auto it_party = observable_parties.find(party_id);
 
     // found
-    if (it_party != observable_parties.end()) return it_party->second;
+    if (it_party != observable_parties.end()) {
+        return it_party->second;
+    }
 
     // create if active
-    if (!IsActive()) return nullptr;
+    if (!IsActive()) {
+        return nullptr;
+    }
     const GW::PartyContext* party_ctx = GW::GetGameContext()->party;
-    if (!party_ctx) return nullptr;
+    if (!party_ctx) {
+        return nullptr;
+    }
 
     // get all parties
     const GW::Array<GW::PartyInfo*>& parties = party_ctx->parties;
-    if (!parties.valid()) return nullptr;
+    if (!parties.valid()) {
+        return nullptr;
+    }
 
     // check index
-    if (party_id >= parties.size()) return nullptr;
-    GW::PartyInfo* party_info = parties[party_id];
-    if (!party_info) return nullptr;
+    if (party_id >= parties.size()) {
+        return nullptr;
+    }
+    const GW::PartyInfo* party_info = parties[party_id];
+    if (!party_info) {
+        return nullptr;
+    }
 
     // create
     ObservableParty* observable_party = CreateObservableParty(*party_info);
@@ -1213,21 +1472,24 @@ ObserverModule::ObservableParty* ObserverModule::GetObservablePartyById(const ui
 
 // Create an ObservableParty and cache it
 // Do NOT call this if the party already exists, will cause memory leak
-ObserverModule::ObservableParty* ObserverModule::CreateObservableParty(const GW::PartyInfo& party_info) {
+ObserverModule::ObservableParty* ObserverModule::CreateObservableParty(const GW::PartyInfo& party_info)
+{
     // create
-    ObservableParty* observable_party = new ObservableParty(*this, party_info);
+    auto observable_party = new ObservableParty(*this, party_info);
     // cache
-    observable_parties.insert({ observable_party->party_id, observable_party });
+    observable_parties.insert({observable_party->party_id, observable_party});
     observable_party_ids.push_back(observable_party->party_id);
     std::ranges::sort(observable_party_ids);
     return observable_party;
 }
 
 
-
 // change state based on an actions stage
-void ObserverModule::ObservedAction::Reduce(const TargetAction* action, const ActionStage stage) {
-    if (!action) return;
+void ObserverModule::ObservedAction::Reduce(const TargetAction* action, const ActionStage stage)
+{
+    if (!action) {
+        return;
+    }
 
     switch (stage) {
         case ActionStage::Instant:
@@ -1250,7 +1512,9 @@ void ObserverModule::ObservedAction::Reduce(const TargetAction* action, const Ac
             // nothing to do if the action was already finished
             if (!action->was_finished) {
                 // were we prepended by a fake "cancelled" packet?
-                if (action->was_stopped) stopped -= 1;
+                if (action->was_stopped) {
+                    stopped -= 1;
+                }
                 interrupted += 1;
             }
             break;
@@ -1265,10 +1529,11 @@ void ObserverModule::ObservedAction::Reduce(const TargetAction* action, const Ac
 
 
 // fired when the Agent dies
-void ObserverModule::SharedStats::HandleDeath() {
+void ObserverModule::SharedStats::HandleDeath()
+{
     deaths += 1;
     // recalculate kdr
-    kdr_pc = (float) kills / deaths;
+    kdr_pc = static_cast<float>(kills) / deaths;
     // get kdr string
     std::stringstream str;
     str << std::fixed << std::setprecision(2) << kdr_pc;
@@ -1277,13 +1542,16 @@ void ObserverModule::SharedStats::HandleDeath() {
 
 
 // fired when the agent scores a kill
-void ObserverModule::SharedStats::HandleKill() {
+void ObserverModule::SharedStats::HandleKill()
+{
     kills += 1;
     // recalculate kdr
-    if (deaths < 1)
+    if (deaths < 1) {
         kdr_pc = static_cast<float>(kills);
-    else
+    }
+    else {
         kdr_pc = static_cast<float>(kills) / deaths;
+    }
     // get kdr string
     std::stringstream str;
     str << std::fixed << std::setprecision(2) << kdr_pc;
@@ -1291,39 +1559,68 @@ void ObserverModule::SharedStats::HandleKill() {
 }
 
 
-ObserverModule::ObservableAgentStats::~ObservableAgentStats() {
+ObserverModule::ObservableAgentStats::~ObservableAgentStats()
+{
     // attacks received (by agent)
-    for (const auto& [_, o_atk] : attacks_received_from_agents) if (o_atk) delete o_atk;
+    for (const auto& [_, o_atk] : attacks_received_from_agents) {
+        if (o_atk) {
+            delete o_atk;
+        }
+    }
     attacks_received_from_agents.clear();
 
     // attacks dealed (by agent)
-    for (const auto& [_, o_atk] : attacks_dealt_to_agents) if (o_atk) delete o_atk;
+    for (const auto& [_, o_atk] : attacks_dealt_to_agents) {
+        if (o_atk) {
+            delete o_atk;
+        }
+    }
     attacks_dealt_to_agents.clear();
 
     // skills used
     skill_ids_used.clear();
-    for (const auto& [_, o_skill] : skills_used) if (o_skill) delete o_skill;
+    for (const auto& [_, o_skill] : skills_used) {
+        if (o_skill) {
+            delete o_skill;
+        }
+    }
     skills_used.clear();
 
     // skills received
     skill_ids_received.clear();
-    for (const auto& [_, o_skill] : skills_received) if (o_skill) delete o_skill;
+    for (const auto& [_, o_skill] : skills_received) {
+        if (o_skill) {
+            delete o_skill;
+        }
+    }
     skills_received.clear();
 
     // skill received (by agent)
-    for (auto& [_, skill_ids] : skill_ids_received_from_agents) skill_ids.clear();
+    for (auto& [_, skill_ids] : skill_ids_received_from_agents) {
+        skill_ids.clear();
+    }
     skill_ids_received_from_agents.clear();
     for (auto& [_, agent_skills] : skills_received_from_agents) {
-        for (const auto [__, o_skill] : agent_skills) if (o_skill) delete o_skill;
+        for (const auto [__, o_skill] : agent_skills) {
+            if (o_skill) {
+                delete o_skill;
+            }
+        }
         agent_skills.clear();
     }
     skills_received_from_agents.clear();
 
     // skill used (by agent)
-    for (auto& [_, skill_ids] : skill_ids_used_on_agents) skill_ids.clear();
+    for (auto& [_, skill_ids] : skill_ids_used_on_agents) {
+        skill_ids.clear();
+    }
     skill_ids_used_on_agents.clear();
     for (auto& [_, agent_skills] : skills_used_on_agents) {
-        for (const auto [__, o_skill] : agent_skills) if (o_skill) delete o_skill;
+        for (const auto [__, o_skill] : agent_skills) {
+            if (o_skill) {
+                delete o_skill;
+            }
+        }
         agent_skills.clear();
     }
     skills_used_on_agents.clear();
@@ -1332,173 +1629,179 @@ ObserverModule::ObservableAgentStats::~ObservableAgentStats() {
 
 // Get attacks dealed against this agent, by a caster_agent_id
 // Lazy initialises the caster_agent_id
-ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetAttacksDealedAgainst(const uint32_t target_agent_id) {
-    auto it = attacks_dealt_to_agents.find(target_agent_id);
+ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetAttacksDealedAgainst(const uint32_t target_agent_id)
+{
+    const auto it = attacks_dealt_to_agents.find(target_agent_id);
     if (it == attacks_dealt_to_agents.end()) {
         // receiver not registered
-        ObservedAction* observed_action = new ObservedAction();
+        auto observed_action = new ObservedAction();
         attacks_dealt_to_agents.insert({target_agent_id, observed_action});
         return *observed_action;
-    } else {
-        // receiver is already reigstered
-        return *it->second;
     }
+    // receiver is already reigstered
+    return *it->second;
 }
 
 
 // Get attacks dealed against this agent, by a caster_agent_id
 // Lazy initialises the caster_agent_id
-ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetAttacksReceivedFrom(const uint32_t caster_agent_id) {
-    auto it = attacks_received_from_agents.find(caster_agent_id);
+ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetAttacksReceivedFrom(const uint32_t caster_agent_id)
+{
+    const auto it = attacks_received_from_agents.find(caster_agent_id);
     if (it == attacks_received_from_agents.end()) {
         // attacker not registered
-        ObservedAction* observed_action = new ObservedAction();
+        auto observed_action = new ObservedAction();
         attacks_received_from_agents.insert({caster_agent_id, observed_action});
         return *observed_action;
-    } else {
-        // attacker is already reigstered
-        return *it->second;
     }
+    // attacker is already reigstered
+    return *it->second;
 }
 
 
 // Get skills used by this agent
 // Lazy initialises the skill_id
-ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSkillUsed(const GW::Constants::SkillID skill_id) {
-    auto it_skill = skills_used.find(skill_id);
+ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSkillUsed(const GW::Constants::SkillID skill_id)
+{
+    const auto it_skill = skills_used.find(skill_id);
     if (it_skill == skills_used.end()) {
         // skill not registered
         skill_ids_used.push_back(skill_id);
         // re-sort skills
         std::ranges::sort(skill_ids_used);
-        ObservedSkill* observed_skill = new ObservedSkill(skill_id);
+        auto observed_skill = new ObservedSkill(skill_id);
         skills_used.insert({skill_id, observed_skill});
         return *observed_skill;
-    } else {
-        // skill already registered
-        return *it_skill->second;
     }
+    // skill already registered
+    return *it_skill->second;
 }
 
 
 // Get skills used received by this agent
 // Lazy initialises the skill_id
-ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSkillReceived(const GW::Constants::SkillID skill_id) {
-    auto it_skill = skills_received.find(skill_id);
+ObserverModule::ObservedAction& ObserverModule::ObservableAgentStats::LazyGetSkillReceived(const GW::Constants::SkillID skill_id)
+{
+    const auto it_skill = skills_received.find(skill_id);
     if (it_skill == skills_received.end()) {
         // skill not registered
         skill_ids_received.push_back(skill_id);
         // re-sort skills
         std::ranges::sort(skill_ids_received);
-        ObservedSkill* observed_skill = new ObservedSkill(skill_id);
+        auto observed_skill = new ObservedSkill(skill_id);
         skills_received.insert({skill_id, observed_skill});
         return *observed_skill;
-    } else {
-        // skill already registered
-        return *it_skill->second;
     }
+    // skill already registered
+    return *it_skill->second;
 }
-
 
 
 // Get a skill received by this agent, from another agent
 // Lazy initialises the skill_id and caster_agent_id
-ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkillReceivedFrom(const uint32_t caster_agent_id, const GW::Constants::SkillID skill_id) {
-    auto it_caster = skills_received_from_agents.find(caster_agent_id);
+ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkillReceivedFrom(const uint32_t caster_agent_id, const GW::Constants::SkillID skill_id)
+{
+    const auto it_caster = skills_received_from_agents.find(caster_agent_id);
     if (it_caster == skills_received_from_agents.end()) {
         // receiver and his skills are not registered with this agent
-        std::vector<GW::Constants::SkillID> received_skill_ids = {skill_id};
-        skill_ids_received_from_agents.insert({ caster_agent_id, received_skill_ids });
-        ObservedSkill* observed_skill = new ObservedSkill(skill_id);
+        std::vector received_skill_ids = {skill_id};
+        skill_ids_received_from_agents.insert({caster_agent_id, received_skill_ids});
+        auto observed_skill = new ObservedSkill(skill_id);
         std::unordered_map<GW::Constants::SkillID, ObservedSkill*> received_skills = {{skill_id, observed_skill}};
         skills_received_from_agents.insert({caster_agent_id, received_skills});
         return *observed_skill;
-    } else {
-        // receiver is registered with this agent
-        std::unordered_map<GW::Constants::SkillID, ObservedSkill*>& used_by_caster = it_caster->second;
-        auto it_observed_skill = used_by_caster.find(skill_id);
-        // does receiver have the skill registered from/against us?
-        if (it_observed_skill == used_by_caster.end()) {
-            // caster hasn't registered this skill with this agent
-            // add & re-sort skill_ids by the caster
-            std::vector<GW::Constants::SkillID>& skills_ids_received_by_agent_vec = skill_ids_received_from_agents.find(caster_agent_id)->second;
-            skills_ids_received_by_agent_vec.push_back(skill_id);
-            // re-sort
-            std::ranges::sort(skills_ids_received_by_agent_vec);
-            // add the observed skill for the caster
-            ObservedSkill* observed_skill = new ObservedSkill(skill_id);
-            used_by_caster.insert({skill_id, observed_skill});
-            return *observed_skill;
-        } else {
-            // receivers already registered this skill
-            return *(it_observed_skill->second);
-        }
     }
+    // receiver is registered with this agent
+    std::unordered_map<GW::Constants::SkillID, ObservedSkill*>& used_by_caster = it_caster->second;
+    const auto it_observed_skill = used_by_caster.find(skill_id);
+    // does receiver have the skill registered from/against us?
+    if (it_observed_skill == used_by_caster.end()) {
+        // caster hasn't registered this skill with this agent
+        // add & re-sort skill_ids by the caster
+        std::vector<GW::Constants::SkillID>& skills_ids_received_by_agent_vec = skill_ids_received_from_agents.find(caster_agent_id)->second;
+        skills_ids_received_by_agent_vec.push_back(skill_id);
+        // re-sort
+        std::ranges::sort(skills_ids_received_by_agent_vec);
+        // add the observed skill for the caster
+        auto observed_skill = new ObservedSkill(skill_id);
+        used_by_caster.insert({skill_id, observed_skill});
+        return *observed_skill;
+    }
+    // receivers already registered this skill
+    return *it_observed_skill->second;
 }
 
 
 // Get a skill received by this agent, from another agent
 // Lazy initialises the skill_id and caster_agent_id
-ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkillUsedOn(const uint32_t target_agent_id, const GW::Constants::SkillID skill_id) {
-    auto it_target = skills_used_on_agents.find(target_agent_id);
+ObserverModule::ObservedSkill& ObserverModule::ObservableAgentStats::LazyGetSkillUsedOn(const uint32_t target_agent_id, const GW::Constants::SkillID skill_id)
+{
+    const auto it_target = skills_used_on_agents.find(target_agent_id);
     if (it_target == skills_used_on_agents.end()) {
         // receiver and his skills are not registered with this agent
-        std::vector<GW::Constants::SkillID> used_skill_ids = {skill_id};
-        skill_ids_used_on_agents.insert({ target_agent_id, used_skill_ids });
-        ObservedSkill* observed_skill = new ObservedSkill(skill_id);
+        std::vector used_skill_ids = {skill_id};
+        skill_ids_used_on_agents.insert({target_agent_id, used_skill_ids});
+        auto observed_skill = new ObservedSkill(skill_id);
         std::unordered_map<GW::Constants::SkillID, ObservedSkill*> used_skills = {{skill_id, observed_skill}};
         skills_used_on_agents.insert({target_agent_id, used_skills});
         return *observed_skill;
-    } else {
-        std::unordered_map<GW::Constants::SkillID, ObservedSkill*>& used_on_target = it_target->second;
-        // receiver is registered with this agent
-        auto it_observed_skill = used_on_target.find(skill_id);
-        // does receiver have the skill registered from/against us?
-        if (it_observed_skill == used_on_target.end()) {
-            // target hasn't registered this skill with this agent
-            // add & re-sort skill_ids by the caster
-            std::vector<GW::Constants::SkillID>& skills_ids_used_on_agent_vec = skill_ids_used_on_agents.find(target_agent_id)->second;
-            skills_ids_used_on_agent_vec.push_back(skill_id);
-            // re-sort
-            std::ranges::sort(skills_ids_used_on_agent_vec);
-            // add the observed skill for the caster
-            ObservedSkill* observed_skill = new ObservedSkill(skill_id);
-            used_on_target.insert({skill_id, observed_skill});
-            return *observed_skill;
-        } else {
-            // receivers already registered this skill
-            return *(it_observed_skill->second);
-        }
     }
+    std::unordered_map<GW::Constants::SkillID, ObservedSkill*>& used_on_target = it_target->second;
+    // receiver is registered with this agent
+    const auto it_observed_skill = used_on_target.find(skill_id);
+    // does receiver have the skill registered from/against us?
+    if (it_observed_skill == used_on_target.end()) {
+        // target hasn't registered this skill with this agent
+        // add & re-sort skill_ids by the caster
+        std::vector<GW::Constants::SkillID>& skills_ids_used_on_agent_vec = skill_ids_used_on_agents.find(target_agent_id)->second;
+        skills_ids_used_on_agent_vec.push_back(skill_id);
+        // re-sort
+        std::ranges::sort(skills_ids_used_on_agent_vec);
+        // add the observed skill for the caster
+        auto observed_skill = new ObservedSkill(skill_id);
+        used_on_target.insert({skill_id, observed_skill});
+        return *observed_skill;
+    }
+    // receivers already registered this skill
+    return *it_observed_skill->second;
 }
 
 
 // Constructor
 ObserverModule::ObservableParty::ObservableParty(ObserverModule& parent, const GW::PartyInfo& info)
-    : parent(parent)
-    , party_id(info.party_id) {}
-
+    : party_id(info.party_id)
+    , parent(parent) {}
 
 
 // Destructor
-ObserverModule::ObservableParty::~ObservableParty() {
+ObserverModule::ObservableParty::~ObservableParty()
+{
     agent_ids.clear();
 }
 
 
 // Synchronise the ObservableParty with its agents/members
 // Does not load Party Allies (others) (Pets, Guild Lord, Bodyguard, ...)
-bool ObserverModule::ObservableParty::SynchroniseParty() {
+bool ObserverModule::ObservableParty::SynchroniseParty()
+{
     GW::PartyContext* party_ctx = GW::GetPartyContext();
     GW::PlayerArray* players = party_ctx ? GW::Agents::GetPlayerArray() : nullptr;
-    if (!players) return false;
+    if (!players) {
+        return false;
+    }
 
     const GW::Array<GW::PartyInfo*>& parties = party_ctx->parties;
-    if (!parties.valid()) return false;
+    if (!parties.valid()) {
+        return false;
+    }
 
     const GW::PartyInfo* party_info = party_ctx->parties[party_id];
-    if (!party_info) return false;
-    if (!party_info->players.valid()) return false;
+    if (!party_info) {
+        return false;
+    }
+    if (!party_info->players.valid()) {
+        return false;
+    }
 
     // load party members:
     // 1. players
@@ -1508,12 +1811,13 @@ bool ObserverModule::ObservableParty::SynchroniseParty() {
     size_t party_index = 0;
 
     // ensure agent_ids size
-    size_t party_size = party_info->players.size() + party_info->heroes.size() + party_info->henchmen.size();
+    const size_t party_size = party_info->players.size() + party_info->heroes.size() + party_info->henchmen.size();
     if (party_size > agent_ids.size()) {
         // agent_ids is too small
         // add empty agent_ids
         agent_ids.resize(party_size, NO_AGENT);
-    } else if (party_size < agent_ids.size()) {
+    }
+    else if (party_size < agent_ids.size()) {
         // agent_ids is too large
         // clear stale agent_ids
         for (size_t i = party_size; i < agent_ids.size(); i += 1) {
@@ -1562,7 +1866,7 @@ bool ObserverModule::ObservableParty::SynchroniseParty() {
                     // just leave the previous entry in our party
                     if (agent_ids[party_index] != hero.agent_id) {
                         // clear old party member
-                        ObserverModule::ObservableAgent* observable_hero_prev = parent.GetObservableAgentById(agent_ids[party_index]);
+                        ObservableAgent* observable_hero_prev = parent.GetObservableAgentById(agent_ids[party_index]);
                         if (observable_hero_prev) {
                             observable_hero_prev->party_id = NO_PARTY;
                             observable_hero_prev->party_index = 0;
@@ -1570,7 +1874,7 @@ bool ObserverModule::ObservableParty::SynchroniseParty() {
                     }
                     // add new party member
                     agent_ids[party_index] = hero.agent_id;
-                    ObserverModule::ObservableAgent* observable_hero = parent.GetObservableAgentById(hero.agent_id);
+                    ObservableAgent* observable_hero = parent.GetObservableAgentById(hero.agent_id);
                     if (observable_hero) {
                         // notify the hero of their party & position
                         observable_hero->party_id = party_id;
@@ -1588,7 +1892,7 @@ bool ObserverModule::ObservableParty::SynchroniseParty() {
             // just leave the previous entry in our party
             if (agent_ids[party_index] != hench.agent_id) {
                 // clear old party member
-                ObserverModule::ObservableAgent* observable_hench_prev = parent.GetObservableAgentById(agent_ids[party_index]);
+                ObservableAgent* observable_hench_prev = parent.GetObservableAgentById(agent_ids[party_index]);
                 if (observable_hench_prev) {
                     observable_hench_prev->party_id = NO_PARTY;
                     observable_hench_prev->party_index = 0;
@@ -1596,7 +1900,7 @@ bool ObserverModule::ObservableParty::SynchroniseParty() {
             }
             // add new party member
             agent_ids[party_index] = hench.agent_id;
-            ObserverModule::ObservableAgent* observable_hench = parent.GetObservableAgentById(hench.agent_id);
+            ObservableAgent* observable_hench = parent.GetObservableAgentById(hench.agent_id);
             if (observable_hench) {
                 // notify the henchman of their party & position
                 observable_hench->party_id = party_id;
@@ -1619,15 +1923,16 @@ bool ObserverModule::ObservableParty::SynchroniseParty() {
     if (agent_ids.size() > 0) {
         ObservableAgent* agent0 = parent.GetObservableAgentById(agent_ids[0]);
         if (agent0) {
-            ObservableGuild* guild = parent.GetObservableGuildById(agent0->guild_id);
+            const ObservableGuild* guild = parent.GetObservableGuildById(agent0->guild_id);
             if (guild) {
                 guild_id = guild->guild_id;
                 name = guild->name;
                 rank = guild->rank;
-                rank_str = (guild->rank == NO_RANK) ? "N/A" : std::to_string(guild->rank);
+                rank_str = guild->rank == NO_RANK ? "N/A" : std::to_string(guild->rank);
                 rating = guild->rating;
                 display_name = guild->name + " [" + guild->tag + "]";
-            } else {
+            }
+            else {
                 name = agent0->SanitizedName() + "'s team";
                 display_name = agent0->SanitizedName() + "'s team";
             }
@@ -1646,18 +1951,24 @@ ObserverModule::ObservableSkill::ObservableSkill(ObserverModule& parent, const G
 {
     skill_id = _gw_skill.skill_id;
     // initialize the name asynchronously here
-    if (!name_enc[0] && GW::UI::UInt32ToEncStr(gw_skill.name, name_enc, 16))
+    if (!name_enc[0] && GW::UI::UInt32ToEncStr(gw_skill.name, name_enc, 16)) {
         GW::UI::AsyncDecodeStr(name_enc, name_dec, 256);
+    }
 }
 
 
 // Name of the skill
-const std::string ObserverModule::ObservableSkill::Name() {
+const std::string ObserverModule::ObservableSkill::Name()
+{
     // cached?
-    if (_name.length() > 0) return _name;
+    if (_name.length() > 0) {
+        return _name;
+    }
     std::string name = GuiUtils::WStringToString(DecName());
     // not ready to cache
-    if (name.length() == 0) return name;
+    if (name.length() == 0) {
+        return name;
+    }
     // ready to cache
     _name = name;
     return _name;
@@ -1665,8 +1976,10 @@ const std::string ObserverModule::ObservableSkill::Name() {
 
 
 // Name + skill_id of the Skill
-const std::string ObserverModule::ObservableSkill::DebugName() {
-    return std::string("(") + std::to_string((uint32_t)skill_id) + ") \"" + GuiUtils::WStringToString(DecName()) + "\"";
+std::string ObserverModule::ObservableSkill::DebugName()
+{
+    using namespace std::string_literals;
+    return "("s + std::to_string(static_cast<uint32_t>(skill_id)) + "s \"" + GuiUtils::WStringToString(DecName()) + "\"";
 }
 
 
@@ -1692,23 +2005,23 @@ ObserverModule::ObservableGuild::ObservableGuild(ObserverModule& parent, const G
 // Constructor
 ObserverModule::ObservableAgent::ObservableAgent(ObserverModule& parent, const GW::AgentLiving& agent_living)
     : parent(parent)
+    , agent_id(agent_living.agent_id)
+    , login_number(agent_living.login_number)
     , state(agent_living.model_state)
     , guild_id(static_cast<uint32_t>(agent_living.tags->guild_id))
-    , agent_id(agent_living.agent_id)
     , team_id(agent_living.team_id)
-    , primary((GW::Constants::Profession) agent_living.primary)
-    , secondary((GW::Constants::Profession) agent_living.secondary)
-    , is_npc(agent_living.IsNPC())
+    , primary(static_cast<GW::Constants::Profession>(agent_living.primary))
+    , secondary(static_cast<GW::Constants::Profession>(agent_living.secondary))
     , is_player(agent_living.IsPlayer())
-    , login_number(agent_living.login_number)
+    , is_npc(agent_living.IsNPC())
 {
     // async initialise the agents name now because we probably want it later
     GW::Agents::AsyncGetAgentName(&agent_living, _raw_name_w);
 
     if (primary != GW::Constants::Profession::None) {
-        std::string prof = GW::Constants::GetProfessionAcronym(primary);
+        std::string prof = GetProfessionAcronym(primary);
         if (secondary != GW::Constants::Profession::None) {
-            std::string s_prof = GW::Constants::GetProfessionAcronym(secondary);
+            const std::string s_prof = GetProfessionAcronym(secondary);
             prof = prof + "/" + s_prof;
         }
         profession = prof;
@@ -1717,17 +2030,18 @@ ObserverModule::ObservableAgent::ObservableAgent(ObserverModule& parent, const G
 
 
 // Destructor
-ObserverModule::ObservableAgent::~ObservableAgent() {
-    if (current_target_action)
-        delete current_target_action;
+ObserverModule::ObservableAgent::~ObservableAgent()
+{
+    delete current_target_action;
 }
 
 
 // Name of the Agent to display on HUD
-std::string ObserverModule::ObservableAgent::DisplayName() {
-    bool is_initialised = _display_name.length() > 0;
+std::string ObserverModule::ObservableAgent::DisplayName()
+{
+    const bool is_initialised = _display_name.length() > 0;
     // additional name modification settings can go here...
-    bool cache_busted = parent.trim_hench_names != trim_hench_name;
+    const bool cache_busted = parent.trim_hench_names != trim_hench_name;
     if (is_initialised && !cache_busted) {
         return _display_name;
     }
@@ -1737,16 +2051,16 @@ std::string ObserverModule::ObservableAgent::DisplayName() {
 
     // remove hench name
     if (parent.trim_hench_names) {
-        size_t begin = next_display_name.find("[");
-        size_t end = next_display_name.find_first_of("]");
+        const size_t begin = next_display_name.find("[");
+        const size_t end = next_display_name.find_first_of("]");
         if (std::string::npos != begin && std::string::npos != end && begin <= end) {
-            next_display_name.erase(begin, end-begin + 1);
+            next_display_name.erase(begin, end - begin + 1);
         }
     }
 
     // trim whitespace
-    size_t w_first = next_display_name.find_first_not_of(' ');
-    size_t w_last = next_display_name.find_last_not_of(' ');
+    const size_t w_first = next_display_name.find_first_not_of(' ');
+    const size_t w_last = next_display_name.find_last_not_of(' ');
     if (w_first != std::string::npos) {
         next_display_name = next_display_name.substr(w_first, w_last + 1);
     }
@@ -1758,12 +2072,17 @@ std::string ObserverModule::ObservableAgent::DisplayName() {
 
 
 // Sanitized Name of the Agent (as std::string)
-std::string ObserverModule::ObservableAgent::SanitizedName() {
+std::string ObserverModule::ObservableAgent::SanitizedName()
+{
     // has been cached
-    if (_sanitized_name.length() > 0) return _sanitized_name;
-    std::wstring sanitized_name_w = SanitizedNameW();
+    if (_sanitized_name.length() > 0) {
+        return _sanitized_name;
+    }
+    const std::wstring sanitized_name_w = SanitizedNameW();
     // can't be cached yet
-    if (sanitized_name_w.length() == 0) return "";
+    if (sanitized_name_w.length() == 0) {
+        return "";
+    }
     // can now be cached
     _sanitized_name = GuiUtils::WStringToString(sanitized_name_w);
     return _sanitized_name;
@@ -1771,12 +2090,17 @@ std::string ObserverModule::ObservableAgent::SanitizedName() {
 
 
 // Sanitized Name of the Agent (as std::wstring)
-std::wstring ObserverModule::ObservableAgent::SanitizedNameW() {
+std::wstring ObserverModule::ObservableAgent::SanitizedNameW()
+{
     // has been cached
-    if (_sanitized_name_w.length() > 0) return _sanitized_name_w;
-    std::wstring raw_name_w = RawNameW();
+    if (_sanitized_name_w.length() > 0) {
+        return _sanitized_name_w;
+    }
+    const std::wstring raw_name_w = RawNameW();
     // can't be cached yet
-    if (raw_name_w.length() == 0) return L"";
+    if (raw_name_w.length() == 0) {
+        return L"";
+    }
     // can now be cached
     _sanitized_name_w = GuiUtils::SanitizePlayerName(raw_name_w);
     return _sanitized_name_w;
@@ -1784,12 +2108,17 @@ std::wstring ObserverModule::ObservableAgent::SanitizedNameW() {
 
 
 // Name of the Agent (as std::string)
-std::string ObserverModule::ObservableAgent::RawName() {
+std::string ObserverModule::ObservableAgent::RawName()
+{
     // has been cached
-    if (_raw_name.length() > 0) return _raw_name;
-    std::wstring raw_name_w = RawNameW();
+    if (_raw_name.length() > 0) {
+        return _raw_name;
+    }
+    const std::wstring raw_name_w = RawNameW();
     // can't be cached yet
-    if (raw_name_w.length() == 0) return "";
+    if (raw_name_w.length() == 0) {
+        return "";
+    }
     // can now be cached
     _raw_name = GuiUtils::WStringToString(raw_name_w);
     return _raw_name;
@@ -1797,14 +2126,16 @@ std::string ObserverModule::ObservableAgent::RawName() {
 
 
 // Name of the Agent (un-edited as wstring)
-std::wstring ObserverModule::ObservableAgent::RawNameW() {
+std::wstring ObserverModule::ObservableAgent::RawNameW()
+{
     // rely on the constructor initialising the name...
     return _raw_name_w;
 }
 
 
 // Name + agent_id of the Agent
-std::string ObserverModule::ObservableAgent::DebugName() {
+std::string ObserverModule::ObservableAgent::DebugName()
+{
     std::string debug_name = "(" + std::to_string(agent_id) + ") " + "\"" + RawName() + "\"";
     return debug_name;
 }
@@ -1832,15 +2163,21 @@ ObserverModule::ObservableMap::ObservableMap(const GW::AreaInfo& area_info)
 }
 
 // Cache & return name
-std::string ObserverModule::ObservableMap::Name() {
-    if (name.length() > 0) return name;
+std::string ObserverModule::ObservableMap::Name()
+{
+    if (name.length() > 0) {
+        return name;
+    }
     name = GuiUtils::WStringToString(name_w);
     return name;
 }
 
 // Cache & return description
-std::string ObserverModule::ObservableMap::Description() {
-    if (description.length() > 0) return description;
+std::string ObserverModule::ObservableMap::Description()
+{
+    if (description.length() > 0) {
+        return description;
+    }
     description = GuiUtils::WStringToString(description_w);
     return description;
 }

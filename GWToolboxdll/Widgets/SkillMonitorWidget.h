@@ -11,16 +11,17 @@
 
 class SkillMonitorWidget : public ToolboxWidget {
     SkillMonitorWidget() = default;
-    ~SkillMonitorWidget() = default;
+    ~SkillMonitorWidget() override = default;
 
 public:
-    static SkillMonitorWidget& Instance() {
+    static SkillMonitorWidget& Instance()
+    {
         static SkillMonitorWidget instance;
         return instance;
     }
 
-    const char* Name() const override { return "Skill Monitor"; }
-    const char* Icon() const override { return ICON_FA_HISTORY; }
+    [[nodiscard]] const char* Name() const override { return "Skill Monitor"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_HISTORY; }
 
     void Initialize() override;
     void Terminate() override;
@@ -30,7 +31,7 @@ public:
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
 private:
     enum SkillActivationStatus {
@@ -43,7 +44,7 @@ private:
     struct SkillActivation {
         GW::Constants::SkillID id;
         SkillActivationStatus status;
-        clock_t last_update;
+        clock_t last_update{};
         clock_t cast_start = last_update;
         float cast_time = .0f;
     };
@@ -54,12 +55,17 @@ private:
     const float PARTY_MEMBER_PADDING_FIXED = 1.f;
     const float PARTY_HERO_INDENT_BASE = 22.f;
 
-    Color GetColor(SkillActivationStatus status) {
+    Color GetColor(const SkillActivationStatus status) const
+    {
         switch (status) {
-            case CASTING: return status_color_casting;
-            case COMPLETED: return status_color_completed;
-            case CANCELLED: return status_color_cancelled;
-            case INTERRUPTED: return status_color_interrupted;
+            case CASTING:
+                return status_color_casting;
+            case COMPLETED:
+                return status_color_completed;
+            case CANCELLED:
+                return status_color_cancelled;
+            case INTERRUPTED:
+                return status_color_interrupted;
         }
         return Colors::Empty();
     }
@@ -74,11 +80,11 @@ private:
     GW::HookEntry GenericValueTarget_Entry;
     GW::HookEntry GenericModifier_Entry;
 
-    std::unordered_map<GW::AgentID, std::vector<SkillActivation>> history;
-    std::unordered_map<GW::AgentID, float> casttime_map;
+    std::unordered_map<GW::AgentID, std::vector<SkillActivation>> history{};
+    std::unordered_map<GW::AgentID, float> casttime_map{};
 
-    std::unordered_map<GW::AgentID, size_t> party_map;
-    std::unordered_map<GW::AgentID, bool> party_map_indent;
+    std::unordered_map<GW::AgentID, size_t> party_map{};
+    std::unordered_map<GW::AgentID, bool> party_map_indent{};
     size_t allies_start = 255;
     bool FetchPartyInfo();
 

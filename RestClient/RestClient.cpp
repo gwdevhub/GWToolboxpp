@@ -4,11 +4,10 @@
 
 #include "RestClient.h"
 
-class CurlMultiThread : public Thread
-{
-    typedef std::deque<AsyncRestClient*> Container;
-public:
+class CurlMultiThread : public Thread {
+    using Container = std::deque<AsyncRestClient*>;
 
+public:
     CurlMultiThread()
         : m_pMulti(nullptr)
     {
@@ -23,8 +22,9 @@ public:
         // @Remark:
         // Not ideal, but we have to wait for 'm_pMulti' to be setted and it is in the thread.
         // Otherwise, there is cases where 'CurlMultiThread::Execute' block.
-        while (!m_pMulti)
+        while (!m_pMulti) {
             Sleep(1);
+        }
     }
 
     void Stop()
@@ -35,17 +35,16 @@ public:
 
     void Execute(AsyncRestClient* pClient)
     {
-        std::lock_guard<std::recursive_mutex> Lock(m_Mutex);
+        std::lock_guard Lock(m_Mutex);
         m_Clients.push_back(pClient);
         m_pMulti->AddHandle(pClient);
     }
 
     void Abort(AsyncRestClient* pClient)
     {
-        std::lock_guard<std::recursive_mutex> Lock(m_Mutex);
-        Container::iterator it = Search(pClient);
-        if (it != m_Clients.end())
-        {
+        std::lock_guard Lock(m_Mutex);
+        const auto it = Search(pClient);
+        if (it != m_Clients.end()) {
             m_pMulti->RemoveHandle(pClient);
             m_Clients.erase(it);
         }
@@ -57,16 +56,14 @@ private:
         CurlMulti m_Multi;
         m_pMulti = &m_Multi;
 
-        while (m_Running)
-        {
+        while (m_Running) {
             {
-                std::lock_guard<std::recursive_mutex> Lock(m_Mutex);
+                std::lock_guard Lock(m_Mutex);
                 m_Multi.Perform();
 
                 int MsgsLeft;
-                struct CURLMsg *pMsg = curl_multi_info_read(m_Multi.GetHandle(), &MsgsLeft);
-                while (pMsg)
-                {
+                const CURLMsg* pMsg = curl_multi_info_read(m_Multi.GetHandle(), &MsgsLeft);
+                while (pMsg) {
                     AsyncRestClient* pClient = SearchPop(pMsg->easy_handle);
                     m_Multi.RemoveHandle(pClient);
                     pClient->OnCompletion(pMsg->data.result);
@@ -81,33 +78,34 @@ private:
         m_pMulti = nullptr;
     }
 
-    Container::iterator Search(CURL* pHandle)
+    Container::iterator Search(const CURL* pHandle)
     {
         Container::iterator it;
-        for (it = m_Clients.begin(); it != m_Clients.end(); ++it)
-        {
-            if ((*it)->GetHandle() == pHandle)
+        for (it = m_Clients.begin(); it != m_Clients.end(); ++it) {
+            if ((*it)->GetHandle() == pHandle) {
                 break;
+            }
         }
         return it;
     }
 
-    Container::iterator Search(AsyncRestClient* pClient)
+    Container::iterator Search(const AsyncRestClient* pClient)
     {
         Container::iterator it;
-        for (it = m_Clients.begin(); it != m_Clients.end(); ++it)
-        {
-            if (*it == pClient)
+        for (it = m_Clients.begin(); it != m_Clients.end(); ++it) {
+            if (*it == pClient) {
                 break;
+            }
         }
         return it;
     }
 
-    AsyncRestClient* SearchPop(CURL* pHandle)
+    AsyncRestClient* SearchPop(const CURL* pHandle)
     {
-        Container::iterator it = Search(pHandle);
-        if (it == m_Clients.end())
+        const auto it = Search(pHandle);
+        if (it == m_Clients.end()) {
             return nullptr;
+        }
         AsyncRestClient* pClient = *it;
         m_Clients.erase(it);
         return pClient;
@@ -121,10 +119,10 @@ private:
 
 static CurlMultiThread s_RestThread;
 static std::atomic<int> s_InitializeCount;
+
 void InitAsyncRest()
 {
-    if (++s_InitializeCount == 1)
-    {
+    if (++s_InitializeCount == 1) {
         InitCurl();
         s_RestThread.Start();
     }
@@ -133,16 +131,13 @@ void InitAsyncRest()
 void ShutdownAsyncRest()
 {
     assert(s_InitializeCount > 0);
-    if (--s_InitializeCount == 0)
-    {
+    if (--s_InitializeCount == 0) {
         s_RestThread.Stop();
         ShutdownCurl();
     }
 }
 
-RestClient::RestClient()
-{
-}
+RestClient::RestClient() {}
 
 void RestClient::Execute()
 {
@@ -150,9 +145,7 @@ void RestClient::Execute()
 }
 
 AsyncRestClient::AsyncRestClient()
-    : m_Event(true, true)
-{
-}
+    : m_Event(true, true) {}
 
 AsyncRestClient::~AsyncRestClient()
 {
@@ -165,12 +158,12 @@ void AsyncRestClient::Clear()
     RestClient::Clear();
 }
 
-void AsyncRestClient::Wait()
+void AsyncRestClient::Wait() const
 {
     m_Event.WaitUntilDone();
 }
 
-bool AsyncRestClient::Wait(uint32_t TimeoutMs)
+bool AsyncRestClient::Wait(const uint32_t TimeoutMs) const
 {
     return m_Event.WaitWithTimeout(TimeoutMs);
 }
@@ -182,7 +175,7 @@ bool AsyncRestClient::IsPending()
 
 bool AsyncRestClient::IsCompleted()
 {
-    return !IsPending() && (m_Status != ResponseStatus::None);
+    return !IsPending() && m_Status != ResponseStatus::None;
 }
 
 void AsyncRestClient::ExecuteAsync()
@@ -194,14 +187,13 @@ void AsyncRestClient::ExecuteAsync()
 
 void AsyncRestClient::Abort()
 {
-    if (IsPending())
-    {
+    if (IsPending()) {
         s_RestThread.Abort(this);
         m_Event.SetDone();
     }
 }
 
-void AsyncRestClient::OnCompletion(int Status)
+void AsyncRestClient::OnCompletion(const int Status)
 {
     UpdateStatus(Status);
     OnPerformed();

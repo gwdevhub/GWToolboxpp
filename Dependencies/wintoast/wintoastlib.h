@@ -125,12 +125,12 @@ namespace WinToastLib {
         void setScenario(_In_ Scenario scenario);
         void addAction(_In_ const std::wstring& label);
 
-        std::size_t textFieldsCount() const;
-        std::size_t actionsCount() const;
+        size_t textFieldsCount() const;
+        size_t actionsCount() const;
         bool hasImage() const;
         const std::vector<std::wstring>& textFields() const;
         const std::wstring& textField(_In_ TextField pos) const;
-        const std::wstring& actionLabel(_In_ std::size_t pos) const;
+        const std::wstring& actionLabel(_In_ size_t pos) const;
         const std::wstring& imagePath() const;
         const std::wstring& audioPath() const;
         const std::wstring& attributionText() const;

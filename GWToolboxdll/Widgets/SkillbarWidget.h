@@ -3,61 +3,63 @@
 #include <Color.h>
 #include <ToolboxWidget.h>
 
-class SkillbarWidget final : public ToolboxWidget
-{
-    SkillbarWidget() {
+class SkillbarWidget final : public ToolboxWidget {
+    SkillbarWidget()
+    {
         is_resizable = false;
     }
-    ~SkillbarWidget() = default;
+
+    ~SkillbarWidget() override = default;
 
 public:
-    static SkillbarWidget &Instance()
+    static SkillbarWidget& Instance()
     {
         static SkillbarWidget instance;
         return instance;
     }
 
-    [[nodiscard]] const char *Name() const override
+    [[nodiscard]] const char* Name() const override
     {
         return "Skillbar";
     }
-    const char* Icon() const override { return ICON_FA_HISTORY; }
 
-    void LoadSettings(ToolboxIni *ini) override;
-    void SaveSettings(ToolboxIni *ini) override;
-    void DrawSettingInternal() override;
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_HISTORY; }
+
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
+    void DrawSettingsInternal() override;
 
     // Draw user interface. Will be called every frame if the element is visible
-    void Draw(IDirect3DDevice9 *pDevice) override;
+    void Draw(IDirect3DDevice9* pDevice) override;
 
     void Update(float delta) override;
 
 private:
     void DrawEffect(int i, const ImVec2& pos) const;
 
-    struct Effect
-    {
-        float progress = 1.0f; // 1 to 0
+    struct Effect {
+        float progress = 1.0f;  // 1 to 0
         uint32_t remaining = 0; // in ms
-        char text[16] = { 0 };
+        char text[16] = {0};
         Color color{};
     };
-    struct Skill
-    {
-        char cooldown[16] = { 0 };
+
+    struct Skill {
+        char cooldown[16] = {0};
         Color color{};
-        std::vector<Effect> effects;
+        std::vector<Effect> effects{};
     };
+
     std::array<Skill, 8> m_skills{};
 
     // Overall settings
-    enum class Layout
-    {
+    enum class Layout {
         Row,
         Rows,
         Column,
         Columns
     };
+
     Layout layout = Layout::Row;
     float m_skill_width = 50.f;
     float m_skill_height = 50.f;
@@ -98,7 +100,7 @@ private:
     bool snap_to_skillbar = true;
 
     // Internal utils
-    Color UptimeToColor(uint32_t uptime) const;
+    [[nodiscard]] Color UptimeToColor(uint32_t uptime) const;
     static std::vector<Effect> get_effects(GW::Constants::SkillID skillId);
     static Effect get_longest_effect(GW::Constants::SkillID skillId);
     void skill_cooldown_to_string(char arr[16], uint32_t cd) const;

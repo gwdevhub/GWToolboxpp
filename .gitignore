@@ -1,3 +1,6 @@
+# IntelliJ
+.idea
+
 # Build directories
 Debug/
 Release/
@@ -40,6 +43,8 @@ CMakeCache.txt
 *.wxs
 *.wixobj
 *.msi
+*_ps.h
+*_vs.h
 
 # Precompiled Headers
 *.gch

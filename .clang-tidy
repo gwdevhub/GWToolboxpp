@@ -1,0 +1,13 @@
+Checks:          '*,-performance-no-int-to-ptr,-misc-unused-parameters,-android*,-readability-non-const-parameter,-modernize-use-trailing-return-type,-bugprone-bool-pointer-implicit-conversion'
+WarningsAsErrors: true
+CheckOptions:
+  - key:             bugprone-unhandled-self-assignment.WarnOnlyIfThisHasSuspiciousField
+    value:           '0'
+  - key:             modernize-loop-convert.MaxCopySize
+    value:           '4'
+  - key:             modernize-loop-convert.MinConfidence
+    value:           safe
+  - key:             modernize-use-auto.MinTypeNameLength
+    value:           0
+  - key:             modernize-use-auto.RemoveStars
+    value:           1

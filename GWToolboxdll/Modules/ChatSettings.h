@@ -2,10 +2,8 @@
 
 #include <ToolboxModule.h>
 
-namespace GW {
-    namespace Chat {
-        enum Channel : int;
-    }
+namespace GW::Chat {
+    enum Channel : int;
 }
 
 class PendingChatMessage {
@@ -24,20 +22,28 @@ public:
     PendingChatMessage(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender);
     static PendingChatMessage* queueSend(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender);
     static PendingChatMessage* queuePrint(GW::Chat::Channel channel, const wchar_t* enc_message, const wchar_t* enc_sender);
+
     void SendIt()
     {
         print = false;
         send = true;
     }
+
     static bool IsStringEncoded(const wchar_t* str) { return str && (str[0] < L' ' || str[0] > L'~'); }
-    bool IsDecoded() const { return !output_message.empty() && !output_sender.empty(); }
+    [[nodiscard]] bool IsDecoded() const { return !output_message.empty() && !output_sender.empty(); }
+
     bool Consume()
     {
-        if (print) return PrintMessage();
-        if (send) return Send();
+        if (print) {
+            return PrintMessage();
+        }
+        if (send) {
+            return Send();
+        }
         return false;
     }
-    bool IsSend() const { return send; }
+
+    [[nodiscard]] bool IsSend() const { return send; }
     static bool Cooldown();
     bool invalid = true; // Set when we can't find the agent name for some reason, or arguments passed are empty.
 
@@ -56,7 +62,7 @@ struct PlayerChatMessage {
 
 class ChatSettings : public ToolboxModule {
     ChatSettings() = default;
-    ~ChatSettings() = default;
+    ~ChatSettings() override = default;
 
 public:
     static ChatSettings& Instance()
@@ -65,13 +71,13 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Chat Settings"; }
-    const char* Icon() const override { return ICON_FA_COMMENTS; }
+    [[nodiscard]] const char* Name() const override { return "Chat Settings"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_COMMENTS; }
 
     void Initialize() override;
     void Terminate() override;
     void Update(float) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni*) override;
     void SaveSettings(ToolboxIni*) override;
     bool WndProc(UINT, WPARAM, LPARAM) override;

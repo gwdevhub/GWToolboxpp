@@ -7,7 +7,7 @@
 
 class PartyDamage : public ToolboxWidget {
     PartyDamage() = default;
-    ~PartyDamage() = default;
+    ~PartyDamage() override = default;
 
     static constexpr size_t MAX_PLAYERS = 12;
 
@@ -20,7 +20,8 @@ class PartyDamage : public ToolboxWidget {
         GW::Constants::Profession primary = GW::Constants::Profession::None;
         GW::Constants::Profession secondary = GW::Constants::Profession::None;
 
-        void Reset() {
+        void Reset()
+        {
             damage = 0;
             recent_damage = 0;
             agent_id = 0;
@@ -31,13 +32,14 @@ class PartyDamage : public ToolboxWidget {
     };
 
 public:
-    static PartyDamage& Instance() {
+    static PartyDamage& Instance()
+    {
         static PartyDamage instance;
         return instance;
     }
 
-    const char* Name() const override { return "Damage"; }
-    const char* Icon() const override { return ICON_FA_BARS; }
+    [[nodiscard]] const char* Name() const override { return "Damage"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_BARS; }
 
     void Initialize() override;
     void Terminate() override;
@@ -49,34 +51,34 @@ public:
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
     void WritePartyDamage();
-    void WriteDamageOf(const size_t index, uint32_t rank = 0); // party index from 0 to 12
+    void WriteDamageOf(size_t index, uint32_t rank = 0); // party index from 0 to 12
     void WriteOwnDamage();
     void ResetDamage();
 
 private:
-    void DamagePacketCallback(GW::HookStatus *, GW::Packet::StoC::GenericModifier *packet);
-    void MapLoadedCallback(GW::HookStatus *, GW::Packet::StoC::MapLoaded *packet);
+    void DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::GenericModifier* packet);
+    void MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::MapLoaded* packet);
 
     void CreatePartyIndexMap();
 
-    float GetPartOfTotal(uint32_t dmg) const;
-    float GetPercentageOfTotal(const uint32_t dmg) const { return GetPartOfTotal(dmg) * 100.0f; }
+    [[nodiscard]] float GetPartOfTotal(uint32_t dmg) const;
+    [[nodiscard]] float GetPercentageOfTotal(const uint32_t dmg) const { return GetPartOfTotal(dmg) * 100.0f; }
 
     // damage values
     uint32_t total = 0;
     PlayerDamage damage[MAX_PLAYERS];
-    std::map<DWORD, uint32_t> hp_map;
-    std::map<DWORD, size_t> party_index;
+    std::map<DWORD, uint32_t> hp_map{};
+    std::map<DWORD, size_t> party_index{};
     size_t player_index = 0;
     GW::UI::WindowPosition* party_window_position = nullptr;
 
     // main routine variables
     bool in_explorable = false;
     clock_t send_timer = 0;
-    std::queue<std::wstring> send_queue;
+    std::queue<std::wstring> send_queue{};
 
     // ini
     ToolboxIni* inifile = nullptr;
@@ -84,7 +86,7 @@ private:
     Color color_damage = 0;
     Color color_recent = 0;
     float width = 0.f;
-    bool bars_left = false;
+    bool bars_left = true;
     int recent_max_time = 0;
     int row_height = 0;
     bool hide_in_outpost = false;

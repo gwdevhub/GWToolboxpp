@@ -4,32 +4,36 @@
 
 class ToolboxTheme : public ToolboxUIElement {
     ToolboxTheme();
+
 public:
-    static ToolboxTheme& Instance() {
+    static ToolboxTheme& Instance()
+    {
         static ToolboxTheme instance;
         return instance;
     }
 
-    const char* Name() const override { return "Theme"; }
-    const char* Icon() const override { return ICON_FA_PALETTE; }
+    [[nodiscard]] const char* Name() const override { return "Theme"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_PALETTE; }
 
     void Terminate() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void Draw(IDirect3DDevice9* device) override;
-    void ShowVisibleRadio() override {}
-    void DrawSizeAndPositionSettings() override {}
+
+    void ShowVisibleRadio() override { }
+
+    void DrawSizeAndPositionSettings() override { }
 
     void SaveUILayout();
     void LoadUILayout();
 
-    void DrawSettingInternal() override;
+    void DrawSettingsInternal() override;
 
     ToolboxIni* GetLayoutIni(bool reload = true);
     ToolboxIni* GetThemeIni(bool reload = true);
 
 private:
-    ImGuiStyle DefaultTheme();
+    static ImGuiStyle DefaultTheme();
 
     float font_global_scale = 1.0;
     ImGuiStyle ini_style;

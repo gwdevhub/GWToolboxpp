@@ -1,31 +1,25 @@
 #include "stdafx.h"
 
-using Json = nlohmann::json;
-
 #include <File.h>
 #include <Path.h>
 
 #include <RestClient.h>
-
 #include "Download.h"
 
-class AsyncFileDownloader : public AsyncRestClient
-{
+class AsyncFileDownloader : public AsyncRestClient {
 public:
     AsyncFileDownloader()
-        : m_DownloadLength{0}
-    {
-    }
+        : m_DownloadLength{0} { }
 
     AsyncFileDownloader(const AsyncFileDownloader&) = delete;
 
-    size_t GetDownloadCount()
+    size_t GetDownloadCount() const
     {
         return m_DownloadLength.load(std::memory_order_relaxed);
     }
 
 private: // From AsyncRestClient
-    void OnContent(const char *bytes, size_t count) override
+    void OnContent(const char* bytes, const size_t count) override
     {
         AsyncRestClient::OnContent(bytes, count);
         m_DownloadLength += count;
@@ -34,7 +28,7 @@ private: // From AsyncRestClient
     std::atomic<size_t> m_DownloadLength;
 };
 
-bool Download(std::string& content, const char *url)
+bool Download(std::string& content, const char* url)
 {
     RestClient client;
     client.SetUrl(url);
@@ -45,7 +39,7 @@ bool Download(std::string& content, const char *url)
 
     if (!client.IsSuccessful()) {
         fprintf(stderr, "Failed to download '%s'. (Status: %s, StatusCode: %d)\n",
-            url, client.GetStatusStr(), client.GetStatusCode());
+                url, client.GetStatusStr(), client.GetStatusCode());
         return false;
     }
 
@@ -53,7 +47,7 @@ bool Download(std::string& content, const char *url)
     return true;
 }
 
-void AsyncDownload(const char *url, AsyncFileDownloader *downloader)
+void AsyncDownload(const char* url, AsyncFileDownloader* downloader)
 {
     downloader->SetUrl(url);
     downloader->SetVerifyPeer(false);
@@ -62,43 +56,41 @@ void AsyncDownload(const char *url, AsyncFileDownloader *downloader)
     downloader->ExecuteAsync();
 }
 
-struct Asset
-{
+struct Asset {
     std::string name{};
     size_t size = 0;
     std::string browser_download_url{};
 };
 
-struct Release
-{
+struct Release {
     std::string tag_name{};
     std::string body{};
     std::vector<Asset> assets{};
 };
 
-static bool ParseRelease(const std::string& json_text, Release *release)
+static bool ParseRelease(const std::string& json_text, Release* release)
 {
-    Json json;
+    nlohmann::json json;
     try {
-        json = Json::parse(json_text.c_str());
-    } catch(Json::exception&) {
+        json = nlohmann::json::parse(json_text.c_str());
+    } catch (nlohmann::json::exception&) {
         fprintf(stderr, "Json::parse failed\n");
         return false;
     }
 
-    auto it_tag_name = json.find("tag_name");
+    const auto it_tag_name = json.find("tag_name");
     if (it_tag_name == json.end() || !it_tag_name->is_string()) {
         fprintf(stderr, "Key 'tag_name' not found or not a string in '%s'\n", json_text.c_str());
         return false;
     }
 
-    auto it_body = json.find("body");
+    const auto it_body = json.find("body");
     if (it_body == json.end() || !it_body->is_string()) {
         fprintf(stderr, "Key 'body' not found or not a string in '%s'\n", json_text.c_str());
         return false;
     }
 
-    auto it_assets = json.find("assets");
+    const auto it_assets = json.find("assets");
     if (it_assets == json.end() || !it_assets->is_array()) {
         fprintf(stderr, "Key 'assets' not found or not an array in '%s'\n", json_text.c_str());
         return false;
@@ -108,26 +100,26 @@ static bool ParseRelease(const std::string& json_text, Release *release)
     release->body = it_body->get<std::string>();
 
     for (size_t i = 0; i < it_assets->size(); i++) {
-        Json& entry = it_assets->at(i);
+        nlohmann::json& entry = it_assets->at(i);
 
         auto it_name = entry.find("name");
         if (it_name == entry.end() || !it_name->is_string()) {
             fprintf(stderr, "Key 'name' not found or not a string in (assert:%zu) '%s'\n",
-                i, json_text.c_str());
+                    i, json_text.c_str());
             return false;
         }
 
         auto it_size = entry.find("size");
         if (it_size == entry.end() || !it_size->is_number()) {
             fprintf(stderr, "Key 'size' not found or not a number in (assert:%zu) '%s'\n",
-                i, json_text.c_str());
+                    i, json_text.c_str());
             return false;
         }
 
         auto it_browser_download_url = entry.find("browser_download_url");
         if (it_browser_download_url == entry.end() || !it_browser_download_url->is_string()) {
             fprintf(stderr, "Key 'browser_download_url' not found or not a string in (assert:%zu) '%s'\n",
-                i, json_text.c_str());
+                    i, json_text.c_str());
             return false;
         }
 
@@ -142,7 +134,8 @@ static bool ParseRelease(const std::string& json_text, Release *release)
     return true;
 }
 
-std::string GetDllRelease(const std::filesystem::path dllpath) {
+std::string GetDllRelease(const std::filesystem::path& dllpath)
+{
     using namespace std::filesystem;
 
     if (!exists(dllpath)) {
@@ -153,12 +146,12 @@ std::string GetDllRelease(const std::filesystem::path dllpath) {
     const LPCWSTR filename = dllpathstr.c_str();
     char buffer[MAX_PATH];
 
-    DWORD dwHandle, sz = GetFileVersionInfoSizeW(filename, &dwHandle);
+    DWORD dw_handle, sz = GetFileVersionInfoSizeW(filename, &dw_handle);
     if (sz == 0) {
         return {};
     }
-    char* buf = new char[sz];
-    if (!GetFileVersionInfoW(filename, dwHandle, sz, &buf[0])) {
+    const auto buf = new char[sz];
+    if (!GetFileVersionInfoW(filename, dw_handle, sz, &buf[0])) {
         delete[] buf;
         return {};
     }
@@ -168,11 +161,10 @@ std::string GetDllRelease(const std::filesystem::path dllpath) {
         delete[] buf;
         return {};
     }
-    sprintf(buffer, "%d.%d.%d.%d", pvi->dwProductVersionMS >> 16, pvi->dwFileVersionMS & 0xFFFF,
-        pvi->dwFileVersionLS >> 16, pvi->dwFileVersionLS & 0xFFFF);
+    sprintf_s(buffer, "%lu.%lu.%lu.%lu", pvi->dwProductVersionMS >> 16, pvi->dwFileVersionMS & 0xFFFF,
+            pvi->dwFileVersionLS >> 16, pvi->dwFileVersionLS & 0xFFFF);
     delete[] buf;
     return {buffer};
-
 }
 
 bool DownloadWindow::DownloadAllFiles()
@@ -196,9 +188,10 @@ bool DownloadWindow::DownloadAllFiles()
     const auto release_string = GetDllRelease(dllpath);
     if (!release_string.empty()) {
         std::string release_tag = release.tag_name;
-        const auto current_version  = std::regex_replace(release_tag, std::regex(R"([^0-9.])"), "");
-        if (release_string.starts_with(current_version))
+        const auto current_version = std::regex_replace(release_tag, std::regex(R"([^0-9.])"), "");
+        if (release_string.starts_with(current_version)) {
             return true;
+        }
     }
 
     std::filesystem::path dll_path;
@@ -241,17 +234,18 @@ bool DownloadWindow::DownloadAllFiles()
             size_t BytesDownloaded = downloader.GetDownloadCount();
             const auto progress = BytesDownloaded * 100 / file_size;
             SendMessageW(window.m_hProgressBar, PBM_SETPOS, progress, 0);
-        } else {
+        }
+        else {
             if (!downloader.IsSuccessful()) {
                 fprintf(stderr, "Failed to download '%s'. (Status: %s, StatusCode: %d)\n",
-                    url.c_str(), downloader.GetStatusStr(), downloader.GetStatusCode());
+                        url.c_str(), downloader.GetStatusStr(), downloader.GetStatusCode());
                 return false;
             }
 
             std::string& file_content = downloader.GetContent();
             if (!WriteEntireFile(dll_path.wstring().c_str(), file_content.c_str(), file_content.size())) {
                 fwprintf(stderr, L"WriteEntireFile failed on '%s' with %zu bytes\n",
-                    dll_path.wstring().c_str(), file_content.size());
+                         dll_path.wstring().c_str(), file_content.size());
                 return false;
             }
 
@@ -280,66 +274,60 @@ bool DownloadWindow::Create()
     return Window::Create();
 }
 
-void DownloadWindow::SetChangelog(const char* str, size_t length) const
+void DownloadWindow::SetChangelog(const char* str, const size_t length) const
 {
-    std::wstring content(str, str + length);
+    const std::wstring content(str, str + length);
     SendMessageW(m_hChangelog, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(content.c_str()));
 }
 
-LRESULT DownloadWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT DownloadWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
-    switch (uMsg)
-    {
-    case WM_CREATE:
-        OnCreate(hWnd, uMsg, wParam, lParam);
-        break;
+    switch (uMsg) {
+        case WM_CREATE:
+            OnCreate(hWnd, uMsg, wParam, lParam);
+            break;
 
-    case WM_CLOSE:
-        DestroyWindow(hWnd);
-        break;
+        case WM_CLOSE:
+            DestroyWindow(hWnd);
+            break;
 
-    case WM_DESTROY:
-        SignalStop();
-        break;
+        case WM_DESTROY:
+            SignalStop();
+            break;
 
-    case WM_CTLCOLORSTATIC: {
-        HDC hDc = reinterpret_cast<HDC>(wParam);
-        HWND hEditCtl = reinterpret_cast<HWND>(lParam);
+        case WM_CTLCOLORSTATIC: {
+            const auto hDc = reinterpret_cast<HDC>(wParam);
+            const auto hEditCtl = reinterpret_cast<HWND>(lParam);
 
-        if (hEditCtl == m_hChangelog) {
-            SetBkMode(hDc, TRANSPARENT);
-            return (LRESULT)GetStockObject(WHITE_BRUSH);
+            if (hEditCtl == m_hChangelog) {
+                SetBkMode(hDc, TRANSPARENT);
+                return reinterpret_cast<LRESULT>(GetStockObject(WHITE_BRUSH));
+            }
+
+            break;
         }
 
-        break;
-    }
-
-    case WM_COMMAND: {
-        HWND hControl = reinterpret_cast<HWND>(lParam);
-        LONG ControlId = LOWORD(wParam);
-        if ((hControl == m_hCloseButton) && (ControlId == STN_CLICKED)) {
-            DestroyWindow(m_hWnd);
+        case WM_COMMAND: {
+            const auto hControl = reinterpret_cast<HWND>(lParam);
+            const LONG ControlId = LOWORD(wParam);
+            if (hControl == m_hCloseButton && ControlId == STN_CLICKED) {
+                DestroyWindow(m_hWnd);
+            }
+            break;
         }
-        break;
-    }
 
-    case WM_KEYUP:
-        if (wParam == VK_ESCAPE)
-            DestroyWindow(hWnd);
-        else if (wParam == VK_RETURN)
-            DestroyWindow(hWnd);
-        break;
+        case WM_KEYUP:
+            if (wParam == VK_ESCAPE || wParam == VK_RETURN) {
+                DestroyWindow(hWnd);
+            }
+            break;
     }
 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
 }
 
-void DownloadWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+void DownloadWindow::OnCreate(HWND hWnd, UINT, WPARAM, LPARAM)
 {
-    UNREFERENCED_PARAMETER(uMsg);
-    UNREFERENCED_PARAMETER(wParam);
-    UNREFERENCED_PARAMETER(lParam);
-
     m_hProgressBar = CreateWindowW(
         PROGRESS_CLASSW,
         L"Inject",
@@ -367,7 +355,7 @@ void DownloadWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
         nullptr,
         m_hInstance,
         nullptr);
-    SendMessageW(m_hCloseButton, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+    SendMessageW(m_hCloseButton, WM_SETFONT, reinterpret_cast<WPARAM>(m_hFont), MAKELPARAM(TRUE, 0));
 
     m_hChangelog = CreateWindowW(
         WC_EDITW,
@@ -381,5 +369,5 @@ void DownloadWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
         nullptr,
         m_hInstance,
         nullptr);
-    SendMessageW(m_hChangelog, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+    SendMessageW(m_hChangelog, WM_SETFONT, reinterpret_cast<WPARAM>(m_hFont), MAKELPARAM(TRUE, 0));
 }
