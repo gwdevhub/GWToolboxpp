@@ -11,15 +11,12 @@
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
-#include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <Windows/ArmoryWindow_Constants.h>
 #include <Windows/ArmoryWindow.h>
 #include <ImGuiAddons.h>
 #include <ToolboxWindow.h>
 #include <Modules/GwDatTextureModule.h>
-#include <Color.h>
 
 namespace GWArmory {
 
@@ -791,17 +788,13 @@ namespace GWArmory {
                 player_piece->dye.dye_tint = state->current_piece->dye_tint;
             }
 
-
-            auto uv1 = ImVec2(1, 1);
-
             const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction);
-
-            const ImVec2 cursor_pos = ImGui::GetCursorPos();
-
-
-            if (texture && *texture) {
-                uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
+            if (!texture || !*texture) {
+                ImGui::PopID();
+                continue;
             }
+    
+            const auto uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
             const auto& bg = player_piece->model_file_id == piece->model_file_id ? equipped_color : normal_bg;
             ImGui::NextSpacedElement();
             if (ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, bg, tint)) {
