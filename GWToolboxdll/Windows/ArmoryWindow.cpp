@@ -31,7 +31,7 @@ namespace GWArmory {
 
     CostumeData* costume_data_ptr = nullptr;
 
-    constexpr size_t festival_hat_sets_count = 0x3b;
+    constexpr size_t festival_hat_sets_count = 0x3c;
     struct FestivalHatData {
         // [festival_hat_set_id][profession] = { headpiece file id }
         uint32_t sets[festival_hat_sets_count][10][1];
