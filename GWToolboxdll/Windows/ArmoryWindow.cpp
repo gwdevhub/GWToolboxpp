@@ -11,15 +11,12 @@
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
-#include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <Windows/ArmoryWindow_Constants.h>
 #include <Windows/ArmoryWindow.h>
 #include <ImGuiAddons.h>
 #include <ToolboxWindow.h>
 #include <Modules/GwDatTextureModule.h>
-#include <Color.h>
 
 namespace GWArmory {
 
@@ -31,7 +28,7 @@ namespace GWArmory {
 
     CostumeData* costume_data_ptr = nullptr;
 
-    constexpr size_t festival_hat_sets_count = 0x3b;
+    constexpr size_t festival_hat_sets_count = 0x3c;
     struct FestivalHatData {
         // [festival_hat_set_id][profession] = { headpiece file id }
         uint32_t sets[festival_hat_sets_count][10][1];
@@ -791,17 +788,13 @@ namespace GWArmory {
                 player_piece->dye.dye_tint = state->current_piece->dye_tint;
             }
 
-
-            auto uv1 = ImVec2(1, 1);
-
             const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction);
-
-            const ImVec2 cursor_pos = ImGui::GetCursorPos();
-
-
-            if (texture && *texture) {
-                uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
+            if (!texture || !*texture) {
+                ImGui::PopID();
+                continue;
             }
+    
+            const auto uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
             const auto& bg = player_piece->model_file_id == piece->model_file_id ? equipped_color : normal_bg;
             ImGui::NextSpacedElement();
             if (ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, bg, tint)) {

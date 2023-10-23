@@ -1505,6 +1505,7 @@ namespace GWArmory {
         {"Mirthful Dragon Mask", 0xd73, GW::Constants::Profession::None, ItemType::Costume_Headpiece, Campaign::BonusMissionPack, 0},
         {"Reaper's Hood", 0xde1, GW::Constants::Profession::None, ItemType::Costume_Headpiece, Campaign::BonusMissionPack, 0},
         {"Tricorne", 0xde2, GW::Constants::Profession::None, ItemType::Costume_Headpiece, Campaign::BonusMissionPack, 0},
+        {"Festive Winter Hood", 0xe59, GW::Constants::Profession::None, ItemType::Costume_Headpiece, Campaign::BonusMissionPack, 0},
         {"Stylish Red Striped Scarf", 0xe5a, GW::Constants::Profession::None, ItemType::Costume_Headpiece, Campaign::BonusMissionPack, 0},
         {"Stylish White Striped Scarf", 0xe5b, GW::Constants::Profession::None, ItemType::Costume_Headpiece, Campaign::BonusMissionPack, 0},
         {"Stylish Black Scarf", 0xe5c, GW::Constants::Profession::None, ItemType::Costume_Headpiece, Campaign::BonusMissionPack, 0}
