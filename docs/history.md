@@ -7,6 +7,10 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 6.12
+* [Fix] You can search in the TravelWindow again
+* [Minor] Added Festive Winter Hood to ArmoryWindow
+
 ## Version 6.11
 
 * [New] Added item upgrade unlocks to completion window
