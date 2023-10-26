@@ -19,6 +19,8 @@ void SymbolsRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
     color_quest = Colors::Load(ini, section, "color_quest", 0xFF22EF22);
     color_north = Colors::Load(ini, section, "color_north", 0xFFFF8000);
     color_modifier = Colors::Load(ini, section, "color_symbols_modifier", 0x001E1E1E);
+    render_all_quests = ini->GetBoolValue(section, "render_all_quests");
+
     Invalidate();
 }
 
@@ -27,6 +29,7 @@ void SymbolsRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
     Colors::Save(ini, section, "color_quest", color_quest);
     Colors::Save(ini, section, "color_north", color_north);
     Colors::Save(ini, section, "color_symbols_modifier", color_modifier);
+    ini->SetBoolValue(section, "render_all_quests", render_all_quests);
 }
 
 void SymbolsRenderer::DrawSettings()
@@ -48,6 +51,9 @@ void SymbolsRenderer::DrawSettings()
         Invalidate();
     }
     ImGui::ShowHelp("Each symbol has this value removed on the border and added at the center\nZero makes them have solid color, while a high number makes them appear more shaded.");
+
+    ImGui::Checkbox("Draw all quest markers", &render_all_quests);
+    ImGui::ShowHelp("Draw quest markers for all quests in your quest log, not just the active quest");
 }
 
 void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
@@ -144,8 +150,11 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     DirectX::XMMATRIX translate;
     DirectX::XMMATRIX world{};
 
-    if (const GW::Quest* quest = GW::QuestMgr::GetActiveQuest()) {
-        const GW::Vec2f qpos = {quest->marker.x, quest->marker.y};
+    const GW::Vec2f mypos = me->pos;
+
+    auto drawQuestMarker = [&](const GW::Quest& quest)
+    {
+        const GW::Vec2f qpos = { quest.marker.x, quest.marker.y };
         const float compass_scale = Minimap::Instance().Scale();
         const float marker_scale = 1.0f / compass_scale;
         auto rotate = DirectX::XMMatrixRotationZ(-tau / 5);
@@ -156,7 +165,6 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
         device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
         device->DrawPrimitive(type, star_offset, star_ntriangles);
 
-        const GW::Vec2f mypos = me->pos;
         GW::Vec2f v = qpos - mypos;
         const float max_quest_range = (GW::Constants::Range::Compass - 250.0f) / compass_scale;
         const float max_quest_range_sqr = max_quest_range * max_quest_range;
@@ -171,6 +179,20 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
             device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
             device->DrawPrimitive(type, arrow_offset, arrow_ntriangles);
         }
+    };
+
+    if (render_all_quests)
+    {
+        const GW::QuestLog* questLog = GW::QuestMgr::GetQuestLog();
+
+        if (questLog) {
+            for (const auto& quest : *questLog) {
+                drawQuestMarker(quest);
+            }
+        }
+    }
+    else if (const GW::Quest* quest = GW::QuestMgr::GetActiveQuest()) {
+        drawQuestMarker(*quest);
     }
 
     translate = DirectX::XMMatrixTranslation(me->pos.x, me->pos.y + 5000.0f, 0);
