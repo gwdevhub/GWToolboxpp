@@ -20,6 +20,8 @@ private:
     Color color_north = 0;
     Color color_modifier = 0;
 
+    bool render_all_quests = false;
+
     const DWORD star_ntriangles = 16;
     DWORD star_offset = 0;
 
