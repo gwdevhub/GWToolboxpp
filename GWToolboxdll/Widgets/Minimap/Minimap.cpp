@@ -351,6 +351,14 @@ void Minimap::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* 
                 SetWindowVisible(GW::UI::WindowID_Compass, true);
             }
             instance.is_observing = GW::Map::GetIsObserving();
+            // Cycle active quests to cache their markers
+            auto active_quest_id = GW::QuestMgr::GetActiveQuestId();
+            if (const GW::QuestLog* questLog = GW::QuestMgr::GetQuestLog(); questLog != nullptr) {
+                for (auto& quest : *questLog) {
+                    GW::QuestMgr::SetActiveQuestId(quest.quest_id);
+                }
+            }
+            GW::QuestMgr::SetActiveQuestId(active_quest_id);
         }
         break;
         case GW::UI::UIMessage::kSkillActivated: {
