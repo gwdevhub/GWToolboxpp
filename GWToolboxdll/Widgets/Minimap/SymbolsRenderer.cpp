@@ -183,9 +183,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
 
     if (render_all_quests)
     {
-        const GW::QuestLog* questLog = GW::QuestMgr::GetQuestLog();
-
-        if (questLog) {
+        if (const GW::QuestLog* questLog = GW::QuestMgr::GetQuestLog()) {
             for (const auto& quest : *questLog) {
                 drawQuestMarker(quest);
             }
