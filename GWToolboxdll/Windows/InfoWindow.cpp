@@ -586,18 +586,6 @@ namespace {
         ImGui::Checkbox("Show message in chat when you're the last player to resign", &show_last_to_resign_message);
     }
 
-    using GetQuestInfo_pt = void(__cdecl*)(GW::Constants::QuestID);
-    GetQuestInfo_pt RequestQuestInfo_Func = nullptr;
-
-    bool RequestQuestInfo(const GW::Constants::QuestID quest_id)
-    {
-        if (!RequestQuestInfo_Func) {
-            const uintptr_t address = GW::Scanner::Find("\x68\x4a\x01\x00\x10\xff\x77\x04", "xxxxxxxx", 0x7a);
-            RequestQuestInfo_Func = (GetQuestInfo_pt)GW::Scanner::FunctionFromNearCall(address);
-        }
-        return RequestQuestInfo_Func ? RequestQuestInfo_Func(quest_id), true : false;
-    }
-
     bool GetQuestEntryGroupName(const GW::Constants::QuestID quest_id, wchar_t* out, const size_t out_len)
     {
         const auto quest = GW::QuestMgr::GetQuest(quest_id);
@@ -981,7 +969,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             ImGui::SameLine();
             if (ImGui::SmallButton("Request quest info")) {
                 for (const auto& quest : quests_missing_info) {
-                    RequestQuestInfo(quest->quest_id);
+                    GW::QuestMgr::RequestQuestInfo(quest);
                 }
             }
 #endif
