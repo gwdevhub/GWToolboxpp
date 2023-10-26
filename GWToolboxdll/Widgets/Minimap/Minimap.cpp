@@ -220,6 +220,15 @@ namespace {
             }
         });
     }
+    void CycleActiveQuests() {
+        auto active_quest_id = GW::QuestMgr::GetActiveQuestId();
+        if (const GW::QuestLog* questLog = GW::QuestMgr::GetQuestLog(); questLog != nullptr) {
+            for (auto& quest : *questLog) {
+                GW::QuestMgr::SetActiveQuestId(quest.quest_id);
+            }
+        }
+        GW::QuestMgr::SetActiveQuestId(active_quest_id);
+    }
 }
 
 void Minimap::DrawHelp()
@@ -329,6 +338,10 @@ void Minimap::Initialize()
         RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);
     }
 
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
+        GW::GameThread::Enqueue(CycleActiveQuests);
+    }
+
     last_moved = TIMER_INIT();
 
     pmap_renderer.Invalidate();
@@ -352,13 +365,7 @@ void Minimap::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* 
             }
             instance.is_observing = GW::Map::GetIsObserving();
             // Cycle active quests to cache their markers
-            auto active_quest_id = GW::QuestMgr::GetActiveQuestId();
-            if (const GW::QuestLog* questLog = GW::QuestMgr::GetQuestLog(); questLog != nullptr) {
-                for (auto& quest : *questLog) {
-                    GW::QuestMgr::SetActiveQuestId(quest.quest_id);
-                }
-            }
-            GW::QuestMgr::SetActiveQuestId(active_quest_id);
+            CycleActiveQuests();
         }
         break;
         case GW::UI::UIMessage::kSkillActivated: {
