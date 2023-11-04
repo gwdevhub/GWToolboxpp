@@ -78,16 +78,6 @@ namespace {
         return GW::Map::GetIsMapLoaded() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving();
     }
 
-    // @Cleanup: Find the address for this without checking map garbage - how does inv window know to show "pvp equipment" button?
-    bool IsPvPCharacter()
-    {
-        // This is the 3rd module that uses this function, should really be part of GWCA but leave here for now.
-        return !(GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Ascalon_City_outpost)
-                 || GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Shing_Jea_Monastery_outpost)
-                 || GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost)
-                 || GW::Map::GetIsMapUnlocked(GW::Constants::MapID::Ascalon_City_pre_searing));
-    }
-
     // Repopulates applicable_hotkeys based on current character/map context.
     // Used because its not necessary to check these vars on every keystroke, only when they change
     bool CheckSetValidHotkeys()
@@ -104,7 +94,7 @@ namespace {
         const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
         const GW::Constants::MapID map_id = GW::Map::GetMapID();
         const auto primary = static_cast<GW::Constants::Profession>(me->primary);
-        const bool is_pvp = IsPvPCharacter();
+        const bool is_pvp = me->IsPvP();
         valid_hotkeys.clear();
         by_profession.clear();
         by_map.clear();
