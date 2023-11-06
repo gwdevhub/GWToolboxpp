@@ -96,10 +96,11 @@ namespace {
 
     wchar_t last_player_name[20];
 
-    void GetOutpostIcons(GW::Constants::MapID map_id, WorldMapIcon icons_out[4], uint8_t mission_state) {
+    void GetOutpostIcons(GW::Constants::MapID map_id, WorldMapIcon icons_out[4], uint8_t mission_state, bool is_hard_mode = false) {
         icons_out = { 0 };
         const auto area_info = GW::Map::GetMapInfo(map_id);
         uint32_t icon_idx = 0;
+        (is_hard_mode); // TODO: Change these icons out for Hard Mode
         switch (area_info->continent) {
         case GW::Continent::Kryta: {
             switch (area_info->type) {
@@ -118,6 +119,45 @@ namespace {
                 break;
             case GW::RegionType::Challenge:
                 icons_out[0] = WorldMapIcon::Kryta_Outpost;
+                break;
+            }
+        } break;
+        case GW::Continent::Cantha: {
+            switch (area_info->type) {
+            case GW::RegionType::CooperativeMission:
+                icons_out[icon_idx++] = WorldMapIcon::Cantha_Mission;
+                if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
+                    icons_out[icon_idx++] = WorldMapIcon::Cantha_CompletePrimary;
+                if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                    icons_out[icon_idx++] = WorldMapIcon::Cantha_CompleteExpert;
+                if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                    icons_out[icon_idx++] = WorldMapIcon::Cantha_CompleteMaster;
+                break;
+            }
+        } break;
+        case GW::Continent::Elona: {
+            switch (area_info->type) {
+            case GW::RegionType::CooperativeMission:
+                icons_out[icon_idx++] = WorldMapIcon::Elona_Mission;
+                if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
+                    icons_out[icon_idx++] = WorldMapIcon::Elona_CompletePrimary;
+                if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                    icons_out[icon_idx++] = WorldMapIcon::Elona_CompleteExpert;
+                if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                    icons_out[icon_idx++] = WorldMapIcon::Elona_CompleteMaster;
+                break;
+            }
+        } break;
+        case GW::Continent::RealmOfTorment: {
+            switch (area_info->type) {
+            case GW::RegionType::CooperativeMission:
+                icons_out[icon_idx++] = WorldMapIcon::Elona_Mission;
+                if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
+                    icons_out[icon_idx++] = WorldMapIcon::Elona_CompletePrimary;
+                if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                    icons_out[icon_idx++] = WorldMapIcon::Elona_CompleteExpert;
+                if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                    icons_out[icon_idx++] = WorldMapIcon::Elona_CompleteMaster;
                 break;
             }
         } break;
@@ -727,7 +767,7 @@ void Mission::CheckProgress(const std::wstring& player_name)
 
     mission_state = ToolboxUtils::GetMissionState(outpost, complete_arr, bonus_arr);
 
-    GetOutpostIcons(outpost, outpost_icons, mission_state);
+    GetOutpostIcons(outpost, outpost_icons, mission_state, hard_mode);
 }
 
 IDirect3DTexture9* Mission::GetMissionImage()
