@@ -398,8 +398,8 @@ public:
     public:
         ObservableMap(const GW::AreaInfo& area_info);
 
-        uint32_t campaign;
-        uint32_t continent;
+        GW::Constants::Campaign campaign;
+        GW::Continent continent;
         GW::Region region;
         GW::RegionType type;
         uint32_t flags;
