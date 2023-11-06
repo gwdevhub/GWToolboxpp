@@ -25,6 +25,7 @@
 #include <GWCA/Managers/QuestMgr.h>
 
 #include <Modules/Resources.h>
+#include <Modules/GwDatTextureModule.h>
 
 #include <resource.h>
 
@@ -35,6 +36,8 @@
 
 #include <Color.h>
 #include <Modules/DialogModule.h>
+
+#include <Utils/ToolboxUtils.h>
 
 using namespace GW::Constants;
 using namespace Missions;
@@ -92,6 +95,34 @@ namespace {
     }
 
     wchar_t last_player_name[20];
+
+    void GetOutpostIcons(GW::Constants::MapID map_id, WorldMapIcon icons_out[4], uint8_t mission_state) {
+        icons_out = { 0 };
+        const auto area_info = GW::Map::GetMapInfo(map_id);
+        uint32_t icon_idx = 0;
+        switch (area_info->continent) {
+        case GW::Continent::Kryta: {
+            switch (area_info->type) {
+            case GW::RegionType::CooperativeMission:
+                if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
+                    icons_out[icon_idx++] = WorldMapIcon::Kryta_CompletePrimary;
+                if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                    icons_out[icon_idx++] = WorldMapIcon::Kryta_CompleteSecondary;
+                icons_out[icon_idx++] = WorldMapIcon::Kryta_Mission;
+                break;
+            case GW::RegionType::City:
+                icons_out[0] = WorldMapIcon::Kryta_City;
+                break;
+            case GW::RegionType::Outpost:
+                icons_out[0] = WorldMapIcon::Kryta_Outpost;
+                break;
+            case GW::RegionType::Challenge:
+                icons_out[0] = WorldMapIcon::Kryta_Outpost;
+                break;
+            }
+        } break;
+        }
+    }
 
     bool show_as_list = true;
 
@@ -585,6 +616,17 @@ bool Mission::Draw(IDirect3DDevice9*)
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
     ImGui::PushID(this);
+
+    for (auto file_id : outpost_icons) {
+        if (file_id == WorldMapIcon::None) 
+            continue;
+        const auto texture_ptr = GwDatTextureModule::LoadTextureFromFileId((uint32_t)file_id);
+
+        // TODO: Combine these textures into a composite, then use this instead of GetMissionImage().
+        // This would remove the need for icons to be embedded as resources, my machine doesn't like them.
+        (texture_ptr);
+    }
+
     if (show_as_list) {
         s.y /= 2.f;
         if (!map_unlocked) {
@@ -674,6 +716,18 @@ void Mission::CheckProgress(const std::wstring& player_name)
     map_unlocked = player_completion->maps_unlocked.empty() || ArrayBoolAt(player_completion->maps_unlocked, static_cast<uint32_t>(outpost));
     is_completed = ArrayBoolAt(*missions_complete, static_cast<uint32_t>(outpost));
     bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
+
+    GW::Array<uint32_t> complete_arr;
+    complete_arr.m_buffer = (uint32_t*)missions_complete->data();
+    complete_arr.m_capacity = complete_arr.m_size = missions_complete->size();
+
+    GW::Array<uint32_t> bonus_arr;
+    bonus_arr.m_buffer = (uint32_t*)missions_bonus->data();
+    bonus_arr.m_capacity = bonus_arr.m_size = missions_bonus->size();
+
+    mission_state = ToolboxUtils::GetMissionState(outpost, complete_arr, bonus_arr);
+
+    GetOutpostIcons(outpost, outpost_icons, mission_state);
 }
 
 IDirect3DTexture9* Mission::GetMissionImage()

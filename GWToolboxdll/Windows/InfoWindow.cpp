@@ -48,6 +48,9 @@
 #include <GWCA/Managers/QuestMgr.h>
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/Resources.h>
+#include <GWCA/Utilities/Hooker.h>
+#include <Modules/GwDatTextureModule.h>
+#include <Utils/ToolboxUtils.h>
 
 namespace {
     enum class Status {
@@ -748,6 +751,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+
         if (show_widgets) {
             const auto& widgets = GWToolbox::GetWidgets();
 
@@ -822,6 +826,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
                     InfoField("Continent", "%d", map_info->continent);
                     InfoField("Region", "%d", map_info->region);
                     InfoField("Type", "%d", map_info->type);
+                    InfoField("Mission Complete?", "%d", ToolboxUtils::GetMissionState(GW::Map::GetMapID(), GW::PartyMgr::GetIsPartyInHardMode()));
                     InfoField("Instance Info Type", "%d", GW::Map::GetMapTypeInstanceInfo(map_info->type)->request_instance_map_type);
                     InfoField("Flags", "0x%X", map_info->flags);
                     InfoField("Thumbnail ID", "%d", map_info->thumbnail_id);

@@ -32,6 +32,19 @@ namespace ToolboxUtils {
     bool IsOutpost();
     bool IsExplorable();
 
+    enum MissionState : uint8_t {
+        Primary = 0x1,
+        Expert = 0x2,
+        Master = 0x4
+    };
+
+    // Returns bitwise state of MissionState enum
+    uint8_t GetMissionState(GW::Constants::MapID map_id, const GW::Array<uint32_t>& missions_completed, const GW::Array<uint32_t>& missions_bonus);
+    // Returns bitwise state of MissionState enum
+    uint8_t GetMissionState(GW::Constants::MapID map_id, bool is_hard_mode = false);
+    // Returns bitwise state of MissionState enum
+    uint8_t GetMissionState();
+
     // Player
 
     // Return player name without guild tag or player number

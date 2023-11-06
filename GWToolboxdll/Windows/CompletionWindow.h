@@ -6,6 +6,10 @@
 #include <ToolboxWindow.h>
 #include <Color.h>
 
+namespace CompletionWindow_Constants {
+    enum class WorldMapIcon : uint32_t;
+}
+
 namespace Missions {
     struct MissionImage {
         const wchar_t* file_name;
@@ -39,6 +43,9 @@ namespace Missions {
         bool is_completed = false;
         bool bonus = false;
         bool map_unlocked = true;
+
+        uint8_t mission_state = 0;
+        CompletionWindow_Constants::WorldMapIcon outpost_icons[4] = { (CompletionWindow_Constants::WorldMapIcon)0 };
 
         virtual const char* Name();
         virtual bool Draw(IDirect3DDevice9*);
