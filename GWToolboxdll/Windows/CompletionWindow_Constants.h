@@ -14,7 +14,7 @@ namespace CompletionWindow_Constants {
     // GW loads these icons as an array of file hashes once, and then keeps it in memory - I can't find where these are in RDATA reliably, so have to define them here :(
     enum class WorldMapIcon : uint32_t {
         None = 0,
-        Kryta_Mission = 0x2ac223,
+        Kryta_Mission = 0x2ac23,
         Kryta_CompletePrimary = 0x2ac27,
         Kryta_CompleteSecondary = 0x2ac29,
         Kryta_City = 0x2ac2f,
