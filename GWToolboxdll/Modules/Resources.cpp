@@ -35,6 +35,8 @@ namespace {
     const char* d3dErrorMessage(HRESULT code)
     {
         switch (code) {
+            case E_INVALIDARG:
+                return "E_INVALIDARG One or more arguments are invalid.";
             case D3DERR_NOTAVAILABLE:
                 return "D3DERR_NOTAVAILABLE";
             case D3DERR_OUTOFVIDEOMEMORY:
