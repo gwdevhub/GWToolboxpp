@@ -813,7 +813,7 @@ size_t HeroUnlock::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
         wchar_t local_image[MAX_PATH];
         swprintf(local_image, _countof(local_image), L"%s/hero_%d.jpg", path.c_str(), skill_id);
         char remote_image[128];
-        snprintf(remote_image, _countof(remote_image), "https://github.com/HasKha/GWToolboxpp/raw/master/resources/heros/hero_%d.jpg", skill_id);
+        snprintf(remote_image, _countof(remote_image), "https://github.com/gwdevhub/GWToolboxpp/raw/master/resources/heros/hero_%d.jpg", skill_id);
         Resources::LoadTexture(*icons, local_image, remote_image);
         icons_loaded = true;
     }
