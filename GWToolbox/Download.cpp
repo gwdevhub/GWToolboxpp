@@ -32,6 +32,7 @@ bool Download(std::string& content, const char* url)
 {
     RestClient client;
     client.SetUrl(url);
+    client.SetFollowLocation(true);
     client.SetVerifyPeer(false);
     client.SetTimeoutSec(5);
     client.SetUserAgent("curl/7.71.1");
