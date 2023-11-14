@@ -24,118 +24,154 @@ using namespace GW::Constants;
 
 bool Pcon::map_has_effects_array = false;
 
+namespace {
+    constexpr uint32_t ICON_ESSENCE_OF_CELERITY = 0x458A7;
+    constexpr uint32_t ICON_GRAIL_OF_MIGHT = 0x24BB;
+    constexpr uint32_t ICON_ARMOR_OF_SALVATION = 0x458A4;
+    constexpr uint32_t ICON_RED_ROCK_CANDY = 0x45999;
+    constexpr uint32_t ICON_BLUE_ROCK_CANDY = 0x45998;
+    constexpr uint32_t ICON_GREEN_ROCK_CANDY = 0x499ED;
+    constexpr uint32_t ICON_GOLDEN_EGG = 0x458D4;
+    constexpr uint32_t ICON_CANDY_APPLE = 0x52193;
+    constexpr uint32_t ICON_CANDY_CORN = 0x52196;
+    constexpr uint32_t ICON_BIRTHDAY_CUPCAKE = 0x47C34;
+    constexpr uint32_t ICON_PUMPKIN_PIE = 0x521AE;
+    constexpr uint32_t ICON_WAR_SUPPLIES = 0x5788F;
+    constexpr uint32_t ICON_DWARVEN_ALE = 0x252BD;
+    constexpr uint32_t ICON_LUNAR_FORTUNE = 0x44C96;
+    constexpr uint32_t ICON_SUGARY_BLUE_DRINK = 0x44CA0;
+    constexpr uint32_t ICON_DRAKE_KABOB = 0x38467;
+    constexpr uint32_t ICON_SKALEFIN_SOUP = 0x3846A;
+    constexpr uint32_t ICON_PAHNAI_SALAD = 0x3846D;
+    constexpr uint32_t ICON_HUNTERS_INSIGHT = 0x25970;
+    constexpr uint32_t ICON_SCROLL_OF_RESURRECTION = 0x38458;
+    constexpr uint32_t ICON_POWERSTONE_OF_COURAGE = 0x17000;
+    constexpr uint32_t ICON_SEAL_OF_THE_DRAGON_EMPIRE = 0x38495;
+    constexpr uint32_t ICON_HONEYCOMB = 0x212EC;
+    constexpr uint32_t ICON_PUMPKIN_COOKIE = 0x52199;
+    constexpr uint32_t ICON_GHOST_IN_THE_BOX = 0x26855;
+    constexpr uint32_t ICON_EVERLASTING_MOBSTOPPER = 0x56469;
+    constexpr uint32_t ICON_TENGU_SUPPORT_FLARE = 0x44C99;
+    constexpr uint32_t ICON_IMPERIAL_GUARD_SUMMON = 0x43474;
+    constexpr uint32_t ICON_SHINING_BLADE_WAR_HORN = 0x57894;
+    constexpr uint32_t ICON_SUMMONING_STONE_GENERIC = 0x54991; // Ghastly, Demonic, Arctic, Chitinous share this
+    constexpr uint32_t ICON_MERCANTILE_SUMMONING_STONE = 0x55766;
+    constexpr uint32_t ICON_MYSTERIOUS_SUMMONING_STONE = 0x55767;
+    constexpr uint32_t ICON_ZAISHEN_SUMMONING_STONE = 0x55768;
+}
+
 PconsWindow::PconsWindow()
 {
     constexpr float s = 64.0f; // all icons are 64x64
 
-    pcons.push_back(new PconCons("Essence of Celerity", "Essence", "essence", L"Essence of Celerity",
+    pcons.push_back(new PconCons("Essence of Celerity", "Essence", "essence", ICON_ESSENCE_OF_CELERITY,
                                  ImVec2(5 / s, 10 / s), ImVec2(46 / s, 51 / s),
                                  ItemID::ConsEssence, SkillID::Essence_of_Celerity_item_effect, 5));
 
-    pcons.push_back(new PconCons("Grail of Might", "Grail", "grail", L"Grail of Might",
+    pcons.push_back(new PconCons("Grail of Might", "Grail", "grail", ICON_GRAIL_OF_MIGHT,
                                  ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s),
                                  ItemID::ConsGrail, SkillID::Grail_of_Might_item_effect, 5));
 
-    pcons.push_back(new PconCons("Armor of Salvation", "Armor", "armor", L"Armor of Salvation",
+    pcons.push_back(new PconCons("Armor of Salvation", "Armor", "armor", ICON_ARMOR_OF_SALVATION,
                                  ImVec2(0 / s, 2 / s), ImVec2(56 / s, 58 / s),
                                  ItemID::ConsArmor, SkillID::Armor_of_Salvation_item_effect, 5));
 
-    pcons.push_back(new PconGeneric("Red Rock Candy", "Red Rock", "redrock", L"Red Rock Candy",
+    pcons.push_back(new PconGeneric("Red Rock Candy", "Red Rock", "redrock", ICON_RED_ROCK_CANDY,
                                     ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
                                     ItemID::RRC, SkillID::Red_Rock_Candy_Rush, 5));
 
-    pcons.push_back(new PconGeneric("Blue Rock Candy", "Blue Rock", "bluerock", L"Blue Rock Candy",
+    pcons.push_back(new PconGeneric("Blue Rock Candy", "Blue Rock", "bluerock", ICON_BLUE_ROCK_CANDY,
                                     ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
                                     ItemID::BRC, SkillID::Blue_Rock_Candy_Rush, 10));
 
-    pcons.push_back(new PconGeneric("Green Rock Candy", "Green Rock", "greenrock", L"Green Rock Candy",
+    pcons.push_back(new PconGeneric("Green Rock Candy", "Green Rock", "greenrock", ICON_GREEN_ROCK_CANDY,
                                     ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
                                     ItemID::GRC, SkillID::Green_Rock_Candy_Rush, 15));
 
-    pcons.push_back(new PconGeneric("Golden Egg", "Egg", "egg", L"Golden Egg",
+    pcons.push_back(new PconGeneric("Golden Egg", "Egg", "egg", ICON_GOLDEN_EGG,
                                     ImVec2(1 / s, 8 / s), ImVec2(48 / s, 55 / s),
                                     ItemID::Eggs, SkillID::Golden_Egg_skill, 20));
 
-    pcons.push_back(new PconGeneric("Candy Apple", "Apple", "apple", L"Candy Apple",
+    pcons.push_back(new PconGeneric("Candy Apple", "Apple", "apple", ICON_CANDY_APPLE,
                                     ImVec2(0 / s, 7 / s), ImVec2(50 / s, 57 / s),
                                     ItemID::Apples, SkillID::Candy_Apple_skill, 10));
 
-    pcons.push_back(new PconGeneric("Candy Corn", "Corn", "corn", L"Candy Corn",
+    pcons.push_back(new PconGeneric("Candy Corn", "Corn", "corn", ICON_CANDY_CORN,
                                     ImVec2(5 / s, 10 / s), ImVec2(48 / s, 53 / s),
                                     ItemID::Corns, SkillID::Candy_Corn_skill, 10));
 
-    pcons.push_back(new PconGeneric("Birthday Cupcake", "Cupcake", "cupcake", L"Birthday Cupcake",
+    pcons.push_back(new PconGeneric("Birthday Cupcake", "Cupcake", "cupcake", ICON_BIRTHDAY_CUPCAKE,
                                     ImVec2(1 / s, 5 / s), ImVec2(51 / s, 55 / s),
                                     ItemID::Cupcakes, SkillID::Birthday_Cupcake_skill, 10));
 
-    pcons.push_back(new PconGeneric("Slice of Pumpkin Pie", "Pie", "pie", L"Slice of Pumpkin Pie",
+    pcons.push_back(new PconGeneric("Slice of Pumpkin Pie", "Pie", "pie", ICON_PUMPKIN_PIE,
                                     ImVec2(0 / s, 7 / s), ImVec2(52 / s, 59 / s),
                                     ItemID::Pies, SkillID::Pie_Induced_Ecstasy, 10));
 
-    pcons.push_back(new PconGeneric("War Supplies", "War Supply", "warsupply", L"War Supplies",
+    pcons.push_back(new PconGeneric("War Supplies", "War Supply", "warsupply", ICON_WAR_SUPPLIES,
                                     ImVec2(0 / s, 0 / s), ImVec2(63 / s, 63 / s),
                                     ItemID::Warsupplies, SkillID::Well_Supplied, 20));
 
-    pcons.push_back(pcon_alcohol = new PconAlcohol("Alcohol", "Alcohol", "alcohol", L"Dwarven Ale",
+    pcons.push_back(pcon_alcohol = new PconAlcohol("Alcohol", "Alcohol", "alcohol", ICON_DWARVEN_ALE,
                                                    ImVec2(-5 / s, 1 / s), ImVec2(57 / s, 63 / s),
                                                    10));
 
-    pcons.push_back(new PconLunar("Lunar Fortunes", "Lunars", "lunars", L"Lunar Fortune",
+    pcons.push_back(new PconLunar("Lunar Fortunes", "Lunars", "lunars", ICON_LUNAR_FORTUNE,
                                   ImVec2(1 / s, 4 / s), ImVec2(56 / s, 59 / s),
                                   10));
 
-    pcons.push_back(new PconCity("City speedboost", "City IMS", "city", L"Sugary Blue Drink",
+    pcons.push_back(new PconCity("City speedboost", "City IMS", "city", ICON_SUGARY_BLUE_DRINK,
                                  ImVec2(0 / s, 1 / s), ImVec2(61 / s, 62 / s),
                                  20));
 
-    pcons.push_back(new PconGeneric("Drake Kabob", "Kabob", "kabob", L"Drake Kabob",
+    pcons.push_back(new PconGeneric("Drake Kabob", "Kabob", "kabob", ICON_DRAKE_KABOB,
                                     ImVec2(0 / s, 0 / s), ImVec2(64 / s, 64 / s),
                                     ItemID::Kabobs, SkillID::Drake_Skin, 10));
 
-    pcons.push_back(new PconGeneric("Bowl of Skalefin Soup", "Soup", "soup", L"Bowl of Skalefin Soup",
+    pcons.push_back(new PconGeneric("Bowl of Skalefin Soup", "Soup", "soup", ICON_SKALEFIN_SOUP,
                                     ImVec2(2 / s, 5 / s), ImVec2(51 / s, 54 / s),
                                     ItemID::SkalefinSoup, SkillID::Skale_Vigor, 10));
 
-    pcons.push_back(new PconGeneric("Pahnai Salad", "Salad", "salad", L"Pahnai Salad",
+    pcons.push_back(new PconGeneric("Pahnai Salad", "Salad", "salad", ICON_PAHNAI_SALAD,
                                     ImVec2(0 / s, 5 / s), ImVec2(49 / s, 54 / s),
                                     ItemID::PahnaiSalad, SkillID::Pahnai_Salad_item_effect, 10));
 
-    pcons.push_back(new PconGeneric(L"Scroll of Hunter's Insight", 5976, SkillID::Hunters_Insight, 20));
+    pcons.push_back(new PconGeneric("Scroll of Hunter's Insight", ICON_HUNTERS_INSIGHT, 5976, SkillID::Hunters_Insight, 20));
     pcons.back()->visible = false;
 
     // Refillers
 
-    pcons.push_back(new PconRefiller(L"Scroll of Resurrection", ItemID::ResScrolls, 5));
+    pcons.push_back(new PconRefiller("Scroll of Resurrection", ICON_SCROLL_OF_RESURRECTION, ItemID::ResScrolls, 5));
     pcons.back()->ini = "resscroll";
-    pcons.push_back(new PconRefiller(L"Powerstone of Courage", ItemID::Powerstone, 5));
+    pcons.push_back(new PconRefiller("Powerstone of Courage", ICON_POWERSTONE_OF_COURAGE, ItemID::Powerstone, 5));
     pcons.back()->ini = "pstone";
-    pcons.push_back(new PconRefiller(L"Seal of the Dragon Empire", ItemID::SealOfTheDragonEmpire, 5));
+    pcons.push_back(new PconRefiller("Seal of the Dragon Empire", ICON_SEAL_OF_THE_DRAGON_EMPIRE, ItemID::SealOfTheDragonEmpire, 5));
 
-    pcons.push_back(new PconRefiller(L"Honeycomb", ItemID::Honeycomb));
-    pcons.push_back(new PconRefiller(L"Pumpkin Cookie", ItemID::PumpkinCookie));
-    pcons.push_back(new PconRefiller(L"Ghost in the Box", ItemID::GhostInTheBox));
-    pcons.push_back(new PconRefiller(L"Everlasting Mobstopper", ItemID::Mobstopper));
+    pcons.push_back(new PconRefiller("Honeycomb", ICON_HONEYCOMB, ItemID::Honeycomb));
+    pcons.push_back(new PconRefiller("Pumpkin Cookie", ICON_PUMPKIN_COOKIE, ItemID::PumpkinCookie));
+    pcons.push_back(new PconRefiller("Ghost in the Box", ICON_GHOST_IN_THE_BOX, ItemID::GhostInTheBox));
+    pcons.push_back(new PconRefiller("Everlasting Mobstopper", ICON_EVERLASTING_MOBSTOPPER, ItemID::Mobstopper));
 
     // Summoning Stones
-    pcons.push_back(new PconRefiller(L"Tengu Support Flare", ItemID::TenguSummon));
-    pcons.push_back(new PconRefiller(L"Imperial Guard Reinforcement Order", ItemID::ImperialGuardSummon));
-    pcons.push_back(new PconRefiller(L"Shining Blade War Horn", ItemID::WarhornSummon));
-    pcons.push_back(new PconRefiller(L"Ghastly Summoning Stone", ItemID::GhastlyStone));
+    pcons.push_back(new PconRefiller("Tengu Support Flare", ICON_TENGU_SUPPORT_FLARE, ItemID::TenguSummon));
+    pcons.push_back(new PconRefiller("Imperial Guard Reinforcement Order", ICON_IMPERIAL_GUARD_SUMMON, ItemID::ImperialGuardSummon));
+    pcons.push_back(new PconRefiller("Shining Blade War Horn", ICON_SHINING_BLADE_WAR_HORN, ItemID::WarhornSummon));
+    pcons.push_back(new PconRefiller("Ghastly Summoning Stone", ICON_SUMMONING_STONE_GENERIC, ItemID::GhastlyStone));
     // @Cleanup: Add these items to GWCA or something
-    pcons.push_back(new PconRefiller(L"Chitinous Summoning Stone", 30959));
-    pcons.push_back(new PconRefiller(L"Amber Summoning Stone", 30961));
-    pcons.push_back(new PconRefiller(L"Arctic Summoning Stone", 30962));
-    pcons.push_back(new PconRefiller(L"Celestial Summoning Stone", 34176));
-    pcons.push_back(new PconRefiller(L"Mystical Summoning Stone", 30960));
-    pcons.push_back(new PconRefiller(L"Demonic Summoning Stone", 30963));
-    pcons.push_back(new PconRefiller(L"Gelatinous Summoning Stone", 30964));
-    pcons.push_back(new PconRefiller(L"Fossilized Summoning Stone", 30965));
-    pcons.push_back(new PconRefiller(L"Jadeite Summoning Stone", 30966));
-    pcons.push_back(new PconRefiller(L"Mischievous Summoning Stone", 31022));
-    pcons.push_back(new PconRefiller(L"Frosty Summoning Stone", 31023));
-    pcons.push_back(new PconRefiller(L"Mercantile Summoning Stone", 31154));
-    pcons.push_back(new PconRefiller(L"Mysterious Summoning Stone", 31155));
-    pcons.push_back(new PconRefiller(L"Zaishen Summoning Stone", 31156));
+    pcons.push_back(new PconRefiller("Chitinous Summoning Stone", ICON_SUMMONING_STONE_GENERIC, 30959));
+    pcons.push_back(new PconRefiller("Amber Summoning Stone", ICON_SUMMONING_STONE_GENERIC, 30961));
+    pcons.push_back(new PconRefiller("Arctic Summoning Stone", ICON_SUMMONING_STONE_GENERIC, 30962));
+    pcons.push_back(new PconRefiller("Celestial Summoning Stone", ICON_SUMMONING_STONE_GENERIC, 34176));
+    pcons.push_back(new PconRefiller("Mystical Summoning Stone", ICON_SUMMONING_STONE_GENERIC, 30960));
+    pcons.push_back(new PconRefiller("Demonic Summoning Stone", ICON_SUMMONING_STONE_GENERIC, 30963));
+    pcons.push_back(new PconRefiller("Gelatinous Summoning Stone", ICON_SUMMONING_STONE_GENERIC, 30964));
+    pcons.push_back(new PconRefiller("Fossilized Summoning Stone", ICON_SUMMONING_STONE_GENERIC, 30965));
+    pcons.push_back(new PconRefiller("Jadeite Summoning Stone", ICON_SUMMONING_STONE_GENERIC, 30966));
+    pcons.push_back(new PconRefiller("Mischievous Summoning Stone", ICON_SUMMONING_STONE_GENERIC, 31022));
+    pcons.push_back(new PconRefiller("Frosty Summoning Stone", ICON_SUMMONING_STONE_GENERIC, 31023));
+    pcons.push_back(new PconRefiller("Mercantile Summoning Stone", ICON_MERCANTILE_SUMMONING_STONE, 31154));
+    pcons.push_back(new PconRefiller("Mysterious Summoning Stone", ICON_MYSTERIOUS_SUMMONING_STONE, 31155));
+    pcons.push_back(new PconRefiller("Zaishen Summoning Stone", ICON_ZAISHEN_SUMMONING_STONE, 31156));
 }
 
 void PconsWindow::Initialize()

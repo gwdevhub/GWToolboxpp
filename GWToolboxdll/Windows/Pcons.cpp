@@ -23,6 +23,7 @@
 #include <Widgets/AlcoholWidget.h>
 #include <Windows/Pcons.h>
 #include <Windows/PconsWindow.h>
+#include <Modules/GwDatTextureModule.h>
 
 float Pcon::size = 46.0f;
 int Pcon::pcons_delay = 5000;
@@ -47,11 +48,11 @@ std::array<std::array<clock_t, 25>, 22> Pcon::reserved_bag_slots{};
 Pcon::Pcon(const char* chatname,
            const char* abbrevname,
            const char* ininame,
-           const wchar_t* filename_,
+           const uint32_t icon_id,
            const ImVec2 uv0_, const ImVec2 uv1_, const int threshold_,
            const char* desc_)
     : threshold(threshold_)
-    , filename(filename_)
+    , icon_id(icon_id)
     , timer(TIMER_INIT())
     , uv0(uv0_)
     , uv1(uv1_)
@@ -60,7 +61,7 @@ Pcon::Pcon(const char* chatname,
     if (desc_) {
         desc = desc_;
     }
-    chat = chatname ? chatname : GuiUtils::WStringToString(filename);
+    chat = chatname;
     abbrev = abbrevname ? abbrevname : GuiUtils::RemovePunctuation(chat);
     ini = ininame ? ininame : GuiUtils::ToSlug(chat);
 }
@@ -112,7 +113,7 @@ wchar_t* Pcon::SetPlayerName()
 void Pcon::Draw(IDirect3DDevice9*)
 {
     if (!texture) {
-        texture = Resources::GetItemImage(filename);
+        texture = GwDatTextureModule::LoadTextureFromFileId(icon_id);
     }
     if (*texture == nullptr) {
         return;
