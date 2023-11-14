@@ -526,7 +526,7 @@ namespace {
 
     GW::MemoryPatcher skip_map_entry_message_patch;
 
-    // Refresh agent name tags when allegiance changes ( https://github.com/HasKha/GWToolboxpp/issues/781 )
+    // Refresh agent name tags when allegiance changes ( https://github.com/gwdevhub/GWToolboxpp/issues/781 )
     void OnAgentAllegianceChanged(GW::HookStatus*, GW::Packet::StoC::AgentUpdateAllegiance*)
     {
         // Backup the current name tag flag state, then "flash" nametags to update.

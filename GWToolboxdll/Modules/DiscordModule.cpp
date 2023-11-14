@@ -337,7 +337,7 @@ void DiscordModule::Initialize()
     dll_location = Resources::GetPath(L"discord_game_sdk.dll");
     // NOTE: We're using the one we know matches our API version, not checking for any other discord dll on the machine.
     Resources::EnsureFileExists(dll_location,
-                                "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/discord_game_sdk.dll",
+                                "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/discord_game_sdk.dll",
                                 [&](const bool success, const std::wstring& error) {
                                     if (!success || !LoadDll()) {
                                         Log::LogW(L"Failed to load discord_game_sdk.dll. To try again, please restart GWToolbox\n%s", error.c_str());
