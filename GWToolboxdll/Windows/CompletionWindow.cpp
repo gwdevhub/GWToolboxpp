@@ -2195,7 +2195,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 #if 1
     ImGui::SameLine();
     if (ImGui::Button("Change") && wcscmp(GetPlayerName(), chosen_player_name.c_str()) != 0) {
-        RerollWindow::Instance().Reroll(chosen_player_name.data(), false, false);
+        if (!RerollWindow::Instance().Reroll(chosen_player_name.data(), false, false)) {
+            Log::Warning("Failed to reroll to character");
+        }
     }
 #endif
     ImGui::SameLine();
