@@ -618,6 +618,35 @@ namespace {
     typedef uint32_t*(__cdecl* CreateTexture_pt)(wchar_t* file_name, uint32_t flags);
     CreateTexture_pt CreateTexture_Func = nullptr;
     CreateTexture_pt CreateTexture_Ret = nullptr;
+
+    // Why reinvent the wheel?
+    typedef void(__cdecl* GWCA_SendUIMessage_pt)(GW::UI::UIMessage msgid, void* wParam, void* lParam);
+    GWCA_SendUIMessage_pt GWCA_SendUIMessage_Func = nullptr;
+    GWCA_SendUIMessage_pt GWCA_SendUIMessage_Ret = nullptr;
+
+    struct UIMessagePacket {
+        GW::UI::UIMessage msgid;
+        void* wParam;
+        void* lParam;
+    };
+
+    std::vector<UIMessagePacket*> ui_message_packets_recorded;
+    bool record_ui_messages = false;
+
+    void OnGWCASendUIMessage(GW::UI::UIMessage msgid, void* wParam, void* lParam) {
+        GW::Hook::EnterHook();
+        GWCA_SendUIMessage_Ret(msgid, wParam, lParam);
+        if(record_ui_messages)
+            ui_message_packets_recorded.push_back(new UIMessagePacket({ msgid,wParam,lParam }));
+        GW::Hook::LeaveHook();
+    }
+    void ClearUIMessagesRecorded() {
+        for (auto p : ui_message_packets_recorded) {
+            delete p;
+        }
+        ui_message_packets_recorded.clear();
+    }
+
     std::map<uint32_t,IDirect3DTexture9**> textures_created;
 
     bool record_textures = false;
@@ -689,6 +718,17 @@ namespace {
             ImGui::PopStyleVar();
             ImGui::PopStyleVar();
         }
+        record_ui_messages = ImGui::CollapsingHeader("UI Message Log");
+        if (record_ui_messages) {
+            if (ImGui::SmallButton("Reset")) {
+                ClearUIMessagesRecorded();
+            }
+            for (auto it : ui_message_packets_recorded) {
+                ImGui::PushID(it);
+                ImGui::Text("0x%08x 0x%08x 0x%08x", it->msgid, it->wParam, it->lParam);
+                ImGui::PopID();
+            }
+        }
 
 
         // For debugging changes to flags/arrays etc
@@ -718,6 +758,11 @@ void InfoWindow::Terminate()
         GW::HookBase::RemoveHook(CreateTexture_Func);
         CreateTexture_Func = nullptr;
     }
+    if (GWCA_SendUIMessage_Func) {
+        GW::HookBase::RemoveHook(GWCA_SendUIMessage_Func);
+        GWCA_SendUIMessage_Func = nullptr;
+    }
+    ClearUIMessagesRecorded();
 }
 
 void InfoWindow::Initialize()
@@ -739,13 +784,18 @@ void InfoWindow::Initialize()
         GW::HookBase::EnableHooks(CreateTexture_Func);
     }
 
-
-
+    GWCA_SendUIMessage_Func = (GWCA_SendUIMessage_pt)GW::UI::SendUIMessage;
+    if (GWCA_SendUIMessage_Func) {
+        GW::HookBase::CreateHook(GWCA_SendUIMessage_Func, OnGWCASendUIMessage, (void**)&GWCA_SendUIMessage_Ret);
+        GW::HookBase::EnableHooks(GWCA_SendUIMessage_Func);
+    }
 }
 
 void InfoWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
+        record_ui_messages = false;
+        record_textures = false;
         return;
     }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
