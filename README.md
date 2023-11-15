@@ -15,7 +15,7 @@ If you are here to check toolbox features and for a download link to go [https:/
 1. Open **Git Bash**. Use all the following commands in **Git Bash**. 
 
 2. Clone the repository recursively: 
-`git clone --recursive https://github.com/Haskha/GWToolboxpp.git`
+`git clone --recursive https://github.com/gwdevhub/GWToolboxpp.git`
 
 3. Navigate to the GWToolboxpp folder: 
 `cd GWToolboxpp`
@@ -93,7 +93,7 @@ For developers: there are a few things you should take note of:
 **[JetBrains](https://github.com/JetBrains)**
 * <img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" alt="JetBrains Logo" width="23" style="float: left" /> Providing core contributors with <a href="https://www.jetbrains.com/community/opensource">OSS Development Licenses</a>
 
-**Everyone who [proposed a PR](https://github.com/HasKha/GWToolboxpp/pulls?q=is%3Apr+is%3Amerged)**
+**Everyone who [proposed a PR](https://github.com/gwdevhub/GWToolboxpp/pulls?q=is%3Apr+is%3Amerged)**
 
 **and everyone suggesting ideas!**
 
