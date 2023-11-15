@@ -681,7 +681,7 @@ namespace {
 
         record_textures = ImGui::CollapsingHeader("Loaded Textures");
         if (record_textures) {
-
+            ImGui::PushID(&textures_created);
             const ImVec2 scaled_size = { 64.f,64.f };
             constexpr ImVec4 tint(1, 1, 1, 1);
             const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
@@ -717,9 +717,11 @@ namespace {
             ImGui::PopStyleColor();
             ImGui::PopStyleVar();
             ImGui::PopStyleVar();
+            ImGui::PopID();
         }
         record_ui_messages = ImGui::CollapsingHeader("UI Message Log");
         if (record_ui_messages) {
+            ImGui::PushID(&ui_message_packets_recorded);
             if (ImGui::SmallButton("Reset")) {
                 ClearUIMessagesRecorded();
             }
@@ -728,6 +730,7 @@ namespace {
                 ImGui::Text("0x%08x 0x%08x 0x%08x", it->msgid, it->wParam, it->lParam);
                 ImGui::PopID();
             }
+            ImGui::PopID();
         }
 
 
