@@ -14,6 +14,7 @@
 #include "GuildWarsSettingsModule.h"
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
 
 #include <GWCA/GameContainers/List.h>
 #include <GWCA/Constants/QuestIDs.h>
@@ -227,6 +228,7 @@ namespace {
         std::vector<uint32_t> preference_flags{};
         std::vector<uint32_t> key_mappings{};
         std::vector<GW::UI::WindowPosition> window_positions{};
+        RECT gw_window_pos = { 0 };
     };
 
     // Read preferences from in-game memory to a PreferencesStruct
@@ -252,6 +254,7 @@ namespace {
         for (auto i = 0u; key_mappings_array && i < key_mappings_array_length; i++) {
             out.key_mappings[i] = key_mappings_array[i];
         }
+        ASSERT(GetWindowRect(GW::MemoryMgr::GetGWWindowHandle(), &out.gw_window_pos));
     }
 
     // Write preferences to the game from a PreferencesStruct. Run this on the game thread.
@@ -271,6 +274,15 @@ namespace {
         }
         for (auto i = 0u; i < in.key_mappings.size() && i < key_mappings_array_length; i++) {
             key_mappings_array[i] = in.key_mappings[i];
+        }
+
+        if (GW::UI::GetPreference(GW::UI::NumberPreference::ScreenBorderless) == 0) {
+            const auto whnd = GW::MemoryMgr::GetGWWindowHandle();
+            const auto w = in.gw_window_pos.right - in.gw_window_pos.left;
+            const auto h = in.gw_window_pos.bottom - in.gw_window_pos.top;
+            if (w > 10 && h > 10) {
+                SetWindowPos(whnd, 0, in.gw_window_pos.left, in.gw_window_pos.top, w, h, SWP_ASYNCWINDOWPOS | SWP_NOZORDER);
+            }
         }
     }
 
@@ -306,6 +318,10 @@ namespace {
             snprintf(key_buf, _countof(key_buf), "0x%02x_p2_y", window_id);
             window_pos.p2.y = static_cast<float>(ini.GetDoubleValue(ini_label_windows, key_buf, window_pos.p2.y));
         }
+        prefs.gw_window_pos.top = ini.GetLongValue(ini_label_windows, "gw_window_top", 0);
+        prefs.gw_window_pos.left = ini.GetLongValue(ini_label_windows, "gw_window_left", 0);
+        prefs.gw_window_pos.right = ini.GetLongValue(ini_label_windows, "gw_window_right", 0);
+        prefs.gw_window_pos.bottom = ini.GetLongValue(ini_label_windows, "gw_window_bottom", 0);
     }
 
     // Write preferences to an ini file from a PreferencesStruct
@@ -341,6 +357,10 @@ namespace {
             snprintf(key_buf, _countof(key_buf), "0x%02x_p2_y", window_id);
             ini.SetDoubleValue(ini_label_windows, key_buf, window_pos.p2.y);
         }
+        ini.SetLongValue(ini_label_windows, "gw_window_top", prefs.gw_window_pos.top);
+        ini.SetLongValue(ini_label_windows, "gw_window_left", prefs.gw_window_pos.left);
+        ini.SetLongValue(ini_label_windows, "gw_window_right", prefs.gw_window_pos.right);
+        ini.SetLongValue(ini_label_windows, "gw_window_bottom", prefs.gw_window_pos.bottom);
     }
 
     void OnPreferencesLoadFileChosen(const char* result)
