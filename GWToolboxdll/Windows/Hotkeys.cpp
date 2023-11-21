@@ -1618,11 +1618,9 @@ void HotkeyAction::Execute()
     }
     switch (action) {
         case OpenXunlaiChest:
-            if (isOutpost()) {
-                GW::GameThread::Enqueue([] {
-                    GW::Items::OpenXunlaiWindow();
+            GW::GameThread::Enqueue([] {
+                GW::Items::OpenXunlaiWindow();
                 });
-            }
             break;
         case OpenLockedChest: {
             if (isExplorable()) {
