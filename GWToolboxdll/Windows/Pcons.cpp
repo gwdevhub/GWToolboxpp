@@ -482,8 +482,7 @@ int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, const size_t from_bag
             if (qtyea < 1) {
                 continue; // This is not the pcon you're looking for...
             }
-            if (used != nullptr && !*used) {
-                GW::Items::UseItem(item);
+            if (used != nullptr && !*used && GW::Items::UseItem(item)) {
                 *used = true;
                 used_qty = qtyea;
             }

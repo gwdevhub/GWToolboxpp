@@ -533,7 +533,10 @@ void RerollWindow::Update(float)
                 RerollFailed(L"No scroll available for elite area");
                 return;
             }
-            GW::Items::UseItem(scroll);
+            if (!GW::Items::UseItem(scroll)) {
+                RerollFailed(L"Failed to use scroll item");
+                return;
+            }
             reroll_stage = WaitForActiveDistrict;
             reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
         }
