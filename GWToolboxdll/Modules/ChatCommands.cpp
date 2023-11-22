@@ -1462,9 +1462,7 @@ void ChatCommands::CmdChest(const wchar_t*, int, LPWSTR*)
     if (!IsMapReady()) {
         return;
     }
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-        GW::Items::OpenXunlaiWindow();
-    }
+    GW::Items::OpenXunlaiWindow();
 }
 
 void ChatCommands::CmdTB(const wchar_t* message, const int argc, LPWSTR* argv)

@@ -25,6 +25,7 @@
 #include <GWCA/Managers/QuestMgr.h>
 
 #include <Modules/Resources.h>
+#include <Modules/GwDatTextureModule.h>
 
 #include <resource.h>
 
@@ -35,6 +36,8 @@
 
 #include <Color.h>
 #include <Modules/DialogModule.h>
+
+#include <Utils/ToolboxUtils.h>
 
 using namespace GW::Constants;
 using namespace Missions;
@@ -92,6 +95,141 @@ namespace {
     }
 
     wchar_t last_player_name[20];
+
+    void GetOutpostIcons(GW::Constants::MapID map_id, IDirect3DTexture9** icons_out[4], uint8_t mission_state, bool is_hard_mode = false) {
+        memset(icons_out, 0, sizeof(icons_out) * sizeof(*icons_out));
+
+        WorldMapIcon icon_file_ids[4] = { WorldMapIcon::None };
+        uint32_t icon_idx = 0;
+
+        auto hardModeMissionIcons = [mission_state](WorldMapIcon icon_file_ids[4], bool has_master = true) {
+            uint32_t icon_idx = 0;
+            if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
+                icon_file_ids[icon_idx++] = WorldMapIcon::HardMode_CompletePrimary;
+            if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                icon_file_ids[icon_idx++] = WorldMapIcon::HardMode_CompleteExpert;
+
+            if (has_master && (mission_state & ToolboxUtils::MissionState::Master) != 0)
+                icon_file_ids[icon_idx++] = WorldMapIcon::HardMode_CompleteMaster;
+            if (!has_master 
+                && (mission_state & ToolboxUtils::MissionState::Expert) != 0
+                && (mission_state & ToolboxUtils::MissionState::Primary) != 0) {
+                icon_file_ids[icon_idx++] = WorldMapIcon::HardMode_CompleteAll;
+            }
+            else if (has_master && (mission_state & ToolboxUtils::MissionState::Master) != 0) {
+                icon_file_ids[icon_idx++] = WorldMapIcon::HardMode_CompleteAll;
+            }
+            else {
+                icon_file_ids[icon_idx++] = WorldMapIcon::HardMode;
+            }
+        };
+        const auto area_info = GW::Map::GetMapInfo(map_id);
+
+        if (area_info->type == GW::RegionType::ExplorableZone) {
+            *icon_file_ids = WorldMapIcon::HardMode;
+            if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
+                *icon_file_ids = WorldMapIcon::HardMode_CompleteAll;
+        }
+        else {
+            // TODO: Change these icons out for Hard Mode
+            switch (area_info->continent) {
+            case GW::Continent::Kryta: {
+                switch (area_info->type) {
+                case GW::RegionType::MissionOutpost:
+                case GW::RegionType::CooperativeMission:
+                    if (is_hard_mode) {
+                        hardModeMissionIcons(icon_file_ids, false);
+                    }
+                    else {
+                        if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
+                            icon_file_ids[icon_idx++] = WorldMapIcon::Kryta_CompletePrimary;
+                        if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                            icon_file_ids[icon_idx++] = WorldMapIcon::Kryta_CompleteSecondary;
+                        icon_file_ids[icon_idx++] = WorldMapIcon::Kryta_Mission;
+                    }
+                    break;
+                case GW::RegionType::City:
+                    icon_file_ids[0] = WorldMapIcon::Kryta_City;
+                    break;
+                case GW::RegionType::Outpost:
+                    icon_file_ids[0] = WorldMapIcon::Kryta_Outpost;
+                    break;
+                case GW::RegionType::Challenge:
+                    icon_file_ids[0] = WorldMapIcon::Kryta_Outpost;
+                    break;
+                case GW::RegionType::Dungeon:
+                    icon_file_ids[0] =  is_hard_mode ? WorldMapIcon::EyeOfTheNorth_HardMode_Dungeon : WorldMapIcon::EyeOfTheNorth_Dungeon;
+                    break;
+                case GW::RegionType::EotnMission:
+                    icon_file_ids[0] =  is_hard_mode ? WorldMapIcon::EyeOfTheNorth_HardMode_Mission : WorldMapIcon::EyeOfTheNorth_Mission;
+                    break;
+                }
+            } break;
+            case GW::Continent::Cantha: {
+                switch (area_info->type) {
+                case GW::RegionType::MissionOutpost:
+                case GW::RegionType::CooperativeMission:
+                    if (is_hard_mode) {
+                        hardModeMissionIcons(icon_file_ids);
+                    }
+                    else {
+                        icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_Mission;
+                        if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
+                            icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_CompletePrimary;
+                        if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                            icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_CompleteExpert;
+                        if((mission_state & ToolboxUtils::MissionState::Master) != 0)
+                            icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_CompleteMaster;
+                    }
+
+                    break;
+                }
+            } break;
+            case GW::Continent::Elona: {
+                switch (area_info->type) {
+                case GW::RegionType::MissionOutpost:
+                case GW::RegionType::CooperativeMission:
+                    if (is_hard_mode) {
+                        hardModeMissionIcons(icon_file_ids);
+                    }
+                    else {
+                        icon_file_ids[icon_idx++] = WorldMapIcon::Elona_Mission;
+                        if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
+                            icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompletePrimary;
+                        if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                            icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompleteExpert;
+                        if((mission_state & ToolboxUtils::MissionState::Master) != 0)
+                            icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompleteMaster;
+                    }
+                    break;
+                }
+            } break;
+            case GW::Continent::RealmOfTorment: {
+                switch (area_info->type) {
+                case GW::RegionType::MissionOutpost:
+                case GW::RegionType::CooperativeMission:
+                    if (is_hard_mode) {
+                        hardModeMissionIcons(icon_file_ids);
+                    }
+                    else {
+                        icon_file_ids[icon_idx++] = WorldMapIcon::RealmOfTorment_Mission;
+                        if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
+                            icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompletePrimary;
+                        if ((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                            icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompleteExpert;
+                        if ((mission_state & ToolboxUtils::MissionState::Master) != 0)
+                            icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompleteMaster;
+                    }
+                    break;
+                }
+            } break;
+            }
+        }
+        for (size_t i = 0; i < _countof(icon_file_ids) && icon_file_ids[i] != WorldMapIcon::None;i++) {
+            icons_out[i] = GwDatTextureModule::LoadTextureFromFileId(static_cast<uint32_t>(icon_file_ids[i]));
+        }
+       
+    }
 
     bool show_as_list = true;
 
@@ -265,21 +403,6 @@ namespace {
                 Instance().CheckProgress();
                 break;
             }
-        }
-    }
-
-    void LoadTextures(std::vector<MissionImage>& mission_images)
-    {
-        Resources::EnsureFolderExists(Resources::GetPath(L"img", L"missions"));
-        for (auto& mission_image : mission_images) {
-            if (mission_image.texture) {
-                continue;
-            }
-            Resources::LoadTexture(
-                &mission_image.texture,
-                Resources::GetPath(L"img/missions", mission_image.file_name),
-                static_cast<WORD>(mission_image.resource_id)
-            );
         }
     }
 
@@ -462,81 +585,8 @@ namespace {
         }
         return subject;
     }
+
 }
-
-Mission::MissionImageList PropheciesMission::normal_mode_images({
-    {L"MissionIconIncomplete.png", IDB_Missions_MissionIconIncomplete},
-    {L"MissionIconPrimary.png", IDB_Missions_MissionIconPrimary},
-    {L"MissionIconBonus.png", IDB_Missions_MissionIconBonus},
-    {L"MissionIcon.png", IDB_Missions_MissionIcon},
-});
-Mission::MissionImageList PropheciesMission::hard_mode_images({
-    {L"HardModeMissionIconIncomplete.png", IDB_Missions_HardModeMissionIconIncomplete},
-    {L"HardModeMissionIcon1.png", IDB_Missions_HardModeMissionIcon1},
-    {L"HardModeMissionIcon1b.png", IDB_Missions_HardModeMissionIcon1b},
-    {L"HardModeMissionIcon2.png", IDB_Missions_HardModeMissionIcon2},
-});
-
-Mission::MissionImageList FactionsMission::normal_mode_images({
-    {L"FactionsMissionIconIncomplete.png", IDB_Missions_FactionsMissionIconIncomplete},
-    {L"FactionsMissionIconPrimary.png", IDB_Missions_FactionsMissionIconPrimary},
-    {L"FactionsMissionIconExpert.png", IDB_Missions_FactionsMissionIconExpert},
-    {L"FactionsMissionIcon.png", IDB_Missions_FactionsMissionIcon},
-});
-Mission::MissionImageList FactionsMission::hard_mode_images({
-    {L"HardModeMissionIconIncomplete.png", IDB_Missions_HardModeMissionIconIncomplete},
-    {L"HardModeMissionIcon1.png", IDB_Missions_HardModeMissionIcon1},
-    {L"HardModeMissionIcon2.png", IDB_Missions_HardModeMissionIcon2},
-    {L"HardModeMissionIcon.png", IDB_Missions_HardModeMissionIcon},
-});
-
-Mission::MissionImageList NightfallMission::normal_mode_images({
-    {L"NightfallMissionIconIncomplete.png", IDB_Missions_NightfallMissionIconIncomplete},
-    {L"NightfallMissionIconPrimary.png", IDB_Missions_NightfallMissionIconPrimary},
-    {L"NightfallMissionIconExpert.png", IDB_Missions_NightfallMissionIconExpert},
-    {L"NightfallMissionIcon.png", IDB_Missions_NightfallMissionIcon},
-});
-Mission::MissionImageList NightfallMission::hard_mode_images({
-    {L"HardModeMissionIconIncomplete.png", IDB_Missions_HardModeMissionIconIncomplete},
-    {L"HardModeMissionIcon1.png", IDB_Missions_HardModeMissionIcon1},
-    {L"HardModeMissionIcon2.png", IDB_Missions_HardModeMissionIcon2},
-    {L"HardModeMissionIcon.png", IDB_Missions_HardModeMissionIcon},
-});
-
-Mission::MissionImageList TormentMission::normal_mode_images({
-    {L"NightfallTormentMissionIconIncomplete.png", IDB_Missions_NightfallTormentMissionIconIncomplete},
-    {L"NightfallTormentMissionIconPrimary.png", IDB_Missions_NightfallTormentMissionIconPrimary},
-    {L"NightfallTormentMissionIconExpert.png", IDB_Missions_NightfallTormentMissionIconExpert},
-    {L"NightfallTormentMissionIcon.png", IDB_Missions_NightfallTormentMissionIcon},
-});
-Mission::MissionImageList TormentMission::hard_mode_images({
-    {L"HardModeMissionIconIncomplete.png", IDB_Missions_HardModeMissionIconIncomplete},
-    {L"HardModeMissionIcon1.png", IDB_Missions_HardModeMissionIcon1},
-    {L"HardModeMissionIcon2.png", IDB_Missions_HardModeMissionIcon2},
-    {L"HardModeMissionIcon.png", IDB_Missions_HardModeMissionIcon},
-});
-
-Mission::MissionImageList EotNMission::normal_mode_images({
-    {L"EOTNMissionIncomplete.png", IDB_Missions_EOTNMissionIncomplete},
-    {L"EOTNMission.png", IDB_Missions_EOTNMission},
-});
-Mission::MissionImageList EotNMission::hard_mode_images({
-    {L"EOTNHardModeMissionIncomplete.png", IDB_Missions_EOTNHardModeMissionIncomplete},
-    {L"EOTNHardModeMission.png", IDB_Missions_EOTNHardModeMission},
-});
-
-Mission::MissionImageList Dungeon::normal_mode_images({
-    {L"EOTNDungeonIncomplete.png", IDB_Missions_EOTNDungeonIncomplete},
-    {L"EOTNDungeon.png", IDB_Missions_EOTNDungeon},
-});
-Mission::MissionImageList Dungeon::hard_mode_images({
-    {L"EOTNHardModeDungeonIncomplete.png", IDB_Missions_EOTNHardModeDungeonIncomplete},
-    {L"EOTNDungeon.png", IDB_Missions_EOTNDungeon},
-});
-Mission::MissionImageList Vanquish::hard_mode_images({
-    {L"VanquishIncomplete.png", IDB_Missions_VanquishIncomplete},
-    {L"Vanquish.png", IDB_Missions_Vanquish},
-});
 
 
 Color Mission::is_daily_bg_color = Colors::ARGB(102, 0, 255, 0);
@@ -546,10 +596,8 @@ ImVec2 Mission::icon_size = {48.0f, 48.0f};
 
 
 Mission::Mission(const MapID _outpost,
-                 const MissionImageList& _normal_mode_images,
-                 const MissionImageList& _hard_mode_images,
                  const QuestID _zm_quest)
-    : outpost(_outpost), zm_quest(_zm_quest), normal_mode_textures(_normal_mode_images), hard_mode_textures(_hard_mode_images)
+    : outpost(_outpost), zm_quest(_zm_quest)
 {
     map_to = outpost;
     const GW::AreaInfo* map_info = GW::Map::GetMapInfo(outpost);
@@ -563,9 +611,20 @@ MapID Mission::GetOutpost() const
     return TravelWindow::GetNearestOutpost(map_to);
 }
 
+size_t Mission::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
+    size_t icons_added = 0;
+    for (size_t i = 0; i < _countof(icons) && icons_added < 4; i++) {
+        if (!icons[i])
+            break;
+        if (*icons[i]) {
+            icons_out[icons_added++] = *icons[i];
+        }
+    }
+    return icons_added;
+}
+
 bool Mission::Draw(IDirect3DDevice9*)
 {
-    const auto texture = GetMissionImage();
 
     const float scale = ImGui::GetIO().FontGlobalScale;
 
@@ -578,36 +637,38 @@ bool Mission::Draw(IDirect3DDevice9*)
         bg = ImColor(has_quest_bg_color);
     }
     constexpr ImVec4 tint(1, 1, 1, 1);
-    constexpr auto uv0 = ImVec2(0, 0);
-    auto uv1 = ImVec2(1, 1);
 
     const ImVec2 cursor_pos = ImGui::GetCursorPos();
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
     ImGui::PushID(this);
+
+    bool clicked = false;
+    bool hovered = false;
+
+    IDirect3DTexture9* icons_out[4] = { nullptr };
+    size_t icons_len = GetLoadedIcons(icons_out);
+
+
     if (show_as_list) {
         s.y /= 2.f;
         if (!map_unlocked) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
         }
-        const bool clicked = ImGui::IconButton(Name(), texture, {s.x * 5.f, s.y}, 0, {s.x / 2.f, s.y});
+        clicked = ImGui::CompositeIconButton(Name(), (ImTextureID*)icons_out, icons_len, {s.x * 5.f, s.y}, 0, {s.x / 2.f, s.y},icon_uv_offset[0],icon_uv_offset[1]);
+        hovered = ImGui::IsItemHovered();
         if (!map_unlocked) {
             ImGui::PopStyleColor();
         }
-        if (clicked) {
-            OnClick();
-        }
     }
     else {
-        if (texture) {
-            uv1 = ImGui::CalculateUvCrop(texture, s);
-        }
-        if (ImGui::ImageButton(texture, s, uv0, uv1, -1, bg, tint)) {
-            OnClick();
-        }
+        clicked = ImGui::CompositeIconButton("", (ImTextureID*)icons_out, icons_len,  s, 0, s,icon_uv_offset[0],icon_uv_offset[1]);
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip(Name());
         }
+    }
+    if (clicked) {
+        OnClick();
     }
     ImGui::PopID();
     ImGui::PopStyleColor();
@@ -674,18 +735,18 @@ void Mission::CheckProgress(const std::wstring& player_name)
     map_unlocked = player_completion->maps_unlocked.empty() || ArrayBoolAt(player_completion->maps_unlocked, static_cast<uint32_t>(outpost));
     is_completed = ArrayBoolAt(*missions_complete, static_cast<uint32_t>(outpost));
     bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
-}
 
-IDirect3DTexture9* Mission::GetMissionImage()
-{
-    const auto* texture_list = &normal_mode_textures;
+    GW::Array<uint32_t> complete_arr;
+    complete_arr.m_buffer = (uint32_t*)missions_complete->data();
+    complete_arr.m_capacity = complete_arr.m_size = missions_complete->size();
 
-    if (hard_mode) {
-        texture_list = &hard_mode_textures;
-    }
-    const uint8_t index = is_completed + 2 * bonus;
+    GW::Array<uint32_t> bonus_arr;
+    bonus_arr.m_buffer = (uint32_t*)missions_bonus->data();
+    bonus_arr.m_capacity = bonus_arr.m_size = missions_bonus->size();
 
-    return texture_list->at(index).texture;
+    mission_state = ToolboxUtils::GetMissionState(outpost, complete_arr, bonus_arr);
+
+    GetOutpostIcons(outpost, icons, mission_state, hard_mode);
 }
 
 bool Mission::IsDaily()
@@ -698,12 +759,7 @@ bool Mission::HasQuest()
     return GW::QuestMgr::GetQuest(zm_quest) != nullptr;
 }
 
-bool Dungeon::IsDaily()
-{
-    return false;
-}
-
-bool Dungeon::HasQuest()
+bool EotNMission::HasQuest()
 {
     for (const auto& zb : zb_quests) {
         if (GW::QuestMgr::GetQuest(zb)) {
@@ -713,6 +769,19 @@ bool Dungeon::HasQuest()
     return false;
 }
 
+
+void EotNMission::CheckProgress(const std::wstring& player_name) {
+    Mission::CheckProgress(player_name);
+    // EotN mission icons are sprited - first sprite for incomplete, second for complete
+    if (is_completed) {
+        icon_uv_offset[0] = { .5f,0.f };
+        icon_uv_offset[1] = { 1.f,1.f };
+    }
+    else {
+        icon_uv_offset[0] = { .0f,0.f };
+        icon_uv_offset[1] = { .5f,1.f };
+    }
+}
 
 HeroUnlock::HeroUnlock(HeroID _hero_id)
     : PvESkill(SkillID::No_Skill)
@@ -736,20 +805,23 @@ const char* HeroUnlock::Name()
     return hero_names[static_cast<uint32_t>(skill_id)];
 }
 
-IDirect3DTexture9* HeroUnlock::GetMissionImage()
-{
-    if (!image) {
-        image = new IDirect3DTexture9*;
-        *image = nullptr;
+size_t HeroUnlock::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
+    if (!icons_loaded) {
+        *icons = new IDirect3DTexture9 * ();
         const auto path = Resources::GetPath(L"img/heros");
         Resources::EnsureFolderExists(path);
         wchar_t local_image[MAX_PATH];
         swprintf(local_image, _countof(local_image), L"%s/hero_%d.jpg", path.c_str(), skill_id);
         char remote_image[128];
-        snprintf(remote_image, _countof(remote_image), "https://github.com/HasKha/GWToolboxpp/raw/master/resources/heros/hero_%d.jpg", skill_id);
-        Resources::LoadTexture(image, local_image, remote_image);
+        snprintf(remote_image, _countof(remote_image), "https://github.com/gwdevhub/GWToolboxpp/raw/master/resources/heros/hero_%d.jpg", skill_id);
+        Resources::LoadTexture(*icons, local_image, remote_image);
+        icons_loaded = true;
     }
-    return *image;
+    return Mission::GetLoadedIcons(icons_out);
+}
+HeroUnlock::~HeroUnlock() {
+    if (*icons)
+        delete* icons;
 }
 
 void HeroUnlock::OnClick()
@@ -774,24 +846,26 @@ const char* ItemAchievement::Name()
     return name.string().c_str();
 }
 
-IDirect3DTexture9* ItemAchievement::GetMissionImage()
-{
-    if (!name.wstring().empty()) {
+size_t ItemAchievement::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
+    if (!icons_loaded && !name.wstring().empty()) {
         if (name.wstring() == L"Brown Rabbit") {
-            return *Resources::GetItemImage(L"Brown Rabbit (miniature)");
+            *icons = Resources::GetItemImage(L"Brown Rabbit (miniature)");
         }
-        if (name.wstring() == L"Oppressor's Bow") {
-            return *Resources::GetItemImage(L"Oppressor's Longbow");
+        else if (name.wstring() == L"Oppressor's Bow") {
+            *icons = Resources::GetItemImage(L"Oppressor's Longbow");
         }
-        if (name.wstring() == L"Tormented Bow") {
-            return *Resources::GetItemImage(L"Tormented Longbow");
+        else if (name.wstring() == L"Tormented Bow") {
+            *icons = Resources::GetItemImage(L"Tormented Longbow");
         }
-        if (name.wstring() == L"Destroyer Bow") {
-            return *Resources::GetItemImage(L"Destroyer Longbow");
+        else if (name.wstring() == L"Destroyer Bow") {
+            *icons = Resources::GetItemImage(L"Destroyer Longbow");
         }
-        return *Resources::GetItemImage(name.wstring());
+        else {
+            *icons = Resources::GetItemImage(name.wstring());
+        }
+        icons_loaded = true;
     }
-    return nullptr;
+    return Mission::GetLoadedIcons(icons_out);
 }
 
 void ItemAchievement::OnClick()
@@ -800,17 +874,16 @@ void ItemAchievement::OnClick()
         GuiUtils::OpenWiki(url);
     });
 }
-
-IDirect3DTexture9* PvESkill::GetMissionImage()
-{
-    if (!image) {
-        image = Resources::GetSkillImage(skill_id);
+size_t PvESkill::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
+    if (!icons_loaded) {
+        *icons = Resources::GetSkillImage(skill_id);
+        icons_loaded = true;
     }
-    return *image;
+    return Mission::GetLoadedIcons(icons_out);
 }
 
 PvESkill::PvESkill(const SkillID _skill_id)
-    : Mission(MapID::None, dummy_var, dummy_var), skill_id(_skill_id)
+    : Mission(MapID::None), skill_id(_skill_id)
 {
     if (_skill_id != SkillID::No_Skill) {
         const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
@@ -901,29 +974,6 @@ bool FactionsPvESkill::Draw(IDirect3DDevice9* device)
     return drawn;
 }
 
-void EotNMission::CheckProgress(const std::wstring& player_name)
-{
-    is_completed = false;
-    const auto& completion = character_completion;
-    if (!completion.contains(player_name)) {
-        return;
-    }
-    const std::vector<uint32_t>* missions_bonus = &completion.at(player_name)->mission_bonus;
-    if (hard_mode) {
-        missions_bonus = &completion.at(player_name)->mission_bonus_hm;
-    }
-    is_completed = bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
-}
-
-IDirect3DTexture9* EotNMission::GetMissionImage()
-{
-    const auto* texture_list = &normal_mode_textures;
-    if (hard_mode) {
-        texture_list = &hard_mode_textures;
-    }
-    return texture_list->at(is_completed ? 1 : 0).texture;
-}
-
 void Vanquish::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
@@ -933,13 +983,11 @@ void Vanquish::CheckProgress(const std::wstring& player_name)
     }
     const auto& unlocked = completion.at(player_name)->vanquishes;
     is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(outpost));
-}
+    mission_state = is_completed ? 0x7 : 0x0;
 
-IDirect3DTexture9* Vanquish::GetMissionImage()
-{
-    return hard_mode_textures.at(is_completed).texture;
-}
+    GetOutpostIcons(outpost, icons, mission_state, true);
 
+}
 
 void CompletionWindow::Initialize()
 {
@@ -1285,62 +1333,58 @@ void CompletionWindow::Initialize()
 
 void CompletionWindow::Initialize_Prophecies()
 {
-    LoadTextures(PropheciesMission::normal_mode_images);
-    LoadTextures(PropheciesMission::hard_mode_images);
 
     auto& prophecies_missions = missions.at(Campaign::Prophecies);
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::The_Great_Northern_Wall, QuestID::ZaishenMission_The_Great_Northern_Wall));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Fort_Ranik, QuestID::ZaishenMission_Fort_Ranik));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Ruins_of_Surmia, QuestID::ZaishenMission_Ruins_of_Surmia));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Nolani_Academy, QuestID::ZaishenMission_Nolani_Academy));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Borlis_Pass, QuestID::ZaishenMission_Borlis_Pass));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::The_Frost_Gate, QuestID::ZaishenMission_The_Frost_Gate));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Gates_of_Kryta, QuestID::ZaishenMission_Gates_of_Kryta));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::DAlessio_Seaboard, QuestID::ZaishenMission_DAlessio_Seaboard));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Divinity_Coast, QuestID::ZaishenMission_Divinity_Coast));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::The_Wilds, QuestID::ZaishenMission_The_Wilds));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Bloodstone_Fen, QuestID::ZaishenMission_Bloodstone_Fen));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Aurora_Glade, QuestID::ZaishenMission_Aurora_Glade));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Riverside_Province, QuestID::ZaishenMission_Riverside_Province));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Sanctum_Cay, QuestID::ZaishenMission_Sanctum_Cay));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Dunes_of_Despair, QuestID::ZaishenMission_Dunes_of_Despair));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Thirsty_River, QuestID::ZaishenMission_Thirsty_River));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Elona_Reach, QuestID::ZaishenMission_Elona_Reach));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Augury_Rock_mission, QuestID::ZaishenMission_Augury_Rock));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::The_Dragons_Lair, QuestID::ZaishenMission_The_Dragons_Lair));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Ice_Caves_of_Sorrow, QuestID::ZaishenMission_Ice_Caves_of_Sorrow));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Iron_Mines_of_Moladune, QuestID::ZaishenMission_Iron_Mines_of_Moladune));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Thunderhead_Keep, QuestID::ZaishenMission_Thunderhead_Keep));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Ring_of_Fire, QuestID::ZaishenMission_Ring_of_Fire));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Abaddons_Mouth, QuestID::ZaishenMission_Abaddons_Mouth));
-    prophecies_missions.push_back(new PropheciesMission(
+    prophecies_missions.push_back(new Mission(
         MapID::Hells_Precipice, QuestID::ZaishenMission_Hells_Precipice));
-
-    LoadTextures(Vanquish::hard_mode_images);
 
     auto& prophecies_vanquishes = vanquishes.at(Campaign::Prophecies);
     prophecies_vanquishes.push_back(new Vanquish(MapID::Pockmark_Flats));
@@ -1468,42 +1512,38 @@ void CompletionWindow::Initialize_Prophecies()
 
 void CompletionWindow::Initialize_Factions()
 {
-    LoadTextures(FactionsMission::normal_mode_images);
-    LoadTextures(FactionsMission::hard_mode_images);
 
     auto& factions_missions = missions.at(Campaign::Factions);
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::Minister_Chos_Estate_outpost_mission, QuestID::ZaishenMission_Minister_Chos_Estate));
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::Zen_Daijun_outpost_mission, QuestID::ZaishenMission_Zen_Daijun));
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::Vizunah_Square_Local_Quarter_outpost, QuestID::ZaishenMission_Vizunah_Square));
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::Vizunah_Square_Foreign_Quarter_outpost, QuestID::ZaishenMission_Vizunah_Square));
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::Nahpui_Quarter_outpost_mission, QuestID::ZaishenMission_Nahpui_Quarter));
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::Tahnnakai_Temple_outpost_mission, QuestID::ZaishenMission_Tahnnakai_Temple));
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::Arborstone_outpost_mission, QuestID::ZaishenMission_Arborstone));
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::Boreas_Seabed_outpost_mission, QuestID::ZaishenMission_Boreas_Seabed));
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::Sunjiang_District_outpost_mission, QuestID::ZaishenMission_Sunjiang_District));
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::The_Eternal_Grove_outpost_mission, QuestID::ZaishenMission_The_Eternal_Grove));
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::Gyala_Hatchery_outpost_mission, QuestID::ZaishenMission_Gyala_Hatchery));
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::Unwaking_Waters_Kurzick_outpost, QuestID::ZaishenMission_Unwaking_Waters));
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::Unwaking_Waters_Luxon_outpost, QuestID::ZaishenMission_Unwaking_Waters));
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::Raisu_Palace_outpost_mission, QuestID::ZaishenMission_Raisu_Palace));
-    factions_missions.push_back(new FactionsMission(
+    factions_missions.push_back(new Mission(
         MapID::Imperial_Sanctum_outpost_mission, QuestID::ZaishenMission_Imperial_Sanctum));
-
-    LoadTextures(Vanquish::hard_mode_images);
 
     auto& this_vanquishes = vanquishes.at(Campaign::Factions);
     this_vanquishes.push_back(new Vanquish(MapID::Haiju_Lagoon, QuestID::ZaishenVanquish_Haiju_Lagoon));
@@ -1677,54 +1717,48 @@ void CompletionWindow::Initialize_Factions()
 
 void CompletionWindow::Initialize_Nightfall()
 {
-    LoadTextures(NightfallMission::normal_mode_images);
-    LoadTextures(NightfallMission::hard_mode_images);
-    LoadTextures(TormentMission::normal_mode_images);
-    LoadTextures(TormentMission::hard_mode_images);
 
     auto& nightfall_missions = missions.at(Campaign::Nightfall);
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Chahbek_Village, QuestID::ZaishenMission_Chahbek_Village));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Jokanur_Diggings, QuestID::ZaishenMission_Jokanur_Diggings));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Blacktide_Den, QuestID::ZaishenMission_Blacktide_Den));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Consulate_Docks, QuestID::ZaishenMission_Consulate_Docks));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Venta_Cemetery, QuestID::ZaishenMission_Venta_Cemetery));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Kodonur_Crossroads, QuestID::ZaishenMission_Kodonur_Crossroads));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Pogahn_Passage, QuestID::ZaishenMission_Pogahn_Passage));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Rilohn_Refuge, QuestID::ZaishenMission_Rilohn_Refuge));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Moddok_Crevice, QuestID::ZaishenMission_Moddok_Crevice));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Tihark_Orchard, QuestID::ZaishenMission_Tihark_Orchard));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Dasha_Vestibule, QuestID::ZaishenMission_Dasha_Vestibule));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Dzagonur_Bastion, QuestID::ZaishenMission_Dzagonur_Bastion));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Grand_Court_of_Sebelkeh, QuestID::ZaishenMission_Grand_Court_of_Sebelkeh));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Jennurs_Horde, QuestID::ZaishenMission_Jennurs_Horde));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Nundu_Bay, QuestID::ZaishenMission_Nundu_Bay));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Gate_of_Desolation, QuestID::ZaishenMission_Gate_of_Desolation));
-    nightfall_missions.push_back(new NightfallMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Ruins_of_Morah, QuestID::ZaishenMission_Ruins_of_Morah));
-    nightfall_missions.push_back(new TormentMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Gate_of_Pain, QuestID::ZaishenMission_Gate_of_Pain));
-    nightfall_missions.push_back(new TormentMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Gate_of_Madness, QuestID::ZaishenMission_Gate_of_Madness));
-    nightfall_missions.push_back(new TormentMission(
+    nightfall_missions.push_back(new Mission(
         MapID::Abaddons_Gate, QuestID::ZaishenMission_Abaddons_Gate));
-
-    LoadTextures(Vanquish::hard_mode_images);
 
     auto& this_vanquishes = vanquishes.at(Campaign::Nightfall);
     this_vanquishes.push_back(new Vanquish(MapID::Cliffs_of_Dohjok));
@@ -1919,8 +1953,6 @@ void CompletionWindow::Initialize_Nightfall()
 
 void CompletionWindow::Initialize_EotN()
 {
-    LoadTextures(EotNMission::normal_mode_images);
-    LoadTextures(EotNMission::hard_mode_images);
     auto& eotn_missions = missions.at(Campaign::EyeOfTheNorth);
     // Asura
     eotn_missions.push_back(new EotNMission(MapID::Finding_the_Bloodstone_mission));
@@ -1937,8 +1969,6 @@ void CompletionWindow::Initialize_EotN()
     // Destroyers
     eotn_missions.push_back(new EotNMission(MapID::Destructions_Depths_mission, QuestID::ZaishenMission_Destructions_Depths));
     eotn_missions.push_back(new EotNMission(MapID::A_Time_for_Heroes_mission, QuestID::ZaishenMission_A_Time_for_Heroes));
-
-    LoadTextures(Vanquish::hard_mode_images);
 
     auto& this_vanquishes = vanquishes.at(Campaign::EyeOfTheNorth);
     this_vanquishes.push_back(new Vanquish(MapID::Bjora_Marches, QuestID::ZaishenVanquish_Bjora_Marches));
@@ -2028,49 +2058,47 @@ void CompletionWindow::Initialize_EotN()
 
 void CompletionWindow::Initialize_Dungeons()
 {
-    LoadTextures(Dungeon::normal_mode_images);
-    LoadTextures(Dungeon::hard_mode_images);
     auto& dungeons = missions.at(Campaign::BonusMissionPack);
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Catacombs_of_Kathandrax_Level_1, QuestID::ZaishenBounty_Ilsundur_Lord_of_Fire));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Rragars_Menagerie_Level_1, QuestID::ZaishenBounty_Rragar_Maneater));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Cathedral_of_Flames_Level_1, QuestID::ZaishenBounty_Murakai_Lady_of_the_Night));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Ooze_Pit_mission));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Darkrime_Delves_Level_1));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Frostmaws_Burrows_Level_1));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Sepulchre_of_Dragrimmar_Level_1, QuestID::ZaishenBounty_Remnant_of_Antiquities));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Ravens_Point_Level_1, QuestID::ZaishenBounty_Plague_of_Destruction));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Vloxen_Excavations_Level_1, QuestID::ZaishenBounty_Zoldark_the_Unholy));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Bogroot_Growths_Level_1));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Bloodstone_Caves_Level_1));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Shards_of_Orr_Level_1, QuestID::ZaishenBounty_Fendi_Nin));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Oolas_Lab_Level_1, QuestID::ZaishenBounty_TPS_Regulator_Golem));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Arachnis_Haunt_Level_1, QuestID::ZaishenBounty_Arachni));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Slavers_Exile_Level_1, {
             QuestID::ZaishenBounty_Forgewight,
             QuestID::ZaishenBounty_Selvetarm,
             QuestID::ZaishenBounty_Justiciar_Thommis,
             QuestID::ZaishenBounty_Rand_Stormweaver,
             QuestID::ZaishenBounty_Duncan_the_Black}));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Fronis_Irontoes_Lair_mission, {QuestID::ZaishenBounty_Fronis_Irontoe}));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Secret_Lair_of_the_Snowmen));
-    dungeons.push_back(new Dungeon(
+    dungeons.push_back(new EotNMission(
         MapID::Heart_of_the_Shiverpeaks_Level_1, {QuestID::ZaishenBounty_Magmus}));
 }
 
@@ -2167,7 +2195,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 #if 1
     ImGui::SameLine();
     if (ImGui::Button("Change") && wcscmp(GetPlayerName(), chosen_player_name.c_str()) != 0) {
-        RerollWindow::Instance().Reroll(chosen_player_name.data(), false, false);
+        if (!RerollWindow::Instance().Reroll(chosen_player_name.data(), false, false)) {
+            Log::Warning("Failed to reroll to character");
+        }
     }
 #endif
     ImGui::SameLine();
@@ -2931,12 +2961,12 @@ void WeaponAchievement::CheckProgress(const std::wstring& player_name)
     is_completed = bonus = unlocked[encoded_name_index] != 0;
 }
 
-IDirect3DTexture9* AchieventWithWikiFile::GetMissionImage()
-{
-    if (!img && !wiki_file_name.empty()) {
-        img = Resources::GetGuildWarsWikiImage(wiki_file_name.c_str(), 64);
+size_t AchieventWithWikiFile::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
+    if (!icons_loaded && !wiki_file_name.empty()) {
+        *icons = Resources::GetGuildWarsWikiImage(wiki_file_name.c_str(), 64);
+        icons_loaded = true;
     }
-    return img ? *img : nullptr;
+    return Mission::GetLoadedIcons(icons_out);
 }
 
 void ArmorAchievement::CheckProgress(const std::wstring& player_name)
@@ -2995,21 +3025,18 @@ void FestivalHat::CheckProgress(const std::wstring& player_name)
     is_completed = bonus = ArrayBoolAt(unlocked, encoded_name_index);
 }
 
-IDirect3DTexture9* UnlockedPvPItemUpgrade::GetMissionImage()
-{
-    if (image) {
-        return *image;
+size_t UnlockedPvPItemUpgrade::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
+    if (!icons_loaded) {
+        const auto info = GW::Items::GetPvPItemUpgrade(encoded_name_index);
+        if (info) {
+            const auto found = std::ranges::find_if(item_upgrades_by_file_id, [file_id = info->file_id](auto& check) { return check.file_id == file_id; });
+            if (found != item_upgrades_by_file_id.end()) {
+                *icons = Resources::GetGuildWarsWikiImage(found->wiki_filename);
+            }
+        }
+        icons_loaded = true;
     }
-    const auto info = GW::Items::GetPvPItemUpgrade(encoded_name_index);
-    if (!info) {
-        return nullptr;
-    }
-    const auto found = std::ranges::find_if(item_upgrades_by_file_id, [file_id = info->file_id](auto& check) { return check.file_id == file_id; });
-    if (found == item_upgrades_by_file_id.end()) {
-        return nullptr;
-    }
-    image = Resources::GetGuildWarsWikiImage(found->wiki_filename);
-    return *image;
+    return Mission::GetLoadedIcons(icons_out);
 }
 
 void UnlockedPvPItemUpgrade::CheckProgress(const std::wstring&)

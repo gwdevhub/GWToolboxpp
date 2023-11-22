@@ -883,7 +883,7 @@ int HotkeyUseItem::Description(char* buf, const size_t bufsz)
 
 bool HotkeyUseItem::Draw()
 {
-    bool hotkey_changed = ImGui::InputInt("Item ID", (int*)&item_id);
+    bool hotkey_changed = ImGui::InputInt("Item Model ID", (int*)&item_id);
     hotkey_changed |= ImGui::InputText("Item Name", name, _countof(name));
     hotkey_changed |= ImGui::Checkbox("Display error message on failure", &show_error_on_failure);
     return hotkey_changed;
@@ -1618,11 +1618,9 @@ void HotkeyAction::Execute()
     }
     switch (action) {
         case OpenXunlaiChest:
-            if (isOutpost()) {
-                GW::GameThread::Enqueue([] {
-                    GW::Items::OpenXunlaiWindow();
+            GW::GameThread::Enqueue([] {
+                GW::Items::OpenXunlaiWindow();
                 });
-            }
             break;
         case OpenLockedChest: {
             if (isExplorable()) {

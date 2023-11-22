@@ -48,6 +48,9 @@
 #include <GWCA/Managers/QuestMgr.h>
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/Resources.h>
+#include <GWCA/Utilities/Hooker.h>
+#include <Modules/GwDatTextureModule.h>
+#include <Utils/ToolboxUtils.h>
 
 namespace {
     enum class Status {
@@ -610,6 +613,141 @@ namespace {
         }
         return false;
     }
+
+
+    typedef uint32_t*(__cdecl* CreateTexture_pt)(wchar_t* file_name, uint32_t flags);
+    CreateTexture_pt CreateTexture_Func = nullptr;
+    CreateTexture_pt CreateTexture_Ret = nullptr;
+
+    // Why reinvent the wheel?
+    typedef void(__cdecl* GWCA_SendUIMessage_pt)(GW::UI::UIMessage msgid, void* wParam, void* lParam);
+    GWCA_SendUIMessage_pt GWCA_SendUIMessage_Func = nullptr;
+    GWCA_SendUIMessage_pt GWCA_SendUIMessage_Ret = nullptr;
+
+    struct UIMessagePacket {
+        GW::UI::UIMessage msgid;
+        void* wParam;
+        void* lParam;
+    };
+
+    std::vector<UIMessagePacket*> ui_message_packets_recorded;
+    bool record_ui_messages = false;
+
+    void OnGWCASendUIMessage(GW::UI::UIMessage msgid, void* wParam, void* lParam) {
+        GW::Hook::EnterHook();
+        GWCA_SendUIMessage_Ret(msgid, wParam, lParam);
+        if(record_ui_messages)
+            ui_message_packets_recorded.push_back(new UIMessagePacket({ msgid,wParam,lParam }));
+        GW::Hook::LeaveHook();
+    }
+    void ClearUIMessagesRecorded() {
+        for (auto p : ui_message_packets_recorded) {
+            delete p;
+        }
+        ui_message_packets_recorded.clear();
+    }
+
+    std::map<uint32_t,IDirect3DTexture9**> textures_created;
+
+    bool record_textures = false;
+
+    uint32_t FileHashToFileId(wchar_t* param_1) {
+        if (!param_1)
+            return 0;
+        if (((0xff < *param_1) && (0xff < param_1[1])) &&
+            ((param_1[2] == 0 || ((0xff < param_1[2] && (param_1[3] == 0)))))) {
+            return (*param_1 - 0xff00ff) + (uint32_t)param_1[1] * 0xff00;
+        }
+        return 0;
+    }
+
+    uint32_t* OnCreateTexture(wchar_t* file_name, uint32_t flags) {
+        GW::Hook::EnterHook();
+        const auto out = CreateTexture_Ret(file_name, flags);
+        uint32_t file_id = FileHashToFileId(file_name);
+        if (record_textures && textures_created.find(file_id) == textures_created.end()) {
+            textures_created[file_id] = GwDatTextureModule::LoadTextureFromFileId(file_id);
+        }
+        GW::Hook::LeaveHook();
+        return out;
+    }
+
+    void DrawDebugInfo() {
+        if (ImGui::CollapsingHeader("Quoted Item")) {
+            ImGui::Text("Most recently quoted item (buy or sell) from trader");
+            static GuiUtils::EncString quoted_name;
+            DrawItemInfo(GW::Items::GetItemById(quoted_item_id), &quoted_name);
+        }
+
+        record_textures = ImGui::CollapsingHeader("Loaded Textures");
+        if (record_textures) {
+            ImGui::PushID(&textures_created);
+            const ImVec2 scaled_size = { 64.f,64.f };
+            constexpr ImVec4 tint(1, 1, 1, 1);
+            const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
+            constexpr auto uv0 = ImVec2(0, 0);
+
+            if (ImGui::SmallButton("Reset")) {
+                textures_created.clear();
+            }
+
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+            ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
+
+            ImGui::StartSpacedElements(scaled_size.x);
+
+            for (auto& it : textures_created) {
+                ImGui::PushID(it.first);
+                const auto texture = it.second;
+                if (!texture || !*texture) {
+                    ImGui::PopID();
+                    continue;
+                }
+
+                const auto uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
+                ImGui::NextSpacedElement();
+                ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, normal_bg, tint);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("File ID 0x%08x", it.first);
+                }
+                ImGui::PopID();
+            }
+
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar();
+            ImGui::PopStyleVar();
+            ImGui::PopID();
+        }
+        record_ui_messages = ImGui::CollapsingHeader("UI Message Log");
+        if (record_ui_messages) {
+            ImGui::PushID(&ui_message_packets_recorded);
+            if (ImGui::SmallButton("Reset")) {
+                ClearUIMessagesRecorded();
+            }
+            for (auto it : ui_message_packets_recorded) {
+                ImGui::PushID(it);
+                ImGui::Text("0x%08x 0x%08x 0x%08x", it->msgid, it->wParam, it->lParam);
+                ImGui::PopID();
+            }
+            ImGui::PopID();
+        }
+
+
+        // For debugging changes to flags/arrays etc
+        [[maybe_unused]] const GW::GameContext* g = GW::GetGameContext();
+        [[maybe_unused]] const GW::GuildContext* gu = g->guild;
+        [[maybe_unused]] const GW::CharContext* c = g->character;
+        [[maybe_unused]] const GW::WorldContext* w = g->world;
+        [[maybe_unused]] const GW::PartyContext* p = g->party;
+        [[maybe_unused]] const GW::MapContext* m = g->map;
+        [[maybe_unused]] const GW::AccountContext* acc = g->account;
+        [[maybe_unused]] const GW::ItemContext* i = g->items;
+        [[maybe_unused]] const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+        [[maybe_unused]] const GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
+        [[maybe_unused]] const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
+        [[maybe_unused]] const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
+    }
 }
 
 void InfoWindow::Terminate()
@@ -618,6 +756,16 @@ void InfoWindow::Terminate()
         delete achievement;
     }
     target_achievements.clear();
+
+    if (CreateTexture_Func) {
+        GW::HookBase::RemoveHook(CreateTexture_Func);
+        CreateTexture_Func = nullptr;
+    }
+    if (GWCA_SendUIMessage_Func) {
+        GW::HookBase::RemoveHook(GWCA_SendUIMessage_Func);
+        GWCA_SendUIMessage_Func = nullptr;
+    }
+    ClearUIMessagesRecorded();
 }
 
 void InfoWindow::Initialize()
@@ -631,16 +779,32 @@ void InfoWindow::Initialize()
                                                                         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, OnInstanceLoad);
     GW::Chat::CreateCommand(L"resignlog", CmdResignLog);
+#ifdef _DEBUG
+    CreateTexture_Func = (CreateTexture_pt)GW::Scanner::FindAssertion("p:\\code\\engine\\gr\\grtex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)", -0x32);
+#endif
+    if (CreateTexture_Func) {
+        GW::HookBase::CreateHook(CreateTexture_Func, OnCreateTexture, (void**)&CreateTexture_Ret);
+        GW::HookBase::EnableHooks(CreateTexture_Func);
+    }
+
+    GWCA_SendUIMessage_Func = (GWCA_SendUIMessage_pt)GW::UI::SendUIMessage;
+    if (GWCA_SendUIMessage_Func) {
+        GW::HookBase::CreateHook(GWCA_SendUIMessage_Func, OnGWCASendUIMessage, (void**)&GWCA_SendUIMessage_Ret);
+        GW::HookBase::EnableHooks(GWCA_SendUIMessage_Func);
+    }
 }
 
 void InfoWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
+        record_ui_messages = false;
+        record_textures = false;
         return;
     }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+
         if (show_widgets) {
             const auto& widgets = GWToolbox::GetWidgets();
 
@@ -715,6 +879,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
                     InfoField("Continent", "%d", map_info->continent);
                     InfoField("Region", "%d", map_info->region);
                     InfoField("Type", "%d", map_info->type);
+                    InfoField("Mission Complete?", "%d", ToolboxUtils::GetMissionState(GW::Map::GetMapID(), GW::PartyMgr::GetIsPartyInHardMode()));
                     InfoField("Instance Info Type", "%d", GW::Map::GetMapTypeInstanceInfo(map_info->type)->request_instance_map_type);
                     InfoField("Flags", "0x%X", map_info->flags);
                     InfoField("Thumbnail ID", "%d", map_info->thumbnail_id);
@@ -785,13 +950,6 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             static GuiUtils::EncString item_name;
             DrawItemInfo(GW::Items::GetItemBySlot(GW::Constants::Bag::Backpack, 1), &item_name);
         }
-#ifdef _DEBUG
-        if (show_item && ImGui::CollapsingHeader("Quoted Item")) {
-            ImGui::Text("Most recently quoted item (buy or sell) from trader");
-            static GuiUtils::EncString quoted_name;
-            DrawItemInfo(GW::Items::GetItemById(quoted_item_id), &quoted_name);
-        }
-#endif
         if (show_quest && ImGui::CollapsingHeader("Quest")) {
             const GW::Quest* q = GW::QuestMgr::GetActiveQuest();
             if (q) {
@@ -872,22 +1030,11 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             DrawResignlog();
         }
     }
-    ImGui::End();
 #ifdef _DEBUG
-    // For debugging changes to flags/arrays etc
-    [[maybe_unused]] const GW::GameContext* g = GW::GetGameContext();
-    [[maybe_unused]] const GW::GuildContext* gu = g->guild;
-    [[maybe_unused]] const GW::CharContext* c = g->character;
-    [[maybe_unused]] const GW::WorldContext* w = g->world;
-    [[maybe_unused]] const GW::PartyContext* p = g->party;
-    [[maybe_unused]] const GW::MapContext* m = g->map;
-    [[maybe_unused]] const GW::AccountContext* acc = g->account;
-    [[maybe_unused]] const GW::ItemContext* i = g->items;
-    [[maybe_unused]] const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
-    [[maybe_unused]] const GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
-    [[maybe_unused]] const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
-    [[maybe_unused]] const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
+    DrawDebugInfo();
 #endif
+    ImGui::End();
+
 }
 
 void InfoWindow::Update(const float)

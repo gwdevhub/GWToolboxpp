@@ -37,6 +37,7 @@ namespace {
     bool show_notifications_on_guild_chat = false;
     bool show_notifications_on_ally_chat = false;
     bool show_notifications_on_last_to_ready = false;
+    bool show_notifications_on_invite = false;
     bool show_notifications_on_everyone_ready = false;
     bool show_notifications_on_self_resurrected = false;
 
@@ -44,6 +45,7 @@ namespace {
     bool flash_window_on_guild_chat = false;
     bool flash_window_on_ally_chat = false;
     bool flash_window_on_last_to_ready = false;
+    bool flash_window_on_invite = false;
     bool flash_window_on_everyone_ready = false;
     bool flash_window_on_self_resurrected = false;
 
@@ -277,6 +279,23 @@ namespace {
         }
     }
 
+    void OnPartyInviteReceived(const GW::HookStatus* status, GW::Packet::StoC::PacketBase*)
+    {
+        if (status->blocked) {
+            return;
+        }
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !GW::PartyMgr::GetIsLeader()) {
+            return;
+        }
+
+        if (show_notifications_on_invite) {
+            ToastNotifications::SendToast(L"Party Invite", L"You have been invited to a party!", OnGenericToastActivated);
+        }
+        if (flash_window_on_invite) {
+            FlashWindow();
+        }
+    }
+
     struct StoC_Callback {
         uint32_t header = 0;
         GW::StoC::PacketCallback cb;
@@ -290,7 +309,8 @@ namespace {
         {GAME_SMSG_CHAT_MESSAGE_GLOBAL, OnMessageGlobal},
         {GAME_SMSG_PARTY_PLAYER_READY, OnPartyPlayerReady},
         {GAME_SMSG_INSTANCE_LOADED, OnMapChange},
-        {GAME_SMSG_AGENT_UPDATE_EFFECTS, OnAgentUpdateEffects}
+        {GAME_SMSG_AGENT_UPDATE_EFFECTS, OnAgentUpdateEffects},
+        {GAME_SMSG_PARTY_JOIN_REQUEST,OnPartyInviteReceived}
     };
 } // namespace
 ToastNotifications::Toast::Toast(const std::wstring& _title, const std::wstring& _message)
@@ -441,6 +461,8 @@ void ToastNotifications::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Alliance Chat", &show_notifications_on_ally_chat);
     ImGui::NextSpacedElement();
+    ImGui::Checkbox("Party Invite", &show_notifications_on_invite);
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("Last to Tick", &show_notifications_on_last_to_ready);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Everyone Ticked", &show_notifications_on_everyone_ready);
@@ -459,6 +481,8 @@ void ToastNotifications::DrawSettingsInternal()
     ImGui::Checkbox("Guild Chat", &flash_window_on_guild_chat);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Alliance Chat", &flash_window_on_ally_chat);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Party Invite", &flash_window_on_invite);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Last to Tick", &flash_window_on_last_to_ready);
     ImGui::NextSpacedElement();
@@ -497,6 +521,7 @@ void ToastNotifications::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_notifications_on_whisper);
     LOAD_BOOL(show_notifications_on_guild_chat);
     LOAD_BOOL(show_notifications_on_ally_chat);
+    LOAD_BOOL(show_notifications_on_invite);
     LOAD_BOOL(show_notifications_on_last_to_ready);
     LOAD_BOOL(show_notifications_on_everyone_ready);
     LOAD_BOOL(show_notifications_on_self_resurrected);
@@ -504,6 +529,7 @@ void ToastNotifications::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(flash_window_on_whisper);
     LOAD_BOOL(flash_window_on_guild_chat);
     LOAD_BOOL(flash_window_on_ally_chat);
+    LOAD_BOOL(flash_window_on_invite);
     LOAD_BOOL(flash_window_on_last_to_ready);
     LOAD_BOOL(flash_window_on_everyone_ready);
     LOAD_BOOL(flash_window_on_self_resurrected);

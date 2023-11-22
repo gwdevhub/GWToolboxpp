@@ -669,10 +669,7 @@ namespace {
                 return;
             }
             case UseItem: {
-                const GW::Item* item = GW::Items::GetItemById(tome_pending_item_id);
-                if (item) {
-                    GW::Items::UseItem(item);
-                }
+                GW::Items::UseItem(GW::Items::GetItemById(tome_pending_item_id));
             }
         }
     cancel:

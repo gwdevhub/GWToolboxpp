@@ -47,67 +47,6 @@ END
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
-
-IDB_Missions_MissionIconIncomplete RCDATA       "..\\resources\\missions\\MissionIconIncomplete.png"
-
-IDB_Missions_MissionIconBonus RCDATA            "..\\resources\\missions\\MissionIconBonus.png"
-
-IDB_Missions_MissionIconPrimary RCDATA          "..\\resources\\missions\\MissionIconPrimary.png"
-
-IDB_Missions_MissionIcon RCDATA                 "..\\resources\\missions\\MissionIcon.png"
-
-IDB_Missions_FactionsMissionIconIncomplete RCDATA "..\\resources\\missions\\FactionsMissionIconIncomplete.png"
-
-IDB_Missions_FactionsMissionIconExpert RCDATA   "..\\resources\\missions\\FactionsMissionIconExpert.png"
-
-IDB_Missions_FactionsMissionIconPrimary RCDATA  "..\\resources\\missions\\FactionsMissionIconPrimary.png"
-
-IDB_Missions_FactionsMissionIcon RCDATA         "..\\resources\\missions\\FactionsMissionIcon.png"
-
-IDB_Missions_NightfallMissionIconIncomplete RCDATA "..\\resources\\missions\\NightfallMissionIconIncomplete.png"
-
-IDB_Missions_NightfallMissionIconExpert RCDATA  "..\\resources\\missions\\NightfallMissionIconExpert.png"
-
-IDB_Missions_NightfallMissionIconPrimary RCDATA "..\\resources\\missions\\NightfallMissionIconPrimary.png"
-
-IDB_Missions_NightfallMissionIcon RCDATA        "..\\resources\\missions\\NightfallMissionIcon.png"
-
-IDB_Missions_NightfallTormentMissionIconIncomplete RCDATA "..\\resources\\missions\\NightfallTormentMissionIconIncomplete.png"
-
-IDB_Missions_NightfallTormentMissionIconExpert RCDATA "..\\resources\\missions\\NightfallTormentMissionIconExpert.png"
-
-IDB_Missions_NightfallTormentMissionIconPrimary RCDATA "..\\resources\\missions\\NightfallTormentMissionIconPrimary.png"
-
-IDB_Missions_NightfallTormentMissionIcon RCDATA "..\\resources\\missions\\NightfallTormentMissionIcon.png"
-
-IDB_Missions_EOTNMissionIncomplete RCDATA       "..\\resources\\missions\\EOTNMissionIncomplete.png"
-
-IDB_Missions_EOTNMission RCDATA                 "..\\resources\\missions\\EOTNMission.png"
-
-IDB_Missions_EOTNDungeonIncomplete RCDATA       "..\\resources\\missions\\EOTNDungeonIncomplete.png"
-
-IDB_Missions_EOTNDungeon RCDATA                 "..\\resources\\missions\\EOTNDungeon.png"
-
-IDB_Missions_HardModeMissionIconIncomplete RCDATA "..\\resources\\missions\\HardModeMissionIconIncomplete.png"
-
-IDB_Missions_HardModeMissionIcon1 RCDATA        "..\\resources\\missions\\HardModeMissionIcon1.png"
-
-IDB_Missions_HardModeMissionIcon1b RCDATA       "..\\resources\\missions\\HardModeMissionIcon1b.png"
-
-IDB_Missions_HardModeMissionIcon2 RCDATA        "..\\resources\\missions\\HardModeMissionIcon2.png"
-
-IDB_Missions_HardModeMissionIcon RCDATA         "..\\resources\\missions\\HardModeMissionIcon.png"
-
-IDB_Missions_EOTNHardModeMissionIncomplete RCDATA "..\\resources\\missions\\EOTNHardModeMissionIncomplete.png"
-
-IDB_Missions_EOTNHardModeMission RCDATA         "..\\resources\\missions\\EOTNHardModeMission.png"
-
-IDB_Missions_EOTNHardModeDungeonIncomplete RCDATA "..\\resources\\missions\\EOTNHardModeDungeonIncomplete.png"
-
-IDB_Missions_Vanquish RCDATA         "..\\resources\\missions\\HardModeMissionIcon1.png"
-
-IDB_Missions_VanquishIncomplete RCDATA "..\\resources\\missions\\HardModeMissionIconIncomplete.png"
-
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

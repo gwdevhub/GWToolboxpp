@@ -10,6 +10,57 @@ namespace CompletionWindow_Constants {
     const char* hero_names[] = {"", "Norgu", "Goren", "Tahlkora", "Master of Whispers", "Acolyte Jin", "Koss", "Dunkoro", "Acolyte Sousuke", "Melonni", "Zhed Shadowhoof", "General Morgahn", "Margrid the Sly", "Zenmai", "Olias", "Razah", "M.O.X.",
                                 "Keiran Thackeray", "Jora", "Pyre Fierceshot", "Anton", "Livia", "Hayda", "Kahmu", "Gwen", "Xandra", "Vekk", "Ogden Stonehealer", "", "", "", "", "", "", "", "", "Miku", "Zei Ri"};
 
+
+    // GW loads these icons as an array of file hashes once, and then keeps it in memory - I can't find where these are in RDATA reliably, so have to define them here :(
+    enum class WorldMapIcon : uint32_t {
+        None = 0,
+        Kryta_Mission = 0x2ac23,
+        Kryta_CompletePrimary = 0x2ac27,
+        Kryta_CompleteSecondary = 0x2ac29,
+        Kryta_City = 0x2ac2f,
+        Kryta_Outpost = 0x2ac2d,
+        Kryta_Arena = 0x2ac2b,
+
+        Cantha_Mission = 0x2ac35,
+        Cantha_CompletePrimary = 0x2ac39,
+        Cantha_CompleteExpert = 0x2ac3b,
+        Cantha_CompleteMaster = 0x2ac3d,
+        Cantha_City = 0x2ac43,
+        Cantha_Outpost = 0x2ac41,
+        Cantha_ChallengeMission = 0x2ac33,
+        Cantha_LuxonsOwned = 0x2ac31, // NB: Kurshit owned is Luxon texture with blue overlay; proof that Luxons hold the true claim to Cantha!
+
+        Elona_Mission = 0x38048,
+        Elona_CompletePrimary = 0x3804c,
+        Elona_CompleteExpert = 0x3804e,
+        Elona_CompleteMaster = 0x38050,
+        Elona_City = 0x322ad,
+        Elona_Outpost = 0x322ab,
+        Elona_ChallengeMission = 0x38046,
+
+        RealmOfTorment_Outpost = 0x322af,
+        RealmOfTorment_City = 0x322b1,
+        RealmOfTorment_Mission = 0x38058,
+        RealmOfTorment_ChallengeMission = 0x38056,
+
+        RealmOfTorment_EliteArea = 0x43466,
+
+        EyeOfTheNorth_Dungeon = 0x50830,
+        EyeOfTheNorth_DungeonComplete = 0x50830, // TODO
+        EyeOfTheNorth_Mission = 0x50831,
+        EyeOfTheNorth_MissionComplete = 0x50831, // TODO
+        EyeOfTheNorth_HardMode_Dungeon = 0x50832,
+        EyeOfTheNorth_HardMode_DungeonComplete = 0x50832, // TODO
+        EyeOfTheNorth_HardMode_Mission = 0x50833,
+        EyeOfTheNorth_HardMode_MissionComplete = 0x50833, // TODO
+
+        HardMode = 0x45563,
+        HardMode_CompletePrimary = 0x45567,
+        HardMode_CompleteExpert = 0x45569,
+        HardMode_CompleteMaster = 0x4556b,
+        HardMode_CompleteAll = 0x4556d // Gold helm
+    };
+
     const wchar_t* encoded_festival_hat_names[] = {
         // Halloween
         L"\x8102\x5C2B\xB7F4\xC976\x5CE1", // Charr hat

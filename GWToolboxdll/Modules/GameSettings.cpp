@@ -162,7 +162,6 @@ namespace {
     bool drop_ua_on_cast = false;
 
     bool focus_window_on_launch = true;
-    bool flash_window_on_party_invite = false;
     bool flash_window_on_zoning = false;
     bool focus_window_on_zoning = false;
     bool flash_window_on_cinematic = true;
@@ -526,7 +525,7 @@ namespace {
 
     GW::MemoryPatcher skip_map_entry_message_patch;
 
-    // Refresh agent name tags when allegiance changes ( https://github.com/HasKha/GWToolboxpp/issues/781 )
+    // Refresh agent name tags when allegiance changes ( https://github.com/gwdevhub/GWToolboxpp/issues/781 )
     void OnAgentAllegianceChanged(GW::HookStatus*, GW::Packet::StoC::AgentUpdateAllegiance*)
     {
         // Backup the current name tag flag state, then "flash" nametags to update.
@@ -975,9 +974,6 @@ namespace {
         ImGui::Indent();
         ImGui::StartSpacedElements(checkbox_w);
         ImGui::NextSpacedElement();
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Receiving a party invite", &flash_window_on_party_invite);
-        ImGui::NextSpacedElement();
         ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
         ImGui::NextSpacedElement();
         ImGui::Checkbox("Cinematic start/end", &flash_window_on_cinematic);
@@ -1001,7 +997,7 @@ namespace {
         ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &focus_window_on_trade);
         ImGui::Unindent();
 
-        ImGui::Text("Show a message when a friend:");
+        ImGui::Text("Show a chat message when a friend:");
         ImGui::Indent();
         ImGui::StartSpacedElements(checkbox_w);
         ImGui::NextSpacedElement();
@@ -1014,7 +1010,7 @@ namespace {
         ImGui::Checkbox("Leaves your outpost###notify_when_friends_leave_outpost", &notify_when_friends_leave_outpost);
         ImGui::Unindent();
 
-        ImGui::Text("Show a message when a player:");
+        ImGui::Text("Show a chat message when a player:");
         ImGui::Indent();
         ImGui::StartSpacedElements(checkbox_w);
         ImGui::NextSpacedElement();
@@ -1549,7 +1545,6 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(move_item_to_current_storage_pane);
     LOAD_BOOL(move_materials_to_current_storage_pane);
 
-    LOAD_BOOL(flash_window_on_party_invite);
     LOAD_BOOL(flash_window_on_zoning);
     LOAD_BOOL(flash_window_on_cinematic);
     LOAD_BOOL(focus_window_on_launch);
@@ -1710,7 +1705,6 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(move_materials_to_current_storage_pane);
     SAVE_BOOL(stop_screen_shake);
 
-    SAVE_BOOL(flash_window_on_party_invite);
     SAVE_BOOL(flash_window_on_zoning);
     SAVE_BOOL(focus_window_on_launch);
     SAVE_BOOL(focus_window_on_zoning);
@@ -2240,32 +2234,15 @@ void GameSettings::OnPartyInviteReceived(const GW::HookStatus* status, const GW:
             GW::PartyMgr::RespondToPartyRequest(packet->target_party_id, true);
         }
     }
-    if (flash_window_on_party_invite) {
-        FlashWindow();
-    }
 }
 
 // Flash window on player added
-void GameSettings::OnPartyPlayerJoined(const GW::HookStatus*, const GW::Packet::StoC::PartyPlayerAdd* packet)
+void GameSettings::OnPartyPlayerJoined(const GW::HookStatus*, const GW::Packet::StoC::PartyPlayerAdd*)
 {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
         return;
     }
     check_message_on_party_change = true;
-    if (flash_window_on_party_invite) {
-        const GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
-        if (!current_party) {
-            return;
-        }
-        const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
-        if (!me) {
-            return;
-        }
-        if (packet->player_id == me->login_number
-            || (packet->party_id == current_party->party_id && GW::PartyMgr::GetIsLeader())) {
-            FlashWindow();
-        }
-    }
 }
 
 // Block overhead arrow marker for zaishen scout

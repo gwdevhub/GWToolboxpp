@@ -32,6 +32,7 @@ bool Download(std::string& content, const char* url)
 {
     RestClient client;
     client.SetUrl(url);
+    client.SetFollowLocation(true);
     client.SetVerifyPeer(false);
     client.SetTimeoutSec(5);
     client.SetUserAgent("curl/7.71.1");
@@ -170,7 +171,7 @@ std::string GetDllRelease(const std::filesystem::path& dllpath)
 bool DownloadWindow::DownloadAllFiles()
 {
     std::string content;
-    if (!Download(content, "https://api.github.com/repos/HasKha/GWToolboxpp/releases/latest")) {
+    if (!Download(content, "https://api.github.com/repos/gwdevhub/GWToolboxpp/releases/latest")) {
         fprintf(stderr, "Couldn't download the latest release of GWToolboxpp\n");
         // @Remark:
         // We may not be able to grep Github api. (For instance, if we spam it)

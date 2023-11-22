@@ -107,8 +107,7 @@ namespace ImGui {
         }
         return *confirm_bool;
     }
-
-    bool IconButton(const char* label, const ImTextureID icon, const ImVec2& size, const ImGuiButtonFlags flags, const ImVec2& icon_size)
+    bool CompositeIconButton(const char* label, const ImTextureID* icons, size_t icons_len, const ImVec2& size, const ImGuiButtonFlags flags, const ImVec2& icon_size, const ImVec2& uv0, ImVec2 uv1)
     {
         char button_id[128];
         sprintf(button_id, "###icon_button_%s", label);
@@ -118,22 +117,17 @@ namespace ImGui {
 
         const ImVec2& button_size = GetItemRectSize();
         ImVec2 img_size = icon_size;
-        if (!icon) {
-            img_size = {0.f, 0.f};
+        if (icon_size.x > 0.f) {
+            img_size.x = icon_size.x;
         }
-        else {
-            if (icon_size.x > 0.f) {
-                img_size.x = icon_size.x;
-            }
-            if (icon_size.y > 0.f) {
-                img_size.y = icon_size.y;
-            }
-            if (img_size.y == 0.f) {
-                img_size.y = button_size.y - 2.f;
-            }
-            if (img_size.x == 0.f) {
-                img_size.x = img_size.y;
-            }
+        if (icon_size.y > 0.f) {
+            img_size.y = icon_size.y;
+        }
+        if (img_size.y == 0.f) {
+            img_size.y = button_size.y - 2.f;
+        }
+        if (img_size.x == 0.f) {
+            img_size.x = img_size.y;
         }
         const ImGuiStyle& style = GetStyle();
         const float content_width = img_size.x + textsize.x + style.FramePadding.x * 2.f;
@@ -146,13 +140,26 @@ namespace ImGui {
         const float img_y = pos.y + (button_size.y - img_size.y) / 2.f;
         const float text_x = img_x + img_size.x + 3.f;
         const float text_y = pos.y + (button_size.y - textsize.y) * style.ButtonTextAlign.y;
-        if (img_size.x) {
-            AddImageCropped(icon, ImVec2(img_x, img_y), ImVec2(img_x + img_size.x, img_y + img_size.y));
+        const auto top_left = ImVec2(img_x, img_y);
+        const auto bottom_right = ImVec2(img_x + img_size.x, img_y + img_size.y);
+        for (size_t i = 0; i < icons_len; i++) {
+            if (!icons[i])
+                continue;
+            if (uv0.x == uv1.x && uv0.y == uv1.y) {
+                GetWindowDrawList()->AddImage(icons[i], top_left, bottom_right, uv0, CalculateUvCrop(icons[i], img_size));
+            }
+            else {
+                GetWindowDrawList()->AddImage(icons[i], top_left, bottom_right, uv0, uv1);
+            }
         }
         if (label) {
             GetWindowDrawList()->AddText(ImVec2(text_x, text_y), ImColor(GetStyle().Colors[ImGuiCol_Text]), label);
         }
         return clicked;
+    }
+    bool IconButton(const char* label, const ImTextureID icon, const ImVec2& size, const ImGuiButtonFlags flags, const ImVec2& icon_size)
+    {
+        return CompositeIconButton(label, &icon, 1, size, flags, icon_size);
     }
 
     bool ColorButtonPicker(const char* label, Color* imcol, const ImGuiColorEditFlags flags)
@@ -299,6 +306,36 @@ namespace ImGui {
             }
         }
         return uv1;
+    }
+    // Given a texture, sprite size in px and the offset of the sprite we want, fill out uv0 and uv1 coords for percentage offsets. False on failure.
+    bool GetSpriteUvCoords(const ImTextureID user_texture_id, const ImVec2& single_sprite_size, uint32_t sprite_offset[2], ImVec2* uv0_out, ImVec2* uv1_out) {
+        if (!user_texture_id)
+            return false;
+        const auto texture = static_cast<IDirect3DTexture9*>(user_texture_id);
+        D3DSURFACE_DESC desc;
+        const HRESULT res = texture->GetLevelDesc(0, &desc);
+        if (!SUCCEEDED(res)) {
+            return false; // Don't throw anything into the log here; this function is called every frame by modules that use it!
+        }
+
+        ImVec2 img_dimensions = { static_cast<float>(desc.Width), static_cast<float>(desc.Height) };
+
+        ImVec2 start_px_offset = { single_sprite_size.x * sprite_offset[0], single_sprite_size.y * sprite_offset[1] };
+        if (start_px_offset.x >= img_dimensions.x
+            || start_px_offset.y >= img_dimensions.y) {
+            return false;
+        }
+        ImVec2 end_px_offset = { start_px_offset.x + single_sprite_size.x, start_px_offset.y + single_sprite_size.y };
+        if (end_px_offset.x >= img_dimensions.x
+            || end_px_offset.y >= img_dimensions.y) {
+            return false;
+        }
+        uv0_out->x = start_px_offset.x / img_dimensions.x;
+        uv0_out->y = end_px_offset.y / img_dimensions.y;
+
+        uv1_out->x = end_px_offset.x / img_dimensions.x;
+        uv1_out->x = end_px_offset.y / img_dimensions.y;
+        return true;
     }
 
     void ImageCropped(const ImTextureID user_texture_id, const ImVec2& size)

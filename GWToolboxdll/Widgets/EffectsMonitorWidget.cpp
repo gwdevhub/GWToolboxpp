@@ -530,6 +530,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
                     ImGui::PopFont();
                     ImGui::End();
                     ImGui::PopStyleVar(2);
+                    return;
                 }
             }
             else if (effect.skill_id == GW::Constants::SkillID::Hard_mode) {

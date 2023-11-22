@@ -17,6 +17,17 @@ namespace {
     clock_t state_timestamp = 0;
     uint32_t char_sort_order = std::numeric_limits<uint32_t>::max();
 
+    void SetCharSortOrder(uint32_t order)
+    {
+        const auto current_sort_order = GetPreference(GW::UI::EnumPreference::CharSortOrder);
+        if (char_sort_order == std::numeric_limits<uint32_t>::max()) {
+            char_sort_order = current_sort_order;
+        }
+        if (current_sort_order != order && order != std::numeric_limits<uint32_t>::max()) {
+            SetPreference(GW::UI::EnumPreference::CharSortOrder, order);
+        }
+    }
+
     enum class LoginState {
         Idle,
         PendingLogin,
@@ -68,7 +79,7 @@ namespace {
     void OnPortalAccountLogin(const uint32_t transaction_id, uint32_t* user_id, uint32_t* session_id, wchar_t* preselect_character)
     {
         GW::Hook::EnterHook();
-        // Don't pre-select the character yet; we'll do this in the Update() loop after sucessful login
+        // Don't pre-select the character yet; we'll do this in the Update() loop after successful login
         preselect_character[0] = 0;
         PortalAccountLogin_Ret(transaction_id, user_id, session_id, preselect_character);
         state_timestamp = TIMER_INIT();
@@ -136,9 +147,9 @@ void LoginModule::Update(float)
                 state = LoginState::Idle;
                 return;
             }
-            if (char_sort_order == std::numeric_limits<uint32_t>::max()) {
-                char_sort_order = GetPreference(GW::UI::EnumPreference::CharSortOrder);
-                SetPreference(GW::UI::EnumPreference::CharSortOrder, static_cast<uint32_t>(GW::Constants::Preference::CharSortOrder::Alphabetize));
+            if (original_charname_parameter != nullptr && *original_charname_parameter != '\0') {
+                // we want to pre-select a character, set order to alphabetical so we don't get stuck on empty char slots when using arrow keys
+                SetCharSortOrder(static_cast<uint32_t>(GW::Constants::Preference::CharSortOrder::Alphabetize));
             }
             if (IsCharSelectReady()) {
                 state = LoginState::FindCharacterIndex;
@@ -158,8 +169,8 @@ void LoginModule::Update(float)
                     state = LoginState::SelectChar;
                     reroll_index_needed = i;
                     reroll_index_current = 0xffff;
-                    // Wipe out the command line parameter for GW here; its only relevent for the first login!
-                    *original_charname_parameter = 0;
+                    // Wipe out the command line parameter for GW here; its only relevant for the first login!
+                    *original_charname_parameter = '\0';
                     return;
                 }
             }
@@ -181,9 +192,7 @@ void LoginModule::Update(float)
             if (pgc->index_1 == reroll_index_needed) {
                 // We're on the character that was asked for
                 state = LoginState::Idle;
-                if (char_sort_order != std::numeric_limits<uint32_t>::max() && char_sort_order != GetPreference(GW::UI::EnumPreference::CharSortOrder)) {
-                    SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
-                }
+                SetCharSortOrder(char_sort_order);
                 return;
             }
             reroll_index_current = pgc->index_1;

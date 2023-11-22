@@ -33,11 +33,14 @@ set_target_properties(GWToolboxdll PROPERTIES
     VS_GLOBAL_EnableClangTidyCodeAnalysis false
 )
 
-target_link_options(GWToolboxdll PRIVATE /WX /OPT:REF /OPT:ICF /SAFESEH:NO)
-target_link_options(GWToolboxdll PRIVATE $<$<NOT:$<CONFIG:Debug>>:/LTCG /INCREMENTAL:NO>)
-target_link_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/IGNORE:4098 /OPT:NOREF /OPT:NOICF>)
-target_link_options(GWToolboxdll PRIVATE $<$<CONFIG:RelWithDebInfo>:/OPT:NOICF>)
-target_link_options(GWToolboxdll PRIVATE /IGNORE:4099) # pdb not found for github action
+target_link_options(GWToolboxdll PRIVATE
+    /WX /OPT:REF /OPT:ICF /SAFESEH:NO
+    $<$<NOT:$<CONFIG:Debug>>:/LTCG /INCREMENTAL:NO>
+    $<$<CONFIG:Debug>:/IGNORE:4098 /OPT:NOREF /OPT:NOICF>
+    $<$<CONFIG:RelWithDebInfo>:/OPT:NOICF>
+    $<$<CONFIG:DEBUG>:/NODEFAULTLIB:LIBCMT>
+    /IGNORE:4099 # pdb not found for github action
+    )
 
 target_include_directories(GWToolboxdll PRIVATE
     "${PROJECT_SOURCE_DIR}/Dependencies"

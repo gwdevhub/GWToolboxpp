@@ -6,19 +6,11 @@
 #include <ToolboxWindow.h>
 #include <Color.h>
 
-namespace Missions {
-    struct MissionImage {
-        const wchar_t* file_name;
-        int resource_id;
-        IDirect3DTexture9* texture = nullptr;
 
-        MissionImage(const wchar_t* _file_name, const int _resource_id)
-            : file_name(_file_name), resource_id(_resource_id) {}
-    };
+namespace Missions {
 
     class Mission {
     protected:
-        using MissionImageList = std::vector<MissionImage>;
         static Color is_daily_bg_color;
         static Color has_quest_bg_color;
 
@@ -27,12 +19,16 @@ namespace Missions {
         GW::Constants::MapID outpost;
         GW::Constants::MapID map_to;
         GW::Constants::QuestID zm_quest;
-        MissionImageList normal_mode_textures;
-        MissionImageList hard_mode_textures;
+
+        uint8_t mission_state = 0;
+        // Array of placeholder pointers; the actual IDirect3DTexture9* is loaded from dx9
+        IDirect3DTexture9** icons[4] = { nullptr };
+        bool icons_loaded = false;
+        ImVec2 icon_uv_offset[2] = { { .0f,.0f },{0.f,0.f} };
 
     public:
         virtual ~Mission() = default;
-        Mission(GW::Constants::MapID, const MissionImageList&, const MissionImageList&, GW::Constants::QuestID = static_cast<GW::Constants::QuestID>(0));
+        Mission(GW::Constants::MapID, GW::Constants::QuestID = static_cast<GW::Constants::QuestID>(0));
         static ImVec2 icon_size;
         [[nodiscard]] GW::Constants::MapID GetOutpost() const;
 
@@ -40,10 +36,11 @@ namespace Missions {
         bool bonus = false;
         bool map_unlocked = true;
 
+        virtual size_t GetLoadedIcons(IDirect3DTexture9* icons_out[4]);
+
         virtual const char* Name();
         virtual bool Draw(IDirect3DDevice9*);
         virtual void OnClick();
-        virtual IDirect3DTexture9* GetMissionImage();
         virtual bool IsDaily();  // True if this mission is ZM or ZB today
         virtual bool HasQuest(); // True if the ZM or ZB is in quest log
         virtual void CheckProgress(const std::wstring& player_name);
@@ -52,16 +49,15 @@ namespace Missions {
 
     class PvESkill : public Mission {
     protected:
-        IDirect3DTexture9** image = nullptr;
         GW::Constants::SkillID skill_id;
 
     public:
         uint32_t profession = 0;
-        inline static MissionImageList dummy_var = {};
         PvESkill(GW::Constants::SkillID _skill_id);
-        IDirect3DTexture9* GetMissionImage() override;
         bool IsDaily() override { return false; }
         bool HasQuest() override { return false; }
+
+        size_t GetLoadedIcons(IDirect3DTexture9* icons_out[4]) override;
 
         bool Draw(IDirect3DDevice9*) override;
         void OnClick() override;
@@ -72,8 +68,9 @@ namespace Missions {
     class HeroUnlock : public PvESkill {
     public:
         HeroUnlock(GW::Constants::HeroID _hero_id);
-        ~HeroUnlock() override { delete image; }
-        IDirect3DTexture9* GetMissionImage() override;
+        ~HeroUnlock();
+
+        size_t GetLoadedIcons(IDirect3DTexture9* icons_out[4]) override;
 
         void OnClick() override;
 
@@ -89,7 +86,7 @@ namespace Missions {
 
     public:
         ItemAchievement(size_t _encoded_name_index, const wchar_t* encoded_name);
-        IDirect3DTexture9* GetMissionImage() override;
+        size_t GetLoadedIcons(IDirect3DTexture9* icons_out[4]) override;
 
         void OnClick() override;
         const char* Name() override;
@@ -109,7 +106,7 @@ namespace Missions {
             : ItemAchievement(_encoded_name_index, nullptr) {}
 
         void CheckProgress(const std::wstring& player_name) override;
-        IDirect3DTexture9* GetMissionImage() override;
+        size_t GetLoadedIcons(IDirect3DTexture9* icons_out[4]) override;
         const char* Name() override;
 
         void OnClick() override;
@@ -139,7 +136,6 @@ namespace Missions {
     class AchieventWithWikiFile : public ItemAchievement {
     protected:
         std::string wiki_file_name;
-        IDirect3DTexture9** img = nullptr;
 
     public:
         AchieventWithWikiFile(const size_t hom_achievement_index, const wchar_t* encoded_name, const char* _wiki_file_name = nullptr)
@@ -150,7 +146,7 @@ namespace Missions {
             }
         }
 
-        IDirect3DTexture9* GetMissionImage() override;
+        size_t GetLoadedIcons(IDirect3DTexture9* icons_out[4]) override;
     };
 
     class ArmorAchievement : public AchieventWithWikiFile {
@@ -180,103 +176,25 @@ namespace Missions {
         bool Draw(IDirect3DDevice9*) override;
     };
 
-    class PropheciesMission : public Mission {
-    public:
-        static MissionImageList normal_mode_images;
-        static MissionImageList hard_mode_images;
-
-        PropheciesMission(const GW::Constants::MapID _outpost, const GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
-            : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest) { }
-    };
-
-
-    class FactionsMission : public Mission {
-    public:
-        static MissionImageList normal_mode_images;
-        static MissionImageList hard_mode_images;
-
-        FactionsMission(const GW::Constants::MapID _outpost, const GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
-            : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest) { }
-    };
-
-
-    class NightfallMission : public Mission {
-    protected:
-        NightfallMission(const GW::Constants::MapID _outpost,
-                         const MissionImageList& _normal_mode_images,
-                         const MissionImageList& _hard_mode_images,
-                         const GW::Constants::QuestID _zm_quest)
-            : Mission(_outpost, _normal_mode_images, _hard_mode_images, _zm_quest) { }
-
-    public:
-        static MissionImageList normal_mode_images;
-        static MissionImageList hard_mode_images;
-
-        NightfallMission(const GW::Constants::MapID _outpost, const GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
-            : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest) { }
-    };
-
-
-    class TormentMission : public NightfallMission {
-    public:
-        static MissionImageList normal_mode_images;
-        static MissionImageList hard_mode_images;
-
-        TormentMission(const GW::Constants::MapID _outpost, const GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
-            : NightfallMission(_outpost, normal_mode_images, hard_mode_images, _zm_quest) { }
-    };
-
     class Vanquish : public Mission {
     public:
-        static MissionImageList hard_mode_images;
 
         Vanquish(const GW::Constants::MapID _outpost, const GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
-            : Mission(_outpost, hard_mode_images, hard_mode_images, _zm_quest) { }
+            : Mission(_outpost, _zm_quest) { }
 
-
-        IDirect3DTexture9* GetMissionImage() override;
         void CheckProgress(const std::wstring& player_name) override;
     };
-
 
     class EotNMission : public Mission {
-    protected:
-        EotNMission(const GW::Constants::MapID _outpost,
-                    const MissionImageList& _normal_mode_images,
-                    const MissionImageList& _hard_mode_images,
-                    const GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
-            : Mission(_outpost, _normal_mode_images, _hard_mode_images, _zm_quest) { }
-
     public:
-        static MissionImageList normal_mode_images;
-        static MissionImageList hard_mode_images;
+        EotNMission(const GW::Constants::MapID _outpost, const std::vector<GW::Constants::QuestID>& _zb_quests)
+            : zb_quests(_zb_quests), Mission(_outpost)  { }
 
-        EotNMission(const GW::Constants::MapID _outpost, const GW::Constants::QuestID _zm_quest = static_cast<GW::Constants::QuestID>(0))
-            : Mission(_outpost, normal_mode_images, hard_mode_images, _zm_quest) { }
+        EotNMission(const GW::Constants::MapID _outpost, GW::Constants::QuestID _zb_quest = static_cast<GW::Constants::QuestID>(0))
+            : zb_quests({_zb_quest}), Mission(_outpost)  { }
 
-
-        IDirect3DTexture9* GetMissionImage() override;
         void CheckProgress(const std::wstring& player_name) override;
-
-    private:
-        std::string name;
-    };
-
-
-    class Dungeon : public EotNMission {
-    public:
-        static MissionImageList normal_mode_images;
-        static MissionImageList hard_mode_images;
-
-        Dungeon(const GW::Constants::MapID _outpost, const std::vector<GW::Constants::QuestID>& _zb_quests)
-            : EotNMission(_outpost, normal_mode_images, hard_mode_images), zb_quests(_zb_quests) { }
-
-        Dungeon(const GW::Constants::MapID _outpost, GW::Constants::QuestID _zb_quest = static_cast<GW::Constants::QuestID>(0))
-            : EotNMission(_outpost, normal_mode_images, hard_mode_images), zb_quests({_zb_quest}) { }
-
-        bool IsDaily() override;
         bool HasQuest() override;
-
     private:
         std::vector<GW::Constants::QuestID> zb_quests{};
     };

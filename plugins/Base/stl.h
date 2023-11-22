@@ -1,6 +1,8 @@
 ﻿#pragma once
 
+#ifndef VC_EXTRALEAN
 #define VC_EXTRALEAN
+#endif
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
 #endif

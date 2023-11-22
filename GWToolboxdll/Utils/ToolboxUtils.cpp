@@ -11,6 +11,7 @@
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
@@ -31,9 +32,70 @@ namespace {
     {
         return item && item->info_string && wcschr(item->info_string, 0xAC9);
     }
+    bool ArrayBoolAt(const GW::Array<uint32_t>& array, const uint32_t index)
+    {
+        const uint32_t real_index = index / 32;
+        if (real_index >= array.size()) {
+            return false;
+        }
+        const uint32_t shift = index % 32;
+        const uint32_t flag = 1 << shift;
+        const auto res = (array[real_index] & flag);
+        return res != 0;
+    }
 }
 
 namespace ToolboxUtils {
+    uint8_t GetMissionState(GW::Constants::MapID map_id, const GW::Array<uint32_t>& missions_completed, const GW::Array<uint32_t>& missions_bonus) {
+        const auto area_info = GW::Map::GetMapInfo(map_id);
+        switch (area_info->type) {
+        case GW::RegionType::CooperativeMission:
+        case GW::RegionType::MissionOutpost:
+        case GW::RegionType::Dungeon:
+            break;
+        default:
+            return 0;
+        }
+        uint8_t state_out = 0;
+        auto complete = ArrayBoolAt(missions_completed, (uint32_t)map_id);
+        auto bonus = ArrayBoolAt(missions_bonus, (uint32_t)map_id);
+
+        auto primary = complete;
+        auto expert = bonus;
+        auto master = false;
+
+        switch (area_info->campaign) {
+        case GW::Constants::Campaign::Factions:
+        case GW::Constants::Campaign::Nightfall:
+            // Master = bonus, Expert = complete, Primary = any
+            master = bonus;
+            expert = complete;
+            primary = master || expert;
+            break;
+        }
+
+        if(primary)
+            state_out |= MissionState::Primary;
+        if(expert)
+            state_out |= MissionState::Expert;
+        if(master)
+            state_out |= MissionState::Master;
+        return state_out;
+    }
+    uint8_t GetMissionState(GW::Constants::MapID map_id, bool is_hard_mode) {
+        const auto w = GW::GetWorldContext();
+        const GW::Array<uint32_t>* missions_completed = &w->missions_completed;
+        const GW::Array<uint32_t>* missions_bonus = &w->missions_bonus;
+        if (is_hard_mode) {
+            missions_completed = &w->missions_completed_hm;
+            missions_bonus = &w->missions_bonus_hm;
+        }
+        return GetMissionState(map_id, *missions_completed, *missions_bonus);
+    }
+    uint8_t GetMissionState() {
+        return GetMissionState(GW::Map::GetMapID(), GW::PartyMgr::GetIsPartyInHardMode());
+    }
+
     bool IsOutpost()
     {
         return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;

@@ -1,7 +1,7 @@
 #pragma once
 
 #define GWTOOLBOX_WEBSITE "https://www.gwtoolbox.com"
-#define RESOURCES_DOWNLOAD_URL "https://raw.githubusercontent.com/HasKha/GWToolboxpp/master/resources/"
+#define RESOURCES_DOWNLOAD_URL "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/"
 
 #define DIRECTX_REDIST_WEBSITE "https://www.microsoft.com/en-us/download/details.aspx?id=35"
 
