@@ -55,6 +55,7 @@
 #include <Windows/DoorMonitorWindow.h>
 #include <Windows/StringDecoderWindow.h>
 #include <Windows/SkillListingWindow.h>
+#include <Windows/Pathfinder.h>
 #endif
 #include <Windows/RerollWindow.h>
 #include <Windows/ArmoryWindow.h>
@@ -208,6 +209,7 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini)
     GWToolbox::ToggleModule(StringDecoderWindow::Instance());
     GWToolbox::ToggleModule(DoorMonitorWindow::Instance());
     GWToolbox::ToggleModule(SkillListingWindow::Instance());
+    GWToolbox::ToggleModule(Pathfinder::Instance());
 #endif
     for (const auto& m : optional_modules) {
         GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
