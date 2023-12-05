@@ -95,15 +95,16 @@ void CustomRenderer::LoadMarkers()
             continue;
         }
         if (strncmp(section, "customline", "customline"s.length()) == 0) {
-            lines.push_back(CustomLine(inifile.GetValue(section, "name", "line")));
-            lines.back().p1.x = static_cast<float>(inifile.GetDoubleValue(section, "x1", 0.0));
-            lines.back().p1.y = static_cast<float>(inifile.GetDoubleValue(section, "y1", 0.0));
-            lines.back().p2.x = static_cast<float>(inifile.GetDoubleValue(section, "x2", 0.0));
-            lines.back().p2.y = static_cast<float>(inifile.GetDoubleValue(section, "y2", 0.0));
-            lines.back().map = static_cast<GW::Constants::MapID>(inifile.GetLongValue(section, "map", 0));
-            lines.back().color = Colors::Load(&inifile, section, "color", lines.back().color);
-            lines.back().visible = inifile.GetBoolValue(section, "visible", true);
-            lines.back().draw_on_terrain = inifile.GetBoolValue(section, "draw_on_terrain", false);
+            auto line = new CustomLine(inifile.GetValue(section, "name", "line"));
+            line->p1.x = static_cast<float>(inifile.GetDoubleValue(section, "x1", 0.0));
+            line->p1.y = static_cast<float>(inifile.GetDoubleValue(section, "y1", 0.0));
+            line->p2.x = static_cast<float>(inifile.GetDoubleValue(section, "x2", 0.0));
+            line->p2.y = static_cast<float>(inifile.GetDoubleValue(section, "y2", 0.0));
+            line->map = static_cast<GW::Constants::MapID>(inifile.GetLongValue(section, "map", 0));
+            line->color = Colors::Load(&inifile, section, "color", line->color);
+            line->visible = inifile.GetBoolValue(section, "visible", true);
+            line->draw_on_terrain = inifile.GetBoolValue(section, "draw_on_terrain", false);
+            lines.push_back(line);
             inifile.Delete(section, nullptr);
         }
         else if (strncmp(section, "custommarker", "custommarker"s.length()) == 0) {
@@ -178,7 +179,7 @@ void CustomRenderer::SaveMarkers()
 
         // then save
         for (auto i = 0u; i < lines.size(); i++) {
-            const CustomLine& line = lines[i];
+            const CustomLine& line = *lines[i];
             char section[32];
             snprintf(section, 32, "customline%03d", i);
             inifile.SetValue(section, "name", line.name);
@@ -262,6 +263,20 @@ void CustomRenderer::SetTooltipMapID(const GW::Constants::MapID& map_id)
     ImGui::SetTooltip(map_id_tooltip.tooltip_str);
 }
 
+bool CustomRenderer::RemoveCustomLine(CustomRenderer::CustomLine* line) {
+    const auto found = std::ranges::find(lines, line);
+    if (found != lines.end()) {
+        lines.erase(found);
+        return true;
+    }
+    return false;
+}
+CustomRenderer::CustomLine* CustomRenderer::AddCustomLine(const GW::GamePos& from,const GW::GamePos& to) {
+    const auto line = new CustomRenderer::CustomLine(from.x,from.y,to.x,to.y,GW::Map::GetMapID());
+    lines.push_back(line);
+    return line;
+}
+
 void CustomRenderer::DrawLineSettings()
 {
     if (Colors::DrawSettingHueWheel("Color", &color)) {
@@ -270,7 +285,7 @@ void CustomRenderer::DrawLineSettings()
     const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
     ImGui::PushID("lines");
     for (size_t i = 0; i < lines.size(); i++) {
-        CustomLine& line = lines[i];
+        CustomLine& line = *lines[i];
         ImGui::PushID(static_cast<int>(i));
         markers_changed |= ImGui::Checkbox("##visible", &line.visible);
         if (ImGui::IsItemHovered()) {
@@ -344,7 +359,7 @@ void CustomRenderer::DrawLineSettings()
     if (ImGui::Button("Add Line")) {
         char buf[32];
         snprintf(buf, 32, "line%zu", lines.size());
-        lines.push_back(CustomLine(buf));
+        lines.push_back(new CustomLine(buf));
         markers_changed = true;
     }
 }
@@ -636,6 +651,14 @@ void CustomRenderer::Initialize(IDirect3DDevice9* device)
         printf("Error setting up CustomRenderer vertex buffer: HRESULT: 0x%lX\n", hr);
     }
 }
+void CustomRenderer::Terminate()
+{
+    VBuffer::Terminate();
+    for (auto l : lines) {
+        delete l;
+    }
+    lines.clear();
+}
 
 void CustomRenderer::CustomPolygon::Initialize(IDirect3DDevice9* device)
 {
@@ -879,10 +902,10 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
 void CustomRenderer::DrawCustomLines(const IDirect3DDevice9*)
 {
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-        for (const CustomLine& line : lines) {
-            if (line.visible && (line.map == GW::Constants::MapID::None || line.map == GW::Map::GetMapID())) {
-                EnqueueVertex(line.p1.x, line.p1.y, line.color);
-                EnqueueVertex(line.p2.x, line.p2.y, line.color);
+        for (const auto line : lines) {
+            if (line->visible && (line->map == GW::Constants::MapID::None || line->map == GW::Map::GetMapID())) {
+                EnqueueVertex(line->p1.x, line->p1.y, line->color);
+                EnqueueVertex(line->p2.x, line->p2.y, line->color);
             }
         }
     }

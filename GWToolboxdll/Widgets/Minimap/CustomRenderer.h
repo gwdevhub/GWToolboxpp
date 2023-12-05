@@ -25,19 +25,7 @@ namespace mapbox::util {
 class CustomRenderer : public VBuffer {
     friend class AgentRenderer;
 
-    struct CustomLine {
-        CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n);
 
-        explicit CustomLine(const char* n)
-            : CustomLine(0, 0, 0, 0, static_cast<GW::Constants::MapID>(0), n) { }
-        GW::Vec2f p1{};
-        GW::Vec2f p2{};
-        GW::Constants::MapID map{};
-        Color color{0xFFFFFFFF};
-        bool visible = true;
-        bool draw_on_terrain = false;
-        char name[128]{};
-    };
 
     enum class Shape {
         LineCircle,
@@ -86,8 +74,23 @@ class CustomRenderer : public VBuffer {
     };
 
 public:
+    struct CustomLine {
+        CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n = nullptr);
+
+        explicit CustomLine(const char* n)
+            : CustomLine(0, 0, 0, 0, static_cast<GW::Constants::MapID>(0), n) { }
+        GW::Vec2f p1{};
+        GW::Vec2f p2{};
+        GW::Constants::MapID map{};
+        Color color{0xFFFFFFFF};
+        bool visible = true;
+        bool draw_on_terrain = false;
+        char name[128]{};
+    };
+
     void Render(IDirect3DDevice9* device) override;
     void Invalidate() override;
+    void Terminate() override;
     void DrawSettings();
     void DrawLineSettings();
     void DrawMarkerSettings();
@@ -96,13 +99,16 @@ public:
     void SaveSettings(ToolboxIni* ini, const char* section);
     void LoadMarkers();
     void SaveMarkers();
+    CustomLine* AddCustomLine(const GW::GamePos& from, const GW::GamePos& to);
+    bool RemoveCustomLine(CustomLine* line);
 
-    [[nodiscard]] const std::vector<CustomLine>& GetLines() const { return lines; }
+    [[nodiscard]] const std::vector<CustomLine*>& GetLines() const { return lines; }
     [[nodiscard]] const std::vector<CustomPolygon>& GetPolys() const { return polygons; }
     [[nodiscard]] const std::vector<CustomMarker>& GetMarkers() const { return markers; }
 
 private:
     void Initialize(IDirect3DDevice9* device) override;
+
     void DrawCustomMarkers(IDirect3DDevice9* device);
     void DrawCustomLines(const IDirect3DDevice9* device);
     void EnqueueVertex(float x, float y, Color color);
@@ -127,7 +133,7 @@ private:
     int show_polygon_details = -1;
     bool markers_changed = false;
     bool marker_file_dirty = true;
-    std::vector<CustomLine> lines{};
+    std::vector<CustomLine*> lines{};
     std::vector<CustomMarker> markers{};
     std::vector<CustomPolygon> polygons{};
 };

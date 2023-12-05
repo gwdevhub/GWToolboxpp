@@ -369,12 +369,12 @@ void GameWorldRenderer::SyncLines(IDirect3DDevice9* device)
     // sync lines with CustomRenderer
     const auto& lines = Minimap::Instance().custom_renderer.GetLines();
     // for each line, add as a renderable if appropriate
-    for (const auto& line : lines) {
-        if (!line.draw_on_terrain || !line.visible) {
+    for (const auto line : lines) {
+        if (!line->draw_on_terrain || !line->visible) {
             continue;
         }
-        std::vector points = {line.p1, line.p2};
-        renderables.push_back(std::make_unique<GenericPolyRenderable>(device, line.map, points, line.color, false));
+        std::vector points = {line->p1, line->p2};
+        renderables.push_back(std::make_unique<GenericPolyRenderable>(device, line->map, points, line->color, false));
     }
 }
 
