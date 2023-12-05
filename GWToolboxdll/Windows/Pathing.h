@@ -6,6 +6,17 @@
 #include "MapSpecificData.h"
 
 namespace Pathing {
+
+    enum class Error : uint32_t {
+        OK,
+        FailedToFindGoalBox,
+        FailedToFindStartBox,
+        FailedToFinializePath,
+        InvalidMapContext,
+        BuildPathLengthExceeded
+    };
+
+
 	//basdically a copy of Pathing trapezoid with additional layer and corner points.
 	//  a----d   
 	//   \    \
@@ -22,6 +33,7 @@ namespace Pathing {
 
         uint32_t id, layer;
         GW::Vec2f a, b, c, d;
+        const bool IsOnPathingTrapezoid(const GW::Vec2f& p) const;
     };
 
     class AABB {
@@ -42,17 +54,33 @@ namespace Pathing {
 
     class MilePath {
     private:
-        MilePath();
+
+        
 
         volatile bool m_processing = false;
         volatile bool m_done = false;
         volatile bool m_terminateThread = false;
         volatile int m_progress = 0;
+
+        std::thread* worker_thread = nullptr;
         
     public:
-        static MilePath *instance();
+        MilePath();
+        ~MilePath();
 
+        MilePath* instance();
+        // Signals terminate to worker thread. Usually followed late by shutdown() to grab the thread again.
         void stopProcessing() { m_terminateThread = true; }
+        bool isProcessing() { return m_processing; }
+        // Signals terminate to worker thread, waits for thread to finish. Blocking.
+        void shutdown() {
+            stopProcessing();
+            if (worker_thread) {
+                worker_thread->join();
+                delete worker_thread;
+                worker_thread = nullptr;
+            }
+        }
 
         int progress() {
             return m_progress;
@@ -81,7 +109,7 @@ namespace Pathing {
             const Portal *portal = nullptr;
 
             operator GW::GamePos() {
-                return GW::GamePos(pos.x, pos.y, box->m_t->layer);
+                return GW::GamePos(pos.x, pos.y, box && box->m_t ? box->m_t->layer : 0);
             }
         };
 
@@ -103,57 +131,57 @@ namespace Pathing {
         std::vector<MapSpecific::teleport_node> m_teleportGraph;
 
         //Generate distance graph among teleports
-        static void GenerateTeleportGraph(MilePath *mp);
-        static MilePath::point CreatePoint(const MilePath *mp, const GW::GamePos &pos);
+        void GenerateTeleportGraph();
+        MilePath::point CreatePoint(const GW::GamePos &pos);
 
-        static bool HasLineOfSight(const MilePath *mp, const point &start, const point &goal,
+        bool HasLineOfSight(const point &start, const point &goal,
             std::vector<const AABB *> &open, std::vector<bool> &visited,
             std::vector<uint32_t> *blocking_ids = nullptr);
 
-        static const AABB *FindAABB(const std::vector<AABB> &aabbs, const GW::GamePos &pos);
-        static bool IsOnPathingTrapezoid(const std::vector<AABB> &aabbs, const GW::Vec2f &p, const SimplePT **pt = nullptr);
+        const AABB *FindAABB(const GW::GamePos &pos);
+        bool IsOnPathingTrapezoid(const GW::Vec2f &p, const SimplePT **pt = nullptr);
 
     private:
-        void LoadMapSpecificData(MilePath *mp);
+        void LoadMapSpecificData();
 
         //Generate Axis Aligned Bounding Boxes around trapezoids
         //This is used for quick intersection checks.
-        void GenerateAABBs(MilePath *mp);
+        void GenerateAABBs();
 
-        bool CreatePortal(MilePath *mp, const AABB *box1, const AABB *box2, const SimplePT::adjacentSide &ts);
+        bool CreatePortal(const AABB *box1, const AABB *box2, const SimplePT::adjacentSide &ts);
 
         //Connect trapezoid AABBS.
-        void GenerateAABBGraph(MilePath *mp);
+        void GenerateAABBGraph();
 
-        void GeneratePoints(MilePath *mp);
+        void GeneratePoints();
 
-        static bool IsOnPathingTrapezoid(const SimplePT *pt, const GW::Vec2f &p);
-
-        static void GenerateVisibilityGraph(MilePath *mp);
+        void GenerateVisibilityGraph();
 
         typedef enum { enter, exit, both } teleport_point_type;
-        static void insertTeleportPointIntoVisGraph(MilePath *mp, MilePath::point &point, teleport_point_type type);
-        static void InsertTeleportsIntoVisibilityGraph(MilePath *mp);
+        void insertTeleportPointIntoVisGraph( MilePath::point &point, teleport_point_type type);
+        void InsertTeleportsIntoVisibilityGraph();
     };
 
     class AStar {
     public:
         class Path {
         public:
-            Path() : m_points(), m_cost(0.0f) { 
-                m_mp = MilePath::instance();
-            };
+            Path(AStar* _parent) : m_astar(_parent), m_points(), m_cost(0.0f) { };
 
-            const std::vector<MilePath::point> points() const {
-                if (m_mp != MilePath::instance())
-                    return {};
+            const std::vector<MilePath::point>& points() {
                 return m_points;
             }
 
             float cost() const {
                 return m_cost;
             }
-
+            bool ready() const {
+                return finalized;
+            }
+            void clear() {
+                finalized = false;
+                m_points.clear();
+            }
             void insertPoint(const MilePath::point &point) {
                 m_points.emplace_back(point);
             }
@@ -170,7 +198,7 @@ namespace Pathing {
 
         private:
             bool finalized = false;
-            MilePath* m_mp;
+            AStar* m_astar;
             std::vector<MilePath::point> m_points;
             float m_cost; //distance
         };
@@ -179,16 +207,16 @@ namespace Pathing {
 
         AStar(MilePath *mp);
 
-        static void insertPointIntoVisGraph(const MilePath *mp, std::vector<std::vector<MilePath::PointVisElement>> &visGraph, MilePath::point &point);
+        void insertPointIntoVisGraph(MilePath::point &point);
         
-        static Path buildPath(const MilePath *mp, const MilePath::point &start, const MilePath::point &goal, std::vector<MilePath::point::Id> &came_from);
+        Error buildPath(const MilePath::point &start, const MilePath::point &goal, std::vector<MilePath::point::Id> &came_from);
 
-        static inline float teleporterHeuristic(const MilePath *mp, const MilePath::point &start, const MilePath::point &goal);
+        inline float teleporterHeuristic(const MilePath::point &start, const MilePath::point &goal);
 
-        Path search(const GW::GamePos &start_pos, const GW::GamePos &goal_pos);
+        Error search(const GW::GamePos &start_pos, const GW::GamePos &goal_pos);
 
-        GW::GamePos getClosestPoint(const GW::Vec2f &pos) const;
-        static GW::GamePos getClosestPoint(const Path &path, const GW::Vec2f &pos);
+        GW::GamePos getClosestPoint(const GW::Vec2f &pos);
+        GW::GamePos getClosestPoint(Path &path, const GW::Vec2f &pos);
 
     private:
         std::vector<std::vector<MilePath::PointVisElement>> m_visGraph;
