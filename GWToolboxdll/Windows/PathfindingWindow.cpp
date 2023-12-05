@@ -18,6 +18,7 @@
 #include <Timer.h>
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 namespace {
     std::unordered_map<uint32_t, Pathing::MilePath*> mile_paths_by_map_file_id;
@@ -109,32 +110,19 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
     ImGui::Text("Length: %.2f", astar->m_path.cost());
     ImGui::Text("n points: %d", astar->m_path.points().size());
 
-    if (TIMER_DIFF(last_draw) > 1000
-        && draw_pos + 1 < astar->m_path.points().size()) {
-        GW::Vec2f points[2] = { 
-            astar->m_path.points()[draw_pos].pos,
-            astar->m_path.points()[draw_pos + 1].pos
-        };
-        GW::UI::DrawOnCompass(draw_pos, _countof(points), points);
+    for (auto& point : astar->m_path.points()) {
+        ImGui::PushID(&point);
+        const auto gp = static_cast<const GW::GamePos>(point);
+        ImGui::Text("%.2f, %.2f, %d", gp.x,gp.y,gp.zplane);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Move")) {
 
-        GW::Packet::StoC::CompassEvent event;
-        event.NumberPts = _countof(points);
-        event.Player = GW::Agents::GetPlayerAsAgentLiving()->player_number;
-        for (size_t i = 0; i < event.NumberPts; i++) {
-            event.points[i].x = (short)points[i].x;
-            event.points[i].y = (short)points[i].y;
+            GW::GameThread::Enqueue([cpy = gp]() {
+                GW::Agents::Move(cpy);
+                });
         }
-        GW::StoC::EmulatePacket(&event);
-        last_draw = TIMER_INIT();
-        draw_pos++;
+        ImGui::PopID();
     }
-
-
-    for (uint32_t i = 1; i < astar->m_path.points().size(); ++i) {
-        //TODO draw path:
-        //DrawLine(points[i - 1], points[i]);
-    }
-
     ImGui::End();
 }
 

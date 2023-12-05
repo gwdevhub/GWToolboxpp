@@ -108,7 +108,7 @@ namespace Pathing {
             const AABB *box2 = nullptr;
             const Portal *portal = nullptr;
 
-            operator GW::GamePos() {
+            operator GW::GamePos() const {
                 return GW::GamePos(pos.x, pos.y, box && box->m_t ? box->m_t->layer : 0);
             }
         };
