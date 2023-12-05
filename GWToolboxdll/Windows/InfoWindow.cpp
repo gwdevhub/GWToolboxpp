@@ -51,6 +51,7 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <Modules/GwDatTextureModule.h>
 #include <Utils/ToolboxUtils.h>
+#include <GWCA/Context/MapContext.h>
 
 namespace {
     enum class Status {
@@ -883,6 +884,10 @@ void InfoWindow::Draw(IDirect3DDevice9*)
                     InfoField("Instance Info Type", "%d", GW::Map::GetMapTypeInstanceInfo(map_info->type)->request_instance_map_type);
                     InfoField("Flags", "0x%X", map_info->flags);
                     InfoField("Thumbnail ID", "%d", map_info->thumbnail_id);
+                    const auto m = GW::GetMapContext();
+                    if (m) {
+                        InfoField("Map Boundaries", "%.0f, %.0f, %.0f, %.0f, %.0f", m->map_boundaries[0],m->map_boundaries[1],m->map_boundaries[2],m->map_boundaries[3],m->map_boundaries[4]);
+                    }
                     GW::Vec2f pos = {static_cast<float>(map_info->x), static_cast<float>(map_info->y)};
                     InfoField("Map Pos", "%.2f, %.2f", pos.x, pos.y);
                     if (!pos.x) {

@@ -11,6 +11,7 @@
 #include "Pathing.h"
 
 namespace Pathing {
+
     using namespace GW;
     using namespace MathUtil;
 
@@ -89,7 +90,19 @@ namespace Pathing {
         return adjacentSide::none;
     }
 
-
+    const bool SimplePT::IsOnPathingTrapezoid(const GW::Vec2f& p) const {
+        constexpr float tolerance = 2.0f;
+        if (a.y < p.y || b.y > p.y) return false;
+        if (b.x > p.x && a.x > p.x) return false;
+        if (c.x < p.x && d.x < p.x) return false;
+        Vec2f ab = b - a, bc = c - b, cd = d - c, da = a - d;
+        Vec2f pa = a - p, pb = b - p, pc = c - p, pd = d - p;
+        if (Cross(ab, pa) > tolerance) return false;
+        //if (Cross(bc, pb) > tolerance) return false;
+        if (Cross(cd, pc) > tolerance) return false;
+        //if (Cross(da, pd) > tolerance) return false;
+        return true;
+    }
     AABB::AABB(const SimplePT& t) :
         m_id(0), m_t(&t) {
         float min_x = std::min(t.b.x, t.a.x);
@@ -154,76 +167,36 @@ namespace Pathing {
         return true;
     }
 
-    void MilePath::LoadMapSpecificData(MilePath *mp) {
+    void MilePath::LoadMapSpecificData() {
         m_msd = MapSpecific::MapSpecificData(Map::GetMapID());
-        mp->m_teleports = m_msd.m_teleports;
+        m_teleports = m_msd.m_teleports;
     }
 
     MilePath::MilePath() {
         m_processing = true;
         static volatile clock_t start = clock();
         start = clock();
-        LoadMapSpecificData(this);
-        GenerateAABBs(this);
-        GenerateAABBGraph(this); //not threaded because it relies on gw client Query altitude.
-        std::thread([&]() {
-            GeneratePoints(this);
-            GenerateVisibilityGraph(this);
-            GenerateTeleportGraph(this);
-            InsertTeleportsIntoVisibilityGraph(this);
+        LoadMapSpecificData();
+        GenerateAABBs();
+        GenerateAABBGraph(); //not threaded because it relies on gw client Query altitude.
+        worker_thread = new std::thread([&]() {
+            GeneratePoints();
+            GenerateVisibilityGraph();
+            GenerateTeleportGraph();
+            InsertTeleportsIntoVisibilityGraph();
             volatile clock_t stop = clock();
-            m_processing = false;
-            m_done = true;
-            m_progress = 100;
+
 
             Log::Info("Processing %s\n", m_terminateThread ? "terminated." : "done.");
             Log::Info("processing time: %d ms\n", stop - start);
-        }).detach();
+            m_processing = false;
+            m_done = true;
+            m_progress = 100;
+            });
+            worker_thread->detach();
     }
-        
-    MilePath* MilePath::instance() {
-        static std::vector<MilePath *> instances;
-        static GW::Constants::MapID currentMapId = GW::Constants::MapID::None;
-        static GW::Constants::InstanceType currentInstanceType = GW::Constants::InstanceType::Loading;
-            
-        auto terminateInstance = [](auto *instance) {
-            instance->m_terminateThread = true;
-            Log::Warning("Terminating current instance.\n");
-        };
-        auto deleteOldInstances = [](auto *i) {
-            if (i && i->m_done) {
-                delete i;
-                i = nullptr;
-                Log::Info("Removing old instances.\n");
-                return true;
-            }
-            return false;
-        };
-
-        auto type = GW::Map::GetInstanceType();
-        if (type == GW::Constants::InstanceType::Loading && currentInstanceType != type) {
-            currentInstanceType = type;
-            if (instances.size()) {
-                std::for_each(instances.begin(), instances.end(), terminateInstance);
-                instances.erase(std::remove_if(instances.begin(), instances.end(), deleteOldInstances), instances.end());
-            }
-            return nullptr;
-        }
-
-        if (type == GW::Constants::InstanceType::Loading)
-            return nullptr;
-
-        if (currentMapId != GW::Map::GetMapID()) {
-            currentMapId = GW::Map::GetMapID();
-            std::for_each(instances.begin(), instances.end(), terminateInstance);
-            instances.erase(std::remove_if(instances.begin(), instances.end(), deleteOldInstances), instances.end());
-
-            instances.push_back(new MilePath());
-            Log::Info("Created new instance.\n");
-        }
-        if (instances.empty())
-            return nullptr;
-        return instances.back();
+    MilePath::~MilePath() {
+        stopProcessing();
     }
 
     MilePath::Portal::Portal(const Vec2f& start, const Vec2f& goal, const AABB* box1, const AABB* box2) :
@@ -236,51 +209,51 @@ namespace Pathing {
     }
 
     //Generate distance graph among teleports
-    void MilePath::GenerateTeleportGraph(MilePath* mp) {
-        if (mp->m_terminateThread) return;
+    void MilePath::GenerateTeleportGraph() {
+        if (m_terminateThread) return;
 
         using namespace MapSpecific;
 
-        mp->m_teleportGraph.clear();
+        m_teleportGraph.clear();
        
-        for (size_t i = 0; i < mp->m_teleports.size(); ++i) {
-            auto& p1 = mp->m_teleports[i];
-            for (size_t j = i; j < mp->m_teleports.size(); ++j) {
-                auto& p2 = mp->m_teleports[j];
+        for (size_t i = 0; i < m_teleports.size(); ++i) {
+            auto& p1 = m_teleports[i];
+            for (size_t j = i; j < m_teleports.size(); ++j) {
+                auto& p2 = m_teleports[j];
 
                 if (p1.m_directionality == Teleport::direction::both_ways &&
                     p2.m_directionality == Teleport::direction::both_ways) {
                     float dist = std::min(
                         std::min(GetDistance(p1.m_enter, p2.m_exit), GetDistance(p1.m_exit, p2.m_enter)), 
                         std::min(GetDistance(p1.m_exit, p2.m_exit), GetDistance(p1.m_enter, p2.m_enter)));
-                    mp->m_teleportGraph.push_back({ &p1, &p2, dist });
+                    m_teleportGraph.push_back({ &p1, &p2, dist });
                     if (&p1 == &p2) continue;
-                    mp->m_teleportGraph.push_back({ &p2, &p1, dist });
+                    m_teleportGraph.push_back({ &p2, &p1, dist });
                 } else if (p1.m_directionality == Teleport::direction::both_ways) {
                     float dist = std::min(GetDistance(p1.m_enter, p2.m_enter), GetDistance(p1.m_exit, p2.m_enter));
-                    mp->m_teleportGraph.push_back({ &p1, &p2, dist });
+                    m_teleportGraph.push_back({ &p1, &p2, dist });
                     dist = std::min(GetDistance(p2.m_exit, p1.m_enter), GetDistance(p2.m_exit, p1.m_exit));
-                    mp->m_teleportGraph.push_back({ &p2, &p1, dist });
+                    m_teleportGraph.push_back({ &p2, &p1, dist });
                 } else if (p2.m_directionality == Teleport::direction::both_ways) {
                     float dist = std::min(GetDistance(p2.m_enter, p1.m_enter), GetDistance(p2.m_exit, p1.m_enter));
-                    mp->m_teleportGraph.push_back({ &p2, &p1, dist });
+                    m_teleportGraph.push_back({ &p2, &p1, dist });
                     dist = std::min(GetDistance(p1.m_exit, p2.m_enter), GetDistance(p1.m_exit, p2.m_exit));
-                    mp->m_teleportGraph.push_back({ &p1, &p2, dist });
+                    m_teleportGraph.push_back({ &p1, &p2, dist });
                 } else {
                     float dist = GetDistance(p1.m_exit, p2.m_enter);
-                    mp->m_teleportGraph.push_back({ &p1, &p2, dist });
+                    m_teleportGraph.push_back({ &p1, &p2, dist });
                     if (&p1 == &p2) continue;
                     dist = GetDistance(p2.m_exit, p1.m_enter);
-                    mp->m_teleportGraph.push_back({ &p2, &p1, dist });
+                    m_teleportGraph.push_back({ &p2, &p1, dist });
                 }
             }
         }
     }
 
-    MilePath::point MilePath::CreatePoint(const MilePath *mp, const GamePos& pos) {
+    MilePath::point MilePath::CreatePoint(const GamePos& pos) {
         MilePath::point point;
         point.pos = pos;
-        point.box = MilePath::FindAABB(mp->m_aabbs, pos);
+        point.box = MilePath::FindAABB(pos);
         if (!point.box) {
             return point;
         }
@@ -291,33 +264,34 @@ namespace Pathing {
     //Generate Axis Aligned Bounding Boxes around trapezoids
     //This is used for quick intersection checks.
     //AABB related stuff could be entirely omitted.
-    void MilePath::GenerateAABBs(MilePath* mp) {
+    void MilePath::GenerateAABBs() {
         PathingMapArray* map = Map::GetPathingMap();
         MapContext* mapContex = GW::GetMapContext();
         if (!map || !mapContex) return;
+        ASSERT(mapContex->sub1);
 
-        mp->m_aabbs.clear();
-        mp->m_aabbs.reserve(mapContex->sub1->h0014[0]); //h0014[0] == total trapezoid count
-        mp->m_trapezoids.clear();
-        mp->m_trapezoids.reserve(mapContex->sub1->h0014[0]);
+        m_aabbs.clear();
+        m_aabbs.reserve(mapContex->sub1->total_trapezoid_count); //h0014[0] == total trapezoid count
+        m_trapezoids.clear();
+        m_trapezoids.reserve(mapContex->sub1->total_trapezoid_count);
             
         for (uint32_t i = 0; i < map->size(); ++i) {
             auto& m = (*map)[i];
             for (uint32_t j = 0; j < m.trapezoid_count; j++) {
                 const PathingTrapezoid* t = &m.trapezoids[j];
                 if (t->YB == t->YT) continue;
-                mp->m_trapezoids.emplace_back( *t, i );
-                mp->m_aabbs.emplace_back(mp->m_trapezoids.back());
+                m_trapezoids.emplace_back( *t, i );
+                m_aabbs.emplace_back(m_trapezoids.back());
             }
         }
-        std::sort(mp->m_aabbs.begin(), mp->m_aabbs.end(), [](AABB& a, AABB& b) { return a.m_pos.y - a.m_half.y > b.m_pos.y - b.m_half.y; });
+        std::sort(m_aabbs.begin(), m_aabbs.end(), [](AABB& a, AABB& b) { return a.m_pos.y - a.m_half.y > b.m_pos.y - b.m_half.y; });
         AABB::boxId id = 0;
-        for (auto& box : mp->m_aabbs) {
+        for (auto& box : m_aabbs) {
             box.m_id = id++;
         }
     }
 
-    bool MilePath::CreatePortal(MilePath* mp, const AABB* box1, const AABB* box2, const SimplePT::adjacentSide& ts)
+    bool MilePath::CreatePortal(const AABB* box1, const AABB* box2, const SimplePT::adjacentSide& ts)
     {
         const SimplePT* pt1 = box1->m_t;
         const SimplePT* pt2 = box2->m_t;
@@ -334,7 +308,7 @@ namespace Pathing {
                 return false;
             Vec2f p1{ a, pt1->a.y };
             Vec2f p2{ b, pt1->a.y };
-            mp->m_portals.emplace_back( p1, p2, box1, box2 );
+            m_portals.emplace_back( p1, p2, box1, box2 );
         } break;
         case SimplePT::adjacentSide::aTop_bBottom: {
             auto a = std::max(pt1->b.x, pt2->a.x);
@@ -343,7 +317,7 @@ namespace Pathing {
                 return false;
             Vec2f p1{ a, pt1->b.y };
             Vec2f p2{ b, pt1->b.y };
-            mp->m_portals.emplace_back( p1, p2, box1, box2 );
+            m_portals.emplace_back( p1, p2, box1, box2 );
         } break;
         case SimplePT::adjacentSide::aLeft_bRight: {
             bool o1 = onSegment(pt1->c, pt2->a, pt1->d);
@@ -351,22 +325,22 @@ namespace Pathing {
             if (o1 && o2) {
                 if (GetSquareDistance(pt2->a, pt2->b) < square_tolerance)
                     return false;
-                mp->m_portals.emplace_back( pt2->a, pt2->b, box1, box2 );
+                m_portals.emplace_back( pt2->a, pt2->b, box1, box2 );
             }
             else if (o1) {
                 if (GetSquareDistance(pt2->a, pt1->c) < square_tolerance)
                     return false;
-                mp->m_portals.emplace_back( pt2->a, pt1->c, box1, box2 );
+                m_portals.emplace_back( pt2->a, pt1->c, box1, box2 );
             }
             else if (o2) {
                 if (GetSquareDistance(pt1->d, pt2->b) < square_tolerance)
                     return false;
-                mp->m_portals.emplace_back( pt1->d, pt2->b, box1, box2 );
+                m_portals.emplace_back( pt1->d, pt2->b, box1, box2 );
             }
             else {
                 if (GetSquareDistance(pt1->c, pt1->d) < square_tolerance)
                     return false;
-                mp->m_portals.emplace_back( pt1->c, pt1->d, box1, box2 );
+                m_portals.emplace_back( pt1->c, pt1->d, box1, box2 );
             }
         } break;
         case SimplePT::adjacentSide::aRight_bLeft: {
@@ -375,49 +349,49 @@ namespace Pathing {
             if (o1 && o2) {
                 if (GetSquareDistance(pt2->c, pt2->d) < square_tolerance)
                     return false;
-                mp->m_portals.emplace_back( pt2->c, pt2->d, box1, box2 );
+                m_portals.emplace_back( pt2->c, pt2->d, box1, box2 );
             }
             else if (o1) {
                 if (GetSquareDistance(pt2->c, pt1->a) < square_tolerance)
                     return false;
-                mp->m_portals.emplace_back( pt2->c, pt1->a, box1, box2 );
+                m_portals.emplace_back( pt2->c, pt1->a, box1, box2 );
             }
             else if (o2) {
                 if (GetSquareDistance(pt1->b, pt2->d) < square_tolerance)
                     return false;
-                mp->m_portals.emplace_back( pt1->b, pt2->d, box1, box2 );
+                m_portals.emplace_back( pt1->b, pt2->d, box1, box2 );
             }
             else {
                 if (GetSquareDistance(pt1->a, pt1->b) < square_tolerance)
                     return false;
-                mp->m_portals.emplace_back( pt1->a, pt1->b, box1, box2 );
+                m_portals.emplace_back( pt1->a, pt1->b, box1, box2 );
             }
         } break;
         default: return false;
         }
 
-        mp->m_PTPortalGraph[pt1->id].emplace_back(&mp->m_portals.back());
-        mp->m_PTPortalGraph[pt2->id].emplace_back(&mp->m_portals.back());
+        m_PTPortalGraph[pt1->id].emplace_back(&m_portals.back());
+        m_PTPortalGraph[pt2->id].emplace_back(&m_portals.back());
         return true;
     }
 
     //Connect trapezoid AABBS.
-    void MilePath::GenerateAABBGraph(MilePath* mp) {
+    void MilePath::GenerateAABBGraph() {
         if (m_terminateThread) return;
 
-        mp->m_AABBgraph.clear();
-        mp->m_AABBgraph.resize(mp->m_aabbs.size());
+        m_AABBgraph.clear();
+        m_AABBgraph.resize(m_aabbs.size());
 
-        mp->m_portals.clear();
-        mp->m_portals.reserve(mp->m_aabbs.size() * 3);
-        mp->m_PTPortalGraph.clear();
-        mp->m_PTPortalGraph.resize(mp->m_aabbs.size() * 2, {});
+        m_portals.clear();
+        m_portals.reserve(m_aabbs.size() * 3);
+        m_PTPortalGraph.clear();
+        m_PTPortalGraph.resize(m_aabbs.size() * 2, {});
 
-        for (size_t i = 0; i < mp->m_aabbs.size(); ++i) {
-            for (size_t j = i + 1; j < mp->m_aabbs.size(); ++j) {
+        for (size_t i = 0; i < m_aabbs.size(); ++i) {
+            for (size_t j = i + 1; j < m_aabbs.size(); ++j) {
                 //coarse intersection
-                if (!mp->m_aabbs[i].intersect(mp->m_aabbs[j], { 1.0f, 1.0f })) continue;
-                auto *a = &mp->m_aabbs[i], *b = &mp->m_aabbs[j];
+                if (!m_aabbs[i].intersect(m_aabbs[j], { 1.0f, 1.0f })) continue;
+                auto *a = &m_aabbs[i], *b = &m_aabbs[j];
 
                 //fine intersection
                 SimplePT::adjacentSide ts;
@@ -426,36 +400,36 @@ namespace Pathing {
                 else
                     ts = a->m_t->TouchingHeight(*b->m_t);
                 if (ts == SimplePT::adjacentSide::none) continue;
-                if (CreatePortal(mp, a, b, ts)) {
-                    mp->m_AABBgraph[a->m_id].emplace_back(b);
-                    mp->m_AABBgraph[b->m_id].emplace_back(a);
+                if (CreatePortal(a, b, ts)) {
+                    m_AABBgraph[a->m_id].emplace_back(b);
+                    m_AABBgraph[b->m_id].emplace_back(a);
                 }
             }
         }
-        Log::Info("Portal count: %d\n", mp->m_portals.size());
+        Log::Info("Portal count: %d\n", m_portals.size());
     }
 
-    void MilePath::GeneratePoints(MilePath* mp) {
+    void MilePath::GeneratePoints() {
         if (m_terminateThread) return;
 
-        mp->m_points.clear();
-        mp->m_points.reserve(mp->m_portals.size() * 2 + mp->m_teleports.size() * 2);
+        m_points.clear();
+        m_points.reserve(m_portals.size() * 2 + m_teleports.size() * 2);
             
-        for (const auto& portal : mp->m_portals) {
-            mp->m_points.emplace_back( 0, portal.m_start, portal.m_box1, portal.m_box2, &portal );
-            mp->m_points.emplace_back( 0, portal.m_goal, portal.m_box1, portal.m_box2, &portal );
+        for (const auto& portal : m_portals) {
+            m_points.emplace_back( 0, portal.m_start, portal.m_box1, portal.m_box2, &portal );
+            m_points.emplace_back( 0, portal.m_goal, portal.m_box1, portal.m_box2, &portal );
         }
 
         //Not needed. But if they are sorted binary search can be used.
-        std::sort(mp->m_points.begin(), mp->m_points.end(), [](point& a, point& b) { return a.pos.y > b.pos.y; });
-        for (size_t i = 0; i < mp->m_points.size(); ++i) { 
-            mp->m_points[i].id = i; 
+        std::sort(m_points.begin(), m_points.end(), [](point& a, point& b) { return a.pos.y > b.pos.y; });
+        for (size_t i = 0; i < m_points.size(); ++i) { 
+            m_points[i].id = i; 
         };
 
-        Log::Info("Number of points: %d\n", mp->m_points.size());
+        Log::Info("Number of points: %d\n", m_points.size());
     }
 
-    bool MilePath::IsOnPathingTrapezoid(const std::vector<AABB> &aabbs, const Vec2f &p, const SimplePT **ppt) {
+    bool MilePath::IsOnPathingTrapezoid(const Vec2f &p, const SimplePT **ppt) {
         //note: maybe use GW client O(logn) algorithm?
         //constexpr float tolerance = 2.0f;
         //auto lower = std::lower_bound(aabbs.begin(), aabbs.end(), p.y,
@@ -470,30 +444,16 @@ namespace Pathing {
         //        return true;
         //    }
         //}
-        
+        const auto& aabbs = m_aabbs;
         for (auto &box : aabbs) { 
             const SimplePT *pt = box.m_t;            
-            if (IsOnPathingTrapezoid(pt, p)) {
+            if (pt->IsOnPathingTrapezoid(p)) {
                 if (ppt) *ppt = pt;
                 return true;
             }
         }
         if (ppt) *ppt = nullptr;
         return false;
-    }
-
-    bool MilePath::IsOnPathingTrapezoid(const SimplePT* pt, const Vec2f& p) {
-        constexpr float tolerance = 2.0f;
-        if (pt->a.y < p.y || pt->b.y > p.y) return false;
-        if (pt->b.x > p.x && pt->a.x > p.x) return false;
-        if (pt->c.x < p.x && pt->d.x < p.x) return false;
-        Vec2f ab = pt->b - pt->a, bc = pt->c - pt->b, cd = pt->d - pt->c, da = pt->a - pt->d;
-        Vec2f pa = pt->a - p, pb = pt->b - p, pc = pt->c - p, pd = pt->d - p;
-        if (Cross(ab, pa) > tolerance) return false;
-        //if (Cross(bc, pb) > tolerance) return false;
-        if (Cross(cd, pc) > tolerance) return false;
-        //if (Cross(da, pd) > tolerance) return false;
-        return true;
     }
 
     bool IntersectPt(const SimplePT& pt, const Vec2f& start, const Vec2f& goal) {
@@ -504,9 +464,10 @@ namespace Pathing {
         return false;
     }
 
-    const AABB *MilePath::FindAABB(const std::vector<AABB> &aabbs, const GamePos &pos) {
+    const AABB *MilePath::FindAABB(const GamePos &pos) {
+        const auto& aabbs = m_aabbs;
         for (auto& a : aabbs) {
-            if (pos.zplane == a.m_t->layer && IsOnPathingTrapezoid(a.m_t, pos))
+            if (pos.zplane == a.m_t->layer && a.m_t->IsOnPathingTrapezoid(pos))
                 return &a;
         }
         return nullptr;
@@ -519,7 +480,7 @@ namespace Pathing {
     }
 
     
-    bool MilePath::HasLineOfSight(const MilePath* mp, const point& start, const point& goal,
+    bool MilePath::HasLineOfSight(const point& start, const point& goal,
             std::vector<const AABB *> &open, std::vector<bool> &visited,
             std::vector<uint32_t>* blocking_ids)
     {
@@ -537,7 +498,7 @@ namespace Pathing {
         }
 
         open.clear();
-        open.reserve(mp->m_aabbs.size());
+        open.reserve(m_aabbs.size());
 
         if (start.box) open.emplace_back(start.box);
         if (start.box2) open.emplace_back(start.box2);
@@ -545,7 +506,7 @@ namespace Pathing {
 
         const AABB *current; //current open box
         visited.clear();
-        visited.resize(mp->m_aabbs.size());
+        visited.resize(m_aabbs.size());
 
         while (open.size()) {
             current = open.back();
@@ -554,7 +515,7 @@ namespace Pathing {
             visited[current->m_id] = true; //close box
 
             //get portals of the current box
-            auto &portals = mp->m_PTPortalGraph[current->m_t->id];
+            auto &portals = m_PTPortalGraph[current->m_t->id];
             for (const auto *portal : portals) {
                 if (start.portal == portal) //self intersection is always true
                     continue;
@@ -590,28 +551,28 @@ namespace Pathing {
         return false;
     }
    
-    void MilePath::GenerateVisibilityGraph(MilePath* mp) {
-        if (mp->m_terminateThread) return;
+    void MilePath::GenerateVisibilityGraph() {
+        if (m_terminateThread) return;
 
         //note: naive VG generation is O(n^3)
         //TODO: great speedup if only checking visibility of convex points.
 
-        mp->m_visGraph.clear();
-        mp->m_visGraph.resize(mp->m_portals.size() * 2 + mp->m_teleports.size() * 2 + 2);
+        m_visGraph.clear();
+        m_visGraph.resize(m_portals.size() * 2 + m_teleports.size() * 2 + 2);
 
-        float range = mp->m_visibility_range;
+        float range = m_visibility_range;
         float sqrange = range * range;
 
         std::vector<const AABB *> open;
         std::vector<bool> visited;
-        size_t size = mp->m_points.size();
+        size_t size = m_points.size();
         for (size_t i = 0; i < size; ++i) {
-            auto& p1 = mp->m_points[i];
+            auto& p1 = m_points[i];
             float min_range = p1.pos.y - range;
             float max_range = p1.pos.y + range;
 
             for (size_t j = i + 1; j < size; ++j) {
-                auto& p2 = mp->m_points[j];
+                auto& p2 = m_points[j];
 
                 if (min_range > p2.pos.y || max_range < p2.pos.y)
                     continue;
@@ -621,64 +582,64 @@ namespace Pathing {
                     continue;
 
                 if (std::any_of(
-                    std::begin(mp->m_visGraph[p1.id]), 
-                    std::end(mp->m_visGraph[p1.id]), 
+                    std::begin(m_visGraph[p1.id]), 
+                    std::end(m_visGraph[p1.id]), 
                     [&p2](const PointVisElement &a) { return a.point_id == p2.id; })) continue;
 
                 std::vector<uint32_t> blocking_ids;
-                if (HasLineOfSight(mp, p1, p2, open, visited, &blocking_ids)) {
+                if (HasLineOfSight(p1, p2, open, visited, &blocking_ids)) {
                     float dist = sqrtf(sqdist);
-                    mp->m_visGraph[p1.id].emplace_back( p2.id, dist, blocking_ids );
-                    mp->m_visGraph[p2.id].emplace_back( p1.id, dist, std::move(blocking_ids) );
+                    m_visGraph[p1.id].emplace_back( p2.id, dist, blocking_ids );
+                    m_visGraph[p2.id].emplace_back( p1.id, dist, std::move(blocking_ids) );
                 }
             }
-            mp->m_progress = (i * 100) / size;
-            if (mp->m_terminateThread) return;
+            m_progress = (i * 100) / size;
+            if (m_terminateThread) return;
         }
     }
 
-    void MilePath::insertTeleportPointIntoVisGraph(MilePath *mp, MilePath::point& point, teleport_point_type type) {
+    void MilePath::insertTeleportPointIntoVisGraph(MilePath::point& point, teleport_point_type type) {
         std::vector<const AABB*> open;
         std::vector<bool> visited;
-        for (const auto &p : mp->m_points) {
+        for (const auto &p : m_points) {
             std::vector<uint32_t> blocking_ids;
-            if (!MilePath::HasLineOfSight(mp, p, point, open, visited, &blocking_ids)) continue;
+            if (!MilePath::HasLineOfSight(p, point, open, visited, &blocking_ids)) continue;
 
             float distance = GetDistance(point.pos, p.pos);
             if (type == both) {
-                mp->m_visGraph[p.id].emplace_back( point.id, distance, blocking_ids );
-                mp->m_visGraph[point.id].emplace_back( p.id, distance, blocking_ids );
+                m_visGraph[p.id].emplace_back( point.id, distance, blocking_ids );
+                m_visGraph[point.id].emplace_back( p.id, distance, blocking_ids );
             } else if (type == enter) {
-                mp->m_visGraph[p.id].emplace_back( point.id, distance, blocking_ids );
+                m_visGraph[p.id].emplace_back( point.id, distance, blocking_ids );
             } else if(type == exit) {
-                mp->m_visGraph[point.id].emplace_back( p.id, distance, blocking_ids );
+                m_visGraph[point.id].emplace_back( p.id, distance, blocking_ids );
             }
         }
     }
 
-    void MilePath::InsertTeleportsIntoVisibilityGraph(MilePath* mp) {
-        if (mp->m_terminateThread) return;
+    void MilePath::InsertTeleportsIntoVisibilityGraph() {
+        if (m_terminateThread) return;
 
         using namespace MapSpecific;
 
-        for (const auto& teleport : mp->m_teleports) {
+        for (const auto& teleport : m_teleports) {
             bool bidir = teleport.m_directionality == Teleport::direction::both_ways;
 
-            auto point_enter = CreatePoint(mp, teleport.m_enter);
-            point_enter.id = mp->m_points.size();
-            mp->m_points.emplace_back(point_enter);
-            insertTeleportPointIntoVisGraph(mp, mp->m_points.back(), bidir ? both : enter);
+            auto point_enter = CreatePoint(teleport.m_enter);
+            point_enter.id = m_points.size();
+            m_points.emplace_back(point_enter);
+            insertTeleportPointIntoVisGraph(m_points.back(), bidir ? both : enter);
 
-            auto point_exit = CreatePoint(mp, teleport.m_exit);
-            point_exit.id = mp->m_points.size();
-            mp->m_points.emplace_back(point_exit);
-            insertTeleportPointIntoVisGraph(mp, mp->m_points.back(), bidir ? both : exit);
+            auto point_exit = CreatePoint(teleport.m_exit);
+            point_exit.id = m_points.size();
+            m_points.emplace_back(point_exit);
+            insertTeleportPointIntoVisGraph(m_points.back(), bidir ? both : exit);
 
             //although the distance between teleports is 0, a tiny value is used as a penalty for various reasons.
             float dist = GetDistance(teleport.m_enter, teleport.m_exit) * 0.01f;
-            mp->m_visGraph[point_enter.id].emplace_back( mp->m_points[point_exit.id].id, dist , std::initializer_list<uint32_t>() );
+            m_visGraph[point_enter.id].emplace_back( m_points[point_exit.id].id, dist , std::initializer_list<uint32_t>() );
             if (bidir)
-                mp->m_visGraph[point_exit.id].emplace_back( mp->m_points[point_enter.id].id, dist * 0.01f, std::initializer_list<uint32_t>() );
+                m_visGraph[point_exit.id].emplace_back( m_points[point_enter.id].id, dist * 0.01f, std::initializer_list<uint32_t>() );
         }
     }
 
@@ -693,7 +654,7 @@ namespace Pathing {
         }
     };
 
-    AStar::AStar(MilePath* mp) : m_mp(mp), m_path() {
+    AStar::AStar(MilePath* mp) : m_mp(mp), m_path(this) {
         //Visibility graph challenge: integrating start and goal points requires careful
         //handling to prevent continuous graph expansion and search slowdown. 
         //Previous method involved copying the entire graph for each search.
@@ -717,18 +678,19 @@ namespace Pathing {
     };
     Path m_path;
 
-    void AStar::insertPointIntoVisGraph(const MilePath* mp, std::vector<std::vector<MilePath::PointVisElement>>& visGraph, MilePath::point& point)
+    void AStar::insertPointIntoVisGraph(MilePath::point& point)
     {
-        float sqrange = mp->m_visibility_range * mp->m_visibility_range;
+        auto& visGraph = m_mp->m_visGraph;
+        float sqrange = m_mp->m_visibility_range * m_mp->m_visibility_range;
         std::vector<const AABB *> open;
         std::vector<bool> visited;
-        for (auto it = mp->m_points.cbegin(); it != mp->m_points.cend(); ++it) {
+        for (auto it = m_mp->m_points.cbegin(); it != m_mp->m_points.cend(); ++it) {
             float sqdistance = GetSquareDistance((*it).pos, point.pos);
             if (sqdistance > sqrange)
                 continue;
 
             std::vector<uint32_t> blocking_ids;
-            if (!MilePath::HasLineOfSight(mp, (*it), point, open, visited, &blocking_ids)) 
+            if (!m_mp->HasLineOfSight((*it), point, open, visited, &blocking_ids)) 
                 continue;
 
             float distance = sqrtf(sqdistance);
@@ -738,33 +700,34 @@ namespace Pathing {
     }
 
     //https://github.com/Rikora/A-star/blob/master/src/AStar.cpp
-    AStar::Path AStar::buildPath(const MilePath* mp, const MilePath::point& start, const MilePath::point& goal,
+    Error AStar::buildPath(const MilePath::point& start, const MilePath::point& goal,
         std::vector<MilePath::point::Id>& came_from) {
-        Path path{};
         MilePath::point current(goal);
+
+        m_path.clear();
 
         int count = 0;
         while (current.id != start.id) {
             if (count++ > 64) {
                 Log::Error("build path failed\n");
-                break;
+                return Error::BuildPathLengthExceeded;
             }
             if (current.id < 0) {
                 break;
             }
-            path.insertPoint(current);
+            m_path.insertPoint(current);
             auto& id = came_from[current.id];
             if (id == start.id)
                 break;
-            current = mp->m_points[id];
+            current = m_mp->m_points[id];
         }
-        path.insertPoint(start);
-        path.finalize();
-        return path;
+        m_path.insertPoint(start);
+        m_path.finalize();
+        return Error::OK;
     }
 
-    float AStar::teleporterHeuristic(const MilePath* mp, const MilePath::point& start, const MilePath::point& goal) {
-        if (!mp->m_teleports.size())
+    float AStar::teleporterHeuristic(const MilePath::point& start, const MilePath::point& goal) {
+        if (!m_mp->m_teleports.size())
             return 0.0f;
         
         using namespace MapSpecific;
@@ -772,7 +735,7 @@ namespace Pathing {
         float cost = INFINITY;
         const Teleport *ts = nullptr, *tg = nullptr;
         float dist_start = cost, dist_goal = cost;
-        for (const auto &tp : mp->m_teleports) {
+        for (const auto &tp : m_mp->m_teleports) {
             float dist = GetSquareDistance(start.pos, tp.m_enter);
             if (tp.m_directionality == Teleport::direction::both_ways)
                 dist = std::min(dist, GetSquareDistance(start.pos, tp.m_exit));
@@ -792,7 +755,7 @@ namespace Pathing {
             }
         }
 
-        for (const auto &ttd : mp->m_teleportGraph) {
+        for (const auto &ttd : m_mp->m_teleportGraph) {
             if (ttd.tp1 == ts && ttd.tp2 == tg) {
                 //cost = sqrtf(dist_start) + ttd.distance + sqrtf(dist_goal);
                 cost = sqrtf(dist_start);
@@ -802,17 +765,18 @@ namespace Pathing {
         return cost;
     }
 
-    AStar::Path AStar::search(const GamePos &start_pos, const GamePos &goal_pos) {
+    Error AStar::search(const GamePos &start_pos, const GamePos &goal_pos) {
         MilePath::point::Id point_id = m_mp->m_points.size();
         MilePath::point start;
         bool new_start = false;
+        m_path.clear();
         //if (m_mp->m_pointLookup.contains(start_pos)) {
         //    start = *m_mp->m_pointLookup.at(start_pos);
         //} else 
         {
-            start = m_mp->CreatePoint(m_mp, start_pos);
+            start = m_mp->CreatePoint(start_pos);
             if (!start.box)
-                return m_path;
+                return Error::FailedToFindStartBox;
             start.id = point_id++;
             new_start = true;
         }
@@ -823,27 +787,28 @@ namespace Pathing {
         //    goal = *m_mp->m_pointLookup.at(goal_pos);
         //} else 
         {
-            goal = m_mp->CreatePoint(m_mp, goal_pos);
+            goal = m_mp->CreatePoint(goal_pos);
             if (!goal.box)
-                return m_path;
+                return Error::FailedToFindGoalBox;
             goal.id = point_id++;
             new_goal = true;
         }
 
         GW::MapContext* mapContext = GW::GetMapContext();
-        if (!mapContext) return m_path;
+        if (!mapContext) return Error::InvalidMapContext;
         GW::Array<uint32_t>& block = mapContext->sub1->pathing_map_block;
 
         {
             std::vector<const AABB *> open;
             std::vector<bool> visited;
             std::vector<uint32_t> blocking_ids;
-            if (MilePath::HasLineOfSight(m_mp, start, goal, open, visited, &blocking_ids)) {
+            if (m_mp->HasLineOfSight(start, goal, open, visited, &blocking_ids)) {
                 if (!std::ranges::any_of(blocking_ids, [&block](auto &id) { return block[id]; })) {
                     m_path.insertPoint(start);
                     m_path.insertPoint(goal);
                     m_path.setCost(GetDistance(start_pos, goal_pos));
-                    return m_path;
+                    m_path.finalize();
+                    return Error::OK;
                 }
             }
         }
@@ -852,11 +817,11 @@ namespace Pathing {
 
         if (new_start) {
             m_mp->m_points.push_back(start);
-            insertPointIntoVisGraph(m_mp, m_mp->m_visGraph, start);
+            insertPointIntoVisGraph(start);
         }
         if (new_goal) {
             m_mp->m_points.push_back(goal);
-            insertPointIntoVisGraph(m_mp, m_mp->m_visGraph, goal);
+            insertPointIntoVisGraph(goal);
         }
 
         std::vector<float> cost_so_far;
@@ -890,7 +855,7 @@ namespace Pathing {
                     float priority = new_cost;
                     if (teleports) {
                         auto &point = m_mp->m_points[vis.point_id];
-                        float tp_cost = teleporterHeuristic(m_mp, point, goal);
+                        float tp_cost = teleporterHeuristic(point, goal);
                         priority += std::min(GetDistance(point.pos, goal.pos), tp_cost);
                     }
                     open.emplace(priority, vis.point_id);
@@ -899,7 +864,7 @@ namespace Pathing {
         }
 
         if (current == goal.id) {
-            m_path = buildPath(m_mp, start, goal, came_from);
+            buildPath(start, goal, came_from);
             m_path.setCost(cost_so_far[current]);
         }
 
@@ -928,14 +893,14 @@ namespace Pathing {
         volatile clock_t stop_timestamp = clock();
         Log::Info("Find path: %d ms\n", stop_timestamp - start_timestamp);
 
-        return m_path;
+        return m_path.ready() ? Error::OK : Error::FailedToFinializePath;
     }
 
-    GamePos AStar::getClosestPoint(const Vec2f& pos) const {
+    GamePos AStar::getClosestPoint(const Vec2f& pos) {
         return getClosestPoint(m_path, pos);
     }
 
-    GamePos AStar::getClosestPoint(const Path& path, const Vec2f& pos) {
+    GamePos AStar::getClosestPoint(Path& path, const Vec2f& pos) {
         auto& points = path.points();
         if (!points.size()) return {};
         if (points.size() < 2)

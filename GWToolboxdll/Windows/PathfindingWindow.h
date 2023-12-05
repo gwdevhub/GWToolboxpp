@@ -7,7 +7,7 @@
 
 class PathfindingWindow : public ToolboxWindow {
     PathfindingWindow() = default;
-    ~PathfindingWindow() override = default;
+    ~PathfindingWindow() = default;
 
 public:
     static PathfindingWindow& Instance()
@@ -23,11 +23,10 @@ public:
 
     void Draw(IDirect3DDevice9* pDevice) override;
     void SignalTerminate() override;
+    bool CanTerminate() override;
+    void Terminate() override;
 
 private:
     GW::GamePos m_saved_pos;
-    Pathing::AStar::Path m_path;
-
-public:
     
 };
