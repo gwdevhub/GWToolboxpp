@@ -22,6 +22,8 @@
 #include <Modules/Resources.h>
 #include <Windows/PacketLoggerWindow.h>
 
+#include <GWToolbox.h>
+
 namespace {
     wchar_t* GetMessageCore()
     {
@@ -95,123 +97,178 @@ namespace {
         out.close();
         Log::Info("Maps exported to %ls", file_location.c_str());
     }
-}
 
-// We can forward declare, because we won't use it
-struct IDirect3DDevice9;
+    // Taken from StoCMgr.cpp
+    using StoCHandler_pt = bool(__fastcall*)(GW::Packet::StoC::PacketBase* pak);
 
-// Taken from StoCMgr.cpp
-using StoCHandler_pt = bool(__fastcall*)(GW::Packet::StoC::PacketBase* pak);
+    struct StoCHandler {
+        uint32_t* fields;
+        uint32_t field_count;
+        StoCHandler_pt handler_func;
+    };
 
-struct StoCHandler {
-    uint32_t* fields;
-    uint32_t field_count;
-    StoCHandler_pt handler_func;
-};
+    StoCHandler** gwca_original_functions = nullptr;
 
-using StoCHandlerArray = GW::Array<StoCHandler>;
 
-enum class FieldType {
-    Ignore,
-    AgentId,
-    Float,
-    Vect2,
-    Vect3,
-    Byte,
-    Word,
-    Dword,
-    Blob,
-    String16,
-    Array8,
-    Array16,
-    Array32,
-    NestedStruct,
-    Count
-};
-
-bool log_message_content = false;
-bool log_npc_dialogs = false;
-
-struct NPCDialog {
-    wchar_t msg_in[122] = {0};
-    wchar_t sender_in[32] = {0};
-    std::wstring msg_out = L"";
-    std::wstring sender_out = L"";
-} npc_dialog;
-
-bool logger_enabled = false;
-bool log_packet_content = false;
-bool auto_ignore_packets = false;
-bool debug = false;
-uint32_t log_message_callback_identifier = 0;
-static volatile bool running;
-
-static StoCHandlerArray* game_server_handler;
-static constexpr size_t packet_max = 512; // Increase if number of StoC packets exceeds this.
-static bool ignored_packets[packet_max] = {false};
-static bool blocked_packets[packet_max] = {false};
-GW::HookEntry hook_entry;
-
-static void printchar(const wchar_t c)
-{
-    if (c >= L' ' && c <= L'~') {
-        printf("%lc", c);
+    void TooltipHandlerInfo(StoCHandler& handler) {
+        ImGui::SetTooltip("Field Count: %d\nHandler Addr: %08x", handler.field_count, handler.handler_func);
     }
-    else {
-        printf("0x%X ", c);
+
+    using StoCHandlerArray = GW::Array<StoCHandler>;
+
+    enum class FieldType {
+        Ignore,
+        AgentId,
+        Float,
+        Vect2,
+        Vect3,
+        Byte,
+        Word,
+        Dword,
+        Blob,
+        String16,
+        Array8,
+        Array16,
+        Array32,
+        NestedStruct,
+        Count
+    };
+
+    bool log_message_content = false;
+    bool log_npc_dialogs = false;
+
+    struct NPCDialog {
+        wchar_t msg_in[122] = {0};
+        wchar_t sender_in[32] = {0};
+        std::wstring msg_out = L"";
+        std::wstring sender_out = L"";
+    } npc_dialog;
+
+    bool logger_enabled = false;
+    bool log_packet_content = false;
+    bool auto_ignore_packets = false;
+    bool debug = false;
+    uint32_t log_message_callback_identifier = 0;
+    volatile bool running;
+
+    StoCHandlerArray game_server_handler;
+    constexpr size_t packet_max = 512; // Increase if number of StoC packets exceeds this.
+    bool ignored_packets[packet_max] = {false};
+    bool blocked_packets[packet_max] = {false};
+    GW::HookEntry hook_entry;
+
+
+
+    void printchar(const wchar_t c)
+    {
+        if (c >= L' ' && c <= L'~') {
+            printf("%lc", c);
+        }
+        else {
+            printf("0x%X ", c);
+        }
     }
-}
 
-uintptr_t game_srv_object_addr;
+    uintptr_t game_srv_object_addr;
 
-static void InitStoC()
-{
-    if (game_server_handler) {
-        return;
-    }
-    struct GameServer {
-        uint8_t h0000[8];
 
-        struct {
-            uint8_t h0000[12]{};
+
+
+
+    StoCHandlerArray* GetStoCHandlerArray() {
+
+        uintptr_t address = GW::Scanner::Find("\x75\x04\x33\xC0\x5D\xC3\x8B\x41\x08\xA8\x01\x75", "xxxxxxxxxxxx", -6);
+        const uintptr_t StoCHandler_Addr = *(uintptr_t*)address;
+
+        struct GameServer {
+            uint8_t h0000[8];
 
             struct {
                 uint8_t h0000[12]{};
-                void* next{};
+
+                struct {
+                    uint8_t h0000[12]{};
+                    void* next{};
+                    uint8_t h0010[12]{};
+                    uint32_t ClientCodecArray[4]{};
+                    StoCHandlerArray handlers;
+                }* ls_codec{};
+
                 uint8_t h0010[12]{};
+                // Client codec
                 uint32_t ClientCodecArray[4]{};
                 StoCHandlerArray handlers;
-            }* ls_codec{};
+            } * gs_codec;
+        };
 
-            uint8_t h0010[12]{};
-            // Client codec
-            uint32_t ClientCodecArray[4]{};
-            StoCHandlerArray handlers;
-        } * gs_codec;
-    };
 
-    const uintptr_t address = GW::Scanner::Find("\x75\x04\x33\xC0\x5D\xC3\x8B\x41\x08\xA8\x01\x75", "xxxxxxxxxxxx", -6);
-    const uintptr_t StoCHandler_Addr = *(uintptr_t*)address;
+        const auto addr = (GameServer* *)StoCHandler_Addr;
+        if (!(addr && *addr)) {
+            return nullptr;
+        }
+        return &(*addr)->gs_codec->handlers;
 
-    const auto addr = (GameServer* *)StoCHandler_Addr;
-    if (!(addr && *addr)) {
-        return;
+    }
+    bool stoc_initialised = false;
+    void InitStoC()
+    {
+        if (stoc_initialised) {
+            return;
+        }
+        const auto original_handler_arr = GetStoCHandlerArray();
+        if (!original_handler_arr) {
+            return;
+        }
+
+        auto& test_handler = original_handler_arr->at(1);
+
+        const auto original_handler_func = test_handler.handler_func;
+
+        // Hook packet 1 to grab the address for GWCA's function hook
+        GW::HookEntry entry;
+        GW::StoC::PacketCallback c;
+
+        GW::StoC::RegisterPacketCallback(&entry, 1, c);
+        if (original_handler_func == test_handler.handler_func) {
+            GW::StoC::RemoveCallback(1, &entry);
+            return; // GWCA not ready yet
+        }
+
+        StoCHandler_pt GWCA_StoCHandler_Func = test_handler.handler_func;
+        GW::StoC::RemoveCallback(1, &entry);
+
+        ASSERT(original_handler_func != test_handler.handler_func);
+
+        // Using GWCA_StoCHandler_Func, offset to find original callback array
+        gwca_original_functions = *(StoCHandler***)(((uintptr_t)GWCA_StoCHandler_Func) + 0x110);
+        ASSERT(gwca_original_functions && *gwca_original_functions);
+
+        StoCHandler* original_functions = *gwca_original_functions;
+
+        // Final sanity check; ensure the pointer for packet 1 is the same as what we grabbed from memory
+        ASSERT(original_functions[1].handler_func == original_handler_func);
+
+        // Copy gs handler array; we're going to swap out m_buffer.
+        memcpy(&game_server_handler, original_handler_arr, sizeof(*original_handler_arr));
+
+        // Redirect our handler array to pont to the originals
+        game_server_handler.m_buffer = original_functions;
+
+        ignored_packets[12] = true;
+        ignored_packets[13] = true;
+        ignored_packets[31] = true;
+        ignored_packets[42] = true;
+        ignored_packets[47] = true;
+        ignored_packets[160] = true;
+        ignored_packets[242] = true;
+
+        stoc_initialised = true;
     }
 
-    game_server_handler = &(*addr)->gs_codec->handlers;
 
-    ignored_packets[12] = true;
-    ignored_packets[13] = true;
-    ignored_packets[31] = true;
-    ignored_packets[42] = true;
-    ignored_packets[47] = true;
-    ignored_packets[160] = true;
-    ignored_packets[242] = true;
-}
-
-static FieldType GetField(const uint32_t type, const uint32_t size, const uint32_t count)
-{
-    switch (type) {
+    FieldType GetField(const uint32_t type, const uint32_t size, const uint32_t count)
+    {
+        switch (type) {
         case 0:
             return FieldType::AgentId;
         case 1:
@@ -223,12 +280,12 @@ static FieldType GetField(const uint32_t type, const uint32_t size, const uint32
         case 4:
         case 8:
             switch (count) {
-                case 1:
-                    return FieldType::Byte;
-                case 2:
-                    return FieldType::Word;
-                case 4:
-                    return FieldType::Dword;
+            case 1:
+                return FieldType::Byte;
+            case 2:
+                return FieldType::Word;
+            case 4:
+                return FieldType::Dword;
             }
         case 5:
         case 9:
@@ -240,70 +297,70 @@ static FieldType GetField(const uint32_t type, const uint32_t size, const uint32
             return FieldType::String16;
         case 11:
             switch (size) {
-                case 1:
-                    return FieldType::Array8;
-                case 2:
-                    return FieldType::Array32;
-                case 4:
-                    return FieldType::Array32;
+            case 1:
+                return FieldType::Array8;
+            case 2:
+                return FieldType::Array32;
+            case 4:
+                return FieldType::Array32;
             }
         case 12:
             return FieldType::NestedStruct;
+        }
+
+        return FieldType::Count;
     }
 
-    return FieldType::Count;
-}
+    void PrintIndent(const uint32_t indent)
+    {
+        char buffer[64];
+        ASSERT(indent <= sizeof(buffer) - 1);
+        for (auto i = 0u; i < indent; i++) {
+            buffer[i] = ' ';
+        }
+        buffer[indent] = 0;
+        printf("%s", buffer);
+    }
 
-static void PrintIndent(const uint32_t indent)
-{
-    char buffer[64];
-    ASSERT(indent <= sizeof(buffer) - 1);
-    for (auto i = 0u; i < indent; i++) {
-        buffer[i] = ' ';
+    void GetHexS(char* buf, const uint8_t byte)
+    {
+        const uint8_t h = byte >> 4 & 0xfu;
+        const uint8_t l = byte >> 0 & 0xfu;
+        if (h < 10) {
+            buf[0] = h + '0';
+        }
+        else {
+            buf[0] = h - 10 + 'A';
+        }
+        if (l < 10) {
+            buf[1] = l + '0';
+        }
+        else {
+            buf[1] = l - 10 + 'A';
+        }
+        buf[2] = 0;
     }
-    buffer[indent] = 0;
-    printf("%s", buffer);
-}
 
-static void GetHexS(char* buf, const uint8_t byte)
-{
-    const uint8_t h = byte >> 4 & 0xfu;
-    const uint8_t l = byte >> 0 & 0xfu;
-    if (h < 10) {
-        buf[0] = h + '0';
+    template <typename T>
+    void Serialize(uint8_t** bytes, T* val)
+    {
+        uint8_t* b = *bytes;
+        // if we want to allign
+        // b = (uint8_t*)(((uintptr_t)b + (sizeof(T) - 1)) & ~(sizeof(T) - 1));
+        memcpy(val, b, sizeof(T));
+        *bytes = b + sizeof(T);
     }
-    else {
-        buf[0] = h - 10 + 'A';
-    }
-    if (l < 10) {
-        buf[1] = l + '0';
-    }
-    else {
-        buf[1] = l - 10 + 'A';
-    }
-    buf[2] = 0;
-}
 
-template <typename T>
-static void Serialize(uint8_t** bytes, T* val)
-{
-    uint8_t* b = *bytes;
-    // if we want to allign
-    // b = (uint8_t*)(((uintptr_t)b + (sizeof(T) - 1)) & ~(sizeof(T) - 1));
-    memcpy(val, b, sizeof(T));
-    *bytes = b + sizeof(T);
-}
-
-static void PrintString(const int length, const wchar_t* str)
-{
-    for (auto i = 0; i < length && str[i]; i++) {
-        printf(i > 0 ? " %04x" : "%04x", str[i]);
+    void PrintString(const int length, const wchar_t* str)
+    {
+        for (auto i = 0; i < length && str[i]; i++) {
+            printf(i > 0 ? " %04x" : "%04x", str[i]);
+        }
     }
-}
 
-static void PrintField(const FieldType field, const uint32_t count, uint8_t** bytes, const uint32_t indent)
-{
-    switch (field) {
+    void PrintField(const FieldType field, const uint32_t count, uint8_t** bytes, const uint32_t indent)
+    {
+        switch (field) {
         case FieldType::AgentId: {
             PrintIndent(indent);
             uint32_t agent_id;
@@ -432,53 +489,56 @@ static void PrintField(const FieldType field, const uint32_t count, uint8_t** by
         }
         default:
             break;
-    }
-}
-
-static void PrintNestedField(uint32_t* fields, const uint32_t n_fields,
-                             const uint32_t repeat, uint8_t** bytes, const uint32_t indent)
-{
-    for (uint32_t rep = 0; rep < repeat; rep++) {
-        PrintIndent(indent);
-        printf("[%u] => {\n", rep);
-        for (auto i = 0u; i < n_fields; i++) {
-            const uint32_t field = fields[i];
-            const uint32_t type = field >> 0 & 0xF;
-            const uint32_t size = field >> 4 & 0xF;
-            const uint32_t count = field >> 8 & 0xFFFF;
-
-            // Just to make it easier to print
-            const FieldType field_type = GetField(type, size, count);
-
-            // Used to skip field that are not printable, for instance the array end
-            if (field_type == FieldType::Ignore) {
-                continue;
-            }
-
-            if (field_type != FieldType::NestedStruct) {
-                PrintField(field_type, count, bytes, indent + 4);
-            }
-            else {
-                const uint32_t next_field_index = i + 1;
-
-                uint32_t struct_count;
-                Serialize<uint32_t>(bytes, &struct_count);
-
-                PrintIndent(indent + 4);
-                printf("NextedStruct(%u) {\n", struct_count);
-                PrintNestedField(fields + next_field_index,
-                                 n_fields - next_field_index, struct_count, bytes, indent + 8);
-                PrintIndent(indent + 4);
-                printf("}\n");
-
-                // This isn't necessary, but Guild Wars always have the nested struct at the end and once max
-                break;
-            }
         }
-        PrintIndent(indent);
-        printf("}\n");
     }
+
+    void PrintNestedField(uint32_t* fields, const uint32_t n_fields,
+        const uint32_t repeat, uint8_t** bytes, const uint32_t indent)
+    {
+        for (uint32_t rep = 0; rep < repeat; rep++) {
+            PrintIndent(indent);
+            printf("[%u] => {\n", rep);
+            for (auto i = 0u; i < n_fields; i++) {
+                const uint32_t field = fields[i];
+                const uint32_t type = field >> 0 & 0xF;
+                const uint32_t size = field >> 4 & 0xF;
+                const uint32_t count = field >> 8 & 0xFFFF;
+
+                // Just to make it easier to print
+                const FieldType field_type = GetField(type, size, count);
+
+                // Used to skip field that are not printable, for instance the array end
+                if (field_type == FieldType::Ignore) {
+                    continue;
+                }
+
+                if (field_type != FieldType::NestedStruct) {
+                    PrintField(field_type, count, bytes, indent + 4);
+                }
+                else {
+                    const uint32_t next_field_index = i + 1;
+
+                    uint32_t struct_count;
+                    Serialize<uint32_t>(bytes, &struct_count);
+
+                    PrintIndent(indent + 4);
+                    printf("NextedStruct(%u) {\n", struct_count);
+                    PrintNestedField(fields + next_field_index,
+                        n_fields - next_field_index, struct_count, bytes, indent + 8);
+                    PrintIndent(indent + 4);
+                    printf("}\n");
+
+                    // This isn't necessary, but Guild Wars always have the nested struct at the end and once max
+                    break;
+                }
+            }
+            PrintIndent(indent);
+            printf("}\n");
+        }
+    }
+
 }
+
 
 void PacketLoggerWindow::CtoSHandler(const GW::HookStatus*, void* packet) const
 {
@@ -497,11 +557,11 @@ void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC:
         return;
     }
     InitStoC();
-    if (!game_server_handler) {
+    if (!game_server_handler.m_buffer) {
         return;
     }
     //if (packet->header == 95) return true;
-    if (packet->header >= game_server_handler->size()) {
+    if (packet->header >= game_server_handler.size()) {
         return;
     }
     if (auto_ignore_packets) {
@@ -511,7 +571,7 @@ void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC:
         return;
     }
 
-    const StoCHandler handler = game_server_handler->at(packet->header);
+    const StoCHandler handler = game_server_handler.at(packet->header);
     auto packet_raw = reinterpret_cast<uint8_t*>(packet);
 
     uint8_t** bytes = &packet_raw;
@@ -661,9 +721,11 @@ void PacketLoggerWindow::ClearMessageLog()
 
 void PacketLoggerWindow::Draw(IDirect3DDevice9*)
 {
-    if (!visible || !game_server_handler) {
+
+    if (!visible) {
         return;
     }
+    InitStoC();
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(256, 128), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
@@ -698,18 +760,18 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9*)
     ImGui::ShowHelp("Log encoded strings and their translated output to debug console");
     if (ImGui::CollapsingHeader("Ignored Packets")) {
         if (ImGui::Button("Select All")) {
-            for (size_t i = 0; i < game_server_handler->size(); i++) {
+            for (size_t i = 0; i < game_server_handler.size(); i++) {
                 ignored_packets[i] = true;
             }
         }
         ImGui::SameLine();
         if (ImGui::Button("Deselect All")) {
-            for (size_t i = 0; i < game_server_handler->size(); i++) {
+            for (size_t i = 0; i < game_server_handler.size(); i++) {
                 ignored_packets[i] = false;
             }
         }
         float offset = 0.0f;
-        for (size_t i = 0; i < game_server_handler->size(); i++) {
+        for (size_t i = 0; i < game_server_handler.size(); i++) {
             if (i % 12 == 0) {
                 offset = 0.0f;
                 ImGui::NewLine();
@@ -722,22 +784,25 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9*)
             if (ImGui::Checkbox(buf, &p)) {
                 ignored_packets[i] = p;
             }
+            if (ImGui::IsItemHovered()) {
+                TooltipHandlerInfo(game_server_handler[i]);
+            }
         }
     }
     if (ImGui::CollapsingHeader("Blocked Packets")) {
         if (ImGui::Button("Select All")) {
-            for (size_t i = 0; i < game_server_handler->size(); i++) {
+            for (size_t i = 0; i < game_server_handler.size(); i++) {
                 blocked_packets[i] = true;
             }
         }
         ImGui::SameLine();
         if (ImGui::Button("Deselect All")) {
-            for (size_t i = 0; i < game_server_handler->size(); i++) {
+            for (size_t i = 0; i < game_server_handler.size(); i++) {
                 blocked_packets[i] = false;
             }
         }
         float offset = 0.0f;
-        for (size_t i = 0; i < game_server_handler->size(); i++) {
+        for (size_t i = 0; i < game_server_handler.size(); i++) {
             if (i % 12 == 0) {
                 offset = 0.0f;
                 ImGui::NewLine();
@@ -750,6 +815,9 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9*)
             if (ImGui::Checkbox(buf, &p)) {
                 blocked_packets[i] = p;
             }
+            if (ImGui::IsItemHovered()) {
+                TooltipHandlerInfo(game_server_handler[i]);
+            }
         }
     }
     return ImGui::End();
@@ -758,7 +826,9 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9*)
 void PacketLoggerWindow::Initialize()
 {
     ToolboxWindow::Initialize();
-    InitStoC();
+    GW::GameThread::Enqueue([]() {
+        InitStoC();
+        });
     if (logger_enabled) {
         logger_enabled = false;
         Enable();
@@ -807,6 +877,8 @@ void PacketLoggerWindow::OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::Pack
 
 void PacketLoggerWindow::Update(const float)
 {
+
+
     for (auto it = pending_translation.begin(); it != pending_translation.end(); ++it) {
         ForTranslation& t = **it;
         if (t.out.empty()) {
@@ -870,10 +942,10 @@ void PacketLoggerWindow::LoadSettings(ToolboxIni* ini)
 
 void PacketLoggerWindow::Disable()
 {
-    if (!logger_enabled || !game_server_handler) {
+    if (!logger_enabled || !game_server_handler.m_buffer) {
         return;
     }
-    for (size_t i = 0; i < game_server_handler->size(); i++) {
+    for (size_t i = 0; i < game_server_handler.size(); i++) {
         GW::StoC::RemoveCallback(i, &hook_entry);
     }
     for (size_t i = 0; i < 180; i++) {
@@ -881,13 +953,15 @@ void PacketLoggerWindow::Disable()
     }
     logger_enabled = false;
 }
-
+void PacketLoggerWindow::Terminate() {
+    ClearMessageLog();
+}
 void PacketLoggerWindow::Enable()
 {
     if (logger_enabled) {
         return;
     }
-    for (size_t i = 0; i < game_server_handler->size(); i++) {
+    for (size_t i = 0; i < game_server_handler.size(); i++) {
         GW::StoC::RegisterPacketCallback(
             &hook_entry, i, [this](GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet) -> void {
                 PacketHandler(status, packet);
@@ -903,7 +977,6 @@ void PacketLoggerWindow::Enable()
     }
     logger_enabled = true;
 }
-
 void PacketLoggerWindow::DrawSettingsInternal()
 {
     ImGui::RadioButton("No timestamp", &timestamp_type, TimestampType_None);

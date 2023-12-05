@@ -6,7 +6,7 @@
 
 class PacketLoggerWindow : public ToolboxWindow {
     PacketLoggerWindow() = default;
-    ~PacketLoggerWindow() override { ClearMessageLog(); };
+    ~PacketLoggerWindow() = default;
 
 public:
     static PacketLoggerWindow& Instance()
@@ -22,6 +22,7 @@ public:
     void DrawSettingsInternal() override;
 
     void Initialize() override;
+    void Terminate() override;
     void SaveSettings(ToolboxIni* ini) override;
     void LoadSettings(ToolboxIni* ini) override;
     void Update(float delta) override;
