@@ -220,16 +220,26 @@ namespace {
             }
         });
     }
-    void CycleActiveQuests() {
-        auto active_quest_id = GW::QuestMgr::GetActiveQuestId();
+
+    void PreloadQuestMarkers() {
         if (const GW::QuestLog* questLog = GW::QuestMgr::GetQuestLog(); questLog != nullptr) {
-            for (auto& quest : *questLog) {
-                GW::QuestMgr::SetActiveQuestId(quest.quest_id);
-            }
+            GW::GameThread::Enqueue([questLog]() {
+                auto activeQuestId = GW::QuestMgr::GetActiveQuestId();
+                auto mapId = GW::Map::GetMapID();
+
+                for (const auto& quest : *questLog) {
+                    // Limit requests to the server:
+                    // * Don't load the marker for the active quest - the game already handles that
+                    //   and us doing it will trigger an extra unwanted UI event
+                    // * Only request quests whose markers are not yet loaded (marker = (INF,INF))
+                    // * Only request quests whose destination zone is unknown or the current zone
+                    if(quest.quest_id != activeQuestId && (quest.map_to == GW::Constants::MapID::Count || quest.map_to == mapId) && quest.marker.x == INFINITY && quest.marker.y == INFINITY) {
+                        GW::QuestMgr::RequestQuestInfoId(quest.quest_id, true);
+                    }
+                }
+            });
         }
-        GW::QuestMgr::SetActiveQuestId(active_quest_id);
-    }
-}
+    }}
 
 void Minimap::DrawHelp()
 {
@@ -339,7 +349,7 @@ void Minimap::Initialize()
     }
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
-        GW::GameThread::Enqueue(CycleActiveQuests);
+        PreloadQuestMarkers();
     }
 
     last_moved = TIMER_INIT();
@@ -365,7 +375,7 @@ void Minimap::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* 
             }
             instance.is_observing = GW::Map::GetIsObserving();
             // Cycle active quests to cache their markers
-            CycleActiveQuests();
+            PreloadQuestMarkers();
         }
         break;
         case GW::UI::UIMessage::kSkillActivated: {
