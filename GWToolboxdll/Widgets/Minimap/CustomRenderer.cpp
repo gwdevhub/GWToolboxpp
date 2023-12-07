@@ -266,6 +266,7 @@ void CustomRenderer::SetTooltipMapID(const GW::Constants::MapID& map_id)
 bool CustomRenderer::RemoveCustomLine(CustomRenderer::CustomLine* line) {
     const auto found = std::ranges::find(lines, line);
     if (found != lines.end()) {
+        delete *found;
         lines.erase(found);
         return true;
     }
