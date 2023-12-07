@@ -85,6 +85,9 @@ namespace Pathing {
         int progress() {
             return m_progress;
         }
+        bool ready() {
+            return m_progress >= 100;
+        }
 
         MapSpecific::MapSpecificData m_msd;
 

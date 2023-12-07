@@ -892,7 +892,7 @@ namespace Pathing {
 
         volatile clock_t stop_timestamp = clock();
         Log::Info("Find path: %d ms\n", stop_timestamp - start_timestamp);
-
+        m_path.finalize();
         return m_path.ready() ? Error::OK : Error::FailedToFinializePath;
     }
 
