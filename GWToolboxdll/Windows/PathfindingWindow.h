@@ -5,6 +5,8 @@
 #include <ToolboxWindow.h>
 #include <Windows/Pathing.h>
 
+using CalculatedCallback = std::function<void (const std::vector<GW::GamePos>& waypoints, void* args)>;
+
 class PathfindingWindow : public ToolboxWindow {
     PathfindingWindow() = default;
     ~PathfindingWindow() = default;
@@ -25,6 +27,8 @@ public:
     void SignalTerminate() override;
     bool CanTerminate() override;
     void Terminate() override;
+
+    static void CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args = nullptr);
 
 private:
     GW::GamePos m_saved_pos;
