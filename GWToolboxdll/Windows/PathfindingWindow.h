@@ -27,8 +27,10 @@ public:
     void SignalTerminate() override;
     bool CanTerminate() override;
     void Terminate() override;
-
-    static void CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args = nullptr);
+    // False if still calculating current map
+    static bool ReadyForPathing();
+    // False if still calculating current map
+    static bool CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args = nullptr);
 
 private:
     GW::GamePos m_saved_pos;

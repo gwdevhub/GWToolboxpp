@@ -46,6 +46,9 @@ namespace {
     size_t draw_pos = 0;
     clock_t last_draw = 0;
 
+    volatile bool pending_terminate = false;
+    volatile bool pending_worker_task = false;
+
     bool pending_redraw = false;
     clock_t pending_undraw = 0;
 
@@ -118,6 +121,10 @@ namespace {
             return;
 
     }
+}
+bool PathfindingWindow::ReadyForPathing() {
+    const auto m = GetMilepathForCurrentMap();
+    return m && m->ready();
 }
 void PathfindingWindow::Draw(IDirect3DDevice9*)
 {
@@ -217,6 +224,7 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
 void PathfindingWindow::SignalTerminate()
 {
     ToolboxWindow::SignalTerminate();
+    pending_terminate = true;
     GW::UI::RemoveUIMessageCallback(&gw_ui_hookentry);
     for (const auto m : mile_paths_by_map_file_id) {
         m.second->stopProcessing();
@@ -224,25 +232,38 @@ void PathfindingWindow::SignalTerminate()
 }
 bool PathfindingWindow::CanTerminate()
 {
+    if (pending_worker_task)
+        return false;
     for (const auto m : mile_paths_by_map_file_id) {
         if (m.second->isProcessing())
             return false;
     }
     return true;
 }
-void PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args)
+bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args)
 {
+    if (pending_terminate)
+        return false;
+
+    if (!ReadyForPathing())
+        return false;
     GW::GamePos* from_cpy = new GW::GamePos();
     memcpy(from_cpy, &from, sizeof(from));
     GW::GamePos* to_cpy = new GW::GamePos();
     memcpy(to_cpy, &to, sizeof(to));
 
+    pending_worker_task = true;
+
     Resources::EnqueueWorkerTask([from_cpy, to_cpy, callback, args ]() {
-        const auto milepath = GetMilepathForCurrentMap();
+        Pathing::MilePath* milepath = nullptr;
         Pathing::AStar* tmpAstar = nullptr;
         Pathing::Error res = Pathing::Error::OK;
         std::vector<GW::GamePos>* waypoints = new std::vector<GW::GamePos>();
+        if (pending_terminate) {
+            goto trigger_callback;
+        }
 
+        milepath = GetMilepathForCurrentMap();
         if (!(milepath && milepath->ready())) {
             goto trigger_callback;
         }
@@ -269,7 +290,9 @@ void PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
             delete waypoints;
 
             });
+        pending_worker_task = false;
         });
+    return true;
 }
 void PathfindingWindow::Terminate()
 {

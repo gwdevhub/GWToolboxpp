@@ -137,8 +137,8 @@ namespace {
         MouseFix::Instance(),
         KeyboardLanguageFix::Instance(),
         ZrawDeepModule::Instance(),
-        GuildWarsSettingsModule::Instance(),
-        QuestModule::Instance()
+        GuildWarsSettingsModule::Instance()
+        //QuestModule::Instance()
     };
 
     std::vector<WidgetToggle> optional_widgets = {
@@ -214,7 +214,6 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini)
     GWToolbox::ToggleModule(SkillListingWindow::Instance());
 
 #endif
-    GWToolbox::ToggleModule(PathfindingWindow::Instance());
     for (const auto& m : optional_modules) {
         GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
     }

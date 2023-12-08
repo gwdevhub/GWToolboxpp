@@ -31,6 +31,7 @@ namespace {
         std::vector<CustomRenderer::CustomLine*> minimap_lines;
         GW::GamePos original_quest_marker;
         GW::GamePos calculated_from;
+        clock_t calculated_at = 0;
         uint32_t current_waypoint = 0;
         GW::Constants::QuestID quest_id;
         bool calculating = false;
@@ -68,8 +69,7 @@ namespace {
             if (original_quest_marker.x == INFINITY)
                 return;
             calculated_from = from;
-            calculating = true;
-            PathfindingWindow::CalculatePath(calculated_from, original_quest_marker, OnQuestPathRecalculated, this);
+            calculating = PathfindingWindow::CalculatePath(calculated_from, original_quest_marker, OnQuestPathRecalculated, (void*)quest_id);
         }
         bool Update(const GW::GamePos& from) {
             const auto quest = GetQuest();
@@ -80,14 +80,26 @@ namespace {
             if (calculating) {
                 return false;
             }
+            if (!calculated_at) {
+                Recalculate(from);
+                return false;
+            }
             constexpr float dist_check = 1500.f * 1500.f;
             if (GetSquareDistance(from, calculated_from) > 1500.f * 1500.f) {
                 Recalculate(from);
                 return false;
             }
-            const auto wp = CurrentWaypoint();
-            if (wp && current_waypoint < waypoints.size() - 1 && GetSquareDistance(from, *wp) < dist_check) {
+            uint32_t original_waypoint = current_waypoint;
+
+            if (!waypoints.size())
+                return false;
+            while (current_waypoint < waypoints.size() - 1 && GetSquareDistance(from, waypoints[current_waypoint + 1]) < GetSquareDistance(from, waypoints[current_waypoint])) {
                 current_waypoint++;
+            }
+            while(current_waypoint < waypoints.size() && GetSquareDistance(from, waypoints[current_waypoint]) < dist_check) {
+                current_waypoint++;
+            }
+            if (original_waypoint != current_waypoint) {
                 calculated_from = from;
                 UpdateUI();
             }
@@ -117,9 +129,11 @@ namespace {
         delete found->second;
         calculated_quest_paths.erase(found);
     }
-    CalculatedQuestPath* GetCalculatedQuestPath(GW::Constants::QuestID quest_id) {
+    CalculatedQuestPath* GetCalculatedQuestPath(GW::Constants::QuestID quest_id, bool create_if_not_found = true) {
         const auto found = calculated_quest_paths.find(quest_id);
         if (found != calculated_quest_paths.end()) return found->second;
+        if (!create_if_not_found)
+            return nullptr;
         auto cqp = new CalculatedQuestPath(quest_id);
         calculated_quest_paths[quest_id] = cqp;
         return cqp;
@@ -173,7 +187,8 @@ namespace {
 
     // Called by PathfindingWindow when a path has been calculated. Should be on the main loop.
     void OnQuestPathRecalculated(const std::vector<GW::GamePos>& waypoints, void* args) {
-        CalculatedQuestPath* cqp = (CalculatedQuestPath*)args;
+        auto cqp = GetCalculatedQuestPath(*(GW::Constants::QuestID*)&args, false);
+        if (!cqp) return;
         ASSERT(cqp->calculating);
         
         cqp->current_waypoint = 0;
@@ -183,7 +198,7 @@ namespace {
             // Waypoint array is in descending distance, flip it
             std::reverse(cqp->waypoints.begin(), cqp->waypoints.end());
         }
-       
+        cqp->calculated_at = TIMER_INIT();
         cqp->calculating = false;
         cqp->UpdateUI();
     }
@@ -213,7 +228,7 @@ void QuestModule::Initialize()
     for (auto ui_message : ui_messages) {
         // Post callbacks, non blocking
         (ui_message);
-        //GW::UI::RegisterUIMessageCallback(&ui_message_entry, ui_message, OnGWQuestMarkerUpdated, 0x4000);
+        GW::UI::RegisterUIMessageCallback(&ui_message_entry, ui_message, OnGWQuestMarkerUpdated, 0x4000);
     }
 }
 void QuestModule::SignalTerminate() {
