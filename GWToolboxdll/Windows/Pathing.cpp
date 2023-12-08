@@ -1,6 +1,8 @@
 #include <thread>
 #include <algorithm>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/Context/MapContext.h>
@@ -9,6 +11,39 @@
 
 #include "MathUtility.h"
 #include "Pathing.h"
+
+namespace {
+    
+
+
+    // Grab a copy of map_context->sub1->pathing_map_block for processing on a different thread - Blocks until copy is complete
+    Pathing::Error CopyPathingMapBlocks(std::vector<uint32_t>& block) {
+        auto block_pt = &block;
+        volatile Pathing::Error res = Pathing::Error::Unknown;
+        std::mutex mutex;
+        auto res_pt = &res;
+        // Enqueue
+        GW::GameThread::Enqueue([&block_pt, res_pt, &mutex]() {
+            const std::lock_guard<std::mutex> lock(mutex);
+            GW::MapContext* mapContext = GW::GetMapContext();
+            if (!mapContext) {
+                *res_pt = Pathing::Error::InvalidMapContext;
+                return;
+            }
+            GW::Array<uint32_t>& block = mapContext->sub1->pathing_map_block;
+            if(block.m_size)
+                block_pt->assign(block.m_buffer, block.m_buffer + block.m_size);
+            *res_pt = Pathing::Error::OK;
+            });
+        // Wait
+        do {
+            const std::lock_guard<std::mutex> lock(mutex);
+            if (res != Pathing::Error::Unknown)
+                break;
+        } while (true);
+        return res;
+    }
+}
 
 namespace Pathing {
 
@@ -766,6 +801,12 @@ namespace Pathing {
     }
 
     Error AStar::search(const GamePos &start_pos, const GamePos &goal_pos) {
+
+        std::vector<uint32_t> block;
+        Pathing::Error res = CopyPathingMapBlocks(block);
+
+        if (res != Pathing::Error::OK)
+            return res;
         MilePath::point::Id point_id = m_mp->m_points.size();
         MilePath::point start;
         bool new_start = false;
@@ -794,10 +835,6 @@ namespace Pathing {
             new_goal = true;
         }
 
-        GW::MapContext* mapContext = GW::GetMapContext();
-        if (!mapContext) return Error::InvalidMapContext;
-        GW::Array<uint32_t>& block = mapContext->sub1->pathing_map_block;
-
         {
             std::vector<const AABB *> open;
             std::vector<bool> visited;
@@ -815,6 +852,7 @@ namespace Pathing {
 
         volatile clock_t start_timestamp = clock();
 
+        //@Cleanup: Maybe I'm not using milepath for its intended purpose, but this function will ALWAYS add more points to the graph!!
         if (new_start) {
             m_mp->m_points.push_back(start);
             insertPointIntoVisGraph(start);

@@ -9,11 +9,13 @@ namespace Pathing {
 
     enum class Error : uint32_t {
         OK,
+        Unknown,
         FailedToFindGoalBox,
         FailedToFindStartBox,
         FailedToFinializePath,
         InvalidMapContext,
-        BuildPathLengthExceeded
+        BuildPathLengthExceeded,
+        FailedToGetPathingMapBlock
     };
 
 
