@@ -14,7 +14,7 @@
 
 namespace {
     
-
+    std::mutex pathing_mutex;
 
     // Grab a copy of map_context->sub1->pathing_map_block for processing on a different thread - Blocks until copy is complete
     Pathing::Error CopyPathingMapBlocks(std::vector<uint32_t>& block) {
@@ -801,6 +801,8 @@ namespace Pathing {
     }
 
     Error AStar::search(const GamePos &start_pos, const GamePos &goal_pos) {
+
+        std::lock_guard<std::mutex> lock(pathing_mutex);
 
         std::vector<uint32_t> block;
         Pathing::Error res = CopyPathingMapBlocks(block);
