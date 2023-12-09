@@ -31,6 +31,7 @@ namespace {
         std::vector<CustomRenderer::CustomLine*> minimap_lines;
         GW::GamePos original_quest_marker;
         GW::GamePos calculated_from;
+        GW::GamePos calculated_to;
         clock_t calculated_at = 0;
         uint32_t current_waypoint = 0;
         GW::Constants::QuestID quest_id;
@@ -64,12 +65,16 @@ namespace {
             return current_waypoint < waypoints.size() - 1 ? &waypoints[current_waypoint + 1] : nullptr;
         }
         void Recalculate(const GW::GamePos& from) {
-            if (from == calculated_from)
+            if (from == calculated_from && calculated_to == original_quest_marker) {
+                calculating = true;
+                OnQuestPathRecalculated(waypoints, (void*)quest_id); // No need to recalculate
                 return;
+            }
+            calculated_from = from;
+            calculated_to = original_quest_marker;
             if (original_quest_marker.x == INFINITY)
                 return;
-            calculated_from = from;
-            calculating = PathfindingWindow::CalculatePath(calculated_from, original_quest_marker, OnQuestPathRecalculated, (void*)quest_id);
+            calculating = PathfindingWindow::CalculatePath(calculated_from, calculated_to, OnQuestPathRecalculated, (void*)quest_id);
         }
         bool Update(const GW::GamePos& from) {
             const auto quest = GetQuest();
@@ -84,20 +89,25 @@ namespace {
                 Recalculate(from);
                 return false;
             }
-            constexpr float dist_check = 1500.f * 1500.f;
-            if (GetSquareDistance(from, calculated_from) > 1500.f * 1500.f) {
+            constexpr float recalculate_when_moved_further_than = 1500.f * 1500.f;
+            if (GetSquareDistance(from, calculated_from) > recalculate_when_moved_further_than) {
                 Recalculate(from);
                 return false;
             }
             uint32_t original_waypoint = current_waypoint;
 
-            if (!waypoints.size())
+            const auto waypoint_len = waypoints.size();
+            if (!waypoint_len)
                 return false;
-            while (current_waypoint < waypoints.size() - 1 && GetSquareDistance(from, waypoints[current_waypoint + 1]) < GetSquareDistance(from, waypoints[current_waypoint])) {
-                current_waypoint++;
-            }
-            while(current_waypoint < waypoints.size() && GetSquareDistance(from, waypoints[current_waypoint]) < dist_check) {
-                current_waypoint++;
+
+            const auto from_end_waypoint = GetSquareDistance(from, waypoints.back());
+            // Find next waypoint
+            current_waypoint = waypoint_len - 1;
+            for (size_t i = 1; i < waypoint_len; i++) {
+                if (GetSquareDistance(from, waypoints[i]) < from_end_waypoint) {
+                    current_waypoint = i;
+                    break;
+                }
             }
             if (original_waypoint != current_waypoint) {
                 calculated_from = from;
@@ -106,7 +116,7 @@ namespace {
             return false;
         }
         void UpdateUI() {
-            if (!waypoints.size())
+            if (waypoints.empty())
                 return;
             DrawMinimapLines();
             if(IsActive())
@@ -192,9 +202,9 @@ namespace {
         ASSERT(cqp->calculating);
         
         cqp->current_waypoint = 0;
-        cqp->waypoints = waypoints;
+        cqp->waypoints = std::move(waypoints);
 
-        if (GetSquareDistance(cqp->waypoints.back(), cqp->calculated_from) < GetSquareDistance(cqp->waypoints.front(), cqp->calculated_from)) {
+        if (!cqp->waypoints.empty() && GetSquareDistance(cqp->waypoints.back(), cqp->calculated_from) < GetSquareDistance(cqp->waypoints.front(), cqp->calculated_from)) {
             // Waypoint array is in descending distance, flip it
             std::reverse(cqp->waypoints.begin(), cqp->waypoints.end());
         }
