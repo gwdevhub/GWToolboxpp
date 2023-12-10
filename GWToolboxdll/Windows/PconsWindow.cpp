@@ -107,6 +107,8 @@ PconsWindow::PconsWindow()
 
     pcons.push_back(new PconRefiller(L"Scroll of Resurrection", ItemID::ResScrolls, 5));
     pcons.back()->ini = "resscroll";
+    pcons.push_back(new PconRefiller(L"Lockpick", ItemID::Lockpick, 50));
+    pcons.back()->ini = "lockpick";
     pcons.push_back(new PconRefiller(L"Powerstone of Courage", ItemID::Powerstone, 5));
     pcons.back()->ini = "pstone";
     pcons.push_back(new PconRefiller(L"Seal of the Dragon Empire", ItemID::SealOfTheDragonEmpire, 5));
