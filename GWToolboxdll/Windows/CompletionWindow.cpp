@@ -263,6 +263,7 @@ namespace {
     std::unordered_map<std::wstring, CharacterCompletion*> character_completion;
     GW::HookEntry skills_unlocked_stoc_entry;
 
+    std::map<Campaign, std::vector<OutpostUnlock*>> outposts;
     std::map<Campaign, std::vector<Mission*>> missions;
     std::map<Campaign, std::vector<Mission*>> vanquishes;
     std::map<Campaign, std::vector<PvESkill*>> elite_skills;
@@ -749,6 +750,24 @@ void Mission::CheckProgress(const std::wstring& player_name)
     GetOutpostIcons(outpost, icons, mission_state, hard_mode);
 }
 
+void OutpostUnlock::CheckProgress(const std::wstring& player_name) {
+    const auto& completion = character_completion;
+    if (!completion.contains(player_name)) {
+        return;
+    }
+    const auto& player_completion = completion.at(player_name);
+    is_completed = bonus = map_unlocked = ArrayBoolAt(player_completion->maps_unlocked, static_cast<uint32_t>(outpost));
+
+    GetOutpostIcons(outpost, icons, 0);
+}
+bool OutpostUnlock::Draw(IDirect3DDevice9* device) {
+    if (!Mission::Draw(device))
+        return false;
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%d", outpost);
+    return true;
+}
+
 bool Mission::IsDaily()
 {
     return false;
@@ -994,6 +1013,13 @@ void CompletionWindow::Initialize()
     ToolboxWindow::Initialize();
 
     //Resources::LoadTexture(&button_texture, Resources::GetPath(L"img/missions", L"MissionIcon.png"), IDB_Missions_MissionIcon);
+    outposts = {
+        {Campaign::Prophecies, {}},
+        {Campaign::Factions, {}},
+        {Campaign::Nightfall, {}},
+        {Campaign::EyeOfTheNorth, {}},
+        {Campaign::BonusMissionPack, {}},
+    };
 
     missions = {
         {Campaign::Prophecies, {}},
@@ -1333,6 +1359,27 @@ void CompletionWindow::Initialize()
 
 void CompletionWindow::Initialize_Prophecies()
 {
+    std::unordered_map<uint32_t, char> dupes;
+    auto& prophecies_outposts = outposts.at(Campaign::Prophecies);
+    for (size_t i = 1; i < static_cast<size_t>(MapID::Count); i++) {
+        const auto info = GW::Map::GetMapInfo(static_cast<MapID>(i));
+        if (!info) continue;
+        if (!info->GetIsOnWorldMap()) continue;
+        if (dupes.find(info->thumbnail_id) != dupes.end())
+            continue;
+        if (info->campaign != Campaign::Prophecies) continue;
+        if (info->region == GW::Region::Region_Presearing) continue;
+        switch (info->type) {
+        case GW::RegionType::City:
+        case GW::RegionType::Outpost:
+        case GW::RegionType::Challenge:
+        case GW::RegionType::MissionOutpost:
+        case GW::RegionType::Arena:
+            prophecies_outposts.push_back(new OutpostUnlock(static_cast<MapID>(i)));
+            dupes[info->thumbnail_id] = 1;
+            break;
+        }
+    }
 
     auto& prophecies_missions = missions.at(Campaign::Prophecies);
     prophecies_missions.push_back(new Mission(
@@ -2120,6 +2167,7 @@ void CompletionWindow::Terminate()
         vec.clear();
     };
 
+    clear_vec(outposts);
     clear_vec(missions);
     clear_vec(vanquishes);
     clear_vec(pve_skills);
@@ -2277,7 +2325,30 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             pending_sort = false;
         }
     }
-
+    ImGui::Text("Outposts");
+    ImGui::SameLine(checkbox_offset);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
+    ImGui::Checkbox("Hide unlocked outposts", &hide_completed_missions);
+    ImGui::PopStyleVar();
+    for (auto& camp : outposts) {
+        auto& camp_missions = camp.second;
+        size_t completed = 0;
+        std::vector<Mission*> filtered;
+        for (size_t i = 0; i < camp_missions.size(); i++) {
+            if (camp_missions[i]->is_completed && camp_missions[i]->bonus) {
+                completed++;
+                if (hide_completed_missions) {
+                    continue;
+                }
+            }
+            filtered.push_back(camp_missions[i]);
+        }
+        char label[128];
+        snprintf(label, _countof(label), "%s (%d of %d unlocked) - %.0f%%###campaign_outposts_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
+        if (ImGui::CollapsingHeader(label)) {
+            draw_missions(filtered);
+        }
+    }
     ImGui::Text("Missions");
     ImGui::SameLine(checkbox_offset);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
@@ -2824,6 +2895,11 @@ CompletionWindow* CompletionWindow::CheckProgress(const bool fetch_hom)
         }
     }
     for (auto& camp : elite_skills) {
+        for (const auto& skill : camp.second) {
+            skill->CheckProgress(chosen_player_name);
+        }
+    }
+    for (auto& camp : outposts) {
         for (const auto& skill : camp.second) {
             skill->CheckProgress(chosen_player_name);
         }

@@ -46,6 +46,12 @@ namespace Missions {
         virtual void CheckProgress(const std::wstring& player_name);
     };
 
+    class OutpostUnlock : public Mission {
+    public:
+        OutpostUnlock(GW::Constants::MapID map_id) : Mission(map_id) {};
+        void CheckProgress(const std::wstring& player_name) override;
+        bool Draw(IDirect3DDevice9*) override;
+    };
 
     class PvESkill : public Mission {
     protected:
