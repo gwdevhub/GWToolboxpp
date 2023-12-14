@@ -40,7 +40,7 @@ protected:
         : Pcon(nullptr, nullptr, nullptr, file, {0, 0}, {1, 1}, threshold) { }
 
     Pcon(const Pcon&) = delete;
-    virtual ~Pcon();
+
     bool* GetSettingsByName(const wchar_t* name);
     static bool UnreserveSlotForMove(size_t bagId, size_t slot); // Unlock slot.
     // Prevents more than 1 pcon from trying to add to the same slot at the same time.
@@ -54,8 +54,10 @@ protected:
     uint32_t pending_move_to_slot = 0;
     uint32_t pending_move_to_quantity = 0;
 
-public:
     void Terminate();
+public:
+    virtual ~Pcon();
+
 
     virtual void Draw(IDirect3DDevice9* device);
     virtual void Update(int delay = -1);
