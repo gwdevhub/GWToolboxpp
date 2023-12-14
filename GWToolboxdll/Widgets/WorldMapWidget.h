@@ -15,6 +15,8 @@ public:
 
     void Initialize() override;
 
+    void Terminate() override;
+
     void RegisterSettingsContent() override { };
 
     [[nodiscard]] bool ShowOnWorldMap() const override { return true; }
@@ -30,7 +32,4 @@ public:
     void DrawSettingsInternal() override;
 
     bool WndProc(UINT, WPARAM, LPARAM) override;
-
-private:
-    static void InitializeMapsUnlockedArrays();
 };
