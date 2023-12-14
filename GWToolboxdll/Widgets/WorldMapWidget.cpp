@@ -1,115 +1,83 @@
 #include "stdafx.h"
 
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/WorldContext.h>
-
-#include <GWCA/GameEntities/Map.h>
+#include <GWCA/Utilities/MemoryPatcher.h>
+#include <GWCA/Utilities/Scanner.h>
 
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
-
-#include <GWCA/Packets/StoC.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <Widgets/WorldMapWidget.h>
 
+#include <Timer.h>
+
 namespace {
-    GW::Packet::StoC::MapsUnlocked all_maps_unlocked_packet;
-    GW::Packet::StoC::MapsUnlocked actual_maps_unlocked_packet;
-
-    bool actual_maps_unlocked_initialised = false;
-
     ImRect show_all_rect;
     ImRect hard_mode_rect;
 
     bool showing_all_outposts = false;
 
     bool drawn = false;
-}
 
-void WorldMapWidget::InitializeMapsUnlockedArrays()
-{
-    const GW::GameContext* g = GW::GetGameContext();
-    if (!g) {
-        return;
+    GW::MemoryPatcher view_all_outposts_patch;
+    GW::MemoryPatcher view_all_carto_areas_patch;
+
+    uint32_t __cdecl GetCartographyFlagsForArea(uint32_t , uint32_t , uint32_t , uint32_t ) {
+        return 0xffffffff;
     }
-    const GW::WorldContext* w = g->world;
-    if (!w) {
-        return;
-    }
-    actual_maps_unlocked_packet.missions_bonus_length = 0;
-    const GW::Array<uint32_t>* arr = &w->missions_bonus;
-    if (arr->valid()) {
-        actual_maps_unlocked_packet.missions_bonus_length = arr->size();
-        memcpy(&actual_maps_unlocked_packet.missions_bonus, arr->m_buffer, sizeof(actual_maps_unlocked_packet.missions_bonus));
-    }
-    arr = &w->missions_bonus_hm;
-    actual_maps_unlocked_packet.missions_bonus_hm_length = 0;
-    if (arr->valid()) {
-        actual_maps_unlocked_packet.missions_bonus_hm_length = arr->size();
-        memcpy(&actual_maps_unlocked_packet.missions_bonus_hm, arr->m_buffer, sizeof(actual_maps_unlocked_packet.missions_bonus_hm));
-    }
-    arr = &w->missions_completed;
-    actual_maps_unlocked_packet.missions_completed_length = 0;
-    if (arr->valid()) {
-        actual_maps_unlocked_packet.missions_completed_length = arr->size();
-        memcpy(&actual_maps_unlocked_packet.missions_completed, arr->m_buffer, sizeof(actual_maps_unlocked_packet.missions_completed));
-    }
-    arr = &w->missions_completed_hm;
-    actual_maps_unlocked_packet.missions_completed_hm_length = 0;
-    if (arr->valid()) {
-        actual_maps_unlocked_packet.missions_completed_hm_length = arr->size();
-        memcpy(&actual_maps_unlocked_packet.missions_completed_hm, arr->m_buffer, sizeof(actual_maps_unlocked_packet.missions_completed_hm));
-    }
-    arr = &w->unlocked_map;
-    actual_maps_unlocked_packet.unlocked_map_length = 0;
-    if (arr->valid()) {
-        actual_maps_unlocked_packet.unlocked_map_length = arr->size();
-        memcpy(&actual_maps_unlocked_packet.unlocked_map, arr->m_buffer, sizeof(actual_maps_unlocked_packet.unlocked_map));
-    }
-    all_maps_unlocked_packet = actual_maps_unlocked_packet;
-    all_maps_unlocked_packet.unlocked_map_length = 32;
-    memset(&all_maps_unlocked_packet.unlocked_map, 0xff, sizeof(all_maps_unlocked_packet.unlocked_map));
-    actual_maps_unlocked_initialised = true;
+
+    clock_t show_map_at = 0;
 }
 
 void WorldMapWidget::Initialize()
 {
     ToolboxWidget::Initialize();
-    InitializeMapsUnlockedArrays();
 
-    static GW::HookEntry e;
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MapsUnlocked>(&e, [](GW::HookStatus*, const GW::Packet::StoC::MapsUnlocked*) {
-        Instance().InitializeMapsUnlockedArrays();
-    });
+    uintptr_t address = GW::Scanner::Find("\x8b\x45\xfc\xf7\x40\x10\x00\x00\x01\x00", "xxxxxxxxxx", 0xa);
+    if (address) {
+        view_all_outposts_patch.SetPatch(address, "\xeb", 1);
+    }
+    address = GW::Scanner::Find("\x8b\xd8\x83\xc4\x10\x8b\xcb\x8b\xf3\xd1\xe9","xxxxxxxxxxx",-0x5);
+    if (address) {
+        view_all_carto_areas_patch.SetRedirect(address, GetCartographyFlagsForArea);
+    }
+
+    ASSERT(view_all_outposts_patch.IsValid());
+    ASSERT(view_all_carto_areas_patch.IsValid());
+}
+void WorldMapWidget::Terminate() {
+    ToolboxWidget::Terminate();
+    view_all_outposts_patch.Reset();
+    view_all_carto_areas_patch.Reset();
 }
 
 void WorldMapWidget::ShowAllOutposts(const bool show = showing_all_outposts)
 {
-    static bool showing = false;
-    //GW::WorldContext* world = GW::GetGameContext()->world;
-    if (showing == show) {
-        return;
-    }
-    ASSERT(actual_maps_unlocked_initialised);
-    if (show) {
-        // Show all areas
-        GW::StoC::EmulatePacket<GW::Packet::StoC::MapsUnlocked>(&all_maps_unlocked_packet);
-    }
-    else {
-        // Restore area visibility
-        GW::StoC::EmulatePacket<GW::Packet::StoC::MapsUnlocked>(&actual_maps_unlocked_packet);
-    }
-    showing = show;
+    if(view_all_outposts_patch.IsValid())
+        view_all_outposts_patch.TogglePatch(show);
+    if (view_all_carto_areas_patch.IsValid())
+        view_all_carto_areas_patch.TogglePatch(show);
+    // @Cleanup: Instead of using 500ms clock timer, figure out how to refresh cartography areas properly
+    GW::GameThread::Enqueue([]() {
+        if (GW::UI::GetIsWorldMapShowing()) {
+            GW::UI::Keypress(GW::UI::ControlAction_OpenWorldMap);
+            show_map_at = TIMER_INIT() + 500;
+        }
+        });
 }
 
 void WorldMapWidget::Draw(IDirect3DDevice9*)
 {
+    if (show_map_at && TIMER_INIT() > show_map_at) {
+        GW::UI::Keypress(GW::UI::ControlAction_OpenWorldMap);
+        show_map_at = 0;
+    }
     if (!GW::UI::GetIsWorldMapShowing()) {
         //ShowAllOutposts(showing_all_outposts = false);
         drawn = false;
         return;
     }
+
     if (!visible) {
         drawn = false;
         return;
