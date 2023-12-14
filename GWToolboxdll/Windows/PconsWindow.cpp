@@ -162,8 +162,9 @@ void PconsWindow::Terminate()
 {
     ToolboxWindow::Terminate();
     for (Pcon* pcon : pcons) {
-        pcon->Terminate();
+        delete pcon;
     }
+    pcons.clear();
 }
 
 void PconsWindow::OnAddExternalBond(GW::HookStatus* status, const GW::Packet::StoC::AddExternalBond* pak)
