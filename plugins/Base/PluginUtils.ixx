@@ -496,7 +496,7 @@ namespace PluginUtils {
         PLUGIN_ASSERT(size_needed != 0);
         std::string strTo(size_needed, 0);
         PLUGIN_ASSERT(WideCharToMultiByte(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), strTo.data(), size_needed, NULL, NULL));
-        return std::move(strTo);
+        return strTo;
     }
 
     // Makes sure the file name doesn't have chars that won't be allowed on disk
@@ -568,7 +568,7 @@ namespace PluginUtils {
         PLUGIN_ASSERT(size_needed != 0);
         std::wstring wstrTo(size_needed, 0);
         PLUGIN_ASSERT(MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), wstrTo.data(), size_needed));
-        return std::move(wstrTo);
+        return wstrTo;
     }
 
     std::wstring SanitizePlayerName(const std::wstring& s)
@@ -970,7 +970,7 @@ namespace PluginUtils {
         out.resize(size + 1);
         PLUGIN_ASSERT(vsnprintf(out.data(), out.size(), msg, args) <= size);
         va_end(args);
-        return std::move(out);
+        return out;
     }
 
     std::wstring format(const wchar_t* msg, ...)
@@ -982,7 +982,7 @@ namespace PluginUtils {
         out.resize(size + 1);
         PLUGIN_ASSERT(_vsnwprintf(out.data(), out.size(), msg, args) <= size);
         va_end(args);
-        return std::move(out);
+        return out;
     }
 
     std::string& EncString::string()

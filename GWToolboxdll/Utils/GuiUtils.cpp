@@ -494,7 +494,7 @@ namespace GuiUtils {
         ASSERT(size_needed != 0);
         std::string str_to(size_needed, 0);
         ASSERT(WideCharToMultiByte(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), str_to.data(), size_needed, NULL, NULL));
-        return std::move(str_to);
+        return str_to;
     }
 
     // Makes sure the file name doesn't have chars that won't be allowed on disk
@@ -968,7 +968,7 @@ namespace GuiUtils {
         out.resize(size + 1);
         ASSERT(vsnprintf(out.data(), out.size(), msg, args) <= size);
         va_end(args);
-        return std::move(out);
+        return out;
     }
 
     std::wstring format(const wchar_t* msg, ...)
@@ -980,7 +980,7 @@ namespace GuiUtils {
         out.resize(size + 1);
         ASSERT(_vsnwprintf(out.data(), out.size(), msg, args) <= size);
         va_end(args);
-        return std::move(out);
+        return out;
     }
 
     std::string& EncString::string()

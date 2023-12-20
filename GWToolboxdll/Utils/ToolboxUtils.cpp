@@ -653,6 +653,6 @@ namespace ToolboxUtils {
             original += L"\x2\x102\x2\x108\x107" L"Customized\x1";
         }
 
-        return std::move(original);
+        return original;
     }
 }
