@@ -356,7 +356,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
                     }
                     const GW::Attribute* agentAttributes = GW::PartyMgr::GetAgentAttributes(agent_id);
                     assert(agentAttributes);
-                    agentAttributes = &agentAttributes[skill_data->attribute];
+                    agentAttributes = &agentAttributes[static_cast<size_t>(skill_data->attribute)];
                     const bool overlay = effect.attribute_level < agentAttributes->level;
 
                     const size_t y = party_map[agent_id];

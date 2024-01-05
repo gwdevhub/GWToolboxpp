@@ -121,7 +121,7 @@ void SkillbarWidget::Update(float)
                 continue;
             }
             m_skills[i].effects.clear();
-            if (display_multiple_effects && has_sf && skill_data->profession == static_cast<uint8_t>(GW::Constants::Profession::Assassin) && skill_data->type == GW::Constants::SkillType::Enchantment) {
+            if (display_multiple_effects && has_sf && skill_data->profession == GW::Constants::ProfessionByte::Assassin && skill_data->type == GW::Constants::SkillType::Enchantment) {
                 m_skills[i].effects = get_effects(skill_id);
                 std::ranges::sort(m_skills[i].effects, [](const Effect& a, const Effect& b) { return a.remaining > b.remaining; });
             }
