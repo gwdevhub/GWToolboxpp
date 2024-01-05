@@ -176,15 +176,22 @@ namespace {
                         icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_Mission;
                         if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
                             icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_CompletePrimary;
-                        if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                        if ((mission_state & ToolboxUtils::MissionState::Expert) != 0)
                             icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_CompleteExpert;
-                        if((mission_state & ToolboxUtils::MissionState::Master) != 0)
+                        if ((mission_state & ToolboxUtils::MissionState::Master) != 0)
                             icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_CompleteMaster;
                     }
 
                     break;
-                }
-            } break;
+                case GW::RegionType::City:
+                    icon_file_ids[0] = WorldMapIcon::Cantha_City;
+                    break;
+                case GW::RegionType::Outpost:
+                case GW::RegionType::Challenge:
+                    icon_file_ids[0] = WorldMapIcon::Cantha_Outpost;
+                    break;
+                } break;
+            }
             case GW::Continent::Elona: {
                 switch (area_info->type) {
                 case GW::RegionType::MissionOutpost:
@@ -201,6 +208,13 @@ namespace {
                         if((mission_state & ToolboxUtils::MissionState::Master) != 0)
                             icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompleteMaster;
                     }
+                    break;
+                case GW::RegionType::City:
+                    icon_file_ids[0] = WorldMapIcon::Elona_City;
+                    break;
+                case GW::RegionType::Outpost:
+                case GW::RegionType::Challenge:
+                    icon_file_ids[0] = WorldMapIcon::Elona_Outpost;
                     break;
                 }
             } break;
@@ -220,6 +234,13 @@ namespace {
                         if ((mission_state & ToolboxUtils::MissionState::Master) != 0)
                             icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompleteMaster;
                     }
+                    break;
+                case GW::RegionType::City:
+                    icon_file_ids[0] = WorldMapIcon::RealmOfTorment_City;
+                    break;
+                case GW::RegionType::Outpost:
+                case GW::RegionType::Challenge:
+                    icon_file_ids[0] = WorldMapIcon::RealmOfTorment_Outpost;
                     break;
                 }
             } break;
@@ -657,7 +678,6 @@ bool Mission::Draw(IDirect3DDevice9*)
             ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
         }
         clicked = ImGui::CompositeIconButton(Name(), (ImTextureID*)icons_out, icons_len, {s.x * 5.f, s.y}, 0, {s.x / 2.f, s.y},icon_uv_offset[0],icon_uv_offset[1]);
-        hovered = ImGui::IsItemHovered();
         if (!map_unlocked) {
             ImGui::PopStyleColor();
         }
@@ -665,11 +685,14 @@ bool Mission::Draw(IDirect3DDevice9*)
     else {
         clicked = ImGui::CompositeIconButton("", (ImTextureID*)icons_out, icons_len,  s, 0, s,icon_uv_offset[0],icon_uv_offset[1]);
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip(Name());
+            ImGui::SetTooltip("%s", Name());
         }
     }
     if (clicked) {
         OnClick();
+    }
+    if (hovered) {
+        ImGui::SetTooltip("%s", Name());
     }
     ImGui::PopID();
     ImGui::PopStyleColor();
@@ -763,8 +786,6 @@ void OutpostUnlock::CheckProgress(const std::wstring& player_name) {
 bool OutpostUnlock::Draw(IDirect3DDevice9* device) {
     if (!Mission::Draw(device))
         return false;
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("%d", outpost);
     return true;
 }
 
@@ -1017,8 +1038,7 @@ void CompletionWindow::Initialize()
         {Campaign::Prophecies, {}},
         {Campaign::Factions, {}},
         {Campaign::Nightfall, {}},
-        {Campaign::EyeOfTheNorth, {}},
-        {Campaign::BonusMissionPack, {}},
+        {Campaign::EyeOfTheNorth, {}}
     };
 
     missions = {
@@ -1032,8 +1052,7 @@ void CompletionWindow::Initialize()
         {Campaign::Prophecies, {}},
         {Campaign::Factions, {}},
         {Campaign::Nightfall, {}},
-        {Campaign::EyeOfTheNorth, {}},
-        {Campaign::BonusMissionPack, {}},
+        {Campaign::EyeOfTheNorth, {}}
     };
     elite_skills = {
         {Campaign::Prophecies, {}},
@@ -1091,6 +1110,39 @@ void CompletionWindow::Initialize()
             unlocked_pvp_items[(uint32_t)PvPItemUpgradeTypeName(i)].push_back(new UnlockedPvPItemUpgrade(i));
         }
     }
+
+    std::unordered_map<uint32_t, char> dupes;
+    for (auto& it : outposts) {
+        for (size_t i = 1; i < static_cast<size_t>(MapID::Count); i++) {
+            if (i == static_cast<size_t>(GW::Constants::MapID::Titans_Tears))
+                continue;
+            const auto info = GW::Map::GetMapInfo(static_cast<MapID>(i));
+            if (!info) continue;
+            if (!info->GetIsOnWorldMap()) continue;
+            if (dupes.find(info->name_id) != dupes.end())
+                continue;
+            if (info->campaign != it.first) continue;
+            if (info->region == GW::Region::Region_Presearing) continue;
+            switch (info->type) {
+            case GW::RegionType::MissionOutpost:
+                missions[it.first].push_back(new Mission(static_cast<MapID>(i)));
+            case GW::RegionType::City:
+            case GW::RegionType::Outpost:
+            case GW::RegionType::Challenge:
+            case GW::RegionType::Arena:
+                outposts[it.first].push_back(new OutpostUnlock(static_cast<MapID>(i)));
+                dupes[info->name_id] = 1;
+                break;
+            case GW::RegionType::ExplorableZone:
+                if (!info->GetIsVanquishableArea())
+                    break;
+                vanquishes[it.first].push_back(new Vanquish(static_cast<MapID>(i)));
+                dupes[info->name_id] = 1;
+                break;
+            }
+        }
+    }
+    
 
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Canthan Armor\x1", "Elementalist_Elite_Canthan_armor_m.jpg"));
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Exotic Armor\x1", "Assassin_Exotic_armor_m.jpg"));
@@ -1359,135 +1411,6 @@ void CompletionWindow::Initialize()
 
 void CompletionWindow::Initialize_Prophecies()
 {
-    std::unordered_map<uint32_t, char> dupes;
-    auto& prophecies_outposts = outposts.at(Campaign::Prophecies);
-    for (size_t i = 1; i < static_cast<size_t>(MapID::Count); i++) {
-        const auto info = GW::Map::GetMapInfo(static_cast<MapID>(i));
-        if (!info) continue;
-        if (!info->GetIsOnWorldMap()) continue;
-        if (dupes.find(info->thumbnail_id) != dupes.end())
-            continue;
-        if (info->campaign != Campaign::Prophecies) continue;
-        if (info->region == GW::Region::Region_Presearing) continue;
-        switch (info->type) {
-        case GW::RegionType::City:
-        case GW::RegionType::Outpost:
-        case GW::RegionType::Challenge:
-        case GW::RegionType::MissionOutpost:
-        case GW::RegionType::Arena:
-            prophecies_outposts.push_back(new OutpostUnlock(static_cast<MapID>(i)));
-            dupes[info->thumbnail_id] = 1;
-            break;
-        }
-    }
-
-    auto& prophecies_missions = missions.at(Campaign::Prophecies);
-    prophecies_missions.push_back(new Mission(
-        MapID::The_Great_Northern_Wall, QuestID::ZaishenMission_The_Great_Northern_Wall));
-    prophecies_missions.push_back(new Mission(
-        MapID::Fort_Ranik, QuestID::ZaishenMission_Fort_Ranik));
-    prophecies_missions.push_back(new Mission(
-        MapID::Ruins_of_Surmia, QuestID::ZaishenMission_Ruins_of_Surmia));
-    prophecies_missions.push_back(new Mission(
-        MapID::Nolani_Academy, QuestID::ZaishenMission_Nolani_Academy));
-    prophecies_missions.push_back(new Mission(
-        MapID::Borlis_Pass, QuestID::ZaishenMission_Borlis_Pass));
-    prophecies_missions.push_back(new Mission(
-        MapID::The_Frost_Gate, QuestID::ZaishenMission_The_Frost_Gate));
-    prophecies_missions.push_back(new Mission(
-        MapID::Gates_of_Kryta, QuestID::ZaishenMission_Gates_of_Kryta));
-    prophecies_missions.push_back(new Mission(
-        MapID::DAlessio_Seaboard, QuestID::ZaishenMission_DAlessio_Seaboard));
-    prophecies_missions.push_back(new Mission(
-        MapID::Divinity_Coast, QuestID::ZaishenMission_Divinity_Coast));
-    prophecies_missions.push_back(new Mission(
-        MapID::The_Wilds, QuestID::ZaishenMission_The_Wilds));
-    prophecies_missions.push_back(new Mission(
-        MapID::Bloodstone_Fen, QuestID::ZaishenMission_Bloodstone_Fen));
-    prophecies_missions.push_back(new Mission(
-        MapID::Aurora_Glade, QuestID::ZaishenMission_Aurora_Glade));
-    prophecies_missions.push_back(new Mission(
-        MapID::Riverside_Province, QuestID::ZaishenMission_Riverside_Province));
-    prophecies_missions.push_back(new Mission(
-        MapID::Sanctum_Cay, QuestID::ZaishenMission_Sanctum_Cay));
-    prophecies_missions.push_back(new Mission(
-        MapID::Dunes_of_Despair, QuestID::ZaishenMission_Dunes_of_Despair));
-    prophecies_missions.push_back(new Mission(
-        MapID::Thirsty_River, QuestID::ZaishenMission_Thirsty_River));
-    prophecies_missions.push_back(new Mission(
-        MapID::Elona_Reach, QuestID::ZaishenMission_Elona_Reach));
-    prophecies_missions.push_back(new Mission(
-        MapID::Augury_Rock_mission, QuestID::ZaishenMission_Augury_Rock));
-    prophecies_missions.push_back(new Mission(
-        MapID::The_Dragons_Lair, QuestID::ZaishenMission_The_Dragons_Lair));
-    prophecies_missions.push_back(new Mission(
-        MapID::Ice_Caves_of_Sorrow, QuestID::ZaishenMission_Ice_Caves_of_Sorrow));
-    prophecies_missions.push_back(new Mission(
-        MapID::Iron_Mines_of_Moladune, QuestID::ZaishenMission_Iron_Mines_of_Moladune));
-    prophecies_missions.push_back(new Mission(
-        MapID::Thunderhead_Keep, QuestID::ZaishenMission_Thunderhead_Keep));
-    prophecies_missions.push_back(new Mission(
-        MapID::Ring_of_Fire, QuestID::ZaishenMission_Ring_of_Fire));
-    prophecies_missions.push_back(new Mission(
-        MapID::Abaddons_Mouth, QuestID::ZaishenMission_Abaddons_Mouth));
-    prophecies_missions.push_back(new Mission(
-        MapID::Hells_Precipice, QuestID::ZaishenMission_Hells_Precipice));
-
-    auto& prophecies_vanquishes = vanquishes.at(Campaign::Prophecies);
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Pockmark_Flats));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Old_Ascalon));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Regent_Valley));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Ascalon_Foothills));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Diessa_Lowlands));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Dragons_Gullet));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Eastern_Frontier));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Flame_Temple_Corridor));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::The_Breach));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Anvil_Rock));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Deldrimor_Bowl));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Griffons_Mouth));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Iron_Horse_Mine));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Travelers_Vale));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Cursed_Lands));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Kessex_Peak));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Majestys_Rest));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Nebo_Terrace));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::North_Kryta_Province));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Scoundrels_Rise));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Stingray_Strand));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Talmark_Wilderness));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Tears_of_the_Fallen));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::The_Black_Curtain));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Twin_Serpent_Lakes));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Watchtower_Coast));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Dry_Top));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Ettins_Back));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Mamnoon_Lagoon));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Reed_Bog));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Sage_Lands));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Silverwood));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Tangle_Root));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::The_Falls));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Diviners_Ascent));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Prophets_Path));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Salt_Flats));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Skyward_Reach));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::The_Arid_Sea));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::The_Scar));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Vulture_Drifts));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Dreadnoughts_Drift));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Frozen_Forest));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Grenths_Footprint));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Ice_Floe));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Icedome));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Lornars_Pass));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Mineral_Springs));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Snake_Dance));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Spearhead_Peak));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Talus_Chute));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Tascas_Demise));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Witmans_Folly));
-    prophecies_vanquishes.push_back(new Vanquish(MapID::Perdition_Rock));
 
     auto& eskills = elite_skills.at(Campaign::Prophecies);
     eskills.push_back(new PvESkill(SkillID::Victory_Is_Mine));
@@ -1555,78 +1478,11 @@ void CompletionWindow::Initialize_Prophecies()
     eskills.push_back(new PvESkill(SkillID::Thunderclap));
     eskills.push_back(new PvESkill(SkillID::Ward_Against_Harm));
     eskills.push_back(new PvESkill(SkillID::Water_Trident));
+
 }
 
 void CompletionWindow::Initialize_Factions()
 {
-
-    auto& factions_missions = missions.at(Campaign::Factions);
-    factions_missions.push_back(new Mission(
-        MapID::Minister_Chos_Estate_outpost_mission, QuestID::ZaishenMission_Minister_Chos_Estate));
-    factions_missions.push_back(new Mission(
-        MapID::Zen_Daijun_outpost_mission, QuestID::ZaishenMission_Zen_Daijun));
-    factions_missions.push_back(new Mission(
-        MapID::Vizunah_Square_Local_Quarter_outpost, QuestID::ZaishenMission_Vizunah_Square));
-    factions_missions.push_back(new Mission(
-        MapID::Vizunah_Square_Foreign_Quarter_outpost, QuestID::ZaishenMission_Vizunah_Square));
-    factions_missions.push_back(new Mission(
-        MapID::Nahpui_Quarter_outpost_mission, QuestID::ZaishenMission_Nahpui_Quarter));
-    factions_missions.push_back(new Mission(
-        MapID::Tahnnakai_Temple_outpost_mission, QuestID::ZaishenMission_Tahnnakai_Temple));
-    factions_missions.push_back(new Mission(
-        MapID::Arborstone_outpost_mission, QuestID::ZaishenMission_Arborstone));
-    factions_missions.push_back(new Mission(
-        MapID::Boreas_Seabed_outpost_mission, QuestID::ZaishenMission_Boreas_Seabed));
-    factions_missions.push_back(new Mission(
-        MapID::Sunjiang_District_outpost_mission, QuestID::ZaishenMission_Sunjiang_District));
-    factions_missions.push_back(new Mission(
-        MapID::The_Eternal_Grove_outpost_mission, QuestID::ZaishenMission_The_Eternal_Grove));
-    factions_missions.push_back(new Mission(
-        MapID::Gyala_Hatchery_outpost_mission, QuestID::ZaishenMission_Gyala_Hatchery));
-    factions_missions.push_back(new Mission(
-        MapID::Unwaking_Waters_Kurzick_outpost, QuestID::ZaishenMission_Unwaking_Waters));
-    factions_missions.push_back(new Mission(
-        MapID::Unwaking_Waters_Luxon_outpost, QuestID::ZaishenMission_Unwaking_Waters));
-    factions_missions.push_back(new Mission(
-        MapID::Raisu_Palace_outpost_mission, QuestID::ZaishenMission_Raisu_Palace));
-    factions_missions.push_back(new Mission(
-        MapID::Imperial_Sanctum_outpost_mission, QuestID::ZaishenMission_Imperial_Sanctum));
-
-    auto& this_vanquishes = vanquishes.at(Campaign::Factions);
-    this_vanquishes.push_back(new Vanquish(MapID::Haiju_Lagoon, QuestID::ZaishenVanquish_Haiju_Lagoon));
-    this_vanquishes.push_back(new Vanquish(MapID::Jaya_Bluffs, QuestID::ZaishenVanquish_Jaya_Bluffs));
-    this_vanquishes.push_back(new Vanquish(MapID::Kinya_Province, QuestID::ZaishenVanquish_Kinya_Province));
-    this_vanquishes.push_back(new Vanquish(MapID::Minister_Chos_Estate_explorable, QuestID::ZaishenVanquish_Minister_Chos_Estate));
-    this_vanquishes.push_back(new Vanquish(MapID::Panjiang_Peninsula, QuestID::ZaishenVanquish_Panjiang_Peninsula));
-    this_vanquishes.push_back(new Vanquish(MapID::Saoshang_Trail, QuestID::ZaishenVanquish_Saoshang_Trail));
-    this_vanquishes.push_back(new Vanquish(MapID::Sunqua_Vale, QuestID::ZaishenVanquish_Sunqua_Vale));
-    this_vanquishes.push_back(new Vanquish(MapID::Zen_Daijun_explorable, QuestID::ZaishenVanquish_Zen_Daijun));
-    this_vanquishes.push_back(new Vanquish(MapID::Bukdek_Byway, QuestID::ZaishenVanquish_Bukdek_Byway));
-    this_vanquishes.push_back(new Vanquish(MapID::Nahpui_Quarter_explorable, QuestID::ZaishenVanquish_Nahpui_Quarter));
-    this_vanquishes.push_back(new Vanquish(MapID::Pongmei_Valley, QuestID::ZaishenVanquish_Pongmei_Valley));
-    this_vanquishes.push_back(new Vanquish(MapID::Raisu_Palace, QuestID::ZaishenVanquish_Raisu_Palace));
-    this_vanquishes.push_back(new Vanquish(MapID::Shadows_Passage, QuestID::ZaishenVanquish_Shadows_Passage));
-    this_vanquishes.push_back(new Vanquish(MapID::Shenzun_Tunnels, QuestID::ZaishenVanquish_Shenzun_Tunnels));
-    this_vanquishes.push_back(new Vanquish(MapID::Sunjiang_District_explorable, QuestID::ZaishenVanquish_Sunjiang_District));
-    this_vanquishes.push_back(new Vanquish(MapID::Tahnnakai_Temple_explorable, QuestID::ZaishenVanquish_Tahnnakai_Temple));
-    this_vanquishes.push_back(new Vanquish(MapID::Wajjun_Bazaar, QuestID::ZaishenVanquish_Wajjun_Bazaar));
-    this_vanquishes.push_back(new Vanquish(MapID::Xaquang_Skyway, QuestID::ZaishenVanquish_Xaquang_Skyway));
-    this_vanquishes.push_back(new Vanquish(MapID::Arborstone_explorable));
-    this_vanquishes.push_back(new Vanquish(MapID::Drazach_Thicket, QuestID::ZaishenVanquish_Drazach_Thicket));
-    this_vanquishes.push_back(new Vanquish(MapID::Ferndale, QuestID::ZaishenVanquish_Ferndale));
-    this_vanquishes.push_back(new Vanquish(MapID::Melandrus_Hope));
-    this_vanquishes.push_back(new Vanquish(MapID::Morostav_Trail, QuestID::ZaishenVanquish_Morostav_Trail));
-    this_vanquishes.push_back(new Vanquish(MapID::Mourning_Veil_Falls, QuestID::ZaishenVanquish_Mourning_Veil_Falls));
-    this_vanquishes.push_back(new Vanquish(MapID::The_Eternal_Grove, QuestID::ZaishenVanquish_The_Eternal_Grove));
-    this_vanquishes.push_back(new Vanquish(MapID::Archipelagos));
-    this_vanquishes.push_back(new Vanquish(MapID::Boreas_Seabed_explorable, QuestID::ZaishenVanquish_Boreas_Seabed));
-    this_vanquishes.push_back(new Vanquish(MapID::Gyala_Hatchery, QuestID::ZaishenVanquish_Gyala_Hatchery));
-    this_vanquishes.push_back(new Vanquish(MapID::Maishang_Hills, QuestID::ZaishenVanquish_Maishang_Hills));
-    this_vanquishes.push_back(new Vanquish(MapID::Mount_Qinkai));
-    this_vanquishes.push_back(new Vanquish(MapID::Rheas_Crater, QuestID::ZaishenVanquish_Rheas_Crater));
-    this_vanquishes.push_back(new Vanquish(MapID::Silent_Surf, QuestID::ZaishenVanquish_Silent_Surf));
-    this_vanquishes.push_back(new Vanquish(MapID::Unwaking_Waters, QuestID::ZaishenVanquish_Unwaking_Waters));
-
     auto& skills = pve_skills.at(Campaign::Factions);
     skills.push_back(new FactionsPvESkill(SkillID::Save_Yourselves_kurzick));
     skills.push_back(new FactionsPvESkill(SkillID::Save_Yourselves_luxon));
@@ -1764,85 +1620,6 @@ void CompletionWindow::Initialize_Factions()
 
 void CompletionWindow::Initialize_Nightfall()
 {
-
-    auto& nightfall_missions = missions.at(Campaign::Nightfall);
-    nightfall_missions.push_back(new Mission(
-        MapID::Chahbek_Village, QuestID::ZaishenMission_Chahbek_Village));
-    nightfall_missions.push_back(new Mission(
-        MapID::Jokanur_Diggings, QuestID::ZaishenMission_Jokanur_Diggings));
-    nightfall_missions.push_back(new Mission(
-        MapID::Blacktide_Den, QuestID::ZaishenMission_Blacktide_Den));
-    nightfall_missions.push_back(new Mission(
-        MapID::Consulate_Docks, QuestID::ZaishenMission_Consulate_Docks));
-    nightfall_missions.push_back(new Mission(
-        MapID::Venta_Cemetery, QuestID::ZaishenMission_Venta_Cemetery));
-    nightfall_missions.push_back(new Mission(
-        MapID::Kodonur_Crossroads, QuestID::ZaishenMission_Kodonur_Crossroads));
-    nightfall_missions.push_back(new Mission(
-        MapID::Pogahn_Passage, QuestID::ZaishenMission_Pogahn_Passage));
-    nightfall_missions.push_back(new Mission(
-        MapID::Rilohn_Refuge, QuestID::ZaishenMission_Rilohn_Refuge));
-    nightfall_missions.push_back(new Mission(
-        MapID::Moddok_Crevice, QuestID::ZaishenMission_Moddok_Crevice));
-    nightfall_missions.push_back(new Mission(
-        MapID::Tihark_Orchard, QuestID::ZaishenMission_Tihark_Orchard));
-    nightfall_missions.push_back(new Mission(
-        MapID::Dasha_Vestibule, QuestID::ZaishenMission_Dasha_Vestibule));
-    nightfall_missions.push_back(new Mission(
-        MapID::Dzagonur_Bastion, QuestID::ZaishenMission_Dzagonur_Bastion));
-    nightfall_missions.push_back(new Mission(
-        MapID::Grand_Court_of_Sebelkeh, QuestID::ZaishenMission_Grand_Court_of_Sebelkeh));
-    nightfall_missions.push_back(new Mission(
-        MapID::Jennurs_Horde, QuestID::ZaishenMission_Jennurs_Horde));
-    nightfall_missions.push_back(new Mission(
-        MapID::Nundu_Bay, QuestID::ZaishenMission_Nundu_Bay));
-    nightfall_missions.push_back(new Mission(
-        MapID::Gate_of_Desolation, QuestID::ZaishenMission_Gate_of_Desolation));
-    nightfall_missions.push_back(new Mission(
-        MapID::Ruins_of_Morah, QuestID::ZaishenMission_Ruins_of_Morah));
-    nightfall_missions.push_back(new Mission(
-        MapID::Gate_of_Pain, QuestID::ZaishenMission_Gate_of_Pain));
-    nightfall_missions.push_back(new Mission(
-        MapID::Gate_of_Madness, QuestID::ZaishenMission_Gate_of_Madness));
-    nightfall_missions.push_back(new Mission(
-        MapID::Abaddons_Gate, QuestID::ZaishenMission_Abaddons_Gate));
-
-    auto& this_vanquishes = vanquishes.at(Campaign::Nightfall);
-    this_vanquishes.push_back(new Vanquish(MapID::Cliffs_of_Dohjok));
-    this_vanquishes.push_back(new Vanquish(MapID::Fahranur_The_First_City));
-    this_vanquishes.push_back(new Vanquish(MapID::Issnur_Isles));
-    this_vanquishes.push_back(new Vanquish(MapID::Lahtenda_Bog));
-    this_vanquishes.push_back(new Vanquish(MapID::Mehtani_Keys));
-    this_vanquishes.push_back(new Vanquish(MapID::Plains_of_Jarin));
-    this_vanquishes.push_back(new Vanquish(MapID::Zehlon_Reach));
-    this_vanquishes.push_back(new Vanquish(MapID::Arkjok_Ward));
-    this_vanquishes.push_back(new Vanquish(MapID::Bahdok_Caverns));
-    this_vanquishes.push_back(new Vanquish(MapID::Barbarous_Shore));
-    this_vanquishes.push_back(new Vanquish(MapID::Dejarin_Estate));
-    this_vanquishes.push_back(new Vanquish(MapID::Gandara_the_Moon_Fortress));
-    this_vanquishes.push_back(new Vanquish(MapID::Jahai_Bluffs));
-    this_vanquishes.push_back(new Vanquish(MapID::Marga_Coast));
-    this_vanquishes.push_back(new Vanquish(MapID::Sunward_Marches));
-    this_vanquishes.push_back(new Vanquish(MapID::The_Floodplain_of_Mahnkelon));
-    this_vanquishes.push_back(new Vanquish(MapID::Turais_Procession));
-    this_vanquishes.push_back(new Vanquish(MapID::Forum_Highlands));
-    this_vanquishes.push_back(new Vanquish(MapID::Garden_of_Seborhin));
-    this_vanquishes.push_back(new Vanquish(MapID::Holdings_of_Chokhin));
-    this_vanquishes.push_back(new Vanquish(MapID::Resplendent_Makuun));
-    this_vanquishes.push_back(new Vanquish(MapID::The_Hidden_City_of_Ahdashim));
-    this_vanquishes.push_back(new Vanquish(MapID::The_Mirror_of_Lyss));
-    this_vanquishes.push_back(new Vanquish(MapID::Vehjin_Mines));
-    this_vanquishes.push_back(new Vanquish(MapID::Vehtendi_Valley));
-    this_vanquishes.push_back(new Vanquish(MapID::Wilderness_of_Bahdza));
-    this_vanquishes.push_back(new Vanquish(MapID::Yatendi_Canyons));
-    this_vanquishes.push_back(new Vanquish(MapID::Crystal_Overlook));
-    this_vanquishes.push_back(new Vanquish(MapID::Jokos_Domain));
-    this_vanquishes.push_back(new Vanquish(MapID::Poisoned_Outcrops));
-    this_vanquishes.push_back(new Vanquish(MapID::The_Alkali_Pan));
-    this_vanquishes.push_back(new Vanquish(MapID::The_Ruptured_Heart));
-    this_vanquishes.push_back(new Vanquish(MapID::The_Shattered_Ravines));
-    this_vanquishes.push_back(new Vanquish(MapID::The_Sulfurous_Wastes));
-
     auto& skills = pve_skills.at(Campaign::Nightfall);
     skills.push_back(new PvESkill(SkillID::Theres_Nothing_to_Fear));
     skills.push_back(new PvESkill(SkillID::Lightbringer_Signet));
@@ -2016,24 +1793,6 @@ void CompletionWindow::Initialize_EotN()
     // Destroyers
     eotn_missions.push_back(new EotNMission(MapID::Destructions_Depths_mission, QuestID::ZaishenMission_Destructions_Depths));
     eotn_missions.push_back(new EotNMission(MapID::A_Time_for_Heroes_mission, QuestID::ZaishenMission_A_Time_for_Heroes));
-
-    auto& this_vanquishes = vanquishes.at(Campaign::EyeOfTheNorth);
-    this_vanquishes.push_back(new Vanquish(MapID::Bjora_Marches, QuestID::ZaishenVanquish_Bjora_Marches));
-    this_vanquishes.push_back(new Vanquish(MapID::Drakkar_Lake, QuestID::ZaishenVanquish_Drakkar_Lake));
-    this_vanquishes.push_back(new Vanquish(MapID::Ice_Cliff_Chasms, QuestID::ZaishenVanquish_Ice_Cliff_Chasms));
-    this_vanquishes.push_back(new Vanquish(MapID::Jaga_Moraine, QuestID::ZaishenVanquish_Jaga_Moraine));
-    this_vanquishes.push_back(new Vanquish(MapID::Norrhart_Domains, QuestID::ZaishenVanquish_Norrhart_Domains));
-    this_vanquishes.push_back(new Vanquish(MapID::Varajar_Fells, QuestID::ZaishenVanquish_Varajar_Fells));
-    this_vanquishes.push_back(new Vanquish(MapID::Dalada_Uplands, QuestID::ZaishenVanquish_Dalada_Uplands));
-    this_vanquishes.push_back(new Vanquish(MapID::Grothmar_Wardowns, QuestID::ZaishenVanquish_Grothmar_Wardowns));
-    this_vanquishes.push_back(new Vanquish(MapID::Sacnoth_Valley, QuestID::ZaishenVanquish_Sacnoth_Valley));
-    this_vanquishes.push_back(new Vanquish(MapID::Alcazia_Tangle));
-    this_vanquishes.push_back(new Vanquish(MapID::Arbor_Bay, QuestID::ZaishenVanquish_Arbor_Bay));
-    this_vanquishes.push_back(new Vanquish(MapID::Magus_Stones, QuestID::ZaishenVanquish_Magus_Stones));
-    this_vanquishes.push_back(new Vanquish(MapID::Riven_Earth, QuestID::ZaishenVanquish_Riven_Earth));
-    this_vanquishes.push_back(new Vanquish(MapID::Sparkfly_Swamp, QuestID::ZaishenVanquish_Sparkfly_Swamp));
-    this_vanquishes.push_back(new Vanquish(MapID::Verdant_Cascades, QuestID::ZaishenVanquish_Verdant_Cascades));
-
     auto& skills = pve_skills.at(Campaign::EyeOfTheNorth);
     skills.push_back(new PvESkill(SkillID::Air_of_Superiority));
     skills.push_back(new PvESkill(SkillID::Asuran_Scan));
@@ -2307,6 +2066,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     if (pending_sort) {
         bool sorted = true;
         for (auto it = missions.begin(); sorted && it != missions.end(); ++it) {
+            sorted = sort(it->second);
+        }
+        for (auto it = outposts.begin(); sorted && it != outposts.end(); ++it) {
             sorted = sort(it->second);
         }
         for (auto it = vanquishes.begin(); sorted && it != vanquishes.end(); ++it) {
