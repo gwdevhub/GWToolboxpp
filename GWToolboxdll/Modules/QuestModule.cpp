@@ -135,9 +135,12 @@ namespace {
         const auto found = calculated_quest_paths.find(quest_id);
         if (found == calculated_quest_paths.end())
             return;
-        ASSERT(!found->second->calculating);
-        delete found->second;
+        auto cqp = found->second;
         calculated_quest_paths.erase(found);
+        if (!cqp->calculating) {
+            // NB: If its still calculating, it will delete itself later in OnQuestPathRecalculated
+            delete cqp;
+        }
     }
     CalculatedQuestPath* GetCalculatedQuestPath(GW::Constants::QuestID quest_id, bool create_if_not_found = true) {
         const auto found = calculated_quest_paths.find(quest_id);
@@ -200,6 +203,12 @@ namespace {
         auto cqp = GetCalculatedQuestPath(*(GW::Constants::QuestID*)&args, false);
         if (!cqp) return;
         ASSERT(cqp->calculating);
+
+        if (GetCalculatedQuestPath(cqp->quest_id) != cqp) {
+            // Calculated path is stale, delete and drop out
+            delete cqp;
+            return;
+        }
         
         cqp->current_waypoint = 0;
         cqp->waypoints = std::move(waypoints);
