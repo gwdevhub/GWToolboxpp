@@ -55,6 +55,7 @@
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/DialogModule.h>
 #include <GWCA/Managers/QuestMgr.h>
+#include <Widgets/BondsWidget.h>
 
 constexpr auto CMDTITLE_KEEP_CURRENT = 0xfffe;
 constexpr auto CMDTITLE_REMOVE_CURRENT = 0xffff;
@@ -180,6 +181,35 @@ namespace {
         }
     }
 
+    // Fetches agent id of party member (hero, player or henchman) by index. This is NOT player number!
+    uint32_t GetPartyMemberAgentId(uint32_t party_member_index) {
+        uint32_t current_idx = (uint32_t)-1;
+        const auto party = GW::PartyMgr::GetPartyInfo();
+        if (!party) return 0;
+        for (const auto& player_member : party->players) {
+            current_idx++;
+            if (current_idx == party_member_index) {
+                const auto player = GW::PlayerMgr::GetPlayerByID(player_member.login_number);
+                return player ? player->agent_id : 0;
+            }
+            for (const auto& hero : party->heroes) {
+                if (hero.owner_player_id != player_member.login_number)
+                    continue;
+                current_idx++;
+                if (current_idx == party_member_index) {
+                    return hero.agent_id;
+                }
+            }
+        }
+        for (const auto& hench_member : party->henchmen) {
+            current_idx++;
+            if (current_idx == party_member_index) {
+                return hench_member.agent_id;
+            }
+        }
+        return 0;
+    }
+
     bool IsNearestStr(const wchar_t* str)
     {
         return wcscmp(str, L"nearest") == 0 || wcscmp(str, L"closest") == 0;
@@ -286,6 +316,73 @@ namespace {
             GW::StoC::EmulatePacket(s);
             delete s;
         });
+    }
+
+    const char* cmd_bonds_syntax = "'/bonds [remove|add] [party_member_index|all] [all|skill_id]' remove or add bonds from a single party member, or all party members";
+
+    void CmdBondsAddRemove(const wchar_t*, int argc, const LPWSTR* argv) {
+
+        auto syntax_err = [argc,argv]() {
+            Log::WarningW(L"Invalid syntax for /%s; correct syntax:\n%S", argc ? argv[0] : L"Unk", cmd_bonds_syntax);
+        };
+
+        if (argc < 4) {
+            syntax_err();
+            return;
+        }
+        bool add_bond = true;
+        uint32_t agent_id = 0;
+        uint32_t skill_id = 0;
+
+        if (wcscmp(argv[1], L"add") == 0) {
+            add_bond = true;
+        }
+        else if (wcscmp(argv[1], L"remove") == 0) {
+            add_bond = false;
+        }
+        else {
+            syntax_err();
+            return;
+        }
+        // Party member (or all)
+        if (wcscmp(argv[2], L"all") != 0) {
+            uint32_t party_member_idx = 0;
+            if (!GuiUtils::ParseUInt(argv[2], &party_member_idx)) {
+                syntax_err();
+                return;
+            }
+            agent_id = GetPartyMemberAgentId(party_member_idx);
+            if (!agent_id) {
+                return; // Failed to find party member
+            }
+        }
+        // Skill
+        if (wcscmp(argv[3], L"all") != 0) {
+            if (!GuiUtils::ParseUInt(argv[3], &skill_id)) {
+                syntax_err();
+                return;
+            }
+        }
+        if (add_bond && !skill_id) {
+            Log::WarningW(L"/%s: skill_id required when adding bond",argv[0]);
+            syntax_err();
+            return;
+        }
+        if (add_bond && !agent_id) {
+            Log::WarningW(L"/%s: party_member_index required when adding bond",argv[0]);
+            syntax_err();
+            return;
+        }
+
+
+
+        if (add_bond) {
+            BondsWidget::UseBuff(agent_id, (GW::Constants::SkillID)skill_id);
+        }
+        else {
+            BondsWidget::DropBuffs(agent_id,(GW::Constants::SkillID)skill_id);
+        }
+
     }
 
     HallOfMonumentsAchievements hom_achievements;
@@ -627,6 +724,8 @@ void ChatCommands::DrawHelp()
     ImGui::Bullet();
     ImGui::Text("'/armor' is an alias for '/pingitem armor'.");
     ImGui::Bullet();
+    ImGui::Text(cmd_bonds_syntax);
+    ImGui::Bullet();
     ImGui::Text("'/borderless [on|off]' toggles, enables or disables borderless window.");
     ImGui::Bullet();
     ImGui::Text("'/camera (lock|unlock)' to lock or unlock the camera.");
@@ -927,6 +1026,7 @@ void ChatCommands::Initialize()
     GW::Chat::CreateCommand(L"gh", [](const wchar_t*, int, LPWSTR*) {
         GW::Chat::SendChat('/', "tp gh");
     });
+    GW::Chat::CreateCommand(L"bonds", CmdBondsAddRemove);
     GW::Chat::CreateCommand(L"chat", CmdChatTab);
     GW::Chat::CreateCommand(L"enter", CmdEnterMission);
     GW::Chat::CreateCommand(L"age2", CmdAge2);
