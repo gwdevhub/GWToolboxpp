@@ -58,7 +58,7 @@ namespace Missions {
         GW::Constants::SkillID skill_id;
 
     public:
-        uint32_t profession = 0;
+        GW::Constants::ProfessionByte profession = (GW::Constants::ProfessionByte)0;
         PvESkill(GW::Constants::SkillID _skill_id);
         bool IsDaily() override { return false; }
         bool HasQuest() override { return false; }

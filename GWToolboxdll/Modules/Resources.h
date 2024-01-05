@@ -8,7 +8,7 @@ namespace GuiUtils {
 }
 
 namespace GW::Constants {
-    enum class Profession;
+    enum class Profession : uint32_t;
     enum class MapID;
     enum class SkillID : uint32_t;
 }

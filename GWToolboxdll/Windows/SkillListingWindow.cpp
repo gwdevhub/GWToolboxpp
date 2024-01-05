@@ -231,7 +231,7 @@ nlohmann::json SkillListingWindow::Skill::ToJson()
     json["cd"] = GuiUtils::WStringToString(GWWConcise());
     json["t"] = skill->type;
     json["p"] = skill->profession;
-    json["a"] = IsPvE() ? 255 - skill->title : skill->attribute;
+    json["a"] = IsPvE() ? 255 - skill->title : (int)skill->attribute;
     if (IsElite()) {
         json["e"] = 1;
     }
@@ -330,9 +330,9 @@ const std::wstring SkillListingWindow::Skill::GetSkillType() const
             return str += L"Trap", str;
         case 22:
             switch (skill->profession) {
-                case 8:
+            case GW::Constants::ProfessionByte::Ritualist:
                     return str += L"Binding Ritual", str;
-                case 2:
+                case GW::Constants::ProfessionByte::Ranger:
                     return str += L"Nature Ritual", str;
             }
             return str += L"Ebon Vanguard Ritual", str;
