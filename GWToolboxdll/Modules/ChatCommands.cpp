@@ -249,7 +249,7 @@ namespace {
 
     void CmdChatTab(const wchar_t*, const int argc, const LPWSTR* argv)
     {
-        if (argc < 1) {
+        if (argc < 2) {
             return Log::Error(chat_tab_syntax);
         }
         uint32_t channel = 0xff;
