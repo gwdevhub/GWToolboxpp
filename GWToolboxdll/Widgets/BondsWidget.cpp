@@ -207,6 +207,59 @@ namespace {
     }
 }
 
+bool BondsWidget::UseBuff(GW::AgentID targetId, GW::Constants::SkillID skill_id)
+{
+    if (GW::Map::GetIsObserving() || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+        return false;
+    }
+    if (!GW::Agents::GetAgentByID(targetId)) {
+        return false;
+    }
+    if (!IsBondLikeSkill(skill_id)) {
+        return false;
+    }
+
+    const auto islot = GW::SkillbarMgr::GetSkillSlot(skill_id);
+    if (islot < 0) {
+        return false;
+    }
+    auto slot = static_cast<uint32_t>(islot);
+    const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
+    if (!skillbar || !skillbar->IsValid()) {
+        return false;
+    }
+    if (skillbar->skills[slot].recharge != 0) {
+        return false;
+    }
+
+    // capture by value!
+    GW::GameThread::Enqueue([slot, targetId]() -> void {
+        GW::SkillbarMgr::UseSkill(slot, targetId);
+        });
+    return true;
+}
+
+bool BondsWidget::DropBuffs(GW::AgentID targetId, GW::Constants::SkillID skill_id) {
+    const auto buffs = GW::Effects::GetPlayerBuffs();
+    if (!buffs)
+        return false;
+    for (const auto& buff : *buffs) {
+        if (!(skill_id == (GW::Constants::SkillID)0 || buff.skill_id == skill_id))
+            continue;
+        if (!(targetId == (GW::AgentID)0 || buff.target_agent_id == targetId))
+            continue;
+        const auto buff_id = buff.buff_id;
+        GW::GameThread::Enqueue([buff_id]() -> void {
+            GW::Effects::DropBuff(buff_id);
+            });
+    }
+    return true;
+}
+
+bool BondsWidget::IsBondLikeSkill(GW::Constants::SkillID skill_id) {
+    return GetAvailableBond(skill_id) != nullptr;
+}
+
 void BondsWidget::Initialize()
 {
     ToolboxWidget::Initialize();
@@ -385,7 +438,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
                     }
                     ImGui::GetWindowDrawList()->AddRect(tl, br, IM_COL32(255, 255, 255, 255));
                     if (ImGui::IsMouseReleased(0)) {
-                        UseBuff(party_list[y], static_cast<DWORD>(bond_list[x]));
+                        UseBuff(party_list[y], bond_list[x]);
                     }
                 }
             }

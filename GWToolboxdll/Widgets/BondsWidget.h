@@ -2,6 +2,12 @@
 
 #include <ToolboxWidget.h>
 
+namespace GW {
+    namespace Constants {
+        enum class SkillID : uint32_t;
+    }
+}
+
 class BondsWidget : public ToolboxWidget {
     BondsWidget() = default;
     ~BondsWidget() override = default;
@@ -24,4 +30,8 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;
+
+    static bool UseBuff(GW::AgentID targetId, GW::Constants::SkillID skill_id);
+    static bool DropBuffs(GW::AgentID targetId = (GW::AgentID)0, GW::Constants::SkillID skill_id = (GW::Constants::SkillID)0);
+    static bool IsBondLikeSkill(GW::Constants::SkillID skill_id);
 };
