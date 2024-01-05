@@ -92,6 +92,9 @@ namespace {
     GW::HookEntry OnDialogButton_Entry;
     GW::HookEntry OnSendDialog_Entry;
 
+    int pending_map_names = 1;
+    std::unordered_map<uint32_t,GuiUtils::EncString*> encoded_name_id_to_string;
+
     bool EncInfoField(const char* label, const wchar_t* enc_string)
     {
         std::string info_string;
@@ -284,6 +287,65 @@ namespace {
     {
         param_2[1] = static_cast<short>((param_1 - 1) / 0xff00) + 0x100;
         *param_2 = static_cast<short>((param_1 - 1) % 0xff00) + 0x100;
+    }
+
+    void DrawMapInfo(GW::Constants::MapID map_id) {
+        static char info_id[16];
+        snprintf(info_id, _countof(info_id), "map_info_%d", map_id);
+        ImGui::PushID(info_id);
+        auto type = "";
+        switch (GW::Map::GetInstanceType()) {
+        case GW::Constants::InstanceType::Outpost:
+            type = "Outpost\0\0\0";
+            break;
+        case GW::Constants::InstanceType::Explorable:
+            type = "Explorable";
+            break;
+        case GW::Constants::InstanceType::Loading:
+            type = "Loading\0\0\0";
+            break;
+        }
+        InfoField("Map ID", "%d", map_id);
+        ImGui::ShowHelp("Map ID is unique for each area");
+        InfoField("Map Region", "%d", GW::Map::GetRegion());
+        InfoField("Map District", "%d", GW::Map::GetDistrict());
+        InfoField("Map Type", type);
+        InfoField("Map file", "%lu", mapfile);
+        ImGui::ShowHelp("Map file is unique for each pathing map (e.g. used by minimap).\nMany different maps use the same map file");
+        if (ImGui::TreeNodeEx("Advanced", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            const GW::AreaInfo* map_info = GW::Map::GetMapInfo(map_id);
+            if (map_info) {
+                InfoField("Campaign", "%d", map_info->campaign);
+                InfoField("Continent", "%d", map_info->continent);
+                InfoField("Region", "%d", map_info->region);
+                InfoField("Type", "%d", map_info->type);
+                InfoField("Mission Complete?", "%d", ToolboxUtils::GetMissionState(GW::Map::GetMapID(), GW::PartyMgr::GetIsPartyInHardMode()));
+                InfoField("Instance Info Type", "%d", GW::Map::GetMapTypeInstanceInfo(map_info->type)->request_instance_map_type);
+                InfoField("Flags", "0x%X", map_info->flags);
+                InfoField("Thumbnail ID", "%d", map_info->thumbnail_id);
+                const auto m = GW::GetMapContext();
+                if (m) {
+                    InfoField("Map Boundaries", "%.0f, %.0f, %.0f, %.0f, %.0f", m->map_boundaries[0],m->map_boundaries[1],m->map_boundaries[2],m->map_boundaries[3],m->map_boundaries[4]);
+                }
+                GW::Vec2f pos = {static_cast<float>(map_info->x), static_cast<float>(map_info->y)};
+                InfoField("Map Pos", "%.2f, %.2f", pos.x, pos.y);
+                if (!pos.x) {
+                    pos.x = static_cast<float>(map_info->icon_start_x + (map_info->icon_end_x - map_info->icon_start_x) / 2);
+                    pos.y = static_cast<float>(map_info->icon_start_y + (map_info->icon_end_y - map_info->icon_start_y) / 2);
+                }
+                if (!pos.x) {
+                    pos.x = static_cast<float>(map_info->icon_start_x_dupe + (map_info->icon_end_x_dupe - map_info->icon_start_x_dupe) / 2);
+                    pos.y = static_cast<float>(map_info->icon_start_y_dupe + (map_info->icon_end_y_dupe - map_info->icon_start_y_dupe) / 2);
+                }
+                InfoField("Calculated Pos", "%.2f, %.2f", pos.x, pos.y);
+                static wchar_t name_enc[8];
+                if (GW::UI::UInt32ToEncStr(map_info->name_id, name_enc, 8)) {
+                    EncInfoField("Name Enc", name_enc);
+                }
+            }
+            ImGui::TreePop();
+        }
+        ImGui::PopID();
     }
 
     void DrawSkillInfo(GW::Skill* skill, GuiUtils::EncString* name, const bool force_advanced = false)
@@ -636,9 +698,15 @@ namespace {
         ui_message_packets_recorded.clear();
     }
 
-    std::map<uint32_t,IDirect3DTexture9**> textures_created;
+    std::unordered_map<uint32_t,IDirect3DTexture9**> textures_created;
 
     bool record_textures = false;
+
+    void FileIdToFileHash(uint32_t file_id, wchar_t* fileHash) {
+        fileHash[0] = static_cast<wchar_t>(((file_id - 1) % 0xff00) + 0x100);
+        fileHash[1] = static_cast<wchar_t>(((file_id - 1) / 0xff00) + 0x100);
+        fileHash[2] = 0;
+    }
 
     uint32_t FileHashToFileId(wchar_t* param_1) {
         if (!param_1)
@@ -698,7 +766,9 @@ namespace {
                 ImGui::NextSpacedElement();
                 ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, normal_bg, tint);
                 if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("File ID 0x%08x", it.first);
+                    static wchar_t out[3] = { 0 };
+                    FileIdToFileHash(it.first, out);
+                    ImGui::SetTooltip("File ID: 0x%08x\nFile Hash: 0x%04x 0x%04x", it.first, out[0], out[1]);
                 }
                 ImGui::PopID();
             }
@@ -841,60 +911,14 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             ImGui::PopID();
         }
         if (show_map && ImGui::CollapsingHeader("Map")) {
-            ImGui::PushID("map_info");
-            auto type = "";
-            switch (GW::Map::GetInstanceType()) {
-                case GW::Constants::InstanceType::Outpost:
-                    type = "Outpost\0\0\0";
-                    break;
-                case GW::Constants::InstanceType::Explorable:
-                    type = "Explorable";
-                    break;
-                case GW::Constants::InstanceType::Loading:
-                    type = "Loading\0\0\0";
-                    break;
-            }
-            InfoField("Map ID", "%d", GW::Map::GetMapID());
-            ImGui::ShowHelp("Map ID is unique for each area");
-            InfoField("Map Region", "%d", GW::Map::GetRegion());
-            InfoField("Map District", "%d", GW::Map::GetDistrict());
-            InfoField("Map Type", type);
-            InfoField("Map file", "%lu", mapfile);
-            ImGui::ShowHelp("Map file is unique for each pathing map (e.g. used by minimap).\nMany different maps use the same map file");
-            if (ImGui::TreeNodeEx("Advanced", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-                const GW::AreaInfo* map_info = GW::Map::GetCurrentMapInfo();
-                if (map_info) {
-                    InfoField("Campaign", "%d", map_info->campaign);
-                    InfoField("Continent", "%d", map_info->continent);
-                    InfoField("Region", "%d", map_info->region);
-                    InfoField("Type", "%d", map_info->type);
-                    InfoField("Mission Complete?", "%d", ToolboxUtils::GetMissionState(GW::Map::GetMapID(), GW::PartyMgr::GetIsPartyInHardMode()));
-                    InfoField("Instance Info Type", "%d", GW::Map::GetMapTypeInstanceInfo(map_info->type)->request_instance_map_type);
-                    InfoField("Flags", "0x%X", map_info->flags);
-                    InfoField("Thumbnail ID", "%d", map_info->thumbnail_id);
-                    const auto m = GW::GetMapContext();
-                    if (m) {
-                        InfoField("Map Boundaries", "%.0f, %.0f, %.0f, %.0f, %.0f", m->map_boundaries[0],m->map_boundaries[1],m->map_boundaries[2],m->map_boundaries[3],m->map_boundaries[4]);
-                    }
-                    GW::Vec2f pos = {static_cast<float>(map_info->x), static_cast<float>(map_info->y)};
-                    InfoField("Map Pos", "%.2f, %.2f", pos.x, pos.y);
-                    if (!pos.x) {
-                        pos.x = static_cast<float>(map_info->icon_start_x + (map_info->icon_end_x - map_info->icon_start_x) / 2);
-                        pos.y = static_cast<float>(map_info->icon_start_y + (map_info->icon_end_y - map_info->icon_start_y) / 2);
-                    }
-                    if (!pos.x) {
-                        pos.x = static_cast<float>(map_info->icon_start_x_dupe + (map_info->icon_end_x_dupe - map_info->icon_start_x_dupe) / 2);
-                        pos.y = static_cast<float>(map_info->icon_start_y_dupe + (map_info->icon_end_y_dupe - map_info->icon_start_y_dupe) / 2);
-                    }
-                    InfoField("Calculated Pos", "%.2f, %.2f", pos.x, pos.y);
-                    static wchar_t name_enc[8];
-                    if (GW::UI::UInt32ToEncStr(map_info->name_id, name_enc, 8)) {
-                        EncInfoField("Name Enc", name_enc);
-                    }
-                }
-                ImGui::TreePop();
-            }
-            ImGui::PopID();
+            DrawMapInfo(GW::Map::GetMapID());
+        }
+        if (show_map && ImGui::CollapsingHeader("Lookup Map")) {
+            static int map_id = 0;
+            ImGui::InputInt("Map ID", &map_id, 1, 1);
+            const auto current = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
+            if(current)
+                DrawMapInfo(static_cast<GW::Constants::MapID>(map_id));
         }
         if (show_dialog && ImGui::CollapsingHeader("Dialog")) {
             EncInfoField("Dialog Body", DialogModule::GetDialogBody());
@@ -927,6 +951,14 @@ void InfoWindow::Draw(IDirect3DDevice9*)
                 last_hovered_skill_id = current->skill_id;
             }
             DrawSkillInfo(GW::SkillbarMgr::GetSkillConstantData(last_hovered_skill_id), &skill_name, true);
+        }
+        if (ImGui::CollapsingHeader("Lookup Skill")) {
+            static GuiUtils::EncString skill_name;
+            static int skill_id = 0;
+            ImGui::InputInt("Skill ID", &skill_id, 1, 1);
+            const auto current = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(skill_id));
+            if(current)
+                DrawSkillInfo(current, &skill_name, true);
         }
         if (show_item && ImGui::CollapsingHeader("Hovered Item")) {
             static GuiUtils::EncString item_name;
