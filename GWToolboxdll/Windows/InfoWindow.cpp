@@ -698,7 +698,9 @@ namespace {
         ui_message_packets_recorded.clear();
     }
 
-    std::unordered_map<uint32_t,IDirect3DTexture9**> textures_created;
+    std::unordered_map<uint32_t,IDirect3DTexture9**> textures_created_by_file_id;
+    std::unordered_map<IDirect3DTexture9**,uint32_t> texture_file_ids;
+    std::vector<IDirect3DTexture9**> textures_created;
 
     bool record_textures = false;
 
@@ -722,8 +724,11 @@ namespace {
         GW::Hook::EnterHook();
         const auto out = CreateTexture_Ret(file_name, flags);
         uint32_t file_id = FileHashToFileId(file_name);
-        if (record_textures && textures_created.find(file_id) == textures_created.end()) {
-            textures_created[file_id] = GwDatTextureModule::LoadTextureFromFileId(file_id);
+        if (textures_created_by_file_id.find(file_id) == textures_created_by_file_id.end()) {
+            const auto f = GwDatTextureModule::LoadTextureFromFileId(file_id);
+            textures_created.push_back(f);
+            textures_created_by_file_id[file_id] = f;
+            texture_file_ids[f] = file_id;
         }
         GW::Hook::LeaveHook();
         return out;
@@ -745,7 +750,9 @@ namespace {
             constexpr auto uv0 = ImVec2(0, 0);
 
             if (ImGui::SmallButton("Reset")) {
+                textures_created_by_file_id.clear();
                 textures_created.clear();
+                texture_file_ids.clear();
             }
 
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -754,9 +761,8 @@ namespace {
 
             ImGui::StartSpacedElements(scaled_size.x);
 
-            for (auto& it : textures_created) {
-                ImGui::PushID(it.first);
-                const auto texture = it.second;
+            for (const auto texture : textures_created) {
+                ImGui::PushID(texture);
                 if (!texture || !*texture) {
                     ImGui::PopID();
                     continue;
@@ -767,8 +773,8 @@ namespace {
                 ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, normal_bg, tint);
                 if (ImGui::IsItemHovered()) {
                     static wchar_t out[3] = { 0 };
-                    FileIdToFileHash(it.first, out);
-                    ImGui::SetTooltip("File ID: 0x%08x\nFile Hash: 0x%04x 0x%04x", it.first, out[0], out[1]);
+                    FileIdToFileHash(texture_file_ids[texture], out);
+                    ImGui::SetTooltip("File ID: 0x%08x\nFile Hash: 0x%04x 0x%04x", texture_file_ids[texture], out[0], out[1]);
                 }
                 ImGui::PopID();
             }
