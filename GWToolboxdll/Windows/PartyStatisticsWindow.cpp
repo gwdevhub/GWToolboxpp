@@ -140,9 +140,18 @@ namespace {
         });
         return found != party_members.end() ? *found : nullptr;
     }
-
     PartyMember* GetPartyMemberByEncName(const wchar_t* enc_name)
     {
+        /* 
+        @Cleanup: 
+         - What happens when 3 players each bring the same hero ? "Ebon Vanguard Mesmer" x 2
+         - GW sometimes sends the enc_name packet after the NPC is created; would this affect henchmen?
+         - Players can have names that match heros or henchmen in some edge cases
+         - Obfuscator could be a problem
+
+         Instead maybe hook into the PartyPlayerAdd / PartyAllyAdd / PartyHeroAdd packets, then identify by player owner / hero id instead of just using name
+         */
+
         if (pending_party_members)
             return nullptr;
         const auto found = std::ranges::find_if(party_members, [enc_name](const auto party_member) {
