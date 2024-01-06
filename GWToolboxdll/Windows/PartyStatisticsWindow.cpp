@@ -122,6 +122,8 @@ namespace {
 
     PartyMember* GetPartyMemberByPartyIdx(const uint32_t party_idx)
     {
+        if (pending_party_members)
+            return nullptr;
         const auto found = std::ranges::find_if(party_members, [party_idx](const auto party_member) {
             return party_member->party_idx == party_idx;
         });
@@ -130,6 +132,8 @@ namespace {
 
     PartyMember* GetPartyMemberByAgentId(const uint32_t agent_id)
     {
+        if (pending_party_members)
+            return nullptr;
         // NB: This function is called on the game thread whenever a skill is used. Would it be much performance difference to keep a std::map for this?
         const auto found = std::ranges::find_if(party_members, [agent_id](const auto party_member) {
             return party_member->agent_id == agent_id;
@@ -139,6 +143,8 @@ namespace {
 
     PartyMember* GetPartyMemberByEncName(const wchar_t* enc_name)
     {
+        if (pending_party_members)
+            return nullptr;
         const auto found = std::ranges::find_if(party_members, [enc_name](const auto party_member) {
             return party_member->name_enc == enc_name;
         });
