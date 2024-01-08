@@ -78,11 +78,6 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         return;
     }
 
-    if (!visible) {
-        drawn = false;
-        return;
-    }
-
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowPos(ImVec2(16.f, 16.f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
