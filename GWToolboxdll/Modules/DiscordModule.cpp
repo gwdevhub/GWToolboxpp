@@ -718,10 +718,10 @@ void DiscordModule::UpdateActivity()
                     case GW::Constants::ServerRegion::China:
                     case GW::Constants::ServerRegion::Korea:
                     case GW::Constants::ServerRegion::Japan:
-                        sprintf(region_info, "%s %d", region_abbreviations[map_region], map_district);
+                        sprintf(region_info, "%s %d", region_abbreviations[server_region], map_district);
                         break;
                     default:
-                        sprintf(region_info, "%s %s %d", region_abbreviations[map_region], map_languages[map_language], map_district);
+                        sprintf(region_info, "%s %s %d", region_abbreviations[server_region], map_languages[map_language], map_district);
                         break;
                 }
             }

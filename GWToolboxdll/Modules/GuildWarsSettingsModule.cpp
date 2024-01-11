@@ -20,7 +20,7 @@
 #include <GWCA/Constants/QuestIDs.h>
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
-#include <d3d9on12.h>
+
 #include <GWCA/Managers/RenderMgr.h>
 
 namespace {
@@ -531,23 +531,20 @@ namespace {
 
     CreateUIComponent_pt CreateUIComponent = nullptr;
 
-    bool IsD3D9On12Device(IDirect3DDevice9* d3d9Device) {
-        // Manually define the GUID for IDirect3DDevice9On12
-        const GUID IID_IDirect3DDevice9On12_Local = 
-        { 0x6B4A1127, 0x23F0, 0x40F8, { 0x8F, 0xA3, 0xC7, 0x76, 0x0A, 0x77, 0x56, 0xDC } };
-
-        IDirect3DDevice9On12* d3d9On12Device = nullptr;
+    bool DoesDeviceSupportInterface(IDirect3DDevice9* d3d9Device, const GUID interface_iid) {
+        if (!d3d9Device)
+            return false;
+        IUnknown* dxvkInterface = nullptr;
 
         // Use the locally defined GUID
-        HRESULT hr = d3d9Device->QueryInterface(IID_IDirect3DDevice9On12_Local, (void**)&d3d9On12Device);
+        HRESULT hr = d3d9Device->QueryInterface(interface_iid, (void**)&dxvkInterface);
 
         if (SUCCEEDED(hr)) {
-            // IDirect3DDevice9On12 interface is supported.
-            d3d9On12Device->Release();  // Release the IDirect3DDevice9On12 interface.
+            dxvkInterface->Release();  // Release the DXVK-specific interface.
             return true;
         }
 
-        // The device does not support IDirect3DDevice9On12.
+        // The device does not support the DXVK-specific interface.
         return false;
     }
 
@@ -625,11 +622,6 @@ namespace {
         new_name_enc += name_enc;
         new_name_enc += L"\x2\x108\x107";
 
-        const auto device = GW::Render::GetDevice();
-        if (device && IsD3D9On12Device(device)) {
-            new_name_enc += L", D3D9On12";
-        }
-
         if (dll_product_name.size()) {
             new_name_enc += L" (";
             new_name_enc += GuiUtils::StringToWString(dll_base_name);
@@ -655,6 +647,20 @@ namespace {
             new_name_enc += L")";
         }
         new_name_enc += L"\x1";
+
+        const auto device = GW::Render::GetDevice();
+
+        // IID_IDirect3DDevice9On12
+        const bool d3d9on12_support = DoesDeviceSupportInterface(device, { 0x6B4A1127, 0x23F0, 0x40F8, { 0x8F, 0xA3, 0xC7, 0x76, 0x0A, 0x77, 0x56, 0xDC } });
+        if (d3d9on12_support) {
+            new_name_enc += L"\x2\x102\x2\x108\x107Supports D3D9On12\x1";
+        }
+        // IID_DXVKInterface
+        const bool dxvk_support = DoesDeviceSupportInterface(device, { 0x12345678, 0x8765, 0x4321, { 0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89 } });
+        if (dxvk_support) {
+            new_name_enc += L"\x2\x102\x2\x108\x107Supports Vulkan\x1";
+        }
+
 
         return CreateUIComponent(frame_id, behavior, child_frame_id, ui_callback, new_name_enc.data(), label);
     }
