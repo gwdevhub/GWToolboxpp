@@ -51,6 +51,10 @@ namespace {
         "Bag 2"
     };
 
+    bool wcseq(const wchar_t* a, const wchar_t* b) {
+        return a && b && wcscmp(a, b) == 0;
+    }
+
     bool GetIsProfessionUnlocked(GW::Constants::Profession prof)
     {
         const auto world = GW::GetWorldContext();
@@ -73,7 +77,13 @@ namespace {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
     }
 
-    std::unordered_map<uint32_t, std::pair<uint16_t, clock_t>> pending_moves; // { bag_idx | slot, { quantity_to_move,move_started_at} }
+    struct PendingMove {
+        uint32_t item_id;
+        uint16_t quantity;
+        clock_t started_at;
+    };
+
+    std::unordered_map<uint32_t, PendingMove> pending_moves; // { bag_idx | slot, { quantity_to_move,move_started_at} }
     uint16_t get_pending_move(const uint32_t bag_idx, const uint32_t slot)
     {
         const uint32_t bag_slot = bag_idx << 16 | slot;
@@ -81,17 +91,33 @@ namespace {
         if (found == pending_moves.end()) {
             return 0;
         }
-        if (TIMER_DIFF(found->second.second) > 3000) // 3 second timeout incase of hanging moves
+        if (TIMER_DIFF(found->second.started_at) > 3000) // 3 second timeout incase of hanging moves
         {
             return 0;
         }
-        return found->second.first;
+        return found->second.quantity;
+    }
+    GW::Item* get_pending_move_item(const uint32_t bag_idx, const uint32_t slot) {
+        const uint32_t bag_slot = bag_idx << 16 | slot;
+        const auto found = pending_moves.find(bag_slot);
+        if (found == pending_moves.end()) {
+            return nullptr;
+        }
+        if (TIMER_DIFF(found->second.started_at) > 3000) // 3 second timeout incase of hanging moves
+        {
+            return nullptr;
+        }
+        return GW::Items::GetItemById(found->second.item_id);
     }
 
-    void set_pending_move(const uint32_t bag_idx, const uint32_t slot, const uint16_t quantity_to_move)
+    void set_pending_move(const uint32_t bag_idx, const uint32_t slot, const uint16_t quantity_to_move, const uint32_t item_id)
     {
         const uint32_t bag_slot = bag_idx << 16 | slot;
-        pending_moves[bag_slot] = {static_cast<uint16_t>(get_pending_move(bag_idx, slot) + quantity_to_move), TIMER_INIT()};
+        pending_moves[bag_slot] = {
+            item_id,
+            static_cast<uint16_t>(get_pending_move(bag_idx, slot) + quantity_to_move),
+            TIMER_INIT()
+        };
     }
 
     void clear_pending_move(GW::Constants::Bag bag_idx, const uint32_t slot)
@@ -161,10 +187,25 @@ namespace {
         available -= pending_move;
         const uint16_t will_move = std::min<uint16_t>(item->quantity, available);
         if (will_move) {
-            set_pending_move(static_cast<uint32_t>(GW::Constants::Bag::Material_Storage), slot, will_move);
+            set_pending_move(static_cast<uint32_t>(GW::Constants::Bag::Material_Storage), slot, will_move, item->item_id);
             GW::Items::MoveItem(item, GW::Constants::Bag::Material_Storage, slot, will_move);
         }
         return will_move;
+    }
+
+    size_t find_same_item_in_bag(const GW::Bag* bag, const GW::Item* item, const size_t start_slot = 0) {
+        if (!bag) return GW::Bag::npos;
+        const auto& items = bag->items;
+        for (size_t i = start_slot; i < items.size(); i++) {
+            if (!item) {
+                if (items[i])
+                    continue;
+                return i;
+            }
+            if (item != items[i] && Instance().IsSameItem(item, items[i]))
+                return i;
+        }
+        return GW::Bag::npos;
     }
 
     // From bag_first to bag_last (included) i.e. [bag_first, bag_last]
@@ -182,7 +223,7 @@ namespace {
                 continue;
             }
             const uint16_t max_slot_size = MaxSlotSize(bag_i);
-            size_t slot = bag->find2(item);
+            size_t slot = find_same_item_in_bag(bag,item);
             while (slot != GW::Bag::npos) {
                 const GW::Item* b_item = bag->items[slot];
                 // b_item can be null in the case of birthday present for instance.
@@ -192,14 +233,14 @@ namespace {
                     const uint16_t will_move = std::min<uint16_t>(availaible, remaining);
                     if (will_move > 0) {
                         GW::Items::MoveItem(item, b_item, will_move);
-                        set_pending_move(bag_i, slot, will_move);
+                        set_pending_move(bag_i, slot, will_move, item->item_id);
                         remaining -= will_move;
                     }
                     if (remaining == 0) {
                         return to_move;
                     }
                 }
-                slot = bag->find2(item, slot + 1);
+                slot = find_same_item_in_bag(bag,item,slot + 1);
             }
         }
         return to_move - remaining;
@@ -208,26 +249,38 @@ namespace {
     uint16_t move_to_first_empty_slot(const GW::Item* item, const size_t bag_first, const size_t bag_last, uint16_t quantity = 1000u)
     {
         quantity = std::min<uint16_t>(item->quantity, quantity);
+        const auto stackable = item->GetIsStackable();
         for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
             GW::Bag* bag = GW::Items::GetBag(bag_i);
             if (!bag) {
                 continue;
             }
             const uint16_t max_slot_size = MaxSlotSize(bag_i);
-            size_t slot = bag->find1(0);
-            // The reason why we test if the slot has no item is because birthday present have ModelId == 0
-            while (slot != GW::Bag::npos) {
-                if (bag->items[slot] == nullptr) {
-                    uint16_t available = max_slot_size - get_pending_move(bag_i, slot);
-                    const uint16_t will_move = std::min<uint16_t>(quantity, available);
-                    if (will_move > 0) {
-                        set_pending_move(bag_i, slot, will_move);
-                        GW::Items::MoveItem(item, bag, slot, will_move);
-                        return will_move;
-                    }
+            size_t slot = (size_t)-1;
+            
+            do {
+                slot = find_same_item_in_bag(bag, nullptr,slot + 1);
+                if (slot == GW::Bag::npos)
+                    break; // No empty slot found
+                if (bag->items[slot] != nullptr)
+                    break; // Slot isn't empty(?)
+                const auto pending_amount_for_slot = get_pending_move(bag_i, slot);
+                if (pending_amount_for_slot) {
+                    // Slot is currently empty, but we're pending a move for something into it
+                    if (!stackable)
+                        continue; // This item isn't stackable
+                    if (!Instance().IsSameItem(item, get_pending_move_item(bag_i, slot)))
+                        continue; // The pending item isn't the same as this item
                 }
-                slot = bag->find1(0, slot + 1);
-            }
+                uint16_t available = max_slot_size - pending_amount_for_slot;
+                const uint16_t will_move = std::min<uint16_t>(quantity, available);
+                if (will_move > 0) {
+                    set_pending_move(bag_i, slot, will_move, item->item_id);
+                    GW::Items::MoveItem(item, bag, slot, will_move);
+                    return will_move;
+                }
+
+            } while (true);
         }
         return 0;
     }
@@ -416,6 +469,36 @@ namespace {
         });
         for (const auto& item : items) {
             move_item_to_storage(item);
+        }
+        pending_moves.clear();
+    }
+    void store_all_dyes()
+    {
+        const std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [](const InventoryManager::Item* item) {
+            return item && item->type == GW::Constants::ItemType::Dye;
+            });
+        for (const auto& item : items) {
+            move_item_to_storage(item);
+        }
+        pending_moves.clear();
+    }
+    void withdraw_all_dyes()
+    {
+        const std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Storage_1, GW::Constants::Bag::Storage_14, [](const InventoryManager::Item* item) {
+            return item && item->type == GW::Constants::ItemType::Dye;
+            });
+        for (const auto& item : items) {
+            move_item_to_inventory(item);
+        }
+        pending_moves.clear();
+    }
+    void withdraw_all_tomes()
+    {
+        const std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Storage_1, GW::Constants::Bag::Storage_14, [](const InventoryManager::Item* item) {
+            return item && item->IsTome();
+            });
+        for (const auto& item : items) {
+            move_item_to_inventory(item);
         }
         pending_moves.clear();
     }
@@ -1611,13 +1694,10 @@ GW::Item* InventoryManager::GetAvailableInventoryStack(GW::Item* like_item, cons
 
 bool InventoryManager::IsSameItem(const GW::Item* item1, const GW::Item* item2)
 {
-    // TODO: Special cases for minipets and kits (dunno whats up with minipets, but kits have uses in mod struct)
     return item1 && item2
-           && (!item1->model_id || item1->model_id == item2->model_id)
-           && (!item1->model_file_id || item1->model_file_id == item2->model_file_id)
-           && (!item1->mod_struct_size || item1->mod_struct_size == item2->mod_struct_size)
-           && (!item1->interaction || item1->interaction == item2->interaction)
-           && (!item1->mod_struct_size || memcmp(item1->mod_struct, item2->mod_struct, item1->mod_struct_size * sizeof(item1->mod_struct[0])) == 0);
+        && (!item1->model_file_id || item1->model_file_id == item2->model_file_id)
+        && (item1->type != GW::Constants::ItemType::Dye || memcmp(&item1->dye,&item2->dye,sizeof(item1->dye)) == 0)
+        && wcseq(item1->name_enc, item2->name_enc);
 }
 
 bool InventoryManager::IsPendingIdentify() const
@@ -2061,25 +2141,50 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
             move_item(context_item_actual);
             goto end_popup;
         }
-        if (context_item_actual->GetIsMaterial() && context_item_actual->bag->IsInventoryBag()) {
-            if (ImGui::Button("Store All Materials", size)) {
-                ImGui::CloseCurrentPopup();
-                store_all_materials();
-                goto end_popup;
+        if (context_item_actual->bag->IsInventoryBag()) {
+            if (context_item_actual->GetIsMaterial()) {
+                if (ImGui::Button("Store All Materials", size)) {
+                    ImGui::CloseCurrentPopup();
+                    store_all_materials();
+                    goto end_popup;
+                }
+            }
+            else if (context_item_actual->IsTome()) {
+                if (ImGui::Button("Store All Tomes", size)) {
+                    ImGui::CloseCurrentPopup();
+                    store_all_tomes();
+                    goto end_popup;
+                }
+            }
+            else if (context_item_actual->type == GW::Constants::ItemType::Rune_Mod) {
+                if (ImGui::Button("Store All Upgrades", size)) {
+                    ImGui::CloseCurrentPopup();
+                    store_all_upgrades();
+                    goto end_popup;
+                }
+            }
+            else if (context_item_actual->type == GW::Constants::ItemType::Dye) {
+                if (ImGui::Button("Store All Dyes", size)) {
+                    ImGui::CloseCurrentPopup();
+                    store_all_dyes();
+                    goto end_popup;
+                }
             }
         }
-        else if (context_item_actual->IsTome() && context_item_actual->bag->IsInventoryBag()) {
-            if (ImGui::Button("Store All Tomes", size)) {
-                ImGui::CloseCurrentPopup();
-                store_all_tomes();
-                goto end_popup;
+        else {
+            if (context_item_actual->type == GW::Constants::ItemType::Dye) {
+                if (ImGui::Button("Withdraw All Dyes", size)) {
+                    ImGui::CloseCurrentPopup();
+                    withdraw_all_dyes();
+                    goto end_popup;
+                }
             }
-        }
-        else if (context_item_actual->type == GW::Constants::ItemType::Rune_Mod && context_item_actual->bag->IsInventoryBag()) {
-            if (ImGui::Button("Store All Upgrades", size)) {
-                ImGui::CloseCurrentPopup();
-                store_all_upgrades();
-                goto end_popup;
+            if (context_item_actual->IsTome()) {
+                if (ImGui::Button("Withdraw All Tomes", size)) {
+                    ImGui::CloseCurrentPopup();
+                    withdraw_all_tomes();
+                    goto end_popup;
+                }
             }
         }
         char buf[128];
