@@ -110,7 +110,7 @@ namespace {
 
     struct MapStruct {
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
-        GW::Constants::MapRegion region_id = GW::Constants::MapRegion::International;
+        GW::Constants::ServerRegion region_id = GW::Constants::ServerRegion::International;
         GW::Constants::Language language_id = GW::Constants::Language::English;
         uint32_t district_number = 0;
     };

@@ -411,7 +411,7 @@ void DiscordModule::JoinParty()
             Log::Log("Travelling to outpost\n");
             GW::Map::Travel(
                 static_cast<GW::Constants::MapID>(join_in_progress.map_id), 
-                static_cast<GW::Constants::MapRegion>(join_in_progress.region_id),
+                static_cast<GW::Constants::ServerRegion>(join_in_progress.region_id),
                 join_in_progress.district_id,
                 static_cast<GW::Constants::Language>(join_in_progress.language_id));
         }
@@ -656,7 +656,7 @@ void DiscordModule::UpdateActivity()
 
     if (show_activity) {
         const auto map_id = static_cast<unsigned short>(GW::Map::GetMapID());
-        auto map_region = static_cast<short>(GW::Map::GetRegion());
+        const auto server_region = static_cast<short>(GW::Map::GetRegion());
         const auto map_language = static_cast<short>(GW::Map::GetLanguage());
         const auto map_district = static_cast<short>(GW::Map::GetDistrict());
         char party_id[128];
@@ -671,7 +671,7 @@ void DiscordModule::UpdateActivity()
                         p->party_id);
             }
             else {
-                sprintf(party_id, "%d-%d-%d-%d-%d-%d", map_id, map_region, m->type, map_language, map_district, p->party_id);
+                sprintf(party_id, "%d-%d-%d-%d-%d-%d", map_id, server_region, m->type, map_language, map_district, p->party_id);
             }
             SHA1 checksum;
             checksum.update(party_id);
@@ -679,7 +679,7 @@ void DiscordModule::UpdateActivity()
             // Add a party secret if in an outpost. TODO: Joining feature?
             DiscordJoinableParty secret;
             secret.map_id = map_id;
-            secret.region_id = map_region;
+            secret.region_id = server_region;
             secret.language_id = map_language;
             secret.district_id = map_district;
             secret.ghkey[0] = 0;
@@ -708,17 +708,16 @@ void DiscordModule::UpdateActivity()
             if (map_name_decoded.wstring().empty()) {
                 return; // Map name not decoded yet.
             }
-            map_region = static_cast<short>(m->region);
+            auto map_region = static_cast<short>(m->region);
             char region_info[32] = {0};
             if (instance_type == GW::Constants::InstanceType::Outpost && !is_guild_hall) {
-                const auto server_region = static_cast<GW::Constants::MapRegion>(map_region);
-                switch (server_region) {
-                    case GW::Constants::MapRegion::International:
+                switch (static_cast<GW::Constants::ServerRegion>(server_region)) {
+                    case GW::Constants::ServerRegion::International:
                         sprintf(region_info, "International %d", map_district);
                         break;
-                    case GW::Constants::MapRegion::China:
-                    case GW::Constants::MapRegion::Korea:
-                    case GW::Constants::MapRegion::Japan:
+                    case GW::Constants::ServerRegion::China:
+                    case GW::Constants::ServerRegion::Korea:
+                    case GW::Constants::ServerRegion::Japan:
                         sprintf(region_info, "%s %d", region_abbreviations[map_region], map_district);
                         break;
                     default:

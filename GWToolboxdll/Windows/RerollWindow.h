@@ -5,7 +5,7 @@
 
 namespace GW::Constants {
     enum class MapID;
-    enum class MapRegion;
+    enum class ServerRegion;
     enum class Language;
 }
 
@@ -102,7 +102,7 @@ private:
     GW::FriendStatus online_status = GW::FriendStatus::Online;
     GW::Constants::MapID map_id = static_cast<GW::Constants::MapID>(0);
     int district_id = 0;
-    GW::Constants::MapRegion region_id = (GW::Constants::MapRegion)0;
+    GW::Constants::ServerRegion region_id = (GW::Constants::ServerRegion)0;
     GW::Constants::Language language_id = (GW::Constants::Language)0;
     uint32_t* guild_hall_uuid = nullptr;
     wchar_t initial_player_name[20] = {0};

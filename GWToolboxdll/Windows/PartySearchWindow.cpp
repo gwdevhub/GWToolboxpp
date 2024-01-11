@@ -117,16 +117,16 @@ namespace {
 
     const char* DistrictAbbr(int32_t region, int32_t language)
     {
-        switch (static_cast<GW::Constants::MapRegion>(region)) {
-            case GW::Constants::MapRegion::International:
+        switch (static_cast<GW::Constants::ServerRegion>(region)) {
+            case GW::Constants::ServerRegion::International:
                 return "INT";
-            case GW::Constants::MapRegion::America:
+            case GW::Constants::ServerRegion::America:
                 return "AE";
-            case GW::Constants::MapRegion::Korea:
+            case GW::Constants::ServerRegion::Korea:
                 return "KR";
-            case GW::Constants::MapRegion::China:
+            case GW::Constants::ServerRegion::China:
                 return "CN";
-            case GW::Constants::MapRegion::Japan:
+            case GW::Constants::ServerRegion::Japan:
                 return "JP";
             default:
                 switch (static_cast<GW::Constants::Language>(language)) {

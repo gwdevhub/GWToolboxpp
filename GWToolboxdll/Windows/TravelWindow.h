@@ -11,7 +11,7 @@ namespace GuiUtils {
 namespace GW {
     namespace Constants {
         enum class Language;
-        enum class MapRegion;
+        enum class ServerRegion;
     }
 }
 
