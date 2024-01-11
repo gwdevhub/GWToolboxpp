@@ -900,7 +900,7 @@ namespace GuiUtils {
         }
     }
 
-    EncString* EncString::language(const GW::Constants::TextLanguage l)
+    EncString* EncString::language(const GW::Constants::Language l)
     {
         if (language_id == l) {
             return this;
@@ -929,7 +929,7 @@ namespace GuiUtils {
     {
         if (!decoded && !decoding && !encoded_ws.empty()) {
             decoding = true;
-            GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnStringDecoded, this, static_cast<uint32_t>(language_id));
+            GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnStringDecoded, this, language_id);
         }
         sanitise();
         return decoded_ws;

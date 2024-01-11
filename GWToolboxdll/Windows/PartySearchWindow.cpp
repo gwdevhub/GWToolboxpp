@@ -120,27 +120,27 @@ namespace {
         switch (static_cast<GW::Constants::MapRegion>(region)) {
             case GW::Constants::MapRegion::International:
                 return "INT";
-            case GW::Constants::MapRegion::American:
+            case GW::Constants::MapRegion::America:
                 return "AE";
-            case GW::Constants::MapRegion::Korean:
+            case GW::Constants::MapRegion::Korea:
                 return "KR";
-            case GW::Constants::MapRegion::Chinese:
+            case GW::Constants::MapRegion::China:
                 return "CN";
-            case GW::Constants::MapRegion::Japanese:
+            case GW::Constants::MapRegion::Japan:
                 return "JP";
             default:
-                switch (static_cast<GW::Constants::MapLanguage>(language)) {
-                    case GW::Constants::MapLanguage::French:
+                switch (static_cast<GW::Constants::Language>(language)) {
+                    case GW::Constants::Language::French:
                         return "FR";
-                    case GW::Constants::MapLanguage::German:
+                    case GW::Constants::Language::German:
                         return "DE";
-                    case GW::Constants::MapLanguage::Italian:
+                    case GW::Constants::Language::Italian:
                         return "IT";
-                    case GW::Constants::MapLanguage::Spanish:
+                    case GW::Constants::Language::Spanish:
                         return "ES";
-                    case GW::Constants::MapLanguage::Polish:
+                    case GW::Constants::Language::Polish:
                         return "PL";
-                    case GW::Constants::MapLanguage::Russian:
+                    case GW::Constants::Language::Russian:
                         return "RU";
                     default:
                         return "EN";
@@ -179,8 +179,8 @@ bool PartySearchWindow::TBParty::FromRegionParty(const GW::PartySearch* party)
     is_hard_mode = party->hardmode;
     map_id = static_cast<uint16_t>(GW::Map::GetMapID());
     district = party->district;
-    language = party->language;
-    region_id = GW::Map::GetRegion();
+    language = static_cast<uint8_t>(party->language);
+    region_id = static_cast<uint8_t>(GW::Map::GetRegion());
     message = GuiUtils::WStringToString(party->message);
     primary = party->primary;
     secondary = party->secondary;
@@ -205,8 +205,8 @@ bool PartySearchWindow::TBParty::FromPlayerInMap(const GW::Player* player)
     // TODO: Can we find out if the party is HM?
     map_id = static_cast<uint16_t>(GW::Map::GetMapID());
     district = GW::Map::GetDistrict();
-    language = GW::Map::GetLanguage();
-    region_id = GW::Map::GetRegion();
+    language = static_cast<uint8_t>(GW::Map::GetLanguage());
+    region_id = static_cast<uint8_t>(GW::Map::GetRegion());
     primary = player->primary;
     secondary = player->secondary;
     player_name = GuiUtils::WStringToString(player->name);
@@ -234,8 +234,8 @@ bool PartySearchWindow::TBParty::FromLocalParty(GW::PartyInfo* party)
     // TODO: Can we find out if the party is HM?
     map_id = static_cast<uint16_t>(GW::Map::GetMapID());
     district = GW::Map::GetDistrict();
-    language = GW::Map::GetLanguage();
-    region_id = GW::Map::GetRegion();
+    language = static_cast<uint8_t>(GW::Map::GetLanguage());
+    region_id = static_cast<uint8_t>(GW::Map::GetRegion());
     primary = player->primary;
     secondary = player->secondary;
     player_name = GuiUtils::WStringToString(player->name);
@@ -675,9 +675,9 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
         ImVec4 green(0x00, 0xff, 0x00, 0xff);
         constexpr ImVec4 yellow(0xff, 0xff, 0x00, 0xff);
         constexpr ImVec4 white(0xff, 0xff, 0xff, 0xff);
-        const int32_t language = GW::Map::GetLanguage();
-        const int32_t district = GW::Map::GetDistrict();
-        const uint32_t map = static_cast<uint32_t>(GW::Map::GetMapID());
+        const auto language = static_cast<uint8_t>(GW::Map::GetLanguage());
+        const auto district = GW::Map::GetDistrict();
+        const auto map = static_cast<uint8_t>(GW::Map::GetMapID());
         //auto& parties = party_ctx->party_search;
         for (const auto& it : party_advertisements) {
             auto* party = it.second;

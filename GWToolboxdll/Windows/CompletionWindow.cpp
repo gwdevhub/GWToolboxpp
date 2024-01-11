@@ -877,7 +877,7 @@ ItemAchievement::ItemAchievement(const size_t _encoded_name_index, const wchar_t
     : PvESkill(SkillID::No_Skill)
 {
     encoded_name_index = _encoded_name_index;
-    name.language(TextLanguage::English);
+    name.language(Language::English);
     name.reset(encoded_name);
 }
 

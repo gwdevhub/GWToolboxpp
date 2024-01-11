@@ -281,7 +281,7 @@ void DiscordModule::Initialize()
     params.network_events = &network_events;
     network_events.on_message = OnNetworkMessage;
 
-    map_name_decoded.language(GW::Constants::TextLanguage::English);
+    map_name_decoded.language(GW::Constants::Language::English);
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
         &InstanceLoadInfo_Callback,
@@ -366,9 +366,9 @@ bool DiscordModule::IsInJoinablePartyMap()
         return true;
     }
     return join_in_progress.map_id == static_cast<unsigned short>(GW::Map::GetMapID())
-           && join_in_progress.district_id == GW::Map::GetDistrict()
-           && join_in_progress.region_id == GW::Map::GetRegion()
-           && join_in_progress.language_id == GW::Map::GetLanguage();
+           && join_in_progress.district_id == static_cast<unsigned short>(GW::Map::GetDistrict())
+           && join_in_progress.region_id == static_cast<unsigned short>(GW::Map::GetRegion())
+           && join_in_progress.language_id == static_cast<unsigned short>(GW::Map::GetLanguage());
 }
 
 void DiscordModule::FailedJoin(const char* error_msg)
@@ -409,7 +409,11 @@ void DiscordModule::JoinParty()
         }
         else {
             Log::Log("Travelling to outpost\n");
-            GW::Map::Travel(static_cast<GW::Constants::MapID>(join_in_progress.map_id), join_in_progress.district_id, join_in_progress.region_id, join_in_progress.language_id);
+            GW::Map::Travel(
+                static_cast<GW::Constants::MapID>(join_in_progress.map_id), 
+                static_cast<GW::Constants::MapRegion>(join_in_progress.region_id),
+                join_in_progress.district_id,
+                static_cast<GW::Constants::Language>(join_in_progress.language_id));
         }
         // 5s timeout for any GW::Packet::StoC::ErrorMessage packets e.g. "Cannot enter outpost"
         join_party_next_action = time(nullptr) + 5;
@@ -707,17 +711,18 @@ void DiscordModule::UpdateActivity()
             map_region = static_cast<short>(m->region);
             char region_info[32] = {0};
             if (instance_type == GW::Constants::InstanceType::Outpost && !is_guild_hall) {
-                switch (static_cast<GW::Constants::MapRegion>(GW::Map::GetRegion())) {
+                const auto server_region = static_cast<GW::Constants::MapRegion>(map_region);
+                switch (server_region) {
                     case GW::Constants::MapRegion::International:
-                        sprintf(region_info, "International %d", GW::Map::GetDistrict());
+                        sprintf(region_info, "International %d", map_district);
                         break;
-                    case GW::Constants::MapRegion::Chinese:
-                    case GW::Constants::MapRegion::Korean:
-                    case GW::Constants::MapRegion::Japanese:
-                        sprintf(region_info, "%s %d", region_abbreviations[GW::Map::GetRegion()], GW::Map::GetDistrict());
+                    case GW::Constants::MapRegion::China:
+                    case GW::Constants::MapRegion::Korea:
+                    case GW::Constants::MapRegion::Japan:
+                        sprintf(region_info, "%s %d", region_abbreviations[map_region], map_district);
                         break;
                     default:
-                        sprintf(region_info, "%s %s %d", region_abbreviations[GW::Map::GetRegion()], map_languages[GW::Map::GetLanguage()], GW::Map::GetDistrict());
+                        sprintf(region_info, "%s %s %d", region_abbreviations[map_region], map_languages[map_language], map_district);
                         break;
                 }
             }

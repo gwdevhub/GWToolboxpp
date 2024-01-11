@@ -165,7 +165,7 @@ bool TradeWindow::GetInKamadanAE1(const bool check_district)
         case MapID::Kamadan_Jewel_of_Istan_Halloween_outpost:
         case MapID::Kamadan_Jewel_of_Istan_Wintersday_outpost:
         case MapID::Kamadan_Jewel_of_Istan_Canthan_New_Year_outpost:
-            return !check_district || (GW::Map::GetDistrict() == 1 && GW::Map::GetRegion() == Region::America);
+            return !check_district || (GW::Map::GetDistrict() == 1 && GW::Map::GetRegion() == MapRegion::America);
         default:
             return false;
     }
@@ -177,7 +177,7 @@ bool TradeWindow::GetInAscalonAE1(const bool check_district)
     switch (GW::Map::GetMapID()) {
         case MapID::Ascalon_City_pre_searing:
             return !check_district ||
-                   (GW::Map::GetDistrict() == 1 && GW::Map::GetRegion() == Region::America);
+                   (GW::Map::GetDistrict() == 1 && GW::Map::GetRegion() == MapRegion::America);
         default:
             return false;
     }

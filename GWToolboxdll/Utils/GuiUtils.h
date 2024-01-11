@@ -14,7 +14,7 @@
 #endif
 
 namespace GW::Constants {
-    enum class TextLanguage;
+    enum class Language;
 }
 
 namespace GuiUtils {
@@ -143,12 +143,12 @@ namespace GuiUtils {
         bool decoded = false;
         bool sanitised = false;
         virtual void sanitise();
-        GW::Constants::TextLanguage language_id = static_cast<GW::Constants::TextLanguage>(-1);
+        GW::Constants::Language language_id = static_cast<GW::Constants::Language>(0xff);
         static void OnStringDecoded(void* param, wchar_t* decoded);
 
     public:
         // Set the language for decoding this encoded string. If the language has changed, resets the decoded result. Returns this for chaining.
-        EncString* language(GW::Constants::TextLanguage l = static_cast<GW::Constants::TextLanguage>(-1));
+        EncString* language(GW::Constants::Language l);
         bool IsDecoding() const { return decoding && decoded_ws.empty(); };
         // Recycle this EncString by passing a new encoded string id to decode.
         // Set sanitise to true to automatically remove guild tags etc from the string

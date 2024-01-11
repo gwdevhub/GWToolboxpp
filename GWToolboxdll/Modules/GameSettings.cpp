@@ -75,139 +75,6 @@ namespace {
     GW::MemoryPatcher gold_confirm_patch;
     GW::MemoryPatcher skill_description_patch;
     GW::MemoryPatcher remove_skill_warmup_duration_patch;
-    GW::MemoryPatcher display_graphics_version_ui_component;
-
-    using CreateUIComponent_pt = uint32_t(__cdecl*)(int frame_id,int behavior,int child_frame_id,void *ui_callback,wchar_t *name_enc, wchar_t *label);
-
-    CreateUIComponent_pt CreateUIComponent = nullptr;
-
-    bool IsD3D9On12Device(IDirect3DDevice9* d3d9Device) {
-        // Manually define the GUID for IDirect3DDevice9On12
-        const GUID IID_IDirect3DDevice9On12_Local = 
-        { 0x6B4A1127, 0x23F0, 0x40F8, { 0x8F, 0xA3, 0xC7, 0x76, 0x0A, 0x77, 0x56, 0xDC } };
-
-        IDirect3DDevice9On12* d3d9On12Device = nullptr;
-
-        // Use the locally defined GUID
-        HRESULT hr = d3d9Device->QueryInterface(IID_IDirect3DDevice9On12_Local, (void**)&d3d9On12Device);
-
-        if (SUCCEEDED(hr)) {
-            // IDirect3DDevice9On12 interface is supported.
-            d3d9On12Device->Release();  // Release the IDirect3DDevice9On12 interface.
-            return true;
-        }
-
-        // The device does not support IDirect3DDevice9On12.
-        return false;
-    }
-
-    bool GetModuleFileInfo(HMODULE hModule, std::string& productName, std::string& productVersion, std::string& baseName) {
-        productName.clear();
-        productVersion.clear();
-        baseName.clear();
-        if (hModule == NULL) {
-            return false;
-        }
-
-        char dllPath[MAX_PATH];
-        if (GetModuleFileNameA(hModule, dllPath, MAX_PATH) == 0) {
-            return false;
-        }
-
-        // Extract the base name using std::filesystem::path directly
-        baseName = std::filesystem::path(dllPath).filename().string();
-
-        DWORD dummy;
-        DWORD versionSize = GetFileVersionInfoSizeA(dllPath, &dummy);
-
-        if (versionSize == 0) {
-            return false;
-        }
-
-        LPVOID versionInfo = malloc(versionSize);
-
-        if (!GetFileVersionInfoA(dllPath, 0, versionSize, versionInfo)) {
-            free(versionInfo);
-            return false;
-        }
-
-        UINT langCodepageSize;
-        LPVOID langCodepageInfo;
-        if (VerQueryValueA(versionInfo, "\\VarFileInfo\\Translation", &langCodepageInfo, &langCodepageSize)) {
-            DWORD* langCodepage = static_cast<DWORD*>(langCodepageInfo);
-
-            // Get Product Name
-            char nameQueryPath[256];
-            snprintf(nameQueryPath, sizeof(nameQueryPath) / sizeof(nameQueryPath[0]), "\\StringFileInfo\\%04X%04X\\ProductName", LOWORD(*langCodepage), HIWORD(*langCodepage));
-
-            LPVOID productNameValue;
-            UINT productNameValueSize;
-
-            if (VerQueryValueA(versionInfo, nameQueryPath, &productNameValue, &productNameValueSize)) {
-                productName.assign(static_cast<const char*>(productNameValue), productNameValueSize - 1);  // Exclude the null terminator
-            }
-
-            // Get Product Version
-            char versionQueryPath[256];
-            snprintf(versionQueryPath, sizeof(versionQueryPath) / sizeof(versionQueryPath[0]), "\\StringFileInfo\\%04X%04X\\ProductVersion", LOWORD(*langCodepage), HIWORD(*langCodepage));
-
-            LPVOID productVersionValue;
-            UINT productVersionValueSize;
-
-            if (VerQueryValueA(versionInfo, versionQueryPath, &productVersionValue, &productVersionValueSize)) {
-                productVersion.assign(static_cast<const char*>(productVersionValue), productVersionValueSize - 1);  // Exclude the null terminator
-            }
-        }
-
-        free(versionInfo);
-        return !productName.empty() && !productVersion.empty();
-    }
-
-
-    uint32_t OnCreateUIComponent_GraphicsVersion( int frame_id,int behavior,int child_frame_id,void *ui_callback,wchar_t *name_enc, wchar_t *label) {
-        std::string dll_product_name;
-        std::string dll_product_version;
-        std::string dll_base_name;
-        GetModuleFileInfo(GetModuleHandle("d3d9.dll"), dll_product_name, dll_product_version, dll_base_name);
-        
-
-        std::wstring new_name_enc;
-        new_name_enc += name_enc;
-        new_name_enc += L"\x2\x108\x107";
-
-        const auto device = GW::Render::GetDevice();
-        if (device && IsD3D9On12Device(device)) {
-            new_name_enc += L", D3D9On12";
-        }
-
-        if (dll_product_name.size()) {
-            new_name_enc += L" (";
-            new_name_enc += GuiUtils::StringToWString(dll_base_name);
-            new_name_enc += L", ";
-            new_name_enc += GuiUtils::StringToWString(dll_product_name);
-            if (dll_product_version.size()) {
-                new_name_enc += L", ";
-                new_name_enc += GuiUtils::StringToWString(dll_product_version);
-            }
-            new_name_enc += L")";
-        }
-
-        GetModuleFileInfo(GetModuleHandle("dxgi.dll"), dll_product_name, dll_product_version, dll_base_name);
-        if (dll_product_name.size()) {
-            new_name_enc += L" (";
-            new_name_enc += GuiUtils::StringToWString(dll_base_name);
-            new_name_enc += L", ";
-            new_name_enc += GuiUtils::StringToWString(dll_product_name);
-            if (dll_product_version.size()) {
-                new_name_enc += L", ";
-                new_name_enc += GuiUtils::StringToWString(dll_product_version);
-            }
-            new_name_enc += L")";
-        }
-        new_name_enc += L"\x1";
-
-        return CreateUIComponent(frame_id, behavior, child_frame_id, ui_callback, new_name_enc.data(), label);
-    }
 
     void SetWindowTitle(const bool enabled)
     {
@@ -1436,16 +1303,6 @@ void GameSettings::Initialize()
         remove_skill_warmup_duration_patch.SetPatch(address, "\x90\x90", 2);
     }
 
-    address = GW::Scanner::Find("\x6a\x0a\x68\x5a\x05\x00\x00", "xxxxxxx", 0x1e);
-    if (address) {
-        CreateUIComponent = (CreateUIComponent_pt)GW::Scanner::FunctionFromNearCall(address);
-        if (CreateUIComponent) {
-            display_graphics_version_ui_component.SetRedirect(address, OnCreateUIComponent_GraphicsVersion);
-            display_graphics_version_ui_component.TogglePatch(true);
-        }
-           
-    }
-
     // This could be done with patches if we wanted to still show description for weapon sets and merchants etc, but its more signatures to log.
     GetItemDescription_Func = (GetItemDescription_pt)GW::Scanner::Find("\x8b\xc3\x25\xfd\x00\x00\x00\x3c\xfd", "xxxxxxxxx", -0x5f);
     if (GetItemDescription_Func) {
@@ -1832,7 +1689,6 @@ void GameSettings::Terminate()
     skill_description_patch.Reset();
     skip_map_entry_message_patch.Reset();
     remove_skill_warmup_duration_patch.Reset();
-    display_graphics_version_ui_component.Reset();
 
     GW::UI::RemoveUIMessageCallback(&OnQuestUIMessage_HookEntry);
 }

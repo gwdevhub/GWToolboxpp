@@ -493,9 +493,9 @@ void RerollWindow::Update(float)
                             RerollFailed(L"Map isn't unlocked");
                             return;
                         }
-                        reroll_scroll_from_map_id = static_cast<uint32_t>(GetScrollableOutpostForEliteArea(map_id));
-                        if (reroll_scroll_from_map_id) {
-                            if (!GW::Map::GetIsMapUnlocked(static_cast<GW::Constants::MapID>(reroll_scroll_from_map_id))) {
+                        reroll_scroll_from_map_id = GetScrollableOutpostForEliteArea(map_id);
+                        if (reroll_scroll_from_map_id != GW::Constants::MapID::None) {
+                            if (!GW::Map::GetIsMapUnlocked(reroll_scroll_from_map_id)) {
                                 RerollFailed(L"No scrollable outpost unlocked");
                                 return;
                             }
@@ -503,15 +503,15 @@ void RerollWindow::Update(float)
                                 RerollFailed(L"No scroll available for elite area");
                                 return;
                             }
-                            if (GW::Map::GetMapID() != static_cast<GW::Constants::MapID>(reroll_scroll_from_map_id)) {
-                                GW::Map::Travel(static_cast<GW::Constants::MapID>(reroll_scroll_from_map_id), 0, region_id, language_id);
+                            if (GW::Map::GetMapID() != reroll_scroll_from_map_id) {
+                                GW::Map::Travel(reroll_scroll_from_map_id, region_id, 0, language_id);
                             }
 
                             reroll_stage = WaitForScrollableOutpost;
                             reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
                             return;
                         }
-                        GW::Map::Travel(map_id, 0, region_id, language_id);
+                        GW::Map::Travel(map_id, region_id, 0, language_id);
                         reroll_stage = WaitForActiveDistrict;
                         reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
                         return;
@@ -551,7 +551,7 @@ void RerollWindow::Update(float)
             }
             if (!IsInMap()) {
                 // Same map, wrong district
-                GW::Map::Travel(map_id, district_id, region_id, language_id);
+                GW::Map::Travel(map_id, region_id, district_id, language_id);
             }
             reroll_stage = WaitForMapLoad;
             reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;

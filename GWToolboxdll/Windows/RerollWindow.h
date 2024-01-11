@@ -5,6 +5,8 @@
 
 namespace GW::Constants {
     enum class MapID;
+    enum class MapRegion;
+    enum class Language;
 }
 
 class RerollWindow : public ToolboxWindow {
@@ -100,8 +102,8 @@ private:
     GW::FriendStatus online_status = GW::FriendStatus::Online;
     GW::Constants::MapID map_id = static_cast<GW::Constants::MapID>(0);
     int district_id = 0;
-    int region_id = 0;
-    int language_id = 0;
+    GW::Constants::MapRegion region_id = (GW::Constants::MapRegion)0;
+    GW::Constants::Language language_id = (GW::Constants::Language)0;
     uint32_t* guild_hall_uuid = nullptr;
     wchar_t initial_player_name[20] = {0};
     wchar_t reroll_to_player_name[20] = {0};
@@ -127,7 +129,7 @@ private:
         Done
     } reroll_stage = None;
 
-    uint32_t reroll_scroll_from_map_id = 0;
+    GW::Constants::MapID reroll_scroll_from_map_id = (GW::Constants::MapID)0;
 
     void RerollFailed(const wchar_t* reason);
 
