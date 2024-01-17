@@ -490,11 +490,17 @@ namespace GuiUtils {
             return "";
         }
         // NB: GW uses code page 0 (CP_ACP)
-        const auto size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
-        ASSERT(size_needed != 0);
-        std::string str_to(size_needed, 0);
-        ASSERT(WideCharToMultiByte(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), str_to.data(), size_needed, NULL, NULL));
-        return str_to;
+        const int try_code_pages[] = { CP_UTF8, CP_ACP };
+        for (auto cp : try_code_pages) {
+            const auto size_needed = WideCharToMultiByte(cp, WC_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
+            if (!size_needed)
+                continue;
+            std::string dest(size_needed, 0);
+            ASSERT(WideCharToMultiByte(cp, 0, str.data(), static_cast<int>(str.size()), dest.data(), size_needed, nullptr, nullptr));
+            return dest;
+        }
+        ASSERT("Failed to convert" && false);
+        return {};
     }
 
     // Makes sure the file name doesn't have chars that won't be allowed on disk
@@ -562,11 +568,17 @@ namespace GuiUtils {
             return {};
         }
         // NB: GW uses code page 0 (CP_ACP)
-        const auto size_needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0);
-        ASSERT(size_needed != 0);
-        std::wstring wstr_to(size_needed, 0);
-        ASSERT(MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), wstr_to.data(), size_needed));
-        return wstr_to;
+        const int try_code_pages[] = { CP_UTF8, CP_ACP };
+        for (auto cp : try_code_pages) {
+            const auto size_needed = MultiByteToWideChar(cp, MB_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0);
+            if (!size_needed)
+                continue;
+            std::wstring dest(size_needed, 0);
+            ASSERT(MultiByteToWideChar(cp, 0, str.data(), static_cast<int>(str.size()), dest.data(), size_needed));
+            return dest;
+        }
+        ASSERT("Failed to convert" && false);
+        return {};
     }
 
     std::wstring SanitizePlayerName(const std::wstring_view str)
