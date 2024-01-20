@@ -575,6 +575,7 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
             break;
         case WM_XBUTTONDOWN:
         case WM_MBUTTONDOWN:
+        case WM_XBUTTONDBLCLK:
             if (LOWORD(wParam) & MK_MBUTTON) {
                 keyData = VK_MBUTTON;
             }
@@ -589,6 +590,8 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
         case WM_MBUTTONUP:
             // leave keydata to none, need to handle special case below
             break;
+        case WM_MBUTTONDBLCLK:
+            keyData = VK_MBUTTON;
         default:
             break;
     }
@@ -597,7 +600,9 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
         case WM_XBUTTONDOWN:
-        case WM_MBUTTONDOWN: {
+        case WM_XBUTTONDBLCLK:
+        case WM_MBUTTONDOWN:
+        case WM_MBUTTONDBLCLK: {
             if (block_hotkeys) {
                 return true;
             }
