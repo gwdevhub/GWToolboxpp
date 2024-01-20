@@ -592,6 +592,7 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
             break;
         case WM_MBUTTONDBLCLK:
             keyData = VK_MBUTTON;
+            break;
         default:
             break;
     }
