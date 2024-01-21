@@ -1091,7 +1091,7 @@ bool HotkeyEquipItem::Draw()
                     continue;
                 }
 
-                ImGui::TextUnformatted(GetBagName(it.first));
+                ImGui::TextUnformatted(bags[(uint32_t)it.first]);
                 ImGui::Indent();
                 for (auto& ai : it.second) {
                     ImGui::PushID(&ai);
