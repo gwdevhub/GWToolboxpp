@@ -19,6 +19,7 @@
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
+#include <GWCA/Context/AccountContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -735,6 +736,36 @@ namespace {
     }
 
     void DrawDebugInfo() {
+        if (ImGui::CollapsingHeader("Account Features")) {
+            const auto& features = GW::GetGameContext()->account->account_unlocked_counts;
+            ImGui::PushItemWidth(140.f);
+            ImGui::TextUnformatted("ID");
+            ImGui::SameLine();
+            ImGui::TextUnformatted("Value 1");
+            ImGui::SameLine();
+            ImGui::TextUnformatted("Value 2");
+            for (const auto& feature : features) {
+                ImGui::PushID(&feature);
+                ImGui::Text("0x%x",feature.id);
+                ImGui::SameLine();
+                ImGui::Text("%d",feature.unk1);
+                ImGui::SameLine();
+                ImGui::Text("%d",feature.unk2);
+                ImGui::PopID();
+            }
+        }
+        if (record_ui_messages) {
+            ImGui::PushID(&ui_message_packets_recorded);
+            if (ImGui::SmallButton("Reset")) {
+                ClearUIMessagesRecorded();
+            }
+            for (auto it : ui_message_packets_recorded) {
+                ImGui::PushID(it);
+                ImGui::Text("0x%08x 0x%08x 0x%08x", it->msgid, it->wParam, it->lParam);
+                ImGui::PopID();
+            }
+            ImGui::PopID();
+        }
         if (ImGui::CollapsingHeader("Quoted Item")) {
             ImGui::Text("Most recently quoted item (buy or sell) from trader");
             static GuiUtils::EncString quoted_name;
@@ -979,7 +1010,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
         if (show_item && ImGui::CollapsingHeader("Item")) {
             ImGui::Text("First item in inventory");
             static GuiUtils::EncString item_name;
-            DrawItemInfo(GW::Items::GetItemBySlot(GW::Constants::Bag::Backpack, 1), &item_name);
+            DrawItemInfo(GW::Items::GetItemBySlot(GW::Items::GetBag(GW::Constants::Bag::Backpack), 1), &item_name);
         }
         if (show_quest && ImGui::CollapsingHeader("Quest")) {
             const GW::Quest* q = GW::QuestMgr::GetActiveQuest();

@@ -171,7 +171,7 @@ std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> HotkeyGWKey:
 
 namespace {
     // @Cleanup: when toolbox closes, this array isn't freed properly
-    std::vector<std::vector<HotkeyEquipItemAttributes*>> available_items;
+    std::map<GW::Constants::Bag,std::vector<HotkeyEquipItemAttributes*>> available_items;
 
     const char* behaviors[] = {
         "Fight",
@@ -1057,24 +1057,23 @@ bool HotkeyEquipItem::Draw()
             need_to_fetch_bag_items = true;
             ImGui::OpenPopup("Choose Item to Equip");
         }
-        constexpr size_t bags_size = _countof(bags);
         if (ImGui::BeginPopupModal("Choose Item to Equip", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             if (need_to_fetch_bag_items) {
                 // Free available_items ptrs
-                for (auto i = available_items.begin(); i != available_items.end(); ++i) {
-                    for (auto j = i->begin(); j != i->end(); ++j) {
-                        delete*j;
+                for (auto& it : available_items) {
+                    for (auto atts : it.second) {
+                        delete atts;
                     }
+                    it.second.clear();
                 }
                 available_items.clear();
-                available_items.resize(bags_size);
-                for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size; i++) {
+                for (auto i = GW::Constants::Bag::Backpack; i <= GW::Constants::Bag::Equipment_Pack; i = (GW::Constants::Bag)((size_t)i + 1)) {
                     GW::Bag* bag = GW::Items::GetBag(i);
                     if (!bag) {
                         continue;
                     }
                     GW::ItemArray& items = bag->items;
-                    for (size_t slot = 0; slot < items.size(); slot++) {
+                    for (size_t slot = 0, size = items.size(); slot < size; slot++) {
                         const GW::Item* cur_item = items[slot];
                         if (!IsEquippable(cur_item)) {
                             continue;
@@ -1086,15 +1085,15 @@ bool HotkeyEquipItem::Draw()
             }
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
             ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
-            for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size; i++) {
-                auto& items = available_items[i];
+            for (auto& it : available_items) {
+                auto& items = it.second;
                 if (items.empty()) {
                     continue;
                 }
 
-                ImGui::TextUnformatted(bags[i]);
+                ImGui::TextUnformatted(GetBagName(it.first));
                 ImGui::Indent();
-                for (auto& ai : available_items[i]) {
+                for (auto& ai : it.second) {
                     ImGui::PushID(&ai);
                     if (ImGui::Button(ai->name().c_str())) {
                         item_attributes.set(*ai);
@@ -1183,23 +1182,24 @@ void HotkeyEquipItem::Execute()
     }
     if (!ongoing) {
         if (equip_by == SLOT) {
-            if (bag_idx < 1 || bag_idx > 5 || slot_idx < 1 || slot_idx > 25) {
+            const auto bag_id = static_cast<GW::Constants::Bag>(bag_idx);
+            if (bag_id < GW::Constants::Bag::Backpack || bag_id > GW::Constants::Bag::Equipment_Pack || slot_idx < 1 || slot_idx > 25) {
                 if (show_error_on_failure) {
-                    Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
+                    Log::Error("Invalid bag slot %d/%d!", bag_id, slot_idx);
                 }
                 return;
             }
-            GW::Bag* b = GW::Items::GetBag(bag_idx);
+            GW::Bag* b = GW::Items::GetBag(bag_id);
             if (!b) {
                 if (show_error_on_failure) {
-                    Log::Error("Bag #%d not found!", bag_idx);
+                    Log::Error("Bag #%d not found!", bag_id);
                 }
                 return;
             }
             GW::ItemArray& items = b->items;
             if (!items.valid() || slot_idx > items.size()) {
                 if (show_error_on_failure) {
-                    Log::Error("Invalid bag slot %d/%d!", bag_idx, slot_idx);
+                    Log::Error("Invalid bag slot %d/%d!", bag_id, slot_idx);
                 }
                 return;
             }
@@ -1207,9 +1207,8 @@ void HotkeyEquipItem::Execute()
         }
         else {
             item = FindMatchingItem(GW::Constants::Bag::Equipped_Items);
-            constexpr size_t bags_size = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack) + 1;
-            for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size && !item; i++) {
-                item = FindMatchingItem(static_cast<GW::Constants::Bag>(i));
+            for (auto i = GW::Constants::Bag::Backpack; i <= GW::Constants::Bag::Equipment_Pack && !item; i = (GW::Constants::Bag)((size_t) i + 1)) {
+                item = FindMatchingItem(i);
             }
             if (!item) {
                 if (show_error_on_failure) {

@@ -2287,42 +2287,45 @@ void ChatCommands::CmdPingEquipment(const wchar_t*, const int argc, const LPWSTR
         Log::Error("Missing argument for /pingitem");
         return;
     }
+    const auto equipped_items_bag = GW::Items::GetBag(GW::Constants::Bag::Equipped_Items);
+    if (!equipped_items_bag)
+        return;
     const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
     if (arg1 == L"weapon") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 1), 3);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 1), 3);
     }
     else if (arg1 == L"offhand" || arg1 == L"shield") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 2), 3);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 2), 3);
     }
     else if (arg1 == L"chest") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 3), 2);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 3), 2);
     }
     else if (arg1 == L"legs") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 4), 2);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 4), 2);
     }
     else if (arg1 == L"head") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 5), 2);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 5), 2);
     }
     else if (arg1 == L"boots" || arg1 == L"feet") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 6), 2);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 6), 2);
     }
     else if (arg1 == L"gloves" || arg1 == L"hands") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 7), 2);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 7), 2);
     }
     else if (arg1 == L"weapons") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 1), 3);
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 2), 3);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 1), 3);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 2), 3);
     }
     else if (arg1 == L"armor") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 5), 2);
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 3), 2);
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 7), 2);
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 4), 2);
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 6), 2);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 5), 2);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 3), 2);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 7), 2);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 4), 2);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 6), 2);
     }
     else if (arg1 == L"costume") {
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 8), 1);
-        GameSettings::PingItem(GW::Items::GetItemBySlot(GW::Constants::Bag::Equipped_Items, 9), 1);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 8), 1);
+        GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 9), 1);
     }
     else {
         Log::Error("Unrecognised /pingitem %ls", argv[1]);

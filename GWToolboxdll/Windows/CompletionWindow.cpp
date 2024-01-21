@@ -1124,7 +1124,10 @@ void CompletionWindow::Initialize()
             if (info->campaign != it.first) continue;
             if (info->region == GW::Region::Region_Presearing) continue;
             switch (info->type) {
+            case GW::RegionType::CooperativeMission:
             case GW::RegionType::MissionOutpost:
+                if (!info->thumbnail_id)
+                    break;
                 missions[it.first].push_back(new Mission(static_cast<MapID>(i)));
             case GW::RegionType::City:
             case GW::RegionType::Outpost:

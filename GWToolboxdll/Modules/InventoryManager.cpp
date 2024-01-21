@@ -84,9 +84,9 @@ namespace {
     };
 
     std::unordered_map<uint32_t, PendingMove> pending_moves; // { bag_idx | slot, { quantity_to_move,move_started_at} }
-    uint16_t get_pending_move(const uint32_t bag_idx, const uint32_t slot)
+    uint16_t get_pending_move(const GW::Constants::Bag bag_id, const uint32_t slot)
     {
-        const uint32_t bag_slot = bag_idx << 16 | slot;
+        const uint32_t bag_slot = ((size_t)bag_id) << 16 | slot;
         const auto found = pending_moves.find(bag_slot);
         if (found == pending_moves.end()) {
             return 0;
@@ -97,8 +97,8 @@ namespace {
         }
         return found->second.quantity;
     }
-    GW::Item* get_pending_move_item(const uint32_t bag_idx, const uint32_t slot) {
-        const uint32_t bag_slot = bag_idx << 16 | slot;
+    GW::Item* get_pending_move_item(const GW::Constants::Bag bag_id, const uint32_t slot) {
+        const uint32_t bag_slot = ((size_t)bag_id) << 16 | slot;
         const auto found = pending_moves.find(bag_slot);
         if (found == pending_moves.end()) {
             return nullptr;
@@ -110,12 +110,12 @@ namespace {
         return GW::Items::GetItemById(found->second.item_id);
     }
 
-    void set_pending_move(const uint32_t bag_idx, const uint32_t slot, const uint16_t quantity_to_move, const uint32_t item_id)
+    void set_pending_move(const GW::Constants::Bag bag_id, const uint32_t slot, const uint16_t quantity_to_move, const uint32_t item_id)
     {
-        const uint32_t bag_slot = bag_idx << 16 | slot;
+        const uint32_t bag_slot = ((size_t)bag_id) << 16 | slot;
         pending_moves[bag_slot] = {
             item_id,
-            static_cast<uint16_t>(get_pending_move(bag_idx, slot) + quantity_to_move),
+            static_cast<uint16_t>(get_pending_move(bag_id, slot) + quantity_to_move),
             TIMER_INIT()
         };
     }
@@ -134,60 +134,32 @@ namespace {
         }
     }
 
-    // GW Client doesn't actually know max material storage size for the account.
-// We can make a guess by checking how many materials are currently in storage.
-    uint16_t MaxSlotSize(const GW::Constants::Bag bag_idx)
+    uint16_t MaxSlotSize(const GW::Bag* bag)
     {
-        uint16_t slot_size = 250u;
-        switch (bag_idx) {
-            case GW::Constants::Bag::Material_Storage:
-                GW::Bag* bag = GW::Items::GetBag(bag_idx);
-                if (!bag || !bag->items.valid() || !bag->items_count) {
-                    return slot_size;
-                }
-                for (size_t i = GW::Constants::MaterialSlot::Bone; i < GW::Constants::MaterialSlot::N_MATS; i++) {
-                    const GW::Item* b_item = bag->items[i];
-                    if (!b_item || b_item->quantity <= slot_size) {
-                        continue;
-                    }
-                    while (b_item->quantity > slot_size) {
-                        slot_size += 250u;
-                    }
-                }
-                break;
-        }
-        return slot_size;
-    }
-
-    uint16_t MaxSlotSize(uint32_t bag_idx)
-    {
-        return MaxSlotSize(static_cast<GW::Constants::Bag>(bag_idx));
+        return bag && bag->bag_type == GW::Constants::BagType::MaterialStorage ? (uint16_t)GW::Items::GetMaterialStorageStackSize() : 250;
     }
 
     uint16_t move_materials_to_storage(const GW::Item* item)
     {
-        ASSERT(item && item->quantity);
-        ASSERT(item->GetIsMaterial());
-
-        const int islot = GW::Items::GetMaterialSlot(item);
-        if (islot < 0 || static_cast<int>(GW::Constants::N_MATS) <= islot) {
+        const auto material_slot = GW::Items::GetMaterialSlot(item);
+        if (material_slot == GW::Constants::MaterialSlot::Count) {
             return 0;
         }
-        const uint32_t slot = static_cast<uint32_t>(islot);
-        const uint16_t max_in_slot = MaxSlotSize(GW::Constants::Bag::Material_Storage);
+        const uint32_t slot = static_cast<uint32_t>(material_slot);
+        const uint16_t max_in_slot = MaxSlotSize(GW::Items::GetBag(GW::Constants::Bag::Material_Storage));
         uint16_t available = max_in_slot;
-        const GW::Item* b_item = GW::Items::GetItemBySlot(GW::Constants::Bag::Material_Storage, slot + 1);
+        const GW::Item* b_item = GW::Items::GetItemBySlot(item->bag, slot + 1);
         if (b_item) {
             if (b_item->quantity >= max_in_slot) {
                 return 0;
             }
             available -= b_item->quantity;
         }
-        const uint16_t pending_move = get_pending_move(static_cast<uint32_t>(GW::Constants::Bag::Material_Storage), slot);
+        const uint16_t pending_move = get_pending_move(GW::Constants::Bag::Material_Storage, slot);
         available -= pending_move;
         const uint16_t will_move = std::min<uint16_t>(item->quantity, available);
         if (will_move) {
-            set_pending_move(static_cast<uint32_t>(GW::Constants::Bag::Material_Storage), slot, will_move, item->item_id);
+            set_pending_move(GW::Constants::Bag::Material_Storage, slot, will_move, item->item_id);
             GW::Items::MoveItem(item, GW::Constants::Bag::Material_Storage, slot, will_move);
         }
         return will_move;
@@ -210,30 +182,30 @@ namespace {
 
     // From bag_first to bag_last (included) i.e. [bag_first, bag_last]
     // Returns the amount moved
-    uint16_t complete_existing_stack(const GW::Item* item, const size_t bag_first, const size_t bag_last, const uint16_t quantity = 1000u)
+    uint16_t complete_existing_stack(const GW::Item* item, const GW::Constants::Bag bag_first, const GW::Constants::Bag bag_last, const uint16_t quantity = 1000u)
     {
         if (!item->GetIsStackable()) {
             return 0;
         }
         const uint16_t to_move = std::min<uint16_t>(item->quantity, quantity);
         uint16_t remaining = to_move;
-        for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
-            GW::Bag* bag = GW::Items::GetBag(bag_i);
+        for (auto bag_id = bag_first; bag_id <= bag_last; bag_id = (GW::Constants::Bag)((size_t)bag_id + 1)) {
+            GW::Bag* bag = GW::Items::GetBag(bag_id);
             if (!bag) {
                 continue;
             }
-            const uint16_t max_slot_size = MaxSlotSize(bag_i);
+            const uint16_t max_slot_size = MaxSlotSize(bag);
             size_t slot = find_same_item_in_bag(bag,item);
             while (slot != GW::Bag::npos) {
                 const GW::Item* b_item = bag->items[slot];
                 // b_item can be null in the case of birthday present for instance.
 
                 if (b_item != nullptr && b_item->quantity < max_slot_size) {
-                    uint16_t availaible = max_slot_size - get_pending_move(bag_i, slot) - b_item->quantity;
+                    uint16_t availaible = max_slot_size - get_pending_move(bag_id, slot) - b_item->quantity;
                     const uint16_t will_move = std::min<uint16_t>(availaible, remaining);
                     if (will_move > 0) {
                         GW::Items::MoveItem(item, b_item, will_move);
-                        set_pending_move(bag_i, slot, will_move, item->item_id);
+                        set_pending_move(bag_id, slot, will_move, item->item_id);
                         remaining -= will_move;
                     }
                     if (remaining == 0) {
@@ -246,16 +218,16 @@ namespace {
         return to_move - remaining;
     }
 
-    uint16_t move_to_first_empty_slot(const GW::Item* item, const size_t bag_first, const size_t bag_last, uint16_t quantity = 1000u)
+    uint16_t move_to_first_empty_slot(const GW::Item* item, const GW::Constants::Bag bag_first, const GW::Constants::Bag bag_last, uint16_t quantity = 1000u)
     {
         quantity = std::min<uint16_t>(item->quantity, quantity);
         const auto stackable = item->GetIsStackable();
-        for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
-            GW::Bag* bag = GW::Items::GetBag(bag_i);
+        for (auto bag_id = bag_first; bag_id <= bag_last; bag_id = (GW::Constants::Bag)((size_t)bag_id + 1)) {
+            GW::Bag* bag = GW::Items::GetBag(bag_id);
             if (!bag) {
                 continue;
             }
-            const uint16_t max_slot_size = MaxSlotSize(bag_i);
+            const uint16_t max_slot_size = MaxSlotSize(bag);
             size_t slot = (size_t)-1;
             
             do {
@@ -264,18 +236,18 @@ namespace {
                     break; // No empty slot found
                 if (bag->items[slot] != nullptr)
                     break; // Slot isn't empty(?)
-                const auto pending_amount_for_slot = get_pending_move(bag_i, slot);
+                const auto pending_amount_for_slot = get_pending_move(bag_id, slot);
                 if (pending_amount_for_slot) {
                     // Slot is currently empty, but we're pending a move for something into it
                     if (!stackable)
                         continue; // This item isn't stackable
-                    if (!Instance().IsSameItem(item, get_pending_move_item(bag_i, slot)))
+                    if (!Instance().IsSameItem(item, get_pending_move_item(bag_id, slot)))
                         continue; // The pending item isn't the same as this item
                 }
                 uint16_t available = max_slot_size - pending_amount_for_slot;
                 const uint16_t will_move = std::min<uint16_t>(quantity, available);
                 if (will_move > 0) {
-                    set_pending_move(bag_i, slot, will_move, item->item_id);
+                    set_pending_move(bag_id, slot, will_move, item->item_id);
                     GW::Items::MoveItem(item, bag, slot, will_move);
                     return will_move;
                 }
@@ -284,33 +256,30 @@ namespace {
         }
         return 0;
     }
-
-    uint16_t move_item_to_storage_page(const GW::Item* item, const size_t page, const uint16_t quantity = 1000u)
+    // page is 0 based from storage 1. Note that if material storage is on focus, 0 is returned.
+    uint16_t move_item_to_storage_page(const GW::Item* item, const GW::Constants::StoragePane page, const uint16_t quantity = 1000u)
     {
         ASSERT(item && item->quantity);
         const uint16_t to_move = std::min<uint16_t>(item->quantity, quantity);
         uint16_t remaining = to_move;
-        if (page == static_cast<size_t>(GW::Constants::StoragePane::Material_Storage)) {
+        if (page == GW::Constants::StoragePane::Material_Storage) {
             if (!item->GetIsMaterial()) {
                 return 0;
             }
             remaining -= move_materials_to_storage(item);
         }
 
-        if (static_cast<size_t>(GW::Constants::StoragePane::Storage_14) < page) {
-            return item->quantity - remaining;
+        if (GW::Constants::StoragePane::Storage_14 < page) {
+            return to_move - remaining;
         }
 
-        constexpr size_t storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
-        const size_t bag_index = storage1 + page;
-        ASSERT(GW::Items::GetBag(bag_index));
-
+        const GW::Constants::Bag bag_id = (GW::Constants::Bag)((size_t)GW::Constants::Bag::Storage_1 + (size_t)page);
         // if the item is stackable we try to complete stack that already exist in the current storage page
         if (remaining) {
-            remaining -= complete_existing_stack(item, bag_index, bag_index, remaining);
+            remaining -= complete_existing_stack(item, bag_id, bag_id, remaining);
         }
         if (remaining) {
-            remaining -= move_to_first_empty_slot(item, bag_index, bag_index, remaining);
+            remaining -= move_to_first_empty_slot(item, bag_id, bag_id, remaining);
         }
         return to_move - remaining;
     }
@@ -322,26 +291,21 @@ namespace {
         uint16_t remaining = to_move;
         const bool is_storage_open = GW::Items::GetIsStorageOpen();
         if (remaining && is_storage_open && item->GetIsMaterial() && GameSettings::GetSettingBool("move_materials_to_current_storage_pane")) {
-            const size_t current_storage = GW::Items::GetStoragePage();
-            remaining -= move_item_to_storage_page(item, current_storage, remaining);
+            remaining -= move_item_to_storage_page(item, GW::Items::GetStoragePage(), remaining);
         }
         if (remaining && item->GetIsMaterial()) {
             remaining -= move_materials_to_storage(item);
         }
 
         if (remaining && is_storage_open && GameSettings::GetSettingBool("move_item_to_current_storage_pane")) {
-            const size_t current_storage = GW::Items::GetStoragePage();
-            remaining -= move_item_to_storage_page(item, current_storage, remaining);
+            remaining -= move_item_to_storage_page(item, GW::Items::GetStoragePage(), remaining);
         }
-
-        constexpr size_t storage1 = static_cast<size_t>(GW::Constants::Bag::Storage_1);
-        constexpr size_t storage14 = static_cast<size_t>(GW::Constants::Bag::Storage_14);
 
         if (remaining) {
-            remaining -= complete_existing_stack(item, storage1, storage14, remaining);
+            remaining -= complete_existing_stack(item, GW::Constants::Bag::Storage_1, GW::Constants::Bag::Storage_14, remaining);
         }
         while (remaining) {
-            const uint16_t moved = move_to_first_empty_slot(item, storage1, storage14, remaining);
+            const uint16_t moved = move_to_first_empty_slot(item, GW::Constants::Bag::Storage_1, GW::Constants::Bag::Storage_14, remaining);
             if (!moved) {
                 break;
             }
@@ -355,15 +319,12 @@ namespace {
     {
         ASSERT(item && item->quantity);
 
-        constexpr size_t backpack = static_cast<size_t>(GW::Constants::Bag::Backpack);
-        constexpr size_t bag2 = static_cast<size_t>(GW::Constants::Bag::Bag_2);
-
         const uint16_t to_move = std::min<uint16_t>(item->quantity, quantity);
         uint16_t remaining = to_move;
         // If item is stackable, try to complete similar stack
-        remaining -= complete_existing_stack(item, backpack, bag2, remaining);
+        remaining -= complete_existing_stack(item, GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, remaining);
         while (remaining) {
-            const uint16_t moved = move_to_first_empty_slot(item, backpack, bag2, remaining);
+            const uint16_t moved = move_to_first_empty_slot(item, GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, remaining);
             if (!moved) {
                 break;
             }
@@ -376,10 +337,8 @@ namespace {
     std::vector<InventoryManager::Item*> filter_items(GW::Constants::Bag from, GW::Constants::Bag to, const std::function<bool(InventoryManager::Item*)>& cmp, const uint32_t limit = 0)
     {
         std::vector<InventoryManager::Item*> out;
-        const size_t bag_first = static_cast<size_t>(from);
-        const size_t bag_last = static_cast<size_t>(to);
-        for (size_t bag_i = bag_first; bag_i <= bag_last; bag_i++) {
-            GW::Bag* bag = GW::Items::GetBag(bag_i);
+        for (auto bag_id = from; bag_id <= to; bag_id = (GW::Constants::Bag)((size_t)bag_id + 1)) {
+            GW::Bag* bag = GW::Items::GetBag(bag_id);
             if (!bag) {
                 continue;
             }
@@ -656,8 +615,8 @@ namespace {
     int CountInventoryBagSlots()
     {
         int slots = 0;
-        for (size_t bag_index = static_cast<size_t>(GW::Constants::Bag::Backpack); bag_index < static_cast<size_t>(GW::Constants::Bag::Equipment_Pack); bag_index++) {
-            const GW::Bag* bag = GW::Items::GetBag(bag_index);
+        for (auto bag_id = GW::Constants::Bag::Backpack; bag_id < GW::Constants::Bag::Equipment_Pack; bag_id = (GW::Constants::Bag)((size_t)bag_id + 1)) {
+            const GW::Bag* bag = GW::Items::GetBag(bag_id);
             if (!bag) {
                 continue;
             }
@@ -1453,35 +1412,54 @@ void InventoryManager::FetchPotentialItems()
     }
 }
 
-InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(const Item* start_after_item) const
-{
-    size_t start_bag = static_cast<size_t>(GW::Constants::Bag::Backpack);
-    if (start_after_item) {
-        for (size_t i = 0; i < start_after_item->bag->items.size(); i++) {
-            if (start_after_item->bag->items[i] == start_after_item) {
-                const size_t start_position = i + 1;
-                start_bag = start_after_item->bag->index + 1;
-                if (start_position >= start_after_item->bag->items.size()) {
-                    start_bag++;
-                }
+bool get_next_bag_slot(const InventoryManager::Item* item, GW::Constants::Bag* bag_id_out, size_t* slot_out) {
+    if (!(item && item->bag))
+        return false;
+    const auto bag = item->bag;
+    const auto slot_item = bag->items[item->slot];
+    ASSERT(slot_item == item);
+    size_t slot = item->slot + 1;
+    auto bag_id = bag->bag_id;
+    if (slot >= bag->items.size()) {
+        bag_id = GW::Constants::Bag::Max;
+        slot = 0;
+        for (auto it_bag_id = bag->bag_id; it_bag_id < GW::Constants::Bag::Max; it_bag_id = (GW::Constants::Bag)((size_t)it_bag_id + 1)) {
+            const auto it_bag = GW::Items::GetBag(it_bag_id);
+            if (it_bag) {
+                bag_id = it_bag_id;
                 break;
             }
         }
     }
-    constexpr size_t end_bag = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack);
-    for (size_t bag_i = start_bag; bag_i <= end_bag; bag_i++) {
-        GW::Bag* bag = GW::Items::GetBag(bag_i);
+    if (bag_id != GW::Constants::Bag::Max) {
+        *bag_id_out = bag_id;
+        *slot_out = slot;
+        return true;
+    }
+    return true;
+}
+
+InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(const Item* start_after_item) const
+{
+    size_t start_slot = 0;
+    auto start_bag_id = GW::Constants::Bag::Backpack;
+    if (start_after_item) {
+        get_next_bag_slot(start_after_item, &start_bag_id, &start_slot);
+    }
+
+    for (auto bag_id = start_bag_id; bag_id <= GW::Constants::Bag::Equipment_Pack; bag_id = (GW::Constants::Bag)((size_t)bag_id + 1)) {
+        GW::Bag* bag = GW::Items::GetBag(bag_id);
+        size_t slot = start_slot;
+        start_slot = 0;
         if (!bag) {
             continue;
         }
         GW::ItemArray& items = bag->items;
-        size_t items_found = 0;
-        for (size_t i = 0; i < items.size() && items_found < bag->items_count; i++) {
+        for (size_t i = slot, size = items.size(); i < size; i++) {
             const auto item = static_cast<Item*>(items[i]);
             if (!item) {
                 continue;
             }
-            items_found++;
             if (item->GetIsIdentified()) {
                 continue;
             }
@@ -1516,38 +1494,27 @@ InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(const Item* st
 
 InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(const Item* kit, const Item* start_after_item)
 {
-    size_t start_bag = static_cast<size_t>(GW::Constants::Bag::Backpack);
-    size_t start_position = 0;
+    size_t start_slot = 0;
+    auto start_bag_id = GW::Constants::Bag::Backpack;
     if (start_after_item) {
-        for (size_t i = 0; i < start_after_item->bag->items.size(); i++) {
-            if (start_after_item->bag->items[i] == start_after_item) {
-                start_position = i + 1;
-                start_bag = start_after_item->bag->index + 1;
-                if (start_position >= start_after_item->bag->items.size()) {
-                    start_position = 0;
-                    start_bag++;
-                }
-                break;
-            }
-        }
+        get_next_bag_slot(start_after_item, &start_bag_id, &start_slot);
     }
-    constexpr size_t end_bag = static_cast<size_t>(GW::Constants::Bag::Bag_2);
-    for (size_t bag_i = start_bag; bag_i <= end_bag; bag_i++) {
-        if (!bags_to_salvage_from[static_cast<GW::Constants::Bag>(bag_i)]) {
+    for (auto bag_id = start_bag_id; bag_id <= GW::Constants::Bag::Bag_2; bag_id = (GW::Constants::Bag)((size_t)bag_id + 1)) {
+        size_t slot = start_slot;
+        start_slot = 0;
+        if (!bags_to_salvage_from[bag_id]) {
             continue;
         }
-        GW::Bag* bag = GW::Items::GetBag(bag_i);
+        GW::Bag* bag = GW::Items::GetBag(bag_id);
         if (!bag) {
             continue;
         }
         GW::ItemArray& items = bag->items;
-        size_t items_found = 0;
-        for (size_t i = bag_i == start_bag ? start_position : 0; i < items.size() && items_found < bag->items_count; i++) {
+        for (size_t i = slot, size = items.size(); i < size; i++) {
             const auto item = static_cast<Item*>(items[i]);
             if (!item) {
                 continue;
             }
-            items_found++;
             if (!item->value) {
                 continue; // No value usually means no salvage.
             }
@@ -2288,7 +2255,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
                 return;
             }
             if (!item->bag->IsInventoryBag()) {
-                const uint16_t moved = move_to_first_empty_slot(item, static_cast<size_t>(GW::Constants::Bag::Backpack), static_cast<size_t>(GW::Constants::Bag::Bag_2));
+                const uint16_t moved = move_to_first_empty_slot(item, GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2);
                 if (!moved) {
                     Log::ErrorW(L"Failed to move item to inventory for trading");
                     return;
@@ -2571,7 +2538,7 @@ InventoryManager::Item* InventoryManager::PendingItem::item() const
     if (!item_id) {
         return nullptr;
     }
-    const auto item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
+    const auto item = static_cast<Item*>(GW::Items::GetItemBySlot(GW::Items::GetBag(bag), slot + 1));
     return item && item->item_id == item_id ? item : nullptr;
 }
 
