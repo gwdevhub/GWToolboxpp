@@ -61,7 +61,7 @@ namespace {
     std::map<std::string, IDirect3DTexture9**> guild_wars_wiki_images;
     std::map<uint32_t, IDirect3DTexture9**> profession_icons;
     std::map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
-    std::map<uint32_t, GuiUtils::EncString*> encoded_string_ids;
+    std::unordered_map<GW::Constants::Language, std::unordered_map<uint32_t,GuiUtils::EncString*>> encoded_string_ids;
     std::filesystem::path current_settings_folder;
     constexpr size_t MAX_WORKERS = 5;
     const wchar_t* GUILD_WARS_WIKI_FILES_PATH = L"img\\gww_files";
@@ -359,8 +359,10 @@ void Resources::Cleanup()
         delete img;
     }
     guild_wars_wiki_images.clear();
-    for (const auto& img : encoded_string_ids | std::views::values) {
-        delete img;
+    for (const auto& enc_strings : encoded_string_ids | std::views::values) {
+        for (const auto& enc_string : enc_strings | std::views::values) {
+            delete enc_string;
+        }
     }
     encoded_string_ids.clear();
     map_names.clear(); // NB: Map names are pointers to encoded_string_ids
@@ -970,14 +972,18 @@ GuiUtils::EncString* Resources::GetMapName(const GW::Constants::MapID map_id)
     return ret;
 }
 
-GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id)
+GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id, GW::Constants::Language language)
 {
-    const auto found = encoded_string_ids.find(enc_str_id);
-    if (found != encoded_string_ids.end()) {
-        return found->second;
+    if (language == (GW::Constants::Language)0xff)
+        language = static_cast<GW::Constants::Language>(GW::UI::GetPreference(GW::UI::NumberPreference::TextLanguage));
+    const auto by_language = encoded_string_ids.find(language);
+    if (by_language != encoded_string_ids.end()) {
+        const auto found = by_language->second.find(enc_str_id);
+        if (found != by_language->second.end())
+            return found->second;
     }
     const auto enc_string = new GuiUtils::EncString(enc_str_id, false);
-    encoded_string_ids[enc_str_id] = enc_string;
+    encoded_string_ids[language][enc_str_id] = enc_string;
     return enc_string;
 }
 

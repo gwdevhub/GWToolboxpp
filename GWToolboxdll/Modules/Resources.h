@@ -11,6 +11,7 @@ namespace GW::Constants {
     enum class Profession : uint32_t;
     enum class MapID;
     enum class SkillID : uint32_t;
+    enum class Language;
 }
 namespace GW {
     struct Item;
@@ -106,7 +107,7 @@ public:
     // Guaranteed to return a pointer, but may not yet be decoded.
     static GuiUtils::EncString* GetMapName(GW::Constants::MapID map_id);
     // Guaranteed to return a pointer, but may not yet be decoded.
-    static GuiUtils::EncString* DecodeStringId(uint32_t enc_str_id);
+    static GuiUtils::EncString* DecodeStringId(const uint32_t enc_str_id, GW::Constants::Language language = (GW::Constants::Language)0xff);
 
     // Ensure file exists on disk, download from remote location if not found. If an error occurs, details are held in error string
     static void EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, const AsyncLoadCallback& callback);
