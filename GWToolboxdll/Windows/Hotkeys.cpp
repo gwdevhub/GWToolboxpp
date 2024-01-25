@@ -1396,8 +1396,7 @@ void HotkeyDropUseBuff::Execute()
             uint32_t slot = static_cast<uint32_t>(islot);
             if (GW::SkillbarMgr::GetPlayerSkillbar()->skills[slot].recharge == 0) {
                 GW::GameThread::Enqueue([slot]() -> void {
-                    GW::SkillbarMgr::UseSkill(slot, GW::Agents::GetTargetId(),
-                                              ImGui::IsKeyDown(ImGuiKey_ModCtrl));
+                    GW::SkillbarMgr::UseSkill(slot);
                 });
             }
         }

@@ -235,7 +235,7 @@ private:
     };
 
     struct CtoS_QuoteItem {
-        uint32_t header = GAME_CMSG_REQUEST_QUOTE;
+        uint32_t header = 0;
         uint32_t type = 0;
         uint32_t unk1 = 0;
         uint32_t gold_give = 0;

@@ -465,15 +465,7 @@ void TradeWindow::Draw(IDirect3DDevice9*)
                 }
             }
             else {
-                struct {
-                    uint32_t header = GAME_CMSG_PARTY_SEARCH_SEEK;
-                    uint32_t search_type = 0;
-                    wchar_t advert[32]{};
-                    uint32_t hard_mode = 0;
-                } packet;
                 const std::wstring out = GuiUtils::StringToWString(player_party_search_text);
-                swprintf(packet.advert, _countof(packet.advert), L"%s", out.c_str());
-
                 GW::PartyMgr::SearchParty(search_type, out.data());
             }
         }

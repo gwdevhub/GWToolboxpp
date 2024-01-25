@@ -109,7 +109,6 @@ private:
     bool stop_screen_shake = false;
     bool disable_camera_smoothing = false;
 
-    bool improve_move_to_cast = false;
     bool check_message_on_party_change = true;
 
     bool is_prompting_hard_mode_mission = false;
