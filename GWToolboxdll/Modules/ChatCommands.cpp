@@ -2000,11 +2000,11 @@ void ChatCommands::CmdTarget(const wchar_t* message, const int argc, const LPWST
             }
         }
         else {
-            if (!party->heroes.valid()) {
-                return;
-            }
             uint32_t partyMemberNumber = 0;
-            const uint32_t partySize = party->players.size() + party->heroes.size();
+            uint32_t partySize = party->players.size();
+            if (party->heroes.valid()) {
+                partySize += party->heroes.size();
+            }
 
             if (!GuiUtils::ParseUInt(argv[2], &partyMemberNumber) || partyMemberNumber <= 0 ||
                 partyMemberNumber > partySize) {
