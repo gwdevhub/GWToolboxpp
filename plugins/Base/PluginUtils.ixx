@@ -1,4 +1,4 @@
-﻿module;
+module;
 
 #include "stl.h"
 #include <GWCA/Constants/Constants.h>
@@ -134,12 +134,12 @@ export namespace PluginUtils {
         bool decoded = false;
         bool sanitised = false;
         virtual void sanitise();
-        GW::Constants::TextLanguage language_id = static_cast<GW::Constants::TextLanguage>(-1);
+        GW::Constants::Language language_id = static_cast<GW::Constants::Language>(-1);
         static void OnStringDecoded(void* param, wchar_t* decoded);
 
     public:
         // Set the language for decoding this encoded string. If the language has changed, resets the decoded result. Returns this for chaining.
-        EncString* language(GW::Constants::TextLanguage l = static_cast<GW::Constants::TextLanguage>(-1));
+        EncString* language(GW::Constants::Language l = static_cast<GW::Constants::Language>(-1));
         bool IsDecoding() const { return decoding && decoded_ws.empty(); };
         // Recycle this EncString by passing a new encoded string id to decode.
         // Set sanitise to true to automatically remove guild tags etc from the string
@@ -902,7 +902,7 @@ namespace PluginUtils {
         }
     }
 
-    EncString* EncString::language(const GW::Constants::TextLanguage l)
+    EncString* EncString::language(const GW::Constants::Language l)
     {
         if (language_id == l) {
             return this;
@@ -931,7 +931,7 @@ namespace PluginUtils {
     {
         if (!decoded && !decoding && !encoded_ws.empty()) {
             decoding = true;
-            GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnStringDecoded, this, static_cast<uint32_t>(language_id));
+            GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnStringDecoded, this, language_id);
         }
         sanitise();
         return decoded_ws;
