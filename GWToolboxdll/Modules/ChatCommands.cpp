@@ -774,6 +774,9 @@ void ChatCommands::DrawHelp()
     ImGui::Bullet();
     ImGui::Text("'/load [build template|build name] [Hero index]' loads a build. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
     ImGui::Bullet();
+    ImGui::Text("'/loadprefs' to load GW settings from '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
+        "'/loadprefs <filename>' to load GW settings from '<GWToolbox Dir>/<filename>.ini'");
+    ImGui::Bullet();
     ImGui::Text("'/nm' or '/normalmode' to set normal mode difficulty in an outpost.");
     ImGui::Bullet();
     ImGui::Text("'/morale' to send your current morale/death penalty info to team chat.");
@@ -788,6 +791,9 @@ void ChatCommands::DrawHelp()
     ImGui::Text(pref_syntax);
     ImGui::Bullet();
     ImGui::Text("'/resize <width> <height>' resize the GW window");
+    ImGui::Bullet();
+    ImGui::Text("'/saveprefs' to save GW settings to '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
+        "'/saveprefs <filename>' to save GW settings to '<GWToolbox Dir>/<filename>.ini'");
     ImGui::Bullet();
     ImGui::Text("'/scwiki [<search_term>]' search https://wiki.fbgmguild.com.");
     ImGui::Bullet();
