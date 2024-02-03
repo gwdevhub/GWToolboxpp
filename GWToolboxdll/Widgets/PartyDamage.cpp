@@ -138,12 +138,12 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::
         return; // ignore player-inflicted damage
     }
     // such as Life bond or sacrifice
-    if (target->allegiance == GW::Constants::Allegiance::Ally_NonAttackable) {
-        return; // ignore damage inflicted to allies in general
+    switch (target->allegiance) {
+        case GW::Constants::Allegiance::Ally_NonAttackable:
+        case GW::Constants::Allegiance::Spirit_Pet:
+        case GW::Constants::Allegiance::Minion:
+            return; // ignore damage inflicted to allies in general
     }
-    // warning: note damage to allied spirits, minions or stones may still trigger
-    // you can do damage like that by standing in bugged dart traps in eye of the north
-    // or maybe with some skills that damage minions/spirits
 
     long ldmg;
     if (target->max_hp > 0 && target->max_hp < 100000) {
