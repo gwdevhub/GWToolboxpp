@@ -24,25 +24,45 @@
 
 #include "GWToolbox.h"
 
-// Every connection cost 30 seconds.
-// You have 2 tries.
-// After that, you can try every 30 seconds.
-constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
-constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
-static const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-using easywsclient::WebSocket;
-using nlohmann::json;
-using json_vec = std::vector<json>;
+namespace {
+    // Every connection cost 30 seconds.
+    // You have 2 tries.
+    // After that, you can try every 30 seconds.
+    constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
+    constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
+    static const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    using easywsclient::WebSocket;
+    using nlohmann::json;
+    using json_vec = std::vector<json>;
 
-constexpr char ws_host_kmd[] = "wss://kamadan.gwtoolbox.com";
-constexpr char https_host_kmd[] = "https://kamadan.gwtoolbox.com";
-constexpr char ws_host_asc[] = "wss://ascalon.gwtoolbox.com";
-constexpr char https_host_asc[] = "https://ascalon.gwtoolbox.com/";
+    constexpr char ws_host_kmd[] = "wss://kamadan.gwtoolbox.com";
+    constexpr char https_host_kmd[] = "https://kamadan.gwtoolbox.com";
+    constexpr char ws_host_asc[] = "wss://ascalon.gwtoolbox.com";
+    constexpr char https_host_asc[] = "https://ascalon.gwtoolbox.com/";
 
-static wchar_t* GetMessageCore()
+    wchar_t* GetMessageCore()
+    {
+        GW::Array<wchar_t>* buff = &GW::GetGameContext()->world->message_buff;
+        return buff ? buff->begin() : nullptr;
+    }
+
+    
+}
+void TradeWindow::CmdPricecheck(const wchar_t*, const int argc, const LPWSTR* argv)
 {
-    GW::Array<wchar_t>* buff = &GW::GetGameContext()->world->message_buff;
-    return buff ? buff->begin() : nullptr;
+    if (argc < 2) {
+        return Log::Error("Try '/pc <item>'");
+    }
+
+    std::string item_to_search;
+    for (int i = 1; i < argc; i++) {
+        if (i > 1) {
+            item_to_search += " ";
+        }
+        item_to_search += GuiUtils::WStringToString(argv[i]);
+    }
+    Log::Info("Searching trade for \"%s\"...", item_to_search.c_str());
+    Instance().search(item_to_search, true);
 }
 
 void TradeWindow::OnMessageLocal(GW::HookStatus* status, const GW::Packet::StoC::MessageLocal* pak)
@@ -86,23 +106,6 @@ void TradeWindow::OnMessageLocal(GW::HookStatus* status, const GW::Packet::StoC:
     if (!Instance().IsTradeAlert(message_utf8)) {
         status->blocked = true;
     }
-}
-
-void TradeWindow::CmdPricecheck(const wchar_t*, const int argc, const LPWSTR* argv)
-{
-    if (argc < 2) {
-        return Log::Error("Try '/pc <item>'");
-    }
-
-    std::string item_to_search;
-    for (int i = 1; i < argc; i++) {
-        if (i > 1) {
-            item_to_search += " ";
-        }
-        item_to_search += GuiUtils::WStringToString(argv[i]);
-    }
-    Log::Info("Searching trade for \"%s\"...", item_to_search.c_str());
-    Instance().search(item_to_search, true);
 }
 
 void TradeWindow::Initialize()

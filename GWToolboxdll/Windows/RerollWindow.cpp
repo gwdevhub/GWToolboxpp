@@ -291,7 +291,7 @@ std::vector<std::wstring>* RerollWindow::GetAvailableChars()
     return email ? account_characters[email] : nullptr;
 }
 
-void RerollWindow::CmdReroll(const wchar_t* message, const int argc, LPWSTR*)
+void RerollWindow::CmdReroll(const wchar_t* message, const int argc, const LPWSTR*)
 {
     if (argc < 2) {
         Log::Error("Incorrect syntax: /reroll [profession|character_name]");

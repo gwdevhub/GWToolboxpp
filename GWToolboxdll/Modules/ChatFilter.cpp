@@ -811,11 +811,22 @@ void ChatFilter::Initialize()
     GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_GLOBAL, ClearMessageBufferIfBlocked);
     GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_LOCAL, ClearMessageBufferIfBlocked);
 
-    GW::Chat::RegisterLocalMessageCallback(&BlockIfApplicable_Entry, [](GW::HookStatus* status, const int channel, const wchar_t* message) {
-        if (ShouldIgnore(message, static_cast<uint32_t>(channel))) {
+    GW::UI::RegisterUIMessageCallback(&BlockIfApplicable_Entry, GW::UI::UIMessage::kWriteToChatLog, [](GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) {
+        const auto message = ((wchar_t**)wparam)[1];
+        const auto channel = *(uint32_t*)wparam;
+        if (!status->blocked && ShouldIgnore(message, channel)) {
             status->blocked = true;
         }
-    });
+        });
+}
+
+void ChatFilter::Terminate() {
+    ToolboxModule::Terminate();
+    GW::StoC::RemoveCallback(GAME_SMSG_CHAT_MESSAGE_SERVER, &BlockIfApplicable_Entry);
+    GW::StoC::RemoveCallback(GAME_SMSG_CHAT_MESSAGE_GLOBAL, &BlockIfApplicable_Entry);
+    GW::StoC::RemoveCallback(GAME_SMSG_CHAT_MESSAGE_LOCAL, &BlockIfApplicable_Entry);
+
+    GW::UI::RemoveUIMessageCallback(&BlockIfApplicable_Entry);
 }
 
 void ChatFilter::LoadSettings(ToolboxIni* ini)

@@ -530,8 +530,8 @@ namespace {
         guild_roster_obfuscated = obfuscate;
         return true;
     }
-
-    void CmdObfuscate(const wchar_t*, int, wchar_t**)
+    
+    void CmdObfuscate(const wchar_t*, const int, const LPWSTR*)
     {
         Obfuscator::Obfuscate(pending_state != ObfuscatorState::Enabled);
     }
@@ -748,8 +748,10 @@ namespace {
     }
 
     // Function called right before GW tries to send a chat message to a player; if the player is obfuscated, we need to unobfuscate it for the server.
-    void OnSendChat(GW::HookStatus* status, const GW::Chat::Channel channel, wchar_t* message)
+    void OnSendChat(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
     {
+        const auto message = *(wchar_t**)wparam;
+        const auto channel = GW::Chat::GetChannel(*message);
         if (channel != GW::Chat::Channel::CHANNEL_WHISPER) {
             return;
         }
@@ -777,15 +779,22 @@ namespace {
         }
     }
 
-    void OnPrintChat(GW::HookStatus*, GW::Chat::Channel, wchar_t** message_ptr, FILETIME, int)
+    void OnPrintChat(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
     {
+        struct Packet {
+            GW::Chat::Channel channel;
+            wchar_t* message;
+            FILETIME timestamp;
+            bool is_reprint;
+        } *packet = (Packet*)wparam;
+
         if (!IsObfuscatorEnabled()) {
             return;
         }
         // We unobfuscated the message in OnPreUIMessage - now we need to re-obfuscate it for display
-        if (ObfuscateMessage(*message_ptr, ui_message_temp_message)) {
+        if (ObfuscateMessage(packet->message, ui_message_temp_message)) {
             // I think this is copied away later?
-            *message_ptr = ui_message_temp_message.data();
+            packet->message = ui_message_temp_message.data();
         }
     }
 #ifdef DETECT_STREAMING_APPLICATION
@@ -903,9 +912,8 @@ void Obfuscator::Initialize()
         RegisterUIMessageCallback(&stoc_hook, header, OnUIMessage, post_gw_altitude);
     }
 
-    RegisterPrintChatCallback(&ctos_hook, OnPrintChat);
-
-    RegisterSendChatCallback(&ctos_hook, OnSendChat);
+    GW::UI::RegisterUIMessageCallback(&ctos_hook, GW::UI::UIMessage::kPrintChatMessage, OnPrintChat);
+    GW::UI::RegisterUIMessageCallback(&ctos_hook, GW::UI::UIMessage::kSendChatMessage, OnSendChat);
 
     GW::Chat::CreateCommand(L"obfuscate", CmdObfuscate);
     GW::Chat::CreateCommand(L"hideme", CmdObfuscate);

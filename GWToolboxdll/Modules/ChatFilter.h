@@ -18,6 +18,7 @@ public:
     [[nodiscard]] const char* SettingsName() const override { return "Chat Settings"; }
 
     void Initialize() override;
+    void Terminate() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;

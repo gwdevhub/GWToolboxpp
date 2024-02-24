@@ -191,7 +191,7 @@ namespace {
         });
     }
 
-    void OnTeamspeakCommand(const wchar_t*, int, LPWSTR*)
+    void OnTeamspeakCommand(const wchar_t*, const int, const LPWSTR*)
     {
         if (!IsConnected()) {
             Log::Error("GWToolbox isn't connected to Teamspeak 5");

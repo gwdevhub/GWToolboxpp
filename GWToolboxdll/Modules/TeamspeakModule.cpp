@@ -63,7 +63,7 @@ namespace {
         return current_server;
     }
 
-    void OnTeamspeakCommand(const wchar_t*, int, LPWSTR*);
+    void OnTeamspeakCommand(const wchar_t*,const int,const LPWSTR*);
     bool ConnectBlocking(bool user_invoked = false);
 
     bool IsConnected()
@@ -414,7 +414,7 @@ namespace {
         });
     }
 
-    void OnTeamspeakCommand(const wchar_t*, int, LPWSTR*)
+    void OnTeamspeakCommand(const wchar_t*, const int, const LPWSTR*)
     {
         Resources::EnqueueWorkerTask([] {
             GetServerInfoBlocking();

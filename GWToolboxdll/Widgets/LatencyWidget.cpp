@@ -15,32 +15,54 @@ namespace {
     constexpr size_t ping_history_len = 10; // GW checks last 10 pings for avg
     uint32_t ping_history[ping_history_len] = {0};
     size_t ping_index = 0;
+
+    GW::HookEntry Ping_Entry;
+    int red_threshold = 250;
+    bool show_avg_ping = false;
+    int font_size = 0;
+
+    GW::HookEntry ChatCommand_Hook;
+
+    void OnServerPing(GW::HookStatus*, void* packet)
+    {
+        const auto packet_as_uint_array = static_cast<uint32_t*>(packet);
+        const uint32_t ping = packet_as_uint_array[1];
+        if (ping > 4999) {
+            return; // GW checks this too.
+        }
+        if (ping_history[ping_index]) {
+            ping_index++;
+            if (ping_index == ping_history_len) {
+                ping_index = 0;
+            }
+        }
+        ping_history[ping_index] = ping;
+    }
+
+    void CmdPing(const wchar_t*, const int, const LPWSTR*)
+    {
+        LatencyWidget::SendPing();
+    }
 }
 
+void LatencyWidget::SendPing() {
+    char buffer[48];
+    snprintf(buffer, sizeof(buffer), "Current Ping: %ums, Avg Ping: %ums", LatencyWidget::GetPing(), LatencyWidget::GetAveragePing());
+    GW::Chat::SendChat('#', buffer);
+}
 void LatencyWidget::Initialize()
 {
     ToolboxWidget::Initialize();
     GW::StoC::RegisterPacketCallback(&Ping_Entry, GAME_SMSG_PING_REPLY, OnServerPing, 0x800);
-    GW::Chat::CreateCommand(L"ping", SendPing);
+    GW::Chat::CreateCommand(L"ping", CmdPing);
+}
+void LatencyWidget::Terminate() {
+    ToolboxWidget::Terminate();
+    GW::Chat::DeleteCommand(L"ping");
+    GW::StoC::RemoveCallback(GAME_SMSG_PING_REPLY,&Ping_Entry);
 }
 
 void LatencyWidget::Update(const float) { }
-
-void LatencyWidget::OnServerPing(GW::HookStatus*, void* packet)
-{
-    const auto packet_as_uint_array = static_cast<uint32_t*>(packet);
-    const uint32_t ping = packet_as_uint_array[1];
-    if (ping > 4999) {
-        return; // GW checks this too.
-    }
-    if (ping_history[ping_index]) {
-        ping_index++;
-        if (ping_index == ping_history_len) {
-            ping_index = 0;
-        }
-    }
-    ping_history[ping_index] = ping;
-}
 
 uint32_t LatencyWidget::GetPing() { return ping_history[ping_index]; }
 
@@ -142,16 +164,7 @@ void LatencyWidget::DrawSettingsInternal()
 
 ImColor LatencyWidget::GetColorForPing(const uint32_t ping)
 {
-    const LatencyWidget& instance = Instance();
-    const float x = ping / static_cast<float>(instance.red_threshold);
+    const float x = ping / static_cast<float>(red_threshold);
     const auto myColor = ImColor(2.0f * x, 2.0f * (1 - x), 0.0f);
     return myColor;
-}
-
-void LatencyWidget::SendPing(const wchar_t*, int, LPWSTR*)
-{
-    LatencyWidget& instance = Instance();
-    char buffer[48];
-    snprintf(buffer, sizeof(buffer), "Current Ping: %ums, Avg Ping: %ums", instance.GetPing(), instance.GetAveragePing());
-    GW::Chat::SendChat('#', buffer);
 }

@@ -7,18 +7,48 @@
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
 
+#include <GWCA/Managers/UIMgr.h>
+
 #include <Modules/TwitchModule.h>
 
 namespace {
+    // IRC details
+    std::string irc_server = "irc.chat.twitch.tv";
+    int irc_port = 443; // Not 6667, just in case router blocks it.
+    std::string irc_username = "";
+    std::string irc_password = "oauth:<your_token_here>";
+    std::string irc_channel = "";
+    std::string irc_alias = "Twitch";
+    Color irc_chat_color = Colors::RGB(0xAD, 0x83, 0xFA);
+
+    bool show_messages = true;
+    bool notify_on_user_leave = true;
+    bool notify_on_user_join = true;
+    bool pending_connect = false;
+    bool pending_disconnect = false;
+    bool connected = false;
+    bool show_irc_password = false;
+    bool twitch_enabled = true;
+    bool hooked = false;
+
+    char message_buffer[1024] = {0};
+
+    IRC irc_conn;
+
+    GW::HookEntry SendChatCallback_Entry;
+    GW::HookEntry StartWhisperCallback_Entry;
+
+
+
+
     void WriteChat(const wchar_t* message, const char* nick = nullptr)
     {
-        const TwitchModule& module = TwitchModule::Instance();
         char sender[128];
         if (nick) {
-            snprintf(sender, sizeof(sender) / sizeof(*sender), "%s @ %s", nick, module.irc_alias.c_str());
+            snprintf(sender, sizeof(sender) / sizeof(*sender), "%s @ %s", nick, irc_alias.c_str());
         }
         else {
-            snprintf(sender, sizeof(sender) / sizeof(*sender), "%s", module.irc_alias.c_str());
+            snprintf(sender, sizeof(sender) / sizeof(*sender), "%s", irc_alias.c_str());
         }
         std::wstring sender_ws = GuiUtils::StringToWString(sender);
         auto message_ws = new wchar_t[255];
@@ -61,21 +91,20 @@ namespace {
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnJoin(const char* params, irc_reply_data* hostd, void*)
     {
-        const TwitchModule* module = &TwitchModule::Instance();
-        if (!params[0] || !module->show_messages) {
+        if (!params[0] || !show_messages) {
             return 0; // Empty msg
         }
         wchar_t buf[600];
-        if (strcmp(hostd->nick, module->irc_username.c_str()) == 0) {
-            if (strcmp(&params[1], module->irc_username.c_str()) == 0) {
+        if (strcmp(hostd->nick, irc_username.c_str()) == 0) {
+            if (strcmp(&params[1], irc_username.c_str()) == 0) {
                 WriteChat(L"Connected");
                 return 0;
             }
-            swprintf(buf, 599, L"Connected to %s as %S", GuiUtils::StringToWString(&params[1]).c_str(), module->irc_username.c_str());
+            swprintf(buf, 599, L"Connected to %s as %S", GuiUtils::StringToWString(&params[1]).c_str(), irc_username.c_str());
             WriteChat(buf);
             return 0;
         }
-        if (!module->notify_on_user_join) {
+        if (!notify_on_user_join) {
             return 0;
         }
         swprintf(buf, 599, L"%s joined your channel.", GuiUtils::StringToWString(hostd->nick).c_str());
@@ -87,8 +116,7 @@ namespace {
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnLeave(const char* params, irc_reply_data* hostd, void*)
     {
-        const TwitchModule* module = &TwitchModule::Instance();
-        if (!params[0] || !module->show_messages || !module->notify_on_user_leave) {
+        if (!params[0] || !show_messages || !notify_on_user_leave) {
             return 0; // Empty msg
         }
 
@@ -100,21 +128,20 @@ namespace {
 
     // ReSharper disable once CppParameterMayBeConst
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
-    int OnConnected(const char* params, irc_reply_data*, void* conn)
+    int OnConnected(const char* params, irc_reply_data*, void* wparam)
     {
-        TwitchModule* module = &TwitchModule::Instance();
-        const auto irc_conn = static_cast<IRC*>(conn);
+        const auto conn = static_cast<IRC*>(wparam);
         // Set the username to be the connected name.
-        module->irc_username = params;
-        module->irc_username.erase(module->irc_username.find_first_of(' '));
+        irc_username = params;
+        irc_username.erase(irc_username.find_first_of(' '));
         // Channel == username. This could be changed to connect to other Twitch channels/IRC channels.
-        if (module->irc_channel[0] == 0) {
-            module->irc_channel = module->irc_username;
+        if (irc_channel[0] == 0) {
+            irc_channel = irc_username;
         }
         char buf[128];
-        Log::Log("%s: Connected %s", module->irc_alias.c_str(), params);
-        sprintf(buf, "#%s", module->irc_channel.c_str());
-        irc_conn->join(buf);
+        Log::Log("%s: Connected %s", irc_alias.c_str(), params);
+        sprintf(buf, "#%s", irc_channel.c_str());
+        conn->join(buf);
         return 0;
     }
 
@@ -122,8 +149,7 @@ namespace {
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnMessage(const char* params, irc_reply_data* hostd, void*)
     {
-        const TwitchModule* module = &TwitchModule::Instance();
-        if (!params[0] || !module->show_messages) {
+        if (!params[0] || !show_messages) {
             return 0; // Empty msg
         }
         const std::wstring message_ws = GuiUtils::StringToWString(&params[1]);
@@ -150,6 +176,57 @@ namespace {
 
         return 0;
     }
+
+    void AddHooks()
+    {
+        if (hooked) {
+            return;
+        }
+        hooked = true;
+        // When starting a whisper to "<irc_nickname> @ <irc_channel>", rewrite recipient to be "<irc_channel>"
+        GW::UI::RegisterUIMessageCallback(&StartWhisperCallback_Entry, GW::UI::UIMessage::kStartWhisper, [](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+            wchar_t* name = *(wchar_t**)wparam;
+            if (!(name && *name)) {
+                return;
+            }
+            wchar_t buf[128];
+            const std::wstring walias = GuiUtils::StringToWString(irc_alias);
+            swprintf(buf, 128, L" @ %s", walias.c_str());
+            if (std::wstring(name).find(buf) != std::wstring::npos) {
+                wcscpy(name, walias.c_str());
+            }
+            });
+        GW::UI::RegisterUIMessageCallback(&SendChatCallback_Entry, GW::UI::UIMessage::kSendChatMessage, [](GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) {
+            wchar_t* msg = *(wchar_t**)wparam;
+            GW::Chat::Channel chan = GW::Chat::GetChannel(*msg);
+            if (chan != GW::Chat::Channel::CHANNEL_WHISPER || !connected) {
+                return;
+            }
+            wchar_t msgcpy[255];
+            wcscpy(msgcpy, msg);
+            std::string message = GuiUtils::WStringToString(msgcpy);
+            const size_t sender_idx = message.find(',');
+            if (sender_idx == std::string::npos) {
+                return; // Invalid sender
+            }
+            const std::string to = message.substr(0, sender_idx);
+            if (to.compare(irc_alias) != 0) {
+                return;
+            }
+            std::string content = message.substr(sender_idx + 1);
+            Log::Log("Sending to IRC: %s", content.c_str());
+            if (irc_conn.raw("PRIVMSG #%s :%s\r\n", irc_channel.c_str(), content.c_str())) {
+                Log::Error("Failed to send message");
+            }
+            else {
+                irc_reply_data d{};
+                d.nick = const_cast<char*>(irc_username.c_str());
+                content.insert(0, ":");
+                OnMessage(content.c_str(), &d, &irc_conn);
+            }
+            status->blocked = true;
+            });
+    }
 }
 
 void TwitchModule::Initialize()
@@ -161,11 +238,11 @@ void TwitchModule::Initialize()
     irc_password.resize(255);
     irc_channel.resize(56);
 
-    conn.hook_irc_command("376", &OnConnected);
-    conn.hook_irc_command("JOIN", &OnJoin);
-    conn.hook_irc_command("PART", &OnLeave);
-    conn.hook_irc_command("PRIVMSG", &OnMessage);
-    conn.hook_irc_command("NOTICE", &OnNotice);
+    irc_conn.hook_irc_command("376", &OnConnected);
+    irc_conn.hook_irc_command("JOIN", &OnJoin);
+    irc_conn.hook_irc_command("PART", &OnLeave);
+    irc_conn.hook_irc_command("PRIVMSG", &OnMessage);
+    irc_conn.hook_irc_command("NOTICE", &OnNotice);
 
     AddHooks();
 
@@ -174,79 +251,35 @@ void TwitchModule::Initialize()
     SetMessageColor(GW::Chat::Channel::CHANNEL_GWCA1, col2);
 }
 
-void TwitchModule::AddHooks()
-{
-    if (hooked) {
-        return;
-    }
-    hooked = true;
-    // When starting a whisper to "<irc_nickname> @ <irc_channel>", rewrite recipient to be "<irc_channel>"
-    GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, [&](const GW::HookStatus*, wchar_t* name) -> bool {
-        wchar_t buf[128];
-        if (!name) {
-            return false;
-        }
-        const std::wstring walias = GuiUtils::StringToWString(Instance().irc_alias);
-        swprintf(buf, 128, L" @ %s", walias.c_str());
-        if (std::wstring(name).find(buf) != std::wstring::npos) {
-            wcscpy(name, walias.c_str());
-        }
-        return false;
-    });
-    // When sending a whisper to "<irc_channel>", redirect it to send message via IRC
-    GW::Chat::RegisterSendChatCallback(&SendChatCallback_Entry, [&](GW::HookStatus* status, const GW::Chat::Channel chan, const wchar_t* msg) -> bool {
-        if (chan != GW::Chat::Channel::CHANNEL_WHISPER || !connected) {
-            return false;
-        }
-        wchar_t msgcpy[255];
-        wcscpy(msgcpy, msg);
-        std::string message = GuiUtils::WStringToString(msgcpy);
-        const size_t sender_idx = message.find(',');
-        if (sender_idx == std::string::npos) {
-            return false; // Invalid sender
-        }
-        const std::string to = message.substr(0, sender_idx);
-        if (to.compare(irc_alias) != 0) {
-            return false;
-        }
-        std::string content = message.substr(sender_idx + 1);
-        Log::Log("Sending to IRC: %s", content.c_str());
-        if (conn.raw("PRIVMSG #%s :%s\r\n", irc_channel.c_str(), content.c_str())) {
-            Log::Error("Failed to send message");
-        }
-        else {
-            irc_reply_data d{};
-            d.nick = const_cast<char*>(irc_username.c_str());
-            content.insert(0, ":");
-            OnMessage(content.c_str(), &d, &conn);
-        }
-        status->blocked = true;
-        return true;
-    });
-}
+
+
+bool TwitchModule::isConnected() { return connected; };
+IRC* TwitchModule::irc() { return &irc_conn; };
 
 void TwitchModule::Disconnect()
 {
-    connected = conn.is_connected();
+    connected = irc_conn.is_connected();
     if (!connected) {
         return;
     }
-    conn.disconnect();
-    connected = conn.is_connected();
+    irc_conn.disconnect();
+    connected = irc_conn.is_connected();
 }
-
 void TwitchModule::Terminate()
 {
     ToolboxModule::Terminate();
     Disconnect();
+    GW::UI::RemoveUIMessageCallback(&SendChatCallback_Entry);
+    GW::UI::RemoveUIMessageCallback(&StartWhisperCallback_Entry);
 }
 
 bool TwitchModule::Connect()
 {
+    auto conn = irc();
     if (!twitch_enabled) {
         return true;
     }
-    connected = conn.is_connected();
+    connected = conn->is_connected();
     if (connected) {
         return true;
     }
@@ -274,7 +307,7 @@ bool TwitchModule::Connect()
                                return static_cast<char>(tolower(c));
                            });
 
-    if (conn.start(
+    if (conn->start(
             irc_server.c_str(),
             irc_port,
             "unused",
@@ -285,12 +318,12 @@ bool TwitchModule::Connect()
         return false;
     }
     printf("Connected to IRC!\n");
-    return connected = conn.is_connected();
+    return connected = conn->is_connected();
 }
 
 void TwitchModule::Update(const float)
 {
-    connected = conn.is_connected();
+    connected = irc_conn.is_connected();
     if (pending_disconnect) {
         Disconnect();
         pending_connect = pending_disconnect = false;
@@ -300,7 +333,7 @@ void TwitchModule::Update(const float)
         pending_connect = pending_disconnect = false;
     }
     if (connected) {
-        conn.ping();
+        irc_conn.ping();
     }
 }
 
@@ -332,7 +365,7 @@ void TwitchModule::DrawSettingsInternal()
         ImGui::SameLine();
         constexpr ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
         if (Colors::DrawSettingHueWheel("Twitch Color:", &irc_chat_color, flags)) {
-            SetSenderColor(GW::Chat::Channel::CHANNEL_GWCA1, Instance().irc_chat_color);
+            SetSenderColor(GW::Chat::Channel::CHANNEL_GWCA1, irc_chat_color);
         }
         ImGui::Checkbox("Notify on user leave", &notify_on_user_leave);
         ImGui::ShowHelp("Receive a message in the chat window when a viewer leaves the Twitch Channel");

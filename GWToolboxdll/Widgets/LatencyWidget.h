@@ -8,10 +8,6 @@ class LatencyWidget : public ToolboxWidget {
     LatencyWidget() = default;
     ~LatencyWidget() override = default;
 
-    GW::HookEntry Ping_Entry;
-    int red_threshold = 250;
-    bool show_avg_ping = false;
-    int font_size = 0;
 
 public:
     static LatencyWidget& Instance()
@@ -25,10 +21,10 @@ public:
     [[nodiscard]] const char* Icon() const override { return ICON_FA_STOPWATCH; }
 
     void Initialize() override;
+    void Terminate() override;
     void Update(float delta) override;
 
-    static void OnServerPing(GW::HookStatus*, void* packet);
-
+    static void SendPing();
     static uint32_t GetPing();
     static uint32_t GetAveragePing();
 
@@ -42,5 +38,4 @@ public:
     void DrawSettingsInternal() override;
 
     static ImColor GetColorForPing(uint32_t ping);
-    static void SendPing(const wchar_t* = nullptr, int argc = 0, LPWSTR* argv = nullptr);
 };

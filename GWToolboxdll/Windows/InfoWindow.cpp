@@ -672,7 +672,7 @@ namespace {
     CreateTexture_pt CreateTexture_Ret = nullptr;
 
     // Why reinvent the wheel?
-    typedef void(__cdecl* GWCA_SendUIMessage_pt)(GW::UI::UIMessage msgid, void* wParam, void* lParam);
+    typedef void(__cdecl* GWCA_SendUIMessage_pt)(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks);
     GWCA_SendUIMessage_pt GWCA_SendUIMessage_Func = nullptr;
     GWCA_SendUIMessage_pt GWCA_SendUIMessage_Ret = nullptr;
 
@@ -680,16 +680,17 @@ namespace {
         GW::UI::UIMessage msgid;
         void* wParam;
         void* lParam;
+        bool skip_hooks;
     };
 
     std::vector<UIMessagePacket*> ui_message_packets_recorded;
     bool record_ui_messages = false;
 
-    void OnGWCASendUIMessage(GW::UI::UIMessage msgid, void* wParam, void* lParam) {
+    void OnGWCASendUIMessage(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks) {
         GW::Hook::EnterHook();
-        GWCA_SendUIMessage_Ret(msgid, wParam, lParam);
+        GWCA_SendUIMessage_Ret(msgid, wParam, lParam, skip_hooks);
         if(record_ui_messages)
-            ui_message_packets_recorded.push_back(new UIMessagePacket({ msgid,wParam,lParam }));
+            ui_message_packets_recorded.push_back(new UIMessagePacket({ msgid,wParam,lParam, skip_hooks }));
         GW::Hook::LeaveHook();
     }
     void ClearUIMessagesRecorded() {
@@ -843,6 +844,9 @@ namespace {
         [[maybe_unused]] const GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
         [[maybe_unused]] const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
         [[maybe_unused]] const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
+
+        const auto frame = GW::UI::GetFrameByLabel(L"Skillbar");
+        (frame);
     }
 }
 
@@ -959,7 +963,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
         }
         if (show_dialog && ImGui::CollapsingHeader("Dialog")) {
             EncInfoField("Dialog Body", DialogModule::GetDialogBody());
-            InfoField("Last Dialog", "0x%X", GW::Agents::GetLastDialogId());
+            InfoField("Last Dialog", "0x%X", DialogModule::LastDialogId());
             ImGui::Text("Available NPC Dialogs:");
             ImGui::ShowHelp("Talk to an NPC to see available dialogs");
             const auto& messages = DialogModule::GetDialogButtonMessages();

@@ -22,6 +22,28 @@ namespace {
     GW::HookEntry AgentAdd_Hook;
     GW::HookEntry AgentRemove_Hook;
     GW::HookEntry GameSrvTransfer_Hook;
+    GW::HookEntry ChatCommand_Hook;
+
+    const wchar_t* af_2020_quotes[] = {
+        L"Happy April Fools Da-- *cough*",
+        L"I don't feel so good...",
+        L"*cough* *cough*",
+        L"I'm down to my last roll of toilet paper!",
+        L"Day 5 of self isolation...",
+        L"Get ready for the baby boom after all this blows over!",
+        L"Hell of a commute this morning from my bed to my PC...",
+        L"Do I look ill to you?",
+        L"Urpp... feel sick...",
+        L"Schools are closed, my kids are driving me mad and I just want to play Guild Wars!",
+        L"DoA Quarantineway anyone?",
+        L"'Working from home' is just a good excuse to play video games during the day",
+        L"Nothing like a global pandemic to bring people togeth-- nevermind.",
+        L"Stay away from crowded places? You mean like Kamadan? No way!",
+        L"Nothing left to do but 'Netflix and ill'!",
+        L"Knew I should have put shares into the paracetamol stock market this year",
+        L"I swear thats the last time I eat Canthan food again!"
+    };
+    constexpr auto af_quotes_length = sizeof(af_2020_quotes) / 4;
 
 
     void OnAgentAdd(GW::HookStatus*, const GW::Packet::StoC::AgentAdd* packet)
@@ -79,35 +101,15 @@ namespace {
         GW::StoC::RemoveCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Hook);
         listeners_added = false;
     }
+    void CmdAprilFools(const wchar_t*, const int, const LPWSTR*) {
+        AprilFools::SetEnabled(!enabled);
+    }
 }
-
-static const wchar_t* af_2020_quotes[] = {
-    L"Happy April Fools Da-- *cough*",
-    L"I don't feel so good...",
-    L"*cough* *cough*",
-    L"I'm down to my last roll of toilet paper!",
-    L"Day 5 of self isolation...",
-    L"Get ready for the baby boom after all this blows over!",
-    L"Hell of a commute this morning from my bed to my PC...",
-    L"Do I look ill to you?",
-    L"Urpp... feel sick...",
-    L"Schools are closed, my kids are driving me mad and I just want to play Guild Wars!",
-    L"DoA Quarantineway anyone?",
-    L"'Working from home' is just a good excuse to play video games during the day",
-    L"Nothing like a global pandemic to bring people togeth-- nevermind.",
-    L"Stay away from crowded places? You mean like Kamadan? No way!",
-    L"Nothing left to do but 'Netflix and ill'!",
-    L"Knew I should have put shares into the paracetamol stock market this year",
-    L"I swear thats the last time I eat Canthan food again!"
-};
-constexpr auto af_quotes_length = sizeof(af_2020_quotes) / 4;
 
 void AprilFools::Initialize()
 {
     ToolboxModule::Initialize();
-    GW::Chat::CreateCommand(L"aprilfools", [this](const wchar_t*, int, LPWSTR*) -> void {
-        SetEnabled(!enabled);
-    });
+    GW::Chat::CreateCommand(L"aprilfools", CmdAprilFools);
 
     const auto now = time(nullptr);
     const auto ltm = gmtime(&now);

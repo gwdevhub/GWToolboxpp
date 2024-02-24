@@ -137,7 +137,7 @@ namespace {
         marked_targets.emplace(agent->agent_id, new MarkedTarget(agent));
     }
 
-    void CmdClearMarkTarget(const wchar_t*, int, LPWSTR*)
+    void CmdClearMarkTarget(const wchar_t*, const int, const LPWSTR*)
     {
         RemoveMarkedTarget();
     }

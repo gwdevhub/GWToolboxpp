@@ -1624,7 +1624,7 @@ void HotkeyAction::Execute()
             if (isExplorable()) {
                 const GW::Agent* target = GW::Agents::GetTarget();
                 if (target && target->GetIsGadgetType()) {
-                    GW::Agents::GoSignpost(target);
+                    GW::Agents::InteractAgent(target);
                     GW::Items::OpenLockedChest();
                 }
             }

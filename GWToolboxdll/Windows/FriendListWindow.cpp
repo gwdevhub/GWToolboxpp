@@ -285,35 +285,6 @@ namespace {
         }
     }
 
-    // Record the pending outgoing whisper
-    void OnOutgoingWhisper(GW::HookStatus* status, int channel, wchar_t* message)
-    {
-        // If this outgoing whisper was created due to a redirect, or its not a whisper, drop out here.
-        if (is_redirecting_whisper || static_cast<GW::Chat::Channel>(channel) != GW::Chat::CHANNEL_WHISPER) {
-            return;
-        }
-        wchar_t* separator_pos = wcschr(message, ',');
-        if (!separator_pos) {
-            return;
-        }
-        // If the recipient is in my friend list, but under a different player name, redirect it now...
-        const auto target = std::wstring(message, separator_pos);
-        const auto text = separator_pos + 1;
-        if (const auto friend_ = FriendListWindow::GetFriend(target.c_str())) {
-            const auto& friendname = friend_->current_char->getNameW();
-            if (!friend_->IsOffline() && friend_->current_char && friendname != target) {
-                is_redirecting_whisper = true;
-                GW::Chat::SendChat(friendname.c_str(), text);
-                is_redirecting_whisper = false;
-                pending_whisper.reset();
-                status->blocked = true;
-                return;
-            }
-        }
-        // ...Otherwise carry on with the send
-        pending_whisper.reset(target, text);
-    }
-
     // Remove from pending whispers when whisper has been sent
     void OnOutgoingWhisperSuccess(GW::HookStatus*, wchar_t*)
     {
@@ -358,16 +329,6 @@ namespace {
         }
     }
 
-    void OnPrintChat(GW::HookStatus*, GW::Chat::Channel, wchar_t** message_ptr, FILETIME, int)
-    {
-        switch (static_cast<MessageType>(*message_ptr[0])) {
-            case MessageType::INCOMING_WHISPER:
-            case MessageType::OUTGOING_WHISPER:
-                FriendListWindow::AddFriendAliasToMessage(message_ptr);
-                break;
-        }
-    }
-
     void OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
@@ -388,24 +349,63 @@ namespace {
                 const auto uimsg = static_cast<FriendListWindow::UIChatMessage*>(wparam);
                 wchar_t* message = uimsg->message;
                 switch (static_cast<MessageType>(message[0])) {
-                    case MessageType::CANNOT_ADD_YOURSELF_AS_A_FRIEND: // You cannot add yourself as a friend.
-                    case MessageType::EXCEEDED_MAX_NUMBER_OF_FRIENDS:  // You have exceeded the maximum number of characters on your Friends list.
-                    case MessageType::PLAYER_NAME_IS_INVALID:          // The player name is invalid
-                    case MessageType::CHARACTER_NAME_X_DOES_NOT_EXIST: // The Character name "" does not exist
-                        OnAddFriendError(status, message);
-                        break;
-                    case MessageType::FRIEND_ALREADY_ADDED_AS_X: // The Character you're trying to add is already in your friend list as "".
-                        OnFriendAlreadyAdded(status, message);
-                        break;
-                    case MessageType::OUTGOING_WHISPER: // Server has successfully sent your whisper
-                        OnOutgoingWhisperSuccess(status, message);
-                        break;
-                    case MessageType::PLAYER_X_NOT_ONLINE: // Player "" is not online. Redirect to the right person if we can find them!
-                        OnPlayerNotOnline(status, message);
-                        break;
+                case MessageType::CANNOT_ADD_YOURSELF_AS_A_FRIEND: // You cannot add yourself as a friend.
+                case MessageType::EXCEEDED_MAX_NUMBER_OF_FRIENDS:  // You have exceeded the maximum number of characters on your Friends list.
+                case MessageType::PLAYER_NAME_IS_INVALID:          // The player name is invalid
+                case MessageType::CHARACTER_NAME_X_DOES_NOT_EXIST: // The Character name "" does not exist
+                    OnAddFriendError(status, message);
+                    break;
+                case MessageType::FRIEND_ALREADY_ADDED_AS_X: // The Character you're trying to add is already in your friend list as "".
+                    OnFriendAlreadyAdded(status, message);
+                    break;
+                case MessageType::OUTGOING_WHISPER: // Server has successfully sent your whisper
+                    OnOutgoingWhisperSuccess(status, message);
+                    break;
+                case MessageType::PLAYER_X_NOT_ONLINE: // Player "" is not online. Redirect to the right person if we can find them!
+                    OnPlayerNotOnline(status, message);
+                    break;
                 }
-                break;
             }
+            break;
+            case GW::UI::UIMessage::kSendChatMessage: {
+                const auto message = *(wchar_t**)wparam;
+                const auto channel = GW::Chat::GetChannel(*message);
+                // If this outgoing whisper was created due to a redirect, or its not a whisper, drop out here.
+                if (is_redirecting_whisper || channel != GW::Chat::CHANNEL_WHISPER) {
+                    return;
+                }
+                wchar_t* separator_pos = wcschr(message, ',');
+                if (!separator_pos) {
+                    return;
+                }
+                // If the recipient is in my friend list, but under a different player name, redirect it now...
+                const auto target = std::wstring(message, separator_pos);
+                const auto text = separator_pos + 1;
+                if (const auto friend_ = FriendListWindow::GetFriend(target.c_str())) {
+                    const auto& friendname = friend_->current_char->getNameW();
+                    if (!friend_->IsOffline() && friend_->current_char && friendname != target) {
+                        is_redirecting_whisper = true;
+                        GW::Chat::SendChat(friendname.c_str(), text);
+                        is_redirecting_whisper = false;
+                        pending_whisper.reset();
+                        status->blocked = true;
+                        return;
+                    }
+                }
+                // ...Otherwise carry on with the send
+                pending_whisper.reset(target, text);
+            }
+            break;
+            case GW::UI::UIMessage::kPrintChatMessage: {
+                auto message = ((wchar_t**)wparam)[1];
+                switch (static_cast<MessageType>(*message)) {
+                case MessageType::INCOMING_WHISPER:
+                case MessageType::OUTGOING_WHISPER:
+                    FriendListWindow::AddFriendAliasToMessage(&message);
+                    break;
+                }
+            }
+            break;
         }
     }
 
@@ -642,7 +642,7 @@ void FriendListWindow::CmdRemoveFriend(const wchar_t*, const int argc, const LPW
 }
 
 // Redirect /whisper player_name, message to GW::SendChat
-void FriendListWindow::CmdWhisper(const wchar_t* message, int, LPWSTR*)
+void FriendListWindow::CmdWhisper(const wchar_t* message, const int, const LPWSTR*)
 {
     const wchar_t* msg = wcschr(message, ' ');
     if (msg) {
@@ -816,15 +816,15 @@ void FriendListWindow::Initialize()
     GW::Chat::CreateCommand(L"dnd", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::DND); });
 
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusUpdate_Entry, OnFriendUpdated);
-    GW::Chat::RegisterSendChatCallback(&SendChat_Entry, OnOutgoingWhisper);
-    RegisterPrintChatCallback(&SendChat_Entry, OnPrintChat);
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, OnPlayerJoinInstance);
 
     constexpr GW::UI::UIMessage hook_messages[] = {
         GW::UI::UIMessage::kSetAgentNameTagAttribs,
         GW::UI::UIMessage::kShowAgentNameTag,
         GW::UI::UIMessage::kWriteToChatLog,
-        GW::UI::UIMessage::kOpenWhisper
+        GW::UI::UIMessage::kOpenWhisper,
+        GW::UI::UIMessage::kSendChatMessage,
+        GW::UI::UIMessage::kPrintChatMessage
     };
     for (const auto message_id : hook_messages) {
         RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);

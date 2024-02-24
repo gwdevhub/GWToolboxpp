@@ -46,6 +46,7 @@ namespace {
     GW::HookEntry MessageLocal_Entry;
     GW::HookEntry MessageServer_Entry;
     GW::HookEntry OnPlayerChatMessage_Entry;
+    GW::HookEntry OnWriteToChatLog_Entry;
 
     // used by chat colors grid
     constexpr float chat_colors_grid_x[] = {0, 100, 160, 240};
@@ -240,11 +241,14 @@ namespace {
     }
 
     // Turn /wiki into /wiki <location>
-    void OnSendChat(GW::HookStatus*, const GW::Chat::Channel chan, wchar_t* msg)
+    void OnSendChat(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
     {
-        if (!auto_url || !msg) {
+        ASSERT(message_id == GW::UI::UIMessage::kSendChatMessage);
+        wchar_t* msg = *(wchar_t**)wparam;
+        if (!(auto_url && msg)) {
             return;
         }
+        const auto chan = GW::Chat::GetChannel((char)*msg);
         size_t len = wcslen(msg);
         size_t max_len = 120;
 
@@ -295,10 +299,19 @@ namespace {
         }
     }
 
+    // Redirect outgoing whispers to the whisper channel; allows sender to be coloured
+    void OnWriteToChatLog(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*) {
+        auto param = (GW::UI::UIChatMessage*)wParam;
+        if (param->channel == GW::Chat::Channel::CHANNEL_GLOBAL && *param->message == 0x76e) {
+            param->channel = GW::Chat::Channel::CHANNEL_WHISPER;
+        }
+    }
+
     // Open links on player name click, Ctrl + click name to target, Ctrl + Shift + click name to invite
-    void OnStartWhisper(GW::HookStatus* status, wchar_t* name)
+    void OnStartWhisper(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
     {
-        if (!name) {
+        const auto name = *(wchar_t**)wparam;
+        if (!(name && *name)) {
             return;
         }
         switch (name[0]) {
@@ -340,8 +353,11 @@ namespace {
         }
     }
 
-    void OnWhisper(GW::HookStatus*, const wchar_t* from, const wchar_t*)
+    void OnRecvWhisper(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
     {
+        const auto from = ((wchar_t**)wparam)[1];
+        ASSERT(from && *from);
+
         const auto status = GW::FriendListMgr::GetMyStatus();
         if (status == GW::FriendStatus::Away && !afk_message.empty()) {
             wchar_t buffer[120];
@@ -363,16 +379,16 @@ void ChatSettings::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry, OnServerMessage);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry, OnLocalChatMessage);
-
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry, OnSpeechBubble);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, OnSpeechDialogue);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageNPC>(&MessageNPC_Entry, OnNPCChatMessage);
+
     RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, GW::UI::UIMessage::kCheckboxPreference, OnCheckboxPreferenceChanged);
     RegisterUIMessageCallback(&OnPlayerChatMessage_Entry, GW::UI::UIMessage::kPlayerChatMessage, OnPlayerChatMessage);
-
-    GW::Chat::RegisterStartWhisperCallback(&StartWhisperCallback_Entry, OnStartWhisper);
-    RegisterSendChatCallback(&SendChatCallback_Entry, OnSendChat);
-    GW::Chat::RegisterWhisperCallback(&WhisperCallback_Entry, OnWhisper);
+    RegisterUIMessageCallback(&OnWriteToChatLog_Entry, GW::UI::UIMessage::kWriteToChatLog, OnWriteToChatLog);
+    RegisterUIMessageCallback(&StartWhisperCallback_Entry, GW::UI::UIMessage::kStartWhisper, OnStartWhisper);
+    RegisterUIMessageCallback(&SendChatCallback_Entry, GW::UI::UIMessage::kSendChatMessage, OnSendChat);
+    RegisterUIMessageCallback(&WhisperCallback_Entry, GW::UI::UIMessage::kRecvWhisper, OnRecvWhisper);
 }
 
 void ChatSettings::Terminate()
@@ -381,16 +397,16 @@ void ChatSettings::Terminate()
 
     GW::StoC::RemoveCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::MessageLocal>(&MessageLocal_Entry);
-
     GW::StoC::RemoveCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::MessageNPC>(&MessageNPC_Entry);
+
     GW::UI::RemoveUIMessageCallback(&OnCheckboxPreferenceChanged_Entry);
     GW::UI::RemoveUIMessageCallback(&OnPlayerChatMessage_Entry);
-
-    GW::Chat::RemoveSendChatCallback(&SendChatCallback_Entry);
-    GW::Chat::RemoveStartWhisperCallback(&WhisperCallback_Entry);
-    GW::Chat::RemoveWhisperCallback(&WhisperCallback_Entry);
+    GW::UI::RemoveUIMessageCallback(&OnWriteToChatLog_Entry);
+    GW::UI::RemoveUIMessageCallback(&StartWhisperCallback_Entry);
+    GW::UI::RemoveUIMessageCallback(&SendChatCallback_Entry);
+    GW::UI::RemoveUIMessageCallback(&WhisperCallback_Entry);
 }
 
 void ChatSettings::Update(float)

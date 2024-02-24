@@ -48,7 +48,7 @@ public:
     // Hook to override status on login - allows us to keep FL status across rerolls without messing with UI
     static void OnSetStatus(GW::FriendStatus status);
 
-    static void CmdReroll(const wchar_t* message, int argc, LPWSTR* argv);
+    static void CmdReroll(const wchar_t* message, const int argc, const LPWSTR*);
 
     bool Reroll(const wchar_t* character_name, bool same_map = true, bool same_party = true);
     bool Reroll(const wchar_t* character_name, GW::Constants::MapID _map_id);

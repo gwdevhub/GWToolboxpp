@@ -30,6 +30,8 @@ namespace {
 
     std::map<uint32_t, clock_t> queued_dialogs_to_send;
 
+    uint32_t last_dialog_id = 0;
+
     void OnDialogButtonAdded(const GW::UI::DialogButtonInfo* wparam)
     {
         const auto button_info = new GW::UI::DialogButtonInfo();
@@ -86,7 +88,7 @@ namespace {
     void OnNPCDialogUICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
     {
         GW::HookBase::EnterHook();
-        if (message->message_id == 0xb) {
+        if (message->message_id == GW::UI::UIMessage::kDestroyFrame) {
             ResetDialog();
             if (dialog_info.agent_id) {
                 last_agent_id = dialog_info.agent_id;
@@ -105,7 +107,7 @@ namespace {
         const GW::Agent* npc = GW::Agents::GetAgentByID(last_agent_id);
         const GW::Agent* me = GW::Agents::GetPlayer();
         if (npc && me && GetDistance(npc->pos, me->pos) < GW::Constants::Range::Area) {
-            GW::Agents::GoNPC(npc);
+            GW::Agents::InteractAgent(npc);
         }
     }
 
@@ -175,6 +177,7 @@ void DialogModule::OnPostUIMessage(const GW::HookStatus* status, const GW::UI::U
 
 void DialogModule::OnDialogSent(const uint32_t dialog_id)
 {
+    last_dialog_id = dialog_id;
     const auto queued_at = queued_dialogs_to_send.contains(dialog_id) ? queued_dialogs_to_send.at(dialog_id) : 0;
     queued_dialogs_to_send.erase(dialog_id);
     if (IsQuest(dialog_id)) {
@@ -312,6 +315,10 @@ const wchar_t* DialogModule::GetDialogBody()
 const std::vector<GuiUtils::EncString*>& DialogModule::GetDialogButtonMessages()
 {
     return dialog_button_messages;
+}
+
+uint32_t DialogModule::LastDialogId() {
+    return last_dialog_id;
 }
 
 uint32_t DialogModule::AcceptFirstAvailableQuest()

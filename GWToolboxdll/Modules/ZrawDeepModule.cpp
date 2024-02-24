@@ -120,7 +120,7 @@ namespace {
         return true;
     }
 
-    void CmdDeep24h(const wchar_t*, int, LPWSTR*)
+    void CmdDeep24h(const wchar_t*, const int, const LPWSTR*)
     {
         ZrawDeepModule::Instance().SetEnabled(!enabled);
         Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");
@@ -243,6 +243,7 @@ void ZrawDeepModule::Initialize()
     ToolboxModule::Initialize();
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     SetEnabled(enabled);
+
     GW::Chat::CreateCommand(L"deep24h", CmdDeep24h);
     GW::Chat::CreateCommand(L"24hdeep", CmdDeep24h);
 }

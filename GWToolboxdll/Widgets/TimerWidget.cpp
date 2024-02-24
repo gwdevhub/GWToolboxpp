@@ -52,6 +52,301 @@ namespace {
                 break;
         }
     }
+
+    // those function write to extra_buffer and extra_color.
+    // they return true if there is something to draw.
+
+
+
+    std::map<GW::Constants::SkillID, const char*> spirit_effects{
+        {GW::Constants::SkillID::Edge_of_Extinction, "EoE"},
+        {GW::Constants::SkillID::Quickening_Zephyr, "QZ"},
+        {GW::Constants::SkillID::Famine, "Famine"},
+        {GW::Constants::SkillID::Symbiosis, "Symbiosis"},
+        {GW::Constants::SkillID::Winnowing, "Winnowing"},
+        {GW::Constants::SkillID::Frozen_Soil, "Frozen Soil"},
+        {GW::Constants::SkillID::Union, "Union"},
+        {GW::Constants::SkillID::Shelter, "Shelter"},
+        {GW::Constants::SkillID::Displacement, "Displacement"},
+        {GW::Constants::SkillID::Life, "Life"},
+        {GW::Constants::SkillID::Recuperation, "Recuperation"},
+        {GW::Constants::SkillID::Winds, "Winds"}
+    };
+
+    bool hide_in_outpost = false;
+    bool show_deep_timer = true;
+    bool show_urgoz_timer = true;
+    bool show_doa_timer = true;
+    bool show_dhuum_timer = true;
+    bool show_dungeon_traps_timer = true;
+    bool show_spirit_timers = true;
+    std::map<GW::Constants::SkillID, bool> spirit_effects_enabled{
+        {GW::Constants::SkillID::Edge_of_Extinction, true},
+        {GW::Constants::SkillID::Quickening_Zephyr, true}
+    };
+
+    char timer_buffer[32] = "";
+    char extra_buffer[32] = "";
+    char spirits_buffer[128] = "";
+    ImColor extra_color = 0;
+
+    bool use_instance_timer = false;
+    bool never_reset = false;
+    bool stop_at_objective_completion = true;
+    bool also_show_instance_timer = false;
+    int show_decimals = 1;
+
+    bool click_to_print_time = false;
+    bool print_time_zoning = false;
+    bool print_time_objective = true;
+
+    bool reset_next_loading_screen = false;
+    bool in_explorable = false;
+    bool in_dungeon = false;
+
+    std::chrono::steady_clock::time_point run_started, run_completed, instance_started;
+
+    unsigned long cave_start = 0; // instance timer when cave started
+    GW::HookEntry DisplayDialogue_Entry;
+    GW::HookEntry PreGameSrvTransfer_Entry;
+    GW::HookEntry InstanceTimer_Entry;
+    GW::HookEntry PostGameSrvTransfer_Entry;
+    const uint32_t CAVE_SPAWN_INTERVALS[12] = {12, 12, 12, 12, 12, 12, 10, 10, 10, 10, 10, 10};
+
+    bool GetUrgozTimer()
+    {
+        if (GW::Map::GetMapID() != GW::Constants::MapID::Urgozs_Warren) {
+            return false;
+        }
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+            return false;
+        }
+        const unsigned long time = GW::Map::GetInstanceTime() / 1000;
+        const unsigned long temp = (time - 1) % 25;
+        if (temp < 15) {
+            snprintf(extra_buffer, 32, "Open - %lu", 15u - temp);
+            extra_color = ImColor(0, 255, 0);
+        }
+        else {
+            snprintf(extra_buffer, 32, "Closed - %lu", 25u - temp);
+            extra_color = ImColor(255, 0, 0);
+        }
+        return true;
+    }
+
+    bool GetSpiritTimer()
+    {
+        using namespace GW::Constants;
+
+        if (!show_spirit_timers || GW::Map::GetInstanceType() != InstanceType::Explorable) {
+            return false;
+        }
+
+        GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+        if (!effects) {
+            return false;
+        }
+
+        int offset = 0;
+        for (auto& effect : *effects) {
+            if (!effect.duration) {
+                continue;
+            }
+            SkillID effect_id = effect.skill_id;
+            auto spirit_effect_enabled = spirit_effects_enabled.find(effect_id);
+            if (spirit_effect_enabled == spirit_effects_enabled.end() || !spirit_effect_enabled->second) {
+                continue;
+            }
+            offset += snprintf(&spirits_buffer[offset], sizeof(spirits_buffer) - offset - 1, "%s%s: %d", offset ? "\n" : "", spirit_effects[effect_id], effect.GetTimeRemaining() / 1000);
+        }
+        if (!offset) {
+            return false;
+        }
+        spirits_buffer[offset] = 0;
+        return true;
+    }
+
+    bool GetDeepTimer()
+    {
+        using namespace GW::Constants;
+
+        if (GW::Map::GetMapID() != MapID::The_Deep) {
+            return false;
+        }
+        if (GW::Map::GetInstanceType() != InstanceType::Explorable) {
+            return false;
+        }
+
+        GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+        if (!effects) {
+            return false;
+        }
+
+        static clock_t start = -1;
+        auto skill = SkillID::No_Skill;
+        for (const auto& effect : *effects) {
+            const auto effect_id = effect.skill_id;
+            switch (effect_id) {
+            case SkillID::Aspect_of_Exhaustion:
+            case SkillID::Aspect_of_Depletion_energy_loss:
+            case SkillID::Scorpion_Aspect:
+                skill = effect_id;
+                break;
+            default:
+                break;
+            }
+            if (skill != SkillID::No_Skill) {
+                break;
+            }
+        }
+        if (skill == SkillID::No_Skill) {
+            start = -1;
+            return false;
+        }
+
+        if (start == -1) {
+            start = TIMER_INIT();
+        }
+
+        const clock_t diff = TIMER_DIFF(start) / 1000;
+
+        // a 30s timer starts when you enter the aspect
+        // a 30s timer starts 100s after you enter the aspect
+        // a 30s timer starts 200s after you enter the aspect
+        long timer = 30 - diff % 30;
+        if (diff > 100) {
+            timer = std::min(timer, 30 - (diff - 100) % 30);
+        }
+        if (diff > 200) {
+            timer = std::min(timer, 30 - (diff - 200) % 30);
+        }
+        switch (skill) {
+        case SkillID::Aspect_of_Exhaustion:
+            snprintf(extra_buffer, 32, "Exhaustion: %lu", timer);
+            break;
+        case SkillID::Aspect_of_Depletion_energy_loss:
+            snprintf(extra_buffer, 32, "Depletion: %lu", timer);
+            break;
+        case SkillID::Scorpion_Aspect:
+            snprintf(extra_buffer, 32, "Scorpion: %lu", timer);
+            break;
+        default:
+            break;
+        }
+        extra_color = ImColor(255, 255, 255);
+        return true;
+    }
+
+    bool GetDhuumTimer()
+    {
+        // todo: implement
+        return false;
+    }
+
+    bool GetTrapTimer()
+    {
+        using namespace GW::Constants;
+        if (GW::Map::GetInstanceType() != InstanceType::Explorable) {
+            return false;
+        }
+
+        const unsigned long time = GW::Map::GetInstanceTime() / 1000;
+        const unsigned long temp = time % 20;
+        unsigned long timer;
+        if (temp < 10) {
+            timer = 10u - temp;
+            extra_color = ImColor(0, 255, 0);
+        }
+        else {
+            timer = 20u - temp;
+            extra_color = ImColor(255, 0, 0);
+        }
+
+        switch (GW::Map::GetMapID()) {
+        case MapID::Catacombs_of_Kathandrax_Level_1:
+        case MapID::Catacombs_of_Kathandrax_Level_2:
+        case MapID::Catacombs_of_Kathandrax_Level_3:
+        case MapID::Bloodstone_Caves_Level_1:
+        case MapID::Arachnis_Haunt_Level_2:
+        case MapID::Oolas_Lab_Level_2:
+            snprintf(extra_buffer, 32, "Fire Jet: %lu", timer);
+            return true;
+        case MapID::Heart_of_the_Shiverpeaks_Level_3:
+            snprintf(extra_buffer, 32, "Fire Spout: %lu", timer);
+            return true;
+        case MapID::Shards_of_Orr_Level_3:
+        case MapID::Cathedral_of_Flames_Level_3:
+            snprintf(extra_buffer, 32, "Fire Trap: %lu", timer);
+            return true;
+        case MapID::Sepulchre_of_Dragrimmar_Level_1:
+        case MapID::Ravens_Point_Level_1:
+        case MapID::Ravens_Point_Level_2:
+        case MapID::Heart_of_the_Shiverpeaks_Level_1:
+        case MapID::Darkrime_Delves_Level_2:
+            snprintf(extra_buffer, 32, "Ice Jet: %lu", timer);
+            return true;
+        case MapID::Darkrime_Delves_Level_1:
+        case MapID::Secret_Lair_of_the_Snowmen:
+            snprintf(extra_buffer, 32, "Ice Spout: %lu", timer);
+            return true;
+        case MapID::Bogroot_Growths_Level_1:
+        case MapID::Arachnis_Haunt_Level_1:
+        case MapID::Shards_of_Orr_Level_1:
+        case MapID::Shards_of_Orr_Level_2:
+            snprintf(extra_buffer, 32, "Poison Jet: %lu", timer);
+            return true;
+        case MapID::Bloodstone_Caves_Level_2:
+            snprintf(extra_buffer, 32, "Poison Spout: %lu", timer);
+            return true;
+        case MapID::Cathedral_of_Flames_Level_2:
+        case MapID::Bloodstone_Caves_Level_3:
+            snprintf(extra_buffer, 32, "Poison Trap: %lu", timer);
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    bool GetDoATimer()
+    {
+        using namespace GW::Constants;
+
+        if (GW::Map::GetInstanceType() != InstanceType::Explorable) {
+            return false;
+        }
+        if (GW::Map::GetMapID() != MapID::Domain_of_Anguish) {
+            return false;
+        }
+        if (cave_start == 0) {
+            return false;
+        }
+
+        const uint32_t time = GW::Map::GetInstanceTime();
+
+        uint32_t currentWave = 0;
+        uint32_t time_since_previous_wave = (time - cave_start) / 1000;
+        for (size_t i = 0; i < _countof(CAVE_SPAWN_INTERVALS); i++) {
+            if (time_since_previous_wave < CAVE_SPAWN_INTERVALS[i]) {
+                break;
+            }
+            time_since_previous_wave -= CAVE_SPAWN_INTERVALS[i];
+            ++currentWave;
+        }
+
+        if (currentWave >= _countof(CAVE_SPAWN_INTERVALS)) {
+            return false;
+        }
+
+        uint32_t timer = 0;
+        if (time_since_previous_wave < CAVE_SPAWN_INTERVALS[currentWave]) {
+            timer = CAVE_SPAWN_INTERVALS[currentWave] - time_since_previous_wave;
+        }
+
+        snprintf(extra_buffer, 32, "Wave %d: %d", currentWave + 1, timer);
+        extra_color = ImColor(255, 255, 255);
+
+        return true;
+    }
 }
 
 // Called before map change
@@ -112,6 +407,11 @@ void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameS
 void TimerWidget::Initialize()
 {
     ToolboxWidget::Initialize();
+    for (const auto& [skill_id, name] : spirit_effects) {
+        if (!spirit_effects_enabled.contains(skill_id)) {
+            spirit_effects_enabled[skill_id] = false;
+        }
+    }
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(
         &DisplayDialogue_Entry,
@@ -142,11 +442,11 @@ void TimerWidget::Initialize()
             instance_timer_valid = true;
         }, 5);
     in_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
-    GW::Chat::CreateCommand(L"resettimer", [this](const wchar_t*, int, LPWSTR*) {
+    GW::Chat::CreateCommand(L"resettimer", [](const wchar_t*, const int, const LPWSTR*) {
         reset_next_loading_screen = true;
         Log::Info("Resetting timer at the next loading screen.");
     });
-    GW::Chat::CreateCommand(L"timerreset", [this](const wchar_t*, int, LPWSTR*) {
+    GW::Chat::CreateCommand(L"timerreset", [](const wchar_t*, const int, const LPWSTR*) {
         reset_next_loading_screen = true;
     });
     if (!is_valid(run_started)) {
@@ -376,14 +676,14 @@ void TimerWidget::Draw(IDirect3DDevice9*)
             ImGui::PopFont();
         }
 
-        auto drawTimer = [](const char* buffer, const ImColor* extra_color = nullptr) {
+        auto drawTimer = [](const char* buffer, const ImColor* _extra_color = nullptr) {
             ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_label));
             const ImVec2 cur2 = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur2.x + 1, cur2.y + 1));
             ImGui::TextColored(ImColor(0, 0, 0), buffer);
             ImGui::SetCursorPos(cur2);
             if (extra_color) {
-                ImGui::TextColored(*extra_color, buffer);
+                ImGui::TextColored(*_extra_color, buffer);
             }
             else {
                 ImGui::Text(buffer);
@@ -425,237 +725,3 @@ void TimerWidget::Draw(IDirect3DDevice9*)
     ImGui::PopStyleColor();
 }
 
-bool TimerWidget::GetUrgozTimer()
-{
-    if (GW::Map::GetMapID() != GW::Constants::MapID::Urgozs_Warren) {
-        return false;
-    }
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
-        return false;
-    }
-    const unsigned long time = GW::Map::GetInstanceTime() / 1000;
-    const unsigned long temp = (time - 1) % 25;
-    if (temp < 15) {
-        snprintf(extra_buffer, 32, "Open - %lu", 15u - temp);
-        extra_color = ImColor(0, 255, 0);
-    }
-    else {
-        snprintf(extra_buffer, 32, "Closed - %lu", 25u - temp);
-        extra_color = ImColor(255, 0, 0);
-    }
-    return true;
-}
-
-bool TimerWidget::GetSpiritTimer()
-{
-    using namespace GW::Constants;
-
-    if (!show_spirit_timers || GW::Map::GetInstanceType() != InstanceType::Explorable) {
-        return false;
-    }
-
-    GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-    if (!effects) {
-        return false;
-    }
-
-    int offset = 0;
-    for (auto& effect : *effects) {
-        if (!effect.duration) {
-            continue;
-        }
-        SkillID effect_id = effect.skill_id;
-        auto spirit_effect_enabled = spirit_effects_enabled.find(effect_id);
-        if (spirit_effect_enabled == spirit_effects_enabled.end() || !spirit_effect_enabled->second) {
-            continue;
-        }
-        offset += snprintf(&spirits_buffer[offset], sizeof(spirits_buffer) - offset, "%s%s: %d", offset ? "\n" : "", spirit_effects[effect_id], effect.GetTimeRemaining() / 1000);
-    }
-    if (!offset) {
-        return false;
-    }
-    spirits_buffer[offset] = 0;
-    return true;
-}
-
-bool TimerWidget::GetDeepTimer()
-{
-    using namespace GW::Constants;
-
-    if (GW::Map::GetMapID() != MapID::The_Deep) {
-        return false;
-    }
-    if (GW::Map::GetInstanceType() != InstanceType::Explorable) {
-        return false;
-    }
-
-    GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-    if (!effects) {
-        return false;
-    }
-
-    static clock_t start = -1;
-    auto skill = SkillID::No_Skill;
-    for (const auto& effect : *effects) {
-        const auto effect_id = effect.skill_id;
-        switch (effect_id) {
-            case SkillID::Aspect_of_Exhaustion:
-            case SkillID::Aspect_of_Depletion_energy_loss:
-            case SkillID::Scorpion_Aspect:
-                skill = effect_id;
-                break;
-            default:
-                break;
-        }
-        if (skill != SkillID::No_Skill) {
-            break;
-        }
-    }
-    if (skill == SkillID::No_Skill) {
-        start = -1;
-        return false;
-    }
-
-    if (start == -1) {
-        start = TIMER_INIT();
-    }
-
-    const clock_t diff = TIMER_DIFF(start) / 1000;
-
-    // a 30s timer starts when you enter the aspect
-    // a 30s timer starts 100s after you enter the aspect
-    // a 30s timer starts 200s after you enter the aspect
-    long timer = 30 - diff % 30;
-    if (diff > 100) {
-        timer = std::min(timer, 30 - (diff - 100) % 30);
-    }
-    if (diff > 200) {
-        timer = std::min(timer, 30 - (diff - 200) % 30);
-    }
-    switch (skill) {
-        case SkillID::Aspect_of_Exhaustion:
-            snprintf(extra_buffer, 32, "Exhaustion: %lu", timer);
-            break;
-        case SkillID::Aspect_of_Depletion_energy_loss:
-            snprintf(extra_buffer, 32, "Depletion: %lu", timer);
-            break;
-        case SkillID::Scorpion_Aspect:
-            snprintf(extra_buffer, 32, "Scorpion: %lu", timer);
-            break;
-        default:
-            break;
-    }
-    extra_color = ImColor(255, 255, 255);
-    return true;
-}
-
-bool TimerWidget::GetDhuumTimer()
-{
-    // todo: implement
-    return false;
-}
-
-bool TimerWidget::GetTrapTimer()
-{
-    using namespace GW::Constants;
-    if (GW::Map::GetInstanceType() != InstanceType::Explorable) {
-        return false;
-    }
-
-    const unsigned long time = GW::Map::GetInstanceTime() / 1000;
-    const unsigned long temp = time % 20;
-    unsigned long timer;
-    if (temp < 10) {
-        timer = 10u - temp;
-        extra_color = ImColor(0, 255, 0);
-    }
-    else {
-        timer = 20u - temp;
-        extra_color = ImColor(255, 0, 0);
-    }
-
-    switch (GW::Map::GetMapID()) {
-        case MapID::Catacombs_of_Kathandrax_Level_1:
-        case MapID::Catacombs_of_Kathandrax_Level_2:
-        case MapID::Catacombs_of_Kathandrax_Level_3:
-        case MapID::Bloodstone_Caves_Level_1:
-        case MapID::Arachnis_Haunt_Level_2:
-        case MapID::Oolas_Lab_Level_2:
-            snprintf(extra_buffer, 32, "Fire Jet: %lu", timer);
-            return true;
-        case MapID::Heart_of_the_Shiverpeaks_Level_3:
-            snprintf(extra_buffer, 32, "Fire Spout: %lu", timer);
-            return true;
-        case MapID::Shards_of_Orr_Level_3:
-        case MapID::Cathedral_of_Flames_Level_3:
-            snprintf(extra_buffer, 32, "Fire Trap: %lu", timer);
-            return true;
-        case MapID::Sepulchre_of_Dragrimmar_Level_1:
-        case MapID::Ravens_Point_Level_1:
-        case MapID::Ravens_Point_Level_2:
-        case MapID::Heart_of_the_Shiverpeaks_Level_1:
-        case MapID::Darkrime_Delves_Level_2:
-            snprintf(extra_buffer, 32, "Ice Jet: %lu", timer);
-            return true;
-        case MapID::Darkrime_Delves_Level_1:
-        case MapID::Secret_Lair_of_the_Snowmen:
-            snprintf(extra_buffer, 32, "Ice Spout: %lu", timer);
-            return true;
-        case MapID::Bogroot_Growths_Level_1:
-        case MapID::Arachnis_Haunt_Level_1:
-        case MapID::Shards_of_Orr_Level_1:
-        case MapID::Shards_of_Orr_Level_2:
-            snprintf(extra_buffer, 32, "Poison Jet: %lu", timer);
-            return true;
-        case MapID::Bloodstone_Caves_Level_2:
-            snprintf(extra_buffer, 32, "Poison Spout: %lu", timer);
-            return true;
-        case MapID::Cathedral_of_Flames_Level_2:
-        case MapID::Bloodstone_Caves_Level_3:
-            snprintf(extra_buffer, 32, "Poison Trap: %lu", timer);
-            return true;
-        default:
-            return false;
-    }
-}
-
-bool TimerWidget::GetDoATimer()
-{
-    using namespace GW::Constants;
-
-    if (GW::Map::GetInstanceType() != InstanceType::Explorable) {
-        return false;
-    }
-    if (GW::Map::GetMapID() != MapID::Domain_of_Anguish) {
-        return false;
-    }
-    if (cave_start == 0) {
-        return false;
-    }
-
-    const uint32_t time = GW::Map::GetInstanceTime();
-
-    uint32_t currentWave = 0;
-    uint32_t time_since_previous_wave = (time - cave_start) / 1000;
-    for (size_t i = 0; i < _countof(CAVE_SPAWN_INTERVALS); i++) {
-        if (time_since_previous_wave < CAVE_SPAWN_INTERVALS[i]) {
-            break;
-        }
-        time_since_previous_wave -= CAVE_SPAWN_INTERVALS[i];
-        ++currentWave;
-    }
-
-    if (currentWave >= _countof(CAVE_SPAWN_INTERVALS)) {
-        return false;
-    }
-
-    uint32_t timer = 0;
-    if (time_since_previous_wave < CAVE_SPAWN_INTERVALS[currentWave]) {
-        timer = CAVE_SPAWN_INTERVALS[currentWave] - time_since_previous_wave;
-    }
-
-    snprintf(extra_buffer, 32, "Wave %d: %d", currentWave + 1, timer);
-    extra_color = ImColor(255, 255, 255);
-
-    return true;
-}

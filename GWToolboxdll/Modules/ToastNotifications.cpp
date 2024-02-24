@@ -120,10 +120,12 @@ namespace {
 
     GW::HookEntry OnWhisper_Entry;
 
-    void OnWhisper(GW::HookStatus*, const wchar_t* from, const wchar_t* msg)
+    void OnRecvWhisper(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
     {
+        const auto packet = (GW::UI::UIPacket::kRecvWhisper*)wparam;
+
         if (show_notifications_on_whisper) {
-            ToastNotifications::SendToast(from, msg, OnWhisperToastActivated);
+            ToastNotifications::SendToast(packet->from, packet->message, OnWhisperToastActivated);
         }
         if (flash_window_on_whisper) {
             FlashWindow();
@@ -418,7 +420,7 @@ void ToastNotifications::Initialize()
     ToolboxModule::Initialize();
 
     is_platform_compatible = WinToastLib::WinToast::isCompatible();
-    GW::Chat::RegisterWhisperCallback(&OnWhisper_Entry, OnWhisper);
+    GW::UI::RegisterUIMessageCallback(&OnWhisper_Entry, GW::UI::UIMessage::kRecvWhisper, OnRecvWhisper);
     for (auto& callback : stoc_callbacks) {
         GW::StoC::RegisterPacketCallback(&callback.hook_entry, callback.header, callback.cb, 0x8000);
     }
@@ -435,7 +437,7 @@ void ToastNotifications::Terminate()
     for (auto& callback : stoc_callbacks) {
         GW::StoC::RemoveCallback(callback.header, &callback.hook_entry);
     }
-    GW::Chat::RemoveWhisperCallback(&OnWhisper_Entry);
+    GW::UI::RemoveUIMessageCallback(&OnWhisper_Entry);
     for (const auto& toast : toasts | std::views::values) {
         TriggerToastCallback(toast, false);
         delete toast;

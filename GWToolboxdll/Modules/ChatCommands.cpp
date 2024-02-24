@@ -585,8 +585,10 @@ namespace {
 
     GW::HookEntry OnSentChat_HookEntry;
 
-    void OnSendChat(GW::HookStatus* status, const GW::Chat::Channel channel, const wchar_t* message)
+    void OnSendChat(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
     {
+        const auto channel = *(GW::Chat::Channel*)wparam;
+        const auto message = ((wchar_t**)wparam)[1];
         if (channel != GW::Chat::CHANNEL_COMMAND || status->blocked) {
             return;
         }
@@ -1026,9 +1028,9 @@ void ChatCommands::Initialize()
 
     // you can create commands here in-line with a lambda, but only if they are only
     // a couple of lines and not used multiple times
-    GW::Chat::CreateCommand(L"ff", [](const wchar_t*, int, LPWSTR*) {
+    GW::Chat::CreateCommand(L"ff", [](const wchar_t*, const int, const LPWSTR*) {
         GW::Chat::SendChat('/', "resign");
-    });
+        });
     GW::Chat::CreateCommand(L"gh", [](const wchar_t*, int, LPWSTR*) {
         GW::Chat::SendChat('/', "tp gh");
     });
@@ -1085,7 +1087,7 @@ void ChatCommands::Initialize()
     GW::Chat::CreateCommand(L"fps", CmdFps);
     GW::Chat::CreateCommand(L"pref", CmdPref);
 
-    RegisterSendChatCallback(&OnSentChat_HookEntry, OnSendChat);
+    GW::UI::RegisterUIMessageCallback(&OnSentChat_HookEntry, GW::UI::UIMessage::kSendChatMessage, OnSendChat);
 
     // Experimental chat commands
     uintptr_t address = 0;
@@ -1126,7 +1128,7 @@ void ChatCommands::Terminate()
         GW::HookBase::RemoveHook(OnChatInteraction_Callback_Func);
     }
 
-    GW::Chat::RemoveSendChatCallback(&OnSentChat_HookEntry);
+    GW::UI::RemoveUIMessageCallback(&OnSentChat_HookEntry);
 
     for (const auto it : title_names) {
         delete it;
@@ -1525,7 +1527,8 @@ void ChatCommands::CmdMorale(const wchar_t*, int, LPWSTR*)
         GW::Chat::SendChat('#', L"I have no Morale Boost or Death Penalty!");
     }
     else {
-        GW::Agents::CallTarget(GW::Agents::GetPlayer(), GW::CallTargetType::Morale);
+        uint32_t packet[] = { (uint32_t)GW::CallTargetType::Morale, GW::Agents::GetPlayerId() };
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, packet);
     }
 }
 
@@ -1557,7 +1560,7 @@ void ChatCommands::CmdDialog(const wchar_t*, const int argc, const LPWSTR* argv)
         const auto* me = GW::Agents::GetPlayer();
         if (target && target->allegiance == GW::Constants::Allegiance::Npc_Minipet
             && GetDistance(me->pos, target->pos) < GW::Constants::Range::Area) {
-            GW::Agents::GoNPC(target);
+            GW::Agents::InteractAgent(target);
         }
     }
     DialogModule::SendDialog(id);
