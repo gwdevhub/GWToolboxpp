@@ -672,7 +672,7 @@ namespace {
     CreateTexture_pt CreateTexture_Ret = nullptr;
 
     // Why reinvent the wheel?
-    typedef void(__cdecl* GWCA_SendUIMessage_pt)(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks);
+    typedef bool(__cdecl* GWCA_SendUIMessage_pt)(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks);
     GWCA_SendUIMessage_pt GWCA_SendUIMessage_Func = nullptr;
     GWCA_SendUIMessage_pt GWCA_SendUIMessage_Ret = nullptr;
 
@@ -686,12 +686,13 @@ namespace {
     std::vector<UIMessagePacket*> ui_message_packets_recorded;
     bool record_ui_messages = false;
 
-    void OnGWCASendUIMessage(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks) {
+    bool OnGWCASendUIMessage(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks) {
         GW::Hook::EnterHook();
-        GWCA_SendUIMessage_Ret(msgid, wParam, lParam, skip_hooks);
+        auto res = GWCA_SendUIMessage_Ret(msgid, wParam, lParam, skip_hooks);
         if(record_ui_messages)
             ui_message_packets_recorded.push_back(new UIMessagePacket({ msgid,wParam,lParam, skip_hooks }));
         GW::Hook::LeaveHook();
+        return res;
     }
     void ClearUIMessagesRecorded() {
         for (auto p : ui_message_packets_recorded) {
