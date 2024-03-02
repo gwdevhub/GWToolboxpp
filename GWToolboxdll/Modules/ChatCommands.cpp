@@ -595,9 +595,8 @@ namespace {
         if (channel != GW::Chat::CHANNEL_COMMAND || status->blocked) {
             return;
         }
-        const auto message = &message[1];
         for (const auto alias : cmd_aliases) {
-            if (wcscmp(alias->alias_wstr, message) == 0 && !alias->processing && wcslen(alias->command_wstr) > 1) {
+            if (wcscmp(alias->alias_wstr, &message[1]) == 0 && !alias->processing && wcslen(alias->command_wstr) > 1) {
                 status->blocked = true;
                 alias->processing = true;
                 GW::Chat::SendChat(alias->command_cstr[0], &alias->command_wstr[1]);
