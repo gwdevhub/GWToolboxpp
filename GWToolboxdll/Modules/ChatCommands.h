@@ -10,6 +10,8 @@
 #include <ToolboxUIElement.h>
 #include <Modules/PluginModule.h>
 
+#define CHAT_CMD_FUNC(fn) fn([[maybe_unused]] const wchar_t* message,[[maybe_unused]] int argc,[[maybe_unused]] const LPWSTR* argv)
+
 class ChatCommands : public ToolboxModule {
     const float DEFAULT_CAM_SPEED = 1000.f;            // 600 units per sec
     const float ROTATION_SPEED = DirectX::XM_PI / 3.f; // 6 seconds for full rotation
@@ -55,54 +57,56 @@ public:
 
     void DrawHelp() override;
 
+    static void CreateAlias(const wchar_t* from, const wchar_t* to);
+
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
     // Update. Will always be called every frame.
     void Update(float delta) override;
 
-    static void CmdReapplyTitle(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CHAT_CMD_FUNC(CmdReapplyTitle);
 
 private:
     static bool ReadTemplateFile(const std::wstring& path, char* buff, size_t buffSize);
 
     static bool IsLuxon();
 
-    static void CmdEnterMission(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdAge2(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdDialog(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdTB(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdDamage(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdObserverReset(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdChest(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdAfk(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdTarget(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdUseSkill(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdShow(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdHide(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdToggle(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdZoom(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdCamera(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdSCWiki(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdLoad(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdPing(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdTransmo(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdResize(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdPingEquipment(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdTransmoTarget(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdTransmoParty(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdTransmoAgent(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdHeroBehaviour(const wchar_t* message, int argc, const LPWSTR* argv);
-    static void CmdPingQuest(const wchar_t* message, int argc, LPWSTR* argv);
-    static void CmdMorale(const wchar_t*, int argc, LPWSTR* argv);
-    static void CmdVolume(const wchar_t*, int argc, const LPWSTR* argv);
-    static void CmdSetHardMode(const wchar_t*, int argc, LPWSTR* argv);
-    static void CmdSetNormalMode(const wchar_t*, int argc, LPWSTR* argv);
-    static void CmdAnimation(const wchar_t*, int argc, const LPWSTR* argv);
-    static void CmdMute(const wchar_t*, int argc, LPWSTR* argv);
+    static void CHAT_CMD_FUNC(CmdEnterMission);
+    static void CHAT_CMD_FUNC(CmdAge2);
+    static void CHAT_CMD_FUNC(CmdDialog);
+    static void CHAT_CMD_FUNC(CmdTB);
+    static void CHAT_CMD_FUNC(CmdDamage);
+    static void CHAT_CMD_FUNC(CmdObserverReset);
+    static void CHAT_CMD_FUNC(CmdChest);
+    static void CHAT_CMD_FUNC(CmdAfk);
+    static void CHAT_CMD_FUNC(CmdTarget);
+    static void CHAT_CMD_FUNC(CmdUseSkill);
+    static void CHAT_CMD_FUNC(CmdShow);
+    static void CHAT_CMD_FUNC(CmdHide);
+    static void CHAT_CMD_FUNC(CmdToggle);
+    static void CHAT_CMD_FUNC(CmdZoom);
+    static void CHAT_CMD_FUNC(CmdCamera);
+    static void CHAT_CMD_FUNC(CmdSCWiki);
+    static void CHAT_CMD_FUNC(CmdLoad);
+    static void CHAT_CMD_FUNC(CmdPing);
+    static void CHAT_CMD_FUNC(CmdTransmo);
+    static void CHAT_CMD_FUNC(CmdResize);
+    static void CHAT_CMD_FUNC(CmdPingEquipment);
+    static void CHAT_CMD_FUNC(CmdTransmoTarget);
+    static void CHAT_CMD_FUNC(CmdTransmoParty);
+    static void CHAT_CMD_FUNC(CmdTransmoAgent);
+    static void CHAT_CMD_FUNC(CmdHeroBehaviour);
+    static void CHAT_CMD_FUNC(CmdPingQuest);
+    static void CHAT_CMD_FUNC(CmdMorale);
+    static void CHAT_CMD_FUNC(CmdVolume);
+    static void CHAT_CMD_FUNC(CmdSetHardMode);
+    static void CHAT_CMD_FUNC(CmdSetNormalMode);
+    static void CHAT_CMD_FUNC(CmdAnimation);
+    static void CHAT_CMD_FUNC(CmdMute);
     // Trigger hall of monuments info for current target or given player name
-    static void CmdHom(const wchar_t*, int argc, LPWSTR* argv);
-    static void CmdWithdraw(const wchar_t*, int argc, const LPWSTR* argv);
-    static void CmdDeposit(const wchar_t*, int argc, const LPWSTR* argv);
+    static void CHAT_CMD_FUNC(CmdHom);
+    static void CHAT_CMD_FUNC(CmdWithdraw);
+    static void CHAT_CMD_FUNC(CmdDeposit);
 
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
     static bool GetNPCInfoByName(const std::string& name, PendingTransmo& transmo);
@@ -112,8 +116,8 @@ private:
     static void TargetNearest(const wchar_t* model_id_or_name, TargetType type);
     static const wchar_t* GetRemainingArgsWstr(const wchar_t* message, int argc_start);
 
-    static std::vector<ToolboxUIElement*> MatchingWindows(const wchar_t* message, int argc, const LPWSTR* argv);
-    static GW::UI::WindowID MatchingGWWindow(const wchar_t*, int argc, const LPWSTR* argv);
+    static std::vector<ToolboxUIElement*> CHAT_CMD_FUNC(MatchingWindows);
+    static GW::UI::WindowID CHAT_CMD_FUNC(MatchingGWWindow);
 
     float cam_speed = DEFAULT_CAM_SPEED;
     bool forward_fix_z = true;

@@ -559,7 +559,7 @@ namespace {
         return SetFriend(f->uuid, f->type, f->status, f->zone_id, &f->charname[0], &f->alias[0]);
     }
 
-    bool CmdInvite(const wchar_t*, int argc, LPWSTR* argv)
+    bool CmdInvite(const wchar_t*, const int argc, const LPWSTR* argv)
     {
         const auto player_name = ParsePlayerName(argc - 1, &argv[1]);
         if (player_name.empty()) {
@@ -572,6 +572,26 @@ namespace {
             }
         }
         return false;
+    }
+
+    void CmdSetFriendListStatus(const wchar_t*, const int, const LPWSTR* argv)
+    {
+        std::wstring cmd = *argv;
+        if (cmd == L"away") {
+            GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away);
+        }
+        else if (cmd == L"online") {
+            GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Online);
+        }
+        else if (cmd == L"online") {
+            GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Offline);
+        }
+        else if (cmd == L"busy" || cmd == L"dnd") {
+            GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::DND);
+        }
+        else {
+            Log::ErrorW(L"Failed to recognise friend list status via command");
+        }
     }
 }
 
@@ -804,16 +824,16 @@ void FriendListWindow::Initialize()
     GW::Chat::CreateCommand(L"addfriend", CmdAddFriend);
     GW::Chat::CreateCommand(L"removefriend", CmdRemoveFriend);
     GW::Chat::CreateCommand(L"deletefriend", CmdRemoveFriend);
+    GW::Chat::CreateCommand(L"invite", CmdInvite);
     GW::Chat::CreateCommand(L"tell", CmdWhisper);
     GW::Chat::CreateCommand(L"whisper", CmdWhisper);
-    GW::Chat::CreateCommand(L"invite", static_cast<GW::Chat::CmdCB>(CmdInvite));
     GW::Chat::CreateCommand(L"t", CmdWhisper);
     GW::Chat::CreateCommand(L"w", CmdWhisper);
-    GW::Chat::CreateCommand(L"away", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away); });
-    GW::Chat::CreateCommand(L"online", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Online); });
-    GW::Chat::CreateCommand(L"offline", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Offline); });
-    GW::Chat::CreateCommand(L"busy", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::DND); });
-    GW::Chat::CreateCommand(L"dnd", [](...) { GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::DND); });
+    GW::Chat::CreateCommand(L"away", CmdSetFriendListStatus);
+    GW::Chat::CreateCommand(L"online", CmdSetFriendListStatus);
+    GW::Chat::CreateCommand(L"offline", CmdSetFriendListStatus );
+    GW::Chat::CreateCommand(L"busy", CmdSetFriendListStatus);
+    GW::Chat::CreateCommand(L"dnd", CmdSetFriendListStatus);
 
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusUpdate_Entry, OnFriendUpdated);
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, OnPlayerJoinInstance);

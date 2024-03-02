@@ -1043,6 +1043,11 @@ namespace {
                 break;
         }
     }
+
+    void CmdReinvite(const wchar_t*, const int, const LPWSTR*)
+    {
+        pending_reinvite.reset(current_party_target_id);
+    }
 }
 
 bool GameSettings::GetSettingBool(const char* setting)
@@ -2448,11 +2453,6 @@ void GameSettings::OnMapTravel(const GW::HookStatus*, const GW::Packet::StoC::Ga
     if (focus_window_on_zoning && pak->is_explorable) {
         FocusWindow();
     }
-}
-
-void GameSettings::CmdReinvite(const wchar_t*, int, LPWSTR*)
-{
-    pending_reinvite.reset(current_party_target_id);
 }
 
 // Turn screenshots into clickable links

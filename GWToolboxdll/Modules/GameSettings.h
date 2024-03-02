@@ -90,8 +90,6 @@ public:
     static void OnUpdateSkillCount(GW::HookStatus*, void* packet);
     static void OnAgentNameTag(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*);
     static void OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
-    static void CmdReinvite(const wchar_t* message, int argc, LPWSTR* argv);
-
 private:
     void FactionEarnedCheckAndWarn();
     bool faction_checked = false;

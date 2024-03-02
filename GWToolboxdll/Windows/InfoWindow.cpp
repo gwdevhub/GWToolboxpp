@@ -248,7 +248,7 @@ namespace {
         CheckAndWarnIfNotResigned();
     }
 
-    void CmdResignLog([[maybe_unused]] const wchar_t* cmd, [[maybe_unused]] const int argc, [[maybe_unused]] wchar_t** argv)
+    void CmdResignLog([[maybe_unused]] const wchar_t* cmd, [[maybe_unused]] const int argc, [[maybe_unused]] const LPWSTR* argv)
     {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
             return;
