@@ -5,7 +5,11 @@
 
 #include <GWCA/Context/PreGameContext.h>
 #include <GWCA/Context/CharContext.h>
+#include <GWCA/Context/MapContext.h>
 
+#include <GWCA/GameEntities/Map.h>
+
+#include <GWCA/Managers/Module.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
@@ -37,13 +41,13 @@
 
 
 
+
 // declare method here as recommended by imgui
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace {
     HMODULE dllmodule = nullptr;
     WNDPROC OldWndProc = nullptr;
-    bool tb_destroyed = false;
     bool defer_close = false;
     HWND gw_window_handle = nullptr;
 
@@ -54,9 +58,12 @@ namespace {
     bool must_self_destruct = false; // is true when toolbox should quit
     GW::HookEntry Update_Entry;
 
-    bool initialized = false;
-
     bool event_handler_attached = false;
+
+    bool IsPvP() {
+        const auto m = GW::Map::GetMapInfo();
+        return (m && /*GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost &&*/ m->GetIsPvP());
+    }
 
     bool AttachWndProcHandler()
     {
@@ -103,13 +110,15 @@ namespace {
         ImGui_ImplDX9_Init(device);
         ImGui_ImplWin32_Init(GW::MemoryMgr::GetGWWindowHandle());
 
-        GW::Render::SetResetCallback([](const IDirect3DDevice9*) {
+        GW::Render::SetResetCallback([](IDirect3DDevice9*) {
             ImGui_ImplDX9_InvalidateDeviceObjects();
         });
 
         auto& io = ImGui::GetIO();
         io.MouseDrawCursor = false;
         io.IniFilename = imgui_inifile.bytes;
+
+        imgui_initialized = true;
 
         Resources::EnsureFileExists(
             Resources::GetPath(L"Font.ttf"),
@@ -120,9 +129,10 @@ namespace {
                 }
                 else {
                     Log::ErrorW(L"Cannot download font, please download it manually!\n%s", error.c_str());
+                    GWToolbox::SignalTerminate();
                 }
             });
-        imgui_initialized = true;
+
         return true;
     }
 
@@ -131,6 +141,7 @@ namespace {
         if (!imgui_initialized) {
             return true;
         }
+        GW::Render::SetResetCallback(nullptr);
         ImGui_ImplDX9_Shutdown();
         ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();
@@ -147,6 +158,20 @@ namespace {
 
     std::vector<ToolboxModule*> modules_terminating{};
 
+    enum class GWToolboxState {
+        Initialising,
+        Initialised,
+        Terminating,
+        Terminated,
+        Disabled
+    };
+    GWToolboxState gwtoolbox_state = GWToolboxState::Terminated;
+    bool gwtoolbox_disabled = false;
+
+    bool pending_detach_dll = false;
+
+    bool greeted = false;
+
     void ReorderModules(std::vector<ToolboxModule*>& modules)
     {
         std::ranges::sort(modules, [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
@@ -156,16 +181,21 @@ namespace {
 
     ToolboxIni* OpenSettingsFile()
     {
-        static std::unique_ptr<ToolboxIni> inifile = nullptr;
+        static ToolboxIni* inifile = nullptr;
         const auto full_path = Resources::GetSettingFile(GWTOOLBOX_INI_FILENAME);
         if (!GWToolbox::SettingsFolderChanged() && inifile) {
-            return inifile.get();
+            return inifile;
         }
-        auto tmp = std::make_unique<ToolboxIni>(false, false, false);
+        auto tmp = new ToolboxIni(false, false, false);
         ASSERT(tmp->LoadIfExists(full_path) == SI_OK);
         tmp->location_on_disk = full_path;
-        inifile = std::move(tmp);
-        return inifile.get();
+        inifile = tmp;
+        return inifile;
+    }
+
+    bool ShouldDisableToolbox() {
+        const auto m = GW::Map::GetMapInfo();
+        return m && m->GetIsPvP();
     }
 
     bool ToggleTBModule(ToolboxModule& m, std::vector<ToolboxModule*>& vec, const bool enable)
@@ -254,7 +284,7 @@ void UpdateEnabledWidgetVectors(ToolboxModule* m, bool added)
     }
 }
 
-bool GWToolbox::IsInitialized() { return initialized; }
+bool GWToolbox::IsInitialized() { return gwtoolbox_state == GWToolboxState::Initialised; }
 
 bool GWToolbox::ToggleModule(ToolboxWidget& m, const bool enable)
 {
@@ -315,11 +345,7 @@ DWORD __stdcall ThreadEntry(LPVOID)
 
     Log::Log("Installed chat hooks\n");
 
-    GW::HookBase::EnableHooks();
-
-    Log::Log("Hooks Enabled!\n");
-
-    while (!tb_destroyed) {
+    while (gwtoolbox_state != GWToolboxState::Terminated) {
         // wait until destruction
         Sleep(100);
 
@@ -367,12 +393,13 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
         // This is naughty, but we need to defer the closing signal until toolbox has terminated properly.
         // we can't sleep here, because toolbox modules will probably be using the render loop to close off things
         // like hooks
-        GWToolbox::StartSelfDestruct();
         defer_close = true;
+        GWToolbox::SignalTerminate();
+
         return 0;
     }
 
-    if (!(!GW::GetPreGameContext() && imgui_initialized && GWToolbox::IsInitialized() && !tb_destroyed)) {
+    if (!(!GW::GetPreGameContext() && GWToolbox::IsInitialized())) {
         return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
     }
 
@@ -499,59 +526,16 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
 
 void GWToolbox::Initialize()
 {
-    if (initialized || must_self_destruct) {
+    switch (gwtoolbox_state) {
+    case GWToolboxState::Initialising:
         return;
+    case GWToolboxState::Terminating:
+    case GWToolboxState::Terminated:
+        gwtoolbox_state = GWToolboxState::Initialising;
+        GW::Render::SetRenderCallback(Draw);
+        GW::EnableHooks();
+        pending_detach_dll = false;
     }
-
-    imgui_inifile = Unicode16ToUtf8(Resources::GetSettingFile(L"interface.ini").c_str());
-
-    Log::Log("Creating Toolbox\n");
-
-    GW::GameThread::RegisterGameThreadCallback(&Update_Entry, [](GW::HookStatus* a) { Update(a); });
-
-    Resources::EnsureFolderExists(Resources::GetComputerFolderPath());
-    Resources::EnsureFolderExists(Resources::GetPath(L"img"));
-    Resources::EnsureFolderExists(Resources::GetPath(L"location logs"));
-    Resources::EnsureFolderExists(Resources::GetPath(L"configs"));
-
-    // if the file does not exist we'll load module settings once downloaded, but we need the file open
-    // in order to read defaults
-    const auto ini = OpenSettingsFile();
-
-    Log::Log("Creating Modules\n");
-    ToggleModule(CrashHandler::Instance());
-    ToggleModule(Resources::Instance());
-    ToggleModule(ToolboxTheme::Instance());
-    ToggleModule(ToolboxSettings::Instance());
-    ToggleModule(MainWindow::Instance());
-    ToggleModule(DialogModule::Instance());
-
-    ToggleModule(GwDatTextureModule::Instance());
-    ToggleModule(Updater::Instance());
-    ToggleModule(ChatCommands::Instance());
-    ToggleModule(GameSettings::Instance());
-    ToggleModule(ChatSettings::Instance());
-    ToggleModule(InventoryManager::Instance());
-    ToggleModule(HallOfMonumentsModule::Instance());
-    ToggleModule(LoginModule::Instance());
-    ToggleModule(AprilFools::Instance());
-    ToggleModule(SettingsWindow::Instance());
-
-    ToolboxSettings::LoadModules(ini); // initialize all other modules as specified by the user
-
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
-        const auto* c = GW::GetCharContext();
-        if (c && c->player_name) {
-            Log::InfoW(L"Hello!");
-        }
-    }
-    GW::Render::SetRenderCallback([](IDirect3DDevice9* device) {
-        __try {
-            Draw(device);
-        } __except (EXCEPT_EXPRESSION_ENTRY) { }
-    });
-
-    initialized = true;
 }
 
 std::filesystem::path GWToolbox::LoadSettings()
@@ -613,145 +597,40 @@ std::filesystem::path GWToolbox::SaveSettings()
     return ini->location_on_disk;
 }
 
-void GWToolbox::StartSelfDestruct()
+void GWToolbox::SignalTerminate(bool detach_dll)
 {
-    if (must_self_destruct) {
-        return;
-    }
-    if (initialized) {
-        SaveSettings();
-        while (modules_enabled.size()) {
-            ASSERT(ToggleModule(*modules_enabled[0], false) == false);
-        }
-        while (widgets_enabled.size()) {
-            ASSERT(ToggleModule(*widgets_enabled[0], false) == false);
-        }
-        while (windows_enabled.size()) {
-            ASSERT(ToggleModule(*windows_enabled[0], false) == false);
-        }
-        ASSERT(all_modules_enabled.empty());
-    }
-    must_self_destruct = true;
-}
-
-void GWToolbox::Terminate()
-{
-    if (!initialized) {
-        return;
-    }
-    SaveSettings();
-
-    GW::GameThread::RemoveGameThreadCallback(&Update_Entry);
-
-    ASSERT(CanTerminate());
-
-    ASSERT(all_modules_enabled.empty());
-
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
-        Log::Info("Bye!");
+    switch (gwtoolbox_state) {
+    case GWToolboxState::Disabled:
+    case GWToolboxState::Terminating:
+    case GWToolboxState::Initialised:
+    case GWToolboxState::Initialising:
+        gwtoolbox_state = GWToolboxState::Terminating;
+        pending_detach_dll = detach_dll;
     }
 }
 
+void GWToolbox::Enable()
+{
+    if (!gwtoolbox_disabled)
+        return;
+    GW::EnableHooks();
+    gwtoolbox_disabled = false;
+}
+void GWToolbox::Disable()
+{
+    if (gwtoolbox_disabled)
+        return;
+    GW::DisableHooks();
+    GW::RenderModule.enable_hooks();
+    gwtoolbox_disabled = true;
+}
 
 bool GWToolbox::CanTerminate()
 {
-    return modules_terminating.empty();
+    return modules_terminating.empty() && !GuiUtils::FontsLoading() && all_modules_enabled.empty();
 }
 
 void GWToolbox::Draw(IDirect3DDevice9* device)
-{
-    // === destruction ===
-    if (initialized && must_self_destruct) {
-        if (!GuiUtils::FontsLoaded()) {
-            return;
-        }
-        if (!CanTerminate()) {
-            return;
-        }
-
-        Instance().Terminate();
-        ASSERT(DetachImgui());
-        ASSERT(DetachWndProcHandler());
-
-        GW::DisableHooks();
-        initialized = false;
-        tb_destroyed = true;
-    }
-    // === runtime ===
-    if (initialized && !must_self_destruct) {
-        // Attach WndProc in the render loop to make sure the window is loaded and ready
-        ASSERT(AttachWndProcHandler());
-        // Attach imgui if not already done so
-        ASSERT(AttachImgui(device));
-
-        if (imgui_inifile_changed) {
-            auto& io = ImGui::GetIO();
-            io.IniFilename = imgui_inifile.bytes;
-            imgui_inifile_changed = false;
-        }
-
-        if (!GW::UI::GetIsUIDrawn()) {
-            return;
-        }
-        if (GW::GetPreGameContext()) {
-            return; // Login screen
-        }
-        if (GW::Map::GetIsInCinematic()) {
-            return;
-        }
-        if (IsIconic(GW::MemoryMgr::GetGWWindowHandle())) {
-            return;
-        }
-
-        if (!GuiUtils::FontsLoaded()) {
-            return; // Fonts not loaded yet.
-        }
-
-        Resources::DxUpdate(device);
-
-        ImGui_ImplDX9_NewFrame();
-        ImGui_ImplWin32_NewFrame();
-
-        const bool world_map_showing = GW::UI::GetIsWorldMapShowing();
-
-        if (!world_map_showing) {
-            Minimap::Render(device);
-        }
-
-        ImGui::NewFrame();
-
-        // Key up/down events don't get passed to gw window when out of focus, but we need the following to be correct,
-        // or things like alt-tab make imgui think that alt is still down.
-        auto& io = ImGui::GetIO();
-        io.AddKeyEvent(ImGuiKey_ModCtrl, (GetKeyState(VK_CONTROL) & 0x8000) != 0);
-        io.AddKeyEvent(ImGuiKey_ModShift, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
-        io.AddKeyEvent(ImGuiKey_ModAlt, (GetKeyState(VK_MENU) & 0x8000) != 0);
-
-        for (const auto uielement : ui_elements_enabled) {
-            if (world_map_showing && !uielement->ShowOnWorldMap()) {
-                continue;
-            }
-            uielement->Draw(device);
-        }
-
-#ifdef _DEBUG
-        // Feel free to uncomment to play with ImGui's features
-        //ImGui::ShowDemoWindow();
-        //ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
-#endif
-
-        ImGui::EndFrame();
-        ImGui::Render();
-        ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
-    }
-
-    if (tb_destroyed && defer_close) {
-        // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
-        SendMessageW(gw_window_handle, WM_CLOSE, NULL, NULL);
-    }
-}
-
-void GWToolbox::Update(GW::HookStatus*)
 {
     static DWORD last_tick_count;
     if (last_tick_count == 0) {
@@ -764,23 +643,201 @@ void GWToolbox::Update(GW::HookStatus*)
     const auto delta = tick - last_tick_count;
     const auto delta_f = static_cast<float>(delta) / 1000.f;
 
-    if (initialized
-        && imgui_initialized
-        && !must_self_destruct) {
-        for (const auto m : all_modules_enabled) {
-            m->Update(delta_f);
+    switch (gwtoolbox_state) {
+    case GWToolboxState::Terminating:
+        return DrawTerminating(device, delta_f);
+    case GWToolboxState::Initialising:
+        return DrawInitialising(device, delta_f);
+    case GWToolboxState::Initialised:
+        break;
+    default:
+        return;
+    }
+
+    if (gwtoolbox_disabled) {
+        if (!ShouldDisableToolbox()) {
+            Enable();
+        }
+        return;
+    }
+    if (ShouldDisableToolbox()) {
+        Disable();
+        return;
+    }
+
+    if (imgui_inifile_changed) {
+        auto& io = ImGui::GetIO();
+        io.IniFilename = imgui_inifile.bytes;
+        imgui_inifile_changed = false;
+    }
+
+    if (!GW::UI::GetIsUIDrawn()) {
+        return;
+    }
+    if (GW::GetPreGameContext()) {
+        return; // Login screen
+    }
+    if (GW::Map::GetIsInCinematic()) {
+        return;
+    }
+    if (IsIconic(GW::MemoryMgr::GetGWWindowHandle())) {
+        return;
+    }
+    if (!GuiUtils::FontsLoaded()) {
+        return; // Fonts not loaded yet.
+    }
+
+    // Update loop
+    for (const auto m : all_modules_enabled) {
+        m->Update(delta_f);
+    }
+    last_tick_count = tick;
+
+    // Draw loop
+    Resources::DxUpdate(device);
+
+    ImGui_ImplDX9_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+
+    const bool world_map_showing = GW::UI::GetIsWorldMapShowing();
+
+    if (!world_map_showing) {
+        Minimap::Render(device);
+    }
+
+    ImGui::NewFrame();
+
+    // Key up/down events don't get passed to gw window when out of focus, but we need the following to be correct,
+    // or things like alt-tab make imgui think that alt is still down.
+    auto& io = ImGui::GetIO();
+    io.AddKeyEvent(ImGuiKey_ModCtrl, (GetKeyState(VK_CONTROL) & 0x8000) != 0);
+    io.AddKeyEvent(ImGuiKey_ModShift, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
+    io.AddKeyEvent(ImGuiKey_ModAlt, (GetKeyState(VK_MENU) & 0x8000) != 0);
+
+    for (const auto uielement : ui_elements_enabled) {
+        if (world_map_showing && !uielement->ShowOnWorldMap()) {
+            continue;
+        }
+        uielement->Draw(device);
+    }
+
+#ifdef _DEBUG
+    // Feel free to uncomment to play with ImGui's features
+    //ImGui::ShowDemoWindow();
+    //ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
+#endif
+
+    ImGui::EndFrame();
+    ImGui::Render();
+    ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+}
+
+void GWToolbox::DrawInitialising(IDirect3DDevice9* device, float) {
+    ASSERT(gwtoolbox_state == GWToolboxState::Initialising);
+
+    if(!imgui_inifile.bytes)
+        imgui_inifile = Unicode16ToUtf8(Resources::GetSettingFile(L"interface.ini").c_str());
+
+    // Attach WndProc in the render loop to make sure the window is loaded and ready
+    ASSERT(AttachWndProcHandler());
+    // Attach imgui if not already done so
+    ASSERT(AttachImgui(device));
+
+    if (!GuiUtils::FontsLoaded())
+        return;
+
+    Log::Log("Creating Toolbox\n");
+
+    Resources::EnsureFolderExists(Resources::GetComputerFolderPath());
+    Resources::EnsureFolderExists(Resources::GetPath(L"img"));
+    Resources::EnsureFolderExists(Resources::GetPath(L"location logs"));
+    Resources::EnsureFolderExists(Resources::GetPath(L"configs"));
+
+    // if the file does not exist we'll load module settings once downloaded, but we need the file open
+    // in order to read defaults
+    const auto ini = OpenSettingsFile();
+
+    Log::Log("Creating Modules\n");
+    ToggleModule(CrashHandler::Instance());
+    ToggleModule(Resources::Instance());
+    ToggleModule(ToolboxTheme::Instance());
+    ToggleModule(ToolboxSettings::Instance());
+    ToggleModule(MainWindow::Instance());
+    ToggleModule(DialogModule::Instance());
+
+    ToggleModule(GwDatTextureModule::Instance());
+    ToggleModule(Updater::Instance());
+    ToggleModule(ChatCommands::Instance());
+    ToggleModule(GameSettings::Instance());
+    ToggleModule(ChatSettings::Instance());
+    ToggleModule(InventoryManager::Instance());
+    ToggleModule(HallOfMonumentsModule::Instance());
+    ToggleModule(LoginModule::Instance());
+    ToggleModule(AprilFools::Instance());
+    ToggleModule(SettingsWindow::Instance());
+
+    ToolboxSettings::LoadModules(ini); // initialize all other modules as specified by the user
+
+    if (!greeted && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
+        const auto* c = GW::GetCharContext();
+        if (c && c->player_name) {
+            Log::InfoW(L"Hello!");
+            greeted = true;
         }
     }
 
+
+
+    gwtoolbox_state = GWToolboxState::Initialised;
+}
+
+void GWToolbox::DrawTerminating(IDirect3DDevice9*, float delta_f) {
+    ASSERT(gwtoolbox_state == GWToolboxState::Terminating);
+
+    if (all_modules_enabled.size()) {
+        SaveSettings();
+        while (modules_enabled.size()) {
+            ASSERT(ToggleModule(*modules_enabled[0], false) == false);
+        }
+        while (widgets_enabled.size()) {
+            ASSERT(ToggleModule(*widgets_enabled[0], false) == false);
+        }
+        while (windows_enabled.size()) {
+            ASSERT(ToggleModule(*windows_enabled[0], false) == false);
+        }
+    }
+    ASSERT(all_modules_enabled.empty());
+
+terminate_modules:
     for (const auto m : modules_terminating) {
         if (m->CanTerminate()) {
             m->Terminate();
             const auto found = std::ranges::find(modules_terminating, m);
             ASSERT(found != modules_terminating.end());
             modules_terminating.erase(found);
-            break;
+            goto terminate_modules;
         }
         m->Update(delta_f);
     }
-    last_tick_count = tick;
+    if (!modules_terminating.empty())
+        return;
+
+    if (!CanTerminate())
+        return;
+
+    ASSERT(DetachWndProcHandler());
+    ASSERT(DetachImgui());
+
+    GW::DisableHooks();
+    // Re-enable render hook because we use it to check to re-enable
+    GW::RenderModule.enable_hooks();
+
+    gwtoolbox_state = GWToolboxState::Terminated;
+
+    if (defer_close) {
+        // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
+        SendMessageW(gw_window_handle, WM_CLOSE, NULL, NULL);
+    }
+
 }
+

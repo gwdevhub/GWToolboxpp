@@ -143,6 +143,6 @@ void MainWindow::Draw(IDirect3DDevice9*)
     ImGui::End();
 
     if (!open) {
-        GWToolbox::StartSelfDestruct();
+        GWToolbox::SignalTerminate();
     }
 }

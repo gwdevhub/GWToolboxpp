@@ -20,7 +20,7 @@ extern "C" __declspec(dllexport) void __cdecl Terminate()
 {
     if (thread_running) {
         // Tell tb to close, then wait for the thread to finish.
-        GWToolbox::StartSelfDestruct();
+        GWToolbox::SignalTerminate();
     }
     // Wait up to 5000 ms for toolbox to clean up after itself; after that, bomb out
     constexpr uint32_t timeout = 5000 / 16;

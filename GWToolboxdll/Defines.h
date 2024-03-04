@@ -27,6 +27,8 @@ constexpr auto GWTOOLBOX_INI_FILENAME = L"GWToolbox.ini";
 #define LOAD_COLOR(var) var = Colors::Load(ini, Name(), #var, var);
 #define SAVE_COLOR(var) Colors::Save(ini, Name(), #var, var);
 
+#define CLEAR_PTR_VEC(var) for(size_t i=0;i < var.size();i++) { delete var[i]; }; var.clear();
+
 /*
 Notes:
 - EXCEPT_EXPRESSION_ENTRY is for the initialization
