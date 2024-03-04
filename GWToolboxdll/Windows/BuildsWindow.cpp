@@ -179,6 +179,7 @@ void BuildsWindow::Terminate()
     teambuilds.clear();
     if (inifile) {
         delete inifile;
+        inifile = nullptr;
     }
 }
 

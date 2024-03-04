@@ -1922,9 +1922,7 @@ void CompletionWindow::Terminate()
     GW::StoC::RemoveCallback(GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, &skills_unlocked_stoc_entry);
     auto clear_vec = [](auto& vec) {
         for (auto& c : vec) {
-            for (auto i : c.second) {
-                delete i;
-            }
+            CLEAR_PTR_VEC(c.second);
         }
         vec.clear();
     };
@@ -1937,10 +1935,12 @@ void CompletionWindow::Terminate()
     clear_vec(heros);
     clear_vec(unlocked_pvp_items);
 
-    for (const auto c : minipets) {
-        delete c;
-    }
-    minipets.clear();
+    CLEAR_PTR_VEC(festival_hats);
+    CLEAR_PTR_VEC(minipets);
+    CLEAR_PTR_VEC(hom_weapons);
+    CLEAR_PTR_VEC(hom_armor);
+    CLEAR_PTR_VEC(hom_companions);
+    CLEAR_PTR_VEC(hom_titles);
 
     for (const auto& camp : character_completion) {
         delete camp.second;
