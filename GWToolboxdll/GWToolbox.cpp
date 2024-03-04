@@ -627,7 +627,7 @@ void GWToolbox::Disable()
 
 bool GWToolbox::CanTerminate()
 {
-    return modules_terminating.empty() && !GuiUtils::FontsLoading() && all_modules_enabled.empty();
+    return modules_terminating.empty() && GuiUtils::FontsLoaded() && all_modules_enabled.empty();
 }
 
 void GWToolbox::Draw(IDirect3DDevice9* device)
