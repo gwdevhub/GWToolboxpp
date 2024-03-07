@@ -109,8 +109,8 @@ namespace {
     bool RemoveMarkedTarget(const uint32_t agent_id = 0)
     {
         if (!agent_id) {
-            for (const auto marked_agent_id : marked_targets | std::views::keys) {
-                RemoveMarkedTarget(marked_agent_id);
+            while (marked_targets.size()) {
+                RemoveMarkedTarget(marked_targets.begin()->first);
             }
             return true;
         }
@@ -125,12 +125,17 @@ namespace {
 
     void CmdMarkTarget(const wchar_t*, const int argc, const LPWSTR* argv)
     {
+        if (argc > 1 && wcscmp(argv[1], L"clearall") == 0) {
+            // /marktarget clearall
+            RemoveMarkedTarget();
+            return;
+        }
         const auto agent = GW::Agents::GetTarget();
         if (!agent) {
             return;
         }
-        // /markedtarget clear
         if (argc > 1 && (wcscmp(argv[1], L"clear") == 0 || wcscmp(argv[1], L"remove") == 0)) {
+            // /marktarget clear
             RemoveMarkedTarget(agent->agent_id);
             return;
         }
@@ -559,6 +564,9 @@ AgentRenderer::AgentRenderer()
 void AgentRenderer::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* wParam, void*)
 {
     switch (msgid) {
+        case GW::UI::UIMessage::kMapLoaded:
+            RemoveMarkedTarget();
+            break;
         case GW::UI::UIMessage::kShowAgentNameTag:
         case GW::UI::UIMessage::kSetAgentNameTagAttribs: {
             const auto msg = static_cast<GW::UI::AgentNameTagInfo*>(wParam);
@@ -614,7 +622,8 @@ void AgentRenderer::Initialize(IDirect3DDevice9* device)
 
     constexpr GW::UI::UIMessage hook_messages[] = {
         GW::UI::UIMessage::kShowAgentNameTag,
-        GW::UI::UIMessage::kSetAgentNameTagAttribs
+        GW::UI::UIMessage::kSetAgentNameTagAttribs,
+        GW::UI::UIMessage::kMapLoaded
     };
     for (const auto message_id : hook_messages) {
         RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);

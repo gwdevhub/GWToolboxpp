@@ -814,6 +814,10 @@ void ChatCommands::DrawHelp()
     ImGui::Bullet();
     ImGui::Text("'/morale' to send your current morale/death penalty info to team chat.");
     ImGui::Bullet();
+    ImGui::Text("'/marktarget' to highlight the current target on the gwtoolbox minimap.\n"
+                "'/marktarget clear' to unhighlight the current target on the gwtoolbox minimap.\n"
+                "'/marktarget clearall' to clear all highlighted targets on the gwtoolbox minimap.");
+    ImGui::Bullet();
     ImGui::Text("'/observer:reset' resets observer mode data.");
     ImGui::Bullet();
     ImGui::Text("'/pingitem <equipped_item>' to ping your equipment in chat.\n"
