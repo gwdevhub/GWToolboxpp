@@ -432,6 +432,30 @@ namespace {
     }
 }
 
+void PartyWindowModule::Update(float delta) {
+    ToolboxModule::Update(delta);
+    while (!summons_pending.empty()) {
+        const SummonPending summon = summons_pending.front();
+
+        const uint32_t agent_id = summon.agent_id;
+        const GW::Constants::SkillID skill_id = summon.skill_id;
+
+        const GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+
+        const GW::AgentLiving* agentLiving = skill ? static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(summon.agent_id)) : nullptr;
+        if (!agentLiving) {
+            return;
+        }
+
+        wchar_t skill_name_enc[8] = { 0 };
+        GW::UI::UInt32ToEncStr(skill->name, skill_name_enc, 8);
+
+        SetAgentName(agent_id, skill_name_enc);
+
+        summons_pending.pop();
+    }
+}
+
 void PartyWindowModule::Initialize()
 {
     ToolboxModule::Initialize();
@@ -542,36 +566,11 @@ void PartyWindowModule::Initialize()
             summons_pending.push({pak->agent_id, summon_elite->second});
         }
     );
-
-    GW::GameThread::RegisterGameThreadCallback(
-        &Summon_GameThreadCallback_Entry,
-        [&](GW::HookStatus*) -> void {
-            while (!summons_pending.empty()) {
-                const SummonPending summon = summons_pending.front();
-
-                const uint32_t agent_id = summon.agent_id;
-                const GW::Constants::SkillID skill_id = summon.skill_id;
-
-                const GW::Skill* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-
-                const GW::AgentLiving* agentLiving = skill ? static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(summon.agent_id)) : nullptr;
-                if (!agentLiving) {
-                    return;
-                }
-
-                wchar_t skill_name_enc[8] = {0};
-                GW::UI::UInt32ToEncStr(skill->name, skill_name_enc, 8);
-
-                SetAgentName(agent_id, skill_name_enc);
-
-                summons_pending.pop();
-            }
-        }
-    );
 }
 
 void PartyWindowModule::Terminate()
 {
+    GW::GameThread::RemoveGameThreadCallback(&Summon_GameThreadCallback_Entry);
     ClearSpecialNPCs();
 }
 

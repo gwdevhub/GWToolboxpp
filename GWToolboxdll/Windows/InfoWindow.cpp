@@ -891,7 +891,7 @@ void InfoWindow::Initialize()
     GWCA_SendUIMessage_Func = (GWCA_SendUIMessage_pt)GW::UI::SendUIMessage;
     if (GWCA_SendUIMessage_Func) {
         GW::HookBase::CreateHook(GWCA_SendUIMessage_Func, OnGWCASendUIMessage, (void**)&GWCA_SendUIMessage_Ret);
-        GW::HookBase::EnableHooks(GWCA_SendUIMessage_Func);
+        //GW::HookBase::EnableHooks(GWCA_SendUIMessage_Func);
     }
 }
 

@@ -74,7 +74,7 @@ public:
     // Generic callback used when loading async functions. If success is false, any error details are held in response.
     using AsyncLoadCallback = std::function<void(bool success, const std::wstring& response)>;
     // Callback for binary, usually only curl stuff; try to stick to wstrings where possible
-    using AsyncLoadMbCallback = std::function<void(bool success, const std::string& response)>;
+    using AsyncLoadMbCallback = std::function<void(bool success, const std::string& response, void* context)>;
 
     // Load from file to D3DTexture, runs callback on completion
     static void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback = nullptr);
@@ -119,13 +119,13 @@ public:
     // download to memory, blocking. If an error occurs, details are held in response string
     static bool Download(const std::string& url, std::string& response);
     // download to memory, async, calls callback on completion. If an error occurs, details are held in response string
-    void Download(const std::string& url, AsyncLoadMbCallback callback) const;
+    static void Download(const std::string& url, AsyncLoadMbCallback callback, void* wparam = nullptr);
 
 
     // download to memory, blocking. If an error occurs, details are held in response string
     static bool Post(const std::string& url, const std::string& payload, std::string& response);
     // download to memory, async, calls callback on completion. If an error occurs, details are held in response string
-    static void Post(const std::string& url, const std::string& payload, AsyncLoadMbCallback callback);
+    static void Post(const std::string& url, const std::string& payload, AsyncLoadMbCallback callback, void* wparam = nullptr);
 
     // Stops the worker thread once it's done with the current jobs.
     void EndLoading() const;

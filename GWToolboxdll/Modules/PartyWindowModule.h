@@ -17,6 +17,7 @@ public:
     [[nodiscard]] const char* SettingsName() const override { return "Party Settings"; }
     void Initialize() override;
     void Terminate() override;
+    void Update(float) override;
     void SignalTerminate() override;
     bool CanTerminate() override;
     void LoadSettings(ToolboxIni* ini) override;

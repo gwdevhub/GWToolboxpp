@@ -502,13 +502,13 @@ bool Resources::Download(const std::string& url, std::string& response)
     return true;
 }
 
-void Resources::Download(const std::string& url, AsyncLoadMbCallback callback) const
+void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, void* context)
 {
-    EnqueueWorkerTask([this, url, callback] {
+    EnqueueWorkerTask([url, callback, context] {
         std::string response;
         bool ok = Download(url, response);
-        EnqueueMainTask([callback, ok, response] {
-            callback(ok, response);
+        EnqueueMainTask([callback, ok, response, context] {
+            callback(ok, response, context);
         });
     });
 }
@@ -534,13 +534,13 @@ bool Resources::Post(const std::string& url, const std::string& payload, std::st
     return true;
 }
 
-void Resources::Post(const std::string& url, const std::string& payload, AsyncLoadMbCallback callback)
+void Resources::Post(const std::string& url, const std::string& payload, AsyncLoadMbCallback callback, void* wparam)
 {
-    EnqueueWorkerTask([url, payload, callback] {
+    EnqueueWorkerTask([url, payload, callback, wparam] {
         std::string response;
         bool ok = Post(url, payload, response);
-        EnqueueMainTask([callback, ok, response] {
-            callback(ok, response);
+        EnqueueMainTask([callback, ok, response, wparam] {
+            callback(ok, response, wparam);
         });
     });
 }
@@ -819,7 +819,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     // No local file found; download from wiki via skill link URL
     std::string wiki_url = "https://wiki.guildwars.com/wiki/File:";
     wiki_url.append(GuiUtils::UrlEncode(filename, '_'));
-    Instance().Download(wiki_url.c_str(), [texture, filename_sanitised, callback, width](const bool ok, const std::string& response) {
+    Instance().Download(wiki_url.c_str(), [texture, filename_sanitised, callback, width](const bool ok, const std::string& response, void*) {
         if (!ok) {
             callback(ok, GuiUtils::StringToWString(response));
             return; // Already logged whatever errors
@@ -906,7 +906,7 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
     // No local file found; download from wiki via skill link URL
     char url[128];
     snprintf(url, _countof(url), "https://wiki.guildwars.com/wiki/Game_link:Skill_%d", skill_id);
-    Instance().Download(url, [texture, skill_id, callback](const bool ok, const std::string& response) {
+    Instance().Download(url, [texture, skill_id, callback](const bool ok, const std::string& response, void*) {
         if (!ok) {
             callback(ok, GuiUtils::StringToWString(response));
             return; // Already logged whatever errors
@@ -1041,7 +1041,7 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
 
     // No local file found; download from wiki via searching by the item name; the wiki will usually return a 302 redirect if its an exact item match
     const std::string search_str = GuiUtils::WikiUrl(item_name);
-    Instance().Download(search_str, [texture, item_name, callback](const bool ok, const std::string& response) {
+    Instance().Download(search_str, [texture, item_name, callback](const bool ok, const std::string& response, void*) {
         if (!ok) {
             callback(ok, GuiUtils::StringToWString(response));
             return;

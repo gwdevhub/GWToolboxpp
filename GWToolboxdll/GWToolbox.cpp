@@ -98,8 +98,42 @@ namespace {
         return true;
     }
 
-    bool imgui_initialized = false;
 
+
+    bool render_callback_attached = false;
+    bool AttachRenderCallback() {
+        if (!render_callback_attached) {
+            GW::Render::SetRenderCallback(GWToolbox::Draw);
+            render_callback_attached = true;
+        }
+        return render_callback_attached;
+    }
+    bool DetachRenderCallback() {
+        if (render_callback_attached) {
+            GW::Render::SetRenderCallback(nullptr);
+            render_callback_attached = false;
+        }
+        return !render_callback_attached;
+    }
+
+    bool game_loop_callback_attached = false;
+    GW::HookEntry game_loop_callback_entry;
+    bool AttachGameLoopCallback() {
+        if (!game_loop_callback_attached) {
+            GW::GameThread::RegisterGameThreadCallback(&game_loop_callback_entry,GWToolbox::Update);
+            game_loop_callback_attached = true;
+        }
+        return game_loop_callback_attached;
+    }
+    bool DetachGameLoopCallback() {
+        if (game_loop_callback_attached) {
+            GW::GameThread::RemoveGameThreadCallback(&game_loop_callback_entry);
+            game_loop_callback_attached = false;
+        }
+        return !game_loop_callback_attached;
+    }
+
+    bool imgui_initialized = false;
     bool AttachImgui(IDirect3DDevice9* device)
     {
         if (imgui_initialized) {
@@ -196,6 +230,15 @@ namespace {
     bool ShouldDisableToolbox() {
         const auto m = GW::Map::GetMapInfo();
         return m && m->GetIsPvP();
+    }
+
+    bool CanRenderToolbox() {
+        return !gwtoolbox_disabled
+            && GW::UI::GetIsUIDrawn()
+            && !GW::GetPreGameContext()
+            && !GW::Map::GetIsInCinematic()
+            && !IsIconic(GW::MemoryMgr::GetGWWindowHandle())
+            && GuiUtils::FontsLoaded();
     }
 
     bool ToggleTBModule(ToolboxModule& m, std::vector<ToolboxModule*>& vec, const bool enable)
@@ -532,7 +575,8 @@ void GWToolbox::Initialize()
     case GWToolboxState::Terminating:
     case GWToolboxState::Terminated:
         gwtoolbox_state = GWToolboxState::Initialising;
-        GW::Render::SetRenderCallback(Draw);
+        AttachRenderCallback();
+        AttachGameLoopCallback();
         GW::EnableHooks();
         pending_detach_dll = false;
     }
@@ -605,6 +649,8 @@ void GWToolbox::SignalTerminate(bool detach_dll)
     case GWToolboxState::Initialised:
     case GWToolboxState::Initialising:
         gwtoolbox_state = GWToolboxState::Terminating;
+        AttachGameLoopCallback();
+        AttachRenderCallback();
         pending_detach_dll = detach_dll;
     }
 }
@@ -622,16 +668,20 @@ void GWToolbox::Disable()
         return;
     GW::DisableHooks();
     GW::RenderModule.enable_hooks();
+    AttachRenderCallback();
     gwtoolbox_disabled = true;
 }
 
 bool GWToolbox::CanTerminate()
 {
-    return modules_terminating.empty() && GuiUtils::FontsLoaded() && all_modules_enabled.empty();
+    return modules_terminating.empty() 
+        && GuiUtils::FontsLoaded() 
+        && all_modules_enabled.empty()
+        && !imgui_initialized
+        && !event_handler_attached;
 }
 
-void GWToolbox::Draw(IDirect3DDevice9* device)
-{
+void GWToolbox::Update(GW::HookStatus*) {
     static DWORD last_tick_count;
     if (last_tick_count == 0) {
         last_tick_count = GetTickCount();
@@ -645,23 +695,35 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 
     switch (gwtoolbox_state) {
     case GWToolboxState::Terminating:
-        return DrawTerminating(device, delta_f);
+        return UpdateTerminating(delta_f);
     case GWToolboxState::Initialising:
-        return DrawInitialising(device, delta_f);
+        return UpdateInitialising(delta_f);
     case GWToolboxState::Initialised:
         break;
     default:
         return;
     }
-
-    if (gwtoolbox_disabled) {
-        if (!ShouldDisableToolbox()) {
-            Enable();
-        }
+    if (!CanRenderToolbox())
         return;
+
+    // Update loop
+    for (const auto m : all_modules_enabled) {
+        m->Update(delta_f);
     }
-    if (ShouldDisableToolbox()) {
-        Disable();
+    last_tick_count = tick;
+}
+
+void GWToolbox::Draw(IDirect3DDevice9* device)
+{
+
+    switch (gwtoolbox_state) {
+    case GWToolboxState::Terminating:
+        return DrawTerminating(device);
+    case GWToolboxState::Initialising:
+        return DrawInitialising(device);
+    case GWToolboxState::Initialised:
+        break;
+    default:
         return;
     }
 
@@ -670,28 +732,18 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         io.IniFilename = imgui_inifile.bytes;
         imgui_inifile_changed = false;
     }
-
-    if (!GW::UI::GetIsUIDrawn()) {
+    if (gwtoolbox_disabled) {
+        if (!ShouldDisableToolbox()) {
+            Enable();
+        }
         return;
     }
-    if (GW::GetPreGameContext()) {
-        return; // Login screen
-    }
-    if (GW::Map::GetIsInCinematic()) {
+    else if (ShouldDisableToolbox()) {
+        Disable();
         return;
     }
-    if (IsIconic(GW::MemoryMgr::GetGWWindowHandle())) {
+    if (!CanRenderToolbox())
         return;
-    }
-    if (!GuiUtils::FontsLoaded()) {
-        return; // Fonts not loaded yet.
-    }
-
-    // Update loop
-    for (const auto m : all_modules_enabled) {
-        m->Update(delta_f);
-    }
-    last_tick_count = tick;
 
     // Draw loop
     Resources::DxUpdate(device);
@@ -732,7 +784,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
 }
 
-void GWToolbox::DrawInitialising(IDirect3DDevice9* device, float) {
+void GWToolbox::DrawInitialising(IDirect3DDevice9* device) {
     ASSERT(gwtoolbox_state == GWToolboxState::Initialising);
 
     if(!imgui_inifile.bytes)
@@ -743,6 +795,9 @@ void GWToolbox::DrawInitialising(IDirect3DDevice9* device, float) {
     // Attach imgui if not already done so
     ASSERT(AttachImgui(device));
 
+
+}
+void GWToolbox::UpdateInitialising(float) {
     if (!GuiUtils::FontsLoaded())
         return;
 
@@ -786,12 +841,10 @@ void GWToolbox::DrawInitialising(IDirect3DDevice9* device, float) {
         }
     }
 
-
-
     gwtoolbox_state = GWToolboxState::Initialised;
 }
 
-void GWToolbox::DrawTerminating(IDirect3DDevice9*, float delta_f) {
+void GWToolbox::UpdateTerminating(float delta_f) {
     ASSERT(gwtoolbox_state == GWToolboxState::Terminating);
 
     if (all_modules_enabled.size()) {
@@ -807,8 +860,7 @@ void GWToolbox::DrawTerminating(IDirect3DDevice9*, float delta_f) {
         }
     }
     ASSERT(all_modules_enabled.empty());
-
-terminate_modules:
+    terminate_modules:
     for (const auto m : modules_terminating) {
         if (m->CanTerminate()) {
             m->Terminate();
@@ -822,15 +874,12 @@ terminate_modules:
     if (!modules_terminating.empty())
         return;
 
+    ASSERT(DetachWndProcHandler());
+
     if (!CanTerminate())
         return;
 
-    ASSERT(DetachWndProcHandler());
-    ASSERT(DetachImgui());
-
     GW::DisableHooks();
-    // Re-enable render hook because we use it to check to re-enable
-    GW::RenderModule.enable_hooks();
 
     gwtoolbox_state = GWToolboxState::Terminated;
 
@@ -838,6 +887,9 @@ terminate_modules:
         // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
         SendMessageW(gw_window_handle, WM_CLOSE, NULL, NULL);
     }
+}
 
+void GWToolbox::DrawTerminating(IDirect3DDevice9*) {
+    ASSERT(DetachImgui());
 }
 

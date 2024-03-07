@@ -30,6 +30,7 @@ public:
 
     static void Initialize();
     static void SignalTerminate(bool detach_dll = true);
+    static void Update(GW::HookStatus* status = nullptr);
     static void Enable();
     static void Disable();
     static bool CanTerminate();
@@ -59,6 +60,8 @@ public:
     static bool ToggleModule(ToolboxModule& m, bool enable = true);
 
 private:
-    static void DrawInitialising(IDirect3DDevice9* device, float delta_f);
-    static void DrawTerminating(IDirect3DDevice9* device, float delta_f);
+    static void DrawInitialising(IDirect3DDevice9* device);
+    static void DrawTerminating(IDirect3DDevice9* device);
+    static void UpdateInitialising(float);
+    static void UpdateTerminating(float);
 };
