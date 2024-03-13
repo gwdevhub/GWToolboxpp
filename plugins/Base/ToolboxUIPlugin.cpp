@@ -1,4 +1,4 @@
-﻿#include "ToolboxUIPlugin.h"
+#include "ToolboxUIPlugin.h"
 #include <imgui.h>
 
 #include <GWCA/Utilities/Hooker.h>
@@ -11,7 +11,7 @@ import PluginUtils;
 namespace {
     // ReSharper disable once CppParameterMayBeConst
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
-    bool CmdTB(const wchar_t*, int argc, LPWSTR* argv)
+    bool CmdTB(const wchar_t*, const int argc, const LPWSTR* argv)
     {
         const auto instance = static_cast<ToolboxUIPlugin*>(ToolboxPluginInstance());
         if (!instance) {
@@ -60,7 +60,7 @@ void ToolboxUIPlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocato
 {
     ToolboxPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
     GW::Initialize();
-    GW::Chat::CreateCommand(L"tb", GW::Chat::CmdCB(CmdTB));
+    GW::Chat::CreateCommand(L"tb", CmdTB);
 }
 
 bool ToolboxUIPlugin::CanTerminate()
