@@ -61,6 +61,7 @@
 #include <Windows/PathfindingWindow.h>
 #include <Windows/RerollWindow.h>
 #include <Windows/ArmoryWindow.h>
+#include <Windows/TargetInfoWindow.h>
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
@@ -212,7 +213,7 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini)
     GWToolbox::ToggleModule(StringDecoderWindow::Instance());
     GWToolbox::ToggleModule(DoorMonitorWindow::Instance());
     GWToolbox::ToggleModule(SkillListingWindow::Instance());
-
+    GWToolbox::ToggleModule(TargetInfoWindow::Instance());
 #endif
     for (const auto& m : optional_modules) {
         GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
