@@ -703,8 +703,6 @@ void GWToolbox::Update(GW::HookStatus*) {
     default:
         return;
     }
-    if (!CanRenderToolbox())
-        return;
 
     // Update loop
     for (const auto m : all_modules_enabled) {
