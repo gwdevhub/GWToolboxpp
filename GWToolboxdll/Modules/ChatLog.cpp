@@ -511,19 +511,20 @@ namespace {
         }
         if (status->blocked)
             return;
-        wchar_t* message = *(wchar_t**)wparam;
+        const auto packet = (GW::UI::UIPacket::kLogChatMessage*)wparam;
         const auto logged_message = GetLastLoggedMessage();
         if (!logged_message)
             return; // NB: Can be false if between maps
-        ASSERT(wcscmp(logged_message->message, message) == 0);
-        if (logged_message) {
-            if (timestamp_override_message) {
-                logged_message->timestamp = timestamp_override_message->timestamp;
-                timestamp_override_message = nullptr;
-            }
-            else {
-                Add(logged_message);
-            }
+        if (wcscmp(logged_message->message, packet->message) != 0) {
+            // Channel 7 isn't logged on GW side; UI message may have been sent, but GW didn't append it to the log. Valid error.
+            return;
+        }
+        if (timestamp_override_message) {
+            logged_message->timestamp = timestamp_override_message->timestamp;
+            timestamp_override_message = nullptr;
+        }
+        else {
+            Add(logged_message);
         }
     }
 
