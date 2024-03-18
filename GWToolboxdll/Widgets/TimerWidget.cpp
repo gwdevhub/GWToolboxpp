@@ -682,7 +682,7 @@ void TimerWidget::Draw(IDirect3DDevice9*)
             ImGui::SetCursorPos(ImVec2(cur2.x + 1, cur2.y + 1));
             ImGui::TextColored(ImColor(0, 0, 0), buffer);
             ImGui::SetCursorPos(cur2);
-            if (extra_color) {
+            if (_extra_color) {
                 ImGui::TextColored(*_extra_color, buffer);
             }
             else {

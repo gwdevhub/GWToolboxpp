@@ -2002,6 +2002,10 @@ const wchar_t* ChatCommands::GetRemainingArgsWstr(const wchar_t* message, const 
             out++;
         }
     }
+
+    if(!out) {
+        return L"";
+    }
     return out;
 };
 
