@@ -194,7 +194,10 @@ namespace {
 
     enum class GWToolboxState {
         Initialising,
+        UpdateInitialising,
+        DrawInitialising,
         Initialised,
+        DrawTerminating,
         Terminating,
         Terminated,
         Disabled
@@ -570,9 +573,6 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
 void GWToolbox::Initialize()
 {
     switch (gwtoolbox_state) {
-    case GWToolboxState::Initialising:
-        return;
-    case GWToolboxState::Terminating:
     case GWToolboxState::Terminated:
         gwtoolbox_state = GWToolboxState::Initialising;
         AttachRenderCallback();
@@ -648,7 +648,7 @@ void GWToolbox::SignalTerminate(bool detach_dll)
     case GWToolboxState::Terminating:
     case GWToolboxState::Initialised:
     case GWToolboxState::Initialising:
-        gwtoolbox_state = GWToolboxState::Terminating;
+        gwtoolbox_state = GWToolboxState::DrawTerminating;
         AttachGameLoopCallback();
         AttachRenderCallback();
         pending_detach_dll = detach_dll;
@@ -715,9 +715,9 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 {
 
     switch (gwtoolbox_state) {
-    case GWToolboxState::Terminating:
+    case GWToolboxState::DrawTerminating:
         return DrawTerminating(device);
-    case GWToolboxState::Initialising:
+    case GWToolboxState::DrawInitialising:
         return DrawInitialising(device);
     case GWToolboxState::Initialised:
         break;
@@ -783,7 +783,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 }
 
 void GWToolbox::DrawInitialising(IDirect3DDevice9* device) {
-    ASSERT(gwtoolbox_state == GWToolboxState::Initialising);
+    ASSERT(gwtoolbox_state == GWToolboxState::DrawInitialising);
 
     if(!imgui_inifile.bytes)
         imgui_inifile = Unicode16ToUtf8(Resources::GetSettingFile(L"interface.ini").c_str());
@@ -793,11 +793,14 @@ void GWToolbox::DrawInitialising(IDirect3DDevice9* device) {
     // Attach imgui if not already done so
     ASSERT(AttachImgui(device));
 
+    if (!GuiUtils::FontsLoaded())
+        return;
+
+    gwtoolbox_state = GWToolboxState::Initialised;
 
 }
 void GWToolbox::UpdateInitialising(float) {
-    if (!GuiUtils::FontsLoaded())
-        return;
+    ASSERT(gwtoolbox_state == GWToolboxState::Initialising);
 
     Log::Log("Creating Toolbox\n");
 
@@ -839,7 +842,7 @@ void GWToolbox::UpdateInitialising(float) {
         }
     }
 
-    gwtoolbox_state = GWToolboxState::Initialised;
+    gwtoolbox_state = GWToolboxState::DrawInitialising;
 }
 
 void GWToolbox::UpdateTerminating(float delta_f) {
@@ -888,6 +891,8 @@ void GWToolbox::UpdateTerminating(float delta_f) {
 }
 
 void GWToolbox::DrawTerminating(IDirect3DDevice9*) {
+    ASSERT(gwtoolbox_state == GWToolboxState::DrawTerminating);
     ASSERT(DetachImgui());
+    gwtoolbox_state = GWToolboxState::Terminating;
 }
 
