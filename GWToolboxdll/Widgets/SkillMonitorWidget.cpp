@@ -19,49 +19,274 @@
 #include <Modules/Resources.h>
 #include <Widgets/SkillMonitorWidget.h>
 
+namespace {
+
+    enum SkillActivationStatus {
+        CASTING,
+        COMPLETED,
+        CANCELLED,
+        INTERRUPTED,
+    };
+
+    struct SkillActivation {
+        GW::Constants::SkillID id;
+        SkillActivationStatus status;
+        clock_t last_update{};
+        clock_t cast_start = last_update;
+        float cast_time = .0f;
+    };
+
+    const float PARTY_OFFSET_LEFT_BASE = 15.f;
+    const float PARTY_OFFSET_TOP_BASE = 31.f;
+    const float PARTY_OFFSET_RIGHT_BASE = 14.f;
+    const float PARTY_MEMBER_PADDING_FIXED = 1.f;
+    const float PARTY_HERO_INDENT_BASE = 22.f;
+
+
+    GW::HookEntry GenericFloat_Entry;
+
+    GW::UI::WindowPosition* party_window_position = nullptr;
+
+    GW::HookEntry InstanceLoadInfo_Entry;
+    GW::HookEntry GenericValueSelf_Entry;
+    GW::HookEntry GenericValueTarget_Entry;
+    GW::HookEntry GenericModifier_Entry;
+
+    std::unordered_map<GW::AgentID, std::vector<SkillActivation>> history{};
+    std::unordered_map<GW::AgentID, float> casttime_map{};
+
+    std::unordered_map<GW::AgentID, size_t> party_map{};
+    std::unordered_map<GW::AgentID, bool> party_map_indent{};
+    size_t allies_start = 255;
+
+    bool hide_in_outpost = false;
+    bool show_non_party_members = false;
+    Color background = Colors::ARGB(76, 0, 0, 0);
+
+    bool snap_to_party_window = true;
+    int user_offset = -1;
+    int row_height = GW::Constants::HealthbarHeight::Normal;
+
+    bool history_flip_direction = false;
+
+    int cast_indicator_threshold = 1000;
+    int cast_indicator_height = 3;
+    Color cast_indicator_color = Colors::ARGB(255, 55, 153, 30);
+
+    int status_border_thickness = 2;
+    Color status_color_completed = Colors::ARGB(255, 219, 157, 14);
+    Color status_color_casting = Colors::ARGB(255, 55, 153, 30);
+    Color status_color_cancelled = Colors::ARGB(255, 71, 24, 102);
+    Color status_color_interrupted = Colors::ARGB(255, 71, 24, 102);
+
+    int history_length = 5;
+    int history_timeout = 5000;
+
+    Color GetColor(const SkillActivationStatus status)
+    {
+        switch (status) {
+        case CASTING:
+            return status_color_casting;
+        case COMPLETED:
+            return status_color_completed;
+        case CANCELLED:
+            return status_color_cancelled;
+        case INTERRUPTED:
+            return status_color_interrupted;
+        }
+        return Colors::Empty();
+    }
+
+    bool FetchPartyInfo()
+    {
+        const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
+        if (!info) {
+            return false;
+        }
+        party_map.clear();
+        party_map_indent.clear();
+        allies_start = 255;
+        for (const GW::PlayerPartyMember& player : info->players) {
+            const auto id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
+            if (!id) {
+                continue;
+            }
+            party_map[id] = party_map.size();
+
+            if (info->heroes.valid()) {
+                for (const GW::HeroPartyMember& hero : info->heroes) {
+                    if (hero.owner_player_id == player.login_number) {
+                        party_map[hero.agent_id] = party_map.size();
+                        party_map_indent[hero.agent_id] = true;
+                    }
+                }
+            }
+        }
+        if (info->henchmen.valid()) {
+            for (const GW::HenchmanPartyMember& hench : info->henchmen) {
+                party_map[hench.agent_id] = party_map.size();
+            }
+        }
+        if (info->others.valid()) {
+            for (const DWORD ally_id : info->others) {
+                GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
+                const GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
+                if (ally && ally->allegiance != GW::Constants::Allegiance::Minion && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
+                    if (allies_start == 255) {
+                        allies_start = party_map.size();
+                    }
+                    party_map[ally_id] = party_map.size();
+                }
+            }
+        }
+        return true;
+    }
+
+    void CasttimeCallback(const uint32_t value_id, const uint32_t caster_id, const float value)
+    {
+        if (value_id != GW::Packet::StoC::GenericValueID::casttime) {
+            return;
+        }
+
+        casttime_map[caster_id] = value;
+    }
+
+    void SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t value)
+    {
+        if (!party_map.contains(caster_id)) {
+            return;
+        }
+        using namespace GW::Packet::StoC;
+
+        const auto skill_history = &history[caster_id];
+        if (!skill_history) {
+            return;
+        }
+
+        switch (value_id) {
+        case GenericValueID::instant_skill_activated:
+        case GenericValueID::attack_skill_activated:
+        case GenericValueID::skill_activated: {
+            float casttime = casttime_map[caster_id];
+            const bool is_instant = value_id == GenericValueID::instant_skill_activated;
+            if (!is_instant && !casttime) {
+                if (const auto skill = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(value))) {
+                    casttime = skill->activation;
+                }
+            }
+
+            skill_history->push_back({
+                static_cast<GW::Constants::SkillID>(value),
+                is_instant ? COMPLETED : CASTING,
+                TIMER_INIT(),
+                TIMER_INIT(),
+                casttime,
+                });
+
+            casttime_map.erase(caster_id);
+            break;
+        }
+        case GenericValueID::skill_stopped:
+        case GenericValueID::skill_finished:
+        case GenericValueID::attack_skill_finished: {
+            const auto casting = find_if(skill_history->begin(), skill_history->end(),
+                [&](const SkillActivation& skill_activation) { return skill_activation.status == CASTING; });
+            if (casting == skill_history->end()) {
+                break;
+            }
+            casting->status = value_id == GenericValueID::skill_stopped
+                ? CANCELLED
+                : COMPLETED;
+            casting->last_update = TIMER_INIT();
+            break;
+        }
+        case GenericValueID::interrupted: {
+            const auto cancelled = find_if(skill_history->begin(), skill_history->end(),
+                [&](const SkillActivation& skill_activation) { return skill_activation.status == CANCELLED; });
+            if (cancelled == skill_history->end()) {
+                break;
+            }
+
+            cancelled->status = INTERRUPTED;
+            cancelled->last_update = TIMER_INIT();
+            break;
+        }
+        default:
+            return;
+        }
+    }
+
+    std::unordered_map<uint32_t, GW::HookEntry*> packet_hooks;
+
+    void OnStoCPacket(GW::HookStatus* status, GW::Packet::StoC::PacketBase* base) {
+        if (status->blocked)
+            return;
+        switch (base->header) {
+        case GW::Packet::StoC::InstanceLoadInfo::STATIC_HEADER: {
+            history.clear();
+            casttime_map.clear();
+        } break;
+
+        case GW::Packet::StoC::GenericModifier::STATIC_HEADER: {
+            const auto packet = (GW::Packet::StoC::GenericModifier*)base;
+            CasttimeCallback(packet->type, packet->target_id, packet->value);
+        } break;
+
+        case GW::Packet::StoC::GenericFloat::STATIC_HEADER: {
+            const auto packet = (GW::Packet::StoC::GenericFloat*)base;
+            CasttimeCallback(packet->type, packet->agent_id, packet->value);
+        } break;
+
+        case GW::Packet::StoC::GenericValue::STATIC_HEADER: {
+            const auto packet = (GW::Packet::StoC::GenericValue*)base;
+            SkillCallback(packet->value_id, packet->agent_id, packet->value);
+        } break;
+
+        case GW::Packet::StoC::GenericValueTarget::STATIC_HEADER: {
+            using namespace GW::Packet::StoC::GenericValueID;
+
+            const auto packet = (GW::Packet::StoC::GenericValueTarget*)base;
+            const auto value_id = packet->Value_id;
+            const auto caster_id = packet->caster;
+            const auto target_id = packet->target;
+
+            const bool isSwapped = value_id == skill_activated || value_id == attack_skill_activated;
+            SkillCallback(value_id, isSwapped ? target_id : caster_id, packet->value);
+        } break;
+
+        }
+    }
+
+}
+
 void SkillMonitorWidget::Initialize()
 {
     ToolboxWidget::Initialize();
     party_window_position = GetWindowPosition(GW::UI::WindowID_PartyWindow);
 
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
-        &InstanceLoadInfo_Entry, [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadInfo*) {
-            history.clear();
-            casttime_map.clear();
-        });
+    uint32_t packet_headers_to_hook[] = {
+        GW::Packet::StoC::GenericModifier::STATIC_HEADER,
+        GW::Packet::StoC::GenericFloat::STATIC_HEADER,
+        GW::Packet::StoC::GenericValue::STATIC_HEADER,
+        GW::Packet::StoC::GenericValueTarget::STATIC_HEADER,
+        GW::Packet::StoC::InstanceLoadInfo::STATIC_HEADER
+    };
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericModifier>(
-        &GenericModifier_Entry, [this](const GW::HookStatus*, const GW::Packet::StoC::GenericModifier* packet) -> void {
-            CasttimeCallback(packet->type, packet->target_id, packet->value);
-        });
-
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(
-        &GenericValueSelf_Entry, [this](const GW::HookStatus*, const GW::Packet::StoC::GenericValue* packet) -> void {
-            const uint32_t value_id = packet->value_id;
-            const uint32_t caster_id = packet->agent_id;
-            const uint32_t value = packet->value;
-
-            SkillCallback(value_id, caster_id, value);
-        });
-
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(
-        &GenericValueTarget_Entry,
-        [this](const GW::HookStatus*, const GW::Packet::StoC::GenericValueTarget* packet) -> void {
-            using namespace GW::Packet::StoC::GenericValueID;
-
-            const uint32_t value_id = packet->Value_id;
-            const uint32_t caster_id = packet->caster;
-            const uint32_t target_id = packet->target;
-            const uint32_t value = packet->value;
-
-            const bool isSwapped = value_id == skill_activated || value_id == attack_skill_activated;
-            SkillCallback(value_id, isSwapped ? target_id : caster_id, value);
-        });
+    for (const auto header : packet_headers_to_hook) {
+        const auto entry = new GW::HookEntry;
+        packet_hooks[header] = entry;
+        GW::StoC::RegisterPostPacketCallback(entry, header, OnStoCPacket);
+    }
 }
 
 void SkillMonitorWidget::Terminate()
 {
     ToolboxWidget::Terminate();
+    for (const auto& it : packet_hooks) {
+        GW::StoC::RemoveCallback(it.first, it.second);
+        delete it.second;
+    }
+    packet_hooks.clear();
 }
 
 void SkillMonitorWidget::Draw(IDirect3DDevice9*)
@@ -328,121 +553,4 @@ void SkillMonitorWidget::DrawSettingsInternal()
     }
 }
 
-void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t value)
-{
-    if (!party_map.contains(caster_id)) {
-        return;
-    }
-    using namespace GW::Packet::StoC;
 
-    const auto skill_history = &history[caster_id];
-    if (!skill_history) {
-        return;
-    }
-
-    switch (value_id) {
-        case GenericValueID::instant_skill_activated:
-        case GenericValueID::attack_skill_activated:
-        case GenericValueID::skill_activated: {
-            float casttime = casttime_map[caster_id];
-            const bool is_instant = value_id == GenericValueID::instant_skill_activated;
-            if (!is_instant && !casttime) {
-                if (const auto skill = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(value))) {
-                    casttime = skill->activation;
-                }
-            }
-
-            skill_history->push_back({
-                static_cast<GW::Constants::SkillID>(value),
-                is_instant ? COMPLETED : CASTING,
-                TIMER_INIT(),
-                TIMER_INIT(),
-                casttime,
-            });
-
-            casttime_map.erase(caster_id);
-            break;
-        }
-        case GenericValueID::skill_stopped:
-        case GenericValueID::skill_finished:
-        case GenericValueID::attack_skill_finished: {
-            const auto casting = find_if(skill_history->begin(), skill_history->end(),
-                                         [&](const SkillActivation& skill_activation) { return skill_activation.status == CASTING; });
-            if (casting == skill_history->end()) {
-                break;
-            }
-            casting->status = value_id == GenericValueID::skill_stopped
-                                  ? CANCELLED
-                                  : COMPLETED;
-            casting->last_update = TIMER_INIT();
-            break;
-        }
-        case GenericValueID::interrupted: {
-            const auto cancelled = find_if(skill_history->begin(), skill_history->end(),
-                                           [&](const SkillActivation& skill_activation) { return skill_activation.status == CANCELLED; });
-            if (cancelled == skill_history->end()) {
-                break;
-            }
-
-            cancelled->status = INTERRUPTED;
-            cancelled->last_update = TIMER_INIT();
-            break;
-        }
-        default:
-            return;
-    }
-}
-
-void SkillMonitorWidget::CasttimeCallback(const uint32_t value_id, const uint32_t caster_id, const float value)
-{
-    if (value_id != GW::Packet::StoC::GenericValueID::casttime) {
-        return;
-    }
-
-    casttime_map[caster_id] = value;
-}
-
-bool SkillMonitorWidget::FetchPartyInfo()
-{
-    const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-    if (!info) {
-        return false;
-    }
-    party_map.clear();
-    party_map_indent.clear();
-    allies_start = 255;
-    for (const GW::PlayerPartyMember& player : info->players) {
-        const auto id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
-        if (!id) {
-            continue;
-        }
-        party_map[id] = party_map.size();
-
-        if (info->heroes.valid()) {
-            for (const GW::HeroPartyMember& hero : info->heroes) {
-                if (hero.owner_player_id == player.login_number) {
-                    party_map[hero.agent_id] = party_map.size();
-                    party_map_indent[hero.agent_id] = true;
-                }
-            }
-        }
-    }
-    if (info->henchmen.valid()) {
-        for (const GW::HenchmanPartyMember& hench : info->henchmen) {
-            party_map[hench.agent_id] = party_map.size();
-        }
-    }
-    if (info->others.valid()) {
-        for (const DWORD ally_id : info->others) {
-            GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
-            const GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
-            if (ally && ally->allegiance != GW::Constants::Allegiance::Minion && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
-                if (allies_start == 255) {
-                    allies_start = party_map.size();
-                }
-                party_map[ally_id] = party_map.size();
-            }
-        }
-    }
-    return true;
-}
