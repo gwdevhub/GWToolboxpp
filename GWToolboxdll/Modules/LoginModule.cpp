@@ -66,7 +66,7 @@ namespace {
             original_charname_parameter = parameter_value;
             parameter_value = const_cast<wchar_t*>(L"NA");
         }
-        Log::Info("GetStringParameter_Ret %p = %ls", param_id_plus_0x27, parameter_value);
+        //Log::Info("GetStringParameter_Ret %p = %ls", param_id_plus_0x27, parameter_value);
         GW::Hook::LeaveHook();
         return parameter_value;
     }

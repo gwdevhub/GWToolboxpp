@@ -576,8 +576,10 @@ void GWToolbox::Initialize()
     case GWToolboxState::Terminated:
         gwtoolbox_state = GWToolboxState::Initialising;
         AttachRenderCallback();
-        AttachGameLoopCallback();
+        //AttachGameLoopCallback();
         GW::EnableHooks();
+        UpdateInitialising(.0f);
+        AttachGameLoopCallback();
         pending_detach_dll = false;
     }
 }
