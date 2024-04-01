@@ -166,21 +166,21 @@ namespace {
         if (!info) {
             return false;
         }
-        party_list.clear();
         party_map.clear();
+        party_list.clear();
         allies_start = 255;
         for (const GW::PlayerPartyMember& player : info->players) {
-            const DWORD id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
+            const auto id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
             if (!id) {
                 continue;
             }
-            party_map[id] = party_list.size();
+            party_map[id] = party_map.size();
             party_list.push_back(id);
 
             if (info->heroes.valid()) {
                 for (const GW::HeroPartyMember& hero : info->heroes) {
                     if (hero.owner_player_id == player.login_number) {
-                        party_map[hero.agent_id] = party_list.size();
+                        party_map[hero.agent_id] = party_map.size();
                         party_list.push_back(hero.agent_id);
                     }
                 }
@@ -188,6 +188,7 @@ namespace {
         }
         if (info->henchmen.valid()) {
             for (const GW::HenchmanPartyMember& hench : info->henchmen) {
+                party_map[hench.agent_id] = party_map.size();
                 party_list.push_back(hench.agent_id);
             }
         }
@@ -200,6 +201,7 @@ namespace {
                         allies_start = party_map.size();
                     }
                     party_map[ally_id] = party_map.size();
+                    party_list.push_back(ally_id);
                 }
             }
         }
@@ -329,13 +331,12 @@ void BondsWidget::Draw(IDirect3DDevice9*)
         GuiUtils::ClampRect(rect, viewport);
         // Left placement
         GW::Vec2f internal_offset(
-            7.f,
-            GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable ? 31.f : 34.f
-        );
+            7.f, GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable ? 31.f : 34.f);
         internal_offset *= uiscale_multiply;
         const auto user_offset_x = abs(user_offset);
         float offset_width = width;
-        auto calculated_pos = ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
+        auto calculated_pos =
+            ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
         if (calculated_pos.x < 0 || user_offset < 0) {
             // Right placement
             internal_offset.x = 4.f * uiscale_multiply;
@@ -349,8 +350,9 @@ void BondsWidget::Draw(IDirect3DDevice9*)
     if (ImGui::Begin(Name(), &visible, GetWinFlags(0, !(click_to_cast || click_to_drop)))) {
         const float win_x = ImGui::GetWindowPos().x;
         const float win_y = ImGui::GetWindowPos().y;
-
-        const auto get_grid_pos = [&](size_t x, size_t y, const bool topleft) -> ImVec2 {
+        auto GetGridPos = [&](const size_t _x, const size_t _y, const bool topleft) -> ImVec2 {
+            size_t x = _x;
+            size_t y = _y;
             if (y >= allies_start) {
                 ++y;
             }
@@ -358,8 +360,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
                 ++x;
                 ++y;
             }
-            return {win_x + img_size * static_cast<float>(x),
-                    win_y + img_size * static_cast<float>(y)};
+            return { win_x + x * img_size, win_y + y * img_size };
         };
 
         bool handled_click = false;
@@ -377,8 +378,8 @@ void BondsWidget::Draw(IDirect3DDevice9*)
                 const size_t y = party_map[agent];
                 const size_t x = bond_map[skill];
                 const auto texture = *Resources::GetSkillImage(buff.skill_id);
-                ImVec2 tl = get_grid_pos(x, y, true);
-                ImVec2 br = get_grid_pos(x, y, false);
+                ImVec2 tl = GetGridPos(x, y, true);
+                ImVec2 br = GetGridPos(x, y, false);
                 if (texture) {
                     ImGui::AddImageCropped(texture, tl, br);
                 }
@@ -416,8 +417,8 @@ void BondsWidget::Draw(IDirect3DDevice9*)
                     const size_t x = bond_map[skill_id];
 
                     const auto texture = *Resources::GetSkillImage(skill_id);
-                    ImVec2 tl = get_grid_pos(x, y, true);
-                    ImVec2 br = get_grid_pos(x, y, false);
+                    ImVec2 tl = GetGridPos(x, y, true);
+                    ImVec2 br = GetGridPos(x, y, false);
                     if (texture) {
                         ImGui::AddImageCropped(texture, tl, br);
                     }
@@ -431,8 +432,8 @@ void BondsWidget::Draw(IDirect3DDevice9*)
         if (click_to_cast && !handled_click) {
             for (unsigned int y = 0; y < party_list.size(); ++y) {
                 for (unsigned int x = 0; x < bond_list.size(); ++x) {
-                    ImVec2 tl = get_grid_pos(x, y, true);
-                    ImVec2 br = get_grid_pos(x, y, false);
+                    ImVec2 tl = GetGridPos(x, y, true);
+                    ImVec2 br = GetGridPos(x, y, false);
                     if (!ImGui::IsMouseHoveringRect(tl, br)) {
                         continue;
                     }
