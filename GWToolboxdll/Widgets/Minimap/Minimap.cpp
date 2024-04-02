@@ -634,6 +634,15 @@ void Minimap::DrawSettingsInternal()
     ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
 }
 
+ImGuiWindowFlags Minimap::GetWinFlags(ImGuiWindowFlags flags, const bool noinput_if_frozen) const
+{
+    flags = ToolboxWidget::GetWinFlags(flags, noinput_if_frozen);
+    if (snap_to_compass) {
+        flags |= ImGuiWindowFlags_NoInputs;
+    }
+    return flags;
+}
+
 void Minimap::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
