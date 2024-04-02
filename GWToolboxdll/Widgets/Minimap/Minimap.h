@@ -77,6 +77,15 @@ public:
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;
 
+    ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags, const bool noinput_if_frozen) const override
+    {
+        flags = ToolboxWidget::GetWinFlags(flags, noinput_if_frozen);
+        if (snap_to_compass) {
+            flags |= ImGuiWindowFlags_NoInputs;
+        }
+        return flags;
+    }
+
     [[nodiscard]] float GetMapRotation() const;
     [[nodiscard]] static DirectX::XMFLOAT2 GetGwinchScale();
     [[nodiscard]] GW::Vec2f ShadowstepLocation() const;
