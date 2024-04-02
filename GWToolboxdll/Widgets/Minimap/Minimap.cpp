@@ -634,6 +634,15 @@ void Minimap::DrawSettingsInternal()
     ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
 }
 
+ImGuiWindowFlags Minimap::GetWinFlags(ImGuiWindowFlags flags, const bool noinput_if_frozen) const
+{
+    flags = ToolboxWidget::GetWinFlags(flags, noinput_if_frozen);
+    if (snap_to_compass) {
+        flags |= ImGuiWindowFlags_NoInputs;
+    }
+    return flags;
+}
+
 void Minimap::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
@@ -817,7 +826,7 @@ void Minimap::Draw(IDirect3DDevice9*)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(500.0f, 500.0f), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin(Name(), nullptr, GetWinFlags(ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus, !snap_to_compass))) {
+    if (ImGui::Begin(Name(), nullptr, GetWinFlags(ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus, true))) {
         // window pos are already rounded by imgui, so casting is no big deal
         if (!snap_to_compass) {
             location.x = static_cast<int>(ImGui::GetWindowPos().x);

@@ -77,6 +77,8 @@ public:
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;
 
+    [[nodiscard]] ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags, bool noinput_if_frozen) const override;
+
     [[nodiscard]] float GetMapRotation() const;
     [[nodiscard]] static DirectX::XMFLOAT2 GetGwinchScale();
     [[nodiscard]] GW::Vec2f ShadowstepLocation() const;
