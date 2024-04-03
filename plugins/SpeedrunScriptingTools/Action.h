@@ -8,6 +8,7 @@ enum class ActionType {
     SendDialog,
     GoToNpc,
     Wait,
+    SendChat,
 };
 
 class Action {

@@ -92,3 +92,23 @@ private:
     uint32_t waitTime;
     std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
 };
+
+class SendChatAction : public Action {
+public:
+    enum class Channel {
+        All,
+        Guild,
+        Team,
+        Trade,
+        Alliance,
+        Whisper,
+        Emote,
+    };
+    SendChatAction(Channel channel, std::string_view message) : channel{channel}, message{message} {}
+    ActionType type() const final { return ActionType::SendChat; }
+    void initialAction() final;
+
+private:
+    Channel channel;
+    std::string_view message;
+};
