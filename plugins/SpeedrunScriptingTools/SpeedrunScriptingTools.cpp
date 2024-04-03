@@ -99,6 +99,7 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
     testScript.actions.push_back(std::make_shared<CastOnTargetAction>(GW::Constants::SkillID::Ebon_Escape));
     testScript.actions.push_back(std::make_shared<UseItemAction>(6368));
     testScript.actions.push_back(std::make_shared<CastOnSelfAction>(GW::Constants::SkillID::Shadow_Form));
+    testScript.actions.push_back(std::make_shared<SendChatAction>(SendChatAction::Channel::Emote, "show settings"));
 
     m_scripts.push_back(std::move(testScript));
     ///

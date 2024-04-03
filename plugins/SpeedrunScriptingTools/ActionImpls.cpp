@@ -4,6 +4,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/GameEntities/Agent.h>
 
 namespace {
@@ -148,4 +149,33 @@ bool WaitAction::isComplete() const
     const auto now = std::chrono::steady_clock::now();
     const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
     return elapsedTime > waitTime;
+}
+
+/// ------------- SendChatAction -------------
+void SendChatAction::initialAction()
+{
+    Action::initialAction();
+
+    const auto channelId = [&]() -> char {
+        switch (channel) {
+            case Channel::All:
+                return '!';
+            case Channel::Guild:
+                return '@';
+            case Channel::Team:
+                return '#';
+            case Channel::Trade:
+                return '$';
+            case Channel::Alliance:
+                return '%';
+            case Channel::Whisper:
+                return '"';
+            case Channel::Emote:
+                return '/';
+            default:
+                return '#';
+        }
+        }();
+    
+       GW::Chat::SendChat(channelId, message.data());
 }
