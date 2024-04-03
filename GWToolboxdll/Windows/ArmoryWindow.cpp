@@ -898,10 +898,11 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
         if (ImGui::MyCombo("##filter", "All", (int*)&current_campaign, armor_filter_array_getter, nullptr, 6)) {
             UpdateArmorsFilter();
         }
-        for (size_t slot = 0; slot < _countof(gwarmory_window_pieces); slot++) {
-            if (!IsEquipmentSlotSupportedByArmory(static_cast<ItemSlot>(slot)))
+        const auto order = {Headpiece, Chestpiece, Leggings, Boots, CostumeHead, CostumeBody};
+        for (const auto slot : order) {
+            if (!IsEquipmentSlotSupportedByArmory(slot))
                 continue;
-            if (DrawArmorPieceNew(static_cast<ItemSlot>(slot))) {
+            if (DrawArmorPieceNew(slot)) {
                 SetArmorItem(&gwarmory_window_pieces[slot]);
             }
         }
