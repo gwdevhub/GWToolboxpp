@@ -99,6 +99,7 @@ public:
     static void Render(IDirect3DDevice9* device);
 
 private:
+
     [[nodiscard]] bool IsInside(int x, int y) const;
     // returns true if the map is visible, valid, not loading, etc
     [[nodiscard]] bool IsActive() const;

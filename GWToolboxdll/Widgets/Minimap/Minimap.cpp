@@ -311,11 +311,6 @@ void Minimap::Initialize()
             pingslines_renderer.P046Callback(pak);
         }
     });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CompassEvent>(&CompassEvent_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::CompassEvent* pak) -> void {
-        if (visible) {
-            pingslines_renderer.P138Callback(pak);
-        }
-    });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&CompassEvent_Entry, [this](const GW::HookStatus*, GW::Packet::StoC::PlayEffect* pak) -> void {
         if (visible) {
             if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
@@ -342,7 +337,8 @@ void Minimap::Initialize()
         GW::UI::UIMessage::kMapChange,
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kChangeTarget,
-        GW::UI::UIMessage::kSkillActivated
+        GW::UI::UIMessage::kSkillActivated,
+        GW::UI::UIMessage::kCompassDraw
     };
     for (const auto message_id : hook_messages) {
         RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);
@@ -359,9 +355,10 @@ void Minimap::Initialize()
     GW::Chat::CreateCommand(L"flag", &OnFlagHeroCmd);
 }
 
-void Minimap::OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msgid, void* wParam, void*)
+void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid, void* wParam, void* lParam)
 {
     auto& instance = Instance();
+    instance.pingslines_renderer.OnUIMessage(status, msgid, wParam, lParam);
     switch (msgid) {
         case GW::UI::UIMessage::kMapLoaded: {
             instance.pmap_renderer.Invalidate();

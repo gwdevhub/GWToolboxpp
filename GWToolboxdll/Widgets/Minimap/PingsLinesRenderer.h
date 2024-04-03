@@ -114,7 +114,7 @@ public:
     void AddMouseClickPing(GW::Vec2f pos);
 
     void P046Callback(const GW::Packet::StoC::AgentPinged* pak);
-    void P138Callback(const GW::Packet::StoC::CompassEvent* pak);
+    void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
     void P153Callback(const GW::Packet::StoC::GenericValueTarget* pak);
 
     void DrawSettings();
@@ -131,9 +131,9 @@ private:
     void DrawDrawings(IDirect3DDevice9* device);
     void EnqueueVertex(float x, float y, Color color);
 
-    short ToShortPos(const float n) const
+    int ToIntPos(const float n) const
     {
-        return static_cast<short>(std::lroundf(n / drawing_scale));
+        return static_cast<int>(std::lroundf(n / drawing_scale));
     }
 
     void BumpSessionID()

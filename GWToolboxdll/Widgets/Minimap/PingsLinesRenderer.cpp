@@ -101,55 +101,61 @@ void PingsLinesRenderer::P046Callback(const GW::Packet::StoC::AgentPinged* pak)
     }
 }
 
-void PingsLinesRenderer::P138Callback(const GW::Packet::StoC::CompassEvent* pak)
-{
+void PingsLinesRenderer::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
+    if (message_id != GW::UI::UIMessage::kCompassDraw)
+        return;
+
+    const auto packet = (GW::UI::UIPacket::kCompassDraw*)wparam;
+
     bool new_session;
-    if (drawings[pak->Player].player == pak->Player) {
-        new_session = drawings[pak->Player].session != pak->SessionID;
-        drawings[pak->Player].session = pak->SessionID;
+
+    if (drawings[packet->player_number].player == packet->player_number) {
+        new_session = drawings[packet->player_number].session != packet->session_id;
+        drawings[packet->player_number].session = packet->session_id;
     }
     else {
-        drawings[pak->Player].player = pak->Player;
-        drawings[pak->Player].session = pak->SessionID;
+        drawings[packet->player_number].player = packet->player_number;
+        drawings[packet->player_number].session = packet->session_id;
         new_session = true;
     }
 
-    if (new_session && pak->NumberPts == 1) {
+    if (new_session && packet->number_of_points == 1) {
         pings.push_front(new TerrainPing(
-            pak->points[0].x * drawing_scale,
-            pak->points[0].y * drawing_scale));
+            packet->points[0].x * drawing_scale,
+            packet->points[0].y * drawing_scale));
         return;
     }
 
     if (new_session) {
-        for (auto i = 0u; i < pak->NumberPts - 1; i++) {
+        for (auto i = 0u; i < packet->number_of_points - 1; i++) {
             DrawingLine l;
-            l.x1 = pak->points[i + 0].x * drawing_scale;
-            l.y1 = pak->points[i + 0].y * drawing_scale;
-            l.x2 = pak->points[i + 1].x * drawing_scale;
-            l.y2 = pak->points[i + 1].y * drawing_scale;
-            drawings[pak->Player].lines.push_back(l);
+            l.x1 = packet->points[i + 0].x * drawing_scale;
+            l.y1 = packet->points[i + 0].y * drawing_scale;
+            l.x2 = packet->points[i + 1].x * drawing_scale;
+            l.y2 = packet->points[i + 1].y * drawing_scale;
+            drawings[packet->player_number].lines.push_back(l);
         }
     }
     else {
-        if (drawings[pak->Player].lines.empty()) {
+        if (drawings[packet->player_number].lines.empty()) {
             return;
         }
-        for (auto i = 0u; i < pak->NumberPts; i++) {
+        for (auto i = 0u; i < packet->number_of_points; i++) {
             DrawingLine l;
             if (i == 0) {
-                l.x1 = drawings[pak->Player].lines.back().x2;
-                l.y1 = drawings[pak->Player].lines.back().y2;
+                l.x1 = drawings[packet->player_number].lines.back().x2;
+                l.y1 = drawings[packet->player_number].lines.back().y2;
             }
             else {
-                l.x1 = pak->points[i - 1].x * drawing_scale;
-                l.y1 = pak->points[i - 1].y * drawing_scale;
+                l.x1 = packet->points[i - 1].x * drawing_scale;
+                l.y1 = packet->points[i - 1].y * drawing_scale;
             }
-            l.x2 = pak->points[i].x * drawing_scale;
-            l.y2 = pak->points[i].y * drawing_scale;
-            drawings[pak->Player].lines.push_back(l);
+            l.x2 = packet->points[i].x * drawing_scale;
+            l.y2 = packet->points[i].y * drawing_scale;
+            drawings[packet->player_number].lines.push_back(l);
         }
     }
+
 }
 
 void PingsLinesRenderer::P153Callback(const GW::Packet::StoC::GenericValueTarget* pak)
@@ -166,6 +172,7 @@ void PingsLinesRenderer::Initialize(IDirect3DDevice9* device)
     if (initialized) {
         return;
     }
+
     initialized = true;
     type = D3DPT_LINELIST;
 
@@ -503,13 +510,13 @@ bool PingsLinesRenderer::OnMouseMove(const float x, const float y)
         l.y1 = mouse_y;
         l.x2 = mouse_x = x;
         l.y2 = mouse_y = y;
-        drawings[me->player_number].lines.push_back(l);
+        //drawings[me->player_number].lines.push_back(l);
 
         if (TIMER_DIFF(lastqueued) > queue_interval
             || TIMER_DIFF(lastsent) > send_interval) {
             lastqueued = TIMER_INIT();
 
-            queue.push_back(GW::UI::CompassPoint(ToShortPos(x), ToShortPos(y)));
+            queue.push_back(GW::UI::CompassPoint(ToIntPos(x), ToIntPos(y)));
 
             if (queue.size() == 7 || TIMER_DIFF(lastsent) > send_interval) {
                 lastsent = TIMER_INIT();
@@ -533,7 +540,7 @@ bool PingsLinesRenderer::OnMouseUp()
     }
     else {
         BumpSessionID();
-        queue.push_back(GW::UI::CompassPoint(ToShortPos(mouse_x), ToShortPos(mouse_y)));
+        queue.push_back(GW::UI::CompassPoint(ToIntPos(mouse_x), ToIntPos(mouse_y)));
         pings.push_front(new TerrainPing(mouse_x, mouse_y));
     }
 
@@ -550,6 +557,13 @@ void PingsLinesRenderer::SendQueue()
             pts[i] = queue[i];
         }
         DrawOnCompass(static_cast<size_t>(session_id), queue.size(), pts);
+        GW::UI::UIPacket::kCompassDraw packet = {
+            .player_number = GW::Agents::GetPlayerId(),
+            .session_id = static_cast<size_t>(session_id),
+            .number_of_points = queue.size(),
+            .points = pts
+        };
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kCompassDraw, &packet);
     }
 
     queue.clear();
