@@ -8,7 +8,8 @@
 struct Script {
     std::vector<std::shared_ptr<Condition>> conditions;
     std::vector<std::shared_ptr<Action>> actions;
-    bool enabled{false};
+    bool enabled = false;
+    std::string name = std::string(100,'\0');
 };
 
 class SpeedrunScriptingTools : public ToolboxPlugin {
@@ -20,6 +21,7 @@ public:
     void DrawSettings() override;
     void LoadSettings(const wchar_t*) override;
     void SaveSettings(const wchar_t*) override;
+    bool HasSettings() const override { return true; }
 
     void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE) override;
     bool CanTerminate() override;

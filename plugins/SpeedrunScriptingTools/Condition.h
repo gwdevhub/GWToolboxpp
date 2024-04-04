@@ -19,11 +19,13 @@ enum class ConditionType {
     EnemyWithModelIdAndEffectExists,
     EnemyInPolygonWithModelIdExists,
     EnemyInCircleSegmentWithModelIdExísts,
+    Count
 };
 
 class Condition {
 public:
-    virtual ~Condition(){}
+    virtual ~Condition() {}
     virtual ConditionType type() const = 0;
-    virtual bool check() const { return true;}
+    virtual bool check() const { return true; };
+    virtual void drawSettings() {}
 };

@@ -9,6 +9,7 @@ enum class ActionType {
     GoToNpc,
     Wait,
     SendChat,
+    Count
 };
 
 class Action {
@@ -18,8 +19,9 @@ public:
     virtual void initialAction() { m_hasBeenStarted = true; }
     virtual void finalAction() { m_hasBeenStarted = false; }
     virtual bool isComplete() const { return true; }
+    virtual void drawSettings() {}
     bool hasBeenStarted() const { return m_hasBeenStarted; }
 
-protected:
+private:
     bool m_hasBeenStarted{false};
 };
