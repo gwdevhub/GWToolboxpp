@@ -7,6 +7,8 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/GameEntities/Agent.h>
 
+#include "imgui.h"
+
 namespace {
     GW::Item* FindMatchingItem(GW::Constants::Bag _bag_idx, uint32_t model_id)
     {
@@ -37,6 +39,27 @@ namespace {
         }
         return nullptr;
     }
+    std::string_view toString(SendChatAction::Channel channel) {
+        switch (channel) {
+            case SendChatAction::Channel::All:
+                return "All";
+            case SendChatAction::Channel::Guild:
+                return "Guild";
+            case SendChatAction::Channel::Team:
+                return "Team";
+            case SendChatAction::Channel::Trade:
+                return "Trade";
+            case SendChatAction::Channel::Alliance:
+                return "Alliance";
+            case SendChatAction::Channel::Whisper:
+                return "Whisper";
+            case SendChatAction::Channel::Emote:
+                return "Emote";
+            default:
+                return "Unknown";
+        }
+    }
+    constexpr double eps = 1e-3;
 }
 
 /// ------------- MoveToAction -------------
@@ -50,9 +73,17 @@ bool MoveToAction::isComplete() const {
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
 
-    if (!player->GetIsMoving()) GW::Agents::Move(pos);
-
-    return GW::GetSquareDistance(player->pos, pos) < squareAccuracy;
+    return GW::GetDistance(player->pos, pos) < accuracy + eps;
+}
+void MoveToAction::drawSettings(){
+    ImGui::Text("Move to:");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputFloat("x", &pos.x, 0.0f, 0.0f);
+    ImGui::SameLine();
+    ImGui::InputFloat("y", &pos.y, 0.0f, 0.0f);
+    ImGui::SameLine();
+    ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
 }
 
 /// ------------- CastOnSelfAction -------------
@@ -74,6 +105,13 @@ bool CastOnSelfAction::isComplete() const
     // Maybe need to wait a few frames before checking? 
     printf("iscomplete skill id %d", player->skill);
     return static_cast<GW::Constants::SkillID>(player->skill) != id;
+}
+void CastOnSelfAction::drawSettings()
+{
+    ImGui::Text("Cast on self:");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
 }
 
 /// ------------- CastOnTargetAction -------------
@@ -99,6 +137,13 @@ bool CastOnTargetAction::isComplete() const
     // Maybe need to wait a few frames before checking?
     return static_cast<GW::Constants::SkillID>(player->skill) != id;
 }
+void CastOnTargetAction::drawSettings()
+{
+    ImGui::Text("Cast on target:");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
+}
 
 /// ------------- UseItemAction -------------
 void UseItemAction::initialAction()
@@ -109,6 +154,13 @@ void UseItemAction::initialAction()
     if (!item) return;
     GW::Items::UseItem(item);
 }
+void UseItemAction::drawSettings()
+{
+    ImGui::Text("Use item:");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputInt("ID", reinterpret_cast<int*>(&id), 0);
+}
 
 /// ------------- SendDialogAction -------------
 void SendDialogAction::initialAction()
@@ -116,6 +168,13 @@ void SendDialogAction::initialAction()
     Action::initialAction();
 
     GW::Agents::SendDialog(id);
+}
+void SendDialogAction::drawSettings()
+{
+    ImGui::Text("Use item:");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputInt("ID", reinterpret_cast<int*>(&id), 0);
 }
 
 /// ------------- GoToNpcAction -------------
@@ -134,7 +193,16 @@ bool GoToNpcAction::isComplete() const
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
 
-    return GW::GetSquareDistance(player->pos, npc->pos) < squareAccuracy;
+    return GW::GetDistance(player->pos, npc->pos) < accuracy + eps;
+}
+void GoToNpcAction::drawSettings()
+{
+    ImGui::Text("Go to NPC:");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputInt("Model ID", reinterpret_cast<int*>(&id), 0);
+    ImGui::SameLine();
+    ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
 }
 
 /// ------------- WaitAction -------------
@@ -149,6 +217,13 @@ bool WaitAction::isComplete() const
     const auto now = std::chrono::steady_clock::now();
     const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
     return elapsedTime > waitTime;
+}
+void WaitAction::drawSettings()
+{
+    ImGui::Text("Wait for:");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputInt("ms", &waitTime, 0);
 }
 
 /// ------------- SendChatAction -------------
@@ -177,5 +252,25 @@ void SendChatAction::initialAction()
         }
         }();
     
-       GW::Chat::SendChat(channelId, message.data());
+    GW::Chat::SendChat(channelId, buf);
+}
+
+void SendChatAction::drawSettings()
+{
+    ImGui::Text("Send Chat Message:");
+    ImGui::SameLine();
+    if (ImGui::Button(toString(channel).data(), ImVec2(100, 0))) {
+        ImGui::OpenPopup("Pick channel");
+    }
+    if (ImGui::BeginPopup("Pick channel")) {
+        for (auto i = 0; i <= (int)Channel::Emote; ++i) {
+            if (ImGui::Selectable(toString((Channel)i).data())) {
+                channel = (Channel)i;
+            }
+        }
+        ImGui::EndPopup();
+    }
+    ImGui::PushItemWidth(300);
+    ImGui::SameLine();
+    ImGui::InputText("", buf, IM_ARRAYSIZE(buf));
 }
