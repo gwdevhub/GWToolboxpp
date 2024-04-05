@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 enum class ConditionType {
     IsInMap,
     QuestHasState,
@@ -28,4 +30,5 @@ public:
     virtual ConditionType type() const = 0;
     virtual bool check() const { return true; };
     virtual void drawSettings() {}
+    virtual void serialize(std::ostringstream&) const {}
 };

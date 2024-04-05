@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sstream>
+
 enum class ActionType {
     MoveTo,
     CastOnSelf,
@@ -20,6 +22,7 @@ public:
     virtual void finalAction() { m_hasBeenStarted = false; }
     virtual bool isComplete() const { return true; }
     virtual void drawSettings() {}
+    virtual void serialize(std::ostringstream&) const {}
     bool hasBeenStarted() const { return m_hasBeenStarted; }
 
 private:

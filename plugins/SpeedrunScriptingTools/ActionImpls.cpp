@@ -5,6 +5,7 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
+
 #include <GWCA/GameEntities/Agent.h>
 
 #include "imgui.h"
@@ -59,17 +60,31 @@ namespace {
                 return "Unknown";
         }
     }
+    std::ostringstream& operator<<(std::ostringstream& stream, GW::Constants::SkillID id)
+    {
+        stream << (int)id;
+        return stream;
+    }
     constexpr double eps = 1e-3;
-}
+} // namespace
 
 /// ------------- MoveToAction -------------
+MoveToAction::MoveToAction(std::istringstream& stream)
+{
+    stream >> pos.x >> pos.y >> accuracy;
+}
+void MoveToAction::serialize(std::ostringstream& stream) const
+{
+    stream << pos.x << pos.y << accuracy;
+}
 void MoveToAction::initialAction()
 {
     Action::initialAction();
 
     GW::Agents::Move(pos);
 }
-bool MoveToAction::isComplete() const {
+bool MoveToAction::isComplete() const 
+{
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
 
@@ -87,6 +102,16 @@ void MoveToAction::drawSettings(){
 }
 
 /// ------------- CastOnSelfAction -------------
+CastOnSelfAction::CastOnSelfAction(std::istringstream& stream)
+{
+    int read;
+    stream >> read;
+    id = (GW::Constants::SkillID)read;
+}
+void CastOnSelfAction::serialize(std::ostringstream& stream) const
+{
+    stream << id;
+}
 void CastOnSelfAction::initialAction()
 {
     Action::initialAction();
@@ -102,8 +127,6 @@ bool CastOnSelfAction::isComplete() const
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
 
-    // Maybe need to wait a few frames before checking? 
-    printf("iscomplete skill id %d", player->skill);
     return static_cast<GW::Constants::SkillID>(player->skill) != id;
 }
 void CastOnSelfAction::drawSettings()
@@ -115,6 +138,16 @@ void CastOnSelfAction::drawSettings()
 }
 
 /// ------------- CastOnTargetAction -------------
+CastOnTargetAction::CastOnTargetAction(std::istringstream& stream)
+{
+    int read;
+    stream >> read;
+    id = (GW::Constants::SkillID)read;
+}
+void CastOnTargetAction::serialize(std::ostringstream& stream) const
+{
+    stream << id;
+}
 void CastOnTargetAction::initialAction()
 {
     Action::initialAction();
@@ -133,8 +166,6 @@ bool CastOnTargetAction::isComplete() const
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
 
-    printf("iscomplete skill id %d", player->skill);
-    // Maybe need to wait a few frames before checking?
     return static_cast<GW::Constants::SkillID>(player->skill) != id;
 }
 void CastOnTargetAction::drawSettings()
@@ -146,6 +177,14 @@ void CastOnTargetAction::drawSettings()
 }
 
 /// ------------- UseItemAction -------------
+UseItemAction::UseItemAction(std::istringstream& stream)
+{
+    stream >> id;
+}
+void UseItemAction::serialize(std::ostringstream& stream) const
+{
+    stream << id;
+}
 void UseItemAction::initialAction()
 {
     Action::initialAction();
@@ -163,6 +202,14 @@ void UseItemAction::drawSettings()
 }
 
 /// ------------- SendDialogAction -------------
+SendDialogAction::SendDialogAction(std::istringstream& stream)
+{
+    stream >> id;
+}
+void SendDialogAction::serialize(std::ostringstream& stream) const
+{
+    stream << id;
+}
 void SendDialogAction::initialAction()
 {
     Action::initialAction();
@@ -178,6 +225,14 @@ void SendDialogAction::drawSettings()
 }
 
 /// ------------- GoToNpcAction -------------
+GoToNpcAction::GoToNpcAction(std::istringstream& stream)
+{
+    stream >> id >> accuracy;
+}
+void GoToNpcAction::serialize(std::ostringstream& stream) const
+{
+    stream << id << accuracy;
+}
 void GoToNpcAction::initialAction()
 {
     Action::initialAction();
@@ -206,6 +261,14 @@ void GoToNpcAction::drawSettings()
 }
 
 /// ------------- WaitAction -------------
+WaitAction::WaitAction(std::istringstream& stream)
+{
+    stream >> waitTime;
+}
+void WaitAction::serialize(std::ostringstream& stream) const
+{
+    stream << waitTime;
+}
 void WaitAction::initialAction()
 {
     Action::initialAction();
@@ -227,6 +290,16 @@ void WaitAction::drawSettings()
 }
 
 /// ------------- SendChatAction -------------
+SendChatAction::SendChatAction(std::istringstream& stream)
+{
+    int read;
+    stream >> read;
+    channel = (Channel)read;
+}
+void SendChatAction::serialize(std::ostringstream& stream) const
+{
+    stream << (int)channel;
+}
 void SendChatAction::initialAction()
 {
     Action::initialAction();
