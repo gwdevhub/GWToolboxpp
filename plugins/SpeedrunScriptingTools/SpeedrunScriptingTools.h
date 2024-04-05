@@ -9,7 +9,7 @@ struct Script {
     std::vector<std::shared_ptr<Condition>> conditions;
     std::vector<std::shared_ptr<Action>> actions;
     bool enabled = false;
-    std::string name = std::string(100,'\0');
+    std::string name = "TestScript:                   ";
 };
 
 class SpeedrunScriptingTools : public ToolboxPlugin {

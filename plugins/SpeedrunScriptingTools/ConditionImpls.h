@@ -8,89 +8,112 @@
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <cstdint>
+#include <sstream>
+
+enum class QuestStatus : int { NotStarted, Started, Completed, Failed };
 
 class IsInMapCondition : public Condition {
 public:
-    IsInMapCondition(GW::Constants::MapID id = GW::Constants::MapID::The_Underworld) : id{id} {}
+    IsInMapCondition() = default;
+    IsInMapCondition(std::istringstream&);
     ConditionType type() const final { return ConditionType::IsInMap; }
     bool check() const final;
     void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
 
 private:
-    GW::Constants::MapID id;
+    GW::Constants::MapID id = GW::Constants::MapID::The_Underworld;
 };
 
 class QuestHasStateCondition : public Condition {
 public:
-    // todo add constructor
+    QuestHasStateCondition() = default;
+    QuestHasStateCondition(std::istringstream&);
     ConditionType type() const final { return ConditionType::QuestHasState; }
     bool check() const final;
     void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    GW::Constants::QuestID id = GW::Constants::QuestID::None;
+    QuestStatus status = QuestStatus::NotStarted;
 };
 
 class PartyPlayerCountCondition : public Condition {
 public:
-    PartyPlayerCountCondition(int count = 8) : count{count} {}
+    PartyPlayerCountCondition() = default;
+    PartyPlayerCountCondition(std::istringstream&);
     ConditionType type() const final { return ConditionType::PartyPlayerCount; }
     bool check() const final;
     void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
 
 private:
-    int count;
+    int count = 1;
 };
 
 class InstanceProgressCondition : public Condition {
 public:
-    InstanceProgressCondition(float requiredProgress = .0f) : requiredProgress{requiredProgress} {}
+    InstanceProgressCondition() = default;
+    InstanceProgressCondition(std::istringstream&);
     ConditionType type() const final { return ConditionType::InstanceProgress; }
     bool check() const final;
     void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
 
 private:
-    float requiredProgress;
+    float requiredProgress = .5f;
 };
 
 class PlayerIsNearPositionCondition : public Condition {
 public:
-    PlayerIsNearPositionCondition(GW::GamePos pos = {}, float accuracy = GW::Constants::Range::Adjacent) : pos{pos}, accuracy{accuracy} {}
+    PlayerIsNearPositionCondition() = default;
+    PlayerIsNearPositionCondition(std::istringstream&);
     ConditionType type() const final { return ConditionType::PlayerIsNearPosition; }
     bool check() const final;
     void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
 
 private:
-    GW::GamePos pos;
-    float accuracy;
+    GW::GamePos pos = {};
+    float accuracy = GW::Constants::Range::Adjacent;
 };
 
 class PlayerHasBuffCondition : public Condition {
 public:
-    PlayerHasBuffCondition(GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill) : id{id} {}
+    PlayerHasBuffCondition() = default;
+    PlayerHasBuffCondition(std::istringstream&);
     ConditionType type() const final { return ConditionType::PlayerHasBuff; }
     bool check() const final;
     void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
 
 private:
-    GW::Constants::SkillID id;
+    GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
 };
 
 class PlayerHasSkillCondition : public Condition {
 public:
-    PlayerHasSkillCondition(GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill) : id{id} {}
+    PlayerHasSkillCondition() = default;
+    PlayerHasSkillCondition(std::istringstream&);
     ConditionType type() const final { return ConditionType::PlayerHasSkill; }
     bool check() const final;
     void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
 
 private:
-    GW::Constants::SkillID id;
+    GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
 };
 
 class CurrentTargetIsCastingSkillCondition : public Condition {
 public:
-    CurrentTargetIsCastingSkillCondition(GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill) : id{id} {}
+    CurrentTargetIsCastingSkillCondition() = default;
+    CurrentTargetIsCastingSkillCondition(std::istringstream&);
     ConditionType type() const final { return ConditionType::CurrentTargetIsUsingSkill; }
     bool check() const final;
     void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
 
 private:
-    GW::Constants::SkillID id;
+    GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
 };
