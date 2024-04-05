@@ -11,6 +11,7 @@ enum class ActionType {
     GoToNpc,
     Wait,
     SendChat,
+    Cancel,
     Count
 };
 

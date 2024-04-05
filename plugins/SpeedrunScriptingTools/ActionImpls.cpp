@@ -5,6 +5,9 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/CtoSMgr.h>
+
+#include <GWCA/Packets/Opcodes.h>
 
 #include <GWCA/GameEntities/Agent.h>
 
@@ -346,4 +349,16 @@ void SendChatAction::drawSettings()
     ImGui::PushItemWidth(300);
     ImGui::SameLine();
     ImGui::InputText("", buf, IM_ARRAYSIZE(buf));
+}
+
+/// ------------- CancelAction -------------
+void CancelAction::initialAction()
+{
+    Action::initialAction();
+    GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT);
+}
+
+void CancelAction::drawSettings()
+{
+    ImGui::Text("Cancel Action");
 }
