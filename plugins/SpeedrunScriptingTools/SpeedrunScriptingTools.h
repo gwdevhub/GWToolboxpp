@@ -8,7 +8,7 @@
 struct Script {
     std::vector<std::shared_ptr<Condition>> conditions;
     std::vector<std::shared_ptr<Action>> actions;
-    bool enabled = false;
+    bool enabled = true;
     std::string name = "TestScript:                   ";
 };
 

@@ -295,14 +295,8 @@ void SpeedrunScriptingTools::DrawSettings()
 
     // Add script
     if (ImGui::Button("Add script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-        ImGui::OpenPopup("Add script");
-    }
-    if (ImGui::BeginPopup("Add script")) {
-        if (m_scripts.size() < 3) {
-            m_scripts.push_back({});
-            m_scripts.back().name = (char)(rand() % 50 + std::min('A', 'a'));
-        }
-        ImGui::EndPopup();
+        m_scripts.push_back({});
+        m_scripts.back().name = (char)(rand() % 50 + std::min('A', 'a'));
     }
 }
 
@@ -405,6 +399,7 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
 {
     ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
     GW::Initialize();
+    srand((unsigned int)time(NULL));
 }
 void SpeedrunScriptingTools::SignalTerminate()
 {
