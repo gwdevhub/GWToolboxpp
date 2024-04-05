@@ -61,7 +61,7 @@ namespace {
             case ConditionType::IsInMap:
                 return std::make_shared<IsInMapCondition>();
             case ConditionType::QuestHasState:
-                return nullptr;
+                return std::make_shared<QuestHasStateCondition>();
             case ConditionType::PartyPlayerCount:
                 return std::make_shared<PartyPlayerCountCondition>();
             case ConditionType::InstanceProgress:
@@ -141,6 +141,76 @@ namespace {
                 return nullptr;
         }
     }
+
+     std::shared_ptr<Action> readAction(std::istringstream& stream) 
+    {
+        int type;
+        
+        stream >> type;
+        switch (static_cast<ActionType>(type)) {
+            case ActionType::MoveTo:
+                return std::make_shared<MoveToAction>(stream);
+            case ActionType::CastOnSelf:
+                return std::make_shared<CastOnSelfAction>(stream);
+            case ActionType::CastOnTarget:
+                return std::make_shared<CastOnTargetAction>(stream);
+            case ActionType::UseItem:
+                return std::make_shared<UseItemAction>(stream);
+            case ActionType::SendDialog:
+                return std::make_shared<SendDialogAction>(stream);
+            case ActionType::GoToNpc:
+                return std::make_shared<GoToNpcAction>(stream);
+            case ActionType::Wait:
+                return std::make_shared<WaitAction>(stream);
+            case ActionType::SendChat:
+                return std::make_shared<SendChatAction>(stream);
+            default:
+                return nullptr;
+        }
+    }
+
+    std::shared_ptr<Condition> readCondition(std::istringstream& stream)
+    {
+        int type;
+        stream >> type;
+        switch (static_cast<ConditionType>(type)) {
+            case ConditionType::IsInMap:
+                return std::make_shared<IsInMapCondition>(stream);
+            case ConditionType::QuestHasState:
+                return std::make_shared<QuestHasStateCondition>(stream);
+            case ConditionType::PartyPlayerCount:
+                return std::make_shared<PartyPlayerCountCondition>(stream);
+            case ConditionType::InstanceProgress:
+                return std::make_shared<InstanceProgressCondition>(stream);
+            case ConditionType::HasPartyWindowAllyOfName:
+                return nullptr;
+
+            case ConditionType::PlayerIsNearPosition:
+                return std::make_shared<PlayerIsNearPositionCondition>(stream);
+            case ConditionType::PlayerHasBuff:
+                return std::make_shared<PlayerHasBuffCondition>(stream);
+            case ConditionType::PlayerHasSkill:
+                return std::make_shared<PlayerHasSkillCondition>(stream);
+
+            case ConditionType::CurrentTargetHasHpPercentBelow:
+                return nullptr;
+            case ConditionType::CurrentTargetIsUsingSkill:
+                return std::make_shared<CurrentTargetIsCastingSkillCondition>(stream);
+
+            case ConditionType::NearbyAllyOfModelIdExists:
+                return nullptr;
+            case ConditionType::NearbyEnemyWithModelIdCastingSpellExists:
+                return nullptr;
+            case ConditionType::EnemyWithModelIdAndEffectExists:
+                return nullptr;
+            case ConditionType::EnemyInPolygonWithModelIdExists:
+                return nullptr;
+            case ConditionType::EnemyInCircleSegmentWithModelIdExísts:
+                return nullptr;
+            default:
+                return nullptr;
+        }
+    }
 }
 
 
@@ -206,31 +276,79 @@ void SpeedrunScriptingTools::DrawSettings()
             ImGui::Checkbox("Enabled", &scriptIt->enabled);
             ImGui::PushItemWidth(300);
             ImGui::InputText("Name", &scriptIt->name[0], scriptIt->name.size());
+            ImGui::SameLine();
             if (ImGui::Button("Delete Script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 scriptToDelete = scriptIt;
             }
         }
     }
     if (scriptToDelete.has_value()) m_scripts.erase(scriptToDelete.value());
+
+    // Add script
+    if (ImGui::Button("Add script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+        ImGui::OpenPopup("Add script");
+    }
+    if (ImGui::BeginPopup("Add script")) {
+        if (m_scripts.size() < 3) {
+            m_scripts.push_back({});
+            m_scripts.back().name = (char)(rand() % 50 + std::min('A', 'a'));
+        }
+        ImGui::EndPopup();
+    }
 }
 
 void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
 {
     ToolboxPlugin::LoadSettings(folder);
     ini.LoadFile(GetSettingFile(folder).c_str());
-    /* shortcutKey = ini.GetLongValue(Name(), "key", shortcutKey);
-    shortcutMod = ini.GetLongValue(Name(), "mod", shortcutMod);
-    castDelayInMs = ini.GetLongValue(Name(), "delay", castDelayInMs);*/
+    const std::string read = ini.GetValue(Name(), "scripts", "");
+    if (read.empty()) return;
 
-    //ModKeyName(hotkeyDescription, _countof(hotkeyDescription), shortcutMod, shortcutKey);
+    std::istringstream stream(read);
+    do { 
+        char token;
+        stream >> token;
+        switch (token) {
+            case 'S':
+                m_scripts.push_back({});
+                stream >> m_scripts.back().enabled;
+                stream >> m_scripts.back().name;
+                break;
+            case 'A':
+                if (m_scripts.empty()) return;
+                m_scripts.back().actions.push_back(readAction(stream));
+                break;
+            case 'C':
+                assert(m_scripts.size() > 0);
+                m_scripts.back().conditions.push_back(readCondition(stream));
+                break;
+            default:
+                return;
+        }
+    } while (stream); 
 }
 
 void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
 {
     ToolboxPlugin::SaveSettings(folder);
-    /* ini.SetLongValue(Name(), "key", shortcutKey);
-    ini.SetLongValue(Name(), "mod", shortcutMod);
-    ini.SetLongValue(Name(), "delay", castDelayInMs);*/
+    std::ostringstream stream;
+    for (const auto& script : m_scripts) {
+        stream << 'S' << " ";
+        stream << script.enabled << " ";
+        stream << script.name << " ";
+        for (const auto& condition : script.conditions) {
+            stream << 'C' << " ";
+            stream << (int)condition->type() << " ";
+            condition->serialize(stream);
+        }
+        for (const auto& action : script.actions) {
+            stream << 'A' << " ";
+            stream << (int)action->type() << " ";
+            action->serialize(stream);
+        }
+    }
+    
+    ini.SetValue(Name(), "scripts", stream.str().c_str());
     PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
 }
 
@@ -278,23 +396,6 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
 {
     ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
     GW::Initialize();
-
-    /// TODO remove
-    Script testScript;
-    testScript.enabled = true;
-    testScript.conditions.push_back(std::make_shared<PlayerHasSkillCondition>(GW::Constants::SkillID::Ebon_Escape));
-    testScript.conditions.push_back(std::make_shared<IsInMapCondition>(GW::Constants::MapID::The_Black_Curtain));
-    testScript.conditions.push_back(std::make_shared<CurrentTargetIsCastingSkillCondition>(GW::Constants::SkillID::Heart_of_Shadow));       
-
-    testScript.actions.push_back(std::make_shared<MoveToAction>(GW::GamePos{-4503.89f, 14949.46f, 0}));
-    testScript.actions.push_back(std::make_shared<WaitAction>(4312));
-    testScript.actions.push_back(std::make_shared<CastOnTargetAction>(GW::Constants::SkillID::Ebon_Escape));
-    testScript.actions.push_back(std::make_shared<UseItemAction>(6368));
-    testScript.actions.push_back(std::make_shared<CastOnSelfAction>(GW::Constants::SkillID::Shadow_Form));
-    testScript.actions.push_back(std::make_shared<SendChatAction>(SendChatAction::Channel::Emote, "show settings"));
-
-    m_scripts.push_back(std::move(testScript));
-    ///
 }
 void SpeedrunScriptingTools::SignalTerminate()
 {
