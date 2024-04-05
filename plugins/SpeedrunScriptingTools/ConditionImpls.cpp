@@ -9,7 +9,6 @@
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
-#include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <unordered_map>

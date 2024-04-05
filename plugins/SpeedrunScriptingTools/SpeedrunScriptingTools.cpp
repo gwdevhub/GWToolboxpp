@@ -97,6 +97,7 @@ namespace {
     }
     std::string_view toString(ActionType type)
     {
+        static_assert((int)ActionType::Count == 9);
         switch (type) {
             case ActionType::MoveTo: 
                 return "Move to";
@@ -114,12 +115,15 @@ namespace {
                 return "Wait";
             case ActionType::SendChat:
                 return "Send chat";
+            case ActionType::Cancel:
+                return "Cancel current action";
             default:
                 return "Unknown";
         }
     }
     std::shared_ptr<Action> makeAction(ActionType type)
     {
+        static_assert((int)ActionType::Count == 9);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -137,6 +141,8 @@ namespace {
                 return std::make_shared<WaitAction>();
             case ActionType::SendChat:
                 return std::make_shared<SendChatAction>();
+            case ActionType::Cancel:
+                return std::make_shared<CancelAction>();
             default:
                 return nullptr;
         }
@@ -144,6 +150,7 @@ namespace {
 
      std::shared_ptr<Action> readAction(std::istringstream& stream) 
     {
+        static_assert((int)ActionType::Count == 9);
         int type;
         
         stream >> type;
@@ -164,6 +171,8 @@ namespace {
                 return std::make_shared<WaitAction>(stream);
             case ActionType::SendChat:
                 return std::make_shared<SendChatAction>(stream);
+            case ActionType::Cancel:
+                return std::make_shared<CancelAction>(stream);
             default:
                 return nullptr;
         }

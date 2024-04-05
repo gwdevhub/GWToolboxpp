@@ -136,3 +136,12 @@ private:
     Channel channel = Channel::All;
     char buf[100] = "";
 };
+
+class CancelAction : public Action {
+public:
+    CancelAction() = default;
+    CancelAction(std::istringstream&){}
+    ActionType type() const final { return ActionType::Cancel; }
+    void initialAction() final;
+    void drawSettings() final;
+};
