@@ -40,6 +40,34 @@ namespace {
         }
         return "";
     }
+
+    std::string toString(Class c)
+    {
+        switch (c) {
+            case Class::Warrior:
+                return "Warrior";
+            case Class::Ranger:
+                return "Ranger";
+            case Class::Monk:
+                return "Monk";
+            case Class::Necro:
+                return "Necro";
+            case Class::Mesmer:
+                return "Mesmer";
+            case Class::Elementalist:
+                return "Elementalist";
+            case Class::Assassin:
+                return "Assassin";
+            case Class::Ritualist:
+                return "Ritualist";
+            case Class::Paragon:
+                return "Paragon";
+            case Class::Dervish:
+                return "Dervish";
+            default:
+                return "Any";
+        }
+    }
 }
 
 /// ------------- InvertedCondition -------------
@@ -306,6 +334,53 @@ void PlayerHasSkillCondition::drawSettings()
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("id", reinterpret_cast<int*>(&id), 0);
+}
+
+/// ------------- PlayerHasClassCondition -------------
+PlayerHasClassCondition::PlayerHasClassCondition(std::istringstream& stream)
+{
+    int read;
+
+    stream >> read;
+    primary = (Class)read;
+
+    stream >> read;
+    secondary = (Class)read;
+}
+void PlayerHasClassCondition::serialize(std::ostringstream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << (int)primary << " " << (int)secondary << " ";
+}
+bool PlayerHasClassCondition::check() const
+{
+    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    if (!player) return false;
+    return (primary == Class::Any || primary == (Class)player->primary) && (secondary == Class::Any || secondary == (Class)player->secondary);
+}
+void PlayerHasClassCondition::drawSettings()
+{
+    const auto drawClassSelector = [&](Class& c, bool primary) {
+        ImGui::SameLine();
+        const auto id = std::string{"###"} + (primary ? "1" : "2");
+        if (ImGui::Button((toString(c) + id).data(), ImVec2(100, 0))) {
+            ImGui::OpenPopup((std::string{"Pick class"} + id).c_str());
+        }
+        if (ImGui::BeginPopup((std::string{"Pick class"} + id).c_str())) {
+            for (auto i = 0; i <= (int)Class::Dervish; ++i) {
+                if (ImGui::Selectable(toString((Class)i).data())) {
+                    c = (Class)i;
+                }
+            }
+            ImGui::EndPopup();
+        }
+    };
+    ImGui::Text("If the player has primary");
+    drawClassSelector(primary, true);
+    ImGui::SameLine();
+    ImGui::Text("and secondary");
+    drawClassSelector(secondary, false);
 }
 
 /// ------------- CurrentTargetIsCastingSkillCondition -------------

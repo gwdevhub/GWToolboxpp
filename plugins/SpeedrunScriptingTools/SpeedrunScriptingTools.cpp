@@ -76,12 +76,14 @@ void SpeedrunScriptingTools::DrawSettings()
             ImGui::PopID();
 
             // Add trigger packet
-            drawTriggerPacketSelector(scriptIt->triggerPacket, ImGui::GetContentRegionAvail().x);
             ImGui::Separator();
             ImGui::PushID(drawCount++);
             ImGui::Checkbox("Enabled", &scriptIt->enabled);
-            ImGui::PushItemWidth(300);
+            ImGui::PushItemWidth(200);
+            ImGui::SameLine();
             ImGui::InputText("Name", &scriptIt->name);
+            ImGui::SameLine();
+            drawTriggerPacketSelector(scriptIt->triggerPacket, ImGui::GetContentRegionAvail().x / 2);
             ImGui::SameLine();
             if (ImGui::Button("Delete Script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 scriptToDelete = scriptIt;
