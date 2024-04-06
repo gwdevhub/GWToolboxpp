@@ -12,8 +12,11 @@
 #include <GWCA/GameEntities/Agent.h>
 
 #include "imgui.h"
+#include <ImGuiCppWrapper.h>
 
 namespace {
+    const std::string endOfMessageSignifier = "ENDOFMESSAGE";
+
     GW::Item* FindMatchingItem(GW::Constants::Bag _bag_idx, uint32_t model_id)
     {
         GW::Bag* bag = GW::Items::GetBag(_bag_idx);
@@ -354,12 +357,22 @@ SendChatAction::SendChatAction(std::istringstream& stream)
     int read;
     stream >> read;
     channel = (Channel)read;
+
+    std::string word;
+    while (!stream.eof()) {
+        stream >> word;
+        if (word == endOfMessageSignifier) break;
+        message += word + " ";
+    }
+    if (!message.empty()) {
+        message.erase(message.size() - 1, 1); // last character is space
+    }
 }
 void SendChatAction::serialize(std::ostringstream& stream) const
 {
     Action::serialize(stream);
 
-    stream << (int)channel << " ";
+    stream << (int)channel << " " << message << " " << endOfMessageSignifier << " ";
 }
 void SendChatAction::initialAction()
 {
@@ -386,7 +399,7 @@ void SendChatAction::initialAction()
         }
         }();
     
-    GW::Chat::SendChat(channelId, buf);
+    GW::Chat::SendChat(channelId, message.c_str());
 }
 
 void SendChatAction::drawSettings()
@@ -406,7 +419,7 @@ void SendChatAction::drawSettings()
     }
     ImGui::PushItemWidth(300);
     ImGui::SameLine();
-    ImGui::InputText("", buf, IM_ARRAYSIZE(buf));
+    ImGui::InputText("", &message);
 }
 
 /// ------------- CancelAction -------------

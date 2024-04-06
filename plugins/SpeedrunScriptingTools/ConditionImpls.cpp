@@ -3,6 +3,8 @@
 #include <ConditionIO.h>
 
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Skill.h>
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -11,41 +13,18 @@
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <unordered_map>
 #include <random>
 #include "imgui.h"
+#include "ImGuiCppWrapper.h"
 
 namespace {
     constexpr double eps = 1e-3;
+    const std::string endOfNameSignifier = "ENDOFNAME";
     const std::string missingContentToken = "/";
-    static std::random_device rd;
-    static std::mt19937 generator(rd());
-    static std::uniform_int_distribution<> getRandomInt(1, std::numeric_limits<int>::max());
-    static int instanceUniqueId{getRandomInt(generator)};
-
-    struct QuestObserver {
-        std::unordered_map<GW::Constants::QuestID, QuestStatus> questStatus;
-        GW::HookEntry ObjectiveUpdateName_Entry;
-        GW::HookEntry ObjectiveDone_Entry;
-        GW::HookEntry InstanceLoadFile_Entry;
-
-        QuestObserver()
-        {
-            GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveUpdateName* packet) {
-                this->questStatus[(GW::Constants::QuestID)packet->objective_id] = QuestStatus::Started;
-            });
-            GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveDone* packet) {
-                this->questStatus[(GW::Constants::QuestID)packet->objective_id] = QuestStatus::Completed;
-            });
-            GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {
-                this->questStatus.clear();
-                instanceUniqueId = getRandomInt(generator);
-            });
-        }
-    };
-    static std::unique_ptr<QuestObserver> questObserver = nullptr;
 
     std::string_view toString(QuestStatus status)
     {
@@ -312,7 +291,14 @@ void PlayerHasSkillCondition::serialize(std::ostringstream& stream) const
 }
 bool PlayerHasSkillCondition::check() const
 {
-    return GW::SkillbarMgr::GetSkillSlot(id) >= 0;
+    GW::Skillbar* bar = GW::SkillbarMgr::GetPlayerSkillbar();
+    if (!bar || !bar->IsValid()) return false;
+    for (int i = 0; i < 8; ++i) {
+        if (bar->skills[i].skill_id == id) {
+            return bar->skills[i].GetRecharge() == 0;
+        }
+    }
+    return false;
 }
 void PlayerHasSkillCondition::drawSettings()
 {
@@ -372,6 +358,43 @@ void CurrentTargetHasHpBelowCondition::drawSettings()
     ImGui::InputFloat("%", &hp, 0);
 }
 
+/// ------------- HasPartyWindowAllyOfNameCondition -------------
+HasPartyWindowAllyOfNameCondition::HasPartyWindowAllyOfNameCondition(std::istringstream& stream)
+{
+    std::string word;
+    while (!stream.eof()) {
+        stream >> word;
+        if (word == endOfNameSignifier) break;
+        name += word + " ";
+    }
+    if (!name.empty()) {
+        name.erase(name.size() - 1, 1); //last character is space
+    }
+}
+void HasPartyWindowAllyOfNameCondition::serialize(std::ostringstream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << name << " " << endOfNameSignifier << " ";
+}
+bool HasPartyWindowAllyOfNameCondition::check() const
+{
+    const auto info = GW::PartyMgr::GetPartyInfo();
+    const auto agentArray = GW::Agents::GetAgentArray();
+    if (!info || !agentArray) return false;
+
+    auto& instanceInfo = InstanceInfo::getInstance();
+    return std::ranges::any_of(info->others, [&](const auto& allyId) {
+        return instanceInfo.getDecodedName(allyId) == name;
+    });
+}
+void HasPartyWindowAllyOfNameCondition::drawSettings()
+{
+    ImGui::Text("Has party window ally of name");
+    ImGui::SameLine();
+    ImGui::InputText("Ally name", &name);
+}
+
 /// ------------- QuestHasStateCondition -------------
 
 QuestHasStateCondition::QuestHasStateCondition(std::istringstream& stream)
@@ -392,8 +415,8 @@ void QuestHasStateCondition::serialize(std::ostringstream& stream) const
 }
 bool QuestHasStateCondition::check() const
 {
-    if (!questObserver) questObserver = std::make_unique<QuestObserver>();
-    return questObserver->questStatus[id] == status;
+    auto& instanceInfo = InstanceInfo::getInstance();
+    return instanceInfo.getQuestStatus(id) == status;
 }
 void QuestHasStateCondition::drawSettings()
 {

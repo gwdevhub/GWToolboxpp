@@ -22,7 +22,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
         case ConditionType::InstanceProgress:
             return std::make_shared<InstanceProgressCondition>();
         case ConditionType::HasPartyWindowAllyOfName:
-            return nullptr;
+            return std::make_shared<HasPartyWindowAllyOfNameCondition>();
 
         case ConditionType::PlayerIsNearPosition:
             return std::make_shared<PlayerIsNearPositionCondition>();
@@ -118,8 +118,7 @@ switch (static_cast<ConditionType>(type))
     case ConditionType::InstanceProgress:
         return std::make_shared<InstanceProgressCondition>(stream);
     case ConditionType::HasPartyWindowAllyOfName:
-        assert(false);
-        return nullptr;
+        return std::make_shared<HasPartyWindowAllyOfNameCondition>(stream);
 
     case ConditionType::PlayerIsNearPosition:
         return std::make_shared<PlayerIsNearPositionCondition>(stream);
