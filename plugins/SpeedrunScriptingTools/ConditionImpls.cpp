@@ -348,6 +348,30 @@ void CurrentTargetIsCastingSkillCondition::drawSettings()
     ImGui::InputInt("id", reinterpret_cast<int*>(&id), 0);
 }
 
+/// ------------- CurrentTargetHasHpBelowCondition -------------
+CurrentTargetHasHpBelowCondition::CurrentTargetHasHpBelowCondition(std::istringstream& stream)
+{
+    stream >> hp;
+}
+void CurrentTargetHasHpBelowCondition::serialize(std::ostringstream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << hp << " ";
+}
+bool CurrentTargetHasHpBelowCondition::check() const
+{
+    const auto target = GW::Agents::GetTargetAsAgentLiving();
+    return target && target->hp < hp;
+}
+void CurrentTargetHasHpBelowCondition::drawSettings()
+{
+    ImGui::Text("If the target has HP below");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputFloat("%", &hp, 0);
+}
+
 /// ------------- QuestHasStateCondition -------------
 
 QuestHasStateCondition::QuestHasStateCondition(std::istringstream& stream)
