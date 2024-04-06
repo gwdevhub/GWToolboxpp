@@ -1,16 +1,14 @@
 #pragma once
 
 #include <Condition.h>
+#include <InstanceInfo.h>
 
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/Constants/Skills.h>
-#include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <cstdint>
 #include <sstream>
-
-enum class QuestStatus : int { NotStarted, Started, Completed, Failed };
 
 class NegatedCondition : public Condition {
 public:
@@ -156,4 +154,17 @@ public:
 
 private:
     float hp = 50.f;
+};
+
+class HasPartyWindowAllyOfNameCondition : public Condition {
+public:
+    HasPartyWindowAllyOfNameCondition() = default;
+    HasPartyWindowAllyOfNameCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::HasPartyWindowAllyOfName; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    std::string name = "";
 };

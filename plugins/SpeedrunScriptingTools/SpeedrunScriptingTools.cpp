@@ -2,7 +2,7 @@
 
 #include <ConditionIO.h>
 #include <ActionIO.h>
-
+#include <InstanceInfo.h>
 #include <GWCA/GWCA.h>
 
 #include <GWCA/Utilities/Hooker.h>
@@ -208,6 +208,7 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {
         firstFrameAfterInstanceLoad = true;
     });
+    InstanceInfo::getInstance().initialize();
 }
 void SpeedrunScriptingTools::SignalTerminate()
 {

@@ -149,7 +149,7 @@ public:
 
 private:
     Channel channel = Channel::All;
-    char buf[100] = "";
+    std::string message;
 };
 
 class CancelAction : public Action {
