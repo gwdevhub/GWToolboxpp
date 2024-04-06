@@ -78,7 +78,9 @@ MoveToAction::MoveToAction(std::istringstream& stream)
 }
 void MoveToAction::serialize(std::ostringstream& stream) const
 {
-    stream << pos.x << pos.y << accuracy;
+    Action::serialize(stream);
+
+    stream << pos.x << " " << pos.y << " " << accuracy << " ";
 }
 void MoveToAction::initialAction()
 {
@@ -113,7 +115,9 @@ CastOnSelfAction::CastOnSelfAction(std::istringstream& stream)
 }
 void CastOnSelfAction::serialize(std::ostringstream& stream) const
 {
-    stream << id;
+    Action::serialize(stream);
+
+    stream << id << " ";
 }
 void CastOnSelfAction::initialAction()
 {
@@ -149,7 +153,9 @@ CastOnTargetAction::CastOnTargetAction(std::istringstream& stream)
 }
 void CastOnTargetAction::serialize(std::ostringstream& stream) const
 {
-    stream << id;
+    Action::serialize(stream);
+
+    stream << id << " ";
 }
 void CastOnTargetAction::initialAction()
 {
@@ -186,7 +192,9 @@ UseItemAction::UseItemAction(std::istringstream& stream)
 }
 void UseItemAction::serialize(std::ostringstream& stream) const
 {
-    stream << id;
+    Action::serialize(stream);
+
+    stream << id << " ";
 }
 void UseItemAction::initialAction()
 {
@@ -201,7 +209,7 @@ void UseItemAction::drawSettings()
     ImGui::Text("Use item:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputInt("ID", reinterpret_cast<int*>(&id), 0);
+    ImGui::InputInt("ID", &id, 0);
 }
 
 /// ------------- SendDialogAction -------------
@@ -211,7 +219,9 @@ SendDialogAction::SendDialogAction(std::istringstream& stream)
 }
 void SendDialogAction::serialize(std::ostringstream& stream) const
 {
-    stream << id;
+    Action::serialize(stream);
+
+    stream << id << " ";
 }
 void SendDialogAction::initialAction()
 {
@@ -221,10 +231,10 @@ void SendDialogAction::initialAction()
 }
 void SendDialogAction::drawSettings()
 {
-    ImGui::Text("Use item:");
+    ImGui::Text("Send Dialog:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputInt("ID", reinterpret_cast<int*>(&id), 0);
+    ImGui::InputInt("ID", &id, 0);
 }
 
 /// ------------- GoToNpcAction -------------
@@ -234,7 +244,9 @@ GoToNpcAction::GoToNpcAction(std::istringstream& stream)
 }
 void GoToNpcAction::serialize(std::ostringstream& stream) const
 {
-    stream << id << accuracy;
+    Action::serialize(stream);
+
+    stream << id << " " << accuracy << " ";
 }
 void GoToNpcAction::initialAction()
 {
@@ -258,7 +270,7 @@ void GoToNpcAction::drawSettings()
     ImGui::Text("Go to NPC:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputInt("Model ID", reinterpret_cast<int*>(&id), 0);
+    ImGui::InputInt("Model ID", &id, 0);
     ImGui::SameLine();
     ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
 }
@@ -270,7 +282,9 @@ WaitAction::WaitAction(std::istringstream& stream)
 }
 void WaitAction::serialize(std::ostringstream& stream) const
 {
-    stream << waitTime;
+    Action::serialize(stream);
+
+    stream << waitTime << " ";
 }
 void WaitAction::initialAction()
 {
@@ -301,7 +315,9 @@ SendChatAction::SendChatAction(std::istringstream& stream)
 }
 void SendChatAction::serialize(std::ostringstream& stream) const
 {
-    stream << (int)channel;
+    Action::serialize(stream);
+
+    stream << (int)channel << " ";
 }
 void SendChatAction::initialAction()
 {
