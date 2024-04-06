@@ -383,6 +383,41 @@ void PlayerHasClassCondition::drawSettings()
     drawClassSelector(secondary, false);
 }
 
+/// ------------- PlayerHasNameCondition -------------
+PlayerHasNameCondition::PlayerHasNameCondition(std::istringstream& stream)
+{
+    std::string word;
+    while (!stream.eof()) {
+        stream >> word;
+        if (word == endOfNameSignifier) break;
+        name += word + " ";
+    }
+    if (!name.empty()) {
+        name.erase(name.size() - 1, 1); // last character is space
+    }
+}
+void PlayerHasNameCondition::serialize(std::ostringstream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << name << " " << endOfNameSignifier << " ";
+}
+bool PlayerHasNameCondition::check() const
+{
+    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    if (!player) return false;
+
+    auto& instanceInfo = InstanceInfo::getInstance();
+    return instanceInfo.getDecodedName(player->agent_id) == name;
+}
+void PlayerHasNameCondition::drawSettings()
+{
+    ImGui::Text("If player character has name");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(300);
+    ImGui::InputText("name", &name);
+}
+
 /// ------------- CurrentTargetIsCastingSkillCondition -------------
 CurrentTargetIsCastingSkillCondition::CurrentTargetIsCastingSkillCondition(std::istringstream& stream)
 {
@@ -467,6 +502,7 @@ void HasPartyWindowAllyOfNameCondition::drawSettings()
 {
     ImGui::Text("Has party window ally of name");
     ImGui::SameLine();
+    ImGui::PushItemWidth(300);
     ImGui::InputText("Ally name", &name);
 }
 

@@ -20,6 +20,7 @@ enum class ConditionType {
     PlayerHasBuff,
     PlayerHasSkill,
     PlayerHasClass,
+    PlayerHasName,
 
     // Current target state
     CurrentTargetHasHpBelow,
