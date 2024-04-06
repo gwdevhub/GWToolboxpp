@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 13);
+    static_assert((int)ConditionType::Count == 14);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -32,6 +32,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<PlayerHasSkillCondition>();
         case ConditionType::PlayerHasClass:
             return std::make_shared<PlayerHasClassCondition>();
+        case ConditionType::PlayerHasName:
+            return std::make_shared<PlayerHasNameCondition>();
 
         case ConditionType::CurrentTargetHasHpBelow:
             return std::make_shared<CurrentTargetHasHpBelowCondition>();
@@ -45,7 +47,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 13);
+    static_assert((int)ConditionType::Count == 14);
     switch (type) {
         case ConditionType::Not:
             return "Negation";
@@ -70,6 +72,8 @@ std::string_view toString(ConditionType type)
             return "Player has skill";
         case ConditionType::PlayerHasClass:
             return "Player has class";
+        case ConditionType::PlayerHasName:
+            return "Player has name";
 
         case ConditionType::CurrentTargetHasHpBelow:
             return "Current target HP";
@@ -84,7 +88,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(std::istringstream& stream)
 {
-static_assert((int)ConditionType::Count == 13);
+static_assert((int)ConditionType::Count == 14);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -112,6 +116,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<PlayerHasSkillCondition>(stream);
     case ConditionType::PlayerHasClass:
         return std::make_shared<PlayerHasClassCondition>(stream);
+    case ConditionType::PlayerHasName:
+        return std::make_shared<PlayerHasNameCondition>(stream);
 
     case ConditionType::CurrentTargetHasHpBelow:
         return std::make_shared<CurrentTargetHasHpBelowCondition>(stream);

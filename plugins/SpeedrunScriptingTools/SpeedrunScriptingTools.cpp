@@ -96,7 +96,7 @@ void SpeedrunScriptingTools::DrawSettings()
     // Add script
     if (ImGui::Button("Add script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
         m_scripts.push_back({});
-        m_scripts.back().name = (char)(rand() % 50 + std::min('A', 'a'));
+        m_scripts.back().name = "New script";
     }
 }
 
@@ -207,7 +207,6 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
 {
     ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
     GW::Initialize();
-    srand((unsigned int)time(NULL));
 
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {
         firstFrameAfterInstanceLoad = true;
