@@ -13,6 +13,7 @@ enum class ConditionType {
     PartyPlayerCount,
     InstanceProgress,
     HasPartyWindowAllyOfName,
+    // Script has not yet triggered in this instance condition
 
     // Player state
     PlayerIsNearPosition,
