@@ -39,7 +39,5 @@ public:
     virtual ConditionType type() const = 0;
     virtual bool check() const { return true; };
     virtual void drawSettings() {}
-    virtual void serialize(std::ostringstream& stream) const { 
-        stream << "C " << (int)type() << " ";
-    }
+    virtual void serialize(std::ostringstream& stream) const { stream << "C " << (int)type() << " "; }
 };

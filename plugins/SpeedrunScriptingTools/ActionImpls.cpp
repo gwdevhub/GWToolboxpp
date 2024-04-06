@@ -185,6 +185,42 @@ void CastOnTargetAction::drawSettings()
     ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
 }
 
+/// ------------- ChangeTargetAction -------------
+ChangeTargetAction::ChangeTargetAction(std::istringstream& stream)
+{
+    stream >> id;
+}
+void ChangeTargetAction::serialize(std::ostringstream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << id << " ";
+}
+void ChangeTargetAction::initialAction()
+{
+    Action::initialAction();
+
+    const auto agents = GW::Agents::GetAgentArray();
+    if (!agents) return;
+
+    for (const auto* agent : *agents) {
+        if (!agent) continue;
+        const auto living = agent->GetAsAgentLiving();
+        if (!living) continue;
+        if (living->player_number == id) {
+            GW::Agents::ChangeTarget(living);
+            return;
+        }
+    }
+}
+void ChangeTargetAction::drawSettings()
+{
+    ImGui::Text("Change target to agent with model ID:");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputInt("ID", &id, 0);
+}
+
 /// ------------- UseItemAction -------------
 UseItemAction::UseItemAction(std::istringstream& stream)
 {

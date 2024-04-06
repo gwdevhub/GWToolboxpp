@@ -6,7 +6,7 @@
 namespace {
     std::shared_ptr<Action> makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 9);
+        static_assert((int)ActionType::Count == 10);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -14,6 +14,8 @@ namespace {
                 return std::make_shared<CastOnSelfAction>();
             case ActionType::CastOnTarget:
                 return std::make_shared<CastOnTargetAction>();
+            case ActionType::ChangeTarget:
+                return std::make_shared<ChangeTargetAction>();
             case ActionType::UseItem:
                 return std::make_shared<UseItemAction>();
             case ActionType::SendDialog:
@@ -33,7 +35,7 @@ namespace {
 
     std::string_view toString(ActionType type)
     {
-        static_assert((int)ActionType::Count == 9);
+        static_assert((int)ActionType::Count == 10);
         switch (type) {
             case ActionType::MoveTo:
                 return "Move to";
@@ -41,6 +43,8 @@ namespace {
                 return "Cast on self";
             case ActionType::CastOnTarget:
                 return "Cast on current target";
+            case ActionType::ChangeTarget:
+                return "Change target";
             case ActionType::UseItem:
                 return "Use item";
             case ActionType::SendDialog:
@@ -61,7 +65,7 @@ namespace {
 
 std::shared_ptr<Action> readAction(std::istringstream& stream)
 {
-    static_assert((int)ActionType::Count == 9);
+    static_assert((int)ActionType::Count == 10);
     int type;
 
     stream >> type;
@@ -72,6 +76,8 @@ std::shared_ptr<Action> readAction(std::istringstream& stream)
             return std::make_shared<CastOnSelfAction>(stream);
         case ActionType::CastOnTarget:
             return std::make_shared<CastOnTargetAction>(stream);
+        case ActionType::ChangeTarget:
+            return std::make_shared<ChangeTargetAction>(stream);
         case ActionType::UseItem:
             return std::make_shared<UseItemAction>(stream);
         case ActionType::SendDialog:
