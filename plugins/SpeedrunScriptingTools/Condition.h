@@ -19,17 +19,11 @@ enum class ConditionType {
     PlayerIsNearPosition,
     PlayerHasBuff,
     PlayerHasSkill,
+    PlayerHasClass,
 
     // Current target state
     CurrentTargetHasHpBelow,
     CurrentTargetIsUsingSkill,
-
-    // All agents state
-    NearbyAllyOfModelIdExists,
-    NearbyEnemyWithModelIdCastingSpellExists,
-    EnemyWithModelIdAndEffectExists,
-    EnemyInPolygonWithModelIdExists,
-    EnemyInCircleSegmentWithModelIdExísts,
 
     Count
 };

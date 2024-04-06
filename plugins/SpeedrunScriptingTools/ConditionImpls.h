@@ -10,6 +10,8 @@
 #include <cstdint>
 #include <sstream>
 
+enum class Class : int {Any, Warrior, Ranger, Monk, Necro, Mesmer, Elementalist, Assassin, Ritualist, Paragon, Dervish };
+
 class NegatedCondition : public Condition {
 public:
     NegatedCondition() = default;
@@ -128,6 +130,20 @@ public:
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
+};
+
+class PlayerHasClassCondition : public Condition {
+public:
+    PlayerHasClassCondition() = default;
+    PlayerHasClassCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::PlayerHasSkill; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    Class primary = Class::Any;
+    Class secondary = Class::Any;
 };
 
 class CurrentTargetIsCastingSkillCondition : public Condition {
