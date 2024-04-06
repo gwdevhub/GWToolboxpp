@@ -95,11 +95,7 @@ namespace GWArmory {
             // @Enhancement: atm weapons aren't being redrawn after being set - the hand will change, but the model of the weapon remains.
 
             // Set this to true to play around
-#ifdef _DEBUG
-            return true;
-#else
             return false;
-#endif
         case ItemSlot::Unknown:
             return false;
         }
