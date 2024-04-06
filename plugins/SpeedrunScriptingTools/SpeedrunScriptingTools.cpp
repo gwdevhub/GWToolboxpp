@@ -6,13 +6,25 @@
 #include <GWCA/GWCA.h>
 
 #include <GWCA/Utilities/Hooker.h>
-
+#include <GWCA/Utilities/Hook.h>
+#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Packets/StoC.h>
 
 #include <imgui.h>
 #include <SimpleIni.h>
 #include <filesystem>
+
+namespace {
+    GW::HookEntry InstanceLoadFile_Entry;
+
+    bool IsMapReady()
+    {
+        return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && GW::Agents::GetPlayerAsAgentLiving();
+    }
+}
 
 void SpeedrunScriptingTools::DrawSettings()
 {
@@ -35,9 +47,11 @@ void SpeedrunScriptingTools::DrawSettings()
             }
             if (conditionToDelete.has_value()) scriptIt->conditions.erase(conditionToDelete.value());
             // Add condition
+            ImGui::PushID(drawCount++);
             if (auto newCondition = drawConditionSelector(ImGui::GetContentRegionAvail().x)) {
                 scriptIt->conditions.push_back(std::move(newCondition));
             }
+            ImGui::PopID();
 
             //Actions
             ImGui::Separator();
@@ -53,11 +67,16 @@ void SpeedrunScriptingTools::DrawSettings()
             }
             if (actionToDelete.has_value()) scriptIt->actions.erase(actionToDelete.value());
             // Add action
+            ImGui::PushID(drawCount++);
             if (auto newAction = drawActionSelector(ImGui::GetContentRegionAvail().x)) {
                 scriptIt->actions.push_back(std::move(newAction));
             }
+            ImGui::PopID();
 
+            // Add trigger packet
+            drawTriggerPacketSelector(scriptIt->triggerPacket, ImGui::GetContentRegionAvail().x);
             ImGui::Separator();
+            ImGui::PushID(drawCount++);
             ImGui::Checkbox("Enabled", &scriptIt->enabled);
             ImGui::PushItemWidth(300);
             ImGui::InputText("Name", &scriptIt->name[0], scriptIt->name.size());
@@ -65,6 +84,7 @@ void SpeedrunScriptingTools::DrawSettings()
             if (ImGui::Button("Delete Script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 scriptToDelete = scriptIt;
             }
+            ImGui::PopID();
         }
     }
     if (scriptToDelete.has_value()) m_scripts.erase(scriptToDelete.value());
@@ -91,8 +111,9 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
         switch (token[0]) {
             case 'S':
                 m_scripts.push_back({});
-                stream >> m_scripts.back().enabled;
                 stream >> m_scripts.back().name;
+                stream >> m_scripts.back().triggerPacket;
+                stream >> m_scripts.back().enabled;
                 break;
             case 'A':
                 assert(m_scripts.size() > 0);
@@ -116,8 +137,10 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
     std::ostringstream stream;
     for (const auto& script : m_scripts) {
         stream << 'S' << " ";
-        stream << script.enabled << " ";
         stream << script.name << " ";
+        stream << (int)script.triggerPacket << " ";
+        stream << script.enabled << " ";
+        
         for (const auto& condition : script.conditions) {
             condition->serialize(stream);
         }
@@ -139,10 +162,15 @@ void SpeedrunScriptingTools::Update(float delta)
 {
     ToolboxPlugin::Update(delta);
 
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+    if (!IsMapReady()) return;
+
+    if (m_currentScript && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         m_currentScript = std::nullopt;
         return;
     }
+
+    bool executeInstanceLoadScripts = firstFrameAfterInstanceLoad;
+    firstFrameAfterInstanceLoad = false;
 
     if (m_currentScript && !m_currentScript->actions.empty()) {
         // Execute current script
@@ -162,6 +190,7 @@ void SpeedrunScriptingTools::Update(float delta)
         // Find script to use
         for (const auto& script : m_scripts) {
             if (!script.enabled || script.conditions.empty() || script.actions.empty()) continue;
+            if (script.triggerPacket != TriggerPacket::None && !(script.triggerPacket == TriggerPacket::InstanceLoad && executeInstanceLoadScripts)) continue;
             if (std::ranges::all_of(script.conditions, [](const auto& condition) {return condition->check();})) {
                 m_currentScript = script;
                 break;
@@ -175,6 +204,10 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
     ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
     GW::Initialize();
     srand((unsigned int)time(NULL));
+
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {
+        firstFrameAfterInstanceLoad = true;
+    });
 }
 void SpeedrunScriptingTools::SignalTerminate()
 {
