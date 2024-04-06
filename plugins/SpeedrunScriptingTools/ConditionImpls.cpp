@@ -216,7 +216,7 @@ bool PartyPlayerCountCondition::check() const
 void PartyPlayerCountCondition::drawSettings()
 {
     ImGui::Text("If the number of players in the party is");
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(30);
     ImGui::SameLine();
     ImGui::InputInt("", &count, 0);
 }

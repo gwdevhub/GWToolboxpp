@@ -41,6 +41,7 @@ public:
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
+    mutable bool hasBegunCasting = false;
 };
 
 class CastOnTargetAction : public Action {
@@ -55,6 +56,7 @@ public:
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
+    mutable bool hasBegunCasting = false;
 };
 
 class ChangeTargetAction : public Action {
