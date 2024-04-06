@@ -125,6 +125,8 @@ void CastOnSelfAction::initialAction()
 
     const auto slot = GW::SkillbarMgr::GetSkillSlot(id);
     if (slot < 0) return;
+
+    hasBegunCasting = false;
     GW::GameThread::Enqueue([slot]() -> void {
         GW::SkillbarMgr::UseSkill(slot, 0);
     });
@@ -134,7 +136,9 @@ bool CastOnSelfAction::isComplete() const
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
 
-    return static_cast<GW::Constants::SkillID>(player->skill) != id;
+    hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
+
+    return hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id;
 }
 void CastOnSelfAction::drawSettings()
 {
@@ -166,6 +170,7 @@ void CastOnTargetAction::initialAction()
     const auto slot = GW::SkillbarMgr::GetSkillSlot(id);
     if (slot < 0) return;
 
+    hasBegunCasting = false;
     GW::GameThread::Enqueue([slot, targetId = target->agent_id]() -> void {
         GW::SkillbarMgr::UseSkill(slot, targetId);
     });
@@ -175,7 +180,8 @@ bool CastOnTargetAction::isComplete() const
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
 
-    return static_cast<GW::Constants::SkillID>(player->skill) != id;
+    hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
+    return hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id;
 }
 void CastOnTargetAction::drawSettings()
 {
