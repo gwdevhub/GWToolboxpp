@@ -67,7 +67,7 @@ public:
     void serialize(std::ostringstream&) const final;
 
 private:
-    uint32_t id = 0;
+    int id = 0;
 };
 
 class SendDialogAction : public Action {
@@ -80,7 +80,7 @@ public:
     void serialize(std::ostringstream&) const final;
 
 private:
-    uint32_t id = 0;
+    int id = 0;
 };
 
 class GoToNpcAction : public Action {
@@ -94,7 +94,7 @@ public:
     void serialize(std::ostringstream&) const final;
 
 private:
-    uint32_t id = 0;
+    int id = 0;
     float accuracy = GW::Constants::Range::Adjacent;
     const GW::AgentLiving* npc = nullptr;
 };

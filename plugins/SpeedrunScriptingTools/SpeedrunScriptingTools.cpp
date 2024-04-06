@@ -1,7 +1,7 @@
 #include "SpeedrunScriptingTools.h"
 
-#include <ConditionImpls.h>
-#include <ActionImpls.h>
+#include <ConditionIO.h>
+#include <ActionIO.h>
 
 #include <GWCA/GWCA.h>
 
@@ -10,218 +10,9 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Constants/Constants.h>
 
-#include <Keys.h>
-
 #include <imgui.h>
 #include <SimpleIni.h>
 #include <filesystem>
-
-namespace {
-    std::string_view toString(ConditionType type) {
-        switch (type) {
-            case ConditionType::IsInMap:
-                return "Current map ID";
-            case ConditionType::QuestHasState:
-                return "Queststate";
-            case ConditionType::PartyPlayerCount:
-                return "Party player count";
-            case ConditionType::InstanceProgress:
-                return "Instance progress";
-            case ConditionType::HasPartyWindowAllyOfName:
-                return "Party window contains ally";
-
-            case ConditionType::PlayerIsNearPosition:
-                return "Player position";
-            case ConditionType::PlayerHasBuff:
-                return "Player buff";
-            case ConditionType::PlayerHasSkill:
-                return "Player has skill";
-
-            case ConditionType::CurrentTargetHasHpPercentBelow:
-                return "Current target HP";
-            case ConditionType::CurrentTargetIsUsingSkill:
-                return "Current target skill";
-
-            case ConditionType::NearbyAllyOfModelIdExists:
-                return "Has nearby ally with model id";
-            case ConditionType::NearbyEnemyWithModelIdCastingSpellExists:
-                return "Nearby enemy casts skill";
-            case ConditionType::EnemyWithModelIdAndEffectExists:
-                return "Enemy has effect";
-            case ConditionType::EnemyInPolygonWithModelIdExists:
-                return "Enemies in polygon";
-            case ConditionType::EnemyInCircleSegmentWithModelIdExísts:
-                return "Enemies in circle segment";
-            default:
-                return "Unknown";
-        }
-    }
-    std::shared_ptr<Condition> makeCondition(ConditionType type) {
-        switch (type) {
-            case ConditionType::IsInMap:
-                return std::make_shared<IsInMapCondition>();
-            case ConditionType::QuestHasState:
-                return std::make_shared<QuestHasStateCondition>();
-            case ConditionType::PartyPlayerCount:
-                return std::make_shared<PartyPlayerCountCondition>();
-            case ConditionType::InstanceProgress:
-                return std::make_shared<InstanceProgressCondition>();
-            case ConditionType::HasPartyWindowAllyOfName:
-                return nullptr;
-
-            case ConditionType::PlayerIsNearPosition:
-                return std::make_shared<PlayerIsNearPositionCondition>();
-            case ConditionType::PlayerHasBuff:
-                return std::make_shared<PlayerHasBuffCondition>();
-            case ConditionType::PlayerHasSkill:
-                return std::make_shared<PlayerHasSkillCondition>();
-
-            case ConditionType::CurrentTargetHasHpPercentBelow:
-                return nullptr;
-            case ConditionType::CurrentTargetIsUsingSkill:
-                return std::make_shared<CurrentTargetIsCastingSkillCondition>();
-
-            case ConditionType::NearbyAllyOfModelIdExists:
-                return nullptr;
-            case ConditionType::NearbyEnemyWithModelIdCastingSpellExists:
-                return nullptr;
-            case ConditionType::EnemyWithModelIdAndEffectExists:
-                return nullptr;
-            case ConditionType::EnemyInPolygonWithModelIdExists:
-                return nullptr;
-            case ConditionType::EnemyInCircleSegmentWithModelIdExísts:
-                return nullptr;
-            default:
-                return nullptr;
-        }
-    }
-    std::string_view toString(ActionType type)
-    {
-        static_assert((int)ActionType::Count == 9);
-        switch (type) {
-            case ActionType::MoveTo: 
-                return "Move to";
-            case ActionType::CastOnSelf:
-                return "Cast on self";
-            case ActionType::CastOnTarget:
-                return "Cast on current target";
-            case ActionType::UseItem:
-                return "Use item";
-            case ActionType::SendDialog:
-                return "Send dialog";
-            case ActionType::GoToNpc:
-                return "Go to NPC";
-            case ActionType::Wait:
-                return "Wait";
-            case ActionType::SendChat:
-                return "Send chat";
-            case ActionType::Cancel:
-                return "Cancel current action";
-            default:
-                return "Unknown";
-        }
-    }
-    std::shared_ptr<Action> makeAction(ActionType type)
-    {
-        static_assert((int)ActionType::Count == 9);
-        switch (type) {
-            case ActionType::MoveTo:
-                return std::make_shared<MoveToAction>();
-            case ActionType::CastOnSelf:
-                return std::make_shared<CastOnSelfAction>();
-            case ActionType::CastOnTarget:
-                return std::make_shared<CastOnTargetAction>();
-            case ActionType::UseItem:
-                return std::make_shared<UseItemAction>();
-            case ActionType::SendDialog:
-                return std::make_shared<SendDialogAction>();
-            case ActionType::GoToNpc:
-                return std::make_shared<GoToNpcAction>();
-            case ActionType::Wait:
-                return std::make_shared<WaitAction>();
-            case ActionType::SendChat:
-                return std::make_shared<SendChatAction>();
-            case ActionType::Cancel:
-                return std::make_shared<CancelAction>();
-            default:
-                return nullptr;
-        }
-    }
-
-     std::shared_ptr<Action> readAction(std::istringstream& stream) 
-    {
-        static_assert((int)ActionType::Count == 9);
-        int type;
-        
-        stream >> type;
-        switch (static_cast<ActionType>(type)) {
-            case ActionType::MoveTo:
-                return std::make_shared<MoveToAction>(stream);
-            case ActionType::CastOnSelf:
-                return std::make_shared<CastOnSelfAction>(stream);
-            case ActionType::CastOnTarget:
-                return std::make_shared<CastOnTargetAction>(stream);
-            case ActionType::UseItem:
-                return std::make_shared<UseItemAction>(stream);
-            case ActionType::SendDialog:
-                return std::make_shared<SendDialogAction>(stream);
-            case ActionType::GoToNpc:
-                return std::make_shared<GoToNpcAction>(stream);
-            case ActionType::Wait:
-                return std::make_shared<WaitAction>(stream);
-            case ActionType::SendChat:
-                return std::make_shared<SendChatAction>(stream);
-            case ActionType::Cancel:
-                return std::make_shared<CancelAction>(stream);
-            default:
-                return nullptr;
-        }
-    }
-
-    std::shared_ptr<Condition> readCondition(std::istringstream& stream)
-    {
-        int type;
-        stream >> type;
-        switch (static_cast<ConditionType>(type)) {
-            case ConditionType::IsInMap:
-                return std::make_shared<IsInMapCondition>(stream);
-            case ConditionType::QuestHasState:
-                return std::make_shared<QuestHasStateCondition>(stream);
-            case ConditionType::PartyPlayerCount:
-                return std::make_shared<PartyPlayerCountCondition>(stream);
-            case ConditionType::InstanceProgress:
-                return std::make_shared<InstanceProgressCondition>(stream);
-            case ConditionType::HasPartyWindowAllyOfName:
-                return nullptr;
-
-            case ConditionType::PlayerIsNearPosition:
-                return std::make_shared<PlayerIsNearPositionCondition>(stream);
-            case ConditionType::PlayerHasBuff:
-                return std::make_shared<PlayerHasBuffCondition>(stream);
-            case ConditionType::PlayerHasSkill:
-                return std::make_shared<PlayerHasSkillCondition>(stream);
-
-            case ConditionType::CurrentTargetHasHpPercentBelow:
-                return nullptr;
-            case ConditionType::CurrentTargetIsUsingSkill:
-                return std::make_shared<CurrentTargetIsCastingSkillCondition>(stream);
-
-            case ConditionType::NearbyAllyOfModelIdExists:
-                return nullptr;
-            case ConditionType::NearbyEnemyWithModelIdCastingSpellExists:
-                return nullptr;
-            case ConditionType::EnemyWithModelIdAndEffectExists:
-                return nullptr;
-            case ConditionType::EnemyInPolygonWithModelIdExists:
-                return nullptr;
-            case ConditionType::EnemyInCircleSegmentWithModelIdExísts:
-                return nullptr;
-            default:
-                return nullptr;
-        }
-    }
-}
-
 
 void SpeedrunScriptingTools::DrawSettings()
 {
@@ -244,16 +35,8 @@ void SpeedrunScriptingTools::DrawSettings()
             }
             if (conditionToDelete.has_value()) scriptIt->conditions.erase(conditionToDelete.value());
             // Add condition
-            if (ImGui::Button("Add condition", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-                ImGui::OpenPopup("Add condition");
-            }
-            if (ImGui::BeginPopup("Add condition")) {
-                for (auto i = 0; i < (int)ConditionType::Count; ++i) {
-                    if (ImGui::Selectable(toString((ConditionType)i).data())) {
-                        scriptIt->conditions.push_back(makeCondition(ConditionType(i)));
-                    }
-                }
-                ImGui::EndPopup();
+            if (auto newCondition = drawConditionSelector(ImGui::GetContentRegionAvail().x)) {
+                scriptIt->conditions.push_back(std::move(newCondition));
             }
 
             //Actions
@@ -270,17 +53,10 @@ void SpeedrunScriptingTools::DrawSettings()
             }
             if (actionToDelete.has_value()) scriptIt->actions.erase(actionToDelete.value());
             // Add action
-            if (ImGui::Button("Add action", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-                ImGui::OpenPopup("Add action");
+            if (auto newAction = drawActionSelector(ImGui::GetContentRegionAvail().x)) {
+                scriptIt->actions.push_back(std::move(newAction));
             }
-            if (ImGui::BeginPopup("Add action")) {
-                for (auto i = 0; i < (int)ActionType::Count; ++i) {
-                    if (ImGui::Selectable(toString((ActionType)i).data())) {
-                        scriptIt->actions.push_back(makeAction(ActionType(i)));
-                    }
-                }
-                ImGui::EndPopup();
-            }
+
             ImGui::Separator();
             ImGui::Checkbox("Enabled", &scriptIt->enabled);
             ImGui::PushItemWidth(300);
@@ -309,21 +85,24 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
 
     std::istringstream stream(read);
     do { 
-        char token;
+        std::string token = "";
         stream >> token;
-        switch (token) {
+        if (token.length() > 1) return;
+        switch (token[0]) {
             case 'S':
                 m_scripts.push_back({});
                 stream >> m_scripts.back().enabled;
                 stream >> m_scripts.back().name;
                 break;
             case 'A':
-                if (m_scripts.empty()) return;
+                assert(m_scripts.size() > 0);
                 m_scripts.back().actions.push_back(readAction(stream));
+                assert(m_scripts.back().actions.back() != nullptr);
                 break;
             case 'C':
                 assert(m_scripts.size() > 0);
                 m_scripts.back().conditions.push_back(readCondition(stream));
+                assert(m_scripts.back().conditions.back() != nullptr);
                 break;
             default:
                 return;
@@ -340,13 +119,9 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
         stream << script.enabled << " ";
         stream << script.name << " ";
         for (const auto& condition : script.conditions) {
-            stream << 'C' << " ";
-            stream << (int)condition->type() << " ";
             condition->serialize(stream);
         }
         for (const auto& action : script.actions) {
-            stream << 'A' << " ";
-            stream << (int)action->type() << " ";
             action->serialize(stream);
         }
     }
@@ -364,7 +139,7 @@ void SpeedrunScriptingTools::Update(float delta)
 {
     ToolboxPlugin::Update(delta);
 
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
         m_currentScript = std::nullopt;
         return;
     }

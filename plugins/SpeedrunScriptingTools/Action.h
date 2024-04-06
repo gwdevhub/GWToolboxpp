@@ -23,7 +23,7 @@ public:
     virtual void finalAction() { m_hasBeenStarted = false; }
     virtual bool isComplete() const { return true; }
     virtual void drawSettings() {}
-    virtual void serialize(std::ostringstream&) const {}
+    virtual void serialize(std::ostringstream& stream) const { stream << "A " << (int)type() << " ";}
     bool hasBeenStarted() const { return m_hasBeenStarted; }
 
 private:
