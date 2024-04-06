@@ -14,6 +14,7 @@
 #include <GWCA/Packets/StoC.h>
 
 #include <imgui.h>
+#include <ImGuiCppWrapper.h>
 #include <SimpleIni.h>
 #include <filesystem>
 
@@ -33,7 +34,8 @@ void SpeedrunScriptingTools::DrawSettings()
     std::optional<decltype(m_scripts.begin())> scriptToDelete = std::nullopt;
 
     for (auto scriptIt = m_scripts.begin(); scriptIt < m_scripts.end(); ++scriptIt) {
-        if (ImGui::CollapsingHeader(scriptIt->name.data())) {
+        const auto displayName = scriptIt->name + "###" + std::to_string(scriptIt - m_scripts.begin());
+        if (ImGui::CollapsingHeader(displayName.c_str())) {
             // Conditions
             std::optional<decltype(scriptIt->conditions.begin())> conditionToDelete = std::nullopt;
             for (auto it = scriptIt->conditions.begin(); it < scriptIt->conditions.end(); ++it) {
@@ -79,7 +81,7 @@ void SpeedrunScriptingTools::DrawSettings()
             ImGui::PushID(drawCount++);
             ImGui::Checkbox("Enabled", &scriptIt->enabled);
             ImGui::PushItemWidth(300);
-            ImGui::InputText("Name", &scriptIt->name[0], scriptIt->name.size());
+            ImGui::InputText("Name", &scriptIt->name);
             ImGui::SameLine();
             if (ImGui::Button("Delete Script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 scriptToDelete = scriptIt;
