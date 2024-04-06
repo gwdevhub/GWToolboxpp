@@ -34,6 +34,7 @@ void InstanceInfo::initialize()
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {
         this->questStatus.clear();
         this->decodedNames.clear();
+        ++instanceId;
     });
 }
 
