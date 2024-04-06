@@ -12,6 +12,33 @@
 
 enum class QuestStatus : int { NotStarted, Started, Completed, Failed };
 
+class NegatedCondition : public Condition {
+public:
+    NegatedCondition() = default;
+    NegatedCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::Not; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    std::shared_ptr<Condition> cond = nullptr;
+};
+
+class DisjunctionCondition : public Condition {
+public:
+    DisjunctionCondition() = default;
+    DisjunctionCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::Or; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    std::shared_ptr<Condition> first = nullptr;
+    std::shared_ptr<Condition> second = nullptr;
+};
+
 class IsInMapCondition : public Condition {
 public:
     IsInMapCondition() = default;
