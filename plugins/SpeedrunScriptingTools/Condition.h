@@ -21,7 +21,7 @@ enum class ConditionType {
     PlayerHasSkill,
 
     // Current target state
-    CurrentTargetHasHpPercentBelow,
+    CurrentTargetHasHpBelow,
     CurrentTargetIsUsingSkill,
 
     // All agents state

@@ -31,8 +31,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
         case ConditionType::PlayerHasSkill:
             return std::make_shared<PlayerHasSkillCondition>();
 
-        case ConditionType::CurrentTargetHasHpPercentBelow:
-            return nullptr;
+        case ConditionType::CurrentTargetHasHpBelow:
+            return std::make_shared<CurrentTargetHasHpBelowCondition>();
         case ConditionType::CurrentTargetIsUsingSkill:
             return std::make_shared<CurrentTargetIsCastingSkillCondition>();
 
@@ -77,7 +77,7 @@ std::string_view toString(ConditionType type)
         case ConditionType::PlayerHasSkill:
             return "Player has skill";
 
-        case ConditionType::CurrentTargetHasHpPercentBelow:
+        case ConditionType::CurrentTargetHasHpBelow:
             return "Current target HP";
         case ConditionType::CurrentTargetIsUsingSkill:
             return "Current target skill";
@@ -128,9 +128,8 @@ switch (static_cast<ConditionType>(type))
     case ConditionType::PlayerHasSkill:
         return std::make_shared<PlayerHasSkillCondition>(stream);
 
-    case ConditionType::CurrentTargetHasHpPercentBelow:
-        assert(false);
-        return nullptr;
+    case ConditionType::CurrentTargetHasHpBelow:
+        return std::make_shared<CurrentTargetHasHpBelowCondition>(stream);
     case ConditionType::CurrentTargetIsUsingSkill:
         return std::make_shared<CurrentTargetIsCastingSkillCondition>(stream);
 

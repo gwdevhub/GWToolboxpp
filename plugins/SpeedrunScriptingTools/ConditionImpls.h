@@ -144,3 +144,16 @@ public:
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
 };
+
+class CurrentTargetHasHpBelowCondition : public Condition {
+public:
+    CurrentTargetHasHpBelowCondition() = default;
+    CurrentTargetHasHpBelowCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::CurrentTargetHasHpBelow; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    float hp = 50.f;
+};
