@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 17);
+    static_assert((int)ConditionType::Count == 13);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -30,22 +30,14 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<PlayerHasBuffCondition>();
         case ConditionType::PlayerHasSkill:
             return std::make_shared<PlayerHasSkillCondition>();
+        case ConditionType::PlayerHasClass:
+            return std::make_shared<PlayerHasClassCondition>();
 
         case ConditionType::CurrentTargetHasHpBelow:
             return std::make_shared<CurrentTargetHasHpBelowCondition>();
         case ConditionType::CurrentTargetIsUsingSkill:
             return std::make_shared<CurrentTargetIsCastingSkillCondition>();
 
-        case ConditionType::NearbyAllyOfModelIdExists:
-            return nullptr;
-        case ConditionType::NearbyEnemyWithModelIdCastingSpellExists:
-            return nullptr;
-        case ConditionType::EnemyWithModelIdAndEffectExists:
-            return nullptr;
-        case ConditionType::EnemyInPolygonWithModelIdExists:
-            return nullptr;
-        case ConditionType::EnemyInCircleSegmentWithModelIdExísts:
-            return nullptr;
         default:
             return nullptr;
     }
@@ -53,7 +45,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 17);
+    static_assert((int)ConditionType::Count == 13);
     switch (type) {
         case ConditionType::Not:
             return "Negation";
@@ -76,22 +68,14 @@ std::string_view toString(ConditionType type)
             return "Player buff";
         case ConditionType::PlayerHasSkill:
             return "Player has skill";
+        case ConditionType::PlayerHasClass:
+            return "Player has class";
 
         case ConditionType::CurrentTargetHasHpBelow:
             return "Current target HP";
         case ConditionType::CurrentTargetIsUsingSkill:
             return "Current target skill";
 
-        case ConditionType::NearbyAllyOfModelIdExists:
-            return "Has nearby ally with model id";
-        case ConditionType::NearbyEnemyWithModelIdCastingSpellExists:
-            return "Nearby enemy casts skill";
-        case ConditionType::EnemyWithModelIdAndEffectExists:
-            return "Enemy has effect";
-        case ConditionType::EnemyInPolygonWithModelIdExists:
-            return "Enemies in polygon";
-        case ConditionType::EnemyInCircleSegmentWithModelIdExísts:
-            return "Enemies in circle segment";
         default:
             return "Unknown";
     }
@@ -100,7 +84,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(std::istringstream& stream)
 {
-static_assert((int)ConditionType::Count == 17);
+static_assert((int)ConditionType::Count == 13);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -126,27 +110,14 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<PlayerHasBuffCondition>(stream);
     case ConditionType::PlayerHasSkill:
         return std::make_shared<PlayerHasSkillCondition>(stream);
+    case ConditionType::PlayerHasClass:
+        return std::make_shared<PlayerHasClassCondition>(stream);
 
     case ConditionType::CurrentTargetHasHpBelow:
         return std::make_shared<CurrentTargetHasHpBelowCondition>(stream);
     case ConditionType::CurrentTargetIsUsingSkill:
         return std::make_shared<CurrentTargetIsCastingSkillCondition>(stream);
 
-    case ConditionType::NearbyAllyOfModelIdExists:
-        assert(false);
-        return nullptr;
-    case ConditionType::NearbyEnemyWithModelIdCastingSpellExists:
-        assert(false);
-        return nullptr;
-    case ConditionType::EnemyWithModelIdAndEffectExists:
-        assert(false);
-        return nullptr;
-    case ConditionType::EnemyInPolygonWithModelIdExists:
-        assert(false);
-        return nullptr;
-    case ConditionType::EnemyInCircleSegmentWithModelIdExísts:
-        assert(false);
-        return nullptr;
     default:
         assert(false);
         return nullptr;
