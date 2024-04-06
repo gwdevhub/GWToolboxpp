@@ -250,6 +250,23 @@ void InstanceProgressCondition::drawSettings()
     ImGui::InputFloat("", &requiredProgress, 0);
 }
 
+/// ------------- OnlyTriggerOnceCondition -------------
+OnlyTriggerOnceCondition::OnlyTriggerOnceCondition(std::istringstream&)
+{
+}
+bool OnlyTriggerOnceCondition::check() const
+{
+    const auto currentInstanceId = InstanceInfo::getInstance().getInstanceId();
+    if (triggeredLastInInstanceId == currentInstanceId) return false;
+    
+    triggeredLastInInstanceId = currentInstanceId;
+    return true;
+}
+void OnlyTriggerOnceCondition::drawSettings()
+{
+    ImGui::Text("If script has not been triggered in this instance (this condition has to come last)");
+}
+
 /// ------------- PlayerIsNearPositionCondition -------------
 PlayerIsNearPositionCondition::PlayerIsNearPositionCondition(std::istringstream& stream)
 {
@@ -265,6 +282,7 @@ bool PlayerIsNearPositionCondition::check() const
 {
     const auto player = GW::Agents::GetPlayerAsAgentLiving(); 
     if (!player) return false;
+    printf("distance %f", GW::GetDistance(player->pos, pos));
     return GW::GetDistance(player->pos, pos) < accuracy + eps;
 }
 void PlayerIsNearPositionCondition::drawSettings()

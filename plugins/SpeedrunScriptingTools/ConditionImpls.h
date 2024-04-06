@@ -92,6 +92,18 @@ private:
     float requiredProgress = .5f;
 };
 
+class OnlyTriggerOnceCondition : public Condition {
+public:
+    OnlyTriggerOnceCondition() = default;
+    OnlyTriggerOnceCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::OnlyTriggerOncePerInstance; }
+    bool check() const final;
+    void drawSettings() final;
+
+private:
+    mutable int triggeredLastInInstanceId = 0;
+};
+
 class PlayerIsNearPositionCondition : public Condition {
 public:
     PlayerIsNearPositionCondition() = default;
