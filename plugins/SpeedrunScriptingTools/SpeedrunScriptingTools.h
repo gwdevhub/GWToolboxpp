@@ -2,14 +2,16 @@
 
 #include <Action.h>
 #include <Condition.h>
+#include <TriggerPacket.h>
 
 #include <ToolboxPlugin.h>
 
 struct Script {
     std::vector<std::shared_ptr<Condition>> conditions;
     std::vector<std::shared_ptr<Action>> actions;
+    std::string name = "missing";
+    TriggerPacket triggerPacket = TriggerPacket::None;
     bool enabled = true;
-    std::string name = "TestScript:                   ";
 };
 
 class SpeedrunScriptingTools : public ToolboxPlugin {
@@ -31,4 +33,5 @@ public:
 private:
     std::vector<Script> m_scripts;
     std::optional<Script> m_currentScript = std::nullopt;
+    bool firstFrameAfterInstanceLoad = false;
 };
