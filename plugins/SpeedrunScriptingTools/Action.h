@@ -6,6 +6,7 @@ enum class ActionType {
     MoveTo,
     CastOnSelf,
     CastOnTarget,
+    ChangeTarget,
     UseItem,
     SendDialog,
     GoToNpc,
