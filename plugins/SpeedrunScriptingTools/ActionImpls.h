@@ -57,6 +57,19 @@ private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
 };
 
+class ChangeTargetAction : public Action {
+public:
+    ChangeTargetAction() = default;
+    ChangeTargetAction(std::istringstream&);
+    ActionType type() const final { return ActionType::ChangeTarget; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    int id = 0;
+};
+
 class UseItemAction : public Action {
 public:
     UseItemAction() = default;
