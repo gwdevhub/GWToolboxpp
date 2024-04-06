@@ -16,6 +16,7 @@ public:
     }
     QuestStatus getQuestStatus(GW::Constants::QuestID);
     std::string getDecodedName(GW::AgentID);
+    int getInstanceId() { return instanceId; }
     void initialize();
 
     InstanceInfo(const InstanceInfo&) = delete;
@@ -25,4 +26,5 @@ private:
     InstanceInfo() = default;
     std::unordered_map<GW::Constants::QuestID, QuestStatus> questStatus;
     std::unordered_map<GW::AgentID, std::wstring> decodedNames;
+    int instanceId = 0;
 };
