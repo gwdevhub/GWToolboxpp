@@ -136,7 +136,7 @@ class PlayerHasClassCondition : public Condition {
 public:
     PlayerHasClassCondition() = default;
     PlayerHasClassCondition(std::istringstream&);
-    ConditionType type() const final { return ConditionType::PlayerHasSkill; }
+    ConditionType type() const final { return ConditionType::PlayerHasClass; }
     bool check() const final;
     void drawSettings() final;
     void serialize(std::ostringstream&) const final;
@@ -144,6 +144,19 @@ public:
 private:
     Class primary = Class::Any;
     Class secondary = Class::Any;
+};
+
+class PlayerHasNameCondition : public Condition {
+public:
+    PlayerHasNameCondition() = default;
+    PlayerHasNameCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::PlayerHasName; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    std::string name;
 };
 
 class CurrentTargetIsCastingSkillCondition : public Condition {
