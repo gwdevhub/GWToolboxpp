@@ -13,6 +13,7 @@ enum class ConditionType {
     PartyPlayerCount,
     InstanceProgress,
     HasPartyWindowAllyOfName,
+    PartyMemberStatus,
     OnlyTriggerOncePerInstance,
 
     // Player state

@@ -11,7 +11,7 @@
 #include <sstream>
 
 enum class Class : int {Any, Warrior, Ranger, Monk, Necro, Mesmer, Elementalist, Assassin, Ritualist, Paragon, Dervish };
-
+enum class Status : int {Dead, Alive};
 class NegatedCondition : public Condition {
 public:
     NegatedCondition() = default;
@@ -208,4 +208,18 @@ public:
 
 private:
     std::string name = "";
+};
+
+class PartyMemberStatusCondition : public Condition {
+public:
+    PartyMemberStatusCondition() = default;
+    PartyMemberStatusCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::PartyMemberStatus; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    std::string name = "";
+    Status status = Status::Dead;
 };

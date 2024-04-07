@@ -7,10 +7,12 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 
 #include <GWCA/Packets/Opcodes.h>
 
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include "imgui.h"
 #include <ImGuiCppWrapper.h>
@@ -426,4 +428,34 @@ void CancelAction::initialAction()
 void CancelAction::drawSettings()
 {
     ImGui::Text("Cancel Action");
+}
+
+/// ------------- DropBuffAction -------------
+DropBuffAction::DropBuffAction(std::istringstream& stream)
+{
+    int read;
+    stream >> read;
+    id = (GW::Constants::SkillID)read;
+}
+void DropBuffAction::serialize(std::ostringstream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << (int)id << " ";
+}
+void DropBuffAction::initialAction()
+{
+    Action::initialAction();
+
+    if (const auto buff = GW::Effects::GetPlayerBuffBySkillId(id)) 
+    {
+        GW::Effects::DropBuff(buff->buff_id);
+    }
+}
+void DropBuffAction::drawSettings()
+{
+    ImGui::Text("Drop buff");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
 }
