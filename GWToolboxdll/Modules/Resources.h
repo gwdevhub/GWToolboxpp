@@ -87,6 +87,8 @@ public:
 
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetProfessionIcon(GW::Constants::Profession p);
+    // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
+    static IDirect3DTexture9** GetDamagetypeImage(std::string dmg_type);
     // Fetches skill image from gw dat via file_id
     static IDirect3DTexture9** GetSkillImage(GW::Constants::SkillID skill_id);
     // Fetches skill page from GWW, parses out the image for the skill then downloads that to disk
