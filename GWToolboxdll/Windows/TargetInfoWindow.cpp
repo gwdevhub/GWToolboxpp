@@ -20,12 +20,70 @@ namespace {
     std::unordered_map<std::string, GW::Constants::SkillID> skill_ids_by_name;
 
 
+    const ImVec2 get_texture_size(IDirect3DTexture9* texture) {
+        const ImVec2 uv1 = { 0.f, 0.f };
+        if (!texture)
+            return uv1;
+        D3DSURFACE_DESC desc;
+        const HRESULT res = texture->GetLevelDesc(0, &desc);
+        if (!SUCCEEDED(res)) {
+            return uv1; // Don't throw anything into the log here; this function is called every frame by modules that use it!
+        }
+        return { static_cast<float>(desc.Width),static_cast<float>(desc.Height) };
+    }
+
+    const char* ws = " \t\n\r\f\v";
+
+    // trim from end of string (right)
+    inline std::string& rtrim(std::string& s, const char* t = ws)
+    {
+        s.erase(s.find_last_not_of(t) + 1);
+        return s;
+    }
+
+    // trim from beginning of string (left)
+    inline std::string& ltrim(std::string& s, const char* t = ws)
+    {
+        s.erase(0, s.find_first_not_of(t));
+        return s;
+    }
+
+    // trim from both ends of string (right then left)
+    inline std::string& trim(std::string& s, const char* t = ws)
+    {
+        return ltrim(rtrim(s, t), t);
+    }
+    // Make sure you pass valid html e.g. start with a < tag
+    std::string& strip_tags(std::string& html) {
+        while (1)
+        {
+            auto startpos = html.find("<");
+            if (startpos == std::string::npos)
+                break;
+            auto endpos = html.find(">", startpos) + 1;
+            if (endpos == std::string::npos)
+                break;
+            html.erase(startpos, endpos - startpos);
+        }
+
+        return html;
+    }
+    std::string& from_html(std::string& html) {
+        strip_tags(html);
+        trim(html);
+        return html;
+    }
+
+
     struct AgentInfo {
         GuiUtils::EncString name;
+        std::string image_url;
+        IDirect3DTexture9** image = nullptr;
         std::string wiki_content;
         std::string wiki_search_term;
         std::vector<GW::Constants::SkillID> wiki_skills;
         std::unordered_map<std::string, std::string> wiki_armor_ratings; // rating type, rating value
+        std::unordered_map<std::string, std::string> infobox_deets; // key, value
         enum class TargetInfoState {
             DecodingName,
             FetchingWikiPage,
@@ -126,7 +184,8 @@ namespace {
 
                 agent_info->wiki_search_term = GuiUtils::WStringToString(
                     GuiUtils::SanitizePlayerName(agent_info->name.wstring())
-                );  
+                );
+                trim(agent_info->wiki_search_term);
                 std::string wiki_url = "https://wiki.guildwars.com/wiki/?search=";
                 wiki_url.append(GuiUtils::UrlEncode(agent_info->wiki_search_term, '_'));
                 Resources::Download(wiki_url, AgentInfo::OnFetchedWikiPage, agent_info);
@@ -134,7 +193,7 @@ namespace {
             case AgentInfo::TargetInfoState::ParsingWikiPage:
                 Log::InfoW(L"Got wiki page for %ls, need to write the code to parse!!", agent_info->name.wstring().c_str());
 
-                const std::regex skill_list_regex("<h2><span class=\"mw-headline\" id=\"Skills\">([\\s\\S]*)</ul>");
+                const std::regex skill_list_regex("<h2><span class=\"mw-headline\" id=\"Skills\">([\\s\\S]*?)</ul>");
                 std::smatch m;
                 if (std::regex_search(agent_info->wiki_content, m, skill_list_regex)) {
                     std::string skill_list_found = m[1].str();
@@ -155,21 +214,55 @@ namespace {
                     }
                 }
 
-                const std::regex armor_ratings_regex("<h2><span class=\"mw-headline\" id=\"Armor_ratings\">([\\s\\S]*)</table>");
+                const std::regex armor_ratings_regex("<h2><span class=\"mw-headline\" id=\"Armor_ratings\">([\\s\\S]*?)</table>");
                 if (std::regex_search(agent_info->wiki_content, m, armor_ratings_regex)) {
                     std::string armor_table_found = m[1].str();
 
                     // Iterate over all skills in this list.
-                    const auto armor_cell_regex = std::regex("<td>[\\s\\S]*title=\"([^\"]+)\"[\\s\\S]*<td>([0-9 \\(\\)]+)</td>");
+                    const auto armor_cell_regex = std::regex("<td>[\\s\\S]*?title=\"([^\"]+)\"[\\s\\S]*?<td>([0-9 \\(\\)]+)</td>");
                     auto words_begin = std::sregex_iterator(armor_table_found.begin(), armor_table_found.end(), armor_cell_regex);
                     auto words_end = std::sregex_iterator();
                     for (std::sregex_iterator i = words_begin; i != words_end; ++i)
                     {
-                        const auto armor_type = i->str(1);
-                        const auto armor_rating = i->str(2);
-                        agent_info->wiki_armor_ratings[armor_type] = armor_rating;
+                        auto key = i->str(1);
+                        auto val = i->str(2);
+                        from_html(key);
+                        from_html(val);
+                        if (key.empty() || val.empty())
+                            continue;
+                        agent_info->wiki_armor_ratings[key] = val;
                     }
                 }
+
+                const std::regex infobox_regex("<table[^>]+ class=\"[^\"]+infobox([\\s\\S]*?)</table>");
+                if (std::regex_search(agent_info->wiki_content, m, infobox_regex)) {
+                    std::string infobox_content = m[1].str();
+
+                    const auto infobox_image_regex = std::regex("<td[^>]+class=\"[^\"]*?infobox-image[\\s\\S]*?<a [\\s\\S]*?href=\"[^\"]*?File:([^\"]+)");
+                    if (std::regex_search(infobox_content, m, infobox_image_regex)) {
+                        const auto img_src = m[1].str();
+                        agent_info->image_url = img_src;
+                        agent_info->image = Resources::GetGuildWarsWikiImage(img_src.c_str());
+                    }
+
+                    // Iterate over all skills in this list.
+                    const auto infobox_row_regex = std::regex(
+                        "(?:<tr>|<tr[^>]+>)[\\s\\S]*?(?:<th>|<th[^>]+>)([\\s\\S]*?)</th>[\\s\\S]*?(?:<td>|<td[^>]+>)([\\s\\S]*?)</td>[\\s\\S]*?</tr>"
+                    );
+                    auto words_begin = std::sregex_iterator(infobox_content.begin(), infobox_content.end(), infobox_row_regex);
+                    auto words_end = std::sregex_iterator();
+                    for (std::sregex_iterator i = words_begin; i != words_end; ++i)
+                    {
+                        auto key = i->str(1);
+                        auto val = i->str(2);
+                        from_html(key);
+                        from_html(val);
+                        if (key.empty() || val.empty())
+                            continue;
+                        agent_info->infobox_deets[key] = val;
+                    }
+                }
+
                 agent_info->state = AgentInfo::TargetInfoState::Done;
                 break;
             }
@@ -216,31 +309,50 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
         }
         ImGui::Text("Guild Wars Wiki info for %s", current_agent_info->name.string().c_str());
         ImGui::Separator();
-        if (current_agent_info->wiki_skills.size()) {
-            const float btnw = ImGui::GetContentRegionAvail().x / 2.f;
-            const ImVec2 btn_dims = { btnw,.0f };
-            ImGui::Text("Skills Used:");
-            ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, { 0.f, .5f });
-            for (const auto skill_id : current_agent_info->wiki_skills) {
-                const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-                const auto skill_img = Resources::GetSkillImage(skill_id);
-                if (ImGui::IconButton(Resources::DecodeStringId(skill->name)->string().c_str(), *skill_img, btn_dims)) {
-                    wchar_t url_buf[64];
-                    swprintf(url_buf, _countof(url_buf), L"Game_link:Skill_%d", skill_id);
-                    GuiUtils::OpenWiki(url_buf);
+        if (ImGui::BeginTable("table1", current_agent_info->image ? 2 : 1))
+        {
+            ImGui::TableNextRow();
+            if (current_agent_info->image) {
+                ImGui::TableNextColumn();
+                const auto w = ImGui::GetContentRegionAvail().x;
+                ImGui::ImageCropped(*current_agent_info->image, { w / 2.f, w });
+            }
+            ImGui::TableNextColumn();
+            if (current_agent_info->wiki_skills.size()) {
+                const float btnw = ImGui::GetContentRegionAvail().x / 2.f;
+                const ImVec2 btn_dims = { btnw,.0f };
+                ImGui::Text("Skills Used:");
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, { 0.f, .5f });
+                for (const auto skill_id : current_agent_info->wiki_skills) {
+                    const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+                    const auto skill_img = Resources::GetSkillImage(skill_id);
+                    if (ImGui::IconButton(Resources::DecodeStringId(skill->name)->string().c_str(), *skill_img, btn_dims)) {
+                        wchar_t url_buf[64];
+                        swprintf(url_buf, _countof(url_buf), L"Game_link:Skill_%d", skill_id);
+                        GuiUtils::OpenWiki(url_buf);
+                    }
+                }
+                ImGui::PopStyleVar();
+            }
+            if (current_agent_info->infobox_deets.size()) {
+                ImGui::Separator();
+                for (const auto it : current_agent_info->infobox_deets) {
+                    ImGui::Text("%s: %s", it.first.c_str(), it.second.c_str());
                 }
             }
-            ImGui::PopStyleVar();
-        }
-        if (current_agent_info->wiki_armor_ratings.size()) {
-            ImGui::Text("Armor Ratings:");
-            for (const auto it : current_agent_info->wiki_armor_ratings) {
-                ImGui::Text("%s: %s", it.first.c_str(), it.second.c_str());
+            if (current_agent_info->wiki_armor_ratings.size()) {
+                ImGui::Text("Armor Ratings:");
+                for (const auto it : current_agent_info->wiki_armor_ratings) {
+                    ImGui::Text("%s: %s", it.first.c_str(), it.second.c_str());
+                }
             }
+            ImGui::EndTable();
         }
+        ImGui::Separator();
         if (ImGui::Button("View More on Guild Wars Wiki")) {
             GuiUtils::SearchWiki(GuiUtils::StringToWString(current_agent_info->wiki_search_term));
         }
+        
     }
     ImGui::End();
 
