@@ -895,10 +895,10 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
             pending_reset_equipment = true;
         }
 
-        if (ImGui::MyCombo("##filter", "All", (int*)&current_campaign, armor_filter_array_getter, nullptr, 6)) {
+        if (ImGui::MyCombo("##filter", "All", reinterpret_cast<int*>(&current_campaign), armor_filter_array_getter, nullptr, 6)) {
             UpdateArmorsFilter();
         }
-        const auto order = {Headpiece, Chestpiece, Leggings, Boots, CostumeHead, CostumeBody};
+        const auto order = {Headpiece, Chestpiece, Gloves, Leggings, Boots, CostumeHead, CostumeBody, LeftHand, RightHand};
         for (const auto slot : order) {
             if (!IsEquipmentSlotSupportedByArmory(slot))
                 continue;

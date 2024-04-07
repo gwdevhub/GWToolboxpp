@@ -54,20 +54,43 @@ namespace {
         }
     }
 
-    const char* profession_icon_urls[] = {"", "8/87/Warrior-tango-icon-48", "e/e8/Ranger-tango-icon-48", "5/53/Monk-tango-icon-48", "b/b1/Necromancer-tango-icon-48", "b/b1/Mesmer-tango-icon-48", "4/47/Elementalist-tango-icon-48",
-                                          "2/2b/Assassin-tango-icon-48", "5/5b/Ritualist-tango-icon-48", "5/5e/Paragon-tango-icon-48", "3/38/Dervish-tango-icon-48"};
+    constexpr std::array profession_icon_urls = {
+        "",
+        "8/87/Warrior-tango-icon-48",
+        "e/e8/Ranger-tango-icon-48",
+        "5/53/Monk-tango-icon-48",
+        "b/b1/Necromancer-tango-icon-48",
+        "b/b1/Mesmer-tango-icon-48",
+        "4/47/Elementalist-tango-icon-48",
+        "2/2b/Assassin-tango-icon-48",
+        "5/5b/Ritualist-tango-icon-48",
+        "5/5e/Paragon-tango-icon-48",
+        "3/38/Dervish-tango-icon-48"
+    };
+    std::map<uint32_t, IDirect3DTexture9**> profession_icons;
     std::map<GW::Constants::SkillID, IDirect3DTexture9**> skill_images;
     std::map<std::wstring, IDirect3DTexture9**> item_images;
     std::map<std::string, IDirect3DTexture9**> guild_wars_wiki_images;
-    std::map<uint32_t, IDirect3DTexture9**> profession_icons;
+    const std::map<std::string, const char*> damagetype_icon_urls = {
+        {"Blunt damage", "1/19/Blunt_damage.png/60px-Blunt_damage.png"},
+        {"Piercing damage", "1/1a/Piercing_damage.png/60px-Piercing_damage.png"},
+        {"Slashing damage", "3/3c/Slashing_damage.png/60px-Slashing_damage.png"},
+        {"Cold damage", "4/48/Cold_damage.png/60px-Cold_damage.png"},
+        {"Earth damage", "b/bb/Earth_damage.png/60px-Earth_damage.png"},
+        {"Fire damage", "6/6a/Fire_damage.png/60px-Fire_damage.png"},
+        {"Lightning damage", "0/06/Lightning_damage.png/60px-Lightning_damage.png"},
+    };
+
+    std::map<std::string, IDirect3DTexture9**> damagetype_icons;
     std::map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
-    std::unordered_map<GW::Constants::Language, std::unordered_map<uint32_t,GuiUtils::EncString*>> encoded_string_ids;
+    std::unordered_map<GW::Constants::Language, std::unordered_map<uint32_t, GuiUtils::EncString*>> encoded_string_ids;
     std::filesystem::path current_settings_folder;
     constexpr size_t MAX_WORKERS = 5;
     const wchar_t* GUILD_WARS_WIKI_FILES_PATH = L"img\\gww_files";
     const wchar_t* SKILL_IMAGES_PATH = L"img\\skills";
     const wchar_t* ITEM_IMAGES_PATH = L"img\\items";
     const wchar_t* PROF_ICONS_PATH = L"img\\professions";
+    const wchar_t* DMGTYPE_ICONS_PATH = L"img\\damagetypes";
 
     std::recursive_mutex worker_mutex;
     std::recursive_mutex main_mutex;
@@ -779,6 +802,29 @@ IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p)
     return texture;
 }
 
+IDirect3DTexture9** Resources::GetDamagetypeImage(std::string dmg_type)
+{
+    if (damagetype_icons.contains(dmg_type)) {
+        return damagetype_icons.at(dmg_type);
+    }
+    const auto texture = new IDirect3DTexture9*;
+    *texture = nullptr;
+    damagetype_icons[dmg_type] = texture;
+    if (damagetype_icon_urls.contains(dmg_type)) {
+        const auto path = GetPath(DMGTYPE_ICONS_PATH);
+        EnsureFolderExists(path);
+        const auto local_path = path / GuiUtils::SanitiseFilename(dmg_type + ".png");
+        const auto remote_path = std::format("https://wiki.guildwars.com/images/thumb/{}", damagetype_icon_urls.at(dmg_type));
+        LoadTexture(texture, local_path, remote_path, [dmg_type](const bool success, const std::wstring& error) {
+            if (!success) {
+                const auto dmg_type_wstr = GuiUtils::StringToWString(dmg_type);
+                Log::ErrorW(L"Failed to load icon for %d\n%s", dmg_type_wstr.c_str(), error.c_str());
+            }
+        });
+    }
+    return texture;
+}
+
 IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_t width)
 {
     ASSERT(filename && filename[0]);
@@ -864,8 +910,8 @@ IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id)
     const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
     ASSERT(skill && skill->icon_file_id);
     return GwDatTextureModule::LoadTextureFromFileId(skill->icon_file_id);
-
 }
+
 IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill_id)
 {
     if (skill_images.contains(skill_id)) {
@@ -987,7 +1033,8 @@ GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id, GW::Co
     return enc_string;
 }
 
-IDirect3DTexture9** Resources::GetItemImage(GW::Item* item) {
+IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
+{
     if (!(item && item->model_file_id))
         return nullptr;
     uint32_t model_id_to_load = 0;
@@ -998,7 +1045,7 @@ IDirect3DTexture9** Resources::GetItemImage(GW::Item* item) {
     if (is_composite_item) {
         // Armor/runes
         const auto model_file_info = GW::Items::GetCompositeModelInfo(item->model_file_id);
-        if(!model_id_to_load)
+        if (!model_id_to_load)
             model_id_to_load = model_file_info->file_ids[0xa];
         if (!model_id_to_load)
             model_id_to_load = is_female ? model_file_info->file_ids[5] : model_file_info->file_ids[0];

@@ -314,8 +314,8 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background).Value);
 
-    if (snap_to_party_window && party_window_position) {
-        const float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
+    const float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
+    const auto calculate_window_position = [uiscale_multiply]() -> auto {
         // NB: Use case to define GW::Vec4f ?
         GW::Vec2f x = party_window_position->xAxis();
         GW::Vec2f y = party_window_position->yAxis();
@@ -334,13 +334,16 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
         // GW Clamps windows to viewport; we need to do the same.
         GuiUtils::ClampRect(rect, viewport);
         // Left placement
-        GW::Vec2f internal_offset(
-            7.f, GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable ? 31.f : 34.f);
+        return rect;
+    };
+
+    if (snap_to_party_window && party_window_position) {
+        GW::Vec2f internal_offset(7.f, GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable ? 31.f : 34.f);
         internal_offset *= uiscale_multiply;
         const auto user_offset_x = abs(user_offset);
         float offset_width = width;
-        auto calculated_pos =
-            ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
+        const auto rect = calculate_window_position();
+        auto calculated_pos = ImVec2(rect.x + internal_offset.x - user_offset_x - offset_width, rect.y + internal_offset.y);
         if (calculated_pos.x < 0 || user_offset < 0) {
             // Right placement
             internal_offset.x = 4.f * uiscale_multiply;
@@ -398,26 +401,26 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
                     if (skill_activation.status == CASTING && skill_activation.cast_time * 1000 >= cast_indicator_threshold) {
                         const auto remainingCast = TIMER_DIFF(skill_activation.cast_start);
                         const auto percentageCast = std::min(remainingCast / (skill_activation.cast_time * 1000), 1.0f);
-                        const auto uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
-                        GW::Vec2f xPartyWindow = party_window_position->xAxis() * uiscale_multiply;
+                        const auto calculated_pos = calculate_window_position();
+                        GW::Vec2f xPartyWindow = { calculated_pos.x, calculated_pos.z };
                         xPartyWindow.x += PARTY_OFFSET_LEFT_BASE * uiscale_multiply;
                         xPartyWindow.y -= PARTY_OFFSET_RIGHT_BASE * uiscale_multiply;
-                        GW::Vec2f yPartyWindow = party_window_position->yAxis() * uiscale_multiply;
+                        GW::Vec2f yPartyWindow = {calculated_pos.y, calculated_pos.w};
                         yPartyWindow.x += PARTY_OFFSET_TOP_BASE * uiscale_multiply;
 
-                        ImVec2 member_tl(xPartyWindow.x, yPartyWindow.x + y * GuiUtils::GetPartyHealthbarHeight());
+                        ImVec2 member_topleft(xPartyWindow.x, yPartyWindow.x + y * GuiUtils::GetPartyHealthbarHeight());
 
                         if (party_map_indent[agent_id]) {
-                            member_tl.x += PARTY_HERO_INDENT_BASE * uiscale_multiply;
+                            member_topleft.x += PARTY_HERO_INDENT_BASE * uiscale_multiply;
                         }
 
-                        ImVec2 member_br(xPartyWindow.y,
-                                         member_tl.y + GuiUtils::GetPartyHealthbarHeight() - PARTY_MEMBER_PADDING_FIXED);
+                        ImVec2 member_bottomright(xPartyWindow.y,
+                                         member_topleft.y + GuiUtils::GetPartyHealthbarHeight() - PARTY_MEMBER_PADDING_FIXED);
 
-                        ImGui::PushClipRect(member_tl, member_br, false);
+                        ImGui::PushClipRect(member_topleft, member_bottomright, false);
                         ImGui::GetWindowDrawList()->AddRectFilled(
-                            ImVec2(member_tl.x, member_br.y - cast_indicator_height),
-                            ImVec2(member_tl.x + (member_br.x - member_tl.x) * percentageCast, member_br.y),
+                            ImVec2(member_topleft.x, member_bottomright.y - cast_indicator_height),
+                            ImVec2(member_topleft.x + (member_bottomright.x - member_topleft.x) * percentageCast, member_bottomright.y),
                             cast_indicator_color);
                         ImGui::PopClipRect();
                     }

@@ -1855,6 +1855,7 @@ void GameSettings::DrawSettingsInternal()
     if (ImGui::Checkbox("Remove 1.5 second minimum for the cast bar to show.", &remove_min_skill_warmup_duration)) {
         remove_skill_warmup_duration_patch.TogglePatch(remove_min_skill_warmup_duration);
     }
+    ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
 
     ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
     ImGui::Checkbox("Automatically return to outpost on defeat", &auto_return_on_defeat);
