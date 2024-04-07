@@ -5,9 +5,11 @@
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
+#include <GWCA/Context/WorldContext.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -20,6 +22,7 @@
 #include "ImGuiCppWrapper.h"
 
 #include <algorithm>
+#include <optional>
 
 namespace {
     constexpr double eps = 1e-3;
@@ -36,6 +39,17 @@ namespace {
                 return "Completed";
             case QuestStatus::Failed:
                 return "Failed";
+        }
+        return "";
+    }
+
+    std::string_view toString(Status status)
+    {
+        switch (status) {
+            case Status::Dead:
+                return "Dead";
+            case Status::Alive:
+                return "Alive";
         }
         return "";
     }
@@ -65,6 +79,15 @@ namespace {
                 return "Dervish";
             default:
                 return "Any";
+        }
+    }
+
+    void ShowHelp(const char* help)
+    {
+        ImGui::SameLine();
+        ImGui::TextDisabled("%s", "(?)");
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", help);
         }
     }
 }
@@ -507,6 +530,68 @@ void HasPartyWindowAllyOfNameCondition::drawSettings()
     ImGui::InputText("Ally name", &name);
 }
 
+/// ------------- PartyMemberStatusCondition -------------
+PartyMemberStatusCondition::PartyMemberStatusCondition(std::istringstream& stream)
+{
+    int read;
+    stream >> read;
+    status = (Status)read;
+    name = readStringWithSpaces(stream);
+}
+void PartyMemberStatusCondition::serialize(std::ostringstream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << (int)status;
+    writeStringWithSpaces(stream, name);
+}
+bool PartyMemberStatusCondition::check() const
+{
+    const auto info = GW::PartyMgr::GetPartyInfo();
+    const auto agentArray = GW::Agents::GetAgentArray();
+    if (!info || !agentArray) return false;
+
+    auto& instanceInfo = InstanceInfo::getInstance();
+
+    const auto agentID = [&] {
+        for (const auto& player : info->players) {
+            auto candidate = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
+            if (instanceInfo.getDecodedName(candidate) == name) {
+                return std::optional{candidate};
+            }
+        }
+        return std::optional<GW::AgentID>{};
+    }();
+
+    if (!agentID) return false;
+    
+    const auto agent = GW::Agents::GetAgentByID(agentID.value());
+    if (!agent) return false;
+    const auto living = agent->GetAsAgentLiving();
+
+    bool shouldBeAlive = status == Status::Alive;
+    return living && living->GetIsAlive() == shouldBeAlive;
+}
+void PartyMemberStatusCondition::drawSettings()
+{
+    ImGui::Text("Party window ally status");
+    ImGui::SameLine();
+    if (ImGui::Button(toString(status).data(), ImVec2(100, 0))) {
+        ImGui::OpenPopup("Pick status");
+    }
+    if (ImGui::BeginPopup("Pick status")) {
+        for (auto i = 0; i <= (int)Status::Alive; ++i) {
+            if (ImGui::Selectable(toString((Status)i).data())) {
+                status = (Status)i;
+            }
+        }
+        ImGui::EndPopup();
+    }
+    ImGui::SameLine();
+    ImGui::PushItemWidth(300);
+    ImGui::InputText("Ally name", &name);
+}
+
 /// ------------- QuestHasStateCondition -------------
 
 QuestHasStateCondition::QuestHasStateCondition(std::istringstream& stream)
@@ -527,12 +612,11 @@ void QuestHasStateCondition::serialize(std::ostringstream& stream) const
 }
 bool QuestHasStateCondition::check() const
 {
-    auto& instanceInfo = InstanceInfo::getInstance();
-    return instanceInfo.getQuestStatus(id) == status;
+    return InstanceInfo::getInstance().getQuestStatus(id) == status;
 }
 void QuestHasStateCondition::drawSettings()
 {
-    ImGui::Text("If the quest has status");
+    ImGui::Text("If the quest objective has status");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("id", reinterpret_cast<int*>(&id), 0);
@@ -549,4 +633,6 @@ void QuestHasStateCondition::drawSettings()
         }
         ImGui::EndPopup();
     }
+    ImGui::SameLine();
+    ShowHelp("Objective ID, NOT quest ID!\nUW: Chamber 146, Restore 147, UWG 149, Vale 150, Waste 151, Pits 152, Planes 153, Mnts 154, Pools 155");
 }

@@ -160,3 +160,16 @@ public:
     void initialAction() final;
     void drawSettings() final;
 };
+
+class DropBuffAction : public Action {
+public:
+    DropBuffAction() = default;
+    DropBuffAction(std::istringstream&);
+    ActionType type() const final { return ActionType::DropBuff; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
+};

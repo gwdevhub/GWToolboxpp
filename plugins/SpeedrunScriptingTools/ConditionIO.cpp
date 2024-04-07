@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 15);
+    static_assert((int)ConditionType::Count == 16);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -23,6 +23,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<InstanceProgressCondition>();
         case ConditionType::HasPartyWindowAllyOfName:
             return std::make_shared<HasPartyWindowAllyOfNameCondition>();
+        case ConditionType::PartyMemberStatus:
+            return std::make_shared<PartyMemberStatusCondition>();
         case ConditionType::OnlyTriggerOncePerInstance:
             return std::make_shared<OnlyTriggerOnceCondition>();
 
@@ -49,7 +51,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 15);
+    static_assert((int)ConditionType::Count == 16);
     switch (type) {
         case ConditionType::Not:
             return "Negation";
@@ -67,6 +69,8 @@ std::string_view toString(ConditionType type)
             return "Party window contains ally";
         case ConditionType::OnlyTriggerOncePerInstance:
             return "Only trigger once";
+        case ConditionType::PartyMemberStatus:
+            return "Party member has status";
 
         case ConditionType::PlayerIsNearPosition:
             return "Player position";
@@ -92,7 +96,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(std::istringstream& stream)
 {
-static_assert((int)ConditionType::Count == 15);
+static_assert((int)ConditionType::Count == 16);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -113,6 +117,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<HasPartyWindowAllyOfNameCondition>(stream);
     case ConditionType::OnlyTriggerOncePerInstance:
         return std::make_shared<OnlyTriggerOnceCondition>(stream);
+    case ConditionType::PartyMemberStatus:
+        return std::make_shared<PartyMemberStatusCondition>(stream);
 
     case ConditionType::PlayerIsNearPosition:
         return std::make_shared<PlayerIsNearPositionCondition>(stream);
