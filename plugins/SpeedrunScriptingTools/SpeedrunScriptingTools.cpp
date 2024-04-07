@@ -3,6 +3,7 @@
 #include <ConditionIO.h>
 #include <ActionIO.h>
 #include <InstanceInfo.h>
+#include <utils.h>
 #include <GWCA/GWCA.h>
 
 #include <GWCA/Utilities/Hooker.h>
@@ -115,7 +116,8 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
         switch (token[0]) {
             case 'S':
                 m_scripts.push_back({});
-                stream >> m_scripts.back().name;
+                m_scripts.back().name = readStringWithSpaces(stream);
+                printf("read name %s", m_scripts.back().name.c_str());
                 stream >> m_scripts.back().triggerPacket;
                 stream >> m_scripts.back().enabled;
                 break;
@@ -141,7 +143,7 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
     std::ostringstream stream;
     for (const auto& script : m_scripts) {
         stream << 'S' << " ";
-        stream << script.name << " ";
+        writeStringWithSpaces(stream, script.name);
         stream << (int)script.triggerPacket << " ";
         stream << script.enabled << " ";
         
@@ -168,8 +170,7 @@ void SpeedrunScriptingTools::Update(float delta)
 
     if (!IsMapReady()) return;
 
-    if (m_currentScript && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-        m_currentScript = std::nullopt;
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         return;
     }
 
