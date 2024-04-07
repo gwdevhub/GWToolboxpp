@@ -1,4 +1,5 @@
 #include <ActionImpls.h>
+#include <utils.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
@@ -15,8 +16,6 @@
 #include <ImGuiCppWrapper.h>
 
 namespace {
-    const std::string endOfMessageSignifier = "ENDOFMESSAGE";
-
     GW::Item* FindMatchingItem(GW::Constants::Bag _bag_idx, uint32_t model_id)
     {
         GW::Bag* bag = GW::Items::GetBag(_bag_idx);
@@ -95,6 +94,8 @@ bool MoveToAction::isComplete() const
 {
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
+
+    if (!player->GetIsMoving()) GW::Agents::Move(pos);
 
     return GW::GetDistance(player->pos, pos) < accuracy + eps;
 }
@@ -358,21 +359,14 @@ SendChatAction::SendChatAction(std::istringstream& stream)
     stream >> read;
     channel = (Channel)read;
 
-    std::string word;
-    while (!stream.eof()) {
-        stream >> word;
-        if (word == endOfMessageSignifier) break;
-        message += word + " ";
-    }
-    if (!message.empty()) {
-        message.erase(message.size() - 1, 1); // last character is space
-    }
+    message = readStringWithSpaces(stream);
 }
 void SendChatAction::serialize(std::ostringstream& stream) const
 {
     Action::serialize(stream);
 
-    stream << (int)channel << " " << message << " " << endOfMessageSignifier << " ";
+    stream << (int)channel << " ";
+    writeStringWithSpaces(stream, message);
 }
 void SendChatAction::initialAction()
 {

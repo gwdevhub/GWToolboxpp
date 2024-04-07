@@ -1,6 +1,7 @@
 #include <ConditionImpls.h>
 
 #include <ConditionIO.h>
+#include <utils.h>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
@@ -14,16 +15,14 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
-#include <GWCA/Packets/StoC.h>
 
-#include <unordered_map>
-#include <random>
 #include "imgui.h"
 #include "ImGuiCppWrapper.h"
 
+#include <algorithm>
+
 namespace {
     constexpr double eps = 1e-3;
-    const std::string endOfNameSignifier = "ENDOFNAME";
     const std::string missingContentToken = "/";
 
     std::string_view toString(QuestStatus status)
@@ -404,21 +403,13 @@ void PlayerHasClassCondition::drawSettings()
 /// ------------- PlayerHasNameCondition -------------
 PlayerHasNameCondition::PlayerHasNameCondition(std::istringstream& stream)
 {
-    std::string word;
-    while (!stream.eof()) {
-        stream >> word;
-        if (word == endOfNameSignifier) break;
-        name += word + " ";
-    }
-    if (!name.empty()) {
-        name.erase(name.size() - 1, 1); // last character is space
-    }
+    name = readStringWithSpaces(stream);
 }
 void PlayerHasNameCondition::serialize(std::ostringstream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << name << " " << endOfNameSignifier << " ";
+    writeStringWithSpaces(stream, name);
 }
 bool PlayerHasNameCondition::check() const
 {
@@ -489,21 +480,13 @@ void CurrentTargetHasHpBelowCondition::drawSettings()
 /// ------------- HasPartyWindowAllyOfNameCondition -------------
 HasPartyWindowAllyOfNameCondition::HasPartyWindowAllyOfNameCondition(std::istringstream& stream)
 {
-    std::string word;
-    while (!stream.eof()) {
-        stream >> word;
-        if (word == endOfNameSignifier) break;
-        name += word + " ";
-    }
-    if (!name.empty()) {
-        name.erase(name.size() - 1, 1); //last character is space
-    }
+    name = readStringWithSpaces(stream);
 }
 void HasPartyWindowAllyOfNameCondition::serialize(std::ostringstream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << name << " " << endOfNameSignifier << " ";
+    writeStringWithSpaces(stream, name);
 }
 bool HasPartyWindowAllyOfNameCondition::check() const
 {
