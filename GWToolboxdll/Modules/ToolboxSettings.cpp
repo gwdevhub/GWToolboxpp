@@ -51,17 +51,17 @@
 #include <Windows/ObserverExportWindow.h>
 #include <Windows/CompletionWindow.h>
 #include <Windows/DupingWindow.h>
+#include <Windows/RerollWindow.h>
+#include <Windows/ArmoryWindow.h>
+
 #ifdef _DEBUG
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/DoorMonitorWindow.h>
 #include <Windows/StringDecoderWindow.h>
 #include <Windows/SkillListingWindow.h>
-
-#endif
-#include <Windows/PathfindingWindow.h>
-#include <Windows/RerollWindow.h>
-#include <Windows/ArmoryWindow.h>
 #include <Windows/TargetInfoWindow.h>
+#include <Windows/PathfindingWindow.h>
+#endif
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
