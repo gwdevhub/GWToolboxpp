@@ -7,6 +7,21 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 6.13
+* [Update] Compatibility with GW Version 37.363
+* [Removed] Toolbox no longer works in PvP. This is intentional.
+* [New] Added option to show quest markers for all quests on the minimap
+* [New] Added /bonds chat command
+* [New] Added XP scrolls to pcon window
+* [Minor] Completion window stores mission state
+* [Minor] Added texture creation tracking to info window
+* [Minor] Added lockpicks to pcons window
+* [Minor] Fixed skill monitor cast indication for half-casttime casts
+* [Minor] Reordered the armory window pieces to ingame order
+* [Fix] Fixed gw crash when using /chat without an argument
+* [Fix] Fixed bonds not showing for allies like summoning stones
+* [Fix] Fixed minimap not taking inputs when it was snapped to compass, but size and position were unlocked
+
 ## Version 6.12
 * [Fix] You can search in the TravelWindow again
 * [Minor] Added Festive Winter Hood to ArmoryWindow
