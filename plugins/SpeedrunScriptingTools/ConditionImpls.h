@@ -223,3 +223,31 @@ private:
     std::string name = "";
     Status status = Status::Dead;
 };
+
+class KeyIsPressedCondition : public Condition {
+public:
+    KeyIsPressedCondition() = default;
+    KeyIsPressedCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::KeyIsPressed; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    long shortcutKey = 0;
+    long shortcutMod = 0;
+    char hotkeyDescription[64]{};
+};
+
+class InstanceTimeCondition : public Condition {
+public:
+    InstanceTimeCondition() = default;
+    InstanceTimeCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::InstanceTime; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    int timeInSeconds = 0;
+};

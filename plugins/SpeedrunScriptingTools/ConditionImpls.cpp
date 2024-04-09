@@ -18,6 +18,9 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 
+#include <Keys.h>
+
+#include "windows.h"
 #include "imgui.h"
 #include "ImGuiCppWrapper.h"
 
@@ -286,7 +289,7 @@ bool OnlyTriggerOnceCondition::check() const
 }
 void OnlyTriggerOnceCondition::drawSettings()
 {
-    ImGui::Text("If script has not been triggered in this instance (this condition has to come last)");
+    ImGui::Text("If script has not been triggered in this instance");
 }
 
 /// ------------- PlayerIsNearPositionCondition -------------
@@ -635,4 +638,99 @@ void QuestHasStateCondition::drawSettings()
     }
     ImGui::SameLine();
     ShowHelp("Objective ID, NOT quest ID!\nUW: Chamber 146, Restore 147, UWG 149, Vale 150, Waste 151, Pits 152, Planes 153, Mnts 154, Pools 155");
+}
+
+/// ------------- KeyIsPressedCondition -------------
+KeyIsPressedCondition::KeyIsPressedCondition(std::istringstream& stream)
+{
+    stream >> shortcutKey >> shortcutMod;
+}
+void KeyIsPressedCondition::serialize(std::ostringstream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << shortcutKey << " " << shortcutMod << " ";
+}
+bool KeyIsPressedCondition::check() const
+{
+    bool keyIsPressed = GetAsyncKeyState(shortcutKey) & (1 << 15);
+    if (shortcutMod & ModKey_Control) keyIsPressed &= ImGui::IsKeyDown(ImGuiKey_ModCtrl);
+    if (shortcutMod & ModKey_Shift) keyIsPressed &= ImGui::IsKeyDown(ImGuiKey_ModShift);
+    if (shortcutMod & ModKey_Alt) keyIsPressed &= ImGui::IsKeyDown(ImGuiKey_ModAlt);
+
+    return keyIsPressed;
+}
+void KeyIsPressedCondition::drawSettings()
+{
+    ImGui::Text("If key is pressed:");
+    ImGui::SameLine();
+    if (ImGui::Button(hotkeyDescription)) {
+        ImGui::OpenPopup("Select Hotkey");
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Click to change hotkey");
+    if (ImGui::BeginPopup("Select Hotkey")) {
+        static long newkey = 0;
+        char newkey_buf[256]{};
+        long newmod = 0;
+
+        ImGui::Text("Press key");
+        if (ImGui::IsKeyDown(ImGuiKey_ModCtrl)) newmod |= ModKey_Control;
+        if (ImGui::IsKeyDown(ImGuiKey_ModShift)) newmod |= ModKey_Shift;
+        if (ImGui::IsKeyDown(ImGuiKey_ModAlt)) newmod |= ModKey_Alt;
+
+        if (newkey == 0) { // we are looking for the key
+            for (WORD i = 0; i < 512; i++) {
+                switch (i) {
+                    case VK_CONTROL:
+                    case VK_LCONTROL:
+                    case VK_RCONTROL:
+                    case VK_SHIFT:
+                    case VK_LSHIFT:
+                    case VK_RSHIFT:
+                    case VK_MENU:
+                    case VK_LMENU:
+                    case VK_RMENU:
+                        continue;
+                    default: {
+                        if (::GetKeyState(i) & 0x8000) newkey = i;
+                    }
+                }
+            }
+        }
+        else if (!(::GetKeyState(newkey) & 0x8000)) { // We have a key, check if it was released
+            shortcutKey = newkey;
+            shortcutMod = newmod;
+            ModKeyName(hotkeyDescription, _countof(hotkeyDescription), newmod, newkey);
+            newkey = 0;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ModKeyName(newkey_buf, _countof(newkey_buf), newmod, newkey);
+        ImGui::Text("%s", newkey_buf);
+
+        ImGui::EndPopup();
+    }
+}
+
+/// ------------- InstanceTimeCondition -------------
+
+InstanceTimeCondition::InstanceTimeCondition(std::istringstream& stream)
+{
+    stream >> timeInSeconds;
+}
+void InstanceTimeCondition::serialize(std::ostringstream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << timeInSeconds << " ";
+}
+bool InstanceTimeCondition::check() const
+{
+    return (int)(GW::Map::GetInstanceTime() / 1000) >= timeInSeconds;
+}
+void InstanceTimeCondition::drawSettings()
+{
+    ImGui::Text("If the instance is older than");
+    ImGui::SameLine();
+    ImGui::InputInt("s", &timeInSeconds, 0);
 }
