@@ -217,12 +217,13 @@ namespace {
                 const std::regex armor_ratings_regex("<h2><span class=\"mw-headline\" id=\"Armor_ratings\">([\\s\\S]*?)</table>");
                 if (std::regex_search(agent_info->wiki_content, m, armor_ratings_regex)) {
                     std::string armor_table_found = m[1].str();
+                    armor_table_found.erase(std::ranges::remove(armor_table_found, '\n').begin(), armor_table_found.end());
 
                     // Iterate over all skills in this list.
-                    const auto armor_cell_regex = std::regex("<td>[\\s\\S]*?title=\"([^\"]+)\"[\\s\\S]*?<td>([0-9 \\(\\)]+)</td>");
+                    const auto armor_cell_regex = std::regex(R"regex(<td>[\s\S]*?title="([^"]+)"[\s\S]*?<td>([0-9 \(\)]+).*?<\/td>)regex");
                     auto words_begin = std::sregex_iterator(armor_table_found.begin(), armor_table_found.end(), armor_cell_regex);
                     auto words_end = std::sregex_iterator();
-                    for (std::sregex_iterator i = words_begin; i != words_end; ++i)
+                    for (auto i = words_begin; i != words_end; ++i)
                     {
                         auto key = i->str(1);
                         auto val = i->str(2);
@@ -342,8 +343,29 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             }
             if (current_agent_info->wiki_armor_ratings.size()) {
                 ImGui::Text("Armor Ratings:");
-                for (const auto it : current_agent_info->wiki_armor_ratings) {
-                    ImGui::Text("%s: %s", it.first.c_str(), it.second.c_str());
+                for (const auto [damage_type, armour_rating] : current_agent_info->wiki_armor_ratings) {
+                    const float btnw = ImGui::GetContentRegionAvail().x / 2.f;
+                    const ImVec2 btn_dims = { btnw,.0f };
+                    const auto open_wiki = [&] {
+                        auto damage_type_wstr = GuiUtils::StringToWString(damage_type);
+                        std::ranges::replace(damage_type_wstr, L' ', L'_');
+                        GuiUtils::OpenWiki(damage_type_wstr.c_str());
+                    };
+                    ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, { 0.f, .5f });
+                    if (const auto dmgtype_img = Resources::GetDamagetypeImage(damage_type)) {
+                        ImGui::PushID(damage_type.c_str());
+                        if (ImGui::IconButton(armour_rating.c_str(), *dmgtype_img, btn_dims)) {
+                            open_wiki();
+                        }
+                        ImGui::PopID();
+                    }
+                    else {
+                        ImGui::Text("%s: %s", damage_type.c_str(), armour_rating.c_str());
+                        if (ImGui::IsItemClicked()) {
+                            open_wiki();
+                        }
+                    }
+                    ImGui::PopStyleVar();
                 }
             }
             ImGui::EndTable();
