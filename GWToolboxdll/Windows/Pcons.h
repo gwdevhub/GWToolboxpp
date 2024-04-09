@@ -265,3 +265,20 @@ public:
     [[nodiscard]] bool CanUseByEffect() const override;
     size_t QuantityForEach(const GW::Item* item) const override;
 };
+
+class PconScroll : public Pcon {
+public:
+    PconScroll(const char* chat,
+             const char* abbrev,
+             const char* ini,
+             const wchar_t* file,
+             const ImVec2 uv0, const ImVec2 uv1,
+             const int threshold,
+             const char* desc = nullptr)
+        : Pcon(chat, abbrev, ini, file, uv0, uv1, threshold, desc) { }
+
+    PconScroll(const PconCity&) = delete;
+
+    [[nodiscard]] bool CanUseByEffect() const override;
+    size_t QuantityForEach(const GW::Item* item) const override;
+};

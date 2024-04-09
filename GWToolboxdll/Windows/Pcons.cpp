@@ -819,7 +819,6 @@ size_t PconLunar::QuantityForEach(const GW::Item* item) const
             return 0;
     }
 }
-
 bool PconLunar::CanUseByEffect() const
 {
     const GW::Agent* _player = GW::Agents::GetPlayer();
@@ -828,4 +827,51 @@ bool PconLunar::CanUseByEffect() const
     }
 
     return GW::Effects::GetPlayerEffectBySkillId(GW::Constants::SkillID::Lunar_Blessing) == nullptr;
+}
+
+bool PconScroll::CanUseByEffect() const
+{
+    using namespace GW::Constants;
+    const GW::Agent* _player = GW::Agents::GetPlayer();
+    if (!_player) {
+        return false; // player doesn't exist?
+    }
+
+    GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
+    if (!effects) {
+        return true;
+    }
+
+    for (DWORD i = 0; i < effects->size(); i++) {
+        if (effects->at(i).GetTimeRemaining() < 1000) {
+            continue;
+        }
+        if (effects->at(i).skill_id == SkillID::Adventurers_Insight
+            || effects->at(i).skill_id == SkillID::Berserkers_Insight
+            || effects->at(i).skill_id == SkillID::Heros_Insight
+            || effects->at(i).skill_id == SkillID::Hunters_Insight
+            || effects->at(i).skill_id == SkillID::Lightbringers_Insight
+            || effects->at(i).skill_id == SkillID::Rampagers_Insight
+            || effects->at(i).skill_id == SkillID::Slayers_Insight) {
+            return false; // already on
+            }
+    }
+    return true;
+}
+
+size_t PconScroll::QuantityForEach(const GW::Item* item) const
+{
+    using namespace GW::Constants;
+    switch (item->model_id) {
+        case ItemID::ScrollOfAdventurersInsight:
+        case ItemID::ScrollOfBerserkersInsight:
+        case ItemID::ScrollOfHerosInsight:
+        case ItemID::ScrollOfHuntersInsight:
+        case ItemID::ScrollOfRampagersInsight:
+        case ItemID::ScrollOfSlayersInsight:
+        case ItemID::ScrollOfTheLightbringer:
+            return 1;
+        default:
+            return 0;
+    }
 }

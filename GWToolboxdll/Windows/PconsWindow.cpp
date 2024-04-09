@@ -100,8 +100,8 @@ PconsWindow::PconsWindow()
                                     ImVec2(0 / s, 5 / s), ImVec2(49 / s, 54 / s),
                                     ItemID::PahnaiSalad, SkillID::Pahnai_Salad_item_effect, 10));
 
-    pcons.push_back(new PconGeneric(L"Scroll of Hunter's Insight", 5976, SkillID::Hunters_Insight, 20));
-    pcons.back()->visible = false;
+    pcons.push_back(new PconScroll("XP scroll", "XP scroll", "scroll", L"Scroll of Hunter's Insight",
+                                 {0, 0}, {1, 1}, 20));
 
     // Refillers
 
