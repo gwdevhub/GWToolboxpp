@@ -13,7 +13,8 @@ enum class ActionType {
     Wait,
     SendChat,
     Cancel, 
-    DropBuff,
+    DropBuff, 
+    EquipItem,
     Count
 };
 

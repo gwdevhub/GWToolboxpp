@@ -22,9 +22,10 @@
 namespace {
     GW::HookEntry InstanceLoadFile_Entry;
 
-    bool IsMapReady()
-    {
-        return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && GW::Agents::GetPlayerAsAgentLiving();
+    bool canAddCondition(const Script& script) {
+        return !std::ranges::any_of(script.conditions, [](const auto& cond) {
+            return cond->type() == ConditionType::OnlyTriggerOncePerInstance;
+        });
     }
 }
 
@@ -50,11 +51,13 @@ void SpeedrunScriptingTools::DrawSettings()
             }
             if (conditionToDelete.has_value()) scriptIt->conditions.erase(conditionToDelete.value());
             // Add condition
-            ImGui::PushID(drawCount++);
-            if (auto newCondition = drawConditionSelector(ImGui::GetContentRegionAvail().x)) {
-                scriptIt->conditions.push_back(std::move(newCondition));
+            if (canAddCondition(*scriptIt)) {
+                ImGui::PushID(drawCount++);
+                if (auto newCondition = drawConditionSelector(ImGui::GetContentRegionAvail().x)) {
+                    scriptIt->conditions.push_back(std::move(newCondition));
+                }
+                ImGui::PopID();
             }
-            ImGui::PopID();
 
             //Actions
             ImGui::Separator();
@@ -168,9 +171,10 @@ void SpeedrunScriptingTools::Update(float delta)
 {
     ToolboxPlugin::Update(delta);
 
-    if (!IsMapReady()) return;
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Agents::GetPlayerAsAgentLiving()) return;
 
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+        m_currentScript = std::nullopt;
         return;
     }
 

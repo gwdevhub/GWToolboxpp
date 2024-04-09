@@ -27,6 +27,9 @@ enum class ConditionType {
     CurrentTargetHasHpBelow,
     CurrentTargetIsUsingSkill,
 
+    KeyIsPressed,
+    InstanceTime,
+
     Count
 };
 

@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 16);
+    static_assert((int)ConditionType::Count == 18);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -44,6 +44,12 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
         case ConditionType::CurrentTargetIsUsingSkill:
             return std::make_shared<CurrentTargetIsCastingSkillCondition>();
 
+        case ConditionType::KeyIsPressed:
+            return std::make_shared<KeyIsPressedCondition>();
+
+        case ConditionType::InstanceTime:
+            return std::make_shared<InstanceTimeCondition>();
+
         default:
             return nullptr;
     }
@@ -51,7 +57,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 16);
+    static_assert((int)ConditionType::Count == 18);
     switch (type) {
         case ConditionType::Not:
             return "Negation";
@@ -88,6 +94,12 @@ std::string_view toString(ConditionType type)
         case ConditionType::CurrentTargetIsUsingSkill:
             return "Current target skill";
 
+        case ConditionType::KeyIsPressed:
+            return "Keypress";
+
+        case ConditionType::InstanceTime:
+            return "Instance time";
+
         default:
             return "Unknown";
     }
@@ -96,7 +108,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(std::istringstream& stream)
 {
-static_assert((int)ConditionType::Count == 16);
+static_assert((int)ConditionType::Count == 18);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -135,6 +147,11 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<CurrentTargetHasHpBelowCondition>(stream);
     case ConditionType::CurrentTargetIsUsingSkill:
         return std::make_shared<CurrentTargetIsCastingSkillCondition>(stream);
+
+    case ConditionType::KeyIsPressed:
+        return std::make_shared<KeyIsPressedCondition>(stream);
+    case ConditionType::InstanceTime:
+        return std::make_shared<InstanceTimeCondition>(stream);
 
     default:
         assert(false);

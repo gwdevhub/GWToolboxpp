@@ -16,6 +16,7 @@
 
 #include "imgui.h"
 #include <ImGuiCppWrapper.h>
+#include <thread>
 
 namespace {
     GW::Item* FindMatchingItem(GW::Constants::Bag _bag_idx, uint32_t model_id)
@@ -36,6 +37,22 @@ namespace {
         for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size && !item; i++)
             item = FindMatchingItem(static_cast<GW::Constants::Bag>(i), model_id);
         return item;
+    }
+    void SafeEquip(GW::Item* item)
+    {
+        using namespace std::chrono_literals;
+        GW::AgentLiving* p = GW::Agents::GetCharacter();
+        const GW::Skillbar* s = GW::SkillbarMgr::GetPlayerSkillbar();
+        if (!item || !p || p->GetIsDead() || p->GetIsKnockedDown() || (s && s->casting)) return;
+        if (p->skill) {
+            GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT);
+            std::this_thread::sleep_for(10ms);
+        }
+        if (!p->GetIsIdle() && !p->GetIsMoving()) {
+            GW::Agents::Move(p->pos);
+            std::this_thread::sleep_for(10ms);
+        }
+        GW::Items::EquipItem(item);
     }
     const GW::AgentLiving* findAgentWithId(uint32_t id)
     {
@@ -253,6 +270,33 @@ void UseItemAction::initialAction()
     GW::Items::UseItem(item);
 }
 void UseItemAction::drawSettings()
+{
+    ImGui::Text("Use item:");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputInt("ID", &id, 0);
+}
+
+/// ------------- EquipItemAction -------------
+EquipItemAction::EquipItemAction(std::istringstream& stream)
+{
+    stream >> id;
+}
+void EquipItemAction::serialize(std::ostringstream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << id << " ";
+}
+void EquipItemAction::initialAction()
+{
+    Action::initialAction();
+
+    const auto item = FindMatchingItem(id);
+    if (!item) return;
+    SafeEquip(item);
+}
+void EquipItemAction::drawSettings()
 {
     ImGui::Text("Use item:");
     ImGui::PushItemWidth(90);

@@ -85,6 +85,19 @@ private:
     int id = 0;
 };
 
+class EquipItemAction : public Action {
+public:
+    EquipItemAction() = default;
+    EquipItemAction(std::istringstream&);
+    ActionType type() const final { return ActionType::EquipItem; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    int id = 0;
+};
+
 class SendDialogAction : public Action {
 public:
     SendDialogAction() = default;
