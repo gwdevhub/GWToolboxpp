@@ -679,7 +679,7 @@ bool PconCity::CanUseByEffect() const
 {
     using namespace GW::Constants;
     const GW::Agent* _player = GW::Agents::GetPlayer();
-    if (!_player) {
+    if (!_player || _player->move_x == 0.0f && _player->move_y == 0.0f) {
         return false; // player doesn't exist?
     }
 
@@ -688,19 +688,15 @@ bool PconCity::CanUseByEffect() const
         return true;
     }
 
-    if (_player->move_x == 0.0f && _player->move_y == 0.0f) {
-        return false;
-    }
-
-    for (DWORD i = 0; i < effects->size(); i++) {
-        if (effects->at(i).GetTimeRemaining() < 1000) {
+    for (auto& effect : *effects) {
+        if (effect.GetTimeRemaining() < 1000) {
             continue;
         }
-        if (effects->at(i).skill_id == SkillID::Sugar_Rush_short
-            || effects->at(i).skill_id == SkillID::Sugar_Rush_medium
-            || effects->at(i).skill_id == SkillID::Sugar_Rush_long
-            || effects->at(i).skill_id == SkillID::Sugar_Jolt_short
-            || effects->at(i).skill_id == SkillID::Sugar_Jolt_long) {
+        if (effect.skill_id == SkillID::Sugar_Rush_short
+            || effect.skill_id == SkillID::Sugar_Rush_medium
+            || effect.skill_id == SkillID::Sugar_Rush_long
+            || effect.skill_id == SkillID::Sugar_Jolt_short
+            || effect.skill_id == SkillID::Sugar_Jolt_long) {
             return false; // already on
         }
     }
