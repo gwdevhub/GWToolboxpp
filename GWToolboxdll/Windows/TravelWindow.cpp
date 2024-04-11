@@ -84,7 +84,7 @@ namespace {
         return TravelWindow::Instance();
     }
 
-    bool ImInPresearing() { return GW::Map::GetCurrentMapInfo()->region == GW::Region_Presearing; }
+    bool ImInPresearing() { return GW::Map::GetIsMapLoaded() && GW::Map::GetCurrentMapInfo()->region == GW::Region_Presearing; }
 
     bool IsInGH()
     {
