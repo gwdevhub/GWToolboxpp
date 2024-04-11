@@ -322,7 +322,7 @@ namespace {
 
     void CHAT_CMD_FUNC(CmdBondsAddRemove) {
 
-        auto syntax_err = [argc,argv]() {
+        const auto syntax_err = [argc, argv] {
             Log::WarningW(L"Invalid syntax for /%s; correct syntax:\n%S", argc ? argv[0] : L"Unk", cmd_bonds_syntax);
         };
 
@@ -364,23 +364,26 @@ namespace {
             }
         }
         if (add_bond && !skill_id) {
-            Log::WarningW(L"/%s: skill_id required when adding bond",argv[0]);
+            Log::WarningW(L"/%s: skill_id required when adding bond", argv[0]);
+            syntax_err();
+            return;
+        }
+        if (skill_id >= static_cast<uint32_t>(GW::Constants::SkillID::Count)) {
+            Log::WarningW(L"%d: is not a valid skill id", skill_id);
             syntax_err();
             return;
         }
         if (add_bond && !agent_id) {
-            Log::WarningW(L"/%s: party_member_index required when adding bond",argv[0]);
+            Log::WarningW(L"/%s: party_member_index required when adding bond", argv[0]);
             syntax_err();
             return;
         }
 
-
-
         if (add_bond) {
-            BondsWidget::UseBuff(agent_id, (GW::Constants::SkillID)skill_id);
+            BondsWidget::UseBuff(agent_id, static_cast<GW::Constants::SkillID>(skill_id));
         }
         else {
-            BondsWidget::DropBuffs(agent_id,(GW::Constants::SkillID)skill_id);
+            BondsWidget::DropBuffs(agent_id,static_cast<GW::Constants::SkillID>(skill_id));
         }
 
     }
