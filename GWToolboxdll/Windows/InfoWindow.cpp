@@ -756,18 +756,6 @@ namespace {
                 ImGui::PopID();
             }
         }
-        if (record_ui_messages) {
-            ImGui::PushID(&ui_message_packets_recorded);
-            if (ImGui::SmallButton("Reset")) {
-                ClearUIMessagesRecorded();
-            }
-            for (auto it : ui_message_packets_recorded) {
-                ImGui::PushID(it);
-                ImGui::Text("0x%08x 0x%08x 0x%08x", it->msgid, it->wParam, it->lParam);
-                ImGui::PopID();
-            }
-            ImGui::PopID();
-        }
         if (ImGui::CollapsingHeader("Quoted Item")) {
             ImGui::Text("Most recently quoted item (buy or sell) from trader");
             static GuiUtils::EncString quoted_name;
