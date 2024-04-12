@@ -1423,7 +1423,8 @@ bool get_next_bag_slot(const InventoryManager::Item* item, GW::Constants::Bag* b
     if (slot >= bag->items.size()) {
         bag_id = GW::Constants::Bag::Max;
         slot = 0;
-        for (auto it_bag_id = GW::Constants::Bag(bag->index+1); it_bag_id < GW::Constants::Bag::Max; it_bag_id = (GW::Constants::Bag)((size_t)it_bag_id + 1)) {
+        // Start from bag->index+2 as that is the next potential bag
+        for (auto it_bag_id = GW::Constants::Bag(bag->index+2); it_bag_id < GW::Constants::Bag::Max; it_bag_id = (GW::Constants::Bag)((size_t)it_bag_id + 1)) {
             const auto it_bag = GW::Items::GetBag(it_bag_id);
             if (it_bag) {
                 bag_id = it_bag_id;
