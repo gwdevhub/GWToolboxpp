@@ -1803,6 +1803,9 @@ void GameSettings::DrawInventorySettings()
     ImGui::Checkbox("Shorthand item description on weapon ping", &shorthand_item_ping);
     ImGui::ShowHelp("Include a concise description of your equipped weapon when ctrl+clicking a weapon set");
 
+    ImGui::Checkbox("Fetch prices for item components", &fetch_module_prices);
+    ImGui::ShowHelp("When enabled, the item description will contain information about the components of the item and their respective prices");
+
     ImGui::Checkbox("Lazy chest looting", &lazy_chest_looting);
     ImGui::ShowHelp("Toolbox will try to target any nearby reserved items\nwhen using the 'target nearest item' key next to a chest\nto pick stuff up.");
     ImGui::Text("Hide item descriptions in:");
@@ -1811,7 +1814,6 @@ void GameSettings::DrawInventorySettings()
     ImGui::Checkbox("Explorable Area###disable_item_descriptions_in_explorable", &disable_item_descriptions_in_explorable);
     ImGui::SameLine();
     ImGui::Checkbox("Outpost###disable_item_descriptions_in_outpost", &disable_item_descriptions_in_outpost);
-    ImGui::Checkbox("Perform price check on item components", &fetch_module_prices);
     if (disable_item_descriptions_in_explorable || disable_item_descriptions_in_outpost) {
         ImGui::Indent();
         ImGui::TextDisabled("Hold Alt when hovering an item to show full description");
