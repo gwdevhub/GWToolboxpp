@@ -812,6 +812,7 @@ bool EotNMission::HasQuest()
 
 void EotNMission::CheckProgress(const std::wstring& player_name) {
     Mission::CheckProgress(player_name);
+    bonus = is_completed;
     // EotN mission icons are sprited - first sprite for incomplete, second for complete
     if (is_completed) {
         icon_uv_offset[0] = { .5f,0.f };
