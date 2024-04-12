@@ -1814,7 +1814,6 @@ void GameSettings::DrawInventorySettings()
     ImGui::Checkbox("Explorable Area###disable_item_descriptions_in_explorable", &disable_item_descriptions_in_explorable);
     ImGui::SameLine();
     ImGui::Checkbox("Outpost###disable_item_descriptions_in_outpost", &disable_item_descriptions_in_outpost);
-    ImGui::Checkbox("Perform price check on item components", &fetch_module_prices);
     if (disable_item_descriptions_in_explorable || disable_item_descriptions_in_outpost) {
         ImGui::Indent();
         ImGui::TextDisabled("Hold Alt when hovering an item to show full description");
