@@ -6,7 +6,7 @@
 namespace {
     std::shared_ptr<Action> makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 12);
+        static_assert((int)ActionType::Count == 14);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -32,6 +32,10 @@ namespace {
                 return std::make_shared<DropBuffAction>();
             case ActionType::EquipItem:
                 return std::make_shared<EquipItemAction>();
+            case ActionType::Conditioned:
+                return std::make_shared<ConditionedAction>();
+            case ActionType::RepopMinipet:
+                return std::make_shared<RepopMinipetAction>();
             default:
                 return nullptr;
         }
@@ -39,7 +43,7 @@ namespace {
 
     std::string_view toString(ActionType type)
     {
-        static_assert((int)ActionType::Count == 12);
+        static_assert((int)ActionType::Count == 14);
         switch (type) {
             case ActionType::MoveTo:
                 return "Move to";
@@ -65,6 +69,10 @@ namespace {
                 return "Drop buff";
             case ActionType::EquipItem:
                 return "Equip Item";
+            case ActionType::Conditioned:
+                return "Optional";
+            case ActionType::RepopMinipet:
+                return "Safely repop minipet";
             default:
                 return "Unknown";
         }
@@ -73,7 +81,7 @@ namespace {
 
 std::shared_ptr<Action> readAction(std::istringstream& stream)
 {
-    static_assert((int)ActionType::Count == 12);
+    static_assert((int)ActionType::Count == 14);
     int type;
 
     stream >> type;
@@ -102,6 +110,10 @@ std::shared_ptr<Action> readAction(std::istringstream& stream)
             return std::make_shared<DropBuffAction>(stream);
         case ActionType::EquipItem:
             return std::make_shared<EquipItemAction>(stream);
+        case ActionType::Conditioned:
+            return std::make_shared<ConditionedAction>(stream);
+        case ActionType::RepopMinipet:
+            return std::make_shared<RepopMinipetAction>(stream);
         default:
             return nullptr;
     }

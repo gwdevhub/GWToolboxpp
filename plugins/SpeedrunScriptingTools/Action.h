@@ -15,6 +15,8 @@ enum class ActionType {
     Cancel, 
     DropBuff, 
     EquipItem,
+    Conditioned,
+    RepopMinipet,
     Count
 };
 
