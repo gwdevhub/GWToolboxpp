@@ -26,6 +26,7 @@ namespace {
     bool show_timestamp_24h = false;
     bool npc_speech_bubbles_as_chat = false;
     bool redirect_npc_messages_to_emote_chat = false;
+    bool redirect_outgoing_whisper_to_whisper_channel = false;
     bool openlinks = true;
     bool auto_url = true;
 
@@ -301,11 +302,14 @@ namespace {
 
     // Redirect outgoing whispers to the whisper channel; allows sender to be coloured
     // I don't think we want this? extremely confusing to users
-    void OnWriteToChatLog(GW::HookStatus*, GW::UI::UIMessage, [[maybe_unused]] void* wParam, void*) {
-        // auto param = (GW::UI::UIChatMessage*)wParam;
-        // if (param->channel == GW::Chat::Channel::CHANNEL_GLOBAL && *param->message == 0x76e) {
-        //     param->channel = GW::Chat::Channel::CHANNEL_WHISPER;
-        // }
+    void OnWriteToChatLog(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*) {
+        if (!redirect_outgoing_whisper_to_whisper_channel) {
+            return;
+        }
+        auto param = (GW::UI::UIChatMessage*)wParam;
+        if (param->channel == GW::Chat::Channel::CHANNEL_GLOBAL && *param->message == 0x76e) {
+            param->channel = GW::Chat::Channel::CHANNEL_WHISPER;
+        }
     }
 
     // Open links on player name click, Ctrl + click name to target, Ctrl + Shift + click name to invite
@@ -481,6 +485,9 @@ void ChatSettings::DrawSettingsInternal()
     ImGui::ShowHelp("Speech bubbles from NPCs and Heroes will appear as emote messages in chat");
     ImGui::Checkbox("Redirect NPC dialog to emote channel", &redirect_npc_messages_to_emote_chat);
     ImGui::ShowHelp("Messages from NPCs that would normally show on-screen and in team chat are instead redirected to the emote channel");
+    ImGui::Checkbox("Redirect outgoing whispers to whisper channel", &redirect_outgoing_whisper_to_whisper_channel);
+    ImGui::ShowHelp("Whispers that you send are typically shown in colour of the global channel (green).\n"
+                    "This setting makes them appear blue like an incoming message, with -> before the name.");
     if (ImGui::Checkbox("Open web links from templates", &openlinks)) {
         GW::UI::SetOpenLinks(openlinks);
     }
@@ -500,6 +507,7 @@ void ChatSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(hide_player_speech_bubbles);
     LOAD_BOOL(npc_speech_bubbles_as_chat);
     LOAD_BOOL(redirect_npc_messages_to_emote_chat);
+    LOAD_BOOL(redirect_outgoing_whisper_to_whisper_channel);
     LOAD_BOOL(openlinks);
     LOAD_BOOL(auto_url);
 
@@ -520,6 +528,7 @@ void ChatSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(hide_player_speech_bubbles);
     SAVE_BOOL(npc_speech_bubbles_as_chat);
     SAVE_BOOL(redirect_npc_messages_to_emote_chat);
+    SAVE_BOOL(redirect_outgoing_whisper_to_whisper_channel);
     SAVE_BOOL(openlinks);
     SAVE_BOOL(auto_url);
 
