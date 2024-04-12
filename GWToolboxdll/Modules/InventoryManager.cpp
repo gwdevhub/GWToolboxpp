@@ -1419,11 +1419,11 @@ bool get_next_bag_slot(const InventoryManager::Item* item, GW::Constants::Bag* b
     const auto slot_item = bag->items[item->slot];
     ASSERT(slot_item == item);
     size_t slot = item->slot + 1;
-    auto bag_id = bag->bag_id;
+    auto bag_id = (GW::Constants::Bag)(bag->index+1);
     if (slot >= bag->items.size()) {
         bag_id = GW::Constants::Bag::Max;
         slot = 0;
-        for (auto it_bag_id = bag->bag_id; it_bag_id < GW::Constants::Bag::Max; it_bag_id = (GW::Constants::Bag)((size_t)it_bag_id + 1)) {
+        for (auto it_bag_id = GW::Constants::Bag(bag->index+1); it_bag_id < GW::Constants::Bag::Max; it_bag_id = (GW::Constants::Bag)((size_t)it_bag_id + 1)) {
             const auto it_bag = GW::Items::GetBag(it_bag_id);
             if (it_bag) {
                 bag_id = it_bag_id;
