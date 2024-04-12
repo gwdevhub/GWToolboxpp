@@ -483,7 +483,8 @@ namespace {
                 uint32_t button_id_dupe;
                 uint32_t current_state; // 0x5 = hovered, 0x6 = mouse down
             }* param = static_cast<MouseParams*>(wparam);
-            if (param->button_id == 0x4 && param->current_state == 0x6) {
+            const auto frame = GW::UI::GetFrameByLabel(L"btnExit");
+            if (frame && frame->frame_id == message->frame_id && param->current_state == 0x6) {
                 param->current_state = 0x5; // Revert state to avoid GW closing the window on mouse up
 
                 // Left button clicked, on the exit button (ID 0x3)
