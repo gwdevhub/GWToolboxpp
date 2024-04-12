@@ -1571,7 +1571,8 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDialog)
         return;
     }
     uint32_t id = 0;
-    if (wcscmp(argv[1], L"take") == 0) {
+    const auto dialog_str = std::wstring{argv[1]};
+    if (dialog_str == L"take" || dialog_str == L"0") {
         id = 0;
     }
     else if (!(GuiUtils::ParseUInt(argv[1], &id) && id)) {
