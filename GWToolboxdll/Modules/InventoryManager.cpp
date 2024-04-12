@@ -130,7 +130,7 @@ namespace {
     {
         const auto item = GW::Items::GetItemById(item_id);
         if (item && item->bag) {
-            return clear_pending_move(item->bag->bag_id, item->slot);
+            return clear_pending_move(static_cast<GW::Constants::Bag>(item->bag->index + 1), item->slot);
         }
     }
 
@@ -1419,20 +1419,20 @@ bool get_next_bag_slot(const InventoryManager::Item* item, GW::Constants::Bag* b
     const auto slot_item = bag->items[item->slot];
     ASSERT(slot_item == item);
     size_t slot = item->slot + 1;
-    auto bag_id = bag->bag_id;
+    auto bag_index = bag->index;
     if (slot >= bag->items.size()) {
-        bag_id = GW::Constants::Bag::Max;
+        bag_index = GW::Constants::BagMax;
         slot = 0;
-        for (auto it_bag_id = bag->bag_id; it_bag_id < GW::Constants::Bag::Max; it_bag_id = (GW::Constants::Bag)((size_t)it_bag_id + 1)) {
-            const auto it_bag = GW::Items::GetBag(it_bag_id);
+        for (auto bag_idx = bag->index + 1; bag_idx < GW::Constants::BagMax; bag_idx++) {
+            const auto it_bag = GW::Items::GetBagByIndex(bag_idx);
             if (it_bag) {
-                bag_id = it_bag_id;
+                bag_index = bag_idx;
                 break;
             }
         }
     }
-    if (bag_id != GW::Constants::Bag::Max) {
-        *bag_id_out = bag_id;
+    if (bag_index < GW::Constants::BagMax) {
+        *bag_id_out = (GW::Constants::Bag)(bag_index+1);
         *slot_out = slot;
         return true;
     }
