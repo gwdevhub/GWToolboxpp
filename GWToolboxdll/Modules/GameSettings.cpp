@@ -148,6 +148,8 @@ namespace {
     bool notify_when_party_member_leaves = false;
     bool notify_when_party_member_joins = false;
 
+    bool fetch_module_prices = true;
+
     bool block_enter_area_message = false;
 
     EncString* pending_wiki_search_term = nullptr;
@@ -1558,6 +1560,8 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(notify_when_players_join_outpost);
     LOAD_BOOL(notify_when_players_leave_outpost);
 
+    LOAD_BOOL(fetch_module_prices);
+
     LOAD_BOOL(auto_age_on_vanquish);
     LOAD_BOOL(hide_dungeon_chest_popup);
     LOAD_BOOL(auto_age2_on_age);
@@ -1807,6 +1811,7 @@ void GameSettings::DrawInventorySettings()
     ImGui::Checkbox("Explorable Area###disable_item_descriptions_in_explorable", &disable_item_descriptions_in_explorable);
     ImGui::SameLine();
     ImGui::Checkbox("Outpost###disable_item_descriptions_in_outpost", &disable_item_descriptions_in_outpost);
+    ImGui::Checkbox("Perform price check on item components", &fetch_module_prices);
     if (disable_item_descriptions_in_explorable || disable_item_descriptions_in_outpost) {
         ImGui::Indent();
         ImGui::TextDisabled("Hold Alt when hovering an item to show full description");
