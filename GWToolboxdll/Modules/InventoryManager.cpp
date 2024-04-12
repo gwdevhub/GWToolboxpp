@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include <GWCA/Packets/Opcodes.h>
-#include <GWCA/Constants/Maps.h>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Player.h>

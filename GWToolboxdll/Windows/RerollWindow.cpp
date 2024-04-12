@@ -266,6 +266,11 @@ void RerollWindow::Draw(IDirect3DDevice9*)
             if (i % 2 != 0) {
                 ImGui::SameLine();
             }
+            const auto is_current_char = wcscmp(character.player_name, GetPlayerName()) == 0;
+            if (is_current_char) {
+                ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.f));
+            }
             if (ImGui::IconButton(buf.c_str(), *Resources::GetProfessionIcon(static_cast<GW::Constants::Profession>(profession)), btn_dim)) {
                 const bool _same_map = travel_to_same_location_after_rerolling;
                 bool _same_party = travel_to_same_location_after_rerolling && rejoin_party_after_rerolling;
@@ -276,6 +281,10 @@ void RerollWindow::Draw(IDirect3DDevice9*)
                     }
                 }
                 Reroll(player_name, _same_map || _same_party, _same_party);
+            }
+            if (is_current_char) {
+                ImGui::PopItemFlag();
+                ImGui::PopStyleColor();
             }
         }
         ImGui::PopStyleVar();
