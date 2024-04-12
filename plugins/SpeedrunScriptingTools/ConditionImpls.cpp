@@ -46,45 +46,6 @@ namespace {
         return "";
     }
 
-    std::string_view toString(Status status)
-    {
-        switch (status) {
-            case Status::Dead:
-                return "Dead";
-            case Status::Alive:
-                return "Alive";
-        }
-        return "";
-    }
-
-    std::string toString(Class c)
-    {
-        switch (c) {
-            case Class::Warrior:
-                return "Warrior";
-            case Class::Ranger:
-                return "Ranger";
-            case Class::Monk:
-                return "Monk";
-            case Class::Necro:
-                return "Necro";
-            case Class::Mesmer:
-                return "Mesmer";
-            case Class::Elementalist:
-                return "Elementalist";
-            case Class::Assassin:
-                return "Assassin";
-            case Class::Ritualist:
-                return "Ritualist";
-            case Class::Paragon:
-                return "Paragon";
-            case Class::Dervish:
-                return "Dervish";
-            default:
-                return "Any";
-        }
-    }
-
     void ShowHelp(const char* help)
     {
         ImGui::SameLine();
@@ -377,6 +338,8 @@ void PlayerHasSkillCondition::drawSettings()
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("id", reinterpret_cast<int*>(&id), 0);
+    ImGui::SameLine();
+    ImGui::Text("off cooldown");
 }
 
 /// ------------- PlayerHasClassCondition -------------
@@ -644,6 +607,7 @@ void QuestHasStateCondition::drawSettings()
 KeyIsPressedCondition::KeyIsPressedCondition(std::istringstream& stream)
 {
     stream >> shortcutKey >> shortcutMod;
+    ModKeyName(hotkeyDescription, _countof(hotkeyDescription), shortcutMod, shortcutKey);
 }
 void KeyIsPressedCondition::serialize(std::ostringstream& stream) const
 {

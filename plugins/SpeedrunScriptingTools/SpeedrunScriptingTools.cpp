@@ -8,6 +8,8 @@
 
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Hook.h>
+
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
@@ -171,9 +173,8 @@ void SpeedrunScriptingTools::Update(float delta)
 {
     ToolboxPlugin::Update(delta);
 
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Agents::GetPlayerAsAgentLiving()) return;
-
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+    const auto map = GW::Map::GetMapInfo();
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable || !map || map->GetIsPvP() || !GW::Agents::GetPlayerAsAgentLiving()) {
         m_currentScript = std::nullopt;
         return;
     }
