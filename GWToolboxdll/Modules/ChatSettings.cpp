@@ -301,7 +301,6 @@ namespace {
     }
 
     // Redirect outgoing whispers to the whisper channel; allows sender to be coloured
-    // I don't think we want this? extremely confusing to users
     void OnWriteToChatLog(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*) {
         if (!redirect_outgoing_whisper_to_whisper_channel) {
             return;
