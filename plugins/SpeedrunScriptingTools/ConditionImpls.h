@@ -2,6 +2,7 @@
 
 #include <Condition.h>
 #include <InstanceInfo.h>
+#include <utils.h>
 
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/Constants/Skills.h>
@@ -10,8 +11,6 @@
 #include <cstdint>
 #include <sstream>
 
-enum class Class : int {Any, Warrior, Ranger, Monk, Necro, Mesmer, Elementalist, Assassin, Ritualist, Paragon, Dervish };
-enum class Status : int {Dead, Alive};
 class NegatedCondition : public Condition {
 public:
     NegatedCondition() = default;
@@ -236,7 +235,7 @@ public:
 private:
     long shortcutKey = 0;
     long shortcutMod = 0;
-    char hotkeyDescription[64]{};
+    char hotkeyDescription[64] = "Click to change key";
 };
 
 class InstanceTimeCondition : public Condition {

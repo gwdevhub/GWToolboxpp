@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Action.h>
+#include <Condition.h>
+#include <utils.h>
 
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/Constants/Skills.h>
@@ -69,7 +71,18 @@ public:
     void serialize(std::ostringstream&) const final;
 
 private:
-    int id = 0;
+    AgentType agentType = AgentType::Any;
+    Class primary = Class::Any;
+    Class secondary = Class::Any;
+    Status status = Status::Alive;
+    HexedStatus hexed = HexedStatus::Any;
+    GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
+    Sorting sorting = Sorting::AgentId;
+    int modelId = 0;
+    float minDistance = 0.f;
+    float maxDistance = 5000.f;
+    bool mayBeCurrentTarget = true;
+    bool requireSameModelIdAsTarget = false;
 };
 
 class UseItemAction : public Action {
@@ -185,4 +198,33 @@ public:
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
+};
+
+class ConditionedAction : public Action {
+public:
+    ConditionedAction() = default;
+    ConditionedAction(std::istringstream&);
+    ActionType type() const final { return ActionType::Conditioned; }
+    void initialAction() final;
+    bool isComplete() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    std::shared_ptr<Condition> cond = nullptr;
+    std::shared_ptr<Action> act = nullptr;
+};
+
+class RepopMinipetAction : public Action {
+public:
+    RepopMinipetAction() = default;
+    RepopMinipetAction(std::istringstream&);
+    ActionType type() const final { return ActionType::RepopMinipet; }
+    void initialAction() final;
+    bool isComplete() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    int id = 0;
 };

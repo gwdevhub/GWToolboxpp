@@ -1,5 +1,8 @@
 #include <ActionImpls.h>
 #include <utils.h>
+#include <ConditionIO.h>
+#include <ActionIO.h>
+#include <InstanceInfo.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
@@ -7,6 +10,7 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 
 #include <GWCA/Packets/Opcodes.h>
@@ -19,6 +23,8 @@
 #include <thread>
 
 namespace {
+    const std::string missingContentToken = "/";
+
     GW::Item* FindMatchingItem(GW::Constants::Bag _bag_idx, uint32_t model_id)
     {
         GW::Bag* bag = GW::Items::GetBag(_bag_idx);
@@ -84,12 +90,42 @@ namespace {
                 return "Unknown";
         }
     }
-    std::ostringstream& operator<<(std::ostringstream& stream, GW::Constants::SkillID id)
+
+    template <typename T, typename U = std::enable_if_t<std::is_enum<T>::value>>
+    std::ostream& operator<<(std::ostream& os, T t)
     {
-        stream << (int)id;
-        return stream;
+        using ut = std::underlying_type_t<T>;
+        os << static_cast<ut>(t);
+        return os;
+    }
+    template <typename T, typename U = std::enable_if_t<std::is_enum<T>::value>>
+    std::istringstream& operator>>(std::istringstream& is, T& t)
+    {
+        using ut = std::underlying_type_t<T>;
+        ut read;
+        is >> read;
+        t = static_cast<T>(read);
+        return is;
     }
     constexpr double eps = 1e-3;
+
+    template<typename T>
+    void drawEnumButton(T firstValue, T lastValue, T& currentValue, int id = 0, float width = 100.)
+    {
+        const auto popupName = std::string{"p"} + "###" + std::to_string(id);
+        const auto buttonText = std::string{toString(currentValue)} + "###" + std::to_string(id);
+        if (ImGui::Button(buttonText.c_str(), ImVec2(width, 0))) {
+            ImGui::OpenPopup(popupName.c_str());
+        }
+        if (ImGui::BeginPopup(popupName.c_str())) {
+            for (auto i = (int)firstValue; i <= (int)lastValue; ++i) {
+                if (ImGui::Selectable(toString((T)i).data())) {
+                    currentValue = static_cast<T>(i);
+                }
+            }
+            ImGui::EndPopup();
+        }
+    }
 } // namespace
 
 /// ------------- MoveToAction -------------
@@ -132,9 +168,7 @@ void MoveToAction::drawSettings(){
 /// ------------- CastOnSelfAction -------------
 CastOnSelfAction::CastOnSelfAction(std::istringstream& stream)
 {
-    int read;
-    stream >> read;
-    id = (GW::Constants::SkillID)read;
+    stream >> id;
 }
 void CastOnSelfAction::serialize(std::ostringstream& stream) const
 {
@@ -174,9 +208,7 @@ void CastOnSelfAction::drawSettings()
 /// ------------- CastOnTargetAction -------------
 CastOnTargetAction::CastOnTargetAction(std::istringstream& stream)
 {
-    int read;
-    stream >> read;
-    id = (GW::Constants::SkillID)read;
+    stream >> id;
 }
 void CastOnTargetAction::serialize(std::ostringstream& stream) const
 {
@@ -217,37 +249,157 @@ void CastOnTargetAction::drawSettings()
 /// ------------- ChangeTargetAction -------------
 ChangeTargetAction::ChangeTargetAction(std::istringstream& stream)
 {
-    stream >> id;
+    stream >> agentType >> primary >> secondary >> status >> hexed >> skill >> sorting >> modelId >> minDistance >> maxDistance >> mayBeCurrentTarget >> requireSameModelIdAsTarget;
 }
 void ChangeTargetAction::serialize(std::ostringstream& stream) const
 {
     Action::serialize(stream);
 
-    stream << id << " ";
+    stream << agentType << " " << primary << " " << secondary << " " << status << " " << hexed << " " << skill << " " << sorting << " " << modelId 
+           << " " << minDistance << " " << maxDistance << " " << mayBeCurrentTarget << " " << requireSameModelIdAsTarget << " ";
 }
 void ChangeTargetAction::initialAction()
 {
     Action::initialAction();
 
+    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto currentTarget = GW::Agents::GetTargetAsAgentLiving();
     const auto agents = GW::Agents::GetAgentArray();
-    if (!agents) return;
+    if (!player || !agents) return;
+
+    const auto fulfillsConditions = [&](const GW::AgentLiving* agent) 
+    {
+        if (!agent) return false;
+        const auto correctType = [&]() -> bool {
+            switch (agentType) {
+                case AgentType::Any:
+                    return true;
+                case AgentType::PartyMember: //optimize this? Dont need to check all agents
+                    return agent->IsPlayer();
+                case AgentType::Friendly:
+                    return agent->allegiance != GW::Constants::Allegiance::Enemy;
+                case AgentType::Hostile:
+                    return agent->allegiance == GW::Constants::Allegiance::Enemy;
+                default:
+                    return false;
+            }
+        }();
+        const auto correctPrimary = (primary == Class::Any) || primary == (Class)agent->primary;
+        const auto correctSecondary = (secondary == Class::Any) || secondary == (Class)agent->secondary;
+        const auto correctStatus = (status == Status::Any) || ((status == Status::Alive) == agent->GetIsAlive());
+        const auto hexedCorrectly = (hexed == HexedStatus::Any) || ((hexed == HexedStatus::Hexed) == agent->GetIsHexed());
+        const auto correctSkill = (skill == GW::Constants::SkillID::No_Skill) || (skill == (GW::Constants::SkillID)agent->skill);
+        const auto correctModelId = (requireSameModelIdAsTarget && currentTarget) 
+            ? (currentTarget->player_number == agent->player_number) 
+            : ((modelId == 0) || (agent->player_number == modelId));
+        const auto acceptableWithCurrentTarget = mayBeCurrentTarget || !currentTarget || (agent->agent_id != currentTarget->agent_id);
+        const auto distance = GW::GetDistance(player->pos, agent->pos);
+        const auto goodDistance = (minDistance < distance) && (distance < maxDistance);
+        return correctType && correctPrimary && correctSecondary && correctStatus && hexedCorrectly && correctSkill && correctModelId && acceptableWithCurrentTarget && goodDistance;
+    };
+
+    GW::AgentLiving const * currentBestTarget = nullptr;
+
+    const auto isNewBest = [&](const GW::AgentLiving* agent) 
+    {
+        if(!currentBestTarget)
+            return true;
+        switch (sorting) {
+            case Sorting::AgentId:
+                return true;
+            case Sorting::ClosestToPlayer:
+                return GW::GetSquareDistance(player->pos, agent->pos) < GW::GetSquareDistance(player->pos, currentBestTarget->pos);
+            case Sorting::FurthestFromPlayer:
+                return GW::GetSquareDistance(player->pos, agent->pos) > GW::GetSquareDistance(player->pos, currentBestTarget->pos);
+            case Sorting::ClosestToTarget:
+                return currentTarget
+                    ? GW::GetSquareDistance(currentTarget->pos, agent->pos) < GW::GetSquareDistance(currentTarget->pos, currentBestTarget->pos) 
+                    : GW::GetSquareDistance(player->pos, agent->pos) < GW::GetSquareDistance(player->pos, currentBestTarget->pos); // Fallback: Closest to player
+            case Sorting::FurthestFromTarget:
+                return currentTarget 
+                    ? GW::GetSquareDistance(currentTarget->pos, agent->pos) > GW::GetSquareDistance(currentTarget->pos, currentBestTarget->pos) 
+                    : GW::GetSquareDistance(player->pos, agent->pos) > GW::GetSquareDistance(player->pos, currentBestTarget->pos); // Fallback: Furthest from player
+            case Sorting::LowestHp:
+                return agent->hp < currentBestTarget->hp;
+            case Sorting::HighestHp:
+                return agent->hp > currentBestTarget->hp;
+            default:
+                return false;
+        }
+    };
 
     for (const auto* agent : *agents) {
         if (!agent) continue;
-        const auto living = agent->GetAsAgentLiving();
-        if (!living) continue;
-        if (living->player_number == id) {
-            GW::Agents::ChangeTarget(living);
-            return;
-        }
+        auto living = agent->GetAsAgentLiving();
+        if (!fulfillsConditions(living)) continue;
+        if (isNewBest(living)) currentBestTarget = living;
+        if (sorting == Sorting::AgentId) break;
+        // test: if (agentType == AgentType::PartyMember && !agent->isPlayer) break;
+        // Move these two conditions out of loop? Measure time this function takes
+    }
+
+    if (currentBestTarget) 
+    {
+        GW::GameThread::Enqueue([id = currentBestTarget->agent_id]() -> void {
+            GW::Agents::ChangeTarget(id);
+        });
     }
 }
 void ChangeTargetAction::drawSettings()
 {
-    ImGui::Text("Change target to agent with model ID:");
-    ImGui::PushItemWidth(90);
-    ImGui::SameLine();
-    ImGui::InputInt("ID", &id, 0);
+    int drawId = 12345;
+    ImGui::PushItemWidth(120);
+
+    if (ImGui::TreeNodeEx("Change target to agent with characteristics", ImGuiTreeNodeFlags_FramePadding)) {
+        ImGui::BulletText("Distance to player");
+        ImGui::SameLine();
+        ImGui::InputFloat("min", &minDistance);
+        ImGui::SameLine();
+        ImGui::InputFloat("max", &maxDistance);
+
+        ImGui::BulletText("Allegiance");
+        ImGui::SameLine();
+        drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, ++drawId);
+
+        ImGui::BulletText("Class");
+        ImGui::SameLine();
+        drawEnumButton(Class::Any, Class::Dervish, primary, ++drawId);
+        ImGui::SameLine();
+        ImGui::Text("/");
+        ImGui::SameLine();
+        drawEnumButton(Class::Any, Class::Dervish, secondary, ++drawId);
+
+        ImGui::BulletText("Dear or alive");
+        ImGui::SameLine();
+        drawEnumButton(Status::Any, Status::Alive, status, ++drawId);
+
+        ImGui::BulletText("Hexed");
+        ImGui::SameLine();
+        drawEnumButton(HexedStatus::Any, HexedStatus::Hexed, hexed, ++drawId);
+
+        ImGui::BulletText("Uses skill");
+        ImGui::SameLine();
+        ImGui::InputInt("id (0 for any)###2", reinterpret_cast<int*>(&skill), 0);
+
+        ImGui::Bullet();
+        ImGui::Checkbox("May choose current target again", &mayBeCurrentTarget);
+
+        ImGui::Bullet();
+        ImGui::Checkbox("Require same model as current target", &requireSameModelIdAsTarget);
+
+        ImGui::Bullet();
+        ImGui::Text(requireSameModelIdAsTarget ? "If no target is selected, pick agent with model" : "Pick agent with model");
+        ImGui::SameLine();
+        ImGui::InputInt("id (0 for any)###1", &modelId, 0);
+
+        ImGui::BulletText("Sort candidates by:");
+        ImGui::SameLine();
+        drawEnumButton(Sorting::AgentId, Sorting::HighestHp, sorting, ++drawId, 150.);
+        
+
+        ImGui::TreePop();
+    }
+
 }
 
 /// ------------- UseItemAction -------------
@@ -401,17 +553,14 @@ void WaitAction::drawSettings()
 /// ------------- SendChatAction -------------
 SendChatAction::SendChatAction(std::istringstream& stream)
 {
-    int read;
-    stream >> read;
-    channel = (Channel)read;
-
+    stream >> channel;
     message = readStringWithSpaces(stream);
 }
 void SendChatAction::serialize(std::ostringstream& stream) const
 {
     Action::serialize(stream);
 
-    stream << (int)channel << " ";
+    stream << channel << " ";
     writeStringWithSpaces(stream, message);
 }
 void SendChatAction::initialAction()
@@ -446,17 +595,7 @@ void SendChatAction::drawSettings()
 {
     ImGui::Text("Send Chat Message:");
     ImGui::SameLine();
-    if (ImGui::Button(toString(channel).data(), ImVec2(100, 0))) {
-        ImGui::OpenPopup("Pick channel");
-    }
-    if (ImGui::BeginPopup("Pick channel")) {
-        for (auto i = 0; i <= (int)Channel::Emote; ++i) {
-            if (ImGui::Selectable(toString((Channel)i).data())) {
-                channel = (Channel)i;
-            }
-        }
-        ImGui::EndPopup();
-    }
+    drawEnumButton(Channel::All, Channel::Emote, channel);
     ImGui::PushItemWidth(300);
     ImGui::SameLine();
     ImGui::InputText("", &message);
@@ -477,15 +616,13 @@ void CancelAction::drawSettings()
 /// ------------- DropBuffAction -------------
 DropBuffAction::DropBuffAction(std::istringstream& stream)
 {
-    int read;
-    stream >> read;
-    id = (GW::Constants::SkillID)read;
+    stream >> id;
 }
 void DropBuffAction::serialize(std::ostringstream& stream) const
 {
     Action::serialize(stream);
 
-    stream << (int)id << " ";
+    stream << id << " ";
 }
 void DropBuffAction::initialAction()
 {
@@ -502,4 +639,111 @@ void DropBuffAction::drawSettings()
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
+}
+
+/// ------------- ConditionedAction -------------
+ConditionedAction::ConditionedAction(std::istringstream& stream)
+{
+    std::string read;
+    stream >> read;
+    if (read == missingContentToken) {
+        cond = nullptr;
+    }
+    else if (read == "C") {
+        cond = readCondition(stream);
+    }
+    else {
+        assert(false);
+    }
+    stream >> read;
+    if (read == missingContentToken) {
+        act = nullptr;
+    }
+    else if (read == "A") {
+        act = readAction(stream);
+    }
+    else {
+        assert(false);
+    }
+}
+void ConditionedAction::serialize(std::ostringstream& stream) const
+{
+    Action::serialize(stream);
+
+    if (cond)
+        cond->serialize(stream);
+    else
+        stream << missingContentToken << " ";
+
+    if (act)
+        act->serialize(stream);
+    else
+        stream << missingContentToken << " ";
+}
+void ConditionedAction::initialAction()
+{
+    Action::initialAction();
+
+    if (cond && act && cond->check()) 
+        act->initialAction();
+}
+bool ConditionedAction::isComplete() const
+{
+    if (cond && act) 
+        return act->isComplete();
+    return true;
+}
+void ConditionedAction::drawSettings() 
+{
+    if (cond)
+        cond->drawSettings();
+    else    
+        cond = drawConditionSelector(120.f);
+    ImGui::Indent(30.f);
+    if (act)
+        act->drawSettings();
+    else
+        act = drawActionSelector(120.f);
+    ImGui::Unindent(30.f);
+}
+
+/// ------------- RepopMinipetAction -------------
+RepopMinipetAction::RepopMinipetAction(std::istringstream& stream)
+{
+    stream >> id;
+}
+void RepopMinipetAction::serialize(std::ostringstream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << id << " ";
+}
+void RepopMinipetAction::initialAction()
+{
+    Action::initialAction();
+}
+
+bool RepopMinipetAction::isComplete() const
+{
+    const auto& instanceInfo = InstanceInfo::getInstance();
+    if (!instanceInfo.canPopAgent()) return false;
+
+    const auto item = FindMatchingItem(id);
+    if (!item) return true;
+    const auto needsToUnpop = instanceInfo.hasMinipetPopped();
+    printf(needsToUnpop ? "pop twice\n" : "use once\n");
+    GW::GameThread::Enqueue([needsToUnpop, item]() -> void {
+        if (needsToUnpop) 
+            GW::Items::UseItem(item);
+        GW::Items::UseItem(item);
+    });
+    return true;
+}
+
+void RepopMinipetAction::drawSettings()
+{
+    ImGui::Text("(Unpop and) repop minipet as soon as its available:");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputInt("Item ID", &id, 0);
 }
