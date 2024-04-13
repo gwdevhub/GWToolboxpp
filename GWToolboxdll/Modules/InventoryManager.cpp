@@ -145,18 +145,16 @@ namespace {
             return 0;
         }
         const uint32_t slot = static_cast<uint32_t>(material_slot);
-        const uint16_t max_in_slot = MaxSlotSize(GW::Items::GetBag(GW::Constants::Bag::Material_Storage));
-        uint16_t available = max_in_slot;
-        const GW::Item* b_item = GW::Items::GetItemBySlot(item->bag, slot + 1);
-        if (b_item) {
-            if (b_item->quantity >= max_in_slot) {
-                return 0;
-            }
-            available -= b_item->quantity;
+        const auto materials_pane = GW::Items::GetBag(GW::Constants::Bag::Material_Storage);
+        uint16_t space_available = MaxSlotSize(materials_pane);
+        const GW::Item* existing_stack_in_storage = GW::Items::GetItemBySlot(materials_pane, slot + 1);
+        if (existing_stack_in_storage) {
+            ASSERT(existing_stack_in_storage->quantity <= space_available); // Could trigger if we failed to get the correct max slot size for materials
+            space_available -= existing_stack_in_storage->quantity;
         }
         const uint16_t pending_move = get_pending_move(GW::Constants::Bag::Material_Storage, slot);
-        available -= pending_move;
-        const uint16_t will_move = std::min<uint16_t>(item->quantity, available);
+        space_available -= pending_move;
+        const uint16_t will_move = std::min<uint16_t>(item->quantity, space_available);
         if (will_move) {
             set_pending_move(GW::Constants::Bag::Material_Storage, slot, will_move, item->item_id);
             GW::Items::MoveItem(item, GW::Constants::Bag::Material_Storage, slot, will_move);
