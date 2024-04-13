@@ -7,7 +7,7 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
-## Version 6.15
+## Version 6.16
 * [Minor] `/dialog take` can now be used the take bounties
 * [Minor] Current character is highlighted in Reroll window now
 * [Minor] Added option to colour outgoing whispers blue, instead of always doing so
