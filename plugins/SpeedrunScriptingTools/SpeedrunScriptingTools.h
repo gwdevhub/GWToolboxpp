@@ -34,4 +34,5 @@ private:
     std::vector<Script> m_scripts;
     std::optional<Script> m_currentScript = std::nullopt;
     bool firstFrameAfterInstanceLoad = false;
+    bool firstFrameAfterHardModePing = false;
 };

@@ -6,7 +6,7 @@
 namespace {
     std::shared_ptr<Action> makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 14);
+        static_assert((int)ActionType::Count == 15);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -36,6 +36,8 @@ namespace {
                 return std::make_shared<ConditionedAction>();
             case ActionType::RepopMinipet:
                 return std::make_shared<RepopMinipetAction>();
+            case ActionType::PingHardMode:
+                return std::make_shared<PingHardModeAction>();
             default:
                 return nullptr;
         }
@@ -43,7 +45,7 @@ namespace {
 
     std::string_view toString(ActionType type)
     {
-        static_assert((int)ActionType::Count == 14);
+        static_assert((int)ActionType::Count == 15);
         switch (type) {
             case ActionType::MoveTo:
                 return "Move to";
@@ -73,6 +75,8 @@ namespace {
                 return "Optional";
             case ActionType::RepopMinipet:
                 return "Safely repop minipet";
+            case ActionType::PingHardMode:
+                return "Ping hard mode";
             default:
                 return "Unknown";
         }
@@ -81,7 +85,7 @@ namespace {
 
 std::shared_ptr<Action> readAction(std::istringstream& stream)
 {
-    static_assert((int)ActionType::Count == 14);
+    static_assert((int)ActionType::Count == 15);
     int type;
 
     stream >> type;
@@ -114,6 +118,8 @@ std::shared_ptr<Action> readAction(std::istringstream& stream)
             return std::make_shared<ConditionedAction>(stream);
         case ActionType::RepopMinipet:
             return std::make_shared<RepopMinipetAction>(stream);
+        case ActionType::PingHardMode:
+            return std::make_shared<PingHardModeAction>(stream);
         default:
             return nullptr;
     }
