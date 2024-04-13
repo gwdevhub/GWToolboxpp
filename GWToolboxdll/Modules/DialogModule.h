@@ -39,6 +39,7 @@ public:
     static const std::vector<GuiUtils::EncString*>& GetDialogButtonMessages();
     // Find and take the first available quest from the current dialog. Returns quest_id requested.
     static uint32_t AcceptFirstAvailableQuest();
+    static uint32_t AcceptFirstAvailableBounty();
     static uint32_t LastDialogId();
 
 private:

@@ -296,7 +296,7 @@ void DialogModule::Update(float)
         }
         if (it->first == 0) {
             // If dialog queued is id 0, this means the player wants to take (or accept reward for) the first available quest.
-            AcceptFirstAvailableQuest();
+            AcceptFirstAvailableQuest() || AcceptFirstAvailableBounty();
             queued_dialogs_to_send.erase(it);
             break;
         }
@@ -365,6 +365,43 @@ uint32_t DialogModule::AcceptFirstAvailableQuest()
     if (!available_quests.empty()) {
         return take_quest(available_quests[0]);
     }
+    return 0;
+}
+
+uint32_t DialogModule::AcceptFirstAvailableBounty() {
+    if (dialog_buttons.empty()) {
+        return 0;
+    }
+    
+    // NB: Be careful - GW allows you to grab factions blessings more than once!
+
+    for (const auto dialog_button : dialog_buttons) {
+        if (dialog_button->button_icon == 0xD) {
+            // Tick icon
+            const wchar_t* i_am_interested_in_blessings = L"\x5E9F\xDFDE\xEBF7\x790";
+            if (wcscmp(dialog_button->message, i_am_interested_in_blessings) == 0) {
+                // I am interested in blessings
+                SendDialog(dialog_button->dialog_id);
+                // Thank you.
+                SendDialog(dialog_button->dialog_id + 1);
+                return dialog_button->dialog_id;
+            }
+        }
+        if (dialog_button->dialog_id == 0x2) {
+            // NB: Hostile priest dialog buttons are wrapped up in the dialog body.
+            const wchar_t* kurzick_priest_hostile_dialog = L"\x5E92\x9FFB\xF999\x6B63";
+            const wchar_t* luxon_priest_hostile_dialog = L"TODO"; // Find this
+            if (wcscmp(dialog_body.encoded().c_str(), kurzick_priest_hostile_dialog) == 0
+                || wcscmp(dialog_body.encoded().c_str(), luxon_priest_hostile_dialog) == 0) {
+                // I'll make it worth your while (bribe.)
+                SendDialog(dialog_button->dialog_id);
+                // 50 gold? I accept.
+                SendDialog(0x84);
+                return dialog_button->dialog_id;
+            }
+        }
+    }
+
     return 0;
 }
 
