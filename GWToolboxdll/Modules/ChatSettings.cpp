@@ -242,14 +242,15 @@ namespace {
     }
 
     // Turn /wiki into /wiki <location>
-    void OnSendChat(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
+    void OnSendChat(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
     {
         ASSERT(message_id == GW::UI::UIMessage::kSendChatMessage);
-        wchar_t* msg = *(wchar_t**)wparam;
-        if (!(auto_url && msg)) {
+        auto packet = (GW::UI::UIPacket::kSendChatMessage*)wparam;
+        if (!(auto_url && packet->message && *packet->message)) {
             return;
         }
-        const auto chan = GW::Chat::GetChannel((char)*msg);
+        const auto chan = GW::Chat::GetChannel((char)*packet->message);
+        auto msg = &packet->message[1];
         size_t len = wcslen(msg);
         size_t max_len = 120;
 
@@ -272,18 +273,13 @@ namespace {
         if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) {
             return;
         }
-
-        if (len + 5 < max_len) {
-            for (size_t i = len; i != 0; --i) {
-                msg[i] = msg[i - 1];
-            }
-            msg[0] = '[';
-            msg[len + 1] = ';';
-            msg[len + 2] = 'x';
-            msg[len + 3] = 'x';
-            msg[len + 4] = ']';
-            msg[len + 5] = 0;
-        }
+        GW::UI::UIPacket::kSendChatMessage new_packet = *packet;
+        wchar_t new_msg[122];
+        if (swprintf(new_msg, _countof(new_msg), L"%c[%s;xx]",*packet->message,msg) < 1)
+            return;
+        new_packet.message = new_msg;
+        status->blocked = true;
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kSendChatMessage, &new_packet);
     }
 
     // Hide player chat message speech bubbles by redirecting from 0x10000081 to 0x1000007E
