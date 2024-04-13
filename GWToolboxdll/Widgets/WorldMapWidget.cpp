@@ -26,7 +26,12 @@ namespace {
         return 0xffffffff;
     }
 
-    clock_t show_map_at = 0;
+    void TriggerWorldMapRedraw() {
+        GW::GameThread::Enqueue([]() {
+            // Trigger a benign ui message e.g. guild context update; world map subscribes to this, and automatically updates the view.
+            GW::UI::SendUIMessage((GW::UI::UIMessage)0x100000ca);
+            });
+    }
 }
 
 void WorldMapWidget::Initialize()
@@ -57,21 +62,12 @@ void WorldMapWidget::ShowAllOutposts(const bool show = showing_all_outposts)
         view_all_outposts_patch.TogglePatch(show);
     if (view_all_carto_areas_patch.IsValid())
         view_all_carto_areas_patch.TogglePatch(show);
-    // @Cleanup: Instead of using 500ms clock timer, figure out how to refresh cartography areas properly
-    GW::GameThread::Enqueue([]() {
-        if (GW::UI::GetIsWorldMapShowing()) {
-            GW::UI::Keypress(GW::UI::ControlAction_OpenWorldMap);
-            show_map_at = TIMER_INIT() + 500;
-        }
-        });
+    TriggerWorldMapRedraw();
 }
 
 void WorldMapWidget::Draw(IDirect3DDevice9*)
 {
-    if (show_map_at && TIMER_INIT() > show_map_at) {
-        GW::UI::Keypress(GW::UI::ControlAction_OpenWorldMap);
-        show_map_at = 0;
-    }
+
     if (!GW::UI::GetIsWorldMapShowing()) {
         //ShowAllOutposts(showing_all_outposts = false);
         drawn = false;
