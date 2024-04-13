@@ -13,6 +13,7 @@
 #include <Modules/Resources.h>
 #include <Modules/ChatLog.h>
 #include <Defines.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 namespace GW::Chat {
     constexpr size_t SENT_LOG_LENGTH = 0x32;
@@ -92,6 +93,10 @@ namespace {
     TBSentMessage* sent_first = nullptr;
     TBSentMessage* sent_last = nullptr;
     TBChatMessage* timestamp_override_message = nullptr;
+
+    bool IsValidPtr(void* ptr) {
+        return ptr && ((size_t)ptr & 3) == 0;
+    }
 
 
     GW::Chat::ChatMessage* GetLastLoggedMessage() {
@@ -246,7 +251,7 @@ namespace {
     // Add message to outgoing log
     void AddSent(wchar_t* _message, const uint32_t addr = 0)
     {
-        if (!(((size_t)_message & 3) == 0 && _message[0])) {
+        if (!(IsValidPtr(_message) && _message[0])) {
             return; // Empty message
         }
         if (injecting || IsAdded(_message, addr)) {
@@ -292,17 +297,19 @@ namespace {
 
         // Sent
         const auto out_log = GetSentLog();
-        if (out_log && out_log->count && out_log->prev) {
-            GWSentMessage* oldest = out_log->prev;
+        if (out_log && out_log->count && IsValidPtr(out_log->prev)) {
+            auto oldest = out_log->prev;
+            const auto newest = oldest;
             for (size_t i = 0; i < out_log->count; i++) {
-                if (oldest->prev) {
+                if (oldest->prev && IsValidPtr(oldest->prev) && oldest->prev->next == oldest) {
                     oldest = oldest->prev;
                 }
             }
-            for (size_t i = 0; i < out_log->count; i++) {
+
+            do {
                 AddSent(oldest->message);
                 oldest = oldest->next;
-            }
+            } while (oldest != newest);
         }
     }
 
@@ -563,7 +570,7 @@ void ChatLog::LoadSettings(ToolboxIni* ini)
     ToolboxModule::LoadSettings(ini);
     Save();
     LOAD_BOOL(enabled);
-    Init();
+    GW::GameThread::Enqueue(Init);
 }
 
 
@@ -615,7 +622,7 @@ void ChatLog::Initialize()
         Inject();
         Save(); // Save the chat log on every map transition
     }, -0x8000);
-    Init();
+    GW::GameThread::Enqueue(Init);
 }
 
 void ChatLog::RegisterSettingsContent()
