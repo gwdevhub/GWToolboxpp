@@ -294,14 +294,16 @@ void DialogModule::Update(float)
         if (!GetDialogAgent()) {
             continue;
         }
-        if (it->first == 0) {
+        const auto dialog_id = it->first;
+        if (dialog_id == 0) {
             // If dialog queued is id 0, this means the player wants to take (or accept reward for) the first available quest.
-            AcceptFirstAvailableQuest() || AcceptFirstAvailableBounty();
             queued_dialogs_to_send.erase(it);
+            AcceptFirstAvailableQuest() || AcceptFirstAvailableBounty();
             break;
         }
-        if (IsDialogButtonAvailable(it->first)) {
-            GW::Agents::SendDialog(it->first);
+        if (IsDialogButtonAvailable(dialog_id)) {
+            queued_dialogs_to_send.erase(it);
+            GW::Agents::SendDialog(dialog_id);
             break;
         }
     }
@@ -389,10 +391,8 @@ uint32_t DialogModule::AcceptFirstAvailableBounty() {
         }
         if (dialog_button->dialog_id == 0x2) {
             // NB: Hostile priest dialog buttons are wrapped up in the dialog body.
-            const wchar_t* kurzick_priest_hostile_dialog = L"\x5E92\x9FFB\xF999\x6B63";
-            const wchar_t* luxon_priest_hostile_dialog = L"TODO"; // Find this
-            if (wcscmp(dialog_body.encoded().c_str(), kurzick_priest_hostile_dialog) == 0
-                || wcscmp(dialog_body.encoded().c_str(), luxon_priest_hostile_dialog) == 0) {
+            const wchar_t* factions_priest_hostile_dialog = L"\x5E92\x9FFB\xF999\x6B63";
+            if (wcscmp(dialog_body.encoded().c_str(), factions_priest_hostile_dialog) == 0) {
                 // I'll make it worth your while (bribe.)
                 SendDialog(dialog_button->dialog_id);
                 // 50 gold? I accept.
