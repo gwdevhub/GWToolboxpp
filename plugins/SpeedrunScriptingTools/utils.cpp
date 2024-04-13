@@ -1,8 +1,19 @@
 #include <utils.h>
 
+#include <imgui.h>
+
 namespace 
 {
     const std::string endOfStringSignifier{"ENDOFSTRING"};
+}
+
+void ShowHelp(const char* help)
+{
+    ImGui::SameLine();
+    ImGui::TextDisabled("%s", "(?)");
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("%s", help);
+    }
 }
 
 std::string readStringWithSpaces(std::istringstream& stream) 

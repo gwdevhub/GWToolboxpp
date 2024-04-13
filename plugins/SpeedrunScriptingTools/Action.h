@@ -16,7 +16,8 @@ enum class ActionType {
     DropBuff, 
     EquipItem,
     Conditioned,
-    RepopMinipet,
+    RepopMinipet, 
+    PingHardMode,
     Count
 };
 
@@ -27,7 +28,7 @@ public:
     virtual void initialAction() { m_hasBeenStarted = true; }
     virtual void finalAction() { m_hasBeenStarted = false; }
     virtual bool isComplete() const { return true; }
-    virtual void drawSettings() {}
+    virtual void drawSettings() = 0;
     virtual void serialize(std::ostringstream& stream) const { stream << "A " << (int)type() << " ";}
     bool hasBeenStarted() const { return m_hasBeenStarted; }
 
