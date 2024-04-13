@@ -12,8 +12,8 @@ namespace{
                 return "No packet trigger";
             case TriggerPacket::InstanceLoad:
                 return "Trigger on instance load";
-            case TriggerPacket::CastSpell:
-                return "Trigger on spellcast";
+            case TriggerPacket::HardModePing:
+                return "Trigger on hard mode ping";
             default:
                 return "Unknown";
         }

@@ -228,3 +228,12 @@ public:
 private:
     int id = 0;
 };
+
+class PingHardModeAction : public Action {
+public:
+    PingHardModeAction() = default;
+    PingHardModeAction(std::istringstream&) : PingHardModeAction(){}
+    ActionType type() const final { return ActionType::PingHardMode; }
+    void initialAction() final;
+    void drawSettings() final;
+};

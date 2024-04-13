@@ -23,6 +23,7 @@
 
 namespace {
     GW::HookEntry InstanceLoadFile_Entry;
+    GW::HookEntry CoreMessage_Entry;
 
     bool canAddCondition(const Script& script) {
         return !std::ranges::any_of(script.conditions, [](const auto& cond) {
@@ -179,8 +180,15 @@ void SpeedrunScriptingTools::Update(float delta)
         return;
     }
 
-    bool executeInstanceLoadScripts = firstFrameAfterInstanceLoad;
-    firstFrameAfterInstanceLoad = false;
+    auto currentTrigger = TriggerPacket::None;
+    if (firstFrameAfterInstanceLoad) {
+        currentTrigger = TriggerPacket::InstanceLoad;
+        firstFrameAfterInstanceLoad = false;
+    }
+    else if (firstFrameAfterHardModePing) {
+        currentTrigger = TriggerPacket::HardModePing;
+        firstFrameAfterHardModePing = false;
+    }
 
     if (m_currentScript && !m_currentScript->actions.empty()) {
         // Execute current script
@@ -200,7 +208,7 @@ void SpeedrunScriptingTools::Update(float delta)
         // Find script to use
         for (const auto& script : m_scripts) {
             if (!script.enabled || script.conditions.empty() || script.actions.empty()) continue;
-            if (script.triggerPacket != TriggerPacket::None && !(script.triggerPacket == TriggerPacket::InstanceLoad && executeInstanceLoadScripts)) continue;
+            if (script.triggerPacket != currentTrigger) continue;
             if (std::ranges::all_of(script.conditions, [](const auto& condition) {return condition->check();})) {
                 m_currentScript = script;
                 break;
@@ -216,6 +224,11 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
 
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {
         firstFrameAfterInstanceLoad = true;
+    });
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MessageCore>(&CoreMessage_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::MessageCore* packet) {
+        if (wmemcmp(packet->message, L"\x8101\x7f84", 2) == 0) {
+            firstFrameAfterHardModePing = true;
+        }
     });
     InstanceInfo::getInstance().initialize();
 }

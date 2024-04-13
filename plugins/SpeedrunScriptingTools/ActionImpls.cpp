@@ -10,7 +10,7 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
-#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 
 #include <GWCA/Packets/Opcodes.h>
@@ -746,4 +746,38 @@ void RepopMinipetAction::drawSettings()
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("Item ID", &id, 0);
+}
+
+/// ------------- PingHardModeAction -------------
+void PingHardModeAction::initialAction()
+{
+    Action::initialAction();
+
+    if (!GW::Effects::GetPlayerEffectBySkillId(GW::Constants::SkillID::Hard_mode)) return;
+
+    // Read from the packet logger. This is probably in the map information somewhere, but I could not find it.
+    const auto pingId = [] {
+        switch (GW::Map::GetMapID()) {
+            case GW::Constants::MapID::The_Underworld:
+                return 0x14;
+            case GW::Constants::MapID::Domain_of_Anguish:
+                return 0x27;
+            case GW::Constants::MapID::The_Fissure_of_Woe:
+                return 0xA;
+            default:
+                return 0;
+        }
+    }();
+    
+    if (pingId) {
+        GW::GameThread::Enqueue([pingId]() {
+            GW::CtoS::SendPacket(0xC, GAME_CMSG_TARGET_CALL, 0x4, pingId);
+        });
+    }
+    
+}
+void PingHardModeAction::drawSettings()
+{
+    ImGui::Text("Ping hard mode");
+    ShowHelp("Currently only works in UW, DoA and FoW because I don't understand the information sent. Let me know if you need any others.");
 }
