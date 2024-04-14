@@ -1501,9 +1501,9 @@ void HotkeyToggle::Toggle()
     }
 }
 
-bool HotkeyToggle::IsToggled(const bool force)
+bool HotkeyToggle::IsToggled(const bool refresh)
 {
-    if (force) {
+    if (refresh) {
         const auto found = toggled.find(togglekey);
         ongoing = found != toggled.end() && found->second == this;
     }

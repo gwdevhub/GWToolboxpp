@@ -222,7 +222,10 @@ public:
 
     [[nodiscard]] bool CanUseByInstanceType() const override { return false; }
     [[nodiscard]] bool CanUseByEffect() const override { return false; }
-    [[nodiscard]] bool IsVisible() const override { return visible && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
+    [[nodiscard]] bool IsVisible() const override
+    {
+        return visible && (!hide_city_pcons_in_explorable_areas || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable);
+    }
     void Draw(IDirect3DDevice9* device) override;
     size_t QuantityForEach(const GW::Item* item) const override { return item->model_id == itemID ? 1u : 0u; }
 

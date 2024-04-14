@@ -52,6 +52,8 @@
 #include <Modules/ChatSettings.h>
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>
+#include <Modules/PriceCheckerModule.h>
+#include <Modules/InventoryManager.h>
 
 #include <Color.h>
 #include <hidusage.h>
@@ -147,6 +149,10 @@ namespace {
 
     bool notify_when_party_member_leaves = false;
     bool notify_when_party_member_joins = false;
+
+    bool fetch_module_prices = true;
+    const size_t modified_description_size = 256;
+    wchar_t modified_description[modified_description_size];
 
     bool block_enter_area_message = false;
 
@@ -444,6 +450,52 @@ namespace {
         if (block_description && description_out) {
             *description_out = nullptr;
         }
+
+        if (!block_description && fetch_module_prices && description_out && *description_out)
+        {
+            std::memset(modified_description, 0, sizeof(modified_description));
+            wcscpy(modified_description, *description_out);
+            const auto item = (InventoryManager::Item*)GW::Items::GetItemById(item_id);
+            auto pos = wcslen(*description_out);
+            auto price = (float)PriceChecker::GetPrice(item->model_id);
+            if (price > 0)
+            {
+                auto unit = 'g';
+                if (item->GetIsMaterial() && !item->IsRareMaterial())
+                {
+                    price = price / 10;
+                }
+
+                if (price > 1000)
+                {
+                    price = price / 1000;
+                    unit = 'k';
+                }
+
+                pos += swprintf(&modified_description[pos], modified_description_size - pos, L"\x2\x108\x107\n<c=#ffd600>Item price: %.4g%C\x1", price, unit);
+            }
+            else
+            {
+                for (auto i = 0U; i < item->mod_struct_size; i++) {
+                    auto unit = 'g';
+                    const auto mod = item->mod_struct[i];
+                    price = (float)PriceChecker::GetPrice(mod);
+                    if (price == 0) {
+                        continue;
+                    }
+
+                    if (price > 1000) {
+                        price = price / 1000;
+                        unit = 'k';
+                    }
+
+                    pos += swprintf(&modified_description[pos], modified_description_size - pos, L"\x2\x108\x107\n<c=#ffd600>%S: %.4g%C\x1", PriceChecker::GetModifierName(mod).c_str(), price, unit);
+                }
+            }
+
+            *description_out = modified_description;
+        }
+
         GW::Hook::LeaveHook();
     }
 
@@ -483,7 +535,7 @@ namespace {
                 uint32_t button_id_dupe;
                 uint32_t current_state; // 0x5 = hovered, 0x6 = mouse down
             }* param = static_cast<MouseParams*>(wparam);
-            if (param->button_id == 0x3 && param->current_state == 0x6) {
+            if (param->button_id == 0x4 && param->current_state == 0x6) {
                 param->current_state = 0x5; // Revert state to avoid GW closing the window on mouse up
 
                 // Left button clicked, on the exit button (ID 0x3)
@@ -1558,6 +1610,8 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(notify_when_players_join_outpost);
     LOAD_BOOL(notify_when_players_leave_outpost);
 
+    LOAD_BOOL(fetch_module_prices);
+
     LOAD_BOOL(auto_age_on_vanquish);
     LOAD_BOOL(hide_dungeon_chest_popup);
     LOAD_BOOL(auto_age2_on_age);
@@ -1798,6 +1852,9 @@ void GameSettings::DrawInventorySettings()
     ImGui::Unindent();
     ImGui::Checkbox("Shorthand item description on weapon ping", &shorthand_item_ping);
     ImGui::ShowHelp("Include a concise description of your equipped weapon when ctrl+clicking a weapon set");
+
+    ImGui::Checkbox("Fetch prices for item components", &fetch_module_prices);
+    ImGui::ShowHelp("When enabled, the item description will contain information about the components of the item and their respective prices");
 
     ImGui::Checkbox("Lazy chest looting", &lazy_chest_looting);
     ImGui::ShowHelp("Toolbox will try to target any nearby reserved items\nwhen using the 'target nearest item' key next to a chest\nto pick stuff up.");

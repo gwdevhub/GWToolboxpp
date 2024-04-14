@@ -300,11 +300,12 @@ namespace {
     }
 
     // Redirect outgoing whispers to the whisper channel; allows sender to be coloured
-    void OnWriteToChatLog(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*) {
-        auto param = (GW::UI::UIChatMessage*)wParam;
-        if (param->channel == GW::Chat::Channel::CHANNEL_GLOBAL && *param->message == 0x76e) {
-            param->channel = GW::Chat::Channel::CHANNEL_WHISPER;
-        }
+    // I don't think we want this? extremely confusing to users
+    void OnWriteToChatLog(GW::HookStatus*, GW::UI::UIMessage, [[maybe_unused]] void* wParam, void*) {
+        // auto param = (GW::UI::UIChatMessage*)wParam;
+        // if (param->channel == GW::Chat::Channel::CHANNEL_GLOBAL && *param->message == 0x76e) {
+        //     param->channel = GW::Chat::Channel::CHANNEL_WHISPER;
+        // }
     }
 
     // Open links on player name click, Ctrl + click name to target, Ctrl + Shift + click name to invite

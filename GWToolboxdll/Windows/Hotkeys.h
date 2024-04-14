@@ -245,10 +245,10 @@ public:
     int Description(char* buf, size_t bufsz) override;
     void Execute() override;
     void Toggle() override;
-    bool IsToggled(bool force = false);
+    bool IsToggled(bool refresh = false);
 
 private:
-    [[nodiscard]] bool HasInterval() const { return target == Clicker || target == CoinDrop; };
+    [[nodiscard]] bool HasInterval() const { return target == Clicker || target == CoinDrop; }
     WORD togglekey = VK_LBUTTON;
     bool is_key_down = false;
     clock_t last_use = 0;

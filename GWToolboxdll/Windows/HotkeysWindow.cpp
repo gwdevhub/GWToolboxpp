@@ -590,9 +590,9 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
         case WM_MBUTTONUP:
             // leave keydata to none, need to handle special case below
             break;
-        case WM_MBUTTONDBLCLK:
-            keyData = VK_MBUTTON;
-            break;
+        // case WM_MBUTTONDBLCLK:
+        //     keyData = VK_MBUTTON;
+        //     break;
         default:
             break;
     }
@@ -680,7 +680,7 @@ void HotkeysWindow::Update(const float)
     while (const auto hk = PopPendingHotkey()) {
         hk->pressed = true;
         current_hotkey = hk;
-        hk->Execute();
+        hk->Toggle();
         current_hotkey = nullptr;
         hk->pressed = false;
     }
