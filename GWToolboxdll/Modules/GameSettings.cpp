@@ -52,6 +52,7 @@
 #include <Modules/ChatSettings.h>
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>
+#include <Modules/PriceCheckerModule.h>
 
 #include <Color.h>
 #include <hidusage.h>
@@ -446,6 +447,29 @@ namespace {
         if (block_description && description_out) {
             *description_out = nullptr;
         }
+
+        if (!block_description && fetch_module_prices && description_out && *description_out)
+        {
+            const auto item = GW::Items::GetItemById(item_id);
+            int approximatedPrice = 0;
+            std::wstring description(*description_out);
+            for (auto i = 0U; i < item->mod_struct_size; i++)
+            {
+                const auto mod = item->mod_struct[i];
+                const auto price = PriceChecker::GetPrice(mod);
+                approximatedPrice += price;
+            }
+
+            auto new_description = new wchar_t[description.length() + 1];
+            wcscpy(new_description, description.c_str());
+
+            if (*description_out) {
+                free(*description_out);
+            }
+
+            *description_out = new_description;
+        }
+
         GW::Hook::LeaveHook();
     }
 
