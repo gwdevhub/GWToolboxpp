@@ -1418,18 +1418,18 @@ bool get_next_bag_slot(const InventoryManager::Item* item, GW::Constants::Bag* b
     size_t slot = item->slot + 1;
     auto bag_id = bag->bag_id();
     if (slot >= bag->items.size()) {
-        bag_index = GW::Constants::BagMax;
+        bag_id = GW::Constants::Bag::Max;
         slot = 0;
         for (auto it_bag_id = ++bag->bag_id(); it_bag_id < GW::Constants::Bag::Max; it_bag_id++) {
             const auto it_bag = GW::Items::GetBag(it_bag_id);
             if (it_bag) {
-                bag_index = bag_idx;
+                bag_id = it_bag_id;
                 break;
             }
         }
     }
-    if (bag_index < GW::Constants::BagMax) {
-        *bag_id_out = (GW::Constants::Bag)(bag_index+1);
+    if (bag_id != GW::Constants::Bag::Max) {
+        *bag_id_out = bag_id;
         *slot_out = slot;
         return true;
     }
