@@ -53,6 +53,7 @@
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>
 #include <Modules/PriceCheckerModule.h>
+#include <Modules/InventoryManager.h>
 
 #include <Color.h>
 #include <hidusage.h>
@@ -454,12 +455,17 @@ namespace {
         {
             std::memset(modified_description, 0, sizeof(modified_description));
             wcscpy(modified_description, *description_out);
-            const auto item = GW::Items::GetItemById(item_id);
+            const auto item = (InventoryManager::Item*)GW::Items::GetItemById(item_id);
             auto pos = wcslen(*description_out);
             auto price = (float)PriceChecker::GetPrice(item->model_id);
             if (price > 0)
             {
                 auto unit = 'g';
+                if (item->GetIsMaterial() && !item->IsRareMaterial())
+                {
+                    price = price / 10;
+                }
+
                 if (price > 1000)
                 {
                     price = price / 1000;

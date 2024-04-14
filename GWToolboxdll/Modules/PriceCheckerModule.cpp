@@ -389,14 +389,41 @@ namespace {
     };
 }
 
-void PriceChecker::Initialize()
+static void LoadFromCache()
 {
-    ToolboxModule::Initialize();
+    const auto computer_path = Resources::GetComputerFolderPath();
+    const auto cache_path = computer_path / "price_quote_cache.json";
+    std::ifstream cache_file(cache_path);
+    if (!cache_file.is_open()) {
+        return;
+    }
+
+    try
+    {
+        std::stringstream buffer;
+        buffer << cache_file.rdbuf();
+        cache_file.close();
+
+        price_json = nlohmann::json::parse(buffer.str());
+    }
+    catch (...)
+    {
+    }
+
+    return;
 }
 
-void PriceChecker::Terminate()
+static void CacheResponse(const std::string response)
 {
-    ToolboxModule::Terminate();
+    const auto computer_path = Resources::GetComputerFolderPath();
+    const auto cache_path = computer_path / "price_quote_cache.json";
+    std::ofstream cache_file(cache_path);
+    if (!cache_file.is_open()) {
+        return;
+    }
+
+    cache_file << response;
+    cache_file.close();
 }
 
 static void EnsureLatestPriceJson()
@@ -417,11 +444,20 @@ static void EnsureLatestPriceJson()
     Resources::Download(trader_quotes_url, [](bool success, const std::string& response, void*) {
         if (!success)
         {
+            LoadFromCache();
             fetching_prices = false;
             return;
         }
 
-        price_json = nlohmann::json::parse(response);
+        try
+        {
+            CacheResponse(response);
+            price_json = nlohmann::json::parse(response);
+        }
+        catch (...)
+        {
+        }
+
         fetching_prices = false;
     });
 }
@@ -445,6 +481,17 @@ static int GetPriceById(std::string id)
     } catch (const std::exception&) {
         return 0;
     }
+}
+
+void PriceChecker::Initialize()
+{
+    ToolboxModule::Initialize();
+    LoadFromCache();
+}
+
+void PriceChecker::Terminate()
+{
+    ToolboxModule::Terminate();
 }
 
 void PriceChecker::Update(const float)
