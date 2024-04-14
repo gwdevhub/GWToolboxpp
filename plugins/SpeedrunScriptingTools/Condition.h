@@ -11,9 +11,10 @@ enum class ConditionType {
     IsInMap,
     QuestHasState,
     PartyPlayerCount,
-    InstanceProgress,
-    HasPartyWindowAllyOfName,
     PartyMemberStatus,
+    HasPartyWindowAllyOfName,
+    InstanceProgress,
+    InstanceTime,
     OnlyTriggerOncePerInstance,
 
     // Player state
@@ -22,13 +23,12 @@ enum class ConditionType {
     PlayerHasSkill,
     PlayerHasClass,
     PlayerHasName,
+    PlayerHasEnergy,
+    KeyIsPressed,
 
     // Current target state
     CurrentTargetHasHpBelow,
     CurrentTargetIsUsingSkill,
-
-    KeyIsPressed,
-    InstanceTime,
 
     NearbyAgent,
 
