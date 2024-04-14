@@ -6,18 +6,18 @@ enum class ActionType {
     MoveTo,
     CastOnSelf,
     CastOnTarget,
+    DropBuff, 
     ChangeTarget,
     UseItem,
+    EquipItem, 
+    RepopMinipet, 
     SendDialog,
     GoToNpc,
     Wait,
     SendChat,
-    Cancel, 
-    DropBuff, 
-    EquipItem,
-    Conditioned,
-    RepopMinipet, 
     PingHardMode,
+    Cancel, 
+    Conditioned,
     Count
 };
 
