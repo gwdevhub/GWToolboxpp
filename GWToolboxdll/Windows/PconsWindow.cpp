@@ -438,20 +438,24 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
         }
         ImGui::PopStyleColor();
     }
-    int j = 0;
-    for (auto i = 0u; i < pcons.size(); i++) {
-        if (pcons[i]->IsVisible()) {
-            if (j++ % items_per_row > 0) {
-                ImGui::SameLine(0, 2.0f);
-            }
-            pcons[i]->Draw(device);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(1, 1));
+    
+    if (ImGui::BeginTable("#pcons_table", std::max(items_per_row,1)))
+    {
+        for (auto pcon : pcons) {
+            if (!pcon->IsVisible())
+                continue;
+            ImGui::TableNextColumn();
+            pcon->Draw(device);
         }
+        ImGui::EndTable();
     }
+    ImGui::PopStyleVar(4);
 
     if (instance_type == InstanceType::Explorable && show_auto_disable_pcons_tickbox) {
-        if (j && j % items_per_row > 0) {
-            ImGui::NewLine();
-        }
         if (!current_objectives_to_check.empty()) {
             ImGui::Checkbox("Off @ end", &disable_cons_on_objective_completion);
             ImGui::ShowHelp(disable_cons_on_objective_completion_hint);

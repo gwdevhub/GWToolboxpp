@@ -129,7 +129,7 @@ namespace {
     {
         const auto item = GW::Items::GetItemById(item_id);
         if (item && item->bag) {
-            return clear_pending_move(static_cast<GW::Constants::Bag>(item->bag->index + 1), item->slot);
+            return clear_pending_move(item->bag->bag_id(), item->slot);
         }
     }
 
@@ -145,18 +145,16 @@ namespace {
             return 0;
         }
         const uint32_t slot = static_cast<uint32_t>(material_slot);
-        const uint16_t max_in_slot = MaxSlotSize(GW::Items::GetBag(GW::Constants::Bag::Material_Storage));
-        uint16_t available = max_in_slot;
-        const GW::Item* b_item = GW::Items::GetItemBySlot(item->bag, slot + 1);
-        if (b_item) {
-            if (b_item->quantity >= max_in_slot) {
-                return 0;
-            }
-            available -= b_item->quantity;
+        const auto materials_pane = GW::Items::GetBag(GW::Constants::Bag::Material_Storage);
+        uint16_t space_available = MaxSlotSize(materials_pane);
+        const GW::Item* existing_stack_in_storage = GW::Items::GetItemBySlot(materials_pane, slot + 1);
+        if (existing_stack_in_storage) {
+            ASSERT(existing_stack_in_storage->quantity <= space_available); // Could trigger if we failed to get the correct max slot size for materials
+            space_available -= existing_stack_in_storage->quantity;
         }
         const uint16_t pending_move = get_pending_move(GW::Constants::Bag::Material_Storage, slot);
-        available -= pending_move;
-        const uint16_t will_move = std::min<uint16_t>(item->quantity, available);
+        space_available -= pending_move;
+        const uint16_t will_move = std::min<uint16_t>(item->quantity, space_available);
         if (will_move) {
             set_pending_move(GW::Constants::Bag::Material_Storage, slot, will_move, item->item_id);
             GW::Items::MoveItem(item, GW::Constants::Bag::Material_Storage, slot, will_move);
@@ -188,7 +186,7 @@ namespace {
         }
         const uint16_t to_move = std::min<uint16_t>(item->quantity, quantity);
         uint16_t remaining = to_move;
-        for (auto bag_id = bag_first; bag_id <= bag_last; bag_id = (GW::Constants::Bag)((size_t)bag_id + 1)) {
+        for (auto bag_id = bag_first; bag_id <= bag_last; bag_id++) {
             GW::Bag* bag = GW::Items::GetBag(bag_id);
             if (!bag) {
                 continue;
@@ -221,7 +219,7 @@ namespace {
     {
         quantity = std::min<uint16_t>(item->quantity, quantity);
         const auto stackable = item->GetIsStackable();
-        for (auto bag_id = bag_first; bag_id <= bag_last; bag_id = (GW::Constants::Bag)((size_t)bag_id + 1)) {
+        for (auto bag_id = bag_first; bag_id <= bag_last; bag_id++) {
             GW::Bag* bag = GW::Items::GetBag(bag_id);
             if (!bag) {
                 continue;
@@ -336,7 +334,7 @@ namespace {
     std::vector<InventoryManager::Item*> filter_items(GW::Constants::Bag from, GW::Constants::Bag to, const std::function<bool(InventoryManager::Item*)>& cmp, const uint32_t limit = 0)
     {
         std::vector<InventoryManager::Item*> out;
-        for (auto bag_id = from; bag_id <= to; bag_id = (GW::Constants::Bag)((size_t)bag_id + 1)) {
+        for (auto bag_id = from; bag_id <= to; bag_id++) {
             GW::Bag* bag = GW::Items::GetBag(bag_id);
             if (!bag) {
                 continue;
@@ -614,7 +612,7 @@ namespace {
     int CountInventoryBagSlots()
     {
         int slots = 0;
-        for (auto bag_id = GW::Constants::Bag::Backpack; bag_id < GW::Constants::Bag::Equipment_Pack; bag_id = (GW::Constants::Bag)((size_t)bag_id + 1)) {
+        for (auto bag_id = GW::Constants::Bag::Backpack; bag_id < GW::Constants::Bag::Equipment_Pack; bag_id++) {
             const GW::Bag* bag = GW::Items::GetBag(bag_id);
             if (!bag) {
                 continue;
@@ -1404,7 +1402,7 @@ void InventoryManager::FetchPotentialItems()
     if (salvage_all_type != SalvageAllType::None) {
         ClearPotentialItems();
         while ((found = GetNextUnsalvagedItem(context_item.item(), found)) != nullptr) {
-            auto pi = new PotentialItem();
+            const auto pi = new PotentialItem();
             pi->set(found);
             potential_salvage_all_items.push_back(pi);
         }
@@ -1418,12 +1416,12 @@ bool get_next_bag_slot(const InventoryManager::Item* item, GW::Constants::Bag* b
     const auto slot_item = bag->items[item->slot];
     ASSERT(slot_item == item);
     size_t slot = item->slot + 1;
-    auto bag_index = bag->index;
+    auto bag_id = bag->bag_id();
     if (slot >= bag->items.size()) {
         bag_index = GW::Constants::BagMax;
         slot = 0;
-        for (auto bag_idx = bag->index + 1; bag_idx < GW::Constants::BagMax; bag_idx++) {
-            const auto it_bag = GW::Items::GetBagByIndex(bag_idx);
+        for (auto it_bag_id = ++bag->bag_id(); it_bag_id < GW::Constants::Bag::Max; it_bag_id++) {
+            const auto it_bag = GW::Items::GetBag(it_bag_id);
             if (it_bag) {
                 bag_index = bag_idx;
                 break;
@@ -1446,7 +1444,7 @@ InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(const Item* st
         get_next_bag_slot(start_after_item, &start_bag_id, &start_slot);
     }
 
-    for (auto bag_id = start_bag_id; bag_id <= GW::Constants::Bag::Equipment_Pack; bag_id = (GW::Constants::Bag)((size_t)bag_id + 1)) {
+    for (auto bag_id = start_bag_id; bag_id <= GW::Constants::Bag::Equipment_Pack; bag_id++) {
         GW::Bag* bag = GW::Items::GetBag(bag_id);
         size_t slot = start_slot;
         start_slot = 0;
@@ -1498,7 +1496,7 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(const Item* kit,
     if (start_after_item) {
         get_next_bag_slot(start_after_item, &start_bag_id, &start_slot);
     }
-    for (auto bag_id = start_bag_id; bag_id <= GW::Constants::Bag::Bag_2; bag_id = (GW::Constants::Bag)((size_t)bag_id + 1)) {
+    for (auto bag_id = start_bag_id; bag_id <= GW::Constants::Bag::Bag_2; bag_id++) {
         size_t slot = start_slot;
         start_slot = 0;
         if (!bags_to_salvage_from[bag_id]) {

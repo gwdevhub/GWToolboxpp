@@ -853,7 +853,6 @@ void GWToolbox::UpdateTerminating(float delta_f) {
     ASSERT(gwtoolbox_state == GWToolboxState::Terminating);
 
     if (all_modules_enabled.size()) {
-        SaveSettings();
         while (modules_enabled.size()) {
             ASSERT(ToggleModule(*modules_enabled[0], false) == false);
         }
@@ -896,6 +895,8 @@ void GWToolbox::UpdateTerminating(float delta_f) {
 
 void GWToolbox::DrawTerminating(IDirect3DDevice9*) {
     ASSERT(gwtoolbox_state == GWToolboxState::DrawTerminating);
+    // Save settings on the draw loop otherwise theme won't be saved
+    SaveSettings();
     ASSERT(DetachImgui());
     gwtoolbox_state = GWToolboxState::Terminating;
 }

@@ -192,6 +192,8 @@ namespace {
         return result;
     }
 
+    bool hide_compass_drawings = false;
+
     bool hide_compass_quest_marker = false;
     GW::MemoryPatcher show_compass_quest_marker_patch;
 
@@ -360,6 +362,10 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
     auto& instance = Instance();
     instance.pingslines_renderer.OnUIMessage(status, msgid, wParam, lParam);
     switch (msgid) {
+        case GW::UI::UIMessage::kCompassDraw: {
+            if (hide_compass_drawings)
+                status->blocked = true;
+        } break;
         case GW::UI::UIMessage::kMapLoaded: {
             instance.pmap_renderer.Invalidate();
             instance.loading = false;
@@ -521,13 +527,16 @@ void Minimap::DrawSettingsInternal()
     if (snap_to_compass) {
         ImGui::NextSpacedElement();
     }
-    ImGui::Checkbox("Snap to compass", &snap_to_compass);
+    ImGui::Checkbox("Snap to GW compass", &snap_to_compass);
     ImGui::ShowHelp("Resize and position minimap to match in-game compass size and position.");
     ImGui::Checkbox("Hide GW compass agents", &hide_compass_agents);
     if (ImGui::Checkbox("Hide GW compass quest marker", &hide_compass_quest_marker)) {
         ToggleCompassQuestMarker(hide_compass_quest_marker);
     }
     ImGui::ShowHelp("To disable the toolbox minimap quest marker, set the quest marker color to transparent in the Symbols section below.");
+
+    ImGui::Checkbox("Hide GW compass drawings", &hide_compass_drawings);
+    ImGui::ShowHelp("Drawings made by other players will be visible on the minimap, but not the compass");
 
     is_movable = is_resizable = !snap_to_compass;
     if (is_resizable) {
@@ -631,15 +640,6 @@ void Minimap::DrawSettingsInternal()
     ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
 }
 
-ImGuiWindowFlags Minimap::GetWinFlags(ImGuiWindowFlags flags, const bool noinput_if_frozen) const
-{
-    flags = ToolboxWidget::GetWinFlags(flags, noinput_if_frozen);
-    if (snap_to_compass) {
-        flags |= ImGuiWindowFlags_NoInputs;
-    }
-    return flags;
-}
-
 void Minimap::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
@@ -668,6 +668,8 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(hide_compass_agents);
 
     LOAD_BOOL(hide_compass_quest_marker);
+    LOAD_BOOL(hide_compass_drawings);
+
     ToggleCompassQuestMarker(hide_compass_quest_marker);
 
     key_none_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_none_behavior), 1));
@@ -707,6 +709,7 @@ void Minimap::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(hide_compass_agents);
 
     SAVE_BOOL(hide_compass_quest_marker);
+    SAVE_BOOL(hide_compass_drawings);
 
     range_renderer.SaveSettings(ini, Name());
     pmap_renderer.SaveSettings(ini, Name());
@@ -823,7 +826,12 @@ void Minimap::Draw(IDirect3DDevice9*)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(500.0f, 500.0f), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin(Name(), nullptr, GetWinFlags(ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus, true))) {
+
+    auto win_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus;
+    if (snap_to_compass) {
+        win_flags |= ImGuiWindowFlags_NoInputs;
+    }
+    if (ImGui::Begin(Name(), nullptr, GetWinFlags(win_flags, true) )) {
         // window pos are already rounded by imgui, so casting is no big deal
         if (!snap_to_compass) {
             location.x = static_cast<int>(ImGui::GetWindowPos().x);

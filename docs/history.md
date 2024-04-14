@@ -7,6 +7,21 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 6.16
+* [Minor] `/dialog take` can now be used the take bounties
+* [Minor] Current character is highlighted in Reroll window now
+* [Minor] Added option to colour outgoing whispers blue, instead of always doing so
+* [Fix] Fixed dialog hotkeys
+* [Fix] Fixed salvaging and storing functionality
+* [Fix] Disabled toolbox in PvP explorables as well
+* [Fix] Fixed bug preventing minimap flag buttons from working
+* [Fix] Capitalised chat aliases work again
+* [Fix] Fixed autoclicker not being possible to turn off
+* [Fix] Completionwindow EotN is correctly tracked again
+* [Fix] Fixed urls not being turned into templates when sending to chat
+* [Fix] Fixed tb not being disabled fully in pvp
+* [Fix] Fixed crash on world map when toggling "view all areas" in cantha
+
 ## Version 6.13
 * [Update] Compatibility with GW Version 37.363
 * [Removed] Toolbox no longer works in PvP. This is intentional.

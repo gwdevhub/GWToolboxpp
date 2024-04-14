@@ -591,7 +591,7 @@ namespace {
     void OnSendChat(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
     {
         ASSERT(message_id == GW::UI::UIMessage::kSendChatMessage);
-        const auto message = ((GW::UI::UIPacket::kSendChatMessage*)wparam)->message;
+        const auto message = static_cast<GW::UI::UIPacket::kSendChatMessage*>(wparam)->message;
         if (!(message && *message))
             return;
         const auto channel = GW::Chat::GetChannel(*message);
@@ -599,7 +599,8 @@ namespace {
             return;
         }
         for (const auto alias : cmd_aliases) {
-            if (wcscmp(alias->alias_wstr, &message[1]) == 0 && !alias->processing && wcslen(alias->command_wstr) > 1) {
+            const auto sent_alias = GuiUtils::ToLower(&message[1]);
+            if (wcscmp(alias->alias_wstr, sent_alias.c_str()) == 0 && !alias->processing && wcslen(alias->command_wstr) > 1) {
                 status->blocked = true;
                 alias->processing = true;
                 GW::Chat::SendChat(alias->command_cstr[0], &alias->command_wstr[1]);
@@ -1570,7 +1571,8 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDialog)
         return;
     }
     uint32_t id = 0;
-    if (wcscmp(argv[1], L"take") == 0) {
+    const auto dialog_str = std::wstring{argv[1]};
+    if (dialog_str == L"take" || dialog_str == L"0") {
         id = 0;
     }
     else if (!(GuiUtils::ParseUInt(argv[1], &id) && id)) {

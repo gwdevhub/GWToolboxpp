@@ -26,6 +26,7 @@ namespace {
     bool show_timestamp_24h = false;
     bool npc_speech_bubbles_as_chat = false;
     bool redirect_npc_messages_to_emote_chat = false;
+    bool redirect_outgoing_whisper_to_whisper_channel = false;
     bool openlinks = true;
     bool auto_url = true;
 
@@ -241,14 +242,15 @@ namespace {
     }
 
     // Turn /wiki into /wiki <location>
-    void OnSendChat(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
+    void OnSendChat(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
     {
         ASSERT(message_id == GW::UI::UIMessage::kSendChatMessage);
-        wchar_t* msg = *(wchar_t**)wparam;
-        if (!(auto_url && msg)) {
+        auto packet = (GW::UI::UIPacket::kSendChatMessage*)wparam;
+        if (!(auto_url && packet->message && *packet->message)) {
             return;
         }
-        const auto chan = GW::Chat::GetChannel((char)*msg);
+        const auto chan = GW::Chat::GetChannel((char)*packet->message);
+        auto msg = &packet->message[1];
         size_t len = wcslen(msg);
         size_t max_len = 120;
 
@@ -271,18 +273,13 @@ namespace {
         if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) {
             return;
         }
-
-        if (len + 5 < max_len) {
-            for (size_t i = len; i != 0; --i) {
-                msg[i] = msg[i - 1];
-            }
-            msg[0] = '[';
-            msg[len + 1] = ';';
-            msg[len + 2] = 'x';
-            msg[len + 3] = 'x';
-            msg[len + 4] = ']';
-            msg[len + 5] = 0;
-        }
+        GW::UI::UIPacket::kSendChatMessage new_packet = *packet;
+        wchar_t new_msg[122];
+        if (swprintf(new_msg, _countof(new_msg), L"%c[%s;xx]",*packet->message,msg) < 1)
+            return;
+        new_packet.message = new_msg;
+        status->blocked = true;
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kSendChatMessage, &new_packet);
     }
 
     // Hide player chat message speech bubbles by redirecting from 0x10000081 to 0x1000007E
@@ -300,12 +297,14 @@ namespace {
     }
 
     // Redirect outgoing whispers to the whisper channel; allows sender to be coloured
-    // I don't think we want this? extremely confusing to users
-    void OnWriteToChatLog(GW::HookStatus*, GW::UI::UIMessage, [[maybe_unused]] void* wParam, void*) {
-        // auto param = (GW::UI::UIChatMessage*)wParam;
-        // if (param->channel == GW::Chat::Channel::CHANNEL_GLOBAL && *param->message == 0x76e) {
-        //     param->channel = GW::Chat::Channel::CHANNEL_WHISPER;
-        // }
+    void OnWriteToChatLog(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*) {
+        if (!redirect_outgoing_whisper_to_whisper_channel) {
+            return;
+        }
+        auto param = (GW::UI::UIChatMessage*)wParam;
+        if (param->channel == GW::Chat::Channel::CHANNEL_GLOBAL && *param->message == 0x76e) {
+            param->channel = GW::Chat::Channel::CHANNEL_WHISPER;
+        }
     }
 
     // Open links on player name click, Ctrl + click name to target, Ctrl + Shift + click name to invite
@@ -481,6 +480,9 @@ void ChatSettings::DrawSettingsInternal()
     ImGui::ShowHelp("Speech bubbles from NPCs and Heroes will appear as emote messages in chat");
     ImGui::Checkbox("Redirect NPC dialog to emote channel", &redirect_npc_messages_to_emote_chat);
     ImGui::ShowHelp("Messages from NPCs that would normally show on-screen and in team chat are instead redirected to the emote channel");
+    ImGui::Checkbox("Redirect outgoing whispers to whisper channel", &redirect_outgoing_whisper_to_whisper_channel);
+    ImGui::ShowHelp("Whispers that you send are typically shown in colour of the global channel (green).\n"
+                    "This setting makes them appear blue like an incoming message, with -> before the name.");
     if (ImGui::Checkbox("Open web links from templates", &openlinks)) {
         GW::UI::SetOpenLinks(openlinks);
     }
@@ -500,6 +502,7 @@ void ChatSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(hide_player_speech_bubbles);
     LOAD_BOOL(npc_speech_bubbles_as_chat);
     LOAD_BOOL(redirect_npc_messages_to_emote_chat);
+    LOAD_BOOL(redirect_outgoing_whisper_to_whisper_channel);
     LOAD_BOOL(openlinks);
     LOAD_BOOL(auto_url);
 
@@ -520,6 +523,7 @@ void ChatSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(hide_player_speech_bubbles);
     SAVE_BOOL(npc_speech_bubbles_as_chat);
     SAVE_BOOL(redirect_npc_messages_to_emote_chat);
+    SAVE_BOOL(redirect_outgoing_whisper_to_whisper_channel);
     SAVE_BOOL(openlinks);
     SAVE_BOOL(auto_url);
 

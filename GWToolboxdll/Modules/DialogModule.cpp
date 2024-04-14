@@ -6,6 +6,8 @@
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
+
 
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
@@ -294,14 +296,16 @@ void DialogModule::Update(float)
         if (!GetDialogAgent()) {
             continue;
         }
-        if (it->first == 0) {
+        const auto dialog_id = it->first;
+        if (dialog_id == 0) {
             // If dialog queued is id 0, this means the player wants to take (or accept reward for) the first available quest.
-            AcceptFirstAvailableQuest();
             queued_dialogs_to_send.erase(it);
+            AcceptFirstAvailableQuest() || AcceptFirstAvailableBounty();
             break;
         }
-        if (IsDialogButtonAvailable(it->first)) {
-            GW::Agents::SendDialog(it->first);
+        if (IsDialogButtonAvailable(dialog_id)) {
+            queued_dialogs_to_send.erase(it);
+            GW::Agents::SendDialog(dialog_id);
             break;
         }
     }
@@ -364,6 +368,48 @@ uint32_t DialogModule::AcceptFirstAvailableQuest()
     }
     if (!available_quests.empty()) {
         return take_quest(available_quests[0]);
+    }
+    return 0;
+}
+
+uint32_t DialogModule::AcceptFirstAvailableBounty() {
+    if (dialog_buttons.empty()) {
+        return 0;
+    }
+    
+    // NB: Be careful - GW allows you to grab factions blessings more than once!
+
+    const wchar_t* luxon_priest = L"\x3F69\xBAA2\xF307\x2CC1";
+    const wchar_t* kurzick_priest = L"\x3E98\xDA05\xAA38\x45D";
+
+    const auto agent_name = GW::Agents::GetAgentEncName(GetDialogAgent());
+    if (!agent_name)
+        return 0;
+
+    const auto has_bounty = [](GW::Constants::SkillID skill_id) {
+        return GW::Effects::GetPlayerEffectBySkillId(skill_id) != nullptr;
+    };
+
+    // NB: Be careful - GW allows you to grab factions blessings more than once!
+    if (wcscmp(agent_name, luxon_priest) == 0) {
+        if (has_bounty(GW::Constants::SkillID::Blessing_of_the_Luxons))
+            return 0;
+        SendDialogs({ 0x85, 0x86, 0x2, 0x84 });
+        return 1;
+    }
+    if (wcscmp(agent_name, kurzick_priest) == 0) {
+        if (has_bounty(GW::Constants::SkillID::Blessing_of_the_Kurzicks))
+            return 0;
+        // Interested > Thanks || Lets talk this over > Bribe > Thanks
+        SendDialogs({ 0x85, 0x86, 0x81, 0x2, 0x84 });
+        return 1;
+    }
+    // NB: For all other bounties, we don't need to check because the dialog will no longer be available.
+    for (auto dialog : dialog_buttons) {
+        if (dialog->skill_id != 0xffffffff) {
+            SendDialog(dialog->dialog_id);
+            return 1;
+        }
     }
     return 0;
 }
