@@ -153,6 +153,7 @@ namespace {
     bool fetch_module_prices = true;
     const size_t modified_description_size = 256;
     wchar_t modified_description[modified_description_size];
+    float high_price_threshold = 1000;
 
     bool block_enter_area_message = false;
 
@@ -461,9 +462,15 @@ namespace {
             if (price > 0)
             {
                 auto unit = 'g';
+                auto color = L"ffffff";
                 if (item->GetIsMaterial() && !item->IsRareMaterial())
                 {
                     price = price / 10;
+                }
+
+                if (price > high_price_threshold)
+                {
+                    color = L"ffd600";
                 }
 
                 if (price > 1000)
@@ -472,16 +479,22 @@ namespace {
                     unit = 'k';
                 }
 
-                pos += swprintf(&modified_description[pos], modified_description_size - pos, L"\x2\x108\x107\n<c=#ffd600>Item price: %.4g%C\x1", price, unit);
+                pos += swprintf(&modified_description[pos], modified_description_size - pos, L"\x2\x108\x107\n<c=#%s>Item price: %.4g%C\x1", color, price, unit);
             }
             else
             {
                 for (auto i = 0U; i < item->mod_struct_size; i++) {
                     auto unit = 'g';
+                    auto color = L"ffffff";
                     const auto mod = item->mod_struct[i];
                     price = (float)PriceChecker::GetPrice(mod);
                     if (price == 0) {
                         continue;
+                    }
+
+                    if (price > high_price_threshold)
+                    {
+                        color = L"ffd600";
                     }
 
                     if (price > 1000) {
@@ -489,7 +502,7 @@ namespace {
                         unit = 'k';
                     }
 
-                    pos += swprintf(&modified_description[pos], modified_description_size - pos, L"\x2\x108\x107\n<c=#ffd600>%S: %.4g%C\x1", PriceChecker::GetModifierName(mod).c_str(), price, unit);
+                    pos += swprintf(&modified_description[pos], modified_description_size - pos, L"\x2\x108\x107\n<c=#%s>%S: %.4g%C\x1", color, PriceChecker::GetModifierName(mod).c_str(), price, unit);
                 }
             }
 
@@ -1611,6 +1624,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(notify_when_players_join_outpost);
     LOAD_BOOL(notify_when_players_leave_outpost);
 
+    LOAD_FLOAT(high_price_threshold);
     LOAD_BOOL(fetch_module_prices);
 
     LOAD_BOOL(auto_age_on_vanquish);
@@ -1856,6 +1870,7 @@ void GameSettings::DrawInventorySettings()
 
     ImGui::Checkbox("Fetch prices for item components", &fetch_module_prices);
     ImGui::ShowHelp("When enabled, the item description will contain information about the components of the item and their respective prices");
+    ImGui::SliderFloat("High price threshold", &high_price_threshold, 100, 50000);
 
     ImGui::Checkbox("Lazy chest looting", &lazy_chest_looting);
     ImGui::ShowHelp("Toolbox will try to target any nearby reserved items\nwhen using the 'target nearest item' key next to a chest\nto pick stuff up.");
