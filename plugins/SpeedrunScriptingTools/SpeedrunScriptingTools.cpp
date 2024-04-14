@@ -25,6 +25,8 @@ namespace {
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry CoreMessage_Entry;
 
+    constexpr long currentVersion = 2;
+
     bool canAddCondition(const Script& script) {
         return !std::ranges::any_of(script.conditions, [](const auto& cond) {
             return cond->type() == ConditionType::OnlyTriggerOncePerInstance;
@@ -105,12 +107,18 @@ void SpeedrunScriptingTools::DrawSettings()
         m_scripts.push_back({});
         m_scripts.back().name = "New script";
     }
+
+    ImGui::Text("Version 0.2. For bug reports and requests contact Jabor.");
 }
 
 void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
 {
     ToolboxPlugin::LoadSettings(folder);
     ini.LoadFile(GetSettingFile(folder).c_str());
+    const long savedVersion = ini.GetLongValue(Name(), "version", 1);
+    
+    if (savedVersion != currentVersion) return;
+    
     const std::string read = ini.GetValue(Name(), "scripts", "");
     if (read.empty()) return;
 
@@ -123,7 +131,6 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
             case 'S':
                 m_scripts.push_back({});
                 m_scripts.back().name = readStringWithSpaces(stream);
-                printf("read name %s", m_scripts.back().name.c_str());
                 stream >> m_scripts.back().triggerPacket;
                 stream >> m_scripts.back().enabled;
                 break;
@@ -146,6 +153,8 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
 void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
 {
     ToolboxPlugin::SaveSettings(folder);
+    ini.SetLongValue(Name(), "version", currentVersion);
+
     std::ostringstream stream;
     for (const auto& script : m_scripts) {
         stream << 'S' << " ";
