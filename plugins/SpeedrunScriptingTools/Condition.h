@@ -30,6 +30,8 @@ enum class ConditionType {
     KeyIsPressed,
     InstanceTime,
 
+    NearbyAgent,
+
     Count
 };
 
