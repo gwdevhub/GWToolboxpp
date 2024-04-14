@@ -150,6 +150,8 @@ namespace {
     bool notify_when_party_member_joins = false;
 
     bool fetch_module_prices = true;
+    const size_t modified_description_size = 256;
+    wchar_t modified_description[modified_description_size];
 
     bool block_enter_area_message = false;
 
@@ -450,24 +452,42 @@ namespace {
 
         if (!block_description && fetch_module_prices && description_out && *description_out)
         {
+            std::memset(modified_description, 0, sizeof(modified_description));
+            wcscpy(modified_description, *description_out);
             const auto item = GW::Items::GetItemById(item_id);
-            int approximatedPrice = 0;
-            std::wstring description(*description_out);
-            for (auto i = 0U; i < item->mod_struct_size; i++)
+            auto pos = wcslen(*description_out);
+            auto price = (float)PriceChecker::GetPrice(item->model_id);
+            if (price > 0)
             {
-                const auto mod = item->mod_struct[i];
-                const auto price = PriceChecker::GetPrice(mod);
-                approximatedPrice += price;
+                auto unit = 'g';
+                if (price > 1000)
+                {
+                    price = price / 1000;
+                    unit = 'k';
+                }
+
+                pos += swprintf(&modified_description[pos], modified_description_size - pos, L"\x2\x108\x107\n<c=#ffd600>Item price: %.4g%C\x1", price, unit);
+            }
+            else
+            {
+                for (auto i = 0U; i < item->mod_struct_size; i++) {
+                    auto unit = 'g';
+                    const auto mod = item->mod_struct[i];
+                    price = (float)PriceChecker::GetPrice(mod);
+                    if (price == 0) {
+                        continue;
+                    }
+
+                    if (price > 1000) {
+                        price = price / 1000;
+                        unit = 'k';
+                    }
+
+                    pos += swprintf(&modified_description[pos], modified_description_size - pos, L"\x2\x108\x107\n<c=#ffd600>%S: %.4g%C\x1", PriceChecker::GetModifierName(mod).c_str(), price, unit);
+                }
             }
 
-            auto new_description = new wchar_t[description.length() + 1];
-            wcscpy(new_description, description.c_str());
-
-            if (*description_out) {
-                free(*description_out);
-            }
-
-            *description_out = new_description;
+            *description_out = modified_description;
         }
 
         GW::Hook::LeaveHook();

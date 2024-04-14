@@ -2,6 +2,7 @@
 
 #include <ToolboxModule.h>
 #include <GWCA/GameEntities/Item.h>
+#include <string.h>
 
 class PriceChecker : public ToolboxModule {
     PriceChecker() = default;
@@ -21,4 +22,6 @@ public:
     void Terminate() override;
     void Update(float delta) override;
     static int GetPrice(GW::ItemModifier itemModifier);
+    static int GetPrice(uint32_t model_id);
+    static std::string GetModifierName(GW::ItemModifier itemModifier);
 };
