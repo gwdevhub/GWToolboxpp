@@ -192,6 +192,8 @@ namespace {
         return result;
     }
 
+    bool hide_compass_drawings = false;
+
     bool hide_compass_quest_marker = false;
     GW::MemoryPatcher show_compass_quest_marker_patch;
 
@@ -360,6 +362,10 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
     auto& instance = Instance();
     instance.pingslines_renderer.OnUIMessage(status, msgid, wParam, lParam);
     switch (msgid) {
+        case GW::UI::UIMessage::kCompassDraw: {
+            if (hide_compass_drawings)
+                status->blocked = true;
+        } break;
         case GW::UI::UIMessage::kMapLoaded: {
             instance.pmap_renderer.Invalidate();
             instance.loading = false;
@@ -521,13 +527,16 @@ void Minimap::DrawSettingsInternal()
     if (snap_to_compass) {
         ImGui::NextSpacedElement();
     }
-    ImGui::Checkbox("Snap to compass", &snap_to_compass);
+    ImGui::Checkbox("Snap to GW compass", &snap_to_compass);
     ImGui::ShowHelp("Resize and position minimap to match in-game compass size and position.");
     ImGui::Checkbox("Hide GW compass agents", &hide_compass_agents);
     if (ImGui::Checkbox("Hide GW compass quest marker", &hide_compass_quest_marker)) {
         ToggleCompassQuestMarker(hide_compass_quest_marker);
     }
     ImGui::ShowHelp("To disable the toolbox minimap quest marker, set the quest marker color to transparent in the Symbols section below.");
+
+    ImGui::Checkbox("Hide GW compass drawings", &hide_compass_drawings);
+    ImGui::ShowHelp("Drawings made by other players will be visible on the minimap, but not the compass");
 
     is_movable = is_resizable = !snap_to_compass;
     if (is_resizable) {
@@ -659,6 +668,8 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(hide_compass_agents);
 
     LOAD_BOOL(hide_compass_quest_marker);
+    LOAD_BOOL(hide_compass_drawings);
+
     ToggleCompassQuestMarker(hide_compass_quest_marker);
 
     key_none_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_none_behavior), 1));
@@ -698,6 +709,7 @@ void Minimap::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(hide_compass_agents);
 
     SAVE_BOOL(hide_compass_quest_marker);
+    SAVE_BOOL(hide_compass_drawings);
 
     range_renderer.SaveSettings(ini, Name());
     pmap_renderer.SaveSettings(ini, Name());
