@@ -152,9 +152,14 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
 
     const GW::Vec2f mypos = me->pos;
 
+    std::vector<GW::Vec2f> markers_drawn;
+
     auto drawQuestMarker = [&](const GW::Quest& quest)
     {
         const GW::Vec2f qpos = { quest.marker.x, quest.marker.y };
+        if (std::find(markers_drawn.begin(), markers_drawn.end(), qpos) != markers_drawn.end())
+            return; // Don't draw more than 1 marker for a position
+        markers_drawn.push_back(qpos);
         const float compass_scale = Minimap::Instance().Scale();
         const float marker_scale = 1.0f / compass_scale;
         auto rotate = DirectX::XMMatrixRotationZ(-tau / 5);
