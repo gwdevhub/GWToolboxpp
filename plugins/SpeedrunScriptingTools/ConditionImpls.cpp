@@ -426,6 +426,32 @@ void PlayerHasNameCondition::drawSettings()
     ImGui::InputText("name", &name);
 }
 
+/// ------------- PlayerHasEnergyCondition -------------
+PlayerHasEnergyCondition::PlayerHasEnergyCondition(std::istringstream& stream)
+{
+    stream >> minEnergy;
+}
+void PlayerHasEnergyCondition::serialize(std::ostringstream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << minEnergy << " ";
+}
+bool PlayerHasEnergyCondition::check() const
+{
+    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    if (!player) return false;
+
+    return player->energy * player->max_energy >= minEnergy;
+}
+void PlayerHasEnergyCondition::drawSettings()
+{
+    ImGui::Text("If player has at least");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(90);
+    ImGui::InputInt("energy", &minEnergy, 0);
+}
+
 /// ------------- CurrentTargetIsCastingSkillCondition -------------
 CurrentTargetIsCastingSkillCondition::CurrentTargetIsCastingSkillCondition(std::istringstream& stream)
 {

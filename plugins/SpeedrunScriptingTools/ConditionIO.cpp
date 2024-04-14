@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 19);
+    static_assert((int)ConditionType::Count == 20);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -38,6 +38,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<PlayerHasClassCondition>();
         case ConditionType::PlayerHasName:
             return std::make_shared<PlayerHasNameCondition>();
+        case ConditionType::PlayerHasEnergy:
+            return std::make_shared<PlayerHasEnergyCondition>();
 
         case ConditionType::CurrentTargetHasHpBelow:
             return std::make_shared<CurrentTargetHasHpBelowCondition>();
@@ -58,7 +60,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 19);
+    static_assert((int)ConditionType::Count == 20);
     switch (type) {
         case ConditionType::Not:
             return "Negation";
@@ -89,6 +91,8 @@ std::string_view toString(ConditionType type)
             return "Player has class";
         case ConditionType::PlayerHasName:
             return "Player has name";
+        case ConditionType::PlayerHasEnergy:
+            return "Player has energy";
 
         case ConditionType::CurrentTargetHasHpBelow:
             return "Current target HP";
@@ -110,7 +114,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(std::istringstream& stream)
 {
-static_assert((int)ConditionType::Count == 19);
+static_assert((int)ConditionType::Count == 20);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -144,6 +148,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<PlayerHasClassCondition>(stream);
     case ConditionType::PlayerHasName:
         return std::make_shared<PlayerHasNameCondition>(stream);
+    case ConditionType::PlayerHasEnergy:
+        return std::make_shared<PlayerHasEnergyCondition>(stream);
 
     case ConditionType::CurrentTargetHasHpBelow:
         return std::make_shared<CurrentTargetHasHpBelowCondition>(stream);
@@ -172,6 +178,7 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
     }
     if (ImGui::BeginPopup("Add condition")) {
         for (auto i = 0; i < (int)ConditionType::Count; ++i) {
+            if (ConditionType(i) == ConditionType::PartyMemberStatus) continue; //Does not work properly
             if (ImGui::Selectable(toString((ConditionType)i).data())) {
                 result = makeCondition(ConditionType(i));
             }

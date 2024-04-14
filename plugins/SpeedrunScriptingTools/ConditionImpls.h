@@ -157,6 +157,20 @@ private:
     Class secondary = Class::Any;
 };
 
+class PlayerHasEnergyCondition : public Condition {
+public:
+    PlayerHasEnergyCondition() = default;
+    PlayerHasEnergyCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::PlayerHasEnergy; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    int minEnergy = 0;
+};
+
+
 class PlayerHasNameCondition : public Condition {
 public:
     PlayerHasNameCondition() = default;
