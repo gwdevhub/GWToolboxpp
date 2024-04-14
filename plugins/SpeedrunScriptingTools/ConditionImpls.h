@@ -250,3 +250,24 @@ public:
 private:
     int timeInSeconds = 0;
 };
+
+class NearbyAgentCondition : public Condition {
+public:
+    NearbyAgentCondition() = default;
+    NearbyAgentCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::NearbyAgent; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    AgentType agentType = AgentType::Any;
+    Class primary = Class::Any;
+    Class secondary = Class::Any;
+    Status status = Status::Alive;
+    HexedStatus hexed = HexedStatus::Any;
+    GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
+    int modelId = 0;
+    float minDistance = 0.f;
+    float maxDistance = 5000.f;
+};

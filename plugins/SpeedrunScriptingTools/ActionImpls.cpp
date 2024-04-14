@@ -91,25 +91,7 @@ namespace {
         }
     }
 
-    template <typename T, typename U = std::enable_if_t<std::is_enum<T>::value>>
-    std::ostream& operator<<(std::ostream& os, T t)
-    {
-        using ut = std::underlying_type_t<T>;
-        os << static_cast<ut>(t);
-        return os;
-    }
-    template <typename T, typename U = std::enable_if_t<std::is_enum<T>::value>>
-    std::istringstream& operator>>(std::istringstream& is, T& t)
-    {
-        using ut = std::underlying_type_t<T>;
-        ut read;
-        is >> read;
-        t = static_cast<T>(read);
-        return is;
-    }
-    constexpr double eps = 1e-3;
-
-    template<typename T>
+    template <typename T>
     void drawEnumButton(T firstValue, T lastValue, T& currentValue, int id = 0, float width = 100.)
     {
         const auto popupName = std::string{"p"} + "###" + std::to_string(id);
@@ -126,6 +108,9 @@ namespace {
             ImGui::EndPopup();
         }
     }
+
+
+    constexpr double eps = 1e-3;
 } // namespace
 
 /// ------------- MoveToAction -------------

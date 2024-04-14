@@ -1,6 +1,6 @@
 #pragma once
 
-#include<sstream>
+#include <sstream>
 
 std::string readStringWithSpaces(std::istringstream&);
 void writeStringWithSpaces(std::ostringstream&, const std::string& word);
@@ -17,3 +17,20 @@ std::string_view toString(AgentType);
 std::string_view toString(Sorting);
 std::string_view toString(HexedStatus);
 std::string toString(Class);
+
+template <typename T, typename U = std::enable_if_t<std::is_enum<T>::value>>
+std::ostream& operator<<(std::ostream& os, T t)
+{
+    using ut = std::underlying_type_t<T>;
+    os << static_cast<ut>(t);
+    return os;
+}
+template <typename T, typename U = std::enable_if_t<std::is_enum<T>::value>>
+std::istringstream& operator>>(std::istringstream& is, T& t)
+{
+    using ut = std::underlying_type_t<T>;
+    ut read;
+    is >> read;
+    t = static_cast<T>(read);
+    return is;
+}
