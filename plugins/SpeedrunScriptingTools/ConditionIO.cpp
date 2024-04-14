@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 18);
+    static_assert((int)ConditionType::Count == 19);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -46,9 +46,10 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
         case ConditionType::KeyIsPressed:
             return std::make_shared<KeyIsPressedCondition>();
-
         case ConditionType::InstanceTime:
             return std::make_shared<InstanceTimeCondition>();
+        case ConditionType::NearbyAgent:
+            return std::make_shared<NearbyAgentCondition>();
 
         default:
             return nullptr;
@@ -57,7 +58,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 18);
+    static_assert((int)ConditionType::Count == 19);
     switch (type) {
         case ConditionType::Not:
             return "Negation";
@@ -96,9 +97,10 @@ std::string_view toString(ConditionType type)
 
         case ConditionType::KeyIsPressed:
             return "Keypress";
-
         case ConditionType::InstanceTime:
             return "Instance time";
+        case ConditionType::NearbyAgent:
+            return "Nearby agent exists";
 
         default:
             return "Unknown";
@@ -108,7 +110,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(std::istringstream& stream)
 {
-static_assert((int)ConditionType::Count == 18);
+static_assert((int)ConditionType::Count == 19);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -152,6 +154,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<KeyIsPressedCondition>(stream);
     case ConditionType::InstanceTime:
         return std::make_shared<InstanceTimeCondition>(stream);
+    case ConditionType::NearbyAgent:
+        return std::make_shared<NearbyAgentCondition>(stream);
 
     default:
         assert(false);

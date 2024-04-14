@@ -45,6 +45,25 @@ namespace {
         }
         return "";
     }
+
+    template <typename T>
+    void drawEnumButton(T firstValue, T lastValue, T& currentValue, int id = 0, float width = 100.)
+    {
+        const auto popupName = std::string{"p"} + "###" + std::to_string(id);
+        const auto buttonText = std::string{toString(currentValue)} + "###" + std::to_string(id);
+        if (ImGui::Button(buttonText.c_str(), ImVec2(width, 0))) {
+            ImGui::OpenPopup(popupName.c_str());
+        }
+        if (ImGui::BeginPopup(popupName.c_str())) {
+            for (auto i = (int)firstValue; i <= (int)lastValue; ++i) {
+                if (ImGui::Selectable(toString((T)i).data())) {
+                    currentValue = static_cast<T>(i);
+                }
+            }
+            ImGui::EndPopup();
+        }
+    }
+
 }
 
 /// ------------- InvertedCondition -------------
@@ -688,4 +707,111 @@ void InstanceTimeCondition::drawSettings()
     ImGui::Text("If the instance is older than");
     ImGui::SameLine();
     ImGui::InputInt("s", &timeInSeconds, 0);
+}
+
+/// ------------- NearbyAgentCondition -------------
+
+NearbyAgentCondition::NearbyAgentCondition(std::istringstream& stream)
+{
+    stream >> agentType >> primary >> secondary >> status >> hexed >> skill >> modelId >> minDistance >> maxDistance;
+}
+void NearbyAgentCondition::serialize(std::ostringstream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << agentType << " " << primary << " " << secondary << " " << status << " " << hexed << " " << skill << " "
+           << " " << modelId << " " << minDistance << " " << maxDistance << " ";
+}
+bool NearbyAgentCondition::check() const
+{
+    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto agents = GW::Agents::GetAgentArray();
+    if (!player || !agents) return false;
+
+    const auto fulfillsConditions = [&](const GW::AgentLiving* agent) {
+        if (!agent) return false;
+        const auto correctType = [&]() -> bool {
+            switch (agentType) {
+                case AgentType::Any:
+                    return true;
+                case AgentType::PartyMember: // optimize this? Dont need to check all agents
+                    return agent->IsPlayer();
+                case AgentType::Friendly:
+                    return agent->allegiance != GW::Constants::Allegiance::Enemy;
+                case AgentType::Hostile:
+                    return agent->allegiance == GW::Constants::Allegiance::Enemy;
+                default:
+                    return false;
+            }
+        }();
+        const auto correctPrimary = (primary == Class::Any) || primary == (Class)agent->primary;
+        const auto correctSecondary = (secondary == Class::Any) || secondary == (Class)agent->secondary;
+        const auto correctStatus = (status == Status::Any) || ((status == Status::Alive) == agent->GetIsAlive());
+        const auto hexedCorrectly = (hexed == HexedStatus::Any) || ((hexed == HexedStatus::Hexed) == agent->GetIsHexed());
+        const auto correctSkill = (skill == GW::Constants::SkillID::No_Skill) || (skill == (GW::Constants::SkillID)agent->skill);
+        const auto correctModelId = (modelId == 0) || (agent->player_number == modelId);
+        const auto distance = GW::GetDistance(player->pos, agent->pos);
+        const auto goodDistance = (minDistance < distance) && (distance < maxDistance);
+        return correctType && correctPrimary && correctSecondary && correctStatus && hexedCorrectly && correctSkill && correctModelId && goodDistance;
+    };
+    if (agentType == AgentType::PartyMember) {
+        const auto info = GW::PartyMgr::GetPartyInfo();
+        if (!info) return false;
+        for (const auto& partyMember : info->players) {
+            const auto agent = GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(partyMember.login_number));
+            if (!agent) continue;
+            if (fulfillsConditions(agent->GetAsAgentLiving())) return true;
+        }
+    }
+    else {
+        for (const auto* agent : *agents) {
+            if (!agent) continue;
+            if (fulfillsConditions(agent->GetAsAgentLiving())) return true;
+        }
+    }
+    return false;
+}
+void NearbyAgentCondition::drawSettings()
+{
+    int drawId = 7122;
+    ImGui::PushItemWidth(120);
+
+    if (ImGui::TreeNodeEx("If there exists an agent with characteristics", ImGuiTreeNodeFlags_FramePadding)) {
+        ImGui::BulletText("Distance to player");
+        ImGui::SameLine();
+        ImGui::InputFloat("min", &minDistance);
+        ImGui::SameLine();
+        ImGui::InputFloat("max", &maxDistance);
+
+        ImGui::BulletText("Allegiance");
+        ImGui::SameLine();
+        drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, ++drawId);
+
+        ImGui::BulletText("Class");
+        ImGui::SameLine();
+        drawEnumButton(Class::Any, Class::Dervish, primary, ++drawId);
+        ImGui::SameLine();
+        ImGui::Text("/");
+        ImGui::SameLine();
+        drawEnumButton(Class::Any, Class::Dervish, secondary, ++drawId);
+
+        ImGui::BulletText("Dear or alive");
+        ImGui::SameLine();
+        drawEnumButton(Status::Any, Status::Alive, status, ++drawId);
+
+        ImGui::BulletText("Hexed");
+        ImGui::SameLine();
+        drawEnumButton(HexedStatus::Any, HexedStatus::Hexed, hexed, ++drawId);
+
+        ImGui::BulletText("Uses skill");
+        ImGui::SameLine();
+        ImGui::InputInt("id (0 for any)###2", reinterpret_cast<int*>(&skill), 0);
+
+        ImGui::Bullet();
+        ImGui::Text("Has model");
+        ImGui::SameLine();
+        ImGui::InputInt("id (0 for any)###1", &modelId, 0);
+
+        ImGui::TreePop();
+    }
 }
