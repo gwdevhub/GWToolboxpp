@@ -3,6 +3,7 @@
 #include <Windows/ObjectiveTimerWindow.h>
 #include <Modules/Resources.h>
 #include <Modules/GameSettings.h>
+#include <Widgets/TimerWidget.h>
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/AgentIDs.h>
@@ -186,7 +187,8 @@ void ObjectiveTimerWindow::CheckIsMapLoaded()
         return;
     }
     map_load_pending = false;
-    if (InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
+    // use TimerWidgets start point, default first frame of 0% load, to comply with GWSCR timing
+    if (TimerWidget::Instance().GetStartPoint() != TIME_UNKNOWN && InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
         AddObjectiveSet(static_cast<GW::Constants::MapID>(InstanceLoadInfo->map_id));
         Event(EventType::InstanceLoadInfo, InstanceLoadInfo->map_id);
     }
@@ -1417,6 +1419,7 @@ void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone()
         if (Instance().auto_send_age) {
             GW::Chat::SendChat('/', "age");
         }
+        TimerWidget::Instance().SetRunCompleted(GameSettings::GetSettingBool("auto_age2_on_age"));
     }
 }
 
@@ -1424,7 +1427,7 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet()
     : ui_id(cur_ui_id++)
 {
     system_time = static_cast<DWORD>(time(nullptr));
-    run_start_time_point = time_point_ms();
+    run_start_time_point = TimerWidget::Instance().GetStartPoint() != TIME_UNKNOWN ? TimerWidget::Instance().GetStartPoint() : time_point_ms();
     duration = TIME_UNKNOWN;
 }
 
