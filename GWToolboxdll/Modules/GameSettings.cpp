@@ -52,6 +52,7 @@
 #include <Modules/ChatSettings.h>
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>
+#include <Modules/PriceCheckerModule.h>
 
 #include <Color.h>
 #include <hidusage.h>
@@ -441,9 +442,15 @@ namespace {
         bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
         block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
         GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, block_description ? nullptr : description_out);
+        if (!block_description)
+        {
+            PriceChecker::UpdateDescription(item_id, description_out);
+        }
+
         if (block_description && description_out) {
             *description_out = nullptr;
         }
+
         GW::Hook::LeaveHook();
     }
 
