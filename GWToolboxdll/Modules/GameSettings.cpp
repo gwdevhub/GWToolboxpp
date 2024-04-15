@@ -2062,6 +2062,7 @@ void GameSettings::Update(float)
         GW::Camera* cam = GW::CameraMgr::GetCamera();
         cam->position = cam->camera_pos_to_go;
         cam->look_at_target = cam->look_at_to_go;
+        cam->cam_pos_inverted = cam->cam_pos_inverted_to_go;
         cam->yaw = cam->yaw_to_go;
         cam->pitch = cam->pitch_to_go;
     }
