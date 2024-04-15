@@ -224,9 +224,6 @@ namespace {
     }
 
     void PreloadQuestMarkers() {
-        if (!render_all_quests) {
-            return;
-        }
         if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
             GW::GameThread::Enqueue([quest_log] {
                 if (!quest_log || !quest_log->size()) {
