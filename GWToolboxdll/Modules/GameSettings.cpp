@@ -435,24 +435,6 @@ namespace {
 
     using GetItemDescription_pt = void(__cdecl*)(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** out, wchar_t** out2);
     GetItemDescription_pt GetItemDescription_Func = nullptr, GetItemDescription_Ret = nullptr;
-    // Block full item descriptions
-    void OnGetItemDescription(const uint32_t item_id, const uint32_t flags, const uint32_t quantity, const uint32_t unk, wchar_t** name_out, wchar_t** description_out)
-    {
-        GW::Hook::EnterHook();
-        bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
-        block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
-        GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, block_description ? nullptr : description_out);
-        if (!block_description)
-        {
-            PriceChecker::UpdateDescription(item_id, description_out);
-        }
-
-        if (block_description && description_out) {
-            *description_out = nullptr;
-        }
-
-        GW::Hook::LeaveHook();
-    }
 
     // Key held to show/hide skill descriptions
     constexpr int modifier_key_skill_descriptions = VK_MENU;
@@ -1056,6 +1038,21 @@ namespace {
     {
         pending_reinvite.reset(current_party_target_id);
     }
+}
+
+// Block full item descriptions
+void GameSettings::OnGetItemDescription(const uint32_t item_id, const uint32_t flags, const uint32_t quantity, const uint32_t unk, wchar_t** name_out, wchar_t** description_out)
+{
+    GW::Hook::EnterHook();
+    bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
+    block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
+    GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, block_description ? nullptr : description_out);
+
+    if (block_description && description_out) {
+        *description_out = nullptr;
+    }
+
+    GW::Hook::LeaveHook();
 }
 
 bool GameSettings::GetSettingBool(const char* setting)
