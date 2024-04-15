@@ -490,6 +490,27 @@ static int GetPriceById(std::string id)
     }
 }
 
+static void PrintPrice(size_t* pos, float price, float high_price_threshold, std::string item_name)
+{
+    auto unit = 'g';
+    auto color = L"ffffff";
+    if (price > high_price_threshold) {
+        color = L"ffd600";
+    }
+
+    if (price > 1000) {
+        price = price / 1000;
+        unit = 'k';
+    }
+
+    if (item_name == "")
+    {
+        item_name = "Item price:";
+    }
+
+    *pos += swprintf(&modified_description[*pos], modified_description_size - *pos, L"\x2\x108\x107\n<c=#%s>%S: %.4g%C\x1", color, item_name.c_str(), price, unit);
+}
+
 void PriceChecker::Initialize()
 {
     ToolboxModule::Initialize();
@@ -541,43 +562,23 @@ void PriceChecker::UpdateDescription(const uint32_t item_id, const float high_pr
     auto pos = wcslen(*description_out);
     auto price = (float)PriceChecker::GetPrice(item->model_id);
     if (price > 0) {
-        auto unit = 'g';
-        auto color = L"ffffff";
+        
         if (item->GetIsMaterial() && !item->IsRareMaterial()) {
             price = price / 10;
         }
 
-        if (price > high_price_threshold) {
-            color = L"ffd600";
-        }
-
-        if (price > 1000) {
-            price = price / 1000;
-            unit = 'k';
-        }
-
-        pos += swprintf(&modified_description[pos], modified_description_size - pos, L"\x2\x108\x107\n<c=#%s>Item price: %.4g%C\x1", color, price, unit);
+        PrintPrice(&pos, price, high_price_threshold, "");
     }
     else {
         for (auto i = 0U; i < item->mod_struct_size; i++) {
-            auto unit = 'g';
-            auto color = L"ffffff";
             const auto mod = item->mod_struct[i];
             price = (float)PriceChecker::GetPrice(mod);
+            const auto name = PriceChecker::GetModifierName(mod);
             if (price == 0) {
                 continue;
             }
 
-            if (price > high_price_threshold) {
-                color = L"ffd600";
-            }
-
-            if (price > 1000) {
-                price = price / 1000;
-                unit = 'k';
-            }
-
-            pos += swprintf(&modified_description[pos], modified_description_size - pos, L"\x2\x108\x107\n<c=#%s>%S: %.4g%C\x1", color, PriceChecker::GetModifierName(mod).c_str(), price, unit);
+            PrintPrice(&pos, price, high_price_threshold, name);
         }
     }
 
