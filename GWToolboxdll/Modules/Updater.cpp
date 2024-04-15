@@ -212,7 +212,7 @@ void Updater::LoadSettings(ToolboxIni* ini)
     release_type = ReleaseType::Beta;
 #else
     mode = static_cast<Mode>(ini->GetLongValue(Name(), "update_mode", static_cast<int>(mode)));
-    release_type = static_cast<Mode>(ini->GetLongValue(Name(), "update_release_type", static_cast<int>(release_type)));
+    release_type = static_cast<ReleaseType>(ini->GetLongValue(Name(), "update_release_type", static_cast<int>(release_type)));
 #endif
     CheckForUpdate();
 }
