@@ -1,5 +1,9 @@
 #pragma once
 
+#include <stdint.h>
+#include <cstddef>
+#include <cstring>
+#include <Windows.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Agent.h>
 
@@ -26,6 +30,7 @@ public:
     bool hasMinipetPopped() const;
     int getInstanceId() { return instanceId; }
     void initialize();
+    void terminate();
 
     InstanceInfo(const InstanceInfo&) = delete;
     InstanceInfo(InstanceInfo&&) = delete;

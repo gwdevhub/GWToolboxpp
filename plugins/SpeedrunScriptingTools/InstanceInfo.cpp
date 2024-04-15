@@ -43,9 +43,6 @@ namespace {
 
 void InstanceInfo::initialize()
 {
-    
-    
-
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveUpdateName* packet) {
         this->questStatus[(GW::Constants::QuestID)packet->objective_id] = QuestStatus::Started;
     });
@@ -91,6 +88,14 @@ void InstanceInfo::initialize()
             }
         }
     );
+}
+
+void InstanceInfo::terminate() 
+{
+    GW::StoC::RemovePostCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry);
+    GW::StoC::RemovePostCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry);
+    GW::StoC::RemovePostCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry);
+    RemoveUIMessageCallback(&UseItem_Entry, GW::UI::UIMessage::kSendUseItem);
 }
 
 QuestStatus InstanceInfo::getQuestStatus(GW::Constants::QuestID id)

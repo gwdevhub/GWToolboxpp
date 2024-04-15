@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Windows.h"
+#include <stdint.h>
+#include <cstddef>
+#include <cstring>
 #include <sstream>
 
 std::string readStringWithSpaces(std::istringstream&);
