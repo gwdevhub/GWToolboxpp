@@ -707,6 +707,8 @@ void GWToolbox::Update(GW::HookStatus*) {
         return;
     }
 
+    UpdateModulesTerminating(delta_f);
+
     // Update loop
     for (const auto m : all_modules_enabled) {
         m->Update(delta_f);
@@ -849,6 +851,19 @@ void GWToolbox::UpdateInitialising(float) {
     gwtoolbox_state = GWToolboxState::DrawInitialising;
 }
 
+void GWToolbox::UpdateModulesTerminating(float delta_f) {
+    terminate_modules:
+    for (const auto m : modules_terminating) {
+        if (m->CanTerminate()) {
+            m->Terminate();
+            const auto found = std::ranges::find(modules_terminating, m);
+            ASSERT(found != modules_terminating.end());
+            modules_terminating.erase(found);
+            goto terminate_modules;
+        }
+        m->Update(delta_f);
+    }
+}
 void GWToolbox::UpdateTerminating(float delta_f) {
     ASSERT(gwtoolbox_state == GWToolboxState::Terminating);
 
@@ -864,17 +879,7 @@ void GWToolbox::UpdateTerminating(float delta_f) {
         }
     }
     ASSERT(all_modules_enabled.empty());
-    terminate_modules:
-    for (const auto m : modules_terminating) {
-        if (m->CanTerminate()) {
-            m->Terminate();
-            const auto found = std::ranges::find(modules_terminating, m);
-            ASSERT(found != modules_terminating.end());
-            modules_terminating.erase(found);
-            goto terminate_modules;
-        }
-        m->Update(delta_f);
-    }
+    UpdateModulesTerminating(delta_f);
     if (!modules_terminating.empty())
         return;
 
