@@ -192,9 +192,7 @@ void PluginModule::DrawSettingsInternal()
 
 bool PluginModule::CanTerminate()
 {
-    return std::ranges::all_of(plugins_loaded, [](const auto plugin) {
-        return !plugin->instance || plugin->instance->CanTerminate();
-    });
+    return plugins_loaded.empty();
 }
 
 bool PluginModule::WndProc(const UINT msg, const WPARAM wParam, const LPARAM lParam)
@@ -262,7 +260,7 @@ void PluginModule::LoadSettings(ToolboxIni* ini)
                 return plugin->path.filename() == filename;
             });
             // Find any matching plugins and load them
-            for (auto plugin : matching_plugins) {
+            for (const auto plugin : matching_plugins) {
                 if (!LoadPlugin(plugin)) {
                     continue;
                 }
@@ -304,16 +302,13 @@ void PluginModule::Update(const float delta)
 void PluginModule::SignalTerminate()
 {
     ToolboxUIElement::SignalTerminate();
-    const auto plugins_cpy = plugins_loaded;
-    for (const auto p : std::views::reverse(plugins_cpy)) {
-        UnloadPlugin(p);
+    for (const auto plugin : plugins_loaded) {
+        plugin->terminating = true;
     }
 }
 
 void PluginModule::Terminate()
 {
-    ToolboxUIElement::Terminate();
-    SignalTerminate();
     ASSERT(plugins_loaded.empty());
     for (const auto p : plugins_available) {
         delete p;
