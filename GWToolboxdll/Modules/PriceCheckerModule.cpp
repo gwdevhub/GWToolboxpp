@@ -400,122 +400,125 @@ namespace {
         {0x24080100, "5550-25B80000240801002530020127E902C2"},                  // Rune of Major Vigor
         {0x24080212, "898-25B80000240802122530042523480A00"}                    // Rune of Vitae
     };
-}
 
-static void LoadFromCache()
-{
-    const auto computer_path = Resources::GetComputerFolderPath();
-    const auto cache_path = computer_path / "price_quote_cache.json";
-    std::ifstream cache_file(cache_path);
-    if (!cache_file.is_open()) {
-        return;
-    }
 
-    try
+    void LoadFromCache()
     {
-        std::stringstream buffer;
-        buffer << cache_file.rdbuf();
-        cache_file.close();
-
-        price_json = nlohmann::json::parse(buffer.str());
-    }
-    catch (...)
-    {
-    }
-
-    return;
-}
-
-static void CacheResponse(const std::string response)
-{
-    const auto computer_path = Resources::GetComputerFolderPath();
-    const auto cache_path = computer_path / "price_quote_cache.json";
-    std::ofstream cache_file(cache_path);
-    if (!cache_file.is_open()) {
-        return;
-    }
-
-    cache_file << response;
-    cache_file.close();
-}
-
-static void EnsureLatestPriceJson()
-{
-    const auto now = std::time(0);
-    if (difftime(now, last_request_time) < 3600)
-    {
-        return;
-    }
-
-    if (fetching_prices)
-    {
-        return;
-    }
-
-    fetching_prices = true;
-    last_request_time = std::time(0);
-    Resources::Download(trader_quotes_url, [](bool success, const std::string& response, void*) {
-        if (!success)
-        {
-            LoadFromCache();
-            fetching_prices = false;
+        const auto computer_path = Resources::GetComputerFolderPath();
+        const auto cache_path = computer_path / "price_quote_cache.json";
+        std::ifstream cache_file(cache_path);
+        if (!cache_file.is_open()) {
             return;
         }
 
         try
         {
-            CacheResponse(response);
-            price_json = nlohmann::json::parse(response);
+            std::stringstream buffer;
+            buffer << cache_file.rdbuf();
+            cache_file.close();
+
+            price_json = nlohmann::json::parse(buffer.str());
         }
         catch (...)
         {
         }
 
-        fetching_prices = false;
-    });
-}
-
-static int GetPriceById(std::string id)
-{
-    const auto& it_buy = price_json.find("buy");
-    if (it_buy == price_json.end() || !it_buy->is_object()) {
-        return 0;
+        return;
     }
 
-    const auto& buy = it_buy.value();
-    const auto& it_id = buy.find(id);
-    if (it_id == it_buy->end() || !it_id->is_object()) {
-        return 0;
-    }
-
-    try {
-        const auto price_value = it_id->at("p").get<int>();
-        return price_value;
-    } catch (const std::exception&) {
-        return 0;
-    }
-}
-
-static void PrintPrice(size_t* pos, float price, std::string item_name)
-{
-    auto unit = 'g';
-    auto color = L"ffffff";
-    if (price > high_price_threshold) {
-        color = L"ffd600";
-    }
-
-    if (price > 1000) {
-        price = price / 1000;
-        unit = 'k';
-    }
-
-    if (item_name == "")
+    void CacheResponse(const std::string response)
     {
-        item_name = "Item price";
+        const auto computer_path = Resources::GetComputerFolderPath();
+        const auto cache_path = computer_path / "price_quote_cache.json";
+        std::ofstream cache_file(cache_path);
+        if (!cache_file.is_open()) {
+            return;
+        }
+
+        cache_file << response;
+        cache_file.close();
     }
 
-    *pos += swprintf(&modified_description[*pos], modified_description_size - *pos, L"\x2\x108\x107\n<c=#%s>%S: %.4g%C\x1", color, item_name.c_str(), price, unit);
+    void EnsureLatestPriceJson()
+    {
+        const auto now = std::time(0);
+        if (difftime(now, last_request_time) < 3600)
+        {
+            return;
+        }
+
+        if (fetching_prices)
+        {
+            return;
+        }
+
+        fetching_prices = true;
+        last_request_time = std::time(0);
+        Resources::Download(trader_quotes_url, [](bool success, const std::string& response, void*) {
+            if (!success)
+            {
+                LoadFromCache();
+                fetching_prices = false;
+                return;
+            }
+
+            try
+            {
+                CacheResponse(response);
+                price_json = nlohmann::json::parse(response);
+            }
+            catch (...)
+            {
+            }
+
+            fetching_prices = false;
+            });
+    }
+
+    int GetPriceById(std::string id)
+    {
+        const auto& it_buy = price_json.find("buy");
+        if (it_buy == price_json.end() || !it_buy->is_object()) {
+            return 0;
+        }
+
+        const auto& buy = it_buy.value();
+        const auto& it_id = buy.find(id);
+        if (it_id == it_buy->end() || !it_id->is_object()) {
+            return 0;
+        }
+
+        try {
+            const auto price_value = it_id->at("p").get<int>();
+            return price_value;
+        }
+        catch (const std::exception&) {
+            return 0;
+        }
+    }
+
+    void PrintPrice(size_t* pos, float price, std::string item_name)
+    {
+        auto unit = 'g';
+        auto color = L"ffffff";
+        if (price > high_price_threshold) {
+            color = L"ffd600";
+        }
+
+        if (price > 1000) {
+            price = price / 1000;
+            unit = 'k';
+        }
+
+        if (item_name == "")
+        {
+            item_name = "Item price";
+        }
+
+        *pos += swprintf(&modified_description[*pos], modified_description_size - *pos, L"\x2\x108\x107\n<c=#%s>%S: %.4g%C\x1", color, item_name.c_str(), price, unit);
+    }
 }
+
 
 void PriceChecker::Initialize()
 {
