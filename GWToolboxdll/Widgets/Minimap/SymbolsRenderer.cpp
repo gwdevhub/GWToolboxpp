@@ -19,7 +19,6 @@ void SymbolsRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
     color_quest = Colors::Load(ini, section, "color_quest", 0xFF22EF22);
     color_north = Colors::Load(ini, section, "color_north", 0xFFFF8000);
     color_modifier = Colors::Load(ini, section, "color_symbols_modifier", 0x001E1E1E);
-    render_all_quests = ini->GetBoolValue(section, "render_all_quests");
 
     Invalidate();
 }
@@ -29,7 +28,6 @@ void SymbolsRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
     Colors::Save(ini, section, "color_quest", color_quest);
     Colors::Save(ini, section, "color_north", color_north);
     Colors::Save(ini, section, "color_symbols_modifier", color_modifier);
-    ini->SetBoolValue(section, "render_all_quests", render_all_quests);
 }
 
 void SymbolsRenderer::DrawSettings()
@@ -51,9 +49,6 @@ void SymbolsRenderer::DrawSettings()
         Invalidate();
     }
     ImGui::ShowHelp("Each symbol has this value removed on the border and added at the center\nZero makes them have solid color, while a high number makes them appear more shaded.");
-
-    ImGui::Checkbox("Draw all quest markers", &render_all_quests);
-    ImGui::ShowHelp("Draw quest markers for all quests in your quest log, not just the active quest");
 }
 
 void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
@@ -137,27 +132,29 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     device->SetFVF(D3DFVF_CUSTOMVERTEX);
     device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
 
-    constexpr float PI = 3.1415927f;
+    constexpr float pi = std::numbers::pi_v<float>;
     static float tau = 0.0f;
     const float fps = ImGui::GetIO().Framerate;
     // tau of += 0.05f is good for 60 fps, adapt that for any
     // note: framerate is a moving average of the last 120 frames, so it won't adapt quickly.
     // when the framerate changes a lot, the quest marker may speed up or down for a bit.
     tau += 0.05f * 60.0f / std::max(fps, 1.0f);
-    if (tau > 10 * PI) {
-        tau -= 10 * PI;
+    if (tau > 10 * pi) {
+        tau -= 10 * pi;
     }
-    DirectX::XMMATRIX translate;
+    DirectX::XMMATRIX translate{};
     DirectX::XMMATRIX world{};
 
     const GW::Vec2f mypos = me->pos;
-
     std::vector<GW::Vec2f> markers_drawn;
-
-    auto drawQuestMarker = [&](const GW::Quest& quest)
+    const auto draw_quest_marker = [&](const GW::Quest& quest)
     {
+        const bool is_current_quest = quest.quest_id == GW::QuestMgr::GetActiveQuestId();
+        if (!Minimap::ShouldDrawAllQuests() && !is_current_quest) {
+            return;
+        }
         const GW::Vec2f qpos = { quest.marker.x, quest.marker.y };
-        if (std::find(markers_drawn.begin(), markers_drawn.end(), qpos) != markers_drawn.end())
+        if (std::ranges::find(markers_drawn, qpos) != markers_drawn.end())
             return; // Don't draw more than 1 marker for a position
         markers_drawn.push_back(qpos);
         const float compass_scale = Minimap::Instance().Scale();
@@ -186,16 +183,10 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
         }
     };
 
-    if (render_all_quests)
-    {
-        if (const GW::QuestLog* questLog = GW::QuestMgr::GetQuestLog()) {
-            for (const auto& quest : *questLog) {
-                drawQuestMarker(quest);
-            }
+    if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
+        for (const auto& quest : *quest_log) {
+            draw_quest_marker(quest);
         }
-    }
-    else if (const GW::Quest* quest = GW::QuestMgr::GetActiveQuest()) {
-        drawQuestMarker(*quest);
     }
 
     translate = DirectX::XMMatrixTranslation(me->pos.x, me->pos.y + 5000.0f, 0);

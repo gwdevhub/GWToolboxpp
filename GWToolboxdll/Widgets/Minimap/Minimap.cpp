@@ -193,9 +193,9 @@ namespace {
     }
 
     bool hide_compass_drawings = false;
-
     bool hide_compass_quest_marker = false;
     GW::MemoryPatcher show_compass_quest_marker_patch;
+    bool render_all_quests = false;
 
     void ToggleCompassQuestMarker(const bool enable)
     {
@@ -224,21 +224,31 @@ namespace {
     }
 
     void PreloadQuestMarkers() {
-        if (const GW::QuestLog* questLog = GW::QuestMgr::GetQuestLog(); questLog != nullptr) {
-            GW::GameThread::Enqueue([questLog]() {
-                auto activeQuestId = GW::QuestMgr::GetActiveQuestId();
-                auto mapId = GW::Map::GetMapID();
+        if (!render_all_quests) {
+            return;
+        }
+        if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
+            GW::GameThread::Enqueue([quest_log] {
+                if (!quest_log || !quest_log->size()) {
+                    return;
+                }
+                const auto active_quest_id = GW::QuestMgr::GetActiveQuestId();
+                const auto map_id = GW::Map::GetMapID();
 
-                for (const auto& quest : *questLog) {
+                for (const auto& quest : *quest_log) {
                     // Limit requests to the server:
                     // * Don't load the marker for the active quest - the game already handles that
                     //   and us doing it will trigger an extra unwanted UI event
                     // * Only request quests whose markers are not yet loaded (marker = (INF,INF))
                     // * Only request quests whose destination zone is unknown or the current zone
-                    if(quest.quest_id != activeQuestId && (quest.map_to == GW::Constants::MapID::Count || quest.map_to == mapId) && quest.marker.x == INFINITY && quest.marker.y == INFINITY) {
+                    if (quest.quest_id != active_quest_id &&
+                        quest.marker.x == std::numeric_limits<float>::infinity() && quest.marker.y == std::numeric_limits<float>::infinity() &&
+                        (quest.map_to == GW::Constants::MapID::Count || quest.map_to == map_id)) {
                         GW::QuestMgr::RequestQuestInfoId(quest.quest_id, true);
                     }
                 }
+
+                GW::QuestMgr::SetActiveQuestId(active_quest_id);
             });
         }
     }}
@@ -335,7 +345,7 @@ void Minimap::Initialize()
             }
         }
     });
-    constexpr GW::UI::UIMessage hook_messages[] = {
+    constexpr std::array hook_messages = {
         GW::UI::UIMessage::kMapChange,
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kChangeTarget,
@@ -534,6 +544,8 @@ void Minimap::DrawSettingsInternal()
         ToggleCompassQuestMarker(hide_compass_quest_marker);
     }
     ImGui::ShowHelp("To disable the toolbox minimap quest marker, set the quest marker color to transparent in the Symbols section below.");
+    ImGui::Checkbox("Draw all quest markers", &render_all_quests);
+    ImGui::ShowHelp("Draw quest markers for all quests in your quest log, not just the active quest");
 
     ImGui::Checkbox("Hide GW compass drawings", &hide_compass_drawings);
     ImGui::ShowHelp("Drawings made by other players will be visible on the minimap, but not the compass");
@@ -583,7 +595,7 @@ void Minimap::DrawSettingsInternal()
         ImGui::Checkbox("Show hero flag controls", &hero_flag_controls_show);
         ImGui::Checkbox("Attach to minimap", &hero_flag_window_attach);
         ImGui::ShowHelp("If disabled, you can move/resize the window with 'Unlock Move All'.");
-        Colors::DrawSettingHueWheel("Background", &hero_flag_window_background);
+        Colors::DrawSettingHueWheel("Background", &hero_flag_controls_background);
         ImGui::TreePop();
     }
     if (ImGui::TreeNodeEx("In-game rendering", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
@@ -657,7 +669,7 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     scale = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(scale), 1.0));
     LOAD_BOOL(hero_flag_controls_show);
     LOAD_BOOL(hero_flag_window_attach);
-    hero_flag_window_background = Colors::Load(ini, Name(), "hero_flag_controls_background", hero_flag_window_background);
+    LOAD_COLOR(hero_flag_controls_background);
     LOAD_BOOL(mouse_clickthrough_in_outpost);
     LOAD_BOOL(mouse_clickthrough_in_explorable);
     LOAD_BOOL(rotate_minimap);
@@ -666,7 +678,7 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(circular_map);
     LOAD_BOOL(snap_to_compass);
     LOAD_BOOL(hide_compass_agents);
-
+    LOAD_BOOL(render_all_quests);
     LOAD_BOOL(hide_compass_quest_marker);
     LOAD_BOOL(hide_compass_drawings);
 
@@ -693,7 +705,7 @@ void Minimap::SaveSettings(ToolboxIni* ini)
     ini->SetDoubleValue(Name(), VAR_NAME(scale), scale);
     SAVE_BOOL(hero_flag_controls_show);
     SAVE_BOOL(hero_flag_window_attach);
-    SAVE_COLOR(hero_flag_window_background);
+    SAVE_COLOR(hero_flag_controls_background);
     SAVE_BOOL(mouse_clickthrough_in_outpost);
     SAVE_BOOL(mouse_clickthrough_in_explorable);
     ini->SetLongValue(Name(), VAR_NAME(key_none_behavior), static_cast<long>(key_none_behavior));
@@ -707,9 +719,9 @@ void Minimap::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(circular_map);
     SAVE_BOOL(snap_to_compass);
     SAVE_BOOL(hide_compass_agents);
-
     SAVE_BOOL(hide_compass_quest_marker);
     SAVE_BOOL(hide_compass_drawings);
+    SAVE_BOOL(render_all_quests);
 
     range_renderer.SaveSettings(ini, Name());
     pmap_renderer.SaveSettings(ini, Name());
@@ -894,7 +906,7 @@ void Minimap::Draw(IDirect3DDevice9*)
                 ImGui::SetNextWindowPos(ImVec2(static_cast<float>(location.x), static_cast<float>(location.y + size.y)));
                 ImGui::SetNextWindowSize(ImVec2(static_cast<float>(size.x), 40.0f));
             }
-            ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(hero_flag_window_background).Value);
+            ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(hero_flag_controls_background).Value);
             if (ImGui::Begin("Hero Controls", nullptr, GetWinFlags(hero_flag_window_attach ? ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove : 0, false))) {
                 static const char* flag_txt[] = {"All", "1", "2", "3", "4", "5", "6", "7", "8"};
                 const unsigned int num_heroflags = player_heroes.size() + 1;
@@ -962,6 +974,11 @@ bool Minimap::ShouldMarkersDrawOnMap()
         return false;
     }
     return true;
+}
+
+bool Minimap::ShouldDrawAllQuests()
+{
+    return render_all_quests;
 }
 
 void Minimap::Render(IDirect3DDevice9* device)
