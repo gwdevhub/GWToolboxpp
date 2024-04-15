@@ -505,7 +505,7 @@ static void PrintPrice(size_t* pos, float price, float high_price_threshold, std
 
     if (item_name == "")
     {
-        item_name = "Item price:";
+        item_name = "Item price";
     }
 
     *pos += swprintf(&modified_description[*pos], modified_description_size - *pos, L"\x2\x108\x107\n<c=#%s>%S: %.4g%C\x1", color, item_name.c_str(), price, unit);
