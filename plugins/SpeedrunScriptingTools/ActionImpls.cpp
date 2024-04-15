@@ -1,5 +1,5 @@
 #include <ActionImpls.h>
-#include <utils.h>
+
 #include <ConditionIO.h>
 #include <ActionIO.h>
 #include <InstanceInfo.h>
@@ -175,8 +175,13 @@ void CastOnSelfAction::initialAction()
 }
 bool CastOnSelfAction::isComplete() const
 {
+    if (id == GW::Constants::SkillID::No_Skill) return true;
+
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
+
+    const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
+    if (skillData && skillData->activation == 0) return true;
 
     hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
 
@@ -217,8 +222,13 @@ void CastOnTargetAction::initialAction()
 }
 bool CastOnTargetAction::isComplete() const
 {
+    if (id == GW::Constants::SkillID::No_Skill) return true;
+
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
+
+    const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
+    if (skillData && skillData->activation == 0) return true;
 
     hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
     return hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id;
@@ -483,7 +493,7 @@ void GoToNpcAction::initialAction()
     
     npc = findAgentWithId(id);
     if (npc) {
-        GW::Agents::GoNPC(npc);
+        GW::Agents::InteractAgent(npc);
     }
 }
 bool GoToNpcAction::isComplete() const

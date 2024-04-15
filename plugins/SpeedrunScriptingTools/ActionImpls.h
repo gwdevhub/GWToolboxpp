@@ -1,8 +1,8 @@
 #pragma once
 
+#include <utils.h>
 #include <Action.h>
 #include <Condition.h>
-#include <utils.h>
 
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/Constants/Skills.h>
