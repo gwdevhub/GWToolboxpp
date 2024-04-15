@@ -16,7 +16,8 @@ public:
     }
 
     [[nodiscard]] const char* Name() const override { return "Price Checker"; }
-    bool HasSettings() override { return false; }
+    bool HasSettings() override { return true; }
+    [[nodiscard]] const char* SettingsName() const override { return "Inventory Settings"; }
 
     void Initialize() override;
     void Terminate() override;
@@ -24,5 +25,8 @@ public:
     static int GetPrice(GW::ItemModifier itemModifier);
     static int GetPrice(uint32_t model_id);
     static std::string GetModifierName(GW::ItemModifier itemModifier);
-    static void UpdateDescription(const uint32_t item_id, const float high_price_threshold, wchar_t** description_out);
+    static void UpdateDescription(const uint32_t item_id, wchar_t** description_out);
+    void LoadSettings(ToolboxIni* ini) override;
+    void RegisterSettingsContent() override;
+    void SaveSettings(ToolboxIni* ini) override;
 };

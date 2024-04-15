@@ -149,9 +149,6 @@ namespace {
     bool notify_when_party_member_leaves = false;
     bool notify_when_party_member_joins = false;
 
-    bool fetch_module_prices = true;
-    float high_price_threshold = 1000;
-
     bool block_enter_area_message = false;
 
     EncString* pending_wiki_search_term = nullptr;
@@ -445,13 +442,13 @@ namespace {
         bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
         block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
         GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, block_description ? nullptr : description_out);
-        if (block_description && description_out) {
-            *description_out = nullptr;
+        if (!block_description)
+        {
+            PriceChecker::UpdateDescription(item_id, description_out);
         }
 
-        if (!block_description && fetch_module_prices && description_out && *description_out)
-        {
-            PriceChecker::UpdateDescription(item_id, high_price_threshold, description_out);
+        if (block_description && description_out) {
+            *description_out = nullptr;
         }
 
         GW::Hook::LeaveHook();
@@ -1569,9 +1566,6 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(notify_when_players_join_outpost);
     LOAD_BOOL(notify_when_players_leave_outpost);
 
-    LOAD_FLOAT(high_price_threshold);
-    LOAD_BOOL(fetch_module_prices);
-
     LOAD_BOOL(auto_age_on_vanquish);
     LOAD_BOOL(hide_dungeon_chest_popup);
     LOAD_BOOL(auto_age2_on_age);
@@ -1729,9 +1723,6 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(notify_when_players_join_outpost);
     SAVE_BOOL(notify_when_players_leave_outpost);
 
-    SAVE_FLOAT(high_price_threshold);
-    SAVE_BOOL(fetch_module_prices);
-
     SAVE_BOOL(auto_age_on_vanquish);
     SAVE_BOOL(hide_dungeon_chest_popup);
     SAVE_BOOL(auto_age2_on_age);
@@ -1815,10 +1806,6 @@ void GameSettings::DrawInventorySettings()
     ImGui::Unindent();
     ImGui::Checkbox("Shorthand item description on weapon ping", &shorthand_item_ping);
     ImGui::ShowHelp("Include a concise description of your equipped weapon when ctrl+clicking a weapon set");
-
-    ImGui::Checkbox("Fetch prices for item components", &fetch_module_prices);
-    ImGui::ShowHelp("When enabled, the item description will contain information about the components of the item and their respective prices");
-    ImGui::SliderFloat("High price threshold", &high_price_threshold, 100, 50000);
 
     ImGui::Checkbox("Lazy chest looting", &lazy_chest_looting);
     ImGui::ShowHelp("Toolbox will try to target any nearby reserved items\nwhen using the 'target nearest item' key next to a chest\nto pick stuff up.");

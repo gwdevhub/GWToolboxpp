@@ -1,12 +1,16 @@
 #include "stdafx.h"
 
+#include <Defines.h>
 #include <Logger.h>
 #include <ctime>
 #include <Utils/GuiUtils.h>
-#include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/GameEntities/Item.h>
+#include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Utilities/Hook.h>
+#include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Utilities/Scanner.h>
 #include <Modules/Resources.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/PriceCheckerModule.h>
@@ -14,6 +18,8 @@
 using nlohmann::json;
 
 namespace {
+    bool fetch_module_prices = true;
+    float high_price_threshold = 1000;
     const size_t modified_description_size = 2560;
     wchar_t modified_description[modified_description_size];
     bool fetching_prices;
@@ -490,7 +496,7 @@ static int GetPriceById(std::string id)
     }
 }
 
-static void PrintPrice(size_t* pos, float price, float high_price_threshold, std::string item_name)
+static void PrintPrice(size_t* pos, float price, std::string item_name)
 {
     auto unit = 'g';
     auto color = L"ffffff";
@@ -555,11 +561,21 @@ std::string PriceChecker::GetModifierName(GW::ItemModifier modifier)
     return it_name->second;
 }
 
-void PriceChecker::UpdateDescription(const uint32_t item_id, const float high_price_threshold, wchar_t** description_out)
+void PriceChecker::UpdateDescription(const uint32_t item_id, wchar_t** description_out)
 {
-    wcscpy(modified_description, *description_out);
+    if (!description_out ||
+        !*description_out) {
+        return;
+    }
+
+    const auto desc_len = wcslen(*description_out);
+    if (desc_len <= 0) {
+        return;
+    }
+
+    wcsncpy_s(modified_description, modified_description_size, *description_out, desc_len);
     const auto item = (InventoryManager::Item*)GW::Items::GetItemById(item_id);
-    auto pos = wcslen(*description_out);
+    auto pos = desc_len;
     auto price = (float)PriceChecker::GetPrice(item->model_id);
     if (price > 0) {
         
@@ -567,7 +583,7 @@ void PriceChecker::UpdateDescription(const uint32_t item_id, const float high_pr
             price = price / 10;
         }
 
-        PrintPrice(&pos, price, high_price_threshold, "");
+        PrintPrice(&pos, price, "");
     }
     else {
         for (auto i = 0U; i < item->mod_struct_size; i++) {
@@ -578,9 +594,41 @@ void PriceChecker::UpdateDescription(const uint32_t item_id, const float high_pr
                 continue;
             }
 
-            PrintPrice(&pos, price, high_price_threshold, name);
+            PrintPrice(&pos, price, name);
         }
     }
 
     *description_out = modified_description;
+}
+
+void PriceChecker::SaveSettings(ToolboxIni* ini)
+{
+    ToolboxModule::SaveSettings(ini);
+    SAVE_FLOAT(high_price_threshold);
+    SAVE_BOOL(fetch_module_prices);
+}
+
+void PriceChecker::LoadSettings(ToolboxIni* ini)
+{
+    ToolboxModule::SaveSettings(ini);
+    LOAD_FLOAT(high_price_threshold);
+    LOAD_BOOL(fetch_module_prices);
+}
+
+void PriceChecker::RegisterSettingsContent()
+{
+    //ToolboxModule::RegisterSettingsContent();
+    ToolboxModule::RegisterSettingsContent(
+        "Inventory Settings", ICON_FA_BOXES,
+        [this](const std::string&, const bool is_showing) {
+            if (!is_showing) {
+                return;
+            }
+
+            ImGui::Checkbox("Fetch prices for item components", &fetch_module_prices);
+            ImGui::ShowHelp("When enabled, the item description will contain information about the components of the item and their respective prices");
+            ImGui::SliderFloat("High price threshold", &high_price_threshold, 100, 50000);
+        },
+        0.9f
+    );
 }
