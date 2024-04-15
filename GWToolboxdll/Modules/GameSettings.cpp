@@ -1729,6 +1729,9 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(notify_when_players_join_outpost);
     SAVE_BOOL(notify_when_players_leave_outpost);
 
+    SAVE_FLOAT(high_price_threshold);
+    SAVE_BOOL(fetch_module_prices);
+
     SAVE_BOOL(auto_age_on_vanquish);
     SAVE_BOOL(hide_dungeon_chest_popup);
     SAVE_BOOL(auto_age2_on_age);
