@@ -181,8 +181,12 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     std::vector<GW::Vec2f> markers_drawn;
     const auto draw_quest_marker = [&](const GW::Quest& quest)
     {
-        const bool is_current_quest = quest.quest_id == GW::QuestMgr::GetActiveQuestId();
+        const auto active_quest = GW::QuestMgr::GetActiveQuest();
+        const bool is_current_quest = quest.quest_id == active_quest->quest_id;
         if (!Minimap::ShouldDrawAllQuests() && !is_current_quest) {
+            return;
+        }
+        if (ImColor(is_current_quest ? color_quest : color_other_quests).Value.w == 0.0f) {
             return;
         }
         const GW::Vec2f qpos = { quest.marker.x, quest.marker.y };
@@ -216,7 +220,14 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     };
 
     if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
-        for (const auto& quest : *quest_log) {
+        // draw active quest first
+        const auto active_quest_id = GW::QuestMgr::GetActiveQuestId();
+        if (active_quest_id != GW::Constants::QuestID::None) {
+            draw_quest_marker(*GW::QuestMgr::GetQuest(active_quest_id));
+        }
+        for (const auto& quest : *quest_log | std::views::filter([active_quest_id](const GW::Quest& q) {
+            return q.quest_id != active_quest_id;
+        })) {
             draw_quest_marker(quest);
         }
     }
