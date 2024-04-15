@@ -4,28 +4,25 @@
 #include <GWCA/GameEntities/Item.h>
 #include <string.h>
 
-class PriceChecker : public ToolboxModule {
-    PriceChecker() = default;
-    ~PriceChecker() override = default;
+class PriceCheckerModule : public ToolboxModule {
+    PriceCheckerModule() = default;
+    ~PriceCheckerModule() override = default;
 
 public:
-    static PriceChecker& Instance()
+    static PriceCheckerModule& Instance()
     {
-        static PriceChecker instance;
+        static PriceCheckerModule instance;
         return instance;
     }
 
     [[nodiscard]] const char* Name() const override { return "Price Checker"; }
+    [[nodiscard]] const char* Description() const override { return "Adds extra information to the hover description of an item"; }
     bool HasSettings() override { return true; }
     [[nodiscard]] const char* SettingsName() const override { return "Inventory Settings"; }
 
     void Initialize() override;
     void Terminate() override;
     void Update(float delta) override;
-    static int GetPrice(GW::ItemModifier itemModifier);
-    static int GetPrice(uint32_t model_id);
-    static std::string GetModifierName(GW::ItemModifier itemModifier);
-    static void UpdateDescription(const uint32_t item_id, wchar_t** description_out);
     void LoadSettings(ToolboxIni* ini) override;
     void RegisterSettingsContent() override;
     void SaveSettings(ToolboxIni* ini) override;

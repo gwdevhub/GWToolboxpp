@@ -3,30 +3,36 @@
 #include <Defines.h>
 #include <Logger.h>
 #include <ctime>
-#include <Utils/GuiUtils.h>
+
 #include <GWCA/GameEntities/Item.h>
+
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+
 #include <GWCA/Constants/Constants.h>
+
 #include <GWCA/Utilities/Hook.h>
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
+
 #include <Modules/Resources.h>
-#include <Modules/InventoryManager.h>
+#include <Modules/GameSettings.h>
 #include <Modules/PriceCheckerModule.h>
+
+#include <Timer.h>
+#include <Utils/GuiUtils.h>
 
 using nlohmann::json;
 
 namespace {
     bool fetch_module_prices = true;
     float high_price_threshold = 1000;
-    const size_t modified_description_size = 2560;
-    wchar_t modified_description[modified_description_size];
+    std::wstring modified_description;
     bool fetching_prices;
-    std::string trader_quotes_url = "https://kamadan.gwtoolbox.com/trader_quotes";
+    const char* trader_quotes_url = "https://kamadan.gwtoolbox.com/trader_quotes";
     json price_json = nullptr;
-    std::time_t last_request_time = 0;
-    std::unordered_map<uint32_t, std::string> mod_to_name =
+    clock_t last_request_time = 0;
+    std::unordered_map<uint32_t, const char*> mod_to_name =
     {
         {0x240801F9, "Knight's Insignia"},
         {0x24080208, "Lieutenant's Insignia"},
@@ -213,7 +219,7 @@ namespace {
         {0x24080100, "Rune of Major Vigor"},
         {0x24080212, "Rune of Vitae"}
     };
-    std::unordered_map<uint32_t, std::string> mod_to_id =
+    std::unordered_map<uint32_t, const char*> mod_to_id =
     {
         {0x240801F9, "19152-25B80000240801F9A53003F2A7F80300"},                 // Knight's Insignia
         {0x24080208, "19153-25B80000240802082530041027E802B6A5300410A0FBEC00"}, // Lieutenant's Insignia
@@ -426,7 +432,7 @@ namespace {
         return;
     }
 
-    void CacheResponse(const std::string response)
+    void CacheResponse(const std::string& response)
     {
         const auto computer_path = Resources::GetComputerFolderPath();
         const auto cache_path = computer_path / "price_quote_cache.json";
@@ -441,19 +447,13 @@ namespace {
 
     void EnsureLatestPriceJson()
     {
-        const auto now = std::time(0);
-        if (difftime(now, last_request_time) < 3600)
-        {
+        if (TIMER_DIFF(last_request_time) < 3600)
             return;
-        }
-
         if (fetching_prices)
-        {
             return;
-        }
 
         fetching_prices = true;
-        last_request_time = std::time(0);
+        last_request_time = TIMER_INIT();
         Resources::Download(trader_quotes_url, [](bool success, const std::string& response, void*) {
             if (!success)
             {
@@ -475,7 +475,13 @@ namespace {
             });
     }
 
-    int GetPriceById(std::string id)
+    bool IsCommonMaterial(GW::Item* item) {
+        if (!(item && item->GetModifier(0x2508)))
+            return item->GetModifier(0x2508)->arg1() > static_cast<uint32_t>(GW::Constants::MaterialSlot::Feather);
+        return false;
+    }
+
+    float GetPriceById(const char* id)
     {
         const auto& it_buy = price_json.find("buy");
         if (it_buy == price_json.end() || !it_buy->is_object()) {
@@ -487,138 +493,117 @@ namespace {
         if (it_id == it_buy->end() || !it_id->is_object()) {
             return 0;
         }
-
-        try {
-            const auto price_value = it_id->at("p").get<int>();
-            return price_value;
-        }
-        catch (const std::exception&) {
+        const auto& price_value = it_id->find("p");
+        if (!(price_value != it_id->end() && price_value->is_number()))
             return 0;
-        }
+        return price_value->get<float>();
     }
 
-    void PrintPrice(size_t* pos, float price, std::string item_name)
-    {
+    std::wstring PrintPrice(float price, const char* name = nullptr) {
         auto unit = 'g';
         auto color = L"ffffff";
         if (price > high_price_threshold) {
             color = L"ffd600";
         }
 
-        if (price > 1000) {
-            price = price / 1000;
+        if (price > 1000.f) {
+            price /= 1000.f;
             unit = 'k';
         }
+        return GuiUtils::format(L"\x2\x108\x107\n<c=#%s>%S: %.4g%C</c>\x1", color, name && *name ? name : "Item price", price, unit);
+    }
 
-        if (item_name == "")
-        {
-            item_name = "Item price";
+    void UpdateDescription(const uint32_t item_id, wchar_t** description_out)
+    {
+        if (!(description_out && *description_out))
+            return;
+        const auto item = GW::Items::GetItemById(item_id);
+        if (!item)
+            return;
+        
+        std::vector<uint32_t> mod_matches;
+        modified_description = *description_out;
+        for (size_t i = 0; i < item->mod_struct_size; i++) {
+            const auto found = mod_to_id.find(item->mod_struct[i].mod);
+            if (found == mod_to_id.end())
+                continue;
+            auto price = GetPriceById(found->second);
+            if (price < .1f)
+                continue;
+            const auto name = mod_to_name.find(found->first);
+            if (name == mod_to_name.end())
+                continue;
+            modified_description += PrintPrice(price, name->second);
+        }
+        const auto model_id_str = std::to_string(item->model_id);
+        auto price = GetPriceById(model_id_str.c_str());
+        if (price > .0f) {
+            modified_description += PrintPrice(price);
         }
 
-        *pos += swprintf(&modified_description[*pos], modified_description_size - *pos, L"\x2\x108\x107\n<c=#%s>%S: %.4g%C\x1", color, item_name.c_str(), price, unit);
+        *description_out = modified_description.data();
     }
+
+    using GetItemDescription_pt = void(__cdecl*)(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** out, wchar_t** out2);
+    GetItemDescription_pt GetItemDescription_Func = nullptr, GetItemDescription_Ret = nullptr;
+    // Block full item descriptions
+    void OnGetItemDescription(const uint32_t item_id, const uint32_t flags, const uint32_t quantity, const uint32_t unk, wchar_t** name_out, wchar_t** description_out)
+    {
+        GW::Hook::EnterHook();
+        wchar_t** tmp_name_out = nullptr;
+        if (!name_out)
+            name_out = tmp_name_out; // Ensure name_out is valid; we're going to piggy back on it.
+        GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, description_out);
+        UpdateDescription(item_id, description_out);
+        GW::Hook::LeaveHook();
+    }
+
 }
 
 
-void PriceChecker::Initialize()
+void PriceCheckerModule::Initialize()
 {
     ToolboxModule::Initialize();
+
+    // Copied from GameSettings.cpp
+    GetItemDescription_Func = (GetItemDescription_pt)GameSettings::OnGetItemDescription;
+    if (GetItemDescription_Func) {
+        ASSERT(GW::HookBase::CreateHook(GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret) == 0);
+        GW::HookBase::EnableHooks(GetItemDescription_Func);
+    }
+
     LoadFromCache();
 }
 
-void PriceChecker::Terminate()
+void PriceCheckerModule::Terminate()
 {
     ToolboxModule::Terminate();
+
+    if (GetItemDescription_Func) {
+        GW::HookBase::DisableHooks(GetItemDescription_Func);
+    }
 }
 
-void PriceChecker::Update(const float)
+void PriceCheckerModule::Update(const float)
 {
     EnsureLatestPriceJson();
 }
 
-int PriceChecker::GetPrice(uint32_t model_id) {
-    const auto id = std::to_string(model_id);
-    return GetPriceById(id);
-}
-
-int PriceChecker::GetPrice(GW::ItemModifier modifier)
-{
-    const auto it_mod = mod_to_id.find(modifier.mod);
-    if (it_mod == mod_to_id.end())
-    {
-        return 0;
-    }
-    
-    const auto& id = it_mod->second;
-    return GetPriceById(id);
-}
-
-std::string PriceChecker::GetModifierName(GW::ItemModifier modifier)
-{
-    const auto it_name = mod_to_name.find(modifier.mod);
-    if (it_name == mod_to_name.end())
-    {
-        return "";
-    }
-
-    return it_name->second;
-}
-
-void PriceChecker::UpdateDescription(const uint32_t item_id, wchar_t** description_out)
-{
-    if (!description_out ||
-        !*description_out) {
-        return;
-    }
-
-    const auto desc_len = wcslen(*description_out);
-    if (desc_len <= 0) {
-        return;
-    }
-
-    wcsncpy_s(modified_description, modified_description_size, *description_out, desc_len);
-    const auto item = (InventoryManager::Item*)GW::Items::GetItemById(item_id);
-    auto pos = desc_len;
-    auto price = (float)PriceChecker::GetPrice(item->model_id);
-    if (price > 0) {
-        
-        if (item->GetIsMaterial() && !item->IsRareMaterial()) {
-            price = price / 10;
-        }
-
-        PrintPrice(&pos, price, "");
-    }
-    else {
-        for (auto i = 0U; i < item->mod_struct_size; i++) {
-            const auto mod = item->mod_struct[i];
-            price = (float)PriceChecker::GetPrice(mod);
-            const auto name = PriceChecker::GetModifierName(mod);
-            if (price == 0) {
-                continue;
-            }
-
-            PrintPrice(&pos, price, name);
-        }
-    }
-
-    *description_out = modified_description;
-}
-
-void PriceChecker::SaveSettings(ToolboxIni* ini)
+void PriceCheckerModule::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     SAVE_FLOAT(high_price_threshold);
     SAVE_BOOL(fetch_module_prices);
 }
 
-void PriceChecker::LoadSettings(ToolboxIni* ini)
+void PriceCheckerModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     LOAD_FLOAT(high_price_threshold);
     LOAD_BOOL(fetch_module_prices);
 }
 
-void PriceChecker::RegisterSettingsContent()
+void PriceCheckerModule::RegisterSettingsContent()
 {
     //ToolboxModule::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent(
