@@ -836,7 +836,6 @@ void GWToolbox::UpdateInitialising(float) {
     ToggleModule(LoginModule::Instance());
     ToggleModule(AprilFools::Instance());
     ToggleModule(SettingsWindow::Instance());
-    ToggleModule(PriceChecker::Instance());
 
     ToolboxSettings::LoadModules(ini); // initialize all other modules as specified by the user
 
