@@ -14,7 +14,7 @@
 using nlohmann::json;
 
 namespace {
-    const size_t modified_description_size = 256;
+    const size_t modified_description_size = 2560;
     wchar_t modified_description[modified_description_size];
     bool fetching_prices;
     std::string trader_quotes_url = "https://kamadan.gwtoolbox.com/trader_quotes";
