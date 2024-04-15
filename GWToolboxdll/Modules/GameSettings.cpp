@@ -53,7 +53,6 @@
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>
 #include <Modules/PriceCheckerModule.h>
-#include <Modules/InventoryManager.h>
 
 #include <Color.h>
 #include <hidusage.h>
@@ -151,8 +150,6 @@ namespace {
     bool notify_when_party_member_joins = false;
 
     bool fetch_module_prices = true;
-    const size_t modified_description_size = 256;
-    wchar_t modified_description[modified_description_size];
     float high_price_threshold = 1000;
 
     bool block_enter_area_message = false;
@@ -454,59 +451,7 @@ namespace {
 
         if (!block_description && fetch_module_prices && description_out && *description_out)
         {
-            std::memset(modified_description, 0, sizeof(modified_description));
-            wcscpy(modified_description, *description_out);
-            const auto item = (InventoryManager::Item*)GW::Items::GetItemById(item_id);
-            auto pos = wcslen(*description_out);
-            auto price = (float)PriceChecker::GetPrice(item->model_id);
-            if (price > 0)
-            {
-                auto unit = 'g';
-                auto color = L"ffffff";
-                if (item->GetIsMaterial() && !item->IsRareMaterial())
-                {
-                    price = price / 10;
-                }
-
-                if (price > high_price_threshold)
-                {
-                    color = L"ffd600";
-                }
-
-                if (price > 1000)
-                {
-                    price = price / 1000;
-                    unit = 'k';
-                }
-
-                pos += swprintf(&modified_description[pos], modified_description_size - pos, L"\x2\x108\x107\n<c=#%s>Item price: %.4g%C\x1", color, price, unit);
-            }
-            else
-            {
-                for (auto i = 0U; i < item->mod_struct_size; i++) {
-                    auto unit = 'g';
-                    auto color = L"ffffff";
-                    const auto mod = item->mod_struct[i];
-                    price = (float)PriceChecker::GetPrice(mod);
-                    if (price == 0) {
-                        continue;
-                    }
-
-                    if (price > high_price_threshold)
-                    {
-                        color = L"ffd600";
-                    }
-
-                    if (price > 1000) {
-                        price = price / 1000;
-                        unit = 'k';
-                    }
-
-                    pos += swprintf(&modified_description[pos], modified_description_size - pos, L"\x2\x108\x107\n<c=#%s>%S: %.4g%C\x1", color, PriceChecker::GetModifierName(mod).c_str(), price, unit);
-                }
-            }
-
-            *description_out = modified_description;
+            PriceChecker::UpdateDescription(item_id, high_price_threshold, description_out);
         }
 
         GW::Hook::LeaveHook();

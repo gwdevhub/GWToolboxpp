@@ -24,4 +24,5 @@ public:
     static int GetPrice(GW::ItemModifier itemModifier);
     static int GetPrice(uint32_t model_id);
     static std::string GetModifierName(GW::ItemModifier itemModifier);
+    static void UpdateDescription(const uint32_t item_id, const float high_price_threshold, wchar_t** description_out);
 };

@@ -1,14 +1,21 @@
 #include "stdafx.h"
 
 #include <Logger.h>
-#include <Modules/PriceCheckerModule.h>
-#include <GWCA/GameEntities/Item.h>
-#include <Modules/Resources.h>
 #include <ctime>
+#include <Utils/GuiUtils.h>
+#include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/GameEntities/Item.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Constants/Constants.h>
+#include <Modules/Resources.h>
+#include <Modules/InventoryManager.h>
+#include <Modules/PriceCheckerModule.h>
 
 using nlohmann::json;
 
 namespace {
+    const size_t modified_description_size = 256;
+    wchar_t modified_description[modified_description_size];
     bool fetching_prices;
     std::string trader_quotes_url = "https://kamadan.gwtoolbox.com/trader_quotes";
     json price_json = nullptr;
@@ -525,4 +532,54 @@ std::string PriceChecker::GetModifierName(GW::ItemModifier modifier)
     }
 
     return it_name->second;
+}
+
+void PriceChecker::UpdateDescription(const uint32_t item_id, const float high_price_threshold, wchar_t** description_out)
+{
+    wcscpy(modified_description, *description_out);
+    const auto item = (InventoryManager::Item*)GW::Items::GetItemById(item_id);
+    auto pos = wcslen(*description_out);
+    auto price = (float)PriceChecker::GetPrice(item->model_id);
+    if (price > 0) {
+        auto unit = 'g';
+        auto color = L"ffffff";
+        if (item->GetIsMaterial() && !item->IsRareMaterial()) {
+            price = price / 10;
+        }
+
+        if (price > high_price_threshold) {
+            color = L"ffd600";
+        }
+
+        if (price > 1000) {
+            price = price / 1000;
+            unit = 'k';
+        }
+
+        pos += swprintf(&modified_description[pos], modified_description_size - pos, L"\x2\x108\x107\n<c=#%s>Item price: %.4g%C\x1", color, price, unit);
+    }
+    else {
+        for (auto i = 0U; i < item->mod_struct_size; i++) {
+            auto unit = 'g';
+            auto color = L"ffffff";
+            const auto mod = item->mod_struct[i];
+            price = (float)PriceChecker::GetPrice(mod);
+            if (price == 0) {
+                continue;
+            }
+
+            if (price > high_price_threshold) {
+                color = L"ffd600";
+            }
+
+            if (price > 1000) {
+                price = price / 1000;
+                unit = 'k';
+            }
+
+            pos += swprintf(&modified_description[pos], modified_description_size - pos, L"\x2\x108\x107\n<c=#%s>%S: %.4g%C\x1", color, PriceChecker::GetModifierName(mod).c_str(), price, unit);
+        }
+    }
+
+    *description_out = modified_description;
 }
