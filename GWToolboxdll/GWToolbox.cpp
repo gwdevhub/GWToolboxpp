@@ -374,7 +374,6 @@ DWORD __stdcall ThreadEntry(LPVOID)
 {
     Log::Log("Initializing API\n");
 
-    GW::HookBase::Initialize();
     if (!GW::Initialize()) {
         if (MessageBoxA(nullptr, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0) == IDOK) { }
         return 0;
@@ -406,6 +405,7 @@ DWORD __stdcall ThreadEntry(LPVOID)
 
     // @Remark:
     // Hooks are disable from Guild Wars thread (safely), so we just make sure we exit the last hooks
+    GW::DisableHooks();
     while (GW::HookBase::GetInHookCount()) {
         Sleep(16);
     }
