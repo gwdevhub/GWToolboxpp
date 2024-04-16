@@ -510,7 +510,9 @@ namespace {
             price /= 1000.f;
             unit = 'k';
         }
-        return GuiUtils::format(L"\x2\x108\x107\n<c=#%s>%S: %.4g%C</c>\x1", color, name && *name ? name : "Item price", price, unit);
+        auto price_s = GuiUtils::format(L"\x2\x108\x107\n<c=#%s>%S: %.4g%C</c>\x1", color, name && *name ? name : "Item price", price, unit);
+        price_s.resize(price_s.size() - 1, L'\x1');
+        return price_s;
     }
 
     void UpdateDescription(const uint32_t item_id, wchar_t** description_out)
@@ -538,6 +540,9 @@ namespace {
         const auto model_id_str = std::to_string(item->model_id);
         auto price = GetPriceById(model_id_str.c_str());
         if (price > .0f) {
+            if (IsCommonMaterial(item)) {
+                price = price / 10;
+            }
             modified_description += PrintPrice(price);
         }
 
