@@ -510,8 +510,7 @@ namespace {
             price /= 1000.f;
             unit = 'k';
         }
-        auto price_s = GuiUtils::format(L"\x2\x108\x107\n<c=#%s>%S: %.4g%C</c>\x1", color, name && *name ? name : "Item price", price, unit);
-        return price_s;
+        return GuiUtils::format(L"\x2\x108\x107\n<c=#%s>%S: %.4g%C</c>\x1", color, name && *name ? name : "Item price", price, unit);
     }
 
     void UpdateDescription(const uint32_t item_id, wchar_t** description_out)
