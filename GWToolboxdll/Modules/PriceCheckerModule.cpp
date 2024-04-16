@@ -500,7 +500,7 @@ namespace {
     }
 
     std::wstring PrintPrice(float price, const char* name = nullptr) {
-        auto unit = 'g';
+        auto unit = L'g';
         auto color = L"ffffff";
         if (price > high_price_threshold) {
             color = L"ffd600";
@@ -508,9 +508,9 @@ namespace {
 
         if (price > 1000.f) {
             price /= 1000.f;
-            unit = 'k';
+            unit = L'k';
         }
-        return GuiUtils::format(L"\x2\x108\x107\n<c=#%s>%S: %.4g%C</c>\x1", color, name && *name ? name : "Item price", price, unit);
+        return std::format(L"\x2\x108\x107\n<c=#{}>{}: {:.4g}{}</c>\x1", color, name && *name ? GuiUtils::StringToWString(name) : L"Item price", price, unit);
     }
 
     void UpdateDescription(const uint32_t item_id, wchar_t** description_out)
@@ -533,7 +533,7 @@ namespace {
             const auto name = mod_to_name.find(found->first);
             if (name == mod_to_name.end())
                 continue;
-            modified_description.append(PrintPrice(price, name->second).c_str());
+            modified_description.append(PrintPrice(price, name->second));
         }
         const auto model_id_str = std::to_string(item->model_id);
         auto price = GetPriceById(model_id_str.c_str());
