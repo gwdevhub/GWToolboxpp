@@ -476,8 +476,8 @@ namespace {
     }
 
     bool IsCommonMaterial(GW::Item* item) {
-        if (!(item && item->GetModifier(0x2508)))
-            return item->GetModifier(0x2508)->arg1() > static_cast<uint32_t>(GW::Constants::MaterialSlot::Feather);
+        if (item && item->GetModifier(0x2508))
+            return item->GetModifier(0x2508)->arg1() <= static_cast<uint32_t>(GW::Constants::MaterialSlot::Feather);
         return false;
     }
 
@@ -511,7 +511,6 @@ namespace {
             unit = 'k';
         }
         auto price_s = GuiUtils::format(L"\x2\x108\x107\n<c=#%s>%S: %.4g%C</c>\x1", color, name && *name ? name : "Item price", price, unit);
-        price_s.resize(price_s.size() - 1, L'\x1');
         return price_s;
     }
 
@@ -535,7 +534,7 @@ namespace {
             const auto name = mod_to_name.find(found->first);
             if (name == mod_to_name.end())
                 continue;
-            modified_description += PrintPrice(price, name->second);
+            modified_description.append(PrintPrice(price, name->second).c_str());
         }
         const auto model_id_str = std::to_string(item->model_id);
         auto price = GetPriceById(model_id_str.c_str());
