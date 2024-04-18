@@ -284,4 +284,14 @@ private:
     int modelId = 0;
     float minDistance = 0.f;
     float maxDistance = 5000.f;
+    std::string agentName = "";
+};
+
+class CanPopAgentCondition : public Condition {
+public:
+    CanPopAgentCondition() = default;
+    CanPopAgentCondition(std::istringstream&) {}
+    ConditionType type() const final { return ConditionType::CanPopAgent; }
+    bool check() const final;
+    void drawSettings() final;
 };

@@ -245,6 +245,7 @@ void CastOnTargetAction::drawSettings()
 ChangeTargetAction::ChangeTargetAction(std::istringstream& stream)
 {
     stream >> agentType >> primary >> secondary >> status >> hexed >> skill >> sorting >> modelId >> minDistance >> maxDistance >> mayBeCurrentTarget >> requireSameModelIdAsTarget;
+    agentName = readStringWithSpaces(stream);
 }
 void ChangeTargetAction::serialize(std::ostringstream& stream) const
 {
@@ -252,6 +253,7 @@ void ChangeTargetAction::serialize(std::ostringstream& stream) const
 
     stream << agentType << " " << primary << " " << secondary << " " << status << " " << hexed << " " << skill << " " << sorting << " " << modelId 
            << " " << minDistance << " " << maxDistance << " " << mayBeCurrentTarget << " " << requireSameModelIdAsTarget << " ";
+    writeStringWithSpaces(stream, agentName);
 }
 void ChangeTargetAction::initialAction()
 {
@@ -261,6 +263,8 @@ void ChangeTargetAction::initialAction()
     const auto currentTarget = GW::Agents::GetTargetAsAgentLiving();
     const auto agents = GW::Agents::GetAgentArray();
     if (!player || !agents) return;
+
+    auto& instanceInfo = InstanceInfo::getInstance();
 
     const auto fulfillsConditions = [&](const GW::AgentLiving* agent) 
     {
@@ -290,7 +294,8 @@ void ChangeTargetAction::initialAction()
         const auto acceptableWithCurrentTarget = mayBeCurrentTarget || !currentTarget || (agent->agent_id != currentTarget->agent_id);
         const auto distance = GW::GetDistance(player->pos, agent->pos);
         const auto goodDistance = (minDistance < distance) && (distance < maxDistance);
-        return correctType && correctPrimary && correctSecondary && correctStatus && hexedCorrectly && correctSkill && correctModelId && acceptableWithCurrentTarget && goodDistance;
+        const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedName(agent->agent_id) == agentName);
+        return correctType && correctPrimary && correctSecondary && correctStatus && hexedCorrectly && correctSkill && correctModelId && acceptableWithCurrentTarget && goodDistance && goodName;
     };
 
     GW::AgentLiving const * currentBestTarget = nullptr;
@@ -313,7 +318,7 @@ void ChangeTargetAction::initialAction()
             case Sorting::FurthestFromTarget:
                 return currentTarget 
                     ? GW::GetSquareDistance(currentTarget->pos, agent->pos) > GW::GetSquareDistance(currentTarget->pos, currentBestTarget->pos) 
-                    : GW::GetSquareDistance(player->pos, agent->pos) > GW::GetSquareDistance(player->pos, currentBestTarget->pos); // Fallback: Furthest from player
+                    : GW::GetSquareDistance(player->pos, agent->pos) < GW::GetSquareDistance(player->pos, currentBestTarget->pos); // Fallback: Closest to player
             case Sorting::LowestHp:
                 return agent->hp < currentBestTarget->hp;
             case Sorting::HighestHp:
@@ -329,8 +334,6 @@ void ChangeTargetAction::initialAction()
         if (!fulfillsConditions(living)) continue;
         if (isNewBest(living)) currentBestTarget = living;
         if (sorting == Sorting::AgentId) break;
-        // test: if (agentType == AgentType::PartyMember && !agent->isPlayer) break;
-        // Move these two conditions out of loop? Measure time this function takes
     }
 
     if (currentBestTarget) 
@@ -375,6 +378,10 @@ void ChangeTargetAction::drawSettings()
         ImGui::BulletText("Uses skill");
         ImGui::SameLine();
         ImGui::InputInt("id (0 for any)###2", reinterpret_cast<int*>(&skill), 0);
+
+        ImGui::BulletText("Has name");
+        ImGui::SameLine();
+        ImGui::InputText((std::string{"###"} + std::to_string(++drawId)).c_str(), &agentName);
 
         ImGui::Bullet();
         ImGui::Checkbox("May choose current target again", &mayBeCurrentTarget);
