@@ -83,6 +83,7 @@ private:
     float maxDistance = 5000.f;
     bool mayBeCurrentTarget = true;
     bool requireSameModelIdAsTarget = false;
+    std::string agentName = "";
 };
 
 class UseItemAction : public Action {

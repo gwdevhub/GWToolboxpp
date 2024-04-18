@@ -740,6 +740,7 @@ void InstanceTimeCondition::drawSettings()
 NearbyAgentCondition::NearbyAgentCondition(std::istringstream& stream)
 {
     stream >> agentType >> primary >> secondary >> status >> hexed >> skill >> modelId >> minDistance >> maxDistance;
+    agentName = readStringWithSpaces(stream);
 }
 void NearbyAgentCondition::serialize(std::ostringstream& stream) const
 {
@@ -747,12 +748,15 @@ void NearbyAgentCondition::serialize(std::ostringstream& stream) const
 
     stream << agentType << " " << primary << " " << secondary << " " << status << " " << hexed << " " << skill << " "
            << " " << modelId << " " << minDistance << " " << maxDistance << " ";
+    writeStringWithSpaces(stream, agentName);
 }
 bool NearbyAgentCondition::check() const
 {
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     const auto agents = GW::Agents::GetAgentArray();
     if (!player || !agents) return false;
+
+    auto& instanceInfo = InstanceInfo::getInstance();
 
     const auto fulfillsConditions = [&](const GW::AgentLiving* agent) {
         if (!agent) return false;
@@ -778,7 +782,8 @@ bool NearbyAgentCondition::check() const
         const auto correctModelId = (modelId == 0) || (agent->player_number == modelId);
         const auto distance = GW::GetDistance(player->pos, agent->pos);
         const auto goodDistance = (minDistance < distance) && (distance < maxDistance);
-        return correctType && correctPrimary && correctSecondary && correctStatus && hexedCorrectly && correctSkill && correctModelId && goodDistance;
+        const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedName(agent->agent_id) == agentName);
+        return correctType && correctPrimary && correctSecondary && correctStatus && hexedCorrectly && correctSkill && correctModelId && goodDistance && goodName;
     };
     if (agentType == AgentType::PartyMember) {
         const auto info = GW::PartyMgr::GetPartyInfo();
@@ -833,6 +838,10 @@ void NearbyAgentCondition::drawSettings()
         ImGui::SameLine();
         ImGui::InputInt("id (0 for any)###2", reinterpret_cast<int*>(&skill), 0);
 
+        ImGui::BulletText("Has name");
+        ImGui::SameLine();
+        ImGui::InputText((std::string{"###"} + std::to_string(++drawId)).c_str(), &agentName);
+
         ImGui::Bullet();
         ImGui::Text("Has model");
         ImGui::SameLine();
@@ -840,4 +849,15 @@ void NearbyAgentCondition::drawSettings()
 
         ImGui::TreePop();
     }
+}
+
+/// ------------- CanPopAgentCondition -------------
+
+bool CanPopAgentCondition::check() const
+{
+    return InstanceInfo::getInstance().canPopAgent();
+}
+void CanPopAgentCondition::drawSettings()
+{
+    ImGui::Text("If player can pop minipet or ghost in the box");
 }

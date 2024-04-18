@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 20);
+    static_assert((int)ConditionType::Count == 21);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -52,6 +52,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<InstanceTimeCondition>();
         case ConditionType::NearbyAgent:
             return std::make_shared<NearbyAgentCondition>();
+        case ConditionType::CanPopAgent:
+            return std::make_shared<CanPopAgentCondition>();
 
         default:
             return nullptr;
@@ -60,7 +62,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 20);
+    static_assert((int)ConditionType::Count == 21);
     switch (type) {
         case ConditionType::Not:
             return "Negation";
@@ -93,6 +95,8 @@ std::string_view toString(ConditionType type)
             return "Player has name";
         case ConditionType::PlayerHasEnergy:
             return "Player has energy";
+        case ConditionType::CanPopAgent:
+            return "Can pop agent";
 
         case ConditionType::CurrentTargetHasHpBelow:
             return "Current target HP";
@@ -114,7 +118,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(std::istringstream& stream)
 {
-static_assert((int)ConditionType::Count == 20);
+static_assert((int)ConditionType::Count == 21);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -162,6 +166,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<InstanceTimeCondition>(stream);
     case ConditionType::NearbyAgent:
         return std::make_shared<NearbyAgentCondition>(stream);
+    case ConditionType::CanPopAgent:
+        return std::make_shared<CanPopAgentCondition>(stream);
 
     default:
         assert(false);

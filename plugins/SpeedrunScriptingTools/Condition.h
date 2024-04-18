@@ -16,6 +16,7 @@ enum class ConditionType {
     InstanceProgress,
     InstanceTime,
     OnlyTriggerOncePerInstance,
+    CanPopAgent,
 
     // Player state
     PlayerIsNearPosition,
