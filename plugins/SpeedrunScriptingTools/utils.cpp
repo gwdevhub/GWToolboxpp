@@ -2,6 +2,8 @@
 
 #include <imgui.h>
 
+#include <Keys.h>
+
 namespace 
 {
     const std::string endOfStringSignifier{"ENDOFSTRING"};
@@ -121,5 +123,65 @@ std::string_view toString(HexedStatus status) {
             return "Hexed";
         default:
             return "";
+    }
+}
+
+std::string makeHotkeyDescription(long keyData, long modifier) 
+{
+    char newDescription[256];
+    ModKeyName(newDescription, _countof(newDescription), modifier, keyData);
+    return std::string{newDescription};
+}
+
+void drawHotkeySelector(long& keyData, long& modifier, std::string& description, float selectorWidth) 
+{
+    ImGui::PushItemWidth(selectorWidth);
+    if (ImGui::Button(description.c_str())) {
+        ImGui::OpenPopup("Select Hotkey");
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Click to change hotkey");
+    if (ImGui::BeginPopup("Select Hotkey")) {
+        static long newkey = 0;
+        char newkey_buf[256]{};
+        long newmod = 0;
+
+        ImGui::Text("Press key");
+        if (ImGui::IsKeyDown(ImGuiKey_ModCtrl)) newmod |= ModKey_Control;
+        if (ImGui::IsKeyDown(ImGuiKey_ModShift)) newmod |= ModKey_Shift;
+        if (ImGui::IsKeyDown(ImGuiKey_ModAlt)) newmod |= ModKey_Alt;
+
+        if (newkey == 0) { // we are looking for the key
+            for (WORD i = 0; i < 512; i++) {
+                switch (i) {
+                    case VK_CONTROL:
+                    case VK_LCONTROL:
+                    case VK_RCONTROL:
+                    case VK_SHIFT:
+                    case VK_LSHIFT:
+                    case VK_RSHIFT:
+                    case VK_MENU:
+                    case VK_LMENU:
+                    case VK_RMENU:
+                    case VK_LBUTTON:
+                    case VK_RBUTTON:
+                        continue;
+                    default: {
+                        if (::GetKeyState(i) & 0x8000) newkey = i;
+                    }
+                }
+            }
+        }
+        else if (!(::GetKeyState(newkey) & 0x8000)) { // We have a key, check if it was released
+            keyData = newkey;
+            modifier = newmod;
+            description = makeHotkeyDescription(newkey, newmod);
+            newkey = 0;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ModKeyName(newkey_buf, _countof(newkey_buf), newmod, newkey);
+        ImGui::Text("%s", newkey_buf);
+
+        ImGui::EndPopup();
     }
 }

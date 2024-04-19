@@ -249,7 +249,7 @@ public:
 private:
     long shortcutKey = 0;
     long shortcutMod = 0;
-    char hotkeyDescription[64] = "Click to change key";
+    std::string description = "Click to change key";
 };
 
 class InstanceTimeCondition : public Condition {
