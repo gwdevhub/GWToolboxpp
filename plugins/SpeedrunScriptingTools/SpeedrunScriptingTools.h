@@ -7,12 +7,19 @@
 
 #include <ToolboxPlugin.h>
 
+struct HotkeyStatus {
+    long keyData = 0;
+    long modifier = 0;
+    bool triggered = false;
+};
+
 struct Script {
     std::vector<std::shared_ptr<Condition>> conditions;
     std::vector<std::shared_ptr<Action>> actions;
     std::string name = "missing";
-    TriggerPacket triggerPacket = TriggerPacket::None;
+    Trigger trigger = Trigger::None;
     bool enabled = true;
+    HotkeyStatus hotkeyStatus{};
 };
 
 class SpeedrunScriptingTools : public ToolboxPlugin {
@@ -25,6 +32,8 @@ public:
     void LoadSettings(const wchar_t*) override;
     void SaveSettings(const wchar_t*) override;
     bool HasSettings() const override { return true; }
+
+    bool WndProc(UINT, WPARAM, LPARAM) override;
 
     void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE) override;
     bool CanTerminate() override;

@@ -1,39 +1,54 @@
 #include <TriggerPacket.h>
-#include <imgui.h>
 
+#include <utils.h>
+
+#include <imgui.h>
 #include <string_view>
 
 namespace{
-    std::string_view toString(TriggerPacket type)
+    std::string_view toString(Trigger type)
     {
-        static_assert((int)TriggerPacket::Count == 3);
+        static_assert((int)Trigger::Count == 4);
         switch (type) {
-            case TriggerPacket::None:
+            case Trigger::None:
                 return "No packet trigger";
-            case TriggerPacket::InstanceLoad:
+            case Trigger::InstanceLoad:
                 return "Trigger on instance load";
-            case TriggerPacket::HardModePing:
+            case Trigger::HardModePing:
                 return "Trigger on hard mode ping";
+            case Trigger::Hotkey:
+                return "Trigger on keypress";
             default:
                 return "Unknown";
         }
     }
 } // namespace
 
-void drawTriggerPacketSelector(TriggerPacket& trigger, float width)
+void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& hotkeyMod)
 {
-    if (trigger == TriggerPacket::None) 
+    if (trigger == Trigger::None) 
     {
         if (ImGui::Button("Add trigger", ImVec2(width, 0))) {
             ImGui::OpenPopup("Add trigger");
         }
         if (ImGui::BeginPopup("Add trigger")) {
-            for (auto i = 1; i < (int)TriggerPacket::Count; ++i) {
-                if (ImGui::Selectable(toString((TriggerPacket)i).data())) {
-                    trigger = (TriggerPacket)i;
+            for (auto i = 1; i < (int)Trigger::Count; ++i) {
+                if (ImGui::Selectable(toString((Trigger)i).data())) {
+                    trigger = (Trigger)i;
                 }
             }
             ImGui::EndPopup();
+        }
+    }
+    else if (trigger == Trigger::Hotkey) 
+    {
+        auto description = hotkeyData ? makeHotkeyDescription(hotkeyData, hotkeyMod) : "Click to change key";
+        drawHotkeySelector(hotkeyData, hotkeyMod, description, width - 20.f);
+        ImGui::SameLine();
+        ImGui::Text("Hotkey");
+        ImGui::SameLine();
+        if (ImGui::Button("X", ImVec2(20.f, 0))) {
+            trigger = Trigger::None;
         }
     }
     else 
@@ -41,15 +56,15 @@ void drawTriggerPacketSelector(TriggerPacket& trigger, float width)
         ImGui::Text(toString(trigger).data());
         ImGui::SameLine();
         if (ImGui::Button("X", ImVec2(20.f, 0))) {
-            trigger = TriggerPacket::None;
+            trigger = Trigger::None;
         }
     }
 }
 
-std::istringstream& operator>>(std::istringstream& in, TriggerPacket& packet)
+std::istringstream& operator>>(std::istringstream& in, Trigger& packet)
 {
     std::string read;
     in >> read;
-    packet = (TriggerPacket)std::stoi(read);
+    packet = (Trigger)std::stoi(read);
     return in;
 }

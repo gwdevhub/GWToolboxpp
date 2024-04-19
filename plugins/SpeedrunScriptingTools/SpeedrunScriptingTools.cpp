@@ -4,6 +4,8 @@
 #include <ActionIO.h>
 #include <InstanceInfo.h>
 #include <utils.h>
+#include <Keys.h>
+
 #include <GWCA/GWCA.h>
 
 #include <GWCA/Utilities/Hooker.h>
@@ -13,6 +15,8 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 
@@ -92,7 +96,7 @@ void SpeedrunScriptingTools::DrawSettings()
             ImGui::SameLine();
             ImGui::InputText("Name", &scriptIt->name);
             ImGui::SameLine();
-            drawTriggerPacketSelector(scriptIt->triggerPacket, ImGui::GetContentRegionAvail().x / 2);
+            drawTriggerSelector(scriptIt->trigger, ImGui::GetContentRegionAvail().x / 2, scriptIt->hotkeyStatus.keyData, scriptIt->hotkeyStatus.modifier);
             ImGui::SameLine();
             if (ImGui::Button("Delete Script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 scriptToDelete = scriptIt;
@@ -101,6 +105,10 @@ void SpeedrunScriptingTools::DrawSettings()
         }
     }
     if (scriptToDelete.has_value()) m_scripts.erase(scriptToDelete.value());
+
+    ImGui::Dummy(ImVec2(0.0f, 5.0f));
+    ImGui::Separator();
+    ImGui::Dummy(ImVec2(0.0f, 5.0f));
 
     // Add script
     if (ImGui::Button("Add script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
@@ -126,13 +134,15 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
     do { 
         std::string token = "";
         stream >> token;
-        if (token.length() > 1) return;
+        if (token.length() != 1) return;
         switch (token[0]) {
             case 'S':
                 m_scripts.push_back({});
                 m_scripts.back().name = readStringWithSpaces(stream);
-                stream >> m_scripts.back().triggerPacket;
+                stream >> m_scripts.back().trigger;
                 stream >> m_scripts.back().enabled;
+                stream >> m_scripts.back().hotkeyStatus.keyData;
+                stream >> m_scripts.back().hotkeyStatus.modifier;
                 break;
             case 'A':
                 assert(m_scripts.size() > 0);
@@ -159,8 +169,10 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
     for (const auto& script : m_scripts) {
         stream << 'S' << " ";
         writeStringWithSpaces(stream, script.name);
-        stream << (int)script.triggerPacket << " ";
+        stream << (int)script.trigger << " ";
         stream << script.enabled << " ";
+        stream << script.hotkeyStatus.keyData << " ";
+        stream << script.hotkeyStatus.modifier << " ";
         
         for (const auto& condition : script.conditions) {
             condition->serialize(stream);
@@ -186,16 +198,18 @@ void SpeedrunScriptingTools::Update(float delta)
     const auto map = GW::Map::GetMapInfo();
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable || !map || map->GetIsPvP() || !GW::Agents::GetPlayerAsAgentLiving()) {
         m_currentScript = std::nullopt;
+        for (auto& script : m_scripts)
+            script.hotkeyStatus.triggered = false;
         return;
     }
 
-    auto currentTrigger = TriggerPacket::None;
+    auto currentTrigger = Trigger::None;
     if (firstFrameAfterInstanceLoad) {
-        currentTrigger = TriggerPacket::InstanceLoad;
+        currentTrigger = Trigger::InstanceLoad;
         firstFrameAfterInstanceLoad = false;
     }
     else if (firstFrameAfterHardModePing) {
-        currentTrigger = TriggerPacket::HardModePing;
+        currentTrigger = Trigger::HardModePing;
         firstFrameAfterHardModePing = false;
     }
 
@@ -215,14 +229,99 @@ void SpeedrunScriptingTools::Update(float delta)
     }
     else {
         // Find script to use
-        for (const auto& script : m_scripts) {
+        for (auto& script : m_scripts) {
             if (!script.enabled || script.conditions.empty() || script.actions.empty()) continue;
-            if (script.triggerPacket != currentTrigger) continue;
-            if (std::ranges::all_of(script.conditions, [](const auto& condition) {return condition->check();})) {
-                m_currentScript = script;
-                break;
+            if (script.trigger == currentTrigger || (script.trigger == Trigger::Hotkey && script.hotkeyStatus.triggered)) {
+                script.hotkeyStatus.triggered = false;
+                if (std::ranges::all_of(script.conditions, [](const auto& condition) {return condition->check();})) {
+                    m_currentScript = script;
+                    break;
+                }
             }
         }
+    }
+}
+
+bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LPARAM lparam)
+{
+    if (GW::Chat::GetIsTyping()) {
+        return false;
+    }
+    if (GW::MemoryMgr::GetGWWindowHandle() != GetActiveWindow()) {
+        return false;
+    }
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+        return false;
+    }
+    long keyData = 0;
+    switch (Message) {
+        case WM_KEYDOWN:
+            if (const auto isRepeated = (int)lparam & (1 << 30)) break;
+        case WM_SYSKEYDOWN:
+        case WM_KEYUP:
+        case WM_SYSKEYUP:
+            keyData = static_cast<int>(wParam);
+            break;
+        case WM_XBUTTONDOWN:
+        case WM_MBUTTONDOWN:
+        case WM_XBUTTONDBLCLK:
+            if (LOWORD(wParam) & MK_MBUTTON) {
+                keyData = VK_MBUTTON;
+            }
+            if (LOWORD(wParam) & MK_XBUTTON1) {
+                keyData = VK_XBUTTON1;
+            }
+            if (LOWORD(wParam) & MK_XBUTTON2) {
+                keyData = VK_XBUTTON2;
+            }
+            break;
+        case WM_XBUTTONUP:
+        case WM_MBUTTONUP:
+            // leave keydata to none, need to handle special case below
+            break;
+        case WM_MBUTTONDBLCLK:
+             keyData = VK_MBUTTON;
+             break;
+        default:
+            break;
+    }
+
+    switch (Message) {
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
+        case WM_XBUTTONDOWN:
+        case WM_XBUTTONDBLCLK:
+        case WM_MBUTTONDOWN:
+        case WM_MBUTTONDBLCLK: {
+            long modifier = 0;
+            if (GetKeyState(VK_CONTROL) < 0) {
+                modifier |= ModKey_Control;
+            }
+            if (GetKeyState(VK_SHIFT) < 0) {
+                modifier |= ModKey_Shift;
+            }
+            if (GetKeyState(VK_MENU) < 0) {
+                modifier |= ModKey_Alt;
+            }
+
+            bool triggered = false;
+            for (auto& script : m_scripts) {
+                if (script.enabled && script.trigger == Trigger::Hotkey && script.hotkeyStatus.keyData == keyData && 
+                    script.hotkeyStatus.modifier == modifier) {
+                    script.hotkeyStatus.triggered = true;
+                    triggered = true;
+                }
+            }
+            return triggered;
+        }
+
+        case WM_KEYUP:
+        case WM_SYSKEYUP:
+
+        case WM_XBUTTONUP:
+        case WM_MBUTTONUP:
+        default:
+            return false;
     }
 }
 

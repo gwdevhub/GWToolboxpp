@@ -9,7 +9,8 @@
 std::string readStringWithSpaces(std::istringstream&);
 void writeStringWithSpaces(std::ostringstream&, const std::string& word);
 void ShowHelp(const char* help);
-
+void drawHotkeySelector(long& keyData, long& modifier, std::string& description, float selectorWidth);
+std::string makeHotkeyDescription(long keyData, long modifier);
 enum class Class : int { Any, Warrior, Ranger, Monk, Necro, Mesmer, Elementalist, Assassin, Ritualist, Paragon, Dervish };
 enum class Status : int { Any, Dead, Alive };
 enum class AgentType : int { Any, PartyMember, Friendly, Hostile };
