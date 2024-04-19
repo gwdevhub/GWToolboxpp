@@ -643,7 +643,7 @@ void QuestHasStateCondition::drawSettings()
 KeyIsPressedCondition::KeyIsPressedCondition(std::istringstream& stream)
 {
     stream >> shortcutKey >> shortcutMod;
-    ModKeyName(hotkeyDescription, _countof(hotkeyDescription), shortcutMod, shortcutKey);
+    description = makeHotkeyDescription(shortcutKey, shortcutMod);
 }
 void KeyIsPressedCondition::serialize(std::ostringstream& stream) const
 {
@@ -664,52 +664,7 @@ void KeyIsPressedCondition::drawSettings()
 {
     ImGui::Text("If key is pressed:");
     ImGui::SameLine();
-    if (ImGui::Button(hotkeyDescription)) {
-        ImGui::OpenPopup("Select Hotkey");
-    }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Click to change hotkey");
-    if (ImGui::BeginPopup("Select Hotkey")) {
-        static long newkey = 0;
-        char newkey_buf[256]{};
-        long newmod = 0;
-
-        ImGui::Text("Press key");
-        if (ImGui::IsKeyDown(ImGuiKey_ModCtrl)) newmod |= ModKey_Control;
-        if (ImGui::IsKeyDown(ImGuiKey_ModShift)) newmod |= ModKey_Shift;
-        if (ImGui::IsKeyDown(ImGuiKey_ModAlt)) newmod |= ModKey_Alt;
-
-        if (newkey == 0) { // we are looking for the key
-            for (WORD i = 0; i < 512; i++) {
-                switch (i) {
-                    case VK_CONTROL:
-                    case VK_LCONTROL:
-                    case VK_RCONTROL:
-                    case VK_SHIFT:
-                    case VK_LSHIFT:
-                    case VK_RSHIFT:
-                    case VK_MENU:
-                    case VK_LMENU:
-                    case VK_RMENU:
-                        continue;
-                    default: {
-                        if (::GetKeyState(i) & 0x8000) newkey = i;
-                    }
-                }
-            }
-        }
-        else if (!(::GetKeyState(newkey) & 0x8000)) { // We have a key, check if it was released
-            shortcutKey = newkey;
-            shortcutMod = newmod;
-            ModKeyName(hotkeyDescription, _countof(hotkeyDescription), newmod, newkey);
-            newkey = 0;
-            ImGui::CloseCurrentPopup();
-        }
-
-        ModKeyName(newkey_buf, _countof(newkey_buf), newmod, newkey);
-        ImGui::Text("%s", newkey_buf);
-
-        ImGui::EndPopup();
-    }
+    drawHotkeySelector(shortcutKey, shortcutMod, description, 100.f);
 }
 
 /// ------------- InstanceTimeCondition -------------
