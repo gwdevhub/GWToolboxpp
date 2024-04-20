@@ -183,7 +183,7 @@ public:
     void serialize(std::ostringstream&) const final;
 
 private:
-    std::string name;
+    std::string name = "";
 };
 
 class CurrentTargetIsCastingSkillCondition : public Condition {
@@ -210,6 +210,19 @@ public:
 
 private:
     float hp = 50.f;
+};
+
+class CurrentTargetModelCondition : public Condition {
+public:
+    CurrentTargetModelCondition() = default;
+    CurrentTargetModelCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::CurrentTargetHasModel; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    int modelId = 0;
 };
 
 class HasPartyWindowAllyOfNameCondition : public Condition {

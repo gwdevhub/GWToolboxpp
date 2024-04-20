@@ -842,3 +842,20 @@ void PingHardModeAction::drawSettings()
     ImGui::Text("Ping hard mode");
     ShowHelp("Currently only works in UW, DoA and FoW because I don't understand the information sent. Let me know if you need any others.");
 }
+
+/// ------------- PingTargetAction -------------
+void PingTargetAction::initialAction()
+{
+    Action::initialAction();
+
+    const auto currentTarget = GW::Agents::GetTargetAsAgentLiving();
+    if (!currentTarget) return;
+
+    GW::GameThread::Enqueue([id = currentTarget->agent_id]() {
+        GW::CtoS::SendPacket(0xC, GAME_CMSG_TARGET_CALL, 0xA, id);
+    });
+}
+void PingTargetAction::drawSettings()
+{
+    ImGui::Text("Ping current target");
+}

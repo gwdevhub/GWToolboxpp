@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-enum class ConditionType {
+enum class ConditionType : int {
     // Logic Operators
     Not,
     Or,
@@ -30,6 +30,7 @@ enum class ConditionType {
     // Current target state
     CurrentTargetHasHpBelow,
     CurrentTargetIsUsingSkill,
+    CurrentTargetHasModel,
 
     NearbyAgent,
 
