@@ -296,19 +296,21 @@ void PlayerIsNearPositionCondition::drawSettings()
 /// ------------- PlayerHasBuffCondition -------------
 PlayerHasBuffCondition::PlayerHasBuffCondition(std::istringstream& stream)
 {
-    int read;
-    stream >> read;
-    id = (GW::Constants::SkillID)read;
+    stream >> id >> minimumDuration >> maximumDuration;
 }
 void PlayerHasBuffCondition::serialize(std::ostringstream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << (int)id << " ";
+    stream << id << " " << minimumDuration << " " << maximumDuration << " ";
 }
 bool PlayerHasBuffCondition::check() const
 {
-    return GW::Effects::GetPlayerBuffBySkillId(id);
+    const auto effect = GW::Effects::GetPlayerEffectBySkillId(id);
+    if (!effect) return false;
+    if (minimumDuration > 0 && effect->GetTimeRemaining() < DWORD(minimumDuration)) return false;
+    if (maximumDuration > 0 && effect->GetTimeRemaining() > DWORD(maximumDuration)) return false;
+    return true;
 }
 void PlayerHasBuffCondition::drawSettings()
 {
@@ -316,6 +318,12 @@ void PlayerHasBuffCondition::drawSettings()
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("id", reinterpret_cast<int*>(&id), 0);
+    ImGui::SameLine();
+    ImGui::Text("Min/Max duration in ms (0 for any):");
+    ImGui::SameLine();
+    ImGui::InputInt("min", &minimumDuration, 0);
+    ImGui::SameLine();
+    ImGui::InputInt("max", &maximumDuration, 0);
 }
 
 /// ------------- PlayerHasSkillCondition -------------
