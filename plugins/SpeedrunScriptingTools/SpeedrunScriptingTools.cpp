@@ -36,6 +36,89 @@ namespace {
             return cond->type() == ConditionType::OnlyTriggerOncePerInstance;
         });
     }
+
+    std::string serialize(const Script& script) 
+    {
+        std::ostringstream stream;
+
+        stream << 'S' << " ";
+        writeStringWithSpaces(stream, script.name);
+        stream << (int)script.trigger << " ";
+        stream << script.enabled << " ";
+        stream << script.hotkeyStatus.keyData << " ";
+        stream << script.hotkeyStatus.modifier << " ";
+
+        for (const auto& condition : script.conditions) {
+            condition->serialize(stream);
+        }
+        for (const auto& action : script.actions) {
+            action->serialize(stream);
+        }
+        return stream.str();
+    }
+
+    std::optional<Script> deserialize(const std::string& input)
+    {
+        std::optional<Script> result;
+        std::istringstream stream(input);
+
+        do {
+            std::string token = "";
+            stream >> token;
+            if (token.length() != 1) return result; //nullopt?
+            switch (token[0]) {
+                case 'S':
+                    result = Script{};
+                    result->name = readStringWithSpaces(stream);
+                    stream >> result->trigger;
+                    stream >> result->enabled;
+                    stream >> result->hotkeyStatus.keyData;
+                    stream >> result->hotkeyStatus.modifier;
+                    break;
+                case 'A':
+                    if (!result) return std::nullopt;
+                    result->actions.push_back(readAction(stream));
+                    if (!result->actions.back()) return std::nullopt;
+                    break;
+                case 'C':
+                    if (!result) return std::nullopt;
+                    result->conditions.push_back(readCondition(stream));
+                    if (!result->conditions.back()) return std::nullopt;
+                    break;
+                default:
+                    return result;
+            }
+        } while (stream);
+
+        return result;
+    }
+
+    std::string splitIntoAlphabetCharacters(const std::string& raw) 
+    {
+        std::string result;
+        result.reserve(raw.size() * 2);
+
+        for (char c : raw) {
+            result += (c >> 4) + 'A';
+            result += (c & 0xF) + 'A';
+        }
+
+        return result;
+    }
+
+    std::string combineFromAlphabetCharacters(const std::string& input)
+    {
+        std::string result;
+        result.reserve(input.size()/2);
+
+        for (auto i = 0u; i < input.size(); i += 2) {
+            const char first = input[i] - 'A';
+            const char second = input[i + 1] - 'A';
+            result += (first << 4) + second;
+        }
+
+        return result;
+    }
 }
 
 void SpeedrunScriptingTools::DrawSettings()
@@ -92,11 +175,15 @@ void SpeedrunScriptingTools::DrawSettings()
             ImGui::Separator();
             ImGui::PushID(drawCount++);
             ImGui::Checkbox("Enabled", &scriptIt->enabled);
-            ImGui::PushItemWidth(200);
+            ImGui::PushItemWidth(150);
             ImGui::SameLine();
             ImGui::InputText("Name", &scriptIt->name);
             ImGui::SameLine();
-            drawTriggerSelector(scriptIt->trigger, ImGui::GetContentRegionAvail().x / 2, scriptIt->hotkeyStatus.keyData, scriptIt->hotkeyStatus.modifier);
+            drawTriggerSelector(scriptIt->trigger, ImGui::GetContentRegionAvail().x / 3, scriptIt->hotkeyStatus.keyData, scriptIt->hotkeyStatus.modifier);
+            ImGui::SameLine();
+            if (ImGui::Button("Copy script to clipboard", ImVec2(ImGui::GetContentRegionAvail().x / 2, 0))) {
+                ImGui::SetClipboardText(splitIntoAlphabetCharacters(serialize(*scriptIt)).c_str());
+            }
             ImGui::SameLine();
             if (ImGui::Button("Delete Script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 scriptToDelete = scriptIt;
@@ -111,9 +198,16 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::Dummy(ImVec2(0.0f, 5.0f));
 
     // Add script
-    if (ImGui::Button("Add script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
+    if (ImGui::Button("Add script", ImVec2(ImGui::GetContentRegionAvail().x / 2, 0))) {
         m_scripts.push_back({});
-        m_scripts.back().name = "New script";
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Import script from clipboard", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+        if (const auto clipboardContent = ImGui::GetClipboardText()) {
+            if (auto importedScript = deserialize(combineFromAlphabetCharacters(clipboardContent)))
+                m_scripts.push_back(std::move(importedScript.value()));
+        }
     }
 
     ImGui::Text("Version 0.2. For bug reports and requests contact Jabor.");

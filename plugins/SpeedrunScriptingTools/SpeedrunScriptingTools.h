@@ -16,7 +16,7 @@ struct HotkeyStatus {
 struct Script {
     std::vector<std::shared_ptr<Condition>> conditions;
     std::vector<std::shared_ptr<Action>> actions;
-    std::string name = "missing";
+    std::string name = "New script";
     Trigger trigger = Trigger::None;
     bool enabled = true;
     HotkeyStatus hotkeyStatus{};
