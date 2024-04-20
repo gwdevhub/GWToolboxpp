@@ -662,9 +662,11 @@ bool KeyIsPressedCondition::check() const
 }
 void KeyIsPressedCondition::drawSettings()
 {
-    ImGui::Text("If key is pressed:");
+    ImGui::Text("If key is held down:");
     ImGui::SameLine();
     drawHotkeySelector(shortcutKey, shortcutMod, description, 100.f);
+    ImGui::SameLine();
+    ShowHelp("Different from the hotkey trigger, this does not block the input to Guild Wars and continuously checks if the key is pressed; not just once when it is pressed");
 }
 
 /// ------------- InstanceTimeCondition -------------
@@ -687,6 +689,7 @@ void InstanceTimeCondition::drawSettings()
 {
     ImGui::Text("If the instance is older than");
     ImGui::SameLine();
+    ImGui::PushItemWidth(90);
     ImGui::InputInt("s", &timeInSeconds, 0);
 }
 
@@ -795,7 +798,7 @@ void NearbyAgentCondition::drawSettings()
 
         ImGui::BulletText("Has name");
         ImGui::SameLine();
-        ImGui::InputText((std::string{"###"} + std::to_string(++drawId)).c_str(), &agentName);
+        ImGui::InputText((std::string{"name (empty for any)###"} + std::to_string(++drawId)).c_str(), &agentName);
 
         ImGui::Bullet();
         ImGui::Text("Has model");
