@@ -128,16 +128,24 @@ void MoveToAction::initialAction()
 {
     Action::initialAction();
 
-    GW::Agents::Move(pos);
+    GW::GameThread::Enqueue([pos = this->pos]() -> void {
+        GW::Agents::Move(pos);
+    });
 }
 bool MoveToAction::isComplete() const 
 {
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
 
+    const auto distance = GW::GetDistance(player->pos, pos);
+
+    if (distance > GW::Constants::Range::Compass) {
+        return true; // We probably teled
+    }
+
     if (!player->GetIsMoving()) GW::Agents::Move(pos);
 
-    return GW::GetDistance(player->pos, pos) < accuracy + eps;
+    return distance < accuracy + eps;
 }
 void MoveToAction::drawSettings(){
     ImGui::Text("Move to:");
@@ -165,8 +173,18 @@ void CastOnSelfAction::initialAction()
 {
     Action::initialAction();
 
-    const auto slot = GW::SkillbarMgr::GetSkillSlot(id);
-    if (slot < 0) return;
+    GW::Skillbar* bar = GW::SkillbarMgr::GetPlayerSkillbar();
+    
+    int slot = -1;
+    hasSkillReady = false;
+    if (bar && bar->IsValid())
+    for (int i = 0; i < 8; ++i) {
+        if (bar->skills[i].skill_id == id) {
+            slot = i;
+            hasSkillReady = bar->skills[i].GetRecharge() == 0;
+        }
+    }
+    if (slot < 0 || !hasSkillReady) return;
 
     hasBegunCasting = false;
     GW::GameThread::Enqueue([slot]() -> void {
@@ -175,7 +193,7 @@ void CastOnSelfAction::initialAction()
 }
 bool CastOnSelfAction::isComplete() const
 {
-    if (id == GW::Constants::SkillID::No_Skill) return true;
+    if (!hasSkillReady || id == GW::Constants::SkillID::No_Skill) return true;
 
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
@@ -209,11 +227,22 @@ void CastOnTargetAction::serialize(std::ostringstream& stream) const
 void CastOnTargetAction::initialAction()
 {
     Action::initialAction();
-
+    
     const auto target = GW::Agents::GetTargetAsAgentLiving();
     if (!target) return;
-    const auto slot = GW::SkillbarMgr::GetSkillSlot(id);
-    if (slot < 0) return;
+
+    GW::Skillbar* bar = GW::SkillbarMgr::GetPlayerSkillbar();
+
+    int slot = -1;
+    hasSkillReady = false;
+    if (bar && bar->IsValid())
+    for (int i = 0; i < 8; ++i) {
+        if (bar->skills[i].skill_id == id) {
+            slot = i;
+            hasSkillReady = bar->skills[i].GetRecharge() == 0;
+        }
+    }
+    if (slot < 0 || !hasSkillReady) return;
 
     hasBegunCasting = false;
     GW::GameThread::Enqueue([slot, targetId = target->agent_id]() -> void {
@@ -222,7 +251,7 @@ void CastOnTargetAction::initialAction()
 }
 bool CastOnTargetAction::isComplete() const
 {
-    if (id == GW::Constants::SkillID::No_Skill) return true;
+    if (!hasSkillReady || id == GW::Constants::SkillID::No_Skill) return true;
 
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
@@ -231,6 +260,7 @@ bool CastOnTargetAction::isComplete() const
     if (skillData && skillData->activation == 0) return true;
 
     hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
+
     return hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id;
 }
 void CastOnTargetAction::drawSettings()
@@ -421,7 +451,10 @@ void UseItemAction::initialAction()
 
     const auto item = FindMatchingItem(id);
     if (!item) return;
-    GW::Items::UseItem(item);
+
+    GW::GameThread::Enqueue([item]() -> void {
+        GW::Items::UseItem(item);
+    });
 }
 void UseItemAction::drawSettings()
 {
@@ -448,7 +481,10 @@ void EquipItemAction::initialAction()
 
     const auto item = FindMatchingItem(id);
     if (!item) return;
-    SafeEquip(item);
+
+    GW::GameThread::Enqueue([item]() -> void {
+        SafeEquip(item);
+    });
 }
 void EquipItemAction::drawSettings()
 {
@@ -473,7 +509,9 @@ void SendDialogAction::initialAction()
 {
     Action::initialAction();
 
-    GW::Agents::SendDialog(id);
+    GW::GameThread::Enqueue([id = this->id]() -> void {
+        GW::Agents::SendDialog(id);
+    });
 }
 void SendDialogAction::drawSettings()
 {
@@ -499,9 +537,11 @@ void GoToNpcAction::initialAction()
     Action::initialAction();
     
     npc = findAgentWithId(id);
-    if (npc) {
+    if (!npc) return;
+    
+    GW::GameThread::Enqueue([npc = this->npc]() -> void {
         GW::Agents::InteractAgent(npc);
-    }
+    });
 }
 bool GoToNpcAction::isComplete() const
 {
@@ -509,7 +549,9 @@ bool GoToNpcAction::isComplete() const
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
 
-    return GW::GetDistance(player->pos, npc->pos) < accuracy + eps;
+    const auto distance = GW::GetDistance(player->pos, npc->pos);
+
+    return distance < accuracy + eps || distance > GW::Constants::Range::Compass;
 }
 void GoToNpcAction::drawSettings()
 {
@@ -590,7 +632,9 @@ void SendChatAction::initialAction()
         }
         }();
     
-    GW::Chat::SendChat(channelId, message.c_str());
+    GW::GameThread::Enqueue([channelId, message = this->message]() -> void {
+        GW::Chat::SendChat(channelId, message.c_str());
+    });
 }
 
 void SendChatAction::drawSettings()
@@ -607,7 +651,9 @@ void SendChatAction::drawSettings()
 void CancelAction::initialAction()
 {
     Action::initialAction();
-    GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT);
+    GW::GameThread::Enqueue([]() -> void {
+        GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT);
+    });
 }
 
 void CancelAction::drawSettings()
@@ -630,10 +676,12 @@ void DropBuffAction::initialAction()
 {
     Action::initialAction();
 
-    if (const auto buff = GW::Effects::GetPlayerBuffBySkillId(id)) 
-    {
-        GW::Effects::DropBuff(buff->buff_id);
-    }
+    const auto buff = GW::Effects::GetPlayerBuffBySkillId(id);
+    if (!buff) return;
+
+    GW::GameThread::Enqueue([buffId = buff->buff_id]() -> void {
+        GW::Effects::DropBuff(buffId);
+    });
 }
 void DropBuffAction::drawSettings()
 {
@@ -733,7 +781,6 @@ bool RepopMinipetAction::isComplete() const
     const auto item = FindMatchingItem(id);
     if (!item) return true;
     const auto needsToUnpop = instanceInfo.hasMinipetPopped();
-    printf(needsToUnpop ? "pop twice\n" : "use once\n");
     GW::GameThread::Enqueue([needsToUnpop, item]() -> void {
         if (needsToUnpop) 
             GW::Items::UseItem(item);
