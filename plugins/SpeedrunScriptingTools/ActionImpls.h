@@ -45,6 +45,7 @@ private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
     mutable bool hasBegunCasting = false;
     mutable bool hasSkillReady = false;
+    std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
 };
 
 class CastOnTargetAction : public Action {
@@ -61,6 +62,7 @@ private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
     mutable bool hasBegunCasting = false;
     mutable bool hasSkillReady = false;
+    std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
 };
 
 class ChangeTargetAction : public Action {
@@ -77,12 +79,12 @@ private:
     Class primary = Class::Any;
     Class secondary = Class::Any;
     Status status = Status::Alive;
-    HexedStatus hexed = HexedStatus::Any;
     GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
     Sorting sorting = Sorting::AgentId;
     int modelId = 0;
     float minDistance = 0.f;
     float maxDistance = 5000.f;
+    bool preferNonHexed = false;
     bool mayBeCurrentTarget = true;
     bool requireSameModelIdAsTarget = false;
     std::string agentName = "";
