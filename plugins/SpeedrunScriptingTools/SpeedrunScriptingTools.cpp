@@ -29,11 +29,17 @@ namespace {
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry CoreMessage_Entry;
 
-    constexpr long currentVersion = 2;
+    constexpr long currentVersion = 3;
 
     bool canAddCondition(const Script& script) {
         return !std::ranges::any_of(script.conditions, [](const auto& cond) {
             return cond->type() == ConditionType::OnlyTriggerOncePerInstance;
+        });
+    }
+
+    bool checkConditions(const Script& script) {
+        return std::ranges::all_of(script.conditions, [](const auto& cond) {
+            return cond->check();
         });
     }
 
@@ -43,7 +49,7 @@ namespace {
 
         stream << 'S' << " ";
         writeStringWithSpaces(stream, script.name);
-        stream << (int)script.trigger << " ";
+        stream << script.trigger << " ";
         stream << script.enabled << " ";
         stream << script.hotkeyStatus.keyData << " ";
         stream << script.hotkeyStatus.modifier << " ";
@@ -244,7 +250,7 @@ void SpeedrunScriptingTools::DrawSettings()
         }
     }
 
-    ImGui::Text("Version 0.2. For bug reports and requests contact Jabor.");
+    ImGui::Text("Version 0.3. For bug reports and requests contact Jabor.");
 }
 
 void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
@@ -299,16 +305,6 @@ void SpeedrunScriptingTools::Update(float delta)
         return;
     }
 
-    auto currentTrigger = Trigger::None;
-    if (firstFrameAfterInstanceLoad) {
-        currentTrigger = Trigger::InstanceLoad;
-        firstFrameAfterInstanceLoad = false;
-    }
-    else if (firstFrameAfterHardModePing) {
-        currentTrigger = Trigger::HardModePing;
-        firstFrameAfterHardModePing = false;
-    }
-
     if (m_currentScript && !m_currentScript->actions.empty()) {
         // Execute current script
         auto& currentActions = m_currentScript->actions;
@@ -326,16 +322,20 @@ void SpeedrunScriptingTools::Update(float delta)
     else {
         // Find script to use
         for (auto& script : m_scripts) {
-            if (!script.enabled || script.conditions.empty() || script.actions.empty()) continue;
+            if (!script.enabled || (script.conditions.empty() && script.trigger == Trigger::None) || script.actions.empty()) continue;
             if (script.trigger == currentTrigger || (script.trigger == Trigger::Hotkey && script.hotkeyStatus.triggered)) {
                 script.hotkeyStatus.triggered = false;
-                if (std::ranges::all_of(script.conditions, [](const auto& condition) {return condition->check();})) {
+                if (checkConditions(script)) {
                     m_currentScript = script;
                     break;
                 }
             }
         }
     }
+
+    currentTrigger = Trigger::None;
+    for (auto& script : m_scripts)
+        script.hotkeyStatus.triggered = false;
 }
 
 bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LPARAM lparam)
@@ -428,11 +428,13 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
 
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
         &InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {
-        firstFrameAfterInstanceLoad = true;
+        if (std::ranges::any_of(m_scripts, [](const Script& s){return s.enabled && s.trigger == Trigger::InstanceLoad;}))
+            currentTrigger = Trigger::InstanceLoad;
     });
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MessageCore>(&CoreMessage_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::MessageCore* packet) {
         if (wmemcmp(packet->message, L"\x8101\x7f84", 2) == 0) {
-            firstFrameAfterHardModePing = true;
+            if (std::ranges::any_of(m_scripts, [](const Script& s){return s.enabled && s.trigger == Trigger::HardModePing;}))
+                currentTrigger = Trigger::HardModePing;
         }
     });
     InstanceInfo::getInstance().initialize();

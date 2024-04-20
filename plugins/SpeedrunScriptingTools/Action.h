@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-enum class ActionType {
+enum class ActionType : int {
     MoveTo,
     CastOnSelf,
     CastOnTarget,
@@ -11,11 +11,12 @@ enum class ActionType {
     UseItem,
     EquipItem, 
     RepopMinipet, 
+    PingHardMode,
+    PingTarget,
     SendDialog,
     GoToNpc,
     Wait,
     SendChat,
-    PingHardMode,
     Cancel, 
     Conditioned,
     Count
