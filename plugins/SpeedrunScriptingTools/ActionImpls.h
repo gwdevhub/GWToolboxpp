@@ -5,12 +5,14 @@
 #include <Condition.h>
 
 #include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Constants/Skills.h>
 #include <GWCA/Constants/ItemIDs.h>
 #include <GWCA/Constants/Constants.h>
 
 #include <chrono>
 #include <sstream>
+#include <unordered_set>
 
 namespace GW {
     struct AgentLiving;
@@ -250,4 +252,10 @@ public:
     ActionType type() const final { return ActionType::PingTarget; }
     void initialAction() final;
     void drawSettings() final;
+
+private:
+    bool onlyOncePerInstance = true;
+    int instanceId = 0;
+    std::unordered_set<GW::AgentID> pingedTargets;
 };
+

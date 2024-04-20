@@ -851,6 +851,14 @@ void PingTargetAction::initialAction()
     const auto currentTarget = GW::Agents::GetTargetAsAgentLiving();
     if (!currentTarget) return;
 
+    if (const auto currentInstanceId = InstanceInfo::getInstance().getInstanceId(); currentInstanceId != instanceId) {
+        instanceId = currentInstanceId;
+        pingedTargets.clear();
+    }
+
+    if (onlyOncePerInstance && pingedTargets.contains(currentTarget->agent_id)) return;
+
+    pingedTargets.insert(currentTarget->agent_id);
     GW::GameThread::Enqueue([id = currentTarget->agent_id]() {
         GW::CtoS::SendPacket(0xC, GAME_CMSG_TARGET_CALL, 0xA, id);
     });
@@ -858,4 +866,6 @@ void PingTargetAction::initialAction()
 void PingTargetAction::drawSettings()
 {
     ImGui::Text("Ping current target");
+    ImGui::SameLine();
+    ImGui::Checkbox("Ping same agent only once per instance", &onlyOncePerInstance);
 }
