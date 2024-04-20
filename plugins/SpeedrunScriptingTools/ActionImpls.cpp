@@ -186,6 +186,8 @@ void CastOnSelfAction::initialAction()
     }
     if (slot < 0 || !hasSkillReady) return;
 
+    startTime = std::chrono::steady_clock::now();
+
     hasBegunCasting = false;
     GW::GameThread::Enqueue([slot]() -> void {
         GW::SkillbarMgr::UseSkill(slot, 0);
@@ -199,9 +201,12 @@ bool CastOnSelfAction::isComplete() const
     if (!player) return true;
 
     const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
-    if (skillData && skillData->activation == 0) return true;
+    if (!skillData) return true;
+    const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
+    if (elapsedTime > 2000 * skillData->activation) return true;
 
     hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
+    
 
     return hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id;
 }
@@ -244,6 +249,8 @@ void CastOnTargetAction::initialAction()
     }
     if (slot < 0 || !hasSkillReady) return;
 
+    startTime = std::chrono::steady_clock::now();
+
     hasBegunCasting = false;
     GW::GameThread::Enqueue([slot, targetId = target->agent_id]() -> void {
         GW::SkillbarMgr::UseSkill(slot, targetId);
@@ -257,7 +264,9 @@ bool CastOnTargetAction::isComplete() const
     if (!player) return true;
 
     const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
-    if (skillData && skillData->activation == 0) return true;
+    if (!skillData) return true;
+    const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
+    if (elapsedTime > 2000 * skillData->activation) return true;
 
     hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
 
@@ -274,15 +283,15 @@ void CastOnTargetAction::drawSettings()
 /// ------------- ChangeTargetAction -------------
 ChangeTargetAction::ChangeTargetAction(std::istringstream& stream)
 {
-    stream >> agentType >> primary >> secondary >> status >> hexed >> skill >> sorting >> modelId >> minDistance >> maxDistance >> mayBeCurrentTarget >> requireSameModelIdAsTarget;
+    stream >> agentType >> primary >> secondary >> status >> skill >> sorting >> modelId >> minDistance >> maxDistance >> mayBeCurrentTarget >> requireSameModelIdAsTarget >> preferNonHexed;
     agentName = readStringWithSpaces(stream);
 }
 void ChangeTargetAction::serialize(std::ostringstream& stream) const
 {
     Action::serialize(stream);
 
-    stream << agentType << " " << primary << " " << secondary << " " << status << " " << hexed << " " << skill << " " << sorting << " " << modelId 
-           << " " << minDistance << " " << maxDistance << " " << mayBeCurrentTarget << " " << requireSameModelIdAsTarget << " ";
+    stream << agentType << " " << primary << " " << secondary << " " << status << " " << skill << " " << sorting << " " << modelId << " " << minDistance << " " << maxDistance << " " << mayBeCurrentTarget << " " << requireSameModelIdAsTarget << " "
+           << preferNonHexed << " ";
     writeStringWithSpaces(stream, agentName);
 }
 void ChangeTargetAction::initialAction()
@@ -316,7 +325,6 @@ void ChangeTargetAction::initialAction()
         const auto correctPrimary = (primary == Class::Any) || primary == (Class)agent->primary;
         const auto correctSecondary = (secondary == Class::Any) || secondary == (Class)agent->secondary;
         const auto correctStatus = (status == Status::Any) || ((status == Status::Alive) == agent->GetIsAlive());
-        const auto hexedCorrectly = (hexed == HexedStatus::Any) || ((hexed == HexedStatus::Hexed) == agent->GetIsHexed());
         const auto correctSkill = (skill == GW::Constants::SkillID::No_Skill) || (skill == (GW::Constants::SkillID)agent->skill);
         const auto correctModelId = (requireSameModelIdAsTarget && currentTarget) 
             ? (currentTarget->player_number == agent->player_number) 
@@ -325,7 +333,7 @@ void ChangeTargetAction::initialAction()
         const auto distance = GW::GetDistance(player->pos, agent->pos);
         const auto goodDistance = (minDistance < distance) && (distance < maxDistance);
         const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedName(agent->agent_id) == agentName);
-        return correctType && correctPrimary && correctSecondary && correctStatus && hexedCorrectly && correctSkill && correctModelId && acceptableWithCurrentTarget && goodDistance && goodName;
+        return correctType && correctPrimary && correctSecondary && correctStatus && correctSkill && correctModelId && acceptableWithCurrentTarget && goodDistance && goodName;
     };
 
     GW::AgentLiving const * currentBestTarget = nullptr;
@@ -334,6 +342,10 @@ void ChangeTargetAction::initialAction()
     {
         if(!currentBestTarget)
             return true;
+        if (preferNonHexed && !agent->GetIsHexed() && currentBestTarget->GetIsHexed()) 
+            return true;
+        if (preferNonHexed && agent->GetIsHexed() && !currentBestTarget->GetIsHexed()) 
+            return false;
         switch (sorting) {
             case Sorting::AgentId:
                 return true;
@@ -392,6 +404,7 @@ void ChangeTargetAction::drawSettings()
         ImGui::BulletText("Class");
         ImGui::SameLine();
         drawEnumButton(Class::Any, Class::Dervish, primary, ++drawId);
+
         ImGui::SameLine();
         ImGui::Text("/");
         ImGui::SameLine();
@@ -401,10 +414,6 @@ void ChangeTargetAction::drawSettings()
         ImGui::SameLine();
         drawEnumButton(Status::Any, Status::Alive, status, ++drawId);
 
-        ImGui::BulletText("Hexed");
-        ImGui::SameLine();
-        drawEnumButton(HexedStatus::Any, HexedStatus::Hexed, hexed, ++drawId);
-
         ImGui::BulletText("Uses skill");
         ImGui::SameLine();
         ImGui::InputInt("id (0 for any)###2", reinterpret_cast<int*>(&skill), 0);
@@ -412,6 +421,9 @@ void ChangeTargetAction::drawSettings()
         ImGui::BulletText("Has name");
         ImGui::SameLine();
         ImGui::InputText((std::string{"###"} + std::to_string(++drawId)).c_str(), &agentName);
+
+        ImGui::Bullet();
+        ImGui::Checkbox("Prefer enemies that are not hexed", &preferNonHexed);
 
         ImGui::Bullet();
         ImGui::Checkbox("May choose current target again", &mayBeCurrentTarget);
