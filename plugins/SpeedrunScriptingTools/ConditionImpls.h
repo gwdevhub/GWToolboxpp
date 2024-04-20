@@ -128,6 +128,8 @@ public:
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
+    int minimumDuration = 0;
+    int maximumDuration = 0;
 };
 
 class PlayerHasSkillCondition : public Condition {
