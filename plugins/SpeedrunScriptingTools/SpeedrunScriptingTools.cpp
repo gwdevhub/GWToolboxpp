@@ -29,7 +29,7 @@ namespace {
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry CoreMessage_Entry;
 
-    constexpr long currentVersion = 3;
+    constexpr long currentVersion = 4;
 
     bool canAddCondition(const Script& script) {
         return !std::ranges::any_of(script.conditions, [](const auto& cond) {
@@ -250,7 +250,7 @@ void SpeedrunScriptingTools::DrawSettings()
         }
     }
 
-    ImGui::Text("Version 0.3. For bug reports and requests contact Jabor.");
+    ImGui::Text("Version 0.4. For bug reports and requests contact Jabor.");
 }
 
 void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)

@@ -88,7 +88,7 @@ public:
     void serialize(std::ostringstream&) const final;
 
 private:
-    float requiredProgress = .5f;
+    float requiredProgress = 50.f;
 };
 
 class OnlyTriggerOnceCondition : public Condition {
@@ -210,6 +210,19 @@ public:
 
 private:
     float hp = 50.f;
+};
+
+class CurrentTargetAllegianceCondition : public Condition {
+public:
+    CurrentTargetAllegianceCondition() = default;
+    CurrentTargetAllegianceCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::CurrentTargetAllegiance; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    AgentType agentType = AgentType::Hostile;
 };
 
 class CurrentTargetModelCondition : public Condition {

@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 22);
+    static_assert((int)ConditionType::Count == 23);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -47,6 +47,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<CurrentTargetIsCastingSkillCondition>();
         case ConditionType::CurrentTargetHasModel:
             return std::make_shared<CurrentTargetModelCondition>();
+        case ConditionType::CurrentTargetAllegiance:
+            return std::make_shared<CurrentTargetAllegianceCondition>();
 
         case ConditionType::KeyIsPressed:
             return std::make_shared<KeyIsPressedCondition>();
@@ -64,7 +66,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 22);
+    static_assert((int)ConditionType::Count == 23);
     switch (type) {
         case ConditionType::Not:
             return "Negation";
@@ -106,6 +108,8 @@ std::string_view toString(ConditionType type)
             return "Current target skill";
         case ConditionType::CurrentTargetHasModel:
             return "Current target model";
+        case ConditionType::CurrentTargetAllegiance:
+            return "Current target allegiance";
 
         case ConditionType::KeyIsPressed:
             return "Keypress";
@@ -122,7 +126,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(std::istringstream& stream)
 {
-static_assert((int)ConditionType::Count == 22);
+static_assert((int)ConditionType::Count == 23);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -165,6 +169,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<CurrentTargetIsCastingSkillCondition>(stream);
     case ConditionType::CurrentTargetHasModel:
         return std::make_shared<CurrentTargetModelCondition>(stream);
+    case ConditionType::CurrentTargetAllegiance:
+        return std::make_shared<CurrentTargetAllegianceCondition>(stream);
 
     case ConditionType::KeyIsPressed:
         return std::make_shared<KeyIsPressedCondition>(stream);
