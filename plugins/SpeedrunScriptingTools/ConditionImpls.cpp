@@ -181,15 +181,13 @@ void DisjunctionCondition::drawSettings()
 /// ------------- IsInMapCondition -------------
 IsInMapCondition::IsInMapCondition(std::istringstream& stream)
 {
-    int read;
-    stream >> read;
-    id = (GW::Constants::MapID)read;
+    stream >> id;
 }
 void IsInMapCondition::serialize(std::ostringstream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << (int)id << " ";
+    stream << id << " ";
 }
 bool IsInMapCondition::check() const {
     return GW::Map::GetMapID() == id;
@@ -329,15 +327,13 @@ void PlayerHasBuffCondition::drawSettings()
 /// ------------- PlayerHasSkillCondition -------------
 PlayerHasSkillCondition::PlayerHasSkillCondition(std::istringstream& stream)
 {
-    int read;
-    stream >> read;
-    id = (GW::Constants::SkillID)read;
+    stream >> id;
 }
 void PlayerHasSkillCondition::serialize(std::ostringstream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << (int)id << " ";
+    stream << id << " ";
 }
 bool PlayerHasSkillCondition::check() const
 {
@@ -363,19 +359,13 @@ void PlayerHasSkillCondition::drawSettings()
 /// ------------- PlayerHasClassCondition -------------
 PlayerHasClassCondition::PlayerHasClassCondition(std::istringstream& stream)
 {
-    int read;
-
-    stream >> read;
-    primary = (Class)read;
-
-    stream >> read;
-    secondary = (Class)read;
+    stream >> primary >> secondary;
 }
 void PlayerHasClassCondition::serialize(std::ostringstream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << (int)primary << " " << (int)secondary << " ";
+    stream << primary << " " << secondary << " ";
 }
 bool PlayerHasClassCondition::check() const
 {
@@ -420,6 +410,7 @@ void PlayerHasNameCondition::serialize(std::ostringstream& stream) const
 }
 bool PlayerHasNameCondition::check() const
 {
+    if (name.empty()) return false;
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return false;
 
@@ -463,15 +454,13 @@ void PlayerHasEnergyCondition::drawSettings()
 /// ------------- CurrentTargetIsCastingSkillCondition -------------
 CurrentTargetIsCastingSkillCondition::CurrentTargetIsCastingSkillCondition(std::istringstream& stream)
 {
-    int read;
-    stream >> read;
-    id = (GW::Constants::SkillID)read;
+    stream >> id;
 }
 void CurrentTargetIsCastingSkillCondition::serialize(std::ostringstream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << (int)id << " ";
+    stream << id << " ";
 }
 bool CurrentTargetIsCastingSkillCondition::check() const
 {
@@ -510,6 +499,30 @@ void CurrentTargetHasHpBelowCondition::drawSettings()
     ImGui::InputFloat("%", &hp, 0);
 }
 
+/// ------------- CurrentTargetModelCondition -------------
+CurrentTargetModelCondition::CurrentTargetModelCondition(std::istringstream& stream)
+{
+    stream >> modelId;
+}
+void CurrentTargetModelCondition::serialize(std::ostringstream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << modelId << " ";
+}
+bool CurrentTargetModelCondition::check() const
+{
+    const auto target = GW::Agents::GetTargetAsAgentLiving();
+    return target && target->player_number == modelId;
+}
+void CurrentTargetModelCondition::drawSettings()
+{
+    ImGui::Text("If the target has model");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputInt("id", &modelId, 0);
+}
+
 /// ------------- HasPartyWindowAllyOfNameCondition -------------
 HasPartyWindowAllyOfNameCondition::HasPartyWindowAllyOfNameCondition(std::istringstream& stream)
 {
@@ -523,11 +536,18 @@ void HasPartyWindowAllyOfNameCondition::serialize(std::ostringstream& stream) co
 }
 bool HasPartyWindowAllyOfNameCondition::check() const
 {
+    if (name.empty()) return false;
     const auto info = GW::PartyMgr::GetPartyInfo();
     const auto agentArray = GW::Agents::GetAgentArray();
     if (!info || !agentArray) return false;
 
     auto& instanceInfo = InstanceInfo::getInstance();
+
+    for (const auto& player : info->players) {
+        auto candidate = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
+        if (instanceInfo.getDecodedName(candidate) == name) { return true; }
+    }
+
     return std::ranges::any_of(info->others, [&](const auto& allyId) {
         return instanceInfo.getDecodedName(allyId) == name;
     });
@@ -543,20 +563,19 @@ void HasPartyWindowAllyOfNameCondition::drawSettings()
 /// ------------- PartyMemberStatusCondition -------------
 PartyMemberStatusCondition::PartyMemberStatusCondition(std::istringstream& stream)
 {
-    int read;
-    stream >> read;
-    status = (Status)read;
+    stream >> status;
     name = readStringWithSpaces(stream);
 }
 void PartyMemberStatusCondition::serialize(std::ostringstream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << (int)status;
+    stream << status;
     writeStringWithSpaces(stream, name);
 }
 bool PartyMemberStatusCondition::check() const
 {
+    if (name.empty()) return false;
     const auto info = GW::PartyMgr::GetPartyInfo();
     const auto agentArray = GW::Agents::GetAgentArray();
     if (!info || !agentArray) return false;
@@ -606,19 +625,13 @@ void PartyMemberStatusCondition::drawSettings()
 
 QuestHasStateCondition::QuestHasStateCondition(std::istringstream& stream)
 {
-    int read;
-
-    stream >> read;
-    id = (GW::Constants::QuestID)read;
-
-    stream >> read;
-    status = (QuestStatus)read;
+    stream >> id >> status;
 }
 void QuestHasStateCondition::serialize(std::ostringstream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << (int)id << " " << (int)status << " ";
+    stream << id << " " << status << " ";
 }
 bool QuestHasStateCondition::check() const
 {

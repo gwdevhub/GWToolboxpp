@@ -242,3 +242,12 @@ public:
     void initialAction() final;
     void drawSettings() final;
 };
+
+class PingTargetAction : public Action {
+public:
+    PingTargetAction() = default;
+    PingTargetAction(std::istringstream&) : PingTargetAction() {}
+    ActionType type() const final { return ActionType::PingTarget; }
+    void initialAction() final;
+    void drawSettings() final;
+};
