@@ -234,14 +234,14 @@ void InstanceProgressCondition::serialize(std::ostringstream& stream) const
     stream << requiredProgress << " ";
 }
 bool InstanceProgressCondition::check() const {
-    return GW::GetGameContext()->character->progress_bar->progress > requiredProgress;
+    return GW::GetGameContext()->character->progress_bar->progress * 100.f > requiredProgress;
 }
 void InstanceProgressCondition::drawSettings()
 {
-    ImGui::Text("If the instance progress (0..1) is greater than");
+    ImGui::Text("If the instance progress is greater than");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputFloat("", &requiredProgress, 0);
+    ImGui::InputFloat("%", &requiredProgress, 0);
 }
 
 /// ------------- OnlyTriggerOnceCondition -------------
@@ -489,7 +489,7 @@ void CurrentTargetHasHpBelowCondition::serialize(std::ostringstream& stream) con
 bool CurrentTargetHasHpBelowCondition::check() const
 {
     const auto target = GW::Agents::GetTargetAsAgentLiving();
-    return target && target->hp < hp;
+    return target && target->hp * 100.f < hp;
 }
 void CurrentTargetHasHpBelowCondition::drawSettings()
 {
@@ -497,6 +497,42 @@ void CurrentTargetHasHpBelowCondition::drawSettings()
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputFloat("%", &hp, 0);
+}
+
+/// ------------- CurrentTargetAllegianceCondition -------------
+CurrentTargetAllegianceCondition::CurrentTargetAllegianceCondition(std::istringstream& stream)
+{
+    stream >> agentType;
+}
+void CurrentTargetAllegianceCondition::serialize(std::ostringstream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << agentType << " ";
+}
+bool CurrentTargetAllegianceCondition::check() const
+{
+    const auto target = GW::Agents::GetTargetAsAgentLiving();
+    if (!target) return false;
+    switch (agentType) {
+        case AgentType::Any:
+            return true;
+        case AgentType::PartyMember:
+            return target->IsPlayer();
+        case AgentType::Friendly:
+            return target->allegiance != GW::Constants::Allegiance::Enemy;
+        case AgentType::Hostile:
+            return target->allegiance == GW::Constants::Allegiance::Enemy;
+        default:
+            return false;
+    }
+}
+void CurrentTargetAllegianceCondition::drawSettings()
+{
+    ImGui::Text("If the target has allegiance");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    drawEnumButton(AgentType::Any, AgentType::Hostile, agentType);
 }
 
 /// ------------- CurrentTargetModelCondition -------------

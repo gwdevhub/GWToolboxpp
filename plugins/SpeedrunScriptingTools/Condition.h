@@ -31,6 +31,7 @@ enum class ConditionType : int {
     CurrentTargetHasHpBelow,
     CurrentTargetIsUsingSkill,
     CurrentTargetHasModel,
+    CurrentTargetAllegiance,
 
     NearbyAgent,
 
