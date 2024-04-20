@@ -57,12 +57,13 @@ namespace {
         return stream.str();
     }
 
-    std::optional<Script> deserialize(const std::string& input)
+    std::optional<Script> deserialize(std::istringstream& stream)
     {
         std::optional<Script> result;
-        std::istringstream stream(input);
 
         do {
+            stream >> std::ws;
+            if (result.has_value() && stream.peek() == 'S') return result;
             std::string token = "";
             stream >> token;
             if (token.length() != 1) return result; //nullopt?
@@ -130,65 +131,96 @@ void SpeedrunScriptingTools::DrawSettings()
     for (auto scriptIt = m_scripts.begin(); scriptIt < m_scripts.end(); ++scriptIt) {
         const auto displayName = scriptIt->name + "###" + std::to_string(scriptIt - m_scripts.begin());
         if (ImGui::CollapsingHeader(displayName.c_str())) {
+
             // Conditions
-            std::optional<decltype(scriptIt->conditions.begin())> conditionToDelete = std::nullopt;
-            for (auto it = scriptIt->conditions.begin(); it < scriptIt->conditions.end(); ++it) {
-                ImGui::PushID(drawCount++);
-                (*it)->drawSettings();
-                ImGui::SameLine();
-                if (ImGui::Button("X", ImVec2(20, 0))) {
-                    conditionToDelete = it;
+            {
+                using ConditionIt = decltype(scriptIt->conditions.begin());
+                std::optional<ConditionIt> conditionToDelete = std::nullopt;
+                std::optional<std::pair<ConditionIt, ConditionIt>> conditionsToSwap = std::nullopt;
+                for (auto it = scriptIt->conditions.begin(); it < scriptIt->conditions.end(); ++it) {
+                    ImGui::PushID(drawCount++);
+                    (*it)->drawSettings();
+                    ImGui::SameLine();
+                    if (ImGui::Button("X", ImVec2(20, 0))) {
+                        conditionToDelete = it;
+                    }
+                    if (it->get()->type() != ConditionType::OnlyTriggerOncePerInstance) {
+                        ImGui::SameLine();
+                        if (ImGui::Button("^", ImVec2(20, 0))) {
+                            if (it != scriptIt->conditions.begin()) conditionsToSwap = {it - 1, it};
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("v", ImVec2(20, 0))) {
+                            if (it + 1 != scriptIt->conditions.end()) conditionsToSwap = {it, it + 1};
+                        }
+                    }
+                    ImGui::PopID();
                 }
-                ImGui::PopID();
-            }
-            if (conditionToDelete.has_value()) scriptIt->conditions.erase(conditionToDelete.value());
-            // Add condition
-            if (canAddCondition(*scriptIt)) {
-                ImGui::PushID(drawCount++);
-                if (auto newCondition = drawConditionSelector(ImGui::GetContentRegionAvail().x)) {
-                    scriptIt->conditions.push_back(std::move(newCondition));
+                if (conditionToDelete.has_value()) scriptIt->conditions.erase(conditionToDelete.value());
+                if (conditionsToSwap.has_value()) std::swap(*conditionsToSwap->first, *conditionsToSwap->second);
+                // Add condition
+                if (canAddCondition(*scriptIt)) {
+                    ImGui::PushID(drawCount++);
+                    if (auto newCondition = drawConditionSelector(ImGui::GetContentRegionAvail().x)) {
+                        scriptIt->conditions.push_back(std::move(newCondition));
+                    }
+                    ImGui::PopID();
                 }
-                ImGui::PopID();
             }
 
             //Actions
             ImGui::Separator();
-            std::optional<decltype(scriptIt->actions.begin())> actionToDelete = std::nullopt;
-            for (auto it = scriptIt->actions.begin(); it < scriptIt->actions.end(); ++it) {
+            {
+                using ActionIt = decltype(scriptIt->actions.begin());
+                std::optional<ActionIt> actionToDelete = std::nullopt;
+                std::optional<std::pair<ActionIt, ActionIt>> actionsToSwap = std::nullopt;
+                for (auto it = scriptIt->actions.begin(); it < scriptIt->actions.end(); ++it) {
+                    ImGui::PushID(drawCount++);
+                    (*it)->drawSettings();
+                    ImGui::SameLine();
+                    if (ImGui::Button("X", ImVec2(20, 0))) {
+                        actionToDelete = it;
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("^", ImVec2(20, 0))) {
+                        if (it != scriptIt->actions.begin()) actionsToSwap = {it - 1, it};
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("v", ImVec2(20, 0))) {
+                        if (it + 1 != scriptIt->actions.end()) actionsToSwap = {it, it + 1};
+                    }
+                    ImGui::PopID();
+                }
+                if (actionToDelete.has_value()) scriptIt->actions.erase(actionToDelete.value());
+                if (actionsToSwap.has_value()) std::swap(*actionsToSwap->first, *actionsToSwap->second);
+                // Add action
                 ImGui::PushID(drawCount++);
-                (*it)->drawSettings();
-                ImGui::SameLine();
-                if (ImGui::Button("X", ImVec2(20, 0))) {
-                    actionToDelete = it;
+                if (auto newAction = drawActionSelector(ImGui::GetContentRegionAvail().x)) {
+                    scriptIt->actions.push_back(std::move(newAction));
                 }
                 ImGui::PopID();
             }
-            if (actionToDelete.has_value()) scriptIt->actions.erase(actionToDelete.value());
-            // Add action
-            ImGui::PushID(drawCount++);
-            if (auto newAction = drawActionSelector(ImGui::GetContentRegionAvail().x)) {
-                scriptIt->actions.push_back(std::move(newAction));
-            }
-            ImGui::PopID();
 
             // Add trigger packet
             ImGui::Separator();
-            ImGui::PushID(drawCount++);
-            ImGui::Checkbox("Enabled", &scriptIt->enabled);
-            ImGui::PushItemWidth(150);
-            ImGui::SameLine();
-            ImGui::InputText("Name", &scriptIt->name);
-            ImGui::SameLine();
-            drawTriggerSelector(scriptIt->trigger, ImGui::GetContentRegionAvail().x / 3, scriptIt->hotkeyStatus.keyData, scriptIt->hotkeyStatus.modifier);
-            ImGui::SameLine();
-            if (ImGui::Button("Copy script to clipboard", ImVec2(ImGui::GetContentRegionAvail().x / 2, 0))) {
-                ImGui::SetClipboardText(splitIntoAlphabetCharacters(serialize(*scriptIt)).c_str());
+            {
+                ImGui::PushID(drawCount++);
+                ImGui::Checkbox("Enabled", &scriptIt->enabled);
+                ImGui::PushItemWidth(150);
+                ImGui::SameLine();
+                ImGui::InputText("Name", &scriptIt->name);
+                ImGui::SameLine();
+                drawTriggerSelector(scriptIt->trigger, ImGui::GetContentRegionAvail().x / 3, scriptIt->hotkeyStatus.keyData, scriptIt->hotkeyStatus.modifier);
+                ImGui::SameLine();
+                if (ImGui::Button("Copy script to clipboard", ImVec2(ImGui::GetContentRegionAvail().x / 2, 0))) {
+                    ImGui::SetClipboardText(splitIntoAlphabetCharacters(serialize(*scriptIt)).c_str());
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Delete Script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+                    scriptToDelete = scriptIt;
+                }
+                ImGui::PopID();
             }
-            ImGui::SameLine();
-            if (ImGui::Button("Delete Script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-                scriptToDelete = scriptIt;
-            }
-            ImGui::PopID();
         }
     }
     if (scriptToDelete.has_value()) m_scripts.erase(scriptToDelete.value());
@@ -205,7 +237,9 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     if (ImGui::Button("Import script from clipboard", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
         if (const auto clipboardContent = ImGui::GetClipboardText()) {
-            if (auto importedScript = deserialize(combineFromAlphabetCharacters(clipboardContent)))
+            const auto combined = combineFromAlphabetCharacters(clipboardContent);
+            std::istringstream stream{combined};
+            if (auto importedScript = deserialize(stream))
                 m_scripts.push_back(std::move(importedScript.value()));
         }
     }
@@ -225,33 +259,13 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
     if (read.empty()) return;
 
     std::istringstream stream(read);
-    do { 
-        std::string token = "";
-        stream >> token;
-        if (token.length() != 1) return;
-        switch (token[0]) {
-            case 'S':
-                m_scripts.push_back({});
-                m_scripts.back().name = readStringWithSpaces(stream);
-                stream >> m_scripts.back().trigger;
-                stream >> m_scripts.back().enabled;
-                stream >> m_scripts.back().hotkeyStatus.keyData;
-                stream >> m_scripts.back().hotkeyStatus.modifier;
-                break;
-            case 'A':
-                assert(m_scripts.size() > 0);
-                m_scripts.back().actions.push_back(readAction(stream));
-                assert(m_scripts.back().actions.back() != nullptr);
-                break;
-            case 'C':
-                assert(m_scripts.size() > 0);
-                m_scripts.back().conditions.push_back(readCondition(stream));
-                assert(m_scripts.back().conditions.back() != nullptr);
-                break;
-            default:
-                return;
-        }
-    } while (stream); 
+    while (stream) {
+        auto nextScript = deserialize(stream);
+        if (nextScript)
+            m_scripts.push_back(std::move(*nextScript));
+        else
+            break;
+    }
 }
 
 void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
@@ -261,19 +275,7 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
 
     std::ostringstream stream;
     for (const auto& script : m_scripts) {
-        stream << 'S' << " ";
-        writeStringWithSpaces(stream, script.name);
-        stream << (int)script.trigger << " ";
-        stream << script.enabled << " ";
-        stream << script.hotkeyStatus.keyData << " ";
-        stream << script.hotkeyStatus.modifier << " ";
-        
-        for (const auto& condition : script.conditions) {
-            condition->serialize(stream);
-        }
-        for (const auto& action : script.actions) {
-            action->serialize(stream);
-        }
+        stream << serialize(script) << " ";
     }
     
     ini.SetValue(Name(), "scripts", stream.str().c_str());
