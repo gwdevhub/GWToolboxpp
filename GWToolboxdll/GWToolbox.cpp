@@ -61,11 +61,6 @@ namespace {
 
     bool event_handler_attached = false;
 
-    bool IsPvP() {
-        const auto m = GW::Map::GetMapInfo();
-        return (m && /*GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost &&*/ m->GetIsPvP());
-    }
-
     bool AttachWndProcHandler()
     {
         if (event_handler_attached) {
@@ -447,6 +442,9 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
     }
 
     if (!(!GW::GetPreGameContext() && GWToolbox::IsInitialized())) {
+        return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
+    }
+    if (gwtoolbox_disabled) {
         return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
     }
 
