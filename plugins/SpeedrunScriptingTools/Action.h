@@ -13,6 +13,7 @@ enum class ActionType : int {
     RepopMinipet, 
     PingHardMode,
     PingTarget,
+    AutoAttackTarget,
     SendDialog,
     GoToNpc,
     Wait,

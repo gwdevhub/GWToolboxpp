@@ -34,8 +34,20 @@ public:
     void serialize(std::ostringstream&) const final;
 
 private:
-    std::shared_ptr<Condition> first = nullptr;
-    std::shared_ptr<Condition> second = nullptr;
+    std::vector<std::shared_ptr<Condition>> conditions{};
+};
+
+class ConjunctionCondition : public Condition {
+public:
+    ConjunctionCondition() = default;
+    ConjunctionCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::And; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    std::vector<std::shared_ptr<Condition>> conditions{};
 };
 
 class IsInMapCondition : public Condition {
