@@ -188,7 +188,7 @@ void drawHotkeySelector(long& keyData, long& modifier, std::string& description,
     }
 }
 
-enum FrequentChar { B = 26 + 23, Exclamation, Quote, Underscore, Hashtag, Plus, Minus, Equals, Star, Apostroph, Tilde, Slash, Ampersand, EndOfString, EndOfList };
+enum FrequentChar { B = 26 + 23, Exclamation, Quote, Underscore, Hashtag, Plus, Minus, Equals, Star, Apostroph, Ampersand, Slash, EndOfAC, EndOfString, EndOfList };
 constexpr uint8_t frequentCharValue(char c) 
 {
     if ('a' <= c && c <= 'z') 
@@ -216,12 +216,12 @@ constexpr uint8_t frequentCharValue(char c)
             return FrequentChar::Star;
         case '\'':
             return FrequentChar::Apostroph;
-        case '~':
-            return FrequentChar::Tilde;
-        case '/':
-            return FrequentChar::Slash;
         case '&':
             return FrequentChar::Ampersand;
+        case '/':
+            return FrequentChar::Slash;
+        case 0x7F:
+            return FrequentChar::EndOfAC;
         case '<':
             return FrequentChar::EndOfString;
         case '>':
@@ -258,8 +258,8 @@ constexpr char valueToFrequentChar(uint8_t i) {
             return '*';
         case FrequentChar::Apostroph:
             return '\'';
-        case FrequentChar::Tilde:
-            return '~';
+        case FrequentChar::EndOfAC:
+            return 0x7F;
         case FrequentChar::Slash:
             return '/';
         case FrequentChar::Ampersand:
@@ -387,11 +387,6 @@ constexpr std::vector<bool> huffmanEncode(const std::string& str)
 
 std::string exportString(const std::string& str) 
 {
-    const auto huff = huffmanEncode(str);
-    std::cout << "huffman encoding:  ";
-    for (auto i = 0u; i < std::min(40u, huff.size()); ++i)
-        std::cout << (int)huff[i];
-    std::cout << std::endl;
     return splitIntoReadableChars(huffmanEncode(str));
 }
 

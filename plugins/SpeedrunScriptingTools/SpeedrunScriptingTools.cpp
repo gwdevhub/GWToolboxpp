@@ -29,7 +29,9 @@ namespace {
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry CoreMessage_Entry;
 
-    constexpr long currentVersion = 5;
+    constexpr long currentVersion = 6;
+
+    constexpr char endOfAC = 0x7F;
 
     bool canAddCondition(const Script& script) {
         return !std::ranges::any_of(script.conditions, [](const auto& cond) {
@@ -56,9 +58,11 @@ namespace {
 
         for (const auto& condition : script.conditions) {
             condition->serialize(stream);
+            stream << endOfAC << " ";
         }
         for (const auto& action : script.actions) {
             action->serialize(stream);
+            stream << endOfAC << " ";
         }
         return stream.str();
     }
@@ -86,11 +90,13 @@ namespace {
                     if (!result) return std::nullopt;
                     result->actions.push_back(readAction(stream));
                     if (!result->actions.back()) return std::nullopt;
+                    while (stream && stream.get() != endOfAC) {}
                     break;
                 case 'C':
                     if (!result) return std::nullopt;
                     result->conditions.push_back(readCondition(stream));
                     if (!result->conditions.back()) return std::nullopt;
+                    while (stream && stream.get() != endOfAC) {}
                     break;
                 default:
                     return result;
@@ -222,7 +228,7 @@ void SpeedrunScriptingTools::DrawSettings()
         }
     }
 
-    ImGui::Text("Version 0.5. For bug reports and feature requests contact Jabor.");
+    ImGui::Text("Version 0.6. For bug reports and feature requests contact Jabor.");
 }
 
 void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
@@ -233,10 +239,12 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
     
     if (savedVersion != currentVersion) return;
     
-    const std::string read = ini.GetValue(Name(), "scripts", "");
+    std::string read = ini.GetValue(Name(), "scripts", "");
     if (read.empty()) return;
 
-    std::istringstream stream(read);
+    const auto decoded = importString(std::move(read));
+
+    std::istringstream stream(decoded);
     while (stream) {
         auto nextScript = deserialize(stream);
         if (nextScript)
@@ -256,7 +264,7 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
         stream << serialize(script) << " ";
     }
     
-    ini.SetValue(Name(), "scripts", stream.str().c_str());
+    ini.SetValue(Name(), "scripts", exportString(stream.str()).c_str());
     PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
 }
 
