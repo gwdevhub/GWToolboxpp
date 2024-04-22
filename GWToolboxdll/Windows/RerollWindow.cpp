@@ -221,14 +221,22 @@ void RerollWindow::Draw(IDirect3DDevice9*)
             ImGui::OpenPopup("##reroll_confirm_popup");
             if (ImGui::BeginPopupModal("##reroll_confirm_popup", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("You're currently in an explorable area.\nAre you sure you want to change character?");
-                const bool check_key = TIMER_DIFF(reroll_stage_set) > 500; // Avoid enter key being read from last press
-                if (ImGui::Button("Yes", ImVec2(120, 0)) || (check_key && ImGui::IsKeyPressed(ImGuiKey_Enter))) {
+                static bool was_enter_down = true, was_escape_down = true;
+                if (!ImGui::IsKeyDown(ImGuiKey_Enter)) {
+                    was_enter_down = false;
+                }
+                if (!ImGui::IsKeyDown(ImGuiKey_Escape)) {
+                    was_escape_down = false;
+                }
+                if (ImGui::Button("Yes", ImVec2(120, 0)) || (!was_enter_down && ImGui::IsKeyPressed(ImGuiKey_Enter, false))) {
                     reroll_stage = PendingLogout;
+                    was_enter_down = true;
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::SameLine();
-                if (ImGui::Button("No", ImVec2(120, 0)) || (check_key && ImGui::IsKeyPressed(ImGuiKey_Escape))) {
+                if (ImGui::Button("No", ImVec2(120, 0)) || (!was_escape_down && ImGui::IsKeyPressed(ImGuiKey_Escape, false))) {
                     reroll_stage = None;
+                    was_escape_down = true;
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::EndPopup();
