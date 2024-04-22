@@ -993,7 +993,18 @@ bool CanPopAgentCondition::check() const
 }
 void CanPopAgentCondition::drawSettings()
 {
-    ImGui::PushID(drawId());
     ImGui::Text("If player can pop minipet or ghost in the box");
-    ImGui::PopID();
+}
+
+/// ------------- PlayerIsIdleCondition -------------
+
+bool PlayerIsIdleCondition::check() const
+{
+    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    if (!player) return false;
+    return player->GetIsIdle();
+}
+void PlayerIsIdleCondition::drawSettings()
+{
+    ImGui::Text("If player is idle");
 }

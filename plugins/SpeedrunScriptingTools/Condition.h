@@ -26,6 +26,7 @@ enum class ConditionType : int {
     PlayerHasClass,
     PlayerHasName,
     PlayerHasEnergy,
+    PlayerIsIdle,
     KeyIsPressed,
 
     // Current target state

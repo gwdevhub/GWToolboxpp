@@ -263,7 +263,7 @@ class AutoAttackTargetAction : public Action {
 public:
     AutoAttackTargetAction() = default;
     AutoAttackTargetAction(std::istringstream&) : AutoAttackTargetAction() {}
-    ActionType type() const final { return ActionType::PingHardMode; }
+    ActionType type() const final { return ActionType::AutoAttackTarget; }
     void initialAction() final;
     void drawSettings() final;
 };
