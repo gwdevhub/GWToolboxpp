@@ -6,6 +6,7 @@ enum class ConditionType : int {
     // Logic Operators
     Not,
     Or,
+    And,
 
     // Instance state
     IsInMap,
@@ -40,9 +41,20 @@ enum class ConditionType : int {
 
 class Condition {
 public:
+    Condition() { 
+        static int counter = 10'000;
+        m_drawId = counter;
+        counter += 8; //Allow 8 entries with the same label
+    }
     virtual ~Condition() {}
     virtual ConditionType type() const = 0;
     virtual bool check() const { return true; };
     virtual void drawSettings() {}
     virtual void serialize(std::ostringstream& stream) const { stream << "C " << (int)type() << " "; }
+
+protected:
+    int drawId() const { return m_drawId; }
+
+private:
+    int m_drawId = 0;
 };

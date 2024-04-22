@@ -7,12 +7,14 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 23);
+    static_assert((int)ConditionType::Count == 24);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
         case ConditionType::Or:
             return std::make_shared<DisjunctionCondition>();
+        case ConditionType::And:
+            return std::make_shared<ConjunctionCondition>();
         case ConditionType::IsInMap:
             return std::make_shared<IsInMapCondition>();
         case ConditionType::QuestHasState:
@@ -66,12 +68,14 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 23);
+    static_assert((int)ConditionType::Count == 24);
     switch (type) {
         case ConditionType::Not:
             return "Negation";
         case ConditionType::Or:
             return "Disjunction";
+        case ConditionType::And:
+            return "Conjunction";
         case ConditionType::IsInMap:
             return "Current map ID";
         case ConditionType::QuestHasState:
@@ -126,7 +130,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(std::istringstream& stream)
 {
-static_assert((int)ConditionType::Count == 23);
+static_assert((int)ConditionType::Count == 24);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -135,6 +139,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<NegatedCondition>(stream);
     case ConditionType::Or:
         return std::make_shared<DisjunctionCondition>(stream);
+    case ConditionType::And:
+        return std::make_shared<ConjunctionCondition>(stream);
     case ConditionType::IsInMap:
         return std::make_shared<IsInMapCondition>(stream);
     case ConditionType::QuestHasState:
