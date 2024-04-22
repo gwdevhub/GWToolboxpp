@@ -410,7 +410,7 @@ void ChangeTargetAction::drawSettings()
         ImGui::SameLine();
         drawEnumButton(Class::Any, Class::Dervish, secondary, 2);
 
-        ImGui::BulletText("Dear or alive");
+        ImGui::BulletText("Dead or alive");
         ImGui::SameLine();
         drawEnumButton(Status::Any, Status::Alive, status, 3);
 
@@ -874,7 +874,7 @@ void AutoAttackTargetAction::initialAction()
     Action::initialAction();
 
     const auto currentTarget = GW::Agents::GetTargetAsAgentLiving();
-    if (!currentTarget) return;
+    if (!currentTarget || currentTarget->allegiance != GW::Constants::Allegiance::Enemy) return;
     
     GW::GameThread::Enqueue([id = currentTarget->agent_id]() {
         GW::CtoS::SendPacket(0xC, GAME_CMSG_ATTACK_AGENT, id, 0, 0);

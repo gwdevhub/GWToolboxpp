@@ -17,6 +17,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
 
 #include <Keys.h>
 
@@ -66,6 +67,17 @@ namespace {
         }
 
         ImGui::PopID();
+    }
+
+    GW::Item* FindMatchingItem(GW::Constants::Bag _bag_idx, uint32_t model_id)
+    {
+        GW::Bag* bag = GW::Items::GetBag(_bag_idx);
+        if (!bag) return nullptr;
+        GW::ItemArray& items = bag->items;
+        for (auto _item : items) {
+            if (_item && _item->model_id == model_id) return _item;
+        }
+        return nullptr;
     }
 }
 
@@ -959,7 +971,7 @@ void NearbyAgentCondition::drawSettings()
         ImGui::SameLine();
         drawEnumButton(Class::Any, Class::Dervish, secondary, 2);
 
-        ImGui::BulletText("Dear or alive");
+        ImGui::BulletText("Dead or alive");
         ImGui::SameLine();
         drawEnumButton(Status::Any, Status::Alive, status, 3);
 
@@ -1007,4 +1019,30 @@ bool PlayerIsIdleCondition::check() const
 void PlayerIsIdleCondition::drawSettings()
 {
     ImGui::Text("If player is idle");
+}
+
+/// ------------- PlayerHasItemEquippedCondition -------------
+
+PlayerHasItemEquippedCondition::PlayerHasItemEquippedCondition(std::istringstream& stream)
+{
+    stream >> modelId;
+}
+void PlayerHasItemEquippedCondition::serialize(std::ostringstream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << modelId << " ";
+}
+bool PlayerHasItemEquippedCondition::check() const
+{
+    return FindMatchingItem(GW::Constants::Bag::Equipped_Items, modelId) != nullptr;
+}
+void PlayerHasItemEquippedCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+    ImGui::Text("If the player has item equipped");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(90);
+    ImGui::InputInt("model id", &modelId, 0);
+    ImGui::PopID();
 }

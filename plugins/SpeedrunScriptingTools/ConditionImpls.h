@@ -344,3 +344,16 @@ public:
     bool check() const final;
     void drawSettings() final;
 };
+
+class PlayerHasItemEquippedCondition : public Condition {
+public:
+    PlayerHasItemEquippedCondition() = default;
+    PlayerHasItemEquippedCondition(std::istringstream&);
+    ConditionType type() const final { return ConditionType::PlayerHasItemEquipped; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(std::ostringstream&) const final;
+
+private:
+    int modelId = 0;
+};
