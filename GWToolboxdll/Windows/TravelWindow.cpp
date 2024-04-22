@@ -137,12 +137,15 @@ namespace {
 
     // ==== options ====
     bool close_on_travel = false;
+    bool minimize_on_travel = true;
 
     // ==== scroll to outpost ====
     GW::Constants::MapID scroll_to_outpost_id = GW::Constants::MapID::None;   // Which outpost do we want to end up in?
     GW::Constants::MapID scroll_from_outpost_id = GW::Constants::MapID::None; // Which outpost did we start from?
 
     bool map_travel_countdown_started = false;
+
+    bool to_minimize = false;
 
     IDirect3DTexture9** scroll_texture = nullptr;
 
@@ -504,9 +507,6 @@ void TravelWindow::TravelButton(const char* text, const int x_idx, const GW::Con
     }
     if (clicked) {
         Instance().Travel(mapid, district, district_number);
-        if (close_on_travel) {
-            Instance().visible = false;
-        }
     }
 }
 
@@ -520,6 +520,11 @@ void TravelWindow::Draw(IDirect3DDevice9*)
 
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
+
+    if (to_minimize) {
+        ImGui::SetNextWindowCollapsed(true);
+        to_minimize = false;
+    }
 
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         if (ImInPresearing()) {
@@ -536,9 +541,6 @@ void TravelWindow::Draw(IDirect3DDevice9*)
                 const auto map_id = IndexToOutpostID(travelto_index);
                 Travel(map_id, district, district_number);
                 travelto_index = -1;
-                if (close_on_travel) {
-                    visible = false;
-                }
             }
 
             static int district_index = 0;
@@ -591,6 +593,8 @@ void TravelWindow::Draw(IDirect3DDevice9*)
         }
         ImGui::Checkbox("Close on travel", &close_on_travel);
         ImGui::ShowHelp("Will close the travel window when clicking on a travel destination");
+        ImGui::Checkbox("Minimize on travel", &minimize_on_travel);
+        ImGui::ShowHelp("Will minimize the travel window when clicking on a travel destination");
     }
     ImGui::End();
 }
@@ -786,6 +790,15 @@ bool TravelWindow::Travel(const GW::Constants::MapID map_id, const GW::Constants
         Log::Error("[Error] You are already in the outpost");
         return false;
     }
+
+    if (minimize_on_travel) {
+        to_minimize = true;
+    }
+
+    if (close_on_travel) {
+        visible = false;
+    }
+
     switch (map_id) {
     case GW::Constants::MapID::The_Deep:
     case GW::Constants::MapID::Urgozs_Warren:
@@ -805,9 +818,7 @@ bool TravelWindow::TravelFavorite(const unsigned int idx)
         return false;
     }
     Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
-    if (close_on_travel) {
-        visible = false;
-    }
+
     return true;
 }
 
@@ -815,6 +826,8 @@ void TravelWindow::DrawSettingsInternal()
 {
     ImGui::Checkbox("Close on travel", &close_on_travel);
     ImGui::ShowHelp("Will close the travel window when clicking on a travel destination");
+    ImGui::Checkbox("Minimize on travel", &minimize_on_travel);
+    ImGui::ShowHelp("Will minimize the travel window when clicking on a travel destination");
     ImGui::PushItemWidth(100.0f);
     if (ImGui::InputInt("Number of favorites", &fav_count)) {
         if (fav_count < 0) {
@@ -843,6 +856,7 @@ void TravelWindow::LoadSettings(ToolboxIni* ini)
         fav_index[static_cast<size_t>(i)] = ini->GetLongValue(Name(), key, -1);
     }
     LOAD_BOOL(close_on_travel);
+    LOAD_BOOL(minimize_on_travel);
     LOAD_BOOL(retry_map_travel);
 }
 
@@ -857,6 +871,7 @@ void TravelWindow::SaveSettings(ToolboxIni* ini)
         ini->SetLongValue(Name(), key, fav_index[ui]);
     }
     SAVE_BOOL(close_on_travel);
+    SAVE_BOOL(minimize_on_travel);
     SAVE_BOOL(retry_map_travel);
 }
 
