@@ -164,7 +164,7 @@ namespace {
     void OnShowHint_UIMessage(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
     {
         const auto msg = static_cast<HintUIMessage*>(wparam);
-        if (std::ranges::find(hints_shown, msg->message_id) != hints_shown.end()) {
+        if (std::ranges::contains(hints_shown, msg->message_id)) {
             if (only_show_hints_once) {
                 status->blocked = true;
             }

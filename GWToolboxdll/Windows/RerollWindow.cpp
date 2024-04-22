@@ -180,7 +180,7 @@ namespace {
 
     bool IsExcludedFromReroll(const wchar_t* player_name)
     {
-        return std::ranges::find(exclude_charnames_from_reroll_cmd, LowerCaseRemovePunct(player_name)) != exclude_charnames_from_reroll_cmd.end();
+        return std::ranges::contains(exclude_charnames_from_reroll_cmd, LowerCaseRemovePunct(player_name));
     }
 
     void DrawExcludedCharacters()

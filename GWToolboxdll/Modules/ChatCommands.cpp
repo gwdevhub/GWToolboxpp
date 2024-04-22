@@ -620,9 +620,9 @@ void ChatCommands::CreateAlias(const wchar_t* alias, const wchar_t* message) {
         alias++;
     if (!(alias && *alias && message && *message))
         return;
-    auto found = std::ranges::find_if(cmd_aliases, [alias](CmdAlias* cmp) {
+    const auto found = std::ranges::find_if(cmd_aliases, [alias](const CmdAlias* cmp) {
         return wcscmp(alias, cmp->alias_wstr) == 0;
-        });
+    });
     CmdAlias* alias_obj = nullptr;
     if (found != cmd_aliases.end()) {
         alias_obj = *found;

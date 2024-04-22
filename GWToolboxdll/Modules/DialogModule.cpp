@@ -362,7 +362,7 @@ uint32_t DialogModule::AcceptFirstAvailableQuest()
     // restore -> escort -> uwg
     for (const auto quest_id : {GW::Constants::QuestID::UW_Restore, GW::Constants::QuestID::UW_Escort}) {
         const uint32_t uquest_id = static_cast<uint32_t>(quest_id);
-        if (std::ranges::find(available_quests, uquest_id) != std::ranges::end(available_quests)) {
+        if (std::ranges::contains(available_quests, uquest_id)) {
             return take_quest(uquest_id);
         }
     }

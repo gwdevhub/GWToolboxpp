@@ -208,7 +208,7 @@ namespace {
                         const auto found = skill_ids_by_name.find(skill_name);
                         if (found == skill_ids_by_name.end())
                             continue;
-                        if (std::ranges::find(agent_info->wiki_skills, found->second) != agent_info->wiki_skills.end())
+                        if (std::ranges::contains(agent_info->wiki_skills, found->second))
                             continue;
                         agent_info->wiki_skills.push_back(found->second);
                     }

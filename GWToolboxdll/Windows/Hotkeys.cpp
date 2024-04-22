@@ -322,7 +322,7 @@ bool TBHotkey::IsValid(const char* _player_name, const GW::Constants::InstanceTy
            && (!is_pvp_character || trigger_on_pvp_character)
            && (instance_type == -1 || static_cast<GW::Constants::InstanceType>(instance_type) == _instance_type)
            && (prof_ids[static_cast<size_t>(_profession)] || !HasProfession())
-           && (map_ids.empty() || std::ranges::find(map_ids, static_cast<uint32_t>(_map_id)) != map_ids.end())
+           && (map_ids.empty() || std::ranges::contains(map_ids, static_cast<uint32_t>(_map_id)))
            && (!player_name[0] || strcmp(_player_name, player_name) == 0);
 }
 
@@ -554,7 +554,7 @@ bool TBHotkey::Draw(Op* op)
                 if (strlen(map_id_input_buf)
                     && GuiUtils::ParseInt(map_id_input_buf, &map_id_out)
                     && map_id_out > 0
-                    && std::ranges::find(map_ids, reinterpret_cast<uint32_t>(map_id_input_buf)) == map_ids.end()) {
+                    && !std::ranges::contains(map_ids, reinterpret_cast<uint32_t>(map_id_input_buf))) {
                     map_ids.push_back(static_cast<uint32_t>(map_id_out));
                     memset(map_id_input_buf, 0, sizeof(map_id_input_buf));
                     hotkey_changed = true;

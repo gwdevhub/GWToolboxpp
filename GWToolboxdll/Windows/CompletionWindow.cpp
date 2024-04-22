@@ -838,7 +838,7 @@ void HeroUnlock::CheckProgress(const std::wstring& player_name)
         return;
     }
     auto& heroes = skills.at(player_name)->heroes;
-    is_completed = bonus = std::ranges::find(heroes, static_cast<uint32_t>(skill_id)) != heroes.end();
+    is_completed = bonus = std::ranges::contains(heroes, static_cast<uint32_t>(skill_id));
 }
 
 const char* HeroUnlock::Name()

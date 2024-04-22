@@ -117,7 +117,7 @@ namespace {
                 }
             }
             if (ext == ".dll") {
-                auto found = std::ranges::find_if(plugins_available, [file_path](const auto plugin) {
+                const auto found = std::ranges::find_if(plugins_available, [file_path](const auto plugin) {
                     return plugin->path == file_path;
                 });
                 if (found == plugins_available.end()) {
@@ -271,7 +271,7 @@ void PluginModule::LoadSettings(ToolboxIni* ini)
     }
     // Find any plugins that are currently loaded but not supposed to be
     auto to_unload = std::views::filter(plugins_loaded, [&](auto plugin) {
-        return std::ranges::find(plugins_loaded_from_ini, plugin) == plugins_loaded_from_ini.end();
+        return !std::ranges::contains(plugins_loaded_from_ini, plugin);
     });
     for (const auto plugin : std::views::reverse(to_unload)) {
         UnloadPlugin(plugin);

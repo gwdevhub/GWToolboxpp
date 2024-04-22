@@ -259,8 +259,7 @@ namespace {
         if (!enable) {
             return false;
         }
-        const auto is_terminating = std::ranges::find(modules_terminating, &m);
-        if (is_terminating != modules_terminating.end()) {
+        if (std::ranges::contains(modules_terminating, &m)) {
             return false; // Not finished terminating
         }
         vec.push_back(&m);
