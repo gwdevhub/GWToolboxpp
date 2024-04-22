@@ -6,7 +6,7 @@
 namespace {
     std::shared_ptr<Action> makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 16);
+        static_assert((int)ActionType::Count == 17);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -40,6 +40,8 @@ namespace {
                 return std::make_shared<PingHardModeAction>();
             case ActionType::PingTarget:
                 return std::make_shared<PingTargetAction>();
+            case ActionType::AutoAttackTarget:
+                return std::make_shared<AutoAttackTargetAction>();
             default:
                 return nullptr;
         }
@@ -47,7 +49,7 @@ namespace {
 
     std::string_view toString(ActionType type)
     {
-        static_assert((int)ActionType::Count == 16);
+        static_assert((int)ActionType::Count == 17);
         switch (type) {
             case ActionType::MoveTo:
                 return "Move to";
@@ -81,6 +83,8 @@ namespace {
                 return "Ping hard mode";
             case ActionType::PingTarget:
                 return "Ping current target";
+            case ActionType::AutoAttackTarget:
+                return "Attack current target";
             default:
                 return "Unknown";
         }
@@ -89,7 +93,7 @@ namespace {
 
 std::shared_ptr<Action> readAction(std::istringstream& stream)
 {
-    static_assert((int)ActionType::Count == 16);
+    static_assert((int)ActionType::Count == 17);
     int type;
 
     stream >> type;
@@ -126,6 +130,8 @@ std::shared_ptr<Action> readAction(std::istringstream& stream)
             return std::make_shared<PingHardModeAction>(stream);
         case ActionType::PingTarget:
             return std::make_shared<PingTargetAction>(stream);
+        case ActionType::AutoAttackTarget:
+            return std::make_shared<AutoAttackTargetAction>(stream);
         default:
             return nullptr;
     }
