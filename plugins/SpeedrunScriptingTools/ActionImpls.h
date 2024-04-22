@@ -259,3 +259,11 @@ private:
     std::unordered_set<GW::AgentID> pingedTargets;
 };
 
+class AutoAttackTargetAction : public Action {
+public:
+    AutoAttackTargetAction() = default;
+    AutoAttackTargetAction(std::istringstream&) : AutoAttackTargetAction() {}
+    ActionType type() const final { return ActionType::PingHardMode; }
+    void initialAction() final;
+    void drawSettings() final;
+};

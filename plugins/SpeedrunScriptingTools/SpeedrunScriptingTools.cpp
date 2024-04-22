@@ -29,7 +29,7 @@ namespace {
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry CoreMessage_Entry;
 
-    constexpr long currentVersion = 4;
+    constexpr long currentVersion = 5;
 
     bool canAddCondition(const Script& script) {
         return !std::ranges::any_of(script.conditions, [](const auto& cond) {
@@ -99,33 +99,6 @@ namespace {
 
         return result;
     }
-
-    std::string splitIntoAlphabetCharacters(const std::string& raw) 
-    {
-        std::string result;
-        result.reserve(raw.size() * 2);
-
-        for (char c : raw) {
-            result += (c >> 4) + 'A';
-            result += (c & 0xF) + 'A';
-        }
-
-        return result;
-    }
-
-    std::string combineFromAlphabetCharacters(const std::string& input)
-    {
-        std::string result;
-        result.reserve(input.size()/2);
-
-        for (auto i = 0u; i < input.size(); i += 2) {
-            const char first = input[i] - 'A';
-            const char second = input[i + 1] - 'A';
-            result += (first << 4) + second;
-        }
-
-        return result;
-    }
 }
 
 void SpeedrunScriptingTools::DrawSettings()
@@ -135,9 +108,8 @@ void SpeedrunScriptingTools::DrawSettings()
     std::optional<decltype(m_scripts.begin())> scriptToDelete = std::nullopt;
 
     for (auto scriptIt = m_scripts.begin(); scriptIt < m_scripts.end(); ++scriptIt) {
-        const auto displayName = scriptIt->name + "###" + std::to_string(scriptIt - m_scripts.begin());
+        const auto displayName = scriptIt->name + "###" + std::to_string(drawCount++);
         if (ImGui::CollapsingHeader(displayName.c_str())) {
-
             // Conditions
             {
                 using ConditionIt = decltype(scriptIt->conditions.begin());
@@ -145,8 +117,6 @@ void SpeedrunScriptingTools::DrawSettings()
                 std::optional<std::pair<ConditionIt, ConditionIt>> conditionsToSwap = std::nullopt;
                 for (auto it = scriptIt->conditions.begin(); it < scriptIt->conditions.end(); ++it) {
                     ImGui::PushID(drawCount++);
-                    (*it)->drawSettings();
-                    ImGui::SameLine();
                     if (ImGui::Button("X", ImVec2(20, 0))) {
                         conditionToDelete = it;
                     }
@@ -160,6 +130,8 @@ void SpeedrunScriptingTools::DrawSettings()
                             if (it + 1 != scriptIt->conditions.end()) conditionsToSwap = {it, it + 1};
                         }
                     }
+                    ImGui::SameLine();
+                    (*it)->drawSettings();
                     ImGui::PopID();
                 }
                 if (conditionToDelete.has_value()) scriptIt->conditions.erase(conditionToDelete.value());
@@ -182,8 +154,6 @@ void SpeedrunScriptingTools::DrawSettings()
                 std::optional<std::pair<ActionIt, ActionIt>> actionsToSwap = std::nullopt;
                 for (auto it = scriptIt->actions.begin(); it < scriptIt->actions.end(); ++it) {
                     ImGui::PushID(drawCount++);
-                    (*it)->drawSettings();
-                    ImGui::SameLine();
                     if (ImGui::Button("X", ImVec2(20, 0))) {
                         actionToDelete = it;
                     }
@@ -195,6 +165,8 @@ void SpeedrunScriptingTools::DrawSettings()
                     if (ImGui::Button("v", ImVec2(20, 0))) {
                         if (it + 1 != scriptIt->actions.end()) actionsToSwap = {it, it + 1};
                     }
+                    ImGui::SameLine();
+                    (*it)->drawSettings();
                     ImGui::PopID();
                 }
                 if (actionToDelete.has_value()) scriptIt->actions.erase(actionToDelete.value());
@@ -219,7 +191,7 @@ void SpeedrunScriptingTools::DrawSettings()
                 drawTriggerSelector(scriptIt->trigger, ImGui::GetContentRegionAvail().x / 3, scriptIt->hotkeyStatus.keyData, scriptIt->hotkeyStatus.modifier);
                 ImGui::SameLine();
                 if (ImGui::Button("Copy script to clipboard", ImVec2(ImGui::GetContentRegionAvail().x / 2, 0))) {
-                    ImGui::SetClipboardText(splitIntoAlphabetCharacters(serialize(*scriptIt)).c_str());
+                    ImGui::SetClipboardText(exportString(serialize(*scriptIt)).c_str());
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Delete Script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
@@ -243,14 +215,14 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     if (ImGui::Button("Import script from clipboard", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
         if (const auto clipboardContent = ImGui::GetClipboardText()) {
-            const auto combined = combineFromAlphabetCharacters(clipboardContent);
+            const auto combined = importString(clipboardContent);
             std::istringstream stream{combined};
             if (auto importedScript = deserialize(stream))
                 m_scripts.push_back(std::move(importedScript.value()));
         }
     }
 
-    ImGui::Text("Version 0.4. For bug reports and requests contact Jabor.");
+    ImGui::Text("Version 0.5. For bug reports and feature requests contact Jabor.");
 }
 
 void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)

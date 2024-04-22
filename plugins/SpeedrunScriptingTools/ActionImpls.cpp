@@ -94,12 +94,12 @@ namespace {
     template <typename T>
     void drawEnumButton(T firstValue, T lastValue, T& currentValue, int id = 0, float width = 100.)
     {
-        const auto popupName = std::string{"p"} + "###" + std::to_string(id);
-        const auto buttonText = std::string{toString(currentValue)} + "###" + std::to_string(id);
-        if (ImGui::Button(buttonText.c_str(), ImVec2(width, 0))) {
-            ImGui::OpenPopup(popupName.c_str());
+        ImGui::PushID(id);
+
+        if (ImGui::Button(toString(currentValue).data(), ImVec2(width, 0))) {
+            ImGui::OpenPopup("Enum popup");
         }
-        if (ImGui::BeginPopup(popupName.c_str())) {
+        if (ImGui::BeginPopup("Enum popup")) {
             for (auto i = (int)firstValue; i <= (int)lastValue; ++i) {
                 if (ImGui::Selectable(toString((T)i).data())) {
                     currentValue = static_cast<T>(i);
@@ -107,8 +107,9 @@ namespace {
             }
             ImGui::EndPopup();
         }
-    }
 
+        ImGui::PopID();
+    }
 
     constexpr double eps = 1e-3;
 } // namespace
@@ -387,7 +388,6 @@ void ChangeTargetAction::initialAction()
 }
 void ChangeTargetAction::drawSettings()
 {
-    int drawId = 12345;
     ImGui::PushItemWidth(120);
 
     if (ImGui::TreeNodeEx("Change target to agent with characteristics", ImGuiTreeNodeFlags_FramePadding)) {
@@ -399,28 +399,28 @@ void ChangeTargetAction::drawSettings()
 
         ImGui::BulletText("Allegiance");
         ImGui::SameLine();
-        drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, ++drawId);
+        drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, 0);
 
         ImGui::BulletText("Class");
         ImGui::SameLine();
-        drawEnumButton(Class::Any, Class::Dervish, primary, ++drawId);
+        drawEnumButton(Class::Any, Class::Dervish, primary, 1);
 
         ImGui::SameLine();
         ImGui::Text("/");
         ImGui::SameLine();
-        drawEnumButton(Class::Any, Class::Dervish, secondary, ++drawId);
+        drawEnumButton(Class::Any, Class::Dervish, secondary, 2);
 
         ImGui::BulletText("Dear or alive");
         ImGui::SameLine();
-        drawEnumButton(Status::Any, Status::Alive, status, ++drawId);
+        drawEnumButton(Status::Any, Status::Alive, status, 3);
 
         ImGui::BulletText("Uses skill");
         ImGui::SameLine();
-        ImGui::InputInt("id (0 for any)###2", reinterpret_cast<int*>(&skill), 0);
+        ImGui::InputInt("id (0 for any)###0", reinterpret_cast<int*>(&skill), 0);
 
         ImGui::BulletText("Has name");
         ImGui::SameLine();
-        ImGui::InputText((std::string{"###"} + std::to_string(++drawId)).c_str(), &agentName);
+        ImGui::InputText("###1", &agentName);
 
         ImGui::Bullet();
         ImGui::Checkbox("Prefer enemies that are not hexed", &preferNonHexed);
@@ -434,16 +434,14 @@ void ChangeTargetAction::drawSettings()
         ImGui::Bullet();
         ImGui::Text(requireSameModelIdAsTarget ? "If no target is selected, pick agent with model" : "Pick agent with model");
         ImGui::SameLine();
-        ImGui::InputInt("id (0 for any)###1", &modelId, 0);
+        ImGui::InputInt("id (0 for any)###2", &modelId, 0);
 
         ImGui::BulletText("Sort candidates by:");
         ImGui::SameLine();
-        drawEnumButton(Sorting::AgentId, Sorting::HighestHp, sorting, ++drawId, 150.);
-        
+        drawEnumButton(Sorting::AgentId, Sorting::HighestHp, sorting, 4, 150.);
 
         ImGui::TreePop();
     }
-
 }
 
 /// ------------- UseItemAction -------------
@@ -761,12 +759,12 @@ void ConditionedAction::drawSettings()
         cond->drawSettings();
     else    
         cond = drawConditionSelector(120.f);
-    ImGui::Indent(30.f);
+    ImGui::Indent(120.f);
     if (act)
         act->drawSettings();
     else
         act = drawActionSelector(120.f);
-    ImGui::Unindent(30.f);
+    ImGui::Unindent(120.f);
 }
 
 /// ------------- RepopMinipetAction -------------
@@ -868,4 +866,16 @@ void PingTargetAction::drawSettings()
     ImGui::Text("Ping current target");
     ImGui::SameLine();
     ImGui::Checkbox("Ping same agent only once per instance", &onlyOncePerInstance);
+}
+
+/// ------------- AutoAttackTargetAction -------------
+void AutoAttackTargetAction::initialAction()
+{
+    Action::initialAction();
+
+    const auto target = GW::Agents::GetTargetAsAgentLiving();
+}
+void AutoAttackTargetAction::drawSettings()
+{
+    ImGui::Text("Autoattack target");
 }
