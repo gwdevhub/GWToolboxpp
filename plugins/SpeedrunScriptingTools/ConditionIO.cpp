@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 24);
+    static_assert((int)ConditionType::Count == 25);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -42,6 +42,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<PlayerHasNameCondition>();
         case ConditionType::PlayerHasEnergy:
             return std::make_shared<PlayerHasEnergyCondition>();
+        case ConditionType::PlayerIsIdle:
+            return std::make_shared<PlayerIsIdleCondition>();
 
         case ConditionType::CurrentTargetHasHpBelow:
             return std::make_shared<CurrentTargetHasHpBelowCondition>();
@@ -68,7 +70,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 24);
+    static_assert((int)ConditionType::Count == 25);
     switch (type) {
         case ConditionType::Not:
             return "Negation";
@@ -103,6 +105,8 @@ std::string_view toString(ConditionType type)
             return "Player has name";
         case ConditionType::PlayerHasEnergy:
             return "Player has energy";
+        case ConditionType::PlayerIsIdle:
+            return "Player is idle";
         case ConditionType::CanPopAgent:
             return "Can pop agent";
 
@@ -130,7 +134,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(std::istringstream& stream)
 {
-static_assert((int)ConditionType::Count == 24);
+static_assert((int)ConditionType::Count == 25);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -168,6 +172,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<PlayerHasNameCondition>(stream);
     case ConditionType::PlayerHasEnergy:
         return std::make_shared<PlayerHasEnergyCondition>(stream);
+    case ConditionType::PlayerIsIdle:
+        return std::make_shared<PlayerIsIdleCondition>(stream);
 
     case ConditionType::CurrentTargetHasHpBelow:
         return std::make_shared<CurrentTargetHasHpBelowCondition>(stream);

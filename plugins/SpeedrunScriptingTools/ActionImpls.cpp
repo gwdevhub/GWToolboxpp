@@ -873,9 +873,14 @@ void AutoAttackTargetAction::initialAction()
 {
     Action::initialAction();
 
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
+    const auto currentTarget = GW::Agents::GetTargetAsAgentLiving();
+    if (!currentTarget) return;
+    
+    GW::GameThread::Enqueue([id = currentTarget->agent_id]() {
+        GW::CtoS::SendPacket(0xC, GAME_CMSG_ATTACK_AGENT, id, 0, 0);
+    });
 }
 void AutoAttackTargetAction::drawSettings()
 {
-    ImGui::Text("Autoattack target");
+    ImGui::Text("Autoattack current target");
 }

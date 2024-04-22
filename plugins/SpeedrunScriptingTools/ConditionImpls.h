@@ -335,3 +335,12 @@ public:
     bool check() const final;
     void drawSettings() final;
 };
+
+class PlayerIsIdleCondition : public Condition {
+public:
+    PlayerIsIdleCondition() = default;
+    PlayerIsIdleCondition(std::istringstream&) {}
+    ConditionType type() const final { return ConditionType::PlayerIsIdle; }
+    bool check() const final;
+    void drawSettings() final;
+};
