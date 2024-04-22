@@ -2416,8 +2416,6 @@ void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::Dun
 }
 
 // Flash/focus window on trade
-// ReSharper disable once CppParameterMayBeConst
-// ReSharper disable once CppParameterMayBeConstPtrOrRef
 void GameSettings::OnTradeStarted(GW::HookStatus* status, GW::Packet::StoC::TradeStart*)
 {
     if (status->blocked) {
