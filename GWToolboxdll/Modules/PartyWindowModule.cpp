@@ -710,7 +710,7 @@ void PartyWindowModule::SaveSettings(ToolboxIni* ini)
         }
         std::string s(user_defined_npc->alias);
         s += "\x1";
-        s += std::to_string(static_cast<uint32_t>(user_defined_npc->map_id));
+        s += std::to_string(std::to_underlying(user_defined_npc->map_id));
         ini->SetValue(Name(), std::to_string(user_defined_npc->model_id).c_str(), s.c_str());
     }
 }

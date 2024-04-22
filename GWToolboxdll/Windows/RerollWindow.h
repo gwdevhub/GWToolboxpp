@@ -5,7 +5,7 @@
 #include <GWCA/GameEntities/Guild.h>
 
 namespace GW::Constants {
-    enum class MapID;
+    enum class MapID : uint32_t;
     enum class ServerRegion;
     enum class Language;
 }

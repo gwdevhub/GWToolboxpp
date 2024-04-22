@@ -58,12 +58,12 @@ namespace {
 
     std::map<uint32_t, MapInfo*> maps;
 
-    void FetchMapInfo()
+    [[maybe_unused]] void FetchMapInfo()
     {
         if (!maps.empty()) {
             return;
         }
-        for (uint32_t map_id = 1; map_id < static_cast<uint32_t>(GW::Constants::MapID::Count); map_id++) {
+        for (uint32_t map_id = 1; map_id < std::to_underlying(GW::Constants::MapID::Count); map_id++) {
             const auto map_info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
             if (!map_info) {
                 continue;

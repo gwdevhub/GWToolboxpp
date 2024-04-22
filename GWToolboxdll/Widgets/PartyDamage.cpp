@@ -254,7 +254,7 @@ void PartyDamage::Draw(IDirect3DDevice9*)
     const float line_height = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
     uint32_t size = GW::PartyMgr::GetPartySize();
     if (size > MAX_PLAYERS) {
-        size = static_cast<uint32_t>(MAX_PLAYERS);
+        size = MAX_PLAYERS;
     }
 
     uint32_t max_recent = 0;

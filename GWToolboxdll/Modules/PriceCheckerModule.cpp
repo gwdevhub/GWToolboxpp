@@ -475,9 +475,9 @@ namespace {
             });
     }
 
-    bool IsCommonMaterial(GW::Item* item) {
+    bool IsCommonMaterial(const GW::Item* item) {
         if (item && item->GetModifier(0x2508))
-            return item->GetModifier(0x2508)->arg1() <= static_cast<uint32_t>(GW::Constants::MaterialSlot::Feather);
+            return item->GetModifier(0x2508)->arg1() <= std::to_underlying(GW::Constants::MaterialSlot::Feather);
         return false;
     }
 

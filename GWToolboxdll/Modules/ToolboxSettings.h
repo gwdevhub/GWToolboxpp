@@ -3,7 +3,7 @@
 #include <ToolboxUIElement.h>
 
 namespace GW::Constants {
-    enum class MapID;
+    enum class MapID : uint32_t;
 }
 
 class ToolboxSettings : public ToolboxUIElement {

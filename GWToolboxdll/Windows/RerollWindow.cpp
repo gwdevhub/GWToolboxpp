@@ -683,7 +683,7 @@ bool RerollWindow::Reroll(const wchar_t* character_name, bool _same_map, const b
     reverting_reroll = false;
     failed_message = nullptr;
     char_sort_order = GetPreference(GW::UI::EnumPreference::CharSortOrder);
-    SetPreference(GW::UI::EnumPreference::CharSortOrder, static_cast<uint32_t>(GW::Constants::Preference::CharSortOrder::Alphabetize));
+    SetPreference(GW::UI::EnumPreference::CharSortOrder, std::to_underlying(GW::Constants::Preference::CharSortOrder::Alphabetize));
     if (!character_name) {
         return false;
     }

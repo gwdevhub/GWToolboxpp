@@ -1030,7 +1030,7 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
     }
     const float height = ImGui::GetTextLineHeightWithSpacing();
     if (show_my_status) {
-        auto status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
+        auto status = std::to_underlying(GW::FriendListMgr::GetMyStatus());
         ImGui::Text("You are:");
         ImGui::SameLine();
         const ImVec2 pos = ImGui::GetCursorPos();

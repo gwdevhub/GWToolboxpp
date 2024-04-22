@@ -173,7 +173,7 @@ namespace {
     // @Cleanup: when toolbox closes, this array isn't freed properly
     std::map<GW::Constants::Bag,std::vector<HotkeyEquipItemAttributes*>> available_items;
 
-    const char* behaviors[] = {
+    constexpr std::array behaviors = {
         "Fight",
         "Guard",
         "Avoid Combat"
@@ -322,7 +322,7 @@ bool TBHotkey::IsValid(const char* _player_name, const GW::Constants::InstanceTy
            && (!is_pvp_character || trigger_on_pvp_character)
            && (instance_type == -1 || static_cast<GW::Constants::InstanceType>(instance_type) == _instance_type)
            && (prof_ids[static_cast<size_t>(_profession)] || !HasProfession())
-           && (map_ids.empty() || std::ranges::contains(map_ids, static_cast<uint32_t>(_map_id)))
+           && (map_ids.empty() || std::ranges::contains(map_ids, std::to_underlying(_map_id)))
            && (!player_name[0] || strcmp(_player_name, player_name) == 0);
 }
 
@@ -550,12 +550,11 @@ bool TBHotkey::Draw(Op* op)
             ImGui::SameLine();
             add_map_id |= ImGui::Button("Add##add_map_id_for_hotkey", {64.f * scale, 0.f});
             if (add_map_id) {
-                int map_id_out = 0;
+                uint32_t map_id_out;
                 if (strlen(map_id_input_buf)
-                    && GuiUtils::ParseInt(map_id_input_buf, &map_id_out)
-                    && map_id_out > 0
+                    && GuiUtils::ParseUInt(map_id_input_buf, &map_id_out)
                     && !std::ranges::contains(map_ids, reinterpret_cast<uint32_t>(map_id_input_buf))) {
-                    map_ids.push_back(static_cast<uint32_t>(map_id_out));
+                    map_ids.push_back(map_id_out);
                     memset(map_id_input_buf, 0, sizeof(map_id_input_buf));
                     hotkey_changed = true;
                 }
@@ -2173,8 +2172,8 @@ void HotkeyGWKey::Execute()
 namespace {
     const char* GetBehaviorDesc(GW::HeroBehavior behaviour)
     {
-        if (static_cast<uint32_t>(behaviour) < _countof(behaviors)) {
-            return behaviors[static_cast<uint32_t>(behaviour)];
+        if (std::to_underlying(behaviour) < behaviors.size()) {
+            return behaviors[std::to_underlying(behaviour)];
         }
         return nullptr;
     }
@@ -2202,7 +2201,7 @@ int HotkeyCommandPet::Description(char* buf, const size_t bufsz)
 
 bool HotkeyCommandPet::Draw()
 {
-    const bool changed = ImGui::Combo("Behavior###combo", (int*)&behavior, behaviors, _countof(behaviors), _countof(behaviors));
+    const bool changed = ImGui::Combo("Behavior###combo", reinterpret_cast<int*>(&behavior), behaviors.data(), behaviors.size(), behaviors.size());
     if (changed && !GetBehaviorDesc(behavior)) {
         behavior = GW::HeroBehavior::Fight;
     }

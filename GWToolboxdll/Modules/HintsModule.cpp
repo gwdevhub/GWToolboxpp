@@ -185,7 +185,7 @@ namespace {
                     break;
                 }
                 wchar_t out[256];
-                const auto campaign = static_cast<uint32_t>(GetCharacterCampaign());
+                const auto campaign = std::to_underlying(GetCharacterCampaign());
                 swprintf(out, 256, EMBARK_WITHOUT_HOMELAND.message, embark_beach_campaign_npcs[campaign]);
                 HintUIMessage(out, 30000, EMBARK_WITHOUT_HOMELAND.message_id | campaign).Show();
             }

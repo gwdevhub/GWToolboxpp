@@ -4,10 +4,10 @@
 namespace CompletionWindow_Constants {
     using namespace GW::Constants;
 
-    const char* campaign_names[] = {"Core", "Prophecies", "Factions", "Nightfall", "Eye Of The North", "Dungeons"};
+    constexpr std::array campaign_names = {"Core", "Prophecies", "Factions", "Nightfall", "Eye Of The North", "Dungeons"};
 
-    const char* CampaignName(const Campaign camp) { return campaign_names[static_cast<uint8_t>(camp)]; }
-    const char* hero_names[] = {"", "Norgu", "Goren", "Tahlkora", "Master of Whispers", "Acolyte Jin", "Koss", "Dunkoro", "Acolyte Sousuke", "Melonni", "Zhed Shadowhoof", "General Morgahn", "Margrid the Sly", "Zenmai", "Olias", "Razah", "M.O.X.",
+    const char* CampaignName(const Campaign camp) { return campaign_names[std::to_underlying(camp)]; }
+    constexpr std::array hero_names = {"", "Norgu", "Goren", "Tahlkora", "Master of Whispers", "Acolyte Jin", "Koss", "Dunkoro", "Acolyte Sousuke", "Melonni", "Zhed Shadowhoof", "General Morgahn", "Margrid the Sly", "Zenmai", "Olias", "Razah", "M.O.X.",
                                 "Keiran Thackeray", "Jora", "Pyre Fierceshot", "Anton", "Livia", "Hayda", "Kahmu", "Gwen", "Xandra", "Vekk", "Ogden Stonehealer", "", "", "", "", "", "", "", "", "Miku", "Zei Ri"};
 
 

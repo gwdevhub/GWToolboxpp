@@ -5,7 +5,7 @@
 #include <Widgets/Minimap/VBuffer.h>
 
 namespace GW::Constants {
-    enum class MapID;
+    enum class MapID : uint32_t;
 }
 
 using Color = uint32_t;

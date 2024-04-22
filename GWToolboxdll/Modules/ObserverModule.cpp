@@ -900,14 +900,13 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, const ActionStage sta
         // includes a caster and no target.
         // here we effectively set the
         // target to the caster.
-        const uint32_t target_type = skill->gw_skill.target;
-        switch (target_type) {
-            case static_cast<uint32_t>(TargetType::no_target): {
+        switch (static_cast<TargetType>(skill->gw_skill.target)) {
+            case TargetType::no_target: {
                 // don't provide a target
                 // e.g. flash enchantments, stances, whirlwind
                 break;
             }
-            case static_cast<uint32_t>(TargetType::anyone): {
+            case TargetType::anyone: {
                 // Ensure we interpret the target correctly
                 // e.g. Mirror of Ice, Stone Sheath
                 if (action->target_id == NO_AGENT) {
@@ -916,7 +915,7 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, const ActionStage sta
                 }
                 break;
             }
-            case static_cast<uint32_t>(TargetType::ally): {
+            case TargetType::ally: {
                 // Ensure we interpret the target correctly
                 // e.g. Healing Burst
                 if (action->target_id == NO_AGENT) {
@@ -925,11 +924,11 @@ bool ObserverModule::ReduceAction(ObservableAgent* caster, const ActionStage sta
                 }
                 break;
             }
-            case static_cast<uint32_t>(TargetType::other_ally): {
+            case TargetType::other_ally: {
                 // should always have a target
                 break;
             }
-            case static_cast<uint32_t>(TargetType::enemy): {
+            case TargetType::enemy: {
                 // should always have a target
                 break;
             }

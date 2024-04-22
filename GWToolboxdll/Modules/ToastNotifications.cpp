@@ -96,7 +96,7 @@ namespace {
     uint32_t GetPartyId()
     {
         const auto p = GW::PartyMgr::GetPartyInfo();
-        return p ? p->party_id : static_cast<uint32_t>(-1);
+        return p ? p->party_id : std::numeric_limits<uint32_t>::max();
     }
 
     void OnWhisperToastActivated(const ToastNotifications::Toast* toast, const bool activated)

@@ -677,18 +677,18 @@ namespace {
     // Should this channel be checked for ignored messages?
     bool ShouldFilterByChannel(const uint32_t channel)
     {
-        switch (channel) {
-            case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALL):
+        switch (static_cast<GW::Chat::Channel>(channel)) {
+            case GW::Chat::Channel::CHANNEL_ALL:
                 return filter_channel_local;
-            case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GUILD):
+            case GW::Chat::Channel::CHANNEL_GUILD:
                 return filter_channel_guild;
-            case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP):
+            case GW::Chat::Channel::CHANNEL_GROUP:
                 return filter_channel_team;
-            case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_TRADE):
+            case GW::Chat::Channel::CHANNEL_TRADE:
                 return filter_channel_trade;
-            case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_ALLIANCE):
+            case GW::Chat::Channel::CHANNEL_ALLIANCE:
                 return filter_channel_alliance;
-            case static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_EMOTE):
+            case GW::Chat::Channel::CHANNEL_EMOTE:
                 return filter_channel_emotes;
         }
         return false;
