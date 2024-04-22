@@ -591,10 +591,6 @@ void TravelWindow::Draw(IDirect3DDevice9*)
                 }
             }
         }
-        ImGui::Checkbox("Close on travel", &close_on_travel);
-        ImGui::ShowHelp("Will close the travel window when clicking on a travel destination");
-        ImGui::Checkbox("Minimize on travel", &minimize_on_travel);
-        ImGui::ShowHelp("Will minimize the travel window when clicking on a travel destination");
     }
     ImGui::End();
 }
