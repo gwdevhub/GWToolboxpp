@@ -1227,15 +1227,16 @@ void Minimap::SelectTarget(const GW::Vec2f pos)
         if (agent->GetIsItemType()) {
             continue;
         }
-        if (agent->GetIsGadgetType() && agent->GetAsAgentGadget()->gadget_id != 8141) {
+        const auto agent_is_locked_chest = agent->GetIsGadgetType() && agent->GetAsAgentGadget()->gadget_id == 8141;
+        if (agent->GetIsGadgetType() && !agent_is_locked_chest) {
             continue; // allow locked chests
         }
-        if (!GW::Agents::GetIsAgentTargettable(agent)) {
+        if (!GW::Agents::GetIsAgentTargettable(agent) && !agent_is_locked_chest) {
             continue; // block all useless minis
         }
-        const float newDistance = GetSquareDistance(pos, agent->pos);
-        if (distance > newDistance) {
-            distance = newDistance;
+        const float new_distance = GetSquareDistance(pos, agent->pos);
+        if (distance > new_distance) {
+            distance = new_distance;
             closest = agent;
         }
     }
