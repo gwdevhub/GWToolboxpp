@@ -28,7 +28,7 @@
 
 namespace {
     constexpr wchar_t NONE_PLAYER_NAME[] = L"Hero/Henchman Slot";
-    constexpr uint32_t NONE_SKILL = static_cast<uint32_t>(GW::Constants::SkillID::No_Skill);
+    constexpr uint32_t NONE_SKILL = std::to_underlying(GW::Constants::SkillID::No_Skill);
     constexpr wchar_t UNKNOWN_SKILL_NAME[] = L"Unknown Skill";
     constexpr wchar_t UNKNOWN_PLAYER_NAME[] = L"Unknown Player";
 
@@ -415,7 +415,7 @@ namespace {
             WritePlayerStatisticsAllSkills(player_party_member);
             /* single skill for some player */
         }
-        else if (static_cast<uint32_t>(-1) != skill_idx) {
+        else if (std::numeric_limits<uint32_t>::max() != skill_idx) {
             WritePlayerStatisticsSingleSkill(GetPartyMemberByPartyIdx(player_idx), skill_idx);
             /* all skills for some player */
         }

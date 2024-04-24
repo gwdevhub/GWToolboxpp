@@ -180,7 +180,7 @@ namespace {
 
     bool IsExcludedFromReroll(const wchar_t* player_name)
     {
-        return std::ranges::find(exclude_charnames_from_reroll_cmd, LowerCaseRemovePunct(player_name)) != exclude_charnames_from_reroll_cmd.end();
+        return std::ranges::contains(exclude_charnames_from_reroll_cmd, LowerCaseRemovePunct(player_name));
     }
 
     void DrawExcludedCharacters()
@@ -221,14 +221,22 @@ void RerollWindow::Draw(IDirect3DDevice9*)
             ImGui::OpenPopup("##reroll_confirm_popup");
             if (ImGui::BeginPopupModal("##reroll_confirm_popup", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("You're currently in an explorable area.\nAre you sure you want to change character?");
-                const bool check_key = TIMER_DIFF(reroll_stage_set) > 500; // Avoid enter key being read from last press
-                if (ImGui::Button("Yes", ImVec2(120, 0)) || (check_key && ImGui::IsKeyPressed(ImGuiKey_Enter))) {
+                static bool was_enter_down = true, was_escape_down = true;
+                if (!ImGui::IsKeyDown(ImGuiKey_Enter)) {
+                    was_enter_down = false;
+                }
+                if (!ImGui::IsKeyDown(ImGuiKey_Escape)) {
+                    was_escape_down = false;
+                }
+                if (ImGui::Button("Yes", ImVec2(120, 0)) || (!was_enter_down && ImGui::IsKeyPressed(ImGuiKey_Enter, false))) {
                     reroll_stage = PendingLogout;
+                    was_enter_down = true;
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::SameLine();
-                if (ImGui::Button("No", ImVec2(120, 0)) || (check_key && ImGui::IsKeyPressed(ImGuiKey_Escape))) {
+                if (ImGui::Button("No", ImVec2(120, 0)) || (!was_escape_down && ImGui::IsKeyPressed(ImGuiKey_Escape, false))) {
                     reroll_stage = None;
+                    was_escape_down = true;
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::EndPopup();
@@ -312,7 +320,7 @@ void RerollWindow::CmdReroll(const wchar_t* message, const int argc, const LPWST
         return;
     }
     const std::wstring character_or_profession = GuiUtils::ToLower(GetRemainingArgsWstr(message, 1));
-    const wchar_t* to_find[] = {
+    constexpr std::array to_find = {
         L"",
         L"warrior",
         L"ranger",
@@ -327,11 +335,8 @@ void RerollWindow::CmdReroll(const wchar_t* message, const int argc, const LPWST
     };
 
     // Search by profession
-    for (size_t i = 0; i < _countof(to_find); i++) {
-        if (!to_find[0]) {
-            continue;
-        }
-        if (!wcsstr(to_find[i], character_or_profession.c_str())) {
+    for (size_t i = 0; i < to_find.size(); i++) {
+        if (!wcsstr(to_find.at(i), character_or_profession.c_str())) {
             continue;
         }
         for (auto& available_char : *available_characters) {
@@ -495,7 +500,7 @@ void RerollWindow::Update(float)
                 if (!IsInMap()) {
                     if (guild_hall_uuid) {
                         // Was previously in a guild hall
-                        GW::GuildMgr::TravelGH(*reinterpret_cast<GW::GHKey*>(guild_hall_uuid));
+                        GW::GuildMgr::TravelGH(guild_hall_uuid);
                     }
                     else {
                         if (!GW::Map::GetIsMapUnlocked(map_id)) {
@@ -615,7 +620,7 @@ bool RerollWindow::IsInMap(const bool include_district) const
 {
     if (guild_hall_uuid) {
         const GW::Guild* current_location = GW::GuildMgr::GetCurrentGH();
-        return current_location && memcmp(&current_location->key, guild_hall_uuid, sizeof(*guild_hall_uuid)) == 0;
+        return current_location && memcmp(&current_location->key, &guild_hall_uuid, sizeof(guild_hall_uuid)) == 0;
     }
     return GW::Map::GetMapID() == map_id && (!include_district || district_id == 0 || GW::Map::GetDistrict() == district_id) && GW::Map::GetRegion() == region_id && GW::Map::GetLanguage() == language_id;
 }
@@ -667,10 +672,7 @@ bool RerollWindow::Reroll(const wchar_t* character_name, const GW::Constants::Ma
         return false;
     }
     map_id = _map_id;
-    if (guild_hall_uuid) {
-        delete[] guild_hall_uuid;
-        guild_hall_uuid = nullptr;
-    }
+    guild_hall_uuid = {};
     district_id = 0;
     return true;
 }
@@ -681,7 +683,7 @@ bool RerollWindow::Reroll(const wchar_t* character_name, bool _same_map, const b
     reverting_reroll = false;
     failed_message = nullptr;
     char_sort_order = GetPreference(GW::UI::EnumPreference::CharSortOrder);
-    SetPreference(GW::UI::EnumPreference::CharSortOrder, static_cast<uint32_t>(GW::Constants::Preference::CharSortOrder::Alphabetize));
+    SetPreference(GW::UI::EnumPreference::CharSortOrder, std::to_underlying(GW::Constants::Preference::CharSortOrder::Alphabetize));
     if (!character_name) {
         return false;
     }
@@ -715,14 +717,9 @@ bool RerollWindow::Reroll(const wchar_t* character_name, bool _same_map, const b
     region_id = GW::Map::GetRegion();
     language_id = GW::Map::GetLanguage();
     online_status = GW::FriendListMgr::GetMyStatus();
-    if (guild_hall_uuid) {
-        delete[] guild_hall_uuid;
-        guild_hall_uuid = nullptr;
-    }
-    const GW::Guild* current_guild_hall = GW::GuildMgr::GetCurrentGH();
-    if (current_guild_hall) {
-        guild_hall_uuid = new uint32_t[4];
-        memcpy(guild_hall_uuid, &current_guild_hall->key, sizeof(current_guild_hall->key));
+    guild_hall_uuid = {};
+    if (const auto current_guild_hall = GW::GuildMgr::GetCurrentGH()) {
+        memcpy(&guild_hall_uuid, &current_guild_hall->key, sizeof(current_guild_hall->key));
     }
     same_map = _same_map;
     same_party = _same_party;

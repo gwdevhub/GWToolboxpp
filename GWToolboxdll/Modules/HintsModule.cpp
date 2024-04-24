@@ -164,7 +164,7 @@ namespace {
     void OnShowHint_UIMessage(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
     {
         const auto msg = static_cast<HintUIMessage*>(wparam);
-        if (std::ranges::find(hints_shown, msg->message_id) != hints_shown.end()) {
+        if (std::ranges::contains(hints_shown, msg->message_id)) {
             if (only_show_hints_once) {
                 status->blocked = true;
             }
@@ -185,7 +185,7 @@ namespace {
                     break;
                 }
                 wchar_t out[256];
-                const auto campaign = static_cast<uint32_t>(GetCharacterCampaign());
+                const auto campaign = std::to_underlying(GetCharacterCampaign());
                 swprintf(out, 256, EMBARK_WITHOUT_HOMELAND.message, embark_beach_campaign_npcs[campaign]);
                 HintUIMessage(out, 30000, EMBARK_WITHOUT_HOMELAND.message_id | campaign).Show();
             }

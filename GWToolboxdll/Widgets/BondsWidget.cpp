@@ -118,7 +118,7 @@ namespace {
         if (islot < 0) {
             return;
         }
-        auto slot = static_cast<uint32_t>(islot);
+        const auto slot = static_cast<uint32_t>(islot);
         const GW::Skillbar* skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
         if (!skillbar || !skillbar->IsValid()) {
             return;

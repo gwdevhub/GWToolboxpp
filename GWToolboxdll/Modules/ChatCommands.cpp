@@ -54,6 +54,7 @@
 #include <Widgets/TimerWidget.h>
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/DialogModule.h>
+#include <Modules/Resources.h>
 #include <GWCA/Managers/QuestMgr.h>
 #include <Widgets/BondsWidget.h>
 
@@ -368,7 +369,7 @@ namespace {
             syntax_err();
             return;
         }
-        if (skill_id >= static_cast<uint32_t>(GW::Constants::SkillID::Count)) {
+        if (skill_id >= std::to_underlying(GW::Constants::SkillID::Count)) {
             Log::WarningW(L"%d: is not a valid skill id", skill_id);
             syntax_err();
             return;
@@ -492,19 +493,19 @@ namespace {
 
     struct PrefMapCommand {
         PrefMapCommand(GW::UI::EnumPreference p)
-            : preference_id(static_cast<uint32_t>(p))
+            : preference_id(std::to_underlying(p))
         {
             preference_callback = CmdEnumPref;
         }
 
         PrefMapCommand(GW::UI::NumberPreference p)
-            : preference_id(static_cast<uint32_t>(p))
+            : preference_id(std::to_underlying(p))
         {
             preference_callback = CmdValuePref;
         }
 
         PrefMapCommand(GW::UI::FlagPreference p)
-            : preference_id(static_cast<uint32_t>(p))
+            : preference_id(std::to_underlying(p))
         {
             preference_callback = CmdFlagPref;
         }
@@ -620,9 +621,9 @@ void ChatCommands::CreateAlias(const wchar_t* alias, const wchar_t* message) {
         alias++;
     if (!(alias && *alias && message && *message))
         return;
-    auto found = std::ranges::find_if(cmd_aliases, [alias](CmdAlias* cmp) {
+    const auto found = std::ranges::find_if(cmd_aliases, [alias](const CmdAlias* cmp) {
         return wcscmp(alias, cmp->alias_wstr) == 0;
-        });
+    });
     CmdAlias* alias_obj = nullptr;
     if (found != cmd_aliases.end()) {
         alias_obj = *found;
@@ -909,7 +910,7 @@ void ChatCommands::DrawSettingsInternal()
             preview = "Remove title";
             break;
         default:
-            const auto selected = std::ranges::find_if(title_names, [&](auto* it) { return static_cast<uint32_t>(it->title) == default_title_id; });
+            const auto selected = std::ranges::find_if(title_names, [&](auto* it) { return std::to_underlying(it->title) == default_title_id; });
 
             if (selected != title_names.end()) {
                 preview = (*selected)->name.string();
@@ -928,8 +929,8 @@ void ChatCommands::DrawSettingsInternal()
             default_title_id = CMDTITLE_REMOVE_CURRENT;
         }
         for (auto* it : title_names) {
-            if (ImGui::Selectable(it->name.string().c_str(), static_cast<uint32_t>(it->title) == default_title_id)) {
-                default_title_id = static_cast<uint32_t>(it->title);
+            if (ImGui::Selectable(it->name.string().c_str(), std::to_underlying(it->title) == default_title_id)) {
+                default_title_id = std::to_underlying(it->title);
             }
         }
         ImGui::EndCombo();
@@ -1703,7 +1704,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
     }
     else if (arg1 == L"save") {
         // e.g. /tb save pure
-        const auto sanitised_foldername = GuiUtils::SanitiseFilename(arg2.c_str());
+        const auto sanitised_foldername = GuiUtils::SanitiseFilename(arg2);
         GWToolbox::SetSettingsFolder(sanitised_foldername);
         const auto file_location = GWToolbox::SaveSettings();
         const auto dir = file_location.parent_path();
@@ -1713,8 +1714,14 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
     }
     else if (arg1 == L"load") {
         // e.g. /tb load tas
-        const auto sanitised_foldername = GuiUtils::SanitiseFilename(arg2.c_str());
+        const auto sanitised_foldername = GuiUtils::SanitiseFilename(arg2);
+        const auto old_settings_folder = Resources::GetSettingsFolderName();
         GWToolbox::SetSettingsFolder(sanitised_foldername);
+        if (!std::filesystem::exists(Resources::GetSettingFile(GWTOOLBOX_INI_FILENAME))) {
+            Log::ErrorW(L"Settings folder '%s' does not exist", arg2.c_str());
+            GWToolbox::SetSettingsFolder(old_settings_folder);
+            return;
+        }
         const auto file_location = GWToolbox::LoadSettings();
         const auto dir = file_location.parent_path();
         const auto dirstr = dir.wstring();
@@ -1978,9 +1985,9 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDamage)
             PartyDamage::Instance().ResetDamage();
         }
         else {
-            int idx;
-            if (GuiUtils::ParseInt(argv[1], &idx)) {
-                PartyDamage::Instance().WriteDamageOf(static_cast<uint32_t>(idx) - 1);
+            uint32_t idx;
+            if (GuiUtils::ParseUInt(argv[1], &idx)) {
+                PartyDamage::Instance().WriteDamageOf(idx - 1);
             }
         }
     }
@@ -2258,12 +2265,12 @@ void CHAT_CMD_FUNC(ChatCommands::CmdLoad)
         GW::SkillbarMgr::LoadSkillTemplate(temp);
     }
     else if (argc == 3) {
-        int ihero_number;
-        if (GuiUtils::ParseInt(argv[2], &ihero_number)) {
+        uint32_t ihero_number;
+        if (GuiUtils::ParseUInt(argv[2], &ihero_number)) {
             // @Robustness:
             // Check that the number is actually valid or make sure LoadSkillTemplate is safe
             if (0 < ihero_number && ihero_number <= 8) {
-                GW::SkillbarMgr::LoadSkillTemplate(temp, static_cast<uint32_t>(ihero_number));
+                GW::SkillbarMgr::LoadSkillTemplate(temp, ihero_number);
             }
         }
     }
@@ -2760,12 +2767,11 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmoAgent)
     if (argc < 3) {
         return Log::Error("Missing /transmoagent argument");
     }
-    int iagent_id = 0;
-    if (!GuiUtils::ParseInt(argv[1], &iagent_id) || iagent_id < 0) {
+    uint32_t agent_id;
+    if (!GuiUtils::ParseUInt(argv[1], &agent_id)) {
         return Log::Error("Invalid /transmoagent agent_id");
     }
     PendingTransmo transmo;
-    const auto agent_id = static_cast<uint32_t>(iagent_id);
     int iscale;
     if (wcsncmp(argv[2], L"reset", 5) == 0) {
         transmo.npc_id = std::numeric_limits<int>::max();
@@ -2830,7 +2836,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdReapplyTitle)
         case GW::Constants::MapID::Umbral_Grotto_outpost:
         case GW::Constants::MapID::Verdant_Cascades:
         case GW::Constants::MapID::Vloxs_Falls:
-            title_id = static_cast<uint32_t>(GW::Constants::TitleID::Asuran);
+            title_id = std::to_underlying(GW::Constants::TitleID::Asuran);
             break;
         case GW::Constants::MapID::A_Gate_Too_Far_Level_1:
         case GW::Constants::MapID::A_Gate_Too_Far_Level_2:
@@ -2845,7 +2851,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdReapplyTitle)
         case GW::Constants::MapID::Ravens_Point_Level_1:
         case GW::Constants::MapID::Ravens_Point_Level_2:
         case GW::Constants::MapID::Ravens_Point_Level_3:
-            title_id = static_cast<uint32_t>(GW::Constants::TitleID::Deldrimor);
+            title_id = std::to_underlying(GW::Constants::TitleID::Deldrimor);
             break;
         case GW::Constants::MapID::Attack_of_the_Nornbear:
         case GW::Constants::MapID::Bjora_Marches:
@@ -2866,7 +2872,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdReapplyTitle)
         case GW::Constants::MapID::The_Norn_Fighting_Tournament:
         case GW::Constants::MapID::Varajar_Fells:
             // @todo: case MapID for Bear Club for Women/Men
-            title_id = static_cast<uint32_t>(GW::Constants::TitleID::Norn);
+            title_id = std::to_underlying(GW::Constants::TitleID::Norn);
             break;
         case GW::Constants::MapID::Against_the_Charr:
         case GW::Constants::MapID::Ascalon_City_outpost:
@@ -2901,7 +2907,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdReapplyTitle)
         case GW::Constants::MapID::Warband_of_Brothers_Level_1:
         case GW::Constants::MapID::Warband_of_Brothers_Level_2:
         case GW::Constants::MapID::Warband_of_Brothers_Level_3:
-            title_id = static_cast<uint32_t>(GW::Constants::TitleID::Vanguard);
+            title_id = std::to_underlying(GW::Constants::TitleID::Vanguard);
             break;
         case GW::Constants::MapID::Abaddons_Gate:
         case GW::Constants::MapID::Basalt_Grotto_outpost:
@@ -2943,13 +2949,13 @@ void CHAT_CMD_FUNC(ChatCommands::CmdReapplyTitle)
         case GW::Constants::MapID::Throne_of_Secrets:
         case GW::Constants::MapID::Vehtendi_Valley:
         case GW::Constants::MapID::Yatendi_Canyons:
-            title_id = static_cast<uint32_t>(GW::Constants::TitleID::Lightbringer);
+            title_id = std::to_underlying(GW::Constants::TitleID::Lightbringer);
             break;
     }
 apply:
     GW::Constants::TitleID current_title = GW::PlayerMgr::GetActiveTitleId();
     if (title_id == CMDTITLE_KEEP_CURRENT && current_title != GW::Constants::TitleID::None) {
-        title_id = static_cast<uint32_t>(current_title);
+        title_id = std::to_underlying(current_title);
     }
     if (current_title != GW::Constants::TitleID::None) {
         GW::PlayerMgr::RemoveActiveTitle();
@@ -2958,7 +2964,7 @@ apply:
         case CMDTITLE_REMOVE_CURRENT:
             break;
         default:
-            if (title_id > static_cast<uint32_t>(GW::Constants::TitleID::Codex)) {
+            if (title_id > std::to_underlying(GW::Constants::TitleID::Codex)) {
                 Log::Error("Invalid title_id %d", title_id);
                 return;
             }

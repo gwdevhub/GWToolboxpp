@@ -9,7 +9,7 @@ namespace GuiUtils {
 
 namespace GW::Constants {
     enum class Profession : uint32_t;
-    enum class MapID;
+    enum class MapID : uint32_t;
     enum class SkillID : uint32_t;
     enum class Language;
 }
@@ -54,6 +54,7 @@ public:
     static int SaveIniToFile(const std::filesystem::path& absolute_path, const ToolboxIni* inifile);
 
     static std::filesystem::path GetComputerFolderPath();
+    static std::filesystem::path GetSettingsFolderName();
     static std::filesystem::path GetSettingsFolderPath();
 
 private:

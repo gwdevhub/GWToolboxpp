@@ -190,7 +190,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
             return;
         }
         const GW::Vec2f qpos = { quest.marker.x, quest.marker.y };
-        if (std::ranges::find(markers_drawn, qpos) != markers_drawn.end())
+        if (std::ranges::contains(markers_drawn, qpos))
             return; // Don't draw more than 1 marker for a position
         markers_drawn.push_back(qpos);
         const float compass_scale = Minimap::Instance().Scale();

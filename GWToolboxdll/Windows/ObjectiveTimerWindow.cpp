@@ -29,7 +29,7 @@
 #include <Utils/GuiUtils.h>
 #include <Logger.h>
 
-constexpr uint32_t TIME_UNKNOWN(static_cast<uint32_t>(-1));
+constexpr uint32_t TIME_UNKNOWN = std::numeric_limits<uint32_t>::max();
 unsigned int ObjectiveTimerWindow::ObjectiveSet::cur_ui_id = 0;
 
 namespace {
@@ -329,10 +329,11 @@ void ObjectiveTimerWindow::Initialize()
                 Event(EventType::DoACompleteZone, packet->message[1]);
             }
         });
-    GW::StoC::RegisterPacketCallback(&CountdownStart_Enty, GAME_SMSG_INSTANCE_COUNTDOWN,
-                                     [this](GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
-                                         Event(EventType::CountdownStart, static_cast<uint32_t>(GW::Map::GetMapID()));
-                                     });
+    GW::StoC::RegisterPacketCallback(
+        &CountdownStart_Enty, GAME_SMSG_INSTANCE_COUNTDOWN,
+             [this](GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
+                 Event(EventType::CountdownStart, std::to_underlying(GW::Map::GetMapID()));
+             });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(
         &DungeonReward_Entry, [this](GW::HookStatus*, GW::Packet::StoC::DungeonReward*) {
             Event(EventType::DungeonReward);
@@ -818,17 +819,17 @@ void ObjectiveTimerWindow::AddToPKObjectiveSet()
     // we could read out the name of the maps...
     os->AddObjective(new Objective("The Underworld"))
       ->SetStarted()
-      ->AddStartEvent(EventType::InstanceLoadInfo, static_cast<uint32_t>(GW::Constants::MapID::The_Underworld_PvP))
-      ->AddEndEvent(EventType::CountdownStart, static_cast<uint32_t>(GW::Constants::MapID::The_Underworld_PvP));
+      ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Underworld_PvP))
+      ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Underworld_PvP));
     os->AddObjective(new Objective("Scarred Earth"))
-      ->AddStartEvent(EventType::InstanceLoadInfo, static_cast<uint32_t>(GW::Constants::MapID::Scarred_Earth))
-      ->AddEndEvent(EventType::CountdownStart, static_cast<uint32_t>(GW::Constants::MapID::Scarred_Earth));
+      ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::Scarred_Earth))
+      ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::Scarred_Earth));
     os->AddObjective(new Objective("The Courtyard"))
-      ->AddStartEvent(EventType::InstanceLoadInfo, static_cast<uint32_t>(GW::Constants::MapID::The_Courtyard))
-      ->AddEndEvent(EventType::CountdownStart, static_cast<uint32_t>(GW::Constants::MapID::The_Courtyard));
+      ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Courtyard))
+      ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Courtyard));
     os->AddObjective(new Objective("The Hall of Heroes"))
-      ->AddStartEvent(EventType::InstanceLoadInfo, static_cast<uint32_t>(GW::Constants::MapID::The_Hall_of_Heroes))
-      ->AddEndEvent(EventType::CountdownStart, static_cast<uint32_t>(GW::Constants::MapID::The_Hall_of_Heroes));
+      ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Hall_of_Heroes))
+      ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Hall_of_Heroes));
 
     AsyncGetMapName(os->name, sizeof(os->name), GW::Constants::MapID::Tomb_of_the_Primeval_Kings);
     AddObjectiveSet(os);

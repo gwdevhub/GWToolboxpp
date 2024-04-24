@@ -816,7 +816,7 @@ namespace {
             case GW::UI::ControlAction_TargetNearestItem:
                 if (lazy_chest_looting) {
                     targeting_nearest_item = true;
-                    GW::Agents::ChangeTarget(static_cast<uint32_t>(0)); // To ensure OnChangeTarget is triggered
+                    GW::Agents::ChangeTarget(0u); // To ensure OnChangeTarget is triggered
                 }
                 break;
         }
@@ -2360,7 +2360,7 @@ void GameSettings::OnLocalChatMessage(GW::HookStatus* status, const GW::Packet::
     if (status->blocked) {
         return; // Sender blocked, packet handled.
     }
-    if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number) {
+    if (pak->channel != std::to_underlying(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number) {
         return; // Not team chat or no sender
     }
     const auto core = GetMessageCore();
@@ -2416,8 +2416,6 @@ void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::Dun
 }
 
 // Flash/focus window on trade
-// ReSharper disable once CppParameterMayBeConst
-// ReSharper disable once CppParameterMayBeConstPtrOrRef
 void GameSettings::OnTradeStarted(GW::HookStatus* status, GW::Packet::StoC::TradeStart*)
 {
     if (status->blocked) {
