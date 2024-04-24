@@ -421,6 +421,11 @@ std::filesystem::path Resources::GetComputerFolderPath()
     return docpath;
 }
 
+std::filesystem::path Resources::GetSettingsFolderName()
+{
+    return current_settings_folder;
+}
+
 std::filesystem::path Resources::GetSettingsFolderPath()
 {
     const auto computer_path = GetComputerFolderPath();

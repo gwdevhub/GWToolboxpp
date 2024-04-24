@@ -54,6 +54,7 @@
 #include <Widgets/TimerWidget.h>
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/DialogModule.h>
+#include <Modules/Resources.h>
 #include <GWCA/Managers/QuestMgr.h>
 #include <Widgets/BondsWidget.h>
 
@@ -1703,7 +1704,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
     }
     else if (arg1 == L"save") {
         // e.g. /tb save pure
-        const auto sanitised_foldername = GuiUtils::SanitiseFilename(arg2.c_str());
+        const auto sanitised_foldername = GuiUtils::SanitiseFilename(arg2);
         GWToolbox::SetSettingsFolder(sanitised_foldername);
         const auto file_location = GWToolbox::SaveSettings();
         const auto dir = file_location.parent_path();
@@ -1713,8 +1714,14 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
     }
     else if (arg1 == L"load") {
         // e.g. /tb load tas
-        const auto sanitised_foldername = GuiUtils::SanitiseFilename(arg2.c_str());
+        const auto sanitised_foldername = GuiUtils::SanitiseFilename(arg2);
+        const auto old_settings_folder = Resources::GetSettingsFolderName();
         GWToolbox::SetSettingsFolder(sanitised_foldername);
+        if (!std::filesystem::exists(Resources::GetSettingFile(GWTOOLBOX_INI_FILENAME))) {
+            Log::ErrorW(L"Settings folder '%s' does not exist", arg2.c_str());
+            GWToolbox::SetSettingsFolder(old_settings_folder);
+            return;
+        }
         const auto file_location = GWToolbox::LoadSettings();
         const auto dir = file_location.parent_path();
         const auto dirstr = dir.wstring();

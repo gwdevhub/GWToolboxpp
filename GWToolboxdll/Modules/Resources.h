@@ -54,6 +54,7 @@ public:
     static int SaveIniToFile(const std::filesystem::path& absolute_path, const ToolboxIni* inifile);
 
     static std::filesystem::path GetComputerFolderPath();
+    static std::filesystem::path GetSettingsFolderName();
     static std::filesystem::path GetSettingsFolderPath();
 
 private:
