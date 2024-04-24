@@ -12,6 +12,8 @@
 #include <Defines.h>
 #include <Timer.h>
 #include <Utils/GuiUtils.h>
+#include <GWCA/GWCA.h>
+#include <GWCA/Utilities/Hooker.h>
 
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
@@ -48,6 +50,23 @@ void InstanceTimer::DrawSettings()
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Such as Deep Aspects");
     }
+}
+
+void InstanceTimer::Initialize(ImGuiContext* ctx, ImGuiAllocFns , HMODULE )
+{
+    ImGui::SetCurrentContext(ctx);
+    GW::Initialize();
+}
+void InstanceTimer::SignalTerminate()
+{
+    GW::DisableHooks();
+}
+void InstanceTimer::Terminate()
+{
+    GW::Terminate();
+}
+bool InstanceTimer::CanTerminate() {
+    return GW::Hook::GetInHookCount() == 0;
 }
 
 void InstanceTimer::Draw(IDirect3DDevice9*)

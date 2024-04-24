@@ -224,7 +224,7 @@ void DialogModule::Initialize()
     NPCDialogUICallback_Func = reinterpret_cast<GW::UI::UIInteractionCallback>(GW::Scanner::FindAssertion(
         "p:\\code\\gw\\ui\\game\\gmnpc.cpp", "interactMsg.codedText && interactMsg.codedText[0]", -0xfb));
     if (NPCDialogUICallback_Func) {
-        GW::HookBase::CreateHook(NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
+        GW::HookBase::CreateHook((void**)&NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
         GW::HookBase::EnableHooks(NPCDialogUICallback_Func);
     }
 }

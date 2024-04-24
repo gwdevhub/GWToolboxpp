@@ -901,7 +901,7 @@ void InventoryManager::Initialize()
     AddItemRowToWindow_Func = reinterpret_cast<AddItemRowToWindow_pt>(GW::Scanner::Find(
         "\x83\xc4\x04\x80\x78\x04\x06\x0f\x84\xd3\x00\x00\x00\x6a\x02\xff\x37", nullptr, -0x10));
     if (AddItemRowToWindow_Func) {
-        GW::Hook::CreateHook(AddItemRowToWindow_Func, OnAddItemToWindow, reinterpret_cast<void**>(&RetAddItemRowToWindow));
+        GW::Hook::CreateHook((void**)&AddItemRowToWindow_Func, OnAddItemToWindow, reinterpret_cast<void**>(&RetAddItemRowToWindow));
         GW::Hook::EnableHooks(AddItemRowToWindow_Func);
     }
 }

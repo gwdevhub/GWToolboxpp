@@ -112,12 +112,12 @@ void LoginModule::Initialize()
         return InitialiationFailure("Failed to initialize GetStringParameter_Func");
     }
     {
-        int res = GW::HookBase::CreateHook(PortalAccountLogin_Func, OnPortalAccountLogin, (void**)&PortalAccountLogin_Ret);
+        int res = GW::HookBase::CreateHook((void**)&PortalAccountLogin_Func, OnPortalAccountLogin, (void**)&PortalAccountLogin_Ret);
         if (res == -1) {
             return InitialiationFailure("Failed to hook PortalAccountLogin_Func");
         }
 
-        res = GW::HookBase::CreateHook(GetStringParameter_Func, OnGetStringParameter, (void**)&GetStringParameter_Ret);
+        res = GW::HookBase::CreateHook((void**)&GetStringParameter_Func, OnGetStringParameter, (void**)&GetStringParameter_Ret);
         if (res == -1) {
             return InitialiationFailure("Failed to hook GetStringParameter_Func");
         }

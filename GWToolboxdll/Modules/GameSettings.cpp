@@ -1289,7 +1289,7 @@ void GameSettings::Initialize()
     // This could be done with patches if we wanted to still show description for weapon sets and merchants etc, but its more signatures to log.
     GetItemDescription_Func = (GetItemDescription_pt)GW::Scanner::Find("\x8b\xc3\x25\xfd\x00\x00\x00\x3c\xfd", "xxxxxxxxx", -0x5f);
     if (GetItemDescription_Func) {
-        GW::HookBase::CreateHook(GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret);
+        GW::HookBase::CreateHook((void**)&GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret);
         GW::HookBase::EnableHooks(GetItemDescription_Func);
     }
 
@@ -1315,15 +1315,15 @@ void GameSettings::Initialize()
     printf("[SCAN] ShowAgentFactionGain_Func = %p\n", (void*)ShowAgentFactionGain_Func);
     printf("[SCAN] ShowAgentExperienceGain_Func = %p\n", (void*)ShowAgentExperienceGain_Func);
 
-    GW::HookBase::CreateHook(ShowAgentFactionGain_Func, OnShowAgentFactionGain, reinterpret_cast<void**>(&ShowAgentFactionGain_Ret));
+    GW::HookBase::CreateHook((void**)&ShowAgentFactionGain_Func, OnShowAgentFactionGain, reinterpret_cast<void**>(&ShowAgentFactionGain_Ret));
     GW::HookBase::EnableHooks(ShowAgentFactionGain_Func);
-    GW::HookBase::CreateHook(ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, reinterpret_cast<void**>(&ShowAgentExperienceGain_Ret));
+    GW::HookBase::CreateHook((void**)&ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, reinterpret_cast<void**>(&ShowAgentExperienceGain_Ret));
     GW::HookBase::EnableHooks(ShowAgentExperienceGain_Func);
 
     // Stop GW from force closing the game when clicking on the exit button in window fullscreen; instead route it through the close signal.
     OnMinOrRestoreOrExitBtnClicked_Func = (GW::UI::UIInteractionCallback)GW::Scanner::Find("\x83\xc4\x0c\xa9\x00\x00\x80\x00", "xxxxxxxx", -0x54);
     if (OnMinOrRestoreOrExitBtnClicked_Func) {
-        GW::HookBase::CreateHook(OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
+        GW::HookBase::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
         GW::HookBase::EnableHooks();
     }
 

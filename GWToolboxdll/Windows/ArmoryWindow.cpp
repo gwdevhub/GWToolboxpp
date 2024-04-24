@@ -916,12 +916,12 @@ void ArmoryWindow::Initialize()
 
     RedrawAgentEquipment_Func = (EquipmentSlotAction_pt)GW::Scanner::FindAssertion("p:\\code\\gw\\composite\\cpsplayer.cpp", "itemData.fileId",-0x1fc);
     if (RedrawAgentEquipment_Func) {
-        GW::Hook::CreateHook(RedrawAgentEquipment_Func, OnRedrawAgentEquipment, (void**)&RedrawAgentEquipment_Ret);
+        GW::Hook::CreateHook((void**)&RedrawAgentEquipment_Func, OnRedrawAgentEquipment, (void**)&RedrawAgentEquipment_Ret);
         GW::Hook::EnableHooks(RedrawAgentEquipment_Func);
     }
     UndrawAgentEquipment_Func = (EquipmentSlotAction_pt)GW::Scanner::Find("\x0f\xb7\x8f\xe0\x03\x00\x00\x0f\xb7\x87\xe2\x03\x00\x00", "xxxxxxxxxxxxxx",-0x2f);
     if (UndrawAgentEquipment_Func) {
-        GW::Hook::CreateHook(UndrawAgentEquipment_Func, OnUndrawAgentEquipment, (void**)&UndrawAgentEquipment_Ret);
+        GW::Hook::CreateHook((void**)&UndrawAgentEquipment_Func, OnUndrawAgentEquipment, (void**)&UndrawAgentEquipment_Ret);
         GW::Hook::EnableHooks(UndrawAgentEquipment_Func);
     }
 

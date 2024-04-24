@@ -682,14 +682,14 @@ void GuildWarsSettingsModule::Initialize()
     address = GW::Scanner::Find("\x89\x77\x1c\x5f\x5e\x8b\xe5\x5d\xc2\x04\x00", "xxxxxxxxxxx", -0x155);
     if (address) {
         OnQuestEntryGroupInteract_Func = (OnQuestEntryGroupInteract_pt)address;
-        GW::Hook::CreateHook(OnQuestEntryGroupInteract_Func, OnQuestEntryGroupInteract, (void**)&OnQuestEntryGroupInteract_Ret);
+        GW::Hook::CreateHook((void**)&OnQuestEntryGroupInteract_Func, OnQuestEntryGroupInteract, (void**)&OnQuestEntryGroupInteract_Ret);
         GW::Hook::EnableHooks(OnQuestEntryGroupInteract_Func);
 
         quest_entry_group_context = *(QuestEntryGroupContext**)(address + 0x12f);
 
         GetOrCreateQuestEntryGroup_Func = (GetOrCreateQuestEntryGroup_pt)GW::Scanner::FunctionFromNearCall(address + 0x136);
         if (GetOrCreateQuestEntryGroup_Func) {
-            GW::Hook::CreateHook(GetOrCreateQuestEntryGroup_Func, OnGetOrCreateQuestEntryGroup, (void**)&GetOrCreateQuestEntryGroup_Ret);
+            GW::Hook::CreateHook((void**)&GetOrCreateQuestEntryGroup_Func, OnGetOrCreateQuestEntryGroup, (void**)&GetOrCreateQuestEntryGroup_Ret);
             GW::Hook::EnableHooks(GetOrCreateQuestEntryGroup_Func);
         }
     }

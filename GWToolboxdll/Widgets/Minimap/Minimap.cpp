@@ -293,7 +293,7 @@ void Minimap::Initialize()
     Log::Log("[SCAN] MouseClickCaptureDataPtr = %p\n", MouseClickCaptureDataPtr);
 
     DrawCompassAgentsByType_Func = (DrawCompassAgentsByType_pt)GW::Scanner::Find("\x8b\x46\x08\x8d\x5e\x18\x53", "xxxxxxx", -0xb);
-    GW::HookBase::CreateHook(DrawCompassAgentsByType_Func, OnDrawCompassAgentsByType, (void**)&DrawCompassAgentsByType_Ret);
+    GW::HookBase::CreateHook((void**)&DrawCompassAgentsByType_Func, OnDrawCompassAgentsByType, (void**)&DrawCompassAgentsByType_Ret);
     GW::HookBase::EnableHooks(DrawCompassAgentsByType_Func);
 
     address = GW::Scanner::Find("\xdd\xd8\x6a\x01\x52", "xxxxx");

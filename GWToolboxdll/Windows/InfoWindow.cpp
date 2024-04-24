@@ -872,13 +872,13 @@ void InfoWindow::Initialize()
     CreateTexture_Func = (CreateTexture_pt)GW::Scanner::FindAssertion("p:\\code\\engine\\gr\\grtex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)", -0x32);
 #endif
     if (CreateTexture_Func) {
-        GW::HookBase::CreateHook(CreateTexture_Func, OnCreateTexture, (void**)&CreateTexture_Ret);
+        GW::HookBase::CreateHook((void**)&CreateTexture_Func, OnCreateTexture, (void**)&CreateTexture_Ret);
         GW::HookBase::EnableHooks(CreateTexture_Func);
     }
 
     GWCA_SendUIMessage_Func = (GWCA_SendUIMessage_pt)GW::UI::SendUIMessage;
     if (GWCA_SendUIMessage_Func) {
-        GW::HookBase::CreateHook(GWCA_SendUIMessage_Func, OnGWCASendUIMessage, (void**)&GWCA_SendUIMessage_Ret);
+        GW::HookBase::CreateHook((void**)&GWCA_SendUIMessage_Func, OnGWCASendUIMessage, (void**)&GWCA_SendUIMessage_Ret);
         //GW::HookBase::EnableHooks(GWCA_SendUIMessage_Func);
     }
 }

@@ -864,7 +864,7 @@ void Obfuscator::Initialize()
     if (GetCharacterSummary_Assertion) {
         // Hook to override character names on login screen
         GetCharacterSummary_Func = reinterpret_cast<GetCharacterSummary_pt>(GetCharacterSummary_Assertion - 0x4F);
-        GW::HookBase::CreateHook(GetCharacterSummary_Func, OnGetCharacterSummary, reinterpret_cast<void**>(&RetGetCharacterSummary));
+        GW::HookBase::CreateHook((void**)&GetCharacterSummary_Func, OnGetCharacterSummary, reinterpret_cast<void**>(&RetGetCharacterSummary));
         GW::HookBase::EnableHooks(GetCharacterSummary_Func);
         // Patch to allow missing character summary
         GetCharacterSummary_AssertionPatch.SetPatch(GetCharacterSummary_Assertion - 0x7, "\xEB", 1);
@@ -873,7 +873,7 @@ void Obfuscator::Initialize()
     const uintptr_t address = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\game\vendor\vnacctnameset.cpp)", "charName", -0x30);
     GetAccountData_Func = reinterpret_cast<GetAccountData_pt>(GW::Scanner::FunctionFromNearCall(address));
     if (GetAccountData_Func) {
-        GW::HookBase::CreateHook(GetAccountData_Func, OnGetAccountInfo, reinterpret_cast<void**>(&GetAccountData_Ret));
+        GW::HookBase::CreateHook((void**)&GetAccountData_Func, OnGetAccountInfo, reinterpret_cast<void**>(&GetAccountData_Ret));
         GW::HookBase::EnableHooks(GetAccountData_Func);
     }
 

@@ -571,7 +571,7 @@ void PriceCheckerModule::Initialize()
     // Copied from GameSettings.cpp
     GetItemDescription_Func = (GetItemDescription_pt)GameSettings::OnGetItemDescription;
     if (GetItemDescription_Func) {
-        ASSERT(GW::HookBase::CreateHook(GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret) == 0);
+        ASSERT(GW::HookBase::CreateHook((void**)&GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret) == 0);
         GW::HookBase::EnableHooks(GetItemDescription_Func);
     }
 

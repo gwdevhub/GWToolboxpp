@@ -1129,7 +1129,7 @@ void ChatCommands::Initialize()
     if (address) {
         OnChatInteraction_Callback_Func = (GW::UI::UIInteractionCallback)address;
         FocusChatTab_Func = (FocusChatTab_pt)GW::Scanner::FunctionFromNearCall(address + 0x248);
-        GW::HookBase::CreateHook(OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
+        GW::HookBase::CreateHook((void**)&OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
         GW::HookBase::EnableHooks();
     }
 

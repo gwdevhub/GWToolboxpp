@@ -68,7 +68,7 @@ void Clock::Initialize(ImGuiContext* ctx, const ImGuiAllocFns fns, const HMODULE
     SendChat_Func = (SendChat_pt)GW::Scanner::Find("\x8D\x85\xE0\xFE\xFF\xFF\x50\x68\x1C\x01", "xxxxxxxxx", -0x3E);
 
     if (SendChat_Func) {
-        GW::HookBase::CreateHook(SendChat_Func, OnSendChat, (void**)&SendChat_Ret);
+        GW::HookBase::CreateHook((void**)&SendChat_Func, OnSendChat, (void**)&SendChat_Ret);
         GW::HookBase::EnableHooks(SendChat_Func);
     }
 }
