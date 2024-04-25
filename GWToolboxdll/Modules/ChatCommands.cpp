@@ -578,14 +578,26 @@ namespace {
         "If quantity is 'all', deposits all gold [platinum] from your inventory to your storage.";;
 
     struct CmdAlias {
-        char alias_cstr[256] = {0};
-        wchar_t alias_wstr[128] = {0};
-        char command_cstr[256] = {0};
-        wchar_t command_wstr[128] = {0};
+        char alias_cstr[256] = {};
+        wchar_t alias_wstr[128] = {};
+        char command_cstr[256] = {};
+        wchar_t command_wstr[128] = {};
         bool processing = false;
     };
 
     std::vector<CmdAlias*> cmd_aliases;
+
+    void sort_cmd_aliases() {
+        std::ranges::stable_sort(cmd_aliases, [](const auto* a, const auto* b) {
+            if (a->alias_cstr[0] == '\0' && b->alias_cstr[0] != '\0') {
+                return false;
+            }
+            if (b->alias_cstr[0] == '\0' && a->alias_cstr[0] != '\0') {
+                return true;
+            }
+            return strcmp(a->alias_cstr, b->alias_cstr) < 0;
+        });
+    }
 
     GW::HookEntry OnSentChat_HookEntry;
 
@@ -606,7 +618,6 @@ namespace {
                 alias->processing = true;
                 GW::Chat::SendChat(alias->command_cstr[0], &alias->command_wstr[1]);
                 alias->processing = false;
-                return;
             }
         }
     }
@@ -621,8 +632,8 @@ void ChatCommands::CreateAlias(const wchar_t* alias, const wchar_t* message) {
         alias++;
     if (!(alias && *alias && message && *message))
         return;
-    const auto found = std::ranges::find_if(cmd_aliases, [alias](const CmdAlias* cmp) {
-        return wcscmp(alias, cmp->alias_wstr) == 0;
+    const auto found = std::ranges::find_if(cmd_aliases, [alias, message](const CmdAlias* cmp) {
+        return wcscmp(alias, cmp->alias_wstr) == 0 && wcscmp(message, cmp->command_wstr) == 0;
     });
     CmdAlias* alias_obj = nullptr;
     if (found != cmd_aliases.end()) {
@@ -974,7 +985,11 @@ void ChatCommands::DrawSettingsInternal()
     if (ImGui::Button("Add New Alias")) {
         wchar_t tmp[32];
         swprintf(tmp, _countof(tmp), L"alias_%d", cmd_aliases.size());
-        CreateAlias(L"thetime", L"age");
+        CreateAlias(L"zraw", L"!zraw");
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Sort")) {
+        sort_cmd_aliases();
     }
 }
 
@@ -1000,14 +1015,21 @@ void ChatCommands::LoadSettings(ToolboxIni* ini)
         if (!entry.pItem[0]) {
             continue;
         }
+        auto alias = std::string(entry.pItem);
         std::string cmd = ini->GetValue(section_name, entry.pItem, "");
         if (cmd.empty()) {
             continue;
         }
-        const auto alias_wstr = GuiUtils::StringToWString(entry.pItem);
+        static const std::regex index_regex(R"((\d+):(.+))");
+        std::smatch match;
+        if (std::regex_match(alias, match, index_regex)) {
+            alias = match[2];
+        }
+        const auto alias_wstr = GuiUtils::StringToWString(alias);
         const auto command_wstr = GuiUtils::StringToWString(cmd);
         CreateAlias(alias_wstr.c_str(), command_wstr.c_str());
     }
+    sort_cmd_aliases();
 }
 
 void ChatCommands::SaveSettings(ToolboxIni* ini)
@@ -1019,12 +1041,13 @@ void ChatCommands::SaveSettings(ToolboxIni* ini)
     const auto section_name = "Chat Command Aliases";
 
     ini->Delete("Chat Command Aliases", nullptr);
+    sort_cmd_aliases();
 
-    for (const auto alias : cmd_aliases) {
+    for (const auto [index, alias] : cmd_aliases | std::views::enumerate) {
         if (!alias->alias_cstr && alias->alias_cstr[0]) {
             continue;
         }
-        ini->SetValue(section_name, alias->alias_cstr, alias->command_cstr);
+        ini->SetValue(section_name, std::format("{}:{}", index, alias->alias_cstr).c_str(), alias->command_cstr);
     }
 }
 
