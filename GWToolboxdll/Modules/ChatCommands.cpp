@@ -1574,8 +1574,8 @@ void CHAT_CMD_FUNC(ChatCommands::CmdMorale)
         GW::Chat::SendChat('#', L"I have no Morale Boost or Death Penalty!");
     }
     else {
-        uint32_t packet[] = { (uint32_t)GW::CallTargetType::Morale, GW::Agents::GetPlayerId() };
-        GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, packet);
+        auto packet = GW::UI::UIPacket::kSendCallTarget { GW::CallTargetType::Morale, GW::Agents::GetPlayerId() };
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &packet);
     }
 }
 
