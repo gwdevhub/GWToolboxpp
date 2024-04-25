@@ -810,14 +810,14 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
             if (!show_hidden_npcs && !GW::Agents::GetIsAgentTargettable(living)) {
                 continue;
             }
+            if (AddMarkedTarget(living)) {
+                continue; // 8. marked targets
+            }
             if (AddOtherPlayersToDraw(living)) {
                 continue; // 5. players
             }
             if (AddDeadAgentToDraw(living)) {
                 continue;
-            }
-            if (AddMarkedTarget(living)) {
-                continue; // 8. marked targets
             }
             if (AddCustomAgentsToDraw(living)) {
                 continue; // 3. custom colored models
