@@ -295,7 +295,7 @@ bool HealthWidget::Threshold::DrawHeader()
     constexpr size_t buffer_size = 64;
     char mapbuf[buffer_size] = {'\0'};
     if (mapId) {
-        if (mapId < sizeof(GW::Constants::NAME_FROM_ID) / sizeof(*GW::Constants::NAME_FROM_ID)) {
+        if (mapId < sizeof(GW::Constants::NAME_FROM_ID) / sizeof(GW::Constants::NAME_FROM_ID.at(0))) {
             snprintf(mapbuf, buffer_size, "[%s]", GW::Constants::NAME_FROM_ID[mapId]);
         }
         else {

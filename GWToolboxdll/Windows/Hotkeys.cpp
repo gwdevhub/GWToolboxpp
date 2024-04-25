@@ -453,7 +453,7 @@ bool TBHotkey::Draw(Op* op)
     }
     switch (map_ids.size()) {
         case 1:
-            if (map_ids[0] < _countof(GW::Constants::NAME_FROM_ID)) {
+            if (map_ids[0] < GW::Constants::NAME_FROM_ID.size()) {
                 written += snprintf(&header[written], _countof(header) - written, " [%s]", GW::Constants::NAME_FROM_ID[map_ids[0]]);
             }
             else {

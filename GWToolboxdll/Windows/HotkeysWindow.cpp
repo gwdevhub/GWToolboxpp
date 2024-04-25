@@ -442,7 +442,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
                     if (map == 0) {
                         map_name = "Any";
                     }
-                    else if (map >= 0 && map < _countof(GW::Constants::NAME_FROM_ID)) {
+                    else if (map >= 0 && static_cast<size_t>(map) < GW::Constants::NAME_FROM_ID.size()) {
                         map_name = GW::Constants::NAME_FROM_ID[map];
                     }
                     else {
