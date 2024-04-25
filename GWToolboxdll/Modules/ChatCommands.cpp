@@ -2182,7 +2182,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTarget)
         }
         GW::Agents::ChangeTarget(agent);
     }
-    return TargetNearest(GetRemainingArgsWstr(message, 1), Npc);
+    return TargetNearest(GetRemainingArgsWstr(message, 1), Living);
 }
 
 void CHAT_CMD_FUNC(ChatCommands::CmdUseSkill)
@@ -2742,10 +2742,10 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, const TargetTy
         }
         if (index == 0) {
             // target closest
-            const float newDistance = GetSquareDistance(me->pos, agent->pos);
-            if (newDistance < distance) {
+            const float new_distance = GetSquareDistance(me->pos, agent->pos);
+            if (new_distance < distance) {
                 closest = agent->agent_id;
-                distance = newDistance;
+                distance = new_distance;
             }
         }
         else {
