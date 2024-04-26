@@ -182,7 +182,8 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     const auto draw_quest_marker = [&](const GW::Quest& quest)
     {
         const auto active_quest = GW::QuestMgr::GetActiveQuest();
-        const bool is_current_quest = quest.quest_id == active_quest->quest_id;
+        const bool is_current_quest = active_quest != nullptr && quest.quest_id == active_quest->quest_id;
+
         if (!Minimap::ShouldDrawAllQuests() && !is_current_quest) {
             return;
         }
@@ -222,8 +223,8 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
         // draw active quest first
         const auto active_quest_id = GW::QuestMgr::GetActiveQuestId();
-        if (active_quest_id != GW::Constants::QuestID::None) {
-            draw_quest_marker(*GW::QuestMgr::GetQuest(active_quest_id));
+        if (auto* quest = GW::QuestMgr::GetQuest(active_quest_id)) {
+            draw_quest_marker(*quest);
         }
         for (const auto& quest : *quest_log | std::views::filter([active_quest_id](const GW::Quest& q) {
             return q.quest_id != active_quest_id;
