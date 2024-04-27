@@ -307,6 +307,9 @@ void PluginModule::Terminate()
 {
     ASSERT(plugins_loaded.empty());
     for (const auto p : plugins_available) {
+        if (p->dll) {
+            FreeLibrary(p->dll);
+        }
         delete p;
     }
 }
