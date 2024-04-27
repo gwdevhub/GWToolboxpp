@@ -15,6 +15,11 @@
 #include <GWCA/GWCA.h>
 #include <GWCA/Utilities/Hooker.h>
 
+namespace {
+    bool terminating = false;
+    std::thread terminator;
+}
+
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
     static InstanceTimer instance;
@@ -60,13 +65,19 @@ void InstanceTimer::Initialize(ImGuiContext* ctx, ImGuiAllocFns , HMODULE )
 void InstanceTimer::SignalTerminate()
 {
     GW::DisableHooks();
+    terminating = true;
+    // Run GW::Terminate in a separate thread, just in case we're calling this from inside a hook already!
+    terminator = std::thread([] {
+        GW::Terminate();
+        terminating = false;
+        });
 }
 void InstanceTimer::Terminate()
 {
-    GW::Terminate();
+    terminator.join();
 }
 bool InstanceTimer::CanTerminate() {
-    return GW::Hook::GetInHookCount() == 0;
+    return GW::Hook::GetInHookCount() == 0 && terminating == false;
 }
 
 void InstanceTimer::Draw(IDirect3DDevice9*)
