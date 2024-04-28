@@ -299,7 +299,7 @@ void PluginModule::SignalTerminate()
 {
     ToolboxUIElement::SignalTerminate();
     for (const auto plugin : plugins_loaded) {
-        plugin->terminating = true;
+        UnloadPlugin(plugin);
     }
 }
 
