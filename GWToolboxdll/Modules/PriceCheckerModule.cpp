@@ -501,16 +501,16 @@ namespace {
 
     std::wstring PrintPrice(float price, const char* name = nullptr) {
         auto unit = L'g';
-        auto color = L"ffffff";
+        auto color = L"@ItemCommon";
         if (price > high_price_threshold) {
-            color = L"ffd600";
+            color = L"@ItemRare";
         }
 
         if (price > 1000.f) {
             price /= 1000.f;
             unit = L'k';
         }
-        return std::format(L"\x2\x108\x107\n<c=#{}>{}: {:.4g}{}</c>\x1", color, name && *name ? GuiUtils::StringToWString(name) : L"Item price", price, unit);
+        return std::format(L"\x2\x108\x107\n<c={}>{}: {:.4g}{}</c>\x1", color, name && *name ? GuiUtils::StringToWString(name) : L"Item price", price, unit);
     }
 
     void UpdateDescription(const uint32_t item_id, wchar_t** description_out)
@@ -535,13 +535,15 @@ namespace {
                 continue;
             modified_description.append(PrintPrice(price, name->second));
         }
-        const auto model_id_str = std::to_string(item->model_id);
-        auto price = GetPriceById(model_id_str.c_str());
-        if (price > .0f) {
-            if (IsCommonMaterial(item)) {
-                price = price / 10;
+        if (item->type == GW::Constants::ItemType::Materials_Zcoins) {
+            const auto model_id_str = std::to_string(item->model_id);
+            auto price = GetPriceById(model_id_str.c_str());
+            if (price > .0f) {
+                if (IsCommonMaterial(item)) {
+                    price = price / 10;
+                }
+                modified_description += PrintPrice(price);
             }
-            modified_description += PrintPrice(price);
         }
 
         *description_out = modified_description.data();
