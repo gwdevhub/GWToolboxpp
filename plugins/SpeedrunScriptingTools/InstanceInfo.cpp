@@ -1,8 +1,11 @@
 #include <InstanceInfo.h>
 
+#include <GWCA/GameEntities/Party.h>
+
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Packets/StoC.h>
@@ -54,6 +57,7 @@ void InstanceInfo::initialize()
 
         this->questStatus.clear();
         this->decodedNames.clear();
+        this->playerDecodedNames.clear();
 
         mpStatus.poppedMinipetId = std::nullopt;
         mpStatus.lastPop = std::chrono::steady_clock::now() - 1h;
@@ -111,6 +115,22 @@ std::string InstanceInfo::getDecodedName(GW::AgentID id)
         GW::Agents::AsyncGetAgentName(agent, wName);
     }
     return WStringToString(wName);
+}
+
+void InstanceInfo::update() 
+{
+
+    const auto info = GW::PartyMgr::GetPartyInfo();
+    if (!info || info->players.size() == playerDecodedNames.size()) return;
+
+    const auto agentArray = GW::Agents::GetAgentArray();
+    if (!agentArray) return;
+
+    for (const auto& player : info->players) {
+        const auto id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
+        if (id && !playerDecodedNames.contains(id))
+            playerDecodedNames[id] = getDecodedName(id);
+    }
 }
 
 bool InstanceInfo::canPopAgent() const {
