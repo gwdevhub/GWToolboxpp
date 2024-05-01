@@ -86,6 +86,10 @@ namespace {
         if (!GetActionLabel_Func) {
             return;
         }
+        HotkeyGWKey::control_labels.clear();
+        for (size_t i = 0x80; i < 0x12a; i++) {
+            HotkeyGWKey::control_labels.push_back({ (GW::UI::ControlAction)i,nullptr });
+        }
         for (auto& [action, label] : HotkeyGWKey::control_labels) {
             label = new GuiUtils::EncString(GetActionLabel_Func(action));
         }
