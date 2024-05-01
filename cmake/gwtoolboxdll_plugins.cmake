@@ -40,5 +40,4 @@ macro(add_tb_plugin PLUGIN)
     set_target_properties(${PLUGIN} PROPERTIES FOLDER "plugins/")
 endmacro()
 
-add_tb_plugin(clock)
 add_tb_plugin(InstanceTimer)

@@ -97,7 +97,6 @@ namespace {
 
     GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Func = nullptr;
     GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Ret = nullptr;
-    bool closing_gw = false;
 
     void OnMinOrRestoreOrExitBtnClicked(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
     {
@@ -113,6 +112,7 @@ namespace {
                 param->current_state = 0x5; // Revert state to avoid GW closing the window on mouse up
 
                 // Left button clicked, on the exit button (ID 0x3)
+                static bool closing_gw = false;
                 if (!closing_gw) {
                     SendMessage(gw_window_handle, WM_CLOSE, NULL, NULL);
                 }
