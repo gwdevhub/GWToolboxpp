@@ -446,7 +446,7 @@ constexpr std::vector<bool> huffmanEncode(const std::string& str)
         if (i == 62) 
             return '_';
         if (i == 63) 
-            return '-';
+            return '#';
         assert(false);
         return 0;
     };
@@ -493,7 +493,7 @@ std::vector<bool> combineIntoBitSequence(std::string&& str)
         {
             append(makeBitSequence(62, 6));
         }
-        else if (c == '-') 
+        else if (c == '#') 
         {
             append(makeBitSequence(63, 6));
         }
