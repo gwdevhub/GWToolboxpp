@@ -368,7 +368,8 @@ namespace {
             }
             break;
             case GW::UI::UIMessage::kSendChatMessage: {
-                const auto message = *(wchar_t**)wparam;
+                const auto packet = (GW::UI::UIPacket::kSendChatMessage*)wparam;
+                const auto message = packet->message;
                 const auto channel = GW::Chat::GetChannel(*message);
                 // If this outgoing whisper was created due to a redirect, or its not a whisper, drop out here.
                 if (is_redirecting_whisper || channel != GW::Chat::CHANNEL_WHISPER) {
@@ -379,7 +380,7 @@ namespace {
                     return;
                 }
                 // If the recipient is in my friend list, but under a different player name, redirect it now...
-                const auto target = std::wstring(message, separator_pos);
+                const auto target = std::wstring(&message[1], separator_pos);
                 const auto text = separator_pos + 1;
                 if (const auto friend_ = FriendListWindow::GetFriend(target.c_str())) {
                     const auto& friendname = friend_->current_char->getNameW();
@@ -1029,7 +1030,7 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
     }
     const float height = ImGui::GetTextLineHeightWithSpacing();
     if (show_my_status) {
-        auto status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
+        auto status = std::to_underlying(GW::FriendListMgr::GetMyStatus());
         ImGui::Text("You are:");
         ImGui::SameLine();
         const ImVec2 pos = ImGui::GetCursorPos();

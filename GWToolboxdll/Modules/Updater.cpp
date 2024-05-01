@@ -9,6 +9,10 @@
 
 namespace {
     // 0=none, 1=check and warn, 2=check and ask, 3=check and do
+    enum class ReleaseType : uint8_t {
+        Stable,
+        Beta
+    };
     enum class Mode : uint8_t {
         DontCheckForUpdates,
         CheckAndWarn,
@@ -16,6 +20,7 @@ namespace {
         CheckAndAutoUpdate
     };
 
+    ReleaseType release_type = ReleaseType::Stable;
     Mode mode = Mode::CheckAndAsk;
 
     // 0=checking, 1=asking, 2=downloading, 3=done
@@ -69,8 +74,12 @@ namespace {
             if (!(js.contains("tag_name") && js["tag_name"].is_string())) {
                 continue;
             }
+            const auto is_prerelease = js["prerelease"].get<bool>();
+            if (is_prerelease && release_type == ReleaseType::Stable) {
+                continue;
+            }
             auto tag_name = js["tag_name"].get<std::string>();
-            const size_t version_number_len = tag_name.find("_Release", 0);
+            const auto version_number_len = tag_name.find(tag_name.contains("_Release") ? "_Release" : "_Beta", 0);
             if (version_number_len == std::string::npos) {
                 continue;
             }
@@ -200,8 +209,10 @@ void Updater::LoadSettings(ToolboxIni* ini)
     ToolboxModule::LoadSettings(ini);
 #ifdef _DEBUG
     mode = static_cast<Mode>(0);
+    release_type = ReleaseType::Beta;
 #else
     mode = static_cast<Mode>(ini->GetLongValue(Name(), "update_mode", static_cast<int>(mode)));
+    release_type = static_cast<ReleaseType>(ini->GetLongValue(Name(), "update_release_type", static_cast<int>(release_type)));
 #endif
     CheckForUpdate();
 }
@@ -212,6 +223,7 @@ void Updater::SaveSettings(ToolboxIni* ini)
 #ifdef _DEBUG
 #else
     ini->SetLongValue(Name(), "update_mode", static_cast<int>(mode));
+    ini->SetLongValue(Name(), "update_release_type", static_cast<int>(release_type));
     ini->SetValue(Name(), "dllversion", GWTOOLBOXDLL_VERSION);
 
     const HMODULE module = GWToolbox::GetDLLModule();
@@ -223,12 +235,15 @@ void Updater::SaveSettings(ToolboxIni* ini)
 
 void Updater::DrawSettingsInternal()
 {
-    ImGui::Text("Update mode:");
+    ImGui::Text("Release channel:");
     const float btnWidth = 180.0f * ImGui::GetIO().FontGlobalScale;
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - btnWidth);
     if (ImGui::Button(step == Checking ? "Checking..." : "Check for updates", ImVec2(btnWidth, 0)) && step != Checking) {
         CheckForUpdate(true);
     }
+    ImGui::RadioButton("Stable", (int*)&release_type, static_cast<int>(ReleaseType::Stable));
+    ImGui::RadioButton("Beta", (int*)&release_type, static_cast<int>(ReleaseType::Beta));
+    ImGui::Text("Update mode:");
     ImGui::RadioButton("Do not check for updates", (int*)&mode, static_cast<int>(Mode::DontCheckForUpdates));
     ImGui::RadioButton("Check and display a message", (int*)&mode, static_cast<int>(Mode::CheckAndWarn));
     ImGui::RadioButton("Check and ask before updating", (int*)&mode, static_cast<int>(Mode::CheckAndAsk));

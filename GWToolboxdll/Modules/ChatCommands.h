@@ -121,7 +121,7 @@ private:
 
     float cam_speed = DEFAULT_CAM_SPEED;
     bool forward_fix_z = true;
-    uint32_t default_title_id = static_cast<uint32_t>(GW::Constants::TitleID::Lightbringer);
+    uint32_t default_title_id = std::to_underlying(GW::Constants::TitleID::Lightbringer);
 
     struct SearchAgent {
         clock_t started = 0;

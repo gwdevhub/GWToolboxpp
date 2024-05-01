@@ -41,7 +41,7 @@ namespace GWArmory {
     const uint32_t* GetFileIdsForCostume(uint32_t costume_model_file_id, GW::Constants::Profession profession = GW::Constants::Profession::Warrior, ItemSlot slot = ItemSlot::Boots) {
         if (!costume_data_ptr)
             return nullptr;
-        uint32_t profession_idx = static_cast<uint32_t>(profession) - 1;
+        uint32_t profession_idx = std::to_underlying(profession) - 1;
         uint32_t slot_idx = 0;
         switch (slot) {
         case ItemSlot::Boots:
@@ -75,7 +75,7 @@ namespace GWArmory {
     const uint32_t* GetFileIdForFestivalHat(uint32_t festival_hat_model_file_id, GW::Constants::Profession profession = GW::Constants::Profession::Warrior) {
         if (!festival_hat_data_ptr)
             return nullptr;
-        uint32_t profession_idx = static_cast<uint32_t>(profession) - 1;
+        uint32_t profession_idx = std::to_underlying(profession) - 1;
         for (const auto& set : festival_hat_data_ptr->sets) {
             for (const auto& profession_file_ids : set) {
                 for (const auto& file_id : profession_file_ids) {
@@ -196,7 +196,7 @@ namespace GWArmory {
 
     ImVec4 ImVec4FromDyeColor(GW::DyeColor color)
     {
-        const uint32_t color_id = static_cast<uint32_t>(color) - static_cast<uint32_t>(GW::DyeColor::Blue);
+        const uint32_t color_id = std::to_underlying(color) - std::to_underlying(GW::DyeColor::Blue);
         switch (color) {
             case GW::DyeColor::Blue:
             case GW::DyeColor::Green:
@@ -357,10 +357,10 @@ namespace GWArmory {
         if (col1 == GW::DyeColor::None && col2 == GW::DyeColor::None && col3 == GW::DyeColor::None && col4 == GW::DyeColor::None) {
             col1 = GW::DyeColor::Gray;
         }
-        const auto c1 = static_cast<uint32_t>(col1);
-        const auto c2 = static_cast<uint32_t>(col2);
-        const auto c3 = static_cast<uint32_t>(col3);
-        const auto c4 = static_cast<uint32_t>(col4);
+        const auto c1 = std::to_underlying(col1);
+        const auto c2 = std::to_underlying(col2);
+        const auto c3 = std::to_underlying(col3);
+        const auto c4 = std::to_underlying(col4);
         const uint32_t composite = c1 | c2 << 4 | c3 << 8 | c4 << 12;
         return composite;
     }
@@ -371,7 +371,6 @@ namespace GWArmory {
             return;
         if (drawn_pieces[slot].model_file_id && drawn_pieces[slot].interaction) {
             // Backup via copy
-            auto original = equip->items[slot];
             equip->items[slot] = drawn_pieces[slot];
 
             // Clear the slot(s)
@@ -380,7 +379,7 @@ namespace GWArmory {
             gwarmory_setitem = false;
 
             // Swap the data back
-            equip->items[slot] = { 0 };
+            equip->items[slot] = {};
         }
         
     }
@@ -916,12 +915,12 @@ void ArmoryWindow::Initialize()
 
     RedrawAgentEquipment_Func = (EquipmentSlotAction_pt)GW::Scanner::FindAssertion("p:\\code\\gw\\composite\\cpsplayer.cpp", "itemData.fileId",-0x1fc);
     if (RedrawAgentEquipment_Func) {
-        GW::Hook::CreateHook(RedrawAgentEquipment_Func, OnRedrawAgentEquipment, (void**)&RedrawAgentEquipment_Ret);
+        GW::Hook::CreateHook((void**)&RedrawAgentEquipment_Func, OnRedrawAgentEquipment, (void**)&RedrawAgentEquipment_Ret);
         GW::Hook::EnableHooks(RedrawAgentEquipment_Func);
     }
     UndrawAgentEquipment_Func = (EquipmentSlotAction_pt)GW::Scanner::Find("\x0f\xb7\x8f\xe0\x03\x00\x00\x0f\xb7\x87\xe2\x03\x00\x00", "xxxxxxxxxxxxxx",-0x2f);
     if (UndrawAgentEquipment_Func) {
-        GW::Hook::CreateHook(UndrawAgentEquipment_Func, OnUndrawAgentEquipment, (void**)&UndrawAgentEquipment_Ret);
+        GW::Hook::CreateHook((void**)&UndrawAgentEquipment_Func, OnUndrawAgentEquipment, (void**)&UndrawAgentEquipment_Ret);
         GW::Hook::EnableHooks(UndrawAgentEquipment_Func);
     }
 

@@ -112,12 +112,12 @@ void LoginModule::Initialize()
         return InitialiationFailure("Failed to initialize GetStringParameter_Func");
     }
     {
-        int res = GW::HookBase::CreateHook(PortalAccountLogin_Func, OnPortalAccountLogin, (void**)&PortalAccountLogin_Ret);
+        int res = GW::HookBase::CreateHook((void**)&PortalAccountLogin_Func, OnPortalAccountLogin, (void**)&PortalAccountLogin_Ret);
         if (res == -1) {
             return InitialiationFailure("Failed to hook PortalAccountLogin_Func");
         }
 
-        res = GW::HookBase::CreateHook(GetStringParameter_Func, OnGetStringParameter, (void**)&GetStringParameter_Ret);
+        res = GW::HookBase::CreateHook((void**)&GetStringParameter_Func, OnGetStringParameter, (void**)&GetStringParameter_Ret);
         if (res == -1) {
             return InitialiationFailure("Failed to hook GetStringParameter_Func");
         }
@@ -149,7 +149,7 @@ void LoginModule::Update(float)
             }
             if (original_charname_parameter != nullptr && *original_charname_parameter != '\0') {
                 // we want to pre-select a character, set order to alphabetical so we don't get stuck on empty char slots when using arrow keys
-                SetCharSortOrder(static_cast<uint32_t>(GW::Constants::Preference::CharSortOrder::Alphabetize));
+                SetCharSortOrder(std::to_underlying(GW::Constants::Preference::CharSortOrder::Alphabetize));
             }
             if (IsCharSelectReady()) {
                 state = LoginState::FindCharacterIndex;

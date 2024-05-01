@@ -12,6 +12,13 @@
 #include <Defines.h>
 #include <Timer.h>
 #include <Utils/GuiUtils.h>
+#include <GWCA/GWCA.h>
+#include <GWCA/Utilities/Hooker.h>
+
+namespace {
+    bool terminating = false;
+    std::thread terminator;
+}
 
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 {
@@ -48,6 +55,29 @@ void InstanceTimer::DrawSettings()
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Such as Deep Aspects");
     }
+}
+
+void InstanceTimer::Initialize(ImGuiContext* ctx, ImGuiAllocFns , HMODULE )
+{
+    ImGui::SetCurrentContext(ctx);
+    GW::Initialize();
+}
+void InstanceTimer::SignalTerminate()
+{
+    GW::DisableHooks();
+    terminating = true;
+    // Run GW::Terminate in a separate thread, just in case we're calling this from inside a hook already!
+    terminator = std::thread([] {
+        GW::Terminate();
+        terminating = false;
+        });
+}
+void InstanceTimer::Terminate()
+{
+    terminator.join();
+}
+bool InstanceTimer::CanTerminate() {
+    return GW::Hook::GetInHookCount() == 0 && terminating == false;
 }
 
 void InstanceTimer::Draw(IDirect3DDevice9*)

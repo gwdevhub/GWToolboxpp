@@ -271,7 +271,7 @@ namespace {
         for (auto& effect : readd_effects) {
             remove.effect_id = effect.effect_id;
             GW::StoC::EmulatePacket(&remove);
-            add.skill_id = static_cast<uint32_t>(effect.skill_id);
+            add.skill_id = std::to_underlying(effect.skill_id);
             add.effect_id = effect.effect_id;
             add.duration = effect.duration;
             add.attribute_level = effect.attribute_level;

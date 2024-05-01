@@ -594,7 +594,7 @@ void ChatLog::Initialize()
         uintptr_t address = GW::Scanner::FindAssertion(R"(p:\code\gw\chat\ctchatedit.cpp)", "length", -0x5A);
         if (address) {
             AddToSentLog_Func = (AddToSentLog_pt)address;
-            GW::Hook::CreateHook(AddToSentLog_Func, OnAddToSentLog, (void**)&RetAddToSentLog);
+            GW::Hook::CreateHook((void**)&AddToSentLog_Func, OnAddToSentLog, (void**)&RetAddToSentLog);
             GW::Hook::EnableHooks(AddToSentLog_Func);
             address += 0x17;
             gw_sent_log_ptr = *(uintptr_t*)address;

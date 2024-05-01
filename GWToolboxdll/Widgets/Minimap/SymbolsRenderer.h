@@ -17,16 +17,21 @@ private:
     void Initialize(IDirect3DDevice9* device) override;
 
     Color color_quest = 0;
+    Color color_other_quests = 0;
     Color color_north = 0;
     Color color_modifier = 0;
-
-    bool render_all_quests = false;
 
     const DWORD star_ntriangles = 16;
     DWORD star_offset = 0;
 
+    const DWORD other_star_ntriangles = 16;
+    DWORD other_star_offset = 0;
+
     const DWORD arrow_ntriangles = 2;
     DWORD arrow_offset = 0;
+
+    const DWORD other_arrow_ntriangles = 2;
+    DWORD other_arrow_offset = 0;
 
     const DWORD north_ntriangles = 2;
     DWORD north_offset = 0;

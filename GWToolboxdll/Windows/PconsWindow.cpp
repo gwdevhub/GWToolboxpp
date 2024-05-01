@@ -310,7 +310,7 @@ void PconsWindow::OnSpeechBubble(GW::HookStatus* status, const GW::Packet::StoC:
         L"\x8102\x492B\xC39F\xD6FA",
         L"\x8102\x4923\xAA60\x9F98", // end grog messages
     };
-    if (std::ranges::find(msgs, msg) != std::ranges::end(msgs)) {
+    if (std::ranges::contains(msgs, msg)) {
         status->blocked = true;
     }
 
@@ -438,20 +438,24 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
         }
         ImGui::PopStyleColor();
     }
-    int j = 0;
-    for (auto i = 0u; i < pcons.size(); i++) {
-        if (pcons[i]->IsVisible()) {
-            if (j++ % items_per_row > 0) {
-                ImGui::SameLine(0, 2.0f);
-            }
-            pcons[i]->Draw(device);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(1, 1));
+    
+    if (ImGui::BeginTable("#pcons_table", std::max(items_per_row,1)))
+    {
+        for (auto pcon : pcons) {
+            if (!pcon->IsVisible())
+                continue;
+            ImGui::TableNextColumn();
+            pcon->Draw(device);
         }
+        ImGui::EndTable();
     }
+    ImGui::PopStyleVar(4);
 
     if (instance_type == InstanceType::Explorable && show_auto_disable_pcons_tickbox) {
-        if (j && j % items_per_row > 0) {
-            ImGui::NewLine();
-        }
         if (!current_objectives_to_check.empty()) {
             ImGui::Checkbox("Off @ end", &disable_cons_on_objective_completion);
             ImGui::ShowHelp(disable_cons_on_objective_completion_hint);
@@ -663,6 +667,7 @@ void PconsWindow::LoadSettings(ToolboxIni* ini)
     Pcon::suppress_drunk_emotes = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), Pcon::suppress_drunk_emotes);
     Pcon::suppress_lunar_skills = ini->GetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), Pcon::suppress_lunar_skills);
     Pcon::pcons_by_character = ini->GetBoolValue(Name(), VAR_NAME(pcons_by_character), Pcon::pcons_by_character);
+    Pcon::hide_city_pcons_in_explorable_areas = ini->GetBoolValue(Name(), VAR_NAME(hide_city_pcons_in_explorable_areas), Pcon::hide_city_pcons_in_explorable_areas);
     Pcon::refill_if_below_threshold = ini->GetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), Pcon::refill_if_below_threshold);
     LOAD_BOOL(show_auto_refill_pcons_tickbox);
     LOAD_BOOL(show_auto_disable_pcons_tickbox);

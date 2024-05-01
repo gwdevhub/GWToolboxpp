@@ -246,8 +246,8 @@ namespace {
             } break;
             }
         }
-        for (size_t i = 0; i < _countof(icon_file_ids) && icon_file_ids[i] != WorldMapIcon::None;i++) {
-            icons_out[i] = GwDatTextureModule::LoadTextureFromFileId(static_cast<uint32_t>(icon_file_ids[i]));
+        for (size_t i = 0; i < _countof(icon_file_ids) && icon_file_ids[i] != WorldMapIcon::None; i++) {
+            icons_out[i] = GwDatTextureModule::LoadTextureFromFileId(std::to_underlying(icon_file_ids[i]));
         }
        
     }
@@ -756,16 +756,16 @@ void Mission::CheckProgress(const std::wstring& player_name)
         missions_complete = &player_completion->mission_hm;
         missions_bonus = &player_completion->mission_bonus_hm;
     }
-    map_unlocked = player_completion->maps_unlocked.empty() || ArrayBoolAt(player_completion->maps_unlocked, static_cast<uint32_t>(outpost));
-    is_completed = ArrayBoolAt(*missions_complete, static_cast<uint32_t>(outpost));
-    bonus = ArrayBoolAt(*missions_bonus, static_cast<uint32_t>(outpost));
+    map_unlocked = player_completion->maps_unlocked.empty() || ArrayBoolAt(player_completion->maps_unlocked, std::to_underlying(outpost));
+    is_completed = ArrayBoolAt(*missions_complete, std::to_underlying(outpost));
+    bonus = ArrayBoolAt(*missions_bonus, std::to_underlying(outpost));
 
     GW::Array<uint32_t> complete_arr;
-    complete_arr.m_buffer = (uint32_t*)missions_complete->data();
+    complete_arr.m_buffer = const_cast<uint32_t*>(missions_complete->data());
     complete_arr.m_capacity = complete_arr.m_size = missions_complete->size();
 
     GW::Array<uint32_t> bonus_arr;
-    bonus_arr.m_buffer = (uint32_t*)missions_bonus->data();
+    bonus_arr.m_buffer = const_cast<uint32_t*>(missions_bonus->data());
     bonus_arr.m_capacity = bonus_arr.m_size = missions_bonus->size();
 
     mission_state = ToolboxUtils::GetMissionState(outpost, complete_arr, bonus_arr);
@@ -779,7 +779,7 @@ void OutpostUnlock::CheckProgress(const std::wstring& player_name) {
         return;
     }
     const auto& player_completion = completion.at(player_name);
-    is_completed = bonus = map_unlocked = ArrayBoolAt(player_completion->maps_unlocked, static_cast<uint32_t>(outpost));
+    is_completed = bonus = map_unlocked = ArrayBoolAt(player_completion->maps_unlocked, std::to_underlying(outpost));
 
     GetOutpostIcons(outpost, icons, 0);
 }
@@ -838,12 +838,12 @@ void HeroUnlock::CheckProgress(const std::wstring& player_name)
         return;
     }
     auto& heroes = skills.at(player_name)->heroes;
-    is_completed = bonus = std::ranges::find(heroes, static_cast<uint32_t>(skill_id)) != heroes.end();
+    is_completed = bonus = std::ranges::contains(heroes, std::to_underlying(skill_id));
 }
 
 const char* HeroUnlock::Name()
 {
-    return hero_names[static_cast<uint32_t>(skill_id)];
+    return hero_names[std::to_underlying(skill_id)];
 }
 
 size_t HeroUnlock::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
@@ -983,7 +983,7 @@ void PvESkill::CheckProgress(const std::wstring& player_name)
         return;
     }
     const auto& unlocked = skills.at(player_name)->skills;
-    is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(skill_id));
+    is_completed = bonus = ArrayBoolAt(unlocked, std::to_underlying(skill_id));
 }
 
 FactionsPvESkill::FactionsPvESkill(const SkillID skill_id)
@@ -1023,7 +1023,7 @@ void Vanquish::CheckProgress(const std::wstring& player_name)
         return;
     }
     const auto& unlocked = completion.at(player_name)->vanquishes;
-    is_completed = bonus = ArrayBoolAt(unlocked, static_cast<uint32_t>(outpost));
+    is_completed = bonus = ArrayBoolAt(unlocked, std::to_underlying(outpost));
     mission_state = is_completed ? 0x7 : 0x0;
 
     GetOutpostIcons(outpost, icons, mission_state, true);
@@ -2741,7 +2741,7 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
     for (const auto& char_unlocks : character_completion) {
         CharacterCompletion* char_comp = char_unlocks.second;
         const std::string* name = &char_comp->name_str;
-        completion_ini->SetLongValue(name->c_str(), "profession", static_cast<uint32_t>(char_comp->profession));
+        completion_ini->SetLongValue(name->c_str(), "profession", std::to_underlying(char_comp->profession));
         completion_ini->SetValue(name->c_str(), "account", GuiUtils::WStringToString(char_comp->account).c_str());
         write_buf_to_ini("mission", &char_comp->mission, ini_str, name);
         write_buf_to_ini("mission_bonus", &char_comp->mission_bonus, ini_str, name);

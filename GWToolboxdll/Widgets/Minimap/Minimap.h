@@ -94,6 +94,7 @@ public:
     GameWorldRenderer game_world_renderer;
 
     static bool ShouldMarkersDrawOnMap();
+    static bool ShouldDrawAllQuests();
     static void Render(IDirect3DDevice9* device);
 
 private:
@@ -140,7 +141,7 @@ private:
 
     bool hero_flag_controls_show = false;
     bool hero_flag_window_attach = true;
-    Color hero_flag_window_background = 0;
+    Color hero_flag_controls_background = 0;
     std::vector<GW::AgentID> player_heroes{};
 
     static size_t GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);

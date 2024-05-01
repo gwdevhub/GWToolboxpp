@@ -40,10 +40,9 @@ namespace {
         plugin.initialized = false;
         plugin.terminating = false;
         plugin.instance = nullptr;
-        if (plugin.dll) {
-            ASSERT(FreeLibrary(plugin.dll));
+        if (SUCCEEDED(FreeLibrary(plugin.dll))) {
+            plugin.dll = nullptr;
         }
-        plugin.dll = nullptr;
         std::erase_if(plugins_loaded, [plugin_ptr](auto p) { return p == plugin_ptr; });
         return true;
     }
@@ -117,7 +116,7 @@ namespace {
                 }
             }
             if (ext == ".dll") {
-                auto found = std::ranges::find_if(plugins_available, [file_path](const auto plugin) {
+                const auto found = std::ranges::find_if(plugins_available, [file_path](const auto plugin) {
                     return plugin->path == file_path;
                 });
                 if (found == plugins_available.end()) {
@@ -192,9 +191,7 @@ void PluginModule::DrawSettingsInternal()
 
 bool PluginModule::CanTerminate()
 {
-    return std::ranges::all_of(plugins_loaded, [](const auto plugin) {
-        return !plugin->instance || plugin->instance->CanTerminate();
-    });
+    return plugins_loaded.empty();
 }
 
 bool PluginModule::WndProc(const UINT msg, const WPARAM wParam, const LPARAM lParam)
@@ -262,7 +259,7 @@ void PluginModule::LoadSettings(ToolboxIni* ini)
                 return plugin->path.filename() == filename;
             });
             // Find any matching plugins and load them
-            for (auto plugin : matching_plugins) {
+            for (const auto plugin : matching_plugins) {
                 if (!LoadPlugin(plugin)) {
                     continue;
                 }
@@ -273,7 +270,7 @@ void PluginModule::LoadSettings(ToolboxIni* ini)
     }
     // Find any plugins that are currently loaded but not supposed to be
     auto to_unload = std::views::filter(plugins_loaded, [&](auto plugin) {
-        return std::ranges::find(plugins_loaded_from_ini, plugin) == plugins_loaded_from_ini.end();
+        return !std::ranges::contains(plugins_loaded_from_ini, plugin);
     });
     for (const auto plugin : std::views::reverse(to_unload)) {
         UnloadPlugin(plugin);
@@ -304,18 +301,18 @@ void PluginModule::Update(const float delta)
 void PluginModule::SignalTerminate()
 {
     ToolboxUIElement::SignalTerminate();
-    const auto plugins_cpy = plugins_loaded;
-    for (const auto p : std::views::reverse(plugins_cpy)) {
-        UnloadPlugin(p);
+    for (const auto plugin : plugins_loaded) {
+        UnloadPlugin(plugin);
     }
 }
 
 void PluginModule::Terminate()
 {
-    ToolboxUIElement::Terminate();
-    SignalTerminate();
     ASSERT(plugins_loaded.empty());
     for (const auto p : plugins_available) {
+        if (p->dll) {
+            FreeLibrary(p->dll);
+        }
         delete p;
     }
 }

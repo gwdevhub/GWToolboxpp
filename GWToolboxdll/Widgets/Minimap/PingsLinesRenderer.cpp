@@ -110,8 +110,9 @@ void PingsLinesRenderer::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_
     bool new_session;
 
     if (drawings[packet->player_number].player == packet->player_number) {
-        new_session = drawings[packet->player_number].session != packet->session_id;
-        drawings[packet->player_number].session = packet->session_id;
+        return; // Don't need to draw our own compass markings
+        //new_session = drawings[packet->player_number].session != packet->session_id;
+        //drawings[packet->player_number].session = packet->session_id;
     }
     else {
         drawings[packet->player_number].player = packet->player_number;
@@ -510,7 +511,7 @@ bool PingsLinesRenderer::OnMouseMove(const float x, const float y)
         l.y1 = mouse_y;
         l.x2 = mouse_x = x;
         l.y2 = mouse_y = y;
-        //drawings[me->player_number].lines.push_back(l);
+        drawings[me->player_number].lines.push_back(l);
 
         if (TIMER_DIFF(lastqueued) > queue_interval
             || TIMER_DIFF(lastsent) > send_interval) {

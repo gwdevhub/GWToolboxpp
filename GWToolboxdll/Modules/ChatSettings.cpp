@@ -154,7 +154,7 @@ namespace {
         if (status->blocked) {
             return; // Sender blocked, packet handled.
         }
-        if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number) {
+        if (pak->channel != std::to_underlying(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number) {
             return; // Not team chat or no sender
         }
         std::wstring message(ToolboxUtils::GetMessageCore());

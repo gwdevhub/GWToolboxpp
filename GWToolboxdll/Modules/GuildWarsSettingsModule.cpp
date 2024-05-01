@@ -72,7 +72,7 @@ namespace {
         "VolMaster",
         "ClockMode"
     };
-    static_assert(_countof(number_pref_names) == static_cast<uint32_t>(GW::UI::NumberPreference::Count));
+    static_assert(_countof(number_pref_names) == std::to_underlying(GW::UI::NumberPreference::Count));
 
     const char* enum_pref_names[] = {
         "CharSortOrder",
@@ -84,7 +84,7 @@ namespace {
         "UiScale",
         "FpsLimit"
     };
-    static_assert(_countof(enum_pref_names) == static_cast<uint32_t>(GW::UI::EnumPreference::Count));
+    static_assert(_countof(enum_pref_names) == std::to_underlying(GW::UI::EnumPreference::Count));
 
     const char* flag_pref_names[] = {
         "FlagPref_0x0",
@@ -181,7 +181,7 @@ namespace {
         "FlagPref_0x5B",
         "LockCompassRotation"
     };
-    static_assert(_countof(flag_pref_names) == static_cast<uint32_t>(GW::UI::FlagPreference::Count));
+    static_assert(_countof(flag_pref_names) == std::to_underlying(GW::UI::FlagPreference::Count));
 
     const char* ini_label_numbers = "Preference Values";
     const char* ini_label_enums = "Preference Enums";
@@ -239,20 +239,20 @@ namespace {
     // Read preferences from in-game memory to a PreferencesStruct
     void GetPreferences(PreferencesStruct& out)
     {
-        out.preference_values.resize(static_cast<uint32_t>(GW::UI::NumberPreference::Count), 0);
-        for (auto i = 0u; i < static_cast<uint32_t>(GW::UI::NumberPreference::Count); i++) {
+        out.preference_values.resize(std::to_underlying(GW::UI::NumberPreference::Count), 0);
+        for (auto i = 0u; i < std::to_underlying(GW::UI::NumberPreference::Count); i++) {
             out.preference_values[i] = GetPreference(static_cast<GW::UI::NumberPreference>(i));
         }
-        out.preference_enums.resize(static_cast<uint32_t>(GW::UI::EnumPreference::Count), 0);
-        for (auto i = 0u; i < static_cast<uint32_t>(GW::UI::EnumPreference::Count); i++) {
+        out.preference_enums.resize(std::to_underlying(GW::UI::EnumPreference::Count), 0);
+        for (auto i = 0u; i < std::to_underlying(GW::UI::EnumPreference::Count); i++) {
             out.preference_enums[i] = GetPreference(static_cast<GW::UI::EnumPreference>(i));
         }
-        out.preference_flags.resize(static_cast<uint32_t>(GW::UI::FlagPreference::Count), 0);
-        for (auto i = 0u; i < static_cast<uint32_t>(GW::UI::FlagPreference::Count); i++) {
+        out.preference_flags.resize(std::to_underlying(GW::UI::FlagPreference::Count), 0);
+        for (auto i = 0u; i < std::to_underlying(GW::UI::FlagPreference::Count); i++) {
             out.preference_flags[i] = GetPreference(static_cast<GW::UI::FlagPreference>(i));
         }
         out.window_positions.resize(GW::UI::WindowID::WindowID_Count, {0});
-        for (auto i = 0u; i < static_cast<uint32_t>(GW::UI::WindowID::WindowID_Count); i++) {
+        for (auto i = 0u; i < std::to_underlying(GW::UI::WindowID::WindowID_Count); i++) {
             out.window_positions[i] = *GetWindowPosition(static_cast<GW::UI::WindowID>(i));
         }
         out.key_mappings.resize(key_mappings_array_length, 0);
@@ -265,16 +265,16 @@ namespace {
     // Write preferences to the game from a PreferencesStruct. Run this on the game thread.
     void SetPreferences(PreferencesStruct& in)
     {
-        for (auto i = 0u; i < in.preference_values.size() && i < static_cast<uint32_t>(GW::UI::NumberPreference::Count); i++) {
+        for (auto i = 0u; i < in.preference_values.size() && i < std::to_underlying(GW::UI::NumberPreference::Count); i++) {
             SetPreference(static_cast<GW::UI::NumberPreference>(i), in.preference_values[i]);
         }
-        for (auto i = 0u; i < in.preference_enums.size() && i < static_cast<uint32_t>(GW::UI::EnumPreference::Count); i++) {
+        for (auto i = 0u; i < in.preference_enums.size() && i < std::to_underlying(GW::UI::EnumPreference::Count); i++) {
             SetPreference(static_cast<GW::UI::EnumPreference>(i), in.preference_enums[i]);
         }
-        for (auto i = 0u; i < in.preference_flags.size() && i < static_cast<uint32_t>(GW::UI::FlagPreference::Count); i++) {
+        for (auto i = 0u; i < in.preference_flags.size() && i < std::to_underlying(GW::UI::FlagPreference::Count); i++) {
             SetPreference(static_cast<GW::UI::FlagPreference>(i), in.preference_flags[i]);
         }
-        for (auto i = 0u; i < in.window_positions.size() && i < static_cast<uint32_t>(GW::UI::WindowID::WindowID_Count); i++) {
+        for (auto i = 0u; i < in.window_positions.size() && i < std::to_underlying(GW::UI::WindowID::WindowID_Count); i++) {
             SetWindowPosition(static_cast<GW::UI::WindowID>(i), &in.window_positions[i]);
         }
         for (auto i = 0u; i < in.key_mappings.size() && i < key_mappings_array_length; i++) {
@@ -682,14 +682,14 @@ void GuildWarsSettingsModule::Initialize()
     address = GW::Scanner::Find("\x89\x77\x1c\x5f\x5e\x8b\xe5\x5d\xc2\x04\x00", "xxxxxxxxxxx", -0x155);
     if (address) {
         OnQuestEntryGroupInteract_Func = (OnQuestEntryGroupInteract_pt)address;
-        GW::Hook::CreateHook(OnQuestEntryGroupInteract_Func, OnQuestEntryGroupInteract, (void**)&OnQuestEntryGroupInteract_Ret);
+        GW::Hook::CreateHook((void**)&OnQuestEntryGroupInteract_Func, OnQuestEntryGroupInteract, (void**)&OnQuestEntryGroupInteract_Ret);
         GW::Hook::EnableHooks(OnQuestEntryGroupInteract_Func);
 
         quest_entry_group_context = *(QuestEntryGroupContext**)(address + 0x12f);
 
         GetOrCreateQuestEntryGroup_Func = (GetOrCreateQuestEntryGroup_pt)GW::Scanner::FunctionFromNearCall(address + 0x136);
         if (GetOrCreateQuestEntryGroup_Func) {
-            GW::Hook::CreateHook(GetOrCreateQuestEntryGroup_Func, OnGetOrCreateQuestEntryGroup, (void**)&GetOrCreateQuestEntryGroup_Ret);
+            GW::Hook::CreateHook((void**)&GetOrCreateQuestEntryGroup_Func, OnGetOrCreateQuestEntryGroup, (void**)&GetOrCreateQuestEntryGroup_Ret);
             GW::Hook::EnableHooks(GetOrCreateQuestEntryGroup_Func);
         }
     }

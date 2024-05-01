@@ -33,7 +33,7 @@ namespace OldCursorFix {
             Log::Warning("Cursor Fix not installed, message devs about this!");
             return;
         }
-        GW::HookBase::CreateHook(GetClipCursor_Func, fnGetClipCursor, reinterpret_cast<void**>(&RetGetClipCursor));
+        GW::HookBase::CreateHook((void**)&GetClipCursor_Func, fnGetClipCursor, reinterpret_cast<void**>(&RetGetClipCursor));
         GW::HookBase::EnableHooks(GetClipCursor_Func);
     }
 
@@ -163,8 +163,8 @@ namespace {
             address += 0x7;
             SetCursorPosCenter_Func = reinterpret_cast<SetCursorPosCenter_pt>(GW::Scanner::FunctionFromNearCall(address));
 
-            GW::Hook::CreateHook(ProcessInput_Func, OnProcessInput, reinterpret_cast<void**>(&ProcessInput_Ret));
-            GW::Hook::CreateHook(SetCursorPosCenter_Func, OnSetCursorPosCenter, reinterpret_cast<void**>(&SetCursorPosCenter_Ret));
+            GW::Hook::CreateHook((void**)&ProcessInput_Func, OnProcessInput, reinterpret_cast<void**>(&ProcessInput_Ret));
+            GW::Hook::CreateHook((void**)&SetCursorPosCenter_Func, OnSetCursorPosCenter, reinterpret_cast<void**>(&SetCursorPosCenter_Ret));
         }
 
         GWCA_INFO("[SCAN] ProcessInput_Func = %p", ProcessInput_Func);
@@ -388,7 +388,7 @@ void MouseFix::Initialize()
     const uintptr_t address = GW::Scanner::Find("\x8b\x41\x08\x89\x82\x50\x0c\x00\x00", "xxxxxxxxx", 0x9);
     ChangeCursorIcon_Func = (ChangeCursorIcon_pt)GW::Scanner::FunctionFromNearCall(address);
     if (ChangeCursorIcon_Func) {
-        GW::HookBase::CreateHook(ChangeCursorIcon_Func, OnChangeCursorIcon, (void**)&ChangeCursorIcon_Ret);
+        GW::HookBase::CreateHook((void**)&ChangeCursorIcon_Func, OnChangeCursorIcon, (void**)&ChangeCursorIcon_Ret);
     }
 }
 

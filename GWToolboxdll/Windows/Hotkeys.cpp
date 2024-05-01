@@ -39,145 +39,55 @@ unsigned int TBHotkey::cur_ui_id = 0;
 LONG* TBHotkey::key_out = nullptr;
 LONG* TBHotkey::mod_out = nullptr;
 std::unordered_map<WORD, HotkeyToggle*> HotkeyToggle::toggled;
-std::vector<const char*> HotkeyGWKey::labels = {};
-std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> HotkeyGWKey::control_labels = {
-    {GW::UI::ControlAction::ControlAction_Interact, nullptr},
-    {GW::UI::ControlAction::ControlAction_CancelAction, nullptr},
-    {GW::UI::ControlAction::ControlAction_ClearPartyCommands, nullptr},
-    {GW::UI::ControlAction::ControlAction_CommandHero1, nullptr},
-    {GW::UI::ControlAction::ControlAction_CommandHero2, nullptr},
-    {GW::UI::ControlAction::ControlAction_CommandHero3, nullptr},
-    {GW::UI::ControlAction::ControlAction_CommandHero4, nullptr},
-    {GW::UI::ControlAction::ControlAction_CommandHero5, nullptr},
-    {GW::UI::ControlAction::ControlAction_CommandHero6, nullptr},
-    {GW::UI::ControlAction::ControlAction_CommandHero7, nullptr},
-    {GW::UI::ControlAction::ControlAction_CommandParty, nullptr},
 
-    {GW::UI::ControlAction::ControlAction_DropItem, nullptr},
-    {GW::UI::ControlAction::ControlAction_Follow, nullptr},
-
-    {GW::UI::ControlAction::ControlAction_OpenHero1PetCommander, nullptr},
-    {GW::UI::ControlAction::ControlAction_OpenHero2PetCommander, nullptr},
-    {GW::UI::ControlAction::ControlAction_OpenHero3PetCommander, nullptr},
-    {GW::UI::ControlAction::ControlAction_OpenHero4PetCommander, nullptr},
-    {GW::UI::ControlAction::ControlAction_OpenHero5PetCommander, nullptr},
-    {GW::UI::ControlAction::ControlAction_OpenHero6PetCommander, nullptr},
-    {GW::UI::ControlAction::ControlAction_OpenHero7PetCommander, nullptr},
-    {GW::UI::ControlAction::ControlAction_OpenHeroCommander1, nullptr},
-    {GW::UI::ControlAction::ControlAction_OpenHeroCommander2, nullptr},
-    {GW::UI::ControlAction::ControlAction_OpenHeroCommander3, nullptr},
-    {GW::UI::ControlAction::ControlAction_OpenHeroCommander4, nullptr},
-    {GW::UI::ControlAction::ControlAction_OpenHeroCommander5, nullptr},
-    {GW::UI::ControlAction::ControlAction_OpenHeroCommander6, nullptr},
-    {GW::UI::ControlAction::ControlAction_OpenHeroCommander7, nullptr},
-
-    {GW::UI::ControlAction::ControlAction_Hero1Skill1, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero1Skill2, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero1Skill3, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero1Skill4, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero1Skill5, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero1Skill6, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero1Skill7, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero1Skill8, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero2Skill1, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero2Skill2, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero2Skill3, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero2Skill4, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero2Skill5, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero2Skill6, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero2Skill7, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero2Skill8, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero3Skill1, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero3Skill2, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero3Skill3, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero3Skill4, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero3Skill5, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero3Skill6, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero3Skill7, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero3Skill8, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero4Skill1, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero4Skill2, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero4Skill3, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero4Skill4, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero4Skill5, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero4Skill6, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero4Skill7, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero4Skill8, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero5Skill1, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero5Skill2, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero5Skill3, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero5Skill4, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero5Skill5, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero5Skill6, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero5Skill7, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero5Skill8, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero6Skill1, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero6Skill2, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero6Skill3, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero6Skill4, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero6Skill5, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero6Skill6, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero6Skill7, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero6Skill8, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero7Skill1, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero7Skill2, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero7Skill3, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero7Skill4, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero7Skill5, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero7Skill6, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero7Skill7, nullptr},
-    {GW::UI::ControlAction::ControlAction_Hero7Skill8, nullptr},
-
-    {GW::UI::ControlAction::ControlAction_UseSkill1, nullptr},
-    {GW::UI::ControlAction::ControlAction_UseSkill2, nullptr},
-    {GW::UI::ControlAction::ControlAction_UseSkill3, nullptr},
-    {GW::UI::ControlAction::ControlAction_UseSkill4, nullptr},
-    {GW::UI::ControlAction::ControlAction_UseSkill5, nullptr},
-    {GW::UI::ControlAction::ControlAction_UseSkill6, nullptr},
-    {GW::UI::ControlAction::ControlAction_UseSkill7, nullptr},
-    {GW::UI::ControlAction::ControlAction_UseSkill8, nullptr},
-
-    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet1, nullptr},
-    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet2, nullptr},
-    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet3, nullptr},
-    {GW::UI::ControlAction::ControlAction_ActivateWeaponSet4, nullptr},
-
-    {GW::UI::ControlAction::ControlAction_TargetAllyNearest, nullptr},
-    {GW::UI::ControlAction::ControlAction_ClearTarget, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetNearestEnemy, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetNextEnemy, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPreviousEnemy, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetNearestItem, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetNextItem, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPreviousItem, nullptr},
-
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember1, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember2, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember3, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember4, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember5, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember6, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember7, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember8, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember9, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember10, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember11, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPartyMember12, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPartyMemberNext, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPartyMemberPrevious, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetPriorityTarget, nullptr},
-    {GW::UI::ControlAction::ControlAction_TargetSelf, nullptr}
-};
+typedef std::pair<GW::UI::ControlAction, GuiUtils::EncString*> ControlLabelPair;
+std::vector<ControlLabelPair> HotkeyGWKey::control_labels;
 
 namespace {
     // @Cleanup: when toolbox closes, this array isn't freed properly
     std::map<GW::Constants::Bag,std::vector<HotkeyEquipItemAttributes*>> available_items;
 
-    const char* behaviors[] = {
+    constexpr std::array behaviors = {
         "Fight",
         "Guard",
         "Avoid Combat"
     };
+
+    std::vector<const char*> HotkeyGWKey_labels = {};
+
+    bool BuildHotkeyGWKeyLabels() {
+        if (!HotkeyGWKey_labels.empty())
+            return true;
+        bool waiting = false;
+        for (const auto& it : HotkeyGWKey::control_labels) {
+            (it.second->string());
+            if (it.second->IsDecoding()) {
+                waiting = true;
+                break;
+            }
+        }
+        if (waiting) {
+            //ImGui::Text("Waiting on endoded strings");
+            return false;
+        }
+        // Reorder
+        std::ranges::sort(HotkeyGWKey::control_labels, [](const ControlLabelPair& lhs, const ControlLabelPair& rhs) {
+            return lhs.second->string().compare(rhs.second->string()) < 0;
+            });
+        for (const auto& it : HotkeyGWKey::control_labels) {
+            HotkeyGWKey_labels.push_back(it.second->string().c_str());
+        }
+        return true;
+    }
+
+    int GetHotkeyActionIdx(GW::UI::ControlAction action) {
+        BuildHotkeyGWKeyLabels();
+        for (size_t i = 0; i < HotkeyGWKey::control_labels.size(); i++) {
+            if (HotkeyGWKey::control_labels[i].first == action)
+                return (int)i;
+        }
+        return 0;
+    }
 }
 
 
@@ -322,7 +232,7 @@ bool TBHotkey::IsValid(const char* _player_name, const GW::Constants::InstanceTy
            && (!is_pvp_character || trigger_on_pvp_character)
            && (instance_type == -1 || static_cast<GW::Constants::InstanceType>(instance_type) == _instance_type)
            && (prof_ids[static_cast<size_t>(_profession)] || !HasProfession())
-           && (map_ids.empty() || std::ranges::find(map_ids, static_cast<uint32_t>(_map_id)) != map_ids.end())
+           && (map_ids.empty() || std::ranges::contains(map_ids, std::to_underlying(_map_id)))
            && (!player_name[0] || strcmp(_player_name, player_name) == 0);
 }
 
@@ -453,7 +363,7 @@ bool TBHotkey::Draw(Op* op)
     }
     switch (map_ids.size()) {
         case 1:
-            if (map_ids[0] < _countof(GW::Constants::NAME_FROM_ID)) {
+            if (map_ids[0] < GW::Constants::NAME_FROM_ID.size()) {
                 written += snprintf(&header[written], _countof(header) - written, " [%s]", GW::Constants::NAME_FROM_ID[map_ids[0]]);
             }
             else {
@@ -550,12 +460,11 @@ bool TBHotkey::Draw(Op* op)
             ImGui::SameLine();
             add_map_id |= ImGui::Button("Add##add_map_id_for_hotkey", {64.f * scale, 0.f});
             if (add_map_id) {
-                int map_id_out = 0;
+                uint32_t map_id_out;
                 if (strlen(map_id_input_buf)
-                    && GuiUtils::ParseInt(map_id_input_buf, &map_id_out)
-                    && map_id_out > 0
-                    && std::ranges::find(map_ids, reinterpret_cast<uint32_t>(map_id_input_buf)) == map_ids.end()) {
-                    map_ids.push_back(static_cast<uint32_t>(map_id_out));
+                    && GuiUtils::ParseUInt(map_id_input_buf, &map_id_out)
+                    && !std::ranges::contains(map_ids, reinterpret_cast<uint32_t>(map_id_input_buf))) {
+                    map_ids.push_back(map_id_out);
                     memset(map_id_input_buf, 0, sizeof(map_id_input_buf));
                     hotkey_changed = true;
                 }
@@ -2114,12 +2023,7 @@ HotkeyGWKey::HotkeyGWKey(const ToolboxIni* ini, const char* section)
 {
     can_trigger_on_map_change = trigger_on_explorable = trigger_on_outpost = false;
     action = static_cast<GW::UI::ControlAction>(ini->GetLongValue(section, "ActionID", action));
-    const auto found = std::ranges::find_if(control_labels, [&](const std::pair<GW::UI::ControlAction, GuiUtils::EncString*> in) {
-        return action == in.first;
-    });
-    if (found != control_labels.end()) {
-        action_idx = std::distance(control_labels.begin(), found);
-    }
+
 }
 
 void HotkeyGWKey::Save(ToolboxIni* ini, const char* section) const
@@ -2130,6 +2034,7 @@ void HotkeyGWKey::Save(ToolboxIni* ini, const char* section) const
 
 int HotkeyGWKey::Description(char* buf, const size_t bufsz)
 {
+    action_idx = GetHotkeyActionIdx(action);
     if (action_idx < 0 || action_idx >= static_cast<int>(control_labels.size())) {
         return snprintf(buf, bufsz, "Guild Wars Key: Unknown Action %d", action_idx);
     }
@@ -2138,25 +2043,13 @@ int HotkeyGWKey::Description(char* buf, const size_t bufsz)
 
 bool HotkeyGWKey::Draw()
 {
-    if (labels.empty()) {
-        bool waiting = false;
-        for (const auto& it : control_labels) {
-            if (it.second->string().empty()) {
-                waiting = true;
-                break;
-            }
-            labels.push_back(it.second->string().c_str());
-        }
-        if (waiting) {
-            labels.clear();
-        }
-    }
-    if (labels.empty()) {
+    if (!BuildHotkeyGWKeyLabels()) {
         ImGui::Text("Waiting on endoded strings");
         return false;
     }
+    action_idx = GetHotkeyActionIdx(action);
 
-    if (ImGui::Combo("Action###combo", &action_idx, labels.data(), labels.size(), 10)) {
+    if (ImGui::Combo("Action###combo", &action_idx, HotkeyGWKey_labels.data(), HotkeyGWKey_labels.size(), 10)) {
         action = control_labels[action_idx].first;
         return true;
     }
@@ -2173,8 +2066,8 @@ void HotkeyGWKey::Execute()
 namespace {
     const char* GetBehaviorDesc(GW::HeroBehavior behaviour)
     {
-        if (static_cast<uint32_t>(behaviour) < _countof(behaviors)) {
-            return behaviors[static_cast<uint32_t>(behaviour)];
+        if (std::to_underlying(behaviour) < behaviors.size()) {
+            return behaviors[std::to_underlying(behaviour)];
         }
         return nullptr;
     }
@@ -2202,7 +2095,7 @@ int HotkeyCommandPet::Description(char* buf, const size_t bufsz)
 
 bool HotkeyCommandPet::Draw()
 {
-    const bool changed = ImGui::Combo("Behavior###combo", (int*)&behavior, behaviors, _countof(behaviors), _countof(behaviors));
+    const bool changed = ImGui::Combo("Behavior###combo", reinterpret_cast<int*>(&behavior), behaviors.data(), behaviors.size(), behaviors.size());
     if (changed && !GetBehaviorDesc(behavior)) {
         behavior = GW::HeroBehavior::Fight;
     }

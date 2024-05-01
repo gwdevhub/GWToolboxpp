@@ -224,7 +224,7 @@ void DialogModule::Initialize()
     NPCDialogUICallback_Func = reinterpret_cast<GW::UI::UIInteractionCallback>(GW::Scanner::FindAssertion(
         "p:\\code\\gw\\ui\\game\\gmnpc.cpp", "interactMsg.codedText && interactMsg.codedText[0]", -0xfb));
     if (NPCDialogUICallback_Func) {
-        GW::HookBase::CreateHook(NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
+        GW::HookBase::CreateHook((void**)&NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
         GW::HookBase::EnableHooks(NPCDialogUICallback_Func);
     }
 }
@@ -361,8 +361,8 @@ uint32_t DialogModule::AcceptFirstAvailableQuest()
 
     // restore -> escort -> uwg
     for (const auto quest_id : {GW::Constants::QuestID::UW_Restore, GW::Constants::QuestID::UW_Escort}) {
-        const uint32_t uquest_id = static_cast<uint32_t>(quest_id);
-        if (std::ranges::find(available_quests, uquest_id) != std::ranges::end(available_quests)) {
+        const auto uquest_id = std::to_underlying(quest_id);
+        if (std::ranges::contains(available_quests, uquest_id)) {
             return take_quest(uquest_id);
         }
     }

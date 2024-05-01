@@ -33,6 +33,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <numbers>
 #include <queue>
 #include <ranges>
 #include <regex>

@@ -407,7 +407,7 @@ void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameS
 void TimerWidget::Initialize()
 {
     ToolboxWidget::Initialize();
-    for (const auto& [skill_id, name] : spirit_effects) {
+    for (const auto& skill_id : spirit_effects | std::views::keys) {
         if (!spirit_effects_enabled.contains(skill_id)) {
             spirit_effects_enabled[skill_id] = false;
         }
@@ -599,7 +599,7 @@ milliseconds TimerWidget::GetRunTimeElapsed()
         return duration_cast<milliseconds>(run_completed - run_started);
     }
     // rare case that OnPostGameSrvTransfer was not called
-    if (duration_cast<milliseconds>(now() - run_started) - milliseconds{GW::Map::GetInstanceTime()} > 5000ms) {
+    if (duration_cast<milliseconds>(now() - run_started) - milliseconds{GW::Map::GetInstanceTime()} > 5000ms && !never_reset) {
         const GW::AreaInfo* info = GW::Map::GetMapInfo(GW::Map::GetMapID());
         if (info) {
             if (info->type == GW::RegionType::ExplorableZone) {

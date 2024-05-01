@@ -91,7 +91,7 @@ void SkillListingWindow::ExportToJSON() const
         if (!skills[i]) {
             continue;
         }
-        json[static_cast<uint32_t>(skills[i]->skill->skill_id)] = skills[i]->ToJson();
+        json[std::to_underlying(skills[i]->skill->skill_id)] = skills[i]->ToJson();
     }
     const auto file_location = Resources::GetPath(L"skills.json");
     if (exists(file_location)) {
@@ -270,29 +270,29 @@ nlohmann::json SkillListingWindow::Skill::ToJson()
 const std::wstring SkillListingWindow::Skill::GetSkillType() const
 {
     std::wstring str(IsElite() ? L"Elite " : L"");
-    switch (static_cast<uint32_t>(skill->type)) {
-        case 3:
+    switch (skill->type) {
+        case GW::Constants::SkillType::Stance:
             return str += L"Stance", str;
-        case 4:
+        case GW::Constants::SkillType::Hex:
             return str += L"Hex Spell", str;
-        case 5:
+        case GW::Constants::SkillType::Spell:
             return str += L"Spell", str;
-        case 6:
+        case GW::Constants::SkillType::Enchantment:
             if (skill->special & 0x800000) {
                 str += L"Flash ";
             }
             return str += L"Enchantment Spell", str;
-        case 7:
+        case GW::Constants::SkillType::Signet:
             return str += L"Signet", str;
-        case 9:
+        case GW::Constants::SkillType::Well:
             return str += L"Well Spell", str;
-        case 10:
+        case GW::Constants::SkillType::Skill:
             return str += L"Touch Skill", str;
-        case 11:
+        case GW::Constants::SkillType::Ward:
             return str += L"Ward Spell", str;
-        case 12:
+        case GW::Constants::SkillType::Glyph:
             return str += L"Glyph", str;
-        case 14:
+        case GW::Constants::SkillType::Attack:
             switch (skill->weapon_req) {
                 case 1:
                     return str += L"Axe Attack", str;
@@ -320,15 +320,15 @@ const std::wstring SkillListingWindow::Skill::GetSkillType() const
                     return str += L"Sword Attack", str;
             }
             return str += L"Melee Attack", str;
-        case 15:
+        case GW::Constants::SkillType::Shout:
             return str += L"Shout", str;
-        case 19:
+        case GW::Constants::SkillType::Preparation:
             return str += L"Preparation", str;
-        case 20:
+        case GW::Constants::SkillType::PetAttack:
             return str += L"Pet Attack", str;
-        case 21:
+        case GW::Constants::SkillType::Trap:
             return str += L"Trap", str;
-        case 22:
+        case GW::Constants::SkillType::Ritual:
             switch (skill->profession) {
             case GW::Constants::ProfessionByte::Ritualist:
                     return str += L"Binding Ritual", str;
@@ -336,15 +336,15 @@ const std::wstring SkillListingWindow::Skill::GetSkillType() const
                     return str += L"Nature Ritual", str;
             }
             return str += L"Ebon Vanguard Ritual", str;
-        case 24:
+        case GW::Constants::SkillType::ItemSpell:
             return str += L"Item Spell", str;
-        case 25:
+        case GW::Constants::SkillType::WeaponSpell:
             return str += L"Weapon Spell", str;
-        case 26:
+        case GW::Constants::SkillType::Form:
             return str += L"Form", str;
-        case 27:
+        case GW::Constants::SkillType::Chant:
             return str += L"Chant", str;
-        case 28:
+        case GW::Constants::SkillType::EchoRefrain:
             return str += L"Echo", str;
         default:
             return str += L"Skill", str;

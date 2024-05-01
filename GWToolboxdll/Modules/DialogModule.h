@@ -72,7 +72,7 @@ private:
 
     static uint32_t GetDialogIDForQuestDialogType(const uint32_t quest_id, QuestDialogType type)
     {
-        return quest_id << 8 | static_cast<uint32_t>(type);
+        return quest_id << 8 | std::to_underlying(type);
     }
 
     static QuestDialogType GetQuestDialogType(const uint32_t dialog_id)

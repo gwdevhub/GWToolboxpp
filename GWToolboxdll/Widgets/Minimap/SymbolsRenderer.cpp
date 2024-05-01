@@ -17,9 +17,9 @@
 void SymbolsRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {
     color_quest = Colors::Load(ini, section, "color_quest", 0xFF22EF22);
+    color_other_quests = Colors::Load(ini, section, "color_other_quests", 0xFF0D7C0D);
     color_north = Colors::Load(ini, section, "color_north", 0xFFFF8000);
     color_modifier = Colors::Load(ini, section, "color_symbols_modifier", 0x001E1E1E);
-    render_all_quests = ini->GetBoolValue(section, "render_all_quests");
 
     Invalidate();
 }
@@ -27,9 +27,9 @@ void SymbolsRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 void SymbolsRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
 {
     Colors::Save(ini, section, "color_quest", color_quest);
+    Colors::Save(ini, section, "color_other_quests", color_other_quests);
     Colors::Save(ini, section, "color_north", color_north);
     Colors::Save(ini, section, "color_symbols_modifier", color_modifier);
-    ini->SetBoolValue(section, "render_all_quests", render_all_quests);
 }
 
 void SymbolsRenderer::DrawSettings()
@@ -37,23 +37,25 @@ void SymbolsRenderer::DrawSettings()
     bool confirm = false;
     if (ImGui::SmallConfirmButton("Restore Defaults", &confirm)) {
         color_quest = 0xFF22EF22;
+        color_other_quests = 0xFF0D7C0D;
         color_north = 0xFFFF8000;
         color_modifier = 0x001E1E1E;
         Invalidate();
     }
-    if (Colors::DrawSettingHueWheel("Quest Marker", &color_quest)) {
+    if (Colors::DrawSettingHueWheel("Quest marker", &color_quest)) {
         Invalidate();
     }
-    if (Colors::DrawSettingHueWheel("North Marker", &color_north)) {
+    if (Colors::DrawSettingHueWheel("Other quest markers", &color_other_quests)) {
         Invalidate();
     }
-    if (Colors::DrawSettingHueWheel("Symbol Modifier", &color_modifier)) {
+    if (Colors::DrawSettingHueWheel("North marker", &color_north)) {
         Invalidate();
     }
-    ImGui::ShowHelp("Each symbol has this value removed on the border and added at the center\nZero makes them have solid color, while a high number makes them appear more shaded.");
-
-    ImGui::Checkbox("Draw all quest markers", &render_all_quests);
-    ImGui::ShowHelp("Draw quest markers for all quests in your quest log, not just the active quest");
+    if (Colors::DrawSettingHueWheel("Symbol modifier", &color_modifier)) {
+        Invalidate();
+    }
+    ImGui::ShowHelp("Each symbol has this value removed on the border and added at the center\n"
+                    "Zero makes them have solid color, while a high number makes them appear more shaded.");
 }
 
 void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
@@ -65,15 +67,15 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
     type = D3DPT_TRIANGLELIST;
 
     D3DVertex* vertices = nullptr;
-    const DWORD vertex_count = (star_ntriangles + arrow_ntriangles + north_ntriangles) * 3;
+    const DWORD vertex_count = (star_ntriangles + arrow_ntriangles + other_arrow_ntriangles + other_star_ntriangles + north_ntriangles) * 3;
     DWORD offset = 0;
 
     device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, D3DUSAGE_WRITEONLY,
                                D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
-                 (VOID**)&vertices, D3DLOCK_DISCARD);
+                 reinterpret_cast<void**>(&vertices), D3DLOCK_DISCARD);
 
-    auto AddVertex = [&vertices, &offset](const float x, const float y, const Color color) -> void {
+    const auto add_vertex = [&vertices, &offset](const float x, const float y, const Color color) -> void {
         vertices[0].x = x;
         vertices[0].y = y;
         vertices[0].z = 0.0f;
@@ -93,28 +95,53 @@ void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
         const float size2 = (i + 1) % 2 == 0 ? star_size_small : star_size_big;
         const Color c1 = (i + 0) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier);
         const Color c2 = (i + 1) % 2 == 0 ? color_quest : Colors::Sub(color_quest, color_modifier);
-        AddVertex(std::cos(angle1) * size1, std::sin(angle1) * size1, c1);
-        AddVertex(std::cos(angle2) * size2, std::sin(angle2) * size2, c2);
-        AddVertex(0.0f, 0.0f, Colors::Add(color_quest, color_modifier));
+        add_vertex(std::cos(angle1) * size1, std::sin(angle1) * size1, c1);
+        add_vertex(std::cos(angle2) * size2, std::sin(angle2) * size2, c2);
+        add_vertex(0.0f, 0.0f, Colors::Add(color_quest, color_modifier));
     }
 
     // === Arrow (quest) ===
     arrow_offset = offset;
-    AddVertex(0.0f, -125.0f, Colors::Add(color_quest, color_modifier));
-    AddVertex(250.0f, -250.0f, color_quest);
-    AddVertex(0.0f, 250.0f, color_quest);
-    AddVertex(0.0f, 250.0f, color_quest);
-    AddVertex(-250.0f, -250.0f, color_quest);
-    AddVertex(0.0f, -125.0f, Colors::Add(color_quest, color_modifier));
+    add_vertex(0.0f, -125.0f, Colors::Add(color_quest, color_modifier));
+    add_vertex(250.0f, -250.0f, color_quest);
+    add_vertex(0.0f, 250.0f, color_quest);
+    add_vertex(0.0f, 250.0f, color_quest);
+    add_vertex(-250.0f, -250.0f, color_quest);
+    add_vertex(0.0f, -125.0f, Colors::Add(color_quest, color_modifier));
+
+    // === Star (other quests) ===
+    other_star_offset = offset;
+    for (auto i = 0u; i < other_star_ntriangles; i++) {
+        constexpr float star_size_big = 300.0f;
+        constexpr float star_size_small = 150.0f;
+        const float angle1 = 2 * (i + 0) * DirectX::XM_PI / other_star_ntriangles;
+        const float angle2 = 2 * (i + 1) * DirectX::XM_PI / other_star_ntriangles;
+        const float size1 = (i + 0) % 2 == 0 ? star_size_small : star_size_big;
+        const float size2 = (i + 1) % 2 == 0 ? star_size_small : star_size_big;
+        const Color c1 = (i + 0) % 2 == 0 ? color_other_quests : Colors::Sub(color_other_quests, color_modifier);
+        const Color c2 = (i + 1) % 2 == 0 ? color_other_quests : Colors::Sub(color_other_quests, color_modifier);
+        add_vertex(std::cos(angle1) * size1, std::sin(angle1) * size1, c1);
+        add_vertex(std::cos(angle2) * size2, std::sin(angle2) * size2, c2);
+        add_vertex(0.0f, 0.0f, Colors::Add(color_other_quests, color_modifier));
+    }
+
+    // === Arrow (other quests) ===
+    other_arrow_offset = offset;
+    add_vertex(0.0f, -125.0f, Colors::Add(color_other_quests, color_modifier));
+    add_vertex(250.0f, -250.0f, color_other_quests);
+    add_vertex(0.0f, 250.0f, color_other_quests);
+    add_vertex(0.0f, 250.0f, color_other_quests);
+    add_vertex(-250.0f, -250.0f, color_other_quests);
+    add_vertex(0.0f, -125.0f, Colors::Add(color_other_quests, color_modifier));
 
     // === Arrow (north) ===
     north_offset = offset;
-    AddVertex(0.0f, -375.0f, Colors::Add(color_north, color_modifier));
-    AddVertex(250.0f, -500.0f, color_north);
-    AddVertex(0.0f, 0.0f, color_north);
-    AddVertex(0.0f, 0.0f, color_north);
-    AddVertex(-250.0f, -500.0f, color_north);
-    AddVertex(0.0f, -375.0f, Colors::Add(color_north, color_modifier));
+    add_vertex(0.0f, -375.0f, Colors::Add(color_north, color_modifier));
+    add_vertex(250.0f, -500.0f, color_north);
+    add_vertex(0.0f, 0.0f, color_north);
+    add_vertex(0.0f, 0.0f, color_north);
+    add_vertex(-250.0f, -500.0f, color_north);
+    add_vertex(0.0f, -375.0f, Colors::Add(color_north, color_modifier));
 
     buffer->Unlock();
 }
@@ -137,24 +164,36 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     device->SetFVF(D3DFVF_CUSTOMVERTEX);
     device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
 
-    constexpr float PI = 3.1415927f;
+    constexpr float pi = std::numbers::pi_v<float>;
     static float tau = 0.0f;
     const float fps = ImGui::GetIO().Framerate;
     // tau of += 0.05f is good for 60 fps, adapt that for any
     // note: framerate is a moving average of the last 120 frames, so it won't adapt quickly.
     // when the framerate changes a lot, the quest marker may speed up or down for a bit.
     tau += 0.05f * 60.0f / std::max(fps, 1.0f);
-    if (tau > 10 * PI) {
-        tau -= 10 * PI;
+    if (tau > 10 * pi) {
+        tau -= 10 * pi;
     }
-    DirectX::XMMATRIX translate;
+    DirectX::XMMATRIX translate{};
     DirectX::XMMATRIX world{};
 
     const GW::Vec2f mypos = me->pos;
-
-    auto drawQuestMarker = [&](const GW::Quest& quest)
+    std::vector<GW::Vec2f> markers_drawn;
+    const auto draw_quest_marker = [&](const GW::Quest& quest)
     {
+        const auto active_quest = GW::QuestMgr::GetActiveQuest();
+        const bool is_current_quest = active_quest != nullptr && quest.quest_id == active_quest->quest_id;
+
+        if (!Minimap::ShouldDrawAllQuests() && !is_current_quest) {
+            return;
+        }
+        if (ImColor(is_current_quest ? color_quest : color_other_quests).Value.w == 0.0f) {
+            return;
+        }
         const GW::Vec2f qpos = { quest.marker.x, quest.marker.y };
+        if (std::ranges::contains(markers_drawn, qpos))
+            return; // Don't draw more than 1 marker for a position
+        markers_drawn.push_back(qpos);
         const float compass_scale = Minimap::Instance().Scale();
         const float marker_scale = 1.0f / compass_scale;
         auto rotate = DirectX::XMMatrixRotationZ(-tau / 5);
@@ -163,7 +202,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
         translate = DirectX::XMMatrixTranslation(qpos.x, qpos.y, 0);
         world = rotate * scale * translate;
         device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
-        device->DrawPrimitive(type, star_offset, star_ntriangles);
+        device->DrawPrimitive(type, is_current_quest ? star_offset : other_star_offset, is_current_quest ? star_ntriangles : other_star_ntriangles);
 
         GW::Vec2f v = qpos - mypos;
         const float max_quest_range = (GW::Constants::Range::Compass - 250.0f) / compass_scale;
@@ -177,20 +216,21 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
             translate = DirectX::XMMatrixTranslation(me->pos.x + v.x, me->pos.y + v.y, 0);
             world = rotate * scale * translate;
             device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
-            device->DrawPrimitive(type, arrow_offset, arrow_ntriangles);
+            device->DrawPrimitive(type, is_current_quest ? arrow_offset : other_arrow_offset, is_current_quest ? arrow_ntriangles : other_arrow_ntriangles);
         }
     };
 
-    if (render_all_quests)
-    {
-        if (const GW::QuestLog* questLog = GW::QuestMgr::GetQuestLog()) {
-            for (const auto& quest : *questLog) {
-                drawQuestMarker(quest);
-            }
+    if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
+        // draw active quest first
+        const auto active_quest_id = GW::QuestMgr::GetActiveQuestId();
+        if (auto* quest = GW::QuestMgr::GetQuest(active_quest_id)) {
+            draw_quest_marker(*quest);
         }
-    }
-    else if (const GW::Quest* quest = GW::QuestMgr::GetActiveQuest()) {
-        drawQuestMarker(*quest);
+        for (const auto& quest : *quest_log | std::views::filter([active_quest_id](const GW::Quest& q) {
+            return q.quest_id != active_quest_id;
+        })) {
+            draw_quest_marker(quest);
+        }
     }
 
     translate = DirectX::XMMatrixTranslation(me->pos.x, me->pos.y + 5000.0f, 0);

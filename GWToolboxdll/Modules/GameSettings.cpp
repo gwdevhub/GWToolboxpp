@@ -52,6 +52,7 @@
 #include <Modules/ChatSettings.h>
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>
+#include <Modules/PriceCheckerModule.h>
 
 #include <Color.h>
 #include <hidusage.h>
@@ -434,18 +435,6 @@ namespace {
 
     using GetItemDescription_pt = void(__cdecl*)(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** out, wchar_t** out2);
     GetItemDescription_pt GetItemDescription_Func = nullptr, GetItemDescription_Ret = nullptr;
-    // Block full item descriptions
-    void OnGetItemDescription(const uint32_t item_id, const uint32_t flags, const uint32_t quantity, const uint32_t unk, wchar_t** name_out, wchar_t** description_out)
-    {
-        GW::Hook::EnterHook();
-        bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
-        block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
-        GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, block_description ? nullptr : description_out);
-        if (block_description && description_out) {
-            *description_out = nullptr;
-        }
-        GW::Hook::LeaveHook();
-    }
 
     // Key held to show/hide skill descriptions
     constexpr int modifier_key_skill_descriptions = VK_MENU;
@@ -469,36 +458,6 @@ namespace {
     using SetGlobalNameTagVisibility_pt = void(__cdecl*)(uint32_t flags);
     SetGlobalNameTagVisibility_pt SetGlobalNameTagVisibility_Func = nullptr;
     uint32_t* GlobalNameTagVisibilityFlags = nullptr;
-
-    GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Func = nullptr;
-    GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Ret = nullptr;
-    bool closing_gw = false;
-
-    void OnMinOrRestoreOrExitBtnClicked(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
-    {
-        GW::Hook::EnterHook();
-        if (message->message_id == GW::UI::UIMessage::kMouseAction && wparam) {
-            struct MouseParams {
-                uint32_t button_id;
-                uint32_t button_id_dupe;
-                uint32_t current_state; // 0x5 = hovered, 0x6 = mouse down
-            }* param = static_cast<MouseParams*>(wparam);
-            const auto frame = GW::UI::GetFrameByLabel(L"btnExit");
-            if (frame && frame->frame_id == message->frame_id && param->current_state == 0x6) {
-                param->current_state = 0x5; // Revert state to avoid GW closing the window on mouse up
-
-                // Left button clicked, on the exit button (ID 0x3)
-                if (!closing_gw) {
-                    SendMessage(GW::MemoryMgr::GetGWWindowHandle(), WM_CLOSE, NULL, NULL);
-                }
-                closing_gw = true;
-                GW::Hook::LeaveHook();
-                return;
-            }
-        }
-        OnMinOrRestoreOrExitBtnClicked_Ret(message, wparam, lparam);
-        GW::Hook::LeaveHook();
-    }
 
     GW::MemoryPatcher skip_map_entry_message_patch;
 
@@ -827,7 +786,7 @@ namespace {
             case GW::UI::ControlAction_TargetNearestItem:
                 if (lazy_chest_looting) {
                     targeting_nearest_item = true;
-                    GW::Agents::ChangeTarget(static_cast<uint32_t>(0)); // To ensure OnChangeTarget is triggered
+                    GW::Agents::ChangeTarget(0u); // To ensure OnChangeTarget is triggered
                 }
                 break;
         }
@@ -1049,6 +1008,21 @@ namespace {
     {
         pending_reinvite.reset(current_party_target_id);
     }
+}
+
+// Block full item descriptions
+void GameSettings::OnGetItemDescription(const uint32_t item_id, const uint32_t flags, const uint32_t quantity, const uint32_t unk, wchar_t** name_out, wchar_t** description_out)
+{
+    GW::Hook::EnterHook();
+    bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
+    block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
+    GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, block_description ? nullptr : description_out);
+
+    if (block_description && description_out) {
+        *description_out = nullptr;
+    }
+
+    GW::Hook::LeaveHook();
 }
 
 bool GameSettings::GetSettingBool(const char* setting)
@@ -1285,7 +1259,7 @@ void GameSettings::Initialize()
     // This could be done with patches if we wanted to still show description for weapon sets and merchants etc, but its more signatures to log.
     GetItemDescription_Func = (GetItemDescription_pt)GW::Scanner::Find("\x8b\xc3\x25\xfd\x00\x00\x00\x3c\xfd", "xxxxxxxxx", -0x5f);
     if (GetItemDescription_Func) {
-        GW::HookBase::CreateHook(GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret);
+        GW::HookBase::CreateHook((void**)&GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret);
         GW::HookBase::EnableHooks(GetItemDescription_Func);
     }
 
@@ -1311,17 +1285,10 @@ void GameSettings::Initialize()
     printf("[SCAN] ShowAgentFactionGain_Func = %p\n", (void*)ShowAgentFactionGain_Func);
     printf("[SCAN] ShowAgentExperienceGain_Func = %p\n", (void*)ShowAgentExperienceGain_Func);
 
-    GW::HookBase::CreateHook(ShowAgentFactionGain_Func, OnShowAgentFactionGain, reinterpret_cast<void**>(&ShowAgentFactionGain_Ret));
+    GW::HookBase::CreateHook((void**)&ShowAgentFactionGain_Func, OnShowAgentFactionGain, reinterpret_cast<void**>(&ShowAgentFactionGain_Ret));
     GW::HookBase::EnableHooks(ShowAgentFactionGain_Func);
-    GW::HookBase::CreateHook(ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, reinterpret_cast<void**>(&ShowAgentExperienceGain_Ret));
+    GW::HookBase::CreateHook((void**)&ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, reinterpret_cast<void**>(&ShowAgentExperienceGain_Ret));
     GW::HookBase::EnableHooks(ShowAgentExperienceGain_Func);
-
-    // Stop GW from force closing the game when clicking on the exit button in window fullscreen; instead route it through the close signal.
-    OnMinOrRestoreOrExitBtnClicked_Func = (GW::UI::UIInteractionCallback)GW::Scanner::Find("\x83\xc4\x0c\xa9\x00\x00\x80\x00", "xxxxxxxx", -0x54);
-    if (OnMinOrRestoreOrExitBtnClicked_Func) {
-        GW::HookBase::CreateHook(OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
-        GW::HookBase::EnableHooks();
-    }
 
     RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendDialog, bind_member(this, &GameSettings::OnFactionDonate));
     RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillbar, &OnPreLoadSkillBar);
@@ -2062,6 +2029,7 @@ void GameSettings::Update(float)
         GW::Camera* cam = GW::CameraMgr::GetCamera();
         cam->position = cam->camera_pos_to_go;
         cam->look_at_target = cam->look_at_to_go;
+        cam->cam_pos_inverted = cam->cam_pos_inverted_to_go;
         cam->yaw = cam->yaw_to_go;
         cam->pitch = cam->pitch_to_go;
     }
@@ -2355,7 +2323,7 @@ void GameSettings::OnLocalChatMessage(GW::HookStatus* status, const GW::Packet::
     if (status->blocked) {
         return; // Sender blocked, packet handled.
     }
-    if (pak->channel != static_cast<uint32_t>(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number) {
+    if (pak->channel != std::to_underlying(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number) {
         return; // Not team chat or no sender
     }
     const auto core = GetMessageCore();
@@ -2411,8 +2379,6 @@ void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::Dun
 }
 
 // Flash/focus window on trade
-// ReSharper disable once CppParameterMayBeConst
-// ReSharper disable once CppParameterMayBeConstPtrOrRef
 void GameSettings::OnTradeStarted(GW::HookStatus* status, GW::Packet::StoC::TradeStart*)
 {
     if (status->blocked) {

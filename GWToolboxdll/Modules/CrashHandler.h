@@ -26,7 +26,7 @@ public:
         char buffer[0x80001];
     };
 
-    static_assert(sizeof(GWDebugInfo) == 0x80210, "struct GWDebugInfo has incorect size");
+    static_assert(sizeof(GWDebugInfo) == 0x80210, "struct GWDebugInfo has incorrect size");
 
     static LONG WINAPI Crash(EXCEPTION_POINTERS* pExceptionPointers = nullptr);
     static void FatalAssert(const char* expr, const char* file, unsigned line);

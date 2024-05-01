@@ -68,7 +68,7 @@ namespace {
                 found = &profession_unlocks_array[i];
             }
         }
-        return found && (found->unlocked_professions >> static_cast<uint32_t>(prof) & 1) == 1;
+        return found && (found->unlocked_professions >> std::to_underlying(prof) & 1) == 1;
     }
 
     bool IsMapReady()
@@ -121,7 +121,7 @@ namespace {
 
     void clear_pending_move(GW::Constants::Bag bag_idx, const uint32_t slot)
     {
-        const uint32_t bag_slot = static_cast<uint32_t>(bag_idx) << 16 | slot;
+        const uint32_t bag_slot = std::to_underlying(bag_idx) << 16 | slot;
         pending_moves.erase(bag_slot);
     }
 
@@ -144,7 +144,7 @@ namespace {
         if (material_slot == GW::Constants::MaterialSlot::Count) {
             return 0;
         }
-        const uint32_t slot = static_cast<uint32_t>(material_slot);
+        const uint32_t slot = std::to_underlying(material_slot);
         const auto materials_pane = GW::Items::GetBag(GW::Constants::Bag::Material_Storage);
         uint16_t space_available = MaxSlotSize(materials_pane);
         const GW::Item* existing_stack_in_storage = GW::Items::GetItemBySlot(materials_pane, slot + 1);
@@ -597,7 +597,7 @@ namespace {
         PreMoveItemStruct details;
         details.item_id = item->item_id;
         // Doesn't matter where the prompt is asking to move to, as long as its not the same slot; we're going to override later.
-        details.bag_id = static_cast<uint32_t>(GW::Constants::Bag::Backpack); // empty_bag_id;
+        details.bag_id = std::to_underlying(GW::Constants::Bag::Backpack); // empty_bag_id;
         details.slot = 0;                                                     // empty_slot;
         if (item->bag->index == details.bag_id && item->slot == details.slot) {
             details.slot++;
@@ -901,7 +901,7 @@ void InventoryManager::Initialize()
     AddItemRowToWindow_Func = reinterpret_cast<AddItemRowToWindow_pt>(GW::Scanner::Find(
         "\x83\xc4\x04\x80\x78\x04\x06\x0f\x84\xd3\x00\x00\x00\x6a\x02\xff\x37", nullptr, -0x10));
     if (AddItemRowToWindow_Func) {
-        GW::Hook::CreateHook(AddItemRowToWindow_Func, OnAddItemToWindow, reinterpret_cast<void**>(&RetAddItemRowToWindow));
+        GW::Hook::CreateHook((void**)&AddItemRowToWindow_Func, OnAddItemToWindow, reinterpret_cast<void**>(&RetAddItemRowToWindow));
         GW::Hook::EnableHooks(AddItemRowToWindow_Func);
     }
 }
@@ -1754,7 +1754,7 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::InputInt("Item Model ID", &new_item_id);
     submitted |= ImGui::Button("Add");
     if (submitted && new_item_id > 0) {
-        const auto new_id = static_cast<uint32_t>(new_item_id);
+        const auto new_id = static_cast<uint16_t>(new_item_id);
         if (!hide_from_merchant_items.contains(new_id)) {
             hide_from_merchant_items[new_id] = std::string(buf);
             Log::Info("Added Item %s with ID (%d)", buf, new_id);
@@ -2361,7 +2361,7 @@ bool InventoryManager::Item::IsSalvagable()
     if (!bag->IsInventoryBag() && !bag->IsStorageBag()) {
         return false;
     }
-    if (bag->index + 1 == static_cast<uint32_t>(GW::Constants::Bag::Equipment_Pack)) {
+    if (bag->index + 1 == std::to_underlying(GW::Constants::Bag::Equipment_Pack)) {
         return false;
     }
     switch (static_cast<GW::Constants::ItemType>(type)) {

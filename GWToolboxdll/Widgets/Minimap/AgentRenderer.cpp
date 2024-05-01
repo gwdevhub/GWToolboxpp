@@ -745,7 +745,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
 
     // some helper lambads
 
-    auto AddCustomAgentsToDraw = [this](const GW::AgentLiving* agent) -> bool {
+    const auto add_custom_agents_to_draw = [this](const GW::AgentLiving* agent) -> bool {
         const auto custom_agents_for_this_agent = GetCustomAgentsToDraw(agent);
         if (!custom_agents_for_this_agent) {
             return false;
@@ -756,7 +756,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
         return true;
     };
 
-    auto AddMarkedTarget = [](const GW::AgentLiving* agent) -> bool {
+    const auto add_marked_target = [](const GW::AgentLiving* agent) -> bool {
         if (!GetMarkedTarget(agent ? agent->agent_id : 0)) {
             return false;
         }
@@ -764,14 +764,15 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
         return true;
     };
 
-    auto AddOtherPlayersToDraw = [](const GW::AgentLiving* agent) -> bool {
+    const auto add_other_players_to_draw = [](const GW::AgentLiving* agent) -> bool {
         if (!agent || !agent->IsPlayer() || agent == GW::Agents::GetPlayer()) {
             return false;
         }
         players_to_draw.push_back(agent);
         return true;
     };
-    auto AddDeadAgentToDraw = [](const GW::AgentLiving* agent) -> bool {
+
+    const auto add_dead_agent_to_draw = [](const GW::AgentLiving* agent) -> bool {
         if (!agent || !agent->GetIsDead()) {
             return false;
         }
@@ -810,16 +811,16 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
             if (!show_hidden_npcs && !GW::Agents::GetIsAgentTargettable(living)) {
                 continue;
             }
-            if (AddOtherPlayersToDraw(living)) {
-                continue; // 5. players
-            }
-            if (AddDeadAgentToDraw(living)) {
-                continue;
-            }
-            if (AddMarkedTarget(living)) {
+            if (add_marked_target(living)) {
                 continue; // 8. marked targets
             }
-            if (AddCustomAgentsToDraw(living)) {
+            if (add_other_players_to_draw(living)) {
+                continue; // 5. players
+            }
+            if (add_dead_agent_to_draw(living)) {
+                continue;
+            }
+            if (add_custom_agents_to_draw(living)) {
                 continue; // 3. custom colored models
             }
         }

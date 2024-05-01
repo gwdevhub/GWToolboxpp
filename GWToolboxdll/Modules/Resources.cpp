@@ -421,6 +421,11 @@ std::filesystem::path Resources::GetComputerFolderPath()
     return docpath;
 }
 
+std::filesystem::path Resources::GetSettingsFolderName()
+{
+    return current_settings_folder;
+}
+
 std::filesystem::path Resources::GetSettingsFolderPath()
 {
     const auto computer_path = GetComputerFolderPath();
@@ -779,7 +784,7 @@ void Resources::Update(float)
 
 IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p)
 {
-    auto prof_id = static_cast<uint32_t>(p);
+    const auto prof_id = std::to_underlying(p);
     if (profession_icons.contains(prof_id)) {
         return profession_icons.at(prof_id);
     }

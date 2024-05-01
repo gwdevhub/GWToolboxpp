@@ -5,7 +5,6 @@
 
 #include <GWCA/Context/PreGameContext.h>
 #include <GWCA/Context/CharContext.h>
-#include <GWCA/Context/MapContext.h>
 
 #include <GWCA/GameEntities/Map.h>
 
@@ -33,11 +32,14 @@
 #include "Modules/InventoryManager.h"
 #include "Modules/LoginModule.h"
 #include "Modules/Updater.h"
+#include "Modules/PriceCheckerModule.h"
 #include "Windows/SettingsWindow.h"
 
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <hidusage.h>
+
+#include "GWCA/Utilities/Scanner.h"
 
 
 
@@ -59,11 +61,6 @@ namespace {
     GW::HookEntry Update_Entry;
 
     bool event_handler_attached = false;
-
-    bool IsPvP() {
-        const auto m = GW::Map::GetMapInfo();
-        return (m && /*GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost &&*/ m->GetIsPvP());
-    }
 
     bool AttachWndProcHandler()
     {
@@ -98,7 +95,35 @@ namespace {
         return true;
     }
 
+    GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Func = nullptr;
+    GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Ret = nullptr;
 
+    void OnMinOrRestoreOrExitBtnClicked(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
+    {
+        GW::Hook::EnterHook();
+        if (message->message_id == GW::UI::UIMessage::kMouseAction && wparam) {
+            struct MouseParams {
+                uint32_t button_id;
+                uint32_t button_id_dupe;
+                uint32_t current_state; // 0x5 = hovered, 0x6 = mouse down
+            }* param = static_cast<MouseParams*>(wparam);
+            const auto frame = GW::UI::GetFrameByLabel(L"btnExit");
+            if (frame && frame->frame_id == message->frame_id && param->current_state == 0x6) {
+                param->current_state = 0x5; // Revert state to avoid GW closing the window on mouse up
+
+                // Left button clicked, on the exit button (ID 0x3)
+                static bool closing_gw = false;
+                if (!closing_gw) {
+                    SendMessage(gw_window_handle, WM_CLOSE, NULL, NULL);
+                }
+                closing_gw = true;
+                GW::Hook::LeaveHook();
+                return;
+            }
+        }
+        OnMinOrRestoreOrExitBtnClicked_Ret(message, wparam, lparam);
+        GW::Hook::LeaveHook();
+    }
 
     bool render_callback_attached = false;
     bool AttachRenderCallback() {
@@ -119,6 +144,7 @@ namespace {
     bool game_loop_callback_attached = false;
     GW::HookEntry game_loop_callback_entry;
     bool AttachGameLoopCallback() {
+        GW::GameThreadModule.enable_hooks();
         if (!game_loop_callback_attached) {
             GW::GameThread::RegisterGameThreadCallback(&game_loop_callback_entry,GWToolbox::Update);
             game_loop_callback_attached = true;
@@ -263,8 +289,7 @@ namespace {
         if (!enable) {
             return false;
         }
-        const auto is_terminating = std::ranges::find(modules_terminating, &m);
-        if (is_terminating != modules_terminating.end()) {
+        if (std::ranges::contains(modules_terminating, &m)) {
             return false; // Not finished terminating
         }
         vec.push_back(&m);
@@ -373,7 +398,6 @@ DWORD __stdcall ThreadEntry(LPVOID)
 {
     Log::Log("Initializing API\n");
 
-    GW::HookBase::Initialize();
     if (!GW::Initialize()) {
         if (MessageBoxA(nullptr, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0) == IDOK) { }
         return 0;
@@ -405,6 +429,7 @@ DWORD __stdcall ThreadEntry(LPVOID)
 
     // @Remark:
     // Hooks are disable from Guild Wars thread (safely), so we just make sure we exit the last hooks
+    GW::DisableHooks();
     while (GW::HookBase::GetInHookCount()) {
         Sleep(16);
     }
@@ -419,6 +444,11 @@ DWORD __stdcall ThreadEntry(LPVOID)
 
     Log::Log("Closing log/console, bye!\n");
     Log::Terminate();
+
+    if (defer_close) {
+        // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
+        SendMessage(gw_window_handle, WM_CLOSE, NULL, NULL);
+    }
     return 0;
 }
 
@@ -446,6 +476,9 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
     }
 
     if (!(!GW::GetPreGameContext() && GWToolbox::IsInitialized())) {
+        return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
+    }
+    if (gwtoolbox_disabled) {
         return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
     }
 
@@ -576,8 +609,16 @@ void GWToolbox::Initialize()
     case GWToolboxState::Terminated:
         gwtoolbox_state = GWToolboxState::Initialising;
         AttachRenderCallback();
-        //AttachGameLoopCallback();
         GW::EnableHooks();
+
+        // Stop GW from force closing the game when clicking on the exit button in window fullscreen; instead route it through the close signal.
+        if (!OnMinOrRestoreOrExitBtnClicked_Func) {
+            OnMinOrRestoreOrExitBtnClicked_Func = (GW::UI::UIInteractionCallback)GW::Scanner::Find("\x83\xc4\x0c\xa9\x00\x00\x80\x00", "xxxxxxxx", -0x54);
+            if (OnMinOrRestoreOrExitBtnClicked_Func) {
+                GW::HookBase::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
+                GW::HookBase::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
+            }
+        }
         UpdateInitialising(.0f);
         AttachGameLoopCallback();
         pending_detach_dll = false;
@@ -670,14 +711,16 @@ void GWToolbox::Disable()
         return;
     GW::DisableHooks();
     GW::RenderModule.enable_hooks();
+    if (OnMinOrRestoreOrExitBtnClicked_Func)
+        GW::HookBase::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
     AttachRenderCallback();
     gwtoolbox_disabled = true;
 }
 
 bool GWToolbox::CanTerminate()
 {
-    return modules_terminating.empty() 
-        && GuiUtils::FontsLoaded() 
+    return modules_terminating.empty()
+        && GuiUtils::FontsLoaded()
         && all_modules_enabled.empty()
         && !imgui_initialized
         && !event_handler_attached;
@@ -705,6 +748,8 @@ void GWToolbox::Update(GW::HookStatus*) {
     default:
         return;
     }
+
+    UpdateModulesTerminating(delta_f);
 
     // Update loop
     for (const auto m : all_modules_enabled) {
@@ -847,22 +892,7 @@ void GWToolbox::UpdateInitialising(float) {
     gwtoolbox_state = GWToolboxState::DrawInitialising;
 }
 
-void GWToolbox::UpdateTerminating(float delta_f) {
-    ASSERT(gwtoolbox_state == GWToolboxState::Terminating);
-
-    if (all_modules_enabled.size()) {
-        SaveSettings();
-        while (modules_enabled.size()) {
-            ASSERT(ToggleModule(*modules_enabled[0], false) == false);
-        }
-        while (widgets_enabled.size()) {
-            ASSERT(ToggleModule(*widgets_enabled[0], false) == false);
-        }
-        while (windows_enabled.size()) {
-            ASSERT(ToggleModule(*windows_enabled[0], false) == false);
-        }
-    }
-    ASSERT(all_modules_enabled.empty());
+void GWToolbox::UpdateModulesTerminating(float delta_f) {
     terminate_modules:
     for (const auto m : modules_terminating) {
         if (m->CanTerminate()) {
@@ -874,6 +904,24 @@ void GWToolbox::UpdateTerminating(float delta_f) {
         }
         m->Update(delta_f);
     }
+}
+
+void GWToolbox::UpdateTerminating(float delta_f) {
+    ASSERT(gwtoolbox_state == GWToolboxState::Terminating);
+
+    if (all_modules_enabled.size()) {
+        while (modules_enabled.size()) {
+            ASSERT(ToggleModule(*modules_enabled[0], false) == false);
+        }
+        while (widgets_enabled.size()) {
+            ASSERT(ToggleModule(*widgets_enabled[0], false) == false);
+        }
+        while (windows_enabled.size()) {
+            ASSERT(ToggleModule(*windows_enabled[0], false) == false);
+        }
+    }
+    ASSERT(all_modules_enabled.empty());
+    UpdateModulesTerminating(delta_f);
     if (!modules_terminating.empty())
         return;
 
@@ -885,15 +933,12 @@ void GWToolbox::UpdateTerminating(float delta_f) {
     GW::DisableHooks();
 
     gwtoolbox_state = GWToolboxState::Terminated;
-
-    if (defer_close) {
-        // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
-        SendMessageW(gw_window_handle, WM_CLOSE, NULL, NULL);
-    }
 }
 
 void GWToolbox::DrawTerminating(IDirect3DDevice9*) {
     ASSERT(gwtoolbox_state == GWToolboxState::DrawTerminating);
+    // Save settings on the draw loop otherwise theme won't be saved
+    SaveSettings();
     ASSERT(DetachImgui());
     gwtoolbox_state = GWToolboxState::Terminating;
 }

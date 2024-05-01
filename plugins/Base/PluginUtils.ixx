@@ -120,10 +120,6 @@ export namespace PluginUtils {
     void FlashWindow(bool force = false);
     void FocusWindow();
 
-    // Same as std::format, but use printf formatting
-    std::string format(const char* msg, ...);
-    // Same as std::format, but use printf formatting
-    std::wstring format(const wchar_t* msg, ...);
 
     class EncString {
     protected:
@@ -959,30 +955,6 @@ namespace PluginUtils {
         }
         context->decoded = true;
         context->decoding = false;
-    }
-
-    std::string format(const char* msg, ...)
-    {
-        std::string out;
-        va_list args;
-        va_start(args, msg);
-        const auto size = vsnprintf(nullptr, 0, msg, args);
-        out.resize(size + 1);
-        PLUGIN_ASSERT(vsnprintf(out.data(), out.size(), msg, args) <= size);
-        va_end(args);
-        return out;
-    }
-
-    std::wstring format(const wchar_t* msg, ...)
-    {
-        std::wstring out;
-        va_list args;
-        va_start(args, msg);
-        const auto size = _vsnwprintf(nullptr, 0, msg, args);
-        out.resize(size + 1);
-        PLUGIN_ASSERT(_vsnwprintf(out.data(), out.size(), msg, args) <= size);
-        va_end(args);
-        return out;
     }
 
     std::string& EncString::string()
