@@ -5,7 +5,7 @@
 enum class ActionType : int {
     MoveTo,
     CastOnSelf,
-    CastOnTarget,
+    Cast,
     DropBuff, 
     ChangeTarget,
     UseItem,
@@ -15,7 +15,7 @@ enum class ActionType : int {
     PingTarget,
     AutoAttackTarget,
     SendDialog,
-    GoToNpc,
+    GoToTarget,
     Wait,
     SendChat,
     Cancel, 

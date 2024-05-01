@@ -3,6 +3,8 @@
 
 #include <imgui.h>
 
+#include <array>
+
 namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
@@ -209,14 +211,49 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
 {
     std::shared_ptr<Condition> result = nullptr;
     
+    constexpr auto conditions = std::array{
+        ConditionType::PlayerIsNearPosition,
+        ConditionType::PlayerHasBuff,
+        ConditionType::PlayerHasSkill,
+        ConditionType::PlayerHasClass,
+        ConditionType::PlayerHasName,
+        ConditionType::PlayerHasEnergy,
+        ConditionType::PlayerIsIdle,
+        ConditionType::PlayerHasItemEquipped,
+
+        ConditionType::NearbyAgent,
+
+        ConditionType::CurrentTargetHasHpBelow,
+        ConditionType::CurrentTargetIsUsingSkill,
+        ConditionType::CurrentTargetHasModel,
+        ConditionType::CurrentTargetAllegiance,
+
+        ConditionType::IsInMap,
+        ConditionType::QuestHasState,
+        ConditionType::PartyPlayerCount,
+        ConditionType::InstanceProgress,
+        ConditionType::HasPartyWindowAllyOfName,
+        
+        // ConditionType::PartyMemberStatus, // Does not work currently
+
+        ConditionType::InstanceTime,
+        ConditionType::KeyIsPressed,
+        ConditionType::CanPopAgent,
+
+        ConditionType::OnlyTriggerOncePerInstance,
+
+        ConditionType::Not,
+        ConditionType::Or,
+        ConditionType::And,
+    };
+
     if (ImGui::Button("Add condition", ImVec2(width, 0))) {
         ImGui::OpenPopup("Add condition");
     }
     if (ImGui::BeginPopup("Add condition")) {
-        for (auto i = 0; i < (int)ConditionType::Count; ++i) {
-            if (ConditionType(i) == ConditionType::PartyMemberStatus) continue; //Does not work properly
-            if (ImGui::Selectable(toString((ConditionType)i).data())) {
-                result = makeCondition(ConditionType(i));
+        for (auto condition : conditions) {
+            if (ImGui::Selectable(toString(condition).data())) {
+                result = makeCondition(condition);
             }
         }
         ImGui::EndPopup();

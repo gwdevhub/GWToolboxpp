@@ -75,7 +75,7 @@ namespace {
             stream >> std::ws;
             if (result.has_value() && stream.peek() == 'S') return result;
             std::string token = "";
-            stream >> token;
+            stream >> std::ws >> token;
             if (token.length() != 1) return result; //nullopt?
             switch (token[0]) {
                 case 'S':
@@ -227,7 +227,13 @@ void SpeedrunScriptingTools::DrawSettings()
                 m_scripts.push_back(std::move(importedScript.value()));
         }
     }
-
+    // Debug info
+    ImGui::Text("Current action: %s", (m_currentScript.has_value() && !m_currentScript->actions.empty()) ? toString(m_currentScript->actions.front()->type()).data() : "None");
+    ImGui::SameLine();
+    if (ImGui::Button("Reset")) 
+    {
+        m_currentScript = std::nullopt;
+    }
     ImGui::Text("Version 0.6. For bug reports and feature requests contact Jabor.");
 }
 
@@ -418,6 +424,7 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         }
     });
     InstanceInfo::getInstance().initialize();
+    srand((unsigned int)time(NULL));
 }
 void SpeedrunScriptingTools::SignalTerminate()
 {

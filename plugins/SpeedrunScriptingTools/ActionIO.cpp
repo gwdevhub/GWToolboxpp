@@ -3,6 +3,8 @@
 
 #include <imgui.h>
 
+#include <array>
+
 namespace {
     std::shared_ptr<Action> makeAction(ActionType type)
     {
@@ -12,16 +14,16 @@ namespace {
                 return std::make_shared<MoveToAction>();
             case ActionType::CastOnSelf:
                 return std::make_shared<CastOnSelfAction>();
-            case ActionType::CastOnTarget:
-                return std::make_shared<CastOnTargetAction>();
+            case ActionType::Cast:
+                return std::make_shared<CastAction>();
             case ActionType::ChangeTarget:
                 return std::make_shared<ChangeTargetAction>();
             case ActionType::UseItem:
                 return std::make_shared<UseItemAction>();
             case ActionType::SendDialog:
                 return std::make_shared<SendDialogAction>();
-            case ActionType::GoToNpc:
-                return std::make_shared<GoToNpcAction>();
+            case ActionType::GoToTarget:
+                return std::make_shared<GoToTargetAction>();
             case ActionType::Wait:
                 return std::make_shared<WaitAction>();
             case ActionType::SendChat:
@@ -46,50 +48,50 @@ namespace {
                 return nullptr;
         }
     }
-
-    std::string_view toString(ActionType type)
-    {
-        static_assert((int)ActionType::Count == 17);
-        switch (type) {
-            case ActionType::MoveTo:
-                return "Move to";
-            case ActionType::CastOnSelf:
-                return "Cast on self";
-            case ActionType::CastOnTarget:
-                return "Cast on current target";
-            case ActionType::ChangeTarget:
-                return "Change target";
-            case ActionType::UseItem:
-                return "Use item";
-            case ActionType::SendDialog:
-                return "Send dialog";
-            case ActionType::GoToNpc:
-                return "Go to NPC";
-            case ActionType::Wait:
-                return "Wait";
-            case ActionType::SendChat:
-                return "Send chat";
-            case ActionType::Cancel:
-                return "Cancel current action";
-            case ActionType::DropBuff:
-                return "Drop buff";
-            case ActionType::EquipItem:
-                return "Equip Item";
-            case ActionType::Conditioned:
-                return "Optional";
-            case ActionType::RepopMinipet:
-                return "Safely repop minipet";
-            case ActionType::PingHardMode:
-                return "Ping hard mode";
-            case ActionType::PingTarget:
-                return "Ping current target";
-            case ActionType::AutoAttackTarget:
-                return "Attack current target";
-            default:
-                return "Unknown";
-        }
-    }
 } // namespace
+
+std::string_view toString(ActionType type)
+{
+    static_assert((int)ActionType::Count == 17);
+    switch (type) {
+        case ActionType::MoveTo:
+            return "Move to";
+        case ActionType::CastOnSelf:
+            return "Force-cast on self";
+        case ActionType::Cast:
+            return "Cast";
+        case ActionType::ChangeTarget:
+            return "Change target";
+        case ActionType::UseItem:
+            return "Use item";
+        case ActionType::SendDialog:
+            return "Send dialog";
+        case ActionType::GoToTarget:
+            return "Go to current target";
+        case ActionType::Wait:
+            return "Wait";
+        case ActionType::SendChat:
+            return "Send chat";
+        case ActionType::Cancel:
+            return "Cancel current action";
+        case ActionType::DropBuff:
+            return "Drop buff";
+        case ActionType::EquipItem:
+            return "Equip Item";
+        case ActionType::Conditioned:
+            return "Optional";
+        case ActionType::RepopMinipet:
+            return "Safely repop minipet";
+        case ActionType::PingHardMode:
+            return "Ping hard mode";
+        case ActionType::PingTarget:
+            return "Ping current target";
+        case ActionType::AutoAttackTarget:
+            return "Attack current target";
+        default:
+            return "Unknown";
+    }
+}
 
 std::shared_ptr<Action> readAction(std::istringstream& stream)
 {
@@ -102,16 +104,16 @@ std::shared_ptr<Action> readAction(std::istringstream& stream)
             return std::make_shared<MoveToAction>(stream);
         case ActionType::CastOnSelf:
             return std::make_shared<CastOnSelfAction>(stream);
-        case ActionType::CastOnTarget:
-            return std::make_shared<CastOnTargetAction>(stream);
+        case ActionType::Cast:
+            return std::make_shared<CastAction>(stream);
         case ActionType::ChangeTarget:
             return std::make_shared<ChangeTargetAction>(stream);
         case ActionType::UseItem:
             return std::make_shared<UseItemAction>(stream);
         case ActionType::SendDialog:
             return std::make_shared<SendDialogAction>(stream);
-        case ActionType::GoToNpc:
-            return std::make_shared<GoToNpcAction>(stream);
+        case ActionType::GoToTarget:
+            return std::make_shared<GoToTargetAction>(stream);
         case ActionType::Wait:
             return std::make_shared<WaitAction>(stream);
         case ActionType::SendChat:
@@ -140,14 +142,38 @@ std::shared_ptr<Action> readAction(std::istringstream& stream)
 std::shared_ptr<Action> drawActionSelector(float width)
 {
     std::shared_ptr<Action> result = nullptr;
-    
+
+    static_assert((int)ActionType::Count == 17);
+    constexpr auto actions = std::array{
+        ActionType::MoveTo,       
+        ActionType::Cast,
+        ActionType::CastOnSelf,
+        ActionType::ChangeTarget, 
+        ActionType::GoToTarget,
+        ActionType::AutoAttackTarget, 
+        ActionType::PingTarget,
+
+        ActionType::UseItem,         
+        ActionType::EquipItem,
+        ActionType::SendDialog, 
+        ActionType::SendChat,
+        ActionType::DropBuff,
+        
+        ActionType::RepopMinipet,
+        ActionType::PingHardMode,
+
+        ActionType::Cancel,
+        ActionType::Wait,
+        ActionType::Conditioned,
+    };
+
     if (ImGui::Button("Add action", ImVec2(width, 0))) {
         ImGui::OpenPopup("Add action");
     }
     if (ImGui::BeginPopup("Add action")) {
-        for (auto i = 0; i < (int)ActionType::Count; ++i) {
-            if (ImGui::Selectable(toString((ActionType)i).data())) {
-                result = makeAction(ActionType(i));
+        for (auto action : actions) {
+            if (ImGui::Selectable(toString(action).data())) {
+                result = makeAction(action);
             }
         }
         ImGui::EndPopup();

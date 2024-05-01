@@ -5,3 +5,4 @@
 
 std::shared_ptr<Action> readAction(std::istringstream& stream);
 std::shared_ptr<Action> drawActionSelector(float width);
+std::string_view toString(ActionType type);

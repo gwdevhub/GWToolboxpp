@@ -111,19 +111,25 @@ namespace {
         ImGui::PopID();
     }
 
+    void ctosUseSkill(GW::Constants::SkillID skill, GW::AgentLiving* target) {
+        GW::GameThread::Enqueue([skill = (uint32_t)skill, target = target->agent_id]() -> void {
+            GW::CtoS::SendPacket(0x14, GAME_CMSG_USE_SKILL, skill, 0, target, 0);
+        });
+    }
+
     constexpr double eps = 1e-3;
 } // namespace
 
 /// ------------- MoveToAction -------------
 MoveToAction::MoveToAction(std::istringstream& stream)
 {
-    stream >> pos.x >> pos.y >> accuracy;
+    stream >> pos.x >> pos.y >> accuracy >> radius;
 }
 void MoveToAction::serialize(std::ostringstream& stream) const
 {
     Action::serialize(stream);
 
-    stream << pos.x << " " << pos.y << " " << accuracy << " ";
+    stream << pos.x << " " << pos.y << " " << accuracy << " " << radius << " ";
 }
 void MoveToAction::initialAction()
 {
@@ -133,7 +139,7 @@ void MoveToAction::initialAction()
         GW::Agents::Move(pos);
     });
 }
-bool MoveToAction::isComplete() const 
+bool MoveToAction::isComplete() const
 {
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
@@ -144,7 +150,17 @@ bool MoveToAction::isComplete() const
         return true; // We probably teled
     }
 
-    if (!player->GetIsMoving()) GW::Agents::Move(pos);
+    if (!player->GetIsMoving()) {
+        float px = radius > 0 ? pos.x + (rand() % radius - radius / 2) : pos.x;
+        float py = radius > 0 ? pos.y + (rand() % radius - radius / 2) : pos.y;
+
+        const auto now = std::chrono::steady_clock::now();
+        const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastMovePacketTime).count();
+        if (elapsedTime > 50) {
+            lastMovePacketTime = now;
+            GW::Agents::Move(GW::GamePos{px, py, pos.zplane});
+        }
+    }
 
     return distance < accuracy + eps;
 }
@@ -157,6 +173,10 @@ void MoveToAction::drawSettings(){
     ImGui::InputFloat("y", &pos.y, 0.0f, 0.0f);
     ImGui::SameLine();
     ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
+    ImGui::SameLine();
+    ImGui::InputInt("Target radius", &radius, 0);
+    ImGui::SameLine();
+    ShowHelp("If radius is greater than 0, moves to a slightly different position within the specified radius every time the player stops moving. Useful for walking through gates");
 }
 
 /// ------------- CastOnSelfAction -------------
@@ -190,9 +210,7 @@ void CastOnSelfAction::initialAction()
     startTime = std::chrono::steady_clock::now();
 
     hasBegunCasting = false;
-    GW::GameThread::Enqueue([slot]() -> void {
-        GW::SkillbarMgr::UseSkill(slot, 0);
-    });
+    ctosUseSkill(id, GW::Agents::GetPlayerAsAgentLiving());
 }
 bool CastOnSelfAction::isComplete() const
 {
@@ -213,29 +231,29 @@ bool CastOnSelfAction::isComplete() const
 }
 void CastOnSelfAction::drawSettings()
 {
-    ImGui::Text("Cast on self:");
+    ImGui::Text("Force-cast on self:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
+    ImGui::SameLine();
+    ShowHelp("Send a CtoS packet to cast a spell on yourself even if you have another target selected. Only necessary for targeted spells.");
 }
 
-/// ------------- CastOnTargetAction -------------
-CastOnTargetAction::CastOnTargetAction(std::istringstream& stream)
+/// ------------- CastAction -------------
+CastAction::CastAction(std::istringstream& stream)
 {
     stream >> id;
 }
-void CastOnTargetAction::serialize(std::ostringstream& stream) const
+void CastAction::serialize(std::ostringstream& stream) const
 {
     Action::serialize(stream);
 
     stream << id << " ";
 }
-void CastOnTargetAction::initialAction()
+void CastAction::initialAction()
 {
     Action::initialAction();
     
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
-    if (!target) return;
 
     GW::Skillbar* bar = GW::SkillbarMgr::GetPlayerSkillbar();
 
@@ -253,11 +271,14 @@ void CastOnTargetAction::initialAction()
     startTime = std::chrono::steady_clock::now();
 
     hasBegunCasting = false;
-    GW::GameThread::Enqueue([slot, targetId = target->agent_id]() -> void {
+
+    const auto target = GW::Agents::GetTargetAsAgentLiving();
+
+    GW::GameThread::Enqueue([slot, targetId = target ? target->agent_id : 0]() -> void {
         GW::SkillbarMgr::UseSkill(slot, targetId);
     });
 }
-bool CastOnTargetAction::isComplete() const
+bool CastAction::isComplete() const
 {
     if (!hasSkillReady || id == GW::Constants::SkillID::No_Skill) return true;
 
@@ -273,7 +294,7 @@ bool CastOnTargetAction::isComplete() const
 
     return hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id;
 }
-void CastOnTargetAction::drawSettings()
+void CastAction::drawSettings()
 {
     ImGui::Text("Cast on target:");
     ImGui::PushItemWidth(90);
@@ -531,44 +552,42 @@ void SendDialogAction::drawSettings()
     ImGui::InputInt("ID", &id, 0);
 }
 
-/// ------------- GoToNpcAction -------------
-GoToNpcAction::GoToNpcAction(std::istringstream& stream)
+/// ------------- GoToTargetAction -------------
+GoToTargetAction::GoToTargetAction(std::istringstream& stream)
 {
-    stream >> id >> accuracy;
+    stream >> accuracy;
 }
-void GoToNpcAction::serialize(std::ostringstream& stream) const
+void GoToTargetAction::serialize(std::ostringstream& stream) const
 {
     Action::serialize(stream);
 
-    stream << id << " " << accuracy << " ";
+    stream << accuracy << " ";
 }
-void GoToNpcAction::initialAction()
+void GoToTargetAction::initialAction()
 {
     Action::initialAction();
     
-    npc = findAgentWithId(id);
-    if (!npc) return;
-    
-    GW::GameThread::Enqueue([npc = this->npc]() -> void {
-        GW::Agents::InteractAgent(npc);
+    target = GW::Agents::GetTargetAsAgentLiving();
+    if (!target) return;
+
+    GW::GameThread::Enqueue([target = this->target]() -> void {
+        GW::Agents::InteractAgent(target);
     });
 }
-bool GoToNpcAction::isComplete() const
+bool GoToTargetAction::isComplete() const
 {
-    if (!npc) return true;
+    if (!target) return true;
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
 
-    const auto distance = GW::GetDistance(player->pos, npc->pos);
+    const auto distance = GW::GetDistance(player->pos, target->pos);
 
     return distance < accuracy + eps || distance > GW::Constants::Range::Compass;
 }
-void GoToNpcAction::drawSettings()
+void GoToTargetAction::drawSettings()
 {
-    ImGui::Text("Go to NPC:");
+    ImGui::Text("Go to target:");
     ImGui::PushItemWidth(90);
-    ImGui::SameLine();
-    ImGui::InputInt("Model ID", &id, 0);
     ImGui::SameLine();
     ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
 }

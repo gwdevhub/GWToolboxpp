@@ -31,6 +31,8 @@ public:
 private:
     GW::GamePos pos{};
     float accuracy = GW::Constants::Range::Adjacent;
+    int radius = 0;
+    mutable std::chrono::steady_clock::time_point lastMovePacketTime = std::chrono::steady_clock::now();
 };
 
 class CastOnSelfAction : public Action {
@@ -50,11 +52,11 @@ private:
     std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
 };
 
-class CastOnTargetAction : public Action {
+class CastAction : public Action {
 public:
-    CastOnTargetAction() = default;
-    CastOnTargetAction(std::istringstream&);
-    ActionType type() const final { return ActionType::CastOnTarget; }
+    CastAction() = default;
+    CastAction(std::istringstream&);
+    ActionType type() const final { return ActionType::Cast; }
     void initialAction() final;
     bool isComplete() const final;
     void drawSettings() final;
@@ -131,20 +133,19 @@ private:
     int id = 0;
 };
 
-class GoToNpcAction : public Action {
+class GoToTargetAction : public Action {
 public:
-    GoToNpcAction() = default;
-    GoToNpcAction(std::istringstream&);
-    ActionType type() const final { return ActionType::GoToNpc; }
+    GoToTargetAction() = default;
+    GoToTargetAction(std::istringstream&);
+    ActionType type() const final { return ActionType::GoToTarget; }
     void initialAction() final;
     bool isComplete() const final;
     void drawSettings() final;
     void serialize(std::ostringstream&) const final;
 
 private:
-    int id = 0;
     float accuracy = GW::Constants::Range::Adjacent;
-    const GW::AgentLiving* npc = nullptr;
+    const GW::AgentLiving* target = nullptr;
 };
 
 class WaitAction : public Action {
