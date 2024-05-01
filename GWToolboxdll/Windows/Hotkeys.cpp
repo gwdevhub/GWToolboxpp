@@ -39,8 +39,9 @@ unsigned int TBHotkey::cur_ui_id = 0;
 LONG* TBHotkey::key_out = nullptr;
 LONG* TBHotkey::mod_out = nullptr;
 std::unordered_map<WORD, HotkeyToggle*> HotkeyToggle::toggled;
-std::vector<const char*> HotkeyGWKey::labels = {};
-std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> HotkeyGWKey::control_labels;
+
+typedef std::pair<GW::UI::ControlAction, GuiUtils::EncString*> ControlLabelPair;
+std::vector<ControlLabelPair> HotkeyGWKey::control_labels;
 
 namespace {
     // @Cleanup: when toolbox closes, this array isn't freed properly
@@ -51,6 +52,42 @@ namespace {
         "Guard",
         "Avoid Combat"
     };
+
+    std::vector<const char*> HotkeyGWKey_labels = {};
+
+    bool BuildHotkeyGWKeyLabels() {
+        if (!HotkeyGWKey_labels.empty())
+            return true;
+        bool waiting = false;
+        for (const auto& it : HotkeyGWKey::control_labels) {
+            (it.second->string());
+            if (it.second->IsDecoding()) {
+                waiting = true;
+                break;
+            }
+        }
+        if (waiting) {
+            //ImGui::Text("Waiting on endoded strings");
+            return false;
+        }
+        // Reorder
+        std::ranges::sort(HotkeyGWKey::control_labels, [](const ControlLabelPair& lhs, const ControlLabelPair& rhs) {
+            return lhs.second->string().compare(rhs.second->string()) < 0;
+            });
+        for (const auto& it : HotkeyGWKey::control_labels) {
+            HotkeyGWKey_labels.push_back(it.second->string().c_str());
+        }
+        return true;
+    }
+
+    int GetHotkeyActionIdx(GW::UI::ControlAction action) {
+        BuildHotkeyGWKeyLabels();
+        for (size_t i = 0; i < HotkeyGWKey::control_labels.size(); i++) {
+            if (HotkeyGWKey::control_labels[i].first == action)
+                return (int)i;
+        }
+        return 0;
+    }
 }
 
 
@@ -1986,12 +2023,7 @@ HotkeyGWKey::HotkeyGWKey(const ToolboxIni* ini, const char* section)
 {
     can_trigger_on_map_change = trigger_on_explorable = trigger_on_outpost = false;
     action = static_cast<GW::UI::ControlAction>(ini->GetLongValue(section, "ActionID", action));
-    const auto found = std::ranges::find_if(control_labels, [&](const std::pair<GW::UI::ControlAction, GuiUtils::EncString*> in) {
-        return action == in.first;
-    });
-    if (found != control_labels.end()) {
-        action_idx = std::distance(control_labels.begin(), found);
-    }
+
 }
 
 void HotkeyGWKey::Save(ToolboxIni* ini, const char* section) const
@@ -2002,6 +2034,7 @@ void HotkeyGWKey::Save(ToolboxIni* ini, const char* section) const
 
 int HotkeyGWKey::Description(char* buf, const size_t bufsz)
 {
+    action_idx = GetHotkeyActionIdx(action);
     if (action_idx < 0 || action_idx >= static_cast<int>(control_labels.size())) {
         return snprintf(buf, bufsz, "Guild Wars Key: Unknown Action %d", action_idx);
     }
@@ -2010,32 +2043,13 @@ int HotkeyGWKey::Description(char* buf, const size_t bufsz)
 
 bool HotkeyGWKey::Draw()
 {
-    if (labels.empty()) {
-        bool waiting = false;
-        for (const auto& it : control_labels) {
-            (it.second->string());
-            if (it.second->IsDecoding()) {
-                waiting = true;
-                break;
-            }
-            labels.push_back(it.second->string().c_str());
-        }
-        if (waiting) {
-            labels.clear();
-        }
-        else {
-            // Reorder
-            std::ranges::sort(labels, [](const char* lhs, const char* rhs) {
-                return std::string(lhs).compare(rhs) < 0;
-                });
-        }
-    }
-    if (labels.empty()) {
+    if (!BuildHotkeyGWKeyLabels()) {
         ImGui::Text("Waiting on endoded strings");
         return false;
     }
+    action_idx = GetHotkeyActionIdx(action);
 
-    if (ImGui::Combo("Action###combo", &action_idx, labels.data(), labels.size(), 10)) {
+    if (ImGui::Combo("Action###combo", &action_idx, HotkeyGWKey_labels.data(), HotkeyGWKey_labels.size(), 10)) {
         action = control_labels[action_idx].first;
         return true;
     }
