@@ -92,6 +92,7 @@ private:
     bool mayBeCurrentTarget = true;
     bool requireSameModelIdAsTarget = false;
     std::string agentName = "";
+    std::vector<GW::Vec2f> polygon;
 };
 
 class UseItemAction : public Action {

@@ -325,6 +325,7 @@ private:
     float minDistance = 0.f;
     float maxDistance = 5000.f;
     std::string agentName = "";
+    std::vector<GW::Vec2f> polygon;
 };
 
 class CanPopAgentCondition : public Condition {

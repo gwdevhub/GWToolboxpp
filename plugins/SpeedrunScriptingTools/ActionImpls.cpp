@@ -307,6 +307,7 @@ ChangeTargetAction::ChangeTargetAction(std::istringstream& stream)
 {
     stream >> agentType >> primary >> secondary >> status >> skill >> sorting >> modelId >> minDistance >> maxDistance >> mayBeCurrentTarget >> requireSameModelIdAsTarget >> preferNonHexed;
     agentName = readStringWithSpaces(stream);
+    polygon = readPositions(stream);
 }
 void ChangeTargetAction::serialize(std::ostringstream& stream) const
 {
@@ -315,6 +316,7 @@ void ChangeTargetAction::serialize(std::ostringstream& stream) const
     stream << agentType << " " << primary << " " << secondary << " " << status << " " << skill << " " << sorting << " " << modelId << " " << minDistance << " " << maxDistance << " " << mayBeCurrentTarget << " " << requireSameModelIdAsTarget << " "
            << preferNonHexed << " ";
     writeStringWithSpaces(stream, agentName);
+    writePositions(stream, polygon);
 }
 void ChangeTargetAction::initialAction()
 {
@@ -355,7 +357,8 @@ void ChangeTargetAction::initialAction()
         const auto distance = GW::GetDistance(player->pos, agent->pos);
         const auto goodDistance = (minDistance < distance) && (distance < maxDistance);
         const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedName(agent->agent_id) == agentName);
-        return correctType && correctPrimary && correctSecondary && correctStatus && correctSkill && correctModelId && acceptableWithCurrentTarget && goodDistance && goodName;
+        const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(agent->pos, polygon);
+        return correctType && correctPrimary && correctSecondary && correctStatus && correctSkill && correctModelId && acceptableWithCurrentTarget && goodDistance && goodName && goodPosition;
     };
 
     GW::AgentLiving const * currentBestTarget = nullptr;
@@ -460,6 +463,10 @@ void ChangeTargetAction::drawSettings()
         ImGui::BulletText("Sort candidates by:");
         ImGui::SameLine();
         drawEnumButton(Sorting::AgentId, Sorting::HighestHp, sorting, 4, 150.);
+
+        ImGui::Bullet();
+        ImGui::Text("Is within polygon");
+        drawPolygonSelector(polygon);
 
         ImGui::TreePop();
     }
