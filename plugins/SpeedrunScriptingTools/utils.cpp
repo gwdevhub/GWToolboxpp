@@ -4,15 +4,49 @@
 
 #include <Keys.h>
 
-#include <vector>
-#include <optional>
-
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
 
 namespace 
 {
     const std::string endOfStringSignifier{"<"};
+    constexpr char separatorToken = 0x7F;
+}
+
+int InputStream::peek()
+{
+    return stream.peek();
+}
+int InputStream::get()
+{
+    return stream.get();
+}
+InputStream::operator bool() const
+{
+    return stream.good();
+}
+void InputStream::proceedPastSeparator()
+{
+    while (stream.good() && get() != separatorToken)
+    {
+    }
+}
+bool InputStream::isAtSeparator()
+{
+    stream >> std::ws;
+    return peek() == separatorToken;
+}
+void OutputStream::writeSeparator()
+{
+    stream << separatorToken;
+}
+std::string OutputStream::str()
+{
+    return stream.str();
+}
+OutputStream::operator bool() const
+{
+    return stream.good();
 }
 
 void ShowHelp(const char* help)
@@ -24,7 +58,7 @@ void ShowHelp(const char* help)
     }
 }
 
-std::string readStringWithSpaces(std::istringstream& stream) 
+std::string readStringWithSpaces(InputStream& stream) 
 {
     std::string result;
     std::string word;
@@ -39,9 +73,9 @@ std::string readStringWithSpaces(std::istringstream& stream)
     return result;
 }
 
-void writeStringWithSpaces(std::ostringstream& stream, const std::string& word) 
+void writeStringWithSpaces(OutputStream& stream, const std::string& word) 
 {
-    stream << word << " " << endOfStringSignifier << " ";
+    stream << word << endOfStringSignifier;
 }
 
 std::string_view toString(Status status)
@@ -57,7 +91,7 @@ std::string_view toString(Status status)
     return "";
 }
 
-std::string toString(Class c)
+std::string_view toString(Class c)
 {
     switch (c) {
         case Class::Warrior:
@@ -132,6 +166,41 @@ std::string_view toString(HexedStatus status) {
         default:
             return "";
     }
+}
+std::string_view toString(Channel channel)
+{
+    switch (channel) {
+        case Channel::All:
+            return "All";
+        case Channel::Guild:
+            return "Guild";
+        case Channel::Team:
+            return "Team";
+        case Channel::Trade:
+            return "Trade";
+        case Channel::Alliance:
+            return "Alliance";
+        case Channel::Whisper:
+            return "Whisper";
+        case Channel::Emote:
+            return "Emote";
+        default:
+            return "Unknown";
+    }
+}
+std::string_view toString(QuestStatus status)
+{
+    switch (status) {
+        case QuestStatus::NotStarted:
+            return "Not started";
+        case QuestStatus::Started:
+            return "Started";
+        case QuestStatus::Completed:
+            return "Completed";
+        case QuestStatus::Failed:
+            return "Failed";
+    }
+    return "";
 }
 
 std::string makeHotkeyDescription(long keyData, long modifier) 
@@ -390,7 +459,7 @@ constexpr std::vector<bool> huffmanEncode(const std::string& str)
     return result;
 }
 
-std::string exportString(const std::string& str) 
+std::string encodeString(const std::string& str) 
 {
     return splitIntoReadableChars(huffmanEncode(str));
 }
@@ -507,12 +576,12 @@ std::string huffmanDecode(std::vector<bool>&& seq)
     return result;
 }
 
-std::string importString(std::string&& str)
+std::string decodeString(std::string&& str)
 {
     return huffmanDecode(combineIntoBitSequence(std::move(str)));
 }
 
-std::vector<GW::Vec2f> readPositions(std::istringstream& stream) 
+std::vector<GW::Vec2f> readPositions(InputStream& stream) 
 {
     int size;
     stream >> size;
@@ -528,11 +597,11 @@ std::vector<GW::Vec2f> readPositions(std::istringstream& stream)
 
     return result;
 }
-void writePositions(std::ostringstream& stream, const std::vector<GW::Vec2f>& positions) 
+void writePositions(OutputStream& stream, const std::vector<GW::Vec2f>& positions) 
 {
-    stream << positions.size() << " ";
+    stream << positions.size();
     for (const auto& pos : positions) {
-        stream << pos.x << " " << pos.y << " ";
+        stream << pos.x << pos.y;
     }
 }
 

@@ -138,7 +138,7 @@ std::string_view toString(ConditionType type)
 }
 } // namespace
 
-std::shared_ptr<Condition> readCondition(std::istringstream& stream)
+std::shared_ptr<Condition> readCondition(InputStream& stream)
 {
 static_assert((int)ConditionType::Count == 26);
 int type;

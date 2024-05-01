@@ -11,9 +11,6 @@
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/Constants/ItemIDs.h>
 
-#include "windows.h"
-#include <stringapiset.h>
-
 namespace {
     GW::HookEntry ObjectiveUpdateName_Entry;
     GW::HookEntry ObjectiveDone_Entry;

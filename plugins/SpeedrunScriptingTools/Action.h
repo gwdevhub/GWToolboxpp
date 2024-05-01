@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sstream>
+#include <utils.h>
 
 enum class ActionType : int {
     MoveTo,
@@ -31,7 +31,7 @@ public:
     virtual void finalAction() { m_hasBeenStarted = false; }
     virtual bool isComplete() const { return true; }
     virtual void drawSettings() = 0;
-    virtual void serialize(std::ostringstream& stream) const { stream << "A " << (int)type() << " ";}
+    virtual void serialize(OutputStream& stream) const { stream << "A " << type();}
     bool hasBeenStarted() const { return m_hasBeenStarted; }
 
 private:
