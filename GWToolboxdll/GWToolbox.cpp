@@ -115,6 +115,7 @@ namespace {
     bool game_loop_callback_attached = false;
     GW::HookEntry game_loop_callback_entry;
     bool AttachGameLoopCallback() {
+        GW::GameThread::EnableHooks();
         if (!game_loop_callback_attached) {
             GW::GameThread::RegisterGameThreadCallback(&game_loop_callback_entry,GWToolbox::Update);
             game_loop_callback_attached = true;
@@ -674,8 +675,8 @@ void GWToolbox::Disable()
 
 bool GWToolbox::CanTerminate()
 {
-    return modules_terminating.empty() 
-        && GuiUtils::FontsLoaded() 
+    return modules_terminating.empty()
+        && GuiUtils::FontsLoaded()
         && all_modules_enabled.empty()
         && !imgui_initialized
         && !event_handler_attached;
