@@ -5,9 +5,18 @@
 #include <cstddef>
 #include <cstring>
 #include <sstream>
+#include <vector>
+
+#include <GWCA/GameContainers/GamePos.h>
 
 std::string readStringWithSpaces(std::istringstream&);
 void writeStringWithSpaces(std::ostringstream&, const std::string& word);
+
+std::vector<GW::Vec2f> readPositions(std::istringstream&);
+void writePositions(std::ostringstream&, const std::vector<GW::Vec2f>&);
+
+void drawPolygonSelector(std::vector<GW::Vec2f>& polygon);
+bool pointIsInsidePolygon(const GW::GamePos pos, const std::vector<GW::Vec2f>& polygon);
 
 std::string exportString(const std::string&);
 std::string importString(std::string&&);
