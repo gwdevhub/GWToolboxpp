@@ -80,19 +80,29 @@ namespace {
 } // namespace
 
 /// ------------- MoveToAction -------------
+MoveToAction::MoveToAction()
+{
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+        if (auto player = GW::Agents::GetPlayerAsAgentLiving()) {
+            pos = player->pos;
+        }
+    }
+}
 MoveToAction::MoveToAction(InputStream& stream)
 {
-    stream >> pos.x >> pos.y >> accuracy >> radius;
+    stream >> pos.x >> pos.y >> accuracy >> repeatMove;
 }
 void MoveToAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << pos.x << pos.y << accuracy << radius;
+    stream << pos.x << pos.y << accuracy << repeatMove;
 }
 void MoveToAction::initialAction()
 {
     Action::initialAction();
+
+    hasBegunWalking = false;
 
     GW::GameThread::Enqueue([pos = this->pos]() -> void {
         GW::Agents::Move(pos);
@@ -105,21 +115,34 @@ bool MoveToAction::isComplete() const
 
     const auto distance = GW::GetDistance(player->pos, pos);
 
-    if (distance > GW::Constants::Range::Compass) {
+    if (distance > GW::Constants::Range::Compass) 
+    {
         return true; // We probably teled
     }
 
-    if (!player->GetIsMoving()) {
-        float px = radius > 0 ? pos.x + (rand() % radius - radius / 2) : pos.x;
-        float py = radius > 0 ? pos.y + (rand() % radius - radius / 2) : pos.y;
+    if (!player->GetIsMoving() && distance > accuracy + eps) 
+    {
+        if (repeatMove) 
+        {
+            const auto radius = std::min((int)(accuracy / 4), 10);
+            float px = radius > 0 ? pos.x + (rand() % radius - radius / 2) : pos.x;
+            float py = radius > 0 ? pos.y + (rand() % radius - radius / 2) : pos.y;
 
-        const auto now = std::chrono::steady_clock::now();
-        const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastMovePacketTime).count();
-        if (elapsedTime > 50) {
-            lastMovePacketTime = now;
-            GW::Agents::Move(GW::GamePos{px, py, pos.zplane});
+            const auto now = std::chrono::steady_clock::now();
+            const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastMovePacketTime).count();
+            if (elapsedTime > 50) {
+                lastMovePacketTime = now;
+                GW::Agents::Move(GW::GamePos{px, py, pos.zplane});
+            }
+        }
+        else if (hasBegunWalking)
+        {
+            // Give up on this action
+            return true;
         }
     }
+
+    hasBegunWalking |= player->GetIsMoving();
 
     return distance < accuracy + eps;
 }
@@ -133,9 +156,7 @@ void MoveToAction::drawSettings(){
     ImGui::SameLine();
     ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
     ImGui::SameLine();
-    ImGui::InputInt("Target radius", &radius, 0);
-    ImGui::SameLine();
-    ShowHelp("If radius is greater than 0, moves to a slightly different position within the specified radius every time the player stops moving. Useful for walking through gates");
+    ImGui::Checkbox("Repeat move when idle", &repeatMove);
 }
 
 /// ------------- CastOnSelfAction -------------
@@ -255,7 +276,7 @@ bool CastAction::isComplete() const
 }
 void CastAction::drawSettings()
 {
-    ImGui::Text("Cast on target:");
+    ImGui::Text("Use skill:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
@@ -468,7 +489,7 @@ void UseItemAction::drawSettings()
     ImGui::Text("Use item:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputInt("ID", &id, 0);
+    ImGui::InputInt("model ID", &id, 0);
 }
 
 /// ------------- EquipItemAction -------------
@@ -495,10 +516,10 @@ void EquipItemAction::initialAction()
 }
 void EquipItemAction::drawSettings()
 {
-    ImGui::Text("Use item:");
+    ImGui::Text("Equip item:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputInt("ID", &id, 0);
+    ImGui::InputInt("model ID", &id, 0);
 }
 
 /// ------------- SendDialogAction -------------
@@ -562,7 +583,7 @@ bool GoToTargetAction::isComplete() const
 }
 void GoToTargetAction::drawSettings()
 {
-    ImGui::Text("Go to target:");
+    ImGui::Text("Interact with current target");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);

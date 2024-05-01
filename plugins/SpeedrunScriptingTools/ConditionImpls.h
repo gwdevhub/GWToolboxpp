@@ -49,7 +49,7 @@ private:
 
 class IsInMapCondition : public Condition {
 public:
-    IsInMapCondition() = default;
+    IsInMapCondition();
     IsInMapCondition(InputStream&);
     ConditionType type() const final { return ConditionType::IsInMap; }
     bool check() const final;
@@ -114,7 +114,7 @@ private:
 
 class PlayerIsNearPositionCondition : public Condition {
 public:
-    PlayerIsNearPositionCondition() = default;
+    PlayerIsNearPositionCondition();
     PlayerIsNearPositionCondition(InputStream&);
     ConditionType type() const final { return ConditionType::PlayerIsNearPosition; }
     bool check() const final;

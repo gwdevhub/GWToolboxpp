@@ -67,7 +67,7 @@ std::string_view toString(ActionType type)
         case ActionType::SendDialog:
             return "Send dialog";
         case ActionType::GoToTarget:
-            return "Go to current target";
+            return "Interact with current target";
         case ActionType::Wait:
             return "Wait";
         case ActionType::SendChat:
