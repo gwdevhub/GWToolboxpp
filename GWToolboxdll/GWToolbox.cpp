@@ -114,7 +114,7 @@ namespace {
 
                 // Left button clicked, on the exit button (ID 0x3)
                 if (!closing_gw) {
-                    SendMessage(GW::MemoryMgr::GetGWWindowHandle(), WM_CLOSE, NULL, NULL);
+                    SendMessage(gw_window_handle, WM_CLOSE, NULL, NULL);
                 }
                 closing_gw = true;
                 GW::Hook::LeaveHook();
@@ -444,6 +444,11 @@ DWORD __stdcall ThreadEntry(LPVOID)
 
     Log::Log("Closing log/console, bye!\n");
     Log::Terminate();
+
+    if (defer_close) {
+        // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
+        SendMessage(gw_window_handle, WM_CLOSE, NULL, NULL);
+    }
     return 0;
 }
 
@@ -928,11 +933,6 @@ void GWToolbox::UpdateTerminating(float delta_f) {
     GW::DisableHooks();
 
     gwtoolbox_state = GWToolboxState::Terminated;
-
-    if (defer_close) {
-        // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
-        SendMessageW(gw_window_handle, WM_CLOSE, NULL, NULL);
-    }
 }
 
 void GWToolbox::DrawTerminating(IDirect3DDevice9*) {
