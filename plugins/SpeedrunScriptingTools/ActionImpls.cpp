@@ -18,7 +18,6 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
 
-#include "imgui.h"
 #include <ImGuiCppWrapper.h>
 #include <thread>
 
@@ -70,46 +69,6 @@ namespace {
         }
         return nullptr;
     }
-    std::string_view toString(SendChatAction::Channel channel) {
-        switch (channel) {
-            case SendChatAction::Channel::All:
-                return "All";
-            case SendChatAction::Channel::Guild:
-                return "Guild";
-            case SendChatAction::Channel::Team:
-                return "Team";
-            case SendChatAction::Channel::Trade:
-                return "Trade";
-            case SendChatAction::Channel::Alliance:
-                return "Alliance";
-            case SendChatAction::Channel::Whisper:
-                return "Whisper";
-            case SendChatAction::Channel::Emote:
-                return "Emote";
-            default:
-                return "Unknown";
-        }
-    }
-
-    template <typename T>
-    void drawEnumButton(T firstValue, T lastValue, T& currentValue, int id = 0, float width = 100.)
-    {
-        ImGui::PushID(id);
-
-        if (ImGui::Button(toString(currentValue).data(), ImVec2(width, 0))) {
-            ImGui::OpenPopup("Enum popup");
-        }
-        if (ImGui::BeginPopup("Enum popup")) {
-            for (auto i = (int)firstValue; i <= (int)lastValue; ++i) {
-                if (ImGui::Selectable(toString((T)i).data())) {
-                    currentValue = static_cast<T>(i);
-                }
-            }
-            ImGui::EndPopup();
-        }
-
-        ImGui::PopID();
-    }
 
     void ctosUseSkill(GW::Constants::SkillID skill, GW::AgentLiving* target) {
         GW::GameThread::Enqueue([skill = (uint32_t)skill, target = target->agent_id]() -> void {
@@ -121,15 +80,15 @@ namespace {
 } // namespace
 
 /// ------------- MoveToAction -------------
-MoveToAction::MoveToAction(std::istringstream& stream)
+MoveToAction::MoveToAction(InputStream& stream)
 {
     stream >> pos.x >> pos.y >> accuracy >> radius;
 }
-void MoveToAction::serialize(std::ostringstream& stream) const
+void MoveToAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << pos.x << " " << pos.y << " " << accuracy << " " << radius << " ";
+    stream << pos.x << pos.y << accuracy << radius;
 }
 void MoveToAction::initialAction()
 {
@@ -180,15 +139,15 @@ void MoveToAction::drawSettings(){
 }
 
 /// ------------- CastOnSelfAction -------------
-CastOnSelfAction::CastOnSelfAction(std::istringstream& stream)
+CastOnSelfAction::CastOnSelfAction(InputStream& stream)
 {
     stream >> id;
 }
-void CastOnSelfAction::serialize(std::ostringstream& stream) const
+void CastOnSelfAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << id << " ";
+    stream << id;
 }
 void CastOnSelfAction::initialAction()
 {
@@ -240,15 +199,15 @@ void CastOnSelfAction::drawSettings()
 }
 
 /// ------------- CastAction -------------
-CastAction::CastAction(std::istringstream& stream)
+CastAction::CastAction(InputStream& stream)
 {
     stream >> id;
 }
-void CastAction::serialize(std::ostringstream& stream) const
+void CastAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << id << " ";
+    stream << id;
 }
 void CastAction::initialAction()
 {
@@ -303,18 +262,18 @@ void CastAction::drawSettings()
 }
 
 /// ------------- ChangeTargetAction -------------
-ChangeTargetAction::ChangeTargetAction(std::istringstream& stream)
+ChangeTargetAction::ChangeTargetAction(InputStream& stream)
 {
     stream >> agentType >> primary >> secondary >> status >> skill >> sorting >> modelId >> minDistance >> maxDistance >> mayBeCurrentTarget >> requireSameModelIdAsTarget >> preferNonHexed;
     agentName = readStringWithSpaces(stream);
     polygon = readPositions(stream);
 }
-void ChangeTargetAction::serialize(std::ostringstream& stream) const
+void ChangeTargetAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << agentType << " " << primary << " " << secondary << " " << status << " " << skill << " " << sorting << " " << modelId << " " << minDistance << " " << maxDistance << " " << mayBeCurrentTarget << " " << requireSameModelIdAsTarget << " "
-           << preferNonHexed << " ";
+    stream << agentType << primary << secondary << status << skill << sorting << modelId << minDistance << maxDistance << mayBeCurrentTarget << requireSameModelIdAsTarget
+           << preferNonHexed;
     writeStringWithSpaces(stream, agentName);
     writePositions(stream, polygon);
 }
@@ -483,15 +442,15 @@ void ChangeTargetAction::drawSettings()
 }
 
 /// ------------- UseItemAction -------------
-UseItemAction::UseItemAction(std::istringstream& stream)
+UseItemAction::UseItemAction(InputStream& stream)
 {
     stream >> id;
 }
-void UseItemAction::serialize(std::ostringstream& stream) const
+void UseItemAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << id << " ";
+    stream << id;
 }
 void UseItemAction::initialAction()
 {
@@ -513,15 +472,15 @@ void UseItemAction::drawSettings()
 }
 
 /// ------------- EquipItemAction -------------
-EquipItemAction::EquipItemAction(std::istringstream& stream)
+EquipItemAction::EquipItemAction(InputStream& stream)
 {
     stream >> id;
 }
-void EquipItemAction::serialize(std::ostringstream& stream) const
+void EquipItemAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << id << " ";
+    stream << id;
 }
 void EquipItemAction::initialAction()
 {
@@ -543,15 +502,15 @@ void EquipItemAction::drawSettings()
 }
 
 /// ------------- SendDialogAction -------------
-SendDialogAction::SendDialogAction(std::istringstream& stream)
+SendDialogAction::SendDialogAction(InputStream& stream)
 {
     stream >> id;
 }
-void SendDialogAction::serialize(std::ostringstream& stream) const
+void SendDialogAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << id << " ";
+    stream << id;
 }
 void SendDialogAction::initialAction()
 {
@@ -570,15 +529,15 @@ void SendDialogAction::drawSettings()
 }
 
 /// ------------- GoToTargetAction -------------
-GoToTargetAction::GoToTargetAction(std::istringstream& stream)
+GoToTargetAction::GoToTargetAction(InputStream& stream)
 {
     stream >> accuracy;
 }
-void GoToTargetAction::serialize(std::ostringstream& stream) const
+void GoToTargetAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << accuracy << " ";
+    stream << accuracy;
 }
 void GoToTargetAction::initialAction()
 {
@@ -610,15 +569,15 @@ void GoToTargetAction::drawSettings()
 }
 
 /// ------------- WaitAction -------------
-WaitAction::WaitAction(std::istringstream& stream)
+WaitAction::WaitAction(InputStream& stream)
 {
     stream >> waitTime;
 }
-void WaitAction::serialize(std::ostringstream& stream) const
+void WaitAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << waitTime << " ";
+    stream << waitTime;
 }
 void WaitAction::initialAction()
 {
@@ -641,16 +600,16 @@ void WaitAction::drawSettings()
 }
 
 /// ------------- SendChatAction -------------
-SendChatAction::SendChatAction(std::istringstream& stream)
+SendChatAction::SendChatAction(InputStream& stream)
 {
     stream >> channel;
     message = readStringWithSpaces(stream);
 }
-void SendChatAction::serialize(std::ostringstream& stream) const
+void SendChatAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << channel << " ";
+    stream << channel;
     writeStringWithSpaces(stream, message);
 }
 void SendChatAction::initialAction()
@@ -708,15 +667,15 @@ void CancelAction::drawSettings()
 }
 
 /// ------------- DropBuffAction -------------
-DropBuffAction::DropBuffAction(std::istringstream& stream)
+DropBuffAction::DropBuffAction(InputStream& stream)
 {
     stream >> id;
 }
-void DropBuffAction::serialize(std::ostringstream& stream) const
+void DropBuffAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << id << " ";
+    stream << id;
 }
 void DropBuffAction::initialAction()
 {
@@ -738,7 +697,7 @@ void DropBuffAction::drawSettings()
 }
 
 /// ------------- ConditionedAction -------------
-ConditionedAction::ConditionedAction(std::istringstream& stream)
+ConditionedAction::ConditionedAction(InputStream& stream)
 {
     std::string read;
     stream >> read;
@@ -762,19 +721,19 @@ ConditionedAction::ConditionedAction(std::istringstream& stream)
         assert(false);
     }
 }
-void ConditionedAction::serialize(std::ostringstream& stream) const
+void ConditionedAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
     if (cond)
         cond->serialize(stream);
     else
-        stream << missingContentToken << " ";
+        stream << missingContentToken;
 
     if (act)
         act->serialize(stream);
     else
-        stream << missingContentToken << " ";
+        stream << missingContentToken;
 }
 void ConditionedAction::initialAction()
 {
@@ -804,15 +763,15 @@ void ConditionedAction::drawSettings()
 }
 
 /// ------------- RepopMinipetAction -------------
-RepopMinipetAction::RepopMinipetAction(std::istringstream& stream)
+RepopMinipetAction::RepopMinipetAction(InputStream& stream)
 {
     stream >> id;
 }
-void RepopMinipetAction::serialize(std::ostringstream& stream) const
+void RepopMinipetAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << id << " ";
+    stream << id;
 }
 void RepopMinipetAction::initialAction()
 {

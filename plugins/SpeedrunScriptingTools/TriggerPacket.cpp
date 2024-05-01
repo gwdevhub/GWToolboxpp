@@ -1,10 +1,5 @@
 #include <TriggerPacket.h>
 
-#include <utils.h>
-
-#include <imgui.h>
-#include <string_view>
-
 namespace{
     std::string_view toString(Trigger type)
     {
@@ -61,7 +56,7 @@ void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& 
     }
 }
 
-std::istringstream& operator>>(std::istringstream& in, Trigger& packet)
+InputStream& operator>>(InputStream& in, Trigger& packet)
 {
     std::string read;
     in >> read;

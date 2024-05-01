@@ -31,8 +31,6 @@ namespace {
 
     constexpr long currentVersion = 7;
 
-    constexpr char endOfAC = 0x7F;
-
     bool canAddCondition(const Script& script) {
         return !std::ranges::any_of(script.conditions, [](const auto& cond) {
             return cond->type() == ConditionType::OnlyTriggerOncePerInstance;
@@ -47,36 +45,37 @@ namespace {
 
     std::string serialize(const Script& script) 
     {
-        std::ostringstream stream;
+        OutputStream stream;
 
-        stream << 'S' << " ";
+        stream << 'S';
         writeStringWithSpaces(stream, script.name);
-        stream << script.trigger << " ";
-        stream << script.enabled << " ";
-        stream << script.hotkeyStatus.keyData << " ";
-        stream << script.hotkeyStatus.modifier << " ";
+        stream << script.trigger;
+        stream << script.enabled;
+        stream << script.hotkeyStatus.keyData;
+        stream << script.hotkeyStatus.modifier;
+
+        stream.writeSeparator();
 
         for (const auto& condition : script.conditions) {
             condition->serialize(stream);
-            stream << endOfAC << " ";
+            stream.writeSeparator();
         }
         for (const auto& action : script.actions) {
             action->serialize(stream);
-            stream << endOfAC << " ";
+            stream.writeSeparator();
         }
         return stream.str();
     }
 
-    std::optional<Script> deserialize(std::istringstream& stream)
+    std::optional<Script> deserialize(InputStream& stream)
     {
         std::optional<Script> result;
 
         do {
-            stream >> std::ws;
             if (result.has_value() && stream.peek() == 'S') return result;
             std::string token = "";
-            stream >> std::ws >> token;
-            if (token.length() != 1) return result; //nullopt?
+            stream >> token;
+            if (token.length() != 1) return result;
             switch (token[0]) {
                 case 'S':
                     result = Script{};
@@ -85,18 +84,19 @@ namespace {
                     stream >> result->enabled;
                     stream >> result->hotkeyStatus.keyData;
                     stream >> result->hotkeyStatus.modifier;
+                    stream.proceedPastSeparator();
                     break;
                 case 'A':
                     if (!result) return std::nullopt;
-                    result->actions.push_back(readAction(stream));
-                    if (!result->actions.back()) return std::nullopt;
-                    while (stream && stream.get() != endOfAC) {}
+                    if (auto newAction = readAction(stream))
+                        result->actions.push_back(std::move(newAction));
+                    stream.proceedPastSeparator();
                     break;
                 case 'C':
                     if (!result) return std::nullopt;
-                    result->conditions.push_back(readCondition(stream));
-                    if (!result->conditions.back()) return std::nullopt;
-                    while (stream && stream.get() != endOfAC) {}
+                    if (auto newCondition = readCondition(stream))
+                        result->conditions.push_back(std::move(newCondition));
+                    stream.proceedPastSeparator();
                     break;
                 default:
                     return result;
@@ -197,7 +197,7 @@ void SpeedrunScriptingTools::DrawSettings()
                 drawTriggerSelector(scriptIt->trigger, ImGui::GetContentRegionAvail().x / 3, scriptIt->hotkeyStatus.keyData, scriptIt->hotkeyStatus.modifier);
                 ImGui::SameLine();
                 if (ImGui::Button("Copy script to clipboard", ImVec2(ImGui::GetContentRegionAvail().x / 2, 0))) {
-                    ImGui::SetClipboardText(exportString(serialize(*scriptIt)).c_str());
+                    ImGui::SetClipboardText(encodeString(serialize(*scriptIt)).c_str());
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Delete Script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
@@ -221,8 +221,8 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     if (ImGui::Button("Import script from clipboard", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
         if (const auto clipboardContent = ImGui::GetClipboardText()) {
-            const auto combined = importString(clipboardContent);
-            std::istringstream stream{combined};
+            const auto combined = decodeString(clipboardContent);
+            InputStream stream{combined};
             if (auto importedScript = deserialize(stream))
                 m_scripts.push_back(std::move(importedScript.value()));
         }
@@ -248,9 +248,9 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
     std::string read = ini.GetValue(Name(), "scripts", "");
     if (read.empty()) return;
 
-    const auto decoded = importString(std::move(read));
+    const auto decoded = decodeString(std::move(read));
 
-    std::istringstream stream(decoded);
+    InputStream stream(decoded);
     while (stream) {
         auto nextScript = deserialize(stream);
         if (nextScript)
@@ -265,12 +265,12 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
     ToolboxPlugin::SaveSettings(folder);
     ini.SetLongValue(Name(), "version", currentVersion);
 
-    std::ostringstream stream;
+    OutputStream stream;
     for (const auto& script : m_scripts) {
-        stream << serialize(script) << " ";
+        stream << serialize(script);
     }
     
-    ini.SetValue(Name(), "scripts", exportString(stream.str()).c_str());
+    ini.SetValue(Name(), "scripts", encodeString(stream.str()).c_str());
     PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
 }
 

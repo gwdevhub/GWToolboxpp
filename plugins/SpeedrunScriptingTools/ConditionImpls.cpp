@@ -34,42 +34,6 @@ namespace {
     const std::string missingContentToken = "/";
     const std::string endOfListToken = ">";
 
-    std::string_view toString(QuestStatus status)
-    {
-        switch (status) {
-            case QuestStatus::NotStarted:
-                return "Not started";
-            case QuestStatus::Started:
-                return "Started";
-            case QuestStatus::Completed:
-                return "Completed";
-            case QuestStatus::Failed:
-                return "Failed";
-        }
-        return "";
-    }
-
-    template <typename T>
-    void drawEnumButton(T firstValue, T lastValue, T& currentValue, int id = 0, float width = 100., std::optional<T> skipValue = std::nullopt)
-    {
-        ImGui::PushID(id);
-
-        if (ImGui::Button(toString(currentValue).data(), ImVec2(width, 0))) {
-            ImGui::OpenPopup("Enum popup");
-        }
-        if (ImGui::BeginPopup("Enum popup")) {
-            for (auto i = (int)firstValue; i <= (int)lastValue; ++i) {
-                if (skipValue && (int)skipValue.value() == i) continue;
-                if (ImGui::Selectable(toString((T)i).data())) {
-                    currentValue = static_cast<T>(i);
-                }
-            }
-            ImGui::EndPopup();
-        }
-
-        ImGui::PopID();
-    }
-
     GW::Item* FindMatchingItem(GW::Constants::Bag _bag_idx, uint32_t model_id)
     {
         GW::Bag* bag = GW::Items::GetBag(_bag_idx);
@@ -83,7 +47,7 @@ namespace {
 }
 
 /// ------------- InvertedCondition -------------
-NegatedCondition::NegatedCondition(std::istringstream& stream)
+NegatedCondition::NegatedCondition(InputStream& stream)
 {
     std::string read;
     stream >> read;
@@ -98,13 +62,13 @@ NegatedCondition::NegatedCondition(std::istringstream& stream)
         assert(false);
     }
 }
-void NegatedCondition::serialize(std::ostringstream& stream) const
+void NegatedCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
     if (cond)
         cond->serialize(stream);
     else
-        stream << missingContentToken << " ";
+        stream << missingContentToken;
 }
 bool NegatedCondition::check() const
 {
@@ -127,7 +91,7 @@ void NegatedCondition::drawSettings()
 }
 
 /// ------------- DisjunctionCondition -------------
-DisjunctionCondition::DisjunctionCondition(std::istringstream& stream) 
+DisjunctionCondition::DisjunctionCondition(InputStream& stream) 
 {
     std::string read;
     
@@ -143,7 +107,7 @@ DisjunctionCondition::DisjunctionCondition(std::istringstream& stream)
             assert(false);
     }
 }
-void DisjunctionCondition::serialize(std::ostringstream& stream) const 
+void DisjunctionCondition::serialize(OutputStream& stream) const 
 {
     Condition::serialize(stream);
 
@@ -151,9 +115,9 @@ void DisjunctionCondition::serialize(std::ostringstream& stream) const
         if (condition)
             condition->serialize(stream);
         else
-            stream << missingContentToken << " ";
+            stream << missingContentToken;
     }
-    stream << endOfListToken << " ";
+    stream << endOfListToken;
 }
 bool DisjunctionCondition::check() const
 {
@@ -197,7 +161,7 @@ void DisjunctionCondition::drawSettings()
 }
 
 /// ------------- ConjunctionCondition -------------
-ConjunctionCondition::ConjunctionCondition(std::istringstream& stream)
+ConjunctionCondition::ConjunctionCondition(InputStream& stream)
 {
     std::string read;
 
@@ -212,7 +176,7 @@ ConjunctionCondition::ConjunctionCondition(std::istringstream& stream)
             assert(false);
     }
 }
-void ConjunctionCondition::serialize(std::ostringstream& stream) const
+void ConjunctionCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
@@ -220,9 +184,9 @@ void ConjunctionCondition::serialize(std::ostringstream& stream) const
         if (condition)
             condition->serialize(stream);
         else
-            stream << missingContentToken << " ";
+            stream << missingContentToken;
     }
-    stream << endOfListToken << " ";
+    stream << endOfListToken;
 }
 bool ConjunctionCondition::check() const
 {
@@ -266,15 +230,15 @@ void ConjunctionCondition::drawSettings()
 }
 
 /// ------------- IsInMapCondition -------------
-IsInMapCondition::IsInMapCondition(std::istringstream& stream)
+IsInMapCondition::IsInMapCondition(InputStream& stream)
 {
     stream >> id;
 }
-void IsInMapCondition::serialize(std::ostringstream& stream) const
+void IsInMapCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << id << " ";
+    stream << id;
 }
 bool IsInMapCondition::check() const {
     return GW::Map::GetMapID() == id;
@@ -289,15 +253,15 @@ void IsInMapCondition::drawSettings() {
 }
 
 /// ------------- PartyPlayerCountCondition -------------
-PartyPlayerCountCondition::PartyPlayerCountCondition(std::istringstream& stream)
+PartyPlayerCountCondition::PartyPlayerCountCondition(InputStream& stream)
 {
     stream >> count;
 }
-void PartyPlayerCountCondition::serialize(std::ostringstream& stream) const
+void PartyPlayerCountCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << count << " ";
+    stream << count;
 }
 bool PartyPlayerCountCondition::check() const
 {
@@ -314,15 +278,15 @@ void PartyPlayerCountCondition::drawSettings()
 }
 
 /// ------------- InstanceProgressCondition -------------
-InstanceProgressCondition::InstanceProgressCondition(std::istringstream& stream)
+InstanceProgressCondition::InstanceProgressCondition(InputStream& stream)
 {
     stream >> requiredProgress;
 }
-void InstanceProgressCondition::serialize(std::ostringstream& stream) const
+void InstanceProgressCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << requiredProgress << " ";
+    stream << requiredProgress;
 }
 bool InstanceProgressCondition::check() const {
     return GW::GetGameContext()->character->progress_bar->progress * 100.f > requiredProgress;
@@ -338,7 +302,7 @@ void InstanceProgressCondition::drawSettings()
 }
 
 /// ------------- OnlyTriggerOnceCondition -------------
-OnlyTriggerOnceCondition::OnlyTriggerOnceCondition(std::istringstream&)
+OnlyTriggerOnceCondition::OnlyTriggerOnceCondition(InputStream&)
 {
 }
 bool OnlyTriggerOnceCondition::check() const
@@ -357,15 +321,16 @@ void OnlyTriggerOnceCondition::drawSettings()
 }
 
 /// ------------- PlayerIsNearPositionCondition -------------
-PlayerIsNearPositionCondition::PlayerIsNearPositionCondition(std::istringstream& stream)
+PlayerIsNearPositionCondition::PlayerIsNearPositionCondition(InputStream& stream) 
+    : PlayerIsNearPositionCondition()
 {
     stream >> pos.x >> pos.y >> accuracy;
 }
-void PlayerIsNearPositionCondition::serialize(std::ostringstream& stream) const
+void PlayerIsNearPositionCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << pos.x << " " << pos.y << " " << accuracy << " ";
+    stream << pos.x << pos.y << accuracy;
 }
 bool PlayerIsNearPositionCondition::check() const
 {
@@ -388,15 +353,15 @@ void PlayerIsNearPositionCondition::drawSettings()
 }
 
 /// ------------- PlayerHasBuffCondition -------------
-PlayerHasBuffCondition::PlayerHasBuffCondition(std::istringstream& stream)
+PlayerHasBuffCondition::PlayerHasBuffCondition(InputStream& stream)
 {
     stream >> id >> minimumDuration >> maximumDuration;
 }
-void PlayerHasBuffCondition::serialize(std::ostringstream& stream) const
+void PlayerHasBuffCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << id << " " << minimumDuration << " " << maximumDuration << " ";
+    stream << id << minimumDuration << maximumDuration;
 }
 bool PlayerHasBuffCondition::check() const
 {
@@ -423,15 +388,15 @@ void PlayerHasBuffCondition::drawSettings()
 }
 
 /// ------------- PlayerHasSkillCondition -------------
-PlayerHasSkillCondition::PlayerHasSkillCondition(std::istringstream& stream)
+PlayerHasSkillCondition::PlayerHasSkillCondition(InputStream& stream)
 {
     stream >> id;
 }
-void PlayerHasSkillCondition::serialize(std::ostringstream& stream) const
+void PlayerHasSkillCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << id << " ";
+    stream << id;
 }
 bool PlayerHasSkillCondition::check() const
 {
@@ -457,15 +422,15 @@ void PlayerHasSkillCondition::drawSettings()
 }
 
 /// ------------- PlayerHasClassCondition -------------
-PlayerHasClassCondition::PlayerHasClassCondition(std::istringstream& stream)
+PlayerHasClassCondition::PlayerHasClassCondition(InputStream& stream)
 {
     stream >> primary >> secondary;
 }
-void PlayerHasClassCondition::serialize(std::ostringstream& stream) const
+void PlayerHasClassCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << primary << " " << secondary << " ";
+    stream << primary << secondary;
 }
 bool PlayerHasClassCondition::check() const
 {
@@ -495,11 +460,11 @@ void PlayerHasClassCondition::drawSettings()
 }
 
 /// ------------- PlayerHasNameCondition -------------
-PlayerHasNameCondition::PlayerHasNameCondition(std::istringstream& stream)
+PlayerHasNameCondition::PlayerHasNameCondition(InputStream& stream)
 {
     name = readStringWithSpaces(stream);
 }
-void PlayerHasNameCondition::serialize(std::ostringstream& stream) const
+void PlayerHasNameCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
@@ -525,15 +490,15 @@ void PlayerHasNameCondition::drawSettings()
 }
 
 /// ------------- PlayerHasEnergyCondition -------------
-PlayerHasEnergyCondition::PlayerHasEnergyCondition(std::istringstream& stream)
+PlayerHasEnergyCondition::PlayerHasEnergyCondition(InputStream& stream)
 {
     stream >> minEnergy;
 }
-void PlayerHasEnergyCondition::serialize(std::ostringstream& stream) const
+void PlayerHasEnergyCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << minEnergy << " ";
+    stream << minEnergy;
 }
 bool PlayerHasEnergyCondition::check() const
 {
@@ -553,15 +518,15 @@ void PlayerHasEnergyCondition::drawSettings()
 }
 
 /// ------------- CurrentTargetIsCastingSkillCondition -------------
-CurrentTargetIsCastingSkillCondition::CurrentTargetIsCastingSkillCondition(std::istringstream& stream)
+CurrentTargetIsCastingSkillCondition::CurrentTargetIsCastingSkillCondition(InputStream& stream)
 {
     stream >> id;
 }
-void CurrentTargetIsCastingSkillCondition::serialize(std::ostringstream& stream) const
+void CurrentTargetIsCastingSkillCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << id << " ";
+    stream << id;
 }
 bool CurrentTargetIsCastingSkillCondition::check() const
 {
@@ -579,15 +544,15 @@ void CurrentTargetIsCastingSkillCondition::drawSettings()
 }
 
 /// ------------- CurrentTargetHasHpBelowCondition -------------
-CurrentTargetHasHpBelowCondition::CurrentTargetHasHpBelowCondition(std::istringstream& stream)
+CurrentTargetHasHpBelowCondition::CurrentTargetHasHpBelowCondition(InputStream& stream)
 {
     stream >> hp;
 }
-void CurrentTargetHasHpBelowCondition::serialize(std::ostringstream& stream) const
+void CurrentTargetHasHpBelowCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << hp << " ";
+    stream << hp;
 }
 bool CurrentTargetHasHpBelowCondition::check() const
 {
@@ -605,15 +570,15 @@ void CurrentTargetHasHpBelowCondition::drawSettings()
 }
 
 /// ------------- CurrentTargetAllegianceCondition -------------
-CurrentTargetAllegianceCondition::CurrentTargetAllegianceCondition(std::istringstream& stream)
+CurrentTargetAllegianceCondition::CurrentTargetAllegianceCondition(InputStream& stream)
 {
     stream >> agentType;
 }
-void CurrentTargetAllegianceCondition::serialize(std::ostringstream& stream) const
+void CurrentTargetAllegianceCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << agentType << " ";
+    stream << agentType;
 }
 bool CurrentTargetAllegianceCondition::check() const
 {
@@ -643,15 +608,15 @@ void CurrentTargetAllegianceCondition::drawSettings()
 }
 
 /// ------------- CurrentTargetModelCondition -------------
-CurrentTargetModelCondition::CurrentTargetModelCondition(std::istringstream& stream)
+CurrentTargetModelCondition::CurrentTargetModelCondition(InputStream& stream)
 {
     stream >> modelId;
 }
-void CurrentTargetModelCondition::serialize(std::ostringstream& stream) const
+void CurrentTargetModelCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << modelId << " ";
+    stream << modelId;
 }
 bool CurrentTargetModelCondition::check() const
 {
@@ -669,11 +634,11 @@ void CurrentTargetModelCondition::drawSettings()
 }
 
 /// ------------- HasPartyWindowAllyOfNameCondition -------------
-HasPartyWindowAllyOfNameCondition::HasPartyWindowAllyOfNameCondition(std::istringstream& stream)
+HasPartyWindowAllyOfNameCondition::HasPartyWindowAllyOfNameCondition(InputStream& stream)
 {
     name = readStringWithSpaces(stream);
 }
-void HasPartyWindowAllyOfNameCondition::serialize(std::ostringstream& stream) const
+void HasPartyWindowAllyOfNameCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
@@ -708,12 +673,12 @@ void HasPartyWindowAllyOfNameCondition::drawSettings()
 }
 
 /// ------------- PartyMemberStatusCondition -------------
-PartyMemberStatusCondition::PartyMemberStatusCondition(std::istringstream& stream)
+PartyMemberStatusCondition::PartyMemberStatusCondition(InputStream& stream)
 {
     stream >> status;
     name = readStringWithSpaces(stream);
 }
-void PartyMemberStatusCondition::serialize(std::ostringstream& stream) const
+void PartyMemberStatusCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
@@ -758,15 +723,15 @@ void PartyMemberStatusCondition::drawSettings()
 
 /// ------------- QuestHasStateCondition -------------
 
-QuestHasStateCondition::QuestHasStateCondition(std::istringstream& stream)
+QuestHasStateCondition::QuestHasStateCondition(InputStream& stream)
 {
     stream >> id >> status;
 }
-void QuestHasStateCondition::serialize(std::ostringstream& stream) const
+void QuestHasStateCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << id << " " << status << " ";
+    stream << id << status;
 }
 bool QuestHasStateCondition::check() const
 {
@@ -787,16 +752,16 @@ void QuestHasStateCondition::drawSettings()
 }
 
 /// ------------- KeyIsPressedCondition -------------
-KeyIsPressedCondition::KeyIsPressedCondition(std::istringstream& stream)
+KeyIsPressedCondition::KeyIsPressedCondition(InputStream& stream)
 {
     stream >> shortcutKey >> shortcutMod;
     description = makeHotkeyDescription(shortcutKey, shortcutMod);
 }
-void KeyIsPressedCondition::serialize(std::ostringstream& stream) const
+void KeyIsPressedCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << shortcutKey << " " << shortcutMod << " ";
+    stream << shortcutKey << shortcutMod;
 }
 bool KeyIsPressedCondition::check() const
 {
@@ -820,15 +785,15 @@ void KeyIsPressedCondition::drawSettings()
 
 /// ------------- InstanceTimeCondition -------------
 
-InstanceTimeCondition::InstanceTimeCondition(std::istringstream& stream)
+InstanceTimeCondition::InstanceTimeCondition(InputStream& stream)
 {
     stream >> timeInSeconds;
 }
-void InstanceTimeCondition::serialize(std::ostringstream& stream) const
+void InstanceTimeCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << timeInSeconds << " ";
+    stream << timeInSeconds;
 }
 bool InstanceTimeCondition::check() const
 {
@@ -846,18 +811,18 @@ void InstanceTimeCondition::drawSettings()
 
 /// ------------- NearbyAgentCondition -------------
 
-NearbyAgentCondition::NearbyAgentCondition(std::istringstream& stream)
+NearbyAgentCondition::NearbyAgentCondition(InputStream& stream)
 {
     stream >> agentType >> primary >> secondary >> status >> hexed >> skill >> modelId >> minDistance >> maxDistance;
     agentName = readStringWithSpaces(stream);
     polygon = readPositions(stream);
 }
-void NearbyAgentCondition::serialize(std::ostringstream& stream) const
+void NearbyAgentCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << agentType << " " << primary << " " << secondary << " " << status << " " << hexed << " " << skill << " "
-           << " " << modelId << " " << minDistance << " " << maxDistance << " ";
+    stream << agentType << primary << secondary << status << hexed << skill
+           << modelId << minDistance << maxDistance;
     writeStringWithSpaces(stream, agentName);
     writePositions(stream, polygon);
 }
@@ -994,15 +959,15 @@ void PlayerIsIdleCondition::drawSettings()
 
 /// ------------- PlayerHasItemEquippedCondition -------------
 
-PlayerHasItemEquippedCondition::PlayerHasItemEquippedCondition(std::istringstream& stream)
+PlayerHasItemEquippedCondition::PlayerHasItemEquippedCondition(InputStream& stream)
 {
     stream >> modelId;
 }
-void PlayerHasItemEquippedCondition::serialize(std::ostringstream& stream) const
+void PlayerHasItemEquippedCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << modelId << " ";
+    stream << modelId;
 }
 bool PlayerHasItemEquippedCondition::check() const
 {

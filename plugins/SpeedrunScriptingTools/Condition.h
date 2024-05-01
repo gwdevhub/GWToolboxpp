@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sstream>
+#include <utils.h>
 
 enum class ConditionType : int {
     // Logic Operators
@@ -52,7 +52,7 @@ public:
     virtual ConditionType type() const = 0;
     virtual bool check() const { return true; };
     virtual void drawSettings() {}
-    virtual void serialize(std::ostringstream& stream) const { stream << "C " << (int)type() << " "; }
+    virtual void serialize(OutputStream& stream) const { stream << "C " << type(); }
 
 protected:
     int drawId() const { return m_drawId; }
