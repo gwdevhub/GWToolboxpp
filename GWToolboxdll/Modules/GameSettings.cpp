@@ -459,36 +459,6 @@ namespace {
     SetGlobalNameTagVisibility_pt SetGlobalNameTagVisibility_Func = nullptr;
     uint32_t* GlobalNameTagVisibilityFlags = nullptr;
 
-    GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Func = nullptr;
-    GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Ret = nullptr;
-    bool closing_gw = false;
-
-    void OnMinOrRestoreOrExitBtnClicked(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
-    {
-        GW::Hook::EnterHook();
-        if (message->message_id == GW::UI::UIMessage::kMouseAction && wparam) {
-            struct MouseParams {
-                uint32_t button_id;
-                uint32_t button_id_dupe;
-                uint32_t current_state; // 0x5 = hovered, 0x6 = mouse down
-            }* param = static_cast<MouseParams*>(wparam);
-            const auto frame = GW::UI::GetFrameByLabel(L"btnExit");
-            if (frame && frame->frame_id == message->frame_id && param->current_state == 0x6) {
-                param->current_state = 0x5; // Revert state to avoid GW closing the window on mouse up
-
-                // Left button clicked, on the exit button (ID 0x3)
-                if (!closing_gw) {
-                    SendMessage(GW::MemoryMgr::GetGWWindowHandle(), WM_CLOSE, NULL, NULL);
-                }
-                closing_gw = true;
-                GW::Hook::LeaveHook();
-                return;
-            }
-        }
-        OnMinOrRestoreOrExitBtnClicked_Ret(message, wparam, lparam);
-        GW::Hook::LeaveHook();
-    }
-
     GW::MemoryPatcher skip_map_entry_message_patch;
 
     // Refresh agent name tags when allegiance changes ( https://github.com/gwdevhub/GWToolboxpp/issues/781 )
@@ -1319,13 +1289,6 @@ void GameSettings::Initialize()
     GW::HookBase::EnableHooks(ShowAgentFactionGain_Func);
     GW::HookBase::CreateHook((void**)&ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, reinterpret_cast<void**>(&ShowAgentExperienceGain_Ret));
     GW::HookBase::EnableHooks(ShowAgentExperienceGain_Func);
-
-    // Stop GW from force closing the game when clicking on the exit button in window fullscreen; instead route it through the close signal.
-    OnMinOrRestoreOrExitBtnClicked_Func = (GW::UI::UIInteractionCallback)GW::Scanner::Find("\x83\xc4\x0c\xa9\x00\x00\x80\x00", "xxxxxxxx", -0x54);
-    if (OnMinOrRestoreOrExitBtnClicked_Func) {
-        GW::HookBase::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
-        GW::HookBase::EnableHooks();
-    }
 
     RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendDialog, bind_member(this, &GameSettings::OnFactionDonate));
     RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillbar, &OnPreLoadSkillBar);

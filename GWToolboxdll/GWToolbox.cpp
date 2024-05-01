@@ -5,7 +5,6 @@
 
 #include <GWCA/Context/PreGameContext.h>
 #include <GWCA/Context/CharContext.h>
-#include <GWCA/Context/MapContext.h>
 
 #include <GWCA/GameEntities/Map.h>
 
@@ -39,6 +38,8 @@
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <hidusage.h>
+
+#include "GWCA/Utilities/Scanner.h"
 
 
 
@@ -94,7 +95,35 @@ namespace {
         return true;
     }
 
+    GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Func = nullptr;
+    GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Ret = nullptr;
+    bool closing_gw = false;
 
+    void OnMinOrRestoreOrExitBtnClicked(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
+    {
+        GW::Hook::EnterHook();
+        if (message->message_id == GW::UI::UIMessage::kMouseAction && wparam) {
+            struct MouseParams {
+                uint32_t button_id;
+                uint32_t button_id_dupe;
+                uint32_t current_state; // 0x5 = hovered, 0x6 = mouse down
+            }* param = static_cast<MouseParams*>(wparam);
+            const auto frame = GW::UI::GetFrameByLabel(L"btnExit");
+            if (frame && frame->frame_id == message->frame_id && param->current_state == 0x6) {
+                param->current_state = 0x5; // Revert state to avoid GW closing the window on mouse up
+
+                // Left button clicked, on the exit button (ID 0x3)
+                if (!closing_gw) {
+                    SendMessage(GW::MemoryMgr::GetGWWindowHandle(), WM_CLOSE, NULL, NULL);
+                }
+                closing_gw = true;
+                GW::Hook::LeaveHook();
+                return;
+            }
+        }
+        OnMinOrRestoreOrExitBtnClicked_Ret(message, wparam, lparam);
+        GW::Hook::LeaveHook();
+    }
 
     bool render_callback_attached = false;
     bool AttachRenderCallback() {
@@ -115,7 +144,7 @@ namespace {
     bool game_loop_callback_attached = false;
     GW::HookEntry game_loop_callback_entry;
     bool AttachGameLoopCallback() {
-        GW::GameThread::EnableHooks();
+        GW::GameThreadModule.enable_hooks();
         if (!game_loop_callback_attached) {
             GW::GameThread::RegisterGameThreadCallback(&game_loop_callback_entry,GWToolbox::Update);
             game_loop_callback_attached = true;
@@ -575,8 +604,16 @@ void GWToolbox::Initialize()
     case GWToolboxState::Terminated:
         gwtoolbox_state = GWToolboxState::Initialising;
         AttachRenderCallback();
-        //AttachGameLoopCallback();
         GW::EnableHooks();
+
+        // Stop GW from force closing the game when clicking on the exit button in window fullscreen; instead route it through the close signal.
+        if (!OnMinOrRestoreOrExitBtnClicked_Func) {
+            OnMinOrRestoreOrExitBtnClicked_Func = (GW::UI::UIInteractionCallback)GW::Scanner::Find("\x83\xc4\x0c\xa9\x00\x00\x80\x00", "xxxxxxxx", -0x54);
+            if (OnMinOrRestoreOrExitBtnClicked_Func) {
+                GW::HookBase::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
+                GW::HookBase::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
+            }
+        }
         UpdateInitialising(.0f);
         AttachGameLoopCallback();
         pending_detach_dll = false;
@@ -669,6 +706,8 @@ void GWToolbox::Disable()
         return;
     GW::DisableHooks();
     GW::RenderModule.enable_hooks();
+    if (OnMinOrRestoreOrExitBtnClicked_Func)
+        GW::HookBase::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
     AttachRenderCallback();
     gwtoolbox_disabled = true;
 }
