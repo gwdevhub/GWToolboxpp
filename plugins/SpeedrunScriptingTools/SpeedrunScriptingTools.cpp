@@ -29,7 +29,7 @@ namespace {
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry CoreMessage_Entry;
 
-    constexpr long currentVersion = 6;
+    constexpr long currentVersion = 7;
 
     constexpr char endOfAC = 0x7F;
 
@@ -230,11 +230,11 @@ void SpeedrunScriptingTools::DrawSettings()
     // Debug info
     ImGui::Text("Current action: %s", (m_currentScript.has_value() && !m_currentScript->actions.empty()) ? toString(m_currentScript->actions.front()->type()).data() : "None");
     ImGui::SameLine();
-    if (ImGui::Button("Reset")) 
+    if (ImGui::Button("Clear")) 
     {
         m_currentScript = std::nullopt;
     }
-    ImGui::Text("Version 0.6. For bug reports and feature requests contact Jabor.");
+    ImGui::Text("Version 0.7. For bug reports and feature requests contact Jabor.");
 }
 
 void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)

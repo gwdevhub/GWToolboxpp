@@ -234,7 +234,7 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
         ConditionType::InstanceProgress,
         ConditionType::HasPartyWindowAllyOfName,
         
-        ConditionType::PartyMemberStatus, // Does not work currently
+        ConditionType::PartyMemberStatus,
 
         ConditionType::InstanceTime,
         ConditionType::KeyIsPressed,

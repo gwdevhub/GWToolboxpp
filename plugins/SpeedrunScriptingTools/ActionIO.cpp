@@ -147,7 +147,7 @@ std::shared_ptr<Action> drawActionSelector(float width)
     constexpr auto actions = std::array{
         ActionType::MoveTo,       
         ActionType::Cast,
-        ActionType::CastOnSelf,
+        //ActionType::CastOnSelf, // CtoS cast on self despite having a different target. Currently deemed unnecessary
         ActionType::ChangeTarget, 
         ActionType::GoToTarget,
         ActionType::AutoAttackTarget, 

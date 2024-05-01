@@ -50,7 +50,7 @@ namespace {
     }
 
     template <typename T>
-    void drawEnumButton(T firstValue, T lastValue, T& currentValue, int id = 0, float width = 100.)
+    void drawEnumButton(T firstValue, T lastValue, T& currentValue, int id = 0, float width = 100., std::optional<T> skipValue = std::nullopt)
     {
         ImGui::PushID(id);
 
@@ -59,6 +59,7 @@ namespace {
         }
         if (ImGui::BeginPopup("Enum popup")) {
             for (auto i = (int)firstValue; i <= (int)lastValue; ++i) {
+                if (skipValue && (int)skipValue.value() == i) continue;
                 if (ImGui::Selectable(toString((T)i).data())) {
                     currentValue = static_cast<T>(i);
                 }
@@ -634,7 +635,7 @@ bool CurrentTargetAllegianceCondition::check() const
 void CurrentTargetAllegianceCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::Text("If the target has allegiance");
+    ImGui::Text("If the target has type");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     drawEnumButton(AgentType::Any, AgentType::Hostile, agentType);
@@ -927,7 +928,7 @@ void NearbyAgentCondition::drawSettings()
 
         ImGui::BulletText("Allegiance");
         ImGui::SameLine();
-        drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, 0);
+        drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, 0, 100.f, std::optional{AgentType::Self});
 
         ImGui::BulletText("Class");
         ImGui::SameLine();
