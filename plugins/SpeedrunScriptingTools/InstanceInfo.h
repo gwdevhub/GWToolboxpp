@@ -1,16 +1,11 @@
 #pragma once
 
-#include <stdint.h>
-#include <cstddef>
-#include <cstring>
-#include <Windows.h>
+#include <utils.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Agent.h>
 
-#include <unordered_map>
 #include <chrono>
-
-enum class QuestStatus : int { NotStarted, Started, Completed, Failed };
+#include <unordered_map>
 
 // Contains information about the current instance which either has to be kept between function calls or is expensive to compute
 class InstanceInfo {

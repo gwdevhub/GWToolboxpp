@@ -11,7 +11,6 @@
 #include <GWCA/Constants/Constants.h>
 
 #include <chrono>
-#include <sstream>
 #include <unordered_set>
 
 namespace GW {
@@ -21,12 +20,12 @@ namespace GW {
 class MoveToAction : public Action {
 public:
     MoveToAction() = default;
-    MoveToAction(std::istringstream&);
+    MoveToAction(InputStream&);
     ActionType type() const final { return ActionType::MoveTo; }
     void initialAction() final;
     bool isComplete() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     GW::GamePos pos{};
@@ -38,12 +37,12 @@ private:
 class CastOnSelfAction : public Action {
 public:
     CastOnSelfAction() = default;
-    CastOnSelfAction(std::istringstream&);
+    CastOnSelfAction(InputStream&);
     ActionType type() const final { return ActionType::CastOnSelf; }
     void initialAction() final;
     bool isComplete() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
@@ -55,12 +54,12 @@ private:
 class CastAction : public Action {
 public:
     CastAction() = default;
-    CastAction(std::istringstream&);
+    CastAction(InputStream&);
     ActionType type() const final { return ActionType::Cast; }
     void initialAction() final;
     bool isComplete() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
@@ -72,11 +71,11 @@ private:
 class ChangeTargetAction : public Action {
 public:
     ChangeTargetAction() = default;
-    ChangeTargetAction(std::istringstream&);
+    ChangeTargetAction(InputStream&);
     ActionType type() const final { return ActionType::ChangeTarget; }
     void initialAction() final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     AgentType agentType = AgentType::Any;
@@ -98,11 +97,11 @@ private:
 class UseItemAction : public Action {
 public:
     UseItemAction() = default;
-    UseItemAction(std::istringstream&);
+    UseItemAction(InputStream&);
     ActionType type() const final { return ActionType::UseItem; }
     void initialAction() final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     int id = 0;
@@ -111,11 +110,11 @@ private:
 class EquipItemAction : public Action {
 public:
     EquipItemAction() = default;
-    EquipItemAction(std::istringstream&);
+    EquipItemAction(InputStream&);
     ActionType type() const final { return ActionType::EquipItem; }
     void initialAction() final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     int id = 0;
@@ -124,11 +123,11 @@ private:
 class SendDialogAction : public Action {
 public:
     SendDialogAction() = default;
-    SendDialogAction(std::istringstream&);
+    SendDialogAction(InputStream&);
     ActionType type() const final { return ActionType::SendDialog; }
     void initialAction() final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     int id = 0;
@@ -137,12 +136,12 @@ private:
 class GoToTargetAction : public Action {
 public:
     GoToTargetAction() = default;
-    GoToTargetAction(std::istringstream&);
+    GoToTargetAction(InputStream&);
     ActionType type() const final { return ActionType::GoToTarget; }
     void initialAction() final;
     bool isComplete() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     float accuracy = GW::Constants::Range::Adjacent;
@@ -152,12 +151,12 @@ private:
 class WaitAction : public Action {
 public:
     WaitAction() = default;
-    WaitAction(std::istringstream&);
+    WaitAction(InputStream&);
     ActionType type() const final { return ActionType::Wait; }
     void initialAction() final;
     bool isComplete() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     int waitTime = 1000;
@@ -166,21 +165,12 @@ private:
 
 class SendChatAction : public Action {
 public:
-    enum class Channel {
-        All,
-        Guild,
-        Team,
-        Trade,
-        Alliance,
-        Whisper,
-        Emote,
-    };
     SendChatAction() = default;
-    SendChatAction(std::istringstream&);
+    SendChatAction(InputStream&);
     ActionType type() const final { return ActionType::SendChat; }
     void initialAction() final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     Channel channel = Channel::All;
@@ -190,7 +180,7 @@ private:
 class CancelAction : public Action {
 public:
     CancelAction() = default;
-    CancelAction(std::istringstream&){}
+    CancelAction(InputStream&){}
     ActionType type() const final { return ActionType::Cancel; }
     void initialAction() final;
     void drawSettings() final;
@@ -199,11 +189,11 @@ public:
 class DropBuffAction : public Action {
 public:
     DropBuffAction() = default;
-    DropBuffAction(std::istringstream&);
+    DropBuffAction(InputStream&);
     ActionType type() const final { return ActionType::DropBuff; }
     void initialAction() final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
@@ -212,12 +202,12 @@ private:
 class ConditionedAction : public Action {
 public:
     ConditionedAction() = default;
-    ConditionedAction(std::istringstream&);
+    ConditionedAction(InputStream&);
     ActionType type() const final { return ActionType::Conditioned; }
     void initialAction() final;
     bool isComplete() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     std::shared_ptr<Condition> cond = nullptr;
@@ -227,12 +217,12 @@ private:
 class RepopMinipetAction : public Action {
 public:
     RepopMinipetAction() = default;
-    RepopMinipetAction(std::istringstream&);
+    RepopMinipetAction(InputStream&);
     ActionType type() const final { return ActionType::RepopMinipet; }
     void initialAction() final;
     bool isComplete() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     int id = 0;
@@ -241,7 +231,7 @@ private:
 class PingHardModeAction : public Action {
 public:
     PingHardModeAction() = default;
-    PingHardModeAction(std::istringstream&) : PingHardModeAction(){}
+    PingHardModeAction(InputStream&) : PingHardModeAction(){}
     ActionType type() const final { return ActionType::PingHardMode; }
     void initialAction() final;
     void drawSettings() final;
@@ -250,7 +240,7 @@ public:
 class PingTargetAction : public Action {
 public:
     PingTargetAction() = default;
-    PingTargetAction(std::istringstream&) : PingTargetAction() {}
+    PingTargetAction(InputStream&) : PingTargetAction() {}
     ActionType type() const final { return ActionType::PingTarget; }
     void initialAction() final;
     void drawSettings() final;
@@ -264,7 +254,7 @@ private:
 class AutoAttackTargetAction : public Action {
 public:
     AutoAttackTargetAction() = default;
-    AutoAttackTargetAction(std::istringstream&) : AutoAttackTargetAction() {}
+    AutoAttackTargetAction(InputStream&) : AutoAttackTargetAction() {}
     ActionType type() const final { return ActionType::AutoAttackTarget; }
     void initialAction() final;
     void drawSettings() final;

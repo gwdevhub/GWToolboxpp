@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdint.h>
 #include <Action.h>
 #include <Condition.h>
 #include <TriggerPacket.h>

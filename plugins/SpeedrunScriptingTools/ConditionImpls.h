@@ -1,24 +1,21 @@
 #pragma once
 
+#include <utils.h>
 #include <Condition.h>
 #include <InstanceInfo.h>
-#include <utils.h>
 
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/Constants/Skills.h>
 #include <GWCA/GameContainers/GamePos.h>
 
-#include <cstdint>
-#include <sstream>
-
 class NegatedCondition : public Condition {
 public:
     NegatedCondition() = default;
-    NegatedCondition(std::istringstream&);
+    NegatedCondition(InputStream&);
     ConditionType type() const final { return ConditionType::Not; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     std::shared_ptr<Condition> cond = nullptr;
@@ -27,11 +24,11 @@ private:
 class DisjunctionCondition : public Condition {
 public:
     DisjunctionCondition() = default;
-    DisjunctionCondition(std::istringstream&);
+    DisjunctionCondition(InputStream&);
     ConditionType type() const final { return ConditionType::Or; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     std::vector<std::shared_ptr<Condition>> conditions{};
@@ -40,11 +37,11 @@ private:
 class ConjunctionCondition : public Condition {
 public:
     ConjunctionCondition() = default;
-    ConjunctionCondition(std::istringstream&);
+    ConjunctionCondition(InputStream&);
     ConditionType type() const final { return ConditionType::And; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     std::vector<std::shared_ptr<Condition>> conditions{};
@@ -53,11 +50,11 @@ private:
 class IsInMapCondition : public Condition {
 public:
     IsInMapCondition() = default;
-    IsInMapCondition(std::istringstream&);
+    IsInMapCondition(InputStream&);
     ConditionType type() const final { return ConditionType::IsInMap; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     GW::Constants::MapID id = GW::Constants::MapID::The_Underworld;
@@ -66,11 +63,11 @@ private:
 class QuestHasStateCondition : public Condition {
 public:
     QuestHasStateCondition() = default;
-    QuestHasStateCondition(std::istringstream&);
+    QuestHasStateCondition(InputStream&);
     ConditionType type() const final { return ConditionType::QuestHasState; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     GW::Constants::QuestID id = GW::Constants::QuestID::None;
@@ -80,11 +77,11 @@ private:
 class PartyPlayerCountCondition : public Condition {
 public:
     PartyPlayerCountCondition() = default;
-    PartyPlayerCountCondition(std::istringstream&);
+    PartyPlayerCountCondition(InputStream&);
     ConditionType type() const final { return ConditionType::PartyPlayerCount; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     int count = 1;
@@ -93,11 +90,11 @@ private:
 class InstanceProgressCondition : public Condition {
 public:
     InstanceProgressCondition() = default;
-    InstanceProgressCondition(std::istringstream&);
+    InstanceProgressCondition(InputStream&);
     ConditionType type() const final { return ConditionType::InstanceProgress; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     float requiredProgress = 50.f;
@@ -106,7 +103,7 @@ private:
 class OnlyTriggerOnceCondition : public Condition {
 public:
     OnlyTriggerOnceCondition() = default;
-    OnlyTriggerOnceCondition(std::istringstream&);
+    OnlyTriggerOnceCondition(InputStream&);
     ConditionType type() const final { return ConditionType::OnlyTriggerOncePerInstance; }
     bool check() const final;
     void drawSettings() final;
@@ -118,11 +115,11 @@ private:
 class PlayerIsNearPositionCondition : public Condition {
 public:
     PlayerIsNearPositionCondition() = default;
-    PlayerIsNearPositionCondition(std::istringstream&);
+    PlayerIsNearPositionCondition(InputStream&);
     ConditionType type() const final { return ConditionType::PlayerIsNearPosition; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     GW::GamePos pos = {};
@@ -132,11 +129,11 @@ private:
 class PlayerHasBuffCondition : public Condition {
 public:
     PlayerHasBuffCondition() = default;
-    PlayerHasBuffCondition(std::istringstream&);
+    PlayerHasBuffCondition(InputStream&);
     ConditionType type() const final { return ConditionType::PlayerHasBuff; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
@@ -147,11 +144,11 @@ private:
 class PlayerHasSkillCondition : public Condition {
 public:
     PlayerHasSkillCondition() = default;
-    PlayerHasSkillCondition(std::istringstream&);
+    PlayerHasSkillCondition(InputStream&);
     ConditionType type() const final { return ConditionType::PlayerHasSkill; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
@@ -160,11 +157,11 @@ private:
 class PlayerHasClassCondition : public Condition {
 public:
     PlayerHasClassCondition() = default;
-    PlayerHasClassCondition(std::istringstream&);
+    PlayerHasClassCondition(InputStream&);
     ConditionType type() const final { return ConditionType::PlayerHasClass; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     Class primary = Class::Any;
@@ -174,11 +171,11 @@ private:
 class PlayerHasEnergyCondition : public Condition {
 public:
     PlayerHasEnergyCondition() = default;
-    PlayerHasEnergyCondition(std::istringstream&);
+    PlayerHasEnergyCondition(InputStream&);
     ConditionType type() const final { return ConditionType::PlayerHasEnergy; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     int minEnergy = 0;
@@ -188,11 +185,11 @@ private:
 class PlayerHasNameCondition : public Condition {
 public:
     PlayerHasNameCondition() = default;
-    PlayerHasNameCondition(std::istringstream&);
+    PlayerHasNameCondition(InputStream&);
     ConditionType type() const final { return ConditionType::PlayerHasName; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     std::string name = "";
@@ -201,11 +198,11 @@ private:
 class CurrentTargetIsCastingSkillCondition : public Condition {
 public:
     CurrentTargetIsCastingSkillCondition() = default;
-    CurrentTargetIsCastingSkillCondition(std::istringstream&);
+    CurrentTargetIsCastingSkillCondition(InputStream&);
     ConditionType type() const final { return ConditionType::CurrentTargetIsUsingSkill; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
@@ -214,11 +211,11 @@ private:
 class CurrentTargetHasHpBelowCondition : public Condition {
 public:
     CurrentTargetHasHpBelowCondition() = default;
-    CurrentTargetHasHpBelowCondition(std::istringstream&);
+    CurrentTargetHasHpBelowCondition(InputStream&);
     ConditionType type() const final { return ConditionType::CurrentTargetHasHpBelow; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     float hp = 50.f;
@@ -227,11 +224,11 @@ private:
 class CurrentTargetAllegianceCondition : public Condition {
 public:
     CurrentTargetAllegianceCondition() = default;
-    CurrentTargetAllegianceCondition(std::istringstream&);
+    CurrentTargetAllegianceCondition(InputStream&);
     ConditionType type() const final { return ConditionType::CurrentTargetAllegiance; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     AgentType agentType = AgentType::Hostile;
@@ -240,11 +237,11 @@ private:
 class CurrentTargetModelCondition : public Condition {
 public:
     CurrentTargetModelCondition() = default;
-    CurrentTargetModelCondition(std::istringstream&);
+    CurrentTargetModelCondition(InputStream&);
     ConditionType type() const final { return ConditionType::CurrentTargetHasModel; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     int modelId = 0;
@@ -253,11 +250,11 @@ private:
 class HasPartyWindowAllyOfNameCondition : public Condition {
 public:
     HasPartyWindowAllyOfNameCondition() = default;
-    HasPartyWindowAllyOfNameCondition(std::istringstream&);
+    HasPartyWindowAllyOfNameCondition(InputStream&);
     ConditionType type() const final { return ConditionType::HasPartyWindowAllyOfName; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     std::string name = "";
@@ -266,11 +263,11 @@ private:
 class PartyMemberStatusCondition : public Condition {
 public:
     PartyMemberStatusCondition() = default;
-    PartyMemberStatusCondition(std::istringstream&);
+    PartyMemberStatusCondition(InputStream&);
     ConditionType type() const final { return ConditionType::PartyMemberStatus; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     std::string name = "";
@@ -280,11 +277,11 @@ private:
 class KeyIsPressedCondition : public Condition {
 public:
     KeyIsPressedCondition() = default;
-    KeyIsPressedCondition(std::istringstream&);
+    KeyIsPressedCondition(InputStream&);
     ConditionType type() const final { return ConditionType::KeyIsPressed; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     long shortcutKey = 0;
@@ -295,11 +292,11 @@ private:
 class InstanceTimeCondition : public Condition {
 public:
     InstanceTimeCondition() = default;
-    InstanceTimeCondition(std::istringstream&);
+    InstanceTimeCondition(InputStream&);
     ConditionType type() const final { return ConditionType::InstanceTime; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     int timeInSeconds = 0;
@@ -308,11 +305,11 @@ private:
 class NearbyAgentCondition : public Condition {
 public:
     NearbyAgentCondition() = default;
-    NearbyAgentCondition(std::istringstream&);
+    NearbyAgentCondition(InputStream&);
     ConditionType type() const final { return ConditionType::NearbyAgent; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     AgentType agentType = AgentType::Any;
@@ -331,7 +328,7 @@ private:
 class CanPopAgentCondition : public Condition {
 public:
     CanPopAgentCondition() = default;
-    CanPopAgentCondition(std::istringstream&) {}
+    CanPopAgentCondition(InputStream&) {}
     ConditionType type() const final { return ConditionType::CanPopAgent; }
     bool check() const final;
     void drawSettings() final;
@@ -340,7 +337,7 @@ public:
 class PlayerIsIdleCondition : public Condition {
 public:
     PlayerIsIdleCondition() = default;
-    PlayerIsIdleCondition(std::istringstream&) {}
+    PlayerIsIdleCondition(InputStream&) {}
     ConditionType type() const final { return ConditionType::PlayerIsIdle; }
     bool check() const final;
     void drawSettings() final;
@@ -349,11 +346,11 @@ public:
 class PlayerHasItemEquippedCondition : public Condition {
 public:
     PlayerHasItemEquippedCondition() = default;
-    PlayerHasItemEquippedCondition(std::istringstream&);
+    PlayerHasItemEquippedCondition(InputStream&);
     ConditionType type() const final { return ConditionType::PlayerHasItemEquipped; }
     bool check() const final;
     void drawSettings() final;
-    void serialize(std::ostringstream&) const final;
+    void serialize(OutputStream&) const final;
 
 private:
     int modelId = 0;

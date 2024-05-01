@@ -93,7 +93,7 @@ std::string_view toString(ActionType type)
     }
 }
 
-std::shared_ptr<Action> readAction(std::istringstream& stream)
+std::shared_ptr<Action> readAction(InputStream& stream)
 {
     static_assert((int)ActionType::Count == 17);
     int type;
