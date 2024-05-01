@@ -5,7 +5,11 @@
 #include <Keys.h>
 
 #include <vector>
-#include <iostream> //DBG
+#include <optional>
+
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/Managers/AgentMgr.h>
+
 namespace 
 {
     const std::string endOfStringSignifier{"<"};
@@ -381,7 +385,6 @@ constexpr std::vector<bool> huffmanEncode(const std::string& str)
     {
         result += makeReadableChar(makeInt(seq[i + 0], seq[i + 1], seq[i + 2], seq[i + 3], seq[i + 4], seq[i + 5]));
     }
-    std::cout << "encoded:" << result << "\n";
     return result;
 }
 
@@ -505,4 +508,64 @@ std::string huffmanDecode(std::vector<bool>&& seq)
 std::string importString(std::string&& str)
 {
     return huffmanDecode(combineIntoBitSequence(std::move(str)));
+}
+
+std::vector<GW::Vec2f> readPositions(std::istringstream& stream) 
+{
+    int size;
+    stream >> size;
+
+    std::vector<GW::Vec2f> result;
+
+    for (int i = 0; i < size; ++i) {
+        GW::Vec2f pos;
+        stream >> pos.x;
+        stream >> pos.y;
+        result.push_back(std::move(pos));
+    }
+
+    return result;
+}
+void writePositions(std::ostringstream& stream, const std::vector<GW::Vec2f>& positions) 
+{
+    stream << positions.size() << " ";
+    for (const auto& pos : positions) {
+        stream << pos.x << " " << pos.y << " ";
+    }
+}
+
+void drawPolygonSelector(std::vector<GW::Vec2f>& polygon)
+{
+    ImGui::Indent();
+
+    std::optional<int> remove_point;
+    ImGui::PushItemWidth(200);
+    for (auto j = 0u; j < polygon.size(); j++) {
+        ImGui::PushID(j);
+        ImGui::Bullet();
+        ImGui::InputFloat2("", reinterpret_cast<float*>(&polygon.at(j)));
+        ImGui::SameLine();
+        if (ImGui::Button("x")) remove_point = j;
+        ImGui::PopID();
+    }
+    if (remove_point) {
+        polygon.erase(polygon.begin() + remove_point.value());
+    }
+    if (ImGui::Button("Add Polygon Point")) {
+        if (const auto player = GW::Agents::GetPlayerAsAgentLiving()) {
+            polygon.emplace_back(player->pos.x, player->pos.y);
+        }
+    }
+
+    ImGui::Unindent();
+}
+bool pointIsInsidePolygon(const GW::GamePos pos, const std::vector<GW::Vec2f>& points)
+{
+    bool b = false;
+    for (auto i = 0u, j = points.size() - 1; i < points.size(); j = i++) {
+        if (points[i].y >= pos.y != points[j].y >= pos.y && pos.x <= (points[j].x - points[i].x) * (pos.y - points[i].y) / (points[j].y - points[i].y) + points[i].x) {
+            b = !b;
+        }
+    }
+    return b;
 }

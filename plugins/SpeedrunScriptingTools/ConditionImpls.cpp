@@ -886,6 +886,7 @@ NearbyAgentCondition::NearbyAgentCondition(std::istringstream& stream)
 {
     stream >> agentType >> primary >> secondary >> status >> hexed >> skill >> modelId >> minDistance >> maxDistance;
     agentName = readStringWithSpaces(stream);
+    polygon = readPositions(stream);
 }
 void NearbyAgentCondition::serialize(std::ostringstream& stream) const
 {
@@ -894,6 +895,7 @@ void NearbyAgentCondition::serialize(std::ostringstream& stream) const
     stream << agentType << " " << primary << " " << secondary << " " << status << " " << hexed << " " << skill << " "
            << " " << modelId << " " << minDistance << " " << maxDistance << " ";
     writeStringWithSpaces(stream, agentName);
+    writePositions(stream, polygon);
 }
 bool NearbyAgentCondition::check() const
 {
@@ -928,7 +930,8 @@ bool NearbyAgentCondition::check() const
         const auto distance = GW::GetDistance(player->pos, agent->pos);
         const auto goodDistance = (minDistance < distance) && (distance < maxDistance);
         const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedName(agent->agent_id) == agentName);
-        return correctType && correctPrimary && correctSecondary && correctStatus && hexedCorrectly && correctSkill && correctModelId && goodDistance && goodName;
+        const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(agent->pos, polygon);
+        return correctType && correctPrimary && correctSecondary && correctStatus && hexedCorrectly && correctSkill && correctModelId && goodDistance && goodName && goodPosition;
     };
     if (agentType == AgentType::PartyMember) {
         const auto info = GW::PartyMgr::GetPartyInfo();
@@ -991,6 +994,10 @@ void NearbyAgentCondition::drawSettings()
         ImGui::Text("Has model");
         ImGui::SameLine();
         ImGui::InputInt("id (0 for any)###1", &modelId, 0);
+
+        ImGui::Bullet();
+        ImGui::Text("Is within polygon");
+        drawPolygonSelector(polygon);
 
         ImGui::TreePop();
     }
