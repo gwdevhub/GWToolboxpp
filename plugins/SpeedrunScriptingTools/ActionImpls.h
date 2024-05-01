@@ -19,7 +19,7 @@ namespace GW {
 
 class MoveToAction : public Action {
 public:
-    MoveToAction() = default;
+    MoveToAction();
     MoveToAction(InputStream&);
     ActionType type() const final { return ActionType::MoveTo; }
     void initialAction() final;
@@ -30,8 +30,9 @@ public:
 private:
     GW::GamePos pos{};
     float accuracy = GW::Constants::Range::Adjacent;
-    int radius = 0;
+    bool repeatMove{true};
     mutable std::chrono::steady_clock::time_point lastMovePacketTime = std::chrono::steady_clock::now();
+    mutable bool hasBegunWalking = false;
 };
 
 class CastOnSelfAction : public Action {
