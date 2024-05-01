@@ -7,6 +7,21 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 6.17
+* [New] Added a release channel option to the toolbox updating functionality
+* [New] Draw all quests option (Minimap) now offers to draw non-active quests in a different colour
+* [Minor] /target <name> can now target players, previously it required /target player <name>
+* [Minor] Minimap targetting is now able to target locked chests again
+* [Minor] You can now create multiple chat aliases with the same alias, i.e. `/hi !sayinghello` and `/hi /wave`
+* [Minor] Disable camera smoothing now works while reverse camera is active
+* [Minor] /marktarget can now highlight other players
+* [Fix] Hide city pcons in explorable areas now saves and loads
+* [Fix] Real time timer no longer resets on entering explorables if never reset is ticked
+* [Fix] Minimap drawing is fluent again
+* [Fix] Travelling to a pvp outpost while mouse hovers over toolbox windows no longer blocks left clicks
+* [Fix] Draw all quests no longer switches your active quest around
+* [Fix] reroll confirmation now waits for a separate enter press, rather than a forced wait of 500ms
+
 ## Version 6.16
 * [Minor] `/dialog take` can now be used the take bounties
 * [Minor] Current character is highlighted in Reroll window now
