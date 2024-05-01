@@ -230,6 +230,13 @@ void ConjunctionCondition::drawSettings()
 }
 
 /// ------------- IsInMapCondition -------------
+IsInMapCondition::IsInMapCondition()
+{
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) 
+    {
+        id = GW::Map::GetMapID();
+    }
+}
 IsInMapCondition::IsInMapCondition(InputStream& stream)
 {
     stream >> id;
@@ -321,6 +328,14 @@ void OnlyTriggerOnceCondition::drawSettings()
 }
 
 /// ------------- PlayerIsNearPositionCondition -------------
+PlayerIsNearPositionCondition::PlayerIsNearPositionCondition()
+{
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+        if (auto player = GW::Agents::GetPlayerAsAgentLiving()) {
+            pos = player->pos;
+        }
+    }
+}
 PlayerIsNearPositionCondition::PlayerIsNearPositionCondition(InputStream& stream) 
     : PlayerIsNearPositionCondition()
 {
@@ -539,7 +554,7 @@ void CurrentTargetIsCastingSkillCondition::drawSettings()
     ImGui::Text("If the target is casting the skill");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputInt("id", reinterpret_cast<int*>(&id), 0);
+    ImGui::InputInt("id (0 for none)", reinterpret_cast<int*>(&id), 0);
     ImGui::PopID();
 }
 
