@@ -1682,7 +1682,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         }
         else if (arg1 == L"close" || arg1 == L"quit" || arg1 == L"exit") {
             // e.g. /tb close
-            GWToolbox::Instance().SignalTerminate();
+            GWToolbox::SignalTerminate();
         }
         else {
             // e.g. /tb travel
