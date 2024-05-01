@@ -88,6 +88,8 @@ std::string_view toString(AgentType type) {
     switch (type) {
         case AgentType::Any:
             return "Any";
+        case AgentType::Self:
+            return "Self";
         case AgentType::PartyMember:
             return "Party member";
         case AgentType::Friendly:

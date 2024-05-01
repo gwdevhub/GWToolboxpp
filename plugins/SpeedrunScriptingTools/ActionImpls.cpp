@@ -327,6 +327,14 @@ void ChangeTargetAction::initialAction()
     const auto agents = GW::Agents::GetAgentArray();
     if (!player || !agents) return;
 
+    if (agentType == AgentType::Self) 
+    {
+        GW::GameThread::Enqueue([id = player->agent_id]() -> void {
+            GW::Agents::ChangeTarget(id);
+        });
+        return;
+    }
+
     auto& instanceInfo = InstanceInfo::getInstance();
 
     const auto fulfillsConditions = [&](const GW::AgentLiving* agent) 
@@ -415,58 +423,60 @@ void ChangeTargetAction::drawSettings()
     ImGui::PushItemWidth(120);
 
     if (ImGui::TreeNodeEx("Change target to agent with characteristics", ImGuiTreeNodeFlags_FramePadding)) {
-        ImGui::BulletText("Distance to player");
-        ImGui::SameLine();
-        ImGui::InputFloat("min", &minDistance);
-        ImGui::SameLine();
-        ImGui::InputFloat("max", &maxDistance);
-
-        ImGui::BulletText("Allegiance");
+        ImGui::BulletText("Type");
         ImGui::SameLine();
         drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, 0);
 
-        ImGui::BulletText("Class");
-        ImGui::SameLine();
-        drawEnumButton(Class::Any, Class::Dervish, primary, 1);
+        if (agentType != AgentType::Self) {
+            ImGui::BulletText("Distance to player");
+            ImGui::SameLine();
+            ImGui::InputFloat("min", &minDistance);
+            ImGui::SameLine();
+            ImGui::InputFloat("max", &maxDistance);
 
-        ImGui::SameLine();
-        ImGui::Text("/");
-        ImGui::SameLine();
-        drawEnumButton(Class::Any, Class::Dervish, secondary, 2);
+            ImGui::BulletText("Class");
+            ImGui::SameLine();
+            drawEnumButton(Class::Any, Class::Dervish, primary, 1);
 
-        ImGui::BulletText("Dead or alive");
-        ImGui::SameLine();
-        drawEnumButton(Status::Any, Status::Alive, status, 3);
+            ImGui::SameLine();
+            ImGui::Text("/");
+            ImGui::SameLine();
+            drawEnumButton(Class::Any, Class::Dervish, secondary, 2);
 
-        ImGui::BulletText("Uses skill");
-        ImGui::SameLine();
-        ImGui::InputInt("id (0 for any)###0", reinterpret_cast<int*>(&skill), 0);
+            ImGui::BulletText("Dead or alive");
+            ImGui::SameLine();
+            drawEnumButton(Status::Any, Status::Alive, status, 3);
 
-        ImGui::BulletText("Has name");
-        ImGui::SameLine();
-        ImGui::InputText("###1", &agentName);
+            ImGui::BulletText("Uses skill");
+            ImGui::SameLine();
+            ImGui::InputInt("id (0 for any)###0", reinterpret_cast<int*>(&skill), 0);
 
-        ImGui::Bullet();
-        ImGui::Checkbox("Prefer enemies that are not hexed", &preferNonHexed);
+            ImGui::BulletText("Has name");
+            ImGui::SameLine();
+            ImGui::InputText("###1", &agentName);
 
-        ImGui::Bullet();
-        ImGui::Checkbox("May choose current target again", &mayBeCurrentTarget);
+            ImGui::Bullet();
+            ImGui::Checkbox("Prefer enemies that are not hexed", &preferNonHexed);
 
-        ImGui::Bullet();
-        ImGui::Checkbox("Require same model as current target", &requireSameModelIdAsTarget);
+            ImGui::Bullet();
+            ImGui::Checkbox("May choose current target again", &mayBeCurrentTarget);
 
-        ImGui::Bullet();
-        ImGui::Text(requireSameModelIdAsTarget ? "If no target is selected, pick agent with model" : "Pick agent with model");
-        ImGui::SameLine();
-        ImGui::InputInt("id (0 for any)###2", &modelId, 0);
+            ImGui::Bullet();
+            ImGui::Checkbox("Require same model as current target", &requireSameModelIdAsTarget);
 
-        ImGui::BulletText("Sort candidates by:");
-        ImGui::SameLine();
-        drawEnumButton(Sorting::AgentId, Sorting::HighestHp, sorting, 4, 150.);
+            ImGui::Bullet();
+            ImGui::Text(requireSameModelIdAsTarget ? "If no target is selected, pick agent with model" : "Pick agent with model");
+            ImGui::SameLine();
+            ImGui::InputInt("id (0 for any)###2", &modelId, 0);
 
-        ImGui::Bullet();
-        ImGui::Text("Is within polygon");
-        drawPolygonSelector(polygon);
+            ImGui::BulletText("Sort candidates by:");
+            ImGui::SameLine();
+            drawEnumButton(Sorting::AgentId, Sorting::HighestHp, sorting, 4, 150.);
+
+            ImGui::Bullet();
+            ImGui::Text("Is within polygon");
+            drawPolygonSelector(polygon);
+        }
 
         ImGui::TreePop();
     }
