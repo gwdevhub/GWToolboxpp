@@ -40,6 +40,9 @@ namespace {
         plugin.initialized = false;
         plugin.terminating = false;
         plugin.instance = nullptr;
+        if (SUCCEEDED(FreeLibrary(plugin.dll))) {
+            plugin.dll = nullptr;
+        }
         std::erase_if(plugins_loaded, [plugin_ptr](auto p) { return p == plugin_ptr; });
         return true;
     }
