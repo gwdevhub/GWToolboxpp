@@ -474,32 +474,20 @@ bool PlayerHasClassCondition::check() const
 }
 void PlayerHasClassCondition::drawSettings()
 {
-    const auto drawClassSelector = [&](Class& c) {
-        ImGui::SameLine();
-        if (ImGui::Button(toString(c).c_str(), ImVec2(100, 0))) {
-            ImGui::OpenPopup("Pick class");
-        }
-        if (ImGui::BeginPopup("Pick class")) {
-            for (auto i = 0; i <= (int)Class::Dervish; ++i) {
-                if (ImGui::Selectable(toString((Class)i).data())) {
-                    c = (Class)i;
-                }
-            }
-            ImGui::EndPopup();
-        }
-    };
     ImGui::PushID(drawId());
     
     ImGui::PushID(0);
     ImGui::Text("If the player has primary");
-    drawClassSelector(primary);
+    ImGui::SameLine();
+    drawEnumButton(Class::Any, Class::Dervish, primary);
     ImGui::PopID();
 
     ImGui::SameLine();
 
     ImGui::PushID(1);
     ImGui::Text("and secondary");
-    drawClassSelector(secondary);
+    ImGui::SameLine();
+    drawEnumButton(Class::Any, Class::Dervish, secondary);
     ImGui::PopID();
 
     ImGui::PopID();
@@ -740,41 +728,27 @@ bool PartyMemberStatusCondition::check() const
 
     auto& instanceInfo = InstanceInfo::getInstance();
 
-    const auto agentID = [&] {
-        for (const auto& player : info->players) {
-            auto candidate = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
-            if (instanceInfo.getDecodedName(candidate) == name) {
-                return std::optional{candidate};
-            }
-        }
-        return std::optional<GW::AgentID>{};
-    }();
+    GW::Agents::GetMapAgentArray();
 
-    if (!agentID) return false;
-    
-    const auto agent = GW::Agents::GetAgentByID(agentID.value());
-    if (!agent) return false;
-    const auto living = agent->GetAsAgentLiving();
+    for (const auto& [playerAgentId, decodedName] : instanceInfo.getPlayerNames()) 
+    {
+        if (decodedName != name) continue;
 
-    bool shouldBeAlive = status == Status::Alive;
-    return living && living->GetIsAlive() == shouldBeAlive;
+        if (status == Status::Any) return true; // Player is in the instance
+
+        const auto mapAgent = GW::Agents::GetMapAgentByID(playerAgentId);
+        if (!mapAgent) continue;
+        return (mapAgent->GetIsDead()) == (status == Status::Dead);
+    }
+
+    return false;
 }
 void PartyMemberStatusCondition::drawSettings()
 {
     ImGui::PushID(drawId());
     ImGui::Text("Party window ally status");
     ImGui::SameLine();
-    if (ImGui::Button(toString(status).data(), ImVec2(100, 0))) {
-        ImGui::OpenPopup("Pick status");
-    }
-    if (ImGui::BeginPopup("Pick status")) {
-        for (auto i = 0; i <= (int)Status::Alive; ++i) {
-            if (ImGui::Selectable(toString((Status)i).data())) {
-                status = (Status)i;
-            }
-        }
-        ImGui::EndPopup();
-    }
+    drawEnumButton(Status::Any, Status::Alive, status);
     ImGui::SameLine();
     ImGui::PushItemWidth(300);
     ImGui::InputText("Ally name", &name);
@@ -805,18 +779,7 @@ void QuestHasStateCondition::drawSettings()
     ImGui::SameLine();
     ImGui::InputInt("id", reinterpret_cast<int*>(&id), 0);
     ImGui::SameLine();
-
-    if (ImGui::Button(toString(status).data(), ImVec2(100, 0))) {
-        ImGui::OpenPopup("Pick status");
-    }
-    if (ImGui::BeginPopup("Pick status")) {
-        for (auto i = 0; i <= (int)QuestStatus::Failed; ++i) {
-            if (ImGui::Selectable(toString((QuestStatus)i).data())) {
-                status = (QuestStatus)i;
-            }
-        }
-        ImGui::EndPopup();
-    }
+    drawEnumButton(QuestStatus::NotStarted, QuestStatus::Failed, status);
     ImGui::SameLine();
     ShowHelp("Objective ID, NOT quest ID!\nUW: Chamber 146, Restore 147, UWG 149, Vale 150, Waste 151, Pits 152, Planes 153, Mnts 154, Pools 155");
     ImGui::PopID();
