@@ -900,6 +900,7 @@ void GWToolbox::UpdateModulesTerminating(float delta_f) {
         m->Update(delta_f);
     }
 }
+
 void GWToolbox::UpdateTerminating(float delta_f) {
     ASSERT(gwtoolbox_state == GWToolboxState::Terminating);
 
