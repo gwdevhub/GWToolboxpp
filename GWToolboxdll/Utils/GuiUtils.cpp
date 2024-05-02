@@ -39,6 +39,10 @@ namespace {
         return "https://wiki.guildwars.com/wiki/";
     }
 
+    const char* GetRawWikiPrefix() {
+        return "https://wiki.guildwars.com/index.php";
+    }
+
     int safe_ispunct(const char c)
     {
         if (c >= -1 && c <= 255) {
@@ -148,6 +152,23 @@ namespace GuiUtils {
         char cmd[256];
         const std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(url_path)), '_');
         snprintf(cmd, _countof(cmd), "%s%s", GetWikiPrefix(), encoded.c_str());
+        return cmd;
+    }
+
+    std::string WikiTemplateUrlFromTitle(const std::string& title)
+    {
+        return WikiTemplateUrlFromTitle(StringToWString(title));
+    }
+
+    std::string WikiTemplateUrlFromTitle(const std::wstring& title)
+    {
+        // @Cleanup: Should really properly url encode the string here, but modern browsers clean up after our mess. Test with Creme Brulees.
+        if (title.empty()) {
+            return GetRawWikiPrefix();
+        }
+        char cmd[256];
+        const std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(title)), '_');
+        snprintf(cmd, _countof(cmd), "%s?title=%s&action=raw", GetRawWikiPrefix(), encoded.c_str());
         return cmd;
     }
 
