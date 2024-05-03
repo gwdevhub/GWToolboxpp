@@ -550,6 +550,7 @@ void ToastNotifications::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_notifications_on_whisper);
     SAVE_BOOL(show_notifications_on_guild_chat);
     SAVE_BOOL(show_notifications_on_ally_chat);
+    SAVE_BOOL(show_notifications_on_invite);
     SAVE_BOOL(show_notifications_on_last_to_ready);
     SAVE_BOOL(show_notifications_on_everyone_ready);
     SAVE_BOOL(show_notifications_on_self_resurrected);
@@ -557,6 +558,7 @@ void ToastNotifications::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(flash_window_on_whisper);
     SAVE_BOOL(flash_window_on_guild_chat);
     SAVE_BOOL(flash_window_on_ally_chat);
+    SAVE_BOOL(flash_window_on_invite);
     SAVE_BOOL(flash_window_on_last_to_ready);
     SAVE_BOOL(flash_window_on_everyone_ready);
     SAVE_BOOL(flash_window_on_self_resurrected);
