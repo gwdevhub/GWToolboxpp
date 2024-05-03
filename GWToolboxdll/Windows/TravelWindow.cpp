@@ -137,7 +137,7 @@ namespace {
 
     // ==== options ====
     bool close_on_travel = false;
-    bool minimize_on_travel = true;
+    bool minimize_on_travel = false;
 
     // ==== scroll to outpost ====
     GW::Constants::MapID scroll_to_outpost_id = GW::Constants::MapID::None;   // Which outpost do we want to end up in?
