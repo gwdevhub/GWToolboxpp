@@ -137,7 +137,7 @@ namespace {
 
     // ==== options ====
     bool close_on_travel = false;
-    bool minimize_on_travel = false;
+    bool collapse_on_travel = false;
 
     // ==== scroll to outpost ====
     GW::Constants::MapID scroll_to_outpost_id = GW::Constants::MapID::None;   // Which outpost do we want to end up in?
@@ -489,7 +489,7 @@ void TravelWindow::Terminate()
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }
 
-void TravelWindow::TravelButton(const char* text, const int x_idx, const GW::Constants::MapID mapid)
+void TravelWindow::TravelButton(const char* text, const int x_idx, const GW::Constants::MapID mapid) const
 {
     if (x_idx != 0) {
         ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
@@ -509,8 +509,6 @@ void TravelWindow::TravelButton(const char* text, const int x_idx, const GW::Con
         Instance().Travel(mapid, district, district_number);
     }
 }
-
-
 
 void TravelWindow::Draw(IDirect3DDevice9*)
 {
@@ -787,7 +785,7 @@ bool TravelWindow::Travel(const GW::Constants::MapID map_id, const GW::Constants
         return false;
     }
 
-    if (minimize_on_travel) {
+    if (collapse_on_travel) {
         to_minimize = true;
     }
 
@@ -822,8 +820,8 @@ void TravelWindow::DrawSettingsInternal()
 {
     ImGui::Checkbox("Close on travel", &close_on_travel);
     ImGui::ShowHelp("Will close the travel window when clicking on a travel destination");
-    ImGui::Checkbox("Minimize on travel", &minimize_on_travel);
-    ImGui::ShowHelp("Will minimize the travel window when clicking on a travel destination");
+    ImGui::Checkbox("Collapse on travel", &collapse_on_travel);
+    ImGui::ShowHelp("Will collapse the travel window when clicking on a travel destination");
     ImGui::PushItemWidth(100.0f);
     if (ImGui::InputInt("Number of favorites", &fav_count)) {
         if (fav_count < 0) {
@@ -852,7 +850,7 @@ void TravelWindow::LoadSettings(ToolboxIni* ini)
         fav_index[static_cast<size_t>(i)] = ini->GetLongValue(Name(), key, -1);
     }
     LOAD_BOOL(close_on_travel);
-    LOAD_BOOL(minimize_on_travel);
+    LOAD_BOOL(collapse_on_travel);
     LOAD_BOOL(retry_map_travel);
 }
 
@@ -867,7 +865,7 @@ void TravelWindow::SaveSettings(ToolboxIni* ini)
         ini->SetLongValue(Name(), key, fav_index[ui]);
     }
     SAVE_BOOL(close_on_travel);
-    SAVE_BOOL(minimize_on_travel);
+    SAVE_BOOL(collapse_on_travel);
     SAVE_BOOL(retry_map_travel);
 }
 
