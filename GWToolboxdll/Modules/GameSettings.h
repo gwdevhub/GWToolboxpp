@@ -79,7 +79,6 @@ public:
     static void OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::PlayerJoinInstance*);
     static void OnPartyInviteReceived(const GW::HookStatus*, const GW::Packet::StoC::PartyInviteReceived_Create*);
     void OnPartyPlayerJoined(const GW::HookStatus*, const GW::Packet::StoC::PartyPlayerAdd*);
-    static void OnLocalChatMessage(GW::HookStatus*, const GW::Packet::StoC::MessageLocal*);
     static void OnServerMessage(const GW::HookStatus*, GW::Packet::StoC::MessageServer*);
     void OnScreenShake(GW::HookStatus*, const void* packet) const;
     static void OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*);

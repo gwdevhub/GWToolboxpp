@@ -170,7 +170,7 @@ namespace {
         if (end_idx == std::wstring::npos) {
             return; // Not a player name, this should never happen.
         }
-        const std::wstring player_pinged = GuiUtils::SanitizePlayerName(message.substr(start_idx, end_idx));
+        const std::wstring player_pinged = GuiUtils::SanitizePlayerName(message.substr(start_idx, end_idx - start_idx));
         if (player_pinged.empty()) {
             return; // No recipient
         }

@@ -2316,52 +2316,6 @@ void GameSettings::OnServerMessage(const GW::HookStatus*, GW::Packet::StoC::Mess
     }
 }
 
-
-// Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
-void GameSettings::OnLocalChatMessage(GW::HookStatus* status, const GW::Packet::StoC::MessageLocal* pak)
-{
-    if (status->blocked) {
-        return; // Sender blocked, packet handled.
-    }
-    if (pak->channel != std::to_underlying(GW::Chat::Channel::CHANNEL_GROUP) || !pak->player_number) {
-        return; // Not team chat or no sender
-    }
-    const auto core = GetMessageCore();
-    if (core[0] != 0x778 && core[0] != 0x781) {
-        return; // Not "I'm Following X" or "I'm Targeting X" message.
-    }
-    std::wstring message(core);
-    size_t start_idx = message.find(L"\xba9\x107");
-    if (start_idx == std::wstring::npos) {
-        return; // Not a player name.
-    }
-    start_idx += 2;
-    const size_t end_idx = message.find(L'\x1', start_idx);
-    if (end_idx == std::wstring::npos) {
-        return; // Not a player name, this should never happen.
-    }
-    const auto player_pinged = SanitizePlayerName(message.substr(start_idx, end_idx));
-    if (player_pinged.empty()) {
-        return; // No recipient
-    }
-    const auto sender = GW::PlayerMgr::GetPlayerByID(pak->player_number);
-    if (!sender) {
-        return; // No sender
-    }
-    if (flash_window_on_name_ping && GetPlayerName() == player_pinged) {
-        FlashWindow(); // Flash window - we've been followed!
-    }
-    // Allow clickable player name
-    message.insert(start_idx, L"<a=1>");
-    message.insert(end_idx + 5, L"</a>");
-    PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_GROUP, message.c_str(), sender->name_enc);
-    if (m) {
-        ChatSettings::AddPendingMessage(m);
-    }
-    ClearMessageCore();
-    status->blocked = true; // consume original packet.
-}
-
 // Automatic /age on vanquish
 void GameSettings::OnVanquishComplete(const GW::HookStatus*, GW::Packet::StoC::VanquishComplete*)
 {

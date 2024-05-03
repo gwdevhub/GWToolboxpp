@@ -762,7 +762,7 @@ namespace {
         record_textures = ImGui::CollapsingHeader("Loaded Textures");
         if (record_textures) {
             ImGui::PushID(&textures_created);
-            const ImVec2 scaled_size = { 64.f,64.f };
+            constexpr ImVec2 scaled_size = { 64.f,64.f };
             constexpr ImVec4 tint(1, 1, 1, 1);
             const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
             constexpr auto uv0 = ImVec2(0, 0);
@@ -790,7 +790,7 @@ namespace {
                 ImGui::NextSpacedElement();
                 ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, normal_bg, tint);
                 if (ImGui::IsItemHovered()) {
-                    static wchar_t out[3] = { 0 };
+                    static wchar_t out[3];
                     FileIdToFileHash(texture_file_ids[texture], out);
                     ImGui::SetTooltip("File ID: 0x%08x\nFile Hash: 0x%04x 0x%04x", texture_file_ids[texture], out[0], out[1]);
                 }
