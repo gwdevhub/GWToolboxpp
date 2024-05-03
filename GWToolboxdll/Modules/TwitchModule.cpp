@@ -6,6 +6,7 @@
 #include <Defines.h>
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
+#include <Color.h>
 
 #include <GWCA/Managers/UIMgr.h>
 
@@ -15,9 +16,9 @@ namespace {
     // IRC details
     std::string irc_server = "irc.chat.twitch.tv";
     int irc_port = 443; // Not 6667, just in case router blocks it.
-    std::string irc_username = "";
+    std::string irc_username;
     std::string irc_password = "oauth:<your_token_here>";
-    std::string irc_channel = "";
+    std::string irc_channel;
     std::string irc_alias = "Twitch";
     Color irc_chat_color = Colors::RGB(0xAD, 0x83, 0xFA);
 
@@ -31,24 +32,19 @@ namespace {
     bool twitch_enabled = true;
     bool hooked = false;
 
-    char message_buffer[1024] = {0};
-
     IRC irc_conn;
 
     GW::HookEntry SendChatCallback_Entry;
     GW::HookEntry StartWhisperCallback_Entry;
 
-
-
-
     void WriteChat(const wchar_t* message, const char* nick = nullptr)
     {
         char sender[128];
         if (nick) {
-            snprintf(sender, sizeof(sender) / sizeof(*sender), "%s @ %s", nick, irc_alias.c_str());
+            snprintf(sender, std::size(sender), "%s @ %s", nick, irc_alias.c_str());
         }
         else {
-            snprintf(sender, sizeof(sender) / sizeof(*sender), "%s", irc_alias.c_str());
+            snprintf(sender, std::size(sender), "%s", irc_alias.c_str());
         }
         std::wstring sender_ws = GuiUtils::StringToWString(sender);
         auto message_ws = new wchar_t[255];
@@ -87,7 +83,6 @@ namespace {
         });
     }
 
-    // ReSharper disable once CppParameterMayBeConst
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnJoin(const char* params, irc_reply_data* hostd, void*)
     {
@@ -112,7 +107,6 @@ namespace {
         return 0;
     }
 
-    // ReSharper disable once CppParameterMayBeConst
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnLeave(const char* params, irc_reply_data* hostd, void*)
     {
@@ -126,7 +120,6 @@ namespace {
         return 0;
     }
 
-    // ReSharper disable once CppParameterMayBeConst
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnConnected(const char* params, irc_reply_data*, void* wparam)
     {
@@ -145,7 +138,6 @@ namespace {
         return 0;
     }
 
-    // ReSharper disable once CppParameterMayBeConst
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnMessage(const char* params, irc_reply_data* hostd, void*)
     {
@@ -158,7 +150,6 @@ namespace {
         return 0;
     }
 
-    // ReSharper disable once CppParameterMayBeConst
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnNotice(const char* params, irc_reply_data*, void* conn)
     {
@@ -190,21 +181,19 @@ namespace {
                 return;
             }
             wchar_t buf[128];
-            const std::wstring walias = GuiUtils::StringToWString(irc_alias);
-            swprintf(buf, 128, L" @ %s", walias.c_str());
+            const std::wstring w_alias = GuiUtils::StringToWString(irc_alias);
+            swprintf(buf, 128, L" @ %s", w_alias.c_str());
             if (std::wstring(name).find(buf) != std::wstring::npos) {
-                wcscpy(name, walias.c_str());
+                wcscpy(name, w_alias.c_str());
             }
-            });
+        });
         GW::UI::RegisterUIMessageCallback(&SendChatCallback_Entry, GW::UI::UIMessage::kSendChatMessage, [](GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) {
-            wchar_t* msg = *(wchar_t**)wparam;
-            GW::Chat::Channel chan = GW::Chat::GetChannel(*msg);
+            const auto msg = *static_cast<const wchar_t**>(wparam);
+            const auto chan = GW::Chat::GetChannel(*msg);
             if (chan != GW::Chat::Channel::CHANNEL_WHISPER || !connected) {
                 return;
             }
-            wchar_t msgcpy[255];
-            wcscpy(msgcpy, msg);
-            std::string message = GuiUtils::WStringToString(msgcpy);
+            std::string message = GuiUtils::WStringToString(msg);
             const size_t sender_idx = message.find(',');
             if (sender_idx == std::string::npos) {
                 return; // Invalid sender
@@ -225,7 +214,7 @@ namespace {
                 OnMessage(content.c_str(), &d, &irc_conn);
             }
             status->blocked = true;
-            });
+        });
     }
 }
 
@@ -253,8 +242,8 @@ void TwitchModule::Initialize()
 
 
 
-bool TwitchModule::isConnected() { return connected; };
-IRC* TwitchModule::irc() { return &irc_conn; };
+bool TwitchModule::IsConnected() { return connected; }
+IRC* TwitchModule::irc() { return &irc_conn; }
 
 void TwitchModule::Disconnect()
 {
@@ -265,6 +254,7 @@ void TwitchModule::Disconnect()
     irc_conn.disconnect();
     connected = irc_conn.is_connected();
 }
+
 void TwitchModule::Terminate()
 {
     ToolboxModule::Terminate();
@@ -275,11 +265,11 @@ void TwitchModule::Terminate()
 
 bool TwitchModule::Connect()
 {
-    auto conn = irc();
+    const auto irc_connection = irc();
     if (!twitch_enabled) {
         return true;
     }
-    connected = conn->is_connected();
+    connected = irc_connection->is_connected();
     if (connected) {
         return true;
     }
@@ -296,18 +286,20 @@ bool TwitchModule::Connect()
         return false;
     }*/
     // Sanitise strings to lower case
-    std::ranges::transform(irc_server, irc_server.begin(),
-                           [](const char c) -> char {
-                               return static_cast<char>(tolower(c));
-                           });
+    std::ranges::transform(
+        irc_server, irc_server.begin(),
+        [](const char c) -> char {
+            return static_cast<char>(tolower(c));
+        });
     /*std::transform(irc_username.begin(), irc_username.end(), irc_username.begin(),
         [](unsigned char c) { return std::tolower(c); });*/
-    std::ranges::transform(irc_channel, irc_channel.begin(),
-                           [](const char c) -> char {
-                               return static_cast<char>(tolower(c));
-                           });
+    std::ranges::transform(
+        irc_channel, irc_channel.begin(),
+        [](const char c) -> char {
+            return static_cast<char>(tolower(c));
+        });
 
-    if (conn->start(
+    if (irc_connection->start(
             irc_server.c_str(),
             irc_port,
             "unused",
@@ -318,7 +310,7 @@ bool TwitchModule::Connect()
         return false;
     }
     printf("Connected to IRC!\n");
-    return connected = conn->is_connected();
+    return connected = irc_connection->is_connected();
 }
 
 void TwitchModule::Update(const float)

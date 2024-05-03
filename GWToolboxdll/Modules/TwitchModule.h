@@ -3,10 +3,6 @@
 #include "IRC.h"
 #include <ToolboxModule.h>
 
-#include <GWCA/Utilities/Hook.h>
-
-#include <Color.h>
-
 class TwitchModule : public ToolboxModule {
     TwitchModule() = default;
     TwitchModule(const TwitchModule&) = delete;
@@ -31,11 +27,9 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;
-    bool Connect();
-    void Disconnect();
 
-
-    bool isConnected();
-    IRC* irc();
-
+    static bool Connect();
+    static void Disconnect();
+    static bool IsConnected();
+    static IRC* irc();
 };
