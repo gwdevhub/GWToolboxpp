@@ -209,8 +209,8 @@ namespace {
             if (sender_idx == std::string::npos) {
                 return; // Invalid sender
             }
-            const std::string to = message.substr(0, sender_idx);
-            if (to.compare(irc_alias) != 0) {
+            const std::string to = message.substr(1, sender_idx - 1);
+            if (to != irc_alias) {
                 return;
             }
             std::string content = message.substr(sender_idx + 1);
