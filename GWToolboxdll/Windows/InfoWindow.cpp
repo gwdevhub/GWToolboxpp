@@ -683,21 +683,18 @@ namespace {
         bool skip_hooks;
     };
 
-    std::vector<UIMessagePacket*> ui_message_packets_recorded;
+    std::vector<UIMessagePacket> ui_message_packets_recorded;
     bool record_ui_messages = false;
 
     bool OnGWCASendUIMessage(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks) {
         GW::Hook::EnterHook();
         auto res = GWCA_SendUIMessage_Ret(msgid, wParam, lParam, skip_hooks);
-        if(record_ui_messages)
-            ui_message_packets_recorded.push_back(new UIMessagePacket({ msgid,wParam,lParam, skip_hooks }));
+        if (record_ui_messages)
+            ui_message_packets_recorded.emplace_back(msgid, wParam, lParam, skip_hooks);
         GW::Hook::LeaveHook();
         return res;
     }
     void ClearUIMessagesRecorded() {
-        for (auto p : ui_message_packets_recorded) {
-            delete p;
-        }
         ui_message_packets_recorded.clear();
     }
 
@@ -811,9 +808,9 @@ namespace {
             if (ImGui::SmallButton("Reset")) {
                 ClearUIMessagesRecorded();
             }
-            for (auto it : ui_message_packets_recorded) {
-                ImGui::PushID(it);
-                ImGui::Text("0x%08x 0x%08x 0x%08x", it->msgid, it->wParam, it->lParam);
+            for (const auto packet : ui_message_packets_recorded) {
+                ImGui::PushID(&packet);
+                ImGui::Text("0x%08x 0x%08x 0x%08x", packet.msgid, packet.wParam, packet.lParam);
                 ImGui::PopID();
             }
             ImGui::PopID();
@@ -879,7 +876,7 @@ void InfoWindow::Initialize()
     GWCA_SendUIMessage_Func = (GWCA_SendUIMessage_pt)GW::UI::SendUIMessage;
     if (GWCA_SendUIMessage_Func) {
         GW::HookBase::CreateHook((void**)&GWCA_SendUIMessage_Func, OnGWCASendUIMessage, (void**)&GWCA_SendUIMessage_Ret);
-        //GW::HookBase::EnableHooks(GWCA_SendUIMessage_Func);
+        GW::HookBase::EnableHooks(GWCA_SendUIMessage_Func);
     }
 }
 
