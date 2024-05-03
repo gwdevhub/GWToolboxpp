@@ -27,9 +27,10 @@ namespace {
     }
 
     void TriggerWorldMapRedraw() {
-        GW::GameThread::Enqueue([]() {
+        GW::GameThread::Enqueue([] {
             // Trigger a benign ui message e.g. guild context update; world map subscribes to this, and automatically updates the view.
-            GW::UI::SendUIMessage((GW::UI::UIMessage)0x100000ca);
+            // GW::UI::SendUIMessage((GW::UI::UIMessage)0x100000ca); // disables guild/ally chat until reloading char/map
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kMapLoaded);
             });
     }
 }
@@ -58,7 +59,7 @@ void WorldMapWidget::Terminate() {
 
 void WorldMapWidget::ShowAllOutposts(const bool show = showing_all_outposts)
 {
-    if(view_all_outposts_patch.IsValid())
+    if (view_all_outposts_patch.IsValid())
         view_all_outposts_patch.TogglePatch(show);
     if (view_all_carto_areas_patch.IsValid())
         view_all_carto_areas_patch.TogglePatch(show);
