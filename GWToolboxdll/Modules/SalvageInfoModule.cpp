@@ -304,6 +304,8 @@ namespace {
         j.at("RareCraftingMaterials").get_to(p.rare_crafting_materials);
     }
 
+    // The following regex captures the text between <gallery></gallery> in the disambiguation page: eg. <gallery>Image : Inscribed Chakram(metal).jpg | [[Inscribed Chakram(metal)]] Image : Inscribed Chakram(wooden).jpg | [[Inscribed Chakram(wooden)]] Image : Inscribed Chakram(diamond).jpg |[[Inscribed Chakram(diamond)]]</ gallery>
+    const std::regex gallery_regex(R"(<gallery>([\s\S]*?)</gallery>)");
     // The follwing regex captures the text between [[ ]] in the disambiguation page: eg. Image:Eerie Focus (Nightfall).jpg|[[Eerie Focus (Nightfall)]]
     const std::regex disambig_entries_regex(R"(\[\[([^\[\]]+)\]\])");
     // The following regexes capture the entire text after commonsalvage or raresalvage: eg. | commonsalvage = [[Pile of Glittering Dust|Piles of Glittering Dust]]
@@ -693,7 +695,13 @@ void SalvageInfoModule::Update(const float)
         if (response.starts_with(disambig)) {
             Log::Info(std::format("[{}] Found disambig page. Fetching crafting materials for all entries", base64_name, item_url).c_str());
             std::smatch matches;
-            while (std::regex_search(response, matches, disambig_entries_regex))
+            if (!std::regex_search(response, matches, gallery_regex) || matches.size() <= 1) {
+                fetching_info = false;
+                return;
+            }
+
+            auto sub_names = matches[1].str();
+            while (std::regex_search(sub_names, matches, disambig_entries_regex))
             {
                 if (matches.size() > 0) {
                     Log::Info(std::format("[{}] Fetching crafting materials for {}", base64_name, matches[matches.size() - 1].str()).c_str());
@@ -707,7 +715,7 @@ void SalvageInfoModule::Update(const float)
                     ParseItemWikiResponse(sub_response, salvage_info);
                 }
 
-                response = matches.suffix().str();
+                sub_names = matches.suffix().str();
             }
         }
         else {
