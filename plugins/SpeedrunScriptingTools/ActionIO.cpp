@@ -6,7 +6,7 @@
 namespace {
     std::shared_ptr<Action> makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 17);
+        static_assert((int)ActionType::Count == 18);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -14,6 +14,8 @@ namespace {
                 return std::make_shared<CastOnSelfAction>();
             case ActionType::Cast:
                 return std::make_shared<CastAction>();
+            case ActionType::CastBySlot:
+                return std::make_shared<CastBySlotAction>();
             case ActionType::ChangeTarget:
                 return std::make_shared<ChangeTargetAction>();
             case ActionType::UseItem:
@@ -50,14 +52,16 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 17);
+    static_assert((int)ActionType::Count == 18);
     switch (type) {
         case ActionType::MoveTo:
             return "Move to";
         case ActionType::CastOnSelf:
             return "Force-cast on self";
         case ActionType::Cast:
-            return "Cast";
+            return "Use skill by id";
+        case ActionType::CastBySlot:
+            return "Use skill by slot";
         case ActionType::ChangeTarget:
             return "Change target";
         case ActionType::UseItem:
@@ -93,7 +97,7 @@ std::string_view toString(ActionType type)
 
 std::shared_ptr<Action> readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 17);
+    static_assert((int)ActionType::Count == 18);
     int type;
 
     stream >> type;
@@ -104,6 +108,8 @@ std::shared_ptr<Action> readAction(InputStream& stream)
             return std::make_shared<CastOnSelfAction>(stream);
         case ActionType::Cast:
             return std::make_shared<CastAction>(stream);
+        case ActionType::CastBySlot:
+            return std::make_shared<CastBySlotAction>(stream);
         case ActionType::ChangeTarget:
             return std::make_shared<ChangeTargetAction>(stream);
         case ActionType::UseItem:
@@ -141,10 +147,11 @@ std::shared_ptr<Action> drawActionSelector(float width)
 {
     std::shared_ptr<Action> result = nullptr;
 
-    static_assert((int)ActionType::Count == 17);
+    static_assert((int)ActionType::Count == 18);
     constexpr auto actions = std::array{
         ActionType::MoveTo,       
         ActionType::Cast,
+        ActionType::CastBySlot,
         //ActionType::CastOnSelf, // CtoS cast on self despite having a different target. Currently deemed unnecessary
         ActionType::ChangeTarget, 
         ActionType::GoToTarget,

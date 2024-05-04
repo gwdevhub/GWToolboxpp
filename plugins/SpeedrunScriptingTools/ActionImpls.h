@@ -64,9 +64,27 @@ public:
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
-    mutable bool hasBegunCasting = false;
-    mutable bool hasSkillReady = false;
+    bool hasSkillReady = false;
     std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
+    mutable bool hasBegunCasting = false;
+};
+
+class CastBySlotAction : public Action {
+public:
+    CastBySlotAction() = default;
+    CastBySlotAction(InputStream&);
+    ActionType type() const final { return ActionType::CastBySlot; }
+    void initialAction() final;
+    bool isComplete() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    int slot = 1;
+    bool hasSkillReady = false;
+    GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
+    std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
+    mutable bool hasBegunCasting = false;
 };
 
 class ChangeTargetAction : public Action {
@@ -140,15 +158,13 @@ private:
 class GoToTargetAction : public Action {
 public:
     GoToTargetAction() = default;
-    GoToTargetAction(InputStream&);
+    GoToTargetAction(InputStream&) : GoToTargetAction(){};
     ActionType type() const final { return ActionType::GoToTarget; }
     void initialAction() final;
     bool isComplete() const final;
     void drawSettings() final;
-    void serialize(OutputStream&) const final;
 
 private:
-    float accuracy = GW::Constants::Range::Adjacent;
     const GW::AgentLiving* target = nullptr;
 };
 
