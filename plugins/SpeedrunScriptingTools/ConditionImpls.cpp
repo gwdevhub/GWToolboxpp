@@ -337,7 +337,6 @@ PlayerIsNearPositionCondition::PlayerIsNearPositionCondition()
     }
 }
 PlayerIsNearPositionCondition::PlayerIsNearPositionCondition(InputStream& stream) 
-    : PlayerIsNearPositionCondition()
 {
     stream >> pos.x >> pos.y >> accuracy;
 }

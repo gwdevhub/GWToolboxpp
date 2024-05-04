@@ -89,10 +89,11 @@ private:
     float minDistance = 0.f;
     float maxDistance = 5000.f;
     bool preferNonHexed = false;
-    bool mayBeCurrentTarget = true;
     bool requireSameModelIdAsTarget = false;
     std::string agentName = "";
     std::vector<GW::Vec2f> polygon;
+    bool rotateThroughTargets = true;
+    std::unordered_set<GW::AgentID> recentlyTargetedEnemies;
 };
 
 class UseItemAction : public Action {
