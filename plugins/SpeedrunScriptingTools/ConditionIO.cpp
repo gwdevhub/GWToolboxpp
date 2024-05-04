@@ -3,8 +3,6 @@
 
 #include <imgui.h>
 
-#include <array>
-
 namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
