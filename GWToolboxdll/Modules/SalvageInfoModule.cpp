@@ -4,6 +4,7 @@
 #include <Logger.h>
 #include <ctime>
 #include <regex>
+#include <base64.h>
 
 #include <GWCA/GameEntities/Item.h>
 
@@ -12,6 +13,7 @@
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Constants/ItemIDs.h>
 
 #include <GWCA/Utilities/Hook.h>
 #include <GWCA/Utilities/Hooker.h>
@@ -29,6 +31,98 @@
 using nlohmann::json;
 
 namespace {
+    std::unordered_map<std::string, GW::ItemID> material_id_lookup {
+        {"bones", GW::Constants::ItemID::Bone},
+        {"bone", GW::Constants::ItemID::Bone},
+        {"bolts of cloth", GW::Constants::ItemID::BoltofCloth},
+        {"bolt of cloth", GW::Constants::ItemID::BoltofCloth},
+        {"piles of glittering dust", GW::Constants::ItemID::PileofGlitteringDust},
+        {"pile of glittering dust", GW::Constants::ItemID::PileofGlitteringDust},
+        {"feathers", GW::Constants::ItemID::Feather},
+        {"feather", GW::Constants::ItemID::Feather},
+        {"plant fibers", GW::Constants::ItemID::PlantFiber},
+        {"plant fiber", GW::Constants::ItemID::PlantFiber},
+        {"tanned hide squares", GW::Constants::ItemID::TannedHideSquare},
+        {"tanned hide square", GW::Constants::ItemID::TannedHideSquare},
+        {"wood planks", GW::Constants::ItemID::WoodPlank},
+        {"wood plank", GW::Constants::ItemID::WoodPlank},
+        {"iron ingots", GW::Constants::ItemID::IronIngot},
+        {"iron ingot", GW::Constants::ItemID::IronIngot},
+        {"scales", GW::Constants::ItemID::Scale},
+        {"scale", GW::Constants::ItemID::Scale},
+        {"chitin fragments", GW::Constants::ItemID::ChitinFragment},
+        {"chitin fragment", GW::Constants::ItemID::ChitinFragment},
+        {"granite slabs", GW::Constants::ItemID::GraniteSlab},
+        {"granite slab", GW::Constants::ItemID::GraniteSlab},
+        {"amber chunks", GW::Constants::ItemID::AmberChunk},
+        {"amber chunk", GW::Constants::ItemID::AmberChunk},
+        {"bolts of damask", GW::Constants::ItemID::BoltofDamask},
+        {"bolt of damask", GW::Constants::ItemID::BoltofDamask},
+        {"bolts of linen", GW::Constants::ItemID::BoltofLinen},
+        {"bolt of linen", GW::Constants::ItemID::BoltofLinen},
+        {"bolts of silk", GW::Constants::ItemID::BoltofSilk},
+        {"bolt of silk", GW::Constants::ItemID::BoltofSilk},
+        {"deldrimor steel ingots", GW::Constants::ItemID::DeldrimorSteelIngot},
+        {"deldrimor steel ingot", GW::Constants::ItemID::DeldrimorSteelIngot},
+        {"diamonds", GW::Constants::ItemID::Diamond},
+        {"diamond", GW::Constants::ItemID::Diamond},
+        {"elonian leather squares", GW::Constants::ItemID::ElonianLeatherSquare},
+        {"elonian leather square", GW::Constants::ItemID::ElonianLeatherSquare},
+        {"fur squares", GW::Constants::ItemID::FurSquare},
+        {"fur square", GW::Constants::ItemID::FurSquare},
+        {"globs of ectoplasm", GW::Constants::ItemID::GlobofEctoplasm},
+        {"glob of ectoplasm", GW::Constants::ItemID::GlobofEctoplasm},
+        {"jadeite shards", GW::Constants::ItemID::JadeiteShard},
+        {"jadeite shard", GW::Constants::ItemID::JadeiteShard},
+        {"leather squares", GW::Constants::ItemID::LeatherSquare},
+        {"leather square", GW::Constants::ItemID::LeatherSquare},
+        {"lumps of charcoal", GW::Constants::ItemID::LumpofCharcoal},
+        {"lump of charcoal", GW::Constants::ItemID::LumpofCharcoal},
+        {"monstrous claws", GW::Constants::ItemID::MonstrousClaw},
+        {"monstrous claw", GW::Constants::ItemID::MonstrousClaw},
+        {"monstrous eyes", GW::Constants::ItemID::MonstrousEye},
+        {"monstrous eye", GW::Constants::ItemID::MonstrousEye},
+        {"monstrous fangs", GW::Constants::ItemID::MonstrousFang},
+        {"monstrous fang", GW::Constants::ItemID::MonstrousFang},
+        {"obsidian shards", GW::Constants::ItemID::ObsidianShard},
+        {"obsidian shard", GW::Constants::ItemID::ObsidianShard},
+        {"onyx gemstones", GW::Constants::ItemID::OnyxGemstone},
+        {"onyx gemstone", GW::Constants::ItemID::OnyxGemstone},
+        {"rolls of parchment", GW::Constants::ItemID::RollofParchment},
+        {"roll of parchment", GW::Constants::ItemID::RollofParchment},
+        {"rolls of vellum", GW::Constants::ItemID::RollofVellum},
+        {"roll of vellum", GW::Constants::ItemID::RollofVellum},
+        {"rubys", GW::Constants::ItemID::Ruby},
+        {"ruby", GW::Constants::ItemID::Ruby},
+        {"sapphires", GW::Constants::ItemID::Sapphire},
+        {"sapphire", GW::Constants::ItemID::Sapphire},
+        {"spiritwood planks", GW::Constants::ItemID::SpiritwoodPlank},
+        {"spiritwood plank", GW::Constants::ItemID::SpiritwoodPlank},
+        {"steel ingots", GW::Constants::ItemID::SteelIngot},
+        {"steel ingot", GW::Constants::ItemID::SteelIngot},
+        {"tempered glass vials", GW::Constants::ItemID::TemperedGlassVial},
+        {"tempered glass vial", GW::Constants::ItemID::TemperedGlassVial},
+        {"vials of ink", GW::Constants::ItemID::VialofInk},
+        {"vial of ink", GW::Constants::ItemID::VialofInk},
+    };
+
+    struct SalvageInfo {
+        std::vector<GW::ItemID> crafting_materials;
+        std::vector<GW::ItemID> rare_crafting_materials;
+    };
+
+    void to_json(json& j, const SalvageInfo& p){
+        j = json{
+            {"CraftingMaterials", p.crafting_materials},
+            {"RareCraftingMaterials", p.rare_crafting_materials},
+        };
+    }
+
+    void from_json(json& j, SalvageInfo& p){
+        j.at("CraftingMaterials").get_to(p.crafting_materials);
+        j.at("RareCraftingMaterials").get_to(p.rare_crafting_materials);
+    }
+
     // The following regexes capture the entire text after commonsalvage or raresalvage: eg. | commonsalvage = [[Pile of Glittering Dust|Piles of Glittering Dust]]
     std::regex common_materials_regex("commonsalvage = (([a-zA-Z [\\]<>|'])*)");
     std::regex rare_materials_regex("raresalvage = (([a-zA-Z [\\]<>|'])*)");
@@ -39,7 +133,53 @@ namespace {
     // Json containing uint32_t keys being the item IDs and string values being the salvage info
     json salvage_info_cache = nullptr;
     bool fetching_info = false;
-    std::queue<std::tuple<uint32_t, std::wstring>> fetch_queue;
+    std::queue<std::wstring> fetch_queue;
+
+    std::vector<unsigned char> WStringToByteArray(const std::wstring& wstr)
+    {
+        std::vector<unsigned char> byte_array;
+        byte_array.reserve(wstr.size() * sizeof(wchar_t));
+        for (wchar_t wc : wstr) {
+            byte_array.push_back((wc >> 0) & 0xFF); // Low byte
+            byte_array.push_back((wc >> 8) & 0xFF); // High byte (if little-endian)
+        }
+        return byte_array;
+    }
+
+    std::string GetBase64EncodedName(std::wstring value)
+    {
+        const auto bytes = WStringToByteArray(value);
+        std::string key_str;
+        key_str.resize(bytes.size());
+        b64_enc((void*)bytes.data(), bytes.size(), key_str.data());
+        return key_str;
+    }
+
+    std::string ToLowerString(const std::string& str) {
+        std::string result = str;
+        for (char& c : result) {
+            c = static_cast<char>(std::tolower(c));
+        }
+
+        return result;
+    }
+
+    std::string Trim(const std::string& str)
+    {
+        size_t start = str.find_first_not_of(" \t\n\r\f\v");
+        size_t end = str.find_last_not_of(" \t\n\r\f\v");
+        return (start == std::string::npos || end == std::string::npos) ? "" : str.substr(start, end - start + 1);
+    }
+
+    std::string Replace(std::string& source, const std::string& from, const std::string& to) {
+        size_t startPos = 0;
+        while ((startPos = source.find(from, startPos)) != std::string::npos) {
+            source.replace(startPos, from.length(), to);
+            startPos += to.length(); // Move past the last replaced part to avoid replacing it again
+        }
+
+        return source;
+    }
 
     //Splits a string by a substring, removing the separators
     std::vector<std::string> Split(const std::string& s, const std::string& separator)
@@ -63,7 +203,7 @@ namespace {
         GW::UI::AsyncDecodeStr(name.c_str(), &res, GW::Constants::Language::English);
     }
 
-    void LoadFromCache()
+    void LoadLocalCache()
     {
         const auto computer_path = Resources::GetComputerFolderPath();
         const auto cache_path = computer_path / "salvage_info_cache.json";
@@ -87,7 +227,7 @@ namespace {
         return;
     }
 
-    void SaveToCache()
+    void SaveLocalCache()
     {
         const auto computer_path = Resources::GetComputerFolderPath();
         const auto cache_path = computer_path / "salvage_info_cache.json";
@@ -100,7 +240,53 @@ namespace {
         cache_file.close();
     }
 
-    std::string CleanMaterialsInfo(std::string raw_materials_info) {
+    std::optional<SalvageInfo> LoadFromCache(std::wstring key) {
+        const auto key_str = GetBase64EncodedName(key);
+        Log::Info(std::format("[{}] Looking for key", key_str).c_str());
+        const auto iter = salvage_info_cache.find(key_str);
+        if (iter == salvage_info_cache.end() || !iter->is_object()) {
+            Log::Info(std::format("[{}] No key found", key_str).c_str());
+            return std::optional<SalvageInfo>();
+        }
+
+        try {
+            SalvageInfo salvageInfo;
+            from_json(iter.value(), salvageInfo);
+            Log::Info(std::format("[{}] Found value. Returning", key_str).c_str());
+            return salvageInfo;
+        }
+        catch (std::exception ex) {
+            Log::Error(std::format("[{}] Exception when fetching salvage info for key. Details:{}", key_str, ex.what()).c_str());
+            return std::optional<SalvageInfo>();
+        }
+    }
+
+    void SaveToCache(std::wstring key, SalvageInfo value) {
+        const auto key_str = GetBase64EncodedName(key);
+        Log::Info(std::format("[{}] Saving key to cache", key_str).c_str());
+        salvage_info_cache[key_str] = value;
+    }
+
+    std::string ConvertMaterialToString(const GW::ItemID itemId)
+    {
+        return std::to_string(static_cast<uint32_t>(itemId));
+    }
+
+    std::string BuildItemListString(const std::vector<GW::ItemID>& items) {
+        std::string itemListString = "";
+        if (items.size() == 0) {
+            return itemListString;
+        }
+
+        for (size_t i = 0; i < items.size() - 1; i++) {
+            itemListString += std::format("{}, ", ConvertMaterialToString(items[i]));
+        }
+
+        itemListString += ConvertMaterialToString(items[items.size() - 1]);
+        return itemListString;
+    }
+
+    std::vector<GW::ItemID> GetMaterials(std::string raw_materials_info) {
         // Raw string comes in like this: [[Pile of Glittering Dust|Piles of Glittering Dust]] <br> [[Wood Plank]]s
         // Strip '[' and ']'
         raw_materials_info.erase(
@@ -114,44 +300,50 @@ namespace {
         );
 
         // Split materials by " <br> "
-        const auto mats = Split(raw_materials_info, " <br> ");
+        const auto mats = Split(Replace(raw_materials_info, "\n", "<br>"), "<br>");
         
         // If the material info contains a '|', we want to split by that and choose the second option (plural)
         std::vector<std::string> final_mats;
         for (size_t i = 0; i < mats.size(); i++) {
             const auto tokens = Split(mats[i], "|");
-            final_mats.push_back(tokens[tokens.size() - 1]);
+            const auto final_mat = ToLowerString(Trim(tokens[tokens.size() - 1]));
+            final_mats.push_back(final_mat);
         }
 
-        // Generate the final string, adding a ',' for all elements between the first and last
-        std::string final_info;
-        for (size_t i = 0; i < final_mats.size() - 1; i++) {
-            final_info.append(std::format("{}, ", final_mats[i]));
-        }
-
-        if (final_mats.size() > 0) {
-            final_info.append(final_mats[final_mats.size() - 1]);
+        std::vector<GW::ItemID> final_info;
+        for (size_t i = 0; i < final_mats.size(); i++) {
+            const auto &final_mat = final_mats[i];
+            if (material_id_lookup.contains(final_mat)) {
+                final_info.push_back(material_id_lookup[final_mat]);
+            }
         }
 
         return final_info;
     }
 
-    std::wstring FetchDescription(GW::Item* item) {
+    std::wstring FetchDescription(const GW::Item* item) {
         if (!item) {
             return L"";
         }
 
-        const auto iter = salvage_info_cache.find(std::to_string((uint32_t)item->item_id));
+        const auto maybe_info = LoadFromCache(std::wstring(item->name_enc));
         // Could not find the item. We need to fetch the item name and then fetch the salvage info from wiki
-        if (iter == salvage_info_cache.end()) {
-            const auto item_id = static_cast<uint32_t>(item->item_id);
-            const auto name_str = std::wstring(item->name_enc);
-            fetch_queue.push(std::make_tuple(item_id, name_str));
+        if (!maybe_info.has_value()) {
+            fetch_queue.push(std::wstring(item->name_enc));
             return L"";
         }
-        
-        const auto value = static_cast<std::string>(iter.value());
-        return GuiUtils::StringToWString(value);
+
+        const auto salvage_info = maybe_info.value();
+        std::wstring salvage_description;
+        if (!salvage_info.crafting_materials.empty()) {
+            salvage_description += std::format(L"\x2\x108\x107\n<c={}>Crafting Materials: {}</c>\x1", color, GuiUtils::StringToWString(BuildItemListString(salvage_info.crafting_materials)));
+        }
+
+        if (!salvage_info.rare_crafting_materials.empty()) {
+            salvage_description += std::format(L"\x2\x108\x107\n<c={}>Rare Crafting Materials: {}</c>\x1", color, GuiUtils::StringToWString(BuildItemListString(salvage_info.rare_crafting_materials)));
+        }
+
+        return salvage_description;
     }
 
     void UpdateDescription(const uint32_t item_id, wchar_t** description_out)
@@ -203,7 +395,7 @@ void SalvageInfoModule::Initialize()
         GW::HookBase::EnableHooks(GetItemDescription_Func);
     }
 
-    LoadFromCache();
+    LoadLocalCache();
 }
 
 void SalvageInfoModule::Terminate()
@@ -225,34 +417,33 @@ void SalvageInfoModule::Update(const float)
         return;
     }
 
-    const auto tuple = fetch_queue.front();
-    const auto item_id = std::get<0>(tuple);
-    const auto name_enc = std::get<1>(tuple);
+    const auto name_enc = fetch_queue.front();
     fetch_queue.pop();
 
     //Detect duplicate fetch requests and ignore them
-    if (salvage_info_cache.find(std::to_string(item_id)) != salvage_info_cache.end()) {
+    if (LoadFromCache(name_enc).has_value()) {
         return;
     }
 
     fetching_info = true;
     name_cache.clear();
-    Log::Info(std::format("[{}] Fetching name", item_id).c_str());
+    const auto base64_name = GetBase64EncodedName(name_enc);
+    Log::Info(std::format("[{}] Fetching name", base64_name).c_str());
     // Async Get Name sometimes hangs if not run from the game thread
     GW::GameThread::Enqueue([name_enc] {
         AsyncGetItemSimpleName(name_enc, name_cache);
     });
 
     // Free the main thread and move the work on a background thread. When the work finishes, the main thread can process another item from the queue
-    Resources::EnqueueWorkerTask([item_id] {
+    Resources::EnqueueWorkerTask([name_enc, base64_name] {
         while (name_cache.empty()) {
             Sleep(16);
         }
 
-        Log::Info(std::format("[{}] Fetching crafting materials for {}", item_id, GuiUtils::WStringToString(name_cache)).c_str());
+        Log::Info(std::format("[{}] Fetching crafting materials for {}", base64_name, GuiUtils::WStringToString(name_cache)).c_str());
         const auto item_url = GuiUtils::WikiTemplateUrlFromTitle(name_cache);
 
-        Log::Info(std::format("[{}] Fetching crafting materials from {}", item_id, item_url).c_str());
+        Log::Info(std::format("[{}] Fetching crafting materials from {}", base64_name, item_url).c_str());
         std::string response;
         if (!Resources::Download(item_url, response)) {
             Log::Info(std::format("Failed to fetch item data from {}. Error: {}", item_url, response).c_str());
@@ -261,21 +452,21 @@ void SalvageInfoModule::Update(const float)
             return;
         }
 
-        Log::Info(std::format("[{}] Caching crafting materials", item_id, item_url).c_str());
-        std::wstring salvage_info;
+        Log::Info(std::format("[{}] Caching crafting materials", base64_name, item_url).c_str());
+        SalvageInfo salvageInfo;
         std::smatch matches;
         if (std::regex_search(response, matches, common_materials_regex) && matches.size() > 1) {
-            const auto mat_info = CleanMaterialsInfo(matches[1].str());
-            salvage_info += std::format(L"\x2\x108\x107\n<c={}>Common Materials: {}\x1", color, GuiUtils::StringToWString(mat_info));
+            const auto materials_list = GetMaterials(matches[1].str());
+            salvageInfo.crafting_materials = materials_list;
         }
 
         if (std::regex_search(response, matches, rare_materials_regex) && matches.size() > 1) {
-            auto mat_info = CleanMaterialsInfo(matches[1].str());
-            salvage_info += std::format(L"\x2\x108\x107\n<c={}>Rare Materials: {}\x1", color, GuiUtils::StringToWString(mat_info));
+            const auto materials_list = GetMaterials(matches[1].str());
+            salvageInfo.rare_crafting_materials = materials_list;
         }
 
-        salvage_info_cache[std::to_string(item_id)] = GuiUtils::WStringToString(salvage_info);
-        SaveToCache();
+        SaveToCache(name_enc, salvageInfo);
+        SaveLocalCache();
         fetching_info = false;
     });
 }
