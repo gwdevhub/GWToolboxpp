@@ -27,8 +27,6 @@
 #include <Modules/GameSettings.h>
 #include <Modules/SalvageInfoModule.h>
 
-#include <Logger.h>
-#include <Timer.h>
 #include <Utils/GuiUtils.h>
 
 using nlohmann::json;
@@ -428,17 +426,14 @@ namespace {
 
     std::optional<SalvageInfo> LoadFromCache(std::wstring key) {
         const auto key_str = GetBase64EncodedName(key);
-        Log::Info(std::format("[{}] Looking for key", key_str).c_str());
         const auto iter = salvage_info_cache.find(key_str);
         if (iter == salvage_info_cache.end() || !iter->is_object()) {
-            Log::Info(std::format("[{}] No key found", key_str).c_str());
             return std::optional<SalvageInfo>();
         }
 
         try {
             SalvageInfo salvageInfo;
             from_json(iter.value(), salvageInfo);
-            Log::Info(std::format("[{}] Found value. Returning", key_str).c_str());
             return salvageInfo;
         }
         catch (std::exception ex) {
@@ -449,7 +444,6 @@ namespace {
 
     void SaveToCache(std::wstring key, SalvageInfo value) {
         const auto key_str = GetBase64EncodedName(key);
-        Log::Info(std::format("[{}] Saving key to cache", key_str).c_str());
         salvage_info_cache[key_str] = value;
     }
 
@@ -576,6 +570,8 @@ namespace {
     void UpdateDescription(const uint32_t item_id, wchar_t** description_out)
     {
         if (!(description_out && *description_out)) return;
+        if (!fetch_salvage_info) return;
+
         const auto item = static_cast<InventoryManager::Item*>(GW::Items::GetItemById(item_id));
 
         if (!item) return;
@@ -666,7 +662,6 @@ void SalvageInfoModule::Update(const float)
     fetching_info = true;
     name_cache.clear();
     const auto base64_name = GetBase64EncodedName(name_enc);
-    Log::Info(std::format("[{}] Fetching name", base64_name).c_str());
     // Async Get Name sometimes hangs if not run from the game thread
     GW::GameThread::Enqueue([name_enc] {
         AsyncGetItemSimpleName(name_enc, name_cache);
@@ -678,10 +673,7 @@ void SalvageInfoModule::Update(const float)
             Sleep(16);
         }
 
-        Log::Info(std::format("[{}] Fetching crafting materials for {}", base64_name, GuiUtils::WStringToString(name_cache)).c_str());
         const auto item_url = GuiUtils::WikiTemplateUrlFromTitle(name_cache);
-
-        Log::Info(std::format("[{}] Fetching crafting materials from {}", base64_name, item_url).c_str());
         std::string response;
         if (!Resources::Download(item_url, response)) {
             Log::Info(std::format("Failed to fetch item data from {}. Error: {}", item_url, response).c_str());
@@ -693,7 +685,6 @@ void SalvageInfoModule::Update(const float)
         SalvageInfo salvage_info{};
         // Check for disambig wiki entry. In this case, fetch all crafting materials for all entries
         if (response.starts_with(disambig)) {
-            Log::Info(std::format("[{}] Found disambig page. Fetching crafting materials for all entries", base64_name, item_url).c_str());
             std::smatch matches;
             if (!std::regex_search(response, matches, gallery_regex) || matches.size() <= 1) {
                 fetching_info = false;
@@ -704,7 +695,6 @@ void SalvageInfoModule::Update(const float)
             while (std::regex_search(sub_names, matches, disambig_entries_regex))
             {
                 if (matches.size() > 0) {
-                    Log::Info(std::format("[{}] Fetching crafting materials for {}", base64_name, matches[matches.size() - 1].str()).c_str());
                     const auto sub_item_url = GuiUtils::WikiTemplateUrlFromTitle(matches[matches.size() - 1].str());
                     std::string sub_response; // We need to keep the previous response so that we can process the disambig entries one by one
                     if (!Resources::Download(sub_item_url, sub_response)) {
@@ -722,7 +712,7 @@ void SalvageInfoModule::Update(const float)
             ParseItemWikiResponse(response, salvage_info);
         }
 
-        Log::Info(std::format("[{}] Caching crafting materials", base64_name, item_url).c_str());
+        Log::Info(std::format("[{}] Retrieved materials", base64_name, item_url).c_str());
         SaveToCache(name_enc, salvage_info);
         SaveLocalCache();
         fetching_info = false;
