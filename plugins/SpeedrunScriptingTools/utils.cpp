@@ -607,10 +607,16 @@ void writePositions(OutputStream& stream, const std::vector<GW::Vec2f>& position
 
 void drawPolygonSelector(std::vector<GW::Vec2f>& polygon)
 {
+    ImGui::PushItemWidth(200);
+    if (ImGui::Button("Add Polygon Point")) {
+        if (const auto player = GW::Agents::GetPlayerAsAgentLiving()) {
+            polygon.emplace_back(player->pos.x, player->pos.y);
+        }
+    }
+    
     ImGui::Indent();
 
     std::optional<int> remove_point;
-    ImGui::PushItemWidth(200);
     for (auto j = 0u; j < polygon.size(); j++) {
         ImGui::PushID(j);
         ImGui::Bullet();
@@ -621,11 +627,6 @@ void drawPolygonSelector(std::vector<GW::Vec2f>& polygon)
     }
     if (remove_point) {
         polygon.erase(polygon.begin() + remove_point.value());
-    }
-    if (ImGui::Button("Add Polygon Point")) {
-        if (const auto player = GW::Agents::GetPlayerAsAgentLiving()) {
-            polygon.emplace_back(player->pos.x, player->pos.y);
-        }
     }
 
     ImGui::Unindent();

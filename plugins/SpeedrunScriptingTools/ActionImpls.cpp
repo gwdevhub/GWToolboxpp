@@ -236,12 +236,13 @@ void CastAction::serialize(OutputStream& stream) const
 void CastAction::initialAction()
 {
     Action::initialAction();
-    
 
-    GW::Skillbar* bar = GW::SkillbarMgr::GetPlayerSkillbar();
-
-    int slot = -1;
+    startTime = std::chrono::steady_clock::now();
+    hasBegunCasting = false;
     hasSkillReady = false;
+
+    const auto bar = GW::SkillbarMgr::GetPlayerSkillbar();
+    int slot = -1;
     if (bar && bar->IsValid())
     for (int i = 0; i < 8; ++i) {
         if (bar->skills[i].skill_id == id) {
@@ -251,12 +252,7 @@ void CastAction::initialAction()
     }
     if (slot < 0 || !hasSkillReady) return;
 
-    startTime = std::chrono::steady_clock::now();
-
-    hasBegunCasting = false;
-
     const auto target = GW::Agents::GetTargetAsAgentLiving();
-
     GW::GameThread::Enqueue([slot, targetId = target ? target->agent_id : 0]() -> void {
         GW::SkillbarMgr::UseSkill(slot, targetId);
     });
@@ -270,19 +266,78 @@ bool CastAction::isComplete() const
 
     const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
     if (!skillData) return true;
-    const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
-    if (elapsedTime > 2000 * skillData->activation) return true;
+    if (skillData->activation == 0.f) return true;
 
     hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
+
+    const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
+    if (elapsedTime > 2000 * skillData->activation + 500) return true;
 
     return hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id;
 }
 void CastAction::drawSettings()
 {
-    ImGui::Text("Use skill:");
+    ImGui::Text("Use skill by id:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
+}
+
+/// ------------- CastBySlotAction -------------
+CastBySlotAction::CastBySlotAction(InputStream& stream)
+{
+    stream >> slot;
+}
+void CastBySlotAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << slot;
+}
+void CastBySlotAction::initialAction()
+{
+    Action::initialAction();
+    hasBegunCasting = false;
+    startTime = std::chrono::steady_clock::now();
+
+    const auto bar = GW::SkillbarMgr::GetPlayerSkillbar();
+    if (!bar || !bar->IsValid()) return;
+
+    hasSkillReady = bar->skills[slot - 1].GetRecharge() == 0;
+    id = bar->skills[slot - 1].skill_id;
+    if (!hasSkillReady) return;
+
+    const auto target = GW::Agents::GetTargetAsAgentLiving();
+    GW::GameThread::Enqueue([this, targetId = target ? target->agent_id : 0]() -> void {
+        GW::SkillbarMgr::UseSkill(slot - 1, targetId);
+    });
+}
+bool CastBySlotAction::isComplete() const
+{
+    if (!hasSkillReady || id == GW::Constants::SkillID::No_Skill) return true;
+
+    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    if (!player) return true;
+
+    const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
+    if (!skillData) return true;
+    if (skillData->activation == 0.f) return true;
+
+    hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
+
+    const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
+    if (elapsedTime > 2000 * skillData->activation + 500) return true;
+
+    return hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id;
+}
+void CastBySlotAction::drawSettings()
+{
+    ImGui::Text("Use skill by slot:");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputInt("Slot", reinterpret_cast<int*>(&slot), 0);
+    if (slot < 1) slot = 1;
+    if (slot > 8) slot = 8;
 }
 
 /// ------------- ChangeTargetAction -------------
@@ -474,6 +529,7 @@ void ChangeTargetAction::drawSettings()
 
             ImGui::Bullet();
             ImGui::Text("Is within polygon");
+            ImGui::SameLine();
             drawPolygonSelector(polygon);
         }
 
@@ -569,16 +625,6 @@ void SendDialogAction::drawSettings()
 }
 
 /// ------------- GoToTargetAction -------------
-GoToTargetAction::GoToTargetAction(InputStream& stream)
-{
-    stream >> accuracy;
-}
-void GoToTargetAction::serialize(OutputStream& stream) const
-{
-    Action::serialize(stream);
-
-    stream << accuracy;
-}
 void GoToTargetAction::initialAction()
 {
     Action::initialAction();
@@ -597,15 +643,14 @@ bool GoToTargetAction::isComplete() const
     if (!player) return true;
 
     const auto distance = GW::GetDistance(player->pos, target->pos);
-
-    return distance < accuracy + eps || distance > GW::Constants::Range::Compass;
+    const auto isMoving = player->GetIsMoving();
+    
+    constexpr auto dialogDistance = 101.f;
+    return (!isMoving && distance < dialogDistance) || distance > GW::Constants::Range::Compass;
 }
 void GoToTargetAction::drawSettings()
 {
     ImGui::Text("Interact with current target");
-    ImGui::PushItemWidth(90);
-    ImGui::SameLine();
-    ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
 }
 
 /// ------------- WaitAction -------------

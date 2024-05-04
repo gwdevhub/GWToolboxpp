@@ -5,7 +5,8 @@
 enum class ActionType : int {
     MoveTo,
     CastOnSelf,
-    Cast,
+    Cast, 
+    CastBySlot,
     DropBuff, 
     ChangeTarget,
     UseItem,
