@@ -947,6 +947,7 @@ void NearbyAgentCondition::drawSettings()
 
         ImGui::Bullet();
         ImGui::Text("Is within polygon");
+        ImGui::SameLine();
         drawPolygonSelector(polygon);
 
         ImGui::TreePop();
