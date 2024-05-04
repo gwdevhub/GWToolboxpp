@@ -3,8 +3,6 @@
 
 #include <imgui.h>
 
-#include <array>
-
 namespace {
     std::shared_ptr<Action> makeAction(ActionType type)
     {

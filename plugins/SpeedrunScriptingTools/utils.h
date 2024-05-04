@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <sstream>
 #include <vector>
+#include <array>
 #include <optional>
 
 #include "imgui.h"
