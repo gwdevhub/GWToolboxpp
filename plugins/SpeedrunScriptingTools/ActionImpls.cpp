@@ -347,7 +347,8 @@ void ChangeTargetAction::initialAction()
         const auto goodDistance = (minDistance < distance) && (distance < maxDistance);
         const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedName(agent->agent_id) == agentName);
         const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(agent->pos, polygon);
-        return correctType && correctPrimary && correctSecondary && correctStatus && correctSkill && correctModelId && goodDistance && goodName && goodPosition;
+        const auto goodHp = minHp <= 100.f * agent->hp && 100.f * agent->hp <= maxHp;
+        return correctType && correctPrimary && correctSecondary && correctStatus && correctSkill && correctModelId && goodDistance && goodName && goodPosition && goodHp;
     };
 
     GW::AgentLiving const * currentBestTarget = nullptr;
@@ -365,8 +366,6 @@ void ChangeTargetAction::initialAction()
         if (rotateThroughTargets && !recentlyTargetedEnemies.contains(agent->agent_id) && recentlyTargetedEnemies.contains(currentBestTarget->agent_id)) 
             return true;
         switch (sorting) {
-            case Sorting::AgentId:
-                return true;
             case Sorting::ClosestToPlayer:
                 return GW::GetSquareDistance(player->pos, agent->pos) < GW::GetSquareDistance(player->pos, currentBestTarget->pos);
             case Sorting::FurthestFromPlayer:
@@ -393,7 +392,7 @@ void ChangeTargetAction::initialAction()
         auto living = agent->GetAsAgentLiving();
         if (!fulfillsConditions(living)) continue;
         if (isNewBest(living)) currentBestTarget = living;
-        if (sorting == Sorting::AgentId) break;
+        if (sorting == Sorting::AgentId && !rotateThroughTargets) break;
     }
 
     if (!currentBestTarget) 
@@ -449,6 +448,13 @@ void ChangeTargetAction::drawSettings()
             ImGui::InputText("###1", &agentName);
 
             ImGui::Bullet();
+            ImGui::Text("HP percent");
+            ImGui::SameLine();
+            ImGui::InputFloat("min###1", &minHp);
+            ImGui::SameLine();
+            ImGui::InputFloat("max###2", &maxHp);
+
+            ImGui::Bullet();
             ImGui::Checkbox("Prefer enemies that are not hexed", &preferNonHexed);
 
             ImGui::Bullet();
@@ -460,7 +466,7 @@ void ChangeTargetAction::drawSettings()
             ImGui::Bullet();
             ImGui::Text(requireSameModelIdAsTarget ? "If no target is selected, pick agent with model" : "Pick agent with model");
             ImGui::SameLine();
-            ImGui::InputInt("id (0 for any)###2", &modelId, 0);
+            ImGui::InputInt("id (0 for any)###3", &modelId, 0);
 
             ImGui::BulletText("Sort candidates by:");
             ImGui::SameLine();

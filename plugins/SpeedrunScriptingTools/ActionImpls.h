@@ -94,6 +94,8 @@ private:
     std::vector<GW::Vec2f> polygon;
     bool rotateThroughTargets = true;
     std::unordered_set<GW::AgentID> recentlyTargetedEnemies;
+    float minHp = 0.f;
+    float maxHp = 100.f;
 };
 
 class UseItemAction : public Action {
