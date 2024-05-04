@@ -36,6 +36,8 @@ namespace GuiUtils {
     void LoadFonts();
     std::string WikiUrl(const std::wstring& term);
     std::string WikiUrl(const std::string& term);
+    std::string WikiTemplateUrlFromTitle(const std::string& title);
+    std::string WikiTemplateUrlFromTitle(const std::wstring& title);
     void OpenWiki(const std::wstring& term);
     void SearchWiki(const std::wstring& term);
     bool FontsLoaded();

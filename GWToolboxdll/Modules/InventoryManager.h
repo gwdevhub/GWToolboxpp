@@ -6,6 +6,8 @@
 
 #include <GWCA/Packets/StoC.h>
 
+#include <Utils/GuiUtils.h>
+
 #include <ToolboxWidget.h>
 
 namespace GW::Constants {

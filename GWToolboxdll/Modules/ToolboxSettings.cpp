@@ -31,6 +31,7 @@
 #include <Modules/MouseFix.h>
 #include <Modules/GuildWarsSettingsModule.h>
 #include <Modules/PriceCheckerModule.h>
+#include <Modules/SalvageInfoModule.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -141,7 +142,8 @@ namespace {
         ZrawDeepModule::Instance(),
         GuildWarsSettingsModule::Instance(),
         //QuestModule::Instance(),
-        PriceCheckerModule::Instance()
+        PriceCheckerModule::Instance(),
+        SalvageInfoModule::Instance()
     };
 
     std::vector<WidgetToggle> optional_widgets = {
