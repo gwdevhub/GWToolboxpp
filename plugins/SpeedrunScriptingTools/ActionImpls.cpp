@@ -57,7 +57,9 @@ namespace {
             GW::Agents::Move(p->pos);
             std::this_thread::sleep_for(10ms);
         }
-        GW::Items::EquipItem(item);
+        GW::GameThread::Enqueue([item]() {
+            GW::Items::EquipItem(item);
+        });
     }
     const GW::AgentLiving* findAgentWithId(uint32_t id)
     {
@@ -132,7 +134,9 @@ bool MoveToAction::isComplete() const
             const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastMovePacketTime).count();
             if (elapsedTime > 50) {
                 lastMovePacketTime = now;
-                GW::Agents::Move(GW::GamePos{px, py, pos.zplane});
+                GW::GameThread::Enqueue([pos = GW::GamePos{px, py, pos.zplane}]{
+                    GW::Agents::Move(pos);
+                });
             }
         }
         else if (hasBegunWalking)
@@ -205,7 +209,6 @@ bool CastOnSelfAction::isComplete() const
     if (elapsedTime > 2000 * skillData->activation) return true;
 
     hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
-    
 
     return hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id;
 }
@@ -285,7 +288,7 @@ void CastAction::drawSettings()
 /// ------------- ChangeTargetAction -------------
 ChangeTargetAction::ChangeTargetAction(InputStream& stream)
 {
-    stream >> agentType >> primary >> secondary >> status >> skill >> sorting >> modelId >> minDistance >> maxDistance >> mayBeCurrentTarget >> requireSameModelIdAsTarget >> preferNonHexed;
+    stream >> agentType >> primary >> secondary >> status >> skill >> sorting >> modelId >> minDistance >> maxDistance >> requireSameModelIdAsTarget >> preferNonHexed >> rotateThroughTargets;
     agentName = readStringWithSpaces(stream);
     polygon = readPositions(stream);
 }
@@ -293,8 +296,7 @@ void ChangeTargetAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << agentType << primary << secondary << status << skill << sorting << modelId << minDistance << maxDistance << mayBeCurrentTarget << requireSameModelIdAsTarget
-           << preferNonHexed;
+    stream << agentType << primary << secondary << status << skill << sorting << modelId << minDistance << maxDistance << requireSameModelIdAsTarget << preferNonHexed << rotateThroughTargets;
     writeStringWithSpaces(stream, agentName);
     writePositions(stream, polygon);
 }
@@ -341,12 +343,11 @@ void ChangeTargetAction::initialAction()
         const auto correctModelId = (requireSameModelIdAsTarget && currentTarget) 
             ? (currentTarget->player_number == agent->player_number) 
             : ((modelId == 0) || (agent->player_number == modelId));
-        const auto acceptableWithCurrentTarget = mayBeCurrentTarget || !currentTarget || (agent->agent_id != currentTarget->agent_id);
         const auto distance = GW::GetDistance(player->pos, agent->pos);
         const auto goodDistance = (minDistance < distance) && (distance < maxDistance);
         const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedName(agent->agent_id) == agentName);
         const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(agent->pos, polygon);
-        return correctType && correctPrimary && correctSecondary && correctStatus && correctSkill && correctModelId && acceptableWithCurrentTarget && goodDistance && goodName && goodPosition;
+        return correctType && correctPrimary && correctSecondary && correctStatus && correctSkill && correctModelId && goodDistance && goodName && goodPosition;
     };
 
     GW::AgentLiving const * currentBestTarget = nullptr;
@@ -359,6 +360,10 @@ void ChangeTargetAction::initialAction()
             return true;
         if (preferNonHexed && agent->GetIsHexed() && !currentBestTarget->GetIsHexed()) 
             return false;
+        if (rotateThroughTargets && recentlyTargetedEnemies.contains(agent->agent_id) && !recentlyTargetedEnemies.contains(currentBestTarget->agent_id))
+            return false;
+        if (rotateThroughTargets && !recentlyTargetedEnemies.contains(agent->agent_id) && recentlyTargetedEnemies.contains(currentBestTarget->agent_id)) 
+            return true;
         switch (sorting) {
             case Sorting::AgentId:
                 return true;
@@ -391,12 +396,20 @@ void ChangeTargetAction::initialAction()
         if (sorting == Sorting::AgentId) break;
     }
 
-    if (currentBestTarget) 
+    if (!currentBestTarget) 
+        return;
+
+    if (rotateThroughTargets)
     {
-        GW::GameThread::Enqueue([id = currentBestTarget->agent_id]() -> void {
-            GW::Agents::ChangeTarget(id);
-        });
+        if (recentlyTargetedEnemies.contains(currentBestTarget->agent_id))
+        {
+            recentlyTargetedEnemies.clear();
+        }
+        recentlyTargetedEnemies.insert(currentBestTarget->agent_id);
     }
+    GW::GameThread::Enqueue([id = currentBestTarget->agent_id]() -> void {
+        GW::Agents::ChangeTarget(id);
+    });
 }
 void ChangeTargetAction::drawSettings()
 {
@@ -439,7 +452,7 @@ void ChangeTargetAction::drawSettings()
             ImGui::Checkbox("Prefer enemies that are not hexed", &preferNonHexed);
 
             ImGui::Bullet();
-            ImGui::Checkbox("May choose current target again", &mayBeCurrentTarget);
+            ImGui::Checkbox("Rotate through eligible targets", &rotateThroughTargets);
 
             ImGui::Bullet();
             ImGui::Checkbox("Require same model as current target", &requireSameModelIdAsTarget);
@@ -871,8 +884,8 @@ void PingTargetAction::initialAction()
     }
 
     if (onlyOncePerInstance && pingedTargets.contains(currentTarget->agent_id)) return;
-
     pingedTargets.insert(currentTarget->agent_id);
+    
     GW::GameThread::Enqueue([id = currentTarget->agent_id]() {
         GW::CtoS::SendPacket(0xC, GAME_CMSG_TARGET_CALL, 0xA, id);
     });
@@ -898,5 +911,5 @@ void AutoAttackTargetAction::initialAction()
 }
 void AutoAttackTargetAction::drawSettings()
 {
-    ImGui::Text("Autoattack current target");
+    ImGui::Text("Auto-attack current target");
 }

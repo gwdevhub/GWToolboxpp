@@ -44,9 +44,8 @@ enum class ConditionType : int {
 class Condition {
 public:
     Condition() { 
-        static int counter = 10'000;
-        m_drawId = counter;
-        counter += 8; //Allow 8 entries with the same label
+        static int counter = 0;
+        m_drawId = counter++;
     }
     virtual ~Condition() {}
     virtual ConditionType type() const = 0;
