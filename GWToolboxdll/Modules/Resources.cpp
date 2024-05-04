@@ -876,10 +876,8 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
             return; // Already logged whatever errors
         }
 
-        std::string tmp_str;
         // Find a valid png or jpg image inside the HTML response, <img alt="<skill_id>" src="<location_of_image>"
-        StrSprintf(tmp_str, R"(class="fullMedia"[\s\S]*?href=['"]([^"']+))");
-        std::regex image_finder(tmp_str);
+        std::regex image_finder(R"(class="fullMedia"[\s\S]*?href=['"]([^"']+))");
         std::smatch m;
         std::regex_search(response, m, image_finder);
         if (!m.size()) {
@@ -897,13 +895,11 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
                 trigger_failure_callback(callback, L"Regex failed evaluating GWW thumbnail from %S", image_url.c_str());
                 return;
             }
-            StrSprintf(tmp_str, "/images/thumb/%s/%s/%dpx-%s", m[1].str().c_str(), m[2].str().c_str(), width, m[2].str().c_str());
-            image_url = tmp_str;
+            StrSprintf(image_url, "/images/thumb/%s/%s/%dpx-%s", m[1].str().c_str(), m[2].str().c_str(), width, m[2].str().c_str());
         }
         // https://wiki.guildwars.com/images/thumb/5/5c/Eternal_Protector_of_Tyria.jpg/150px-Eternal_Protector_of_Tyria.jpg
         if (strncmp(image_url.c_str(), "http", 4) != 0) {
-            StrSprintf(tmp_str, "https://wiki.guildwars.com%s", image_url.c_str());
-            image_url = tmp_str;
+            StrSprintf(image_url, "https://wiki.guildwars.com%s", image_url.c_str());
         }
         LoadTexture(texture, path_to_file2, image_url, callback);
     });
@@ -1100,7 +1096,7 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
         }
         const std::string item_name_str = GuiUtils::WStringToString(item_name);
         // matches any characters that need to be escaped in RegEx
-        const std::regex specialChars{R"([-[\]{}()*+?.,\^$|#\s])"};
+        static const std::regex specialChars{R"([-[\]{}()*+?.,\^$|#\s])"};
         const std::string sanitized = std::regex_replace(item_name_str, specialChars, R"(\$&)");
         std::smatch m;
         // Find first png image that has an alt tag matching the html encoded title of the page

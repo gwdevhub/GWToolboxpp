@@ -193,7 +193,7 @@ namespace {
             case AgentInfo::TargetInfoState::ParsingWikiPage:
                 Log::InfoW(L"Got wiki page for %ls, need to write the code to parse!!", agent_info->name.wstring().c_str());
 
-                const std::regex skill_list_regex("<h2><span class=\"mw-headline\" id=\"Skills\">([\\s\\S]*?)</ul>");
+                static const std::regex skill_list_regex("<h2><span class=\"mw-headline\" id=\"Skills\">([\\s\\S]*?)</ul>");
                 std::smatch m;
                 if (std::regex_search(agent_info->wiki_content, m, skill_list_regex)) {
                     std::string skill_list_found = m[1].str();
@@ -214,13 +214,13 @@ namespace {
                     }
                 }
 
-                const std::regex armor_ratings_regex("<h2><span class=\"mw-headline\" id=\"Armor_ratings\">([\\s\\S]*?)</table>");
+                static const std::regex armor_ratings_regex("<h2><span class=\"mw-headline\" id=\"Armor_ratings\">([\\s\\S]*?)</table>");
                 if (std::regex_search(agent_info->wiki_content, m, armor_ratings_regex)) {
                     std::string armor_table_found = m[1].str();
                     armor_table_found.erase(std::ranges::remove(armor_table_found, '\n').begin(), armor_table_found.end());
 
                     // Iterate over all skills in this list.
-                    const auto armor_cell_regex = std::regex(R"regex(<td>[\s\S]*?title="([^"]+)"[\s\S]*?<td>([0-9 \(\)]+).*?<\/td>)regex");
+                    static const std::regex armor_cell_regex(R"regex(<td>[\s\S]*?title="([^"]+)"[\s\S]*?<td>([0-9 \(\)]+).*?<\/td>)regex");
                     auto words_begin = std::sregex_iterator(armor_table_found.begin(), armor_table_found.end(), armor_cell_regex);
                     auto words_end = std::sregex_iterator();
                     for (auto i = words_begin; i != words_end; ++i)

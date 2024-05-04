@@ -156,7 +156,7 @@ namespace {
         Log::Log("content: %s\n error: %s %s", response->content.c_str(), response->error_id.c_str(), response->error_text.c_str());
 
         {
-            const std::regex server_info_regex("ip=([^ ]+) port=([0-9]+)");
+            static const std::regex server_info_regex("ip=([^ ]+) port=([0-9]+)");
             std::smatch m;
             std::regex_search(response->content, m, server_info_regex);
             if (!m.size()) {
@@ -171,7 +171,7 @@ namespace {
             if (!response) {
                 goto cleanup;
             }
-            const std::regex client_info_regex("clid=([0-9]+) cid=([0-9]+)");
+            static const std::regex client_info_regex("clid=([0-9]+) cid=([0-9]+)");
             if (!std::regex_search(response->content, m, client_info_regex)) {
                 goto cleanup;
             }
@@ -182,7 +182,7 @@ namespace {
             if (!response) {
                 goto cleanup;
             }
-            const std::regex server_name_regex("virtualserver_name=([^\n]+)");
+            static const std::regex server_name_regex("virtualserver_name=([^\n]+)");
             if (!std::regex_search(response->content, m, server_name_regex)) {
                 goto cleanup;
             }

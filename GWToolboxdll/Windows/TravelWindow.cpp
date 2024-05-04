@@ -328,7 +328,7 @@ namespace {
         std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s)));
         const std::string first_word = compare.substr(0, compare.find(' '));
 
-        const std::regex district_regex("([a-z]{2,3})(\\d)?");
+        static const std::regex district_regex("([a-z]{2,3})(\\d)?");
         std::smatch m;
         if (!std::regex_search(first_word, m, district_regex)) {
             return false;

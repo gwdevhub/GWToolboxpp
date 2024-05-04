@@ -314,7 +314,7 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& char
             }
             return;
         }
-        const std::regex json_regex("legacy_bits\":\"([^\"]+)");
+        static const std::regex json_regex("legacy_bits\":\"([^\"]+)");
         std::smatch m;
         if (!std::regex_search(response, m, json_regex)) {
             Log::Log("Failed to find regex code from %s", response.c_str());
