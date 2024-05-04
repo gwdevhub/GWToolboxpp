@@ -1853,7 +1853,6 @@ void GameSettings::DrawSettingsInternal()
     }
     ImGui::Checkbox("Apply Collector's Edition animations on player dance", &collectors_edition_emotes);
     ImGui::ShowHelp("Only applies to your own character");
-    ImGui::ShowHelp("This should make you stop to cast skills earlier by re-triggering the skill cast when in range.");
     ImGui::Checkbox("Auto-cancel Unyielding Aura when re-casting", &drop_ua_on_cast);
     ImGui::Checkbox("Auto use available keys when interacting with locked chest", &auto_open_locked_chest_with_key);
     ImGui::Checkbox("Auto use lockpick when interacting with locked chest", &auto_open_locked_chest);
