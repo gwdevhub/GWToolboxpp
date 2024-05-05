@@ -26,4 +26,5 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void RegisterSettingsContent() override;
     void SaveSettings(ToolboxIni* ini) override;
+    float GetPriceById(const char* id);
 };

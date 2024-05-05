@@ -22,6 +22,7 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
+#include <Modules/PriceCheckerModule.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/Resources.h>
 #include <Modules/GameSettings.h>
@@ -32,183 +33,43 @@
 using nlohmann::json;
 
 namespace {
-    std::unordered_map<GW::ItemID, std::string> english_material_names{
-        {0, "Crafting materials"}, {1, "Rare crafting materials"},
-        {921, "Bone"}, {948, "Iron Ingot"}, {940, "Tanned Hide Square"},
-        {953, "Scale"}, {954, "Chitin Fragment"}, {925, "Bolt of Cloth"},
-        {946, "Wood Plank"}, {955, "Granite Slab"}, {929, "Pile of Glittering Dust"},
-        {934, "Plant Fiber"}, {933, "Feather"}, {941, "Fur Square"},
-        {926, "Bolt of Linen"}, {927, "Bolt of Damask"}, {928, "Bolt of Silk"},
-        {930, "Glob of Ectoplasm"}, {949, "Steel Ingot"}, {950, "Deldrimor Steel Ingot"},
-        {923, "Monstrous Claw"}, {931, "Monstrous Eye"}, {932, "Monstrous Fang"},
-        {937, "Ruby"}, {938, "Sapphire"}, {935, "Diamond"},
-        {936, "Onyx Gemstone"}, {922, "Lump of Charcoal"}, {945, "Obsidian Shard"},
-        {939, "Tempered Glass Vial"}, {942, "Leather Square"}, {943, "Elonian Leather Square"},
-        {944, "Vial of Ink"}, {951, "Roll of Parchment"}, {952, "Roll of Vellum"},
-        {956, "Spiritwood Plank"}, {6532, "Amber Chunk"}, {6533, "Jadeite Shard"}
+    std::unordered_map<GW::ItemID, std::wstring> id_to_enc_names{
+        {GW::Constants::ItemID::Bone, L"\x22D0\xBEB5\xC462\x64B5"},
+        {GW::Constants::ItemID::IronIngot, L"\x22EB\xC6B0\xBD46\x2DAD"},
+        {GW::Constants::ItemID::TannedHideSquare, L"\x22E3\xD3A9\xC22C\x285A"},
+        {GW::Constants::ItemID::ChitinFragment, L"\x22F1\x9156\x8692\x497D"},
+        {GW::Constants::ItemID::BoltofCloth, L"\x22D4\x888E\x9089\x6EC8"},
+        {GW::Constants::ItemID::WoodPlank, L"\x22E8\xE46D\x8FE4\x5F8B"},
+        {GW::Constants::ItemID::GraniteSlab, L"\x22F2\xA623\xFAE8\xE5A"},
+        {GW::Constants::ItemID::PileofGlitteringDust, L"\x22D8\xA4A4\xED0D\x4304"},
+        {GW::Constants::ItemID::PlantFiber, L"\x22DD\xAC69\xDEA5\x73C5"},
+        {GW::Constants::ItemID::Feather, L"\x22DC\x8209\xAD29\xBBD"},
+        {GW::Constants::ItemID::FurSquare, L"\x22E4\xE5F4\xBBEF\x5A25"},
+        {GW::Constants::ItemID::BoltofLinen, L"\x22D5\x8371\x8ED5\x56B4"},
+        {GW::Constants::ItemID::BoltofDamask, L"\x22D6\xF04C\xF1E5\x5699"},
+        {GW::Constants::ItemID::BoltofSilk, L"\x22D7\xFD2A\xC85B\x58B3"},
+        {GW::Constants::ItemID::GlobofEctoplasm, L"\x22D9\xE7B8\xE9DD\x2322"},
+        {GW::Constants::ItemID::SteelIngot, L"\x22EC\xF12D\x87A7\x6460"},
+        {GW::Constants::ItemID::DeldrimorSteelIngot, L"\x22ED\xB873\x85A4\x74B"},
+        {GW::Constants::ItemID::MonstrousClaw, L"\x22D2\xCDC6\xEFC8\x3C99"},
+        {GW::Constants::ItemID::MonstrousEye, L"\x22DA\x9059\xD163\x2187"},
+        {GW::Constants::ItemID::MonstrousFang, L"\x22DB\x8DCE\xC3FA\x4A26"},
+        {GW::Constants::ItemID::Ruby, L"\x22E0\x93CC\x939C\x5286"},
+        {GW::Constants::ItemID::Sapphire, L"\x22E1\xB785\x866C\x34F6"},
+        {GW::Constants::ItemID::Diamond, L"\x22DE\xBB93\xABD4\x5439"},
+        {GW::Constants::ItemID::OnyxGemstone, L"\x22DF\xD425\xC093\x1CF4"},
+        {GW::Constants::ItemID::LumpofCharcoal, L"\x22D1\xDE2A\xED03\x2625"},
+        {GW::Constants::ItemID::ObsidianShard, L"\x22EA\xFDA9\xDE53\x2D16"},
+        {GW::Constants::ItemID::TemperedGlassVial, L"\x22E2\xCE9B\x8771\x7DC7"},
+        {GW::Constants::ItemID::LeatherSquare, L"\x22E5\x9758\xC5DD\x727"},
+        {GW::Constants::ItemID::ElonianLeatherSquare, L"\x22E6\xE8F4\xA898\x75CB"},
+        {GW::Constants::ItemID::VialofInk, L"\x22E7\xC1DA\xF2C1\x452A"},
+        {GW::Constants::ItemID::RollofParchment, L"\x22EE\xF65A\x86E6\x1C6C"},
+        {GW::Constants::ItemID::RollofVellum, L"\x22EF\xC588\x861D\x5BD3"},
+        {GW::Constants::ItemID::SpiritwoodPlank, L"\x22F3\xA11C\xC924\x5E15"},
+        {GW::Constants::ItemID::AmberChunk, L"\x55D0\xF8B7\xB108\x6018"},
+        {GW::Constants::ItemID::JadeiteShard, L"\x55D1\xD189\x845A\x7164"}
     };
-
-    std::unordered_map<GW::ItemID, std::string> korean_material_names{
-        {0, "재료 제작"}, {1, "희귀 제작 재료"},
-        {921, "뼈조각"}, {948, "철광석"}, {940, "무두질한 가죽 조각"},
-        {953, "비늘"}, {954, "각질 파편"}, {925, "모직물"},
-        {946, "목재"}, {955, "화강암 조각"}, {929, "빛나는 먼지 덩어리"},
-        {934, "실뭉치"}, {933, "깃털"}, {941, "모피 조각"},
-        {926, "리넨"}, {927, "다마스크"}, {928, "비단"},
-        {930, "심령의 구슬"}, {949, "강철 광석"}, {950, "델트리모 광석"},
-        {923, "괴수의 발톱"}, {931, "괴수의 눈"}, {932, "괴수의 송곳니"},
-        {937, "루비"}, {938, "사파이어"}, {935, "다이아몬드"},
-        {936, "오닉스 원석"}, {922, "목탄 덩어리"}, {945, "흑요석 파편"},
-        {939, "강화 유리 약병"}, {942, "재단된 가죽"}, {943, "엘로나 가죽 조각"},
-        {944, "잉크병"}, {951, "양피 두루마리"}, {952, "송아지 피지 두루마리"},
-        {956, "심령의 판자"}, {6532, "호박석 덩어리"}, {6533, "비취 원석 조각"}
-    };
-
-    std::unordered_map<GW::ItemID, std::string> french_material_names{
-        {0, "Matériaux d' artisanat"}, {1, "Matériaux rares"},
-        {921, "Ossement"}, {948, "Lingot de fer"}, {940, "Peau tannée"},
-        {953, "Ecaille"}, {954, "Fragment de chitine"}, {925, "Rouleau de tissu"},
-        {946, "Planche de bois"}, {955, "Bloc de granite"}, {929, "Tas de Poussière scintillante"},
-        {934, "Fibre végétale"}, {933, "Plume"}, {941, "Morceau de fourrure"},
-        {926, "Rouleau de lin"}, {927, "Rouleau de Damas"}, {928, "Rouleau de soie"},
-        {930, "Boule d'ectoplasme"}, {949, "Lingot d'acier"}, {950, "Lingot d'acier de Deldrimor"},
-        {923, "Griffe monstrueuse"}, {931, "Oeil monstrueux"}, {932, "Croc monstrueux"},
-        {937, "Rubis"}, {938, "Saphir"}, {935, "Diamant"},
-        {936, "Gemme d'onyx"}, {922, "Morceau de charbon"}, {945, "Fragment d'obsidienne"},
-        {939, "Fiole de verre trempé"}, {942, "Carré de cuir"}, {943, "Carré de cuir élonien"}, 
-        {944, "Fiole d'encre"}, {951, "Rouleau de parchemin"}, {952, "Rouleau de vélin"},
-        {956, "Planche de Boispirite"}, {6532, "Morceau d'ambre"}, {6533, "Eclat de Jadéite"}
-    };
-
-    std::unordered_map<GW::ItemID, std::string> german_material_names{
-        {0, "Handwerksmaterialien"}, {1, "Seltene materialien"},
-        {921, "Knochen"}, {948, "Eisenbarren"}, {940, "Gerbfellquadrat"},
-        {953, "Schuppe"}, {954, "Chitin-Fragment"}, {925, "Tuchballen"},
-        {946, "Holzbrett"}, {955, "Granitplatte"}, {929, "Glitzerstaubhaufen"},
-        {934, "Pflanzenfaser"}, {933, "Feder"}, {941, "Pelzquadrat"},
-        {926, "Leinentuchballen"}, {927, "Damastballen"}, {928, "Seidentuchballen"},
-        {930, "Ektoplasmakugel"}, {949, "Stahlbarren"}, {950, "Deldrimor-Stahlbarren"},
-        {923, "Monsterklaue"}, {931, "Monsterauge"}, {932, "Monsterfangzahn"},
-        {937, "Rubin"}, {938, "Saphir"}, {935, "Diamant"},
-        {936, "Onyx"}, {922, "Holzkohleklumpen"}, {945, "Obsidian-Scherbe"},
-        {939, "Vergütetes Glasfläschchen"}, {942, "Lederquadrat"}, {943, "Elona-Lederquadrat"},
-        {944, "Tintenfläschchen"}, {951, "Pergamentrolle"}, {952, "Vellinrolle"},
-        {956, "Geisterholzbrett"}, {6532, "Bernstein-Klumpen"}, {6533, "Jadeit-Scherbe"}
-    };
-
-    std::unordered_map<GW::ItemID, std::string> italian_material_names{
-        {0, "Materiali artigianali"}, {1, "Materiali rari"},
-        {921, "Osso"}, {948, "Lingotto di Ferro"}, {940, "Scampolo di Pellame Pregiato"},
-        {953, "Scaglia"}, {954, "Frammento di Chitina"}, {925, "Rotolo di Tessuto Grezzo"},
-        {946, "Tavola di Legno"}, {955, "Lastra di Granito"}, {929, "Mucchio di Polvere Brillante"},
-        {934, "Fibra di Pianta"}, {933, "Piuma"}, {941, "Scampolo di Pelliccia"},
-        {926, "Rotolo di Lino"}, {927, "Rotolo di Damasco"}, {928, "Rotolo di Seta"},
-        {930, "Globo di Ectoplasma"}, {949, "Lingotto d'Acciaio"}, {950, "Lingotto d'Acciaio di Deldrimor"},
-        {923, "Artiglio Mostruoso"}, {931, "Occhio Mostruoso"}, {932, "Zanna Mostruosa"},
-        {937, "Rubino"}, {938, "Zaffiro"}, {935, "Diamante"},
-        {936, "Pietra d'Onice"}, {922, "Pezzo di Carbone"}, {945, "Frammento di Ossidiana"},
-        {939, "Fiala di Vetro Temprato"}, {942, "Scampolo di Pelle"}, {943, "Scampolo di Pelle di Elona"},
-        {944, "Fiala di Inchiostro"}, {951, "Rotolo di Cartapecora"}, {952, "Rotolo di Pergamena"},
-        {956, "Tavola di Legno degli Spiriti"}, {6532, "Pezzo di Ambra"}, {6533, "Frammento di Giadeite"}
-    };
-
-    std::unordered_map<GW::ItemID, std::string> spanish_material_names{
-        {0, "Materiales artesanales"}, {1, "Materiales poco frecuentes"},
-        {921, "Hueso"}, {948, "Lingote de hierro"}, {940, "Trozo de piel curtido"},
-        {953, "Escama"}, {954, "Fragmento de quitina"}, {925, "Rollo de tela"},
-        {946, "Tabla de madera"}, {955, "Losa de granito"}, {929, "Pila de polvo brillante"},
-        {934, "Maraña de fibras"}, {933, "Pluma"}, {941, "Forro"},
-        {926, "Rollo de lino"}, {927, "Rollo de tela de damasco"}, {928, "Rollo de seda"},
-        {930, "Pegote de ectoplasma"}, {949, "Lingote de acero"}, {950, "Lingote de acero de Deldrimor"},
-        {923, "Garra de monstruo"}, {931, "Ojo de monstruo"}, {932, "Colmillo de monstruo"},
-        {937, "Rubí"}, {938, "Zafiro"}, {935, "Diamante"},
-        {936, "Piedra ónice"}, {922, "Trozo de carbón"}, {945, "Trozo de obsidiana"},
-        {939, "Frasco de vidrio templado"}, {942, "Trozo de cuero"}, {943, "Trozo de cuero de Elona"},
-        {944, "Frasco de tinta"}, {951, "Rollo de pergamino"}, {952, "Rollo de vitela"},
-        {956, "Tabla de madera espiritual"}, {6532, "Trozo de ámbar"}, {6533, "Trozo de jadeíta"}
-    };
-
-    std::unordered_map<GW::ItemID, std::string> traditionalchinese_material_names{
-        {0, "製作材料"}, {1, "稀有製作材料"},
-        {921, "骨頭"}, {948, "鐵礦石"}, {940, "褐色獸皮"},
-        {953, "鱗片"}, {954, "外殼"}, {925, "布料"},
-        {946, "木材"}, {955, "花崗岩石板"}, {929, "閃爍之土"},
-        {934, "植物纖維"}, {933, "羽毛"}, {941, "毛皮"},
-        {926, "亞麻布"}, {927, "緞布"}, {928, "絲綢"},
-        {930, "心靈之玉"}, {949, "鋼鐵礦石"}, {950, "戴爾狄摩鋼鐵礦石"},
-        {923, "巨大的爪"}, {931, "巨大的眼"}, {932, "巨大尖牙"},
-        {937, "紅寶石"}, {938, "藍寶石"}, {935, "金剛石"},
-        {936, "瑪瑙寶石"}, {922, "結塊的木炭"}, {945, "黑曜石碎片"},
-        {939, "調合後的玻璃瓶"}, {942, "皮革"}, {943, "伊洛那皮革"},
-        {944, "小瓶墨水"}, {951, "羊皮紙卷"}, {952, "牛皮紙卷"},
-        {956, "心靈之板"}, {6532, "琥珀"}, {6533, "硬玉"}
-    };
-
-    std::unordered_map<GW::ItemID, std::string> japanese_material_names{
-        {0, "クラフト素材"}, {1, "レアなクラフト素材"},
-        {921, "骨片"}, {948, "鉄鉱石"}, {940, "動物の皮"},
-        {953, "鱗片"}, {954, "甲殻のかけら"}, {925, "布の生地"},
-        {946, "木の枝"}, {955, "グラニットの石板"}, {929, "光り輝く粉"},
-        {934, "植物の繊維"}, {933, "羽毛"}, {941, "毛皮"},
-        {926, "リネンの生地"}, {927, "ダマスク織の生地"}, {928, "シルクの生地"},
-        {930, "エクトプラズム"}, {949, "鋼鉄"}, {950, "デルドリモア鉱石"},
-        {923, "巨大な爪"}, {931, "巨大な目"}, {932, "巨大な牙"},
-        {937, "ルビー"}, {938, "サファイア"}, {935, "ダイアモンド"},
-        {936, "オニキス"}, {922, "黒炭"}, {945, "黒曜石の破片"},
-        {939, "強化ガラスビン"}, {942, "レザー"}, {943, "イロナ産の革"},
-        {944, "インクビン"}, {951, "パーチメント紙"}, {952, "ベラム紙"},
-        {956, "霊木"}, {6532, "コハクの塊"}, {6533, "ヒスイの輝石"}
-    };
-
-    std::unordered_map<GW::ItemID, std::string> polish_material_names{
-        {0, "Surowcami"}, {1, "Rzadkimi surowcami"},
-        {921, "Kość"}, {948, "Sztabka Żelaza"}, {940, "Łatka Garbowanej Skóry"},
-        {953, "Łuska"}, {954, "Kawałek Chityny"}, {925, "Skrawek Płótna"},
-        {946, "Szczapa Drewna"}, {955, "Płytka Granitowa"}, {929, "Garść Lśniącego Pyłu"},
-        {934, "Włókno Roślinne"}, {933, "Pióro"}, {941, "Łatka Futra"},
-        {926, "Skrawek Lnu"}, {927, "Skrawek Adamaszku"}, {928, "Skrawek Jedwabiu"},
-        {930, "Kula Ektoplazmy"}, {949, "Sztabka Stali"}, {950, "Sztabka Stali Deldrimorskiej"},
-        {923, "Pazur Bestii"}, {931, "Oko Bestii"}, {932, "Kieł Bestii"},
-        {937, "Rubin"}, {938, "Szafir"}, {935, "Diament"},
-        {936, "Onyks"}, {922, "Bryłka Węgla"}, {945, "Odłamek Obsydianu"},
-        {939, "Fiolka z Hartowanego Szkła"}, {942, "Łatka Skóry"}, {943, "Elońska Skórzana Łatka"},
-        {944, "Fiolka Atramentu"}, {951, "Zwój Pergaminu"}, {952, "Zwój Welinu"},
-        {956, "Gałąź Duchodrewna"}, {6532, "Bryłka Bursztynu"}, {6533, "Odłamek Jadeitu"}
-    };
-
-    std::unordered_map<GW::ItemID, std::string> russian_material_names{ // For some reason, the text parser for russian returns english names. Leaving like this for now
-        {0, "Crafting materials"}, {1, "Rare crafting materials"},
-        {921, "Bone"}, {948, "Iron Ingot"}, {940, "Tanned Hide Square"},
-        {953, "Scale"}, {954, "Chitin Fragment"}, {925, "Bolt of Cloth"},
-        {946, "Wood Plank"}, {955, "Granite Slab"}, {929, "Pile of Glittering Dust"},
-        {934, "Plant Fiber"}, {933, "Feather"}, {941, "Fur Square"},
-        {926, "Bolt of Linen"}, {927, "Bolt of Damask"}, {928, "Bolt of Silk"},
-        {930, "Glob of Ectoplasm"}, {949, "Steel Ingot"}, {950, "Deldrimor Steel Ingot"},
-        {923, "Monstrous Claw"}, {931, "Monstrous Eye"}, {932, "Monstrous Fang"},
-        {937, "Ruby"}, {938, "Sapphire"}, {935, "Diamond"},
-        {936, "Onyx Gemstone"}, {922, "Lump of Charcoal"}, {945, "Obsidian Shard"},
-        {939, "Tempered Glass Vial"}, {942, "Leather Square"}, {943, "Elonian Leather Square"},
-        {944, "Vial of Ink"}, {951, "Roll of Parchment"}, {952, "Roll of Vellum"},
-        {956, "Spiritwood Plank"}, {6532, "Amber Chunk"}, {6533, "Jadeite Shard"}
-    };
-
-    std::unordered_map<GW::ItemID, std::string> borkborkbork_material_names{
-        {0, "Creffting meteriels"}, {1, "Rere-a creffting meteriels"},
-        {921, "Bune-a"}, {948, "Irun Ingut"}, {940, "Tunned Heede-a Sqooaere-a"},
-        {953, "Scaele-a"}, {954, "Cheeteen Fraegment"}, {925, "Bult ooff Clut"},
-        {946, "Vuud Plunk"}, {955, "Gruneete-a Slaeb"}, {929, "Peele-a ooff Gleettereeng Doost"},
-        {934, "Plunt Feeber"}, {933, "Feaezeer"}, {941, "Foor Sqooaere-a"},
-        {926, "Bult ooff Leenee"}, {927, "Bult ooff Daemaesk"}, {928, "Bult ooff Seelk"},
-        {930, "Glub ooff Ictuplaesm"}, {949, "Steel Ingut"}, {950, "Deldreemur Steel Ingut"},
-        {923, "Munstruoos Claev"}, {931, "Munstruoos Iye-a"}, {932, "Munstruoos Fung"},
-        {937, "Rooby"}, {938, "Saepphure-a"}, {935, "Deeaemund"},
-        {936, "Oonyx Gemstune-a"}, {922, "Loomp ooff Chaercuael"}, {945, "Oobseedeeun Shaerd"},
-        {939, "Tempered Glaess Feeael"}, {942, "Leaezeer Sqooaere-a"}, {943, "Iluneeun Leaezeer Sqooaere-a"},
-        {944, "Feeael ooff Ink"}, {951, "Rull ooff Paerchment"}, {952, "Rull ooff Felloom"},
-        {956, "Spureetvuud Plunk"}, {6532, "Aember Choonk"}, {6533, "Jaedeeete-a Shaerd"}
-    };
-
-    std::unordered_map<GW::Constants::Language, std::unordered_map<GW::ItemID, std::string>> material_names; // initialized with all the other maps on module initialization
 
     std::unordered_map<std::string, GW::ItemID> material_to_id_lookup {
         {"bones", GW::Constants::ItemID::Bone},
@@ -303,15 +164,17 @@ namespace {
     }
 
     // The following regex captures the text between <gallery></gallery> in the disambiguation page: eg. <gallery>Image : Inscribed Chakram(metal).jpg | [[Inscribed Chakram(metal)]] Image : Inscribed Chakram(wooden).jpg | [[Inscribed Chakram(wooden)]] Image : Inscribed Chakram(diamond).jpg |[[Inscribed Chakram(diamond)]]</ gallery>
-    const std::regex gallery_regex(R"(<gallery>([\s\S]*?)</gallery>)");
+    const static std::regex gallery_regex(R"(<gallery>([\s\S]*?)</gallery>)");
     // The follwing regex captures the text between [[ ]] in the disambiguation page: eg. Image:Eerie Focus (Nightfall).jpg|[[Eerie Focus (Nightfall)]]
-    const std::regex disambig_entries_regex(R"(\[\[([^\[\]]+)\]\])");
+    const static std::regex disambig_entries_regex(R"(\[\[([^\[\]]+)\]\])");
     // The following regexes capture the entire text after commonsalvage or raresalvage: eg. | commonsalvage = [[Pile of Glittering Dust|Piles of Glittering Dust]]
-    const std::regex common_materials_regex("commonsalvage = (([a-zA-Z [\\]<>|'])*)");
-    const std::regex rare_materials_regex("raresalvage = (([a-zA-Z [\\]<>|'])*)");
+    const static std::regex common_materials_regex("commonsalvage = (([a-zA-Z [\\]<>|'])*)");
+    const static std::regex rare_materials_regex("raresalvage = (([a-zA-Z [\\]<>|'])*)");
+    const static std::string disambig = "{{disambig}}";
+    const static std::wstring color = L"@ItemCommon";
+    const static std::wstring high_price_color = L"@ItemRare";
     bool fetch_salvage_info = true;
-    const std::string disambig = "{{disambig}}";
-    const std::wstring color = L"@ItemCommon";
+    float high_price_threshold = 300;
     std::wstring modified_description;
     std::wstring name_cache;
     // Json containing uint32_t keys being the item IDs and string values being the salvage info
@@ -447,32 +310,34 @@ namespace {
         salvage_info_cache[key_str] = value;
     }
 
-    std::string ConvertMaterialToString(const GW::ItemID item_id, const GW::Constants::Language language)
+    std::wstring ConvertMaterialToString(const GW::ItemID item_id, const GW::Constants::Language language)
     {
-        const auto lang_map_iter = material_names.find(language);
-        if (lang_map_iter == material_names.end()) {
-            return std::to_string((uint32_t)item_id);
+        const auto mat_name_iter = id_to_enc_names.find(item_id);
+        if (mat_name_iter == id_to_enc_names.end()) {
+            return L"";
         }
 
-        const auto name_iter = lang_map_iter->second.find(item_id);
-        if (name_iter == lang_map_iter->second.end()) {
-            return std::to_string((uint32_t)item_id);
+        const auto &enc_name = mat_name_iter->second;
+        std::wstring simple_name = L"";
+        AsyncGetItemSimpleName(enc_name, simple_name, language);
+        while (enc_name.empty()) {
         }
 
-        return name_iter->second;
+        return simple_name;
     }
 
-    std::string BuildItemListString(const std::vector<GW::ItemID>& items, const GW::Constants::Language language) {
-        std::string itemListString = "";
+    std::wstring BuildItemListString(const std::vector<GW::ItemID>& items, const GW::Constants::Language language) {
+        std::wstring itemListString = L"";
         if (items.size() == 0) {
             return itemListString;
         }
 
-        for (size_t i = 0; i < items.size() - 1; i++) {
-            itemListString += std::format("{}, ", ConvertMaterialToString(items[i], language));
+        for (size_t i = 0; i < items.size(); i++) {
+            const auto material = items[i];
+            const auto price = PriceCheckerModule::Instance().GetPriceById(std::to_string((uint32_t)material).c_str());
+            itemListString += std::format(L"\x2\x108\x107\n<c={}>{}</c>\x1", price > high_price_threshold ? high_price_color : color, ConvertMaterialToString(material, language));
         }
 
-        itemListString += ConvertMaterialToString(items[items.size() - 1], language);
         return itemListString;
     }
 
@@ -547,21 +412,15 @@ namespace {
         }
 
         const auto language = GW::GetGameContext()->text_parser->language_id;
-        const auto lang_map_iter = material_names.find(language);
-        if (lang_map_iter == material_names.end()) {
-            L"";
-        }
 
         const auto salvage_info = maybe_info.value();
         std::wstring salvage_description;
         if (!salvage_info.crafting_materials.empty()) {
-            const auto crafting_materials_str = GuiUtils::StringToWString(lang_map_iter->second.at(0));
-            salvage_description += std::format(L"\x2\x108\x107\n<c={}>{}: {}</c>\x1", color, crafting_materials_str, GuiUtils::StringToWString(BuildItemListString(salvage_info.crafting_materials, language)));
+            salvage_description += BuildItemListString(salvage_info.crafting_materials, language);
         }
 
         if (!salvage_info.rare_crafting_materials.empty()) {
-            const auto rare_crafting_materials_str = GuiUtils::StringToWString(lang_map_iter->second.at(1));
-            salvage_description += std::format(L"\x2\x108\x107\n<c={}>{}: {}</c>\x1", color, rare_crafting_materials_str, GuiUtils::StringToWString(BuildItemListString(salvage_info.rare_crafting_materials, language)));
+            salvage_description += BuildItemListString(salvage_info.rare_crafting_materials, language);
         }
 
         return salvage_description;
@@ -618,17 +477,6 @@ void SalvageInfoModule::Initialize()
         GW::HookBase::EnableHooks(GetItemDescription_Func);
     }
 
-    material_names[GW::Constants::Language::English] = english_material_names;
-    material_names[GW::Constants::Language::Korean] = korean_material_names;
-    material_names[GW::Constants::Language::French] = french_material_names;
-    material_names[GW::Constants::Language::German] = german_material_names;
-    material_names[GW::Constants::Language::Italian] = italian_material_names;
-    material_names[GW::Constants::Language::Spanish] = spanish_material_names;
-    material_names[GW::Constants::Language::TraditionalChinese] = traditionalchinese_material_names;
-    material_names[GW::Constants::Language::Japanese] = japanese_material_names;
-    material_names[GW::Constants::Language::Polish] = polish_material_names;
-    material_names[GW::Constants::Language::Russian] = russian_material_names;
-    material_names[GW::Constants::Language::BorkBorkBork] = borkborkbork_material_names;
     LoadLocalCache();
 }
 
@@ -723,12 +571,14 @@ void SalvageInfoModule::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(fetch_salvage_info);
+    SAVE_FLOAT(high_price_threshold);
 }
 
 void SalvageInfoModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     LOAD_BOOL(fetch_salvage_info);
+    LOAD_FLOAT(high_price_threshold);
 }
 
 void SalvageInfoModule::RegisterSettingsContent()
@@ -743,6 +593,8 @@ void SalvageInfoModule::RegisterSettingsContent()
 
             ImGui::Checkbox("Fetch salvage information for items", &fetch_salvage_info);
             ImGui::ShowHelp("When enabled, the item description will contain information about the crafting materials that can be salvaged from the item");
+            ImGui::SliderFloat("Salvage material price threshold", &high_price_threshold, 100, 5000);
+            ImGui::ShowHelp("The item description will color gold the possible salvage material if its price is above the threshold");
         },
         0.9f
     );

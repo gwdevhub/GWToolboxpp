@@ -481,24 +481,6 @@ namespace {
         return false;
     }
 
-    float GetPriceById(const char* id)
-    {
-        const auto& it_buy = price_json.find("buy");
-        if (it_buy == price_json.end() || !it_buy->is_object()) {
-            return 0;
-        }
-
-        const auto& buy = it_buy.value();
-        const auto& it_id = buy.find(id);
-        if (it_id == it_buy->end() || !it_id->is_object()) {
-            return 0;
-        }
-        const auto& price_value = it_id->find("p");
-        if (!(price_value != it_id->end() && price_value->is_number()))
-            return 0;
-        return price_value->get<float>();
-    }
-
     std::wstring PrintPrice(float price, const char* name = nullptr) {
         auto unit = L'g';
         auto color = L"@ItemCommon";
@@ -527,7 +509,7 @@ namespace {
             const auto found = mod_to_id.find(item->mod_struct[i].mod);
             if (found == mod_to_id.end())
                 continue;
-            auto price = GetPriceById(found->second);
+            auto price = PriceCheckerModule::Instance().GetPriceById(found->second);
             if (price < .1f)
                 continue;
             const auto name = mod_to_name.find(found->first);
@@ -537,7 +519,7 @@ namespace {
         }
         if (item->type == GW::Constants::ItemType::Materials_Zcoins) {
             const auto model_id_str = std::to_string(item->model_id);
-            auto price = GetPriceById(model_id_str.c_str());
+            auto price = PriceCheckerModule::Instance().GetPriceById(model_id_str.c_str());
             if (price > .0f) {
                 if (IsCommonMaterial(item)) {
                     price = price / 10;
@@ -624,4 +606,20 @@ void PriceCheckerModule::RegisterSettingsContent()
         },
         0.9f
     );
+}
+
+float PriceCheckerModule::GetPriceById(const char* id) {
+    const auto& it_buy = price_json.find("buy");
+    if (it_buy == price_json.end() || !it_buy->is_object()) {
+        return 0;
+    }
+
+    const auto& buy = it_buy.value();
+    const auto& it_id = buy.find(id);
+    if (it_id == it_buy->end() || !it_id->is_object()) {
+        return 0;
+    }
+    const auto& price_value = it_id->find("p");
+    if (!(price_value != it_id->end() && price_value->is_number())) return 0;
+    return price_value->get<float>();
 }
