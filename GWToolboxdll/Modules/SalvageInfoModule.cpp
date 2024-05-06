@@ -115,8 +115,6 @@ namespace {
             return;
         }
         auto* info = (SalvageInfo*)wparam;
-        // TODO
-        Log::Info("TODO: Parse wiki content for %s", info->en_name.string().c_str());
 
         const auto parse_materials = [](const std::string& cell_content, std::vector<CraftingMaterial*>& vec) {
                 const std::regex link_regex("<a[^>]+title=\"([^\"]+)");
