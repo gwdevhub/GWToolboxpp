@@ -34,7 +34,39 @@ namespace GW {
     namespace EncStrings {
         const wchar_t* Bone = L"\x22D0\xBEB5\xC462\x64B5";
         const wchar_t* IronIngot = L"\x22EB\xC6B0\xBD46\x2DAD";
-        // TODO: fill this in
+        const wchar_t* TannedHideSquare = L"\x22E3\xD3A9\xC22C\x285A";
+        const wchar_t* ChitinFragment = L"\x22F1\x9156\x8692\x497D";
+        const wchar_t* BoltofCloth = L"\x22D4\x888E\x9089\x6EC8";
+        const wchar_t* WoodPlank = L"\x22E8\xE46D\x8FE4\x5F8B";
+        const wchar_t* GraniteSlab = L"\x22F2\xA623\xFAE8\xE5A";
+        const wchar_t* PileofGlitteringDust = L"\x22D8\xA4A4\xED0D\x4304";
+        const wchar_t* PlantFiber = L"\x22DD\xAC69\xDEA5\x73C5";
+        const wchar_t* Feather = L"\x22DC\x8209\xAD29\xBBD";
+        const wchar_t* FurSquare = L"\x22E4\xE5F4\xBBEF\x5A25";
+        const wchar_t* BoltofLinen = L"\x22D5\x8371\x8ED5\x56B4";
+        const wchar_t* BoltofDamask = L"\x22D6\xF04C\xF1E5\x5699";
+        const wchar_t* BoltofSilk = L"\x22D7\xFD2A\xC85B\x58B3";
+        const wchar_t* GlobofEctoplasm = L"\x22D9\xE7B8\xE9DD\x2322";
+        const wchar_t* SteelIngot = L"\x22EC\xF12D\x87A7\x6460";
+        const wchar_t* DeldrimorSteelIngot = L"\x22ED\xB873\x85A4\x74B";
+        const wchar_t* MonstrousClaw = L"\x22D2\xCDC6\xEFC8\x3C99";
+        const wchar_t* MonstrousEye = L"\x22DA\x9059\xD163\x2187";
+        const wchar_t* MonstrousFang = L"\x22DB\x8DCE\xC3FA\x4A26";
+        const wchar_t* Ruby = L"\x22E0\x93CC\x939C\x5286";
+        const wchar_t* Sapphire = L"\x22E1\xB785\x866C\x34F6";
+        const wchar_t* Diamond = L"\x22DE\xBB93\xABD4\x5439";
+        const wchar_t* OnyxGemstone = L"\x22DF\xD425\xC093\x1CF4";
+        const wchar_t* LumpofCharcoal = L"\x22D1\xDE2A\xED03\x2625";
+        const wchar_t* ObsidianShard = L"\x22EA\xFDA9\xDE53\x2D16";
+        const wchar_t* TemperedGlassVial = L"\x22E2\xCE9B\x8771\x7DC7";
+        const wchar_t* LeatherSquare = L"\x22E5\x9758\xC5DD\x727";
+        const wchar_t* ElonianLeatherSquare = L"\x22E6\xE8F4\xA898\x75CB";
+        const wchar_t* VialofInk = L"\x22E7\xC1DA\xF2C1\x452A";
+        const wchar_t* RollofParchment = L"\x22EE\xF65A\x86E6\x1C6C";
+        const wchar_t* RollofVellum = L"\x22EF\xC588\x861D\x5BD3";
+        const wchar_t* SpiritwoodPlank = L"\x22F3\xA11C\xC924\x5E15";
+        const wchar_t* AmberChunk = L"\x55D0\xF8B7\xB108\x6018";
+        const wchar_t* JadeiteShard = L"\x55D1\xD189\x845A\x7164";
     }
 }
 
@@ -59,9 +91,10 @@ namespace {
         std::vector<CraftingMaterial*> common_crafting_materials;
         std::vector<CraftingMaterial*> rare_crafting_materials;
         bool loading = false;
+        bool failed = false;
     };
 
-    std::unordered_map<std::wstring, SalvageInfo*> salvage_info_by_model_id;
+    std::unordered_map<std::wstring, SalvageInfo*> salvage_info_by_single_item_name;
 
     std::wstring item_description_appended; // Not thread safe
 
@@ -87,6 +120,28 @@ namespace {
         return ltrim(rtrim(s, t), t);
     }
 
+    //Converts signed char to unsigned char arrays
+    inline std::vector<unsigned char> convert_to_unsigned(const std::vector<char>& input)
+    {
+        std::vector<unsigned char> output;
+        output.reserve(input.size()); // Reserve space to improve efficiency
+        for (char c : input) {
+            output.push_back(static_cast<unsigned char>(c));
+        }
+        return output;
+    };
+
+    // Converts unsigned char to signed char arrays
+    inline std::vector<char> convert_to_signed(const std::vector<unsigned char>& input)
+    {
+        std::vector<char> output;
+        output.reserve(input.size()); // Reserve space to improve efficiency
+        for (unsigned char c : input) {
+            output.push_back(static_cast<char>(c));
+        }
+        return output;
+    };
+
     // Make sure you pass valid html e.g. start with a < tag
     std::string& strip_tags(std::string& html) {
         while (1)
@@ -110,11 +165,13 @@ namespace {
 
 
     void OnWikiContentDownloaded(bool success, const std::string& response, void* wparam) {
+        auto* info = (SalvageInfo*)wparam;
         if (!success) {
             Log::Error("Failed to download wiki content for item");
+            info->loading = false;
+            info->failed = true;
             return;
         }
-        auto* info = (SalvageInfo*)wparam;
 
         const auto parse_materials = [](const std::string& cell_content, std::vector<CraftingMaterial*>& vec) {
                 const std::regex link_regex("<a[^>]+title=\"([^\"]+)");
@@ -127,7 +184,13 @@ namespace {
                         return c->en_name.string() == material_name;
                         });
                     if (found != materials.end()) {
-                        vec.push_back(*found);
+                        // Add the material to the list only if the material doesn't already exist
+                        const auto in_list = std::find_if(vec.begin(), vec.end(), [material_name](auto* c) {
+                            return c->en_name.string() == material_name;
+                        });
+                        if (in_list == vec.end()) {
+                            vec.push_back(*found);
+                        }
                     }
                 }
             };
@@ -136,6 +199,60 @@ namespace {
         std::smatch m;
         if (std::regex_search(response, m, infobox_regex)) {
             std::string infobox_content = m[1].str();
+
+            const auto sub_links_regex = std::regex(R"delim(<a href="\/wiki\/File:[\s\S]*?title="([\s\S]*?)">)delim");
+            const auto disambig_regex = std::regex("This disambiguation page lists articles associated");
+            if (std::regex_search(infobox_content, m, disambig_regex)) {
+                // Detected a disambiguation page. We need to search for materials in the hrefs listed on this page
+                std::unordered_set<std::string> sub_urls;
+                std::string::const_iterator sub_search_start(response.cbegin());
+                while (std::regex_search(sub_search_start, response.cend(), m, sub_links_regex)) {
+                    const auto entry = m[1].str();
+                    // Search for entries that contain the name of the item, skipping the SpecialWhatLinksHere entry
+                    if (entry.contains(info->en_name.string()) && !entry.contains("Special:WhatLinksHere")) {
+                        sub_urls.emplace(entry);
+                    }
+
+                    sub_search_start = m.suffix().first; // Update the start position
+                }
+
+                // Fetch materials of the sub urls and add them to the salvage info struct
+                if (sub_urls.size() > 0) {
+                    for (const auto sub_name : sub_urls) {
+                        const auto url = GuiUtils::WikiUrl(sub_name);
+                        Resources::Download(url, OnWikiContentDownloaded, info);
+                    }
+                    
+                    return;
+                }
+            }
+
+            const auto weapon_page_regex = std::regex(R"(This article is about [\s\S]*? type[\s\S]*?same name)");
+            if (std::regex_search(response, m, weapon_page_regex)) {
+                // Detected weapon type page. We need to go to the weapon with same name page and fetch materials from there
+                const auto expected_token = std::format("{} (weapon)", info->en_name.string());
+                std::unordered_set<std::string> sub_urls;
+                std::string::const_iterator sub_search_start(response.cbegin());
+                while (std::regex_search(sub_search_start, response.cend(), m, sub_links_regex)) {
+                    const auto entry = m[1].str();
+                    // Search for entries that match [WeaponName] (weapon) token
+                    if (entry == expected_token) {
+                        sub_urls.emplace(entry);
+                    }
+
+                    sub_search_start = m.suffix().first; // Update the start position
+                }
+
+                // Fetch materials of the sub urls and add them to the salvage info struct
+                if (sub_urls.size() > 0) {
+                    for (const auto sub_name : sub_urls) {
+                        const auto url = GuiUtils::WikiUrl(sub_name);
+                        Resources::Download(url, OnWikiContentDownloaded, info);
+                    }
+
+                    return;
+                }
+            }
 
             // Iterate over all skills in this list.
             const auto infobox_row_regex = std::regex(
@@ -182,23 +299,24 @@ namespace {
     SalvageInfo* GetSalvageInfo(const wchar_t* single_item_name) {
         if (!single_item_name)
             return nullptr;
-        const auto found = salvage_info_by_model_id.find(single_item_name);
-        if (found == salvage_info_by_model_id.end()) {
-
+        const auto found = salvage_info_by_single_item_name.find(single_item_name);
+        if (found == salvage_info_by_single_item_name.end() ||
+            found->second->failed) {
+            if (found != salvage_info_by_single_item_name.end()) {
+                delete (found->second);
+            }
             // Need to fetch info for this item.
             auto salvage_info = new SalvageInfo();
             salvage_info->en_name.language(GW::Constants::Language::English);
             salvage_info->en_name.reset(single_item_name);
-            salvage_info_by_model_id[single_item_name] = salvage_info;
-
-
+            salvage_info_by_single_item_name[single_item_name] = salvage_info;
             salvage_info->loading = true;
             Resources::EnqueueWorkerTask([salvage_info]() {
                 FetchSalvageInfoFromGuildWarsWiki(salvage_info);
                 });
 
         }
-        return salvage_info_by_model_id[single_item_name];
+        return salvage_info_by_single_item_name[single_item_name];
     }
 
     void AppendSalvageInfoDescription(const uint32_t item_id, wchar_t** description_out) {
@@ -206,7 +324,7 @@ namespace {
             return;
         const auto item = static_cast<InventoryManager::Item*>(GW::Items::GetItemById(item_id));
 
-        if (!(item && item->name_enc && *item->name_enc && item->IsSalvagable())) {
+        if (!(item && item->name_enc && *item->name_enc && item->IsSalvagable(false))) {
             return;
         }
 
@@ -233,9 +351,9 @@ namespace {
         if (!salvage_info->rare_crafting_materials.empty()) {
             std::wstring items;
             for (auto i : salvage_info->rare_crafting_materials) {
-                if (!items.empty())
-                    items += L"\x2\x108\x107, \x1";
-                items += std::format(L"\x2{}", i->en_name.encoded());
+                if (!items.empty()) 
+                    items += L"\x2\x108\x107, \x1\x2";
+                items += i->en_name.encoded();
             }
 
             item_description_appended += std::format(L"\x2\x102\x2\x108\x107<c=@ItemRare>Rare Materials:</c> \x1\x2{}", items);
@@ -271,11 +389,42 @@ void SalvageInfoModule::Initialize()
     GW::GameThread::Enqueue([]() {
         materials = {
             new CraftingMaterial(GW::Constants::ItemID::Bone, GW::EncStrings::Bone),
-            new CraftingMaterial(GW::Constants::ItemID::IronIngot, GW::EncStrings::IronIngot)
-            // TODO: fill this in
+            new CraftingMaterial(GW::Constants::ItemID::IronIngot, GW::EncStrings::IronIngot),
+            new CraftingMaterial(GW::Constants::ItemID::TannedHideSquare, GW::EncStrings::TannedHideSquare),
+            new CraftingMaterial(GW::Constants::ItemID::ChitinFragment, GW::EncStrings::ChitinFragment),
+            new CraftingMaterial(GW::Constants::ItemID::BoltofCloth, GW::EncStrings::BoltofCloth),
+            new CraftingMaterial(GW::Constants::ItemID::WoodPlank, GW::EncStrings::WoodPlank),
+            new CraftingMaterial(GW::Constants::ItemID::GraniteSlab, GW::EncStrings::GraniteSlab),
+            new CraftingMaterial(GW::Constants::ItemID::PileofGlitteringDust, GW::EncStrings::PileofGlitteringDust),
+            new CraftingMaterial(GW::Constants::ItemID::PlantFiber, GW::EncStrings::PlantFiber),
+            new CraftingMaterial(GW::Constants::ItemID::Feather, GW::EncStrings::Feather),
+            new CraftingMaterial(GW::Constants::ItemID::FurSquare, GW::EncStrings::FurSquare),
+            new CraftingMaterial(GW::Constants::ItemID::BoltofLinen, GW::EncStrings::BoltofLinen),
+            new CraftingMaterial(GW::Constants::ItemID::BoltofDamask, GW::EncStrings::BoltofDamask),
+            new CraftingMaterial(GW::Constants::ItemID::BoltofSilk, GW::EncStrings::BoltofSilk),
+            new CraftingMaterial(GW::Constants::ItemID::GlobofEctoplasm, GW::EncStrings::GlobofEctoplasm),
+            new CraftingMaterial(GW::Constants::ItemID::SteelIngot, GW::EncStrings::SteelIngot),
+            new CraftingMaterial(GW::Constants::ItemID::DeldrimorSteelIngot, GW::EncStrings::DeldrimorSteelIngot),
+            new CraftingMaterial(GW::Constants::ItemID::MonstrousClaw, GW::EncStrings::MonstrousClaw),
+            new CraftingMaterial(GW::Constants::ItemID::MonstrousEye, GW::EncStrings::MonstrousEye),
+            new CraftingMaterial(GW::Constants::ItemID::MonstrousFang, GW::EncStrings::MonstrousFang),
+            new CraftingMaterial(GW::Constants::ItemID::Ruby, GW::EncStrings::Ruby),
+            new CraftingMaterial(GW::Constants::ItemID::Sapphire, GW::EncStrings::Sapphire),
+            new CraftingMaterial(GW::Constants::ItemID::Diamond, GW::EncStrings::Diamond),
+            new CraftingMaterial(GW::Constants::ItemID::OnyxGemstone, GW::EncStrings::OnyxGemstone),
+            new CraftingMaterial(GW::Constants::ItemID::LumpofCharcoal, GW::EncStrings::LumpofCharcoal),
+            new CraftingMaterial(GW::Constants::ItemID::ObsidianShard, GW::EncStrings::ObsidianShard),
+            new CraftingMaterial(GW::Constants::ItemID::TemperedGlassVial, GW::EncStrings::TemperedGlassVial),
+            new CraftingMaterial(GW::Constants::ItemID::LeatherSquare, GW::EncStrings::LeatherSquare),
+            new CraftingMaterial(GW::Constants::ItemID::ElonianLeatherSquare, GW::EncStrings::ElonianLeatherSquare),
+            new CraftingMaterial(GW::Constants::ItemID::VialofInk, GW::EncStrings::VialofInk),
+            new CraftingMaterial(GW::Constants::ItemID::RollofParchment, GW::EncStrings::RollofParchment),
+            new CraftingMaterial(GW::Constants::ItemID::RollofVellum, GW::EncStrings::RollofVellum),
+            new CraftingMaterial(GW::Constants::ItemID::SpiritwoodPlank, GW::EncStrings::SpiritwoodPlank),
+            new CraftingMaterial(GW::Constants::ItemID::AmberChunk, GW::EncStrings::AmberChunk),
+            new CraftingMaterial(GW::Constants::ItemID::JadeiteShard, GW::EncStrings::JadeiteShard)
         };
-        });
-
+    });
 }
 
 void SalvageInfoModule::Terminate()
