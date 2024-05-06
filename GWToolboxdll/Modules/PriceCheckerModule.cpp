@@ -30,8 +30,37 @@ namespace {
     std::wstring modified_description;
     bool fetching_prices;
     const char* trader_quotes_url = "https://kamadan.gwtoolbox.com/trader_quotes";
-    json price_json = nullptr;
     clock_t last_request_time = 0;
+    std::unordered_map<std::string, uint32_t> prices_by_identifier;
+
+    bool ParsePriceJson(const std::string& prices_json_str) {
+
+        const json& prices_json = json::parse(prices_json_str, nullptr, false);
+        if (prices_json == json::value_t::discarded) {
+            return false;
+        }
+
+        prices_by_identifier.clear();
+        const auto& it_buy = prices_json.find("buy");
+        if (it_buy == prices_json.end() || !it_buy->is_object()) {
+            return false;
+        }
+
+        const auto& buy = it_buy.value();
+
+        for (auto it = buy.begin(); it != buy.end(); it++) {
+            const auto& identifier = it.key();
+            if (!it->is_object())
+                continue;
+            const auto& price_value = it->find("p");
+            if (!(price_value != it->end() && price_value->is_number_unsigned()))
+                continue;
+            prices_by_identifier[identifier] = price_value->get<uint32_t>();
+        }
+        return !prices_by_identifier.empty();
+    }
+
+
     std::unordered_map<uint32_t, const char*> mod_to_name =
     {
         {0x240801F9, "Knight's Insignia"},
@@ -407,74 +436,6 @@ namespace {
         {0x24080212, "898-25B80000240802122530042523480A00"}                    // Rune of Vitae
     };
 
-
-    void LoadFromCache()
-    {
-        const auto computer_path = Resources::GetComputerFolderPath();
-        const auto cache_path = computer_path / "price_quote_cache.json";
-        std::ifstream cache_file(cache_path);
-        if (!cache_file.is_open()) {
-            return;
-        }
-
-        try
-        {
-            std::stringstream buffer;
-            buffer << cache_file.rdbuf();
-            cache_file.close();
-
-            price_json = nlohmann::json::parse(buffer.str());
-        }
-        catch (...)
-        {
-        }
-
-        return;
-    }
-
-    void CacheResponse(const std::string& response)
-    {
-        const auto computer_path = Resources::GetComputerFolderPath();
-        const auto cache_path = computer_path / "price_quote_cache.json";
-        std::ofstream cache_file(cache_path);
-        if (!cache_file.is_open()) {
-            return;
-        }
-
-        cache_file << response;
-        cache_file.close();
-    }
-
-    void EnsureLatestPriceJson()
-    {
-        if (TIMER_DIFF(last_request_time) < 3600)
-            return;
-        if (fetching_prices)
-            return;
-
-        fetching_prices = true;
-        last_request_time = TIMER_INIT();
-        Resources::Download(trader_quotes_url, [](bool success, const std::string& response, void*) {
-            if (!success)
-            {
-                LoadFromCache();
-                fetching_prices = false;
-                return;
-            }
-
-            try
-            {
-                CacheResponse(response);
-                price_json = nlohmann::json::parse(response);
-            }
-            catch (...)
-            {
-            }
-
-            fetching_prices = false;
-            });
-    }
-
     bool IsCommonMaterial(const GW::Item* item) {
         if (item && item->GetModifier(0x2508))
             return item->GetModifier(0x2508)->arg1() <= std::to_underlying(GW::Constants::MaterialSlot::Feather);
@@ -483,20 +444,12 @@ namespace {
 
     float GetPriceById(const char* id)
     {
-        const auto& it_buy = price_json.find("buy");
-        if (it_buy == price_json.end() || !it_buy->is_object()) {
-            return 0;
+        const auto prices = PriceCheckerModule::FetchPrices();
+        const auto found = prices.find(id);
+        if (found != prices.end()) {
+            return static_cast<float>(found->second);
         }
-
-        const auto& buy = it_buy.value();
-        const auto& it_id = buy.find(id);
-        if (it_id == it_buy->end() || !it_id->is_object()) {
-            return 0;
-        }
-        const auto& price_value = it_id->find("p");
-        if (!(price_value != it_id->end() && price_value->is_number()))
-            return 0;
-        return price_value->get<float>();
+        return .0f;
     }
 
     std::wstring PrintPrice(float price, const char* name = nullptr) {
@@ -577,7 +530,7 @@ void PriceCheckerModule::Initialize()
         GW::HookBase::EnableHooks(GetItemDescription_Func);
     }
 
-    LoadFromCache();
+    FetchPrices();
 }
 
 void PriceCheckerModule::Terminate()
@@ -587,11 +540,6 @@ void PriceCheckerModule::Terminate()
     if (GetItemDescription_Func) {
         GW::HookBase::DisableHooks(GetItemDescription_Func);
     }
-}
-
-void PriceCheckerModule::Update(const float)
-{
-    EnsureLatestPriceJson();
 }
 
 void PriceCheckerModule::SaveSettings(ToolboxIni* ini)
@@ -624,4 +572,18 @@ void PriceCheckerModule::RegisterSettingsContent()
         },
         0.9f
     );
+}
+
+const std::unordered_map<std::string,uint32_t>& PriceCheckerModule::FetchPrices() {
+    if (TIMER_DIFF(last_request_time) > 1000 * 60 * 5) {
+        last_request_time = TIMER_INIT();
+        Resources::Download(trader_quotes_url, [](bool success, const std::string& response, void*) {
+            if (!success) {
+                last_request_time = 0;
+                return;
+            }
+            ParsePriceJson(response);
+            });
+    }
+    return prices_by_identifier;
 }
