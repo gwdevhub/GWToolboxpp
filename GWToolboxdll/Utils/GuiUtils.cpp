@@ -4,6 +4,7 @@
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <Utf8.h>
 #include <fonts/fontawesome5.h>
@@ -962,7 +963,10 @@ namespace GuiUtils {
     {
         if (!decoded && !decoding && !encoded_ws.empty()) {
             decoding = true;
-            GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnStringDecoded, this, language_id);
+            GW::GameThread::Enqueue([&]() {
+                GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnStringDecoded, this, language_id);
+                });
+
         }
         sanitise();
         return decoded_ws;
