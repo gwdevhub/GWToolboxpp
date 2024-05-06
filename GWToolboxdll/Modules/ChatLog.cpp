@@ -345,7 +345,8 @@ namespace {
             }
             recv = recv->next;
         }
-        ASSERT(inifile->SaveFile(LogPath(L"recv").c_str()) == SI_OK);
+        const auto res = inifile->SaveFile(LogPath(L"recv").c_str());
+        ASSERT(res == SI_OK);
         delete inifile;
 
         // Sent log FIFO
