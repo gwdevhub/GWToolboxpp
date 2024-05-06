@@ -158,7 +158,7 @@ public:
         bool IsPerfectSalvageKit() const;
         bool IsWeapon();
         bool IsArmor();
-        bool IsSalvagable();
+        bool IsSalvagable(bool check_bag = true);
         bool IsHiddenFromMerchants();
 
         bool IsRareMaterial() const;

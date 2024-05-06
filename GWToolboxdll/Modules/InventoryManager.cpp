@@ -2347,7 +2347,7 @@ bool InventoryManager::Item::CanOfferToTrade() const
     return IsTradable() && IsTradeWindowOpen() && !IsOfferedInTrade() && player_items->size() < 7;
 }
 
-bool InventoryManager::Item::IsSalvagable()
+bool InventoryManager::Item::IsSalvagable(bool check_bag)
 {
     if (item_formula == 0x5da) {
         return false;
@@ -2358,10 +2358,10 @@ bool InventoryManager::Item::IsSalvagable()
     if (!bag) {
         return false;
     }
-    if (!bag->IsInventoryBag() && !bag->IsStorageBag()) {
+    if (check_bag && !bag->IsInventoryBag() && !bag->IsStorageBag()) {
         return false;
     }
-    if (bag->index + 1 == std::to_underlying(GW::Constants::Bag::Equipment_Pack)) {
+    if (check_bag && bag->index + 1 == std::to_underlying(GW::Constants::Bag::Equipment_Pack)) {
         return false;
     }
     switch (static_cast<GW::Constants::ItemType>(type)) {
