@@ -597,7 +597,7 @@ namespace {
         PreMoveItemStruct details;
         details.item_id = item->item_id;
         // Doesn't matter where the prompt is asking to move to, as long as its not the same slot; we're going to override later.
-        details.bag_id = std::to_underlying(GW::Constants::Bag::Backpack); // empty_bag_id;
+        details.bag_id = std::to_underlying(GW::Constants::Bag::None); // empty_bag_id;
         details.slot = 0;                                                     // empty_slot;
         if (item->bag->index == details.bag_id && item->slot == details.slot) {
             details.slot++;
