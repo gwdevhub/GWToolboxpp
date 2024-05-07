@@ -541,6 +541,129 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
     });
 }
 
+void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, void* context, std::chrono::seconds cache_duration)
+{
+    const auto get_cache_expiration = [](const std::filesystem::path& file_name) -> std::optional<std::chrono::seconds> {
+        std::ifstream cache_file(file_name, std::ios::binary | std::ios::ate);
+        if (!cache_file.is_open()) {
+            return std::optional<std::chrono::seconds>();
+        }
+
+        try {
+            std::streampos file_size = cache_file.tellg();
+            if (file_size < 8) {
+                cache_file.close();
+                return std::optional<std::chrono::seconds>();
+            }
+            cache_file.seekg(-8, std::ios::end);
+            std::vector<char> duration_bytes;
+            duration_bytes.resize(8);
+
+            cache_file.read(duration_bytes.data(), 8);
+            long long seconds;
+            std::memcpy(&seconds, duration_bytes.data(), sizeof(seconds));
+            cache_file.close();
+            return std::chrono::seconds(seconds);
+        }
+        catch (...) {
+            cache_file.close();
+            return std::optional<std::chrono::seconds>();
+        }
+    };
+
+    const auto load_from_cache = [](const std::filesystem::path& file_name) -> std::optional<std::string> {
+        std::ifstream cache_file(file_name, std::ios::binary | std::ios::ate);
+        if (!cache_file.is_open()) {
+            return std::optional<std::string>();
+        }
+
+        try {
+            std::streampos file_size = cache_file.tellg();
+            if (file_size < 8) {
+                cache_file.close();
+                return std::optional<std::string>();
+            }
+
+            cache_file.seekg(0, std::ios::beg);
+            std::string file_buffer;
+            file_buffer.resize(static_cast<size_t>(file_size - std::streamoff(8)));
+            cache_file.read(file_buffer.data(), file_buffer.size());
+            cache_file.close();
+            return file_buffer;
+        } catch (...) {
+            cache_file.close();
+            return std::optional<std::string>();
+        }
+    };
+
+    const auto save_to_cache = [](const std::filesystem::path& file_name, const std::string& content, const std::chrono::seconds cache_duration) -> bool {
+        std::filesystem::create_directories(file_name.parent_path());
+        std::ofstream cache_file(file_name);
+        if (!cache_file.is_open()) {
+            return false;
+        }
+
+        try {
+            cache_file << content;
+            std::vector<char> duration_buff;
+            const long long seconds = cache_duration.count();
+            duration_buff.resize(8);
+            std::memcpy(duration_buff.data(), &seconds, duration_buff.size());
+            for (const auto c : duration_buff) {
+                cache_file << c;
+            }
+            cache_file.close();
+            return true;
+        } catch (...) {
+            cache_file.close();
+            return false;
+        }
+    };
+
+    const auto remove_protocol = [](const std::string& url) -> std::string {
+        const std::string http = "http://";
+        const std::string https = "https://";
+
+        // Check if the URL starts with http:// or https:// and remove it
+        if (url.substr(0, http.size()) == http) {
+            return url.substr(http.size());
+        }
+        else if (url.substr(0, https.size()) == https) {
+            return url.substr(https.size());
+        }
+        return url; // Return the original if no match is found
+    };
+
+    EnqueueWorkerTask([url, callback, context, cache_duration, &get_cache_expiration, &load_from_cache, &save_to_cache, &remove_protocol] {
+        const auto computer_path = Resources::GetComputerFolderPath();
+        auto cache_path_str = (computer_path / "cache" / remove_protocol(url)).string();
+        for (char& c : cache_path_str) {
+            if (c == '/') {
+                c = '\\';
+            }
+        }
+        const auto cache_path = std::filesystem::path(cache_path_str);
+        const auto expiration = get_cache_expiration(cache_path);
+        if (expiration.has_value() &&
+            expiration.value() > std::chrono::system_clock::now().time_since_epoch()) {
+            const auto response = load_from_cache(cache_path);
+            if (response.has_value()) {
+                EnqueueMainTask([callback, context, response] {
+                    callback(true, response.value(), context);
+                });
+                return;
+            }
+        }
+        std::string response;
+        bool ok = Download(url, response);
+        const auto expiration_time = std::chrono::duration_cast<std::chrono::seconds>((std::chrono::system_clock::now() + cache_duration).time_since_epoch());
+        save_to_cache(cache_path, response, expiration_time);
+        EnqueueMainTask([callback, ok, response, context] {
+            callback(ok, response, context);
+        });
+    });
+}
+
 bool Resources::Post(const std::string& url, const std::string& payload, std::string& response)
 {
     RestClient r;
