@@ -2,9 +2,9 @@
 
 #include <Defines.h>
 #include <Logger.h>
+#include <base64.h>
 #include <ctime>
 #include <regex>
-#include <base64.h>
 
 #include <GWCA/GameEntities/Item.h>
 
@@ -22,6 +22,7 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
+#include <Modules/ItemDescriptionHandler.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/Resources.h>
 #include <Modules/GameSettings.h>
@@ -92,8 +93,6 @@ namespace {
     };
 
     std::unordered_map<std::wstring, SalvageInfo*> salvage_info_by_single_item_name;
-
-    std::wstring item_description_appended; // Not thread safe
 
     const char* ws = " \t\n\r\f\v";
 
@@ -315,9 +314,7 @@ namespace {
         return salvage_info_by_single_item_name[single_item_name];
     }
 
-    void AppendSalvageInfoDescription(const uint32_t item_id, wchar_t** description_out) {
-        if (!(description_out && *description_out))
-            return;
+    void AppendSalvageInfoDescription(const uint32_t item_id, std::wstring& description) {
         const auto item = static_cast<InventoryManager::Item*>(GW::Items::GetItemById(item_id));
 
         if (!(item && item->name_enc && *item->name_enc && item->IsSalvagable(false))) {
@@ -336,10 +333,8 @@ namespace {
         if (!salvage_info)
             return;
 
-        item_description_appended = *description_out;
-
         if (salvage_info->loading) {
-            item_description_appended += L"\x2\x102\x2\x108\x107" L"Fetching salvage info...\x1";
+            description += L"\x2\x102\x2\x108\x107" L"Fetching salvage info...\x1";
         }
 
         if (!salvage_info->common_crafting_materials.empty()) {
@@ -350,7 +345,7 @@ namespace {
                 items += i->en_name.encoded();
             }
 
-            item_description_appended += std::format(L"\x2\x102\x2\x108\x107<c=@ItemCommon>Common Materials:</c> \x1\x2{}", items);
+            description += std::format(L"\x2\x102\x2\x108\x107<c=@ItemCommon>Common Materials:</c> \x1\x2{}", items);
         }
         if (!salvage_info->rare_crafting_materials.empty()) {
             std::wstring items;
@@ -360,21 +355,13 @@ namespace {
                 items += i->en_name.encoded();
             }
 
-            item_description_appended += std::format(L"\x2\x102\x2\x108\x107<c=@ItemEnhance>Rare Materials:</c> \x1\x2{}", items);
+            description += std::format(L"\x2\x102\x2\x108\x107<c=@ItemRare>Rare Materials:</c> \x1\x2{}", items);
         }
-        *description_out = item_description_appended.data();
     }
 
-    using GetItemDescription_pt = void(__cdecl*)(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** out, wchar_t** out2);
-    GetItemDescription_pt GetItemDescription_Func = nullptr, GetItemDescription_Ret = nullptr;
-    // Block full item descriptions
-    void OnGetItemDescription(const uint32_t item_id, const uint32_t flags, const uint32_t quantity, const uint32_t unk, wchar_t** name_out, wchar_t** description_out)
+    void OnGetItemDescription(ItemDescriptionEventArgs& args)
     {
-        GW::Hook::EnterHook();
-        GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, description_out);
-        AppendSalvageInfoDescription(item_id, description_out);
-
-        GW::Hook::LeaveHook();
+        AppendSalvageInfoDescription(args.item_id, args.description);
     }
 }
 
@@ -382,13 +369,8 @@ void SalvageInfoModule::Initialize()
 {
     ToolboxModule::Initialize();
 
-    // Copied from GameSettings.cpp
-    GetItemDescription_Func = (GetItemDescription_pt)GameSettings::OnGetItemDescription;
-    if (GetItemDescription_Func) {
-        ASSERT(GW::HookBase::CreateHook((void**)&GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret) == 0);
-        GW::HookBase::EnableHooks(GetItemDescription_Func);
-    }
-    GW::GameThread::Enqueue([] {
+    ItemDescriptionHandler::Instance().RegisterDescriptionCallback(OnGetItemDescription, 200);
+    GW::GameThread::Enqueue([]() {
         materials = {
             new CraftingMaterial(GW::Constants::ItemID::Bone, GW::EncStrings::Bone),
             new CraftingMaterial(GW::Constants::ItemID::IronIngot, GW::EncStrings::IronIngot),
@@ -432,10 +414,6 @@ void SalvageInfoModule::Initialize()
 void SalvageInfoModule::Terminate()
 {
     ToolboxModule::Terminate();
-
-    if (GetItemDescription_Func) {
-        GW::HookBase::DisableHooks(GetItemDescription_Func);
-    }
 
     for (auto m : materials) {
         delete m;
