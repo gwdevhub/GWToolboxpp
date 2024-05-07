@@ -544,6 +544,11 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
 void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, void* context, std::chrono::seconds cache_duration)
 {
     const auto get_cache_expiration = [](const std::filesystem::path& file_name) -> std::optional<std::chrono::seconds> {
+        /*
+        * Load the expiration time from the cache. The expiration time
+        * is the last 8 bytes at the end of the file. They represent
+        * the amount of seconds from epoch until when the cache should expire.
+        */
         std::ifstream cache_file(file_name, std::ios::binary | std::ios::ate);
         if (!cache_file.is_open()) {
             return std::optional<std::chrono::seconds>();
@@ -572,6 +577,10 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
     };
 
     const auto load_from_cache = [](const std::filesystem::path& file_name) -> std::optional<std::string> {
+        /*
+        * Load the file from cache. The last 8 bytes
+        * are the expiration time, so we don't need to load those.
+        */
         std::ifstream cache_file(file_name, std::ios::binary | std::ios::ate);
         if (!cache_file.is_open()) {
             return std::optional<std::string>();
@@ -597,6 +606,11 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
     };
 
     const auto save_to_cache = [](const std::filesystem::path& file_name, const std::string& content, const std::chrono::seconds cache_duration) -> bool {
+        /*
+        * Save the file contents to a cached file. At the end of the file,
+        * append 8 bytes representing the amount of seconds since epoch
+        * until the cache should expire
+        */
         std::filesystem::create_directories(file_name.parent_path());
         std::ofstream cache_file(file_name);
         if (!cache_file.is_open()) {
