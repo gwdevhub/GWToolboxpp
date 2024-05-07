@@ -575,7 +575,7 @@ void PriceCheckerModule::RegisterSettingsContent()
 }
 
 const std::unordered_map<std::string,uint32_t>& PriceCheckerModule::FetchPrices() {
-    if (TIMER_DIFF(last_request_time) > 1000 * 60 * 5) {
+    if (!last_request_time || TIMER_DIFF(last_request_time) > 1000 * 60 * 5) {
         last_request_time = TIMER_INIT();
         Resources::Download(trader_quotes_url, [](bool success, const std::string& response, void*) {
             if (!success) {
