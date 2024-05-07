@@ -201,7 +201,7 @@ namespace {
             std::string infobox_content = m[1].str();
 
             const auto sub_links_regex = std::regex(R"delim(<a href="\/wiki\/File:[\s\S]*?title="([\s\S]*?)">)delim");
-            const auto disambig_regex = std::regex("This disambiguation page lists articles associated");
+            const auto disambig_regex = std::regex("This disambiguation page");
             if (std::regex_search(infobox_content, m, disambig_regex)) {
                 // Detected a disambiguation page. We need to search for materials in the hrefs listed on this page
                 std::unordered_set<std::string> sub_urls;
@@ -325,6 +325,14 @@ namespace {
         const auto item = static_cast<InventoryManager::Item*>(GW::Items::GetItemById(item_id));
 
         if (!(item && item->name_enc && *item->name_enc && item->IsSalvagable(false))) {
+            return;
+        }
+
+        if (item->type == GW::Constants::ItemType::Boots ||
+            item->type == GW::Constants::ItemType::Gloves ||
+            item->type == GW::Constants::ItemType::Leggings ||
+            item->type == GW::Constants::ItemType::Headpiece ||
+            item->type == GW::Constants::ItemType::Chestpiece) {
             return;
         }
 
