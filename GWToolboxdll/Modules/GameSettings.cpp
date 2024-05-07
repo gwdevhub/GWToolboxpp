@@ -1290,7 +1290,7 @@ void GameSettings::Initialize()
     GW::HookBase::CreateHook((void**)&ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, reinterpret_cast<void**>(&ShowAgentExperienceGain_Ret));
     GW::HookBase::EnableHooks(ShowAgentExperienceGain_Func);
 
-    RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendDialog, bind_member(this, &GameSettings::OnFactionDonate));
+    RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendAgentDialog, bind_member(this, &GameSettings::OnFactionDonate));
     RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillbar, &OnPreLoadSkillBar);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILLBAR_UPDATE, OnPostLoadSkillBar, 0x8000);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, OnUpdateSkillCount, -0x3000);
