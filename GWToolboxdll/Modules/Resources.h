@@ -123,7 +123,8 @@ public:
     static bool Download(const std::string& url, std::string& response);
     // download to memory, async, calls callback on completion. If an error occurs, details are held in response string
     static void Download(const std::string& url, AsyncLoadMbCallback callback, void* wparam = nullptr);
-
+    // download to memory, async, calls callback on completion and caches the response locally for the duration specified. If an error occurs, details are held in response string
+    static void Download(const std::string& url, AsyncLoadMbCallback callback, void* context, std::chrono::seconds cache_duration);
 
     // download to memory, blocking. If an error occurs, details are held in response string
     static bool Post(const std::string& url, const std::string& payload, std::string& response);

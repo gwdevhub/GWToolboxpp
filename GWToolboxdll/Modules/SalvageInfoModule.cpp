@@ -220,7 +220,7 @@ namespace {
                 if (sub_urls.size() > 0) {
                     for (const auto sub_name : sub_urls) {
                         const auto url = GuiUtils::WikiUrl(sub_name);
-                        Resources::Download(url, OnWikiContentDownloaded, info);
+                        Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(30));
                     }
                     
                     return;
@@ -247,7 +247,7 @@ namespace {
                 if (sub_urls.size() > 0) {
                     for (const auto sub_name : sub_urls) {
                         const auto url = GuiUtils::WikiUrl(sub_name);
-                        Resources::Download(url, OnWikiContentDownloaded, info);
+                        Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(30));
                     }
 
                     return;
@@ -292,7 +292,7 @@ namespace {
             Sleep(16);
         }
         const auto url = GuiUtils::WikiUrl(info->en_name.string().c_str());
-        Resources::Download(url, OnWikiContentDownloaded, info);
+        Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(30));
     }
 
 
@@ -364,7 +364,7 @@ namespace {
                 items += i->en_name.encoded();
             }
 
-            item_description_appended += std::format(L"\x2\x102\x2\x108\x107<c=@ItemRare>Rare Materials:</c> \x1\x2{}", items);
+            item_description_appended += std::format(L"\x2\x102\x2\x108\x107<c=@ItemEnhance>Rare Materials:</c> \x1\x2{}", items);
         }
         *description_out = item_description_appended.data();
     }
