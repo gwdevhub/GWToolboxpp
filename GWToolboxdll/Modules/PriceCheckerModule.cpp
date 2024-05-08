@@ -470,6 +470,10 @@ namespace {
     {
         if (!(description_out && *description_out))
             return;
+
+        if (!fetch_module_prices)
+            return;
+
         const auto item = GW::Items::GetItemById(item_id);
         if (!item)
             return;
