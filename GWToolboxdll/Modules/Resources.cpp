@@ -553,7 +553,7 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
         return hash_file;
     };
 
-    const auto get_cache_modified_time = [&hash_name](const std::filesystem::path& file_name) -> std::optional<std::filesystem::file_time_type> {
+    const auto get_cache_modified_time = [](const std::filesystem::path& file_name) -> std::optional<std::filesystem::file_time_type> {
         if (!std::filesystem::exists(file_name)) {
             return std::optional<std::filesystem::file_time_type>();
         }
@@ -565,7 +565,7 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
     const auto load_from_cache = [](const std::filesystem::path& file_name) -> std::optional<std::string> {
         std::ifstream cache_file(file_name);
         if (!cache_file.is_open()) {
-            return std::optional<std::string>();
+            return {};
         }
 
         std::string contents((std::istreambuf_iterator<char>(cache_file)), std::istreambuf_iterator<char>());
@@ -591,19 +591,18 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
         if (url.substr(0, http.size()) == http) {
             return url.substr(http.size());
         }
-        else if (url.substr(0, https.size()) == https) {
+        if (url.substr(0, https.size()) == https) {
             return url.substr(https.size());
         }
         return url; // Return the original if no match is found
     };
 
-    EnqueueWorkerTask([url, callback, context, cache_duration, &get_cache_modified_time, &load_from_cache, &save_to_cache, &remove_protocol, &hash_name] {
-        const auto computer_path = Resources::GetComputerFolderPath();
-        const auto cache_path = (computer_path / "cache" / remove_protocol(url));
+    EnqueueWorkerTask([url, callback, context, &cache_duration, &get_cache_modified_time, &load_from_cache, &save_to_cache, &remove_protocol, &hash_name] {
+        const auto cache_path = Resources::GetPath("cache") / remove_protocol(url);
         const auto hashed_path = hash_name(cache_path);
         const auto expiration = get_cache_modified_time(cache_path);
         if (expiration.has_value() &&
-            expiration.value() - std::chrono::file_clock::now() < std::chrono::days(30)) {
+            expiration.value() - std::chrono::file_clock::now() < cache_duration) {
             const auto response = load_from_cache(cache_path);
             if (response.has_value()) {
                 EnqueueMainTask([callback, context, response] {
