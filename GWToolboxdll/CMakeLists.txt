@@ -34,7 +34,7 @@ set_target_properties(GWToolboxdll PROPERTIES
 
 target_link_options(GWToolboxdll PRIVATE
     /WX /OPT:REF /OPT:ICF /SAFESEH:NO
-    $<$<NOT:$<CONFIG:Debug>>:/LTCG /INCREMENTAL:NO>
+    $<$<NOT:$<CONFIG:Debug>>:/INCREMENTAL:NO>
     $<$<CONFIG:Debug>:/IGNORE:4098 /OPT:NOREF /OPT:NOICF>
     $<$<CONFIG:RelWithDebInfo>:/OPT:NOICF>
     $<$<CONFIG:DEBUG>:/NODEFAULTLIB:LIBCMT>

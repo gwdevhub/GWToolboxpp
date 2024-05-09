@@ -539,6 +539,7 @@ void PriceCheckerModule::Terminate()
 
     if (GetItemDescription_Func) {
         GW::HookBase::DisableHooks(GetItemDescription_Func);
+        GW::HookBase::RemoveHook(GetItemDescription_Func);
     }
 }
 
