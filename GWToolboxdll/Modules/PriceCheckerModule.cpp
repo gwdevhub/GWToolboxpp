@@ -25,7 +25,6 @@
 using nlohmann::json;
 
 namespace {
-    bool fetch_module_prices = true;
     float high_price_threshold = 1000;
     std::wstring modified_description;
     bool fetching_prices;
@@ -471,9 +470,6 @@ namespace {
         if (!(description_out && *description_out))
             return;
 
-        if (!fetch_module_prices)
-            return;
-
         const auto item = GW::Items::GetItemById(item_id);
         if (!item)
             return;
@@ -550,14 +546,12 @@ void PriceCheckerModule::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     SAVE_FLOAT(high_price_threshold);
-    SAVE_BOOL(fetch_module_prices);
 }
 
 void PriceCheckerModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     LOAD_FLOAT(high_price_threshold);
-    LOAD_BOOL(fetch_module_prices);
 }
 
 void PriceCheckerModule::RegisterSettingsContent()
@@ -570,9 +564,7 @@ void PriceCheckerModule::RegisterSettingsContent()
                 return;
             }
 
-            ImGui::Checkbox("Fetch prices for item components", &fetch_module_prices);
-            ImGui::ShowHelp("When enabled, the item description will contain information about the components of the item and their respective prices");
-            ImGui::SliderFloat("High price threshold", &high_price_threshold, 100, 50000);
+            ImGui::SliderFloat("Price Checker high price threshold", &high_price_threshold, 100, 50000);
         },
         0.9f
     );

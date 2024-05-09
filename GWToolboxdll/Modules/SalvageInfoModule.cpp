@@ -71,9 +71,6 @@ namespace GW {
 }
 
 namespace {
-
-    bool fetch_salvage_info = true;
-
     struct CraftingMaterial {
         uint32_t model_id; // Used to map to kamadan trade chat
         GuiUtils::EncString en_name; // Used to map to Guild Wars Wiki
@@ -376,9 +373,7 @@ namespace {
     {
         GW::Hook::EnterHook();
         GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, description_out);
-        if (fetch_salvage_info && description_out && *description_out) {
-            AppendSalvageInfoDescription(item_id, description_out);
-        }
+        AppendSalvageInfoDescription(item_id, description_out);
 
         GW::Hook::LeaveHook();
     }
@@ -456,28 +451,13 @@ void SalvageInfoModule::Update(const float)
 void SalvageInfoModule::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
-    SAVE_BOOL(fetch_salvage_info);
 }
 
 void SalvageInfoModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
-    LOAD_BOOL(fetch_salvage_info);
 }
 
 void SalvageInfoModule::RegisterSettingsContent()
 {
-    //ToolboxModule::RegisterSettingsContent();
-    ToolboxModule::RegisterSettingsContent(
-        "Inventory Settings", ICON_FA_BOXES,
-        [this](const std::string&, const bool is_showing) {
-            if (!is_showing) {
-                return;
-            }
-
-            ImGui::Checkbox("Fetch salvage information for items", &fetch_salvage_info);
-            ImGui::ShowHelp("When enabled, the item description will contain information about the crafting materials that can be salvaged from the item");
-        },
-        0.9f
-    );
 }
