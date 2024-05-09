@@ -546,8 +546,8 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
     const auto hash_name = [](const std::filesystem::path& file_name) -> std::filesystem::path {
         const auto str = file_name.string();
         const auto bytes_to_hash = std::vector<byte>(str.begin(), str.end());
-        auto hash = std::vector<byte>(WC_MD5_DIGEST_SIZE);
-        wc_Md5Hash(bytes_to_hash.data(), bytes_to_hash.size(), hash.data());
+        auto hash = std::vector<byte>(WC_SHA256_DIGEST_SIZE);
+        wc_Sha256Hash(bytes_to_hash.data(), bytes_to_hash.size(), hash.data());
         const auto hash_str = std::string(hash.begin(), hash.end());
         const auto hash_file = std::filesystem::path(hash_str);
         return hash_file;
