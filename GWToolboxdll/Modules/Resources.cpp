@@ -548,7 +548,12 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
         const auto bytes_to_hash = std::vector<byte>(str.begin(), str.end());
         auto hash = std::vector<byte>(WC_SHA256_DIGEST_SIZE);
         wc_Sha256Hash(bytes_to_hash.data(), bytes_to_hash.size(), hash.data());
-        const auto hash_str = std::string(hash.begin(), hash.end());
+        std::stringstream hexstream;
+        hexstream << std::hex << std::setfill('0');
+        for (auto b : hash) {
+            hexstream << std::setw(2) << static_cast<unsigned>(b);
+        }
+        const auto hash_str = hexstream.str();
         const auto hash_file = std::filesystem::path(hash_str);
         return hash_file;
     };
@@ -598,8 +603,7 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
     };
 
     EnqueueWorkerTask([url, callback, context, &cache_duration, &get_cache_modified_time, &load_from_cache, &save_to_cache, &remove_protocol, &hash_name] {
-        const auto cache_path = Resources::GetPath("cache") / remove_protocol(url);
-        const auto hashed_path = hash_name(cache_path);
+        const auto cache_path = Resources::GetPath("cache") / hash_name(remove_protocol(url));
         const auto expiration = get_cache_modified_time(cache_path);
         if (expiration.has_value() &&
             expiration.value() - std::chrono::file_clock::now() < cache_duration) {
