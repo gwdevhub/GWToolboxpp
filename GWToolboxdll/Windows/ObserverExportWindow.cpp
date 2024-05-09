@@ -21,7 +21,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_0_1()
     ObserverModule& observer_module = ObserverModule::Instance();
     const std::vector<uint32_t>& party_ids = observer_module.GetObservablePartyIds();
 
-    auto shared_stats_to_json = [](const ObserverModule::SharedStats& stats) -> nlohmann::json {
+    auto shared_stats_to_json = [](const ObserverModule::SharedStats& stats) {
         nlohmann::json shared_json;
         shared_json["total_crits_received"] = stats.total_crits_received;
         shared_json["total_crits_dealt"] = stats.total_crits_dealt;
@@ -78,7 +78,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_0_1()
                             json["skills"].push_back(nlohmann::json::value_t::null);
                             continue;
                         }
-                        json["skills"].push_back([&]() -> nlohmann::json {
+                        json["skills"].push_back([&] {
                             // parties -> party -> agents -> agent -> skills -> skill
                             nlohmann::json json_skill;
                             json_skill["name"] = skill->Name();
@@ -130,7 +130,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
         json["map"]["description_id"] = map->description_id;
     }
 
-    auto action_to_json = [](const ObserverModule::ObservedAction& action) -> nlohmann::json {
+    auto action_to_json = [](const ObserverModule::ObservedAction& action) {
         nlohmann::json action_json;
         action_json["started"] = action.started;
         action_json["stopped"] = action.stopped;
@@ -140,7 +140,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
         return action_json;
     };
 
-    auto shared_stats_to_json = [&action_to_json](const ObserverModule::SharedStats& stats) -> nlohmann::json {
+    auto shared_stats_to_json = [&action_to_json](const ObserverModule::SharedStats& stats) {
         nlohmann::json stats_json;
         stats_json["total_crits_received"] = stats.total_crits_received;
         stats_json["total_crits_dealt"] = stats.total_crits_dealt;
