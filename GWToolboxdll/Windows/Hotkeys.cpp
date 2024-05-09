@@ -1304,7 +1304,7 @@ void HotkeyDropUseBuff::Execute()
         if (islot >= 0) {
             uint32_t slot = static_cast<uint32_t>(islot);
             if (GW::SkillbarMgr::GetPlayerSkillbar()->skills[slot].recharge == 0) {
-                GW::GameThread::Enqueue([slot]() -> void {
+                GW::GameThread::Enqueue([slot] {
                     GW::SkillbarMgr::UseSkill(slot);
                 });
             }

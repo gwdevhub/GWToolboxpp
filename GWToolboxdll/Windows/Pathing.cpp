@@ -23,8 +23,8 @@ namespace {
         std::mutex mutex;
         auto res_pt = &res;
         // Enqueue
-        GW::GameThread::Enqueue([&block_pt, res_pt, &mutex]() {
-            const std::lock_guard<std::mutex> lock(mutex);
+        GW::GameThread::Enqueue([&block_pt, res_pt, &mutex] {
+            const std::lock_guard lock(mutex);
             GW::MapContext* mapContext = GW::GetMapContext();
             if (!mapContext) {
                 *res_pt = Pathing::Error::InvalidMapContext;
@@ -37,7 +37,7 @@ namespace {
             });
         // Wait
         do {
-            const std::lock_guard<std::mutex> lock(mutex);
+            const std::lock_guard lock(mutex);
             if (res != Pathing::Error::Unknown)
                 break;
         } while (true);
@@ -214,7 +214,7 @@ namespace Pathing {
         LoadMapSpecificData();
         GenerateAABBs();
         GenerateAABBGraph(); //not threaded because it relies on gw client Query altitude.
-        worker_thread = new std::thread([&]() {
+        worker_thread = new std::thread([&] {
             GeneratePoints();
             GenerateVisibilityGraph();
             GenerateTeleportGraph();

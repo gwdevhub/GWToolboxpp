@@ -963,7 +963,7 @@ namespace GuiUtils {
     {
         if (!decoded && !decoding && !encoded_ws.empty()) {
             decoding = true;
-            GW::GameThread::Enqueue([&]() {
+            GW::GameThread::Enqueue([&] {
                 GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnStringDecoded, this, language_id);
                 });
 

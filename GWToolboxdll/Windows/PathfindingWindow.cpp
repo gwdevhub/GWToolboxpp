@@ -81,7 +81,7 @@ namespace {
             return;
         delete astar;
         astar = nullptr;
-        Resources::EnqueueWorkerTask([from_cpy = from, to_cpy = to ]() {
+        Resources::EnqueueWorkerTask([from_cpy = from, to_cpy = to] {
             auto tmpAstar = new Pathing::AStar(GetMilepathForCurrentMap());
             const auto res = tmpAstar->search(from_cpy, to_cpy);
             if (res != Pathing::Error::OK) {
@@ -254,7 +254,7 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
 
     pending_worker_task = true;
 
-    Resources::EnqueueWorkerTask([from_cpy, to_cpy, callback, args ]() {
+    Resources::EnqueueWorkerTask([from_cpy, to_cpy, callback, args ] {
         Pathing::MilePath* milepath = nullptr;
         Pathing::AStar* tmpAstar = nullptr;
         Pathing::Error res = Pathing::Error::OK;
@@ -285,7 +285,7 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
         delete tmpAstar;
         delete from_cpy;
         delete to_cpy;
-        Resources::EnqueueMainTask([waypoints, callback, args]() {
+        Resources::EnqueueMainTask([waypoints, callback, args] {
             callback(*waypoints,args);
             delete waypoints;
 

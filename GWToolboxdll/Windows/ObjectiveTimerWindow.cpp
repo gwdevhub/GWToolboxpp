@@ -554,7 +554,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
 {
     constexpr int n_areas = 4;
 
-    const auto starting_area = [&]() -> int {
+    const auto starting_area = [&] {
         constexpr GW::Vec2f mallyx_spawn(-3931, -6214);
         constexpr GW::Vec2f area_spawns[] = {
             {-10514, 15231}, // foundry

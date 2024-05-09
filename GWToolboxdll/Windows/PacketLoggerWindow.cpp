@@ -826,7 +826,7 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9*)
 void PacketLoggerWindow::Initialize()
 {
     ToolboxWindow::Initialize();
-    GW::GameThread::Enqueue([]() {
+    GW::GameThread::Enqueue([] {
         InitStoC();
         });
     if (logger_enabled) {

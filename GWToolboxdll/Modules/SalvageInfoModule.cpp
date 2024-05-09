@@ -229,7 +229,7 @@ namespace {
                 // Detected weapon type page. We need to go to the weapon with same name page and fetch materials from there
                 const auto expected_token = std::format("{} (weapon)", info->en_name.string());
                 std::unordered_set<std::string> sub_urls;
-                std::string::const_iterator sub_search_start(response.cbegin());
+                auto sub_search_start(response.cbegin());
                 while (std::regex_search(sub_search_start, response.cend(), m, sub_links_regex)) {
                     const auto entry = m[1].str();
                     // Search for entries that match [WeaponName] (weapon) token
@@ -252,7 +252,7 @@ namespace {
             }
 
             // Iterate over all skills in this list.
-            const auto infobox_row_regex = std::regex(
+            static const std::regex infobox_row_regex(
                 "(?:<tr>|<tr[^>]+>)[\\s\\S]*?(?:<th>|<th[^>]+>)([\\s\\S]*?)</th>[\\s\\S]*?(?:<td>|<td[^>]+>)([\\s\\S]*?)</td>[\\s\\S]*?</tr>"
             );
             auto words_begin = std::sregex_iterator(infobox_content.begin(), infobox_content.end(), infobox_row_regex);
@@ -272,13 +272,12 @@ namespace {
         }
         info->loading = false;
         // Now we've got the wiki info parsed, trigger an item update ui message; this will refresh the item tooltip
-        GW::GameThread::Enqueue([info]() {
+        GW::GameThread::Enqueue([info] {
             const auto item = GW::Items::GetHoveredItem();
             if (item && wcscmp(item->name_enc, info->en_name.encoded().c_str()) == 0) {
                 GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, item);
             }
-            });
-        (response);
+        });
     }
 
     // Run on worker thread, so we can Sleep!
@@ -288,7 +287,7 @@ namespace {
             // @Cleanup: this should never hang, but should we handle it?
             Sleep(16);
         }
-        const auto url = GuiUtils::WikiUrl(info->en_name.string().c_str());
+        const auto url = GuiUtils::WikiUrl(info->en_name.string());
         Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(30));
     }
 
@@ -300,7 +299,7 @@ namespace {
         if (found == salvage_info_by_single_item_name.end() ||
             found->second->failed) {
             if (found != salvage_info_by_single_item_name.end()) {
-                delete (found->second);
+                delete found->second;
             }
             // Need to fetch info for this item.
             auto salvage_info = new SalvageInfo();
@@ -308,7 +307,7 @@ namespace {
             salvage_info->en_name.reset(single_item_name);
             salvage_info_by_single_item_name[single_item_name] = salvage_info;
             salvage_info->loading = true;
-            Resources::EnqueueWorkerTask([salvage_info]() {
+            Resources::EnqueueWorkerTask([salvage_info] {
                 FetchSalvageInfoFromGuildWarsWiki(salvage_info);
                 });
 
@@ -389,7 +388,7 @@ void SalvageInfoModule::Initialize()
         ASSERT(GW::HookBase::CreateHook((void**)&GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret) == 0);
         GW::HookBase::EnableHooks(GetItemDescription_Func);
     }
-    GW::GameThread::Enqueue([]() {
+    GW::GameThread::Enqueue([] {
         materials = {
             new CraftingMaterial(GW::Constants::ItemID::Bone, GW::EncStrings::Bone),
             new CraftingMaterial(GW::Constants::ItemID::IronIngot, GW::EncStrings::IronIngot),

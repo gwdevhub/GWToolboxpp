@@ -128,7 +128,7 @@ namespace {
         }
 
         // capture by value!
-        GW::GameThread::Enqueue([slot, targetId]() -> void {
+        GW::GameThread::Enqueue([slot, targetId] {
             GW::SkillbarMgr::UseSkill(slot, targetId);
         });
     }
@@ -235,7 +235,7 @@ bool BondsWidget::UseBuff(GW::AgentID targetId, GW::Constants::SkillID skill_id)
     }
 
     // capture by value!
-    GW::GameThread::Enqueue([slot, targetId]() -> void {
+    GW::GameThread::Enqueue([slot, targetId] {
         GW::SkillbarMgr::UseSkill(slot, targetId);
         });
     return true;
@@ -251,7 +251,7 @@ bool BondsWidget::DropBuffs(GW::AgentID targetId, GW::Constants::SkillID skill_i
         if (!(targetId == (GW::AgentID)0 || buff.target_agent_id == targetId))
             continue;
         const auto buff_id = buff.buff_id;
-        GW::GameThread::Enqueue([buff_id]() -> void {
+        GW::GameThread::Enqueue([buff_id] {
             GW::Effects::DropBuff(buff_id);
             });
     }

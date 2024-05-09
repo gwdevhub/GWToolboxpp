@@ -315,7 +315,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(background).Value);
 
     const float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
-    const auto calculate_window_position = [uiscale_multiply]() -> auto {
+    const auto calculate_window_position = [uiscale_multiply] {
         // NB: Use case to define GW::Vec4f ?
         GW::Vec2f x = party_window_position->xAxis();
         GW::Vec2f y = party_window_position->yAxis();

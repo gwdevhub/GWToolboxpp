@@ -46,7 +46,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_0_1()
             json["parties"].push_back(nlohmann::json::value_t::null);
             continue;
         }
-        json["parties"].push_back([&]() -> nlohmann::json {
+        json["parties"].push_back([&] {
             // parties -> party
             nlohmann::json json_party;
             json_party["party_id"] = party->party_id;
@@ -58,7 +58,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_0_1()
                     json_party["members"].push_back(nlohmann::json::value_t::null);
                     continue;
                 }
-                json_party["members"].push_back([&]() -> nlohmann::json {
+                json_party["members"].push_back([&] {
                     // parties -> party -> agents -> agent
                     nlohmann::json json_agent;
                     json_agent["display_name"] = agent->DisplayName();

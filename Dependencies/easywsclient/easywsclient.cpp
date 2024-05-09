@@ -514,8 +514,7 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
     }
 
     if (is_ssl) {
-        int res = 0;
-        auto err_out = [res,ptConnCtx]() {
+        auto err_out = [ptConnCtx] {
             ERR_print_errors_cb(print_error_callback, 0);
             char err_str[255];
             wolfSSL_ERR_error_string(SSL_get_error(ptConnCtx->sslHandle, 0),err_str);
