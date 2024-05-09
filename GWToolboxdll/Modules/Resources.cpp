@@ -603,7 +603,7 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
     };
 
     EnqueueWorkerTask([url, callback, context, &cache_duration, &get_cache_modified_time, &load_from_cache, &save_to_cache, &remove_protocol, &hash_name] {
-        const auto cache_path = (Resources::GetPath("cache") / hash_name(remove_protocol(url))).string();
+        const auto cache_path = Resources::GetPath("cache") / hash_name(remove_protocol(url));
         const auto expiration = get_cache_modified_time(cache_path);
         if (expiration.has_value() &&
             expiration.value() - std::chrono::file_clock::now() < cache_duration) {
