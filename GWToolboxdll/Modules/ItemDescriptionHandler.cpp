@@ -97,3 +97,20 @@ void ItemDescriptionHandler::OnGetItemDescription(const uint32_t item_id, const 
 
     GW::Hook::LeaveHook();
 }
+
+// Unregisters all instance of the provided callback
+void ItemDescriptionHandler::UnregisterDescriptionCallback(ItemDescriptionCallback callback)
+{
+    erase_if(this->callbacks, [callback](const auto& cb) {
+        return cb.callback == callback;
+    });
+}
+
+// Unregisters all instances of the provided callback at the provided altitude.  Leaves all instances at other
+// altitudes registered.
+void ItemDescriptionHandler::UnregisterDescriptionCallback(ItemDescriptionCallback callback, unsigned int altitude)
+{
+    erase_if(this->callbacks, [callback, altitude](const auto& cb) {
+        return cb.callback == callback && cb.altitude == altitude;
+    });
+}

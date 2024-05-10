@@ -21,6 +21,7 @@ public:
     [[nodiscard]] const char* SettingsName() const override { return "Inventory Settings"; }
 
     void Initialize() override;
+    void Terminate() override;
     void LoadSettings(ToolboxIni* ini) override;
     void RegisterSettingsContent() override;
     void SaveSettings(ToolboxIni* ini) override;

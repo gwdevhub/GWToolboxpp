@@ -415,6 +415,8 @@ void SalvageInfoModule::Terminate()
 {
     ToolboxModule::Terminate();
 
+    ItemDescriptionHandler::Instance().UnregisterDescriptionCallback(OnGetItemDescription);
+
     for (auto m : materials) {
         delete m;
     }

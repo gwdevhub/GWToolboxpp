@@ -512,6 +512,13 @@ void PriceCheckerModule::Initialize()
     FetchPrices();
 }
 
+void PriceCheckerModule::Terminate()
+{
+    ToolboxModule::Terminate();
+
+    ItemDescriptionHandler::Instance().UnregisterDescriptionCallback(OnGetItemDescription);
+}
+
 
 void PriceCheckerModule::SaveSettings(ToolboxIni* ini)
 {

@@ -45,6 +45,8 @@ public:
     [[nodiscard]] const char* Description() const override { return "Allows dynamic modification of inventory item descriptions"; }
 
     void RegisterDescriptionCallback(ItemDescriptionCallback callback, unsigned int altitude = 0);
+    void UnregisterDescriptionCallback(ItemDescriptionCallback callback);
+    void UnregisterDescriptionCallback(ItemDescriptionCallback callback, unsigned int altitude);
 
     void Initialize() override;
     void SignalTerminate() override;
