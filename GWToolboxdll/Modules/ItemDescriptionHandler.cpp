@@ -78,7 +78,7 @@ void ItemDescriptionHandler::OnGetItemDescription(const uint32_t item_id, const 
         }
 
         if (out_name != nullptr) {
-            if (args.block_name || modified_name.c_str()[0] == L'\0') {
+            if (args.block_name || modified_name.empty()) {
                 *out_name = nullptr;
             }
             else {
@@ -86,7 +86,7 @@ void ItemDescriptionHandler::OnGetItemDescription(const uint32_t item_id, const 
             }
         }
         if (out_desc != nullptr) {
-            if (args.block_description || modified_description.c_str()[0] == L'\0') {
+            if (args.block_description || modified_description.empty()) {
                 *out_desc = nullptr;
             }
             else {
