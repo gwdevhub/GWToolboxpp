@@ -1004,4 +1004,15 @@ namespace GuiUtils {
         }
         return decoded_s;
     }
+
+    void EncString_append(std::wstring& encstr, const wchar_t* to_append) {
+        if(!encstr.empty()) {
+            encstr.append(L"\x02");
+        }
+        encstr.append(to_append);
+    }
+
+    void EncString_append(std::wstring& encstr, const std::wstring& to_append) {
+        EncString_append(encstr, to_append.c_str());
+    }
 }
