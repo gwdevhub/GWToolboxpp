@@ -419,7 +419,7 @@ namespace ToolboxUtils {
         wchar_t buffer[128];
 
         // For armor items, include full item name and a few description bits.
-        switch (static_cast<GW::Constants::ItemType>(item->type)) {
+        switch (item->type) {
             case GW::Constants::ItemType::Headpiece:
             case GW::Constants::ItemType::Boots:
             case GW::Constants::ItemType::Chestpiece:
@@ -447,7 +447,7 @@ namespace ToolboxUtils {
         }
 
         // Replace "Requires 9 Divine Favor" > "q9 Divine Favor"
-        const std::wregex regexp_req(L".\x10A\x0AA8\x10A\xAA9\x10A.\x1\x101.\x1\x1");
+        static const std::wregex regexp_req(L".\x10A\x0AA8\x10A\xAA9\x10A.\x1\x101.\x1\x1");
         while (std::regex_search(original, m, regexp_req)) {
             for (auto& match : m) {
                 const std::wstring found = match.str();
@@ -456,7 +456,7 @@ namespace ToolboxUtils {
             }
         }
         // Replace "Requires 9 Scythe Mastery" > "q9 Scythe Mastery"
-        const std::wregex regexp_req2(L".\x10A\xAA8\x10A\xAA9\x10A\x8101.\x1\x101.\x1\x1");
+        static const std::wregex regexp_req2(L".\x10A\xAA8\x10A\xAA9\x10A\x8101.\x1\x101.\x1\x1");
         while (std::regex_search(original, m, regexp_req2)) {
             for (auto& match : m) {
                 const std::wstring found = match.str();
@@ -467,7 +467,7 @@ namespace ToolboxUtils {
 
         // "vs. Earth damage" > "Earth"
         // "vs. Demons" > "Demons"
-        const std::wregex vs_damage(L"[\xAAC\xAAF]\x10A.\x1");
+        static const std::wregex vs_damage(L"[\xAAC\xAAF]\x10A.\x1");
         while (std::regex_search(original, m, vs_damage)) {
             for (auto& match : m) {
                 const std::wstring found = match.str();
@@ -477,7 +477,7 @@ namespace ToolboxUtils {
         }
 
         // Replace "Lengthens ??? duration on foes by 33%" > "??? duration +33%"
-        const std::wregex regexp_lengthens_duration(L"\xAA4\x10A.\x1");
+        static const std::wregex regexp_lengthens_duration(L"\xAA4\x10A.\x1");
         while (std::regex_search(original, m, regexp_lengthens_duration)) {
             for (auto& match : m) {
                 const std::wstring found = match.str();
@@ -487,7 +487,7 @@ namespace ToolboxUtils {
         }
 
         // Replace "Reduces ??? duration on you by 20%" > "??? duration -20%"
-        const std::wregex regexp_reduces_duration(L"\xAA7\x10A.\x1");
+        static const std::wregex regexp_reduces_duration(L"\xAA7\x10A.\x1");
         while (std::regex_search(original, m, regexp_reduces_duration)) {
             for (auto& match : m) {
                 const std::wstring found = match.str();
@@ -499,7 +499,7 @@ namespace ToolboxUtils {
         // Change "Damage 15% (while Health is above 50%)" to "Damage +15^50"
         //std::wregex damage_15_over_50(L".\x010A\xA85\x010A\xA4C\x1\x101.\x1\x2" L".\x010A\xAA8\x010A\xABC\x10A\xA52\x1\x101.\x1\x1");
         // Change " (while Health is above n)" to "^n";
-        const std::wregex n_over_n(L"\xAA8\x10A\xABC\x10A\xA52\x1\x101.\x1");
+        static const std::wregex n_over_n(L"\xAA8\x10A\xABC\x10A\xA52\x1\x101.\x1");
         while (std::regex_search(original, m, n_over_n)) {
             for (auto& match : m) {
                 std::wstring found = match.str();
@@ -509,7 +509,7 @@ namespace ToolboxUtils {
         }
 
         // Change "Enchantments last 20% longer" to "Ench +20%"
-        const std::wregex enchantments(L"\xAA2\x101.");
+        static const std::wregex enchantments(L"\xAA2\x101.");
         while (std::regex_search(original, m, enchantments)) {
             for (auto& match : m) {
                 std::wstring found = match.str();
@@ -519,7 +519,7 @@ namespace ToolboxUtils {
         }
 
         // "(Chance: 18%)" > "(18%)"
-        const std::wregex chance_regex(L"\xA87\x10A\xA48\x1\x101.");
+        static const std::wregex chance_regex(L"\xA87\x10A\xA48\x1\x101.");
         while (std::regex_search(original, m, chance_regex)) {
             for (auto& match : m) {
                 std::wstring found = match.str();
@@ -528,7 +528,7 @@ namespace ToolboxUtils {
             }
         }
         // Change "Halves skill recharge of <attribute> spells" > "HSR <attribute>"
-        const std::wregex hsr_attribute(L"\xA81\x10A\xA58\x1\x10B.\x1");
+        static const std::wregex hsr_attribute(L"\xA81\x10A\xA58\x1\x10B.\x1");
         while (std::regex_search(original, m, hsr_attribute)) {
             for (auto& match : m) {
                 std::wstring found = match.str();
@@ -537,7 +537,7 @@ namespace ToolboxUtils {
             }
         }
         // Change "Inscription: "Blah Blah"" to just "Blah Blah"
-        const std::wregex inscription(L"\x8101\x5DC5\x10A..\x1");
+        static const std::wregex inscription(L"\x8101\x5DC5\x10A..\x1");
         while (std::regex_search(original, m, inscription)) {
             for (auto& match : m) {
                 std::wstring found = match.str();
@@ -547,7 +547,7 @@ namespace ToolboxUtils {
         }
 
         // Change "Halves casting time of <attribute> spells" > "HCT <attribute>"
-        const std::wregex hct_attribute(L"\xA81\x10A\xA47\x1\x10B.\x1");
+        static const std::wregex hct_attribute(L"\xA81\x10A\xA47\x1\x10B.\x1");
         while (std::regex_search(original, m, hct_attribute)) {
             for (auto& match : m) {
                 std::wstring found = match.str();
@@ -557,7 +557,7 @@ namespace ToolboxUtils {
         }
 
         // Change "Piercing Dmg: 11-22" > "Piercing: 11-22"
-        const std::wregex weapon_dmg(L"\xA89\x10A\xA4E\x1\x10B.\x1\x101.\x102.");
+        static const std::wregex weapon_dmg(L"\xA89\x10A\xA4E\x1\x10B.\x1\x101.\x102.");
         while (std::regex_search(original, m, weapon_dmg)) {
             for (auto& match : m) {
                 std::wstring found = match.str();
@@ -567,13 +567,13 @@ namespace ToolboxUtils {
         }
 
         // Change "Life draining -3, Health regeneration -1" > "Vampiric" (add at end of description)
-        const std::wregex vampiric(L"\x2\x102\x2.\x10A\xA86\x10A\xA54\x1\x101.\x1" L"\x2\x102\x2.\x10A\xA7E\x10A\xA53\x1\x101.\x1");
+        static const std::wregex vampiric(L"\x2\x102\x2.\x10A\xA86\x10A\xA54\x1\x101.\x1" L"\x2\x102\x2.\x10A\xA7E\x10A\xA53\x1\x101.\x1");
         if (std::regex_search(original, vampiric)) {
             original = std::regex_replace(original, vampiric, L"");
             original += L"\x2\x102\x2\x108\x107" L"Vampiric\x1";
         }
         // Change "Energy gain on hit 1, Energy regeneration -1" > "Zealous" (add at end of description)
-        const std::wregex zealous(L"\x2\x102\x2.\x10A\xA86\x10A\xA50\x1\x101.\x1" L"\x2\x102\x2.\x10A\xA7E\x10A\xA51\x1\x101.\x1");
+        static const std::wregex zealous(L"\x2\x102\x2.\x10A\xA86\x10A\xA50\x1\x101.\x1" L"\x2\x102\x2.\x10A\xA7E\x10A\xA51\x1\x101.\x1");
         if (std::regex_search(original, zealous)) {
             original = std::regex_replace(original, zealous, L"");
             original += L"\x2\x102\x2\x108\x107" L"Zealous\x1";
@@ -589,11 +589,11 @@ namespace ToolboxUtils {
         original = std::regex_replace(original, std::wregex(L"\xA80\x10A\xA47\x1"), L"\x108\x107" L"HCT\x1");
 
         // Change "Halves skill recharge of spells" > "HSR"
-        const std::wregex half_skill_recharge(L"\xA80\x10A\xA58\x1");
+        static const std::wregex half_skill_recharge(L"\xA80\x10A\xA58\x1");
         original = std::regex_replace(original, half_skill_recharge, L"\x108\x107" L"HSR\x1");
 
         // Remove (Stacking) and (Non-stacking) rubbish
-        const std::wregex stacking_non_stacking(L"\x2.\x10A\xAA8\x10A[\xAB1\xAB2]\x1\x1");
+        static const std::wregex stacking_non_stacking(L"\x2.\x10A\xAA8\x10A[\xAB1\xAB2]\x1\x1");
         original = std::regex_replace(original, stacking_non_stacking, L"");
 
         // Replace (while affected by a(n) to just (n)
@@ -615,7 +615,7 @@ namespace ToolboxUtils {
         original = std::regex_replace(original, std::wregex(L"[\xAB9\xABA]"), L"\x108\x107" L"Stance\x1");
 
         // Combine Attribute + 3, Attribute + 1 to Attribute +3 +1 (e.g. headpiece)
-        const std::wregex attribute_stacks(L".\x10A\xA84\x10A.\x1\x101.\x1\x2\x102\x2.\x10A\xA84\x10A.\x1\x101.\x1");
+        static const std::wregex attribute_stacks(L".\x10A\xA84\x10A.\x1\x101.\x1\x2\x102\x2.\x10A\xA84\x10A.\x1\x101.\x1");
         if (std::regex_search(original, m, attribute_stacks)) {
             for (auto& match : m) {
                 const std::wstring found = match.str();
@@ -645,7 +645,7 @@ namespace ToolboxUtils {
         // Remove "20% Additional damage during festival events" > "Dmg +20% (Festival)"
         original = std::regex_replace(original, std::wregex(L".\x10A\x108\x10A\x8103\xB71\x101\x100\x1\x1"), L"\xA85\x10A\xA4E\x1\x101\x114\x2\xAA8\x10A\x108\x107" L"Festival\x1\x1");
 
-        const std::wregex dmg_plus_20(L"\x2\x102\x2.\x10A\xA85\x10A[\xA4C\xA4E]\x1\x101\x114\x1");
+        static const std::wregex dmg_plus_20(L"\x2\x102\x2.\x10A\xA85\x10A[\xA4C\xA4E]\x1\x101\x114\x1");
         if (item->customized && std::regex_search(original, dmg_plus_20)) {
             // Remove "\nDamage +20%" > "\n"
             original = std::regex_replace(original, dmg_plus_20, L"");
