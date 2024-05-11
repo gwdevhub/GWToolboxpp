@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ToolboxModule.h"
+#include <ToolboxModule.h>
 
 struct ItemDescriptionEventArgs {
     const uint32_t item_id;
@@ -18,7 +18,6 @@ struct ItemDescriptionEventArgs {
 using ItemDescriptionCallback = void(*)(ItemDescriptionEventArgs& eventArgs);
 
 class ItemDescriptionHandler final : public ToolboxModule {
-private:
     using GetItemDescription_pt = void(__cdecl*)(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** out_name, wchar_t** out_desc);
     GetItemDescription_pt GetItemDescription_Func = nullptr, GetItemDescription_Ret = nullptr;
 
@@ -32,8 +31,8 @@ private:
     std::wstring modified_name;
     std::wstring modified_description;
 
-    static void __cdecl OnGetItemDescription_Wrapper(const uint32_t item_id, const uint32_t flags, const uint32_t quantity, const uint32_t unk, wchar_t** out_name, wchar_t** out_desc);
-    void OnGetItemDescription(const uint32_t item_id, const uint32_t flags, const uint32_t quantity, const uint32_t unk, wchar_t** out_name, wchar_t** out_desc);
+    static void __cdecl OnGetItemDescription_Wrapper(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** out_name, wchar_t** out_desc);
+    void OnGetItemDescription(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** out_name, wchar_t** out_desc);
 public:
     static ItemDescriptionHandler& Instance() {
         static ItemDescriptionHandler instance;
@@ -51,4 +50,3 @@ public:
     void Initialize() override;
     void SignalTerminate() override;
 };
-

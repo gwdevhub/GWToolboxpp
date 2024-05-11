@@ -5,12 +5,12 @@
 
 void __cdecl ItemDescriptionHandler::OnGetItemDescription_Wrapper(const uint32_t item_id, const uint32_t flags, const uint32_t quantity, const uint32_t unk, wchar_t** out_name, wchar_t** out_description)
 {
-    ItemDescriptionHandler::Instance().OnGetItemDescription(item_id, flags, quantity, unk, out_name, out_description);
+    Instance().OnGetItemDescription(item_id, flags, quantity, unk, out_name, out_description);
 }
 
 void ItemDescriptionHandler::Initialize()
 {
-    GetItemDescription_Func = (GetItemDescription_pt)GW::Scanner::Find("\x8b\xc3\x25\xfd\x00\x00\x00\x3c\xfd", "xxxxxxxxx", -0x5f);
+    GetItemDescription_Func = reinterpret_cast<GetItemDescription_pt>(GW::Scanner::Find("\x8b\xc3\x25\xfd\x00\x00\x00\x3c\xfd", "xxxxxxxxx", -0x5f));
     if (GetItemDescription_Func) {
         GW::HookBase::CreateHook(
             reinterpret_cast<void**>(&GetItemDescription_Func),
@@ -41,14 +41,14 @@ void ItemDescriptionHandler::RegisterDescriptionCallback(ItemDescriptionCallback
         it++;
     }
 
-    this->callbacks.insert(it, ItemDescriptionHandler::CallbackEntry { altitude, callback });
+    this->callbacks.insert(it, CallbackEntry { altitude, callback });
 }
 
 void ItemDescriptionHandler::OnGetItemDescription(const uint32_t item_id, const uint32_t flags, const uint32_t quantity, const uint32_t unk, wchar_t** out_name, wchar_t** out_desc) {
     GW::Hook::EnterHook();
 
     {
-        std::lock_guard<std::mutex> guard(this->modified_strings_mutex);
+        std::lock_guard guard(this->modified_strings_mutex);
 
         this->modified_name.clear();
         this->modified_description.clear();
@@ -101,7 +101,7 @@ void ItemDescriptionHandler::OnGetItemDescription(const uint32_t item_id, const 
 // Unregisters all instance of the provided callback
 void ItemDescriptionHandler::UnregisterDescriptionCallback(ItemDescriptionCallback callback)
 {
-    erase_if(this->callbacks, [callback](const auto& cb) {
+    std::erase_if(this->callbacks, [callback](const auto& cb) {
         return cb.callback == callback;
     });
 }
@@ -110,7 +110,7 @@ void ItemDescriptionHandler::UnregisterDescriptionCallback(ItemDescriptionCallba
 // altitudes registered.
 void ItemDescriptionHandler::UnregisterDescriptionCallback(ItemDescriptionCallback callback, unsigned int altitude)
 {
-    erase_if(this->callbacks, [callback, altitude](const auto& cb) {
+    std::erase_if(this->callbacks, [callback, altitude](const auto& cb) {
         return cb.callback == callback && cb.altitude == altitude;
     });
 }
