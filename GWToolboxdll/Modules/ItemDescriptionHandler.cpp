@@ -67,8 +67,6 @@ void ItemDescriptionHandler::OnGetItemDescription(const uint32_t item_id, const 
             .flags = flags,
             .quantity = quantity,
             .unk = unk,
-            .block_name = false,
-            .block_description = false,
             .name = this->modified_name,
             .description = this->modified_description,
         };
@@ -78,7 +76,7 @@ void ItemDescriptionHandler::OnGetItemDescription(const uint32_t item_id, const 
         }
 
         if (out_name != nullptr) {
-            if (args.block_name || modified_name.empty()) {
+            if (modified_name.empty()) {
                 *out_name = nullptr;
             }
             else {
@@ -86,7 +84,7 @@ void ItemDescriptionHandler::OnGetItemDescription(const uint32_t item_id, const 
             }
         }
         if (out_desc != nullptr) {
-            if (args.block_description || modified_description.empty()) {
+            if (modified_description.empty()) {
                 *out_desc = nullptr;
             }
             else {

@@ -8,9 +8,6 @@ struct ItemDescriptionEventArgs {
     const uint32_t quantity;
     const uint32_t unk;
 
-    bool block_name;
-    bool block_description;
-
     std::wstring& name;
     std::wstring& description;
 };
