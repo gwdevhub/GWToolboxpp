@@ -433,9 +433,6 @@ namespace {
     constexpr int modifier_key_item_descriptions = VK_MENU;
     int modifier_key_item_descriptions_key_state = 0;
 
-    using GetItemDescription_pt = void(__cdecl*)(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** out, wchar_t** out2);
-    GetItemDescription_pt GetItemDescription_Func = nullptr, GetItemDescription_Ret = nullptr;
-
     // Key held to show/hide skill descriptions
     constexpr int modifier_key_skill_descriptions = VK_MENU;
     int modifier_key_skill_descriptions_key_state = 0;
@@ -1011,18 +1008,12 @@ namespace {
 }
 
 // Block full item descriptions
-void GameSettings::OnGetItemDescription(const uint32_t item_id, const uint32_t flags, const uint32_t quantity, const uint32_t unk, wchar_t** name_out, wchar_t** description_out)
+void GameSettings::OnGetItemDescription(ItemDescriptionEventArgs& args)
 {
-    GW::Hook::EnterHook();
     bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
     block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
-    GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, block_description ? nullptr : description_out);
 
-    if (block_description && description_out) {
-        *description_out = nullptr;
-    }
-
-    GW::Hook::LeaveHook();
+    args.block_description = block_description;
 }
 
 bool GameSettings::GetSettingBool(const char* setting)
@@ -1256,12 +1247,7 @@ void GameSettings::Initialize()
         remove_skill_warmup_duration_patch.SetPatch(address, "\x90\x90", 2);
     }
 
-    // This could be done with patches if we wanted to still show description for weapon sets and merchants etc, but its more signatures to log.
-    GetItemDescription_Func = (GetItemDescription_pt)GW::Scanner::Find("\x8b\xc3\x25\xfd\x00\x00\x00\x3c\xfd", "xxxxxxxxx", -0x5f);
-    if (GetItemDescription_Func) {
-        GW::HookBase::CreateHook((void**)&GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret);
-        GW::HookBase::EnableHooks(GetItemDescription_Func);
-    }
+    ItemDescriptionHandler::Instance().RegisterDescriptionCallback(GameSettings::OnGetItemDescription, 9999);
 
     // Call our CreateCodedTextLabel function instead of default CreateCodedTextLabel for patching skill descriptions
     address = GW::Scanner::FindAssertion("p:\\code\\gw\\ui\\game\\gmtipskill.cpp", "!(m_tipSkillFlags & TipSkillMsgCreate::FLAG_SHOW_ENABLE_AI_HINT)", 0x7b);

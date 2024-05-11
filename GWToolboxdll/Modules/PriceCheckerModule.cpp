@@ -15,8 +15,9 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
-#include <Modules/Resources.h>
 #include <Modules/GameSettings.h>
+#include <Modules/ItemDescriptionHandler.h>
+#include <Modules/Resources.h>
 #include <Modules/PriceCheckerModule.h>
 
 #include <Timer.h>
@@ -26,7 +27,6 @@ using nlohmann::json;
 
 namespace {
     float high_price_threshold = 1000;
-    std::wstring modified_description;
     bool fetching_prices;
     const char* trader_quotes_url = "https://kamadan.gwtoolbox.com/trader_quotes";
     clock_t last_request_time = 0;
@@ -465,17 +465,13 @@ namespace {
         return std::format(L"\x2\x108\x107\n<c={}>{}: {:.4g}{}</c>\x1", color, name && *name ? GuiUtils::StringToWString(name) : L"Item price", price, unit);
     }
 
-    void UpdateDescription(const uint32_t item_id, wchar_t** description_out)
+    void UpdateDescription(const uint32_t item_id, std::wstring& description)
     {
-        if (!(description_out && *description_out))
-            return;
-
         const auto item = GW::Items::GetItemById(item_id);
         if (!item)
             return;
         
         std::vector<uint32_t> mod_matches;
-        modified_description = *description_out;
         for (size_t i = 0; i < item->mod_struct_size; i++) {
             const auto found = mod_to_id.find(item->mod_struct[i].mod);
             if (found == mod_to_id.end())
@@ -486,7 +482,7 @@ namespace {
             const auto name = mod_to_name.find(found->first);
             if (name == mod_to_name.end())
                 continue;
-            modified_description.append(PrintPrice(price, name->second));
+            description.append(PrintPrice(price, name->second));
         }
         if (item->type == GW::Constants::ItemType::Materials_Zcoins) {
             const auto model_id_str = std::to_string(item->model_id);
@@ -495,27 +491,15 @@ namespace {
                 if (IsCommonMaterial(item)) {
                     price = price / 10;
                 }
-                modified_description += PrintPrice(price);
+                description += PrintPrice(price);
             }
         }
-
-        *description_out = modified_description.data();
     }
 
-    using GetItemDescription_pt = void(__cdecl*)(uint32_t item_id, uint32_t flags, uint32_t quantity, uint32_t unk, wchar_t** out, wchar_t** out2);
-    GetItemDescription_pt GetItemDescription_Func = nullptr, GetItemDescription_Ret = nullptr;
-    // Block full item descriptions
-    void OnGetItemDescription(const uint32_t item_id, const uint32_t flags, const uint32_t quantity, const uint32_t unk, wchar_t** name_out, wchar_t** description_out)
+    void OnGetItemDescription(ItemDescriptionEventArgs& args)
     {
-        GW::Hook::EnterHook();
-        wchar_t** tmp_name_out = nullptr;
-        if (!name_out)
-            name_out = tmp_name_out; // Ensure name_out is valid; we're going to piggy back on it.
-        GetItemDescription_Ret(item_id, flags, quantity, unk, name_out, description_out);
-        UpdateDescription(item_id, description_out);
-        GW::Hook::LeaveHook();
+        UpdateDescription(args.item_id, args.description);
     }
-
 }
 
 
@@ -523,12 +507,7 @@ void PriceCheckerModule::Initialize()
 {
     ToolboxModule::Initialize();
 
-    // Copied from GameSettings.cpp
-    GetItemDescription_Func = (GetItemDescription_pt)GameSettings::OnGetItemDescription;
-    if (GetItemDescription_Func) {
-        ASSERT(GW::HookBase::CreateHook((void**)&GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret) == 0);
-        GW::HookBase::EnableHooks(GetItemDescription_Func);
-    }
+    ItemDescriptionHandler::Instance().RegisterDescriptionCallback(OnGetItemDescription, 100);
 
     FetchPrices();
 }
@@ -537,11 +516,9 @@ void PriceCheckerModule::Terminate()
 {
     ToolboxModule::Terminate();
 
-    if (GetItemDescription_Func) {
-        GW::HookBase::DisableHooks(GetItemDescription_Func);
-        GW::HookBase::RemoveHook(GetItemDescription_Func);
-    }
+    ItemDescriptionHandler::Instance().UnregisterDescriptionCallback(OnGetItemDescription);
 }
+
 
 void PriceCheckerModule::SaveSettings(ToolboxIni* ini)
 {

@@ -30,6 +30,7 @@
 #include "Modules/GwDatTextureModule.h"
 #include "Modules/HallOfMonumentsModule.h"
 #include "Modules/InventoryManager.h"
+#include "Modules/ItemDescriptionHandler.h"
 #include "Modules/LoginModule.h"
 #include "Modules/Updater.h"
 #include "Modules/PriceCheckerModule.h"
@@ -864,6 +865,7 @@ void GWToolbox::UpdateInitialising(float) {
     ToggleModule(CrashHandler::Instance());
     ToggleModule(Resources::Instance());
     ToggleModule(ToolboxTheme::Instance());
+    ToggleModule(ItemDescriptionHandler::Instance());
     ToggleModule(ToolboxSettings::Instance());
     ToggleModule(MainWindow::Instance());
     ToggleModule(DialogModule::Instance());
