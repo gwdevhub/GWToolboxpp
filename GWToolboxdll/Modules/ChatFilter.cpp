@@ -149,11 +149,11 @@ namespace {
         return GetSegment(encoded_string, 0x10b, segment_length);
     }
 
-    DWORD GetNumericSegment(const wchar_t* encoded_string)
+    DWORD GetNumericSegment(const wchar_t* encoded_string, wchar_t identifier = 0x101)
     {
-        const auto found = GetSegment(encoded_string, 0x10f);
-        if (found && found[1] > 0x100) {
-            return found[1] - 0x100;
+        const auto found = GetSegment(encoded_string, identifier);
+        if (found) {
+            return *found - 0x100;
         }
         return 0;
     }
@@ -422,7 +422,7 @@ namespace {
                 // 0x7F1 0x9A9D 0xE943 0xB33 0x10A <monster> 0x1 0x10B <rarity> 0x10A <item> 0x1 0x1 0x10F <assignee: playernumber + 0x100>
                 // <monster> is wchar_t id of several wchars
                 // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
-                const bool for_player = GW::PlayerMgr::GetPlayerNumber() == GetNumericSegment(message);
+                const bool for_player = GW::PlayerMgr::GetPlayerNumber() == GetNumericSegment(message, 0x10f);
                 const bool rare = IsRare(GetSecondSegment(message));
                 if (for_player && rare) {
                     return self_drop_rare;
