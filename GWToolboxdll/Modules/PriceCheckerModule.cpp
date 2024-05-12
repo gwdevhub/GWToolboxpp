@@ -462,7 +462,7 @@ namespace {
             price /= 1000.f;
             unit = L'k';
         }
-        return std::format(L"\x108\x107\n<c={}>{}: {:.4g}{}</c>\x1", color, name && *name ? GuiUtils::StringToWString(name) : L"Item price", price, unit);
+        return std::format(L"\x2\x108\x107\n<c={}>{}: {:.4g}{}</c>\x1", color, name && *name ? GuiUtils::StringToWString(name) : L"Item price", price, unit);
     }
 
     void UpdateDescription(const uint32_t item_id, std::wstring& description)
@@ -482,7 +482,7 @@ namespace {
             const auto name = mod_to_name.find(found->first);
             if (name == mod_to_name.end())
                 continue;
-            GuiUtils::EncString_append(description, PrintPrice(price, name->second));
+            description.append(PrintPrice(price, name->second));
         }
         if (item->type == GW::Constants::ItemType::Materials_Zcoins) {
             const auto model_id_str = std::to_string(item->model_id);
@@ -491,7 +491,7 @@ namespace {
                 if (IsCommonMaterial(item)) {
                     price = price / 10;
                 }
-                GuiUtils::EncString_append(description, PrintPrice(price));
+                description += PrintPrice(price);
             }
         }
     }

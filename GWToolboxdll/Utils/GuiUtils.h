@@ -136,9 +136,6 @@ namespace GuiUtils {
     // Same as std::format, but use printf formatting
     std::wstring format(const wchar_t* msg, ...);
 
-    void EncString_append(std::wstring& encstr, const wchar_t* to_append);
-    void EncString_append(std::wstring& encstr, const std::wstring& to_append);
-
     class EncString {
     protected:
         std::wstring encoded_ws;

@@ -314,12 +314,6 @@ namespace {
         return salvage_info_by_single_item_name[single_item_name];
     }
 
-    void AppendLineIfNonEmpty(std::wstring& encstr) {
-        if(!encstr.empty()) {
-            GuiUtils::EncString_append(encstr, L"\x102");
-        }
-    }
-
     void AppendSalvageInfoDescription(const uint32_t item_id, std::wstring& description) {
         const auto item = static_cast<InventoryManager::Item*>(GW::Items::GetItemById(item_id));
 
@@ -340,8 +334,7 @@ namespace {
             return;
 
         if (salvage_info->loading) {
-            AppendLineIfNonEmpty(description);
-            GuiUtils::EncString_append(description, L"\x108\x107" L"Fetching salvage info...\x1");
+            description += L"\x2\x102\x2\x108\x107" L"Fetching salvage info...\x1";
         }
 
         if (!salvage_info->common_crafting_materials.empty()) {
@@ -352,8 +345,7 @@ namespace {
                 items += i->en_name.encoded();
             }
 
-            AppendLineIfNonEmpty(description);
-            GuiUtils::EncString_append(description, std::format(L"\x108\x107<c=@ItemCommon>Common Materials:</c> \x1\x2{}", items));
+            description += std::format(L"\x2\x102\x2\x108\x107<c=@ItemCommon>Common Materials:</c> \x1\x2{}", items);
         }
         if (!salvage_info->rare_crafting_materials.empty()) {
             std::wstring items;
@@ -363,8 +355,7 @@ namespace {
                 items += i->en_name.encoded();
             }
 
-            AppendLineIfNonEmpty(description);
-            GuiUtils::EncString_append(description, std::format(L"\x108\x107<c=@ItemRare>Rare Materials:</c> \x1\x2{}", items));
+            description += std::format(L"\x2\x102\x2\x108\x107<c=@ItemRare>Rare Materials:</c> \x1\x2{}", items);
         }
     }
 
