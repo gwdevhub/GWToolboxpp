@@ -1013,7 +1013,9 @@ void GameSettings::OnGetItemDescription(ItemDescriptionEventArgs& args)
     bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
     block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
 
-    args.block_description = block_description;
+    if (block_description) {
+        args.description.clear();
+    }
 }
 
 bool GameSettings::GetSettingBool(const char* setting)
