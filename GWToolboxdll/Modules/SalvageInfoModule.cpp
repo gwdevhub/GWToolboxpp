@@ -333,6 +333,9 @@ namespace {
         if (!salvage_info)
             return;
 
+        if (description.empty())
+            description += L"\x1";
+
         if (salvage_info->loading) {
             description += L"\x2\x102\x2\x108\x107" L"Fetching salvage info...\x1";
         }

@@ -470,8 +470,10 @@ namespace {
         const auto item = GW::Items::GetItemById(item_id);
         if (!item)
             return;
+
+        if (description.empty())
+            description += L"\x1";
         
-        std::vector<uint32_t> mod_matches;
         for (size_t i = 0; i < item->mod_struct_size; i++) {
             const auto found = mod_to_id.find(item->mod_struct[i].mod);
             if (found == mod_to_id.end())
