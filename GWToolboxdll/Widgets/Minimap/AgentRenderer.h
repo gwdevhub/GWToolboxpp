@@ -134,7 +134,7 @@ private:
     void Enqueue(Shape_e shape, const GW::MapProp* agent, float size, Color color);
     void Enqueue(Shape_e shape, const RenderPosition& pos, float size, Color color, Color modifier = 0);
 
-    std::vector<const CustomAgent*>* GetCustomAgentsToDraw(const GW::AgentLiving* agent);
+    std::vector<const CustomAgent*>* GetCustomAgentsToDraw(const GW::Agent* agent);
 
     D3DVertex* vertices = nullptr;    // vertices array
     unsigned int vertices_count = 0;  // count of vertices
