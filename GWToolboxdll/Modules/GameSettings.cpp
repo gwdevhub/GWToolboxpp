@@ -1005,16 +1005,16 @@ namespace {
     {
         pending_reinvite.reset(current_party_target_id);
     }
-}
 
-// Block full item descriptions
-void GameSettings::OnGetItemDescription(ItemDescriptionEventArgs& args)
-{
-    bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
-    block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
+    // Block full item descriptions
+    void OnGetItemDescription(uint32_t, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc) 
+    {
+        bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
+        block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
 
-    if (block_description) {
-        args.description.clear();
+        if (block_description && *out_desc) {
+            **out_desc = 0;
+        }
     }
 }
 
@@ -1249,7 +1249,7 @@ void GameSettings::Initialize()
         remove_skill_warmup_duration_patch.SetPatch(address, "\x90\x90", 2);
     }
 
-    ItemDescriptionHandler::Instance().RegisterDescriptionCallback(GameSettings::OnGetItemDescription, 9999);
+    ItemDescriptionHandler::RegisterDescriptionCallback(OnGetItemDescription, 9999);
 
     // Call our CreateCodedTextLabel function instead of default CreateCodedTextLabel for patching skill descriptions
     address = GW::Scanner::FindAssertion("p:\\code\\gw\\ui\\game\\gmtipskill.cpp", "!(m_tipSkillFlags & TipSkillMsgCreate::FLAG_SHOW_ENABLE_AI_HINT)", 0x7b);

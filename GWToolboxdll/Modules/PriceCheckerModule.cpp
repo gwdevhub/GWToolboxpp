@@ -472,7 +472,7 @@ namespace {
             return;
 
         if (description.empty())
-            description += L"\x1";
+            description += L"\x101";
         
         for (size_t i = 0; i < item->mod_struct_size; i++) {
             const auto found = mod_to_id.find(item->mod_struct[i].mod);
@@ -497,10 +497,15 @@ namespace {
             }
         }
     }
-
-    void OnGetItemDescription(ItemDescriptionEventArgs& args)
+    std::wstring tmp_item_description;
+    void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc) 
     {
-        UpdateDescription(args.item_id, args.description);
+        if (!(out_desc && *out_desc)) return;
+        if (*out_desc != tmp_item_description.data()) {
+            tmp_item_description.assign(*out_desc);
+        }
+        UpdateDescription(item_id, tmp_item_description);
+        *out_desc = tmp_item_description.data();
     }
 }
 
@@ -509,7 +514,7 @@ void PriceCheckerModule::Initialize()
 {
     ToolboxModule::Initialize();
 
-    ItemDescriptionHandler::Instance().RegisterDescriptionCallback(OnGetItemDescription, 100);
+    ItemDescriptionHandler::RegisterDescriptionCallback(OnGetItemDescription, 100);
 
     FetchPrices();
 }
@@ -518,7 +523,7 @@ void PriceCheckerModule::Terminate()
 {
     ToolboxModule::Terminate();
 
-    ItemDescriptionHandler::Instance().UnregisterDescriptionCallback(OnGetItemDescription);
+    ItemDescriptionHandler::UnregisterDescriptionCallback(OnGetItemDescription);
 }
 
 
@@ -534,20 +539,9 @@ void PriceCheckerModule::LoadSettings(ToolboxIni* ini)
     LOAD_FLOAT(high_price_threshold);
 }
 
-void PriceCheckerModule::RegisterSettingsContent()
+void PriceCheckerModule::DrawSettingsInternal()
 {
-    //ToolboxModule::RegisterSettingsContent();
-    ToolboxModule::RegisterSettingsContent(
-        "Inventory Settings", ICON_FA_BOXES,
-        [this](const std::string&, const bool is_showing) {
-            if (!is_showing) {
-                return;
-            }
-
-            ImGui::SliderFloat("Price Checker high price threshold", &high_price_threshold, 100, 50000);
-        },
-        0.9f
-    );
+    ImGui::SliderFloat("Price Checker high price threshold", &high_price_threshold, 100, 50000);
 }
 
 const std::unordered_map<std::string,uint32_t>& PriceCheckerModule::FetchPrices() {
