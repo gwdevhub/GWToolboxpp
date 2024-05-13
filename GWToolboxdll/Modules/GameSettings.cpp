@@ -1013,7 +1013,7 @@ namespace {
         block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
 
         if (block_description && *out_desc) {
-            **out_desc = 0;
+            *out_desc = nullptr;
         }
     }
 }
