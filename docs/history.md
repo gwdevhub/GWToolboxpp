@@ -7,6 +7,18 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 6.18
+* [New] Salvage information module added
+* [Minor] TravelWindow: Renamed minimize_on_travel to collapse_on_travel, default false
+* [Minor] Toolbox now respects fetch_salvage_info checkbox
+* [Minor] Removed outdated move_to_cast help
+* [Fix] Show All Areas (world map widget) no longer disables guild/ally chat buttons
+* [Fix] replying to Twitch (TwitchModule) correctly sends to twitch chat now
+* [Fix] Fixed option to flash gw window when player is pinged
+* [Fix] Fixed show notification/flash window on invite not saving
+* [Fix] Fixed crash when trying to withdraw to character without unlocked bags
+* [Fix] ChatFilter blocking ally drops no longer blocks drop messages for the player
+
 ## Version 6.17
 * [New] Added a release channel option to the toolbox updating functionality
 * [New] Draw all quests option (Minimap) now offers to draw non-active quests in a different colour
