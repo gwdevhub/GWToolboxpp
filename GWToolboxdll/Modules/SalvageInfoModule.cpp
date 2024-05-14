@@ -159,6 +159,16 @@ namespace {
         return html;
     }
 
+    void SignalItemDescriptionUpdated(const wchar_t* enc_name) {
+        // Now we've got the wiki info parsed, trigger an item update ui message; this will refresh the item tooltip
+        GW::GameThread::Enqueue([enc_name] {
+            const auto item = GW::Items::GetHoveredItem();
+            if (item && wcscmp(item->name_enc, enc_name) == 0) {
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, item);
+            }
+            });
+    }
+
 
     void OnWikiContentDownloaded(bool success, const std::string& response, void* wparam) {
         auto* info = (SalvageInfo*)wparam;
@@ -166,6 +176,7 @@ namespace {
             Log::Error("Failed to download wiki content for item");
             info->loading = false;
             info->failed = true;
+            SignalItemDescriptionUpdated(info->en_name.encoded().c_str());
             return;
         }
 
@@ -270,13 +281,7 @@ namespace {
             }
         }
         info->loading = false;
-        // Now we've got the wiki info parsed, trigger an item update ui message; this will refresh the item tooltip
-        GW::GameThread::Enqueue([info] {
-            const auto item = GW::Items::GetHoveredItem();
-            if (item && wcscmp(item->name_enc, info->en_name.encoded().c_str()) == 0) {
-                GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, item);
-            }
-        });
+        SignalItemDescriptionUpdated(info->en_name.encoded().c_str());
     }
 
     // Run on worker thread, so we can Sleep!
@@ -334,7 +339,7 @@ namespace {
             return;
 
         if (description.empty())
-            description += L"\x1";
+            description += L"\x101";
 
         if (salvage_info->loading) {
             description += L"\x2\x102\x2\x108\x107" L"Fetching salvage info...\x1";
@@ -361,10 +366,15 @@ namespace {
             description += std::format(L"\x2\x102\x2\x108\x107<c=@ItemRare>Rare Materials:</c> \x1\x2{}", items);
         }
     }
-
-    void OnGetItemDescription(ItemDescriptionEventArgs& args)
+    std::wstring tmp_item_description;
+    void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc) 
     {
-        AppendSalvageInfoDescription(args.item_id, args.description);
+        if (!(out_desc && *out_desc)) return;
+        if (*out_desc != tmp_item_description.data()) {
+            tmp_item_description.assign(*out_desc);
+        }
+        AppendSalvageInfoDescription(item_id, tmp_item_description);
+        *out_desc = tmp_item_description.data();
     }
 }
 
@@ -372,7 +382,7 @@ void SalvageInfoModule::Initialize()
 {
     ToolboxModule::Initialize();
 
-    ItemDescriptionHandler::Instance().RegisterDescriptionCallback(OnGetItemDescription, 200);
+    ItemDescriptionHandler::RegisterDescriptionCallback(OnGetItemDescription, 200);
     GW::GameThread::Enqueue([]() {
         materials = {
             new CraftingMaterial(GW::Constants::ItemID::Bone, GW::EncStrings::Bone),
@@ -418,16 +428,12 @@ void SalvageInfoModule::Terminate()
 {
     ToolboxModule::Terminate();
 
-    ItemDescriptionHandler::Instance().UnregisterDescriptionCallback(OnGetItemDescription);
+    ItemDescriptionHandler::UnregisterDescriptionCallback(OnGetItemDescription);
 
     for (auto m : materials) {
         delete m;
     }
     materials.clear();
-}
-
-void SalvageInfoModule::Update(const float)
-{
 }
 
 void SalvageInfoModule::SaveSettings(ToolboxIni* ini)
