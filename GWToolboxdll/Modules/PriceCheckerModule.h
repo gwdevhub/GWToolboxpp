@@ -1,8 +1,6 @@
 #pragma once
 
 #include <ToolboxModule.h>
-#include <GWCA/GameEntities/Item.h>
-#include <string.h>
 
 class PriceCheckerModule : public ToolboxModule {
     PriceCheckerModule() = default;

@@ -6,8 +6,8 @@ project(gwtoolbox)
 
 set(GWTOOLBOXEXE_VERSION "4.0")
 set(GWTOOLBOXDLL_VERSION "6.18")
-set(GWTOOLBOXDLL_VERSION_BETA "beta1") # can be anything. Marks beta version if not empty.
-set(GWTOOLBOX_MODULE_VERSION "6,17,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
+set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not empty.
+set(GWTOOLBOX_MODULE_VERSION "6,18,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
 
 # this is no longer required, but in case we have to add an installer again some day
 # configure_file(${PROJECT_SOURCE_DIR}/gwtoolbox.wxs.in ${PROJECT_SOURCE_DIR}/gwtoolbox.wxs @ONLY)
