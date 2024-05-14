@@ -242,44 +242,62 @@ namespace {
     }
 
     // Turn /wiki into /wiki <location>
+    bool converting_message_into_url = false;
     void OnSendChat(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
     {
         ASSERT(message_id == GW::UI::UIMessage::kSendChatMessage);
         auto packet = (GW::UI::UIPacket::kSendChatMessage*)wparam;
-        if (!(auto_url && packet->message && *packet->message)) {
+        if (converting_message_into_url || !(auto_url && packet->message && *packet->message)) {
             return;
         }
-        const auto chan = GW::Chat::GetChannel((char)*packet->message);
+        const auto channel = GW::Chat::GetChannel(*packet->message);
         auto msg = &packet->message[1];
-        size_t len = wcslen(msg);
-        size_t max_len = 120;
-
-        if (chan == GW::Chat::Channel::CHANNEL_WHISPER) {
+        switch (channel) {
+        case GW::Chat::Channel::CHANNEL_WHISPER: {
             // msg == "Whisper Target Name,msg"
-            size_t i;
-            for (i = 0; i < len; i++) {
-                if (msg[i] == ',') {
-                    break;
-                }
-            }
-
-            if (i < len) {
-                msg += i + 1;
-                len -= i + 1;
-                max_len -= i + 1;
-            }
+            const auto sep = wcschr(msg, ',');
+            if (!sep)
+                return; // Invalid format for message; no separator between recipient and message
+            msg = &sep[1];
+        } break;
+        case GW::Chat::Channel::CHANNEL_GUILD:
+        case GW::Chat::Channel::CHANNEL_ALLIANCE:
+        case GW::Chat::Channel::CHANNEL_TRADE:
+        case GW::Chat::Channel::CHANNEL_GROUP:
+            break;
+        default:
+            return; // Channel doesn't support templates
         }
 
-        if (wcsncmp(msg, L"http://", 7) && wcsncmp(msg, L"https://", 8)) {
+        auto url_found = wcsstr(msg, L"http://");
+        if(!url_found)
+            url_found = wcsstr(msg, L"https://");
+        if (!url_found)
             return;
+
+        const auto unused_msg_length = 121 - wcslen(packet->message);
+        if (unused_msg_length < 5)
+            return; // No space to convert into a template
+
+        auto url_end = wcschr(url_found, ' ');
+        if (!url_end) {
+            url_end = url_found + wcslen(url_found);
         }
         GW::UI::UIPacket::kSendChatMessage new_packet = *packet;
-        wchar_t new_msg[122];
-        if (swprintf(new_msg, _countof(new_msg), L"%c[%s;xx]",*packet->message,msg) < 1)
-            return;
-        new_packet.message = new_msg;
+        std::wstring new_msg;
+        // Prefix
+        new_msg.append(packet->message, url_found - packet->message);
+        // URL via equipment template
+        new_msg.append(L"[");
+        new_msg.append(url_found, url_end - url_found);
+        new_msg.append(L";xx]");
+        // Suffix
+        new_msg.append(url_end);
+        new_packet.message = new_msg.data();
         status->blocked = true;
+        converting_message_into_url = true;
         GW::UI::SendUIMessage(GW::UI::UIMessage::kSendChatMessage, &new_packet);
+        converting_message_into_url = false;
     }
 
     // Hide player chat message speech bubbles by redirecting from 0x10000081 to 0x1000007E
