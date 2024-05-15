@@ -59,6 +59,7 @@ namespace {
         gwmm->center_y = (rect.bottom + rect.top) / 2;
         rawInputRelativePosX = rawInputRelativePosY = 0;
         SetPhysicalCursorPos(gwmm->captured_x, gwmm->captured_y);
+        GW::Hook::LeaveHook();
     }
 
     // Override (and rewrite) GW's handling of mouse event 0x200 to stop camera glitching.
@@ -323,18 +324,7 @@ namespace {
     void SetCursorSize(const int new_size)
     {
         cursor_size = new_size;
-        if (cursor_size != 32) {
-            if (!cursor_size_hooked) {
-                
-            }
-            cursor_size_hooked = true;
-        }
-        else {
-            if (cursor_size_hooked) {
-                GW::HookBase::DisableHooks(ChangeCursorIcon_Func);
-            }
-            cursor_size_hooked = false;
-        }
+        RedrawCursorIcon();
     }
 } // namespace
 
