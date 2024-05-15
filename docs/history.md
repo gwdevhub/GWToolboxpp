@@ -18,6 +18,9 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Fixed show notification/flash window on invite not saving
 * [Fix] Fixed crash when trying to withdraw to character without unlocked bags
 * [Fix] ChatFilter blocking ally drops no longer blocks drop messages for the player
+* [Fix] Fixed bug preventing URLs being sent as templates in whispers
+* [Fix] Fixed bug causing "I'm following X" messages from ignored players to still be shown
+* [Fix] Fixed bug preventing `/offline` chat command from working
 
 ## Version 6.17
 * [New] Added a release channel option to the toolbox updating functionality
