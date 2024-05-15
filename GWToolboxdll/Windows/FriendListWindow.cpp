@@ -578,20 +578,21 @@ namespace {
     void CmdSetFriendListStatus(const wchar_t*, const int, const LPWSTR* argv)
     {
         std::wstring cmd = *argv;
+        bool res = false;
         if (cmd == L"away") {
-            GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away);
+            res = GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away);
         }
         else if (cmd == L"online") {
-            GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Online);
+            res = GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Online);
         }
-        else if (cmd == L"online") {
-            GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Offline);
+        else if (cmd == L"offline") {
+            res = GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Offline);
         }
         else if (cmd == L"busy" || cmd == L"dnd") {
-            GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::DND);
+            res = GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::DND);
         }
-        else {
-            Log::ErrorW(L"Failed to recognise friend list status via command");
+        if (!res) {
+            Log::ErrorW(L"Failed to set friend list status");
         }
     }
 }
