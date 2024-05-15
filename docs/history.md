@@ -8,6 +8,7 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 6.18
+* [Removed] Toolbox no longer works in Guild Halls. This is intentional.
 * [New] Salvage information module added
 * [Minor] TravelWindow: Renamed minimize_on_travel to collapse_on_travel, default false
 * [Minor] Toolbox now respects fetch_salvage_info checkbox
