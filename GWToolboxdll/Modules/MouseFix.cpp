@@ -13,38 +13,6 @@
 
 #include <hidusage.h>
 
-namespace OldCursorFix {
-    using GetClipCursor_pt = BOOL(WINAPI*)(_Out_ LPRECT lpRect);
-
-    GetClipCursor_pt GetClipCursor_Func;
-    GetClipCursor_pt RetGetClipCursor;
-
-    BOOL WINAPI fnGetClipCursor(const LPRECT lpRect) { return GetWindowRect(GW::MemoryMgr::GetGWWindowHandle(), lpRect); }
-
-    void InstallCursorFix()
-    {
-        const HMODULE hUser32 = GetModuleHandleA("user32.dll");
-        if (!hUser32) {
-            Log::Warning("Cursor Fix not installed, message devs about this!");
-            return;
-        }
-        GetClipCursor_Func = reinterpret_cast<GetClipCursor_pt>(GetProcAddress(hUser32, "GetClipCursor"));
-        if (!GetClipCursor_Func) {
-            Log::Warning("Cursor Fix not installed, message devs about this!");
-            return;
-        }
-        GW::HookBase::CreateHook((void**)&GetClipCursor_Func, fnGetClipCursor, reinterpret_cast<void**>(&RetGetClipCursor));
-        GW::HookBase::EnableHooks(GetClipCursor_Func);
-    }
-
-    void UninstallCursorFix()
-    {
-        if (GetClipCursor_Func) {
-            GW::HookBase::DisableHooks(GetClipCursor_Func);
-            GW::HookBase::RemoveHook(GetClipCursor_Func);
-        }
-    } // Collect the relative mouse position from raw input, instead of using the position passed into GW.
-}     // namespace OldCursorFix
 namespace {
     using OnProcessInput_pt = bool(__cdecl*)(uint32_t* wParam, uint32_t* lParam);
     OnProcessInput_pt ProcessInput_Func = nullptr;
@@ -66,33 +34,38 @@ namespace {
     bool* HasRegisteredTrackMouseEvent = nullptr;
     using SetCursorPosCenter_pt = void(__cdecl*)(GwMouseMove* wParam);
     SetCursorPosCenter_pt SetCursorPosCenter_Func = nullptr;
-    SetCursorPosCenter_pt SetCursorPosCenter_Ret = nullptr;
-
-    // Override (and rewrite) GW's handling of setting the mouse cursor to the center of the screen (bypass GameMutex, may be the cause of camera glitch)
+    SetCursorPosCenter_pt SetCursorPosCenter_Ret = nullptr;    // Override (and rewrite) GW's handling of setting the mouse cursor to the center of the screen (bypass GameMutex, may be the cause of camera glitch)
     // This could be a patch really, but rewriting the function out is a bit more readable.
+    
+    bool initialized = false;
+    bool enable_cursor_fix = true;
+    int cursor_size = 32;
+    HCURSOR current_cursor = nullptr;
+    bool cursor_size_hooked = false;
+    
     void OnSetCursorPosCenter(GwMouseMove* gwmm)
     {
         GW::Hook::EnterHook();
+        if (!enable_cursor_fix)
+            return GW::Hook::LeaveHook();
         // @Enhancement: Maybe assert that gwmm == gw_mouse_move?
         const HWND gw_window_handle = GetFocus();
         // @Enhancement: Maybe check that the focussed window handle is the GW window handle?
         RECT rect;
         if (!(gw_window_handle && GetClientRect(gw_window_handle, &rect))) {
-            goto leave;
+            return GW::Hook::LeaveHook();
         }
         gwmm->center_x = (rect.left + rect.right) / 2;
         gwmm->center_y = (rect.bottom + rect.top) / 2;
         rawInputRelativePosX = rawInputRelativePosY = 0;
         SetPhysicalCursorPos(gwmm->captured_x, gwmm->captured_y);
-    leave:
-        GW::Hook::LeaveHook();
     }
 
     // Override (and rewrite) GW's handling of mouse event 0x200 to stop camera glitching.
     bool OnProcessInput(uint32_t* wParam, uint32_t* lParam)
     {
         GW::Hook::EnterHook();
-        if (!(HasRegisteredTrackMouseEvent && gw_mouse_move)) {
+        if (!(enable_cursor_fix && HasRegisteredTrackMouseEvent && gw_mouse_move)) {
             goto forward_call; // Failed to find addresses for variables
         }
         if (!(wParam && wParam[1] == 0x200)) {
@@ -164,7 +137,10 @@ namespace {
             SetCursorPosCenter_Func = reinterpret_cast<SetCursorPosCenter_pt>(GW::Scanner::FunctionFromNearCall(address));
 
             GW::Hook::CreateHook((void**)&ProcessInput_Func, OnProcessInput, reinterpret_cast<void**>(&ProcessInput_Ret));
+            GW::Hook::EnableHooks(ProcessInput_Func);
             GW::Hook::CreateHook((void**)&SetCursorPosCenter_Func, OnSetCursorPosCenter, reinterpret_cast<void**>(&SetCursorPosCenter_Ret));
+            GW::Hook::EnableHooks(SetCursorPosCenter_Func);
+
         }
 
         GWCA_INFO("[SCAN] ProcessInput_Func = %p", ProcessInput_Func);
@@ -172,34 +148,18 @@ namespace {
         GWCA_INFO("[SCAN] gw_mouse_move = %p", gw_mouse_move);
         GWCA_INFO("[SCAN] SetCursorPosCenter_Func = %p", SetCursorPosCenter_Func);
 
-        ASSERT(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func);
+        //ASSERT(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func);
 
-        return true;
+        return gw_mouse_move != nullptr;
     }
 
     void CursorFixEnable(const bool enable)
     {
-        ASSERT(CursorFixInitialise());
-        if (enable) {
-            if (ProcessInput_Func) {
-                GW::Hook::EnableHooks(ProcessInput_Func);
-            }
-            if (SetCursorPosCenter_Func) {
-                GW::Hook::EnableHooks(SetCursorPosCenter_Func);
-            }
-        }
-        else {
-            if (SetCursorPosCenter_Func) {
-                GW::Hook::DisableHooks(SetCursorPosCenter_Func);
-            }
-            if (ProcessInput_Func) {
-                GW::Hook::DisableHooks(ProcessInput_Func);
-            }
-        }
+        CursorFixInitialise();
+        enable_cursor_fix = enable;
     }
 
-    bool initialized = false;
-    bool enable_cursor_fix = true;
+
 
     /*
      *  Logic for scaling gw cursor up or down
@@ -264,9 +224,6 @@ namespace {
         return outBitmap;
     }
 
-    int cursor_size = 32;
-    HCURSOR current_cursor = nullptr;
-    bool cursor_size_hooked = false;
 
     HCURSOR ScaleCursor(const HCURSOR cursor, const int targetSize)
     {
@@ -368,7 +325,7 @@ namespace {
         cursor_size = new_size;
         if (cursor_size != 32) {
             if (!cursor_size_hooked) {
-                GW::HookBase::EnableHooks(ChangeCursorIcon_Func);
+                
             }
             cursor_size_hooked = true;
         }
@@ -389,6 +346,7 @@ void MouseFix::Initialize()
     ChangeCursorIcon_Func = (ChangeCursorIcon_pt)GW::Scanner::FunctionFromNearCall(address);
     if (ChangeCursorIcon_Func) {
         GW::HookBase::CreateHook((void**)&ChangeCursorIcon_Func, OnChangeCursorIcon, (void**)&ChangeCursorIcon_Ret);
+        GW::HookBase::EnableHooks(ChangeCursorIcon_Func);
     }
 }
 
@@ -410,9 +368,9 @@ void MouseFix::Terminate()
     ToolboxModule::Terminate();
     if (initialized) {
         CursorFixEnable(false);
-        OldCursorFix::UninstallCursorFix();
     }
     if (ChangeCursorIcon_Func) {
+        GW::HookBase::DisableHooks(ChangeCursorIcon_Func);
         GW::HookBase::RemoveHook(ChangeCursorIcon_Func);
     }
 }
@@ -441,7 +399,6 @@ bool MouseFix::WndProc(const UINT Message, const WPARAM wParam, const LPARAM lPa
         return false;
     }
     if (!initialized) {
-        OldCursorFix::InstallCursorFix();
         CursorFixEnable(enable_cursor_fix);
         initialized = true;
     }
