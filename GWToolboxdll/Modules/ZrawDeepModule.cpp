@@ -21,7 +21,7 @@
 #include <Modules/Resources.h>
 
 namespace {
-    const wchar_t* kanaxai_dialogs[] = {
+    constexpr std::array kanaxai_dialogs = {
         // Room 1-4 no dialog
         L"\x5336\xBEB8\x8555\x7267", // Room 5 "Fear not the darkness. It is already within you."
         L"\x5337\xAA3A\xE96F\x3E34", // Room 6 "Is it comforting to know the source of your fears? Or do you fear more now that you see them in front of you."
@@ -34,9 +34,8 @@ namespace {
         L"\x533B\xCAA6\xFDA9\x3277", // Room 13 "I am Kanaxai, creator of nightmares. Let me make yours into reality."
         L"\x533C\xDD33\xA330\x4E27", // Room 14 "I will fill your hearts with visions of horror and despair that will haunt you for all of your days."
         L"\x533D\x9EB1\x8BEE\x2637", // Kanaxai "What gives you the right to enter my lair? I shall kill you for your audacity, after I destroy your mind with my horrifying visions, of course."
-        nullptr
     };
-    const wchar_t* kanaxai_audio_filenames[] = {
+    constexpr std::array kanaxai_audio_filenames = {
         L"kanaxai\\room5.mp3",
         L"kanaxai\\room6.mp3",
         L"kanaxai\\room8.mp3",
@@ -47,7 +46,7 @@ namespace {
         L"kanaxai\\kanaxai.mp3"
     };
 
-    Mp3* mp3 = nullptr;
+    Mp3 mp3{};
 
     bool enabled = false;
     bool transmo_team = true;
@@ -213,30 +212,29 @@ void ZrawDeepModule::SetEnabled(const bool _enabled)
         }
     }
     else {
-        GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayDialogue>(&ZrawDeepModule_StoCs);
-        GW::StoC::RemoveCallback<GW::Packet::StoC::SpeechBubble>(&ZrawDeepModule_StoCs);
-        GW::StoC::RemoveCallback<GW::Packet::StoC::DialogBody>(&ZrawDeepModule_StoCs);
-        GW::StoC::RemoveCallback<GW::Packet::StoC::InstanceLoadInfo>(&ZrawDeepModule_StoCs);
-        GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&ZrawDeepModule_StoCs);
-        GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayCape>(&ZrawDeepModule_StoCs);
-        GW::StoC::RemoveCallback<GW::Packet::StoC::AgentModel>(&ZrawDeepModule_StoCs);
+        GW::StoC::RemoveCallbacks(&ZrawDeepModule_StoCs);
+        GW::StoC::RemoveCallbacks(&ZrawDeepModule_StoCs);
+        GW::StoC::RemoveCallbacks(&ZrawDeepModule_StoCs);
+        GW::StoC::RemoveCallbacks(&ZrawDeepModule_StoCs);
+        GW::StoC::RemoveCallbacks(&ZrawDeepModule_StoCs);
+        GW::StoC::RemoveCallbacks(&ZrawDeepModule_StoCs);
+        GW::StoC::RemoveCallbacks(&ZrawDeepModule_StoCs);
     }
     pending_transmog = -500;
 }
 
 void ZrawDeepModule::Terminate()
 {
+    ToolboxModule::Terminate();
     GW::Chat::DeleteCommand(L"deep24h");
     GW::Chat::DeleteCommand(L"24hdeep");
     SetEnabled(false);
-    delete mp3;
-    mp3 = nullptr;
     CoUninitialize();
+    terminating = false;
 }
 
 bool ZrawDeepModule::CanTerminate() { return can_terminate; }
 bool ZrawDeepModule::IsEnabled() { return enabled; }
-bool ZrawDeepModule::HasSettings() { return enabled; }
 
 void ZrawDeepModule::Initialize()
 {
@@ -314,6 +312,7 @@ void ZrawDeepModule::SignalTerminate()
 {
     terminating = true;
     SetEnabled(false);
+    SetTransmogs();
 }
 
 void ZrawDeepModule::SaveSettings(ToolboxIni* ini)
@@ -338,7 +337,7 @@ void ZrawDeepModule::LoadSettings(ToolboxIni* ini)
 
 void ZrawDeepModule::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet)
 {
-    for (uint8_t i = 0; kanaxai_dialogs[i] != nullptr; i++) {
+    for (uint8_t i = 0; i < kanaxai_dialogs.size(); i++) {
         if (wmemcmp(packet->message, kanaxai_dialogs[i], 4) == 0) {
             return PlayKanaxaiDialog(i);
         }
@@ -351,11 +350,8 @@ void ZrawDeepModule::DisplayDialogue(GW::Packet::StoC::DisplayDialogue* packet)
 
 void ZrawDeepModule::PlayKanaxaiDialog(const uint8_t idx)
 {
-    if (!mp3) {
-        mp3 = new Mp3();
-    }
-    if (!mp3->Load(Resources::GetPath(kanaxai_audio_filenames[idx]).c_str())) {
+    if (!mp3.Load(Resources::GetPath(kanaxai_audio_filenames[idx]).c_str())) {
         return;
     }
-    mp3->Play();
+    mp3.Play();
 }

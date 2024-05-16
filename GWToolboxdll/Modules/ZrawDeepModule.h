@@ -19,7 +19,6 @@ public:
     void Terminate() override;
     void SignalTerminate() override;
     bool CanTerminate() override;
-    bool HasSettings() override;
     void SetEnabled(bool enabled);
     void Update(float delta) override;
     void DrawSettingsInternal() override;
