@@ -1,4 +1,29 @@
 #pragma once
+#include <GWCA/Managers/StoCMgr.h>
+
+class StoCCallback {
+    GW::HookEntry* hook_entry = nullptr;
+    const GW::StoC::PacketCallback callback;
+    const uint32_t header;
+    const int altitude;
+
+public:
+    StoCCallback(const uint32_t _header, const GW::StoC::PacketCallback _callback, const int _altitude = -0x8000)
+        : header(_header), callback(_callback), altitude(_altitude) { }
+    void detach() {
+        if (!hook_entry) return;
+        GW::StoC::RemoveCallback(header, hook_entry);
+        delete hook_entry;
+        hook_entry = nullptr;
+    }
+    void attach() {
+        hook_entry = new GW::HookEntry;
+        GW::StoC::RegisterPacketCallback(hook_entry, header, callback, altitude);
+    }
+    ~StoCCallback() {
+        detach();
+    }
+};
 
 namespace GW {
     struct Player;
