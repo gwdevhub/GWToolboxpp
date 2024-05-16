@@ -560,7 +560,7 @@ void HotkeysWindow::SaveSettings(ToolboxIni* ini)
 bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
 {
     if (Message == WM_ACTIVATE) {
-        OnWindowActivated(wParam != WA_INACTIVE);
+        OnWindowActivated(LOWORD(wParam) != WA_INACTIVE);
         return false;
     }
     if (GW::Chat::GetIsTyping()) {

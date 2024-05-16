@@ -580,8 +580,8 @@ namespace {
     struct CmdAlias {
         char alias_cstr[256] = {};
         wchar_t alias_wstr[128] = {};
-        char command_cstr[256] = {};
-        wchar_t command_wstr[128] = {};
+        char command_cstr[512] = {};
+        wchar_t command_wstr[256] = {};
         bool processing = false;
     };
 
@@ -616,7 +616,14 @@ namespace {
             if (wcscmp(alias->alias_wstr, sent_alias.c_str()) == 0 && !alias->processing && wcslen(alias->command_wstr) > 1) {
                 status->blocked = true;
                 alias->processing = true;
-                GW::Chat::SendChat(alias->command_cstr[0], &alias->command_wstr[1]);
+                std::wstring tmp;
+                std::vector<std::wstring> parts;
+                std::wstringstream wss(alias->command_wstr);
+                while (std::getline(wss, tmp, L'\n')) {
+                    if (tmp.length() < 2)
+                        continue;
+                    GW::Chat::SendChat((char)tmp[0], &tmp[1]);
+                }
                 alias->processing = false;
             }
         }
@@ -963,15 +970,14 @@ void ChatCommands::DrawSettingsInternal()
             ImGui::SetTooltip("Alias for this command");
         }
         ImGui::PopItemWidth();
-        ImGui::PushItemWidth(avail_w * .6f);
         ImGui::SameLine();
-        if (ImGui::InputText("###cmd_command", (*it)->command_cstr, _countof(CmdAlias::command_cstr))) {
+        if (ImGui::InputTextMultiline("##cmd_command", (*it)->command_cstr,
+            _countof(CmdAlias::command_cstr), ImVec2(avail_w * .6f, 0.0f))) {
             swprintf((*it)->command_wstr, _countof(CmdAlias::command_wstr), L"%S", (*it)->command_cstr);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Chat command to trigger");
         }
-        ImGui::PopItemWidth();
         ImGui::SameLine(avail_w);
         static bool confirm_delete = false;
         if (ImGui::SmallConfirmButton("Delete", &confirm_delete, "Are you sure you want to delete this entry?")) {
@@ -985,7 +991,7 @@ void ChatCommands::DrawSettingsInternal()
     if (ImGui::Button("Add New Alias")) {
         wchar_t tmp[32];
         swprintf(tmp, _countof(tmp), L"alias_%d", cmd_aliases.size());
-        CreateAlias(L"zraw", L"!zraw");
+        CreateAlias(tmp, L"#hello world");
     }
     ImGui::SameLine();
     if (ImGui::Button("Sort")) {
@@ -1003,10 +1009,6 @@ void ChatCommands::LoadSettings(ToolboxIni* ini)
         delete it;
     }
     cmd_aliases.clear();
-    CreateAlias(L"ff", L"/resign");
-    CreateAlias(L"gh", L"/tp gh");
-    CreateAlias(L"armor", L"/pingitem armor");
-
     const auto section_name = "Chat Command Aliases";
 
     ToolboxIni::TNamesDepend entries;
@@ -1020,7 +1022,8 @@ void ChatCommands::LoadSettings(ToolboxIni* ini)
         if (cmd.empty()) {
             continue;
         }
-        static const std::regex index_regex(R"((\d+):(.+))");
+        std::ranges::replace(cmd, '\x2', '\n');
+        static const std::regex index_regex("(\\d+):(.+)");
         std::smatch match;
         if (std::regex_match(alias, match, index_regex)) {
             alias = match[2];
@@ -1028,6 +1031,11 @@ void ChatCommands::LoadSettings(ToolboxIni* ini)
         const auto alias_wstr = GuiUtils::StringToWString(alias);
         const auto command_wstr = GuiUtils::StringToWString(cmd);
         CreateAlias(alias_wstr.c_str(), command_wstr.c_str());
+    }
+    if (cmd_aliases.empty()) {
+        CreateAlias(L"ff", L"/resign");
+        CreateAlias(L"gh", L"/tp gh");
+        CreateAlias(L"armor", L"/pingitem armor");
     }
     sort_cmd_aliases();
 }
@@ -1047,7 +1055,11 @@ void ChatCommands::SaveSettings(ToolboxIni* ini)
         if (!alias->alias_cstr && alias->alias_cstr[0]) {
             continue;
         }
-        ini->SetValue(section_name, std::format("{}:{}", index, alias->alias_cstr).c_str(), alias->command_cstr);
+
+        std::string cmd_copy = alias->command_cstr;
+        std::ranges::replace(cmd_copy, '\n', '\x2');
+
+        ini->SetValue(section_name, std::format("{}:{}", index, alias->alias_cstr).c_str(), cmd_copy.c_str());
     }
 }
 
@@ -1659,7 +1671,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         else if (arg1 == L"load") {
             // e.g. /tb load
             GWToolbox::SetSettingsFolder({});
-            const auto file_location = GWToolbox::LoadSettings();
+            const auto file_location = GWToolbox::LoadSettings(true);
             const auto dir = file_location.parent_path();
             const auto dirstr = dir.wstring();
             const auto printable = std::regex_replace(dirstr, std::wregex(L"\\\\"), L"/");
@@ -1745,7 +1757,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
             GWToolbox::SetSettingsFolder(old_settings_folder);
             return;
         }
-        const auto file_location = GWToolbox::LoadSettings();
+        const auto file_location = GWToolbox::LoadSettings(true);
         const auto dir = file_location.parent_path();
         const auto dirstr = dir.wstring();
         const auto printable = std::regex_replace(dirstr, std::wregex(L"\\\\"), L"/");
