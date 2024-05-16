@@ -1671,7 +1671,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         else if (arg1 == L"load") {
             // e.g. /tb load
             GWToolbox::SetSettingsFolder({});
-            const auto file_location = GWToolbox::LoadSettings(true);
+            const auto file_location = GWToolbox::LoadSettings();
             const auto dir = file_location.parent_path();
             const auto dirstr = dir.wstring();
             const auto printable = std::regex_replace(dirstr, std::wregex(L"\\\\"), L"/");
@@ -1757,7 +1757,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
             GWToolbox::SetSettingsFolder(old_settings_folder);
             return;
         }
-        const auto file_location = GWToolbox::LoadSettings(true);
+        const auto file_location = GWToolbox::LoadSettings();
         const auto dir = file_location.parent_path();
         const auto dirstr = dir.wstring();
         const auto printable = std::regex_replace(dirstr, std::wregex(L"\\\\"), L"/");
