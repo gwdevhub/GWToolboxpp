@@ -20,6 +20,8 @@ SI_Error ToolboxIni::LoadIfExists(const std::filesystem::path& a_pwszFile)
 SI_Error ToolboxIni::LoadFile(const std::filesystem::path& a_pwszFile)
 {
     int res = -1;
+
+    Reset();
     // 3 tries to load from disk
     for (auto i = 0; i < 3 && res != SI_OK; i++) {
         res = CSimpleIni::LoadFile(a_pwszFile.wstring().c_str());
