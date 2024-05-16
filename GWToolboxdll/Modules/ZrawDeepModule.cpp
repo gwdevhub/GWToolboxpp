@@ -236,7 +236,6 @@ void ZrawDeepModule::Terminate()
 
 bool ZrawDeepModule::CanTerminate() { return can_terminate; }
 bool ZrawDeepModule::IsEnabled() { return enabled; }
-bool ZrawDeepModule::HasSettings() { return enabled; }
 
 void ZrawDeepModule::Initialize()
 {
