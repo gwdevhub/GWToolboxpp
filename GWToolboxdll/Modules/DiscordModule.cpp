@@ -245,6 +245,10 @@ void DiscordModule::InviteUser(const DiscordUser* user)
 
 void DiscordModule::Terminate()
 {
+    GW::StoC::RemoveCallback(GW::Packet::StoC::Packet<GW::Packet::StoC::InstanceLoadInfo>::STATIC_HEADER, &InstanceLoadInfo_Callback);
+    GW::StoC::RemoveCallback(GW::Packet::StoC::Packet<GW::Packet::StoC::PartyPlayerAdd>::STATIC_HEADER, &PartyPlayerAdd_Callback);
+    GW::StoC::RemoveCallback(GW::Packet::StoC::Packet<GW::Packet::StoC::PartyUpdateSize>::STATIC_HEADER, &PartyUpdateSize_Callback);
+    GW::StoC::RemoveCallback(GW::Packet::StoC::Packet<GW::Packet::StoC::ErrorMessage>::STATIC_HEADER, &ErrorMessage_Callback);
     ToolboxModule::Terminate();
     Disconnect();
     ASSERT(UnloadDll());
@@ -336,15 +340,16 @@ void DiscordModule::Initialize()
     // Try to download and inject discord_game_sdk.dll for discord.
     dll_location = Resources::GetPath(L"discord_game_sdk.dll");
     // NOTE: We're using the one we know matches our API version, not checking for any other discord dll on the machine.
-    Resources::EnsureFileExists(dll_location,
-                                "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/discord_game_sdk.dll",
-                                [&](const bool success, const std::wstring& error) {
-                                    if (!success || !LoadDll()) {
-                                        Log::LogW(L"Failed to load discord_game_sdk.dll. To try again, please restart GWToolbox\n%s", error.c_str());
-                                        return;
-                                    }
-                                    pending_discord_connect = pending_activity_update = discord_enabled;
-                                });
+    Resources::EnsureFileExists(
+        dll_location,
+        "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/discord_game_sdk.dll",
+        [&](const bool success, const std::wstring& error) {
+            if (!success || !LoadDll()) {
+                Log::LogW(L"Failed to load discord_game_sdk.dll. To try again, please restart GWToolbox\n%s", error.c_str());
+                return;
+            }
+            pending_discord_connect = pending_activity_update = discord_enabled;
+        });
 }
 
 bool DiscordModule::IsInJoinablePartyMap()
