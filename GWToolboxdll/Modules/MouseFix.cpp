@@ -359,10 +359,12 @@ void MouseFix::Terminate()
     if (initialized) {
         CursorFixEnable(false);
     }
-    if (ChangeCursorIcon_Func) {
-        GW::HookBase::DisableHooks(ChangeCursorIcon_Func);
-        GW::HookBase::RemoveHook(ChangeCursorIcon_Func);
-    }
+    GW::HookBase::RemoveHook(ChangeCursorIcon_Func);
+    GW::HookBase::RemoveHook(ProcessInput_Func);
+    GW::HookBase::RemoveHook(SetCursorPosCenter_Func);
+
+    gw_mouse_move = nullptr;
+
 }
 
 void MouseFix::DrawSettingsInternal()
