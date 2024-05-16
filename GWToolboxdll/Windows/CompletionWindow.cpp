@@ -1915,12 +1915,8 @@ void CompletionWindow::Initialize_Dungeons()
 
 void CompletionWindow::Terminate()
 {
-    GW::StoC::RemoveCallback(GAME_SMSG_MAPS_UNLOCKED, &skills_unlocked_stoc_entry);
-    GW::StoC::RemoveCallback(GAME_SMSG_VANQUISH_PROGRESS, &skills_unlocked_stoc_entry);
-    GW::StoC::RemoveCallback(GAME_SMSG_VANQUISH_COMPLETE, &skills_unlocked_stoc_entry);
-    GW::StoC::RemoveCallback(GAME_SMSG_SKILLS_UNLOCKED, &skills_unlocked_stoc_entry);
-    GW::StoC::RemoveCallback(GAME_SMSG_INSTANCE_LOADED, &skills_unlocked_stoc_entry);
-    GW::StoC::RemoveCallback(GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, &skills_unlocked_stoc_entry);
+    GW::StoC::RemoveCallbacks(&skills_unlocked_stoc_entry);
+    GW::UI::RemoveUIMessageCallback(&skills_unlocked_stoc_entry);
     auto clear_vec = [](auto& vec) {
         for (auto& c : vec) {
             CLEAR_PTR_VEC(c.second);
