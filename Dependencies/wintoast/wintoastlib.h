@@ -58,7 +58,7 @@ namespace WinToastLib {
         virtual void toastActivated() const = 0;
         virtual void toastActivated(int actionIndex) const = 0;
         virtual void toastDismissed(WinToastDismissalReason state) const = 0;
-        virtual void toastFailed() const = 0;
+        virtual void toastFailed(HRESULT err = 0) const = 0;
     };
 
     class WinToastTemplate {

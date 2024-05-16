@@ -305,9 +305,11 @@ namespace Util {
             if (SUCCEEDED(hr)) {
                 hr = notification->add_Failed(Callback < Implements < RuntimeClassFlags<ClassicCom>,
                     ITypedEventHandler<ToastNotification*, ToastFailedEventArgs* >> >(
-                    [eventHandler](IToastNotification*, IToastFailedEventArgs*)
+                    [eventHandler](IToastNotification*, IToastFailedEventArgs* args)
                 {
-                    eventHandler->toastFailed();
+                            HRESULT err = 0;
+                            args->get_ErrorCode(&err);
+                    eventHandler->toastFailed(err);
                     return S_OK;
                 }).Get(), &failedToken);
             }
