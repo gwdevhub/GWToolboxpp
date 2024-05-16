@@ -557,6 +557,15 @@ namespace {
         }
         GW::HookBase::LeaveHook();
     }
+
+    void OnMapChange(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
+        // NB: Friends list messages don't play well when clearing the chat log after the map has loaded.
+        // Instead, we trigger this immediately before map load.
+        // When the game world is rebuilt during map load, the log works properly again.
+        Init();
+        Inject();
+        Save(); // Save the chat log on every map transition
+    }
 }
 
 void ChatLog::SaveSettings(ToolboxIni* ini)
@@ -615,31 +624,21 @@ void ChatLog::Initialize()
     }
     GW::UI::RegisterUIMessageCallback(&PostAddToChatLog_entry, GW::UI::UIMessage::kLogChatMessage, OnPostAddToChatLog, 0x4000);
 
-    RegisterUIMessageCallback(&UIMessage_Entry, GW::UI::UIMessage::kMapChange, [&](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
-        // NB: Friends list messages don't play well when clearing the chat log after the map has loaded.
-        // Instead, we trigger this immediately before map load.
-        // When the game world is rebuilt during map load, the log works properly again.
-        Init();
-        Inject();
-        Save(); // Save the chat log on every map transition
-    }, -0x8000);
+    GW::UI::RegisterUIMessageCallback(&UIMessage_Entry, GW::UI::UIMessage::kMapChange, OnMapChange, -0x8000);
     GW::GameThread::Enqueue(Init);
 }
 
-void ChatLog::RegisterSettingsContent()
-{
-    ToolboxModule::RegisterSettingsContent(
-        "Chat Settings", ICON_FA_COMMENTS,
-        [this](const std::string&, const bool is_showing) {
-            if (!is_showing) {
-                return;
-            }
-            ImGui::Checkbox("Enable GWToolbox chat log", &enabled);
-            ImGui::ShowHelp(Description());
-        },
-        0.8f);
-}
-ChatLog::~ChatLog() {
+void ChatLog::Terminate() {
+    ToolboxModule::Terminate();
+    GW::UI::RemoveUIMessageCallback(&UIMessage_Entry);
+    GW::UI::RemoveUIMessageCallback(&PostAddToChatLog_entry);
+    if (AddToSentLog_Func)
+        GW::Hook::RemoveHook(AddToSentLog_Func);
     Reset();
 }
 
+void ChatLog::DrawSettingsInternal()
+{
+    ImGui::Checkbox("Enable GWToolbox chat log", &enabled);
+    ImGui::ShowHelp(Description());
+}

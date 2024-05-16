@@ -11,8 +11,6 @@ namespace GW::Chat {
 
 class ChatLog : public ToolboxModule {
     ChatLog() = default;
-
-    ~ChatLog() override;
 public:
     static ChatLog& Instance()
     {
@@ -25,7 +23,8 @@ public:
     [[nodiscard]] const char* SettingsName() const override { return "Chat Settings"; }
 
     void Initialize() override;
-    void RegisterSettingsContent() override;
+    void Terminate() override;
+    void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void SetEnabled(bool _enabled);
