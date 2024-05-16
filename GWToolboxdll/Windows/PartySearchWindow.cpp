@@ -475,6 +475,7 @@ void PartySearchWindow::SignalTerminate()
     ws_window = nullptr;
     if (wsaData.wVersion) {
         WSACleanup();
+        wsaData = { 0 };
     }
 }
 

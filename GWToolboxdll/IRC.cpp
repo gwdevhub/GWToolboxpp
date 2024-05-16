@@ -65,6 +65,7 @@ IRC::~IRC()
     }
     if (wsaData.wVersion) {
         WSACleanup();
+        wsaData = { 0 };
     }
 }
 

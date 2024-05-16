@@ -157,6 +157,7 @@ void TradeWindow::SignalTerminate()
     ws_window = nullptr;
     if (wsaData.wVersion) {
         WSACleanup();
+        wsaData = { 0 };
     }
 }
 
