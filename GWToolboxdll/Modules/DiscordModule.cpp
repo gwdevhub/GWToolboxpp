@@ -48,6 +48,13 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 
 constexpr auto DISCORD_APP_ID = 378706083788881961;
 
+namespace {
+    GW::HookEntry ErrorMessage_Callback;
+    GW::HookEntry PartyUpdateSize_Callback;
+    GW::HookEntry PartyPlayerAdd_Callback;
+    GW::HookEntry InstanceLoadInfo_Callback;
+}
+
 using DiscordCreate_pt = EDiscordResult(__cdecl*)(DiscordVersion version, DiscordCreateParams* params, IDiscordCore** result);
 
 const char* region_assets[] = {
@@ -245,10 +252,10 @@ void DiscordModule::InviteUser(const DiscordUser* user)
 
 void DiscordModule::Terminate()
 {
-    GW::StoC::RemoveCallback(GW::Packet::StoC::Packet<GW::Packet::StoC::InstanceLoadInfo>::STATIC_HEADER, &InstanceLoadInfo_Callback);
-    GW::StoC::RemoveCallback(GW::Packet::StoC::Packet<GW::Packet::StoC::PartyPlayerAdd>::STATIC_HEADER, &PartyPlayerAdd_Callback);
-    GW::StoC::RemoveCallback(GW::Packet::StoC::Packet<GW::Packet::StoC::PartyUpdateSize>::STATIC_HEADER, &PartyUpdateSize_Callback);
-    GW::StoC::RemoveCallback(GW::Packet::StoC::Packet<GW::Packet::StoC::ErrorMessage>::STATIC_HEADER, &ErrorMessage_Callback);
+    GW::StoC::RemoveCallbacks(&InstanceLoadInfo_Callback);
+    GW::StoC::RemoveCallbacks(&PartyPlayerAdd_Callback);
+    GW::StoC::RemoveCallbacks(&PartyUpdateSize_Callback);
+    GW::StoC::RemoveCallbacks(&ErrorMessage_Callback);
     ToolboxModule::Terminate();
     Disconnect();
     ASSERT(UnloadDll());

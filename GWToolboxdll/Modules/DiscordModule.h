@@ -97,9 +97,4 @@ private:
     bool Connect();
     static void ConnectCanary();
     void Disconnect();
-
-    GW::HookEntry ErrorMessage_Callback;
-    GW::HookEntry PartyUpdateSize_Callback;
-    GW::HookEntry PartyPlayerAdd_Callback;
-    GW::HookEntry InstanceLoadInfo_Callback;
 };
