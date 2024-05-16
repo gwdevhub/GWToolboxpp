@@ -119,7 +119,7 @@ namespace {
             : toolbox_module(&m), name(m.Name()), enabled(_enabled) { }
     };
 
-    const char* modules_ini_section = "Toolbox Modules";
+    constexpr const char* modules_ini_section = "Toolbox Modules";
 
     std::vector<ModuleToggle> optional_modules = {
 #if USE_OBFUSCATOR

@@ -629,6 +629,8 @@ void GWToolbox::Initialize()
 std::filesystem::path GWToolbox::LoadSettings()
 {
     const auto ini = OpenSettingsFile();
+    ToolboxSettings::Instance().LoadSettings(ini);
+    ToolboxSettings::LoadModules(ini);
     if (!ini->location_on_disk.empty()) {
         for (const auto m : modules_enabled) {
             m->LoadSettings(ini);
@@ -676,6 +678,7 @@ std::filesystem::path GWToolbox::SaveSettings()
     for (const auto m : windows_enabled) {
         m->SaveSettings(ini);
     }
+    ToolboxSettings::LoadModules(ini);
     ASSERT(Resources::SaveIniToFile(ini->location_on_disk, ini) == 0);
     const auto dir = ini->location_on_disk.parent_path();
     const auto dirstr = dir.wstring();
