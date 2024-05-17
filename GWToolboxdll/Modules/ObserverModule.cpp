@@ -1995,7 +1995,7 @@ ObserverModule::ObservableGuild::ObservableGuild(ObserverModule& parent, const G
     , faction(guild.faction)
     , faction_point(guild.faction_point)
     , qualifier_point(guild.qualifier_point)
-    , cape_trim(guild.cape_trim)
+    , cape_trim(guild.cape.cape_trim)
 {
     //
 }
