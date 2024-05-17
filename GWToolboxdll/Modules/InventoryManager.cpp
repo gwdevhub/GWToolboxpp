@@ -1772,11 +1772,10 @@ void InventoryManager::Update(float)
 {
     if (check_context_menu_position && TIMER_DIFF(check_context_menu_position) > 0) {
         const auto item = right_clicked_item ? GW::Items::GetItemById(right_clicked_item) : nullptr;
-        const auto bag = item ? item->bag : nullptr;
-        if (bag) {
+        if (item) {
             // Item right clicked - spoof a click event
             GW::HookStatus status;
-            ItemClickCallback(&status, 999, item->slot, bag);
+            ItemClickCallback(&status, 999, item->slot, item->bag);
         }
         check_context_menu_position = 0;
     }
@@ -2102,14 +2101,17 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
     }*/
     ImGui::Text(context_item.name.string().c_str());
     ImGui::Separator();
+    const auto bag = context_item_actual->bag;
     // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-        if (ImGui::Button(context_item_actual->bag->IsInventoryBag() ? "Store Item" : "Withdraw Item", size)) {
+        if (bag && ImGui::Button(bag->IsInventoryBag() ? "Store Item" : "Withdraw Item", size)) {
             ImGui::CloseCurrentPopup();
             move_item(context_item_actual);
             goto end_popup;
         }
-        if (context_item_actual->bag->IsInventoryBag()) {
+        char move_all_label[128];
+        *move_all_label = 0;
+        if (context_item_actual->IsInventoryItem()) {
             if (context_item_actual->GetIsMaterial()) {
                 if (ImGui::Button("Store All Materials", size)) {
                     ImGui::CloseCurrentPopup();
@@ -2138,8 +2140,9 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
                     goto end_popup;
                 }
             }
+            snprintf(move_all_label, _countof(move_all_label), "Store All %s", context_item.plural_item_name.string().c_str());
         }
-        else {
+        if(context_item_actual->IsStorageItem()) {
             if (context_item_actual->type == GW::Constants::ItemType::Dye) {
                 if (ImGui::Button("Withdraw All Dyes", size)) {
                     ImGui::CloseCurrentPopup();
@@ -2154,21 +2157,15 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
                     goto end_popup;
                 }
             }
+            snprintf(move_all_label, _countof(move_all_label), "Withdraw All %s", context_item.plural_item_name.string().c_str());
         }
-        char buf[128];
-        if (context_item_actual->bag->IsInventoryBag()) {
-            snprintf(buf, 128, "Store All %s", context_item.plural_item_name.string().c_str());
-        }
-        else {
-            snprintf(buf, 128, "Withdraw All %s", context_item.plural_item_name.string().c_str());
-        }
-        if (ImGui::Button(buf, size)) {
+        if (*move_all_label && ImGui::Button(move_all_label, size)) {
             ImGui::CloseCurrentPopup();
             move_all_item(context_item_actual);
             goto end_popup;
         }
     }
-    if (context_item_actual->IsIdentificationKit()) {
+    if (bag && context_item_actual->IsIdentificationKit()) {
         auto type = IdentifyAllType::None;
         if (ImGui::Button("Identify All Items", size)) {
             type = IdentifyAllType::All;
@@ -2197,7 +2194,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
             goto end_popup;
         }
     }
-    else if (context_item_actual->IsSalvageKit()) {
+    if (bag && context_item_actual->IsSalvageKit()) {
         auto type = SalvageAllType::None;
         if (ImGui::Button("Salvage All White Items", size)) {
             type = SalvageAllType::White;
@@ -2284,11 +2281,6 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
     }
 
     if (!item) {
-        return;
-    }
-    const bool is_inventory_item = item->bag->IsInventoryBag();
-    const bool is_storage_item = item->bag->IsStorageBag() || item->bag->IsMaterialStorage();
-    if (!is_inventory_item && !is_storage_item) {
         return;
     }
 
@@ -2493,6 +2485,14 @@ bool InventoryManager::Item::IsRareMaterial() const
     const GW::ItemModifier* mod = GetModifier(0x2508);
     return mod && mod->arg1() > 11;
 }
+bool InventoryManager::Item::IsInventoryItem() const
+{
+    return bag && bag->IsInventoryBag();
+}
+bool InventoryManager::Item::IsStorageItem() const
+{
+    return bag && (bag->IsStorageBag() || bag->IsMaterialStorage());
+}
 
 GW::Constants::Rarity InventoryManager::Item::GetRarity() const
 {
@@ -2514,22 +2514,21 @@ GW::Constants::Rarity InventoryManager::Item::GetRarity() const
 bool InventoryManager::PendingItem::set(const Item* item)
 {
     item_id = 0;
-    if (!item || !item->item_id || !item->bag) {
+    if (!item || !item->item_id) {
         return false;
     }
     item_id = item->item_id;
     slot = item->slot;
     quantity = item->quantity;
     uses = item->GetUses();
-    bag = static_cast<GW::Constants::Bag>(item->bag->index + 1);
+    bag = item->bag ? item->bag->bag_id() : GW::Constants::Bag::None;
     name.reset(item->complete_name_enc ? item->complete_name_enc : item->name_enc);
     // NB: This doesn't work for inscriptions; gww doesn't have a page per inscription.
     wiki_name.reset(item->name_enc);
     wiki_name.language(GW::Constants::Language::English);
     wiki_name.wstring(); // Trigger decode; this isn't done any other time
-    wchar_t plural_item_name_wc[128];
-    swprintf(plural_item_name_wc, 128, L"\xa3d\x10a\xa35\x101\x200\x10a%s\x1\x1", item->name_enc);
-    plural_item_name.reset(plural_item_name_wc);
+    const auto plural_item_enc = std::format(L"\xa35\x101\x100\x10a{}\x1", item->name_enc);
+    plural_item_name.reset(plural_item_enc.c_str());
     desc.reset(item->info_string);
     return true;
 }
@@ -2539,7 +2538,14 @@ InventoryManager::Item* InventoryManager::PendingItem::item() const
     if (!item_id) {
         return nullptr;
     }
-    const auto item = static_cast<Item*>(GW::Items::GetItemBySlot(GW::Items::GetBag(bag), slot + 1));
+    Item* item = nullptr;
+    if (bag == GW::Constants::Bag::None) {
+        // i.e. merchant item
+        item = static_cast<Item*>(GW::Items::GetItemById(item_id));
+    }
+    else {
+        item = static_cast<Item*>(GW::Items::GetItemBySlot(GW::Items::GetBag(bag), slot + 1));
+    }
     return item && item->item_id == item_id ? item : nullptr;
 }
 
@@ -2597,7 +2603,6 @@ void InventoryManager::PendingItem::PluralEncString::sanitise()
     }
     EncString::sanitise();
     if (sanitised) {
-        static const std::wregex plural(L"256 ");
-        decoded_ws = std::regex_replace(decoded_ws, plural, L"");
+        decoded_ws = decoded_ws.substr(2);
     }
 }

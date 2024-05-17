@@ -161,6 +161,9 @@ public:
         bool IsSalvagable(bool check_bag = true);
         bool IsHiddenFromMerchants();
 
+        bool IsInventoryItem() const;
+        bool IsStorageItem() const;
+
         bool IsRareMaterial() const;
         bool IsOfferedInTrade() const;
         bool CanOfferToTrade() const;
