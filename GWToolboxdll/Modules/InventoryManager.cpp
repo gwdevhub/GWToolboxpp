@@ -461,7 +461,7 @@ namespace {
 
 
     // Move a whole stack into/out of storage
-    uint16_t move_item(const GW::Item* item, const uint16_t quantity = 1000u)
+    uint16_t move_item(const InventoryManager::Item* item, const uint16_t quantity = 1000u)
     {
         // Expected behaviors
         //  When clicking on item in inventory
@@ -484,7 +484,7 @@ namespace {
             Log::Error("Ctrl+click doesn't work with birthday presents yet");
             return 0;
         }
-        const bool is_inventory_item = item->bag->IsInventoryBag();
+        const bool is_inventory_item = item->IsInventoryItem();
         uint16_t remaining = std::min<uint16_t>(item->quantity, quantity);
         if (is_inventory_item) {
             remaining -= move_item_to_storage(item, remaining);
@@ -830,7 +830,7 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessa
             }
             instance.stack_prompt_item_id = 0;
             status->blocked = true;
-            move_item(GW::Items::GetItemById(item_id), static_cast<uint16_t>(quantity));
+            move_item((InventoryManager::Item*)GW::Items::GetItemById(item_id), static_cast<uint16_t>(quantity));
         }
         break;
         // Quote for item has been received
@@ -2104,7 +2104,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
     const auto bag = context_item_actual->bag;
     // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-        if (bag && ImGui::Button(bag->IsInventoryBag() ? "Store Item" : "Withdraw Item", size)) {
+        if (bag && ImGui::Button(context_item_actual->IsInventoryItem() ? "Store Item" : "Withdraw Item", size)) {
             ImGui::CloseCurrentPopup();
             move_item(context_item_actual);
             goto end_popup;
@@ -2487,7 +2487,7 @@ bool InventoryManager::Item::IsRareMaterial() const
 }
 bool InventoryManager::Item::IsInventoryItem() const
 {
-    return bag && bag->IsInventoryBag();
+    return bag && (bag->IsInventoryBag() || bag->bag_type == GW::Constants::BagType::Equipped);
 }
 bool InventoryManager::Item::IsStorageItem() const
 {
