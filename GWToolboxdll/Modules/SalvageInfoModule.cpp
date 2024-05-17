@@ -36,6 +36,7 @@ namespace GW {
         const wchar_t* Bone = L"\x22D0\xBEB5\xC462\x64B5";
         const wchar_t* IronIngot = L"\x22EB\xC6B0\xBD46\x2DAD";
         const wchar_t* TannedHideSquare = L"\x22E3\xD3A9\xC22C\x285A";
+        const wchar_t* Scale = L"\x22F0\x832C\xD6A3\x1382";
         const wchar_t* ChitinFragment = L"\x22F1\x9156\x8692\x497D";
         const wchar_t* BoltofCloth = L"\x22D4\x888E\x9089\x6EC8";
         const wchar_t* WoodPlank = L"\x22E8\xE46D\x8FE4\x5F8B";
@@ -88,6 +89,7 @@ namespace {
         GuiUtils::EncString en_name; // Used to map to Guild Wars Wiki
         std::vector<CraftingMaterial*> common_crafting_materials;
         std::vector<CraftingMaterial*> rare_crafting_materials;
+        std::chrono::time_point<std::chrono::steady_clock> retry_after;
         bool loading = false;
         bool failed = false;
     };
@@ -159,6 +161,23 @@ namespace {
         return html;
     }
 
+    // Erases specified substring from string
+    inline std::string& remove_substring(std::string& str, const std::string& toRemove)
+    {
+        size_t pos = 0;
+        while ((pos = str.find(toRemove, pos)) != std::string::npos) {
+            str.erase(pos, toRemove.length());
+        }
+
+        return str;
+    }
+
+    inline std::string& remove_char(std::string& str, char charToRemove)
+    {
+        str.erase(std::remove(str.begin(), str.end(), charToRemove), str.end());
+        return str;
+    }
+
     void SignalItemDescriptionUpdated(const wchar_t* enc_name) {
         // Now we've got the wiki info parsed, trigger an item update ui message; this will refresh the item tooltip
         GW::GameThread::Enqueue([enc_name] {
@@ -169,11 +188,10 @@ namespace {
             });
     }
 
-
     void OnWikiContentDownloaded(bool success, const std::string& response, void* wparam) {
         auto* info = (SalvageInfo*)wparam;
         if (!success) {
-            Log::Error("Failed to download wiki content for item");
+            Log::Error(std::format("Failed to download wiki content for item. Response: {}", response).c_str());
             info->loading = false;
             info->failed = true;
             SignalItemDescriptionUpdated(info->en_name.encoded().c_str());
@@ -188,7 +206,24 @@ namespace {
                 {
                     const auto material_name = j->str(1);
                     const auto found = std::ranges::find_if(materials, [material_name](auto* c) {
-                        return c->en_name.string() == material_name;
+                        /*
+                        * We need to do a pretty lax compare here for materials.
+                        * We'll compare case-insensitive.
+                        * We deal with Ruby/Rubies by removing "ies" and 'y'.
+                        * Finally, to deal with plural versions, we remove all occurences of 's'.
+                        * After all the transformations, we'll have Bone => bone, Bones => bone, Monstrous Eye => montrou ee, Ruby => rub, Rubies => rub, etc.
+                        */
+                        auto single_material_name = c->en_name.string();
+                        auto parsed_material_name = material_name;
+                        std::transform(single_material_name.begin(), single_material_name.end(), single_material_name.begin(), [](unsigned char c) {
+                            return static_cast<char>(std::tolower(c));
+                        });
+                        std::transform(parsed_material_name.begin(), parsed_material_name.end(), parsed_material_name.begin(), [](unsigned char c) {
+                            return static_cast<char>(std::tolower(c));
+                        });
+                        single_material_name = remove_char(remove_char(remove_substring(single_material_name, "ies"), 'y'), 's');
+                        parsed_material_name = remove_char(remove_char(remove_substring(parsed_material_name, "ies"), 'y'), 's');
+                        return single_material_name == parsed_material_name;
                         });
                     if (found != materials.end()) {
                         // Add the material to the list only if the material doesn't already exist
@@ -292,16 +327,17 @@ namespace {
             Sleep(16);
         }
         const auto url = GuiUtils::WikiUrl(info->en_name.string());
+        info->retry_after = std::chrono::steady_clock::now() + std::chrono::seconds(30);
         Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(30));
     }
-
 
     SalvageInfo* GetSalvageInfo(const wchar_t* single_item_name) {
         if (!single_item_name)
             return nullptr;
         const auto found = salvage_info_by_single_item_name.find(single_item_name);
+        // If the item does not exist, or it exists but the fetching failed and a timeout has passed, attempt to fetch salvage info
         if (found == salvage_info_by_single_item_name.end() ||
-            found->second->failed) {
+            (found->second->failed && std::chrono::steady_clock::now() >= found->second->retry_after)) {
             if (found != salvage_info_by_single_item_name.end()) {
                 delete found->second;
             }
@@ -388,6 +424,7 @@ void SalvageInfoModule::Initialize()
             new CraftingMaterial(GW::Constants::ItemID::Bone, GW::EncStrings::Bone),
             new CraftingMaterial(GW::Constants::ItemID::IronIngot, GW::EncStrings::IronIngot),
             new CraftingMaterial(GW::Constants::ItemID::TannedHideSquare, GW::EncStrings::TannedHideSquare),
+            new CraftingMaterial(GW::Constants::ItemID::Scale, GW::EncStrings::Scale),
             new CraftingMaterial(GW::Constants::ItemID::ChitinFragment, GW::EncStrings::ChitinFragment),
             new CraftingMaterial(GW::Constants::ItemID::BoltofCloth, GW::EncStrings::BoltofCloth),
             new CraftingMaterial(GW::Constants::ItemID::WoodPlank, GW::EncStrings::WoodPlank),
