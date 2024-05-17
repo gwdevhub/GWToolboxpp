@@ -518,10 +518,17 @@ void Resources::Download(const std::filesystem::path& path_to_file, const std::s
 
 bool Resources::Download(const std::string& url, std::string& response)
 {
+    int statusCode = 0;
+    return Download(url, response, statusCode);
+}
+
+bool Resources::Download(const std::string& url, std::string& response, int& statusCode)
+{
     RestClient r;
     InitRestClient(&r);
     r.SetUrl(url.c_str());
     r.Execute();
+    statusCode = r.GetStatusCode();
     if (!r.IsSuccessful()) {
         StrSprintf(response, "Failed to download %s, curl status %d %s", url.c_str(), r.GetStatusCode(), r.GetStatusStr());
         return false;
@@ -534,7 +541,8 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
 {
     EnqueueWorkerTask([url, callback, context] {
         std::string response;
-        bool ok = Download(url, response);
+        int statusCode = 0;
+        bool ok = Download(url, response, statusCode);
         EnqueueMainTask([callback, ok, response, context] {
             callback(ok, response, context);
         });
@@ -616,8 +624,12 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
             }
         }
         std::string response;
-        bool ok = Download(url, response);
-        save_to_cache(cache_path, response);
+        int statusCode = 0;
+        bool ok = Download(url, response, statusCode);
+        if (ok ||
+            (statusCode >= 300 && statusCode < 500)) {
+            save_to_cache(cache_path, response);
+        }
         EnqueueMainTask([callback, ok, response, context] {
             callback(ok, response, context);
         });
