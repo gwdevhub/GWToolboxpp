@@ -910,6 +910,10 @@ void InventoryManager::Terminate()
 {
     ToolboxUIElement::Terminate();
     ClearPotentialItems();
+    GW::Items::RemoveItemClickCallback(&ItemClick_Entry);
+    GW::UI::RemoveUIMessageCallback(&ItemClick_Entry);
+    GW::Trade::RemoveOfferItemCallback(&on_offer_item_hook);
+    GW::Hook::RemoveHook(AddItemRowToWindow_Func);
 }
 
 // Hide unsellable items from merchant
