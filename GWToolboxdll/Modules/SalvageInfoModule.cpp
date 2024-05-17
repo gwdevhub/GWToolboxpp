@@ -75,11 +75,33 @@ namespace GW {
 namespace {
     struct CraftingMaterial {
         uint32_t model_id; // Used to map to kamadan trade chat
-        GuiUtils::EncString en_name; // Used to map to Guild Wars Wiki
-        CraftingMaterial(uint32_t _model_id, const wchar_t* enc_name) : model_id(_model_id) {
-            en_name.language(GW::Constants::Language::English);
-            en_name.reset(enc_name);
-            en_name.string(); // Trigger decode
+        const wchar_t* enc_name;
+        std::wstring en_name; // Used to map to Guild Wars Wiki
+        std::wstring en_name_plural;
+        bool decoding_en_name = false;
+        bool decoding_en_name_plural = false;
+        CraftingMaterial(uint32_t _model_id, const wchar_t* _enc_name) : model_id(_model_id), enc_name(_enc_name) {
+
+            decoding_en_name = true;
+            GW::UI::AsyncDecodeStr(enc_name, OnNameDecoded, this, GW::Constants::Language::English);
+
+            const auto enc_name_plural = std::format(L"\xA35\x101\x100\x10A{}\x1", enc_name);
+            decoding_en_name_plural = true;
+            GW::UI::AsyncDecodeStr(enc_name_plural.c_str(), OnPluralNameDecoded, this, GW::Constants::Language::English);
+        }
+        static void OnNameDecoded(void* param, wchar_t* s) {
+            auto ctx = (CraftingMaterial*)param;
+            ctx->en_name = s;
+            ctx->decoding_en_name = false;
+        }
+        static void OnPluralNameDecoded(void* param, wchar_t* s) {
+            auto ctx = (CraftingMaterial*)param;
+            ctx->en_name_plural = s;
+            ctx->en_name_plural = ctx->en_name_plural.substr(2); // Remove "0 " prefix
+            ctx->decoding_en_name_plural = false;
+        }
+        ~CraftingMaterial() {
+            ASSERT(!decoding_en_name_plural && !decoding_en_name);
         }
     };
 
@@ -161,23 +183,6 @@ namespace {
         return html;
     }
 
-    // Erases specified substring from string
-    inline std::string& remove_substring(std::string& str, const std::string& toRemove)
-    {
-        size_t pos = 0;
-        while ((pos = str.find(toRemove, pos)) != std::string::npos) {
-            str.erase(pos, toRemove.length());
-        }
-
-        return str;
-    }
-
-    inline std::string& remove_char(std::string& str, char charToRemove)
-    {
-        str.erase(std::remove(str.begin(), str.end(), charToRemove), str.end());
-        return str;
-    }
-
     void SignalItemDescriptionUpdated(const wchar_t* enc_name) {
         // Now we've got the wiki info parsed, trigger an item update ui message; this will refresh the item tooltip
         GW::GameThread::Enqueue([enc_name] {
@@ -204,31 +209,15 @@ namespace {
                 auto links_end = std::sregex_iterator();
                 for (std::sregex_iterator j = links_begin; j != links_end; ++j)
                 {
-                    const auto material_name = j->str(1);
+                    const auto material_name = GuiUtils::StringToWString(j->str(1));
+
                     const auto found = std::ranges::find_if(materials, [material_name](auto* c) {
-                        /*
-                        * We need to do a pretty lax compare here for materials.
-                        * We'll compare case-insensitive.
-                        * We deal with Ruby/Rubies by removing "ies" and 'y'.
-                        * Finally, to deal with plural versions, we remove all occurences of 's'.
-                        * After all the transformations, we'll have Bone => bone, Bones => bone, Monstrous Eye => montrou ee, Ruby => rub, Rubies => rub, etc.
-                        */
-                        auto single_material_name = c->en_name.string();
-                        auto parsed_material_name = material_name;
-                        std::transform(single_material_name.begin(), single_material_name.end(), single_material_name.begin(), [](unsigned char c) {
-                            return static_cast<char>(std::tolower(c));
-                        });
-                        std::transform(parsed_material_name.begin(), parsed_material_name.end(), parsed_material_name.begin(), [](unsigned char c) {
-                            return static_cast<char>(std::tolower(c));
-                        });
-                        single_material_name = remove_char(remove_char(remove_substring(single_material_name, "ies"), 'y'), 's');
-                        parsed_material_name = remove_char(remove_char(remove_substring(parsed_material_name, "ies"), 'y'), 's');
-                        return single_material_name == parsed_material_name;
+                        return c->en_name == material_name || c->en_name_plural == material_name;
                         });
                     if (found != materials.end()) {
                         // Add the material to the list only if the material doesn't already exist
                         const auto in_list = std::find_if(vec.begin(), vec.end(), [material_name](auto* c) {
-                            return c->en_name.string() == material_name;
+                            return c->en_name == material_name || c->en_name_plural == material_name;
                         });
                         if (in_list == vec.end()) {
                             vec.push_back(*found);
@@ -386,7 +375,7 @@ namespace {
             for (auto i : salvage_info->common_crafting_materials) {
                 if (!items.empty())
                     items += L"\x2\x108\x107, \x1\x2";
-                items += i->en_name.encoded();
+                items += i->enc_name;
             }
 
             description += std::format(L"\x2\x102\x2\x108\x107<c=@ItemCommon>Common Materials:</c> \x1\x2{}", items);
@@ -396,7 +385,7 @@ namespace {
             for (auto i : salvage_info->rare_crafting_materials) {
                 if (!items.empty()) 
                     items += L"\x2\x108\x107, \x1\x2";
-                items += i->en_name.encoded();
+                items += i->enc_name;
             }
 
             description += std::format(L"\x2\x102\x2\x108\x107<c=@ItemRare>Rare Materials:</c> \x1\x2{}", items);

@@ -443,6 +443,7 @@ namespace {
             InfoField("Interaction", "0x%X", item->interaction);
             InfoField("model_file_id", "0x%X", item->model_file_id);
             EncInfoField("Name Enc", item->name_enc);
+            EncInfoField("Complete Name Enc", item->complete_name_enc);
             EncInfoField("Desc Enc", item->info_string);
             if (item->mod_struct_size) {
                 ImGui::Text("Mod Struct (identifier, arg1, arg2)");
