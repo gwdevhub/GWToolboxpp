@@ -466,6 +466,13 @@ namespace GuiUtils {
         return out;
     }
 
+    std::wstring UrlEncode(const std::wstring& s, const char space_token) {
+        const auto str = WStringToString(s);
+        const auto enc = UrlEncode(str, space_token);
+        return StringToWString(enc);
+    }
+
+
     std::string UrlEncode(const std::string& s, const char space_token)
     {
         if (s.empty()) {
