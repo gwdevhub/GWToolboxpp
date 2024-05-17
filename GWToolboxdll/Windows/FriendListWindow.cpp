@@ -413,6 +413,8 @@ namespace {
         }
     }
 
+    std::vector<std::pair< const wchar_t*, GW::Chat::ChatCommandCallback>> chat_commands;
+
     constexpr GW::UI::UIMessage OnUIMessage_Headers[] = {
         GW::UI::UIMessage::kSetAgentNameTagAttribs,
         GW::UI::UIMessage::kShowAgentNameTag,
@@ -421,6 +423,7 @@ namespace {
         GW::UI::UIMessage::kSendChatMessage,
         GW::UI::UIMessage::kPrintChatMessage
     };
+
 
     GW::HookEntry OnUIMessage_Entry;
     void OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
@@ -580,22 +583,21 @@ namespace {
         return SetFriend(f->uuid, f->type, f->status, f->zone_id, &f->charname[0], &f->alias[0]);
     }
 
-    bool CmdInvite(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdInvite)
     {
         const auto player_name = ParsePlayerName(argc - 1, &argv[1]);
         if (player_name.empty()) {
-            return false;
+            return;
         }
         if (const auto friend_ = FriendListWindow::GetFriend(player_name.c_str())) {
             if (friend_->current_char && friend_->current_char->getNameW() != player_name) {
                 GW::Chat::SendChat('/', (std::wstring(L"invite ") + friend_->current_char->getNameW()).c_str());
-                return true;
+                return;
             }
         }
-        return false;
     }
 
-    void CmdSetFriendListStatus(const wchar_t*, const int, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdSetFriendListStatus)
     {
         std::wstring cmd = *argv;
         bool res = false;
@@ -615,6 +617,45 @@ namespace {
             Log::ErrorW(L"Failed to set friend list status");
         }
     }
+
+    void CHAT_CMD_FUNC(CmdAddFriend)
+    {
+        if (argc < 2) {
+            return Log::Error("Missing player name");
+        }
+        const auto player_name = ParsePlayerName(argc - 1, &argv[1]);
+        if (player_name.empty()) {
+            return Log::Error("Missing player name");
+        }
+        GW::FriendListMgr::AddFriend(player_name.c_str());
+    }
+
+    void CHAT_CMD_FUNC(CmdRemoveFriend)
+    {
+        if (argc < 2) {
+            return Log::Error("Missing player name");
+        }
+        const auto player_name = ParsePlayerName(argc - 1, &argv[1]);
+        if (player_name.empty()) {
+            return Log::Error("Missing player name");
+        }
+        auto f = Instance().GetFriend(player_name.c_str());
+        if (!f) {
+            return Log::Error("No friend '%ls' found", player_name.c_str());
+        }
+        f->RemoveGWFriend();
+    }
+
+    // Redirect /whisper player_name, message to GW::SendChat
+    void CHAT_CMD_FUNC(CmdWhisper)
+    {
+        const wchar_t* msg = wcschr(message, ' ');
+        if (msg) {
+            GW::Chat::SendChat('"', msg + 1);
+        }
+    }
+
+
 }
 
 // Find out whether the player related to this packet is on the current player's ignore list.
@@ -655,42 +696,6 @@ bool FriendListWindow::GetIsPlayerIgnored(const std::wstring& player_name)
     return f && f->type == GW::FriendType::Ignore;
 }
 
-void FriendListWindow::CmdAddFriend(const wchar_t*, const int argc, const LPWSTR* argv)
-{
-    if (argc < 2) {
-        return Log::Error("Missing player name");
-    }
-    const auto player_name = ParsePlayerName(argc - 1, &argv[1]);
-    if (player_name.empty()) {
-        return Log::Error("Missing player name");
-    }
-    GW::FriendListMgr::AddFriend(player_name.c_str());
-}
-
-void FriendListWindow::CmdRemoveFriend(const wchar_t*, const int argc, const LPWSTR* argv)
-{
-    if (argc < 2) {
-        return Log::Error("Missing player name");
-    }
-    const auto player_name = ParsePlayerName(argc - 1, &argv[1]);
-    if (player_name.empty()) {
-        return Log::Error("Missing player name");
-    }
-    Friend* f = Instance().GetFriend(player_name.c_str());
-    if (!f) {
-        return Log::Error("No friend '%ls' found", player_name.c_str());
-    }
-    f->RemoveGWFriend();
-}
-
-// Redirect /whisper player_name, message to GW::SendChat
-void FriendListWindow::CmdWhisper(const wchar_t* message, const int, const LPWSTR*)
-{
-    const wchar_t* msg = wcschr(message, ' ');
-    if (msg) {
-        GW::Chat::SendChat('"', msg + 1);
-    }
-}
 
 /*  FriendListWindow::Friend    */
 // Get the Guild Wars friend object for this friend (if it exists)
@@ -843,18 +848,6 @@ void FriendListWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 
-    GW::Chat::CreateCommand(L"addfriend", CmdAddFriend);
-    for (const auto cmd : { L"removefriend",L"deletefriend" }) {
-        GW::Chat::CreateCommand(cmd, CmdRemoveFriend);
-    }
-    GW::Chat::CreateCommand(L"invite", CmdInvite);
-    for (const auto cmd : { L"t",L"whisper",L"tell",L"w"}) {
-        GW::Chat::CreateCommand(cmd, CmdWhisper);
-    }
-    for (const auto cmd : { L"away",L"dnd",L"offline",L"online",L"busy"}) {
-        GW::Chat::CreateCommand(cmd, CmdSetFriendListStatus);
-    }
-
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusUpdate_Entry, OnFriendUpdated);
 
     for (const auto message_id : OnUIMessage_Headers) {
@@ -864,6 +857,53 @@ void FriendListWindow::Initialize()
     for (const auto header_id : OnStoCPacket_Headers) {
         GW::StoC::RegisterPacketCallback(&OnPreStoCPacket_Entry, header_id, OnPreStoCPacket, -0x8001);
         GW::StoC::RegisterPacketCallback(&OnPostStoCPacket_Entry, header_id, OnPostStoCPacket, 0x8001);
+    }
+
+chat_commands = {
+    {L"addfriend", CmdAddFriend},
+    {L"removefriend", CmdRemoveFriend},
+    {L"deletefriend", CmdRemoveFriend},
+    {L"invite", CmdInvite},
+    {L"t", CmdWhisper},
+    {L"whisper", CmdWhisper},
+    {L"tell", CmdWhisper},
+    {L"w", CmdWhisper},
+    {L"away", CmdSetFriendListStatus},
+    {L"dnd", CmdSetFriendListStatus},
+    {L"offline", CmdSetFriendListStatus},
+    {L"online", CmdSetFriendListStatus},
+    {L"busy", CmdSetFriendListStatus}
+};
+    for (auto& it : chat_commands) {
+        GW::Chat::CreateCommand(it.first, it.second);
+    }
+
+}
+
+void FriendListWindow::SignalTerminate()
+{
+    for (auto& it : chat_commands) {
+        GW::Chat::DeleteCommand(it.first);
+    }
+    // Try to remove callbacks here.
+    GW::FriendListMgr::RemoveFriendStatusCallback(&FriendStatusUpdate_Entry);
+    GW::StoC::RemoveCallbacks(&OnPreStoCPacket_Entry);
+    GW::StoC::RemoveCallbacks(&OnPostStoCPacket_Entry);
+    GW::UI::RemoveUIMessageCallback(&OnUIMessage_Entry);
+}
+
+void FriendListWindow::Terminate()
+{
+    ToolboxWindow::Terminate();
+    // Try to remove callbacks AGAIN here.
+    SignalTerminate();
+    // Free memory for Friends list.
+    while (friends.begin() != friends.end()) {
+        RemoveFriend(friends.begin()->second);
+    }
+    friends.clear();
+    if (settings_thread.joinable()) {
+        settings_thread.join();
     }
 }
 
@@ -1285,34 +1325,6 @@ void FriendListWindow::SaveSettings(ToolboxIni* ini)
     SAVE_COLOR(friend_name_tag_color);
 
     SaveToFile();
-}
-
-void FriendListWindow::SignalTerminate()
-{
-    // Try to remove callbacks here.
-    GW::FriendListMgr::RemoveFriendStatusCallback(&FriendStatusUpdate_Entry);
-    for (const auto header_id : OnStoCPacket_Headers) {
-        GW::StoC::RemoveCallback(header_id , &OnPreStoCPacket_Entry);
-        GW::StoC::RemoveCallback(header_id, &OnPostStoCPacket_Entry);
-    }
-    for (const auto message_id : OnUIMessage_Headers) {
-        RemoveUIMessageCallback(&OnUIMessage_Entry, message_id);
-    }
-}
-
-void FriendListWindow::Terminate()
-{
-    ToolboxWindow::Terminate();
-    // Try to remove callbacks AGAIN here.
-    SignalTerminate();
-    // Free memory for Friends list.
-    while (friends.begin() != friends.end()) {
-        RemoveFriend(friends.begin()->second);
-    }
-    friends.clear();
-    if (settings_thread.joinable()) {
-        settings_thread.join();
-    }
 }
 
 void FriendListWindow::LoadFromFile()

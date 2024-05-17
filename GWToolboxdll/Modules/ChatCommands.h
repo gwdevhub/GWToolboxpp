@@ -10,8 +10,6 @@
 #include <ToolboxUIElement.h>
 #include <Modules/PluginModule.h>
 
-#define CHAT_CMD_FUNC(fn) fn([[maybe_unused]] const wchar_t* message,[[maybe_unused]] int argc,[[maybe_unused]] const LPWSTR* argv)
-
 class ChatCommands : public ToolboxModule {
     const float DEFAULT_CAM_SPEED = 1000.f;            // 600 units per sec
     const float ROTATION_SPEED = DirectX::XM_PI / 3.f; // 6 seconds for full rotation

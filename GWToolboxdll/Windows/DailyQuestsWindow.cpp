@@ -1152,7 +1152,7 @@ namespace {
         WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buf, nullptr, true);
     }
 
-    void CmdWeeklyBonus(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdWeeklyBonus)
     {
         time_t now = time(nullptr);
         if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
@@ -1162,7 +1162,7 @@ namespace {
         PrintDaily(L"Weekly Bonus PvP", pvp_weekly_bonus_cycles[GetWeeklyBonusPvP(&now)], now);
     }
 
-    void CmdZaishenBounty(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdZaishenBounty)
     {
         time_t now = time(nullptr);
         if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
@@ -1171,7 +1171,7 @@ namespace {
         PrintDaily(L"Zaishen Bounty", zaishen_bounty_cycles[GetZaishenBounty(&now)], now);
     }
 
-    void CmdZaishenMission(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdZaishenMission)
     {
         time_t now = time(nullptr);
         if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
@@ -1180,7 +1180,7 @@ namespace {
         PrintDaily(L"Zaishen Mission", zaishen_mission_cycles[GetZaishenMission(&now)], now);
     }
 
-    void CmdZaishenVanquish(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdZaishenVanquish)
     {
         time_t now = time(nullptr);
         if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
@@ -1189,7 +1189,7 @@ namespace {
         PrintDaily(L"Zaishen Vanquish", zaishen_vanquish_cycles[GetZaishenVanquish(&now)], now);
     }
 
-    void CmdZaishenCombat(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdZaishenCombat)
     {
         time_t now = time(nullptr);
         if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
@@ -1198,7 +1198,7 @@ namespace {
         PrintDaily(L"Zaishen Combat", zaishen_combat_cycles[GetZaishenCombat(&now)], now);
     }
 
-    void CmdWantedByShiningBlade(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdWantedByShiningBlade)
     {
         time_t now = time(nullptr);
         if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
@@ -1207,7 +1207,7 @@ namespace {
         PrintDaily(L"Wanted", wanted_by_shining_blade_cycles[GetWantedByShiningBlade(&now)], now);
     }
 
-    void CmdVanguard(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdVanguard)
     {
         time_t now = time(nullptr);
         if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
@@ -1216,7 +1216,7 @@ namespace {
         PrintDaily(L"Vanguard Quest", GetVanguardQuest(&now), now);
     }
 
-    void CmdNicholas(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdNicholas)
     {
         time_t now = time(nullptr);
         if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {

@@ -143,10 +143,6 @@ public:
     [[nodiscard]] bool IsWidget() const override;
     [[nodiscard]] bool IsWindow() const override;
 
-    static void CmdAddFriend(const wchar_t* message,const int argc, const LPWSTR* argv);
-    static void CmdRemoveFriend(const wchar_t* message,const int argc, const LPWSTR* argv);
-    static void CmdWhisper(const wchar_t* message, const int argc, const LPWSTR* argv);
-
     void Initialize() override;
     void SignalTerminate() override;
     void Terminate() override;
