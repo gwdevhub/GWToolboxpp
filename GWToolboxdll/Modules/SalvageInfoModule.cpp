@@ -328,7 +328,7 @@ namespace {
         }
         const auto url = GuiUtils::WikiUrl(info->en_name.string());
         info->retry_after = std::chrono::steady_clock::now() + std::chrono::seconds(30);
-        Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(30));
+        Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(1));
     }
 
     SalvageInfo* GetSalvageInfo(const wchar_t* single_item_name) {

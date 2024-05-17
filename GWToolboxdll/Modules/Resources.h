@@ -121,6 +121,8 @@ public:
     void Download(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback) const;
     // download to memory, blocking. If an error occurs, details are held in response string
     static bool Download(const std::string& url, std::string& response);
+    // download to memory, blocking. If an error occurs, details are held in response string
+    static bool Download(const std::string& url, std::string& response, int& statusCode);
     // download to memory, async, calls callback on completion. If an error occurs, details are held in response string
     static void Download(const std::string& url, AsyncLoadMbCallback callback, void* wparam = nullptr);
     // download to memory, async, calls callback on completion and caches the response locally for the duration specified. If an error occurs, details are held in response string
