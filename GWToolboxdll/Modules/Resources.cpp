@@ -617,7 +617,9 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
         }
         std::string response;
         bool ok = Download(url, response);
-        save_to_cache(cache_path, response);
+        if (ok) {
+            save_to_cache(cache_path, response);
+        }
         EnqueueMainTask([callback, ok, response, context] {
             callback(ok, response, context);
         });
