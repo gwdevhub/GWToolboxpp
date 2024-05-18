@@ -231,7 +231,8 @@ public:
 
 private:
     std::shared_ptr<Condition> cond = nullptr;
-    std::shared_ptr<Action> act = nullptr;
+    std::vector<std::shared_ptr<Action>> actions = {};
+    mutable std::vector<std::shared_ptr<Action>> currentlyExecutedActions = {};
 };
 
 class RepopMinipetAction : public Action {
