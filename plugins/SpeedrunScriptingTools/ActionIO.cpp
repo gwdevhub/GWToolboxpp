@@ -6,7 +6,7 @@
 namespace {
     std::shared_ptr<Action> makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 18);
+        static_assert((int)ActionType::Count == 19);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -44,6 +44,8 @@ namespace {
                 return std::make_shared<PingTargetAction>();
             case ActionType::AutoAttackTarget:
                 return std::make_shared<AutoAttackTargetAction>();
+            case ActionType::ChangeWeaponSet:
+                return std::make_shared<ChangeWeaponSetAction>();
             default:
                 return nullptr;
         }
@@ -52,7 +54,7 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 18);
+    static_assert((int)ActionType::Count == 19);
     switch (type) {
         case ActionType::MoveTo:
             return "Move to";
@@ -90,6 +92,8 @@ std::string_view toString(ActionType type)
             return "Ping current target";
         case ActionType::AutoAttackTarget:
             return "Attack current target";
+        case ActionType::ChangeWeaponSet:
+            return "Change weapon set";
         default:
             return "Unknown";
     }
@@ -97,7 +101,7 @@ std::string_view toString(ActionType type)
 
 std::shared_ptr<Action> readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 18);
+    static_assert((int)ActionType::Count == 19);
     int type;
 
     stream >> type;
@@ -138,6 +142,8 @@ std::shared_ptr<Action> readAction(InputStream& stream)
             return std::make_shared<PingTargetAction>(stream);
         case ActionType::AutoAttackTarget:
             return std::make_shared<AutoAttackTargetAction>(stream);
+        case ActionType::ChangeWeaponSet:
+            return std::make_shared<ChangeWeaponSetAction>(stream);
         default:
             return nullptr;
     }
@@ -147,7 +153,7 @@ std::shared_ptr<Action> drawActionSelector(float width)
 {
     std::shared_ptr<Action> result = nullptr;
 
-    static_assert((int)ActionType::Count == 18);
+    static_assert((int)ActionType::Count == 19);
     constexpr auto actions = std::array{
         ActionType::MoveTo,       
         ActionType::Cast,
@@ -160,6 +166,8 @@ std::shared_ptr<Action> drawActionSelector(float width)
 
         ActionType::UseItem,         
         ActionType::EquipItem,
+        ActionType::ChangeWeaponSet,  
+
         ActionType::SendDialog, 
         ActionType::SendChat,
         ActionType::DropBuff,

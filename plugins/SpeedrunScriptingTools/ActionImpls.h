@@ -279,3 +279,16 @@ public:
     void initialAction() final;
     void drawSettings() final;
 };
+
+class ChangeWeaponSetAction : public Action {
+public:
+    ChangeWeaponSetAction() = default;
+    ChangeWeaponSetAction(InputStream&);
+    ActionType type() const final { return ActionType::ChangeWeaponSet; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    int id = 1;
+};

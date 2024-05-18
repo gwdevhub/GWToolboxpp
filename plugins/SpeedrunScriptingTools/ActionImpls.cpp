@@ -12,6 +12,7 @@
 #include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Packets/Opcodes.h>
 
@@ -206,7 +207,7 @@ bool CastOnSelfAction::isComplete() const
     const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
     if (!skillData) return true;
     const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
-    if (elapsedTime > 2000 * skillData->activation) return true;
+    if (elapsedTime > 2000 * (skillData->activation + skillData->aftercast)) return true;
 
     hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
 
@@ -271,7 +272,7 @@ bool CastAction::isComplete() const
     hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
 
     const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
-    if (elapsedTime > 2000 * skillData->activation + 500) return true;
+    if (elapsedTime > 2000 * (skillData->activation + skillData->aftercast)) return true;
 
     return hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id;
 }
@@ -326,7 +327,7 @@ bool CastBySlotAction::isComplete() const
     hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
 
     const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
-    if (elapsedTime > 2000 * skillData->activation + 500) return true;
+    if (elapsedTime > 2000 * (skillData->activation+skillData->aftercast)) return true;
 
     return hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id;
 }
@@ -963,4 +964,32 @@ void AutoAttackTargetAction::initialAction()
 void AutoAttackTargetAction::drawSettings()
 {
     ImGui::Text("Auto-attack current target");
+}
+
+/// ------------- ChangeWeaponSetAction -------------
+ChangeWeaponSetAction::ChangeWeaponSetAction(InputStream& stream)
+{
+    stream >> id;
+}
+void ChangeWeaponSetAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << id;
+}
+void ChangeWeaponSetAction::initialAction()
+{
+    Action::initialAction();
+
+    GW::UI::Keypress((GW::UI::ControlAction)((uint32_t)GW::UI::ControlAction_ActivateWeaponSet1 + id - 1));
+}
+
+void ChangeWeaponSetAction::drawSettings()
+{
+    ImGui::Text("Switch to weapon set:");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputInt("Slot", &id, 0);
+    if (id < 1) id = 1;
+    if (id > 4) id = 4;
 }
