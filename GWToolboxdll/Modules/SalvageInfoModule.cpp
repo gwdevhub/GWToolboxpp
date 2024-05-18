@@ -114,6 +114,11 @@ namespace {
         std::chrono::time_point<std::chrono::steady_clock> retry_after;
         bool loading = false;
         bool failed = false;
+
+        ~SalvageInfo()
+        {
+            ASSERT(!loading);
+        }
     };
 
     std::unordered_map<std::wstring, SalvageInfo*> salvage_info_by_single_item_name;
@@ -325,11 +330,7 @@ namespace {
             return nullptr;
         const auto found = salvage_info_by_single_item_name.find(single_item_name);
         // If the item does not exist, or it exists but the fetching failed and a timeout has passed, attempt to fetch salvage info
-        if (found == salvage_info_by_single_item_name.end() ||
-            (found->second->failed && std::chrono::steady_clock::now() >= found->second->retry_after)) {
-            if (found != salvage_info_by_single_item_name.end()) {
-                delete found->second;
-            }
+        if (found == salvage_info_by_single_item_name.end()) {
             // Need to fetch info for this item.
             auto salvage_info = new SalvageInfo();
             salvage_info->en_name.language(GW::Constants::Language::English);
@@ -339,6 +340,17 @@ namespace {
             Resources::EnqueueWorkerTask([salvage_info] {
                 FetchSalvageInfoFromGuildWarsWiki(salvage_info);
                 });
+
+        }
+        // If the item exists but it failed and the timeout has expired, attempt to fetch salvage info again
+        else if ((found->second->failed && std::chrono::steady_clock::now() >= found->second->retry_after)) {
+            const auto salvage_info = found->second;
+            salvage_info->common_crafting_materials.clear();
+            salvage_info->rare_crafting_materials.clear();
+            salvage_info->loading = true;
+            Resources::EnqueueWorkerTask([salvage_info] {
+                FetchSalvageInfoFromGuildWarsWiki(salvage_info);
+            });
 
         }
         return salvage_info_by_single_item_name[single_item_name];
@@ -460,6 +472,22 @@ void SalvageInfoModule::Terminate()
         delete m;
     }
     materials.clear();
+
+    for (const auto &tuple : salvage_info_by_single_item_name) {
+        delete tuple.second;
+    }
+    salvage_info_by_single_item_name.clear();
+}
+
+bool SalvageInfoModule::CanTerminate() {
+    // Cannot terminate while waiting for the item fetching to finish
+    for (const auto &tuple : salvage_info_by_single_item_name) {
+        if (tuple.second->loading) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 void SalvageInfoModule::SaveSettings(ToolboxIni* ini)
