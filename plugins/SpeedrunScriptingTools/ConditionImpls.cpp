@@ -296,12 +296,12 @@ void InstanceProgressCondition::serialize(OutputStream& stream) const
     stream << requiredProgress;
 }
 bool InstanceProgressCondition::check() const {
-    return GW::GetGameContext()->character->progress_bar->progress * 100.f > requiredProgress;
+    return GW::GetGameContext()->character->progress_bar->progress * 100.f + eps > requiredProgress;
 }
 void InstanceProgressCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::Text("If the instance progress is greater than");
+    ImGui::Text("If the instance progress is greater than or equal");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputFloat("%", &requiredProgress, 0);
@@ -980,7 +980,6 @@ void PlayerIsIdleCondition::drawSettings()
 }
 
 /// ------------- PlayerHasItemEquippedCondition -------------
-
 PlayerHasItemEquippedCondition::PlayerHasItemEquippedCondition(InputStream& stream)
 {
     stream >> modelId;

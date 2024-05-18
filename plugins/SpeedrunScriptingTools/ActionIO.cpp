@@ -6,7 +6,7 @@
 namespace {
     std::shared_ptr<Action> makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 19);
+        static_assert((int)ActionType::Count == 21);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -46,6 +46,10 @@ namespace {
                 return std::make_shared<AutoAttackTargetAction>();
             case ActionType::ChangeWeaponSet:
                 return std::make_shared<ChangeWeaponSetAction>();
+            case ActionType::StoreTarget:
+                return std::make_shared<StoreTargetAction>();
+            case ActionType::RestoreTarget:
+                return std::make_shared<RestoreTargetAction>();
             default:
                 return nullptr;
         }
@@ -54,7 +58,7 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 19);
+    static_assert((int)ActionType::Count == 21);
     switch (type) {
         case ActionType::MoveTo:
             return "Move to";
@@ -94,6 +98,10 @@ std::string_view toString(ActionType type)
             return "Attack current target";
         case ActionType::ChangeWeaponSet:
             return "Change weapon set";
+        case ActionType::StoreTarget:
+            return "Store target";
+        case ActionType::RestoreTarget:
+            return "Restore target";
         default:
             return "Unknown";
     }
@@ -101,7 +109,7 @@ std::string_view toString(ActionType type)
 
 std::shared_ptr<Action> readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 19);
+    static_assert((int)ActionType::Count == 21);
     int type;
 
     stream >> type;
@@ -144,6 +152,10 @@ std::shared_ptr<Action> readAction(InputStream& stream)
             return std::make_shared<AutoAttackTargetAction>(stream);
         case ActionType::ChangeWeaponSet:
             return std::make_shared<ChangeWeaponSetAction>(stream);
+        case ActionType::StoreTarget:
+            return std::make_shared<StoreTargetAction>(stream);
+        case ActionType::RestoreTarget:
+            return std::make_shared<RestoreTargetAction>(stream);
         default:
             return nullptr;
     }
@@ -153,7 +165,7 @@ std::shared_ptr<Action> drawActionSelector(float width)
 {
     std::shared_ptr<Action> result = nullptr;
 
-    static_assert((int)ActionType::Count == 19);
+    static_assert((int)ActionType::Count == 21);
     constexpr auto actions = std::array{
         ActionType::MoveTo,       
         ActionType::Cast,
@@ -163,6 +175,8 @@ std::shared_ptr<Action> drawActionSelector(float width)
         ActionType::GoToTarget,
         ActionType::AutoAttackTarget, 
         ActionType::PingTarget,
+        ActionType::StoreTarget,
+        ActionType::RestoreTarget,
 
         ActionType::UseItem,         
         ActionType::EquipItem,
