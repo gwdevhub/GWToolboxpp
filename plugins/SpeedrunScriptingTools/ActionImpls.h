@@ -292,3 +292,29 @@ public:
 private:
     int id = 1;
 };
+
+class StoreTargetAction : public Action {
+public:
+    StoreTargetAction() = default;
+    StoreTargetAction(InputStream&);
+    ActionType type() const final { return ActionType::StoreTarget; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    int id = 0;
+};
+
+class RestoreTargetAction : public Action {
+public:
+    RestoreTargetAction() = default;
+    RestoreTargetAction(InputStream&);
+    ActionType type() const final { return ActionType::RestoreTarget; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    int id = 0;
+};

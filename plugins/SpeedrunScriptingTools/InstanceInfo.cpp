@@ -130,10 +130,37 @@ void InstanceInfo::update()
     }
 }
 
-bool InstanceInfo::canPopAgent() const {
+bool InstanceInfo::canPopAgent() const 
+{
     const auto now = std::chrono::steady_clock::now();
     return std::chrono::duration_cast<std::chrono::milliseconds>(now - mpStatus.lastPop).count() >= 10'010;
 }
-bool InstanceInfo::hasMinipetPopped() const {
+bool InstanceInfo::hasMinipetPopped() const 
+{
     return mpStatus.poppedMinipetId != std::nullopt;
+}
+
+void InstanceInfo::storeTarget(const GW::AgentLiving* agent, int storageId) 
+{
+    if (!agent)
+    {
+        auto it = storedTargets.find(storageId);
+        if (it != storedTargets.end())
+        {
+            storedTargets.erase(it);
+        }
+        return;
+    } 
+    storedTargets[storageId] = agent->agent_id;
+}
+const GW::AgentLiving* InstanceInfo::retrieveTarget(int storageId) const
+{
+    const auto it = storedTargets.find(storageId);
+    if (it == storedTargets.end()) return nullptr;
+    const auto agent = GW::Agents::GetAgentByID(it->second);
+    if (agent && agent->GetIsLivingType()) 
+    {
+        return agent->GetAsAgentLiving();
+    }
+    return nullptr;
 }
