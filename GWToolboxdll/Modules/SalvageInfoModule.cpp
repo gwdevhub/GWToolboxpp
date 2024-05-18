@@ -29,6 +29,7 @@
 #include <Modules/SalvageInfoModule.h>
 
 #include <Utils/GuiUtils.h>
+#include <Timer.h>
 
 using nlohmann::json;
 namespace GW {
@@ -111,9 +112,9 @@ namespace {
         GuiUtils::EncString en_name; // Used to map to Guild Wars Wiki
         std::vector<CraftingMaterial*> common_crafting_materials;
         std::vector<CraftingMaterial*> rare_crafting_materials;
-        std::chrono::time_point<std::chrono::steady_clock> retry_after;
+        clock_t last_retry = 0;
         bool loading = false;
-        bool failed = false;
+        bool success = false;
 
         ~SalvageInfo()
         {
@@ -203,7 +204,6 @@ namespace {
         if (!success) {
             Log::Error(std::format("Failed to fetch salvage info. Response: {}", response).c_str());
             info->loading = false;
-            info->failed = true;
             SignalItemDescriptionUpdated(info->en_name.encoded().c_str());
             return;
         }
@@ -309,6 +309,7 @@ namespace {
                 }
             }
         }
+        info->success = true;
         info->loading = false;
         SignalItemDescriptionUpdated(info->en_name.encoded().c_str());
     }
@@ -321,33 +322,27 @@ namespace {
             Sleep(16);
         }
         const auto url = GuiUtils::WikiUrl(info->en_name.string());
-        info->retry_after = std::chrono::steady_clock::now() + std::chrono::seconds(30);
         Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(1));
     }
 
     SalvageInfo* GetSalvageInfo(const wchar_t* single_item_name) {
         if (!single_item_name)
             return nullptr;
-        const auto found = salvage_info_by_single_item_name.find(single_item_name);
+        auto found = salvage_info_by_single_item_name.find(single_item_name);
         // If the item does not exist, or it exists but the fetching failed and a timeout has passed, attempt to fetch salvage info
-        if (found == salvage_info_by_single_item_name.end()) {
+        if (found != salvage_info_by_single_item_name.end()) {
             // Need to fetch info for this item.
             auto salvage_info = new SalvageInfo();
             salvage_info->en_name.language(GW::Constants::Language::English);
             salvage_info->en_name.reset(single_item_name);
             salvage_info_by_single_item_name[single_item_name] = salvage_info;
-            salvage_info->loading = true;
-            Resources::EnqueueWorkerTask([salvage_info] {
-                FetchSalvageInfoFromGuildWarsWiki(salvage_info);
-                });
-
+            found = salvage_info_by_single_item_name.find(single_item_name);
         }
+        const auto salvage_info = found->second;
         // If the item exists but it failed and the timeout has expired, attempt to fetch salvage info again
-        else if ((found->second->failed && std::chrono::steady_clock::now() >= found->second->retry_after)) {
-            const auto salvage_info = found->second;
-            salvage_info->common_crafting_materials.clear();
-            salvage_info->rare_crafting_materials.clear();
+        if (!salvage_info->loading && !salvage_info->success && TIMER_DIFF(salvage_info->last_retry) > 30000) {
             salvage_info->loading = true;
+            salvage_info->last_retry = TIMER_INIT();
             Resources::EnqueueWorkerTask([salvage_info] {
                 FetchSalvageInfoFromGuildWarsWiki(salvage_info);
             });
