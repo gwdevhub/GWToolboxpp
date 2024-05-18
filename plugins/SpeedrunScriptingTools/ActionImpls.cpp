@@ -24,6 +24,8 @@
 
 namespace {
     const std::string missingContentToken = "/";
+    const std::string endOfListToken = ">";
+    constexpr float indent = 30.f;
 
     GW::Item* FindMatchingItem(GW::Constants::Bag _bag_idx, uint32_t model_id)
     {
@@ -152,6 +154,8 @@ bool MoveToAction::isComplete() const
     return distance < accuracy + eps;
 }
 void MoveToAction::drawSettings(){
+    ImGui::PushID(drawId());
+
     ImGui::Text("Move to:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
@@ -162,6 +166,8 @@ void MoveToAction::drawSettings(){
     ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
     ImGui::SameLine();
     ImGui::Checkbox("Repeat move when idle", &repeatMove);
+
+    ImGui::PopID();
 }
 
 /// ------------- CastOnSelfAction -------------
@@ -215,12 +221,16 @@ bool CastOnSelfAction::isComplete() const
 }
 void CastOnSelfAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Force-cast on self:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
     ImGui::SameLine();
     ShowHelp("Send a CtoS packet to cast a spell on yourself even if you have another target selected. Only necessary for targeted spells.");
+
+    ImGui::PopID();
 }
 
 /// ------------- CastAction -------------
@@ -278,10 +288,14 @@ bool CastAction::isComplete() const
 }
 void CastAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Use skill by id:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
+
+    ImGui::PopID();
 }
 
 /// ------------- CastBySlotAction -------------
@@ -333,12 +347,16 @@ bool CastBySlotAction::isComplete() const
 }
 void CastBySlotAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Use skill by slot:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("Slot", reinterpret_cast<int*>(&slot), 0);
     if (slot < 1) slot = 1;
     if (slot > 8) slot = 8;
+    
+    ImGui::PopID();
 }
 
 /// ------------- ChangeTargetAction -------------
@@ -468,6 +486,8 @@ void ChangeTargetAction::initialAction()
 }
 void ChangeTargetAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::PushItemWidth(120);
 
     if (ImGui::TreeNodeEx("Change target to agent with characteristics", ImGuiTreeNodeFlags_FramePadding)) {
@@ -536,6 +556,8 @@ void ChangeTargetAction::drawSettings()
 
         ImGui::TreePop();
     }
+
+    ImGui::PopID();
 }
 
 /// ------------- UseItemAction -------------
@@ -562,10 +584,14 @@ void UseItemAction::initialAction()
 }
 void UseItemAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Use item:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("model ID", &id, 0);
+
+    ImGui::PopID();
 }
 
 /// ------------- EquipItemAction -------------
@@ -592,10 +618,14 @@ void EquipItemAction::initialAction()
 }
 void EquipItemAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Equip item:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("model ID", &id, 0);
+
+    ImGui::PopID();
 }
 
 /// ------------- SendDialogAction -------------
@@ -619,10 +649,14 @@ void SendDialogAction::initialAction()
 }
 void SendDialogAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Send Dialog:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("ID", &id, 0);
+
+    ImGui::PopID();
 }
 
 /// ------------- GoToTargetAction -------------
@@ -651,7 +685,11 @@ bool GoToTargetAction::isComplete() const
 }
 void GoToTargetAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Interact with current target");
+
+    ImGui::PopID();
 }
 
 /// ------------- WaitAction -------------
@@ -679,10 +717,14 @@ bool WaitAction::isComplete() const
 }
 void WaitAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Wait for:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("ms", &waitTime, 0);
+
+    ImGui::PopID();
 }
 
 /// ------------- SendChatAction -------------
@@ -730,12 +772,16 @@ void SendChatAction::initialAction()
 
 void SendChatAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Send Chat Message:");
     ImGui::SameLine();
     drawEnumButton(Channel::All, Channel::Emote, channel);
     ImGui::PushItemWidth(300);
     ImGui::SameLine();
     ImGui::InputText("", &message);
+
+    ImGui::PopID();
 }
 
 /// ------------- CancelAction -------------
@@ -749,7 +795,11 @@ void CancelAction::initialAction()
 
 void CancelAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Cancel Action");
+
+    ImGui::PopID();
 }
 
 /// ------------- DropBuffAction -------------
@@ -776,10 +826,14 @@ void DropBuffAction::initialAction()
 }
 void DropBuffAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Drop buff");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
+
+    ImGui::PopID();
 }
 
 /// ------------- ConditionedAction -------------
@@ -796,14 +850,15 @@ ConditionedAction::ConditionedAction(InputStream& stream)
     else {
         assert(false);
     }
-    stream >> read;
-    if (read == missingContentToken) {
-        act = nullptr;
-    }
-    else if (read == "A") {
-        act = readAction(stream);
-    }
-    else {
+
+    while (stream >> read) {
+    if (read == endOfListToken)
+        return;
+    else if (read == missingContentToken)
+        actions.push_back(nullptr);
+    else if (read == "C")
+        actions.push_back(readAction(stream));
+    else
         assert(false);
     }
 }
@@ -816,36 +871,87 @@ void ConditionedAction::serialize(OutputStream& stream) const
     else
         stream << missingContentToken;
 
-    if (act)
-        act->serialize(stream);
-    else
-        stream << missingContentToken;
+    for (const auto& action : actions) {
+        if (action)
+            action->serialize(stream);
+        else
+            stream << missingContentToken;
+    }
+    stream << endOfListToken;
 }
 void ConditionedAction::initialAction()
 {
     Action::initialAction();
 
-    if (cond && act && cond->check()) 
-        act->initialAction();
+    currentlyExecutedActions = {};
+
+    if (cond && actions.size() > 0 && cond->check())
+    {
+        currentlyExecutedActions = actions;
+        if (const auto front = currentlyExecutedActions.front())
+            front->initialAction();
+    }
 }
 bool ConditionedAction::isComplete() const
 {
-    if (cond && act) 
-        return act->isComplete();
-    return true;
+    if (currentlyExecutedActions.empty()) return true;
+
+    if (const auto first = currentlyExecutedActions.front(); !first || first->isComplete())
+    {
+        currentlyExecutedActions.erase(currentlyExecutedActions.begin());
+
+        if (!currentlyExecutedActions.empty())
+        {
+            if (const auto second = currentlyExecutedActions.front()) 
+                second->initialAction();
+        }
+    } 
+    return false;
 }
 void ConditionedAction::drawSettings() 
 {
+    ImGui::PushID(drawId());
+
     if (cond)
         cond->drawSettings();
     else    
         cond = drawConditionSelector(120.f);
-    ImGui::Indent(120.f);
-    if (act)
-        act->drawSettings();
-    else
-        act = drawActionSelector(120.f);
-    ImGui::Unindent(120.f);
+
+    ImGui::Indent(indent);
+
+    int rowToDelete = -1;
+    for (int i = 0; i < int(actions.size()); ++i) 
+    {
+        ImGui::PushID(i);
+
+        ImGui::Bullet();
+        if (ImGui::Button("X")) 
+        {
+            if (actions[i])
+                actions[i] = nullptr;
+            else
+                rowToDelete = i;
+        }
+
+        ImGui::SameLine();
+        if (actions[i])
+            actions[i]->drawSettings();
+        else
+            actions[i] = drawActionSelector(100.f);
+
+        ImGui::PopID();
+    }
+    if (rowToDelete != -1) actions.erase(actions.begin() + rowToDelete);
+
+    ImGui::Bullet();
+    if (ImGui::Button("+")) 
+    {
+        actions.push_back(nullptr);
+    }
+
+    ImGui::Unindent(indent);
+
+    ImGui::PopID();
 }
 
 /// ------------- RepopMinipetAction -------------
@@ -882,10 +988,14 @@ bool RepopMinipetAction::isComplete() const
 
 void RepopMinipetAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("(Unpop and) repop minipet as soon as its available:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("Item ID", &id, 0);
+
+    ImGui::PopID();
 }
 
 /// ------------- PingHardModeAction -------------
@@ -918,8 +1028,12 @@ void PingHardModeAction::initialAction()
 }
 void PingHardModeAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Ping hard mode");
     ShowHelp("Currently only works in UW, DoA and FoW because I don't understand the information sent. Let me know if you need any others.");
+
+    ImGui::PopID();
 }
 
 /// ------------- PingTargetAction -------------
@@ -944,9 +1058,13 @@ void PingTargetAction::initialAction()
 }
 void PingTargetAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Ping current target");
     ImGui::SameLine();
     ImGui::Checkbox("Ping same agent only once per instance", &onlyOncePerInstance);
+
+    ImGui::PopID();
 }
 
 /// ------------- AutoAttackTargetAction -------------
@@ -963,7 +1081,11 @@ void AutoAttackTargetAction::initialAction()
 }
 void AutoAttackTargetAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Auto-attack current target");
+
+    ImGui::PopID();
 }
 
 /// ------------- ChangeWeaponSetAction -------------
@@ -986,12 +1108,16 @@ void ChangeWeaponSetAction::initialAction()
 
 void ChangeWeaponSetAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Switch to weapon set:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("Slot", &id, 0);
     if (id < 1) id = 1;
     if (id > 4) id = 4;
+
+    ImGui::PopID();
 }
 
 /// ------------- StoreTargetAction -------------
@@ -1013,7 +1139,11 @@ void StoreTargetAction::initialAction()
 
 void StoreTargetAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Store current target");
+
+    ImGui::PopID();
 }
 
 /// ------------- RestoreTargetAction -------------
@@ -1038,5 +1168,9 @@ void RestoreTargetAction::initialAction()
 
 void RestoreTargetAction::drawSettings()
 {
+    ImGui::PushID(drawId());
+
     ImGui::Text("Restore target");
+
+    ImGui::PopID();
 }

@@ -29,6 +29,11 @@ enum class ActionType : int {
 
 class Action {
 public:
+    Action()
+    {
+        static int counter = 0;
+        m_drawId = counter++;
+    }
     virtual ~Action(){};
     virtual ActionType type() const = 0;
     virtual void initialAction() { m_hasBeenStarted = true; }
@@ -38,6 +43,10 @@ public:
     virtual void serialize(OutputStream& stream) const { stream << "A " << type();}
     bool hasBeenStarted() const { return m_hasBeenStarted; }
 
+protected:
+    int drawId() const { return m_drawId; }
+
 private:
+    int m_drawId = 0;
     bool m_hasBeenStarted{false};
 };
