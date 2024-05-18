@@ -330,7 +330,7 @@ namespace {
             return nullptr;
         auto found = salvage_info_by_single_item_name.find(single_item_name);
         // If the item does not exist, or it exists but the fetching failed and a timeout has passed, attempt to fetch salvage info
-        if (found != salvage_info_by_single_item_name.end()) {
+        if (found == salvage_info_by_single_item_name.end()) {
             // Need to fetch info for this item.
             auto salvage_info = new SalvageInfo();
             salvage_info->en_name.language(GW::Constants::Language::English);
