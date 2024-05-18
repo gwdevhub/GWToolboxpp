@@ -22,6 +22,8 @@ enum class ActionType : int {
     Cancel, 
     Conditioned,
     ChangeWeaponSet,
+    StoreTarget,
+    RestoreTarget,
     Count
 };
 

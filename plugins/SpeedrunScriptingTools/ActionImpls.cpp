@@ -993,3 +993,50 @@ void ChangeWeaponSetAction::drawSettings()
     if (id < 1) id = 1;
     if (id > 4) id = 4;
 }
+
+/// ------------- StoreTargetAction -------------
+StoreTargetAction::StoreTargetAction(InputStream& stream)
+{
+    stream >> id;
+}
+void StoreTargetAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << id;
+}
+void StoreTargetAction::initialAction()
+{
+    Action::initialAction();
+    InstanceInfo::getInstance().storeTarget(GW::Agents::GetTargetAsAgentLiving(), id);
+}
+
+void StoreTargetAction::drawSettings()
+{
+    ImGui::Text("Store current target");
+}
+
+/// ------------- RestoreTargetAction -------------
+RestoreTargetAction::RestoreTargetAction(InputStream& stream)
+{
+    stream >> id;
+}
+void RestoreTargetAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << id;
+}
+void RestoreTargetAction::initialAction()
+{
+    Action::initialAction();
+    const auto agent = InstanceInfo::getInstance().retrieveTarget(id);
+    if (!agent) return;
+
+    GW::GameThread::Enqueue([id = agent->agent_id]{ GW::Agents::ChangeTarget(id); });
+}
+
+void RestoreTargetAction::drawSettings()
+{
+    ImGui::Text("Restore target");
+}
