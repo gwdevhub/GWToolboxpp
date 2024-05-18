@@ -669,13 +669,14 @@ namespace {
 
 
     typedef uint32_t*(__cdecl* CreateTexture_pt)(wchar_t* file_name, uint32_t flags);
-    CreateTexture_pt CreateTexture_Func = nullptr;
-    CreateTexture_pt CreateTexture_Ret = nullptr;
+    CreateTexture_pt CreateTexture_Func = 0, CreateTexture_Ret = 0;
+
+    typedef void(__fastcall* DoAsyncDecodeStr_pt)(void* ecx, void* edx, const wchar_t* encoded_str, void* cb, void* wParam);
+    DoAsyncDecodeStr_pt ValidateAsyncDecodeStr_Func = 0, ValidateAsyncDecodeStr_Ret = 0;
 
     // Why reinvent the wheel?
     typedef bool(__cdecl* GWCA_SendUIMessage_pt)(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks);
-    GWCA_SendUIMessage_pt GWCA_SendUIMessage_Func = nullptr;
-    GWCA_SendUIMessage_pt GWCA_SendUIMessage_Ret = nullptr;
+    GWCA_SendUIMessage_pt GWCA_SendUIMessage_Func = 0, GWCA_SendUIMessage_Ret = 0;
 
     struct UIMessagePacket {
         GW::UI::UIMessage msgid;
@@ -686,6 +687,63 @@ namespace {
 
     std::vector<UIMessagePacket> ui_message_packets_recorded;
     bool record_ui_messages = false;
+
+    struct RecordedAsyncDecode {
+        std::wstring s; 
+        void* cb;
+        void* wParam;
+        std::wstring decoded;
+        std::string decoded_str;
+    };
+    std::unordered_map<std::wstring,RecordedAsyncDecode*> enc_strings_recorded;
+
+    void OnRecordedAsyncDecode_Decoded(void* param, const wchar_t* decoded) {
+        auto e = (RecordedAsyncDecode*)param;
+        e->decoded = decoded;
+        e->decoded_str = GuiUtils::WStringToString(e->decoded);
+    }
+
+    void __fastcall OnValidateAsyncDecodeStr(void* ecx, void* edx, const wchar_t* s, void* cb, void* wParam) {
+        GW::Hook::EnterHook();
+        if (s && enc_strings_recorded.find(s) == enc_strings_recorded.end()) {
+            auto e = new RecordedAsyncDecode();
+            e->s = s;
+            e->cb = cb;
+            e->wParam = wParam;
+
+            enc_strings_recorded[s] = e;
+
+            if (s && wcsncmp(s, L"\x8103\xBB3", 2) != 0) // Ignore the time thing
+                ValidateAsyncDecodeStr_Ret(ecx, edx, e->s.c_str(), OnRecordedAsyncDecode_Decoded, e);
+        }
+
+
+        ValidateAsyncDecodeStr_Ret(ecx, edx, s, cb, wParam);
+
+        GW::Hook::LeaveHook();
+    }
+
+    void HookOnValidateAsyncDecodeStr(bool hook) {
+        if (hook && ValidateAsyncDecodeStr_Func)
+            return;
+        if (hook) {
+            ValidateAsyncDecodeStr_Func = (DoAsyncDecodeStr_pt)GW::Scanner::Find("\x8b\x47\x14\x8d\x9f\x80\xfe\xff\xff", "xxxxxxxxx", -0x8);
+            if (ValidateAsyncDecodeStr_Func) {
+                GW::HookBase::CreateHook((void**)&ValidateAsyncDecodeStr_Func, OnValidateAsyncDecodeStr, (void**)&ValidateAsyncDecodeStr_Ret);
+                GW::HookBase::EnableHooks(ValidateAsyncDecodeStr_Func);
+            }
+
+        }
+        else {
+            if (ValidateAsyncDecodeStr_Func)
+                GW::Hook::RemoveHook(ValidateAsyncDecodeStr_Func);
+            while (enc_strings_recorded.begin() != enc_strings_recorded.end()) {
+                delete enc_strings_recorded.begin()->second;
+                enc_strings_recorded.erase(enc_strings_recorded.begin());
+            }
+            ValidateAsyncDecodeStr_Func = 0;
+        }
+    }
 
     bool OnGWCASendUIMessage(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks) {
         GW::Hook::EnterHook();
@@ -817,6 +875,27 @@ namespace {
             ImGui::PopID();
         }
 
+        if (ImGui::CollapsingHeader("Async Str Log")) {
+            HookOnValidateAsyncDecodeStr(true);
+            ImGui::PushID(&enc_strings_recorded);
+            if (ImGui::SmallButton("Reset")) {
+                while (enc_strings_recorded.begin() != enc_strings_recorded.end()) {
+                    delete enc_strings_recorded.begin()->second;
+                    enc_strings_recorded.erase(enc_strings_recorded.begin());
+                }
+            }
+            for (const auto packet : enc_strings_recorded) {
+                ImGui::PushID(packet.second);
+                EncInfoField("Encoded", packet.second->s.c_str());
+                InfoField("Decoded", "%s", packet.second->decoded_str.c_str());
+                ImGui::PopID();
+            }
+            ImGui::PopID();
+        }
+        else {
+            HookOnValidateAsyncDecodeStr(false);
+        }
+
 
         // For debugging changes to flags/arrays etc
         [[maybe_unused]] const GW::GameContext* g = GW::GetGameContext();
@@ -853,6 +932,7 @@ void InfoWindow::Terminate()
         GWCA_SendUIMessage_Func = nullptr;
     }
     ClearUIMessagesRecorded();
+    HookOnValidateAsyncDecodeStr(false);
 }
 
 void InfoWindow::Initialize()
