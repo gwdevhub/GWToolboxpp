@@ -930,7 +930,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     ASSERT(filename && filename[0]);
     std::string filename_on_disk;
     if (width > 0) {
-        StrSprintf(filename_on_disk, "%dpx_%s", width, filename);
+        filename_on_disk = std::format("{}px_{}", width, filename);
     }
     else {
         filename_on_disk = filename;
@@ -955,9 +955,8 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
         trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());
         return texture;
     }
-    std::wstring path_to_file;
+    const auto path_to_file = std::format("{}\\{}",path.string(), filename_sanitised);
     // Check for local file
-    StrSwprintf(path_to_file, L"%s\\%S", path.wstring().c_str(), filename_sanitised.c_str());
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
         return texture;
@@ -965,7 +964,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     // No local file found; download from wiki via skill link URL
     std::string wiki_url = "https://wiki.guildwars.com/wiki/File:";
     wiki_url.append(GuiUtils::UrlEncode(filename, '_'));
-    Instance().Download(wiki_url.c_str(), [texture, filename_sanitised, callback, width](const bool ok, const std::string& response, void*) {
+    Instance().Download(wiki_url, [texture, filename_sanitised, callback, width](const bool ok, const std::string& response, void*) {
         if (!ok) {
             callback(ok, GuiUtils::StringToWString(response));
             return; // Already logged whatever errors
@@ -980,8 +979,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
             return;
         }
         std::string image_url = m[1].str();
-        std::wstring path_to_file2;
-        StrSwprintf(path_to_file2, L"%s\\%S", path.c_str(), filename_sanitised.c_str());
+        const auto path_to_file2 = std::format("{}\\{}", path.string(), filename_sanitised);
         if (width) {
             // Divert to resized version using mediawiki's method
             image_finder = "/images/(.*)/([^/]+)$";
@@ -990,11 +988,11 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
                 trigger_failure_callback(callback, L"Regex failed evaluating GWW thumbnail from %S", image_url.c_str());
                 return;
             }
-            StrSprintf(image_url, "/images/thumb/%s/%s/%dpx-%s", m[1].str().c_str(), m[2].str().c_str(), width, m[2].str().c_str());
+            image_url = std::format("/images/thumb/{}/{}/{}px-{}", m[1].str(), m[2].str(), width, m[2].str());
         }
         // https://wiki.guildwars.com/images/thumb/5/5c/Eternal_Protector_of_Tyria.jpg/150px-Eternal_Protector_of_Tyria.jpg
-        if (strncmp(image_url.c_str(), "http", 4) != 0) {
-            StrSprintf(image_url, "https://wiki.guildwars.com%s", image_url.c_str());
+        if (!image_url.starts_with("http")) {
+            image_url = std::format("https://wiki.guildwars.com{}", image_url);
         }
         LoadTexture(texture, path_to_file2, image_url, callback);
     });
