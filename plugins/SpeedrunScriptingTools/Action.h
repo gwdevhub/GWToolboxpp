@@ -21,6 +21,7 @@ enum class ActionType : int {
     SendChat,
     Cancel, 
     Conditioned,
+    ChangeWeaponSet,
     Count
 };
 

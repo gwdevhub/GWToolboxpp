@@ -234,6 +234,8 @@ void SpeedrunScriptingTools::DrawSettings()
     {
         m_currentScript = std::nullopt;
     }
+    ImGui::SameLine();
+    ImGui::Text("Actions in queue: %i", m_currentScript ? m_currentScript->actions.size() : 0u);
     ImGui::Text("Version 0.7. For bug reports and feature requests contact Jabor.");
 }
 
