@@ -761,7 +761,7 @@ void QuestHasStateCondition::drawSettings()
     ImGui::SameLine();
     drawEnumButton(QuestStatus::NotStarted, QuestStatus::Failed, status);
     ImGui::SameLine();
-    ShowHelp("Objective ID, NOT quest ID!\nUW: Chamber 146, Restore 147, UWG 149, Vale 150, Waste 151, Pits 152, Planes 153, Mnts 154, Pools 155");
+    ShowHelp("Objective ID, NOT quest ID!\nUW: Chamber 146, Restore 147, Escort 148, UWG 149, Vale 150, Waste 151, Pits 152, Planes 153, Mnts 154, Pools 155, Dhuum 157");
     ImGui::PopID();
 }
 
@@ -882,6 +882,7 @@ bool NearbyAgentCondition::check() const
         for (const auto& partyMember : info->players) {
             const auto agent = GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(partyMember.login_number));
             if (!agent) continue;
+            if (agent->agent_id == player->agent_id) continue;
             if (fulfillsConditions(agent->GetAsAgentLiving())) return true;
         }
     }

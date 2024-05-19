@@ -393,6 +393,11 @@ void ChangeTargetAction::initialAction()
         return;
     }
 
+    if (rotateThroughTargets && recentlyTargetedEnemies.empty() && currentTarget)
+    {
+        recentlyTargetedEnemies.insert(currentTarget->agent_id);
+    }
+
     auto& instanceInfo = InstanceInfo::getInstance();
 
     const auto fulfillsConditions = [&](const GW::AgentLiving* agent) 

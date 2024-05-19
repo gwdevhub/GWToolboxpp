@@ -111,19 +111,18 @@ namespace {
 void SpeedrunScriptingTools::DrawSettings()
 {
     ToolboxPlugin::DrawSettings();
-    int drawCount = 0;
     std::optional<decltype(m_scripts.begin())> scriptToDelete = std::nullopt;
 
     for (auto scriptIt = m_scripts.begin(); scriptIt < m_scripts.end(); ++scriptIt) {
-        const auto displayName = scriptIt->name + "###" + std::to_string(drawCount++);
-        if (ImGui::CollapsingHeader(displayName.c_str())) {
+        const auto displayName = scriptIt->name + "###" + std::to_string(scriptIt - m_scripts.begin());
+        if (ImGui::TreeNodeEx(displayName.c_str(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             // Conditions
             {
                 using ConditionIt = decltype(scriptIt->conditions.begin());
                 std::optional<ConditionIt> conditionToDelete = std::nullopt;
                 std::optional<std::pair<ConditionIt, ConditionIt>> conditionsToSwap = std::nullopt;
                 for (auto it = scriptIt->conditions.begin(); it < scriptIt->conditions.end(); ++it) {
-                    ImGui::PushID(drawCount++);
+                    ImGui::PushID(it - scriptIt->conditions.begin());
                     if (ImGui::Button("X", ImVec2(20, 0))) {
                         conditionToDelete = it;
                     }
@@ -145,11 +144,9 @@ void SpeedrunScriptingTools::DrawSettings()
                 if (conditionsToSwap.has_value()) std::swap(*conditionsToSwap->first, *conditionsToSwap->second);
                 // Add condition
                 if (canAddCondition(*scriptIt)) {
-                    ImGui::PushID(drawCount++);
                     if (auto newCondition = drawConditionSelector(ImGui::GetContentRegionAvail().x)) {
                         scriptIt->conditions.push_back(std::move(newCondition));
                     }
-                    ImGui::PopID();
                 }
             }
 
@@ -160,7 +157,7 @@ void SpeedrunScriptingTools::DrawSettings()
                 std::optional<ActionIt> actionToDelete = std::nullopt;
                 std::optional<std::pair<ActionIt, ActionIt>> actionsToSwap = std::nullopt;
                 for (auto it = scriptIt->actions.begin(); it < scriptIt->actions.end(); ++it) {
-                    ImGui::PushID(drawCount++);
+                    ImGui::PushID(it - scriptIt->actions.begin() + scriptIt->conditions.size());
                     if (ImGui::Button("X", ImVec2(20, 0))) {
                         actionToDelete = it;
                     }
@@ -179,17 +176,14 @@ void SpeedrunScriptingTools::DrawSettings()
                 if (actionToDelete.has_value()) scriptIt->actions.erase(actionToDelete.value());
                 if (actionsToSwap.has_value()) std::swap(*actionsToSwap->first, *actionsToSwap->second);
                 // Add action
-                ImGui::PushID(drawCount++);
                 if (auto newAction = drawActionSelector(ImGui::GetContentRegionAvail().x)) {
                     scriptIt->actions.push_back(std::move(newAction));
                 }
-                ImGui::PopID();
             }
 
             // Add trigger packet
             ImGui::Separator();
             {
-                ImGui::PushID(drawCount++);
                 ImGui::Checkbox("Enabled", &scriptIt->enabled);
                 ImGui::PushItemWidth(150);
                 ImGui::SameLine();
@@ -204,8 +198,9 @@ void SpeedrunScriptingTools::DrawSettings()
                 if (ImGui::Button("Delete Script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                     scriptToDelete = scriptIt;
                 }
-                ImGui::PopID();
             }
+
+            ImGui::TreePop();
         }
     }
     if (scriptToDelete.has_value()) m_scripts.erase(scriptToDelete.value());
@@ -237,7 +232,7 @@ void SpeedrunScriptingTools::DrawSettings()
     }
     ImGui::SameLine();
     ImGui::Text("Actions in queue: %i", m_currentScript ? m_currentScript->actions.size() : 0u);
-    ImGui::Text("Version 0.8. For bug reports and feature requests contact Jabor.");
+    ImGui::Text("Version 0.8.1. For bug reports and feature requests contact Jabor.");
 }
 
 void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
