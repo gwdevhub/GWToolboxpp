@@ -101,6 +101,7 @@ void ActiveQuestWidget::Initialize() {
     p_quest_marker_texture = GwDatTextureModule::LoadTextureFromFileId(QUEST_MARKER_FILE_ID);
 
     GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_QUEST_DESCRIPTION, SetForceUpdate, 1);
+    GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_QUEST_UPDATE_NAME, SetForceUpdate, 1);
     GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_MISSION_OBJECTIVE_ADD, SetForceUpdate, 1);
     GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_MISSION_OBJECTIVE_COMPLETE, SetForceUpdate, 1);
     GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_MISSION_OBJECTIVE_UPDATE_STRING, SetForceUpdate, 1);
