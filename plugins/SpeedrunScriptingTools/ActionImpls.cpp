@@ -10,11 +10,13 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/CtoSMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Packets/Opcodes.h>
+#include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
@@ -955,33 +957,54 @@ void ConditionedAction::drawSettings()
 /// ------------- RepopMinipetAction -------------
 RepopMinipetAction::RepopMinipetAction(InputStream& stream)
 {
-    stream >> id;
+    stream >> itemModelId >> agentModelId;
 }
 void RepopMinipetAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << id;
+    stream << itemModelId << agentModelId;
 }
 void RepopMinipetAction::initialAction()
 {
     Action::initialAction();
+
+    agentHasSpawned = false;
+    hasUsedItem = false;
+
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(&hook,
+        [&](GW::HookStatus*, const GW::Packet::StoC::AgentAdd* packet) {
+            const auto agent = GW::Agents::GetAgentByID(packet->agent_id);
+            if (!agent || !agent->GetIsLivingType()) return;
+            if (agent->GetAsAgentLiving()->player_number == agentModelId) agentHasSpawned = true;
+        });
 }
 
 bool RepopMinipetAction::isComplete() const
 {
-    const auto& instanceInfo = InstanceInfo::getInstance();
-    if (!instanceInfo.canPopAgent()) return false;
+    const auto isDone = [&] {
+        if (!hasUsedItem) {
+            const auto& instanceInfo = InstanceInfo::getInstance();
+            if (!instanceInfo.canPopAgent()) return false;
 
-    const auto item = FindMatchingItem(id);
-    if (!item) return true;
-    const auto needsToUnpop = instanceInfo.hasMinipetPopped();
-    GW::GameThread::Enqueue([needsToUnpop, item]() -> void {
-        if (needsToUnpop) 
-            GW::Items::UseItem(item);
-        GW::Items::UseItem(item);
-    });
-    return true;
+            const auto item = FindMatchingItem(itemModelId);
+            if (!item) return true;
+            const auto needsToUnpop = instanceInfo.hasMinipetPopped();
+            GW::GameThread::Enqueue([needsToUnpop, item]() -> void {
+                if (needsToUnpop) GW::Items::UseItem(item);
+                GW::Items::UseItem(item);
+            });
+            hasUsedItem = true;
+        }
+
+        return hasUsedItem && agentHasSpawned;
+    }();
+
+    if (isDone) 
+    {
+        GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&hook);
+    }
+    return isDone;
 }
 
 void RepopMinipetAction::drawSettings()
@@ -991,7 +1014,9 @@ void RepopMinipetAction::drawSettings()
     ImGui::Text("(Unpop and) repop minipet as soon as its available:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputInt("Item model ID", &id, 0);
+    ImGui::InputInt("Item model ID", &itemModelId, 0);
+    ImGui::SameLine();
+    ImGui::InputInt("Agent model ID", &agentModelId, 0);
 
     ImGui::PopID();
 }
@@ -1017,10 +1042,9 @@ void PingHardModeAction::initialAction()
         }
     }();
     
-    if (pingId) {
-        GW::GameThread::Enqueue([pingId]() {
-            GW::CtoS::SendPacket(0xC, GAME_CMSG_TARGET_CALL, 0x4, pingId);
-        });
+    if (pingId) 
+    {
+        GW::GameThread::Enqueue([pingId]{ GW::CtoS::SendPacket(0xC, GAME_CMSG_TARGET_CALL, 0x4, pingId); });
     }
     
 }

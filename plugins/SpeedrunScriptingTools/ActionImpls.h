@@ -9,6 +9,7 @@
 #include <GWCA/Constants/Skills.h>
 #include <GWCA/Constants/ItemIDs.h>
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Utilities/Hook.h>
 
 #include <chrono>
 #include <unordered_set>
@@ -246,7 +247,12 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    int id = 36651;
+    int itemModelId = 36651;
+    int agentModelId = 350;
+
+    mutable GW::HookEntry hook;
+    mutable bool agentHasSpawned = false;
+    mutable bool hasUsedItem = false;
 };
 
 class PingHardModeAction : public Action {

@@ -133,7 +133,7 @@ void SpeedrunScriptingTools::DrawSettings()
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("v", ImVec2(20, 0))) {
-                            if (it + 1 != scriptIt->conditions.end()) conditionsToSwap = {it, it + 1};
+                            if (it + 1 != scriptIt->conditions.end() && (it+1)->get()->type() != ConditionType::OnlyTriggerOncePerInstance) conditionsToSwap = {it, it + 1};
                         }
                     }
                     ImGui::SameLine();

@@ -75,11 +75,11 @@ std::string_view toString(ConditionType type)
     static_assert((int)ConditionType::Count == 26);
     switch (type) {
         case ConditionType::Not:
-            return "Negation";
+            return "Not";
         case ConditionType::Or:
-            return "Disjunction";
+            return "Or";
         case ConditionType::And:
-            return "Conjunction";
+            return "And";
         case ConditionType::IsInMap:
             return "Current map ID";
         case ConditionType::QuestHasState:
