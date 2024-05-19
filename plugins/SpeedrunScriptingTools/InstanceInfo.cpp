@@ -55,6 +55,7 @@ void InstanceInfo::initialize()
         this->questStatus.clear();
         this->decodedNames.clear();
         this->playerDecodedNames.clear();
+        this->storedTargets.clear();
 
         mpStatus.poppedMinipetId = std::nullopt;
         mpStatus.lastPop = std::chrono::steady_clock::now() - 1h;

@@ -53,7 +53,7 @@ namespace {
         const GW::Skillbar* s = GW::SkillbarMgr::GetPlayerSkillbar();
         if (!item || !p || p->GetIsDead() || p->GetIsKnockedDown() || (s && s->casting)) return;
         if (p->skill) {
-            GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT);
+            GW::GameThread::Enqueue([]{ GW::UI::Keypress(GW::UI::ControlAction_CancelAction); });
             std::this_thread::sleep_for(10ms);
         }
         if (!p->GetIsIdle() && !p->GetIsMoving()) {
@@ -418,7 +418,7 @@ void ChangeTargetAction::initialAction()
             ? (currentTarget->player_number == agent->player_number) 
             : ((modelId == 0) || (agent->player_number == modelId));
         const auto distance = GW::GetDistance(player->pos, agent->pos);
-        const auto goodDistance = (minDistance < distance) && (distance < maxDistance);
+        const auto goodDistance = (minDistance - eps < distance) && (distance < maxDistance + eps);
         const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedName(agent->agent_id) == agentName);
         const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(agent->pos, polygon);
         const auto goodHp = minHp <= 100.f * agent->hp && 100.f * agent->hp <= maxHp;
@@ -519,7 +519,7 @@ void ChangeTargetAction::drawSettings()
             ImGui::SameLine();
             ImGui::InputInt("id (0 for any)###0", reinterpret_cast<int*>(&skill), 0);
 
-            ImGui::BulletText("Has name");
+            ImGui::BulletText("Name");
             ImGui::SameLine();
             ImGui::InputText("###1", &agentName);
 
@@ -540,7 +540,7 @@ void ChangeTargetAction::drawSettings()
             ImGui::Checkbox("Require same model as current target", &requireSameModelIdAsTarget);
 
             ImGui::Bullet();
-            ImGui::Text(requireSameModelIdAsTarget ? "If no target is selected, pick agent with model" : "Pick agent with model");
+            ImGui::Text(requireSameModelIdAsTarget ? "If no target is selected: Model" : "Model");
             ImGui::SameLine();
             ImGui::InputInt("id (0 for any)###3", &modelId, 0);
 
@@ -665,7 +665,7 @@ void GoToTargetAction::initialAction()
     Action::initialAction();
     
     target = GW::Agents::GetTargetAsAgentLiving();
-    if (!target) return;
+    if (!target || target->allegiance == GW::Constants::Allegiance::Enemy) return;
 
     GW::GameThread::Enqueue([target = this->target]() -> void {
         GW::Agents::InteractAgent(target);
@@ -673,7 +673,7 @@ void GoToTargetAction::initialAction()
 }
 bool GoToTargetAction::isComplete() const
 {
-    if (!target) return true;
+    if (!target || target->allegiance == GW::Constants::Allegiance::Enemy) return true;
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return true;
 
@@ -687,7 +687,7 @@ void GoToTargetAction::drawSettings()
 {
     ImGui::PushID(drawId());
 
-    ImGui::Text("Interact with current target");
+    ImGui::Text("Talk with NPC");
 
     ImGui::PopID();
 }
@@ -788,9 +788,7 @@ void SendChatAction::drawSettings()
 void CancelAction::initialAction()
 {
     Action::initialAction();
-    GW::GameThread::Enqueue([]() -> void {
-        GW::CtoS::SendPacket(0x4, GAME_CMSG_CANCEL_MOVEMENT);
-    });
+    GW::GameThread::Enqueue([]{ GW::UI::Keypress(GW::UI::ControlAction_CancelAction); });
 }
 
 void CancelAction::drawSettings()
@@ -993,7 +991,7 @@ void RepopMinipetAction::drawSettings()
     ImGui::Text("(Unpop and) repop minipet as soon as its available:");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputInt("Item ID", &id, 0);
+    ImGui::InputInt("Item model ID", &id, 0);
 
     ImGui::PopID();
 }
@@ -1075,9 +1073,7 @@ void AutoAttackTargetAction::initialAction()
     const auto currentTarget = GW::Agents::GetTargetAsAgentLiving();
     if (!currentTarget || currentTarget->allegiance != GW::Constants::Allegiance::Enemy) return;
     
-    GW::GameThread::Enqueue([id = currentTarget->agent_id]() {
-        GW::CtoS::SendPacket(0xC, GAME_CMSG_ATTACK_AGENT, id, 0, 0);
-    });
+    GW::GameThread::Enqueue([currentTarget]{ GW::Agents::InteractAgent(currentTarget); });
 }
 void AutoAttackTargetAction::drawSettings()
 {

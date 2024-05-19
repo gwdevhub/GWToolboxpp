@@ -171,12 +171,15 @@ std::shared_ptr<Action> drawActionSelector(float width)
         ActionType::Cast,
         ActionType::CastBySlot,
         //ActionType::CastOnSelf, // CtoS cast on self despite having a different target. Currently deemed unnecessary
+        
         ActionType::ChangeTarget, 
+        ActionType::StoreTarget,
+        ActionType::RestoreTarget,
+        
         ActionType::GoToTarget,
         ActionType::AutoAttackTarget, 
         ActionType::PingTarget,
-        ActionType::StoreTarget,
-        ActionType::RestoreTarget,
+
 
         ActionType::UseItem,         
         ActionType::EquipItem,
