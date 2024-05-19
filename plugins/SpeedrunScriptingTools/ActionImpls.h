@@ -246,7 +246,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    int id = 0;
+    int id = 36651;
 };
 
 class PingHardModeAction : public Action {
