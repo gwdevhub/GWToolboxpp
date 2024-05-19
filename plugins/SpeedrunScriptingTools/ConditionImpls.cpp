@@ -703,20 +703,19 @@ bool PartyMemberStatusCondition::check() const
 {
     if (name.empty()) return false;
     const auto info = GW::PartyMgr::GetPartyInfo();
-    const auto agentArray = GW::Agents::GetAgentArray();
-    if (!info || !agentArray) return false;
+    if (!info) return false;
 
     auto& instanceInfo = InstanceInfo::getInstance();
 
-    GW::Agents::GetMapAgentArray();
-
-    for (const auto& [playerAgentId, decodedName] : instanceInfo.getPlayerNames()) 
+    for (const auto& player : info->players)
     {
+        const auto agentId = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
+        const auto decodedName = instanceInfo.getDecodedName(agentId);
         if (decodedName != name) continue;
 
         if (status == Status::Any) return true; // Player is in the instance
 
-        const auto mapAgent = GW::Agents::GetMapAgentByID(playerAgentId);
+        const auto mapAgent = GW::Agents::GetMapAgentByID(agentId);
         if (!mapAgent) continue;
         return (mapAgent->GetIsDead()) == (status == Status::Dead);
     }

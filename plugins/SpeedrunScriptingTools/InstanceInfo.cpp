@@ -1,6 +1,7 @@
 #include <InstanceInfo.h>
 
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Player.h>
 
 #include <GWCA/Context/WorldContext.h>
 
@@ -56,7 +57,6 @@ void InstanceInfo::initialize()
 
         this->questStatus.clear();
         this->decodedNames.clear();
-        this->playerDecodedNames.clear();
         this->storedTargets.clear();
 
         mpStatus.poppedMinipetId = std::nullopt;
@@ -111,30 +111,29 @@ std::string InstanceInfo::getDecodedName(GW::AgentID id)
     auto& wName = decodedNames[id];
 
     if (wName.empty()) {
+        const wchar_t* encodedName = nullptr;
+
+        // Check in agent infos
         const auto& agentInfos = GW::GetWorldContext()->agent_infos;
-        if (id >= agentInfos.size()) 
-            return "";
-        const auto& encodedName = agentInfos[id].name_enc;
-        if (!encodedName)
-            return "";
+        if (id >= agentInfos.size()) return "";
+        encodedName = agentInfos[id].name_enc;
+        
+        // Check players
+        if (!encodedName) 
+        {
+            for (const auto& player : GW::GetWorldContext()->players)
+            {
+                if (player.agent_id == id) {
+                    encodedName = player.name_enc;
+                    break;
+                }
+            }
+        }
+
+        if (!encodedName) return "";
         GW::UI::AsyncDecodeStr(encodedName, &wName);
     }
     return WStringToString(wName);
-}
-
-void InstanceInfo::update() 
-{
-    const auto info = GW::PartyMgr::GetPartyInfo();
-    if (!info || info->players.size() == playerDecodedNames.size()) return;
-
-    const auto agentArray = GW::Agents::GetAgentArray();
-    if (!agentArray) return;
-
-    for (const auto& player : info->players) {
-        const auto id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
-        if (id && !playerDecodedNames.contains(id))
-            playerDecodedNames[id] = getDecodedName(id);
-    }
 }
 
 bool InstanceInfo::canPopAgent() const 
