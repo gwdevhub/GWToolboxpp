@@ -29,7 +29,7 @@ namespace {
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry CoreMessage_Entry;
 
-    constexpr long currentVersion = 7;
+    constexpr long currentVersion = 8;
 
     bool canAddCondition(const Script& script) {
         return !std::ranges::any_of(script.conditions, [](const auto& cond) {
@@ -78,6 +78,7 @@ namespace {
             if (token.length() != 1) return result;
             switch (token[0]) {
                 case 'S':
+                    assert(!result.has_value());
                     result = Script{};
                     result->name = readStringWithSpaces(stream);
                     stream >> result->trigger;
@@ -236,7 +237,7 @@ void SpeedrunScriptingTools::DrawSettings()
     }
     ImGui::SameLine();
     ImGui::Text("Actions in queue: %i", m_currentScript ? m_currentScript->actions.size() : 0u);
-    ImGui::Text("Version 0.7. For bug reports and feature requests contact Jabor.");
+    ImGui::Text("Version 0.8. For bug reports and feature requests contact Jabor.");
 }
 
 void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
@@ -255,10 +256,12 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
     InputStream stream(decoded);
     while (stream) {
         auto nextScript = deserialize(stream);
-        if (nextScript)
+        if (nextScript) {
             m_scripts.push_back(std::move(*nextScript));
-        else
+        }
+        else {
             break;
+        }
     }
 }
 

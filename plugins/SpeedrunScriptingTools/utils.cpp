@@ -30,6 +30,7 @@ void InputStream::proceedPastSeparator()
     while (stream.good() && get() != separatorToken)
     {
     }
+    stream >> std::ws;
 }
 bool InputStream::isAtSeparator()
 {
