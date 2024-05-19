@@ -2,6 +2,8 @@
 
 #include <GWCA/GameEntities/Party.h>
 
+#include <GWCA/Context/WorldContext.h>
+
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
@@ -109,15 +111,19 @@ std::string InstanceInfo::getDecodedName(GW::AgentID id)
     auto& wName = decodedNames[id];
 
     if (wName.empty()) {
-        const auto agent = GW::Agents::GetAgentByID(id);
-        GW::Agents::AsyncGetAgentName(agent, wName);
+        const auto& agentInfos = GW::GetWorldContext()->agent_infos;
+        if (id >= agentInfos.size()) 
+            return "";
+        const auto& encodedName = agentInfos[id].name_enc;
+        if (!encodedName)
+            return "";
+        GW::UI::AsyncDecodeStr(encodedName, &wName);
     }
     return WStringToString(wName);
 }
 
 void InstanceInfo::update() 
 {
-
     const auto info = GW::PartyMgr::GetPartyInfo();
     if (!info || info->players.size() == playerDecodedNames.size()) return;
 
