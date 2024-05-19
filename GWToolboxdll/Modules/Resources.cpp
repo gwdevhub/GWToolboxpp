@@ -530,7 +530,7 @@ bool Resources::Download(const std::string& url, std::string& response, int& sta
     r.Execute();
     statusCode = r.GetStatusCode();
     if (!r.IsSuccessful()) {
-        StrSprintf(response, "Failed to download %s, curl status %d %s", url.c_str(), r.GetStatusCode(), r.GetStatusStr());
+        response = std::format("Failed to download {}, curl status {} {}", url, r.GetStatusCode(), r.GetStatusStr());
         return false;
     }
     response = std::move(r.GetContent());
