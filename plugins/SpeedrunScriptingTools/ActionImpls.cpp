@@ -857,14 +857,24 @@ ConditionedAction::ConditionedAction(InputStream& stream)
     }
 
     while (stream >> read) {
-    if (read == endOfListToken)
-        return;
-    else if (read == missingContentToken)
-        actions.push_back(nullptr);
-    else if (read == "C")
-        actions.push_back(readAction(stream));
-    else
-        assert(false);
+        if (read == endOfListToken)
+            return;
+        else if (read == missingContentToken)
+            actionsTrue.push_back(nullptr);
+        else if (read == "C")
+            actionsTrue.push_back(readAction(stream));
+        else
+            assert(false);
+    }
+    while (stream >> read) {
+        if (read == endOfListToken)
+            return;
+        else if (read == missingContentToken)
+            actionsFalse.push_back(nullptr);
+        else if (read == "C")
+            actionsFalse.push_back(readAction(stream));
+        else
+            assert(false);
     }
 }
 void ConditionedAction::serialize(OutputStream& stream) const
@@ -876,7 +886,15 @@ void ConditionedAction::serialize(OutputStream& stream) const
     else
         stream << missingContentToken;
 
-    for (const auto& action : actions) {
+    for (const auto& action : actionsTrue) {
+        if (action)
+            action->serialize(stream);
+        else
+            stream << missingContentToken;
+    }
+    stream << endOfListToken;
+
+    for (const auto& action : actionsFalse) {
         if (action)
             action->serialize(stream);
         else
@@ -890,11 +908,17 @@ void ConditionedAction::initialAction()
 
     currentlyExecutedActions = {};
 
-    if (cond && actions.size() > 0 && cond->check())
+    if (cond && cond->check())
     {
-        currentlyExecutedActions = actions;
-        if (const auto front = currentlyExecutedActions.front())
-            front->initialAction();
+        if (actionsTrue.empty()) return;
+        currentlyExecutedActions = actionsTrue;
+        if (const auto front = currentlyExecutedActions.front()) front->initialAction();
+    }
+    else
+    {
+        if (actionsTrue.empty()) return;
+        currentlyExecutedActions = actionsFalse;
+        if (const auto front = currentlyExecutedActions.front()) front->initialAction();
     }
 }
 bool ConditionedAction::isComplete() const
@@ -915,6 +939,39 @@ bool ConditionedAction::isComplete() const
 }
 void ConditionedAction::drawSettings() 
 {
+    const auto drawActionsSelector = [](auto& actions) {
+        ImGui::Indent(indent);
+
+        int rowToDelete = -1;
+        for (int i = 0; i < int(actions.size()); ++i) {
+            ImGui::PushID(i);
+
+            ImGui::Bullet();
+            if (ImGui::Button("X")) {
+                if (actions[i])
+                    actions[i] = nullptr;
+                else
+                    rowToDelete = i;
+            }
+
+            ImGui::SameLine();
+            if (actions[i])
+                actions[i]->drawSettings();
+            else
+                actions[i] = drawActionSelector(100.f);
+
+            ImGui::PopID();
+        }
+        if (rowToDelete != -1) actions.erase(actions.begin() + rowToDelete);
+
+        ImGui::Bullet();
+        if (ImGui::Button("Add row")) {
+            actions.push_back(nullptr);
+        }
+
+        ImGui::Unindent(indent);
+    };
+
     ImGui::PushID(drawId());
 
     if (cond)
@@ -922,39 +979,27 @@ void ConditionedAction::drawSettings()
     else    
         cond = drawConditionSelector(120.f);
 
-    ImGui::Indent(indent);
+    ImGui::PushID(0);
+    drawActionsSelector(actionsTrue);
+    ImGui::PopID();
 
-    int rowToDelete = -1;
-    for (int i = 0; i < int(actions.size()); ++i) 
+    if (actionsFalse.empty()) 
     {
-        ImGui::PushID(i);
-
-        ImGui::Bullet();
-        if (ImGui::Button("X")) 
-        {
-            if (actions[i])
-                actions[i] = nullptr;
-            else
-                rowToDelete = i;
-        }
-
         ImGui::SameLine();
-        if (actions[i])
-            actions[i]->drawSettings();
-        else
-            actions[i] = drawActionSelector(100.f);
+        if (ImGui::Button("Add else")) {
+            actionsFalse.push_back(nullptr);
+        }
+    }
+    else
+    {
+        ImGui::Indent(indent);
+        ImGui::Text("Else:");
+        ImGui::Unindent(indent);
 
+        ImGui::PushID(1);
+        drawActionsSelector(actionsFalse);
         ImGui::PopID();
     }
-    if (rowToDelete != -1) actions.erase(actions.begin() + rowToDelete);
-
-    ImGui::Bullet();
-    if (ImGui::Button("+")) 
-    {
-        actions.push_back(nullptr);
-    }
-
-    ImGui::Unindent(indent);
 
     ImGui::PopID();
 }
