@@ -332,9 +332,19 @@ void SpeedrunScriptingTools::Update(float delta)
         auto& currentActions = m_currentScript->actions;
         auto& currentAction = **currentActions.begin();
         if (currentAction.hasBeenStarted()) {
-            if (currentAction.isComplete()) {
-                currentAction.finalAction();
-                currentActions.erase(currentActions.begin(), currentActions.begin() + 1);
+            switch (currentAction.isComplete()) 
+            {
+                case ActionStatus::Running:
+                    break;
+                case ActionStatus::Complete:
+                    currentAction.finalAction();
+                    currentActions.erase(currentActions.begin(), currentActions.begin() + 1);
+                    break;
+                case ActionStatus::Error:
+                    currentAction.finalAction();
+                    currentActions.clear();
+                default:
+                    assert(false);
             }
         }
         else {

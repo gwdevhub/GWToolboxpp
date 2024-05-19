@@ -24,7 +24,7 @@ public:
     MoveToAction(InputStream&);
     ActionType type() const final { return ActionType::MoveTo; }
     void initialAction() final;
-    bool isComplete() const final;
+    ActionStatus isComplete() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
 
@@ -42,7 +42,7 @@ public:
     CastOnSelfAction(InputStream&);
     ActionType type() const final { return ActionType::CastOnSelf; }
     void initialAction() final;
-    bool isComplete() const final;
+    ActionStatus isComplete() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
 
@@ -59,7 +59,7 @@ public:
     CastAction(InputStream&);
     ActionType type() const final { return ActionType::Cast; }
     void initialAction() final;
-    bool isComplete() const final;
+    ActionStatus isComplete() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
 
@@ -76,7 +76,7 @@ public:
     CastBySlotAction(InputStream&);
     ActionType type() const final { return ActionType::CastBySlot; }
     void initialAction() final;
-    bool isComplete() const final;
+    ActionStatus isComplete() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
 
@@ -162,7 +162,7 @@ public:
     GoToTargetAction(InputStream&) : GoToTargetAction(){};
     ActionType type() const final { return ActionType::GoToTarget; }
     void initialAction() final;
-    bool isComplete() const final;
+    ActionStatus isComplete() const final;
     void drawSettings() final;
 
 private:
@@ -175,7 +175,7 @@ public:
     WaitAction(InputStream&);
     ActionType type() const final { return ActionType::Wait; }
     void initialAction() final;
-    bool isComplete() const final;
+    ActionStatus isComplete() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
 
@@ -226,7 +226,7 @@ public:
     ConditionedAction(InputStream&);
     ActionType type() const final { return ActionType::Conditioned; }
     void initialAction() final;
-    bool isComplete() const final;
+    ActionStatus isComplete() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
 
@@ -243,7 +243,7 @@ public:
     RepopMinipetAction(InputStream&);
     ActionType type() const final { return ActionType::RepopMinipet; }
     void initialAction() final;
-    bool isComplete() const final;
+    ActionStatus isComplete() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
 
@@ -325,4 +325,13 @@ public:
 
 private:
     int id = 0;
+};
+
+class StopScriptAction : public Action {
+public:
+    StopScriptAction() = default;
+    StopScriptAction(InputStream&) : StopScriptAction(){}
+    ActionType type() const final { return ActionType::StopScript; }
+    ActionStatus isComplete() const final { return ActionStatus::Error; }
+    void drawSettings() final;
 };
