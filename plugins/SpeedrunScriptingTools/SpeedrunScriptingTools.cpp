@@ -291,8 +291,6 @@ void SpeedrunScriptingTools::Update(float delta)
         return;
     }
 
-    InstanceInfo::getInstance().update();
-
     if (m_currentScript && !m_currentScript->actions.empty()) {
         // Execute current script
         auto& currentActions = m_currentScript->actions;
