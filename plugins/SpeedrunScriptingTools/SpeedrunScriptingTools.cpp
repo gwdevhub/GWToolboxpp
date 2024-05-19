@@ -106,6 +106,43 @@ namespace {
 
         return result;
     }
+
+    std::string makeScriptHeaderName(const Script& script, int id)
+    {
+        std::string result = script.name + " [";
+        if (!script.enabled) 
+        {
+            result += "Disabled";
+        }
+        else {
+            switch (script.trigger) {
+                case Trigger::None:
+                    result += "Always on";
+                    break;
+                case Trigger::InstanceLoad:
+                    result += "On instance load";
+                    break;
+                case Trigger::Hotkey:
+                    if (script.hotkeyStatus.keyData) 
+                    {
+                        result += makeHotkeyDescription(script.hotkeyStatus.keyData, script.hotkeyStatus.modifier);
+                    }
+                    else 
+                    {
+                        result += "Undefined hotkey";
+                    }
+                    break;
+                case Trigger::HardModePing:
+                    result += "On hard mode ping";
+                    break;
+                default:
+                    result += "Unknown trigger";
+            }
+        }
+
+        result += "]###" + std::to_string(id);
+        return result;
+    }
 }
 
 void SpeedrunScriptingTools::DrawSettings()
@@ -114,8 +151,7 @@ void SpeedrunScriptingTools::DrawSettings()
     std::optional<decltype(m_scripts.begin())> scriptToDelete = std::nullopt;
 
     for (auto scriptIt = m_scripts.begin(); scriptIt < m_scripts.end(); ++scriptIt) {
-        const auto displayName = scriptIt->name + "###" + std::to_string(scriptIt - m_scripts.begin());
-        if (ImGui::TreeNodeEx(displayName.c_str(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        if (ImGui::TreeNodeEx(makeScriptHeaderName(*scriptIt, scriptIt - m_scripts.begin()).c_str(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             // Conditions
             {
                 using ConditionIt = decltype(scriptIt->conditions.begin());
@@ -232,7 +268,7 @@ void SpeedrunScriptingTools::DrawSettings()
     }
     ImGui::SameLine();
     ImGui::Text("Actions in queue: %i", m_currentScript ? m_currentScript->actions.size() : 0u);
-    ImGui::Text("Version 0.8.1. For bug reports and feature requests contact Jabor.");
+    ImGui::Text("Version 1.0. For bug reports and feature requests contact Jabor.");
 }
 
 void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
