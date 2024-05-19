@@ -22,6 +22,9 @@ namespace ImGui {
     IMGUI_API bool MyCombo(const char* label, const char* preview_text, int* current_item,
                            bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count);
 
+    // Show a popup on-screen with a message and yes/no buttons. Returns true if an option has been chosen, with *result as true/false for yes/no
+    IMGUI_API bool ConfirmDialog(const char* message, bool* result);
+
     IMGUI_API bool SmallConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content = "Are you sure you want to continue?");
 
     IMGUI_API bool ConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content = "Are you sure you want to continue?");

@@ -257,11 +257,6 @@ namespace {
         return inifile;
     }
 
-    bool ShouldDisableToolbox() {
-        const auto m = GW::Map::GetMapInfo();
-        return m && (m->GetIsPvP() || m->GetIsGuildHall());
-    }
-
     bool CanRenderToolbox() {
         return !gwtoolbox_disabled
             && GW::UI::GetIsUIDrawn()
@@ -354,6 +349,11 @@ void UpdateEnabledWidgetVectors(ToolboxModule* m, bool added)
     else {
         update_vec(reinterpret_cast<std::vector<void*>&>(modules_enabled), m);
     }
+}
+
+bool GWToolbox::ShouldDisableToolbox(GW::Constants::MapID map_id) {
+    const auto m = GW::Map::GetMapInfo(map_id);
+    return m && (m->GetIsPvP() || m->GetIsGuildHall());
 }
 
 bool GWToolbox::IsInitialized() { return gwtoolbox_state == GWToolboxState::Initialised; }

@@ -64,6 +64,37 @@ namespace ImGui {
         SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), flags, ImVec2(0.5f, 0.5f));
     }
 
+    bool ConfirmDialog(const char* message, bool* result) {
+        bool res = false;
+        ImGui::OpenPopup("##confirm_popup");
+        if (ImGui::BeginPopupModal("##confirm_popup", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::TextUnformatted(message);
+            static bool was_enter_down = true, was_escape_down = true;
+            if (!ImGui::IsKeyDown(ImGuiKey_Enter)) {
+                was_enter_down = false;
+            }
+            if (!ImGui::IsKeyDown(ImGuiKey_Escape)) {
+                was_escape_down = false;
+            }
+
+            if (ImGui::Button("Yes", ImVec2(120, 0)) || (!was_enter_down && ImGui::IsKeyPressed(ImGuiKey_Enter, false))) {
+                was_enter_down = true;
+                *result = true;
+                res = true;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("No", ImVec2(120, 0)) || (!was_escape_down && ImGui::IsKeyPressed(ImGuiKey_Escape, false))) {
+                was_escape_down = true;
+                *result = false;
+                res = true;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+        return res;
+    }
+
     bool SmallConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content)
     {
         static char id_buf[128];

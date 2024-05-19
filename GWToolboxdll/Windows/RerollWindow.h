@@ -13,15 +13,6 @@ namespace GW::Constants {
 class RerollWindow : public ToolboxWindow {
     RerollWindow() = default;
 
-    ~RerollWindow() override
-    {
-        for (const auto& char_name : account_characters | std::views::values) {
-            delete char_name;
-        }
-        account_characters.clear();
-        guild_hall_uuid = {};
-    }
-
 public:
     static RerollWindow& Instance()
     {
@@ -36,110 +27,12 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
 
     void Initialize() override;
+    void Terminate() override;
     void Update(float) override;
-    std::vector<std::wstring>* GetAvailableChars();
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
 
-
-    // Hook to override status on login - allows us to keep FL status across rerolls without messing with UI
-    static void OnSetStatus(GW::FriendStatus status);
-
-    static void CmdReroll(const wchar_t* message, const int argc, const LPWSTR*);
-
     bool Reroll(const wchar_t* character_name, bool same_map = true, bool same_party = true);
     bool Reroll(const wchar_t* character_name, GW::Constants::MapID _map_id);
-
-private:
-    bool travel_to_same_location_after_rerolling = true;
-    bool rejoin_party_after_rerolling = true;
-
-    bool check_available_chars = true;
-
-    // Can find out campaign etc from props array
-    struct AvailableCharacterInfo {
-        /* + h0000 */
-        uint32_t h0000[2];
-        /* + h0008 */
-        uint32_t uuid[4];
-        /* + h0018 */
-        wchar_t player_name[20];
-        /* + h0040 */
-        uint32_t props[17];
-
-        uint32_t map_id() const
-        {
-            return props[0] & 0xffff0000;
-        }
-
-        uint32_t primary() const
-        {
-            return (props[2] & 0x00f00000) >> 20;
-        }
-
-        uint32_t campaign() const
-        {
-            return (props[7] & 0x000f0000) >> 16;
-        }
-
-        uint32_t level() const
-        {
-            return ((props[7] & 0x0ff00000) >> 20) - 64;
-        }
-    };
-
-    static_assert(sizeof(AvailableCharacterInfo) == 0x84);
-    GW::Array<AvailableCharacterInfo>* available_chars_ptr = nullptr;
-
-    clock_t reroll_timeout = 0;
-    uint32_t char_sort_order = std::numeric_limits<uint32_t>::max();
-    clock_t reroll_stage_set = 0;
-    uint32_t reroll_index_needed = 0;
-    uint32_t reroll_index_current = 0xffffffdd;
-    GW::FriendStatus online_status = GW::FriendStatus::Online;
-    GW::Constants::MapID map_id = static_cast<GW::Constants::MapID>(0);
-    int district_id = 0;
-    GW::Constants::ServerRegion region_id = (GW::Constants::ServerRegion)0;
-    GW::Constants::Language language_id = (GW::Constants::Language)0;
-    GW::GHKey guild_hall_uuid{};
-    wchar_t initial_player_name[20] = {0};
-    wchar_t reroll_to_player_name[20] = {0};
-    wchar_t party_leader[20] = {0};
-    bool same_map = false;
-    bool same_party = false;
-    const wchar_t* failed_message = nullptr;
-    bool return_on_fail = false;
-    bool reverting_reroll = false;
-
-    enum RerollStage {
-        None,
-        PendingLogout,
-        PromptPendingLogout,
-        WaitingForCharSelect,
-        CheckForCharname,
-        NavigateToCharname,
-        WaitForCharacterLoad,
-        WaitForScrollableOutpost,
-        WaitForActiveDistrict,
-        WaitForMapLoad,
-        WaitForEmptyParty,
-        Done
-    } reroll_stage = None;
-
-    GW::Constants::MapID reroll_scroll_from_map_id = (GW::Constants::MapID)0;
-
-    void RerollFailed(const wchar_t* reason);
-
-    void RerollSuccess();
-
-    std::map<std::wstring, std::vector<std::wstring>*> account_characters{};
-
-    bool IsInMap(bool include_district = true) const;
-    static bool IsCharSelectReady();
-
-    void AddAvailableCharacter(const wchar_t* email, const wchar_t* charname);
-
-    GW::HookEntry OnGoToCharSelect_Entry;
-    static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage msg_id, void*, void*);
 };

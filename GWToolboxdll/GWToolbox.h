@@ -17,6 +17,12 @@ class ToolboxWidget;
 class ToolboxWindow;
 class ToolboxModule;
 
+namespace GW {
+    namespace Constants {
+        enum class MapID : uint32_t;
+    }
+}
+
 class GWToolbox {
 public:
     static GWToolbox& Instance()
@@ -24,6 +30,7 @@ public:
         static GWToolbox instance;
         return instance;
     }
+    static bool ShouldDisableToolbox(GW::Constants::MapID = (GW::Constants::MapID)0);
 
     static HMODULE GetDLLModule();
     static void Draw(IDirect3DDevice9* device);
