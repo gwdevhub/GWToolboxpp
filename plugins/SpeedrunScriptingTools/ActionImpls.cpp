@@ -115,16 +115,16 @@ void MoveToAction::initialAction()
         GW::Agents::Move(pos);
     });
 }
-bool MoveToAction::isComplete() const
+ActionStatus MoveToAction::isComplete() const
 {
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
-    if (!player) return true;
+    if (!player) return ActionStatus::Error;
 
     const auto distance = GW::GetDistance(player->pos, pos);
 
     if (distance > GW::Constants::Range::Compass) 
     {
-        return true; // We probably teled
+        return ActionStatus::Error; // We probably teled
     }
 
     if (!player->GetIsMoving() && distance > accuracy + eps) 
@@ -146,14 +146,13 @@ bool MoveToAction::isComplete() const
         }
         else if (hasBegunWalking)
         {
-            // Give up on this action
-            return true;
+            return ActionStatus::Complete;
         }
     }
 
     hasBegunWalking |= player->GetIsMoving();
 
-    return distance < accuracy + eps;
+    return distance < accuracy + eps ? ActionStatus::Complete : ActionStatus::Running;
 }
 void MoveToAction::drawSettings(){
     ImGui::PushID(drawId());
@@ -205,21 +204,21 @@ void CastOnSelfAction::initialAction()
     hasBegunCasting = false;
     ctosUseSkill(id, GW::Agents::GetPlayerAsAgentLiving());
 }
-bool CastOnSelfAction::isComplete() const
+ActionStatus CastOnSelfAction::isComplete() const
 {
-    if (!hasSkillReady || id == GW::Constants::SkillID::No_Skill) return true;
+    if (!hasSkillReady || id == GW::Constants::SkillID::No_Skill) return ActionStatus::Error;
 
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
-    if (!player) return true;
+    if (!player) return ActionStatus::Error;
 
     const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
-    if (!skillData) return true;
+    if (!skillData) return ActionStatus::Error;
     const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
-    if (elapsedTime > 2000 * (skillData->activation + skillData->aftercast)) return true;
+    if (elapsedTime > 2000 * (skillData->activation + skillData->aftercast)) return ActionStatus::Complete;
 
     hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
 
-    return hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id;
+    return (hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id) ? ActionStatus::Complete : ActionStatus::Running;
 }
 void CastOnSelfAction::drawSettings()
 {
@@ -270,23 +269,23 @@ void CastAction::initialAction()
         GW::SkillbarMgr::UseSkill(slot, targetId);
     });
 }
-bool CastAction::isComplete() const
+ActionStatus CastAction::isComplete() const
 {
-    if (!hasSkillReady || id == GW::Constants::SkillID::No_Skill) return true;
+    if (!hasSkillReady || id == GW::Constants::SkillID::No_Skill) return ActionStatus::Error;
 
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
-    if (!player) return true;
+    if (!player) return ActionStatus::Error;
 
     const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
-    if (!skillData) return true;
-    if (skillData->activation == 0.f) return true;
+    if (!skillData) return ActionStatus::Error;
+    if (skillData->activation == 0.f) return ActionStatus::Complete;
 
     hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
 
     const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
-    if (elapsedTime > 2000 * (skillData->activation + skillData->aftercast)) return true;
+    if (elapsedTime > 2000 * (skillData->activation + skillData->aftercast)) return ActionStatus::Complete;
 
-    return hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id;
+    return (hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id) ? ActionStatus::Complete : ActionStatus::Running;
 }
 void CastAction::drawSettings()
 {
@@ -329,23 +328,23 @@ void CastBySlotAction::initialAction()
         GW::SkillbarMgr::UseSkill(slot - 1, targetId);
     });
 }
-bool CastBySlotAction::isComplete() const
+ActionStatus CastBySlotAction::isComplete() const
 {
-    if (!hasSkillReady || id == GW::Constants::SkillID::No_Skill) return true;
+    if (!hasSkillReady || id == GW::Constants::SkillID::No_Skill) return ActionStatus::Error;
 
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
-    if (!player) return true;
+    if (!player) return ActionStatus::Error;
 
     const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
-    if (!skillData) return true;
-    if (skillData->activation == 0.f) return true;
+    if (!skillData) return ActionStatus::Error;
+    if (skillData->activation == 0.f) return ActionStatus::Complete;
 
     hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
 
     const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
-    if (elapsedTime > 2000 * (skillData->activation+skillData->aftercast)) return true;
+    if (elapsedTime > 2000 * (skillData->activation+skillData->aftercast)) return ActionStatus::Complete;
 
-    return hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id;
+    return (hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id) ? ActionStatus::Complete : ActionStatus::Running;
 }
 void CastBySlotAction::drawSettings()
 {
@@ -678,17 +677,17 @@ void GoToTargetAction::initialAction()
         GW::Agents::InteractAgent(target);
     });
 }
-bool GoToTargetAction::isComplete() const
+ActionStatus GoToTargetAction::isComplete() const
 {
-    if (!target || target->allegiance == GW::Constants::Allegiance::Enemy) return true;
+    if (!target || target->allegiance == GW::Constants::Allegiance::Enemy) return ActionStatus::Error;
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
-    if (!player) return true;
+    if (!player) return ActionStatus::Error;
 
     const auto distance = GW::GetDistance(player->pos, target->pos);
     const auto isMoving = player->GetIsMoving();
     
     constexpr auto dialogDistance = 101.f;
-    return (!isMoving && distance < dialogDistance) || distance > GW::Constants::Range::Compass;
+    return ((!isMoving && distance < dialogDistance) || distance > GW::Constants::Range::Compass) ? ActionStatus::Complete : ActionStatus::Running;
 }
 void GoToTargetAction::drawSettings()
 {
@@ -716,11 +715,11 @@ void WaitAction::initialAction()
 
     startTime = std::chrono::steady_clock::now();
 }
-bool WaitAction::isComplete() const
+ActionStatus WaitAction::isComplete() const
 {
     const auto now = std::chrono::steady_clock::now();
     const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
-    return elapsedTime > waitTime;
+    return (elapsedTime > waitTime) ? ActionStatus::Complete : ActionStatus::Running;
 }
 void WaitAction::drawSettings()
 {
@@ -858,20 +857,20 @@ ConditionedAction::ConditionedAction(InputStream& stream)
 
     while (stream >> read) {
         if (read == endOfListToken)
-            return;
+            break;
         else if (read == missingContentToken)
             actionsTrue.push_back(nullptr);
-        else if (read == "C")
+        else if (read == "A")
             actionsTrue.push_back(readAction(stream));
         else
             assert(false);
     }
     while (stream >> read) {
         if (read == endOfListToken)
-            return;
+            break;
         else if (read == missingContentToken)
             actionsFalse.push_back(nullptr);
-        else if (read == "C")
+        else if (read == "A")
             actionsFalse.push_back(readAction(stream));
         else
             assert(false);
@@ -921,21 +920,43 @@ void ConditionedAction::initialAction()
         if (const auto front = currentlyExecutedActions.front()) front->initialAction();
     }
 }
-bool ConditionedAction::isComplete() const
+ActionStatus ConditionedAction::isComplete() const
 {
-    if (currentlyExecutedActions.empty()) return true;
+    if (currentlyExecutedActions.empty()) return ActionStatus::Complete;
+    const auto first = currentlyExecutedActions.front();
 
-    if (const auto first = currentlyExecutedActions.front(); !first || first->isComplete())
+    const auto finishFirstAction = [&] 
     {
         currentlyExecutedActions.erase(currentlyExecutedActions.begin());
 
-        if (!currentlyExecutedActions.empty())
+        if (!currentlyExecutedActions.empty()) 
         {
-            if (const auto second = currentlyExecutedActions.front()) 
-                second->initialAction();
+            if (const auto second = currentlyExecutedActions.front()) second->initialAction();
         }
-    } 
-    return false;
+        return currentlyExecutedActions.empty() ? ActionStatus::Complete : ActionStatus::Running;
+    };
+
+    if (first)
+    {
+        const auto status = first->isComplete();
+        switch (status)
+        {
+            case ActionStatus::Running:
+                return ActionStatus::Running;
+            case ActionStatus::Complete:
+                return finishFirstAction();
+            case ActionStatus::Error:
+                currentlyExecutedActions.clear();
+                return ActionStatus::Error;
+            default:
+                assert(false);
+                return ActionStatus::Error;
+        }
+    }
+    else
+    {
+        return finishFirstAction();
+    }
 }
 void ConditionedAction::drawSettings() 
 {
@@ -1030,15 +1051,15 @@ void RepopMinipetAction::initialAction()
         });
 }
 
-bool RepopMinipetAction::isComplete() const
+ActionStatus RepopMinipetAction::isComplete() const
 {
-    const auto isDone = [&] {
+    const auto status = [&] {
         if (!hasUsedItem) {
             const auto& instanceInfo = InstanceInfo::getInstance();
-            if (!instanceInfo.canPopAgent()) return false;
+            if (!instanceInfo.canPopAgent()) return ActionStatus::Running;
 
             const auto item = FindMatchingItem(itemModelId);
-            if (!item) return true;
+            if (!item) return ActionStatus::Error;
             const auto needsToUnpop = instanceInfo.hasMinipetPopped();
             GW::GameThread::Enqueue([needsToUnpop, item]() -> void {
                 if (needsToUnpop) GW::Items::UseItem(item);
@@ -1047,14 +1068,14 @@ bool RepopMinipetAction::isComplete() const
             hasUsedItem = true;
         }
 
-        return hasUsedItem && agentHasSpawned;
+        return (hasUsedItem && agentHasSpawned) ? ActionStatus::Complete : ActionStatus::Running;
     }();
 
-    if (isDone) 
+    if (status != ActionStatus::Running) 
     {
         GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&hook);
     }
-    return isDone;
+    return status;
 }
 
 void RepopMinipetAction::drawSettings()
@@ -1241,6 +1262,16 @@ void RestoreTargetAction::drawSettings()
     ImGui::PushID(drawId());
 
     ImGui::Text("Restore target");
+
+    ImGui::PopID();
+}
+
+/// ------------- StopScriptAction -------------
+void StopScriptAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("Stop script");
 
     ImGui::PopID();
 }

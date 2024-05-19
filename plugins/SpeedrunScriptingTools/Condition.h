@@ -51,7 +51,7 @@ public:
     virtual ConditionType type() const = 0;
     virtual bool check() const { return true; };
     virtual void drawSettings() {}
-    virtual void serialize(OutputStream& stream) const { stream << "C " << type(); }
+    virtual void serialize(OutputStream& stream) const { stream << "C" << type(); }
 
 protected:
     int drawId() const { return m_drawId; }

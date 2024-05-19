@@ -24,7 +24,14 @@ enum class ActionType : int {
     ChangeWeaponSet,
     StoreTarget,
     RestoreTarget,
+    StopScript,
     Count
+};
+
+enum class ActionStatus {
+    Running,
+    Complete,
+    Error
 };
 
 class Action {
@@ -38,9 +45,9 @@ public:
     virtual ActionType type() const = 0;
     virtual void initialAction() { m_hasBeenStarted = true; }
     virtual void finalAction() { m_hasBeenStarted = false; }
-    virtual bool isComplete() const { return true; }
+    virtual ActionStatus isComplete() const { return ActionStatus::Complete; }
     virtual void drawSettings() = 0;
-    virtual void serialize(OutputStream& stream) const { stream << "A " << type();}
+    virtual void serialize(OutputStream& stream) const { stream << "A" << type();}
     bool hasBeenStarted() const { return m_hasBeenStarted; }
 
 protected:

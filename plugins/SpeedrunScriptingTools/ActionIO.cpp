@@ -6,7 +6,7 @@
 namespace {
     std::shared_ptr<Action> makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 21);
+        static_assert((int)ActionType::Count == 22);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -50,6 +50,8 @@ namespace {
                 return std::make_shared<StoreTargetAction>();
             case ActionType::RestoreTarget:
                 return std::make_shared<RestoreTargetAction>();
+            case ActionType::StopScript:
+                return std::make_shared<StopScriptAction>();
             default:
                 return nullptr;
         }
@@ -58,7 +60,7 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 21);
+    static_assert((int)ActionType::Count == 22);
     switch (type) {
         case ActionType::MoveTo:
             return "Move to";
@@ -102,6 +104,8 @@ std::string_view toString(ActionType type)
             return "Store target";
         case ActionType::RestoreTarget:
             return "Restore target";
+        case ActionType::StopScript:
+            return "Stop script";
         default:
             return "Unknown";
     }
@@ -109,7 +113,7 @@ std::string_view toString(ActionType type)
 
 std::shared_ptr<Action> readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 21);
+    static_assert((int)ActionType::Count == 22);
     int type;
 
     stream >> type;
@@ -156,6 +160,8 @@ std::shared_ptr<Action> readAction(InputStream& stream)
             return std::make_shared<StoreTargetAction>(stream);
         case ActionType::RestoreTarget:
             return std::make_shared<RestoreTargetAction>(stream);
+        case ActionType::StopScript:
+            return std::make_shared<StopScriptAction>(stream);
         default:
             return nullptr;
     }
@@ -165,7 +171,7 @@ std::shared_ptr<Action> drawActionSelector(float width)
 {
     std::shared_ptr<Action> result = nullptr;
 
-    static_assert((int)ActionType::Count == 21);
+    static_assert((int)ActionType::Count == 22);
     constexpr auto actions = std::array{
         ActionType::MoveTo,       
         ActionType::Cast,
@@ -195,6 +201,7 @@ std::shared_ptr<Action> drawActionSelector(float width)
         ActionType::Cancel,
         ActionType::Wait,
         ActionType::Conditioned,
+        ActionType::StopScript,
     };
 
     if (ImGui::Button("Add action", ImVec2(width, 0))) {
