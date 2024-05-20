@@ -257,7 +257,11 @@ void ToolboxSettings::DrawSettingsInternal()
     for (auto& m : optional_modules) {
         if (ImGui::Checkbox(m.name, &m.enabled)) {
             GWToolbox::SaveSettings();
-            GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
+            const auto p = &m;
+            GW::GameThread::Enqueue([p]() {
+                GWToolbox::ToggleModule(*p->toolbox_module, p->enabled);
+                });
+
         }
         if (ImGui::IsItemHovered() && m.toolbox_module->Description()) {
             ImGui::BeginTooltip();
@@ -279,7 +283,10 @@ void ToolboxSettings::DrawSettingsInternal()
     for (auto& m : optional_windows) {
         if (ImGui::Checkbox(m.name, &m.enabled)) {
             GWToolbox::SaveSettings();
-            GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
+            const auto p = &m;
+            GW::GameThread::Enqueue([p]() {
+                GWToolbox::ToggleModule(*p->toolbox_module, p->enabled);
+                });
         }
         if (ImGui::IsItemHovered() && m.toolbox_module->Description()) {
             ImGui::BeginTooltip();
@@ -301,7 +308,10 @@ void ToolboxSettings::DrawSettingsInternal()
     for (auto& m : optional_widgets) {
         if (ImGui::Checkbox(m.name, &m.enabled)) {
             GWToolbox::SaveSettings();
-            GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
+            const auto p = &m;
+            GW::GameThread::Enqueue([p]() {
+                GWToolbox::ToggleModule(*p->toolbox_module, p->enabled);
+                });
         }
         if (ImGui::IsItemHovered() && m.toolbox_module->Description()) {
             ImGui::BeginTooltip();
