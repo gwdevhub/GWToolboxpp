@@ -111,7 +111,7 @@ private:
     bool requireSameModelIdAsTarget = false;
     std::string agentName = "";
     std::vector<GW::Vec2f> polygon;
-    bool rotateThroughTargets = true;
+    bool rotateThroughTargets = false;
     std::unordered_set<GW::AgentID> recentlyTargetedEnemies;
     float minHp = 0.f;
     float maxHp = 100.f;

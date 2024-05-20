@@ -17,6 +17,8 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 
@@ -143,6 +145,18 @@ namespace {
         result += "]###" + std::to_string(id);
         return result;
     }
+
+    void logMessage(std::string_view message)
+    {
+        const auto wMessage = std::wstring{message.begin(), message.end()};
+        const size_t len = 30 + wcslen(wMessage.c_str());
+        auto to_send = new wchar_t[len];
+        swprintf(to_send, len - 1, L"<a=1>%s</a><c=#%6X>: %s</c>", L"SST", 0xFFFFFF, wMessage.c_str());   
+        GW::GameThread::Enqueue([to_send]{
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA2, to_send, nullptr);
+            delete[] to_send;
+        });
+    }
 }
 
 void SpeedrunScriptingTools::DrawSettings()
@@ -268,7 +282,18 @@ void SpeedrunScriptingTools::DrawSettings()
     }
     ImGui::SameLine();
     ImGui::Text("Actions in queue: %i", m_currentScript ? m_currentScript->actions.size() : 0u);
-    ImGui::Text("Version 1.0. For bug reports and feature requests contact Jabor.");
+    ImGui::SameLine();
+    ImGui::Checkbox("Show message when a script is triggered", &showTriggerMessage);
+
+    ImGui::Text("Version 1.1. For new releases, feature requests and bug reports check out");
+    ImGui::SameLine();
+
+    constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
+    ImGui::TextColored(ImColor{102, 187, 238, 255}, discordInviteLink);
+    if (ImGui::IsItemClicked()) 
+    {
+        ShellExecute(nullptr, "open", discordInviteLink, nullptr, nullptr, SW_SHOWNORMAL);
+    }
 }
 
 void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
@@ -276,6 +301,7 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
     ToolboxPlugin::LoadSettings(folder);
     ini.LoadFile(GetSettingFile(folder).c_str());
     const long savedVersion = ini.GetLongValue(Name(), "version", 1);
+    showTriggerMessage = ini.GetBoolValue(Name(), "showTriggerMessage", showTriggerMessage);
     
     if (savedVersion != currentVersion) return;
     
@@ -300,9 +326,11 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
 {
     ToolboxPlugin::SaveSettings(folder);
     ini.SetLongValue(Name(), "version", currentVersion);
+    ini.SetBoolValue(Name(), "showTriggerMessage", showTriggerMessage);
 
     OutputStream stream;
-    for (const auto& script : m_scripts) {
+    for (const auto& script : m_scripts) 
+    {
         stream << serialize(script);
     }
     
@@ -358,6 +386,8 @@ void SpeedrunScriptingTools::Update(float delta)
             if (script.trigger == currentTrigger || (script.trigger == Trigger::Hotkey && script.hotkeyStatus.triggered)) {
                 script.hotkeyStatus.triggered = false;
                 if (checkConditions(script)) {
+                    if (showTriggerMessage) 
+                        logMessage(std::string{"Trigger script "} + script.name);
                     m_currentScript = script;
                     break;
                 }
