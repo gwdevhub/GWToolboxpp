@@ -186,7 +186,6 @@ std::shared_ptr<Action> drawActionSelector(float width)
         ActionType::AutoAttackTarget, 
         ActionType::PingTarget,
 
-
         ActionType::UseItem,         
         ActionType::EquipItem,
         ActionType::ChangeWeaponSet,  

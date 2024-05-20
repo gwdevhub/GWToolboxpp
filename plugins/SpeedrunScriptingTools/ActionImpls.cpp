@@ -9,7 +9,6 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
@@ -75,12 +74,6 @@ namespace {
             if (const auto living = agent->GetAsAgentLiving(); living && living->player_number == id) return living;
         }
         return nullptr;
-    }
-
-    void ctosUseSkill(GW::Constants::SkillID skill, GW::AgentLiving* target) {
-        GW::GameThread::Enqueue([skill = (uint32_t)skill, target = target->agent_id]() -> void {
-            GW::CtoS::SendPacket(0x14, GAME_CMSG_USE_SKILL, skill, 0, target, 0);
-        });
     }
 
     constexpr double eps = 1e-3;
@@ -202,7 +195,9 @@ void CastOnSelfAction::initialAction()
     startTime = std::chrono::steady_clock::now();
 
     hasBegunCasting = false;
-    ctosUseSkill(id, GW::Agents::GetPlayerAsAgentLiving());
+    /*GW::GameThread::Enqueue([skill = (uint32_t)skill, target = target->agent_id]() -> void {
+        GW::CtoS::SendPacket(0x14, GAME_CMSG_USE_SKILL, skill, 0, target, 0);
+    });*/
 }
 ActionStatus CastOnSelfAction::isComplete() const
 {
@@ -1105,20 +1100,19 @@ void PingHardModeAction::initialAction()
     const auto pingId = [] {
         switch (GW::Map::GetMapID()) {
             case GW::Constants::MapID::The_Underworld:
-                return 0x14;
+                return 0x14u;
             case GW::Constants::MapID::Domain_of_Anguish:
-                return 0x27;
+                return 0x27u;
             case GW::Constants::MapID::The_Fissure_of_Woe:
-                return 0xA;
+                return 0xAu;
             default:
-                return 0;
+                return 0u;
         }
     }();
-    
-    if (pingId) 
-    {
-        GW::GameThread::Enqueue([pingId]{ GW::CtoS::SendPacket(0xC, GAME_CMSG_TARGET_CALL, 0x4, pingId); });
-    }
+    GW::GameThread::Enqueue([pingId]() {
+        auto packet = GW::UI::UIPacket::kSendCallTarget{GW::CallTargetType::HardMode, pingId};
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &packet);
+    });
     
 }
 void PingHardModeAction::drawSettings()
@@ -1147,8 +1141,11 @@ void PingTargetAction::initialAction()
     if (onlyOncePerInstance && pingedTargets.contains(currentTarget->agent_id)) return;
     pingedTargets.insert(currentTarget->agent_id);
     
-    GW::GameThread::Enqueue([id = currentTarget->agent_id]() {
-        GW::CtoS::SendPacket(0xC, GAME_CMSG_TARGET_CALL, 0xA, id);
+    
+    GW::GameThread::Enqueue([id = currentTarget->agent_id]() 
+    {
+        auto packet = GW::UI::UIPacket::kSendCallTarget{GW::CallTargetType::AttackingOrTargetting, id};
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &packet);
     });
 }
 void PingTargetAction::drawSettings()
