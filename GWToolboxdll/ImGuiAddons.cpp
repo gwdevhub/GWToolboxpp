@@ -52,8 +52,10 @@ namespace ImGui {
     void TextShadowed(const char* label, const ImVec2 offset, const ImVec4& shadow_color)
     {
         const ImVec2 pos = GetCursorPos();
+        ImGui::PushStyleColor(ImGuiCol_Text, shadow_color);
         SetCursorPos(ImVec2(pos.x + offset.x, pos.y + offset.y));
-        TextColored(shadow_color, "%s", label);
+        TextUnformatted(label);
+        ImGui::PopStyleColor();
         SetCursorPos(pos);
         TextUnformatted(label);
     }
@@ -68,28 +70,28 @@ namespace ImGui {
         bool res = false;
         ImGui::OpenPopup("##confirm_popup");
         if (ImGui::BeginPopupModal("##confirm_popup", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::TextUnformatted(message);
             static bool was_enter_down = true, was_escape_down = true;
-            if (!ImGui::IsKeyDown(ImGuiKey_Enter)) {
-                was_enter_down = false;
+            if (ImGui::IsWindowAppearing()) {
+                was_enter_down = ImGui::IsKeyDown(ImGuiKey_Enter);
+                was_escape_down = ImGui::IsKeyDown(ImGuiKey_Escape);
             }
-            if (!ImGui::IsKeyDown(ImGuiKey_Escape)) {
-                was_escape_down = false;
-            }
+            bool is_enter_down = ImGui::IsKeyDown(ImGuiKey_Enter);
+            bool is_escape_down = ImGui::IsKeyDown(ImGuiKey_Escape);
+            ImGui::TextUnformatted(message);
 
-            if (ImGui::Button("Yes", ImVec2(120, 0)) || (!was_enter_down && ImGui::IsKeyPressed(ImGuiKey_Enter, false))) {
-                was_enter_down = true;
+            if (ImGui::Button("Yes", ImVec2(120, 0)) || (!was_enter_down && is_enter_down)) {
                 *result = true;
                 res = true;
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            if (ImGui::Button("No", ImVec2(120, 0)) || (!was_escape_down && ImGui::IsKeyPressed(ImGuiKey_Escape, false))) {
-                was_escape_down = true;
+            if (ImGui::Button("No", ImVec2(120, 0)) || (!was_escape_down && is_escape_down)) {
                 *result = false;
                 res = true;
                 ImGui::CloseCurrentPopup();
             }
+            was_escape_down = is_escape_down;
+            was_enter_down = is_enter_down;
             ImGui::EndPopup();
         }
         return res;
