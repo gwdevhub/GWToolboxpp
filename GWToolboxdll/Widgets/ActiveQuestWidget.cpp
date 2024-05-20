@@ -183,6 +183,8 @@ void ActiveQuestWidget::Draw(IDirect3DDevice9*)
 
     ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
+        ImVec2 cursor = ImGui::GetCursorPos();
+        ImGui::PushTextWrapPos(ImGui::GetWindowWidth() - cursor.x);
         DrawQuestIcon();
 
         ImGui::SameLine();
@@ -193,8 +195,6 @@ void ActiveQuestWidget::Draw(IDirect3DDevice9*)
         ImGui::PopStyleColor();
         ImGui::PopFont();
 
-        ImVec2 cursor = ImGui::GetCursorPos();
-        ImGui::PushTextWrapPos(ImGui::GetWindowWidth() - cursor.x);
         ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::header2));
         for (const auto& objective : active_quest_objectives) {
             auto& [_, obj_str, completed] = objective;
