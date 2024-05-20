@@ -221,7 +221,7 @@ void ObjectiveTimerWindow::Initialize()
         &PartyDefeated_Entry, [this](GW::HookStatus*, GW::Packet::StoC::PartyDefeated*) { StopObjectives(); });
 
     // NB: Server may not send packets in the order we want them
-    // e.g. InstanceLoadInfo comes in before InstanceTimer which means the run start is whacked out
+    // e.g. InstanceLoadInfo comes in before ExamplePlugin which means the run start is whacked out
     // keep track of the packets and only trigger relevent events when the needed packets are in.
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry,
                                                                              [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadInfo* packet) {

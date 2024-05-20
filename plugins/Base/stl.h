@@ -77,9 +77,9 @@
 #define PLUGIN_ASSERT(expr) ((void)(!!(expr) || (std::cerr << (#expr, __FILE__, (unsigned)__LINE__), 0)))
 #endif
 
-#define LOAD_BOOL(var) var = ini->GetBoolValue(Name(), #var, var);
-#define SAVE_BOOL(var) ini->SetBoolValue(Name(), #var, var);
-#define LOAD_FLOAT(var) var = static_cast<float>(ini->GetDoubleValue(Name(), #var, static_cast<double>(var)));
-#define SAVE_FLOAT(var) ini->SetDoubleValue(Name(), #var, static_cast<double>(var));
-#define LOAD_UINT(var) var = static_cast<unsigned int>(ini->GetLongValue(Name(), #var, static_cast<long>(var)));
-#define SAVE_UINT(var) ini->SetLongValue(Name(), #var, static_cast<long>(var));
+#define PLUGIN_LOAD_BOOL(var) var = ini.GetBoolValue(Name(), #var, var);
+#define PLUGIN_SAVE_BOOL(var) ini.SetBoolValue(Name(), #var, var);
+#define PLUGIN_LOAD_FLOAT(var) var = static_cast<float>(ini.GetDoubleValue(Name(), #var, static_cast<double>(var)));
+#define PLUGIN_SAVE_FLOAT(var) ini.SetDoubleValue(Name(), #var, static_cast<double>(var));
+#define PLUGIN_LOAD_UINT(var) var = static_cast<unsigned int>(ini.GetLongValue(Name(), #var, static_cast<long>(var)));
+#define PLUGIN_SAVE_UINT(var) ini.SetLongValue(Name(), #var, static_cast<long>(var));

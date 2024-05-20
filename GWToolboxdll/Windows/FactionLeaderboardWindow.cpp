@@ -1,20 +1,7 @@
 #include "stdafx.h"
-
-#include <GWCA/Constants/Constants.h>
-
-#include <GWCA/Packets/StoC.h>
-
-#include <GWCA/GameEntities/Map.h>
 #include <GWCA/Context/GuildContext.h>
-
-#include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
-
 #include <Modules/Resources.h>
-
 #include <Utils/GuiUtils.h>
-
 #include <Windows/FactionLeaderboardWindow.h>
 
 void FactionLeaderboardWindow::Draw(IDirect3DDevice9*)
@@ -44,8 +31,7 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9*)
     ImGui::Separator();
     bool has_entries = false;
 
-    const auto g = GW::GetGuildContext();
-    if (g) {
+    if (const auto g = GW::GetGuildContext()) {
         const auto& leaderboard = g->factions_outpost_guilds;
         for (const auto& e : leaderboard) {
             has_entries = true;
