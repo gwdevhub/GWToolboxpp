@@ -395,6 +395,7 @@ void ChangeTargetAction::initialAction()
     const auto fulfillsConditions = [&](const GW::AgentLiving* agent) 
     {
         if (!agent) return false;
+        if (agent->agent_id == player->agent_id) return false; // Target self handled seperately
         const auto correctType = [&]() -> bool {
             switch (agentType) {
                 case AgentType::Any:
