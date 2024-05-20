@@ -9,6 +9,8 @@
 
 #include "imgui.h"
 #include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/Constants/Skills.h>
+#include <GWCA/Constants/Maps.h>
 
 template <typename T, typename U = std::enable_if_t<std::is_enum<T>::value>>
 std::ostream& operator<<(std::ostream& os, T t)
@@ -79,6 +81,9 @@ std::string decodeString(std::string&&);
 void ShowHelp(const char* help);
 void drawHotkeySelector(long& keyData, long& modifier, std::string& description, float selectorWidth);
 std::string makeHotkeyDescription(long keyData, long modifier);
+
+void drawSkillIDSelector(GW::Constants::SkillID& id);
+void drawMapIDSelector(GW::Constants::MapID& id);
 
 enum class Class : int { Any, Warrior, Ranger, Monk, Necro, Mesmer, Elementalist, Assassin, Ritualist, Paragon, Dervish };
 enum class Status : int { Any, Dead, Alive };
