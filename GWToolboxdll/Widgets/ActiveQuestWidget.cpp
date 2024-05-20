@@ -8,14 +8,14 @@
 
 #include <GWCA/Constants/QuestIDs.h>
 #include <GWCA/Context/WorldContext.h>
+
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Quest.h>
+
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Packets/Opcodes.h>
 
 namespace {
     constexpr uint32_t OBJECTIVE_FLAG_BULLET = 0x1;
@@ -23,16 +23,17 @@ namespace {
     constexpr uint32_t QUEST_MARKER_FILE_ID = 0x1b4d5;
 
     constexpr ImU32 TEXT_COLOR_COMPLETED = 0xffbbbbbb;
+    constexpr ImU32 TEXT_COLOR_ACTIVE = 0xff00ff00;
 
     GW::HookEntry hook_entry;
-    GW::Constants::QuestID active_quest_id;
+    GW::Constants::QuestID active_quest_id = (GW::Constants::QuestID)0;
     GuiUtils::EncString active_quest_name;
     std::vector<std::tuple<int, std::string, bool>> active_quest_objectives; // (index, objective, completed)
     IDirect3DTexture9** p_quest_marker_texture;
     bool is_loading_quest_objectives = false;
     bool force_update = false;
 
-    void SetForceUpdate(GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
+    void SetForceUpdate(GW::HookStatus*, GW::UI::UIMessage,void*,void*) {
         force_update = true;
     }
 
@@ -100,37 +101,37 @@ void ActiveQuestWidget::Initialize() {
 
     p_quest_marker_texture = GwDatTextureModule::LoadTextureFromFileId(QUEST_MARKER_FILE_ID);
 
-    GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_QUEST_DESCRIPTION, SetForceUpdate, 1);
-    GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_QUEST_UPDATE_NAME, SetForceUpdate, 1);
-    GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_MISSION_OBJECTIVE_ADD, SetForceUpdate, 1);
-    GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_MISSION_OBJECTIVE_COMPLETE, SetForceUpdate, 1);
-    GW::StoC::RegisterPacketCallback(&hook_entry, GAME_SMSG_MISSION_OBJECTIVE_UPDATE_STRING, SetForceUpdate, 1);
+    const GW::UI::UIMessage ui_messages[] = {
+        GW::UI::UIMessage::kQuestDetailsChanged,
+        GW::UI::UIMessage::kQuestAdded,
+        GW::UI::UIMessage::kClientActiveQuestChanged
+    };
+    for (auto message_id : ui_messages) {
+        GW::UI::RegisterUIMessageCallback(&hook_entry, message_id, SetForceUpdate);
+    }
 }
 
 void ActiveQuestWidget::Terminate() {
-    GW::StoC::RemoveCallbacks(&hook_entry);
+    GW::UI::RemoveUIMessageCallback(&hook_entry);
 
     ToolboxWidget::Terminate();
 }
 
 void ActiveQuestWidget::Update(float)
 {
-    GW::Constants::QuestID qid = GW::QuestMgr::GetActiveQuestId();
+    const auto qid = GW::QuestMgr::GetActiveQuestId();
 
     if (qid != active_quest_id || force_update) {
         force_update = false;
         active_quest_id = qid;
 
-        GW::Quest* quest = GW::QuestMgr::GetQuest(qid);
+        const auto quest = GW::QuestMgr::GetQuest(qid);
         if (quest) {
             active_quest_name.reset(quest->name);
             active_quest_objectives.clear();
 
             if(quest->objectives) {
-                wchar_t* objectives = quest->objectives;
-                GW::GameThread::Enqueue([objectives] {
-                    GW::UI::AsyncDecodeStr(objectives, OnQuestObjectivesDecoded);
-                });
+                GW::UI::AsyncDecodeStr(quest->objectives, OnQuestObjectivesDecoded);
                 is_loading_quest_objectives = false;
             }
             else {
@@ -140,41 +141,36 @@ void ActiveQuestWidget::Update(float)
         }
         else if(static_cast<int32_t>(qid) == -1) {
             // Mission objectives
-            GW::WorldContext* worldContext = GW::GetWorldContext();
-            GW::AreaInfo* areaInfo = GW::Map::GetCurrentMapInfo();
-            active_quest_name.reset(areaInfo->name_id);
+            const auto worldContext = GW::GetWorldContext();
+            const auto areaInfo = GW::Map::GetCurrentMapInfo();
+            active_quest_name.reset(areaInfo && areaInfo->name_id ? areaInfo->name_id : 3);
 
             active_quest_objectives.clear();
 
             int index = 0;
 
             for (const auto& objective : worldContext->mission_objectives) {
+                if (!objective.enc_str)
+                    continue;
                 bool objective_completed = (objective.type & OBJECTIVE_FLAG_COMPLETED) != 0;
-                wchar_t* objective_text = objective.enc_str;
                 if (objective.type & OBJECTIVE_FLAG_BULLET) {
-                    GW::GameThread::Enqueue([objective_text, index, objective_completed] {
-                        auto* param = new std::tuple<int,bool>(index, objective_completed);
-                        GW::UI::AsyncDecodeStr(objective_text, OnMissionObjectiveDecoded, reinterpret_cast<void*>(param));
-                    });
+                    auto* param = new std::tuple<int, bool>(index, objective_completed);
+                    GW::UI::AsyncDecodeStr(objective.enc_str, OnMissionObjectiveDecoded, reinterpret_cast<void*>(param));
                 }
                 index++;
             }
         }
         else {
-            active_quest_name.reset(L"\x108\x107No active quest\x1");
+            active_quest_name.reset(1);
             active_quest_objectives.clear();
         }
     }
 
     if (is_loading_quest_objectives) {
-        GW::Quest* quest = GW::QuestMgr::GetQuest(qid);
-        if(quest->objectives) {
-            wchar_t* objectives = quest->objectives;
+        const auto quest = GW::QuestMgr::GetQuest(qid);
+        if(quest && quest->objectives) {
             is_loading_quest_objectives = false;
-
-            GW::GameThread::Enqueue([objectives] {
-                GW::UI::AsyncDecodeStr(objectives, OnQuestObjectivesDecoded);
-            });
+            GW::UI::AsyncDecodeStr(quest->objectives, OnQuestObjectivesDecoded);
         }
     }
 }
@@ -192,7 +188,9 @@ void ActiveQuestWidget::Draw(IDirect3DDevice9*)
         ImGui::SameLine();
 
         ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_label));
-        ImGui::TextColored(ImColor(0, 255, 0), "%s", active_quest_name.string().c_str());
+        ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR_ACTIVE);
+        ImGui::TextUnformatted(active_quest_name.string().c_str());
+        ImGui::PopStyleColor();
         ImGui::PopFont();
 
         ImVec2 cursor = ImGui::GetCursorPos();
@@ -205,7 +203,7 @@ void ActiveQuestWidget::Draw(IDirect3DDevice9*)
                 ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR_COMPLETED);
             }
             ImGui::Bullet();
-            ImGui::Text("%s", obj_str.c_str());
+            ImGui::TextUnformatted(obj_str.c_str());
             if(completed) {
                 ImGui::PopStyleColor();
             }
