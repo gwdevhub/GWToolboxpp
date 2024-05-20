@@ -225,9 +225,8 @@ void CastOnSelfAction::drawSettings()
     ImGui::PushID(drawId());
 
     ImGui::Text("Force-cast on self:");
-    ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
+    drawSkillIDSelector(id);
     ImGui::SameLine();
     ShowHelp("Send a CtoS packet to cast a spell on yourself even if you have another target selected. Only necessary for targeted spells.");
 
@@ -291,10 +290,9 @@ void CastAction::drawSettings()
 {
     ImGui::PushID(drawId());
 
-    ImGui::Text("Use skill by id:");
-    ImGui::PushItemWidth(90);
+    ImGui::Text("Use skill");
     ImGui::SameLine();
-    ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
+    drawSkillIDSelector(id);
 
     ImGui::PopID();
 }
@@ -350,8 +348,8 @@ void CastBySlotAction::drawSettings()
 {
     ImGui::PushID(drawId());
 
-    ImGui::Text("Use skill by slot:");
-    ImGui::PushItemWidth(90);
+    ImGui::Text("Use skill");
+    ImGui::PushItemWidth(40.f);
     ImGui::SameLine();
     ImGui::InputInt("Slot", reinterpret_cast<int*>(&slot), 0);
     if (slot < 1) slot = 1;
@@ -523,12 +521,16 @@ void ChangeTargetAction::drawSettings()
 
             ImGui::BulletText("Uses skill");
             ImGui::SameLine();
-            ImGui::InputInt("id (0 for any)###0", reinterpret_cast<int*>(&skill), 0);
+            ImGui::PushID(0);
+            drawSkillIDSelector(skill);
+            ImGui::PopID();
 
             ImGui::BulletText("Name");
             ImGui::SameLine();
+            ImGui::PushItemWidth(200.f);
             ImGui::InputText("###1", &agentName);
 
+            ImGui::PushItemWidth(80.f);
             ImGui::Bullet();
             ImGui::Text("HP percent");
             ImGui::SameLine();
@@ -835,7 +837,7 @@ void DropBuffAction::drawSettings()
     ImGui::Text("Drop buff");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
+    drawSkillIDSelector(id);
 
     ImGui::PopID();
 }

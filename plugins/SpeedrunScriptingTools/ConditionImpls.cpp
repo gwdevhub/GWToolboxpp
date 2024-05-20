@@ -253,9 +253,8 @@ bool IsInMapCondition::check() const {
 void IsInMapCondition::drawSettings() {
     ImGui::PushID(drawId());
     ImGui::Text("If player is in map");
-    ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputInt("id", reinterpret_cast<int*>(&id), 0);
+    drawMapIDSelector(id);
     ImGui::PopID();
 }
 
@@ -389,10 +388,10 @@ void PlayerHasBuffCondition::drawSettings()
 {
     ImGui::PushID(drawId());
     ImGui::Text("If the player is affected by the skill");
-    ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputInt("id", reinterpret_cast<int*>(&id), 0);
+    drawSkillIDSelector(id);
     ImGui::SameLine();
+    ImGui::PushItemWidth(100.f);
     ImGui::Text("Min/Max duration in ms (0 for any):");
     ImGui::SameLine();
     ImGui::InputInt("min", &minimumDuration, 0);
@@ -426,12 +425,9 @@ bool PlayerHasSkillCondition::check() const
 void PlayerHasSkillCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::Text("If the player has the skill");
-    ImGui::PushItemWidth(90);
+    ImGui::Text("If the player has skill off cooldown:");
     ImGui::SameLine();
-    ImGui::InputInt("id", reinterpret_cast<int*>(&id), 0);
-    ImGui::SameLine();
-    ImGui::Text("off cooldown");
+    drawSkillIDSelector(id);
     ImGui::PopID();
 }
 
@@ -551,9 +547,10 @@ void CurrentTargetIsCastingSkillCondition::drawSettings()
 {
     ImGui::PushID(drawId());
     ImGui::Text("If the target is casting the skill");
-    ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputInt("id (0 for none)", reinterpret_cast<int*>(&id), 0);
+    drawSkillIDSelector(id);
+    ImGui::SameLine();
+    ImGui::Text("(0 for none)");
     ImGui::PopID();
 }
 
@@ -818,7 +815,7 @@ void InstanceTimeCondition::drawSettings()
     ImGui::Text("If the instance is older than");
     ImGui::SameLine();
     ImGui::PushItemWidth(90);
-    ImGui::InputInt("s", &timeInSeconds, 0);
+    ImGui::InputInt("seconds", &timeInSeconds, 0);
     ImGui::PopID();
 }
 
@@ -927,12 +924,18 @@ void NearbyAgentCondition::drawSettings()
 
         ImGui::BulletText("Uses skill");
         ImGui::SameLine();
-        ImGui::InputInt("id (0 for any)###2", reinterpret_cast<int*>(&skill), 0);
+        ImGui::PushID(2);
+        drawSkillIDSelector(skill);
+        ImGui::PopID();
+        ImGui::SameLine();
+        ImGui::Text("(0 for any)");
 
+        ImGui::PushItemWidth(200.f);
         ImGui::BulletText("Has name");
         ImGui::SameLine();
         ImGui::InputText("name (empty for any)", &agentName);
 
+        ImGui::PushItemWidth(80.f);
         ImGui::Bullet();
         ImGui::Text("HP percent");
         ImGui::SameLine();

@@ -1,11 +1,12 @@
 #include <utils.h>
 
+#include <skillNames.h>
 #include <imgui.h>
-
 #include <Keys.h>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Constants/Maps.h>
 
 namespace 
 {
@@ -641,4 +642,27 @@ bool pointIsInsidePolygon(const GW::GamePos pos, const std::vector<GW::Vec2f>& p
         }
     }
     return b;
+}
+
+void drawSkillIDSelector(GW::Constants::SkillID& id)
+{
+    ImGui::PushItemWidth(50.f);
+    if (id != GW::Constants::SkillID::No_Skill && (uint32_t)id < skillNames.size()) {
+        ImGui::Text("%s", skillNames[(uint32_t)id]);
+        ImGui::SameLine();
+    }
+    ImGui::SameLine();
+    ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
+}
+
+void drawMapIDSelector(GW::Constants::MapID& id) 
+{
+    ImGui::PushItemWidth(50.f);
+    if (id != GW::Constants::MapID::None && (uint32_t)id < GW::Constants::NAME_FROM_ID.size()) 
+    {
+        ImGui::Text("%s", GW::Constants::NAME_FROM_ID[(uint32_t)id]);
+        ImGui::SameLine();
+    }
+    
+    ImGui::InputInt("Map ID", reinterpret_cast<int*>(&id), 0);
 }
