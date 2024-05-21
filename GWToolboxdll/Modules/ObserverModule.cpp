@@ -23,6 +23,16 @@
 
 #include <Logger.h>
 
+namespace {
+
+
+
+    void CHAT_CMD_FUNC(CmdObserverReset)
+    {
+        ObserverModule::Instance().Reset();
+    }
+}
+
 constexpr auto INI_FILENAME = L"observerlog.ini";
 constexpr auto IniSection = "observer";
 
@@ -91,13 +101,6 @@ struct JumboMessage : GW::Packet::StoC::Packet<JumboMessage> {
 };
 
 const uint32_t GW::Packet::StoC::Packet<JumboMessage>::STATIC_HEADER = 0x18F; // 399
-
-
-// Destructor
-ObserverModule::~ObserverModule()
-{
-    Reset();
-}
 
 
 void ObserverModule::Initialize()
@@ -234,12 +237,17 @@ void ObserverModule::Initialize()
     if (IsActive() && !observer_session_initialized) {
         InitializeObserverSession();
     }
+
+    GW::Chat::CreateCommand(L"observer:reset", CmdObserverReset);
 }
 
 void ObserverModule::Terminate()
 {
     ToolboxModule::Terminate();
+    GW::Chat::DeleteCommand(L"observer:reset");
     Reset();
+
+    // TODO: Clear stoc callbacks
 }
 
 
