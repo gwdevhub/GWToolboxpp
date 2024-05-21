@@ -200,7 +200,6 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<CanPopAgentCondition>(stream);
 
     default:
-        assert(false);
         return nullptr;
 }
 }
