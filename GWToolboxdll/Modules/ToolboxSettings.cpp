@@ -55,6 +55,7 @@
 #include <Windows/DupingWindow.h>
 #include <Windows/RerollWindow.h>
 #include <Windows/ArmoryWindow.h>
+#include <Windows/EnemyWindow.h>
 
 #ifdef _DEBUG
 #include <Windows/PacketLoggerWindow.h>
@@ -188,7 +189,8 @@ namespace {
         RerollWindow::Instance(),
         PartyStatisticsWindow::Instance(),
         DupingWindow::Instance(),
-        ArmoryWindow::Instance()
+        ArmoryWindow::Instance(),
+        EnemyWindow::Instance()
     };
 
     bool modules_sorted = false;
