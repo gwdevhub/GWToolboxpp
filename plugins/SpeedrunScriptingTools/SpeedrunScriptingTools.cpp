@@ -285,7 +285,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Checkbox("Show message when a script is triggered", &showTriggerMessage);
 
-    ImGui::Text("Version 1.1. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 1.1-bay6TargetSameFix. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
@@ -368,11 +368,9 @@ void SpeedrunScriptingTools::Update(float delta)
                     currentAction.finalAction();
                     currentActions.erase(currentActions.begin(), currentActions.begin() + 1);
                     break;
-                case ActionStatus::Error:
+                default:
                     currentAction.finalAction();
                     currentActions.clear();
-                default:
-                    assert(false);
             }
         }
         else {
