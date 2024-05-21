@@ -370,20 +370,24 @@ void PlayerIsNearPositionCondition::drawSettings()
 /// ------------- PlayerHasBuffCondition -------------
 PlayerHasBuffCondition::PlayerHasBuffCondition(InputStream& stream)
 {
-    stream >> id >> minimumDuration >> maximumDuration;
+    stream >> id >> minimumDuration >> maximumDuration >> hasMinimumDuration >> hasMaximumDuration;
+
+    // Compatability with old scripts
+    if (minimumDuration > 0) hasMinimumDuration = true;
+    if (maximumDuration > 0) hasMaximumDuration = true;
 }
 void PlayerHasBuffCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << id << minimumDuration << maximumDuration;
+    stream << id << minimumDuration << maximumDuration << hasMinimumDuration << hasMaximumDuration;
 }
 bool PlayerHasBuffCondition::check() const
 {
     const auto effect = GW::Effects::GetPlayerEffectBySkillId(id);
     if (!effect) return false;
-    if (minimumDuration > 0 && effect->GetTimeRemaining() < DWORD(minimumDuration)) return false;
-    if (maximumDuration > 0 && effect->GetTimeRemaining() > DWORD(maximumDuration)) return false;
+    if (hasMinimumDuration && effect->GetTimeRemaining() < DWORD(minimumDuration)) return false;
+    if (hasMaximumDuration && effect->GetTimeRemaining() > DWORD(maximumDuration)) return false;
     return true;
 }
 void PlayerHasBuffCondition::drawSettings()
@@ -393,12 +397,41 @@ void PlayerHasBuffCondition::drawSettings()
     ImGui::SameLine();
     drawSkillIDSelector(id);
     ImGui::SameLine();
-    ImGui::PushItemWidth(100.f);
-    ImGui::Text("Min/Max duration in ms (0 for any):");
+    ImGui::Text("Remaining duration (ms):");
+    ImGui::PushItemWidth(50.f);
     ImGui::SameLine();
-    ImGui::InputInt("min", &minimumDuration, 0);
+    
+
+    if (hasMinimumDuration)
+    {
+        ImGui::InputInt("min", &minimumDuration, 0);
+        ImGui::SameLine();
+        if (ImGui::Button("X###0")) 
+        {
+            hasMinimumDuration = false;
+            minimumDuration = 0;
+        }
+    }
+    else 
+    {
+        if (ImGui::Button("Add min")) hasMinimumDuration = true;
+    }
+
     ImGui::SameLine();
-    ImGui::InputInt("max", &maximumDuration, 0);
+    if (hasMaximumDuration) 
+    {
+        ImGui::InputInt("max", &maximumDuration, 0);
+        ImGui::SameLine();
+        if (ImGui::Button("X###1")) {
+            hasMaximumDuration = false;
+            maximumDuration = 0;
+        }
+    }
+    else 
+    {
+        if (ImGui::Button("Add max")) hasMaximumDuration = true;
+    }
+
     ImGui::PopID();
 }
 
