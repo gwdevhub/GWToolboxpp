@@ -632,6 +632,15 @@ namespace {
     void CHAT_CMD_FUNC(CmdTick) {
         GW::PartyMgr::Tick(!GW::PartyMgr::GetIsPlayerTicked());
     }
+    void CHAT_CMD_FUNC(CmdCallTarget) {
+        const auto* target = GW::Agents::GetTarget();
+        if (!target)
+            return;
+        auto call_packet = GW::UI::UIPacket::kSendCallTarget{ GW::CallTargetType::AttackingOrTargetting, target->agent_id };
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &call_packet);
+    }
+
+    std::vector<std::pair< const wchar_t*, GW::Chat::ChatCommandCallback>> chat_commands;
 } // namespace
 
 void ChatCommands::CreateAlias(const wchar_t* alias, const wchar_t* message) {
@@ -1098,67 +1107,73 @@ void ChatCommands::Initialize()
         {"moa", {504, def_scale, 16689, 0, 98820}}
     };
 
-    GW::Chat::CreateCommand(L"bonds", CmdBondsAddRemove);
-    GW::Chat::CreateCommand(L"chat", CmdChatTab);
-    GW::Chat::CreateCommand(L"enter", CmdEnterMission);
-    GW::Chat::CreateCommand(L"age2", CmdAge2);
-    GW::Chat::CreateCommand(L"dialog", CmdDialog);
-    GW::Chat::CreateCommand(L"show", CmdShow);
-    GW::Chat::CreateCommand(L"hide", CmdHide);
-    GW::Chat::CreateCommand(L"toggle", CmdToggle);
-    GW::Chat::CreateCommand(L"tb", CmdTB);
-    GW::Chat::CreateCommand(L"zoom", CmdZoom);
-    GW::Chat::CreateCommand(L"camera", CmdCamera);
-    GW::Chat::CreateCommand(L"cam", CmdCamera);
-    GW::Chat::CreateCommand(L"damage", CmdDamage);
-    GW::Chat::CreateCommand(L"dmg", CmdDamage);
-    GW::Chat::CreateCommand(L"observer:reset", CmdObserverReset);
-    GW::Chat::CreateCommand(L"chest", CmdChest);
-    GW::Chat::CreateCommand(L"xunlai", CmdChest);
-    GW::Chat::CreateCommand(L"afk", CmdAfk);
-    GW::Chat::CreateCommand(L"target", CmdTarget);
-    GW::Chat::CreateCommand(L"tgt", CmdTarget);
-    GW::Chat::CreateCommand(L"useskill", CmdUseSkill);
-    GW::Chat::CreateCommand(L"scwiki", CmdSCWiki);
-    GW::Chat::CreateCommand(L"load", CmdLoad);
-    GW::Chat::CreateCommand(L"ping", CmdPing);
-    GW::Chat::CreateCommand(L"quest", CmdPingQuest);
-    GW::Chat::CreateCommand(L"transmo", CmdTransmo);
-    GW::Chat::CreateCommand(L"transmotarget", CmdTransmoTarget);
-    GW::Chat::CreateCommand(L"transmoparty", CmdTransmoParty);
-    GW::Chat::CreateCommand(L"transmoagent", CmdTransmoAgent);
-    GW::Chat::CreateCommand(L"resize", CmdResize);
-    GW::Chat::CreateCommand(L"settitle", CmdReapplyTitle);
-    GW::Chat::CreateCommand(L"title", CmdReapplyTitle);
-    GW::Chat::CreateCommand(L"withdraw", CmdWithdraw);
-    GW::Chat::CreateCommand(L"deposit", CmdDeposit);
-    GW::Chat::CreateCommand(L"pingitem", CmdPingEquipment);
-    GW::Chat::CreateCommand(L"tick", CmdTick);
-    GW::Chat::CreateCommand(L"hero", CmdHeroBehaviour);
-    GW::Chat::CreateCommand(L"morale", CmdMorale);
-    GW::Chat::CreateCommand(L"volume", CmdVolume);
-    GW::Chat::CreateCommand(L"nm", CmdSetNormalMode);
-    GW::Chat::CreateCommand(L"hm", CmdSetHardMode);
-    GW::Chat::CreateCommand(L"normalmode", CmdSetNormalMode);
-    GW::Chat::CreateCommand(L"hardmode", CmdSetHardMode);
-    GW::Chat::CreateCommand(L"animation", CmdAnimation);
-    GW::Chat::CreateCommand(L"hom", CmdHom);
-    GW::Chat::CreateCommand(L"fps", CmdFps);
-    GW::Chat::CreateCommand(L"pref", CmdPref);
+    //TODO: Move all of these callbacks into pvt namespace
+    chat_commands = {
+        {L"bonds", CmdBondsAddRemove},
+        {L"chat", CmdChatTab},
+        {L"enter", CmdEnterMission},
+        {L"age2", CmdAge2},
+        {L"dialog", CmdDialog},
+        {L"show", CmdShow},
+        {L"hide", CmdHide},
+        {L"toggle", CmdToggle},
+        {L"tb", CmdTB},
+        {L"zoom", CmdZoom},
+        {L"camera", CmdCamera},
+        {L"cam", CmdCamera},
+        {L"damage", CmdDamage},
+        {L"dmg", CmdDamage},
+        {L"chest", CmdChest},
+        {L"xunlai", CmdChest},
+        {L"afk", CmdAfk},
+        {L"target", CmdTarget},
+        {L"tgt", CmdTarget},
+        {L"xunlai", CmdChest},
+        {L"useskill", CmdUseSkill},
+        {L"scwiki", CmdSCWiki},
+        {L"load", CmdLoad},
+        {L"ping", CmdPing},
+        {L"quest", CmdPingQuest},
+        {L"transmo", CmdTransmo},
+        {L"transmotarget", CmdTransmoTarget},
+        {L"transmoparty", CmdTransmoParty},
+        {L"transmoagent", CmdTransmoAgent},
+        {L"resize", CmdResize},
+        {L"settitle", CmdReapplyTitle},
+        {L"title", CmdReapplyTitle},
+        {L"withdraw", CmdWithdraw},
+        {L"deposit", CmdDeposit},
+        {L"pingitem", CmdPingEquipment},
+        {L"tick", CmdTick},
+        {L"hero", CmdHeroBehaviour},
+        {L"morale", CmdMorale},
+        {L"volume", CmdVolume},
+        {L"nm", CmdSetNormalMode},
+        {L"normalmode", CmdSetNormalMode},
+        {L"hm", CmdSetHardMode},
+        {L"hardmode", CmdSetHardMode},
+        {L"animation", CmdAnimation},
+        {L"hom", CmdHom},
+        {L"fps", CmdFps},
+        {L"pref", CmdPref},
+        {L"call", CmdCallTarget}
+    };
+
 
     GW::UI::RegisterUIMessageCallback(&OnSentChat_HookEntry, GW::UI::UIMessage::kSendChatMessage, OnSendChat);
 
     // Experimental chat commands
     uintptr_t address = 0;
 #if _DEBUG
-    GW::Chat::CreateCommand(L"skillimage", CmdSkillImage);
+    chat_commands.push_back({ L"skillimage", CmdSkillImage });
     address = GW::Scanner::Find("\x83\xc4\x04\xc7\x45\x08\x00\x00\x00\x00", "xxxxxxxxxx", -5);
     if (address) {
         SetMuted_Func = (SetMuted_pt)GW::Scanner::FunctionFromNearCall(address);
         PostMuted_Func = (PostMute_pt)GW::Scanner::FunctionFromNearCall(address + 0x10);
         is_muted = *(bool**)((uintptr_t)SetMuted_Func + 0x6);
     }
-    GW::Chat::CreateCommand(L"mute", CmdMute); // Doesn't unmute!
+    chat_commands.push_back({ L"mute", CmdMute }); // Doesn't unmute!
+
 #endif
 
     address = GW::Scanner::Find("\x3d\x7d\x00\x00\x10\x0f\x87\xe5\x02\x00\x00", "xxxxxxxxxxx", -0x11);
@@ -1176,10 +1191,18 @@ void ChatCommands::Initialize()
     ASSERT(OnChatInteraction_Callback_Func);
     ASSERT(FocusChatTab_Func);
 #endif
+
+    for (auto& it : chat_commands) {
+        GW::Chat::CreateCommand(it.first, it.second);
+    }
 }
 
 void ChatCommands::Terminate()
 {
+    for (auto& it : chat_commands) {
+        GW::Chat::DeleteCommand(it.first);
+    }
+    chat_commands.clear();
     if (FocusChatTab_Func) {
         GW::HookBase::RemoveHook(FocusChatTab_Func);
     }
@@ -1921,7 +1944,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
     }
 }
 
-
 void CHAT_CMD_FUNC(ChatCommands::CmdZoom)
 {
     if (argc <= 1) {
@@ -1995,13 +2017,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdCamera)
         }
     }
 }
-
-
-void CHAT_CMD_FUNC(ChatCommands::CmdObserverReset)
-{
-    ObserverModule::Instance().Reset();
-}
-
 
 void CHAT_CMD_FUNC(ChatCommands::CmdDamage)
 {
