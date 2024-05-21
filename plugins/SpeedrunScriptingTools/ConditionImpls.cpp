@@ -28,6 +28,8 @@
 #include <algorithm>
 #include <optional>
 
+#include <iostream>
+
 namespace {
     constexpr double eps = 1e-3;
     constexpr float indent = 30.f;
@@ -845,6 +847,7 @@ bool NearbyAgentCondition::check() const
 
     const auto fulfillsConditions = [&](const GW::AgentLiving* agent) {
         if (!agent) return false;
+        if (agent->agent_id == player->agent_id) return false;
         const auto correctType = [&]() -> bool {
             switch (agentType) {
                 case AgentType::Any:
@@ -870,6 +873,7 @@ bool NearbyAgentCondition::check() const
         const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedName(agent->agent_id) == agentName);
         const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(agent->pos, polygon);
         const auto goodHp = minHp <= 100.f * agent->hp && 100.f * agent->hp <= maxHp;
+
         return correctType && correctPrimary && correctSecondary && correctStatus && hexedCorrectly && correctSkill && correctModelId && goodDistance && goodName && goodPosition && goodHp;
     };
     if (agentType == AgentType::PartyMember) {

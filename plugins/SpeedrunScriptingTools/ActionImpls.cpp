@@ -23,6 +23,8 @@
 #include <ImGuiCppWrapper.h>
 #include <thread>
 
+#include <iostream>
+
 namespace {
     const std::string missingContentToken = "/";
     const std::string endOfListToken = ">";
@@ -249,11 +251,12 @@ void CastAction::initialAction()
 
     const auto bar = GW::SkillbarMgr::GetPlayerSkillbar();
     int slot = -1;
-    if (bar && bar->IsValid())
-    for (int i = 0; i < 8; ++i) {
-        if (bar->skills[i].skill_id == id) {
-            slot = i;
-            hasSkillReady = bar->skills[i].GetRecharge() == 0;
+    if (bar && bar->IsValid()) {
+        for (int i = 0; i < 8; ++i) {
+            if (bar->skills[i].skill_id == id) {
+                slot = i;
+                hasSkillReady = bar->skills[i].GetRecharge() == 0;
+            }
         }
     }
     if (slot < 0 || !hasSkillReady) return;
@@ -425,7 +428,7 @@ void ChangeTargetAction::initialAction()
         return correctType && correctPrimary && correctSecondary && correctStatus && correctSkill && correctModelId && goodDistance && goodName && goodPosition && goodHp;
     };
 
-    GW::AgentLiving const * currentBestTarget = nullptr;
+    const GW::AgentLiving* currentBestTarget = nullptr;
 
     const auto isNewBest = [&](const GW::AgentLiving* agent) 
     {
@@ -435,10 +438,20 @@ void ChangeTargetAction::initialAction()
             return true;
         if (preferNonHexed && agent->GetIsHexed() && !currentBestTarget->GetIsHexed()) 
             return false;
-        if (rotateThroughTargets && recentlyTargetedEnemies.contains(agent->agent_id) && !recentlyTargetedEnemies.contains(currentBestTarget->agent_id))
-            return false;
-        if (rotateThroughTargets && !recentlyTargetedEnemies.contains(agent->agent_id) && recentlyTargetedEnemies.contains(currentBestTarget->agent_id)) 
-            return true;
+
+        if (rotateThroughTargets)
+        {
+            const auto currentBestIsStored = recentlyTargetedEnemies.contains(currentBestTarget->agent_id);
+            const auto currentBestIsCurrentTarget = currentTarget && currentBestTarget->agent_id == currentTarget->agent_id;
+            const auto agentIsStored = recentlyTargetedEnemies.contains(agent->agent_id);
+            const auto agentIsCurrentTarget = currentTarget && agent->agent_id == currentTarget->agent_id;
+
+            if (agentIsStored && !currentBestIsStored) return false;
+            if (agentIsCurrentTarget && !currentBestIsCurrentTarget) return false;
+            if (!agentIsStored && currentBestIsStored) return true;
+            if (!agentIsCurrentTarget && currentBestIsCurrentTarget) return true;
+        }
+
         switch (sorting) {
             case Sorting::ClosestToPlayer:
                 return GW::GetSquareDistance(player->pos, agent->pos) < GW::GetSquareDistance(player->pos, currentBestTarget->pos);
@@ -480,9 +493,8 @@ void ChangeTargetAction::initialAction()
         }
         recentlyTargetedEnemies.insert(currentBestTarget->agent_id);
     }
-    GW::GameThread::Enqueue([id = currentBestTarget->agent_id]() -> void {
-        GW::Agents::ChangeTarget(id);
-    });
+
+    GW::GameThread::Enqueue([id = currentBestTarget->agent_id] { GW::Agents::ChangeTarget(id); });
 }
 void ChangeTargetAction::drawSettings()
 {
@@ -530,9 +542,9 @@ void ChangeTargetAction::drawSettings()
             ImGui::Bullet();
             ImGui::Text("HP percent");
             ImGui::SameLine();
-            ImGui::InputFloat("min###1", &minHp);
+            ImGui::InputFloat("min###2", &minHp);
             ImGui::SameLine();
-            ImGui::InputFloat("max###2", &maxHp);
+            ImGui::InputFloat("max###3", &maxHp);
 
             ImGui::Bullet();
             ImGui::Checkbox("Prefer enemies that are not hexed", &preferNonHexed);
@@ -546,7 +558,7 @@ void ChangeTargetAction::drawSettings()
             ImGui::Bullet();
             ImGui::Text(requireSameModelIdAsTarget ? "If no target is selected: Model" : "Model");
             ImGui::SameLine();
-            ImGui::InputInt("id (0 for any)###3", &modelId, 0);
+            ImGui::InputInt("id (0 for any)###4", &modelId, 0);
 
             ImGui::BulletText("Sort candidates by:");
             ImGui::SameLine();
@@ -913,7 +925,7 @@ void ConditionedAction::initialAction()
     }
     else
     {
-        if (actionsTrue.empty()) return;
+        if (actionsFalse.empty()) return;
         currentlyExecutedActions = actionsFalse;
         if (const auto front = currentlyExecutedActions.front()) front->initialAction();
     }
@@ -943,11 +955,8 @@ ActionStatus ConditionedAction::isComplete() const
                 return ActionStatus::Running;
             case ActionStatus::Complete:
                 return finishFirstAction();
-            case ActionStatus::Error:
-                currentlyExecutedActions.clear();
-                return ActionStatus::Error;
             default:
-                assert(false);
+                currentlyExecutedActions.clear();
                 return ActionStatus::Error;
         }
     }
