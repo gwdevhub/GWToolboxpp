@@ -8,10 +8,22 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Constants/Maps.h>
 
+#include <algorithm>
+
 namespace 
 {
     const std::string endOfStringSignifier{"<"};
     constexpr char separatorToken = 0x7F;
+
+    constexpr bool isInvalidDecodedCharacter(char c) {
+        if ('a' <= c && c <= 'z')
+            return false;
+        else if ('A' <= c && c <= 'Z')
+            return false;
+        else if ('0' <= c && c <= '9')
+            return false;
+        return c != '_' && c != '#';
+    }
 }
 
 int InputStream::peek()
@@ -585,6 +597,7 @@ std::string huffmanDecode(std::vector<bool>&& seq)
 
 std::optional<std::string> decodeString(std::string&& str)
 {
+    std::erase_if(str, isInvalidDecodedCharacter);
     try 
     {
         return huffmanDecode(combineIntoBitSequence(std::move(str)));
