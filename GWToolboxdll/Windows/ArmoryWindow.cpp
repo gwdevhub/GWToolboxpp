@@ -128,7 +128,7 @@ namespace GWArmory {
 
     GW::Equipment* GetPlayerEquipment()
     {
-        const auto player = GW::Agents::GetPlayerAsAgentLiving();
+        const auto player = GW::Agents::GetCharacter();
         return player && player->equip && *player->equip ? *player->equip : nullptr;
     }
 
@@ -469,7 +469,7 @@ namespace GWArmory {
     }
 
     GW::Constants::Profession GetPlayerProfession() {
-        return GetAgentProfession(static_cast<GW::AgentLiving*>(GW::Agents::GetPlayer()));
+        return GetAgentProfession(GW::Agents::GetCharacter());
     }
     bool IsCostumeFileId(uint32_t model_file_id) {
         return model_file_id && GetFileIdsForCostume(model_file_id) != nullptr;
@@ -677,7 +677,7 @@ namespace GWArmory {
     }
 
     bool GetIsFemale() {
-        const auto player = GW::Agents::GetPlayerAsAgentLiving();
+        const auto player = GW::Agents::GetCharacter();
         return player && player->GetIsFemale();
     }
 
