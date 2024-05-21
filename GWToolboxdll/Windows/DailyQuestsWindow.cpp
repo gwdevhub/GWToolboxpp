@@ -111,17 +111,16 @@ namespace {
         return nicholas_post_cycles[cycle_index].quantity;
     }
 
-    const char* GetNicholasLocation(const time_t* unix)
-    {
-        // const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % NICHOLAS_POST_COUNT);
-        // return nicholas_post_cycles[cycle_index].english_map_name;
-        return "<Map>"; // TODO
-    }
-
-    const char* GetNicholasItemName(const time_t* unix)
+    const std::string& GetNicholasLocation(const time_t* unix)
     {
         const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % NICHOLAS_POST_COUNT);
-        return const_cast<GuiUtils::EncString*>(&nicholas_post_cycles[cycle_index].name_enc)->string().c_str();
+        return const_cast<NicholasCycleData*>(&nicholas_post_cycles[cycle_index])->map_name()->string();
+    }
+
+    const std::string& GetNicholasItemName(const time_t* unix)
+    {
+        const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % NICHOLAS_POST_COUNT);
+        return const_cast<GuiUtils::EncString*>(nicholas_post_cycles[cycle_index].name_english)->string();
     }
 
     uint32_t GetWantedByShiningBlade(const time_t* unix)
@@ -219,14 +218,16 @@ namespace {
         if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
             now += 86400;
         }
-        char buf[128];
+        std::string buf;
+
         if (GetIsPreSearing()) {
-            snprintf(buf, _countof(buf), "5 %s", GetNicholasSandfordLocation(&now));
-            PrintDaily(L"Nicholas Sandford", buf, now, false);
+            buf = std::format("5 {}", GetNicholasSandfordLocation(&now));
+
+            PrintDaily(L"Nicholas Sandford", buf.c_str(), now, false);
         }
         else {
-            snprintf(buf, _countof(buf), "%d %s in %s", GetNicholasItemQuantity(&now), GetNicholasItemName(&now), GetNicholasLocation(&now));
-            PrintDaily(L"Nicholas the Traveler", buf, now, false);
+            buf = std::format("{} {} in {}", GetNicholasItemQuantity(&now), GetNicholasItemName(&now), GetNicholasLocation(&now));
+            PrintDaily(L"Nicholas the Traveler", buf.c_str(), now, false);
         }
     }
 
@@ -353,7 +354,7 @@ void DailyQuests::Draw(IDirect3DDevice9*)
             ImGui::SameLine(offset += ws_width);
         }
         if (show_nicholas_in_window) {
-            ImGui::Text("%d %s", GetNicholasItemQuantity(&unix), GetNicholasItemName(&unix));
+            ImGui::Text("%d %s", GetNicholasItemQuantity(&unix), GetNicholasItemName(&unix).c_str());
             ImGui::SameLine(offset += nicholas_width);
         }
         if (show_weekly_bonus_pve_in_window) {
