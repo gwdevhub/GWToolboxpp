@@ -104,7 +104,10 @@ void ActiveQuestWidget::Initialize() {
     const GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kQuestDetailsChanged,
         GW::UI::UIMessage::kQuestAdded,
-        GW::UI::UIMessage::kClientActiveQuestChanged
+        GW::UI::UIMessage::kClientActiveQuestChanged,
+        GW::UI::UIMessage::kObjectiveComplete,
+        GW::UI::UIMessage::kObjectiveAdd,
+        GW::UI::UIMessage::kObjectiveUpdated
     };
     for (auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&hook_entry, message_id, SetForceUpdate);
