@@ -53,16 +53,12 @@ NegatedCondition::NegatedCondition(InputStream& stream)
 {
     std::string read;
     stream >> read;
-    if (read == missingContentToken) {
+    if (read == missingContentToken)
         cond = nullptr;
-    }
-    else if (read == "C"){
+    else if (read == "C")
         cond = readCondition(stream);
-    }
     else
-    {
-        assert(false);
-    }
+        return;
 }
 void NegatedCondition::serialize(OutputStream& stream) const
 {
@@ -95,18 +91,20 @@ void NegatedCondition::drawSettings()
 /// ------------- DisjunctionCondition -------------
 DisjunctionCondition::DisjunctionCondition(InputStream& stream) 
 {
-    std::string read;
+    std::string token;
     
-    while (stream >> read) {
+    while (stream >> token) {
         
-        if (read == endOfListToken)
+        if (token == endOfListToken)
             return;
-        else if (read == missingContentToken)
+        else if (token == missingContentToken)
             conditions.push_back(nullptr);
-        else if (read == "C")
-            conditions.push_back(readCondition(stream));
+        else if (token == "C") {
+            if (auto read = readCondition(stream)) 
+                conditions.push_back(std::move(read));
+        }
         else
-            assert(false);
+            return;
     }
 }
 void DisjunctionCondition::serialize(OutputStream& stream) const 
@@ -165,17 +163,19 @@ void DisjunctionCondition::drawSettings()
 /// ------------- ConjunctionCondition -------------
 ConjunctionCondition::ConjunctionCondition(InputStream& stream)
 {
-    std::string read;
+    std::string token;
 
-    while (stream >> read) {
-        if (read == endOfListToken)
+    while (stream >> token) {
+        if (token == endOfListToken)
             return;
-        else if (read == missingContentToken)
+        else if (token == missingContentToken)
             conditions.push_back(nullptr);
-        else if (read == "C")
-            conditions.push_back(readCondition(stream));
+        else if (token == "C") {
+            if (auto read = readCondition(stream)) 
+                conditions.push_back(std::move(read));
+        }
         else
-            assert(false);
+            return;
     }
 }
 void ConjunctionCondition::serialize(OutputStream& stream) const
