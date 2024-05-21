@@ -2,12 +2,11 @@
 
 #include <GWCA/Constants/Maps.h>
 
-namespace GUIUtils {
+namespace GuiUtils {
     class EncString;
 }
 
 using GW::Constants::MapID;
-using GW::Region;
 
 static constexpr size_t ZAISHEN_BOUNTY_COUNT = 66;
 static constexpr size_t ZAISHEN_MISSION_COUNT = 69;
@@ -338,7 +337,7 @@ inline const char* zaishen_bounty_cycles[ZAISHEN_BOUNTY_COUNT] = {
 };
 
 // TODO: enc names
-const char* zaishen_combat_cycles[ZAISHEN_COMBAT_COUNT] = {
+inline const char* zaishen_combat_cycles[ZAISHEN_COMBAT_COUNT] = {
     "Jade Quarry",
     "Codex Arena",
     "Heroes' Ascent",
@@ -370,7 +369,7 @@ const char* zaishen_combat_cycles[ZAISHEN_COMBAT_COUNT] = {
 };
 
 // TODO: enc names/mission ids/something
-const char* zaishen_mission_cycles[ZAISHEN_MISSION_COUNT] = {
+inline const char* zaishen_mission_cycles[ZAISHEN_MISSION_COUNT] = {
     "Augury Rock",
     "Grand Court of Sebelkeh",
     "Ice Caves of Sorrow",
@@ -443,7 +442,7 @@ const char* zaishen_mission_cycles[ZAISHEN_MISSION_COUNT] = {
 };
 
 // TODO: enc names/map ids/something
-const char* zaishen_vanquish_cycles[ZAISHEN_VANQUISH_COUNT] = {
+inline const char* zaishen_vanquish_cycles[ZAISHEN_VANQUISH_COUNT] = {
     "Jaya Bluffs",
     "Holdings of Chokhin",
     "Ice Cliff Chasms",
@@ -583,7 +582,7 @@ const char* zaishen_vanquish_cycles[ZAISHEN_VANQUISH_COUNT] = {
 };
 
 // TODO: enc names etc
-const char* wanted_by_shining_blade_cycles[WANTED_COUNT] = {
+inline const char* wanted_by_shining_blade_cycles[WANTED_COUNT] = {
     "Justiciar Kimii",
     "Zaln the Jaded",
     "Justiciar Sevaan",
@@ -608,7 +607,7 @@ const char* wanted_by_shining_blade_cycles[WANTED_COUNT] = {
 };
 
 // TODO: enc strings?  should probably be some for login screen bonus info
-const char* pve_weekly_bonus_cycles[WEEKLY_BONUS_PVE_COUNT] = {
+inline const char* pve_weekly_bonus_cycles[WEEKLY_BONUS_PVE_COUNT] = {
     "Extra Luck",
     "Elonian Support",
     "Zaishen Bounty",
@@ -621,7 +620,7 @@ const char* pve_weekly_bonus_cycles[WEEKLY_BONUS_PVE_COUNT] = {
 };
 
 // TODO: enc strings?  should probably be some for login screen bonus info
-const char* pve_weekly_bonus_descriptions[9] = {
+inline const char* pve_weekly_bonus_descriptions[9] = {
     "Keys and lockpicks drop at four times the usual rate and double Lucky and Unlucky title points",
     "Double Sunspear and Lightbringer points",
     "Double copper Zaishen Coin rewards for Zaishen bounties",
@@ -634,7 +633,7 @@ const char* pve_weekly_bonus_descriptions[9] = {
 };
 
 // TODO: enc strings?  should probably be some for login screen bonus info
-const char* pvp_weekly_bonus_cycles[WEEKLY_BONUS_PVP_COUNT] = {
+inline const char* pvp_weekly_bonus_cycles[WEEKLY_BONUS_PVP_COUNT] = {
     "Random Arenas",
     "Guild Versus Guild",
     "Competitive Mission",
@@ -644,7 +643,7 @@ const char* pvp_weekly_bonus_cycles[WEEKLY_BONUS_PVP_COUNT] = {
 };
 
 // TODO: enc strings?  should probably be some for login screen bonus info
-const char* pvp_weekly_bonus_descriptions[6] = {
+inline const char* pvp_weekly_bonus_descriptions[6] = {
     "Double Balthazar faction and Gladiator title points in Random Arenas",
     "Double Balthazar faction and Champion title points in GvG",
     "Double Balthazar and Imperial faction in the Jade Quarry and Fort Aspenwood",
