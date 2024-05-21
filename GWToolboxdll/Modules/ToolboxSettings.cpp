@@ -32,6 +32,7 @@
 #include <Modules/GuildWarsSettingsModule.h>
 #include <Modules/PriceCheckerModule.h>
 #include <Modules/SalvageInfoModule.h>
+#include <Modules/NicItemModule.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -144,7 +145,8 @@ namespace {
         GuildWarsSettingsModule::Instance(),
         //QuestModule::Instance(),
         PriceCheckerModule::Instance(),
-        SalvageInfoModule::Instance()
+        SalvageInfoModule::Instance(),
+        NicItemModule::Instance()
     };
 
     std::vector<WidgetToggle> optional_widgets = {
