@@ -793,6 +793,8 @@ void ChatCommands::DrawHelp()
     ImGui::Bullet();
     ImGui::Text("'/borderless [on|off]' toggles, enables or disables borderless window.");
     ImGui::Bullet();
+    ImGui::Text("'/call' ping current target.");
+    ImGui::Bullet();
     ImGui::Text("'/camera (lock|unlock)' to lock or unlock the camera.");
     ImGui::Bullet();
     ImGui::Text("'/camera fog (on|off)' sets game fog effect on or off.");
