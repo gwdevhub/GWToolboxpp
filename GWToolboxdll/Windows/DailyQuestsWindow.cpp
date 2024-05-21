@@ -6,7 +6,6 @@
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Utils/GuiUtils.h>
-#include <GWToolbox.h>
 #include <Logger.h>
 
 #include <Constants/DailyQuests.h>
@@ -36,10 +35,6 @@ namespace {
     float text_width = 200.0f;
     int daily_quest_window_count = 90;
 
-    class ZaishenMission {
-        ZaishenMission(GW::Constants::QuestID _quest_id, GW::Constants::MapID _map_id);
-    };
-
     bool subscriptions_changed = false;
     bool checked_subscriptions = false;
     time_t start_time;
@@ -64,32 +59,32 @@ namespace {
 
     uint32_t GetZaishenBounty(const time_t* unix)
     {
-        return static_cast<uint32_t>((*unix - 1244736000) / 86400 % 66);
+        return static_cast<uint32_t>((*unix - 1244736000) / 86400 % ZAISHEN_BOUNTY_COUNT);
     }
 
     uint32_t GetWeeklyBonusPvE(const time_t* unix)
     {
-        return static_cast<uint32_t>((*unix - 1368457200) / 604800 % 9);
+        return static_cast<uint32_t>((*unix - 1368457200) / 604800 % WEEKLY_BONUS_PVE_COUNT);
     }
 
     uint32_t GetWeeklyBonusPvP(const time_t* unix)
     {
-        return static_cast<uint32_t>((*unix - 1368457200) / 604800 % 6);
+        return static_cast<uint32_t>((*unix - 1368457200) / 604800 % WEEKLY_BONUS_PVP_COUNT);
     }
 
     uint32_t GetZaishenCombat(const time_t* unix)
     {
-        return static_cast<uint32_t>((*unix - 1256227200) / 86400 % 28);
+        return static_cast<uint32_t>((*unix - 1256227200) / 86400 % ZAISHEN_COMBAT_COUNT);
     }
 
     uint32_t GetZaishenMission(const time_t* unix)
     {
-        return static_cast<uint32_t>((*unix - 1299168000) / 86400 % 69);
+        return static_cast<uint32_t>((*unix - 1299168000) / 86400 % ZAISHEN_MISSION_COUNT);
     }
 
     uint32_t GetZaishenVanquish(const time_t* unix)
     {
-        return static_cast<uint32_t>((*unix - 1299168000) / 86400 % 136);
+        return static_cast<uint32_t>((*unix - 1299168000) / 86400 % ZAISHEN_VANQUISH_COUNT);
     }
 
     // Find the "week start" for this timestamp.
@@ -106,36 +101,37 @@ namespace {
 
     const char* GetNicholasSandfordLocation(const time_t* unix)
     {
-        const auto cycle_index = static_cast<uint32_t>((*unix - 1239260400) / 86400 % 52);
+        const auto cycle_index = static_cast<uint32_t>((*unix - 1239260400) / 86400 % NICHOLAS_PRE_COUNT);
         return NICHOLAS_PRE_CYCLES[cycle_index];
     }
 
     uint32_t GetNicholasItemQuantity(const time_t* unix)
     {
-        const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
+        const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % NICHOLAS_POST_COUNT);
         return nicholas_post_cycles[cycle_index].quantity;
     }
 
     const char* GetNicholasLocation(const time_t* unix)
     {
-        const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
-        return nicholas_post_cycles[cycle_index].english_map_name;
+        // const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % NICHOLAS_POST_COUNT);
+        // return nicholas_post_cycles[cycle_index].english_map_name;
+        return "<Map>"; // TODO
     }
 
     const char* GetNicholasItemName(const time_t* unix)
     {
-        const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % 137);
-        return nicholas_post_cycles[cycle_index].english_name;
+        const auto cycle_index = static_cast<uint32_t>((*unix - 1323097200) / 604800 % NICHOLAS_POST_COUNT);
+        return const_cast<GuiUtils::EncString*>(&nicholas_post_cycles[cycle_index].name_enc)->string().c_str();
     }
 
     uint32_t GetWantedByShiningBlade(const time_t* unix)
     {
-        return static_cast<uint32_t>((*unix - 1276012800) / 86400 % 21);
+        return static_cast<uint32_t>((*unix - 1276012800) / 86400 % WANTED_COUNT);
     }
 
     const char* GetVanguardQuest(const time_t* unix)
     {
-        const auto cycle_index = static_cast<uint32_t>((*unix - 1299168000) / 86400 % 9);
+        const auto cycle_index = static_cast<uint32_t>((*unix - 1299168000) / 86400 % VANGUARD_COUNT);
         return VANGUARD_CYCLES[cycle_index];
     }
 
