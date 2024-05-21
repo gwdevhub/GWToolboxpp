@@ -431,8 +431,6 @@ public:
         enemy      = 5,
     };
 
-    ~ObserverModule() override;
-
     static ObserverModule& Instance()
     {
         static ObserverModule instance;

@@ -481,12 +481,18 @@ namespace {
     {
         const auto pref = static_cast<GW::UI::FlagPreference>(pref_id);
 
-        // Find value and set preference
-        uint32_t value = 0xff;
-        if (argc > 2 && GuiUtils::ParseUInt(argv[2], &value) && SetPreference(pref, value == 1 ? 1 : 0)) {
-            return; // Success
+        if (argc > 2) {
+            // Setting value
+            if (wcscmp(argv[2], L"toggle") == 0) {
+                SetPreference(pref, !GetPreference(pref));
+                return;
+            }
+            uint32_t value = 0xff;
+            if (GuiUtils::ParseUInt(argv[2], &value)) {
+                SetPreference(pref, value == 1 ? 1 : 0);
+            }
+            return;
         }
-
         // Print current value
         Log::InfoW(L"Current preference value for %s is %d", argv[1], GetPreference(pref));
     }
@@ -533,7 +539,8 @@ namespace {
                 {L"guild", GW::UI::FlagPreference::ChannelGuild},
                 {L"team", GW::UI::FlagPreference::ChannelGroup},
                 {L"alliance", GW::UI::FlagPreference::ChannelAlliance},
-                {L"music", GW::UI::NumberPreference::MusicVolume}
+                {L"music", GW::UI::NumberPreference::MusicVolume},
+                {L"disablemousewalking", GW::UI::FlagPreference::DisableMouseWalking}
             };
         }
         return pref_map;
