@@ -80,7 +80,7 @@ namespace {
             if (token.length() != 1) return result;
             switch (token[0]) {
                 case 'S':
-                    assert(!result.has_value());
+                    if (result.has_value()) return result;
                     result = Script{};
                     result->name = readStringWithSpaces(stream);
                     stream >> result->trigger;
@@ -242,7 +242,9 @@ void SpeedrunScriptingTools::DrawSettings()
                 drawTriggerSelector(scriptIt->trigger, ImGui::GetContentRegionAvail().x / 3, scriptIt->hotkeyStatus.keyData, scriptIt->hotkeyStatus.modifier);
                 ImGui::SameLine();
                 if (ImGui::Button("Copy script to clipboard", ImVec2(ImGui::GetContentRegionAvail().x / 2, 0))) {
-                    ImGui::SetClipboardText(encodeString(serialize(*scriptIt)).c_str());
+                    const auto encoded = encodeString(serialize(*scriptIt)); 
+                    if (encoded.has_value())
+                        ImGui::SetClipboardText(encoded->c_str());
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Delete Script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
@@ -267,10 +269,11 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     if (ImGui::Button("Import script from clipboard", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
         if (const auto clipboardContent = ImGui::GetClipboardText()) {
-            const auto combined = decodeString(clipboardContent);
-            InputStream stream{combined};
-            if (auto importedScript = deserialize(stream))
-                m_scripts.push_back(std::move(importedScript.value()));
+            if (const auto combined = decodeString(clipboardContent)) {
+                InputStream stream{combined.value()};
+                if (auto importedScript = deserialize(stream)) 
+                    m_scripts.push_back(std::move(importedScript.value()));
+            }
         }
     }
     // Debug info
@@ -310,7 +313,8 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
 
     const auto decoded = decodeString(std::move(read));
 
-    InputStream stream(decoded);
+    if (!decoded) return;
+    InputStream stream(decoded.value());
     while (stream) {
         auto nextScript = deserialize(stream);
         if (nextScript) {
@@ -334,8 +338,11 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
         stream << serialize(script);
     }
     
-    ini.SetValue(Name(), "scripts", encodeString(stream.str()).c_str());
-    PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+    if (const auto encoded = encodeString(stream.str())) 
+    {
+        ini.SetValue(Name(), "scripts", encoded->c_str());
+        PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+    }
 }
 
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()

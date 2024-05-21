@@ -346,8 +346,7 @@ constexpr char valueToFrequentChar(uint8_t i) {
         case FrequentChar::EndOfList:
             return '>';
         default:
-            assert(false);
-            return 0;
+            throw std::runtime_error("invalid value");
     }
 }
 
@@ -449,8 +448,7 @@ constexpr std::vector<bool> huffmanEncode(const std::string& str)
             return '_';
         if (i == 63) 
             return '#';
-        assert(false);
-        return 0;
+        throw std::runtime_error("invalid value");
     };
 
     std::string result;
@@ -461,9 +459,16 @@ constexpr std::vector<bool> huffmanEncode(const std::string& str)
     return result;
 }
 
-std::string encodeString(const std::string& str) 
+std::optional<std::string> encodeString(const std::string& str) 
 {
-    return splitIntoReadableChars(huffmanEncode(str));
+    try 
+    {
+        return splitIntoReadableChars(huffmanEncode(str));
+    } 
+    catch (...) 
+    {
+        return std::nullopt;
+    }
 }
 
 std::vector<bool> combineIntoBitSequence(std::string&& str) 
@@ -501,7 +506,7 @@ std::vector<bool> combineIntoBitSequence(std::string&& str)
         }
         else 
         {
-            assert(false);
+            throw std::runtime_error("invalid value");
         }
     }
 
@@ -578,9 +583,17 @@ std::string huffmanDecode(std::vector<bool>&& seq)
     return result;
 }
 
-std::string decodeString(std::string&& str)
+std::optional<std::string> decodeString(std::string&& str)
 {
-    return huffmanDecode(combineIntoBitSequence(std::move(str)));
+    try 
+    {
+        return huffmanDecode(combineIntoBitSequence(std::move(str)));
+    } 
+    catch (...) 
+    {
+        return std::nullopt;
+    }
+    
 }
 
 std::vector<GW::Vec2f> readPositions(InputStream& stream) 

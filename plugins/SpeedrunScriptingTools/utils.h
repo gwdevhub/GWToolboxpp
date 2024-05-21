@@ -75,8 +75,8 @@ void writePositions(OutputStream&, const std::vector<GW::Vec2f>&);
 void drawPolygonSelector(std::vector<GW::Vec2f>& polygon);
 bool pointIsInsidePolygon(const GW::GamePos pos, const std::vector<GW::Vec2f>& polygon);
 
-std::string encodeString(const std::string&);
-std::string decodeString(std::string&&);
+std::optional<std::string> encodeString(const std::string&);
+std::optional<std::string> decodeString(std::string&&);
 
 void ShowHelp(const char* help);
 void drawHotkeySelector(long& keyData, long& modifier, std::string& description, float selectorWidth);

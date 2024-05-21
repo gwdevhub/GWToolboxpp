@@ -855,15 +855,12 @@ ConditionedAction::ConditionedAction(InputStream& stream)
 {
     std::string read;
     stream >> read;
-    if (read == missingContentToken) {
+    if (read == missingContentToken)
         cond = nullptr;
-    }
-    else if (read == "C") {
+    else if (read == "C")
         cond = readCondition(stream);
-    }
-    else {
-        assert(false);
-    }
+    else
+        return;
 
     while (stream >> read) {
         if (read == endOfListToken)
@@ -873,7 +870,7 @@ ConditionedAction::ConditionedAction(InputStream& stream)
         else if (read == "A")
             actionsTrue.push_back(readAction(stream));
         else
-            assert(false);
+            return;
     }
     while (stream >> read) {
         if (read == endOfListToken)
@@ -883,7 +880,7 @@ ConditionedAction::ConditionedAction(InputStream& stream)
         else if (read == "A")
             actionsFalse.push_back(readAction(stream));
         else
-            assert(false);
+            return;
     }
 }
 void ConditionedAction::serialize(OutputStream& stream) const
