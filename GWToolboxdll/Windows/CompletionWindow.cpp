@@ -1155,19 +1155,7 @@ void CompletionWindow::Initialize()
             case GW::RegionType::ExplorableZone:
                 if (!info->GetIsVanquishableArea())
                     break;
-                if (map_id == MapID::War_in_Kryta_Talmark_Wilderness ||
-                    map_id == MapID::War_in_Kryta_Trial_of_Zinn ||
-                    map_id == MapID::War_in_Kryta_Divinity_Coast ||
-                    map_id == MapID::War_in_Kryta_Lions_Arch_Keep ||
-                    map_id == MapID::War_in_Kryta_DAlessio_Seaboard ||
-                    map_id == MapID::War_in_Kryta_The_Battle_for_Lions_Arch ||
-                    map_id == MapID::War_in_Kryta_Riverside_Province ||
-                    map_id == MapID::War_in_Kryta_Lions_Arch ||
-                    map_id == MapID::War_in_Kryta_The_Mausoleum ||
-                    map_id == MapID::War_in_Kryta_Rise ||
-                    map_id == MapID::War_in_Kryta_Shadows_in_the_Jungle ||
-                    map_id == MapID::War_in_Kryta_A_Vengeance_of_Blades ||
-                    map_id == MapID::War_in_Kryta_Auspicious_Beginnings)
+                if (map_id == MapID::War_in_Kryta_Talmark_Wilderness)
                     continue;
                 vanquishes[campaign].push_back(new Vanquish(static_cast<MapID>(i)));
                 dupes[info->name_id] = 1;
