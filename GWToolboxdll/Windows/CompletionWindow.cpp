@@ -111,7 +111,7 @@ namespace {
 
             if (has_master && (mission_state & ToolboxUtils::MissionState::Master) != 0)
                 icon_file_ids[icon_idx++] = WorldMapIcon::HardMode_CompleteMaster;
-            if (!has_master 
+            if (!has_master
                 && (mission_state & ToolboxUtils::MissionState::Expert) != 0
                 && (mission_state & ToolboxUtils::MissionState::Primary) != 0) {
                 icon_file_ids[icon_idx++] = WorldMapIcon::HardMode_CompleteAll;
@@ -249,7 +249,7 @@ namespace {
         for (size_t i = 0; i < _countof(icon_file_ids) && icon_file_ids[i] != WorldMapIcon::None; i++) {
             icons_out[i] = GwDatTextureModule::LoadTextureFromFileId(std::to_underlying(icon_file_ids[i]));
         }
-       
+
     }
 
     bool show_as_list = true;
@@ -1113,40 +1113,69 @@ void CompletionWindow::Initialize()
     }
 
     std::unordered_map<uint32_t, char> dupes;
-    for (auto& it : outposts) {
+    for (const auto campaign : outposts | std::views::keys) {
         for (size_t i = 1; i < static_cast<size_t>(MapID::Count); i++) {
-            if (i == static_cast<size_t>(GW::Constants::MapID::Titans_Tears))
+            const auto map_id = static_cast<MapID>(i);
+            if (map_id == MapID::Titans_Tears)
                 continue;
-            const auto info = GW::Map::GetMapInfo(static_cast<MapID>(i));
+            const auto info = GW::Map::GetMapInfo(map_id);
             if (!info) continue;
             if (!info->GetIsOnWorldMap()) continue;
-            if (dupes.find(info->name_id) != dupes.end())
+            if (dupes.contains(info->name_id))
                 continue;
-            if (info->campaign != it.first) continue;
+            if (info->campaign != campaign) continue;
             if (info->region == GW::Region::Region_Presearing) continue;
             switch (info->type) {
             case GW::RegionType::CooperativeMission:
             case GW::RegionType::MissionOutpost:
                 if (!info->thumbnail_id)
                     break;
-                missions[it.first].push_back(new Mission(static_cast<MapID>(i)));
+                missions[campaign].push_back(new Mission(static_cast<MapID>(i)));
             case GW::RegionType::City:
+            case GW::RegionType::CompetitiveMission:
             case GW::RegionType::Outpost:
             case GW::RegionType::Challenge:
             case GW::RegionType::Arena:
-                outposts[it.first].push_back(new OutpostUnlock(static_cast<MapID>(i)));
+                switch (map_id) {
+                    case MapID::Augury_Rock_outpost:
+                    case MapID::Fort_Aspenwood_mission:
+                    case MapID::The_Jade_Quarry_mission:
+                        continue;
+                    default:
+                        break;
+                }
+                outposts[campaign].push_back(new OutpostUnlock(static_cast<MapID>(i)));
                 dupes[info->name_id] = 1;
+                break;
+            case GW::RegionType::EliteMission:
+                if (map_id == MapID::Domain_of_Anguish) {
+                    outposts[campaign].push_back(new OutpostUnlock(static_cast<MapID>(i)));
+                }
                 break;
             case GW::RegionType::ExplorableZone:
                 if (!info->GetIsVanquishableArea())
                     break;
-                vanquishes[it.first].push_back(new Vanquish(static_cast<MapID>(i)));
+                if (map_id == MapID::War_in_Kryta_Talmark_Wilderness ||
+                    map_id == MapID::War_in_Kryta_Trial_of_Zinn ||
+                    map_id == MapID::War_in_Kryta_Divinity_Coast ||
+                    map_id == MapID::War_in_Kryta_Lions_Arch_Keep ||
+                    map_id == MapID::War_in_Kryta_DAlessio_Seaboard ||
+                    map_id == MapID::War_in_Kryta_The_Battle_for_Lions_Arch ||
+                    map_id == MapID::War_in_Kryta_Riverside_Province ||
+                    map_id == MapID::War_in_Kryta_Lions_Arch ||
+                    map_id == MapID::War_in_Kryta_The_Mausoleum ||
+                    map_id == MapID::War_in_Kryta_Rise ||
+                    map_id == MapID::War_in_Kryta_Shadows_in_the_Jungle ||
+                    map_id == MapID::War_in_Kryta_A_Vengeance_of_Blades ||
+                    map_id == MapID::War_in_Kryta_Auspicious_Beginnings)
+                    continue;
+                vanquishes[campaign].push_back(new Vanquish(static_cast<MapID>(i)));
                 dupes[info->name_id] = 1;
                 break;
             }
         }
     }
-    
+
 
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Canthan Armor\x1", "Elementalist_Elite_Canthan_armor_m.jpg"));
     hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Exotic Armor\x1", "Assassin_Exotic_armor_m.jpg"));
@@ -2092,21 +2121,21 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
     ImGui::Checkbox("Hide unlocked outposts", &hide_completed_missions);
     ImGui::PopStyleVar();
-    for (auto& camp : outposts) {
-        auto& camp_missions = camp.second;
+    for (auto& [campaign, unlockable_outposts] : outposts) {
         size_t completed = 0;
         std::vector<Mission*> filtered;
-        for (size_t i = 0; i < camp_missions.size(); i++) {
-            if (camp_missions[i]->is_completed && camp_missions[i]->bonus) {
+        for (const auto& outpost : unlockable_outposts) {
+            if (outpost->is_completed && outpost->bonus) {
                 completed++;
                 if (hide_completed_missions) {
                     continue;
                 }
             }
-            filtered.push_back(camp_missions[i]);
+            filtered.push_back(outpost);
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d unlocked) - %.0f%%###campaign_outposts_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s (%d of %d unlocked) - %.0f%%###campaign_outposts_%d",
+            CampaignName(campaign), completed, unlockable_outposts.size(), static_cast<float>(completed) / static_cast<float>(unlockable_outposts.size()) * 100.f, campaign);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
