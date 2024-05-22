@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 26);
+    static_assert((int)ConditionType::Count == 27);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -55,6 +55,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<CurrentTargetModelCondition>();
         case ConditionType::CurrentTargetAllegiance:
             return std::make_shared<CurrentTargetAllegianceCondition>();
+        case ConditionType::CurrentTargetDistance:
+            return std::make_shared<CurrentTargetDistanceCondition>();
 
         case ConditionType::KeyIsPressed:
             return std::make_shared<KeyIsPressedCondition>();
@@ -72,7 +74,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 26);
+    static_assert((int)ConditionType::Count == 27);
     switch (type) {
         case ConditionType::Not:
             return "Not";
@@ -122,6 +124,8 @@ std::string_view toString(ConditionType type)
             return "Current target model";
         case ConditionType::CurrentTargetAllegiance:
             return "Current target allegiance";
+        case ConditionType::CurrentTargetDistance:
+            return "Current target distance";
 
         case ConditionType::KeyIsPressed:
             return "Keypress";
@@ -138,7 +142,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(InputStream& stream)
 {
-static_assert((int)ConditionType::Count == 26);
+static_assert((int)ConditionType::Count == 27);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -189,6 +193,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<CurrentTargetModelCondition>(stream);
     case ConditionType::CurrentTargetAllegiance:
         return std::make_shared<CurrentTargetAllegianceCondition>(stream);
+    case ConditionType::CurrentTargetDistance:
+        return std::make_shared<CurrentTargetDistanceCondition>(stream);
 
     case ConditionType::KeyIsPressed:
         return std::make_shared<KeyIsPressedCondition>(stream);
@@ -224,6 +230,7 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
         ConditionType::CurrentTargetIsUsingSkill,
         ConditionType::CurrentTargetHasModel,
         ConditionType::CurrentTargetAllegiance,
+        ConditionType::CurrentTargetDistance,
 
         ConditionType::IsInMap,
         ConditionType::QuestHasState,

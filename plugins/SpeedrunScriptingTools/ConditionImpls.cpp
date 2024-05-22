@@ -581,11 +581,47 @@ bool CurrentTargetIsCastingSkillCondition::check() const
 void CurrentTargetIsCastingSkillCondition::drawSettings()
 {
     ImGui::PushID(drawId());
+
     ImGui::Text("If the target is casting the skill");
     ImGui::SameLine();
     drawSkillIDSelector(id);
     ImGui::SameLine();
     ImGui::Text("(0 for none)");
+
+    ImGui::PopID();
+}
+
+/// ------------- CurrentTargetDistanceCondition -------------
+CurrentTargetDistanceCondition::CurrentTargetDistanceCondition(InputStream& stream)
+{
+    stream >> minDistance >> maxDistance;
+}
+void CurrentTargetDistanceCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << minDistance << maxDistance;
+}
+bool CurrentTargetDistanceCondition::check() const
+{
+    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto target = GW::Agents::GetTargetAsAgentLiving();
+    if (!player || !target) return false;
+
+    const auto distance = GW::GetDistance(player->pos, target->pos);
+    return minDistance <= distance + eps && distance - eps <= maxDistance;
+}
+void CurrentTargetDistanceCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+    
+    ImGui::Text("If the target has distance to player");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(80.f);
+    ImGui::InputFloat("min", &minDistance, 0);
+    ImGui::SameLine();
+    ImGui::InputFloat("max", &maxDistance, 0);
+    
     ImGui::PopID();
 }
 

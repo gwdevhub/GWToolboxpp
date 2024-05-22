@@ -3,12 +3,9 @@
 #include <utils.h>
 
 enum class ConditionType : int {
-    // Logic Operators
     Not,
     Or,
     And,
-
-    // Instance state
     IsInMap,
     QuestHasState,
     PartyPlayerCount,
@@ -18,8 +15,6 @@ enum class ConditionType : int {
     InstanceTime,
     OnlyTriggerOncePerInstance,
     CanPopAgent,
-
-    // Player state
     PlayerIsNearPosition,
     PlayerHasBuff,
     PlayerHasSkill,
@@ -29,14 +24,12 @@ enum class ConditionType : int {
     PlayerIsIdle,
     PlayerHasItemEquipped,
     KeyIsPressed,
-
-    // Current target state
     CurrentTargetHasHpBelow,
     CurrentTargetIsUsingSkill,
     CurrentTargetHasModel,
     CurrentTargetAllegiance,
-
     NearbyAgent,
+    CurrentTargetDistance,
 
     Count
 };
