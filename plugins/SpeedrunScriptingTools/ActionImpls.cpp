@@ -1103,20 +1103,10 @@ void PingHardModeAction::initialAction()
 
     if (!GW::Effects::GetPlayerEffectBySkillId(GW::Constants::SkillID::Hard_mode)) return;
 
-    // Read from the packet logger. This is probably in the map information somewhere, but I could not find it.
-    const auto pingId = [] {
-        switch (GW::Map::GetMapID()) {
-            case GW::Constants::MapID::The_Underworld:
-                return 0x14u;
-            case GW::Constants::MapID::Domain_of_Anguish:
-                return 0x27u;
-            case GW::Constants::MapID::The_Fissure_of_Woe:
-                return 0xAu;
-            default:
-                return 0u;
-        }
-    }();
-    GW::GameThread::Enqueue([pingId]() {
+    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    if (!player) return;
+
+    GW::GameThread::Enqueue([pingId = player->agent_id]() {
         auto packet = GW::UI::UIPacket::kSendCallTarget{GW::CallTargetType::HardMode, pingId};
         GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &packet);
     });
@@ -1127,7 +1117,6 @@ void PingHardModeAction::drawSettings()
     ImGui::PushID(drawId());
 
     ImGui::Text("Ping hard mode");
-    ShowHelp("Currently only works in UW, DoA and FoW because I don't understand the information sent. Let me know if you need any others.");
 
     ImGui::PopID();
 }
