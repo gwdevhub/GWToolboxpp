@@ -210,6 +210,20 @@ private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
 };
 
+class CurrentTargetDistanceCondition : public Condition {
+public:
+    CurrentTargetDistanceCondition() = default;
+    CurrentTargetDistanceCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::CurrentTargetDistance; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    float minDistance = 0.f;
+    float maxDistance = 5000.f;
+};
+
 class CurrentTargetHasHpBelowCondition : public Condition {
 public:
     CurrentTargetHasHpBelowCondition() = default;
