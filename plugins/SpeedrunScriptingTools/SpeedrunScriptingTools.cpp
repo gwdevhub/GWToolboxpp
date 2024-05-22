@@ -162,10 +162,33 @@ namespace {
 void SpeedrunScriptingTools::DrawSettings()
 {
     ToolboxPlugin::DrawSettings();
-    std::optional<decltype(m_scripts.begin())> scriptToDelete = std::nullopt;
+
+    using ScriptIt = decltype(m_scripts.begin());
+    std::optional<ScriptIt> scriptToDelete = std::nullopt;
+    std::optional<std::pair<ScriptIt, ScriptIt>> scriptsToSwap = std::nullopt;
 
     for (auto scriptIt = m_scripts.begin(); scriptIt < m_scripts.end(); ++scriptIt) {
-        if (ImGui::TreeNodeEx(makeScriptHeaderName(*scriptIt, scriptIt - m_scripts.begin()).c_str(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        ImGui::PushID(scriptIt - m_scripts.begin());
+
+        const auto treeHeader = makeScriptHeaderName(*scriptIt, scriptIt - m_scripts.begin());
+        const auto treeOpen = ImGui::TreeNodeEx(treeHeader.c_str(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - (treeOpen ? 127.f : 148.f));
+        if (ImGui::Button("X", ImVec2(20, 0))) 
+        {
+            scriptToDelete = scriptIt;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("^", ImVec2(20, 0)) && scriptIt != m_scripts.begin())
+        {
+            scriptsToSwap = {scriptIt - 1, scriptIt};
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("v", ImVec2(20, 0)) && scriptIt + 1 != m_scripts.end()) 
+        {
+            scriptsToSwap = {scriptIt, scriptIt+1};
+        }
+
+        if (treeOpen) {
             // Conditions
             {
                 using ConditionIt = decltype(scriptIt->conditions.begin());
@@ -183,7 +206,7 @@ void SpeedrunScriptingTools::DrawSettings()
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("v", ImVec2(20, 0))) {
-                            if (it + 1 != scriptIt->conditions.end() && (it+1)->get()->type() != ConditionType::OnlyTriggerOncePerInstance) conditionsToSwap = {it, it + 1};
+                            if (it + 1 != scriptIt->conditions.end() && (it + 1)->get()->type() != ConditionType::OnlyTriggerOncePerInstance) conditionsToSwap = {it, it + 1};
                         }
                     }
                     ImGui::SameLine();
@@ -200,7 +223,7 @@ void SpeedrunScriptingTools::DrawSettings()
                 }
             }
 
-            //Actions
+            // Actions
             ImGui::Separator();
             {
                 using ActionIt = decltype(scriptIt->actions.begin());
@@ -235,27 +258,25 @@ void SpeedrunScriptingTools::DrawSettings()
             ImGui::Separator();
             {
                 ImGui::Checkbox("Enabled", &scriptIt->enabled);
-                ImGui::PushItemWidth(150);
                 ImGui::SameLine();
+                drawTriggerSelector(scriptIt->trigger, 250.f, scriptIt->hotkeyStatus.keyData, scriptIt->hotkeyStatus.modifier);
+                ImGui::SameLine();
+                if (ImGui::Button("Copy script to clipboard", ImVec2(160, 0))) {
+                    const auto encoded = encodeString(serialize(*scriptIt));
+                    if (encoded.has_value()) ImGui::SetClipboardText(encoded->c_str());
+                }
+                ImGui::SameLine();
+                ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 50);
                 ImGui::InputText("Name", &scriptIt->name);
-                ImGui::SameLine();
-                drawTriggerSelector(scriptIt->trigger, ImGui::GetContentRegionAvail().x / 3, scriptIt->hotkeyStatus.keyData, scriptIt->hotkeyStatus.modifier);
-                ImGui::SameLine();
-                if (ImGui::Button("Copy script to clipboard", ImVec2(ImGui::GetContentRegionAvail().x / 2, 0))) {
-                    const auto encoded = encodeString(serialize(*scriptIt)); 
-                    if (encoded.has_value())
-                        ImGui::SetClipboardText(encoded->c_str());
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Delete Script", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-                    scriptToDelete = scriptIt;
-                }
             }
 
             ImGui::TreePop();
         }
+        
+        ImGui::PopID();
     }
     if (scriptToDelete.has_value()) m_scripts.erase(scriptToDelete.value());
+    if (scriptsToSwap.has_value()) std::swap(*scriptsToSwap->first, *scriptsToSwap->second);
 
     ImGui::Dummy(ImVec2(0.0f, 5.0f));
     ImGui::Separator();
