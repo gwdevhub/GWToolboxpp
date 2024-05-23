@@ -467,7 +467,7 @@ namespace {
             // 0 gold
             currency_string = L"\xAC2\x100";
         }
-        else if (plat > 0) {
+        else if (plat > 0 && gold > 0) {
             // N platinum, N gold
             currency_string = std::format(L"\xAC4\x101{}\x102{}", (wchar_t)(0x100 + plat), (wchar_t)(0x100 + gold));
         }
