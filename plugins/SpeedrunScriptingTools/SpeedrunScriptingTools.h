@@ -6,10 +6,9 @@
 
 #include <ToolboxPlugin.h>
 
-struct HotkeyStatus {
+struct Hotkey {
     long keyData = 0;
     long modifier = 0;
-    bool triggered = false;
 };
 
 struct Script {
@@ -18,7 +17,10 @@ struct Script {
     std::string name = "New script";
     Trigger trigger = Trigger::None;
     bool enabled = true;
-    HotkeyStatus hotkeyStatus{};
+
+    Hotkey triggerHotkey{};
+    bool hotkeyTriggered = false;
+    Hotkey enabledToggleHotkey{};
 };
 
 class SpeedrunScriptingTools : public ToolboxPlugin {
