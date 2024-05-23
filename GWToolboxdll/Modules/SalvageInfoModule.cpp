@@ -55,12 +55,12 @@ namespace {
         }
         static void OnNameDecoded(void* param, const wchar_t* s) {
             auto ctx = (CraftingMaterial*)param;
-            ctx->en_name = s;
+            ctx->en_name = GuiUtils::ToLower(s);
             ctx->decoding_en_name = false;
         }
         static void OnPluralNameDecoded(void* param, const wchar_t* s) {
             auto ctx = (CraftingMaterial*)param;
-            ctx->en_name_plural = s;
+            ctx->en_name_plural = GuiUtils::ToLower(s);
             ctx->en_name_plural = ctx->en_name_plural.substr(2); // Remove "0 " prefix
             ctx->decoding_en_name_plural = false;
         }
@@ -180,7 +180,7 @@ namespace {
                 auto links_end = std::sregex_iterator();
                 for (std::sregex_iterator j = links_begin; j != links_end; ++j)
                 {
-                    const auto material_name = GuiUtils::StringToWString(j->str(1));
+                    const auto material_name = GuiUtils::ToLower(GuiUtils::StringToWString(j->str(1)));
 
                     const auto found = std::ranges::find_if(materials, [material_name](auto* c) {
                         return c->en_name == material_name || c->en_name_plural == material_name;
