@@ -27,6 +27,7 @@
 #include <Modules/Resources.h>
 #include <Modules/GameSettings.h>
 #include <Modules/SalvageInfoModule.h>
+#include <Windows/DailyQuestsWindow.h>
 
 #include <Utils/GuiUtils.h>
 #include <Timer.h>
@@ -75,6 +76,7 @@ namespace {
         GuiUtils::EncString en_name; // Used to map to Guild Wars Wiki
         std::vector<CraftingMaterial*> common_crafting_materials;
         std::vector<CraftingMaterial*> rare_crafting_materials;
+        DailyQuests::NicholasCycleData* nicholas_info = nullptr;
         clock_t last_retry = salvage_info_retry_interval * -1;
         bool loading = false;
         bool success = false;
@@ -308,6 +310,7 @@ namespace {
         // If the item exists but it failed and the timeout has expired, attempt to fetch salvage info again
         if (!salvage_info->loading && !salvage_info->success && TIMER_DIFF(salvage_info->last_retry) > salvage_info_retry_interval) {
             salvage_info->loading = true;
+            salvage_info->nicholas_info = DailyQuests::GetNicholasItemInfo(single_item_name);
             salvage_info->last_retry = TIMER_INIT();
             Resources::EnqueueWorkerTask([salvage_info] {
                 FetchSalvageInfoFromGuildWarsWiki(salvage_info);
@@ -364,6 +367,9 @@ namespace {
             }
 
             description += std::format(L"\x2\x102\x2\x108\x107<c=@ItemRare>Rare Materials:</c> \x1\x2{}", items);
+        }
+        if (salvage_info->nicholas_info) {
+            description += std::format(L"\x2\x102\x2{}\x107\x108Nicholas The Traveller collects this!\x1", GW::EncStrings::ItemUnique);
         }
     }
     std::wstring tmp_item_description;
