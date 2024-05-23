@@ -53,8 +53,10 @@ namespace {
         writeStringWithSpaces(stream, script.name);
         stream << script.trigger;
         stream << script.enabled;
-        stream << script.hotkeyStatus.keyData;
-        stream << script.hotkeyStatus.modifier;
+        stream << script.triggerHotkey.keyData;
+        stream << script.triggerHotkey.modifier;
+        stream << script.enabledToggleHotkey.keyData;
+        stream << script.enabledToggleHotkey.modifier;
 
         stream.writeSeparator();
 
@@ -85,8 +87,10 @@ namespace {
                     result->name = readStringWithSpaces(stream);
                     stream >> result->trigger;
                     stream >> result->enabled;
-                    stream >> result->hotkeyStatus.keyData;
-                    stream >> result->hotkeyStatus.modifier;
+                    stream >> result->triggerHotkey.keyData;
+                    stream >> result->triggerHotkey.modifier;
+                    stream >> result->enabledToggleHotkey.keyData;
+                    stream >> result->enabledToggleHotkey.modifier;
                     stream.proceedPastSeparator();
                     break;
                 case 'A':
@@ -125,14 +129,7 @@ namespace {
                     result += "On instance load";
                     break;
                 case Trigger::Hotkey:
-                    if (script.hotkeyStatus.keyData) 
-                    {
-                        result += makeHotkeyDescription(script.hotkeyStatus.keyData, script.hotkeyStatus.modifier);
-                    }
-                    else 
-                    {
-                        result += "Undefined hotkey";
-                    }
+                    result += script.triggerHotkey.keyData ? makeHotkeyDescription(script.triggerHotkey.keyData, script.triggerHotkey.modifier) : "Undefined hotkey";
                     break;
                 case Trigger::HardModePing:
                     result += "On hard mode ping";
@@ -141,8 +138,14 @@ namespace {
                     result += "Unknown trigger";
             }
         }
+        result += "]";
+        if (script.enabledToggleHotkey.keyData)
+        {
+            result += "[Toggle " + makeHotkeyDescription(script.enabledToggleHotkey.keyData, script.enabledToggleHotkey.modifier) + "]";
+        }
 
-        result += "]###" + std::to_string(id);
+
+        result += "###" + std::to_string(id);
         return result;
     }
 
@@ -169,6 +172,7 @@ void SpeedrunScriptingTools::DrawSettings()
 
     for (auto scriptIt = m_scripts.begin(); scriptIt < m_scripts.end(); ++scriptIt) {
         ImGui::PushID(scriptIt - m_scripts.begin());
+        auto drawId = 0;
 
         const auto treeHeader = makeScriptHeaderName(*scriptIt, scriptIt - m_scripts.begin());
         const auto treeOpen = ImGui::TreeNodeEx(treeHeader.c_str(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
@@ -195,7 +199,7 @@ void SpeedrunScriptingTools::DrawSettings()
                 std::optional<ConditionIt> conditionToDelete = std::nullopt;
                 std::optional<std::pair<ConditionIt, ConditionIt>> conditionsToSwap = std::nullopt;
                 for (auto it = scriptIt->conditions.begin(); it < scriptIt->conditions.end(); ++it) {
-                    ImGui::PushID(it - scriptIt->conditions.begin());
+                    ImGui::PushID(drawId++);
                     if (ImGui::Button("X", ImVec2(20, 0))) {
                         conditionToDelete = it;
                     }
@@ -230,7 +234,8 @@ void SpeedrunScriptingTools::DrawSettings()
                 std::optional<ActionIt> actionToDelete = std::nullopt;
                 std::optional<std::pair<ActionIt, ActionIt>> actionsToSwap = std::nullopt;
                 for (auto it = scriptIt->actions.begin(); it < scriptIt->actions.end(); ++it) {
-                    ImGui::PushID(it - scriptIt->actions.begin() + scriptIt->conditions.size());
+                    ImGui::PushID(drawId++);
+
                     if (ImGui::Button("X", ImVec2(20, 0))) {
                         actionToDelete = it;
                     }
@@ -244,6 +249,7 @@ void SpeedrunScriptingTools::DrawSettings()
                     }
                     ImGui::SameLine();
                     (*it)->drawSettings();
+
                     ImGui::PopID();
                 }
                 if (actionToDelete.has_value()) scriptIt->actions.erase(actionToDelete.value());
@@ -254,20 +260,47 @@ void SpeedrunScriptingTools::DrawSettings()
                 }
             }
 
-            // Add trigger packet
+            // Script settings
             ImGui::Separator();
             {
+                ImGui::PushID(drawId++);
+
                 ImGui::Checkbox("Enabled", &scriptIt->enabled);
                 ImGui::SameLine();
-                drawTriggerSelector(scriptIt->trigger, 250.f, scriptIt->hotkeyStatus.keyData, scriptIt->hotkeyStatus.modifier);
-                ImGui::SameLine();
-                if (ImGui::Button("Copy script to clipboard", ImVec2(160, 0))) {
-                    const auto encoded = encodeString(serialize(*scriptIt));
-                    if (encoded.has_value()) ImGui::SetClipboardText(encoded->c_str());
+                
+                auto& keyData = scriptIt->enabledToggleHotkey.keyData;
+                auto& keyMod = scriptIt->enabledToggleHotkey.modifier;
+                auto description = keyData ? makeHotkeyDescription(keyData, keyMod) : "Set enable toggle";
+                drawHotkeySelector(keyData, keyMod, description, 80.f);
+                if (keyData) 
+                {
+                    ImGui::SameLine();
+                    ImGui::Text("Toggle");
+                    ImGui::SameLine();
+                    if (ImGui::Button("X", ImVec2(20.f, 0))) {
+                        keyData = 0;
+                        keyMod = 0;
+                    }
                 }
+                ImGui::SameLine();
+
+                ImGui::PopID();
+                ImGui::PushID(drawId++);
+                
+                if (ImGui::Button("Copy script to clipboard", ImVec2(160, 0))) 
+                {
+                    if (const auto encoded = encodeString(serialize(*scriptIt))) 
+                        ImGui::SetClipboardText(encoded->c_str());
+                }
+
+                ImGui::SameLine();
+                drawTriggerSelector(scriptIt->trigger, 100.f, scriptIt->triggerHotkey.keyData, scriptIt->triggerHotkey.modifier);
+                
                 ImGui::SameLine();
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 50);
                 ImGui::InputText("Name", &scriptIt->name);
+
+                ImGui::PopID();
             }
 
             ImGui::TreePop();
@@ -309,7 +342,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Checkbox("Show message when a script is triggered", &showTriggerMessage);
 
-    ImGui::Text("Version 1.1-bay6TargetSameFix. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 1.2. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
@@ -379,7 +412,7 @@ void SpeedrunScriptingTools::Update(float delta)
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable || !map || map->GetIsPvP() || !GW::Agents::GetPlayerAsAgentLiving()) {
         m_currentScript = std::nullopt;
         for (auto& script : m_scripts)
-            script.hotkeyStatus.triggered = false;
+            script.hotkeyTriggered = false;
         return;
     }
 
@@ -409,11 +442,11 @@ void SpeedrunScriptingTools::Update(float delta)
         // Find script to use
         for (auto& script : m_scripts) {
             if (!script.enabled || (script.conditions.empty() && script.trigger == Trigger::None) || script.actions.empty()) continue;
-            if (script.trigger == currentTrigger || (script.trigger == Trigger::Hotkey && script.hotkeyStatus.triggered)) {
-                script.hotkeyStatus.triggered = false;
+            if (script.trigger == currentTrigger || (script.trigger == Trigger::Hotkey && script.hotkeyTriggered)) {
+                script.hotkeyTriggered = false;
                 if (checkConditions(script)) {
                     if (showTriggerMessage) 
-                        logMessage(std::string{"Trigger script "} + script.name);
+                        logMessage(std::string{"Run script "} + script.name);
                     m_currentScript = script;
                     break;
                 }
@@ -423,7 +456,7 @@ void SpeedrunScriptingTools::Update(float delta)
 
     currentTrigger = Trigger::None;
     for (auto& script : m_scripts)
-        script.hotkeyStatus.triggered = false;
+        script.hotkeyTriggered = false;
 }
 
 bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LPARAM lparam)
@@ -432,9 +465,6 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
         return false;
     }
     if (GW::MemoryMgr::GetGWWindowHandle() != GetActiveWindow()) {
-        return false;
-    }
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
         return false;
     }
     long keyData = 0;
@@ -470,6 +500,8 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
             break;
     }
 
+    if (!keyData) return false;
+
     switch (Message) {
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
@@ -489,10 +521,22 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
             }
 
             bool triggered = false;
-            for (auto& script : m_scripts) {
-                if (script.enabled && script.trigger == Trigger::Hotkey && script.hotkeyStatus.keyData == keyData && 
-                    script.hotkeyStatus.modifier == modifier) {
-                    script.hotkeyStatus.triggered = true;
+            for (auto& script : m_scripts) 
+            {
+                if (script.enabledToggleHotkey.keyData == keyData && script.enabledToggleHotkey.modifier == modifier)
+                {
+                    if (showTriggerMessage)
+                    {
+                        if (script.enabled) logMessage(std::string{"Disable script "} + script.name);
+                        else logMessage(std::string{"Enable script "} + script.name);
+                    }
+                    script.enabled = !script.enabled;
+                    triggered = true;
+                }
+
+                if (script.enabled && script.trigger == Trigger::Hotkey && script.triggerHotkey.keyData == keyData && script.triggerHotkey.modifier == modifier && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) 
+                {
+                    script.hotkeyTriggered = true;
                     triggered = true;
                 }
             }
@@ -504,7 +548,7 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
 
         case WM_XBUTTONUP:
         case WM_MBUTTONUP:
-        default:
+        default:    
             return false;
     }
 }
