@@ -159,14 +159,20 @@ private:
 class GoToTargetAction : public Action {
 public:
     GoToTargetAction() = default;
-    GoToTargetAction(InputStream&) : GoToTargetAction(){};
+    GoToTargetAction(InputStream&);
     ActionType type() const final { return ActionType::GoToTarget; }
     void initialAction() final;
+    void finalAction() final;
     ActionStatus isComplete() const final;
     void drawSettings() final;
+    void serialize(OutputStream&) const final;
 
 private:
+    GoToTargetFinishCondition finishCondition = GoToTargetFinishCondition::StoppedMovingNextToTarget;
+
     const GW::AgentLiving* target = nullptr;
+    mutable GW::HookEntry hook;
+    mutable bool dialogHasPoppedUp = false;
 };
 
 class WaitAction : public Action {
@@ -243,6 +249,7 @@ public:
     RepopMinipetAction(InputStream&);
     ActionType type() const final { return ActionType::RepopMinipet; }
     void initialAction() final;
+    void finalAction() final;
     ActionStatus isComplete() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;

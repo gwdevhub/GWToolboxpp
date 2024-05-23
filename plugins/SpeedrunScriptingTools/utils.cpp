@@ -128,9 +128,10 @@ std::string_view toString(Class c)
             return "Paragon";
         case Class::Dervish:
             return "Dervish";
-        default:
+        case Class::Any:
             return "Any";
     }
+    return "";
 }
 std::string_view toString(AgentType type) {
     switch (type) {
@@ -144,9 +145,8 @@ std::string_view toString(AgentType type) {
             return "Friendly";
         case AgentType::Hostile:
             return "Hostile";
-        default: 
-            return "Any";
     }
+    return "";
 }
 std::string_view toString(Sorting sorting)
 {
@@ -165,9 +165,8 @@ std::string_view toString(Sorting sorting)
             return "Lowest HP";
         case Sorting::HighestHp:
             return "Highest HP";
-        default:
-            return "";
     }
+    return "";
 }
 std::string_view toString(HexedStatus status) {
     switch (status) {
@@ -177,9 +176,8 @@ std::string_view toString(HexedStatus status) {
             return "Not hexed";
         case HexedStatus::Hexed:
             return "Hexed";
-        default:
-            return "";
     }
+    return "";
 }
 std::string_view toString(Channel channel)
 {
@@ -198,9 +196,8 @@ std::string_view toString(Channel channel)
             return "Whisper";
         case Channel::Emote:
             return "Emote";
-        default:
-            return "Unknown";
     }
+    return "";
 }
 std::string_view toString(QuestStatus status)
 {
@@ -213,6 +210,19 @@ std::string_view toString(QuestStatus status)
             return "Completed";
         case QuestStatus::Failed:
             return "Failed";
+    }
+    return "";
+}
+
+std::string_view toString(GoToTargetFinishCondition cond)
+{
+    switch (cond) {
+        case GoToTargetFinishCondition::None:
+            return "Immediately";
+        case GoToTargetFinishCondition::StoppedMovingNextToTarget:
+            return "When next to target and not moving";
+        case GoToTargetFinishCondition::DialogOpen:
+            return "When dialog has opened";
     }
     return "";
 }
