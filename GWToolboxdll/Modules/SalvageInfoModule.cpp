@@ -156,7 +156,10 @@ namespace {
         // Now we've got the wiki info parsed, trigger an item update ui message; this will refresh the item tooltip
         GW::GameThread::Enqueue([enc_name] {
             const auto item = GW::Items::GetHoveredItem();
-            if (item && wcscmp(item->name_enc, enc_name) == 0) {
+            if (!item)
+                return;
+            const auto item_name_without_mods = ItemDescriptionHandler::GetItemEncNameWithoutMods(item);
+            if (wcscmp(item_name_without_mods.c_str(), enc_name) == 0) {
                 GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, item);
             }
             });
