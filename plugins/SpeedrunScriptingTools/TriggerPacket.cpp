@@ -44,6 +44,8 @@ void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& 
         ImGui::SameLine();
         if (ImGui::Button("X", ImVec2(20.f, 0))) {
             trigger = Trigger::None;
+            hotkeyData = 0;
+            hotkeyMod = 0;
         }
     }
     else 
