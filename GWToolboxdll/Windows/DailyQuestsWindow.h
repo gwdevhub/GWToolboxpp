@@ -53,6 +53,8 @@ public:
         const char* GetQuestName();
         const std::string& GetWikiName();
 
+        void Travel();
+
         // Clear out any encoded strings to ensure any decoding errors are thrown within the lifecycle of the application
         void Terminate();
     };

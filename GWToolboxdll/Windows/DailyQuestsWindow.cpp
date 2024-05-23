@@ -8,6 +8,7 @@
 #include <Utils/GuiUtils.h>
 #include <Logger.h>
 
+#include <Windows/TravelWindow.h>
 #include <Windows/DailyQuestsWindow.h>
 #include <Constants/EncStrings.h>
 #include <Modules/Resources.h>
@@ -1382,6 +1383,9 @@ const char* DailyQuests::QuestData::GetQuestName() {
 const std::string& DailyQuests::QuestData::GetWikiName() {
     Decode();
     return name_english->string();
+}
+void DailyQuests::QuestData::Travel() {
+    GW::Map::Travel(TravelWindow::GetNearestOutpost(map_id));
 }
 const char* DailyQuests::QuestData::GetMapName() {
     return Resources::GetMapName(map_id)->string().c_str();
