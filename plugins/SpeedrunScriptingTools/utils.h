@@ -92,13 +92,15 @@ enum class Sorting : int { AgentId, ClosestToPlayer, FurthestFromPlayer, Closest
 enum class HexedStatus : int { Any, NotHexed, Hexed };
 enum class Channel { All, Guild, Team, Trade, Alliance, Whisper, Emote };
 enum class QuestStatus : int { NotStarted, Started, Completed, Failed };
+enum class GoToTargetFinishCondition { None, StoppedMovingNextToTarget, DialogOpen };
 std::string_view toString(Status);
 std::string_view toString(AgentType);
 std::string_view toString(Sorting);
 std::string_view toString(HexedStatus);
 std::string_view toString(Class);
-std::string_view toString(Channel channel);
-std::string_view toString(QuestStatus status);
+std::string_view toString(Channel);
+std::string_view toString(QuestStatus);
+std::string_view toString(GoToTargetFinishCondition);
 
 template <typename T>
 void drawEnumButton(T firstValue, T lastValue, T& currentValue, int id = 0, float width = 100., std::optional<T> skipValue = std::nullopt)

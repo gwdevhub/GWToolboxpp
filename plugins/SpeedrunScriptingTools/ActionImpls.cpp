@@ -676,6 +676,16 @@ void SendDialogAction::drawSettings()
 }
 
 /// ------------- GoToTargetAction -------------
+GoToTargetAction::GoToTargetAction(InputStream& stream) : GoToTargetAction()
+{
+    stream >> finishCondition;
+}
+void GoToTargetAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << finishCondition;
+}
 void GoToTargetAction::initialAction()
 {
     Action::initialAction();
@@ -683,27 +693,51 @@ void GoToTargetAction::initialAction()
     target = GW::Agents::GetTargetAsAgentLiving();
     if (!target || target->allegiance == GW::Constants::Allegiance::Enemy) return;
 
-    GW::GameThread::Enqueue([target = this->target]() -> void {
-        GW::Agents::InteractAgent(target);
+    dialogHasPoppedUp = false;
+    
+    GW::UI::RegisterUIMessageCallback(&hook, GW::UI::UIMessage::kDialogBody, [this, id = target->agent_id](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        const auto packet = static_cast<GW::UI::DialogBodyInfo*>(wparam);
+        if (packet->agent_id == id)
+            dialogHasPoppedUp = true;
     });
+    
+    GW::GameThread::Enqueue([target = this->target] { GW::Agents::InteractAgent(target); });
+}
+void GoToTargetAction::finalAction()
+{
+    Action::finalAction();
+    GW::UI::RemoveUIMessageCallback(&hook, GW::UI::UIMessage::kDialogBody);
 }
 ActionStatus GoToTargetAction::isComplete() const
 {
-    if (!target || target->allegiance == GW::Constants::Allegiance::Enemy) return ActionStatus::Error;
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
-    if (!player) return ActionStatus::Error;
+    switch (finishCondition)
+    {
+        case GoToTargetFinishCondition::StoppedMovingNextToTarget: 
+        {
+            if (!target || target->allegiance == GW::Constants::Allegiance::Enemy) return ActionStatus::Error;
 
-    const auto distance = GW::GetDistance(player->pos, target->pos);
-    const auto isMoving = player->GetIsMoving();
-    
-    constexpr auto dialogDistance = 101.f;
-    return ((!isMoving && distance < dialogDistance) || distance > GW::Constants::Range::Compass) ? ActionStatus::Complete : ActionStatus::Running;
+            const auto player = GW::Agents::GetPlayerAsAgentLiving();
+            if (!player) return ActionStatus::Error;
+
+            const auto distance = GW::GetDistance(player->pos, target->pos);
+            const auto isMoving = player->GetIsMoving();
+
+            constexpr auto dialogDistance = 101.f;
+            return ((!isMoving && distance < dialogDistance) || distance > GW::Constants::Range::Compass) ? ActionStatus::Complete : ActionStatus::Running;
+        }
+        case GoToTargetFinishCondition::DialogOpen:
+            return dialogHasPoppedUp ? ActionStatus::Complete : ActionStatus::Running;
+        default:
+            return ActionStatus::Complete;
+    }
 }
 void GoToTargetAction::drawSettings()
 {
     ImGui::PushID(drawId());
 
-    ImGui::Text("Talk with NPC");
+    ImGui::Text("Talk with NPC. Finish action");
+    ImGui::SameLine();
+    drawEnumButton(GoToTargetFinishCondition::None, GoToTargetFinishCondition::DialogOpen, finishCondition, 0, 250.f);
 
     ImGui::PopID();
 }
@@ -1054,32 +1088,29 @@ void RepopMinipetAction::initialAction()
             if (agent->GetAsAgentLiving()->player_number == agentModelId) agentHasSpawned = true;
         });
 }
+void RepopMinipetAction::finalAction()
+{
+    Action::finalAction();
+    GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&hook);
+}
 
 ActionStatus RepopMinipetAction::isComplete() const
 {
-    const auto status = [&] {
-        if (!hasUsedItem) {
-            const auto& instanceInfo = InstanceInfo::getInstance();
-            if (!instanceInfo.canPopAgent()) return ActionStatus::Running;
+    if (!hasUsedItem) {
+        const auto& instanceInfo = InstanceInfo::getInstance();
+        if (!instanceInfo.canPopAgent()) return ActionStatus::Running;
 
-            const auto item = FindMatchingItem(itemModelId);
-            if (!item) return ActionStatus::Error;
-            const auto needsToUnpop = instanceInfo.hasMinipetPopped();
-            GW::GameThread::Enqueue([needsToUnpop, item]() -> void {
-                if (needsToUnpop) GW::Items::UseItem(item);
-                GW::Items::UseItem(item);
-            });
-            hasUsedItem = true;
-        }
-
-        return (hasUsedItem && agentHasSpawned) ? ActionStatus::Complete : ActionStatus::Running;
-    }();
-
-    if (status != ActionStatus::Running) 
-    {
-        GW::StoC::RemoveCallback<GW::Packet::StoC::AgentAdd>(&hook);
+        const auto item = FindMatchingItem(itemModelId);
+        if (!item) return ActionStatus::Error;
+        const auto needsToUnpop = instanceInfo.hasMinipetPopped();
+        GW::GameThread::Enqueue([needsToUnpop, item]() -> void {
+            if (needsToUnpop) GW::Items::UseItem(item);
+            GW::Items::UseItem(item);
+        });
+        hasUsedItem = true;
     }
-    return status;
+
+    return (hasUsedItem && agentHasSpawned) ? ActionStatus::Complete : ActionStatus::Running;
 }
 
 void RepopMinipetAction::drawSettings()
@@ -1110,7 +1141,6 @@ void PingHardModeAction::initialAction()
         auto packet = GW::UI::UIPacket::kSendCallTarget{GW::CallTargetType::HardMode, pingId};
         GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &packet);
     });
-    
 }
 void PingHardModeAction::drawSettings()
 {

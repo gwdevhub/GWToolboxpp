@@ -335,6 +335,13 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     if (ImGui::Button("Clear")) 
     {
+        if (m_currentScript) 
+        {
+            for (auto& action : m_currentScript->actions) 
+            {
+                action->finalAction();
+            }
+        }
         m_currentScript = std::nullopt;
     }
     ImGui::SameLine();
