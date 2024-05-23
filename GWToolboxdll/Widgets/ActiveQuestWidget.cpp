@@ -37,7 +37,7 @@ namespace {
         force_update = true;
     }
 
-    void __cdecl OnQuestObjectivesDecoded(void*, wchar_t* decoded) {
+    void __cdecl OnQuestObjectivesDecoded(void*, const wchar_t* decoded) {
         std::wstring decoded_objectives = decoded;
         static const std::wregex SANITIZE_REGEX(L"<[^>]+>");
         static const std::wregex OBJECTIVE_REGEX(L"\\{s(c?)\\}([^\\{]+)");
@@ -58,7 +58,7 @@ namespace {
         }
     }
 
-    void __cdecl OnMissionObjectiveDecoded(void* param, wchar_t* decoded) {
+    void __cdecl OnMissionObjectiveDecoded(void* param, const wchar_t* decoded) {
         static std::mutex mutex;
         auto* param_tuple = reinterpret_cast<std::tuple<int, bool>*>(param);
         auto& [index, completed] = *param_tuple;

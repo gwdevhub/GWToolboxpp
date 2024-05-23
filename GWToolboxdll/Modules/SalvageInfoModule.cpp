@@ -90,12 +90,12 @@ namespace {
             decoding_en_name_plural = true;
             GW::UI::AsyncDecodeStr(enc_name_plural.c_str(), OnPluralNameDecoded, this, GW::Constants::Language::English);
         }
-        static void OnNameDecoded(void* param, wchar_t* s) {
+        static void OnNameDecoded(void* param, const wchar_t* s) {
             auto ctx = (CraftingMaterial*)param;
             ctx->en_name = s;
             ctx->decoding_en_name = false;
         }
-        static void OnPluralNameDecoded(void* param, wchar_t* s) {
+        static void OnPluralNameDecoded(void* param, const wchar_t* s) {
             auto ctx = (CraftingMaterial*)param;
             ctx->en_name_plural = s;
             ctx->en_name_plural = ctx->en_name_plural.substr(2); // Remove "0 " prefix
