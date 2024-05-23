@@ -74,6 +74,9 @@ namespace GW {
 }
 
 namespace {
+    // If requesting info from gww for an item fails, how long should we wait before retrying?
+    constexpr clock_t salvage_info_retry_interval = CLOCKS_PER_SEC * 30;
+
     struct CraftingMaterial {
         uint32_t model_id; // Used to map to kamadan trade chat
         const wchar_t* enc_name;
@@ -112,7 +115,7 @@ namespace {
         GuiUtils::EncString en_name; // Used to map to Guild Wars Wiki
         std::vector<CraftingMaterial*> common_crafting_materials;
         std::vector<CraftingMaterial*> rare_crafting_materials;
-        clock_t last_retry = 0;
+        clock_t last_retry = salvage_info_retry_interval * -1;
         bool loading = false;
         bool success = false;
 
@@ -340,7 +343,7 @@ namespace {
         }
         const auto salvage_info = found->second;
         // If the item exists but it failed and the timeout has expired, attempt to fetch salvage info again
-        if (!salvage_info->loading && !salvage_info->success && TIMER_DIFF(salvage_info->last_retry) > 30000) {
+        if (!salvage_info->loading && !salvage_info->success && TIMER_DIFF(salvage_info->last_retry) > salvage_info_retry_interval) {
             salvage_info->loading = true;
             salvage_info->last_retry = TIMER_INIT();
             Resources::EnqueueWorkerTask([salvage_info] {

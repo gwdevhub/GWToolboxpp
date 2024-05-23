@@ -545,14 +545,11 @@ void PriceCheckerModule::DrawSettingsInternal()
 }
 
 const std::unordered_map<std::string,uint32_t>& PriceCheckerModule::FetchPrices() {
-    if (!last_request_time || TIMER_DIFF(last_request_time) > 1000 * 60 * 5) {
+    if (TIMER_DIFF(last_request_time) > request_interval) {
         last_request_time = TIMER_INIT();
         Resources::Download(trader_quotes_url, [](bool success, const std::string& response, void*) {
-            if (!success) {
-                last_request_time = 0;
-                return;
-            }
-            ParsePriceJson(response);
+            if (success)
+                ParsePriceJson(response);
             });
     }
     return prices_by_identifier;
