@@ -3,6 +3,10 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
+#include <GWCA/GameEntities/Item.h>
+
+#include <Modules/InventoryManager.h>
+
 namespace {
     GetItemDescriptionCallback GetItemDescription_Func = nullptr, GetItemDescription_Ret = nullptr;
 
@@ -16,8 +20,83 @@ namespace {
         }
         GW::Hook::LeaveHook();
     }
-}
 
+    constexpr wchar_t SUFFIX_AND_PREFIX = 0xa31;
+    constexpr wchar_t PREFIX_ONLY = 0xa30;
+    constexpr wchar_t SUFFIX_ONLY = 0xa33;
+
+    const wchar_t* GetSuffixModName(GW::Item* item, size_t* out_len) {
+        if (!item->complete_name_enc)
+            return nullptr;
+        auto found = wcschr(item->complete_name_enc, SUFFIX_AND_PREFIX);
+        if (found) {
+            found = wcschr(found, 0x10c) + 1;
+            *out_len = wcschr(found, 0x1) - found;
+            return found;
+        }
+        found = wcschr(item->complete_name_enc, SUFFIX_ONLY);
+        if (found) {
+            found = wcschr(found, 0x10b) + 1;
+            *out_len = wcschr(found, 0x1) - found;
+            return found;
+        }
+        return nullptr;
+    }
+    const wchar_t* GetPrefixModName(GW::Item* item, size_t* out_len) {
+        if (!item->complete_name_enc)
+            return nullptr;
+        auto found = wcschr(item->complete_name_enc, SUFFIX_AND_PREFIX);
+        if (found) {
+            found = wcschr(found, 0x10b) + 1;
+            *out_len = wcschr(found, 0x1) - found;
+            return found;
+        }
+        found = wcschr(item->complete_name_enc, PREFIX_ONLY);
+        if (found) {
+            found = wcschr(found, 0x10b) + 1;
+            *out_len = wcschr(found, 0x1) - found;
+            return found;
+        }
+        return nullptr;
+    }
+}
+std::wstring ItemDescriptionHandler::GetItemEncNameWithoutMods(GW::Item* _item) {
+
+    auto item = (InventoryManager::Item*)_item;
+
+    size_t prefix_name_len = 0;
+    const wchar_t* prefix_mod_name = nullptr;
+    size_t suffix_name_len = 0;
+    const wchar_t* suffix_mod_name = nullptr;
+
+    if (!item->IsPrefixUpgradable()) {
+        // Weapon prefix can't be modified; this is part of the item name
+        prefix_mod_name = GetPrefixModName(item, &prefix_name_len);
+    }
+    if (!item->IsSuffixUpgradable()) {
+        // Weapon suffix can't be modified; this is part of the item name
+        suffix_mod_name = GetSuffixModName(item, &suffix_name_len);
+    }
+
+    std::wstring out;
+    if (prefix_mod_name && suffix_mod_name) {
+        out = std::format(L"{}\x10a{}\x1\x10b{}\x1\x10c{}\x1", SUFFIX_AND_PREFIX, item->name_enc, 
+            std::wstring(prefix_mod_name, prefix_name_len), 
+            std::wstring(suffix_mod_name, suffix_name_len));
+    }
+    else if (prefix_mod_name) {
+        out = std::format(L"{}\x10a{}\x1\x10b{}\x1", PREFIX_ONLY, item->name_enc,
+            std::wstring(prefix_mod_name, prefix_name_len));
+    }
+    else if (suffix_mod_name) {
+        out = std::format(L"{}\x10a{}\x1\x10b{}\x1", SUFFIX_ONLY, item->name_enc,
+            std::wstring(suffix_mod_name, suffix_name_len));
+    }
+    else {
+        out = item->name_enc;
+    }
+    return out;
+}
 void ItemDescriptionHandler::Initialize()
 {
     GetItemDescription_Func = reinterpret_cast<GetItemDescriptionCallback>(GW::Scanner::Find("\x8b\xc3\x25\xfd\x00\x00\x00\x3c\xfd", "xxxxxxxxx", -0x5f));
