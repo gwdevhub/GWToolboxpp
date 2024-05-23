@@ -1185,6 +1185,19 @@ void DailyQuests::Initialize()
         }
     }
 
+    // Trigger string decodes
+    for (auto& it : wanted_by_shining_blade_cycles) { it.GetQuestName(); }
+    for (auto& it : vanguard_cycles) { it.GetQuestName(); }
+    for (auto& it : nicholas_sandford_cycles) { it.GetQuestName(); }
+
+    for (auto& it : nicholas_cycles) { it.GetQuestName(); }
+    for (auto& it : zaishen_bounty_cycles) { it.GetQuestName(); }
+    for (auto& it : zaishen_combat_cycles) { it.GetQuestName(); }
+    for (auto& it : zaishen_vanquish_cycles) { it.GetQuestName(); }
+    for (auto& it : zaishen_mission_cycles) { it.GetQuestName(); }
+    for (auto& it : pvp_weekly_bonus_cycles) { it.GetQuestName(); }
+    for (auto& it : pve_weekly_bonus_cycles) { it.GetQuestName(); }
+
     chat_commands = {
         {L"zm", CmdZaishenMission},
         {L"zb", CmdZaishenBounty},
