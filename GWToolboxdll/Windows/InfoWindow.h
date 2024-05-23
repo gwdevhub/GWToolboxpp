@@ -18,6 +18,7 @@ public:
 
     void Initialize() override;
     void Terminate() override;
+    void SignalTerminate() override;
 
     void RegisterSettingsContent() override;
 

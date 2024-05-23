@@ -53,6 +53,7 @@
 #include <Modules/GwDatTextureModule.h>
 #include <Utils/ToolboxUtils.h>
 #include <GWCA/Context/MapContext.h>
+#include <Modules/ItemDescriptionHandler.h>
 
 namespace {
     enum class Status {
@@ -95,6 +96,10 @@ namespace {
 
     int pending_map_names = 1;
     std::unordered_map<uint32_t,GuiUtils::EncString*> encoded_name_id_to_string;
+
+    bool record_textures = false;
+    bool record_ui_messages = false;
+    bool record_enc_strings = false;
 
     bool EncInfoField(const char* label, const wchar_t* enc_string)
     {
@@ -443,6 +448,7 @@ namespace {
             InfoField("Interaction", "0x%X", item->interaction);
             InfoField("model_file_id", "0x%X", item->model_file_id);
             EncInfoField("Name Enc", item->name_enc);
+            EncInfoField("Name Enc no mods", ItemDescriptionHandler::GetItemEncNameWithoutMods(item).c_str());
             EncInfoField("Complete Name Enc", item->complete_name_enc);
             EncInfoField("Desc Enc", item->info_string);
             if (item->mod_struct_size) {
@@ -686,7 +692,6 @@ namespace {
     };
 
     std::vector<UIMessagePacket> ui_message_packets_recorded;
-    bool record_ui_messages = false;
 
     struct RecordedAsyncDecode {
         std::wstring s; 
@@ -723,27 +728,9 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
-    void HookOnValidateAsyncDecodeStr(bool hook) {
-        if (hook && ValidateAsyncDecodeStr_Func)
-            return;
-        if (hook) {
-            ValidateAsyncDecodeStr_Func = (DoAsyncDecodeStr_pt)GW::Scanner::Find("\x8b\x47\x14\x8d\x9f\x80\xfe\xff\xff", "xxxxxxxxx", -0x8);
-            if (ValidateAsyncDecodeStr_Func) {
-                GW::HookBase::CreateHook((void**)&ValidateAsyncDecodeStr_Func, OnValidateAsyncDecodeStr, (void**)&ValidateAsyncDecodeStr_Ret);
-                GW::HookBase::EnableHooks(ValidateAsyncDecodeStr_Func);
-            }
-
-        }
-        else {
-            if (ValidateAsyncDecodeStr_Func)
-                GW::Hook::RemoveHook(ValidateAsyncDecodeStr_Func);
-            while (enc_strings_recorded.begin() != enc_strings_recorded.end()) {
-                delete enc_strings_recorded.begin()->second;
-                enc_strings_recorded.erase(enc_strings_recorded.begin());
-            }
-            ValidateAsyncDecodeStr_Func = 0;
-        }
-    }
+    std::unordered_map<uint32_t, IDirect3DTexture9**> textures_created_by_file_id;
+    std::unordered_map<IDirect3DTexture9**, uint32_t> texture_file_ids;
+    std::vector<IDirect3DTexture9**> textures_created;
 
     bool OnGWCASendUIMessage(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks) {
         GW::Hook::EnterHook();
@@ -753,16 +740,6 @@ namespace {
         GW::Hook::LeaveHook();
         return res;
     }
-    void ClearUIMessagesRecorded() {
-        ui_message_packets_recorded.clear();
-    }
-
-    std::unordered_map<uint32_t,IDirect3DTexture9**> textures_created_by_file_id;
-    std::unordered_map<IDirect3DTexture9**,uint32_t> texture_file_ids;
-    std::vector<IDirect3DTexture9**> textures_created;
-
-    bool record_textures = false;
-
     void FileIdToFileHash(uint32_t file_id, wchar_t* fileHash) {
         fileHash[0] = static_cast<wchar_t>(((file_id - 1) % 0xff00) + 0x100);
         fileHash[1] = static_cast<wchar_t>(((file_id - 1) / 0xff00) + 0x100);
@@ -793,6 +770,71 @@ namespace {
         return out;
     }
 
+    void HookOnValidateAsyncDecodeStr(bool hook) {
+        if (hook && ValidateAsyncDecodeStr_Func)
+            return;
+        if (hook) {
+            ValidateAsyncDecodeStr_Func = (DoAsyncDecodeStr_pt)GW::Scanner::Find("\x8b\x47\x14\x8d\x9f\x80\xfe\xff\xff", "xxxxxxxxx", -0x8);
+            if (ValidateAsyncDecodeStr_Func) {
+                GW::HookBase::CreateHook((void**)&ValidateAsyncDecodeStr_Func, OnValidateAsyncDecodeStr, (void**)&ValidateAsyncDecodeStr_Ret);
+                GW::HookBase::EnableHooks(ValidateAsyncDecodeStr_Func);
+            }
+
+        }
+        else if (ValidateAsyncDecodeStr_Func) {
+            GW::Hook::RemoveHook(ValidateAsyncDecodeStr_Func);
+            while (enc_strings_recorded.begin() != enc_strings_recorded.end()) {
+                delete enc_strings_recorded.begin()->second;
+                enc_strings_recorded.erase(enc_strings_recorded.begin());
+            }
+            ValidateAsyncDecodeStr_Func = 0;
+        }
+    }
+    void HookOnCreateTexture(bool hook) {
+        if (hook && CreateTexture_Func)
+            return;
+        if (hook) {
+            CreateTexture_Func = (CreateTexture_pt)GW::Scanner::FindAssertion("p:\\code\\engine\\gr\\grtex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)", -0x32);
+            if (CreateTexture_Func) {
+                GW::HookBase::CreateHook((void**)&CreateTexture_Func, OnCreateTexture, (void**)&CreateTexture_Ret);
+                GW::HookBase::EnableHooks(CreateTexture_Func);
+            }
+
+        }
+        else if(CreateTexture_Func) {
+            GW::Hook::RemoveHook(CreateTexture_Func);
+            CreateTexture_Func = 0;
+            textures_created_by_file_id.clear();
+            textures_created.clear();
+            texture_file_ids.clear();
+        }
+    }
+    void HookOnGWCASendUIMessage(bool hook) {
+        if (hook && GWCA_SendUIMessage_Func)
+            return;
+        if (hook) {
+            GWCA_SendUIMessage_Func = (GWCA_SendUIMessage_pt)GW::UI::SendUIMessage;
+            if (GWCA_SendUIMessage_Func) {
+                GW::HookBase::CreateHook((void**)&GWCA_SendUIMessage_Func, OnGWCASendUIMessage, (void**)&GWCA_SendUIMessage_Ret);
+                GW::HookBase::EnableHooks(GWCA_SendUIMessage_Func);
+            }
+        }
+        else if (GWCA_SendUIMessage_Func) {
+            GW::Hook::RemoveHook(GWCA_SendUIMessage_Func);
+            ui_message_packets_recorded.clear();
+            GWCA_SendUIMessage_Func = 0;
+        }
+    }
+
+
+
+
+    void PostDraw() {
+        HookOnCreateTexture(record_textures);
+        HookOnValidateAsyncDecodeStr(record_enc_strings);
+        HookOnGWCASendUIMessage(record_ui_messages);
+    }
+
     void DrawDebugInfo() {
         if (ImGui::CollapsingHeader("Account Features")) {
             const auto& features = GW::GetGameContext()->account->account_unlocked_counts;
@@ -818,8 +860,8 @@ namespace {
             DrawItemInfo(GW::Items::GetItemById(quoted_item_id), &quoted_name);
         }
 
-        record_textures = ImGui::CollapsingHeader("Loaded Textures");
-        if (record_textures) {
+        if (ImGui::CollapsingHeader("Loaded Textures")) {
+            record_textures = true;
             ImGui::PushID(&textures_created);
             constexpr ImVec2 scaled_size = { 64.f,64.f };
             constexpr ImVec4 tint(1, 1, 1, 1);
@@ -861,11 +903,11 @@ namespace {
             ImGui::PopStyleVar();
             ImGui::PopID();
         }
-        record_ui_messages = ImGui::CollapsingHeader("UI Message Log");
-        if (record_ui_messages) {
+        if (ImGui::CollapsingHeader("UI Message Log")) {
+            record_ui_messages = true;
             ImGui::PushID(&ui_message_packets_recorded);
             if (ImGui::SmallButton("Reset")) {
-                ClearUIMessagesRecorded();
+                ui_message_packets_recorded.clear();
             }
             for (const auto packet : ui_message_packets_recorded) {
                 ImGui::PushID(&packet);
@@ -876,7 +918,7 @@ namespace {
         }
 
         if (ImGui::CollapsingHeader("Async Str Log")) {
-            HookOnValidateAsyncDecodeStr(true);
+            record_enc_strings = true;
             ImGui::PushID(&enc_strings_recorded);
             if (ImGui::SmallButton("Reset")) {
                 while (enc_strings_recorded.begin() != enc_strings_recorded.end()) {
@@ -891,9 +933,6 @@ namespace {
                 ImGui::PopID();
             }
             ImGui::PopID();
-        }
-        else {
-            HookOnValidateAsyncDecodeStr(false);
         }
 
 
@@ -923,16 +962,12 @@ void InfoWindow::Terminate()
     }
     target_achievements.clear();
 
-    if (CreateTexture_Func) {
-        GW::HookBase::RemoveHook(CreateTexture_Func);
-        CreateTexture_Func = nullptr;
-    }
-    if (GWCA_SendUIMessage_Func) {
-        GW::HookBase::RemoveHook(GWCA_SendUIMessage_Func);
-        GWCA_SendUIMessage_Func = nullptr;
-    }
-    ClearUIMessagesRecorded();
     HookOnValidateAsyncDecodeStr(false);
+    HookOnCreateTexture(false);
+    HookOnGWCASendUIMessage(false);
+}
+void InfoWindow::SignalTerminate() {
+    visible = false;
 }
 
 void InfoWindow::Initialize()
@@ -946,26 +981,17 @@ void InfoWindow::Initialize()
                                                                         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, OnInstanceLoad);
     GW::Chat::CreateCommand(L"resignlog", CmdResignLog);
-#ifdef _DEBUG
-    CreateTexture_Func = (CreateTexture_pt)GW::Scanner::FindAssertion("p:\\code\\engine\\gr\\grtex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)", -0x32);
-#endif
-    if (CreateTexture_Func) {
-        GW::HookBase::CreateHook((void**)&CreateTexture_Func, OnCreateTexture, (void**)&CreateTexture_Ret);
-        GW::HookBase::EnableHooks(CreateTexture_Func);
-    }
 
-    GWCA_SendUIMessage_Func = (GWCA_SendUIMessage_pt)GW::UI::SendUIMessage;
-    if (GWCA_SendUIMessage_Func) {
-        GW::HookBase::CreateHook((void**)&GWCA_SendUIMessage_Func, OnGWCASendUIMessage, (void**)&GWCA_SendUIMessage_Ret);
-        GW::HookBase::EnableHooks(GWCA_SendUIMessage_Func);
-    }
+
 }
 
 void InfoWindow::Draw(IDirect3DDevice9*)
 {
+    record_textures = false;
+    record_ui_messages = false;
+    record_enc_strings = false;
     if (!visible) {
-        record_ui_messages = false;
-        record_textures = false;
+        PostDraw();
         return;
     }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
@@ -1167,7 +1193,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
     DrawDebugInfo();
 #endif
     ImGui::End();
-
+    PostDraw();
 }
 
 void InfoWindow::Update(const float)
