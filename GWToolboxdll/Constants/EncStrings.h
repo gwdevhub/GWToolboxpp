@@ -2,6 +2,19 @@
 
 namespace GW {
     namespace EncStrings {
+
+        // Text wrappers, 0x10a = inner text e.g. <c=@ItemBasic>
+        static const wchar_t* ItemBasic = L"\xA3B";
+        static const wchar_t* ItemCommon = L"\xA3D";
+        static const wchar_t* ItemDull = L"\xA3E";
+        static const wchar_t* ItemEnhance = L"\xA4F";
+        static const wchar_t* ItemRare = L"\xA40";
+        static const wchar_t* ItemUncommon = L"\xA42";
+        static const wchar_t* ItemUnique = L"\xA43";
+
+        static const wchar_t* MaterialTrader = L"\xCDA";
+        static const wchar_t* RareMaterialTrader = L"\xCDB";
+
         static const wchar_t* ZaishenBounty = L"\x8102\x545B\xD046\xBF3F\x615F";
         namespace MapRegion {
             static const wchar_t* BattleIsles = L"\xE63";
@@ -33,6 +46,43 @@ namespace GW {
             static const wchar_t* CharrHomelands = L"\x8101\x76Fc";
             static const wchar_t* DepthsOfTyria = L"\x8101\x76FD";
         }
+
+        static const wchar_t* Bone = L"\x22D0\xBEB5\xC462\x64B5";
+        static const wchar_t* IronIngot = L"\x22EB\xC6B0\xBD46\x2DAD";
+        static const wchar_t* TannedHideSquare = L"\x22E3\xD3A9\xC22C\x285A";
+        static const wchar_t* Scale = L"\x22F0\x832C\xD6A3\x1382";
+        static const wchar_t* ChitinFragment = L"\x22F1\x9156\x8692\x497D";
+        static const wchar_t* BoltofCloth = L"\x22D4\x888E\x9089\x6EC8";
+        static const wchar_t* WoodPlank = L"\x22E8\xE46D\x8FE4\x5F8B";
+        static const wchar_t* GraniteSlab = L"\x22F2\xA623\xFAE8\xE5A";
+        static const wchar_t* PileofGlitteringDust = L"\x22D8\xA4A4\xED0D\x4304";
+        static const wchar_t* PlantFiber = L"\x22DD\xAC69\xDEA5\x73C5";
+        static const wchar_t* Feather = L"\x22DC\x8209\xAD29\xBBD";
+        static const wchar_t* FurSquare = L"\x22E4\xE5F4\xBBEF\x5A25";
+        static const wchar_t* BoltofLinen = L"\x22D5\x8371\x8ED5\x56B4";
+        static const wchar_t* BoltofDamask = L"\x22D6\xF04C\xF1E5\x5699";
+        static const wchar_t* BoltofSilk = L"\x22D7\xFD2A\xC85B\x58B3";
+        static const wchar_t* GlobofEctoplasm = L"\x22D9\xE7B8\xE9DD\x2322";
+        static const wchar_t* SteelIngot = L"\x22EC\xF12D\x87A7\x6460";
+        static const wchar_t* DeldrimorSteelIngot = L"\x22ED\xB873\x85A4\x74B";
+        static const wchar_t* MonstrousClaw = L"\x22D2\xCDC6\xEFC8\x3C99";
+        static const wchar_t* MonstrousEye = L"\x22DA\x9059\xD163\x2187";
+        static const wchar_t* MonstrousFang = L"\x22DB\x8DCE\xC3FA\x4A26";
+        static const wchar_t* Ruby = L"\x22E0\x93CC\x939C\x5286";
+        static const wchar_t* Sapphire = L"\x22E1\xB785\x866C\x34F6";
+        static const wchar_t* Diamond = L"\x22DE\xBB93\xABD4\x5439";
+        static const wchar_t* OnyxGemstone = L"\x22DF\xD425\xC093\x1CF4";
+        static const wchar_t* LumpofCharcoal = L"\x22D1\xDE2A\xED03\x2625";
+        static const wchar_t* ObsidianShard = L"\x22EA\xFDA9\xDE53\x2D16";
+        static const wchar_t* TemperedGlassVial = L"\x22E2\xCE9B\x8771\x7DC7";
+        static const wchar_t* LeatherSquare = L"\x22E5\x9758\xC5DD\x727";
+        static const wchar_t* ElonianLeatherSquare = L"\x22E6\xE8F4\xA898\x75CB";
+        static const wchar_t* VialofInk = L"\x22E7\xC1DA\xF2C1\x452A";
+        static const wchar_t* RollofParchment = L"\x22EE\xF65A\x86E6\x1C6C";
+        static const wchar_t* RollofVellum = L"\x22EF\xC588\x861D\x5BD3";
+        static const wchar_t* SpiritwoodPlank = L"\x22F3\xA11C\xC924\x5E15";
+        static const wchar_t* AmberChunk = L"\x55D0\xF8B7\xB108\x6018";
+        static const wchar_t* JadeiteShard = L"\x55D1\xD189\x845A\x7164";
 
         static const wchar_t* RedIrisFlowers = L"\x271E\xDBDF\xBBD8\x34CB";
         static const wchar_t* FeatheredAvicaraScalps = L"\x294F";
@@ -174,7 +224,6 @@ namespace GW {
 
         static const wchar_t* GuildVersusGuild = L"\x8102\x58B6\xFE7C\xB94E\x2209";
         static const wchar_t* AllianceBattles = L"\x108\x107" L"Alliance Battles\x1"; // TODO: find this, subtitle when entering zone
-
 
         static const wchar_t* GuildVersusGuildBonus = L"\x8103\xAD9";
         static const wchar_t* GuildVersusGuildBonusDescription = L"\x8103\xADa";

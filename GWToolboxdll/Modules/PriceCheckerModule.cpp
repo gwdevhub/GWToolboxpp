@@ -22,6 +22,7 @@
 
 #include <Timer.h>
 #include <Utils/GuiUtils.h>
+#include <Constants/EncStrings.h>
 
 using nlohmann::json;
 
@@ -29,7 +30,9 @@ namespace {
     float high_price_threshold = 1000;
     bool fetching_prices;
     const char* trader_quotes_url = "https://kamadan.gwtoolbox.com/trader_quotes";
-    clock_t last_request_time = 0;
+
+    constexpr clock_t request_interval = CLOCKS_PER_SEC * 60 * 5;
+    clock_t last_request_time = request_interval * -1;
     std::unordered_map<std::string, uint32_t> prices_by_identifier;
 
     bool ParsePriceJson(const std::string& prices_json_str) {
@@ -58,7 +61,6 @@ namespace {
         }
         return !prices_by_identifier.empty();
     }
-
 
     std::unordered_map<uint32_t, const char*> mod_to_name =
     {
@@ -451,20 +453,51 @@ namespace {
         return .0f;
     }
 
-    std::wstring PrintPrice(float price, const char* name = nullptr) {
-        auto unit = L'g';
-        auto color = L"@ItemCommon";
+    std::wstring PrintPrice(uint32_t price, const char* name = nullptr) {
+        auto color = GW::EncStrings::ItemCommon;
         if (price > high_price_threshold) {
-            color = L"@ItemRare";
+            color = GW::EncStrings::ItemRare;
         }
 
-        if (price > 1000.f) {
-            price /= 1000.f;
-            unit = L'k';
+        const uint32_t plat = price / 1000;
+        const uint32_t gold = price % 1000;
+
+        std::wstring currency_string;
+        if (price == 0.f) {
+            // 0 gold
+            currency_string = L"\xAC2\x100";
         }
-        return std::format(L"\x2\x108\x107\n<c={}>{}: {:.4g}{}</c>\x1", color, name && *name ? GuiUtils::StringToWString(name) : L"Item price", price, unit);
+        else if (plat > 0) {
+            // N platinum, N gold
+            currency_string = std::format(L"\xAC4\x101{}\x102{}", (wchar_t)(0x100 + plat), (wchar_t)(0x100 + gold));
+        }
+        else if(gold > 0) {
+            // N gold
+            currency_string = std::format(L"\xAC2\x101{}", (wchar_t)(0x100 + gold));
+        }
+        else {
+            // N platinum
+            currency_string = std::format(L"\xAC3\x101{}", (wchar_t)(0x100 + plat));
+        }
+
+        std::wstring subject;
+        if (name && *name) {
+            subject = std::format(L"\x108\x107{}\x1",GuiUtils::StringToWString(name));
+        }
+        else {
+            subject = L"\x108\x107Item price\x1";
+        }
+
+        return std::format(L"\x2\x102\x2{}\x10A\xA8A\x10A{}\x1\x10B{}\x1\x1", color, subject, currency_string);
     }
-
+    std::wstring PrintPrice(float price, const char* name = nullptr) {
+        if (price < .0f)
+            price = .0f;
+#pragma warning( push )
+#pragma warning( disable : 4244)
+        return PrintPrice(static_cast<uint32_t>(price), name);
+#pragma warning( pop ) 
+    }
     void UpdateDescription(const uint32_t item_id, std::wstring& description)
     {
         const auto item = GW::Items::GetItemById(item_id);

@@ -2532,7 +2532,7 @@ bool InventoryManager::PendingItem::set(const Item* item)
     bag = item->bag ? item->bag->bag_id() : GW::Constants::Bag::None;
     name.reset(item->complete_name_enc ? item->complete_name_enc : item->name_enc);
     // NB: This doesn't work for inscriptions; gww doesn't have a page per inscription.
-    wiki_name.reset(item->name_enc);
+    wiki_name.reset(ItemDescriptionHandler::GetItemEncNameWithoutMods(item).c_str());
     wiki_name.language(GW::Constants::Language::English);
     wiki_name.wstring(); // Trigger decode; this isn't done any other time
     const auto plural_item_enc = std::format(L"\xa35\x101\x100\x10a{}\x1", item->name_enc);
