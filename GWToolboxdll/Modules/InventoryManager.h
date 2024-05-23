@@ -10,14 +10,21 @@
 
 #include <ToolboxWidget.h>
 
-namespace GW::Constants {
-    enum class Rarity : uint8_t {
-        White,
-        Blue,
-        Purple,
-        Gold,
-        Green
-    };
+namespace GW {
+    namespace Constants {
+        enum class Rarity : uint8_t {
+            White,
+            Blue,
+            Purple,
+            Gold,
+            Green
+        };
+        enum class Bag : uint8_t;
+    }
+    namespace UI {
+        enum class UIMessage : uint32_t;
+    }
+
 }
 
 class InventoryManager : public ToolboxUIElement {
@@ -111,12 +118,7 @@ private:
     bool right_click_context_menu_in_explorable = true;
     bool right_click_context_menu_in_outpost = true;
 
-    std::map<GW::Constants::Bag, bool> bags_to_salvage_from = {
-        {GW::Constants::Bag::Backpack, true},
-        {GW::Constants::Bag::Belt_Pouch, true},
-        {GW::Constants::Bag::Bag_1, true},
-        {GW::Constants::Bag::Bag_2, true}
-    };
+    std::map<GW::Constants::Bag, bool> bags_to_salvage_from;
 
     size_t identified_count = 0;
     size_t salvaged_count = 0;
@@ -176,6 +178,15 @@ public:
         [[nodiscard]] bool GetIsIdentified() const
         {
             return (interaction & 1) != 0;
+        }
+        [[nodiscard]] bool IsPrefixUpgradable() const
+        {
+            return ((interaction >> 14) & 1) == 0;
+        }
+
+        [[nodiscard]] bool IsSuffixUpgradable() const
+        {
+            return ((interaction >> 15) & 1) == 0;
         }
 
         [[nodiscard]] bool IsStackable() const
@@ -286,7 +297,7 @@ private:
     struct PendingItem {
         uint32_t item_id = 0;
         uint32_t slot = 0;
-        GW::Constants::Bag bag = GW::Constants::Bag::None;
+        GW::Constants::Bag bag = (GW::Constants::Bag)0;
         uint32_t uses = 0;
         uint32_t quantity = 0;
         bool set(const Item* item = nullptr);

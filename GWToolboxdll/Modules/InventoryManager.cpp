@@ -878,6 +878,14 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessa
 void InventoryManager::Initialize()
 {
     ToolboxUIElement::Initialize();
+
+    bags_to_salvage_from = {
+        {GW::Constants::Bag::Backpack, true},
+        {GW::Constants::Bag::Belt_Pouch, true},
+        {GW::Constants::Bag::Bag_1, true},
+        {GW::Constants::Bag::Bag_2, true}
+    };
+
     GW::Items::RegisterItemClickCallback(&ItemClick_Entry, ItemClickCallback);
 
     GW::UI::UIMessage message_id_hooks[] = {
