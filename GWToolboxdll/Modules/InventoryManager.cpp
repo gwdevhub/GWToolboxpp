@@ -29,8 +29,9 @@
 #include <Utils/GuiUtils.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/GameSettings.h>
-#include <Windows/MaterialsWindow.h>
 
+#include <Windows/MaterialsWindow.h>
+#include <Windows/DailyQuestsWindow.h>
 
 namespace {
     InventoryManager& Instance()
@@ -996,6 +997,7 @@ void InventoryManager::SaveSettings(ToolboxIni* ini)
     ToolboxUIElement::SaveSettings(ini);
     SAVE_BOOL(only_use_superior_salvage_kits);
     SAVE_BOOL(salvage_rare_mats);
+    SAVE_BOOL(salvage_nicholas_items);
     SAVE_BOOL(trade_whole_stacks);
     SAVE_BOOL(wiki_link_on_context_menu);
     SAVE_BOOL(hide_unsellable_items);
@@ -1017,6 +1019,7 @@ void InventoryManager::LoadSettings(ToolboxIni* ini)
     ToolboxUIElement::LoadSettings(ini);
     LOAD_BOOL(only_use_superior_salvage_kits);
     LOAD_BOOL(salvage_rare_mats);
+    LOAD_BOOL(salvage_nicholas_items);
     LOAD_BOOL(trade_whole_stacks);
     LOAD_BOOL(wiki_link_on_context_menu);
     LOAD_BOOL(hide_unsellable_items);
@@ -1542,6 +1545,9 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(const Item* kit,
             if (item->IsBlue() && !item->GetIsIdentified() && (kit && kit->IsLesserKit())) {
                 continue; // Note: lesser kits cant salvage blue unids - Guild Wars bug/feature
             }
+            if (DailyQuests::GetNicholasItemInfo(item->name_enc) && !salvage_nicholas_items) {
+                continue; // Don't salvage nicholas items
+            }
             const GW::Constants::Rarity rarity = item->GetRarity();
             switch (rarity) {
                 case GW::Constants::Rarity::Gold:
@@ -1731,6 +1737,9 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::TextDisabled("Note: Salvage All will only salvage items that are identified.");
     ImGui::Checkbox("Salvage Rare Materials", &salvage_rare_mats);
     ImGui::ShowHelp("Untick to skip salvagable rare materials when checking for salvagable items");
+    ImGui::SameLine();
+    ImGui::Checkbox("Salvage Nicholas Items", &salvage_nicholas_items);
+    ImGui::ShowHelp("Untick to skip items that Nicholas the Traveller collects when checking for salvagable items");
     ImGui::Text("Salvage from:");
     ImGui::ShowHelp("Only ticked bags will be checked for salvagable items");
     ImGui::Checkbox("Backpack", &bags_to_salvage_from[GW::Constants::Bag::Backpack]);
