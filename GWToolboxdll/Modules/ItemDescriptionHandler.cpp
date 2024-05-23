@@ -25,7 +25,7 @@ namespace {
     constexpr wchar_t PREFIX_ONLY = 0xa30;
     constexpr wchar_t SUFFIX_ONLY = 0xa33;
 
-    const wchar_t* GetSuffixModName(GW::Item* item, size_t* out_len) {
+    const wchar_t* GetSuffixModName(const GW::Item* item, size_t* out_len) {
         if (!item->complete_name_enc)
             return nullptr;
         auto found = wcschr(item->complete_name_enc, SUFFIX_AND_PREFIX);
@@ -42,7 +42,7 @@ namespace {
         }
         return nullptr;
     }
-    const wchar_t* GetPrefixModName(GW::Item* item, size_t* out_len) {
+    const wchar_t* GetPrefixModName(const GW::Item* item, size_t* out_len) {
         if (!item->complete_name_enc)
             return nullptr;
         auto found = wcschr(item->complete_name_enc, SUFFIX_AND_PREFIX);
@@ -60,7 +60,7 @@ namespace {
         return nullptr;
     }
 }
-std::wstring ItemDescriptionHandler::GetItemEncNameWithoutMods(GW::Item* _item) {
+std::wstring ItemDescriptionHandler::GetItemEncNameWithoutMods(const GW::Item* _item) {
 
     auto item = (InventoryManager::Item*)_item;
 

@@ -22,7 +22,7 @@ public:
     void Initialize() override;
     void SignalTerminate() override;
 
-    static std::wstring GetItemEncNameWithoutMods(GW::Item* item);
+    static std::wstring GetItemEncNameWithoutMods(const GW::Item* item);
 
     static void RegisterDescriptionCallback(GetItemDescriptionCallback callback, int altitude = 0);
     static void UnregisterDescriptionCallback(GetItemDescriptionCallback callback);
