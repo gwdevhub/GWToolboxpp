@@ -126,10 +126,10 @@ void CustomRenderer::LoadMarkers()
             for (auto i = 0; i < CustomPolygon::max_points; i++) {
                 GW::Vec2f vec;
                 vec.x = static_cast<float>(
-                    inifile.GetDoubleValue(section, ("point["s + std::to_string(i) + "].x").c_str(), 0.f));
+                    inifile.GetDoubleValue(section, ("point["s + std::to_string(i) + "].x").c_str(), std::numeric_limits<float>::max()));
                 vec.y = static_cast<float>(
-                    inifile.GetDoubleValue(section, ("point["s + std::to_string(i) + "].y").c_str(), 0.f));
-                if (vec.x != 0.f || vec.y != 0.f) {
+                    inifile.GetDoubleValue(section, ("point["s + std::to_string(i) + "].y").c_str(), std::numeric_limits<float>::max()));
+                if (vec.x != std::numeric_limits<float>::max() && vec.y != std::numeric_limits<float>::max()) {
                     polygon.points.emplace_back(vec);
                 }
                 else {
