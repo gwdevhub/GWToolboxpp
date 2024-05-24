@@ -1375,6 +1375,9 @@ void DailyQuests::QuestData::Decode() {
         name_translated->reset(enc_name.c_str());
         name_english->reset(enc_name.c_str());
     }
+    name_translated->wstring();
+    name_english->wstring();
+    GetMapName();
 }
 const char* DailyQuests::QuestData::GetQuestName() {
     Decode();

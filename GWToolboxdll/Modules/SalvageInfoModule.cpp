@@ -368,7 +368,14 @@ namespace {
 
             description += std::format(L"\x2\x102\x2\x108\x107<c=@ItemRare>Rare Materials:</c> \x1\x2{}", items);
         }
-        if (salvage_info->nicholas_info) {
+
+    }
+    void AppendNicholasInfo(const uint32_t item_id, std::wstring& description) {
+        const auto item = GW::Items::GetItemById(item_id);
+        const auto name = item ? item->name_enc : nullptr;
+        if (name && DailyQuests::GetNicholasItemInfo(name)) {
+            if (description.empty())
+                description += L"\x101";
             description += std::format(L"\x2\x102\x2{}\x107\x108Nicholas The Traveller collects this!\x1", GW::EncStrings::ItemUnique);
         }
     }
@@ -380,6 +387,7 @@ namespace {
             tmp_item_description.assign(*out_desc);
         }
         AppendSalvageInfoDescription(item_id, tmp_item_description);
+        AppendNicholasInfo(item_id, tmp_item_description);
         *out_desc = tmp_item_description.data();
     }
 }
