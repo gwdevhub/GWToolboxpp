@@ -89,6 +89,15 @@ private:
     int count = 1;
 };
 
+class PartyHasLoadedInCondition : public Condition {
+public:
+    PartyHasLoadedInCondition() = default;
+    PartyHasLoadedInCondition(InputStream&) {}
+    ConditionType type() const final { return ConditionType::PartyHasLoadedIn; }
+    bool check() const final;
+    void drawSettings() final;
+};
+
 class InstanceProgressCondition : public Condition {
 public:
     InstanceProgressCondition() = default;
@@ -374,4 +383,17 @@ public:
 
 private:
     int modelId = 0;
+};
+
+class PlayerHasHpBelowCondition : public Condition {
+public:
+    PlayerHasHpBelowCondition() = default;
+    PlayerHasHpBelowCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::CurrentTargetHasHpBelow; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    float hp = 50.f;
 };
