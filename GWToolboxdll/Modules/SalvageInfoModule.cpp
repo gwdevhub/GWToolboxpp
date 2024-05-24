@@ -263,8 +263,8 @@ namespace {
                 }
             }
 
-            const auto weapon_page_regex = std::regex(R"(This article is about [\s\S]*? type[\s\S]*?same name)");
-            if (std::regex_search(response, m, weapon_page_regex)) {
+            const auto different_article_page_regex = std::regex(R"(This article is about [\s\S]*?For the weapon[\s\S]*?)");
+            if (std::regex_search(response, m, different_article_page_regex)) {
                 // Detected weapon type page. We need to go to the weapon with same name page and fetch materials from there
                 const auto expected_token = std::format("{} (weapon)", info->en_name.string());
                 std::unordered_set<std::string> sub_urls;
