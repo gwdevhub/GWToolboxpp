@@ -39,4 +39,12 @@ namespace ImGui
         cb_user_data.ChainCallbackUserData = user_data;
         return ImGui::InputText(label, const_cast<char*>(str->c_str()), str->capacity() + 1, flags, InputTextCallback, &cb_user_data);
     }
+    void ShowHelp(const char* help)
+    {
+        ImGui::SameLine();
+        ImGui::TextDisabled("%s", "(?)");
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", help);
+        }
+    }
 } // namespace ImGui

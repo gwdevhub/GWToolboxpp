@@ -1,11 +1,13 @@
 #pragma once
 
-#include <utils.h>
 #include <Condition.h>
-#include <InstanceInfo.h>
+#include <Enums.h>
 
+#include <commonIncludes.h>
+#include <GWCA/Constants/QuestIDs.h>
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/Constants/Skills.h>
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/GamePos.h>
 
 class NegatedCondition : public Condition {

@@ -1,22 +1,19 @@
 #pragma once
 
-#include <utils.h>
+#include <io.h>
+#include <Enums.h>
 #include <Action.h>
 #include <Condition.h>
+#include <commonIncludes.h>
 
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Constants/Skills.h>
-#include <GWCA/Constants/ItemIDs.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Utilities/Hook.h>
 
 #include <chrono>
 #include <unordered_set>
-
-namespace GW {
-    struct AgentLiving;
-}
 
 class MoveToAction : public Action {
 public:
