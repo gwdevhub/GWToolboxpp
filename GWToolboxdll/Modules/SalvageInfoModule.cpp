@@ -76,6 +76,7 @@ namespace {
         GuiUtils::EncString en_name; // Used to map to Guild Wars Wiki
         std::vector<CraftingMaterial*> common_crafting_materials;
         std::vector<CraftingMaterial*> rare_crafting_materials;
+        std::vector<std::string> searched_urls; // Used to detect cycles
         DailyQuests::NicholasCycleData* nicholas_info = nullptr;
         clock_t last_retry = salvage_info_retry_interval * -1;
         bool loading = false;
@@ -132,6 +133,23 @@ namespace {
         }
         return output;
     };
+
+    inline std::string& replace_all(std::string& s, const std::string& from, const std::string& to) {
+        if (from.empty()) {
+            return s;
+        }
+        size_t pos = 0;
+        while ((pos = s.find(from, pos)) != std::string::npos) {
+            s.replace(pos, from.length(), to);
+            pos += to.length();
+        }
+        return s;
+    }
+
+    inline std::string& handle_encoded_names(std::string& s) {
+        s = replace_all(s, "&#39;", "'");
+        return s;
+    }
 
     // Make sure you pass valid html e.g. start with a < tag
     std::string& strip_tags(std::string& html) {
@@ -222,12 +240,22 @@ namespace {
 
                 // Fetch materials of the sub urls and add them to the salvage info struct
                 if (sub_urls.size() > 0) {
-                    for (const auto sub_name : sub_urls) {
-                        const auto url = GuiUtils::WikiUrl(sub_name);
+                    auto search_suburls = false;
+                    for (const auto& sub_name : sub_urls) {
+                        auto url = sub_name;
+                        url = GuiUtils::WikiUrl(handle_encoded_names(url));
+                        // Skip urls that have already been searched
+                        if (std::find(info->searched_urls.begin(), info->searched_urls.end(), url) != info->searched_urls.end()) {
+                            continue;
+                        }
+                        search_suburls = true;
+                        info->searched_urls.push_back(url);
                         Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(30));
                     }
-                    
-                    return;
+                    // Return early if we redirected from this page
+                    if (search_suburls) {
+                        return;
+                    }
                 }
             }
 
@@ -249,12 +277,22 @@ namespace {
 
                 // Fetch materials of the sub urls and add them to the salvage info struct
                 if (sub_urls.size() > 0) {
-                    for (const auto sub_name : sub_urls) {
-                        const auto url = GuiUtils::WikiUrl(sub_name);
+                    auto search_suburls = false;
+                    for (const auto& sub_name : sub_urls) {
+                        auto url = sub_name;
+                        url = GuiUtils::WikiUrl(handle_encoded_names(url));
+                        // Skip urls that have already been searched
+                        if (std::find(info->searched_urls.begin(), info->searched_urls.end(), url) != info->searched_urls.end()) {
+                            continue;
+                        }
+                        search_suburls = true;
+                        info->searched_urls.push_back(url);
                         Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(30));
                     }
-
-                    return;
+                    // Return early if we redirected from this page
+                    if (search_suburls) {
+                        return;
+                    }
                 }
             }
 
@@ -290,6 +328,7 @@ namespace {
             Sleep(16);
         }
         const auto url = GuiUtils::WikiUrl(info->en_name.string());
+        info->searched_urls.push_back(url);
         Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(1));
     }
 

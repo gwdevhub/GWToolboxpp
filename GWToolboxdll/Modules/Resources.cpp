@@ -1108,6 +1108,11 @@ GuiUtils::EncString* Resources::GetMapName(const GW::Constants::MapID map_id)
     if (found != map_names.end()) {
         return found->second;
     }
+    if (map_id == GW::Constants::MapID::None) {
+        const auto none = new GuiUtils::EncString(L"\x103", false);
+        map_names[map_id] = none;
+        return none;
+    }
     const auto area = GW::Map::GetMapInfo(map_id);
     ASSERT(area);
     const auto ret = DecodeStringId(area->name_id);
