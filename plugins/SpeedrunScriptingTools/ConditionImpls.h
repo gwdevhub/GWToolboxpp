@@ -352,6 +352,7 @@ private:
     std::vector<GW::Vec2f> polygon;
     float minHp = 0.f;
     float maxHp = 100.f;
+    float maxAngle = 180.f;
 };
 
 class CanPopAgentCondition : public Condition {
