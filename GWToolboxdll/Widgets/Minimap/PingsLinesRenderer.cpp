@@ -15,6 +15,7 @@
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <Widgets/Minimap/Minimap.h>
+#include <GWCA/Managers/PlayerMgr.h>
 
 void PingsLinesRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {
@@ -109,10 +110,12 @@ void PingsLinesRenderer::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_
 
     bool new_session;
 
+    if (packet->player_number == GW::PlayerMgr::GetPlayerNumber()) {
+        return;
+    }
     if (drawings[packet->player_number].player == packet->player_number) {
-        return; // Don't need to draw our own compass markings
-        //new_session = drawings[packet->player_number].session != packet->session_id;
-        //drawings[packet->player_number].session = packet->session_id;
+        new_session = drawings[packet->player_number].session != packet->session_id;
+        drawings[packet->player_number].session = packet->session_id;
     }
     else {
         drawings[packet->player_number].player = packet->player_number;
@@ -559,7 +562,7 @@ void PingsLinesRenderer::SendQueue()
         }
         DrawOnCompass(static_cast<size_t>(session_id), queue.size(), pts);
         GW::UI::UIPacket::kCompassDraw packet = {
-            .player_number = GW::Agents::GetPlayerId(),
+            .player_number = GW::PlayerMgr::GetPlayerNumber(),
             .session_id = static_cast<size_t>(session_id),
             .number_of_points = queue.size(),
             .points = pts
