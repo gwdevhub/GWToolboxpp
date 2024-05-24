@@ -233,7 +233,7 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
             result = makeCondition(type);
         }
     };
-    const auto drawSubMenu = [&drawConditionSelector](std::string_view title, const std::vector<ConditionType>& types) 
+    const auto drawSubMenu = [&drawConditionSelector](std::string_view title, const auto& types) 
     {
         if (ImGui::BeginMenu(title.data())) 
         {
@@ -252,11 +252,11 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
 
     if (ImGui::BeginPopup("Add condition")) 
     {
-        drawSubMenu("Player", {ConditionType::PlayerIsNearPosition, ConditionType::PlayerHasBuff, ConditionType::PlayerHasSkill, ConditionType::PlayerHasClass, ConditionType::PlayerHasName, ConditionType::PlayerHasEnergy, ConditionType::PlayerHasHpBelow, ConditionType::PlayerIsIdle, ConditionType::PlayerHasItemEquipped, ConditionType::CanPopAgent});
-        drawSubMenu("Current target", {ConditionType::CurrentTargetHasHpBelow, ConditionType::CurrentTargetIsUsingSkill, ConditionType::CurrentTargetHasModel, ConditionType::CurrentTargetAllegiance, ConditionType::CurrentTargetDistance});
-        drawSubMenu("Party", {ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName});
-        drawSubMenu("Instance", {ConditionType::IsInMap, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime});
-        drawSubMenu("Logic", {ConditionType::Not, ConditionType::Or, ConditionType::And});
+        drawSubMenu("Player", std::array{ConditionType::PlayerIsNearPosition, ConditionType::PlayerHasBuff, ConditionType::PlayerHasSkill, ConditionType::PlayerHasClass, ConditionType::PlayerHasName, ConditionType::PlayerHasEnergy, ConditionType::PlayerHasHpBelow, ConditionType::PlayerIsIdle, ConditionType::PlayerHasItemEquipped, ConditionType::CanPopAgent});
+        drawSubMenu("Current target", std::array{ConditionType::CurrentTargetHasHpBelow, ConditionType::CurrentTargetIsUsingSkill, ConditionType::CurrentTargetHasModel, ConditionType::CurrentTargetAllegiance, ConditionType::CurrentTargetDistance});
+        drawSubMenu("Party", std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName});
+        drawSubMenu("Instance", std::array{ConditionType::IsInMap, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime});
+        drawSubMenu("Logic", std::array{ConditionType::Not, ConditionType::Or, ConditionType::And});
         drawConditionSelector(ConditionType::NearbyAgent);
         drawConditionSelector(ConditionType::KeyIsPressed);
         drawConditionSelector(ConditionType::OnlyTriggerOncePerInstance);
