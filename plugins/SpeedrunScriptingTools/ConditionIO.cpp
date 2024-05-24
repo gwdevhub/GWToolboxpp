@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 27);
+    static_assert((int)ConditionType::Count == 29);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -21,6 +21,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<QuestHasStateCondition>();
         case ConditionType::PartyPlayerCount:
             return std::make_shared<PartyPlayerCountCondition>();
+        case ConditionType::PartyHasLoadedIn:
+            return std::make_shared<PartyHasLoadedInCondition>();
         case ConditionType::InstanceProgress:
             return std::make_shared<InstanceProgressCondition>();
         case ConditionType::HasPartyWindowAllyOfName:
@@ -46,6 +48,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<PlayerIsIdleCondition>();
         case ConditionType::PlayerHasItemEquipped:
             return std::make_shared<PlayerHasItemEquippedCondition>();
+        case ConditionType::PlayerHasHpBelow:
+            return std::make_shared<PlayerHasHpBelowCondition>();
 
         case ConditionType::CurrentTargetHasHpBelow:
             return std::make_shared<CurrentTargetHasHpBelowCondition>();
@@ -74,7 +78,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 27);
+    static_assert((int)ConditionType::Count == 29);
     switch (type) {
         case ConditionType::Not:
             return "Not";
@@ -96,6 +100,8 @@ std::string_view toString(ConditionType type)
             return "Only trigger once";
         case ConditionType::PartyMemberStatus:
             return "Party member has status";
+        case ConditionType::PartyHasLoadedIn:
+            return "Party has finshed loading";
 
         case ConditionType::PlayerIsNearPosition:
             return "Player position";
@@ -113,6 +119,8 @@ std::string_view toString(ConditionType type)
             return "Player is idle";
         case ConditionType::PlayerHasItemEquipped:
             return "Player has item equipped";
+        case ConditionType::PlayerHasHpBelow:
+            return "Player hp";
         case ConditionType::CanPopAgent:
             return "Can pop agent";
 
@@ -142,7 +150,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(InputStream& stream)
 {
-static_assert((int)ConditionType::Count == 27);
+static_assert((int)ConditionType::Count == 29);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -159,6 +167,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<QuestHasStateCondition>(stream);
     case ConditionType::PartyPlayerCount:
         return std::make_shared<PartyPlayerCountCondition>(stream);
+    case ConditionType::PartyHasLoadedIn:
+        return std::make_shared<PartyHasLoadedInCondition>(stream);
     case ConditionType::InstanceProgress:
         return std::make_shared<InstanceProgressCondition>(stream);
     case ConditionType::HasPartyWindowAllyOfName:
@@ -184,6 +194,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<PlayerIsIdleCondition>(stream);
     case ConditionType::PlayerHasItemEquipped:
         return std::make_shared<PlayerHasItemEquippedCondition>(stream);
+    case ConditionType::PlayerHasHpBelow:
+        return std::make_shared<PlayerHasHpBelowCondition>(stream);
 
     case ConditionType::CurrentTargetHasHpBelow:
         return std::make_shared<CurrentTargetHasHpBelowCondition>(stream);
@@ -221,6 +233,7 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
         ConditionType::PlayerHasClass,
         ConditionType::PlayerHasName,
         ConditionType::PlayerHasEnergy,
+        ConditionType::PlayerHasHpBelow,
         ConditionType::PlayerIsIdle,
         ConditionType::PlayerHasItemEquipped,
 
@@ -235,6 +248,7 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
         ConditionType::IsInMap,
         ConditionType::QuestHasState,
         ConditionType::PartyPlayerCount,
+        ConditionType::PartyHasLoadedIn,
         ConditionType::InstanceProgress,
         ConditionType::HasPartyWindowAllyOfName,
         

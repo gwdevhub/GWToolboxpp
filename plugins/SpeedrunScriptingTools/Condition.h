@@ -30,6 +30,8 @@ enum class ConditionType : int {
     CurrentTargetAllegiance,
     NearbyAgent,
     CurrentTargetDistance,
+    PlayerHasHpBelow,
+    PartyHasLoadedIn,
 
     Count
 };
