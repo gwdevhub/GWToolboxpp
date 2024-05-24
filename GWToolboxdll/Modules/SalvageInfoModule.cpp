@@ -373,10 +373,11 @@ namespace {
     void AppendNicholasInfo(const uint32_t item_id, std::wstring& description) {
         const auto item = GW::Items::GetItemById(item_id);
         const auto name = item ? item->name_enc : nullptr;
-        if (name && DailyQuests::GetNicholasItemInfo(name)) {
+        const auto nick_item = name ? DailyQuests::GetNicholasItemInfo(name) : nullptr;
+        if (nick_item) {
             if (description.empty())
                 description += L"\x101";
-            description += std::format(L"\x2\x102\x2{}\x107\x108Nicholas The Traveller collects this!\x1", GW::EncStrings::ItemUnique);
+            description += std::format(L"\x2\x102\x2{}\x107\x108Nicholas The Traveller collects {} of these!\x1", GW::EncStrings::ItemUnique, nick_item->quantity);
         }
     }
     std::wstring tmp_item_description;
