@@ -688,7 +688,7 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesys
     HRESULT res = D3DERR_NOTAVAILABLE;
     size_t tries = 0;
     const auto ext = path_to_file.extension();
-    while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
+    while (res == D3DERR_NOTAVAILABLE && tries++ < 5) {
         if (ext == ".dds") {
             res = DirectX::CreateDDSTextureFromFileEx(device, path_to_file.c_str(), 0, D3DPOOL_MANAGED, true, texture);
         }
@@ -697,6 +697,7 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesys
         }
     }
     if (res != D3D_OK) {
+        std::filesystem::remove(path_to_file);
         StrSwprintf(error, L"Error loading resource from file %s - Error is %S", path_to_file.filename().wstring().c_str(), d3dErrorMessage(res));
         return res;
     }
