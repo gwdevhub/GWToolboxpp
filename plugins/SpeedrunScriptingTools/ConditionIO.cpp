@@ -89,56 +89,56 @@ std::string_view toString(ConditionType type)
         case ConditionType::IsInMap:
             return "Current map ID";
         case ConditionType::QuestHasState:
-            return "Queststate";
+            return "Quest state";
         case ConditionType::PartyPlayerCount:
-            return "Party player count";
+            return "Size";
         case ConditionType::InstanceProgress:
-            return "Instance progress";
+            return "Progress";
         case ConditionType::HasPartyWindowAllyOfName:
             return "Party window contains ally";
         case ConditionType::OnlyTriggerOncePerInstance:
             return "Only trigger once";
         case ConditionType::PartyMemberStatus:
-            return "Party member has status";
+            return "Member status";
         case ConditionType::PartyHasLoadedIn:
-            return "Party has finshed loading";
+            return "Finshed loading";
 
         case ConditionType::PlayerIsNearPosition:
-            return "Player position";
+            return "Position";
         case ConditionType::PlayerHasBuff:
-            return "Player buff";
+            return "Buff";
         case ConditionType::PlayerHasSkill:
-            return "Player has skill";
+            return "Has skill";
         case ConditionType::PlayerHasClass:
-            return "Player has class";
+            return "Class";
         case ConditionType::PlayerHasName:
-            return "Player has name";
+            return "Name";
         case ConditionType::PlayerHasEnergy:
-            return "Player has energy";
+            return "Energy";
         case ConditionType::PlayerIsIdle:
-            return "Player is idle";
+            return "Is idle";
         case ConditionType::PlayerHasItemEquipped:
-            return "Player has item equipped";
+            return "Equipped item";
         case ConditionType::PlayerHasHpBelow:
-            return "Player hp";
+            return "HP";
         case ConditionType::CanPopAgent:
             return "Can pop agent";
 
         case ConditionType::CurrentTargetHasHpBelow:
-            return "Current target HP";
+            return "HP";
         case ConditionType::CurrentTargetIsUsingSkill:
-            return "Current target skill";
+            return "Skill";
         case ConditionType::CurrentTargetHasModel:
-            return "Current target model";
+            return "Model";
         case ConditionType::CurrentTargetAllegiance:
-            return "Current target allegiance";
+            return "Allegiance";
         case ConditionType::CurrentTargetDistance:
-            return "Current target distance";
+            return "Distance";
 
         case ConditionType::KeyIsPressed:
             return "Keypress";
         case ConditionType::InstanceTime:
-            return "Instance time";
+            return "Time";
         case ConditionType::NearbyAgent:
             return "Nearby agent exists";
 
@@ -225,55 +225,42 @@ switch (static_cast<ConditionType>(type))
 std::shared_ptr<Condition> drawConditionSelector(float width)
 {
     std::shared_ptr<Condition> result = nullptr;
-    
-    constexpr auto conditions = std::array{
-        ConditionType::PlayerIsNearPosition,
-        ConditionType::PlayerHasBuff,
-        ConditionType::PlayerHasSkill,
-        ConditionType::PlayerHasClass,
-        ConditionType::PlayerHasName,
-        ConditionType::PlayerHasEnergy,
-        ConditionType::PlayerHasHpBelow,
-        ConditionType::PlayerIsIdle,
-        ConditionType::PlayerHasItemEquipped,
 
-        ConditionType::NearbyAgent,
-
-        ConditionType::CurrentTargetHasHpBelow,
-        ConditionType::CurrentTargetIsUsingSkill,
-        ConditionType::CurrentTargetHasModel,
-        ConditionType::CurrentTargetAllegiance,
-        ConditionType::CurrentTargetDistance,
-
-        ConditionType::IsInMap,
-        ConditionType::QuestHasState,
-        ConditionType::PartyPlayerCount,
-        ConditionType::PartyHasLoadedIn,
-        ConditionType::InstanceProgress,
-        ConditionType::HasPartyWindowAllyOfName,
-        
-        ConditionType::PartyMemberStatus,
-
-        ConditionType::InstanceTime,
-        ConditionType::KeyIsPressed,
-        ConditionType::CanPopAgent,
-
-        ConditionType::OnlyTriggerOncePerInstance,
-
-        ConditionType::Not,
-        ConditionType::Or,
-        ConditionType::And,
+    const auto drawConditionSelector = [&result](ConditionType type)
+    {
+        if (ImGui::MenuItem(toString(type).data())) 
+        {
+            result = makeCondition(type);
+        }
+    };
+    const auto drawSubMenu = [&drawConditionSelector](std::string_view title, const std::vector<ConditionType>& types) 
+    {
+        if (ImGui::BeginMenu(title.data())) 
+        {
+            for (const auto& type : types) 
+            {
+                drawConditionSelector(type);
+            }
+            ImGui::EndMenu();
+        }
     };
 
-    if (ImGui::Button("Add condition", ImVec2(width, 0))) {
+    if (ImGui::Button("Add condition", ImVec2(width, 0))) 
+    {
         ImGui::OpenPopup("Add condition");
     }
-    if (ImGui::BeginPopup("Add condition")) {
-        for (auto condition : conditions) {
-            if (ImGui::Selectable(toString(condition).data())) {
-                result = makeCondition(condition);
-            }
-        }
+
+    if (ImGui::BeginPopup("Add condition")) 
+    {
+        drawSubMenu("Player", {ConditionType::PlayerIsNearPosition, ConditionType::PlayerHasBuff, ConditionType::PlayerHasSkill, ConditionType::PlayerHasClass, ConditionType::PlayerHasName, ConditionType::PlayerHasEnergy, ConditionType::PlayerHasHpBelow, ConditionType::PlayerIsIdle, ConditionType::PlayerHasItemEquipped, ConditionType::CanPopAgent});
+        drawSubMenu("Current target", {ConditionType::CurrentTargetHasHpBelow, ConditionType::CurrentTargetIsUsingSkill, ConditionType::CurrentTargetHasModel, ConditionType::CurrentTargetAllegiance, ConditionType::CurrentTargetDistance});
+        drawSubMenu("Party", {ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName});
+        drawSubMenu("Instance", {ConditionType::IsInMap, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime});
+        drawSubMenu("Logic", {ConditionType::Not, ConditionType::Or, ConditionType::And});
+        drawConditionSelector(ConditionType::NearbyAgent);
+        drawConditionSelector(ConditionType::KeyIsPressed);
+        drawConditionSelector(ConditionType::OnlyTriggerOncePerInstance);
+
         ImGui::EndPopup();
     }
 
