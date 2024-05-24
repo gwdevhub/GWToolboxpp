@@ -28,6 +28,7 @@ namespace {
     const std::string missingContentToken = "/";
     const std::string endOfListToken = ">";
     constexpr float indent = 30.f;
+    constexpr double eps = 1e-3;
 
     GW::Item* FindMatchingItem(GW::Constants::Bag _bag_idx, uint32_t model_id)
     {
@@ -78,14 +79,15 @@ namespace {
     }
     float angleToAgent(const GW::AgentLiving* player, const GW::AgentLiving* agent)
     {
+        if (GW::GetSquareDistance(player->pos, agent->pos) < eps) return 0.f;
         constexpr auto radiansToDegree = 180.f / 3.141592741f;
-        const auto angleBetweenNormalizedVectors = [](GW::Vec2f a, GW::Vec2f b) { return std::acos(a.x * b.x + a.y * b.y); };
+        const auto angleBetweenNormalizedVectors = [](GW::Vec2f a, GW::Vec2f b) {
+            return std::acos(a.x * b.x + a.y * b.y);
+        };
         const auto forwards = GW::Normalize(GW::Vec2f{player->rotation_cos, player->rotation_sin});
         const auto toTarget = GW::Normalize(GW::Vec2f{agent->pos.x - player->pos.x, agent->pos.y - player->pos.y});
         return angleBetweenNormalizedVectors(forwards, toTarget) * radiansToDegree;
     }
-
-    constexpr double eps = 1e-3;
 } // namespace
 
 /// ------------- MoveToAction -------------

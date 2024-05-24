@@ -48,6 +48,8 @@ namespace {
     // Returns angle in degrees (0-180) between player forwards direction and agent
     float angleToAgent(const GW::AgentLiving* player, const GW::AgentLiving* agent) 
     {
+        if (GW::GetSquareDistance(player->pos,agent->pos) < eps)
+            return 0.f;
         constexpr auto radiansToDegree = 180.f / 3.141592741f;
         const auto angleBetweenNormalizedVectors = [](GW::Vec2f a, GW::Vec2f b) {
             return std::acos(a.x * b.x + a.y * b.y);
