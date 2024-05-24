@@ -283,6 +283,20 @@ void PartyPlayerCountCondition::drawSettings()
     ImGui::PopID();
 }
 
+/// ------------- PartyHasLoadedInCondition -------------
+bool PartyHasLoadedInCondition::check() const
+{
+    const auto partyInfo = GW::PartyMgr::GetPartyInfo();
+    if (!partyInfo) return false;
+    return std::ranges::all_of(partyInfo->players, [](const auto& player) {return player.connected();});
+}
+void PartyHasLoadedInCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+    ImGui::Text("If all players in the party have finished loading");
+    ImGui::PopID();
+}
+
 /// ------------- InstanceProgressCondition -------------
 InstanceProgressCondition::InstanceProgressCondition(InputStream& stream)
 {
@@ -1075,5 +1089,31 @@ void PlayerHasItemEquippedCondition::drawSettings()
     ImGui::SameLine();
     ImGui::PushItemWidth(90);
     ImGui::InputInt("model id", &modelId, 0);
+    ImGui::PopID();
+}
+
+/// ------------- PlayerHasHpBelowCondition -------------
+PlayerHasHpBelowCondition::PlayerHasHpBelowCondition(InputStream& stream)
+{
+    stream >> hp;
+}
+void PlayerHasHpBelowCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << hp;
+}
+bool PlayerHasHpBelowCondition::check() const
+{
+    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    return player && player->hp * 100.f < hp;
+}
+void PlayerHasHpBelowCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+    ImGui::Text("If the player has HP below");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::InputFloat("%", &hp, 0);
     ImGui::PopID();
 }
