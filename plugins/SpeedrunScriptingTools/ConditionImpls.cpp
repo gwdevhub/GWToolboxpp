@@ -1,7 +1,8 @@
 #include <ConditionImpls.h>
 
 #include <ConditionIO.h>
-#include <utils.h>
+#include <enumUtils.h>
+#include <InstanceInfo.h>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
@@ -21,14 +22,11 @@
 
 #include <Keys.h>
 
-#include "windows.h"
 #include "imgui.h"
 #include "ImGuiCppWrapper.h"
 
 #include <algorithm>
 #include <optional>
-
-#include <iostream>
 
 namespace {
     constexpr double eps = 1e-3;
@@ -828,7 +826,7 @@ void QuestHasStateCondition::drawSettings()
     ImGui::SameLine();
     drawEnumButton(QuestStatus::NotStarted, QuestStatus::Failed, status);
     ImGui::SameLine();
-    ShowHelp("Objective ID, NOT quest ID!\nUW: Chamber 146, Restore 147, Escort 148, UWG 149, Vale 150, Waste 151, Pits 152, Planes 153, Mnts 154, Pools 155, Dhuum 157");
+    ImGui::ShowHelp("Objective ID, NOT quest ID!\nUW: Chamber 146, Restore 147, Escort 148, UWG 149, Vale 150, Waste 151, Pits 152, Planes 153, Mnts 154, Pools 155, Dhuum 157");
     ImGui::PopID();
 }
 
@@ -860,7 +858,7 @@ void KeyIsPressedCondition::drawSettings()
     ImGui::SameLine();
     drawHotkeySelector(shortcutKey, shortcutMod, description, 100.f);
     ImGui::SameLine();
-    ShowHelp("Different from the hotkey trigger, this does not block the input to Guild Wars and continuously checks if the key is pressed; not just once when it is pressed");
+    ImGui::ShowHelp("Different from the hotkey trigger, this does not block the input to Guild Wars and continuously checks if the key is pressed; not just once when it is pressed");
     ImGui::PopID();
 }
 
@@ -977,7 +975,7 @@ void NearbyAgentCondition::drawSettings()
 
         ImGui::BulletText("Allegiance");
         ImGui::SameLine();
-        drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, 0, 100.f, std::optional{AgentType::Self});
+        drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, 0, 100.f, std::nullopt, std::optional{AgentType::Self});
 
         ImGui::BulletText("Class");
         ImGui::SameLine();

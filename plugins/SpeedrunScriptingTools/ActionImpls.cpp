@@ -3,6 +3,7 @@
 #include <ConditionIO.h>
 #include <ActionIO.h>
 #include <InstanceInfo.h>
+#include <enumUtils.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
@@ -22,8 +23,6 @@
 
 #include <ImGuiCppWrapper.h>
 #include <thread>
-
-#include <iostream>
 
 namespace {
     const std::string missingContentToken = "/";
@@ -225,7 +224,7 @@ void CastOnSelfAction::drawSettings()
     ImGui::SameLine();
     drawSkillIDSelector(id);
     ImGui::SameLine();
-    ShowHelp("Send a CtoS packet to cast a spell on yourself even if you have another target selected. Only necessary for targeted spells.");
+    ImGui::ShowHelp("Send a CtoS packet to cast a spell on yourself even if you have another target selected. Only necessary for targeted spells.");
 
     ImGui::PopID();
 }
