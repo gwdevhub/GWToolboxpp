@@ -349,7 +349,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Checkbox("Show message when a script is triggered", &showTriggerMessage);
 
-    ImGui::Text("Version 1.2. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 1.2-angleToTargetTest. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";

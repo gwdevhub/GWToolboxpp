@@ -44,6 +44,18 @@ namespace {
         }
         return nullptr;
     }
+
+    // Returns angle in degrees (0-180) between player forwards direction and agent
+    float angleToAgent(const GW::AgentLiving* player, const GW::AgentLiving* agent) 
+    {
+        constexpr auto radiansToDegree = 180.f / 3.141592741f;
+        const auto angleBetweenNormalizedVectors = [](GW::Vec2f a, GW::Vec2f b) {
+            return std::acos(a.x * b.x + a.y * b.y);
+        };
+        const auto forwards = GW::Normalize(GW::Vec2f{player->rotation_cos, player->rotation_sin});
+        const auto toTarget = GW::Normalize(GW::Vec2f{agent->pos.x - player->pos.x, agent->pos.y - player->pos.y});
+        return angleBetweenNormalizedVectors(forwards, toTarget) * radiansToDegree;
+    }
 }
 
 /// ------------- InvertedCondition -------------
@@ -943,6 +955,7 @@ bool NearbyAgentCondition::check() const
                     return false;
             }
         }();
+
         const auto correctPrimary = (primary == Class::Any) || primary == (Class)agent->primary;
         const auto correctSecondary = (secondary == Class::Any) || secondary == (Class)agent->secondary;
         const auto correctStatus = (status == Status::Any) || ((status == Status::Alive) == agent->GetIsAlive());
@@ -954,8 +967,9 @@ bool NearbyAgentCondition::check() const
         const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedName(agent->agent_id) == agentName);
         const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(agent->pos, polygon);
         const auto goodHp = minHp <= 100.f * agent->hp && 100.f * agent->hp <= maxHp;
+        const auto goodAngle = angleToAgent(player, agent) - eps < maxAngle;
 
-        return correctType && correctPrimary && correctSecondary && correctStatus && hexedCorrectly && correctSkill && correctModelId && goodDistance && goodName && goodPosition && goodHp;
+        return correctType && correctPrimary && correctSecondary && correctStatus && hexedCorrectly && correctSkill && correctModelId && goodDistance && goodName && goodPosition && goodHp && goodAngle;
     };
     if (agentType == AgentType::PartyMember) {
         const auto info = GW::PartyMgr::GetPartyInfo();
@@ -1032,6 +1046,13 @@ void NearbyAgentCondition::drawSettings()
         ImGui::Text("Has model");
         ImGui::SameLine();
         ImGui::InputInt("id (0 for any)###3", &modelId, 0);
+
+        ImGui::Bullet();
+        ImGui::Text("Maximum angle to player forward");
+        ImGui::SameLine();
+        ImGui::InputFloat("degrees", &maxAngle);
+        if (maxAngle < 0.f) maxAngle = 0.f;
+        if (maxAngle > 180.f) maxAngle = 180.f;
 
         ImGui::Bullet();
         ImGui::Text("Is within polygon");

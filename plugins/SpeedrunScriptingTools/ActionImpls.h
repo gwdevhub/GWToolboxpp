@@ -112,6 +112,7 @@ private:
     std::unordered_set<GW::AgentID> recentlyTargetedEnemies;
     float minHp = 0.f;
     float maxHp = 100.f;
+    float maxAngle = 180.f;
 };
 
 class UseItemAction : public Action {
