@@ -3,8 +3,8 @@
 #include <ConditionIO.h>
 #include <ActionIO.h>
 #include <InstanceInfo.h>
-#include <utils.h>
 #include <Keys.h>
+#include <enumUtils.h>
 
 #include <GWCA/GWCA.h>
 

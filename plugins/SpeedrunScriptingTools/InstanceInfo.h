@@ -1,6 +1,8 @@
 #pragma once
 
-#include <utils.h>
+#include <Enums.h>
+
+#include <commonIncludes.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Agent.h>
 

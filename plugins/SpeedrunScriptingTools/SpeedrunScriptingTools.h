@@ -2,7 +2,7 @@
 
 #include <Action.h>
 #include <Condition.h>
-#include <TriggerPacket.h>
+#include <Enums.h>
 
 #include <ToolboxPlugin.h>
 
