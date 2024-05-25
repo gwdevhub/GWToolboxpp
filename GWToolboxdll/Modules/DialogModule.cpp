@@ -49,7 +49,7 @@ namespace {
     // Parse any buttons held within the dialog body
     // ReSharper disable once CppParameterMayBeConst
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
-    void OnDialogBodyDecoded(void*, wchar_t* decoded)
+    void OnDialogBodyDecoded(void*, const wchar_t* decoded)
     {
         const std::wregex button_regex(L"<a=([0-9]+)>([^<]+)(<|$)");
         std::wsmatch m;

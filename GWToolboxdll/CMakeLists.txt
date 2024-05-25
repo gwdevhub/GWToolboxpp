@@ -4,6 +4,8 @@ file(GLOB SOURCES
     "*.h"
     "*.cpp"
     "GWToolbox.rc"
+    "Constants/*.h"
+    "Constants/*.cpp"
     "Modules/*.h"
     "Modules/*.cpp"
     "Utils/*.h"

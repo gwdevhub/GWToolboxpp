@@ -131,7 +131,7 @@ export namespace PluginUtils {
         bool sanitised = false;
         virtual void sanitise();
         GW::Constants::Language language_id = static_cast<GW::Constants::Language>(-1);
-        static void OnStringDecoded(void* param, wchar_t* decoded);
+        static void OnStringDecoded(void* param, const wchar_t* decoded);
 
     public:
         // Set the language for decoding this encoded string. If the language has changed, resets the decoded result. Returns this for chaining.
@@ -942,9 +942,7 @@ namespace PluginUtils {
         }
     }
 
-    // ReSharper disable once CppParameterMayBeConst
-    // ReSharper disable once CppParameterMayBeConstPtrOrRef
-    void EncString::OnStringDecoded(void* param, wchar_t* decoded)
+    void EncString::OnStringDecoded(void* param, const wchar_t* decoded)
     {
         const auto context = static_cast<EncString*>(param);
         if (!(context && context->decoding && !context->decoded)) {

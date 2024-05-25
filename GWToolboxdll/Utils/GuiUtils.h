@@ -147,7 +147,7 @@ namespace GuiUtils {
         bool sanitised = false;
         virtual void sanitise();
         GW::Constants::Language language_id = static_cast<GW::Constants::Language>(0xff);
-        static void OnStringDecoded(void* param, wchar_t* decoded);
+        static void OnStringDecoded(void* param, const wchar_t* decoded);
 
     public:
         // Set the language for decoding this encoded string. If the language has changed, resets the decoded result. Returns this for chaining.

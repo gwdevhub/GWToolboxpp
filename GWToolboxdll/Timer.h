@@ -19,5 +19,5 @@ inline clock_t TIMER_INIT()
 
 inline clock_t TIMER_DIFF(const clock_t t)
 {
-    return clock() - t;
+    return TIMER_INIT() - t;
 }

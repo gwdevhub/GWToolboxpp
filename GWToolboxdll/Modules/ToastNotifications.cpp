@@ -145,7 +145,7 @@ namespace {
 
     // ReSharper disable once CppParameterMayBeConst
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
-    void OnToastMessageDecoded(void* callback_param, wchar_t* decoded)
+    void OnToastMessageDecoded(void* callback_param, const wchar_t* decoded)
     {
         const auto title = static_cast<wchar_t*>(callback_param);
         ToastNotifications::SendToast(title, decoded, OnGenericToastActivated);

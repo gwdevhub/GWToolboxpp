@@ -27,53 +27,17 @@
 #include <Modules/Resources.h>
 #include <Modules/GameSettings.h>
 #include <Modules/SalvageInfoModule.h>
+#include <Windows/DailyQuestsWindow.h>
 
 #include <Utils/GuiUtils.h>
 #include <Timer.h>
+#include <Constants/EncStrings.h>
 
 using nlohmann::json;
-namespace GW {
-    namespace EncStrings {
-        const wchar_t* Bone = L"\x22D0\xBEB5\xC462\x64B5";
-        const wchar_t* IronIngot = L"\x22EB\xC6B0\xBD46\x2DAD";
-        const wchar_t* TannedHideSquare = L"\x22E3\xD3A9\xC22C\x285A";
-        const wchar_t* Scale = L"\x22F0\x832C\xD6A3\x1382";
-        const wchar_t* ChitinFragment = L"\x22F1\x9156\x8692\x497D";
-        const wchar_t* BoltofCloth = L"\x22D4\x888E\x9089\x6EC8";
-        const wchar_t* WoodPlank = L"\x22E8\xE46D\x8FE4\x5F8B";
-        const wchar_t* GraniteSlab = L"\x22F2\xA623\xFAE8\xE5A";
-        const wchar_t* PileofGlitteringDust = L"\x22D8\xA4A4\xED0D\x4304";
-        const wchar_t* PlantFiber = L"\x22DD\xAC69\xDEA5\x73C5";
-        const wchar_t* Feather = L"\x22DC\x8209\xAD29\xBBD";
-        const wchar_t* FurSquare = L"\x22E4\xE5F4\xBBEF\x5A25";
-        const wchar_t* BoltofLinen = L"\x22D5\x8371\x8ED5\x56B4";
-        const wchar_t* BoltofDamask = L"\x22D6\xF04C\xF1E5\x5699";
-        const wchar_t* BoltofSilk = L"\x22D7\xFD2A\xC85B\x58B3";
-        const wchar_t* GlobofEctoplasm = L"\x22D9\xE7B8\xE9DD\x2322";
-        const wchar_t* SteelIngot = L"\x22EC\xF12D\x87A7\x6460";
-        const wchar_t* DeldrimorSteelIngot = L"\x22ED\xB873\x85A4\x74B";
-        const wchar_t* MonstrousClaw = L"\x22D2\xCDC6\xEFC8\x3C99";
-        const wchar_t* MonstrousEye = L"\x22DA\x9059\xD163\x2187";
-        const wchar_t* MonstrousFang = L"\x22DB\x8DCE\xC3FA\x4A26";
-        const wchar_t* Ruby = L"\x22E0\x93CC\x939C\x5286";
-        const wchar_t* Sapphire = L"\x22E1\xB785\x866C\x34F6";
-        const wchar_t* Diamond = L"\x22DE\xBB93\xABD4\x5439";
-        const wchar_t* OnyxGemstone = L"\x22DF\xD425\xC093\x1CF4";
-        const wchar_t* LumpofCharcoal = L"\x22D1\xDE2A\xED03\x2625";
-        const wchar_t* ObsidianShard = L"\x22EA\xFDA9\xDE53\x2D16";
-        const wchar_t* TemperedGlassVial = L"\x22E2\xCE9B\x8771\x7DC7";
-        const wchar_t* LeatherSquare = L"\x22E5\x9758\xC5DD\x727";
-        const wchar_t* ElonianLeatherSquare = L"\x22E6\xE8F4\xA898\x75CB";
-        const wchar_t* VialofInk = L"\x22E7\xC1DA\xF2C1\x452A";
-        const wchar_t* RollofParchment = L"\x22EE\xF65A\x86E6\x1C6C";
-        const wchar_t* RollofVellum = L"\x22EF\xC588\x861D\x5BD3";
-        const wchar_t* SpiritwoodPlank = L"\x22F3\xA11C\xC924\x5E15";
-        const wchar_t* AmberChunk = L"\x55D0\xF8B7\xB108\x6018";
-        const wchar_t* JadeiteShard = L"\x55D1\xD189\x845A\x7164";
-    }
-}
-
 namespace {
+    // If requesting info from gww for an item fails, how long should we wait before retrying?
+    constexpr clock_t salvage_info_retry_interval = CLOCKS_PER_SEC * 30;
+
     struct CraftingMaterial {
         uint32_t model_id; // Used to map to kamadan trade chat
         const wchar_t* enc_name;
@@ -90,14 +54,14 @@ namespace {
             decoding_en_name_plural = true;
             GW::UI::AsyncDecodeStr(enc_name_plural.c_str(), OnPluralNameDecoded, this, GW::Constants::Language::English);
         }
-        static void OnNameDecoded(void* param, wchar_t* s) {
+        static void OnNameDecoded(void* param, const wchar_t* s) {
             auto ctx = (CraftingMaterial*)param;
-            ctx->en_name = s;
+            ctx->en_name = GuiUtils::ToLower(s);
             ctx->decoding_en_name = false;
         }
-        static void OnPluralNameDecoded(void* param, wchar_t* s) {
+        static void OnPluralNameDecoded(void* param, const wchar_t* s) {
             auto ctx = (CraftingMaterial*)param;
-            ctx->en_name_plural = s;
+            ctx->en_name_plural = GuiUtils::ToLower(s);
             ctx->en_name_plural = ctx->en_name_plural.substr(2); // Remove "0 " prefix
             ctx->decoding_en_name_plural = false;
         }
@@ -112,7 +76,9 @@ namespace {
         GuiUtils::EncString en_name; // Used to map to Guild Wars Wiki
         std::vector<CraftingMaterial*> common_crafting_materials;
         std::vector<CraftingMaterial*> rare_crafting_materials;
-        clock_t last_retry = 0;
+        std::vector<std::string> searched_urls; // Used to detect cycles
+        DailyQuests::NicholasCycleData* nicholas_info = nullptr;
+        clock_t last_retry = salvage_info_retry_interval * -1;
         bool loading = false;
         bool success = false;
 
@@ -168,6 +134,23 @@ namespace {
         return output;
     };
 
+    inline std::string& replace_all(std::string& s, const std::string& from, const std::string& to) {
+        if (from.empty()) {
+            return s;
+        }
+        size_t pos = 0;
+        while ((pos = s.find(from, pos)) != std::string::npos) {
+            s.replace(pos, from.length(), to);
+            pos += to.length();
+        }
+        return s;
+    }
+
+    inline std::string& handle_encoded_names(std::string& s) {
+        s = replace_all(s, "&#39;", "'");
+        return s;
+    }
+
     // Make sure you pass valid html e.g. start with a < tag
     std::string& strip_tags(std::string& html) {
         while (1)
@@ -193,7 +176,10 @@ namespace {
         // Now we've got the wiki info parsed, trigger an item update ui message; this will refresh the item tooltip
         GW::GameThread::Enqueue([enc_name] {
             const auto item = GW::Items::GetHoveredItem();
-            if (item && wcscmp(item->name_enc, enc_name) == 0) {
+            if (!item)
+                return;
+            const auto item_name_without_mods = ItemDescriptionHandler::GetItemEncNameWithoutMods(item);
+            if (wcscmp(item_name_without_mods.c_str(), enc_name) == 0) {
                 GW::UI::SendUIMessage(GW::UI::UIMessage::kItemUpdated, item);
             }
             });
@@ -214,7 +200,7 @@ namespace {
                 auto links_end = std::sregex_iterator();
                 for (std::sregex_iterator j = links_begin; j != links_end; ++j)
                 {
-                    const auto material_name = GuiUtils::StringToWString(j->str(1));
+                    const auto material_name = GuiUtils::ToLower(GuiUtils::StringToWString(j->str(1)));
 
                     const auto found = std::ranges::find_if(materials, [material_name](auto* c) {
                         return c->en_name == material_name || c->en_name_plural == material_name;
@@ -254,17 +240,27 @@ namespace {
 
                 // Fetch materials of the sub urls and add them to the salvage info struct
                 if (sub_urls.size() > 0) {
-                    for (const auto sub_name : sub_urls) {
-                        const auto url = GuiUtils::WikiUrl(sub_name);
+                    auto search_suburls = false;
+                    for (const auto& sub_name : sub_urls) {
+                        auto url = sub_name;
+                        url = GuiUtils::WikiUrl(handle_encoded_names(url));
+                        // Skip urls that have already been searched
+                        if (std::find(info->searched_urls.begin(), info->searched_urls.end(), url) != info->searched_urls.end()) {
+                            continue;
+                        }
+                        search_suburls = true;
+                        info->searched_urls.push_back(url);
                         Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(30));
                     }
-                    
-                    return;
+                    // Return early if we redirected from this page
+                    if (search_suburls) {
+                        return;
+                    }
                 }
             }
 
-            const auto weapon_page_regex = std::regex(R"(This article is about [\s\S]*? type[\s\S]*?same name)");
-            if (std::regex_search(response, m, weapon_page_regex)) {
+            const auto different_article_page_regex = std::regex(R"(This article is about [\s\S]*?For the weapon[\s\S]*?)");
+            if (std::regex_search(response, m, different_article_page_regex)) {
                 // Detected weapon type page. We need to go to the weapon with same name page and fetch materials from there
                 const auto expected_token = std::format("{} (weapon)", info->en_name.string());
                 std::unordered_set<std::string> sub_urls;
@@ -281,12 +277,22 @@ namespace {
 
                 // Fetch materials of the sub urls and add them to the salvage info struct
                 if (sub_urls.size() > 0) {
-                    for (const auto sub_name : sub_urls) {
-                        const auto url = GuiUtils::WikiUrl(sub_name);
+                    auto search_suburls = false;
+                    for (const auto& sub_name : sub_urls) {
+                        auto url = sub_name;
+                        url = GuiUtils::WikiUrl(handle_encoded_names(url));
+                        // Skip urls that have already been searched
+                        if (std::find(info->searched_urls.begin(), info->searched_urls.end(), url) != info->searched_urls.end()) {
+                            continue;
+                        }
+                        search_suburls = true;
+                        info->searched_urls.push_back(url);
                         Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(30));
                     }
-
-                    return;
+                    // Return early if we redirected from this page
+                    if (search_suburls) {
+                        return;
+                    }
                 }
             }
 
@@ -322,6 +328,7 @@ namespace {
             Sleep(16);
         }
         const auto url = GuiUtils::WikiUrl(info->en_name.string());
+        info->searched_urls.push_back(url);
         Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(1));
     }
 
@@ -340,8 +347,9 @@ namespace {
         }
         const auto salvage_info = found->second;
         // If the item exists but it failed and the timeout has expired, attempt to fetch salvage info again
-        if (!salvage_info->loading && !salvage_info->success && TIMER_DIFF(salvage_info->last_retry) > 30000) {
+        if (!salvage_info->loading && !salvage_info->success && TIMER_DIFF(salvage_info->last_retry) > salvage_info_retry_interval) {
             salvage_info->loading = true;
+            salvage_info->nicholas_info = DailyQuests::GetNicholasItemInfo(single_item_name);
             salvage_info->last_retry = TIMER_INIT();
             Resources::EnqueueWorkerTask([salvage_info] {
                 FetchSalvageInfoFromGuildWarsWiki(salvage_info);
@@ -366,7 +374,9 @@ namespace {
             return;
         }
 
-        const auto salvage_info = GetSalvageInfo(item->name_enc);
+        const auto name_without_mods = ItemDescriptionHandler::GetItemEncNameWithoutMods(item);
+
+        const auto salvage_info = GetSalvageInfo(name_without_mods.c_str());
         if (!salvage_info)
             return;
 
@@ -397,6 +407,17 @@ namespace {
 
             description += std::format(L"\x2\x102\x2\x108\x107<c=@ItemRare>Rare Materials:</c> \x1\x2{}", items);
         }
+
+    }
+    void AppendNicholasInfo(const uint32_t item_id, std::wstring& description) {
+        const auto item = GW::Items::GetItemById(item_id);
+        const auto name = item ? item->name_enc : nullptr;
+        const auto nick_item = name ? DailyQuests::GetNicholasItemInfo(name) : nullptr;
+        if (nick_item) {
+            if (description.empty())
+                description += L"\x101";
+            description += std::format(L"\x2\x102\x2{}\x107\x108Nicholas The Traveller collects {} of these!\x1", GW::EncStrings::ItemUnique, nick_item->quantity);
+        }
     }
     std::wstring tmp_item_description;
     void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc) 
@@ -406,6 +427,7 @@ namespace {
             tmp_item_description.assign(*out_desc);
         }
         AppendSalvageInfoDescription(item_id, tmp_item_description);
+        AppendNicholasInfo(item_id, tmp_item_description);
         *out_desc = tmp_item_description.data();
     }
 }

@@ -30,6 +30,7 @@
 #include "GwDatTextureModule.h"
 #include "GWCA/GameEntities/Skill.h"
 #include "GWCA/Managers/SkillbarMgr.h"
+#include <Constants/EncStrings.h>
 
 namespace {
     const char* d3dErrorMessage(HRESULT code)
@@ -83,6 +84,7 @@ namespace {
 
     std::map<std::string, IDirect3DTexture9**> damagetype_icons;
     std::map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
+    std::map<GW::Constants::MapID, GuiUtils::EncString*> region_names;
     std::unordered_map<GW::Constants::Language, std::unordered_map<uint32_t, GuiUtils::EncString*>> encoded_string_ids;
     std::filesystem::path current_settings_folder;
     constexpr size_t MAX_WORKERS = 5;
@@ -686,7 +688,7 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesys
     HRESULT res = D3DERR_NOTAVAILABLE;
     size_t tries = 0;
     const auto ext = path_to_file.extension();
-    while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
+    while (res == D3DERR_NOTAVAILABLE && tries++ < 5) {
         if (ext == ".dds") {
             res = DirectX::CreateDDSTextureFromFileEx(device, path_to_file.c_str(), 0, D3DPOOL_MANAGED, true, texture);
         }
@@ -695,6 +697,7 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesys
         }
     }
     if (res != D3D_OK) {
+        std::filesystem::remove(path_to_file);
         StrSwprintf(error, L"Error loading resource from file %s - Error is %S", path_to_file.filename().wstring().c_str(), d3dErrorMessage(res));
         return res;
     }
@@ -1105,11 +1108,74 @@ GuiUtils::EncString* Resources::GetMapName(const GW::Constants::MapID map_id)
     if (found != map_names.end()) {
         return found->second;
     }
+    if (map_id == GW::Constants::MapID::None) {
+        map_names[map_id] = DecodeStringId(0x3);
+        return map_names[map_id];
+    }
     const auto area = GW::Map::GetMapInfo(map_id);
-    ASSERT(area);
-    const auto ret = DecodeStringId(area->name_id);
-    map_names[map_id] = ret;
-    return ret;
+    ASSERT(area && area->name_id);
+    map_names[map_id] = DecodeStringId(area->name_id);
+    return map_names[map_id];
+}
+
+const wchar_t* Resources::GetRegionName(const GW::Constants::MapID map_id)
+{
+    const auto area_info = GW::Map::GetMapInfo(map_id);
+    switch (area_info->region) {
+    case GW::Region_BattleIslands:
+        return GW::EncStrings::MapRegion::BattleIsles;
+
+    // Prophecies
+    case GW::Region::Region_Maguuma:
+        return GW::EncStrings::MapRegion::MaguumaJungle;
+    case GW::Region::Region_Ascalon:
+    case GW::Region::Region_Presearing:
+        return GW::EncStrings::MapRegion::Ascalon;
+    case GW::Region::Region_Kryta:
+        return GW::EncStrings::MapRegion::Kryta;
+    case GW::Region::Region_NorthernShiverpeaks: {
+        // TODO: Southern vs northern shivers
+        return GW::EncStrings::MapRegion::NorthernShiverpeaks;
+    }
+    case GW::Region_CrystalDesert:
+        return GW::EncStrings::MapRegion::CrystalDesert;
+    case GW::Region_FissureOfWoe: {
+        // TODO: Ring of fire?
+            // TODO: Underworld
+        return GW::EncStrings::MapRegion::FissureOfWoe;
+    }
+
+    // Factions
+    case GW::Region::Region_Kurzick:
+        return GW::EncStrings::MapRegion::EchovaldForest;
+    case GW::Region::Region_Luxon:
+        return GW::EncStrings::MapRegion::TheJadeSea;
+    case GW::Region::Region_ShingJea:
+        return GW::EncStrings::MapRegion::ShingJeaIsland;
+    case GW::Region::Region_Kaineng:
+        return GW::EncStrings::MapRegion::KainengCity;
+
+    // Nightfall
+    case GW::Region::Region_Kourna:
+        return GW::EncStrings::MapRegion::Kourna;
+    case GW::Region::Region_Vaabi:
+        return GW::EncStrings::MapRegion::Vabbi;
+    case GW::Region::Region_Istan:
+        return GW::EncStrings::MapRegion::Istan;
+    case GW::Region::Region_DomainOfAnguish:
+        return GW::EncStrings::MapRegion::RealmOfTorment;
+
+    // Eye of the north
+    case GW::Region::Region_CharrHomelands:
+        return GW::EncStrings::MapRegion::CharrHomelands;
+    case GW::Region::Region_DepthsOfTyria:
+        return GW::EncStrings::MapRegion::DepthsOfTyria;
+    case GW::Region::Region_FarShiverpeaks:
+        return GW::EncStrings::MapRegion::FarShiverpeaks;
+    case GW::Region::Region_TarnishedCoast:
+        return GW::EncStrings::MapRegion::TarnishedCoast;
+    }
+    return L"\x108\107No region name yet :(\x1";
 }
 
 GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id, GW::Constants::Language language)
