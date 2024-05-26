@@ -188,7 +188,7 @@ namespace {
     void OnWikiContentDownloaded(bool success, const std::string& response, void* wparam) {
         auto* info = (SalvageInfo*)wparam;
         if (!success) {
-            Log::Error("Failed to fetch salvage info. Response: %s", response.c_str());
+            Log::Log("Failed to fetch salvage info. Response: %s", response.c_str());
             info->loading = false;
             SignalItemDescriptionUpdated(info->en_name.encoded().c_str());
             return;
