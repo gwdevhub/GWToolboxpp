@@ -15,7 +15,13 @@ namespace GW {
         static const wchar_t* MaterialTrader = L"\xCDA";
         static const wchar_t* RareMaterialTrader = L"\xCDB";
 
-        static const wchar_t* ZaishenBounty = L"\x8102\x545B\xD046\xBF3F\x615F";
+        static const wchar_t* NicholasTheTraveller = L"\x8102\x5362\xB438\x9C87\x4547";
+        static const wchar_t* ZaishenBounty = L"\x8102\x545B\xD046\xBF3F\x615f";
+        static const wchar_t* ZaishenVanquish = L"\x8102\x5459\x9068\xC6DD\x679";
+        static const wchar_t* ZaishenMission = L"\x8102\x5457\xDEF1\xEACD\x5EDB";
+        static const wchar_t* ZaishenCombat = L"\x8102\x545D\xBAED\xD4B5\x2C72";
+        static const wchar_t* WantedByTheShiningBlade = L"\x8102\x63D6\xA268\xEDE8\x5D6D";
+
         namespace MapRegion {
             static const wchar_t* BattleIsles = L"\xE63";
 
