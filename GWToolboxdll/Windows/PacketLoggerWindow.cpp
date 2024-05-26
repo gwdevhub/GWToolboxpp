@@ -11,7 +11,6 @@
 #include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Managers/StoCMgr.h>
-#include <GWCA/Managers/CtoSMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
@@ -948,9 +947,6 @@ void PacketLoggerWindow::Disable()
     for (size_t i = 0; i < game_server_handler.size(); i++) {
         GW::StoC::RemoveCallback(i, &hook_entry);
     }
-    for (size_t i = 0; i < 180; i++) {
-        GW::CtoS::RemoveCallback(i, &hook_entry);
-    }
     logger_enabled = false;
 }
 void PacketLoggerWindow::Terminate() {
@@ -966,13 +962,6 @@ void PacketLoggerWindow::Enable()
             &hook_entry, i, [this](GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet) -> void {
                 PacketHandler(status, packet);
             }, -0x9000
-        );
-    }
-    for (size_t i = 0; i < 180; i++) {
-        GW::CtoS::RegisterPacketCallback(
-            &hook_entry, i, [this](const GW::HookStatus* status, void* packet) -> void {
-                CtoSHandler(status, packet);
-            }
         );
     }
     logger_enabled = true;
