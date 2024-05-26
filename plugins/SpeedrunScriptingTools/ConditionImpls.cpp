@@ -4,13 +4,18 @@
 #include <enumUtils.h>
 #include <InstanceInfo.h>
 
+#include <GWCA/Constants/Constants.h>
+
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Attribute.h>
+
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/WorldContext.h>
+
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -57,6 +62,84 @@ namespace {
         const auto forwards = GW::Normalize(GW::Vec2f{player->rotation_cos, player->rotation_sin});
         const auto toTarget = GW::Normalize(GW::Vec2f{agent->pos.x - player->pos.x, agent->pos.y - player->pos.y});
         return angleBetweenNormalizedVectors(forwards, toTarget) * radiansToDegree;
+    }
+
+    enum class WeaponRequirement : uint32_t { Axe = 1, Bow = 2, Dagger = 8, Hammer = 16, Scythe = 32, Spear = 64, Ranged = 70, Sword = 128 };
+    enum class EquippedWeaponType : uint16_t { Bow = 1, Axe = 2, Hammer = 3, Daggers = 4, Scythe = 5, Spear = 6, Sword = 7, Wand = 10, StaffA = 12, StaffB = 14 };
+
+    bool weaponFulfillsRequirement(EquippedWeaponType weapon, WeaponRequirement req, GW::Constants::SkillType type) 
+    {
+        const auto isRanged = [](EquippedWeaponType type) {
+            switch (type) {
+                case EquippedWeaponType::Bow:
+                case EquippedWeaponType::Spear:
+                case EquippedWeaponType::Wand:
+                case EquippedWeaponType::StaffA:
+                case EquippedWeaponType::StaffB:
+                    return true;
+                case EquippedWeaponType::Axe:
+                case EquippedWeaponType::Hammer:
+                case EquippedWeaponType::Daggers:
+                case EquippedWeaponType::Scythe:
+                case EquippedWeaponType::Sword:
+                    return false;
+            }
+            return true;
+        };
+
+        if (type != GW::Constants::SkillType::Attack) return true;
+        
+        switch (req) 
+        {
+            case WeaponRequirement::Axe:
+                return weapon == EquippedWeaponType::Axe;
+            case WeaponRequirement::Bow:
+                return weapon == EquippedWeaponType::Bow;
+            case WeaponRequirement::Dagger:
+                return weapon == EquippedWeaponType::Daggers;
+            case WeaponRequirement::Hammer:
+                return weapon == EquippedWeaponType::Hammer;
+            case WeaponRequirement::Scythe:
+                return weapon == EquippedWeaponType::Scythe;
+            case WeaponRequirement::Spear:
+                return weapon == EquippedWeaponType::Spear;
+            case WeaponRequirement::Sword:
+                return weapon == EquippedWeaponType::Sword;
+            case WeaponRequirement::Ranged:
+                return isRanged(weapon);
+            default: // Melee Attack
+                return !isRanged(weapon);
+        }
+    }
+
+    uint32_t getEnergyCost(const GW::Skill& skill)
+    {
+        double cost = skill.GetEnergyCost();
+        if (GW::Effects::GetPlayerEffectBySkillId(GW::Constants::SkillID::Quickening_Zephyr)) 
+        {
+            cost *= 2;
+        }
+
+        const auto reduceCostBasedOnAttribute = [&](GW::Constants::Attribute attribute) 
+        {
+            const auto player = GW::Agents::GetPlayerAsAgentLiving();
+            if (!player) return;
+            const auto playerAttributes = GW::PartyMgr::GetAgentAttributes(player->agent_id);
+            if (!playerAttributes) return;
+            const auto attributeLevel = playerAttributes[(uint32_t)attribute].level;
+            cost *= (1. - attributeLevel * 0.04);
+        };
+
+        if (skill.profession == GW::Constants::ProfessionByte::Ranger || skill.type == GW::Constants::SkillType::Ritual) 
+        {
+            reduceCostBasedOnAttribute(GW::Constants::Attribute::Expertise);
+        }
+        else if (skill.profession == GW::Constants::ProfessionByte::Dervish && skill.type == GW::Constants::SkillType::Enchantment)
+        {
+            reduceCostBasedOnAttribute(GW::Constants::Attribute::Mysticism);
+        }
+
+        return (uint32_t)std::round(cost);
     }
 }
 
@@ -464,31 +547,50 @@ void PlayerHasBuffCondition::drawSettings()
 /// ------------- PlayerHasSkillCondition -------------
 PlayerHasSkillCondition::PlayerHasSkillCondition(InputStream& stream)
 {
-    stream >> id;
+    stream >> id >> requirement;
 }
 void PlayerHasSkillCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << id;
+    stream << id << requirement;
 }
 bool PlayerHasSkillCondition::check() const
 {
-    GW::Skillbar* bar = GW::SkillbarMgr::GetPlayerSkillbar();
-    if (!bar || !bar->IsValid()) return false;
-    for (int i = 0; i < 8; ++i) {
-        if (bar->skills[i].skill_id == id) {
-            return bar->skills[i].GetRecharge() == 0;
+    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto bar = GW::SkillbarMgr::GetPlayerSkillbar();
+    if (!player || !bar || !bar->IsValid()) return false;
+
+    return std::ranges::any_of(bar->skills, [&](const auto& skill) {
+        if (skill.skill_id != id) return false;
+        if (skill.skill_id == GW::Constants::SkillID::No_Skill || (uint32_t)skill.skill_id >= (uint32_t)GW::Constants::SkillID::Count) return false;
+        switch (requirement) {
+            case HasSkillRequirement::OnBar:
+                return true;
+            case HasSkillRequirement::OffCooldown:
+                return skill.GetRecharge() == 0;
+            case HasSkillRequirement::ReadyToUse:
+                const auto& skilldata = *GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
+                if (skill.GetRecharge() > 0) return false;
+                if (skill.adrenaline_a < skilldata.adrenaline) return false;
+                if (getEnergyCost(skilldata) > player->energy) return false;
+                return weaponFulfillsRequirement((EquippedWeaponType)player->weapon_type, (WeaponRequirement)skilldata.weapon_req, skilldata.type);
         }
-    }
-    return false;
+        return false;
+    });
 }
 void PlayerHasSkillCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::Text("If the player has skill off cooldown:");
+    
+    ImGui::Text("If the player has skill");
     ImGui::SameLine();
     drawSkillIDSelector(id);
+    ImGui::SameLine();
+    drawEnumButton(HasSkillRequirement::OnBar, HasSkillRequirement::ReadyToUse, requirement);
+    ImGui::SameLine();
+    ImGui::ShowHelp("'Ready to use' checks energy requirement, cooldown, adrenaline and weapon type.\r\nEnergy requirement only takes into account base cost, QZ, expertise and mysticism.");
+
     ImGui::PopID();
 }
 

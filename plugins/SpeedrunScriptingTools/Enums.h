@@ -9,3 +9,4 @@ enum class HexedStatus { Any, NotHexed, Hexed };
 enum class Channel { All, Guild, Team, Trade, Alliance, Whisper, Emote };
 enum class QuestStatus { NotStarted, Started, Completed, Failed };
 enum class GoToTargetFinishCondition { None, StoppedMovingNextToTarget, DialogOpen };
+enum class HasSkillRequirement {OnBar, OffCooldown, ReadyToUse};
