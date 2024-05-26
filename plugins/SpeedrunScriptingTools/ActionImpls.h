@@ -138,7 +138,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::vector<int> ids = {};
+    int id = 0;
 };
 
 class SendDialogAction : public Action {
