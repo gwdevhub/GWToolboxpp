@@ -26,6 +26,7 @@ public:
     template <typename T>
     InputStream& operator>>(T& val)
     {
+        stream >> std::ws;
         if (!isAtSeparator()) stream >> val;
         return *this;
     }

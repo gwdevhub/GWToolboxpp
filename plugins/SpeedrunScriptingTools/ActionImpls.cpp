@@ -175,70 +175,6 @@ void MoveToAction::drawSettings(){
     ImGui::PopID();
 }
 
-/// ------------- CastOnSelfAction -------------
-CastOnSelfAction::CastOnSelfAction(InputStream& stream)
-{
-    stream >> id;
-}
-void CastOnSelfAction::serialize(OutputStream& stream) const
-{
-    Action::serialize(stream);
-
-    stream << id;
-}
-void CastOnSelfAction::initialAction()
-{
-    Action::initialAction();
-
-    GW::Skillbar* bar = GW::SkillbarMgr::GetPlayerSkillbar();
-    
-    int slot = -1;
-    hasSkillReady = false;
-    if (bar && bar->IsValid())
-    for (int i = 0; i < 8; ++i) {
-        if (bar->skills[i].skill_id == id) {
-            slot = i;
-            hasSkillReady = bar->skills[i].GetRecharge() == 0;
-        }
-    }
-    if (slot < 0 || !hasSkillReady) return;
-
-    startTime = std::chrono::steady_clock::now();
-
-    hasBegunCasting = false;
-    /*GW::GameThread::Enqueue([skill = (uint32_t)skill, target = target->agent_id]() -> void {
-        GW::CtoS::SendPacket(0x14, GAME_CMSG_USE_SKILL, skill, 0, target, 0);
-    });*/
-}
-ActionStatus CastOnSelfAction::isComplete() const
-{
-    if (!hasSkillReady || id == GW::Constants::SkillID::No_Skill) return ActionStatus::Error;
-
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
-    if (!player) return ActionStatus::Error;
-
-    const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
-    if (!skillData) return ActionStatus::Error;
-    const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
-    if (elapsedTime > 2000 * (skillData->activation + skillData->aftercast)) return ActionStatus::Complete;
-
-    hasBegunCasting |= (static_cast<GW::Constants::SkillID>(player->skill) == id);
-
-    return (hasBegunCasting && static_cast<GW::Constants::SkillID>(player->skill) != id) ? ActionStatus::Complete : ActionStatus::Running;
-}
-void CastOnSelfAction::drawSettings()
-{
-    ImGui::PushID(drawId());
-
-    ImGui::Text("Force-cast on self:");
-    ImGui::SameLine();
-    drawSkillIDSelector(id);
-    ImGui::SameLine();
-    ImGui::ShowHelp("Send a CtoS packet to cast a spell on yourself even if you have another target selected. Only necessary for targeted spells.");
-
-    ImGui::PopID();
-}
-
 /// ------------- CastAction -------------
 CastAction::CastAction(InputStream& stream)
 {
@@ -970,13 +906,29 @@ void ConditionedAction::initialAction()
     {
         if (actionsTrue.empty()) return;
         currentlyExecutedActions = actionsTrue;
-        if (const auto front = currentlyExecutedActions.front()) front->initialAction();
     }
     else
     {
         if (actionsFalse.empty()) return;
         currentlyExecutedActions = actionsFalse;
-        if (const auto front = currentlyExecutedActions.front()) front->initialAction();
+    }
+
+    while (!currentlyExecutedActions.empty())
+    {
+        auto front = currentlyExecutedActions.front();
+        if (!front) 
+            currentlyExecutedActions.erase(currentlyExecutedActions.erase(currentlyExecutedActions.begin(), currentlyExecutedActions.begin() + 1));
+        else if (front->behaviour().test(ActionBehaviourFlag::ImmediateFinish))
+        {
+            front->initialAction();
+            front->finalAction();
+            currentlyExecutedActions.erase(currentlyExecutedActions.erase(currentlyExecutedActions.begin(), currentlyExecutedActions.begin() + 1));
+        }
+        else 
+        {
+            front->initialAction();
+            break;
+        }
     }
 }
 ActionStatus ConditionedAction::isComplete() const
@@ -1079,6 +1031,19 @@ void ConditionedAction::drawSettings()
     }
 
     ImGui::PopID();
+}
+ActionBehaviourFlags ConditionedAction::behaviour() const
+{
+    ActionBehaviourFlags flags = ActionBehaviourFlag::All;
+    for (const auto& action : actionsTrue) 
+    {
+        if (action) flags &= action->behaviour();
+    }
+    for (const auto& action : actionsFalse) 
+    {
+        if (action) flags &= action->behaviour();
+    }
+    return flags;
 }
 
 /// ------------- RepopMinipetAction -------------
