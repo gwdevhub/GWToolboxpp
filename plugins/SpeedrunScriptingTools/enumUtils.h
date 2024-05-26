@@ -23,6 +23,7 @@ std::string_view toString(Class);
 std::string_view toString(Channel);
 std::string_view toString(QuestStatus);
 std::string_view toString(GoToTargetFinishCondition);
+std::string_view toString(HasSkillRequirement);
 
 void drawHotkeySelector(long& keyData, long& modifier, std::string& description, float selectorWidth);
 std::string makeHotkeyDescription(long keyData, long modifier);
