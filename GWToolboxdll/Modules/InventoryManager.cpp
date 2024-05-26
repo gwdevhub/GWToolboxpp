@@ -364,7 +364,7 @@ namespace {
         return out;
     }
 
-    const GW::Array<GW::TradeContext::Item>* GetPlayerTradeItems()
+    const GW::Array<GW::TradeItem>* GetPlayerTradeItems()
     {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
             return nullptr;
@@ -2339,16 +2339,7 @@ void InventoryManager::ClearPotentialItems()
 
 bool InventoryManager::Item::IsOfferedInTrade() const
 {
-    auto* player_items = GetPlayerTradeItems();
-    if (!player_items) {
-        return false;
-    }
-    for (auto& player_item : *player_items) {
-        if (player_item.item_id == item_id) {
-            return true;
-        }
-    }
-    return false;
+    return GW::Trade::IsItemOffered(item_id) != nullptr;
 }
 
 bool InventoryManager::Item::CanOfferToTrade() const

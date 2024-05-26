@@ -7,7 +7,9 @@
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/Context/PartyContext.h>
+#include <GWCA/Context/TradeContext.h>
 
+#include <GWCA/Managers/TradeMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -15,6 +17,7 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
@@ -23,6 +26,8 @@
 #include <Windows/TradeWindow.h>
 
 #include "GWToolbox.h"
+#include <GWCA/Utilities/MemoryPatcher.h>
+#include <GWCA/Utilities/Scanner.h>
 
 namespace {
     // Every connection cost 30 seconds.
@@ -46,6 +51,28 @@ namespace {
         return buff ? buff->begin() : nullptr;
     }
 
+    // When a kItemUpdated ui message is received for any item in trade, the trade window will automatically remove it. Block this.
+    GW::MemoryPatcher stop_trade_window_removing_item_update;
+
+    GW::HookEntry OnPostUIMessage_Hook;
+
+    // If item updated, was offered in trade but is no longer in inventory, manually remove from trade.
+    void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
+        if (status->blocked)
+            return;
+        switch (message_id) {
+        case GW::UI::UIMessage::kItemUpdated: {
+            const auto packet = (GW::UI::UIPacket::kItemUpdated*)wparam;
+            uint32_t slot;
+            if (GW::Trade::IsItemOffered(packet->item_id,&slot)) {
+                const auto item = GW::Items::GetItemById(packet->item_id);
+                if (!(item && item->bag && item->bag->IsInventoryBag())) {
+                    GW::Trade::RemoveItem(slot);
+                }
+            }
+        } break;
+    }
+    }
     
 }
 void TradeWindow::CmdPricecheck(const wchar_t*, const int argc, const LPWSTR* argv)
@@ -112,6 +139,12 @@ void TradeWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 
+    auto address = GW::Scanner::Find("\x3d\xef\x00\x00\x10\x0f\x87\xba\x05\x00\x00", "xxxxxxxxxxx", 0x7);
+    if (address) {
+        stop_trade_window_removing_item_update.SetPatch(address, "\x00\x00\x00\x00", 4);
+        stop_trade_window_removing_item_update.TogglePatch(true);
+    }
+
     messages = CircularBuffer<Message>(100);
 
     should_stop = false;
@@ -144,6 +177,16 @@ void TradeWindow::Initialize()
     GW::StoC::RegisterPostPacketCallback(&OnPartySearch_Entry, GAME_SMSG_PARTY_SEARCH_REMOVE, FindPlayerPartySearch);
     GW::StoC::RegisterPostPacketCallback(&OnPartySearch_Entry, GAME_SMSG_TRANSFER_GAME_SERVER_INFO, FindPlayerPartySearch);
     FindPlayerPartySearch();
+
+    const GW::UI::UIMessage post_ui_messages[] = {
+        GW::UI::UIMessage::kItemUpdated,
+        GW::UI::UIMessage::kTradePlayerUpdated
+    };
+    for (auto message_id : post_ui_messages) {
+        GW::UI::RegisterUIMessageCallback(&OnPostUIMessage_Hook, message_id, OnPostUIMessage, 0x1000);
+    }
+
+
 }
 
 void TradeWindow::SignalTerminate()
@@ -159,6 +202,8 @@ void TradeWindow::SignalTerminate()
         WSACleanup();
         wsaData = { 0 };
     }
+    stop_trade_window_removing_item_update.TogglePatch(false);
+    GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_Hook);
 }
 
 bool TradeWindow::GetInKamadanAE1(const bool check_district)
