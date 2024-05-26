@@ -631,33 +631,58 @@ void UseItemAction::drawSettings()
 /// ------------- EquipItemAction -------------
 EquipItemAction::EquipItemAction(InputStream& stream)
 {
-    stream >> id;
+    ids = readMultiple<int>(stream);
 }
 void EquipItemAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << id;
+    writeMultiple<int>(stream, ids);
 }
 void EquipItemAction::initialAction()
 {
     Action::initialAction();
 
-    const auto item = FindMatchingItem(id);
-    if (!item) return;
-
-    GW::GameThread::Enqueue([item]() -> void {
-        SafeEquip(item);
+    std::vector<GW::Item*> items;
+    for (const auto& id : ids) 
+    {
+        const auto item = FindMatchingItem(id);
+        if (item) items.push_back(item);
+    }
+    if (items.empty()) return;
+    GW::GameThread::Enqueue([items]() -> void { 
+        for (const auto& item : items)
+            SafeEquip(item); 
     });
 }
 void EquipItemAction::drawSettings()
 {
     ImGui::PushID(drawId());
 
-    ImGui::Text("Equip item:");
+    ImGui::Text("Equip items:");
     ImGui::PushItemWidth(90);
-    ImGui::SameLine();
-    ImGui::InputInt("model ID", &id, 0);
+
+    ImGui::Indent(indent);
+    int rowToDelete = -1;
+    for (auto i = 0; i < int(ids.size()); ++i) {
+        ImGui::PushID(i);
+
+        ImGui::Bullet();
+        if (ImGui::Button("X")) rowToDelete = i;
+
+        ImGui::SameLine();
+        ImGui::InputInt("model ID", &ids[i], 0);
+
+        ImGui::PopID();
+    }
+    if (rowToDelete != -1) ids.erase(ids.begin() + rowToDelete);
+
+    ImGui::Bullet();
+    if (ImGui::Button("Add item")) {
+        ids.push_back(0);
+    }
+
+    ImGui::Unindent(indent);
 
     ImGui::PopID();
 }
