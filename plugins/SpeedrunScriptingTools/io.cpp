@@ -5,6 +5,7 @@
 
 namespace {
     const std::string endOfStringSignifier{"<"};
+    constexpr char endOfListSignifier = '<';
     constexpr char separatorToken = 0x7F;
 
     constexpr bool isInvalidDecodedCharacter(char c)
@@ -36,6 +37,17 @@ void InputStream::proceedPastSeparator()
     while (stream.good() && get() != separatorToken) {}
     stream >> std::ws;
 }
+bool InputStream::isAtEndOfList()
+{
+    stream >> std::ws;
+    const auto isAtEnd = stream.peek() == endOfListSignifier;
+    if (isAtEnd) 
+    {
+        stream.get();
+        stream >> std::ws;
+    }
+    return isAtEnd;
+}
 bool InputStream::isAtSeparator()
 {
     stream >> std::ws;
@@ -44,6 +56,10 @@ bool InputStream::isAtSeparator()
 void OutputStream::writeSeparator()
 {
     stream << separatorToken;
+}
+void OutputStream::writeEndOfListToken()
+{
+    stream << endOfListSignifier;
 }
 std::string OutputStream::str()
 {
