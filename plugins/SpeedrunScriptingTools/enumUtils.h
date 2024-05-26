@@ -35,7 +35,6 @@ void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& 
 void drawPolygonSelector(std::vector<GW::Vec2f>& polygon);
 bool pointIsInsidePolygon(const GW::GamePos pos, const std::vector<GW::Vec2f>& polygon);
 
-
 template <typename T>
 void drawEnumButton(T firstValue, T lastValue, T& currentValue, int id = 0, float width = 100., std::optional<std::string_view> buttonText = std::nullopt, std::optional<T> skipValue = std::nullopt)
 {

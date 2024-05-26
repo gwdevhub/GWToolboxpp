@@ -10,8 +10,6 @@ namespace {
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
-            case ActionType::CastOnSelf:
-                return std::make_shared<CastOnSelfAction>();
             case ActionType::Cast:
                 return std::make_shared<CastAction>();
             case ActionType::CastBySlot:
@@ -64,8 +62,6 @@ std::string_view toString(ActionType type)
     switch (type) {
         case ActionType::MoveTo:
             return "Move to";
-        case ActionType::CastOnSelf:
-            return "Force-cast on self";
         case ActionType::Cast:
             return "Use skill by id";
         case ActionType::CastBySlot:
@@ -120,8 +116,6 @@ std::shared_ptr<Action> readAction(InputStream& stream)
     switch (static_cast<ActionType>(type)) {
         case ActionType::MoveTo:
             return std::make_shared<MoveToAction>(stream);
-        case ActionType::CastOnSelf:
-            return std::make_shared<CastOnSelfAction>(stream);
         case ActionType::Cast:
             return std::make_shared<CastAction>(stream);
         case ActionType::CastBySlot:

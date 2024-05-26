@@ -160,6 +160,13 @@ namespace {
             delete[] to_send;
         });
     }
+
+    bool canBeRunInOutPost(const Script& script)
+    {
+        return std::ranges::all_of(script.actions, [](const auto& action){
+            return !action || action->behaviour().test(ActionBehaviourFlag::CanBeRunInOutpost);
+        });
+    }
 }
 
 void SpeedrunScriptingTools::DrawSettings()
@@ -416,18 +423,27 @@ void SpeedrunScriptingTools::Update(float delta)
     ToolboxPlugin::Update(delta);
 
     const auto map = GW::Map::GetMapInfo();
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable || !map || map->GetIsPvP() || !GW::Agents::GetPlayerAsAgentLiving()) {
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !map || map->GetIsPvP() || !GW::Agents::GetPlayerAsAgentLiving()) 
+    {
         m_currentScript = std::nullopt;
         for (auto& script : m_scripts)
             script.hotkeyTriggered = false;
         return;
     }
 
-    if (m_currentScript && !m_currentScript->actions.empty()) {
+    while (m_currentScript && !m_currentScript->actions.empty()) 
+    {
         // Execute current script
         auto& currentActions = m_currentScript->actions;
         auto& currentAction = **currentActions.begin();
-        if (currentAction.hasBeenStarted()) {
+        if (currentAction.behaviour().test(ActionBehaviourFlag::ImmediateFinish)) 
+        {
+            currentAction.initialAction();
+            currentAction.finalAction();
+            currentActions.erase(currentActions.begin(), currentActions.begin() + 1);
+        }
+        else if (currentAction.hasBeenStarted()) 
+        {
             switch (currentAction.isComplete()) 
             {
                 case ActionStatus::Running:
@@ -440,15 +456,21 @@ void SpeedrunScriptingTools::Update(float delta)
                     currentAction.finalAction();
                     currentActions.clear();
             }
+            break;
         }
-        else {
+        else 
+        {
             currentAction.initialAction();
+            break;
         }
     }
-    else {
+    
+    if(!m_currentScript || m_currentScript->actions.empty())
+    {
         // Find script to use
         for (auto& script : m_scripts) {
             if (!script.enabled || (script.conditions.empty() && script.trigger == Trigger::None) || script.actions.empty()) continue;
+            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !canBeRunInOutPost(script)) continue;
             if (script.trigger == currentTrigger || (script.trigger == Trigger::Hotkey && script.hotkeyTriggered)) {
                 script.hotkeyTriggered = false;
                 if (checkConditions(script)) {
@@ -541,7 +563,7 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
                     triggered = true;
                 }
 
-                if (script.enabled && script.trigger == Trigger::Hotkey && script.triggerHotkey.keyData == keyData && script.triggerHotkey.modifier == modifier && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) 
+                if (script.enabled && script.trigger == Trigger::Hotkey && script.triggerHotkey.keyData == keyData && script.triggerHotkey.modifier == modifier && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) 
                 {
                     script.hotkeyTriggered = true;
                     triggered = true;

@@ -24,6 +24,7 @@ public:
     ActionStatus isComplete() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
     GW::GamePos pos{};
@@ -31,23 +32,6 @@ private:
     bool repeatMove{true};
     mutable std::chrono::steady_clock::time_point lastMovePacketTime = std::chrono::steady_clock::now();
     mutable bool hasBegunWalking = false;
-};
-
-class CastOnSelfAction : public Action {
-public:
-    CastOnSelfAction() = default;
-    CastOnSelfAction(InputStream&);
-    ActionType type() const final { return ActionType::CastOnSelf; }
-    void initialAction() final;
-    ActionStatus isComplete() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
-    mutable bool hasBegunCasting = false;
-    mutable bool hasSkillReady = false;
-    std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
 };
 
 class CastAction : public Action {
@@ -93,6 +77,7 @@ public:
     void initialAction() final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost | ActionBehaviourFlag::ImmediateFinish; }
 
 private:
     AgentType agentType = AgentType::Any;
@@ -123,6 +108,7 @@ public:
     void initialAction() final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::ImmediateFinish; }
 
 private:
     int id = 0;
@@ -136,6 +122,7 @@ public:
     void initialAction() final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::ImmediateFinish | ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
     int id = 0;
@@ -149,6 +136,7 @@ public:
     void initialAction() final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::ImmediateFinish | ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
     int id = 0;
@@ -164,6 +152,7 @@ public:
     ActionStatus isComplete() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
     GoToTargetFinishCondition finishCondition = GoToTargetFinishCondition::StoppedMovingNextToTarget;
@@ -182,6 +171,7 @@ public:
     ActionStatus isComplete() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
     int waitTime = 1000;
@@ -196,6 +186,7 @@ public:
     void initialAction() final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return channel == Channel::Emote ? ActionBehaviourFlag::ImmediateFinish | ActionBehaviourFlag::CanBeRunInOutpost : ActionBehaviourFlag::ImmediateFinish; }
 
 private:
     Channel channel = Channel::All;
@@ -209,6 +200,7 @@ public:
     ActionType type() const final { return ActionType::Cancel; }
     void initialAction() final;
     void drawSettings() final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::ImmediateFinish; }
 };
 
 class DropBuffAction : public Action {
@@ -233,6 +225,7 @@ public:
     ActionStatus isComplete() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final;
 
 private:
     std::shared_ptr<Condition> cond = nullptr;
@@ -251,6 +244,7 @@ public:
     ActionStatus isComplete() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
     int itemModelId = 36651;
@@ -268,6 +262,7 @@ public:
     ActionType type() const final { return ActionType::PingHardMode; }
     void initialAction() final;
     void drawSettings() final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::ImmediateFinish | ActionBehaviourFlag::CanBeRunInOutpost; }
 };
 
 class PingTargetAction : public Action {
@@ -277,6 +272,7 @@ public:
     ActionType type() const final { return ActionType::PingTarget; }
     void initialAction() final;
     void drawSettings() final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::ImmediateFinish | ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
     bool onlyOncePerInstance = true;
@@ -301,6 +297,7 @@ public:
     void initialAction() final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
     int id = 1;
@@ -314,6 +311,7 @@ public:
     void initialAction() final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::ImmediateFinish | ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
     int id = 0;
@@ -327,6 +325,7 @@ public:
     void initialAction() final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::ImmediateFinish | ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
     int id = 0;
@@ -338,5 +337,6 @@ public:
     StopScriptAction(InputStream&) : StopScriptAction(){}
     ActionType type() const final { return ActionType::StopScript; }
     ActionStatus isComplete() const final { return ActionStatus::Error; }
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
     void drawSettings() final;
 };

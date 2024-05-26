@@ -1,11 +1,12 @@
 #pragma once
 
 #include <io.h>
+#include <Enums.h>
 
 enum class ActionType : int {
     MoveTo,
-    CastOnSelf,
-    Cast, 
+    //CastOnSelf, Removed
+    Cast = 2, 
     CastBySlot,
     DropBuff, 
     ChangeTarget,
@@ -48,6 +49,7 @@ public:
     virtual ActionStatus isComplete() const { return ActionStatus::Complete; }
     virtual void drawSettings() = 0;
     virtual void serialize(OutputStream& stream) const { stream << "A" << type();}
+    virtual ActionBehaviourFlags behaviour() const { return ActionBehaviourFlag::Default; }
     bool hasBeenStarted() const { return m_hasBeenStarted; }
 
 protected:
