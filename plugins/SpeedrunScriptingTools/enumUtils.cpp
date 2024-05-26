@@ -144,6 +144,19 @@ std::string_view toString(GoToTargetFinishCondition cond)
     return "";
 }
 
+std::string_view toString(HasSkillRequirement req)
+{
+    switch (req) {
+        case HasSkillRequirement::OnBar:
+            return "On the skillbar";
+        case HasSkillRequirement::OffCooldown:
+            return "Off cooldown";
+        case HasSkillRequirement::ReadyToUse:
+            return "Ready to use";
+    }
+    return "";
+}
+
 std::string_view toString(Trigger type)
 {
     switch (type) {

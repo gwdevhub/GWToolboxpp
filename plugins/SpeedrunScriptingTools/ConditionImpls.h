@@ -165,6 +165,7 @@ public:
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
+    HasSkillRequirement requirement = HasSkillRequirement::OffCooldown;
 };
 
 class PlayerHasClassCondition : public Condition {
