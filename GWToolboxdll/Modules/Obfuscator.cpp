@@ -948,7 +948,7 @@ void Obfuscator::SignalTerminate()
 
 bool Obfuscator::CanTerminate()
 {
-    return !GetCharacterSummary_AssertionPatch.GetIsEnable();
+    return !GetCharacterSummary_AssertionPatch.GetIsActive();
 }
 
 void Obfuscator::Update(float)

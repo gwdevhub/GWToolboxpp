@@ -199,7 +199,7 @@ namespace {
 
     void ToggleCompassQuestMarker(const bool enable)
     {
-        if (enable == show_compass_quest_marker_patch.GetIsEnable()) {
+        if (enable == show_compass_quest_marker_patch.GetIsActive()) {
             return;
         }
         show_compass_quest_marker_patch.TogglePatch(enable);
