@@ -11,7 +11,8 @@
 
 std::string_view toString(Status status)
 {
-    switch (status) {
+    switch (status) 
+    {
         case Status::Any:
             return "Any";
         case Status::Dead:
