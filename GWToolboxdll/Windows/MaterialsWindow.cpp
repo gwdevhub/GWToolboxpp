@@ -486,8 +486,8 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         }
         ImGui::SameLine();
         if (ImGui::Button("Buy##common", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
-            const int material_stock = GW::Items::CountItemByModelId(GetModelID(static_cast<Material>(common_idx)), stock_start, stock_end);
-            const int to_buy = common_qty - (use_stock ? static_cast<int>(material_stock) : 0);
+            const int material_stock = static_cast<int>(GW::Items::CountItemByModelId(GetModelID(static_cast<Material>(common_idx)), stock_start, stock_end));
+            const int to_buy = common_qty - (use_stock ? material_stock : 0);
             for (int i = 0; i < to_buy; i++) {
                 EnqueuePurchase(static_cast<Material>(common_idx));
             }
@@ -540,8 +540,8 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         }
         ImGui::SameLine();
         if (ImGui::Button("Buy##rare", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
-            const int material_stock = GW::Items::CountItemByModelId(GetModelID(static_cast<Material>(rare_idx + AmberChunk)), stock_start, stock_end);
-            const int to_buy = rare_qty - (use_stock ? static_cast<int>(material_stock) : 0);
+            const int material_stock = static_cast<int>(GW::Items::CountItemByModelId(GetModelID(static_cast<Material>(rare_idx + AmberChunk)), stock_start, stock_end));
+            const int to_buy = rare_qty - (use_stock ? material_stock : 0);
             for (int i = 0; i < to_buy; i++) {
                 EnqueuePurchase(static_cast<Material>(rare_idx + AmberChunk));
             }
@@ -556,7 +556,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         ImGui::Separator();
         float progress = 0.0f;
         if (trans_queued > 0) {
-            progress = static_cast<float>(trans_done) / trans_queued;
+            progress = static_cast<float>(trans_done) / static_cast<float>(trans_queued);
         }
         auto status = "";
         if (cancelled) {
@@ -673,9 +673,7 @@ std::string MaterialsWindow::GetPrice(const Material mat1, const float fac1,
     if (p1 == PRICE_COMPUTING_QUEUE || p2 == PRICE_COMPUTING_QUEUE) {
         return "Price: Computing (in queue)";
     }
-    char buf[128];
-    snprintf(buf, 128, "Price: %g k", (p1 * fac1 + p2 * fac2 + extra) / 1000.0f);
-    return std::string(buf);
+    return std::format("Price: {:2f} k", (p1 * fac1 + p2 * fac2 + extra) / 1000.0f);
 }
 
 void MaterialsWindow::FullConsPriceTooltip() const
