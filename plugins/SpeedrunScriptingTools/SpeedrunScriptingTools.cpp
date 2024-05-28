@@ -57,6 +57,7 @@ namespace {
         stream << script.triggerHotkey.modifier;
         stream << script.enabledToggleHotkey.keyData;
         stream << script.enabledToggleHotkey.modifier;
+        stream << script.showMessageWhenTriggered;
 
         stream.writeSeparator();
 
@@ -91,6 +92,7 @@ namespace {
                     stream >> result->triggerHotkey.modifier;
                     stream >> result->enabledToggleHotkey.keyData;
                     stream >> result->enabledToggleHotkey.modifier;
+                    stream >> result->showMessageWhenTriggered;
                     stream.proceedPastSeparator();
                     break;
                 case 'A':
@@ -205,18 +207,23 @@ void SpeedrunScriptingTools::DrawSettings()
                 using ConditionIt = decltype(scriptIt->conditions.begin());
                 std::optional<ConditionIt> conditionToDelete = std::nullopt;
                 std::optional<std::pair<ConditionIt, ConditionIt>> conditionsToSwap = std::nullopt;
-                for (auto it = scriptIt->conditions.begin(); it < scriptIt->conditions.end(); ++it) {
+                for (auto it = scriptIt->conditions.begin(); it < scriptIt->conditions.end(); ++it) 
+                {
                     ImGui::PushID(drawId++);
-                    if (ImGui::Button("X", ImVec2(20, 0))) {
+                    if (ImGui::Button("X", ImVec2(20, 0))) 
+                    {
                         conditionToDelete = it;
                     }
-                    if (it->get()->type() != ConditionType::OnlyTriggerOncePerInstance) {
+                    if (it->get()->type() != ConditionType::OnlyTriggerOncePerInstance) 
+                    {
                         ImGui::SameLine();
-                        if (ImGui::Button("^", ImVec2(20, 0))) {
+                        if (ImGui::Button("^", ImVec2(20, 0))) 
+                        {
                             if (it != scriptIt->conditions.begin()) conditionsToSwap = {it - 1, it};
                         }
                         ImGui::SameLine();
-                        if (ImGui::Button("v", ImVec2(20, 0))) {
+                        if (ImGui::Button("v", ImVec2(20, 0))) 
+                        {
                             if (it + 1 != scriptIt->conditions.end() && (it + 1)->get()->type() != ConditionType::OnlyTriggerOncePerInstance) conditionsToSwap = {it, it + 1};
                         }
                     }
@@ -227,8 +234,10 @@ void SpeedrunScriptingTools::DrawSettings()
                 if (conditionToDelete.has_value()) scriptIt->conditions.erase(conditionToDelete.value());
                 if (conditionsToSwap.has_value()) std::swap(*conditionsToSwap->first, *conditionsToSwap->second);
                 // Add condition
-                if (canAddCondition(*scriptIt)) {
-                    if (auto newCondition = drawConditionSelector(ImGui::GetContentRegionAvail().x)) {
+                if (canAddCondition(*scriptIt)) 
+                {
+                    if (auto newCondition = drawConditionSelector(ImGui::GetContentRegionAvail().x)) 
+                    {
                         scriptIt->conditions.push_back(std::move(newCondition));
                     }
                 }
@@ -240,18 +249,22 @@ void SpeedrunScriptingTools::DrawSettings()
                 using ActionIt = decltype(scriptIt->actions.begin());
                 std::optional<ActionIt> actionToDelete = std::nullopt;
                 std::optional<std::pair<ActionIt, ActionIt>> actionsToSwap = std::nullopt;
-                for (auto it = scriptIt->actions.begin(); it < scriptIt->actions.end(); ++it) {
+                for (auto it = scriptIt->actions.begin(); it < scriptIt->actions.end(); ++it) 
+                {
                     ImGui::PushID(drawId++);
 
-                    if (ImGui::Button("X", ImVec2(20, 0))) {
+                    if (ImGui::Button("X", ImVec2(20, 0))) 
+                    {
                         actionToDelete = it;
                     }
                     ImGui::SameLine();
-                    if (ImGui::Button("^", ImVec2(20, 0))) {
+                    if (ImGui::Button("^", ImVec2(20, 0))) 
+                    {
                         if (it != scriptIt->actions.begin()) actionsToSwap = {it - 1, it};
                     }
                     ImGui::SameLine();
-                    if (ImGui::Button("v", ImVec2(20, 0))) {
+                    if (ImGui::Button("v", ImVec2(20, 0))) 
+                    {
                         if (it + 1 != scriptIt->actions.end()) actionsToSwap = {it, it + 1};
                     }
                     ImGui::SameLine();
@@ -262,7 +275,8 @@ void SpeedrunScriptingTools::DrawSettings()
                 if (actionToDelete.has_value()) scriptIt->actions.erase(actionToDelete.value());
                 if (actionsToSwap.has_value()) std::swap(*actionsToSwap->first, *actionsToSwap->second);
                 // Add action
-                if (auto newAction = drawActionSelector(ImGui::GetContentRegionAvail().x)) {
+                if (auto newAction = drawActionSelector(ImGui::GetContentRegionAvail().x)) 
+                {
                     scriptIt->actions.push_back(std::move(newAction));
                 }
             }
@@ -293,8 +307,8 @@ void SpeedrunScriptingTools::DrawSettings()
 
                 ImGui::PopID();
                 ImGui::PushID(drawId++);
-                
-                if (ImGui::Button("Copy script to clipboard", ImVec2(160, 0))) 
+
+                if (ImGui::Button("Copy script", ImVec2(100, 0))) 
                 {
                     if (const auto encoded = encodeString(serialize(*scriptIt))) 
                         ImGui::SetClipboardText(encoded->c_str());
@@ -303,6 +317,9 @@ void SpeedrunScriptingTools::DrawSettings()
                 ImGui::SameLine();
                 drawTriggerSelector(scriptIt->trigger, 100.f, scriptIt->triggerHotkey.keyData, scriptIt->triggerHotkey.modifier);
                 
+                ImGui::SameLine();
+                ImGui::Checkbox("Log info", &scriptIt->showMessageWhenTriggered);
+
                 ImGui::SameLine();
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 50);
                 ImGui::InputText("Name", &scriptIt->name);
@@ -353,10 +370,8 @@ void SpeedrunScriptingTools::DrawSettings()
     }
     ImGui::SameLine();
     ImGui::Text("Actions in queue: %i", m_currentScript ? m_currentScript->actions.size() : 0u);
-    ImGui::SameLine();
-    ImGui::Checkbox("Show message when a script is triggered", &showTriggerMessage);
 
-    ImGui::Text("Version 1.2-angleToTargetTest. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 1.2. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
@@ -372,7 +387,6 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
     ToolboxPlugin::LoadSettings(folder);
     ini.LoadFile(GetSettingFile(folder).c_str());
     const long savedVersion = ini.GetLongValue(Name(), "version", 1);
-    showTriggerMessage = ini.GetBoolValue(Name(), "showTriggerMessage", showTriggerMessage);
     
     if (savedVersion != currentVersion) return;
     
@@ -398,7 +412,6 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
 {
     ToolboxPlugin::SaveSettings(folder);
     ini.SetLongValue(Name(), "version", currentVersion);
-    ini.SetBoolValue(Name(), "showTriggerMessage", showTriggerMessage);
 
     OutputStream stream;
     for (const auto& script : m_scripts) 
@@ -474,7 +487,7 @@ void SpeedrunScriptingTools::Update(float delta)
             if (script.trigger == currentTrigger || (script.trigger == Trigger::Hotkey && script.hotkeyTriggered)) {
                 script.hotkeyTriggered = false;
                 if (checkConditions(script)) {
-                    if (showTriggerMessage) 
+                    if (script.showMessageWhenTriggered) 
                         logMessage(std::string{"Run script "} + script.name);
                     m_currentScript = script;
                     break;
@@ -554,7 +567,7 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
             {
                 if (script.enabledToggleHotkey.keyData == keyData && script.enabledToggleHotkey.modifier == modifier)
                 {
-                    if (showTriggerMessage)
+                    if (script.showMessageWhenTriggered)
                     {
                         if (script.enabled) logMessage(std::string{"Disable script "} + script.name);
                         else logMessage(std::string{"Enable script "} + script.name);

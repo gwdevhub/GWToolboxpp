@@ -17,10 +17,11 @@ struct Script {
     std::string name = "New script";
     Trigger trigger = Trigger::None;
     bool enabled = true;
+    bool showMessageWhenTriggered = false;
 
+    Hotkey enabledToggleHotkey{};
     Hotkey triggerHotkey{};
     bool hotkeyTriggered = false;
-    Hotkey enabledToggleHotkey{};
 };
 
 class SpeedrunScriptingTools : public ToolboxPlugin {
@@ -45,5 +46,4 @@ private:
     std::vector<Script> m_scripts;
     std::optional<Script> m_currentScript = std::nullopt;
     Trigger currentTrigger = Trigger::None;
-    bool showTriggerMessage = false;
 };
