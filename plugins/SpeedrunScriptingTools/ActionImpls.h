@@ -229,8 +229,9 @@ public:
 
 private:
     std::shared_ptr<Condition> cond = nullptr;
-    std::vector<std::shared_ptr<Action>> actionsTrue = {};
-    std::vector<std::shared_ptr<Action>> actionsFalse = {};
+    std::vector<std::shared_ptr<Action>> actionsIf = {};
+    std::vector<std::shared_ptr<Action>> actionsElse = {};
+    std::vector<std::pair<std::shared_ptr<Condition>, std::vector<std::shared_ptr<Action>>>> actionsElseIf = {};
     mutable std::vector<std::shared_ptr<Action>> currentlyExecutedActions = {};
 };
 
