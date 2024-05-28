@@ -26,6 +26,7 @@ enum class ActionType : int {
     StoreTarget,
     RestoreTarget,
     StopScript,
+    LogOut,
     Count
 };
 
