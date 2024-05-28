@@ -96,6 +96,10 @@ public:
     ConditionType type() const final { return ConditionType::PartyHasLoadedIn; }
     bool check() const final;
     void drawSettings() final;
+
+private:
+    PlayerConnectednessRequirement req = PlayerConnectednessRequirement::All;
+    int slot = 1;
 };
 
 class InstanceProgressCondition : public Condition {

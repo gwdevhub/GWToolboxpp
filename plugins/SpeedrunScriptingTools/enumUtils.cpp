@@ -158,6 +158,17 @@ std::string_view toString(HasSkillRequirement req)
     return "";
 }
 
+std::string_view toString(PlayerConnectednessRequirement req) 
+{
+    switch (req) {
+        case PlayerConnectednessRequirement::All:
+            return "Everyone";
+        case PlayerConnectednessRequirement::Individual:
+            return "Single player";
+    }
+    return "";
+}
+
 std::string_view toString(Trigger type)
 {
     switch (type) {
