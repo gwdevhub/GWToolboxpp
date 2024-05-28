@@ -24,6 +24,7 @@ std::string_view toString(Channel);
 std::string_view toString(QuestStatus);
 std::string_view toString(GoToTargetFinishCondition);
 std::string_view toString(HasSkillRequirement);
+std::string_view toString(PlayerConnectednessRequirement);
 
 void drawHotkeySelector(long& keyData, long& modifier, std::string& description, float selectorWidth);
 std::string makeHotkeyDescription(long keyData, long modifier);

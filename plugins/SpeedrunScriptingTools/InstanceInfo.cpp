@@ -14,6 +14,8 @@
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/Constants/ItemIDs.h>
 
+#include <iostream>
+
 namespace {
     GW::HookEntry ObjectiveUpdateName_Entry;
     GW::HookEntry ObjectiveDone_Entry;
@@ -47,9 +49,11 @@ namespace {
 void InstanceInfo::initialize()
 {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveUpdateName* packet) {
+        std::cout << "Start objective id" << packet->objective_id << std::endl;
         this->questStatus[(GW::Constants::QuestID)packet->objective_id] = QuestStatus::Started;
     });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveDone* packet) {
+        std::cout << "Finish objective id" << packet->objective_id << std::endl;
         this->questStatus[(GW::Constants::QuestID)packet->objective_id] = QuestStatus::Completed;
     });
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {

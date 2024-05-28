@@ -27,16 +27,15 @@
 namespace {
     const std::string missingContentToken = "/";
     const std::string endOfListToken = ">";
-    constexpr float indent = 30.f;
+    constexpr float indent = 25.f;
     constexpr double eps = 1e-3;
 
     GW::Item* FindMatchingItem(GW::Constants::Bag _bag_idx, uint32_t model_id)
     {
         GW::Bag* bag = GW::Items::GetBag(_bag_idx);
         if (!bag) return nullptr;
-        GW::ItemArray& items = bag->items;
-        for (auto _item : items) {
-            if (_item && _item->model_id == model_id) return _item;
+        for (auto item : bag->items) {
+            if (item && item->model_id == model_id) return item;
         }
         return nullptr;
     }
@@ -854,9 +853,9 @@ ConditionedAction::ConditionedAction(InputStream& stream)
         if (read == endOfListToken)
             break;
         else if (read == missingContentToken)
-            actionsTrue.push_back(nullptr);
+            actionsIf.push_back(nullptr);
         else if (read == "A")
-            actionsTrue.push_back(readAction(stream));
+            actionsIf.push_back(readAction(stream));
         else
             return;
     }
@@ -864,9 +863,9 @@ ConditionedAction::ConditionedAction(InputStream& stream)
         if (read == endOfListToken)
             break;
         else if (read == missingContentToken)
-            actionsFalse.push_back(nullptr);
+            actionsElse.push_back(nullptr);
         else if (read == "A")
-            actionsFalse.push_back(readAction(stream));
+            actionsElse.push_back(readAction(stream));
         else
             return;
     }
@@ -880,7 +879,8 @@ void ConditionedAction::serialize(OutputStream& stream) const
     else
         stream << missingContentToken;
 
-    for (const auto& action : actionsTrue) {
+    for (const auto& action : actionsIf)
+    {
         if (action)
             action->serialize(stream);
         else
@@ -888,13 +888,31 @@ void ConditionedAction::serialize(OutputStream& stream) const
     }
     stream << endOfListToken;
 
-    for (const auto& action : actionsFalse) {
+    for (const auto& action : actionsElse)
+    {
         if (action)
             action->serialize(stream);
         else
             stream << missingContentToken;
     }
     stream << endOfListToken;
+
+    for (const auto& [condEI, actionsEI] : actionsElseIf) 
+    {
+        if (condEI)
+            condEI->serialize(stream);
+        else
+            stream << missingContentToken;
+
+        for (const auto& action : actionsEI) 
+        {
+            if (action)
+                action->serialize(stream);
+            else
+                stream << missingContentToken;
+        }
+        stream << endOfListToken;
+    }
 }
 void ConditionedAction::initialAction()
 {
@@ -902,27 +920,39 @@ void ConditionedAction::initialAction()
 
     currentlyExecutedActions = {};
 
+    bool foundActions = false;
     if (cond && cond->check())
     {
-        if (actionsTrue.empty()) return;
-        currentlyExecutedActions = actionsTrue;
+        foundActions = true;
+        currentlyExecutedActions = actionsIf;
     }
     else
     {
-        if (actionsFalse.empty()) return;
-        currentlyExecutedActions = actionsFalse;
+        for (const auto& [condEI, actionsEI] : actionsElseIf)
+        {
+            if (condEI && condEI->check()) 
+            {
+                foundActions = true;
+                currentlyExecutedActions = actionsEI;
+                break;
+            }
+        }
+    }
+    if (!foundActions)
+    {
+        currentlyExecutedActions = actionsElse;
     }
 
     while (!currentlyExecutedActions.empty())
     {
-        auto front = currentlyExecutedActions.front();
+        auto& front = currentlyExecutedActions.front();
         if (!front) 
-            currentlyExecutedActions.erase(currentlyExecutedActions.erase(currentlyExecutedActions.begin(), currentlyExecutedActions.begin() + 1));
+            currentlyExecutedActions.erase(currentlyExecutedActions.begin(), currentlyExecutedActions.begin() + 1);
         else if (front->behaviour().test(ActionBehaviourFlag::ImmediateFinish))
         {
             front->initialAction();
             front->finalAction();
-            currentlyExecutedActions.erase(currentlyExecutedActions.erase(currentlyExecutedActions.begin(), currentlyExecutedActions.begin() + 1));
+            currentlyExecutedActions.erase(currentlyExecutedActions.begin(), currentlyExecutedActions.begin() + 1);
         }
         else 
         {
@@ -1003,43 +1033,74 @@ void ConditionedAction::drawSettings()
 
     ImGui::PushID(drawId());
 
+    ImGui::PushID(0);
     if (cond)
         cond->drawSettings();
     else    
         cond = drawConditionSelector(120.f);
-
-    ImGui::PushID(0);
-    drawActionsSelector(actionsTrue);
+    drawActionsSelector(actionsIf);
     ImGui::PopID();
 
-    if (actionsFalse.empty()) 
-    {
-        ImGui::SameLine();
-        if (ImGui::Button("Add else")) {
-            actionsFalse.push_back(nullptr);
-        }
-    }
-    else
-    {
-        ImGui::Indent(indent);
-        ImGui::Text("Else:");
-        ImGui::Unindent(indent);
+    int elseIfIndex = 0;
+    std::optional<int> elseIfToDelete;
 
-        ImGui::PushID(1);
-        drawActionsSelector(actionsFalse);
+    for (auto& [condEI, actionsEI] : actionsElseIf) {
+        ImGui::PushID(1 + elseIfIndex);
+        if (ImGui::Button("X")) elseIfToDelete = elseIfIndex;
+        ImGui::SameLine();
+        if (condEI) 
+        {
+            ImGui::Text("Else");
+            ImGui::SameLine();
+            condEI->drawSettings();
+        }
+        else 
+        {
+            ImGui::Text("Else If");
+            ImGui::SameLine();
+            condEI = drawConditionSelector(120.f);
+        }
+        
+        drawActionsSelector(actionsEI);
+        ImGui::PopID();
+
+        ++elseIfIndex;
+    }
+    if (elseIfToDelete) actionsElseIf.erase(actionsElseIf.begin() + elseIfToDelete.value());
+    
+    if (!actionsElse.empty())
+    {
+        ImGui::PushID(1 + actionsElseIf.size());
+        if (ImGui::Button("X")) actionsElse.clear();
+        ImGui::SameLine();
+        ImGui::Text("Else");
+
+        drawActionsSelector(actionsElse);
         ImGui::PopID();
     }
+    
+
+    if (ImGui::Button("Add else if"))
+        actionsElseIf.push_back({nullptr, {}});
+    
+    if (actionsElse.empty())
+    {
+        ImGui::SameLine();
+        if (ImGui::Button("Add else"))
+            actionsElse.push_back(nullptr);
+    }
+        
 
     ImGui::PopID();
 }
 ActionBehaviourFlags ConditionedAction::behaviour() const
 {
     ActionBehaviourFlags flags = ActionBehaviourFlag::All;
-    for (const auto& action : actionsTrue) 
+    for (const auto& action : actionsIf) 
     {
         if (action) flags &= action->behaviour();
     }
-    for (const auto& action : actionsFalse) 
+    for (const auto& action : actionsElse) 
     {
         if (action) flags &= action->behaviour();
     }

@@ -385,12 +385,36 @@ bool PartyHasLoadedInCondition::check() const
 {
     const auto partyInfo = GW::PartyMgr::GetPartyInfo();
     if (!partyInfo) return false;
-    return std::ranges::all_of(partyInfo->players, [](const auto& player) {return player.connected();});
+
+    if (req == PlayerConnectednessRequirement::All)
+        return std::ranges::all_of(partyInfo->players, [](const auto& player) { return player.connected(); });
+    else
+        return (int)partyInfo->players.size() > slot && partyInfo->players[slot].connected();
 }
 void PartyHasLoadedInCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::Text("If all players in the party have finished loading");
+    ImGui::Text("If");
+    ImGui::SameLine();
+    drawEnumButton(PlayerConnectednessRequirement::All, PlayerConnectednessRequirement::Individual, req);
+    if (req == PlayerConnectednessRequirement::Individual)
+    {
+        ImGui::SameLine();
+        ImGui::Text("with player number");
+        ImGui::SameLine();
+        ImGui::PushItemWidth(50.f);
+        ImGui::InputInt("", &slot, 0);
+        if (slot < 1) slot = 1;
+        if (slot > 12) slot = 12;
+    }
+    else
+    {
+        slot = 1;
+    }
+    ImGui::SameLine();
+    ImGui::Text("has finished loading");
+    
+    
     ImGui::PopID();
 }
 
