@@ -334,9 +334,19 @@ private:
 class StopScriptAction : public Action {
 public:
     StopScriptAction() = default;
-    StopScriptAction(InputStream&) : StopScriptAction(){}
+    StopScriptAction(InputStream&){}
     ActionType type() const final { return ActionType::StopScript; }
     ActionStatus isComplete() const final { return ActionStatus::Error; }
-    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
     void drawSettings() final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
+};
+
+class LogOutAction : public Action {
+public:
+    LogOutAction() = default;
+    LogOutAction(InputStream&) {}
+    ActionType type() const final { return ActionType::LogOut; }
+    void initialAction() final;
+    void drawSettings() final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
 };

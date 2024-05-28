@@ -1283,3 +1283,21 @@ void StopScriptAction::drawSettings()
 
     ImGui::PopID();
 }
+
+/// ------------- LogOutAction -------------
+void LogOutAction::initialAction()
+{
+    Action::initialAction();
+
+    auto packet = GW::UI::UIPacket::kLogout{.unknown = 0, .character_select = 0};
+    SendUIMessage(GW::UI::UIMessage::kLogout, &packet);
+}
+
+void LogOutAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("Log out");
+
+    ImGui::PopID();
+}
