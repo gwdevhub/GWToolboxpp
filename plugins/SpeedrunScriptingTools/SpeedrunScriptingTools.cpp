@@ -371,7 +371,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Text("Actions in queue: %i", m_currentScript ? m_currentScript->actions.size() : 0u);
 
-    ImGui::Text("Version 1.2. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 1.3. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
@@ -478,7 +478,7 @@ void SpeedrunScriptingTools::Update(float delta)
         }
     }
     
-    if(!m_currentScript || m_currentScript->actions.empty())
+    if (!m_currentScript || m_currentScript->actions.empty())
     {
         // Find script to use
         for (auto& script : m_scripts) {
@@ -567,11 +567,7 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
             {
                 if (script.enabledToggleHotkey.keyData == keyData && script.enabledToggleHotkey.modifier == modifier)
                 {
-                    if (script.showMessageWhenTriggered)
-                    {
-                        if (script.enabled) logMessage(std::string{"Disable script "} + script.name);
-                        else logMessage(std::string{"Enable script "} + script.name);
-                    }
+                    logMessage(script.enabled ? std::string{"Disable script "} + script.name : std::string{"Enable script "} + script.name);
                     script.enabled = !script.enabled;
                     triggered = true;
                 }

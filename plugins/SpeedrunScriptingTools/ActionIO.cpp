@@ -75,7 +75,7 @@ std::string_view toString(ActionType type)
         case ActionType::SendDialog:
             return "Send dialog";
         case ActionType::GoToTarget:
-            return "Interact with current target";
+            return "Speak with NPC";
         case ActionType::Wait:
             return "Wait";
         case ActionType::SendChat:
@@ -171,48 +171,40 @@ std::shared_ptr<Action> drawActionSelector(float width)
 {
     std::shared_ptr<Action> result = nullptr;
 
-    static_assert((int)ActionType::Count == 23);
-    constexpr auto actions = std::array{
-        ActionType::MoveTo,       
-        ActionType::Cast,
-        ActionType::CastBySlot,
-        //ActionType::CastOnSelf, // CtoS cast on self despite having a different target. Currently deemed unnecessary
-        
-        ActionType::ChangeTarget, 
-        ActionType::StoreTarget,
-        ActionType::RestoreTarget,
-        
-        ActionType::GoToTarget,
-        ActionType::AutoAttackTarget, 
-        ActionType::PingTarget,
-
-        ActionType::UseItem,         
-        ActionType::EquipItem,
-        ActionType::ChangeWeaponSet,  
-
-        ActionType::SendDialog, 
-        ActionType::SendChat,
-        ActionType::DropBuff,
-        
-        ActionType::RepopMinipet,
-        ActionType::PingHardMode,
-
-        ActionType::Cancel,
-        ActionType::Wait,
-        ActionType::Conditioned,
-        ActionType::StopScript,
-        ActionType::LogOut,
+    const auto drawActionSelector = [&result](ActionType type) 
+    {
+        if (ImGui::MenuItem(toString(type).data())) 
+        {
+            result = makeAction(type);
+        }
+    };
+    const auto drawSubMenu = [&drawActionSelector](std::string_view title, const auto& types) 
+        {
+        if (ImGui::BeginMenu(title.data())) 
+        {
+            for (const auto& type : types) 
+            {
+                drawActionSelector(type);
+            }
+            ImGui::EndMenu();
+        }
     };
 
-    if (ImGui::Button("Add action", ImVec2(width, 0))) {
+    if (ImGui::Button("Add action", ImVec2(width, 0))) 
+    {
         ImGui::OpenPopup("Add action");
     }
-    if (ImGui::BeginPopup("Add action")) {
-        for (auto action : actions) {
-            if (ImGui::Selectable(toString(action).data())) {
-                result = makeAction(action);
-            }
-        }
+
+    if (ImGui::BeginPopup("Add action")) 
+    {
+        drawActionSelector(ActionType::MoveTo);
+        drawSubMenu("Skill", std::array{ActionType::Cast, ActionType::CastBySlot, ActionType::DropBuff});
+        drawSubMenu("Interaction", std::array{ActionType::SendDialog, ActionType::GoToTarget, ActionType::AutoAttackTarget});
+        drawSubMenu("Targeting", std::array{ActionType::ChangeTarget, ActionType::StoreTarget, ActionType::RestoreTarget});
+        drawSubMenu("Items", std::array{ActionType::EquipItem, ActionType::ChangeWeaponSet, ActionType::UseItem, ActionType::RepopMinipet});
+        drawSubMenu("Chat", std::array{ActionType::SendChat, ActionType::PingTarget, ActionType::PingHardMode});
+        drawSubMenu("Other", std::array{ActionType::Wait, ActionType::Cancel, ActionType::Conditioned, ActionType::LogOut, ActionType::StopScript});
+
         ImGui::EndPopup();
     }
 
