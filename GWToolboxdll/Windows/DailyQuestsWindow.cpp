@@ -751,7 +751,7 @@ namespace {
         if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
             now += 86400;
         }
-        PrintDaily(L"Zaishen Bounty", DailyQuests::GetZaishenMission(now)->GetQuestName(), now);
+        PrintDaily(L"Zaishen Bounty", DailyQuests::GetZaishenBounty(now)->GetQuestName(), now);
     }
 
     void CHAT_CMD_FUNC(CmdZaishenMission)
