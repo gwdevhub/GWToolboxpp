@@ -634,6 +634,42 @@ namespace {
         UseItem
     } tome_pending_stage;
 
+    uint32_t pending_destroy_item_id = 0;
+    clock_t pending_destroy_item_timeout = 0;
+
+    void DrawPendingDestroyItem() {
+        const auto popup_id = "##destroy_item_prompt";
+        if (!pending_destroy_item_id)
+            return;
+        const auto item = GW::Items::GetItemById(pending_destroy_item_id);
+        if (!(item && item->bag)) {
+            pending_destroy_item_id = 0;
+            ImGui::ClosePopup(popup_id);
+            return;
+        }
+        if (!ImGui::IsPopupOpen(popup_id)) {
+            ImGui::OpenPopup(popup_id);
+        }
+        if (ImGui::BeginPopupModal(popup_id, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("Sure you want to destroy this item?");
+            if (ImGui::Button("Destroy", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
+                GW::Items::DestroyItem(pending_destroy_item_id);
+                pending_destroy_item_id = 0;
+                ImGui::CloseCurrentPopup();
+            }
+            if (ImGui::IsWindowAppearing()) {
+                ImGui::SetFocusID(ImGui::GetItemID(), ImGui::GetCurrentWindow());
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                pending_destroy_item_id = 0;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+            return;
+        }
+    }
+
     GW::Constants::Profession tome_pending_profession;
     time_t tome_pending_timeout = 0;
     uint32_t tome_pending_item_id = 0;
@@ -1851,6 +1887,7 @@ void InventoryManager::Draw(IDirect3DDevice9*)
         return;
     }
     DrawPendingTomeUsage();
+    DrawPendingDestroyItem();
 #if 0
     DrawInventoryOverlay();
 #endif
@@ -2236,6 +2273,14 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
                 salvage_all_type = type;
                 SalvageAll(type);
             }
+            goto end_popup;
+        }
+    }
+    if (bag) {
+        const auto btn_text = std::format("Destroy {}", context_item.name.string());
+        if (ImGui::Button(btn_text.c_str())) {
+            ImGui::CloseCurrentPopup();
+            pending_destroy_item_id = context_item.item_id;
             goto end_popup;
         }
     }

@@ -32,6 +32,8 @@ namespace ImGui {
     // Button with single icon texture
     IMGUI_API bool IconButton(const char* label, ImTextureID icon, const ImVec2& size, ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ImVec2& icon_size = {0.f, 0.f});
 
+    IMGUI_API void ClosePopup(const char* popup_id);
+
     // Button with 1 or more icon textures overlaid
     IMGUI_API bool CompositeIconButton(const char* label, const ImTextureID* icons, size_t icons_len, const ImVec2& size, ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ImVec2& icon_size = {0.f, 0.f}, const ImVec2& uv0 = {0.f, 0.f}, ImVec2 uv1 = {0.f, 0.f});
 

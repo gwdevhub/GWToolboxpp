@@ -140,6 +140,10 @@ namespace ImGui {
         }
         return *confirm_bool;
     }
+    void ClosePopup(const char* popup_id) {
+        if (IsPopupOpen(popup_id))
+            ClosePopup(popup_id);
+    }
     bool CompositeIconButton(const char* label, const ImTextureID* icons, size_t icons_len, const ImVec2& size, const ImGuiButtonFlags flags, const ImVec2& icon_size, const ImVec2& uv0, ImVec2 uv1)
     {
         char button_id[128];
