@@ -420,15 +420,33 @@ namespace {
         }
     }
     std::wstring tmp_item_description;
-    void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc) 
+    void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t** out_name, wchar_t** out_desc) 
     {
-        if (!(out_desc && *out_desc)) return;
-        if (*out_desc != tmp_item_description.data()) {
+        // If both description and name are null, we can't do anything so we return early
+        if (!(out_desc && *out_desc) && !(out_name && *out_name)) {
+            return;
+        }
+
+        // If description is not null, we're going to modify the description. If it is null but the name is not null, we're going to take that instead
+        if ((out_desc && *out_desc) && *out_desc != tmp_item_description.data()) {
             tmp_item_description.assign(*out_desc);
         }
+        else if ((out_name && *out_name) && *out_name != tmp_item_description.data()) {
+            tmp_item_description.assign(*out_name);
+        }
+        else {
+            return;
+        }
+
         AppendSalvageInfoDescription(item_id, tmp_item_description);
         AppendNicholasInfo(item_id, tmp_item_description);
-        *out_desc = tmp_item_description.data();
+        // Set the modified string to either the description if it was not null, or the name otherwise
+        if (out_desc && *out_desc) {
+            *out_desc = tmp_item_description.data();
+        }
+        else {
+            *out_name = tmp_item_description.data();
+        }
     }
 }
 
