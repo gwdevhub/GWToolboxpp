@@ -222,7 +222,7 @@ namespace {
         if (std::regex_search(response, m, infobox_regex)) {
             std::string infobox_content = m[1].str();
 
-            const auto sub_links_regex = std::regex(R"delim(<a href="\/wiki\/File:[\s\S]*?title="([\s\S]*?)">)delim");
+            const auto sub_links_regex = std::regex(R"delim(<a href="\/wiki[\s\S]*?title="([\s\S]*?)">)delim");
             const auto disambig_regex = std::regex("This disambiguation page");
             if (std::regex_search(infobox_content, m, disambig_regex)) {
                 // Detected a disambiguation page. We need to search for materials in the hrefs listed on this page
