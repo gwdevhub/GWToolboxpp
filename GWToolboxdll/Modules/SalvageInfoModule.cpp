@@ -359,6 +359,11 @@ namespace {
         return salvage_info_by_single_item_name[single_item_name];
     }
 
+    void NewLineIfNotEmpty(std::wstring& enc_str) {
+        if (!enc_str.empty())
+            enc_str += L"\x2\x102\x2";
+    }
+
     void AppendSalvageInfoDescription(const uint32_t item_id, std::wstring& description) {
         const auto item = static_cast<InventoryManager::Item*>(GW::Items::GetItemById(item_id));
 
@@ -380,11 +385,9 @@ namespace {
         if (!salvage_info)
             return;
 
-        if (description.empty())
-            description += L"\x101";
-
         if (salvage_info->loading) {
-            description += L"\x2\x102\x2\x108\x107" L"Fetching salvage info...\x1";
+            NewLineIfNotEmpty(description);
+            description += L"\x108\x107" L"Fetching salvage info...\x1";
         }
 
         if (!salvage_info->common_crafting_materials.empty()) {
@@ -394,8 +397,8 @@ namespace {
                     items += L"\x2\x108\x107, \x1\x2";
                 items += i->enc_name;
             }
-
-            description += std::format(L"\x2\x102\x2\x108\x107<c=@ItemCommon>Common Materials:</c> \x1\x2{}", items);
+            NewLineIfNotEmpty(description);
+            description += std::format(L"{}\x10a\x108\x107" L"Common Materials: \x1\x1\x2{}", GW::EncStrings::ItemCommon, items);
         }
         if (!salvage_info->rare_crafting_materials.empty()) {
             std::wstring items;
@@ -404,8 +407,8 @@ namespace {
                     items += L"\x2\x108\x107, \x1\x2";
                 items += i->enc_name;
             }
-
-            description += std::format(L"\x2\x102\x2\x108\x107<c=@ItemRare>Rare Materials:</c> \x1\x2{}", items);
+            NewLineIfNotEmpty(description);
+            description += std::format(L"{}\x10a\x108\x107" L"Rare Materials: \x1\x1\x2{}", GW::EncStrings::ItemRare, items);
         }
 
     }
@@ -414,21 +417,25 @@ namespace {
         const auto name = item ? item->name_enc : nullptr;
         const auto nick_item = name ? DailyQuests::GetNicholasItemInfo(name) : nullptr;
         if (nick_item) {
-            if (description.empty())
-                description += L"\x101";
-            description += std::format(L"\x2\x102\x2{}\x107\x108Nicholas The Traveller collects {} of these!\x1", GW::EncStrings::ItemUnique, nick_item->quantity);
+            NewLineIfNotEmpty(description);
+            description += std::format(L"{}\x10a\x108\x107Nicholas The Traveller collects {} of these!\x1\x1", GW::EncStrings::ItemUnique, nick_item->quantity);
         }
     }
     std::wstring tmp_item_description;
     void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc) 
     {
-        if (!(out_desc && *out_desc)) return;
+        if (!out_desc) return;
         if (*out_desc != tmp_item_description.data()) {
-            tmp_item_description.assign(*out_desc);
+            tmp_item_description.assign(*out_desc ? *out_desc : L"");
         }
         AppendSalvageInfoDescription(item_id, tmp_item_description);
         AppendNicholasInfo(item_id, tmp_item_description);
-        *out_desc = tmp_item_description.data();
+        if (!tmp_item_description.empty()) {
+            bool is_valid = GW::UI::IsValidEncStr(tmp_item_description.data());
+            if (is_valid) {
+                *out_desc = tmp_item_description.data();
+            }
+        }
     }
 }
 
