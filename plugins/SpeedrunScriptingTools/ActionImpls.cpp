@@ -46,6 +46,8 @@ namespace {
         GW::Item* item = nullptr;
         for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size && !item; i++)
             item = FindMatchingItem(static_cast<GW::Constants::Bag>(i), model_id);
+        if (!item) 
+            item = FindMatchingItem(GW::Constants::Bag::Equipped_Items, model_id);
         return item;
     }
     void SafeEquip(GW::Item* item)
@@ -366,7 +368,7 @@ void ChangeTargetAction::initialAction()
             : ((modelId == 0) || (agent->player_number == modelId));
         const auto distance = GW::GetDistance(player->pos, agent->pos);
         const auto goodDistance = (minDistance - eps < distance) && (distance < maxDistance + eps);
-        const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedName(agent->agent_id) == agentName);
+        const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedAgentName(agent->agent_id) == agentName);
         const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(agent->pos, polygon);
         const auto goodHp = minHp <= 100.f * agent->hp && 100.f * agent->hp <= maxHp;
         const auto goodAngle = angleToAgent(player, agent) - eps < maxAngle;
@@ -553,9 +555,14 @@ void UseItemAction::initialAction()
 }
 void UseItemAction::drawSettings()
 {
+    const auto item = FindMatchingItem(id);
+    const auto itemName = item ? InstanceInfo::getInstance().getDecodedItemName(item->item_id) : "";
+
     ImGui::PushID(drawId());
 
     ImGui::Text("Use item:");
+    ImGui::SameLine();
+    ImGui::Text("%s", itemName.c_str());
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("model ID", &id, 0);
@@ -587,9 +594,13 @@ void EquipItemAction::initialAction()
 }
 void EquipItemAction::drawSettings()
 {
+    const auto item = FindMatchingItem(id);
+    const auto itemName = item ? InstanceInfo::getInstance().getDecodedItemName(item->item_id) : "";
     ImGui::PushID(drawId());
 
     ImGui::Text("Equip item:");
+    ImGui::SameLine();
+    ImGui::Text("%s", itemName.c_str());
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("model ID", &id, 0);
@@ -1159,10 +1170,15 @@ ActionStatus RepopMinipetAction::isComplete() const
 
 void RepopMinipetAction::drawSettings()
 {
+    const auto item = FindMatchingItem(itemModelId);
+    const auto itemName = item ? InstanceInfo::getInstance().getDecodedItemName(item->item_id) : "";
+
     ImGui::PushID(drawId());
 
     ImGui::Text("(Unpop and) repop minipet as soon as its available:");
     ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    ImGui::Text("%s", itemName.c_str());
     ImGui::SameLine();
     ImGui::InputInt("Item model ID", &itemModelId, 0);
     ImGui::SameLine();

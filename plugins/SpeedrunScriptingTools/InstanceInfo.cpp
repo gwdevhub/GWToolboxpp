@@ -33,8 +33,10 @@ namespace {
         return str_to;
     }
 
-    bool isTargetableMiniPet(uint32_t itemId) {
-        switch (itemId) {
+    bool isTargetableMiniPet(uint32_t itemId) 
+    {
+        switch (itemId) 
+        {
             case GW::Constants::ItemID::GuildLord:
             case GW::Constants::ItemID::HighPriestZhang:
             case GW::Constants::ItemID::GhostlyPriest:
@@ -42,6 +44,18 @@ namespace {
                 return true;
             default:
                 return false;
+        }
+    }
+
+    void removeTextInAngledBrackets(std::string& str)
+    {
+        while (true) 
+        {
+            const auto start = str.find_first_of('<');
+            const auto end = str.find_first_of('>',start);
+
+            if (start == std::string::npos || end == std::string::npos) break;
+            str.erase(start, end+1);
         }
     }
 } // namespace
@@ -60,7 +74,8 @@ void InstanceInfo::initialize()
         using namespace std::chrono_literals;
 
         this->questStatus.clear();
-        this->decodedNames.clear();
+        this->decodedAgentNames.clear();
+        this->decodedItemNames.clear();
         this->storedTargets.clear();
 
         mpStatus.poppedMinipetId = std::nullopt;
@@ -110,9 +125,9 @@ QuestStatus InstanceInfo::getQuestStatus(GW::Constants::QuestID id)
 {
     return questStatus[id];
 }
-std::string InstanceInfo::getDecodedName(GW::AgentID id)
+std::string InstanceInfo::getDecodedAgentName(GW::AgentID id)
 {
-    auto& wName = decodedNames[id];
+    auto& wName = decodedAgentNames[id];
 
     if (wName.empty()) {
         const wchar_t* encodedName = nullptr;
@@ -138,6 +153,26 @@ std::string InstanceInfo::getDecodedName(GW::AgentID id)
         GW::UI::AsyncDecodeStr(encodedName, &wName);
     }
     return WStringToString(wName);
+}
+std::string InstanceInfo::getDecodedItemName(uint32_t item_id)
+{
+    auto& wName = decodedItemNames[item_id];
+
+    if (wName.empty()) {
+        const wchar_t* encodedName = nullptr;
+
+        // Check in agent infos
+        const auto item = GW::Items::GetItemById(item_id);
+        if (!item) return "";
+        encodedName = item->single_item_name;
+
+        if (!encodedName) return "";
+        GW::UI::AsyncDecodeStr(encodedName, &wName);
+    }
+
+    auto decoded = WStringToString(wName);
+    removeTextInAngledBrackets(decoded);
+    return decoded;
 }
 
 bool InstanceInfo::canPopAgent() const 
