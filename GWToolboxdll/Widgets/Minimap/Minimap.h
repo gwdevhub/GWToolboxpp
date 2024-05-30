@@ -4,6 +4,8 @@
 
 #include <ToolboxWidget.h>
 
+#include "Defines.h"
+
 #include <Widgets/Minimap/AgentRenderer.h>
 #include <Widgets/Minimap/CustomRenderer.h>
 #include <Widgets/Minimap/EffectRenderer.h>
@@ -70,7 +72,7 @@ public:
     bool OnMouseUp(UINT Message, WPARAM wParam, LPARAM lParam);
     bool OnMouseMove(UINT Message, WPARAM wParam, LPARAM lParam);
     bool OnMouseWheel(UINT Message, WPARAM wParam, LPARAM lParam);
-    static void OnFlagHeroCmd(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CHAT_CMD_FUNC(OnFlagHeroCmd);
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
     void LoadSettings(ToolboxIni* ini) override;

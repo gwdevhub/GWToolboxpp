@@ -7,6 +7,7 @@
 #include <Utils/GuiUtils.h>
 #include <Timer.h>
 #include <ToolboxWindow.h>
+#include <Defines.h>
 
 constexpr size_t BUFFER_SIZE = 128;
 
@@ -91,7 +92,7 @@ public:
     [[nodiscard]] const char* BuildName(unsigned int idx) const;
     [[nodiscard]] unsigned int BuildCount() const { return teambuilds.size(); }
 
-    static void CmdHeroTeamBuild(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CHAT_CMD_FUNC(CmdHeroTeamBuild);
 
 private:
     bool hide_when_entering_explorable = false;

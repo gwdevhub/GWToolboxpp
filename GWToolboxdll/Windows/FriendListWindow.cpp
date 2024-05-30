@@ -586,15 +586,12 @@ namespace {
     void CHAT_CMD_FUNC(CmdInvite)
     {
         const auto player_name = ParsePlayerName(argc - 1, &argv[1]);
-        if (player_name.empty()) {
+        const auto friend_ = player_name.empty() ? nullptr : FriendListWindow::GetFriend(player_name.c_str());
+        if (friend_ && friend_->current_char && friend_->current_char->getNameW() != player_name) {
+            GW::Chat::SendChat('/', std::format(L"invite {}", friend_->current_char->getNameW()).c_str());
             return;
         }
-        if (const auto friend_ = FriendListWindow::GetFriend(player_name.c_str())) {
-            if (friend_->current_char && friend_->current_char->getNameW() != player_name) {
-                GW::Chat::SendChat('/', (std::wstring(L"invite ") + friend_->current_char->getNameW()).c_str());
-                return;
-            }
-        }
+        status->blocked = false;
     }
 
     void CHAT_CMD_FUNC(CmdSetFriendListStatus)
@@ -654,7 +651,6 @@ namespace {
             GW::Chat::SendChat('"', msg + 1);
         }
     }
-
 
 }
 

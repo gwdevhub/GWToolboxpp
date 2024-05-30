@@ -420,7 +420,7 @@ GW::Vec2f Minimap::ShadowstepLocation() const
     return shadowstep_location;
 }
 
-void Minimap::OnFlagHeroCmd(const wchar_t*, const int argc, const LPWSTR* argv)
+void CHAT_CMD_FUNC(Minimap::OnFlagHeroCmd)
 {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
         return; // Not explorable - "/flag" can be typed in chat to bypass flag hero buttons, so this is needed.

@@ -26,6 +26,8 @@
 #include <Modules/TeamspeakModule.h>
 #include <Timer.h>
 
+#include <Defines.h>
+
 namespace {
     const char* teamspeak3_host = "127.0.0.1";
     char teamspeak3_api_key[128] = {0};
@@ -63,7 +65,7 @@ namespace {
         return current_server;
     }
 
-    void OnTeamspeakCommand(const wchar_t*,const int,const LPWSTR*);
+    void CHAT_CMD_FUNC(OnTeamspeakCommand);
     bool ConnectBlocking(bool user_invoked = false);
 
     bool IsConnected()
@@ -414,7 +416,7 @@ namespace {
         });
     }
 
-    void OnTeamspeakCommand(const wchar_t*, const int, const LPWSTR*)
+    void CHAT_CMD_FUNC(OnTeamspeakCommand)
     {
         Resources::EnqueueWorkerTask([] {
             GetServerInfoBlocking();

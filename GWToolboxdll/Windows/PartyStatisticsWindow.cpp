@@ -424,7 +424,7 @@ namespace {
         }
     }
 
-    void CmdSkillStatistics(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdSkillStatistics)
     {
         /* command: /skillstats */
         /* will write the stats of the self player */

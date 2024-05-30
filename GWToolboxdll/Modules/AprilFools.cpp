@@ -14,6 +14,8 @@
 #include <Logger.h>
 #include <Modules/AprilFools.h>
 
+#include <Defines.h>
+
 namespace {
     bool enabled = false;
 
@@ -101,7 +103,7 @@ namespace {
         GW::StoC::RemoveCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Hook);
         listeners_added = false;
     }
-    void CmdAprilFools(const wchar_t*, const int, const LPWSTR*) {
+    void CHAT_CMD_FUNC(CmdAprilFools) {
         AprilFools::SetEnabled(!enabled);
     }
 }

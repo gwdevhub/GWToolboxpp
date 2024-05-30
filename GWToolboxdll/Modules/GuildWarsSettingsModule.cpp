@@ -25,6 +25,8 @@
 
 #include <d3d9on12.h>
 
+#include "Defines.h"
+
 namespace {
     uint32_t* key_mappings_array = nullptr;
     uint32_t key_mappings_array_length = 0x75;
@@ -421,7 +423,7 @@ namespace {
         });
     }
 
-    void CmdSave(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdSave)
     {
         std::filesystem::path filename = GetDefaultFilename();
         if (argc > 1) {
@@ -436,7 +438,7 @@ namespace {
         OnPreferencesSaveFileChosen(filename.string().c_str());
     }
 
-    void CmdLoad(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdLoad)
     {
         std::filesystem::path filename = GetDefaultFilename();
         if (argc > 1) {

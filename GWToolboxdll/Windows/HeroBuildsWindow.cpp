@@ -685,8 +685,7 @@ void HeroBuildsWindow::Update(float)
     last_instance_type = instance_type;
 }
 
-void HeroBuildsWindow::CmdHeroTeamBuild(const wchar_t*, const int argc, const LPWSTR* argv)
-{
+void CHAT_CMD_FUNC(HeroBuildsWindow::CmdHeroTeamBuild) {
     if (argc < 2) {
         Log::ErrorW(L"Syntax: /%s [hero_build_name]", argv[0]);
         return;

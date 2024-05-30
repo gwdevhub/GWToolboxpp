@@ -51,31 +51,124 @@ namespace {
         return buff ? buff->begin() : nullptr;
     }
 
-}
-void TradeWindow::CmdPricecheck(const wchar_t*, const int argc, const LPWSTR* argv)
-{
-    if (argc < 2) {
-        return Log::Error("Try '/pc <item>'");
+    struct Message {
+        uint32_t timestamp = 0;
+        std::string name;
+        std::string message;
+    };
+
+    GW::HookEntry OnMessageLocal_Entry;
+    GW::HookEntry OnPartySearch_Entry;
+    GW::PartySearch player_party_search = { 0 };
+    char player_party_search_text[64] = { 0 };
+
+    WSAData wsaData = { 0 };
+
+    bool is_kamadan_chat = true;
+    bool refresh_footer = false;
+
+    bool show_alert_window = false;
+
+    // Window could be visible but collapsed - use this var to check it.
+    bool collapsed = false;
+
+    // if we need to print in the chat
+    bool print_game_chat = false;
+    bool print_game_chat_asc = false;
+
+    // if enable, we won't print the messages containing word from alert_words
+    bool filter_alerts = false;
+
+    // if enabled, will also apply the trade alerts filter to incoming local trade chat messages.
+    bool filter_local_trade = false;
+
+    static constexpr auto ALERT_BUF_SIZE = 1024 * 16;
+    char alert_buf[ALERT_BUF_SIZE]{};
+    // set when the alert_buf was modified
+    bool alertfile_dirty = false;
+
+    std::string pending_query_string;
+    clock_t pending_query_sent = 0;
+    bool print_search_results = false;
+
+    char search_buffer[256] = { 0 };
+
+    std::vector<std::string> alert_words{};
+    std::vector<std::string> searched_words{};
+
+    CircularBuffer<Message> messages;
+
+    bool ws_window_connecting = false;
+
+    easywsclient::WebSocket* ws_window = nullptr;
+
+    RateLimiter window_rate_limiter;
+
+    void search(const std::string& query, const bool print_results_in_chat = false)
+    {
+        pending_query_string = query.empty() ? " " : query;
+        print_search_results = print_results_in_chat;
+        pending_query_sent = 0;
     }
 
-    std::string item_to_search;
-    for (int i = 1; i < argc; i++) {
-        if (i > 1) {
-            item_to_search += " ";
+    bool parse_json_message(const json& js, Message* msg)
+    {
+        if (js == json::value_t::discarded) {
+            return false;
         }
-        item_to_search += GuiUtils::WStringToString(argv[i]);
+        if (!(js.contains("s") && js["s"].is_string())) {
+            return false;
+        }
+        msg->name = js["s"].get<std::string>();
+        if (!(js.contains("m") && js["m"].is_string())) {
+            return false;
+        }
+        msg->message = js["m"].get<std::string>();
+        if (!js.contains("t")) {
+            return false;
+        }
+        unsigned long long timestamp_ull = 0ull;
+        if (js["t"].is_string()) {
+            const auto str = js["t"].get<std::string>();
+            timestamp_ull = strtoull(str.c_str(), nullptr, 10);
+        }
+        else if (js["t"].is_number_unsigned()) {
+            timestamp_ull = js["t"].get<uint64_t>();
+        }
+        if (timestamp_ull == 0ull) {
+            return false;
+        }
+        msg->timestamp = static_cast<uint32_t>(timestamp_ull / 1000); // Messy?
+        return true;
     }
-    Log::Info("Searching trade for \"%s\"...", item_to_search.c_str());
-    Instance().search(item_to_search, true);
+
+
+    void CHAT_CMD_FUNC(CmdPricecheck)
+    {
+        if (argc < 2) {
+            return Log::Error("Try '/pc <item>'");
+        }
+
+        std::string item_to_search;
+        for (int i = 1; i < argc; i++) {
+            if (i > 1) {
+                item_to_search += " ";
+            }
+            item_to_search += GuiUtils::WStringToString(argv[i]);
+        }
+        Log::Info("Searching trade for \"%s\"...", item_to_search.c_str());
+        search(item_to_search, true);
+    }
+
 }
 
 void TradeWindow::OnMessageLocal(GW::HookStatus* status, const GW::Packet::StoC::MessageLocal* pak)
 {
-    if (pak->channel != GW::Chat::CHANNEL_TRADE || status->blocked || !Instance().filter_alerts) {
+    if (pak->channel != GW::Chat::CHANNEL_TRADE || status->blocked || !filter_alerts) {
         return;
     }
     // Only filter incoming trade messages if the user wants them filtered.
-    if (!Instance().filter_local_trade) {
+    if (!filter_local_trade) {
         return;
     }
     const wchar_t* message = GetMessageCore();
@@ -212,37 +305,6 @@ void TradeWindow::Update(const float)
         window_rate_limiter = RateLimiter(); // Deliberately closed; reset rate limiter.
     }
     fetch();
-}
-
-bool TradeWindow::parse_json_message(const json& js, Message* msg)
-{
-    if (js == json::value_t::discarded) {
-        return false;
-    }
-    if (!(js.contains("s") && js["s"].is_string())) {
-        return false;
-    }
-    msg->name = js["s"].get<std::string>();
-    if (!(js.contains("m") && js["m"].is_string())) {
-        return false;
-    }
-    msg->message = js["m"].get<std::string>();
-    if (!js.contains("t")) {
-        return false;
-    }
-    unsigned long long timestamp_ull = 0ull;
-    if (js["t"].is_string()) {
-        const auto str = js["t"].get<std::string>();
-        timestamp_ull = strtoull(str.c_str(), nullptr, 10);
-    }
-    else if (js["t"].is_number_unsigned()) {
-        timestamp_ull = js["t"].get<uint64_t>();
-    }
-    if (timestamp_ull == 0ull) {
-        return false;
-    }
-    msg->timestamp = static_cast<uint32_t>(timestamp_ull / 1000); // Messy?
-    return true;
 }
 
 void TradeWindow::fetch()
@@ -389,37 +451,30 @@ bool TradeWindow::IsTradeAlert(std::string& message) const
     return false;
 }
 
-void TradeWindow::search(std::string query, const bool print_results_in_chat)
-{
-    pending_query_string = query.empty() ? " " : query;
-    print_search_results = print_results_in_chat;
-    pending_query_sent = 0;
-}
-
 void TradeWindow::FindPlayerPartySearch(GW::HookStatus*, void*)
 {
     GW::PartyContext* ctx = GW::GetPartyContext();
     if (ctx && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         auto& party_searches = ctx->party_search;
         if (!party_searches.valid() || !party_searches.size()) {
-            Instance().player_party_search = {0};
+            player_party_search = {0};
             return;
         }
         const wchar_t* me = GW::PlayerMgr::GetPlayerName(GW::PlayerMgr::GetPlayerNumber());
         for (const GW::PartySearch* party_search : party_searches) {
             if (party_search && wcscmp(me, party_search->party_leader) == 0) {
-                GW::PartySearch* existing = &Instance().player_party_search;
+                GW::PartySearch* existing = &player_party_search;
                 const bool message_changed = wcscmp(existing->message, party_search->message) != 0;
                 *existing = *party_search;
                 if (message_changed) {
                     const std::string pps_str = GuiUtils::WStringToString(party_search->message);
-                    strcpy(Instance().player_party_search_text, pps_str.c_str());
+                    strcpy(player_party_search_text, pps_str.c_str());
                 }
                 return;
             }
         }
     }
-    Instance().player_party_search = {0};
+    player_party_search = {0};
 }
 
 void TradeWindow::Draw(IDirect3DDevice9*)

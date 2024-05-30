@@ -119,7 +119,7 @@ namespace {
         return true;
     }
 
-    void CmdDeep24h(const wchar_t*, const int, const LPWSTR*)
+    void CHAT_CMD_FUNC(CmdDeep24h)
     {
         ZrawDeepModule::Instance().SetEnabled(!enabled);
         Log::Info(enabled ? "24h Deep mode on!" : "24h Deep mode off :(");

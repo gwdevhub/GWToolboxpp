@@ -123,7 +123,7 @@ void BuildsWindow::DrawHelp()
     ImGui::TreePop();
 }
 
-void BuildsWindow::CmdLoad(const wchar_t*, const int argc, const LPWSTR* argv)
+void CHAT_CMD_FUNC(BuildsWindow::CmdLoad)
 {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
         return;

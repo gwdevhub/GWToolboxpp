@@ -5,6 +5,8 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
+#include <GWCA/Utilities/Hook.h>
+
 #include <Utils/GuiUtils.h>
 #include <Logger.h>
 
@@ -1208,7 +1210,7 @@ void DailyQuests::Initialize()
         {L"wanted", CmdWantedByShiningBlade},
         {L"nicholas", CmdNicholas},
         {L"weekly", CmdWeeklyBonus},
-        {L"today", [](const wchar_t*, const int, const LPWSTR*) -> void {
+        {L"today", [](GW::HookStatus*,const wchar_t*, const int, const LPWSTR*) -> void {
             if (GetIsPreSearing()) {
                 GW::Chat::SendChat('/', "vanguard");
                 GW::Chat::SendChat('/', "nicholas");
@@ -1222,13 +1224,13 @@ void DailyQuests::Initialize()
             GW::Chat::SendChat('/', "nicholas");
             GW::Chat::SendChat('/', "weekly");
         }},
-        {L"daily", [](const wchar_t*, const int, const LPWSTR*) -> void {
+        {L"daily", [](GW::HookStatus*,const wchar_t*, const int, const LPWSTR*) -> void {
             GW::Chat::SendChat('/', "today");
         }},
-        {L"dailies", [](const wchar_t*, const int, const LPWSTR*) -> void {
+        {L"dailies", [](GW::HookStatus*,const wchar_t*, const int, const LPWSTR*) -> void {
             GW::Chat::SendChat('/', "today");
         }},
-        {L"tomorrow", [](const wchar_t*, const int, const LPWSTR*) -> void {
+        {L"tomorrow", [](GW::HookStatus*,const wchar_t*, const int, const LPWSTR*) -> void {
             if (GetIsPreSearing()) {
                 GW::Chat::SendChat('/', "vanguard tomorrow");
                 GW::Chat::SendChat('/', "nicholas tomorrow");

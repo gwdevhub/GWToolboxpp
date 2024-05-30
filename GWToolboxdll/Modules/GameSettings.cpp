@@ -1002,7 +1002,7 @@ namespace {
         }
     }
 
-    void CmdReinvite(const wchar_t*, const int, const LPWSTR*)
+    void CHAT_CMD_FUNC(CmdReinvite)
     {
         pending_reinvite.reset(current_party_target_id);
     }

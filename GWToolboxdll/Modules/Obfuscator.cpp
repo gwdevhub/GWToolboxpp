@@ -531,7 +531,7 @@ namespace {
         return true;
     }
     
-    void CmdObfuscate(const wchar_t*, const int, const LPWSTR*)
+    void CHAT_CMD_FUNC(CmdObfuscate)
     {
         Obfuscator::Obfuscate(pending_state != ObfuscatorState::Enabled);
     }

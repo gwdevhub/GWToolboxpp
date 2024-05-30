@@ -29,8 +29,7 @@ constexpr auto GWTOOLBOX_INI_FILENAME = L"GWToolbox.ini";
 
 #define CLEAR_PTR_VEC(var) for(size_t i=0;i < var.size();i++) { delete var[i]; }; var.clear();
 
-#define CHAT_CMD_FUNC(fn) fn([[maybe_unused]] const wchar_t* message,[[maybe_unused]] int argc,[[maybe_unused]] const LPWSTR* argv)
-
+#define CHAT_CMD_FUNC(fn) fn([[maybe_unused]] GW::HookStatus* status, [[maybe_unused]] const wchar_t* message,[[maybe_unused]] int argc,[[maybe_unused]] const LPWSTR* argv)
 /*
 Notes:
 - EXCEPT_EXPRESSION_ENTRY is for the initialization

@@ -346,7 +346,7 @@ namespace {
         return true;
     }
 
-    void CmdTP(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdTP)
     {
         // zero argument error
         if (argc == 1) {

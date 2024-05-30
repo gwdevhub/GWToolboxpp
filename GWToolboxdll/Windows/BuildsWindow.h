@@ -8,6 +8,8 @@
 #include <Timer.h>
 #include <ToolboxWindow.h>
 
+#include <Defines.h>
+
 namespace GW::UI {
     enum class UIMessage : uint32_t;
 }
@@ -52,7 +54,7 @@ public:
         return instance;
     }
 
-    static void CmdLoad(const wchar_t* message, int argc, const LPWSTR* argv);
+    static void CHAT_CMD_FUNC(CmdLoad);
 
     [[nodiscard]] const char* Name() const override { return "Builds"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_LIST; }

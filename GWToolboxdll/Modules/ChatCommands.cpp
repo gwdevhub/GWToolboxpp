@@ -35,6 +35,7 @@
 
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Utilities/Hook.h>
 
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
@@ -60,6 +61,8 @@
 
 constexpr auto CMDTITLE_KEEP_CURRENT = 0xfffe;
 constexpr auto CMDTITLE_REMOVE_CURRENT = 0xffff;
+
+
 
 namespace {
     const wchar_t* next_word(const wchar_t* str)
@@ -317,6 +320,21 @@ namespace {
             GW::StoC::EmulatePacket(s);
             delete s;
         });
+    }
+
+    void CHAT_CMD_FUNC(CmdPlayEffect)
+    {
+        const auto player = GW::Agents::GetPlayer();
+        auto packet = new GW::Packet::StoC::PlayEffect();
+        memset(packet, 0, sizeof(*packet));
+        packet->header = GW::Packet::StoC::PlayEffect::STATIC_HEADER;
+        packet->agent_id = player->agent_id;
+        packet->coords = player->pos;
+        GuiUtils::ParseUInt(argv[1], &packet->effect_id);
+        GW::GameThread::Enqueue([packet] {
+            GW::StoC::EmulatePacket(packet);
+            delete packet;
+            });
     }
 
     const char* cmd_bonds_syntax = "'/bonds [remove|add] [party_member_index|all] [all|skill_id]' remove or add bonds from a single party member, or all party members";
@@ -1182,6 +1200,7 @@ void ChatCommands::Initialize()
         is_muted = *(bool**)((uintptr_t)SetMuted_Func + 0x6);
     }
     chat_commands.push_back({ L"mute", CmdMute }); // Doesn't unmute!
+    chat_commands.push_back({ L"effect", CmdPlayEffect });
 
 #endif
 
@@ -1730,14 +1749,14 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         }
         else {
             // e.g. /tb travel
-            const std::vector<ToolboxUIElement*> windows = MatchingWindows(message, argc, argv);
+            const std::vector<ToolboxUIElement*> windows = MatchingWindows(status, message, argc, argv);
             for (ToolboxUIElement* window : windows) {
                 window->visible ^= 1;
             }
         }
         return;
     }
-    const std::vector<ToolboxUIElement*> windows = MatchingWindows(message, argc, argv);
+    const std::vector<ToolboxUIElement*> windows = MatchingWindows(status, message, argc, argv);
     const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
     if (arg2 == L"hide") {
         // e.g. /tb travel hide
@@ -1920,7 +1939,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
         ASSERT(GW::Items::SetEquipmentVisibility(equipment_slot, state));
         return;
     }
-    const std::vector<ToolboxUIElement*> windows = MatchingWindows(message, ignore_last_arg ? argc - 1 : argc, argv);
+    const std::vector<ToolboxUIElement*> windows = MatchingWindows(status, message, ignore_last_arg ? argc - 1 : argc, argv);
     /*if (windows.empty()) {
         Log::Error("Cannot find window or command '%ls'", argc > 1 ? argv[1] : L"");
         return;
@@ -1938,7 +1957,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
                 break;
         }
     }
-    const GW::UI::WindowID gw_window = MatchingGWWindow(message, ignore_last_arg ? argc - 1 : argc, argv);
+    const GW::UI::WindowID gw_window = MatchingGWWindow(status, message, ignore_last_arg ? argc - 1 : argc, argv);
     if (gw_window < GW::UI::WindowID_Count) {
         bool set = true;
         switch (action) {

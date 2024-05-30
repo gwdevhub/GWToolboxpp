@@ -407,7 +407,7 @@ namespace {
         return true;
     }
 
-    void CmdReroll(const wchar_t* message, const int argc, const LPWSTR*)
+    void CHAT_CMD_FUNC(CmdReroll)
     {
         if (argc < 2) {
             Log::Error("Incorrect syntax: /reroll [profession|character_name]");

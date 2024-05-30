@@ -39,7 +39,7 @@ namespace {
         ping_history[ping_index] = ping;
     }
 
-    void CmdPing(const wchar_t*, const int, const LPWSTR*)
+    void CHAT_CMD_FUNC(CmdPing)
     {
         LatencyWidget::SendPing();
     }

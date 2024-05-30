@@ -334,8 +334,7 @@ void PconsWindow::OnVanquishComplete(GW::HookStatus*, GW::Packet::StoC::Vanquish
     Log::Info("Cons auto-disabled on completion");
 }
 
-void PconsWindow::CmdPcons(const wchar_t*, const int argc, const LPWSTR* argv)
-{
+void CHAT_CMD_FUNC(PconsWindow::CmdPcons) {
     if (argc <= 1) {
         Instance().ToggleEnable();
     }

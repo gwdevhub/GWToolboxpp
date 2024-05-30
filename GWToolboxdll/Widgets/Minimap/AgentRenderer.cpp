@@ -123,7 +123,7 @@ namespace {
         return true;
     }
 
-    void CmdMarkTarget(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CHAT_CMD_FUNC(CmdMarkTarget)
     {
         if (argc > 1 && wcscmp(argv[1], L"clearall") == 0) {
             // /marktarget clearall
@@ -142,7 +142,7 @@ namespace {
         marked_targets.emplace(agent->agent_id, new MarkedTarget(agent));
     }
 
-    void CmdClearMarkTarget(const wchar_t*, const int, const LPWSTR*)
+    void CHAT_CMD_FUNC(CmdClearMarkTarget)
     {
         RemoveMarkedTarget();
     }
