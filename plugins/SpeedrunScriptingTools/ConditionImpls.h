@@ -118,7 +118,7 @@ private:
 class OnlyTriggerOnceCondition : public Condition {
 public:
     OnlyTriggerOnceCondition() = default;
-    OnlyTriggerOnceCondition(InputStream&);
+    OnlyTriggerOnceCondition(InputStream&){}
     ConditionType type() const final { return ConditionType::OnlyTriggerOncePerInstance; }
     bool check() const final;
     void drawSettings() final;
