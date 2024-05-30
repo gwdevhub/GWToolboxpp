@@ -197,6 +197,7 @@ namespace {
     bool block_sugar_rush_effect = false;
     bool block_snowman_summoner = false;
     bool block_party_poppers = false;
+    bool block_fireworks = false;
     bool block_bottle_rockets = false;
     bool block_ghostinthebox_effect = false;
     bool block_sparkly_drops_effect = false;
@@ -1006,6 +1007,35 @@ namespace {
         pending_reinvite.reset(current_party_target_id);
     }
 
+    bool ShouldBlockEffect(uint32_t effect_id) {
+        if (effect_id >= 1292 && effect_id <= 1303) {
+            return block_fireworks;
+        }
+        if (effect_id >= 1685 && effect_id <= 1687) {
+            return block_fireworks;
+        }
+        switch (effect_id) {
+        case 905:
+            return block_snowman_summoner;
+        case 1688:
+            return block_bottle_rockets;
+        case 1689:
+            return block_party_poppers;
+        case 758:  // Chocolate bunny
+        case 2063: // e.g. Fruitcake, sugary blue drink
+        case 1176: // e.g. Delicious cake
+            return block_sugar_rush_effect;
+        case 1491:
+            return block_transmogrify_effect;
+        }
+        return false;
+    }
+
+    void OnPlayEffect(GW::HookStatus* status, const GW::Packet::StoC::PlayEffect* pak)
+    {
+        status->blocked |= ShouldBlockEffect(pak->effect_id);
+    }
+
     // Block full item descriptions
     void OnGetItemDescription(uint32_t, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc) 
     {
@@ -1307,6 +1337,7 @@ void GameSettings::Initialize()
             status->blocked = true;
         });*/
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TradeStart>(&TradeStart_Entry, OnTradeStarted);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&TradeStart_Entry, OnPlayEffect);
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PartyPlayerAdd_Entry, OnPartyInviteReceived);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, bind_member(this, &GameSettings::OnPartyPlayerJoined));
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, OnMapTravel);
@@ -1528,6 +1559,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(block_transmogrify_effect);
     LOAD_BOOL(block_sugar_rush_effect);
     LOAD_BOOL(block_snowman_summoner);
+    LOAD_BOOL(block_fireworks);
     LOAD_BOOL(block_party_poppers);
     LOAD_BOOL(block_bottle_rockets);
     LOAD_BOOL(block_ghostinthebox_effect);
@@ -1683,6 +1715,7 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
 
     SAVE_BOOL(block_transmogrify_effect);
     SAVE_BOOL(block_sugar_rush_effect);
+    SAVE_BOOL(block_fireworks);
     SAVE_BOOL(block_snowman_summoner);
     SAVE_BOOL(block_party_poppers);
     SAVE_BOOL(block_bottle_rockets);
@@ -1874,6 +1907,7 @@ void GameSettings::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Snowman Summoners", &block_snowman_summoner);
     ImGui::ShowHelp(doesnt_affect_me);
+    ImGui::Checkbox("Fireworks", &block_fireworks);
 #if 0
     //@Cleanup: Ghost in the box spawn effect suppressed, but still need to figure out how to suppress the death effect.
     ImGui::SameLine(column_spacing); ImGui::Checkbox("Ghost-in-the-box", &block_ghostinthebox_effect);
@@ -2146,27 +2180,7 @@ void GameSettings::OnAgentMarker(GW::HookStatus*, GW::Packet::StoC::GenericValue
 void GameSettings::OnAgentEffect(GW::HookStatus* status, const GW::Packet::StoC::GenericValue* pak)
 {
     if (pak->agent_id != GW::Agents::GetPlayerId()) {
-        switch (pak->value) {
-            case 905:
-                status->blocked = block_snowman_summoner;
-                break;
-            case 1688:
-                status->blocked = block_bottle_rockets;
-                break;
-            case 1689:
-                status->blocked = block_party_poppers;
-                break;
-            case 758:  // Chocolate bunny
-            case 2063: // e.g. Fruitcake, sugary blue drink
-            case 1176: // e.g. Delicious cake
-                status->blocked = block_sugar_rush_effect;
-                break;
-            case 1491:
-                status->blocked = block_transmogrify_effect;
-                break;
-            default:
-                break;
-        }
+        status->blocked |= ShouldBlockEffect(pak->value);
     }
 }
 
