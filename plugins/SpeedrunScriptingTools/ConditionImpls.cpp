@@ -49,6 +49,17 @@ namespace {
         }
         return nullptr;
     }
+    GW::Item* FindMatchingItem(uint32_t model_id)
+    {
+        constexpr size_t bags_size = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack) + 1;
+
+        GW::Item* item = nullptr;
+        for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size && !item; i++)
+            item = FindMatchingItem(static_cast<GW::Constants::Bag>(i), model_id);
+        if (!item) 
+            item = FindMatchingItem(GW::Constants::Bag::Equipped_Items, model_id);
+        return item;
+    }
 
     // Returns angle in degrees (0-180) between player forwards direction and agent
     float angleToAgent(const GW::AgentLiving* player, const GW::AgentLiving* agent) 
@@ -443,9 +454,6 @@ void InstanceProgressCondition::drawSettings()
 }
 
 /// ------------- OnlyTriggerOnceCondition -------------
-OnlyTriggerOnceCondition::OnlyTriggerOnceCondition(InputStream&)
-{
-}
 bool OnlyTriggerOnceCondition::check() const
 {
     const auto currentInstanceId = InstanceInfo::getInstance().getInstanceId();
@@ -674,7 +682,7 @@ bool PlayerHasNameCondition::check() const
     if (!player) return false;
 
     auto& instanceInfo = InstanceInfo::getInstance();
-    return instanceInfo.getDecodedName(player->agent_id) == name;
+    return instanceInfo.getDecodedAgentName(player->agent_id) == name;
 }
 void PlayerHasNameCondition::drawSettings()
 {
@@ -889,11 +897,12 @@ bool HasPartyWindowAllyOfNameCondition::check() const
 
     for (const auto& player : info->players) {
         auto candidate = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
-        if (instanceInfo.getDecodedName(candidate) == name) { return true; }
+        if (instanceInfo.getDecodedAgentName(candidate) == name) { return true; }
     }
 
-    return std::ranges::any_of(info->others, [&](const auto& allyId) {
-        return instanceInfo.getDecodedName(allyId) == name;
+    return std::ranges::any_of(info->others, [&](const auto& allyId) 
+    {
+        return instanceInfo.getDecodedAgentName(allyId) == name;
     });
 }
 void HasPartyWindowAllyOfNameCondition::drawSettings()
@@ -930,7 +939,7 @@ bool PartyMemberStatusCondition::check() const
     for (const auto& player : info->players)
     {
         const auto agentId = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
-        const auto decodedName = instanceInfo.getDecodedName(agentId);
+        const auto decodedName = instanceInfo.getDecodedAgentName(agentId);
         if (decodedName != name) continue;
 
         if (status == Status::Any) return true; // Player is in the instance
@@ -1092,7 +1101,7 @@ bool NearbyAgentCondition::check() const
         const auto correctModelId = (modelId == 0) || (agent->player_number == modelId);
         const auto distance = GW::GetDistance(player->pos, agent->pos);
         const auto goodDistance = (minDistance <= distance) && (distance <= maxDistance);
-        const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedName(agent->agent_id) == agentName);
+        const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedAgentName(agent->agent_id) == agentName);
         const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(agent->pos, polygon);
         const auto goodHp = minHp <= 100.f * agent->hp && 100.f * agent->hp <= maxHp;
         const auto goodAngle = angleToAgent(player, agent) - eps < maxAngle;
@@ -1233,11 +1242,18 @@ bool PlayerHasItemEquippedCondition::check() const
 }
 void PlayerHasItemEquippedCondition::drawSettings()
 {
+    const auto item = FindMatchingItem(modelId);
+    const auto itemName = item ? InstanceInfo::getInstance().getDecodedItemName(item->item_id) : "";
+
     ImGui::PushID(drawId());
+
     ImGui::Text("If the player has item equipped");
+    ImGui::SameLine();
+    ImGui::Text("%s", itemName.c_str());
     ImGui::SameLine();
     ImGui::PushItemWidth(90);
     ImGui::InputInt("model id", &modelId, 0);
+
     ImGui::PopID();
 }
 
