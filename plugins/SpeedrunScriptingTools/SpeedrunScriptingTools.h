@@ -18,6 +18,7 @@ struct Script {
     Trigger trigger = Trigger::None;
     bool enabled = true;
     bool showMessageWhenTriggered = false;
+    bool showMessageWhenToggled = false;
 
     Hotkey enabledToggleHotkey{};
     Hotkey triggerHotkey{};

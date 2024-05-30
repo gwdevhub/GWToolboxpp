@@ -58,6 +58,7 @@ namespace {
         stream << script.enabledToggleHotkey.keyData;
         stream << script.enabledToggleHotkey.modifier;
         stream << script.showMessageWhenTriggered;
+        stream << script.showMessageWhenToggled;
 
         stream.writeSeparator();
 
@@ -93,6 +94,7 @@ namespace {
                     stream >> result->enabledToggleHotkey.keyData;
                     stream >> result->enabledToggleHotkey.modifier;
                     stream >> result->showMessageWhenTriggered;
+                    stream >> result->showMessageWhenToggled;
                     stream.proceedPastSeparator();
                     break;
                 case 'A':
@@ -301,7 +303,10 @@ void SpeedrunScriptingTools::DrawSettings()
                     if (ImGui::Button("X", ImVec2(20.f, 0))) {
                         keyData = 0;
                         keyMod = 0;
+                        scriptIt->showMessageWhenToggled = false;
                     }
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Log toggle", &scriptIt->showMessageWhenToggled);
                 }
                 ImGui::SameLine();
 
@@ -318,7 +323,7 @@ void SpeedrunScriptingTools::DrawSettings()
                 drawTriggerSelector(scriptIt->trigger, 100.f, scriptIt->triggerHotkey.keyData, scriptIt->triggerHotkey.modifier);
                 
                 ImGui::SameLine();
-                ImGui::Checkbox("Log info", &scriptIt->showMessageWhenTriggered);
+                ImGui::Checkbox("Log trigger", &scriptIt->showMessageWhenTriggered);
 
                 ImGui::SameLine();
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 50);
@@ -567,7 +572,8 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
             {
                 if (script.enabledToggleHotkey.keyData == keyData && script.enabledToggleHotkey.modifier == modifier)
                 {
-                    logMessage(script.enabled ? std::string{"Disable script "} + script.name : std::string{"Enable script "} + script.name);
+                    if (script.showMessageWhenToggled)
+                        logMessage(script.enabled ? std::string{"Disable script "} + script.name : std::string{"Enable script "} + script.name);
                     script.enabled = !script.enabled;
                     triggered = true;
                 }
