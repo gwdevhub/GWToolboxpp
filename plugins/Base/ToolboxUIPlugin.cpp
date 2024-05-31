@@ -41,8 +41,8 @@ namespace {
             // /tb PluginName hide
             *instance->GetVisiblePtr() = !*instance->GetVisiblePtr();
         }
-        if (arg1 == pluginname) {
-            status->blocked = true;
+        if (arg1 != pluginname) {
+            status->blocked = false;
         }
     }
 }

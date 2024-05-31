@@ -44,11 +44,10 @@ void ExamplePlugin::DrawSettings()
 void ExamplePlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
 {
     ToolboxUIPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
-    GW::Chat::CreateCommand(L"ee", [](GW::HookStatus* status, const wchar_t*, const int, const LPWSTR*) {
+    GW::Chat::CreateCommand(L"ee", [](GW::HookStatus*, const wchar_t*, const int, const LPWSTR*) {
         if (redirect_slash_ee_to_eee) {
             GW::Chat::SendChat('/', "eee");
         }
-        status->blocked = true;
     });
 }
 void ExamplePlugin::SignalTerminate()
