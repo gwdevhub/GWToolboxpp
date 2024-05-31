@@ -379,12 +379,12 @@ void PartyPlayerCountCondition::serialize(OutputStream& stream) const
 }
 bool PartyPlayerCountCondition::check() const
 {
-    return GW::PartyMgr::GetPartyPlayerCount() == uint32_t(count);
+    return GW::PartyMgr::GetPartySize() == uint32_t(count);
 }
 void PartyPlayerCountCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::Text("If the number of players in the party is");
+    ImGui::Text("If the party is");
     ImGui::PushItemWidth(30);
     ImGui::SameLine();
     ImGui::InputInt("", &count, 0);
@@ -602,10 +602,11 @@ bool PlayerHasSkillCondition::check() const
             case HasSkillRequirement::OffCooldown:
                 return skill.GetRecharge() == 0;
             case HasSkillRequirement::ReadyToUse:
+                if (player->skill) return false;
                 const auto& skilldata = *GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
                 if (skill.GetRecharge() > 0) return false;
                 if (skill.adrenaline_a < skilldata.adrenaline) return false;
-                if (getEnergyCost(skilldata) > player->energy) return false;
+                if (getEnergyCost(skilldata) > player->energy * player->max_energy) return false;
                 return weaponFulfillsRequirement((EquippedWeaponType)player->weapon_type, (WeaponRequirement)skilldata.weapon_req, skilldata.type);
         }
         return false;
