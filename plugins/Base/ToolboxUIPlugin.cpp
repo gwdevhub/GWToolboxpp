@@ -2,6 +2,7 @@
 #include <imgui.h>
 
 #include <GWCA/Utilities/Hooker.h>
+#include "GWCA/Utilities/Hook.h"
 #include <GWCA/Managers/ChatMgr.h>
 
 #include "GWCA/GWCA.h"
@@ -9,25 +10,23 @@
 import PluginUtils;
 
 namespace {
-    // ReSharper disable once CppParameterMayBeConst
-    // ReSharper disable once CppParameterMayBeConstPtrOrRef
-    bool CmdTB(const wchar_t*, const int argc, const LPWSTR* argv)
+    void CmdTB(GW::HookStatus* status, const wchar_t*, const int argc, const LPWSTR* argv)
     {
         const auto instance = static_cast<ToolboxUIPlugin*>(ToolboxPluginInstance());
         if (!instance) {
-            return false;
+            return;
         }
         if (argc < 3) {
-            return false;
+            return;
         }
         const std::wstring arg1 = PluginUtils::ToLower(argv[1]);
         auto pluginname = PluginUtils::ToLower(PluginUtils::StringToWString(instance->Name()));
         pluginname.erase(std::ranges::remove_if(pluginname, [](const wchar_t x) { return std::isspace(x); }).begin(), pluginname.end());
         if (arg1.empty()) {
-            return false;
+            return;
         }
         if (!(arg1 == L"all" || arg1 == L"plugins" || pluginname.find(arg1) == 0)) {
-            return false;
+            return;
         }
         const std::wstring arg2 = PluginUtils::ToLower(argv[2]);
         if (arg2 == L"hide") {
@@ -42,7 +41,9 @@ namespace {
             // /tb PluginName hide
             *instance->GetVisiblePtr() = !*instance->GetVisiblePtr();
         }
-        return arg1 == pluginname;
+        if (arg1 == pluginname) {
+            status->blocked = true;
+        }
     }
 }
 
