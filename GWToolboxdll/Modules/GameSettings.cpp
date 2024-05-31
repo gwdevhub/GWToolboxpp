@@ -161,6 +161,7 @@ namespace {
     bool shorthand_item_ping = true;
     // bool select_with_chat_doubleclick = false;
     bool move_item_on_ctrl_click = false;
+    bool drop_item_on_ctrl_click_in_explorable = false;
     bool move_item_to_current_storage_pane = true;
     bool move_materials_to_current_storage_pane = false;
     bool drop_ua_on_cast = false;
@@ -1056,6 +1057,7 @@ bool GameSettings::GetSettingBool(const char* setting)
     RETURN_SETTING_IF_MATCH(move_materials_to_current_storage_pane);
     RETURN_SETTING_IF_MATCH(move_item_to_current_storage_pane);
     RETURN_SETTING_IF_MATCH(move_item_on_ctrl_click);
+    RETURN_SETTING_IF_MATCH(drop_item_on_ctrl_click_in_explorable);
 
     ASSERT("Failed to find valid setting" && false);
     return false;
@@ -1509,6 +1511,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
 
     LOAD_BOOL(shorthand_item_ping);
     LOAD_BOOL(move_item_on_ctrl_click);
+    LOAD_BOOL(drop_item_on_ctrl_click_in_explorable);
     LOAD_BOOL(move_item_to_current_storage_pane);
     LOAD_BOOL(move_materials_to_current_storage_pane);
 
@@ -1668,6 +1671,7 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(shorthand_item_ping);
 
     SAVE_BOOL(move_item_on_ctrl_click);
+    SAVE_BOOL(drop_item_on_ctrl_click_in_explorable);
     SAVE_BOOL(move_item_to_current_storage_pane);
     SAVE_BOOL(move_materials_to_current_storage_pane);
     SAVE_BOOL(stop_screen_shake);
@@ -1762,6 +1766,7 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
 
 void GameSettings::DrawInventorySettings()
 {
+    ImGui::Checkbox("Drop items on the ground with Control+Click in explorable areas", &drop_item_on_ctrl_click_in_explorable);
     ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click);
     ImGui::Indent();
     ImGui::Checkbox("Move items to current open storage pane on click", &move_item_to_current_storage_pane);

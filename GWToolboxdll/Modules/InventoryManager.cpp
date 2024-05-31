@@ -609,20 +609,6 @@ namespace {
         InventoryManager::Instance().stack_prompt_item_id = item->item_id;
     }
 
-
-    int CountInventoryBagSlots()
-    {
-        int slots = 0;
-        for (auto bag_id = GW::Constants::Bag::Backpack; bag_id < GW::Constants::Bag::Equipment_Pack; bag_id++) {
-            const GW::Bag* bag = GW::Items::GetBag(bag_id);
-            if (!bag) {
-                continue;
-            }
-            slots += bag->items.m_size;
-        }
-        return slots;
-    }
-
     uint32_t right_clicked_item = 0;
 
     enum PendingTomeUseStage {
@@ -2360,16 +2346,18 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
         status->blocked = true;
         return;
     }
-    if (type == 7
-        && ImGui::IsKeyDown(ImGuiKey_ModCtrl)
-        && GameSettings::GetSettingBool("move_item_on_ctrl_click")
-        && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-        // Move item on ctrl click
-        if (ImGui::IsKeyDown(ImGuiKey_ModShift) && item->quantity > 1) {
-            prompt_split_stack(item);
+    if (type == 7 && ImGui::IsKeyDown(ImGuiKey_ModCtrl)) {
+        if (GameSettings::GetSettingBool("move_item_on_ctrl_click") && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+            // Move item on ctrl click
+            if (ImGui::IsKeyDown(ImGuiKey_ModShift) && item->quantity > 1) {
+                prompt_split_stack(item);
+            }
+            else {
+                move_item(item);
+            }
         }
-        else {
-            move_item(item);
+        else if (GameSettings::GetSettingBool("drop_item_on_ctrl_click_in_explorable") && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+            GW::Items::DropItem(item, item->quantity);
         }
     }
 }
