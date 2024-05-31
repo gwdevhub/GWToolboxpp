@@ -461,7 +461,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         // === generic materials ===
         static int common_idx = 0;
         static int common_qty = 1;
-        static const char* common_names[] = {
+        constexpr std::array common_names = {
             "10 Bolts of Cloth",
             "10 Bones",
             "10 Chitin Fragments",
@@ -475,7 +475,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
             "10 Wood Planks",
         };
         ImGui::PushItemWidth(width1);
-        ImGui::Combo("##commoncombo", &common_idx, common_names, 11);
+        ImGui::Combo("##commoncombo", &common_idx, common_names.data(), common_names.size());
         ImGui::PopItemWidth();
         ImGui::SameLine();
         ImGui::PushItemWidth(width2);
@@ -502,34 +502,35 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         // === Rare materials ===
         static int rare_idx = 0;
         static int rare_qty = 1;
-        static const char* rare_names[] = {"Amber Chunk",
-                                           "Bolt of Damask",
-                                           "Bolt of Linen",
-                                           "Bolt of Silk",
-                                           "Deldrimor Steel Ingot",
-                                           "Diamond",
-                                           "Elonian Leather Square",
-                                           "Fur Square",
-                                           "Glob of Ectoplasm",
-                                           "Jadeite Shard",
-                                           "Leather Square",
-                                           "Lump of Charcoal",
-                                           "Monstrous Claw",
-                                           "Monstrous Eye",
-                                           "Monstrous Fang",
-                                           "Obsidian Shard",
-                                           "Onyx Gemstone",
-                                           "Roll of Parchment",
-                                           "Roll of Vellum",
-                                           "Ruby",
-                                           "Sapphire",
-                                           "Spiritwood Plank",
-                                           "Steel Ingot",
-                                           "Tempered Glass Vial",
-                                           "Vial of Ink"
+        constexpr std::array rare_names = {
+            "Amber Chunk",
+            "Bolt of Damask",
+            "Bolt of Linen",
+            "Bolt of Silk",
+            "Deldrimor Steel Ingot",
+            "Diamond",
+            "Elonian Leather Square",
+            "Fur Square",
+            "Glob of Ectoplasm",
+            "Jadeite Shard",
+            "Leather Square",
+            "Lump of Charcoal",
+            "Monstrous Claw",
+            "Monstrous Eye",
+            "Monstrous Fang",
+            "Obsidian Shard",
+            "Onyx Gemstone",
+            "Roll of Parchment",
+            "Roll of Vellum",
+            "Ruby",
+            "Sapphire",
+            "Spiritwood Plank",
+            "Steel Ingot",
+            "Tempered Glass Vial",
+            "Vial of Ink"
         };
         ImGui::PushItemWidth(width1);
-        ImGui::Combo("##rarecombo", &rare_idx, rare_names, 25);
+        ImGui::Combo("##rarecombo", &rare_idx, rare_names.data(), rare_names.size());
         ImGui::PopItemWidth();
         ImGui::SameLine();
         ImGui::PushItemWidth(width2);
