@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 29);
+    static_assert((int)ConditionType::Count == 30);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -50,6 +50,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<PlayerHasItemEquippedCondition>();
         case ConditionType::PlayerHasHpBelow:
             return std::make_shared<PlayerHasHpBelowCondition>();
+        case ConditionType::ItemInInventory:
+            return std::make_shared<ItemInInventoryCondition>();
 
         case ConditionType::CurrentTargetHasHpBelow:
             return std::make_shared<CurrentTargetHasHpBelowCondition>();
@@ -78,7 +80,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 29);
+    static_assert((int)ConditionType::Count == 30);
     switch (type) {
         case ConditionType::Not:
             return "Not";
@@ -119,6 +121,8 @@ std::string_view toString(ConditionType type)
             return "Is idle";
         case ConditionType::PlayerHasItemEquipped:
             return "Equipped item";
+        case ConditionType::ItemInInventory:
+            return "Item in inventory";
         case ConditionType::PlayerHasHpBelow:
             return "HP";
         case ConditionType::CanPopAgent:
@@ -150,7 +154,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(InputStream& stream)
 {
-static_assert((int)ConditionType::Count == 29);
+static_assert((int)ConditionType::Count == 30);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -194,6 +198,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<PlayerIsIdleCondition>(stream);
     case ConditionType::PlayerHasItemEquipped:
         return std::make_shared<PlayerHasItemEquippedCondition>(stream);
+    case ConditionType::ItemInInventory:
+        return std::make_shared<ItemInInventoryCondition>(stream);
     case ConditionType::PlayerHasHpBelow:
         return std::make_shared<PlayerHasHpBelowCondition>(stream);
 
@@ -252,7 +258,7 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
 
     if (ImGui::BeginPopup("Add condition")) 
     {
-        drawSubMenu("Player", std::array{ConditionType::PlayerIsNearPosition, ConditionType::PlayerHasBuff, ConditionType::PlayerHasSkill, ConditionType::PlayerHasClass, ConditionType::PlayerHasName, ConditionType::PlayerHasEnergy, ConditionType::PlayerHasHpBelow, ConditionType::PlayerIsIdle, ConditionType::PlayerHasItemEquipped, ConditionType::CanPopAgent});
+        drawSubMenu("Player", std::array{ConditionType::PlayerIsNearPosition, ConditionType::PlayerHasBuff, ConditionType::PlayerHasSkill, ConditionType::PlayerHasClass, ConditionType::PlayerHasName, ConditionType::PlayerHasEnergy, ConditionType::PlayerHasHpBelow, ConditionType::PlayerIsIdle, ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory, ConditionType::CanPopAgent});
         drawSubMenu("Current target", std::array{ConditionType::CurrentTargetHasHpBelow, ConditionType::CurrentTargetIsUsingSkill, ConditionType::CurrentTargetHasModel, ConditionType::CurrentTargetAllegiance, ConditionType::CurrentTargetDistance});
         drawSubMenu("Party", std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName});
         drawSubMenu("Instance", std::array{ConditionType::IsInMap, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime});

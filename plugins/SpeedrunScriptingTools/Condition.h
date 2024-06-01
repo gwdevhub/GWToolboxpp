@@ -32,6 +32,7 @@ enum class ConditionType : int {
     CurrentTargetDistance,
     PlayerHasHpBelow,
     PartyHasLoadedIn,
+    ItemInInventory,
 
     Count
 };

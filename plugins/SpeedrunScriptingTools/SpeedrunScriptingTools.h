@@ -47,4 +47,5 @@ private:
     std::vector<Script> m_scripts;
     std::optional<Script> m_currentScript = std::nullopt;
     Trigger currentTrigger = Trigger::None;
+    bool runInOutposts = false;
 };

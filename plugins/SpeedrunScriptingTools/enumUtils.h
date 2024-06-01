@@ -15,10 +15,9 @@ namespace GW::Constants
     enum class MapID : uint32_t;
 }
 
-std::string_view toString(Status);
 std::string_view toString(AgentType);
 std::string_view toString(Sorting);
-std::string_view toString(HexedStatus);
+std::string_view toString(AnyNoYes);
 std::string_view toString(Class);
 std::string_view toString(Channel);
 std::string_view toString(QuestStatus);

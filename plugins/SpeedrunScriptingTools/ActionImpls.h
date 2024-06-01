@@ -77,13 +77,17 @@ public:
     void initialAction() final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
-    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost | ActionBehaviourFlag::ImmediateFinish; }
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
     AgentType agentType = AgentType::Any;
     Class primary = Class::Any;
     Class secondary = Class::Any;
-    Status status = Status::Alive;
+    AnyNoYes alive = AnyNoYes::Yes;
+    AnyNoYes bleeding = AnyNoYes::Any;
+    AnyNoYes poisoned = AnyNoYes::Any;
+    AnyNoYes weaponspelled = AnyNoYes::Any;
+    AnyNoYes enchanted = AnyNoYes::Any;
     GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
     Sorting sorting = Sorting::AgentId;
     int modelId = 0;
@@ -97,6 +101,7 @@ private:
     std::unordered_set<GW::AgentID> recentlyTargetedEnemies;
     float minHp = 0.f;
     float maxHp = 100.f;
+    float minAngle = 0.f;
     float maxAngle = 180.f;
 };
 
@@ -186,7 +191,7 @@ public:
     void initialAction() final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
-    ActionBehaviourFlags behaviour() const final { return channel == Channel::Emote ? ActionBehaviourFlag::ImmediateFinish | ActionBehaviourFlag::CanBeRunInOutpost : ActionBehaviourFlag::ImmediateFinish; }
+    ActionBehaviourFlags behaviour() const final;
 
 private:
     Channel channel = Channel::All;
