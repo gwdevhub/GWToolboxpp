@@ -43,6 +43,8 @@ namespace {
     ImVec4 ItemPurple = ImColor(187, 137, 237).Value;
     ImVec4 ItemGold = ImColor(255, 204, 86).Value;
 
+    bool trade_whole_stacks = false;
+
     const char* bag_names[5] = {
         "None",
         "Backpack",
@@ -806,6 +808,72 @@ namespace {
 
     uint32_t merchant_list_tab = 0;
 
+    struct ButtonPress {
+        uint32_t child_frame_id; // Child offset of the button
+        uint32_t parent_frame_id;
+        clock_t added = TIMER_INIT();
+    };
+    std::queue<ButtonPress> queued_button_presses;
+
+    // Cycle through queued buttons, trigger as necessary
+    void ProcessQueuedButtonPresses() {
+        while (queued_button_presses.size()) {
+            auto todo = queued_button_presses.front();
+            if (TIMER_DIFF(todo.added) > 1000) {
+                queued_button_presses.pop();
+                continue;
+            }
+            const auto parent_frame = GW::UI::GetFrameById(todo.parent_frame_id);
+            if (!parent_frame) {
+                queued_button_presses.pop();
+                continue;
+            }
+            if (!(parent_frame->field91_0x184 & 4)) { // frame->state.Test(FRAME_STATE_CREATED)
+                return; // Not yet created
+            }
+
+            const auto btn_frame = GW::UI::GetChildFrame(parent_frame, todo.child_frame_id);
+            if (!btn_frame) {
+                queued_button_presses.pop();
+                continue;
+            }
+            if (!(btn_frame->field91_0x184 & 4)) {
+                return; // Not yet created
+            }
+            queued_button_presses.pop();
+            GW::GameThread::Enqueue([todo]() {
+                GW::UI::UIPacket::kMouseAction action;
+                action.current_state = 0x6;
+                action.child_frame_id_dupe = action.child_frame_id = todo.child_frame_id; // Ok btn offset is 3
+                GW::UI::SendFrameUIMessage(GW::UI::GetFrameById(todo.parent_frame_id), GW::UI::UIMessage::kMouseClick2, &action);
+                });
+        }
+    }
+
+
+    GW::UI::UIInteractionCallback UICallback_ChooseQuantityPopup_Func = nullptr, UICallback_ChooseQuantityPopup_Ret = nullptr;
+    
+    // When choose quantity popup is shown, automatically accept with max amount, unless shift is held
+    void __cdecl OnChooseQuantityPopupUIMessage(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+        GW::Hook::EnterHook();
+        UICallback_ChooseQuantityPopup_Ret(message, wParam, lParam);
+
+        if(!(message->message_id == GW::UI::UIMessage::kInitFrame
+            && trade_whole_stacks
+            && !ImGui::IsKeyDown(ImGuiKey_ModShift)))
+            return GW::Hook::LeaveHook();
+
+        queued_button_presses.push({
+            .child_frame_id = 4,// Btn max
+            .parent_frame_id = message->frame_id
+            });
+        queued_button_presses.push({
+            .child_frame_id = 3,// Btn ok
+            .parent_frame_id = message->frame_id
+            });
+        GW::Hook::LeaveHook();
+    }
+
     void __fastcall OnAddItemToWindow(void* ecx, void* edx, const uint32_t frame, const uint32_t item_id)
     {
         GW::Hook::EnterHook();
@@ -925,7 +993,6 @@ void InventoryManager::Initialize()
         RegisterUIMessageCallback(&ItemClick_Entry, message_id, OnUIMessage);
     }
 
-    GW::Trade::RegisterOfferItemCallback(&on_offer_item_hook, OnOfferTradeItem);
 
     inventory_bags_window_position = GetWindowPosition(GW::UI::WindowID::WindowID_InventoryBags);
 
@@ -935,6 +1002,19 @@ void InventoryManager::Initialize()
         GW::Hook::CreateHook((void**)&AddItemRowToWindow_Func, OnAddItemToWindow, reinterpret_cast<void**>(&RetAddItemRowToWindow));
         GW::Hook::EnableHooks(AddItemRowToWindow_Func);
     }
+
+    uintptr_t address = GW::Scanner::Find("\x6a\x6a\x6a\x30\xff\x75\x08","xxxxxxx", - 0x4);
+    if (address) {
+        UICallback_ChooseQuantityPopup_Func = *(GW::UI::UIInteractionCallback*)address;
+        GW::Hook::CreateHook((void**)&UICallback_ChooseQuantityPopup_Func, OnChooseQuantityPopupUIMessage, reinterpret_cast<void**>(&UICallback_ChooseQuantityPopup_Ret));
+        GW::Hook::EnableHooks(UICallback_ChooseQuantityPopup_Func);
+    }
+
+#if _DEBUG
+    ASSERT(AddItemRowToWindow_Func);
+    ASSERT(UICallback_ChooseQuantityPopup_Func);
+#endif
+
 }
 
 void InventoryManager::Terminate()
@@ -945,21 +1025,7 @@ void InventoryManager::Terminate()
     GW::UI::RemoveUIMessageCallback(&ItemClick_Entry);
     GW::Trade::RemoveOfferItemCallback(&on_offer_item_hook);
     GW::Hook::RemoveHook(AddItemRowToWindow_Func);
-}
-
-// Hide unsellable items from merchant
-void InventoryManager::OnOfferTradeItem(GW::HookStatus* status, const uint32_t item_id, const uint32_t quantity)
-{
-    if (ImGui::IsKeyDown(ImGuiKey_ModShift) || !Instance().trade_whole_stacks) {
-        return; // Default behaviour; prompt user for amount
-    }
-    if (quantity == 0) {
-        const GW::Item* item = GW::Items::GetItemById(item_id);
-        if (item && item->quantity > 1) {
-            status->blocked = true;
-            GW::Trade::OfferItem(item_id, item->quantity);
-        }
-    }
+    GW::Hook::RemoveHook(UICallback_ChooseQuantityPopup_Func);
 }
 
 bool InventoryManager::WndProc(const UINT message, const WPARAM wParam, const LPARAM lParam)
@@ -1744,8 +1810,8 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::TextDisabled("This module is responsible for extra item functions via ctrl+click, right click or double click");
     ImGui::Checkbox("Hide unsellable items from merchant window", &hide_unsellable_items);
     ImGui::Checkbox("Hide weapon sets and customized items from merchant window", &hide_weapon_sets_and_customized_items);
-    ImGui::Checkbox("Move whole stacks into trade by default", &trade_whole_stacks);
-    ImGui::ShowHelp("Shift drag to prompt for amount, drag without shift to move the whole stack into trade");
+    ImGui::Checkbox("Move whole stacks by default", &trade_whole_stacks);
+    ImGui::ShowHelp("Shift drag to prompt for amount, drag without shift to move the whole stack without any item quantity prompts");
     ImGui::Checkbox("Show 'Guild Wars Wiki' link on item context menu", &wiki_link_on_context_menu);
     ImGui::Checkbox("Prompt to change secondary profession when using a tome", &change_secondary_for_tome);
     ImGui::Text("Right click an item to open context menu in:");
@@ -1809,6 +1875,7 @@ void InventoryManager::DrawSettingsInternal()
 
 void InventoryManager::Update(float)
 {
+    ProcessQueuedButtonPresses();
     if (check_context_menu_position && TIMER_DIFF(check_context_menu_position) > 0) {
         const auto item = right_clicked_item ? GW::Items::GetItemById(right_clicked_item) : nullptr;
         if (item) {
@@ -2346,18 +2413,16 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
         status->blocked = true;
         return;
     }
-    if (type == 7 && ImGui::IsKeyDown(ImGuiKey_ModCtrl)) {
-        if (GameSettings::GetSettingBool("move_item_on_ctrl_click") && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-            // Move item on ctrl click
-            if (ImGui::IsKeyDown(ImGuiKey_ModShift) && item->quantity > 1) {
-                prompt_split_stack(item);
-            }
-            else {
-                move_item(item);
-            }
+    if (type == 7
+        && ImGui::IsKeyDown(ImGuiKey_ModCtrl)
+        && GameSettings::GetSettingBool("move_item_on_ctrl_click")
+        && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+        // Move item on ctrl click
+        if (ImGui::IsKeyDown(ImGuiKey_ModShift) && item->quantity > 1) {
+            prompt_split_stack(item);
         }
-        else if (GameSettings::GetSettingBool("drop_item_on_ctrl_click_in_explorable") && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-            GW::Items::DropItem(item, item->quantity);
+        else {
+            move_item(item);
         }
     }
 }

@@ -86,7 +86,6 @@ public:
     static bool IsSameItem(const GW::Item* item1, const GW::Item* item2);
 
     static void ItemClickCallback(GW::HookStatus*, uint32_t type, uint32_t slot, const GW::Bag* bag);
-    static void OnOfferTradeItem(GW::HookStatus* status, uint32_t item_id, uint32_t quantity);
     static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
 
 
@@ -97,7 +96,7 @@ protected:
     void ShowVisibleRadio() override { };
 
 private:
-    bool trade_whole_stacks = false;
+
     bool show_item_context_menu = false;
     bool is_identifying = false;
     bool is_identifying_all = false;
