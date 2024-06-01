@@ -32,11 +32,12 @@ public:
     }
     int peek();
     int get();
-    void proceedPastSeparator();
+    void proceedPastSeparator(int lvl = 1);
     operator bool() const;
 
-private:
     bool isAtSeparator();
+
+private:
     std::istringstream stream;
 };
 
@@ -49,7 +50,7 @@ public:
         stream << val << " ";
         return *this;
     }
-    void writeSeparator();
+    void writeSeparator(int lvl = 1);
     std::string str();
     operator bool() const;
 

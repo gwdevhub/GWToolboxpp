@@ -197,33 +197,44 @@ void NegatedCondition::drawSettings()
 /// ------------- DisjunctionCondition -------------
 DisjunctionCondition::DisjunctionCondition(InputStream& stream) 
 {
+    int count;
     std::string token;
-    
-    while (stream >> token) {
+    stream >> count;
+
+    for (int i = 0; i < count; ++i)
+    {
+        if (stream.isAtSeparator() || !(stream >> token)) continue;
         
-        if (token == endOfListToken)
-            return;
-        else if (token == missingContentToken)
+        if (token == missingContentToken) 
             conditions.push_back(nullptr);
-        else if (token == "C") {
+        else if (token == "C") 
+        {
             if (auto read = readCondition(stream)) 
                 conditions.push_back(std::move(read));
         }
-        else
+        else 
+        {
             return;
+        }
+
+        stream.proceedPastSeparator(2);
     }
 }
 void DisjunctionCondition::serialize(OutputStream& stream) const 
 {
     Condition::serialize(stream);
 
-    for (const auto& condition : conditions) {
+    stream << conditions.size();
+
+    for (const auto& condition : conditions) 
+    {
         if (condition)
             condition->serialize(stream);
         else
             stream << missingContentToken;
+
+        stream.writeSeparator(2);
     }
-    stream << endOfListToken;
 }
 bool DisjunctionCondition::check() const
 {
@@ -269,32 +280,43 @@ void DisjunctionCondition::drawSettings()
 /// ------------- ConjunctionCondition -------------
 ConjunctionCondition::ConjunctionCondition(InputStream& stream)
 {
+    int count;
     std::string token;
+    stream >> count;
 
-    while (stream >> token) {
-        if (token == endOfListToken)
-            return;
-        else if (token == missingContentToken)
+    for (int i = 0; i < count; ++i) 
+    {
+        if (stream.isAtSeparator() || !(stream >> token)) continue;
+
+        if (token == missingContentToken)
             conditions.push_back(nullptr);
-        else if (token == "C") {
+        else if (token == "C") 
+        {
             if (auto read = readCondition(stream)) 
                 conditions.push_back(std::move(read));
         }
-        else
+        else {
             return;
+        }
+
+        stream.proceedPastSeparator(2);
     }
 }
 void ConjunctionCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    for (const auto& condition : conditions) {
+    stream << conditions.size();
+
+    for (const auto& condition : conditions) 
+    {
         if (condition)
             condition->serialize(stream);
         else
             stream << missingContentToken;
+
+        stream.writeSeparator(2);
     }
-    stream << endOfListToken;
 }
 bool ConjunctionCondition::check() const
 {
@@ -1059,6 +1081,7 @@ NearbyAgentCondition::NearbyAgentCondition(InputStream& stream)
     stream >> agentType >> primary >> secondary >> status >> hexed >> skill >> modelId >> minDistance >> maxDistance >> minHp >> maxHp;
     agentName = readStringWithSpaces(stream);
     polygon = readPositions(stream);
+    stream >> maxAngle;
 }
 void NearbyAgentCondition::serialize(OutputStream& stream) const
 {
@@ -1067,6 +1090,7 @@ void NearbyAgentCondition::serialize(OutputStream& stream) const
     stream << agentType << primary << secondary << status << hexed << skill << modelId << minDistance << maxDistance << minHp << maxHp;
     writeStringWithSpaces(stream, agentName);
     writePositions(stream, polygon);
+    stream << maxAngle;
 }
 bool NearbyAgentCondition::check() const
 {
