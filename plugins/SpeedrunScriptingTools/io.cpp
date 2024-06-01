@@ -2,6 +2,8 @@
 
 #include <commonIncludes.h>
 #include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 
 #include <algorithm>
 
@@ -396,4 +398,16 @@ std::optional<std::string> decodeString(std::string&& str)
     } catch (...) {
         return std::nullopt;
     }
+}
+
+void logMessage(std::string_view message)
+{
+    const auto wMessage = std::wstring{message.begin(), message.end()};
+    const size_t len = 30 + wcslen(wMessage.c_str());
+    auto to_send = new wchar_t[len];
+    swprintf(to_send, len - 1, L"<a=1>%s</a><c=#%6X>: %s</c>", L"SST", 0xFFFFFF, wMessage.c_str());
+    GW::GameThread::Enqueue([to_send] {
+        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA2, to_send, nullptr);
+        delete[] to_send;
+    });
 }
