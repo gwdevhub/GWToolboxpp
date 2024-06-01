@@ -852,77 +852,88 @@ void DropBuffAction::drawSettings()
 ConditionedAction::ConditionedAction(InputStream& stream)
 {
     std::string read;
-    stream >> read;
-    if (read == missingContentToken)
-        cond = nullptr;
-    else if (read == "C")
-        cond = readCondition(stream);
-    else
-        return;
+    const auto readCond = [&](auto& condition) 
+    {
+        stream >> read;
+        if (read == missingContentToken)
+            condition = nullptr;
+        else if (read == "C")
+            condition = readCondition(stream);
+        else
+            throw std::runtime_error("Invalid string");
 
-    while (stream >> read) {
-        if (read == endOfListToken)
-            break;
-        else if (read == missingContentToken)
-            actionsIf.push_back(nullptr);
-        else if (read == "A")
-            actionsIf.push_back(readAction(stream));
-        else
-            return;
+        stream.proceedPastSeparator(2);
+    };
+    const auto readActionSequence = [&](auto& sequence) {
+        size_t size;
+        stream >> size;
+        for (size_t i = 0; i < size; ++i) {
+            if (stream.isAtSeparator() || !(stream >> read)) continue;
+
+            if (read == missingContentToken)
+                sequence.push_back(nullptr);
+            else if (read == "A")
+                sequence.push_back(readAction(stream));
+            else
+                throw std::runtime_error("Invalid string");
+
+            stream.proceedPastSeparator(2);
+        }
+    };
+    
+    try 
+    {
+        readCond(cond);
+        readActionSequence(actionsIf);
+        readActionSequence(actionsElse);
+
+        size_t actionsElseIfSize;
+        stream >> actionsElseIfSize;
+
+        for (size_t i = 0; i < actionsElseIfSize; ++i) {
+            actionsElseIf.push_back({});
+            readCond(actionsElseIf.back().first);
+            readActionSequence(actionsElseIf.back().second);
+        }
     }
-    while (stream >> read) {
-        if (read == endOfListToken)
-            break;
-        else if (read == missingContentToken)
-            actionsElse.push_back(nullptr);
-        else if (read == "A")
-            actionsElse.push_back(readAction(stream));
-        else
-            return;
+    catch(...)
+    {
     }
 }
 void ConditionedAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    if (cond)
-        cond->serialize(stream);
-    else
-        stream << missingContentToken;
-
-    for (const auto& action : actionsIf)
+    const auto writeCondition = [&](const auto& condition) 
     {
-        if (action)
-            action->serialize(stream);
+        if (condition)
+            condition->serialize(stream);
         else
             stream << missingContentToken;
-    }
-    stream << endOfListToken;
-
-    for (const auto& action : actionsElse)
+        stream.writeSeparator(2);
+    };
+    const auto writeActionSequence = [&](const auto& sequence) 
     {
-        if (action)
-            action->serialize(stream);
-        else
-            stream << missingContentToken;
-    }
-    stream << endOfListToken;
-
-    for (const auto& [condEI, actionsEI] : actionsElseIf) 
-    {
-        if (condEI)
-            condEI->serialize(stream);
-        else
-            stream << missingContentToken;
-
-        for (const auto& action : actionsEI) 
+        stream << sequence.size();
+        for (const auto& action : sequence) 
         {
             if (action)
                 action->serialize(stream);
             else
                 stream << missingContentToken;
+            stream.writeSeparator(2);
         }
-        stream << endOfListToken;
+    };
+
+    writeCondition(cond);
+    writeActionSequence(actionsIf);
+    writeActionSequence(actionsElse);
+
+    stream << actionsElseIf.size();
+    for (const auto& [condEI, actionsEI] : actionsElseIf) 
+    {
+        writeCondition(condEI);
+        writeActionSequence(actionsEI);
     }
 }
 void ConditionedAction::initialAction()
