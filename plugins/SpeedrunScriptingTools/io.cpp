@@ -3,9 +3,11 @@
 #include <commonIncludes.h>
 #include <GWCA/GameContainers/GamePos.h>
 
+#include <algorithm>
+
 namespace {
     const std::string endOfStringSignifier{"<"};
-    constexpr char separatorToken = 0x7F;
+    constexpr std::array<char, 4> separatorTokens = {0x7F, 0x4, 0x5, 0x6};
 
     constexpr bool isInvalidDecodedCharacter(char c)
     {
@@ -31,19 +33,23 @@ InputStream::operator bool() const
 {
     return stream.good();
 }
-void InputStream::proceedPastSeparator()
+void InputStream::proceedPastSeparator(int lvl)
 {
-    while (stream.good() && get() != separatorToken) {}
+    if (lvl < 1) lvl = 1;
+    if (lvl > 4) lvl = 4;
+    while (stream.good() && get() != separatorTokens[lvl-1]) {}
     stream >> std::ws;
 }
 bool InputStream::isAtSeparator()
 {
     stream >> std::ws;
-    return peek() == separatorToken;
+    return std::ranges::any_of(separatorTokens, [&](auto separatorToken) { return peek() == separatorToken; });
 }
-void OutputStream::writeSeparator()
+void OutputStream::writeSeparator(int lvl)
 {
-    stream << separatorToken;
+    if (lvl < 1) lvl = 1;
+    if (lvl > 4) lvl = 4;
+    stream << separatorTokens[lvl-1];
 }
 std::string OutputStream::str()
 {

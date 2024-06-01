@@ -5,6 +5,7 @@
 #include <InstanceInfo.h>
 #include <Keys.h>
 #include <enumUtils.h>
+#include <SerializationIncrement.h>
 
 #include <GWCA/GWCA.h>
 
@@ -31,7 +32,11 @@ namespace {
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry CoreMessage_Entry;
 
-    constexpr long currentVersion = 8;
+    // Versions 1-7: Prerelease, can be ignored
+    // Version 8: 1.0-1.2. See SerializationIncrement for deprecation context
+    // Version 9: Skipped because exported scripts started with profanity lol
+    // Version 10: Current
+    constexpr long currentVersion = 10;
 
     bool canAddCondition(const Script& script) {
         return !std::ranges::any_of(script.conditions, [](const auto& cond) {
@@ -73,7 +78,7 @@ namespace {
         return stream.str();
     }
 
-    std::optional<Script> deserialize(InputStream& stream)
+    std::optional<Script> deserialize(InputStream& stream, int version)
     {
         std::optional<Script> result;
 
@@ -99,14 +104,31 @@ namespace {
                     break;
                 case 'A':
                     if (!result) return std::nullopt;
-                    if (auto newAction = readAction(stream))
-                        result->actions.push_back(std::move(newAction));
+
+                    if (version == 8) 
+                    {
+                        if (auto newAction = readV8Action(stream)) 
+                            result->actions.push_back(std::move(newAction));
+                    }
+                    else 
+                    {
+                        if (auto newAction = readAction(stream)) 
+                            result->actions.push_back(std::move(newAction));
+                    }
                     stream.proceedPastSeparator();
                     break;
                 case 'C':
                     if (!result) return std::nullopt;
-                    if (auto newCondition = readCondition(stream))
-                        result->conditions.push_back(std::move(newCondition));
+                    if (version == 8) 
+                    {
+                        if (auto newCondition = readV8Condition(stream)) 
+                            result->conditions.push_back(std::move(newCondition));
+                    }
+                    else 
+                    {
+                        if (auto newCondition = readCondition(stream)) 
+                            result->conditions.push_back(std::move(newCondition));
+                    }
                     stream.proceedPastSeparator();
                     break;
                 default:
@@ -167,7 +189,8 @@ namespace {
 
     bool canBeRunInOutPost(const Script& script)
     {
-        return std::ranges::all_of(script.actions, [](const auto& action){
+        return std::ranges::all_of(script.actions, [](const auto& action)
+        {
             return !action || action->behaviour().test(ActionBehaviourFlag::CanBeRunInOutpost);
         });
     }
@@ -315,7 +338,7 @@ void SpeedrunScriptingTools::DrawSettings()
 
                 if (ImGui::Button("Copy script", ImVec2(100, 0))) 
                 {
-                    if (const auto encoded = encodeString(serialize(*scriptIt))) 
+                    if (const auto encoded = encodeString(std::to_string(currentVersion) + " " + serialize(*scriptIt))) 
                         ImGui::SetClipboardText(encoded->c_str());
                 }
 
@@ -354,7 +377,13 @@ void SpeedrunScriptingTools::DrawSettings()
         if (const auto clipboardContent = ImGui::GetClipboardText()) {
             if (const auto combined = decodeString(clipboardContent)) {
                 InputStream stream{combined.value()};
-                if (auto importedScript = deserialize(stream)) 
+
+                int version = 8; // Version 8 and earlier do not write a version into the export string
+                if (stream.peek() != 'S') 
+                {
+                    stream >> version;
+                }
+                if (auto importedScript = deserialize(stream, version)) 
                     m_scripts.push_back(std::move(importedScript.value()));
             }
         }
@@ -393,7 +422,7 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
     ini.LoadFile(GetSettingFile(folder).c_str());
     const long savedVersion = ini.GetLongValue(Name(), "version", 1);
     
-    if (savedVersion != currentVersion) return;
+    if (savedVersion < 8) return; // Prerelease versions
     
     std::string read = ini.GetValue(Name(), "scripts", "");
     if (read.empty()) return;
@@ -402,14 +431,12 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
 
     if (!decoded) return;
     InputStream stream(decoded.value());
-    while (stream) {
-        auto nextScript = deserialize(stream);
-        if (nextScript) {
+    while (stream) 
+    {
+        if (auto nextScript = deserialize(stream, savedVersion))
             m_scripts.push_back(std::move(*nextScript));
-        }
-        else {
+        else
             break;
-        }
     }
 }
 
