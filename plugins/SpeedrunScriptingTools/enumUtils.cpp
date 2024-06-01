@@ -9,20 +9,6 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
 
-std::string_view toString(Status status)
-{
-    switch (status) 
-    {
-        case Status::Any:
-            return "Any";
-        case Status::Dead:
-            return "Dead";
-        case Status::Alive:
-            return "Alive";
-    }
-    return "";
-}
-
 std::string_view toString(Class c)
 {
     switch (c) {
@@ -86,14 +72,14 @@ std::string_view toString(Sorting sorting)
     }
     return "";
 }
-std::string_view toString(HexedStatus status) {
-    switch (status) {
-        case HexedStatus::Any:
+std::string_view toString(AnyNoYes anyNoYes) {
+    switch (anyNoYes) {
+        case AnyNoYes::Any:
             return "Any";
-        case HexedStatus::NotHexed:
-            return "Not hexed";
-        case HexedStatus::Hexed:
-            return "Hexed";
+        case AnyNoYes::Yes:
+            return "Yes";
+        case AnyNoYes::No:
+            return "No";
     }
     return "";
 }
@@ -113,7 +99,9 @@ std::string_view toString(Channel channel)
         case Channel::Whisper:
             return "Whisper";
         case Channel::Emote:
-            return "Emote";
+            return "/ Commands";
+        case Channel::Log:
+            return "Log";
     }
     return "";
 }

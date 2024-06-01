@@ -303,7 +303,7 @@ public:
 
 private:
     std::string name = "";
-    Status status = Status::Dead;
+    AnyNoYes alive = AnyNoYes::No;
 };
 
 class KeyIsPressedCondition : public Condition {
@@ -347,8 +347,12 @@ private:
     AgentType agentType = AgentType::Any;
     Class primary = Class::Any;
     Class secondary = Class::Any;
-    Status status = Status::Alive;
-    HexedStatus hexed = HexedStatus::Any;
+    AnyNoYes alive = AnyNoYes::Yes;
+    AnyNoYes hexed = AnyNoYes::Any;
+    AnyNoYes bleeding = AnyNoYes::Any;
+    AnyNoYes poisoned = AnyNoYes::Any;
+    AnyNoYes weaponspelled = AnyNoYes::Any;
+    AnyNoYes enchanted = AnyNoYes::Any;
     GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
     int modelId = 0;
     float minDistance = 0.f;
@@ -357,6 +361,7 @@ private:
     std::vector<GW::Vec2f> polygon;
     float minHp = 0.f;
     float maxHp = 100.f;
+    float minAngle = 0.f;
     float maxAngle = 180.f;
 };
 
@@ -402,4 +407,17 @@ public:
 
 private:
     float hp = 50.f;
+};
+
+class ItemInInventoryCondition : public Condition {
+public:
+    ItemInInventoryCondition() = default;
+    ItemInInventoryCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::ItemInInventory; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    int modelId = 0;
 };

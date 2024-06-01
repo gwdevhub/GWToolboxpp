@@ -94,10 +94,9 @@ namespace {
 /// ------------- MoveToAction -------------
 MoveToAction::MoveToAction()
 {
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-        if (auto player = GW::Agents::GetPlayerAsAgentLiving()) {
-            pos = player->pos;
-        }
+    if (auto player = GW::Agents::GetPlayerAsAgentLiving()) 
+    {
+        pos = player->pos;
     }
 }
 MoveToAction::MoveToAction(InputStream& stream)
@@ -305,17 +304,19 @@ void CastBySlotAction::drawSettings()
 /// ------------- ChangeTargetAction -------------
 ChangeTargetAction::ChangeTargetAction(InputStream& stream)
 {
-    stream >> agentType >> primary >> secondary >> status >> skill >> sorting >> modelId >> minDistance >> maxDistance >> requireSameModelIdAsTarget >> preferNonHexed >> rotateThroughTargets;
+    stream >> agentType >> primary >> secondary >> alive >> skill >> sorting >> modelId >> minDistance >> maxDistance >> requireSameModelIdAsTarget >> preferNonHexed >> rotateThroughTargets;
     agentName = readStringWithSpaces(stream);
     polygon = readPositions(stream);
+    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding;
 }
 void ChangeTargetAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << agentType << primary << secondary << status << skill << sorting << modelId << minDistance << maxDistance << requireSameModelIdAsTarget << preferNonHexed << rotateThroughTargets;
+    stream << agentType << primary << secondary << alive << skill << sorting << modelId << minDistance << maxDistance << requireSameModelIdAsTarget << preferNonHexed << rotateThroughTargets;
     writeStringWithSpaces(stream, agentName);
     writePositions(stream, polygon);
+    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding;
 }
 void ChangeTargetAction::initialAction()
 {
@@ -361,7 +362,11 @@ void ChangeTargetAction::initialAction()
         }();
         const auto correctPrimary = (primary == Class::Any) || primary == (Class)agent->primary;
         const auto correctSecondary = (secondary == Class::Any) || secondary == (Class)agent->secondary;
-        const auto correctStatus = (status == Status::Any) || ((status == Status::Alive) == agent->GetIsAlive());
+        const auto correctStatus = (alive == AnyNoYes::Any) || ((alive == AnyNoYes::Yes) == agent->GetIsAlive());
+        const auto correctEnch = (enchanted == AnyNoYes::Any) || ((enchanted == AnyNoYes::Yes) == agent->GetIsEnchanted());
+        const auto correctWeaponSpell = (weaponspelled == AnyNoYes::Any) || ((weaponspelled == AnyNoYes::Yes) == agent->GetIsWeaponSpelled());
+        const auto correctBleed = (bleeding == AnyNoYes::Any) || ((bleeding == AnyNoYes::Yes) == agent->GetIsBleeding());
+        const auto correctPoison = (poisoned == AnyNoYes::Any) || ((poisoned == AnyNoYes::Yes) == agent->GetIsPoisoned());
         const auto correctSkill = (skill == GW::Constants::SkillID::No_Skill) || (skill == (GW::Constants::SkillID)agent->skill);
         const auto correctModelId = (requireSameModelIdAsTarget && currentTarget) 
             ? (currentTarget->player_number == agent->player_number) 
@@ -373,7 +378,8 @@ void ChangeTargetAction::initialAction()
         const auto goodHp = minHp <= 100.f * agent->hp && 100.f * agent->hp <= maxHp;
         const auto goodAngle = angleToAgent(player, agent) - eps < maxAngle;
 
-        return correctType && correctPrimary && correctSecondary && correctStatus && correctSkill && correctModelId && goodDistance && goodName && goodPosition && goodHp && goodAngle;
+        return correctType && correctPrimary && correctSecondary && correctStatus && correctEnch && correctWeaponSpell && correctBleed && correctPoison && correctSkill && 
+                correctModelId && goodDistance && goodName && goodPosition && goodHp && goodAngle;
     };
 
     const GW::AgentLiving* currentBestTarget = nullptr;
@@ -471,9 +477,25 @@ void ChangeTargetAction::drawSettings()
             ImGui::SameLine();
             drawEnumButton(Class::Any, Class::Dervish, secondary, 2);
 
-            ImGui::BulletText("Dead or alive");
+            ImGui::BulletText("Is alive");
             ImGui::SameLine();
-            drawEnumButton(Status::Any, Status::Alive, status, 3);
+            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, alive, 3);
+
+            ImGui::BulletText("Is enchanted");
+            ImGui::SameLine();
+            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, enchanted, 4);
+
+            ImGui::BulletText("Is affected by weapon spell");
+            ImGui::SameLine();
+            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, weaponspelled, 5);
+
+            ImGui::BulletText("Is poisoned");
+            ImGui::SameLine();
+            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, poisoned, 6);
+
+            ImGui::BulletText("Is bleeding");
+            ImGui::SameLine();
+            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, bleeding, 7);
 
             ImGui::BulletText("Uses skill");
             ImGui::SameLine();
@@ -484,15 +506,15 @@ void ChangeTargetAction::drawSettings()
             ImGui::BulletText("Name");
             ImGui::SameLine();
             ImGui::PushItemWidth(200.f);
-            ImGui::InputText("###1", &agentName);
+            ImGui::InputText("###8", &agentName);
 
             ImGui::PushItemWidth(80.f);
             ImGui::Bullet();
             ImGui::Text("HP percent");
             ImGui::SameLine();
-            ImGui::InputFloat("min###2", &minHp);
+            ImGui::InputFloat("min###9", &minHp);
             ImGui::SameLine();
-            ImGui::InputFloat("max###3", &maxHp);
+            ImGui::InputFloat("max###10", &maxHp);
 
             ImGui::Bullet();
             ImGui::Checkbox("Prefer enemies that are not hexed", &preferNonHexed);
@@ -506,18 +528,22 @@ void ChangeTargetAction::drawSettings()
             ImGui::Bullet();
             ImGui::Text(requireSameModelIdAsTarget ? "If no target is selected: Model" : "Model");
             ImGui::SameLine();
-            ImGui::InputInt("id (0 for any)###4", &modelId, 0);
+            ImGui::InputInt("id (0 for any)###11", &modelId, 0);
 
             ImGui::Bullet();
-            ImGui::Text("Maximum angle to player forward");
+            ImGui::Text("Angle to player forward (degrees)");
             ImGui::SameLine();
-            ImGui::InputFloat("degrees", &maxAngle);
+            ImGui::InputFloat("min###12", &minAngle);
+            ImGui::SameLine();
+            ImGui::InputFloat("max###13", &maxAngle);
+            if (minAngle < 0.f) minAngle = 0.f;
+            if (minAngle > 180.f) minAngle = 180.f;
             if (maxAngle < 0.f) maxAngle = 0.f;
             if (maxAngle > 180.f) maxAngle = 180.f;
 
             ImGui::BulletText("Sort candidates by:");
             ImGui::SameLine();
-            drawEnumButton(Sorting::AgentId, Sorting::HighestHp, sorting, 4, 150.);
+            drawEnumButton(Sorting::AgentId, Sorting::HighestHp, sorting, 14, 150.);
 
             ImGui::Bullet();
             ImGui::Text("Is within polygon");
@@ -758,6 +784,12 @@ void SendChatAction::initialAction()
 {
     Action::initialAction();
 
+    if (channel == Channel::Log) 
+    {
+        logMessage(message);
+        return;
+    }
+
     const auto channelId = [&]() -> char {
         switch (channel) {
             case Channel::All:
@@ -778,10 +810,8 @@ void SendChatAction::initialAction()
                 return '#';
         }
         }();
-    
-    GW::GameThread::Enqueue([channelId, message = this->message]() -> void {
-        GW::Chat::SendChat(channelId, message.c_str());
-    });
+
+    GW::GameThread::Enqueue([channelId, message = this->message] { GW::Chat::SendChat(channelId, message.c_str()); });
 }
 
 void SendChatAction::drawSettings()
@@ -790,12 +820,21 @@ void SendChatAction::drawSettings()
 
     ImGui::Text("Send Chat Message:");
     ImGui::SameLine();
-    drawEnumButton(Channel::All, Channel::Emote, channel);
+    drawEnumButton(Channel::All, Channel::Log, channel);
     ImGui::PushItemWidth(300);
     ImGui::SameLine();
     ImGui::InputText("", &message);
 
     ImGui::PopID();
+}
+
+ActionBehaviourFlags SendChatAction::behaviour() const
+{
+    if (channel == Channel::Emote || channel == Channel::Log)
+    {
+        return ActionBehaviourFlag::ImmediateFinish | ActionBehaviourFlag::CanBeRunInOutpost;
+    }
+    return ActionBehaviourFlag::ImmediateFinish;
 }
 
 /// ------------- CancelAction -------------

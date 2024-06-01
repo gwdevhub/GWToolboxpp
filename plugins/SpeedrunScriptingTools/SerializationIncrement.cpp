@@ -69,7 +69,7 @@ namespace v8
     {
         NearbyAgentCondition(InputStream& stream) 
         { 
-            stream >> agentType >> primary >> secondary >> status >> hexed >> skill >> modelId >> minDistance >> maxDistance >> minHp >> maxHp;
+            stream >> agentType >> primary >> secondary >> alive >> hexed >> skill >> modelId >> minDistance >> maxDistance >> minHp >> maxHp;
             agentName = readStringWithSpaces(stream);
             polygon = readPositions(stream);
         } 
@@ -77,18 +77,18 @@ namespace v8
         {
             OutputStream stream;
 
-            stream << agentType << primary << secondary << status << hexed << skill << modelId << minDistance << maxDistance << minHp << maxHp;
+            stream << agentType << primary << secondary << alive << hexed << skill << modelId << minDistance << maxDistance << minHp << maxHp;
             writeStringWithSpaces(stream, agentName);
             writePositions(stream, polygon);
-            stream << 180.f; // New Member: max Angle
+            stream << 0.f << 180.f << 0 << 0 << 0 << 0; // new members: Min angle, max angle, enchanted, weaponspelled, poisoned, bleeding
 
             return stream.str();
         }
         AgentType agentType = AgentType::Any;
         Class primary = Class::Any;
         Class secondary = Class::Any;
-        Status status = Status::Alive;
-        HexedStatus hexed = HexedStatus::Any;
+        AnyNoYes alive = AnyNoYes::Yes;
+        AnyNoYes hexed = AnyNoYes::Any;
         GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
         int modelId = 0;
         float minDistance = 0.f;
@@ -103,7 +103,7 @@ namespace v8
     {
         ChangeTargetAction(InputStream& stream)
         {
-            stream >> agentType >> primary >> secondary >> status >> skill >> sorting >> modelId >> minDistance >> maxDistance >> requireSameModelIdAsTarget >> preferNonHexed >> rotateThroughTargets;
+            stream >> agentType >> primary >> secondary >> alive >> skill >> sorting >> modelId >> minDistance >> maxDistance >> requireSameModelIdAsTarget >> preferNonHexed >> rotateThroughTargets;
             agentName = readStringWithSpaces(stream);
             polygon = readPositions(stream);
         }
@@ -111,17 +111,17 @@ namespace v8
         {
             OutputStream stream;
 
-            stream << agentType << primary << secondary << status << skill << sorting << modelId << minDistance << maxDistance << requireSameModelIdAsTarget << preferNonHexed << rotateThroughTargets;
+            stream << agentType << primary << secondary << alive << skill << sorting << modelId << minDistance << maxDistance << requireSameModelIdAsTarget << preferNonHexed << rotateThroughTargets;
             writeStringWithSpaces(stream, agentName);
             writePositions(stream, polygon);
-            stream << 180.f; // new member: Max angle
+            stream << 0.f << 180.f << 0 << 0 << 0 << 0; // new members: Min angle, max angle, enchanted, weaponspelled, poisoned, bleeding
 
             return stream.str();
         }
         AgentType agentType = AgentType::Any;
         Class primary = Class::Any;
         Class secondary = Class::Any;
-        Status status = Status::Alive;
+        AnyNoYes alive = AnyNoYes::Yes;
         GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
         Sorting sorting = Sorting::AgentId;
         int modelId = 0;

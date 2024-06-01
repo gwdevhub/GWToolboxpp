@@ -175,18 +175,6 @@ namespace {
         return result;
     }
 
-    void logMessage(std::string_view message)
-    {
-        const auto wMessage = std::wstring{message.begin(), message.end()};
-        const size_t len = 30 + wcslen(wMessage.c_str());
-        auto to_send = new wchar_t[len];
-        swprintf(to_send, len - 1, L"<a=1>%s</a><c=#%6X>: %s</c>", L"SST", 0xFFFFFF, wMessage.c_str());   
-        GW::GameThread::Enqueue([to_send]{
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA2, to_send, nullptr);
-            delete[] to_send;
-        });
-    }
-
     bool canBeRunInOutPost(const Script& script)
     {
         return std::ranges::all_of(script.actions, [](const auto& action)
@@ -404,6 +392,8 @@ void SpeedrunScriptingTools::DrawSettings()
     }
     ImGui::SameLine();
     ImGui::Text("Actions in queue: %i", m_currentScript ? m_currentScript->actions.size() : 0u);
+    ImGui::SameLine();
+    ImGui::Checkbox("Execute scripts while in outpost", &runInOutposts);
 
     ImGui::Text("Version 1.3. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
@@ -421,6 +411,7 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
     ToolboxPlugin::LoadSettings(folder);
     ini.LoadFile(GetSettingFile(folder).c_str());
     const long savedVersion = ini.GetLongValue(Name(), "version", 1);
+    runInOutposts = ini.GetBoolValue(Name(), "runInOutpost", false);
     
     if (savedVersion < 8) return; // Prerelease versions
     
@@ -444,6 +435,7 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
 {
     ToolboxPlugin::SaveSettings(folder);
     ini.SetLongValue(Name(), "version", currentVersion);
+    ini.SetBoolValue(Name(), "runInOutpost", runInOutposts);
 
     OutputStream stream;
     for (const auto& script : m_scripts) 
@@ -468,7 +460,8 @@ void SpeedrunScriptingTools::Update(float delta)
     ToolboxPlugin::Update(delta);
 
     const auto map = GW::Map::GetMapInfo();
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !map || map->GetIsPvP() || !GW::Agents::GetPlayerAsAgentLiving()) 
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !map || map->GetIsPvP() || !GW::Agents::GetPlayerAsAgentLiving()
+          || (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !runInOutposts))
     {
         m_currentScript = std::nullopt;
         for (auto& script : m_scripts)
