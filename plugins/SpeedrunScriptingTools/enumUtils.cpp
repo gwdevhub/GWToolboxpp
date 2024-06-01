@@ -157,6 +157,29 @@ std::string_view toString(PlayerConnectednessRequirement req)
     return "";
 }
 
+std::string_view toString(Status status)
+{
+    switch (status) {
+        case Status::Enchanted:
+            return "Enchanted";
+        case Status::WeaponSpelled:
+            return "Weapon spelled";
+        case Status::Alive:
+            return "Alive";
+        case Status::Bleeding:
+            return "Bleeding";
+        case Status::Crippled:
+            return "Crippled";
+        case Status::DeepWounded:
+            return "Deep wounded";
+        case Status::Poisoned:
+            return "Poisoned";
+        case Status::Hexed:
+            return "Hexed";
+    }
+    return "";
+}
+
 std::string_view toString(Trigger type)
 {
     switch (type) {

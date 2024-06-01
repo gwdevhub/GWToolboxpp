@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 30);
+    static_assert((int)ConditionType::Count == 32);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -50,6 +50,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<PlayerHasItemEquippedCondition>();
         case ConditionType::PlayerHasHpBelow:
             return std::make_shared<PlayerHasHpBelowCondition>();
+        case ConditionType::PlayerStatus:
+            return std::make_shared<PlayerStatusCondition>();
         case ConditionType::ItemInInventory:
             return std::make_shared<ItemInInventoryCondition>();
 
@@ -63,6 +65,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<CurrentTargetAllegianceCondition>();
         case ConditionType::CurrentTargetDistance:
             return std::make_shared<CurrentTargetDistanceCondition>();
+        case ConditionType::CurrentTargetStatus:
+            return std::make_shared<CurrentTargetStatusCondition>();
 
         case ConditionType::KeyIsPressed:
             return std::make_shared<KeyIsPressedCondition>();
@@ -80,7 +84,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 30);
+    static_assert((int)ConditionType::Count == 32);
     switch (type) {
         case ConditionType::Not:
             return "Not";
@@ -119,6 +123,8 @@ std::string_view toString(ConditionType type)
             return "Energy";
         case ConditionType::PlayerIsIdle:
             return "Is idle";
+        case ConditionType::PlayerStatus:
+            return "Status";
         case ConditionType::PlayerHasItemEquipped:
             return "Equipped item";
         case ConditionType::ItemInInventory:
@@ -138,6 +144,8 @@ std::string_view toString(ConditionType type)
             return "Allegiance";
         case ConditionType::CurrentTargetDistance:
             return "Distance";
+        case ConditionType::CurrentTargetStatus:
+            return "Status";
 
         case ConditionType::KeyIsPressed:
             return "Keypress";
@@ -154,7 +162,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(InputStream& stream)
 {
-static_assert((int)ConditionType::Count == 30);
+static_assert((int)ConditionType::Count == 32);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -202,6 +210,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<ItemInInventoryCondition>(stream);
     case ConditionType::PlayerHasHpBelow:
         return std::make_shared<PlayerHasHpBelowCondition>(stream);
+    case ConditionType::PlayerStatus:
+        return std::make_shared<PlayerStatusCondition>(stream);
 
     case ConditionType::CurrentTargetHasHpBelow:
         return std::make_shared<CurrentTargetHasHpBelowCondition>(stream);
@@ -213,6 +223,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<CurrentTargetAllegianceCondition>(stream);
     case ConditionType::CurrentTargetDistance:
         return std::make_shared<CurrentTargetDistanceCondition>(stream);
+    case ConditionType::CurrentTargetStatus:
+        return std::make_shared<CurrentTargetStatusCondition>(stream);
 
     case ConditionType::KeyIsPressed:
         return std::make_shared<KeyIsPressedCondition>(stream);
@@ -258,8 +270,10 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
 
     if (ImGui::BeginPopup("Add condition")) 
     {
-        drawSubMenu("Player", std::array{ConditionType::PlayerIsNearPosition, ConditionType::PlayerHasBuff, ConditionType::PlayerHasSkill, ConditionType::PlayerHasClass, ConditionType::PlayerHasName, ConditionType::PlayerHasEnergy, ConditionType::PlayerHasHpBelow, ConditionType::PlayerIsIdle, ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory, ConditionType::CanPopAgent});
-        drawSubMenu("Current target", std::array{ConditionType::CurrentTargetHasHpBelow, ConditionType::CurrentTargetIsUsingSkill, ConditionType::CurrentTargetHasModel, ConditionType::CurrentTargetAllegiance, ConditionType::CurrentTargetDistance});
+        drawSubMenu("Player", std::array{ConditionType::PlayerIsNearPosition, ConditionType::PlayerHasBuff, ConditionType::PlayerHasSkill, ConditionType::PlayerHasClass, ConditionType::PlayerHasName, ConditionType::PlayerHasEnergy,
+            ConditionType::PlayerHasHpBelow, ConditionType::PlayerStatus, ConditionType::PlayerIsIdle, ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory, ConditionType::CanPopAgent});
+        drawSubMenu("Current target", std::array{ConditionType::CurrentTargetHasHpBelow, ConditionType::CurrentTargetStatus, ConditionType::CurrentTargetIsUsingSkill, ConditionType::CurrentTargetHasModel, 
+            ConditionType::CurrentTargetAllegiance, ConditionType::CurrentTargetDistance});
         drawSubMenu("Party", std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName});
         drawSubMenu("Instance", std::array{ConditionType::IsInMap, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime});
         drawSubMenu("Logic", std::array{ConditionType::Not, ConditionType::Or, ConditionType::And});
