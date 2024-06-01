@@ -33,6 +33,8 @@ enum class ConditionType : int {
     PlayerHasHpBelow,
     PartyHasLoadedIn,
     ItemInInventory,
+    PlayerStatus,
+    CurrentTargetStatus,
 
     Count
 };
