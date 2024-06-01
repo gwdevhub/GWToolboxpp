@@ -1366,3 +1366,100 @@ void ItemInInventoryCondition::drawSettings()
 
     ImGui::PopID();
 }
+
+/// ------------- PlayerStatusCondition -------------
+PlayerStatusCondition::PlayerStatusCondition(InputStream& stream)
+{
+    stream >> status;
+}
+void PlayerStatusCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << status;
+}
+bool PlayerStatusCondition::check() const
+{
+    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    if (!player) return false;
+
+    switch (status) 
+    {
+        case Status::Enchanted:
+            return player->GetIsEnchanted();
+        case Status::WeaponSpelled:
+            return player->GetIsWeaponSpelled();
+        case Status::Alive:
+            return player->GetIsAlive();
+        case Status::Bleeding:
+            return player->GetIsBleeding();
+        case Status::Crippled:
+            return player->GetIsCrippled();
+        case Status::DeepWounded:
+            return player->GetIsDeepWounded();
+        case Status::Poisoned:
+            return player->GetIsPoisoned();
+        case Status::Hexed:
+            return player->GetIsHexed() || player->GetIsDegenHexed();
+        default:
+            return false;
+    }
+}
+void PlayerStatusCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("If player is");
+    ImGui::SameLine();
+    drawEnumButton(Status::Enchanted, Status::Hexed, status);
+
+    ImGui::PopID();
+}
+
+/// ------------- CurrentTargetStatusCondition -------------
+CurrentTargetStatusCondition::CurrentTargetStatusCondition(InputStream& stream)
+{
+    stream >> status;
+}
+void CurrentTargetStatusCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << status;
+}
+bool CurrentTargetStatusCondition::check() const
+{
+    const auto target = GW::Agents::GetTargetAsAgentLiving();
+    if (!target) return false;
+
+    switch (status) {
+        case Status::Enchanted:
+            return target->GetIsEnchanted();
+        case Status::WeaponSpelled:
+            return target->GetIsWeaponSpelled();
+        case Status::Alive:
+            return target->GetIsAlive();
+        case Status::Bleeding:
+            return target->GetIsBleeding();
+        case Status::Crippled:
+            return target->GetIsCrippled();
+        case Status::DeepWounded:
+            return target->GetIsDeepWounded();
+        case Status::Poisoned:
+            return target->GetIsPoisoned();
+        case Status::Hexed:
+            return target->GetIsHexed() || target->GetIsDegenHexed();
+        default:
+            return false;
+    }
+}
+void CurrentTargetStatusCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("If current target is");
+    ImGui::SameLine();
+    drawEnumButton(Status::Enchanted, Status::Hexed, status);
+
+    ImGui::PopID();
+}

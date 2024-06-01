@@ -421,3 +421,29 @@ public:
 private:
     int modelId = 0;
 };
+
+class PlayerStatusCondition : public Condition {
+public:
+    PlayerStatusCondition() = default;
+    PlayerStatusCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::PlayerStatus; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    Status status = Status::Enchanted;
+};
+
+class CurrentTargetStatusCondition : public Condition {
+public:
+    CurrentTargetStatusCondition() = default;
+    CurrentTargetStatusCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::CurrentTargetStatus; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    Status status = Status::Enchanted;
+};
