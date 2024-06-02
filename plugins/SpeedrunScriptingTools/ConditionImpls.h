@@ -310,6 +310,7 @@ class KeyIsPressedCondition : public Condition {
 public:
     KeyIsPressedCondition() = default;
     KeyIsPressedCondition(InputStream&);
+    ~KeyIsPressedCondition();
     ConditionType type() const final { return ConditionType::KeyIsPressed; }
     bool check() const final;
     void drawSettings() final;
@@ -319,6 +320,7 @@ private:
     long shortcutKey = 0;
     long shortcutMod = 0;
     std::string description = "Click to change key";
+    bool blockKey = false;
 };
 
 class InstanceTimeCondition : public Condition {

@@ -633,6 +633,7 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
                     triggered = true;
                 }
             }
+            if (InstanceInfo::getInstance().keyIsDisabled({keyData, modifier})) return true;
             return triggered;
         }
 
