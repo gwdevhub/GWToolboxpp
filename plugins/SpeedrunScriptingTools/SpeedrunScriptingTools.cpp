@@ -465,19 +465,21 @@ void SpeedrunScriptingTools::Update(float delta)
 {
     ToolboxPlugin::Update(delta);
 
-    const auto map = GW::Map::GetMapInfo();
-
-    static bool wasDeactivated = false;
-    bool isDeactivated = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !map || map->GetIsPvP() || !GW::Agents::GetPlayerAsAgentLiving() || (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !runInOutposts);
-    if (isDeactivated && !wasDeactivated) 
+    static bool wasLoading = false;
+    bool isLoading = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading;
+    if (isLoading && !wasLoading) 
     {
         m_currentScript = std::nullopt;
         for (auto& script : m_scripts)
              script.triggered = false;
-        
     }
-    wasDeactivated = isDeactivated;
-    if (isDeactivated) return;
+    wasLoading = isLoading;
+
+    const auto map = GW::Map::GetMapInfo();
+    if (isLoading || !map || map->GetIsPvP() || !GW::Agents::GetPlayerAsAgentLiving() || (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !runInOutposts))
+    {
+        return;
+    }
 
     while (m_currentScript && !m_currentScript->actions.empty()) 
     {
