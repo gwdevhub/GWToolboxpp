@@ -27,6 +27,7 @@
 #include <ImGuiCppWrapper.h>
 #include <SimpleIni.h>
 #include <filesystem>
+#include <ranges>
 
 namespace {
     GW::HookEntry InstanceLoadFile_Entry;
@@ -187,6 +188,11 @@ namespace {
 void SpeedrunScriptingTools::DrawSettings()
 {
     ToolboxPlugin::DrawSettings();
+
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Agents::GetPlayerAsAgentLiving()) 
+    {
+        return;
+    }
 
     using ScriptIt = decltype(m_scripts.begin());
     std::optional<ScriptIt> scriptToDelete = std::nullopt;
@@ -460,14 +466,18 @@ void SpeedrunScriptingTools::Update(float delta)
     ToolboxPlugin::Update(delta);
 
     const auto map = GW::Map::GetMapInfo();
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !map || map->GetIsPvP() || !GW::Agents::GetPlayerAsAgentLiving()
-          || (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !runInOutposts))
+
+    static bool wasDeactivated = false;
+    bool isDeactivated = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !map || map->GetIsPvP() || !GW::Agents::GetPlayerAsAgentLiving() || (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !runInOutposts);
+    if (isDeactivated && !wasDeactivated) 
     {
         m_currentScript = std::nullopt;
         for (auto& script : m_scripts)
-            script.hotkeyTriggered = false;
-        return;
+             script.triggered = false;
+        
     }
+    wasDeactivated = isDeactivated;
+    if (isDeactivated) return;
 
     while (m_currentScript && !m_currentScript->actions.empty()) 
     {
@@ -503,27 +513,45 @@ void SpeedrunScriptingTools::Update(float delta)
         }
     }
     
+    const auto canRunScript = [&](const Script& script) 
+    {
+        if (!script.enabled || (script.conditions.empty() && script.trigger == Trigger::None) || script.actions.empty()) return false;
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !canBeRunInOutPost(script)) return false;
+        if (script.trigger != Trigger::None && !script.triggered) return false;
+        return checkConditions(script);
+    };
+    const auto setCurrentScript = [&](Script& script) 
+    {
+        if (script.showMessageWhenTriggered) 
+            logMessage(std::string{"Run script "} + script.name);
+        script.triggered = false;
+        m_currentScript = script;
+    };
+    const auto hasTrigger = [](const Script& s) { return s.trigger != Trigger::None; };
+
     if (!m_currentScript || m_currentScript->actions.empty())
     {
         // Find script to use
-        for (auto& script : m_scripts) {
-            if (!script.enabled || (script.conditions.empty() && script.trigger == Trigger::None) || script.actions.empty()) continue;
-            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !canBeRunInOutPost(script)) continue;
-            if (script.trigger == currentTrigger || (script.trigger == Trigger::Hotkey && script.hotkeyTriggered)) {
-                script.hotkeyTriggered = false;
-                if (checkConditions(script)) {
-                    if (script.showMessageWhenTriggered) 
-                        logMessage(std::string{"Run script "} + script.name);
-                    m_currentScript = script;
-                    break;
-                }
+        for (auto& script : m_scripts | std::views::filter(hasTrigger))
+        {
+            if (!canRunScript(script)) 
+            {
+                script.triggered = false;
+                continue;
+            }
+            setCurrentScript(script);
+            break;
+        }
+        if (!m_currentScript) 
+        {
+            for (auto& script : m_scripts | std::views::filter(std::not_fn(hasTrigger)))
+            {
+                if (!canRunScript(script)) continue;
+                setCurrentScript(script);
+                break;
             }
         }
     }
-
-    currentTrigger = Trigger::None;
-    for (auto& script : m_scripts)
-        script.hotkeyTriggered = false;
 }
 
 bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LPARAM lparam)
@@ -598,9 +626,10 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
                     triggered = true;
                 }
 
-                if (script.enabled && script.trigger == Trigger::Hotkey && script.triggerHotkey.keyData == keyData && script.triggerHotkey.modifier == modifier && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) 
+                if (script.enabled && script.trigger == Trigger::Hotkey && script.triggerHotkey.keyData == keyData && script.triggerHotkey.modifier == modifier 
+                    && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && checkConditions(script)) 
                 {
-                    script.hotkeyTriggered = true;
+                    script.triggered = true;
                     triggered = true;
                 }
             }
@@ -624,13 +653,22 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
 
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
         &InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {
-        if (std::ranges::any_of(m_scripts, [](const Script& s){return s.enabled && s.trigger == Trigger::InstanceLoad;}))
-            currentTrigger = Trigger::InstanceLoad;
+        std::ranges::for_each(m_scripts, [](Script& s) {
+            if (s.enabled && s.trigger == Trigger::InstanceLoad) {
+                logMessage("script triggered");
+                s.triggered = true;
+            }
+                
+        });
     });
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MessageCore>(&CoreMessage_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::MessageCore* packet) {
-        if (wmemcmp(packet->message, L"\x8101\x7f84", 2) == 0) {
-            if (std::ranges::any_of(m_scripts, [](const Script& s){return s.enabled && s.trigger == Trigger::HardModePing;}))
-                currentTrigger = Trigger::HardModePing;
+        if (wmemcmp(packet->message, L"\x8101\x7f84", 2) == 0) 
+        {
+            std::ranges::for_each(m_scripts, [](Script& s) 
+            {
+                if (s.enabled && s.trigger == Trigger::HardModePing && checkConditions(s)) 
+                    s.triggered = true;
+            });
         }
     });
     InstanceInfo::getInstance().initialize();

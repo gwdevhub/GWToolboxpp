@@ -205,7 +205,7 @@ public:
     ActionType type() const final { return ActionType::Cancel; }
     void initialAction() final;
     void drawSettings() final;
-    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::ImmediateFinish; }
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost | ActionBehaviourFlag::ImmediateFinish; }
 };
 
 class DropBuffAction : public Action {
