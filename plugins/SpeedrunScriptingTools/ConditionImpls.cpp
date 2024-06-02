@@ -1014,14 +1014,18 @@ void QuestHasStateCondition::drawSettings()
 /// ------------- KeyIsPressedCondition -------------
 KeyIsPressedCondition::KeyIsPressedCondition(InputStream& stream)
 {
-    stream >> shortcutKey >> shortcutMod;
+    stream >> shortcutKey >> shortcutMod >> blockKey;
     description = makeHotkeyDescription(shortcutKey, shortcutMod);
 }
 void KeyIsPressedCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << shortcutKey << shortcutMod;
+    stream << shortcutKey << shortcutMod << blockKey;
+}
+KeyIsPressedCondition::~KeyIsPressedCondition() 
+{
+    if (blockKey) InstanceInfo::getInstance().requestEnableKey({shortcutKey, shortcutMod});
 }
 bool KeyIsPressedCondition::check() const
 {
@@ -1037,9 +1041,26 @@ void KeyIsPressedCondition::drawSettings()
     ImGui::PushID(drawId());
     ImGui::Text("If key is held down:");
     ImGui::SameLine();
+    const auto oldKey = std::pair{shortcutKey, shortcutMod};
     drawHotkeySelector(shortcutKey, shortcutMod, description, 100.f);
+    if (const auto newKey = std::pair{shortcutKey, shortcutMod}; blockKey && newKey != oldKey)
+    {
+        InstanceInfo::getInstance().requestEnableKey(oldKey);
+        InstanceInfo::getInstance().requestDisableKey(newKey);
+    }
     ImGui::SameLine();
-    ImGui::ShowHelp("Different from the hotkey trigger, this does not block the input to Guild Wars and continuously checks if the key is pressed; not just once when it is pressed");
+    
+    bool wasBlocking = blockKey;
+    ImGui::Checkbox("Block key", &blockKey);
+    if (wasBlocking && !blockKey) 
+    {
+        InstanceInfo::getInstance().requestEnableKey({shortcutKey, shortcutMod});
+    }
+    else if (!wasBlocking && blockKey)
+    {
+        InstanceInfo::getInstance().requestDisableKey({shortcutKey, shortcutMod});
+    }
+
     ImGui::PopID();
 }
 

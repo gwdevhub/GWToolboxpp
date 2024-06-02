@@ -98,6 +98,23 @@ namespace v8
         float minHp = 0.f;
         float maxHp = 100.f;
     };
+    struct KeyPressCondition 
+    {
+        KeyPressCondition(InputStream& stream)
+        {
+            stream >> shortcut >> modifier;
+        }
+        std::string serialize()
+        {
+            OutputStream stream;
+
+            stream << shortcut << modifier << 0; //New Member: Block key
+
+            return stream.str();
+        }
+        long shortcut;
+        long modifier;
+    };
 
     struct ChangeTargetAction 
     {
@@ -218,7 +235,19 @@ namespace v8
         std::vector<std::shared_ptr<Action>> actionsIf = {};
         std::vector<std::shared_ptr<Action>> actionsElse = {};
     };
-
+    struct EquipItemAction {
+        EquipItemAction(InputStream& stream)
+        { 
+            stream >> id;
+        }
+        std::string serialize()
+        {
+            OutputStream stream;
+            stream << id << 0 << 0; // New Members: modstruct, hasModStruct
+            return stream.str();
+        }
+        int id;
+    };
 }
 
 std::shared_ptr<Condition> readV8Condition(InputStream& stream) 
@@ -250,6 +279,12 @@ std::shared_ptr<Condition> readV8Condition(InputStream& stream)
             auto convertedStream = InputStream{converted};
             return std::make_shared<PlayerHasSkillCondition>(convertedStream);
         }
+        case ConditionType::KeyIsPressed: 
+        {
+            const auto converted = v8::KeyPressCondition(stream).serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<KeyIsPressedCondition>(convertedStream);
+        }
         // No changes, read with current deserializer:
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>(stream);
@@ -267,7 +302,6 @@ std::shared_ptr<Condition> readV8Condition(InputStream& stream)
             return std::make_shared<OnlyTriggerOnceCondition>(stream);
         case ConditionType::PartyMemberStatus:
             return std::make_shared<PartyMemberStatusCondition>(stream);
-
         case ConditionType::PlayerIsNearPosition:
             return std::make_shared<PlayerIsNearPositionCondition>(stream);
         case ConditionType::PlayerHasBuff:
@@ -282,7 +316,6 @@ std::shared_ptr<Condition> readV8Condition(InputStream& stream)
             return std::make_shared<PlayerIsIdleCondition>(stream);
         case ConditionType::PlayerHasItemEquipped:
             return std::make_shared<PlayerHasItemEquippedCondition>(stream);
-
         case ConditionType::CurrentTargetHasHpBelow:
             return std::make_shared<CurrentTargetHasHpBelowCondition>(stream);
         case ConditionType::CurrentTargetIsUsingSkill:
@@ -293,9 +326,6 @@ std::shared_ptr<Condition> readV8Condition(InputStream& stream)
             return std::make_shared<CurrentTargetAllegianceCondition>(stream);
         case ConditionType::CurrentTargetDistance:
             return std::make_shared<CurrentTargetDistanceCondition>(stream);
-
-        case ConditionType::KeyIsPressed:
-            return std::make_shared<KeyIsPressedCondition>(stream);
         case ConditionType::InstanceTime:
             return std::make_shared<InstanceTimeCondition>(stream);
         case ConditionType::CanPopAgent:
@@ -329,6 +359,12 @@ std::shared_ptr<Action> readV8Action(InputStream& stream)
             auto convertedStream = InputStream{converted};
             return std::make_shared<GoToTargetAction>(convertedStream);
         }
+        case ActionType::EquipItem: 
+        {
+            const auto converted = v8::EquipItemAction(stream).serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<EquipItemAction>(convertedStream);
+        }
 
         // No changes, read with current deserializer:
         case ActionType::MoveTo:
@@ -349,8 +385,6 @@ std::shared_ptr<Action> readV8Action(InputStream& stream)
             return std::make_shared<CancelAction>(stream);
         case ActionType::DropBuff:
             return std::make_shared<DropBuffAction>(stream);
-        case ActionType::EquipItem:
-            return std::make_shared<EquipItemAction>(stream);
         case ActionType::RepopMinipet:
             return std::make_shared<RepopMinipetAction>(stream);
         case ActionType::PingHardMode:
