@@ -65,9 +65,11 @@ namespace {
 void InstanceInfo::initialize()
 {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveUpdateName* packet) {
+        logMessage("Start objective id " + std::to_string(packet->objective_id));
         this->questStatus[(GW::Constants::QuestID)packet->objective_id] = QuestStatus::Started;
     });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveDone* packet) {
+        logMessage("Finish objective id " + std::to_string(packet->objective_id));
         this->questStatus[(GW::Constants::QuestID)packet->objective_id] = QuestStatus::Completed;
     });
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {
