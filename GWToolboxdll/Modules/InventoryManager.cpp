@@ -809,9 +809,11 @@ namespace {
     uint32_t merchant_list_tab = 0;
 
     struct ButtonPress {
-        uint32_t child_frame_id; // Child offset of the button
-        uint32_t parent_frame_id;
-        clock_t added = TIMER_INIT();
+        uint32_t frame_id; // Child offset of the button
+        clock_t added = 0;
+        ButtonPress(uint32_t frame_id) : frame_id(frame_id) {
+            added = TIMER_INIT();
+        }
     };
     std::queue<ButtonPress> queued_button_presses;
 
@@ -823,30 +825,9 @@ namespace {
                 queued_button_presses.pop();
                 continue;
             }
-            const auto parent_frame = GW::UI::GetFrameById(todo.parent_frame_id);
-            if (!parent_frame) {
+            if (GW::UI::ButtonClick(GW::UI::GetFrameById(todo.frame_id))) {
                 queued_button_presses.pop();
-                continue;
             }
-            if (!(parent_frame->field91_0x184 & 4)) { // frame->state.Test(FRAME_STATE_CREATED)
-                return; // Not yet created
-            }
-
-            const auto btn_frame = GW::UI::GetChildFrame(parent_frame, todo.child_frame_id);
-            if (!btn_frame) {
-                queued_button_presses.pop();
-                continue;
-            }
-            if (!(btn_frame->field91_0x184 & 4)) {
-                return; // Not yet created
-            }
-            queued_button_presses.pop();
-            GW::GameThread::Enqueue([todo]() {
-                GW::UI::UIPacket::kMouseAction action;
-                action.current_state = 0x6;
-                action.child_frame_id_dupe = action.child_frame_id = todo.child_frame_id; // Ok btn offset is 3
-                GW::UI::SendFrameUIMessage(GW::UI::GetFrameById(todo.parent_frame_id), GW::UI::UIMessage::kMouseClick2, &action);
-                });
         }
     }
 
@@ -862,15 +843,13 @@ namespace {
             && trade_whole_stacks
             && !ImGui::IsKeyDown(ImGuiKey_ModShift)))
             return GW::Hook::LeaveHook();
-
-        queued_button_presses.push({
-            .child_frame_id = 4,// Btn max
-            .parent_frame_id = message->frame_id
-            });
-        queued_button_presses.push({
-            .child_frame_id = 3,// Btn ok
-            .parent_frame_id = message->frame_id
-            });
+        const auto frame = GW::UI::GetFrameById(message->frame_id);
+        const auto max_btn = GW::UI::GetChildFrame(frame,4);
+        const auto ok_btn = GW::UI::GetChildFrame(frame, 3);
+        if (max_btn && ok_btn) {
+            queued_button_presses.push(max_btn->frame_id);
+            queued_button_presses.push(ok_btn->frame_id);
+        }
         GW::Hook::LeaveHook();
     }
 
