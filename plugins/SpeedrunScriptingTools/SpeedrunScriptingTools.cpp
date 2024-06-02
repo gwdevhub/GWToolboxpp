@@ -401,7 +401,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Checkbox("Execute scripts while in outpost", &runInOutposts);
 
-    ImGui::Text("Version 1.3. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 1.3.2. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
@@ -542,7 +542,7 @@ void SpeedrunScriptingTools::Update(float delta)
             setCurrentScript(script);
             break;
         }
-        if (!m_currentScript) 
+        if (!m_currentScript || m_currentScript->actions.empty()) 
         {
             for (auto& script : m_scripts | std::views::filter(std::not_fn(hasTrigger)))
             {
