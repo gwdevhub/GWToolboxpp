@@ -30,24 +30,31 @@ namespace {
     constexpr float indent = 25.f;
     constexpr double eps = 1e-3;
 
-    GW::Item* FindMatchingItem(GW::Constants::Bag _bag_idx, uint32_t model_id)
+    GW::Item* FindMatchingItem(GW::Constants::Bag _bag_idx, uint32_t model_id, std::optional<uint32_t> modstruct = std::nullopt)
     {
         GW::Bag* bag = GW::Items::GetBag(_bag_idx);
         if (!bag) return nullptr;
         for (auto item : bag->items) {
-            if (item && item->model_id == model_id) return item;
+            if (!item) continue;
+
+            auto modStructFound = !modstruct.has_value();
+            for (size_t i = 0; !modStructFound && i < item->mod_struct_size; i++)
+                modStructFound = *modstruct == item->mod_struct[i].mod;
+            
+            if (modStructFound && item->model_id == model_id)
+                return item;
         }
         return nullptr;
     }
-    GW::Item* FindMatchingItem(uint32_t model_id)
+    GW::Item* FindMatchingItem(uint32_t model_id, std::optional<uint32_t> modstruct = std::nullopt)
     {
         constexpr size_t bags_size = static_cast<size_t>(GW::Constants::Bag::Equipment_Pack) + 1;
 
         GW::Item* item = nullptr;
         for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size && !item; i++)
-            item = FindMatchingItem(static_cast<GW::Constants::Bag>(i), model_id);
+            item = FindMatchingItem(static_cast<GW::Constants::Bag>(i), model_id, modstruct);
         if (!item) 
-            item = FindMatchingItem(GW::Constants::Bag::Equipped_Items, model_id);
+            item = FindMatchingItem(GW::Constants::Bag::Equipped_Items, model_id, modstruct);
         return item;
     }
     void SafeEquip(GW::Item* item)
@@ -599,28 +606,26 @@ void UseItemAction::drawSettings()
 /// ------------- EquipItemAction -------------
 EquipItemAction::EquipItemAction(InputStream& stream)
 {
-    stream >> id;
+    stream >> id >> modstruct >> hasModstruct;
 }
 void EquipItemAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << id;
+    stream << id << modstruct << hasModstruct;
 }
 void EquipItemAction::initialAction()
 {
     Action::initialAction();
 
-    const auto item = FindMatchingItem(id);
+    const auto item = FindMatchingItem(id, hasModstruct ? std::optional{modstruct} : std::nullopt);
     if (!item) return;
 
-    GW::GameThread::Enqueue([item]() -> void {
-        SafeEquip(item);
-    });
+    GW::GameThread::Enqueue([item] { SafeEquip(item); });
 }
 void EquipItemAction::drawSettings()
 {
-    const auto item = FindMatchingItem(id);
+    const auto item = FindMatchingItem(id, hasModstruct ? std::optional{modstruct} : std::nullopt);
     const auto itemName = item ? InstanceInfo::getInstance().getDecodedItemName(item->item_id) : "";
     ImGui::PushID(drawId());
 
@@ -630,6 +635,26 @@ void EquipItemAction::drawSettings()
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputInt("model ID", &id, 0);
+    ImGui::SameLine();
+    if (hasModstruct)
+    {
+        ImGui::Text("0x");
+        ImGui::SameLine();
+        ImGui::InputInt("Modstruct", &modstruct, 0, 0, ImGuiInputTextFlags_CharsHexadecimal);
+        ImGui::SameLine();
+        if (ImGui::Button("X"))
+        {
+            hasModstruct = false;
+            modstruct = 0;
+        }
+    }
+    else 
+    {
+        if (ImGui::Button("Add modstruct")) 
+        {
+            hasModstruct = true;
+        }
+    }
 
     ImGui::PopID();
 }

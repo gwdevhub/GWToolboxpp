@@ -131,6 +131,8 @@ public:
 
 private:
     int id = 0;
+    int modstruct = 0;
+    bool hasModstruct = false;
 };
 
 class SendDialogAction : public Action {
