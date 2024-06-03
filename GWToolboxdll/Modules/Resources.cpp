@@ -501,7 +501,7 @@ bool Resources::Download(const std::filesystem::path& path_to_file, const std::s
     return true;
 }
 
-void Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback) const
+void Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, const AsyncLoadCallback& callback) const
 {
     EnqueueWorkerTask([this, path_to_file, url, callback] {
         std::wstring error_message;
@@ -874,7 +874,7 @@ void Resources::Update(float)
         main_mutex.unlock();
         return;
     }
-    const std::function<void()> func = std::move(main_jobs.front());
+    const auto func = std::move(main_jobs.front());
     main_jobs.pop();
     main_mutex.unlock();
     func();

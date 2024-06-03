@@ -127,14 +127,18 @@ namespace {
     }
 
     bool render_callback_attached = false;
-    bool AttachRenderCallback() {
+
+    bool AttachRenderCallback()
+    {
         if (!render_callback_attached) {
             GW::Render::SetRenderCallback(GWToolbox::Draw);
             render_callback_attached = true;
         }
         return render_callback_attached;
     }
-    bool DetachRenderCallback() {
+
+    bool DetachRenderCallback()
+    {
         if (render_callback_attached) {
             GW::Render::SetRenderCallback(nullptr);
             render_callback_attached = false;
@@ -144,15 +148,19 @@ namespace {
 
     bool game_loop_callback_attached = false;
     GW::HookEntry game_loop_callback_entry;
-    bool AttachGameLoopCallback() {
+
+    bool AttachGameLoopCallback()
+    {
         GW::GameThreadModule.enable_hooks();
         if (!game_loop_callback_attached) {
-            GW::GameThread::RegisterGameThreadCallback(&game_loop_callback_entry,GWToolbox::Update);
+            GW::GameThread::RegisterGameThreadCallback(&game_loop_callback_entry, GWToolbox::Update);
             game_loop_callback_attached = true;
         }
         return game_loop_callback_attached;
     }
-    bool DetachGameLoopCallback() {
+
+    bool DetachGameLoopCallback()
+    {
         if (game_loop_callback_attached) {
             GW::GameThread::RemoveGameThreadCallback(&game_loop_callback_entry);
             game_loop_callback_attached = false;
@@ -161,6 +169,7 @@ namespace {
     }
 
     bool imgui_initialized = false;
+
     bool AttachImgui(IDirect3DDevice9* device)
     {
         if (imgui_initialized) {
@@ -229,6 +238,7 @@ namespace {
         Terminated,
         Disabled
     };
+
     GWToolboxState gwtoolbox_state = GWToolboxState::Terminated;
     bool gwtoolbox_disabled = false;
 
@@ -257,13 +267,14 @@ namespace {
         return inifile;
     }
 
-    bool CanRenderToolbox() {
+    bool CanRenderToolbox()
+    {
         return !gwtoolbox_disabled
-            && GW::UI::GetIsUIDrawn()
-            && !GW::GetPreGameContext()
-            && !GW::Map::GetIsInCinematic()
-            && !IsIconic(GW::MemoryMgr::GetGWWindowHandle())
-            && GuiUtils::FontsLoaded();
+               && GW::UI::GetIsUIDrawn()
+               && !GW::GetPreGameContext()
+               && !GW::Map::GetIsInCinematic()
+               && !IsIconic(GW::MemoryMgr::GetGWWindowHandle())
+               && GuiUtils::FontsLoaded();
     }
 
     bool ToggleTBModule(ToolboxModule& m, std::vector<ToolboxModule*>& vec, const bool enable)
@@ -351,7 +362,8 @@ void UpdateEnabledWidgetVectors(ToolboxModule* m, bool added)
     }
 }
 
-bool GWToolbox::ShouldDisableToolbox(GW::Constants::MapID map_id) {
+bool GWToolbox::ShouldDisableToolbox(GW::Constants::MapID map_id)
+{
     const auto m = GW::Map::GetMapInfo(map_id);
     return m && (m->GetIsPvP() || m->GetIsGuildHall());
 }
@@ -400,7 +412,7 @@ DWORD __stdcall ThreadEntry(LPVOID)
     Log::Log("Initializing API\n");
 
     if (!GW::Initialize()) {
-        if (MessageBoxA(nullptr, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0) == IDOK) { }
+        if (MessageBoxA(nullptr, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0) == IDOK) {}
         return 0;
     }
 
@@ -607,22 +619,22 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
 void GWToolbox::Initialize()
 {
     switch (gwtoolbox_state) {
-    case GWToolboxState::Terminated:
-        gwtoolbox_state = GWToolboxState::Initialising;
-        AttachRenderCallback();
-        GW::EnableHooks();
+        case GWToolboxState::Terminated:
+            gwtoolbox_state = GWToolboxState::Initialising;
+            AttachRenderCallback();
+            GW::EnableHooks();
 
         // Stop GW from force closing the game when clicking on the exit button in window fullscreen; instead route it through the close signal.
-        if (!OnMinOrRestoreOrExitBtnClicked_Func) {
-            OnMinOrRestoreOrExitBtnClicked_Func = (GW::UI::UIInteractionCallback)GW::Scanner::Find("\x83\xc4\x0c\xa9\x00\x00\x80\x00", "xxxxxxxx", -0x54);
-            if (OnMinOrRestoreOrExitBtnClicked_Func) {
-                GW::HookBase::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
-                GW::HookBase::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
+            if (!OnMinOrRestoreOrExitBtnClicked_Func) {
+                OnMinOrRestoreOrExitBtnClicked_Func = (GW::UI::UIInteractionCallback)GW::Scanner::Find("\x83\xc4\x0c\xa9\x00\x00\x80\x00", "xxxxxxxx", -0x54);
+                if (OnMinOrRestoreOrExitBtnClicked_Func) {
+                    GW::HookBase::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
+                    GW::HookBase::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
+                }
             }
-        }
-        UpdateInitialising(.0f);
-        AttachGameLoopCallback();
-        pending_detach_dll = false;
+            UpdateInitialising(.0f);
+            AttachGameLoopCallback();
+            pending_detach_dll = false;
     }
 }
 
@@ -691,14 +703,14 @@ std::filesystem::path GWToolbox::SaveSettings()
 void GWToolbox::SignalTerminate(bool detach_dll)
 {
     switch (gwtoolbox_state) {
-    case GWToolboxState::Disabled:
-    case GWToolboxState::Terminating:
-    case GWToolboxState::Initialised:
-    case GWToolboxState::Initialising:
-        gwtoolbox_state = GWToolboxState::DrawTerminating;
-        AttachGameLoopCallback();
-        AttachRenderCallback();
-        pending_detach_dll = detach_dll;
+        case GWToolboxState::Disabled:
+        case GWToolboxState::Terminating:
+        case GWToolboxState::Initialised:
+        case GWToolboxState::Initialising:
+            gwtoolbox_state = GWToolboxState::DrawTerminating;
+            AttachGameLoopCallback();
+            AttachRenderCallback();
+            pending_detach_dll = detach_dll;
     }
 }
 
@@ -709,6 +721,7 @@ void GWToolbox::Enable()
     GW::EnableHooks();
     gwtoolbox_disabled = false;
 }
+
 void GWToolbox::Disable()
 {
     if (gwtoolbox_disabled)
@@ -724,13 +737,14 @@ void GWToolbox::Disable()
 bool GWToolbox::CanTerminate()
 {
     return modules_terminating.empty()
-        && GuiUtils::FontsLoaded()
-        && all_modules_enabled.empty()
-        && !imgui_initialized
-        && !event_handler_attached;
+           && GuiUtils::FontsLoaded()
+           && all_modules_enabled.empty()
+           && !imgui_initialized
+           && !event_handler_attached;
 }
 
-void GWToolbox::Update(GW::HookStatus*) {
+void GWToolbox::Update(GW::HookStatus*)
+{
     static DWORD last_tick_count;
     if (last_tick_count == 0) {
         last_tick_count = GetTickCount();
@@ -743,14 +757,14 @@ void GWToolbox::Update(GW::HookStatus*) {
     const auto delta_f = static_cast<float>(delta) / 1000.f;
 
     switch (gwtoolbox_state) {
-    case GWToolboxState::Terminating:
-        return UpdateTerminating(delta_f);
-    case GWToolboxState::Initialising:
-        return UpdateInitialising(delta_f);
-    case GWToolboxState::Initialised:
-        break;
-    default:
-        return;
+        case GWToolboxState::Terminating:
+            return UpdateTerminating(delta_f);
+        case GWToolboxState::Initialising:
+            return UpdateInitialising(delta_f);
+        case GWToolboxState::Initialised:
+            break;
+        default:
+            return;
     }
 
     UpdateModulesTerminating(delta_f);
@@ -764,16 +778,15 @@ void GWToolbox::Update(GW::HookStatus*) {
 
 void GWToolbox::Draw(IDirect3DDevice9* device)
 {
-
     switch (gwtoolbox_state) {
-    case GWToolboxState::DrawTerminating:
-        return DrawTerminating(device);
-    case GWToolboxState::DrawInitialising:
-        return DrawInitialising(device);
-    case GWToolboxState::Initialised:
-        break;
-    default:
-        return;
+        case GWToolboxState::DrawTerminating:
+            return DrawTerminating(device);
+        case GWToolboxState::DrawInitialising:
+            return DrawInitialising(device);
+        case GWToolboxState::Initialised:
+            break;
+        default:
+            return;
     }
 
     if (imgui_inifile_changed) {
@@ -833,10 +846,11 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
 }
 
-void GWToolbox::DrawInitialising(IDirect3DDevice9* device) {
+void GWToolbox::DrawInitialising(IDirect3DDevice9* device)
+{
     ASSERT(gwtoolbox_state == GWToolboxState::DrawInitialising);
 
-    if(!imgui_inifile.bytes)
+    if (!imgui_inifile.bytes)
         imgui_inifile = Unicode16ToUtf8(Resources::GetSettingFile(L"interface.ini").c_str());
 
     // Attach WndProc in the render loop to make sure the window is loaded and ready
@@ -844,13 +858,16 @@ void GWToolbox::DrawInitialising(IDirect3DDevice9* device) {
     // Attach imgui if not already done so
     ASSERT(AttachImgui(device));
 
-    if (!GuiUtils::FontsLoaded())
-        return;
+    if (!GuiUtils::FontsLoaded()) {
+        Resources::Instance().Update(0.f); // necessary, because this won't be called in
+        return;                            // GWToolbox::Update() until fonts are initialised
+    }
 
     gwtoolbox_state = GWToolboxState::Initialised;
-
 }
-void GWToolbox::UpdateInitialising(float) {
+
+void GWToolbox::UpdateInitialising(float)
+{
     ASSERT(gwtoolbox_state == GWToolboxState::Initialising);
 
     Log::Log("Creating Toolbox\n");
@@ -897,8 +914,9 @@ void GWToolbox::UpdateInitialising(float) {
     gwtoolbox_state = GWToolboxState::DrawInitialising;
 }
 
-void GWToolbox::UpdateModulesTerminating(float delta_f) {
-    terminate_modules:
+void GWToolbox::UpdateModulesTerminating(float delta_f)
+{
+terminate_modules:
     for (const auto m : modules_terminating) {
         if (m->CanTerminate()) {
             m->Terminate();
@@ -911,7 +929,8 @@ void GWToolbox::UpdateModulesTerminating(float delta_f) {
     }
 }
 
-void GWToolbox::UpdateTerminating(float delta_f) {
+void GWToolbox::UpdateTerminating(float delta_f)
+{
     ASSERT(gwtoolbox_state == GWToolboxState::Terminating);
 
     if (all_modules_enabled.size()) {
@@ -940,11 +959,11 @@ void GWToolbox::UpdateTerminating(float delta_f) {
     gwtoolbox_state = GWToolboxState::Terminated;
 }
 
-void GWToolbox::DrawTerminating(IDirect3DDevice9*) {
+void GWToolbox::DrawTerminating(IDirect3DDevice9*)
+{
     ASSERT(gwtoolbox_state == GWToolboxState::DrawTerminating);
     // Save settings on the draw loop otherwise theme won't be saved
     SaveSettings();
     ASSERT(DetachImgui());
     gwtoolbox_state = GWToolboxState::Terminating;
 }
-
