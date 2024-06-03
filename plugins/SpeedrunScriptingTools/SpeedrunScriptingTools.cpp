@@ -657,11 +657,8 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
         &InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {
         std::ranges::for_each(m_scripts, [](Script& s) {
-            if (s.enabled && s.trigger == Trigger::InstanceLoad) {
-                logMessage("script triggered");
+            if (s.enabled && s.trigger == Trigger::InstanceLoad)
                 s.triggered = true;
-            }
-                
         });
     });
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MessageCore>(&CoreMessage_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::MessageCore* packet) {
