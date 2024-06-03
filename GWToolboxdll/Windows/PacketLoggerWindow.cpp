@@ -232,26 +232,13 @@ namespace {
             GW::StoC::RemoveCallback(1, &entry);
             return; // GWCA not ready yet
         }
-
-        StoCHandler_pt GWCA_StoCHandler_Func = test_handler.handler_func;
         GW::StoC::RemoveCallback(1, &entry);
 
         ASSERT(original_handler_func != test_handler.handler_func);
 
-        // Using GWCA_StoCHandler_Func, offset to find original callback array
-        gwca_original_functions = *(StoCHandler***)(((uintptr_t)GWCA_StoCHandler_Func) + 0x110);
-        ASSERT(gwca_original_functions && *gwca_original_functions);
-
-        StoCHandler* original_functions = *gwca_original_functions;
-
-        // Final sanity check; ensure the pointer for packet 1 is the same as what we grabbed from memory
-        ASSERT(original_functions[1].handler_func == original_handler_func);
-
         // Copy gs handler array; we're going to swap out m_buffer.
         memcpy(&game_server_handler, original_handler_arr, sizeof(*original_handler_arr));
 
-        // Redirect our handler array to pont to the originals
-        game_server_handler.m_buffer = original_functions;
 
         ignored_packets[12] = true;
         ignored_packets[13] = true;
