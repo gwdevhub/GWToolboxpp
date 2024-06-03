@@ -105,7 +105,6 @@ void writePositions(OutputStream& stream, const std::vector<GW::Vec2f>& position
     }
 }
 
-
 enum FrequentChar { B = 26 + 23, Exclamation, Quote, Underscore, Hashtag, Plus, Minus, Equals, Star, Apostroph, Ampersand, Slash, EndOfAC, EndOfString, EndOfList };
 constexpr uint8_t frequentCharValue(char c)
 {
