@@ -97,23 +97,11 @@ namespace {
         Log::Info("Maps exported to %ls", file_location.c_str());
     }
 
-    // Taken from StoCMgr.cpp
-    using StoCHandler_pt = bool(__fastcall*)(GW::Packet::StoC::PacketBase* pak);
-
-    struct StoCHandler {
-        uint32_t* fields;
-        uint32_t field_count;
-        StoCHandler_pt handler_func;
-    };
-
-    StoCHandler** gwca_original_functions = nullptr;
-
-
-    void TooltipHandlerInfo(StoCHandler& handler) {
-        ImGui::SetTooltip("Field Count: %d\nHandler Addr: %08x", handler.field_count, handler.handler_func);
+    void TooltipHandlerInfo(GW::StoC::StoCHandler& handler) {
+        ImGui::SetTooltip("Field Count: %d\nHandler Addr: %08x", handler.template_size, handler.handler_func);
     }
 
-    using StoCHandlerArray = GW::Array<StoCHandler>;
+    using StoCHandlerArray = GW::Array<GW::StoC::StoCHandler>;
 
     enum class FieldType {
         Ignore,
@@ -146,33 +134,11 @@ namespace {
     bool logger_enabled = false;
     bool log_packet_content = false;
     bool auto_ignore_packets = false;
-    bool debug = false;
-    uint32_t log_message_callback_identifier = 0;
-    volatile bool running;
 
     StoCHandlerArray game_server_handler;
     constexpr size_t packet_max = 512; // Increase if number of StoC packets exceeds this.
     bool ignored_packets[packet_max] = {false};
     bool blocked_packets[packet_max] = {false};
-    GW::HookEntry hook_entry;
-
-
-
-    void printchar(const wchar_t c)
-    {
-        if (c >= L' ' && c <= L'~') {
-            printf("%lc", c);
-        }
-        else {
-            printf("0x%X ", c);
-        }
-    }
-
-    uintptr_t game_srv_object_addr;
-
-
-
-
 
     StoCHandlerArray* GetStoCHandlerArray() {
 
@@ -233,16 +199,13 @@ namespace {
             return; // GWCA not ready yet
         }
 
-        StoCHandler_pt GWCA_StoCHandler_Func = test_handler.handler_func;
         GW::StoC::RemoveCallback(1, &entry);
 
         ASSERT(original_handler_func != test_handler.handler_func);
 
         // Using GWCA_StoCHandler_Func, offset to find original callback array
-        gwca_original_functions = *(StoCHandler***)(((uintptr_t)GWCA_StoCHandler_Func) + 0x110);
-        ASSERT(gwca_original_functions && *gwca_original_functions);
 
-        StoCHandler* original_functions = *gwca_original_functions;
+        GW::StoC::StoCHandler* original_functions = *GW::StoC::GetOriginalFunctions();
 
         // Final sanity check; ensure the pointer for packet 1 is the same as what we grabbed from memory
         ASSERT(original_functions[1].handler_func == original_handler_func);
@@ -570,7 +533,7 @@ void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC:
         return;
     }
 
-    const StoCHandler handler = game_server_handler.at(packet->header);
+    const GW::StoC::StoCHandler handler = game_server_handler.at(packet->header);
     auto packet_raw = reinterpret_cast<uint8_t*>(packet);
 
     uint8_t** bytes = &packet_raw;
@@ -580,7 +543,7 @@ void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC:
 
     if (log_packet_content) {
         printf(PrefixTimestamp("StoC packet(%u 0x%X) {\n").c_str(), packet->header, packet->header);
-        PrintNestedField(handler.fields + 1, handler.field_count - 1, 1, bytes, 4);
+        PrintNestedField(handler.packet_template + 1, handler.template_size - 1, 1, bytes, 4);
         printf("} endpacket(%u 0x%X)\n", packet->header, packet->header);
     }
     else {
