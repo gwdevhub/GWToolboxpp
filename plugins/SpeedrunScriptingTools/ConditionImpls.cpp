@@ -1484,3 +1484,31 @@ void CurrentTargetStatusCondition::drawSettings()
 
     ImGui::PopID();
 }
+
+/// ------------- PlayerInPolygonCondition -------------
+PlayerInPolygonCondition::PlayerInPolygonCondition(InputStream& stream)
+{
+    polygon = readPositions(stream);
+}
+void PlayerInPolygonCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    writePositions(stream, polygon);
+}
+bool PlayerInPolygonCondition::check() const
+{
+    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    if (!player || polygon.size() < 3) return false;
+    return pointIsInsidePolygon(player->pos, polygon);
+}
+void PlayerInPolygonCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("If player is inside polygon");
+    ImGui::SameLine();
+    drawPolygonSelector(polygon);
+
+    ImGui::PopID();
+}
