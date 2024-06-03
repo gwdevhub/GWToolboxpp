@@ -419,7 +419,7 @@ bool PartyHasLoadedInCondition::check() const
     if (req == PlayerConnectednessRequirement::All)
         return std::ranges::all_of(partyInfo->players, [](const auto& player) { return player.connected(); });
     else
-        return (int)partyInfo->players.size() > slot && partyInfo->players[slot].connected();
+        return slot - 1 < (int)partyInfo->players.size() && partyInfo->players[slot - 1].connected();
 }
 void PartyHasLoadedInCondition::drawSettings()
 {
