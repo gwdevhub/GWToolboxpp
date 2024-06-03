@@ -449,3 +449,16 @@ public:
 private:
     Status status = Status::Enchanted;
 };
+
+class PlayerInPolygonCondition : public Condition {
+public:
+    PlayerInPolygonCondition() = default;
+    PlayerInPolygonCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::PlayerInPolygonCondition; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    std::vector<GW::Vec2f> polygon;
+};
