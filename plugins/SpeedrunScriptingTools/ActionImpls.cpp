@@ -1084,15 +1084,19 @@ ActionStatus ConditionedAction::isComplete() const
 }
 void ConditionedAction::drawSettings() 
 {
-    const auto drawActionsSelector = [](auto& actions) {
+    const auto drawActionsSelector = [](auto& actions) 
+    {
         ImGui::Indent(indent);
 
-        int rowToDelete = -1;
-        for (int i = 0; i < int(actions.size()); ++i) {
+        std::optional<int> rowToDelete;
+
+        for (int i = 0; i < int(actions.size()); ++i) 
+        {
             ImGui::PushID(i);
 
             ImGui::Bullet();
-            if (ImGui::Button("X")) {
+            if (ImGui::Button("X", ImVec2(20, 0))) 
+            {
                 if (actions[i])
                     actions[i] = nullptr;
                 else
@@ -1107,10 +1111,11 @@ void ConditionedAction::drawSettings()
 
             ImGui::PopID();
         }
-        if (rowToDelete != -1) actions.erase(actions.begin() + rowToDelete);
+        if (rowToDelete) actions.erase(actions.begin() + *rowToDelete);
 
         ImGui::Bullet();
-        if (ImGui::Button("Add row")) {
+        if (ImGui::Button("Add row")) 
+        {
             actions.push_back(nullptr);
         }
 
@@ -1120,25 +1125,46 @@ void ConditionedAction::drawSettings()
     ImGui::PushID(drawId());
 
     ImGui::PushID(0);
-    if (cond)
-        cond->drawSettings();
+    if (cond) 
+    {
+        if (ImGui::Button("Remove")) 
+            cond = nullptr;
+        else 
+        {
+            ImGui::SameLine();
+            cond->drawSettings();
+        }
+    }
     else    
         cond = drawConditionSelector(120.f);
     drawActionsSelector(actionsIf);
     ImGui::PopID();
 
+    ImGui::Indent(indent);
+
     int elseIfIndex = 0;
     std::optional<int> elseIfToDelete;
+    std::optional<std::pair<int, int>> elseIfToSwap;
 
     for (auto& [condEI, actionsEI] : actionsElseIf) {
         ImGui::PushID(1 + elseIfIndex);
-        if (ImGui::Button("X")) elseIfToDelete = elseIfIndex;
+        if (ImGui::Button("X", ImVec2(20, 0))) elseIfToDelete = elseIfIndex;
+        ImGui::SameLine();
+        if (ImGui::Button("^", ImVec2(20, 0)) && elseIfIndex > 0) elseIfToSwap = {elseIfIndex - 1, elseIfIndex};
+        ImGui::SameLine();
+        if (ImGui::Button("v", ImVec2(20, 0)) && elseIfIndex + 1 < int(actionsElseIf.size())) elseIfToSwap = {elseIfIndex, elseIfIndex + 1};
         ImGui::SameLine();
         if (condEI) 
         {
-            ImGui::Text("Else");
-            ImGui::SameLine();
-            condEI->drawSettings();
+            if (ImGui::Button("Remove")) 
+                condEI = nullptr;
+            else 
+            {
+                ImGui::SameLine();
+                ImGui::Text("Else");
+                ImGui::SameLine();
+                condEI->drawSettings();
+            }
         }
         else 
         {
@@ -1153,6 +1179,7 @@ void ConditionedAction::drawSettings()
         ++elseIfIndex;
     }
     if (elseIfToDelete) actionsElseIf.erase(actionsElseIf.begin() + elseIfToDelete.value());
+    if (elseIfToSwap) std::swap(*(actionsElseIf.begin() + elseIfToSwap->first), *(actionsElseIf.begin() + elseIfToSwap->second));
     
     if (!actionsElse.empty())
     {
@@ -1164,7 +1191,6 @@ void ConditionedAction::drawSettings()
         drawActionsSelector(actionsElse);
         ImGui::PopID();
     }
-    
 
     if (ImGui::Button("Add else if"))
         actionsElseIf.push_back({nullptr, {}});
@@ -1175,7 +1201,8 @@ void ConditionedAction::drawSettings()
         if (ImGui::Button("Add else"))
             actionsElse.push_back(nullptr);
     }
-        
+    
+    ImGui::Unindent(indent);
 
     ImGui::PopID();
 }
