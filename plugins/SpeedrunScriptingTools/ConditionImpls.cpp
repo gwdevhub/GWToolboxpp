@@ -411,6 +411,16 @@ void PartyPlayerCountCondition::drawSettings()
 }
 
 /// ------------- PartyHasLoadedInCondition -------------
+PartyHasLoadedInCondition::PartyHasLoadedInCondition(InputStream& stream)
+{
+    stream >> req >> slot;
+}
+void PartyHasLoadedInCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << req << slot;
+}
 bool PartyHasLoadedInCondition::check() const
 {
     const auto partyInfo = GW::PartyMgr::GetPartyInfo();
