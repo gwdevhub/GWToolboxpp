@@ -195,6 +195,19 @@ std::string_view toString(Trigger type)
     return "";
 }
 
+std::string_view toString(GW::Constants::InstanceType type) 
+{
+    switch (type) {
+        case GW::Constants::InstanceType::Explorable:
+            return "Explorable";
+        case GW::Constants::InstanceType::Loading:
+            return "Loading";
+        case GW::Constants::InstanceType::Outpost:
+            return "Outpost";
+    }
+    return "";
+}
+
 std::string makeHotkeyDescription(long keyData, long modifier) 
 {
     char newDescription[256];

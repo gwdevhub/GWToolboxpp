@@ -35,7 +35,8 @@ enum class ConditionType : int {
     ItemInInventory,
     PlayerStatus,
     CurrentTargetStatus,
-    PlayerInPolygonCondition,
+    PlayerInPolygon,
+    InstanceType,
 
     Count
 };
