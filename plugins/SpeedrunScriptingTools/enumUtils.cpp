@@ -207,6 +207,90 @@ std::string_view toString(GW::Constants::InstanceType type)
     }
     return "";
 }
+std::string_view toString(GW::Constants::HeroID hero) 
+{
+    switch (hero)
+    {
+        using GW::Constants::HeroID;
+        case HeroID::NoHero:
+            return "Any";
+        case HeroID::Norgu:
+            return "Norgu";
+        case HeroID::Goren:
+            return "Goren";
+        case HeroID::Tahlkora:
+            return "Tahlkora";
+        case HeroID::MasterOfWhispers:
+            return "Master of Whispers";
+        case HeroID::AcolyteJin:
+            return "Acolyte Jin";
+        case HeroID::Koss:
+            return "Koss";
+        case HeroID::Dunkoro:
+            return "Dunkoro";
+        case HeroID::AcolyteSousuke:
+            return "Acolyte Sousuke";
+        case HeroID::Melonni:
+            return "Melonni";
+        case HeroID::ZhedShadowhoof:
+            return "Zhed Shadowhoof";
+        case HeroID::GeneralMorgahn:
+            return "General Morgahn";
+        case HeroID::MargridTheSly:
+            return "Margrid the Sly";
+        case HeroID::Zenmai:
+            return "Zenmai";
+        case HeroID::Olias:
+            return "Olias";
+        case HeroID::Razah:
+            return "Razah";
+        case HeroID::MOX:
+            return "M.O.X.";
+        case HeroID::KeiranThackeray:
+            return "Keiran Thackeray";
+        case HeroID::Jora:
+            return "Jora";
+        case HeroID::PyreFierceshot:
+            return "Pyre Fierceshot";
+        case HeroID::Anton:
+            return "Anton";
+        case HeroID::Livia:
+            return "Livia";
+        case HeroID::Hayda:
+            return "Hayda";
+        case HeroID::Kahmu:
+            return "Kahmu";
+        case HeroID::Gwen:
+            return "Gwen";
+        case HeroID::Xandra:
+            return "Xandra";
+        case HeroID::Vekk:
+            return "Vekk";
+        case HeroID::Ogden:
+            return "Ogden";
+        case HeroID::Merc1:
+            return "Mercenary 1";
+        case HeroID::Merc2:
+            return "Mercenary 2";
+        case HeroID::Merc3:
+            return "Mercenary 3";
+        case HeroID::Merc4:
+            return "Mercenary 4";
+        case HeroID::Merc5:
+            return "Mercenary 5";
+        case HeroID::Merc6:
+            return "Mercenary 6";
+        case HeroID::Merc7:
+            return "Mercenary 7";
+        case HeroID::Merc8:
+            return "Mercenary 8";
+        case HeroID::Miku:
+            return "Miku";
+        case HeroID::ZeiRi:
+            return "Zei Ri";
+    }
+    return "";
+} 
 
 std::string makeHotkeyDescription(long keyData, long modifier) 
 {
