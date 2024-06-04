@@ -358,3 +358,17 @@ public:
     void drawSettings() final;
     ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
 };
+
+class UseHeroSkillAction : public Action {
+public:
+    UseHeroSkillAction() = default;
+    UseHeroSkillAction(InputStream&);
+    ActionType type() const final { return ActionType::UseHeroSkill; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    GW::Constants::HeroID hero = GW::Constants::HeroID::NoHero;
+    GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
+};

@@ -14,6 +14,7 @@ namespace GW::Constants
     enum class SkillID : uint32_t;
     enum class MapID : uint32_t;
     enum class InstanceType;
+    enum HeroID : uint32_t;
 }
 
 std::string_view toString(AgentType);
@@ -27,6 +28,7 @@ std::string_view toString(HasSkillRequirement);
 std::string_view toString(PlayerConnectednessRequirement);
 std::string_view toString(Status);
 std::string_view toString(GW::Constants::InstanceType);
+std::string_view toString(GW::Constants::HeroID);
 
 void drawHotkeySelector(long& keyData, long& modifier, std::string& description, float selectorWidth);
 std::string makeHotkeyDescription(long keyData, long modifier);

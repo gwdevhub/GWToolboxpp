@@ -14,12 +14,14 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <GWCA/Packets/Opcodes.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Party.h>
 
 #include <ImGuiCppWrapper.h>
 #include <thread>
@@ -95,6 +97,39 @@ namespace {
         const auto forwards = GW::Normalize(GW::Vec2f{player->rotation_cos, player->rotation_sin});
         const auto toTarget = GW::Normalize(GW::Vec2f{agent->pos.x - player->pos.x, agent->pos.y - player->pos.y});
         return angleBetweenNormalizedVectors(forwards, toTarget) * radiansToDegree;
+    }
+
+    std::optional<std::pair<size_t, size_t>> getHeroWithSkill(GW::Constants::SkillID skillId, std::optional<GW::Constants::HeroID> heroId)
+    {
+        const auto heroSkillSlot = [&](GW::AgentID agentId) -> std::optional<size_t>
+        {
+            const auto skillBarArray = GW::SkillbarMgr::GetSkillbarArray();
+            if (!skillBarArray) return {};
+            const auto agentSkillBar = std::ranges::find_if(*skillBarArray, [&](const auto& skillbar){ return skillbar.agent_id == agentId; });
+            if (agentSkillBar == skillBarArray->end()) return {};
+            if (const auto skillBarSkill = agentSkillBar->GetSkillById(skillId); skillBarSkill && skillBarSkill->GetRecharge() == 0) 
+                return skillBarSkill - &agentSkillBar->skills[0];
+            return {};
+        };
+
+        const auto partyInfo = GW::PartyMgr::GetPartyInfo();
+        if (!partyInfo) 
+            return {};
+        const auto& party_heros = partyInfo->heroes;
+        if (!party_heros.valid()) 
+            return {};
+
+        const auto player = GW::Agents::GetPlayerAsAgentLiving();
+        if (!player) 
+            return {};
+        
+        for (auto heroIt = party_heros.begin(); heroIt != party_heros.end(); ++heroIt)
+        {
+            if (heroIt->owner_player_id != player->login_number || (heroId && heroIt->hero_id != heroId.value())) continue;
+            if (const auto skillSlot = heroSkillSlot(heroIt->agent_id)) 
+                return std::pair{heroIt - party_heros.begin(), *skillSlot};
+        }
+        return {};
     }
 } // namespace
 
@@ -1477,6 +1512,63 @@ void LogOutAction::drawSettings()
     ImGui::PushID(drawId());
 
     ImGui::Text("Log out");
+
+    ImGui::PopID();
+}
+
+/// ------------- UseHeroSkillAction -------------
+UseHeroSkillAction::UseHeroSkillAction(InputStream& stream)
+{
+    stream >> hero >> skill;
+}
+void UseHeroSkillAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << hero << skill;
+}
+void UseHeroSkillAction::initialAction()
+{
+    Action::initialAction();
+
+    const auto heroAndSkillSlot = getHeroWithSkill(skill, hero != GW::Constants::HeroID::NoHero ? std::optional{hero} : std::nullopt);
+    if (!heroAndSkillSlot) return;
+    const auto& [heroSlot, skillSlot] = heroAndSkillSlot.value();
+
+    const auto controlKey = [&] {
+        switch (heroSlot)
+        {
+            case 0:
+                return GW::UI::ControlAction_Hero1Skill1 + skillSlot;
+            case 1:
+                return GW::UI::ControlAction_Hero2Skill1 + skillSlot;
+            case 2:
+                return GW::UI::ControlAction_Hero3Skill1 + skillSlot;
+            case 3:
+                return GW::UI::ControlAction_Hero4Skill1 + skillSlot;
+            case 4:
+                return GW::UI::ControlAction_Hero5Skill1 + skillSlot;
+            case 5:
+                return GW::UI::ControlAction_Hero6Skill1 + skillSlot;
+            default:
+                return GW::UI::ControlAction_Hero7Skill1 + skillSlot;
+        }
+    }();
+
+    GW::GameThread::Enqueue([controlKey = static_cast<GW::UI::ControlAction>(controlKey)] { GW::UI::Keypress(controlKey); });
+}
+
+void UseHeroSkillAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("Use skill");
+    ImGui::SameLine();
+    drawSkillIDSelector(skill);
+    ImGui::SameLine();
+    ImGui::Text("on hero");
+    ImGui::SameLine();
+    drawEnumButton(GW::Constants::HeroID::NoHero, GW::Constants::HeroID::ZeiRi, hero);
 
     ImGui::PopID();
 }
