@@ -1514,3 +1514,29 @@ void PlayerInPolygonCondition::drawSettings()
 
     ImGui::PopID();
 }
+
+/// ------------- InstanceTypeCondition -------------
+InstanceTypeCondition::InstanceTypeCondition(InputStream& stream)
+{
+    stream >> instanceType;
+}
+void InstanceTypeCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << instanceType;
+}
+bool InstanceTypeCondition::check() const
+{
+    return GW::Map::GetInstanceType() == instanceType;
+}
+void InstanceTypeCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("If player is in");
+    ImGui::SameLine();
+    drawEnumButton(GW::Constants::InstanceType::Outpost, GW::Constants::InstanceType::Explorable, instanceType);
+
+    ImGui::PopID();
+}

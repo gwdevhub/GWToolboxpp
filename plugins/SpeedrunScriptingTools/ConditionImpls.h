@@ -454,11 +454,24 @@ class PlayerInPolygonCondition : public Condition {
 public:
     PlayerInPolygonCondition() = default;
     PlayerInPolygonCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::PlayerInPolygonCondition; }
+    ConditionType type() const final { return ConditionType::PlayerInPolygon; }
     bool check() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
 
 private:
     std::vector<GW::Vec2f> polygon;
+};
+
+class InstanceTypeCondition : public Condition {
+public:
+    InstanceTypeCondition() = default;
+    InstanceTypeCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::IsInMap; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    GW::Constants::InstanceType instanceType = GW::Constants::InstanceType::Explorable;
 };

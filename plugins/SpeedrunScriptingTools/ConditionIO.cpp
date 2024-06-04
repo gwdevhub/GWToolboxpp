@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 33);
+    static_assert((int)ConditionType::Count == 34);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -31,6 +31,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<PartyMemberStatusCondition>();
         case ConditionType::OnlyTriggerOncePerInstance:
             return std::make_shared<OnlyTriggerOnceCondition>();
+        case ConditionType::InstanceType:
+            return std::make_shared<InstanceTypeCondition>();
 
         case ConditionType::PlayerIsNearPosition:
             return std::make_shared<PlayerIsNearPositionCondition>();
@@ -52,7 +54,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<PlayerHasHpBelowCondition>();
         case ConditionType::PlayerStatus:
             return std::make_shared<PlayerStatusCondition>();
-        case ConditionType::PlayerInPolygonCondition:
+        case ConditionType::PlayerInPolygon:
             return std::make_shared<PlayerInPolygonCondition>();
         case ConditionType::ItemInInventory:
             return std::make_shared<ItemInInventoryCondition>();
@@ -86,7 +88,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 33);
+    static_assert((int)ConditionType::Count == 34);
     switch (type) {
         case ConditionType::Not:
             return "Not";
@@ -95,7 +97,7 @@ std::string_view toString(ConditionType type)
         case ConditionType::And:
             return "And";
         case ConditionType::IsInMap:
-            return "Current map ID";
+            return "Map ID";
         case ConditionType::QuestHasState:
             return "Quest state";
         case ConditionType::PartyPlayerCount:
@@ -110,6 +112,8 @@ std::string_view toString(ConditionType type)
             return "Member status";
         case ConditionType::PartyHasLoadedIn:
             return "Finshed loading";
+        case ConditionType::InstanceType:
+            return "Type";
 
         case ConditionType::PlayerIsNearPosition:
             return "Position";
@@ -129,7 +133,7 @@ std::string_view toString(ConditionType type)
             return "Status";
         case ConditionType::PlayerHasItemEquipped:
             return "Equipped item";
-        case ConditionType::PlayerInPolygonCondition:
+        case ConditionType::PlayerInPolygon:
             return "Inside polygon";
         case ConditionType::ItemInInventory:
             return "Item in inventory";
@@ -166,7 +170,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(InputStream& stream)
 {
-static_assert((int)ConditionType::Count == 33);
+static_assert((int)ConditionType::Count == 34);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -193,6 +197,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<OnlyTriggerOnceCondition>(stream);
     case ConditionType::PartyMemberStatus:
         return std::make_shared<PartyMemberStatusCondition>(stream);
+    case ConditionType::InstanceType:
+        return std::make_shared<InstanceTypeCondition>(stream);
 
     case ConditionType::PlayerIsNearPosition:
         return std::make_shared<PlayerIsNearPositionCondition>(stream);
@@ -216,7 +222,7 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<PlayerHasHpBelowCondition>(stream);
     case ConditionType::PlayerStatus:
         return std::make_shared<PlayerStatusCondition>(stream);
-    case ConditionType::PlayerInPolygonCondition:
+    case ConditionType::PlayerInPolygon:
         return std::make_shared<PlayerInPolygonCondition>(stream);
 
     case ConditionType::CurrentTargetHasHpBelow:
@@ -274,13 +280,13 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
         ImGui::OpenPopup("Add condition");
     }
 
-    constexpr auto playerConditions = std::array{ConditionType::PlayerIsNearPosition,  ConditionType::PlayerInPolygonCondition, ConditionType::PlayerHasBuff,    ConditionType::PlayerHasSkill, ConditionType::PlayerHasClass,
-                                                ConditionType::PlayerHasName,         ConditionType::PlayerHasEnergy,          ConditionType::PlayerHasHpBelow, ConditionType::PlayerStatus,   ConditionType::PlayerIsIdle,
-                                                ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory,          ConditionType::CanPopAgent};
-    constexpr auto targetConditions = std::array{ConditionType::CurrentTargetHasHpBelow, ConditionType::CurrentTargetStatus, ConditionType::CurrentTargetIsUsingSkill, ConditionType::CurrentTargetHasModel, 
-                                                ConditionType::CurrentTargetAllegiance, ConditionType::CurrentTargetDistance};
+    constexpr auto playerConditions = std::array{ConditionType::PlayerIsNearPosition,  ConditionType::PlayerInPolygon, ConditionType::PlayerHasBuff,    ConditionType::PlayerHasSkill, ConditionType::PlayerHasClass,
+                                                 ConditionType::PlayerHasName,         ConditionType::PlayerHasEnergy, ConditionType::PlayerHasHpBelow, ConditionType::PlayerStatus,   ConditionType::PlayerIsIdle,
+                                                 ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory, ConditionType::CanPopAgent};
+    constexpr auto targetConditions = std::array{ConditionType::CurrentTargetHasHpBelow, ConditionType::CurrentTargetStatus, ConditionType::CurrentTargetIsUsingSkill, ConditionType::CurrentTargetHasModel,
+                                                 ConditionType::CurrentTargetAllegiance, ConditionType::CurrentTargetDistance};
     constexpr auto partyCondtions = std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName};
-    constexpr auto instanceConditions = std::array{ConditionType::IsInMap, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime};
+    constexpr auto instanceConditions = std::array{ConditionType::IsInMap, ConditionType::InstanceType, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime};
     constexpr auto logicConditions = std::array{ConditionType::Not, ConditionType::Or, ConditionType::And};
 
     if (ImGui::BeginPopup("Add condition")) 
