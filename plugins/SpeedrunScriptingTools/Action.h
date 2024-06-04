@@ -27,6 +27,7 @@ enum class ActionType : int {
     RestoreTarget,
     StopScript,
     LogOut,
+    UseHeroSkill,
     Count
 };
 
