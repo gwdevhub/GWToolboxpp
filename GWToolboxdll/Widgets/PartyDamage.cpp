@@ -276,24 +276,17 @@ void PartyDamage::Draw(IDirect3DDevice9*)
     if (snap_to_party_window && party_window_position) {
         const float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
         // NB: Use case to define GW::Vec4f ?
-        GW::Vec2f x = party_window_position->xAxis();
-        GW::Vec2f y = party_window_position->yAxis();
+        GW::Vec2f x = party_window_position->xAxis(uiscale_multiply);
+        GW::Vec2f y = party_window_position->yAxis(uiscale_multiply);
 
         // If in an outpost and hard mode unlocked, push the interface down past the buttons
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && GW::PartyMgr::GetIsHardModeUnlocked()) {
-            constexpr int HARD_MODE_BUTTONS_HEIGHT = 30;
-            y.x += HARD_MODE_BUTTONS_HEIGHT;
+            constexpr float HARD_MODE_BUTTONS_HEIGHT = 30.f;
+            y.x += HARD_MODE_BUTTONS_HEIGHT * uiscale_multiply;
         }
-
-        // Do the uiscale multiplier
-        x *= uiscale_multiply;
-        y *= uiscale_multiply;
 
         // Clamp
         ImVec4 rect(x.x, y.x, x.y, y.y);
-        const ImVec4 viewport(0, 0, static_cast<float>(GW::Render::GetViewportWidth()), static_cast<float>(GW::Render::GetViewportHeight()));
-        // GW Clamps windows to viewport; we need to do the same.
-        GuiUtils::ClampRect(rect, viewport);
         // Left placement
         GW::Vec2f internal_offset(
             7.f,
