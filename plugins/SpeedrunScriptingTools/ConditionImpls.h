@@ -92,10 +92,11 @@ private:
 class PartyHasLoadedInCondition : public Condition {
 public:
     PartyHasLoadedInCondition() = default;
-    PartyHasLoadedInCondition(InputStream&) {}
+    PartyHasLoadedInCondition(InputStream&);
     ConditionType type() const final { return ConditionType::PartyHasLoadedIn; }
     bool check() const final;
     void drawSettings() final;
+    void serialize(OutputStream&) const final;
 
 private:
     PlayerConnectednessRequirement req = PlayerConnectednessRequirement::All;
