@@ -926,10 +926,12 @@ bool HasPartyWindowAllyOfNameCondition::check() const
 void HasPartyWindowAllyOfNameCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::Text("Has party window ally of name");
+    ImGui::Text("If party window ally of name");
     ImGui::SameLine();
     ImGui::PushItemWidth(300);
     ImGui::InputText("Ally name", &name);
+    ImGui::SameLine();
+    ImGui::Text("exists");
     ImGui::PopID();
 }
 
@@ -972,7 +974,7 @@ bool PartyMemberStatusCondition::check() const
 void PartyMemberStatusCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::Text("Party window ally is alive");
+    ImGui::Text("If party window ally is alive");
     ImGui::SameLine();
     drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, alive);
     ImGui::SameLine();
