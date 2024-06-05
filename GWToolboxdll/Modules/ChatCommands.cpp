@@ -599,8 +599,10 @@ namespace {
         "with a minimum quantity of 1 or more items, identified by model_id\n"
         "If no model_ids are passed, withdraws <quantity>[k] gold from storage\n"
         "If quantity is 'all' and you do not pass model_ids, withdraws all gold you have or can hold.";
-    constexpr auto deposit_syntax = "'/deposit <quantity (1-100)>[k]' deposits <quantity> gold [platinum] from your inventory to your storage.\n"
-        "If quantity is 'all', deposits all gold [platinum] from your inventory to your storage.";;
+    constexpr auto deposit_syntax = "'/deposit <quantity (1-65535)> [model_id1 model_id2 ...]' deposits <quantity> items, "
+        "identified by model ids, from your inventory to your storage.\n"
+        "If no model_ids are passed, deposits <quantity>[k] gold from your inventory\n"
+        "If quantity is 'all' and you do not pass model_ids, deposits all gold [platinum] from your inventory to your storage.";
 
     struct CmdAlias {
         char alias_cstr[256] = {};
@@ -2628,7 +2630,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdWithdraw)
 
     // NB: uint16_t used already throughout Inv manager, and can't possibly have move than 0xffff of any item anyway.
     const auto to_move = static_cast<uint16_t>(wanted_quantity);
-    InventoryManager::Instance().RefillUpToQuantity(to_move, model_ids);
+    InventoryManager::RefillUpToQuantity(to_move, model_ids);
 }
 
 void CHAT_CMD_FUNC(ChatCommands::CmdDeposit)
@@ -2661,6 +2663,23 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDeposit)
         }
         GW::Items::DepositGold(wanted_quantity);
     }
+
+    std::vector<uint32_t> model_ids;
+
+    if (!(GuiUtils::ParseUInt(argv[1], &wanted_quantity) && wanted_quantity <= 0xFFFF)) {
+        return syntax_error();
+    }
+    for (auto i = 2; i < argc; i++) {
+        uint32_t model_id;
+        if (!GuiUtils::ParseUInt(argv[i], &model_id)) {
+            return syntax_error();
+        }
+        model_ids.push_back(model_id);
+    }
+
+    // NB: uint16_t used already throughout Inv manager, and can't possibly have move than 0xffff of any item anyway.
+    const auto to_move = static_cast<uint16_t>(wanted_quantity);
+    InventoryManager::StoreItems(to_move, model_ids);
 }
 
 void CHAT_CMD_FUNC(ChatCommands::CmdTransmo)

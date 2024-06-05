@@ -1710,6 +1710,27 @@ uint16_t InventoryManager::RefillUpToQuantity(const uint16_t wanted_quantity, co
     return moved;
 }
 
+uint16_t InventoryManager::StoreItems(uint16_t quantity, const std::vector<unsigned>& model_ids)
+{
+    uint16_t moved = 0;
+    for (const auto model_id : model_ids) {
+        const auto is_same_item = [model_id](const Item* cmp) {
+            return cmp && cmp->model_id == model_id;
+        };
+        const auto inventory_items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, is_same_item);
+        uint16_t to_move = quantity;
+        for (const auto item : inventory_items) {
+            const auto this_move = move_item_to_storage(item, to_move);
+            moved += this_move;
+            to_move -= this_move;
+            if (to_move < 1) {
+                break; // All items moved ok
+            }
+        }
+    }
+    return moved;
+}
+
 GW::Item* InventoryManager::GetAvailableInventoryStack(GW::Item* like_item, const bool entire_stack)
 {
     if (!like_item || static_cast<Item*>(like_item)->IsStackable()) {
