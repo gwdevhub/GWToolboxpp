@@ -180,6 +180,27 @@ std::string_view toString(Status status)
     return "";
 }
 
+std::string_view toString(EquippedItemSlot slot)
+{
+    switch (slot) {
+        case EquippedItemSlot::Mainhand:
+            return "Main hand";
+        case EquippedItemSlot::Offhand:
+            return "Off hand";
+        case EquippedItemSlot::Head:
+            return "Head";
+        case EquippedItemSlot::Chest:
+            return "Chest";
+        case EquippedItemSlot::Hands:
+            return "Hands";
+        case EquippedItemSlot::Legs:
+            return "Legs";
+        case EquippedItemSlot::Feet:
+            return "Feet";
+    }
+    return "";
+}
+
 std::string_view toString(Trigger type)
 {
     switch (type) {

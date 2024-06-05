@@ -59,6 +59,21 @@ namespace {
             item = FindMatchingItem(GW::Constants::Bag::Equipped_Items, model_id, modstruct);
         return item;
     }
+    std::optional<std::pair<GW::Constants::Bag, uint32_t>> findEmptyItemSlot()
+    {
+        using GW::Constants::Bag;
+        for (const auto bagSlot : {Bag::Backpack, Bag::Belt_Pouch, Bag::Bag_1, Bag::Bag_2, Bag::Equipment_Pack})
+        {
+            const auto bag = GW::Items::GetBag(bagSlot);
+            if (!bag) continue;
+
+            for (uint32_t itemSlot = 0; itemSlot < bag->items.size(); ++itemSlot) 
+            {
+                if (!bag->items[itemSlot]) return std::pair{bagSlot, itemSlot};
+            }
+        }
+        return std::nullopt;
+    }
     void SafeEquip(GW::Item* item)
     {
         using namespace std::chrono_literals;
@@ -690,6 +705,42 @@ void EquipItemAction::drawSettings()
             hasModstruct = true;
         }
     }
+
+    ImGui::PopID();
+}
+
+/// ------------- UnequipItemAction -------------
+UnequipItemAction::UnequipItemAction(InputStream& stream)
+{
+    stream >> slot;
+}
+void UnequipItemAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << slot;
+}
+void UnequipItemAction::initialAction()
+{
+    Action::initialAction();
+
+    const auto equippedItemsBag = GW::Items::GetBag(GW::Constants::Bag::Equipped_Items);
+    if (!equippedItemsBag || equippedItemsBag->items.size() < (uint32_t)slot + 1) return;
+    const auto equippedItem = equippedItemsBag->items[(uint32_t)slot];
+
+    const auto emptySlot = findEmptyItemSlot();
+    if (!emptySlot) return;
+
+    GW::GameThread::Enqueue([equippedItem, bag = emptySlot->first, itemSlot = emptySlot->second]{ GW::Items::MoveItem(equippedItem, bag, itemSlot); });
+}
+void UnequipItemAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("Unequip item in slot");
+    ImGui::PushItemWidth(90);
+    ImGui::SameLine();
+    drawEnumButton(EquippedItemSlot::Mainhand, EquippedItemSlot::Hands, slot);
 
     ImGui::PopID();
 }
