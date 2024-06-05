@@ -1028,6 +1028,10 @@ KeyIsPressedCondition::KeyIsPressedCondition(InputStream& stream)
 {
     stream >> shortcutKey >> shortcutMod >> blockKey;
     description = makeHotkeyDescription(shortcutKey, shortcutMod);
+    if (shortcutKey && blockKey) 
+    {
+        InstanceInfo::getInstance().requestDisableKey({shortcutKey, shortcutMod});
+    }
 }
 void KeyIsPressedCondition::serialize(OutputStream& stream) const
 {
