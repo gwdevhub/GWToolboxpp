@@ -28,6 +28,7 @@ enum class ActionType : int {
     StopScript,
     LogOut,
     UseHeroSkill,
+    UnequipItem,
     Count
 };
 

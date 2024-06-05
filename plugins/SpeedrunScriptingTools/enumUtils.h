@@ -27,6 +27,7 @@ std::string_view toString(GoToTargetFinishCondition);
 std::string_view toString(HasSkillRequirement);
 std::string_view toString(PlayerConnectednessRequirement);
 std::string_view toString(Status);
+std::string_view toString(EquippedItemSlot);
 std::string_view toString(GW::Constants::InstanceType);
 std::string_view toString(GW::Constants::HeroID);
 

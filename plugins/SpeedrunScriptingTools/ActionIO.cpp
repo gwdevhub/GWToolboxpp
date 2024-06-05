@@ -6,7 +6,7 @@
 namespace {
     std::shared_ptr<Action> makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 24);
+        static_assert((int)ActionType::Count == 25);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -54,6 +54,8 @@ namespace {
                 return std::make_shared<UseHeroSkillAction>();
             case ActionType::LogOut:
                 return std::make_shared<LogOutAction>();
+            case ActionType::UnequipItem:
+                return std::make_shared<UnequipItemAction>();
             default:
                 return nullptr;
         }
@@ -62,7 +64,7 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 24);
+    static_assert((int)ActionType::Count == 25);
     switch (type) {
         case ActionType::MoveTo:
             return "Move to";
@@ -110,6 +112,8 @@ std::string_view toString(ActionType type)
             return "Log out";
         case ActionType::UseHeroSkill:
             return "Use hero skill";
+        case ActionType::UnequipItem:
+            return "Unequip item";
         default:
             return "Unknown";
     }
@@ -117,7 +121,7 @@ std::string_view toString(ActionType type)
 
 std::shared_ptr<Action> readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 24);
+    static_assert((int)ActionType::Count == 25);
     int type;
 
     stream >> type;
@@ -168,6 +172,8 @@ std::shared_ptr<Action> readAction(InputStream& stream)
             return std::make_shared<LogOutAction>(stream);
         case ActionType::UseHeroSkill:
             return std::make_shared<UseHeroSkillAction>(stream);
+        case ActionType::UnequipItem:
+            return std::make_shared<UnequipItemAction>(stream);
         default:
             return nullptr;
     }
@@ -207,7 +213,7 @@ std::shared_ptr<Action> drawActionSelector(float width)
         drawSubMenu("Skill", std::array{ActionType::Cast, ActionType::CastBySlot, ActionType::DropBuff, ActionType::UseHeroSkill});
         drawSubMenu("Interaction", std::array{ActionType::SendDialog, ActionType::GoToTarget, ActionType::AutoAttackTarget});
         drawSubMenu("Targeting", std::array{ActionType::ChangeTarget, ActionType::StoreTarget, ActionType::RestoreTarget});
-        drawSubMenu("Items", std::array{ActionType::EquipItem, ActionType::ChangeWeaponSet, ActionType::UseItem, ActionType::RepopMinipet});
+        drawSubMenu("Items", std::array{ActionType::EquipItem, ActionType::ChangeWeaponSet, ActionType::UseItem, ActionType::RepopMinipet, ActionType::UnequipItem});
         drawSubMenu("Chat", std::array{ActionType::SendChat, ActionType::PingTarget, ActionType::PingHardMode});
         drawSubMenu("Other", std::array{ActionType::Wait, ActionType::Cancel, ActionType::Conditioned, ActionType::LogOut, ActionType::StopScript});
 
