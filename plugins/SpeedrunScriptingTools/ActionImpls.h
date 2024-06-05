@@ -135,6 +135,20 @@ private:
     bool hasModstruct = false;
 };
 
+class UnequipItemAction : public Action {
+public:
+    UnequipItemAction() = default;
+    UnequipItemAction(InputStream&);
+    ActionType type() const final { return ActionType::UnequipItem; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::ImmediateFinish | ActionBehaviourFlag::CanBeRunInOutpost; }
+
+private:
+    EquippedItemSlot slot = EquippedItemSlot::Mainhand;
+};
+
 class SendDialogAction : public Action {
 public:
     SendDialogAction() = default;
