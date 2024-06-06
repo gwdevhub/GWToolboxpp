@@ -6,7 +6,7 @@
 class SkillbarWidget final : public ToolboxWidget {
     SkillbarWidget()
     {
-        is_resizable = false;
+        is_movable = is_resizable = false;
     }
 
     ~SkillbarWidget() override = default;
@@ -28,6 +28,8 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;
+    void Initialize() override;
+    void Terminate() override;
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
@@ -51,18 +53,6 @@ private:
     };
 
     std::array<Skill, 8> m_skills{};
-
-    // Overall settings
-    enum class Layout {
-        Row,
-        Rows,
-        Column,
-        Columns
-    };
-
-    Layout layout = Layout::Row;
-    float m_skill_width = 50.f;
-    float m_skill_height = 50.f;
 
     // duration -> color settings
     int medium_treshold = 5000; // long to medium color
@@ -96,8 +86,6 @@ private:
     Color color_effect_background = Colors::ARGB(100, 0, 0, 0);
     Color color_effect_border = Colors::ARGB(255, 0, 0, 0);
     Color color_effect_progress = Colors::Blue();
-
-    bool snap_to_skillbar = true;
 
     // Internal utils
     [[nodiscard]] Color UptimeToColor(uint32_t uptime) const;
