@@ -29,9 +29,11 @@
 #include <Utils/GuiUtils.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/GameSettings.h>
+#include <Modules/Resources.h>
 
 #include <Windows/MaterialsWindow.h>
 #include <Windows/DailyQuestsWindow.h>
+#include <GWCA/Managers/RenderMgr.h>
 
 namespace {
     InventoryManager& Instance()
@@ -42,6 +44,107 @@ namespace {
     ImVec4 ItemBlue = ImColor(153, 238, 255).Value;
     ImVec4 ItemPurple = ImColor(187, 137, 237).Value;
     ImVec4 ItemGold = ImColor(255, 204, 86).Value;
+
+    /**
+    * Inventory overlay POC START
+    */
+
+    bool draw_inventory_overlay = false;
+    struct InventorySlotInfo {
+        GuiUtils::EncString name = nullptr;
+    };
+
+    std::unordered_map<uint32_t, InventorySlotInfo*> inventory_slot_frames;
+    GW::UI::UIInteractionCallback inventory_slot_ui_callback = nullptr, inventory_slot_ui_callback_ret = nullptr;
+
+    // Calculate position of frame relative to the game view
+    bool GetFramePosition(GW::UI::Frame* frame, ImVec2* pos, ImVec2* size) {
+        if (!(frame && frame->IsVisible() && frame->IsCreated())) {
+            return false;
+        }
+        const auto game = GW::UI::GetFrameByLabel(L"Game");
+        const auto& position = frame->position;
+        const auto screen_width = GW::Render::GetViewportWidth();
+        const auto screen_height = GW::Render::GetViewportHeight();
+        (screen_height, screen_width);
+        const ImVec2 viewport_scale = {
+           screen_width / game->position.viewport_width,
+           screen_height / game->position.viewport_height
+        };
+        *pos = {
+            position.screen_left * viewport_scale.x,
+            (game->position.viewport_height - position.screen_top) * viewport_scale.y
+        };
+        *size = {
+            (position.screen_right - position.screen_left) * viewport_scale.x,
+            (position.screen_top - position.screen_bottom) * viewport_scale.y,
+        };
+        return true;
+    }
+    // Callback for generic inventory slots; called from loads of different parent frames, but behaves the same
+    void OnInventorySlot_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+        GW::Hook::EnterHook();
+        inventory_slot_ui_callback_ret(message, wParam, lParam);
+        switch (message->message_id) {
+        case GW::UI::UIMessage::kDestroyFrame: {
+            const auto found = inventory_slot_frames.find(message->frame_id);
+            if (found != inventory_slot_frames.end()) {
+                delete found->second;
+                inventory_slot_frames.erase(found);
+            }
+        } break;
+        case GW::UI::UIMessage::kInitFrame: {
+            const auto found = inventory_slot_frames.find(message->frame_id);
+            if (found == inventory_slot_frames.end()) {
+                inventory_slot_frames[message->frame_id] = new InventorySlotInfo();
+            }
+        } break;
+
+        }
+        GW::Hook::LeaveHook();
+    }
+
+    // Grab item from inv slot frame via tooltip
+    GW::Item* GetInventorySlotItem(GW::UI::Frame* inv_slot_frame) {
+        const auto tooltip = (GW::UI::TooltipInfo*)inv_slot_frame->field99_0x1a4;
+        if (!tooltip) return nullptr;
+        return GW::Items::GetItemById(*(uint32_t*)tooltip->payload);
+    }
+
+    // Draw ImGui stuff for inv slots
+    void DrawInventoryOverlay2() {
+        if (!draw_inventory_overlay)
+            return;
+        ImVec2 position;
+        ImVec2 size;
+        for (auto [frame_id, info] : inventory_slot_frames) {
+            const auto frame = GW::UI::GetFrameById(frame_id);
+            if (!(frame && frame->IsCreated()))
+                continue;
+
+            if (!GetFramePosition(frame, &position, &size))
+                continue;
+
+            const ImVec2 bottom_right = { position.x + size.x, position.y + size.y };
+            ImGui::GetBackgroundDrawList()->AddRect(position, bottom_right, IM_COL32_WHITE);
+            const auto item = GetInventorySlotItem(frame);
+            if (item) {
+                std::string item_id_str = std::format("{}", item->item_id);
+                const auto text_size = ImGui::CalcTextSize(item_id_str.c_str());
+                const ImVec2 text_pos = { position.x + (text_size.x / 2.f), position.y };
+                ImGui::GetBackgroundDrawList()->AddText(text_pos, IM_COL32_WHITE, item_id_str.c_str());
+                if (ImGui::IsMouseHoveringRect(position, bottom_right, false)) {
+                    info->name.reset(item->name_enc);
+                    ImGui::SetTooltip("%s", info->name.string().c_str());
+                }
+            }
+
+        }
+    }
+
+    /*
+    * Inventory overlay POC END
+    */
 
     bool trade_whole_stacks = false;
 
@@ -981,6 +1084,13 @@ void InventoryManager::Initialize()
         GW::Hook::CreateHook((void**)&AddItemRowToWindow_Func, OnAddItemToWindow, reinterpret_cast<void**>(&RetAddItemRowToWindow));
         GW::Hook::EnableHooks(AddItemRowToWindow_Func);
     }
+#ifdef _DEBUG
+    inventory_slot_ui_callback = (GW::UI::UIInteractionCallback)GW::Scanner::Find("\x3d\xef\x00\x00\x10\x0f\x87\x9b\x09\x00\x00", "xxxxxxxxxxx", -0x21);
+    if (inventory_slot_ui_callback) {
+        GW::Hook::CreateHook((void**)&inventory_slot_ui_callback, OnInventorySlot_UICallback, (void**)&inventory_slot_ui_callback_ret);
+        GW::Hook::EnableHooks(inventory_slot_ui_callback);
+    }
+#endif
 
     uintptr_t address = GW::Scanner::Find("\x6a\x6a\x6a\x30\xff\x75\x08","xxxxxxx", - 0x4);
     if (address) {
@@ -1004,6 +1114,12 @@ void InventoryManager::Terminate()
     GW::UI::RemoveUIMessageCallback(&ItemClick_Entry);
     GW::Hook::RemoveHook(AddItemRowToWindow_Func);
     GW::Hook::RemoveHook(UICallback_ChooseQuantityPopup_Func);
+    GW::Hook::RemoveHook(inventory_slot_ui_callback);
+    for (auto& f : inventory_slot_frames) {
+        delete f.second;
+    }
+    inventory_slot_frames.clear();
+
 }
 
 bool InventoryManager::WndProc(const UINT message, const WPARAM wParam, const LPARAM lParam)
@@ -1870,6 +1986,9 @@ void InventoryManager::DrawSettingsInternal()
             new_item_id = 0;
         }
     }
+#ifdef _DEBUG
+    ImGui::Checkbox("Draw inventory overlay POC", &draw_inventory_overlay);
+#endif
 }
 
 void InventoryManager::Update(float)
@@ -1938,6 +2057,7 @@ void InventoryManager::Draw(IDirect3DDevice9*)
     if (!GW::Map::GetIsMapLoaded()) {
         return;
     }
+    DrawInventoryOverlay2();
     DrawPendingTomeUsage();
     DrawPendingDestroyItem();
 #if 0
