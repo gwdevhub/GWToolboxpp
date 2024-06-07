@@ -24,16 +24,17 @@ namespace GW {
     namespace UI {
         enum class UIMessage : uint32_t;
     }
-
 }
 
+class InventoryOverlayWidget;
+
 class InventoryManager : public ToolboxUIElement {
-public:
     InventoryManager()
     {
-        current_salvage_session.salvage_item_id = 0;
         is_movable = is_resizable = has_closebutton = can_show_in_main_window = false;
     }
+    ~InventoryManager() override = default;
+public:
 
     enum class SalvageAllType : uint8_t {
         None,
@@ -65,8 +66,8 @@ public:
 
     void IdentifyAll(IdentifyAllType type);
     void SalvageAll(SalvageAllType type);
-    bool IsPendingIdentify() const;
-    bool IsPendingSalvage() const;
+    [[nodiscard]] bool IsPendingIdentify() const;
+    [[nodiscard]] bool IsPendingSalvage() const;
     bool HasSettings() override { return true; }
     void Initialize() override;
     void Terminate() override;
@@ -94,7 +95,7 @@ public:
     SalvageAllType salvage_all_type = SalvageAllType::None;
 
 protected:
-    void ShowVisibleRadio() override { };
+    void ShowVisibleRadio() override { }
 
 private:
 
@@ -109,7 +110,7 @@ private:
     bool only_use_superior_salvage_kits = false;
     bool hide_unsellable_items = false;
     bool hide_weapon_sets_and_customized_items = false;
-    std::map<uint32_t, std::string> hide_from_merchant_items;
+    std::map<uint32_t, std::string> hide_from_merchant_items{};
     bool salvage_rare_mats = false;
     bool salvage_nicholas_items = false;
     bool show_transact_quantity_popup = false;
@@ -119,7 +120,7 @@ private:
     bool right_click_context_menu_in_explorable = true;
     bool right_click_context_menu_in_outpost = true;
 
-    std::map<GW::Constants::Bag, bool> bags_to_salvage_from;
+    std::map<GW::Constants::Bag, bool> bags_to_salvage_from{};
 
     size_t identified_count = 0;
     size_t salvaged_count = 0;

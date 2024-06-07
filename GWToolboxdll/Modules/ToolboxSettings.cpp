@@ -81,7 +81,9 @@
 #include <Widgets/EffectsMonitorWidget.h>
 #include <Widgets/LatencyWidget.h>
 #include <Widgets/ActiveQuestWidget.h>
+#include <Widgets/InventoryOverlayWidget.h>
 #include "ToolboxSettings.h"
+
 
 #define USE_OBFUSCATOR _DEBUG
 #if USE_OBFUSCATOR
@@ -165,6 +167,7 @@ namespace {
         LatencyWidget::Instance(),
         SkillMonitorWidget::Instance(),
         ActiveQuestWidget::Instance(),
+        InventoryOverlayWidget::Instance(),
     };
 
     std::vector<WindowToggle> optional_windows = {
