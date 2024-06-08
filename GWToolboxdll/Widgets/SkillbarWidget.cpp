@@ -9,7 +9,6 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
 
 #include <Defines.h>
 #include "SkillbarWidget.h"
@@ -39,23 +38,18 @@ namespace {
         if (!(frame && frame->IsVisible() && frame->IsCreated())) {
             return false;
         }
-        const auto screen_width = GW::Render::GetViewportWidth();
-        const auto screen_height = GW::Render::GetViewportHeight();
         for (size_t i = 0; i < _countof(skillbar_skill_positions); i++) {
             const auto skillframe = GW::UI::GetChildFrame(frame, i);
             if (!skillframe)
                 return false;
             skillbar_skill_positions[i] = skillframe->position;
-            const ImVec2 viewport_scale = {
-                screen_width / skillbar_skill_positions[i].viewport_width,
-                screen_height / skillbar_skill_positions[i].viewport_height
-            };
             skill_positions_calculated[i] = { 
-                skillbar_skill_positions[i].screen_left * viewport_scale.x,
-                (skillbar_skill_positions[i].viewport_height - skillbar_skill_positions[i].screen_top) * viewport_scale.y
+                skillbar_skill_positions[i].GetRelativeTopLeft().x,
+                skillbar_skill_positions[i].GetRelativeTopLeft().y
             };
             if (i == 0) {
-                m_skill_width = m_skill_height = (skillbar_skill_positions[0].screen_right - skillbar_skill_positions[0].screen_left) * viewport_scale.x;
+                m_skill_width = skillbar_skill_positions[0].GetRelativeSize().x;
+                m_skill_height = skillbar_skill_positions[0].GetRelativeSize().y;
             }
         }
 
@@ -221,26 +215,32 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     for (size_t i = 0; i < m_skills.size(); i++) {
         const Skill& skill = m_skills[i];
         // NB: Y axis inverted for imgui
-        const ImVec2& pos1 = skill_positions_calculated[i];
+        const ImVec2 top_left = {
+            skillbar_skill_positions[i].GetRelativeTopLeft().x,
+            skillbar_skill_positions[i].GetRelativeTopLeft().y
+        };
         // position of this skill
 
-        auto pos2 = ImVec2(pos1.x + m_skill_width, pos1.y + m_skill_width);
+        const ImVec2 bottom_right = {
+            skillbar_skill_positions[i].GetRelativeBottomRight().x,
+            skillbar_skill_positions[i].GetRelativeBottomRight().y
+        };
 
         // draw overlay
         if (display_skill_overlay) {
-            ImGui::GetBackgroundDrawList()->AddRectFilled(pos1, pos2, skill.color);
+            ImGui::GetBackgroundDrawList()->AddRectFilled(top_left, bottom_right, skill.color);
         }
-        ImGui::GetBackgroundDrawList()->AddRect(pos1, pos2, color_border);
+        ImGui::GetBackgroundDrawList()->AddRect(top_left, bottom_right, color_border);
 
         // label
         if (*skill.cooldown) {
             const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown);
-            ImVec2 label_pos(pos1.x + m_skill_width / 2 - label_size.x / 2, pos1.y + m_skill_width / 2 - label_size.y / 2);
+            ImVec2 label_pos(top_left.x + m_skill_width / 2 - label_size.x / 2, top_left.y + m_skill_width / 2 - label_size.y / 2);
             ImGui::GetBackgroundDrawList()->AddText(label_pos, color_text_recharge, skill.cooldown);
         }
 
         if (display_effect_monitor) {
-            DrawEffect(i, pos1);
+            DrawEffect(i, top_left);
         }
     }
 

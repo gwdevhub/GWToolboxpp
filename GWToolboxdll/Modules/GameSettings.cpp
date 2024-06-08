@@ -1637,14 +1637,6 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
 void GameSettings::RegisterSettingsContent()
 {
     ToolboxModule::RegisterSettingsContent();
-    ToolboxModule::RegisterSettingsContent(
-        "Inventory Settings", ICON_FA_BOXES,
-        [this](const std::string&, const bool is_showing) {
-            if (!is_showing) {
-                return;
-            }
-            DrawInventorySettings();
-        }, 0.9f);
 
     ToolboxModule::RegisterSettingsContent(
         "Party Settings", ICON_FA_USERS,
