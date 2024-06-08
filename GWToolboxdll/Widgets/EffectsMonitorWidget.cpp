@@ -55,8 +55,8 @@ namespace {
 
     void DrawTextOverlay(const char* text, GW::UI::Frame* frame) {
         if (!(frame && text && *text && effects_frame)) return;
-        const auto skill_top_left = frame->position.GetRelativeTopLeft(effects_frame);
-        const auto skill_bottom_right = frame->position.GetRelativeBottomRight(effects_frame);
+        const auto skill_top_left = frame->position.GetTopLeftOnScreen();
+        const auto skill_bottom_right = frame->position.GetBottomRightOnScreen();
 
         const ImVec2 label_size = ImGui::CalcTextSize(text);
         const ImVec2 label_pos(skill_bottom_right.x - label_size.x, skill_bottom_right.y - label_size.y);
