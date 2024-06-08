@@ -36,23 +36,7 @@ namespace {
     bool round_up = true;          // round up or down?
     bool show_vanquish_counter = true;
 
-    GW::UI::Frame* game = nullptr;
-
-    // Get matching effect from gwtoolbox overlay
-    const GW::Effect* GetLongestEffectBySkillId(const GW::Constants::SkillID skill_id)
-    {
-        const GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
-        if (!effects) {
-            return nullptr;
-        }
-        const GW::Effect* found = nullptr;
-        for (const GW::Effect& effect : *effects) {
-            if (effect.skill_id == skill_id && (!found || effect.GetTimeRemaining() > found->GetTimeRemaining())) {
-                found = &effect;
-            }
-        }
-        return found;
-    }
+    GW::UI::Frame* effects_frame = nullptr;
 
     int UptimeToString(char arr[8], int cd)
     {
@@ -70,13 +54,9 @@ namespace {
     }
 
     void DrawTextOverlay(const char* text, GW::UI::Frame* frame) {
-        if (!(frame && text && *text)) return;
-        if (!game) {
-            game = GW::UI::GetFrameByLabel(L"Game");
-        }
-        ASSERT(game);
-        const auto skill_top_left = frame->position.GetRelativeTopLeft(game);
-        const auto skill_bottom_right = frame->position.GetRelativeBottomRight(game);
+        if (!(frame && text && *text && effects_frame)) return;
+        const auto skill_top_left = frame->position.GetRelativeTopLeft(effects_frame);
+        const auto skill_bottom_right = frame->position.GetRelativeBottomRight(effects_frame);
 
         const ImVec2 label_size = ImGui::CalcTextSize(text);
         const ImVec2 label_pos(skill_bottom_right.x - label_size.x, skill_bottom_right.y - label_size.y);
@@ -87,7 +67,8 @@ namespace {
             ImGui::GetBackgroundDrawList()->AddText({ label_pos.x + 1, label_pos.y + 1 }, color_text_shadow, text);
         }
         ImGui::GetBackgroundDrawList()->AddText(label_pos, color_text_effects, text);
-    };
+    }
+
 }
 
 void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
@@ -95,10 +76,10 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     if (!visible) {
         return;
     }
-
-    const auto effects_frame = GW::UI::GetFrameByLabel(L"Effects");
-    if (!(effects_frame && effects_frame->IsCreated() && effects_frame->IsVisible()))
+    effects_frame = GW::UI::GetFrameByLabel(L"Effects");
+    if (!effects_frame) {
         return;
+    }
     ImGui::PushFont(GetFont(font_effects));
 
     char remaining_str[16];
