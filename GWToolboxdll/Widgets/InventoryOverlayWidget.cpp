@@ -10,15 +10,20 @@
 
 #include <Utils/GuiUtils.h>
 
+#include "Color.h"
+#include "Defines.h"
+
 namespace GW {
     struct Item;
 }
 
 namespace {
+    Color text_color = Colors::White();
+    Color border_color = Colors::Black();
+
     struct InventorySlotInfo {
         GuiUtils::EncString name = nullptr;
     };
-
     std::unordered_map<uint32_t, InventorySlotInfo*> inventory_slot_frames;
     GW::UI::UIInteractionCallback inventory_slot_ui_callback = nullptr, inventory_slot_ui_callback_ret = nullptr;
 
@@ -98,17 +103,39 @@ void InventoryOverlayWidget::Draw(IDirect3DDevice9*)
             frame->position.GetRelativeBottomRight().x,
             frame->position.GetRelativeBottomRight().y,
         };
-        ImGui::GetBackgroundDrawList()->AddRect(top_left, bottom_right, IM_COL32_WHITE);
+        ImGui::GetBackgroundDrawList()->AddRect(top_left, bottom_right, border_color);
         if (const auto item = GetInventorySlotItem(frame)) {
-            std::string item_id_str = std::format("{}", item->item_id);
+            std::string item_id_str = std::to_string(item->item_id);
             const auto text_size = ImGui::CalcTextSize(item_id_str.c_str());
-            const ImVec2 text_pos = { top_left.x + (text_size.x / 2.f), top_left.y };
-            ImGui::GetBackgroundDrawList()->AddText(text_pos, IM_COL32_WHITE, item_id_str.c_str());
+            const auto box_width = bottom_right.x - top_left.x;
+            const auto x_offset = (box_width - text_size.x) / 2.f;
+            const ImVec2 text_pos = { top_left.x + x_offset, top_left.y };
+            ImGui::GetBackgroundDrawList()->AddText(text_pos, text_color, item_id_str.c_str());
             if (ImGui::IsMouseHoveringRect(top_left, bottom_right, false)) {
                 info->name.reset(item->name_enc);
                 ImGui::SetTooltip("%s", info->name.string().c_str());
             }
         }
-
     }
+}
+
+void InventoryOverlayWidget::DrawSettingsInternal()
+{
+    ToolboxWidget::DrawSettingsInternal();
+    Colors::DrawSettingHueWheel("Text Color", &text_color);
+    Colors::DrawSettingHueWheel("Text Color", &border_color);
+}
+
+void InventoryOverlayWidget::LoadSettings(ToolboxIni* ini)
+{
+    ToolboxWidget::LoadSettings(ini);
+    LOAD_COLOR(text_color);
+    LOAD_COLOR(border_color);
+}
+
+void InventoryOverlayWidget::SaveSettings(ToolboxIni* ini)
+{
+    ToolboxWidget::SaveSettings(ini);
+    SAVE_COLOR(text_color);
+    SAVE_COLOR(border_color);
 }

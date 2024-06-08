@@ -60,24 +60,22 @@ public:
 
     [[nodiscard]] const char* Name() const override { return "Inventory Management"; }
     [[nodiscard]] const char* SettingsName() const override { return "Inventory Settings"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_BOXES; }
 
     void Draw(IDirect3DDevice9* device) override;
-    bool DrawItemContextMenu(bool open = false);
-
-    void IdentifyAll(IdentifyAllType type);
-    void SalvageAll(SalvageAllType type);
-    [[nodiscard]] bool IsPendingIdentify() const;
-    [[nodiscard]] bool IsPendingSalvage() const;
-    bool HasSettings() override { return true; }
     void Initialize() override;
     void Terminate() override;
     void Update(float delta) override;
     void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-
     bool WndProc(UINT, WPARAM, LPARAM) override;
 
+    bool DrawItemContextMenu(bool open = false);
+    void IdentifyAll(IdentifyAllType type);
+    void SalvageAll(SalvageAllType type);
+    [[nodiscard]] bool IsPendingIdentify() const;
+    [[nodiscard]] bool IsPendingSalvage() const;
     // Find an empty (or partially empty) inventory slot that this item can go into
     static std::pair<GW::Bag*, uint32_t> GetAvailableInventorySlot(GW::Item* like_item = nullptr);
     static uint16_t RefillUpToQuantity(uint16_t quantity, const std::vector<uint32_t>& model_ids);

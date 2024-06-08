@@ -3,7 +3,10 @@
 #include <ToolboxWidget.h>
 
 class InventoryOverlayWidget : public ToolboxWidget {
-    InventoryOverlayWidget() = default;
+    InventoryOverlayWidget()
+    {
+        is_movable = is_resizable = has_closebutton = false;
+    }
     ~InventoryOverlayWidget() override = default;
 
 public:
@@ -19,4 +22,7 @@ public:
     void Initialize() override;
     void Terminate() override;
     void Draw(IDirect3DDevice9*) override;
+    void DrawSettingsInternal() override;
+    void LoadSettings(ToolboxIni* ini) override;
+    void SaveSettings(ToolboxIni* ini) override;
 };
