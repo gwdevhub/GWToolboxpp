@@ -19,6 +19,8 @@ namespace ImGui {
 
     IMGUI_API void SetNextWindowCenter(ImGuiWindowFlags flags);
 
+    IMGUI_API const std::vector<ImGuiKey>& GetPressedKeys();
+
     IMGUI_API bool MyCombo(const char* label, const char* preview_text, int* current_item,
                            bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count);
 
@@ -26,6 +28,7 @@ namespace ImGui {
     IMGUI_API bool ConfirmDialog(const char* message, bool* result);
 
     IMGUI_API bool SmallConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content = "Are you sure you want to continue?");
+    IMGUI_API bool ChooseKey(const char* label, char* buf, size_t buf_len, long* key_code);
 
     IMGUI_API bool ConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content = "Are you sure you want to continue?");
 

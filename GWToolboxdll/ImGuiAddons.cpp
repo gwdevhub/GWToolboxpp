@@ -3,6 +3,7 @@
 
 #include <ImGuiAddons.h>
 #include <string>
+#include <Keys.h>
 
 namespace ImGui {
     float element_spacing_width = 0.f;
@@ -117,6 +118,45 @@ namespace ImGui {
             EndPopup();
         }
         return *confirm_bool;
+    }
+
+    bool ChooseKey(const char* label, char* buf, size_t buf_len, long* output_key_code)
+    {
+        ImGui::InputText(label, buf, buf_len, ImGuiInputTextFlags_AlwaysOverwrite | ImGuiInputTextFlags_AutoSelectAll);
+        if(ImGui::IsItemFocused()) {
+            const auto keys = GetPressedKeys();
+            if (!keys.empty()) {
+                strncpy(buf, KeyName(keys[0]), buf_len);
+                *output_key_code = keys[0];
+            }
+            return true;
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton(ICON_FA_TIMES "##clearkeyinput")) {
+            strcpy(buf, "None");
+            *output_key_code = 0;
+            return true;
+        }
+        return false;
+    }
+
+    const std::vector<ImGuiKey>& GetPressedKeys()
+    {
+        static std::vector<ImGuiKey> pressedKeys;
+        static int                   frameCount = -1;
+
+        int newFrameCount = ImGui::GetFrameCount();
+        if (frameCount != newFrameCount)
+        {
+            frameCount = newFrameCount;
+
+            pressedKeys.clear();
+            for (int key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; ++key)
+                if (ImGui::IsKeyPressed((ImGuiKey)key))
+                    pressedKeys.push_back((ImGuiKey)key);
+        }
+
+        return pressedKeys;
     }
 
     bool ConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content)

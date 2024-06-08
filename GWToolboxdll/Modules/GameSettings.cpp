@@ -63,6 +63,7 @@
 #include <d3d9on12.h>
 
 #include "Windows/FriendListWindow.h"
+#include <Keys.h>
 
 #pragma warning(disable : 6011)
 #pragma comment(lib,"Version.lib")
@@ -1046,6 +1047,26 @@ namespace {
             *out_desc = nullptr;
         }
     }
+
+    bool pending_toggle_mouse_walk_on_key_up = false;
+    long toggle_mouse_walk_key = 0;
+    void UpdateMouseWalkToggle() {
+        if (toggle_mouse_walk_key == ImGuiKey_None)
+            return;
+        if (pending_toggle_mouse_walk_on_key_up) {
+            if (!ImGui::IsKeyDown(toggle_mouse_walk_key)) {
+                GW::UI::SetPreference(GW::UI::FlagPreference::DisableMouseWalking, !GetPreference(GW::UI::FlagPreference::DisableMouseWalking));
+                pending_toggle_mouse_walk_on_key_up = false;
+            }
+        }
+        else {
+            if (ImGui::IsKeyDown(toggle_mouse_walk_key)) {
+                GW::UI::SetPreference(GW::UI::FlagPreference::DisableMouseWalking, !GetPreference(GW::UI::FlagPreference::DisableMouseWalking));
+                pending_toggle_mouse_walk_on_key_up = true;
+            }
+        }
+    }
+
 }
 
 bool GameSettings::GetSettingBool(const char* setting)
@@ -1953,6 +1974,8 @@ void GameSettings::DrawSettingsInternal()
     if (ImGui::Checkbox("Block full screen message when entering a new area", &block_enter_area_message)) {
         skip_map_entry_message_patch.TogglePatch(block_enter_area_message);
     }
+    char buf[64] = "None";
+    ImGui::ChooseKey("Hold key to toggle mouse walk:",buf,_countof(buf), &toggle_mouse_walk_key);
 }
 
 void GameSettings::FactionEarnedCheckAndWarn()
@@ -2022,6 +2045,7 @@ void GameSettings::FactionEarnedCheckAndWarn()
 
 void GameSettings::Update(float)
 {
+    UpdateMouseWalkToggle();
     UpdateSkillTooltip();
     UpdateReinvite();
     UpdateItemTooltip();
