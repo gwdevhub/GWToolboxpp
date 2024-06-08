@@ -36,6 +36,8 @@ namespace {
     bool round_up = true;          // round up or down?
     bool show_vanquish_counter = true;
 
+    GW::UI::Frame* game = nullptr;
+
     // Get matching effect from gwtoolbox overlay
     const GW::Effect* GetLongestEffectBySkillId(const GW::Constants::SkillID skill_id)
     {
@@ -69,8 +71,12 @@ namespace {
 
     void DrawTextOverlay(const char* text, GW::UI::Frame* frame) {
         if (!(frame && text && *text)) return;
-        const auto skill_top_left = frame->position.GetRelativeTopLeft();
-        const auto skill_bottom_right = frame->position.GetRelativeBottomRight();
+        if (!game) {
+            game = GW::UI::GetFrameByLabel(L"Game");
+        }
+        ASSERT(game);
+        const auto skill_top_left = frame->position.GetRelativeTopLeft(game);
+        const auto skill_bottom_right = frame->position.GetRelativeBottomRight(game);
 
         const ImVec2 label_size = ImGui::CalcTextSize(text);
         const ImVec2 label_pos(skill_bottom_right.x - label_size.x, skill_bottom_right.y - label_size.y);
