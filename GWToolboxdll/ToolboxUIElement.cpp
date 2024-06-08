@@ -63,9 +63,6 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         pos = window->Pos;
         size = window->Size;
     }
-    if (std::string_view("Inventory Overlay") == Name()) {
-        [[maybe_unused]] int x = 0;
-    }
     if (is_movable || is_resizable) {
         char buf[128];
         sprintf(buf, "You need to show the %s for this control to work", TypeName());
