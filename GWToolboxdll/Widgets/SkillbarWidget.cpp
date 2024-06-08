@@ -44,12 +44,12 @@ namespace {
                 return false;
             skillbar_skill_positions[i] = skillframe->position;
             skill_positions_calculated[i] = { 
-                skillbar_skill_positions[i].GetRelativeTopLeft().x,
-                skillbar_skill_positions[i].GetRelativeTopLeft().y
+                skillbar_skill_positions[i].GetTopLeftOnScreen().x,
+                skillbar_skill_positions[i].GetTopLeftOnScreen().y
             };
             if (i == 0) {
-                m_skill_width = skillbar_skill_positions[0].GetRelativeSize().x;
-                m_skill_height = skillbar_skill_positions[0].GetRelativeSize().y;
+                m_skill_width = skillbar_skill_positions[0].GetSizeOnScreen().x;
+                m_skill_height = skillbar_skill_positions[0].GetSizeOnScreen().y;
             }
         }
 
@@ -216,14 +216,14 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
         const Skill& skill = m_skills[i];
         // NB: Y axis inverted for imgui
         const ImVec2 top_left = {
-            skillbar_skill_positions[i].GetRelativeTopLeft().x,
-            skillbar_skill_positions[i].GetRelativeTopLeft().y
+            skillbar_skill_positions[i].GetTopLeftOnScreen().x,
+            skillbar_skill_positions[i].GetTopLeftOnScreen().y
         };
         // position of this skill
 
         const ImVec2 bottom_right = {
-            skillbar_skill_positions[i].GetRelativeBottomRight().x,
-            skillbar_skill_positions[i].GetRelativeBottomRight().y
+            skillbar_skill_positions[i].GetBottomRightOnScreen().x,
+            skillbar_skill_positions[i].GetBottomRightOnScreen().y
         };
 
         // draw overlay

@@ -96,12 +96,12 @@ void InventoryOverlayWidget::Draw(IDirect3DDevice9*)
             continue;
 
         const ImVec2 top_left = {
-            frame->position.GetRelativeTopLeft().x,
-            frame->position.GetRelativeTopLeft().y,
+            frame->position.GetTopLeftOnScreen().x,
+            frame->position.GetTopLeftOnScreen().y,
         };
         const ImVec2 bottom_right = {
-            frame->position.GetRelativeBottomRight().x,
-            frame->position.GetRelativeBottomRight().y,
+            frame->position.GetBottomRightOnScreen().x,
+            frame->position.GetBottomRightOnScreen().y,
         };
         ImGui::GetBackgroundDrawList()->AddRect(top_left, bottom_right, border_color);
         if (const auto item = GetInventorySlotItem(frame)) {
