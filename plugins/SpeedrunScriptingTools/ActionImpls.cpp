@@ -480,6 +480,8 @@ void ChangeTargetAction::initialAction()
                 return agent->hp < currentBestTarget->hp;
             case Sorting::HighestHp:
                 return agent->hp > currentBestTarget->hp;
+            case Sorting::ModelID:
+                return agent->player_number < currentBestTarget->player_number;
             default:
                 return false;
         }

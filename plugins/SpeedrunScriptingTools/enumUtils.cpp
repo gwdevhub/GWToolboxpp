@@ -69,6 +69,8 @@ std::string_view toString(Sorting sorting)
             return "Lowest HP";
         case Sorting::HighestHp:
             return "Highest HP";
+        case Sorting::ModelID:
+            return "Model ID";
     }
     return "";
 }
