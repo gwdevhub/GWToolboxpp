@@ -519,7 +519,6 @@ void SpeedrunScriptingTools::Update(float delta)
     {
         if (!script.enabled || (script.conditions.empty() && script.trigger == Trigger::None) || script.actions.empty()) return false;
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !canBeRunInOutPost(script)) return false;
-        if (script.trigger != Trigger::None && !script.triggered) return false;
         return checkConditions(script);
     };
     const auto setCurrentScript = [&](Script& script) 
@@ -530,11 +529,14 @@ void SpeedrunScriptingTools::Update(float delta)
         m_currentScript = script;
     };
     const auto hasTrigger = [](const Script& s) { return s.trigger != Trigger::None; };
+    const auto isTriggered = [](const Script& s) { return s.triggered; };
 
     if (!m_currentScript || m_currentScript->actions.empty())
     {
         // Find script to use
-        for (auto& script : m_scripts | std::views::filter(hasTrigger))
+
+        // Check scripts with triggers first, as these are typically more time-sensitive
+        for (auto& script : m_scripts | std::views::filter(hasTrigger) | std::views::filter(isTriggered))
         {
             if (!canRunScript(script)) 
             {
@@ -542,15 +544,26 @@ void SpeedrunScriptingTools::Update(float delta)
                 continue;
             }
             setCurrentScript(script);
-            break;
+            return;
         }
-        if (!m_currentScript || m_currentScript->actions.empty()) 
+        // Run any scripts still waiting for execution
+        for (auto& script : m_scripts | std::views::filter(std::not_fn(hasTrigger)) | std::views::filter(isTriggered))
         {
-            for (auto& script : m_scripts | std::views::filter(std::not_fn(hasTrigger)))
+            if (!canRunScript(script)) 
             {
-                if (!canRunScript(script)) continue;
-                setCurrentScript(script);
-                break;
+                script.triggered = false;
+                continue;
+            }
+            setCurrentScript(script);
+            return;
+        }
+        // Find new "Always on" scripts to run
+        for (auto& script : m_scripts | std::views::filter(std::not_fn(hasTrigger))) 
+        {
+            if (canRunScript(script)) 
+            {
+                script.triggered = true;
+                if (!m_currentScript || m_currentScript->actions.empty()) setCurrentScript(script);
             }
         }
     }
