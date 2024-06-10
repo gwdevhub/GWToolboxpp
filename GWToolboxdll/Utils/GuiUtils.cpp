@@ -951,10 +951,10 @@ namespace GuiUtils {
         return this;
     }
 
-    void EncString::reset(const wchar_t* _enc_string, const bool sanitise)
+    EncString* EncString::reset(const wchar_t* _enc_string, const bool sanitise)
     {
         if (_enc_string && wcscmp(_enc_string, encoded_ws.c_str()) == 0) {
-            return;
+            return this;
         }
         encoded_ws.clear();
         decoded_ws.clear();
@@ -964,6 +964,7 @@ namespace GuiUtils {
         if (_enc_string) {
             encoded_ws = _enc_string;
         }
+        return this;
     }
 
     std::wstring& EncString::wstring()

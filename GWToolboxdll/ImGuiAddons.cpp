@@ -420,6 +420,11 @@ namespace ImGui {
         Image(user_texture_id, size, {0, 0}, CalculateUvCrop(user_texture_id, size));
     }
 
+    bool IsMouseInRect(const ImVec2& top_left, const ImVec2& bottom_right) {
+        const ImRect rect(top_left, bottom_right);
+        return rect.Contains(GetIO().MousePos);
+    }
+
     void AddImageCropped(const ImTextureID user_texture_id, const ImVec2& top_left, const ImVec2& bottom_right)
     {
         const ImVec2 size = {bottom_right.x - top_left.x, bottom_right.y - top_left.y};

@@ -43,6 +43,9 @@ namespace ImGui {
     IMGUI_API bool ColorButtonPicker(const char*, Color*, ImGuiColorEditFlags = 0);
     // Add cropped image to current window
     IMGUI_API void ImageCropped(ImTextureID user_texture_id, const ImVec2& size);
+
+    // Window/context independent check
+    IMGUI_API bool IsMouseInRect(const ImVec2& top_left, const ImVec2& bottom_right);
     // Add cropped image to window draw list
     IMGUI_API void AddImageCropped(ImTextureID user_texture_id, const ImVec2& top_left, const ImVec2& bottom_right);
     // Calculate the end position of a crop box for the given texture to fit into the given size

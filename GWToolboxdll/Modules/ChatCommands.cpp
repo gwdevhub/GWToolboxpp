@@ -1150,8 +1150,6 @@ void ChatCommands::Initialize()
         {L"zoom", CmdZoom},
         {L"camera", CmdCamera},
         {L"cam", CmdCamera},
-        {L"damage", CmdDamage},
-        {L"dmg", CmdDamage},
         {L"chest", CmdChest},
         {L"xunlai", CmdChest},
         {L"afk", CmdAfk},
@@ -2044,31 +2042,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdCamera)
         }
         else {
             Log::Error("Invalid argument.");
-        }
-    }
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdDamage)
-{
-    if (argc <= 1) {
-        PartyDamage::Instance().WritePartyDamage();
-    }
-    else {
-        const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-        if (arg1 == L"print" || arg1 == L"report") {
-            PartyDamage::Instance().WritePartyDamage();
-        }
-        else if (arg1 == L"me") {
-            PartyDamage::Instance().WriteOwnDamage();
-        }
-        else if (arg1 == L"reset") {
-            PartyDamage::Instance().ResetDamage();
-        }
-        else {
-            uint32_t idx;
-            if (GuiUtils::ParseUInt(argv[1], &idx)) {
-                PartyDamage::Instance().WriteDamageOf(idx - 1);
-            }
         }
     }
 }

@@ -158,7 +158,7 @@ namespace GuiUtils {
         void reset(uint32_t _enc_string_id = 0, bool sanitise = true);
         // Recycle this EncString by passing a new string to decode.
         // Set sanitise to true to automatically remove guild tags etc from the string
-        void reset(const wchar_t* _enc_string = nullptr, bool sanitise = true);
+        EncString* reset(const wchar_t* _enc_string = nullptr, bool sanitise = true);
         std::wstring& wstring();
         std::string& string();
 
