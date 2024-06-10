@@ -915,6 +915,9 @@ namespace {
                 ImGui::PopID();
             }
             ImGui::PopID();
+            if (ImGui::IsMouseDown(ImGuiMouseButton_Right) && ImGui::IsItemHovered()) {
+                ImGui::SetScrollHereY();
+            }
         }
 
         if (ImGui::CollapsingHeader("Async Str Log")) {

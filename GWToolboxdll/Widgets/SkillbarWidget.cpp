@@ -43,10 +43,7 @@ namespace {
             if (!skillframe)
                 return false;
             skillbar_skill_positions[i] = skillframe->position;
-            skill_positions_calculated[i] = { 
-                skillbar_skill_positions[i].GetTopLeftOnScreen().x,
-                skillbar_skill_positions[i].GetTopLeftOnScreen().y
-            };
+            skill_positions_calculated[i] = skillbar_skill_positions[i].GetTopLeftOnScreen();
             if (i == 0) {
                 m_skill_width = skillbar_skill_positions[0].GetSizeOnScreen().x;
                 m_skill_height = skillbar_skill_positions[0].GetSizeOnScreen().y;
@@ -215,16 +212,10 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     for (size_t i = 0; i < m_skills.size(); i++) {
         const Skill& skill = m_skills[i];
         // NB: Y axis inverted for imgui
-        const ImVec2 top_left = {
-            skillbar_skill_positions[i].GetTopLeftOnScreen().x,
-            skillbar_skill_positions[i].GetTopLeftOnScreen().y
-        };
+        const ImVec2 top_left = skillbar_skill_positions[i].GetTopLeftOnScreen();
         // position of this skill
 
-        const ImVec2 bottom_right = {
-            skillbar_skill_positions[i].GetBottomRightOnScreen().x,
-            skillbar_skill_positions[i].GetBottomRightOnScreen().y
-        };
+        const ImVec2 bottom_right = skillbar_skill_positions[i].GetBottomRightOnScreen();
 
         // draw overlay
         if (display_skill_overlay) {
