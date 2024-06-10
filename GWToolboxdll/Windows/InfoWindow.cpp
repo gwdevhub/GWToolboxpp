@@ -915,7 +915,7 @@ namespace {
                 ImGui::PopID();
             }
             ImGui::PopID();
-            if (ImGui::IsMouseDown(ImGuiMouseButton_Right) && ImGui::IsItemHovered()) {
+            if (ImGui::IsKeyDown(ImGuiKey_ModAlt)) {
                 ImGui::SetScrollHereY();
             }
         }
