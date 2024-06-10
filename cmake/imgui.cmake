@@ -1,4 +1,5 @@
 include_guard()
+include(gwca)
 include(FetchContent)
 
 FetchContent_Declare(
@@ -26,7 +27,10 @@ set(SOURCES
     )
 source_group(TREE "${imgui_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(imgui PRIVATE ${SOURCES})
-target_include_directories(imgui PUBLIC "${imgui_SOURCE_DIR}")
+target_include_directories(imgui PUBLIC
+	"${PROJECT_SOURCE_DIR}/Dependencies"
+	"${imgui_SOURCE_DIR}"
+	)
 target_compile_definitions(imgui PUBLIC 
     IMGUI_USER_CONFIG="${PROJECT_SOURCE_DIR}/GWToolboxdll/imconfig.h")
 

@@ -13,8 +13,6 @@
 
 #pragma once
 
-#include <GWCA/GameContainers/GamePos.h>
-
 //---- Define assertion handler. Defaults to calling assert().
 // If your macro uses multiple statements, make sure is enclosed in a 'do { .. } while (0)' block so it can be used as a single statement.
 //#define IM_ASSERT(_EXPR)  MyAssert(_EXPR)
@@ -67,6 +65,9 @@
 
 //---- Define constructor and implicit cast operators to convert back<>forth between your math types and ImVec2/ImVec4.
 // This will be inlined as part of ImVec2 and ImVec4 class declarations.
+
+#include <GWCA/Source/stdafx.h>
+#include <GWCA/Include/GWCA/GameContainers/GamePos.h>
 
 #define IM_VEC2_CLASS_EXTRA                                                 \
         ImVec2(const GW::Vec2f& f) { x = f.x; y = f.y; }                    \
