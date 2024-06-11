@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 34);
+    static_assert((int)ConditionType::Count == 35);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -58,6 +58,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<PlayerInPolygonCondition>();
         case ConditionType::ItemInInventory:
             return std::make_shared<ItemInInventoryCondition>();
+        case ConditionType::RemainingCooldown:
+            return std::make_shared<RemainingCooldownCondition>();
 
         case ConditionType::CurrentTargetHasHpBelow:
             return std::make_shared<CurrentTargetHasHpBelowCondition>();
@@ -88,7 +90,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 34);
+    static_assert((int)ConditionType::Count == 35);
     switch (type) {
         case ConditionType::Not:
             return "Not";
@@ -141,6 +143,8 @@ std::string_view toString(ConditionType type)
             return "HP";
         case ConditionType::CanPopAgent:
             return "Can pop agent";
+        case ConditionType::RemainingCooldown:
+            return "Skill cooldown";
 
         case ConditionType::CurrentTargetHasHpBelow:
             return "HP";
@@ -170,7 +174,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(InputStream& stream)
 {
-static_assert((int)ConditionType::Count == 34);
+static_assert((int)ConditionType::Count == 35);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -224,6 +228,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<PlayerStatusCondition>(stream);
     case ConditionType::PlayerInPolygon:
         return std::make_shared<PlayerInPolygonCondition>(stream);
+    case ConditionType::RemainingCooldown:
+        return std::make_shared<RemainingCooldownCondition>(stream);
 
     case ConditionType::CurrentTargetHasHpBelow:
         return std::make_shared<CurrentTargetHasHpBelowCondition>(stream);
