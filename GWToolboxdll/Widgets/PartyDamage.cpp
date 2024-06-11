@@ -33,20 +33,14 @@ namespace {
         uint32_t recent_damage = 0;
         clock_t last_damage = 0;
         uint32_t agent_id = 0;
-        GuiUtils::EncString* name = nullptr;
         GW::Constants::Profession primary = GW::Constants::Profession::None;
         GW::Constants::Profession secondary = GW::Constants::Profession::None;
-
-        PlayerDamage() {
-            name = new GuiUtils::EncString();
-        }
 
         void Reset()
         {
             damage = 0;
             recent_damage = 0;
             agent_id = 0;
-            name->reset(nullptr);
             primary = GW::Constants::Profession::None;
             secondary = GW::Constants::Profession::None;
         }
@@ -54,8 +48,10 @@ namespace {
 
     uint32_t total = 0;
     std::vector<PlayerDamage> damage;
+    std::vector<GuiUtils::EncString*> party_names_by_index;
     std::map<DWORD, uint32_t> hp_map{};
     std::map<DWORD, size_t> party_index{}; // Mapping of agent_id to party index
+    
 
     // main routine variables
     bool in_explorable = false;
@@ -97,7 +93,13 @@ namespace {
         return &damage[party_idx];
     }
 
-    void GetFramePosition(GW::UI::Frame* frame, GW::UI::Frame* relative_to, ImVec2* top_left, ImVec2* bottom_right) {
+    const wchar_t* GetDamageName(uint32_t index) {
+        return party_names_by_index[index]->wstring().c_str();
+    }
+
+    bool GetFramePosition(GW::UI::Frame* frame, GW::UI::Frame* relative_to, ImVec2* top_left, ImVec2* bottom_right) {
+        if (!(frame && relative_to))
+            return false;
         const auto& rp = relative_to->position;
         const auto viewport_scale = rp.GetViewportScale();
         const auto& p = frame->position;
@@ -114,6 +116,15 @@ namespace {
                 (rp.viewport_height - p.screen_bottom) * viewport_scale.y
             };
         }
+        return true;
+    }
+
+    void DrawFramePosition(GW::UI::Frame* frame) {
+        const auto relative_to = GW::UI::GetFrameByLabel(L"Game");
+        ImVec2 top_left;
+        ImVec2 bottom_right;
+        if (GetFramePosition(frame, relative_to, &top_left, &bottom_right))
+            ImGui::GetForegroundDrawList()->AddRect(top_left, bottom_right, IM_COL32_WHITE);
     }
 
     float GetPartOfTotal(uint32_t dmg) {
@@ -156,7 +167,7 @@ namespace {
             GetPercentageOfTotal(damage[index].damage),
             GetWProfessionAcronym(damage[index].primary),
             GetWProfessionAcronym(damage[index].secondary),
-            damage[index].name->wstring().c_str(),
+            GetDamageName(index),
             damage[index].damage);
 
         send_queue.push(buffer);
@@ -183,39 +194,64 @@ namespace {
         if (!GW::PartyMgr::GetIsPartyLoaded()) {
             return;
         }
+        party_index.clear();
+
+        auto append_agent = [](uint32_t agent_id) {
+            party_index[agent_id] = party_index.size();
+            while (party_names_by_index.size() < party_index.size()) {
+                party_names_by_index.push_back(new GuiUtils::EncString());
+            }
+            auto str = party_names_by_index[party_index.size() - 1];
+            str->reset(GW::Agents::GetAgentEncName(agent_id))
+                ->wstring(); // Trigger decode
+            };
         const GW::PartyInfo* const info = GW::PartyMgr::GetPartyInfo();
-        size_t index = 0;
         for (const GW::PlayerPartyMember& player : info->players) {
             const uint32_t id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
-            party_index[id] = index++;
-
+            append_agent(id);
             for (const GW::HeroPartyMember& hero : info->heroes) {
                 if (hero.owner_player_id == player.login_number) {
-                    party_index[hero.agent_id] = index++;
+                    append_agent(hero.agent_id);
                 }
             }
         }
         for (const GW::HenchmanPartyMember& hench : info->henchmen) {
-            party_index[hench.agent_id] = index++;
+            append_agent(hench.agent_id);
+        }
+        if (damage.size() < party_index.size()) {
+            damage.resize(party_index.size());
         }
     }
 
     bool RecalculatePartyPositions() {
         agent_health_bar_positions.clear();
+        ImVec2 top_left;
+        ImVec2 bottom_right;
         const auto party = GW::PartyMgr::GetPartyInfo();
         const auto party_frame = party ? GW::UI::GetFrameByLabel(L"Party") : nullptr;
         if(!(party_frame && party_frame->IsVisible()))
             return false;
 
+        GW::UI::Frame* party_window_health_bars = nullptr;
+
         // Traverse to health bars
-        auto sub_frame = GW::UI::GetChildFrame(party_frame, 0);
-        sub_frame = GW::UI::GetChildFrame(sub_frame, 0);
-        sub_frame = GW::UI::GetChildFrame(sub_frame, 0);
-        const auto player_health_bars = GW::UI::GetChildFrame(sub_frame, 0); // Child frames by player id (includes heroes)
-        if(!player_health_bars)
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+            auto sub_frame = GW::UI::GetChildFrame(party_frame, 1);
+            sub_frame = GW::UI::GetChildFrame(sub_frame, 8);
+            sub_frame = GW::UI::GetChildFrame(sub_frame, 0);
+            sub_frame = GW::UI::GetChildFrame(sub_frame, 0);
+            party_window_health_bars = GW::UI::GetChildFrame(sub_frame, 0);
+        }
+        else {
+            auto sub_frame = GW::UI::GetChildFrame(party_frame, 0);
+            sub_frame = GW::UI::GetChildFrame(sub_frame, 0);
+            party_window_health_bars = GW::UI::GetChildFrame(sub_frame, 0);
+        }
+
+        const auto player_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 0);
+        if(!player_health_bars) // Child frames by player id (includes heroes)
             return false;
-        ImVec2 top_left;
-        ImVec2 bottom_right;
+
 
         const auto game_frame = GW::UI::GetFrameByLabel(L"Game");
         GetFramePosition(player_health_bars, game_frame, &party_health_bars_position.first, &party_health_bars_position.second);
@@ -242,7 +278,7 @@ namespace {
                 party_health_bars_position.second = bottom_right;
             }
         }
-        const auto henchmen_health_bars = GW::UI::GetChildFrame(sub_frame, 1); // Find matching henchmen frames by agent_id
+        const auto henchmen_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 1); // Find matching henchmen frames by agent_id
         for (auto& henchman : party->henchmen) {
             if (!henchmen_health_bars)
                 return false;
@@ -253,7 +289,7 @@ namespace {
             agent_health_bar_positions[henchman.agent_id] = { top_left, bottom_right };
             party_health_bars_position.second = bottom_right;
         }
-        const auto other_health_bars = GW::UI::GetChildFrame(sub_frame, 2); // Find matching agent frames frames by agent_id
+        const auto other_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 2); // Find matching agent frames frames by agent_id
         for (auto& agent_id : party->others) {
             if (!henchmen_health_bars)
                 return false;
@@ -343,9 +379,6 @@ namespace {
 
         if (entry->damage == 0) {
             entry->agent_id = packet->cause_id;
-            entry->name
-                ->reset(GW::Agents::GetAgentEncName(cause))
-                ->wstring();
             entry->primary = static_cast<GW::Constants::Profession>(cause->primary);
             entry->secondary = static_cast<GW::Constants::Profession>(cause->secondary);
         }
@@ -420,6 +453,11 @@ void PartyDamage::Terminate()
     GW::Chat::DeleteCommand(L"dmg");
     GW::Chat::DeleteCommand(L"damage");
 
+    for (auto str : party_names_by_index) {
+        delete str;
+    }
+    party_names_by_index.clear();
+
     if (inifile) {
         inifile->Reset();
         delete inifile;
@@ -464,8 +502,8 @@ void PartyDamage::Draw(IDirect3DDevice9*)
 
     //const float line_height = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
     uint32_t size = GW::PartyMgr::GetPartySize();
-    if (size > damage.size()) {
-        damage.resize(size);
+    if (size != damage.size()) {
+        CreatePartyIndexMap();
     }
 
     uint32_t max_recent = 0;
