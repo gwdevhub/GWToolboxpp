@@ -7,12 +7,9 @@
 
 #include <Color.h>
 #include <Timer.h>
-#include <ToolboxWidget.h>
+#include <Widgets/SnapsToPartyWindow.h>
 
-class SkillMonitorWidget : public ToolboxWidget {
-    SkillMonitorWidget() = default;
-    ~SkillMonitorWidget() override = default;
-
+class SkillMonitorWidget : public SnapsToPartyWindow {
 public:
     static SkillMonitorWidget& Instance()
     {

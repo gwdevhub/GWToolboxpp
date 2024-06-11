@@ -337,76 +337,6 @@ namespace {
             });
     }
 
-    const char* cmd_bonds_syntax = "'/bonds [remove|add] [party_member_index|all] [all|skill_id]' remove or add bonds from a single party member, or all party members";
-
-    void CHAT_CMD_FUNC(CmdBondsAddRemove) {
-
-        const auto syntax_err = [argc, argv] {
-            Log::WarningW(L"Invalid syntax for /%s; correct syntax:\n%S", argc ? argv[0] : L"Unk", cmd_bonds_syntax);
-        };
-
-        if (argc < 4) {
-            syntax_err();
-            return;
-        }
-        bool add_bond = true;
-        uint32_t agent_id = 0;
-        uint32_t skill_id = 0;
-
-        if (wcscmp(argv[1], L"add") == 0) {
-            add_bond = true;
-        }
-        else if (wcscmp(argv[1], L"remove") == 0) {
-            add_bond = false;
-        }
-        else {
-            syntax_err();
-            return;
-        }
-        // Party member (or all)
-        if (wcscmp(argv[2], L"all") != 0) {
-            uint32_t party_member_idx = 0;
-            if (!GuiUtils::ParseUInt(argv[2], &party_member_idx)) {
-                syntax_err();
-                return;
-            }
-            agent_id = GetPartyMemberAgentId(party_member_idx);
-            if (!agent_id) {
-                return; // Failed to find party member
-            }
-        }
-        // Skill
-        if (wcscmp(argv[3], L"all") != 0) {
-            if (!GuiUtils::ParseUInt(argv[3], &skill_id)) {
-                syntax_err();
-                return;
-            }
-        }
-        if (add_bond && !skill_id) {
-            Log::WarningW(L"/%s: skill_id required when adding bond", argv[0]);
-            syntax_err();
-            return;
-        }
-        if (skill_id >= std::to_underlying(GW::Constants::SkillID::Count)) {
-            Log::WarningW(L"%d: is not a valid skill id", skill_id);
-            syntax_err();
-            return;
-        }
-        if (add_bond && !agent_id) {
-            Log::WarningW(L"/%s: party_member_index required when adding bond", argv[0]);
-            syntax_err();
-            return;
-        }
-
-        if (add_bond) {
-            BondsWidget::UseBuff(agent_id, static_cast<GW::Constants::SkillID>(skill_id));
-        }
-        else {
-            BondsWidget::DropBuffs(agent_id,static_cast<GW::Constants::SkillID>(skill_id));
-        }
-
-    }
-
     HallOfMonumentsAchievements hom_achievements;
     bool hom_loading = false;
 
@@ -816,7 +746,7 @@ void ChatCommands::DrawHelp()
     ImGui::Bullet();
     ImGui::Text("'/armor' is an alias for '/pingitem armor'.");
     ImGui::Bullet();
-    ImGui::Text(cmd_bonds_syntax);
+    ImGui::Text("'/bonds [remove|add] [party_member_index|all] [all|skill_id]' remove or add bonds from a single party member, or all party members");
     ImGui::Bullet();
     ImGui::Text("'/borderless [on|off]' toggles, enables or disables borderless window.");
     ImGui::Bullet();
@@ -1138,7 +1068,6 @@ void ChatCommands::Initialize()
 
     //TODO: Move all of these callbacks into pvt namespace
     chat_commands = {
-        {L"bonds", CmdBondsAddRemove},
         {L"chat", CmdChatTab},
         {L"enter", CmdEnterMission},
         {L"age2", CmdAge2},

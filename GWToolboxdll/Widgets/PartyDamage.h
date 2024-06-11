@@ -3,12 +3,9 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 
-#include <ToolboxWidget.h>
+#include <Widgets/SnapsToPartyWindow.h>
 
-class PartyDamage : public ToolboxWidget {
-    PartyDamage() = default;
-    ~PartyDamage() override = default;
-
+class PartyDamage : public SnapsToPartyWindow {
 public:
     static PartyDamage& Instance()
     {
