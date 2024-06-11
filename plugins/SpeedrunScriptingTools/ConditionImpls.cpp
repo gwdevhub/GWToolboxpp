@@ -1019,7 +1019,7 @@ void QuestHasStateCondition::drawSettings()
     ImGui::SameLine();
     drawEnumButton(QuestStatus::NotStarted, QuestStatus::Failed, status);
     ImGui::SameLine();
-    ImGui::ShowHelp("Objective ID, NOT quest ID!\nUW: Chamber 146, Restore 147, Escort 148, UWG 149, Vale 150, Waste 151, Pits 152, Planes 153, Mnts 154, Pools 155, Dhuum 157");
+    ImGui::ShowHelp("Objective ID, NOT quest ID!\nUW: Chamber 146, Restore 147, Escort 148, UWG 149, Vale 150, Waste 151, Pits 152, Planes 153, Mnts 154, Pools 155");
     ImGui::PopID();
 }
 
@@ -1551,6 +1551,44 @@ void InstanceTypeCondition::drawSettings()
     ImGui::Text("If player is in");
     ImGui::SameLine();
     drawEnumButton(GW::Constants::InstanceType::Outpost, GW::Constants::InstanceType::Explorable, instanceType);
+
+    ImGui::PopID();
+}
+
+/// ------------- RemainingCooldownCondition -------------
+RemainingCooldownCondition::RemainingCooldownCondition(InputStream& stream)
+{
+    stream >> id >> remainingCooldownInMs;
+}
+void RemainingCooldownCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << id << remainingCooldownInMs;
+}
+bool RemainingCooldownCondition::check() const
+{
+    const auto bar = GW::SkillbarMgr::GetPlayerSkillbar();
+    if (!bar || !bar->IsValid()) return false;
+
+    for (int i = 0; i < 8; ++i) 
+    {
+        if (bar->skills[i].skill_id == id) 
+            return bar->skills[i].GetRecharge() > uint32_t(remainingCooldownInMs);
+    }
+    return false;
+}
+void RemainingCooldownCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("If skill");
+    ImGui::SameLine();
+    drawSkillIDSelector(id);
+    ImGui::SameLine();
+    ImGui::Text("has remaining cooldown of at least");
+    ImGui::SameLine();
+    ImGui::InputInt("ms", &remainingCooldownInMs, 0);
 
     ImGui::PopID();
 }
