@@ -209,6 +209,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             }
             if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 auto tb = TeamHeroBuild("");
+                tb.edit_open = true;
                 for (auto i = 0; i < 8; i++) {
                     tb.builds[i] = HeroBuild("", "", i == 0 ? -2 : 0);
                 }
@@ -217,9 +218,10 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             }
             if (ImGui::Button("Add Teambuild from current", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 auto tb = TeamHeroBuild("");
+                tb.edit_open = true;
                 for (auto i = 0u; i < 8; i++) {
                     const auto skill_template = GW::SkillbarMgr::GetSkillTemplate(i);
-                    char buf[BUFFER_SIZE];
+                    char buf[BUFFER_SIZE]{};
                     GW::SkillbarMgr::EncodeSkillTemplate(skill_template, buf, BUFFER_SIZE);
                     constexpr std::string_view empty_code = "OAAAAAAAAAAAAAAA";
                     const auto party_info = GW::PartyMgr::GetPartyInfo();
