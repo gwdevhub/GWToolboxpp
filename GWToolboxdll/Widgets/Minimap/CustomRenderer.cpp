@@ -611,18 +611,24 @@ void CustomRenderer::DrawSettings()
             "Note: custom markers are stored in 'Markers.ini' in settings folder. You can share the file with other players or paste other people's markers into it.");
     };
     if (ImGui::TreeNodeEx("Custom Lines", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        ImGui::BeginChild("##custom_lines", {0.f, std::min(ImGui::GetWindowSize().y * 0.7f, 75.f + lines.size() * 25.f)});
         draw_note();
         DrawLineSettings();
+        ImGui::EndChild();
         ImGui::TreePop();
     }
     if (ImGui::TreeNodeEx("Custom Circles", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        ImGui::BeginChild("##custom_circles", {0.f, std::min(ImGui::GetWindowSize().y * 0.7f, 75.f + markers.size() * 25.f)});
         draw_note();
         DrawMarkerSettings();
+        ImGui::EndChild();
         ImGui::TreePop();
     }
     if (ImGui::TreeNodeEx("Custom Polygons", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        ImGui::BeginChild("##custom_polygons", {0.f, std::min(ImGui::GetWindowSize().y * 0.7f, 50.f + polygons.size() * 25.f)});
         draw_note();
         DrawPolygonSettings();
+        ImGui::EndChild();
         ImGui::TreePop();
     }
     if (markers_changed) {
