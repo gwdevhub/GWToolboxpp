@@ -33,9 +33,9 @@ namespace {
 }
 
 CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const float x2, const float y2, const GW::Constants::MapID m, const char* n)
-    : p1(x1, y1)
-    , p2(x2, y2)
-    , map(m)
+    : p1(x1, y1),
+      p2(x2, y2),
+      map(m)
 {
     if (n) {
         GuiUtils::StrCopy(name, n, sizeof(name));
@@ -46,10 +46,10 @@ CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const flo
 };
 
 CustomRenderer::CustomMarker::CustomMarker(const float x, const float y, const float s, const Shape sh, const GW::Constants::MapID m, const char* _name)
-    : pos(x, y)
-    , size(s)
-    , shape(sh)
-    , map(m)
+    : pos(x, y),
+      size(s),
+      shape(sh),
+      map(m)
 {
     if (_name) {
         GuiUtils::StrCopy(name, _name, sizeof(name));
@@ -263,7 +263,8 @@ void CustomRenderer::SetTooltipMapID(const GW::Constants::MapID& map_id)
     ImGui::SetTooltip(map_id_tooltip.tooltip_str);
 }
 
-bool CustomRenderer::RemoveCustomLine(CustomRenderer::CustomLine* line) {
+bool CustomRenderer::RemoveCustomLine(CustomRenderer::CustomLine* line)
+{
     const auto found = std::ranges::find(lines, line);
     if (found != lines.end()) {
         delete *found;
@@ -272,8 +273,10 @@ bool CustomRenderer::RemoveCustomLine(CustomRenderer::CustomLine* line) {
     }
     return false;
 }
-CustomRenderer::CustomLine* CustomRenderer::AddCustomLine(const GW::GamePos& from,const GW::GamePos& to) {
-    const auto line = new CustomRenderer::CustomLine(from.x,from.y,to.x,to.y,GW::Map::GetMapID());
+
+CustomRenderer::CustomLine* CustomRenderer::AddCustomLine(const GW::GamePos& from, const GW::GamePos& to)
+{
+    const auto line = new CustomRenderer::CustomLine(from.x, from.y, to.x, to.y, GW::Map::GetMapID());
     lines.push_back(line);
     return line;
 }
@@ -534,7 +537,7 @@ void CustomRenderer::DrawPolygonSettings()
         ImGui::SameLine(0.0f, spacing);
 
         ImGui::PopItemWidth();
-        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2  - 20.0f * 2);
+        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2 - 20.0f * 2);
         markers_changed |= ImGui::InputText("##name", polygon.name, 128);
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Name");
@@ -606,9 +609,8 @@ void CustomRenderer::DrawPolygonSettings()
 
 void CustomRenderer::DrawSettings()
 {
-    auto draw_note = [] {
-        ImGui::Text(
-            "Note: custom markers are stored in 'Markers.ini' in settings folder. You can share the file with other players or paste other people's markers into it.");
+    const auto draw_note = [] {
+        ImGui::Text("Note: custom markers are stored in 'Markers.ini' in settings folder. You can share the file with other players or paste other people's markers into it.");
     };
     if (ImGui::TreeNodeEx("Custom Lines", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::BeginChild("##custom_lines", {0.f, std::min(ImGui::GetWindowSize().y * 0.7f, 75.f + lines.size() * 25.f)});
@@ -658,6 +660,7 @@ void CustomRenderer::Initialize(IDirect3DDevice9* device)
         printf("Error setting up CustomRenderer vertex buffer: HRESULT: 0x%lX\n", hr);
     }
 }
+
 void CustomRenderer::Terminate()
 {
     VBuffer::Terminate();

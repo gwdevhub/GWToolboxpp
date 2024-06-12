@@ -19,27 +19,14 @@ namespace {
     bool GetFramePosition(GW::UI::Frame* frame, GW::UI::Frame* relative_to, ImVec2* top_left, ImVec2* bottom_right) {
         if (!(frame && relative_to && frame->IsVisible()))
             return false;
-        const auto& rp = relative_to->position;
-        const auto viewport_scale = rp.GetViewportScale();
-        const auto& p = frame->position;
-
         if (top_left) {
-            *top_left = {
-                p.screen_left * viewport_scale.x,
-                (rp.viewport_height - p.screen_top) * viewport_scale.y
-            };
+            *top_left = frame->position.GetTopLeftOnScreen(relative_to);
         }
         if (bottom_right) {
-            *bottom_right = {
-                p.screen_right * viewport_scale.x,
-                (rp.viewport_height - p.screen_bottom) * viewport_scale.y
-            };
+            *bottom_right = frame->position.GetBottomRightOnScreen(relative_to);
         }
         return true;
     }
-
-    
-
 }
 
 std::unordered_map<uint32_t, std::pair<ImVec2, ImVec2>> SnapsToPartyWindow::agent_health_bar_positions;
