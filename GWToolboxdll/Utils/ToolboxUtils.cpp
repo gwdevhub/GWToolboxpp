@@ -192,20 +192,6 @@ namespace ToolboxUtils {
         return GW::PlayerMgr::GetPlayerByID(agent->login_number);
     }
 
-    GW::HeroInfo* GetHeroInfo(const uint32_t hero_id)
-    {
-        const auto w = GW::GetWorldContext();
-        if (!(w && w->hero_info.size())) {
-            return nullptr;
-        }
-        for (auto& a : w->hero_info) {
-            if (a.hero_id == hero_id) {
-                return &a;
-            }
-        }
-        return nullptr;
-    }
-
     bool IsHenchman(const uint32_t agent_id)
     {
         if (!IsOutpost()) {

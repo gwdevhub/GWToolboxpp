@@ -636,7 +636,7 @@ namespace {
                 return pending_reinvite.reset();
             }
             case PendingReinvite::Stage::InviteHero: {
-                const GW::HeroInfo* hero_info = GetHeroInfo(pending_reinvite.identifier);
+                const GW::HeroInfo* hero_info = GW::PartyMgr::GetHeroInfo(pending_reinvite.identifier);
                 if (!hero_info) {
                     Log::Error("Failed to get hero info for %d", pending_reinvite.identifier);
                     return pending_reinvite.reset();

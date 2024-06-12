@@ -91,8 +91,6 @@ namespace ToolboxUtils {
     const std::wstring GetSenderFromPacket(GW::Packet::StoC::PacketBase* packet);
 
     // Heros
-
-    GW::HeroInfo* GetHeroInfo(uint32_t hero_id);
     bool IsHenchman(uint32_t agent_id);
     bool IsHero(uint32_t agent_id, GW::HeroInfo** info_out = nullptr);
 
