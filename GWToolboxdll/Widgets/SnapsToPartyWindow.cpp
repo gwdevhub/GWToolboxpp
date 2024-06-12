@@ -17,7 +17,7 @@
 namespace {
 
     bool GetFramePosition(GW::UI::Frame* frame, GW::UI::Frame* relative_to, ImVec2* top_left, ImVec2* bottom_right) {
-        if (!(frame && relative_to))
+        if (!(frame && relative_to && frame->IsVisible()))
             return false;
         const auto& rp = relative_to->position;
         const auto viewport_scale = rp.GetViewportScale();
@@ -207,8 +207,14 @@ bool SnapsToPartyWindow::RecalculatePartyPositions() {
         GetFramePosition(agent_health_bar, relative_to, &top_left, &bottom_right);
         agent_health_bar_positions[henchman.agent_id] = { top_left, bottom_right };
     }
-    const auto pet_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 3); // Find matching agent frames frames by agent_id
-    const auto allies_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 4); // Find matching agent frames frames by agent_id
+    auto pet_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 3); // Find matching agent frames frames by agent_id
+    if (!(pet_health_bars && pet_health_bars->IsVisible()))
+        pet_health_bars = nullptr;
+
+    auto allies_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 4); // Find matching agent frames frames by agent_id
+    if (!(allies_health_bars && allies_health_bars->IsVisible()))
+        allies_health_bars = nullptr;
+
     for (auto& agent_id : party->others) {
         agent_health_bar = GW::UI::GetChildFrame(pet_health_bars, agent_id);
         if(!agent_health_bar)
