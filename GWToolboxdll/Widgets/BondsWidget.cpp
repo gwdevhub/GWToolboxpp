@@ -98,8 +98,6 @@ namespace {
 
     std::vector<GW::Constants::SkillID> bond_list{};               // index to skill id
     std::unordered_map<GW::Constants::SkillID, size_t> bond_map{}; // skill id to index
-    std::vector<GW::AgentID> party_list{};               // index to agent id
-    std::unordered_map<GW::AgentID, size_t> party_map{}; // agent id to index
 
     bool UseBuff(GW::AgentID agent_id, GW::Constants::SkillID skill_id)
     {
@@ -129,12 +127,6 @@ namespace {
             GW::SkillbarMgr::UseSkill(slot, agent_id);
         });
         return true;
-    }
-
-    uint32_t GetPartyMemberAgentId(uint32_t idx) {
-        if (idx >= party_list.size())
-            return 0;
-        return party_list[idx];
     }
 
     bool FetchBondSkills()
@@ -174,53 +166,40 @@ namespace {
         return dropped > 0;
     }
 
+    uint32_t GetPartyMemberAgentId(uint32_t index) {
+        const auto info = GW::PartyMgr::GetPartyInfo();
+        if (!info)
+            return 0;
+        uint32_t i = 0;
+        for (auto& player : info->players) {
+            if (i == index)
+                return GW::PlayerMgr::GetPlayerAgentId(player.login_number);
+            i++;
+            for (auto& hero : info->heroes) {
+                if (hero.owner_player_id != player.login_number)
+                    continue;
+                if (i == index)
+                    return hero.agent_id;
+                i++;
+            }
+        }
+        for (auto& henchman : info->henchmen) {
+            if (i == index)
+                return henchman.agent_id;
+            i++;
+        }
+        for (auto& agent_id : info->others) {
+            if (i == index)
+                return agent_id;
+            i++;
+        }
+        return 0;
+    }
+
     bool ToggleBuff(GW::AgentID agent_id, GW::Constants::SkillID skill_id) {
         return DropBuffs(agent_id, skill_id) || UseBuff(agent_id, skill_id);
     }
 
-    bool FetchPartyInfo()
-    {
-        const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
-        if (!info) {
-            return false;
-        }
-        party_map.clear();
-        party_list.clear();
-        for (const GW::PlayerPartyMember& player : info->players) {
-            const auto id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
-            if (!id) {
-                continue;
-            }
-            party_map[id] = party_map.size();
-            party_list.push_back(id);
-
-            if (info->heroes.valid()) {
-                for (const GW::HeroPartyMember& hero : info->heroes) {
-                    if (hero.owner_player_id == player.login_number) {
-                        party_map[hero.agent_id] = party_map.size();
-                        party_list.push_back(hero.agent_id);
-                    }
-                }
-            }
-        }
-        if (info->henchmen.valid()) {
-            for (const GW::HenchmanPartyMember& hench : info->henchmen) {
-                party_map[hench.agent_id] = party_map.size();
-                party_list.push_back(hench.agent_id);
-            }
-        }
-        if (show_allies && info->others.valid()) {
-            for (const DWORD ally_id : info->others) {
-                GW::Agent* agent = GW::Agents::GetAgentByID(ally_id);
-                const GW::AgentLiving* ally = agent ? agent->GetAsAgentLiving() : nullptr;
-                if (ally && ally->allegiance != GW::Constants::Allegiance::Minion && ally->GetCanBeViewedInPartyWindow() && !ally->GetIsSpawned()) {
-                    party_map[ally_id] = party_map.size();
-                    party_list.push_back(ally_id);
-                }
-            }
-        }
-        return true;
-    }
     const char* cmd_bonds_syntax = "'/bonds [remove|add] [party_member_index|all] [all|skill_id]' remove or add bonds from a single party member, or all party members";
 
     void CHAT_CMD_FUNC(CmdBondsAddRemove) {
@@ -323,19 +302,23 @@ bool BondsWidget::DrawBondImage(uint32_t agent_id, GW::Constants::SkillID skill_
 }
 
 bool BondsWidget::GetBondPosition(uint32_t agent_id, GW::Constants::SkillID skill_id, ImVec2* top_left_out, ImVec2* bottom_right_out) {
-    if (!party_map.contains(agent_id)) {
-        return false; // bond target not in party
-    }
+
+    const auto health_bar_pos = GetAgentHealthBarPosition(agent_id);
+    if (!health_bar_pos)
+        return false;
+
+    if (!party_indeces_by_agent_id.contains(agent_id))
+        return false;
+    const auto party_slot = party_indeces_by_agent_id[agent_id];
+    if (party_slot >= allies_start_idx && !show_allies)
+        return false;
+
     if (!bond_map.contains(skill_id)) {
         return false; // bond with a skill not in skillbar
     }
-    if (!agent_health_bar_positions.contains(agent_id))
-        return false;
 
-    const auto& health_bar_pos = agent_health_bar_positions[agent_id];
-
-    const auto img_width = health_bar_pos.second.y - health_bar_pos.first.y;
-    const auto y = health_bar_pos.first.y;
+    const auto img_width = health_bar_pos->second.y - health_bar_pos->first.y;
+    const auto y = health_bar_pos->first.y;
     const auto x = ImGui::GetCurrentWindow()->Pos.x + (img_width * bond_map[skill_id]);
 
     *top_left_out = { x, y };
@@ -358,7 +341,6 @@ void BondsWidget::Draw(IDirect3DDevice9*)
     }
     // note: info->heroes, ->henchmen, and ->others CAN be invalid during normal use.
 
-    // ==== Get bonds ====
     // @Cleanup: This doesn't need to be done every frame - only when player skills have changed
     if (!FetchBondSkills()) {
         return;
@@ -366,13 +348,8 @@ void BondsWidget::Draw(IDirect3DDevice9*)
     if (bond_list.empty()) {
         return; // Don't display bonds widget if we've not got any bonds on our skillbar
     }
-    // ==== Get party ====
-    // @Cleanup: This doesn't need to be done every frame - only when the party has been changed
-    if (!FetchPartyInfo()) {
-        return;
-    }
-
-    if (!RecalculatePartyPositions()) {
+    // @Cleanup: Only call when the party window has been moved or updated
+    if (!(FetchPartyInfo() && RecalculatePartyPositions())) {
         return;
     }
 
@@ -404,7 +381,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
         ImVec2 bond_top_left;
         ImVec2 bond_bottom_right;
 
-        for (auto agent_id : party_list) {
+        for (auto& [agent_id, party_slot] : party_indeces_by_agent_id) {
             if (!GetBondPosition(agent_id, bond_list[0], &bond_top_left, &bond_bottom_right))
                 continue;
             draw_list->AddRectFilled({ window_x , bond_top_left.y}, { window_x + width, bond_bottom_right.y }, background);
@@ -447,7 +424,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
         }
 
         if (click_to_cast && !handled_click) {
-            for (auto agent_id : party_list) {
+            for (auto agent_id : party_agent_ids_by_index) {
                 for (auto skill_id : bond_list) {
                     if (!GetBondPosition(agent_id, skill_id, &bond_top_left, &bond_bottom_right))
                         continue;

@@ -28,29 +28,11 @@ constexpr const char* IniSection = "health";
 namespace {
 
     // damage values
-    struct PlayerDamage {
-        uint32_t damage = 0;
-        uint32_t recent_damage = 0;
-        clock_t last_damage = 0;
-        uint32_t agent_id = 0;
-        GW::Constants::Profession primary = GW::Constants::Profession::None;
-        GW::Constants::Profession secondary = GW::Constants::Profession::None;
 
-        void Reset()
-        {
-            damage = 0;
-            recent_damage = 0;
-            agent_id = 0;
-            primary = GW::Constants::Profession::None;
-            secondary = GW::Constants::Profession::None;
-        }
-    };
 
     uint32_t total = 0;
-    std::vector<PlayerDamage> damage;
-    std::vector<GuiUtils::EncString*> party_names_by_index;
+
     std::map<DWORD, uint32_t> hp_map{};
-    std::map<DWORD, size_t> party_index{}; // Mapping of agent_id to party index
     
 
     // main routine variables
@@ -75,22 +57,6 @@ namespace {
     GW::HookEntry GenericModifier_Entry;
     GW::HookEntry MapLoaded_Entry;
 
-    PlayerDamage* GetDamageByAgentId(uint32_t agent_id, uint32_t* party_index_out = nullptr) {
-        const auto found = party_index.find(agent_id);
-        if (found == party_index.end())
-            return nullptr;
-        const auto party_idx = found->second;
-        if (party_idx >= damage.size())
-            return nullptr;
-        if (party_index_out)
-            *party_index_out = party_idx;
-        return &damage[party_idx];
-    }
-
-    const wchar_t* GetDamageName(uint32_t index) {
-        return party_names_by_index[index]->wstring().c_str();
-    }
-
     float GetPartOfTotal(uint32_t dmg) {
         if (total == 0) {
             return 0;
@@ -100,219 +66,217 @@ namespace {
     float GetPercentageOfTotal(const uint32_t dmg) { 
         return GetPartOfTotal(dmg) * 100.0f; 
     }
+}
 
-    void WriteDamageOf(size_t index, uint32_t rank = 0) {
-        if (index >= damage.size()) {
-            return;
-        }
-        if (damage[index].damage <= 0) {
-            return;
-        }
+struct PartyDamage::PlayerDamage {
+    uint32_t damage = 0;
+    uint32_t recent_damage = 0;
+    clock_t last_damage = 0;
+    uint32_t agent_id = 0;
+    GW::Constants::Profession primary = GW::Constants::Profession::None;
+    GW::Constants::Profession secondary = GW::Constants::Profession::None;
 
-        if (rank == 0) {
-            rank = 1; // start at 1, add 1 for each player with higher damage
-            for (size_t i = 0; i < damage.size(); ++i) {
-                if (i == index) {
-                    continue;
-                }
-                if (damage[i].agent_id == 0) {
-                    continue;
-                }
-                if (damage[i].damage > damage[index].damage) {
-                    ++rank;
-                }
-            }
-        }
-
-        constexpr size_t buffer_size = 130;
-        wchar_t buffer[buffer_size];
-        swprintf_s(buffer, buffer_size, L"#%2d ~ %3.2f %% ~ %ls/%ls %ls ~ %d",
-            rank,
-            GetPercentageOfTotal(damage[index].damage),
-            GetWProfessionAcronym(damage[index].primary),
-            GetWProfessionAcronym(damage[index].secondary),
-            GetDamageName(index),
-            damage[index].damage);
-
-        send_queue.push(buffer);
+    void Reset()
+    {
+        damage = 0;
+        recent_damage = 0;
+        agent_id = 0;
+        primary = GW::Constants::Profession::None;
+        secondary = GW::Constants::Profession::None;
     }
-    void WritePartyDamage() {
-        std::vector<size_t> idx(damage.size());
+};
+
+std::vector<PartyDamage::PlayerDamage> PartyDamage::damage;
+
+void PartyDamage::WriteDamageOf(size_t index, uint32_t rank) {
+    if (index >= damage.size()) {
+        return;
+    }
+    if (damage[index].damage <= 0) {
+        return;
+    }
+
+    if (rank == 0) {
+        rank = 1; // start at 1, add 1 for each player with higher damage
         for (size_t i = 0; i < damage.size(); ++i) {
-            idx[i] = i;
-        }
-        sort(idx.begin(), idx.end(), [](const size_t i1, const size_t i2) {
-            return damage[i1].damage > damage[i2].damage;
-            });
-
-        for (size_t i = 0; i < idx.size(); ++i) {
-            WriteDamageOf(idx[i], i + 1);
-        }
-        send_queue.push(L"Total ~ 100 % ~ " + std::to_wstring(total));
-    }
-    void WriteOwnDamage();
-    void ResetDamage();
-
-    void CreatePartyIndexMap()
-    {
-        if (!GW::PartyMgr::GetIsPartyLoaded()) {
-            return;
-        }
-        party_index.clear();
-
-        auto append_agent = [](uint32_t agent_id) {
-            party_index[agent_id] = party_index.size();
-            while (party_names_by_index.size() < party_index.size()) {
-                party_names_by_index.push_back(new GuiUtils::EncString());
+            if (i == index) {
+                continue;
             }
-            auto str = party_names_by_index[party_index.size() - 1];
-            str->reset(GW::Agents::GetAgentEncName(agent_id))
-                ->wstring(); // Trigger decode
-            };
-        const GW::PartyInfo* const info = GW::PartyMgr::GetPartyInfo();
-        for (const GW::PlayerPartyMember& player : info->players) {
-            const uint32_t id = GW::Agents::GetAgentIdByLoginNumber(player.login_number);
-            append_agent(id);
-            for (const GW::HeroPartyMember& hero : info->heroes) {
-                if (hero.owner_player_id == player.login_number) {
-                    append_agent(hero.agent_id);
-                }
+            if (damage[i].agent_id == 0) {
+                continue;
             }
-        }
-        for (const GW::HenchmanPartyMember& hench : info->henchmen) {
-            append_agent(hench.agent_id);
-        }
-        if (damage.size() < party_index.size()) {
-            damage.resize(party_index.size());
+            if (damage[i].damage > damage[index].damage) {
+                ++rank;
+            }
         }
     }
 
-    void MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::MapLoaded*)
-    {
-        switch (GW::Map::GetInstanceType()) {
-        case GW::Constants::InstanceType::Outpost:
-            in_explorable = false;
-            break;
-        case GW::Constants::InstanceType::Explorable:
-            party_index.clear();
-            if (!in_explorable) {
-                in_explorable = true;
-                ResetDamage();
-            }
-            break;
-        case GW::Constants::InstanceType::Loading:
-        default:
-            break;
+    constexpr size_t buffer_size = 130;
+    wchar_t buffer[buffer_size];
+    swprintf_s(buffer, buffer_size, L"#%2d ~ %3.2f %% ~ %ls/%ls %ls ~ %d",
+        rank,
+        GetPercentageOfTotal(damage[index].damage),
+        GetWProfessionAcronym(damage[index].primary),
+        GetWProfessionAcronym(damage[index].secondary),
+        party_names_by_index[index]->wstring().c_str(),
+        damage[index].damage);
+
+    send_queue.push(buffer);
+}
+void PartyDamage::WritePartyDamage() {
+    std::vector<size_t> idx(damage.size());
+    for (size_t i = 0; i < damage.size(); ++i) {
+        idx[i] = i;
+    }
+    sort(idx.begin(), idx.end(), [](const size_t i1, const size_t i2) {
+        return damage[i1].damage > damage[i2].damage;
+        });
+
+    for (size_t i = 0; i < idx.size(); ++i) {
+        WriteDamageOf(idx[i], i + 1);
+    }
+    send_queue.push(L"Total ~ 100 % ~ " + std::to_wstring(total));
+}
+
+void PartyDamage::MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::MapLoaded*)
+{
+    switch (GW::Map::GetInstanceType()) {
+    case GW::Constants::InstanceType::Outpost:
+        in_explorable = false;
+        break;
+    case GW::Constants::InstanceType::Explorable:
+        if (!in_explorable) {
+            in_explorable = true;
+            ResetDamage();
         }
+        break;
+    case GW::Constants::InstanceType::Loading:
+    default:
+        break;
+    }
+}
+
+void PartyDamage::DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::GenericModifier* packet)
+{
+    // ignore non-damage packets
+    switch (packet->type) {
+    case GW::Packet::StoC::P156_Type::damage:
+    case GW::Packet::StoC::P156_Type::critical:
+    case GW::Packet::StoC::P156_Type::armorignoring:
+        break;
+    default:
+        return;
     }
 
-    void DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::GenericModifier* packet)
-    {
-        // ignore non-damage packets
-        switch (packet->type) {
-        case GW::Packet::StoC::P156_Type::damage:
-        case GW::Packet::StoC::P156_Type::critical:
-        case GW::Packet::StoC::P156_Type::armorignoring:
-            break;
-        default:
-            return;
-        }
+    // ignore heals
+    if (packet->value >= 0) {
+        return;
+    }
+    const auto cause = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->cause_id));
+    if (!(cause && cause->GetIsLivingType()))
+        return; // Ignore damage caused by non-living agents
+    if (cause->allegiance != GW::Constants::Allegiance::Ally_NonAttackable)
+        return; // Ignore damage caused by non-allied NPCs
 
-        // ignore heals
-        if (packet->value >= 0) {
-            return;
-        }
-        const auto cause = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->cause_id));
-        if (!(cause && cause->GetIsLivingType()))
-            return;// ignore player-inflicted damage
-        if (cause->allegiance != GW::Constants::Allegiance::Ally_NonAttackable)
-            return;
-        const auto entry = GetDamageByAgentId(cause->agent_id);
-        if (!entry)
-            return;
-        const auto target = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->target_id));
-        if (!(target && target->GetIsLivingType()))
-            return; // ignore player-inflicted damage
-        if (target->login_number != 0)
-            return; // ignore player-inflicted damage
-        // such as Life bond or sacrifice
-        switch (target->allegiance) {
-        case GW::Constants::Allegiance::Ally_NonAttackable:
-        case GW::Constants::Allegiance::Spirit_Pet:
-        case GW::Constants::Allegiance::Minion:
-            return; // ignore damage inflicted to allies in general
-        }
+    auto entry = GetDamageByAgentId(cause->agent_id);
+    if (!entry)
+        return;
 
-        long ldmg;
-        if (target->max_hp > 0 && target->max_hp < 100000) {
-            ldmg = std::lround(-packet->value * target->max_hp);
-            hp_map[target->player_number] = target->max_hp;
+    const auto target = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->target_id));
+    if (!(target && target->GetIsLivingType()))
+        return; // Ignore damage inflicted on non-living agents
+    if (target->login_number != 0)
+        return; // Ignore damage inflicted on other players such as Life bond or sacrifice
+    switch (target->allegiance) {
+    case GW::Constants::Allegiance::Ally_NonAttackable:
+    case GW::Constants::Allegiance::Spirit_Pet:
+    case GW::Constants::Allegiance::Minion:
+        return; // ignore damage inflicted to allies in general
+    }
+
+    long ldmg;
+    if (target->max_hp > 0 && target->max_hp < 100000) {
+        ldmg = std::lround(-packet->value * target->max_hp);
+        hp_map[target->player_number] = target->max_hp;
+    }
+    else {
+        const auto it = hp_map.find(target->player_number);
+        if (it == hp_map.end()) {
+            // max hp not found, approximate with hp/lvl formula
+            ldmg = std::lround(-packet->value * (target->level * 20 + 100));
         }
         else {
-            const auto it = hp_map.find(target->player_number);
-            if (it == hp_map.end()) {
-                // max hp not found, approximate with hp/lvl formula
-                ldmg = std::lround(-packet->value * (target->level * 20 + 100));
-            }
-            else {
-                // size_t maxhp = it->second;
-                ldmg = std::lround(-packet->value * it->second);
-            }
-        }
-
-        const uint32_t dmg = static_cast<uint32_t>(ldmg);
-
-        if (entry->damage == 0) {
-            entry->agent_id = packet->cause_id;
-            entry->primary = static_cast<GW::Constants::Profession>(cause->primary);
-            entry->secondary = static_cast<GW::Constants::Profession>(cause->secondary);
-        }
-
-        entry->damage += dmg;
-        total += dmg;
-
-        entry->recent_damage += dmg;
-        entry->last_damage = TIMER_INIT();
-    }
-
-    void ResetDamage()
-    {
-        total = 0;
-        for (auto& entry : damage) {
-            entry.Reset();
+            // size_t maxhp = it->second;
+            ldmg = std::lround(-packet->value * it->second);
         }
     }
-    void WriteOwnDamage() {
-        uint32_t my_index = 0;
-        const auto entry = GetDamageByAgentId(GW::Agents::GetPlayerId(), &my_index);
-        if(entry)
-            WriteDamageOf(my_index);
+
+    const uint32_t dmg = static_cast<uint32_t>(ldmg);
+
+    if (entry->damage == 0) {
+        entry->agent_id = packet->cause_id;
+        entry->primary = static_cast<GW::Constants::Profession>(cause->primary);
+        entry->secondary = static_cast<GW::Constants::Profession>(cause->secondary);
     }
 
-    void CHAT_CMD_FUNC(CmdDamage)
-    {
-        if (argc <= 1) {
+    entry->damage += dmg;
+    total += dmg;
+
+    entry->recent_damage += dmg;
+    entry->last_damage = TIMER_INIT();
+}
+
+void PartyDamage::ResetDamage()
+{
+    total = 0;
+    for (auto& entry : damage) {
+        entry.Reset();
+    }
+}
+void PartyDamage::WriteOwnDamage() {
+    uint32_t my_index = 0;
+    const auto entry = GetDamageByAgentId(GW::Agents::GetPlayerId(), &my_index);
+    if (entry)
+        WriteDamageOf(my_index);
+}
+
+void CHAT_CMD_FUNC(PartyDamage::CmdDamage)
+{
+    if (argc <= 1) {
+        WritePartyDamage();
+    }
+    else {
+        const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+        if (arg1 == L"print" || arg1 == L"report") {
             WritePartyDamage();
         }
+        else if (arg1 == L"me") {
+            WriteOwnDamage();
+        }
+        else if (arg1 == L"reset") {
+            ResetDamage();
+        }
         else {
-            const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
-            if (arg1 == L"print" || arg1 == L"report") {
-                WritePartyDamage();
-            }
-            else if (arg1 == L"me") {
-                WriteOwnDamage();
-            }
-            else if (arg1 == L"reset") {
-                ResetDamage();
-            }
-            else {
-                uint32_t idx;
-                if (GuiUtils::ParseUInt(argv[1], &idx)) {
-                    WriteDamageOf(idx - 1);
-                }
+            uint32_t idx;
+            if (GuiUtils::ParseUInt(argv[1], &idx)) {
+                WriteDamageOf(idx - 1);
             }
         }
     }
+}
+
+PartyDamage::PlayerDamage* PartyDamage::GetDamageByAgentId(uint32_t agent_id, uint32_t* party_index_out) {
+    const auto found = party_indeces_by_agent_id.find(agent_id);
+    if (found == party_indeces_by_agent_id.end())
+        return nullptr;
+    const auto party_idx = found->second;
+    if (party_idx >= damage.size())
+        return nullptr;
+    if (party_idx >= pets_start_idx)
+        return nullptr; // Don't log damage for allies or pets
+    if (party_index_out)
+        *party_index_out = party_idx;
+    return &damage[party_idx];
 }
 
 void PartyDamage::Initialize()
@@ -361,10 +325,6 @@ void PartyDamage::Update(const float)
         }
     }
 
-    if (party_index.empty()) {
-        CreatePartyIndexMap();
-    }
-
     // reset recent if needed
     for (auto& entry : damage) {
         if (TIMER_DIFF(entry.last_damage) > recent_max_time) {
@@ -385,10 +345,12 @@ void PartyDamage::Draw(IDirect3DDevice9* )
         return;
     }
 
-    //const float line_height = row_height > 0 && !snap_to_party_window ? row_height : GuiUtils::GetPartyHealthbarHeight();
-    uint32_t size = GW::PartyMgr::GetPartySize();
-    if (size != damage.size()) {
-        CreatePartyIndexMap();
+    // @Cleanup: Only call when the party window has been moved or updated
+    if (!(FetchPartyInfo() && RecalculatePartyPositions())) {
+        return;
+    }
+    if (damage.size() < party_agent_ids_by_index.size()) {
+        damage.resize(party_agent_ids_by_index.size());
     }
 
     uint32_t max_recent = 0;
@@ -403,10 +365,7 @@ void PartyDamage::Draw(IDirect3DDevice9* )
         }
     }
 
-    // @Cleanup: Only call RecalculatePartyPositions() when the party window has been moved or updated
-    RecalculatePartyPositions();
-    if (agent_health_bar_positions.empty())
-        return;
+    
 
     const Color damage_col_from = Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20));
     const Color damage_col_to = Colors::Sub(color_damage, Colors::ARGB(0, 20, 20, 20));
@@ -434,14 +393,17 @@ void PartyDamage::Draw(IDirect3DDevice9* )
 
         const auto text_size = ImGui::CalcTextSize(" ");
 
-        for (auto& [agent_id, health_bar_pos] : agent_health_bar_positions) {
+        for (auto& [agent_id, party_slot] : party_indeces_by_agent_id) {
             uint32_t this_agent_party_index = 0;
             const auto entry = GetDamageByAgentId(agent_id, &this_agent_party_index);
             if (!entry)
                 continue;
+            const auto health_bar_pos = GetAgentHealthBarPosition(agent_id);
+            if (!health_bar_pos)
+                continue;
 
-            const ImVec2 damage_top_left = { damage_x, health_bar_pos.first.y };
-            const ImVec2 damage_bottom_right = { damage_top_left.x + width, health_bar_pos.second.y };
+            const ImVec2 damage_top_left = { damage_x, health_bar_pos->first.y };
+            const ImVec2 damage_bottom_right = { damage_top_left.x + width, health_bar_pos->second.y };
             draw_list->AddRectFilled(damage_top_left, damage_bottom_right, color_background);
 
             const auto x = damage_top_left.x;

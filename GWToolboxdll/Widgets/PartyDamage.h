@@ -1,11 +1,38 @@
 #pragma once
 
+#include <Defines.h>
+
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <Widgets/SnapsToPartyWindow.h>
 
+namespace GW {
+    namespace Packet {
+        namespace StoC {
+            struct MapLoaded;
+        }
+    }
+    struct HookStatus;
+}
+
 class PartyDamage : public SnapsToPartyWindow {
+protected:
+    struct PlayerDamage;
+    static std::vector<PartyDamage::PlayerDamage> damage;
+
+    static void WriteDamageOf(size_t index, uint32_t rank = 0);
+    static void WritePartyDamage();
+    static void WriteOwnDamage();
+    static void ResetDamage();
+
+    static PlayerDamage* GetDamageByAgentId(uint32_t agent_id, uint32_t* party_index_out = nullptr);
+
+    static void CHAT_CMD_FUNC(CmdDamage);
+
+    static void MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::MapLoaded*);
+    static void DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::GenericModifier*);
+
 public:
     static PartyDamage& Instance()
     {

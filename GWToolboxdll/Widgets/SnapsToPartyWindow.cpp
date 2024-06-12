@@ -11,6 +11,8 @@
 #include <GWCA/Managers/AgentMgr.h>
 
 #include "SnapsToPartyWindow.h"
+#include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Context/WorldContext.h>
 
 namespace {
 
@@ -38,6 +40,72 @@ namespace {
 
     
 
+}
+
+std::unordered_map<uint32_t, std::pair<ImVec2, ImVec2>> SnapsToPartyWindow::agent_health_bar_positions;
+std::pair<ImVec2, ImVec2> SnapsToPartyWindow::party_health_bars_position;
+uint32_t SnapsToPartyWindow::henchmen_start_idx = 0xff;
+uint32_t SnapsToPartyWindow::pets_start_idx = 0xff;
+uint32_t SnapsToPartyWindow::allies_start_idx = 0xff;
+std::unordered_map<uint32_t, uint32_t> SnapsToPartyWindow::party_indeces_by_agent_id;
+std::vector<uint32_t> SnapsToPartyWindow::party_agent_ids_by_index;
+std::vector<GuiUtils::EncString*> SnapsToPartyWindow::party_names_by_index;
+
+std::pair<ImVec2, ImVec2>* SnapsToPartyWindow::GetAgentHealthBarPosition(uint32_t agent_id) {
+    if (!(agent_id && agent_health_bar_positions.contains(agent_id)))
+        return nullptr;
+    return &agent_health_bar_positions[agent_id];
+}
+
+bool SnapsToPartyWindow::FetchPartyInfo()
+{
+    const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
+    if (!info) {
+        return false;
+    }
+    party_indeces_by_agent_id.clear();
+    party_agent_ids_by_index.clear();
+
+    auto append_agent = [&](uint32_t agent_id) {
+        if (party_indeces_by_agent_id.contains(agent_id))
+            return;
+        party_indeces_by_agent_id[agent_id] = party_agent_ids_by_index.size();
+        party_agent_ids_by_index.push_back(agent_id);
+        while (party_names_by_index.size() < party_agent_ids_by_index.size()) {
+            party_names_by_index.push_back(new GuiUtils::EncString());
+        }
+        auto str = party_names_by_index[party_agent_ids_by_index.size() - 1];
+        str->reset(GW::Agents::GetAgentEncName(agent_id))
+            ->wstring(); // Trigger decode
+        };
+
+    for (const auto& player : info->players) {
+        append_agent(GW::PlayerMgr::GetPlayerAgentId(player.login_number));
+        for (const auto& hero : info->heroes) {
+            if (hero.owner_player_id == player.login_number) {
+                append_agent(hero.agent_id);
+            }
+        }
+    }
+
+    henchmen_start_idx = party_indeces_by_agent_id.size();
+    for (const auto& hench : info->henchmen) {
+        append_agent(hench.agent_id);
+    }
+
+    pets_start_idx = party_indeces_by_agent_id.size();
+    const auto w = GW::GetWorldContext();
+    if (w) {
+        for (const auto& pet : w->pets) {
+            append_agent(pet.agent_id);
+        }
+    }
+
+    allies_start_idx = party_indeces_by_agent_id.size();
+    for (const auto& other_agent_id : info->others) {
+        append_agent(other_agent_id);
+    }
+    return true;
 }
 
 void SnapsToPartyWindow::Initialize()
@@ -107,20 +175,22 @@ bool SnapsToPartyWindow::RecalculatePartyPositions() {
     party_health_bars_position.first.x -= diff;
     party_health_bars_position.second.x += diff;
 
+    GW::UI::Frame* agent_health_bar = nullptr;
+
     for (auto& player : party->players) {
         const auto player_container = GW::UI::GetChildFrame(player_health_bars, player.login_number);
-        const auto player_health_bar = GW::UI::GetChildFrame(player_container, 0);
-        if (!player_health_bar)
+        agent_health_bar = GW::UI::GetChildFrame(player_container, 0);
+        if (!agent_health_bar)
             return false;
         const auto player_agent = GW::Agents::GetPlayerByID(player.login_number);
         if (!player_agent)
             return false;
-        GetFramePosition(player_health_bar, relative_to, &top_left, &bottom_right);
+        GetFramePosition(agent_health_bar, relative_to, &top_left, &bottom_right);
         agent_health_bar_positions[player_agent->agent_id] = { top_left, bottom_right };
         for (auto& hero : party->heroes) {
             if (hero.owner_player_id != player.login_number)
                 continue;
-            const auto agent_health_bar = GW::UI::GetChildFrame(player_container, 4 + hero.agent_id);
+            agent_health_bar = GW::UI::GetChildFrame(player_container, 4 + hero.agent_id);
             if (!agent_health_bar)
                 continue;
             GetFramePosition(agent_health_bar, relative_to, &top_left, &bottom_right);
@@ -131,17 +201,18 @@ bool SnapsToPartyWindow::RecalculatePartyPositions() {
     for (auto& henchman : party->henchmen) {
         if (!henchmen_health_bars)
             return false;
-        const auto agent_health_bar = GW::UI::GetChildFrame(henchmen_health_bars, henchman.agent_id);
+        agent_health_bar = GW::UI::GetChildFrame(henchmen_health_bars, henchman.agent_id);
         if (!agent_health_bar)
             continue;
         GetFramePosition(agent_health_bar, relative_to, &top_left, &bottom_right);
         agent_health_bar_positions[henchman.agent_id] = { top_left, bottom_right };
     }
-    const auto other_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 2); // Find matching agent frames frames by agent_id
+    const auto pet_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 3); // Find matching agent frames frames by agent_id
+    const auto allies_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 4); // Find matching agent frames frames by agent_id
     for (auto& agent_id : party->others) {
-        if (!henchmen_health_bars)
-            return false;
-        const auto agent_health_bar = GW::UI::GetChildFrame(other_health_bars, agent_id);
+        agent_health_bar = GW::UI::GetChildFrame(pet_health_bars, agent_id);
+        if(!agent_health_bar)
+            agent_health_bar = GW::UI::GetChildFrame(allies_health_bars, agent_id);
         if (!agent_health_bar)
             continue;
         GetFramePosition(agent_health_bar, relative_to, &top_left, &bottom_right);

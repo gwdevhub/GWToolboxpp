@@ -10,6 +10,9 @@
 #include <Widgets/SnapsToPartyWindow.h>
 
 class SkillMonitorWidget : public SnapsToPartyWindow {
+protected:
+    static void OnStoCPacket(GW::HookStatus* status, GW::Packet::StoC::PacketBase* base);
+    static void SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t value);
 public:
     static SkillMonitorWidget& Instance()
     {
