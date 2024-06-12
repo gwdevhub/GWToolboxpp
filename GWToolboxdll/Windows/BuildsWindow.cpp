@@ -552,44 +552,7 @@ bool BuildsWindow::GetCurrentSkillBar(char* out, const size_t out_len)
     if (!(out && out_len)) {
         return false;
     }
-    GW::SkillbarMgr::SkillTemplate templ;
-    const GW::AgentLiving* agent = GW::Agents::GetPlayerAsAgentLiving();
-    GW::Player* player = agent ? GW::PlayerMgr::GetPlayerByID(agent->player_number) : nullptr;
-    const GW::Skillbar* player_skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
-    if (!(player && player_skillbar)) {
-        return false;
-    }
-    templ.primary = static_cast<GW::Constants::Profession>(player->primary);
-    templ.secondary = static_cast<GW::Constants::Profession>(player->secondary);
-    GW::PartyAttributeArray& party_attributes = GW::GetGameContext()->world->attributes;
-    size_t attribute_idx = 0;
-    for (const GW::PartyAttribute& agent_attributes : party_attributes) {
-        if (agent_attributes.agent_id != agent->agent_id) {
-            continue;
-        }
-        for (size_t attribute_id = 0; attribute_id < _countof(agent_attributes.attribute); attribute_id++) {
-            if (static_cast<GW::Constants::Attribute>(attribute_id) > GW::Constants::Attribute::Mysticism) {
-                continue;
-            }
-            const GW::Attribute& attribute = agent_attributes.attribute[attribute_id];
-            if (!attribute.level_base) {
-                continue;
-            }
-            ASSERT(attribute_idx < _countof(templ.attributes));
-            templ.attributes[attribute_idx].attribute = static_cast<GW::Constants::Attribute>(attribute_id);
-            templ.attributes[attribute_idx].points = attribute.level_base;
-            attribute_idx++;
-        }
-    }
-    for (attribute_idx; attribute_idx < _countof(templ.attributes); attribute_idx++) {
-        templ.attributes[attribute_idx].attribute = GW::Constants::Attribute::None;
-        templ.attributes[attribute_idx].points = 0;
-    }
-    for (size_t i = 0; i < _countof(templ.skills); i++) {
-        // Ensure skill encoded is the pve version
-        auto* skill = GW::SkillbarMgr::GetSkillConstantData(player_skillbar->skills[i].skill_id);
-        templ.skills[i] = skill->IsPvP() ? skill->skill_id_pvp : skill->skill_id;
-    }
+    auto templ = GW::SkillbarMgr::GetSkillTemplate();
     return EncodeSkillTemplate(templ, out, out_len) && DecodeSkillTemplate(&templ, out);
 }
 

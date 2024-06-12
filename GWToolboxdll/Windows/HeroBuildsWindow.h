@@ -18,6 +18,7 @@ class HeroBuildsWindow : public ToolboxWindow {
     // 0 for 'no hero',
     // and 1+ for heroes, order is in HeroIndexToID array
     struct HeroBuild {
+        HeroBuild() = default;
         HeroBuild(const char* n, const char* c, const int index = -1, const int panel = 0, const uint32_t _behavior = 1)
             : hero_index(index)
             , behavior(_behavior)
@@ -29,7 +30,7 @@ class HeroBuildsWindow : public ToolboxWindow {
 
         char name[BUFFER_SIZE]{};
         char code[BUFFER_SIZE]{};
-        int hero_index;
+        int hero_index{};
         uint32_t behavior = 1;
         bool show_panel = false;
     };
@@ -46,7 +47,7 @@ class HeroBuildsWindow : public ToolboxWindow {
         bool edit_open = false;
         int mode = 0; // 0=don't change, 1=normal mode, 2=hard mode
         char name[BUFFER_SIZE]{};
-        std::vector<HeroBuild> builds{};
+        std::array<HeroBuild, 8> builds{};
         unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
     };
 

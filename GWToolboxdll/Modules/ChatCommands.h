@@ -85,7 +85,7 @@ private:
     static void CHAT_CMD_FUNC(CmdCamera);
     static void CHAT_CMD_FUNC(CmdSCWiki);
     static void CHAT_CMD_FUNC(CmdLoad);
-    static void CHAT_CMD_FUNC(CmdPing);
+    static void CHAT_CMD_FUNC(CmdPingBuild);
     static void CHAT_CMD_FUNC(CmdTransmo);
     static void CHAT_CMD_FUNC(CmdResize);
     static void CHAT_CMD_FUNC(CmdPingEquipment);

@@ -1088,7 +1088,7 @@ void ChatCommands::Initialize()
         {L"useskill", CmdUseSkill},
         {L"scwiki", CmdSCWiki},
         {L"load", CmdLoad},
-        {L"ping", CmdPing},
+        {L"pingbuild", CmdPingBuild},
         {L"quest", CmdPingQuest},
         {L"transmo", CmdTransmo},
         {L"transmotarget", CmdTransmoTarget},
@@ -2258,7 +2258,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdLoad)
     }
 }
 
-void CHAT_CMD_FUNC(ChatCommands::CmdPing)
+void CHAT_CMD_FUNC(ChatCommands::CmdPingBuild)
 {
     // We will & should move that to GWCA.
     static int (__cdecl *GetPersonalDir)(size_t size, wchar_t* dir) = nullptr;

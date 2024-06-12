@@ -20,10 +20,10 @@ protected:
     static bool FetchPartyInfo();
     static std::pair<ImVec2, ImVec2>* GetAgentHealthBarPosition(uint32_t agent_id);
 public:
-    virtual void Initialize() override;
-    virtual void Terminate() override;
+    void Initialize() override;
+    void Terminate() override;
 
     ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, bool noinput_if_frozen = true) const override;
 
-    virtual void Draw(IDirect3DDevice9* device) override;
+    void Draw(IDirect3DDevice9* device) override;
 };

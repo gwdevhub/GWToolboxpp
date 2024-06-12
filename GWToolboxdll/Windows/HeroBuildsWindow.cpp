@@ -24,6 +24,7 @@
 #include <Windows/HeroBuildsWindow.h>
 
 #include "GWToolbox.h"
+#include "GWCA/GameEntities/Skill.h"
 
 constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 
@@ -210,10 +211,19 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             }
             if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 auto tb = TeamHeroBuild("");
-                tb.builds.reserve(8); // at this point why don't we use a static array ??
-                tb.builds.push_back(HeroBuild("", "", -2));
-                for (auto i = 0; i < 7; i++) {
-                    tb.builds.push_back(HeroBuild("", ""));
+                for (auto i = 0; i < 8; i++) {
+                    tb.builds[i] = HeroBuild("", "", i == 0 ? -2 : 0);
+                }
+                builds_changed = true;
+                teambuilds.push_back(tb);
+            }
+            if (ImGui::Button("Add Teambuild from current", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+                auto tb = TeamHeroBuild("");
+                for (auto i = 0; i < 8; i++) {
+                    const auto skill_template = GW::SkillbarMgr::GetSkillTemplate(i);
+                    char buf[BUFFER_SIZE];
+                    GW::SkillbarMgr::EncodeSkillTemplate(skill_template, buf, BUFFER_SIZE);
+                    tb.builds[i] = HeroBuild("", skill_template.primary != GW::Constants::Profession::None ? buf : "", i == 0 ? -2 : 0);
                 }
 
                 builds_changed = true;
@@ -743,10 +753,9 @@ void HeroBuildsWindow::LoadFromFile()
 
         TeamHeroBuild tb(inifile->GetValue(section, "buildname", ""));
         tb.mode = inifile->GetLongValue(section, "mode", false);
-        tb.builds.reserve(8);
 
-        constexpr size_t buffer_size = 16;
         for (auto i = 0; i < 8; i++) {
+            constexpr size_t buffer_size = 16;
             char namekey[buffer_size];
             char templatekey[buffer_size];
             char heroindexkey[buffer_size];
@@ -765,8 +774,8 @@ void HeroBuildsWindow::LoadFromFile()
             }
             const auto show_panel = inifile->GetLongValue(section, showpanelkey, 0);
             const uint32_t behavior = static_cast<uint32_t>(inifile->GetLongValue(section, behaviorkey, 1));
-            HeroBuild build(nameval, templateval, hero_index, show_panel == 1 ? 1 : 0, behavior);
-            tb.builds.push_back(build);
+            const HeroBuild build(nameval, templateval, hero_index, show_panel == 1 ? 1 : 0, behavior);
+            tb.builds[i] = build;
         }
 
         // Check the binary to see if we should instead take the ptr to read everything to avoid the copy
