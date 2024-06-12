@@ -701,6 +701,9 @@ namespace {
         else {
             return; // Loading
         }
+        const auto tooltip = GW::UI::GetCurrentTooltip();
+        if (!tooltip)
+            return;
         // Trigger re-render of item tooltip
         const auto hovered_item = GW::Items::GetHoveredItem();
         if (!hovered_item) {
@@ -730,10 +733,10 @@ namespace {
         }
         GW::GameThread::Enqueue([items = items_triggered] {
             if (items[0]) {
-                SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items[0]);
+                GW::UI::SendFrameUIMessage(GW::UI::GetChildFrame(GW::UI::GetRootFrame(), 0xffffffff), GW::UI::UIMessage::kItemUpdated, &items[0]);
             }
             if (items[1]) {
-                SendUIMessage(GW::UI::UIMessage::kItemUpdated, &items[1]);
+                GW::UI::SendFrameUIMessage(GW::UI::GetChildFrame(GW::UI::GetRootFrame(), 0xffffffff), GW::UI::UIMessage::kItemUpdated, &items[0]);
             }
         });
     }
@@ -765,7 +768,7 @@ namespace {
         }
         if (GW::SkillbarMgr::GetHoveredSkill()) {
             GW::GameThread::Enqueue([skill] {
-                SendUIMessage(GW::UI::UIMessage::kTitleProgressUpdated, (void*)skill->title);
+                GW::UI::SendFrameUIMessage(GW::UI::GetChildFrame(GW::UI::GetRootFrame(), 0xffffffff), GW::UI::UIMessage::kTitleProgressUpdated, (void*)skill->title);
             });
         }
     }
@@ -1652,6 +1655,15 @@ void GameSettings::RegisterSettingsContent()
         [this](const std::string&, const bool is_showing) {
             if (is_showing) {
                 DrawNotificationsSettings();
+            }
+        },
+        0.9f);
+
+    ToolboxModule::RegisterSettingsContent(
+        "Inventory Settings", ICON_FA_BOXES,
+        [this](const std::string&, const bool is_showing) {
+            if (is_showing) {
+                DrawInventorySettings();
             }
         },
         0.9f);
