@@ -89,6 +89,8 @@ namespace {
     uint32_t* GameCursorState = nullptr;
     CaptureMouseClickType* CaptureMouseClickTypePtr = nullptr;
 
+    GW::UI::Frame* compass_frame = nullptr;
+
     FlaggingState GetFlaggingState()
     {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
@@ -172,8 +174,6 @@ namespace {
         }
         return gamectx->party->player_party;
     }
-
-    GW::UI::WindowPosition* compass_frame = nullptr;
 
     using DrawCompassAgentsByType_pt = uint32_t(__fastcall*)(void* ecx, void* edx, uint32_t param_1, uint32_t param_2, uint32_t flags);
     DrawCompassAgentsByType_pt DrawCompassAgentsByType_Func = nullptr;
@@ -839,55 +839,41 @@ void Minimap::Draw(IDirect3DDevice9*)
     auto win_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus;
     if (snap_to_compass) {
         win_flags |= ImGuiWindowFlags_NoInputs;
+        // @Cleanup: Don't do this every frame, only when compass is relocated.
+        compass_frame = GW::UI::GetFrameByLabel(L"Compass");
+        if (compass_frame) {
+            const float compass_padding = 1.05f;
+            auto top_left = compass_frame->position.GetTopLeftOnScreen(compass_frame);
+            auto bottom_right = compass_frame->position.GetBottomRightOnScreen(compass_frame);
+
+            const auto height = (bottom_right.y - top_left.y);
+            const auto diff = height - (height / compass_padding);
+
+            top_left.y += diff;
+            top_left.x += diff;
+            bottom_right.y -= diff;
+            bottom_right.x -= diff;
+
+            location = { static_cast<int>(top_left.x),static_cast<int>(top_left.y) };
+
+            const ImVec2 sz = { bottom_right.x - top_left.x, bottom_right.y - top_left.y };
+            size = { static_cast<int>(sz.x),static_cast<int>(sz.y) };
+
+            ImGui::SetWindowPos({ static_cast<float>(location.x), static_cast<float>(location.y) });
+            ImGui::SetWindowSize({ static_cast<float>(size.x), static_cast<float>(size.y) });
+
+        }
     }
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(win_flags, true) )) {
         // window pos are already rounded by imgui, so casting is no big deal
-        if (!snap_to_compass) {
-            location.x = static_cast<int>(ImGui::GetWindowPos().x);
-            location.y = static_cast<int>(ImGui::GetWindowPos().y);
-            size.x = static_cast<int>(ImGui::GetWindowSize().x);
-            size.y = static_cast<int>(ImGui::GetWindowSize().y);
-        }
-        else {
-            // @Cleanup: Don't do this every frame, only when compass is relocated.
-            if (!compass_frame) {
-                compass_frame = GetWindowPosition(GW::UI::WindowID::WindowID_Compass);
-            }
-            else {
-                const float multiplier = GuiUtils::GetGWScaleMultiplier();
-                float compass_width = compass_frame->width(multiplier);
-                float compass_height = compass_frame->height(multiplier);
-                float compass_padding = compass_width * .05f;
-                location = {static_cast<int>(compass_frame->left(multiplier) + compass_padding), static_cast<int>(compass_frame->top(multiplier) + compass_padding)};
-                size = {static_cast<int>(compass_width - compass_padding * 2.f), static_cast<int>(compass_height - compass_padding * 2.f)};
-
-                if (compass_width == 0 && location.x == 0 && location.y == 0) {
-                    // In "Restore Defaults" state - replace with sane default values
-                    // Default values for a multiplier of 1.0f
-                    constexpr int DEFAULT_WIDTH = 245;
-                    constexpr int DEFAULT_HEIGHT = 269;
-
-                    compass_width = std::roundf(DEFAULT_WIDTH * multiplier);
-                    compass_height = std::roundf(DEFAULT_HEIGHT * multiplier);
-                    compass_padding = compass_width * .05f;
-
-                    const auto windowWidth = static_cast<float>(GetPreference(GW::UI::NumberPreference::WindowSizeX));
-                    location.x = static_cast<int>(windowWidth - compass_width + compass_padding);
-                    location.y = static_cast<int>(compass_padding);
-                    size.x = static_cast<int>(compass_width - compass_padding * 2.0f);
-                    size.y = static_cast<int>(compass_height - compass_padding * 2.0f);
-                }
-
-                ImGui::SetWindowPos({static_cast<float>(location.x), static_cast<float>(location.y)});
-                ImGui::SetWindowSize({static_cast<float>(size.x), static_cast<float>(size.y)});
-            }
-        }
+        const auto pos = ImGui::GetWindowPos();
+        const auto sz = ImGui::GetWindowSize();
 
         clipping = {
-            static_cast<LONG>(ImGui::GetWindowPos().x),
-            static_cast<LONG>(ImGui::GetWindowPos().y),
-            static_cast<LONG>(std::ceil(ImGui::GetWindowPos().x + ImGui::GetWindowSize().x)),
-            static_cast<LONG>(std::ceil(ImGui::GetWindowPos().y + ImGui::GetWindowSize().y)),
+            static_cast<LONG>(location.x),
+            static_cast<LONG>(location.y),
+            static_cast<LONG>(std::ceil(location.x + size.x)),
+            static_cast<LONG>(std::ceil(location.y + size.y)),
         };
     }
     ImGui::End();
@@ -1491,12 +1477,9 @@ bool Minimap::IsInside(const int x, const int y) const
 bool Minimap::IsActive() const
 {
     if (snap_to_compass) {
-        if (!compass_frame) {
-            compass_frame = GetWindowPosition(GW::UI::WindowID::WindowID_Compass);
-        }
-        if (compass_frame && !compass_frame->visible()) {
+        compass_frame = GW::UI::GetFrameByLabel(L"Compass");
+        if (!(compass_frame && compass_frame->IsVisible()))
             return false;
-        }
     }
 
     return visible
