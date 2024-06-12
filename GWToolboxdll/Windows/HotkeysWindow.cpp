@@ -669,6 +669,7 @@ void HotkeysWindow::Update(const float)
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
         if (map_change_triggered) {
             map_change_triggered = false;
+            while (PopPendingHotkey()) {} // Clear any pending hotkeys from the last map
         }
         return;
     }
