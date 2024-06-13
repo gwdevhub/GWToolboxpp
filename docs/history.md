@@ -7,6 +7,32 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 6.19
+* [Minor] Added warning message when rerolling to a character that is currently in a map that toolbox won't work in e.g. guild hall
+* [Minor] `/tb load` now dynamically enables/disables modules when run
+* [Minor] Fixed some layout errors when Party damage widget is snapped to the in-game UI.
+* [Minor] Fixed some layout errors when Skill monitor widget is snapped to the in-game UI.
+* [Minor] Fixed some layout errors when Bond monitor damage is snapped to the in-game UI.
+* [Minor] Fixed some layout errors when Effect monitor is snapped to the in-game UI.
+* [Minor] Force Party damage/skill/bond/effect monitor snapped to in-game UI.
+* [Minor] Added option to turn the whisper redirect feature of the friend list window module off.
+* [Minor] Added missing deldrimor paragon armor to armory module
+* [Minor] Added option to exclude nicholas items from bulk salvage
+* [Minor] Updated `/deposit` command to allow more options; see chat commands section in help.
+* [New] Added nicholas info when hovering an applicable item
+* [New] Added option to bypass item quantity selection when dropping/moving/trading items (hold shift to prompt when enabled)
+* [New] Added ability to create a Hero build template from current setup via the Hero build window
+* [New] Added `/call` command to ping current target
+* [Fix] Fixed toolbox not loading up on first run due to missing fonts
+* [Fix] Fixed hotkeys being triggered by typing keys before map change
+* [Fix] Fixed crash caused by triggering hotkeys just before map change
+* [Fix] Fixed bugs related to the whisper redirect feature of the friend list window module.
+* [Fix] Fixed bug causing layout errors for snapped UI widgets when screen is small.
+* [Fix] Fixed spammy errors caused by issues fetching salvage info for hovered items
+* [Fix] Fixed crash caused by spectating heroes when you're dead
+* [Fix] Fixed bug causing items offered in trade to be removed when hovering
+* [Fix] Fixed crash when trading with "hide item descriptions" enabled
+
 ## Version 6.18
 * [Removed] Toolbox no longer works in Guild Halls. This is intentional.
 * [New] Salvage information module added
