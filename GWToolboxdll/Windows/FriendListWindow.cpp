@@ -258,15 +258,14 @@ namespace {
         if (lf->IsOffline()) {
             // If they're still not online, then show the "Player is not online" error
             ASSERT(WriteError(MessageType::PLAYER_X_NOT_ONLINE, pending_whisper.charname.c_str()));
-            pending_whisper.reset();
-            return;
         }
-
-        // If they're online, send the original message...
-        ASSERT(lf->current_char);
-        is_redirecting_whisper = true;
-        GW::Chat::SendChat(lf->current_char->getNameW().c_str(), pending_whisper.message.c_str());
-        is_redirecting_whisper = false;
+        else {
+            // If they're online, send the original message...
+            ASSERT(lf->current_char);
+            is_redirecting_whisper = true;
+            GW::Chat::SendChat(lf->current_char->getNameW().c_str(), pending_whisper.message.c_str());
+            is_redirecting_whisper = false;
+        }
         pending_whisper.reset();
 
         // ... then remove from GW.
