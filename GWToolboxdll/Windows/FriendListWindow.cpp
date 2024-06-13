@@ -127,6 +127,7 @@ namespace {
     Color hover_background_color = 0x33999999;
     bool friend_name_tag_enabled = false;
     Color friend_name_tag_color = 0xff6060ff;
+    bool add_offline_players_to_friends = true;
 
     clock_t friends_list_checked = 0;
 
@@ -300,6 +301,9 @@ namespace {
                 pending_whisper.reset();
                 status->blocked = true;
             }
+            return;
+        }
+        if (!add_offline_players_to_friends) {
             return;
         }
         if (pending_whisper.pending_add && player_name == pending_whisper.charname) {
@@ -1233,6 +1237,11 @@ void FriendListWindow::DrawSettingsInternal()
     ImGui::SameLine();
     ImGui::Text("while loading");
 
+    ImGui::Checkbox("Temporarily add offline players you whisper as friends", &add_offline_players_to_friends);
+    ImGui::ShowHelp("When you whisper someone and they are offline, toolbox will attempt to add these players to your friendlist"
+        " to figure out if they are online on another character.\nIf they are, toolbox will redirect your whisper to that character instead.\n"
+        "Afterwards, the player will be removed from your friendlist.");
+
     Colors::DrawSettingHueWheel("Widget background hover color", &hover_background_color);
     ImGui::Checkbox("Show my status", &show_my_status);
     ImGui::ShowHelp("e.g. 'You are: Online'");
@@ -1296,6 +1305,7 @@ void FriendListWindow::LoadSettings(ToolboxIni* ini)
     LOAD_UINT(loading_show_as);
     LOAD_UINT(explorable_show_as);
     LOAD_BOOL(show_my_status);
+    LOAD_BOOL(add_offline_players_to_friends);
 
     LOAD_COLOR(hover_background_color);
     LOAD_BOOL(friend_name_tag_enabled);
@@ -1315,6 +1325,7 @@ void FriendListWindow::SaveSettings(ToolboxIni* ini)
     SAVE_UINT(loading_show_as);
     SAVE_UINT(explorable_show_as);
     SAVE_BOOL(show_my_status);
+    SAVE_BOOL(add_offline_players_to_friends);
 
     SAVE_COLOR(hover_background_color);
     SAVE_BOOL(friend_name_tag_enabled);

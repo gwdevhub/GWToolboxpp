@@ -1,8 +1,6 @@
 #pragma once
 
-#include <GWCA/Utilities/Hook.h>
 #include <GWCA/Packets/StoC.h>
-
 #include <GWCA/GameEntities/Friendslist.h>
 
 #include <Utils/GuiUtils.h>
