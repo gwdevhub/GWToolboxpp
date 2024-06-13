@@ -776,19 +776,21 @@ namespace GWArmory {
 
 #ifdef _DEBUG
         static Armor debug_piece("Debug Piece", 0, Profession::None, ItemType::Unknown, Campaign::Core, 0, 0);
-        constexpr static std::array profession_names = {
-            "None", "Warrior", "Ranger", "Monk", "Necromancer", "Mesmer", "Elementalist", "Assassin", "Ritualist", "Paragon", "Dervish"
-        };
-        constexpr static std::array campaign_names = {
-            "Core", "Prophecies", "Factions", "Nightfall", "Eye of the North", "BonusMissionPack"
-        };
-        if (slot == Headpiece) {
-            ImGui::InputInt("debug_model_file_id", (int*)&debug_piece.model_file_id);
-            ImGui::Combo("debug_profession", (int*)&debug_piece.profession, profession_names.data(), profession_names.size());
-            ImGui::InputInt("debug_type", (int*)&debug_piece.type);
-            ImGui::Combo("debug_campaign", (int*)&debug_piece.campaign, campaign_names.data(), campaign_names.size());
-            ImGui::InputInt("debug_dye_tint", (int*)&debug_piece.dye_tint);
-            ImGui::InputInt("debug_interaction", (int*)&debug_piece.interaction);
+        if (ImGui::CollapsingHeader("Debug Item")) {
+            constexpr static std::array profession_names = {
+                "None", "Warrior", "Ranger", "Monk", "Necromancer", "Mesmer", "Elementalist", "Assassin", "Ritualist", "Paragon", "Dervish"
+            };
+            constexpr static std::array campaign_names = {
+                "Core", "Prophecies", "Factions", "Nightfall", "Eye of the North", "BonusMissionPack"
+            };
+            if (slot == Headpiece) {
+                ImGui::InputInt("model_file_id", (int*)&debug_piece.model_file_id);
+                ImGui::Combo("profession", (int*)&debug_piece.profession, profession_names.data(), profession_names.size());
+                ImGui::InputInt("type", (int*)&debug_piece.type);
+                ImGui::Combo("campaign", (int*)&debug_piece.campaign, campaign_names.data(), campaign_names.size());
+                ImGui::InputInt("dye_tint", (int*)&debug_piece.dye_tint);
+                ImGui::InputInt("interaction", (int*)&debug_piece.interaction);
+            }
         }
         std::vector<Armor*> pieces{};
         if (slot == Headpiece && debug_piece.profession != Profession::None && debug_piece.interaction && debug_piece.model_file_id && debug_piece.type != ItemType::Unknown) {
