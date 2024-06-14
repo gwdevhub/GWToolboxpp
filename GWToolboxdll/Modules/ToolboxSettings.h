@@ -36,7 +36,7 @@ public:
     void DrawSizeAndPositionSettings() override { }
 
     static inline bool move_all = false;
-    static inline bool clamp_windows_to_screen = true;
+    static inline bool clamp_windows_to_screen = false;
 
 private:
     // === location stuff ===

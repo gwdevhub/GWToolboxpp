@@ -2543,7 +2543,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDeposit)
         Log::Error("Incorrect syntax:");
         Log::Error(deposit_syntax);
     };
-    if (argc != 2) {
+    if (argc < 2) {
         return syntax_error();
     }
 
@@ -2566,6 +2566,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDeposit)
             }
         }
         GW::Items::DepositGold(wanted_quantity);
+        return;
     }
 
     std::vector<uint32_t> model_ids;
