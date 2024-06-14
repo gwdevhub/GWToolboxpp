@@ -61,7 +61,7 @@ bool SnapsToPartyWindow::FetchPartyInfo()
         while (party_names_by_index.size() < party_agent_ids_by_index.size()) {
             party_names_by_index.push_back(new GuiUtils::EncString());
         }
-        auto str = party_names_by_index[party_agent_ids_by_index.size() - 1];
+        const auto str = party_names_by_index[party_agent_ids_by_index.size() - 1];
         str->reset(GW::Agents::GetAgentEncName(agent_id))
             ->wstring(); // Trigger decode
         };
