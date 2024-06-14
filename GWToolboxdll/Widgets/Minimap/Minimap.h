@@ -50,7 +50,7 @@ public:
     void Terminate() override;
 
     void Draw(IDirect3DDevice9* device) override;
-    void RenderSetupProjection(IDirect3DDevice9* device) const;
+    static void RenderSetupProjection(IDirect3DDevice9* device);
 
     bool FlagHeros(LPARAM lParam);
     bool OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam);
@@ -91,11 +91,7 @@ private:
     // returns true if the map is visible, valid, not loading, etc
     [[nodiscard]] bool IsActive() const;
 
-
     static void SelectTarget(GW::Vec2f pos);
-
-
-
     static size_t GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);
 
     GW::HookEntry AgentPinged_Entry;
