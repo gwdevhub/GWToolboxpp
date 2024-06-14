@@ -190,6 +190,7 @@ void AgentRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
     color_neutral = Colors::Load(ini, section, VAR_NAME(color_neutral), color_neutral);
     color_ally = Colors::Load(ini, section, VAR_NAME(color_ally), color_ally);
     color_ally_npc = Colors::Load(ini, section, VAR_NAME(color_ally_npc), color_ally_npc);
+    color_ally_npc_quest = Colors::Load(ini, section, VAR_NAME(color_ally_npc_quest), color_ally_npc_quest);
     color_ally_spirit = Colors::Load(ini, section, VAR_NAME(color_ally_spirit), color_ally_spirit);
     color_ally_minion = Colors::Load(ini, section, VAR_NAME(color_ally_minion), color_ally_minion);
     color_ally_dead = Colors::Load(ini, section, VAR_NAME(color_ally_dead), color_ally_dead);
@@ -263,6 +264,7 @@ void AgentRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
     Colors::Save(ini, section, VAR_NAME(color_neutral), color_neutral);
     Colors::Save(ini, section, VAR_NAME(color_ally), color_ally);
     Colors::Save(ini, section, VAR_NAME(color_ally_npc), color_ally_npc);
+    Colors::Save(ini, section, VAR_NAME(color_ally_npc_quest), color_ally_npc_quest);
     Colors::Save(ini, section, VAR_NAME(color_ally_spirit), color_ally_spirit);
     Colors::Save(ini, section, VAR_NAME(color_ally_minion), color_ally_minion);
     Colors::Save(ini, section, VAR_NAME(color_ally_dead), color_ally_dead);
@@ -330,6 +332,7 @@ void AgentRenderer::LoadDefaultColors()
     color_neutral = 0xFF0000DC;
     color_ally = 0xFF00B300;
     color_ally_npc = 0xFF99FF99;
+    color_ally_npc_quest = 0x33E100FF;
     color_ally_spirit = 0xFF608000;
     color_ally_minion = 0xFF008060;
     color_ally_dead = 0x64006400;
@@ -362,6 +365,7 @@ void AgentRenderer::DrawSettings()
         Colors::DrawSettingHueWheel("Neutral", &color_neutral);
         Colors::DrawSettingHueWheel("Ally (player)", &color_ally);
         Colors::DrawSettingHueWheel("Ally (NPC)", &color_ally_npc);
+        Colors::DrawSettingHueWheel("Ally (NPC Quest Giver)", &color_ally_npc_quest);
         Colors::DrawSettingHueWheel("Ally (spirit)", &color_ally_spirit);
         Colors::DrawSettingHueWheel("Ally (minion)", &color_ally_minion);
         Colors::DrawSettingHueWheel("Ally (dead)", &color_ally_dead);
@@ -1015,6 +1019,9 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
     // friendly
     if (living->GetIsDead()) {
         return color_ally_dead;
+    }
+    if (living->GetHasQuest()) {
+        return color_ally_npc_quest;
     }
     switch (living->allegiance) {
         case GW::Constants::Allegiance::Ally_NonAttackable:
