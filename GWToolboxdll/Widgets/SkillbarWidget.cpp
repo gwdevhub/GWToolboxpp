@@ -10,6 +10,8 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
+#include <GWCA/Utilities/Hooker.h>
+
 #include <Defines.h>
 #include "SkillbarWidget.h"
 
@@ -33,8 +35,44 @@ namespace {
     float m_skill_width = 50.f;
     float m_skill_height = 50.f;
 
+    GW::UI::Frame* skillbar_frame = nullptr;
+    bool skillbar_position_dirty = true;
+    GW::UI::UIInteractionCallback OnSkillbar_UICallback_Ret = nullptr;
+    void __cdecl OnSkillbar_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+        GW::Hook::EnterHook();
+        OnSkillbar_UICallback_Ret(message, wParam, lParam);
+        switch (static_cast<uint32_t>(message->message_id)) {
+        case 0xb:
+            skillbar_frame = nullptr;
+            skillbar_position_dirty = true;
+            break;
+        case 0x13:
+        case 0x30:
+        case 0x33:
+            skillbar_position_dirty = true; // Forces a recalculation
+            break;
+        }
+        GW::Hook::LeaveHook();
+    }
+
+    GW::UI::Frame* GetSkillbarFrame() {
+        if (skillbar_frame)
+            return skillbar_frame;
+        skillbar_frame = GW::UI::GetFrameByLabel(L"Skillbar");
+        if (skillbar_frame) {
+            ASSERT(skillbar_frame->frame_callbacks.size());
+            if (skillbar_frame->frame_callbacks[0] != OnSkillbar_UICallback) {
+                OnSkillbar_UICallback_Ret = skillbar_frame->frame_callbacks[0];
+                skillbar_frame->frame_callbacks[0] = OnSkillbar_UICallback;
+            }
+        }
+        return skillbar_frame;
+    }
+
     bool GetSkillbarPos() {
-        const auto frame = GW::UI::GetFrameByLabel(L"Skillbar");
+        if (!skillbar_position_dirty)
+            return true;
+        const auto frame = GetSkillbarFrame();
         if (!(frame && frame->IsVisible() && frame->IsCreated())) {
             return false;
         }
@@ -65,6 +103,7 @@ namespace {
         else {
             layout = Layout::Columns;
         }
+        skillbar_position_dirty = false;
         return true;
     }
     GW::HookEntry OnUIMessage_HookEntry;
@@ -531,6 +570,10 @@ void SkillbarWidget::Terminate()
 {
     ToolboxWidget::Terminate();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
+
+    if (skillbar_frame && skillbar_frame->frame_callbacks[0] == OnSkillbar_UICallback) {
+        skillbar_frame->frame_callbacks[0] = OnSkillbar_UICallback_Ret;
+    }
 }
 
 Color SkillbarWidget::UptimeToColor(const uint32_t uptime) const
