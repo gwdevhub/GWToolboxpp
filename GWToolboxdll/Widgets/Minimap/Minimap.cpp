@@ -869,6 +869,13 @@ void Minimap::Draw(IDirect3DDevice9*)
         const auto pos = ImGui::GetWindowPos();
         const auto sz = ImGui::GetWindowSize();
 
+        if (!snap_to_compass) {
+            location.x = static_cast<int>(pos.x);
+            location.y = static_cast<int>(pos.y);
+            size.x = static_cast<int>(sz.x);
+            size.y = static_cast<int>(sz.y);
+        }
+
         clipping = {
             static_cast<LONG>(location.x),
             static_cast<LONG>(location.y),
