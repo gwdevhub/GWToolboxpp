@@ -223,8 +223,7 @@ namespace {
         });
     }
 
-    void PreloadQuestMarkers()
-    {
+    void PreloadQuestMarkers() {
         if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
             GW::GameThread::Enqueue([quest_log] {
                 if (!quest_log || !quest_log->size()) {
@@ -249,8 +248,7 @@ namespace {
                 GW::QuestMgr::SetActiveQuestId(active_quest_id);
             });
         }
-    }
-}
+    }}
 
 void Minimap::DrawHelp()
 {
@@ -374,8 +372,7 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
         case GW::UI::UIMessage::kCompassDraw: {
             if (hide_compass_drawings)
                 status->blocked = true;
-        }
-        break;
+        } break;
         case GW::UI::UIMessage::kMapLoaded: {
             instance.pmap_renderer.Invalidate();
             instance.loading = false;
@@ -845,7 +842,7 @@ void Minimap::Draw(IDirect3DDevice9*)
         // @Cleanup: Don't do this every frame, only when compass is relocated.
         compass_frame = GW::UI::GetFrameByLabel(L"Compass");
         if (compass_frame) {
-            constexpr float compass_padding = 1.05f;
+            const float compass_padding = 1.05f;
             auto top_left = compass_frame->position.GetTopLeftOnScreen(compass_frame);
             auto bottom_right = compass_frame->position.GetBottomRightOnScreen(compass_frame);
 
@@ -857,16 +854,17 @@ void Minimap::Draw(IDirect3DDevice9*)
             bottom_right.y -= diff;
             bottom_right.x -= diff;
 
-            location = {static_cast<int>(top_left.x), static_cast<int>(top_left.y)};
+            location = { static_cast<int>(top_left.x),static_cast<int>(top_left.y) };
 
-            const ImVec2 sz = {bottom_right.x - top_left.x, bottom_right.y - top_left.y};
-            size = {static_cast<int>(sz.x), static_cast<int>(sz.y)};
+            const ImVec2 sz = { bottom_right.x - top_left.x, bottom_right.y - top_left.y };
+            size = { static_cast<int>(sz.x),static_cast<int>(sz.y) };
 
-            ImGui::SetWindowPos({static_cast<float>(location.x), static_cast<float>(location.y)});
-            ImGui::SetWindowSize({static_cast<float>(size.x), static_cast<float>(size.y)});
+            ImGui::SetWindowPos({ static_cast<float>(location.x), static_cast<float>(location.y) });
+            ImGui::SetWindowSize({ static_cast<float>(size.x), static_cast<float>(size.y) });
+
         }
     }
-    if (ImGui::Begin(Name(), nullptr, GetWinFlags(win_flags, true))) {
+    if (ImGui::Begin(Name(), nullptr, GetWinFlags(win_flags, true) )) {
         // window pos are already rounded by imgui, so casting is no big deal
         const auto pos = ImGui::GetWindowPos();
         const auto sz = ImGui::GetWindowSize();
@@ -1487,7 +1485,7 @@ bool Minimap::IsActive() const
 {
     if (snap_to_compass) {
         compass_frame = GW::UI::GetFrameByLabel(L"Compass");
-        if (!compass_frame)
+        if (!(compass_frame && compass_frame->IsVisible()))
             return false;
     }
 
