@@ -14,6 +14,8 @@
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Context/WorldContext.h>
 
+#include <GWCA/Utilities/Hooker.h>
+
 namespace {
 
     bool GetFramePosition(GW::UI::Frame* frame, GW::UI::Frame* relative_to, ImVec2* top_left, ImVec2* bottom_right) {
@@ -26,6 +28,21 @@ namespace {
             *bottom_right = frame->position.GetBottomRightOnScreen(relative_to);
         }
         return true;
+    }
+    GW::UI::Frame* party_window_health_bars = nullptr;
+    GW::UI::UIInteractionCallback OnPartyWindowHealthBars_UICallback_Ret = nullptr;
+    void __cdecl OnPartyWindowHealthBars_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+        GW::Hook::EnterHook();
+        switch (static_cast<uint32_t>(message->message_id)) {
+        case 0xb:
+        case 0x13:
+        case 0x30:
+        case 0x33:
+            party_window_health_bars = nullptr; // Forces a recalculation
+            break;
+        }
+        OnPartyWindowHealthBars_UICallback_Ret(message, wParam, lParam);
+        GW::Hook::LeaveHook();
     }
 }
 
@@ -105,6 +122,9 @@ void SnapsToPartyWindow::Initialize()
 void SnapsToPartyWindow::Terminate()
 {
     ToolboxWidget::Terminate();
+    if (party_window_health_bars && party_window_health_bars->frame_callbacks[0] == OnPartyWindowHealthBars_UICallback) {
+        party_window_health_bars->frame_callbacks[0] = OnPartyWindowHealthBars_UICallback_Ret;
+    }
     // TODO: Detach hooks to trigger recalc of positions when party frame is updated
 }
 
@@ -124,6 +144,8 @@ void SnapsToPartyWindow::Draw(IDirect3DDevice9* device)
 }
 
 bool SnapsToPartyWindow::RecalculatePartyPositions() {
+    if (party_window_health_bars)
+        return true;
     agent_health_bar_positions.clear();
     ImVec2 top_left;
     ImVec2 bottom_right;
@@ -133,7 +155,6 @@ bool SnapsToPartyWindow::RecalculatePartyPositions() {
     if (!(party_frame && party_frame->IsVisible()))
         return false;
 
-    GW::UI::Frame* party_window_health_bars = nullptr;
 
     // Traverse to health bars
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
@@ -148,6 +169,15 @@ bool SnapsToPartyWindow::RecalculatePartyPositions() {
         sub_frame = GW::UI::GetChildFrame(sub_frame, 0);
         party_window_health_bars = GW::UI::GetChildFrame(sub_frame, 0);
     }
+
+    if (!party_window_health_bars)
+        return false;
+    ASSERT(party_window_health_bars->frame_callbacks.size());
+    if (party_window_health_bars->frame_callbacks[0] != OnPartyWindowHealthBars_UICallback) {
+        OnPartyWindowHealthBars_UICallback_Ret = party_window_health_bars->frame_callbacks[0];
+        party_window_health_bars->frame_callbacks[0] = OnPartyWindowHealthBars_UICallback;
+    }
+
 
     const auto player_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 0);
     if (!player_health_bars) // Child frames by player id (includes heroes)
