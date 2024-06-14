@@ -1487,7 +1487,7 @@ bool Minimap::IsActive() const
 {
     if (snap_to_compass) {
         compass_frame = GW::UI::GetFrameByLabel(L"Compass");
-        if (!compass_frame)
+        if (!compass_frame || !compass_frame->IsVisible())
             return false;
     }
 
