@@ -41,7 +41,24 @@
 #include <Modules/Resources.h>
 
 namespace {
-    DirectX::XMFLOAT2 gwinch_scale;
+
+    struct Vec2i {
+        Vec2i(const int _x, const int _y)
+            : x(_x)
+            , y(_y) { }
+
+        Vec2i() = default;
+        int x = 0;
+        int y = 0;
+    };
+
+    enum class MinimapModifierBehaviour : int {
+        Disabled,
+        Draw,
+        Target,
+        Move,
+        Walk
+    };
 
     enum FlaggingState : uint32_t {
         FlagState_All = 0,
@@ -86,10 +103,177 @@ namespace {
         } * sub1;
     }* MouseClickCaptureDataPtr = nullptr;
 
+    float gwinch_scale = 1.f;
     uint32_t* GameCursorState = nullptr;
     CaptureMouseClickType* CaptureMouseClickTypePtr = nullptr;
 
     GW::UI::Frame* compass_frame = nullptr;
+    GW::UI::UIInteractionCallback OnCompassFrame_UICallback_Ret = nullptr;
+    bool compass_position_dirty = true;
+
+    Vec2i location;
+    Vec2i size;
+    bool snap_to_compass = false;
+
+    bool mousedown = false;
+    bool camera_currently_reversed = false;
+
+
+
+    GW::Vec2f shadowstep_location = { 0.f, 0.f };
+    RECT clipping = { 0 };
+
+    Vec2i drag_start;
+    GW::Vec2f translation;
+    float scale = 0.f;
+
+    // vars for minimap movement
+    clock_t last_moved = 0;
+
+    bool loading = false; // only consider some cases but still good
+
+    bool mouse_clickthrough_in_explorable = false;
+    bool mouse_clickthrough_in_outpost = false;
+    bool flip_on_reverse = false;
+    bool rotate_minimap = true;
+    bool smooth_rotation = true;
+    bool circular_map = true;
+    MinimapModifierBehaviour key_none_behavior = MinimapModifierBehaviour::Draw;
+    MinimapModifierBehaviour key_ctrl_behavior = MinimapModifierBehaviour::Target;
+    MinimapModifierBehaviour key_shift_behavior = MinimapModifierBehaviour::Move;
+    MinimapModifierBehaviour key_alt_behavior = MinimapModifierBehaviour::Walk;
+    bool is_observing = false;
+
+    bool hero_flag_controls_show = false;
+    bool hero_flag_window_attach = true;
+    Color hero_flag_controls_background = 0;
+    std::vector<GW::AgentID> player_heroes{};
+
+    GW::Vec2f InterfaceToWorldPoint(const Vec2i& pos)
+    {
+        const GW::Agent* me = GW::Agents::GetPlayer();
+        if (me == nullptr) {
+            return { 0, 0 };
+        }
+
+        GW::Vec2f v(static_cast<float>(pos.x), static_cast<float>(pos.y));
+
+        // Invert viewport projection
+        v.x = v.x - static_cast<float>(location.x);
+        v.y = static_cast<float>(location.y) - v.y;
+
+        // go from [0, width][0, height] to [-1, 1][-1, 1]
+        v.x = 2.0f * v.x / static_cast<float>(size.x) - 1.0f;
+        v.y = 2.0f * v.y / static_cast<float>(size.x) + 1.0f;
+
+        // scale up to [-w, w]
+        constexpr float w = 5000.0f;
+        v *= w;
+
+        // translate by camera
+        v -= translation;
+
+        // scale by camera
+        v /= scale;
+
+        // rotate by current camera rotation
+        const float angle = Minimap::Instance().GetMapRotation() - DirectX::XM_PIDIV2;
+        const float x1 = v.x * std::cos(angle) - v.y * std::sin(angle);
+        const float y1 = v.x * std::sin(angle) + v.y * std::cos(angle);
+        v = GW::Vec2f(x1, y1);
+
+        // translate by character position
+        v += me->pos;
+
+        return v;
+    }
+
+    GW::Vec2f InterfaceToWorldVector(const Vec2i& pos)
+    {
+        GW::Vec2f v(static_cast<float>(pos.x), static_cast<float>(pos.y));
+
+        // Invert y direction
+        v.y = -v.y;
+
+        // go from [0, width][0, height] to [-1, 1][-1, 1]
+        v.x = 2.0f * v.x / static_cast<float>(size.x);
+        v.y = 2.0f * v.y / static_cast<float>(size.x);
+
+        // scale up to [-w, w]
+        constexpr float w = 5000.0f;
+        v *= w;
+
+        return v;
+    }
+
+
+    void __cdecl OnCompassFrame_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+        GW::Hook::EnterHook();
+        OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+        switch (static_cast<uint32_t>(message->message_id)) {
+        case 0xb:
+            compass_frame = nullptr;
+            compass_position_dirty = true;
+            break;
+        case 0x13:
+        case 0x30:
+        case 0x33:
+            compass_position_dirty = true; // Forces a recalculation
+            break;
+        }
+        GW::Hook::LeaveHook();
+    }
+
+    GW::UI::Frame* GetCompassFrame() {
+        if (compass_frame)
+            return compass_frame;
+        compass_frame = GW::UI::GetFrameByLabel(L"Compass");
+        if (compass_frame) {
+            ASSERT(compass_frame->frame_callbacks.size());
+            if (compass_frame->frame_callbacks[0] != OnCompassFrame_UICallback) {
+                OnCompassFrame_UICallback_Ret = compass_frame->frame_callbacks[0];
+                compass_frame->frame_callbacks[0] = OnCompassFrame_UICallback;
+            }
+        }
+        return compass_frame;
+    }
+
+    bool IsKeyDown(MinimapModifierBehaviour mmb) {
+        return (key_none_behavior == mmb && !ImGui::IsKeyDown(ImGuiKey_ModCtrl) &&
+            !ImGui::IsKeyDown(ImGuiKey_ModShift) && !ImGui::IsKeyDown(ImGuiKey_ModAlt)) ||
+            (key_ctrl_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModCtrl)) ||
+            (key_shift_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModShift)) ||
+            (key_alt_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModAlt));
+    }
+
+    bool RepositionMinimapToCompass() {
+        if (!compass_position_dirty)
+            return false;
+        const auto frame = GetCompassFrame();
+        if (!frame)
+            return false;
+        const float compass_padding = 1.05f;
+        auto top_left = frame->position.GetTopLeftOnScreen(frame);
+        auto bottom_right = frame->position.GetBottomRightOnScreen(frame);
+
+        const auto height = (bottom_right.y - top_left.y);
+        const auto diff = height - (height / compass_padding);
+
+        top_left.y += diff;
+        top_left.x += diff;
+        bottom_right.y -= diff;
+        bottom_right.x -= diff;
+
+        location = { static_cast<int>(top_left.x),static_cast<int>(top_left.y) };
+
+        const ImVec2 sz = { bottom_right.x - top_left.x, bottom_right.y - top_left.y };
+        size = { static_cast<int>(sz.x),static_cast<int>(sz.y) };
+
+        ImGui::SetWindowPos({ static_cast<float>(location.x), static_cast<float>(location.y) });
+        ImGui::SetWindowSize({ static_cast<float>(size.x), static_cast<float>(size.y) });
+        compass_position_dirty = false;
+        return true;
+    }
 
     FlaggingState GetFlaggingState()
     {
@@ -223,8 +407,7 @@ namespace {
         });
     }
 
-    void PreloadQuestMarkers()
-    {
+    void PreloadQuestMarkers() {
         if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
             GW::GameThread::Enqueue([quest_log] {
                 if (!quest_log || !quest_log->size()) {
@@ -252,6 +435,8 @@ namespace {
     }
 }
 
+float Minimap::Scale() const { return scale; }
+
 void Minimap::DrawHelp()
 {
     if (!ImGui::TreeNodeEx("Minimap", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
@@ -278,6 +463,10 @@ void Minimap::Terminate()
     custom_renderer.Terminate();
     effect_renderer.Terminate();
     GameWorldRenderer::Terminate();
+
+    if (compass_frame && compass_frame->frame_callbacks[0] == OnCompassFrame_UICallback) {
+        compass_frame->frame_callbacks[0] = OnCompassFrame_UICallback_Ret;
+    }
 }
 
 void Minimap::Initialize()
@@ -374,11 +563,10 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
         case GW::UI::UIMessage::kCompassDraw: {
             if (hide_compass_drawings)
                 status->blocked = true;
-        }
-        break;
+        } break;
         case GW::UI::UIMessage::kMapLoaded: {
             instance.pmap_renderer.Invalidate();
-            instance.loading = false;
+            loading = false;
             // Compass fix to allow hero flagging controls
             const GW::UI::WindowPosition* compass_info = GetWindowPosition(GW::UI::WindowID_Compass);
             if (compass_info && !compass_info->visible()) {
@@ -386,7 +574,7 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
                 compass_fix_pending = true;
                 SetWindowVisible(GW::UI::WindowID_Compass, true);
             }
-            instance.is_observing = GW::Map::GetIsObserving();
+            is_observing = GW::Map::GetIsObserving();
             // Cycle active quests to cache their markers
             PreloadQuestMarkers();
         }
@@ -398,13 +586,13 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
             }* payload = static_cast<Payload*>(wParam);
             if (payload->agent_id == GW::Agents::GetPlayerId()) {
                 if (payload->skill_id == GW::Constants::SkillID::Shadow_of_Haste || payload->skill_id == GW::Constants::SkillID::Shadow_Walk) {
-                    instance.shadowstep_location = GW::Agents::GetPlayer()->pos;
+                    shadowstep_location = GW::Agents::GetPlayer()->pos;
                 }
             }
         }
         break;
         case GW::UI::UIMessage::kMapChange: {
-            instance.loading = true;
+            loading = true;
             instance.agent_renderer.auto_target_id = 0;
         }
         break;
@@ -788,11 +976,12 @@ float Minimap::GetMapRotation() const
 
 DirectX::XMFLOAT2 Minimap::GetGwinchScale()
 {
-    return gwinch_scale;
+    return { gwinch_scale, gwinch_scale };
 }
 
 void Minimap::Draw(IDirect3DDevice9*)
 {
+
     if (!IsActive()) {
         return;
     }
@@ -842,31 +1031,11 @@ void Minimap::Draw(IDirect3DDevice9*)
     auto win_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus;
     if (snap_to_compass) {
         win_flags |= ImGuiWindowFlags_NoInputs;
-        // @Cleanup: Don't do this every frame, only when compass is relocated.
-        compass_frame = GW::UI::GetFrameByLabel(L"Compass");
-        if (compass_frame) {
-            constexpr float compass_padding = 1.05f;
-            auto top_left = compass_frame->position.GetTopLeftOnScreen(compass_frame);
-            auto bottom_right = compass_frame->position.GetBottomRightOnScreen(compass_frame);
-
-            const auto height = (bottom_right.y - top_left.y);
-            const auto diff = height - (height / compass_padding);
-
-            top_left.y += diff;
-            top_left.x += diff;
-            bottom_right.y -= diff;
-            bottom_right.x -= diff;
-
-            location = {static_cast<int>(top_left.x), static_cast<int>(top_left.y)};
-
-            const ImVec2 sz = {bottom_right.x - top_left.x, bottom_right.y - top_left.y};
-            size = {static_cast<int>(sz.x), static_cast<int>(sz.y)};
-
-            ImGui::SetWindowPos({static_cast<float>(location.x), static_cast<float>(location.y)});
-            ImGui::SetWindowSize({static_cast<float>(size.x), static_cast<float>(size.y)});
+        if (compass_position_dirty) {
+            RepositionMinimapToCompass();
         }
     }
-    if (ImGui::Begin(Name(), nullptr, GetWinFlags(win_flags, true))) {
+    if (ImGui::Begin(Name(), nullptr, GetWinFlags(win_flags, true) )) {
         // window pos are already rounded by imgui, so casting is no big deal
         const auto pos = ImGui::GetWindowPos();
         const auto sz = ImGui::GetWindowSize();
@@ -1058,9 +1227,9 @@ void Minimap::Render(IDirect3DDevice9* device)
     instance.RenderSetupProjection(device);
 
     const D3DCOLOR background = instance.pmap_renderer.GetBackgroundColor();
-    device->SetScissorRect(&instance.clipping); // always clip to rect as a fallback if the stenciling fails
+    device->SetScissorRect(&clipping); // always clip to rect as a fallback if the stenciling fails
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
-    if (instance.circular_map) {
+    if (circular_map) {
         device->SetRenderState(D3DRS_STENCILENABLE, true); // enable stencil testing
         device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
         device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
@@ -1084,13 +1253,13 @@ void Minimap::Render(IDirect3DDevice9* device)
 
     const auto rotate_char = DirectX::XMMatrixRotationZ(-instance.GetMapRotation() + DirectX::XM_PIDIV2);
 
-    const auto scaleM = DirectX::XMMatrixScaling(instance.scale, instance.scale, 1.0f);
-    const auto translationM = DirectX::XMMatrixTranslation(instance.translation.x, instance.translation.y, 0);
+    const auto scaleM = DirectX::XMMatrixScaling(scale, scale, 1.0f);
+    const auto translationM = DirectX::XMMatrixTranslation(translation.x, translation.y, 0);
 
-    float current_gwinch_scale = static_cast<float>(instance.size.x) / 5000.0f / 2.f * instance.scale;
-    if (current_gwinch_scale != gwinch_scale.x) {
+    float current_gwinch_scale = static_cast<float>(size.x) / 5000.0f / 2.f * scale;
+    if (current_gwinch_scale != gwinch_scale) {
         instance.range_renderer.Invalidate();
-        gwinch_scale = {current_gwinch_scale, current_gwinch_scale};
+        gwinch_scale = current_gwinch_scale;
     }
 
     const auto view = translate_char * rotate_char * scaleM * translationM;
@@ -1106,7 +1275,7 @@ void Minimap::Render(IDirect3DDevice9* device)
     instance.range_renderer.Render(device);
     device->SetTransform(D3DTS_WORLD, &reset_world);
 
-    if (instance.translation.x != 0 || instance.translation.y != 0) {
+    if (translation.x != 0 || translation.y != 0) {
         const auto view2 = scaleM;
         device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view2));
         instance.range_renderer.SetDrawCenter(true);
@@ -1126,7 +1295,7 @@ void Minimap::Render(IDirect3DDevice9* device)
 
     instance.game_world_renderer.Render(device);
 
-    if (instance.circular_map) {
+    if (circular_map) {
         device->SetRenderState(D3DRS_STENCILREF, 0);
         device->SetRenderState(D3DRS_STENCILWRITEMASK, 0x00000000);
         device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_NEVER);
@@ -1143,63 +1312,6 @@ void Minimap::Render(IDirect3DDevice9* device)
     // Restore the DX9 state
     d3d9_state_block->Apply();
     d3d9_state_block->Release();
-}
-
-GW::Vec2f Minimap::InterfaceToWorldPoint(const Vec2i pos) const
-{
-    const GW::Agent* me = GW::Agents::GetPlayer();
-    if (me == nullptr) {
-        return {0, 0};
-    }
-
-    GW::Vec2f v(static_cast<float>(pos.x), static_cast<float>(pos.y));
-
-    // Invert viewport projection
-    v.x = v.x - static_cast<float>(location.x);
-    v.y = static_cast<float>(location.y) - v.y;
-
-    // go from [0, width][0, height] to [-1, 1][-1, 1]
-    v.x = 2.0f * v.x / static_cast<float>(size.x) - 1.0f;
-    v.y = 2.0f * v.y / static_cast<float>(size.x) + 1.0f;
-
-    // scale up to [-w, w]
-    constexpr float w = 5000.0f;
-    v *= w;
-
-    // translate by camera
-    v -= translation;
-
-    // scale by camera
-    v /= scale;
-
-    // rotate by current camera rotation
-    const float angle = Instance().GetMapRotation() - DirectX::XM_PIDIV2;
-    const float x1 = v.x * std::cos(angle) - v.y * std::sin(angle);
-    const float y1 = v.x * std::sin(angle) + v.y * std::cos(angle);
-    v = GW::Vec2f(x1, y1);
-
-    // translate by character position
-    v += me->pos;
-
-    return v;
-}
-
-GW::Vec2f Minimap::InterfaceToWorldVector(const Vec2i pos) const
-{
-    GW::Vec2f v(static_cast<float>(pos.x), static_cast<float>(pos.y));
-
-    // Invert y direction
-    v.y = -v.y;
-
-    // go from [0, width][0, height] to [-1, 1][-1, 1]
-    v.x = 2.0f * v.x / static_cast<float>(size.x);
-    v.y = 2.0f * v.y / static_cast<float>(size.x);
-
-    // scale up to [-w, w]
-    constexpr float w = 5000.0f;
-    v *= w;
-
-    return v;
 }
 
 void Minimap::SelectTarget(const GW::Vec2f pos)
@@ -1486,8 +1598,8 @@ bool Minimap::IsInside(const int x, const int y) const
 bool Minimap::IsActive() const
 {
     if (snap_to_compass) {
-        compass_frame = GW::UI::GetFrameByLabel(L"Compass");
-        if (!compass_frame)
+        const auto frame = GetCompassFrame();
+        if(!(frame && frame->IsVisible()))
             return false;
     }
 
@@ -1523,13 +1635,4 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9* device) const
     const auto proj = ortho_matrix * viewport_matrix;
 
     device->SetTransform(D3DTS_PROJECTION, reinterpret_cast<const D3DMATRIX*>(&proj));
-}
-
-bool Minimap::IsKeyDown(const MinimapModifierBehaviour mmb) const
-{
-    return (key_none_behavior == mmb && !ImGui::IsKeyDown(ImGuiKey_ModCtrl) &&
-            !ImGui::IsKeyDown(ImGuiKey_ModShift) && !ImGui::IsKeyDown(ImGuiKey_ModAlt)) ||
-           (key_ctrl_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModCtrl)) ||
-           (key_shift_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModShift)) ||
-           (key_alt_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModAlt));
 }
