@@ -165,7 +165,9 @@ namespace {
         LatencyWidget::Instance(),
         SkillMonitorWidget::Instance(),
         ActiveQuestWidget::Instance(),
+#ifdef _DEBUG
         InventoryOverlayWidget::Instance(),
+#endif
     };
 
     std::vector<WindowToggle> optional_windows = {
