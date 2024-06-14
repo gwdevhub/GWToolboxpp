@@ -519,7 +519,6 @@ namespace ImGui {
     {
         if (clamp) {
             for (const auto window : ImGui::GetCurrentContext()->Windows) {
-                // Skip collapsing and hidden windows
                 // if (window->Collapsed || !window->Active) continue;
                 ClampWindowToScreen(window);
             }
