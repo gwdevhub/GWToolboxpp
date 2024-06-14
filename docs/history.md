@@ -7,7 +7,7 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
-## Version 6.19
+## Version 6.20
 * [Minor] Added warning message when rerolling to a character that is currently in a map that toolbox won't work in e.g. guild hall
 * [Minor] `/tb load` now dynamically enables/disables modules when run
 * [Minor] Fixed some layout errors when Party damage widget is snapped to the in-game UI.
