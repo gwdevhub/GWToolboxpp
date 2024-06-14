@@ -500,17 +500,21 @@ namespace ImGui {
 
             // Set the new window position
             ImGui::SetWindowPos(window, window_pos, ImGuiCond_Always);
+            if (window->Collapsed) {
+                original_positions[window_name] = window_pos;
+            }
         }
         else {
-            if (!ImGui::GetIO().WantCaptureMouse && original_positions.contains(window_name)) {
+            const bool is_moving_window = ImGui::GetIO().WantCaptureMouse && ImGui::IsMouseDown(ImGuiMouseButton_Left);
+            if (!is_moving_window && original_positions.contains(window_name)) {
                 const ImVec2& stored_pos = original_positions.at(window_name);
                 if (window_pos.x != stored_pos.x || window_pos.y != stored_pos.y) {
                     ImGui::SetWindowPos(window, original_pos, ImGuiCond_Always);
                     original_positions.erase(window_name);
                 }
-            }
-            else {
-                original_positions[window_name] = window_pos;
+                else {
+                    original_positions[window_name] = window_pos;
+                }
             }
         }
     }

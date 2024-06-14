@@ -841,7 +841,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     //ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
 #endif
 
-    ImGui::ClampAllWindowsToScreen(gwtoolbox_state < GWToolboxState::DrawTerminating);
+    ImGui::ClampAllWindowsToScreen(gwtoolbox_state < GWToolboxState::DrawTerminating && ToolboxSettings::clamp_windows_to_screen);
     ImGui::EndFrame();
     ImGui::Render();
     ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
