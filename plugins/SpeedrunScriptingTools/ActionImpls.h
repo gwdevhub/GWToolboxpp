@@ -386,3 +386,13 @@ private:
     GW::Constants::HeroID hero = GW::Constants::HeroID::NoHero;
     GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
 };
+
+class ClearTargetAction : public Action {
+public:
+    ClearTargetAction() = default;
+    ClearTargetAction(InputStream&) {}
+    ActionType type() const final { return ActionType::ClearTarget; }
+    void initialAction() final;
+    void drawSettings() final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost | ActionBehaviourFlag::ImmediateFinish; }
+};
