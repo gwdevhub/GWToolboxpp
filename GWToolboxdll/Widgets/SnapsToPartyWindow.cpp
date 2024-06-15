@@ -199,11 +199,11 @@ bool SnapsToPartyWindow::RecalculatePartyPositions() {
         agent_health_bar = GW::UI::GetChildFrame(player_container, 0);
         if (!agent_health_bar)
             return false;
-        const auto player_agent = GW::Agents::GetPlayerByID(player.login_number);
-        if (!player_agent)
+        const auto agent_id = GW::PlayerMgr::GetPlayerAgentId(player.login_number);
+        if (!agent_id)
             return false;
         GetFramePosition(agent_health_bar, relative_to, &top_left, &bottom_right);
-        agent_health_bar_positions[player_agent->agent_id] = { top_left, bottom_right };
+        agent_health_bar_positions[agent_id] = { top_left, bottom_right };
         for (auto& hero : party->heroes) {
             if (hero.owner_player_id != player.login_number)
                 continue;
