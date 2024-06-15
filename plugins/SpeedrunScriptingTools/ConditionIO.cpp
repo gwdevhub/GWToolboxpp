@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 35);
+    static_assert((int)ConditionType::Count == 37);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -56,6 +56,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<PlayerStatusCondition>();
         case ConditionType::PlayerInPolygon:
             return std::make_shared<PlayerInPolygonCondition>();
+        case ConditionType::PlayerMorale:
+            return std::make_shared<MoraleCondition>();
         case ConditionType::ItemInInventory:
             return std::make_shared<ItemInInventoryCondition>();
         case ConditionType::RemainingCooldown:
@@ -78,6 +80,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<KeyIsPressedCondition>();
         case ConditionType::InstanceTime:
             return std::make_shared<InstanceTimeCondition>();
+        case ConditionType::FoeCount:
+            return std::make_shared<FoeCountCondition>();
         case ConditionType::NearbyAgent:
             return std::make_shared<NearbyAgentCondition>();
         case ConditionType::CanPopAgent:
@@ -90,7 +94,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 35);
+    static_assert((int)ConditionType::Count == 37);
     switch (type) {
         case ConditionType::Not:
             return "Not";
@@ -133,6 +137,8 @@ std::string_view toString(ConditionType type)
             return "Is idle";
         case ConditionType::PlayerStatus:
             return "Status";
+        case ConditionType::PlayerMorale:
+            return "Morale";
         case ConditionType::PlayerHasItemEquipped:
             return "Equipped item";
         case ConditionType::PlayerInPolygon:
@@ -165,6 +171,8 @@ std::string_view toString(ConditionType type)
             return "Time";
         case ConditionType::NearbyAgent:
             return "Nearby agent exists";
+        case ConditionType::FoeCount:
+            return "Number of enemies";
 
         default:
             return "Unknown";
@@ -174,7 +182,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(InputStream& stream)
 {
-static_assert((int)ConditionType::Count == 35);
+static_assert((int)ConditionType::Count == 37);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -228,6 +236,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<PlayerStatusCondition>(stream);
     case ConditionType::PlayerInPolygon:
         return std::make_shared<PlayerInPolygonCondition>(stream);
+    case ConditionType::PlayerMorale:
+        return std::make_shared<MoraleCondition>(stream);
     case ConditionType::RemainingCooldown:
         return std::make_shared<RemainingCooldownCondition>(stream);
 
@@ -252,6 +262,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<NearbyAgentCondition>(stream);
     case ConditionType::CanPopAgent:
         return std::make_shared<CanPopAgentCondition>(stream);
+    case ConditionType::FoeCount:
+        return std::make_shared<FoeCountCondition>(stream);
 
     default:
         return nullptr;
@@ -288,11 +300,11 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
 
     constexpr auto playerConditions = std::array{ConditionType::PlayerIsNearPosition,  ConditionType::PlayerInPolygon, ConditionType::PlayerHasBuff,    ConditionType::PlayerHasSkill, ConditionType::PlayerHasClass,
                                                  ConditionType::PlayerHasName,         ConditionType::PlayerHasEnergy, ConditionType::PlayerHasHpBelow, ConditionType::PlayerStatus,   ConditionType::PlayerIsIdle,
-                                                 ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory, ConditionType::CanPopAgent};
+                                                 ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory, ConditionType::PlayerMorale,     ConditionType::CanPopAgent};
     constexpr auto targetConditions = std::array{ConditionType::CurrentTargetHasHpBelow, ConditionType::CurrentTargetStatus, ConditionType::CurrentTargetIsUsingSkill, ConditionType::CurrentTargetHasModel,
                                                  ConditionType::CurrentTargetAllegiance, ConditionType::CurrentTargetDistance};
     constexpr auto partyCondtions = std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName};
-    constexpr auto instanceConditions = std::array{ConditionType::IsInMap, ConditionType::InstanceType, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime};
+    constexpr auto instanceConditions = std::array{ConditionType::IsInMap, ConditionType::InstanceType, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime, ConditionType::FoeCount};
     constexpr auto logicConditions = std::array{ConditionType::Not, ConditionType::Or, ConditionType::And};
 
     if (ImGui::BeginPopup("Add condition")) 

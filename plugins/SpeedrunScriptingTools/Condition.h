@@ -2,6 +2,7 @@
 
 #include <io.h>
 
+// This struct is append only, do NOT change the ordering of the values or add new ones at any place but the end
 enum class ConditionType : int {
     Not,
     Or,
@@ -38,6 +39,8 @@ enum class ConditionType : int {
     PlayerInPolygon,
     InstanceType,
     RemainingCooldown,
+    FoeCount,
+    PlayerMorale,
 
     Count
 };

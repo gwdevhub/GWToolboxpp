@@ -1592,3 +1592,59 @@ void RemainingCooldownCondition::drawSettings()
 
     ImGui::PopID();
 }
+
+/// ------------- FoeCountCondition -------------
+FoeCountCondition::FoeCountCondition(InputStream& stream)
+{
+    stream >> maximum;
+}
+void FoeCountCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << maximum;
+}
+bool FoeCountCondition::check() const
+{
+    return (int)GW::Map::GetFoesToKill() <= maximum;
+}
+void FoeCountCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("If there are at most");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(80);
+    ImGui::InputInt("enemies left in the instance", &maximum, 0);
+
+    ImGui::PopID();
+}
+
+/// ------------- MoraleCondition -------------
+MoraleCondition::MoraleCondition(InputStream& stream)
+{
+    stream >> minimumMorale;
+}
+void MoraleCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << minimumMorale;
+}
+bool MoraleCondition::check() const
+{
+    const auto worldContext = GW::GetWorldContext();
+    if (!worldContext) return false;
+    return int(worldContext->morale) - 100 >= minimumMorale;
+}
+void MoraleCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("If morale is greater than or equal to");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(80);
+    ImGui::InputInt("% (negative values for DP)", &minimumMorale, 0);
+
+    ImGui::PopID();
+}

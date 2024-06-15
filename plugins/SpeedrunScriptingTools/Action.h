@@ -3,6 +3,7 @@
 #include <io.h>
 #include <Enums.h>
 
+// This struct is append only, do NOT change the ordering of the values or add new ones at any place but the end
 enum class ActionType : int {
     MoveTo,
     //CastOnSelf, Removed
