@@ -15,7 +15,6 @@
 #include <Modules/DiscordModule.h>
 #include <Modules/TwitchModule.h>
 #include <Modules/PartyWindowModule.h>
-#include <Modules/ZrawDeepModule.h>
 #include <Modules/TeamspeakModule.h>
 #include <Modules/Teamspeak5Module.h>
 #include <Modules/ObserverModule.h>
@@ -80,7 +79,6 @@
 #include <Widgets/EffectsMonitorWidget.h>
 #include <Widgets/LatencyWidget.h>
 #include <Widgets/ActiveQuestWidget.h>
-#include <Widgets/InventoryOverlayWidget.h>
 #include "ToolboxSettings.h"
 
 
@@ -142,7 +140,6 @@ namespace {
         HintsModule::Instance(),
         MouseFix::Instance(),
         KeyboardLanguageFix::Instance(),
-        ZrawDeepModule::Instance(),
         GuildWarsSettingsModule::Instance(),
         //QuestModule::Instance(),
         PriceCheckerModule::Instance(),
@@ -164,10 +161,7 @@ namespace {
         EffectsMonitorWidget::Instance(),
         LatencyWidget::Instance(),
         SkillMonitorWidget::Instance(),
-        ActiveQuestWidget::Instance(),
-#ifdef _DEBUG
-        InventoryOverlayWidget::Instance(),
-#endif
+        ActiveQuestWidget::Instance()
     };
 
     std::vector<WindowToggle> optional_windows = {
