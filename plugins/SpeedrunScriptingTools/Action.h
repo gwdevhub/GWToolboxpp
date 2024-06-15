@@ -30,6 +30,8 @@ enum class ActionType : int {
     LogOut,
     UseHeroSkill,
     UnequipItem,
+    ClearTarget,
+
     Count
 };
 
