@@ -939,8 +939,10 @@ void ChatCommands::DrawSettingsInternal()
         }
         ImGui::PopItemWidth();
         ImGui::SameLine();
+        const auto text_height = ImGui::GetTextLineHeightWithSpacing();
+        const auto num_newlines = 1 + std::count((*it)->command_cstr, (*it)->command_cstr + _countof(CmdAlias::command_cstr), '\n');
         if (ImGui::InputTextMultiline("##cmd_command", (*it)->command_cstr,
-            _countof(CmdAlias::command_cstr), ImVec2(avail_w * .6f, 0.0f))) {
+            _countof(CmdAlias::command_cstr), ImVec2(avail_w * .6f, text_height + num_newlines * ImGui::GetTextLineHeight()))) {
             swprintf((*it)->command_wstr, _countof(CmdAlias::command_wstr), L"%S", (*it)->command_cstr);
         }
         if (ImGui::IsItemHovered()) {
@@ -2541,7 +2543,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDeposit)
         Log::Error("Incorrect syntax:");
         Log::Error(deposit_syntax);
     };
-    if (argc != 2) {
+    if (argc < 2) {
         return syntax_error();
     }
 
@@ -2564,6 +2566,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDeposit)
             }
         }
         GW::Items::DepositGold(wanted_quantity);
+        return;
     }
 
     std::vector<uint32_t> model_ids;

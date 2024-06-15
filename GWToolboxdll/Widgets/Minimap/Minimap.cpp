@@ -41,11 +41,10 @@
 #include <Modules/Resources.h>
 
 namespace {
-
     struct Vec2i {
         Vec2i(const int _x, const int _y)
-            : x(_x)
-            , y(_y) { }
+            : x(_x),
+              y(_y) {}
 
         Vec2i() = default;
         int x = 0;
@@ -120,8 +119,8 @@ namespace {
 
 
 
-    GW::Vec2f shadowstep_location = { 0.f, 0.f };
-    RECT clipping = { 0 };
+    GW::Vec2f shadowstep_location = {0.f, 0.f};
+    RECT clipping = {};
 
     Vec2i drag_start;
     GW::Vec2f translation;
@@ -153,7 +152,7 @@ namespace {
     {
         const GW::Agent* me = GW::Agents::GetPlayer();
         if (me == nullptr) {
-            return { 0, 0 };
+            return {0, 0};
         }
 
         GW::Vec2f v(static_cast<float>(pos.x), static_cast<float>(pos.y));
@@ -207,24 +206,26 @@ namespace {
     }
 
 
-    void __cdecl OnCompassFrame_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+    void __cdecl OnCompassFrame_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
+    {
         GW::Hook::EnterHook();
         OnCompassFrame_UICallback_Ret(message, wParam, lParam);
         switch (static_cast<uint32_t>(message->message_id)) {
-        case 0xb:
-            compass_frame = nullptr;
-            compass_position_dirty = true;
-            break;
-        case 0x13:
-        case 0x30:
-        case 0x33:
-            compass_position_dirty = true; // Forces a recalculation
-            break;
+            case 0xb:
+                compass_frame = nullptr;
+                compass_position_dirty = true;
+                break;
+            case 0x13:
+            case 0x30:
+            case 0x33:
+                compass_position_dirty = true; // Forces a recalculation
+                break;
         }
         GW::Hook::LeaveHook();
     }
 
-    GW::UI::Frame* GetCompassFrame() {
+    GW::UI::Frame* GetCompassFrame()
+    {
         if (compass_frame)
             return compass_frame;
         compass_frame = GW::UI::GetFrameByLabel(L"Compass");
@@ -238,15 +239,17 @@ namespace {
         return compass_frame;
     }
 
-    bool IsKeyDown(MinimapModifierBehaviour mmb) {
+    bool IsKeyDown(MinimapModifierBehaviour mmb)
+    {
         return (key_none_behavior == mmb && !ImGui::IsKeyDown(ImGuiKey_ModCtrl) &&
-            !ImGui::IsKeyDown(ImGuiKey_ModShift) && !ImGui::IsKeyDown(ImGuiKey_ModAlt)) ||
-            (key_ctrl_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModCtrl)) ||
-            (key_shift_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModShift)) ||
-            (key_alt_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModAlt));
+                !ImGui::IsKeyDown(ImGuiKey_ModShift) && !ImGui::IsKeyDown(ImGuiKey_ModAlt)) ||
+               (key_ctrl_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModCtrl)) ||
+               (key_shift_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModShift)) ||
+               (key_alt_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModAlt));
     }
 
-    bool RepositionMinimapToCompass() {
+    bool RepositionMinimapToCompass()
+    {
         if (!compass_position_dirty)
             return false;
         const auto frame = GetCompassFrame();
@@ -264,13 +267,13 @@ namespace {
         bottom_right.y -= diff;
         bottom_right.x -= diff;
 
-        location = { static_cast<int>(top_left.x),static_cast<int>(top_left.y) };
+        location = {static_cast<int>(top_left.x), static_cast<int>(top_left.y)};
 
-        const ImVec2 sz = { bottom_right.x - top_left.x, bottom_right.y - top_left.y };
-        size = { static_cast<int>(sz.x),static_cast<int>(sz.y) };
+        const ImVec2 sz = {bottom_right.x - top_left.x, bottom_right.y - top_left.y};
+        size = {static_cast<int>(sz.x), static_cast<int>(sz.y)};
 
-        ImGui::SetWindowPos({ static_cast<float>(location.x), static_cast<float>(location.y) });
-        ImGui::SetWindowSize({ static_cast<float>(size.x), static_cast<float>(size.y) });
+        ImGui::SetWindowPos({static_cast<float>(location.x), static_cast<float>(location.y)});
+        ImGui::SetWindowSize({static_cast<float>(size.x), static_cast<float>(size.y)});
         compass_position_dirty = false;
         return true;
     }
@@ -407,7 +410,8 @@ namespace {
         });
     }
 
-    void PreloadQuestMarkers() {
+    void PreloadQuestMarkers()
+    {
         if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
             GW::GameThread::Enqueue([quest_log] {
                 if (!quest_log || !quest_log->size()) {
@@ -563,7 +567,8 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
         case GW::UI::UIMessage::kCompassDraw: {
             if (hide_compass_drawings)
                 status->blocked = true;
-        } break;
+        }
+        break;
         case GW::UI::UIMessage::kMapLoaded: {
             instance.pmap_renderer.Invalidate();
             loading = false;
@@ -976,12 +981,11 @@ float Minimap::GetMapRotation() const
 
 DirectX::XMFLOAT2 Minimap::GetGwinchScale()
 {
-    return { gwinch_scale, gwinch_scale };
+    return {gwinch_scale, gwinch_scale};
 }
 
 void Minimap::Draw(IDirect3DDevice9*)
 {
-
     if (!IsActive()) {
         return;
     }
@@ -1035,7 +1039,7 @@ void Minimap::Draw(IDirect3DDevice9*)
             RepositionMinimapToCompass();
         }
     }
-    if (ImGui::Begin(Name(), nullptr, GetWinFlags(win_flags, true) )) {
+    if (ImGui::Begin(Name(), nullptr, GetWinFlags(win_flags, true))) {
         // window pos are already rounded by imgui, so casting is no big deal
         const auto pos = ImGui::GetWindowPos();
         const auto sz = ImGui::GetWindowSize();
@@ -1599,7 +1603,7 @@ bool Minimap::IsActive() const
 {
     if (snap_to_compass) {
         const auto frame = GetCompassFrame();
-        if(!(frame && frame->IsVisible()))
+        if (!(frame && frame->IsVisible()))
             return false;
     }
 
@@ -1608,10 +1612,10 @@ bool Minimap::IsActive() const
            && GW::Map::GetIsMapLoaded()
            && !GW::UI::GetIsWorldMapShowing()
            && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
-           && GW::Agents::GetPlayerId() != 0;
+           && (GW::Agents::GetPlayerId() != 0 || GW::Agents::GetObservingId() != 0);
 }
 
-void Minimap::RenderSetupProjection(IDirect3DDevice9* device) const
+void Minimap::RenderSetupProjection(IDirect3DDevice9* device)
 {
     D3DVIEWPORT9 viewport;
     device->GetViewport(&viewport);

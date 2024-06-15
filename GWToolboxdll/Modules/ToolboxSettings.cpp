@@ -165,7 +165,9 @@ namespace {
         LatencyWidget::Instance(),
         SkillMonitorWidget::Instance(),
         ActiveQuestWidget::Instance(),
+#ifdef _DEBUG
         InventoryOverlayWidget::Instance(),
+#endif
     };
 
     std::vector<WindowToggle> optional_windows = {
@@ -196,8 +198,6 @@ namespace {
 
     bool modules_sorted = false;
 }
-
-bool ToolboxSettings::move_all = false;
 
 void ToolboxSettings::LoadModules(ToolboxIni* ini)
 {
@@ -336,6 +336,7 @@ void ToolboxSettings::DrawFreezeSetting()
 {
     ImGui::Checkbox("Unlock Move All", &move_all);
     ImGui::ShowHelp("Will allow movement and resize of all widgets and windows");
+    ImGui::Checkbox("Clamp growing windows to screen bounds", &clamp_windows_to_screen);
 }
 
 void ToolboxSettings::LoadSettings(ToolboxIni* ini)
@@ -344,6 +345,7 @@ void ToolboxSettings::LoadSettings(ToolboxIni* ini)
     inifile = ini; // Keep this to load module info
 
     move_all = false;
+    LOAD_BOOL(clamp_windows_to_screen);
 
     for (auto& m : optional_modules) {
         m.enabled = ini->GetBoolValue(modules_ini_section, m.name, m.enabled);
@@ -362,6 +364,8 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini)
     if (location_file.is_open()) {
         location_file.close();
     }
+
+    SAVE_BOOL(clamp_windows_to_screen);
 
     for (const auto& m : optional_modules) {
         ini->SetBoolValue(modules_ini_section, m.name, m.enabled);
