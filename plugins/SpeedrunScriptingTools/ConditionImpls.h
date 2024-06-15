@@ -490,3 +490,29 @@ private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
     int remainingCooldownInMs = 1000;
 };
+
+class FoeCountCondition : public Condition {
+public:
+    FoeCountCondition() = default;
+    FoeCountCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::FoeCount; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    int maximum = 0;
+};
+
+class MoraleCondition : public Condition {
+public:
+    MoraleCondition() = default;
+    MoraleCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::PlayerMorale; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    int minimumMorale = 0;
+};
