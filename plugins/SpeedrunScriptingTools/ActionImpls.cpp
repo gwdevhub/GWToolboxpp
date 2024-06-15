@@ -1625,3 +1625,21 @@ void UseHeroSkillAction::drawSettings()
 
     ImGui::PopID();
 }
+
+/// ------------- ClearTargetAction -------------
+void ClearTargetAction::initialAction()
+{
+    Action::initialAction();
+    GW::GameThread::Enqueue([] {
+        GW::UI::Keypress(GW::UI::ControlAction_ClearTarget);
+    });
+}
+
+void ClearTargetAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("Clear Target");
+
+    ImGui::PopID();
+}
