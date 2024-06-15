@@ -113,8 +113,8 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
             const auto skill_frame = GW::UI::GetChildFrame(effects_frame, (uint32_t)skill_id + 0x4);
             if (!skill_frame)
                 continue;
-            UptimeToString(remaining_str, static_cast<int>(remaining));
-            DrawTextOverlay(remaining_str, skill_frame);
+            if(UptimeToString(remaining_str, static_cast<int>(remaining)) > 0)
+                DrawTextOverlay(remaining_str, skill_frame);
         }
     }
 
