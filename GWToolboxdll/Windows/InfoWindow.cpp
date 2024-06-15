@@ -953,7 +953,34 @@ namespace {
         [[maybe_unused]] const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
         [[maybe_unused]] const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
 
-        const auto frame = GW::UI::GetFrameByLabel(L"Skillbar");
+        const auto frame = GW::UI::GetFrameByLabel(L"NPCInteract");
+        if (frame && frame->IsVisible()) {
+            auto dialog_buttons_frame = GW::UI::GetChildFrame(frame, 2); // Scrollable frame
+            dialog_buttons_frame = GW::UI::GetChildFrame(dialog_buttons_frame, 0);
+            dialog_buttons_frame = GW::UI::GetChildFrame(dialog_buttons_frame, 0);
+            dialog_buttons_frame = GW::UI::GetChildFrame(dialog_buttons_frame, 1);
+            if (dialog_buttons_frame) {
+                auto relation = dialog_buttons_frame->relation;
+                auto& siblings = dialog_buttons_frame->relation.siblings;
+                siblings.
+                do {
+                    const auto frame = sibling->Next();
+                    if (!frame) break;
+                    if (frame == relation) break;
+                    sibling = sibling->Next();
+
+                }
+
+                for(auto button_frame : siblings){
+                    const auto button_frame = (*it)->GetFrame();
+                    const auto top_left = button_frame->position.GetTopLeftOnScreen(frame);
+                    const auto bottom_right = button_frame->position.GetBottomRightOnScreen(frame);
+                    ImGui::GetBackgroundDrawList()->AddRect({ top_left.x,top_left.y }, { bottom_right.x,bottom_right.y }, IM_COL32_WHITE);
+                }
+            }
+
+        }
+
         (frame);
     }
 }
