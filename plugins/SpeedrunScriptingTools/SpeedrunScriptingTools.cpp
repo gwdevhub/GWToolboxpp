@@ -401,7 +401,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Checkbox("Execute scripts while in outpost", &runInOutposts);
 
-    ImGui::Text("Version 1.3.3. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 1.4-beta1. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
