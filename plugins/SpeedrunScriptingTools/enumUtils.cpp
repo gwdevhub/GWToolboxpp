@@ -237,6 +237,17 @@ std::string_view toString(EquippedItemSlot slot)
     return "";
 }
 
+std::string_view toString(TrueFalse val)
+{
+    switch (val) {
+        case TrueFalse::True:
+            return "True";
+        case TrueFalse::False:
+            return "False";
+    }
+    return "";
+}
+
 std::string_view toString(Trigger type)
 {
     switch (type) {

@@ -41,6 +41,12 @@ enum class ConditionType : int {
     RemainingCooldown,
     FoeCount,
     PlayerMorale,
+    False,
+    True,
+    Until,
+    Once,
+    Toggle,
+    After,
 
     Count
 };

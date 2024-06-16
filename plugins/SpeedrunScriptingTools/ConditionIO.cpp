@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 37);
+    static_assert((int)ConditionType::Count == 43);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -87,6 +87,19 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
         case ConditionType::CanPopAgent:
             return std::make_shared<CanPopAgentCondition>();
 
+        case ConditionType::True:
+            return std::make_shared<TrueCondition>();
+        case ConditionType::False:
+            return std::make_shared<FalseCondition>();
+        case ConditionType::Once:
+            return std::make_shared<OnceCondition>();
+        case ConditionType::Until:
+            return std::make_shared<UntilCondition>();
+        case ConditionType::Toggle:
+            return std::make_shared<ToggleCondition>();
+        case ConditionType::After:
+            return std::make_shared<AfterCondition>();
+
         default:
             return nullptr;
     }
@@ -94,7 +107,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 37);
+    static_assert((int)ConditionType::Count == 43);
     switch (type) {
         case ConditionType::Not:
             return "Not";
@@ -174,6 +187,19 @@ std::string_view toString(ConditionType type)
         case ConditionType::FoeCount:
             return "Number of enemies";
 
+        case ConditionType::True:
+            return "True";
+        case ConditionType::False:
+            return "False";
+        case ConditionType::Once:
+            return "Once";
+        case ConditionType::Until:
+            return "Until";
+        case ConditionType::Toggle:
+            return "Toggle";
+        case ConditionType::After:
+            return "After";
+
         default:
             return "Unknown";
     }
@@ -182,7 +208,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(InputStream& stream)
 {
-static_assert((int)ConditionType::Count == 37);
+static_assert((int)ConditionType::Count == 43);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -265,6 +291,19 @@ switch (static_cast<ConditionType>(type))
     case ConditionType::FoeCount:
         return std::make_shared<FoeCountCondition>(stream);
 
+    case ConditionType::True:
+        return std::make_shared<TrueCondition>(stream);
+    case ConditionType::False:
+        return std::make_shared<FalseCondition>(stream);
+    case ConditionType::Once:
+        return std::make_shared<OnceCondition>(stream);
+    case ConditionType::Until:
+        return std::make_shared<UntilCondition>(stream);
+    case ConditionType::Toggle:
+        return std::make_shared<ToggleCondition>(stream);
+    case ConditionType::After:
+        return std::make_shared<AfterCondition>(stream);
+
     default:
         return nullptr;
 }
@@ -305,7 +344,8 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
                                                  ConditionType::CurrentTargetAllegiance, ConditionType::CurrentTargetDistance};
     constexpr auto partyCondtions = std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName};
     constexpr auto instanceConditions = std::array{ConditionType::IsInMap, ConditionType::InstanceType, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime, ConditionType::FoeCount};
-    constexpr auto logicConditions = std::array{ConditionType::Not, ConditionType::Or, ConditionType::And};
+    constexpr auto logicConditions = std::array{ConditionType::Not, ConditionType::Or, ConditionType::And, ConditionType::True, ConditionType::False};
+    constexpr auto controlFlowCondition = std::array{ConditionType::OnlyTriggerOncePerInstance, ConditionType::Once, ConditionType::Until, ConditionType::After, ConditionType::Toggle};
 
     if (ImGui::BeginPopup("Add condition")) 
     {
@@ -314,9 +354,9 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
         drawSubMenu("Party", partyCondtions);
         drawSubMenu("Instance", instanceConditions);
         drawSubMenu("Logic", logicConditions);
+        drawSubMenu("Control flow", controlFlowCondition);
         drawConditionSelector(ConditionType::NearbyAgent);
         drawConditionSelector(ConditionType::KeyIsPressed);
-        drawConditionSelector(ConditionType::OnlyTriggerOncePerInstance);
 
         ImGui::EndPopup();
     }
