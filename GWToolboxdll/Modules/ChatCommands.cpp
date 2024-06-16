@@ -27,6 +27,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
@@ -43,7 +44,6 @@
 #include <Logger.h>
 
 #include <Modules/ChatCommands.h>
-#include <Modules/ObserverModule.h>
 #include <Modules/GameSettings.h>
 #include <Modules/ChatSettings.h>
 #include <Modules/InventoryManager.h>
@@ -56,8 +56,6 @@
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/DialogModule.h>
 #include <Modules/Resources.h>
-#include <GWCA/Managers/QuestMgr.h>
-#include <Widgets/BondsWidget.h>
 
 constexpr auto CMDTITLE_KEEP_CURRENT = 0xfffe;
 constexpr auto CMDTITLE_REMOVE_CURRENT = 0xffff;

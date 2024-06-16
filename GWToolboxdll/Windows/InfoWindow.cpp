@@ -953,6 +953,7 @@ namespace {
         [[maybe_unused]] const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
         [[maybe_unused]] const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
 
+#ifdef _DEBUG
         const auto frame = GW::UI::GetFrameByLabel(L"NPCInteract");
         if (frame && frame->IsVisible()) {
             auto dialog_buttons_frame = GW::UI::GetChildFrame(frame, 2); // Scrollable frame
@@ -972,8 +973,8 @@ namespace {
                     draw_list->AddText({ top_left.x, top_left.y }, IM_COL32_WHITE, label.c_str());
                 }
             }
-
         }
+#endif
     }
 }
 
