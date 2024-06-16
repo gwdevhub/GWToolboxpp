@@ -1008,7 +1008,7 @@ void QuestHasStateCondition::serialize(OutputStream& stream) const
 }
 bool QuestHasStateCondition::check() const
 {
-    return InstanceInfo::getInstance().getQuestStatus(id) == status;
+    return InstanceInfo::getInstance().getObjectiveStatus(id) == status;
 }
 void QuestHasStateCondition::drawSettings()
 {
@@ -1020,7 +1020,7 @@ void QuestHasStateCondition::drawSettings()
     ImGui::SameLine();
     drawEnumButton(QuestStatus::NotStarted, QuestStatus::Failed, status);
     ImGui::SameLine();
-    ImGui::ShowHelp("Objective ID, NOT quest ID!\nUW: Chamber 146, Restore 147, Escort 148, UWG 149, Vale 150, Waste 151, Pits 152, Planes 153, Mnts 154, Pools 155");
+    ImGui::ShowHelp("Objective ID, NOT quest ID!\nUW: Chamber 146, Restore 147, Escort 148, UWG 149, Vale 150, Waste 151, Pits 152, Planes 153, Mnts 154, Pools 155, Dhuum 157");
     ImGui::PopID();
 }
 

@@ -21,6 +21,7 @@ namespace {
     GW::HookEntry ObjectiveDone_Entry;
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry UseItem_Entry;
+    GW::HookEntry CoreMessage_Entry;
 
     bool isTargetableMiniPet(uint32_t itemId) 
     {
@@ -52,15 +53,15 @@ namespace {
 void InstanceInfo::initialize()
 {
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveUpdateName* packet) {
-        this->questStatus[(GW::Constants::QuestID)packet->objective_id] = QuestStatus::Started;
+        this->objectiveStatus[packet->objective_id] = QuestStatus::Started;
     });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveDone* packet) {
-        this->questStatus[(GW::Constants::QuestID)packet->objective_id] = QuestStatus::Completed;
+        this->objectiveStatus[packet->objective_id] = QuestStatus::Completed;
     });
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {
         using namespace std::chrono_literals;
 
-        this->questStatus.clear();
+        this->objectiveStatus.clear();
         this->decodedAgentNames.clear();
         this->decodedItemNames.clear();
         this->storedTargets.clear();
@@ -69,6 +70,13 @@ void InstanceInfo::initialize()
         mpStatus.lastPop = std::chrono::steady_clock::now() - 1h;
 
         ++instanceId;
+    });
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::DisplayDialogue>(&CoreMessage_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* packet) {
+        if (wmemcmp(packet->message, L"\x8102\x5d41\xa992\xf927\x29f7", 5) == 0) 
+        {
+            // Dhuum quest does not send a `ObjectiveUpdateName` StoC
+            this->objectiveStatus[157] = QuestStatus::Started;
+        }
     });
 
     RegisterUIMessageCallback(&UseItem_Entry, GW::UI::UIMessage::kSendUseItem, 
@@ -108,9 +116,9 @@ void InstanceInfo::terminate()
     RemoveUIMessageCallback(&UseItem_Entry, GW::UI::UIMessage::kSendUseItem);
 }
 
-QuestStatus InstanceInfo::getQuestStatus(GW::Constants::QuestID id)
+QuestStatus InstanceInfo::getObjectiveStatus(uint32_t id)
 {
-    return questStatus[id];
+    return objectiveStatus[id];
 }
 std::string InstanceInfo::getDecodedAgentName(GW::AgentID id)
 {

@@ -34,7 +34,7 @@ public:
         static InstanceInfo info;
         return info;
     }
-    QuestStatus getQuestStatus(GW::Constants::QuestID);
+    QuestStatus getObjectiveStatus(uint32_t);
     std::string getDecodedAgentName(GW::AgentID);
     std::string getDecodedItemName(uint32_t);
 
@@ -56,7 +56,7 @@ public:
 
 private:
     InstanceInfo() = default;
-    std::unordered_map<GW::Constants::QuestID, QuestStatus> questStatus;
+    std::unordered_map<uint32_t, QuestStatus> objectiveStatus;
     std::unordered_map<GW::AgentID, std::wstring> decodedAgentNames;
     std::unordered_map<uint32_t, std::wstring> decodedItemNames;
     std::unordered_map<int, GW::AgentID> storedTargets;
