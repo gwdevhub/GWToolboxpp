@@ -1,13 +1,47 @@
 #include <enumUtils.h>
 
 #include <commonIncludes.h>
-#include <SkillNames.h>
 #include <Keys.h>
 
 #include <GWCA/Constants/Skills.h>
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Skill.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/UIMgr.h>
+
+namespace {
+    std::string getSkillName(GW::Constants::SkillID id)
+    {
+        static std::unordered_map<GW::Constants::SkillID, std::wstring> decodedNames;
+        if (const auto it = decodedNames.find(id); it != decodedNames.end()) 
+        {
+            return WStringToString(it->second);
+        }
+
+        const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
+        if (!skillData || (uint32_t)id >= (uint32_t)GW::Constants::SkillID::Count) return "";
+
+        wchar_t out[8] = {0};
+        if (GW::UI::UInt32ToEncStr(skillData->name, out, _countof(out))) 
+        {
+            GW::UI::AsyncDecodeStr(out, &decodedNames[id]);
+        }
+        return "";
+    }
+}
+
+std::string WStringToString(const std::wstring_view str)
+{
+    if (str.empty()) {
+        return "";
+    }
+    const auto size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
+    std::string str_to(size_needed, 0);
+    WideCharToMultiByte(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), str_to.data(), size_needed, NULL, NULL);
+    return str_to;
+}
 
 std::string_view toString(Class c)
 {
@@ -444,9 +478,8 @@ bool pointIsInsidePolygon(const GW::GamePos pos, const std::vector<GW::Vec2f>& p
 void drawSkillIDSelector(GW::Constants::SkillID& id)
 {
     ImGui::PushItemWidth(50.f);
-    const auto& skillNames = getSkillNames();
-    if (id != GW::Constants::SkillID::No_Skill && (uint32_t)id < skillNames.size()) {
-        ImGui::Text("%s", skillNames[(uint32_t)id]);
+    if (id != GW::Constants::SkillID::No_Skill) {
+        ImGui::Text("%s", getSkillName(id).c_str());
         ImGui::SameLine();
     }
     ImGui::SameLine();

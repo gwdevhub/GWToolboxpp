@@ -66,3 +66,5 @@ void drawEnumButton(T firstValue, T lastValue, T& currentValue, int id = 0, floa
 
     ImGui::PopID();
 }
+
+std::string WStringToString(const std::wstring_view str);
