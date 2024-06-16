@@ -14,22 +14,13 @@
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/Constants/ItemIDs.h>
 
+#include <enumUtils.h>
+
 namespace {
     GW::HookEntry ObjectiveUpdateName_Entry;
     GW::HookEntry ObjectiveDone_Entry;
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry UseItem_Entry;
-
-    std::string WStringToString(const std::wstring_view str)
-    {
-        if (str.empty()) {
-            return "";
-        }
-        const auto size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
-        std::string str_to(size_needed, 0);
-        WideCharToMultiByte(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), str_to.data(), size_needed, NULL, NULL);
-        return str_to;
-    }
 
     bool isTargetableMiniPet(uint32_t itemId) 
     {
