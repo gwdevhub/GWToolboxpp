@@ -9,11 +9,11 @@
 
 namespace {
     // 0=none, 1=check and warn, 2=check and ask, 3=check and do
-    enum class ReleaseType : uint8_t {
+    enum class ReleaseType : int {
         Stable,
         Beta
     };
-    enum class Mode : uint8_t {
+    enum class Mode : int {
         DontCheckForUpdates,
         CheckAndWarn,
         CheckAndAsk,
@@ -101,6 +101,10 @@ namespace {
                 }
                 release->download_url = asset["browser_download_url"].get<std::string>();
                 release->version = tag_name.substr(0, version_number_len);
+                if (is_prerelease) {
+                    release->version += tag_name.substr(version_number_len + 1);
+                }
+                std::ranges::transform(release->version, release->version.begin(), [](const auto chr) { return static_cast<char>(std::tolower(chr)); });
                 release->body = js["body"].get<std::string>();
                 release->size = asset["size"].get<uintmax_t>();
                 return release;
@@ -119,6 +123,7 @@ namespace {
         out->size = std::filesystem::file_size(path);
         out->version = GWTOOLBOXDLL_VERSION;
         out->version.append(GWTOOLBOXDLL_VERSION_BETA);
+        std::ranges::transform(out->version, out->version.begin(), [](const auto chr) { return static_cast<char>(std::tolower(chr)); });
         return out;
     }
 
@@ -208,7 +213,7 @@ void Updater::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
 #ifdef _DEBUG
-    mode = static_cast<Mode>(0);
+    mode = Mode::DontCheckForUpdates;
     release_type = ReleaseType::Beta;
 #else
     mode = static_cast<Mode>(ini->GetLongValue(Name(), "update_mode", static_cast<int>(mode)));
