@@ -277,7 +277,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    int modelId = 0;
+    uint16_t modelId = 0;
 };
 
 class HasPartyWindowAllyOfNameCondition : public Condition {
@@ -357,7 +357,7 @@ private:
     AnyNoYes weaponspelled = AnyNoYes::Any;
     AnyNoYes enchanted = AnyNoYes::Any;
     GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
-    int modelId = 0;
+    uint16_t modelId = 0;
     float minDistance = 0.f;
     float maxDistance = 5000.f;
     std::string agentName = "";

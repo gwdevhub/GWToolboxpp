@@ -587,7 +587,7 @@ void ChangeTargetAction::drawSettings()
             ImGui::Bullet();
             ImGui::Text(requireSameModelIdAsTarget ? "If no target is selected: Model" : "Model");
             ImGui::SameLine();
-            ImGui::InputInt("id (0 for any)###11", &modelId, 0);
+            drawModelIDSelector(modelId, "id (0 for any)###11");
 
             ImGui::Bullet();
             ImGui::Text("Angle to player forward (degrees)");
@@ -1372,7 +1372,7 @@ void RepopMinipetAction::drawSettings()
     ImGui::SameLine();
     ImGui::InputInt("Item model ID", &itemModelId, 0);
     ImGui::SameLine();
-    ImGui::InputInt("Agent model ID", &agentModelId, 0);
+    drawModelIDSelector(agentModelId, "Agent model ID");
 
     ImGui::PopID();
 }

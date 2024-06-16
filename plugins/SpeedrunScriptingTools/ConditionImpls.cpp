@@ -900,7 +900,7 @@ void CurrentTargetModelCondition::drawSettings()
     ImGui::Text("If the target has model");
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    ImGui::InputInt("id", &modelId, 0);
+    drawModelIDSelector(modelId);
     ImGui::PopID();
 }
 
@@ -1268,7 +1268,7 @@ void NearbyAgentCondition::drawSettings()
         ImGui::Bullet();
         ImGui::Text("Has model");
         ImGui::SameLine();
-        ImGui::InputInt("id (0 for any)###11", &modelId, 0);
+        drawModelIDSelector(modelId, "id (0 for any)###11");
 
         ImGui::Bullet();
         ImGui::Text("Angle to player forward (degrees)");
