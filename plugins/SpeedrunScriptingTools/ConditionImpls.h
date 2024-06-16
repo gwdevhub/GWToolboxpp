@@ -72,7 +72,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    GW::Constants::QuestID id = GW::Constants::QuestID::None;
+    int id = 0;
     QuestStatus status = QuestStatus::NotStarted;
 };
 
