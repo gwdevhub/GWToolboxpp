@@ -602,7 +602,7 @@ void ChangeTargetAction::drawSettings()
 
             ImGui::BulletText("Sort candidates by:");
             ImGui::SameLine();
-            drawEnumButton(Sorting::AgentId, Sorting::HighestHp, sorting, 14, 150.);
+            drawEnumButton(Sorting::AgentId, Sorting::ModelID, sorting, 14, 150.);
 
             ImGui::Bullet();
             ImGui::Text("Is within polygon");
