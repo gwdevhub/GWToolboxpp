@@ -24,6 +24,7 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 
 #include <Keys.h>
 
@@ -1045,6 +1046,7 @@ KeyIsPressedCondition::~KeyIsPressedCondition()
 }
 bool KeyIsPressedCondition::check() const
 {
+    if (GW::Chat::GetIsTyping()) return false;
     bool keyIsPressed = GetAsyncKeyState(shortcutKey) & (1 << 15);
     if (shortcutMod & ModKey_Control) keyIsPressed &= ImGui::IsKeyDown(ImGuiKey_ModCtrl);
     if (shortcutMod & ModKey_Shift) keyIsPressed &= ImGui::IsKeyDown(ImGuiKey_ModShift);
