@@ -39,9 +39,14 @@ namespace {
     // Version 10: Current
     constexpr long currentVersion = 10;
 
+    bool mustComeLast(ConditionType type) 
+    {
+        return type == ConditionType::OnlyTriggerOncePerInstance || type == ConditionType::Once;
+    }
+
     bool canAddCondition(const Script& script) {
         return !std::ranges::any_of(script.conditions, [](const auto& cond) {
-            return cond->type() == ConditionType::OnlyTriggerOncePerInstance;
+            return mustComeLast(cond->type());
         });
     }
 
@@ -233,7 +238,7 @@ void SpeedrunScriptingTools::DrawSettings()
                     {
                         conditionToDelete = it;
                     }
-                    if (it->get()->type() != ConditionType::OnlyTriggerOncePerInstance) 
+                    if (!mustComeLast(it->get()->type())) 
                     {
                         ImGui::SameLine();
                         if (ImGui::Button("^", ImVec2(20, 0))) 
@@ -243,7 +248,8 @@ void SpeedrunScriptingTools::DrawSettings()
                         ImGui::SameLine();
                         if (ImGui::Button("v", ImVec2(20, 0))) 
                         {
-                            if (it + 1 != scriptIt->conditions.end() && (it + 1)->get()->type() != ConditionType::OnlyTriggerOncePerInstance) conditionsToSwap = {it, it + 1};
+                            if (it + 1 != scriptIt->conditions.end() && !mustComeLast((it + 1)->get()->type())) 
+                                conditionsToSwap = {it, it + 1};
                         }
                     }
                     ImGui::SameLine();
@@ -401,7 +407,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Checkbox("Execute scripts while in outpost", &runInOutposts);
 
-    ImGui::Text("Version 1.4-beta1. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 1.4-beta2. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";

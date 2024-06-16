@@ -516,3 +516,82 @@ public:
 private:
     int minimumMorale = 0;
 };
+
+class FalseCondition : public Condition {
+public:
+    FalseCondition() = default;
+    FalseCondition(InputStream&) {}
+    ConditionType type() const final { return ConditionType::False; }
+    bool check() const final;
+    void drawSettings() final;
+};
+
+class TrueCondition : public Condition {
+public:
+    TrueCondition() = default;
+    TrueCondition(InputStream&) {}
+    ConditionType type() const final { return ConditionType::True; }
+    bool check() const final;
+    void drawSettings() final;
+};
+
+class OnceCondition : public Condition {
+public:
+    OnceCondition() = default;
+    OnceCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::Once; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    std::shared_ptr<Condition> cond = nullptr;
+    mutable int triggeredLastInInstanceId = 0;
+};
+
+class UntilCondition : public Condition {
+public:
+    UntilCondition() = default;
+    UntilCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::Until; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    std::shared_ptr<Condition> cond = nullptr;
+    mutable int conditionLastTrueInInstanceId = 0;
+    mutable bool currentState = true;
+};
+
+class AfterCondition : public Condition {
+public:
+    AfterCondition() = default;
+    AfterCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::After; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    std::shared_ptr<Condition> cond = nullptr;
+    mutable int conditionLastTrueInInstanceId = 0;
+    mutable bool currentState = false;
+};
+
+class ToggleCondition : public Condition {
+public:
+    ToggleCondition() = default;
+    ToggleCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::Toggle; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    TrueFalse defaultState = TrueFalse::False;
+    std::shared_ptr<Condition> toggleOnCond = nullptr;
+    std::shared_ptr<Condition> toggleOffCond = nullptr;
+    mutable int lastResetInInstanceId = 0;
+    mutable bool currentState = false;
+};
