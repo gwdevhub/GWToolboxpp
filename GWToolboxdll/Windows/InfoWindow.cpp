@@ -960,28 +960,20 @@ namespace {
             dialog_buttons_frame = GW::UI::GetChildFrame(dialog_buttons_frame, 0);
             dialog_buttons_frame = GW::UI::GetChildFrame(dialog_buttons_frame, 1);
             if (dialog_buttons_frame) {
-                auto relation = dialog_buttons_frame->relation;
-                auto& siblings = dialog_buttons_frame->relation.siblings;
-                siblings.
-                do {
-                    const auto frame = sibling->Next();
-                    if (!frame) break;
-                    if (frame == relation) break;
-                    sibling = sibling->Next();
-
-                }
-
-                for(auto button_frame : siblings){
-                    const auto button_frame = (*it)->GetFrame();
+                for (auto& sibling : dialog_buttons_frame->relation.siblings) {
+                    const auto button_frame = sibling.GetFrame();
+                    if (button_frame->child_offset_id != 0x1)
+                        continue; // Not a button frame
                     const auto top_left = button_frame->position.GetTopLeftOnScreen(frame);
                     const auto bottom_right = button_frame->position.GetBottomRightOnScreen(frame);
-                    ImGui::GetBackgroundDrawList()->AddRect({ top_left.x,top_left.y }, { bottom_right.x,bottom_right.y }, IM_COL32_WHITE);
+                    const auto label = std::to_string(button_frame->field100_0x1a8);
+                    const auto draw_list = ImGui::GetBackgroundDrawList();
+                    draw_list->AddRect({ top_left.x, top_left.y }, { bottom_right.x, bottom_right.y }, IM_COL32_WHITE);
+                    draw_list->AddText({ top_left.x, top_left.y }, IM_COL32_WHITE, label.c_str());
                 }
             }
 
         }
-
-        (frame);
     }
 }
 

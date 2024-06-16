@@ -4,19 +4,12 @@
 
 #include <GWCA/Context/WorldContext.h>
 
-#include <GWCA/Packets/StoC.h>
-
 #include <GWCA/GameEntities/Skill.h>
 
-#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
-#include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
-#include <GWCA/Managers/MemoryMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <Color.h>
