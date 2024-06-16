@@ -465,18 +465,22 @@ void SpeedrunScriptingTools::Update(float delta)
 {
     ToolboxPlugin::Update(delta);
 
-    static bool wasLoading = false;
-    bool isLoading = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading;
-    if (isLoading && !wasLoading) 
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading && !isInLoadingScreen) 
     {
+        // First frame on new loading screen
+        isInLoadingScreen = true;
+        if (m_currentScript) 
+        {
+            for (auto& action : m_currentScript->actions)
+                action->finalAction();
+        }
         m_currentScript = std::nullopt;
         for (auto& script : m_scripts)
              script.triggered = false;
     }
-    wasLoading = isLoading;
 
     const auto map = GW::Map::GetMapInfo();
-    if (isLoading || !map || map->GetIsPvP() || !GW::Agents::GetPlayerAsAgentLiving() || (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !runInOutposts))
+    if (isInLoadingScreen || !map || map->GetIsPvP() || !GW::Agents::GetPlayerAsAgentLiving() || (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !runInOutposts))
     {
         return;
     }
@@ -668,11 +672,14 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
     GW::Initialize();
 
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
-        &InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {
+        &InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) 
+    {
+        isInLoadingScreen = false;
         std::ranges::for_each(m_scripts, [](Script& s) {
             if (s.enabled && s.trigger == Trigger::InstanceLoad)
                 s.triggered = true;
         });
+        
     });
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MessageCore>(&CoreMessage_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::MessageCore* packet) {
         if (wmemcmp(packet->message, L"\x8101\x7f84", 2) == 0) 
