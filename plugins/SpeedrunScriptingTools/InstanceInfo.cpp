@@ -21,7 +21,7 @@ namespace {
     GW::HookEntry ObjectiveDone_Entry;
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry UseItem_Entry;
-    GW::HookEntry CoreMessage_Entry;
+    GW::HookEntry DisplayDialogue_Entry;
 
     bool isTargetableMiniPet(uint32_t itemId) 
     {
@@ -71,7 +71,7 @@ void InstanceInfo::initialize()
 
         ++instanceId;
     });
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::DisplayDialogue>(&CoreMessage_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* packet) {
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* packet) {
         if (wmemcmp(packet->message, L"\x8102\x5d41\xa992\xf927\x29f7", 5) == 0) 
         {
             // Dhuum quest does not send a `ObjectiveUpdateName` StoC

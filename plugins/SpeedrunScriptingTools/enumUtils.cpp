@@ -11,6 +11,8 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
+#include <ModelNames.h>
+
 namespace {
     std::string getSkillName(GW::Constants::SkillID id)
     {
@@ -507,4 +509,24 @@ void drawMapIDSelector(GW::Constants::MapID& id)
     }
     
     ImGui::InputInt("Map ID", reinterpret_cast<int*>(&id), 0);
+}
+void drawModelIDSelector(uint16_t& id, std::optional<std::string_view> label)
+{
+    ImGui::PushItemWidth(50.f);
+    const auto& modelNames = getModelNames();
+    const auto& modelNameIt = modelNames.find(id);
+    if (modelNameIt != modelNames.end())
+    {
+        ImGui::Text("%s", modelNameIt->second.data());
+        ImGui::SameLine();
+    }
+    int editValue = id;
+
+    if (ImGui::InputInt(label ? label->data() : "Model ID", &editValue, 0))
+    {
+        if (editValue >= 0 && editValue <= 0xFFFF)
+            id = uint16_t(editValue);
+        else
+            id = 0;
+    }
 }

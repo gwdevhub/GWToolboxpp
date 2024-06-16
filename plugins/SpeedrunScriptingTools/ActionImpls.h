@@ -90,7 +90,7 @@ private:
     AnyNoYes enchanted = AnyNoYes::Any;
     GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
     Sorting sorting = Sorting::AgentId;
-    int modelId = 0;
+    uint16_t modelId = 0;
     float minDistance = 0.f;
     float maxDistance = 5000.f;
     bool preferNonHexed = false;
@@ -270,7 +270,7 @@ public:
 
 private:
     int itemModelId = 36651;
-    int agentModelId = 350;
+    uint16_t agentModelId = 350;
 
     mutable GW::HookEntry hook;
     mutable bool agentHasSpawned = false;
