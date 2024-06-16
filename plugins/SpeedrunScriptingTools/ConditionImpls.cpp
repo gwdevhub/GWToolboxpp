@@ -1648,3 +1648,292 @@ void MoraleCondition::drawSettings()
 
     ImGui::PopID();
 }
+
+/// ------------- FalseCondition -------------
+bool FalseCondition::check() const
+{
+    return false;
+}
+void FalseCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("False");
+
+    ImGui::PopID();
+}
+
+/// ------------- TrueCondition -------------
+bool TrueCondition::check() const
+{
+    return true;
+}
+void TrueCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("True");
+
+    ImGui::PopID();
+}
+
+/// ------------- OnceCondition -------------
+OnceCondition::OnceCondition(InputStream& stream)
+{
+    std::string read;
+    stream >> read;
+    if (read == missingContentToken)
+        cond = nullptr;
+    else if (read == "C")
+        cond = readCondition(stream);
+    else
+        return;
+}
+void OnceCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+    if (cond)
+        cond->serialize(stream);
+    else
+        stream << missingContentToken;
+}
+bool OnceCondition::check() const
+{
+    const auto currentInstanceId = InstanceInfo::getInstance().getInstanceId();
+    if (triggeredLastInInstanceId == currentInstanceId) return false;
+    if (cond && !cond->check()) return false;
+
+    triggeredLastInInstanceId = currentInstanceId;
+    return true;
+}
+void OnceCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+    ImGui::Text("ONCE (");
+    ImGui::SameLine();
+    if (cond) {
+        cond->drawSettings();
+    }
+    else {
+        cond = drawConditionSelector(100.f);
+    }
+    ImGui::SameLine();
+    ImGui::Text(")");
+    ImGui::SameLine();
+    ImGui::ShowHelp("Is true exactly once the first time the condition is met");
+    ImGui::PopID();
+}
+
+/// ------------- UntilCondition -------------
+UntilCondition::UntilCondition(InputStream& stream)
+{
+    std::string read;
+    stream >> read;
+    if (read == missingContentToken)
+        cond = nullptr;
+    else if (read == "C")
+        cond = readCondition(stream);
+    else
+        return;
+}
+void UntilCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+    if (cond)
+        cond->serialize(stream);
+    else
+        stream << missingContentToken;
+}
+bool UntilCondition::check() const
+{
+    const auto currentInstanceId = InstanceInfo::getInstance().getInstanceId();
+    if (conditionLastTrueInInstanceId != currentInstanceId) 
+    {
+        currentState = true;
+        conditionLastTrueInInstanceId = currentInstanceId;
+    }
+    if (currentState && cond && cond->check()) 
+    {
+        currentState = false;
+    }
+
+    return currentState;
+}
+void UntilCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+    ImGui::Text("UNTIL (");
+    ImGui::SameLine();
+    if (cond) {
+        cond->drawSettings();
+    }
+    else {
+        cond = drawConditionSelector(100.f);
+    }
+    ImGui::SameLine();
+    ImGui::Text(")");
+    ImGui::SameLine();
+    ImGui::ShowHelp("Is true until the condition is met the first time in each instance. False after that.");
+    ImGui::PopID();
+}
+
+/// ------------- AfterCondition -------------
+AfterCondition::AfterCondition(InputStream& stream)
+{
+    std::string read;
+    stream >> read;
+    if (read == missingContentToken)
+        cond = nullptr;
+    else if (read == "C")
+        cond = readCondition(stream);
+    else
+        return;
+}
+void AfterCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+    if (cond)
+        cond->serialize(stream);
+    else
+        stream << missingContentToken;
+}
+bool AfterCondition::check() const
+{
+    const auto currentInstanceId = InstanceInfo::getInstance().getInstanceId();
+    if (conditionLastTrueInInstanceId != currentInstanceId) {
+        currentState = false;
+        conditionLastTrueInInstanceId = currentInstanceId;
+    }
+    if (!currentState && cond && cond->check()) 
+    {
+        currentState = true;
+    }
+
+    return currentState;
+}
+void AfterCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+    ImGui::Text("AFTER (");
+    ImGui::SameLine();
+    if (cond) {
+        cond->drawSettings();
+    }
+    else {
+        cond = drawConditionSelector(100.f);
+    }
+    ImGui::SameLine();
+    ImGui::Text(")");
+    ImGui::SameLine();
+    ImGui::ShowHelp("Is false until the condition is met the first time in each instance. True after that.");
+    ImGui::PopID();
+}
+
+/// ------------- ToggleCondition -------------
+ToggleCondition::ToggleCondition(InputStream& stream)
+{
+    stream >> defaultState;
+
+    std::string read;
+
+    stream >> read;
+    if (read == missingContentToken)
+        toggleOnCond = nullptr;
+    else if (read == "C") 
+    {
+        toggleOnCond = readCondition(stream);
+        stream.proceedPastSeparator(2);
+    }
+    else
+        return;
+
+    stream >> read;
+    if (read == missingContentToken)
+        toggleOffCond = nullptr;
+    else if (read == "C") 
+    {
+        toggleOffCond = readCondition(stream);
+        stream.proceedPastSeparator(2);
+    }
+}
+void ToggleCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+    
+    stream << defaultState;
+
+    if (toggleOnCond) 
+    {
+        toggleOnCond->serialize(stream);
+        stream.writeSeparator(2);
+    }
+    else
+        stream << missingContentToken;
+
+    if (toggleOffCond) 
+    {
+        toggleOffCond->serialize(stream);
+        stream.writeSeparator(2);
+    }
+    else
+        stream << missingContentToken;
+}
+bool ToggleCondition::check() const
+{
+    const auto currentInstanceId = InstanceInfo::getInstance().getInstanceId();
+    if (lastResetInInstanceId != currentInstanceId) 
+    {
+        currentState = defaultState == TrueFalse::True;
+        lastResetInInstanceId = currentInstanceId;
+    }
+    if (!currentState && toggleOnCond && toggleOnCond->check())
+    {
+        currentState = true;
+    }
+    if (currentState && toggleOffCond && toggleOffCond->check()) 
+    {
+        currentState = false;
+    }
+
+    return currentState;
+}
+void ToggleCondition::drawSettings()
+{
+    const auto drawToggle = [&](auto& cond, const auto text, const auto id)
+    {
+        ImGui::PushID(id);
+        
+        bool deleteCondition = false;
+        
+        ImGui::Bullet();
+        ImGui::Text(text);
+        
+        ImGui::SameLine();
+        if (cond) 
+        {
+            if (ImGui::Button("X")) deleteCondition = true;
+            ImGui::SameLine();
+            cond->drawSettings();
+        }
+        else
+            cond = drawConditionSelector(100.f);
+
+        if (deleteCondition) 
+            cond = nullptr;
+
+        ImGui::PopID();
+    };
+    ImGui::PushID(drawId());
+    
+    ImGui::Bullet();
+    ImGui::Text("Initially:");
+    ImGui::SameLine();
+    drawEnumButton(TrueFalse::True, TrueFalse::False, defaultState);
+
+    ImGui::Indent(84.f);
+    drawToggle(toggleOnCond, "Toggle on", 0);
+    drawToggle(toggleOffCond, "Toggle off", 1);
+    ImGui::Unindent(84.f);
+
+    ImGui::PopID();
+}

@@ -14,6 +14,7 @@ enum class HasSkillRequirement {OnBar, OffCooldown, ReadyToUse};
 enum class PlayerConnectednessRequirement {All, Individual};
 enum class Status {Enchanted, WeaponSpelled, Alive, Bleeding, Crippled, DeepWounded, Poisoned, Hexed};
 enum class EquippedItemSlot {Mainhand, Offhand, Chest, Legs, Head, Feet, Hands};
+enum class TrueFalse {True, False};
 
 enum class ActionBehaviourFlag : uint32_t 
 {
