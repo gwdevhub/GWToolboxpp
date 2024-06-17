@@ -337,7 +337,7 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
         ImGui::OpenPopup("Add condition");
     }
 
-    constexpr auto playerConditions = std::array{ConditionType::PlayerIsNearPosition,  ConditionType::PlayerInPolygon, ConditionType::PlayerHasBuff,    ConditionType::PlayerHasSkill, ConditionType::PlayerHasClass,
+    constexpr auto playerConditions = std::array{ConditionType::PlayerIsNearPosition,  ConditionType::PlayerInPolygon, ConditionType::PlayerHasBuff,    ConditionType::PlayerHasSkill, ConditionType::RemainingCooldown, ConditionType::PlayerHasClass,
                                                  ConditionType::PlayerHasName,         ConditionType::PlayerHasEnergy, ConditionType::PlayerHasHpBelow, ConditionType::PlayerStatus,   ConditionType::PlayerIsIdle,
                                                  ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory, ConditionType::PlayerMorale,     ConditionType::CanPopAgent};
     constexpr auto targetConditions = std::array{ConditionType::CurrentTargetHasHpBelow, ConditionType::CurrentTargetStatus, ConditionType::CurrentTargetIsUsingSkill, ConditionType::CurrentTargetHasModel,

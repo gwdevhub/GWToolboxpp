@@ -581,10 +581,12 @@ void SpeedrunScriptingTools::Update(float delta)
 
 bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LPARAM lparam)
 {
-    if (GW::Chat::GetIsTyping()) {
+    if (GW::Chat::GetIsTyping() || GW::MemoryMgr::GetGWWindowHandle() != GetActiveWindow()) 
+    {
         return false;
     }
-    if (GW::MemoryMgr::GetGWWindowHandle() != GetActiveWindow()) {
+    if (!runInOutposts && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) 
+    {
         return false;
     }
     long keyData = 0;
