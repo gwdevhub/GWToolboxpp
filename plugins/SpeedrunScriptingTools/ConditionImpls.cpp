@@ -1560,13 +1560,13 @@ void InstanceTypeCondition::drawSettings()
 /// ------------- RemainingCooldownCondition -------------
 RemainingCooldownCondition::RemainingCooldownCondition(InputStream& stream)
 {
-    stream >> id >> remainingCooldownInMs;
+    stream >> id >> hasMinimumCooldown >> hasMaximumCooldown >> minimumCooldown >> maximumCooldown;
 }
 void RemainingCooldownCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << id << remainingCooldownInMs;
+    stream << id << hasMinimumCooldown << hasMaximumCooldown << minimumCooldown << maximumCooldown;
 }
 bool RemainingCooldownCondition::check() const
 {
@@ -1576,7 +1576,11 @@ bool RemainingCooldownCondition::check() const
     for (int i = 0; i < 8; ++i) 
     {
         if (bar->skills[i].skill_id == id) 
-            return bar->skills[i].GetRecharge() > uint32_t(remainingCooldownInMs);
+        {
+            const auto cooldown = (int)bar->skills[i].GetRecharge();
+            return (!hasMinimumCooldown || cooldown >= minimumCooldown) && (!hasMaximumCooldown || cooldown <= maximumCooldown);
+        }
+            
     }
     return false;
 }
@@ -1588,9 +1592,37 @@ void RemainingCooldownCondition::drawSettings()
     ImGui::SameLine();
     drawSkillIDSelector(id);
     ImGui::SameLine();
-    ImGui::Text("has remaining cooldown of at least");
+    ImGui::Text("has remaining cooldown (in ms)");
     ImGui::SameLine();
-    ImGui::InputInt("ms", &remainingCooldownInMs, 0);
+    
+    if (hasMinimumCooldown) 
+    {
+        ImGui::InputInt("min", &minimumCooldown, 0);
+        ImGui::SameLine();
+        if (ImGui::Button("X###0")) {
+            hasMinimumCooldown = false;
+            minimumCooldown = 0;
+        }
+    }
+    else 
+    {
+        if (ImGui::Button("Add min")) hasMinimumCooldown = true;
+    }
+
+    ImGui::SameLine();
+    if (hasMaximumCooldown) 
+    {
+        ImGui::InputInt("max", &maximumCooldown, 0);
+        ImGui::SameLine();
+        if (ImGui::Button("X###1")) {
+            hasMaximumCooldown = false;
+            maximumCooldown = 0;
+        }
+    }
+    else {
+        if (ImGui::Button("Add max")) hasMaximumCooldown = true;
+    }
+
 
     ImGui::PopID();
 }
