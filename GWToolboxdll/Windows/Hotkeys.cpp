@@ -2008,9 +2008,7 @@ void HotkeyFlagHero::Execute()
 HotkeyGWKey::HotkeyGWKey(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
-    can_trigger_on_map_change = trigger_on_explorable = trigger_on_outpost = false;
     action = static_cast<GW::UI::ControlAction>(ini->GetLongValue(section, "ActionID", action));
-
 }
 
 void HotkeyGWKey::Save(ToolboxIni* ini, const char* section) const
