@@ -468,7 +468,7 @@ class InstanceTypeCondition : public Condition {
 public:
     InstanceTypeCondition() = default;
     InstanceTypeCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::IsInMap; }
+    ConditionType type() const final { return ConditionType::InstanceType; }
     bool check() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
@@ -488,7 +488,10 @@ public:
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
-    int remainingCooldownInMs = 1000;
+    bool hasMinimumCooldown = false;
+    bool hasMaximumCooldown = false;
+    int minimumCooldown = 0;
+    int maximumCooldown = 1000;
 };
 
 class FoeCountCondition : public Condition {
