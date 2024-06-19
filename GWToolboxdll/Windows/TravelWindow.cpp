@@ -22,6 +22,7 @@
 #include <Utils/GuiUtils.h>
 
 #include <Modules/Resources.h>
+#include <Windows/DailyQuestsWindow.h>
 #include <Windows/TravelWindow.h>
 #include <Windows/TravelWindowConstants.h>
 
@@ -373,6 +374,25 @@ namespace {
             }
             return;
         }
+
+        auto travel_quest_info = [](DailyQuests::QuestData* quest_info) {
+            if (!(quest_info 
+                && quest_info->map_id != GW::Constants::MapID::None
+                && TravelWindow::Instance().TravelNearest(quest_info->map_id))) {
+                Log::Error("Failed to travel to daily quest");
+            }
+            };
+
+        if (argOutpost == L"zv") {
+            return travel_quest_info(DailyQuests::GetZaishenVanquish());
+        }
+        if (argOutpost == L"zm") {
+            return travel_quest_info(DailyQuests::GetZaishenMission());
+        }
+        if (argOutpost == L"zb") {
+            return travel_quest_info(DailyQuests::GetZaishenBounty());
+        }
+
         TravelWindow& instance = Instance();
         if (argOutpost.size() > 2 && argOutpost.compare(0, 3, L"fav", 3) == 0) {
             const std::wstring fav_s_num = argOutpost.substr(3, std::wstring::npos);
@@ -761,6 +781,11 @@ void TravelWindow::ScrollToOutpost(const GW::Constants::MapID outpost_id, const 
         scroll_to_outpost_id = GW::Constants::MapID::None;
         return;
     }
+}
+
+bool TravelWindow::TravelNearest(const GW::Constants::MapID map_id) {
+    const auto outpost = GetNearestOutpost(map_id);
+    return Travel(outpost);
 }
 
 bool TravelWindow::Travel(const GW::Constants::MapID map_id, const GW::Constants::District _district /*= 0*/, const uint32_t _district_number)

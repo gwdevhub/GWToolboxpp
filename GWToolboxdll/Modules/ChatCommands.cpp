@@ -862,6 +862,8 @@ void ChatCommands::DrawHelp()
     ImGui::Text("'/travel <town> [dis]', '/tp <town> [dis]' or '/to <town> [dis]' travel to outpost best matching <town> name. \n"
         "[dis] can be any of: ae, ae1, ee, eg, int, etc");
     ImGui::Bullet();
+    ImGui::Text("'/travel [zv|zb|zm]' travel to nearest unlocked outpost to daily quest.");
+    ImGui::Bullet();
     ImGui::Text("'/useskill <skill>' starts using the skill on recharge. "
         "Use the skill number instead of <skill> (e.g. '/useskill 5'). "
         "Use empty '/useskill' or '/useskill stop' to stop all. "
