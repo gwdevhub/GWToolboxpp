@@ -396,3 +396,17 @@ public:
     void drawSettings() final;
     ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost | ActionBehaviourFlag::ImmediateFinish; }
 };
+
+class WaitUntilAction : public Action {
+public:
+    WaitUntilAction() = default;
+    WaitUntilAction(InputStream&);
+    ActionType type() const final { return ActionType::WaitUntil; }
+    ActionStatus isComplete() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
+
+private:
+    std::shared_ptr<Condition> condition = nullptr;
+};

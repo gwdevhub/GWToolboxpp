@@ -31,6 +31,7 @@ enum class ActionType : int {
     UseHeroSkill,
     UnequipItem,
     ClearTarget,
+    WaitUntil,
 
     Count
 };

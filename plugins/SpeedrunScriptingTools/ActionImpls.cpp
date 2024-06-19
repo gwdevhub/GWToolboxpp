@@ -1643,3 +1643,43 @@ void ClearTargetAction::drawSettings()
 
     ImGui::PopID();
 }
+
+/// ------------- WaitUntilAction -------------
+WaitUntilAction::WaitUntilAction(InputStream& stream)
+{
+    std::string read;
+    stream >> read;
+    if (read == missingContentToken)
+        condition = nullptr;
+    else if (read == "C")
+        condition = readCondition(stream);
+}
+void WaitUntilAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    if (condition)
+        condition->serialize(stream);
+    else
+        stream << missingContentToken;
+}
+
+void WaitUntilAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("Wait until is fulfilled: ");
+    ImGui::SameLine();
+    if (condition)
+        condition->drawSettings();
+    else
+        condition = drawConditionSelector(120.f);
+
+    ImGui::PopID();
+}
+ActionStatus WaitUntilAction::isComplete() const 
+{
+    if (!condition || condition->check()) 
+        return ActionStatus::Complete;
+    return ActionStatus::Running;
+}
