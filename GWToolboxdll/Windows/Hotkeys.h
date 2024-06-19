@@ -262,8 +262,7 @@ class HotkeyAction : public TBHotkey {
 
     enum Action {
         OpenXunlaiChest,
-        OpenLockedChest,
-        DropGoldCoin,
+        DropGoldCoin = 2,
         ReapplyTitle,
         EnterChallenge,
     };
@@ -271,7 +270,7 @@ class HotkeyAction : public TBHotkey {
     static bool GetText(void*, int idx, const char** out_text);
 
 public:
-    Action action;
+    Action action = OpenXunlaiChest;
 
     static const char* IniSection() { return "Action"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }

@@ -1476,9 +1476,6 @@ bool HotkeyAction::GetText(void*, int idx, const char** out_text)
         case OpenXunlaiChest:
             *out_text = "Open Xunlai Chest";
             return true;
-        case OpenLockedChest:
-            *out_text = "Open Locked Chest";
-            return true;
         case DropGoldCoin:
             *out_text = "Drop Gold Coin";
             return true;
@@ -1529,16 +1526,6 @@ void HotkeyAction::Execute()
                 GW::Items::OpenXunlaiWindow();
                 });
             break;
-        case OpenLockedChest: {
-            if (isExplorable()) {
-                const GW::Agent* target = GW::Agents::GetTarget();
-                if (target && target->GetIsGadgetType()) {
-                    GW::Agents::InteractAgent(target);
-                    GW::Items::OpenLockedChest();
-                }
-            }
-            break;
-        }
         case DropGoldCoin:
             if (isExplorable()) {
                 GW::Items::DropGold(1);
