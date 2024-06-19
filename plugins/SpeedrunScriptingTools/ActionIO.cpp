@@ -6,7 +6,7 @@
 namespace {
     std::shared_ptr<Action> makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 26);
+        static_assert((int)ActionType::Count == 27);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -58,6 +58,8 @@ namespace {
                 return std::make_shared<UnequipItemAction>();
             case ActionType::ClearTarget:
                 return std::make_shared<ClearTargetAction>();
+            case ActionType::WaitUntil:
+                return std::make_shared<WaitUntilAction>();
             default:
                 return nullptr;
         }
@@ -66,7 +68,7 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 26);
+    static_assert((int)ActionType::Count == 27);
     switch (type) {
         case ActionType::MoveTo:
             return "Move to";
@@ -118,6 +120,8 @@ std::string_view toString(ActionType type)
             return "Unequip item";
         case ActionType::ClearTarget:
             return "Clear target";
+        case ActionType::WaitUntil:
+            return "Wait until";
         default:
             return "Unknown";
     }
@@ -125,7 +129,7 @@ std::string_view toString(ActionType type)
 
 std::shared_ptr<Action> readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 26);
+    static_assert((int)ActionType::Count == 27);
     int type;
 
     stream >> type;
@@ -180,6 +184,8 @@ std::shared_ptr<Action> readAction(InputStream& stream)
             return std::make_shared<UnequipItemAction>(stream);
         case ActionType::ClearTarget:
             return std::make_shared<ClearTargetAction>(stream);
+        case ActionType::WaitUntil:
+            return std::make_shared<WaitUntilAction>(stream);
         default:
             return nullptr;
     }
@@ -221,7 +227,8 @@ std::shared_ptr<Action> drawActionSelector(float width)
         drawSubMenu("Targeting", std::array{ActionType::ChangeTarget, ActionType::StoreTarget, ActionType::RestoreTarget, ActionType::ClearTarget});
         drawSubMenu("Items", std::array{ActionType::EquipItem, ActionType::ChangeWeaponSet, ActionType::UseItem, ActionType::RepopMinipet, ActionType::UnequipItem});
         drawSubMenu("Chat", std::array{ActionType::SendChat, ActionType::PingTarget, ActionType::PingHardMode});
-        drawSubMenu("Other", std::array{ActionType::Wait, ActionType::Cancel, ActionType::Conditioned, ActionType::LogOut, ActionType::StopScript});
+        drawSubMenu("Other", std::array{ActionType::Wait, ActionType::WaitUntil, ActionType::Cancel, ActionType::LogOut, ActionType::StopScript});
+        drawActionSelector(ActionType::Conditioned);
 
         ImGui::EndPopup();
     }
