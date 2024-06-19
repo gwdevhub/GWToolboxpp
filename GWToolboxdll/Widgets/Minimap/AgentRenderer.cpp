@@ -332,7 +332,7 @@ void AgentRenderer::LoadDefaultColors()
     color_neutral = 0xFF0000DC;
     color_ally = 0xFF00B300;
     color_ally_npc = 0xFF99FF99;
-    color_ally_npc_quest = 0x33E100FF;
+    color_ally_npc_quest = 0xFF99FF99;
     color_ally_spirit = 0xFF608000;
     color_ally_minion = 0xFF008060;
     color_ally_dead = 0x64006400;
