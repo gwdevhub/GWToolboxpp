@@ -15,6 +15,8 @@
 #include <Utils/GuiUtils.h>
 #include <Windows/EnemyWindow.h>
 
+#include <Modules/Resources.h>
+
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <Timer.h>
 
@@ -35,11 +37,24 @@ namespace {
     ImU32 ConditionedColor = IM_COL32(160, 117, 85, 255);
     ImU32 EnchantedColor = IM_COL32(224, 253, 94, 255);
 
+    std::unordered_map<uint32_t, GuiUtils::EncString*> agent_names_by_id;
+
+    std::string& GetAgentName(uint32_t agent_id) {
+        const auto enc_name = GW::Agents::GetAgentEncName(agent_id);
+        if (!agent_names_by_id.contains(agent_id)) {
+            agent_names_by_id[agent_id] = new GuiUtils::EncString();
+        }
+        auto enc_string = agent_names_by_id[agent_id];
+        enc_string->reset(enc_name);
+        return enc_string->string();
+    }
+
+
     struct enemyinfo {
         enemyinfo(const GW::AgentID agent_id) : agent_id(agent_id) {}
         GW::AgentID agent_id;
         clock_t last_casted = 0;
-        uint16_t last_skill;
+        GW::Constants::SkillID last_skill = GW::Constants::SkillID::No_Skill;
         float distance = FLT_MAX;
     };
 
@@ -67,13 +82,18 @@ namespace {
         ImGui::GetWindowDrawList()->AddTriangleFilled(point1, point2, point3, triangleColor);
     }
 
-    void WriteEnemyName(ImVec2 position, std::string name, std::string skillname, uint8_t level, clock_t last_casted)
+    void WriteEnemyName(ImVec2 position, const std::string& agent_name, const std::string* skill_name, uint8_t level, clock_t last_casted)
     {
-        if (show_enemy_level) name = "Lvl " + std::to_string(level) + " " + name;
+        std::string text;
 
-        if (show_enemy_last_skill && TIMER_DIFF(last_casted) < last_skill_threshold) name = name + " - " + skillname;
-
-        ImGui::GetWindowDrawList()->AddText(position, IM_COL32(253, 255, 255, 255), (name).c_str());
+        if (show_enemy_level) {
+            text += std::format("Lvl {} ", level);
+        }
+        text += agent_name;
+        if (show_enemy_last_skill && TIMER_DIFF(last_casted) < last_skill_threshold && skill_name && !skill_name->empty()) {
+            text += std::format(" - {}", *skill_name);
+        }
+        ImGui::GetWindowDrawList()->AddText(position, IM_COL32(253, 255, 255, 255), text.c_str());
     }
 
     uint32_t GetAgentMaxHP(const GW::AgentLiving* agent)
@@ -124,15 +144,9 @@ namespace {
                     continue;
                 }
                 const auto selected = target && target->agent_id == living->agent_id;
-
-                std::wstring agent_name_enc;
-                GW::Agents::AsyncGetAgentName(living, agent_name_enc);
-                if (agent_name_enc.empty()) {
+                const auto agent_name_str = GetAgentName(living->agent_id);
+                if (agent_name_str.empty())
                     continue;
-                }
-
-                const std::string agent_name_str = GuiUtils::WStringToString(agent_name_enc);
-                std::string skillname;
 
                 ImGui::PushID(enemy_info.agent_id);
                 ImGui::TableNextRow();
@@ -164,14 +178,16 @@ namespace {
                 ImGui::ProgressBar(living->hp, ImVec2(-1, 0), "");
                 ImGui::PopStyleColor();
 
-                if (enemy_info.last_skill != 0) {
-                    const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(enemy_info.last_skill));
-                    ASSERT(skill_data);
-                    auto enc_skillname = new GuiUtils::EncString(skill_data->name);
-                    skillname = enc_skillname->string();
+                std::string* skill_name = nullptr;
+
+                if (enemy_info.last_skill != GW::Constants::SkillID::No_Skill) {
+                    const auto skill_data = GW::SkillbarMgr::GetSkillConstantData(enemy_info.last_skill);
+                    auto enc_skillname = Resources::DecodeStringId(skill_data->name);
+                    ASSERT(enc_skillname);
+                    skill_name = &enc_skillname->string();
                 }
 
-                WriteEnemyName(Pos1, agent_name_str, skillname, living->level, enemy_info.last_casted);
+                WriteEnemyName(Pos1, agent_name_str, skill_name, living->level, enemy_info.last_casted);
 
                 if (living->GetIsEnchanted()) {
                     DrawStatusTriangle(triangles, Pos2, EnchantedColor, false);
@@ -217,6 +233,11 @@ namespace {
     {
         enemies.clear();
         all_enemies.clear();
+        for (auto& p : agent_names_by_id) {
+            delete p.second;
+        }
+        agent_names_by_id.clear();
+
     }
 
 } // namespace
@@ -280,7 +301,7 @@ void EnemyWindow::Draw(IDirect3DDevice9*)
                 }
                 if (is_casting) {
                     found_enemy->last_casted = TIMER_INIT();
-                    found_enemy->last_skill = living->skill;
+                    found_enemy->last_skill = static_cast<GW::Constants::SkillID>(living->skill);
                 }
 
                 found_enemy->distance = GW::GetSquareDistance(player->pos, living->pos);
