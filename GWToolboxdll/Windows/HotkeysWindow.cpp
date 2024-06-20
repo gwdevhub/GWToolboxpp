@@ -172,7 +172,7 @@ namespace {
         if (!IsMapReady()) {
             return false;
         }
-        if (!GW::Agents::GetPlayerAsAgentLiving()) {
+        if (!GW::Agents::GetControlledCharacter()) {
             return false;
         }
         const GW::Constants::InstanceType mt = GW::Map::GetInstanceType();
@@ -204,7 +204,7 @@ namespace {
         if (!IsMapReady()) {
             return false;
         }
-        if (!GW::Agents::GetPlayerAsAgentLiving()) {
+        if (!GW::Agents::GetControlledCharacter()) {
             return false;
         }
         if (!CheckSetValidHotkeys()) {

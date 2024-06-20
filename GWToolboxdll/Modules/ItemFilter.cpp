@@ -275,7 +275,7 @@ namespace {
             return;
         }
 
-        const auto my_agent_id = GW::Agents::GetPlayerId();
+        const auto my_agent_id = GW::Agents::GetControlledCharacterId();
 
         const auto owner_id = GetItemOwner(item->item_id);
         const auto can_pick_up = owner_id == 0                    // not reserved

@@ -537,7 +537,7 @@ namespace {
         }
         const GW::Player* first_player = nullptr;
         const GW::Player* next_player = nullptr;
-        const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+        const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
         if (!me) {
             // Can't find myself
             Log::Error("Failed to find me");
@@ -817,7 +817,7 @@ namespace {
         uint32_t override_manual_agent_id = 0;
         const GW::Item* target_item = nullptr;
         const auto agents = GW::Agents::GetAgentArray();
-        const auto me = agents ? GW::Agents::GetPlayer() : nullptr;
+        const auto me = agents ? GW::Agents::GetControlledCharacter() : nullptr;
         if (!me) {
             return;
         }
@@ -1463,7 +1463,7 @@ void GameSettings::MessageOnPartyChange()
         return; // Don't need to check, or not an outpost.
     }
     GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
-    const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
     if (!me || !current_party || !current_party->players.valid()) {
         return; // Party not ready yet.
     }
@@ -2145,7 +2145,7 @@ void GameSettings::OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::Playe
     if (!(pak->player_name && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)) {
         return; // Only message in an outpost.
     }
-    if (TIMER_DIFF(instance_entered_at) < 2000 && GW::Agents::GetPlayerId()) {
+    if (!(TIMER_DIFF(instance_entered_at) > 2000 && GW::Agents::GetControlledCharacter())) {
         return; // Only been in this map for less than 2 seconds or current player not loaded in yet; avoids spam on map load.
     }
     if (GW::Agents::GetAgentByID(pak->agent_id)) {
@@ -2207,7 +2207,7 @@ void GameSettings::OnAgentMarker(GW::HookStatus*, GW::Packet::StoC::GenericValue
 // Block annoying tonic sounds/effects from other players
 void GameSettings::OnAgentEffect(GW::HookStatus* status, const GW::Packet::StoC::GenericValue* pak)
 {
-    if (pak->agent_id != GW::Agents::GetPlayerId()) {
+    if (pak->agent_id != GW::Agents::GetControlledCharacterId()) {
         status->blocked |= ShouldBlockEffect(pak->value);
     }
 }
@@ -2233,7 +2233,7 @@ void GameSettings::OnUpdateAgentState(GW::HookStatus*, GW::Packet::StoC::AgentSt
 // Apply Collector's Edition animations on player dancing,
 void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::StoC::GenericValue* pak)
 {
-    if (!(pak->agent_id == GW::Agents::GetPlayerId() && collectors_edition_emotes)) {
+    if (!(pak->agent_id == GW::Agents::GetControlledCharacterId() && collectors_edition_emotes)) {
         return;
     }
     static GW::Packet::StoC::GenericValue pak2;
@@ -2242,7 +2242,7 @@ void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::St
     pak2.value = pak->value; // Glowing hands, any profession
     if (pak->value == 0x43394f1d) {
         // 0x31939cbb = /dance, 0x43394f1d = /dancenew
-        switch (static_cast<GW::Constants::Profession>(GW::Agents::GetPlayerAsAgentLiving()->primary)) {
+        switch (static_cast<GW::Constants::Profession>(GW::Agents::GetControlledCharacter()->primary)) {
             case GW::Constants::Profession::Assassin:
             case GW::Constants::Profession::Ritualist:
             case GW::Constants::Profession::Dervish:
@@ -2472,7 +2472,7 @@ void GameSettings::OnAgentStartCast(GW::HookStatus*, GW::UI::UIMessage, void* wP
         uint32_t agent_id;
         GW::Constants::SkillID skill_id;
     }* casting = static_cast<Casting*>(wParam);
-    if (casting->agent_id == GW::Agents::GetPlayerId() && casting->skill_id == GW::Constants::SkillID::Unyielding_Aura) {
+    if (casting->agent_id == GW::Agents::GetControlledCharacterId() && casting->skill_id == GW::Constants::SkillID::Unyielding_Aura) {
         // Cancel UA before recast
         const GW::Buff* buff = GW::Effects::GetPlayerBuffBySkillId(casting->skill_id);
         if (buff && buff->skill_id != GW::Constants::SkillID::No_Skill) {

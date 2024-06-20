@@ -472,7 +472,7 @@ void CustomRenderer::DrawMarkerSettings()
 CustomRenderer::CustomMarker::CustomMarker(const char* name)
     : CustomMarker(0, 0, 100.0f, Shape::LineCircle, GW::Map::GetMapID(), name)
 {
-    if (const auto player = GW::Agents::GetPlayerAsAgentLiving()) {
+    if (const auto player = GW::Agents::GetControlledCharacter()) {
         pos.x = player->pos.x;
         pos.y = player->pos.y;
     }
@@ -559,7 +559,7 @@ void CustomRenderer::DrawPolygonSettings()
         if (show_details) {
             ImGui::Indent();
             if (polygon.points.size() < CustomPolygon::max_points && ImGui::Button("Add Polygon Point##add")) {
-                if (const auto player = GW::Agents::GetPlayerAsAgentLiving()) {
+                if (const auto player = GW::Agents::GetControlledCharacter()) {
                     polygon.points.emplace_back(player->pos.x, player->pos.y);
                     polygon_changed = true;
                 }

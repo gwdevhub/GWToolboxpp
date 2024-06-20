@@ -476,12 +476,12 @@ namespace {
             return;
         }
         const GW::AgentLiving* living = agent->GetAsAgentLiving();
-        const bool is_player = agent->agent_id == GW::Agents::GetPlayerId();
+        const bool is_player = agent->agent_id == GW::Agents::GetControlledCharacterId();
         const GW::AgentGadget* gadget = agent->GetAsAgentGadget();
         const GW::AgentItem* item = agent->GetAsAgentItem();
         GW::Item* item_actual = item ? GW::Items::GetItemById(item->item_id) : nullptr;
         const GW::Player* player = living && living->IsPlayer() ? GW::PlayerMgr::GetPlayerByID(living->player_number) : nullptr;
-        const GW::Agent* me = GW::Agents::GetPlayer();
+        const GW::Agent* me = GW::Agents::GetControlledCharacter();
         uint32_t npc_id = living && living->IsNPC() ? living->player_number : 0;
         if (player && living->transmog_npc_id & 0x20000000) {
             npc_id = living->transmog_npc_id ^ 0x20000000;
@@ -948,7 +948,7 @@ namespace {
         [[maybe_unused]] const GW::MapContext* m = g->map;
         [[maybe_unused]] const GW::AccountContext* acc = g->account;
         [[maybe_unused]] const GW::ItemContext* i = g->items;
-        [[maybe_unused]] const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+        [[maybe_unused]] const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
         [[maybe_unused]] const GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
         [[maybe_unused]] const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
         [[maybe_unused]] const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
@@ -1059,7 +1059,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
         if (show_player && ImGui::CollapsingHeader("Player")) {
             ImGui::PushID("player_info");
             InfoField("Is Typing?", "%s", GW::Chat::GetIsTyping() ? "Yes" : "No");
-            DrawAgentInfo(GW::Agents::GetPlayer());
+            DrawAgentInfo(GW::Agents::GetObservingAgent());
             ImGui::PopID();
         }
         if (show_target && ImGui::CollapsingHeader("Target")) {
@@ -1170,7 +1170,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             int spirit_count = 0;
             int compass_count = 0;
             GW::AgentArray* agents = GW::Agents::GetAgentArray();
-            const GW::Agent* player = GW::Agents::GetPlayer();
+            const GW::Agent* player = GW::Agents::GetObservingAgent();
             if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
                 && agents
                 && player != nullptr) {
@@ -1224,7 +1224,7 @@ void InfoWindow::Update(const float)
     if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
         send_timer = TIMER_INIT();
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
-            && GW::Agents::GetPlayer()) {
+            && GW::Agents::GetControlledCharacter()) {
             GW::Chat::SendChat('#', send_queue.front().c_str());
             send_queue.pop();
         }

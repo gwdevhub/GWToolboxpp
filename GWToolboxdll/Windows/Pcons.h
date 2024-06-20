@@ -17,7 +17,6 @@ public:
     static bool refill_if_below_threshold;
     static bool pcons_by_character;
     static Color enabled_bg_color;
-    static DWORD player_id;
 
     static DWORD alcohol_level;
     static bool suppress_drunk_effect;
@@ -47,6 +46,8 @@ protected:
     static bool ReserveSlotForMove(size_t bagId, size_t slot);
     // Checks whether another pcon has reserved this slot.
     static bool IsSlotReservedForMove(size_t bagId, size_t slot);
+
+    static bool IsControllingCurrentChar();
 
     void UpdateRefill();
 

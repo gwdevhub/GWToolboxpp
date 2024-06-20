@@ -156,7 +156,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
 {
     Initialize(device);
 
-    const GW::Agent* me = GW::Agents::GetPlayer();
+    const GW::Agent* me = GW::Agents::GetObservingAgent();
     if (me == nullptr) {
         return;
     }

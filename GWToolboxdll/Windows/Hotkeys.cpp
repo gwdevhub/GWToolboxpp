@@ -650,11 +650,10 @@ bool TBHotkey::IsInRangeOfNPC() const
     if (!(in_range_of_npc_id && in_range_of_distance > 0.f)) {
         return true;
     }
-    auto* agents = GW::Agents::GetAgentArray();
-    if (!agents) {
+    const auto agents = GW::Agents::GetAgentArray();
+    const auto me = agents ? GW::Agents::GetControlledCharacter() : nullptr;
+    if (!me)
         return false;
-    }
-    const auto* me = GW::Agents::GetPlayer();
     for (const auto agent : *agents) {
         if (!(agent && agent->type == 0xDB)) {
             continue;
@@ -1174,7 +1173,7 @@ void HotkeyEquipItem::Execute()
         item = nullptr;
         return; // Success!
     }
-    const GW::AgentLiving* p = GW::Agents::GetCharacter();
+    const GW::AgentLiving* p = GW::Agents::GetControlledCharacter();
     if (!p || p->GetIsDead()) {
         if (show_error_on_failure) {
             Log::Error("Failed to equip item in bag %d slot %d", bag_idx,
@@ -1704,7 +1703,7 @@ void HotkeyMove::Execute()
     if (!CanUse()) {
         return;
     }
-    const auto me = GW::Agents::GetPlayer();
+    const auto me = GW::Agents::GetControlledCharacter();
     GW::Vec2f location(x, y);
     if (type == MoveType::Target) {
         const auto target = GW::Agents::GetTarget();
@@ -1970,7 +1969,7 @@ void HotkeyFlagHero::Execute()
         }
     }
 
-    const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::AgentLiving* player = GW::Agents::GetControlledCharacter();
     if (!player) {
         return;
     }

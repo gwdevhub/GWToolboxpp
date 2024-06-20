@@ -630,7 +630,7 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name)
         return;
     }
     GW::SkillbarMgr::SkillTemplate t;
-    const auto prof = static_cast<GW::Constants::Profession>(GW::Agents::GetPlayerAsAgentLiving()->primary);
+    const auto prof = static_cast<GW::Constants::Profession>(GW::Agents::GetControlledCharacter()->primary);
     const bool is_skill_template = DecodeSkillTemplate(&t, build_name);
     if (is_skill_template && t.primary != prof) {
         Log::Error("Invalid profession for %s (%s)", build_name, GetProfessionAcronym(t.primary));
@@ -793,7 +793,7 @@ void BuildsWindow::Update(const float)
 {
     if (!queue.empty() && TIMER_DIFF(send_timer) > 600) {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
-            && GW::Agents::GetPlayer()) {
+            && GW::Agents::GetControlledCharacter()) {
             send_timer = TIMER_INIT();
             GW::Chat::SendChat('#', queue.front().c_str());
             queue.pop();

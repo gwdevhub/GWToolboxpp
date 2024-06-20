@@ -698,7 +698,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
         return;
     }
 
-    const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::AgentLiving* player = GW::Agents::GetControlledCharacter();
     const GW::Agent* target = GW::Agents::GetTarget();
     if (target) {
         auto_target_id = 0;
@@ -771,7 +771,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
     };
 
     const auto add_other_players_to_draw = [](const GW::AgentLiving* agent) -> bool {
-        if (!agent || !agent->IsPlayer() || agent == GW::Agents::GetPlayer()) {
+        if (!agent || !agent->IsPlayer() || agent == GW::Agents::GetObservingAgent()) {
             return false;
         }
         players_to_draw.push_back(agent);
@@ -921,7 +921,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
         return ca->color;
     }
 
-    if (agent->agent_id == GW::Agents::GetPlayerId()) {
+    if (agent->agent_id == GW::Agents::GetControlledCharacterId()) {
         if (agent->GetAsAgentLiving()->GetIsDead()) {
             return color_player_dead;
         }
@@ -1045,7 +1045,7 @@ float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) cons
         return ca->size;
     }
 
-    if (agent->agent_id == GW::Agents::GetPlayerId()) {
+    if (agent->agent_id == GW::Agents::GetObservingId()) {
         return size_player;
     }
     if (agent->GetIsGadgetType()) {

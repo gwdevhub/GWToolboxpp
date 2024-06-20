@@ -106,9 +106,9 @@ namespace {
         if (queued_dialogs_to_send.empty()) {
             return;
         }
-        const GW::Agent* npc = GW::Agents::GetAgentByID(last_agent_id);
-        const GW::Agent* me = GW::Agents::GetPlayer();
-        if (npc && me && GetDistance(npc->pos, me->pos) < GW::Constants::Range::Area) {
+        const auto npc = GW::Agents::GetAgentByID(last_agent_id);
+        const auto me =  npc ? GW::Agents::GetControlledCharacter() : nullptr;
+        if (me && GetDistance(npc->pos, me->pos) < GW::Constants::Range::Area) {
             GW::Agents::InteractAgent(npc);
         }
     }

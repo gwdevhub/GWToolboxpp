@@ -150,7 +150,7 @@ namespace {
 
     GW::Vec2f InterfaceToWorldPoint(const Vec2i& pos)
     {
-        const GW::Agent* me = GW::Agents::GetPlayer();
+        const GW::Agent* me = GW::Agents::GetObservingAgent();
         if (me == nullptr) {
             return {0, 0};
         }
@@ -589,9 +589,9 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
                 uint32_t agent_id;
                 GW::Constants::SkillID skill_id;
             }* payload = static_cast<Payload*>(wParam);
-            if (payload->agent_id == GW::Agents::GetPlayerId()) {
+            if (payload->agent_id == GW::Agents::GetControlledCharacterId()) {
                 if (payload->skill_id == GW::Constants::SkillID::Shadow_of_Haste || payload->skill_id == GW::Constants::SkillID::Shadow_Walk) {
-                    shadowstep_location = GW::Agents::GetPlayer()->pos;
+                    shadowstep_location = GW::Agents::GetControlledCharacter()->pos;
                 }
             }
         }
@@ -990,7 +990,7 @@ void Minimap::Draw(IDirect3DDevice9*)
         return;
     }
 
-    const GW::Agent* me = GW::Agents::GetPlayer();
+    const GW::Agent* me = GW::Agents::GetObservingAgent();
     if (me == nullptr) {
         return;
     }
@@ -1158,7 +1158,7 @@ void Minimap::Render(IDirect3DDevice9* device)
         return;
     }
 
-    const GW::Agent* me = GW::Agents::GetPlayer();
+    const GW::Agent* me = GW::Agents::GetObservingAgent();
     if (me == nullptr) {
         return;
     }
@@ -1589,7 +1589,7 @@ bool Minimap::IsInside(const int x, const int y) const
     // if centered, use radar range
     if (translation.x == 0 && translation.y == 0) {
         const GW::Vec2f gamepos = InterfaceToWorldPoint(Vec2i(x, y));
-        const GW::Agent* me = GW::Agents::GetPlayer();
+        const GW::Agent* me = GW::Agents::GetObservingAgent();
         if (!me) {
             return false;
         }

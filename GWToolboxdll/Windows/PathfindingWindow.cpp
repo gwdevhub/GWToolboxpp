@@ -61,7 +61,7 @@ namespace {
     }
 
     GW::GamePos* GetPlayerPos() {
-        const auto p = GW::Agents::GetPlayer();
+        const auto p = GW::Agents::GetObservingAgent();
         return p ? &p->pos : nullptr;
     }
 
@@ -151,7 +151,7 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
         return ImGui::End();
     }
 
-    auto player = GW::Agents::GetPlayer();
+    auto player = GW::Agents::GetObservingAgent();
     if (!player) {
         return ImGui::End();
     }

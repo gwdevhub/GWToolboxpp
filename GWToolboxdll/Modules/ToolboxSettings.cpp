@@ -390,7 +390,7 @@ void ToolboxSettings::Update(float)
         return;
     }
     GW::Constants::MapID current = GW::Map::GetMapID();
-    const auto me = GW::Agents::GetCharacter();
+    const auto me = GW::Agents::GetControlledCharacter();
     if (location_current_map != current) {
         location_current_map = current;
 

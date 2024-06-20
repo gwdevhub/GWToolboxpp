@@ -263,7 +263,7 @@ void EnemyWindow::Draw(IDirect3DDevice9*)
     all_enemies.clear();
 
     const GW::AgentArray* agents = GW::Agents::GetAgentArray();
-    const GW::Agent* player = agents ? GW::Agents::GetPlayer() : nullptr;
+    const GW::Agent* player = agents ? GW::Agents::GetObservingAgent() : nullptr;
 
     if (player && agents) {
         std::vector<enemyinfo>* enemyinfoarray = nullptr;

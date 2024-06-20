@@ -145,9 +145,6 @@ void PconsWindow::Initialize()
     ToolboxWindow::Initialize();
     AlcoholWidget::Instance().Initialize(); // Pcons depend on alcohol widget to track current drunk level.
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentSetPlayer>(&AgentSetPlayer_Entry, [](GW::HookStatus*, const GW::Packet::StoC::AgentSetPlayer* pak) -> void {
-        Pcon::player_id = pak->unk1;
-    });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AddExternalBond>(&AddExternalBond_Entry, &OnAddExternalBond);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry, &OnPostProcessEffect);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry, &OnGenericValue);
@@ -169,7 +166,10 @@ void PconsWindow::Terminate()
 
 void PconsWindow::OnAddExternalBond(GW::HookStatus* status, const GW::Packet::StoC::AddExternalBond* pak)
 {
-    if (PconAlcohol::suppress_lunar_skills && pak->caster_id == GW::Agents::GetPlayerId() && pak->receiver_id == 0 && (pak->skill_id == static_cast<DWORD>(SkillID::Spiritual_Possession) || pak->skill_id == static_cast<DWORD>(SkillID::Lucky_Aura))) {
+    if (PconAlcohol::suppress_lunar_skills 
+        && pak->caster_id == GW::Agents::GetObservingId()
+        && pak->receiver_id == 0 
+        && (pak->skill_id == static_cast<DWORD>(SkillID::Spiritual_Possession) || pak->skill_id == static_cast<DWORD>(SkillID::Lucky_Aura))) {
         // printf("blocked skill %d\n", pak->skill_id);
         status->blocked = true;
     }
@@ -188,7 +188,7 @@ void PconsWindow::OnPostProcessEffect(GW::HookStatus* status, const GW::Packet::
 
 void PconsWindow::OnGenericValue(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak)
 {
-    if (PconAlcohol::suppress_drunk_emotes && pak->agent_id == GW::Agents::GetPlayerId() && pak->value_id == 22) {
+    if (PconAlcohol::suppress_drunk_emotes && pak->agent_id == GW::Agents::GetObservingId() && pak->value_id == 22) {
         if (pak->value == 0x33E807E5) {
             pak->value = 0; // kneel
         }
@@ -212,7 +212,7 @@ void PconsWindow::OnGenericValue(GW::HookStatus*, GW::Packet::StoC::GenericValue
 
 void PconsWindow::OnAgentState(GW::HookStatus*, GW::Packet::StoC::AgentState* pak)
 {
-    if (PconAlcohol::suppress_drunk_emotes && pak->agent_id == GW::Agents::GetPlayerId() && pak->state & 0x2000) {
+    if (PconAlcohol::suppress_drunk_emotes && pak->agent_id == GW::Agents::GetObservingId() && pak->state & 0x2000) {
         pak->state ^= 0x2000;
     }
 }
@@ -477,7 +477,7 @@ void PconsWindow::Update(const float)
         MapChanged(); // Map changed.
     }
     if (!player && instance_type == InstanceType::Explorable) {
-        player = GW::Agents::GetPlayer(); // Won't be immediately able to get player ptr on map load, so put here.
+        player = GW::Agents::GetControlledCharacter(); // Won't be immediately able to get player ptr on map load, so put here.
     }
     if (!Pcon::map_has_effects_array) {
         Pcon::map_has_effects_array = GW::Effects::GetPlayerEffectsArray() != nullptr;

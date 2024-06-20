@@ -214,7 +214,7 @@ void DupingWindow::Draw(IDirect3DDevice9*)
     all_minds.clear();
 
     const GW::AgentArray* agents = GW::Agents::GetAgentArray();
-    const GW::Agent* player = agents ? GW::Agents::GetPlayer() : nullptr;
+    const GW::Agent* player = agents ? GW::Agents::GetObservingAgent() : nullptr;
 
     if (player && is_in_doa) {
         std::vector<DupeInfo>* duped_agents_of_type = nullptr;
