@@ -275,24 +275,11 @@ namespace {
             return;
         }
 
-        const auto* player = GW::Agents::GetCharacter();
-        if (player == nullptr) {
-            return;
-        }
-
-        if (player->max_energy == 0 || player->login_number == 0) {
-            // we're spectating, not sure what our own player is
-            if (WantToHide(*item, false) && WantToHide(*item, true)) {
-                // only block items that we want to block for player and party
-                status->blocked = true;
-                suppressed_packets.push_back(*packet);
-            }
-            return;
-        }
+        const auto my_agent_id = GW::Agents::GetPlayerId();
 
         const auto owner_id = GetItemOwner(item->item_id);
         const auto can_pick_up = owner_id == 0                    // not reserved
-                                 || owner_id == player->agent_id; // reserved for user
+                                 || owner_id == my_agent_id; // reserved for user
 
         if (WantToHide(*item, can_pick_up)) {
             status->blocked = true;

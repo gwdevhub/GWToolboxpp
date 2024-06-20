@@ -1612,7 +1612,7 @@ bool Minimap::IsActive() const
            && GW::Map::GetIsMapLoaded()
            && !GW::UI::GetIsWorldMapShowing()
            && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
-           && (GW::Agents::GetPlayerId() != 0 || GW::Agents::GetObservingId() != 0);
+           && GW::Agents::GetObservingId() != 0;
 }
 
 void Minimap::RenderSetupProjection(IDirect3DDevice9* device)

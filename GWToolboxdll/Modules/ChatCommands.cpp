@@ -323,6 +323,7 @@ namespace {
     void CHAT_CMD_FUNC(CmdPlayEffect)
     {
         const auto player = GW::Agents::GetPlayer();
+        if (!player) return;
         auto packet = new GW::Packet::StoC::PlayEffect();
         memset(packet, 0, sizeof(*packet));
         packet->header = GW::Packet::StoC::PlayEffect::STATIC_HEADER;
