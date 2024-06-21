@@ -5,6 +5,13 @@
 #include <string>
 #include <Keys.h>
 
+namespace {
+    ImGui::ImGuiContextMenuCallback imguiaddons_context_menu_callback = nullptr;
+    void* imguiaddons_context_menu_wparam = nullptr;
+    const char* imguiaddons_context_menu_id = "###imguiaddons_context_menu";
+    ImGui::ImGuiContextMenuCallback imguiaddons_context_menu_pending = nullptr;
+}
+
 namespace ImGui {
     float element_spacing_width = 0.f;
     int element_spacing_cols = 1;
@@ -38,6 +45,27 @@ namespace ImGui {
             }
         }
         element_spacing_col_idx++;
+    }
+
+    void SetContextMenu(ImGuiContextMenuCallback callback, void* wparam) {
+        imguiaddons_context_menu_pending = callback;
+        imguiaddons_context_menu_wparam = wparam;
+
+    }
+
+    void DrawContextMenu() {
+        if (imguiaddons_context_menu_pending) {
+            imguiaddons_context_menu_callback = imguiaddons_context_menu_pending;
+            imguiaddons_context_menu_pending = nullptr;
+            ImGui::OpenPopup(imguiaddons_context_menu_id);
+            return;
+        }
+        if (!ImGui::BeginPopup(imguiaddons_context_menu_id))
+            return;
+        if (!(imguiaddons_context_menu_callback && imguiaddons_context_menu_callback(imguiaddons_context_menu_wparam))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
     }
 
 
