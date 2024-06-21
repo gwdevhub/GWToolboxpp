@@ -807,7 +807,7 @@ bool TravelWindow::Travel(const GW::Constants::MapID map_id, const GW::Constants
     }
     if (IsAlreadyInOutpost(map_id, _district, _district_number)) {
         Log::Error("[Error] You are already in the outpost");
-        return false;
+        return true;
     }
 
     if (collapse_on_travel) {
