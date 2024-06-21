@@ -35,6 +35,24 @@ namespace {
     static constexpr size_t NICHOLAS_PRE_COUNT = 52;
     static constexpr size_t NICHOLAS_POST_COUNT = 137;
 
+
+    class ZaishenQuestData : public DailyQuests::QuestData {
+    public:
+        ZaishenQuestData(GW::Constants::MapID map_id = (GW::Constants::MapID)0, const wchar_t* enc_name = nullptr) : DailyQuests::QuestData(map_id, enc_name) {};
+        const GW::Constants::MapID GetQuestGiverOutpost() override;
+    };
+    class ZaishenVanquishQuestData : public ZaishenQuestData {
+    public:
+        ZaishenVanquishQuestData(GW::Constants::MapID map_id = (GW::Constants::MapID)0, const wchar_t* enc_name = nullptr) : ZaishenQuestData(map_id, enc_name) {};
+        const GW::Constants::MapID GetQuestGiverOutpost() override;
+    };
+    class WantedQuestData : public DailyQuests::QuestData {
+    public:
+        WantedQuestData(GW::Constants::MapID map_id = (GW::Constants::MapID)0, const wchar_t* enc_name = nullptr) : DailyQuests::QuestData(map_id, enc_name) {};
+        const GW::Constants::MapID GetQuestGiverOutpost() override;
+    };
+    
+
     // Cache map
     std::map<std::wstring, GuiUtils::EncString*> region_names;
 
@@ -208,10 +226,10 @@ namespace {
 
     // these vectors are built inside Initialise() because the strings are hard coded
 
-    std::vector< DailyQuests::QuestData> wanted_by_shining_blade_cycles;
+    std::vector< WantedQuestData> wanted_by_shining_blade_cycles;
     std::vector< DailyQuests::QuestData> vanguard_cycles;
     std::vector< DailyQuests::QuestData> nicholas_sandford_cycles;
-    std::vector< DailyQuests::QuestData> zaishen_bounty_cycles;
+    std::vector< ZaishenQuestData> zaishen_bounty_cycles;
 
     // These vectors are good to go
 
@@ -356,7 +374,7 @@ namespace {
     };
     static_assert(_countof(nicholas_cycles) == NICHOLAS_POST_COUNT);
 
-    DailyQuests::QuestData zaishen_combat_cycles[] = {
+    ZaishenQuestData zaishen_combat_cycles[] = {
      {GW::Constants::MapID::The_Jade_Quarry_mission},
      {GW::Constants::MapID::Codex_Arena_outpost},
      {GW::Constants::MapID::Heroes_Ascent_outpost},
@@ -388,7 +406,7 @@ namespace {
     };
     static_assert(_countof(zaishen_combat_cycles) == ZAISHEN_COMBAT_COUNT);
 
-    DailyQuests::QuestData zaishen_vanquish_cycles[] = {
+    ZaishenVanquishQuestData zaishen_vanquish_cycles[] = {
         {GW::Constants::MapID::Jaya_Bluffs},
         {GW::Constants::MapID::Holdings_of_Chokhin},
         {GW::Constants::MapID::Ice_Cliff_Chasms},
@@ -528,7 +546,7 @@ namespace {
     };
     static_assert(_countof(zaishen_vanquish_cycles) == ZAISHEN_VANQUISH_COUNT);
 
-    DailyQuests::QuestData zaishen_mission_cycles[] = {
+    ZaishenQuestData zaishen_mission_cycles[] = {
         GW::Constants::MapID::Augury_Rock_mission,
         GW::Constants::MapID::Grand_Court_of_Sebelkeh,
         GW::Constants::MapID::Ice_Caves_of_Sorrow,
@@ -862,6 +880,19 @@ namespace {
     }
 
     using QuestLogNames = std::unordered_map<GW::Constants::QuestID, GuiUtils::EncString*>;
+
+    bool IsQuestAvailable(DailyQuests::QuestData* info) {
+#pragma warning( push )
+#pragma warning( disable : 4353) // nonstandard extension used: constant 0 as function expression
+        return info && info->GetQuestGiverOutpost() != GW::Constants::MapID::None
+            (info == DailyQuests::GetZaishenVanquish()
+                || info == DailyQuests::GetZaishenBounty()
+                || info == DailyQuests::GetZaishenCombat()
+                || info == DailyQuests::GetZaishenMission()
+                || info == DailyQuests::GetVanguardQuest()
+                || info == DailyQuests::GetWantedByShiningBlade());
+#pragma warning( pop ) 
+    }
     QuestLogNames quest_log_names;
     QuestLogNames* GetQuestLogInfo() {
         const auto w = GW::GetWorldContext();
@@ -911,35 +942,62 @@ namespace {
     bool OnDailyQuestContextMenu(void* wparam) {
         const auto info = (DailyQuests::QuestData*)wparam;
         const auto has_quest = HasDailyQuest(info->GetQuestName());
+        const auto quest_available = IsQuestAvailable(info);
         ImGui::TextUnformatted(info->GetQuestName());
-        ImGui::Separator();
+
+        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
+        const auto size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
         if (has_quest) {
             ImGui::TextColored(incomplete_color, "You have this quest in your log");
         }
-        if (ImGui::Button("Travel to quest")) {
-            if (!has_quest) {
-                const GW::Constants::MapID map_to[] = {
-                    GW::Constants::MapID::Great_Temple_of_Balthazar_outpost,
-                    GW::Constants::MapID::Embark_Beach,
-                    GW::Constants::MapID::Ascalon_City_pre_searing
-                };
-                for (auto map_id : map_to) {
-                    if (TravelWindow::Instance().Travel(map_id))
-                        return false;
-                }
-            }
-            else {
+        ImGui::Separator();
+        bool travel = false;
+        if (has_quest) {
+            travel = ImGui::Button("Travel to nearest outpost", size);
+        }
+        else if (quest_available) {
+            travel = ImGui::Button("Travel to take quest", size);
+        }
+        bool wiki = info->GetWikiName().empty() ? false : ImGui::Button("Guild Wars Wiki", size);
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+        if (travel) {
+            if (has_quest) {
                 if (TravelWindow::Instance().TravelNearest(info->map_id))
+                    return false;
+            }
+            if (quest_available) {
+                if(TravelWindow::Instance().Travel(info->GetQuestGiverOutpost()))
                     return false;
             }
             Log::Error("Failed to travel to outpost for quest");
             return false;
         }
+        if (wiki) {
+            GuiUtils::SearchWiki(info->GetWikiName());
+            return false;
+        }
         return true;
     }
+
 }
 
-
+const GW::Constants::MapID ZaishenQuestData::GetQuestGiverOutpost()
+{
+    const auto _map_id = GW::Constants::MapID::Great_Temple_of_Balthazar_outpost;
+    if (GW::Map::GetIsMapUnlocked(_map_id))
+        return _map_id;
+    return GW::Constants::MapID::Embark_Beach;
+}
+const GW::Constants::MapID ZaishenVanquishQuestData::GetQuestGiverOutpost()
+{
+    return GW::Constants::MapID::Embark_Beach;
+}
+const GW::Constants::MapID WantedQuestData::GetQuestGiverOutpost()
+{
+    return GW::Constants::MapID::Lions_Arch_outpost;
+}
 
 void DailyQuests::Draw(IDirect3DDevice9*)
 {
@@ -1093,10 +1151,6 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     ImGui::TextColored(subscribed_color, "blue");
     ImGui::SameLine(0, 0);
     ImGui::TextDisabled(".");
-
-    if (ImGui::BeginPopup("###daily_quest_context")) {
-
-    }
 
     return ImGui::End();
 }
@@ -1503,9 +1557,9 @@ const char* DailyQuests::QuestData::GetQuestName() {
     Decode();
     return name_translated->string().c_str();
 }
-const std::string& DailyQuests::QuestData::GetWikiName() {
+const std::wstring& DailyQuests::QuestData::GetWikiName() {
     Decode();
-    return name_english->string();
+    return name_english->wstring();
 }
 void DailyQuests::QuestData::Travel() {
     GW::Map::Travel(TravelWindow::GetNearestOutpost(map_id));
@@ -1531,6 +1585,8 @@ void DailyQuests::NicholasCycleData::Decode() {
     const auto with_qty = std::format(L"\xa35\x101{}\x10a{}\x1", (wchar_t)(quantity + 0x100), enc_name);
     name_translated->reset(with_qty.c_str());
 }
+
+const GW::Constants::MapID DailyQuests::QuestData::GetQuestGiverOutpost() { return GW::Constants::MapID::None; }
 
 DailyQuests::NicholasCycleData* DailyQuests::GetNicholasItemInfo(const wchar_t* item_name_encoded) {
     for (auto& nicholas_item : nicholas_cycles) {
