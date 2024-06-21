@@ -175,7 +175,7 @@ void PconsWindow::OnAddExternalBond(GW::HookStatus* status, const GW::Packet::St
     }
 }
 
-void PconsWindow::OnPostProcessEffect(GW::HookStatus* status, const GW::Packet::StoC::PostProcess* pak)
+void PconsWindow::OnPostProcessEffect(GW::HookStatus*, const GW::Packet::StoC::PostProcess* pak)
 {
     PconAlcohol::alcohol_level = pak->level;
     const PconsWindow& instance = Instance();
@@ -183,7 +183,9 @@ void PconsWindow::OnPostProcessEffect(GW::HookStatus* status, const GW::Packet::
     if (instance.enabled) {
         instance.pcon_alcohol->Update();
     }
-    status->blocked = PconAlcohol::suppress_drunk_effect;
+    if (PconAlcohol::suppress_drunk_effect) {
+        pak->level = 0;
+    }
 }
 
 void PconsWindow::OnGenericValue(GW::HookStatus*, GW::Packet::StoC::GenericValue* pak)
@@ -586,7 +588,6 @@ void PconsWindow::DrawLunarsAndAlcoholSettings()
     ImGui::StartSpacedElements(380.f);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Suppress lunar and drunk post-processing effects", &Pcon::suppress_drunk_effect);
-    ImGui::ShowHelp("Will actually disable any *change*, so make sure you're not drunk already when enabling this!");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Suppress lunar and drunk text", &Pcon::suppress_drunk_text);
     ImGui::ShowHelp("Will hide drunk and lunars messages on top of your and other characters");
