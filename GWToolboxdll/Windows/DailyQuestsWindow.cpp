@@ -1,6 +1,9 @@
 #include "stdafx.h"
 
+#include <GWCA/Context/WorldContext.h>
+
 #include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Quest.h>
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -14,6 +17,8 @@
 #include <Windows/DailyQuestsWindow.h>
 #include <Constants/EncStrings.h>
 #include <Modules/Resources.h>
+#include <Utils/ToolboxUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 
 using GW::Constants::MapID;
@@ -708,13 +713,16 @@ namespace {
 
     std::vector<std::pair< const wchar_t*, GW::Chat::ChatCommandCallback>> chat_commands;
 
+    const ImColor subscribed_color(102, 187, 238, 255);
+    const ImColor normal_color(255, 255, 255, 255);
+    const ImColor incomplete_color(102, 238, 187, 255);
+
 
     bool GetIsPreSearing()
     {
         const GW::AreaInfo* i = GW::Map::GetCurrentMapInfo();
         return i && i->region == GW::Region::Region_Presearing;
     }
-
 
     const wchar_t* DateString(const time_t* unix)
     {
@@ -821,6 +829,114 @@ namespace {
         }
     }
 
+    const char* GetIncompleteStatusMessage(GW::Constants::MapID mission_map_id) {
+        const char* incomplete_hard_mode = "This character hasn't completed this area in hard mode";
+        const char* incomplete_normal_mode = "This character hasn't completed this area in normal mode";
+
+        const auto w = GW::GetWorldContext();
+        const auto map = w ? GW::Map::GetMapInfo(mission_map_id) : nullptr;
+        if (!map) return nullptr;
+        if (map->type == GW::RegionType::ExplorableZone) {
+            if (!ToolboxUtils::ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(mission_map_id))) {
+                return incomplete_hard_mode;
+            }
+            return nullptr;
+        }
+
+        bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
+        if (!ToolboxUtils::ArrayBoolAt(w->missions_completed,static_cast<uint32_t>(mission_map_id))) {
+            return incomplete_normal_mode;
+        }
+        if (!ToolboxUtils::ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(mission_map_id))) {
+            return incomplete_hard_mode;
+        }
+        if (has_bonus) {
+            if (!ToolboxUtils::ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(mission_map_id))) {
+                return incomplete_normal_mode;
+            }
+            if (!ToolboxUtils::ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(mission_map_id))) {
+                return incomplete_hard_mode;
+            }
+        }
+        return nullptr;
+    }
+
+    using QuestLogNames = std::unordered_map<GW::Constants::QuestID, GuiUtils::EncString*>;
+    QuestLogNames quest_log_names;
+    QuestLogNames* GetQuestLogInfo() {
+        const auto w = GW::GetWorldContext();
+        if (!w) return nullptr;
+        bool processing = false;
+        for (auto& entry : w->quest_log) {
+            if (entry.name && !quest_log_names.contains(entry.quest_id)) {
+                auto enc_string = new GuiUtils::EncString();
+                enc_string
+                    ->language(GW::Constants::Language::English)
+                    ->reset(entry.name)
+                    ->wstring();
+                quest_log_names[entry.quest_id] = enc_string;
+            }
+            if (!processing && quest_log_names[entry.quest_id]->IsDecoding()) {
+                processing = true;
+            }
+        }
+        return processing ? nullptr : &quest_log_names;
+    }
+    const bool wcseq(const wchar_t* a, const wchar_t* b) {
+        return wcscmp(a, b) == 0;
+    }
+    const bool IsDailyQuest(const GW::Quest& quest) {
+        return wcseq(quest.location, GW::EncStrings::ZaishenMission)
+            || wcseq(quest.location, GW::EncStrings::ZaishenBounty)
+            || wcseq(quest.location, GW::EncStrings::ZaishenCombat)
+            || wcseq(quest.location, GW::EncStrings::ZaishenVanquish)
+            || wcseq(quest.location, GW::EncStrings::WantedByTheShiningBlade);
+    }
+
+    const bool HasDailyQuest(const char* quest_name) {
+        const auto w = GW::GetWorldContext();
+        if (!w) return false;
+        const auto decoded_quest_names = GetQuestLogInfo();
+        if (!decoded_quest_names)
+            return false;
+        for (auto& entry : w->quest_log) {
+            if (!IsDailyQuest(entry))
+                continue;
+            if (entry.name && decoded_quest_names->at(entry.quest_id)->string() == quest_name)
+                return true;
+        }
+        return false;
+    }
+
+    bool OnDailyQuestContextMenu(void* wparam) {
+        const auto info = (DailyQuests::QuestData*)wparam;
+        const auto has_quest = HasDailyQuest(info->GetQuestName());
+        ImGui::TextUnformatted(info->GetQuestName());
+        ImGui::Separator();
+        if (has_quest) {
+            ImGui::TextColored(incomplete_color, "You have this quest in your log");
+        }
+        if (ImGui::Button("Travel to quest")) {
+            if (!has_quest) {
+                const GW::Constants::MapID map_to[] = {
+                    GW::Constants::MapID::Great_Temple_of_Balthazar_outpost,
+                    GW::Constants::MapID::Embark_Beach,
+                    GW::Constants::MapID::Ascalon_City_pre_searing
+                };
+                for (auto map_id : map_to) {
+                    if (TravelWindow::Instance().Travel(map_id))
+                        return false;
+                }
+            }
+            else {
+                if (TravelWindow::Instance().TravelNearest(info->map_id))
+                    return false;
+            }
+            Log::Error("Failed to travel to outpost for quest");
+            return false;
+        }
+        return true;
+    }
 }
 
 
@@ -886,8 +1002,7 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     ImGui::BeginChild("dailies_scroll", ImVec2(0, -1 * (20.0f * ImGui::GetIO().FontGlobalScale) - ImGui::GetStyle().ItemInnerSpacing.y));
     time_t unix = time(nullptr);
     uint32_t idx = 0;
-    const ImColor sCol(102, 187, 238, 255);
-    const ImColor wCol(255, 255, 255, 255);
+
     for (size_t i = 0; i < static_cast<size_t>(daily_quest_window_count); i++) {
         offset = 0.0f;
         switch (i) {
@@ -903,46 +1018,56 @@ void DailyQuests::Draw(IDirect3DDevice9*)
                 ImGui::Text(mbstr);
                 break;
         }
+        auto write_daily_info = [](bool* subscribed, DailyQuests::QuestData* info, bool check_completion) {
+            const auto incomplete_message = check_completion ? GetIncompleteStatusMessage(info->map_id) : nullptr;
+            auto col = &normal_color;
+            if (*subscribed) col = &subscribed_color;
+            if (incomplete_message) col = &incomplete_color;
+            const auto start = ImGui::GetCursorScreenPos();
+            ImGui::TextColored(*col, info->GetQuestName());
+            const auto lmb_clicked = ImGui::IsItemClicked();
+            const auto rmb_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+            const auto hovered = ImGui::IsItemHovered();
+            if (HasDailyQuest(info->GetQuestName())) {
+                ImGui::SameLine();
+                ImGui::TextColored(incomplete_color, ICON_FA_EXCLAMATION);
+            }
+            if (rmb_clicked) {
+                ImGui::SetContextMenu(OnDailyQuestContextMenu, info);
+            }
+            if (lmb_clicked) {
+                *subscribed = !*subscribed;
+            }
+            if (incomplete_message && hovered) {
+                ImGui::SetTooltip(incomplete_message);
+            }
+            };
+
 
         ImGui::SameLine(offset += short_text_width);
         if (show_zaishen_missions_in_window) {
             idx = GetZaishenMissionIdx(&unix);
-            ImGui::TextColored(subscribed_zaishen_missions[idx] ? sCol : wCol, GetZaishenMission(unix)->GetQuestName());
-            if (ImGui::IsItemClicked()) {
-                subscribed_zaishen_missions[idx] = !subscribed_zaishen_missions[idx];
-            }
+            write_daily_info(&subscribed_zaishen_missions[idx], GetZaishenMission(unix), true);
             ImGui::SameLine(offset += zm_width);
         }
         if (show_zaishen_bounty_in_window) {
             idx = GetZaishenBountyIdx(&unix);
-            ImGui::TextColored(subscribed_zaishen_bounties[idx] ? sCol : wCol, GetZaishenBounty(unix)->GetQuestName());
-            if (ImGui::IsItemClicked()) {
-                subscribed_zaishen_bounties[idx] = !subscribed_zaishen_bounties[idx];
-            }
+            write_daily_info(&subscribed_zaishen_bounties[idx], GetZaishenBounty(unix), false);
             ImGui::SameLine(offset += zb_width);
         }
         if (show_zaishen_combat_in_window) {
             idx = GetZaishenCombatIdx(&unix);
-            ImGui::TextColored(subscribed_zaishen_combats[idx] ? sCol : wCol, GetZaishenCombat(unix)->GetQuestName());
-            if (ImGui::IsItemClicked()) {
-                subscribed_zaishen_combats[idx] = !subscribed_zaishen_combats[idx];
-            }
+            write_daily_info(&subscribed_zaishen_combats[idx], GetZaishenCombat(unix), false);
             ImGui::SameLine(offset += zc_width);
         }
         if (show_zaishen_vanquishes_in_window) {
             idx = GetZaishenVanquishIdx(&unix);
-            ImGui::TextColored(subscribed_zaishen_vanquishes[idx] ? sCol : wCol, GetZaishenVanquish(unix)->GetQuestName());
-            if (ImGui::IsItemClicked()) {
-                subscribed_zaishen_vanquishes[idx] = !subscribed_zaishen_vanquishes[idx];
-            }
+            write_daily_info(&subscribed_zaishen_vanquishes[idx], GetZaishenVanquish(unix), true);
             ImGui::SameLine(offset += zv_width);
         }
         if (show_wanted_quests_in_window) {
             idx = GetWantedByShiningBladeIdx(&unix);
-            ImGui::TextColored(subscribed_wanted_quests[idx] ? sCol : wCol, GetWantedByShiningBlade(unix)->GetQuestName());
-            if (ImGui::IsItemClicked()) {
-                subscribed_wanted_quests[idx] = !subscribed_wanted_quests[idx];
-            }
+            write_daily_info(&subscribed_wanted_quests[idx], GetWantedByShiningBlade(unix), false);
             ImGui::SameLine(offset += ws_width);
         }
         if (show_nicholas_in_window) {
@@ -951,24 +1076,12 @@ void DailyQuests::Draw(IDirect3DDevice9*)
         }
         if (show_weekly_bonus_pve_in_window) {
             idx = GetWeeklyBonusPvEIdx(&unix);
-            ImGui::TextColored(subscribed_weekly_bonus_pve[idx] ? sCol : wCol, pve_weekly_bonus_cycles[idx].GetQuestName());
-            if (ImGui::IsItemHovered()) {
-                //ImGui::SetTooltip(pve_weekly_bonus_descriptions[idx]);
-            }
-            if (ImGui::IsItemClicked()) {
-                subscribed_weekly_bonus_pve[idx] = !subscribed_weekly_bonus_pve[idx];
-            }
+            write_daily_info(&subscribed_weekly_bonus_pve[idx], &pve_weekly_bonus_cycles[idx], false);
             ImGui::SameLine(offset += wbe_width);
         }
         if (show_weekly_bonus_pvp_in_window) {
             idx = GetWeeklyBonusPvPIdx(&unix);
-            ImGui::TextColored(subscribed_weekly_bonus_pvp[idx] ? sCol : wCol, pvp_weekly_bonus_cycles[idx].GetQuestName());
-            if (ImGui::IsItemHovered()) {
-               // ImGui::SetTooltip(pvp_weekly_bonus_descriptions[idx]);
-            }
-            if (ImGui::IsItemClicked()) {
-                subscribed_weekly_bonus_pvp[idx] = !subscribed_weekly_bonus_pvp[idx];
-            }
+            write_daily_info(&subscribed_weekly_bonus_pvp[idx], &pvp_weekly_bonus_cycles[idx], false);
             ImGui::SameLine(offset += long_text_width);
         }
         ImGui::NewLine();
@@ -977,9 +1090,14 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     ImGui::EndChild();
     ImGui::TextDisabled("Click on a daily quest to get notified when its coming up. Subscribed quests are highlighted in ");
     ImGui::SameLine(0, 0);
-    ImGui::TextColored(sCol, "blue");
+    ImGui::TextColored(subscribed_color, "blue");
     ImGui::SameLine(0, 0);
     ImGui::TextDisabled(".");
+
+    if (ImGui::BeginPopup("###daily_quest_context")) {
+
+    }
+
     return ImGui::End();
 }
 
