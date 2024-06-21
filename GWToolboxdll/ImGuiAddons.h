@@ -5,6 +5,13 @@ using Color = ImU32;
 constexpr uint32_t ImGuiButtonFlags_AlignTextLeft = 1 << 20;
 
 namespace ImGui {
+    // Return false to close the context menu
+    using ImGuiContextMenuCallback = std::function<bool(void* wparam)>;
+
+    IMGUI_API void SetContextMenu(ImGuiContextMenuCallback callback, void* wparam = nullptr);
+
+    IMGUI_API void DrawContextMenu();
+
     // Shorthand for ImGui::GetIO().GlobalFontScale
     IMGUI_API const float& FontScale();
     // Initialise available width etc for adding spaced elements. Must be called before calling NextSpacedElement()

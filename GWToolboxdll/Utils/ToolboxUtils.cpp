@@ -32,6 +32,9 @@ namespace {
     {
         return item && item->info_string && wcschr(item->info_string, 0xAC9);
     }
+}
+
+namespace ToolboxUtils {
     bool ArrayBoolAt(const GW::Array<uint32_t>& array, const uint32_t index)
     {
         const uint32_t real_index = index / 32;
@@ -43,9 +46,6 @@ namespace {
         const auto res = (array[real_index] & flag);
         return res != 0;
     }
-}
-
-namespace ToolboxUtils {
     uint8_t GetMissionState(GW::Constants::MapID map_id, const GW::Array<uint32_t>& missions_completed, const GW::Array<uint32_t>& missions_bonus) {
         const auto area_info = GW::Map::GetMapInfo(map_id);
         switch (area_info->type) {
