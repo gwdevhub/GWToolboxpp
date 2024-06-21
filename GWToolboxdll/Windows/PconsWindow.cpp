@@ -175,7 +175,7 @@ void PconsWindow::OnAddExternalBond(GW::HookStatus* status, const GW::Packet::St
     }
 }
 
-void PconsWindow::OnPostProcessEffect(GW::HookStatus*, const GW::Packet::StoC::PostProcess* pak)
+void PconsWindow::OnPostProcessEffect(GW::HookStatus*, GW::Packet::StoC::PostProcess* pak)
 {
     PconAlcohol::alcohol_level = pak->level;
     const PconsWindow& instance = Instance();
