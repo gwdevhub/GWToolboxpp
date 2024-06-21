@@ -219,7 +219,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         MessageBoxW(
             nullptr,
             L"Couldn't find character name RVA.\n"
-            L"You need to update the launcher or contact the developpers.",
+            L"You need to update the launcher or contact the developers.",
             L"GWToolbox - Error",
             MB_OK | MB_ICONERROR | MB_TOPMOST);
         return 1;
