@@ -178,10 +178,14 @@ namespace GuiUtils {
         if (term.empty()) {
             return;
         }
-        char cmd[256];
+        const size_t buf_len = 512;
+        auto cmd = new char[buf_len];
         const std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(term)));
-        ASSERT(snprintf(cmd, _countof(cmd), "%s?search=%s", GetWikiPrefix(), encoded.c_str()) != -1);
-        SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, cmd);
+        ASSERT(snprintf(cmd, buf_len, "%s?search=%s", GetWikiPrefix(), encoded.c_str()) != -1);
+        GW::GameThread::Enqueue([cmd]() {
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, cmd);
+            delete[] cmd;
+            });
     }
 
     void OpenWiki(const std::wstring& url_path)
