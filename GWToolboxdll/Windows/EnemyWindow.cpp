@@ -9,26 +9,18 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/PartyMgr.h>
 
-#include <Color.h>
 #include <Utils/GuiUtils.h>
 #include <Windows/EnemyWindow.h>
-
 #include <Modules/Resources.h>
 
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <Timer.h>
 
-using namespace GW::Agents;
-
 namespace {
-
-    bool hide_when_nothing = true;
-    bool show_enemies_counter = true;
     bool show_enemy_level = true;
     bool show_enemy_last_skill = true;
-    int triangle_y_offset = 3;
+    float triangle_y_offset = 3.f;
     float enemies_threshhold = 1.f;
     float range = 1248.f;
     float triangle_spacing = 22.f;
@@ -39,7 +31,8 @@ namespace {
 
     std::unordered_map<uint32_t, GuiUtils::EncString*> agent_names_by_id;
 
-    std::string& GetAgentName(uint32_t agent_id) {
+    std::string& GetAgentName(uint32_t agent_id)
+    {
         const auto enc_name = GW::Agents::GetAgentEncName(agent_id);
         if (!agent_names_by_id.contains(agent_id)) {
             agent_names_by_id[agent_id] = new GuiUtils::EncString();
@@ -49,9 +42,10 @@ namespace {
         return enc_string->string();
     }
 
+    struct EnemyInfo {
+        EnemyInfo(const GW::AgentID agent_id)
+            : agent_id(agent_id) {}
 
-    struct enemyinfo {
-        enemyinfo(const GW::AgentID agent_id) : agent_id(agent_id) {}
         GW::AgentID agent_id;
         clock_t last_casted = 0;
         GW::Constants::SkillID last_skill = GW::Constants::SkillID::No_Skill;
@@ -64,25 +58,16 @@ namespace {
         return a ? a->GetAsAgentLiving() : nullptr;
     }
 
-    void DrawStatusTriangle(int triangleCount, ImVec2 position, ImU32 triangleColor, bool upsidedown)
+    void DrawStatusTriangle(const int triangleCount, const ImVec2 position, const ImU32 triangleColor, const bool upsidedown)
     {
-        ImVec2 point1, point2, point3;
-
-        if (upsidedown) {
-            point1 = ImVec2(position.x - (triangleCount * triangle_spacing), position.y + triangle_y_offset);
-            point2 = ImVec2(position.x + 20 - (triangleCount * triangle_spacing), position.y + triangle_y_offset);
-            point3 = ImVec2(position.x + 10 - (triangleCount * triangle_spacing), position.y + triangle_y_offset + 10);
-        }
-        else {
-            point1 = ImVec2(position.x - (triangleCount * triangle_spacing), position.y + triangle_y_offset + 10);
-            point2 = ImVec2(position.x + 20 - (triangleCount * triangle_spacing), position.y + triangle_y_offset + 10);
-            point3 = ImVec2(position.x + 10 - (triangleCount * triangle_spacing), position.y + triangle_y_offset);
-        }
+        const auto point1 = ImVec2(position.x - (triangleCount * triangle_spacing), position.y + triangle_y_offset + (upsidedown ? 10.f : 0.f));
+        const auto point2 = ImVec2(position.x + 20 - (triangleCount * triangle_spacing), position.y + triangle_y_offset + (upsidedown ? 10.f : 0.f));
+        const auto point3 = ImVec2(position.x + 10 - (triangleCount * triangle_spacing), position.y + triangle_y_offset + (upsidedown ? 0.f : 10.f));
 
         ImGui::GetWindowDrawList()->AddTriangleFilled(point1, point2, point3, triangleColor);
     }
 
-    void WriteEnemyName(ImVec2 position, const std::string& agent_name, const std::string* skill_name, uint8_t level, clock_t last_casted)
+    void WriteEnemyName(const ImVec2 position, const std::string& agent_name, const std::string* skill_name, uint8_t level, const clock_t last_casted)
     {
         std::string text;
 
@@ -118,12 +103,12 @@ namespace {
         return static_cast<int>(pips);
     }
 
-    bool OrderEnemyInfo(const enemyinfo& a, const enemyinfo& b)
+    bool OrderEnemyInfo(const EnemyInfo& a, const EnemyInfo& b)
     {
         return a.distance < b.distance;
     }
 
-    void DrawEnemies(const char* label, const std::vector<enemyinfo>& vec)
+    void DrawEnemies(const char* label, const std::vector<EnemyInfo>& vec)
     {
         if (vec.empty()) {
             return;
@@ -164,8 +149,8 @@ namespace {
                 // Progress bar
                 ImGui::TableSetColumnIndex(1);
                 ImVec2 progressBarPos = ImGui::GetCursorScreenPos();
-                ImVec2 Pos1 = ImVec2(progressBarPos.x + ImGui::GetContentRegionAvail().x * 0.025f, progressBarPos.y + 3);
-                ImVec2 Pos2 = ImVec2(progressBarPos.x + ImGui::GetContentRegionAvail().x - 25, progressBarPos.y + 3);
+                const ImVec2 pos1 = ImVec2(progressBarPos.x + ImGui::GetContentRegionAvail().x * 0.025f, progressBarPos.y + 3);
+                const ImVec2 pos2 = ImVec2(progressBarPos.x + ImGui::GetContentRegionAvail().x - 25, progressBarPos.y + 3);
 
                 int triangles = 0;
 
@@ -187,20 +172,20 @@ namespace {
                     skill_name = &enc_skillname->string();
                 }
 
-                WriteEnemyName(Pos1, agent_name_str, skill_name, living->level, enemy_info.last_casted);
+                WriteEnemyName(pos1, agent_name_str, skill_name, living->level, enemy_info.last_casted);
 
                 if (living->GetIsEnchanted()) {
-                    DrawStatusTriangle(triangles, Pos2, EnchantedColor, false);
+                    DrawStatusTriangle(triangles, pos2, EnchantedColor, false);
                     triangles++;
                 }
 
                 if (living->GetIsHexed()) {
-                    DrawStatusTriangle(triangles, Pos2, HexedColor, true);
+                    DrawStatusTriangle(triangles, pos2, HexedColor, true);
                     triangles++;
                 }
 
                 if (living->GetIsConditioned()) {
-                    DrawStatusTriangle(triangles, Pos2, ConditionedColor, true);
+                    DrawStatusTriangle(triangles, pos2, ConditionedColor, true);
                 }
 
                 // Health pips
@@ -226,26 +211,24 @@ namespace {
         }
     }
 
-    std::vector<enemyinfo> enemies{};
+    std::vector<EnemyInfo> enemies{};
     std::set<GW::AgentID> all_enemies;
 
-    void clearenemies()
+    void ClearEnemies()
     {
         enemies.clear();
         all_enemies.clear();
-        for (auto& p : agent_names_by_id) {
-            delete p.second;
+        for (const auto enc_name : agent_names_by_id | std::views::values) {
+            delete enc_name;
         }
         agent_names_by_id.clear();
-
     }
-
 } // namespace
 
 void EnemyWindow::Terminate()
 {
     ToolboxWindow::Terminate();
-    clearenemies();
+    ClearEnemies();
 }
 
 void EnemyWindow::Draw(IDirect3DDevice9*)
@@ -254,20 +237,17 @@ void EnemyWindow::Draw(IDirect3DDevice9*)
         return;
     }
 
-    const bool is_in_outpost = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost;
-    if (is_in_outpost) {
-        clearenemies();
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+        ClearEnemies();
     }
 
-    int enemy_count = 0;
     all_enemies.clear();
 
     const GW::AgentArray* agents = GW::Agents::GetAgentArray();
     const GW::Agent* player = agents ? GW::Agents::GetObservingAgent() : nullptr;
 
     if (player && agents) {
-        std::vector<enemyinfo>* enemyinfoarray = nullptr;
-        std::set<GW::AgentID>* all_agents_of_type = nullptr;
+        int enemy_count = 0;
         for (auto* agent : *agents) {
             const GW::AgentLiving* living = agent ? agent->GetAsAgentLiving() : nullptr;
 
@@ -283,21 +263,19 @@ void EnemyWindow::Draw(IDirect3DDevice9*)
                     break;
             }
 
-            all_agents_of_type = &all_enemies;
-            enemyinfoarray = &enemies;
             enemy_count++;
 
             if (living->hp <= enemies_threshhold) {
-                all_agents_of_type->insert(living->agent_id);
+                all_enemies.insert(living->agent_id);
 
                 const bool is_casting = living->skill != static_cast<uint16_t>(GW::Constants::SkillID::No_Skill);
 
-                auto found_enemy = std::ranges::find_if(*enemyinfoarray, [living](const enemyinfo& info) {
+                auto found_enemy = std::ranges::find_if(enemies, [living](const EnemyInfo& info) {
                     return info.agent_id == living->agent_id;
                 });
-                if (found_enemy == enemyinfoarray->end()) {
-                    enemyinfoarray->push_back(living->agent_id);
-                    found_enemy = enemyinfoarray->end() - 1;
+                if (found_enemy == enemies.end()) {
+                    enemies.push_back(living->agent_id);
+                    found_enemy = enemies.end() - 1;
                 }
                 if (is_casting) {
                     found_enemy->last_casted = TIMER_INIT();

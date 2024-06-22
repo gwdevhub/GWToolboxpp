@@ -9,7 +9,7 @@
 
 #include <Widgets/WorldMapWidget.h>
 
-#include <Timer.h>
+#include "Defines.h"
 
 namespace {
     ImRect show_all_rect;
@@ -64,6 +64,18 @@ void WorldMapWidget::ShowAllOutposts(const bool show = showing_all_outposts)
     if (view_all_carto_areas_patch.IsValid())
         view_all_carto_areas_patch.TogglePatch(show);
     TriggerWorldMapRedraw();
+}
+
+void WorldMapWidget::LoadSettings(ToolboxIni* ini)
+{
+    ToolboxWidget::LoadSettings(ini);
+    LOAD_BOOL(showing_all_outposts);
+}
+
+void WorldMapWidget::SaveSettings(ToolboxIni* ini)
+{
+    ToolboxWidget::SaveSettings(ini);
+    SAVE_BOOL(showing_all_outposts);
 }
 
 void WorldMapWidget::Draw(IDirect3DDevice9*)
