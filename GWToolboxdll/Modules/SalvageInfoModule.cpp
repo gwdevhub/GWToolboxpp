@@ -519,6 +519,7 @@ void SalvageInfoModule::Terminate()
     ToolboxModule::Terminate();
 
     ItemDescriptionHandler::UnregisterDescriptionCallback(OnGetItemDescription);
+    GW::UI::RemoveUIMessageCallback(&UIMessage_HookEntry);
 
     for (auto m : materials) {
         delete m;
