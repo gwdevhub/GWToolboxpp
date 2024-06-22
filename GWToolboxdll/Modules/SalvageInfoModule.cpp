@@ -7,10 +7,12 @@
 #include <regex>
 
 #include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/TextParser.h>
@@ -437,6 +439,31 @@ namespace {
             }
         }
     }
+
+    GW::HookEntry UIMessage_HookEntry;
+    std::wstring tmp_item_name_tag;
+    void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*) {
+        switch (message_id) {
+        case GW::UI::UIMessage::kSetAgentNameTagAttribs: {
+            auto packet = (GW::UI::AgentNameTagInfo*)wParam;
+            if (!packet->underline)
+                break;
+            if (packet->extra_info_enc != tmp_item_name_tag.data()) {
+                tmp_item_name_tag.assign(packet->extra_info_enc ? packet->extra_info_enc : L"");
+            }
+            const auto agent = static_cast<GW::AgentItem*>(GW::Agents::GetAgentByID(packet->agent_id));
+            if (!(agent && agent->GetIsItemType()))
+                break;
+            if (agent->owner && agent->owner != GW::Agents::GetControlledCharacterId())
+                break;
+            const auto item_id = agent->item_id;
+            AppendSalvageInfoDescription(item_id, tmp_item_name_tag);
+            AppendNicholasInfo(item_id, tmp_item_name_tag);
+            packet->extra_info_enc = tmp_item_name_tag.data();
+        }
+
+        }
+    }
 }
 
 void SalvageInfoModule::Initialize()
@@ -484,6 +511,7 @@ void SalvageInfoModule::Initialize()
             new CraftingMaterial(GW::Constants::ItemID::JadeiteShard, GW::EncStrings::JadeiteShard)
         };
     });
+    GW::UI::RegisterUIMessageCallback(&UIMessage_HookEntry, GW::UI::UIMessage::kSetAgentNameTagAttribs, ::OnUIMessage);
 }
 
 void SalvageInfoModule::Terminate()

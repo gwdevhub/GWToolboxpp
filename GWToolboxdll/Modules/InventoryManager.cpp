@@ -2457,7 +2457,7 @@ bool InventoryManager::Item::IsSalvagable(bool check_bag)
     if (IsUsable() || IsGreen()) {
         return false; // Non-salvagable flag set
     }
-    if (!bag) {
+    if (check_bag && !bag) {
         return false;
     }
     if (check_bag && !bag->IsInventoryBag() && !bag->IsStorageBag()) {
