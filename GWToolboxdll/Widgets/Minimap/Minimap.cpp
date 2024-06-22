@@ -106,6 +106,9 @@ namespace {
     uint32_t* GameCursorState = nullptr;
     CaptureMouseClickType* CaptureMouseClickTypePtr = nullptr;
 
+    bool hide_flagging_controls = false;
+    GW::MemoryPatcher hide_flagging_controls_patch;
+
     GW::UI::Frame* compass_frame = nullptr;
     GW::UI::UIInteractionCallback OnCompassFrame_UICallback_Ret = nullptr;
     bool compass_position_dirty = true;
@@ -209,16 +212,34 @@ namespace {
     void __cdecl OnCompassFrame_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
     {
         GW::Hook::EnterHook();
-        OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+        // frame + 0x40 is the ai control handler bits. Zero it out to prevent actions from interacting with the flagging controls.
         switch (static_cast<uint32_t>(message->message_id)) {
+            case 0x8: // Creates frame + 0x40 if it doesn't exist, but also draws it - we use the patch to make sure it never draws.
+            case 0x4a: // 0x4a need to pass through to allow hotkey flagging
+                OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+                break;
             case 0xb:
+                OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 compass_frame = nullptr;
                 compass_position_dirty = true;
                 break;
             case 0x13:
             case 0x30:
             case 0x33:
+                OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 compass_position_dirty = true; // Forces a recalculation
+                break;
+            default:
+                if (hide_flagging_controls) {
+                    auto frame = *(GW::UI::Frame**)message->wParam;
+                    uint32_t prev = frame->field16_0x40;
+                    frame->field16_0x40 = 0;
+                    OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+                    frame->field16_0x40 = prev;
+                }
+                else {
+                    OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+                }
                 break;
         }
         GW::Hook::LeaveHook();
@@ -289,7 +310,7 @@ namespace {
         return *MouseClickCaptureDataPtr->sub1->sub2->sub3->sub4->sub5->flagging_hero;
     }
 
-    bool compass_fix_pending = false;
+    bool compass_fix_pending = true;
 
     bool SetFlaggingState(FlaggingState set_state)
     {
@@ -471,6 +492,7 @@ void Minimap::Terminate()
     if (compass_frame && compass_frame->frame_callbacks[0] == OnCompassFrame_UICallback) {
         compass_frame->frame_callbacks[0] = OnCompassFrame_UICallback_Ret;
     }
+    hide_flagging_controls_patch.Reset();
 }
 
 void Minimap::Initialize()
@@ -486,6 +508,11 @@ void Minimap::Initialize()
     }
     Log::Log("[SCAN] CaptureMouseClickTypePtr = %p\n", CaptureMouseClickTypePtr);
     Log::Log("[SCAN] MouseClickCaptureDataPtr = %p\n", MouseClickCaptureDataPtr);
+
+    address = GW::Scanner::Find("\x8b\x46\x40\x85\xc0\x74\x0c", "xxxxx?x", 0x5);
+    if (address) {
+        hide_flagging_controls_patch.SetPatch(address, "\xeb", 1);
+    }
 
     DrawCompassAgentsByType_Func = (DrawCompassAgentsByType_pt)GW::Scanner::Find("\x8b\x46\x08\x8d\x5e\x18\x53", "xxxxxxx", -0xb);
     GW::HookBase::CreateHook((void**)&DrawCompassAgentsByType_Func, OnDrawCompassAgentsByType, (void**)&DrawCompassAgentsByType_Ret);
@@ -742,6 +769,9 @@ void Minimap::DrawSettingsInternal()
 
     ImGui::Checkbox("Hide GW compass drawings", &hide_compass_drawings);
     ImGui::ShowHelp("Drawings made by other players will be visible on the minimap, but not the compass");
+    if (ImGui::Checkbox("Hide GW compass flagging controls", &hide_flagging_controls)) {
+        hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
+    }
 
     is_movable = is_resizable = !snap_to_compass;
     if (is_resizable) {
@@ -874,8 +904,10 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(render_all_quests);
     LOAD_BOOL(hide_compass_quest_marker);
     LOAD_BOOL(hide_compass_drawings);
+    LOAD_BOOL(hide_flagging_controls);
 
     ToggleCompassQuestMarker(hide_compass_quest_marker);
+    hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
 
     key_none_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_none_behavior), 1));
     key_ctrl_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_ctrl_behavior), 2));
@@ -915,6 +947,7 @@ void Minimap::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(hide_compass_quest_marker);
     SAVE_BOOL(hide_compass_drawings);
     SAVE_BOOL(render_all_quests);
+    SAVE_BOOL(hide_flagging_controls);
 
     range_renderer.SaveSettings(ini, Name());
     pmap_renderer.SaveSettings(ini, Name());
