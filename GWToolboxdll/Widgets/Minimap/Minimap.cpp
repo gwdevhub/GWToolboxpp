@@ -1181,7 +1181,7 @@ bool Minimap::ShouldDrawAllQuests()
 
 void Minimap::Render(IDirect3DDevice9* device)
 {
-    if (compass_fix_pending) {
+    if (compass_fix_pending && GetCompassFrame() && GetCompassFrame()->IsVisible()) {
         // Note: Wait for a frame to pass before toggling off again to allow the game to initialise the window.
         SetWindowVisible(GW::UI::WindowID_Compass, false);
         compass_fix_pending = false;
