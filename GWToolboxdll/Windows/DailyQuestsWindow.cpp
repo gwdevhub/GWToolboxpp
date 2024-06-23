@@ -19,6 +19,7 @@
 #include <Modules/Resources.h>
 #include <Utils/ToolboxUtils.h>
 #include <Utils/ToolboxUtils.h>
+#include <GWCA/Managers/QuestMgr.h>
 
 
 using GW::Constants::MapID;
@@ -735,6 +736,8 @@ namespace {
     const ImColor normal_color(255, 255, 255, 255);
     const ImColor incomplete_color(102, 238, 187, 255);
 
+    DailyQuests::QuestData* pending_quest_take = nullptr;
+
 
     bool GetIsPreSearing()
     {
@@ -763,68 +766,53 @@ namespace {
         WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buf, nullptr, true);
     }
 
-    void CHAT_CMD_FUNC(CmdWeeklyBonus)
-    {
+    void CmdDaily(const wchar_t* quest_type, std::function<DailyQuests::QuestData*(time_t)> get_quest_func, int argc, const LPWSTR* argv) {
         time_t now = time(nullptr);
         if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
             now += 86400;
         }
-        PrintDaily(L"Weekly Bonus PvE", DailyQuests::GetWeeklyPvEBonus(now)->GetQuestName(), now);
-        PrintDaily(L"Weekly Bonus PvP", DailyQuests::GetWeeklyPvPBonus(now)->GetQuestName(), now);
+        const auto quest = get_quest_func(now);
+        if (argc > 1 && !wcscmp(argv[1], L"take") && quest->GetQuestGiverOutpost() != GW::Constants::MapID::None) {
+            pending_quest_take = quest;
+            return;
+        }
+        PrintDaily(quest_type, quest->GetQuestName(), now);
+    }
+
+    void CHAT_CMD_FUNC(CmdWeeklyBonus)
+    {
+        CmdDaily(L"Weekly Bonus PvE", DailyQuests::GetWeeklyPvEBonus, argc, argv);
+        CmdDaily(L"Weekly Bonus PvP", DailyQuests::GetWeeklyPvPBonus, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdZaishenBounty)
     {
-        time_t now = time(nullptr);
-        if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
-            now += 86400;
-        }
-        PrintDaily(L"Zaishen Bounty", DailyQuests::GetZaishenBounty(now)->GetQuestName(), now);
+        CmdDaily(L"Zaishen Bounty", DailyQuests::GetZaishenBounty, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdZaishenMission)
     {
-        time_t now = time(nullptr);
-        if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
-            now += 86400;
-        }
-        PrintDaily(L"Zaishen Mission", DailyQuests::GetZaishenMission(now)->GetQuestName(), now);
+        CmdDaily(L"Zaishen Mission", DailyQuests::GetZaishenMission, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdZaishenVanquish)
     {
-        time_t now = time(nullptr);
-        if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
-            now += 86400;
-        }
-        PrintDaily(L"Zaishen Vanquish", DailyQuests::GetZaishenVanquish(now)->GetQuestName(), now);
+        CmdDaily(L"Zaishen Vanquish", DailyQuests::GetZaishenVanquish, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdZaishenCombat)
     {
-        time_t now = time(nullptr);
-        if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
-            now += 86400;
-        }
-        PrintDaily(L"Zaishen Combat", DailyQuests::GetZaishenCombat(now)->GetQuestName(), now);
+        CmdDaily(L"Zaishen Combat", DailyQuests::GetZaishenCombat, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdWantedByShiningBlade)
     {
-        time_t now = time(nullptr);
-        if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
-            now += 86400;
-        }
-        PrintDaily(L"Wanted", DailyQuests::GetWantedByShiningBlade(now)->GetQuestName(), now);
+        CmdDaily(L"Wanted", DailyQuests::GetWantedByShiningBlade, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdVanguard)
     {
-        time_t now = time(nullptr);
-        if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
-            now += 86400;
-        }
-        PrintDaily(L"Vanguard Quest", DailyQuests::GetVanguardQuest(now)->GetQuestName(), now);
+        CmdDaily(L"Vanguard Quest", DailyQuests::GetVanguardQuest, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdNicholas)
@@ -882,16 +870,13 @@ namespace {
     using QuestLogNames = std::unordered_map<GW::Constants::QuestID, GuiUtils::EncString*>;
 
     bool IsQuestAvailable(DailyQuests::QuestData* info) {
-#pragma warning( push )
-#pragma warning( disable : 4353) // nonstandard extension used: constant 0 as function expression
         return info && info->GetQuestGiverOutpost() != GW::Constants::MapID::None
-            (info == DailyQuests::GetZaishenVanquish()
+            && (info == DailyQuests::GetZaishenVanquish()
                 || info == DailyQuests::GetZaishenBounty()
                 || info == DailyQuests::GetZaishenCombat()
                 || info == DailyQuests::GetZaishenMission()
                 || info == DailyQuests::GetVanguardQuest()
                 || info == DailyQuests::GetWantedByShiningBlade());
-#pragma warning( pop ) 
     }
     QuestLogNames quest_log_names;
     QuestLogNames* GetQuestLogInfo() {
@@ -924,20 +909,25 @@ namespace {
             || wcseq(quest.location, GW::EncStrings::WantedByTheShiningBlade);
     }
 
-    const bool HasDailyQuest(const char* quest_name) {
+    GW::Quest* GetQuestByName(const char* quest_name) {
         const auto w = GW::GetWorldContext();
-        if (!w) return false;
+        if (!w) return nullptr;
         const auto decoded_quest_names = GetQuestLogInfo();
         if (!decoded_quest_names)
-            return false;
+            return nullptr;
         for (auto& entry : w->quest_log) {
             if (!IsDailyQuest(entry))
                 continue;
             if (entry.name && decoded_quest_names->at(entry.quest_id)->string() == quest_name)
-                return true;
+                return &entry;
         }
-        return false;
+        return nullptr;
     }
+
+    const bool HasDailyQuest(const char* quest_name) {
+        return GetQuestByName(quest_name) != nullptr;
+    }
+
 
     bool OnDailyQuestContextMenu(void* wparam) {
         const auto info = (DailyQuests::QuestData*)wparam;
@@ -1448,6 +1438,19 @@ void DailyQuests::Terminate() {
 
 void DailyQuests::Update(const float)
 {
+    if (pending_quest_take && GetQuestLogInfo() && *pending_quest_take->GetQuestName()) {
+        auto has_quest = GetQuestByName(pending_quest_take->GetQuestName());
+        if (!has_quest) {
+            TravelWindow::Instance().Travel(pending_quest_take->GetQuestGiverOutpost());
+        }
+        else if(has_quest->IsCompleted()){
+            TravelWindow::Instance().Travel(pending_quest_take->GetQuestGiverOutpost());
+        }
+        else {
+            TravelWindow::Instance().TravelNearest(pending_quest_take->map_id);
+        }
+        pending_quest_take = nullptr;
+    }
     if (subscriptions_changed) {
         checked_subscriptions = false;
     }
