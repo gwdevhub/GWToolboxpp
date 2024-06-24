@@ -364,7 +364,7 @@ ChangeTargetAction::ChangeTargetAction(InputStream& stream)
     stream >> agentType >> primary >> secondary >> alive >> skill >> sorting >> modelId >> minDistance >> maxDistance >> requireSameModelIdAsTarget >> preferNonHexed >> rotateThroughTargets;
     agentName = readStringWithSpaces(stream);
     polygon = readPositions(stream);
-    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding;
+    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding >> hexed;
 }
 void ChangeTargetAction::serialize(OutputStream& stream) const
 {
@@ -373,7 +373,7 @@ void ChangeTargetAction::serialize(OutputStream& stream) const
     stream << agentType << primary << secondary << alive << skill << sorting << modelId << minDistance << maxDistance << requireSameModelIdAsTarget << preferNonHexed << rotateThroughTargets;
     writeStringWithSpaces(stream, agentName);
     writePositions(stream, polygon);
-    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding;
+    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding << hexed;
 }
 void ChangeTargetAction::initialAction()
 {
@@ -407,8 +407,8 @@ void ChangeTargetAction::initialAction()
             switch (agentType) {
                 case AgentType::Any:
                     return true;
-                case AgentType::PartyMember: //optimize this? Dont need to check all agents
-                    return agent->IsPlayer();
+                case AgentType::PartyMember:
+                    return true;
                 case AgentType::Friendly:
                     return agent->allegiance != GW::Constants::Allegiance::Enemy;
                 case AgentType::Hostile:
@@ -487,13 +487,38 @@ void ChangeTargetAction::initialAction()
         }
     };
 
-    for (const auto* agent : *agents) {
-        if (!agent) continue;
-        auto living = agent->GetAsAgentLiving();
-        if (!fulfillsConditions(living)) continue;
+    const auto testAgent = [&](const GW::Agent* agent) 
+    {
+        if (!agent) return;
+
+        const auto living = agent->GetAsAgentLiving();
+        if (!fulfillsConditions(living)) return;
         if (isNewBest(living)) currentBestTarget = living;
-        if (sorting == Sorting::AgentId && !rotateThroughTargets) break;
+    };
+
+
+
+    if (agentType == AgentType::PartyMember) 
+    {
+        const auto info = GW::PartyMgr::GetPartyInfo();
+        if (!info) return;
+
+        for (const auto& partyMember : info->players)
+            testAgent(GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(partyMember.login_number)));
+        for (const auto& hero : info->heroes)
+            testAgent(GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(hero.agent_id)));
+        for (const auto& henchman : info->henchmen)
+            testAgent(GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(henchman.agent_id)));
     }
+    else 
+    {
+        for (const auto* agent : *agents) 
+        {
+            testAgent(agent);
+            if (currentBestTarget && sorting == Sorting::AgentId && !rotateThroughTargets) break;
+        }
+    }
+
 
     if (!currentBestTarget) 
         return;
@@ -516,7 +541,7 @@ void ChangeTargetAction::drawSettings()
     ImGui::PushItemWidth(120);
 
     if (ImGui::TreeNodeEx("Change target to agent with characteristics", ImGuiTreeNodeFlags_FramePadding)) {
-        ImGui::BulletText("Type");
+        ImGui::BulletText("Allegiance");
         ImGui::SameLine();
         drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, 0);
 
@@ -548,13 +573,17 @@ void ChangeTargetAction::drawSettings()
             ImGui::SameLine();
             drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, weaponspelled, 5);
 
+            ImGui::BulletText("Is hexed");
+            ImGui::SameLine();
+            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, hexed, 6);
+
             ImGui::BulletText("Is poisoned");
             ImGui::SameLine();
-            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, poisoned, 6);
+            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, poisoned, 7);
 
             ImGui::BulletText("Is bleeding");
             ImGui::SameLine();
-            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, bleeding, 7);
+            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, bleeding, 8);
 
             ImGui::BulletText("Uses skill");
             ImGui::SameLine();
@@ -565,15 +594,15 @@ void ChangeTargetAction::drawSettings()
             ImGui::BulletText("Name");
             ImGui::SameLine();
             ImGui::PushItemWidth(200.f);
-            ImGui::InputText("###8", &agentName);
+            ImGui::InputText("###9", &agentName);
 
             ImGui::PushItemWidth(80.f);
             ImGui::Bullet();
             ImGui::Text("HP percent");
             ImGui::SameLine();
-            ImGui::InputFloat("min###9", &minHp);
+            ImGui::InputFloat("min###10", &minHp);
             ImGui::SameLine();
-            ImGui::InputFloat("max###10", &maxHp);
+            ImGui::InputFloat("max###11", &maxHp);
 
             ImGui::Bullet();
             ImGui::Checkbox("Prefer enemies that are not hexed", &preferNonHexed);
@@ -587,14 +616,14 @@ void ChangeTargetAction::drawSettings()
             ImGui::Bullet();
             ImGui::Text(requireSameModelIdAsTarget ? "If no target is selected: Model" : "Model");
             ImGui::SameLine();
-            drawModelIDSelector(modelId, "id (0 for any)###11");
+            drawModelIDSelector(modelId, "id (0 for any)###12");
 
             ImGui::Bullet();
             ImGui::Text("Angle to player forward (degrees)");
             ImGui::SameLine();
-            ImGui::InputFloat("min###12", &minAngle);
+            ImGui::InputFloat("min###13", &minAngle);
             ImGui::SameLine();
-            ImGui::InputFloat("max###13", &maxAngle);
+            ImGui::InputFloat("max###14", &maxAngle);
             if (minAngle < 0.f) minAngle = 0.f;
             if (minAngle > 180.f) minAngle = 180.f;
             if (maxAngle < 0.f) maxAngle = 0.f;
@@ -602,7 +631,7 @@ void ChangeTargetAction::drawSettings()
 
             ImGui::BulletText("Sort candidates by:");
             ImGui::SameLine();
-            drawEnumButton(Sorting::AgentId, Sorting::ModelID, sorting, 14, 150.);
+            drawEnumButton(Sorting::AgentId, Sorting::ModelID, sorting, 15, 150.);
 
             ImGui::Bullet();
             ImGui::Text("Is within polygon");

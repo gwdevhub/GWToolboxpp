@@ -88,6 +88,7 @@ private:
     AnyNoYes poisoned = AnyNoYes::Any;
     AnyNoYes weaponspelled = AnyNoYes::Any;
     AnyNoYes enchanted = AnyNoYes::Any;
+    AnyNoYes hexed = AnyNoYes::Any;
     GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
     Sorting sorting = Sorting::AgentId;
     uint16_t modelId = 0;
