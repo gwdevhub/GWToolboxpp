@@ -1142,8 +1142,8 @@ bool NearbyAgentCondition::check() const
             switch (agentType) {
                 case AgentType::Any:
                     return true;
-                case AgentType::PartyMember: // optimize this? Dont need to check all agents
-                    return living->IsPlayer();
+                case AgentType::PartyMember:
+                    return true;
                 case AgentType::Friendly:
                     return living->allegiance != GW::Constants::Allegiance::Enemy;
                 case AgentType::Hostile:
@@ -1181,14 +1181,11 @@ bool NearbyAgentCondition::check() const
         if (!info) return false;
 
         for (const auto& partyMember : info->players) 
-            if (fulfillsConditions(GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(partyMember.login_number)))) 
-                return true;
+            if (fulfillsConditions(GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(partyMember.login_number)))) return true;
         for (const auto& hero : info->heroes)
-            if (fulfillsConditions(GW::Agents::GetAgentByID(hero.agent_id))) 
-                return true;
+            if (fulfillsConditions(GW::Agents::GetAgentByID(hero.agent_id))) return true;
         for (const auto& henchman : info->henchmen)
-            if (fulfillsConditions(GW::Agents::GetAgentByID(henchman.agent_id))) 
-                return true;
+            if (fulfillsConditions(GW::Agents::GetAgentByID(henchman.agent_id))) return true;
     }
     else 
     {
