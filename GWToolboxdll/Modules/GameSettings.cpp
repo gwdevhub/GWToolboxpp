@@ -41,6 +41,7 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
 
@@ -59,7 +60,7 @@
 #include <Logger.h>
 #include <Timer.h>
 #include <Defines.h>
-#include <GWCA/Managers/QuestMgr.h>
+
 #include <d3d9on12.h>
 
 #include "Windows/FriendListWindow.h"
@@ -1070,6 +1071,23 @@ namespace {
         }
     }
 
+    const wchar_t* GetPartySearchLeader(uint32_t party_search_id) {
+        const auto p = GW::PartyMgr::GetPartySearch(party_search_id);
+        return p && p->party_leader && *p->party_leader ? p->party_leader : nullptr;
+    }
+
+    GW::HookEntry OnPostUIMessage_HookEntry;
+    void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*) {
+        switch (message_id) {
+        case GW::UI::UIMessage::kPartySearchInviteSent: {
+            // Automatically send a party window invite when a party search invite is sent
+            const auto packet = (GW::UI::UIPacket::kPartySearchInvite*)wParam;
+            if(GW::PartyMgr::GetIsLeader())
+                GW::PartyMgr::InvitePlayer(GetPartySearchLeader(packet->source_party_search_id));            
+        } break;
+        }
+    }
+
 }
 
 bool GameSettings::GetSettingBool(const char* setting)
@@ -1418,6 +1436,14 @@ void GameSettings::Initialize()
         RegisterUIMessageCallback(&OnPostSendDialog_Entry, message_id, OnPartyTargetChanged, 0x8000);
     }
 
+    constexpr GW::UI::UIMessage post_ui_messages[] = {
+        GW::UI::UIMessage::kPartySearchInviteSent
+    };
+    for (const auto message_id : post_ui_messages) {
+        RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
+    }
+    
+
     GW::Chat::CreateCommand(L"reinvite", CmdReinvite);
 
     RegisterCreateUIComponentCallback(&OnCreateUIComponent_Entry, OnCreateUIComponent);
@@ -1680,6 +1706,7 @@ void GameSettings::Terminate()
     remove_skill_warmup_duration_patch.Reset();
 
     GW::UI::RemoveUIMessageCallback(&OnQuestUIMessage_HookEntry);
+    GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
 }
 
 void GameSettings::SaveSettings(ToolboxIni* ini)
