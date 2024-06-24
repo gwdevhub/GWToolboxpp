@@ -598,3 +598,16 @@ private:
     mutable int lastResetInInstanceId = 0;
     mutable bool currentState = false;
 };
+
+class CurrentTargetNameCondition : public Condition {
+public:
+    CurrentTargetNameCondition() = default;
+    CurrentTargetNameCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::CurrentTargetName; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    std::string name = "";
+};

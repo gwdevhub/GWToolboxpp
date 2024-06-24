@@ -1972,3 +1972,34 @@ void ToggleCondition::drawSettings()
 
     ImGui::PopID();
 }
+/// ------------- CurrentTargetNameCondition -------------
+CurrentTargetNameCondition::CurrentTargetNameCondition(InputStream& stream) 
+{
+    name = readStringWithSpaces(stream);
+}
+void CurrentTargetNameCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    writeStringWithSpaces(stream, name);
+}
+bool CurrentTargetNameCondition::check() const
+{
+    if (name.empty()) return false;
+    const auto target = GW::Agents::GetTargetAsAgentLiving();
+    if (!target) return false;
+
+    auto& instanceInfo = InstanceInfo::getInstance();
+    return instanceInfo.getDecodedAgentName(target->agent_id) == name;
+}
+void CurrentTargetNameCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("If current target has name");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(300);
+    ImGui::InputText("name", &name);
+
+    ImGui::PopID();
+}

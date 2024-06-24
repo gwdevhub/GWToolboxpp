@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 43);
+    static_assert((int)ConditionType::Count == 44);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -75,6 +75,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<CurrentTargetDistanceCondition>();
         case ConditionType::CurrentTargetStatus:
             return std::make_shared<CurrentTargetStatusCondition>();
+        case ConditionType::CurrentTargetName:
+            return std::make_shared<CurrentTargetNameCondition>();
 
         case ConditionType::KeyIsPressed:
             return std::make_shared<KeyIsPressedCondition>();
@@ -107,7 +109,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 43);
+    static_assert((int)ConditionType::Count == 44);
     switch (type) {
         case ConditionType::Not:
             return "Not";
@@ -177,6 +179,8 @@ std::string_view toString(ConditionType type)
             return "Distance";
         case ConditionType::CurrentTargetStatus:
             return "Status";
+        case ConditionType::CurrentTargetName:
+            return "Name";
 
         case ConditionType::KeyIsPressed:
             return "Keypress";
@@ -208,7 +212,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(InputStream& stream)
 {
-static_assert((int)ConditionType::Count == 43);
+static_assert((int)ConditionType::Count == 44);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -279,6 +283,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<CurrentTargetDistanceCondition>(stream);
     case ConditionType::CurrentTargetStatus:
         return std::make_shared<CurrentTargetStatusCondition>(stream);
+    case ConditionType::CurrentTargetName:
+        return std::make_shared<CurrentTargetNameCondition>(stream);
 
     case ConditionType::KeyIsPressed:
         return std::make_shared<KeyIsPressedCondition>(stream);
@@ -341,7 +347,7 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
                                                  ConditionType::PlayerHasName,         ConditionType::PlayerHasEnergy, ConditionType::PlayerHasHpBelow, ConditionType::PlayerStatus,   ConditionType::PlayerIsIdle,
                                                  ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory, ConditionType::PlayerMorale,     ConditionType::CanPopAgent};
     constexpr auto targetConditions = std::array{ConditionType::CurrentTargetHasHpBelow, ConditionType::CurrentTargetStatus, ConditionType::CurrentTargetIsUsingSkill, ConditionType::CurrentTargetHasModel,
-                                                 ConditionType::CurrentTargetAllegiance, ConditionType::CurrentTargetDistance};
+                                                 ConditionType::CurrentTargetAllegiance, ConditionType::CurrentTargetDistance, ConditionType::CurrentTargetName};
     constexpr auto partyCondtions = std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName};
     constexpr auto instanceConditions = std::array{ConditionType::IsInMap, ConditionType::InstanceType, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime, ConditionType::FoeCount};
     constexpr auto logicConditions = std::array{ConditionType::Not, ConditionType::Or, ConditionType::And, ConditionType::True, ConditionType::False};

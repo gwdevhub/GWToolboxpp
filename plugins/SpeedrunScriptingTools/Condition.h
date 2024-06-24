@@ -47,6 +47,7 @@ enum class ConditionType : int {
     Once,
     Toggle,
     After,
+    CurrentTargetName,
 
     Count
 };
