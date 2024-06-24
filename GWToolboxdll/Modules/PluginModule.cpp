@@ -226,12 +226,17 @@ void PluginModule::Draw(IDirect3DDevice9* device)
 {
     static bool message_displayed = false;
     if (!plugins_loaded.empty() && !message_displayed) {
-        WriteChat(GW::Chat::Channel::CHANNEL_GWCA2,
-                  L"<c=#FFFF00>Plugins detected, these may be unsafe to use and are not officially supported by GWToolbox++ developers.\n"
-                  "Use at your own risk if you trust the author.\n"
-                  "Do not report bugs that occur while you play with plugins.</c>\n"
-                  "<c=#FF0000>Plugins are NOT permitted by ArenaNet.</c>",
-                  L"GWToolbox++");
+        GW::Chat::WriteChat(
+            GW::Chat::Channel::CHANNEL_GWCA2,
+            L"<c=#FFFF00>Plugins detected, these may be unsafe to use and are not officially supported by GWToolbox++ developers.\n"
+            "Use at your own risk if you trust the author.\n"
+            "Do not report bugs that occur while you play with plugins.</c>", GWTOOLBOX_SENDER);
+        GW::Chat::WriteChat(
+            GW::Chat::Channel::CHANNEL_GWCA2,
+            L"<c=#FF0000>Plugins are NOT permitted by ArenaNet.</c>", GWTOOLBOX_SENDER);
+        GW::Chat::WriteChat(
+            GW::Chat::Channel::CHANNEL_WARNING,
+            L"Plugins are NOT permitted by ArenaNet.");
         message_displayed = true;
     }
     for (const auto plugin : plugins_loaded) {
