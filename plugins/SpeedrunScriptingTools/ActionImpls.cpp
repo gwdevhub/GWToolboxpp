@@ -1206,6 +1206,7 @@ void ConditionedAction::drawSettings()
         ImGui::Indent(indent);
 
         std::optional<int> rowToDelete;
+        std::optional<std::pair<int, int>> rowsToSwap;
 
         for (int i = 0; i < int(actions.size()); ++i) 
         {
@@ -1219,6 +1220,11 @@ void ConditionedAction::drawSettings()
                 else
                     rowToDelete = i;
             }
+            ImGui::SameLine();
+            if (ImGui::Button("^", ImVec2(20, 0)) && i > 0) 
+                rowsToSwap = {i - 1, i};
+            ImGui::SameLine();
+            if (ImGui::Button("v", ImVec2(20, 0)) && i + 1 < int(actions.size())) rowsToSwap = {i, i + 1};
 
             ImGui::SameLine();
             if (actions[i])
@@ -1229,6 +1235,7 @@ void ConditionedAction::drawSettings()
             ImGui::PopID();
         }
         if (rowToDelete) actions.erase(actions.begin() + *rowToDelete);
+        if (rowsToSwap) std::swap(*(actions.begin() + rowsToSwap->first), *(actions.begin() + rowsToSwap->second));
 
         ImGui::Bullet();
         if (ImGui::Button("Add row")) 
