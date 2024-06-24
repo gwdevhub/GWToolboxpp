@@ -403,7 +403,7 @@ class PlayerHasHpBelowCondition : public Condition {
 public:
     PlayerHasHpBelowCondition() = default;
     PlayerHasHpBelowCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::CurrentTargetHasHpBelow; }
+    ConditionType type() const final { return ConditionType::PlayerHasHpBelow; }
     bool check() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
