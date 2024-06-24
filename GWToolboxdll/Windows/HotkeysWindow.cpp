@@ -95,9 +95,15 @@ namespace {
         }
     }
 
+    bool IsFrameCreated(GW::UI::Frame* frame) {
+        return frame && frame->IsCreated();
+    }
     bool IsMapReady()
     {
-        return GW::Map::GetIsMapLoaded() && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving();
+        return GW::Map::GetIsMapLoaded() 
+            && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading 
+            && !GW::Map::GetIsObserving()
+            && IsFrameCreated(GW::UI::GetFrameByLabel(L"Skillbar"));
     }
 
     // Repopulates applicable_hotkeys based on current character/map context.
@@ -166,7 +172,7 @@ namespace {
         if (!IsMapReady()) {
             return false;
         }
-        if (!GW::Agents::GetPlayerAsAgentLiving()) {
+        if (!GW::Agents::GetControlledCharacter()) {
             return false;
         }
         const GW::Constants::InstanceType mt = GW::Map::GetInstanceType();
@@ -198,7 +204,7 @@ namespace {
         if (!IsMapReady()) {
             return false;
         }
-        if (!GW::Agents::GetPlayerAsAgentLiving()) {
+        if (!GW::Agents::GetControlledCharacter()) {
             return false;
         }
         if (!CheckSetValidHotkeys()) {

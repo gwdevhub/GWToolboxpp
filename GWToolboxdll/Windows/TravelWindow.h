@@ -36,7 +36,9 @@ public:
     bool TravelFavorite(unsigned int idx);
 
     // Travel with checks, returns false if already in outpost or outpost not unlocked
-    bool Travel(GW::Constants::MapID map_id, GW::Constants::District district, uint32_t district_number = 0);
+    bool Travel(GW::Constants::MapID map_id, GW::Constants::District district = GW::Constants::District::Current, uint32_t district_number = 0);
+
+    bool TravelNearest(const GW::Constants::MapID map_id);
 
     // Travel to relevent outpost, then use scroll to access Urgoz/Deep
     void ScrollToOutpost(

@@ -668,7 +668,7 @@ namespace {
         if (tome_pending_stage == None) {
             return;
         }
-        const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
+        const GW::AgentLiving* player = GW::Agents::GetControlledCharacter();
         constexpr auto popup_label = "Change secondary profession?###change-secondary";
         if (tome_pending_timeout && TIMER_INIT() > tome_pending_timeout) {
             Log::Error("Timeout reached trying to change profession for tome use");
@@ -2457,7 +2457,7 @@ bool InventoryManager::Item::IsSalvagable(bool check_bag)
     if (IsUsable() || IsGreen()) {
         return false; // Non-salvagable flag set
     }
-    if (!bag) {
+    if (check_bag && !bag) {
         return false;
     }
     if (check_bag && !bag->IsInventoryBag() && !bag->IsStorageBag()) {

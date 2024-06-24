@@ -239,6 +239,10 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
         return;
     }
 
+    if (agent_health_bar_positions.empty()) {
+        return;
+    }
+
     const auto& first_agent_health_bar = agent_health_bar_positions.begin()->second;
     const auto img_size = first_agent_health_bar.second.y - first_agent_health_bar.first.y;
     const auto width = img_size * history_length;

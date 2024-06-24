@@ -29,7 +29,6 @@ int Pcon::pcons_delay = 5000;
 int Pcon::lunar_delay = 500;
 bool Pcon::disable_when_not_found = true;
 bool Pcon::refill_if_below_threshold = false;
-DWORD Pcon::player_id = 0;
 Color Pcon::enabled_bg_color = Colors::ARGB(102, 0, 255, 0);
 
 DWORD Pcon::alcohol_level = 0;
@@ -210,11 +209,10 @@ void Pcon::Update(int delay)
         if (delay < 0) {
             delay = pcons_delay;
         }
-        player = GW::Agents::GetPlayerAsAgentLiving();
+        player = GW::Agents::GetControlledCharacter();
         // NOTE: Only fails CanUseByEffect() if we've found an effects array for this map before.
         if (player != nullptr
             && !player->GetIsDead()
-            && (player_id == 0 || player->agent_id == player_id)
             && TIMER_DIFF(timer) > delay
             && CanUseByInstanceType()
             && CanUseByEffect()) {
@@ -246,6 +244,9 @@ bool Pcon::IsSlotReservedForMove(const size_t bagIndex, const size_t slot)
     return slot_reserved_at && TIMER_DIFF(slot_reserved_at) < 3000; // 1000ms is reasonable for CtoS then StoC
 }
 
+bool Pcon::IsControllingCurrentChar() {
+    return !GW::Agents::IsObserving() && GW::Agents::GetControlledCharacter();
+}
 void Pcon::AfterUsed(const bool used, const int qty)
 {
     if (qty >= 0) {
@@ -611,8 +612,7 @@ void PconGeneric::OnButtonClick()
 
 bool PconGeneric::CanUseByEffect() const
 {
-    const GW::Agent* _player = GW::Agents::GetPlayer();
-    if (!_player) {
+    if (!GW::Agents::GetControlledCharacter()) {
         return false; // player doesn't exist?
     }
 
@@ -678,7 +678,7 @@ bool PconCity::CanUseByInstanceType() const
 bool PconCity::CanUseByEffect() const
 {
     using namespace GW::Constants;
-    const GW::Agent* _player = GW::Agents::GetPlayer();
+    const GW::Agent* _player = GW::Agents::GetControlledCharacter();
     if (!_player || _player->move_x == 0.0f && _player->move_y == 0.0f) {
         return false; // player doesn't exist?
     }
@@ -773,9 +773,8 @@ size_t PconAlcohol::QuantityForEach(const GW::Item* item) const
 
 void PconAlcohol::ForceUse()
 {
-    const GW::AgentLiving* _player = GW::Agents::GetPlayerAsAgentLiving();
-    if (_player != nullptr && !_player->GetIsDead() &&
-        (player_id == 0 || _player->agent_id == player_id)) {
+    const GW::AgentLiving* _player = GW::Agents::GetControlledCharacter();
+    if (_player != nullptr && !_player->GetIsDead()) {
         bool used = false;
         size_t used_qty = 0;
         int qty = CheckInventory(&used, &used_qty);
@@ -817,18 +816,15 @@ size_t PconLunar::QuantityForEach(const GW::Item* item) const
 }
 bool PconLunar::CanUseByEffect() const
 {
-    const GW::Agent* _player = GW::Agents::GetPlayer();
-    if (!_player) {
-        return false; // player doesn't exist?
-    }
-
-    return GW::Effects::GetPlayerEffectBySkillId(GW::Constants::SkillID::Lunar_Blessing) == nullptr;
+    return GW::Agents::GetControlledCharacter() && GW::Effects::GetPlayerEffectBySkillId(GW::Constants::SkillID::Lunar_Blessing) == nullptr;
 }
 
 bool PconScroll::CanUseByEffect() const
 {
     using namespace GW::Constants;
-    const auto effects = GW::Agents::GetPlayer() ? GW::Effects::GetPlayerEffects() : nullptr;
+    if (!GW::Agents::GetControlledCharacter())
+        return false;
+    const auto effects = GW::Effects::GetPlayerEffects();
     if (!effects) {
         return true;
     }

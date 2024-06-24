@@ -51,7 +51,8 @@ public:
         const char* GetMapName();
         const std::string& GetRegionName();
         const char* GetQuestName();
-        const std::string& GetWikiName();
+        const std::wstring& GetWikiName();
+        virtual const GW::Constants::MapID GetQuestGiverOutpost();
 
         void Travel();
 

@@ -263,7 +263,7 @@ void RangeRenderer::Render(IDirect3DDevice9* device)
 
     // Draw hos line
     if (havehos_) {
-        const auto me = target ? GW::Agents::GetPlayerAsAgentLiving() : nullptr;
+        const auto me = target ? GW::Agents::GetControlledCharacter() : nullptr;
 
         if (me && me != target && !me->GetIsDead() && !target->GetIsDead() && GetSquareDistance(target->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {
             GW::Vec2f v = me->pos - target->pos;

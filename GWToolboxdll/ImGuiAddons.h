@@ -5,6 +5,13 @@ using Color = ImU32;
 constexpr uint32_t ImGuiButtonFlags_AlignTextLeft = 1 << 20;
 
 namespace ImGui {
+    // Return false to close the context menu
+    using ImGuiContextMenuCallback = std::function<bool(void* wparam)>;
+
+    IMGUI_API void SetContextMenu(ImGuiContextMenuCallback callback, void* wparam = nullptr);
+
+    IMGUI_API void DrawContextMenu();
+
     // Shorthand for ImGui::GetIO().GlobalFontScale
     IMGUI_API const float& FontScale();
     // Initialise available width etc for adding spaced elements. Must be called before calling NextSpacedElement()
@@ -52,4 +59,8 @@ namespace ImGui {
     IMGUI_API ImVec2 CalculateUvCrop(ImTextureID user_texture_id, const ImVec2& size);
 
     IMGUI_API bool ColorPalette(const char* label, size_t* palette_index, const ImVec4* palette, size_t count, size_t max_per_line, ImGuiColorEditFlags flags);
+
+    // call before ImGui::Render() to clamp all windows to screen - pass false to restore original positions
+    // e.g. before saving, or if the user doesn't want the windows clamped
+    IMGUI_API void ClampAllWindowsToScreen(bool clamp);
 }

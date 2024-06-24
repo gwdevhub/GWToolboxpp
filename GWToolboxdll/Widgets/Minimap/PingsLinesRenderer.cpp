@@ -165,7 +165,7 @@ void PingsLinesRenderer::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_
 void PingsLinesRenderer::P153Callback(const GW::Packet::StoC::GenericValueTarget* pak)
 {
     if (pak->Value_id == 20
-        && pak->caster == GW::Agents::GetPlayerId()
+        && pak->caster == GW::Agents::GetControlledCharacterId()
         && pak->value == 928) {
         recall_target = pak->target;
     }
@@ -337,7 +337,7 @@ void PingsLinesRenderer::DrawShadowstepLine(IDirect3DDevice9*)
         return;
     }
 
-    const GW::Agent* player = GW::Agents::GetPlayer();
+    const GW::Agent* player = GW::Agents::GetControlledCharacter();
     if (player == nullptr) {
         return;
     }
@@ -356,7 +356,7 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9*)
     }
 
     const GW::Buff* recall = GW::Effects::GetPlayerBuffBySkillId(GW::Constants::SkillID::Recall);
-    const GW::Agent* player = recall && recall->skill_id != GW::Constants::SkillID::No_Skill ? GW::Agents::GetPlayer() : nullptr;
+    const GW::Agent* player = recall && recall->skill_id != GW::Constants::SkillID::No_Skill ? GW::Agents::GetControlledCharacter() : nullptr;
     const GW::Agent* target = player ? GW::Agents::GetAgentByID(recall_target) : nullptr;
     if (target == nullptr) {
         // This can happen if you recall something that then despawns before you drop recall.
@@ -491,7 +491,7 @@ bool PingsLinesRenderer::OnMouseMove(const float x, const float y)
         return false;
     }
 
-    const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
     if (me == nullptr) {
         return false;
     }

@@ -162,7 +162,7 @@ namespace {
 
     // Settings
     GW::GamePos* GetPlayerPos() {
-        const auto p = GW::Agents::GetPlayer();
+        const auto p = GW::Agents::GetControlledCharacter();
         return p ? &p->pos : nullptr;
     }
 

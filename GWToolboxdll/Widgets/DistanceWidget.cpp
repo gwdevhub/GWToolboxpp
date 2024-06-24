@@ -71,9 +71,10 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
-        const GW::Agent* me = GW::Agents::GetPlayer();
-        const GW::Agent* target = GW::Agents::GetTarget();
-        if (me && target && me != target) {
+        
+        const auto target = GW::Agents::GetTarget();
+        const auto me = target ? GW::Agents::GetObservingAgent() : nullptr;
+        if (me && me != target) {
             constexpr size_t buffer_size = 32;
             static char dist_perc[buffer_size];
             static char dist_abs[buffer_size];

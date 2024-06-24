@@ -260,7 +260,7 @@ namespace {
             return;
         }
         const auto packet = static_cast<GW::Packet::StoC::AgentState*>(base);
-        const GW::AgentLiving* current_character = GW::Agents::GetCharacter();
+        const GW::AgentLiving* current_character = GW::Agents::GetControlledCharacter();
         if (!packet || !current_character) {
             return;
         }

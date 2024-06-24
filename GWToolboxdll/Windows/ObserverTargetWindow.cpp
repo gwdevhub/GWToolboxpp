@@ -20,7 +20,7 @@ void ObserverTargetWindow::Prepare()
         tracking_living = tracking_agent->GetAsAgentLiving();
     }
 
-    const GW::Agent* compare_agent = GW::Agents::GetPlayer();
+    const GW::Agent* compare_agent = GW::Agents::GetObservingAgent();
     const GW::AgentLiving* compare_living = nullptr;
     if (compare_agent) {
         compare_living = compare_agent->GetAsAgentLiving();

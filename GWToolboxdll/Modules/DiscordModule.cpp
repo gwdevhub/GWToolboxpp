@@ -392,7 +392,7 @@ namespace {
     }
     void OnStoC_PartyPlayerAdd(const GW::HookStatus*, const GW::Packet::StoC::PacketBase* pak) {
         const auto packet = (GW::Packet::StoC::PartyPlayerAdd*)pak;
-        const auto player_agent = GW::Agents::GetPlayerAsAgentLiving();
+        const auto player_agent = GW::Agents::GetControlledCharacter();
         if (player_agent && packet->player_id == player_agent->player_number) {
             pending_activity_update = true; // Update if this is me
             return;
@@ -541,7 +541,7 @@ namespace {
         GW::Guild* g = nullptr;
         const GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
         const GW::AreaInfo* m = GW::Map::GetCurrentMapInfo();
-        const GW::AgentLiving* a = GW::Agents::GetCharacter();
+        const GW::AgentLiving* a = GW::Agents::GetControlledCharacter();
         const GW::CharContext* c = GW::GetGameContext()->character;
         const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
         if (!p || !m || !a || !c) {

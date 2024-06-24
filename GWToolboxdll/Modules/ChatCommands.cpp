@@ -27,6 +27,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
@@ -43,7 +44,6 @@
 #include <Logger.h>
 
 #include <Modules/ChatCommands.h>
-#include <Modules/ObserverModule.h>
 #include <Modules/GameSettings.h>
 #include <Modules/ChatSettings.h>
 #include <Modules/InventoryManager.h>
@@ -56,8 +56,6 @@
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/DialogModule.h>
 #include <Modules/Resources.h>
-#include <GWCA/Managers/QuestMgr.h>
-#include <Widgets/BondsWidget.h>
 
 constexpr auto CMDTITLE_KEEP_CURRENT = 0xfffe;
 constexpr auto CMDTITLE_REMOVE_CURRENT = 0xffff;
@@ -112,7 +110,7 @@ namespace {
     {
         // target best vipers target (closest)
         GW::AgentArray* agents = GW::Agents::GetAgentArray();
-        const GW::Agent* me = agents ? GW::Agents::GetPlayer() : nullptr;
+        const GW::Agent* me = agents ? GW::Agents::GetControlledCharacter() : nullptr;
         if (me == nullptr) {
             return;
         }
@@ -148,7 +146,7 @@ namespace {
     {
         // target best ebon escape target
         GW::AgentArray* agents = GW::Agents::GetAgentArray();
-        const GW::Agent* me = agents ? GW::Agents::GetPlayer() : nullptr;
+        const GW::Agent* me = agents ? GW::Agents::GetControlledCharacter() : nullptr;
         if (me == nullptr) {
             return;
         }
@@ -313,7 +311,7 @@ namespace {
         uint32_t skill_id = 0;
         GuiUtils::ParseUInt(argv[1], &skill_id);
         auto s = new GW::Packet::StoC::UpdateSkillbarSkill();
-        s->agent_id = GW::Agents::GetPlayerId();
+        s->agent_id = GW::Agents::GetControlledCharacterId();
         s->skill_slot = 0;
         s->skill_id = skill_id;
         GW::GameThread::Enqueue([s] {
@@ -324,7 +322,8 @@ namespace {
 
     void CHAT_CMD_FUNC(CmdPlayEffect)
     {
-        const auto player = GW::Agents::GetPlayer();
+        const auto player = GW::Agents::GetObservingAgent();
+        if (!player) return;
         auto packet = new GW::Packet::StoC::PlayEffect();
         memset(packet, 0, sizeof(*packet));
         packet->header = GW::Packet::StoC::PlayEffect::STATIC_HEADER;
@@ -864,6 +863,8 @@ void ChatCommands::DrawHelp()
     ImGui::Text("'/travel <town> [dis]', '/tp <town> [dis]' or '/to <town> [dis]' travel to outpost best matching <town> name. \n"
         "[dis] can be any of: ae, ae1, ee, eg, int, etc");
     ImGui::Bullet();
+    ImGui::Text("'/travel [zv|zb|zm]' travel to nearest unlocked outpost to daily quest.");
+    ImGui::Bullet();
     ImGui::Text("'/useskill <skill>' starts using the skill on recharge. "
         "Use the skill number instead of <skill> (e.g. '/useskill 5'). "
         "Use empty '/useskill' or '/useskill stop' to stop all. "
@@ -939,8 +940,10 @@ void ChatCommands::DrawSettingsInternal()
         }
         ImGui::PopItemWidth();
         ImGui::SameLine();
+        const auto text_height = ImGui::GetTextLineHeightWithSpacing();
+        const auto num_newlines = 1 + std::count((*it)->command_cstr, (*it)->command_cstr + _countof(CmdAlias::command_cstr), '\n');
         if (ImGui::InputTextMultiline("##cmd_command", (*it)->command_cstr,
-            _countof(CmdAlias::command_cstr), ImVec2(avail_w * .6f, 0.0f))) {
+            _countof(CmdAlias::command_cstr), ImVec2(avail_w * .6f, text_height + num_newlines * ImGui::GetTextLineHeight()))) {
             swprintf((*it)->command_wstr, _countof(CmdAlias::command_wstr), L"%S", (*it)->command_cstr);
         }
         if (ImGui::IsItemHovered()) {
@@ -1423,7 +1426,7 @@ void ChatCommands::SearchAgent::Update()
     // Do search
     float distance = GW::Constants::SqrRange::Compass;
     size_t closest = 0;
-    const GW::Agent* me = GW::Agents::GetPlayer();
+    const GW::Agent* me = GW::Agents::GetControlledCharacter();
     if (!me) {
         return;
     }
@@ -1566,7 +1569,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdMorale)
         GW::Chat::SendChat('#', L"I have no Morale Boost or Death Penalty!");
     }
     else {
-        auto packet = GW::UI::UIPacket::kSendCallTarget { GW::CallTargetType::Morale, GW::Agents::GetPlayerId() };
+        auto packet = GW::UI::UIPacket::kSendCallTarget { GW::CallTargetType::Morale, GW::Agents::GetControlledCharacterId() };
         GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &packet);
     }
 }
@@ -1597,7 +1600,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDialog)
     }
     if (!DialogModule::GetDialogAgent()) {
         const auto* target = GW::Agents::GetTargetAsAgentLiving();
-        const auto* me = GW::Agents::GetPlayer();
+        const auto* me = GW::Agents::GetControlledCharacter();
         if (target && target->allegiance == GW::Constants::Allegiance::Npc_Minipet
             && GetDistance(me->pos, target->pos) < GW::Constants::Range::Area) {
             GW::Agents::InteractAgent(target);
@@ -2109,11 +2112,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTarget)
         uint32_t calledTargetId = 0;
 
         if (argc == 2) {
-            const GW::Agent* me = GW::Agents::GetPlayer();
-            if (me == nullptr) {
-                return;
-            }
-            const GW::AgentLiving* meLiving = me->GetAsAgentLiving();
+            const GW::AgentLiving* meLiving = GW::Agents::GetControlledCharacter();
             if (!meLiving) {
                 return;
             }
@@ -2541,7 +2540,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDeposit)
         Log::Error("Incorrect syntax:");
         Log::Error(deposit_syntax);
     };
-    if (argc != 2) {
+    if (argc < 2) {
         return syntax_error();
     }
 
@@ -2564,6 +2563,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDeposit)
             }
         }
         GW::Items::DepositGold(wanted_quantity);
+        return;
     }
 
     std::vector<uint32_t> model_ids;
@@ -2613,7 +2613,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmo)
             return;
         }
     }
-    TransmoAgent(GW::Agents::GetPlayerId(), transmo);
+    TransmoAgent(GW::Agents::GetControlledCharacterId(), transmo);
 }
 
 bool ChatCommands::GetTargetTransmoInfo(PendingTransmo& transmo)
@@ -2653,7 +2653,7 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, const TargetTy
 
     // target nearest agent
     const auto agents = GW::Agents::GetAgentArray();
-    const auto me = agents ? GW::Agents::GetPlayerAsAgentLiving() : nullptr;
+    const auto me = agents ? GW::Agents::GetControlledCharacter() : nullptr;
     if (me == nullptr) {
         return;
     }
@@ -3081,7 +3081,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdAnimation)
     const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
 
     if (arg1 == L"me") {
-        const GW::AgentLiving* agent = GW::Agents::GetPlayerAsAgentLiving();
+        const GW::AgentLiving* agent = GW::Agents::GetControlledCharacter();
         agentid = agent->agent_id;
     }
     else if (arg1 == L"target") {

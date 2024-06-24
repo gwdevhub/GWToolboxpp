@@ -106,9 +106,9 @@ namespace {
         if (queued_dialogs_to_send.empty()) {
             return;
         }
-        const GW::Agent* npc = GW::Agents::GetAgentByID(last_agent_id);
-        const GW::Agent* me = GW::Agents::GetPlayer();
-        if (npc && me && GetDistance(npc->pos, me->pos) < GW::Constants::Range::Area) {
+        const auto npc = GW::Agents::GetAgentByID(last_agent_id);
+        const auto me =  npc ? GW::Agents::GetControlledCharacter() : nullptr;
+        if (me && GetDistance(npc->pos, me->pos) < GW::Constants::Range::Area) {
             GW::Agents::InteractAgent(npc);
         }
     }
@@ -132,7 +132,7 @@ void DialogModule::OnPreUIMessage(
             }
         }
         break;
-        case GW::UI::UIMessage::kSendDialog: {
+        case GW::UI::UIMessage::kSendAgentDialog: {
             const auto dialog_id = reinterpret_cast<uint32_t>(wparam);
             if ((dialog_id & 0xff000000) != 0) {
                 break; // Don't handle merchant interaction dialogs.
@@ -170,7 +170,7 @@ void DialogModule::OnPostUIMessage(const GW::HookStatus* status, const GW::UI::U
             OnDialogButtonAdded(static_cast<GW::UI::DialogButtonInfo*>(wparam));
         }
         break;
-        case GW::UI::UIMessage::kSendDialog: {
+        case GW::UI::UIMessage::kSendAgentDialog: {
             OnDialogSent(reinterpret_cast<uint32_t>(wparam));
         }
         break;
@@ -212,7 +212,7 @@ void DialogModule::Initialize()
 {
     ToolboxModule::Initialize();
     constexpr GW::UI::UIMessage dialog_ui_messages[] = {
-        GW::UI::UIMessage::kSendDialog,
+        GW::UI::UIMessage::kSendAgentDialog,
         GW::UI::UIMessage::kDialogBody,
         GW::UI::UIMessage::kDialogButton
     };

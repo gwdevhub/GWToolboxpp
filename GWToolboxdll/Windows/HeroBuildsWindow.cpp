@@ -101,7 +101,7 @@ namespace {
         if (!party_heros.valid()) {
             return ret;
         }
-        const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+        const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
         if (!me) {
             return ret;
         }
@@ -142,7 +142,7 @@ GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(const HeroID hero_id, si
     if (!party_heros.valid()) {
         return nullptr;
     }
-    const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
     if (!me) {
         return nullptr;
     }

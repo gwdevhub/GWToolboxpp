@@ -297,7 +297,7 @@ namespace {
             return false;
         }
 
-        const uint32_t my_player_id = GW::Agents::GetPlayerId();
+        const uint32_t my_player_id = GW::Agents::GetControlledCharacterId();
         const GW::Skillbar* my_skillbar = GetAgentSkillbar(my_player_id);
         if (!my_skillbar) {
             return false;
@@ -593,7 +593,7 @@ void PartyStatisticsWindow::Update(const float)
         if (GW::Constants::InstanceType::Loading == GW::Map::GetInstanceType()) {
             return;
         }
-        if (!GW::Agents::GetPlayer()) {
+        if (!GW::Agents::GetControlledCharacter()) {
             return;
         }
 

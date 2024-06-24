@@ -156,6 +156,7 @@ private:
     Color color_neutral = 0;
     Color color_ally = 0;
     Color color_ally_npc = 0;
+    Color color_ally_npc_quest = 0;
     Color color_ally_spirit = 0;
     Color color_ally_minion = 0;
     Color color_ally_dead = 0;

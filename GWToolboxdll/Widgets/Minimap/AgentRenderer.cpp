@@ -190,6 +190,7 @@ void AgentRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
     color_neutral = Colors::Load(ini, section, VAR_NAME(color_neutral), color_neutral);
     color_ally = Colors::Load(ini, section, VAR_NAME(color_ally), color_ally);
     color_ally_npc = Colors::Load(ini, section, VAR_NAME(color_ally_npc), color_ally_npc);
+    color_ally_npc_quest = Colors::Load(ini, section, VAR_NAME(color_ally_npc_quest), color_ally_npc_quest);
     color_ally_spirit = Colors::Load(ini, section, VAR_NAME(color_ally_spirit), color_ally_spirit);
     color_ally_minion = Colors::Load(ini, section, VAR_NAME(color_ally_minion), color_ally_minion);
     color_ally_dead = Colors::Load(ini, section, VAR_NAME(color_ally_dead), color_ally_dead);
@@ -263,6 +264,7 @@ void AgentRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
     Colors::Save(ini, section, VAR_NAME(color_neutral), color_neutral);
     Colors::Save(ini, section, VAR_NAME(color_ally), color_ally);
     Colors::Save(ini, section, VAR_NAME(color_ally_npc), color_ally_npc);
+    Colors::Save(ini, section, VAR_NAME(color_ally_npc_quest), color_ally_npc_quest);
     Colors::Save(ini, section, VAR_NAME(color_ally_spirit), color_ally_spirit);
     Colors::Save(ini, section, VAR_NAME(color_ally_minion), color_ally_minion);
     Colors::Save(ini, section, VAR_NAME(color_ally_dead), color_ally_dead);
@@ -330,6 +332,7 @@ void AgentRenderer::LoadDefaultColors()
     color_neutral = 0xFF0000DC;
     color_ally = 0xFF00B300;
     color_ally_npc = 0xFF99FF99;
+    color_ally_npc_quest = 0xFF99FF99;
     color_ally_spirit = 0xFF608000;
     color_ally_minion = 0xFF008060;
     color_ally_dead = 0x64006400;
@@ -362,6 +365,7 @@ void AgentRenderer::DrawSettings()
         Colors::DrawSettingHueWheel("Neutral", &color_neutral);
         Colors::DrawSettingHueWheel("Ally (player)", &color_ally);
         Colors::DrawSettingHueWheel("Ally (NPC)", &color_ally_npc);
+        Colors::DrawSettingHueWheel("Ally (NPC Quest Giver)", &color_ally_npc_quest);
         Colors::DrawSettingHueWheel("Ally (spirit)", &color_ally_spirit);
         Colors::DrawSettingHueWheel("Ally (minion)", &color_ally_minion);
         Colors::DrawSettingHueWheel("Ally (dead)", &color_ally_dead);
@@ -694,7 +698,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
         return;
     }
 
-    const GW::AgentLiving* player = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::AgentLiving* player = GW::Agents::GetControlledCharacter();
     const GW::Agent* target = GW::Agents::GetTarget();
     if (target) {
         auto_target_id = 0;
@@ -767,7 +771,7 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
     };
 
     const auto add_other_players_to_draw = [](const GW::AgentLiving* agent) -> bool {
-        if (!agent || !agent->IsPlayer() || agent == GW::Agents::GetPlayer()) {
+        if (!agent || !agent->IsPlayer() || agent == GW::Agents::GetObservingAgent()) {
             return false;
         }
         players_to_draw.push_back(agent);
@@ -917,7 +921,7 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
         return ca->color;
     }
 
-    if (agent->agent_id == GW::Agents::GetPlayerId()) {
+    if (agent->agent_id == GW::Agents::GetControlledCharacterId()) {
         if (agent->GetAsAgentLiving()->GetIsDead()) {
             return color_player_dead;
         }
@@ -1016,6 +1020,9 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
     if (living->GetIsDead()) {
         return color_ally_dead;
     }
+    if (living->GetHasQuest()) {
+        return color_ally_npc_quest;
+    }
     switch (living->allegiance) {
         case GW::Constants::Allegiance::Ally_NonAttackable:
             return color_ally; // ally
@@ -1038,7 +1045,7 @@ float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) cons
         return ca->size;
     }
 
-    if (agent->agent_id == GW::Agents::GetPlayerId()) {
+    if (agent->agent_id == GW::Agents::GetObservingId()) {
         return size_player;
     }
     if (agent->GetIsGadgetType()) {

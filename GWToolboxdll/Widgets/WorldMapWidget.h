@@ -20,16 +20,14 @@ public:
     void RegisterSettingsContent() override { };
 
     [[nodiscard]] bool ShowOnWorldMap() const override { return true; }
-
     [[nodiscard]] const char* Name() const override { return "World Map"; }
-
     [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE; }
 
+    void LoadSettings(ToolboxIni*) override;
+    void SaveSettings(ToolboxIni*) override;
     void Draw(IDirect3DDevice9* pDevice) override;
+    void DrawSettingsInternal() override;
+    bool WndProc(UINT, WPARAM, LPARAM) override;
 
     static void ShowAllOutposts(bool show);
-
-    void DrawSettingsInternal() override;
-
-    bool WndProc(UINT, WPARAM, LPARAM) override;
 };

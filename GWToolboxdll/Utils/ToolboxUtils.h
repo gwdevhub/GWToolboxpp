@@ -52,6 +52,8 @@ namespace GW {
 }
 
 namespace ToolboxUtils {
+
+    bool ArrayBoolAt(const GW::Array<uint32_t>&, const uint32_t);
     // Map
 
     bool IsOutpost();

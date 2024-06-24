@@ -15,7 +15,6 @@
 #include <Modules/DiscordModule.h>
 #include <Modules/TwitchModule.h>
 #include <Modules/PartyWindowModule.h>
-#include <Modules/ZrawDeepModule.h>
 #include <Modules/TeamspeakModule.h>
 #include <Modules/Teamspeak5Module.h>
 #include <Modules/ObserverModule.h>
@@ -55,6 +54,7 @@
 #include <Windows/DupingWindow.h>
 #include <Windows/RerollWindow.h>
 #include <Windows/ArmoryWindow.h>
+#include <Windows/EnemyWindow.h>
 
 #ifdef _DEBUG
 #include <Windows/PacketLoggerWindow.h>
@@ -80,7 +80,6 @@
 #include <Widgets/EffectsMonitorWidget.h>
 #include <Widgets/LatencyWidget.h>
 #include <Widgets/ActiveQuestWidget.h>
-#include <Widgets/InventoryOverlayWidget.h>
 #include "ToolboxSettings.h"
 
 
@@ -142,7 +141,6 @@ namespace {
         HintsModule::Instance(),
         MouseFix::Instance(),
         KeyboardLanguageFix::Instance(),
-        ZrawDeepModule::Instance(),
         GuildWarsSettingsModule::Instance(),
         //QuestModule::Instance(),
         PriceCheckerModule::Instance(),
@@ -164,8 +162,7 @@ namespace {
         EffectsMonitorWidget::Instance(),
         LatencyWidget::Instance(),
         SkillMonitorWidget::Instance(),
-        ActiveQuestWidget::Instance(),
-        InventoryOverlayWidget::Instance(),
+        ActiveQuestWidget::Instance()
     };
 
     std::vector<WindowToggle> optional_windows = {
@@ -191,13 +188,14 @@ namespace {
         RerollWindow::Instance(),
         PartyStatisticsWindow::Instance(),
         DupingWindow::Instance(),
-        ArmoryWindow::Instance()
+        ArmoryWindow::Instance(),
+#ifdef _DEBUG
+        EnemyWindow::Instance()
+#endif
     };
 
     bool modules_sorted = false;
 }
-
-bool ToolboxSettings::move_all = false;
 
 void ToolboxSettings::LoadModules(ToolboxIni* ini)
 {
@@ -336,6 +334,7 @@ void ToolboxSettings::DrawFreezeSetting()
 {
     ImGui::Checkbox("Unlock Move All", &move_all);
     ImGui::ShowHelp("Will allow movement and resize of all widgets and windows");
+    ImGui::Checkbox("Clamp growing windows to screen bounds", &clamp_windows_to_screen);
 }
 
 void ToolboxSettings::LoadSettings(ToolboxIni* ini)
@@ -344,6 +343,7 @@ void ToolboxSettings::LoadSettings(ToolboxIni* ini)
     inifile = ini; // Keep this to load module info
 
     move_all = false;
+    LOAD_BOOL(clamp_windows_to_screen);
 
     for (auto& m : optional_modules) {
         m.enabled = ini->GetBoolValue(modules_ini_section, m.name, m.enabled);
@@ -363,6 +363,8 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini)
         location_file.close();
     }
 
+    SAVE_BOOL(clamp_windows_to_screen);
+
     for (const auto& m : optional_modules) {
         ini->SetBoolValue(modules_ini_section, m.name, m.enabled);
     }
@@ -381,74 +383,72 @@ void ToolboxSettings::Draw(IDirect3DDevice9*)
 
 void ToolboxSettings::Update(float)
 {
-    // save location data
-    if (save_location_data && TIMER_DIFF(location_timer) > 1000) {
-        location_timer = TIMER_INIT();
-        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
-            && GW::Agents::GetPlayer() != nullptr) {
-            GW::Constants::MapID current = GW::Map::GetMapID();
-            if (location_current_map != current) {
-                location_current_map = current;
+    if (!(save_location_data && TIMER_DIFF(location_timer) > 1000))
+        return;
+    location_timer = TIMER_INIT();
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+        location_current_map = GW::Constants::MapID::None;
+        location_file.close();
+        return;
+    }
+    GW::Constants::MapID current = GW::Map::GetMapID();
+    const auto me = GW::Agents::GetControlledCharacter();
+    if (location_current_map != current) {
+        location_current_map = current;
 
-                std::wstring map_string;
-                switch (current) {
-                    case GW::Constants::MapID::Domain_of_Anguish:
-                        map_string = L"DoA";
-                        break;
-                    case GW::Constants::MapID::Urgozs_Warren:
-                        map_string = L"Urgoz";
-                        break;
-                    case GW::Constants::MapID::The_Deep:
-                        map_string = L"Deep";
-                        break;
-                    case GW::Constants::MapID::The_Underworld:
-                        map_string = L"UW";
-                        break;
-                    case GW::Constants::MapID::The_Fissure_of_Woe:
-                        map_string = L"FoW";
-                        break;
-                    default:
-                        map_string = std::wstring(L"Map-") + std::to_wstring(static_cast<long>(current));
-                }
-
-                std::wstring prof_string;
-                if (const auto me = GW::Agents::GetCharacter()) {
-                    prof_string += L" - ";
-                    prof_string += GetWProfessionAcronym(
-                        static_cast<GW::Constants::Profession>(me->primary));
-                    prof_string += L"-";
-                    prof_string += GetWProfessionAcronym(
-                        static_cast<GW::Constants::Profession>(me->secondary));
-                }
-
-                SYSTEMTIME localtime;
-                GetLocalTime(&localtime);
-                const std::wstring filename = std::to_wstring(localtime.wYear)
-                                              + L"-" + std::to_wstring(localtime.wMonth)
-                                              + L"-" + std::to_wstring(localtime.wDay)
-                                              + L" - " + std::to_wstring(localtime.wHour)
-                                              + L"-" + std::to_wstring(localtime.wMinute)
-                                              + L"-" + std::to_wstring(localtime.wSecond)
-                                              + L" - " + map_string + prof_string + L".log";
-
-                if (location_file && location_file.is_open()) {
-                    location_file.close();
-                }
-                const std::wstring path = Resources::GetPath(L"location logs", filename);
-                location_file.open(path);
-            }
-
-            const GW::Agent* me = GW::Agents::GetCharacter();
-            if (location_file.is_open() && me != nullptr) {
-                location_file << "Time=" << GW::Map::GetInstanceTime();
-                location_file << " X=" << me->pos.x;
-                location_file << " Y=" << me->pos.y;
-                location_file << "\n";
-            }
+        std::wstring map_string;
+        switch (current) {
+        case GW::Constants::MapID::Domain_of_Anguish:
+            map_string = L"DoA";
+            break;
+        case GW::Constants::MapID::Urgozs_Warren:
+            map_string = L"Urgoz";
+            break;
+        case GW::Constants::MapID::The_Deep:
+            map_string = L"Deep";
+            break;
+        case GW::Constants::MapID::The_Underworld:
+            map_string = L"UW";
+            break;
+        case GW::Constants::MapID::The_Fissure_of_Woe:
+            map_string = L"FoW";
+            break;
+        default:
+            map_string = std::wstring(L"Map-") + std::to_wstring(static_cast<long>(current));
         }
-        else {
-            location_current_map = GW::Constants::MapID::None;
+
+        std::wstring prof_string;
+        if (me) {
+            prof_string += L" - ";
+            prof_string += GetWProfessionAcronym(
+                static_cast<GW::Constants::Profession>(me->primary));
+            prof_string += L"-";
+            prof_string += GetWProfessionAcronym(
+                static_cast<GW::Constants::Profession>(me->secondary));
+        }
+
+        SYSTEMTIME localtime;
+        GetLocalTime(&localtime);
+        const std::wstring filename = std::to_wstring(localtime.wYear)
+            + L"-" + std::to_wstring(localtime.wMonth)
+            + L"-" + std::to_wstring(localtime.wDay)
+            + L" - " + std::to_wstring(localtime.wHour)
+            + L"-" + std::to_wstring(localtime.wMinute)
+            + L"-" + std::to_wstring(localtime.wSecond)
+            + L" - " + map_string + prof_string + L".log";
+
+        if (location_file && location_file.is_open()) {
             location_file.close();
         }
+        const std::wstring path = Resources::GetPath(L"location logs", filename);
+        location_file.open(path);
+    }
+
+    
+    if (location_file.is_open() && me != nullptr) {
+        location_file << "Time=" << GW::Map::GetInstanceTime();
+        location_file << " X=" << me->pos.x;
+        location_file << " Y=" << me->pos.y;
+        location_file << "\n";
     }
 }

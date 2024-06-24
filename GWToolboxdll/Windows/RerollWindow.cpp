@@ -187,7 +187,7 @@ namespace {
 
     bool GetIsMapReady()
     {
-        return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && GW::Map::GetIsMapLoaded() && GW::Agents::GetPlayer();
+        return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && GW::Map::GetIsMapLoaded() && GW::Agents::GetControlledCharacter();
     }
 
     bool GetIsCharSelectReady()

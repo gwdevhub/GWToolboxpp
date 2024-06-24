@@ -25,7 +25,7 @@ uint32_t ObserverPlayerWindow::GetTracking()
     }
 
     // keep tracking up-to-date with the current desired target
-    const GW::Agent* agent = GW::Agents::GetPlayer();
+    const GW::Agent* agent = GW::Agents::GetObservingAgent();
     if (!agent) {
         return previously_tracked_agent_id;
     }

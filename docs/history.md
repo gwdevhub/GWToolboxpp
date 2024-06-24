@@ -7,6 +7,18 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 6.21
+* [Fix] Party widgets do not disappear when party members are out of compass range
+* [Fix] Minimap does not disappear when spectating
+* [Fix] /deposit works with model ids now
+* [Fix] open chest hotkey now works (still, prefer using the setting to automatically open locked chests in GameSettings)
+* [Fix] fixes update mode showing as unticked if you selected "never update"
+* [Removed] open locked chest hotkeys. Use the "automatically open chests with keys (or lockpicks)" in GameSettings instead.
+* [New] Added /wanted take, /zb take, /zm take, /zc take, /zv take to take Zaishen/daily quests and travel to the next quest outpost
+* [New] Added salvage info and nicholas info to item
+* [New] Added option to hide gw compass flagging controls
+* [New] Automatically send a party invite when a party search invite is sent
+
 ## Version 6.20
 * [Minor] Added warning message when rerolling to a character that is currently in a map that toolbox won't work in e.g. guild hall
 * [Minor] `/tb load` now dynamically enables/disables modules when run

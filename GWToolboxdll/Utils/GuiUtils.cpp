@@ -178,10 +178,14 @@ namespace GuiUtils {
         if (term.empty()) {
             return;
         }
-        char cmd[256];
+        const size_t buf_len = 512;
+        auto cmd = new char[buf_len];
         const std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(term)));
-        ASSERT(snprintf(cmd, _countof(cmd), "%s?search=%s", GetWikiPrefix(), encoded.c_str()) != -1);
-        SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, cmd);
+        ASSERT(snprintf(cmd, buf_len, "%s?search=%s", GetWikiPrefix(), encoded.c_str()) != -1);
+        GW::GameThread::Enqueue([cmd]() {
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, cmd);
+            delete[] cmd;
+            });
     }
 
     void OpenWiki(const std::wstring& url_path)
@@ -923,22 +927,23 @@ namespace GuiUtils {
         return dest;
     }
 
-    void EncString::reset(const uint32_t _enc_string_id, const bool sanitise)
+    EncString* EncString::reset(const uint32_t _enc_string_id, const bool sanitise)
     {
         if (_enc_string_id && encoded_ws.length()) {
             const uint32_t this_id = GW::UI::EncStrToUInt32(encoded_ws.c_str());
             if (this_id == _enc_string_id) {
-                return;
+                return this;
             }
         }
         reset(nullptr, sanitise);
         if (_enc_string_id) {
             wchar_t out[8] = {0};
             if (!GW::UI::UInt32ToEncStr(_enc_string_id, out, _countof(out))) {
-                return;
+                return this;
             }
             encoded_ws = out;
         }
+        return this;
     }
 
     EncString* EncString::language(const GW::Constants::Language l)

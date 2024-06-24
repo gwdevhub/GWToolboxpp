@@ -235,7 +235,7 @@ void PartyDamage::ResetDamage()
 }
 void PartyDamage::WriteOwnDamage() {
     uint32_t my_index = 0;
-    const auto entry = GetDamageByAgentId(GW::Agents::GetPlayerId(), &my_index);
+    const auto entry = GetDamageByAgentId(GW::Agents::GetControlledCharacterId(), &my_index);
     if (entry)
         WriteDamageOf(my_index);
 }
@@ -319,7 +319,7 @@ void PartyDamage::Update(const float)
     if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
         send_timer = TIMER_INIT();
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
-            && GW::Agents::GetPlayer()) {
+            && GW::Agents::GetControlledCharacter()) {
             GW::Chat::SendChat('#', send_queue.front().c_str());
             send_queue.pop();
         }

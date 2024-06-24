@@ -223,8 +223,9 @@ namespace {
 
     void OnShowXunlaiChest_UIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
     {
-        const GW::AgentLiving* chest = GW::Agents::GetTargetAsAgentLiving();
-        if (chest && chest->player_number == 5001 && GetDistance(GW::Agents::GetPlayer()->pos, chest->pos) < GW::Constants::Range::Nearby) {
+        const auto chest = GW::Agents::GetTargetAsAgentLiving();
+        const auto me = chest ? GW::Agents::GetControlledCharacter() : nullptr;
+        if (me && chest->player_number == 5001 && GetDistance(me->pos, chest->pos) < GW::Constants::Range::Nearby) {
             HintUIMessage(CHEST_CMD).Show();
         }
     }
@@ -275,7 +276,7 @@ void HintsModule::Update(float)
 {
     if (!delayed_hints.empty()
         && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
-        && GW::Agents::GetPlayer()) {
+        && GW::Agents::GetControlledCharacter()) {
         const clock_t _now = clock();
         for (auto it = delayed_hints.begin(); it != delayed_hints.end(); ++it) {
             if (it->first < _now) {

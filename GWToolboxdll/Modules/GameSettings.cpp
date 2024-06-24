@@ -41,6 +41,7 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
 
@@ -59,7 +60,7 @@
 #include <Logger.h>
 #include <Timer.h>
 #include <Defines.h>
-#include <GWCA/Managers/QuestMgr.h>
+
 #include <d3d9on12.h>
 
 #include "Windows/FriendListWindow.h"
@@ -537,7 +538,7 @@ namespace {
         }
         const GW::Player* first_player = nullptr;
         const GW::Player* next_player = nullptr;
-        const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+        const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
         if (!me) {
             // Can't find myself
             Log::Error("Failed to find me");
@@ -817,7 +818,7 @@ namespace {
         uint32_t override_manual_agent_id = 0;
         const GW::Item* target_item = nullptr;
         const auto agents = GW::Agents::GetAgentArray();
-        const auto me = agents ? GW::Agents::GetPlayer() : nullptr;
+        const auto me = agents ? GW::Agents::GetControlledCharacter() : nullptr;
         if (!me) {
             return;
         }
@@ -1067,6 +1068,23 @@ namespace {
                 GW::UI::SetPreference(GW::UI::FlagPreference::DisableMouseWalking, !GetPreference(GW::UI::FlagPreference::DisableMouseWalking));
                 pending_toggle_mouse_walk_on_key_up = true;
             }
+        }
+    }
+
+    const wchar_t* GetPartySearchLeader(uint32_t party_search_id) {
+        const auto p = GW::PartyMgr::GetPartySearch(party_search_id);
+        return p && p->party_leader && *p->party_leader ? p->party_leader : nullptr;
+    }
+
+    GW::HookEntry OnPostUIMessage_HookEntry;
+    void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*) {
+        switch (message_id) {
+        case GW::UI::UIMessage::kPartySearchInviteSent: {
+            // Automatically send a party window invite when a party search invite is sent
+            const auto packet = (GW::UI::UIPacket::kPartySearchInvite*)wParam;
+            if(GW::PartyMgr::GetIsLeader())
+                GW::PartyMgr::InvitePlayer(GetPartySearchLeader(packet->source_party_search_id));            
+        } break;
         }
     }
 
@@ -1396,7 +1414,7 @@ void GameSettings::Initialize()
     RegisterUIMessageCallback(&OnPreSendDialog_Entry, GW::UI::UIMessage::kSendPingWeaponSet, OnPingWeaponSet);
 
     constexpr GW::UI::UIMessage dialog_ui_messages[] = {
-        GW::UI::UIMessage::kSendDialog,
+        GW::UI::UIMessage::kSendAgentDialog,
         GW::UI::UIMessage::kDialogBody,
         GW::UI::UIMessage::kDialogButton
     };
@@ -1417,6 +1435,14 @@ void GameSettings::Initialize()
     for (const auto message_id : party_target_ui_messages) {
         RegisterUIMessageCallback(&OnPostSendDialog_Entry, message_id, OnPartyTargetChanged, 0x8000);
     }
+
+    constexpr GW::UI::UIMessage post_ui_messages[] = {
+        GW::UI::UIMessage::kPartySearchInviteSent
+    };
+    for (const auto message_id : post_ui_messages) {
+        RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
+    }
+    
 
     GW::Chat::CreateCommand(L"reinvite", CmdReinvite);
 
@@ -1463,7 +1489,7 @@ void GameSettings::MessageOnPartyChange()
         return; // Don't need to check, or not an outpost.
     }
     GW::PartyInfo* current_party = GW::PartyMgr::GetPartyInfo();
-    const GW::AgentLiving* me = GW::Agents::GetPlayerAsAgentLiving();
+    const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
     if (!me || !current_party || !current_party->players.valid()) {
         return; // Party not ready yet.
     }
@@ -1680,6 +1706,7 @@ void GameSettings::Terminate()
     remove_skill_warmup_duration_patch.Reset();
 
     GW::UI::RemoveUIMessageCallback(&OnQuestUIMessage_HookEntry);
+    GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
 }
 
 void GameSettings::SaveSettings(ToolboxIni* ini)
@@ -2145,7 +2172,7 @@ void GameSettings::OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::Playe
     if (!(pak->player_name && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)) {
         return; // Only message in an outpost.
     }
-    if (TIMER_DIFF(instance_entered_at) < 2000 && GW::Agents::GetPlayerId()) {
+    if (!(TIMER_DIFF(instance_entered_at) > 2000 && GW::Agents::GetControlledCharacter())) {
         return; // Only been in this map for less than 2 seconds or current player not loaded in yet; avoids spam on map load.
     }
     if (GW::Agents::GetAgentByID(pak->agent_id)) {
@@ -2207,7 +2234,7 @@ void GameSettings::OnAgentMarker(GW::HookStatus*, GW::Packet::StoC::GenericValue
 // Block annoying tonic sounds/effects from other players
 void GameSettings::OnAgentEffect(GW::HookStatus* status, const GW::Packet::StoC::GenericValue* pak)
 {
-    if (pak->agent_id != GW::Agents::GetPlayerId()) {
+    if (pak->agent_id != GW::Agents::GetControlledCharacterId()) {
         status->blocked |= ShouldBlockEffect(pak->value);
     }
 }
@@ -2233,7 +2260,7 @@ void GameSettings::OnUpdateAgentState(GW::HookStatus*, GW::Packet::StoC::AgentSt
 // Apply Collector's Edition animations on player dancing,
 void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::StoC::GenericValue* pak)
 {
-    if (!(pak->agent_id == GW::Agents::GetPlayerId() && collectors_edition_emotes)) {
+    if (!(pak->agent_id == GW::Agents::GetControlledCharacterId() && collectors_edition_emotes)) {
         return;
     }
     static GW::Packet::StoC::GenericValue pak2;
@@ -2242,7 +2269,7 @@ void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::St
     pak2.value = pak->value; // Glowing hands, any profession
     if (pak->value == 0x43394f1d) {
         // 0x31939cbb = /dance, 0x43394f1d = /dancenew
-        switch (static_cast<GW::Constants::Profession>(GW::Agents::GetPlayerAsAgentLiving()->primary)) {
+        switch (static_cast<GW::Constants::Profession>(GW::Agents::GetControlledCharacter()->primary)) {
             case GW::Constants::Profession::Assassin:
             case GW::Constants::Profession::Ritualist:
             case GW::Constants::Profession::Dervish:
@@ -2472,7 +2499,7 @@ void GameSettings::OnAgentStartCast(GW::HookStatus*, GW::UI::UIMessage, void* wP
         uint32_t agent_id;
         GW::Constants::SkillID skill_id;
     }* casting = static_cast<Casting*>(wParam);
-    if (casting->agent_id == GW::Agents::GetPlayerId() && casting->skill_id == GW::Constants::SkillID::Unyielding_Aura) {
+    if (casting->agent_id == GW::Agents::GetControlledCharacterId() && casting->skill_id == GW::Constants::SkillID::Unyielding_Aura) {
         // Cancel UA before recast
         const GW::Buff* buff = GW::Effects::GetPlayerBuffBySkillId(casting->skill_id);
         if (buff && buff->skill_id != GW::Constants::SkillID::No_Skill) {
