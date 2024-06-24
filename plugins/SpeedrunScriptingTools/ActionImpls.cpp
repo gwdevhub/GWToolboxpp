@@ -422,6 +422,7 @@ void ChangeTargetAction::initialAction()
         const auto correctStatus = (alive == AnyNoYes::Any) || ((alive == AnyNoYes::Yes) == agent->GetIsAlive());
         const auto correctEnch = (enchanted == AnyNoYes::Any) || ((enchanted == AnyNoYes::Yes) == agent->GetIsEnchanted());
         const auto correctWeaponSpell = (weaponspelled == AnyNoYes::Any) || ((weaponspelled == AnyNoYes::Yes) == agent->GetIsWeaponSpelled());
+        const auto correctHex = (hexed == AnyNoYes::Any) || ((hexed == AnyNoYes::Yes) == (agent->GetIsHexed() || agent->GetIsDegenHexed()));
         const auto correctBleed = (bleeding == AnyNoYes::Any) || ((bleeding == AnyNoYes::Yes) == agent->GetIsBleeding());
         const auto correctPoison = (poisoned == AnyNoYes::Any) || ((poisoned == AnyNoYes::Yes) == agent->GetIsPoisoned());
         const auto correctSkill = (skill == GW::Constants::SkillID::No_Skill) || (skill == (GW::Constants::SkillID)agent->skill);
@@ -435,7 +436,7 @@ void ChangeTargetAction::initialAction()
         const auto goodHp = minHp <= 100.f * agent->hp && 100.f * agent->hp <= maxHp;
         const auto goodAngle = angleToAgent(player, agent) - eps < maxAngle;
 
-        return correctType && correctPrimary && correctSecondary && correctStatus && correctEnch && correctWeaponSpell && correctBleed && correctPoison && correctSkill && 
+        return correctType && correctPrimary && correctSecondary && correctStatus && correctEnch && correctWeaponSpell && correctHex &&  correctBleed && correctPoison && correctSkill && 
                 correctModelId && goodDistance && goodName && goodPosition && goodHp && goodAngle;
     };
 
@@ -506,9 +507,9 @@ void ChangeTargetAction::initialAction()
         for (const auto& partyMember : info->players)
             testAgent(GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(partyMember.login_number)));
         for (const auto& hero : info->heroes)
-            testAgent(GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(hero.agent_id)));
+            testAgent(GW::Agents::GetAgentByID(hero.agent_id));
         for (const auto& henchman : info->henchmen)
-            testAgent(GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(henchman.agent_id)));
+            testAgent(GW::Agents::GetAgentByID(henchman.agent_id));
     }
     else 
     {
