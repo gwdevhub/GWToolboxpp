@@ -1134,41 +1134,42 @@ bool NearbyAgentCondition::check() const
 
     auto& instanceInfo = InstanceInfo::getInstance();
 
-    const auto fulfillsConditions = [&](const GW::AgentLiving* agent) {
-        if (!agent) return false;
-        if (agent->agent_id == player->agent_id) return false;
+    const auto fulfillsConditions = [&](const GW::Agent* agent) {
+        if (!agent || !agent->GetIsLivingType() || agent->agent_id == player->agent_id) return false;
+        const auto living = agent->GetAsAgentLiving();
+
         const auto correctType = [&]() -> bool {
             switch (agentType) {
                 case AgentType::Any:
                     return true;
                 case AgentType::PartyMember: // optimize this? Dont need to check all agents
-                    return agent->IsPlayer();
+                    return living->IsPlayer();
                 case AgentType::Friendly:
-                    return agent->allegiance != GW::Constants::Allegiance::Enemy;
+                    return living->allegiance != GW::Constants::Allegiance::Enemy;
                 case AgentType::Hostile:
-                    return agent->allegiance == GW::Constants::Allegiance::Enemy;
+                    return living->allegiance == GW::Constants::Allegiance::Enemy;
                 default:
                     return false;
             }
         }();
 
-        const auto correctPrimary = (primary == Class::Any) || primary == (Class)agent->primary;
-        const auto correctSecondary = (secondary == Class::Any) || secondary == (Class)agent->secondary;
-        const auto correctStatus = (alive == AnyNoYes::Any) || ((alive == AnyNoYes::Yes) == agent->GetIsAlive());
-        const auto correctHex = (hexed == AnyNoYes::Any) || ((hexed == AnyNoYes::Yes) == agent->GetIsHexed());
-        const auto correctEnch = (enchanted == AnyNoYes::Any) || ((enchanted == AnyNoYes::Yes) == agent->GetIsEnchanted());
-        const auto correctWeaponSpell = (weaponspelled == AnyNoYes::Any) || ((weaponspelled == AnyNoYes::Yes) == agent->GetIsWeaponSpelled());
-        const auto correctBleed = (bleeding == AnyNoYes::Any) || ((bleeding == AnyNoYes::Yes) == agent->GetIsBleeding());
-        const auto correctPoison = (poisoned == AnyNoYes::Any) || ((poisoned == AnyNoYes::Yes) == agent->GetIsPoisoned());
+        const auto correctPrimary = (primary == Class::Any) || primary == (Class)living->primary;
+        const auto correctSecondary = (secondary == Class::Any) || secondary == (Class)living->secondary;
+        const auto correctStatus = (alive == AnyNoYes::Any) || ((alive == AnyNoYes::Yes) == living->GetIsAlive());
+        const auto correctHex = (hexed == AnyNoYes::Any) || ((hexed == AnyNoYes::Yes) == living->GetIsHexed());
+        const auto correctEnch = (enchanted == AnyNoYes::Any) || ((enchanted == AnyNoYes::Yes) == living->GetIsEnchanted());
+        const auto correctWeaponSpell = (weaponspelled == AnyNoYes::Any) || ((weaponspelled == AnyNoYes::Yes) == living->GetIsWeaponSpelled());
+        const auto correctBleed = (bleeding == AnyNoYes::Any) || ((bleeding == AnyNoYes::Yes) == living->GetIsBleeding());
+        const auto correctPoison = (poisoned == AnyNoYes::Any) || ((poisoned == AnyNoYes::Yes) == living->GetIsPoisoned());
 
-        const auto correctSkill = (skill == GW::Constants::SkillID::No_Skill) || (skill == (GW::Constants::SkillID)agent->skill);
-        const auto correctModelId = (modelId == 0) || (agent->player_number == modelId);
-        const auto distance = GW::GetDistance(player->pos, agent->pos);
+        const auto correctSkill = (skill == GW::Constants::SkillID::No_Skill) || (skill == (GW::Constants::SkillID)living->skill);
+        const auto correctModelId = (modelId == 0) || (living->player_number == modelId);
+        const auto distance = GW::GetDistance(player->pos, living->pos);
         const auto goodDistance = (minDistance <= distance) && (distance <= maxDistance);
-        const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedAgentName(agent->agent_id) == agentName);
-        const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(agent->pos, polygon);
-        const auto goodHp = minHp <= 100.f * agent->hp && 100.f * agent->hp <= maxHp;
-        const auto angle = angleToAgent(player, agent);
+        const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedAgentName(living->agent_id) == agentName);
+        const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(living->pos, polygon);
+        const auto goodHp = minHp <= 100.f * living->hp && 100.f * living->hp <= maxHp;
+        const auto angle = angleToAgent(player, living);
         const auto goodAngle = minAngle - eps < angle && angle < maxAngle + eps;
 
         return correctType && correctPrimary && correctSecondary && correctStatus && correctHex && correctEnch && correctWeaponSpell && correctBleed && correctPoison 
@@ -1178,20 +1179,23 @@ bool NearbyAgentCondition::check() const
     {
         const auto info = GW::PartyMgr::GetPartyInfo();
         if (!info) return false;
+
         for (const auto& partyMember : info->players) 
-        {
-            const auto agent = GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(partyMember.login_number));
-            if (!agent) continue;
-            if (agent->agent_id == player->agent_id) continue;
-            if (fulfillsConditions(agent->GetAsAgentLiving())) return true;
-        }
+            if (fulfillsConditions(GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(partyMember.login_number)))) 
+                return true;
+        for (const auto& hero : info->heroes)
+            if (fulfillsConditions(GW::Agents::GetAgentByID(hero.agent_id))) 
+                return true;
+        for (const auto& henchman : info->henchmen)
+            if (fulfillsConditions(GW::Agents::GetAgentByID(henchman.agent_id))) 
+                return true;
     }
     else 
     {
         for (const auto* agent : *agents) 
         {
-            if (!agent) continue;
-            if (fulfillsConditions(agent->GetAsAgentLiving())) return true;
+            if (fulfillsConditions(agent)) 
+                return true;
         }
     }
     return false;
@@ -1202,15 +1206,15 @@ void NearbyAgentCondition::drawSettings()
     ImGui::PushItemWidth(120);
 
     if (ImGui::TreeNodeEx("If there exists an agent with characteristics", ImGuiTreeNodeFlags_FramePadding)) {
+        ImGui::BulletText("Allegiance");
+        ImGui::SameLine();
+        drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, 0, 100.f, std::nullopt, std::optional{AgentType::Self});
+
         ImGui::BulletText("Distance to player");
         ImGui::SameLine();
         ImGui::InputFloat("min###0", &minDistance);
         ImGui::SameLine();
         ImGui::InputFloat("max###1", &maxDistance);
-
-        ImGui::BulletText("Allegiance");
-        ImGui::SameLine();
-        drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, 0, 100.f, std::nullopt, std::optional{AgentType::Self});
 
         ImGui::BulletText("Class");
         ImGui::SameLine();
