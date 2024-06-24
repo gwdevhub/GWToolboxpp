@@ -6,7 +6,11 @@
 
 class SnapsToPartyWindow : public ToolboxWidget {
 protected:
-    static std::pair<ImVec2, ImVec2> party_health_bars_position;
+    struct PartyFramePosition {
+        ImVec2 top_left;
+        ImVec2 bottom_right;
+    };
+    static PartyFramePosition party_health_bars_position;
     static std::unordered_map<uint32_t, std::pair<ImVec2, ImVec2>> agent_health_bar_positions;
 
     static uint32_t henchmen_start_idx;

@@ -5,11 +5,7 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
 
-#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/PartyMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
@@ -18,7 +14,6 @@
 #include <Defines.h>
 #include <Modules/Resources.h>
 #include <Widgets/SkillMonitorWidget.h>
-#include <Utils/ToolboxUtils.h>
 
 namespace {
 
@@ -36,13 +31,6 @@ namespace {
         clock_t cast_start = last_update;
         float cast_time = .0f;
     };
-
-    GW::HookEntry GenericFloat_Entry;
-
-    GW::HookEntry InstanceLoadInfo_Entry;
-    GW::HookEntry GenericValueSelf_Entry;
-    GW::HookEntry GenericValueTarget_Entry;
-    GW::HookEntry GenericModifier_Entry;
 
     std::unordered_map<GW::AgentID, std::vector<SkillActivation>> history{};
     std::unordered_map<GW::AgentID, float> casttime_map{};
@@ -248,15 +236,15 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
     const auto width = img_size * history_length;
 
     const auto user_offset_x = abs(static_cast<float>(user_offset));
-    float window_x = party_health_bars_position.first.x - user_offset_x - width;
+    float window_x = party_health_bars_position.top_left.x - user_offset_x - width;
     if (window_x < 0 || user_offset < 0) {
         // Right placement
-        window_x = party_health_bars_position.second.x + user_offset_x;
+        window_x = party_health_bars_position.bottom_right.x + user_offset_x;
     }
 
     // Add a window to capture mouse clicks.
-    ImGui::SetNextWindowPos({ window_x,party_health_bars_position.first.y });
-    ImGui::SetNextWindowSize({ width, party_health_bars_position.second.y - party_health_bars_position.first.y });
+    ImGui::SetNextWindowPos({ window_x, party_health_bars_position.top_left.y });
+    ImGui::SetNextWindowSize({ width, party_health_bars_position.bottom_right.y - party_health_bars_position.top_left.y });
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(10.0f, 10.0f));
@@ -264,8 +252,6 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
 
     if (ImGui::Begin(Name(), &visible, GetWinFlags())) {
         const auto draw_list = ImGui::GetWindowDrawList();
-        ImVec2 top_left;
-        ImVec2 bottom_right;
 
         for (auto& [agent_id, party_slot] : party_indeces_by_agent_id) {
 
@@ -282,8 +268,8 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
             auto& skill_history = history[agent_id];
             for (size_t i = 0; i < skill_history.size(); i++) {
                 const auto& skill_activation = skill_history.at(i);
-                top_left = { history_flip_direction ? window_x + (i * img_size) : window_x + width - (i * img_size) - img_size, health_bar_pos->first.y };
-                bottom_right = { top_left.x + img_size, top_left.y + img_size };
+                const ImVec2 top_left = {history_flip_direction ? window_x + (i * img_size) : window_x + width - (i * img_size) - img_size, health_bar_pos->first.y};
+                const ImVec2 bottom_right = {top_left.x + img_size, top_left.y + img_size};
 
                 const auto texture = *Resources::GetSkillImage(skill_activation.id);
                 if (texture) {
@@ -299,13 +285,13 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
                 if (skill_activation.status == CASTING 
                     && skill_activation.cast_time * 1000 >= cast_indicator_threshold
                     && ImGui::ColorConvertU32ToFloat4(cast_indicator_color).w != 0) {
-                    const auto remainingCast = TIMER_DIFF(skill_activation.cast_start);
-                    const auto percentageCast = std::min(remainingCast / (skill_activation.cast_time * 1000), 1.0f);
+                    const auto remaining_cast = TIMER_DIFF(skill_activation.cast_start);
+                    const auto percentage_cast = std::min(remaining_cast / (skill_activation.cast_time * 1000), 1.0f);
 
                     const auto health_bar_width = health_bar_pos->second.x - health_bar_pos->first.x;
                     ImGui::GetBackgroundDrawList()->AddRectFilled(
                         ImVec2(health_bar_pos->first.x, health_bar_pos->second.y - cast_indicator_height),
-                        ImVec2(health_bar_pos->first.x + (health_bar_width * percentageCast), health_bar_pos->second.y),
+                        ImVec2(health_bar_pos->first.x + (health_bar_width * percentage_cast), health_bar_pos->second.y),
                         cast_indicator_color);
                 }
             }

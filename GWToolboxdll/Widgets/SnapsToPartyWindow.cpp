@@ -47,7 +47,7 @@ namespace {
 }
 
 std::unordered_map<uint32_t, std::pair<ImVec2, ImVec2>> SnapsToPartyWindow::agent_health_bar_positions;
-std::pair<ImVec2, ImVec2> SnapsToPartyWindow::party_health_bars_position;
+SnapsToPartyWindow::PartyFramePosition SnapsToPartyWindow::party_health_bars_position;
 uint32_t SnapsToPartyWindow::henchmen_start_idx = 0xff;
 uint32_t SnapsToPartyWindow::pets_start_idx = 0xff;
 uint32_t SnapsToPartyWindow::allies_start_idx = 0xff;
@@ -155,7 +155,6 @@ bool SnapsToPartyWindow::RecalculatePartyPositions() {
     if (!(party_frame && party_frame->IsVisible()))
         return false;
 
-
     // Traverse to health bars
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         auto sub_frame = GW::UI::GetChildFrame(party_frame, 1);
@@ -178,19 +177,18 @@ bool SnapsToPartyWindow::RecalculatePartyPositions() {
         party_window_health_bars->frame_callbacks[0] = OnPartyWindowHealthBars_UICallback;
     }
 
-
     const auto player_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 0);
     if (!player_health_bars) // Child frames by player id (includes heroes)
         return false;
 
     const auto relative_to = party_frame;
-    GetFramePosition(party_window_health_bars->relation.GetParent(), relative_to, &party_health_bars_position.first, &party_health_bars_position.second);
+    GetFramePosition(party_window_health_bars->relation.GetParent(), relative_to, &party_health_bars_position.top_left, &party_health_bars_position.bottom_right);
 
     // Add some padding left and right
     GetFramePosition(party_frame, relative_to, &top_left, &bottom_right);
-    const auto diff = (party_health_bars_position.first.x - top_left.x) / 2.f;
-    party_health_bars_position.first.x -= diff;
-    party_health_bars_position.second.x += diff;
+    const auto diff = (party_health_bars_position.top_left.x - top_left.x) / 2.f;
+    party_health_bars_position.top_left.x -= diff;
+    party_health_bars_position.bottom_right.x += diff;
 
     GW::UI::Frame* agent_health_bar = nullptr;
 

@@ -362,15 +362,15 @@ void BondsWidget::Draw(IDirect3DDevice9*)
     const float width = bond_list.size() * img_width;
 
     const auto user_offset_x = abs(static_cast<float>(user_offset));
-    float window_x = party_health_bars_position.first.x - user_offset_x - width;
+    float window_x = party_health_bars_position.top_left.x - user_offset_x - width;
     if (window_x < 0 || user_offset < 0) {
         // Right placement
-        window_x = party_health_bars_position.second.x + user_offset_x;
+        window_x = party_health_bars_position.bottom_right.x + user_offset_x;
     }
 
     // Add a window to capture mouse clicks.
-    ImGui::SetNextWindowPos({ window_x,party_health_bars_position.first.y });
-    ImGui::SetNextWindowSize({ width, party_health_bars_position.second.y - party_health_bars_position.first.y });
+    ImGui::SetNextWindowPos({ window_x,party_health_bars_position.top_left.y });
+    ImGui::SetNextWindowSize({ width, party_health_bars_position.bottom_right.y - party_health_bars_position.top_left.y });
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(10.0f, 10.0f));

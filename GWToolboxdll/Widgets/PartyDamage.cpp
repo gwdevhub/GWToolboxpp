@@ -360,23 +360,21 @@ void PartyDamage::Draw(IDirect3DDevice9* )
         }
     }
 
-    
-
     const Color damage_col_from = Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20));
     const Color damage_col_to = Colors::Sub(color_damage, Colors::ARGB(0, 20, 20, 20));
     const Color damage_recent_from = Colors::Add(color_recent, Colors::ARGB(0, 20, 20, 20));
     const Color damage_recent_to = Colors::Sub(color_recent, Colors::ARGB(0, 20, 20, 20));
 
     const auto user_offset_x = abs(static_cast<float>(user_offset));
-    float damage_x = party_health_bars_position.first.x - user_offset_x - width;
+    float damage_x = party_health_bars_position.top_left.x - user_offset_x - width;
     if (damage_x < 0 || user_offset < 0) {
         // Right placement
-        damage_x = party_health_bars_position.second.x + user_offset_x;
+        damage_x = party_health_bars_position.bottom_right.x + user_offset_x;
     }
 
     // Add a window to capture mouse clicks.
-    ImGui::SetNextWindowPos({ damage_x,party_health_bars_position.first.y });
-    ImGui::SetNextWindowSize({ width, party_health_bars_position.second.y - party_health_bars_position.first.y });
+    ImGui::SetNextWindowPos({ damage_x, party_health_bars_position.top_left.y });
+    ImGui::SetNextWindowSize({ width, party_health_bars_position.bottom_right.y - party_health_bars_position.top_left.y });
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(10.0f, 10.0f));
