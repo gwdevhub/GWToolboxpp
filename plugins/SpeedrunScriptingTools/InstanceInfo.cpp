@@ -2,6 +2,7 @@
 
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Player.h>
+#include <GWCA/GameEntities/NPC.h>
 
 #include <GWCA/Context/WorldContext.h>
 
@@ -131,9 +132,9 @@ std::string InstanceInfo::getDecodedAgentName(GW::AgentID id)
         const auto& agentInfos = GW::GetWorldContext()->agent_infos;
         if (id >= agentInfos.size()) return "";
         encodedName = agentInfos[id].name_enc;
-        
+
         // Check players
-        if (!encodedName) 
+        if (!encodedName)
         {
             for (const auto& player : GW::GetWorldContext()->players)
             {
@@ -142,6 +143,15 @@ std::string InstanceInfo::getDecodedAgentName(GW::AgentID id)
                     break;
                 }
             }
+        }
+
+        // Fall back to NPC name
+        if (!encodedName) 
+        {
+            const auto agent = GW::Agents::GetAgentByID(id);
+            if (!agent || !agent->GetIsLivingType()) return "";
+            const auto npc = GW::Agents::GetNPCByID(agent->GetAsAgentLiving()->player_number);
+            encodedName = npc->name_enc;
         }
 
         if (!encodedName) return "";
