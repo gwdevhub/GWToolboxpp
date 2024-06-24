@@ -2,17 +2,12 @@
 #include "stdafx.h"
 #include "Timer.h"
 
-#include <GWCA/GameContainers/GamePos.h>
-
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Party.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/PartyMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWToolbox.h>
@@ -391,7 +386,6 @@ void PartyDamage::Draw(IDirect3DDevice9* )
         constexpr size_t buffer_size = 16;
         char buffer[buffer_size];
 
-        const auto text_size = ImGui::CalcTextSize(" ");
 
         for (auto& [agent_id, party_slot] : party_indeces_by_agent_id) {
             uint32_t this_agent_party_index = 0;
@@ -436,7 +430,9 @@ void PartyDamage::Draw(IDirect3DDevice9* )
                 );
             }
 
-            const auto text_y = damage_bottom_right.y - text_size.y;
+            const auto row_height = damage_bottom_right.y - damage_top_left.y;
+            const auto text_height = ImGui::GetTextLineHeight();
+            const auto text_y = damage_top_left.y + (row_height - text_height) / 2;
 
             // Damage text - float
             if (damage_float < 1000.f) {
