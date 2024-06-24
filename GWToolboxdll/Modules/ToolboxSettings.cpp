@@ -189,9 +189,7 @@ namespace {
         PartyStatisticsWindow::Instance(),
         DupingWindow::Instance(),
         ArmoryWindow::Instance(),
-#ifdef _DEBUG
         EnemyWindow::Instance()
-#endif
     };
 
     bool modules_sorted = false;
