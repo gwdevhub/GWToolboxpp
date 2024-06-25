@@ -6,10 +6,12 @@
 namespace {
     std::shared_ptr<Action> makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 27);
+        static_assert((int)ActionType::Count == 28);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
+            case ActionType::MoveToTargetPosition:
+                return std::make_shared<MoveToTargetPositionAction>();
             case ActionType::Cast:
                 return std::make_shared<CastAction>();
             case ActionType::CastBySlot:
@@ -68,10 +70,12 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 27);
+    static_assert((int)ActionType::Count == 28);
     switch (type) {
         case ActionType::MoveTo:
-            return "Move to";
+            return "Position";
+        case ActionType::MoveToTargetPosition:
+            return "Target position";
         case ActionType::Cast:
             return "Use skill by id";
         case ActionType::CastBySlot:
@@ -129,13 +133,15 @@ std::string_view toString(ActionType type)
 
 std::shared_ptr<Action> readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 27);
+    static_assert((int)ActionType::Count == 28);
     int type;
 
     stream >> type;
     switch (static_cast<ActionType>(type)) {
         case ActionType::MoveTo:
             return std::make_shared<MoveToAction>(stream);
+        case ActionType::MoveToTargetPosition:
+            return std::make_shared<MoveToTargetPositionAction>(stream);
         case ActionType::Cast:
             return std::make_shared<CastAction>(stream);
         case ActionType::CastBySlot:
@@ -221,7 +227,7 @@ std::shared_ptr<Action> drawActionSelector(float width)
 
     if (ImGui::BeginPopup("Add action")) 
     {
-        drawActionSelector(ActionType::MoveTo);
+        drawSubMenu("Move to", std::array{ActionType::MoveTo, ActionType::MoveToTargetPosition});
         drawSubMenu("Skill", std::array{ActionType::Cast, ActionType::CastBySlot, ActionType::DropBuff, ActionType::UseHeroSkill});
         drawSubMenu("Interaction", std::array{ActionType::SendDialog, ActionType::GoToTarget, ActionType::AutoAttackTarget});
         drawSubMenu("Targeting", std::array{ActionType::ChangeTarget, ActionType::StoreTarget, ActionType::RestoreTarget, ActionType::ClearTarget});

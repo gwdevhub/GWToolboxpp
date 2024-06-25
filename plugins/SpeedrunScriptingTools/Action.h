@@ -32,6 +32,7 @@ enum class ActionType : int {
     UnequipItem,
     ClearTarget,
     WaitUntil,
+    MoveToTargetPosition,
 
     Count
 };

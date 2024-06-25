@@ -34,6 +34,27 @@ private:
     mutable bool hasBegunWalking = false;
 };
 
+class MoveToTargetPositionAction : public Action {
+public:
+    MoveToTargetPositionAction() = default;
+    MoveToTargetPositionAction(InputStream&);
+    ActionType type() const final { return ActionType::MoveToTargetPosition; }
+    void initialAction() final;
+    ActionStatus isComplete() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
+
+private:
+    float accuracy = GW::Constants::Range::Adjacent;
+    MoveToBehaviour moveBehaviour = MoveToBehaviour::RepeatIfIdle;
+
+    GW::GamePos pos{}; // Set in initial action
+    mutable std::chrono::steady_clock::time_point lastMovePacketTime = std::chrono::steady_clock::now();
+    mutable bool hasBegunWalking = false;
+    mutable bool hasTarget = false;
+};
+
 class CastAction : public Action {
 public:
     CastAction() = default;
