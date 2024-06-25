@@ -10,6 +10,8 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/GamePos.h>
 
+#include <chrono>
+
 class NegatedCondition : public Condition {
 public:
     NegatedCondition() = default;
@@ -610,4 +612,19 @@ public:
 
 private:
     std::string name = "";
+};
+
+class ThrottleCondition : public Condition {
+public:
+    ThrottleCondition() = default;
+    ThrottleCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::Throttle; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    int delayInMs = 100;
+
+    mutable std::chrono::steady_clock::time_point lastTimeReturnedTrue = std::chrono::steady_clock::now() - std::chrono::days{1};
 };

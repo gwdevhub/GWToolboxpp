@@ -48,6 +48,7 @@ enum class ConditionType : int {
     Toggle,
     After,
     CurrentTargetName,
+    Throttle,
 
     Count
 };
