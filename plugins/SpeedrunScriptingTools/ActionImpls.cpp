@@ -158,13 +158,13 @@ MoveToAction::MoveToAction()
 }
 MoveToAction::MoveToAction(InputStream& stream)
 {
-    stream >> pos.x >> pos.y >> accuracy >> repeatMove;
+    stream >> pos.x >> pos.y >> accuracy >> moveBehaviour;
 }
 void MoveToAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << pos.x << pos.y << accuracy << repeatMove;
+    stream << pos.x << pos.y << accuracy << moveBehaviour;
 }
 void MoveToAction::initialAction()
 {
@@ -178,6 +178,8 @@ void MoveToAction::initialAction()
 }
 ActionStatus MoveToAction::isComplete() const
 {
+    if (moveBehaviour == MoveToBehaviour::ImmediateFinish) return ActionStatus::Complete;
+
     const auto player = GW::Agents::GetPlayerAsAgentLiving();
     if (!player) return ActionStatus::Error;
 
@@ -190,7 +192,7 @@ ActionStatus MoveToAction::isComplete() const
 
     if (!player->GetIsMoving() && distance > accuracy + eps) 
     {
-        if (repeatMove) 
+        if (moveBehaviour == MoveToBehaviour::RepeatIfIdle) 
         {
             const auto radius = std::min((int)(accuracy / 4), 10);
             float px = radius > 0 ? pos.x + (rand() % radius - radius / 2) : pos.x;
@@ -227,7 +229,7 @@ void MoveToAction::drawSettings(){
     ImGui::SameLine();
     ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
     ImGui::SameLine();
-    ImGui::Checkbox("Repeat move when idle", &repeatMove);
+    drawEnumButton(MoveToBehaviour::SendOnce, MoveToBehaviour::ImmediateFinish, moveBehaviour, 0, 310.f);
 
     ImGui::PopID();
 }

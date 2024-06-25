@@ -250,6 +250,19 @@ std::string_view toString(TrueFalse val)
     return "";
 }
 
+std::string_view toString(MoveToBehaviour behaviour)
+{
+    switch (behaviour) {
+        case MoveToBehaviour::SendOnce:
+            return "Finish when at target or not moving";
+        case MoveToBehaviour::RepeatIfIdle:
+            return "Finish when at target, repeat move if not moving";
+        case MoveToBehaviour::ImmediateFinish:
+            return "Immediately finish";
+    }
+    return "";
+}
+
 std::string_view toString(Trigger type)
 {
     switch (type) {

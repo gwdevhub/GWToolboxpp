@@ -190,6 +190,19 @@ namespace {
     }
 }
 
+void SpeedrunScriptingTools::clear() 
+{
+    if (m_currentScript) 
+    {
+        for (auto& action : m_currentScript->actions)
+            action->finalAction();
+    }
+    m_currentScript = std::nullopt;
+
+    for (auto& script : m_scripts)
+        script.triggered = false;
+}
+
 void SpeedrunScriptingTools::DrawSettings()
 {
     ToolboxPlugin::DrawSettings();
@@ -391,21 +404,27 @@ void SpeedrunScriptingTools::DrawSettings()
     // Debug info
     ImGui::Text("Current action: %s", (m_currentScript.has_value() && !m_currentScript->actions.empty()) ? toString(m_currentScript->actions.front()->type()).data() : "None");
     ImGui::SameLine();
-    if (ImGui::Button("Clear")) 
-    {
-        if (m_currentScript) 
-        {
-            for (auto& action : m_currentScript->actions) 
-            {
-                action->finalAction();
-            }
-        }
-        m_currentScript = std::nullopt;
-    }
+    if (ImGui::Button("Clear")) clear();
     ImGui::SameLine();
     ImGui::Text("Actions in queue: %i", m_currentScript ? m_currentScript->actions.size() : 0u);
     ImGui::SameLine();
+    ImGui::Text("Clear scripts hotkey:");
+    ImGui::SameLine();
+    auto description = clearScriptsKey.keyData ? makeHotkeyDescription(clearScriptsKey.keyData, clearScriptsKey.modifier) : "Set key";
+    drawHotkeySelector(clearScriptsKey.keyData, clearScriptsKey.modifier, description, 80.f);
+    if (clearScriptsKey.keyData) 
+    {
+        ImGui::SameLine();
+        if (ImGui::Button("X", ImVec2(20.f, 0))) 
+        {
+            clearScriptsKey.keyData = 0;
+            clearScriptsKey.modifier = 0;
+        }
+    }
+
     ImGui::Checkbox("Execute scripts while in outpost", &runInOutposts);
+    ImGui::SameLine();
+    ImGui::Checkbox("Block hotkey keys even if conditions not met", &alwaysBlockHotkeyKeys);
 
     ImGui::Text("Version 1.5. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
@@ -424,6 +443,9 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
     ini.LoadFile(GetSettingFile(folder).c_str());
     const long savedVersion = ini.GetLongValue(Name(), "version", 1);
     runInOutposts = ini.GetBoolValue(Name(), "runInOutpost", false);
+    alwaysBlockHotkeyKeys = ini.GetBoolValue(Name(), "alwaysBlockHotkeyKeys", false);
+    clearScriptsKey.keyData = ini.GetLongValue(Name(), "clearScriptsKey", 0);
+    clearScriptsKey.modifier = ini.GetLongValue(Name(), "clearScriptsMod", 0);
     
     if (savedVersion < 8) return; // Prerelease versions
     
@@ -448,6 +470,9 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
     ToolboxPlugin::SaveSettings(folder);
     ini.SetLongValue(Name(), "version", currentVersion);
     ini.SetBoolValue(Name(), "runInOutpost", runInOutposts);
+    ini.SetBoolValue(Name(), "alwaysBlockHotkeyKeys", alwaysBlockHotkeyKeys);
+    ini.SetLongValue(Name(), "clearScriptsKey", clearScriptsKey.keyData);
+    ini.SetLongValue(Name(), "clearScriptsMod", clearScriptsKey.modifier);
 
     OutputStream stream;
     for (const auto& script : m_scripts) 
@@ -475,14 +500,7 @@ void SpeedrunScriptingTools::Update(float delta)
     {
         // First frame on new loading screen
         isInLoadingScreen = true;
-        if (m_currentScript) 
-        {
-            for (auto& action : m_currentScript->actions)
-                action->finalAction();
-        }
-        m_currentScript = std::nullopt;
-        for (auto& script : m_scripts)
-             script.triggered = false;
+        clear();
     }
 
     const auto map = GW::Map::GetMapInfo();
@@ -643,6 +661,11 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
             }
 
             bool triggered = false;
+            if (clearScriptsKey.keyData && clearScriptsKey.keyData == keyData && clearScriptsKey.modifier == modifier)
+            {
+                clear();
+                return true; // Don't set scripts to triggered if we just cleared.
+            }
             for (auto& script : m_scripts) 
             {
                 if (script.enabledToggleHotkey.keyData == keyData && script.enabledToggleHotkey.modifier == modifier)
@@ -654,10 +677,12 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
                 }
 
                 if (script.enabled && script.trigger == Trigger::Hotkey && script.triggerHotkey.keyData == keyData && script.triggerHotkey.modifier == modifier 
-                    && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && checkConditions(script)) 
+                    && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) 
                 {
-                    script.triggered = true;
-                    triggered = true;
+                    const auto conditionsMet = checkConditions(script);
+
+                    script.triggered = conditionsMet;
+                    triggered = conditionsMet || alwaysBlockHotkeyKeys;
                 }
             }
             if (InstanceInfo::getInstance().keyIsDisabled({keyData, modifier})) return true;
