@@ -928,7 +928,7 @@ namespace {
         return GetQuestByName(quest_name) != nullptr;
     }
 
-
+    const char* you_have_this_quest = "You have this quest in your log";
     bool OnDailyQuestContextMenu(void* wparam) {
         const auto info = (DailyQuests::QuestData*)wparam;
         const auto has_quest = HasDailyQuest(info->GetQuestName());
@@ -939,7 +939,7 @@ namespace {
         ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
         const auto size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
         if (has_quest) {
-            ImGui::TextColored(incomplete_color, "You have this quest in your log");
+            ImGui::TextColored(incomplete_color, you_have_this_quest);
         }
         ImGui::Separator();
         bool travel = false;
@@ -1079,7 +1079,9 @@ void DailyQuests::Draw(IDirect3DDevice9*)
             if (HasDailyQuest(info->GetQuestName())) {
                 ImGui::SameLine();
                 ImGui::TextColored(incomplete_color, ICON_FA_EXCLAMATION);
-                hovered |= ImGui::IsItemHovered();
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip(you_have_this_quest);
+                }
                 lmb_clicked |= ImGui::IsItemClicked();
                 rmb_clicked |= ImGui::IsItemClicked(ImGuiMouseButton_Right);
             }
