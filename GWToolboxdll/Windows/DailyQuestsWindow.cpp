@@ -1448,11 +1448,8 @@ void DailyQuests::Update(const float)
         if (!has_quest) {
             TravelWindow::Instance().Travel(pending_quest_take->GetQuestGiverOutpost());
         }
-        else if(has_quest->IsCompleted()){
-            TravelWindow::Instance().Travel(pending_quest_take->GetQuestGiverOutpost());
-        }
         else {
-            TravelWindow::Instance().TravelNearest(pending_quest_take->map_id);
+            TravelWindow::Instance().TravelNearest(has_quest->map_to);
         }
         pending_quest_take = nullptr;
     }
