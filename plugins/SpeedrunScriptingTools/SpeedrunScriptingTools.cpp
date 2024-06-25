@@ -352,7 +352,10 @@ void SpeedrunScriptingTools::DrawSettings()
                 if (ImGui::Button("Copy script", ImVec2(100, 0))) 
                 {
                     if (const auto encoded = encodeString(std::to_string(currentVersion) + " " + serialize(*scriptIt))) 
+                    {
+                        logMessage("Copy script " + scriptIt->name + " to clipboard");
                         ImGui::SetClipboardText(encoded->c_str());
+                    }
                 }
 
                 ImGui::SameLine();
