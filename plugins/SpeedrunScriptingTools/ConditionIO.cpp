@@ -7,7 +7,7 @@ namespace
 {
 std::shared_ptr<Condition> makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 44);
+    static_assert((int)ConditionType::Count == 45);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -88,6 +88,8 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
             return std::make_shared<NearbyAgentCondition>();
         case ConditionType::CanPopAgent:
             return std::make_shared<CanPopAgentCondition>();
+        case ConditionType::Throttle:
+            return std::make_shared<ThrottleCondition>();
 
         case ConditionType::True:
             return std::make_shared<TrueCondition>();
@@ -109,7 +111,7 @@ std::shared_ptr<Condition> makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 44);
+    static_assert((int)ConditionType::Count == 45);
     switch (type) {
         case ConditionType::Not:
             return "Not";
@@ -190,6 +192,8 @@ std::string_view toString(ConditionType type)
             return "Nearby agent exists";
         case ConditionType::FoeCount:
             return "Number of enemies";
+        case ConditionType::Throttle:
+            return "Throttle";
 
         case ConditionType::True:
             return "True";
@@ -212,7 +216,7 @@ std::string_view toString(ConditionType type)
 
 std::shared_ptr<Condition> readCondition(InputStream& stream)
 {
-static_assert((int)ConditionType::Count == 44);
+static_assert((int)ConditionType::Count == 45);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -296,6 +300,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<CanPopAgentCondition>(stream);
     case ConditionType::FoeCount:
         return std::make_shared<FoeCountCondition>(stream);
+    case ConditionType::Throttle:
+        return std::make_shared<ThrottleCondition>(stream);
 
     case ConditionType::True:
         return std::make_shared<TrueCondition>(stream);
@@ -351,7 +357,7 @@ std::shared_ptr<Condition> drawConditionSelector(float width)
     constexpr auto partyCondtions = std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName};
     constexpr auto instanceConditions = std::array{ConditionType::IsInMap, ConditionType::InstanceType, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime, ConditionType::FoeCount};
     constexpr auto logicConditions = std::array{ConditionType::Not, ConditionType::Or, ConditionType::And, ConditionType::True, ConditionType::False};
-    constexpr auto controlFlowCondition = std::array{ConditionType::OnlyTriggerOncePerInstance, ConditionType::Once, ConditionType::Until, ConditionType::After, ConditionType::Toggle};
+    constexpr auto controlFlowCondition = std::array{ConditionType::OnlyTriggerOncePerInstance, ConditionType::Once, ConditionType::Until, ConditionType::After, ConditionType::Toggle, ConditionType::Throttle};
 
     if (ImGui::BeginPopup("Add condition")) 
     {

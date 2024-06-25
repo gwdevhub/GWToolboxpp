@@ -27,12 +27,8 @@
 #include <GWCA/Managers/ChatMgr.h>
 
 #include <Keys.h>
-
-#include "imgui.h"
 #include "ImGuiCppWrapper.h"
-
 #include <algorithm>
-#include <optional>
 
 namespace {
     constexpr double eps = 1e-3;
@@ -1972,6 +1968,7 @@ void ToggleCondition::drawSettings()
 
     ImGui::PopID();
 }
+
 /// ------------- CurrentTargetNameCondition -------------
 CurrentTargetNameCondition::CurrentTargetNameCondition(InputStream& stream) 
 {
@@ -2000,6 +1997,39 @@ void CurrentTargetNameCondition::drawSettings()
     ImGui::SameLine();
     ImGui::PushItemWidth(300);
     ImGui::InputText("name", &name);
+
+    ImGui::PopID();
+}
+
+/// ------------- ThrottleCondition -------------
+ThrottleCondition::ThrottleCondition(InputStream& stream)
+{
+    stream >> delayInMs;
+}
+void ThrottleCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << delayInMs;
+}
+bool ThrottleCondition::check() const
+{
+    const auto now = std::chrono::steady_clock::now();
+    
+    const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastTimeReturnedTrue).count();
+    
+    if (elapsedTime < delayInMs) return false;
+    lastTimeReturnedTrue = now;
+    return true;
+}
+void ThrottleCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("If script has not run in ");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(80);
+    ImGui::InputInt("ms", &delayInMs, 0);
 
     ImGui::PopID();
 }

@@ -41,7 +41,7 @@ namespace {
 
     bool mustComeLast(ConditionType type) 
     {
-        return type == ConditionType::OnlyTriggerOncePerInstance || type == ConditionType::Once;
+        return type == ConditionType::OnlyTriggerOncePerInstance || type == ConditionType::Once || type == ConditionType::Throttle;
     }
 
     bool canAddCondition(const Script& script) {
