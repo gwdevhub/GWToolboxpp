@@ -1069,16 +1069,19 @@ void DailyQuests::Draw(IDirect3DDevice9*)
         auto write_daily_info = [](bool* subscribed, DailyQuests::QuestData* info, bool check_completion) {
             const auto incomplete_message = check_completion ? GetIncompleteStatusMessage(info->map_id) : nullptr;
             auto col = &normal_color;
-            if (*subscribed) col = &subscribed_color;
             if (incomplete_message) col = &incomplete_color;
+            if (*subscribed) col = &subscribed_color;
             const auto start = ImGui::GetCursorScreenPos();
             ImGui::TextColored(*col, info->GetQuestName());
-            const auto lmb_clicked = ImGui::IsItemClicked();
-            const auto rmb_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
-            const auto hovered = ImGui::IsItemHovered();
+            auto lmb_clicked = ImGui::IsItemClicked();
+            auto rmb_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+            auto hovered = ImGui::IsItemHovered();
             if (HasDailyQuest(info->GetQuestName())) {
                 ImGui::SameLine();
                 ImGui::TextColored(incomplete_color, ICON_FA_EXCLAMATION);
+                hovered |= ImGui::IsItemHovered();
+                lmb_clicked |= ImGui::IsItemClicked();
+                rmb_clicked |= ImGui::IsItemClicked(ImGuiMouseButton_Right);
             }
             if (rmb_clicked) {
                 ImGui::SetContextMenu(OnDailyQuestContextMenu, info);
