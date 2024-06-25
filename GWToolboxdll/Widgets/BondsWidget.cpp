@@ -390,6 +390,11 @@ void BondsWidget::Draw(IDirect3DDevice9*)
         if (GW::BuffArray* buffs = GW::Effects::GetPlayerBuffs()) {
             for (const auto& buff : *buffs) {
                 DrawBondImage(buff.target_agent_id, buff.skill_id, &bond_top_left, &bond_bottom_right);
+                if (!handled_click && ImGui::IsMouseHoveringRect(bond_top_left, bond_bottom_right, false) && ImGui::IsMouseReleased(0)) {
+                    if(click_to_drop)
+                        DropBuffs(buff.target_agent_id, buff.skill_id);
+                    handled_click = true;
+                }
             }
         }
 
@@ -412,7 +417,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
                         continue; // Maintained skill/enchantment
                     }
                     const GW::Attribute* agentAttributes = GW::PartyMgr::GetAgentAttributes(agent_id);
-                    assert(agentAttributes);
+                    ASSERT(agentAttributes);
                     agentAttributes = &agentAttributes[static_cast<size_t>(skill_data->attribute)];
                     const bool overlay = effect.attribute_level < agentAttributes->level;
 
@@ -423,7 +428,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
             }
         }
 
-        if (click_to_cast && !handled_click) {
+        if (!handled_click) {
             for (auto agent_id : party_agent_ids_by_index) {
                 for (auto skill_id : bond_list) {
                     if (!GetBondPosition(agent_id, skill_id, &bond_top_left, &bond_bottom_right))
@@ -432,7 +437,9 @@ void BondsWidget::Draw(IDirect3DDevice9*)
                         continue;
                     draw_list->AddRect(bond_top_left, bond_bottom_right, IM_COL32(255, 255, 255, 255));
                     if (ImGui::IsMouseReleased(0)) {
-                        ToggleBuff(agent_id, skill_id);
+                        if(click_to_cast)
+                            UseBuff(agent_id, skill_id);
+                        handled_click = true;
                     }
                 }
             }
