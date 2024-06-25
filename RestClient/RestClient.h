@@ -30,7 +30,7 @@ public:
 
     bool IsSuccessful() const
     {
-        if (m_StatusCode < 200 || 300 <= m_StatusCode) {
+        if (m_StatusCode < 200 || m_StatusCode > 302) {
             return false;
         }
         return m_Status == ResponseStatus::Completed;

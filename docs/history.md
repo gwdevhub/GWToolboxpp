@@ -7,6 +7,11 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 6.22
+* [Fix] Fixed compass being hidden when toolbox starts
+* [Fix] Fixed alcohol being spammed too much
+* [New] Added highlight info and right click menu to daily quests window to make doing dailies easier
+
 ## Version 6.21
 * [Fix] Party widgets do not disappear when party members are out of compass range
 * [Fix] Minimap does not disappear when spectating
