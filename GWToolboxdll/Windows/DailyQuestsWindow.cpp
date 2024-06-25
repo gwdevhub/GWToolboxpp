@@ -1449,7 +1449,11 @@ void DailyQuests::Update(const float)
             TravelWindow::Instance().Travel(pending_quest_take->GetQuestGiverOutpost());
         }
         else {
-            TravelWindow::Instance().TravelNearest(has_quest->map_to);
+            auto map_to = has_quest->map_to;
+            // NB: Quest rewards are easier to get from gtob
+            if (map_to == GW::Constants::MapID::Embark_Beach)
+                map_to = GW::Constants::MapID::Great_Temple_of_Balthazar_outpost;
+            TravelWindow::Instance().TravelNearest(map_to);
         }
         pending_quest_take = nullptr;
     }
