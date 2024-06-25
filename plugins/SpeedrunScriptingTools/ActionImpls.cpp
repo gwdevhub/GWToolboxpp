@@ -233,6 +233,82 @@ void MoveToAction::drawSettings(){
 
     ImGui::PopID();
 }
+/// ------------- MoveToTargetPositionAction -------------
+MoveToTargetPositionAction::MoveToTargetPositionAction(InputStream& stream)
+{
+    stream >> accuracy >> moveBehaviour;
+}
+void MoveToTargetPositionAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << accuracy << moveBehaviour;
+}
+void MoveToTargetPositionAction::initialAction()
+{
+    Action::initialAction();
+
+    hasBegunWalking = false;
+    const auto target = GW::Agents::GetTargetAsAgentLiving();
+    hasTarget = target;
+    pos = target->pos;
+
+    if (!hasTarget) return;
+    GW::GameThread::Enqueue([pos = this->pos]() -> void {
+        GW::Agents::Move(pos);
+    });
+}
+ActionStatus MoveToTargetPositionAction::isComplete() const
+{
+    if (!hasTarget) return ActionStatus::Error;
+    if (moveBehaviour == MoveToBehaviour::ImmediateFinish) return ActionStatus::Complete;
+
+    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    if (!player) return ActionStatus::Error;
+
+    const auto distance = GW::GetDistance(player->pos, pos);
+
+    if (distance > GW::Constants::Range::Compass) {
+        return ActionStatus::Error; // We probably teled
+    }
+
+    if (!player->GetIsMoving() && distance > accuracy + eps) {
+        if (moveBehaviour == MoveToBehaviour::RepeatIfIdle) {
+            const auto radius = std::min((int)(accuracy / 4), 10);
+            float px = radius > 0 ? pos.x + (rand() % radius - radius / 2) : pos.x;
+            float py = radius > 0 ? pos.y + (rand() % radius - radius / 2) : pos.y;
+
+            const auto now = std::chrono::steady_clock::now();
+            const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastMovePacketTime).count();
+            if (elapsedTime > 50) {
+                lastMovePacketTime = now;
+                GW::GameThread::Enqueue([pos = GW::GamePos{px, py, pos.zplane}] {
+                    GW::Agents::Move(pos);
+                });
+            }
+        }
+        else if (hasBegunWalking) {
+            return ActionStatus::Complete;
+        }
+    }
+
+    hasBegunWalking |= player->GetIsMoving();
+
+    return distance < accuracy + eps ? ActionStatus::Complete : ActionStatus::Running;
+}
+void MoveToTargetPositionAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("Move to current position of current target");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(90.f);
+    ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
+    ImGui::SameLine();
+    drawEnumButton(MoveToBehaviour::SendOnce, MoveToBehaviour::ImmediateFinish, moveBehaviour, 0, 310.f);
+
+    ImGui::PopID();
+}
 
 /// ------------- CastAction -------------
 CastAction::CastAction(InputStream& stream)
