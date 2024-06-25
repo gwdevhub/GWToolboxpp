@@ -24,7 +24,7 @@ void AlcoholWidget::Initialize()
     // last time the player used a drink
     last_alcohol = 0;
     alcohol_level = 0;
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry, &AlcoholWidget::AlcUpdate);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry, &AlcoholWidget::AlcUpdate,-0x8000);
 }
 
 uint32_t AlcoholWidget::GetAlcoholTitlePoints()

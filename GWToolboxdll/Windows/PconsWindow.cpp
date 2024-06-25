@@ -146,7 +146,7 @@ void PconsWindow::Initialize()
     AlcoholWidget::Instance().Initialize(); // Pcons depend on alcohol widget to track current drunk level.
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AddExternalBond>(&AddExternalBond_Entry, &OnAddExternalBond);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry, &OnPostProcessEffect);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry, &OnPostProcessEffect,-0x4000);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry, &OnGenericValue);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry, &OnAgentState);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry, &OnSpeechBubble);
