@@ -71,40 +71,7 @@ namespace {
         FlagState_None
     };
 
-    enum CaptureMouseClickType : uint32_t {
-        CaptureType_None [[maybe_unused]]                = 0,
-        CaptureType_FlagHero [[maybe_unused]]            = 1,
-        CaptureType_SalvageWithUpgrades [[maybe_unused]] = 11,
-        CaptureType_SalvageMaterials [[maybe_unused]]    = 12,
-        CaptureType_Idenfify [[maybe_unused]]            = 13
-    };
-
-    struct MouseClickCaptureData {
-        struct sub1 {
-            uint8_t pad0[0x3C];
-
-            struct sub2 {
-                uint8_t pad1[0x14];
-
-                struct sub3 {
-                    uint8_t pad2[0x24];
-
-                    struct sub4 {
-                        uint8_t pad3[0x2C];
-
-                        struct sub5 {
-                            uint8_t pad4[0x4];
-                            FlaggingState* flagging_hero;
-                        } * sub5;
-                    } * sub4;
-                } * sub3;
-            } * sub2;
-        } * sub1;
-    }* MouseClickCaptureDataPtr = nullptr;
-
     float gwinch_scale = 1.f;
-    uint32_t* GameCursorState = nullptr;
-    CaptureMouseClickType* CaptureMouseClickTypePtr = nullptr;
 
     bool hide_flagging_controls = false;
     GW::MemoryPatcher hide_flagging_controls_patch;
@@ -133,6 +100,8 @@ namespace {
     clock_t last_moved = 0;
 
     bool loading = false; // only consider some cases but still good
+
+    bool compass_fix_pending = false;
 
     bool mouse_clickthrough_in_explorable = false;
     bool mouse_clickthrough_in_outpost = false;
@@ -208,40 +177,102 @@ namespace {
         return v;
     }
 
+    struct CompassAiControl {
+        uint32_t field0_0x0;
+        uint32_t field1_0x4;
+        uint32_t field2_0x8;
+        uint32_t field3_0xc;
+        uint32_t field4_0x10;
+        uint32_t field5_0x14;
+        uint32_t field6_0x18;
+    };
+    static_assert(sizeof(CompassAiControl) == 0x1c);
+    struct CompassContext {
+        FlaggingState flagging_state;
+        uint32_t field1_0x4;
+        uint32_t field2_0x8;
+        uint32_t field3_0xc;
+        uint32_t field4_0x10;
+        uint32_t field5_0x14;
+        uint32_t field6_0x18;
+        uint32_t field7_0x1c;
+        uint32_t field8_0x20;
+        uint32_t field9_0x24;
+        uint32_t field10_0x28;
+        uint32_t field11_0x2c;
+        uint32_t field12_0x30;
+        uint32_t field13_0x34;
+        uint32_t field14_0x38;
+        uint32_t field15_0x3c;
+        CompassAiControl* ai_controls;
+        void* compass_canvas; // size 0x138
+        uint32_t field18_0x48;
+        uint32_t field19_0x4c;
+        uint32_t field20_0x50;
+        uint32_t field21_0x54;
+        uint32_t field22_0x58;
+        uint32_t field23_0x5c;
+    };
+    static_assert(sizeof(CompassContext) == 0x60);
+
+    CompassContext* compass_context = nullptr;
 
     void __cdecl OnCompassFrame_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
     {
         GW::Hook::EnterHook();
+        compass_context = *(CompassContext**)message->wParam;
         // frame + 0x40 is the ai control handler bits. Zero it out to prevent actions from interacting with the flagging controls.
         switch (static_cast<uint32_t>(message->message_id)) {
             case 0x8: // Creates frame + 0x40 if it doesn't exist, but also draws it - we use the patch to make sure it never draws.
+                OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+                if (compass_fix_pending && compass_context->compass_canvas) {
+                    compass_fix_pending = false;
+                    SetWindowVisible(GW::UI::WindowID_Compass, false);
+                }
+                break;
+            case 0x43: {
+                if (compass_fix_pending)
+                    break; // Block any redrawing until the compass fix has been done
+                if (!compass_context->compass_canvas) {
+                    compass_fix_pending = true;
+                    SetWindowVisible(GW::UI::WindowID_Compass, true);
+                    break;
+                }
+                OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+            } break;
             case 0x4a: // 0x4a need to pass through to allow hotkey flagging
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 break;
             case 0xb:
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+                compass_context = nullptr;
                 compass_frame = nullptr;
+                compass_fix_pending = false;
                 compass_position_dirty = true;
                 break;
             case 0x13:
             case 0x30:
+            case 0x32:
             case 0x33:
+                if (compass_fix_pending)
+                    break; // Block any repositioning messages until the compass fix has been done
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 compass_position_dirty = true; // Forces a recalculation
                 break;
             default:
                 if (hide_flagging_controls) {
-                    auto frame = *(GW::UI::Frame**)message->wParam;
-                    uint32_t prev = frame->field16_0x40;
-                    frame->field16_0x40 = 0;
+                    // Temporarily nullify the pointer to flagging controls for all other message ids
+                    auto prev = compass_context->ai_controls;
+                    compass_context->ai_controls = 0;
                     OnCompassFrame_UICallback_Ret(message, wParam, lParam);
-                    frame->field16_0x40 = prev;
+                    compass_context->ai_controls = prev;
                 }
                 else {
                     OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 }
                 break;
         }
+
         GW::Hook::LeaveHook();
     }
 
@@ -301,16 +332,10 @@ namespace {
 
     FlaggingState GetFlaggingState()
     {
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
-            return FlagState_None;
-        }
-        if (!CaptureMouseClickTypePtr || *CaptureMouseClickTypePtr != CaptureType_FlagHero || !MouseClickCaptureDataPtr || !MouseClickCaptureDataPtr->sub1) {
-            return FlagState_None;
-        }
-        return *MouseClickCaptureDataPtr->sub1->sub2->sub3->sub4->sub5->flagging_hero;
+        return compass_context ? compass_context->flagging_state : FlaggingState::FlagState_None;
     }
 
-    bool compass_fix_pending = true;
+
 
     bool SetFlaggingState(FlaggingState set_state)
     {
@@ -499,17 +524,7 @@ void Minimap::Initialize()
 {
     ToolboxWidget::Initialize();
 
-    uintptr_t address = GW::Scanner::Find("\x00\x74\x16\x6A\x27\x68\x80\x00\x00\x00\x6A\x00\x68", "xxxxxxxxxxxxx", -0x51);
-    if (address) {
-        address = *(uintptr_t*)address;
-        MouseClickCaptureDataPtr = (MouseClickCaptureData*)address;
-        GameCursorState = (uint32_t*)(address + 0x4);
-        CaptureMouseClickTypePtr = (CaptureMouseClickType*)(address - 0x10);
-    }
-    Log::Log("[SCAN] CaptureMouseClickTypePtr = %p\n", CaptureMouseClickTypePtr);
-    Log::Log("[SCAN] MouseClickCaptureDataPtr = %p\n", MouseClickCaptureDataPtr);
-
-    address = GW::Scanner::Find("\x8b\x46\x40\x85\xc0\x74\x0c", "xxxxx?x", 0x5);
+    uintptr_t address = GW::Scanner::Find("\x8b\x46\x40\x85\xc0\x74\x0c", "xxxxx?x", 0x5);
     if (address) {
         hide_flagging_controls_patch.SetPatch(address, "\xeb", 1);
     }
@@ -603,8 +618,7 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
             const GW::UI::WindowPosition* compass_info = GetWindowPosition(GW::UI::WindowID_Compass);
             if (compass_info && !compass_info->visible()) {
                 // Note: Wait for a frame to pass before toggling off again to allow the game to initialise the window.
-                compass_fix_pending = true;
-                SetWindowVisible(GW::UI::WindowID_Compass, true);
+
             }
             is_observing = GW::Map::GetIsObserving();
             // Cycle active quests to cache their markers
@@ -1181,11 +1195,7 @@ bool Minimap::ShouldDrawAllQuests()
 
 void Minimap::Render(IDirect3DDevice9* device)
 {
-    if (compass_fix_pending && GetCompassFrame() && GetCompassFrame()->IsVisible()) {
-        // Note: Wait for a frame to pass before toggling off again to allow the game to initialise the window.
-        SetWindowVisible(GW::UI::WindowID_Compass, false);
-        compass_fix_pending = false;
-    }
+    GetCompassFrame();
     auto& instance = Instance();
     if (!instance.IsActive()) {
         return;
