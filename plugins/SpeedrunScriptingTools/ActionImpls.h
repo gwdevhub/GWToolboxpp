@@ -29,7 +29,7 @@ public:
 private:
     GW::GamePos pos{};
     float accuracy = GW::Constants::Range::Adjacent;
-    bool repeatMove{true};
+    MoveToBehaviour moveBehaviour = MoveToBehaviour::RepeatIfIdle;
     mutable std::chrono::steady_clock::time_point lastMovePacketTime = std::chrono::steady_clock::now();
     mutable bool hasBegunWalking = false;
 };

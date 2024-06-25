@@ -44,8 +44,12 @@ public:
     void Terminate() override;
 
 private:
+    void clear();
+
     std::vector<Script> m_scripts;
     std::optional<Script> m_currentScript = std::nullopt;
     bool runInOutposts = false;
+    bool alwaysBlockHotkeyKeys = false;
     bool isInLoadingScreen = false;
+    Hotkey clearScriptsKey{};
 };
