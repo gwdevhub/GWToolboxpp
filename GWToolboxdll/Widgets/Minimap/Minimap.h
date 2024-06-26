@@ -47,7 +47,8 @@ public:
 
     void DrawHelp() override;
     void Initialize() override;
-    void Terminate() override;
+    void SignalTerminate() override;
+    bool CanTerminate() override;
 
     void Draw(IDirect3DDevice9* device) override;
     static void RenderSetupProjection(IDirect3DDevice9* device);
@@ -85,11 +86,13 @@ public:
     static bool ShouldDrawAllQuests();
     static void Render(IDirect3DDevice9* device);
 
+    [[nodiscard]] static bool IsActive();
+
 private:
 
     [[nodiscard]] bool IsInside(int x, int y) const;
     // returns true if the map is visible, valid, not loading, etc
-    [[nodiscard]] bool IsActive() const;
+
 
     static void SelectTarget(GW::Vec2f pos);
     static size_t GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);

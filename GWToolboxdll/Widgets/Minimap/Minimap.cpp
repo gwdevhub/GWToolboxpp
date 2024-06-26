@@ -81,6 +81,9 @@ namespace {
     GW::UI::UIInteractionCallback OnCompassFrame_UICallback_Ret = nullptr;
     bool compass_position_dirty = true;
 
+    // Flagged when terminating minimap
+    bool terminating = false;
+
     Vec2i location;
     Vec2i size;
     bool snap_to_compass = false;
@@ -101,9 +104,7 @@ namespace {
     clock_t last_moved = 0;
 
     bool loading = false; // only consider some cases but still good
-
     bool compass_fix_pending = false;
-
     bool mouse_clickthrough_in_explorable = false;
     bool mouse_clickthrough_in_outpost = false;
     bool flip_on_reverse = false;
@@ -115,17 +116,65 @@ namespace {
     MinimapModifierBehaviour key_shift_behavior = MinimapModifierBehaviour::Move;
     MinimapModifierBehaviour key_alt_behavior = MinimapModifierBehaviour::Walk;
     bool is_observing = false;
-
     bool hero_flag_controls_show = false;
     bool hero_flag_window_attach = true;
     Color hero_flag_controls_background = 0;
     std::vector<GW::AgentID> player_heroes{};
 
+    using DrawCompassAgentsByType_pt = uint32_t(__fastcall*)(void* ecx, void* edx, uint32_t param_1, uint32_t param_2, uint32_t flags);
+    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Func = nullptr;
+    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Ret = nullptr;
+
+    bool hide_compass_agents = false;
+    bool hide_compass_drawings = false;
+    bool hide_compass_quest_marker = false;
+    GW::MemoryPatcher show_compass_quest_marker_patch;
+    bool render_all_quests = false;
+
+    struct CompassAiControl {
+        uint32_t field0_0x0;
+        uint32_t field1_0x4;
+        uint32_t field2_0x8;
+        uint32_t field3_0xc;
+        uint32_t field4_0x10;
+        uint32_t field5_0x14;
+        uint32_t field6_0x18;
+    };
+    static_assert(sizeof(CompassAiControl) == 0x1c);
+    struct CompassContext {
+        FlaggingState flagging_state;
+        uint32_t field1_0x4;
+        uint32_t field2_0x8;
+        uint32_t field3_0xc;
+        uint32_t field4_0x10;
+        uint32_t field5_0x14;
+        uint32_t field6_0x18;
+        uint32_t field7_0x1c;
+        uint32_t field8_0x20;
+        uint32_t field9_0x24;
+        uint32_t field10_0x28;
+        uint32_t field11_0x2c;
+        uint32_t field12_0x30;
+        uint32_t field13_0x34;
+        uint32_t field14_0x38;
+        uint32_t field15_0x3c;
+        CompassAiControl* ai_controls;
+        void* compass_canvas; // size 0x138
+        uint32_t field18_0x48;
+        uint32_t field19_0x4c;
+        uint32_t field20_0x50;
+        uint32_t field21_0x54;
+        uint32_t field22_0x58;
+        uint32_t field23_0x5c;
+    };
+    static_assert(sizeof(CompassContext) == 0x60);
+
+
     GW::Vec2f InterfaceToWorldPoint(const Vec2i& pos)
     {
         const GW::Agent* me = GW::Agents::GetObservingAgent();
         if (me == nullptr) {
-            return {0, 0};
+            return { 0, 0 };
         }
 
         GW::Vec2f v(static_cast<float>(pos.x), static_cast<float>(pos.y));
@@ -178,43 +227,10 @@ namespace {
         return v;
     }
 
-    struct CompassAiControl {
-        uint32_t field0_0x0;
-        uint32_t field1_0x4;
-        uint32_t field2_0x8;
-        uint32_t field3_0xc;
-        uint32_t field4_0x10;
-        uint32_t field5_0x14;
-        uint32_t field6_0x18;
-    };
-    static_assert(sizeof(CompassAiControl) == 0x1c);
-    struct CompassContext {
-        FlaggingState flagging_state;
-        uint32_t field1_0x4;
-        uint32_t field2_0x8;
-        uint32_t field3_0xc;
-        uint32_t field4_0x10;
-        uint32_t field5_0x14;
-        uint32_t field6_0x18;
-        uint32_t field7_0x1c;
-        uint32_t field8_0x20;
-        uint32_t field9_0x24;
-        uint32_t field10_0x28;
-        uint32_t field11_0x2c;
-        uint32_t field12_0x30;
-        uint32_t field13_0x34;
-        uint32_t field14_0x38;
-        uint32_t field15_0x3c;
-        CompassAiControl* ai_controls;
-        void* compass_canvas; // size 0x138
-        uint32_t field18_0x48;
-        uint32_t field19_0x4c;
-        uint32_t field20_0x50;
-        uint32_t field21_0x54;
-        uint32_t field22_0x58;
-        uint32_t field23_0x5c;
-    };
-    static_assert(sizeof(CompassContext) == 0x60);
+
+    GW::UI::Frame* GetCompassFrame();
+    bool ResetWindowPosition(GW::UI::WindowID, GW::UI::Frame*);
+    bool RepositionMinimapToCompass();
 
     // Just send the UI message to update frames, bypassing use settings.
     bool SetWindowVisibleTmp(GW::UI::WindowID window_id, bool visible) {
@@ -233,6 +249,30 @@ namespace {
         // Swap position out, send UI message to cascade to frames, then set back to original
         GW::UI::SendUIMessage(GW::UI::UIMessage::kUIPositionChanged, &packet);
         *position = original_position;
+        return true;
+    }
+
+    // Check whether the compass ought to be hidden or not depending on user settings
+    bool OverrideCompassVisibility() {
+        const auto frame = GetCompassFrame();
+        if (!frame)
+            return false;
+        if (hide_compass_when_minimap_draws && Minimap::IsActive()) {
+            if (!(frame->IsCreated() && frame->IsVisible()))
+                return false;
+            return SetWindowVisibleTmp(GW::UI::WindowID_Compass, false);
+        }
+        return ResetWindowPosition(GW::UI::WindowID_Compass, frame);
+    }
+
+    // If we've messed around with the window visibility, reset it here.
+    bool ResetWindowPosition(GW::UI::WindowID window_id, GW::UI::Frame* frame) {
+        GW::UI::UIPacket::kUIPositionChanged packet = {
+            window_id,
+            GW::UI::GetWindowPosition(window_id)
+        };
+        if(frame && packet.position && frame->IsCreated() && frame->IsVisible() != packet.position->visible())
+            return GW::UI::SendUIMessage(GW::UI::UIMessage::kUIPositionChanged, &packet);
         return true;
     }
 
@@ -259,8 +299,8 @@ namespace {
                     SetWindowVisibleTmp(GW::UI::WindowID_Compass, true);
                     break;
                 }
-                if (hide_compass_when_minimap_draws && Minimap::Instance().visible) { // TODO: don't do this every time @Jon
-                    SetWindowVisibleTmp(GW::UI::WindowID_Compass, false);
+                if (OverrideCompassVisibility()) {
+                    break;
                 }
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
             } break;
@@ -311,6 +351,7 @@ namespace {
                 OnCompassFrame_UICallback_Ret = compass_frame->frame_callbacks[0];
                 compass_frame->frame_callbacks[0] = OnCompassFrame_UICallback;
             }
+            compass_position_dirty = true;
         }
         return compass_frame;
     }
@@ -326,10 +367,10 @@ namespace {
 
     bool RepositionMinimapToCompass()
     {
-        if (!compass_position_dirty)
+        if (!snap_to_compass)
             return false;
         const auto frame = GetCompassFrame();
-        if (!frame)
+        if (!(frame && frame->IsVisible()))
             return false;
         const float compass_padding = 1.05f;
         auto top_left = frame->position.GetTopLeftOnScreen(frame);
@@ -350,7 +391,6 @@ namespace {
 
         ImGui::SetWindowPos({static_cast<float>(location.x), static_cast<float>(location.y)});
         ImGui::SetWindowSize({static_cast<float>(size.x), static_cast<float>(size.y)});
-        compass_position_dirty = false;
         return true;
     }
 
@@ -358,8 +398,6 @@ namespace {
     {
         return compass_context ? compass_context->flagging_state : FlaggingState::FlagState_None;
     }
-
-
 
     bool SetFlaggingState(FlaggingState set_state)
     {
@@ -432,12 +470,6 @@ namespace {
         return gamectx->party->player_party;
     }
 
-    using DrawCompassAgentsByType_pt = uint32_t(__fastcall*)(void* ecx, void* edx, uint32_t param_1, uint32_t param_2, uint32_t flags);
-    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Func = nullptr;
-    DrawCompassAgentsByType_pt DrawCompassAgentsByType_Ret = nullptr;
-
-    bool hide_compass_agents = false;
-
     uint32_t __fastcall OnDrawCompassAgentsByType(void* ecx, void* edx, const uint32_t param_1, const uint32_t param_2, const uint32_t flags)
     {
         GW::Hook::EnterHook();
@@ -448,11 +480,6 @@ namespace {
         GW::Hook::LeaveHook();
         return result;
     }
-
-    bool hide_compass_drawings = false;
-    bool hide_compass_quest_marker = false;
-    GW::MemoryPatcher show_compass_quest_marker_patch;
-    bool render_all_quests = false;
 
     void ToggleCompassQuestMarker(const bool enable)
     {
@@ -526,9 +553,10 @@ void Minimap::DrawHelp()
     ImGui::TreePop();
 }
 
-void Minimap::Terminate()
+void Minimap::SignalTerminate()
 {
-    ToolboxWidget::Terminate();
+    terminating = true;
+
     range_renderer.Terminate();
     pmap_renderer.Terminate();
     agent_renderer.Terminate();
@@ -538,10 +566,20 @@ void Minimap::Terminate()
     effect_renderer.Terminate();
     GameWorldRenderer::Terminate();
 
-    if (compass_frame && compass_frame->frame_callbacks[0] == OnCompassFrame_UICallback) {
-        compass_frame->frame_callbacks[0] = OnCompassFrame_UICallback_Ret;
-    }
     hide_flagging_controls_patch.Reset();
+
+    GW::GameThread::Enqueue([]() {
+        if (compass_frame && compass_frame->frame_callbacks[0] == OnCompassFrame_UICallback) {
+            compass_frame->frame_callbacks[0] = OnCompassFrame_UICallback_Ret;
+        }
+        ResetWindowPosition(GW::UI::WindowID_Compass, compass_frame);
+        terminating = false;
+        });
+}
+
+bool Minimap::CanTerminate()
+{
+    return terminating == false;
 }
 
 void Minimap::Initialize()
@@ -1110,9 +1148,11 @@ void Minimap::Draw(IDirect3DDevice9*)
     auto win_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus;
     if (snap_to_compass) {
         win_flags |= ImGuiWindowFlags_NoInputs;
-        if (compass_position_dirty) {
-            RepositionMinimapToCompass();
-        }
+    }
+    if (compass_position_dirty) {
+        RepositionMinimapToCompass();
+        OverrideCompassVisibility();
+        compass_position_dirty = false;
     }
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(win_flags, true))) {
         // window pos are already rounded by imgui, so casting is no big deal
@@ -1223,12 +1263,11 @@ bool Minimap::ShouldDrawAllQuests()
 
 void Minimap::Render(IDirect3DDevice9* device)
 {
-    GetCompassFrame();
-    auto& instance = Instance();
-    if (!instance.IsActive()) {
+
+    if (!IsActive()) {
         return;
     }
-
+    auto& instance = Instance();
     const GW::Agent* me = GW::Agents::GetObservingAgent();
     if (me == nullptr) {
         return;
@@ -1670,15 +1709,10 @@ bool Minimap::IsInside(const int x, const int y) const
     return true;
 }
 
-bool Minimap::IsActive() const
+bool Minimap::IsActive()
 {
-    if (snap_to_compass) {
-        const auto frame = GetCompassFrame();
-        if (!(frame && frame->IsVisible()))
-            return false;
-    }
-
-    return visible
+    return Instance().visible
+           && !terminating
            && !loading
            && GW::Map::GetIsMapLoaded()
            && !GW::UI::GetIsWorldMapShowing()
