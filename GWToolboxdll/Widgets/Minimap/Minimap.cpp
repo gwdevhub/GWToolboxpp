@@ -215,6 +215,26 @@ namespace {
     };
     static_assert(sizeof(CompassContext) == 0x60);
 
+    // Just send the UI message to update frames, bypassing use settings.
+    bool SetWindowVisibleTmp(GW::UI::WindowID window_id, bool visible) {
+        auto position = GW::UI::GetWindowPosition(window_id);
+        auto original_position = *position;
+        GW::UI::UIPacket::kUIPositionChanged packet = {
+            window_id,
+            position
+        };
+        if (visible) {
+            position->state |= 1;
+        }
+        else {
+            position->state &= 0xfffffff0;
+        }
+        // Swap position out, send UI message to cascade to frames, then set back to original
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kUIPositionChanged, &packet);
+        *position = original_position;
+        return true;
+    }
+
     CompassContext* compass_context = nullptr;
 
     void __cdecl OnCompassFrame_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
@@ -227,7 +247,7 @@ namespace {
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 if (compass_fix_pending && compass_context->compass_canvas) {
                     compass_fix_pending = false;
-                    SetWindowVisible(GW::UI::WindowID_Compass, false);
+                    SetWindowVisibleTmp(GW::UI::WindowID_Compass, false);
                 }
                 break;
             case 0x43: {
@@ -235,7 +255,7 @@ namespace {
                     break; // Block any redrawing until the compass fix has been done
                 if (!compass_context->compass_canvas) {
                     compass_fix_pending = true;
-                    SetWindowVisible(GW::UI::WindowID_Compass, true);
+                    SetWindowVisibleTmp(GW::UI::WindowID_Compass, true);
                     break;
                 }
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
