@@ -8,9 +8,11 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 6.22
+* [Minor] /tp [zm, zv, zb] now does the same as /zm take or /zm travel
+* [New] Added highlight info and right click menu to daily quests window to make doing dailies easier
 * [Fix] Fixed compass being hidden when toolbox starts
 * [Fix] Fixed alcohol being spammed too much
-* [New] Added highlight info and right click menu to daily quests window to make doing dailies easier
+* [Fix] Fixed rounding issues for SkillMonitor width causing wrong pixel offsets
 
 ## Version 6.21
 * [Fix] Party widgets do not disappear when party members are out of compass range
