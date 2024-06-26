@@ -772,7 +772,7 @@ namespace {
             now += 86400;
         }
         const auto quest = get_quest_func(now);
-        if (argc > 1 && !wcscmp(argv[1], L"take") && quest->GetQuestGiverOutpost() != GW::Constants::MapID::None) {
+        if (argc > 1 && (wcscmp(argv[1], L"take") == 0 || wcscmp(argv[1], L"travel") == 0) && quest->GetQuestGiverOutpost() != MapID::None) {
             pending_quest_take = quest;
             return;
         }

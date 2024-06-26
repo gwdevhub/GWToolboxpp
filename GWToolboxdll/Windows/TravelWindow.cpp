@@ -383,22 +383,17 @@ namespace {
             return;
         }
 
-        auto travel_quest_info = [](DailyQuests::QuestData* quest_info) {
-            if (!(quest_info 
-                && quest_info->map_id != GW::Constants::MapID::None
-                && TravelWindow::Instance().TravelNearest(quest_info->map_id))) {
-                Log::Error("Failed to travel to daily quest");
-            }
-            };
-
         if (argOutpost == L"zv") {
-            return travel_quest_info(DailyQuests::GetZaishenVanquish());
+            GW::Chat::SendChat(GW::Chat::Channel::CHANNEL_COMMAND, L"zv take");
+            return;
         }
         if (argOutpost == L"zm") {
-            return travel_quest_info(DailyQuests::GetZaishenMission());
+            GW::Chat::SendChat(GW::Chat::Channel::CHANNEL_COMMAND, L"zm take");
+            return;
         }
         if (argOutpost == L"zb") {
-            return travel_quest_info(DailyQuests::GetZaishenBounty());
+            GW::Chat::SendChat(GW::Chat::Channel::CHANNEL_COMMAND, L"zb take");
+            return;
         }
 
         TravelWindow& instance = Instance();
