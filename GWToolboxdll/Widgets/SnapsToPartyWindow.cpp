@@ -46,7 +46,7 @@ namespace {
     }
 }
 
-std::unordered_map<uint32_t, std::pair<ImVec2, ImVec2>> SnapsToPartyWindow::agent_health_bar_positions;
+std::unordered_map<uint32_t, SnapsToPartyWindow::PartyFramePosition> SnapsToPartyWindow::agent_health_bar_positions;
 SnapsToPartyWindow::PartyFramePosition SnapsToPartyWindow::party_health_bars_position;
 uint32_t SnapsToPartyWindow::henchmen_start_idx = 0xff;
 uint32_t SnapsToPartyWindow::pets_start_idx = 0xff;
@@ -55,7 +55,7 @@ std::unordered_map<uint32_t, uint32_t> SnapsToPartyWindow::party_indeces_by_agen
 std::vector<uint32_t> SnapsToPartyWindow::party_agent_ids_by_index;
 std::vector<GuiUtils::EncString*> SnapsToPartyWindow::party_names_by_index;
 
-std::pair<ImVec2, ImVec2>* SnapsToPartyWindow::GetAgentHealthBarPosition(uint32_t agent_id) {
+SnapsToPartyWindow::PartyFramePosition* SnapsToPartyWindow::GetAgentHealthBarPosition(uint32_t agent_id) {
     if (!(agent_id && agent_health_bar_positions.contains(agent_id)))
         return nullptr;
     return &agent_health_bar_positions[agent_id];

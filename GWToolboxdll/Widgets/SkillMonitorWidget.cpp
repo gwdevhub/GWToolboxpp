@@ -232,7 +232,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
     }
 
     const auto& first_agent_health_bar = agent_health_bar_positions.begin()->second;
-    const auto img_size = first_agent_health_bar.second.y - first_agent_health_bar.first.y;
+    const auto img_size = first_agent_health_bar.bottom_right.y - first_agent_health_bar.top_left.y;
     const auto width = img_size * history_length;
 
     const auto user_offset_x = abs(static_cast<float>(user_offset));
@@ -263,12 +263,12 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
             const auto health_bar_pos = GetAgentHealthBarPosition(agent_id);
             if (!health_bar_pos)
                 continue;
-            draw_list->AddRectFilled({ window_x , health_bar_pos->first.y }, { window_x + width, health_bar_pos->second.y }, background);
+            draw_list->AddRectFilled({ window_x , health_bar_pos->top_left.y }, { window_x + width, health_bar_pos->bottom_right.y }, background);
 
             auto& skill_history = history[agent_id];
             for (size_t i = 0; i < skill_history.size(); i++) {
                 const auto& skill_activation = skill_history.at(i);
-                const ImVec2 top_left = {history_flip_direction ? window_x + (i * img_size) : window_x + width - (i * img_size) - img_size, health_bar_pos->first.y};
+                const ImVec2 top_left = {history_flip_direction ? window_x + (i * img_size) : window_x + width - (i * img_size) - img_size, health_bar_pos->top_left.y};
                 const ImVec2 bottom_right = {top_left.x + img_size, top_left.y + img_size};
 
                 const auto texture = *Resources::GetSkillImage(skill_activation.id);
@@ -288,10 +288,10 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
                     const auto remaining_cast = TIMER_DIFF(skill_activation.cast_start);
                     const auto percentage_cast = std::min(remaining_cast / (skill_activation.cast_time * 1000), 1.0f);
 
-                    const auto health_bar_width = health_bar_pos->second.x - health_bar_pos->first.x;
+                    const auto health_bar_width = health_bar_pos->bottom_right.x - health_bar_pos->top_left.x;
                     ImGui::GetBackgroundDrawList()->AddRectFilled(
-                        ImVec2(health_bar_pos->first.x, health_bar_pos->second.y - cast_indicator_height),
-                        ImVec2(health_bar_pos->first.x + (health_bar_width * percentage_cast), health_bar_pos->second.y),
+                        ImVec2(health_bar_pos->top_left.x, health_bar_pos->bottom_right.y - cast_indicator_height),
+                        ImVec2(health_bar_pos->top_left.x + (health_bar_width * percentage_cast), health_bar_pos->bottom_right.y),
                         cast_indicator_color);
                 }
             }

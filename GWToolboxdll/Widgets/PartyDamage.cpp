@@ -394,8 +394,8 @@ void PartyDamage::Draw(IDirect3DDevice9* )
             if (!health_bar_pos)
                 continue;
 
-            const ImVec2 damage_top_left = { damage_x, health_bar_pos->first.y };
-            const ImVec2 damage_bottom_right = { damage_top_left.x + width, health_bar_pos->second.y };
+            const ImVec2 damage_top_left = { damage_x, health_bar_pos->top_left.y };
+            const ImVec2 damage_bottom_right = { damage_top_left.x + width, health_bar_pos->bottom_right.y };
             draw_list->AddRectFilled(damage_top_left, damage_bottom_right, color_background);
 
             const auto x = damage_top_left.x;

@@ -317,8 +317,8 @@ bool BondsWidget::GetBondPosition(uint32_t agent_id, GW::Constants::SkillID skil
         return false; // bond with a skill not in skillbar
     }
 
-    const auto img_width = health_bar_pos->second.y - health_bar_pos->first.y;
-    const auto y = health_bar_pos->first.y;
+    const auto img_width = health_bar_pos->bottom_right.y - health_bar_pos->top_left.y;
+    const auto y = health_bar_pos->top_left.y;
     const auto x = ImGui::GetCurrentWindow()->Pos.x + (img_width * bond_map[skill_id]);
 
     *top_left_out = { x, y };
@@ -357,7 +357,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
 
     const auto& first_health_bar_position = agent_health_bar_positions.begin()->second;
 
-    const auto img_width = (first_health_bar_position.second.y - first_health_bar_position.first.y);
+    const auto img_width = (first_health_bar_position.bottom_right.y - first_health_bar_position.top_left.y);
 
     const float width = bond_list.size() * img_width;
 

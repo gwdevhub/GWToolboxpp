@@ -11,7 +11,7 @@ protected:
         ImVec2 bottom_right;
     };
     static PartyFramePosition party_health_bars_position;
-    static std::unordered_map<uint32_t, std::pair<ImVec2, ImVec2>> agent_health_bar_positions;
+    static std::unordered_map<uint32_t, PartyFramePosition> agent_health_bar_positions;
 
     static uint32_t henchmen_start_idx;
     static uint32_t pets_start_idx;
@@ -22,7 +22,7 @@ protected:
 
     static bool RecalculatePartyPositions();
     static bool FetchPartyInfo();
-    static std::pair<ImVec2, ImVec2>* GetAgentHealthBarPosition(uint32_t agent_id);
+    static PartyFramePosition* GetAgentHealthBarPosition(uint32_t agent_id);
 public:
     void Initialize() override;
     void Terminate() override;
