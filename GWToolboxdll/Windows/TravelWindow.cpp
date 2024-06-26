@@ -384,15 +384,15 @@ namespace {
         }
 
         if (argOutpost == L"zv") {
-            GW::Chat::SendChat(GW::Chat::Channel::CHANNEL_COMMAND, L"zv take");
+            GW::Chat::SendChat('/', L"zv travel");
             return;
         }
         if (argOutpost == L"zm") {
-            GW::Chat::SendChat(GW::Chat::Channel::CHANNEL_COMMAND, L"zm take");
+            GW::Chat::SendChat('/', L"zm travel");
             return;
         }
         if (argOutpost == L"zb") {
-            GW::Chat::SendChat(GW::Chat::Channel::CHANNEL_COMMAND, L"zb take");
+            GW::Chat::SendChat('/', L"zb travel");
             return;
         }
 
