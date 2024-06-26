@@ -133,8 +133,7 @@ namespace {
 
 
     // ==== Favorites ====
-    int fav_count = 0;
-    std::vector<int> fav_index{};
+    std::vector<GW::Constants::MapID> favourites{};
 
     // ==== options ====
     bool close_on_travel = false;
@@ -212,6 +211,15 @@ namespace {
             return outpost_ids[index];
         }
         return GW::Constants::MapID::Great_Temple_of_Balthazar_outpost;
+    }
+
+    int OutpostIDToIndex(GW::Constants::MapID map_id)
+    {
+        for (size_t i = 0, size = outpost_ids.size(); i < size; i++) {
+            if (outpost_ids[i] == map_id)
+                return i;
+        }
+        return -1;
     }
 
     bool ParseOutpost(const std::wstring& s, GW::Constants::MapID& outpost, GW::Constants::District& district, const uint32_t&)
@@ -472,15 +480,20 @@ namespace {
         Log::Error("[Error] Did not recognize outpost '%ls'", argOutpost.c_str());
     }
 
+    const char* GetMapName(GW::Constants::MapID map_id) {
+        if (map_id < GW::Constants::MapID::None || map_id > GW::Constants::MapID::Count)
+            return "...";
+        return Resources::GetMapName(map_id)->string().c_str();
+    }
+
     bool outpost_name_array_getter(void* /* _data */, int idx, const char** out_text) {
-        if (idx < 0 || static_cast<size_t>(idx) > outpost_names.size()) {
+        if (idx < 0 || static_cast<size_t>(idx) > outpost_ids.size()) {
             return false;
         }
 
-        *out_text = outpost_names[idx];
+        *out_text = GetMapName(outpost_ids[idx]);
         return true;
     }
-
 }
 
 void TravelWindow::Initialize()
@@ -509,8 +522,11 @@ void TravelWindow::Terminate()
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }
 
-void TravelWindow::TravelButton(const char* text, const int x_idx, const GW::Constants::MapID mapid) const
+void TravelWindow::TravelButton(const GW::Constants::MapID mapid, const int x_idx) const
 {
+    const auto text = GetMapName(mapid);
+    if (!(text && *text))
+        return;
     if (x_idx != 0) {
         ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
     }
@@ -546,16 +562,16 @@ void TravelWindow::Draw(IDirect3DDevice9*)
 
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         if (ImInPresearing()) {
-            TravelButton("Ascalon City", 0, GW::Constants::MapID::Ascalon_City_pre_searing);
-            TravelButton("Ashford Abbey", 1, GW::Constants::MapID::Ashford_Abbey_outpost);
-            TravelButton("Foible's Fair", 0, GW::Constants::MapID::Foibles_Fair_outpost);
-            TravelButton("Fort Ranik", 1, GW::Constants::MapID::Fort_Ranik_pre_Searing_outpost);
-            TravelButton("The Barradin Estate", 0, GW::Constants::MapID::The_Barradin_Estate_outpost);
+            TravelButton(GW::Constants::MapID::Ascalon_City_pre_searing, 0);
+            TravelButton(GW::Constants::MapID::Ashford_Abbey_outpost, 1);
+            TravelButton(GW::Constants::MapID::Foibles_Fair_outpost, 0);
+            TravelButton(GW::Constants::MapID::Fort_Ranik_pre_Searing_outpost, 1);
+            TravelButton(GW::Constants::MapID::The_Barradin_Estate_outpost, 0);
         }
         else {
             ImGui::PushItemWidth(-1.0f);
             static int travelto_index = -1;
-            if (ImGui::MyCombo("travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, outpost_names.size())) {
+            if (ImGui::MyCombo("travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, outpost_ids.size())) {
                 const auto map_id = IndexToOutpostID(travelto_index);
                 Travel(map_id, district, district_number);
                 travelto_index = -1;
@@ -573,32 +589,87 @@ void TravelWindow::Draw(IDirect3DDevice9*)
             }
             ImGui::PopItemWidth();
 
-            TravelButton("ToA", 0, GW::Constants::MapID::Temple_of_the_Ages);
-            TravelButton("DoA", 1, GW::Constants::MapID::Domain_of_Anguish);
-            TravelButton("Kamadan", 0, GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost);
-            TravelButton("Embark", 1, GW::Constants::MapID::Embark_Beach);
-            TravelButton("Vlox's", 0, GW::Constants::MapID::Vloxs_Falls);
-            TravelButton("Gadd's", 1, GW::Constants::MapID::Gadds_Encampment_outpost);
-            TravelButton("Urgoz", 0, GW::Constants::MapID::Urgozs_Warren);
-            TravelButton("Deep", 1, GW::Constants::MapID::The_Deep);
+            TravelButton(GW::Constants::MapID::Temple_of_the_Ages, 0);
+            TravelButton(GW::Constants::MapID::Domain_of_Anguish, 1);
+            TravelButton(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, 0);
+            TravelButton(GW::Constants::MapID::Embark_Beach, 1);
+            TravelButton(GW::Constants::MapID::Vloxs_Falls, 0);
+            TravelButton(GW::Constants::MapID::Gadds_Encampment_outpost, 1);
+            TravelButton(GW::Constants::MapID::Urgozs_Warren, 0);
+            TravelButton(GW::Constants::MapID::The_Deep, 1);
 
-            for (auto i = 0; i < fav_count; i++) {
+            static int editing = -1;
+#
+            const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+            const auto btn_w = (ImGui::GetIO().FontGlobalScale * 30.f);
+            for (size_t i = 0, size = favourites.size(); i < size; i++) {
                 ImGui::PushID(i);
-                ImGui::PushItemWidth(-40.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-                ImGui::MyCombo("", "Select a favorite", &fav_index[static_cast<size_t>(i)], outpost_name_array_getter, nullptr, outpost_names.size());
-                ImGui::PopItemWidth();
-                ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-                if (ImGui::Button("Go", ImVec2(40.0f, 0))) {
-                    TravelFavorite(static_cast<size_t>(i));
+                const auto map_id = favourites[i];
+                if (editing == static_cast<int>(i) || map_id == GW::Constants::MapID::None) {
+
+                    auto btn_count = 4;
+                    if (i == 0 || i + 1 == size)
+                        btn_count--;
+
+                    ImGui::PushItemWidth(((btn_w + spacing) * btn_count) * -1);
+                    // find the index that matches the map from the array of map ids
+                    const auto combo_val = OutpostIDToIndex(map_id);
+                    ImGui::MyCombo("", "Select a favorite",(int*)&combo_val, outpost_name_array_getter, nullptr, outpost_ids.size());
+                    favourites[i] = IndexToOutpostID(combo_val);
+                    ImGui::PopItemWidth();
+                    
+                    if (i > 0) {
+                        ImGui::SameLine();
+                        if (ImGui::ButtonWithHint(ICON_FA_CHEVRON_UP, "Move up", ImVec2(btn_w, 0))) {
+                            auto tmp = favourites[i - 1];
+                            favourites[i - 1] = map_id;
+                            favourites[i] = tmp;
+                            editing = i - 1;
+                        }
+                    }
+                    if (i + 1 < size) {
+                        ImGui::SameLine();
+                        if (ImGui::ButtonWithHint(ICON_FA_CHEVRON_DOWN, "Move down", ImVec2(btn_w, 0))) {
+                            auto tmp = favourites[i + 1];
+                            favourites[i + 1] = map_id;
+                            favourites[i] = tmp;
+                            editing = i + 1;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::ButtonWithHint(ICON_FA_TRASH, "Delete", ImVec2(btn_w, 0))) {
+                        favourites.erase(favourites.begin() + i);
+                        editing = -1;
+                        ImGui::PopID();
+                        break;
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::ButtonWithHint(ICON_FA_CHECK, "Done", ImVec2(btn_w, 0))) {
+                        editing = -1;
+                    }
                 }
+                else {
+                    if (ImGui::Button(GetMapName(static_cast<GW::Constants::MapID>(map_id)), ImVec2((btn_w + spacing) * -1, 0))) {
+                        editing = -1;
+                        TravelFavorite(static_cast<size_t>(i));
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::ButtonWithHint(ICON_FA_PEN, "Edit", ImVec2(btn_w, 0))) {
+                        editing = i;
+                    }
+                }
+
                 ImGui::PopID();
+            }
+            if (ImGui::Button("Add", ImVec2(btn_w * 2, 0))) {
+                favourites.push_back(GW::Constants::MapID::None);
             }
         }
         if (pending_map_travel.map_id != GW::Constants::MapID::None) {
             const auto map_id_it = std::ranges::find(outpost_ids, pending_map_travel.map_id);
             if (map_id_it != std::ranges::end(outpost_ids)) {
                 const auto map_idx = std::distance(outpost_ids.begin(), map_id_it);
-                const auto abort_str = std::format("Abort retrying travel to {}", outpost_names[map_idx]);
+                const auto abort_str = std::format("Abort retrying travel to {}", GetMapName(outpost_ids[map_idx]));
                 if (ImGui::Button(abort_str.c_str())) {
                     pending_map_travel.map_id = GW::Constants::MapID::None;
                 }
@@ -833,10 +904,10 @@ bool TravelWindow::Travel(const GW::Constants::MapID map_id, const GW::Constants
 
 bool TravelWindow::TravelFavorite(const unsigned int idx)
 {
-    if (idx >= fav_index.size()) {
+    if (idx >= favourites.size()) {
         return false;
     }
-    Travel(IndexToOutpostID(fav_index[idx]), district, district_number);
+    Travel(favourites[idx], district, district_number);
 
     return true;
 }
@@ -847,17 +918,6 @@ void TravelWindow::DrawSettingsInternal()
     ImGui::ShowHelp("Will close the travel window when clicking on a travel destination");
     ImGui::Checkbox("Collapse on travel", &collapse_on_travel);
     ImGui::ShowHelp("Will collapse the travel window when clicking on a travel destination");
-    ImGui::PushItemWidth(100.0f);
-    if (ImGui::InputInt("Number of favorites", &fav_count)) {
-        if (fav_count < 0) {
-            fav_count = 0;
-        }
-        if (fav_count > 100) {
-            fav_count = 100;
-        }
-        fav_index.resize(static_cast<size_t>(fav_count), -1);
-    }
-    ImGui::PopItemWidth();
     ImGui::Checkbox("Automatically retry if the district is full", &retry_map_travel);
     ImGui::ShowHelp("Use /tp stop to stop retrying.");
 }
@@ -867,12 +927,15 @@ void TravelWindow::LoadSettings(ToolboxIni* ini)
     ToolboxWindow::LoadSettings(ini);
 
 
-    fav_count = ini->GetLongValue(Name(), VAR_NAME(fav_count), 3);
-    fav_index.resize(static_cast<size_t>(fav_count), -1);
-    for (auto i = 0; i < fav_count; i++) {
+    size_t fav_count = 0;
+    LOAD_UINT(fav_count);
+    favourites.clear();
+    for (size_t i = 0; i < fav_count;i++) {
         char key[32];
-        snprintf(key, 32, "Fav%d", i);
-        fav_index[static_cast<size_t>(i)] = ini->GetLongValue(Name(), key, -1);
+        snprintf(key, _countof(key), "Fav%d", i);
+        const auto map_id = static_cast<GW::Constants::MapID>(ini->GetLongValue(Name(), key, (int)GW::Constants::MapID::None));
+        if (map_id < GW::Constants::MapID::Count && map_id > GW::Constants::MapID::None)
+            favourites.push_back(map_id);
     }
     LOAD_BOOL(close_on_travel);
     LOAD_BOOL(collapse_on_travel);
@@ -882,12 +945,12 @@ void TravelWindow::LoadSettings(ToolboxIni* ini)
 void TravelWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
+    size_t fav_count = favourites.size();
     SAVE_UINT(fav_count);
-    for (auto i = 0; i < fav_count; i++) {
-        const auto ui = static_cast<size_t>(i);
+    for (size_t i = 0, size = favourites.size(); i < size; i++) {
         char key[32];
-        snprintf(key, 32, "Fav%d", i);
-        ini->SetLongValue(Name(), key, fav_index[ui]);
+        snprintf(key, _countof(key), "Fav%d", i);
+        ini->SetLongValue(Name(), key, static_cast<int>(favourites[i]));
     }
     SAVE_BOOL(close_on_travel);
     SAVE_BOOL(collapse_on_travel);

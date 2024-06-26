@@ -59,7 +59,7 @@ public:
     static GW::Constants::MapID GetNearestOutpost(GW::Constants::MapID map_to);
 
 private:
-    void TravelButton(const char* text, const int x_idx, const GW::Constants::MapID mapid) const;
+    void TravelButton(const GW::Constants::MapID mapid, const int x_idx) const;
     // ==== Travel variables ====
     GW::Constants::District district = GW::Constants::District::Current;
     uint32_t district_number = 0;

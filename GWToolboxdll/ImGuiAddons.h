@@ -63,4 +63,6 @@ namespace ImGui {
     // call before ImGui::Render() to clamp all windows to screen - pass false to restore original positions
     // e.g. before saving, or if the user doesn't want the windows clamped
     IMGUI_API void ClampAllWindowsToScreen(bool clamp);
+
+    IMGUI_API bool ButtonWithHint(const char* label, const char* tooltip, const ImVec2& size_arg);
 }

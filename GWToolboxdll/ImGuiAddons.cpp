@@ -563,4 +563,11 @@ namespace ImGui {
             }
         }
     }
+    bool ButtonWithHint(const char* label, const char* tooltip, const ImVec2& size_arg)
+    {
+        bool clicked = ButtonEx(label, size_arg, ImGuiButtonFlags_None);
+        if (IsItemHovered() && tooltip)
+            SetTooltip(tooltip);
+        return clicked;
+    }
 }
