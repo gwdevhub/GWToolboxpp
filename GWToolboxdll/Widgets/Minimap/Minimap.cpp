@@ -74,6 +74,7 @@ namespace {
     float gwinch_scale = 1.f;
 
     bool hide_flagging_controls = false;
+    bool hide_compass_when_minimap_draws = false;
     GW::MemoryPatcher hide_flagging_controls_patch;
 
     GW::UI::Frame* compass_frame = nullptr;
@@ -258,6 +259,9 @@ namespace {
                     SetWindowVisibleTmp(GW::UI::WindowID_Compass, true);
                     break;
                 }
+                if (hide_compass_when_minimap_draws && Minimap::Instance().visible) { // TODO: don't do this every time @Jon
+                    SetWindowVisibleTmp(GW::UI::WindowID_Compass, false);
+                }
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
             } break;
             case 0x4a: // 0x4a need to pass through to allow hotkey flagging
@@ -282,8 +286,8 @@ namespace {
             default:
                 if (hide_flagging_controls) {
                     // Temporarily nullify the pointer to flagging controls for all other message ids
-                    auto prev = compass_context->ai_controls;
-                    compass_context->ai_controls = 0;
+                    const auto prev = compass_context->ai_controls;
+                    compass_context->ai_controls = nullptr;
                     OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                     compass_context->ai_controls = prev;
                 }
@@ -803,6 +807,8 @@ void Minimap::DrawSettingsInternal()
 
     ImGui::Checkbox("Hide GW compass drawings", &hide_compass_drawings);
     ImGui::ShowHelp("Drawings made by other players will be visible on the minimap, but not the compass");
+    ImGui::Checkbox("Hide GW compass when minimap is visible", &hide_compass_when_minimap_draws);
+    ImGui::ShowHelp("Takes effect on map change. Doesn't work in PvP as Toolbox is disabled there.");
     if (ImGui::Checkbox("Hide GW compass flagging controls", &hide_flagging_controls)) {
         hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
     }
@@ -939,6 +945,7 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(hide_compass_quest_marker);
     LOAD_BOOL(hide_compass_drawings);
     LOAD_BOOL(hide_flagging_controls);
+    LOAD_BOOL(hide_compass_when_minimap_draws);
 
     ToggleCompassQuestMarker(hide_compass_quest_marker);
     hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
@@ -982,6 +989,7 @@ void Minimap::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(hide_compass_drawings);
     SAVE_BOOL(render_all_quests);
     SAVE_BOOL(hide_flagging_controls);
+    SAVE_BOOL(hide_compass_when_minimap_draws);
 
     range_renderer.SaveSettings(ini, Name());
     pmap_renderer.SaveSettings(ini, Name());
