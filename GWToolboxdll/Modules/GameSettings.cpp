@@ -1076,6 +1076,20 @@ namespace {
         return p && p->party_leader && *p->party_leader ? p->party_leader : nullptr;
     }
 
+    GW::HookEntry OnPreUIMessage_HookEntry;
+    void OnPreUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*) {
+        switch (message_id) {
+        case GW::UI::UIMessage::kSendCallTarget: {
+            auto packet = (GW::UI::UIPacket::kSendCallTarget*)wParam;
+            const auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
+            if (packet->call_type == GW::CallTargetType::Following && agent
+                && agent->GetIsLivingType() && agent->allegiance == GW::Constants::Allegiance::Enemy) {
+                packet->call_type = GW::CallTargetType::AttackingOrTargetting;
+            }
+        } break;
+        }
+    }
+
     GW::HookEntry OnPostUIMessage_HookEntry;
     void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*) {
         switch (message_id) {
@@ -1436,6 +1450,13 @@ void GameSettings::Initialize()
         RegisterUIMessageCallback(&OnPostSendDialog_Entry, message_id, OnPartyTargetChanged, 0x8000);
     }
 
+    constexpr GW::UI::UIMessage pre_ui_messages[] = {
+        GW::UI::UIMessage::kSendCallTarget
+    };
+    for (const auto message_id : pre_ui_messages) {
+        RegisterUIMessageCallback(&OnPreUIMessage_HookEntry, message_id, OnPreUIMessage, -0x8000);
+    }
+
     constexpr GW::UI::UIMessage post_ui_messages[] = {
         GW::UI::UIMessage::kPartySearchInviteSent
     };
@@ -1707,6 +1728,7 @@ void GameSettings::Terminate()
 
     GW::UI::RemoveUIMessageCallback(&OnQuestUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
+    GW::UI::RemoveUIMessageCallback(&OnPreUIMessage_HookEntry);
 }
 
 void GameSettings::SaveSettings(ToolboxIni* ini)
