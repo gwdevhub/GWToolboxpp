@@ -10,10 +10,11 @@ the latest version, go to the [Home Page](./) instead.
 ## Version 6.22
 * [Minor] /tp [zm, zv, zb] now does the same as /zm take or /zm travel
 * [New] Added highlight info and right click menu to daily quests window to make doing dailies easier
-* [New] Added option to hide gw compass when toolbox minimap is active (refresh on map change)
+* [New] Added option to hide gw compass when toolbox minimap is active
 * [Fix] Fixed compass being hidden when toolbox starts
 * [Fix] Fixed alcohol being spammed too much
 * [Fix] Fixed rounding issues for SkillMonitor width causing wrong pixel offsets
+* [Fix] Fixed crash when offering an item to trade that is already already offered
 
 ## Version 6.21
 * [Fix] Party widgets do not disappear when party members are out of compass range
