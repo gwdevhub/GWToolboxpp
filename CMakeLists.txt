@@ -9,8 +9,6 @@ set(GWTOOLBOXDLL_VERSION "6.22")
 set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not empty.
 set(GWTOOLBOX_MODULE_VERSION "6,22,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
 
-# this is no longer required, but in case we have to add an installer again some day
-# configure_file(${PROJECT_SOURCE_DIR}/gwtoolbox.wxs.in ${PROJECT_SOURCE_DIR}/gwtoolbox.wxs @ONLY)
 
 if(MSVC_TOOLSET_VERSION LESS 143)
     message(FATAL_ERROR "Build using Visual Studio 2022 toolset (v143) or higher. Run cmake with `-T143`. You're currently using ${MSVC_TOOLSET_VERSION}")
