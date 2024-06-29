@@ -8,6 +8,7 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 6.22
+* [Minor] Changed UI layout of travel window
 * [Minor] /tp [zm, zv, zb] now does the same as /zm take or /zm travel
 * [New] Added highlight info and right click menu to daily quests window to make doing dailies easier
 * [New] Added option to hide gw compass when toolbox minimap is active
