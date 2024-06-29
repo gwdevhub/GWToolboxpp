@@ -846,10 +846,10 @@ void Minimap::DrawSettingsInternal()
     ImGui::Checkbox("Hide GW compass drawings", &hide_compass_drawings);
     ImGui::ShowHelp("Drawings made by other players will be visible on the minimap, but not the compass");
     ImGui::Checkbox("Hide GW compass when minimap is visible", &hide_compass_when_minimap_draws);
-    ImGui::ShowHelp("Takes effect on map change. Doesn't work in PvP as Toolbox is disabled there.");
     if (ImGui::Checkbox("Hide GW compass flagging controls", &hide_flagging_controls)) {
         hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
     }
+    ImGui::ShowHelp("Takes effect on map change. Doesn't work in PvP as Toolbox is disabled there.");
 
     is_movable = is_resizable = !snap_to_compass;
     if (is_resizable) {
