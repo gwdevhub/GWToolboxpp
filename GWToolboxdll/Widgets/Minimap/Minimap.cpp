@@ -273,7 +273,7 @@ namespace {
         };
         if(frame && packet.position && frame->IsCreated() && frame->IsVisible() != packet.position->visible())
             return GW::UI::SendUIMessage(GW::UI::UIMessage::kUIPositionChanged, &packet);
-        return true;
+        return false;
     }
 
     CompassContext* compass_context = nullptr;
