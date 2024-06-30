@@ -1645,6 +1645,8 @@ const MapID DailyQuests::QuestData::GetQuestGiverOutpost() { return MapID::None;
 
 DailyQuests::NicholasCycleData* DailyQuests::GetNicholasItemInfo(const wchar_t* item_name_encoded)
 {
+    if (!item_name_encoded)
+        return nullptr;
     for (auto& nicholas_item : nicholas_cycles) {
         if (nicholas_item.enc_name == item_name_encoded) {
             return &nicholas_item;

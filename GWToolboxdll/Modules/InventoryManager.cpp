@@ -461,6 +461,15 @@ namespace {
         }
         pending_moves.clear();
     }
+    void store_all_nicholas_items() {
+        const std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [](const InventoryManager::Item* item) {
+            return item && DailyQuests::GetNicholasItemInfo(item->name_enc);
+            });
+        for (const auto& item : items) {
+            move_item_to_storage(item);
+        }
+        pending_moves.clear();
+    }
 
 
     // Move a whole stack into/out of storage
@@ -507,71 +516,7 @@ namespace {
     AddItemRowToWindow_pt AddItemRowToWindow_Func = nullptr;
     AddItemRowToWindow_pt RetAddItemRowToWindow = nullptr;
 
-    // x, y, z, w; Top, right, bottom, left
-    struct Rect {
-        float top, right, bottom, left;
-
-        bool contains(const GW::Vec2f& pos) const
-        {
-            return pos.x > left
-                   && pos.x < right
-                   && pos.y > top
-                   && pos.y < bottom;
-        }
-
-        Rect() { top = right = bottom = left = 0.0f; }
-
-        Rect(const float _x, const float _y, const float _z, const float _w)
-        {
-            top = _x;
-            right = _y;
-            bottom = _z;
-            left = _w;
-        }
-    };
-
-    Rect& operator*=(Rect& lhs, const float rhs)
-    {
-        lhs.top *= rhs;
-        lhs.bottom *= rhs;
-        lhs.left *= rhs;
-        lhs.right *= rhs;
-        return lhs;
-    }
-
-    Rect operator*(const float lhs, Rect rhs)
-    {
-        rhs *= lhs;
-        return rhs;
-    }
-
-
-    const Rect GetGWWindowPadding()
-    {
-        Rect gw_window_padding = {33.f, 14.f, 14.f, 18.f};
-        gw_window_padding *= GuiUtils::GetGWScaleMultiplier();
-        return gw_window_padding;
-    }
-
-    // Size of a single inv slot on-screen (includes 1px right padding, 2px bottom padding)
-    const GW::Vec2f GetInventorySlotSize()
-    {
-        GW::Vec2f inventory_slot_size = {41.f, 50.f};
-        inventory_slot_size *= GuiUtils::GetGWScaleMultiplier();
-        return inventory_slot_size;
-    }
-
-    // Width of scrollbar on gw windows.
-    constexpr float gw_scrollbar_width = 20.f;
     uint32_t pending_item_move_for_trade = 0;
-
-    bool GetMousePosition(GW::Vec2f& pos)
-    {
-        const ImVec2 imgui_pos = ImGui::GetIO().MousePos;
-        pos.x = static_cast<float>(imgui_pos.x);
-        pos.y = static_cast<float>(imgui_pos.y);
-        return true;
-    }
 
     bool IsTradeWindowOpen()
     {
@@ -2244,6 +2189,13 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
                 if (ImGui::Button("Store All Dyes", size)) {
                     ImGui::CloseCurrentPopup();
                     store_all_dyes();
+                    goto end_popup;
+                }
+            }
+            if (DailyQuests::GetNicholasItemInfo(context_item_actual->name_enc)) {
+                if (ImGui::Button("Store All Nicholas Items", size)) {
+                    ImGui::CloseCurrentPopup();
+                    store_all_nicholas_items();
                     goto end_popup;
                 }
             }
