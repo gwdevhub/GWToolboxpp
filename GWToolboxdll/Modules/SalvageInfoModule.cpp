@@ -37,6 +37,8 @@
 
 using nlohmann::json;
 namespace {
+
+    constexpr size_t salvage_info_page_cache_days = 5;
     // If requesting info from gww for an item fails, how long should we wait before retrying?
     constexpr clock_t salvage_info_retry_interval = CLOCKS_PER_SEC * 30;
 
@@ -331,7 +333,7 @@ namespace {
         }
         const auto url = GuiUtils::WikiUrl(info->en_name.string());
         info->searched_urls.push_back(url);
-        Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(1));
+        Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(salvage_info_page_cache_days));
     }
 
     SalvageInfo* GetSalvageInfo(const wchar_t* single_item_name) {
