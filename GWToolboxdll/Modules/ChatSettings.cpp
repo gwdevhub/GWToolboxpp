@@ -42,7 +42,6 @@ namespace {
     GW::HookEntry SendChatCallback_Entry;
     GW::HookEntry SpeechBubble_Entry;
     GW::HookEntry DisplayDialogue_Entry;
-    GW::HookEntry OnCheckboxPreferenceChanged_Entry;
     GW::HookEntry MessageNPC_Entry;
     GW::HookEntry MessageLocal_Entry;
     GW::HookEntry MessageServer_Entry;
@@ -225,22 +224,6 @@ namespace {
         status->blocked = true; // consume original packet.
     }
 
-    // Disable native timestamps
-    void OnCheckboxPreferenceChanged(GW::HookStatus* status, const GW::UI::UIMessage msgid, void* wParam, const void*)
-    {
-        if (!(msgid == GW::UI::UIMessage::kCheckboxPreference && wParam)) {
-            return;
-        }
-        const GW::UI::FlagPreference pref = *static_cast<GW::UI::FlagPreference*>(wParam); // { uint32_t pref, uint32_t value } - don't care about value atm.
-        if (pref == GW::UI::FlagPreference::ShowChatTimestamps && show_timestamps) {
-            status->blocked = true; // Always block because this UI Message will redraw all timestamps later in the call stack
-            if (show_timestamps && GetPreference(GW::UI::FlagPreference::ShowChatTimestamps) == 1) {
-                Log::Error("Disable GWToolbox timestamps to enable this setting");
-                SetPreference(GW::UI::FlagPreference::ShowChatTimestamps, false);
-            }
-        }
-    }
-
     // Turn /wiki into /wiki <location>
     bool converting_message_into_url = false;
     void OnSendChat(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
@@ -401,7 +384,6 @@ void ChatSettings::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, OnSpeechDialogue);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageNPC>(&MessageNPC_Entry, OnNPCChatMessage);
 
-    RegisterUIMessageCallback(&OnCheckboxPreferenceChanged_Entry, GW::UI::UIMessage::kCheckboxPreference, OnCheckboxPreferenceChanged);
     RegisterUIMessageCallback(&OnPlayerChatMessage_Entry, GW::UI::UIMessage::kPlayerChatMessage, OnPlayerChatMessage);
     RegisterUIMessageCallback(&OnWriteToChatLog_Entry, GW::UI::UIMessage::kWriteToChatLog, OnWriteToChatLog);
     RegisterUIMessageCallback(&StartWhisperCallback_Entry, GW::UI::UIMessage::kStartWhisper, OnStartWhisper);
@@ -419,7 +401,6 @@ void ChatSettings::Terminate()
     GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::MessageNPC>(&MessageNPC_Entry);
 
-    GW::UI::RemoveUIMessageCallback(&OnCheckboxPreferenceChanged_Entry);
     GW::UI::RemoveUIMessageCallback(&OnPlayerChatMessage_Entry);
     GW::UI::RemoveUIMessageCallback(&OnWriteToChatLog_Entry);
     GW::UI::RemoveUIMessageCallback(&StartWhisperCallback_Entry);
@@ -471,6 +452,7 @@ void ChatSettings::DrawSettingsInternal()
         ImGui::TreePop();
         ImGui::Spacing();
     }
+    show_timestamps = GW::UI::GetPreference(GW::UI::FlagPreference::ShowChatTimestamps);
     if (ImGui::Checkbox("Show chat messages timestamp", &show_timestamps)) {
         GW::Chat::ToggleTimestamps(show_timestamps);
     }
