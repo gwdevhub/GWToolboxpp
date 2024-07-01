@@ -241,6 +241,9 @@ public:
     ~HotkeyToggle() override;
     void Save(ToolboxIni* ini, const char* section) const override;
 
+    // Used to ensure that clicker doesn't clog up the event queue
+    static bool processing;
+
     bool Draw() override;
     int Description(char* buf, size_t bufsz) override;
     void Execute() override;

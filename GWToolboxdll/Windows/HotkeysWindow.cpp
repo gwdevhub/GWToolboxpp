@@ -565,16 +565,20 @@ void HotkeysWindow::SaveSettings(ToolboxIni* ini)
 
 bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
 {
+    if (Message == WM_LBUTTONUP && HotkeyToggle::processing) {
+        HotkeyToggle::processing = false;
+    }
     if (Message == WM_ACTIVATE) {
         OnWindowActivated(LOWORD(wParam) != WA_INACTIVE);
-        return false;
-    }
-    if (GW::Chat::GetIsTyping()) {
         return false;
     }
     if (GW::MemoryMgr::GetGWWindowHandle() != GetActiveWindow()) {
         return false;
     }
+    if (GW::Chat::GetIsTyping()) {
+        return false;
+    }
+
     long keyData = 0;
     switch (Message) {
         case WM_KEYDOWN:
