@@ -39,11 +39,11 @@ public:
     protected:
         GuiUtils::EncString* name_english = nullptr;
         GuiUtils::EncString* name_translated = nullptr;
+        std::wstring enc_name;
         // Initialise encoded strings at runtime, allows us to code the daily quests arrays at compile time
         virtual void Decode();
     public:
         const GW::Constants::MapID map_id;
-        std::wstring enc_name;
 
         QuestData(GW::Constants::MapID map_id = (GW::Constants::MapID)0, const wchar_t* enc_name = nullptr);
         // Assert that encoded strings are nulled. Because QuestData structs are static, this destructor is not guaranteed to run!!
@@ -51,6 +51,7 @@ public:
         const char* GetMapName();
         const std::string& GetRegionName();
         const char* GetQuestName();
+        const wchar_t* GetQuestNameEnc();
         const std::wstring& GetWikiName();
         virtual const GW::Constants::MapID GetQuestGiverOutpost();
 

@@ -761,17 +761,21 @@ namespace {
         return buf;
     }
 
-    void PrintDaily(const wchar_t* label, const char* value, const time_t unix, const bool as_wiki_link = true)
+    void PrintDaily(const wchar_t* quest_type_enc, const wchar_t* quest_name_enc, const time_t unix, const bool as_wiki_link = true)
     {
         const bool show_date = unix != time(nullptr);
-        wchar_t buf[139];
+        std::wstring to_send;
+        std::wstring quest_name_as_link = quest_name_enc;
+        if (as_wiki_link) {
+            quest_name_as_link = std::format(L"\x108\x107<a=1>\x200B\x1\x2{}\x2\x108\x107</a>\x1", quest_name_enc);
+        }
         if (show_date) {
-            swprintf(buf, _countof(buf), as_wiki_link ? L"%s, %s: <a=1>\x200B%S</a>" : L"%s, %s: <a=1>%S</a>", label, DateString(&unix), value);
+            to_send = std::format(L"{}\x2\x108\x107, {}: \x1\x2{}", quest_type_enc, DateString(&unix), quest_name_as_link);
         }
         else {
-            swprintf(buf, _countof(buf), as_wiki_link ? L"%s: <a=1>\x200B%S</a>" : L"%s: %S", label, value);
+            to_send = std::format(L"{}\x2\x108\x107: \x1\x2{}", quest_type_enc, quest_name_as_link);
         }
-        WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buf, nullptr, true);
+        WriteChatEnc(GW::Chat::Channel::CHANNEL_GLOBAL, to_send.c_str(), nullptr, true);
     }
 
     void CmdDaily(const wchar_t* quest_type, const std::function<DailyQuests::QuestData*(time_t)>& get_quest_func, int argc, const LPWSTR* argv)
@@ -785,43 +789,43 @@ namespace {
             pending_quest_take = quest;
             return;
         }
-        PrintDaily(quest_type, quest->GetQuestName(), now);
+        PrintDaily(quest_type, quest->GetQuestNameEnc(), now);
     }
 
     void CHAT_CMD_FUNC(CmdWeeklyBonus)
     {
-        CmdDaily(L"Weekly Bonus PvE", DailyQuests::GetWeeklyPvEBonus, argc, argv);
-        CmdDaily(L"Weekly Bonus PvP", DailyQuests::GetWeeklyPvPBonus, argc, argv);
+        CmdDaily(L"\x108\x107Weekly Bonus PvE\x1", DailyQuests::GetWeeklyPvEBonus, argc, argv);
+        CmdDaily(L"\x108\x107Weekly Bonus PvP\x1", DailyQuests::GetWeeklyPvPBonus, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdZaishenBounty)
     {
-        CmdDaily(L"Zaishen Bounty", DailyQuests::GetZaishenBounty, argc, argv);
+        CmdDaily(GW::EncStrings::ZaishenBounty, DailyQuests::GetZaishenBounty, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdZaishenMission)
     {
-        CmdDaily(L"Zaishen Mission", DailyQuests::GetZaishenMission, argc, argv);
+        CmdDaily(GW::EncStrings::ZaishenMission, DailyQuests::GetZaishenMission, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdZaishenVanquish)
     {
-        CmdDaily(L"Zaishen Vanquish", DailyQuests::GetZaishenVanquish, argc, argv);
+        CmdDaily(GW::EncStrings::ZaishenVanquish, DailyQuests::GetZaishenVanquish, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdZaishenCombat)
     {
-        CmdDaily(L"Zaishen Combat", DailyQuests::GetZaishenCombat, argc, argv);
+        CmdDaily(GW::EncStrings::ZaishenCombat, DailyQuests::GetZaishenCombat, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdWantedByShiningBlade)
     {
-        CmdDaily(L"Wanted", DailyQuests::GetWantedByShiningBlade, argc, argv);
+        CmdDaily(GW::EncStrings::WantedByTheShiningBlade, DailyQuests::GetWantedByShiningBlade, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdVanguard)
     {
-        CmdDaily(L"Vanguard Quest", DailyQuests::GetVanguardQuest, argc, argv);
+        CmdDaily(L"\x108\x107Vanguard Quest\x1", DailyQuests::GetVanguardQuest, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdNicholas)
@@ -830,17 +834,17 @@ namespace {
         if (argc > 1 && !wcscmp(argv[1], L"tomorrow")) {
             now += 86400;
         }
-        std::string buf;
+        std::wstring buf;
 
         if (GetIsPreSearing()) {
-            buf = std::format("5 {}", DailyQuests::GetNicholasSandford(now)->GetQuestName());
+            buf = std::format(L"\x108\x107{} \x1\x2{}", 5, DailyQuests::GetNicholasSandford(now)->GetQuestNameEnc());
 
-            PrintDaily(L"Nicholas Sandford", buf.c_str(), now, false);
+            PrintDaily(L"\x108\x107Nicholas Sandford\x1", buf.c_str(), now, false);
         }
         else {
             const auto nick = DailyQuests::GetNicholasTheTraveller(now);
-            buf = std::format("{} ({})", nick->GetQuestName(), nick->GetMapName());
-            PrintDaily(L"Nicholas the Traveler", buf.c_str(), now, false);
+            buf = std::format(L"{}\x2\x108\x107 (\x1\x2{}\x2\x108\x107)\x1", nick->GetQuestNameEnc(), Resources::GetMapName(nick->map_id)->encoded());
+            PrintDaily(GW::EncStrings::NicholasTheTraveller, buf.c_str(), now, false);
         }
     }
 
@@ -1595,6 +1599,11 @@ void DailyQuests::QuestData::Decode()
     GetMapName();
 }
 
+const wchar_t* DailyQuests::QuestData::GetQuestNameEnc()
+{
+    return name_translated->encoded().c_str();
+}
+
 const char* DailyQuests::QuestData::GetQuestName()
 {
     Decode();
@@ -1648,7 +1657,7 @@ DailyQuests::NicholasCycleData* DailyQuests::GetNicholasItemInfo(const wchar_t* 
     if (!item_name_encoded)
         return nullptr;
     for (auto& nicholas_item : nicholas_cycles) {
-        if (nicholas_item.enc_name == item_name_encoded) {
+        if (nicholas_item.GetQuestNameEnc() == item_name_encoded) {
             return &nicholas_item;
         }
     }
