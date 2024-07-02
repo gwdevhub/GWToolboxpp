@@ -1657,7 +1657,7 @@ DailyQuests::NicholasCycleData* DailyQuests::GetNicholasItemInfo(const wchar_t* 
     if (!item_name_encoded)
         return nullptr;
     for (auto& nicholas_item : nicholas_cycles) {
-        if (nicholas_item.GetQuestNameEnc() == item_name_encoded) {
+        if (nicholas_item.enc_name == item_name_encoded) {
             return &nicholas_item;
         }
     }
