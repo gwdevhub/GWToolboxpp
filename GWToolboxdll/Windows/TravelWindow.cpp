@@ -383,6 +383,11 @@ namespace {
             return;
         }
 
+        if (argOutpost == L"nick" || argOutpost == L"nicholas") {
+            const auto nick = DailyQuests::GetNicholasTheTraveller();
+            Instance().TravelNearest(nick->map_id);
+            return;
+        }
         if (argOutpost == L"zv") {
             GW::Chat::SendChat('/', L"zv travel");
             return;
