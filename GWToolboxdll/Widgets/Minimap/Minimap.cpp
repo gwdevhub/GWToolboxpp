@@ -1469,10 +1469,6 @@ void Minimap::SelectTarget(const GW::Vec2f pos)
 
 bool Minimap::WndProc(const UINT Message, const WPARAM wParam, const LPARAM lParam)
 {
-    if (!GetKeyState(VK_LBUTTON) && mousedown) {
-        // fix left button being released outside of gw window
-        mousedown = false;
-    }
     if (!IsActive()) {
         return false;
     }
@@ -1632,13 +1628,20 @@ bool Minimap::OnMouseMove(const UINT, const WPARAM, const LPARAM lParam)
         return false;
     }
 
+    if (!GetKeyState(VK_LBUTTON)) {
+        mousedown = false;
+    }
+
     if (!mousedown) {
         return false;
     }
 
     const int x = GET_X_LPARAM(lParam);
     const int y = GET_Y_LPARAM(lParam);
-    // if (!IsInside(x, y)) return false;
+    if (!IsInside(x, y)) {
+        mousedown = false;
+        return false;
+    }
 
     if (IsKeyDown(MinimapModifierBehaviour::Target)) {
         SelectTarget(InterfaceToWorldPoint(Vec2i(x, y)));
