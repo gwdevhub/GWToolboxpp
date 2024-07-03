@@ -848,33 +848,33 @@ namespace {
         }
     }
 
-    const char* GetIncompleteStatusMessage(MapID mission_map_id)
+    const char* GetIncompleteStatusMessage(MapID map_id)
     {
         const char* incomplete_hard_mode = "This character hasn't completed this in hard mode";
         const char* incomplete_normal_mode = "This character hasn't completed this in normal mode";
 
         const auto w = GW::GetWorldContext();
-        const auto map = w ? GW::Map::GetMapInfo(mission_map_id) : nullptr;
+        const auto map = w ? GW::Map::GetMapInfo(map_id) : nullptr;
         if (!map) return nullptr;
         if (map->type == GW::RegionType::ExplorableZone) {
-            if (!ToolboxUtils::ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(mission_map_id))) {
+            if (!ToolboxUtils::ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(map_id))) {
                 return incomplete_hard_mode;
             }
             return nullptr;
         }
 
         const bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
-        if (!ToolboxUtils::ArrayBoolAt(w->missions_completed, static_cast<uint32_t>(mission_map_id))) {
+        if (!ToolboxUtils::ArrayBoolAt(w->missions_completed, static_cast<uint32_t>(map_id))) {
             return incomplete_normal_mode;
         }
-        if (!ToolboxUtils::ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(mission_map_id))) {
+        if (!ToolboxUtils::ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(map_id))) {
             return incomplete_hard_mode;
         }
         if (has_bonus) {
-            if (!ToolboxUtils::ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(mission_map_id))) {
+            if (!ToolboxUtils::ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(map_id))) {
                 return incomplete_normal_mode;
             }
-            if (!ToolboxUtils::ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(mission_map_id))) {
+            if (!ToolboxUtils::ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(map_id))) {
                 return incomplete_hard_mode;
             }
         }
