@@ -763,7 +763,7 @@ void HotkeySendChat::Execute()
         return;
     }
     if (show_message_in_emote_channel && channel == L'/') {
-        Log::Info("/%s", message);
+        Log::Flash("/%s", message);
     }
     GW::Chat::SendChat(channel, message);
 }
@@ -1401,10 +1401,10 @@ void HotkeyToggle::Toggle()
     if (ongoing || (!ongoing && !toggled[togglekey])) {
         switch (target) {
             case Clicker:
-                Log::Info("Clicker is %s", ongoing ? "active" : "disabled");
+                Log::Flash("Clicker is %s", ongoing ? "active" : "disabled");
                 break;
             case CoinDrop:
-                Log::Info("Coindrop is %s", ongoing ? "active" : "disabled");
+                Log::Flash("Coindrop is %s", ongoing ? "active" : "disabled");
                 break;
         }
     }
@@ -1634,7 +1634,7 @@ void HotkeyTarget::Execute()
     if (show_message_in_emote_channel) {
         char buf[256];
         Description(buf, 256);
-        Log::Info("Triggered %s", buf);
+        Log::Flash("Triggered %s", buf);
     }
 }
 
@@ -1730,12 +1730,12 @@ void HotkeyMove::Execute()
     GW::Agents::Move(location.x, location.y);
     if (name[0] == '\0') {
         if (show_message_in_emote_channel) {
-            Log::Info("Moving to (%.0f, %.0f)", x, y);
+            Log::Flash("Moving to (%.0f, %.0f)", x, y);
         }
     }
     else {
         if (show_message_in_emote_channel) {
-            Log::Info("Moving to %s", name);
+            Log::Flash("Moving to %s", name);
         }
     }
 }
@@ -1786,7 +1786,7 @@ void HotkeyDialog::Execute()
 
     GW::Chat::SendChat('/', buf);
     if (show_message_in_emote_channel) {
-        Log::Info("Sent dialog %s (%d)", name, id);
+        Log::Flash("Sent dialog %s (%d)", name, id);
     }
 }
 

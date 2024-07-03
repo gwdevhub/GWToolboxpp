@@ -156,7 +156,7 @@ namespace {
             }
             item_to_search += GuiUtils::WStringToString(argv[i]);
         }
-        Log::Info("Searching trade for \"%s\"...", item_to_search.c_str());
+        Log::Flash("Searching trade for \"%s\"...", item_to_search.c_str());
         search(item_to_search, true);
     }
 
@@ -375,7 +375,7 @@ void TradeWindow::fetch()
                     if (local_tm) {
                         wchar_t buf[512];
                         swprintf(buf, 512, L"<a=1>%s</a> @ %S %d, %02d:%02d: <c=#f96677><quote>%s", name_ws.c_str(), months[local_tm->tm_mon], local_tm->tm_mday, local_tm->tm_hour, local_tm->tm_min, msg_ws.c_str());
-                        WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buf);
+                        WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buf,nullptr,true);
                     }
                 }
             }

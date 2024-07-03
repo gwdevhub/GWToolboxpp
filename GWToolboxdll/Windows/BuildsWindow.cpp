@@ -97,7 +97,7 @@ void BuildsWindow::OnSkillbarLoad(GW::HookStatus*, const GW::UI::UIMessage messa
     if (found && memcmp(pack->skills, found, sizeof(pack->skills)) != 0) {
         // Copy across the new order before the send is done
         memcpy(pack->skills, found, sizeof(pack->skills));
-        Log::Info("Preferred skill order loaded");
+        Log::Flash("Preferred skill order loaded");
     }
 }
 
@@ -503,7 +503,7 @@ void BuildsWindow::DrawPreferredSkillOrders(IDirect3DDevice9*)
         snprintf(btn_label, sizeof(btn_label), "%s Remove###remove_preferred_skill_order_%d", reinterpret_cast<const char*>(ICON_FA_TRASH), j);
         if (ImGui::Button(btn_label, ImVec2(0, skill_height))) {
             preferred_skill_order_builds.erase(preferred_skill_order_builds.begin() + j);
-            Log::Info("Preferred skill order removed");
+            Log::Flash("Preferred skill order removed");
             j--;
         }
     }
@@ -526,7 +526,7 @@ void BuildsWindow::DrawPreferredSkillOrders(IDirect3DDevice9*)
         }
         else {
             builds_changed = true;
-            Log::Info("Preferred skill order updated");
+            Log::Flash("Preferred skill order updated");
         }
     }
     ImGui::End();
@@ -614,7 +614,7 @@ void BuildsWindow::Load(const TeamBuild& tbuild, const unsigned int idx) const
     }
     if (!tbuild.edit_open) {
         char buf[192] = {0};
-        Log::Info("Build loaded: %s", BuildSkillTemplateString(tbuild, idx, buf, 192) ? buf : build.code);
+        Log::Flash("Build loaded: %s", BuildSkillTemplateString(tbuild, idx, buf, 192) ? buf : build.code);
     }
     LoadPcons(tbuild, idx);
 }
@@ -723,7 +723,7 @@ void BuildsWindow::LoadPcons(const TeamBuild& tbuild, const unsigned int idx) co
             pcons_str += pcon->abbrev;
         }
         const char* str = pcons_str.c_str();
-        Log::Info("Pcons loaded: %s", str);
+        Log::Flash("Pcons loaded: %s", str);
     }
     if (pcons_not_visible.size()) {
         std::string pcons_str;

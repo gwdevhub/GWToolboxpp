@@ -444,7 +444,7 @@ void TimerWidget::Initialize()
     in_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
     GW::Chat::CreateCommand(L"resettimer", [](GW::HookStatus*, const wchar_t*, const int, const LPWSTR*) {
         reset_next_loading_screen = true;
-        Log::Info("Resetting timer at the next loading screen.");
+        Log::Flash("Resetting timer at the next loading screen.");
     });
     GW::Chat::CreateCommand(L"timerreset", [](GW::HookStatus*,const wchar_t*, const int, const LPWSTR*) {
         reset_next_loading_screen = true;

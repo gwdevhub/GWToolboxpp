@@ -1545,7 +1545,7 @@ void GameSettings::MessageOnPartyChange()
             if (!found) {
                 wchar_t buffer[128];
                 swprintf(buffer, 128, L"<a=1>%ls</a> joined the party.", current_party_names[i].c_str());
-                WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+                WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer, nullptr, true);
             }
         }
     }
@@ -1562,7 +1562,7 @@ void GameSettings::MessageOnPartyChange()
             if (!found) {
                 wchar_t buffer[128];
                 swprintf(buffer, 128, L"<a=1>%ls</a> left the party.", previous_party_names[i].c_str());
-                WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer);
+                WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer, nullptr, true);
             }
         }
     }
@@ -2202,12 +2202,12 @@ void GameSettings::OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::Playe
     }
     if (notify_when_friends_join_outpost) {
         if (const auto f = GetFriend(nullptr, pak->player_name, GW::FriendType::Friend, GW::FriendStatus::Online)) {
-            WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> ({}) entered the outpost.", f->charname, f->alias).c_str());
+            WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> ({}) entered the outpost.", f->charname, f->alias).c_str(), nullptr, true);
             return;
         }
     }
     if (notify_when_players_join_outpost) {
-        WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> entered the outpost.", pak->player_name).c_str());
+        WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> entered the outpost.", pak->player_name).c_str(), nullptr, true);
     }
 }
 

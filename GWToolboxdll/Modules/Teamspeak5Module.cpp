@@ -269,7 +269,7 @@ namespace {
             }
             else {
                 if (user_invoked) {
-                    Log::Info("Teamspeak 5 connected");
+                    Log::Flash("Teamspeak 5 connected");
                 }
                 SendTeamspeakHandshake();
                 GW::Chat::CreateCommand(L"ts", OnTeamspeakCommand);

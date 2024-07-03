@@ -23,6 +23,8 @@ namespace {
     };
 
     [[maybe_unused]] bool crash_dumped = false;
+
+    bool log_transient = false;
 }
 
 static void GWCALogHandler(
@@ -177,7 +179,7 @@ static void _chatlog(const LogType log_type, const wchar_t* message)
     swprintf(to_send, len - 1, L"<a=1>%s</a><c=#%6X>: %s</c>", GWTOOLBOX_SENDER, color, message);
 
     GW::GameThread::Enqueue([to_send] {
-        WriteChat(GWTOOLBOX_CHAN, to_send, nullptr);
+        WriteChat(GWTOOLBOX_CHAN, to_send, nullptr, log_transient);
         delete[] to_send;
     });
 
@@ -213,6 +215,25 @@ static void _vchatlog(const LogType log_type, const char* format, const va_list 
     _chatlog(log_type, sbuf2.c_str());
 }
 
+void Log::Flash(const char* format, ...)
+{
+    va_list vl;
+    va_start(vl, format);
+    log_transient = true;
+    _vchatlog(LogType_Info, format, vl);
+    log_transient = false;
+    va_end(vl);
+}
+void Log::FlashW(const wchar_t* format, ...)
+{
+    va_list vl;
+    va_start(vl, format);
+    log_transient = true;
+    _vchatlogW(LogType_Info, format, vl);
+    log_transient = false;
+    va_end(vl);
+}
+
 void Log::Info(const char* format, ...)
 {
     va_list vl;
@@ -233,7 +254,9 @@ void Log::Error(const char* format, ...)
 {
     va_list vl;
     va_start(vl, format);
+    log_transient = true;
     _vchatlog(LogType_Error, format, vl);
+    log_transient = false;
     va_end(vl);
 }
 
@@ -241,7 +264,9 @@ void Log::ErrorW(const wchar_t* format, ...)
 {
     va_list vl;
     va_start(vl, format);
+    log_transient = true;
     _vchatlogW(LogType_Error, format, vl);
+    log_transient = false;
     va_end(vl);
 }
 
@@ -249,7 +274,9 @@ void Log::Warning(const char* format, ...)
 {
     va_list vl;
     va_start(vl, format);
+    log_transient = true;
     _vchatlog(LogType_Warning, format, vl);
+    log_transient = false;
     va_end(vl);
 }
 
@@ -257,6 +284,8 @@ void Log::WarningW(const wchar_t* format, ...)
 {
     va_list vl;
     va_start(vl, format);
+    log_transient = true;
     _vchatlogW(LogType_Warning, format, vl);
+    log_transient = false;
     va_end(vl);
 }

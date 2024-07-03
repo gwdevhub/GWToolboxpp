@@ -75,7 +75,7 @@ namespace {
             GW::UI::AsyncDecodeStr(map->enc_desc, &map->description);
             maps.emplace(map_id, map);
         }
-        Log::Info("Fetching map info now");
+        Log::Flash("Fetching map info now");
     }
 
     void ExportMapInfo()

@@ -915,7 +915,7 @@ void GWToolbox::UpdateInitialising(float)
     if (!greeted && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
         const auto* c = GW::GetCharContext();
         if (c && c->player_name) {
-            Log::InfoW(L"Hello!");
+            Log::Flash("Hello!");
             greeted = true;
         }
     }

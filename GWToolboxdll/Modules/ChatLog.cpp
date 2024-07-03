@@ -98,6 +98,16 @@ namespace {
         return ptr && ((size_t)ptr & 3) == 0;
     }
 
+    void ForceRedrawChatLog() {
+        GW::GameThread::Enqueue([]() {
+            struct {
+                GW::UI::FlagPreference pref = GW::UI::FlagPreference::ShowChatTimestamps;
+                uint32_t val = static_cast<uint32_t>(GW::UI::GetPreference(GW::UI::FlagPreference::ShowChatTimestamps));
+            } packet;
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kCheckboxPreference, &packet);
+            });
+    }
+
 
     GW::Chat::ChatMessage* GetLastLoggedMessage() {
         const auto log = GW::Chat::GetChatLog();
@@ -485,6 +495,7 @@ namespace {
         }
         InjectSent();
         injecting = false;
+        ForceRedrawChatLog();
     }
 
     // Set up chat log, load from file if applicable. Returns true if initialised

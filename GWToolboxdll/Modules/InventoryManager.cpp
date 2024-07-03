@@ -1275,7 +1275,7 @@ void InventoryManager::ContinueTransaction()
             }
             // Check if we need any more of this item; send quote if yes, complete if no.
             if (pending_transaction_amount <= 0) {
-                Log::Info("Transaction complete");
+                Log::Flash("Transaction complete");
                 CancelTransaction();
                 return;
             }
@@ -1793,7 +1793,7 @@ void InventoryManager::DrawSettingsInternal()
         const bool clicked = ImGui::Button(" X ");
         ImGui::PopID();
         if (clicked) {
-            Log::Info("Removed Item %s with ID (%d)", item_name.c_str(), item_id);
+            Log::Flash("Removed Item %s with ID (%d)", item_name.c_str(), item_id);
             hide_from_merchant_items.erase(item_id);
             break;
         }
@@ -1811,7 +1811,7 @@ void InventoryManager::DrawSettingsInternal()
         const auto new_id = static_cast<uint16_t>(new_item_id);
         if (!hide_from_merchant_items.contains(new_id)) {
             hide_from_merchant_items[new_id] = std::string(buf);
-            Log::Info("Added Item %s with ID (%d)", buf, new_id);
+            Log::Flash("Added Item %s with ID (%d)", buf, new_id);
             std::ranges::fill(buf, '\0');
             new_item_id = 0;
         }

@@ -276,7 +276,7 @@ void Updater::CheckForUpdate(const bool forced)
         // Reminder: do not send stuff to gw chat from this thread!
         if (!GetLatestRelease(&latest_release)) {
             // Error getting server version. Server down? We can do nothing.
-            Log::Info("Error checking for updates");
+            Log::Flash("Error checking for updates");
             step = Done;
             return;
         }
@@ -285,7 +285,7 @@ void Updater::CheckForUpdate(const bool forced)
             // Version and size match
             step = Done;
             if (forced) {
-                Log::Info("GWToolbox++ is up-to-date");
+                Log::Flash("GWToolbox++ is up-to-date");
             }
             return;
         }

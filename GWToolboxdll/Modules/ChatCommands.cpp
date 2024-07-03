@@ -352,10 +352,10 @@ namespace {
         if (argc < 2) {
             const auto current_limit = GW::UI::GetFrameLimit();
             if (!current_limit) {
-                Log::Info("Frame limit is not set");
+                Log::Flash("Frame limit is not set");
             }
             else {
-                Log::Info("Frame limit set to %dfps", current_limit);
+                Log::Flash("Frame limit set to %dfps", current_limit);
             }
         }
         uint32_t frame_limit = 0;
@@ -1937,7 +1937,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdCamera)
         }
         else if (arg1 == L"unlock") {
             GW::CameraMgr::UnlockCam(true);
-            Log::Info("Use Q/E, A/D, W/S, X/Z, R and arrows for camera movement");
+            Log::Flash("Use Q/E, A/D, W/S, X/Z, R and arrows for camera movement");
         }
         else if (arg1 == L"fog") {
             if (argc == 3) {
@@ -1968,7 +1968,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdCamera)
                         return;
                     }
                     Instance().cam_speed = speed;
-                    Log::Info("Camera speed is now %f", speed);
+                    Log::Flash("Camera speed is now %f", speed);
                 }
             }
         }

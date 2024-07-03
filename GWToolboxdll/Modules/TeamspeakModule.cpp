@@ -322,7 +322,7 @@ namespace {
         Log::Log("Teamspeak 3 auth response:\n%s", response->content.c_str());
 
         if (user_invoked) {
-            Log::Info("Teamspeak 3 connected");
+            Log::Flash("Teamspeak 3 connected");
         }
 
         GW::Chat::CreateCommand(L"ts", OnTeamspeakCommand);

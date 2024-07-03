@@ -1515,19 +1515,19 @@ void DailyQuests::Update(const float)
                     break;
             }
             if (subscribed_zaishen_missions[quest_idx = GetZaishenMissionIdx(&unix)]) {
-                Log::Info("%s is the Zaishen Mission %s", zaishen_mission_cycles[quest_idx].GetQuestName(), date_str);
+                Log::Flash("%s is the Zaishen Mission %s", zaishen_mission_cycles[quest_idx].GetQuestName(), date_str);
             }
             if (subscribed_zaishen_bounties[quest_idx = GetZaishenBountyIdx(&unix)]) {
-                Log::Info("%s is the Zaishen Bounty %s", zaishen_bounty_cycles[quest_idx].GetQuestName(), date_str);
+                Log::Flash("%s is the Zaishen Bounty %s", zaishen_bounty_cycles[quest_idx].GetQuestName(), date_str);
             }
             if (subscribed_zaishen_combats[quest_idx = GetZaishenCombatIdx(&unix)]) {
-                Log::Info("%s is the Zaishen Combat %s", zaishen_combat_cycles[quest_idx].GetQuestName(), date_str);
+                Log::Flash("%s is the Zaishen Combat %s", zaishen_combat_cycles[quest_idx].GetQuestName(), date_str);
             }
             if (subscribed_zaishen_vanquishes[quest_idx = GetZaishenVanquishIdx(&unix)]) {
-                Log::Info("%s is the Zaishen Vanquish %s", zaishen_vanquish_cycles[quest_idx].GetQuestName(), date_str);
+                Log::Flash("%s is the Zaishen Vanquish %s", zaishen_vanquish_cycles[quest_idx].GetQuestName(), date_str);
             }
             if (subscribed_wanted_quests[quest_idx = GetWantedByShiningBladeIdx(&unix)]) {
-                Log::Info("%s is Wanted by the Shining Blade %s", wanted_by_shining_blade_cycles[quest_idx].GetQuestName(), date_str);
+                Log::Flash("%s is Wanted by the Shining Blade %s", wanted_by_shining_blade_cycles[quest_idx].GetQuestName(), date_str);
             }
             unix += 86400;
         }
@@ -1545,10 +1545,10 @@ void DailyQuests::Update(const float)
                     break;
             }
             if (subscribed_weekly_bonus_pve[quest_idx = GetWeeklyBonusPvPIdx(&unix)]) {
-                Log::Info("%s is the Weekly PvE Bonus %s", pve_weekly_bonus_cycles[quest_idx].GetQuestName(), date_str);
+                Log::Flash("%s is the Weekly PvE Bonus %s", pve_weekly_bonus_cycles[quest_idx].GetQuestName(), date_str);
             }
             if (subscribed_weekly_bonus_pvp[quest_idx = GetWeeklyBonusPvPIdx(&unix)]) {
-                Log::Info("%s is the Weekly PvP Bonus %s", pvp_weekly_bonus_cycles[quest_idx].GetQuestName(), date_str);
+                Log::Flash("%s is the Weekly PvP Bonus %s", pvp_weekly_bonus_cycles[quest_idx].GetQuestName(), date_str);
             }
             unix += 604800;
         }

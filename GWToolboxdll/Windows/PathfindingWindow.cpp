@@ -209,7 +209,7 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
         }
         pending_redraw = false;
         pending_undraw = TIMER_INIT() + 10000;
-        Log::Info("Path drawn on minimap");
+        Log::Flash("Path drawn on minimap");
     }
     if (pending_undraw && TIMER_INIT() > pending_undraw) {
         for (auto line : minimap_lines) {

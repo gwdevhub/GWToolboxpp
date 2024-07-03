@@ -222,8 +222,8 @@ namespace Pathing {
             volatile clock_t stop = clock();
 
 
-            Log::Info("Processing %s\n", m_terminateThread ? "terminated." : "done.");
-            Log::Info("processing time: %d ms\n", stop - start);
+            Log::Flash("Processing %s\n", m_terminateThread ? "terminated." : "done.");
+            Log::Flash("processing time: %d ms\n", stop - start);
             m_processing = false;
             m_done = true;
             m_progress = 100;
@@ -441,7 +441,7 @@ namespace Pathing {
                 }
             }
         }
-        Log::Info("Portal count: %d\n", m_portals.size());
+        Log::Flash("Portal count: %d\n", m_portals.size());
     }
 
     void MilePath::GeneratePoints() {
@@ -461,7 +461,7 @@ namespace Pathing {
             m_points[i].id = i; 
         };
 
-        Log::Info("Number of points: %d\n", m_points.size());
+        Log::Flash("Number of points: %d\n", m_points.size());
     }
 
     bool MilePath::IsOnPathingTrapezoid(const Vec2f &p, const SimplePT **ppt) {
@@ -931,7 +931,7 @@ namespace Pathing {
         }
 
         volatile clock_t stop_timestamp = clock();
-        Log::Info("Find path: %d ms\n", stop_timestamp - start_timestamp);
+        Log::Flash("Find path: %d ms\n", stop_timestamp - start_timestamp);
         m_path.finalize();
         return m_path.ready() ? Error::OK : Error::FailedToFinializePath;
     }

@@ -142,7 +142,7 @@ void AprilFools::SetEnabled(const bool is_enabled)
                 player_agents.emplace(player.agent_id, agent);
             }
         }
-        Log::Info("April Fools 2020 enabled. Type '/aprilfools' to disable it");
+        Log::Flash("April Fools 2020 enabled. Type '/aprilfools' to disable it");
         AddListeners();
     }
     else {
@@ -150,7 +150,7 @@ void AprilFools::SetEnabled(const bool is_enabled)
             SetInfected(agent.second, false);
         }
         player_agents.clear();
-        Log::Info("April Fools 2020 disabled. Type '/aprilfools' to enable it");
+        Log::Flash("April Fools 2020 disabled. Type '/aprilfools' to enable it");
         RemoveListeners();
     }
 }

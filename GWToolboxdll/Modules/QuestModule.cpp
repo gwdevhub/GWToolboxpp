@@ -171,7 +171,7 @@ namespace {
         const auto quest = GW::QuestMgr::GetActiveQuest();
         if (!quest)
             return;
-        Log::Info("Overriding quest marker from %.2f, %.2f to %.2f, %.2f", quest->marker.x, quest->marker.y, new_marker.x, new_marker.y);
+        Log::Flash("Overriding quest marker from %.2f, %.2f to %.2f, %.2f", quest->marker.x, quest->marker.y, new_marker.x, new_marker.y);
         if (quest->marker == new_marker)
             return; // No change
 

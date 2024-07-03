@@ -847,11 +847,11 @@ void Obfuscator::Obfuscate(const bool obfuscate)
     }
     if (obfuscate) {
         pending_state = ObfuscatorState::Enabled;
-        Log::Info("Player name will be hidden on next map change");
+        Log::Flash("Player name will be hidden on next map change");
     }
     else {
         pending_state = ObfuscatorState::Disabled;
-        Log::Info("Player name will be visible on next map change");
+        Log::Flash("Player name will be visible on next map change");
     }
 }
 

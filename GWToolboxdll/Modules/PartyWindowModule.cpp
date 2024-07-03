@@ -657,7 +657,7 @@ void PartyWindowModule::DrawSettingsInternal()
         const bool clicked = ImGui::Button(" X ");
         ImGui::PopID();
         if (clicked) {
-            Log::Info("Removed special NPC %s (%d)", npc->alias.c_str(), npc->model_id);
+            Log::Flash("Removed special NPC %s (%d)", npc->alias.c_str(), npc->model_id);
             RemoveSpecialNPC(npc->model_id);
             CheckMap();
             break;
@@ -687,7 +687,7 @@ void PartyWindowModule::DrawSettingsInternal()
             return Log::Error("Special NPC %s is already defined for model_id %d", it->second->alias.c_str(), new_npc_model_id);
         }
         AddSpecialNPC({alias_str.c_str(), new_npc_model_id, static_cast<GW::Constants::MapID>(new_npc_map_id)});
-        Log::Info("Added special NPC %s (%d)", alias_str.c_str(), new_npc_model_id);
+        Log::Flash("Added special NPC %s (%d)", alias_str.c_str(), new_npc_model_id);
         CheckMap();
     }
 }

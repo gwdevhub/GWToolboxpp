@@ -333,7 +333,7 @@ void PconsWindow::OnVanquishComplete(GW::HookStatus*, GW::Packet::StoC::Vanquish
         return;
     }
     instance.SetEnabled(false);
-    Log::Info("Cons auto-disabled on completion");
+    Log::Flash("Cons auto-disabled on completion");
 }
 
 void CHAT_CMD_FUNC(PconsWindow::CmdPcons) {
@@ -557,7 +557,7 @@ bool PconsWindow::SetEnabled(const bool b)
             const ImGuiWindow* main = ImGui::FindWindowByName(MainWindow::Instance().Name());
             const ImGuiWindow* pcon = ImGui::FindWindowByName(Name());
             if ((pcon == nullptr || pcon->Collapsed || !visible) && (main == nullptr || main->Collapsed || !MainWindow::Instance().visible)) {
-                Log::Info("Pcons %s", enabled ? "enabled" : "disabled");
+                Log::Flash("Pcons %s", enabled ? "enabled" : "disabled");
             }
             break;
         }
@@ -623,7 +623,7 @@ void PconsWindow::CheckObjectivesCompleteAutoDisable()
     if (objective_complete) {
         elite_area_disable_triggered = true;
         SetEnabled(false);
-        Log::Info("Cons auto-disabled on completion");
+        Log::Flash("Cons auto-disabled on completion");
     }
 }
 
@@ -641,7 +641,7 @@ void PconsWindow::CheckBossRangeAutoDisable()
     if (d > 0 && d <= Range::Spirit) {
         elite_area_disable_triggered = true;
         SetEnabled(false);
-        Log::Info("Cons auto-disabled in range of boss");
+        Log::Flash("Cons auto-disabled in range of boss");
     }
 }
 
