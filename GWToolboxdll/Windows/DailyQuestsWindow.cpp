@@ -850,8 +850,8 @@ namespace {
 
     const char* GetIncompleteStatusMessage(MapID mission_map_id)
     {
-        const char* incomplete_hard_mode = "This character hasn't completed this area in hard mode";
-        const char* incomplete_normal_mode = "This character hasn't completed this area in normal mode";
+        const char* incomplete_hard_mode = "This character hasn't completed this in hard mode";
+        const char* incomplete_normal_mode = "This character hasn't completed this in normal mode";
 
         const auto w = GW::GetWorldContext();
         const auto map = w ? GW::Map::GetMapInfo(mission_map_id) : nullptr;
