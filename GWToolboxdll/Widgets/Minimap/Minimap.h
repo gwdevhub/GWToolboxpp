@@ -97,13 +97,5 @@ private:
     static void SelectTarget(GW::Vec2f pos);
     static size_t GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);
 
-    GW::HookEntry AgentPinged_Entry;
-    GW::HookEntry CompassEvent_Entry;
-    GW::HookEntry GenericValueTarget_Entry;
-    GW::HookEntry SkillActivate_Entry;
-    GW::HookEntry InstanceLoadFile_Entry;
-    GW::HookEntry InstanceLoadInfo_Entry;
-    GW::HookEntry GameSrvTransfer_Entry;
-    GW::HookEntry UIMsg_Entry;
     static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage /*msgid*/, void* /*wParam*/, void*);
 };

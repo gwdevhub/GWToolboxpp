@@ -228,6 +228,8 @@ namespace {
 
     std::vector<ToolboxModule*> modules_terminating{};
 
+    bool minimap_enabled = false;
+
     enum class GWToolboxState {
         Initialising,
         UpdateInitialising,
@@ -360,6 +362,7 @@ void UpdateEnabledWidgetVectors(ToolboxModule* m, bool added)
     else {
         update_vec(reinterpret_cast<std::vector<void*>&>(modules_enabled), m);
     }
+    minimap_enabled = GWToolbox::IsModuleEnabled(&Minimap::Instance());
 }
 
 bool GWToolbox::ShouldDisableToolbox(GW::Constants::MapID map_id)
@@ -673,6 +676,11 @@ bool GWToolbox::SetSettingsFolder(const std::filesystem::path& path)
     return true;
 }
 
+bool GWToolbox::IsModuleEnabled(ToolboxModule* m)
+{
+    return std::ranges::find(all_modules_enabled, m) != all_modules_enabled.end();
+}
+
 bool GWToolbox::SettingsFolderChanged()
 {
     return settings_folder_changed;
@@ -815,7 +823,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 
     const bool world_map_showing = GW::UI::GetIsWorldMapShowing();
 
-    if (!world_map_showing) {
+    if (!world_map_showing && minimap_enabled) {
         Minimap::Render(device);
     }
 

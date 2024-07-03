@@ -169,6 +169,11 @@ namespace {
     };
     static_assert(sizeof(CompassContext) == 0x60);
 
+    GW::HookEntry Generic_HookEntry;
+
+    Minimap& Instance() {
+        return Minimap::Instance();
+    }
 
     GW::Vec2f InterfaceToWorldPoint(const Vec2i& pos)
     {
@@ -481,12 +486,12 @@ namespace {
         return result;
     }
 
-    void ToggleCompassQuestMarker(const bool enable)
+    void ToggleCompassQuestMarker(const bool hide_marker)
     {
-        if (enable == show_compass_quest_marker_patch.GetIsActive()) {
+        if (hide_marker == show_compass_quest_marker_patch.GetIsActive()) {
             return;
         }
-        show_compass_quest_marker_patch.TogglePatch(enable);
+        show_compass_quest_marker_patch.TogglePatch(hide_marker);
         GW::GameThread::Enqueue([] {
             if (const auto quest = GW::QuestMgr::GetActiveQuest()) {
                 struct QuestUIMsg {
@@ -534,6 +539,40 @@ namespace {
             });
         }
     }
+
+
+    // Callbacks
+    void OnKeydown(GW::HookStatus*, const uint32_t key) {
+        if (key == GW::UI::ControlAction_ReverseCamera) {
+            camera_currently_reversed = true;
+        }
+    }
+    void OnKeyup(GW::HookStatus*, const uint32_t key) {
+        if (key == GW::UI::ControlAction_ReverseCamera) {
+            camera_currently_reversed = false;
+        }
+    }
+    void OnAgentPinged(GW::HookStatus*, const GW::Packet::StoC::AgentPinged* pak) {
+        if (!Instance().visible) return;
+        Instance().pingslines_renderer.P046Callback(pak);
+    }
+    void OnPlayEffect(const GW::HookStatus*, GW::Packet::StoC::PlayEffect* pak) {
+        if (!(Instance().visible && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable))
+            return;
+        Instance().effect_renderer.PacketCallback(pak);
+    }
+    void OnGenericValue(const GW::HookStatus*, const GW::Packet::StoC::GenericValue* pak) {
+        if (!(Instance().visible && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable))
+            return;
+        Instance().effect_renderer.PacketCallback(pak);
+    }
+    void OnGenericValueTarget(GW::HookStatus*, const GW::Packet::StoC::GenericValueTarget* pak) {
+        if (!Instance().visible)
+            return;
+        Instance().pingslines_renderer.P153Callback(pak);
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+            Instance().effect_renderer.PacketCallback(pak);
+    }
 }
 
 float Minimap::Scale() const { return scale; }
@@ -568,7 +607,19 @@ void Minimap::SignalTerminate()
 
     hide_flagging_controls_patch.Reset();
 
+    ToggleCompassQuestMarker(false);
+
+    GW::UI::RemoveKeydownCallback(&Generic_HookEntry);
+    GW::UI::RemoveKeyupCallback(&Generic_HookEntry);
+    GW::StoC::RemoveCallbacks(&Generic_HookEntry);
+    GW::UI::RemoveUIMessageCallback(&Generic_HookEntry);
+
+    GW::HookBase::RemoveHook(DrawCompassAgentsByType_Func);
+
+    GW::Chat::DeleteCommand(L"flag");
+
     GW::GameThread::Enqueue([]() {
+        show_compass_quest_marker_patch.Reset();
         if (compass_frame && compass_frame->frame_callbacks[0] == OnCompassFrame_UICallback) {
             compass_frame->frame_callbacks[0] = OnCompassFrame_UICallback_Ret;
         }
@@ -601,46 +652,13 @@ void Minimap::Initialize()
     }
     ToggleCompassQuestMarker(hide_compass_quest_marker);
 
-    GW::UI::RegisterKeydownCallback(&AgentPinged_Entry, [this](GW::HookStatus*, const uint32_t key) {
-        if (key != GW::UI::ControlAction_ReverseCamera) {
-            return;
-        }
-        camera_currently_reversed = true;
-    });
-    GW::UI::RegisterKeyupCallback(&AgentPinged_Entry, [this](GW::HookStatus*, const uint32_t key) {
-        if (key != GW::UI::ControlAction_ReverseCamera) {
-            return;
-        }
-        camera_currently_reversed = false;
-    });
+    GW::UI::RegisterKeydownCallback(&Generic_HookEntry, OnKeydown);
+    GW::UI::RegisterKeyupCallback(&Generic_HookEntry, OnKeyup);
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentPinged>(&AgentPinged_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::AgentPinged* pak) -> void {
-        if (visible) {
-            pingslines_renderer.P046Callback(pak);
-        }
-    });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&CompassEvent_Entry, [this](const GW::HookStatus*, GW::Packet::StoC::PlayEffect* pak) -> void {
-        if (visible) {
-            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-                effect_renderer.PacketCallback(pak);
-            }
-        }
-    });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValueTarget_Entry, [this](const GW::HookStatus*, const GW::Packet::StoC::GenericValue* pak) -> void {
-        if (visible) {
-            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-                effect_renderer.PacketCallback(pak);
-            }
-        }
-    });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::GenericValueTarget* pak) -> void {
-        if (visible) {
-            pingslines_renderer.P153Callback(pak);
-            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-                effect_renderer.PacketCallback(pak);
-            }
-        }
-    });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentPinged>(&Generic_HookEntry, OnAgentPinged);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&Generic_HookEntry, OnPlayEffect);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&Generic_HookEntry, OnGenericValue);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&Generic_HookEntry, OnGenericValueTarget);
     constexpr std::array hook_messages = {
         GW::UI::UIMessage::kMapChange,
         GW::UI::UIMessage::kMapLoaded,
@@ -649,7 +667,7 @@ void Minimap::Initialize()
         GW::UI::UIMessage::kCompassDraw
     };
     for (const auto message_id : hook_messages) {
-        RegisterUIMessageCallback(&UIMsg_Entry, message_id, OnUIMessage);
+        RegisterUIMessageCallback(&Generic_HookEntry, message_id, OnUIMessage);
     }
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {

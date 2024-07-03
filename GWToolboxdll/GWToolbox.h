@@ -46,6 +46,8 @@ public:
     static std::filesystem::path LoadSettings();
     static bool SetSettingsFolder(const std::filesystem::path& path);
 
+    static bool IsModuleEnabled(ToolboxModule* m);
+
     //const std::vector<ToolboxModule*>& GetModules();
     static const std::vector<ToolboxModule*>& GetAllModules();
     //const std::vector<ToolboxModule*>& GetCoreModules() const { return core_modules; }
