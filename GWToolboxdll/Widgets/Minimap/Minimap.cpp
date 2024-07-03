@@ -131,6 +131,8 @@ namespace {
     GW::MemoryPatcher show_compass_quest_marker_patch;
     bool render_all_quests = false;
 
+    bool in_interface_settings = false;
+
     struct CompassAiControl {
         uint32_t field0_0x0;
         uint32_t field1_0x4;
@@ -260,7 +262,7 @@ namespace {
     // Check whether the compass ought to be hidden or not depending on user settings
     bool OverrideCompassVisibility() {
         const auto frame = GetCompassFrame();
-        if (!frame)
+        if (!(frame && !in_interface_settings))
             return false;
         if (hide_compass_when_minimap_draws && Minimap::IsActive()) {
             if (!(frame->IsCreated() && frame->IsVisible()))
@@ -272,6 +274,8 @@ namespace {
 
     // If we've messed around with the window visibility, reset it here.
     bool ResetWindowPosition(GW::UI::WindowID window_id, GW::UI::Frame* frame) {
+        if (in_interface_settings)
+            return false;
         GW::UI::UIPacket::kUIPositionChanged packet = {
             window_id,
             GW::UI::GetWindowPosition(window_id)
@@ -664,7 +668,9 @@ void Minimap::Initialize()
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kChangeTarget,
         GW::UI::UIMessage::kSkillActivated,
-        GW::UI::UIMessage::kCompassDraw
+        GW::UI::UIMessage::kCompassDraw,
+        GW::UI::UIMessage::kCloseSettings,
+        GW::UI::UIMessage::kChangeSettingsTab
     };
     for (const auto message_id : hook_messages) {
         RegisterUIMessageCallback(&Generic_HookEntry, message_id, OnUIMessage);
@@ -686,6 +692,14 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
     auto& instance = Instance();
     instance.pingslines_renderer.OnUIMessage(status, msgid, wParam, lParam);
     switch (msgid) {
+        case GW::UI::UIMessage::kCloseSettings:
+            in_interface_settings = false;
+            compass_position_dirty = true;
+        break;
+        case GW::UI::UIMessage::kChangeSettingsTab:
+            in_interface_settings = (uint32_t)wParam == 1;
+            compass_position_dirty = true;
+        break;
         case GW::UI::UIMessage::kCompassDraw: {
             if (hide_compass_drawings)
                 status->blocked = true;
@@ -694,12 +708,6 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
         case GW::UI::UIMessage::kMapLoaded: {
             instance.pmap_renderer.Invalidate();
             loading = false;
-            // Compass fix to allow hero flagging controls
-            const GW::UI::WindowPosition* compass_info = GetWindowPosition(GW::UI::WindowID_Compass);
-            if (compass_info && !compass_info->visible()) {
-                // Note: Wait for a frame to pass before toggling off again to allow the game to initialise the window.
-
-            }
             is_observing = GW::Map::GetIsObserving();
             // Cycle active quests to cache their markers
             PreloadQuestMarkers();
