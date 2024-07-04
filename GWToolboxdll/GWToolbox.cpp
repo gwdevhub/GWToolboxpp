@@ -678,7 +678,13 @@ bool GWToolbox::SetSettingsFolder(const std::filesystem::path& path)
 
 bool GWToolbox::IsModuleEnabled(ToolboxModule* m)
 {
-    return std::ranges::find(all_modules_enabled, m) != all_modules_enabled.end();
+    return m && std::ranges::find(all_modules_enabled, m) != all_modules_enabled.end();
+}
+bool GWToolbox::IsModuleEnabled(const char* name)
+{
+    return name && std::ranges::find_if(all_modules_enabled, [name](ToolboxModule* m) {
+        return strcmp(m->Name(), name) == 0;
+        }) != all_modules_enabled.end();
 }
 
 bool GWToolbox::SettingsFolderChanged()

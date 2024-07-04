@@ -34,6 +34,7 @@ set_target_properties(GWToolboxdll PROPERTIES
     VS_GLOBAL_EnableClangTidyCodeAnalysis false
 )
 
+
 target_link_options(GWToolboxdll PRIVATE
     /WX /OPT:REF /OPT:ICF /SAFESEH:NO
     $<$<NOT:$<CONFIG:Debug>>:/INCREMENTAL:NO>

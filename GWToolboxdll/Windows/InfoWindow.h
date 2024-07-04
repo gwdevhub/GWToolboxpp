@@ -20,10 +20,7 @@ public:
     void Terminate() override;
     void SignalTerminate() override;
 
-    void RegisterSettingsContent() override;
-
     void Draw(IDirect3DDevice9* pDevice) override;
-    void Update(float delta) override;
 
     void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni* ini) override;

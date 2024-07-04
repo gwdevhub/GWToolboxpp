@@ -47,6 +47,7 @@ public:
     static bool SetSettingsFolder(const std::filesystem::path& path);
 
     static bool IsModuleEnabled(ToolboxModule* m);
+    static bool IsModuleEnabled(const char* name);
 
     //const std::vector<ToolboxModule*>& GetModules();
     static const std::vector<ToolboxModule*>& GetAllModules();

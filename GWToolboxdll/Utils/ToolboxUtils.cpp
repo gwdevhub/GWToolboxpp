@@ -34,6 +34,24 @@ namespace {
     }
 }
 
+namespace GW {
+    namespace PartyMgr {
+        GW::PlayerPartyMemberArray* GetPartyPlayers(uint32_t party_id) {
+            const auto party = GW::PartyMgr::GetPartyInfo(party_id);
+            return party ? &party->players : nullptr;
+        }
+        size_t GetPlayerPartyIndex(uint32_t player_number, uint32_t party_id) {
+            const auto players = GetPartyPlayers(party_id);
+            if (!players) return 0;
+            for (size_t i = 0, size = players->size(); i < size; i++) {
+                if (players->at(i).login_number == player_number)
+                    return i + 1;
+            }
+            return 0;
+        }
+    }
+}
+
 namespace ToolboxUtils {
     bool ArrayBoolAt(const GW::Array<uint32_t>& array, const uint32_t index)
     {
