@@ -22,7 +22,7 @@ namespace {
     bool show_enemy_last_skill = true;
     float triangle_y_offset = 3.f;
     float enemies_threshhold = 1.f;
-    float range = 1248.f;
+    float range = GW::Constants::Range::Spellcast;
     float triangle_spacing = 22.f;
     float last_skill_threshold = 3000.f;
     ImU32 HexedColor = IM_COL32(253, 113, 255, 255);
@@ -256,8 +256,8 @@ void EnemyWindow::Draw(IDirect3DDevice9*)
             }
 
             switch (living->player_number) {
-                case 2338:
-                case 2325:
+                case GW::Constants::ModelID::UW::GraspingDarkness:
+                case GW::Constants::ModelID::UW::SmiteCrawler:
                     continue;
                 default:
                     break;
