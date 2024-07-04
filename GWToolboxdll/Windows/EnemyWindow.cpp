@@ -247,23 +247,12 @@ void EnemyWindow::Draw(IDirect3DDevice9*)
     const GW::Agent* player = agents ? GW::Agents::GetObservingAgent() : nullptr;
 
     if (player && agents) {
-        int enemy_count = 0;
         for (auto* agent : *agents) {
             const GW::AgentLiving* living = agent ? agent->GetAsAgentLiving() : nullptr;
 
             if (!living || living->allegiance != GW::Constants::Allegiance::Enemy || !living->GetIsAlive()) {
                 continue;
             }
-
-            switch (living->player_number) {
-                case GW::Constants::ModelID::UW::GraspingDarkness:
-                case GW::Constants::ModelID::UW::SmiteCrawler:
-                    continue;
-                default:
-                    break;
-            }
-
-            enemy_count++;
 
             if (living->hp <= enemies_threshhold) {
                 all_enemies.insert(living->agent_id);
