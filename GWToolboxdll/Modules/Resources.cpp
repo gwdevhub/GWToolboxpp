@@ -163,6 +163,18 @@ namespace {
         r->SetMethod(HttpMethod::Get);
         r->SetVerifyHost(false);
     }
+
+    const std::string HashStr(const std::string& str) {
+        const auto bytes_to_hash = std::vector<byte>(str.begin(), str.end());
+        auto hash = std::vector<byte>(WC_SHA256_DIGEST_SIZE);
+        wc_Sha256Hash(bytes_to_hash.data(), bytes_to_hash.size(), hash.data());
+        std::stringstream hexstream;
+        hexstream << std::hex << std::setfill('0');
+        for (auto b : hash) {
+            hexstream << std::setw(2) << static_cast<unsigned>(b);
+        }
+        return hexstream.str();
+        };
 } // namespace
 
 Resources::Resources()
@@ -553,67 +565,53 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
 
 void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, void* context, std::chrono::seconds cache_duration)
 {
-    const auto hash_name = [](const std::filesystem::path& file_name) -> std::filesystem::path {
-        const auto str = file_name.string();
-        const auto bytes_to_hash = std::vector<byte>(str.begin(), str.end());
-        auto hash = std::vector<byte>(WC_SHA256_DIGEST_SIZE);
-        wc_Sha256Hash(bytes_to_hash.data(), bytes_to_hash.size(), hash.data());
-        std::stringstream hexstream;
-        hexstream << std::hex << std::setfill('0');
-        for (auto b : hash) {
-            hexstream << std::setw(2) << static_cast<unsigned>(b);
-        }
-        const auto hash_str = hexstream.str();
-        const auto hash_file = std::filesystem::path(hash_str);
-        return hash_file;
-    };
+    EnqueueWorkerTask([url, callback, context, &cache_duration] {
 
-    const auto get_cache_modified_time = [](const std::filesystem::path& file_name) -> std::optional<std::filesystem::file_time_type> {
-        if (!std::filesystem::exists(file_name)) {
-            return std::optional<std::filesystem::file_time_type>();
-        }
 
-        const auto file_time = std::filesystem::last_write_time(file_name);
-        return file_time;
-    };
+        const auto get_cache_modified_time = [](const std::filesystem::path& file_name) -> std::optional<std::filesystem::file_time_type> {
+            if (!std::filesystem::exists(file_name)) {
+                return std::optional<std::filesystem::file_time_type>();
+            }
 
-    const auto load_from_cache = [](const std::filesystem::path& file_name) -> std::optional<std::string> {
-        std::ifstream cache_file(file_name);
-        if (!cache_file.is_open()) {
-            return {};
-        }
+            const auto file_time = std::filesystem::last_write_time(file_name);
+            return file_time;
+            };
 
-        std::string contents((std::istreambuf_iterator<char>(cache_file)), std::istreambuf_iterator<char>());
-        return contents;
-    };
+        const auto load_from_cache = [](const std::filesystem::path& file_name) -> std::optional<std::string> {
+            std::ifstream cache_file(file_name);
+            if (!cache_file.is_open()) {
+                return {};
+            }
 
-    const auto save_to_cache = [](const std::filesystem::path& file_name, const std::string& content) -> bool {
-        std::filesystem::create_directories(file_name.parent_path());
-        std::ofstream cache_file(file_name);
-        if (!cache_file.is_open()) {
-            return false;
-        }
+            std::string contents((std::istreambuf_iterator<char>(cache_file)), std::istreambuf_iterator<char>());
+            return contents;
+            };
 
-        cache_file << content;
-        return true;
-    };
+        const auto save_to_cache = [](const std::filesystem::path& file_name, const std::string& content) -> bool {
+            std::filesystem::create_directories(file_name.parent_path());
+            std::ofstream cache_file(file_name);
+            if (!cache_file.is_open()) {
+                return false;
+            }
 
-    const auto remove_protocol = [](const std::string& url) -> std::string {
-        const std::string http = "http://";
-        const std::string https = "https://";
+            cache_file << content;
+            return true;
+            };
 
-        // Check if the URL starts with http:// or https:// and remove it
-        if (url.substr(0, http.size()) == http) {
-            return url.substr(http.size());
-        }
-        if (url.substr(0, https.size()) == https) {
-            return url.substr(https.size());
-        }
-        return url; // Return the original if no match is found
-    };
+        const auto remove_protocol = [](const std::string& url) -> std::string {
+            const std::string http = "http://";
+            const std::string https = "https://";
 
-    EnqueueWorkerTask([url, callback, context, &cache_duration, &get_cache_modified_time, &load_from_cache, &save_to_cache, &remove_protocol, &hash_name] {
-        const auto cache_path = Resources::GetPath("cache") / hash_name(remove_protocol(url));
+            // Check if the URL starts with http:// or https:// and remove it
+            if (url.substr(0, http.size()) == http) {
+                return url.substr(http.size());
+            }
+            if (url.substr(0, https.size()) == https) {
+                return url.substr(https.size());
+            }
+            return url; // Return the original if no match is found
+            };
+        const auto cache_path = Resources::GetPath("cache") / HashStr(remove_protocol(url));
         const auto expiration = get_cache_modified_time(cache_path);
         if (expiration.has_value() &&
             expiration.value() - std::chrono::file_clock::now() < cache_duration) {
