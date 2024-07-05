@@ -190,15 +190,16 @@ namespace {
     }
 
     void OnWikiContentDownloaded(bool success, const std::string& response, void* wparam) {
-        auto* info = (SalvageInfo*)wparam;
-        if (!success) {
-            Log::Log("Failed to fetch salvage info. Response: %s", response.c_str());
-            info->loading = false;
-            SignalItemDescriptionUpdated(info->en_name.encoded().c_str());
-            return;
-        }
+        Resources::EnqueueWorkerTask([success, response = response, wparam]() {
+            auto* info = (SalvageInfo*)wparam;
+            if (!success) {
+                Log::Log("Failed to fetch salvage info. Response: %s", response.c_str());
+                info->loading = false;
+                SignalItemDescriptionUpdated(info->en_name.encoded().c_str());
+                return;
+            }
 
-        const auto parse_materials = [](const std::string& cell_content, std::vector<CraftingMaterial*>& vec) {
+            const auto parse_materials = [](const std::string& cell_content, std::vector<CraftingMaterial*>& vec) {
                 const std::regex link_regex("<a[^>]+title=\"([^\"]+)");
                 auto links_begin = std::sregex_iterator(cell_content.begin(), cell_content.end(), link_regex);
                 auto links_end = std::sregex_iterator();
@@ -213,115 +214,149 @@ namespace {
                         // Add the material to the list only if the material doesn't already exist
                         const auto in_list = std::find_if(vec.begin(), vec.end(), [material_name](auto* c) {
                             return c->en_name == material_name || c->en_name_plural == material_name;
-                        });
+                            });
                         if (in_list == vec.end()) {
                             vec.push_back(*found);
                         }
                     }
                 }
+                };
+
+            const std::regex infobox_regex("<table[^>]+>([\\s\\S]*)</table>");
+            std::smatch m;
+            if (std::regex_search(response, m, infobox_regex)) {
+                std::string infobox_content = m[1].str();
+
+                const auto sub_links_regex = std::regex(R"delim(<a href="\/wiki[\s\S]*?title="([\s\S]*?)">)delim");
+                const auto disambig_regex = std::regex("This disambiguation page");
+                if (std::regex_search(infobox_content, m, disambig_regex)) {
+                    // Detected a disambiguation page. We need to search for materials in the hrefs listed on this page
+                    std::unordered_set<std::string> sub_urls;
+                    std::string::const_iterator sub_search_start(response.cbegin());
+                    while (std::regex_search(sub_search_start, response.cend(), m, sub_links_regex)) {
+                        const auto entry = m[1].str();
+                        // Search for entries that contain the name of the item, skipping the SpecialWhatLinksHere entry
+                        if (entry.contains(info->en_name.string()) && !entry.contains("Special:WhatLinksHere")) {
+                            sub_urls.emplace(entry);
+                        }
+
+                        sub_search_start = m.suffix().first; // Update the start position
+                    }
+
+                    // Fetch materials of the sub urls and add them to the salvage info struct
+                    if (sub_urls.size() > 0) {
+                        auto search_suburls = false;
+                        for (const auto& sub_name : sub_urls) {
+                            auto url = sub_name;
+                            url = GuiUtils::WikiUrl(handle_encoded_names(url));
+                            // Skip urls that have already been searched
+                            if (std::find(info->searched_urls.begin(), info->searched_urls.end(), url) != info->searched_urls.end()) {
+                                continue;
+                            }
+                            search_suburls = true;
+                            info->searched_urls.push_back(url);
+                            Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(30));
+                        }
+                        // Return early if we redirected from this page
+                        if (search_suburls) {
+                            return;
+                        }
+                    }
+                }
+
+                const auto different_article_page_regex = std::regex(R"(This article is about [\s\S]*?For the weapon[\s\S]*?)");
+                if (std::regex_search(response, m, different_article_page_regex)) {
+                    // Detected weapon type page. We need to go to the weapon with same name page and fetch materials from there
+                    const auto expected_token = std::format("{} (weapon)", info->en_name.string());
+                    std::unordered_set<std::string> sub_urls;
+                    auto sub_search_start(response.cbegin());
+                    while (std::regex_search(sub_search_start, response.cend(), m, sub_links_regex)) {
+                        const auto entry = m[1].str();
+                        // Search for entries that match [WeaponName] (weapon) token
+                        if (entry == expected_token) {
+                            sub_urls.emplace(entry);
+                        }
+
+                        sub_search_start = m.suffix().first; // Update the start position
+                    }
+
+                    // Fetch materials of the sub urls and add them to the salvage info struct
+                    if (sub_urls.size() > 0) {
+                        auto search_suburls = false;
+                        for (const auto& sub_name : sub_urls) {
+                            auto url = sub_name;
+                            url = GuiUtils::WikiUrl(handle_encoded_names(url));
+                            // Skip urls that have already been searched
+                            if (std::find(info->searched_urls.begin(), info->searched_urls.end(), url) != info->searched_urls.end()) {
+                                continue;
+                            }
+                            search_suburls = true;
+                            info->searched_urls.push_back(url);
+                            Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(30));
+                        }
+                        // Return early if we redirected from this page
+                        if (search_suburls) {
+                            return;
+                        }
+                    }
+                }
+
+                // Iterate over all skills in this list.
+                static const std::regex infobox_row_regex(
+                    "(?:<tr>|<tr[^>]+>)[\\s\\S]*?(?:<th>|<th[^>]+>)([\\s\\S]*?)</th>[\\s\\S]*?(?:<td>|<td[^>]+>)([\\s\\S]*?)</td>[\\s\\S]*?</tr>"
+                );
+                auto words_begin = std::sregex_iterator(infobox_content.begin(), infobox_content.end(), infobox_row_regex);
+                auto words_end = std::sregex_iterator();
+                for (std::sregex_iterator i = words_begin; i != words_end; ++i)
+                {
+                    auto key = i->str(1);
+                    from_html(key);
+                    const auto val = i->str(2);
+                    if (key == "Common salvage") {
+                        parse_materials(val, info->common_crafting_materials);
+                    }
+                    if (key == "Rare salvage") {
+                        parse_materials(val, info->rare_crafting_materials);
+                    }
+                }
+            }
+            info->success = true;
+            info->loading = false;
+            SignalItemDescriptionUpdated(info->en_name.encoded().c_str());
+            });
+    }
+    // Print out a string representation of the relative time from now e.g. 2 years
+    std::wstring PrintRelativeTime(time_t timestamp) {
+        const auto current_time = time(nullptr);
+        if (timestamp < current_time)
+            return L"the past"; // @Cleanup; N minutes ago etc
+
+        auto amount = (timestamp - current_time);
+        auto time_format = [](const time_t amount, const wchar_t* unit) {
+            if (amount != 1)
+                return std::format(L"{} {}s", amount, unit);
+            return std::format(L"{} {}", amount, unit);
             };
+        if (amount < 60)
+            return L"less than a minute";
 
-        const std::regex infobox_regex("<table[^>]+>([\\s\\S]*)</table>");
-        std::smatch m;
-        if (std::regex_search(response, m, infobox_regex)) {
-            std::string infobox_content = m[1].str();
-
-            const auto sub_links_regex = std::regex(R"delim(<a href="\/wiki[\s\S]*?title="([\s\S]*?)">)delim");
-            const auto disambig_regex = std::regex("This disambiguation page");
-            if (std::regex_search(infobox_content, m, disambig_regex)) {
-                // Detected a disambiguation page. We need to search for materials in the hrefs listed on this page
-                std::unordered_set<std::string> sub_urls;
-                std::string::const_iterator sub_search_start(response.cbegin());
-                while (std::regex_search(sub_search_start, response.cend(), m, sub_links_regex)) {
-                    const auto entry = m[1].str();
-                    // Search for entries that contain the name of the item, skipping the SpecialWhatLinksHere entry
-                    if (entry.contains(info->en_name.string()) && !entry.contains("Special:WhatLinksHere")) {
-                        sub_urls.emplace(entry);
-                    }
-
-                    sub_search_start = m.suffix().first; // Update the start position
-                }
-
-                // Fetch materials of the sub urls and add them to the salvage info struct
-                if (sub_urls.size() > 0) {
-                    auto search_suburls = false;
-                    for (const auto& sub_name : sub_urls) {
-                        auto url = sub_name;
-                        url = GuiUtils::WikiUrl(handle_encoded_names(url));
-                        // Skip urls that have already been searched
-                        if (std::find(info->searched_urls.begin(), info->searched_urls.end(), url) != info->searched_urls.end()) {
-                            continue;
-                        }
-                        search_suburls = true;
-                        info->searched_urls.push_back(url);
-                        Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(30));
-                    }
-                    // Return early if we redirected from this page
-                    if (search_suburls) {
-                        return;
-                    }
-                }
-            }
-
-            const auto different_article_page_regex = std::regex(R"(This article is about [\s\S]*?For the weapon[\s\S]*?)");
-            if (std::regex_search(response, m, different_article_page_regex)) {
-                // Detected weapon type page. We need to go to the weapon with same name page and fetch materials from there
-                const auto expected_token = std::format("{} (weapon)", info->en_name.string());
-                std::unordered_set<std::string> sub_urls;
-                auto sub_search_start(response.cbegin());
-                while (std::regex_search(sub_search_start, response.cend(), m, sub_links_regex)) {
-                    const auto entry = m[1].str();
-                    // Search for entries that match [WeaponName] (weapon) token
-                    if (entry == expected_token) {
-                        sub_urls.emplace(entry);
-                    }
-
-                    sub_search_start = m.suffix().first; // Update the start position
-                }
-
-                // Fetch materials of the sub urls and add them to the salvage info struct
-                if (sub_urls.size() > 0) {
-                    auto search_suburls = false;
-                    for (const auto& sub_name : sub_urls) {
-                        auto url = sub_name;
-                        url = GuiUtils::WikiUrl(handle_encoded_names(url));
-                        // Skip urls that have already been searched
-                        if (std::find(info->searched_urls.begin(), info->searched_urls.end(), url) != info->searched_urls.end()) {
-                            continue;
-                        }
-                        search_suburls = true;
-                        info->searched_urls.push_back(url);
-                        Resources::Download(url, OnWikiContentDownloaded, info, std::chrono::days(30));
-                    }
-                    // Return early if we redirected from this page
-                    if (search_suburls) {
-                        return;
-                    }
-                }
-            }
-
-            // Iterate over all skills in this list.
-            static const std::regex infobox_row_regex(
-                "(?:<tr>|<tr[^>]+>)[\\s\\S]*?(?:<th>|<th[^>]+>)([\\s\\S]*?)</th>[\\s\\S]*?(?:<td>|<td[^>]+>)([\\s\\S]*?)</td>[\\s\\S]*?</tr>"
-            );
-            auto words_begin = std::sregex_iterator(infobox_content.begin(), infobox_content.end(), infobox_row_regex);
-            auto words_end = std::sregex_iterator();
-            for (std::sregex_iterator i = words_begin; i != words_end; ++i)
-            {
-                auto key = i->str(1);
-                from_html(key);
-                const auto val = i->str(2);
-                if (key == "Common salvage") {
-                    parse_materials(val, info->common_crafting_materials);
-                }
-                if (key == "Rare salvage") {
-                    parse_materials(val, info->rare_crafting_materials);
-                }
-            }
-        }
-        info->success = true;
-        info->loading = false;
-        SignalItemDescriptionUpdated(info->en_name.encoded().c_str());
+        amount /= 60;
+        if (amount < 60)
+            return time_format(amount, L"minute");
+        amount /= 60;
+        if (amount < 24)
+            return time_format(amount, L"hour");
+        amount /= 24;
+        if (amount < 14)
+            return time_format(amount, L"day");
+        amount /= 7;
+        if (amount < 8)
+            return time_format(amount, L"week");
+        amount /= 4;
+        if (amount < 24)
+            return time_format(amount, L"month");
+        amount /= 12;
+        return time_format(amount, L"year");
     }
 
     // Run on worker thread, so we can Sleep!
@@ -425,39 +460,11 @@ namespace {
 
         if (!salvage_info->nicholas_info) return;
 
-        const auto current_time = time(nullptr);
         const auto collection_time = DailyQuests::GetTimestampFromNicholasTheTraveller(salvage_info->nicholas_info);
-        std::wstring time_str;
-        const auto years = (collection_time - current_time) / 31536000;
-        if (years < 2) {
-            const auto months = (collection_time - current_time) / 2628000;
-            if (months < 2) {
-                const auto weeks = (collection_time - current_time) / 604800;
-                if (weeks < 2) {
-                    const auto days = (collection_time - current_time) / 86400;
-                    if (days < 2) {
-                        const auto hours = (collection_time - current_time) / 3600;
-                        time_str += std::format(L"{} hours", hours);
-                    }
-                    else {
-                        time_str += std::format(L"{} days", days);
-                    }
-                }
-                else {
-                    time_str += std::format(L"{} weeks", weeks);
-                }
-            }
-            else {
-                time_str += std::format(L"{} months", months);
-            }
-        }
-        else {
-            time_str += std::format(L"{} years", years);
-        }
         
 
         NewLineIfNotEmpty(description);
-        description += std::format(L"{}\x10a\x108\x107Nicholas The Traveller collects {} of these in {}!\x1\x1", GW::EncStrings::ItemUnique, salvage_info->nicholas_info->quantity, time_str);
+        description += std::format(L"{}\x10a\x108\x107Nicholas The Traveller collects {} of these in {}!\x1\x1", GW::EncStrings::ItemUnique, salvage_info->nicholas_info->quantity, PrintRelativeTime(collection_time));
     }
     std::wstring tmp_item_description;
     void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc) 
