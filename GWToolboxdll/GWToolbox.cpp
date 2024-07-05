@@ -787,6 +787,15 @@ void GWToolbox::Update(GW::HookStatus*)
     for (const auto m : all_modules_enabled) {
         m->Update(delta_f);
     }
+
+    if (!greeted && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
+        const auto* c = GW::GetCharContext();
+        if (c && c->player_name) {
+            Log::Flash("Hello!");
+            greeted = true;
+        }
+    }
+
     last_tick_count = tick;
 }
 
@@ -917,14 +926,6 @@ void GWToolbox::UpdateInitialising(float)
     ToggleModule(SettingsWindow::Instance());
 
     ToolboxSettings::LoadModules(ini); // initialize all other modules as specified by the user
-
-    if (!greeted && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
-        const auto* c = GW::GetCharContext();
-        if (c && c->player_name) {
-            Log::Flash("Hello!");
-            greeted = true;
-        }
-    }
 
     gwtoolbox_state = GWToolboxState::DrawInitialising;
 }

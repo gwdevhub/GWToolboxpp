@@ -146,7 +146,7 @@ namespace {
         //QuestModule::Instance(),
         PriceCheckerModule::Instance(),
         SalvageInfoModule::Instance(),
-                ResignLogModule::Instance()
+        ResignLogModule::Instance()
     };
 
     std::vector<WidgetToggle> optional_widgets = {
