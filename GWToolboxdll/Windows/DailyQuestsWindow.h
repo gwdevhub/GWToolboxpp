@@ -74,6 +74,7 @@ public:
     static QuestData* GetZaishenMission(time_t unix = 0);
     static QuestData* GetZaishenCombat(time_t unix = 0);
     static NicholasCycleData* GetNicholasTheTraveller(time_t unix = 0);
+    static time_t GetTimestampFromNicholasTheTraveller(DailyQuests::NicholasCycleData* data);
 
     static QuestData* GetNicholasSandford(time_t unix = 0);
     static QuestData* GetVanguardQuest(time_t unix = 0);

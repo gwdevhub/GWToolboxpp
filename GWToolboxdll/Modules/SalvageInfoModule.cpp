@@ -418,12 +418,46 @@ namespace {
     }
     void AppendNicholasInfo(const uint32_t item_id, std::wstring& description) {
         const auto item = GW::Items::GetItemById(item_id);
-        const auto name = item ? item->name_enc : nullptr;
-        const auto nick_item = name ? DailyQuests::GetNicholasItemInfo(name) : nullptr;
-        if (nick_item) {
-            NewLineIfNotEmpty(description);
-            description += std::format(L"{}\x10a\x108\x107Nicholas The Traveller collects {} of these!\x1\x1", GW::EncStrings::ItemUnique, nick_item->quantity);
+        const auto name_without_mods = ItemDescriptionHandler::GetItemEncNameWithoutMods(item);
+
+        const auto salvage_info = GetSalvageInfo(name_without_mods.c_str());
+        if (!salvage_info) return;
+
+        if (!salvage_info->nicholas_info) return;
+
+        const auto current_time = time(nullptr);
+        const auto collection_time = DailyQuests::GetTimestampFromNicholasTheTraveller(salvage_info->nicholas_info);
+        std::wstring time_str;
+        const auto years = (collection_time - current_time) / 31536000;
+        if (years < 2) {
+            const auto months = (collection_time - current_time) / 2628000;
+            if (months < 2) {
+                const auto weeks = (collection_time - current_time) / 604800;
+                if (weeks < 2) {
+                    const auto days = (collection_time - current_time) / 86400;
+                    if (days < 2) {
+                        const auto hours = (collection_time - current_time) / 3600;
+                        time_str += std::format(L"{} hours", hours);
+                    }
+                    else {
+                        time_str += std::format(L"{} days", days);
+                    }
+                }
+                else {
+                    time_str += std::format(L"{} weeks", weeks);
+                }
+            }
+            else {
+                time_str += std::format(L"{} months", months);
+            }
         }
+        else {
+            time_str += std::format(L"{} years", years);
+        }
+        
+
+        NewLineIfNotEmpty(description);
+        description += std::format(L"{}\x10a\x108\x107Nicholas The Traveller collects {} of these in {}!\x1\x1", GW::EncStrings::ItemUnique, salvage_info->nicholas_info->quantity, time_str);
     }
     std::wstring tmp_item_description;
     void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc) 

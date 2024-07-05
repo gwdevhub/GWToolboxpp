@@ -33,6 +33,8 @@ namespace {
     constexpr size_t VANGUARD_COUNT = 9;
     constexpr size_t NICHOLAS_PRE_COUNT = 52;
     constexpr size_t NICHOLAS_POST_COUNT = 137;
+    constexpr time_t NICHOLAS_POST_START_DATE = 1405954800; // Monday, July 21, 2014 3:00:00 PM | Matches with the first Red Iris Flowers in Regent Valley
+    constexpr int SECONDSINAWEEK = 604800;
 
 
     class ZaishenQuestData : public DailyQuests::QuestData {
@@ -653,12 +655,12 @@ namespace {
 
     uint32_t GetWeeklyBonusPvEIdx(const time_t* unix)
     {
-        return static_cast<uint32_t>((*unix - 1368457200) / 604800 % WEEKLY_BONUS_PVE_COUNT);
+        return static_cast<uint32_t>((*unix - 1368457200) / SECONDSINAWEEK % WEEKLY_BONUS_PVE_COUNT);
     }
 
     uint32_t GetWeeklyBonusPvPIdx(const time_t* unix)
     {
-        return static_cast<uint32_t>((*unix - 1368457200) / 604800 % WEEKLY_BONUS_PVP_COUNT);
+        return static_cast<uint32_t>((*unix - 1368457200) / SECONDSINAWEEK % WEEKLY_BONUS_PVP_COUNT);
     }
 
     uint32_t GetZaishenCombatIdx(const time_t* unix)
@@ -678,7 +680,7 @@ namespace {
 
     uint32_t GetNicholasTheTravellerIdx(const time_t* unix)
     {
-        return static_cast<uint32_t>((*unix - 1323097200) / 604800 % NICHOLAS_POST_COUNT);
+        return static_cast<uint32_t>((*unix - 1323097200) / SECONDSINAWEEK % NICHOLAS_POST_COUNT);
     }
 
     uint32_t GetNicholasSandfordIdx(const time_t* unix)
@@ -698,19 +700,32 @@ namespace {
 
     time_t GetWeeklyRotationTime(const time_t* unix)
     {
-        return static_cast<time_t>(floor((*unix - 1368457200) / 604800) * 604800) + 1368457200;
+        return static_cast<time_t>(floor((*unix - 1368457200) / SECONDSINAWEEK) * SECONDSINAWEEK) + 1368457200;
     }
 
     uint32_t GetWeeklyPvEBonusIdx(const time_t* unix)
     {
-        return static_cast<uint32_t>((GetWeeklyRotationTime(unix) - 1368457200) / 604800 % WEEKLY_BONUS_PVE_COUNT);
+        return static_cast<uint32_t>((GetWeeklyRotationTime(unix) - 1368457200) / SECONDSINAWEEK % WEEKLY_BONUS_PVE_COUNT);
     }
 
     uint32_t GetWeeklyPvPBonusIdx(const time_t* unix)
     {
-        return static_cast<uint32_t>((GetWeeklyRotationTime(unix) - 1368457200) / 604800 % WEEKLY_BONUS_PVP_COUNT);
+        return static_cast<uint32_t>((GetWeeklyRotationTime(unix) - 1368457200) / SECONDSINAWEEK % WEEKLY_BONUS_PVP_COUNT);
     }
 
+    time_t GetNextEventTime(const time_t cycle_start_time, const time_t current_time, const int event_index, const int event_count, const int interval_in_seconds)
+    {
+        const auto cycle_duration = interval_in_seconds * event_count;
+        const auto cycles_since_start = (current_time - cycle_start_time) / cycle_duration;
+        const auto current_cycle_start_time = cycle_start_time + (cycles_since_start * cycle_duration);
+        const auto time_in_currentCycle = event_index * interval_in_seconds;
+        auto next_event_time = current_cycle_start_time + time_in_currentCycle;
+        if (next_event_time < current_time) {
+            next_event_time += cycle_duration;
+        }
+
+        return next_event_time;
+    }
 
     bool subscribed_zaishen_bounties[ZAISHEN_BOUNTY_COUNT] = {false};
     bool subscribed_zaishen_combats[ZAISHEN_COMBAT_COUNT] = {false};
@@ -1550,7 +1565,7 @@ void DailyQuests::Update(const float)
             if (subscribed_weekly_bonus_pvp[quest_idx = GetWeeklyBonusPvPIdx(&unix)]) {
                 Log::Flash("%s is the Weekly PvP Bonus %s", pvp_weekly_bonus_cycles[quest_idx].GetQuestName(), date_str);
             }
-            unix += 604800;
+            unix += SECONDSINAWEEK;
         }
     }
 }
@@ -1732,4 +1747,17 @@ DailyQuests::QuestData* DailyQuests::GetWeeklyPvPBonus(time_t unix)
     if (!unix)
         unix = time(nullptr);
     return &pvp_weekly_bonus_cycles[GetWeeklyPvPBonusIdx(&unix)];
+}
+
+time_t DailyQuests::GetTimestampFromNicholasTheTraveller(DailyQuests::NicholasCycleData* data)
+{
+    auto index = -1;
+    for (auto i = 0; i < NICHOLAS_POST_COUNT; i++) {
+        if (&nicholas_cycles[i] == data) {
+            index = i;
+        }
+    }
+
+    assert(index != -1);
+    return GetNextEventTime(NICHOLAS_POST_START_DATE, time(nullptr), index, NICHOLAS_POST_COUNT, SECONDSINAWEEK);
 }
