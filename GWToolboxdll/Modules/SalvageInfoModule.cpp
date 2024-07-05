@@ -407,7 +407,7 @@ namespace {
         if (!salvage_info->rare_crafting_materials.empty()) {
             std::wstring items;
             for (auto i : salvage_info->rare_crafting_materials) {
-                if (!items.empty()) 
+                if (!items.empty())
                     items += L"\x2\x108\x107, \x1\x2";
                 items += i->enc_name;
             }
@@ -420,13 +420,14 @@ namespace {
         const auto item = GW::Items::GetItemById(item_id);
         const auto name = item ? item->name_enc : nullptr;
         const auto nick_item = name ? DailyQuests::GetNicholasItemInfo(name) : nullptr;
+        const auto nick_item_in_n_weeks = name ? DailyQuests::GetNicholasItemInNWeeks(name) : static_cast<size_t>(-1);
         if (nick_item) {
             NewLineIfNotEmpty(description);
-            description += std::format(L"{}\x10a\x108\x107Nicholas The Traveller collects {} of these!\x1\x1", GW::EncStrings::ItemUnique, nick_item->quantity);
+            description += std::format(L"{}\x10a\x108\x107Nicholas The Traveller collects {} of these in {} weeks!\x1\x1", GW::EncStrings::ItemUnique, nick_item->quantity, nick_item_in_n_weeks);
         }
     }
     std::wstring tmp_item_description;
-    void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc) 
+    void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc)
     {
         if (!out_desc) return;
         if (*out_desc != tmp_item_description.data()) {

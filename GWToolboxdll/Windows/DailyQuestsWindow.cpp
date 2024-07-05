@@ -1664,6 +1664,35 @@ DailyQuests::NicholasCycleData* DailyQuests::GetNicholasItemInfo(const wchar_t* 
     return nullptr;
 }
 
+size_t DailyQuests::GetNicholasItemIndex(const wchar_t* item_name_encoded)
+{
+    if (!item_name_encoded)
+        return static_cast<size_t>(-1);
+
+    auto idx = size_t{0};
+    for (auto& nicholas_item : nicholas_cycles) {
+        if (nicholas_item.enc_name == item_name_encoded) {
+            return idx;
+        }
+        ++idx;
+    }
+
+    return static_cast<size_t>(-1);
+}
+
+size_t DailyQuests::GetNicholasItemInNWeeks(const wchar_t* item_name_encoded)
+{
+    if (!item_name_encoded) return static_cast<size_t>(-1);
+
+    const auto now = time(nullptr);
+    const auto future_item_index = GetNicholasItemIndex(item_name_encoded);
+    const auto current_item_index = GetNicholasTheTravellerIdx(&now);
+
+    const auto index_diff = future_item_index > current_item_index ? future_item_index - current_item_index : NICHOLAS_POST_COUNT - current_item_index + future_item_index;
+
+    return index_diff;
+}
+
 DailyQuests::NicholasCycleData* DailyQuests::GetNicholasTheTraveller(time_t unix)
 {
     if (!unix)

@@ -84,4 +84,6 @@ public:
 
     // Returns info about the nicholas item if the given item name matches
     static NicholasCycleData* GetNicholasItemInfo(const wchar_t* item_name_encoded);
+    static size_t GetNicholasItemIndex(const wchar_t* item_name_encoded);
+    static size_t GetNicholasItemInNWeeks(const wchar_t* item_name_encoded);
 };
