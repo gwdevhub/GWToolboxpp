@@ -22,7 +22,7 @@ namespace {
     bool show_enemy_last_skill = true;
     float triangle_y_offset = 3.f;
     float enemies_threshhold = 1.f;
-    float range = 1248.f;
+    float range = GW::Constants::Range::Spellcast;
     float triangle_spacing = 22.f;
     float last_skill_threshold = 3000.f;
     ImU32 HexedColor = IM_COL32(253, 113, 255, 255);
@@ -247,23 +247,12 @@ void EnemyWindow::Draw(IDirect3DDevice9*)
     const GW::Agent* player = agents ? GW::Agents::GetObservingAgent() : nullptr;
 
     if (player && agents) {
-        int enemy_count = 0;
         for (auto* agent : *agents) {
             const GW::AgentLiving* living = agent ? agent->GetAsAgentLiving() : nullptr;
 
             if (!living || living->allegiance != GW::Constants::Allegiance::Enemy || !living->GetIsAlive()) {
                 continue;
             }
-
-            switch (living->player_number) {
-                case 2338:
-                case 2325:
-                    continue;
-                default:
-                    break;
-            }
-
-            enemy_count++;
 
             if (living->hp <= enemies_threshhold) {
                 all_enemies.insert(living->agent_id);
