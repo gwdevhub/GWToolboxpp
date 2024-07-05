@@ -420,8 +420,8 @@ namespace {
         const auto item = GW::Items::GetItemById(item_id);
         const auto name = item ? item->name_enc : nullptr;
         const auto nick_item = name ? DailyQuests::GetNicholasItemInfo(name) : nullptr;
-        const auto nick_item_in_n_weeks = name ? DailyQuests::GetNicholasItemInNWeeks(name) : static_cast<size_t>(-1);
         if (nick_item) {
+            const auto nick_item_in_n_weeks = DailyQuests::GetNicholasItemInNWeeks(name);
             NewLineIfNotEmpty(description);
             description += std::format(L"{}\x10a\x108\x107Nicholas The Traveller collects {} of these in {} weeks!\x1\x1", GW::EncStrings::ItemUnique, nick_item->quantity, nick_item_in_n_weeks);
         }
