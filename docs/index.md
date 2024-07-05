@@ -31,7 +31,7 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 		<tr>
 			<td><a href="info">Info</a></td>
 			<td><a href="widgets#distance">Distance Monitor</a></td>
-			<td><a href="filter">Chat Filter</a></td>
+			<td><a href="chatfilter">Chat Filter</a></td>
 		</tr>
 		<tr>
 			<td><a href="materials">Materials Buyer</a></td>
@@ -65,6 +65,11 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 		</tr>
 		<tr>
 			<td><a href="trade">Trade</a></td>
+            <td></td>
+            <td></td>
+		</tr>
+		<tr>
+			<td><a href="hallofmonuments">Hall of Monuments</a></td>
             <td></td>
             <td></td>
 		</tr>

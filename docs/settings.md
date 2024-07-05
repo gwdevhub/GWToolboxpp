@@ -17,23 +17,68 @@ This section contains some information about how to use Toolbox, along with a li
 </figure>
 
 ## Game Settings
-These are several quality-of-life features that can simply be toggled on or off:
-* **Maintain FOV** saves and maintains the FOV setting used with `/cam fov [value]`.
+These are several quality-of-life features that can be toggled on or off:
+
+### Chat & Messages
 * **Show chat messages timestamp** shows the time of each message in the chat history. Click the color box to choose a color for the timestamps.
 * **Keep chat history** prevents the chat history from being deleted when changing characters.
 * **Open web links from templates** automatically opens any links in templates you click on, instead of opening the template.
-* **Automatically change URLs into build templates** puts links into equipment templates whenever you send them to chat.  
- A link is any message that starts with `https://` or `http://`.<br /><br />  
-* **Tick is a toggle** makes the "Ready" check on the party window immediately tick/untick when you click on it, instead of offering a drop-down menu.<br /><br />
-* **Target with double-click on message author** targets a player when you double-click their name in the chat.<br /><br />
-* **Flash Guild Wars taskbar icon when:** causes the Guild Wars icon in the taskbar to flash when...
+* **Automatically change URLs into build templates** puts links into equipment templates whenever you send them to chat. A link is any message that starts with `https://` or `http://`.
+* **Target with double-click on message author** targets a player when you double-click their name in the chat.
+* **Hide email address on login screen** replaces your email address with asterisks on the login screen.
+* **Block messages from inactive chat channels** hides messages from chat channels that are currently turned off.
+
+### Gameplay
+* **Maintain FOV** saves and maintains the FOV setting used with `/cam fov [value]`.
+* **Tick is a toggle** makes the "Ready" check on the party window immediately tick/untick when you click on it, instead of offering a drop-down menu.
+* **Disable camera smoothing** removes the delay when rotating the camera.
+* **Automatically skip cinematics** skips in-game cutscenes without user input.
+* **Automatically return to outpost on defeat** returns the party to the outpost when wiped (only works if you're the party leader).
+* **Disable gold/green items confirmation** removes the confirmation prompt when selling gold and green items to merchants.
+* **Automatically accept party invitations when ticked** accepts party invites without user input when you're ticked.
+* **Automatically accept party join requests when ticked** accepts requests to join your party without user input when you're ticked.
+* **Skip character name input when donating faction** automatically fills in your character name when donating faction.
+* **Auto-cancel Unyielding Aura when re-casting** automatically drops Unyielding Aura before recasting it.
+
+### Item Management
+* **Ctrl+Click to move items** allows you to move items between inventory and storage with Ctrl+Click.
+* **Move items to current storage pane** moves items to the currently open storage pane when using Ctrl+Click.
+* **Move materials to current storage pane** moves materials to the currently open storage pane when using Ctrl+Click (overrides default behavior of moving to material storage).
+
+### Notifications
+* **Flash Guild Wars taskbar icon when:**
     * **Receiving a private message** - you receive a whisper
-    * **Receiving a party invite** - you receive a party invite, (BUG: this also happens when your party leader invites someone else or someone accepts an invite to your party)
+    * **Receiving a party invite** - you receive a party invite
     * **Zoning in a new map** - when you switch to another map
-<br /><br />
-* **Automatically set "Away" after ___ minutes of inactivity** sets your status to Away after ___ minutes of no input (including moving the mouse) to Guild Wars. This will only happen if you were set to Online.
-* **Automatically set "Online" after an input to Guild Wars** immediately sets your status to Online after any input (including moving the mouse) to Guild Wars. This will only happen if you were set to Away.  
-Note that you will not see either of these status changes on your own friend list, but your status will have changed, and other players will see this.
+    * **Cinematic starts/ends** - when a cutscene begins or finishes
+    * **A player starts trade with you** - when someone initiates a trade with you
+    * **A party member pings your name** - when someone in your party pings your name in chat
+* **Show Guild Wars in foreground when:**
+    * **Launching GWToolbox++** - brings Guild Wars to the front when Toolbox starts
+    * **Zoning in a new map** - brings Guild Wars to the front when changing maps
+    * **A player starts trade with you** - brings Guild Wars to the front when someone initiates a trade
+* **Show a chat message when a friend:**
+    * **Logs in** - notifies you when a friend comes online
+    * **Logs out** - notifies you when a friend goes offline
+    * **Joins your outpost** - notifies you when a friend enters your current outpost
+    * **Leaves your outpost** - notifies you when a friend leaves your current outpost
+* **Show a chat message when a player:**
+    * **Joins your party** - notifies you when someone joins your party
+    * **Leaves your party** - notifies you when someone leaves your party
+    * **Joins your outpost** - notifies you when any player enters your current outpost
+    * **Leaves your outpost** - notifies you when any player leaves your current outpost
+
+### Status
+* **Automatically set "Away" after ___ minutes of inactivity** sets your status to Away after the specified minutes of no input to Guild Wars. This will only happen if you were set to Online.
+* **Automatically set "Online" after an input to Guild Wars** immediately sets your status to Online after any input to Guild Wars. This will only happen if you were set to Away.
+* **Set Guild Wars window title as current logged-in character** changes the game window title to show your character's name.
+
+Note that you will not see status changes on your own friend list, but your status will have changed, and other players will see this.
+
+### Miscellaneous
+* **Show warning when earned faction reaches ___%** displays a warning when your faction reaches the specified percentage in challenge missions or elite areas.
+* **Collectors Edition emotes on player dance** applies Collector's Edition animations to your character's dance emote.
+* **Automatically flag pet to fight called target** flags your pet to attack the target you've called in chat.
 
 <figure>
 <img src="https://user-images.githubusercontent.com/11432831/28233555-719397f6-68ac-11e7-82e5-8a18f4c7c44e.PNG"/>
