@@ -25,6 +25,7 @@ public:
     void Initialize() override;
     void Terminate() override;
     void DrawSettingsInternal() override;
+    void Update(float) override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void SetEnabled(bool _enabled);

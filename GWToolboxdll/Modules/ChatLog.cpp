@@ -467,6 +467,7 @@ namespace {
             injecting = false;
             return;
         }
+        Fetch();
         TBChatMessage* recv = recv_first;
         if (recv) {
             ClearChatLog_Func();
@@ -495,6 +496,7 @@ namespace {
         }
         InjectSent();
         injecting = false;
+        pending_inject = false;
         ForceRedrawChatLog();
     }
 
@@ -515,13 +517,9 @@ namespace {
         // GW Account changed, save this log and start fresh.
         Save();
         Load(this_account);
-        Fetch();
         pending_inject = true;
         return true;
     }
-
-
-
 
     // After adding chat log message, also add it to tb chat log.
     void OnPostAddToChatLog(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) {
@@ -574,7 +572,6 @@ namespace {
         // Instead, we trigger this immediately before map load.
         // When the game world is rebuilt during map load, the log works properly again.
         Init();
-        Inject();
         Save(); // Save the chat log on every map transition
     }
 }
@@ -594,7 +591,13 @@ void ChatLog::LoadSettings(ToolboxIni* ini)
     GW::GameThread::Enqueue(Init);
 }
 
-
+void ChatLog::Update(float) {
+    if (pending_inject) {
+        Init();
+        Inject();
+        pending_inject = false;
+    }
+}
 
 void ChatLog::SetEnabled(const bool _enabled)
 {
@@ -604,6 +607,7 @@ void ChatLog::SetEnabled(const bool _enabled)
     enabled = _enabled;
     if (enabled) {
         Init();
+        pending_inject = true;
     }
 }
 
