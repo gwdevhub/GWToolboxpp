@@ -423,10 +423,11 @@ namespace {
         GW::UI::UIMessage::kShowAgentNameTag,
         GW::UI::UIMessage::kWriteToChatLog,
         GW::UI::UIMessage::kOpenWhisper,
-        GW::UI::UIMessage::kSendChatMessage,
-        GW::UI::UIMessage::kPrintChatMessage
+        GW::UI::UIMessage::kSendChatMessage
     };
 
+    clock_t offline_status_reminder_last_sent = 0;
+    bool check_currently_offline_reminder = false;
 
     GW::HookEntry OnUIMessage_Entry;
     void OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
@@ -446,8 +447,8 @@ namespace {
         }
                                                  break;
         case GW::UI::UIMessage::kWriteToChatLog: {
-            const auto uimsg = static_cast<FriendListWindow::UIChatMessage*>(wparam);
-            wchar_t* message = uimsg->message;
+            const auto packet = (GW::UI::UIPacket::kWriteToChatLog*)wparam;
+            wchar_t* message = packet->message;
             switch (static_cast<MessageType>(message[0])) {
             case MessageType::CANNOT_ADD_YOURSELF_AS_A_FRIEND: // You cannot add yourself as a friend.
             case MessageType::EXCEEDED_MAX_NUMBER_OF_FRIENDS:  // You have exceeded the maximum number of characters on your Friends list.
@@ -460,6 +461,11 @@ namespace {
                 break;
             case MessageType::OUTGOING_WHISPER: // Server has successfully sent your whisper
                 OnOutgoingWhisperSuccess(status, message);
+                FriendListWindow::AddFriendAliasToMessage(&message);
+                check_currently_offline_reminder = true;
+                break;
+            case MessageType::INCOMING_WHISPER:
+                FriendListWindow::AddFriendAliasToMessage(&message);
                 break;
             case MessageType::PLAYER_X_NOT_ONLINE: // Player "" is not online. Redirect to the right person if we can find them!
                 OnPlayerNotOnline(status, message);
@@ -495,21 +501,20 @@ namespace {
             }
             // ...Otherwise carry on with the send
             pending_whisper.reset(target, text);
-        }
-                                                break;
-        case GW::UI::UIMessage::kPrintChatMessage: {
-            auto message = ((wchar_t**)wparam)[1];
-            switch (static_cast<MessageType>(*message)) {
-            case MessageType::INCOMING_WHISPER:
-            case MessageType::OUTGOING_WHISPER:
-                FriendListWindow::AddFriendAliasToMessage(&message);
-                break;
-            }
-        }
-                                                 break;
+        } break;
         }
     }
 
+    // If the player has just sent a whisper, but they're set to Offline status, put a message in chat to let them know.
+    void UpdateOfflineReminder() {
+        if (check_currently_offline_reminder) {
+            check_currently_offline_reminder = false;
+            if (TIMER_DIFF(offline_status_reminder_last_sent) > 10000 && GW::FriendListMgr::GetMyStatus() == GW::FriendStatus::Offline) {
+                offline_status_reminder_last_sent = TIMER_INIT();
+                Log::Flash("You're currently offline, and won't receive whispers.\nType '/online' in chat to set your status to Online.");
+            }
+        }
+    }
 
     /* Setters */
     // Update local friend record from raw info.
@@ -951,6 +956,7 @@ void FriendListWindow::Update(const float)
     if (!GW::Map::GetIsMapLoaded()) {
         return;
     }
+
     const GW::FriendList* fl = GW::FriendListMgr::GetFriendList();
     friend_list_ready = fl && fl->friends.valid();
     if (!friend_list_ready) {
@@ -963,6 +969,7 @@ void FriendListWindow::Update(const float)
         }
     }
     UpdatePendingWhisper();
+    UpdateOfflineReminder();
 }
 
 void FriendListWindow::Poll()
