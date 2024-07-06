@@ -151,7 +151,7 @@ namespace GuiUtils {
             return GetWikiPrefix();
         }
         char cmd[256];
-        const std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(url_path)), '_');
+        const std::string encoded = UrlEncode(SanitizeWikiUrl(WStringToString(RemoveDiacritics(url_path))), '_');
         snprintf(cmd, _countof(cmd), "%s%s", GetWikiPrefix(), encoded.c_str());
         return cmd;
     }
@@ -168,7 +168,7 @@ namespace GuiUtils {
             return GetRawWikiPrefix();
         }
         char cmd[256];
-        const std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(title)), '_');
+        const std::string encoded = UrlEncode(SanitizeWikiUrl(WStringToString(RemoveDiacritics(title))), '_');
         snprintf(cmd, _countof(cmd), "%s?title=%s&action=raw", GetRawWikiPrefix(), encoded.c_str());
         return cmd;
     }
@@ -186,6 +186,12 @@ namespace GuiUtils {
             GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, cmd);
             delete[] cmd;
             });
+    }
+
+    std::string SanitizeWikiUrl(std::string s)
+    {
+        const std::regex strip_bracket_whitespace(R"([\s_]*\[.*?\][\s_]*)");
+        return std::regex_replace(s, strip_bracket_whitespace, "");
     }
 
     void OpenWiki(const std::wstring& url_path)
