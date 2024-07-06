@@ -482,12 +482,13 @@ namespace {
 
             while (recv) {
                 timestamp_override_message = recv;
-                ASSERT(GW::Chat::AddToChatLog(timestamp_override_message->msg.data(), timestamp_override_message->channel));
-                if (!log) {
-                    log = GW::Chat::GetChatLog();
+                if (GW::Chat::AddToChatLog(timestamp_override_message->msg.data(), timestamp_override_message->channel)) {
+                    if (!log) {
+                        log = GW::Chat::GetChatLog();
+                    }
+                    ASSERT(log && !timestamp_override_message && log_pos != log->next);
+                    log_pos = log->next;
                 }
-                ASSERT(log && !timestamp_override_message && log_pos != log->next);
-                log_pos = log->next;
                 if (recv == recv_last) {
                     break;
                 }

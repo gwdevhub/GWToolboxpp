@@ -790,6 +790,24 @@ namespace {
         }
     }
 
+    void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
+        switch (message_id) {
+        case GW::UI::UIMessage::kLogChatMessage: {
+            const auto packet = (GW::UI::UIPacket::kLogChatMessage*)wparam;
+            if (!status->blocked && ShouldIgnore(packet->message, packet->channel)) {
+                status->blocked = true;
+            }
+        } break;
+        case GW::UI::UIMessage::kWriteToChatLog: {
+            const auto packet = (GW::UI::UIPacket::kWriteToChatLog*)wparam;
+            if (!status->blocked && ShouldIgnore(packet->message, packet->channel)) {
+                status->blocked = true;
+            }
+        } break;
+
+        }
+    }
+
     // Ensure the message buffer is cleared if this packet has been blocked
     void ClearMessageBufferIfBlocked(const GW::HookStatus* status, GW::Packet::StoC::PacketBase*)
     {
@@ -811,13 +829,13 @@ void ChatFilter::Initialize()
     GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_GLOBAL, ClearMessageBufferIfBlocked);
     GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_LOCAL, ClearMessageBufferIfBlocked);
 
-    GW::UI::RegisterUIMessageCallback(&BlockIfApplicable_Entry, GW::UI::UIMessage::kWriteToChatLog, [](GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) {
-        const auto message = ((wchar_t**)wparam)[1];
-        const auto channel = *(uint32_t*)wparam;
-        if (!status->blocked && ShouldIgnore(message, channel)) {
-            status->blocked = true;
-        }
-        });
+    const GW::UI::UIMessage message_ids[] = {
+        GW::UI::UIMessage::kWriteToChatLog,
+        GW::UI::UIMessage::kLogChatMessage
+    };
+    for (auto message_id : message_ids) {
+        GW::UI::RegisterUIMessageCallback(&BlockIfApplicable_Entry, message_id, OnUIMessage, -0x8000);
+    }
 }
 
 void ChatFilter::Terminate() {
