@@ -779,14 +779,10 @@ namespace {
         }
     }
 
-    void OnPrintChat(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
+    void OnPrintChat(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
     {
-        struct Packet {
-            GW::Chat::Channel channel;
-            wchar_t* message;
-            FILETIME timestamp;
-            bool is_reprint;
-        } *packet = (Packet*)wparam;
+        ASSERT(message_id == GW::UI::UIMessage::kWriteToChatLog);
+        const auto packet = (GW::UI::UIPacket::kWriteToChatLog*)wparam;
 
         if (!IsObfuscatorEnabled()) {
             return;
@@ -912,7 +908,7 @@ void Obfuscator::Initialize()
         RegisterUIMessageCallback(&stoc_hook, header, OnUIMessage, post_gw_altitude);
     }
 
-    GW::UI::RegisterUIMessageCallback(&ctos_hook, GW::UI::UIMessage::kPrintChatMessage, OnPrintChat);
+    GW::UI::RegisterUIMessageCallback(&ctos_hook, GW::UI::UIMessage::kWriteToChatLog, OnPrintChat);
     GW::UI::RegisterUIMessageCallback(&ctos_hook, GW::UI::UIMessage::kSendChatMessage, OnSendChat);
 
     GW::Chat::CreateCommand(L"obfuscate", CmdObfuscate);
