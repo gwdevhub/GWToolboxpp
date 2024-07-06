@@ -40,6 +40,7 @@ namespace GuiUtils {
     std::string WikiTemplateUrlFromTitle(const std::wstring& title);
     void OpenWiki(const std::wstring& term);
     void SearchWiki(const std::wstring& term);
+    std::string SanitizeWikiUrl(std::string s);
     bool FontsLoaded();
     DLLAPI ImFont* GetFont(FontSize size);
 
