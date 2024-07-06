@@ -12,7 +12,6 @@
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Quest.h>
 
-#include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/UIMgr.h>
@@ -28,7 +27,7 @@ namespace {
     GW::HookEntry hook_entry;
     GW::Constants::QuestID active_quest_id = (GW::Constants::QuestID)0;
     GuiUtils::EncString active_quest_name;
-    std::vector<std::tuple<int, std::string, bool>> active_quest_objectives; // (index, objective, completed)
+    std::vector<std::tuple<int, std::wstring, bool>> active_quest_objectives; // (index, objective, completed)
     IDirect3DTexture9** p_quest_marker_texture;
     bool is_loading_quest_objectives = false;
     bool force_update = false;
@@ -54,7 +53,7 @@ namespace {
             bool completed = (matches[1].compare(L"c") == 0);
             std::wstring obj = matches[2].str();
 
-            active_quest_objectives.emplace_back(index++, GuiUtils::WStringToString(obj), completed);
+            active_quest_objectives.emplace_back(index++, obj, completed);
         }
     }
 
@@ -71,13 +70,13 @@ namespace {
         for(auto it = active_quest_objectives.cbegin(); it != active_quest_objectives.cend(); it++) {
             const auto& [ix, _a, _b] = *it;
             if (ix >= index) {
-                active_quest_objectives.emplace(it, index, GuiUtils::WStringToString(decoded_objective), completed);
+                active_quest_objectives.emplace(it, index, decoded_objective, completed);
                 delete param_tuple;
                 return;
             }
         }
 
-        active_quest_objectives.emplace_back(index, GuiUtils::WStringToString(decoded_objective), completed);
+        active_quest_objectives.emplace_back(index, decoded_objective, completed);
 
         delete param_tuple;
     }
@@ -194,7 +193,7 @@ void ActiveQuestWidget::Draw(IDirect3DDevice9*)
 
         ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_label));
         ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR_ACTIVE);
-        ImGui::TextUnformatted(active_quest_name.string().c_str());
+        ImGui::Text("%S", active_quest_name.wstring().c_str());
         ImGui::PopStyleColor();
         ImGui::PopFont();
 
@@ -206,7 +205,7 @@ void ActiveQuestWidget::Draw(IDirect3DDevice9*)
                 ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR_COMPLETED);
             }
             ImGui::Bullet();
-            ImGui::TextUnformatted(obj_str.c_str());
+            ImGui::Text("%S", obj_str.c_str());
             if(completed) {
                 ImGui::PopStyleColor();
             }
