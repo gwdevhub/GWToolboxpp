@@ -1,9 +1,6 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-
-#include <GWCA/Context/MapContext.h>
-
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/Managers/MapMgr.h>
@@ -11,7 +8,6 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
-#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Map.h>
@@ -20,9 +16,11 @@
 #include <Timer.h>
 #include <ImGuiAddons.h>
 
-#include <Windows/PathfindingWindow.h>
+#include <Windows/Pathfinding/PathfindingWindow.h>
+#include <Windows/Pathfinding/Pathing.h>
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/Minimap.h>
+
 
 
 

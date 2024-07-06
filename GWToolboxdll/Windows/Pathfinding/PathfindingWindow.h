@@ -1,9 +1,7 @@
 #pragma once
 
-#include <GWCA/Utilities/Hook.h>
-
 #include <ToolboxWindow.h>
-#include <Windows/Pathing.h>
+#include <Windows/Pathfinding/Pathing.h>
 
 using CalculatedCallback = std::function<void (const std::vector<GW::GamePos>& waypoints, void* args)>;
 

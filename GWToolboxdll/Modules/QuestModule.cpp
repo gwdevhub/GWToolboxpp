@@ -9,7 +9,7 @@
 
 #include "QuestModule.h"
 
-#include <Windows/PathfindingWindow.h>
+#include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Widgets/Minimap/CustomRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
 

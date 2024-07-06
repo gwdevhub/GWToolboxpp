@@ -63,7 +63,7 @@
 #include <Windows/StringDecoderWindow.h>
 #include <Windows/SkillListingWindow.h>
 #include <Windows/TargetInfoWindow.h>
-#include <Windows/PathfindingWindow.h>
+#include <Windows/Pathfinding/PathfindingWindow.h>
 #endif
 
 #include <Widgets/TimerWidget.h>

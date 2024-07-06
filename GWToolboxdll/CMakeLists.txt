@@ -15,7 +15,9 @@ file(GLOB SOURCES
     "Widgets/Minimap/*.h"
     "Widgets/Minimap/*.cpp"
     "Windows/*.h" 
-    "Windows/*.cpp"
+    "Windows/*.cpp",
+    "Windows/Pathfinding/*.h"
+    "Windows/Pathfinding/*.cpp"
     )
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})

@@ -1,9 +1,7 @@
-#pragma once
+#include "stdafx.h"
 #include "MathUtility.h"
 
-#include <vector>
 #include <algorithm>
-#include <string>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/GameEntities/Agent.h>
