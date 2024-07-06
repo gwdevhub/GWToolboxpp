@@ -50,4 +50,59 @@ You can use various shortcuts and partial names for outposts and districts. Some
 - **Collapse on travel**: Automatically collapse the Travel window after selecting a destination.
 - **Automatically retry if the district is full**: Keep trying to enter a full district.
 
+## Notes
+
+You can use the following shortcuts instead of `[dest]`:
+* `fav1`, `fav2`, `fav3` for your favorite locations
+* `gh` to enter or leave your guild hall
+* `gh [tag]` for any guild hall in your alliance - the tag is not case sensitive.
+* `toa` - Temple of the Ages
+* `doa`, `goa`, `tdp` - Domain of Anguish
+* `eee` - Embark Beach, Europe English
+* `gtob` - The Great Temple of Balthazar
+* `la` - Lions Arch
+* `ac` - Ascalon City
+* `eotn` - Eye of the North
+* `hzh` - House Zu Heltzer
+* `ctc` - Central Transfer Chamber
+* `topk` - Tomb of the Primeval Kings
+* `ra` - Random Arenas
+* `ha` - Heroes' Ascent
+* `fa` - Fort Aspenwood
+* `jq` - Jade Quarry
+
+The `[dest]` argument also does a partial search on outpost names and returns the best match. Some examples include:
+* `kama ae1` - Kamadan, American district 1
+* `aurora int` - Aurora Glade, International district
+* `sunspear sanc eg` - Sunspear Sanctuary, Europe German district
+* `fa l` - Fort Aspenwood (Luxon)
+* `jade quarry k` - Jade Quarry (Kurzick)
+* `shing fr` - Shing Jea Monastery, Europe French district
+* `vizunah square l` - Vizunah Square, Local Quarter
+* `deep ee` - The Deep, Europe English district
+* `foib` - Foibles' Fair (when on a Pre-Searing character)
+
+The `[dest]` argument also does a partial search on dungeon names:
+* `catacombs of kathandrax`, `rragars menagerie`, `cathedral of flames` - Doomlore Shrine
+* `ooze pit`, `darkrime delves` - Longeye's Ledge
+* `frostmaws burrows`, `sepulchre of dragrimmar` - Sifhalla
+* `ravens point` - Olafstead
+* `vloxen excavations` - Umbral Grotto
+* `bogroot growths` - Gadds Encampment
+
+The last word of the `[dest]` argument can also be a district shortcut as shown in the above examples:
+* `ae` - American (any district)
+* `ae1`, `ad1` - American district 1
+* `int` - International district
+* `ee` - Europe English district
+* `eg`, `dd` - Europe German district
+* `ef`, `fr` - Europe French district
+* `ei`, `it` - Europe Italian district
+* `es` - Europe Spanish district
+* `ep`, `pl` - Europe Polish district
+* `er`, `ru` - Europe Russian district
+* `ak`, `kr` - Asia Korean district
+* `ac`, `atc`, `ch` - Asia Chinese district
+* `aj`, `jp` - Asia Japanese district
+
 [back](./)
