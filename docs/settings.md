@@ -29,7 +29,6 @@ These are several quality-of-life features that can be toggled on or off:
 * **Block messages from inactive chat channels** hides messages from chat channels that are currently turned off.
 
 ### Gameplay
-* **Maintain FOV** saves and maintains the FOV setting used with `/cam fov [value]`.
 * **Tick is a toggle** makes the "Ready" check on the party window immediately tick/untick when you click on it, instead of offering a drop-down menu.
 * **Disable camera smoothing** removes the delay when rotating the camera.
 * **Automatically skip cinematics** skips in-game cutscenes without user input.
@@ -39,16 +38,24 @@ These are several quality-of-life features that can be toggled on or off:
 * **Automatically accept party join requests when ticked** accepts requests to join your party without user input when you're ticked.
 * **Skip character name input when donating faction** automatically fills in your character name when donating faction.
 * **Auto-cancel Unyielding Aura when re-casting** automatically drops Unyielding Aura before recasting it.
+* **Remove 1.5 second minimum for the cast bar to show** allows the cast bar to appear for skills with very short cast times.
+* **Lazy chest looting** automatically targets nearby reserved items when using the 'target nearest item' key next to a chest.
+* **Auto use available keys when interacting with locked chest** automatically uses keys when interacting with locked chests.
+* **Auto use lockpick when interacting with locked chest** automatically uses lockpicks when interacting with locked chests.
+* **Keep current quest when accepting a new one** maintains the current active quest when a new quest is added.
 
 ### Item Management
 * **Ctrl+Click to move items** allows you to move items between inventory and storage with Ctrl+Click.
 * **Move items to current storage pane** moves items to the currently open storage pane when using Ctrl+Click.
 * **Move materials to current storage pane** moves materials to the currently open storage pane when using Ctrl+Click (overrides default behavior of moving to material storage).
+* **Hide item descriptions in explorable areas/outposts** only shows the item name in tooltips when hovering over items in inventory or weapon sets.
+* **Hide skill descriptions in explorable areas/outposts** only shows the skill name and attributes in tooltips when hovering over skills.
+* **Show price check information on item hover** displays the current market price of the item when hovering over it.
+* **Show salvage information on item hover** displays potential salvage materials for the item when hovering over it.
 
 ### Notifications
 * **Flash Guild Wars taskbar icon when:**
     * **Receiving a private message** - you receive a whisper
-    * **Receiving a party invite** - you receive a party invite
     * **Zoning in a new map** - when you switch to another map
     * **Cinematic starts/ends** - when a cutscene begins or finishes
     * **A player starts trade with you** - when someone initiates a trade with you
@@ -79,6 +86,21 @@ Note that you will not see status changes on your own friend list, but your stat
 * **Show warning when earned faction reaches ___%** displays a warning when your faction reaches the specified percentage in challenge missions or elite areas.
 * **Collectors Edition emotes on player dance** applies Collector's Edition animations to your character's dance emote.
 * **Automatically flag pet to fight called target** flags your pet to attack the target you've called in chat.
+* **Block floating numbers above character when:**
+    * **Gaining faction**
+    * **Gaining experience**
+    * **Gaining 0 experience**
+* **Disable animation and sound from consumables:**
+    * **Tonics**
+    * **Sweets**
+    * **Bottle rockets**
+    * **Party poppers**
+    * **Snowman Summoners**
+    * **Fireworks**
+* **Block sparkle effect on dropped items**
+* **Limit signet of capture to 10 in skills window**
+* **Block full screen message when entering a new area**
+* **Customize in-game name tag colors** for different types of entities (e.g., NPCs, enemies, players)
 
 <figure>
 <img src="https://user-images.githubusercontent.com/11432831/28233555-719397f6-68ac-11e7-82e5-8a18f4c7c44e.PNG"/>

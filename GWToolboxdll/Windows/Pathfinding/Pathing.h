@@ -55,10 +55,6 @@ namespace Pathing {
     };
 
     class MilePath {
-    private:
-
-        
-
         volatile bool m_processing = false;
         volatile bool m_done = false;
         volatile bool m_terminateThread = false;

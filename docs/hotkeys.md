@@ -12,7 +12,7 @@ The Hotkeys window offers a large selection of Toolbox functions that can be map
 
 Click "Create Hotkey..." and select the type of hotkey you want to create. A new row will appear in the list of hotkeys, and you can now edit this hotkey.
 
-The unmarked toggle switches the hotkey on or off: if it's off, pressing your hotkey will do nothing, but you can still activate it by clciking the "Run" button.
+The unmarked toggle switches the hotkey on or off: if it's off, pressing your hotkey will do nothing, but you can still activate it by clicking the "Run" button.
 
 "Display message when triggered" prints a message in the Emotes channel whenever the hotkey is successfully activated.
 
@@ -20,7 +20,9 @@ The unmarked toggle switches the hotkey on or off: if it's off, pressing your ho
 
 "Trigger hotkey when entering explorable area" and "Trigger hotkey when entering outpost" cause the hotkey to activate every time you enter an instanced area or outpost/town/Guild Hall, respectively.
 
-"Map ID" is to specify on which map the hotkey will work; use the Map tab on the [Info](info) window to find the Map ID. By default this is 0, which means that it will work on any map. You can also specify which profession the hotkey works for; it will only work for characters of that primary profession.
+"Trigger hotkey when Guild Wars loses focus" and "Trigger hotkey when Guild Wars gains focus" allow the hotkey to activate when you switch away from or back to the Guild Wars window.
+
+You can specify which maps, professions, and instance types the hotkey will work for. You can also set a character name for the hotkey to only work on a specific character.
 
 The "Hotkey:" button allows you to choose a new key to bind to this function.
 
@@ -31,76 +33,56 @@ The "Hotkey:" button allows you to choose a new key to bind to this function.
 The other controls are for setting up the parameters of the hotkey, and are of course different for each type of hotkey, as described below:
 
 ## Send Chat
-Simply select a channel to send the message to, and type, or copy (Ctrl+C) and paste (Ctrl+V), the message.
-
-If you select "/ Commands", the message will send as a chat command. You can use Guild Wars commands (such as `/resign` or `/stuck`), as well as Toolbox commands (such as `/pcons` or `/cam unlock`). You don't need to type in the /.
+Select a channel to send the message to, and type your message. You can use Guild Wars commands (such as `/resign` or `/stuck`), as well as Toolbox commands (such as `/pcons` or `/cam unlock`).
 
 ## Use Item
-Use the Items tab on the [Info](info) window to find the ID number of the item you want. Type, or copy (Ctrl+C) and paste (Ctrl+V) in the ID.
-
-You can also type in the name of the item; this is just to help you remember what the hotkey does, since the item ID isn't very descriptive by itself.
-
-This only works for consumable items; not equipment. It works on items in your Xunlai storage so long as you're in an outpost.
-
-You will receive an error message if the item is not available.
+Specify the item's Model ID and optionally a name to help you remember what the item is. This works for consumable items, including those in your Xunlai storage when you're in an outpost.
 
 ## Drop or Use Buff
-This has a dual function: if you are currently maintaining the selected enchantment, you will dismiss it. Otherwise, you will cast it on the target. If you are maintaining multiple copies, the first one you cast is the one you'll dismiss.
-
-As well as the default options of Recall, Unyielding Aura, and Holy Veil, you can select another skill of your choice. To do this, you'll need to find the skill ID on this page: [https://wiki.guildwars.com/wiki/Skill_template_format/Skill_list](https://wiki.guildwars.com/wiki/Skill_template_format/Skill_list)
+This has a dual function: if you are currently maintaining the selected enchantment, you will dismiss it. Otherwise, you will cast it on the target. You can choose from Recall, Unyielding Aura, Holy Veil, or specify a custom skill ID.
 
 ## Toggle...
 This activates and de-activates one of four features:
 
-* **Clicker** makes the left mouse button click around 30 times per second.
-
+* **Clicker** makes the left mouse button click rapidly.
 * **Pcons** toggles [auto pcons](pcons) on or off.
-
-* **Coin Drop** drops a gold coin on the floor every 500 milliseconds.
-
+* **Coin Drop** drops a gold coin on the floor periodically.
 * **Tick** toggles the Ready tick in the party window.
 
 ## Execute...
-This triggers one of five features:
+This triggers one of several features:
 
-* **Open Xunlai Chest** opens your storage, wherever you are in any outpost. This is even possible on new characters that haven't yet unlocked a storage account (such as in pre-Searing), but these will be unable to access any of the items; you can only look.
-
-* **Open Locked Chest** automatically uses a lockpick to open a targeted chest, without you having to walk over to it. The item will still spawn next to the chest as usual.  
- This will fail if you do not have a lockpick in your inventory, or if someone else is using the chest at the same time.  
- This works on other chests, but there is no option to use a key; a lockpick will always be used.
-
+* **Open Xunlai Chest** opens your storage from anywhere in an outpost.
+* **Open Locked Chest** automatically uses a lockpick to open a targeted chest.
 * **Drop Gold Coin** drops a single gold coin on the ground.
-
-* **Reapply appropriate title** removes your current title (if you were displaying anyway) and instantly applies whichever is appropriate for the current area. Outside of areas where Eye of the North titles are useful, the Lightbringer title is chosen by default.
-
-* **Enter Challenge** activates the Enter Mission button in Prophecies or Factions mission outposts.
+* **Reapply appropriate title** changes your title based on the current area.
+* **Enter Challenge** activates the Enter Mission button in certain outposts.
 
 ## Target
-This automatically targets a particular pre-specified NPC, signpost, or item. Use the Target tab on the [Info](info) window to find the ID number of the NPC or item you want. To find the ID of a signpost, click the Advanced dropdown in the target tab, and find the Gadget ID. Type, or copy (Ctrl+C) and paste (Ctrl+V) in the ID.
-
-If there are multiple agents with the same ID in range, the closest will be targeted.
+This automatically targets a particular pre-specified NPC, signpost, or item based on its ID.
 
 ## Move to
-This will click on a pre-specified point on the map, so that your character moves there. Use the Player tab on the [Info](info) window to find the co-ordinates you want. Type, or copy (Ctrl+C) and paste (Ctrl+V) in the x and y co-ordinates.
-
-You can specify the range in which the hotkey will work; by default this is 5000, which means that it will work so long as you are in compass range of the destination, but no further. Change this value to 0 to make the limit infinite.
-
-Note that movement hotkeys never work in outposts.
+This will move your character to a pre-specified point on the map. You can set the coordinates and specify a range within which the hotkey will work.
 
 ## Dialog
-Use the Dialog tab on the [Info](info) window to find the ID number of the dialog you want. Type, or copy (Ctrl+C) and paste (Ctrl+V) in the ID.
-
-You can also type in a description of the dialog; this is just to help you remember what the hotkey does, since the dialog ID isn't very descriptive by itself.
+This sends a specific dialog ID, useful for interacting with NPCs or accepting quests automatically.
 
 ## Ping Build
-Select a teambuild from the list of [Builds](builds). Using the hotkey will send it to party chat.
+Select a teambuild from your saved builds. Using the hotkey will send it to party chat.
 
 ## Load Hero Team Build
-Select a teambuild from the list of [Hero Builds](herobuilds). Using the hotkey will load the team.
+Select a hero team build from your saved builds. Using the hotkey will load the team.
 
-## Equip item
-Specify a particular slot in your inventory. Using the hotkey will equip the item in that slot.
+## Equip Item
+This allows you to equip a specific item, either by its attributes or by its position in your inventory.
 
-If you are currently unable to change equipment (e.g. you are knocked down), it will try again. "Display error message on failure" prints a message in the Emotes channel if it repeatedly fails to equip the item.
+## Flag Hero
+This allows you to set a flag for a specific hero or all heroes at a certain angle and distance from your character.
+
+## Guild Wars Key
+This allows you to bind a hotkey to trigger a specific Guild Wars control action.
+
+## Command Pet
+This allows you to set your pet's behavior (Fight, Guard, or Avoid Combat) with a hotkey.
 
 [back](./)

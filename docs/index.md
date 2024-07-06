@@ -59,8 +59,13 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 			<td><a href="settings#game_settings">URLs in equipment templates</a></td>
 		</tr>
 		<tr>
+			<td><a href="reroll">Reroll</a></td>
+			<td><a href="widgets#alcohol">Alcohol Monitor</a></td>
+			<td><a href="settings#game_settings">URLs in equipment templates</a></td>
+		</tr>
+		<tr>
 			<td>Hero Builds</td>
-            <td></td>
+            <td><a href="misc_widgets">Miscellaneous Widgets</a></td>
             <td></td>
 		</tr>
 		<tr>
@@ -73,7 +78,76 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
             <td></td>
             <td></td>
 		</tr>
+		<tr>
+			<td><a href="completion">Completion Window</a></td>
+            <td></td>
+            <td></td>
+		</tr>
+		<tr>
+			<td><a href="integrations">Integrations</a></td>
+            <td></td>
+            <td></td>
+		</tr>
+		<tr>
+			<td><a href="items">Items</a></td>
+            <td></td>
+            <td></td>
+		</tr>
+		<tr>
+			<td><a href="input_modules">Input Modules</a></td>
+            <td></td>
+            <td></td>
+		</tr>
+		<tr>
+			<td><a href="plugins">Plugins</a></td>
+            <td></td>
+            <td></td>
+		</tr>
+		<tr>
+			<td><a href="quest">Quest Features</a></td>
+            <td></td>
+            <td></td>
+		</tr>
+		<tr>
+			<td><a href="party_window">Party Window Enhancements</a></td>
+            <td></td>
+            <td></td>
+		</tr>
+		<tr>
+			<td><a href="target_widgets">Target Widgets</a></td>
+            <td></td>
+            <td></td>
+		</tr>
+		<tr>
+			<td><a href="armory_window">Armory Window</a></td>
+            <td></td>
+            <td></td>
+		</tr>
+		<tr>
+			<td><a href="duping_window">Duping Window</a></td>
+            <td></td>
+            <td></td>
+		</tr>
+		<tr>
+			<td><a href="enemy_window">Enemy Window</a></td>
+            <td></td>
+            <td></td>
+		</tr>
+		<tr>
+			<td><a href="main_window">Main Window</a></td>
+            <td></td>
+            <td></td>
+		</tr>
 	</table>
+</div>
+
+<div style="float: right; width: 15%; margin-left: 5%;">
+	<img src="https://user-images.githubusercontent.com/11432831/28233445-c7762ff4-68ab-11e7-9388-9437c8987a61.PNG" style="float: right;" />
+</div>
+
+<div style="clear: both;">
+	<h2>Main Window</h2>
+	<p>The Main Window serves as a central hub for quickly toggling various windows and widgets in GWToolbox++. It provides easy access to the tools you use most frequently, allowing you to customize your interface on the fly.</p>
 </div>
 
 <div style="float: right; width: 15%; margin-left: 5%;">
