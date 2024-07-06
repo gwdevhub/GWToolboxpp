@@ -600,20 +600,27 @@ namespace {
     void CHAT_CMD_FUNC(CmdSetFriendListStatus)
     {
         std::wstring cmd = *argv;
-        bool res = false;
+        auto set = GW::FriendListMgr::GetMyStatus();
+        const auto current = set;
         if (cmd == L"away") {
-            res = GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away);
+            set = GW::FriendStatus::Away;
         }
         else if (cmd == L"online") {
-            res = GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Online);
+            set = GW::FriendStatus::Online;
         }
         else if (cmd == L"offline") {
-            res = GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Offline);
+            set = GW::FriendStatus::Offline;
         }
         else if (cmd == L"busy" || cmd == L"dnd") {
-            res = GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::DND);
+            set = GW::FriendStatus::DND;
+
         }
-        if (!res) {
+        if (current == set)
+            return;
+        if (GW::FriendListMgr::SetFriendListStatus(set)) {
+            Log::Flash("You're now %s", GetStatusText(set));
+        }
+        else {
             Log::ErrorW(L"Failed to set friend list status");
         }
     }
