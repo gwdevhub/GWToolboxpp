@@ -178,8 +178,8 @@ static void _chatlog(const LogType log_type, const wchar_t* message)
     auto to_send = new wchar_t[len];
     swprintf(to_send, len - 1, L"<a=1>%s</a><c=#%6X>: %s</c>", GWTOOLBOX_SENDER, color, message);
 
-    GW::GameThread::Enqueue([to_send] {
-        WriteChat(GWTOOLBOX_CHAN, to_send, nullptr, log_transient);
+    GW::GameThread::Enqueue([to_send, add_to_log = log_transient] {
+        WriteChat(GWTOOLBOX_CHAN, to_send, nullptr, add_to_log);
         delete[] to_send;
     });
 
