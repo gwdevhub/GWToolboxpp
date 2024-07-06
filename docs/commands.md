@@ -4,69 +4,75 @@ layout: default
 
 # Chat Commands
 
-Toolbox supports a variety of chat commands; you can use them by typing in chat like in-game commands such as `/age`.
-`(a|b)` denotes a mandatory argument, in this case 'a' or 'b'.
-`[a|b]` denotes an optional argument, in this case nothing, 'a' or 'b'.
+GWToolbox++ supports a variety of chat commands that enhance your gameplay experience. You can use them by typing in chat, similar to in-game commands such as `/age`.
 
+## Notation
+- `(a|b)` denotes a mandatory argument, where you must choose either 'a' or 'b'.
+- `[a|b]` denotes an optional argument, where you can choose nothing, 'a', or 'b'.
 
-`/afk` will make your character `/sit` and set your status to Away
+## General Commands
 
-`/age2` will display a simple in-game instance time.
+- `/afk [message]`: Set your status to Away and optionally set an AFK message.
+- `/age2`: Display the instance time in chat.
+- `/borderless [on|off]`: Toggle borderless window mode.
+- `/chest` or `/xunlai`: Open Xunlai Chest in a city or outpost.
+- `/dialog [id]`: Send a dialog (use hex number for `[id]`, e.g., `/dialog 0x99`).
+- `/pcons [on|off]`: Turn [pcons](pcons) on/off. Using `/pcons` alone will toggle.
+- `/tb close`, `/tb quit`, or `/tb exit`: Completely close Toolbox and all its windows.
+- `/tb reset`: Move [Settings](settings) and the main Toolbox window to the top-left corner of the screen.
+- `/tb`: Hide or show the main Toolbox window.
+- `/hide [name]` or `/show [name]`: Hide or show a window or widget.
+- `/tb [name]`: Toggle visibility of a window or widget.
+- `/resize [x] [y]`: Set the size of the Guild Wars window (only works in windowed mode).
 
-`/borderless [on|off]` will toggle borderless window.
+## Camera and View Commands
 
-`/cam [args]` or `/camera [args]` to control various aspect of the camera:
-* `/cam (unlock|lock)` to lock/unlock camera.
-* `/cam speed [value]` sets the unlocked camera speed.
-* `/cam fog (on|off)` to enable/disable fog.
-* `/cam fov [amount]` to change the Field-of-View, or `/cam fov` default to reset it.
+- `/cam [args]` or `/camera [args]`: Control various aspects of the camera:
+  - `/cam (unlock|lock)`: Lock/unlock camera.
+  - `/cam speed [value]`: Set the unlocked camera speed.
+  - `/cam fog (on|off)`: Enable/disable fog.
+  - `/cam fov [amount]`: Change the Field-of-View, or `/cam fov` to reset to default.
+- `/zoom [value]`: Change the maximum zoom to the specified value. Use `/zoom` alone to reset to the default value of 750.
 
-`/zoom [value]` to change the maximum zoom to the value. Use just `/zoom` to reset to the default value of 750.
+## Targeting and Flagging Commands
 
-`/chest` or `/xunlai` to open Xunlai Chest in a city or outpost.
+- `/target` or `/tgt`: Interact with your target:
+  - `/target closest` or `/target nearest`: Target the closest agent to the player.
+  - `/target getid`: Print the target's model ID (PlayerNumber).
+  - `/target getpos`: Print the coordinates (x, y) of the target.
+  - `/target ee`: Target the furthest ally within spellcast range in the direction you're facing (for Ebon Escape).
+  - `/target hos`: Target the closest enemy or ally within spellcast range in the direction you're facing away from (for Viper's Defense or Heart of Shadow).
+- `/flag`: Used to flag heroes on the GWToolbox minimap. See [Minimap](minimap#chat-commands) for all options.
 
-`/dialog [id]` will send a dialog; hex number instead of `[id]`, e.g. `/dialog 0x99`.
+## Damage and Skill Commands
 
-`/dmg [arg]` or `/damage [arg]` controls the party damage monitor. See [damage_monitor#chat-commands](Damage Monitor) for all options.
+- `/dmg [arg]` or `/damage [arg]`: Control the party damage monitor. See [Damage Monitor](damage_monitor#chat-commands) for all options.
+- `/useskill [slot]`: Use the selected skill on recharge. For example, `/useskill 1` will use your first skill. Use `/useskill`, `/useskill 0`, or `/useskill stop` to stop.
 
-`/flag` is used to flag heros on the GWToolbox minimap. See [minimap#chat-commands](Minimap) for all options.
+## Travel and Navigation Commands
 
-`/pcons [on|off]` to turn [pcons](pcons) on/off. Using `/pcons` will toggle.
+- `/to [dest]`, `/tp [dest]`, or `/travel [dest]`: Map travel to the specified outpost. See [Travel](travel#chat-commands) for all options.
 
-`/target` or `/tgt` has few advanced ways to interact with your target:
-* `/target closest` or `/target nearest` will target the closest agent to the player.
-* `/target getid` will print the the target model ID (aka PlayerNumber). This is unique and constant for each kind of agent.
-* `/target getpos` will print the coordinates (x, y) of the target.
-* `/target ee` will target the furthest ally within spellcast range of the direction you're facing, e.g. for Ebon Escape.
-* `/target hos` will target the closest enemy or ally within spellcast range of the direction you're facing away from, e.g. for Vipers Defense or Heart of Shadow.
+## Appearance Commands
 
-`/tb close`, `/tb quit`, or `/tb exit` completely close Toolbox and all its windows.
+- `/transmo`: Change your character model to that of the target NPC (only visible to you).
+  - `/transmo [size (6-255)]`: Set the size of your model.
+  - `/transmo <npc_name> [size (6-255)]`: Change your appearance into a specific NPC.
+  - `/transmo reset`: Reset your appearance.
+- `/transmotarget <npc_name> [size (6-255)]`: Change your target's appearance into an NPC (only visible to you).
+  - `/transmotarget reset`: Reset your target's appearance.
+- `/transmoparty <npc_name> [size (6-255)]`: Change your party's appearance into an NPC (only visible to you).
+  - `/transmoparty reset`: Reset your party's appearance.
 
-`/tb reset` moves [Settings](settings) and the main Toolbox window to the top-left corner of the screen.
+## Build and Item Commands
 
-`/hide [name]` or `/show [name]` to hide or show a window or widget, or `/tb [name]` to toggle.
+- `/load` and `/loadbuild`: Load builds onto your player or heroes. See [Builds](builds#chat-commands) for all options.
+- `/pingitem <equipped_item>`: Ping your equipment in chat.
+  - `<equipped_item>` options: armor, head, chest, legs, boots, gloves, offhand, weapon, weapons, costume
 
-`/tb` to hide or show the main Toolbox window.
+## Chat Commands
 
-`/resize [x] [y]` sets the size of the Guild Wars window if the resolution is set to Window.
+- `/chat [all|guild|team|trade|alliance|whisper]`: Open or switch to the specified chat channel.
 
-`/to [dest]`, `/tp [dest]`, or `/travel [dest]` will map travel you to the `[dest]` outpost. See [Travel](travel#chat-commands) for all options.
-
-`/useskill [slot]` will use the selected skill on recharge; for example, `/useskill 1` will use your first skill. Use `/useskill`, `/useskill 0`, or `/useskill stop` to stop.
-
-`/transmo` changes your character model to that of the target NPC. This is only visible to you.
-* `/transmo [size (6-255)]` sets the size of your model. Again, this has no effect except your appearance on your own screen.
-* `/transmo <npc_name> [size (6-255)]` to change your appearance into an NPC.
-* `/transmo reset` to reset your appearance.
-
-`/transmotarget <npc_name> [size (6-255)]` to change your target's appearance into an NPC. This is only visible to you.
-* `/transmotarget reset` to reset your target's appearance.
-
-`/transmoparty <npc_name> [size (6-255)]` to change your party's appearance into an NPC. This is only visible to you.
-* `/transmoparty reset` to reset your party's appearance.
-
-`/load` and `/loadbuild` is used to load builds onto your player, or your heros. See [Builds](builds#chat-commands) for all options.
-
-`/pingitem <equipped_item>` to ping your equipment in chat.
-* `<equipped_item>` options: armor, head, chest, legs, boots, gloves, offhand, weapon, weapons, costume
+For more detailed information on specific features, please refer to their respective documentation pages.
 [back](./)

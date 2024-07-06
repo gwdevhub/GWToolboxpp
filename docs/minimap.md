@@ -15,29 +15,18 @@ The Minimap widget is an advanced version of the Guild Wars compass.
 * The minimap shows a larger area of the map than the default Guild Wars compass. While the minimap shows everything within party range (5000 gwinches), which is the same distance at which agents disappear from sight, the default compass has a radius of less than 90% of this. While agents further than 90% can still be targeted normally and with the minimap, they cannot be targeted by tabbing through targets.
 * Unlike the default compass, the minimap turns immediately when you look around.
 * Rather than the mission map background, the minimap has an accurate pathing map that shows where agents can move.
-* You can make custom lines and circles on the map to replace points of reference from the textures of the default compass.
+* You can make custom lines, circles, and polygons on the map to replace points of reference from the textures of the default compass.
 * Party range, spirit range, cast range, and aggro range each have an accurate circle on the minimap. If you have Heart of Shadow or Viper's Defense in your build, another circle will appear, showing that range, with a line pointing away from your target to show where you would land.
-* All 7 heroes can be individually flagged on the minimap, although flagging on the ground in the open world is not currently supported.
+* All 7 heroes can be individually flagged on the minimap, including flagging on the ground in the open world.
+* The minimap can display AoE spell effects from enemy casters, such as Chaos Storm, Maelstrom, and traps.
 
 ### Agents
-* Edge of Extinction and Quickening Zephyr areas of effect are visible on the minimap.
+* Edge of Extinction, Quickening Zephyr, and Winnowing areas of effect are visible on the minimap.
 * Agents that can move or turn around have the shape of a teardrop, with the point of the teardrop indicating the direction they are facing.
 * Signposts and items on the ground appear as squares.
 * Other agents that cannot move or turn, such as passive spirits, appear as circles.
-* Bosses and other important targets can be set to appear as a different size to other agents, to make them distinguishable on the minimap.  
-  The following non-boss foes appear as bosses on the minimap:
-  * Stygian Underlord (dervish and ranger)
-  * Stygian Lord (monk, elementalist, mesmer, and necromancer)
-  * The Black Beast of Arrgh
-  * Smothering Tendrils
-  * Lord Jadoth
-  * Keeper of Souls
-  * The Four Horsemen (Madruk, Ghozer, Thul Za, and Khazad Dhuum)
-  * Slayer (Demon Assassin)
-  * Shard Wolf
-  * Cursed Brigand
-  * Fendi Nin
-  * Soul of Fendi Nin
+* Bosses and other important targets can be set to appear as a different size to other agents, to make them distinguishable on the minimap.
+* You can create custom colors and shapes for specific agent models.
 
 <figure>
 <img src="https://user-images.githubusercontent.com/11432831/28233561-79208cae-68ac-11e7-8e7e-af4bb1b1264e.PNG"/>
@@ -54,7 +43,7 @@ Moving the map view like this does not allow you to see agents that are beyond p
 You can change the color and opacity of all elements of the minimap. Set the alpha to 0 to disable any minimap feature.
 
 ### Agents
-* **EoE** and **QZ** show the areas of the map affected by Edge of Extinction and Quickening Zephyr, respectively. The colors at the middle of these circle are the same, with alpha -50, and a gradient in between.</br></br>
+* **EoE**, **QZ**, and **Winnowing** show the areas of the map affected by Edge of Extinction, Quickening Zephyr, and Winnowing respectively. The colors at the middle of these circles are the same, with alpha -50, and a gradient in between.</br></br>
 * **Target** is the border surrounding the currently targeted agent.
 * **Player (alive)** is you while you're alive.
 * **Player (dead)** is you while you're dead.
@@ -64,12 +53,14 @@ You can change the color and opacity of all elements of the minimap. Set the alp
 * **Hostile (<90%)** is an enemy with less than 90% health.
 * **Hostile (dead)** is the corpse of an enemy.
 * **Neutral** is a charmable animal that has not yet turned hostile. This does not include charmed pets, which are counted as allied NPCs.
-* **Ally (party member)** is any non-hostile player in the instance.
+* **Ally (player)** is any non-hostile player in the instance.
 * **Ally (NPC)** is any non-hostile NPC.
+* **Ally (NPC Quest Giver)** is any non-hostile NPC that offers a quest.
 * **Ally (spirit)** is any non-hostile spirit.
 * **Ally (minion)** is any non-hostile minion.
 * **Ally (dead)** is the corpse of any ally.</br></br>
 * **Agent modifier** is an effect applied to all agents to create a shaded appearance. Each agent has this value removed on the border and added at the center. Zero makes agents have solid color, while a high number makes them appear more shaded.
+* **Agent damaged modifier** is subtracted from hostile agents when they are under 90% HP.
 
 The appearance of all agents can be re-sized:
 * **Default Size** controls the size of all agents except the player, signposts, items, bosses, and minions.
@@ -78,6 +69,7 @@ The appearance of all agents can be re-sized:
 * **Item Size** controls the size of items on the ground.
 * **Boss Size** controls the size of bosses.
 * **Minion Size** controls the size of minions.
+* **Marked Target Size** controls the size of agents marked with the `/marktarget` command.
 
 ### Ranges
 These are the colors of the range circles.
@@ -89,7 +81,7 @@ These are the colors of the range circles.
 * **Shadowstep Line** is a straight line between you and the Shadowstep Marker, so you can see if terrain is obstructing your path.</br></br>
 * When you approach max Recall range (5000 gwinches), the Shadowstep Line gradually changes color to provide a warning.
   * **Shadowstep Line (Max range)** shows the final color of the line at max range.
-  * **Max range start** is the percentage of Recall range at which the line starts the change color.
+  * **Max range start** is the percentage of Recall range at which the line starts to change color.
   * **Max range end** is the percentage of Recall range at which the line reaches the max range color.
 
 ### Symbols
@@ -100,19 +92,23 @@ These are the colors of the range circles.
 ### Terrain
 * **Map** is the area agents can move within.
 * **Shadow** is the same as the map area, but moved down several pixels, to create an illusion of thickness, which makes the map appear more solid.
+* **Background** is the color behind the map.
 
 ### Custom Markers
-Custom markers are lines between 2 points, or circles radiating from one point, drawn on the minimap to to replace points of reference from the textures of the default compass.
+Custom markers are lines between 2 points, circles radiating from one point, or polygons drawn on the minimap to replace points of reference from the textures of the default compass.
 
-To add a new marker, choose the `Add Line` button to add a line, or `Add Marker` to add a circle. The new marker will then appear in the list of markers, and you can edit it.
+To add a new marker, choose the `Add Line` button to add a line, `Add Marker` to add a circle, or `Add Polygon` to add a polygon. The new marker will then appear in the list of markers, and you can edit it.
 
 Use the [Info](info) window to find the co-ordinates and Map ID of where you want the marker to appear.</br>
 Lines require a co-ordinate for each end.</br>
 Circles require a co-ordinate for the center and a value for the radius. You can choose from a drop-down if you want the circle to be hollow or filled.</br>
+Polygons require at least 3 points to define their shape.</br>
 The next field is for the Map ID. If you choose 0, the marker will appear on all maps.</br>
 The last field is to enter a name for the marker, so you can easily remember what it is.</br>
-The toggle to the left turns the marker off.</br>
+The toggle to the left turns the marker on/off.</br>
 The X to the right deletes the marker, without a prompt.
+
+You can choose to draw custom markers on the in-game terrain, which will render them in the 3D game world.
 
 Note: custom markers are stored in `Markers.ini` in the settings folder. You can share this file with other players or paste other people's markers into it.
 
@@ -125,6 +121,18 @@ You can attach/detach them to/from the minimap with the **Attach to minimap** to
 
 You can also change the color of the flag controls' background.
 
+### AoE Effects
+The minimap can display enemy AoE spell effects. You can customize the color for each effect type:
+* Maelstrom
+* Chaos Storm
+* Savannah Heat
+* Breath of Fire
+* Lava Font
+* Churning Earth
+* Barbed Trap
+* Flame Trap
+* Spike Trap
+
 ## Chat Commands
 
 You can use the chat commands to flag heroes using the minimap.
@@ -135,6 +143,10 @@ You can use the chat commands to flag heroes using the minimap.
 
 `/flag [all|<number>] [x] [y]` to flag a hero to coordinates `[x]`,`[y]`.
 
+`/marktarget` highlights the current target on your minimap.
 
+`/marktarget clear` removes the current target as a marked target on your minimap.
+
+`/clearmarktarget` removes all marked target highlights on your minimap.
 
 [back](./)
