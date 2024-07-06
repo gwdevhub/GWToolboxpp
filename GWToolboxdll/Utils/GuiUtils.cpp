@@ -232,12 +232,12 @@ namespace GuiUtils {
             };
             std::vector<FontData> fonts;
             for (size_t i = 0; i < fonts_on_disk.size(); i++) {
-                const auto& f = fonts_on_disk[i];
-                const utf8::string utf8path = Resources::GetPathUtf8(f.first);
+                const auto& [font_name, glyph_range] = fonts_on_disk[i];
+                const utf8::string utf8path = Resources::GetPathUtf8(font_name);
                 size_t size;
                 void* data = ImFileLoadToMemory(utf8path.bytes, "rb", &size, 0);
                 if (data) {
-                    fonts.push_back({f.second, size, data});
+                    fonts.push_back({glyph_range, size, data});
                 }
                 else if (i == 0) {
                     // first one cannot fail
@@ -250,8 +250,8 @@ namespace GuiUtils {
 
             // TODO: expose those in UI
             constexpr float size_text = 16.0f;
-            constexpr float size_header1 = 18.0f;
-            constexpr float size_header2 = 20.0f;
+            constexpr float size_header1 = 20.0f;
+            constexpr float size_header2 = 18.0f;
             constexpr float size_widget_label = 24.0f;
             constexpr float size_widget_small = 42.0f;
             constexpr float size_widget_large = 48.0f;
@@ -278,28 +278,32 @@ namespace GuiUtils {
 
             cfg.OversampleH = 1; // OversampleH = 1 makes the font look a bit more blurry, but halves the size in memory
             cfg.MergeMode = false;
-            io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_header1, &cfg, base.glyph_ranges);
-            cfg.MergeMode = true;
+            for (const auto& font : fonts) {
+                io.Fonts->AddFontFromMemoryTTF(font.data, font.data_size, size_header1, &cfg, font.glyph_ranges);
+                cfg.MergeMode = true; // for all but the first
+            }
             io.Fonts->AddFontFromMemoryCompressedTTF(
                 fontawesome5_compressed_data, fontawesome5_compressed_size, size_header1, &cfg, fontawesome5_glyph_ranges);
-            font_header2 = io.Fonts->Fonts.back();
-
-            cfg.MergeMode = false;
-            io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_header2, &cfg, base.glyph_ranges);
-
-            cfg.MergeMode = true;
-            io.Fonts->AddFontFromMemoryCompressedTTF(
-                fontawesome5_compressed_data, fontawesome5_compressed_size, size_header2, &cfg, fontawesome5_glyph_ranges);
             font_header1 = io.Fonts->Fonts.back();
 
             cfg.MergeMode = false;
+            for (const auto& font : fonts) {
+                io.Fonts->AddFontFromMemoryTTF(font.data, font.data_size, size_header2, &cfg, font.glyph_ranges);
+                cfg.MergeMode = true; // for all but the first
+            }
+            io.Fonts->AddFontFromMemoryCompressedTTF(
+                fontawesome5_compressed_data, fontawesome5_compressed_size, size_header2, &cfg, fontawesome5_glyph_ranges);
+            font_header2 = io.Fonts->Fonts.back();
 
+            cfg.MergeMode = false;
             io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_widget_label, &cfg, base.glyph_ranges);
             font_widget_label = io.Fonts->Fonts.back();
 
+            cfg.MergeMode = false;
             io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_widget_small, &cfg, base.glyph_ranges);
             font_widget_small = io.Fonts->Fonts.back();
 
+            cfg.MergeMode = false;
             io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_widget_large, &cfg, base.glyph_ranges);
             font_widget_large = io.Fonts->Fonts.back();
 
