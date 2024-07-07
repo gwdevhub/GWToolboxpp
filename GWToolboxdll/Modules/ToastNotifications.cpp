@@ -312,7 +312,8 @@ namespace {
         {GAME_SMSG_PARTY_PLAYER_READY, OnPartyPlayerReady},
         {GAME_SMSG_INSTANCE_LOADED, OnMapChange},
         {GAME_SMSG_AGENT_UPDATE_EFFECTS, OnAgentUpdateEffects},
-        {GAME_SMSG_PARTY_JOIN_REQUEST,OnPartyInviteReceived}
+        {GAME_SMSG_PARTY_JOIN_REQUEST,OnPartyInviteReceived},
+        {GAME_SMSG_PARTY_SEARCH_REQUEST_JOIN,OnPartyInviteReceived}
     };
 } // namespace
 ToastNotifications::Toast::Toast(const std::wstring& _title, const std::wstring& _message)
