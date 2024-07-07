@@ -218,12 +218,13 @@ namespace GuiUtils {
 
             const auto& io = ImGui::GetIO();
 
-            std::vector<std::pair<const wchar_t*, const ImWchar*>> fonts_on_disk;
-            fonts_on_disk.emplace_back(L"Font.ttf", io.Fonts->GetGlyphRangesDefault());
-            fonts_on_disk.emplace_back(L"Font_Japanese.ttf", io.Fonts->GetGlyphRangesJapanese());
-            fonts_on_disk.emplace_back(L"Font_Cyrillic.ttf", io.Fonts->GetGlyphRangesCyrillic());
-            fonts_on_disk.emplace_back(L"Font_ChineseTraditional.ttf", io.Fonts->GetGlyphRangesChineseFull());
-            fonts_on_disk.emplace_back(L"Font_Korean.ttf", io.Fonts->GetGlyphRangesKorean());
+            const std::vector<std::pair<const wchar_t*, const ImWchar*>> fonts_on_disk = {
+                {L"Font.ttf", io.Fonts->GetGlyphRangesDefault()},
+                {L"Font_Japanese.ttf", io.Fonts->GetGlyphRangesJapanese()},
+                {L"Font_Cyrillic.ttf", io.Fonts->GetGlyphRangesCyrillic()},
+                {L"Font_ChineseTraditional.ttf", io.Fonts->GetGlyphRangesChineseFull()},
+                {L"Font_Korean.ttf", io.Fonts->GetGlyphRangesKorean()}
+            };
 
             struct FontData {
                 const ImWchar* glyph_ranges = nullptr;
