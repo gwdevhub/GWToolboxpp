@@ -409,13 +409,14 @@ void BondsWidget::Draw(IDirect3DDevice9*)
                 for (const GW::Effect& effect : agent_effects) {
                     const auto skill_id = static_cast<GW::Constants::SkillID>(effect.skill_id);
 
-                    if (!DrawBondImage(agent_id, skill_id, &bond_top_left, &bond_bottom_right))
-                        continue;
-
                     const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
                     if (!skill_data || skill_data->duration0 == 0x20000) {
                         continue; // Maintained skill/enchantment
                     }
+
+                    if (!DrawBondImage(agent_id, skill_id, &bond_top_left, &bond_bottom_right))
+                        continue;
+
                     const GW::Attribute* agentAttributes = GW::PartyMgr::GetAgentAttributes(agent_id);
                     ASSERT(agentAttributes);
                     agentAttributes = &agentAttributes[static_cast<size_t>(skill_data->attribute)];
