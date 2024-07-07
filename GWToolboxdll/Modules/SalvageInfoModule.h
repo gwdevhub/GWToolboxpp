@@ -22,7 +22,6 @@ public:
 
     void Initialize() override;
     void Terminate() override;
-    bool CanTerminate() override;
     void LoadSettings(ToolboxIni* ini) override;
     void RegisterSettingsContent() override;
     void SaveSettings(ToolboxIni* ini) override;
