@@ -920,7 +920,6 @@ namespace {
             if (entry.name && !quest_log_names.contains(entry.quest_id)) {
                 const auto enc_string = new GuiUtils::EncString();
                 enc_string
-                    ->language(GW::Constants::Language::English)
                     ->reset(entry.name)
                     ->wstring();
                 quest_log_names[entry.quest_id] = enc_string;
