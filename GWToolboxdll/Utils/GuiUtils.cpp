@@ -218,12 +218,13 @@ namespace GuiUtils {
 
             const auto& io = ImGui::GetIO();
 
-            std::vector<std::pair<const wchar_t*, const ImWchar*>> fonts_on_disk;
-            fonts_on_disk.emplace_back(L"Font.ttf", io.Fonts->GetGlyphRangesDefault());
-            fonts_on_disk.emplace_back(L"Font_Japanese.ttf", io.Fonts->GetGlyphRangesJapanese());
-            fonts_on_disk.emplace_back(L"Font_Cyrillic.ttf", io.Fonts->GetGlyphRangesCyrillic());
-            fonts_on_disk.emplace_back(L"Font_ChineseTraditional.ttf", io.Fonts->GetGlyphRangesChineseFull());
-            fonts_on_disk.emplace_back(L"Font_Korean.ttf", io.Fonts->GetGlyphRangesKorean());
+            const std::vector<std::pair<const wchar_t*, const ImWchar*>> fonts_on_disk = {
+                {L"Font.ttf", io.Fonts->GetGlyphRangesDefault()},
+                {L"Font_Japanese.ttf", io.Fonts->GetGlyphRangesJapanese()},
+                {L"Font_Cyrillic.ttf", io.Fonts->GetGlyphRangesCyrillic()},
+                {L"Font_ChineseTraditional.ttf", io.Fonts->GetGlyphRangesChineseFull()},
+                {L"Font_Korean.ttf", io.Fonts->GetGlyphRangesKorean()}
+            };
 
             struct FontData {
                 const ImWchar* glyph_ranges = nullptr;
@@ -247,14 +248,6 @@ namespace GuiUtils {
                     return;
                 }
             }
-
-            // TODO: expose those in UI
-            constexpr float size_text = 16.0f;
-            constexpr float size_header1 = 20.0f;
-            constexpr float size_header2 = 18.0f;
-            constexpr float size_widget_label = 24.0f;
-            constexpr float size_widget_small = 42.0f;
-            constexpr float size_widget_large = 48.0f;
             static constexpr std::array<ImWchar, 3> fontawesome5_glyph_ranges = {ICON_MIN_FA, ICON_MAX_FA, 0};
 
             auto cfg = ImFontConfig();
@@ -263,26 +256,27 @@ namespace GuiUtils {
             cfg.OversampleH = 2; // OversampleH = 2 for base text size (harder to read if OversampleH < 2)
             cfg.OversampleV = 1;
 
-            auto add_font_set = [&](const float size, ImFont*& font_ptr, const bool add_all = true) {
+            auto add_font_set = [&cfg, &fonts](ImFontAtlas* atlas, const float size, ImFont*& font_ptr, const bool add_all = true) {
                 cfg.MergeMode = false;
                 for (const auto& font : fonts) {
-                    io.Fonts->AddFontFromMemoryTTF(font.data, font.data_size, size, &cfg, font.glyph_ranges);
+                    atlas->AddFontFromMemoryTTF(font.data, font.data_size, size, &cfg, font.glyph_ranges);
                     cfg.MergeMode = true; // for all but the first
                     if (!add_all) break;
                 }
-                io.Fonts->AddFontFromMemoryCompressedTTF(
+                atlas->AddFontFromMemoryCompressedTTF(
                     fontawesome5_compressed_data, fontawesome5_compressed_size, size, &cfg, fontawesome5_glyph_ranges.data());
-                font_ptr = io.Fonts->Fonts.back();
-                cfg.OversampleH = 1;
+                font_ptr = atlas->Fonts.back();
                 cfg.FontDataOwnedByAtlas = false;
             };
 
-            add_font_set(size_text, font_text);
-            add_font_set(size_header1, font_header1);
-            add_font_set(size_header2, font_header2);
-            add_font_set(size_widget_label, font_widget_label, false);
-            add_font_set(size_widget_small, font_widget_small, false);
-            add_font_set(size_widget_large, font_widget_large, false);
+            add_font_set(io.Fonts, static_cast<float>(FontSize::text), font_text); // 16.f
+            add_font_set(io.Fonts, static_cast<float>(FontSize::header2), font_header2); // 18.f
+            add_font_set(io.Fonts, static_cast<float>(FontSize::header1), font_header1); // 20.f
+
+            cfg.OversampleH = 1;
+            add_font_set(io.Fonts, static_cast<float>(FontSize::widget_label), font_widget_label, false); // 24.f
+            add_font_set(io.Fonts, static_cast<float>(FontSize::widget_small), font_widget_small, false); // 40.f
+            add_font_set(io.Fonts, static_cast<float>(FontSize::widget_large), font_widget_large, false); // 48.f
 
             if (!io.Fonts->IsBuilt()) {
                 io.Fonts->Build();
@@ -322,7 +316,8 @@ namespace GuiUtils {
             return font;
         }
 
-        return ImGui::GetIO().Fonts->Fonts[0];
+        const auto& io = ImGui::GetIO();
+        return io.Fonts->Fonts[0];
     }
 
     float GetGWScaleMultiplier(const bool force)
