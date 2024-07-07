@@ -19,15 +19,18 @@ namespace GW::Constants {
 
 namespace GuiUtils {
     template <typename T>
-    concept map_type = std::same_as<T,
-                                    std::map<typename T::key_type, typename T::mapped_type, typename T::key_compare, typename T::allocator_type>> ||
-                       std::same_as<T, std::unordered_map<typename T::key_type, typename T::mapped_type, typename T::hasher,
-                                                          typename T::key_equal, typename T::allocator_type>>;
+    concept map_type =
+        std::same_as<
+            T,
+            std::map<typename T::key_type, typename T::mapped_type, typename T::key_compare, typename T::allocator_type>> ||
+        std::same_as<
+            T,
+            std::unordered_map<typename T::key_type, typename T::mapped_type, typename T::hasher, typename T::key_equal, typename T::allocator_type>>;
 
     enum class FontSize {
-        text = 16,
-        header2 = 18,
-        header1 = 20,
+        text         = 16,
+        header2      = 18,
+        header1      = 20,
         widget_label = 24,
         widget_small = 40,
         widget_large = 48
