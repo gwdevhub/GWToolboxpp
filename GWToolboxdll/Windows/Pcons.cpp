@@ -583,7 +583,7 @@ void PconGeneric::OnButtonClick()
     using namespace GW::Constants;
     Pcon::OnButtonClick();
 
-    if (PconsWindow::Instance().shift_click_toggles_category && ImGui::IsKeyDown(ImGuiKey_ModShift)) {
+    if (PconsWindow::Instance().shift_click_toggles_category && ImGui::IsKeyDown(ImGuiMod_Shift)) {
         namespace r = std::ranges;
         const std::vector<std::vector<DWORD>> categories{
             {ItemID::ConsEssence, ItemID::ConsGrail, ItemID::ConsArmor},

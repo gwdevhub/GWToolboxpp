@@ -225,7 +225,7 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     static char buf[128];
     sprintf(buf, "      %s", section);
     const auto pos = ImGui::GetCursorScreenPos();
-    const bool is_showing = ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap);
+    const bool is_showing = ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowOverlap);
 
     const char* icon = nullptr;
     if (const auto it = icons.find(section); it != icons.end()) {

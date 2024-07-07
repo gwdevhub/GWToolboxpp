@@ -847,9 +847,16 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     // Key up/down events don't get passed to gw window when out of focus, but we need the following to be correct,
     // or things like alt-tab make imgui think that alt is still down.
     auto& io = ImGui::GetIO();
-    io.AddKeyEvent(ImGuiKey_ModCtrl, (GetKeyState(VK_CONTROL) & 0x8000) != 0);
-    io.AddKeyEvent(ImGuiKey_ModShift, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
-    io.AddKeyEvent(ImGuiKey_ModAlt, (GetKeyState(VK_MENU) & 0x8000) != 0);
+    io.AddKeyEvent(ImGuiKey_LeftCtrl, (GetKeyState(VK_LCONTROL) & 0x8000) != 0);
+    io.AddKeyEvent(ImGuiKey_LeftShift, (GetKeyState(VK_LSHIFT) & 0x8000) != 0);
+    io.AddKeyEvent(ImGuiKey_LeftAlt, (GetKeyState(VK_LMENU) & 0x8000) != 0);
+    io.AddKeyEvent(ImGuiKey_RightCtrl, (GetKeyState(VK_RCONTROL) & 0x8000) != 0);
+    io.AddKeyEvent(ImGuiKey_RightShift, (GetKeyState(VK_RSHIFT) & 0x8000) != 0);
+    io.AddKeyEvent(ImGuiKey_RightAlt, (GetKeyState(VK_RMENU) & 0x8000) != 0);
+
+    io.AddKeyEvent(ImGuiMod_Ctrl, (GetKeyState(VK_CONTROL) & 0x8000) != 0);
+    io.AddKeyEvent(ImGuiMod_Shift, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
+    io.AddKeyEvent(ImGuiMod_Alt, (GetKeyState(VK_MENU) & 0x8000) != 0);
 
     for (const auto uielement : ui_elements_enabled) {
         if (world_map_showing && !uielement->ShowOnWorldMap()) {

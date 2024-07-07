@@ -23,7 +23,7 @@ void MouseWalkingModule::Terminate() {
 
 void MouseWalkingModule::Update(float)
 {
-    if (!ImGui::IsKeyDown(ImGui::GetKeyIndex(ImGuiKey_LeftAlt)))
+    if (!ImGui::IsKeyDown(ImGuiKey_LeftAlt))
     {
         if (GW::UI::GetPreference(GW::UI::FlagPreference::DisableMouseWalking)) {
             GW::UI::SetPreference(GW::UI::FlagPreference::DisableMouseWalking, false);

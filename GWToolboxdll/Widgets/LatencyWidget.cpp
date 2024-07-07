@@ -88,7 +88,7 @@ void LatencyWidget::Draw(IDirect3DDevice9*)
 
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(180.0f, 60.0f), ImGuiCond_FirstUseEver);
-    const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiKey_ModCtrl);
+    const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiMod_Ctrl);
 
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !ctrl_pressed))) {
         const ImVec2 cur = ImGui::GetCursorPos();

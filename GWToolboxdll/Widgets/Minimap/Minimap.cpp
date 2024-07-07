@@ -367,11 +367,11 @@ namespace {
 
     bool IsKeyDown(MinimapModifierBehaviour mmb)
     {
-        return (key_none_behavior == mmb && !ImGui::IsKeyDown(ImGuiKey_ModCtrl) &&
-                !ImGui::IsKeyDown(ImGuiKey_ModShift) && !ImGui::IsKeyDown(ImGuiKey_ModAlt)) ||
-               (key_ctrl_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModCtrl)) ||
-               (key_shift_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModShift)) ||
-               (key_alt_behavior == mmb && ImGui::IsKeyDown(ImGuiKey_ModAlt));
+        return (key_none_behavior == mmb && !ImGui::IsKeyDown(ImGuiMod_Ctrl) &&
+                !ImGui::IsKeyDown(ImGuiMod_Shift) && !ImGui::IsKeyDown(ImGuiMod_Alt)) ||
+               (key_ctrl_behavior == mmb && ImGui::IsKeyDown(ImGuiMod_Ctrl)) ||
+               (key_shift_behavior == mmb && ImGui::IsKeyDown(ImGuiMod_Shift)) ||
+               (key_alt_behavior == mmb && ImGui::IsKeyDown(ImGuiMod_Alt));
     }
 
     bool RepositionMinimapToCompass()

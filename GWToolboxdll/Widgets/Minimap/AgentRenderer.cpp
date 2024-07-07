@@ -1372,7 +1372,7 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
 {
     bool changed = false;
 
-    if (ImGui::TreeNodeEx("##params", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap)) {
+    if (ImGui::TreeNodeEx("##params", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowOverlap)) {
         ImGui::PushID(static_cast<int>(ui_id));
 
         changed |= DrawHeader();

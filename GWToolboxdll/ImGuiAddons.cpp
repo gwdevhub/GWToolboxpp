@@ -454,6 +454,13 @@ namespace ImGui {
         Image(user_texture_id, size, {0, 0}, CalculateUvCrop(user_texture_id, size));
     }
 
+    bool ImageButton(ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, int, const ImVec4& bg_col, const ImVec4& tint_col) {
+        return ImageButton("", user_texture_id, image_size, uv0, uv1, bg_col, tint_col);
+    }
+    bool IsKeyDown(long key) {
+        return IsKeyDown(static_cast<ImGuiKey>(key));
+    }
+
     bool IsMouseInRect(const ImVec2& top_left, const ImVec2& bottom_right)
     {
         const ImRect rect(top_left, bottom_right);

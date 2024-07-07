@@ -471,6 +471,12 @@ namespace {
         pending_moves.clear();
     }
 
+    void consume_all(InventoryManager::Item* like_item) {
+        for (uint16_t i = 0; i < like_item->quantity; i++) {
+            GW::Items::UseItem(like_item);
+        }
+    }
+
 
     // Move a whole stack into/out of storage
     uint16_t move_item(const InventoryManager::Item* item, const uint16_t quantity = 1000u)
@@ -786,7 +792,7 @@ namespace {
 
         if(!(message->message_id == GW::UI::UIMessage::kInitFrame
             && trade_whole_stacks
-            && !ImGui::IsKeyDown(ImGuiKey_ModShift)))
+            && !ImGui::IsKeyDown(ImGuiMod_Shift)))
             return GW::Hook::LeaveHook();
         const auto frame = GW::UI::GetFrameById(message->frame_id);
         const auto max_btn = GW::UI::GetChildFrame(frame,4);
@@ -827,7 +833,7 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessa
         // About to request a quote for an item
         case GW::UI::UIMessage::kSendMerchantRequestQuote: {
             requesting_quote_type = 0;
-            if (instance.pending_transaction.in_progress() || !ImGui::IsKeyDown(ImGuiKey_ModCtrl) || MaterialsWindow::Instance().GetIsInProgress()) {
+            if (instance.pending_transaction.in_progress() || !ImGui::IsKeyDown(ImGuiMod_Ctrl) || MaterialsWindow::Instance().GetIsInProgress()) {
                 return;
             }
             requesting_quote_type = *static_cast<uint32_t*>(wparam);
@@ -2223,6 +2229,13 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
             move_all_item(context_item_actual);
             goto end_popup;
         }
+        if (context_item_actual->IsUsable() && context_item_actual->IsStackable()) {
+            if (ImGui::Button("Consume All", size)) {
+                ImGui::CloseCurrentPopup();
+                consume_all(context_item_actual);
+                goto end_popup;
+            }
+        }
     }
     if (bag && context_item_actual->IsIdentificationKit()) {
         auto type = IdentifyAllType::None;
@@ -2306,7 +2319,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
     const Item* item = nullptr;
     switch (type) {
         case 7: // Left click + ctrl
-            if (!ImGui::IsKeyDown(ImGuiKey_ModCtrl)) {
+            if (!ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
                 return;
             }
             break;
@@ -2366,11 +2379,11 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
         return;
     }
     if (type == 7
-        && ImGui::IsKeyDown(ImGuiKey_ModCtrl)
+        && ImGui::IsKeyDown(ImGuiMod_Ctrl)
         && GameSettings::GetSettingBool("move_item_on_ctrl_click")
         && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         // Move item on ctrl click
-        if (ImGui::IsKeyDown(ImGuiKey_ModShift) && item->quantity > 1) {
+        if (ImGui::IsKeyDown(ImGuiMod_Shift) && item->quantity > 1) {
             prompt_split_stack(item);
         }
         else {

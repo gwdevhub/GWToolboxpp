@@ -51,6 +51,12 @@ namespace ImGui {
     // Add cropped image to current window
     IMGUI_API void ImageCropped(ImTextureID user_texture_id, const ImVec2& size);
 
+    // Shim to cast
+    IMGUI_API bool IsKeyDown(long key);
+
+    // Shim to new ImageButton definition; an frame_padding isn't needed now.
+    IMGUI_API bool ImageButton(ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0 = ImVec2(0, 0), const ImVec2& uv1 = ImVec2(1, 1), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0, 0, 0, 0), const ImVec4& tint_col = ImVec4(1, 1, 1, 1));
+
     // Window/context independent check
     IMGUI_API bool IsMouseInRect(const ImVec2& top_left, const ImVec2& bottom_right);
     // Add cropped image to window draw list

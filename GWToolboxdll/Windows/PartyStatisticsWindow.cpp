@@ -258,7 +258,7 @@ namespace {
                 snprintf(button_name, _countof(button_name), "###WriteStatistics%d", party_member.party_idx);
                 const float height = ImGui::GetCursorPosY() - start_y;
                 ImGui::SetCursorPosY(start_y);
-                if (ImGui::Button(button_name, ImVec2(width, height)) && ImGui::IsKeyDown(ImGuiKey_ModCtrl)) {
+                if (ImGui::Button(button_name, ImVec2(width, height)) && ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
                     WritePlayerStatisticsAllSkills(&party_member);
                 }
                 ImGui::PopStyleVar();

@@ -659,7 +659,7 @@ void TimerWidget::Draw(IDirect3DDevice9*)
         return;
     }
 
-    const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiKey_ModCtrl);
+    const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiMod_Ctrl);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {

@@ -730,7 +730,7 @@ namespace {
                 ImGui::PopID();
             }
             ImGui::PopID();
-            if (ImGui::IsKeyDown(ImGuiKey_ModAlt)) {
+            if (ImGui::IsKeyDown(ImGuiMod_Alt)) {
                 ImGui::SetScrollHereY();
             }
         }

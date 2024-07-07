@@ -262,10 +262,10 @@ static void ImGui_ImplWin32_ProcessKeyEventsWorkarounds()
 static void ImGui_ImplWin32_UpdateKeyModifiers()
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.AddKeyEvent(ImGuiKey_ModCtrl, IsVkDown(VK_CONTROL));
-    io.AddKeyEvent(ImGuiKey_ModShift, IsVkDown(VK_SHIFT));
-    io.AddKeyEvent(ImGuiKey_ModAlt, IsVkDown(VK_MENU));
-    io.AddKeyEvent(ImGuiKey_ModSuper, IsVkDown(VK_APPS));
+    io.AddKeyEvent(ImGuiMod_Ctrl, IsVkDown(VK_CONTROL));
+    io.AddKeyEvent(ImGuiMod_Shift, IsVkDown(VK_SHIFT));
+    io.AddKeyEvent(ImGuiMod_Alt, IsVkDown(VK_MENU));
+    io.AddKeyEvent(ImGuiMod_Super, IsVkDown(VK_APPS));
 }
 
 static void ImGui_ImplWin32_UpdateMouseData()
@@ -394,7 +394,7 @@ void ImGui_ImplWin32_NewFrame()
     // TODO: dirty hack, remove this as soon as imgui makes it possible to disable the navigation window
     // release ctrl if tab is pressed to avoid the navigation menu
     if (GetKeyState(VK_TAB) & 0x8000) {
-        io.AddKeyEvent(ImGuiKey_ModCtrl, false);
+        io.AddKeyEvent(ImGuiMod_Ctrl, false);
     }
 }
 

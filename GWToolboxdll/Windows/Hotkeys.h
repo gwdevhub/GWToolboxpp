@@ -230,7 +230,7 @@ class HotkeyToggle : public TBHotkey {
         Count
     } target = Clicker;
 
-    static bool GetText(void*, int idx, const char** out_text);
+    static const char* GetText(void*, int idx);
 
 public:
     static bool IsValid(const ToolboxIni* ini, const char* section);
@@ -270,7 +270,7 @@ class HotkeyAction : public TBHotkey {
         EnterChallenge,
     };
 
-    static bool GetText(void*, int idx, const char** out_text);
+    static const char* GetText(void*, int idx);
 
 public:
     Action action = OpenXunlaiChest;
@@ -362,7 +362,7 @@ public:
 };
 
 class HotkeyPingBuild : public TBHotkey {
-    static bool GetText(void*, int idx, const char** out_text);
+    static const char* GetText(void*, int idx);
 
 public:
     size_t index = 0;
@@ -380,7 +380,7 @@ public:
 };
 
 class HotkeyHeroTeamBuild : public TBHotkey {
-    static bool GetText(void*, int idx, const char** out_text);
+    static const char* GetText(void*, int idx);
 
 public:
     size_t index = 0;

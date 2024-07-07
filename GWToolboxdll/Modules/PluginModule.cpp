@@ -146,7 +146,7 @@ void PluginModule::DrawSettingsInternal()
             sprintf(buf, "             %s", plugin->path.filename().string().c_str());
         }
         const auto pos = ImGui::GetCursorScreenPos();
-        const bool is_showing = has_settings ? ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowItemOverlap) : ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_AllowItemOverlap);
+        const bool is_showing = has_settings ? ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowOverlap) : ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_AllowOverlap);
 
         if (const auto icon = plugin->initialized ? plugin->instance->Icon() : nullptr) {
             const float text_offset_x = ImGui::GetTextLineHeightWithSpacing() + 4.0f; // TODO: find a proper number
