@@ -140,14 +140,6 @@ namespace {
             return;
         }
 
-        if (item->type == GW::Constants::ItemType::Boots ||
-            item->type == GW::Constants::ItemType::Gloves ||
-            item->type == GW::Constants::ItemType::Leggings ||
-            item->type == GW::Constants::ItemType::Headpiece ||
-            item->type == GW::Constants::ItemType::Chestpiece) {
-            return;
-        }
-
         const auto formula = GW::Items::GetItemFormula(item);
         if (!(formula && formula->material_cost_count))
             return;
