@@ -533,13 +533,13 @@ namespace GuiUtils {
             return "";
         }
         // NB: GW uses code page 0 (CP_ACP)
-        const int try_code_pages[] = { CP_UTF8, CP_ACP };
-        for (auto cp : try_code_pages) {
-            const auto size_needed = WideCharToMultiByte(cp, WC_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
+        constexpr auto try_code_pages = { CP_UTF8, CP_ACP };
+        for (const auto code_page : try_code_pages) {
+            const auto size_needed = WideCharToMultiByte(code_page, WC_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
             if (!size_needed)
                 continue;
             std::string dest(size_needed, 0);
-            ASSERT(WideCharToMultiByte(cp, 0, str.data(), static_cast<int>(str.size()), dest.data(), size_needed, nullptr, nullptr));
+            ASSERT(WideCharToMultiByte(code_page, 0, str.data(), static_cast<int>(str.size()), dest.data(), size_needed, nullptr, nullptr));
             return dest;
         }
         ASSERT("Failed to convert" && false);
@@ -611,13 +611,13 @@ namespace GuiUtils {
             return {};
         }
         // NB: GW uses code page 0 (CP_ACP)
-        const int try_code_pages[] = { CP_UTF8, CP_ACP };
-        for (auto cp : try_code_pages) {
-            const auto size_needed = MultiByteToWideChar(cp, MB_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0);
+        constexpr auto try_code_pages = { CP_UTF8, CP_ACP };
+        for (const auto code_page : try_code_pages) {
+            const auto size_needed = MultiByteToWideChar(code_page, MB_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0);
             if (!size_needed)
                 continue;
             std::wstring dest(size_needed, 0);
-            ASSERT(MultiByteToWideChar(cp, 0, str.data(), static_cast<int>(str.size()), dest.data(), size_needed));
+            ASSERT(MultiByteToWideChar(code_page, 0, str.data(), static_cast<int>(str.size()), dest.data(), size_needed));
             return dest;
         }
         ASSERT("Failed to convert" && false);
