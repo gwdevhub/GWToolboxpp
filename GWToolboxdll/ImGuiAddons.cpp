@@ -455,7 +455,12 @@ namespace ImGui {
     }
 
     bool ImageButton(ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, int, const ImVec4& bg_col, const ImVec4& tint_col) {
-        return ImageButton("", user_texture_id, image_size, uv0, uv1, bg_col, tint_col);
+        ImGuiContext& g = *GImGui;
+        ImGuiWindow* window = g.CurrentWindow;
+        if (window->SkipItems)
+            return false;
+
+        return ImageButtonEx(window->GetID(user_texture_id ? user_texture_id : window), user_texture_id, image_size, uv0, uv1, bg_col, tint_col);
     }
     bool IsKeyDown(long key) {
         return IsKeyDown(static_cast<ImGuiKey>(key));
