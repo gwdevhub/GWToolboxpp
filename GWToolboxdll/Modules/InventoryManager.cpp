@@ -2229,13 +2229,6 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
             move_all_item(context_item_actual);
             goto end_popup;
         }
-        if (context_item_actual->IsUsable() && context_item_actual->IsStackable()) {
-            if (ImGui::Button("Consume All", size)) {
-                ImGui::CloseCurrentPopup();
-                consume_all(context_item_actual);
-                goto end_popup;
-            }
-        }
     }
     if (bag && context_item_actual->IsIdentificationKit()) {
         auto type = IdentifyAllType::None;
