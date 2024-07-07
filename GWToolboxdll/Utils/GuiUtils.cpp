@@ -255,57 +255,34 @@ namespace GuiUtils {
             constexpr float size_widget_label = 24.0f;
             constexpr float size_widget_small = 42.0f;
             constexpr float size_widget_large = 48.0f;
-            static constexpr ImWchar fontawesome5_glyph_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
+            static constexpr std::array<ImWchar, 3> fontawesome5_glyph_ranges = {ICON_MIN_FA, ICON_MAX_FA, 0};
 
             auto cfg = ImFontConfig();
-            cfg.MergeMode = false;
             cfg.PixelSnapH = true;
             cfg.FontDataOwnedByAtlas = true;
             cfg.OversampleH = 2; // OversampleH = 2 for base text size (harder to read if OversampleH < 2)
             cfg.OversampleV = 1;
-            for (const auto& font : fonts) {
-                io.Fonts->AddFontFromMemoryTTF(font.data, font.data_size, size_text, &cfg, font.glyph_ranges);
-                cfg.MergeMode = true; // for all but the first
-            }
-            io.Fonts->AddFontFromMemoryCompressedTTF(
-                fontawesome5_compressed_data, fontawesome5_compressed_size, size_text, &cfg, fontawesome5_glyph_ranges);
-            font_text = io.Fonts->Fonts.back();
 
-            // All other fonts re-used the data
-            cfg.FontDataOwnedByAtlas = false;
+            auto add_font_set = [&](const float size, ImFont*& font_ptr, const bool add_all = true) {
+                cfg.MergeMode = false;
+                for (const auto& font : fonts) {
+                    io.Fonts->AddFontFromMemoryTTF(font.data, font.data_size, size, &cfg, font.glyph_ranges);
+                    cfg.MergeMode = true; // for all but the first
+                    if (!add_all) break;
+                }
+                io.Fonts->AddFontFromMemoryCompressedTTF(
+                    fontawesome5_compressed_data, fontawesome5_compressed_size, size, &cfg, fontawesome5_glyph_ranges.data());
+                font_ptr = io.Fonts->Fonts.back();
+                cfg.OversampleH = 1;
+                cfg.FontDataOwnedByAtlas = false;
+            };
 
-            const auto& base = fonts.front(); // base font
-
-            cfg.OversampleH = 1; // OversampleH = 1 makes the font look a bit more blurry, but halves the size in memory
-            cfg.MergeMode = false;
-            for (const auto& font : fonts) {
-                io.Fonts->AddFontFromMemoryTTF(font.data, font.data_size, size_header1, &cfg, font.glyph_ranges);
-                cfg.MergeMode = true; // for all but the first
-            }
-            io.Fonts->AddFontFromMemoryCompressedTTF(
-                fontawesome5_compressed_data, fontawesome5_compressed_size, size_header1, &cfg, fontawesome5_glyph_ranges);
-            font_header1 = io.Fonts->Fonts.back();
-
-            cfg.MergeMode = false;
-            for (const auto& font : fonts) {
-                io.Fonts->AddFontFromMemoryTTF(font.data, font.data_size, size_header2, &cfg, font.glyph_ranges);
-                cfg.MergeMode = true; // for all but the first
-            }
-            io.Fonts->AddFontFromMemoryCompressedTTF(
-                fontawesome5_compressed_data, fontawesome5_compressed_size, size_header2, &cfg, fontawesome5_glyph_ranges);
-            font_header2 = io.Fonts->Fonts.back();
-
-            cfg.MergeMode = false;
-            io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_widget_label, &cfg, base.glyph_ranges);
-            font_widget_label = io.Fonts->Fonts.back();
-
-            cfg.MergeMode = false;
-            io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_widget_small, &cfg, base.glyph_ranges);
-            font_widget_small = io.Fonts->Fonts.back();
-
-            cfg.MergeMode = false;
-            io.Fonts->AddFontFromMemoryTTF(base.data, base.data_size, size_widget_large, &cfg, base.glyph_ranges);
-            font_widget_large = io.Fonts->Fonts.back();
+            add_font_set(size_text, font_text);
+            add_font_set(size_header1, font_header1);
+            add_font_set(size_header2, font_header2);
+            add_font_set(size_widget_label, font_widget_label, false);
+            add_font_set(size_widget_small, font_widget_small, false);
+            add_font_set(size_widget_large, font_widget_large, false);
 
             if (!io.Fonts->IsBuilt()) {
                 io.Fonts->Build();
