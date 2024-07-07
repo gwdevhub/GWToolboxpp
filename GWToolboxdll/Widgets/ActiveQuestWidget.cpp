@@ -209,7 +209,7 @@ void ActiveQuestWidget::Draw(IDirect3DDevice9*)
                 ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR_COMPLETED);
             }
             ImGui::Bullet();
-            ImGui::Text("%s", obj_str.data());
+            ImGui::Text("%s", obj_str.c_str());
             if(completed) {
                 ImGui::PopStyleColor();
             }
