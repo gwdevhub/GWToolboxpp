@@ -20,6 +20,10 @@ namespace {
     ImFont* font_header2 = nullptr;
     ImFont* font_text = nullptr;
 
+    ImFontAtlas* font_atlas = nullptr;
+    ImFontAtlas font_atlas_large;
+    ImFontAtlas font_atlas_extralarge;
+
     bool fonts_loading = false;
     bool fonts_loaded = false;
 
@@ -217,6 +221,7 @@ namespace GuiUtils {
             printf("Loading fonts\n");
 
             const auto& io = ImGui::GetIO();
+            io.Fonts->TexDesiredWidth = 8192 * 2;
 
             std::vector<std::pair<const wchar_t*, const ImWchar*>> fonts_on_disk;
             fonts_on_disk.emplace_back(L"Font.ttf", io.Fonts->GetGlyphRangesDefault());
@@ -263,29 +268,38 @@ namespace GuiUtils {
             cfg.OversampleH = 2; // OversampleH = 2 for base text size (harder to read if OversampleH < 2)
             cfg.OversampleV = 1;
 
-            auto add_font_set = [&](const float size, ImFont*& font_ptr, const bool add_all = true) {
+            auto add_font_set = [&cfg, &fonts](ImFontAtlas* atlas, const float size, ImFont*& font_ptr, const bool add_all = true) {
                 cfg.MergeMode = false;
                 for (const auto& font : fonts) {
-                    io.Fonts->AddFontFromMemoryTTF(font.data, font.data_size, size, &cfg, font.glyph_ranges);
+                    atlas->AddFontFromMemoryTTF(font.data, font.data_size, size, &cfg, font.glyph_ranges);
                     cfg.MergeMode = true; // for all but the first
                     if (!add_all) break;
                 }
-                io.Fonts->AddFontFromMemoryCompressedTTF(
+                atlas->AddFontFromMemoryCompressedTTF(
                     fontawesome5_compressed_data, fontawesome5_compressed_size, size, &cfg, fontawesome5_glyph_ranges.data());
-                font_ptr = io.Fonts->Fonts.back();
-                cfg.OversampleH = 1;
+                font_ptr = atlas->Fonts.back();
                 cfg.FontDataOwnedByAtlas = false;
             };
 
-            add_font_set(size_text, font_text);
-            add_font_set(size_header1, font_header1);
-            add_font_set(size_header2, font_header2);
-            add_font_set(size_widget_label, font_widget_label, false);
-            add_font_set(size_widget_small, font_widget_small, false);
-            add_font_set(size_widget_large, font_widget_large, false);
+            font_atlas = io.Fonts;
 
-            if (!io.Fonts->IsBuilt()) {
-                io.Fonts->Build();
+            add_font_set(font_atlas, size_text, font_text);
+            add_font_set(font_atlas, size_header1, font_header1);
+            add_font_set(font_atlas, size_header2, font_header2);
+
+            cfg.OversampleH = 1;
+            add_font_set(&font_atlas_large, size_widget_label, font_widget_label);
+            add_font_set(&font_atlas_large, size_widget_small, font_widget_small);
+            add_font_set(&font_atlas_extralarge, size_widget_large, font_widget_large);
+
+            if (!font_atlas->IsBuilt()) {
+                font_atlas->Build();
+            }
+            if (!font_atlas_large.IsBuilt()) {
+                font_atlas_large.Build();
+            }
+            if (!font_atlas_extralarge.IsBuilt()) {
+                font_atlas_extralarge.Build();
             }
             // Also create device objects here to avoid blocking the main draw loop when ImGui_ImplDX9_NewFrame() is called.
             // ImGui_ImplDX9_CreateDeviceObjects();
@@ -322,7 +336,8 @@ namespace GuiUtils {
             return font;
         }
 
-        return ImGui::GetIO().Fonts->Fonts[0];
+        const auto& io = ImGui::GetIO();
+        return io.Fonts->Fonts[0];
     }
 
     float GetGWScaleMultiplier(const bool force)
