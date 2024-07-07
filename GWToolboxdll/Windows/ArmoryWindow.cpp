@@ -11,12 +11,14 @@
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+
+#include <Modules/GwDatTextureModule.h>
 
 #include <Windows/ArmoryWindow_Constants.h>
 #include <Windows/ArmoryWindow.h>
 #include <ImGuiAddons.h>
 #include <ToolboxWindow.h>
-#include <Modules/GwDatTextureModule.h>
 
 namespace GWArmory {
 
@@ -544,6 +546,8 @@ namespace GWArmory {
         const auto slot = GetSlotFromItemType(piece->type);
         // If its a weapon, figure out if we need to clear left or right hand
         if (IsWeapon(piece->type)) {
+            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+                return;
             if (IsBothHands(piece->type)) {
                 ClearArmorItem(ItemSlot::LeftHand);
                 ClearArmorItem(ItemSlot::RightHand);
