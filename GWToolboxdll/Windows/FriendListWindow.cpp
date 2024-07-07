@@ -418,14 +418,6 @@ namespace {
 
     std::vector<std::pair< const wchar_t*, GW::Chat::ChatCommandCallback>> chat_commands;
 
-    constexpr GW::UI::UIMessage OnUIMessage_Headers[] = {
-        GW::UI::UIMessage::kSetAgentNameTagAttribs,
-        GW::UI::UIMessage::kShowAgentNameTag,
-        GW::UI::UIMessage::kWriteToChatLog,
-        GW::UI::UIMessage::kOpenWhisper,
-        GW::UI::UIMessage::kSendChatMessage
-    };
-
     clock_t offline_status_reminder_last_sent = 0;
     bool check_currently_offline_reminder = false;
 
@@ -444,8 +436,18 @@ namespace {
             if (friend_ && friend_->type == GW::FriendType::Friend) {
                 tag->text_color = friend_name_tag_color;
             }
-        }
-                                                 break;
+        }break;
+        // When starting a new whisper message, automatically check and redirect the recipient
+        case GW::UI::UIMessage::kStartWhisper: {
+            const auto packet = (GW::UI::UIPacket::kStartWhisper*)wparam;
+            if (const auto friend_ = FriendListWindow::GetFriend(packet->player_name)) {
+                const auto& friendname = friend_->current_char->getNameW();
+                if (!friend_->IsOffline() && friend_->current_char && friendname != packet->player_name) {
+                    // TODO; Would doing this cause a memory leak on the previous wchar_t* ?
+                    packet->player_name = const_cast<wchar_t*>(friendname.data());
+                }
+            }
+        } break;
         case GW::UI::UIMessage::kWriteToChatLog: {
             const auto packet = (GW::UI::UIPacket::kWriteToChatLog*)wparam;
             wchar_t* message = packet->message;
@@ -860,6 +862,16 @@ void FriendListWindow::Initialize()
     ToolboxWindow::Initialize();
 
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusUpdate_Entry, OnFriendUpdated);
+
+
+    constexpr GW::UI::UIMessage OnUIMessage_Headers[] = {
+        GW::UI::UIMessage::kStartWhisper,
+        GW::UI::UIMessage::kSetAgentNameTagAttribs,
+        GW::UI::UIMessage::kShowAgentNameTag,
+        GW::UI::UIMessage::kWriteToChatLog,
+        GW::UI::UIMessage::kOpenWhisper,
+        GW::UI::UIMessage::kSendChatMessage
+    };
 
     for (const auto message_id : OnUIMessage_Headers) {
         RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);
