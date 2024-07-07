@@ -461,11 +461,11 @@ namespace {
                 break;
             case MessageType::OUTGOING_WHISPER: // Server has successfully sent your whisper
                 OnOutgoingWhisperSuccess(status, message);
-                FriendListWindow::AddFriendAliasToMessage(&message);
+                FriendListWindow::AddFriendAliasToMessage(&packet->message);
                 check_currently_offline_reminder = true;
                 break;
             case MessageType::INCOMING_WHISPER:
-                FriendListWindow::AddFriendAliasToMessage(&message);
+                FriendListWindow::AddFriendAliasToMessage(&packet->message);
                 break;
             case MessageType::PLAYER_X_NOT_ONLINE: // Player "" is not online. Redirect to the right person if we can find them!
                 OnPlayerNotOnline(status, message);
