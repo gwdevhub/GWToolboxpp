@@ -25,12 +25,12 @@ namespace GuiUtils {
                                                           typename T::key_equal, typename T::allocator_type>>;
 
     enum class FontSize {
-        text,
-        header2,
-        header1,
-        widget_label,
-        widget_small,
-        widget_large
+        text = 16,
+        header2 = 18,
+        header1 = 20,
+        widget_label = 24,
+        widget_small = 40,
+        widget_large = 48
     };
 
     void LoadFonts();

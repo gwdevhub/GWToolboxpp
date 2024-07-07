@@ -20,10 +20,6 @@ namespace {
     ImFont* font_header2 = nullptr;
     ImFont* font_text = nullptr;
 
-    ImFontAtlas* font_atlas = nullptr;
-    ImFontAtlas font_atlas_large;
-    ImFontAtlas font_atlas_extralarge;
-
     bool fonts_loading = false;
     bool fonts_loaded = false;
 
@@ -221,7 +217,6 @@ namespace GuiUtils {
             printf("Loading fonts\n");
 
             const auto& io = ImGui::GetIO();
-            io.Fonts->TexDesiredWidth = 8192 * 2;
 
             std::vector<std::pair<const wchar_t*, const ImWchar*>> fonts_on_disk;
             fonts_on_disk.emplace_back(L"Font.ttf", io.Fonts->GetGlyphRangesDefault());
@@ -252,14 +247,6 @@ namespace GuiUtils {
                     return;
                 }
             }
-
-            // TODO: expose those in UI
-            constexpr float size_text = 16.0f;
-            constexpr float size_header1 = 20.0f;
-            constexpr float size_header2 = 18.0f;
-            constexpr float size_widget_label = 24.0f;
-            constexpr float size_widget_small = 42.0f;
-            constexpr float size_widget_large = 48.0f;
             static constexpr std::array<ImWchar, 3> fontawesome5_glyph_ranges = {ICON_MIN_FA, ICON_MAX_FA, 0};
 
             auto cfg = ImFontConfig();
@@ -281,25 +268,17 @@ namespace GuiUtils {
                 cfg.FontDataOwnedByAtlas = false;
             };
 
-            font_atlas = io.Fonts;
-
-            add_font_set(font_atlas, size_text, font_text);
-            add_font_set(font_atlas, size_header1, font_header1);
-            add_font_set(font_atlas, size_header2, font_header2);
+            add_font_set(io.Fonts, static_cast<float>(FontSize::text), font_text); // 16.f
+            add_font_set(io.Fonts, static_cast<float>(FontSize::header2), font_header2); // 18.f
+            add_font_set(io.Fonts, static_cast<float>(FontSize::header1), font_header1); // 20.f
 
             cfg.OversampleH = 1;
-            add_font_set(&font_atlas_large, size_widget_label, font_widget_label);
-            add_font_set(&font_atlas_large, size_widget_small, font_widget_small);
-            add_font_set(&font_atlas_extralarge, size_widget_large, font_widget_large);
+            add_font_set(io.Fonts, static_cast<float>(FontSize::widget_label), font_widget_label, false); // 24.f
+            add_font_set(io.Fonts, static_cast<float>(FontSize::widget_small), font_widget_small, false); // 40.f
+            add_font_set(io.Fonts, static_cast<float>(FontSize::widget_large), font_widget_large, false); // 48.f
 
-            if (!font_atlas->IsBuilt()) {
-                font_atlas->Build();
-            }
-            if (!font_atlas_large.IsBuilt()) {
-                font_atlas_large.Build();
-            }
-            if (!font_atlas_extralarge.IsBuilt()) {
-                font_atlas_extralarge.Build();
+            if (!io.Fonts->IsBuilt()) {
+                io.Fonts->Build();
             }
             // Also create device objects here to avoid blocking the main draw loop when ImGui_ImplDX9_NewFrame() is called.
             // ImGui_ImplDX9_CreateDeviceObjects();
