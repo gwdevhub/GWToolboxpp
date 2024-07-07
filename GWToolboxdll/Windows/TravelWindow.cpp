@@ -742,7 +742,7 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
         if (!map_info || !map_info->thumbnail_id || !map_info->GetIsOnWorldMap()) {
             continue;
         }
-        if (map_info->campaign != this_map->campaign || map_info->region == GW::Region_Presearing) {
+        if (map_info->campaign != this_map->campaign || map_info->region == GW::Region_Presearing || !map_info->x) {
             continue;
         }
         switch (map_info->type) {
