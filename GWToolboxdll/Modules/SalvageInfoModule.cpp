@@ -182,7 +182,7 @@ namespace {
     }
     void AppendNicholasInfo(const uint32_t item_id, std::wstring& description) {
         const auto item = GW::Items::GetItemById(item_id);
-        const auto nicholas_info = DailyQuests::GetNicholasItemInfo(item->single_item_name);
+        const auto nicholas_info = DailyQuests::GetNicholasItemInfo(item->name_enc);
         if (!nicholas_info) return;
 
         const auto collection_time = DailyQuests::GetTimestampFromNicholasTheTraveller(nicholas_info);
