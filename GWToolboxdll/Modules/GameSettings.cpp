@@ -1585,6 +1585,8 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(stop_screen_shake);
 
     LOAD_BOOL(disable_gold_selling_confirmation);
+    LOAD_BOOL(collectors_edition_emotes);
+
     LOAD_BOOL(notify_when_friends_online);
     LOAD_BOOL(notify_when_friends_offline);
     LOAD_BOOL(notify_when_friends_join_outpost);
@@ -1743,7 +1745,9 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
 
     SAVE_BOOL(faction_warn_percent);
     SAVE_UINT(faction_warn_percent_amount);
+
     SAVE_BOOL(disable_gold_selling_confirmation);
+    SAVE_BOOL(collectors_edition_emotes);
 
     SAVE_BOOL(notify_when_friends_online);
     SAVE_BOOL(notify_when_friends_offline);
