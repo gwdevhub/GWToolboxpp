@@ -60,6 +60,12 @@ namespace {
         return nullptr;
     }
 }
+std::wstring ItemDescriptionHandler::GetItemDescription(const GW::Item* _item) {
+    if (!_item) return L"";
+    wchar_t* out = nullptr;
+    OnGetItemDescription(_item->item_id, 0, 0, 0, nullptr, &out);
+    return out;
+}
 std::wstring ItemDescriptionHandler::GetItemEncNameWithoutMods(const GW::Item* _item) {
 
     auto item = (InventoryManager::Item*)_item;

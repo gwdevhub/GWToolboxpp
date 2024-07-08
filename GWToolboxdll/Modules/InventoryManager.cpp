@@ -1901,58 +1901,6 @@ void InventoryManager::Draw(IDirect3DDevice9*)
     DrawItemContextMenu(show_item_context_menu);
     show_item_context_menu = false;
 
-    /*
-    *   Cog icon on inventory bags window
-    */
-#if 0
-    bool show_options_on_inventory = false;
-    if (show_options_on_inventory && inventory_bags_window_position && inventory_bags_window_position->visible()) {
-        float uiscale_multiply = GuiUtils::GetGWScaleMultiplier();
-        // NB: Use case to define GW::Vec4f ?
-        GW::Vec2f x = inventory_bags_window_position->xAxis(uiscale_multiply);
-        GW::Vec2f y = inventory_bags_window_position->yAxis(uiscale_multiply);
-        // Clamp
-        ImVec4 rect(x.x, y.x, x.y, y.y);
-        ImVec4 viewport(0, 0, (float)GW::Render::GetViewportWidth(), (float)GW::Render::GetViewportHeight());
-        // GW Clamps windows to viewport; we need to do the same.
-        GuiUtils::ClampRect(rect, viewport);
-        // Left placement
-        GW::Vec2f internal_offset(
-            (rect.z - rect.x) - 48.f * uiscale_multiply ,
-            0.f
-        );
-        ImVec2 calculated_pos = ImVec2(rect.x + internal_offset.x, rect.y + internal_offset.y);
-        ImGui::SetNextWindowPos(calculated_pos);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(10.0f, 10.0f));
-        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
-        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-        ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImColor(0, 0, 0, 0).Value);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImColor(0, 0, 0, 0).Value);
-        const char* context_menu_id = "Inventory Context Menu###inv_context";
-        if (ImGui::Begin("Inventory bags context", &visible, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize)) {
-            const char* btn_id = u8"\uf013###inv_bags_context_btn";
-            show_inventory_context_menu = ImGui::Button(btn_id);
-        }
-        ImGui::End();
-        ImGui::PopStyleColor(4);
-        ImGui::PopStyleVar(4);
-        if (show_inventory_context_menu)
-            ImGui::OpenPopup(context_menu_id);
-        if (ImGui::BeginPopup(context_menu_id)) {
-            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-                if (ImGui::Button("Store Materials")) {
-                    Log::Info("TODO: Store materials");
-                }
-            }
-            ImGui::EndPopup();
-        }
-
-    }
-#endif
-
     if (show_transact_quantity_popup) {
         ImGui::OpenPopup("Transaction quantity");
         pending_transaction.setState(PendingTransaction::State::Prompt);
@@ -2593,7 +2541,7 @@ bool InventoryManager::PendingItem::set(const Item* item)
     wiki_name.wstring(); // Trigger decode; this isn't done any other time
     const auto plural_item_enc = std::format(L"\xa35\x101\x100\x10a{}\x1", item->name_enc);
     plural_item_name.reset(plural_item_enc.c_str());
-    desc.reset(item->info_string);
+    desc.reset(ItemDescriptionHandler::GetItemDescription(item).c_str());
     return true;
 }
 
