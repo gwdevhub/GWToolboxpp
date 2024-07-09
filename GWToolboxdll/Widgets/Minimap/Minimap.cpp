@@ -859,7 +859,9 @@ void Minimap::DrawSettingsInternal()
     if (snap_to_compass) {
         ImGui::NextSpacedElement();
     }
-    ImGui::Checkbox("Snap to GW compass", &snap_to_compass);
+    if (ImGui::Checkbox("Snap to GW compass", &snap_to_compass)) {
+        compass_position_dirty = true;
+    }
     ImGui::ShowHelp("Resize and position minimap to match in-game compass size and position.");
     ImGui::Checkbox("Hide GW compass agents", &hide_compass_agents);
     if (ImGui::Checkbox("Hide GW compass quest marker", &hide_compass_quest_marker)) {
