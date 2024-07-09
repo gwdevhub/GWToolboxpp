@@ -128,7 +128,7 @@ namespace {
     void OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
-            case GW::UI::UIMessage::kEnumPreference:
+            case GW::UI::UIMessage::kPreferenceEnumChanged:
                 if (wparam && *static_cast<GW::UI::EnumPreference*>(wparam) == GW::UI::EnumPreference::InterfaceSize) {
                     Resources::GetGWScaleMultiplier(true); // Re-fetch ui scale indicator
                 }
@@ -369,7 +369,7 @@ void Resources::Initialize()
             WorkerUpdate();
         }));
     }
-    RegisterUIMessageCallback(&OnUIMessage_Hook, GW::UI::UIMessage::kEnumPreference, OnUIMessage, 0x8000);
+    RegisterUIMessageCallback(&OnUIMessage_Hook, GW::UI::UIMessage::kPreferenceEnumChanged, OnUIMessage, 0x8000);
 }
 
 void Resources::Cleanup()

@@ -104,7 +104,7 @@ namespace {
                 GW::UI::FlagPreference pref = GW::UI::FlagPreference::ShowChatTimestamps;
                 uint32_t val = static_cast<uint32_t>(GW::UI::GetPreference(GW::UI::FlagPreference::ShowChatTimestamps));
             } packet;
-            GW::UI::SendUIMessage(GW::UI::UIMessage::kCheckboxPreference, &packet);
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kPreferenceFlagChanged, &packet);
             });
     }
 

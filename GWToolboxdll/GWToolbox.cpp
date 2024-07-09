@@ -529,7 +529,7 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
     switch (Message) {
         case WM_MOUSELEAVE:
         case WM_NCMOUSELEAVE:
-            if (::GetCapture() == nullptr)
+            if (::GetCapture() == nullptr && ImGui::IsMouseDown(ImGuiMouseButton_Left))
                 ::SetCapture(hWnd);
             break;
         // Send button up mouse events to everything, to avoid being stuck on mouse-down

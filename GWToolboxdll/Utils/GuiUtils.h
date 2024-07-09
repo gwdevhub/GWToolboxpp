@@ -36,7 +36,7 @@ namespace GuiUtils {
         widget_large = 48
     };
 
-    void LoadFonts();
+    void LoadFonts(bool force = false);
     std::string WikiUrl(const std::wstring& term);
     std::string WikiUrl(const std::string& term);
     std::string WikiTemplateUrlFromTitle(const std::string& title);

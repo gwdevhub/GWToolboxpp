@@ -1099,6 +1099,11 @@ namespace {
             if(GW::PartyMgr::GetIsLeader())
                 GW::PartyMgr::InvitePlayer(GetPartySearchLeader(packet->source_party_search_id));            
         } break;
+        case GW::UI::UIMessage::kPreferenceValueChanged: {
+            const auto packet = (GW::UI::UIPacket::kPreferenceValueChanged*)wParam;
+            if (packet->preference_id == GW::UI::NumberPreference::TextLanguage)
+                GuiUtils::LoadFonts(true);
+        } break;
         }
     }
 
@@ -1458,7 +1463,8 @@ void GameSettings::Initialize()
     }
 
     constexpr GW::UI::UIMessage post_ui_messages[] = {
-        GW::UI::UIMessage::kPartySearchInviteSent
+        GW::UI::UIMessage::kPartySearchInviteSent,
+        GW::UI::UIMessage::kPreferenceValueChanged
     };
     for (const auto message_id : post_ui_messages) {
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
