@@ -75,7 +75,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     # libs:
     Dbghelp.lib # for MiniDump
     )
-
+      
 file(GLOB FXC_PATHS "C:/Program Files (x86)/Windows Kits/10/bin/*/x86")
 find_program(FXC fxc DOC "hlsl compiler" PATHS ${FXC_PATHS})
 if(NOT FXC)

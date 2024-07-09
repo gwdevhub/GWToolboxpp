@@ -176,6 +176,16 @@ namespace {
             return true;
         }
         ImGui::CreateContext();
+
+        auto& io = ImGui::GetIO();
+
+
+        io.MouseDrawCursor = false;
+        io.IniFilename = imgui_inifile.bytes;
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+        io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+        io.ConfigFlags |= ImGuiConfigFlags_NavNoCaptureKeyboard;
+
         //ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
         ImGui_ImplDX9_Init(device);
         ImGui_ImplWin32_Init(GW::MemoryMgr::GetGWWindowHandle());
@@ -184,9 +194,7 @@ namespace {
             ImGui_ImplDX9_InvalidateDeviceObjects();
         });
 
-        auto& io = ImGui::GetIO();
-        io.MouseDrawCursor = false;
-        io.IniFilename = imgui_inifile.bytes;
+
 
         imgui_initialized = true;
 
@@ -513,13 +521,17 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
     // === Send events to ImGui ===
     const auto& io = ImGui::GetIO();
     const bool skip_mouse_capture = right_mouse_down || GW::UI::GetIsWorldMapShowing() || GW::Map::GetIsInCinematic();
-    if (ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam) && !skip_mouse_capture) {
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam) && !skip_mouse_capture)
         return TRUE;
-    }
 
     // === Send events to toolbox ===
     auto& tb = GWToolbox::Instance();
     switch (Message) {
+        case WM_MOUSELEAVE:
+        case WM_NCMOUSELEAVE:
+            if (::GetCapture() == nullptr)
+                ::SetCapture(hWnd);
+            break;
         // Send button up mouse events to everything, to avoid being stuck on mouse-down
         case WM_LBUTTONUP:
         case WM_RBUTTONUP:
@@ -871,10 +883,18 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     //ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
 #endif
     ImGui::DrawContextMenu();
-    ImGui::ClampAllWindowsToScreen(gwtoolbox_state < GWToolboxState::DrawTerminating && ToolboxSettings::clamp_windows_to_screen);
+    //ImGui::ClampAllWindowsToScreen(gwtoolbox_state < GWToolboxState::DrawTerminating && ToolboxSettings::clamp_windows_to_screen);
     ImGui::EndFrame();
     ImGui::Render();
     ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+
+    // Update and Render additional Platform Windows
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+        // TODO for OpenGL: restore current GL context.
+    }
 }
 
 void GWToolbox::DrawInitialising(IDirect3DDevice9* device)
