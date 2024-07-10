@@ -14,7 +14,8 @@
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
 
-IMGUI_IMPL_API void     ImGui_ImplDX9_InvalidateDeviceObjects();
+// Forward declaration of ImGui_ImplDX9_InvalidateDeviceObjects
+void ImGui_ImplDX9_InvalidateDeviceObjects();
 
 namespace {
     ImFont* font_widget_large = nullptr;
@@ -143,6 +144,7 @@ namespace {
     };
     std::vector<FontData> font_data;
     std::wstring all_available_glyph_ranges;
+    std::vector<ImWchar*> allocated_glyph_ranges;
 
     const ImWchar fontawesome5_glyph_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
 
@@ -158,7 +160,7 @@ namespace {
 
         ImFontGlyphRangesBuilder builder;
 
-        typedef uint32_t*(__cdecl* GetGlyphRanges_pt)();
+        using GetGlyphRanges_pt = uint32_t*(*)();
         GetGlyphRanges_pt GetGlyphRanges_Func = 0;
         uintptr_t address = GW::Scanner::Find("\x50\x8d\x45\xc8\x50\x6a\x0d", "xxxxxxx", -0x5);
         GetGlyphRanges_Func = (GetGlyphRanges_pt)GW::Scanner::FunctionFromNearCall(address);
@@ -200,14 +202,14 @@ namespace {
     }
 
 
-    typedef void(__cdecl* ImGui_ImplDX9_InvalidateDeviceObjects_pt)();
-    ImGui_ImplDX9_InvalidateDeviceObjects_pt ImGui_ImplDX9_InvalidateDeviceObjects_Ret = 0, ImGui_ImplDX9_InvalidateDeviceObjects_Func = 0;
+    using ImGui_ImplDX9_InvalidateDeviceObjects_pt = void(*)();
+    ImGui_ImplDX9_InvalidateDeviceObjects_pt ImGui_ImplDX9_InvalidateDeviceObjects_Ret = nullptr, ImGui_ImplDX9_InvalidateDeviceObjects_Func = nullptr;
 
-    typedef bool(__cdecl* ImGui_ImplDX9_CreateFontsTexture_pt)();
-    ImGui_ImplDX9_CreateFontsTexture_pt ImGui_ImplDX9_CreateFontsTexture_Ret = 0, ImGui_ImplDX9_CreateFontsTexture_Func = 0;
+    using ImGui_ImplDX9_CreateFontsTexture_pt = bool(*)();
+    ImGui_ImplDX9_CreateFontsTexture_pt ImGui_ImplDX9_CreateFontsTexture_Ret = nullptr, ImGui_ImplDX9_CreateFontsTexture_Func = nullptr;
 
     // Also create any missing fonts from our own array
-    IMGUI_IMPL_API bool OnImGui_ImplDX9_CreateFontsTexture() {
+    bool OnImGui_ImplDX9_CreateFontsTexture() {
         GW::Hook::EnterHook();
         GuiUtils::CreateFontTextures();
         bool ret = ImGui_ImplDX9_CreateFontsTexture_Ret();
@@ -216,7 +218,7 @@ namespace {
     }
     
     // Also release any fonts from our own array
-    IMGUI_IMPL_API void OnImGui_ImplDX9_InvalidateDeviceObjects() {
+    void OnImGui_ImplDX9_InvalidateDeviceObjects() {
         GW::Hook::EnterHook();
         GuiUtils::ReleaseFontTextures();
         ImGui_ImplDX9_InvalidateDeviceObjects_Ret();
@@ -277,9 +279,32 @@ namespace {
 
         font_data.push_back({ (wchar_t*)fontawesome5_glyph_ranges, L"",fontawesome5_compressed_size, (void*)fontawesome5_compressed_data, true });
 
-        auto add_font_set = [](ImFontConfig& cfg, ImFontAtlasFlags flags, const float size, const ImWchar*) {
+        auto find_glyph_range_intersection = [](std::vector<wchar_t>& range1, std::vector<wchar_t>& range2) {
+            std::vector<ImWchar> intersection;
+            if (range1.empty() || range2.empty()) return intersection;
+            if (range1.back() != 0) range1.push_back(0);
+            if (range2.back() != 0) range2.push_back(0);
+            for (size_t i = 0; range1[i]; i += 2) {
+                for (size_t j = 0; range2[j]; j += 2) {
+                    const wchar_t start = std::max(range1[i], range2[j]);
+                    const wchar_t end = std::min(range1[i+1], range2[j+1]);
+                    if (start <= end) {
+                        // Merge with previous range if possible
+                        if (!intersection.empty() && start <= intersection.back() + 1) {
+                            intersection.back() = std::max(intersection.back(), static_cast<ImWchar>(end));
+                        } else {
+                            intersection.push_back(start);
+                            intersection.push_back(end);
+                        }
+                    }
+                }
+            }
+            intersection.push_back(0);
+            return intersection;
+        };
 
-            auto atlas = IM_NEW(ImFontAtlas);
+        auto add_font_set = [&find_glyph_range_intersection](ImFontConfig& cfg, ImFontAtlasFlags flags, const float size, [[maybe_unused]] const ImWchar* glyph_ranges_to_find) {
+            const auto atlas = IM_NEW(ImFontAtlas);
             atlas->Flags = flags;
 
             cfg.MergeMode = false;
@@ -287,8 +312,19 @@ namespace {
                 void* data = font.data;
                 size_t data_size = font.data_size;
 
-                // TODO: De-intersect to find out which glyph ranges we ACTUALLY need from this font, rather than loading the whole lot.
-                const auto glyph_ranges_to_load_from_this_font = (const ImWchar*)font.glyph_ranges.c_str();
+#if 0
+                auto glyphs_in_font_vec = std::vector(font.glyph_ranges.begin(), font.glyph_ranges.end());
+                auto glyphs_to_find_vec = std::vector(
+                    std::wstring_view(reinterpret_cast<const wchar_t*>(glyph_ranges_to_find)).begin(),
+                    std::wstring_view(reinterpret_cast<const wchar_t*>(glyph_ranges_to_find)).end()
+                );
+                auto intersection = find_glyph_range_intersection(glyphs_in_font_vec, glyphs_to_find_vec);
+                auto glyph_ranges_to_load_from_this_font = static_cast<ImWchar*>(IM_ALLOC(sizeof(ImWchar) * intersection.size() + 1));
+                std::ranges::copy(intersection, glyph_ranges_to_load_from_this_font);
+                allocated_glyph_ranges.push_back(glyph_ranges_to_load_from_this_font);
+#else
+                auto glyph_ranges_to_load_from_this_font = reinterpret_cast<const ImWchar*>(font.glyph_ranges.c_str());
+#endif
 
                 if (!font.font_name.empty()) {
                     const auto path = Resources::GetPath(font.font_name);
@@ -305,7 +341,7 @@ namespace {
             }
             atlas->Build();
             return atlas->Fonts.back();
-            };
+        };
 
         ImFontGlyphRangesBuilder builder = GetGWGlyphRange();
         builder.AddRanges(fontawesome5_glyph_ranges);
@@ -327,7 +363,9 @@ namespace {
             Sleep(16);
         }
 
-        if (font_header2) IM_FREE(font_header2->ContainerAtlas);
+        if (font_header2) {
+            IM_FREE(font_header2->ContainerAtlas);
+        }
         font_header2 = add_font_set(cfg, flags, static_cast<float>(GuiUtils::FontSize::header2), language_specific_glyph_range.Data); // 18.f
 
         if (font_header1) IM_FREE(font_header2->ContainerAtlas);
@@ -353,6 +391,12 @@ namespace {
         printf("Fonts loaded\n");
         fonts_loaded = true;
         fonts_loading = false;
+
+        // Free allocated glyph ranges
+        for (const auto glyph_range : allocated_glyph_ranges) {
+            IM_FREE(glyph_range);
+        }
+        allocated_glyph_ranges.clear();
     }
 
 }
@@ -365,7 +409,7 @@ namespace GuiUtils {
             return false;
 
         for (auto font : GetFonts()) {
-            if (!(font && font->ContainerAtlas))
+            if (!font || !font->ContainerAtlas)
                 continue;
             if (font->ContainerAtlas == ImGui::GetIO().Fonts)
                 continue; // Fallback function will handle this one
@@ -917,18 +961,20 @@ namespace GuiUtils {
         out.resize((in.size() + 1) / 5);
         size_t offset = 0, pos = 0, converted = 0;
         do {
+            if (pos >= in.size()) break;
             if (pos) {
                 pos++;
             }
             std::string substring(in.substr(pos, 4));
             if (!ParseUInt(substring.c_str(), &converted, 16)) {
-                return 0;
+                break;
             }
             if (converted > 0xFFFF) {
-                return 0;
+                break;
             }
             out[offset++] = static_cast<wchar_t>(converted);
-        } while ((pos = in.find(' ', pos)) != std::string::npos);
+        } while ((pos = in.find(' ', pos)) != std::string::npos && offset < out.size());
+        out.resize(offset);
         return offset;
     }
 
@@ -967,15 +1013,16 @@ namespace GuiUtils {
         }
         size_t offset = 0, pos = 0, converted = 0;
         do {
+            if (pos >= in.size()) break;
             if (pos) {
                 pos++;
             }
             std::string substring(in.substr(pos, 8));
             if (!ParseUInt(substring.c_str(), &converted, 16)) {
-                return 0;
+                break;
             }
             out[offset++] = converted;
-        } while ((pos = in.find(' ', pos)) != std::string::npos);
+        } while ((pos = in.find(' ', pos)) != std::string::npos && offset < out_len);
         while (offset < out_len) {
             out[offset++] = 0;
         }
