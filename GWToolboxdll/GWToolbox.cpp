@@ -221,6 +221,7 @@ namespace {
             return true;
         }
         GW::Render::SetResetCallback(nullptr);
+        GuiUtils::ReleaseFontTextures();
         ImGui_ImplDX9_Shutdown();
         ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();

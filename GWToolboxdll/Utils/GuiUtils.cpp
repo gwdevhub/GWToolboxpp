@@ -277,7 +277,7 @@ namespace {
 
         font_data.push_back({ (wchar_t*)fontawesome5_glyph_ranges, L"",fontawesome5_compressed_size, (void*)fontawesome5_compressed_data, true });
 
-        auto add_font_set = [](ImFontConfig& cfg, ImFontAtlasFlags flags, const float size, const ImWchar* glyph_ranges_to_find) {
+        auto add_font_set = [](ImFontConfig& cfg, ImFontAtlasFlags flags, const float size, const ImWchar*) {
 
             auto atlas = IM_NEW(ImFontAtlas);
             atlas->Flags = flags;

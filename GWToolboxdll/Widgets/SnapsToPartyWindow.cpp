@@ -21,15 +21,23 @@ namespace {
     bool GetFramePosition(const GW::UI::Frame* frame, const GW::UI::Frame* relative_to, ImVec2* top_left, ImVec2* bottom_right) {
         if (!(frame && relative_to && frame->IsVisible()))
             return false;
+        if (!GImGui)
+            return false;
+        // Imgui viewport may not be limited to the game area.
+        const auto imgui_viewport = ImGui::GetMainViewport();
         if (top_left) {
             *top_left = frame->position.GetTopLeftOnScreen(relative_to);
             top_left->x = std::round(top_left->x);
             top_left->y = std::round(top_left->y);
+            top_left->x += imgui_viewport->Pos.x;
+            top_left->y += imgui_viewport->Pos.y;
         }
         if (bottom_right) {
             *bottom_right = frame->position.GetBottomRightOnScreen(relative_to);
             bottom_right->x = std::round(bottom_right->x);
             bottom_right->y = std::round(bottom_right->y);
+            bottom_right->x += imgui_viewport->Pos.x;
+            bottom_right->y += imgui_viewport->Pos.y;
         }
         return true;
     }

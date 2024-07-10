@@ -19,7 +19,6 @@
  * Based off of @JuliusPunhal April skill timer - https://github.com/JuliusPunhal/April-old/blob/master/Source/April/SkillbarOverlay.cpp
  */
 namespace {
-    bool skillbar_pos_stale = true;
     GW::UI::FramePosition skillbar_skill_positions[8];
     ImVec2 skill_positions_calculated[8];
 
@@ -76,19 +75,24 @@ namespace {
         if (!(frame && frame->IsVisible() && frame->IsCreated())) {
             return false;
         }
+        if (!GImGui)
+            return false;
+        // Imgui viewport may not be limited to the game area.
+        const auto imgui_viewport = ImGui::GetMainViewport();
+
         for (size_t i = 0; i < _countof(skillbar_skill_positions); i++) {
             const auto skillframe = GW::UI::GetChildFrame(frame, i);
             if (!skillframe)
                 return false;
             skillbar_skill_positions[i] = skillframe->position;
             skill_positions_calculated[i] = skillbar_skill_positions[i].GetTopLeftOnScreen();
+            skill_positions_calculated[i].y += imgui_viewport->Pos.y;
+            skill_positions_calculated[i].x += imgui_viewport->Pos.x;
             if (i == 0) {
                 m_skill_width = skillbar_skill_positions[0].GetSizeOnScreen().x;
                 m_skill_height = skillbar_skill_positions[0].GetSizeOnScreen().y;
             }
         }
-
-        skillbar_pos_stale = false;
 
         // Calculate columns/rows
         if (skillbar_skill_positions[0].screen_top == skillbar_skill_positions[7].screen_top) {
@@ -108,7 +112,7 @@ namespace {
     }
     GW::HookEntry OnUIMessage_HookEntry;
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
-        skillbar_pos_stale = true;
+        skillbar_position_dirty = true;
     }
 }
 void SkillbarWidget::skill_cooldown_to_string(char arr[16], uint32_t cd) const
@@ -239,7 +243,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
         return;
     }
-    if (skillbar_pos_stale && !GetSkillbarPos()) {
+    if (skillbar_position_dirty && !GetSkillbarPos()) {
         return; // Failed to get skillbar pos
     }
 
@@ -248,25 +252,24 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 
     ImGui::Begin(Name(), nullptr, GetWinFlags());
+    const auto draw_list = ImGui::GetBackgroundDrawList();
     for (size_t i = 0; i < m_skills.size(); i++) {
         const Skill& skill = m_skills[i];
         // NB: Y axis inverted for imgui
-        const ImVec2 top_left = skillbar_skill_positions[i].GetTopLeftOnScreen();
-        // position of this skill
-
-        const ImVec2 bottom_right = skillbar_skill_positions[i].GetBottomRightOnScreen();
+        const ImVec2& top_left = skill_positions_calculated[i];
+        const ImVec2& bottom_right = { skill_positions_calculated[i].x + m_skill_width, skill_positions_calculated[i].y + m_skill_height };
 
         // draw overlay
         if (display_skill_overlay) {
-            ImGui::GetBackgroundDrawList()->AddRectFilled(top_left, bottom_right, skill.color);
+            draw_list->AddRectFilled(top_left, bottom_right, skill.color);
         }
-        ImGui::GetBackgroundDrawList()->AddRect(top_left, bottom_right, color_border);
+        draw_list->AddRect(top_left, bottom_right, color_border);
 
         // label
         if (*skill.cooldown) {
             const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown);
             ImVec2 label_pos(top_left.x + m_skill_width / 2 - label_size.x / 2, top_left.y + m_skill_width / 2 - label_size.y / 2);
-            ImGui::GetBackgroundDrawList()->AddText(label_pos, color_text_recharge, skill.cooldown);
+            draw_list->AddText(label_pos, color_text_recharge, skill.cooldown);
         }
 
         if (display_effect_monitor) {
