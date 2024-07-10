@@ -564,7 +564,7 @@ void SkillbarWidget::Initialize()
 {
     ToolboxWidget::Initialize();
     GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kUIPositionChanged, OnUIMessage, 0x8000);
-    GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kPreferenceChanged, OnUIMessage, 0x8000);
+    GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kPreferenceValueChanged, OnUIMessage, 0x8000);
 }
 void SkillbarWidget::Terminate()
 {

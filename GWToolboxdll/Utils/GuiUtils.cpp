@@ -11,7 +11,8 @@
 #include <Modules/Resources.h>
 
 #include "GuiUtils.h"
-
+#include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Utilities/Hooker.h>
 
 IMGUI_IMPL_API void     ImGui_ImplDX9_InvalidateDeviceObjects();
 
@@ -22,6 +23,26 @@ namespace {
     ImFont* font_header1 = nullptr;
     ImFont* font_header2 = nullptr;
     ImFont* font_text = nullptr;
+
+    const std::vector<ImFont*> GetFonts() {
+        return {
+            font_text,
+            font_widget_large,
+            font_widget_small,
+            font_widget_label,
+            font_header1,
+            font_header2
+        };
+    }
+
+    const ImFont* fonts[] = {
+        font_text,
+        font_widget_large,
+        font_widget_small,
+        font_widget_label,
+        font_header1,
+        font_header2
+    };
 
     bool fonts_loading = false;
     bool fonts_loaded = false;
@@ -120,39 +141,106 @@ namespace {
         void* data = nullptr;
         bool compressed = false;
     };
-    std::vector<FontData> fonts;
+    std::vector<FontData> font_data;
     std::wstring all_available_glyph_ranges;
 
     const ImWchar fontawesome5_glyph_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
 
     std::unordered_map<GW::Constants::Language, ImFontAtlas*> font_atlas_by_language;
 
-    std::wstring GetLanguageSpecificGlyphRanges(GW::Constants::Language language) {
-
-        const auto& io = ImGui::GetIO();
-        std::wstring glyph_ranges = (const wchar_t*)io.Fonts->GetGlyphRangesDefault();
-        //glyph_ranges += (wchar_t*)fontawesome5_glyph_ranges;
-
-        switch (language) {
-        case GW::Constants::Language::Russian:
-        case GW::Constants::Language::Polish:
-            glyph_ranges = (const wchar_t*)io.Fonts->GetGlyphRangesCyrillic();
-            break;
-        case GW::Constants::Language::TraditionalChinese:
-            glyph_ranges = (const wchar_t*)io.Fonts->GetGlyphRangesChineseFull();
-            break;
-        case GW::Constants::Language::Korean:
-            glyph_ranges = (const wchar_t*)io.Fonts->GetGlyphRangesKorean();
-            break;
-        case GW::Constants::Language::Japanese:
-            glyph_ranges = (const wchar_t*)io.Fonts->GetGlyphRangesJapanese();
-            break;
-        }
-        return glyph_ranges;
+    std::wstring GlyphBuilderToWstring(ImFontGlyphRangesBuilder& builder) {
+        ImVector<ImWchar> ranges_vec;
+        builder.BuildRanges(&ranges_vec);
+        return (const wchar_t*)ranges_vec.Data;
     }
+
+    ImFontGlyphRangesBuilder GetGWGlyphRange() {
+
+        ImFontGlyphRangesBuilder builder;
+
+        typedef uint32_t*(__cdecl* GetGlyphRanges_pt)();
+        GetGlyphRanges_pt GetGlyphRanges_Func = 0;
+        uintptr_t address = GW::Scanner::Find("\x50\x8d\x45\xc8\x50\x6a\x0d", "xxxxxxx", -0x5);
+        GetGlyphRanges_Func = (GetGlyphRanges_pt)GW::Scanner::FunctionFromNearCall(address);
+
+        if (GetGlyphRanges_Func) {
+            const auto res = GetGlyphRanges_Func();
+            for (size_t i = 0; res[i]; i++) {
+                builder.AddChar(static_cast<ImWchar>(res[i]));
+            }
+        }
+        return builder;
+    }
+
+    bool CreateFontTexture(ImFontAtlas* atlas) {
+        // Upload texture to graphics system
+
+        auto device = GW::Render::GetDevice();
+
+        unsigned char* pixels;
+        int width, height, bytes_per_pixel;
+        atlas->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);
+        
+        LPDIRECT3DTEXTURE9 new_texture = 0;
+        if (device->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &new_texture, nullptr) < 0)
+            return false;
+        D3DLOCKED_RECT tex_locked_rect;
+        if (new_texture->LockRect(0, &tex_locked_rect, nullptr, 0) != D3D_OK)
+            return false;
+        for (int y = 0; y < height; y++)
+            memcpy((unsigned char*)tex_locked_rect.pBits + (size_t)tex_locked_rect.Pitch * y, pixels + (size_t)width * bytes_per_pixel * y, (size_t)width * bytes_per_pixel);
+        new_texture->UnlockRect(0);
+
+        LPDIRECT3DTEXTURE9 old_texture = (LPDIRECT3DTEXTURE9)atlas->TexID;
+        if (old_texture) {
+            old_texture->Release();
+        }
+        atlas->TexID = new_texture;
+        return true;
+    }
+
+
+    typedef void(__cdecl* ImGui_ImplDX9_InvalidateDeviceObjects_pt)();
+    ImGui_ImplDX9_InvalidateDeviceObjects_pt ImGui_ImplDX9_InvalidateDeviceObjects_Ret = 0, ImGui_ImplDX9_InvalidateDeviceObjects_Func = 0;
+
+    typedef bool(__cdecl* ImGui_ImplDX9_CreateFontsTexture_pt)();
+    ImGui_ImplDX9_CreateFontsTexture_pt ImGui_ImplDX9_CreateFontsTexture_Ret = 0, ImGui_ImplDX9_CreateFontsTexture_Func = 0;
+
+    // Also create any missing fonts from our own array
+    IMGUI_IMPL_API bool OnImGui_ImplDX9_CreateFontsTexture() {
+        GW::Hook::EnterHook();
+        GuiUtils::CreateFontTextures();
+        bool ret = ImGui_ImplDX9_CreateFontsTexture_Ret();
+        GW::Hook::LeaveHook();
+        return ret;
+    }
+    
+    // Also release any fonts from our own array
+    IMGUI_IMPL_API void OnImGui_ImplDX9_InvalidateDeviceObjects() {
+        GW::Hook::EnterHook();
+        GuiUtils::ReleaseFontTextures();
+        ImGui_ImplDX9_InvalidateDeviceObjects_Ret();
+        GW::Hook::LeaveHook();
+    }
+
+    void Hook_ImGui_ImplDX9_Functions() {
+        if (!ImGui_ImplDX9_InvalidateDeviceObjects_Ret) {
+            ImGui_ImplDX9_InvalidateDeviceObjects_Func = ImGui_ImplDX9_InvalidateDeviceObjects;
+            GW::Hook::CreateHook((void**)&ImGui_ImplDX9_InvalidateDeviceObjects_Func, OnImGui_ImplDX9_InvalidateDeviceObjects, (void**)&ImGui_ImplDX9_InvalidateDeviceObjects_Ret);
+            GW::Hook::EnableHooks(ImGui_ImplDX9_InvalidateDeviceObjects_Func);
+        }
+        if (!ImGui_ImplDX9_CreateFontsTexture_Ret) {
+            ImGui_ImplDX9_CreateFontsTexture_Func = ImGui_ImplDX9_CreateFontsTexture;
+            GW::Hook::CreateHook((void**)&ImGui_ImplDX9_CreateFontsTexture_Func, OnImGui_ImplDX9_CreateFontsTexture, (void**)&ImGui_ImplDX9_CreateFontsTexture_Ret);
+            GW::Hook::EnableHooks(ImGui_ImplDX9_CreateFontsTexture_Func);
+        }
+    }
+
 
     // Do dont loading into memory; run on a separate thread.
     void LoadFontsThread() {
+
+        Hook_ImGui_ImplDX9_Functions();
 
         // This is hacky but i cba to use imgui's stupid ranges things; just use a wstring, its all 0 terminated anyway
         static_assert(sizeof(ImWchar) == sizeof(wchar_t), "ImWchar == wchar_t");
@@ -161,7 +249,7 @@ namespace {
         fonts_loaded = false;
 
         // Language decides glyph range
-        const auto current_language = (GW::Constants::Language)GW::UI::GetPreference(GW::UI::NumberPreference::TextLanguage);
+        //const auto current_language = (GW::Constants::Language)GW::UI::GetPreference(GW::UI::NumberPreference::TextLanguage);
 
         while (!GImGui) {
             Sleep(16);
@@ -180,99 +268,87 @@ namespace {
             {L"Font_Korean.ttf", io.Fonts->GetGlyphRangesKorean()}
         };
 
-        ImFontGlyphRangesBuilder builder;
-
         for (const auto& [font_name, glyph_range] : fonts_on_disk) {
             const auto path = Resources::GetPath(font_name);
             if (!std::filesystem::exists(path))
                 continue;
-            fonts.push_back({ (wchar_t*)glyph_range, path });
-            builder.AddRanges(glyph_range);
+            font_data.push_back({ (wchar_t*)glyph_range, path });
         }
 
-        fonts.push_back({ (wchar_t*)fontawesome5_glyph_ranges, L"",fontawesome5_compressed_size, (void*)fontawesome5_compressed_data, true});
-        builder.AddRanges(fontawesome5_glyph_ranges);
+        font_data.push_back({ (wchar_t*)fontawesome5_glyph_ranges, L"",fontawesome5_compressed_size, (void*)fontawesome5_compressed_data, true });
 
-        ImVector<ImWchar> ranges_vec;
-        builder.BuildRanges(&ranges_vec);
-        all_available_glyph_ranges = (const wchar_t*)ranges_vec.Data;
+        auto add_font_set = [](ImFontConfig& cfg, ImFontAtlasFlags flags, const float size, const ImWchar* glyph_ranges_to_find) {
 
-        //std::reverse(fonts.begin(),fonts.end());
-
-        auto add_font_set = [](ImFontConfig& cfg, ImFontAtlas* atlas, const float size, ImFont*& font_ptr, const std::wstring& glyph_ranges) {
-            std::unordered_map<const FontData*, std::wstring> fonts_to_load;
-            std::wstring glyphs_found;
+            auto atlas = IM_NEW(ImFontAtlas);
+            atlas->Flags = flags;
 
             cfg.MergeMode = false;
-
-            (glyph_ranges);
-            // TODO: Figure out which fonts have the glyphs ranges we want, and then ONLY extract those glyph ranges.
-
-            // e.g. the default font has the latin ranges but not japanese; tell imgui to load the latin from Font.ttf, but NOT the latin from Japanese.ttf
-            // I have a feeling that imgui is overloading/overwriting the same glyphs causing texture size to bloat.
-
-            // Atm glyph_ranges is ignored and is instead blocking loading of any other fonts over 20px.
-
-            // Actually load up the fonts that match the glyphs we want
-            for (const auto& font : fonts) {
-
-                // TODO: CHANGE THIS!
-                const auto ranges_needed_from_this_font = (const ImWchar*)font.glyph_ranges.c_str();
-
+            for (const auto& font : font_data) {
                 void* data = font.data;
                 size_t data_size = font.data_size;
+
+                // TODO: De-intersect to find out which glyph ranges we ACTUALLY need from this font, rather than loading the whole lot.
+                const auto glyph_ranges_to_load_from_this_font = (const ImWchar*)font.glyph_ranges.c_str();
+
                 if (!font.font_name.empty()) {
                     const auto path = Resources::GetPath(font.font_name);
                     data = ImFileLoadToMemory(path.string().c_str(), "rb", &data_size, 0);
                 }
 
                 if (font.compressed) {
-                    atlas->AddFontFromMemoryCompressedTTF(data, data_size, size, &cfg, ranges_needed_from_this_font);
+                    atlas->AddFontFromMemoryCompressedTTF(data, data_size, size, &cfg, glyph_ranges_to_load_from_this_font);
                 }
                 else {
-                    atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, ranges_needed_from_this_font);
+                    atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, glyph_ranges_to_load_from_this_font);
                 }
                 cfg.MergeMode = true; // for all but the first
-
-                if (size > 20.f)
-                    break; // TODO: Remove this hack once the above logic has been fixed
             }
-
-            font_ptr = atlas->Fonts.back();
+            atlas->Build();
+            return atlas->Fonts.back();
             };
 
-        const auto language_specific_glyph_range = GetLanguageSpecificGlyphRanges(current_language);
+        ImFontGlyphRangesBuilder builder = GetGWGlyphRange();
+        builder.AddRanges(fontawesome5_glyph_ranges);
 
-        while (io.Fonts->Locked) {
-            Sleep(16);
-        }
+        ImVector<ImWchar> language_specific_glyph_range;
+        builder.BuildRanges(&language_specific_glyph_range);
 
-        auto old_atlas = io.Fonts;
-        io.Fonts = IM_NEW(ImFontAtlas);
-        IM_FREE(old_atlas);
-        io.Fonts->Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;
-        io.Fonts->Flags |= ImFontAtlasFlags_NoMouseCursors;
-        io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines;
+        ImFontAtlasFlags flags = 0;
+        flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;
+        flags |= ImFontAtlasFlags_NoMouseCursors;
+        flags |= ImFontAtlasFlags_NoBakedLines;
 
         static ImFontConfig cfg;
         cfg.PixelSnapH = true;
         cfg.OversampleH = 2; // OversampleH = 2 for base text size (harder to read if OversampleH < 2)
         cfg.OversampleV = 1;
-       
 
-        std::wstring default_glyph_range = (const wchar_t*)io.Fonts->GetGlyphRangesDefault();
+        while (io.Fonts->Locked) {
+            Sleep(16);
+        }
 
-        add_font_set(cfg, io.Fonts, static_cast<float>(GuiUtils::FontSize::text), font_text, all_available_glyph_ranges); // 16.f
-        add_font_set(cfg, io.Fonts, static_cast<float>(GuiUtils::FontSize::header2), font_header2, language_specific_glyph_range); // 18.f
-        add_font_set(cfg, io.Fonts, static_cast<float>(GuiUtils::FontSize::header1), font_header1, language_specific_glyph_range); // 20.f
+        if (font_header2) IM_FREE(font_header2->ContainerAtlas);
+        font_header2 = add_font_set(cfg, flags, static_cast<float>(GuiUtils::FontSize::header2), language_specific_glyph_range.Data); // 18.f
+
+        if (font_header1) IM_FREE(font_header2->ContainerAtlas);
+        font_header1 = add_font_set(cfg, flags, static_cast<float>(GuiUtils::FontSize::header1), language_specific_glyph_range.Data); // 20.f
 
         cfg.OversampleH = 1;
-        add_font_set(cfg, io.Fonts, static_cast<float>(GuiUtils::FontSize::widget_label), font_widget_label, language_specific_glyph_range); // 24.f
-        add_font_set(cfg, io.Fonts, static_cast<float>(GuiUtils::FontSize::widget_small), font_widget_small, language_specific_glyph_range); // 40.f
-        add_font_set(cfg, io.Fonts, static_cast<float>(GuiUtils::FontSize::widget_large), font_widget_large, language_specific_glyph_range); // 48.f
+        if (font_widget_label) IM_FREE(font_widget_label->ContainerAtlas);
+        font_widget_label = add_font_set(cfg, flags, static_cast<float>(GuiUtils::FontSize::widget_label), language_specific_glyph_range.Data); // 24.f
 
-        ASSERT(io.Fonts->Build());
+        if (font_widget_small) IM_FREE(font_widget_small->ContainerAtlas);
+        font_widget_small = add_font_set(cfg, flags, static_cast<float>(GuiUtils::FontSize::widget_small),language_specific_glyph_range.Data); // 40.f
+
+        if (font_widget_large) IM_FREE(font_widget_large->ContainerAtlas);
+        font_widget_large = add_font_set(cfg, flags, static_cast<float>(GuiUtils::FontSize::widget_large), language_specific_glyph_range.Data); // 48.f
+
+        if (font_text) IM_FREE(font_text->ContainerAtlas);
+        font_text = add_font_set(cfg, flags, static_cast<float>(GuiUtils::FontSize::text), language_specific_glyph_range.Data); // 16.f
+
         ImGui_ImplDX9_InvalidateDeviceObjects();
+
+        io.Fonts = font_text->ContainerAtlas;
 
         printf("Fonts loaded\n");
         fonts_loaded = true;
@@ -282,6 +358,43 @@ namespace {
 }
 
 namespace GuiUtils {
+
+    
+    bool ReleaseFontTextures() {
+        if (!GImGui)
+            return false;
+
+        for (auto font : GetFonts()) {
+            if (!(font && font->ContainerAtlas))
+                continue;
+            if (font->ContainerAtlas == ImGui::GetIO().Fonts)
+                continue; // Fallback function will handle this one
+            LPDIRECT3DTEXTURE9 texture = (LPDIRECT3DTEXTURE9)font->ContainerAtlas->TexID;
+            if (texture) {
+                texture->Release();
+                font->ContainerAtlas->SetTexID(0);
+            }
+        }
+        return true;
+    }
+
+    bool CreateFontTextures() {
+        if (!GImGui)
+            return false;
+
+        for (auto font : GetFonts()) {
+            if (!(font && font->ContainerAtlas))
+                continue;
+            if (font->ContainerAtlas == ImGui::GetIO().Fonts)
+                continue; // Fallback function will handle this one
+            if (font->ContainerAtlas->TexID)
+                continue; // Already generated
+            if (!CreateFontTexture(font->ContainerAtlas))
+                return false;
+        }
+        return true;
+    }
+
     void FlashWindow(const bool force)
     {
         FLASHWINFO flashInfo = {0};
@@ -376,12 +489,12 @@ namespace GuiUtils {
     }
 
     // Loads fonts asynchronously. CJK font files can by over 20mb in size!
-    void LoadFonts(bool force)
+    void LoadFonts(bool)
     {
         if (fonts_loading) {
             return;
         }
-        if (fonts_loaded && !force) {
+        if (fonts_loaded) {
             return;
         }
         fonts_loading = true;

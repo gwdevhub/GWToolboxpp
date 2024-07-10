@@ -100,10 +100,10 @@ namespace {
 
     void ForceRedrawChatLog() {
         GW::GameThread::Enqueue([]() {
-            struct {
-                GW::UI::FlagPreference pref = GW::UI::FlagPreference::ShowChatTimestamps;
-                uint32_t val = static_cast<uint32_t>(GW::UI::GetPreference(GW::UI::FlagPreference::ShowChatTimestamps));
-            } packet;
+            GW::UI::UIPacket::kPreferenceFlagChanged packet = {
+                GW::UI::FlagPreference::ShowChatTimestamps,
+                static_cast<uint32_t>(GW::UI::GetPreference(GW::UI::FlagPreference::ShowChatTimestamps))
+            };
             GW::UI::SendUIMessage(GW::UI::UIMessage::kPreferenceFlagChanged, &packet);
             });
     }
@@ -498,7 +498,7 @@ namespace {
         InjectSent();
         injecting = false;
         pending_inject = false;
-        ForceRedrawChatLog();
+        //ForceRedrawChatLog();
     }
 
     // Set up chat log, load from file if applicable. Returns true if initialised
@@ -575,6 +575,11 @@ namespace {
         Init();
         Save(); // Save the chat log on every map transition
     }
+
+    bool IsChatLogReady() {
+        const auto log = GW::UI::GetFrameByLabel(L"Log");
+        return log && log->IsCreated() && GW::Chat::GetChatLog();
+    }
 }
 
 void ChatLog::SaveSettings(ToolboxIni* ini)
@@ -593,7 +598,7 @@ void ChatLog::LoadSettings(ToolboxIni* ini)
 }
 
 void ChatLog::Update(float) {
-    if (pending_inject) {
+    if (pending_inject && IsChatLogReady()) {
         Init();
         Inject();
         pending_inject = false;

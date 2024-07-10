@@ -191,6 +191,7 @@ namespace {
         ImGui_ImplWin32_Init(GW::MemoryMgr::GetGWWindowHandle());
 
         GW::Render::SetResetCallback([](IDirect3DDevice9*) {
+            GuiUtils::ReleaseFontTextures();
             ImGui_ImplDX9_InvalidateDeviceObjects();
         });
 
@@ -839,11 +840,13 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         Disable();
         return;
     }
+    // Draw loop
+    Resources::DxUpdate(device);
+
     if (!CanRenderToolbox())
         return;
 
-    // Draw loop
-    Resources::DxUpdate(device);
+
 
     ImGui_ImplDX9_NewFrame();
     ImGui_ImplWin32_NewFrame();
@@ -911,6 +914,7 @@ void GWToolbox::DrawInitialising(IDirect3DDevice9* device)
 
     if (!GuiUtils::FontsLoaded()) {
         Resources::Instance().Update(0.f); // necessary, because this won't be called in
+        Resources::DxUpdate(device);
         return;                            // GWToolbox::Update() until fonts are initialised
     }
 

@@ -195,7 +195,7 @@ void ActiveQuestWidget::Draw(IDirect3DDevice9*)
 
         ImGui::SameLine();
 
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::header1));
+        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_label));
         ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR_ACTIVE);
         ImGui::Text("%s", active_quest_name.string().c_str());
         ImGui::PopStyleColor();

@@ -35,6 +35,10 @@ namespace GuiUtils {
         widget_small = 40,
         widget_large = 48
     };
+    // Cycle through our own fonts, release any valid textures
+    bool ReleaseFontTextures();
+    // Cycle through our own fonts, create any missing textures
+    bool CreateFontTextures();
 
     void LoadFonts(bool force = false);
     std::string WikiUrl(const std::wstring& term);

@@ -350,7 +350,7 @@ static bool ImGui_ImplDX9_CheckFormatSupport(IDirect3DDevice9* pDevice, D3DFORMA
     return support;
 }
 
-static bool ImGui_ImplDX9_CreateFontsTexture()
+ bool ImGui_ImplDX9_CreateFontsTexture()
 {
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
