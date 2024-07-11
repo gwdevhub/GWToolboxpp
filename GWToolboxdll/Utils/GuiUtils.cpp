@@ -6,7 +6,6 @@
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
-#include <Utf8.h>
 #include <fonts/fontawesome5.h>
 #include <Modules/Resources.h>
 
@@ -14,8 +13,6 @@
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
 
-// Forward declaration of ImGui_ImplDX9_InvalidateDeviceObjects
-void ImGui_ImplDX9_InvalidateDeviceObjects();
 
 namespace {
     ImFont* font_widget_large = nullptr;
@@ -25,7 +22,8 @@ namespace {
     ImFont* font_header2 = nullptr;
     ImFont* font_text = nullptr;
 
-    const std::vector<ImFont*> GetFonts() {
+    const std::vector<ImFont*> GetFonts()
+    {
         return {
             font_text,
             font_widget_large,
@@ -65,7 +63,8 @@ namespace {
         return "https://wiki.guildwars.com/wiki/";
     }
 
-    const char* GetRawWikiPrefix() {
+    const char* GetRawWikiPrefix()
+    {
         return "https://wiki.guildwars.com/index.php";
     }
 
@@ -142,22 +141,24 @@ namespace {
         void* data = nullptr;
         bool compressed = false;
     };
+
     std::vector<FontData> font_data;
     std::wstring all_available_glyph_ranges;
     std::vector<ImWchar*> allocated_glyph_ranges;
 
-    const ImWchar fontawesome5_glyph_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+    const ImWchar fontawesome5_glyph_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
 
     std::unordered_map<GW::Constants::Language, ImFontAtlas*> font_atlas_by_language;
 
-    std::wstring GlyphBuilderToWstring(ImFontGlyphRangesBuilder& builder) {
+    std::wstring GlyphBuilderToWstring(ImFontGlyphRangesBuilder& builder)
+    {
         ImVector<ImWchar> ranges_vec;
         builder.BuildRanges(&ranges_vec);
         return (const wchar_t*)ranges_vec.Data;
     }
 
-    ImFontGlyphRangesBuilder GetGWGlyphRange() {
-
+    ImFontGlyphRangesBuilder GetGWGlyphRange()
+    {
         ImFontGlyphRangesBuilder builder;
 
         using GetGlyphRanges_pt = uint32_t*(*)();
@@ -183,7 +184,8 @@ namespace {
         return builder;
     }
 
-    bool CreateFontTexture(ImFontAtlas* atlas) {
+    bool CreateFontTexture(ImFontAtlas* atlas)
+    {
         // Upload texture to graphics system
 
         auto device = GW::Render::GetDevice();
@@ -191,7 +193,7 @@ namespace {
         unsigned char* pixels;
         int width, height, bytes_per_pixel;
         atlas->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);
-        
+
         LPDIRECT3DTEXTURE9 new_texture = 0;
         if (device->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &new_texture, nullptr) < 0)
             return false;
@@ -218,22 +220,25 @@ namespace {
     ImGui_ImplDX9_CreateFontsTexture_pt ImGui_ImplDX9_CreateFontsTexture_Ret = nullptr, ImGui_ImplDX9_CreateFontsTexture_Func = nullptr;
 
     // Also create any missing fonts from our own array
-    bool OnImGui_ImplDX9_CreateFontsTexture() {
+    bool OnImGui_ImplDX9_CreateFontsTexture()
+    {
         GW::Hook::EnterHook();
         bool ret = GuiUtils::CreateFontTextures() && ImGui_ImplDX9_CreateFontsTexture_Ret();
         GW::Hook::LeaveHook();
         return ret;
     }
-    
+
     // Also release any fonts from our own array
-    void OnImGui_ImplDX9_InvalidateDeviceObjects() {
+    void OnImGui_ImplDX9_InvalidateDeviceObjects()
+    {
         GW::Hook::EnterHook();
         GuiUtils::ReleaseFontTextures();
         ImGui_ImplDX9_InvalidateDeviceObjects_Ret();
         GW::Hook::LeaveHook();
     }
 
-    void Hook_ImGui_ImplDX9_Functions() {
+    void Hook_ImGui_ImplDX9_Functions()
+    {
         if (!ImGui_ImplDX9_InvalidateDeviceObjects_Ret) {
             ImGui_ImplDX9_InvalidateDeviceObjects_Func = ImGui_ImplDX9_InvalidateDeviceObjects;
             GW::Hook::CreateHook((void**)&ImGui_ImplDX9_InvalidateDeviceObjects_Func, OnImGui_ImplDX9_InvalidateDeviceObjects, (void**)&ImGui_ImplDX9_InvalidateDeviceObjects_Ret);
@@ -248,8 +253,8 @@ namespace {
 
 
     // Do dont loading into memory; run on a separate thread.
-    void LoadFontsThread() {
-
+    void LoadFontsThread()
+    {
         Hook_ImGui_ImplDX9_Functions();
 
         // This is hacky but i cba to use imgui's stupid ranges things; just use a wstring, its all 0 terminated anyway
@@ -282,10 +287,10 @@ namespace {
             const auto path = Resources::GetPath(font_name);
             if (!std::filesystem::exists(path))
                 continue;
-            font_data.push_back({ (wchar_t*)glyph_range, path });
+            font_data.push_back({(wchar_t*)glyph_range, path});
         }
 
-        font_data.push_back({ (wchar_t*)fontawesome5_glyph_ranges, L"",fontawesome5_compressed_size, (void*)fontawesome5_compressed_data, true });
+        font_data.push_back({(wchar_t*)fontawesome5_glyph_ranges, L"", fontawesome5_compressed_size, (void*)fontawesome5_compressed_data, true});
 
         auto find_glyph_range_intersection = [](std::vector<wchar_t>& range1, std::vector<wchar_t>& range2) {
             std::vector<ImWchar> intersection;
@@ -295,12 +300,13 @@ namespace {
             for (size_t i = 0; range1[i]; i += 2) {
                 for (size_t j = 0; range2[j]; j += 2) {
                     const wchar_t start = std::max(range1[i], range2[j]);
-                    const wchar_t end = std::min(range1[i+1], range2[j+1]);
+                    const wchar_t end = std::min(range1[i + 1], range2[j + 1]);
                     if (start <= end) {
                         // Merge with previous range if possible
                         if (!intersection.empty() && start <= intersection.back() + 1) {
                             intersection.back() = std::max(intersection.back(), static_cast<ImWchar>(end));
-                        } else {
+                        }
+                        else {
                             intersection.push_back(start);
                             intersection.push_back(end);
                         }
@@ -372,20 +378,25 @@ namespace {
         }
         font_header2 = add_font_set(cfg, flags, static_cast<float>(GuiUtils::FontSize::header2), language_specific_glyph_range.Data); // 18.f
 
-        if (font_header1) IM_FREE(font_header2->ContainerAtlas);
+        if (font_header1)
+            IM_FREE(font_header2->ContainerAtlas);
         font_header1 = add_font_set(cfg, flags, static_cast<float>(GuiUtils::FontSize::header1), language_specific_glyph_range.Data); // 20.f
 
         cfg.OversampleH = 1;
-        if (font_widget_label) IM_FREE(font_widget_label->ContainerAtlas);
+        if (font_widget_label)
+            IM_FREE(font_widget_label->ContainerAtlas);
         font_widget_label = add_font_set(cfg, flags, static_cast<float>(GuiUtils::FontSize::widget_label), language_specific_glyph_range.Data); // 24.f
 
-        if (font_widget_small) IM_FREE(font_widget_small->ContainerAtlas);
-        font_widget_small = add_font_set(cfg, flags, static_cast<float>(GuiUtils::FontSize::widget_small),language_specific_glyph_range.Data); // 40.f
+        if (font_widget_small)
+            IM_FREE(font_widget_small->ContainerAtlas);
+        font_widget_small = add_font_set(cfg, flags, static_cast<float>(GuiUtils::FontSize::widget_small), language_specific_glyph_range.Data); // 40.f
 
-        if (font_widget_large) IM_FREE(font_widget_large->ContainerAtlas);
+        if (font_widget_large)
+            IM_FREE(font_widget_large->ContainerAtlas);
         font_widget_large = add_font_set(cfg, flags, static_cast<float>(GuiUtils::FontSize::widget_large), language_specific_glyph_range.Data); // 48.f
 
-        if (font_text) IM_FREE(font_text->ContainerAtlas);
+        if (font_text)
+            IM_FREE(font_text->ContainerAtlas);
         font_text = add_font_set(cfg, flags, static_cast<float>(GuiUtils::FontSize::text), language_specific_glyph_range.Data); // 16.f
 
         ImGui_ImplDX9_InvalidateDeviceObjects();
@@ -402,13 +413,11 @@ namespace {
         }
         allocated_glyph_ranges.clear();
     }
-
 }
 
 namespace GuiUtils {
-
-    
-    bool ReleaseFontTextures() {
+    bool ReleaseFontTextures()
+    {
         if (!GImGui)
             return false;
 
@@ -426,7 +435,8 @@ namespace GuiUtils {
         return true;
     }
 
-    bool CreateFontTextures() {
+    bool CreateFontTextures()
+    {
         if (!GImGui)
             return false;
         if (fonts_loading)
@@ -518,7 +528,7 @@ namespace GuiUtils {
         GW::GameThread::Enqueue([cmd]() {
             GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, cmd);
             delete[] cmd;
-            });
+        });
     }
 
     std::string SanitizeWikiUrl(std::string s)
@@ -715,7 +725,8 @@ namespace GuiUtils {
         return out;
     }
 
-    std::wstring UrlEncode(const std::wstring& s, const char space_token) {
+    std::wstring UrlEncode(const std::wstring& s, const char space_token)
+    {
         const auto str = WStringToString(s);
         const auto enc = UrlEncode(str, space_token);
         return StringToWString(enc);
@@ -768,7 +779,7 @@ namespace GuiUtils {
             return "";
         }
         // NB: GW uses code page 0 (CP_ACP)
-        constexpr auto try_code_pages = { CP_UTF8, CP_ACP };
+        constexpr auto try_code_pages = {CP_UTF8, CP_ACP};
         for (const auto code_page : try_code_pages) {
             const auto size_needed = WideCharToMultiByte(code_page, WC_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
             if (!size_needed)
@@ -846,7 +857,7 @@ namespace GuiUtils {
             return {};
         }
         // NB: GW uses code page 0 (CP_ACP)
-        constexpr auto try_code_pages = { CP_UTF8, CP_ACP };
+        constexpr auto try_code_pages = {CP_UTF8, CP_ACP};
         for (const auto code_page : try_code_pages) {
             const auto size_needed = MultiByteToWideChar(code_page, MB_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0);
             if (!size_needed)
@@ -1057,7 +1068,7 @@ namespace GuiUtils {
             written += snprintf(&out[written], out.capacity() - written, " %d", timeinfo->tm_year + 1900);
         }
         snprintf(&out[written], out.capacity() - written, written > 0 ? ", %02d:%02d" : " %02d:%02d",
-                            timeinfo->tm_hour, timeinfo->tm_min);
+                 timeinfo->tm_hour, timeinfo->tm_min);
         return out.size();
     }
 
@@ -1226,8 +1237,7 @@ namespace GuiUtils {
             decoding = true;
             GW::GameThread::Enqueue([&] {
                 GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnStringDecoded, this, language_id);
-                });
-
+            });
         }
         sanitise();
         return decoded_ws;
