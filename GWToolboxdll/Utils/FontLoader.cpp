@@ -8,8 +8,6 @@
 #include <Modules/Resources.h>
 
 #include "fonts/fontawesome5.h"
-#include "GWCA/Constants/Constants.h"
-#include "GWCA/Managers/UIMgr.h"
 
 namespace {
     ImFont* font_widget_large = nullptr;
@@ -85,7 +83,8 @@ namespace {
         atlas->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);
 
         LPDIRECT3DTEXTURE9 new_texture = 0;
-        if (device->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &new_texture, nullptr) < 0)
+        auto err = device->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &new_texture, nullptr);
+        if (err != D3D_OK)
             return false;
         D3DLOCKED_RECT tex_locked_rect;
         if (new_texture->LockRect(0, &tex_locked_rect, nullptr, 0) != D3D_OK)
@@ -249,6 +248,91 @@ namespace {
         return intersection;
     }
 
+    void ReleaseFontTexture(ImFont* font) {
+        if (!font || !font->ContainerAtlas)
+            return;
+        LPDIRECT3DTEXTURE9 texture = (LPDIRECT3DTEXTURE9)font->ContainerAtlas->TexID;
+        if (texture) {
+            texture->Release();
+            font->ContainerAtlas->SetTexID(0);
+        }
+    }
+
+    void ReleaseFont(ImFont* font) {
+        if (!font) return;
+        if (font->ContainerAtlas && font->ContainerAtlas == ImGui::GetIO().Fonts)
+            return;
+        ReleaseFontTexture(font);
+        if (font->ContainerAtlas) {
+            IM_DELETE(font->ContainerAtlas);
+        }
+        else {
+            IM_DELETE(font);
+        }
+    }
+
+    std::vector<FontData>& GetFontData() {
+        if (!font_data.empty())
+            return font_data;
+            const auto fonts_on_disk = std::to_array<std::pair<std::wstring_view, std::vector<ImWchar>>>({
+            {L"Font.ttf", find_glyph_range_intersection(ConstGetGlyphRangesLatin(), ConstGetGWGlyphRange())},
+            {L"Font_Japanese.ttf", find_glyph_range_intersection(ConstGetGlyphRangesJapanese(), ConstGetGWGlyphRange())},
+            {L"Font_Cyrillic.ttf", find_glyph_range_intersection(ConstGetGlyphRangesCyrillic(), ConstGetGWGlyphRange())},
+            {L"Font_ChineseTraditional.ttf", find_glyph_range_intersection(ConstGetGlyphRangesChinese(), ConstGetGWGlyphRange())},
+            {L"Font_Korean.ttf", find_glyph_range_intersection(ConstGetGlyphRangesKorean(), ConstGetGWGlyphRange())}
+            });
+
+        for (const auto& [font_name, glyph_range] : fonts_on_disk) {
+            const auto path = Resources::GetPath(font_name);
+            if (!std::filesystem::exists(path))
+                continue;
+            font_data.emplace_back(glyph_range, path);
+        }
+
+        font_data.emplace_back(fontawesome5_glyph_ranges, L"", fontawesome5_compressed_size, (void*)fontawesome5_compressed_data, true);
+        return font_data;
+    }
+
+
+    ImFont* BuildFont(const float size, bool first_only = false) {
+        const auto atlas = IM_NEW(ImFontAtlas);
+
+        ImFontAtlasFlags flags = 0;
+        flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;
+        flags |= ImFontAtlasFlags_NoMouseCursors;
+        flags |= ImFontAtlasFlags_NoBakedLines;
+
+        atlas->Flags = flags;
+
+        static ImFontConfig cfg;
+        cfg.PixelSnapH = true;
+        cfg.OversampleH = 1; // OversampleH = 2 for base text size (harder to read if OversampleH < 2)
+        cfg.OversampleV = 1;
+
+        cfg.MergeMode = false;
+        for (const auto& font : GetFontData()) {
+            void* data = font.data;
+            size_t data_size = font.data_size;
+
+            if (!font.font_name.empty()) {
+                const auto path = Resources::GetPath(font.font_name);
+                data = ImFileLoadToMemory(path.string().c_str(), "rb", &data_size, 0);
+            }
+
+            if (font.compressed) {
+                atlas->AddFontFromMemoryCompressedTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
+            }
+            else {
+                atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
+            }
+            if (first_only)
+                break;
+            cfg.MergeMode = true; // for all but the first
+        }
+        atlas->Build();
+        return atlas->Fonts.back();
+        };
+
     // Do dont loading into memory; run on a separate thread.
     void LoadFontsThread()
     {
@@ -258,7 +342,7 @@ namespace {
         fonts_loaded = false;
 
         // Language decides glyph range
-        const auto current_language = static_cast<GW::Constants::Language>(GW::UI::GetPreference(GW::UI::NumberPreference::TextLanguage));
+        //const auto current_language = (GW::Constants::Language)GW::UI::GetPreference(GW::UI::NumberPreference::TextLanguage);
 
         while (!GImGui) {
             Sleep(16);
@@ -266,119 +350,72 @@ namespace {
 
         printf("Loading fonts\n");
 
-        auto& io = ImGui::GetIO();
-
-        const auto fonts_on_disk = std::to_array<std::tuple<std::vector<GW::Constants::Language>,std::wstring_view, std::vector<ImWchar>>>({
-            {{}, L"Font.ttf", find_glyph_range_intersection(ConstGetGlyphRangesLatin(), ConstGetGWGlyphRange())},
-            {{GW::Constants::Language::Japanese}, L"Font_Japanese.ttf", find_glyph_range_intersection(ConstGetGlyphRangesJapanese(), ConstGetGWGlyphRange())},
-            {{GW::Constants::Language::Russian}, L"Font_Cyrillic.ttf", find_glyph_range_intersection(ConstGetGlyphRangesCyrillic(), ConstGetGWGlyphRange())},
-            {{GW::Constants::Language::TraditionalChinese}, L"Font_ChineseTraditional.ttf", find_glyph_range_intersection(ConstGetGlyphRangesChinese(), ConstGetGWGlyphRange())},
-            {{GW::Constants::Language::Korean}, L"Font_Korean.ttf", find_glyph_range_intersection(ConstGetGlyphRangesKorean(), ConstGetGWGlyphRange())}
-        });
-
-        for (const auto& [languages, font_name, glyph_range] : fonts_on_disk) {
-            const auto path = Resources::GetPath(font_name);
-            if (!std::filesystem::exists(path))
-                continue;
-            if (languages.empty() || std::ranges::find(languages, current_language) != languages.end()) {
-                font_data.emplace_back(glyph_range, path);
+        struct FontPending {
+            ImFont** dst_font;
+            FontLoader::FontSize font_size;
+            ImFont* src_font = nullptr;
+            FontPending(ImFont** dst_font, FontLoader::FontSize font_size) : dst_font(dst_font), font_size(font_size) {};
+            void build(bool first_font_only = false) {
+                src_font = BuildFont(static_cast<float>(font_size), first_font_only);
             }
-        }
-
-        font_data.emplace_back(fontawesome5_glyph_ranges, L"", fontawesome5_compressed_size, (void*)fontawesome5_compressed_data, true);
-
-        auto add_font_set = [](ImFontConfig& cfg, ImFontAtlasFlags flags, const float size) {
-            const auto atlas = IM_NEW(ImFontAtlas);
-            atlas->Flags = flags;
-
-            cfg.MergeMode = false;
-            for (const auto& font : font_data) {
-                void* data = font.data;
-                size_t data_size = font.data_size;
-
-                if (!font.font_name.empty()) {
-                    const auto path = Resources::GetPath(font.font_name);
-                    data = ImFileLoadToMemory(path.string().c_str(), "rb", &data_size, 0);
-                }
-
-                if (font.compressed) {
-                    atlas->AddFontFromMemoryCompressedTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
-                }
-                else {
-                    atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
-                }
-                cfg.MergeMode = true; // for all but the first
-            }
-            atlas->Build();
-            return atlas->Fonts.back();
         };
 
-        ImFontAtlasFlags flags = 0;
-        flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;
-        flags |= ImFontAtlasFlags_NoMouseCursors;
-        flags |= ImFontAtlasFlags_NoBakedLines;
+        auto first_pass = new std::vector<FontPending>({
+            {&font_header2, FontLoader::FontSize::header2},
+            {&font_header1, FontLoader::FontSize::header1},
+            {&font_widget_label, FontLoader::FontSize::widget_label},
+            { &font_widget_small, FontLoader::FontSize::widget_small },
+            { &font_widget_large, FontLoader::FontSize::widget_large },
+            { &font_text, FontLoader::FontSize::text }
+        });
 
-        static ImFontConfig cfg;
-        cfg.PixelSnapH = true;
-        cfg.OversampleH = 2; // OversampleH = 2 for base text size (harder to read if OversampleH < 2)
-        cfg.OversampleV = 1;
+        // First pass; only build the first font.
+        for (auto& pending : *first_pass) {
+            pending.build(true);
+        }
+        Resources::EnqueueDxTask([first_pass](IDirect3DDevice9*) {
+            for (auto& pending : *first_pass) {
+                ReleaseFont(*pending.dst_font);
+                *pending.dst_font = pending.src_font;
+            }
+            delete first_pass;
+            ImGui::GetIO().Fonts = font_text->ContainerAtlas;
+            ImGui_ImplDX9_InvalidateDeviceObjects();
 
-        while (io.Fonts->Locked) {
-            Sleep(16);
+            printf("Fonts loaded\n");
+            fonts_loaded = true;
+            fonts_loading = false;
+            });
+
+        // First pass; build full glyph ranges
+        auto second_pass = new std::vector<FontPending>(*first_pass);
+        for (auto& pending : *second_pass) {
+            pending.build();
         }
 
-        if (font_header2) {
-            IM_FREE(font_header2->ContainerAtlas);
-        }
-        font_header2 = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::header2)); // 18.f
-
-        if (font_header1)
-            IM_FREE(font_header2->ContainerAtlas);
-        font_header1 = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::header1)); // 20.f
-
-        cfg.OversampleH = 1;
-        if (font_widget_label)
-            IM_FREE(font_widget_label->ContainerAtlas);
-        font_widget_label = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::widget_label)); // 24.f
-
-        if (font_widget_small)
-            IM_FREE(font_widget_small->ContainerAtlas);
-        font_widget_small = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::widget_small)); // 40.f
-
-        if (font_widget_large)
-            IM_FREE(font_widget_large->ContainerAtlas);
-        font_widget_large = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::widget_large)); // 48.f
-
-        if (font_text)
-            IM_FREE(font_text->ContainerAtlas);
-        font_text = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::text)); // 16.f
-
-        ImGui_ImplDX9_InvalidateDeviceObjects();
-
-        io.Fonts = font_text->ContainerAtlas;
-
-        printf("Fonts loaded\n");
-        fonts_loaded = true;
-        fonts_loading = false;
+        Resources::EnqueueDxTask([second_pass](IDirect3DDevice9*) {
+            for (auto& pending : *second_pass) {
+                ReleaseFont(*pending.dst_font);
+                *pending.dst_font = pending.src_font;
+            }
+            delete second_pass;
+            ImGui::GetIO().Fonts = font_text->ContainerAtlas;
+            ImGui_ImplDX9_InvalidateDeviceObjects();
+            });
     }
 }
 
 namespace FontLoader {
+
     bool ReleaseFontTextures()
     {
         if (!GImGui)
             return false;
 
         for (auto font : GetFonts()) {
-            if (!font || !font->ContainerAtlas)
+            if (font && font->ContainerAtlas == ImGui::GetIO().Fonts)
                 continue;
-            if (font->ContainerAtlas == ImGui::GetIO().Fonts)
-                continue; // Fallback function will handle this one
-            LPDIRECT3DTEXTURE9 texture = (LPDIRECT3DTEXTURE9)font->ContainerAtlas->TexID;
-            if (texture) {
-                texture->Release();
-                font->ContainerAtlas->SetTexID(0);
-            }
+            ReleaseFontTexture(font);
         }
         return true;
     }
@@ -403,7 +440,6 @@ namespace FontLoader {
         return true;
     }
 
-
     // Has LoadFonts() finished?
     bool FontsLoaded()
     {
@@ -419,11 +455,12 @@ namespace FontLoader {
         if (fonts_loaded) {
             return;
         }
+        if (!GImGui)
+            return;
         fonts_loading = true;
         fonts_loaded = false;
 
-        std::thread t(LoadFontsThread);
-        t.detach();
+        Resources::EnqueueWorkerTask(LoadFontsThread);
     }
 
     ImFont* GetFont(const FontSize size)
