@@ -8,6 +8,8 @@
 #include <Modules/Resources.h>
 
 #include "fonts/fontawesome5.h"
+#include "GWCA/Constants/Constants.h"
+#include "GWCA/Managers/UIMgr.h"
 
 namespace {
     ImFont* font_widget_large = nullptr;
@@ -42,7 +44,7 @@ namespace {
 
     std::vector<FontData> font_data;
 
-    const std::vector<ImWchar> fontawesome5_glyph_ranges = {ICON_MIN_FA, ICON_MAX_FA};
+    const std::vector<ImWchar> fontawesome5_glyph_ranges = {ICON_MIN_FA, ICON_MAX_FA, 0};
 
     [[maybe_unused]] ImFontGlyphRangesBuilder GetGWGlyphRange()
     {
@@ -256,7 +258,7 @@ namespace {
         fonts_loaded = false;
 
         // Language decides glyph range
-        //const auto current_language = (GW::Constants::Language)GW::UI::GetPreference(GW::UI::NumberPreference::TextLanguage);
+        const auto current_language = static_cast<GW::Constants::Language>(GW::UI::GetPreference(GW::UI::NumberPreference::TextLanguage));
 
         while (!GImGui) {
             Sleep(16);
@@ -266,19 +268,21 @@ namespace {
 
         auto& io = ImGui::GetIO();
 
-        const auto fonts_on_disk = std::to_array<std::pair<std::wstring_view, std::vector<ImWchar>>>({
-            {L"Font.ttf", find_glyph_range_intersection(ConstGetGlyphRangesLatin(), ConstGetGWGlyphRange())},
-            {L"Font_Japanese.ttf", find_glyph_range_intersection(ConstGetGlyphRangesJapanese(), ConstGetGWGlyphRange())},
-            {L"Font_Cyrillic.ttf", find_glyph_range_intersection(ConstGetGlyphRangesCyrillic(), ConstGetGWGlyphRange())},
-            {L"Font_ChineseTraditional.ttf", find_glyph_range_intersection(ConstGetGlyphRangesChinese(), ConstGetGWGlyphRange())},
-            {L"Font_Korean.ttf", find_glyph_range_intersection(ConstGetGlyphRangesKorean(), ConstGetGWGlyphRange())}
+        const auto fonts_on_disk = std::to_array<std::tuple<std::vector<GW::Constants::Language>,std::wstring_view, std::vector<ImWchar>>>({
+            {{}, L"Font.ttf", find_glyph_range_intersection(ConstGetGlyphRangesLatin(), ConstGetGWGlyphRange())},
+            {{GW::Constants::Language::Japanese}, L"Font_Japanese.ttf", find_glyph_range_intersection(ConstGetGlyphRangesJapanese(), ConstGetGWGlyphRange())},
+            {{GW::Constants::Language::Russian}, L"Font_Cyrillic.ttf", find_glyph_range_intersection(ConstGetGlyphRangesCyrillic(), ConstGetGWGlyphRange())},
+            {{GW::Constants::Language::TraditionalChinese}, L"Font_ChineseTraditional.ttf", find_glyph_range_intersection(ConstGetGlyphRangesChinese(), ConstGetGWGlyphRange())},
+            {{GW::Constants::Language::Korean}, L"Font_Korean.ttf", find_glyph_range_intersection(ConstGetGlyphRangesKorean(), ConstGetGWGlyphRange())}
         });
 
-        for (const auto& [font_name, glyph_range] : fonts_on_disk) {
+        for (const auto& [languages, font_name, glyph_range] : fonts_on_disk) {
             const auto path = Resources::GetPath(font_name);
             if (!std::filesystem::exists(path))
                 continue;
-            font_data.emplace_back(glyph_range, path);
+            if (languages.empty() || std::ranges::find(languages, current_language) != languages.end()) {
+                font_data.emplace_back(glyph_range, path);
+            }
         }
 
         font_data.emplace_back(fontawesome5_glyph_ranges, L"", fontawesome5_compressed_size, (void*)fontawesome5_compressed_data, true);
