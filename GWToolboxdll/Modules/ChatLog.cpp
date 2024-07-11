@@ -355,7 +355,10 @@ namespace {
             }
             recv = recv->next;
         }
-        const auto res = inifile->SaveFile(LogPath(L"recv").c_str());
+        auto res = SI_FILE;
+        for (i = 0; i < 3 && res != SI_OK; i++) {
+            res = inifile->SaveFile(LogPath(L"recv").c_str());
+        }
         ASSERT(res == SI_OK);
         delete inifile;
 
