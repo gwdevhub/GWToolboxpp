@@ -71,6 +71,8 @@ public:
     void SaveSettings(ToolboxIni* ini) override;
     bool WndProc(UINT, WPARAM, LPARAM) override;
 
+    static uint16_t CountItemsByName(const wchar_t* name_enc);
+
     bool DrawItemContextMenu(bool open = false);
     void IdentifyAll(IdentifyAllType type);
     void SalvageAll(SalvageAllType type);

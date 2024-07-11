@@ -1010,6 +1010,13 @@ bool InventoryManager::WndProc(const UINT message, const WPARAM wParam, const LP
     return false;
 }
 
+uint16_t InventoryManager::CountItemsByName(const wchar_t* name_enc)
+{
+    return count_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Storage_14, [name_enc](InventoryManager::Item* item) {
+        return item && item->name_enc && wcscmp(item->name_enc, name_enc) == 0;
+        });
+}
+
 void InventoryManager::SaveSettings(ToolboxIni* ini)
 {
     ToolboxUIElement::SaveSettings(ini);

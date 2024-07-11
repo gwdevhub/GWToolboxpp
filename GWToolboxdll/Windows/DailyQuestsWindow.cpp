@@ -18,6 +18,8 @@
 #include <Constants/EncStrings.h>
 #include <Modules/Resources.h>
 #include <Utils/ToolboxUtils.h>
+#include <Timer.h>
+#include <Modules/InventoryManager.h>
 
 
 using GW::Constants::MapID;
@@ -238,6 +240,8 @@ namespace {
     std::vector<ZaishenQuestData> zaishen_bounty_cycles;
 
     // These vectors are good to go
+
+    std::unordered_map< DailyQuests::NicholasCycleData*, uint16_t> nicholas_item_collected_count;
 
     DailyQuests::NicholasCycleData nicholas_cycles[] = {
         {GW::EncStrings::RedIrisFlowers, 3, MapID::Regent_Valley},                  // Red Iris Flowers
@@ -1165,7 +1169,15 @@ void DailyQuests::Draw(IDirect3DDevice9*)
             ImGui::SameLine(offset += ws_width);
         }
         if (show_nicholas_in_window) {
-            ImGui::TextUnformatted(GetNicholasTheTraveller(unix)->GetQuestName());
+            const auto nick = GetNicholasTheTraveller(unix);
+            ImGui::TextUnformatted(nick->GetQuestName());
+            const auto collected = nick->GetCollectedQuantity();
+            if (collected > 0) {
+                ImGui::SameLine();
+                auto col = &normal_color;
+                if (collected >= nick->quantity) col = &incomplete_color;
+                ImGui::TextColored(*col, "(%d/%d)", collected, nick->quantity);
+            }
             ImGui::SameLine(offset += nicholas_width);
         }
         if (show_weekly_bonus_pve_in_window) {
@@ -1654,6 +1666,21 @@ const std::string& DailyQuests::QuestData::GetRegionName()
 DailyQuests::NicholasCycleData::NicholasCycleData(const wchar_t* enc_name, uint32_t quantity, MapID map_id)
     : QuestData(map_id, enc_name),
       quantity(quantity) {}
+
+size_t DailyQuests::NicholasCycleData::GetCollectedQuantity()
+{
+    static clock_t last_inv_check = 0;
+    if (!last_inv_check || TIMER_DIFF(last_inv_check) > 10000) {
+        // Check inventory
+        for (auto& item : nicholas_cycles) {
+            nicholas_item_collected_count[&item] = InventoryManager::CountItemsByName(item.enc_name.c_str());
+        }
+        last_inv_check = TIMER_INIT();
+    }
+    const auto found = nicholas_item_collected_count.find(this);
+    ASSERT(found != nicholas_item_collected_count.end());
+    return found->second;
+}
 
 void DailyQuests::NicholasCycleData::Decode()
 {

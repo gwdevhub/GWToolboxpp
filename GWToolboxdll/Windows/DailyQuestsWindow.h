@@ -65,8 +65,9 @@ public:
     protected:
         void Decode() override;
     public:
-        const int quantity;
+        const uint32_t quantity;
         NicholasCycleData(const wchar_t* enc_name, uint32_t quantity, GW::Constants::MapID map_id);
+        size_t GetCollectedQuantity();
     };
 
     static QuestData* GetZaishenBounty(time_t unix = 0);
