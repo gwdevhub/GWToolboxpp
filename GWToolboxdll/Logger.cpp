@@ -176,7 +176,7 @@ static void _chatlog(const LogType log_type, const wchar_t* message)
     }
     const size_t len = 5 + wcslen(GWTOOLBOX_SENDER) + 4 + 13 + wcslen(message) + 4 + 1;
     auto to_send = new wchar_t[len];
-    swprintf(to_send, len - 1, L"<a=1>%s</a><c=#%6X>: %s</c>", GWTOOLBOX_SENDER, color, message);
+    ASSERT(swprintf(to_send, len, L"<a=1>%s</a><c=#%6X>: %s</c>", GWTOOLBOX_SENDER, color, message) != -1);
 
     GW::GameThread::Enqueue([to_send, add_to_log = log_transient] {
         WriteChat(GWTOOLBOX_CHAN, to_send, nullptr, add_to_log);
