@@ -146,15 +146,6 @@ namespace {
         };
     }
 
-    constexpr void UnpackAccumulativeOffsetsIntoRanges(int base_codepoint, const short* accumulative_offsets, int accumulative_offsets_count, ImWchar* out_ranges)
-    {
-        for (int n = 0; n < accumulative_offsets_count; n++, out_ranges += 2) {
-            out_ranges[0] = out_ranges[1] = (ImWchar)(base_codepoint + accumulative_offsets[n]);
-            base_codepoint += accumulative_offsets[n];
-        }
-        out_ranges[0] = 0;
-    }
-
     constexpr std::vector<ImWchar> ConstGetGlyphRangesJapanese()
     {
         return  {
@@ -260,9 +251,6 @@ namespace {
     void LoadFontsThread()
     {
         Hook_ImGui_ImplDX9_Functions();
-
-        // This is hacky but i cba to use imgui's stupid ranges things; just use a wstring, its all 0 terminated anyway
-        static_assert(sizeof(ImWchar) == sizeof(wchar_t), "ImWchar == wchar_t");
 
         fonts_loading = true;
         fonts_loaded = false;
