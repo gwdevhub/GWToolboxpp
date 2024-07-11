@@ -64,12 +64,13 @@ namespace {
         uintptr_t address = GW::Scanner::Find("\x50\x8d\x45\xc8\x50\x6a\x0d", "xxxxxxx", -0x5);
         GetGlyphRanges_Func = (GetGlyphRanges_pt)GW::Scanner::FunctionFromNearCall(address);
 
+        uint32_t gw_glyph_range_count = 0xd; // Glyph ranges are in pairs
+
         if (GetGlyphRanges_Func) {
             const auto res = GetGlyphRanges_Func();
             std::vector<ImWchar> ranges;
-            for (int i = 0; res[i]; i++) {
+            for (size_t i = 0, size = (gw_glyph_range_count * 2); i < size; i++) {
                 ranges.push_back(static_cast<ImWchar>(res[i]));
-                if (res[i] == 0xffe7) break;
             }
             if (ranges.empty() || ranges.back()) {
                 ranges.push_back(0);
