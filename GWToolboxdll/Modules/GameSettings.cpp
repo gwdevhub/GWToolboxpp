@@ -66,6 +66,8 @@
 #include "Windows/FriendListWindow.h"
 #include <Keys.h>
 
+#include "Utils/FontLoader.h"
+
 #pragma warning(disable : 6011)
 #pragma comment(lib,"Version.lib")
 
@@ -1102,7 +1104,7 @@ namespace {
         case GW::UI::UIMessage::kPreferenceValueChanged: {
             const auto packet = (GW::UI::UIPacket::kPreferenceValueChanged*)wParam;
             if (packet->preference_id == GW::UI::NumberPreference::TextLanguage)
-                GuiUtils::LoadFonts(true);
+                FontLoader::LoadFonts(true);
         } break;
         }
     }

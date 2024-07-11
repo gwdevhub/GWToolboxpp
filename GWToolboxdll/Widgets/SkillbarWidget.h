@@ -3,6 +3,12 @@
 #include <Color.h>
 #include <ToolboxWidget.h>
 
+#include "Utils/FontLoader.h"
+
+namespace FontLoader {
+    enum class FontSize;
+}
+
 class SkillbarWidget final : public ToolboxWidget {
     SkillbarWidget()
     {
@@ -67,7 +73,7 @@ private:
 
     // Skill overlay settings
     bool display_skill_overlay = true;
-    GuiUtils::FontSize font_recharge = GuiUtils::FontSize::header1;
+    FontLoader::FontSize font_recharge = FontLoader::FontSize::header1;
     Color color_text_recharge = Colors::White();
     Color color_border = Colors::ARGB(100, 255, 255, 255);
 
@@ -81,7 +87,7 @@ private:
     bool effects_flip_direction = false;
     bool effect_text_color = false;
     bool effect_progress_bar_color = false;
-    GuiUtils::FontSize font_effects = GuiUtils::FontSize::text;
+    FontLoader::FontSize font_effects = FontLoader::FontSize::text;
     Color color_text_effects = Colors::White();
     Color color_effect_background = Colors::ARGB(100, 0, 0, 0);
     Color color_effect_border = Colors::ARGB(255, 0, 0, 0);

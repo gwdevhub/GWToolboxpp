@@ -11,6 +11,8 @@
 
 #include <Widgets/LatencyWidget.h>
 
+#include "Utils/FontLoader.h"
+
 namespace {
     constexpr size_t ping_history_len = 10; // GW checks last 10 pings for avg
     uint32_t ping_history[ping_history_len] = {0};
@@ -59,7 +61,7 @@ void LatencyWidget::Initialize()
 void LatencyWidget::Terminate() {
     ToolboxWidget::Terminate();
     GW::Chat::DeleteCommand(L"ping");
-    GW::StoC::RemoveCallback(GAME_SMSG_PING_REPLY,&Ping_Entry);
+    GW::StoC::RemoveCallback(GAME_SMSG_PING_REPLY, &Ping_Entry);
 }
 
 void LatencyWidget::Update(const float) { }
@@ -92,7 +94,7 @@ void LatencyWidget::Draw(IDirect3DDevice9*)
 
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !ctrl_pressed))) {
         const ImVec2 cur = ImGui::GetCursorPos();
-        ImGui::PushFont(GetFont(static_cast<GuiUtils::FontSize>(font_size)));
+        ImGui::PushFont(FontLoader::GetFont(static_cast<FontLoader::FontSize>(font_size)));
         ImGui::SetCursorPos(cur);
         uint32_t ping = GetPing();
         ImGui::TextColored(GetColorForPing(ping), "%ums", ping);
@@ -124,12 +126,12 @@ void LatencyWidget::LoadSettings(ToolboxIni* ini)
     LOAD_UINT(red_threshold);
     LOAD_UINT(font_size);
     switch (font_size) {
-        case static_cast<int>(GuiUtils::FontSize::widget_label):
-        case static_cast<int>(GuiUtils::FontSize::widget_small):
-        case static_cast<int>(GuiUtils::FontSize::widget_large):
+        case static_cast<int>(FontLoader::FontSize::widget_label):
+        case static_cast<int>(FontLoader::FontSize::widget_small):
+        case static_cast<int>(FontLoader::FontSize::widget_large):
             break;
         default:
-            font_size = static_cast<int>(GuiUtils::FontSize::widget_small);
+            font_size = static_cast<int>(FontLoader::FontSize::widget_small);
             break;
     }
 }
@@ -148,16 +150,16 @@ void LatencyWidget::DrawSettingsInternal()
     ImGui::Checkbox("Show average ping", &show_avg_ping);
     ImGui::Text("Font Size");
     ImGui::Indent();
-    if (ImGui::RadioButton("Small", font_size == static_cast<int>(GuiUtils::FontSize::widget_label))) {
-        font_size = static_cast<int>(GuiUtils::FontSize::widget_label);
+    if (ImGui::RadioButton("Small", font_size == static_cast<int>(FontLoader::FontSize::widget_label))) {
+        font_size = static_cast<int>(FontLoader::FontSize::widget_label);
     }
     ImGui::SameLine();
-    if (ImGui::RadioButton("Medium", font_size == static_cast<int>(GuiUtils::FontSize::widget_small))) {
-        font_size = static_cast<int>(GuiUtils::FontSize::widget_small);
+    if (ImGui::RadioButton("Medium", font_size == static_cast<int>(FontLoader::FontSize::widget_small))) {
+        font_size = static_cast<int>(FontLoader::FontSize::widget_small);
     }
     ImGui::SameLine();
-    if (ImGui::RadioButton("Large", font_size == static_cast<int>(GuiUtils::FontSize::widget_large))) {
-        font_size = static_cast<int>(GuiUtils::FontSize::widget_large);
+    if (ImGui::RadioButton("Large", font_size == static_cast<int>(FontLoader::FontSize::widget_large))) {
+        font_size = static_cast<int>(FontLoader::FontSize::widget_large);
     }
     ImGui::Unindent();
 }

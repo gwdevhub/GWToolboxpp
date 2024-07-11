@@ -6,6 +6,8 @@
 #include <Modules/ToolboxSettings.h>
 #include <Defines.h>
 
+#include "Utils/FontLoader.h"
+
 void ClockWidget::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
@@ -39,7 +41,7 @@ void ClockWidget::Draw(IDirect3DDevice9*)
                 snprintf(timer, 32, "%d:%02d %s", hour, time.wMinute, time.wHour >= 12 ? "p.m." : "a.m.");
             }
         }
-        ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_large));
+        ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_large));
         const ImVec2 cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
         ImGui::TextColored(ImColor(0, 0, 0), timer);

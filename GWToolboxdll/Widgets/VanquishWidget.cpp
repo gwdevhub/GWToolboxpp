@@ -9,6 +9,8 @@
 #include <Utils/GuiUtils.h>
 #include <Widgets/VanquishWidget.h>
 
+#include "Utils/FontLoader.h"
+
 void VanquishWidget::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
@@ -32,7 +34,7 @@ void VanquishWidget::Draw(IDirect3DDevice9*)
         snprintf(foes_count, 32, "%lu / %lu", killed, tokill + killed);
 
         // vanquished
-        ImGui::PushFont(GetFont(GuiUtils::FontSize::header1));
+        ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header1));
         ImVec2 cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
         ImGui::TextColored(ImColor(0, 0, 0), "Vanquished");
@@ -41,7 +43,7 @@ void VanquishWidget::Draw(IDirect3DDevice9*)
         ImGui::PopFont();
 
         // count
-        ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_small));
+        ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_small));
         cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
         ImGui::TextColored(ImColor(0, 0, 0), foes_count);

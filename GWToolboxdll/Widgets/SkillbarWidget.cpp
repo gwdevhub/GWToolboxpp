@@ -247,7 +247,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
         return; // Failed to get skillbar pos
     }
 
-    ImGui::PushFont(GetFont(font_recharge));
+    ImGui::PushFont(FontLoader::GetFont(font_recharge));
     ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 
@@ -284,7 +284,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
 
 void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
 {
-    ImGui::PushFont(GetFont(font_effects));
+    ImGui::PushFont(FontLoader::GetFont(font_effects));
 
     const Skill& skill = m_skills[skill_idx];
 
@@ -396,7 +396,7 @@ void SkillbarWidget::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(round_up);
 
     LOAD_BOOL(display_skill_overlay);
-    font_recharge = static_cast<GuiUtils::FontSize>(ini->GetLongValue(Name(), VAR_NAME(font_recharge), static_cast<long>(font_recharge)));
+    font_recharge = static_cast<FontLoader::FontSize>(ini->GetLongValue(Name(), VAR_NAME(font_recharge), static_cast<long>(font_recharge)));
     LOAD_COLOR(color_text_recharge);
     LOAD_COLOR(color_border);
 
@@ -409,7 +409,7 @@ void SkillbarWidget::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(effects_flip_direction);
     LOAD_BOOL(effect_text_color);
     LOAD_BOOL(effect_progress_bar_color);
-    font_effects = static_cast<GuiUtils::FontSize>(ini->GetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects)));
+    font_effects = static_cast<FontLoader::FontSize>(ini->GetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects)));
     LOAD_COLOR(color_text_effects);
     LOAD_COLOR(color_effect_background);
     LOAD_COLOR(color_effect_progress);

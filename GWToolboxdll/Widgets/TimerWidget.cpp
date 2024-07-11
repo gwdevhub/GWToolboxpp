@@ -21,6 +21,8 @@
 #include <Modules/GameSettings.h>
 #include <Widgets/TimerWidget.h>
 
+#include "Utils/FontLoader.h"
+
 using namespace std::chrono;
 
 namespace {
@@ -665,19 +667,19 @@ void TimerWidget::Draw(IDirect3DDevice9*)
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
         // Main timer:
         print_time(GetTimer(), show_decimals, 32, timer_buffer);
-        ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_large));
+        ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_large));
         ImGui::TextShadowed(timer_buffer, {2, 2});
         ImGui::PopFont();
 
         if (also_show_instance_timer) {
             print_time(milliseconds(GW::Map::GetInstanceTime()), show_decimals, 32, timer_buffer);
-            ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_large));
+            ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_large));
             ImGui::TextShadowed(timer_buffer, {2, 2});
             ImGui::PopFont();
         }
 
         auto drawTimer = [](const char* buffer, const ImColor* _extra_color = nullptr) {
-            ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_label));
+            ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_label));
             const ImVec2 cur2 = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur2.x + 1, cur2.y + 1));
             ImGui::TextColored(ImColor(0, 0, 0), buffer);

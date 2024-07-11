@@ -1,10 +1,12 @@
 #include "stdafx.h"
 
+#include <Utils/FontLoader.h>
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 
 #include <Windows/MainWindow.h>
 #include <Modules/PluginModule.h>
+
 
 void MainWindow::LoadSettings(ToolboxIni* ini)
 {
@@ -81,7 +83,7 @@ void MainWindow::Draw(IDirect3DDevice9*)
     static bool open = true;
     ImGui::SetNextWindowSize(ImVec2(110.0f, 300.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), show_closebutton ? &open : nullptr, GetWinFlags())) {
-        ImGui::PushFont(GetFont(GuiUtils::FontSize::header2));
+        ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header2));
         bool drawn = false;
         const size_t msize = modules_to_draw.size();
         for (size_t i = 0; i < msize; i++) {

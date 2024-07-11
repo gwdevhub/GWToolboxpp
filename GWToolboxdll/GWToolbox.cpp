@@ -41,6 +41,7 @@
 #include <hidusage.h>
 
 #include "GWCA/Utilities/Scanner.h"
+#include "Utils/FontLoader.h"
 
 
 
@@ -191,11 +192,9 @@ namespace {
         ImGui_ImplWin32_Init(GW::MemoryMgr::GetGWWindowHandle());
 
         GW::Render::SetResetCallback([](IDirect3DDevice9*) {
-            GuiUtils::ReleaseFontTextures();
+            FontLoader::ReleaseFontTextures();
             ImGui_ImplDX9_InvalidateDeviceObjects();
         });
-
-
 
         imgui_initialized = true;
 
@@ -204,7 +203,7 @@ namespace {
             "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/Font.ttf",
             [](const bool success, const std::wstring& error) {
                 if (success) {
-                    GuiUtils::LoadFonts();
+                    FontLoader::LoadFonts();
                 }
                 else {
                     Log::ErrorW(L"Cannot download font, please download it manually!\n%s", error.c_str());
@@ -221,7 +220,7 @@ namespace {
             return true;
         }
         GW::Render::SetResetCallback(nullptr);
-        GuiUtils::ReleaseFontTextures();
+        FontLoader::ReleaseFontTextures();
         ImGui_ImplDX9_Shutdown();
         ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();
@@ -286,7 +285,7 @@ namespace {
                && !GW::GetPreGameContext()
                && !GW::Map::GetIsInCinematic()
                && !IsIconic(GW::MemoryMgr::GetGWWindowHandle())
-               && GuiUtils::FontsLoaded();
+               && FontLoader::FontsLoaded();
     }
 
     bool ToggleTBModule(ToolboxModule& m, std::vector<ToolboxModule*>& vec, const bool enable)
@@ -765,7 +764,7 @@ void GWToolbox::Disable()
 bool GWToolbox::CanTerminate()
 {
     return modules_terminating.empty()
-           && GuiUtils::FontsLoaded()
+           && FontLoader::FontsLoaded()
            && all_modules_enabled.empty()
            && !imgui_initialized
            && !event_handler_attached;
@@ -914,7 +913,7 @@ void GWToolbox::DrawInitialising(IDirect3DDevice9* device)
     // Attach imgui if not already done so
     ASSERT(AttachImgui(device));
 
-    if (!GuiUtils::FontsLoaded()) {
+    if (!FontLoader::FontsLoaded()) {
         Resources::Instance().Update(0.f); // necessary, because this won't be called in
         Resources::DxUpdate(device);
         return;                            // GWToolbox::Update() until fonts are initialised

@@ -17,6 +17,8 @@
 #include <Modules/Resources.h>
 #include <Widgets/HealthWidget.h>
 
+#include "Utils/FontLoader.h"
+
 constexpr const wchar_t* HEALTH_THRESHOLD_INIFILENAME = L"HealthThreshold.ini";
 
 void HealthWidget::LoadSettings(ToolboxIni* ini)
@@ -218,7 +220,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
             }
 
             // 'health'
-            ImGui::PushFont(GetFont(GuiUtils::FontSize::header1));
+            ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header1));
             ImVec2 cur = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
             ImGui::TextColored(background, "Health");
@@ -228,7 +230,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
 
             // perc
             if (show_perc_value) {
-                ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_small));
+                ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_small));
                 cur = ImGui::GetCursorPos();
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
                 ImGui::TextColored(background, "%s", health_perc);
@@ -239,7 +241,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
 
             // abs
             if (show_abs_value) {
-                ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_label));
+                ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_label));
                 cur = ImGui::GetCursorPos();
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
                 ImGui::TextColored(background, health_abs);

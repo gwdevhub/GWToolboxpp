@@ -14,6 +14,8 @@
 #include <Modules/Resources.h>
 #include <Widgets/ServerInfoWidget.h>
 
+#include "Utils/FontLoader.h"
+
 constexpr auto IPGEO_API_KEY = "161f3834252a4ec6988e49bb75ccd902";
 
 namespace {
@@ -149,7 +151,7 @@ void ServerInfoWidget::Draw(IDirect3DDevice9*)
         snprintf(server_ip, sizeof(server_ip) - 1, "%s", current_server_info->ip.c_str());
     }
     static ImVec2 cur;
-    ImGui::PushFont(GetFont(GuiUtils::FontSize::header1));
+    ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header1));
     cur = ImGui::GetCursorPos();
     ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
     ImGui::TextColored(ImColor(0, 0, 0), server_ip);

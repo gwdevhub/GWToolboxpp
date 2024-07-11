@@ -5,13 +5,6 @@
 #include <nlohmann/json.hpp>
 #include <ToolboxIni.h>
 
-#ifndef DLLAPI
-#ifdef GWCA_IMPORT
-#define DLLAPI __declspec(dllimport)
-#else
-#define DLLAPI extern "C" __declspec(dllexport)
-#endif
-#endif
 
 namespace GW::Constants {
     enum class Language;
@@ -27,20 +20,6 @@ namespace GuiUtils {
             T,
             std::unordered_map<typename T::key_type, typename T::mapped_type, typename T::hasher, typename T::key_equal, typename T::allocator_type>>;
 
-    enum class FontSize {
-        text         = 16,
-        header2      = 18,
-        header1      = 20,
-        widget_label = 24,
-        widget_small = 40,
-        widget_large = 48
-    };
-    // Cycle through our own fonts, release any valid textures
-    bool ReleaseFontTextures();
-    // Cycle through our own fonts, create any missing textures
-    bool CreateFontTextures();
-
-    void LoadFonts(bool force = false);
     std::string WikiUrl(const std::wstring& term);
     std::string WikiUrl(const std::string& term);
     std::string WikiTemplateUrlFromTitle(const std::string& title);
@@ -48,8 +27,6 @@ namespace GuiUtils {
     void OpenWiki(const std::wstring& term);
     void SearchWiki(const std::wstring& term);
     std::string SanitizeWikiUrl(std::string s);
-    bool FontsLoaded();
-    DLLAPI ImFont* GetFont(FontSize size);
 
     float GetPartyHealthbarHeight();
     float GetGWScaleMultiplier(bool force = false);

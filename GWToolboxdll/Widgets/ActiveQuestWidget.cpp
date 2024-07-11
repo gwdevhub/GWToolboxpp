@@ -16,6 +16,8 @@
 #include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
+#include "Utils/FontLoader.h"
+
 namespace {
     struct CompletionState {
         int index;
@@ -195,13 +197,13 @@ void ActiveQuestWidget::Draw(IDirect3DDevice9*)
 
         ImGui::SameLine();
 
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::widget_label));
+        ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_label));
         ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR_ACTIVE);
         ImGui::Text("%s", active_quest_name.string().c_str());
         ImGui::PopStyleColor();
         ImGui::PopFont();
 
-        ImGui::PushFont(GuiUtils::GetFont(GuiUtils::FontSize::header2));
+        ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header2));
         for (const auto& objective : active_quest_objectives) {
             auto& [_, obj_str, completed] = objective;
 

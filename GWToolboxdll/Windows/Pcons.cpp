@@ -24,6 +24,8 @@
 #include <Windows/Pcons.h>
 #include <Windows/PconsWindow.h>
 
+#include "Utils/FontLoader.h"
+
 float Pcon::size = 46.0f;
 int Pcon::pcons_delay = 5000;
 int Pcon::lunar_delay = 500;
@@ -131,7 +133,7 @@ void Pcon::Draw(IDirect3DDevice9*)
         ImGui::SetTooltip(out);
     }
     if (maptype != GW::Constants::InstanceType::Loading) {
-        ImFont* f = GetFont(GuiUtils::FontSize::header1);
+        ImFont* f = FontLoader::GetFont(FontLoader::FontSize::header1);
         const ImVec2 nextPos = ImGui::GetCursorPos();
         ImGui::PushFont(f);
         ImVec4 color;

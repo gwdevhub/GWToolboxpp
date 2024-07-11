@@ -16,6 +16,8 @@
 #include <Widgets/AlcoholWidget.h>
 #include <Defines.h>
 
+#include "Utils/FontLoader.h"
+
 void AlcoholWidget::Initialize()
 {
     ToolboxWidget::Initialize();
@@ -133,7 +135,7 @@ void AlcoholWidget::Draw(IDirect3DDevice9*)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(200.0f, 90.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
-        ImGui::PushFont(GetFont(GuiUtils::FontSize::header1));
+        ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header1));
         ImVec2 cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
         ImGui::TextColored(ImColor(0, 0, 0), "Alcohol");
@@ -144,7 +146,7 @@ void AlcoholWidget::Draw(IDirect3DDevice9*)
         static char timer[32];
         snprintf(timer, 32, "%1ld:%02ld", t / 60 % 60, t % 60);
 
-        ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_large));
+        ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_large));
         cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
         ImGui::TextColored(ImColor(0, 0, 0), timer);

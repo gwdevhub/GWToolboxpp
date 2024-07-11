@@ -16,9 +16,11 @@
 #include <Defines.h>
 #include "EffectsMonitorWidget.h"
 
+#include "Utils/FontLoader.h"
+
 
 namespace {
-    GuiUtils::FontSize font_effects = GuiUtils::FontSize::header2;
+    auto font_effects = FontLoader::FontSize::header2;
     Color color_text_effects = Colors::White();
     Color color_background = Colors::ARGB(128, 0, 0, 0);
     Color color_text_shadow = Colors::Black();
@@ -72,7 +74,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     if (!effects_frame) {
         return;
     }
-    ImGui::PushFont(GetFont(font_effects));
+    ImGui::PushFont(FontLoader::GetFont(font_effects));
 
     char remaining_str[16];
 
@@ -122,7 +124,7 @@ void EffectsMonitorWidget::LoadSettings(ToolboxIni* ini)
     LOAD_UINT(only_under_seconds);
     LOAD_BOOL(round_up);
     LOAD_BOOL(show_vanquish_counter);
-    font_effects = static_cast<GuiUtils::FontSize>(
+    font_effects = static_cast<FontLoader::FontSize>(
         ini->GetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects)));
     LOAD_COLOR(color_text_effects);
     LOAD_COLOR(color_text_shadow);
