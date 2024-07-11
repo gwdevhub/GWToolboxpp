@@ -320,7 +320,6 @@ namespace {
                 void* data = font.data;
                 size_t data_size = font.data_size;
 
-#if 1
                 auto glyphs_in_font_vec = std::vector(font.glyph_ranges.begin(), font.glyph_ranges.end());
                 auto glyphs_to_find_vec = std::vector(
                     std::wstring_view(reinterpret_cast<const wchar_t*>(glyph_ranges_to_find)).begin(),
@@ -330,9 +329,6 @@ namespace {
                 auto glyph_ranges_to_load_from_this_font = static_cast<ImWchar*>(IM_ALLOC(sizeof(ImWchar) * intersection.size() + 1));
                 std::ranges::copy(intersection, glyph_ranges_to_load_from_this_font);
                 allocated_glyph_ranges.push_back(glyph_ranges_to_load_from_this_font);
-#else
-                auto glyph_ranges_to_load_from_this_font = reinterpret_cast<const ImWchar*>(font.glyph_ranges.c_str());
-#endif
 
                 if (!font.font_name.empty()) {
                     const auto path = Resources::GetPath(font.font_name);
