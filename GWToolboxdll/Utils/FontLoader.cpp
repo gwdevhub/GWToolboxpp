@@ -411,7 +411,7 @@ namespace FontLoader {
     }
 
     // Loads fonts asynchronously. CJK font files can by over 20mb in size!
-    void LoadFonts(bool)
+    void LoadFonts([[maybe_unused]] const bool force) // todo: reload fonts when this is true
     {
         if (fonts_loading) {
             return;
