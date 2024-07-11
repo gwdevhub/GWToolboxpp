@@ -261,5 +261,14 @@ namespace GW {
         static const wchar_t* ZaishenMissionBonusDescription = L"\x8103\xAf4";
         static const wchar_t* PantheonBonus = L"\x8103\xAf5";
         static const wchar_t* PantheonBonusDescription = L"\x8103\xAf6";
+
+        namespace Quest {
+            static const wchar_t* ZaishenQuest_GOLEM = L"\x8102\x56CD\xB82D\x940D\x5815";
+
+            static const wchar_t* ZaishenBounty_Urgoz = L"\x8102\x5491\x88BD\x9648\x42B3";
+            static const wchar_t* ZaishenBounty_Rragar_Maneater = L"\x8102\x54F1\xA747\xA10C\x4514"; 
+            static const wchar_t* ZaishenBounty_Zhim_Monns = L"\x8102\x5515\xFB97\xECDE\x6DE5";
+            static const wchar_t* ZaishenBounty_Magmus = L"\x8102\x5545\xFCCD\x97B4\x1449";
+        }
     }
 }

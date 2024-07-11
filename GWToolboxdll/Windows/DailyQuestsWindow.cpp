@@ -602,7 +602,7 @@ namespace {
         MapID::Jokanur_Diggings,
         MapID::Iron_Mines_of_Moladune,
         MapID::Kodonur_Crossroads,
-        MapID::Genius_Operated_Living_Enchanted_Manifestation_mission,
+        {MapID::Genius_Operated_Living_Enchanted_Manifestation_mission,GW::EncStrings::Quest::ZaishenQuest_GOLEM},
         MapID::Arborstone_outpost_mission,
         MapID::Gates_of_Kryta,
         MapID::Gate_of_Madness,
