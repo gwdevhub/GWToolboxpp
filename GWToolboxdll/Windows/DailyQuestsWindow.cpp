@@ -972,6 +972,31 @@ namespace {
 
     const char* you_have_this_quest = "You have this quest in your log";
 
+    bool OnNicholasContextMenu(void* wparam)
+    {
+        const auto info = (DailyQuests::NicholasCycleData*)wparam;
+        ImGui::Text("Collecting %s in %s",info->GetQuestName(), info->GetMapName());
+
+        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
+        const auto size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
+        ImGui::Separator();
+        bool travel = ImGui::Button("Travel to nearest outpost", size);
+        bool wiki = ImGui::Button("Guild Wars Wiki", size);
+
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+        if (travel) {
+            if (TravelWindow::Instance().TravelNearest(info->map_id))
+                return false;
+        }
+        if (wiki) {
+            GuiUtils::SearchWiki(info->GetWikiName());
+            return false;
+        }
+        return true;
+    }
+
     bool OnDailyQuestContextMenu(void* wparam)
     {
         const auto info = (DailyQuests::QuestData*)wparam;
@@ -1116,7 +1141,6 @@ void DailyQuests::Draw(IDirect3DDevice9*)
             auto col = &normal_color;
             if (incomplete_message) col = &incomplete_color;
             if (*subscribed) col = &subscribed_color;
-            const auto start = ImGui::GetCursorScreenPos();
             ImGui::TextColored(*col, info->GetQuestName());
             auto lmb_clicked = ImGui::IsItemClicked();
             auto rmb_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
@@ -1171,12 +1195,20 @@ void DailyQuests::Draw(IDirect3DDevice9*)
         if (show_nicholas_in_window) {
             const auto nick = GetNicholasTheTraveller(unix);
             ImGui::TextUnformatted(nick->GetQuestName());
+            auto rmb_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+            const auto hovered = ImGui::IsItemHovered();
             const auto collected = nick->GetCollectedQuantity();
             if (collected > 0) {
                 ImGui::SameLine();
                 auto col = &normal_color;
                 if (collected >= nick->quantity) col = &incomplete_color;
                 ImGui::TextColored(*col, "(%d/%d)", collected, nick->quantity);
+            }
+            if (rmb_clicked) {
+                ImGui::SetContextMenu(OnNicholasContextMenu, nick);
+            }
+            if (hovered) {
+                ImGui::SetTooltip("%s in %s", nick->GetQuestName(),nick->GetMapName());
             }
             ImGui::SameLine(offset += nicholas_width);
         }
