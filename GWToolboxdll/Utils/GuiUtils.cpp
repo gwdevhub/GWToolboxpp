@@ -167,9 +167,18 @@ namespace {
 
         if (GetGlyphRanges_Func) {
             const auto res = GetGlyphRanges_Func();
-            for (size_t i = 0; res[i]; i++) {
-                builder.AddChar(static_cast<ImWchar>(res[i]));
+            std::vector<ImWchar> ranges;
+            for (int i = 0; res[i]; i++) {
+                ranges.push_back(static_cast<ImWchar>(res[i]));
+                if (res[i] == 0xffe7) break;
             }
+            if (ranges.empty() || ranges.back()) {
+                ranges.push_back(0);
+            }
+            if (ranges[0] == 33) {
+                ranges[0] = 32;
+            }
+            builder.AddRanges(ranges.data());
         }
         return builder;
     }
@@ -311,7 +320,7 @@ namespace {
                 void* data = font.data;
                 size_t data_size = font.data_size;
 
-#if 0
+#if 1
                 auto glyphs_in_font_vec = std::vector(font.glyph_ranges.begin(), font.glyph_ranges.end());
                 auto glyphs_to_find_vec = std::vector(
                     std::wstring_view(reinterpret_cast<const wchar_t*>(glyph_ranges_to_find)).begin(),
