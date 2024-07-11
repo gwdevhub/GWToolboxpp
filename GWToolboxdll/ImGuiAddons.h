@@ -8,9 +8,13 @@ namespace ImGui {
     // Return false to close the context menu
     using ImGuiContextMenuCallback = std::function<bool(void* wparam)>;
 
+    using ImGuiConfirmDialogCallback = std::function<void(bool result, void* wparam)>;
+
     IMGUI_API void SetContextMenu(ImGuiContextMenuCallback callback, void* wparam = nullptr);
 
     IMGUI_API void DrawContextMenu();
+
+    IMGUI_API void DrawConfirmDialog();
 
     // Shorthand for ImGui::GetIO().GlobalFontScale
     IMGUI_API const float& FontScale();
@@ -32,9 +36,9 @@ namespace ImGui {
                            bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count);
 
     // Show a popup on-screen with a message and yes/no buttons. Returns true if an option has been chosen, with *result as true/false for yes/no
-    IMGUI_API bool ConfirmDialog(const char* message, bool* result);
+    IMGUI_API void ConfirmDialog(const char* message, ImGui::ImGuiConfirmDialogCallback callback, void* wparam = nullptr);
 
-    IMGUI_API bool SmallConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content = "Are you sure you want to continue?");
+    IMGUI_API bool SmallConfirmButton(const char* label, const char* confirm_content, ImGui::ImGuiConfirmDialogCallback callback, void* wparam = nullptr);
     IMGUI_API bool ChooseKey(const char* label, char* buf, size_t buf_len, long* key_code);
 
     IMGUI_API bool ConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content = "Are you sure you want to continue?");

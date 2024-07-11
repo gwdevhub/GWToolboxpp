@@ -34,14 +34,15 @@ void SymbolsRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
 
 void SymbolsRenderer::DrawSettings()
 {
-    bool confirm = false;
-    if (ImGui::SmallConfirmButton("Restore Defaults", &confirm)) {
-        color_quest = 0xFF22EF22;
-        color_other_quests = 0xFF0D7C0D;
-        color_north = 0xFFFF8000;
-        color_modifier = 0x001E1E1E;
-        Invalidate();
-    }
+    ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?", [&](bool result, void*) {
+        if (result) {
+            color_quest = 0xFF22EF22;
+            color_other_quests = 0xFF0D7C0D;
+            color_north = 0xFFFF8000;
+            color_modifier = 0x001E1E1E;
+            Invalidate();
+        }
+        });
     if (Colors::DrawSettingHueWheel("Quest marker", &color_quest)) {
         Invalidate();
     }

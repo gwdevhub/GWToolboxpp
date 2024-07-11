@@ -927,6 +927,17 @@ void ChatCommands::DrawSettingsInternal()
     ImGui::TextUnformatted("Chat Command aliases");
     ImGui::TextDisabled("First matching command alias found will be triggered");
 
+    static auto OnConfirmDeleteAlias = [](bool result, void* wparam) {
+        if (!result)
+            return;
+        auto alias = (CmdAlias*)wparam;
+        const auto found = std::ranges::find(cmd_aliases,alias);
+        if (found != cmd_aliases.end()) {
+            cmd_aliases.erase(found);
+            delete alias;
+        }
+    };
+
     const auto avail_w = ImGui::GetContentRegionAvail().x - 128.f;
     for (auto it = cmd_aliases.begin(); it != cmd_aliases.end(); ++it) {
         ImGui::PushID(it._Ptr);
@@ -951,12 +962,7 @@ void ChatCommands::DrawSettingsInternal()
         }
         ImGui::SameLine(avail_w);
         static bool confirm_delete = false;
-        if (ImGui::SmallConfirmButton("Delete", &confirm_delete, "Are you sure you want to delete this entry?")) {
-            cmd_aliases.erase(it);
-            confirm_delete = false;
-            ImGui::PopID();
-            break; // Skip this frame
-        }
+        ImGui::SmallConfirmButton("Delete", "Are you sure you want to delete this entry?", OnConfirmDeleteAlias, *it);
         ImGui::PopID();
     }
     if (ImGui::Button("Add New Alias")) {

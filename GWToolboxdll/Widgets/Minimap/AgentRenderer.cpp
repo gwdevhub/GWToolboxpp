@@ -345,10 +345,12 @@ void AgentRenderer::DrawSettings()
     ImGui::Checkbox("Show props on minimap", &show_props_on_minimap);
 #endif
     if (ImGui::TreeNodeEx("Agent Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        bool confirmed = false;
-        if (ImGui::SmallConfirmButton("Restore Defaults", &confirmed, "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n")) {
-            LoadDefaultColors();
-        }
+        ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n", 
+            [&](bool result, void*) {
+            if (result) {
+                LoadDefaultColors();
+            }
+            });
         Colors::DrawSettingHueWheel("EoE", &color_eoe);
         ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
         Colors::DrawSettingHueWheel("QZ", &color_qz);
@@ -379,10 +381,12 @@ void AgentRenderer::DrawSettings()
     }
 
     if (ImGui::TreeNodeEx("Agent Sizes", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        bool confirmed = false;
-        if (ImGui::SmallConfirmButton("Restore Defaults", &confirmed, "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n")) {
-            LoadDefaultSizes();
-        }
+        ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n",
+            [&](bool result, void*) {
+                if (result) {
+                    LoadDefaultSizes();
+                }
+            });
         ImGui::DragFloat("Default Size", &size_default, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::DragFloat("Player Size", &size_player, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::DragFloat("Signpost Size", &size_signpost, 1.0f, 1.0f, 0.0f, "%.0f");

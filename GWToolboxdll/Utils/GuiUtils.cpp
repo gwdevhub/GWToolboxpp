@@ -211,8 +211,7 @@ namespace {
     // Also create any missing fonts from our own array
     bool OnImGui_ImplDX9_CreateFontsTexture() {
         GW::Hook::EnterHook();
-        GuiUtils::CreateFontTextures();
-        bool ret = ImGui_ImplDX9_CreateFontsTexture_Ret();
+        bool ret = GuiUtils::CreateFontTextures() && ImGui_ImplDX9_CreateFontsTexture_Ret();
         GW::Hook::LeaveHook();
         return ret;
     }
@@ -424,6 +423,8 @@ namespace GuiUtils {
 
     bool CreateFontTextures() {
         if (!GImGui)
+            return false;
+        if (fonts_loading)
             return false;
 
         for (auto font : GetFonts()) {

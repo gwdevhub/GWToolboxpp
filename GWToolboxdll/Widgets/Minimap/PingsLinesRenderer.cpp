@@ -51,15 +51,17 @@ void PingsLinesRenderer::SaveSettings(ToolboxIni* ini, const char* section) cons
 void PingsLinesRenderer::DrawSettings()
 {
     bool changed = false;
-    bool confirm = false;
-    if (ImGui::SmallConfirmButton("Restore Defaults", &confirm)) {
-        color_drawings = Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF);
-        ping_circle.color = Colors::ARGB(128, 255, 0, 0);
-        marker.color = Colors::ARGB(200, 128, 0, 128);
-        color_shadowstep_line = Colors::ARGB(48, 128, 0, 128);
-        color_shadowstep_line_maxrange = Colors::ARGB(48, 128, 0, 128);
-        changed = true;
-    }
+    ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?", [&](bool result, void*) {
+        if (result) {
+            color_drawings = Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF);
+            ping_circle.color = Colors::ARGB(128, 255, 0, 0);
+            marker.color = Colors::ARGB(200, 128, 0, 128);
+            color_shadowstep_line = Colors::ARGB(48, 128, 0, 128);
+            color_shadowstep_line_maxrange = Colors::ARGB(48, 128, 0, 128);
+            ping_circle.Invalidate();
+            marker.Invalidate();
+        }
+        });
     changed |= Colors::DrawSettingHueWheel("Drawings", &color_drawings);
     changed |= Colors::DrawSettingHueWheel("Pings", &ping_circle.color);
     changed |= Colors::DrawSettingHueWheel("Shadow Step Marker", &marker.color);

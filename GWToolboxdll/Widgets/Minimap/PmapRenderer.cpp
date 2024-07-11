@@ -26,13 +26,14 @@ void PmapRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
 
 void PmapRenderer::DrawSettings()
 {
-    bool confirm = false;
-    if (ImGui::SmallConfirmButton("Restore Defaults", &confirm)) {
-        color_map = 0xFF999999;
-        color_mapshadow = 0xFF120808;
-        color_mapbackground = 0x00000000;
-        Invalidate();
-    }
+    ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?", [&](bool result, void*) {
+        if (result) {
+            color_map = 0xFF999999;
+            color_mapshadow = 0xFF120808;
+            color_mapbackground = 0x00000000;
+            Invalidate();
+        }
+        });
     if (Colors::DrawSettingHueWheel("Map", &color_map)) {
         Invalidate();
     }

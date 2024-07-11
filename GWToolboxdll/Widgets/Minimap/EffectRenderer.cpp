@@ -171,10 +171,11 @@ void EffectRenderer::SaveSettings(ToolboxIni* ini, const char* section)
 
 void EffectRenderer::DrawSettings()
 {
-    bool confirm = false;
-    if (ImGui::SmallConfirmButton("Restore Defaults", &confirm)) {
-        LoadDefaults();
-    }
+    ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?", [&](bool result, void*) {
+        if (result) {
+            LoadDefaults();
+        }
+        });
     for (const auto& s : aoe_effect_settings) {
         ImGui::PushID(static_cast<int>(s.first));
         Colors::DrawSettingHueWheel("", &s.second->color, 0);

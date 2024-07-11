@@ -105,6 +105,7 @@ namespace {
         None,
         PendingLogout,
         PromptPendingLogout,
+        PromptPendingReply,
         WaitingForCharSelect,
         CheckForCharname,
         NavigateToCharname,
@@ -325,7 +326,7 @@ namespace {
 
     void RerollFailed(const wchar_t* reason)
     {
-        if (reroll_stage == PromptPendingLogout) {
+        if (reroll_stage < WaitingForCharSelect) {
             reroll_stage = None;
             return;
         }
@@ -484,21 +485,23 @@ namespace {
         }
     }
 
+    void OnRerollPromptReply(bool result, void*) {
+        if (result && reroll_stage == PromptPendingReply) {
+            reroll_stage = PendingLogout;
+        }
+        else {
+            reroll_stage = None;
+        }
+    }
+
 }
 
 void RerollWindow::Draw(IDirect3DDevice9*)
 {
     if (reroll_stage == PromptPendingLogout) {
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-            bool res = false;
-            if (ImGui::ConfirmDialog("You're currently in an explorable area.\nAre you sure you want to change character?", &res)) {
-                if (res) {
-                    reroll_stage = PendingLogout;
-                }
-                else {
-                    reroll_stage = None;
-                }
-            }
+            ImGui::ConfirmDialog("You're currently in an explorable area.\nAre you sure you want to change character?", OnRerollPromptReply);
+            reroll_stage = PromptPendingReply;
             return;
         }
         const auto char_select_info = GetAvailableCharacter(reroll_to_player_name);
@@ -514,16 +517,7 @@ void RerollWindow::Draw(IDirect3DDevice9*)
                 "You can still swap to this character, but won't automatically travel.\n\n"
                 "Continue?",
                 charname_str, Resources::GetMapName(reroll_to_player_current_map)->string());
-            bool should_continue = false;
-            if (ImGui::ConfirmDialog(msg.c_str(), &should_continue)) {
-                if (should_continue) {
-                    same_map = same_party = false;
-                    reroll_stage = PendingLogout;
-                }
-                else {
-                    reroll_stage = None;
-                }
-            }
+            ImGui::ConfirmDialog(msg.c_str(), OnRerollPromptReply);
             return;
         }
         reroll_stage = PendingLogout;
@@ -639,6 +633,15 @@ void RerollWindow::Update(float)
     GW::PreGameContext* pgc = GW::GetPreGameContext();
     switch (reroll_stage) {
         case PendingLogout: {
+            const auto char_select_info = GetAvailableCharacter(reroll_to_player_name);
+            if (!char_select_info) {
+                RerollFailed(L"Failed to find available character from char select list");
+                return;
+            }
+            if (GWToolbox::ShouldDisableToolbox(char_select_info->map_id())) {
+                // If toolbox isn't going to be available in the next map, make sure we don't try to do anything after reroll.
+                same_map = same_party = false;
+            }
             auto packet = GW::UI::UIPacket::kLogout{
                 .unknown = 0, 
                 .character_select = 0

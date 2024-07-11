@@ -10,6 +10,13 @@ namespace {
     void* imguiaddons_context_menu_wparam = nullptr;
     const char* imguiaddons_context_menu_id = "###imguiaddons_context_menu";
     ImGui::ImGuiContextMenuCallback imguiaddons_context_menu_pending = nullptr;
+
+    ImGui::ImGuiConfirmDialogCallback imguiaddons_confirm_dialog_callback = nullptr;
+    void* imguiaddons_confirm_dialog_wparam = nullptr;
+    const char* imguiaddons_confirm_dialog_id = "###imguiaddons_confirm_dialog";
+    ImGui::ImGuiConfirmDialogCallback imguiaddons_confirm_dialog_pending = nullptr;
+    std::string imguiaddons_confirm_dialog_message = "Are you sure?";
+
 }
 
 namespace ImGui {
@@ -95,58 +102,61 @@ namespace ImGui {
         SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), flags, ImVec2(0.5f, 0.5f));
     }
 
-    bool ConfirmDialog(const char* message, bool* result)
-    {
-        bool res = false;
-        ImGui::OpenPopup("##confirm_popup");
-        if (ImGui::BeginPopupModal("##confirm_popup", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            static bool was_enter_down = true, was_escape_down = true;
-            if (ImGui::IsWindowAppearing()) {
-                was_enter_down = ImGui::IsKeyDown(ImGuiKey_Enter);
-                was_escape_down = ImGui::IsKeyDown(ImGuiKey_Escape);
-            }
-            bool is_enter_down = ImGui::IsKeyDown(ImGuiKey_Enter);
-            bool is_escape_down = ImGui::IsKeyDown(ImGuiKey_Escape);
-            ImGui::TextUnformatted(message);
-
-            if (ImGui::Button("Yes", ImVec2(120, 0)) || (!was_enter_down && is_enter_down)) {
-                *result = true;
-                res = true;
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("No", ImVec2(120, 0)) || (!was_escape_down && is_escape_down)) {
-                *result = false;
-                res = true;
-                ImGui::CloseCurrentPopup();
-            }
-            was_escape_down = is_escape_down;
-            was_enter_down = is_enter_down;
-            ImGui::EndPopup();
+    void DrawConfirmDialog() {
+        if (imguiaddons_confirm_dialog_pending) {
+            imguiaddons_confirm_dialog_callback = imguiaddons_confirm_dialog_pending;
+            imguiaddons_confirm_dialog_pending = nullptr;
+            ImGui::OpenPopup(imguiaddons_confirm_dialog_id);
+            return;
         }
-        return res;
+        if (!ImGui::BeginPopupModal(imguiaddons_confirm_dialog_id, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            if (imguiaddons_confirm_dialog_callback) {
+                imguiaddons_confirm_dialog_callback(false, imguiaddons_confirm_dialog_wparam);
+                imguiaddons_confirm_dialog_callback = nullptr;
+            }
+            return;
+        }
+        static bool was_enter_down = true, was_escape_down = true;
+        if (ImGui::IsWindowAppearing()) {
+            was_enter_down = ImGui::IsKeyDown(ImGuiKey_Enter);
+            was_escape_down = ImGui::IsKeyDown(ImGuiKey_Escape);
+        }
+        bool is_enter_down = ImGui::IsKeyDown(ImGuiKey_Enter);
+        bool is_escape_down = ImGui::IsKeyDown(ImGuiKey_Escape);
+        ImGui::TextUnformatted(imguiaddons_confirm_dialog_message.c_str());
+
+        if (ImGui::Button("Yes", ImVec2(120, 0)) || (!was_enter_down && is_enter_down)) {
+            ImGui::CloseCurrentPopup();
+            imguiaddons_confirm_dialog_callback(true, imguiaddons_confirm_dialog_wparam);
+            imguiaddons_confirm_dialog_callback = nullptr;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("No", ImVec2(120, 0)) || (!was_escape_down && is_escape_down)) {
+            ImGui::CloseCurrentPopup();
+            imguiaddons_confirm_dialog_callback(false, imguiaddons_confirm_dialog_wparam);
+            imguiaddons_confirm_dialog_callback = nullptr;
+        }
+        was_escape_down = is_escape_down;
+        was_enter_down = is_enter_down;
+        ImGui::EndPopup();
     }
 
-    bool SmallConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content)
+    void ConfirmDialog(const char* message, ImGui::ImGuiConfirmDialogCallback callback, void* wparam)
+    {
+        imguiaddons_confirm_dialog_message = message;
+        imguiaddons_confirm_dialog_pending = callback;
+        imguiaddons_confirm_dialog_wparam = wparam;
+    }
+
+    bool SmallConfirmButton(const char* label, const char* confirm_content, ImGui::ImGuiConfirmDialogCallback callback, void* wparam)
     {
         static char id_buf[128];
-        snprintf(id_buf, sizeof(id_buf), "%s##confirm_popup%p", label, confirm_bool);
+        snprintf(id_buf, sizeof(id_buf), "%s##confirm_popup%p", label, label);
         if (SmallButton(label)) {
-            OpenPopup(id_buf);
+            ConfirmDialog(confirm_content, callback, wparam);
+            return true;
         }
-        if (BeginPopupModal(id_buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            Text(confirm_content);
-            if (Button("OK", ImVec2(120, 0))) {
-                *confirm_bool = true;
-                CloseCurrentPopup();
-            }
-            SameLine();
-            if (Button("Cancel", ImVec2(120, 0))) {
-                CloseCurrentPopup();
-            }
-            EndPopup();
-        }
-        return *confirm_bool;
+        return false;
     }
 
     bool ChooseKey(const char* label, char* buf, size_t buf_len, long* output_key_code)
