@@ -33,7 +33,7 @@ namespace {
     bool fonts_loaded = false;
 
     struct FontData {
-        const std::wstring glyph_ranges;
+        std::vector<ImWchar> glyph_ranges;
         std::wstring font_name;
         size_t data_size = 0;
         void* data = nullptr;
@@ -41,21 +41,10 @@ namespace {
     };
 
     std::vector<FontData> font_data;
-    std::wstring all_available_glyph_ranges;
-    std::vector<ImWchar*> allocated_glyph_ranges;
 
-    const ImWchar fontawesome5_glyph_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
+    const std::vector<ImWchar> fontawesome5_glyph_ranges = {ICON_MIN_FA, ICON_MAX_FA};
 
-    std::unordered_map<GW::Constants::Language, ImFontAtlas*> font_atlas_by_language;
-
-    std::wstring GlyphBuilderToWstring(ImFontGlyphRangesBuilder& builder)
-    {
-        ImVector<ImWchar> ranges_vec;
-        builder.BuildRanges(&ranges_vec);
-        return (const wchar_t*)ranges_vec.Data;
-    }
-
-    ImFontGlyphRangesBuilder GetGWGlyphRange()
+    [[maybe_unused]] ImFontGlyphRangesBuilder GetGWGlyphRange()
     {
         ImFontGlyphRangesBuilder builder;
 
@@ -150,6 +139,122 @@ namespace {
         }
     }
 
+    constexpr std::vector<ImWchar> ConstGetGlyphRangesLatin()
+    {
+        return {
+            0x0020, 0x00FF, // Basic Latin + Latin Supplement
+        };
+    }
+
+    constexpr void UnpackAccumulativeOffsetsIntoRanges(int base_codepoint, const short* accumulative_offsets, int accumulative_offsets_count, ImWchar* out_ranges)
+    {
+        for (int n = 0; n < accumulative_offsets_count; n++, out_ranges += 2) {
+            out_ranges[0] = out_ranges[1] = (ImWchar)(base_codepoint + accumulative_offsets[n]);
+            base_codepoint += accumulative_offsets[n];
+        }
+        out_ranges[0] = 0;
+    }
+
+    constexpr std::vector<ImWchar> ConstGetGlyphRangesJapanese()
+    {
+        return  {
+            0x0020, 0x00FF, // Basic Latin + Latin Supplement
+            0x3000, 0x30FF, // CJK Symbols and Punctuations, Hiragana, Katakana
+            0x31F0, 0x31FF, // Katakana Phonetic Extensions
+            0xFF00, 0xFFEF, // Half-width characters
+            0xFFFD, 0xFFFD  // Invalid
+        };
+    }
+
+    constexpr std::vector<ImWchar> ConstGetGlyphRangesCyrillic()
+    {
+        return {
+            0x0020, 0x00FF, // Basic Latin + Latin Supplement
+            0x0400, 0x052F, // Cyrillic + Cyrillic Supplement
+            0x2DE0, 0x2DFF, // Cyrillic Extended-A
+            0xA640, 0xA69F, // Cyrillic Extended-B
+        };
+    }
+
+    constexpr std::vector<ImWchar> ConstGetGlyphRangesChinese()
+    {
+        return {
+            0x0020, 0x00FF, // Basic Latin + Latin Supplement
+            0x2000, 0x206F, // General Punctuation
+            0x3000, 0x30FF, // CJK Symbols and Punctuations, Hiragana, Katakana
+            0x31F0, 0x31FF, // Katakana Phonetic Extensions
+            0xFF00, 0xFFEF, // Half-width characters
+            0xFFFD, 0xFFFD, // Invalid
+            0x4e00, 0x9FAF, // CJK Ideograms
+        };
+    }
+
+    constexpr std::vector<ImWchar> ConstGetGlyphRangesKorean()
+    {
+        return {
+            0x0020, 0x00FF, // Basic Latin + Latin Supplement
+            0x3131, 0x3163, // Korean alphabets
+            0xAC00, 0xD7A3, // Korean characters
+            0xFFFD, 0xFFFD, // Invalid
+        };
+    }
+
+    constexpr std::vector<ImWchar> ConstGetGWGlyphRange()
+    {
+        return {
+            0x20, 0x7f,
+            0xa1, 0xff,
+            0x100, 0x180,
+            0x0391, 0x0460,
+            0x2010, 0x266b,
+            0x3000, 0x3020,
+            0x3041, 0x3100,
+            0x3105, 0x312a,
+            0x3131, 0x318f,
+            0xac00, 0xd7a4,
+            0x4e00, 0x9fa6,
+            0xf900, 0xfa6b,
+            0xff01, 0xffe7
+        };
+    }
+
+    constexpr std::vector<ImWchar> find_glyph_range_intersection(const std::vector<ImWchar>& range1, const std::vector<ImWchar>& range2)
+    {
+        if (range1.empty() || range2.empty()) return {};
+
+        auto in_range = [](const wchar_t c, const std::vector<ImWchar>& range) {
+            for (size_t i = 0; i < range.size() - 1; i += 2) {
+                if (c >= range[i] && c <= range[i + 1]) return true;
+            }
+            return false;
+        };
+
+        wchar_t start = 0;
+        bool in_intersection = false;
+
+        std::vector<ImWchar> intersection;
+        for (ImWchar c = 0; c <= 0xffe7; ++c) {
+            const bool in_both = in_range(c, range1) && in_range(c, range2);
+
+            if (in_both && !in_intersection) {
+                start = c;
+                in_intersection = true;
+            }
+            else if (!in_both && in_intersection) {
+                intersection.push_back(start);
+                intersection.push_back(c - 1);
+                in_intersection = false;
+            }
+        }
+
+        if (in_intersection) {
+            intersection.push_back(start);
+            intersection.push_back(0xffe7);
+        }
+
+        intersection.push_back(0); // Null-terminate the range
+        return intersection;
+    }
 
     // Do dont loading into memory; run on a separate thread.
     void LoadFontsThread()
@@ -173,50 +278,24 @@ namespace {
 
         auto& io = ImGui::GetIO();
 
-
-        const std::vector<std::pair<const wchar_t*, const ImWchar*>> fonts_on_disk = {
-            {L"Font.ttf", io.Fonts->GetGlyphRangesDefault()},
-            {L"Font_Japanese.ttf", io.Fonts->GetGlyphRangesJapanese()},
-            {L"Font_Cyrillic.ttf", io.Fonts->GetGlyphRangesCyrillic()},
-            {L"Font_ChineseTraditional.ttf", io.Fonts->GetGlyphRangesChineseFull()},
-            {L"Font_Korean.ttf", io.Fonts->GetGlyphRangesKorean()}
-        };
+        const auto fonts_on_disk = std::to_array<std::pair<std::wstring, std::vector<ImWchar>>>({
+            {L"Font.ttf", find_glyph_range_intersection(ConstGetGlyphRangesLatin(), ConstGetGWGlyphRange())},
+            {L"Font_Japanese.ttf", find_glyph_range_intersection(ConstGetGlyphRangesJapanese(), ConstGetGWGlyphRange())},
+            {L"Font_Cyrillic.ttf", find_glyph_range_intersection(ConstGetGlyphRangesCyrillic(), ConstGetGWGlyphRange())},
+            {L"Font_ChineseTraditional.ttf", find_glyph_range_intersection(ConstGetGlyphRangesChinese(), ConstGetGWGlyphRange())},
+            {L"Font_Korean.ttf", find_glyph_range_intersection(ConstGetGlyphRangesKorean(), ConstGetGWGlyphRange())}
+        });
 
         for (const auto& [font_name, glyph_range] : fonts_on_disk) {
             const auto path = Resources::GetPath(font_name);
             if (!std::filesystem::exists(path))
                 continue;
-            font_data.push_back({(wchar_t*)glyph_range, path});
+            font_data.emplace_back(glyph_range, path);
         }
 
-        font_data.push_back({(wchar_t*)fontawesome5_glyph_ranges, L"", fontawesome5_compressed_size, (void*)fontawesome5_compressed_data, true});
+        font_data.emplace_back(fontawesome5_glyph_ranges, L"", fontawesome5_compressed_size, (void*)fontawesome5_compressed_data, true);
 
-        auto find_glyph_range_intersection = [](std::vector<wchar_t>& range1, std::vector<wchar_t>& range2) {
-            std::vector<ImWchar> intersection;
-            if (range1.empty() || range2.empty()) return intersection;
-            if (range1.back() != 0) range1.push_back(0);
-            if (range2.back() != 0) range2.push_back(0);
-            for (size_t i = 0; range1[i]; i += 2) {
-                for (size_t j = 0; range2[j]; j += 2) {
-                    const wchar_t start = std::max(range1[i], range2[j]);
-                    const wchar_t end = std::min(range1[i + 1], range2[j + 1]);
-                    if (start <= end) {
-                        // Merge with previous range if possible
-                        if (!intersection.empty() && start <= intersection.back() + 1) {
-                            intersection.back() = std::max(intersection.back(), static_cast<ImWchar>(end));
-                        }
-                        else {
-                            intersection.push_back(start);
-                            intersection.push_back(end);
-                        }
-                    }
-                }
-            }
-            intersection.push_back(0);
-            return intersection;
-        };
-
-        auto add_font_set = [&find_glyph_range_intersection](ImFontConfig& cfg, ImFontAtlasFlags flags, const float size, [[maybe_unused]] const ImWchar* glyph_ranges_to_find) {
+        auto add_font_set = [](ImFontConfig& cfg, ImFontAtlasFlags flags, const float size) {
             const auto atlas = IM_NEW(ImFontAtlas);
             atlas->Flags = flags;
 
@@ -225,38 +304,22 @@ namespace {
                 void* data = font.data;
                 size_t data_size = font.data_size;
 
-                auto glyphs_in_font_vec = std::vector(font.glyph_ranges.begin(), font.glyph_ranges.end());
-                auto glyphs_to_find_vec = std::vector(
-                    std::wstring_view(reinterpret_cast<const wchar_t*>(glyph_ranges_to_find)).begin(),
-                    std::wstring_view(reinterpret_cast<const wchar_t*>(glyph_ranges_to_find)).end()
-                );
-                auto intersection = find_glyph_range_intersection(glyphs_in_font_vec, glyphs_to_find_vec);
-                auto glyph_ranges_to_load_from_this_font = static_cast<ImWchar*>(IM_ALLOC(sizeof(ImWchar) * intersection.size() + 1));
-                std::ranges::copy(intersection, glyph_ranges_to_load_from_this_font);
-                allocated_glyph_ranges.push_back(glyph_ranges_to_load_from_this_font);
-
                 if (!font.font_name.empty()) {
                     const auto path = Resources::GetPath(font.font_name);
                     data = ImFileLoadToMemory(path.string().c_str(), "rb", &data_size, 0);
                 }
 
                 if (font.compressed) {
-                    atlas->AddFontFromMemoryCompressedTTF(data, data_size, size, &cfg, glyph_ranges_to_load_from_this_font);
+                    atlas->AddFontFromMemoryCompressedTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
                 }
                 else {
-                    atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, glyph_ranges_to_load_from_this_font);
+                    atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
                 }
                 cfg.MergeMode = true; // for all but the first
             }
             atlas->Build();
             return atlas->Fonts.back();
         };
-
-        ImFontGlyphRangesBuilder builder = GetGWGlyphRange();
-        builder.AddRanges(fontawesome5_glyph_ranges);
-
-        ImVector<ImWchar> language_specific_glyph_range;
-        builder.BuildRanges(&language_specific_glyph_range);
 
         ImFontAtlasFlags flags = 0;
         flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;
@@ -275,28 +338,28 @@ namespace {
         if (font_header2) {
             IM_FREE(font_header2->ContainerAtlas);
         }
-        font_header2 = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::header2), language_specific_glyph_range.Data); // 18.f
+        font_header2 = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::header2)); // 18.f
 
         if (font_header1)
             IM_FREE(font_header2->ContainerAtlas);
-        font_header1 = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::header1), language_specific_glyph_range.Data); // 20.f
+        font_header1 = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::header1)); // 20.f
 
         cfg.OversampleH = 1;
         if (font_widget_label)
             IM_FREE(font_widget_label->ContainerAtlas);
-        font_widget_label = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::widget_label), language_specific_glyph_range.Data); // 24.f
+        font_widget_label = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::widget_label)); // 24.f
 
         if (font_widget_small)
             IM_FREE(font_widget_small->ContainerAtlas);
-        font_widget_small = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::widget_small), language_specific_glyph_range.Data); // 40.f
+        font_widget_small = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::widget_small)); // 40.f
 
         if (font_widget_large)
             IM_FREE(font_widget_large->ContainerAtlas);
-        font_widget_large = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::widget_large), language_specific_glyph_range.Data); // 48.f
+        font_widget_large = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::widget_large)); // 48.f
 
         if (font_text)
             IM_FREE(font_text->ContainerAtlas);
-        font_text = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::text), language_specific_glyph_range.Data); // 16.f
+        font_text = add_font_set(cfg, flags, static_cast<float>(FontLoader::FontSize::text)); // 16.f
 
         ImGui_ImplDX9_InvalidateDeviceObjects();
 
@@ -305,12 +368,6 @@ namespace {
         printf("Fonts loaded\n");
         fonts_loaded = true;
         fonts_loading = false;
-
-        // Free allocated glyph ranges
-        for (const auto glyph_range : allocated_glyph_ranges) {
-            IM_FREE(glyph_range);
-        }
-        allocated_glyph_ranges.clear();
     }
 }
 
