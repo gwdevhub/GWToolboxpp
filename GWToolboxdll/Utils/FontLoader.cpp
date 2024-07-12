@@ -330,6 +330,9 @@ namespace {
             cfg.MergeMode = true; // for all but the first
         }
         atlas->Build();
+        unsigned char* unused = nullptr;
+        // Preload the data for this font
+        atlas->GetTexDataAsRGBA32(&unused, nullptr,nullptr,nullptr);
         return atlas->Fonts.back();
         };
 
