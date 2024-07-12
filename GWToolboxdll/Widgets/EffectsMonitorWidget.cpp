@@ -50,17 +50,23 @@ namespace {
 
     void DrawTextOverlay(const char* text, const GW::UI::Frame* frame) {
         if (!(frame && text && *text && effects_frame)) return;
-        const auto skill_bottom_right = frame->position.GetBottomRightOnScreen();
+        auto skill_bottom_right = frame->position.GetBottomRightOnScreen();
+
+        const auto viewport = ImGui::GetMainViewport();
+        skill_bottom_right.x += viewport->Pos.x;
+        skill_bottom_right.y += viewport->Pos.y;
+
+        const auto draw_list = ImGui::GetBackgroundDrawList(viewport);
 
         const ImVec2 label_size = ImGui::CalcTextSize(text);
         const ImVec2 label_pos(skill_bottom_right.x - label_size.x, skill_bottom_right.y - label_size.y);
         if ((color_background & IM_COL32_A_MASK) != 0) {
-            ImGui::GetBackgroundDrawList()->AddRectFilled(label_pos, skill_bottom_right, color_background);
+            draw_list->AddRectFilled(label_pos, skill_bottom_right, color_background);
         }
         if ((color_text_shadow & IM_COL32_A_MASK) != 0) {
-            ImGui::GetBackgroundDrawList()->AddText({ label_pos.x + 1, label_pos.y + 1 }, color_text_shadow, text);
+            draw_list->AddText({ label_pos.x + 1, label_pos.y + 1 }, color_text_shadow, text);
         }
-        ImGui::GetBackgroundDrawList()->AddText(label_pos, color_text_effects, text);
+        draw_list->AddText(label_pos, color_text_effects, text);
     }
 
 }
