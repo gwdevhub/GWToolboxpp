@@ -1,8 +1,34 @@
+diff --git a/backends/imgui_impl_dx9.cpp b/backends/imgui_impl_dx9.cpp
+index 59475d2a..76a0039e 100644
+--- a/backends/imgui_impl_dx9.cpp
++++ b/backends/imgui_impl_dx9.cpp
+@@ -502,7 +502,7 @@ static void ImGui_ImplDX9_RenderWindow(ImGuiViewport* viewport, void*)
+ {
+     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
+     ImGui_ImplDX9_ViewportData* vd = (ImGui_ImplDX9_ViewportData*)viewport->RendererUserData;
+-    ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
++    ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+ 
+     LPDIRECT3DSURFACE9 render_target = nullptr;
+     LPDIRECT3DSURFACE9 last_render_target = nullptr;
+diff --git a/backends/imgui_impl_win32.cpp b/backends/imgui_impl_win32.cpp
+index 7a96f37c..c1901458 100644
+--- a/backends/imgui_impl_win32.cpp
++++ b/backends/imgui_impl_win32.cpp
+@@ -1055,6 +1055,7 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
+     vd->HwndOwned = true;
+     viewport->PlatformRequestResize = false;
+     viewport->PlatformHandle = viewport->PlatformHandleRaw = vd->Hwnd;
++    ImGui_ImplWin32_EnableAlphaCompositing(vd->Hwnd);
+ 
+     // Secondary viewports store their imgui context
+     ::SetPropA(vd->Hwnd, "IMGUI_CONTEXT", ImGui::GetCurrentContext());
+
 diff --git a/imgui.cpp b/imgui.cpp
-index 074560efa..ebe4385d0 100644
+index 01b497ac..85f2e48b 100644
 --- a/imgui.cpp
 +++ b/imgui.cpp
-@@ -6574,8 +6574,8 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
+@@ -6591,8 +6591,8 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
          const float backup_border_size = style.FrameBorderSize;
          g.Style.FrameBorderSize = window->WindowBorderSize;
          ImU32 title_bar_col = GetColorU32((title_bar_is_highlight && !g.NavDisableHighlight) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBgCollapsed);
