@@ -1,0 +1,89 @@
+diff --git a/imgui.cpp b/imgui.cpp
+index 074560efa..ebe4385d0 100644
+--- a/imgui.cpp
++++ b/imgui.cpp
+@@ -6574,8 +6574,8 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
+         const float backup_border_size = style.FrameBorderSize;
+         g.Style.FrameBorderSize = window->WindowBorderSize;
+         ImU32 title_bar_col = GetColorU32((title_bar_is_highlight && !g.NavDisableHighlight) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBgCollapsed);
+-        if (window->ViewportOwned)
+-            title_bar_col |= IM_COL32_A_MASK; // No alpha (we don't support is_docking_transparent_payload here because simpler and less meaningful, but could with a bit of code shuffle/reuse)
++        // if (window->ViewportOwned)
++        //     title_bar_col |= IM_COL32_A_MASK; // No alpha (we don't support is_docking_transparent_payload here because simpler and less meaningful, but could with a bit of code shuffle/reuse)
+         RenderFrame(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, true, window_rounding);
+         g.Style.FrameBorderSize = backup_border_size;
+     }
+@@ -6607,30 +6607,26 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
+                     is_docking_transparent_payload = true;
+ 
+             ImU32 bg_col = GetColorU32(GetWindowBgColorIdx(window));
+-            if (window->ViewportOwned)
++
++            bool override_alpha = false;
++            float alpha = 1.0f;
++            if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasBgAlpha)
+             {
+-                bg_col |= IM_COL32_A_MASK; // No alpha
+-                if (is_docking_transparent_payload)
+-                    window->Viewport->Alpha *= DOCKING_TRANSPARENT_PAYLOAD_ALPHA;
++                alpha = g.NextWindowData.BgAlphaVal;
++                override_alpha = true;
+             }
+-            else
++            if (is_docking_transparent_payload)
+             {
+-                // Adjust alpha. For docking
+-                bool override_alpha = false;
+-                float alpha = 1.0f;
+-                if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasBgAlpha)
+-                {
+-                    alpha = g.NextWindowData.BgAlphaVal;
+-                    override_alpha = true;
+-                }
+-                if (is_docking_transparent_payload)
++                if (window->ViewportOwned)
++                    window->Viewport->Alpha *= DOCKING_TRANSPARENT_PAYLOAD_ALPHA;
++                else
+                 {
+                     alpha *= DOCKING_TRANSPARENT_PAYLOAD_ALPHA; // FIXME-DOCK: Should that be an override?
+                     override_alpha = true;
+                 }
+-                if (override_alpha)
+-                    bg_col = (bg_col & ~IM_COL32_A_MASK) | (IM_F32_TO_INT8_SAT(alpha) << IM_COL32_A_SHIFT);
+             }
++            if (override_alpha)
++                bg_col = (bg_col & ~IM_COL32_A_MASK) | (IM_F32_TO_INT8_SAT(alpha) << IM_COL32_A_SHIFT);
+ 
+             // Render, for docked windows and host windows we ensure bg goes before decorations
+             if (window->DockIsActive)
+@@ -6651,8 +6647,8 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
+         if (!(flags & ImGuiWindowFlags_NoTitleBar) && !window->DockIsActive)
+         {
+             ImU32 title_bar_col = GetColorU32(title_bar_is_highlight ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
+-            if (window->ViewportOwned)
+-                title_bar_col |= IM_COL32_A_MASK; // No alpha
++            // if (window->ViewportOwned)
++            //     title_bar_col |= IM_COL32_A_MASK; // No alpha
+             window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, window_rounding, ImDrawFlags_RoundCornersTop);
+         }
+ 
+@@ -7369,7 +7365,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
+ 
+         // Lock window rounding for the frame (so that altering them doesn't cause inconsistencies)
+         // Large values tend to lead to variety of artifacts and are not recommended.
+-        if (window->ViewportOwned || window->DockIsActive)
++        if (window->DockIsActive)
+             window->WindowRounding = 0.0f;
+         else
+             window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
+@@ -15621,8 +15617,8 @@ void ImGui::WindowSyncOwnedViewport(ImGuiWindow* window, ImGuiWindow* parent_win
+     // We can also tell the backend that clearing the platform window won't be necessary,
+     // as our window background is filling the viewport and we have disabled BgAlpha.
+     // FIXME: Work on support for per-viewport transparency (#2766)
+-    if (!(window_flags & ImGuiWindowFlags_NoBackground))
+-        viewport_flags |= ImGuiViewportFlags_NoRendererClear;
++    // if (!(window_flags & ImGuiWindowFlags_NoBackground))
++    //     viewport_flags |= ImGuiViewportFlags_NoRendererClear;
+ 
+     window->Viewport->Flags = viewport_flags;
+ 
