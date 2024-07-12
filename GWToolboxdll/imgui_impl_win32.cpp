@@ -1049,15 +1049,13 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
     RECT rect = { (LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x), (LONG)(viewport->Pos.y + viewport->Size.y) };
     ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle);
     vd->Hwnd = ::CreateWindowEx(
-        vd->DwExStyle | WS_EX_LAYERED, _T("ImGui Platform"), _T("Untitled"), vd->DwStyle,       // Style, class name, window name
+        vd->DwExStyle, _T("ImGui Platform"), _T("Untitled"), vd->DwStyle,       // Style, class name, window name
         rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,    // Window area
         vd->HwndParent, nullptr, ::GetModuleHandle(nullptr), nullptr);          // Owner window, Menu, Instance, Param
     vd->HwndOwned = true;
     viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = viewport->PlatformHandleRaw = vd->Hwnd;
-
-    // Set the window to be fully transparent
-    ::SetLayeredWindowAttributes(vd->Hwnd, RGB(0, 0, 0), 0, LWA_COLORKEY);
+    ImGui_ImplWin32_EnableAlphaCompositing(vd->Hwnd);
 
     // Secondary viewports store their imgui context
     ::SetPropA(vd->Hwnd, "IMGUI_CONTEXT", ImGui::GetCurrentContext());
@@ -1138,14 +1136,13 @@ static void ImGui_ImplWin32_UpdateWindow(ImGuiViewport* viewport)
 
         // Apply flags and position (since it is affected by flags)
         vd->DwStyle = new_style;
-        vd->DwExStyle = new_ex_style | WS_EX_LAYERED;
+        vd->DwExStyle = new_ex_style;
         ::SetWindowLong(vd->Hwnd, GWL_STYLE, vd->DwStyle);
         ::SetWindowLong(vd->Hwnd, GWL_EXSTYLE, vd->DwExStyle);
         RECT rect = { (LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x), (LONG)(viewport->Pos.y + viewport->Size.y) };
         ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle); // Client to Screen
         ::SetWindowPos(vd->Hwnd, insert_after, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, swp_flag | SWP_NOACTIVATE | SWP_FRAMECHANGED);
         ::ShowWindow(vd->Hwnd, SW_SHOWNA); // This is necessary when we alter the style
-        ::SetLayeredWindowAttributes(vd->Hwnd, RGB(0, 0, 0), 0, LWA_COLORKEY);
         viewport->PlatformRequestMove = viewport->PlatformRequestResize = true;
     }
 }

@@ -2,10 +2,14 @@ include_guard()
 include(gwca)
 include(FetchContent)
 
+set(imgui_patch git apply ${PROJECT_SOURCE_DIR}/cmake/patches/imgui_transparent_viewports.patch)
+
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.90.9-docking)
+    GIT_TAG v1.90.9-docking
+	PATCH_COMMAND ${imgui_patch}
+	)
 FetchContent_GetProperties(imgui)
 if (imgui_POPULATED)
     return()

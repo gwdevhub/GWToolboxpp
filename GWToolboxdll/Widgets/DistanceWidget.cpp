@@ -70,8 +70,9 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
     if (!show_perc_value && !show_abs_value) {
         return;
     }
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin(Name(), nullptr, GetWinFlags(ImGuiWindowFlags_NoBackground, true))) {
+    if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
         
         const auto target = GW::Agents::GetTarget();
         const auto me = target ? GW::Agents::GetObservingAgent() : nullptr;
@@ -144,4 +145,5 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
         }
     }
     ImGui::End();
+    ImGui::PopStyleColor();
 }
