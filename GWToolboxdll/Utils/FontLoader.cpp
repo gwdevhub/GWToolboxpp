@@ -6,6 +6,7 @@
 
 #include "FontLoader.h"
 #include <Modules/Resources.h>
+#include "toolbox_default_font.h"
 
 #include "fonts/fontawesome5.h"
 
@@ -89,7 +90,7 @@ namespace {
         }
         if (err != D3D_OK)
             return false;
-        D3DLOCKED_RECT tex_locked_rect = { 0 };
+        D3DLOCKED_RECT tex_locked_rect = {0};
         err = D3DERR_INVALIDDEVICE;
         for (size_t i = 0; i < 3 && err != D3D_OK; i++) {
             err = new_texture->LockRect(0, &tex_locked_rect, nullptr, 0);
@@ -153,51 +154,51 @@ namespace {
     constexpr std::vector<ImWchar> ConstGetGlyphRangesLatin()
     {
         return {
-            0x0020, 0x00FF, // Basic Latin + Latin Supplement
+            0x0020, 0x00FF, 0 // Basic Latin + Latin Supplement
         };
     }
 
     constexpr std::vector<ImWchar> ConstGetGlyphRangesJapanese()
     {
-        return  {
-            0x0020, 0x00FF, // Basic Latin + Latin Supplement
-            0x3000, 0x30FF, // CJK Symbols and Punctuations, Hiragana, Katakana
-            0x31F0, 0x31FF, // Katakana Phonetic Extensions
-            0xFF00, 0xFFEF, // Half-width characters
-            0xFFFD, 0xFFFD  // Invalid
+        return {
+            0x0020, 0x00FF,   // Basic Latin + Latin Supplement
+            0x3000, 0x30FF,   // CJK Symbols and Punctuations, Hiragana, Katakana
+            0x31F0, 0x31FF,   // Katakana Phonetic Extensions
+            0xFF00, 0xFFEF,   // Half-width characters
+            0xFFFD, 0xFFFD, 0 // Invalid
         };
     }
 
     constexpr std::vector<ImWchar> ConstGetGlyphRangesCyrillic()
     {
         return {
-            0x0020, 0x00FF, // Basic Latin + Latin Supplement
-            0x0400, 0x052F, // Cyrillic + Cyrillic Supplement
-            0x2DE0, 0x2DFF, // Cyrillic Extended-A
-            0xA640, 0xA69F, // Cyrillic Extended-B
+            0x0020, 0x00FF,   // Basic Latin + Latin Supplement
+            0x0400, 0x052F,   // Cyrillic + Cyrillic Supplement
+            0x2DE0, 0x2DFF,   // Cyrillic Extended-A
+            0xA640, 0xA69F, 0 // Cyrillic Extended-B
         };
     }
 
     constexpr std::vector<ImWchar> ConstGetGlyphRangesChinese()
     {
         return {
-            0x0020, 0x00FF, // Basic Latin + Latin Supplement
-            0x2000, 0x206F, // General Punctuation
-            0x3000, 0x30FF, // CJK Symbols and Punctuations, Hiragana, Katakana
-            0x31F0, 0x31FF, // Katakana Phonetic Extensions
-            0xFF00, 0xFFEF, // Half-width characters
-            0xFFFD, 0xFFFD, // Invalid
-            0x4e00, 0x9FAF, // CJK Ideograms
+            0x0020, 0x00FF,   // Basic Latin + Latin Supplement
+            0x2000, 0x206F,   // General Punctuation
+            0x3000, 0x30FF,   // CJK Symbols and Punctuations, Hiragana, Katakana
+            0x31F0, 0x31FF,   // Katakana Phonetic Extensions
+            0xFF00, 0xFFEF,   // Half-width characters
+            0xFFFD, 0xFFFD,   // Invalid
+            0x4e00, 0x9FAF, 0 // CJK Ideograms
         };
     }
 
     constexpr std::vector<ImWchar> ConstGetGlyphRangesKorean()
     {
         return {
-            0x0020, 0x00FF, // Basic Latin + Latin Supplement
-            0x3131, 0x3163, // Korean alphabets
-            0xAC00, 0xD7A3, // Korean characters
-            0xFFFD, 0xFFFD, // Invalid
+            0x0020, 0x00FF,   // Basic Latin + Latin Supplement
+            0x3131, 0x3163,   // Korean alphabets
+            0xAC00, 0xD7A3,   // Korean characters
+            0xFFFD, 0xFFFD, 0 // Invalid
         };
     }
 
@@ -216,7 +217,7 @@ namespace {
             0xac00, 0xd7a4,
             0x4e00, 0x9fa6,
             0xf900, 0xfa6b,
-            0xff01, 0xffe7
+            0xff01, 0xffe7, 0
         };
     }
 
@@ -258,7 +259,8 @@ namespace {
         return intersection;
     }
 
-    void ReleaseFontTexture(ImFont* font) {
+    void ReleaseFontTexture(ImFont* font)
+    {
         if (!font || !font->ContainerAtlas)
             return;
         LPDIRECT3DTEXTURE9 texture = (LPDIRECT3DTEXTURE9)font->ContainerAtlas->TexID;
@@ -268,7 +270,8 @@ namespace {
         }
     }
 
-    void ReleaseFont(ImFont* font) {
+    void ReleaseFont(ImFont* font)
+    {
         if (!font) return;
         if (font->ContainerAtlas && font->ContainerAtlas == ImGui::GetIO().Fonts)
             return;
@@ -281,16 +284,18 @@ namespace {
         }
     }
 
-    std::vector<FontData>& GetFontData() {
+    std::vector<FontData>& GetFontData()
+    {
         if (!font_data.empty())
             return font_data;
-            const auto fonts_on_disk = std::to_array<std::pair<std::wstring_view, std::vector<ImWchar>>>({
+
+        const auto fonts_on_disk = std::to_array<std::pair<std::wstring_view, std::vector<ImWchar>>>({
             {L"Font.ttf", find_glyph_range_intersection(ConstGetGlyphRangesLatin(), ConstGetGWGlyphRange())},
             {L"Font_Japanese.ttf", find_glyph_range_intersection(ConstGetGlyphRangesJapanese(), ConstGetGWGlyphRange())},
             {L"Font_Cyrillic.ttf", find_glyph_range_intersection(ConstGetGlyphRangesCyrillic(), ConstGetGWGlyphRange())},
             {L"Font_ChineseTraditional.ttf", find_glyph_range_intersection(ConstGetGlyphRangesChinese(), ConstGetGWGlyphRange())},
             {L"Font_Korean.ttf", find_glyph_range_intersection(ConstGetGlyphRangesKorean(), ConstGetGWGlyphRange())}
-            });
+        });
 
         for (const auto& [font_name, glyph_range] : fonts_on_disk) {
             const auto path = Resources::GetPath(font_name);
@@ -304,7 +309,8 @@ namespace {
     }
 
 
-    ImFont* BuildFont(const float size, bool first_only = false) {
+    ImFont* BuildFont(const float size, bool first_only = false)
+    {
         const auto atlas = IM_NEW(ImFontAtlas);
 
         ImFontAtlasFlags flags = 0;
@@ -320,33 +326,40 @@ namespace {
         cfg.OversampleV = 1;
 
         cfg.MergeMode = false;
-        for (const auto& font : GetFontData()) {
-            void* data = font.data;
-            if (size > 20.f && fontawesome5_compressed_data == data)
-                continue; // Don't load FA over 20px
-            size_t data_size = font.data_size;
+        if (first_only) {
+            atlas->AddFontFromMemoryCompressedTTF(toolbox_default_font_compressed_data, toolbox_default_font_compressed_size, size, &cfg, toolbox_default_font_glyph_ranges);
+            if (size <= 20.f) {
+                cfg.MergeMode = true;
+                atlas->AddFontFromMemoryCompressedTTF(fontawesome5_compressed_data, fontawesome5_compressed_size, size, &cfg, fontawesome5_glyph_ranges.data());
+            }
+        }
+        else {
+            for (const auto& font : GetFontData()) {
+                void* data = font.data;
+                if (size > 20.f && fontawesome5_compressed_data == data)
+                    continue; // Don't load FA over 20px
+                size_t data_size = font.data_size;
 
-            if (!font.font_name.empty()) {
-                const auto path = Resources::GetPath(font.font_name);
-                data = ImFileLoadToMemory(path.string().c_str(), "rb", &data_size, 0);
-            }
+                if (!font.font_name.empty()) {
+                    const auto path = Resources::GetPath(font.font_name);
+                    data = ImFileLoadToMemory(path.string().c_str(), "rb", &data_size, 0);
+                }
 
-            if (font.compressed) {
-                atlas->AddFontFromMemoryCompressedTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
+                if (font.compressed) {
+                    atlas->AddFontFromMemoryCompressedTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
+                }
+                else {
+                    atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
+                }
+                cfg.MergeMode = true; // for all but the first
             }
-            else {
-                atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
-            }
-            if (first_only)
-                break;
-            cfg.MergeMode = true; // for all but the first
         }
         atlas->Build();
         unsigned char* unused = nullptr;
         // Preload the data for this font
-        atlas->GetTexDataAsRGBA32(&unused, nullptr,nullptr,nullptr);
+        atlas->GetTexDataAsRGBA32(&unused, nullptr, nullptr, nullptr);
         return atlas->Fonts.back();
-        };
+    }
 
     // Do dont loading into memory; run on a separate thread.
     void LoadFontsThread()
@@ -369,8 +382,13 @@ namespace {
             ImFont** dst_font;
             FontLoader::FontSize font_size;
             ImFont* src_font = nullptr;
-            FontPending(ImFont** dst_font, FontLoader::FontSize font_size) : dst_font(dst_font), font_size(font_size) {};
-            void build(bool first_font_only = false) {
+
+            FontPending(ImFont** dst_font, FontLoader::FontSize font_size)
+                : dst_font(dst_font),
+                  font_size(font_size) {}
+
+            void build(bool first_font_only = false)
+            {
                 src_font = BuildFont(static_cast<float>(font_size), first_font_only);
             }
         };
@@ -379,9 +397,9 @@ namespace {
             {&font_header2, FontLoader::FontSize::header2},
             {&font_header1, FontLoader::FontSize::header1},
             {&font_widget_label, FontLoader::FontSize::widget_label},
-            { &font_widget_small, FontLoader::FontSize::widget_small },
-            { &font_widget_large, FontLoader::FontSize::widget_large },
-            { &font_text, FontLoader::FontSize::text }
+            {&font_widget_small, FontLoader::FontSize::widget_small},
+            {&font_widget_large, FontLoader::FontSize::widget_large},
+            {&font_text, FontLoader::FontSize::text}
         });
 
         // First pass; only build the first font.
@@ -400,7 +418,7 @@ namespace {
             printf("Fonts loaded\n");
             fonts_loaded = true;
             fonts_loading = false;
-            });
+        });
 
         // First pass; build full glyph ranges
         auto second_pass = new std::vector<FontPending>(*first_pass);
@@ -416,12 +434,11 @@ namespace {
             delete second_pass;
             ImGui::GetIO().Fonts = font_text->ContainerAtlas;
             ImGui_ImplDX9_InvalidateDeviceObjects();
-            });
+        });
     }
 }
 
 namespace FontLoader {
-
     bool ReleaseFontTextures()
     {
         if (!GImGui)
@@ -461,7 +478,7 @@ namespace FontLoader {
         return fonts_loaded;
     }
 
-    // Loads fonts asynchronously. CJK font files can by over 20mb in size!
+    // Loads fonts asynchronously. CJK font files can be over 20mb in size!
     void LoadFonts([[maybe_unused]] const bool force) // todo: reload fonts when this is true
     {
         if (fonts_loading) {
@@ -478,8 +495,8 @@ namespace FontLoader {
         Resources::EnqueueWorkerTask(LoadFontsThread);
     }
 
-    void Terminate() {
-
+    void Terminate()
+    {
         ImFont** fonts[] = {
             &font_widget_large,
             &font_widget_small,

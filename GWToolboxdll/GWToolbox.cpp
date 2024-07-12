@@ -202,10 +202,8 @@ namespace {
             Resources::GetPath(L"Font.ttf"),
             "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/Font.ttf",
             [](const bool success, const std::wstring& error) {
-                if (success) {
-                    FontLoader::LoadFonts();
-                }
-                else {
+                FontLoader::LoadFonts();
+                if (!success) {
                     Log::ErrorW(L"Cannot download font, please download it manually!\n%s", error.c_str());
                     GWToolbox::SignalTerminate();
                 }
