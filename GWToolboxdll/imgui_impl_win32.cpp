@@ -210,12 +210,12 @@ static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc)
     return true;
 }
 
-bool ImGui_ImplWin32_Init(void* hwnd)
+IMGUI_IMPL_API bool     ImGui_ImplWin32_Init(void* hwnd)
 {
     return ImGui_ImplWin32_InitEx(hwnd, false);
 }
 
-bool ImGui_ImplWin32_InitForOpenGL(void* hwnd)
+IMGUI_IMPL_API bool     ImGui_ImplWin32_InitForOpenGL(void* hwnd)
 {
     // OpenGL needs CS_OWNDC
     return ImGui_ImplWin32_InitEx(hwnd, true);
@@ -1056,8 +1056,8 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
     viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = viewport->PlatformHandleRaw = vd->Hwnd;
 
-    // Enable per-pixel alpha blending
-    SetLayeredWindowAttributes(vd->Hwnd, 0, 255, LWA_ALPHA);
+    // Set the window to be fully transparent
+    ::SetLayeredWindowAttributes(vd->Hwnd, RGB(0, 0, 0), 0, LWA_COLORKEY);
 
     // Secondary viewports store their imgui context
     ::SetPropA(vd->Hwnd, "IMGUI_CONTEXT", ImGui::GetCurrentContext());
@@ -1145,45 +1145,9 @@ static void ImGui_ImplWin32_UpdateWindow(ImGuiViewport* viewport)
         ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle); // Client to Screen
         ::SetWindowPos(vd->Hwnd, insert_after, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, swp_flag | SWP_NOACTIVATE | SWP_FRAMECHANGED);
         ::ShowWindow(vd->Hwnd, SW_SHOWNA); // This is necessary when we alter the style
-        ::SetLayeredWindowAttributes(vd->Hwnd, 0, 255, LWA_ALPHA);
+        ::SetLayeredWindowAttributes(vd->Hwnd, RGB(0, 0, 0), 0, LWA_COLORKEY);
         viewport->PlatformRequestMove = viewport->PlatformRequestResize = true;
     }
-}
-
-// Add this new function to handle per-pixel alpha blending
-static void ImGui_ImplWin32_SetWindowComposition(ImGuiViewport* viewport)
-{
-    ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
-    IM_ASSERT(vd->Hwnd != 0);
-
-    HMODULE user32 = GetModuleHandleA("user32.dll");
-    if (user32)
-    {
-        using PFN_SetWindowCompositionAttribute = BOOL(WINAPI*)(HWND, void*);
-        PFN_SetWindowCompositionAttribute SetWindowCompositionAttribute = reinterpret_cast<PFN_SetWindowCompositionAttribute>(GetProcAddress(user32, "SetWindowCompositionAttribute"));
-        if (SetWindowCompositionAttribute)
-        {
-            struct ACCENTPOLICY
-            {
-                int nAccentState;
-                int nFlags;
-                int nColor;
-                int nAnimationId;
-            };
-            struct WINCOMPATTRDATA
-            {
-                int nAttribute;
-                PVOID pData;
-                ULONG ulDataSize;
-            };
-            ACCENTPOLICY policy = { 4, 0, 0, 0 }; // ACCENT_ENABLE_TRANSPARENTGRADIENT
-            WINCOMPATTRDATA data = { 19, &policy, sizeof(ACCENTPOLICY) };
-            SetWindowCompositionAttribute(vd->Hwnd, &data);
-        }
-    }
-
-    // Set the window to be fully transparent
-    SetLayeredWindowAttributes(vd->Hwnd, 0, 0, LWA_COLORKEY);
 }
 
 static ImVec2 ImGui_ImplWin32_GetWindowPos(ImGuiViewport* viewport)
@@ -1389,13 +1353,6 @@ static void ImGui_ImplWin32_InitPlatformInterface(bool platform_has_own_dc)
     vd->HwndOwned = false;
     main_viewport->PlatformUserData = vd;
     main_viewport->PlatformHandle = (void*)bd->hWnd;
-
-    // Set up per-pixel alpha blending for all viewports
-    ImGui_ImplWin32_SetWindowComposition(main_viewport);
-    platform_io.Platform_CreateWindow = [](ImGuiViewport* viewport) {
-        ImGui_ImplWin32_CreateWindow(viewport);
-        ImGui_ImplWin32_SetWindowComposition(viewport);
-    };
 }
 
 static void ImGui_ImplWin32_ShutdownPlatformInterface()
