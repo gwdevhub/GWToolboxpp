@@ -1179,7 +1179,7 @@ const wchar_t* Resources::GetRegionName(const GW::Constants::MapID map_id)
 GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id, GW::Constants::Language language)
 {
     if (language == (GW::Constants::Language)0xff)
-        language = static_cast<GW::Constants::Language>(GW::UI::GetPreference(GW::UI::NumberPreference::TextLanguage));
+        language = GW::UI::GetTextLanguage();
     const auto by_language = encoded_string_ids.find(language);
     if (by_language != encoded_string_ids.end()) {
         const auto found = by_language->second.find(enc_str_id);

@@ -7,6 +7,7 @@
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Utilities/Hook.h>
 
@@ -915,6 +916,13 @@ namespace {
 
     QuestLogNames quest_log_names;
 
+    void ClearQuestLogInfo() {
+        for (auto ptr : quest_log_names) {
+            delete ptr.second;
+        }
+        quest_log_names.clear();
+    }
+
     QuestLogNames* GetQuestLogInfo()
     {
         const auto w = GW::GetWorldContext();
@@ -925,6 +933,7 @@ namespace {
                 const auto enc_string = new GuiUtils::EncString();
                 enc_string
                     ->reset(entry.name)
+                    ->language(GW::Constants::Language::English)
                     ->wstring();
                 quest_log_names[entry.quest_id] = enc_string;
             }
@@ -949,7 +958,7 @@ namespace {
                || wcseq(quest.location, GW::EncStrings::WantedByTheShiningBlade);
     }
 
-    GW::Quest* GetQuestByName(const char* quest_name)
+    GW::Quest* GetQuestByName(const char* quest_name_english)
     {
         const auto w = GW::GetWorldContext();
         if (!w) return nullptr;
@@ -959,15 +968,15 @@ namespace {
         for (auto& entry : w->quest_log) {
             if (!IsDailyQuest(entry))
                 continue;
-            if (entry.name && decoded_quest_names->at(entry.quest_id)->string() == quest_name)
+            if (entry.name && decoded_quest_names->at(entry.quest_id)->string() == quest_name_english)
                 return &entry;
         }
         return nullptr;
     }
 
-    const bool HasDailyQuest(const char* quest_name)
+    const bool HasDailyQuest(const char* quest_name_english)
     {
-        return GetQuestByName(quest_name) != nullptr;
+        return GetQuestByName(quest_name_english) != nullptr;
     }
 
     const char* you_have_this_quest = "You have this quest in your log";
@@ -1039,6 +1048,21 @@ namespace {
         }
         return true;
     }
+
+    void OnLanguageChanged(GW::Constants::Language) {
+        
+    }
+
+    GW::HookEntry OnUIMessage_HookEntry;
+    void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
+        switch (message_id) {
+        case GW::UI::UIMessage::kPreferenceValueChanged:
+            const auto packet = (GW::UI::UIPacket::kPreferenceValueChanged*)wparam;
+            if (packet->preference_id == GW::UI::NumberPreference::TextLanguage)
+                OnLanguageChanged((GW::Constants::Language)packet->new_value);
+        }
+    }
+
 }
 
 const MapID ZaishenQuestData::GetQuestGiverOutpost()
@@ -1499,6 +1523,8 @@ void DailyQuests::Initialize()
     for (const auto& it : chat_commands) {
         GW::Chat::CreateCommand(it.first, it.second);
     }
+
+    GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kPreferenceValueChanged, OnUIMessage, 0x8000);
 }
 
 void DailyQuests::Terminate()
@@ -1525,6 +1551,8 @@ void DailyQuests::Terminate()
     for (const auto& it : chat_commands) {
         GW::Chat::DeleteCommand(it.first);
     }
+    ClearQuestLogInfo();
+    GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }
 
 void DailyQuests::Update(const float)
@@ -1633,13 +1661,16 @@ void DailyQuests::QuestData::Terminate()
     name_english = nullptr;
 }
 
-void DailyQuests::QuestData::Decode()
+void DailyQuests::QuestData::Decode(bool force)
 {
-    if (name_translated && name_english)
+    if (name_translated && name_english && !force)
         return;
-    name_translated = new GuiUtils::EncString(nullptr, false);
-    name_english = new GuiUtils::EncString(nullptr, false);
+    if(!name_translated)
+        name_translated = new GuiUtils::EncString(nullptr, false);
+    if(!name_english)
+        name_english = new GuiUtils::EncString(nullptr, false);
     name_english->language(GW::Constants::Language::English);
+    name_translated->language(GW::UI::GetTextLanguage());
 
     if (enc_name.empty()) {
         const auto map_info = GW::Map::GetMapInfo(map_id);
@@ -1714,13 +1745,14 @@ size_t DailyQuests::NicholasCycleData::GetCollectedQuantity()
     return found->second;
 }
 
-void DailyQuests::NicholasCycleData::Decode()
+void DailyQuests::NicholasCycleData::Decode(bool force)
 {
-    if (name_translated)
+    if (name_translated && !force)
         return;
-    QuestData::Decode();
-    const auto with_qty = std::format(L"\xa35\x101{}\x10a{}\x1", (wchar_t)(quantity + 0x100), enc_name);
-    name_translated->reset(with_qty.c_str());
+    const auto old_enc_name = enc_name;
+    enc_name = std::format(L"\xa35\x101{}\x10a{}\x1", (wchar_t)(quantity + 0x100), old_enc_name);
+    QuestData::Decode(force);
+    enc_name = old_enc_name;
 }
 
 const MapID DailyQuests::QuestData::GetQuestGiverOutpost() { return MapID::None; }

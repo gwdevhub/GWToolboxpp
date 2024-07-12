@@ -39,8 +39,7 @@ public:
     protected:
         GuiUtils::EncString* name_english = nullptr;
         GuiUtils::EncString* name_translated = nullptr;
-        // Initialise encoded strings at runtime, allows us to code the daily quests arrays at compile time
-        virtual void Decode();
+
     public:
         const GW::Constants::MapID map_id;
         std::wstring enc_name;
@@ -57,18 +56,22 @@ public:
 
         void Travel();
 
+        // Initialise encoded strings at runtime, allows us to code the daily quests arrays at compile time
+        virtual void Decode(bool force = false);
+
         // Clear out any encoded strings to ensure any decoding errors are thrown within the lifecycle of the application
         void Terminate();
     };
 
     class NicholasCycleData : public QuestData {
-    protected:
-        void Decode() override;
     public:
         const uint32_t quantity;
         NicholasCycleData(const wchar_t* enc_name, uint32_t quantity, GW::Constants::MapID map_id);
         size_t GetCollectedQuantity();
+        void Decode(bool force = false) override;
     };
+
+
 
     static QuestData* GetZaishenBounty(time_t unix = 0);
     static QuestData* GetZaishenVanquish(time_t unix = 0);
