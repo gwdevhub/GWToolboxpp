@@ -536,7 +536,7 @@ namespace {
         {MapID::Diviners_Ascent},
         {MapID::Dalada_Uplands},
         {MapID::Drazach_Thicket},
-        {MapID::Fahranur_The_First_City},
+        {MapID::Fahranur_The_First_City,GW::EncStrings::Quest::ZaishenVanquish_Fahranur_the_First_City },
         {MapID::Dragons_Gullet},
         {MapID::Ferndale},
         {MapID::Forum_Highlands},

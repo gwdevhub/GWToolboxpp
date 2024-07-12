@@ -263,6 +263,8 @@ namespace GW {
         static const wchar_t* PantheonBonusDescription = L"\x8103\xAf6";
 
         namespace Quest {
+            static const wchar_t* ZaishenVanquish_Fahranur_the_First_City = L"\x8102\x5817\xE668\x9A08\x716F";
+
             static const wchar_t* ZaishenQuest_GOLEM = L"\x8102\x56CD\xB82D\x940D\x5815";
 
             static const wchar_t* ZaishenBounty_Urgoz = L"\x8102\x5491\x88BD\x9648\x42B3";
