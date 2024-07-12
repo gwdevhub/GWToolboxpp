@@ -322,6 +322,8 @@ namespace {
         cfg.MergeMode = false;
         for (const auto& font : GetFontData()) {
             void* data = font.data;
+            if (size > 20.f && fontawesome5_compressed_data == data)
+                continue; // Don't load FA over 20px
             size_t data_size = font.data_size;
 
             if (!font.font_name.empty()) {
