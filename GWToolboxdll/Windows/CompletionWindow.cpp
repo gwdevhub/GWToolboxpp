@@ -568,16 +568,20 @@ namespace {
     }
 
     bool only_show_account_chars = true;
+
+    GW::Array<GW::LoginCharacter>* GetAccountChars() {
+        const auto p = GW::GetPreGameContext();
+        return p ? &p->chars : nullptr;
+    }
+
     // Check login screen; assign missing characters to email account
     void RefreshAccountCharacters()
     {
         const auto email = GetAccountEmail();
-        if (!email) {
-            return;
-        }
-        const auto p = GW::GetPreGameContext();
-        if (p) {
-            for (const auto& character : p->chars) {
+        if (!email) return;
+        const auto chars = GetAccountChars();
+        if (chars) {
+            for (const auto& character : *chars) {
                 const auto cc = CompletionWindow::Instance().GetCharacterCompletion(character.character_name, true);
                 cc->account = email;
             }
@@ -678,21 +682,20 @@ bool Mission::Draw(IDirect3DDevice9*)
             ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
         }
         clicked = ImGui::CompositeIconButton(Name(), (ImTextureID*)icons_out, icons_len, {s.x * 5.f, s.y}, 0, {s.x / 2.f, s.y},icon_uv_offset[0],icon_uv_offset[1]);
+        hovered = ImGui::IsItemHovered();
         if (!map_unlocked) {
             ImGui::PopStyleColor();
         }
     }
     else {
         clicked = ImGui::CompositeIconButton("", (ImTextureID*)icons_out, icons_len,  s, 0, s,icon_uv_offset[0],icon_uv_offset[1]);
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", Name());
-        }
+        hovered = ImGui::IsItemHovered();
     }
     if (clicked) {
         OnClick();
     }
     if (hovered) {
-        ImGui::SetTooltip("%s", Name());
+        OnHover();
     }
     ImGui::PopID();
     ImGui::PopStyleColor();
@@ -742,6 +745,21 @@ void Mission::OnClick()
     }
 }
 
+void Mission::OnHover()
+{
+    std::wstring message = name.wstring();
+    const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaComplete(outpost);
+    if (!chars_without_completed.empty()) {
+        message += L"\n\nPlayers who have not completed this area:";
+        for (auto player_name : chars_without_completed) {
+            message += L"\n ";
+            message += player_name;
+        }
+
+    }
+    ImGui::SetTooltip(GuiUtils::WStringToString(message).c_str());
+}
+
 void Mission::CheckProgress(const std::wstring& player_name)
 {
     is_completed = bonus = false;
@@ -787,6 +805,21 @@ bool OutpostUnlock::Draw(IDirect3DDevice9* device) {
     if (!Mission::Draw(device))
         return false;
     return true;
+}
+
+void OutpostUnlock::OnHover()
+{
+    std::wstring message = name.wstring();
+    const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaUnlocked(outpost);
+    if (!chars_without_completed.empty()) {
+        message += L"\n\nPlayers who have not unlocked this area:";
+        for (auto player_name : chars_without_completed) {
+            message += L"\n ";
+            message += player_name;
+        }
+
+    }
+    ImGui::SetTooltip(GuiUtils::WStringToString(message).c_str());
 }
 
 bool Mission::IsDaily()
@@ -942,6 +975,21 @@ void PvESkill::OnClick()
     GW::GameThread::Enqueue([url = wtf] {
         GuiUtils::OpenWiki(url);
     });
+}
+
+void PvESkill::OnHover()
+{
+    std::wstring message = name.wstring();
+    const auto chars_without_completed = CompletionWindow::GetCharactersWithoutSkillUnlocked(skill_id);
+    if (!chars_without_completed.empty()) {
+        message += L"\n\nPlayers without this skill unlocked:";
+        for (auto player_name : chars_without_completed) {
+            message += L"\n ";
+            message += player_name;
+        }
+
+    }
+    ImGui::SetTooltip(GuiUtils::WStringToString(message).c_str());
 }
 
 bool PvESkill::Draw(IDirect3DDevice9* device)
@@ -2787,6 +2835,74 @@ CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* cha
         FetchHom(&this_character_completion->hom_achievements);
     }
     return this_character_completion;
+}
+
+bool CompletionWindow::IsAreaComplete(const wchar_t* player_name, const GW::Constants::MapID map_id, bool include_hard_mode) {
+    const auto completion = GetCharacterCompletion(player_name, false);
+    const auto map = completion ? GW::Map::GetMapInfo(map_id) : nullptr;
+    if (!(map && completion)) return false;
+    if (map->type == GW::RegionType::ExplorableZone)
+        return ArrayBoolAt(completion->vanquishes, static_cast<uint32_t>(map_id));
+
+    if (!ArrayBoolAt(completion->mission, static_cast<uint32_t>(map_id)))
+        return false;
+    if (include_hard_mode && !ArrayBoolAt(completion->mission_hm, static_cast<uint32_t>(map_id)))
+        return false;
+    const bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
+    if (has_bonus) {
+        if (!ArrayBoolAt(completion->mission_bonus, static_cast<uint32_t>(map_id)))
+            return false;
+        if (include_hard_mode && !ArrayBoolAt(completion->mission_bonus_hm, static_cast<uint32_t>(map_id)))
+            return false;
+    }
+    return true;
+}
+
+bool CompletionWindow::IsAreaUnlocked(const wchar_t* player_name, const GW::Constants::MapID map_id) {
+    const auto completion = GetCharacterCompletion(player_name, false);
+    const auto map = completion ? GW::Map::GetMapInfo(map_id) : nullptr;
+    if (!(map && completion)) return false;
+    return ArrayBoolAt(completion->maps_unlocked, static_cast<uint32_t>(map_id));
+}
+bool CompletionWindow::IsSkillUnlocked(const wchar_t* player_name, const GW::Constants::SkillID skill_id) {
+    const auto completion = GetCharacterCompletion(player_name, false);
+    return completion && ArrayBoolAt(completion->skills, static_cast<uint32_t>(skill_id));
+}
+
+std::vector<const wchar_t*> CompletionWindow::GetCharactersWithoutAreaComplete(GW::Constants::MapID map_id, bool include_hard_mode)
+{
+    std::vector<const wchar_t*> out;
+    const auto characters = GW::AccountMgr::GetAvailableChars();
+    if (!characters) return out;
+    for (auto& character : *characters) {
+        if(!IsAreaComplete(character.player_name, map_id, include_hard_mode))
+            out.push_back(character.player_name);
+    }
+    return out;
+}
+
+std::vector<const wchar_t*> CompletionWindow::GetCharactersWithoutAreaUnlocked(GW::Constants::MapID map_id)
+{
+    std::vector<const wchar_t*> out;
+    const auto characters = GW::AccountMgr::GetAvailableChars();
+    if (!characters) return out;
+    for (auto& character : *characters) {
+        if (!IsAreaUnlocked(character.player_name, map_id))
+            out.push_back(character.player_name);
+    }
+    return out;
+}
+
+std::vector<const wchar_t*> CompletionWindow::GetCharactersWithoutSkillUnlocked(GW::Constants::SkillID skill_id)
+{
+    std::vector<const wchar_t*> out;
+    const auto characters = GW::AccountMgr::GetAvailableChars();
+    if (!characters) return out;
+    for (auto& character : *characters) {
+        if (!IsSkillUnlocked(character.player_name, skill_id))
+            out.push_back(character.player_name);
+    }
+    return out;
 }
 
 

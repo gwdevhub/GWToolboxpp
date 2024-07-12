@@ -35,6 +35,7 @@
 #include <ImGuiAddons.h>
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
+#include <Utils/ToolboxUtils.h>
 
 
 namespace {
@@ -43,41 +44,6 @@ namespace {
     bool rejoin_party_after_rerolling = true;
 
     bool check_available_chars = true;
-
-    // Can find out campaign etc from props array
-    struct AvailableCharacterInfo {
-        /* + h0000 */
-        uint32_t h0000[2];
-        /* + h0008 */
-        uint32_t uuid[4];
-        /* + h0018 */
-        wchar_t player_name[20];
-        /* + h0040 */
-        uint32_t props[17];
-
-        GW::Constants::MapID map_id() const
-        {
-            return static_cast<GW::Constants::MapID>((props[0] & 0xffff0000) >> 16);
-        }
-
-        uint32_t primary() const
-        {
-            return (props[2] & 0x00f00000) >> 20;
-        }
-
-        uint32_t campaign() const
-        {
-            return (props[7] & 0x000f0000) >> 16;
-        }
-
-        uint32_t level() const
-        {
-            return ((props[7] & 0x0ff00000) >> 20) - 64;
-        }
-    };
-
-    static_assert(sizeof(AvailableCharacterInfo) == 0x84);
-    GW::Array<AvailableCharacterInfo>* available_chars_ptr = nullptr;
 
     clock_t reroll_timeout = 0;
     uint32_t char_sort_order = std::numeric_limits<uint32_t>::max();
@@ -133,19 +99,6 @@ namespace {
         return c ? c->player_number : 0;
     }
 
-    const wchar_t* GetPlayerName()
-    {
-        const auto c = GW::GetCharContext();
-        return c ? c->player_name : nullptr;
-    }
-
-    const wchar_t* GetAccountEmail()
-    {
-        const auto c = GW::GetCharContext();
-        const auto email = c ? c->player_email : nullptr;
-        return email && *email ? email : nullptr;
-    }
-
     const wchar_t* GetNextPartyLeader()
     {
         const auto player_party = GetPlayerParty();
@@ -162,22 +115,6 @@ namespace {
                 continue;
             }
             return player->name;
-        }
-        return nullptr;
-    }
-
-    std::vector<std::wstring>* GetAvailableChars()
-    {
-        const wchar_t* email = GetAccountEmail();
-        return email ? account_characters[email] : nullptr;
-    }
-
-    AvailableCharacterInfo* GetAvailableCharacter(const wchar_t* name) {
-        if (!available_chars_ptr)
-            return nullptr;
-        for (auto& ac : *available_chars_ptr) {
-            if (wcscmp(ac.player_name, name) == 0)
-                return &ac;
         }
         return nullptr;
     }
@@ -353,20 +290,11 @@ namespace {
         failed_message = nullptr;
         char_sort_order = GetPreference(GW::UI::EnumPreference::CharSortOrder);
         SetPreference(GW::UI::EnumPreference::CharSortOrder, std::to_underlying(GW::Constants::Preference::CharSortOrder::Alphabetize));
-        if (!character_name) {
-            return false;
-        }
-        bool found = false;
-        if (available_chars_ptr && available_chars_ptr->valid()) {
-            for (size_t i = 0; !found && i < available_chars_ptr->size(); i++) {
-                found = wcscmp(available_chars_ptr->at(i).player_name, character_name) == 0;
-            }
-        }
-        if (!found) {
+        if (!GW::AccountMgr::GetAvailableCharacter(character_name)) {
             return false;
         }
         wcscpy(reroll_to_player_name, character_name);
-        const wchar_t* player_name = GetPlayerName();
+        const wchar_t* player_name = GW::AccountMgr::GetCurrentPlayerName();
         if (!player_name || wcscmp(player_name, character_name) == 0) {
             return false;
         }
@@ -414,7 +342,7 @@ namespace {
             Log::Error("Incorrect syntax: /reroll [profession|character_name]");
             return;
         }
-        auto available_characters = available_chars_ptr;
+        auto available_characters = GW::AccountMgr::GetAvailableChars();
         if (!available_characters || !available_characters->valid()) {
             Log::Error("Failed to get available characters");
             return;
@@ -504,7 +432,7 @@ void RerollWindow::Draw(IDirect3DDevice9*)
             reroll_stage = PromptPendingReply;
             return;
         }
-        const auto char_select_info = GetAvailableCharacter(reroll_to_player_name);
+        const auto char_select_info = GW::AccountMgr::GetAvailableCharacter(reroll_to_player_name);
         if (!char_select_info) {
             RerollFailed(L"Failed to find available character from char select list");
             return;
@@ -533,6 +461,7 @@ void RerollWindow::Draw(IDirect3DDevice9*)
         return ImGui::End();
     }
 
+    const auto available_chars_ptr = GW::AccountMgr::GetAvailableChars();
     if (!available_chars_ptr || !available_chars_ptr->valid()) {
         ImGui::TextDisabled("Go to character select screen to record available characters");
     }
@@ -553,7 +482,7 @@ void RerollWindow::Draw(IDirect3DDevice9*)
             if (i % 2 != 0) {
                 ImGui::SameLine();
             }
-            const auto is_current_char = wcscmp(character.player_name, GetPlayerName()) == 0;
+            const auto is_current_char = wcscmp(character.player_name, GW::AccountMgr::GetCurrentPlayerName()) == 0;
             if (is_current_char) {
                 ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.f));
@@ -596,10 +525,7 @@ void RerollWindow::Initialize()
         GW::Hook::EnableHooks(SetOnlineStatus_Func);
     }
 
-    const uintptr_t address = GW::Scanner::Find("\x8b\x35\x00\x00\x00\x00\x57\x69\xF8\x84\x00\x00\x00", "xx????xxxxxxx", 0x2);
-    if (address) {
-        available_chars_ptr = *(GW::Array<AvailableCharacterInfo>**)address;
-    }
+
     GW::Chat::CreateCommand(L"reroll", CmdReroll);
     GW::Chat::CreateCommand(L"rr", CmdReroll);
 
@@ -633,7 +559,7 @@ void RerollWindow::Update(float)
     GW::PreGameContext* pgc = GW::GetPreGameContext();
     switch (reroll_stage) {
         case PendingLogout: {
-            const auto char_select_info = GetAvailableCharacter(reroll_to_player_name);
+            const auto char_select_info = GW::AccountMgr::GetAvailableCharacter(reroll_to_player_name);
             if (!char_select_info) {
                 RerollFailed(L"Failed to find available character from char select list");
                 return;
@@ -703,7 +629,7 @@ void RerollWindow::Update(float)
             if (!GetIsMapReady() || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
                 return;
             }
-            const wchar_t* player_name = GetPlayerName();
+            const wchar_t* player_name = GW::AccountMgr::GetCurrentPlayerName();
             if (!player_name || wcscmp(player_name, reroll_to_player_name) != 0) {
                 RerollFailed(L"Wrong character was loaded");
                 return;

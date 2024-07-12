@@ -21,6 +21,7 @@
 #include <Utils/ToolboxUtils.h>
 #include <Timer.h>
 #include <Modules/InventoryManager.h>
+#include <Windows/CompletionWindow.h>
 
 
 using GW::Constants::MapID;
@@ -1184,8 +1185,17 @@ void DailyQuests::Draw(IDirect3DDevice9*)
             if (lmb_clicked) {
                 *subscribed = !*subscribed;
             }
-            if (incomplete_message && hovered) {
-                ImGui::SetTooltip(incomplete_message);
+            if (hovered) {
+                std::wstring message;
+                const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaComplete(info->map_id);
+                if (!chars_without_completed.empty()) {
+                    message += L"Players who have not completed this area:";
+                    for (auto player_name : chars_without_completed) {
+                        message += L"\n ";
+                        message += player_name;
+                    }
+                    ImGui::SetTooltip(GuiUtils::WStringToString(message).c_str());
+                }
             }
         };
 

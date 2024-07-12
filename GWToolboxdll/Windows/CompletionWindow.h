@@ -41,6 +41,7 @@ namespace Missions {
         virtual const char* Name();
         virtual bool Draw(IDirect3DDevice9*);
         virtual void OnClick();
+        virtual void OnHover();
         virtual bool IsDaily();  // True if this mission is ZM or ZB today
         virtual bool HasQuest(); // True if the ZM or ZB is in quest log
         virtual void CheckProgress(const std::wstring& player_name);
@@ -51,6 +52,7 @@ namespace Missions {
         OutpostUnlock(GW::Constants::MapID map_id) : Mission(map_id) {};
         void CheckProgress(const std::wstring& player_name) override;
         bool Draw(IDirect3DDevice9*) override;
+        void OnHover() override;
     };
 
     class PvESkill : public Mission {
@@ -67,6 +69,7 @@ namespace Missions {
 
         bool Draw(IDirect3DDevice9*) override;
         void OnClick() override;
+        void OnHover() override;
 
         void CheckProgress(const std::wstring& player_name) override;
     };
@@ -79,6 +82,7 @@ namespace Missions {
         size_t GetLoadedIcons(IDirect3DTexture9* icons_out[4]) override;
 
         void OnClick() override;
+        void OnHover() override { ImGui::SetTooltip(Name()); };
 
         void CheckProgress(const std::wstring& player_name) override;
         const char* Name() override;
@@ -95,6 +99,7 @@ namespace Missions {
         size_t GetLoadedIcons(IDirect3DTexture9* icons_out[4]) override;
 
         void OnClick() override;
+        void OnHover() override { ImGui::SetTooltip(Name()); };
         const char* Name() override;
     };
 
@@ -247,7 +252,20 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
     static void DrawHallOfMonuments(IDirect3DDevice9* device);
 
+    static bool IsAreaComplete(const wchar_t*, const GW::Constants::MapID map, bool include_hard_mode = true);
+    static bool IsAreaUnlocked(const wchar_t* player_name, const GW::Constants::MapID map_id);
+    static bool IsSkillUnlocked(const wchar_t* player_name, const GW::Constants::SkillID map_id);
+
     static CharacterCompletion* GetCharacterCompletion(const wchar_t* name, bool create_if_not_found = false);
+
+    // Get player names for the current account that don't have the area unlocked. Won't work very well unless completion module is active
+    static std::vector<const wchar_t*> GetCharactersWithoutAreaComplete(GW::Constants::MapID mission_map_id, bool include_hard_mode = true);
+
+    // Get player names for the current account that don't have the area unlocked. Won't work very well unless completion module is active
+    static std::vector<const wchar_t*> GetCharactersWithoutAreaUnlocked(GW::Constants::MapID map_id);
+
+    // Get player names for the current account that don't have the skill unlocked. Won't work very well unless completion module is active
+    static std::vector<const wchar_t*> GetCharactersWithoutSkillUnlocked(GW::Constants::SkillID skill_id);
 
     void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni* ini) override;

@@ -50,12 +50,54 @@ namespace GW {
         struct PacketBase;
     }
     typedef Array<PlayerPartyMember> PlayerPartyMemberArray;
+    struct AvailableCharacterInfo {
+        /* + h0000 */
+        uint32_t h0000[2];
+        /* + h0008 */
+        uint32_t uuid[4];
+        /* + h0018 */
+        wchar_t player_name[20];
+        /* + h0040 */
+        uint32_t props[17];
+
+        GW::Constants::MapID map_id() const
+        {
+            return static_cast<GW::Constants::MapID>((props[0] & 0xffff0000) >> 16);
+        }
+
+        uint32_t primary() const
+        {
+            return (props[2] & 0x00f00000) >> 20;
+        }
+
+        uint32_t campaign() const
+        {
+            return (props[7] & 0x000f0000) >> 16;
+        }
+
+        uint32_t level() const
+        {
+            return ((props[7] & 0x0ff00000) >> 20) - 64;
+        }
+    };
+    static_assert(sizeof(AvailableCharacterInfo) == 0x84);
 
 }
 namespace GW {
     namespace PartyMgr {
         GW::PlayerPartyMemberArray* GetPartyPlayers(uint32_t party_id = 0);
         size_t GetPlayerPartyIndex(uint32_t player_number, uint32_t party_id = 0);
+    }
+    namespace AccountMgr {
+        // Return pointer to array containing list of playable characters from character select screen.
+        GW::Array<AvailableCharacterInfo>* GetAvailableChars();
+
+        const wchar_t* GetCurrentPlayerName();
+
+        // Try not to be a dick with this info
+        const wchar_t* GetAccountEmail();
+
+        AvailableCharacterInfo* GetAvailableCharacter(const wchar_t* name);
     }
 }
 

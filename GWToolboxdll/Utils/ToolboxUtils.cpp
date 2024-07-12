@@ -26,8 +26,12 @@
 #include <Utils/GuiUtils.h>
 
 #include "ToolboxUtils.h"
+#include <GWCA/Utilities/Scanner.h>
 
 namespace {
+    
+    GW::Array<GW::AvailableCharacterInfo>* available_chars_ptr = nullptr;
+    
     bool IsInfused(const GW::Item* item)
     {
         return item && item->info_string && wcschr(item->info_string, 0xAC9);
@@ -48,6 +52,36 @@ namespace GW {
                     return i + 1;
             }
             return 0;
+        }
+    }
+    namespace AccountMgr {
+        GW::Array<AvailableCharacterInfo>* GetAvailableChars() {
+            if (available_chars_ptr)
+                return available_chars_ptr;
+            const uintptr_t address = GW::Scanner::Find("\x8b\x35\x00\x00\x00\x00\x57\x69\xF8\x84\x00\x00\x00", "xx????xxxxxxx", 0x2);
+            ASSERT(address);
+            available_chars_ptr = *(GW::Array<AvailableCharacterInfo>**)address;
+            return available_chars_ptr;
+        }
+        const wchar_t* GetCurrentPlayerName()
+        {
+            const auto c = GetCharContext();
+            return c ? c->player_name : nullptr;
+        }
+        const wchar_t* GetAccountEmail()
+        {
+            const auto c = GetCharContext();
+            return c ? c->player_email : nullptr;
+        }
+        AvailableCharacterInfo* GetAvailableCharacter(const wchar_t* name) {
+            const auto characters = name ? GetAvailableChars() : nullptr;
+            if (!characters)
+                return nullptr;
+            for (auto& ac : *characters) {
+                if (wcscmp(ac.player_name, name) == 0)
+                    return &ac;
+            }
+            return nullptr;
         }
     }
 }
