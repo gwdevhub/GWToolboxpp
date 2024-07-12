@@ -83,12 +83,21 @@ namespace {
         atlas->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);
 
         LPDIRECT3DTEXTURE9 new_texture = 0;
-        auto err = device->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &new_texture, nullptr);
+        auto err = D3DERR_INVALIDDEVICE;
+        for (size_t i = 0, err = D3DERR_INVALIDDEVICE; i < 3 && err != D3D_OK; i++) {
+            err = device->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &new_texture, nullptr);
+        }
         if (err != D3D_OK)
             return false;
         D3DLOCKED_RECT tex_locked_rect;
-        if (new_texture->LockRect(0, &tex_locked_rect, nullptr, 0) != D3D_OK)
+        for (size_t i = 0, err = D3DERR_INVALIDDEVICE; i < 3 && err != D3D_OK; i++) {
+            err = new_texture->LockRect(0, &tex_locked_rect, nullptr, 0);
+        }
+        if (err != D3D_OK) {
+            new_texture->Release();
             return false;
+        }
+
         for (int y = 0; y < height; y++)
             memcpy((unsigned char*)tex_locked_rect.pBits + (size_t)tex_locked_rect.Pitch * y, pixels + (size_t)width * bytes_per_pixel * y, (size_t)width * bytes_per_pixel);
         new_texture->UnlockRect(0);
