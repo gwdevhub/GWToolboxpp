@@ -56,6 +56,10 @@ namespace {
         OnPartyWindowHealthBars_UICallback_Ret(message, wParam, lParam);
         GW::Hook::LeaveHook();
     }
+    GW::HookEntry OnUIMessage_HookEntry;
+    void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
+        party_window_health_bars = nullptr;
+    }
 }
 
 std::unordered_map<uint32_t, SnapsToPartyWindow::PartyFramePosition> SnapsToPartyWindow::agent_health_bar_positions;
@@ -128,7 +132,7 @@ void SnapsToPartyWindow::Initialize()
 {
     ToolboxWidget::Initialize();
     is_movable = is_resizable = false;
-    // TODO: Attach hooks to trigger recalc of positions when party frame is updated
+    GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kPreferenceValueChanged, OnUIMessage, 0x8000);
 }
 
 void SnapsToPartyWindow::Terminate()
@@ -136,8 +140,9 @@ void SnapsToPartyWindow::Terminate()
     ToolboxWidget::Terminate();
     if (party_window_health_bars && party_window_health_bars->frame_callbacks[0] == OnPartyWindowHealthBars_UICallback) {
         party_window_health_bars->frame_callbacks[0] = OnPartyWindowHealthBars_UICallback_Ret;
+        party_window_health_bars = nullptr;
     }
-    // TODO: Detach hooks to trigger recalc of positions when party frame is updated
+    // NB: Don't remove the ui callback! Other modules that extend this class will use it. Toolbox will remove all hooks at the end
 }
 
 ImGuiWindowFlags SnapsToPartyWindow::GetWinFlags(ImGuiWindowFlags flags, const bool noinput_if_frozen) const
