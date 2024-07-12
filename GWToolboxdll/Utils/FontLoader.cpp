@@ -394,19 +394,23 @@ namespace {
         for (auto& pending : *first_pass) {
             pending.build(true);
         }
-        Resources::EnqueueDxTask([first_pass](IDirect3DDevice9*) {
-            for (auto& pending : *first_pass) {
+        Resources::EnqueueDxTask([fonts_built = first_pass](IDirect3DDevice9*) {
+            ImGui_ImplDX9_InvalidateDeviceObjects();
+            for (auto& pending : *fonts_built) {
                 ReleaseFont(*pending.dst_font);
+            }
+            IM_DELETE(ImGui::GetIO().Fonts);
+            for (auto& pending : *fonts_built) {
                 *pending.dst_font = pending.src_font;
             }
-            delete first_pass;
-            ImGui::GetIO().Fonts = font_text->ContainerAtlas;
-            ImGui_ImplDX9_InvalidateDeviceObjects();
-
+            ImGui::GetIO().Fonts = (*fonts_built->at(0).dst_font)->ContainerAtlas;
+            delete fonts_built;
+        });
+        Resources::EnqueueDxTask([fonts_built = first_pass](IDirect3DDevice9*) {
             printf("Fonts loaded\n");
             fonts_loaded = true;
             fonts_loading = false;
-        });
+            });
 
         // First pass; build full glyph ranges
         auto second_pass = new std::vector<FontPending>(*first_pass);
@@ -414,14 +418,18 @@ namespace {
             pending.build();
         }
 
-        Resources::EnqueueDxTask([second_pass](IDirect3DDevice9*) {
-            for (auto& pending : *second_pass) {
+        Resources::EnqueueDxTask([fonts_built = second_pass](IDirect3DDevice9*) {
+            ImGui_ImplDX9_InvalidateDeviceObjects();
+            for (auto& pending : *fonts_built) {
                 ReleaseFont(*pending.dst_font);
+            }
+            IM_DELETE(ImGui::GetIO().Fonts);
+            for (auto& pending : *fonts_built) {
                 *pending.dst_font = pending.src_font;
             }
-            delete second_pass;
-            ImGui::GetIO().Fonts = font_text->ContainerAtlas;
-            ImGui_ImplDX9_InvalidateDeviceObjects();
+            ImGui::GetIO().Fonts = (*fonts_built->at(0).dst_font)->ContainerAtlas;
+            delete fonts_built;
+
         });
     }
 }
