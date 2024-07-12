@@ -84,13 +84,14 @@ namespace {
 
         LPDIRECT3DTEXTURE9 new_texture = 0;
         auto err = D3DERR_INVALIDDEVICE;
-        for (size_t i = 0, err = D3DERR_INVALIDDEVICE; i < 3 && err != D3D_OK; i++) {
+        for (size_t i = 0; i < 3 && err != D3D_OK; i++) {
             err = device->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &new_texture, nullptr);
         }
         if (err != D3D_OK)
             return false;
-        D3DLOCKED_RECT tex_locked_rect;
-        for (size_t i = 0, err = D3DERR_INVALIDDEVICE; i < 3 && err != D3D_OK; i++) {
+        D3DLOCKED_RECT tex_locked_rect = { 0 };
+        err = D3DERR_INVALIDDEVICE;
+        for (size_t i = 0; i < 3 && err != D3D_OK; i++) {
             err = new_texture->LockRect(0, &tex_locked_rect, nullptr, 0);
         }
         if (err != D3D_OK) {
