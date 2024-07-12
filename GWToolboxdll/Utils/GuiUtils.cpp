@@ -806,8 +806,11 @@ namespace GuiUtils {
         if (language_id == l) {
             return this;
         }
+        ASSERT(!decoding);
         language_id = l;
-        reset(encoded_ws.c_str());
+        decoded_ws.clear();
+        decoded_s.clear();
+        decoding = decoded = false;
         return this;
     }
 
@@ -816,6 +819,7 @@ namespace GuiUtils {
         if (_enc_string && wcscmp(_enc_string, encoded_ws.c_str()) == 0) {
             return this;
         }
+        ASSERT(!decoding);
         encoded_ws.clear();
         decoded_ws.clear();
         decoded_s.clear();
