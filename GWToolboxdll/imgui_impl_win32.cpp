@@ -1044,6 +1044,8 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
     // Select style and parent window
     ImGui_ImplWin32_GetWin32StyleFromViewportFlags(viewport->Flags, &vd->DwStyle, &vd->DwExStyle);
     vd->HwndParent = ImGui_ImplWin32_GetHwndFromViewportID(viewport->ParentViewportId);
+    if (ImGui::GetMainViewport() != viewport)
+        vd->DwExStyle |= WS_EX_LAYERED;
 
     // Create window
     RECT rect = { (LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x), (LONG)(viewport->Pos.y + viewport->Size.y) };
@@ -1056,6 +1058,9 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
     viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = viewport->PlatformHandleRaw = vd->Hwnd;
     ImGui_ImplWin32_EnableAlphaCompositing(vd->Hwnd);
+
+    if (ImGui::GetMainViewport() != viewport)
+        ::SetLayeredWindowAttributes(vd->Hwnd, RGB(0, 0, 0), 0, LWA_COLORKEY);
 
     // Secondary viewports store their imgui context
     ::SetPropA(vd->Hwnd, "IMGUI_CONTEXT", ImGui::GetCurrentContext());
@@ -1125,6 +1130,8 @@ static void ImGui_ImplWin32_UpdateWindow(ImGuiViewport* viewport)
     DWORD new_style;
     DWORD new_ex_style;
     ImGui_ImplWin32_GetWin32StyleFromViewportFlags(viewport->Flags, &new_style, &new_ex_style);
+    if (ImGui::GetMainViewport() != viewport)
+        new_ex_style |= WS_EX_LAYERED;
 
     // Only reapply the flags that have been changed from our point of view (as other flags are being modified by Windows)
     if (vd->DwStyle != new_style || vd->DwExStyle != new_ex_style)
@@ -1144,6 +1151,8 @@ static void ImGui_ImplWin32_UpdateWindow(ImGuiViewport* viewport)
         ::SetWindowPos(vd->Hwnd, insert_after, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, swp_flag | SWP_NOACTIVATE | SWP_FRAMECHANGED);
         ::ShowWindow(vd->Hwnd, SW_SHOWNA); // This is necessary when we alter the style
         viewport->PlatformRequestMove = viewport->PlatformRequestResize = true;
+        if (ImGui::GetMainViewport() != viewport)
+            ::SetLayeredWindowAttributes(vd->Hwnd, RGB(0, 0, 0), 0, LWA_COLORKEY);
     }
 }
 
