@@ -1185,7 +1185,7 @@ void DailyQuests::Draw(IDirect3DDevice9*)
             if (lmb_clicked) {
                 *subscribed = !*subscribed;
             }
-            if (hovered) {
+            if (hovered && check_completion) {
                 std::wstring message;
                 const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaComplete(info->map_id);
                 if (!chars_without_completed.empty()) {
