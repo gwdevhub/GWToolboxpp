@@ -36,12 +36,7 @@ namespace {
     struct FontData {
         std::vector<ImWchar> glyph_ranges;
         std::wstring font_name;
-        size_t data_size = 0;
-        void* data = nullptr;
-        bool compressed = false;
     };
-
-    std::vector<FontData> font_data;
 
     const std::vector<ImWchar> fontawesome5_glyph_ranges = {ICON_MIN_FA, ICON_MAX_FA, 0};
 
@@ -202,7 +197,7 @@ namespace {
         };
     }
 
-    constexpr std::vector<ImWchar> ConstGetGWGlyphRange()
+    constexpr std::vector<ImWchar> ConstGetGlyphRangesGW()
     {
         return {
             0x20, 0x7f,
@@ -286,25 +281,26 @@ namespace {
 
     std::vector<FontData>& GetFontData()
     {
+        static std::vector<FontData> font_data;
         if (!font_data.empty())
             return font_data;
 
         const auto fonts_on_disk = std::to_array<std::pair<std::wstring_view, std::vector<ImWchar>>>({
-            {L"Font.ttf", find_glyph_range_intersection(ConstGetGlyphRangesLatin(), ConstGetGWGlyphRange())},
-            {L"Font_Japanese.ttf", find_glyph_range_intersection(ConstGetGlyphRangesJapanese(), ConstGetGWGlyphRange())},
-            {L"Font_Cyrillic.ttf", find_glyph_range_intersection(ConstGetGlyphRangesCyrillic(), ConstGetGWGlyphRange())},
-            {L"Font_ChineseTraditional.ttf", find_glyph_range_intersection(ConstGetGlyphRangesChinese(), ConstGetGWGlyphRange())},
-            {L"Font_Korean.ttf", find_glyph_range_intersection(ConstGetGlyphRangesKorean(), ConstGetGWGlyphRange())}
+            {L"Font.ttf", ConstGetGlyphRangesLatin()},
+            {L"Font_Japanese.ttf", ConstGetGlyphRangesJapanese()},
+            {L"Font_Cyrillic.ttf", ConstGetGlyphRangesCyrillic()},
+            {L"Font_ChineseTraditional.ttf", ConstGetGlyphRangesChinese()},
+            {L"Font_Korean.ttf", ConstGetGlyphRangesKorean()}
         });
 
         for (const auto& [font_name, glyph_range] : fonts_on_disk) {
             const auto path = Resources::GetPath(font_name);
             if (!std::filesystem::exists(path))
                 continue;
-            font_data.emplace_back(glyph_range, path);
+            const auto font_glyphs = find_glyph_range_intersection(glyph_range, ConstGetGlyphRangesGW());
+            font_data.emplace_back(font_glyphs, path);
         }
 
-        font_data.emplace_back(fontawesome5_glyph_ranges, L"", fontawesome5_compressed_size, (void*)fontawesome5_compressed_data, true);
         return font_data;
     }
 
@@ -328,31 +324,23 @@ namespace {
         cfg.MergeMode = false;
         if (first_only) {
             atlas->AddFontFromMemoryCompressedTTF(toolbox_default_font_compressed_data, toolbox_default_font_compressed_size, size, &cfg, toolbox_default_font_glyph_ranges);
-            if (size <= 20.f) {
-                cfg.MergeMode = true;
-                atlas->AddFontFromMemoryCompressedTTF(fontawesome5_compressed_data, fontawesome5_compressed_size, size, &cfg, fontawesome5_glyph_ranges.data());
-            }
         }
         else {
             for (const auto& font : GetFontData()) {
-                void* data = font.data;
-                if (size > 20.f && fontawesome5_compressed_data == data)
-                    continue; // Don't load FA over 20px
-                size_t data_size = font.data_size;
+                void* data;
+                size_t data_size;
 
-                if (!font.font_name.empty()) {
-                    const auto path = Resources::GetPath(font.font_name);
-                    data = ImFileLoadToMemory(path.string().c_str(), "rb", &data_size, 0);
-                }
+                ASSERT(!font.font_name.empty() && "Font name is empty, this shouldn't happen. Contact the developers.");
+                const auto path = Resources::GetPath(font.font_name);
+                data = ImFileLoadToMemory(path.string().c_str(), "rb", &data_size, 0);
 
-                if (font.compressed) {
-                    atlas->AddFontFromMemoryCompressedTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
-                }
-                else {
-                    atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
-                }
+                atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
                 cfg.MergeMode = true; // for all but the first
             }
+        }
+        if (size <= 20.f) {
+            cfg.MergeMode = true;
+            atlas->AddFontFromMemoryCompressedTTF(fontawesome5_compressed_data, fontawesome5_compressed_size, size, &cfg, fontawesome5_glyph_ranges.data());
         }
         atlas->Build();
         unsigned char* unused = nullptr;
