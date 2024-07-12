@@ -25,4 +25,6 @@ namespace FontLoader {
     bool FontsLoaded();
     void LoadFonts(bool force = false);
     DLLAPI ImFont* GetFont(FontSize size);
+
+    void Terminate();
 }

@@ -220,7 +220,7 @@ namespace {
             return true;
         }
         GW::Render::SetResetCallback(nullptr);
-        FontLoader::ReleaseFontTextures();
+        FontLoader::Terminate();
         ImGui_ImplDX9_Shutdown();
         ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();

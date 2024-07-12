@@ -478,6 +478,26 @@ namespace FontLoader {
         Resources::EnqueueWorkerTask(LoadFontsThread);
     }
 
+    void Terminate() {
+
+        ImFont** fonts[] = {
+            &font_widget_large,
+            &font_widget_small,
+            &font_widget_label,
+            &font_header1,
+            &font_header2,
+            &font_text
+        };
+
+
+        for (auto font : fonts) {
+            if (*font && (*font)->ContainerAtlas == ImGui::GetIO().Fonts)
+                continue;
+            ReleaseFont(*font);
+            *font = nullptr;
+        }
+    }
+
     ImFont* GetFont(const FontSize size)
     {
         ImFont* font = [](const FontSize size) -> ImFont* {
