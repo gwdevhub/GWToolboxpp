@@ -381,56 +381,50 @@ namespace {
             }
         };
 
-        auto first_pass = new std::vector<FontPending>({
+        static auto pending_fonts = std::vector<FontPending>({
+            {&font_text, FontLoader::FontSize::text},
             {&font_header2, FontLoader::FontSize::header2},
             {&font_header1, FontLoader::FontSize::header1},
             {&font_widget_label, FontLoader::FontSize::widget_label},
             {&font_widget_small, FontLoader::FontSize::widget_small},
-            {&font_widget_large, FontLoader::FontSize::widget_large},
-            {&font_text, FontLoader::FontSize::text}
+            {&font_widget_large, FontLoader::FontSize::widget_large}
         });
 
-        // First pass; only build the first font.
-        for (auto& pending : *first_pass) {
-            pending.build(true);
-        }
-        Resources::EnqueueDxTask([fonts_built = first_pass](IDirect3DDevice9*) {
-            ImGui_ImplDX9_InvalidateDeviceObjects();
-            for (auto& pending : *fonts_built) {
-                ReleaseFont(*pending.dst_font);
+        const auto build_pending_fonts = [&](const bool first_font_only = false) {
+            // First pass; only build the first font.
+            for (auto& pending : pending_fonts) {
+                pending.build(first_font_only);
             }
-            IM_DELETE(ImGui::GetIO().Fonts);
-            for (auto& pending : *fonts_built) {
-                *pending.dst_font = pending.src_font;
-            }
-            ImGui::GetIO().Fonts = font_text->ContainerAtlas;
-            delete fonts_built;
-        });
-        Resources::EnqueueDxTask([fonts_built = first_pass](IDirect3DDevice9*) {
-            printf("Fonts loaded\n");
+            Resources::EnqueueDxTask([=](IDirect3DDevice9*) {
+                ImGui_ImplDX9_InvalidateDeviceObjects();
+                for (auto& pending : pending_fonts) {
+                    ReleaseFont(*pending.dst_font);
+                }
+                IM_DELETE(ImGui::GetIO().Fonts);
+                for (auto& pending : pending_fonts) {
+                    *pending.dst_font = pending.src_font;
+                }
+                ImGui::GetIO().Fonts = font_text->ContainerAtlas;
+            });
+        };
+
+        build_pending_fonts(true);
+
+        Resources::EnqueueDxTask([](IDirect3DDevice9*) {
+            printf("Default font loaded\n");
             fonts_loaded = true;
             fonts_loading = false;
             });
 
-        // First pass; build full glyph ranges
-        auto second_pass = new std::vector<FontPending>(*first_pass);
-        for (auto& pending : *second_pass) {
-            pending.build();
-        }
+        // Second pass; build full glyph ranges
+        build_pending_fonts(false);
 
-        Resources::EnqueueDxTask([fonts_built = second_pass](IDirect3DDevice9*) {
-            ImGui_ImplDX9_InvalidateDeviceObjects();
-            for (auto& pending : *fonts_built) {
-                ReleaseFont(*pending.dst_font);
-            }
-            IM_DELETE(ImGui::GetIO().Fonts);
-            for (auto& pending : *fonts_built) {
-                *pending.dst_font = pending.src_font;
-            }
-            ImGui::GetIO().Fonts = font_text->ContainerAtlas;
-            delete fonts_built;
 
-        });
+        Resources::EnqueueDxTask([](IDirect3DDevice9*) {
+            printf("All fonts loaded\n");
+            fonts_loaded = true;
+            fonts_loading = false;
+            });
     }
 }
 
