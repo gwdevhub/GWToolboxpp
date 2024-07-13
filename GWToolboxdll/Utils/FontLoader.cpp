@@ -381,49 +381,50 @@ namespace {
             }
         };
 
-        static auto pending_fonts = std::vector<FontPending>({
-            {&font_text, FontLoader::FontSize::text},
+        auto assign_fonts = [](std::vector<FontPending>* fonts_built) {
+            ImGui_ImplDX9_InvalidateDeviceObjects();
+            for (auto& pending : *fonts_built) {
+                ReleaseFont(*pending.dst_font);
+            }
+            IM_DELETE(ImGui::GetIO().Fonts);
+            for (auto& pending : *fonts_built) {
+                *pending.dst_font = pending.src_font;
+            }
+            ImGui::GetIO().Fonts = font_text->ContainerAtlas;
+            delete fonts_built;
+        };
+
+        auto first_pass = new std::vector<FontPending>({
             {&font_header2, FontLoader::FontSize::header2},
             {&font_header1, FontLoader::FontSize::header1},
             {&font_widget_label, FontLoader::FontSize::widget_label},
             {&font_widget_small, FontLoader::FontSize::widget_small},
-            {&font_widget_large, FontLoader::FontSize::widget_large}
+            {&font_widget_large, FontLoader::FontSize::widget_large},
+            {&font_text, FontLoader::FontSize::text}
         });
 
-        const auto build_pending_fonts = [&](const bool first_font_only = false) {
-            // First pass; only build the first font.
-            for (auto& pending : pending_fonts) {
-                pending.build(first_font_only);
-            }
-            Resources::EnqueueDxTask([=](IDirect3DDevice9*) {
-                ImGui_ImplDX9_InvalidateDeviceObjects();
-                for (auto& pending : pending_fonts) {
-                    ReleaseFont(*pending.dst_font);
-                }
-                IM_DELETE(ImGui::GetIO().Fonts);
-                for (auto& pending : pending_fonts) {
-                    *pending.dst_font = pending.src_font;
-                }
-                ImGui::GetIO().Fonts = font_text->ContainerAtlas;
-            });
-        };
+        // First pass; only build the first font.
+        for (auto& pending : *first_pass) {
+            pending.build(true);
+        }
 
-        build_pending_fonts(true);
-
-        Resources::EnqueueDxTask([](IDirect3DDevice9*) {
-            printf("Default font loaded\n");
+        Resources::EnqueueDxTask([&](IDirect3DDevice9*) {
+            assign_fonts(first_pass);
+        });
+        Resources::EnqueueDxTask([fonts_built = first_pass](IDirect3DDevice9*) {
+            printf("Fonts loaded\n");
             fonts_loaded = true;
             fonts_loading = false;
             });
 
-        // Second pass; build full glyph ranges
-        build_pending_fonts(false);
+        // First pass; build full glyph ranges
+        auto second_pass = new std::vector<FontPending>(*first_pass);
+        for (auto& pending : *second_pass) {
+            pending.build();
+        }
 
-
-        Resources::EnqueueDxTask([](IDirect3DDevice9*) {
-            printf("All fonts loaded\n");
-            fonts_loaded = true;
-            fonts_loading = false;
+        Resources::EnqueueDxTask([&](IDirect3DDevice9*) {
+            assign_fonts(second_pass);
             });
     }
 }
