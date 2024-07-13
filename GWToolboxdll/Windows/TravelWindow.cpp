@@ -246,32 +246,30 @@ namespace {
         }
 
         // Remove "the " from front of entered string
+        const auto unstripped_compare = compare;
         const size_t found = compare.rfind("the ");
         if (found == 0) {
             compare.replace(found, 4, "");
         }
 
         // Helper function
-        auto FindMatchingMap = [](const char* compare, const char* const* map_names, const GW::Constants::MapID* map_ids, const size_t map_count) -> GW::Constants::MapID {
+        auto FindMatchingMap = [](std::string_view compare, const char* const* map_names, const GW::Constants::MapID* map_ids, const size_t map_count) -> GW::Constants::MapID {
+            if (compare.empty()) return GW::Constants::MapID::None;
             const char* bestMatchMapName = nullptr;
             auto bestMatchMapID = GW::Constants::MapID::None;
 
-            const auto searchStringLength = compare ? strlen(compare) : 0;
-            if (!searchStringLength) {
-                return bestMatchMapID;
-            }
             for (size_t i = 0; i < map_count; i++) {
-                const auto thisMapLength = strlen(map_names[i]);
-                if (searchStringLength > thisMapLength) {
+                const std::string_view map_name = map_names[i];
+                if (compare.length() > map_name.length()) {
                     continue; // String entered by user is longer than this outpost name.
                 }
-                if (strncmp(map_names[i], compare, searchStringLength) != 0) {
+                if (!map_name.contains(compare)) {
                     continue; // No match
                 }
-                if (thisMapLength == searchStringLength) {
+                if (compare.length() == map_name.length()) {
                     return map_ids[i]; // Exact match, break.
                 }
-                if (!bestMatchMapName || strcmp(map_names[i], bestMatchMapName) < 0) {
+                if (!bestMatchMapName || map_name.compare(bestMatchMapName) < 0) {
                     bestMatchMapID = map_ids[i];
                     bestMatchMapName = map_names[i];
                 }
@@ -279,29 +277,26 @@ namespace {
             return bestMatchMapID;
         };
         // Helper function
-        auto FindMatchingMapVec = [](const char* compare, std::vector<SearchableArea*>& maps) -> GW::Constants::MapID {
+        auto FindMatchingMapVec = [](std::string_view compare, std::vector<SearchableArea*>& maps) -> GW::Constants::MapID {
+            if (compare.empty()) return GW::Constants::MapID::None;
             const char* bestMatchMapName = nullptr;
             auto bestMatchMapID = GW::Constants::MapID::None;
 
-            const auto searchStringLength = compare ? strlen(compare) : 0;
-            if (!searchStringLength) {
-                return bestMatchMapID;
-            }
-            for (auto it : maps) {
+            for (const auto it : maps) {
                 auto& map = *it;
                 if (!map.Name())
                     continue;
-                const auto thisMapLength = strlen(map.Name());
-                if (searchStringLength > thisMapLength) {
+                const std::string_view map_name = map.Name();
+                if (compare.length() > map_name.length()) {
                     continue; // String entered by user is longer than this outpost name.
                 }
-                if (strncmp(map.Name(), compare, searchStringLength) != 0) {
+                if (!map_name.contains(compare)) {
                     continue; // No match
                 }
-                if (thisMapLength == searchStringLength) {
+                if (compare.length() == map_name.length()) {
                     return map.map_id; // Exact match, break.
                 }
-                if (!bestMatchMapName || strcmp(map.Name(), bestMatchMapName) < 0) {
+                if (!bestMatchMapName || map_name.compare(bestMatchMapName) < 0) {
                     bestMatchMapID = map.map_id;
                     bestMatchMapName = map.Name();
                 }
@@ -319,9 +314,9 @@ namespace {
             }
             if (best_match_map_id == GW::Constants::MapID::None && fetched_searchable_explorable_areas == FetchedMapNames::Ready) {
                 // find explorable area matching this, and then find nearest unlocked outpost.
-                best_match_map_id = FindMatchingMapVec(compare.c_str(), searchable_explorable_areas);
+                best_match_map_id = FindMatchingMapVec(unstripped_compare, searchable_explorable_areas);
                 if (best_match_map_id != GW::Constants::MapID::None) {
-                    best_match_map_id = Instance().GetNearestOutpost(best_match_map_id);
+                    best_match_map_id = TravelWindow::GetNearestOutpost(best_match_map_id);
                 }
             }
         }
