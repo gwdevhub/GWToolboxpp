@@ -1151,8 +1151,6 @@ static void ImGui_ImplWin32_UpdateWindow(ImGuiViewport* viewport)
         ::SetWindowPos(vd->Hwnd, insert_after, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, swp_flag | SWP_NOACTIVATE | SWP_FRAMECHANGED);
         ::ShowWindow(vd->Hwnd, SW_SHOWNA); // This is necessary when we alter the style
         viewport->PlatformRequestMove = viewport->PlatformRequestResize = true;
-        if (ImGui::GetMainViewport() != viewport)
-            ::SetLayeredWindowAttributes(vd->Hwnd, RGB(0, 0, 0), 0, LWA_COLORKEY);
     }
 }
 

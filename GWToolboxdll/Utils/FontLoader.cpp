@@ -403,7 +403,7 @@ namespace {
             for (auto& pending : *fonts_built) {
                 *pending.dst_font = pending.src_font;
             }
-            ImGui::GetIO().Fonts = (*fonts_built->at(0).dst_font)->ContainerAtlas;
+            ImGui::GetIO().Fonts = font_text->ContainerAtlas;
             delete fonts_built;
         });
         Resources::EnqueueDxTask([fonts_built = first_pass](IDirect3DDevice9*) {
@@ -427,7 +427,7 @@ namespace {
             for (auto& pending : *fonts_built) {
                 *pending.dst_font = pending.src_font;
             }
-            ImGui::GetIO().Fonts = (*fonts_built->at(0).dst_font)->ContainerAtlas;
+            ImGui::GetIO().Fonts = font_text->ContainerAtlas;
             delete fonts_built;
 
         });
