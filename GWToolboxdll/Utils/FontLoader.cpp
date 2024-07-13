@@ -390,17 +390,17 @@ namespace {
             for (auto& pending : *fonts_built) {
                 *pending.dst_font = pending.src_font;
             }
-            ImGui::GetIO().Fonts = font_text->ContainerAtlas;
+            ImGui::GetIO().Fonts = fonts_built->at(0).src_font->ContainerAtlas;
             delete fonts_built;
         };
 
         auto first_pass = new std::vector<FontPending>({
+            {&font_text, FontLoader::FontSize::text},
             {&font_header2, FontLoader::FontSize::header2},
             {&font_header1, FontLoader::FontSize::header1},
             {&font_widget_label, FontLoader::FontSize::widget_label},
             {&font_widget_small, FontLoader::FontSize::widget_small},
-            {&font_widget_large, FontLoader::FontSize::widget_large},
-            {&font_text, FontLoader::FontSize::text}
+            {&font_widget_large, FontLoader::FontSize::widget_large}
         });
 
         // First pass; only build the first font.
@@ -408,14 +408,12 @@ namespace {
             pending.build(true);
         }
 
-        Resources::EnqueueDxTask([&](IDirect3DDevice9*) {
-            assign_fonts(first_pass);
-        });
-        Resources::EnqueueDxTask([fonts_built = first_pass](IDirect3DDevice9*) {
+        Resources::EnqueueDxTask([assign_fonts, fonts = first_pass](IDirect3DDevice9*) {
+            assign_fonts(fonts);
             printf("Fonts loaded\n");
             fonts_loaded = true;
             fonts_loading = false;
-            });
+        });
 
         // First pass; build full glyph ranges
         auto second_pass = new std::vector<FontPending>(*first_pass);
@@ -423,8 +421,8 @@ namespace {
             pending.build();
         }
 
-        Resources::EnqueueDxTask([&](IDirect3DDevice9*) {
-            assign_fonts(second_pass);
+        Resources::EnqueueDxTask([assign_fonts, fonts = second_pass](IDirect3DDevice9*) {
+            assign_fonts(fonts);
             });
     }
 }
