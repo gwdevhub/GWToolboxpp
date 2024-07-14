@@ -28,6 +28,8 @@
 
 namespace {
 
+    bool search_in_english = true;
+
     std::string SanitiseForSearch(const std::wstring& in) {
         std::string sanitised = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(in)));
         // Remove "the " from front of entered string
@@ -52,7 +54,9 @@ namespace {
             }
             else {
                 enc_name = new GuiUtils::EncString(map_info->name_id);
-                enc_name->string();
+                if (search_in_english)
+                    enc_name->language(GW::Constants::Language::English);
+                enc_name->wstring();
             }
         }
         ~SearchableArea() {
@@ -90,7 +94,14 @@ namespace {
         Pending,
         Decoding,
         Ready
-    } fetched_searchable_explorable_areas = FetchedMapNames::Pending;
+    };
+    
+    FetchedMapNames fetched_searchable_explorable_areas = FetchedMapNames::Pending;
+
+    // List of explorables with decoded area names, used for searching via chat command
+    std::vector<SearchableArea*> searchable_outposts{};
+
+    FetchedMapNames fetched_searchable_outposts = FetchedMapNames::Pending;
 
     TravelWindow& Instance() {
         return TravelWindow::Instance();
@@ -117,6 +128,34 @@ namespace {
             && GW::Map::RegionFromDistrict(_district) == GW::Map::GetRegion()
             && GW::Map::LanguageFromDistrict(_district) == GW::Map::GetLanguage()
             && (!_district_number || _district_number == static_cast<uint32_t>(GW::Map::GetDistrict()));
+    }
+
+    bool IsPreSearing(GW::Constants::MapID map_id) {
+        const auto map_info = GW::Map::GetMapInfo(map_id);
+        return map_info && map_info->region == GW::Region::Region_Presearing;
+    }
+
+    bool IsValidOutpost(GW::Constants::MapID map_id) {
+        const auto map_info = GW::Map::GetMapInfo(map_id);
+        if (!map_info || !map_info->thumbnail_id || !map_info->name_id || !map_info->icon_start_x)
+            return false;
+        if ((map_info->flags & 0x5000000) == 0x5000000)
+            return false; // e.g. "wrong" augury rock is map 119, no NPCs
+        if ((map_info->flags & 0x80000000) == 0x80000000)
+            return false; // e.g. Debug map
+        switch (map_info->type) {
+        case GW::RegionType::City:
+        case GW::RegionType::CompetitiveMission:
+        case GW::RegionType::CooperativeMission:
+        case GW::RegionType::EliteMission:
+        case GW::RegionType::MissionOutpost:
+        case GW::RegionType::Outpost:
+            break;
+        default:
+            return false;
+        }
+        return true;
+
     }
 
 
@@ -218,16 +257,16 @@ namespace {
     // ==== Helpers ====
     GW::Constants::MapID IndexToOutpostID(const int index)
     {
-        if (static_cast<size_t>(index) < outpost_ids.size()) {
-            return outpost_ids[index];
+        if (static_cast<size_t>(index) < searchable_outposts.size()) {
+            return searchable_outposts[index]->map_id;
         }
         return GW::Constants::MapID::Great_Temple_of_Balthazar_outpost;
     }
 
     int OutpostIDToIndex(GW::Constants::MapID map_id)
     {
-        for (size_t i = 0, size = outpost_ids.size(); i < size; i++) {
-            if (outpost_ids[i] == map_id)
+        for (size_t i = 0, size = searchable_outposts.size(); i < size; i++) {
+            if (searchable_outposts[i]->map_id == map_id)
                 return i;
         }
         return -1;
@@ -318,9 +357,9 @@ namespace {
             best_match_map_id = FindMatchingMap(compare.c_str(), presearing_map_names.data(), presearing_map_ids.data(), presearing_map_ids.size());
         }
         else {
-            best_match_map_id = FindMatchingMap(compare.c_str(), searchable_map_names.data(), searchable_map_ids.data(), searchable_map_ids.size());
-            if (best_match_map_id == GW::Constants::MapID::None) {
-                best_match_map_id = FindMatchingMap(compare.c_str(), searchable_dungeon_names.data(), dungeon_map_ids.data(), dungeon_map_ids.size());
+            if (best_match_map_id == GW::Constants::MapID::None && fetched_searchable_outposts == FetchedMapNames::Ready) {
+                // find explorable area matching this, and then find nearest unlocked outpost.
+                best_match_map_id = FindMatchingMapVec(compare.c_str(), searchable_outposts);
             }
             if (best_match_map_id == GW::Constants::MapID::None && fetched_searchable_explorable_areas == FetchedMapNames::Ready) {
                 // find explorable area matching this, and then find nearest unlocked outpost.
@@ -492,16 +531,47 @@ namespace {
     }
 
     bool outpost_name_array_getter(void* /* _data */, int idx, const char** out_text) {
-        if (idx < 0 || static_cast<size_t>(idx) > outpost_ids.size()) {
+        if (idx < 0 || static_cast<size_t>(idx) > searchable_outposts.size()) {
             return false;
         }
 
-        *out_text = GetMapName(outpost_ids[idx]);
+        *out_text = GetMapName(searchable_outposts[idx]->map_id);
         return true;
     }
 
-    void OnDecodedSearchableMapName(const wchar_t*) {
+    void BuildSearchableAreas(std::vector<SearchableArea*>& vec, std::function<bool(GW::Constants::MapID, const GW::AreaInfo*)> cmp) {
+        for (auto& ptr : vec) {
+            delete ptr;
+        }
+        vec.clear();
+        std::unordered_map<uint32_t, bool> added_map_name_ids;
+        for (auto i = 1u; i < static_cast<uint32_t>(GW::Constants::MapID::Count); i++) {
+            const auto& map_id = static_cast<GW::Constants::MapID>(i);
+            const GW::AreaInfo* map = GW::Map::GetMapInfo(map_id);
+            if (!cmp(map_id, map))
+                continue;
+            vec.push_back(new SearchableArea(map_id));
+        }
+    }
 
+    bool CheckSearchableAreasDecoded(std::vector<SearchableArea*>& vec) {
+        std::unordered_map<std::string, SearchableArea*> searchable_area_indeces_by_name;
+        for (size_t i = 0, size = vec.size(); i < size; i++) {
+            const auto it = vec[i];
+            if (!it->Name())
+                return false;
+            // Now that this one has decoded, check that theres nothing already in the searchable areas that have the same name, e.g. festival outposts
+            if (searchable_area_indeces_by_name.find(it->Name()) != searchable_area_indeces_by_name.end()) {
+                vec.erase(vec.begin() + i);
+                delete it;
+                return CheckSearchableAreasDecoded(vec);
+            }
+            searchable_area_indeces_by_name[it->Name()] = it;
+        }
+        std::ranges::sort(vec, [](SearchableArea* lhs, SearchableArea* rhs) {
+            return strcmp(lhs->Name(), rhs->Name()) < 0;
+            });
+        return true;
     }
 }
 
@@ -580,7 +650,7 @@ void TravelWindow::Draw(IDirect3DDevice9*)
         else {
             ImGui::PushItemWidth(-1.0f);
             static int travelto_index = -1;
-            if (ImGui::MyCombo("travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, outpost_ids.size())) {
+            if (ImGui::MyCombo("travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, searchable_outposts.size())) {
                 const auto map_id = IndexToOutpostID(travelto_index);
                 Travel(map_id, district, district_number);
                 travelto_index = -1;
@@ -623,7 +693,7 @@ void TravelWindow::Draw(IDirect3DDevice9*)
                     ImGui::PushItemWidth(((btn_w + spacing) * btn_count) * -1);
                     // find the index that matches the map from the array of map ids
                     const auto combo_val = OutpostIDToIndex(map_id);
-                    ImGui::MyCombo("", "Select a favorite",(int*)&combo_val, outpost_name_array_getter, nullptr, outpost_ids.size());
+                    ImGui::MyCombo("", "Select a favorite",(int*)&combo_val, outpost_name_array_getter, nullptr, searchable_outposts.size());
                     favourites[i] = IndexToOutpostID(combo_val);
                     ImGui::PopItemWidth();
                     
@@ -674,19 +744,10 @@ void TravelWindow::Draw(IDirect3DDevice9*)
                 favourites.push_back(GW::Constants::MapID::None);
             }
         }
-        if (pending_map_travel.map_id != GW::Constants::MapID::None) {
-            const auto map_id_it = std::ranges::find(outpost_ids, pending_map_travel.map_id);
-            if (map_id_it != std::ranges::end(outpost_ids)) {
-                const auto map_idx = std::distance(outpost_ids.begin(), map_id_it);
-                const auto abort_str = std::format("Abort retrying travel to {}", GetMapName(outpost_ids[map_idx]));
-                if (ImGui::Button(abort_str.c_str())) {
-                    pending_map_travel.map_id = GW::Constants::MapID::None;
-                }
-            }
-            else {
-                if (ImGui::Button("Abort retrying travel")) {
-                    pending_map_travel.map_id = GW::Constants::MapID::None;
-                }
+        if (pending_map_travel.map_id != GW::Constants::MapID::None && IsValidOutpost(pending_map_travel.map_id)) {
+            const auto abort_str = std::format("Abort retrying travel to {}", GetMapName(pending_map_travel.map_id));
+            if (ImGui::Button(abort_str.c_str())) {
+                pending_map_travel.map_id = GW::Constants::MapID::None;
             }
         }
     }
@@ -698,28 +759,33 @@ void TravelWindow::Update(const float)
     if (scroll_to_outpost_id != GW::Constants::MapID::None) {
         ScrollToOutpost(scroll_to_outpost_id); // We're in the process of scrolling to an outpost
     }
+
     // Dynamically generate a list of all explorable areas that the game has rather than storing another massive const array.
     switch (fetched_searchable_explorable_areas) {
-    case FetchedMapNames::Pending:
-        for (auto i = 0u; i < static_cast<uint32_t>(GW::Constants::MapID::Count); i++) {
-            const GW::AreaInfo* map = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
-            if (!map || !map->name_id || !map->GetIsOnWorldMap() || map->type != GW::RegionType::ExplorableZone) {
-                continue;
-            }
-            searchable_explorable_areas.push_back(new SearchableArea(static_cast<GW::Constants::MapID>(i)));
-        }
+    case FetchedMapNames::Pending: {
+        BuildSearchableAreas(searchable_explorable_areas, [](GW::Constants::MapID, const GW::AreaInfo* map) {
+            return map && map->name_id && map->GetIsOnWorldMap() && map->type == GW::RegionType::ExplorableZone;
+            });
         fetched_searchable_explorable_areas = FetchedMapNames::Decoding;
-        break;
-    case FetchedMapNames::Decoding:
-        bool ok = true;
-        const size_t len = searchable_explorable_areas.size();
-        for (size_t i = 0; i < len && ok; i++) {
-            ok = searchable_explorable_areas[i]->Name() != nullptr;
-        }
-        if (ok) {
+    } break;
+    case FetchedMapNames::Decoding: {
+        if (CheckSearchableAreasDecoded(searchable_explorable_areas))
             fetched_searchable_explorable_areas = FetchedMapNames::Ready;
-        }
-        break;
+    } break;
+    }
+
+    // Dynamically generate a list of all outposts that the game has rather than storing another massive const array.
+    switch (fetched_searchable_outposts) {
+    case FetchedMapNames::Pending: {
+        BuildSearchableAreas(searchable_outposts, [](GW::Constants::MapID map_id, const GW::AreaInfo*) {
+            return IsValidOutpost(map_id) && !IsPreSearing(map_id);
+            });
+        fetched_searchable_outposts = FetchedMapNames::Decoding;
+    } break;
+    case FetchedMapNames::Decoding: {
+        if (CheckSearchableAreasDecoded(searchable_outposts))
+            fetched_searchable_outposts = FetchedMapNames::Ready;
+    } break;
     }
 }
 
@@ -747,29 +813,16 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
         this_pos = { static_cast<float>(this_map->icon_start_x), static_cast<float>(this_map->icon_start_y) };
     }
     for (size_t i = 0; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
-        const GW::AreaInfo* map_info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
-        if (!map_info || !map_info->thumbnail_id || !map_info->GetIsOnWorldMap()) {
+        const auto& map_id = static_cast<GW::Constants::MapID>(i);
+        if (!GW::Map::GetIsMapUnlocked(map_id))
             continue;
-        }
-        if (map_info->campaign != this_map->campaign || map_info->region == GW::Region_Presearing || !map_info->x) {
+        if (!IsValidOutpost(map_id))
             continue;
-        }
-        switch (map_info->type) {
-        case GW::RegionType::City:
-        case GW::RegionType::CompetitiveMission:
-        case GW::RegionType::CooperativeMission:
-        case GW::RegionType::EliteMission:
-        case GW::RegionType::MissionOutpost:
-        case GW::RegionType::Outpost:
-            break;
-        default:
+        const auto map_info = GW::Map::GetMapInfo(map_id);
+        if (map_info->campaign != this_map->campaign || map_info->region == GW::Region_Presearing)
             continue;
-        }
         //if ((map_info->flags & 0x5000000) != 0)
         //   continue; // e.g. "wrong" augury rock is map 119, no NPCs
-        if (!GW::Map::GetIsMapUnlocked(static_cast<GW::Constants::MapID>(i))) {
-            continue;
-        }
         const float dist = GetDistance(this_pos, get_pos(map_info));
         if (dist < nearest_distance) {
             nearest_distance = dist;
