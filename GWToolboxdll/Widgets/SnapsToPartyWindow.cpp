@@ -79,6 +79,8 @@ SnapsToPartyWindow::PartyFramePosition* SnapsToPartyWindow::GetAgentHealthBarPos
 
 bool SnapsToPartyWindow::FetchPartyInfo()
 {
+    party_indeces_by_agent_id.clear();
+    party_agent_ids_by_index.clear();
     const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
     if (!info) {
         return false;

@@ -326,6 +326,7 @@ void PartyDamage::Update(const float)
             entry.recent_damage = 0;
         }
     }
+    FetchPartyInfo();
 }
 
 void PartyDamage::Draw(IDirect3DDevice9* )
@@ -341,7 +342,7 @@ void PartyDamage::Draw(IDirect3DDevice9* )
     }
 
     // @Cleanup: Only call when the party window has been moved or updated
-    if (!(FetchPartyInfo() && RecalculatePartyPositions())) {
+    if (party_agent_ids_by_index.empty() || !RecalculatePartyPositions()) {
         return;
     }
     if (damage.size() < party_agent_ids_by_index.size()) {
