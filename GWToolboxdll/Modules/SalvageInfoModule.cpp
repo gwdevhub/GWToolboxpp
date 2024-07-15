@@ -186,9 +186,14 @@ namespace {
         if (!nicholas_info) return;
 
         const auto collection_time = DailyQuests::GetTimestampFromNicholasTheTraveller(nicholas_info);
-
+        const auto current_time = time(nullptr);
         NewLineIfNotEmpty(description);
-        description += std::format(L"{}\x10a\x108\x107Nicholas The Traveller collects {} of these in {}!\x1\x1", GW::EncStrings::ItemUnique, nicholas_info->quantity, PrintRelativeTime(collection_time));
+        if (abs(collection_time - current_time) < 86400) {
+            description += std::format(L"{}\x10a\x108\x107Nicholas The Traveller collects {} of these right now!\x1\x1", GW::EncStrings::ItemUnique, nicholas_info->quantity);
+        }
+        else {
+            description += std::format(L"{}\x10a\x108\x107Nicholas The Traveller collects {} of these in {}!\x1\x1", GW::EncStrings::ItemUnique, nicholas_info->quantity, PrintRelativeTime(collection_time));
+        }
     }
     std::wstring tmp_item_description;
     void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc) 
