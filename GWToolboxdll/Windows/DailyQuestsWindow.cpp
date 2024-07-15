@@ -1151,7 +1151,7 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     }
     ImGui::NewLine();
     ImGui::Separator();
-    ImGui::BeginChild("dailies_scroll", ImVec2(0, -1 * (20.0f * ImGui::GetIO().FontGlobalScale) - ImGui::GetStyle().ItemInnerSpacing.y));
+    ImGui::BeginChild("dailies_scroll", ImVec2(0, -1 * (40.0f * ImGui::GetIO().FontGlobalScale) - ImGui::GetStyle().ItemInnerSpacing.y));
     time_t unix = time(nullptr);
     uint32_t idx = 0;
 
@@ -1195,16 +1195,21 @@ void DailyQuests::Draw(IDirect3DDevice9*)
                 *subscribed = !*subscribed;
             }
             if (hovered && check_completion) {
-                std::wstring message;
-                const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaComplete(info->map_id);
-                if (!chars_without_completed.empty()) {
-                    message += L"Players who have not completed this area:";
-                    for (auto player_name : chars_without_completed) {
-                        message += L"\n ";
-                        message += player_name;
+                ImGui::SetTooltip([&]() {
+                    ImGui::TextUnformatted(info->GetQuestName());
+                    const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaComplete(info->map_id);
+                    if (!chars_without_completed.empty()) {
+                        ImGui::Separator();
+                        ImGui::TextUnformatted("Players who have not completed this area:");
+                        auto icon_size = ImGui::CalcTextSize(" ");
+                        icon_size.x = icon_size.y;
+                        for (auto char_completion : chars_without_completed) {
+                            ImGui::Image(*Resources::GetProfessionIcon(char_completion->profession), icon_size);
+                            ImGui::SameLine();
+                            ImGui::TextUnformatted(char_completion->name_str.c_str());
+                        }
                     }
-                    ImGui::SetTooltip(GuiUtils::WStringToString(message).c_str());
-                }
+                    });
             }
         };
 
@@ -1269,9 +1274,15 @@ void DailyQuests::Draw(IDirect3DDevice9*)
         unix += 86400;
     }
     ImGui::EndChild();
-    ImGui::TextDisabled("Click on a daily quest to get notified when its coming up. Subscribed quests are highlighted in ");
+    ImGui::TextDisabled("Click on a daily quest to get notified when its coming up.");
+
+    ImGui::TextDisabled("Subscribed quests are highlighted in ");
     ImGui::SameLine(0, 0);
-    ImGui::TextColored(subscribed_color, "blue");
+    ImGui::TextColored(subscribed_color, "this color");
+    ImGui::SameLine(0, 0);
+    ImGui::TextDisabled(". Areas that you haven't completed on this player are highlighted in ");
+    ImGui::SameLine(0, 0);
+    ImGui::TextColored(incomplete_color, "this color");
     ImGui::SameLine(0, 0);
     ImGui::TextDisabled(".");
 

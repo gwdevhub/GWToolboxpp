@@ -25,6 +25,14 @@ namespace ImGui {
     int element_spacing_col_idx = 0;
     float* element_spacing_indent = nullptr;
 
+    void SetTooltip(std::function<void()> tooltip_callback)
+    {
+        if (!BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_None))
+            return;
+        tooltip_callback();
+        EndTooltip();
+    }
+
     const float& FontScale()
     {
         return GetIO().FontGlobalScale;

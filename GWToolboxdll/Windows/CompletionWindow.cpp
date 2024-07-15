@@ -769,17 +769,21 @@ void Mission::OnClick()
 
 void Mission::OnHover()
 {
-    std::wstring message = name.wstring();
-    const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaComplete(outpost);
-    if (!chars_without_completed.empty()) {
-        message += L"\n\nPlayers who have not completed this area:";
-        for (auto player_name : chars_without_completed) {
-            message += L"\n ";
-            message += player_name;
+    ImGui::SetTooltip([&]() {
+        ImGui::TextUnformatted(name.string().c_str());
+        const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaComplete(outpost);
+        if (!chars_without_completed.empty()) {
+            ImGui::Separator();
+            ImGui::TextUnformatted("Players who have not completed this area:");
+            auto icon_size = ImGui::CalcTextSize(" ");
+            icon_size.x = icon_size.y;
+            for (auto char_completion : chars_without_completed) {
+                ImGui::Image(*Resources::GetProfessionIcon(char_completion->profession), icon_size);
+                ImGui::SameLine();
+                ImGui::TextUnformatted(char_completion->name_str.c_str());
+            }
         }
-
-    }
-    ImGui::SetTooltip(GuiUtils::WStringToString(message).c_str());
+        });
 }
 
 void Mission::CheckProgress(const std::wstring& player_name)
@@ -831,17 +835,21 @@ bool OutpostUnlock::Draw(IDirect3DDevice9* device) {
 
 void OutpostUnlock::OnHover()
 {
-    std::wstring message = name.wstring();
-    const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaUnlocked(outpost);
-    if (!chars_without_completed.empty()) {
-        message += L"\n\nPlayers who have not unlocked this area:";
-        for (auto player_name : chars_without_completed) {
-            message += L"\n ";
-            message += player_name;
+    ImGui::SetTooltip([&]() {
+        ImGui::TextUnformatted(name.string().c_str());
+        const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaUnlocked(outpost);
+        if (!chars_without_completed.empty()) {
+            ImGui::Separator();
+            ImGui::TextUnformatted("Players who have not unlocked this area:");
+            auto icon_size = ImGui::CalcTextSize(" ");
+            icon_size.x = icon_size.y;
+            for (auto char_completion : chars_without_completed) {
+                ImGui::Image(*Resources::GetProfessionIcon(char_completion->profession), icon_size);
+                ImGui::SameLine();
+                ImGui::TextUnformatted(char_completion->name_str.c_str());
+            }
         }
-
-    }
-    ImGui::SetTooltip(GuiUtils::WStringToString(message).c_str());
+        });
 }
 
 bool Mission::IsDaily()
@@ -1001,17 +1009,21 @@ void PvESkill::OnClick()
 
 void PvESkill::OnHover()
 {
-    std::wstring message = name.wstring();
-    const auto chars_without_completed = CompletionWindow::GetCharactersWithoutSkillUnlocked(skill_id);
-    if (!chars_without_completed.empty()) {
-        message += L"\n\nPlayers without this skill unlocked:";
-        for (auto player_name : chars_without_completed) {
-            message += L"\n ";
-            message += player_name;
+    ImGui::SetTooltip([&]() {
+        ImGui::TextUnformatted(name.string().c_str());
+        const auto chars_without_completed = CompletionWindow::GetCharactersWithoutSkillUnlocked(skill_id);
+        if (!chars_without_completed.empty()) {
+            ImGui::Separator();
+            ImGui::TextUnformatted("Players without this skill unlocked:");
+            auto icon_size = ImGui::CalcTextSize(" ");
+            icon_size.x = icon_size.y;
+            for (auto char_completion : chars_without_completed) {
+                ImGui::Image(*Resources::GetProfessionIcon(char_completion->profession), icon_size);
+                ImGui::SameLine();
+                ImGui::TextUnformatted(char_completion->name_str.c_str());
+            }
         }
-
-    }
-    ImGui::SetTooltip(GuiUtils::WStringToString(message).c_str());
+        });
 }
 
 bool PvESkill::Draw(IDirect3DDevice9* device)
@@ -2714,6 +2726,11 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
         ParseCompletionBuffer(type, name_ws.data(), completion_buf.data(), completion_buf.size());
     };
 
+    for (const auto& camp : character_completion) {
+        delete camp.second;
+    }
+    character_completion.clear();
+
     ToolboxIni::TNamesDepend entries;
     completion_ini->GetAllSections(entries);
     for (const ToolboxIni::Entry& entry : entries) {
@@ -2899,39 +2916,57 @@ bool CompletionWindow::IsSkillUnlocked(const wchar_t* player_name, const GW::Con
     return completion && ArrayBoolAt(completion->skills, static_cast<uint32_t>(skill_id));
 }
 
-std::vector<const wchar_t*> CompletionWindow::GetCharactersWithoutAreaComplete(GW::Constants::MapID map_id, bool include_hard_mode)
+std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaComplete(GW::Constants::MapID map_id, bool include_hard_mode)
 {
-    std::vector<const wchar_t*> out;
+    std::vector<CharacterCompletion*> out;
+    const auto email = GW::AccountMgr::GetAccountEmail();
     for (auto& it : character_completion) {
         if (it.second->is_pvp || it.second->is_pre_searing)
+            continue;
+        if (only_show_account_chars && it.second->account != email)
             continue;
         if(!IsAreaComplete(it.first.c_str(), map_id, include_hard_mode))
-            out.push_back(it.first.c_str());
+            out.push_back(it.second);
     }
+    std::ranges::sort(out, [](CharacterCompletion* a, CharacterCompletion* b) {
+        return a->name_str.compare(b->name_str) < 0;
+        });
     return out;
 }
 
-std::vector<const wchar_t*> CompletionWindow::GetCharactersWithoutAreaUnlocked(GW::Constants::MapID map_id)
+std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaUnlocked(GW::Constants::MapID map_id)
 {
-    std::vector<const wchar_t*> out;
+    std::vector<CharacterCompletion*> out;
+    const auto email = GW::AccountMgr::GetAccountEmail();
     for (auto& it : character_completion) {
         if (it.second->is_pvp || it.second->is_pre_searing)
+            continue;
+        if (only_show_account_chars && it.second->account != email)
             continue;
         if (!IsAreaUnlocked(it.first.c_str(), map_id))
-            out.push_back(it.first.c_str());
+            out.push_back(it.second);
     }
+    std::ranges::sort(out, [](CharacterCompletion* a, CharacterCompletion* b) {
+        return a->name_str.compare(b->name_str) < 0;
+        });
     return out;
 }
 
-std::vector<const wchar_t*> CompletionWindow::GetCharactersWithoutSkillUnlocked(GW::Constants::SkillID skill_id)
+std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutSkillUnlocked(GW::Constants::SkillID skill_id)
 {
-    std::vector<const wchar_t*> out;
+    std::vector<CharacterCompletion*> out;
+    const auto email = GW::AccountMgr::GetAccountEmail();
     for (auto& it : character_completion) {
         if (it.second->is_pvp || it.second->is_pre_searing)
             continue;
+        if (only_show_account_chars && it.second->account != email)
+            continue;
         if (!IsSkillUnlocked(it.first.c_str(), skill_id))
-            out.push_back(it.first.c_str());
+            out.push_back(it.second);
     }
+    std::ranges::sort(out, [](CharacterCompletion* a, CharacterCompletion* b) {
+        return a->name_str.compare(b->name_str) < 0;
+        });
     return out;
 }
 

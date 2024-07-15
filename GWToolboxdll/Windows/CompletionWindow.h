@@ -261,13 +261,13 @@ public:
     static CharacterCompletion* GetCharacterCompletion(const wchar_t* name, bool create_if_not_found = false);
 
     // Get player names for the current account that don't have the area unlocked. Won't work very well unless completion module is active
-    static std::vector<const wchar_t*> GetCharactersWithoutAreaComplete(GW::Constants::MapID mission_map_id, bool include_hard_mode = true);
+    static std::vector<CharacterCompletion*> GetCharactersWithoutAreaComplete(GW::Constants::MapID mission_map_id, bool include_hard_mode = true);
 
     // Get player names for the current account that don't have the area unlocked. Won't work very well unless completion module is active
-    static std::vector<const wchar_t*> GetCharactersWithoutAreaUnlocked(GW::Constants::MapID map_id);
+    static std::vector<CharacterCompletion*> GetCharactersWithoutAreaUnlocked(GW::Constants::MapID map_id);
 
     // Get player names for the current account that don't have the skill unlocked. Won't work very well unless completion module is active
-    static std::vector<const wchar_t*> GetCharactersWithoutSkillUnlocked(GW::Constants::SkillID skill_id);
+    static std::vector<CharacterCompletion*> GetCharactersWithoutSkillUnlocked(GW::Constants::SkillID skill_id);
 
     void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni* ini) override;
