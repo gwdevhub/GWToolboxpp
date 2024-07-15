@@ -767,7 +767,12 @@ namespace {
         [[maybe_unused]] const GW::Player* me_player = me ? GW::PlayerMgr::GetPlayerByID(me->player_number) : nullptr;
         [[maybe_unused]] const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
         [[maybe_unused]] const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
+        [[maybe_unused]] const auto ac = me_player ? GW::AccountMgr::GetAvailableCharacter(me_player->name) : nullptr;
 
+        [[maybe_unused]]  const auto campaign = ac ? ac->campaign() : 0;
+        [[maybe_unused]]  const auto level = ac ? ac->level() : 0;
+        [[maybe_unused]]  const auto primary = ac ? ac->primary() : 0;
+        [[maybe_unused]] const auto secondary = ac ? ac->secondary() : 0;
 #ifdef _DEBUG
         const auto frame = GW::UI::GetFrameByLabel(L"NPCInteract");
         if (frame && frame->IsVisible()) {

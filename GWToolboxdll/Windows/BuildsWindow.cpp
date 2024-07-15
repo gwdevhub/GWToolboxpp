@@ -226,6 +226,11 @@ void BuildsWindow::DrawBuildSection(TeamBuild& tbuild, const unsigned int j)
     if (ImGui::InputText("###code", build.code, 128)) {
         builds_changed = true;
     }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip([&]() {
+            GuiUtils::DrawSkillbar(build.code);
+            });
+    }
     ImGui::PopItemWidth();
     ImGui::SameLine(btn_offset);
     if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "View", ImVec2(btn_width, 0))) {

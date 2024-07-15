@@ -303,6 +303,11 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 builds_changed |= ImGui::InputText("###name", build.name, name_buffer_size);
                 ImGui::SameLine(offset += text_item_width + item_spacing);
                 builds_changed |= ImGui::InputText("###code", build.code, name_buffer_size);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip([&]() {
+                        GuiUtils::DrawSkillbar(build.code);
+                        });
+                }
                 ImGui::SameLine(offset += text_item_width + item_spacing);
                 if (j == 0) {
                     ImGui::TextDisabled("Player");

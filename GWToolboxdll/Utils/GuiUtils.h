@@ -167,4 +167,7 @@ namespace GuiUtils {
         EncString& operator=(const EncString& temp_obj) = delete;
         virtual ~EncString() = default;
     };
+
+    // Create an ImGui representation of the skill bar
+    void DrawSkillbar(const char* build_code);
 };

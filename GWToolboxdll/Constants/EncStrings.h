@@ -22,6 +22,19 @@ namespace GW {
         static const wchar_t* ZaishenCombat = L"\x8102\x545D\xBAED\xD4B5\x2C72";
         static const wchar_t* WantedByTheShiningBlade = L"\x8102\x63D6\xA268\xEDE8\x5D6D";
 
+        enum class Profession : uint32_t {
+            None, Warrior, Ranger, Monk, Necromancer, Mesmer,
+            Elementalist, Assassin, Ritualist, Paragon, Dervish
+        };
+
+        // Profession enc string id, keyed by profession id
+        constexpr uint32_t Profession[11] = {
+            0x7f8, 0x7f9, 0x7fa, 0x7fb, 0x7fc, 0x7fd, 0x7fe, 0x7ff, 0x800, 0x7b3c, 0x7b3d
+        };
+        constexpr uint32_t ProfessionAcronym[11] = {
+            0x801, 0x802, 0x803, 0x804, 0x805, 0x806, 0x807, 0x808, 0x809, 0x7b41, 0x7b42
+        };
+
         namespace MapRegion {
             static const wchar_t* BattleIsles = L"\xE63";
 
