@@ -213,6 +213,8 @@ namespace Missions {
 
 struct CharacterCompletion {
     GW::Constants::Profession profession = static_cast<GW::Constants::Profession>(0);
+    bool is_pvp = false;
+    bool is_pre_searing = false;
     std::wstring account;
     std::string name_str;
     std::vector<uint32_t> skills{};

@@ -579,11 +579,31 @@ namespace {
     {
         const auto email = GetAccountEmail();
         if (!email) return;
-        const auto chars = GetAccountChars();
+        const auto chars = GW::AccountMgr::GetAvailableChars();
         if (chars) {
             for (const auto& character : *chars) {
-                const auto cc = CompletionWindow::Instance().GetCharacterCompletion(character.character_name, true);
+                const auto cc = CompletionWindow::GetCharacterCompletion(character.player_name, true);
                 cc->account = email;
+                cc->profession = static_cast<GW::Constants::Profession>(character.primary());
+                cc->is_pvp = character.is_pvp();
+                const auto map_info = GW::Map::GetMapInfo(character.map_id());
+                cc->is_pre_searing = map_info && map_info->region == GW::Region::Region_Presearing;
+            }
+            // Remove any account chars that no longer exist
+            auto it = character_completion.begin();
+            while (it != character_completion.end()) {
+                if (it->second->account == email) {
+                    const auto exists = std::ranges::find_if(*chars, [char_name = it->first](const GW::AvailableCharacterInfo& character) {
+                        return character.player_name == char_name;
+                        });
+                    if (exists == chars->end()) {
+                        delete it->second;
+                        character_completion.erase(it);
+                        it = character_completion.begin();
+                        continue;
+                    }
+                }
+                it++;
             }
         }
         const auto pn = GetPlayerName();
@@ -591,6 +611,8 @@ namespace {
             const auto cc = CompletionWindow::GetCharacterCompletion(pn);
             if (cc) {
                 cc->account = email;
+                const auto map_info = GW::Map::GetMapInfo();
+                cc->is_pre_searing = map_info && map_info->region == GW::Region::Region_Presearing;
             }
         }
     }
@@ -2052,6 +2074,8 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             if (!is_selected && only_show_account_chars && it.second->account != email) {
                 continue; // Different account
             }
+            if (it.second->is_pvp || it.second->is_pre_searing)
+                continue; // Not applicable
 
             if (it.second->name_str.size() > 0 && ImGui::Selectable(it.second->name_str.c_str(), is_selected)) {
                 chosen_player_name = it.first;
@@ -2710,6 +2734,8 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
         const auto c = GetCharacterCompletion(name_ws.data(), true);
         c->profession = static_cast<Profession>(completion_ini->GetLongValue(ini_section, "profession", 0));
         c->account = GuiUtils::StringToWString(completion_ini->GetValue(ini_section, "account", ""));
+        c->is_pvp = completion_ini->GetBoolValue(ini_section, "is_pvp", false);
+        c->is_pre_searing = completion_ini->GetBoolValue(ini_section, "is_pre_searing", false);
     }
     CheckProgress();
 }
@@ -2804,6 +2830,9 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
         const std::string* name = &char_comp->name_str;
         completion_ini->SetLongValue(name->c_str(), "profession", std::to_underlying(char_comp->profession));
         completion_ini->SetValue(name->c_str(), "account", GuiUtils::WStringToString(char_comp->account).c_str());
+        completion_ini->SetBoolValue(name->c_str(), "is_pvp", char_comp->is_pvp);
+        completion_ini->SetBoolValue(name->c_str(), "is_pre_searing", char_comp->is_pre_searing);
+
         write_buf_to_ini("mission", &char_comp->mission, ini_str, name);
         write_buf_to_ini("mission_bonus", &char_comp->mission_bonus, ini_str, name);
         write_buf_to_ini("mission_hm", &char_comp->mission_hm, ini_str, name);
@@ -2841,6 +2870,7 @@ bool CompletionWindow::IsAreaComplete(const wchar_t* player_name, const GW::Cons
     const auto completion = GetCharacterCompletion(player_name, false);
     const auto map = completion ? GW::Map::GetMapInfo(map_id) : nullptr;
     if (!(map && completion)) return false;
+
     if (map->type == GW::RegionType::ExplorableZone)
         return ArrayBoolAt(completion->vanquishes, static_cast<uint32_t>(map_id));
 
@@ -2872,11 +2902,11 @@ bool CompletionWindow::IsSkillUnlocked(const wchar_t* player_name, const GW::Con
 std::vector<const wchar_t*> CompletionWindow::GetCharactersWithoutAreaComplete(GW::Constants::MapID map_id, bool include_hard_mode)
 {
     std::vector<const wchar_t*> out;
-    const auto characters = GW::AccountMgr::GetAvailableChars();
-    if (!characters) return out;
-    for (auto& character : *characters) {
-        if(!IsAreaComplete(character.player_name, map_id, include_hard_mode))
-            out.push_back(character.player_name);
+    for (auto& it : character_completion) {
+        if (it.second->is_pvp || it.second->is_pre_searing)
+            continue;
+        if(!IsAreaComplete(it.first.c_str(), map_id, include_hard_mode))
+            out.push_back(it.first.c_str());
     }
     return out;
 }
@@ -2884,11 +2914,11 @@ std::vector<const wchar_t*> CompletionWindow::GetCharactersWithoutAreaComplete(G
 std::vector<const wchar_t*> CompletionWindow::GetCharactersWithoutAreaUnlocked(GW::Constants::MapID map_id)
 {
     std::vector<const wchar_t*> out;
-    const auto characters = GW::AccountMgr::GetAvailableChars();
-    if (!characters) return out;
-    for (auto& character : *characters) {
-        if (!IsAreaUnlocked(character.player_name, map_id))
-            out.push_back(character.player_name);
+    for (auto& it : character_completion) {
+        if (it.second->is_pvp || it.second->is_pre_searing)
+            continue;
+        if (!IsAreaUnlocked(it.first.c_str(), map_id))
+            out.push_back(it.first.c_str());
     }
     return out;
 }
@@ -2896,11 +2926,11 @@ std::vector<const wchar_t*> CompletionWindow::GetCharactersWithoutAreaUnlocked(G
 std::vector<const wchar_t*> CompletionWindow::GetCharactersWithoutSkillUnlocked(GW::Constants::SkillID skill_id)
 {
     std::vector<const wchar_t*> out;
-    const auto characters = GW::AccountMgr::GetAvailableChars();
-    if (!characters) return out;
-    for (auto& character : *characters) {
-        if (!IsSkillUnlocked(character.player_name, skill_id))
-            out.push_back(character.player_name);
+    for (auto& it : character_completion) {
+        if (it.second->is_pvp || it.second->is_pre_searing)
+            continue;
+        if (!IsSkillUnlocked(it.first.c_str(), skill_id))
+            out.push_back(it.first.c_str());
     }
     return out;
 }

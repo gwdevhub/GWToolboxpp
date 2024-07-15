@@ -62,22 +62,31 @@ namespace GW {
 
         GW::Constants::MapID map_id() const
         {
-            return static_cast<GW::Constants::MapID>((props[0] & 0xffff0000) >> 16);
+            return static_cast<GW::Constants::MapID>((props[0] >> 16) & 0xffff);
         }
 
         uint32_t primary() const
         {
-            return (props[2] & 0x00f00000) >> 20;
+            return ((props[2] >> 20) & 0xf);
+        }
+        uint32_t secondary() const
+        {
+            return ((props[7] >> 10) & 0xf);
         }
 
         uint32_t campaign() const
         {
-            return (props[7] & 0x000f0000) >> 16;
+            return (props[7] & 0xf);
         }
 
         uint32_t level() const
         {
-            return ((props[7] & 0x0ff00000) >> 20) - 64;
+            return ((props[7] >> 4)  & 0x3f);
+        }
+
+        bool is_pvp() const
+        {
+            return ((props[7] >> 9) & 0x1) == 0x1;
         }
     };
     static_assert(sizeof(AvailableCharacterInfo) == 0x84);
