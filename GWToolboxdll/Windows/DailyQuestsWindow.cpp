@@ -727,7 +727,16 @@ namespace {
         const auto time_in_currentCycle = event_index * interval_in_seconds;
         auto next_event_time = current_cycle_start_time + time_in_currentCycle;
         if (next_event_time < current_time) {
-            next_event_time += cycle_duration;
+            // The event started in the past. We need to check if the event is ongoing or has already finished
+            if (next_event_time + interval_in_seconds < current_time) {
+                // The event ended already so we offset the start time with one cycle
+                next_event_time += cycle_duration;
+            }
+            else {
+                // The event is ongoing so we set the start time as the current time
+                next_event_time = current_time;
+            }
+            
         }
 
         return next_event_time;
@@ -1851,6 +1860,10 @@ DailyQuests::QuestData* DailyQuests::GetWeeklyPvPBonus(time_t unix)
 
 time_t DailyQuests::GetTimestampFromNicholasTheTraveller(DailyQuests::NicholasCycleData* data)
 {
+    /*
+    This function returns the next start time of the cycle data or the
+    current time if the cycle is ongoing
+    */ 
     auto index = -1;
     for (auto i = 0; i < NICHOLAS_POST_COUNT; i++) {
         if (&nicholas_cycles[i] == data) {
