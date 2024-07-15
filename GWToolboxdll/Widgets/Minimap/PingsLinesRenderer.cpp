@@ -493,17 +493,14 @@ bool PingsLinesRenderer::OnMouseMove(const float x, const float y)
         return false;
     }
 
-    const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
-    if (me == nullptr) {
-        return false;
-    }
+    const uint32_t my_player_id = GW::PlayerMgr::GetPlayerNumber();
 
-    drawings[me->player_number].player = me->player_number;
+    drawings[my_player_id].player = my_player_id;
     if (!mouse_moved) {
         // first time
         mouse_moved = true;
         BumpSessionID();
-        drawings[me->player_number].session = static_cast<DWORD>(session_id);
+        drawings[my_player_id].session = static_cast<DWORD>(session_id);
     }
 
     if (TIMER_DIFF(lastshown) > show_interval
@@ -516,7 +513,7 @@ bool PingsLinesRenderer::OnMouseMove(const float x, const float y)
         l.y1 = mouse_y;
         l.x2 = mouse_x = x;
         l.y2 = mouse_y = y;
-        drawings[me->player_number].lines.push_back(l);
+        drawings[my_player_id].lines.push_back(l);
 
         if (TIMER_DIFF(lastqueued) > queue_interval
             || TIMER_DIFF(lastsent) > send_interval) {
