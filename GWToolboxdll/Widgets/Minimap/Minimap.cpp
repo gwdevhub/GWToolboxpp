@@ -40,6 +40,8 @@
 #include <Defines.h>
 #include <Modules/Resources.h>
 
+import TextUtils;
+
 namespace {
     struct Vec2i {
         Vec2i(const int _x, const int _y)
@@ -775,7 +777,7 @@ void CHAT_CMD_FUNC(Minimap::OnFlagHeroCmd)
         return false;
     };
 
-    const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+    const std::wstring arg1 = TextUtils::ToLower(argv[1]);
     float x;
     float y;
     unsigned int n_heros = 0; // Count of heros available
@@ -785,7 +787,7 @@ void CHAT_CMD_FUNC(Minimap::OnFlagHeroCmd)
             FlagHero(0); // "/flag all" == "/flag"
             return;
         }
-        const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
+        const std::wstring arg2 = TextUtils::ToLower(argv[2]);
         if (arg2 == L"clear") {
             GW::PartyMgr::UnflagAll(); // "/flag 5 clear"
             return;
@@ -800,7 +802,7 @@ void CHAT_CMD_FUNC(Minimap::OnFlagHeroCmd)
             }
             return;
         }
-        if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
+        if (argc < 4 || !TextUtils::ParseFloat(argv[2], &x) || !TextUtils::ParseFloat(argv[3], &y)) {
             Log::Error("Please provide command in format /flag all [x] [y]"); // Not enough args or coords not valid float vals.
             return;
         }
@@ -822,7 +824,7 @@ void CHAT_CMD_FUNC(Minimap::OnFlagHeroCmd)
         GW::PartyMgr::UnflagAll(); // "/flag clear"
         return;
     }
-    if (!GuiUtils::ParseUInt(argv[1], &f_hero) || f_hero < 1 || f_hero > n_heros) {
+    if (!TextUtils::ParseUInt(argv[1], &f_hero) || f_hero < 1 || f_hero > n_heros) {
         Log::Error("Invalid hero number");
         return; // Invalid hero number
     }
@@ -830,7 +832,7 @@ void CHAT_CMD_FUNC(Minimap::OnFlagHeroCmd)
         FlagHero(f_hero); // "/flag 5"
         return;
     }
-    const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
+    const std::wstring arg2 = TextUtils::ToLower(argv[2]);
     if (arg2 == L"clear") {
         GW::PartyMgr::UnflagHero(f_hero); // "/flag 5 clear"
         return;
@@ -845,7 +847,7 @@ void CHAT_CMD_FUNC(Minimap::OnFlagHeroCmd)
         }
         return;
     }
-    if (argc < 4 || !GuiUtils::ParseFloat(argv[2], &x) || !GuiUtils::ParseFloat(argv[3], &y)) {
+    if (argc < 4 || !TextUtils::ParseFloat(argv[2], &x) || !TextUtils::ParseFloat(argv[3], &y)) {
         Log::Error("Please provide command in format /flag [hero number] [x] [y]"); // Invalid coords
         return;
     }

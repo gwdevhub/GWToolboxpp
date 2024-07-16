@@ -14,6 +14,8 @@
 #include <Windows/TargetInfoWindow.h>
 #include <Utils/GuiUtils.h>
 
+import TextUtils;
+
 namespace {
 
     std::map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names_by_id;
@@ -182,12 +184,12 @@ namespace {
                 }
                 agent_info->state = AgentInfo::TargetInfoState::FetchingWikiPage;
 
-                agent_info->wiki_search_term = GuiUtils::WStringToString(
-                    GuiUtils::SanitizePlayerName(agent_info->name.wstring())
+                agent_info->wiki_search_term = TextUtils::WStringToString(
+                    TextUtils::SanitizePlayerName(agent_info->name.wstring())
                 );
                 trim(agent_info->wiki_search_term);
                 std::string wiki_url = "https://wiki.guildwars.com/wiki/?search=";
-                wiki_url.append(GuiUtils::UrlEncode(agent_info->wiki_search_term, '_'));
+                wiki_url.append(TextUtils::UrlEncode(agent_info->wiki_search_term, '_'));
                 Resources::Download(wiki_url, AgentInfo::OnFetchedWikiPage, agent_info);
             } break;
             case AgentInfo::TargetInfoState::ParsingWikiPage:
@@ -347,7 +349,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
                     const float btnw = ImGui::GetContentRegionAvail().x / 2.f;
                     const ImVec2 btn_dims = { btnw,.0f };
                     const auto open_wiki = [&] {
-                        auto damage_type_wstr = GuiUtils::StringToWString(damage_type);
+                        auto damage_type_wstr = TextUtils::StringToWString(damage_type);
                         std::ranges::replace(damage_type_wstr, L' ', L'_');
                         GuiUtils::OpenWiki(damage_type_wstr.c_str());
                     };
@@ -372,7 +374,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
         }
         ImGui::Separator();
         if (ImGui::Button("View More on Guild Wars Wiki")) {
-            GuiUtils::SearchWiki(GuiUtils::StringToWString(current_agent_info->wiki_search_term));
+            GuiUtils::SearchWiki(TextUtils::StringToWString(current_agent_info->wiki_search_term));
         }
         
     }

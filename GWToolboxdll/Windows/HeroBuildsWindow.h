@@ -24,8 +24,8 @@ class HeroBuildsWindow : public ToolboxWindow {
             , behavior(_behavior)
             , show_panel(panel)
         {
-            GuiUtils::StrCopy(name, n, sizeof(name));
-            GuiUtils::StrCopy(code, c, sizeof(code));
+            std::snprintf(name, _countof(name), "%s", n);
+            std::snprintf(code, _countof(code), "%s", c);
         }
 
         char name[BUFFER_SIZE]{};
@@ -41,7 +41,7 @@ class HeroBuildsWindow : public ToolboxWindow {
         TeamHeroBuild(const char* n)
             : ui_id(++cur_ui_id)
         {
-            GuiUtils::StrCopy(name, n, sizeof(name));
+            std::snprintf(name, sizeof(name), "%s", n);
         }
 
         bool edit_open = false;

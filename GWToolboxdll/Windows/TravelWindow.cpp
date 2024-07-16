@@ -26,6 +26,8 @@
 #include <Windows/TravelWindow.h>
 #include <Windows/TravelWindowConstants.h>
 
+import TextUtils;
+
 namespace {
 
     bool search_in_english = true;
@@ -95,7 +97,7 @@ namespace {
         Decoding,
         Ready
     };
-    
+
     FetchedMapNames fetched_searchable_explorable_areas = FetchedMapNames::Pending;
 
     // List of explorables with decoded area names, used for searching via chat command
@@ -276,7 +278,7 @@ namespace {
     {
         // By Map ID e.g. "/tp 77" for house zu heltzer
         uint32_t map_id = 0;
-        if (GuiUtils::ParseUInt(s.c_str(), &map_id)) {
+        if (TextUtils::ParseUInt(s.c_str(), &map_id)) {
             return outpost = static_cast<GW::Constants::MapID>(map_id), true;
         }
 
@@ -378,7 +380,7 @@ namespace {
 
     bool ParseDistrict(const std::wstring& s, GW::Constants::District& district, uint32_t& number)
     {
-        std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(s)));
+        std::string compare = TextUtils::ToLower(TextUtils::RemovePunctuation(TextUtils::WStringToString(s)));
         const std::string first_word = compare.substr(0, compare.find(' '));
 
         static const std::regex district_regex("([a-z]{2,3})(\\d)?");
@@ -392,7 +394,7 @@ namespace {
             return false;
         }
         district = shorthand_outpost->second.district;
-        if (m.size() > 2 && !GuiUtils::ParseUInt(m[2].str().c_str(), &number)) {
+        if (m.size() > 2 && !TextUtils::ParseUInt(m[2].str().c_str(), &number)) {
             number = 0;
         }
 
@@ -410,8 +412,8 @@ namespace {
         auto district = GW::Constants::District::Current;
         uint32_t district_number = 0;
 
-        std::wstring argOutpost = GuiUtils::ToLower(argv[1]);
-        const std::wstring argDistrict = GuiUtils::ToLower(argv[argc - 1]);
+        std::wstring argOutpost = TextUtils::ToLower(argv[1]);
+        const std::wstring argDistrict = TextUtils::ToLower(argv[argc - 1]);
         if (argOutpost == L"stop") {
             pending_map_travel.map_id = GW::Constants::MapID::None;
             return;
@@ -453,7 +455,7 @@ namespace {
                 return;
             }
             uint32_t fav_num;
-            if (GuiUtils::ParseUInt(fav_s_num.c_str(), &fav_num) && fav_num > 0) {
+            if (TextUtils::ParseUInt(fav_s_num.c_str(), &fav_num) && fav_num > 0) {
                 instance.TravelFavorite(fav_num - 1);
                 return;
             }
@@ -463,7 +465,7 @@ namespace {
         for (auto i = 2; i < argc - 1; i++) {
             // Outpost name can be anything after "/tp" but before the district e.g. "/tp house zu heltzer ae1"
             argOutpost.append(L" ");
-            argOutpost.append(GuiUtils::ToLower(argv[i]));
+            argOutpost.append(TextUtils::ToLower(argv[i]));
         }
         const bool isValidDistrict = ParseDistrict(argDistrict, district, district_number);
         if (isValidDistrict && argc == 2) {

@@ -137,7 +137,7 @@ namespace {
     void PrintTime(char* buf, const size_t size, const DWORD time, const bool show_ms = true)
     {
         if (time == TIME_UNKNOWN) {
-            GuiUtils::StrCopy(buf, "--:--", size);
+            std::snprintf(buf, size, "%s", "--:--");
         }
         else {
             const DWORD sec = time / 1000;
@@ -1110,7 +1110,7 @@ ObjectiveTimerWindow::Objective::Objective(const char* _name)
     , done(TIME_UNKNOWN)
     , duration(TIME_UNKNOWN)
 {
-    GuiUtils::StrCopy(name, _name, sizeof(name));
+    std::snprintf(name, _countof(name), "%s", _name);
 }
 
 ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::AddStartEvent(

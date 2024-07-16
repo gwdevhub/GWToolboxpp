@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/Constants/Maps.h>
 #include <GWCA/Packets/Opcodes.h>
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/GameContainers/Array.h>
@@ -29,7 +28,9 @@
 #include <Modules/Resources.h>
 #include <Windows/PartySearchWindow.h>
 
-#include "GWToolbox.h"
+#include <GWToolbox.h>
+
+import TextUtils;
 
 // Every connection cost 30 seconds.
 // You have 2 tries.
@@ -181,10 +182,10 @@ bool PartySearchWindow::TBParty::FromRegionParty(const GW::PartySearch* party)
     district = party->district;
     language = static_cast<uint8_t>(party->language);
     region_id = static_cast<uint8_t>(GW::Map::GetRegion());
-    message = GuiUtils::WStringToString(party->message);
+    message = TextUtils::WStringToString(party->message);
     primary = party->primary;
     secondary = party->secondary;
-    player_name = GuiUtils::WStringToString(party->party_leader);
+    player_name = TextUtils::WStringToString(party->party_leader);
     Log::Log("Party %d updated\n", concat_party_id);
     return true;
 #pragma warning (pop)
@@ -209,7 +210,7 @@ bool PartySearchWindow::TBParty::FromPlayerInMap(const GW::Player* player)
     region_id = static_cast<uint8_t>(GW::Map::GetRegion());
     primary = player->primary;
     secondary = player->secondary;
-    player_name = GuiUtils::WStringToString(player->name);
+    player_name = TextUtils::WStringToString(player->name);
     Log::Log("Party %d updated\n", concat_party_id);
     return true;
 #pragma warning (pop)
@@ -238,7 +239,7 @@ bool PartySearchWindow::TBParty::FromLocalParty(GW::PartyInfo* party)
     region_id = static_cast<uint8_t>(GW::Map::GetRegion());
     primary = player->primary;
     secondary = player->secondary;
-    player_name = GuiUtils::WStringToString(player->name);
+    player_name = TextUtils::WStringToString(player->name);
     Log::Log("Party %d updated\n", concat_party_id);
     return true;
 #pragma warning (pop)
@@ -554,8 +555,8 @@ void PartySearchWindow::fetch()
 
         if (print_message) {
             wchar_t buffer[512];
-            const std::wstring name_ws = GuiUtils::ToWstr(msg.name);
-            const std::wstring msg_ws = GuiUtils::ToWstr(msg.message);
+            const std::wstring name_ws = TextUtils::StringToWString(msg.name);
+            const std::wstring msg_ws = TextUtils::StringToWString(msg.message);
             swprintf(buffer, 512, L"<a=1>%s</a>: <c=#f96677><quote>%s", name_ws.c_str(), msg_ws.c_str());
             WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buffer);
         }
@@ -707,7 +708,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
             }
 
             if (ImGui::Button(label, ImVec2(playernamewidth, 0))) {
-                std::wstring leader_name = GuiUtils::StringToWString(party->player_name);
+                std::wstring leader_name = TextUtils::StringToWString(party->player_name);
                 // open whisper to player
                 GW::GameThread::Enqueue([leader_name] {
                     SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)leader_name.data(), nullptr);

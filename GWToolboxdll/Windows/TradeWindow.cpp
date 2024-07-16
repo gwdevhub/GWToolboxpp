@@ -9,7 +9,6 @@
 #include <GWCA/Context/PartyContext.h>
 #include <GWCA/Context/TradeContext.h>
 
-#include <GWCA/Managers/TradeMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -17,17 +16,15 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
-#include <GWCA/Managers/ItemMgr.h>
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
 
 #include <Modules/Resources.h>
 #include <Windows/TradeWindow.h>
+#include <GWToolbox.h>
 
-#include "GWToolbox.h"
-#include <GWCA/Utilities/MemoryPatcher.h>
-#include <GWCA/Utilities/Scanner.h>
+import TextUtils;
 
 namespace {
     // Every connection cost 30 seconds.
@@ -91,7 +88,7 @@ namespace {
     clock_t pending_query_sent = 0;
     bool print_search_results = false;
 
-    char search_buffer[256] = { 0 };
+    char search_buffer[256] = {};
 
     std::vector<std::string> alert_words{};
     std::vector<std::string> searched_words{};
@@ -154,7 +151,7 @@ namespace {
             if (i > 1) {
                 item_to_search += " ";
             }
-            item_to_search += GuiUtils::WStringToString(argv[i]);
+            item_to_search += TextUtils::WStringToString(argv[i]);
         }
         Log::Flash("Searching trade for \"%s\"...", item_to_search.c_str());
         search(item_to_search, true);
@@ -199,7 +196,7 @@ void TradeWindow::OnMessageLocal(GW::HookStatus* status, const GW::Packet::StoC:
     }
 
     // std::string temp(start, end);
-    std::string message_utf8 = GuiUtils::WStringToString(std::wstring(start, end));
+    std::string message_utf8 = TextUtils::WStringToString(std::wstring(start, end));
     if (!Instance().IsTradeAlert(message_utf8)) {
         status->blocked = true;
     }
@@ -368,8 +365,8 @@ void TradeWindow::fetch()
                 }
                 messages.add(msg);
                 if (print_search_results && i < 5) {
-                    std::wstring name_ws = GuiUtils::ToWstr(msg.name);
-                    std::wstring msg_ws = GuiUtils::ToWstr(msg.message);
+                    std::wstring name_ws = TextUtils::StringToWString(msg.name);
+                    std::wstring msg_ws = TextUtils::StringToWString(msg.message);
                     time_t ts = msg.timestamp;
                     tm* local_tm = localtime(&ts);
                     if (local_tm) {
@@ -414,8 +411,8 @@ void TradeWindow::fetch()
 
         if (print_message) {
             wchar_t buffer[512];
-            std::wstring name_ws = GuiUtils::ToWstr(msg.name);
-            std::wstring msg_ws = GuiUtils::ToWstr(msg.message);
+            std::wstring name_ws = TextUtils::StringToWString(msg.name);
+            std::wstring msg_ws = TextUtils::StringToWString(msg.message);
             swprintf(buffer, 512, L"<a=1>%s</a>: <c=#f96677><quote>%s", name_ws.c_str(), msg_ws.c_str());
             WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buffer);
         }
@@ -467,7 +464,7 @@ void TradeWindow::FindPlayerPartySearch(GW::HookStatus*, void*)
                 const bool message_changed = wcscmp(existing->message, party_search->message) != 0;
                 *existing = *party_search;
                 if (message_changed) {
-                    const std::string pps_str = GuiUtils::WStringToString(party_search->message);
+                    const std::string pps_str = TextUtils::WStringToString(party_search->message);
                     strcpy(player_party_search_text, pps_str.c_str());
                 }
                 return;
@@ -529,7 +526,7 @@ void TradeWindow::Draw(IDirect3DDevice9*)
                 }
             }
             else {
-                const std::wstring out = GuiUtils::StringToWString(player_party_search_text);
+                const std::wstring out = TextUtils::StringToWString(player_party_search_text);
                 GW::PartyMgr::SearchParty(search_type, out.data());
             }
         }
@@ -555,7 +552,7 @@ void TradeWindow::Draw(IDirect3DDevice9*)
     }
     ImGui::SameLine();
     if (ImGui::Button("Clear", ImVec2(btn_width, 0))) {
-        GuiUtils::StrCopy(search_buffer, "", 256);
+        std::snprintf(search_buffer, _countof(search_buffer), "");
         search("");
     }
     ImGui::SameLine();
@@ -651,7 +648,7 @@ void TradeWindow::Draw(IDirect3DDevice9*)
             if (ImGui::Button(msg.name.c_str(), ImVec2(playernamewidth, 0))) {
                 // open whisper to player
                 GW::GameThread::Enqueue([&msg] {
-                    std::wstring name_ws = GuiUtils::ToWstr(msg.name);
+                    std::wstring name_ws = TextUtils::StringToWString(msg.name);
                     SendUIMessage(GW::UI::UIMessage::kOpenWhisper, name_ws.data());
                 });
             }

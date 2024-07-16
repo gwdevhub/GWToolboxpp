@@ -16,10 +16,11 @@
 #include <Utils/GuiUtils.h>
 #include <Modules/Resources.h>
 #include <Widgets/HealthWidget.h>
+#include <Utils/FontLoader.h>
 
-#include "Utils/FontLoader.h"
+import TextUtils;
 
-constexpr const wchar_t* HEALTH_THRESHOLD_INIFILENAME = L"HealthThreshold.ini";
+constexpr auto HEALTH_THRESHOLD_INIFILENAME = L"HealthThreshold.ini";
 
 void HealthWidget::LoadSettings(ToolboxIni* ini)
 {
@@ -256,7 +257,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                         GW::Agents::AsyncGetAgentName(target, agent_name_ping);
                         if (!agent_name_ping.empty()) {
                             char buffer[512];
-                            const std::string agent_name_str = GuiUtils::WStringToString(agent_name_ping);
+                            const std::string agent_name_str = TextUtils::WStringToString(agent_name_ping);
                             const auto current_hp = static_cast<int>(target->hp * target->max_hp);
                             snprintf(buffer, sizeof(buffer), "%s's Health is %d of %d. (%.0f %%)", agent_name_str.c_str(), current_hp, target->max_hp, target->hp * 100.f);
                             GW::Chat::SendChat('#', buffer);
@@ -276,7 +277,8 @@ HealthWidget::Threshold::Threshold(const ToolboxIni* ini, const char* section)
     : ui_id(++cur_ui_id)
 {
     active = ini->GetBoolValue(section, VAR_NAME(active));
-    GuiUtils::StrCopy(name, ini->GetValue(section, VAR_NAME(name), ""), sizeof(name));
+
+    std::snprintf(name, sizeof(name), "%s", ini->GetValue(section, VAR_NAME(name), ""));
     modelId = ini->GetLongValue(section, VAR_NAME(modelId), modelId);
     skillId = ini->GetLongValue(section, VAR_NAME(skillId), skillId);
     mapId = ini->GetLongValue(section, VAR_NAME(mapId), mapId);
@@ -289,7 +291,7 @@ HealthWidget::Threshold::Threshold(const char* _name, const Color _color, const 
     , value(_value)
     , color(_color)
 {
-    GuiUtils::StrCopy(name, _name, sizeof(name));
+    std::snprintf(name, sizeof(name), "%s", _name);
 }
 
 bool HealthWidget::Threshold::DrawHeader()

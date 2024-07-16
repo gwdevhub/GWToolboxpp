@@ -28,12 +28,6 @@
 #include <ImGuiAddons.h>
 #include <Logger.h>
 
-
-// #define DETECT_STREAMING_APPLICATION
-#ifdef DETECT_STREAMING_APPLICATION
-#include <Psapi.h>
-#endif
-
 #define ASSERT_MESSAGE_PTR_HASNT_CHANGED(var)  static wchar_t* mp = nullptr; ASSERT(mp == nullptr || mp == var.data()); mp = var.data();
 
 
@@ -330,7 +324,7 @@ namespace {
 
     bool ObfuscateName(const std::wstring& _original_name, std::wstring& out, const bool in_char_select = false)
     {
-        std::wstring original_name = GuiUtils::SanitizePlayerName(_original_name);
+        std::wstring original_name = TextUtils::SanitizePlayerName(_original_name);
         if (_original_name.empty()) {
             return false;
         }
@@ -369,7 +363,7 @@ namespace {
         if (_obfuscated_name.empty()) {
             return false;
         }
-        const auto obfuscated_name = GuiUtils::SanitizePlayerName(std::wstring(_obfuscated_name));
+        const auto obfuscated_name = TextUtils::SanitizePlayerName(std::wstring(_obfuscated_name));
         const auto found = obfuscated_by_obfuscation.find(obfuscated_name);
         if (found == obfuscated_by_obfuscation.end()) {
             return false;
@@ -968,7 +962,7 @@ void Obfuscator::LoadSettings(ToolboxIni* ini)
     const auto own_name = ini->GetValue(Name(), VAR_NAME(own_player_name), own_player_name);
     if (own_name && own_name[0] != '\0') {
         strncpy_s(own_player_name, own_name, strnlen_s(own_name, _countof(own_player_name)));
-        own_player_name_w = GuiUtils::StringToWString(own_player_name);
+        own_player_name_w = TextUtils::StringToWString(own_player_name);
     }
     if (ini->GetBoolValue(Name(), VAR_NAME(obfuscate), pending_state == ObfuscatorState::Enabled)) {
         Obfuscate(true);
@@ -1012,7 +1006,7 @@ void Obfuscator::DrawSettingsInternal()
     ImGui::ShowHelp("Renames yourself in-game and in character select.");
     if (ImGui::InputText("Set own character name", own_player_name, _countof(own_player_name))) {
         if (own_player_name[0] != '\0') {
-            own_player_name_w = GuiUtils::StringToWString(own_player_name);
+            own_player_name_w = TextUtils::StringToWString(own_player_name);
         }
         else {
             own_player_name_w = {};

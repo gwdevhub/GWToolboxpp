@@ -15,8 +15,10 @@
 #include <Modules/GameSettings.h>
 #include <Utils/ToolboxUtils.h>
 #include <Defines.h>
+#include <Utils/GuiUtils.h>
 #include "ChatSettings.h"
 
+import TextUtils;
 
 namespace {
     // Settings
@@ -169,7 +171,7 @@ namespace {
         if (end_idx == std::wstring::npos) {
             return; // Not a player name, this should never happen.
         }
-        const std::wstring player_pinged = GuiUtils::SanitizePlayerName(message.substr(start_idx, end_idx - start_idx));
+        const std::wstring player_pinged = TextUtils::SanitizePlayerName(message.substr(start_idx, end_idx - start_idx));
         if (player_pinged.empty()) {
             return; // No recipient
         }
@@ -339,7 +341,7 @@ namespace {
             return; // - Next logic only applicable when Ctrl is held
         }
 
-        const std::wstring _name = GuiUtils::SanitizePlayerName(name);
+        const std::wstring _name = TextUtils::SanitizePlayerName(name);
         if (ImGui::GetIO().KeyShift && GW::PartyMgr::GetIsLeader()) {
             wchar_t buf[64];
             swprintf(buf, 64, L"invite %s", _name.c_str());

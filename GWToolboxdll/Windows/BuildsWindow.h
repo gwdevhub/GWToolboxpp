@@ -36,7 +36,7 @@ class BuildsWindow : public ToolboxWindow {
         TeamBuild(const char* n)
             : ui_id(++cur_ui_id)
         {
-            GuiUtils::StrCopy(name, n, sizeof(name));
+            std::snprintf(name, sizeof(name), "%s", n);
         }
 
         bool edit_open = false;

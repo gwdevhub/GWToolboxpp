@@ -40,8 +40,6 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
 
-#include <Logger.h>
-
 #include <Widgets/AlcoholWidget.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/PartyDamage.h>
@@ -55,10 +53,11 @@
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/Resources.h>
-
 #include <Utils/ToolboxUtils.h>
-
+#include <Logger.h>
 #include <GWToolbox.h>
+
+import TextUtils;
 
 namespace {
 
@@ -231,7 +230,7 @@ namespace {
         if (ImGui::TreeNodeEx("Guild Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             ImGui::PushID("guild_info");
             InfoField("Addr", "0x%p", guild);
-            InfoField("Name", "%s [%s]", GuiUtils::WStringToString(guild->name).c_str(), GuiUtils::WStringToString(guild->tag).c_str());
+            InfoField("Name", "%s [%s]", TextUtils::WStringToString(guild->name).c_str(), TextUtils::WStringToString(guild->tag).c_str());
             InfoField("Faction", "%d (%s)", guild->faction_point, guild->faction ? "Luxon" : "Kurzick");
             ImGui::PopID();
             ImGui::TreePop();
@@ -354,7 +353,7 @@ namespace {
             if (ImGui::TreeNodeEx("Player Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 ImGui::PushID("player_info");
                 InfoField("Addr", "%p", player);
-                InfoField("Name", "%s", GuiUtils::WStringToString(player->name).c_str());
+                InfoField("Name", "%s", TextUtils::WStringToString(player->name).c_str());
                 if (player->active_title_tier) {
                     const GW::TitleTier& tier = GW::GetGameContext()->world->title_tiers[player->active_title_tier];
                     static GuiUtils::EncString title_enc_string;
@@ -466,7 +465,7 @@ namespace {
                 GW::Chat::SendChat('#', buf.c_str());
             }
             ImGui::SameLine();
-            ImGui::TextUnformatted(GuiUtils::WStringToString(buf).c_str());
+            ImGui::TextUnformatted(TextUtils::WStringToString(buf).c_str());
             ImGui::PopID();
         }
     }
@@ -520,7 +519,7 @@ namespace {
     void OnRecordedAsyncDecode_Decoded(void* param, const wchar_t* decoded) {
         auto e = (RecordedAsyncDecode*)param;
         e->decoded = decoded;
-        e->decoded_str = GuiUtils::WStringToString(e->decoded);
+        e->decoded_str = TextUtils::WStringToString(e->decoded);
     }
 
     void __fastcall OnValidateAsyncDecodeStr(void* ecx, void* edx, const wchar_t* s, void* cb, void* wParam) {

@@ -148,7 +148,7 @@ namespace {
         CSimpleIni::TNamesDepend values{};
         inifile.GetAllValues(section, "charname", values);
         for (auto i = values.cbegin(); i != values.cend(); ++i) {
-            std::wstring char_wstr = GuiUtils::StringToWString(i->pItem);
+            std::wstring char_wstr = TextUtils::StringToWString(i->pItem);
             std::wstring temp;
             std::vector<std::wstring> parts{};
             std::wstringstream wss(char_wstr);
@@ -290,7 +290,7 @@ namespace {
 
     void OnPlayerNotOnline(GW::HookStatus* status, const wchar_t* message)
     {
-        const auto player_name = GuiUtils::GetPlayerNameFromEncodedString(message);
+        const auto player_name = TextUtils::GetPlayerNameFromEncodedString(message);
         if (const auto friend_ = FriendListWindow::GetFriend(player_name.c_str())) {
             // If this player is already in my friend list, send the message directly.
             if (!friend_->IsOffline() && friend_->current_char->getNameW() != player_name) {
@@ -318,7 +318,7 @@ namespace {
 
     void OnFriendAlreadyAdded(GW::HookStatus* status, const wchar_t* message)
     {
-        const auto player_name = GuiUtils::GetPlayerNameFromEncodedString(message);
+        const auto player_name = TextUtils::GetPlayerNameFromEncodedString(message);
         if (const auto friend_ = FriendListWindow::GetFriend(player_name.c_str())) {
             friend_->SetCharacter(player_name.c_str());
         }
@@ -404,7 +404,7 @@ namespace {
         } break;
         case GW::Packet::StoC::PlayerJoinInstance::STATIC_HEADER: {
             const auto p = (GW::Packet::StoC::PlayerJoinInstance*)pak;
-            const auto player_name = GuiUtils::SanitizePlayerName(p->player_name);
+            const auto player_name = TextUtils::SanitizePlayerName(p->player_name);
             const auto a = GW::PlayerMgr::GetPlayerByName(p->player_name);
             const auto f = a && a->primary ? Instance().GetFriend(player_name.data()) : nullptr;
             const auto fc = f ? f->GetCharacter(player_name.data()) : nullptr;
@@ -431,7 +431,7 @@ namespace {
                 break;
             }
             const auto tag = static_cast<GW::UI::AgentNameTagInfo*>(wparam);
-            const auto player_name = GuiUtils::GetPlayerNameFromEncodedString(tag->name_enc);
+            const auto player_name = TextUtils::GetPlayerNameFromEncodedString(tag->name_enc);
             const auto friend_ = FriendListWindow::GetFriend(player_name.c_str());
             if (friend_ && friend_->type == GW::FriendType::Friend) {
                 tag->text_color = friend_name_tag_color;
@@ -798,7 +798,7 @@ std::string FriendListWindow::Friend::GetCharactersHover(const bool include_char
             }
         }
         cached_charnames_hover_str =
-            GuiUtils::WStringToString(cached_charnames_hover_ws);
+            TextUtils::WStringToString(cached_charnames_hover_ws);
         cached_charnames_hover = true;
     }
     std::string str;
@@ -1387,7 +1387,7 @@ void FriendListWindow::LoadFromFile()
             auto lf = new Friend(this);
             lf->uuid = entry.pItem;
             lf->uuid_bytes = StringToGuid(lf->uuid);
-            lf->setAlias(GuiUtils::StringToWString(inifile.GetValue(entry.pItem, "alias", "")));
+            lf->setAlias(TextUtils::StringToWString(inifile.GetValue(entry.pItem, "alias", "")));
             lf->type = static_cast<GW::FriendType>(inifile.GetLongValue(entry.pItem, "type", static_cast<long>(lf->type)));
             if (lf->uuid.empty() || lf->GetAliasW().empty()) {
                 delete lf;
@@ -1454,7 +1454,7 @@ void FriendListWindow::SaveToFile()
             for (const auto& char_it : charnames) {
                 char charname[128] = {0};
                 snprintf(charname, 128, "%s,%d",
-                         GuiUtils::WStringToString(char_it.first).c_str(),
+                         TextUtils::WStringToString(char_it.first).c_str(),
                          char_it.second);
                 inifile.SetValue(uuid, "charname", charname);
             }

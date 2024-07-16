@@ -24,7 +24,9 @@
 #include <Windows/Pcons.h>
 #include <Windows/PconsWindow.h>
 
-#include "Utils/FontLoader.h"
+#include <Utils/FontLoader.h>
+
+import TextUtils;
 
 float Pcon::size = 46.0f;
 int Pcon::pcons_delay = 5000;
@@ -61,9 +63,9 @@ Pcon::Pcon(const char* chatname,
     if (desc_) {
         desc = desc_;
     }
-    chat = chatname ? chatname : GuiUtils::WStringToString(filename);
-    abbrev = abbrevname ? abbrevname : GuiUtils::RemovePunctuation(chat);
-    ini = ininame ? ininame : GuiUtils::ToSlug(chat);
+    chat = chatname ? chatname : TextUtils::WStringToString(filename);
+    abbrev = abbrevname ? abbrevname : TextUtils::RemovePunctuation(chat);
+    ini = ininame ? ininame : TextUtils::ToSlug(chat);
 }
 
 Pcon::~Pcon()
@@ -537,7 +539,7 @@ void Pcon::LoadSettings(const ToolboxIni* inifile, const char* section)
         }
         std::string str(entry.pItem);
         const size_t charname_pos = section_len;
-        std::wstring charname = GuiUtils::StringToWString(entry.pItem + charname_pos);
+        std::wstring charname = TextUtils::StringToWString(entry.pItem + charname_pos);
         bool* char_enabled = GetSettingsByName(charname.c_str());
         *char_enabled = inifile->GetBoolValue(entry.pItem, buf_active, *char_enabled);
     }
@@ -566,7 +568,7 @@ void Pcon::SaveSettings(ToolboxIni* inifile, const char* section) const
         }
         std::string char_section(section);
         char_section.append(":");
-        char_section.append(GuiUtils::WStringToString(charname).c_str());
+        char_section.append(TextUtils::WStringToString(charname).c_str());
         inifile->SetBoolValue(char_section.c_str(), buf_active, _enabled);
     }
 }

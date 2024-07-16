@@ -20,6 +20,8 @@
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
 
+import TextUtils;
+
 using namespace GW::Constants;
 
 bool Pcon::map_has_effects_array = false;
@@ -341,7 +343,7 @@ void CHAT_CMD_FUNC(PconsWindow::CmdPcons) {
         Instance().ToggleEnable();
     }
     else if (argc >= 2) {
-        const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+        const std::wstring arg1 = TextUtils::ToLower(argv[1]);
         if (arg1 != L"on" && arg1 != L"off" && arg1 != L"toggle" && arg1 != L"refill") {
             Log::Error("Invalid argument '%ls', please use /pcons [on|off|toggle] [pcon]", argv[1]);
         }
@@ -360,20 +362,20 @@ void CHAT_CMD_FUNC(PconsWindow::CmdPcons) {
             }
         }
         else {
-            std::wstring argPcon = GuiUtils::ToLower(argv[2]);
+            std::wstring argPcon = TextUtils::ToLower(argv[2]);
             for (auto i = 3; i < argc; i++) {
                 argPcon.append(L" ");
-                argPcon.append(GuiUtils::ToLower(argv[i]));
+                argPcon.append(TextUtils::ToLower(argv[i]));
             }
             const std::vector<Pcon*>& pcons = Instance().pcons;
-            const std::string compare = GuiUtils::WStringToString(argPcon);
+            const std::string compare = TextUtils::WStringToString(argPcon);
             const unsigned int compareLength = compare.length();
             Pcon* bestMatch = nullptr;
             unsigned int bestMatchLength = 0;
             for (size_t i = 0; i < pcons.size(); i++) {
                 Pcon* pcon = pcons[i];
                 const std::string pconName(pcon->chat);
-                std::string pconNameSanitized = GuiUtils::ToLower(pconName);
+                std::string pconNameSanitized = TextUtils::ToLower(pconName);
                 const unsigned int pconNameLength = pconNameSanitized.length();
                 if (compareLength > pconNameLength) {
                     continue;

@@ -8,6 +8,7 @@
 #include <Widgets/Minimap/D3DVertex.h>
 #include <Widgets/Minimap/PmapRenderer.h>
 
+#include <ImGuiAddons.h>
 
 void PmapRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {

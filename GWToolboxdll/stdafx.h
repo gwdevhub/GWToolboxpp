@@ -48,6 +48,7 @@
 
 // windows headers
 #include <Windows.h>
+#include <Psapi.h>
 
 #include <strsafe.h>
 #include <DbgHelp.h>

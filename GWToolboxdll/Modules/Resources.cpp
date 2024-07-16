@@ -5,11 +5,12 @@
 
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameEntities/Skill.h>
 
+#include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
-
 
 #include <EmbeddedResource.h>
 #include <GWToolbox.h>
@@ -27,10 +28,10 @@
 #include <nfd_win.cpp>
 #include <wolfssl/wolfcrypt/asn.h>
 
-#include "GwDatTextureModule.h"
-#include "GWCA/GameEntities/Skill.h"
-#include "GWCA/Managers/SkillbarMgr.h"
+#include <Modules/GwDatTextureModule.h>
 #include <Constants/EncStrings.h>
+
+import TextUtils;
 
 namespace {
     const char* d3dErrorMessage(HRESULT code)
@@ -914,11 +915,11 @@ IDirect3DTexture9** Resources::GetDamagetypeImage(std::string dmg_type)
     if (damagetype_icon_urls.contains(dmg_type)) {
         const auto path = GetPath(DMGTYPE_ICONS_PATH);
         EnsureFolderExists(path);
-        const auto local_path = path / GuiUtils::SanitiseFilename(dmg_type + ".png");
+        const auto local_path = path / TextUtils::SanitiseFilename(dmg_type + ".png");
         const auto remote_path = std::format("https://wiki.guildwars.com/images/thumb/{}", damagetype_icon_urls.at(dmg_type));
         LoadTexture(texture, local_path, remote_path, [dmg_type](const bool success, const std::wstring& error) {
             if (!success) {
-                const auto dmg_type_wstr = GuiUtils::StringToWString(dmg_type);
+                const auto dmg_type_wstr = TextUtils::StringToWString(dmg_type);
                 Log::ErrorW(L"Failed to load icon for %d\n%s", dmg_type_wstr.c_str(), error.c_str());
             }
         });
@@ -936,7 +937,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     else {
         filename_on_disk = filename;
     }
-    const auto filename_sanitised = GuiUtils::SanitiseFilename(filename_on_disk);
+    const auto filename_sanitised = TextUtils::SanitiseFilename(filename_on_disk);
     if (guild_wars_wiki_images.contains(filename_sanitised)) {
         return guild_wars_wiki_images.at(filename_sanitised);
     }
@@ -964,10 +965,10 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     }
     // No local file found; download from wiki via skill link URL
     std::string wiki_url = "https://wiki.guildwars.com/wiki/File:";
-    wiki_url.append(GuiUtils::UrlEncode(filename, '_'));
+    wiki_url.append(TextUtils::UrlEncode(filename, '_'));
     Instance().Download(wiki_url, [texture, filename_sanitised, callback, width](const bool ok, const std::string& response, void*) {
         if (!ok) {
-            callback(ok, GuiUtils::StringToWString(response));
+            callback(ok, TextUtils::StringToWString(response));
             return; // Already logged whatever errors
         }
 
@@ -1049,7 +1050,7 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
     snprintf(url, _countof(url), "https://wiki.guildwars.com/wiki/Game_link:Skill_%d", skill_id);
     Instance().Download(url, [texture, skill_id, callback](const bool ok, const std::string& response, void*) {
         if (!ok) {
-            callback(ok, GuiUtils::StringToWString(response));
+            callback(ok, TextUtils::StringToWString(response));
             return; // Already logged whatever errors
         }
 
@@ -1248,10 +1249,10 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
     const std::string search_str = GuiUtils::WikiUrl(item_name);
     Instance().Download(search_str, [texture, item_name, callback](const bool ok, const std::string& response, void*) {
         if (!ok) {
-            callback(ok, GuiUtils::StringToWString(response));
+            callback(ok, TextUtils::StringToWString(response));
             return;
         }
-        const std::string item_name_str = GuiUtils::WStringToString(item_name);
+        const std::string item_name_str = TextUtils::WStringToString(item_name);
         // matches any characters that need to be escaped in RegEx
         static const std::regex specialChars{R"([-[\]{}()*+?.,\^$|#\s])"};
         const std::string sanitized = std::regex_replace(item_name_str, specialChars, R"(\$&)");
@@ -1266,7 +1267,7 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
                 trigger_failure_callback(callback, L"Failed to find title HTML for %s from wiki", item_name.c_str());
                 return;
             }
-            const std::string html_item_name = GuiUtils::HtmlEncode(m[1].str());
+            const std::string html_item_name = TextUtils::HtmlEncode(m[1].str());
             snprintf(regex_str, sizeof(regex_str), R"(<img[^>]+alt=['"][^>]*%s[^>]*['"][^>]+src=['"]([^"']+)([.](png)))", html_item_name.c_str());
             if (!std::regex_search(response, m, std::regex(regex_str))) {
                 trigger_failure_callback(callback, L"Failed to find image HTML for %s from wiki", item_name.c_str());

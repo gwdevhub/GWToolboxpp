@@ -9,7 +9,6 @@
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/Item.h>
 
-#include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/PartyContext.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/PreGameContext.h>
@@ -37,6 +36,7 @@
 #include <GWToolbox.h>
 #include <Utils/ToolboxUtils.h>
 
+import TextUtils;
 
 namespace {
 
@@ -193,7 +193,7 @@ namespace {
 
     std::wstring LowerCaseRemovePunct(const std::wstring& in)
     {
-        return GuiUtils::ToLower(GuiUtils::RemovePunctuation(in));
+        return TextUtils::ToLower(TextUtils::RemovePunctuation(in));
     }
 
     std::vector<std::wstring> exclude_charnames_from_reroll_cmd;
@@ -213,7 +213,7 @@ namespace {
             for (size_t i = 0; i < exclude_charnames_from_reroll_cmd.size(); i++) {
                 auto& excluded = exclude_charnames_from_reroll_cmd[i];
                 ImGui::PushID(i);
-                ImGui::TextUnformatted(GuiUtils::WStringToString(excluded).c_str());
+                ImGui::TextUnformatted(TextUtils::WStringToString(excluded).c_str());
                 ImGui::SameLine();
                 const bool clicked = ImGui::SmallButton("X");
                 ImGui::PopID();
@@ -223,7 +223,7 @@ namespace {
                 }
             }
             if (ImGui::InputText("###add_character_to_exclude", excluded_char_add_buf, _countof(excluded_char_add_buf), ImGuiInputTextFlags_EnterReturnsTrue)) {
-                const auto charname_w = GuiUtils::StringToWString(excluded_char_add_buf);
+                const auto charname_w = TextUtils::StringToWString(excluded_char_add_buf);
                 if (charname_w.length() && !IsExcludedFromReroll(charname_w.c_str())) {
                     exclude_charnames_from_reroll_cmd.push_back(LowerCaseRemovePunct(charname_w));
                 }
@@ -347,7 +347,7 @@ namespace {
             Log::Error("Failed to get available characters");
             return;
         }
-        const std::wstring character_or_profession = GuiUtils::ToLower(GetRemainingArgsWstr(message, 1));
+        const std::wstring character_or_profession = TextUtils::ToLower(GetRemainingArgsWstr(message, 1));
         constexpr std::array to_find = {
             L"",
             L"warrior",
@@ -386,7 +386,7 @@ namespace {
             if (IsExcludedFromReroll(player_name)) {
                 continue;
             }
-            if (!wcsstr(GuiUtils::ToLower(player_name).c_str(), character_or_profession.c_str())) {
+            if (!wcsstr(TextUtils::ToLower(player_name).c_str(), character_or_profession.c_str())) {
                 continue;
             }
             Reroll(available_char.player_name, travel_to_same_location_after_rerolling, rejoin_party_after_rerolling);
@@ -439,7 +439,7 @@ void RerollWindow::Draw(IDirect3DDevice9*)
         }
         const auto reroll_to_player_current_map = char_select_info->map_id();
         if (GWToolbox::ShouldDisableToolbox(reroll_to_player_current_map)) {
-            const auto charname_str = GuiUtils::WStringToString(char_select_info->player_name);
+            const auto charname_str = TextUtils::WStringToString(char_select_info->player_name);
             const auto msg = std::format("{} is currently in {}.\n"
                 "This is an outpost that toolbox won't work in.\n"
                 "You can still swap to this character, but won't automatically travel.\n\n"
@@ -478,7 +478,7 @@ void RerollWindow::Draw(IDirect3DDevice9*)
             auto& character = available_chars_ptr->at(i);
             const wchar_t* player_name = character.player_name;
             uint32_t profession = character.primary();
-            buf = GuiUtils::WStringToString(player_name);
+            buf = TextUtils::WStringToString(player_name);
             if (i % 2 != 0) {
                 ImGui::SameLine();
             }
@@ -767,7 +767,7 @@ void RerollWindow::LoadSettings(ToolboxIni* ini)
     std::vector<std::string> excluded_charnames_strings;
     GuiUtils::IniToArray(ini->GetValue(Name(), "exclude_charnames_from_reroll_cmd", ""), excluded_charnames_strings, ',');
     for (auto& cstring : excluded_charnames_strings) {
-        auto charname_w = GuiUtils::StringToWString(cstring);
+        auto charname_w = TextUtils::StringToWString(cstring);
         if (charname_w.length() && !IsExcludedFromReroll(charname_w.c_str())) {
             exclude_charnames_from_reroll_cmd.push_back(LowerCaseRemovePunct(charname_w));
         }
@@ -778,10 +778,10 @@ void RerollWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
     for (const auto& it : account_characters) {
-        std::string email_s = GuiUtils::WStringToString(it.first);
+        std::string email_s = TextUtils::WStringToString(it.first);
         const auto chars = it.second;
         for (auto it2 = chars->begin(); it2 != chars->end(); ++it2) {
-            std::string charname_s = GuiUtils::WStringToString(*it2);
+            std::string charname_s = TextUtils::WStringToString(*it2);
             if (charname_s.empty()) {
                 continue;
             }
@@ -797,7 +797,7 @@ void RerollWindow::SaveSettings(ToolboxIni* ini)
         if (excluded_charnames_ini.length()) {
             excluded_charnames_ini += ',';
         }
-        excluded_charnames_ini += GuiUtils::WStringToString(excluded);
+        excluded_charnames_ini += TextUtils::WStringToString(excluded);
     }
     ini->SetValue(Name(), "exclude_charnames_from_reroll_cmd", excluded_charnames_ini.c_str());
 }

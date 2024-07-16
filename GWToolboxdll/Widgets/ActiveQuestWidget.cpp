@@ -4,7 +4,6 @@
 
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/ToolboxSettings.h>
-#include <Utils/GuiUtils.h>
 
 #include <GWCA/Constants/QuestIDs.h>
 #include <GWCA/Context/WorldContext.h>
@@ -16,7 +15,10 @@
 #include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
-#include "Utils/FontLoader.h"
+#include <Utils/GuiUtils.h>
+#include <Utils/FontLoader.h>
+
+import TextUtils;
 
 namespace {
     struct CompletionState {
@@ -56,10 +58,10 @@ namespace {
         for(auto& it = regex_begin; it != regex_end; it++) {
             const std::wsmatch& matches = *it;
 
-            bool completed = (matches[1].compare(L"c") == 0);
+            bool completed = matches[1].compare(L"c") == 0;
             std::wstring obj = matches[2].str();
 
-            active_quest_objectives.emplace_back(index++, GuiUtils::WStringToString(obj), completed);
+            active_quest_objectives.emplace_back(index++, TextUtils::WStringToString(obj), completed);
         }
     }
 
@@ -76,13 +78,13 @@ namespace {
         for(auto it = active_quest_objectives.cbegin(); it != active_quest_objectives.cend(); it++) {
             const auto& [ix, _a, _b] = *it;
             if (ix >= index) {
-                active_quest_objectives.emplace(it, index, GuiUtils::WStringToString(decoded_objective), completed);
+                active_quest_objectives.emplace(it, index, TextUtils::WStringToString(decoded_objective), completed);
                 delete completion_state;
                 return;
             }
         }
 
-        active_quest_objectives.emplace_back(index, GuiUtils::WStringToString(decoded_objective), completed);
+        active_quest_objectives.emplace_back(index, TextUtils::WStringToString(decoded_objective), completed);
 
         delete completion_state;
     }

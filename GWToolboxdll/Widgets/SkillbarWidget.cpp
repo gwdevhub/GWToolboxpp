@@ -13,6 +13,7 @@
 #include <GWCA/Utilities/Hooker.h>
 
 #include <Defines.h>
+#include <ImGuiAddons.h>
 #include "SkillbarWidget.h"
 
 /*

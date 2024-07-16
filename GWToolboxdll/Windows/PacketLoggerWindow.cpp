@@ -23,6 +23,8 @@
 
 #include <GWToolbox.h>
 
+import TextUtils;
+
 namespace {
     wchar_t* GetMessageCore()
     {
@@ -41,10 +43,10 @@ namespace {
         {
             nlohmann::json json;
             if (!name.empty()) {
-                json["name"] = GuiUtils::WStringToString(name);
+                json["name"] = TextUtils::WStringToString(name);
             }
             if (!description.empty()) {
-                json["description"] = GuiUtils::WStringToString(description);
+                json["description"] = TextUtils::WStringToString(description);
             }
             json["campaign"] = map_info->campaign;
             json["type"] = map_info->type;

@@ -1294,7 +1294,7 @@ AgentRenderer::CustomAgent::CustomAgent(const ToolboxIni* ini, const char* secti
     : ui_id(++cur_ui_id)
 {
     active = ini->GetBoolValue(section, VAR_NAME(active), active);
-    GuiUtils::StrCopy(name, ini->GetValue(section, VAR_NAME(name), ""), sizeof(name));
+    std::snprintf(name, sizeof(name), "%s", ini->GetValue(section, VAR_NAME(name), ""));
     modelId = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(modelId), static_cast<long>(modelId)));
     mapId = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(mapId), static_cast<long>(mapId)));
 
@@ -1319,7 +1319,7 @@ AgentRenderer::CustomAgent::CustomAgent(const DWORD model_id, const Color _color
 {
     modelId = model_id;
     color = _color;
-    GuiUtils::StrCopy(name, _name, sizeof(name));
+    std::snprintf(name, _countof(name), "%s", _name);
     active = true;
 }
 

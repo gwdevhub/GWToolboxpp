@@ -3,12 +3,9 @@
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Attribute.h>
-#include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Managers/MapMgr.h>
@@ -17,7 +14,6 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <Logger.h>
@@ -26,7 +22,9 @@
 #include <Windows/BuildsWindow.h>
 #include <Windows/PconsWindow.h>
 
-#include "GWToolbox.h"
+#include <GWToolbox.h>
+
+import TextUtils;
 
 unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 
@@ -36,8 +34,8 @@ constexpr auto INI_FILENAME = L"builds.ini";
 
 BuildsWindow::Build::Build(const char* n, const char* c)
 {
-    GuiUtils::StrCopy(name, n, sizeof(name));
-    GuiUtils::StrCopy(code, c, sizeof(code));
+    std::snprintf(name, _countof(name), "%s", n);
+    std::snprintf(code, _countof(code), "%s", c);
     memset(&skill_template, sizeof(skill_template), 0);
     skill_template.primary = skill_template.secondary = GW::Constants::Profession::None;
 }
@@ -129,13 +127,13 @@ void CHAT_CMD_FUNC(BuildsWindow::CmdLoad)
         return;
     }
     if (argc > 2) {
-        const std::string build_name = GuiUtils::WStringToString(argv[2]);
-        const std::string team_build_name = GuiUtils::WStringToString(argv[1]);
+        const std::string build_name = TextUtils::WStringToString(argv[2]);
+        const std::string team_build_name = TextUtils::WStringToString(argv[1]);
         Instance().Load(team_build_name.c_str(), build_name.c_str());
         return;
     }
     if (argc > 1) {
-        const std::string build_name = GuiUtils::WStringToString(argv[1]);
+        const std::string build_name = TextUtils::WStringToString(argv[1]);
         Instance().Load(build_name.c_str());
         return;
     }
@@ -641,14 +639,14 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name)
         Log::Error("Invalid profession for %s (%s)", build_name, GetProfessionAcronym(t.primary));
         return;
     }
-    const std::string tbuild_ws = tbuild_name ? GuiUtils::ToLower(tbuild_name) : "";
-    const std::string build_ws = GuiUtils::ToLower(build_name);
+    const std::string tbuild_ws = tbuild_name ? TextUtils::ToLower(tbuild_name) : "";
+    const std::string build_ws = TextUtils::ToLower(build_name);
 
     std::vector<std::pair<TeamBuild, size_t>> local_teambuilds;
     for (auto& tb : teambuilds) {
         size_t tbuild_best_match = tb.builds.size();
         if (tbuild_name) {
-            const size_t found = GuiUtils::ToLower(tb.name).find(tbuild_ws.c_str());
+            const size_t found = TextUtils::ToLower(tb.name).find(tbuild_ws.c_str());
             if (found == std::string::npos) {
                 continue; // Teambuild name doesn't match
             }
@@ -664,7 +662,7 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name)
         }
         else {
             for (size_t i = 0; i < tb.builds.size(); i++) {
-                if (GuiUtils::ToLower(tb.builds[i].name).find(build_ws.c_str()) == std::string::npos) {
+                if (TextUtils::ToLower(tb.builds[i].name).find(build_ws.c_str()) == std::string::npos) {
                     continue;
                 }
                 GW::SkillbarMgr::SkillTemplate bt;

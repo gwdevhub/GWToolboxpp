@@ -14,19 +14,17 @@
 */
 
 #include "stdafx.h"
-#include <Psapi.h>
-#include <Defines.h>
-
 #include <GWCA/Managers/ChatMgr.h>
 
-#include <Utils/GuiUtils.h>
+#include <Defines.h>
+
 #include <ImGuiAddons.h>
 
 #include <Modules/Resources.h>
 #include <Modules/TeamspeakModule.h>
 #include <Timer.h>
 
-#include <Defines.h>
+import TextUtils;
 
 namespace {
     const char* teamspeak3_host = "127.0.0.1";
@@ -400,7 +398,7 @@ namespace {
         }
         wchar_t buf[120];
         swprintf(buf, _countof(buf) - 1, L"%s (%d users)",
-                 GuiUtils::StringToWString(teamspeak_server->name).c_str(),
+                 TextUtils::StringToWString(teamspeak_server->name).c_str(),
                  teamspeak_server->user_count);
         GW::Chat::SendChat('#', buf);
 

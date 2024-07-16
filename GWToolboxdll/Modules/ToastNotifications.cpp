@@ -24,6 +24,8 @@
 #include <Utils/ToolboxUtils.h>
 #include <Defines.h>
 
+import TextUtils;
+
 namespace {
     bool is_platform_compatible = false;
 
@@ -355,7 +357,7 @@ bool ToastNotifications::Toast::send()
     }
     if (!instance->isInitialized()) {
         instance->setAppName(L"Guild Wars");
-        const auto version = GuiUtils::StringToWString(GWTOOLBOXDLL_VERSION);
+        const auto version = TextUtils::StringToWString(GWTOOLBOXDLL_VERSION);
         const auto aumi = WinToast::configureAUMI(L"gwtoolbox", L"GWToolbox++", L"GWToolbox++", version);
         instance->setAppUserModelId(aumi);
         if (!instance->initialize()) {

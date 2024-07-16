@@ -27,8 +27,6 @@
 #include <Modules/Resources.h>
 #include <Modules/GwDatTextureModule.h>
 
-#include <resource.h>
-
 #include <Windows/RerollWindow.h>
 #include <Windows/CompletionWindow.h>
 #include <Windows/CompletionWindow_Constants.h>
@@ -38,6 +36,8 @@
 #include <Modules/DialogModule.h>
 
 #include <Utils/ToolboxUtils.h>
+
+import TextUtils;
 
 using namespace GW::Constants;
 using namespace Missions;
@@ -769,7 +769,7 @@ void Mission::OnClick()
 
 void Mission::OnHover()
 {
-    ImGui::SetTooltip([&]() {
+    ImGui::SetTooltip([&] {
         ImGui::TextUnformatted(name.string().c_str());
         const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaComplete(outpost);
         if (!chars_without_completed.empty()) {
@@ -2064,7 +2064,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     const std::wstring* sel = nullptr;
     if (chosen_player_name_s.empty()) {
         chosen_player_name = GetPlayerName();
-        chosen_player_name_s = GuiUtils::WStringToString(chosen_player_name);
+        chosen_player_name_s = TextUtils::WStringToString(chosen_player_name);
         CheckProgress();
     }
 
@@ -2735,7 +2735,7 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
     completion_ini->GetAllSections(entries);
     for (const ToolboxIni::Entry& entry : entries) {
         ini_section = entry.pItem;
-        name_ws = GuiUtils::StringToWString(ini_section);
+        name_ws = TextUtils::StringToWString(ini_section);
 
         read_ini_to_buf(CompletionType::Mission, "mission");
         read_ini_to_buf(CompletionType::MissionBonus, "mission_bonus");
@@ -2750,7 +2750,7 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
 
         const auto c = GetCharacterCompletion(name_ws.data(), true);
         c->profession = static_cast<Profession>(completion_ini->GetLongValue(ini_section, "profession", 0));
-        c->account = GuiUtils::StringToWString(completion_ini->GetValue(ini_section, "account", ""));
+        c->account = TextUtils::StringToWString(completion_ini->GetValue(ini_section, "account", ""));
         c->is_pvp = completion_ini->GetBoolValue(ini_section, "is_pvp", false);
         c->is_pre_searing = completion_ini->GetBoolValue(ini_section, "is_pre_searing", false);
     }
@@ -2875,7 +2875,7 @@ CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* cha
     CharacterCompletion* this_character_completion = nullptr;
     if (create_if_not_found) {
         this_character_completion = new CharacterCompletion();
-        this_character_completion->name_str = GuiUtils::WStringToString(character_name);
+        this_character_completion->name_str = TextUtils::WStringToString(character_name);
         this_character_completion->hom_achievements.character_name = character_name;
         character_completion[character_name] = this_character_completion;
         FetchHom(&this_character_completion->hom_achievements);

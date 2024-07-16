@@ -8,7 +8,6 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 
-
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
 
@@ -16,6 +15,8 @@
 #include <Modules/DialogModule.h>
 #include <Logger.h>
 #include <Timer.h>
+
+import TextUtils;
 
 namespace {
     GW::UI::UIInteractionCallback NPCDialogUICallback_Func = nullptr;
@@ -58,7 +59,7 @@ namespace {
         embedded_button.dialog_id = 0;
         embedded_button.skill_id = 0xFFFFFFF;
         while (std::regex_search(subject, m, button_regex)) {
-            if (!GuiUtils::ParseUInt(m[1].str().c_str(), &embedded_button.dialog_id)) {
+            if (!TextUtils::ParseUInt(m[1].str().c_str(), &embedded_button.dialog_id)) {
                 Log::ErrorW(L"Failed to parse dialog id for %s, %s", m[1].str().c_str(), m[2].str().c_str());
                 return;
             }

@@ -14,7 +14,6 @@
 */
 
 #include "stdafx.h"
-#include <Psapi.h>
 #include <Defines.h>
 
 #include <GWCA/Managers/ChatMgr.h>
@@ -24,6 +23,8 @@
 
 #include <Modules/Resources.h>
 #include <Modules/Teamspeak5Module.h>
+
+import TextUtils;
 
 using easywsclient::WebSocket;
 using nlohmann::json;
@@ -204,7 +205,7 @@ namespace {
         }
         wchar_t buf[120];
         swprintf(buf, _countof(buf) - 1, L"%s (%d users)",
-                 GuiUtils::StringToWString(teamspeak_server->name).c_str(),
+                 TextUtils::StringToWString(teamspeak_server->name).c_str(),
                  teamspeak_server->user_count);
         GW::Chat::SendChat('#', buf);
 

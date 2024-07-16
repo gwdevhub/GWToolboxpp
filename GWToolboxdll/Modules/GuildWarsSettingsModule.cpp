@@ -1,31 +1,29 @@
 #include "stdafx.h"
 
-#include <GWCA/Utilities/Scanner.h>
-
+#include <GWCA/Constants/QuestIDs.h>
 #include <GWCA/Context/CharContext.h>
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
-
-#include <Utils/GuiUtils.h>
-
-#include <Modules/Resources.h>
-
-#include "GuildWarsSettingsModule.h"
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/RenderMgr.h>
 
 #include <GWCA/GameContainers/List.h>
-#include <GWCA/Constants/QuestIDs.h>
+
+#include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
 
-#include <GWCA/Managers/RenderMgr.h>
-
 #include <d3d9on12.h>
+#include <Defines.h>
+#include <Modules/Resources.h>
+#include <Utils/GuiUtils.h>
+#include "GuildWarsSettingsModule.h"
 
-#include "Defines.h"
+
+import TextUtils;
 
 namespace {
     uint32_t* key_mappings_array = nullptr;
@@ -432,7 +430,7 @@ namespace {
         if (filename.extension() != L".ini") {
             filename.append(L".ini");
         }
-        filename = GuiUtils::SanitiseFilename(filename.string());
+        filename = TextUtils::SanitiseFilename(filename.string());
         filename = Resources::GetPath(filename);
 
         OnPreferencesSaveFileChosen(filename.string().c_str());
@@ -447,7 +445,7 @@ namespace {
         if (filename.extension() != L".ini") {
             filename.append(L".ini");
         }
-        filename = GuiUtils::SanitiseFilename(filename.string());
+        filename = TextUtils::SanitiseFilename(filename.string());
         filename = Resources::GetPath(filename);
 
         OnPreferencesLoadFileChosen(filename.string().c_str());
@@ -644,12 +642,12 @@ namespace {
 
         if (dll_product_name.size()) {
             new_name_enc += L" (";
-            new_name_enc += GuiUtils::StringToWString(dll_base_name);
+            new_name_enc += TextUtils::StringToWString(dll_base_name);
             new_name_enc += L", ";
-            new_name_enc += GuiUtils::StringToWString(dll_product_name);
+            new_name_enc += TextUtils::StringToWString(dll_product_name);
             if (dll_product_version.size()) {
                 new_name_enc += L", ";
-                new_name_enc += GuiUtils::StringToWString(dll_product_version);
+                new_name_enc += TextUtils::StringToWString(dll_product_version);
             }
             new_name_enc += L")";
         }
@@ -657,12 +655,12 @@ namespace {
         GetModuleFileInfo(GetModuleHandle("dxgi.dll"), dll_product_name, dll_product_version, dll_base_name);
         if (dll_product_name.size()) {
             new_name_enc += L" (";
-            new_name_enc += GuiUtils::StringToWString(dll_base_name);
+            new_name_enc += TextUtils::StringToWString(dll_base_name);
             new_name_enc += L", ";
-            new_name_enc += GuiUtils::StringToWString(dll_product_name);
+            new_name_enc += TextUtils::StringToWString(dll_product_name);
             if (dll_product_version.size()) {
                 new_name_enc += L", ";
-                new_name_enc += GuiUtils::StringToWString(dll_product_version);
+                new_name_enc += TextUtils::StringToWString(dll_product_version);
             }
             new_name_enc += L")";
         }

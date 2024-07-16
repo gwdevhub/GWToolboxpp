@@ -23,6 +23,7 @@
 #include <Modules/InventoryManager.h>
 #include <Windows/CompletionWindow.h>
 
+import TextUtils;
 
 using GW::Constants::MapID;
 
@@ -736,7 +737,7 @@ namespace {
                 // The event is ongoing so we set the start time as the current time
                 next_event_time = current_time;
             }
-            
+
         }
 
         return next_event_time;
@@ -1465,7 +1466,7 @@ void DailyQuests::Initialize()
     if (zaishen_bounty_cycles.empty()) {
         // TODO: Find the encoded names and maps for these
         for (const auto hard_coded_name : hard_coded_zaishen_bounty_names) {
-            const auto wrapped = std::format(L"\x108\x107{}\x1", GuiUtils::StringToWString(hard_coded_name));
+            const auto wrapped = std::format(L"\x108\x107{}\x1", TextUtils::StringToWString(hard_coded_name));
             zaishen_bounty_cycles.push_back({MapID::None, wrapped.c_str()});
         }
     }
@@ -1473,7 +1474,7 @@ void DailyQuests::Initialize()
     if (wanted_by_shining_blade_cycles.empty()) {
         // TODO: Find the encoded names and maps for these
         for (const auto hard_coded_name : hard_coded_wanted_by_shining_blade_names) {
-            const auto wrapped = std::format(L"\x108\x107{}\x1", GuiUtils::StringToWString(hard_coded_name));
+            const auto wrapped = std::format(L"\x108\x107{}\x1", TextUtils::StringToWString(hard_coded_name));
             wanted_by_shining_blade_cycles.push_back({MapID::None, wrapped.c_str()});
         }
     }
@@ -1481,7 +1482,7 @@ void DailyQuests::Initialize()
     if (vanguard_cycles.empty()) {
         // TODO: Find the encoded names and maps for these
         for (const auto hard_coded_name : hard_coded_vanguard_names) {
-            const auto wrapped = std::format(L"\x108\x107{}\x1", GuiUtils::StringToWString(hard_coded_name));
+            const auto wrapped = std::format(L"\x108\x107{}\x1", TextUtils::StringToWString(hard_coded_name));
             vanguard_cycles.push_back({MapID::None, wrapped.c_str()});
         }
     }
@@ -1489,7 +1490,7 @@ void DailyQuests::Initialize()
     if (nicholas_sandford_cycles.empty()) {
         // TODO: Find the encoded names and maps for these
         for (const auto hard_coded_name : hard_coded_nicholas_sandford_names) {
-            const auto wrapped = std::format(L"\x108\x107{}\x1", GuiUtils::StringToWString(hard_coded_name));
+            const auto wrapped = std::format(L"\x108\x107{}\x1", TextUtils::StringToWString(hard_coded_name));
             nicholas_sandford_cycles.push_back({MapID::None, wrapped.c_str()});
         }
     }
@@ -1874,7 +1875,7 @@ time_t DailyQuests::GetTimestampFromNicholasTheTraveller(DailyQuests::NicholasCy
     /*
     This function returns the next start time of the cycle data or the
     current time if the cycle is ongoing
-    */ 
+    */
     auto index = -1;
     for (auto i = 0; i < NICHOLAS_POST_COUNT; i++) {
         if (&nicholas_cycles[i] == data) {

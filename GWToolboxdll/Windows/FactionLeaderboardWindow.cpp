@@ -4,6 +4,8 @@
 #include <Utils/GuiUtils.h>
 #include <Windows/FactionLeaderboardWindow.h>
 
+import TextUtils;
+
 void FactionLeaderboardWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
@@ -44,7 +46,7 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9*)
             ImGui::SameLine(offset += short_text_width);
             ImGui::Text(Resources::GetMapName(e.map_id)->string().c_str());
             ImGui::SameLine(offset += long_text_width);
-            ImGui::Text("%s [%s]", GuiUtils::WStringToString(e.name).c_str(), GuiUtils::WStringToString(e.tag).c_str());
+            ImGui::Text("%s [%s]", TextUtils::WStringToString(e.name).c_str(), TextUtils::WStringToString(e.tag).c_str());
             ImGui::PushID(&e);
             ImGui::SameLine(offset = avail_width - tiny_text_width);
             if (ImGui::Button("Wiki", ImVec2(tiny_text_width, 0))) {

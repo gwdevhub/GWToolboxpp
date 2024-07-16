@@ -7,13 +7,10 @@
 #include <GWCA/GameEntities/Item.h>
 
 #include <GWCA/Managers/ItemMgr.h>
-#include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/Utilities/Hook.h>
-#include <GWCA/Utilities/Hooker.h>
-#include <GWCA/Utilities/Scanner.h>
 
 #include <Modules/GameSettings.h>
 #include <Modules/ItemDescriptionHandler.h>
@@ -23,6 +20,8 @@
 #include <Timer.h>
 #include <Utils/GuiUtils.h>
 #include <Constants/EncStrings.h>
+
+import TextUtils;
 
 using nlohmann::json;
 
@@ -482,7 +481,7 @@ namespace {
 
         std::wstring subject;
         if (name && *name) {
-            subject = std::format(L"\x108\x107{}\x1",GuiUtils::StringToWString(name));
+            subject = std::format(L"\x108\x107{}\x1", TextUtils::StringToWString(name));
         }
         else {
             subject = L"\x108\x107Item price\x1";

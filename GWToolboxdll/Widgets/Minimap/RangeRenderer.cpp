@@ -12,8 +12,9 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 
 #include <Widgets/Minimap/RangeRenderer.h>
+#include <Widgets/Minimap/Minimap.h>
 
-#include "Minimap.h"
+#include <ImGuiAddons.h>
 
 void RangeRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {

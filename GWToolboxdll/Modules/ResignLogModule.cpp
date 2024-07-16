@@ -4,7 +4,6 @@
 
 #include <GWCA/GameEntities/Party.h>
 
-#include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
@@ -15,6 +14,7 @@
 #include <Defines.h>
 #include <Timer.h>
 
+import TextUtils;
 
 namespace {
 
@@ -129,7 +129,7 @@ namespace {
         const auto players = GW::PartyMgr::GetPartyPlayers();
         if (!players) return;
         for (auto& p : *players) {
-            const auto player_name = GuiUtils::SanitizePlayerName(GW::PlayerMgr::GetPlayerName(p.login_number));
+            const auto player_name = TextUtils::SanitizePlayerName(GW::PlayerMgr::GetPlayerName(p.login_number));
             if (resigned_player_name != player_name)
                 continue;
             party_member_statuses[p.login_number] = {
@@ -198,7 +198,7 @@ bool ResignLogModule::PrintResignStatus(const uint32_t player_number, std::wstri
     const auto status = party_member_statuses.contains(player_number) ? party_member_statuses[player_number] : PartyMemberStatus({
         Status::Unknown, 0
     });
-    out = std::format(L"{}. {} - {}", idx, player_name, GuiUtils::StringToWString(GetStatusStr(status.status)));
+    out = std::format(L"{}. {} - {}", idx, player_name, TextUtils::StringToWString(GetStatusStr(status.status)));
     if (include_timestamp && status.timestamp) {
         out += std::format(L" [{}:{:02}:{:02}:{:03}]", status.timestamp / (60 * 60 * 1000), status.timestamp / (60 * 1000) % 60, status.timestamp / 1000 % 60, status.timestamp % 1000);
     }

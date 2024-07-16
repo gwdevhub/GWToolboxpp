@@ -2,15 +2,16 @@
 
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <Defines.h>
 #include <Logger.h>
-#include <Utils/GuiUtils.h>
 #include <Color.h>
 
-#include <GWCA/Managers/UIMgr.h>
-
 #include <Modules/TwitchModule.h>
+#include <ImGuiAddons.h>
+
+import TextUtils;
 
 namespace {
     // IRC details
@@ -46,7 +47,7 @@ namespace {
         else {
             snprintf(sender, std::size(sender), "%s", irc_alias.c_str());
         }
-        std::wstring sender_ws = GuiUtils::StringToWString(sender);
+        std::wstring sender_ws = TextUtils::StringToWString(sender);
         auto message_ws = new wchar_t[255];
         size_t message_len = 0;
         const size_t original_len = wcslen(message);
@@ -95,14 +96,14 @@ namespace {
                 WriteChat(L"Connected");
                 return 0;
             }
-            swprintf(buf, 599, L"Connected to %s as %S", GuiUtils::StringToWString(&params[1]).c_str(), irc_username.c_str());
+            swprintf(buf, 599, L"Connected to %s as %S", TextUtils::StringToWString(&params[1]).c_str(), irc_username.c_str());
             WriteChat(buf);
             return 0;
         }
         if (!notify_on_user_join) {
             return 0;
         }
-        swprintf(buf, 599, L"%s joined your channel.", GuiUtils::StringToWString(hostd->nick).c_str());
+        swprintf(buf, 599, L"%s joined your channel.", TextUtils::StringToWString(hostd->nick).c_str());
         WriteChat(buf);
         return 0;
     }
@@ -115,7 +116,7 @@ namespace {
         }
 
         wchar_t buf[600];
-        swprintf(buf, 599, L"%s left your channel.", GuiUtils::StringToWString(hostd->nick).c_str());
+        swprintf(buf, 599, L"%s left your channel.", TextUtils::StringToWString(hostd->nick).c_str());
         WriteChat(buf);
         return 0;
     }
@@ -144,7 +145,7 @@ namespace {
         if (!params[0] || !show_messages) {
             return 0; // Empty msg
         }
-        const std::wstring message_ws = GuiUtils::StringToWString(&params[1]);
+        const std::wstring message_ws = TextUtils::StringToWString(&params[1]);
         WriteChat(message_ws.c_str(), hostd->nick);
         Log::Log("Message from %s: %s", hostd->nick, &params[1]);
         return 0;
@@ -181,7 +182,7 @@ namespace {
                 return;
             }
             wchar_t buf[128];
-            const std::wstring w_alias = GuiUtils::StringToWString(irc_alias);
+            const std::wstring w_alias = TextUtils::StringToWString(irc_alias);
             swprintf(buf, 128, L" @ %s", w_alias.c_str());
             if (std::wstring(name).find(buf) != std::wstring::npos) {
                 wcscpy(name, w_alias.c_str());
@@ -193,7 +194,7 @@ namespace {
             if (chan != GW::Chat::Channel::CHANNEL_WHISPER || !connected) {
                 return;
             }
-            std::string message = GuiUtils::WStringToString(msg);
+            std::string message = TextUtils::WStringToString(msg);
             const size_t sender_idx = message.find(',');
             if (sender_idx == std::string::npos) {
                 return; // Invalid sender

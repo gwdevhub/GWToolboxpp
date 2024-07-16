@@ -53,7 +53,6 @@
 #include <Modules/ChatSettings.h>
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>
-#include <Modules/PriceCheckerModule.h>
 #include <Windows/CompletionWindow.h>
 
 #include <Color.h>
@@ -61,13 +60,9 @@
 #include <Logger.h>
 #include <Timer.h>
 #include <Defines.h>
+#include <Utils/FontLoader.h>
 
-#include <d3d9on12.h>
-
-#include "Windows/FriendListWindow.h"
-#include <Keys.h>
-
-#include "Utils/FontLoader.h"
+import TextUtils;
 
 #pragma warning(disable : 6011)
 #pragma comment(lib,"Version.lib")
@@ -2582,7 +2577,7 @@ void GameSettings::OnAgentStartCast(GW::HookStatus*, GW::UI::UIMessage, void* wP
 // Redirect /wiki commands to go to useful pages
 void GameSettings::OnOpenWiki(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wParam, void*)
 {
-    const std::string url = ToLower(static_cast<char*>(wParam));
+    const std::string url = TextUtils::ToLower(static_cast<char*>(wParam));
     if (strstr(url.c_str(), "/wiki/main_page")) {
         // Redirect /wiki to /wiki <current map name>
         status->blocked = true;

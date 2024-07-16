@@ -5,11 +5,12 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 
 #include <Logger.h>
-#include <Utils/GuiUtils.h>
 
 #include <Modules/CrashHandler.h>
 // ReSharper disable once CppUnusedIncludeDirective
 #include <Modules/Resources.h>
+
+import TextUtils;
 
 namespace {
     FILE* logfile = nullptr;
@@ -210,7 +211,7 @@ static void _vchatlog(const LogType log_type, const char* format, const va_list 
     const size_t len = vsnprintf(nullptr, 0, format, argv);
     const auto buf = new char[len + 1];
     vsnprintf(buf, len + 1, format, argv);
-    const std::wstring sbuf2 = GuiUtils::StringToWString(buf);
+    const std::wstring sbuf2 = TextUtils::StringToWString(buf);
     delete[] buf;
     _chatlog(log_type, sbuf2.c_str());
 }

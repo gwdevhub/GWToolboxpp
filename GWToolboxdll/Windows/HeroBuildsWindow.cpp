@@ -23,8 +23,9 @@
 #include <Modules/Resources.h>
 #include <Windows/HeroBuildsWindow.h>
 
-#include "GWToolbox.h"
-#include "GWCA/GameEntities/Skill.h"
+#include <GWToolbox.h>
+
+import TextUtils;
 
 constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 
@@ -255,8 +256,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
                 if (ImGui::Button("Copy##1", ImVec2(60.0f, 0))) {
                     TeamHeroBuild new_tb = teambuilds[selected_teambuild];
-                    const auto copy_name = std::format("{} (Copy)", new_tb.name);
-                    GuiUtils::StrCopy(new_tb.name, copy_name.c_str(), sizeof(new_tb.name));
+                    std::snprintf(new_tb.name, sizeof(new_tb.name), "%s (Copy)", new_tb.name);
                     builds_changed = true;
                     teambuilds.push_back(new_tb);
                 }
@@ -723,7 +723,7 @@ void CHAT_CMD_FUNC(HeroBuildsWindow::CmdHeroTeamBuild)
         argBuildname.append(L" ");
         argBuildname.append(argv[i]);
     }
-    const std::string argBuildName_s = GuiUtils::WStringToString(argBuildname);
+    const std::string argBuildName_s = TextUtils::WStringToString(argBuildname);
     const TeamHeroBuild* found = Instance().GetTeambuildByName(argBuildName_s);
     if (!found) {
         Log::ErrorW(L"No hero build found for %s", argBuildname.c_str());
@@ -889,9 +889,9 @@ bool HeroBuildsWindow::CodeOnHero::Process()
 
 HeroBuildsWindow::TeamHeroBuild* HeroBuildsWindow::GetTeambuildByName(const std::string& build_name_search)
 {
-    const std::string compare = GuiUtils::ToLower(GuiUtils::RemovePunctuation(build_name_search));
+    const std::string compare = TextUtils::ToLower(TextUtils::RemovePunctuation(build_name_search));
     for (auto& tb : teambuilds) {
-        std::string name = GuiUtils::ToLower(GuiUtils::RemovePunctuation(tb.name));
+        std::string name = TextUtils::ToLower(TextUtils::RemovePunctuation(tb.name));
         if (name.length() < compare.length()) {
             continue; // String entered by user is longer
         }

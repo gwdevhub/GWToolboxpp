@@ -19,10 +19,10 @@
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/CustomRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
-
 #include <Color.h>
+#include <GWToolbox.h>
 
-#include "GWToolbox.h"
+import TextUtils;
 
 using namespace std::string_literals;
 
@@ -32,17 +32,12 @@ namespace {
     ToolboxIni inifile{};
 }
 
-CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const float x2, const float y2, const GW::Constants::MapID m, const char* n)
+CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const float x2, const float y2, const GW::Constants::MapID m, const char* _name)
     : p1(x1, y1),
       p2(x2, y2),
       map(m)
 {
-    if (n) {
-        GuiUtils::StrCopy(name, n, sizeof(name));
-    }
-    else {
-        GuiUtils::StrCopy(name, "line", sizeof(name));
-    }
+    std::snprintf(name, sizeof(name), "%s", _name ? _name : "line");
 };
 
 CustomRenderer::CustomMarker::CustomMarker(const float x, const float y, const float s, const Shape sh, const GW::Constants::MapID m, const char* _name)
@@ -51,23 +46,13 @@ CustomRenderer::CustomMarker::CustomMarker(const float x, const float y, const f
       shape(sh),
       map(m)
 {
-    if (_name) {
-        GuiUtils::StrCopy(name, _name, sizeof(name));
-    }
-    else {
-        GuiUtils::StrCopy(name, "marker", sizeof(name));
-    }
+    std::snprintf(name, sizeof(name), "%s", _name ? _name : "marker");
 }
 
-CustomRenderer::CustomPolygon::CustomPolygon(const GW::Constants::MapID m, const char* n)
+CustomRenderer::CustomPolygon::CustomPolygon(const GW::Constants::MapID m, const char* _name)
     : map(m)
 {
-    if (n) {
-        GuiUtils::StrCopy(name, n, sizeof name);
-    }
-    else {
-        GuiUtils::StrCopy(name, "marker", sizeof name);
-    }
+    std::snprintf(name, sizeof(name), "%s", _name ? _name : "polygon");
 };
 
 void CustomRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
@@ -257,7 +242,7 @@ void CustomRenderer::SetTooltipMapID(const GW::Constants::MapID& map_id)
         }
     }
     if (!map_id_tooltip.map_name_ws.empty()) {
-        snprintf(map_id_tooltip.tooltip_str, sizeof(map_id_tooltip.tooltip_str), "Map ID (%s)", GuiUtils::WStringToString(map_id_tooltip.map_name_ws).c_str());
+        snprintf(map_id_tooltip.tooltip_str, sizeof(map_id_tooltip.tooltip_str), "Map ID (%s)", TextUtils::WStringToString(map_id_tooltip.map_name_ws).c_str());
         map_id_tooltip.map_name_ws.clear();
     }
     ImGui::SetTooltip(map_id_tooltip.tooltip_str);

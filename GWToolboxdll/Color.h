@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Utils/GuiUtils.h>
-
 #ifdef RGB
 #undef RGB
 #endif
@@ -41,12 +39,24 @@ namespace Colors {
 
     static Color Load(const ToolboxIni* ini, const char* section, const char* key, const Color def)
     {
+        auto ParseUInt = [](const char* str, unsigned int* val, const int base)
+        {
+            char* end;
+            if (!str) {
+                return false;
+            }
+            *val = strtoul(str, &end, base);
+            if (str == end || errno == ERANGE) {
+                return false;
+            }
+            return true;
+        };
         const char* wc = ini->GetValue(section, key, nullptr);
         if (wc == nullptr) {
             return def;
         }
         unsigned int c;
-        if (GuiUtils::ParseUInt(wc, &c, 16)) {
+        if (ParseUInt(wc, &c, 16)) {
             return c;
         }
         return def;

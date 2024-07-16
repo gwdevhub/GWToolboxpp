@@ -20,6 +20,7 @@
 #include <Timer.h>
 #include <GWToolbox.h>
 
+import TextUtils;
 
 namespace {
     std::vector<TBHotkey*> hotkeys; // list of hotkeys
@@ -118,7 +119,7 @@ namespace {
         if (!me) {
             return false;
         }
-        const std::string player_name = GuiUtils::WStringToString(c->player_name);
+        const std::string player_name = TextUtils::WStringToString(c->player_name);
         const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
         const GW::Constants::MapID map_id = GW::Map::GetMapID();
         const auto primary = static_cast<GW::Constants::Profession>(me->primary);

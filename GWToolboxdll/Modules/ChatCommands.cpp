@@ -57,10 +57,10 @@
 #include <Modules/DialogModule.h>
 #include <Modules/Resources.h>
 
+import TextUtils;
+
 constexpr auto CMDTITLE_KEEP_CURRENT = 0xfffe;
 constexpr auto CMDTITLE_REMOVE_CURRENT = 0xffff;
-
-
 
 namespace {
     const wchar_t* next_word(const wchar_t* str)
@@ -309,7 +309,7 @@ namespace {
     void CHAT_CMD_FUNC(CmdSkillImage)
     {
         uint32_t skill_id = 0;
-        GuiUtils::ParseUInt(argv[1], &skill_id);
+        TextUtils::ParseUInt(argv[1], &skill_id);
         auto s = new GW::Packet::StoC::UpdateSkillbarSkill();
         s->agent_id = GW::Agents::GetControlledCharacterId();
         s->skill_slot = 0;
@@ -329,7 +329,7 @@ namespace {
         packet->header = GW::Packet::StoC::PlayEffect::STATIC_HEADER;
         packet->agent_id = player->agent_id;
         packet->coords = player->pos;
-        GuiUtils::ParseUInt(argv[1], &packet->effect_id);
+        TextUtils::ParseUInt(argv[1], &packet->effect_id);
         GW::GameThread::Enqueue([packet] {
             GW::StoC::EmulatePacket(packet);
             delete packet;
@@ -359,7 +359,7 @@ namespace {
             }
         }
         uint32_t frame_limit = 0;
-        if (!GuiUtils::ParseUInt(argv[1], &frame_limit)) {
+        if (!TextUtils::ParseUInt(argv[1], &frame_limit)) {
             return Log::Error(fps_syntax);
         }
         if (frame_limit && frame_limit < 15) {
@@ -382,7 +382,7 @@ namespace {
 
         // Find value and set preference
         uint32_t value = 0xff;
-        if (argc > 2 && GuiUtils::ParseUInt(argv[2], &value) && SetPreference(pref, value)) {
+        if (argc > 2 && TextUtils::ParseUInt(argv[2], &value) && SetPreference(pref, value)) {
             return; // Success
         }
 
@@ -401,7 +401,7 @@ namespace {
 
         // Find value and set preference
         uint32_t value = 0xff;
-        if (argc > 2 && GuiUtils::ParseUInt(argv[2], &value) && SetPreference(pref, value)) {
+        if (argc > 2 && TextUtils::ParseUInt(argv[2], &value) && SetPreference(pref, value)) {
             return; // Success
         }
 
@@ -435,7 +435,7 @@ namespace {
                 return;
             }
             uint32_t value = 0xff;
-            if (GuiUtils::ParseUInt(argv[2], &value)) {
+            if (TextUtils::ParseUInt(argv[2], &value)) {
                 SetPreference(pref, value == 1 ? 1 : 0);
             }
             return;
@@ -568,7 +568,7 @@ namespace {
             return;
         }
         for (const auto alias : cmd_aliases) {
-            const auto sent_alias = GuiUtils::ToLower(&message[1]);
+            const auto sent_alias = TextUtils::ToLower(&message[1]);
             if (wcscmp(alias->alias_wstr, sent_alias.c_str()) == 0 && !alias->processing && wcslen(alias->command_wstr) > 1) {
                 status->blocked = true;
                 alias->processing = true;
@@ -613,13 +613,13 @@ void ChatCommands::CreateAlias(const wchar_t* alias, const wchar_t* message) {
     }
     else {
         alias_obj = new CmdAlias();
-        const auto alias_cstr = GuiUtils::WStringToString(alias);
+        const auto alias_cstr = TextUtils::WStringToString(alias);
         strcpy(alias_obj->alias_cstr, alias_cstr.c_str());
         wcscpy(alias_obj->alias_wstr, alias);
         cmd_aliases.push_back(alias_obj);
     }
 
-    const auto message_cstr = GuiUtils::WStringToString(message);
+    const auto message_cstr = TextUtils::WStringToString(message);
     strcpy(alias_obj->command_cstr, message_cstr.c_str());
     wcscpy(alias_obj->command_wstr, message);
 }
@@ -724,7 +724,7 @@ bool ChatCommands::GetNPCInfoByName(const std::string& name, PendingTransmo& tra
 
 bool ChatCommands::GetNPCInfoByName(const std::wstring& name, PendingTransmo& transmo)
 {
-    return GetNPCInfoByName(GuiUtils::WStringToString(name), transmo);
+    return GetNPCInfoByName(TextUtils::WStringToString(name), transmo);
 }
 
 void ChatCommands::DrawHelp()
@@ -1005,8 +1005,8 @@ void ChatCommands::LoadSettings(ToolboxIni* ini)
         if (std::regex_match(alias, match, index_regex)) {
             alias = match[2];
         }
-        const auto alias_wstr = GuiUtils::StringToWString(alias);
-        const auto command_wstr = GuiUtils::StringToWString(cmd);
+        const auto alias_wstr = TextUtils::StringToWString(alias);
+        const auto command_wstr = TextUtils::StringToWString(cmd);
         CreateAlias(alias_wstr.c_str(), command_wstr.c_str());
     }
     if (cmd_aliases.empty()) {
@@ -1359,7 +1359,7 @@ void ChatCommands::SearchAgent::Init(const wchar_t* _search, const TargetType ty
     if (!_search || !_search[0]) {
         return;
     }
-    search = GuiUtils::ToLower(_search);
+    search = TextUtils::ToLower(_search);
     npc_names.clear();
     started = TIMER_INIT();
     GW::AgentArray* agents = GW::Agents::GetAgentArray();
@@ -1437,7 +1437,7 @@ void ChatCommands::SearchAgent::Update()
         return;
     }
     for (const auto& enc_name : npc_names) {
-        const size_t found = GuiUtils::ToLower(enc_name.second->wstring()).find(search.c_str());
+        const size_t found = TextUtils::ToLower(enc_name.second->wstring()).find(search.c_str());
         if (found == std::wstring::npos) {
             continue;
         }
@@ -1536,7 +1536,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdEnterMission)
                 return Log::Error(error_fow_uw_syntax);
             }
             uint32_t item_id;
-            const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+            const std::wstring arg1 = TextUtils::ToLower(argv[1]);
             if (arg1 == L"fow") {
                 item_id = 22280;
             }
@@ -1600,7 +1600,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDialog)
     if (dialog_str == L"take" || dialog_str == L"0") {
         id = 0;
     }
-    else if (!(GuiUtils::ParseUInt(argv[1], &id) && id)) {
+    else if (!(TextUtils::ParseUInt(argv[1], &id) && id)) {
         Log::Error(syntax);
         return;
     }
@@ -1634,7 +1634,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         return;
     }
 
-    const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+    const std::wstring arg1 = TextUtils::ToLower(argv[1]);
     if (argc < 3) {
         if (arg1 == L"hide") {
             // e.g. /tb hide
@@ -1695,7 +1695,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         return;
     }
     const std::vector<ToolboxUIElement*> windows = MatchingWindows(status, message, argc, argv);
-    const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
+    const std::wstring arg2 = TextUtils::ToLower(argv[2]);
     if (arg2 == L"hide") {
         // e.g. /tb travel hide
         for (const auto& window : windows) {
@@ -1728,7 +1728,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
     }
     else if (arg1 == L"save") {
         // e.g. /tb save pure
-        const auto sanitised_foldername = GuiUtils::SanitiseFilename(arg2);
+        const auto sanitised_foldername = TextUtils::SanitiseFilename(arg2);
         GWToolbox::SetSettingsFolder(sanitised_foldername);
         const auto file_location = GWToolbox::SaveSettings();
         const auto dir = file_location.parent_path();
@@ -1738,7 +1738,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
     }
     else if (arg1 == L"load") {
         // e.g. /tb load tas
-        const auto sanitised_foldername = GuiUtils::SanitiseFilename(arg2);
+        const auto sanitised_foldername = TextUtils::SanitiseFilename(arg2);
         const auto old_settings_folder = Resources::GetSettingsFolderName();
         GWToolbox::SetSettingsFolder(sanitised_foldername);
         if (!std::filesystem::exists(Resources::GetSettingFile(GWTOOLBOX_INI_FILENAME))) {
@@ -1771,7 +1771,7 @@ GW::UI::WindowID CHAT_CMD_FUNC(ChatCommands::MatchingGWWindow)
     if (argc < 2) {
         return GW::UI::WindowID_Count;
     }
-    const std::wstring arg = GuiUtils::ToLower(argv[1]);
+    const std::wstring arg = TextUtils::ToLower(argv[1]);
     if (!arg.empty() && arg != L"all") {
         for (const auto& [window_id, window_name] : gw_windows) {
             if (wcscmp(window_name, arg.c_str()) == 0) {
@@ -1789,16 +1789,16 @@ std::vector<ToolboxUIElement*> CHAT_CMD_FUNC(ChatCommands::MatchingWindows)
         ret.push_back(&MainWindow::Instance());
     }
     else {
-        const std::wstring arg = GuiUtils::ToLower(argv[1]);
+        const std::wstring arg = TextUtils::ToLower(argv[1]);
         if (arg == L"all") {
             for (ToolboxUIElement* window : GWToolbox::GetUIElements()) {
                 ret.push_back(window);
             }
         }
         else if (!arg.empty()) {
-            const std::string name = GuiUtils::WStringToString(arg);
+            const std::string name = TextUtils::WStringToString(arg);
             for (ToolboxUIElement* window : GWToolbox::GetUIElements()) {
-                if (GuiUtils::ToLower(window->Name()).find(name) == 0) {
+                if (TextUtils::ToLower(window->Name()).find(name) == 0) {
                     ret.push_back(window);
                 }
             }
@@ -1829,7 +1829,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
         Log::ErrorW(L"Invalid syntax: %s", message);
         return;
     }
-    const std::wstring last_arg = GuiUtils::ToLower(argv[argc - 1]);
+    const std::wstring last_arg = TextUtils::ToLower(argv[argc - 1]);
     bool ignore_last_arg = false;
     enum ActionType : uint8_t {
         Toggle,
@@ -1844,7 +1844,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
         action = Off;
         ignore_last_arg = true;
     }
-    const std::wstring second_arg = GuiUtils::ToLower(argv[1]);
+    const std::wstring second_arg = TextUtils::ToLower(argv[1]);
 
     auto equipment_slot = GW::EquipmentType::Unknown;
 
@@ -1917,7 +1917,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdZoom)
     }
     else {
         int distance;
-        if (GuiUtils::ParseInt(argv[1], &distance)) {
+        if (TextUtils::ParseInt(argv[1], &distance)) {
             if (distance > 0) {
                 GW::CameraMgr::SetMaxDist(static_cast<float>(distance));
             }
@@ -1937,7 +1937,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdCamera)
         GW::CameraMgr::UnlockCam(false);
     }
     else {
-        const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+        const std::wstring arg1 = TextUtils::ToLower(argv[1]);
         if (arg1 == L"lock") {
             GW::CameraMgr::UnlockCam(false);
         }
@@ -1947,7 +1947,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdCamera)
         }
         else if (arg1 == L"fog") {
             if (argc == 3) {
-                const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
+                const std::wstring arg2 = TextUtils::ToLower(argv[2]);
                 if (arg2 == L"on") {
                     GW::CameraMgr::SetFog(true);
                 }
@@ -1961,13 +1961,13 @@ void CHAT_CMD_FUNC(ChatCommands::CmdCamera)
                 Instance().cam_speed = Instance().DEFAULT_CAM_SPEED;
             }
             else {
-                const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
+                const std::wstring arg2 = TextUtils::ToLower(argv[2]);
                 if (arg2 == L"default") {
                     Instance().cam_speed = Instance().DEFAULT_CAM_SPEED;
                 }
                 else {
                     float speed = 0.0f;
-                    if (!GuiUtils::ParseFloat(arg2.c_str(), &speed)) {
+                    if (!TextUtils::ParseFloat(arg2.c_str(), &speed)) {
                         Log::Error(
                             "Invalid argument '%ls', please use a float value",
                             argv[2]);
@@ -2020,7 +2020,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTarget)
 
     const auto zero_w = L"0";
 
-    const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+    const std::wstring arg1 = TextUtils::ToLower(argv[1]);
     if (arg1 == L"ee") // /target ee
     {
         return TargetEE();
@@ -2034,7 +2034,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTarget)
         {
             return TargetNearest(zero_w, Living);
         }
-        const std::wstring arg2 = GuiUtils::ToLower(argv[2]);
+        const std::wstring arg2 = TextUtils::ToLower(argv[2]);
         if (arg2 == L"item") {
             // /target nearest item [model_id|name]
             return TargetNearest(argc > 3 ? GetRemainingArgsWstr(message, 3) : zero_w, Item);
@@ -2137,7 +2137,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTarget)
                 partySize += party->heroes.size();
             }
 
-            if (!GuiUtils::ParseUInt(argv[2], &partyMemberNumber) || partyMemberNumber <= 0 ||
+            if (!TextUtils::ParseUInt(argv[2], &partyMemberNumber) || partyMemberNumber <= 0 ||
                 partyMemberNumber > partySize) {
                 Log::Error("Invalid argument '%ls', please use an integer value of 1 to %u", argv[2], partySize);
                 return;
@@ -2182,12 +2182,12 @@ void CHAT_CMD_FUNC(ChatCommands::CmdUseSkill)
     if (argc < 2) {
         return;
     }
-    const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+    const std::wstring arg1 = TextUtils::ToLower(argv[1]);
     if (arg1 == L"stop" || arg1 == L"off" || arg1 == L"0") {
         return; // do nothing, already cleared skills_to_use
     }
     uint32_t num = 0;
-    if (!GuiUtils::ParseUInt(argv[1], &num) || num < 1 || num > 8) {
+    if (!TextUtils::ParseUInt(argv[1], &num) || num < 1 || num > 8) {
         Log::Error("Invalid argument '%ls', please use an integer value of 1 to 8", argv[1]);
         return;
     }
@@ -2253,7 +2253,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdLoad)
     }
     else if (argc == 3) {
         uint32_t ihero_number;
-        if (GuiUtils::ParseUInt(argv[2], &ihero_number)) {
+        if (TextUtils::ParseUInt(argv[2], &ihero_number)) {
             // @Robustness:
             // Check that the number is actually valid or make sure LoadSkillTemplate is safe
             if (0 < ihero_number && ihero_number <= 8) {
@@ -2321,7 +2321,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdPingEquipment)
     const auto equipped_items_bag = GW::Items::GetBag(GW::Constants::Bag::Equipped_Items);
     if (!equipped_items_bag)
         return;
-    const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+    const std::wstring arg1 = TextUtils::ToLower(argv[1]);
     if (arg1 == L"weapon") {
         GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 1), 3);
     }
@@ -2376,7 +2376,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmoParty)
         if (wcsncmp(argv[1], L"reset", 5) == 0) {
             transmo.npc_id = std::numeric_limits<int>::max();
         }
-        else if (GuiUtils::ParseInt(argv[1], &iscale)) {
+        else if (TextUtils::ParseInt(argv[1], &iscale)) {
             if (!ParseScale(iscale, transmo)) {
                 return;
             }
@@ -2385,7 +2385,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmoParty)
             Log::Error("Unknown transmo '%ls'", argv[1]);
             return;
         }
-        if (argc > 2 && GuiUtils::ParseInt(argv[2], &iscale)) {
+        if (argc > 2 && TextUtils::ParseInt(argv[2], &iscale)) {
             if (!ParseScale(iscale, transmo)) {
                 return;
             }
@@ -2440,7 +2440,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmoTarget)
     if (wcsncmp(argv[1], L"reset", 5) == 0) {
         transmo.npc_id = std::numeric_limits<int>::max();
     }
-    else if (GuiUtils::ParseInt(argv[1], &iscale)) {
+    else if (TextUtils::ParseInt(argv[1], &iscale)) {
         if (!ParseScale(iscale, transmo)) {
             return;
         }
@@ -2449,7 +2449,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmoTarget)
         Log::Error("Unknown transmo '%ls'", argv[1]);
         return;
     }
-    if (argc > 2 && GuiUtils::ParseInt(argv[2], &iscale)) {
+    if (argc > 2 && TextUtils::ParseInt(argv[2], &iscale)) {
         if (!ParseScale(iscale, transmo)) {
             return;
         }
@@ -2512,7 +2512,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdWithdraw)
             if (platinum) {
                 amount.pop_back();
             }
-            if (!(GuiUtils::ParseUInt(amount.c_str(), &wanted_quantity) && wanted_quantity <= 0xFFFF)) {
+            if (!(TextUtils::ParseUInt(amount.c_str(), &wanted_quantity) && wanted_quantity <= 0xFFFF)) {
                 return syntax_error();
             }
             if (platinum) {
@@ -2524,12 +2524,12 @@ void CHAT_CMD_FUNC(ChatCommands::CmdWithdraw)
     }
     std::vector<uint32_t> model_ids;
 
-    if (!(GuiUtils::ParseUInt(argv[1], &wanted_quantity) && wanted_quantity <= 0xFFFF)) {
+    if (!(TextUtils::ParseUInt(argv[1], &wanted_quantity) && wanted_quantity <= 0xFFFF)) {
         return syntax_error();
     }
     for (auto i = 2; i < argc; i++) {
         uint32_t model_id;
-        if (!GuiUtils::ParseUInt(argv[i], &model_id)) {
+        if (!TextUtils::ParseUInt(argv[i], &model_id)) {
             return syntax_error();
         }
         model_ids.push_back(model_id);
@@ -2561,7 +2561,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDeposit)
             if (platinum) {
                 amount.pop_back();
             }
-            if (!(GuiUtils::ParseUInt(amount.c_str(), &wanted_quantity) && wanted_quantity <= 0xFFFF)) {
+            if (!(TextUtils::ParseUInt(amount.c_str(), &wanted_quantity) && wanted_quantity <= 0xFFFF)) {
                 return syntax_error();
             }
             if (platinum) {
@@ -2574,12 +2574,12 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDeposit)
 
     std::vector<uint32_t> model_ids;
 
-    if (!(GuiUtils::ParseUInt(argv[1], &wanted_quantity) && wanted_quantity <= 0xFFFF)) {
+    if (!(TextUtils::ParseUInt(argv[1], &wanted_quantity) && wanted_quantity <= 0xFFFF)) {
         return syntax_error();
     }
     for (auto i = 2; i < argc; i++) {
         uint32_t model_id;
-        if (!GuiUtils::ParseUInt(argv[i], &model_id)) {
+        if (!TextUtils::ParseUInt(argv[i], &model_id)) {
             return syntax_error();
         }
         model_ids.push_back(model_id);
@@ -2599,7 +2599,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmo)
         if (wcsncmp(argv[1], L"reset", 5) == 0) {
             transmo.npc_id = std::numeric_limits<int>::max();
         }
-        else if (GuiUtils::ParseInt(argv[1], &iscale)) {
+        else if (TextUtils::ParseInt(argv[1], &iscale)) {
             if (!ParseScale(iscale, transmo)) {
                 return;
             }
@@ -2608,7 +2608,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmo)
             Log::Error("unknown transmo '%ls'", argv[1]);
             return;
         }
-        if (argc > 2 && GuiUtils::ParseInt(argv[2], &iscale)) {
+        if (argc > 2 && TextUtils::ParseInt(argv[2], &iscale)) {
             if (!ParseScale(iscale, transmo)) {
                 return;
             }
@@ -2644,10 +2644,10 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, const TargetTy
     uint32_t index = 0; // 0=nearest. 1=first by id, 2=second by id, etc.
 
     // Searching by name; offload this to decode agent names first.
-    if (GuiUtils::ParseUInt(model_id_or_name, &model_id)) {
+    if (TextUtils::ParseUInt(model_id_or_name, &model_id)) {
         // check if there's an index component
         if (const wchar_t* rest = GetRemainingArgsWstr(model_id_or_name, 1)) {
-            GuiUtils::ParseUInt(rest, &index);
+            TextUtils::ParseUInt(rest, &index);
         }
     }
     else {
@@ -2773,7 +2773,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmoAgent)
         return Log::Error("Missing /transmoagent argument");
     }
     uint32_t agent_id;
-    if (!GuiUtils::ParseUInt(argv[1], &agent_id)) {
+    if (!TextUtils::ParseUInt(argv[1], &agent_id)) {
         return Log::Error("Invalid /transmoagent agent_id");
     }
     PendingTransmo transmo;
@@ -2781,7 +2781,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmoAgent)
     if (wcsncmp(argv[2], L"reset", 5) == 0) {
         transmo.npc_id = std::numeric_limits<int>::max();
     }
-    else if (GuiUtils::ParseInt(argv[2], &iscale)) {
+    else if (TextUtils::ParseInt(argv[2], &iscale)) {
         if (!ParseScale(iscale, transmo)) {
             return;
         }
@@ -2790,7 +2790,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmoAgent)
         Log::Error("unknown transmo '%s'", argv[1]);
         return;
     }
-    if (argc > 4 && GuiUtils::ParseInt(argv[3], &iscale)) {
+    if (argc > 4 && TextUtils::ParseInt(argv[3], &iscale)) {
         if (!ParseScale(iscale, transmo)) {
             return;
         }
@@ -2805,7 +2805,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdResize)
         return;
     }
     int width, height;
-    if (!(GuiUtils::ParseInt(argv[1], &width) && GuiUtils::ParseInt(argv[2], &height))) {
+    if (!(TextUtils::ParseInt(argv[1], &width) && TextUtils::ParseInt(argv[2], &height))) {
         Log::Error("The syntax is /resize width height");
         return;
     }
@@ -2819,7 +2819,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdReapplyTitle)
 {
     uint32_t title_id = Instance().default_title_id;
     if (argc > 1) {
-        if (!GuiUtils::ParseUInt(argv[1], &title_id)) {
+        if (!TextUtils::ParseUInt(argv[1], &title_id)) {
             Log::Error("Syntax: /title [title_id]");
             return;
         }
@@ -2989,7 +2989,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdHeroBehaviour)
     }
     // set behavior based on command message
     auto behaviour = GW::HeroBehavior::Guard; // guard by default
-    const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+    const std::wstring arg1 = TextUtils::ToLower(argv[1]);
     if (arg1 == L"avoid") {
         behaviour = GW::HeroBehavior::AvoidCombat; // avoid combat
     }
@@ -3053,7 +3053,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdVolume)
             return Log::Error(syntax);
     }
     uint32_t value_dec;
-    if (!GuiUtils::ParseUInt(value, &value_dec, 10)) {
+    if (!TextUtils::ParseUInt(value, &value_dec, 10)) {
         return Log::Error(syntax);
     }
     if (value_dec > 100) {
@@ -3084,7 +3084,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdAnimation)
     }
 
     uint32_t agentid;
-    const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+    const std::wstring arg1 = TextUtils::ToLower(argv[1]);
 
     if (arg1 == L"me") {
         const GW::AgentLiving* agent = GW::Agents::GetControlledCharacter();
@@ -3102,7 +3102,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdAnimation)
     }
 
     uint32_t animationid = 0;
-    if (!GuiUtils::ParseUInt(argv[2], &animationid) || animationid < 1 || animationid > 2076) {
+    if (!TextUtils::ParseUInt(argv[2], &animationid) || animationid < 1 || animationid > 2076) {
         return Log::Error(syntax);
     }
 

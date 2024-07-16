@@ -34,40 +34,6 @@ namespace GuiUtils {
     // Reposition a rect within its container to make sure it isn't overflowing it.
     ImVec4& ClampRect(ImVec4& rect, const ImVec4& viewport);
 
-    std::string ToSlug(std::string s);
-    std::wstring ToSlug(std::wstring s);
-    std::string ToLower(std::string s);
-    std::wstring ToLower(std::wstring s);
-    std::wstring UrlEncode(const std::wstring& s, char space_token = '_');
-    std::string UrlEncode(const std::string& s, char space_token = '_');
-    std::string HtmlEncode(const std::string& s);
-    std::wstring RemovePunctuation(std::wstring s);
-    std::string RemovePunctuation(std::string s);
-    std::wstring RemoveDiacritics(const std::wstring& s);
-
-    std::string WStringToString(std::wstring_view str);
-    std::wstring StringToWString(std::string_view str);
-    std::string SanitiseFilename(std::string_view str);
-    std::wstring SanitiseFilename(std::wstring_view str);
-    std::wstring SanitizePlayerName(std::wstring_view str);
-
-    // Extract first unencoded substring from gw encoded string. Pass second and third args to know where the player name was found in the original string.
-    std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out = nullptr, const wchar_t** out_pos_out = nullptr);
-
-    bool ParseInt(const char* str, int* val, int base = 0);
-    bool ParseInt(const wchar_t* str, int* val, int base = 0);
-
-    bool ParseUInt(const char* str, unsigned int* val, int base = 0);
-    bool ParseUInt(const wchar_t* str, unsigned int* val, int base = 0);
-
-    bool ParseFloat(const char* str, float* val);
-    bool ParseFloat(const wchar_t* str, float* val);
-
-    time_t filetime_to_timet(const FILETIME& ft);
-    size_t TimeToString(uint32_t utc_timestamp, std::string& out);
-    size_t TimeToString(time_t utc_timestamp, std::string& out);
-    size_t TimeToString(FILETIME utc_timestamp, std::string& out);
-
     template <map_type T>
     void MapToIni(ToolboxIni* ini, const char* section, const char* name, const T& map)
     {

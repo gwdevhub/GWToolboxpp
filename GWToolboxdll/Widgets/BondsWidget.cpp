@@ -229,7 +229,7 @@ namespace {
         // Party member (or all)
         if (wcscmp(argv[2], L"all") != 0) {
             uint32_t party_member_idx = 0;
-            if (!GuiUtils::ParseUInt(argv[2], &party_member_idx)) {
+            if (!TextUtils::ParseUInt(argv[2], &party_member_idx)) {
                 syntax_err();
                 return;
             }
@@ -240,7 +240,7 @@ namespace {
         }
         // Skill
         if (wcscmp(argv[3], L"all") != 0) {
-            if (!GuiUtils::ParseUInt(argv[3], &skill_id)) {
+            if (!TextUtils::ParseUInt(argv[3], &skill_id)) {
                 syntax_err();
                 return;
             }

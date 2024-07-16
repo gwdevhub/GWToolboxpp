@@ -31,6 +31,7 @@
 #include <Windows/Hotkeys.h>
 #include <Windows/PconsWindow.h>
 
+import TextUtils;
 
 bool TBHotkey::show_active_in_header = true;
 bool TBHotkey::show_run_in_header = true;
@@ -463,7 +464,7 @@ bool TBHotkey::Draw(Op* op)
             if (add_map_id) {
                 uint32_t map_id_out;
                 if (strlen(map_id_input_buf)
-                    && GuiUtils::ParseUInt(map_id_input_buf, &map_id_out)
+                    && TextUtils::ParseUInt(map_id_input_buf, &map_id_out)
                     && !std::ranges::contains(map_ids, reinterpret_cast<uint32_t>(map_id_input_buf))) {
                     map_ids.push_back(map_id_out);
                     memset(map_id_input_buf, 0, sizeof(map_id_input_buf));

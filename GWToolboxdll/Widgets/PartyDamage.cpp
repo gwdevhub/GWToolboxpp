@@ -17,6 +17,8 @@
 #include <Modules/ToolboxSettings.h>
 #include <Widgets/PartyDamage.h>
 
+import TextUtils;
+
 constexpr const wchar_t* INI_FILENAME = L"healthlog.ini";
 constexpr const char* IniSection = "health";
 
@@ -241,7 +243,7 @@ void CHAT_CMD_FUNC(PartyDamage::CmdDamage)
         WritePartyDamage();
     }
     else {
-        const std::wstring arg1 = GuiUtils::ToLower(argv[1]);
+        const std::wstring arg1 = TextUtils::ToLower(argv[1]);
         if (arg1 == L"print" || arg1 == L"report") {
             WritePartyDamage();
         }
@@ -253,7 +255,7 @@ void CHAT_CMD_FUNC(PartyDamage::CmdDamage)
         }
         else {
             uint32_t idx;
-            if (GuiUtils::ParseUInt(argv[1], &idx)) {
+            if (TextUtils::ParseUInt(argv[1], &idx)) {
                 WriteDamageOf(idx - 1);
             }
         }
@@ -495,7 +497,7 @@ void PartyDamage::LoadSettings(ToolboxIni* ini)
     inifile->GetAllKeys(IniSection, keys);
     for (const ToolboxIni::Entry& key : keys) {
         int lkey;
-        if (GuiUtils::ParseInt(key.pItem, &lkey)) {
+        if (TextUtils::ParseInt(key.pItem, &lkey)) {
             if (lkey <= 0) {
                 continue;
             }

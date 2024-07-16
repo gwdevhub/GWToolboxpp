@@ -10,6 +10,7 @@ file(GLOB SOURCES
     "Modules/*.cpp"
     "Utils/*.h"
     "Utils/*.cpp"
+    "Utils/*.ixx"
     "Widgets/*.h"
     "Widgets/*.cpp"
     "Widgets/Minimap/*.h"

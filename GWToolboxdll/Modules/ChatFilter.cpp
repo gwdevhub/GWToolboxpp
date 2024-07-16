@@ -3,6 +3,7 @@
 #include <Defines.h>
 #include <GWCA/Packets/StoC.h>
 
+#include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Managers/FriendListMgr.h>
@@ -10,18 +11,18 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
 
 #include <ImGuiAddons.h>
 #include <Logger.h>
 
 #include <Modules/Resources.h>
 #include <Modules/ChatFilter.h>
-#include <GWCA/GameEntities/Friendslist.h>
 #include <Utils/ToolboxUtils.h>
-#include <Utils/GuiUtils.h>
 
-#include "GWToolbox.h"
-#include "GWCA/Managers/PlayerMgr.h"
+#include <GWToolbox.h>
+
+import TextUtils;
 
 //#define PRINT_CHAT_PACKETS
 
@@ -162,7 +163,7 @@ namespace {
 
     void ParseBuffer(const char* text, std::vector<std::wstring>& words)
     {
-        using namespace GuiUtils;
+        using namespace TextUtils;
         words.clear();
         const auto text_ws = RemoveDiacritics(ToLower(StringToWString(text)));
         std::wstringstream stream(text_ws.c_str());
@@ -177,7 +178,7 @@ namespace {
 
     void ParseBuffer(const char* text, std::vector<std::wregex>& regex)
     {
-        using namespace GuiUtils;
+        using namespace TextUtils;
         regex.clear();
         const auto text_ws = RemoveDiacritics(StringToWString(text));
         std::wstringstream stream(text_ws.c_str());
@@ -654,7 +655,7 @@ namespace {
             end = &message[i];
         }
 
-        using namespace GuiUtils;
+        using namespace TextUtils;
         const auto str = std::wstring(start, end);
         if (str.empty()) {
             return false;

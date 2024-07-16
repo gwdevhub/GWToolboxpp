@@ -5,7 +5,7 @@
 #include <Modules/HallOfMonumentsModule.h>
 #include <ToolboxWindow.h>
 #include <Color.h>
-
+#include <Utils/GuiUtils.h>
 
 namespace Missions {
 

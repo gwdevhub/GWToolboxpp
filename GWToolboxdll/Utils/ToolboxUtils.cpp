@@ -23,10 +23,11 @@
 #include <GWCA/Packets/StoC.h>
 
 #include <GWCA/Managers/FriendListMgr.h>
-#include <Utils/GuiUtils.h>
 
 #include "ToolboxUtils.h"
 #include <GWCA/Utilities/Scanner.h>
+
+import TextUtils;
 
 namespace {
     
@@ -163,7 +164,7 @@ namespace ToolboxUtils {
         if (!_name) {
             return nullptr;
         }
-        const std::wstring name = GuiUtils::SanitizePlayerName(_name);
+        const std::wstring name = TextUtils::SanitizePlayerName(_name);
         GW::PlayerArray* players = GW::PlayerMgr::GetPlayerArray();
         if (!players) {
             return nullptr;
@@ -172,7 +173,7 @@ namespace ToolboxUtils {
             if (!player.name) {
                 continue;
             }
-            if (name == GuiUtils::SanitizePlayerName(player.name)) {
+            if (name == TextUtils::SanitizePlayerName(player.name)) {
                 return &player;
             }
         }
@@ -193,7 +194,7 @@ namespace ToolboxUtils {
         else {
             player = GW::PlayerMgr::GetPlayerByID(player_number);
         }
-        return player && player->name ? GuiUtils::SanitizePlayerName(player->name) : L"";
+        return player && player->name ? TextUtils::SanitizePlayerName(player->name) : L"";
     }
 
     GW::Array<wchar_t>* GetMessageBuffer()

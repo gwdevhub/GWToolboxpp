@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <Utils/GuiUtils.h>
-
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
@@ -9,6 +7,7 @@
 #include <Modules/HallOfMonumentsModule.h>
 #include <CurlWrapper.h>
 
+import TextUtils;
 
 namespace {
     constexpr char _Base64ToValue[128] = {
@@ -292,7 +291,7 @@ bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out)
 void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& character_name, HallOfMonumentsAchievements* out, OnAchievementsLoadedCallback callback)
 {
     out->state = HallOfMonumentsAchievements::State::Loading;
-    std::string character_name_s = GuiUtils::WStringToString(character_name);
+    std::string character_name_s = TextUtils::WStringToString(character_name);
     for (size_t x = 0; x < character_name_s.length(); x++) {
         if (x == 0) {
             character_name_s[x] = static_cast<char>(toupper(character_name_s[x]));

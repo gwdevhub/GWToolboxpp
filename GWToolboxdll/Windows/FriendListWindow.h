@@ -6,6 +6,8 @@
 #include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
 
+import TextUtils;
+
 class FriendListWindow final : public ToolboxWindow {
 public:
     static FriendListWindow& Instance()
@@ -26,7 +28,7 @@ public:
         const std::string& GetNameA()
         {
             if (name_str.empty() && !name.empty()) {
-                name_str = GuiUtils::WStringToString(name);
+                name_str = TextUtils::WStringToString(name);
             }
             return name_str;
         }
@@ -103,7 +105,7 @@ public:
         [[nodiscard]] std::string& GetAliasA()
         {
             if (alias_str.empty() && !alias.empty()) {
-                alias_str = GuiUtils::WStringToString(alias);
+                alias_str = TextUtils::WStringToString(alias);
             }
             return alias_str;
         }

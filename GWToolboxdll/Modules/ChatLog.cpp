@@ -15,6 +15,8 @@
 #include <Defines.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
+import TextUtils;
+
 namespace GW::Chat {
     constexpr size_t SENT_LOG_LENGTH = 0x32;
 }
@@ -337,7 +339,7 @@ namespace {
         size_t i = 0;
         std::string datetime_str;
         while (recv) {
-            if (GuiUtils::TimeToString(recv->timestamp, datetime_str)) {
+            if (TextUtils::TimeToString(recv->timestamp, datetime_str)) {
                 snprintf(addr_buf, 8, "%03x", i++);
                 ASSERT(GuiUtils::ArrayToIni(recv->msg.data(), &msg_buf));
                 inifile->SetValue(addr_buf, "message", msg_buf.c_str());
