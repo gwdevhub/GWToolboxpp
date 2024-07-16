@@ -20,7 +20,6 @@
 #include <GWCA/Managers/UIMgr.h>
 
 #include <Utils/GuiUtils.h>
-
 #include <Modules/Resources.h>
 #include <Windows/DailyQuestsWindow.h>
 #include <Windows/TravelWindow.h>
@@ -33,7 +32,8 @@ namespace {
     bool search_in_english = true;
 
     std::string SanitiseForSearch(const std::wstring& in) {
-        std::string sanitised = GuiUtils::ToLower(GuiUtils::RemovePunctuation(GuiUtils::WStringToString(in)));
+        using namespace TextUtils;
+        std::string sanitised = ToLower(RemovePunctuation(WStringToString(in)));
         // Remove "the " from front of entered string
         const size_t found = sanitised.rfind("the ");
         if (found == 0) {

@@ -2846,7 +2846,7 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
         CharacterCompletion* char_comp = char_unlocks.second;
         const std::string* name = &char_comp->name_str;
         completion_ini->SetLongValue(name->c_str(), "profession", std::to_underlying(char_comp->profession));
-        completion_ini->SetValue(name->c_str(), "account", GuiUtils::WStringToString(char_comp->account).c_str());
+        completion_ini->SetValue(name->c_str(), "account", TextUtils::WStringToString(char_comp->account).c_str());
         completion_ini->SetBoolValue(name->c_str(), "is_pvp", char_comp->is_pvp);
         completion_ini->SetBoolValue(name->c_str(), "is_pre_searing", char_comp->is_pre_searing);
 

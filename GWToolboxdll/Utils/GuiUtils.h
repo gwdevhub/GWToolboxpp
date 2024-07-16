@@ -5,7 +5,6 @@
 #include <nlohmann/json.hpp>
 #include <ToolboxIni.h>
 
-
 namespace GW::Constants {
     enum class Language;
 }
