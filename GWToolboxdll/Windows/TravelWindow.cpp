@@ -28,7 +28,6 @@
 import TextUtils;
 
 namespace {
-
     bool search_in_english = true;
 
     std::string SanitiseForSearch(const std::wstring& in) {
@@ -62,12 +61,8 @@ namespace {
             }
         }
         ~SearchableArea() {
-            if (enc_name) {
-                delete enc_name;
-            }
-            if (name) {
-                delete[] name;
-            }
+            delete enc_name;
+            delete[] name;
         }
         const char* Name() {
             if (name) {
@@ -157,9 +152,7 @@ namespace {
             return false;
         }
         return true;
-
     }
-
 
     struct MapStruct {
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
@@ -984,6 +977,8 @@ void TravelWindow::DrawSettingsInternal()
     ImGui::ShowHelp("Will collapse the travel window when clicking on a travel destination");
     ImGui::Checkbox("Automatically retry if the district is full", &retry_map_travel);
     ImGui::ShowHelp("Use /tp stop to stop retrying.");
+    ImGui::Checkbox("Use English map names", &search_in_english);
+    ImGui::ShowHelp("If this is unchecked, the /tp command will use the localized map names based on your current language.");
 }
 
 void TravelWindow::LoadSettings(ToolboxIni* ini)
