@@ -354,6 +354,18 @@ namespace GuiUtils {
         }
     }
 
+    std::string RemovePunctuation(std::string s)
+    {
+        std::erase_if(s, &safe_ispunct);
+        return s;
+    }
+
+    std::wstring RemovePunctuation(std::wstring s)
+    {
+        std::erase_if(s, &ispunct);
+        return s;
+    }
+
     std::string ToSlug(std::string s)
     {
         s = RemovePunctuation(s);
@@ -381,7 +393,7 @@ namespace GuiUtils {
     std::string ToLower(std::string s)
     {
         std::ranges::transform(s, s.begin(), [](const char c) {
-            return std::tolower(c, std::locale()));
+            return std::tolower(c, std::locale());
         });
         return s;
     }
@@ -633,18 +645,6 @@ namespace GuiUtils {
         }
         const std::wstring name(start, end);
         return SanitizePlayerName(name);
-    }
-
-    std::string RemovePunctuation(std::string s)
-    {
-        std::erase_if(s, &safe_ispunct);
-        return s;
-    }
-
-    std::wstring RemovePunctuation(std::wstring s)
-    {
-        std::erase_if(s, &ispunct);
-        return s;
     }
 
     bool ParseInt(const char* str, int* val, const int base)
