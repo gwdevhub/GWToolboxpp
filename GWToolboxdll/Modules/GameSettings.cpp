@@ -54,6 +54,7 @@
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>
 #include <Modules/PriceCheckerModule.h>
+#include <Windows/CompletionWindow.h>
 
 #include <Color.h>
 #include <hidusage.h>
@@ -1078,8 +1079,11 @@ namespace {
         return p && p->party_leader && *p->party_leader ? p->party_leader : nullptr;
     }
 
+
+    bool mission_prompted = false;
+
     GW::HookEntry OnPreUIMessage_HookEntry;
-    void OnPreUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*) {
+    void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*) {
         switch (message_id) {
         case GW::UI::UIMessage::kSendCallTarget: {
             auto packet = (GW::UI::UIPacket::kSendCallTarget*)wParam;
@@ -1089,6 +1093,41 @@ namespace {
                 packet->call_type = GW::CallTargetType::AttackingOrTargetting;
             }
         } break;
+        case GW::UI::UIMessage::kMapLoaded: {
+            mission_prompted = false;
+        } break;
+        case GW::UI::UIMessage::kSendEnterMission: {
+            if (GW::PartyMgr::GetPartyPlayerCount() > 1)
+                break;
+            if (mission_prompted)
+                break;
+            const auto player_name = GW::AccountMgr::GetCurrentPlayerName();
+            const auto map_id = GW::Map::GetMapID();
+            const auto nm_complete = CompletionWindow::IsAreaComplete(player_name, map_id, CompletionCheck::NormalMode);
+            const auto hm_complete = CompletionWindow::IsAreaComplete(player_name, map_id, CompletionCheck::HardMode);
+
+            auto on_enter_mission_prompt = [](bool result, void*) {
+                mission_prompted = true;
+                if (result) {
+                    // User want to change mode
+                    GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
+                }
+                };
+            const char* confirm_text = nullptr;
+            if (GW::PartyMgr::GetIsPartyInHardMode() && hm_complete && !nm_complete) {
+                confirm_text = "You're about to enter a mission in Hard Mode,\nbut you've already completed it on this character.\n\nWould you like to switch to Normal Mode?";
+            }
+            if (!GW::PartyMgr::GetIsPartyInHardMode() && GW::PartyMgr::GetIsHardModeUnlocked() && nm_complete && !hm_complete) {
+                confirm_text = "You're about to enter a mission in Normal Mode,\nbut you've already completed it on this character.\n\nWould you like to switch to Hard Mode?";
+            }
+            if (confirm_text) {
+                ImGui::ConfirmDialog(confirm_text, on_enter_mission_prompt);
+                uint32_t packet = 0;
+                GW::UI::SendUIMessage((GW::UI::UIMessage)0x10000128, &packet);
+                status->blocked = true;
+            }
+            break;
+        }
         }
     }
 
@@ -1458,7 +1497,9 @@ void GameSettings::Initialize()
     }
 
     constexpr GW::UI::UIMessage pre_ui_messages[] = {
-        GW::UI::UIMessage::kSendCallTarget
+        GW::UI::UIMessage::kSendCallTarget,
+        GW::UI::UIMessage::kSendEnterMission,
+        GW::UI::UIMessage::kMapLoaded
     };
     for (const auto message_id : pre_ui_messages) {
         RegisterUIMessageCallback(&OnPreUIMessage_HookEntry, message_id, OnPreUIMessage, -0x8000);

@@ -211,6 +211,13 @@ namespace Missions {
     };
 } // namespace Missions
 
+enum CompletionCheck : uint32_t {
+    None,
+    NormalMode,
+    HardMode,
+    Both
+};
+
 struct CharacterCompletion {
     GW::Constants::Profession profession = static_cast<GW::Constants::Profession>(0);
     bool is_pvp = false;
@@ -254,14 +261,14 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
     static void DrawHallOfMonuments(IDirect3DDevice9* device);
 
-    static bool IsAreaComplete(const wchar_t*, const GW::Constants::MapID map, bool include_hard_mode = true);
+    static bool IsAreaComplete(const wchar_t*, const GW::Constants::MapID map, CompletionCheck check = CompletionCheck::Both);
     static bool IsAreaUnlocked(const wchar_t* player_name, const GW::Constants::MapID map_id);
     static bool IsSkillUnlocked(const wchar_t* player_name, const GW::Constants::SkillID map_id);
 
     static CharacterCompletion* GetCharacterCompletion(const wchar_t* name, bool create_if_not_found = false);
 
     // Get player names for the current account that don't have the area unlocked. Won't work very well unless completion module is active
-    static std::vector<CharacterCompletion*> GetCharactersWithoutAreaComplete(GW::Constants::MapID mission_map_id, bool include_hard_mode = true);
+    static std::vector<CharacterCompletion*> GetCharactersWithoutAreaComplete(GW::Constants::MapID mission_map_id, CompletionCheck check = CompletionCheck::Both);
 
     // Get player names for the current account that don't have the area unlocked. Won't work very well unless completion module is active
     static std::vector<CharacterCompletion*> GetCharactersWithoutAreaUnlocked(GW::Constants::MapID map_id);

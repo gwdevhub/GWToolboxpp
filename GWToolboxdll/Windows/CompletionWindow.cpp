@@ -2883,7 +2883,7 @@ CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* cha
     return this_character_completion;
 }
 
-bool CompletionWindow::IsAreaComplete(const wchar_t* player_name, const GW::Constants::MapID map_id, bool include_hard_mode) {
+bool CompletionWindow::IsAreaComplete(const wchar_t* player_name, const GW::Constants::MapID map_id, CompletionCheck check) {
     const auto completion = GetCharacterCompletion(player_name, false);
     const auto map = completion ? GW::Map::GetMapInfo(map_id) : nullptr;
     if (!(map && completion)) return false;
@@ -2891,15 +2891,15 @@ bool CompletionWindow::IsAreaComplete(const wchar_t* player_name, const GW::Cons
     if (map->type == GW::RegionType::ExplorableZone)
         return ArrayBoolAt(completion->vanquishes, static_cast<uint32_t>(map_id));
 
-    if (!ArrayBoolAt(completion->mission, static_cast<uint32_t>(map_id)))
+    if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(completion->mission, static_cast<uint32_t>(map_id)))
         return false;
-    if (include_hard_mode && !ArrayBoolAt(completion->mission_hm, static_cast<uint32_t>(map_id)))
+    if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(completion->mission_hm, static_cast<uint32_t>(map_id)))
         return false;
     const bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
     if (has_bonus) {
-        if (!ArrayBoolAt(completion->mission_bonus, static_cast<uint32_t>(map_id)))
+        if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(completion->mission_bonus, static_cast<uint32_t>(map_id)))
             return false;
-        if (include_hard_mode && !ArrayBoolAt(completion->mission_bonus_hm, static_cast<uint32_t>(map_id)))
+        if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(completion->mission_bonus_hm, static_cast<uint32_t>(map_id)))
             return false;
     }
     return true;
@@ -2916,7 +2916,7 @@ bool CompletionWindow::IsSkillUnlocked(const wchar_t* player_name, const GW::Con
     return completion && ArrayBoolAt(completion->skills, static_cast<uint32_t>(skill_id));
 }
 
-std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaComplete(GW::Constants::MapID map_id, bool include_hard_mode)
+std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaComplete(GW::Constants::MapID map_id, CompletionCheck check)
 {
     std::vector<CharacterCompletion*> out;
     const auto email = GW::AccountMgr::GetAccountEmail();
@@ -2925,7 +2925,7 @@ std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaComp
             continue;
         if (only_show_account_chars && it.second->account != email)
             continue;
-        if(!IsAreaComplete(it.first.c_str(), map_id, include_hard_mode))
+        if(!IsAreaComplete(it.first.c_str(), map_id, check))
             out.push_back(it.second);
     }
     std::ranges::sort(out, [](CharacterCompletion* a, CharacterCompletion* b) {
