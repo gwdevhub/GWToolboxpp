@@ -370,8 +370,8 @@ namespace GuiUtils {
     {
         s = RemovePunctuation(s);
         std::ranges::transform(s, s.begin(), [](const wchar_t c) {
-            if (c == ' ') {
-                return '_';
+            if (c == L' ') {
+                return L'_';
             }
             return std::tolower(c, std::locale());
         });
