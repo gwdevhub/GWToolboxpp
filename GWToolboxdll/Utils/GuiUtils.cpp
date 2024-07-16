@@ -357,11 +357,11 @@ namespace GuiUtils {
     std::string ToSlug(std::string s)
     {
         s = RemovePunctuation(s);
-        std::ranges::transform(s, s.begin(), [](const char c) -> char {
+        std::ranges::transform(s, s.begin(), [](const char c) {
             if (c == ' ') {
                 return '_';
             }
-            return static_cast<char>(tolower(c));
+            return std::tolower(c, std::locale());
         });
         return s;
     }
@@ -369,27 +369,27 @@ namespace GuiUtils {
     std::wstring ToSlug(std::wstring s)
     {
         s = RemovePunctuation(s);
-        std::ranges::transform(s, s.begin(), [](const wchar_t c) -> wchar_t {
+        std::ranges::transform(s, s.begin(), [](const wchar_t c) {
             if (c == ' ') {
                 return '_';
             }
-            return static_cast<wchar_t>(tolower(c));
+            return std::tolower(c, std::locale());
         });
         return s;
     }
 
     std::string ToLower(std::string s)
     {
-        std::ranges::transform(s, s.begin(), [](const char c) -> char {
-            return static_cast<char>(tolower(c));
+        std::ranges::transform(s, s.begin(), [](const char c) {
+            return std::tolower(c, std::locale()));
         });
         return s;
     }
 
     std::wstring ToLower(std::wstring s)
     {
-        std::ranges::transform(s, s.begin(), [](const wchar_t c) -> wchar_t {
-            return static_cast<wchar_t>(tolower(c));
+        std::ranges::transform(s, s.begin(), [](const wchar_t c) {
+            return std::tolower(c, std::locale());
         });
         return s;
     }
