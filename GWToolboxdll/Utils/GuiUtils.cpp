@@ -451,14 +451,18 @@ namespace GuiUtils {
         return this;
     }
 
-    std::wstring& EncString::wstring()
-    {
+    void EncString::decode() {
         if (!decoded && !decoding && !encoded_ws.empty()) {
             decoding = true;
             GW::GameThread::Enqueue([&] {
                 GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnStringDecoded, this, language_id);
-            });
+                });
         }
+    }
+
+    std::wstring& EncString::wstring()
+    {
+        decode();
         sanitise();
         return decoded_ws;
     }

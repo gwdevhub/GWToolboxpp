@@ -96,6 +96,7 @@ namespace GuiUtils {
         bool decoded = false;
         bool sanitised = false;
         virtual void sanitise();
+        virtual void decode();
         GW::Constants::Language language_id = static_cast<GW::Constants::Language>(0xff);
         static void OnStringDecoded(void* param, const wchar_t* decoded);
 
@@ -111,6 +112,7 @@ namespace GuiUtils {
         EncString* reset(const wchar_t* _enc_string = nullptr, bool sanitise = true);
         std::wstring& wstring();
         std::string& string();
+
 
         [[nodiscard]] const std::wstring& encoded() const
         {

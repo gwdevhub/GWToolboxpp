@@ -57,6 +57,8 @@
 #include <Modules/DialogModule.h>
 #include <Modules/Resources.h>
 
+#include <Constants/EncStrings.h>
+
 import TextUtils;
 
 constexpr auto CMDTITLE_KEEP_CURRENT = 0xfffe;
@@ -444,51 +446,91 @@ namespace {
         Log::InfoW(L"Current preference value for %s is %d", argv[1], GetPreference(pref));
     }
 
+
+
+    class PrefLabel : public GuiUtils::EncString {
+    public:
+        PrefLabel(const wchar_t* _enc_string = nullptr) : EncString(_enc_string, false) {};
+        PrefLabel(const uint32_t _enc_string) : EncString(_enc_string, false) {};
+    protected:
+        static void OnPrefLabelDecoded(void* param, const wchar_t* decoded);
+        void decode() override {
+            language(GW::Constants::Language::English);
+            if (!decoded && !decoding && !encoded_ws.empty()) {
+                decoding = true;
+                GW::GameThread::Enqueue([&] {
+                    GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnPrefLabelDecoded, this, language_id);
+                    });
+            }
+        }
+    };
+    void PrefLabel::OnPrefLabelDecoded(void* param, const wchar_t* decoded)
+    {
+        GuiUtils::EncString::OnStringDecoded(param, decoded);
+        const auto context = static_cast<PrefLabel*>(param);
+        context->decoded_ws = TextUtils::RemoveDiacritics(TextUtils::ToSlug(context->decoded_ws));
+    }
+
     struct PrefMapCommand {
-        PrefMapCommand(GW::UI::EnumPreference p)
+        PrefMapCommand(GW::UI::EnumPreference p, uint32_t enc_string_id)
             : preference_id(std::to_underlying(p))
         {
             preference_callback = CmdEnumPref;
+            label = new PrefLabel(enc_string_id);
         }
 
-        PrefMapCommand(GW::UI::NumberPreference p)
+        PrefMapCommand(GW::UI::NumberPreference p, uint32_t enc_string_id)
             : preference_id(std::to_underlying(p))
         {
             preference_callback = CmdValuePref;
+            label = new PrefLabel(enc_string_id);
         }
 
-        PrefMapCommand(GW::UI::FlagPreference p)
+        PrefMapCommand(GW::UI::FlagPreference p, uint32_t enc_string_id)
             : preference_id(std::to_underlying(p))
         {
             preference_callback = CmdFlagPref;
+            label = new PrefLabel(enc_string_id);
+        }
+
+        PrefMapCommand(GW::UI::NumberPreference p, const wchar_t* enc_string_id)
+            : preference_id(std::to_underlying(p))
+        {
+            preference_callback = CmdValuePref;
+            label = new PrefLabel(enc_string_id);
         }
 
         uint32_t preference_id;
         CmdPrefCB preference_callback;
+        PrefLabel* label = nullptr;
     };
 
-    using PrefMap = std::map<const std::wstring, const PrefMapCommand>;
+    using PrefMap = std::vector<PrefMapCommand>;
     PrefMap pref_map;
 
     const PrefMap& getPrefCommandOptions()
     {
         if (pref_map.empty()) {
             pref_map = {
-                {L"antialiasing", GW::UI::EnumPreference::AntiAliasing},
-                {L"shaderquality", GW::UI::EnumPreference::ShaderQuality},
-                {L"terrainquality", GW::UI::EnumPreference::TerrainQuality},
-                {L"reflections", GW::UI::EnumPreference::Reflections},
-                {L"shadowquality", GW::UI::EnumPreference::ShadowQuality},
-                {L"interfacesize", GW::UI::EnumPreference::InterfaceSize},
-                {L"texturequality", GW::UI::NumberPreference::TextureQuality},
-                {L"channel", GW::UI::NumberPreference::ChatTab},
-                {L"alliance", GW::UI::FlagPreference::ChannelAlliance},
-                {L"guild", GW::UI::FlagPreference::ChannelGuild},
-                {L"team", GW::UI::FlagPreference::ChannelGroup},
-                {L"alliance", GW::UI::FlagPreference::ChannelAlliance},
-                {L"music", GW::UI::NumberPreference::MusicVolume},
-                {L"disablemousewalking", GW::UI::FlagPreference::DisableMouseWalking}
+                {GW::UI::EnumPreference::AntiAliasing, GW::EncStrings::AntiAliasing},
+                {GW::UI::EnumPreference::ShaderQuality, GW::EncStrings::ShaderQuality},
+                {GW::UI::EnumPreference::TerrainQuality, GW::EncStrings::TerrainQuality },
+                {GW::UI::EnumPreference::Reflections, GW::EncStrings::Reflections},
+                {GW::UI::EnumPreference::ShadowQuality, GW::EncStrings::ShadowQuality},
+                {GW::UI::EnumPreference::InterfaceSize, GW::EncStrings::InterfaceSize},
+                {GW::UI::NumberPreference::TextureQuality, GW::EncStrings::TextureQuality},
+                {GW::UI::NumberPreference::ChatTab, L"\x108\x107" "Chat Tab\x1"},
+                {GW::UI::FlagPreference::ChannelAlliance, GW::EncStrings::ChannelAlliance},
+                {GW::UI::FlagPreference::ChannelGuild, GW::EncStrings::ChannelGuild},
+                {GW::UI::FlagPreference::ChannelGroup, GW::EncStrings::ChannelTeam},
+                {GW::UI::FlagPreference::ChannelEmotes, GW::EncStrings::ChannelEmotes},
+                {GW::UI::FlagPreference::ChannelTrade, GW::EncStrings::ChannelTrade},
+                {GW::UI::NumberPreference::MusicVolume, GW::EncStrings::MusicVolume},
+                {GW::UI::FlagPreference::DisableMouseWalking, GW::EncStrings::DisableMouseWalking}
             };
+            for (auto& it : pref_map) {
+                it.label->wstring();
+            }
         }
         return pref_map;
     };
@@ -498,27 +540,28 @@ namespace {
     {
         const auto& options = getPrefCommandOptions();
         if (argc > 1 && wcscmp(argv[1], L"list") == 0) {
-            const auto buf_size = 16 * options.size(); // Roughly 16 chars per option label
-            const auto buffer = new wchar_t[buf_size];
-            auto offset = 0;
-            for (auto it = options.begin(); it != options.end(); ++it) {
-                const auto written = swprintf(&buffer[offset], offset - buf_size, offset > 0 ? L", %s" : L"%s", it->first.c_str());
-                ASSERT(written != -1);
-                offset += written;
+            std::wstring buffer;
+
+            for (auto& option : options) {
+                if (!buffer.empty())
+                    buffer += L", ";
+                buffer += option.label->wstring();
             }
-            Log::InfoW(L"/pref options:\n%s", buffer);
-            delete[] buffer;
+            Log::InfoW(L"/pref options:\n%s", buffer.c_str());
         }
         if (argc < 2) {
             return Log::Error(pref_syntax);
         }
 
+        // TODO: T
         // Find preference by name
-        const auto found = options.find(argv[1]);
+        const auto found = std::ranges::find_if(options, [argv](const PrefMapCommand& cmd) {
+            return cmd.label->wstring() == argv[1];
+            });
         if (found == options.end()) {
             return Log::Error(pref_syntax);
         }
-        const PrefMapCommand* pref = &found->second;
+        const PrefMapCommand* pref = &(*found);
 
         pref->preference_callback(message, argc, argv, pref->preference_id);
     }

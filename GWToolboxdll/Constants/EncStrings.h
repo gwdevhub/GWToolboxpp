@@ -22,11 +22,6 @@ namespace GW {
         static const wchar_t* ZaishenCombat = L"\x8102\x545D\xBAED\xD4B5\x2C72";
         static const wchar_t* WantedByTheShiningBlade = L"\x8102\x63D6\xA268\xEDE8\x5D6D";
 
-        enum class Profession : uint32_t {
-            None, Warrior, Ranger, Monk, Necromancer, Mesmer,
-            Elementalist, Assassin, Ritualist, Paragon, Dervish
-        };
-
         // Profession enc string id, keyed by profession id
         constexpr uint32_t Profession[11] = {
             0x7f8, 0x7f9, 0x7fa, 0x7fb, 0x7fc, 0x7fd, 0x7fe, 0x7ff, 0x800, 0x7b3c, 0x7b3d
@@ -285,5 +280,55 @@ namespace GW {
             static const wchar_t* ZaishenBounty_Zhim_Monns = L"\x8102\x5515\xFB97\xECDE\x6DE5";
             static const wchar_t* ZaishenBounty_Magmus = L"\x8102\x5545\xFCCD\x97B4\x1449";
         }
+
+        // General settings
+        static const uint32_t TextLanguage = 0x561;
+        static const uint32_t AudioLanguage = 0xdbe2;
+        static const uint32_t ChatFilterLevel = 0x562;
+        static const uint32_t InGameClock = 0x13419;
+        static const uint32_t DisableMouseWalking = 0x571;
+        static const uint32_t InvertMouseControlOfCamera = 0x572;
+        // ...
+
+        // Graphics settings
+        static const uint32_t Resolution = 0x546;
+        static const uint32_t RefreshRate = 0x549;
+        static const uint32_t AntiAliasing = 0x554;
+        static const uint32_t InterfaceSize = 0x573;
+        static const uint32_t TerrainQuality = 0x56c;
+        static const uint32_t Reflections = 0x567;
+        static const uint32_t TextureQuality = 0x57e;
+        static const uint32_t ShadowQuality = 0x578;
+        static const uint32_t ShaderQuality = 0xac88;
+        static const uint32_t FrameLimiter = 0x13411;
+        static const uint32_t FullScreenGamme = 0x558;
+
+        static const uint32_t UseBestTextureFiltering = 0x11de5;
+        static const uint32_t EnablePostProcessing = 0x555;
+        static const uint32_t VerticalSync = 0x559;
+        static const uint32_t UseHighResTexturesInOutposts = 0x16FAA;
+        static const uint32_t EnhancedDrawDistance = 0x13415;
+
+        // Audio settings
+        static const uint32_t MasterVolume = 0x13416;
+        static const uint32_t BackgroundAudioVolume = 0x583;
+        static const uint32_t EffectsVolume = 0x584;
+        static const uint32_t MusicVolume = 0x585;
+        static const uint32_t DialogVolume = 0x9731;
+        static const uint32_t UIVolume = 0x9732;
+        static const uint32_t MuteWhenGuildWarsIsInBackground = 0xc56f;
+        static const uint32_t SoundQuality = 0x586;
+        static const uint32_t Use3DAudioHardware = 0x9733;
+        static const uint32_t UseEAX = 0x9734;
+        static const uint32_t OptimiseForStereoHeadphones = 0x14614;
+
+        // Chat Tabs
+        static const uint32_t ChannelEmotes = 0x2cc;
+        static const uint32_t ChannelGuild = 0x2cd;
+        static const uint32_t ChannelLocal = 0x2ce;
+        static const uint32_t ChannelObservers = 0x2cf;
+        static const uint32_t ChannelTeam = 0x2d0;
+        static const uint32_t ChannelTrade = 0x2d1;
+        static const uint32_t ChannelAlliance = 0x6b70;
     }
 }
