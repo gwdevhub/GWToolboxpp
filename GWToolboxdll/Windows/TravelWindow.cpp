@@ -999,6 +999,7 @@ void TravelWindow::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(close_on_travel);
     LOAD_BOOL(collapse_on_travel);
     LOAD_BOOL(retry_map_travel);
+    LOAD_BOOL(search_in_english);
 }
 
 void TravelWindow::SaveSettings(ToolboxIni* ini)
@@ -1014,6 +1015,7 @@ void TravelWindow::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(close_on_travel);
     SAVE_BOOL(collapse_on_travel);
     SAVE_BOOL(retry_map_travel);
+    SAVE_BOOL(search_in_english);
 }
 
 
