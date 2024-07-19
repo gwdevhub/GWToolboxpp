@@ -10,8 +10,7 @@
 #include <Utils/GuiUtils.h>
 
 #include <Windows/StringDecoderWindow.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     void printchar(const wchar_t c)

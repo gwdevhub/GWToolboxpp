@@ -24,8 +24,7 @@
 #include <Windows/DailyQuestsWindow.h>
 #include <Windows/TravelWindow.h>
 #include <Windows/TravelWindowConstants.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     bool search_in_english = true;

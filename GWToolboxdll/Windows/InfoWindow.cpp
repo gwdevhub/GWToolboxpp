@@ -56,8 +56,7 @@
 #include <Utils/ToolboxUtils.h>
 #include <Logger.h>
 #include <GWToolbox.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
 

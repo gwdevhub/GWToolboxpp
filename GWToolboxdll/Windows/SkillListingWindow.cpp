@@ -11,8 +11,7 @@
 
 #include <Modules/Resources.h>
 #include <Windows/SkillListingWindow.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 static uintptr_t skill_array_addr;
 

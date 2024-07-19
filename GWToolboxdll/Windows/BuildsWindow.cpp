@@ -23,8 +23,7 @@
 #include <Windows/PconsWindow.h>
 
 #include <GWToolbox.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 

@@ -23,8 +23,7 @@
 #include <Modules/Resources.h>
 #include <Modules/TeamspeakModule.h>
 #include <Timer.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     const char* teamspeak3_host = "127.0.0.1";

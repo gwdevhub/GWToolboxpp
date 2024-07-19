@@ -30,8 +30,7 @@
 
 #include <Modules/GwDatTextureModule.h>
 #include <Constants/EncStrings.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     const char* d3dErrorMessage(HRESULT code)

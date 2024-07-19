@@ -30,8 +30,7 @@
 #include <Windows/HeroBuildsWindow.h>
 #include <Windows/Hotkeys.h>
 #include <Windows/PconsWindow.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 bool TBHotkey::show_active_in_header = true;
 bool TBHotkey::show_run_in_header = true;

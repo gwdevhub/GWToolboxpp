@@ -22,8 +22,7 @@
 #include <Utils/GuiUtils.h>
 #include "GuildWarsSettingsModule.h"
 
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     uint32_t* key_mappings_array = nullptr;

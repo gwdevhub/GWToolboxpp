@@ -26,8 +26,7 @@
 
 #include "ToolboxUtils.h"
 #include <GWCA/Utilities/Scanner.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     

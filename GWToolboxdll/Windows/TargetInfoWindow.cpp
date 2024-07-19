@@ -13,8 +13,7 @@
 
 #include <Windows/TargetInfoWindow.h>
 #include <Utils/GuiUtils.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
 

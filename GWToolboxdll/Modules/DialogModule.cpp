@@ -15,8 +15,7 @@
 #include <Modules/DialogModule.h>
 #include <Logger.h>
 #include <Timer.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     GW::UI::UIInteractionCallback NPCDialogUICallback_Func = nullptr;

@@ -39,8 +39,7 @@
 #include "Minimap.h"
 #include <Defines.h>
 #include <Modules/Resources.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     struct Vec2i {

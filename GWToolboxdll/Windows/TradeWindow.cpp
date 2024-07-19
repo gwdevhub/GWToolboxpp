@@ -23,8 +23,7 @@
 #include <Modules/Resources.h>
 #include <Windows/TradeWindow.h>
 #include <GWToolbox.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     // Every connection cost 30 seconds.

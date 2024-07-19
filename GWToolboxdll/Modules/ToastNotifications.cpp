@@ -23,8 +23,7 @@
 #include <Utils/GuiUtils.h>
 #include <Utils/ToolboxUtils.h>
 #include <Defines.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     bool is_platform_compatible = false;

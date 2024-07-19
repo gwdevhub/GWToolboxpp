@@ -22,8 +22,7 @@
 #include <Windows/PacketLoggerWindow.h>
 
 #include <GWToolbox.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     wchar_t* GetMessageCore()

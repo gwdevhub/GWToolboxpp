@@ -14,8 +14,7 @@
 #include <Modules/ChatLog.h>
 #include <Defines.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace GW::Chat {
     constexpr size_t SENT_LOG_LENGTH = 0x32;

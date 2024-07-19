@@ -16,8 +16,7 @@
 #include <Modules/Resources.h>
 #include <Modules/ToolboxSettings.h>
 #include <Widgets/PartyDamage.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 constexpr const wchar_t* INI_FILENAME = L"healthlog.ini";
 constexpr const char* IniSection = "health";
