@@ -1202,6 +1202,7 @@ void ChatCommands::Initialize()
     for (auto& it : chat_commands) {
         GW::Chat::CreateCommand(it.first, it.second);
     }
+    getPrefCommandOptions();
 }
 
 void ChatCommands::Terminate()
