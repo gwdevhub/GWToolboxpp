@@ -491,10 +491,10 @@ namespace {
             label = new PrefLabel(enc_string_id);
         }
 
-        PrefMapCommand(GW::UI::NumberPreference p, const wchar_t* enc_string_id)
+        PrefMapCommand(GW::UI::FlagPreference p, const wchar_t* enc_string_id)
             : preference_id(std::to_underlying(p))
         {
-            preference_callback = CmdValuePref;
+            preference_callback = CmdFlagPref;
             label = new PrefLabel(enc_string_id);
         }
 
@@ -517,14 +517,15 @@ namespace {
                 {GW::UI::EnumPreference::ShadowQuality, GW::EncStrings::ShadowQuality},
                 {GW::UI::EnumPreference::InterfaceSize, GW::EncStrings::InterfaceSize},
                 {GW::UI::NumberPreference::TextureQuality, GW::EncStrings::TextureQuality},
-                {GW::UI::NumberPreference::ChatTab, L"\x108\x107" "Chat Tab\x1"},
                 {GW::UI::FlagPreference::ChannelAlliance, GW::EncStrings::ChannelAlliance},
                 {GW::UI::FlagPreference::ChannelGuild, GW::EncStrings::ChannelGuild},
                 {GW::UI::FlagPreference::ChannelGroup, GW::EncStrings::ChannelTeam},
                 {GW::UI::FlagPreference::ChannelEmotes, GW::EncStrings::ChannelEmotes},
                 {GW::UI::FlagPreference::ChannelTrade, GW::EncStrings::ChannelTrade},
                 {GW::UI::NumberPreference::MusicVolume, GW::EncStrings::MusicVolume},
-                {GW::UI::FlagPreference::DisableMouseWalking, GW::EncStrings::DisableMouseWalking}
+                {GW::UI::FlagPreference::DisableMouseWalking, GW::EncStrings::DisableMouseWalking},
+                {GW::UI::FlagPreference::AlwaysShowFoeNames, L"\x108\x107Show Foe Names\x1"},
+                {GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1"}
             };
             for (auto& it : pref_map) {
                 it.label->wstring();

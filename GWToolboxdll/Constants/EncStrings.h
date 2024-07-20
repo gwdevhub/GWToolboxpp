@@ -288,6 +288,8 @@ namespace GW {
         static const uint32_t InGameClock = 0x13419;
         static const uint32_t DisableMouseWalking = 0x571;
         static const uint32_t InvertMouseControlOfCamera = 0x572;
+        static const uint32_t ShowAllyNpcAndItemNames = 0x5c4;
+        static const uint32_t ShowFoeNames = 0x5c6;
         // ...
 
         // Graphics settings
