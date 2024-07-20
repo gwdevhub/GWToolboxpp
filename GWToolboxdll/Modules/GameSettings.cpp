@@ -1077,6 +1077,38 @@ namespace {
 
     bool mission_prompted = false;
 
+    // We've just asked the game to enter mission; check (and prompt) if we should really be in NM or HM instead
+    void CheckPromptBeforeEnterMission(GW::HookStatus* status) {
+        if (mission_prompted || GW::PartyMgr::GetPartyPlayerCount() > 1)
+            return;
+        const auto player_name = GW::AccountMgr::GetCurrentPlayerName();
+        const auto map_id = GW::Map::GetMapID();
+        const auto nm_complete = CompletionWindow::IsAreaComplete(player_name, map_id, CompletionCheck::NormalMode);
+        const auto hm_complete = CompletionWindow::IsAreaComplete(player_name, map_id, CompletionCheck::HardMode);
+
+        auto on_enter_mission_prompt = [](bool result, void*) {
+            mission_prompted = true;
+            if (result) {
+                // User want to change mode
+                GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
+            }
+            };
+        const char* confirm_text = nullptr;
+        if (GW::PartyMgr::GetIsPartyInHardMode() && hm_complete && !nm_complete) {
+            confirm_text = "You're about to enter a mission in Hard Mode,\nbut you've already completed it on this character.\n\nWould you like to switch to Normal Mode?";
+        }
+        if (!GW::PartyMgr::GetIsPartyInHardMode() && GW::PartyMgr::GetIsHardModeUnlocked() && nm_complete && !hm_complete) {
+            confirm_text = "You're about to enter a mission in Normal Mode,\nbut you've already completed it on this character.\n\nWould you like to switch to Hard Mode?";
+        }
+        if (confirm_text) {
+            ImGui::ConfirmDialog(confirm_text, on_enter_mission_prompt);
+
+            // TODO: Re-enable the clicked dialog button if it was triggered via talking to NPC
+            DialogModule::ReloadDialog();
+            status->blocked = true;
+        }
+    }
+
     GW::HookEntry OnPreUIMessage_HookEntry;
     void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*) {
         switch (message_id) {
@@ -1091,35 +1123,25 @@ namespace {
         case GW::UI::UIMessage::kMapLoaded: {
             mission_prompted = false;
         } break;
+        case GW::UI::UIMessage::kSendAgentDialog: {
+            const auto dialog_id = (uint32_t)wParam;
+            const auto& buttons = DialogModule::GetDialogButtons();
+            const auto button = std::ranges::find_if(buttons, [dialog_id](GW::UI::DialogButtonInfo* btn) {
+                return btn->dialog_id == dialog_id && btn->message && wcscmp(btn->message, L"\x8101\x13D5\x8B48\xD2EF\x7E5A") == 0;
+                });
+            if (button == buttons.end())
+                break;
+            CheckPromptBeforeEnterMission(status);
+            if (status->blocked) {
+                DialogModule::ReloadDialog();
+            }
+        } break;
         case GW::UI::UIMessage::kSendEnterMission: {
-            if (GW::PartyMgr::GetPartyPlayerCount() > 1)
-                break;
-            if (mission_prompted)
-                break;
-            const auto player_name = GW::AccountMgr::GetCurrentPlayerName();
-            const auto map_id = GW::Map::GetMapID();
-            const auto nm_complete = CompletionWindow::IsAreaComplete(player_name, map_id, CompletionCheck::NormalMode);
-            const auto hm_complete = CompletionWindow::IsAreaComplete(player_name, map_id, CompletionCheck::HardMode);
-
-            auto on_enter_mission_prompt = [](bool result, void*) {
-                mission_prompted = true;
-                if (result) {
-                    // User want to change mode
-                    GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
-                }
-                };
-            const char* confirm_text = nullptr;
-            if (GW::PartyMgr::GetIsPartyInHardMode() && hm_complete && !nm_complete) {
-                confirm_text = "You're about to enter a mission in Hard Mode,\nbut you've already completed it on this character.\n\nWould you like to switch to Normal Mode?";
-            }
-            if (!GW::PartyMgr::GetIsPartyInHardMode() && GW::PartyMgr::GetIsHardModeUnlocked() && nm_complete && !hm_complete) {
-                confirm_text = "You're about to enter a mission in Normal Mode,\nbut you've already completed it on this character.\n\nWould you like to switch to Hard Mode?";
-            }
-            if (confirm_text) {
-                ImGui::ConfirmDialog(confirm_text, on_enter_mission_prompt);
+            CheckPromptBeforeEnterMission(status);
+            if (status->blocked) {
+                // Re-enable the enter mission button if triggered via party window
                 uint32_t packet = 0;
                 GW::UI::SendUIMessage((GW::UI::UIMessage)0x10000128, &packet);
-                status->blocked = true;
             }
             break;
         }
@@ -1494,6 +1516,7 @@ void GameSettings::Initialize()
     constexpr GW::UI::UIMessage pre_ui_messages[] = {
         GW::UI::UIMessage::kSendCallTarget,
         GW::UI::UIMessage::kSendEnterMission,
+        GW::UI::UIMessage::kSendAgentDialog,
         GW::UI::UIMessage::kMapLoaded
     };
     for (const auto message_id : pre_ui_messages) {

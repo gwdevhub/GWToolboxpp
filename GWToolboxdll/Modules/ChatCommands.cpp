@@ -468,7 +468,7 @@ namespace {
     {
         GuiUtils::EncString::OnStringDecoded(param, decoded);
         const auto context = static_cast<PrefLabel*>(param);
-        context->decoded_ws = TextUtils::RemoveDiacritics(TextUtils::ToSlug(context->decoded_ws));
+        context->decoded_ws = TextUtils::RemovePunctuation(TextUtils::RemoveDiacritics(TextUtils::ToSlug(context->decoded_ws)));
     }
 
     struct PrefMapCommand {

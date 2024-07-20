@@ -85,7 +85,9 @@ namespace {
             delete d;
         }
         dialog_button_messages.clear();
+
         dialog_body.reset(nullptr);
+        dialog_info = { 0 };
     }
 
     void OnNPCDialogUICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
@@ -162,8 +164,9 @@ void DialogModule::OnPostUIMessage(const GW::HookStatus* status, const GW::UI::U
             if (!new_dialog_info->message_enc) {
                 return; // Dialog closed.
             }
-            memcpy(&dialog_info, wparam, sizeof(dialog_info));
+            dialog_info = *new_dialog_info;
             dialog_body.reset(dialog_info.message_enc);
+            dialog_info.message_enc = (wchar_t*)dialog_body.encoded().data();
             GW::UI::AsyncDecodeStr(dialog_info.message_enc, OnDialogBodyDecoded);
         }
         break;
@@ -175,6 +178,36 @@ void DialogModule::OnPostUIMessage(const GW::HookStatus* status, const GW::UI::U
             OnDialogSent(reinterpret_cast<uint32_t>(wparam));
         }
         break;
+    }
+}
+
+void DialogModule::ReloadDialog()
+{
+    if (!dialog_info.message_enc)
+        return;
+
+    // Careful to copy the strings; once the dialog body ui message is sent, everything used will be freed
+
+    auto dialog_cpy = dialog_info;
+    std::wstring dialog_body_cpy = dialog_info.message_enc;
+    dialog_cpy.message_enc = dialog_body_cpy.data();
+
+    std::vector<std::wstring*> dialog_btn_messages;
+    std::vector<GW::UI::DialogButtonInfo> buttons;
+    for (auto btn : GetDialogButtons()) {
+        auto btn_cpy = *btn;
+        auto msg = new std::wstring(btn->message);
+        dialog_btn_messages.push_back(msg);
+        btn_cpy.message = msg->data();
+        buttons.push_back(std::move(btn_cpy));
+    }
+
+    GW::UI::SendUIMessage(GW::UI::UIMessage::kDialogBody, &dialog_cpy);
+    for (auto& btn : buttons) {
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kDialogButton, &btn);
+    }
+    for (auto msg : dialog_btn_messages) {
+        delete msg;
     }
 }
 

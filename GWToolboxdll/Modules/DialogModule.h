@@ -41,6 +41,7 @@ public:
     static uint32_t AcceptFirstAvailableQuest();
     static uint32_t AcceptFirstAvailableBounty();
     static uint32_t LastDialogId();
+    static void ReloadDialog();
 
 private:
     // private method to queue multiple dialogs with the same timestamp
