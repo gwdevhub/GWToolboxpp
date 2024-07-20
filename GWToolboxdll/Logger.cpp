@@ -9,8 +9,7 @@
 #include <Modules/CrashHandler.h>
 // ReSharper disable once CppUnusedIncludeDirective
 #include <Modules/Resources.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     FILE* logfile = nullptr;

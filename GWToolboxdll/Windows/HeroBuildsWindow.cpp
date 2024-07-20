@@ -24,8 +24,7 @@
 #include <Windows/HeroBuildsWindow.h>
 
 #include <GWToolbox.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 

@@ -21,8 +21,7 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <Color.h>
 #include <GWToolbox.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 using namespace std::string_literals;
 

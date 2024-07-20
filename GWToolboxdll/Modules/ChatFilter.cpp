@@ -21,8 +21,7 @@
 #include <Utils/ToolboxUtils.h>
 
 #include <GWToolbox.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 //#define PRINT_CHAT_PACKETS
 

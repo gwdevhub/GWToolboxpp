@@ -56,10 +56,8 @@
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/DialogModule.h>
 #include <Modules/Resources.h>
-
+#include <Utils/TextUtils.h>
 #include <Constants/EncStrings.h>
-
-import TextUtils;
 
 constexpr auto CMDTITLE_KEEP_CURRENT = 0xfffe;
 constexpr auto CMDTITLE_REMOVE_CURRENT = 0xffff;

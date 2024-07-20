@@ -22,8 +22,7 @@
 #include <Timer.h>
 #include <Modules/InventoryManager.h>
 #include <Windows/CompletionWindow.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 using GW::Constants::MapID;
 

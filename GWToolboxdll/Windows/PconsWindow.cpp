@@ -19,8 +19,7 @@
 #include <Windows/HotkeysWindow.h>
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 using namespace GW::Constants;
 

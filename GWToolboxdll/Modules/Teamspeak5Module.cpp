@@ -23,8 +23,7 @@
 
 #include <Modules/Resources.h>
 #include <Modules/Teamspeak5Module.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 using easywsclient::WebSocket;
 using nlohmann::json;

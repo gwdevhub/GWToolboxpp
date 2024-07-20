@@ -25,8 +25,7 @@
 #include <Windows/PconsWindow.h>
 
 #include <Utils/FontLoader.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 float Pcon::size = 46.0f;
 int Pcon::pcons_delay = 5000;

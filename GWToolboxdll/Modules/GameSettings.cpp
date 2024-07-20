@@ -61,8 +61,7 @@
 #include <Timer.h>
 #include <Defines.h>
 #include <Utils/FontLoader.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 #pragma warning(disable : 6011)
 #pragma comment(lib,"Version.lib")

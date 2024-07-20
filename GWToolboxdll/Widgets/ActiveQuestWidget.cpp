@@ -17,8 +17,7 @@
 
 #include <Utils/GuiUtils.h>
 #include <Utils/FontLoader.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     struct CompletionState {

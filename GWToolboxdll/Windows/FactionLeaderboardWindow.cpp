@@ -3,8 +3,7 @@
 #include <Modules/Resources.h>
 #include <Utils/GuiUtils.h>
 #include <Windows/FactionLeaderboardWindow.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 void FactionLeaderboardWindow::Draw(IDirect3DDevice9*)
 {

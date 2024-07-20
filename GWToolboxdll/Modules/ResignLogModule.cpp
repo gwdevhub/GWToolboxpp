@@ -13,8 +13,7 @@
 #include <Utils/GuiUtils.h>
 #include <Defines.h>
 #include <Timer.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
 

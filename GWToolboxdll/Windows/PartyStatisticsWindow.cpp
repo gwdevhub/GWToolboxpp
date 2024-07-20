@@ -21,8 +21,7 @@
 #include <Utils/GuiUtils.h>
 #include <Timer.h>
 #include <Windows/PartyStatisticsWindow.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 /*************************/
 /* Static Helper Methods */

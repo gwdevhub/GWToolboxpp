@@ -22,8 +22,7 @@
 #include <Modules/ObserverModule.h>
 
 #include <Logger.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
 

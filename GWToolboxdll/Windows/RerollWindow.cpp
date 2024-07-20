@@ -35,8 +35,7 @@
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 #include <Utils/ToolboxUtils.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
 

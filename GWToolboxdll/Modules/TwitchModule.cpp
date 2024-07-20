@@ -10,8 +10,7 @@
 
 #include <Modules/TwitchModule.h>
 #include <ImGuiAddons.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     // IRC details

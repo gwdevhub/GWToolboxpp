@@ -20,8 +20,7 @@
 #include <Timer.h>
 #include <Utils/GuiUtils.h>
 #include <Constants/EncStrings.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 using nlohmann::json;
 

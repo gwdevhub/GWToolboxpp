@@ -17,8 +17,7 @@
 #include <Modules/Resources.h>
 #include <Widgets/HealthWidget.h>
 #include <Utils/FontLoader.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 constexpr auto HEALTH_THRESHOLD_INIFILENAME = L"HealthThreshold.ini";
 

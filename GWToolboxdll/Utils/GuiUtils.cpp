@@ -11,8 +11,7 @@
 #include <Constants/EncStrings.h>
 
 #include "GuiUtils.h"
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     struct AttributeConstData {

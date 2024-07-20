@@ -19,8 +19,7 @@
 #include <GWCA/Utilities/Scanner.h>
 #include <Timer.h>
 #include <GWToolbox.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     std::vector<TBHotkey*> hotkeys; // list of hotkeys

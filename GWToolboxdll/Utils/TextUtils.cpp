@@ -1,13 +1,5 @@
-module;
-
-#include <string>
-#include <algorithm>
-#include <cctype>
-#include <cwctype>
-#include <cstring>
-#include <cstdio>
-
-export module TextUtils;
+#include "stdafx.h"
+#include "TextUtils.h"
 
 namespace {
     constexpr auto diacritics = std::to_array<const wchar_t*>({
@@ -73,23 +65,7 @@ namespace {
     }
 }
 
-export namespace TextUtils {
-    std::string WStringToString(std::wstring_view str);
-    std::wstring StringToWString(std::string_view str);
-    std::string UrlEncode(const std::string& s, char space_token = '+');
-    std::string HtmlEncode(const std::string& s);
-    bool ParseInt(const char* str, int* val, int base = 10);
-    bool ParseInt(const wchar_t* str, int* val, int base = 10);
-    bool ParseUInt(const char* str, unsigned int* val, int base = 10);
-    bool ParseUInt(const wchar_t* str, unsigned int* val, int base = 10);
-    bool ParseFloat(const char* str, float* val);
-    bool ParseFloat(const wchar_t* str, float* val);
-    std::string SanitiseFilename(std::string_view str);
-    std::wstring SanitiseFilename(std::wstring_view str);
-    size_t TimeToString(time_t utc_timestamp, std::string& out);
-    size_t TimeToString(uint32_t utc_timestamp, std::string& out);
-    size_t TimeToString(FILETIME utc_timestamp, std::string& out);
-
+namespace TextUtils {
     std::string RemovePunctuation(std::string s)
     {
         std::erase_if(s, [](auto c) { return std::ispunct(c, std::locale()); });
@@ -142,7 +118,7 @@ export namespace TextUtils {
         return s;
     }
 
-    std::string HtmlEncode(const std::string& s)
+    std::string HtmlEncode(const std::string_view s)
     {
         if (s.empty()) {
             return "";
@@ -166,7 +142,7 @@ export namespace TextUtils {
         }
         char out[256]{};
         size_t len = 0;
-        const char* in = s.c_str();
+        const char* in = s.data();
         for (size_t i = 0; in[i] && len < 255; i++) {
             if (entities[in[i]]) {
                 out[len++] = entities[in[i]];
@@ -183,7 +159,7 @@ export namespace TextUtils {
         return out;
     }
 
-    std::string UrlEncode(const std::string& s, const char space_token)
+    std::string UrlEncode(const std::string_view s, const char space_token)
     {
         if (s.empty()) {
             return "";
@@ -204,7 +180,7 @@ export namespace TextUtils {
         }
         char out[256]{};
         size_t len = 0;
-        const char* in = s.c_str();
+        const char* in = s.data();
         for (size_t i = 0; in[i] && len < 255; i++) {
             if (html5[in[i]]) {
                 out[len++] = html5[in[i]];
@@ -219,6 +195,28 @@ export namespace TextUtils {
         }
         out[len] = 0;
         return out;
+    }
+
+
+    // Convert an UTF8 string to a wide Unicode String
+    std::wstring StringToWString(const std::string_view str)
+    {
+        // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!
+        if (str.empty()) {
+            return {};
+        }
+        // NB: GW uses code page 0 (CP_ACP)
+        constexpr auto try_code_pages = {CP_UTF8, CP_ACP};
+        for (const auto code_page : try_code_pages) {
+            const auto size_needed = MultiByteToWideChar(code_page, MB_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0);
+            if (!size_needed)
+                continue;
+            std::wstring dest(size_needed, 0);
+            ASSERT(MultiByteToWideChar(code_page, 0, str.data(), static_cast<int>(str.size()), dest.data(), size_needed));
+            return dest;
+        }
+        ASSERT("Failed to convert" && false);
+        return {};
     }
 
     // Convert a wide Unicode string to an UTF8 string
@@ -278,7 +276,7 @@ export namespace TextUtils {
         return out;
     }
 
-    std::wstring RemoveDiacritics(const std::wstring& s)
+    std::wstring RemoveDiacritics(const std::wstring_view s)
     {
         if (diacritics_charmap.empty()) {
             // Build static diacritics map if not already done so
@@ -297,27 +295,6 @@ export namespace TextUtils {
             return it == diacritics_charmap.end() ? wc : it->second;
         });
         return out;
-    }
-
-    // Convert an UTF8 string to a wide Unicode String
-    std::wstring StringToWString(const std::string_view str)
-    {
-        // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!
-        if (str.empty()) {
-            return {};
-        }
-        // NB: GW uses code page 0 (CP_ACP)
-        constexpr auto try_code_pages = {CP_UTF8, CP_ACP};
-        for (const auto code_page : try_code_pages) {
-            const auto size_needed = MultiByteToWideChar(code_page, MB_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0);
-            if (!size_needed)
-                continue;
-            std::wstring dest(size_needed, 0);
-            ASSERT(MultiByteToWideChar(code_page, 0, str.data(), static_cast<int>(str.size()), dest.data(), size_needed));
-            return dest;
-        }
-        ASSERT("Failed to convert" && false);
-        return {};
     }
 
     std::wstring SanitizePlayerName(const std::wstring_view str)
@@ -355,7 +332,7 @@ export namespace TextUtils {
     }
 
     // Extract first unencoded substring from gw encoded string. Pass second and third args to know where the player name was found in the original string.
-    std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out = nullptr, const wchar_t** end_pos_out = nullptr)
+    std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out, const wchar_t** end_pos_out)
     {
         const wchar_t* start = wcschr(message, 0x107);
         if (!start) {

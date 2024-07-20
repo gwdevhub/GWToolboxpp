@@ -8,8 +8,7 @@
 #include <Modules/ObserverModule.h>
 
 #include <Windows/ObserverExportWindow.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 void ObserverExportWindow::Initialize()
 {

@@ -17,8 +17,7 @@
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include "ChatSettings.h"
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 namespace {
     // Settings

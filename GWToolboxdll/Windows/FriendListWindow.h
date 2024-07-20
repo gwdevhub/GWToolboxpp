@@ -5,8 +5,7 @@
 
 #include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 class FriendListWindow final : public ToolboxWindow {
 public:

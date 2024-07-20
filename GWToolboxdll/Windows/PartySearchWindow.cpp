@@ -29,8 +29,7 @@
 #include <Windows/PartySearchWindow.h>
 
 #include <GWToolbox.h>
-
-import TextUtils;
+#include <Utils/TextUtils.h>
 
 // Every connection cost 30 seconds.
 // You have 2 tries.
