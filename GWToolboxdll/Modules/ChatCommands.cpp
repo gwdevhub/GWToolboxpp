@@ -2217,23 +2217,20 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTarget)
 
 void CHAT_CMD_FUNC(ChatCommands::CmdUseSkill)
 {
-    if (!IsMapReady()) {
+    if (!(IsMapReady() && argc > 1))
         return;
-    }
-    SkillToUse& skill_to_use = Instance().skill_to_use;
-    skill_to_use.slot = 0;
-    if (argc < 2) {
-        return;
-    }
     const std::wstring arg1 = TextUtils::ToLower(argv[1]);
-    if (arg1 == L"stop" || arg1 == L"off" || arg1 == L"0") {
+    if (arg1 == L"stop" || arg1 == L"off") {
         return; // do nothing, already cleared skills_to_use
     }
     uint32_t num = 0;
-    if (!TextUtils::ParseUInt(argv[1], &num) || num < 1 || num > 8) {
-        Log::Error("Invalid argument '%ls', please use an integer value of 1 to 8", argv[1]);
+    if (!TextUtils::ParseUInt(argv[1], &num) || num > 8) {
+        Log::ErrorW(L"Invalid argument '%s', please use an integer value of 1 to 8", argv[1]);
         return;
     }
+    auto& skill_to_use = Instance().skill_to_use;
+    if (skill_to_use.slot == num) 
+        num = 0;
     skill_to_use.slot = num;
     skill_to_use.skill_usage_delay = .0f;
 }
