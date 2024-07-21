@@ -90,11 +90,18 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowPos(ImVec2(16.f, 16.f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
+        const auto c = ImGui::GetCurrentContext();
+        auto viewport_offset = c->CurrentViewport->Pos;
+        viewport_offset.x *= -1;
+        viewport_offset.y *= -1;
+
         ImGui::Checkbox("Show all areas", &showing_all_outposts);
-        show_all_rect = ImGui::GetCurrentContext()->LastItemData.Rect;
+        show_all_rect = c->LastItemData.Rect;
+        show_all_rect.Translate(viewport_offset);
         bool is_hard_mode = GW::PartyMgr::GetIsPartyInHardMode();
         ImGui::Checkbox("Hard mode", &is_hard_mode);
-        hard_mode_rect = ImGui::GetCurrentContext()->LastItemData.Rect;
+        hard_mode_rect = c->LastItemData.Rect;
+        hard_mode_rect.Translate(viewport_offset);
     }
     ImGui::End();
     ImGui::PopStyleColor();
@@ -109,9 +116,8 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
                 return false;
             }
             auto check_rect = [lParam](const ImRect& rect) {
-                const auto x = GET_X_LPARAM(lParam);
-                const auto y = GET_Y_LPARAM(lParam);
-                return x > rect.Min.x && x < rect.Max.x && y > rect.Min.y && y < rect.Max.y;
+                ImVec2 p = { (float)GET_X_LPARAM(lParam) ,(float)GET_Y_LPARAM(lParam) };
+                return rect.Contains(p);
             };
             if (check_rect(show_all_rect)) {
                 showing_all_outposts = !showing_all_outposts;
