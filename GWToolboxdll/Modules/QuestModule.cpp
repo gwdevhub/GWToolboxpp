@@ -29,6 +29,7 @@ namespace {
         }
         std::vector<GW::GamePos> waypoints;
         std::vector<CustomRenderer::CustomLine*> minimap_lines;
+        GW::GamePos previous_closest_waypoint;
         GW::GamePos original_quest_marker;
         GW::GamePos calculated_from;
         GW::GamePos calculated_to;
@@ -89,7 +90,7 @@ namespace {
                 Recalculate(from);
                 return false;
             }
-            constexpr float recalculate_when_moved_further_than = 1500.f * 1500.f;
+            constexpr float recalculate_when_moved_further_than = 100.f * 100.f;
             if (GetSquareDistance(from, calculated_from) > recalculate_when_moved_further_than) {
                 Recalculate(from);
                 return false;
@@ -119,8 +120,15 @@ namespace {
             if (waypoints.empty())
                 return;
             DrawMinimapLines();
-            if(IsActive())
+            const auto& current_waypoint_pos = waypoints[current_waypoint];
+            const auto waypoint_distance = GetSquareDistance(current_waypoint_pos, previous_closest_waypoint);
+            constexpr float update_when_waypoint_changed_more_than = 300.f * 300.f;
+            if (IsActive() &&
+                waypoint_distance > update_when_waypoint_changed_more_than)
+            {
+                previous_closest_waypoint = waypoints[current_waypoint];
                 RedirectQuestMarker(waypoints[current_waypoint]);
+            }
         }
     };
 
@@ -217,6 +225,24 @@ namespace {
             // Waypoint array is in descending distance, flip it
             std::reverse(cqp->waypoints.begin(), cqp->waypoints.end());
         }
+
+        const auto waypoint_len = waypoints.size();
+        if (!waypoint_len) {
+            cqp->calculating = false;
+            cqp->calculated_at = TIMER_INIT();
+            return;
+        }
+
+        const auto from_end_waypoint = GetSquareDistance(cqp->calculated_from, waypoints.back());
+        // Find next waypoint
+        cqp->current_waypoint = waypoint_len - 1;
+        for (size_t i = 1; i < waypoint_len; i++) {
+            if (GetSquareDistance(cqp->calculated_from, waypoints[i]) < from_end_waypoint) {
+                cqp->current_waypoint = i;
+                break;
+            }
+        }
+
         cqp->calculated_at = TIMER_INIT();
         cqp->calculating = false;
         cqp->UpdateUI();

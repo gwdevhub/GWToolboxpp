@@ -143,10 +143,12 @@ namespace {
         MouseFix::Instance(),
         KeyboardLanguageFix::Instance(),
         GuildWarsSettingsModule::Instance(),
-        //QuestModule::Instance(),
         PriceCheckerModule::Instance(),
         SalvageInfoModule::Instance(),
-        ResignLogModule::Instance()
+        ResignLogModule::Instance(),
+        #ifdef _DEBUG
+        QuestModule::Instance()
+        #endif
     };
 
     std::vector<WidgetToggle> optional_widgets = {
@@ -192,7 +194,8 @@ namespace {
         DupingWindow::Instance(),
         ArmoryWindow::Instance(),
 #ifdef _DEBUG
-        EnemyWindow::Instance()
+        EnemyWindow::Instance(),
+        PathfindingWindow::Instance()
 #endif
     };
 
