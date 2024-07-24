@@ -2881,6 +2881,12 @@ void CHAT_CMD_FUNC(ChatCommands::CmdReapplyTitle)
         case GW::Constants::MapID::Umbral_Grotto_outpost:
         case GW::Constants::MapID::Verdant_Cascades:
         case GW::Constants::MapID::Vloxs_Falls:
+        case GW::Constants::MapID::Finding_the_Bloodstone_Level_1:
+        case GW::Constants::MapID::Finding_the_Bloodstone_Level_2:
+        case GW::Constants::MapID::Finding_the_Bloodstone_Level_3:
+        case GW::Constants::MapID::The_Elusive_Golemancer_Level_1:
+        case GW::Constants::MapID::The_Elusive_Golemancer_Level_2:
+        case GW::Constants::MapID::The_Elusive_Golemancer_Level_3:
             title_id = std::to_underlying(GW::Constants::TitleID::Asuran);
             break;
         case GW::Constants::MapID::A_Gate_Too_Far_Level_1:
