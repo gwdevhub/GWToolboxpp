@@ -45,6 +45,8 @@ namespace {
     public:
         ZaishenQuestData(MapID map_id = (MapID)0, const wchar_t* enc_name = nullptr)
             : QuestData(map_id, enc_name) {};
+        ZaishenQuestData(const wchar_t* enc_name = nullptr, MapID map_id = (MapID)0)
+            : QuestData(map_id, enc_name) {};
         const MapID GetQuestGiverOutpost() override;
     };
 
@@ -65,77 +67,6 @@ namespace {
 
     // Cache map
     std::map<std::wstring, GuiUtils::EncString*> region_names;
-
-    constexpr std::array hard_coded_zaishen_bounty_names = {
-        "Droajam, Mage of the Sands",
-        "Royen Beastkeeper",
-        "Eldritch Ettin",
-        "Vengeful Aatxe",
-        "Fronis Irontoe",
-        "Urgoz",
-        "Fenrir",
-        "Selvetarm",
-        "Mohby Windbeak",
-        "Charged Blackness",
-        "Rotscale",
-        "Zoldark the Unholy",
-        "Korshek the Immolated",
-        "Myish, Lady of the Lake",
-        "Frostmaw the Kinslayer",
-        "Kunvie Firewing",
-        "Z'him Monns",
-        "The Greater Darkness",
-        "TPS Regulator Golem",
-        "Plague of Destruction",
-        "The Darknesses",
-        "Admiral Kantoh",
-        "Borrguus Blisterbark",
-        "Forgewight",
-        "Baubao Wavewrath",
-        "Joffs the Mitigator",
-        "Rragar Maneater",
-        "Chung, the Attuned",
-        "Lord Jadoth",
-        "Nulfastu, Earthbound",
-        "The Iron Forgeman",
-        "Magmus",
-        "Mobrin, Lord of the Marsh",
-        "Jarimiya the Unmerciful",
-        "Duncan the Black",
-        "Quansong Spiritspeak",
-        "The Stygian Underlords",
-        "Fozzy Yeoryios",
-        "The Black Beast of Arrgh",
-        "Arachni",
-        "The Four Horsemen",
-        "Remnant of Antiquities",
-        "Arbor Earthcall",
-        "Prismatic Ooze",
-        "Lord Khobay",
-        "Jedeh the Mighty",
-        "Ssuns, Blessed of Dwayna",
-        "Justiciar Thommis",
-        "Harn and Maxine Coldstone",
-        "Pywatt the Swift",
-        "Fendi Nin",
-        "Mungri Magicbox",
-        "Priest of Menzies",
-        "Ilsundur, Lord of Fire",
-        "Kepkhet Marrowfeast",
-        "Commander Wahli",
-        "Kanaxai",
-        "Khabuus",
-        "Molotov Rocktail",
-        "The Stygian Lords",
-        "Dragon Lich",
-        "Havok Soulwail",
-        "Ghial the Bone Dancer",
-        "Murakai, Lady of the Night",
-        "Rand Stormweaver",
-        "Verata"
-    };
-
-    static_assert(hard_coded_zaishen_bounty_names.size() == ZAISHEN_BOUNTY_COUNT);
 
     constexpr std::array hard_coded_wanted_by_shining_blade_names = {
         "Justiciar Kimii",
@@ -239,7 +170,76 @@ namespace {
     std::vector<WantedQuestData> wanted_by_shining_blade_cycles;
     std::vector<DailyQuests::QuestData> vanguard_cycles;
     std::vector<DailyQuests::QuestData> nicholas_sandford_cycles;
-    std::vector<ZaishenQuestData> zaishen_bounty_cycles;
+
+    ZaishenQuestData zaishen_bounty_cycles[] = {
+        { GW::Constants::MapID::Poisoned_Outcrops, L"Droajam, Mage of the Sands"},
+        { GW::Constants::MapID::Nahpui_Quarter_explorable, L"Royen Beastkeeper"},
+        { GW::Constants::MapID::Bloodstone_Caves_Level_1, L"Eldritch Ettin"},
+        { GW::Constants::MapID::The_Underworld, L"Vengeful Aatxe"},
+        {GW::Constants::MapID::Fronis_Irontoes_Lair_mission, L"Fronis Irontoe"},
+        {GW::Constants::MapID::Urgozs_Warren, L"Urgoz"},
+        { GW::Constants::MapID::Norrhart_Domains, L"Fenrir"},
+        { GW::Constants::MapID::Slavers_Exile_Level_1, L"Selvetarm"},
+        { GW::Constants::MapID::Gyala_Hatchery, L"Mohby Windbeak"},
+        { GW::Constants::MapID::The_Underworld, L"Charged Blackness"},
+        { GW::Constants::MapID::Majestys_Rest, L"Rotscale"},
+        {GW::Constants::MapID::Vloxen_Excavations_Level_1, L"Zoldark the Unholy"},
+        { GW::Constants::MapID::Forum_Highlands, L"Korshek the Immolated"},
+        { GW::Constants::MapID::Drakkar_Lake, L"Myish, Lady of the Lake"},
+        { GW::Constants::MapID::Frostmaws_Burrows_Level_1, L"Frostmaw the Kinslayer"},
+        { GW::Constants::MapID::Unwaking_Waters, L"Kunvie Firewing"},
+        { GW::Constants::MapID::Bogroot_Growths_Level_1, L"Z'him Monns"},
+        { GW::Constants::MapID::Domain_of_Anguish,L"The Greater Darkness"},
+        { GW::Constants::MapID::Oolas_Lab_Level_1, L"TPS Regulator Golem"},
+        { GW::Constants::MapID::Ravens_Point_Level_1, L"Plague of Destruction"},
+        { GW::Constants::MapID::Tomb_of_the_Primeval_Kings, L"The Darknesses"},
+        { GW::Constants::MapID::Jahai_Bluffs, L"Admiral Kantoh"},
+        { GW::Constants::MapID::Sacnoth_Valley, L"Borrguus Blisterbark"},
+        { GW::Constants::MapID::Slavers_Exile_Level_1, L"Forgewight"},
+        { GW::Constants::MapID::The_Undercity, L"Baubao Wavewrath"},
+        { GW::Constants::MapID::Riven_Earth, L"Joffs the Mitigator"},
+        { GW::Constants::MapID::Rragars_Menagerie_Level_1, L"Rragar Maneater"},
+        { GW::Constants::MapID::The_Undercity, L"Chung, the Attuned"},
+        { GW::Constants::MapID::Domain_of_Anguish, L"Lord Jadoth"},
+        { GW::Constants::MapID::Drakkar_Lake, L"Nulfastu, Earthbound"},
+        { GW::Constants::MapID::Sorrows_Furnace, L"The Iron Forgeman"},
+        { GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1, L"Magmus"},
+        { GW::Constants::MapID::Sparkfly_Swamp, L"Mobrin, Lord of the Marsh"},
+        { GW::Constants::MapID::Vehtendi_Valley, L"Jarimiya the Unmerciful"},
+        { GW::Constants::MapID::Slavers_Exile_Level_1, L"Duncan the Black"},
+        { GW::Constants::MapID::Tahnnakai_Temple_explorable, L"Quansong Spiritspeak"},
+        {GW::Constants::MapID::Domain_of_Anguish, L"The Stygian Underlords"},
+        { GW::Constants::MapID::Sacnoth_Valley, L"Fozzy Yeoryios"},
+        { GW::Constants::MapID::Domain_of_Anguish, L"The Black Beast of Arrgh"},
+        { GW::Constants::MapID::Arachnis_Haunt_Level_1, L"Arachni"},
+        { GW::Constants::MapID::The_Underworld, L"The Four Horsemen"},
+        { GW::Constants::MapID::Sepulchre_of_Dragrimmar_Level_1, L"Remnant of Antiquities"},
+        { GW::Constants::MapID::Morostav_Trail, L"Arbor Earthcall"},
+        { GW::Constants::MapID::Ooze_Pit_mission, L"Prismatic Ooze"},
+        { GW::Constants::MapID::The_Fissure_of_Woe, L"Lord Khobay"},
+        {GW::Constants::MapID::Crystal_Overlook, L"Jedeh the Mighty"},
+        { GW::Constants::MapID::Archipelagos, L"Ssuns, Blessed of Dwayna"},
+        { GW::Constants::MapID::Slavers_Exile_Level_1, L"Justiciar Thommis"},
+        { GW::Constants::MapID::Perdition_Rock, L"Harn and Maxine Coldstone"},
+        { GW::Constants::MapID::Alcazia_Tangle, L"Pywatt the Swift"},
+        { GW::Constants::MapID::Shards_of_Orr_Level_1, L"Fendi Nin"},
+        { GW::Constants::MapID::Ferndale, L"Mungri Magicbox"},
+        { GW::Constants::MapID::The_Fissure_of_Woe, L"Priest of Menzies"},
+        { GW::Constants::MapID::Catacombs_of_Kathandrax_Level_1, L"Ilsundur, Lord of Fire"},
+        { GW::Constants::MapID::Prophets_Path, L"Kepkhet Marrowfeast"},
+        { GW::Constants::MapID::Barbarous_Shore, L"Commander Wahli"},
+        { GW::Constants::MapID::The_Deep, L"Kanaxai"},
+        { GW::Constants::MapID::Bogroot_Growths_Level_1, L"Khabuus"},
+        { GW::Constants::MapID::Dalada_Uplands, L"Molotov Rocktail"},
+        { GW::Constants::MapID::Tomb_of_the_Primeval_Kings, L"The Stygian Lords"},
+        { GW::Constants::MapID::The_Fissure_of_Woe, L"Dragon Lich"},
+        { GW::Constants::MapID::Darkrime_Delves_Level_1, L"Havok Soulwail"},
+        { GW::Constants::MapID::Xaquang_Skyway, L"Ghial the Bone Dancer"},
+        { GW::Constants::MapID::Cathedral_of_Flames_Level_1, L"Murakai, Lady of the Night"},
+        { GW::Constants::MapID::Slavers_Exile_Level_1, L"Rand Stormweaver"},
+        { GW::Constants::MapID::Kessex_Peak, L"Verata"}
+    };
+    static_assert(_countof(zaishen_bounty_cycles) == ZAISHEN_BOUNTY_COUNT);
 
     // These vectors are good to go
 
@@ -878,39 +878,6 @@ namespace {
         }
     }
 
-    const char* GetIncompleteStatusMessage(MapID map_id)
-    {
-        const char* incomplete_hard_mode = "This character hasn't completed this in hard mode";
-        const char* incomplete_normal_mode = "This character hasn't completed this in normal mode";
-
-        const auto w = GW::GetWorldContext();
-        const auto map = w ? GW::Map::GetMapInfo(map_id) : nullptr;
-        if (!map) return nullptr;
-        if (map->type == GW::RegionType::ExplorableZone) {
-            if (!ToolboxUtils::ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(map_id))) {
-                return incomplete_hard_mode;
-            }
-            return nullptr;
-        }
-
-        const bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
-        if (!ToolboxUtils::ArrayBoolAt(w->missions_completed, static_cast<uint32_t>(map_id))) {
-            return incomplete_normal_mode;
-        }
-        if (!ToolboxUtils::ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(map_id))) {
-            return incomplete_hard_mode;
-        }
-        if (has_bonus) {
-            if (!ToolboxUtils::ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(map_id))) {
-                return incomplete_normal_mode;
-            }
-            if (!ToolboxUtils::ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(map_id))) {
-                return incomplete_hard_mode;
-            }
-        }
-        return nullptr;
-    }
-
     using QuestLogNames = std::unordered_map<GW::Constants::QuestID, GuiUtils::EncString*>;
 
     bool IsQuestAvailable(DailyQuests::QuestData* info)
@@ -1063,6 +1030,29 @@ namespace {
         
     }
 
+    void OnDailyQuestTooltip(DailyQuests::QuestData* info) {
+        const auto quest_name = info->GetQuestName();
+        const auto map_name = info->map_id != GW::Constants::MapID::None ? info->GetMapName() : nullptr;
+        if (!map_name || !quest_name || strcmp(quest_name, map_name) == 0) {
+            ImGui::TextUnformatted(quest_name);
+        }
+        else {
+            ImGui::Text("%s (%s)", quest_name, map_name);
+        }
+        const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaComplete(info->map_id);
+        if (!chars_without_completed.empty()) {
+            ImGui::Separator();
+            ImGui::TextUnformatted("Characters who have not completed this area:");
+            auto icon_size = ImGui::CalcTextSize(" ");
+            icon_size.x = icon_size.y;
+            for (auto char_completion : chars_without_completed) {
+                ImGui::Image(*Resources::GetProfessionIcon(char_completion->profession), icon_size);
+                ImGui::SameLine();
+                ImGui::TextUnformatted(char_completion->name_str.c_str());
+            }
+        }
+    }
+
     GW::HookEntry OnUIMessage_HookEntry;
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
         switch (message_id) {
@@ -1171,10 +1161,11 @@ void DailyQuests::Draw(IDirect3DDevice9*)
                 break;
         }
         auto write_daily_info = [](bool* subscribed, QuestData* info, bool check_completion) {
-            const auto incomplete_message = check_completion ? GetIncompleteStatusMessage(info->map_id) : nullptr;
             auto col = &normal_color;
-            if (incomplete_message) col = &incomplete_color;
-            if (*subscribed) col = &subscribed_color;
+            if (check_completion && !CompletionWindow::IsAreaComplete(GW::AccountMgr::GetCurrentPlayerName(), info->map_id)) 
+                col = &incomplete_color;
+            if (*subscribed)
+                col = &subscribed_color;
             ImGui::TextColored(*col, info->GetQuestName());
             auto lmb_clicked = ImGui::IsItemClicked();
             auto rmb_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
@@ -1195,20 +1186,8 @@ void DailyQuests::Draw(IDirect3DDevice9*)
                 *subscribed = !*subscribed;
             }
             if (hovered && check_completion) {
-                ImGui::SetTooltip([&]() {
-                    ImGui::TextUnformatted(info->GetQuestName());
-                    const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaComplete(info->map_id);
-                    if (!chars_without_completed.empty()) {
-                        ImGui::Separator();
-                        ImGui::TextUnformatted("Players who have not completed this area:");
-                        auto icon_size = ImGui::CalcTextSize(" ");
-                        icon_size.x = icon_size.y;
-                        for (auto char_completion : chars_without_completed) {
-                            ImGui::Image(*Resources::GetProfessionIcon(char_completion->profession), icon_size);
-                            ImGui::SameLine();
-                            ImGui::TextUnformatted(char_completion->name_str.c_str());
-                        }
-                    }
+                ImGui::SetTooltip([info]() {
+                    OnDailyQuestTooltip(info);
                     });
             }
         };
@@ -1222,7 +1201,7 @@ void DailyQuests::Draw(IDirect3DDevice9*)
         }
         if (show_zaishen_bounty_in_window) {
             idx = GetZaishenBountyIdx(&unix);
-            write_daily_info(&subscribed_zaishen_bounties[idx], GetZaishenBounty(unix), false);
+            write_daily_info(&subscribed_zaishen_bounties[idx], GetZaishenBounty(unix), true);
             ImGui::SameLine(offset += zb_width);
         }
         if (show_zaishen_combat_in_window) {
@@ -1462,13 +1441,11 @@ void DailyQuests::Initialize()
 {
     ToolboxWindow::Initialize();
 
-    if (zaishen_bounty_cycles.empty()) {
-        // TODO: Find the encoded names and maps for these
-        for (const auto hard_coded_name : hard_coded_zaishen_bounty_names) {
-            const auto wrapped = std::format(L"\x108\x107{}\x1", TextUtils::StringToWString(hard_coded_name));
-            zaishen_bounty_cycles.push_back({MapID::None, wrapped.c_str()});
-        }
+    for (auto& cycle : zaishen_bounty_cycles) {
+        if(cycle.enc_name[0] != L'\x108')
+            cycle.enc_name = std::format(L"\x108\x107{}\x1", cycle.enc_name);
     }
+
 
     if (wanted_by_shining_blade_cycles.empty()) {
         // TODO: Find the encoded names and maps for these
@@ -1737,7 +1714,7 @@ const std::wstring& DailyQuests::QuestData::GetWikiName()
 
 void DailyQuests::QuestData::Travel()
 {
-    GW::Map::Travel(TravelWindow::GetNearestOutpost(map_id));
+    TravelWindow::Instance().TravelNearest(map_id);
 }
 
 const char* DailyQuests::QuestData::GetMapName()

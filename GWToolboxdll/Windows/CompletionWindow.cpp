@@ -633,6 +633,37 @@ namespace {
         return subject;
     }
 
+    bool IsAreaComplete(const wchar_t* player_name, const GW::Constants::MapID map_id, CompletionCheck check, const GW::AreaInfo* map) {
+        if (map_id == GW::Constants::MapID::None)
+            return true;
+        if (map_id == GW::Constants::MapID::Tomb_of_the_Primeval_Kings)
+            return true; // Topk special case
+        const auto completion = CompletionWindow::GetCharacterCompletion(player_name, false);
+        if (!(map && completion)) return false;
+
+        switch (map->type) {
+        case GW::RegionType::EliteMission:
+            return true;
+        case GW::RegionType::ExplorableZone:
+            if (map->continent == GW::Continent::BattleIsles)
+                return true; // Fow, Uw
+            return !map->GetIsOnWorldMap() || ArrayBoolAt(completion->vanquishes, static_cast<uint32_t>(map_id));
+        }
+
+        if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(completion->mission, static_cast<uint32_t>(map_id)))
+            return false;
+        if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(completion->mission_hm, static_cast<uint32_t>(map_id)))
+            return false;
+        const bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
+        if (has_bonus) {
+            if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(completion->mission_bonus, static_cast<uint32_t>(map_id)))
+                return false;
+            if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(completion->mission_bonus_hm, static_cast<uint32_t>(map_id)))
+                return false;
+        }
+        return true;
+    }
+
 }
 
 
@@ -773,7 +804,7 @@ void Mission::OnHover()
         const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaComplete(outpost);
         if (!chars_without_completed.empty()) {
             ImGui::Separator();
-            ImGui::TextUnformatted("Players who have not completed this area:");
+            ImGui::TextUnformatted("Characters who have not completed this area:");
             auto icon_size = ImGui::CalcTextSize(" ");
             icon_size.x = icon_size.y;
             for (auto char_completion : chars_without_completed) {
@@ -839,7 +870,7 @@ void OutpostUnlock::OnHover()
         const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaUnlocked(outpost);
         if (!chars_without_completed.empty()) {
             ImGui::Separator();
-            ImGui::TextUnformatted("Players who have not unlocked this area:");
+            ImGui::TextUnformatted("Characters who have not unlocked this area:");
             auto icon_size = ImGui::CalcTextSize(" ");
             icon_size.x = icon_size.y;
             for (auto char_completion : chars_without_completed) {
@@ -2883,25 +2914,7 @@ CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* cha
 }
 
 bool CompletionWindow::IsAreaComplete(const wchar_t* player_name, const GW::Constants::MapID map_id, CompletionCheck check) {
-    const auto completion = GetCharacterCompletion(player_name, false);
-    const auto map = completion ? GW::Map::GetMapInfo(map_id) : nullptr;
-    if (!(map && completion)) return false;
-
-    if (map->type == GW::RegionType::ExplorableZone)
-        return ArrayBoolAt(completion->vanquishes, static_cast<uint32_t>(map_id));
-
-    if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(completion->mission, static_cast<uint32_t>(map_id)))
-        return false;
-    if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(completion->mission_hm, static_cast<uint32_t>(map_id)))
-        return false;
-    const bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
-    if (has_bonus) {
-        if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(completion->mission_bonus, static_cast<uint32_t>(map_id)))
-            return false;
-        if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(completion->mission_bonus_hm, static_cast<uint32_t>(map_id)))
-            return false;
-    }
-    return true;
+    return ::IsAreaComplete(player_name, map_id, check, GW::Map::GetMapInfo(map_id));
 }
 
 bool CompletionWindow::IsAreaUnlocked(const wchar_t* player_name, const GW::Constants::MapID map_id) {
@@ -2918,13 +2931,16 @@ bool CompletionWindow::IsSkillUnlocked(const wchar_t* player_name, const GW::Con
 std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaComplete(GW::Constants::MapID map_id, CompletionCheck check)
 {
     std::vector<CharacterCompletion*> out;
+    if (map_id == GW::Constants::MapID::None)
+        return out;
+    const auto info = GW::Map::GetMapInfo(map_id);
     const auto email = GW::AccountMgr::GetAccountEmail();
     for (auto& it : character_completion) {
         if (it.second->is_pvp || it.second->is_pre_searing)
             continue;
         if (only_show_account_chars && it.second->account != email)
             continue;
-        if(!IsAreaComplete(it.first.c_str(), map_id, check))
+        if(!::IsAreaComplete(it.first.c_str(), map_id, check, info))
             out.push_back(it.second);
     }
     std::ranges::sort(out, [](CharacterCompletion* a, CharacterCompletion* b) {
