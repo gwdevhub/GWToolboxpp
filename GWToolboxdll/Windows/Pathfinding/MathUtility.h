@@ -16,7 +16,7 @@ namespace MathUtil {
 
     float Cross(const GW::Vec2f &lhs, const GW::Vec2f &rhs);
 
-    float Dot(GW::Vec2f lhs, GW::Vec2f rhs);
+    float Dot(const GW::Vec2f& lhs, const GW::Vec2f& rhs);
 
     // Given three collinear points p, q, r, the function checks if
     // point q lies on line segment 'pr'

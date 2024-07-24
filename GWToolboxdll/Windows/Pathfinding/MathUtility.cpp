@@ -90,7 +90,7 @@ namespace MathUtil {
         return (lhs.x * rhs.y) - (lhs.y * rhs.x);
     }
 
-    float Dot(GW::Vec2f lhs, GW::Vec2f rhs) {
+    float Dot(const GW::Vec2f& lhs, const GW::Vec2f& rhs) {
         return (lhs.x * rhs.x) + (lhs.y * rhs.y);
     }
 
