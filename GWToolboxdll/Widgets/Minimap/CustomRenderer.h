@@ -75,7 +75,7 @@ class CustomRenderer : public VBuffer {
 
 public:
     struct CustomLine {
-        CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n = nullptr);
+        CustomLine(float x1, float y1, float x2, float y2, GW::Constants::MapID m, const char* n = nullptr, bool draw_everywhere = false);
 
         explicit CustomLine(const char* n)
             : CustomLine(0, 0, 0, 0, static_cast<GW::Constants::MapID>(0), n) { }
@@ -85,6 +85,7 @@ public:
         Color color{0xFFFFFFFF};
         bool visible = true;
         bool draw_on_terrain = false;
+        bool draw_everywhere = false;
         char name[128]{};
     };
 
@@ -99,7 +100,7 @@ public:
     void SaveSettings(ToolboxIni* ini, const char* section);
     void LoadMarkers();
     void SaveMarkers();
-    CustomLine* AddCustomLine(const GW::GamePos& from, const GW::GamePos& to);
+    CustomLine* AddCustomLine(const GW::GamePos& from, const GW::GamePos& to, const char* _name = nullptr, bool draw_everywhere = false);
     bool RemoveCustomLine(CustomLine* line);
 
     [[nodiscard]] const std::vector<CustomLine*>& GetLines() const { return lines; }

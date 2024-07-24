@@ -31,12 +31,13 @@ namespace {
     ToolboxIni inifile{};
 }
 
-CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const float x2, const float y2, const GW::Constants::MapID m, const char* _name)
+CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const float x2, const float y2, const GW::Constants::MapID m, const char* _name, bool draw_everywhere)
     : p1(x1, y1),
       p2(x2, y2),
       map(m)
 {
     std::snprintf(name, sizeof(name), "%s", _name ? _name : "line");
+    this->draw_everywhere = draw_everywhere;
 };
 
 CustomRenderer::CustomMarker::CustomMarker(const float x, const float y, const float s, const Shape sh, const GW::Constants::MapID m, const char* _name)
@@ -258,9 +259,9 @@ bool CustomRenderer::RemoveCustomLine(CustomRenderer::CustomLine* line)
     return false;
 }
 
-CustomRenderer::CustomLine* CustomRenderer::AddCustomLine(const GW::GamePos& from, const GW::GamePos& to)
+CustomRenderer::CustomLine* CustomRenderer::AddCustomLine(const GW::GamePos& from, const GW::GamePos& to, const char* _name, bool draw_everywhere)
 {
-    const auto line = new CustomRenderer::CustomLine(from.x, from.y, to.x, to.y, GW::Map::GetMapID());
+    const auto line = new CustomRenderer::CustomLine(from.x, from.y, to.x, to.y, GW::Map::GetMapID(), _name, draw_everywhere);
     lines.push_back(line);
     return line;
 }
@@ -895,12 +896,14 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
 
 void CustomRenderer::DrawCustomLines(const IDirect3DDevice9*)
 {
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-        for (const auto line : lines) {
-            if (line->visible && (line->map == GW::Constants::MapID::None || line->map == GW::Map::GetMapID())) {
-                EnqueueVertex(line->p1.x, line->p1.y, line->color);
-                EnqueueVertex(line->p2.x, line->p2.y, line->color);
-            }
+    const auto doa_outpost = GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable && GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish;
+
+    for (const auto line : lines) {
+        // Draw everywhere besides the DoA outpost. Only draw the lines with draw_everywhere in DoA
+        if (line->visible && (line->map == GW::Constants::MapID::None || line->map == GW::Map::GetMapID()) &&
+            (!doa_outpost || line->draw_everywhere)) {
+            EnqueueVertex(line->p1.x, line->p1.y, line->color);
+            EnqueueVertex(line->p2.x, line->p2.y, line->color);
         }
     }
 }
