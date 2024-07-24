@@ -63,7 +63,6 @@ namespace {
         return p ? &p->pos : nullptr;
     }
 
-
     // Returns false if our last AStar calculation matches what we're asking for.
     bool NeedsRecalculating(GW::GamePos& from, GW::GamePos& to) {
         if (!(astar && astar->m_path.ready() && astar->m_path.points().size()))
@@ -71,8 +70,6 @@ namespace {
         return from != astar->m_path.points().at(0)
             || to != astar->m_path.points().at(astar->m_path.points().size() - 1);
     }
-
-
 
     void RecalculatePath(GW::GamePos& from, GW::GamePos& to) {
         if (!NeedsRecalculating(from, to))
