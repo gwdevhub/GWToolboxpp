@@ -148,7 +148,10 @@ namespace {
         InfoField("Map Region", "%d", GW::Map::GetRegion());
         InfoField("Map District", "%d", GW::Map::GetDistrict());
         InfoField("Map Type", type);
-        InfoField("Map file", "%lu", mapfile);
+        InfoField("model_file_id", "0x%X", mapfile);
+        short file_str[8] = { 0 };
+        GetIdsFromFileId(mapfile, file_str);
+        EncInfoField("model_file_id str", (wchar_t*)file_str);
         ImGui::ShowHelp("Map file is unique for each pathing map (e.g. used by minimap).\nMany different maps use the same map file");
         if (ImGui::TreeNodeEx("Advanced", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             const GW::AreaInfo* map_info = GW::Map::GetMapInfo(map_id);
