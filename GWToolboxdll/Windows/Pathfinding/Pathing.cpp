@@ -666,6 +666,7 @@ namespace Pathing {
             std::vector<bool> visited;
             visited.reserve(0xd00);
             std::vector<uint32_t> blocking_ids;
+            std::vector<std::tuple<size_t, size_t, float, std::vector<uint32_t>>> localUpdates;
 
             float min_range, max_range, sqdist, dist;
             Pathing::MilePath::point* p1;
@@ -704,17 +705,27 @@ namespace Pathing {
                     if (HasLineOfSight(*p1, *p2, open, visited, &blocking_ids)) {
                         dist = sqrtf(sqdist);
 
-                        {
-                            std::lock_guard<std::mutex> lock(visGraphMutex);
-                            m_visGraph[p1->id].emplace_back(p2->id, dist, blocking_ids);
-                            m_visGraph[p2->id].emplace_back(p1->id, dist, blocking_ids);
-                        }
+                        // Collect updates
+                        localUpdates.emplace_back(p1->id, p2->id, dist, blocking_ids);
                     }
                 }
 
                 {
                     std::lock_guard<std::mutex> lock(progressMutex);
                     m_progress = (i * 100) / size;
+                }
+            }
+
+            // Apply collected updates
+            {
+                std::lock_guard<std::mutex> lock(visGraphMutex);
+                for (const auto& update : localUpdates) {
+                    size_t id1, id2;
+                    std::vector<uint32_t> blocks;
+                    std::tie(id1, id2, dist, blocks) = update;
+
+                    m_visGraph[id1].emplace_back(id2, dist, blocks);
+                    m_visGraph[id2].emplace_back(id1, dist, blocks);
                 }
             }
             };
