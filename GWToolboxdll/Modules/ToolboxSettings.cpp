@@ -56,14 +56,13 @@
 #include <Windows/RerollWindow.h>
 #include <Windows/ArmoryWindow.h>
 #include <Windows/EnemyWindow.h>
-
+#include <Windows/Pathfinding/PathfindingWindow.h>
 #ifdef _DEBUG
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/DoorMonitorWindow.h>
 #include <Windows/StringDecoderWindow.h>
 #include <Windows/SkillListingWindow.h>
 #include <Windows/TargetInfoWindow.h>
-#include <Windows/Pathfinding/PathfindingWindow.h>
 #endif
 
 #include <Widgets/TimerWidget.h>
@@ -146,9 +145,7 @@ namespace {
         PriceCheckerModule::Instance(),
         SalvageInfoModule::Instance(),
         ResignLogModule::Instance(),
-        #ifdef _DEBUG
         QuestModule::Instance()
-        #endif
     };
 
     std::vector<WidgetToggle> optional_widgets = {
@@ -193,9 +190,10 @@ namespace {
         PartyStatisticsWindow::Instance(),
         DupingWindow::Instance(),
         ArmoryWindow::Instance(),
+        PathfindingWindow::Instance(),
 #ifdef _DEBUG
         EnemyWindow::Instance(),
-        PathfindingWindow::Instance()
+        
 #endif
     };
 

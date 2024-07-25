@@ -47,8 +47,8 @@ namespace {
 
         void DrawMinimapLines() {
             ClearMinimapLines();
-            for (size_t i = current_waypoint; i < waypoints.size() - 1; i++) {
-                const auto l = Minimap::Instance().custom_renderer.AddCustomLine(waypoints[i],waypoints[i + 1]);
+            for (size_t i = current_waypoint > 0 ? current_waypoint - 1 : 0; i < waypoints.size() - 1; i++) {
+                const auto l = Minimap::Instance().custom_renderer.AddCustomLine(waypoints[i], waypoints[i + 1], std::format("{} - {}", (uint32_t)quest_id, i).c_str(), true);
                 minimap_lines.push_back(l);
             }
         }
