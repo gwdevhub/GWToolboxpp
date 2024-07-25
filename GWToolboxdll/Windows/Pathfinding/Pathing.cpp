@@ -83,7 +83,7 @@ namespace Pathing {
 
 	//Gets height of map at current position and layer
     static float height (const Vec2f &p, int layer){
-        float height;
+        float height = .0f;
         Map::QueryAltitude(GamePos(p.x, p.y, layer), 5, height);
         return height;
     }
@@ -594,38 +594,45 @@ namespace Pathing {
 
         m_visGraph.clear();
         m_visGraph.resize(m_portals.size() * 2 + m_teleports.size() * 2 + 2);
-
+        for (auto& it : m_visGraph) {
+            it.reserve(0x100);
+        }
         float range = m_visibility_range;
         float sqrange = range * range;
 
         std::vector<const AABB *> open;
         std::vector<bool> visited;
+        visited.reserve(0xd00);
+        std::vector<uint32_t> blocking_ids;
         size_t size = m_points.size();
+        float min_range, max_range, sqdist, dist;
+        Pathing::MilePath::point* p1;
+        Pathing::MilePath::point* p2;
         for (size_t i = 0; i < size; ++i) {
-            auto& p1 = m_points[i];
-            float min_range = p1.pos.y - range;
-            float max_range = p1.pos.y + range;
+            p1 = &m_points[i];
+            min_range = p1->pos.y - range;
+            max_range = p1->pos.y + range;
 
             for (size_t j = i + 1; j < size; ++j) {
-                auto& p2 = m_points[j];
+                p2 = &m_points[j];
 
-                if (min_range > p2.pos.y || max_range < p2.pos.y)
+                if (min_range > p2->pos.y || max_range < p2->pos.y)
                     continue;
 
-                float sqdist = GetSquareDistance(p1.pos, p2.pos);
+                sqdist = GetSquareDistance(p1->pos, p2->pos);
                 if (sqdist > sqrange) 
                     continue;
 
                 if (std::any_of(
-                    std::begin(m_visGraph[p1.id]), 
-                    std::end(m_visGraph[p1.id]), 
-                    [&p2](const PointVisElement &a) { return a.point_id == p2.id; })) continue;
+                    std::begin(m_visGraph[p1->id]), 
+                    std::end(m_visGraph[p1->id]), 
+                    [p2](const PointVisElement &a) { return a.point_id == p2->id; })) continue;
 
-                std::vector<uint32_t> blocking_ids;
-                if (HasLineOfSight(p1, p2, open, visited, &blocking_ids)) {
-                    float dist = sqrtf(sqdist);
-                    m_visGraph[p1.id].emplace_back( p2.id, dist, blocking_ids );
-                    m_visGraph[p2.id].emplace_back( p1.id, dist, std::move(blocking_ids) );
+                blocking_ids.clear();
+                if (HasLineOfSight(*p1, *p2, open, visited, &blocking_ids)) {
+                    dist = sqrtf(sqdist);
+                    m_visGraph[p1->id].emplace_back( p2->id, dist, blocking_ids );
+                    m_visGraph[p2->id].emplace_back( p1->id, dist, blocking_ids );
                 }
             }
             m_progress = (i * 100) / size;
@@ -942,8 +949,9 @@ namespace Pathing {
 
     GamePos AStar::getClosestPoint(Path& path, const Vec2f& pos) {
         auto& points = path.points();
-        if (!points.size()) return {};
-        if (points.size() < 2)
+        size_t size = points.size();
+        if (!size) return {};
+        if (size < 2)
             return { points.front().pos.x, points.front().pos.y, points.front().box->m_t->layer };
 
         typedef struct pqdist {
@@ -952,28 +960,29 @@ namespace Pathing {
             size_t index = 0;
         } pqdist;
 
-        std::vector<pqdist> pq;
-        for (size_t i = 1; i < points.size(); ++i) {
-            auto AP = pos - points[i - 1].pos;
-            auto AB = points[i].pos - points[i - 1].pos;
+        std::vector<pqdist> pq(size);
+        GW::Vec2f AP;
+        GW::Vec2f AB;
+        float mag, ABAP, distance;
 
-            float mag = GetSquaredNorm(AB);
-            float ABAP = Dot(AP, AB);
-            float distance = ABAP / mag;
-
+        for (size_t i = 1; i < size; ++i) {
+            AP = pos - points[i - 1].pos;
+            AB = points[i].pos - points[i - 1].pos;
+            mag = GetSquaredNorm(AB);
+            ABAP = Dot(AP, AB);
+            distance = ABAP / mag;
             distance = std::clamp(distance, 0.0f, 1.0f);
 
-            pqdist e;
+            pqdist& e = pq[i];
             e.point.box = points[i - 1].box;
             e.point.pos = points[i - 1].pos + AB * distance;
             e.distance = GetDistance(pos, e.point.pos);
-            pq.emplace_back(std::move(e));
         }
 
-        if (!pq.size()) return pos; // points.back().pos;
+
         float min_distance = std::numeric_limits<float>::infinity();
         size_t min_idx = 0;
-        for (size_t i = 0; i < pq.size(); ++i) {
+        for (size_t i = 0; i < size; ++i) {
             if (pq[i].distance < min_distance) {
                 min_distance = pq[i].distance;
                 min_idx = i;

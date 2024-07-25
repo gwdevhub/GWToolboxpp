@@ -12,6 +12,7 @@
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Widgets/Minimap/CustomRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 namespace {
     GW::HookEntry ui_message_entry;
@@ -275,6 +276,10 @@ void QuestModule::Initialize()
         (ui_message);
         GW::UI::RegisterUIMessageCallback(&ui_message_entry, ui_message, OnGWQuestMarkerUpdated, 0x4000);
     }
+    GW::GameThread::Enqueue([]() {
+        PathfindingWindow::ReadyForPathing();
+        });
+
 }
 void QuestModule::SignalTerminate() {
     ToolboxModule::SignalTerminate();
