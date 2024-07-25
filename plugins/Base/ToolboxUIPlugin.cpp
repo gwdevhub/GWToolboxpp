@@ -5,9 +5,8 @@
 #include "GWCA/Utilities/Hook.h"
 #include <GWCA/Managers/ChatMgr.h>
 
-#include "GWCA/GWCA.h"
-
-import PluginUtils;
+#include <GWCA/GWCA.h>
+#include "PluginUtils.h"
 
 namespace {
     void CmdTB(GW::HookStatus* status, const wchar_t*, const int argc, const LPWSTR* argv)

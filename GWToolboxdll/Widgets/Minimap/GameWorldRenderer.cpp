@@ -392,7 +392,7 @@ void GameWorldRenderer::SyncPolys(IDirect3DDevice9* device)
             continue;
         }
         std::vector<GW::Vec3f> pts{};
-        std::ranges::transform(poly.points, std::back_inserter(pts), [](const GW::Vec3f& pt) { return pt; });
+        std::ranges::transform(poly.points, std::back_inserter(pts), [](const GW::Vec2f& pt) { return GW::Vec3f(pt); });
         renderables.push_back(std::make_unique<GenericPolyRenderable>(device, poly.map, pts, poly.color, poly.filled));
     }
 }

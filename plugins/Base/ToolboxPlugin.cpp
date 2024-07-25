@@ -1,8 +1,7 @@
 ﻿#pragma once
 
 #include "ToolboxPlugin.h"
-
-import PluginUtils;
+#include "PluginUtils.h"
 
 std::filesystem::path ToolboxPlugin::GetSettingFile(const wchar_t* folder) const
 {
