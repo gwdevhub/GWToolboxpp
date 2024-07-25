@@ -22,9 +22,6 @@
 #include <Widgets/Minimap/Minimap.h>
 
 
-
-
-
 namespace {
     std::unordered_map<uint32_t, Pathing::MilePath*> mile_paths_by_map_file_id;
     // Returns milepath pointer for the current map, nullptr if we're not in a valid state
@@ -78,7 +75,7 @@ namespace {
         astar = nullptr;
         Resources::EnqueueWorkerTask([from_cpy = from, to_cpy = to] {
             auto tmpAstar = new Pathing::AStar(GetMilepathForCurrentMap());
-            const auto res = tmpAstar->search(from_cpy, to_cpy);
+            const auto res = tmpAstar->Search(from_cpy, to_cpy);
             if (res != Pathing::Error::OK) {
                 Log::Error("Pathing failed; Pathing::Error code %d", res);
                 delete tmpAstar;
@@ -103,6 +100,7 @@ namespace {
         RecalculatePath(*from, to);
     }
     clock_t last_recalculate = 0;
+
     void RecalculatePathToQuest() {
         last_recalculate = TIMER_INIT();
         const auto q = GW::QuestMgr::GetActiveQuest();
@@ -235,6 +233,7 @@ bool PathfindingWindow::CanTerminate()
     }
     return true;
 }
+
 bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args)
 {
     if (pending_terminate)
@@ -263,7 +262,7 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
             goto trigger_callback;
         }
         tmpAstar = new Pathing::AStar(milepath);
-        res = tmpAstar->search(*from_cpy, *to_cpy);
+        res = tmpAstar->Search(*from_cpy, *to_cpy);
         if (res != Pathing::Error::OK) {
             Log::Error("Pathing failed; Pathing::Error code %d", res);
             goto trigger_callback;
@@ -273,7 +272,7 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
             goto trigger_callback;
         }
         for (auto& p : tmpAstar->m_path.points()) {
-            waypoints->push_back(static_cast<GW::GamePos>(p));
+            waypoints->push_back(p);
         }
 
     trigger_callback:

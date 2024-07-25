@@ -220,8 +220,6 @@ namespace Pathing {
             GenerateTeleportGraph();
             InsertTeleportsIntoVisibilityGraph();
             volatile clock_t stop = clock();
-
-
             Log::Flash("Processing %s\n", m_terminateThread ? "terminated." : "done.");
             Log::Flash("processing time: %d ms\n", stop - start);
             m_processing = false;
@@ -711,14 +709,14 @@ namespace Pathing {
                 }
 
                 {
-                    std::lock_guard<std::mutex> lock(progressMutex);
+                    std::lock_guard lock(progressMutex);
                     m_progress = (i * 100) / size;
                 }
             }
 
             // Apply collected updates
             {
-                std::lock_guard<std::mutex> lock(visGraphMutex);
+                std::lock_guard lock(visGraphMutex);
                 for (const auto& update : localUpdates) {
                     size_t id1, id2;
                     std::vector<uint32_t> blocks;
@@ -812,7 +810,6 @@ namespace Pathing {
         //subsequently removing start and stop points in the visibility graph.
 
         //create temporary vis graph to hold start and goal points
-        m_visGraph.clear();
         //m_visGraph.resize(m_mp->m_points.size() + 2);
         //for (size_t i = 0; i < m_mp->m_points.size(); ++i) {
         //    m_visGraph[i] = m_mp->m_visGraph[i];
@@ -821,37 +818,36 @@ namespace Pathing {
 
     class Path {
     public:
-        Path() : points(), cost(0.0f), visited_index(0) {};
-        std::vector<MilePath::point> points;
-        float cost; //distance
-        int visited_index;
+        std::vector<MilePath::point> points{};
+        float cost{}; //distance
+        int visited_index{};
     };
     Path m_path;
 
-    void AStar::insertPointIntoVisGraph(MilePath::point& point)
+    void AStar::InsertPointIntoVisGraph(MilePath::point& point) const
     {
-        auto& visGraph = m_mp->m_visGraph;
-        float sqrange = m_mp->m_visibility_range * m_mp->m_visibility_range;
+        auto& vis_graph = m_mp->m_visGraph;
+        const float sqrange = m_mp->m_visibility_range * m_mp->m_visibility_range;
         std::vector<const AABB *> open;
         std::vector<bool> visited;
         for (auto it = m_mp->m_points.cbegin(); it != m_mp->m_points.cend(); ++it) {
-            float sqdistance = GetSquareDistance((*it).pos, point.pos);
+            const float sqdistance = GetSquareDistance((*it).pos, point.pos);
             if (sqdistance > sqrange)
                 continue;
 
             std::vector<uint32_t> blocking_ids;
-            if (!m_mp->HasLineOfSight((*it), point, open, visited, &blocking_ids)) 
+            if (!m_mp->HasLineOfSight(*it, point, open, visited, &blocking_ids))
                 continue;
 
             float distance = sqrtf(sqdistance);
-            visGraph[point.id].emplace_back( (*it).id, distance, blocking_ids );
-            visGraph[(*it).id].emplace_back( point.id, distance, std::move(blocking_ids) );
+            vis_graph[point.id].emplace_back( it->id, distance, blocking_ids );
+            vis_graph[it->id].emplace_back( point.id, distance, std::move(blocking_ids) );
         }
     }
 
     //https://github.com/Rikora/A-star/blob/master/src/AStar.cpp
-    Error AStar::buildPath(const MilePath::point& start, const MilePath::point& goal,
-        std::vector<MilePath::point::Id>& came_from) {
+    Error AStar::BuildPath(const MilePath::point& start, const MilePath::point& goal,
+                           const std::vector<MilePath::point::Id>& came_from) {
         MilePath::point current(goal);
 
         m_path.clear();
@@ -876,7 +872,8 @@ namespace Pathing {
         return Error::OK;
     }
 
-    float AStar::teleporterHeuristic(const MilePath::point& start, const MilePath::point& goal) {
+    float AStar::TeleporterHeuristic(const MilePath::point& start, const MilePath::point& goal) const
+    {
         if (!m_mp->m_teleports.size())
             return 0.0f;
         
@@ -915,14 +912,14 @@ namespace Pathing {
         return cost;
     }
 
-    Error AStar::search(const GamePos &start_pos, const GamePos &goal_pos) {
+    Error AStar::Search(const GamePos &start_pos, const GamePos &goal_pos) {
 
-        std::lock_guard<std::mutex> lock(pathing_mutex);
+        std::lock_guard lock(pathing_mutex);
 
         std::vector<uint32_t> block;
-        Pathing::Error res = CopyPathingMapBlocks(block);
+        Error res = CopyPathingMapBlocks(block);
 
-        if (res != Pathing::Error::OK)
+        if (res != Error::OK)
             return res;
         MilePath::point::Id point_id = m_mp->m_points.size();
         MilePath::point start;
@@ -948,7 +945,7 @@ namespace Pathing {
             goal = m_mp->CreatePoint(goal_pos);
             if (!goal.box)
                 return Error::FailedToFindGoalBox;
-            goal.id = point_id++;
+            goal.id = point_id;
             new_goal = true;
         }
 
@@ -972,11 +969,11 @@ namespace Pathing {
         //@Cleanup: Maybe I'm not using milepath for its intended purpose, but this function will ALWAYS add more points to the graph!!
         if (new_start) {
             m_mp->m_points.push_back(start);
-            insertPointIntoVisGraph(start);
+            InsertPointIntoVisGraph(start);
         }
         if (new_goal) {
             m_mp->m_points.push_back(goal);
-            insertPointIntoVisGraph(goal);
+            InsertPointIntoVisGraph(goal);
         }
 
         std::vector<float> cost_so_far;
@@ -990,7 +987,7 @@ namespace Pathing {
         came_from[start.id] = start.id;
         open.emplace(0.0f, start.id);
 
-        bool teleports = m_mp->m_teleports.size();
+        const bool teleports = m_mp->m_teleports.size();
         MilePath::point::Id current = 0; //-1
         while (!open.empty()) {
             current = open.top().second;
@@ -998,11 +995,11 @@ namespace Pathing {
             if (current == goal.id)
                 break;
 
-            for (auto &vis : m_mp->m_visGraph[current]) {
+            for (auto& vis : m_mp->m_visGraph[current]) {
                 if (std::ranges::any_of(vis.blocking_ids, [&block](auto &id) { return block[id]; }))
                     continue;
 
-                float new_cost = cost_so_far[current] + vis.distance;
+                const float new_cost = cost_so_far[current] + vis.distance;
                 if (cost_so_far[vis.point_id] == -INFINITY || new_cost < cost_so_far[vis.point_id]) {
                     cost_so_far[vis.point_id] = new_cost;
                     came_from[vis.point_id] = current;
@@ -1010,7 +1007,7 @@ namespace Pathing {
                     float priority = new_cost;
                     if (teleports) {
                         auto &point = m_mp->m_points[vis.point_id];
-                        float tp_cost = teleporterHeuristic(point, goal);
+                        float tp_cost = TeleporterHeuristic(point, goal);
                         priority += std::min(GetDistance(point.pos, goal.pos), tp_cost);
                     }
                     open.emplace(priority, vis.point_id);
@@ -1019,7 +1016,7 @@ namespace Pathing {
         }
 
         if (current == goal.id) {
-            buildPath(start, goal, came_from);
+            BuildPath(start, goal, came_from);
             m_path.setCost(cost_so_far[current]);
         }
 
@@ -1051,22 +1048,22 @@ namespace Pathing {
         return m_path.ready() ? Error::OK : Error::FailedToFinializePath;
     }
 
-    GamePos AStar::getClosestPoint(const Vec2f& pos) {
-        return getClosestPoint(m_path, pos);
+    GamePos AStar::GetClosestPoint(const Vec2f& pos) {
+        return GetClosestPoint(m_path, pos);
     }
 
-    GamePos AStar::getClosestPoint(Path& path, const Vec2f& pos) {
+    GamePos AStar::GetClosestPoint(Path& path, const Vec2f& pos) {
         auto& points = path.points();
         size_t size = points.size();
         if (!size) return {};
         if (size < 2)
             return { points.front().pos.x, points.front().pos.y, points.front().box->m_t->layer };
 
-        typedef struct pqdist {
+        struct pqdist {
             float distance = 0.0f;
             MilePath::point point = {};
             size_t index = 0;
-        } pqdist;
+        };
 
         std::vector<pqdist> pq(size);
         GW::Vec2f AP;
@@ -1086,7 +1083,6 @@ namespace Pathing {
             e.point.pos = points[i - 1].pos + AB * distance;
             e.distance = GetDistance(pos, e.point.pos);
         }
-
 
         float min_distance = std::numeric_limits<float>::infinity();
         size_t min_idx = 0;

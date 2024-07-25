@@ -208,19 +208,19 @@ namespace Pathing {
 
         AStar(MilePath *mp);
 
-        void insertPointIntoVisGraph(MilePath::point &point);
+        void InsertPointIntoVisGraph(MilePath::point &point) const;
         
-        Error buildPath(const MilePath::point &start, const MilePath::point &goal, std::vector<MilePath::point::Id> &came_from);
+        Error BuildPath(const MilePath::point &start, const MilePath::point &goal, const std::vector<MilePath::point::Id> &came_from);
 
-        inline float teleporterHeuristic(const MilePath::point &start, const MilePath::point &goal);
+        inline float TeleporterHeuristic(const MilePath::point &start, const MilePath::point &goal) const;
 
-        Error search(const GW::GamePos &start_pos, const GW::GamePos &goal_pos);
+        Error Search(const GW::GamePos &start_pos, const GW::GamePos &goal_pos);
 
-        GW::GamePos getClosestPoint(const GW::Vec2f &pos);
-        GW::GamePos getClosestPoint(Path &path, const GW::Vec2f &pos);
+        GW::GamePos GetClosestPoint(const GW::Vec2f &pos);
+        static GW::GamePos GetClosestPoint(Path &path, const GW::Vec2f &pos);
 
     private:
-        std::vector<std::vector<MilePath::PointVisElement>> m_visGraph;
+        std::vector<std::vector<MilePath::PointVisElement>> m_visGraph{};
         MilePath* m_mp;
     };
 }
