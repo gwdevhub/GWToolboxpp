@@ -15,6 +15,10 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 
 namespace {
+    Color draw_quest_path_color = 0xFFFFFFFF;
+    bool draw_quest_path_on_terrain = true;
+    bool draw_quest_path_on_minimap = true;
+    bool redirect_quest_marker = false;
     GW::HookEntry ui_message_entry;
 
     void OnQuestPathRecalculated(const std::vector<GW::GamePos>& waypoints, void* args);
@@ -24,10 +28,14 @@ namespace {
     void RedirectQuestMarker(const GW::GamePos& new_marker);
 
     struct CalculatedQuestPath {
-        CalculatedQuestPath(GW::Constants::QuestID _quest_id) : quest_id(_quest_id) {};
-        ~CalculatedQuestPath() {
+        CalculatedQuestPath(GW::Constants::QuestID _quest_id)
+            : quest_id(_quest_id) {};
+
+        ~CalculatedQuestPath()
+        {
             ClearMinimapLines();
         }
+
         std::vector<GW::GamePos> waypoints;
         std::vector<CustomRenderer::CustomLine*> minimap_lines;
         GW::GamePos previous_closest_waypoint;
@@ -38,37 +46,52 @@ namespace {
         uint32_t current_waypoint = 0;
         GW::Constants::QuestID quest_id;
         bool calculating = false;
-        void ClearMinimapLines() {
-            for (auto l : minimap_lines) {
+
+        void ClearMinimapLines()
+        {
+            for (const auto l : minimap_lines) {
                 Minimap::Instance().custom_renderer.RemoveCustomLine(l);
             }
             minimap_lines.clear();
         }
 
-        void DrawMinimapLines() {
+        void DrawMinimapLines()
+        {
             ClearMinimapLines();
+            if (!draw_quest_path_on_terrain && !draw_quest_path_on_minimap)
+                return;
             for (size_t i = current_waypoint > 0 ? current_waypoint - 1 : 0; i < waypoints.size() - 1; i++) {
                 const auto l = Minimap::Instance().custom_renderer.AddCustomLine(waypoints[i], waypoints[i + 1], std::format("{} - {}", (uint32_t)quest_id, i).c_str(), true);
-                l->draw_on_terrain = true;
+                l->draw_on_terrain = draw_quest_path_on_terrain;
                 l->created_by_toolbox = true;
+                l->color = draw_quest_path_color;
                 minimap_lines.push_back(l);
             }
         }
 
-        const GW::Quest* GetQuest() {
-            return GW::QuestMgr::GetQuest(static_cast<GW::Constants::QuestID>(quest_id));
+        const GW::Quest* GetQuest()
+        {
+            return GW::QuestMgr::GetQuest(quest_id);
         }
-        bool IsActive() {
+
+        bool IsActive()
+        {
             const auto a = GW::QuestMgr::GetActiveQuest();
             return a && a == GetQuest();
         }
-        const GW::GamePos* CurrentWaypoint() {
+
+        const GW::GamePos* CurrentWaypoint()
+        {
             return &waypoints[current_waypoint];
         }
-        const GW::GamePos* NextWaypoint() {
+
+        const GW::GamePos* NextWaypoint()
+        {
             return current_waypoint < waypoints.size() - 1 ? &waypoints[current_waypoint + 1] : nullptr;
         }
-        void Recalculate(const GW::GamePos& from) {
+
+        void Recalculate(const GW::GamePos& from)
+        {
             if (from == calculated_from && calculated_to == original_quest_marker) {
                 calculating = true;
                 OnQuestPathRecalculated(waypoints, (void*)quest_id); // No need to recalculate
@@ -80,7 +103,9 @@ namespace {
                 return;
             calculating = PathfindingWindow::CalculatePath(calculated_from, calculated_to, OnQuestPathRecalculated, (void*)quest_id);
         }
-        bool Update(const GW::GamePos& from) {
+
+        bool Update(const GW::GamePos& from)
+        {
             const auto quest = GetQuest();
             if (!quest) {
                 ClearCalculatedPath(quest_id);
@@ -119,7 +144,9 @@ namespace {
             }
             return false;
         }
-        void UpdateUI() {
+
+        void UpdateUI()
+        {
             if (waypoints.empty())
                 return;
             DrawMinimapLines();
@@ -127,22 +154,26 @@ namespace {
             const auto waypoint_distance = GetSquareDistance(current_waypoint_pos, previous_closest_waypoint);
             constexpr float update_when_waypoint_changed_more_than = 300.f * 300.f;
             if (IsActive() &&
-                waypoint_distance > update_when_waypoint_changed_more_than)
-            {
+                waypoint_distance > update_when_waypoint_changed_more_than) {
                 previous_closest_waypoint = waypoints[current_waypoint];
-                RedirectQuestMarker(waypoints[current_waypoint]);
+                if (redirect_quest_marker)
+                    RedirectQuestMarker(waypoints[current_waypoint]);
             }
         }
     };
 
     std::unordered_map<GW::Constants::QuestID, CalculatedQuestPath*> calculated_quest_paths;
-    void ClearCalculatedPaths() {
+
+    void ClearCalculatedPaths()
+    {
         for (auto& it : calculated_quest_paths) {
             delete it.second;
         }
         calculated_quest_paths.clear();
     }
-    void ClearCalculatedPath(GW::Constants::QuestID quest_id) {
+
+    void ClearCalculatedPath(GW::Constants::QuestID quest_id)
+    {
         const auto found = calculated_quest_paths.find(quest_id);
         if (found == calculated_quest_paths.end())
             return;
@@ -153,7 +184,9 @@ namespace {
             delete cqp;
         }
     }
-    CalculatedQuestPath* GetCalculatedQuestPath(GW::Constants::QuestID quest_id, bool create_if_not_found = true) {
+
+    CalculatedQuestPath* GetCalculatedQuestPath(GW::Constants::QuestID quest_id, bool create_if_not_found = true)
+    {
         const auto found = calculated_quest_paths.find(quest_id);
         if (found != calculated_quest_paths.end()) return found->second;
         if (!create_if_not_found)
@@ -163,7 +196,7 @@ namespace {
         return cqp;
     }
 
-    GW::UI::UIMessage ui_messages[] = {
+    constexpr auto ui_messages = {
         GW::UI::UIMessage::kQuestDetailsChanged,
         GW::UI::UIMessage::kQuestAdded,
         GW::UI::UIMessage::kClientActiveQuestChanged
@@ -172,13 +205,15 @@ namespace {
     bool is_spoofing_quest_update = false;
 
     // Settings
-    GW::GamePos* GetPlayerPos() {
+    GW::GamePos* GetPlayerPos()
+    {
         const auto p = GW::Agents::GetControlledCharacter();
         return p ? &p->pos : nullptr;
     }
 
     // Replace marker for current quest, broadcast update to the game
-    void RedirectQuestMarker(const GW::GamePos& new_marker) {
+    void RedirectQuestMarker(const GW::GamePos& new_marker)
+    {
         const auto quest = GW::QuestMgr::GetActiveQuest();
         if (!quest)
             return;
@@ -204,15 +239,19 @@ namespace {
         SendUIMessage(GW::UI::UIMessage::kClientActiveQuestChanged, &msg);
         is_spoofing_quest_update = false;
     }
+
     // Cast helper
-    float GetSquareDistance(const GW::GamePos& a, const GW::GamePos& b) {
+    float GetSquareDistance(const GW::GamePos& a, const GW::GamePos& b)
+    {
         return GetSquareDistance(static_cast<GW::Vec2f>(a), static_cast<GW::Vec2f>(b));
     }
 
     // Called by PathfindingWindow when a path has been calculated. Should be on the main loop.
-    void OnQuestPathRecalculated(const std::vector<GW::GamePos>& waypoints, void* args) {
-        auto cqp = GetCalculatedQuestPath(*(GW::Constants::QuestID*)&args, false);
-        if (!cqp) return;
+    void OnQuestPathRecalculated(const std::vector<GW::GamePos>& waypoints, void* args)
+    {
+        const auto cqp = GetCalculatedQuestPath(*(GW::Constants::QuestID*)&args, false);
+        if (!cqp || !cqp->calculating) return;
+        // TODO: @3vcloud idc to look at it atm but this crashes me when changing zones if a path had already been calculated
         ASSERT(cqp->calculating);
 
         if (GetCalculatedQuestPath(cqp->quest_id) != cqp) {
@@ -220,13 +259,13 @@ namespace {
             delete cqp;
             return;
         }
-        
+
         cqp->current_waypoint = 0;
         cqp->waypoints = std::move(waypoints);
 
         if (!cqp->waypoints.empty() && GetSquareDistance(cqp->waypoints.back(), cqp->calculated_from) < GetSquareDistance(cqp->waypoints.front(), cqp->calculated_from)) {
             // Waypoint array is in descending distance, flip it
-            std::reverse(cqp->waypoints.begin(), cqp->waypoints.end());
+            std::ranges::reverse(cqp->waypoints);
         }
 
         const auto waypoint_len = waypoints.size();
@@ -250,8 +289,10 @@ namespace {
         cqp->calculating = false;
         cqp->UpdateUI();
     }
+
     // Callback invoked by quest related ui messages. All messages sent should have the quest id as first wparam variable
-    void OnGWQuestMarkerUpdated(GW::HookStatus*,GW::UI::UIMessage, void* packet, void*) {
+    void OnGWQuestMarkerUpdated(GW::HookStatus*, GW::UI::UIMessage, void* packet, void*)
+    {
         if (is_spoofing_quest_update)
             return; // Recursive
         GW::Constants::QuestID affected_quest_id = *(GW::Constants::QuestID*)packet;
@@ -265,9 +306,31 @@ namespace {
             return;
         cqp->Recalculate(*pos);
     }
-
-
 } // namespace
+
+void QuestModule::DrawSettingsInternal()
+{
+    ImGui::Text("Draw path to quest marker on:");
+    ImGui::Checkbox("Terrain##drawquestpath", &draw_quest_path_on_terrain);
+    ImGui::Checkbox("Minimap##drawquestpath", &draw_quest_path_on_minimap);
+    Colors::DrawSettingHueWheel("Color##drawquestpath", &draw_quest_path_color);
+}
+
+void QuestModule::LoadSettings(ToolboxIni* ini)
+{
+    ToolboxModule::LoadSettings(ini);
+    LOAD_BOOL(draw_quest_path_on_minimap);
+    LOAD_BOOL(draw_quest_path_on_terrain);
+    LOAD_COLOR(draw_quest_path_color);
+}
+
+void QuestModule::SaveSettings(ToolboxIni* ini)
+{
+    ToolboxModule::SaveSettings(ini);
+    SAVE_BOOL(draw_quest_path_on_minimap);
+    SAVE_BOOL(draw_quest_path_on_terrain);
+    SAVE_COLOR(draw_quest_path_color);
+}
 
 void QuestModule::Initialize()
 {
@@ -278,28 +341,35 @@ void QuestModule::Initialize()
         (ui_message);
         GW::UI::RegisterUIMessageCallback(&ui_message_entry, ui_message, OnGWQuestMarkerUpdated, 0x4000);
     }
-    GW::GameThread::Enqueue([]() {
+    GW::GameThread::Enqueue([] {
         PathfindingWindow::ReadyForPathing();
-        });
-
+    });
 }
-void QuestModule::SignalTerminate() {
+
+void QuestModule::SignalTerminate()
+{
     ToolboxModule::SignalTerminate();
     GW::UI::RemoveUIMessageCallback(&ui_message_entry);
     ClearCalculatedPaths();
 }
-void QuestModule::Update(float) {
+
+void QuestModule::Update(float)
+{
     const auto pos = GetPlayerPos();
     if (!pos)
         return;
+    const uint8_t alpha = (draw_quest_path_color >> IM_COL32_A_SHIFT) & 0xFF;
+    if (!draw_quest_path_on_minimap && !draw_quest_path_on_terrain || alpha == 0) {
+        //return;
+    }
 
     for (const auto& it : calculated_quest_paths) {
         if (it.second->Update(*pos))
             break; // Deleted, skip frame
     }
 }
+
 void QuestModule::Terminate()
 {
     ToolboxModule::Terminate();
-
 }

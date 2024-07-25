@@ -34,10 +34,10 @@ namespace {
 CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const float x2, const float y2, const GW::Constants::MapID m, const char* _name, bool draw_everywhere)
     : p1(x1, y1),
       p2(x2, y2),
-      map(m)
+      map(m),
+      draw_everywhere(draw_everywhere)
 {
     std::snprintf(name, sizeof(name), "%s", _name ? _name : "line");
-    this->draw_everywhere = draw_everywhere;
 };
 
 CustomRenderer::CustomMarker::CustomMarker(const float x, const float y, const float s, const Shape sh, const GW::Constants::MapID m, const char* _name)
@@ -264,7 +264,7 @@ bool CustomRenderer::RemoveCustomLine(CustomRenderer::CustomLine* line)
 
 CustomRenderer::CustomLine* CustomRenderer::AddCustomLine(const GW::GamePos& from, const GW::GamePos& to, const char* _name, bool draw_everywhere)
 {
-    const auto line = new CustomRenderer::CustomLine(from.x, from.y, to.x, to.y, GW::Map::GetMapID(), _name, draw_everywhere);
+    const auto line = new CustomLine(from.x, from.y, to.x, to.y, GW::Map::GetMapID(), _name, draw_everywhere);
     lines.push_back(line);
     markers_changed = true;
     return line;
@@ -908,9 +908,9 @@ void CustomRenderer::DrawCustomLines(const IDirect3DDevice9*)
     const auto doa_outpost = GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable && GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish;
 
     for (const auto line : lines) {
-        // Draw everywhere besides the DoA outpost. Only draw the lines with draw_everywhere in DoA
+        // Draw everywhere besides the DoA outpost. Only draw the lines with pathing_info_draw_everywhere in DoA
         if (line->visible && (line->map == GW::Constants::MapID::None || line->map == GW::Map::GetMapID()) &&
-            (!doa_outpost || line->draw_everywhere)) {
+            (!doa_outpost || line->pathing_info_draw_everywhere)) {
             EnqueueVertex(line->p1.x, line->p1.y, line->color);
             EnqueueVertex(line->p2.x, line->p2.y, line->color);
         }
