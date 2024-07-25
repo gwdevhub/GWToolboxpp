@@ -165,6 +165,8 @@ void CustomRenderer::SaveMarkers()
         // then save
         for (auto i = 0u; i < lines.size(); i++) {
             const CustomLine& line = *lines[i];
+            if (line.created_by_toolbox)
+                continue;
             char section[32];
             snprintf(section, 32, "customline%03d", i);
             inifile.SetValue(section, "name", line.name);
@@ -254,6 +256,7 @@ bool CustomRenderer::RemoveCustomLine(CustomRenderer::CustomLine* line)
     if (found != lines.end()) {
         delete *found;
         lines.erase(found);
+        markers_changed = true;
         return true;
     }
     return false;
@@ -263,6 +266,7 @@ CustomRenderer::CustomLine* CustomRenderer::AddCustomLine(const GW::GamePos& fro
 {
     const auto line = new CustomRenderer::CustomLine(from.x, from.y, to.x, to.y, GW::Map::GetMapID(), _name, draw_everywhere);
     lines.push_back(line);
+    markers_changed = true;
     return line;
 }
 
@@ -275,6 +279,8 @@ void CustomRenderer::DrawLineSettings()
     ImGui::PushID("lines");
     for (size_t i = 0; i < lines.size(); i++) {
         CustomLine& line = *lines[i];
+        if (line.created_by_toolbox)
+            continue;
         ImGui::PushID(static_cast<int>(i));
         markers_changed |= ImGui::Checkbox("##visible", &line.visible);
         if (ImGui::IsItemHovered()) {
@@ -618,12 +624,7 @@ void CustomRenderer::DrawSettings()
         ImGui::EndChild();
         ImGui::TreePop();
     }
-    if (markers_changed) {
-        GameWorldRenderer::TriggerSyncAllMarkers();
-        marker_file_dirty = true;
-        markers_changed = false;
-        Invalidate();
-    }
+
 }
 
 void CustomRenderer::Initialize(IDirect3DDevice9* device)
@@ -840,6 +841,14 @@ void CustomRenderer::Render(IDirect3DDevice9* device)
 {
     Initialize(device);
     if (!initialized) {
+        return;
+    }
+
+    if (markers_changed) {
+        GameWorldRenderer::TriggerSyncAllMarkers();
+        marker_file_dirty = true;
+        markers_changed = false;
+        Invalidate();
         return;
     }
 

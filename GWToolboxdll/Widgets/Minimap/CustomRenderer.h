@@ -86,6 +86,7 @@ public:
         bool visible = true;
         bool draw_on_terrain = false;
         bool draw_everywhere = false;
+        bool created_by_toolbox = false;
         char name[128]{};
     };
 

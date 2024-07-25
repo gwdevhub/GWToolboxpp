@@ -199,7 +199,7 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
             const auto& redraw_from = static_cast<GW::GamePos>(points[i]);
             const auto& redraw_to = static_cast<GW::GamePos>(points[i + 1]);
             const auto line = Minimap::Instance().custom_renderer.AddCustomLine(redraw_from, redraw_to);
-
+            line->created_by_toolbox = true;
             minimap_lines.push_back(line);
         }
         pending_redraw = false;
