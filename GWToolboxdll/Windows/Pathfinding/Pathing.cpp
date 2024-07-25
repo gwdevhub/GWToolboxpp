@@ -540,8 +540,7 @@ namespace Pathing {
         uint32_t last_layer = 0;
 
         const AABB *current; //current open box
-        visited.clear();
-        visited.resize(m_aabbs.size());
+        visited.assign(m_aabbs.size(), false);
 
         while (open.size()) {
             current = open.back();
@@ -585,7 +584,8 @@ namespace Pathing {
         }
         return false;
     }
-   
+
+#if 0
     void MilePath::GenerateVisibilityGraph() {
         if (m_terminateThread) return;
 
@@ -639,7 +639,104 @@ namespace Pathing {
             if (m_terminateThread) return;
         }
     }
+#else 
 
+    void MilePath::GenerateVisibilityGraph() {
+        if (m_terminateThread) return;
+
+        m_visGraph.clear();
+        m_visGraph.resize(m_portals.size() * 2 + m_teleports.size() * 2 + 2);
+        for (auto& it : m_visGraph) {
+            it.reserve(0x100);
+        }
+
+        float range = m_visibility_range;
+        float sqrange = range * range;
+
+        size_t size = m_points.size();
+        const size_t num_threads = std::thread::hardware_concurrency(); // Get number of supported hardware threads
+        std::vector<std::thread> threads;
+        std::mutex visGraphMutex;
+        std::mutex progressMutex;
+        std::mutex terminateMutex;
+
+        // Function to be executed by each thread
+        auto worker = [&](size_t start, size_t end) {
+            std::vector<const AABB*> open;
+            std::vector<bool> visited;
+            visited.reserve(0xd00);
+            std::vector<uint32_t> blocking_ids;
+
+            float min_range, max_range, sqdist, dist;
+            Pathing::MilePath::point* p1;
+            Pathing::MilePath::point* p2;
+
+            for (size_t i = start; i < end; ++i) {
+                {
+                    std::lock_guard<std::mutex> lock(terminateMutex);
+                    if (m_terminateThread) return; // Check termination flag
+                }
+
+                p1 = &m_points[i];
+                min_range = p1->pos.y - range;
+                max_range = p1->pos.y + range;
+
+                for (size_t j = i + 1; j < size; ++j) {
+                    p2 = &m_points[j];
+
+                    if (min_range > p2->pos.y || max_range < p2->pos.y)
+                        continue;
+
+                    sqdist = GetSquareDistance(p1->pos, p2->pos);
+                    if (sqdist > sqrange)
+                        continue;
+
+                    {
+                        std::lock_guard<std::mutex> lock(visGraphMutex);
+                        if (std::any_of(
+                            std::begin(m_visGraph[p1->id]),
+                            std::end(m_visGraph[p1->id]),
+                            [p2](const PointVisElement& a) { return a.point_id == p2->id; }))
+                            continue;
+                    }
+
+                    blocking_ids.clear();
+                    if (HasLineOfSight(*p1, *p2, open, visited, &blocking_ids)) {
+                        dist = sqrtf(sqdist);
+
+                        {
+                            std::lock_guard<std::mutex> lock(visGraphMutex);
+                            m_visGraph[p1->id].emplace_back(p2->id, dist, blocking_ids);
+                            m_visGraph[p2->id].emplace_back(p1->id, dist, blocking_ids);
+                        }
+                    }
+                }
+
+                {
+                    std::lock_guard<std::mutex> lock(progressMutex);
+                    m_progress = (i * 100) / size;
+                }
+            }
+            };
+
+        // Determine the range of work each thread will handle
+        size_t chunk_size = size / num_threads;
+
+        for (size_t t = 0; t < num_threads; ++t) {
+            size_t start = t * chunk_size;
+            size_t end = (t == num_threads - 1) ? size : (t + 1) * chunk_size;
+            threads.emplace_back(worker, start, end);
+        }
+
+        // Join all threads
+        for (auto& thread : threads) {
+            if (thread.joinable()) {
+                thread.join();
+            }
+        }
+    }
+
+#endif
     void MilePath::insertTeleportPointIntoVisGraph(MilePath::point& point, teleport_point_type type) {
         std::vector<const AABB*> open;
         std::vector<bool> visited;
