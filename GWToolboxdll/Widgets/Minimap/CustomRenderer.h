@@ -20,6 +20,16 @@ namespace mapbox::util {
     struct nth<1, GW::Vec2f> {
         static auto get(const GW::Vec2f& t) { return t.y; }
     };
+
+    template <>
+    struct nth<0, GW::Vec3f> {
+        static auto get(const GW::Vec3f& t) { return t.x; }
+    };
+
+    template <>
+    struct nth<1, GW::Vec3f> {
+        static auto get(const GW::Vec3f& t) { return t.y; }
+    };
 }
 
 class CustomRenderer : public VBuffer {

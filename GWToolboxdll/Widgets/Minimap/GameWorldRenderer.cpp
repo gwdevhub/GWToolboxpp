@@ -29,22 +29,22 @@ namespace {
     IDirect3DPixelShader9* pshader = nullptr;
     IDirect3DVertexDeclaration9* vertex_declaration = nullptr;
 
-    constexpr GW::Vec2f lerp(const GW::Vec2f& a, const GW::Vec2f& b, const float t)
+    constexpr GW::Vec3f lerp(const GW::Vec3f& a, const GW::Vec3f& b, const float t)
     {
         return a * t + b * (1.f - t);
     }
 
     constexpr auto ALTITUDE_UNKNOWN = std::numeric_limits<float>::max();
 
-    std::vector<GW::Vec2f> circular_points_from_marker(const float pos_x, const float pos_y, const float size)
+    std::vector<GW::Vec3f> circular_points_from_marker(const float pos_x, const float pos_y, const float size)
     {
-        std::vector<GW::Vec2f> points{};
+        std::vector<GW::Vec3f> points{};
         constexpr float pi = DirectX::XM_PI;
         constexpr size_t num_points_per_circle = 48;
         constexpr auto slice = 2.0f * pi / static_cast<float>(num_points_per_circle);
         for (auto i = 0u; i < num_points_per_circle; i++) {
             const auto angle = slice * static_cast<float>(i);
-            points.push_back(GW::Vec2f{pos_x + size * std::cos(angle), pos_y + size * std::sin(angle)});
+            points.emplace_back(pos_x + size * std::cos(angle), pos_y + size * std::sin(angle), 0.f);
         }
         points.push_back(points.at(0)); // to complete the line list
         return points;
@@ -54,7 +54,7 @@ namespace {
 GameWorldRenderer::GenericPolyRenderable::GenericPolyRenderable(
     IDirect3DDevice9* device,
     const GW::Constants::MapID map_id,
-    const std::vector<GW::Vec2f>& points,
+    const std::vector<GW::Vec3f>& points,
     const unsigned int col,
     const bool filled)
     : map_id(map_id)
@@ -64,13 +64,13 @@ GameWorldRenderer::GenericPolyRenderable::GenericPolyRenderable(
 {
     if (filled && points.size() >= 3) {
         // (filling doesn't make sense if there is not at least enough points for one triangle)
-        std::vector<GW::Vec2f> lerp_points{};
+        std::vector<GW::Vec3f> lerp_points{};
         for (size_t i = 0; i < points.size(); i++) {
-            const GW::Vec2f& pt = points.at(i);
+            const GW::Vec3f& pt = points.at(i);
             if (!lerp_points.empty() && lerp_steps_per_line > 0) {
                 for (auto j = 1u; j < lerp_steps_per_line; j++) {
                     const float div = static_cast<float>(j) / static_cast<float>(lerp_steps_per_line);
-                    GW::Vec2f split = lerp(points[i], points[i - 1], div);
+                    GW::Vec3f split = lerp(points[i], points[i - 1], div);
                     lerp_points.push_back(split);
                 }
             }
@@ -85,7 +85,7 @@ GameWorldRenderer::GenericPolyRenderable::GenericPolyRenderable(
     }
     else {
         for (size_t i = 0; i < points.size(); i++) {
-            const GW::Vec2f& pt = points.at(i);
+            const GW::Vec3f& pt = points.at(i);
             if (!vertices.empty() && lerp_steps_per_line > 0) {
                 for (auto j = 1u; j < lerp_steps_per_line; j++) {
                     const auto div = static_cast<float>(j) / static_cast<float>(lerp_steps_per_line);
@@ -374,7 +374,7 @@ void GameWorldRenderer::SyncLines(IDirect3DDevice9* device)
         if (!line->draw_on_terrain || !line->visible) {
             continue;
         }
-        std::vector points = {line->p1, line->p2};
+        std::vector points = {GW::Vec3f(line->p1), GW::Vec3f(line->p2)};
         renderables.push_back(std::make_unique<GenericPolyRenderable>(device, line->map, points, line->color, false));
     }
 }
@@ -391,7 +391,9 @@ void GameWorldRenderer::SyncPolys(IDirect3DDevice9* device)
         if (poly.points.empty()) {
             continue;
         }
-        renderables.push_back(std::make_unique<GenericPolyRenderable>(device, poly.map, poly.points, poly.color, poly.filled));
+        std::vector<GW::Vec3f> pts{};
+        std::ranges::transform(poly.points, std::back_inserter(pts), [](const GW::Vec3f& pt) { return pt; });
+        renderables.push_back(std::make_unique<GenericPolyRenderable>(device, poly.map, pts, poly.color, poly.filled));
     }
 }
 
@@ -404,7 +406,7 @@ void GameWorldRenderer::SyncMarkers(IDirect3DDevice9* device)
         if (!marker.draw_on_terrain || !marker.visible) {
             continue;
         }
-        std::vector<GW::Vec2f> points = circular_points_from_marker(marker.pos.x, marker.pos.y, marker.size);
+        std::vector<GW::Vec3f> points = circular_points_from_marker(marker.pos.x, marker.pos.y, marker.size);
         renderables.push_back(std::make_unique<GenericPolyRenderable>(device, marker.map, points, marker.color, marker.IsFilled()));
     }
 }

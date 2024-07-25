@@ -9,7 +9,7 @@ class GameWorldRenderer {
 public:
     class GenericPolyRenderable {
     public:
-        GenericPolyRenderable(IDirect3DDevice9* device, GW::Constants::MapID map_id, const std::vector<GW::Vec2f>& points, unsigned int col, bool filled);
+        GenericPolyRenderable(IDirect3DDevice9* device, GW::Constants::MapID map_id, const std::vector<GW::Vec3f>& points, unsigned int col, bool filled);
         ~GenericPolyRenderable();
 
         void Draw(IDirect3DDevice9* device);
@@ -18,7 +18,7 @@ public:
     private:
         IDirect3DVertexBuffer9* vb = nullptr;
         unsigned int col = 0u;
-        std::vector<GW::Vec2f> points{};
+        std::vector<GW::Vec3f> points{};
         std::vector<D3DVertex> vertices{};
         bool filled = false;
         unsigned int cur_altitude = 0u;
