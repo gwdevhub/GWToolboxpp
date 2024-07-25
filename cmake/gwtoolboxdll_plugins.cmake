@@ -4,7 +4,8 @@ target_sources(plugin_base INTERFACE
     "plugins/Base/stl.h"
     "plugins/Base/ToolboxPlugin.h"
     "plugins/Base/ToolboxPlugin.cpp"
-    "plugins/Base/PluginUtils.ixx"
+    "plugins/Base/PluginUtils.h"
+    "plugins/Base/PluginUtils.cpp"
     "plugins/Base/ToolboxUIPlugin.h"
     "plugins/Base/ToolboxUIPlugin.cpp")
 target_include_directories(plugin_base INTERFACE
