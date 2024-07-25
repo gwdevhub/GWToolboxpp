@@ -314,6 +314,7 @@ void QuestModule::DrawSettingsInternal()
     ImGui::Checkbox("Terrain##drawquestpath", &draw_quest_path_on_terrain);
     ImGui::Checkbox("Minimap##drawquestpath", &draw_quest_path_on_minimap);
     Colors::DrawSettingHueWheel("Color##drawquestpath", &draw_quest_path_color);
+    ImGui::Checkbox("Redirect quest marker to nearest stop##redirectquestmarker", &redirect_quest_marker);
 }
 
 void QuestModule::LoadSettings(ToolboxIni* ini)
@@ -321,6 +322,7 @@ void QuestModule::LoadSettings(ToolboxIni* ini)
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(draw_quest_path_on_minimap);
     LOAD_BOOL(draw_quest_path_on_terrain);
+    LOAD_BOOL(redirect_quest_marker);
     LOAD_COLOR(draw_quest_path_color);
 }
 
@@ -329,6 +331,7 @@ void QuestModule::SaveSettings(ToolboxIni* ini)
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(draw_quest_path_on_minimap);
     SAVE_BOOL(draw_quest_path_on_terrain);
+    SAVE_BOOL(redirect_quest_marker);
     SAVE_COLOR(draw_quest_path_color);
 }
 
