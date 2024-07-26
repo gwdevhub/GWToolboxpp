@@ -261,7 +261,7 @@ namespace {
         }
 
         cqp->current_waypoint = 0;
-        cqp->waypoints = std::move(waypoints);
+        cqp->waypoints = waypoints; // Copy
 
         if (!cqp->waypoints.empty() && GetSquareDistance(cqp->waypoints.back(), cqp->calculated_from) < GetSquareDistance(cqp->waypoints.front(), cqp->calculated_from)) {
             // Waypoint array is in descending distance, flip it
