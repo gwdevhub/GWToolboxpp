@@ -142,6 +142,9 @@ namespace Pathing {
         const AABB *FindAABB(const GW::GamePos &pos);
         bool IsOnPathingTrapezoid(const GW::Vec2f &p, const SimplePT **pt = nullptr);
 
+        // Get the nearest point on the map that is within a trapezoid
+        GW::GamePos GetClosestPoint(const GW::GamePos& pos);
+
     private:
         void LoadMapSpecificData();
 

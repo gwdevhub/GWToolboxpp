@@ -677,6 +677,25 @@ namespace Pathing {
     }
 #else
 
+    GW::GamePos MilePath::GetClosestPoint(const GW::GamePos& pos) {
+        if (FindAABB(pos)) {
+            return pos; // Already on pathing map
+        }
+        float min_distance = std::numeric_limits<float>::max();
+        const MilePath::point* closest = nullptr;
+
+        for (const auto& point : m_points) {
+            float sq_dist = GetSquareDistance(pos, point.pos);
+
+            if (sq_dist < min_distance) {
+                min_distance = sq_dist;
+                closest = &point;
+            }
+        }
+
+        return closest ? *closest : GW::GamePos();
+    }
+
     void MilePath::GenerateVisibilityGraph()
     {
         if (m_terminateThread) return;
@@ -955,7 +974,7 @@ namespace Pathing {
         return cost;
     }
 
-    Error AStar::Search(const GamePos& start_pos, const GamePos& goal_pos)
+    Error AStar::Search(const GamePos& _start_pos, const GamePos& _goal_pos)
     {
         std::lock_guard lock(pathing_mutex);
 
@@ -968,6 +987,11 @@ namespace Pathing {
         MilePath::point start;
         bool new_start = false;
         m_path.clear();
+
+        // Start or goal may not actually be in the pmap e.g. objective marker leading to portal
+        const auto start_pos = m_mp->GetClosestPoint(_start_pos);
+        const auto goal_pos = m_mp->GetClosestPoint(_goal_pos);
+
         //if (m_mp->m_pointLookup.contains(start_pos)) {
         //    start = *m_mp->m_pointLookup.at(start_pos);
         //} else 
