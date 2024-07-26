@@ -4,23 +4,39 @@
 #include <GWCA/GameContainers/GamePos.h>
 #include <ToolboxIni.h>
 #include <Widgets/Minimap/D3DVertex.h>
+#include <stacktrace>
 
 class GameWorldRenderer {
 public:
     class GenericPolyRenderable {
     public:
-        GenericPolyRenderable(IDirect3DDevice9* device, GW::Constants::MapID map_id, const std::vector<GW::Vec3f>& points, unsigned int col, bool filled);
-        ~GenericPolyRenderable();
+        GenericPolyRenderable(IDirect3DDevice9* device, GW::Constants::MapID map_id, const std::vector<GW::Vec3f>& points, unsigned int col, bool filled) noexcept;
+        ~GenericPolyRenderable() noexcept;
+
+        // copy not allowed
+        GenericPolyRenderable(const GenericPolyRenderable& other) = delete;
+
+        GenericPolyRenderable(GenericPolyRenderable&& other) noexcept
+            : vb(other.vb)
+        {
+            other.vb = nullptr;
+            points = std::move(other.points);
+            other.points.clear();
+            vertices = std::move(other.vertices);
+            other.vertices.clear();
+        }
 
         // copy not allowed
         GenericPolyRenderable& operator=(const GenericPolyRenderable& other) = delete;
 
-        GenericPolyRenderable& operator=(GenericPolyRenderable&& other)
+        GenericPolyRenderable& operator=(GenericPolyRenderable&& other) noexcept
         {
             vb = other.vb; // Move the buffer!
             other.vb = nullptr;
             points = std::move(other.points);
+            other.points.clear();
             vertices = std::move(other.vertices);
+            other.vertices.clear();
             return *this;
         }
 
@@ -45,13 +61,13 @@ public:
     static void Terminate();
     static void TriggerSyncAllMarkers();
 
-    typedef std::vector<GameWorldRenderer::GenericPolyRenderable> RenderableVectors;
+    using RenderableVectors = std::vector<GenericPolyRenderable>;
 
 private:
     static RenderableVectors SyncLines(IDirect3DDevice9* device);
     static RenderableVectors SyncPolys(IDirect3DDevice9* device);
     static RenderableVectors SyncMarkers(IDirect3DDevice9* device);
-    static RenderableVectors SyncAllMarkers(IDirect3DDevice9* device);
+    static void SyncAllMarkers(IDirect3DDevice9* device);
     static bool ConfigureProgrammablePipeline(IDirect3DDevice9* device);
     static bool SetD3DTransform(IDirect3DDevice9* device);
 };

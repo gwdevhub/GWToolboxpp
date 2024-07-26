@@ -54,7 +54,7 @@ namespace {
 
     GameWorldRenderer::GenericPolyRenderable* find_matching_poly(const GameWorldRenderer::GenericPolyRenderable& poly_to_find) {
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
-        const auto found = std::ranges::find_if(renderables, [&poly_to_find](const GameWorldRenderer::GenericPolyRenderable& check) {
+        auto found = std::ranges::find_if(renderables, [&poly_to_find](const GameWorldRenderer::GenericPolyRenderable& check) {
             if (!(check.map_id == poly_to_find.map_id
                 && check.col == poly_to_find.col
                 && check.filled == poly_to_find.filled
@@ -78,7 +78,7 @@ GameWorldRenderer::GenericPolyRenderable::GenericPolyRenderable(
     const GW::Constants::MapID map_id,
     const std::vector<GW::Vec3f>& points,
     const unsigned int col,
-    const bool filled)
+    const bool filled) noexcept
     : map_id(map_id)
     , col(col)
     , points(points)
@@ -122,7 +122,7 @@ GameWorldRenderer::GenericPolyRenderable::GenericPolyRenderable(
     device->CreateVertexBuffer(vertices.size() * sizeof(D3DVertex), D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &vb, nullptr);
 }
 
-GameWorldRenderer::GenericPolyRenderable::~GenericPolyRenderable()
+GameWorldRenderer::GenericPolyRenderable::~GenericPolyRenderable() noexcept
 {
     if (vb != nullptr) {
         vb->Release();
@@ -376,7 +376,7 @@ void GameWorldRenderer::Terminate()
     renderables.clear();
 }
 
-GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncAllMarkers(IDirect3DDevice9* device)
+void GameWorldRenderer::SyncAllMarkers(IDirect3DDevice9* device)
 {
     renderables_mutex.lock();
     auto lines = SyncLines(device);
@@ -402,9 +402,10 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncAllMarkers(IDirect3D
 
 GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines(IDirect3DDevice9* device)
 {
-    RenderableVectors out;
     // sync lines with CustomRenderer
     const auto& lines = Minimap::Instance().custom_renderer.GetLines();
+    RenderableVectors out;
+    out.reserve(lines.size());
     // for each line, add as a renderable if appropriate
     for (const auto line : lines) {
         if (!(line->draw_on_terrain && line->visible)) {
@@ -412,16 +413,16 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines(IDirect3DDevic
         }
         std::vector points = { GW::Vec3f(line->p1), GW::Vec3f(line->p2) };
 
-        const auto poly_to_add = GenericPolyRenderable(device, line->map, points, line->color, false);
+        auto poly_to_add = GenericPolyRenderable(device, line->map, points, line->color, false);
 
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
-        const auto found = find_matching_poly(poly_to_add);
+        auto found = find_matching_poly(poly_to_add);
 
         if (found) {
-            out.push_back(std::move(*found));
+            out.emplace_back(std::move(*found));
         }
         else {
-            out.push_back(std::move(poly_to_add));
+            out.emplace_back(std::move(poly_to_add));
         }
     }
     return out;
@@ -429,9 +430,10 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines(IDirect3DDevic
 
 GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys(IDirect3DDevice9* device)
 {
-    RenderableVectors out;
     // sync polygons with CustomRenderer
     const auto& polys = Minimap::Instance().custom_renderer.GetPolys();
+    RenderableVectors out;
+    out.reserve(polys.size());
     // for each poly, add as a renderable if appropriate
     for (const auto& poly : polys) {
         if (!(poly.draw_on_terrain && poly.visible && poly.points.size())) {
@@ -440,16 +442,16 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys(IDirect3DDevic
         std::vector<GW::Vec3f> pts{};
         std::ranges::transform(poly.points, std::back_inserter(pts), [](const GW::Vec2f& pt) { return GW::Vec3f(pt); });
 
-        const auto poly_to_add = GenericPolyRenderable(device, poly.map, pts, poly.color, poly.filled);
+        auto poly_to_add = GenericPolyRenderable(device, poly.map, pts, poly.color, poly.filled);
 
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
-        const auto found = find_matching_poly(poly_to_add);
+        auto found = find_matching_poly(poly_to_add);
 
         if (found) {
-            out.push_back(std::move(*found));
+            out.emplace_back(std::move(*found));
         }
         else {
-            out.push_back(std::move(poly_to_add));
+            out.emplace_back(std::move(poly_to_add));
         }
     }
     return out;
@@ -457,9 +459,10 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys(IDirect3DDevic
 
 GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers(IDirect3DDevice9* device)
 {
-    RenderableVectors out;
     // sync markers with CustomRenderer
     const auto& markers = Minimap::Instance().custom_renderer.GetMarkers();
+    RenderableVectors out;
+    out.reserve(markers.size());
     // for each marker, add as a renderable if appropriate
     for (const auto& marker : markers) {
         if (!(marker.draw_on_terrain && marker.visible)) {
@@ -467,16 +470,16 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers(IDirect3DDev
         }
         std::vector<GW::Vec3f> points = circular_points_from_marker(marker.pos.x, marker.pos.y, marker.size);
 
-        const auto poly_to_add = GenericPolyRenderable(device, marker.map, points, marker.color, marker.IsFilled());
+        auto poly_to_add = GenericPolyRenderable(device, marker.map, points, marker.color, marker.IsFilled());
 
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
-        const auto found = find_matching_poly(poly_to_add);
+        auto found = find_matching_poly(poly_to_add);
 
         if (found) {
-            out.push_back(std::move(*found));
+            out.emplace_back(std::move(*found));
         }
         else {
-            out.push_back(std::move(poly_to_add));
+            out.emplace_back(std::move(poly_to_add));
         }
 
     }
