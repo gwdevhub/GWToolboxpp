@@ -17,7 +17,11 @@ public:
         GenericPolyRenderable(const GenericPolyRenderable& other) = delete;
 
         GenericPolyRenderable(GenericPolyRenderable&& other) noexcept
-            : vb(other.vb)
+            : vb(other.vb), map_id(other.map_id)
+            , col(other.col)
+            , filled(other.filled)
+            , all_altitudes_queried(other.all_altitudes_queried)
+            , cur_altitude(other.cur_altitude)
         {
             other.vb = nullptr;
             points = std::move(other.points);
