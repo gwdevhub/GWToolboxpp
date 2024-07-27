@@ -34,12 +34,19 @@ public:
 
         GenericPolyRenderable& operator=(GenericPolyRenderable&& other) noexcept
         {
+            if (vb && vb != other.vb) {
+                vb->Release();
+            }
             vb = other.vb; // Move the buffer!
             other.vb = nullptr;
             points = std::move(other.points);
-            other.points.clear();
             vertices = std::move(other.vertices);
-            other.vertices.clear();
+
+            map_id = other.map_id;
+            col = other.col;
+            filled = other.filled;
+            vertices_processed = other.vertices_processed;
+
             return *this;
         }
 
