@@ -35,6 +35,9 @@ public:
 
         GenericPolyRenderable& operator=(GenericPolyRenderable&& other) noexcept
         {
+            if (vb != nullptr) {
+                vb->Release();
+            }
             vb = other.vb; // Move the buffer!
             other.vb = nullptr;
             points = std::move(other.points);
