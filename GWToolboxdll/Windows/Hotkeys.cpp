@@ -39,7 +39,6 @@ unsigned int TBHotkey::cur_ui_id = 0;
 LONG* TBHotkey::key_out = nullptr;
 LONG* TBHotkey::mod_out = nullptr;
 std::unordered_map<WORD, HotkeyToggle*> HotkeyToggle::toggled;
-bool HotkeyToggle::processing = false;
 
 typedef std::pair<GW::UI::ControlAction, GuiUtils::EncString*> ControlLabelPair;
 std::vector<ControlLabelPair> HotkeyGWKey::control_labels;
@@ -1344,7 +1343,7 @@ HotkeyToggle::HotkeyToggle(const ToolboxIni* ini, const char* section)
     initialised = true;
     switch (target) {
         case Clicker:
-            interval = 20;
+            interval = clicker_delay_ms;
             break;
         case CoinDrop:
             interval = 500;
@@ -1425,7 +1424,10 @@ void HotkeyToggle::Execute()
         if (!ongoing) {
             Toggle();
         }
-        if (TIMER_DIFF(last_use) < interval) {
+        if (target == Clicker) {
+            interval = clicker_delay_ms;
+        }
+        else if (TIMER_DIFF(last_use) < interval) {
             return;
         }
         if (processing) {
