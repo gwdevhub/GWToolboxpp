@@ -54,7 +54,7 @@ namespace {
 
     GameWorldRenderer::GenericPolyRenderable* find_matching_poly(const GameWorldRenderer::GenericPolyRenderable& poly_to_find) {
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
-        auto found = std::ranges::find_if(renderables, [&poly_to_find](const GameWorldRenderer::GenericPolyRenderable& check) {
+        const auto found = std::ranges::find_if(renderables, [&poly_to_find](const GameWorldRenderer::GenericPolyRenderable& check) {
             if (!(check.map_id == poly_to_find.map_id
                 && check.col == poly_to_find.col
                 && check.filled == poly_to_find.filled
@@ -101,7 +101,8 @@ namespace {
             // to appear.
 
             // @Cleanup: zplane needs setting properly here!
-            GW::Map::QueryAltitude({ vertices[i].x, vertices[i].y, 0 }, 5.f, altitude);
+            const auto z_plane =  vertices[i].z == static_cast<int>(vertices[i].z) ? static_cast<unsigned>(vertices[i].z) : 0u; // 0 = unknown
+            GW::Map::QueryAltitude({ vertices[i].x, vertices[i].y, z_plane}, 5.f, altitude);
 
             if (altitude < vertices[i].z) {
                 // recall that the Up camera component is inverted
