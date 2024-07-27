@@ -407,7 +407,6 @@ void GameWorldRenderer::SyncAllMarkers()
     renderables.clear();
     renderables.reserve(lines.size() + polys.size() + markers.size());
 
-    // @dubble please make shit cpp garbage work; we need to make sure the vertex buffer is moved to avoid it being destroyed in the destructor of GenericPolyRenderable
     for (auto& poly : lines) {
         renderables.push_back(std::move(poly));
     }
