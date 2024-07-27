@@ -1427,7 +1427,7 @@ void HotkeyToggle::Execute()
         if (target == Clicker) {
             interval = clicker_delay_ms;
         }
-        else if (TIMER_DIFF(last_use) < interval) {
+        if (TIMER_DIFF(last_use) < interval) {
             return;
         }
         if (processing) {

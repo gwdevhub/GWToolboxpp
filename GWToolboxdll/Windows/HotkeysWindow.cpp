@@ -509,7 +509,7 @@ void HotkeysWindow::DrawSettingsInternal()
     ToolboxWindow::DrawSettingsInternal();
     ImGui::Checkbox("Show 'Active' checkbox in header", &TBHotkey::show_active_in_header);
     ImGui::Checkbox("Show 'Run' button in header", &TBHotkey::show_run_in_header);
-    ImGui::SliderInt("Autoclicker delay (ms)", &HotkeyToggle::clicker_delay_ms, 1, 100);
+    ImGui::SliderInt("Autoclicker delay (ms)", &HotkeyToggle::clicker_delay_ms, 1, 1'000);
 }
 
 void HotkeysWindow::LoadSettings(ToolboxIni* ini)
