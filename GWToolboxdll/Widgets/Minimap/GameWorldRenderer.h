@@ -17,17 +17,15 @@ public:
         GenericPolyRenderable(const GenericPolyRenderable& other) = delete;
 
         GenericPolyRenderable(GenericPolyRenderable&& other) noexcept
-            : vb(other.vb), map_id(other.map_id)
-            , col(other.col)
+            : map_id(other.map_id), col(other.col)
             , filled(other.filled)
-            , all_altitudes_queried(other.all_altitudes_queried)
+            , vb(other.vb)
             , cur_altitude(other.cur_altitude)
+            , all_altitudes_queried(other.all_altitudes_queried)
         {
             other.vb = nullptr;
             points = std::move(other.points);
-            other.points.clear();
             vertices = std::move(other.vertices);
-            other.vertices.clear();
         }
 
         // copy not allowed
@@ -41,9 +39,12 @@ public:
             vb = other.vb; // Move the buffer!
             other.vb = nullptr;
             points = std::move(other.points);
-            other.points.clear();
             vertices = std::move(other.vertices);
-            other.vertices.clear();
+            map_id = other.map_id;
+            col = other.col;
+            filled = other.filled;
+            all_altitudes_queried = other.all_altitudes_queried;
+            cur_altitude = other.cur_altitude;
             return *this;
         }
 
