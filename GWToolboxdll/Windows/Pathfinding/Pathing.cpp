@@ -1031,7 +1031,9 @@ namespace Pathing {
             }
         }
 
+#ifdef _DEBUG
         volatile clock_t start_timestamp = clock();
+#endif
 
         //@Cleanup: Maybe I'm not using milepath for its intended purpose, but this function will ALWAYS add more points to the graph!!
         if (new_start) {
@@ -1106,8 +1108,10 @@ namespace Pathing {
             m_mp->m_visGraph[start.id].clear();
         }
 
+#ifdef _DEBUG
         volatile clock_t stop_timestamp = clock();
-        Log::Flash("Find path: %d ms\n", stop_timestamp - start_timestamp);
+        Log::Log("Find path: %d ms\n", stop_timestamp - start_timestamp);
+#endif
         m_path.finalize();
         return m_path.ready() ? Error::OK : Error::FailedToFinializePath;
     }
