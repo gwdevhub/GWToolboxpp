@@ -424,6 +424,9 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines()
 {
     // sync lines with CustomRenderer
     const auto& lines = Minimap::Instance().custom_renderer.GetLines();
+
+    const auto map_id = GW::Map::GetMapID();
+
     RenderableVectors out;
     out.reserve(lines.size());
     // for each line, add as a renderable if appropriate
@@ -431,6 +434,8 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines()
         if (!(line->draw_on_terrain && line->visible)) {
             continue;
         }
+        if (!(line->map == map_id || line->map == GW::Constants::MapID::None))
+            continue;
         std::vector points = { GW::Vec3f(line->p1), GW::Vec3f(line->p2) };
 
         auto poly_to_add = GenericPolyRenderable(line->map, points, line->color, false);
@@ -453,12 +458,17 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys()
     // sync polygons with CustomRenderer
     const auto& polys = Minimap::Instance().custom_renderer.GetPolys();
     RenderableVectors out;
+
+    const auto map_id = GW::Map::GetMapID();
+
     out.reserve(polys.size());
     // for each poly, add as a renderable if appropriate
     for (const auto& poly : polys) {
         if (!(poly.draw_on_terrain && poly.visible && poly.points.size())) {
             continue;
         }
+        if (!(poly.map == map_id || poly.map == GW::Constants::MapID::None))
+            continue;
         std::vector<GW::Vec3f> pts{};
         std::ranges::transform(poly.points, std::back_inserter(pts), [](const GW::Vec2f& pt) { return GW::Vec3f(pt); });
 
@@ -481,6 +491,9 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers()
 {
     // sync markers with CustomRenderer
     const auto& markers = Minimap::Instance().custom_renderer.GetMarkers();
+
+    const auto map_id = GW::Map::GetMapID();
+
     RenderableVectors out;
     out.reserve(markers.size());
     // for each marker, add as a renderable if appropriate
@@ -488,6 +501,9 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers()
         if (!(marker.draw_on_terrain && marker.visible)) {
             continue;
         }
+        if (!(marker.map == map_id || marker.map == GW::Constants::MapID::None))
+            continue;
+
         std::vector<GW::Vec3f> points = circular_points_from_marker(marker.pos.x, marker.pos.y, marker.size);
 
         auto poly_to_add = GenericPolyRenderable(marker.map, points, marker.color, marker.IsFilled());
