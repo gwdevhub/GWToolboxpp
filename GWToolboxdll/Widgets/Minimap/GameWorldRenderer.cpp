@@ -71,10 +71,66 @@ namespace {
         }
         return nullptr;
     }
+    
+    // update altitudes if not done already, then add to the device buffer
+    bool AddPolyToDevice(GameWorldRenderer::GenericPolyRenderable& poly, IDirect3DDevice9* device) {
+        if (poly.vb)
+            return true; // Already created the vertex buffer for this poly, which means altitudes have been done!
+        auto& vertices = poly.vertices;
+        if(poly.vertices_processed == vertices.size())
+            return true;
+        // altitudes (Z value) for each vertex can't be known until we are in the correct map,
+            // so these are dynamically computed, one-time.
+        float altitude = ALTITUDE_UNKNOWN;
+
+        // in order to properly query altitudes, we have to use the pathing map
+        // to determine the number of Z planes in the current map.
+        const GW::PathingMapArray* pathing_map = GW::Map::GetPathingMap();
+        if (!pathing_map)
+            return false;
+        const size_t pmap_size = pathing_map->size();
+        if (!pmap_size)
+            return false;
+
+        for (size_t i = poly.vertices_processed; i < vertices.size(); i++, poly.vertices_processed++) {
+            // until we have a better solution, all Z planes will be queried per vertex
+            // to avoid a significant delay in the render thread, query one plane per frame
+            // until all have been queried. this might result in some renderables shifting
+            // not appearing for a while on first map load, but IMO is better than stalling.
+            // It seems to take, even in most extreme cases, less time than it takes for agents
+            // to appear.
+
+            // @Cleanup: zplane needs setting properly here!
+            GW::Map::QueryAltitude({ vertices[i].x, vertices[i].y, 0 }, 5.f, altitude);
+
+            if (altitude < vertices[i].z) {
+                // recall that the Up camera component is inverted
+                vertices[i].z = altitude;
+            }
+        }
+        // commit the completed vertices to vram
+        auto res = device->CreateVertexBuffer(vertices.size() * sizeof(D3DVertex), D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &poly.vb, nullptr);
+        if (res != S_OK) {
+            poly.vb = nullptr;
+            return false;
+        }
+        void* mem_loc = nullptr;
+        // map the vertex buffer memory and write vertices to it.
+
+        res = poly.vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD);
+        if (!(res == S_OK && mem_loc)) {
+            poly.vb->Release();
+            poly.vb = nullptr;
+            return false;
+        }
+        // this should avoid an invalid memcpy, if locking fails for some reason
+        memcpy(mem_loc, vertices.data(), vertices.size() * sizeof(D3DVertex));
+        poly.vb->Unlock();
+        return true;
+    }
 } // namespace
 
 GameWorldRenderer::GenericPolyRenderable::GenericPolyRenderable(
-    IDirect3DDevice9* device,
     const GW::Constants::MapID map_id,
     const std::vector<GW::Vec3f>& points,
     const unsigned int col,
@@ -119,7 +175,6 @@ GameWorldRenderer::GenericPolyRenderable::GenericPolyRenderable(
         }
     }
 
-    device->CreateVertexBuffer(vertices.size() * sizeof(D3DVertex), D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &vb, nullptr);
 }
 
 GameWorldRenderer::GenericPolyRenderable::~GenericPolyRenderable() noexcept
@@ -131,50 +186,16 @@ GameWorldRenderer::GenericPolyRenderable::~GenericPolyRenderable() noexcept
 
 void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
 {
+    if (!AddPolyToDevice(*this, device))
+        return;
     // draw this specific renderable
     if (device->SetStreamSource(0, vb, 0, sizeof(D3DVertex)) != D3D_OK) {
         // a safe failure mode
         return;
     }
-    // update altitudes if not done already
-    if (!all_altitudes_queried) {
-        // altitudes (Z value) for each vertex can't be known until we are in the correct map,
-        // so these are dynamically computed, one-time.
-        float altitude = ALTITUDE_UNKNOWN;
 
-        // in order to properly query altitudes, we have to use the pathing map
-        // to determine the number of Z planes in the current map.
-        const GW::PathingMapArray* pathing_map = GW::Map::GetPathingMap();
-        if (pathing_map != nullptr) {
-            const size_t pmap_size = pathing_map->size();
-            if (pmap_size > 0) {
-                for (size_t i = 0; i < vertices.size(); i++) {
-                    // until we have a better solution, all Z planes will be queried per vertex
-                    // to avoid a significant delay in the render thread, query one plane per frame
-                    // until all have been queried. this might result in some renderables shifting
-                    // not appearing for a while on first map load, but IMO is better than stalling.
-                    // It seems to take, even in most extreme cases, less time than it takes for agents
-                    // to appear.
-                    GW::Map::QueryAltitude({vertices[i].x, vertices[i].y, cur_altitude}, 0.1f, altitude);
-                    if (altitude < vertices[i].z) {
-                        // recall that the Up camera component is inverted
-                        vertices[i].z = altitude;
-                    }
-                }
-                if (cur_altitude++ == pmap_size - 1) {
-                    all_altitudes_queried = true;
-                    // commit the completed vertices to vram
-                    void* mem_loc = nullptr;
-                    // map the vertex buffer memory and write vertices to it.
-                    if (vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD) == S_OK && mem_loc != nullptr) {
-                        // this should avoid an invalid memcpy, if locking fails for some reason
-                        memcpy(mem_loc, vertices.data(), vertices.size() * sizeof(D3DVertex));
-                        vb->Unlock();
-                    }
-                }
-            }
-        }
-    }
+
+    
     // copy the vertex buffer to the back buffer
     filled ? device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices.size() / 3) : device->DrawPrimitive(D3DPT_LINESTRIP, 0, vertices.size() - 1);
 }
@@ -230,7 +251,7 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
     if (need_sync_markers) {
         // marker synchronisation is done when needed on the render thread, as it requires access
         // to the directX device for creating vertex buffers.
-        SyncAllMarkers(device);
+        SyncAllMarkers();
     }
     if (renderables.empty()) {
         // if nothing ticked "Draw On Terrain", don't waste performance
@@ -317,16 +338,16 @@ bool GameWorldRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
 {
     constexpr D3DVERTEXELEMENT9 decl[] = {{0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0}, {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0}, D3DDECL_END()};
     if (device->CreateVertexDeclaration(decl, &vertex_declaration) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to CreateVertexDeclaration");
+        //Log::Error("GameWorldRenderer: unable to CreateVertexDeclaration");
         return false;
     }
 
     if (device->CreateVertexShader(reinterpret_cast<const DWORD*>(&g_vs20_main), &vshader) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to CreateVertexShader");
+        //Log::Error("GameWorldRenderer: unable to CreateVertexShader");
         return false;
     }
     if (device->CreatePixelShader(reinterpret_cast<const DWORD*>(&g_ps20_main), &pshader) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to CreateVertexShader");
+        //Log::Error("GameWorldRenderer: unable to CreateVertexShader");
         return false;
     }
     need_configure_pipeline = false;
@@ -376,12 +397,12 @@ void GameWorldRenderer::Terminate()
     renderables.clear();
 }
 
-void GameWorldRenderer::SyncAllMarkers(IDirect3DDevice9* device)
+void GameWorldRenderer::SyncAllMarkers()
 {
     renderables_mutex.lock();
-    auto lines = SyncLines(device);
-    auto polys = SyncPolys(device);
-    auto markers = SyncMarkers(device);
+    auto lines = SyncLines();
+    auto polys = SyncPolys();
+    auto markers = SyncMarkers();
 
     renderables.clear();
     renderables.reserve(lines.size() + polys.size() + markers.size());
@@ -400,7 +421,7 @@ void GameWorldRenderer::SyncAllMarkers(IDirect3DDevice9* device)
     need_sync_markers = false;
 }
 
-GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines(IDirect3DDevice9* device)
+GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines()
 {
     // sync lines with CustomRenderer
     const auto& lines = Minimap::Instance().custom_renderer.GetLines();
@@ -413,7 +434,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines(IDirect3DDevic
         }
         std::vector points = { GW::Vec3f(line->p1), GW::Vec3f(line->p2) };
 
-        auto poly_to_add = GenericPolyRenderable(device, line->map, points, line->color, false);
+        auto poly_to_add = GenericPolyRenderable(line->map, points, line->color, false);
 
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
         auto found = find_matching_poly(poly_to_add);
@@ -428,7 +449,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines(IDirect3DDevic
     return out;
 }
 
-GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys(IDirect3DDevice9* device)
+GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys()
 {
     // sync polygons with CustomRenderer
     const auto& polys = Minimap::Instance().custom_renderer.GetPolys();
@@ -442,7 +463,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys(IDirect3DDevic
         std::vector<GW::Vec3f> pts{};
         std::ranges::transform(poly.points, std::back_inserter(pts), [](const GW::Vec2f& pt) { return GW::Vec3f(pt); });
 
-        auto poly_to_add = GenericPolyRenderable(device, poly.map, pts, poly.color, poly.filled);
+        auto poly_to_add = GenericPolyRenderable(poly.map, pts, poly.color, poly.filled);
 
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
         auto found = find_matching_poly(poly_to_add);
@@ -457,7 +478,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys(IDirect3DDevic
     return out;
 }
 
-GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers(IDirect3DDevice9* device)
+GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers()
 {
     // sync markers with CustomRenderer
     const auto& markers = Minimap::Instance().custom_renderer.GetMarkers();
@@ -470,7 +491,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers(IDirect3DDev
         }
         std::vector<GW::Vec3f> points = circular_points_from_marker(marker.pos.x, marker.pos.y, marker.size);
 
-        auto poly_to_add = GenericPolyRenderable(device, marker.map, points, marker.color, marker.IsFilled());
+        auto poly_to_add = GenericPolyRenderable(marker.map, points, marker.color, marker.IsFilled());
 
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
         auto found = find_matching_poly(poly_to_add);

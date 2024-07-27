@@ -10,7 +10,7 @@ class GameWorldRenderer {
 public:
     class GenericPolyRenderable {
     public:
-        GenericPolyRenderable(IDirect3DDevice9* device, GW::Constants::MapID map_id, const std::vector<GW::Vec3f>& points, unsigned int col, bool filled) noexcept;
+        GenericPolyRenderable(GW::Constants::MapID map_id, const std::vector<GW::Vec3f>& points, unsigned int col, bool filled) noexcept;
         ~GenericPolyRenderable() noexcept;
 
         // copy not allowed
@@ -20,8 +20,7 @@ public:
             : vb(other.vb), map_id(other.map_id)
             , col(other.col)
             , filled(other.filled)
-            , all_altitudes_queried(other.all_altitudes_queried)
-            , cur_altitude(other.cur_altitude)
+            , vertices_processed(other.vertices_processed)
         {
             other.vb = nullptr;
             points = std::move(other.points);
@@ -50,12 +49,10 @@ public:
         std::vector<GW::Vec3f> points{};
         std::vector<D3DVertex> vertices{};
         bool filled = false;
-
-    private:
+        unsigned int vertices_processed = 0u;
         IDirect3DVertexBuffer9* vb = nullptr;
 
-        unsigned int cur_altitude = 0u;
-        bool all_altitudes_queried = false;
+
     };
 
     static void Render(IDirect3DDevice9* device);
@@ -68,10 +65,10 @@ public:
     using RenderableVectors = std::vector<GenericPolyRenderable>;
 
 private:
-    static RenderableVectors SyncLines(IDirect3DDevice9* device);
-    static RenderableVectors SyncPolys(IDirect3DDevice9* device);
-    static RenderableVectors SyncMarkers(IDirect3DDevice9* device);
-    static void SyncAllMarkers(IDirect3DDevice9* device);
+    static RenderableVectors SyncLines();
+    static RenderableVectors SyncPolys();
+    static RenderableVectors SyncMarkers();
+    static void SyncAllMarkers();
     static bool ConfigureProgrammablePipeline(IDirect3DDevice9* device);
     static bool SetD3DTransform(IDirect3DDevice9* device);
 };
