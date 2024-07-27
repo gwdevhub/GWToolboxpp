@@ -242,7 +242,8 @@ public:
     void Save(ToolboxIni* ini, const char* section) const override;
 
     // Used to ensure that clicker doesn't clog up the event queue
-    static bool processing;
+    static inline bool processing = false;
+    static inline int clicker_delay_ms = 20;
 
     bool Draw() override;
     int Description(char* buf, size_t bufsz) override;
