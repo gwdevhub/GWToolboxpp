@@ -97,14 +97,6 @@ namespace Colors {
         i[3] = static_cast<int>(color >> IM_COL32_B_SHIFT & 0xFF);
     }
 
-    static void ConvertU32ToFloat4RGBA(const Color color, float* i)
-    {
-        i[0] = static_cast<float>(color >> IM_COL32_R_SHIFT & 0xFF) / 255.0f;
-        i[1] = static_cast<float>(color >> IM_COL32_G_SHIFT & 0xFF) / 255.0f;
-        i[2] = static_cast<float>(color >> IM_COL32_B_SHIFT & 0xFF) / 255.0f;
-        i[3] = static_cast<float>(color >> IM_COL32_A_SHIFT & 0xFF) / 255.0f;
-    }
-
     static Color ConvertInt4ToU32(const int* i)
     {
         return static_cast<Color>((i[0] & 0xFF) << IM_COL32_A_SHIFT) |

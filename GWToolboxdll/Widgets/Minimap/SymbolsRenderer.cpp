@@ -210,9 +210,8 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
         }
 
         const auto quest_im_color = QuestModule::GetQuestColor(quest.quest_id);
-        float quest_color[4];
-        Colors::ConvertU32ToFloat4RGBA(quest_im_color, quest_color);
-        device->SetPixelShaderConstantF(0, quest_color, 1);
+        const auto quest_color = ImGui::ColorConvertU32ToFloat4(quest_im_color);
+        device->SetPixelShaderConstantF(0, &quest_color.x, 1);
         const GW::Vec2f qpos = { quest.marker.x, quest.marker.y };
         if (std::ranges::contains(markers_drawn, qpos))
             return; // Don't draw more than 1 marker for a position
