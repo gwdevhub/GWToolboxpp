@@ -37,6 +37,26 @@ namespace Colors {
     static Color Yellow() { return RGB(0xFF, 0xFF, 0x0); }
     static Color Blue() { return RGB(0x0, 0x0, 0xFF); }
 
+    static Color MaterialRed() { return RGB(213, 0, 0); }
+    static Color Pink() { return RGB(197, 17, 98); }
+    static Color Purple() { return RGB(170, 0, 255); }
+    static Color DeepPurple() { return RGB(98, 0, 234); }
+    static Color Indigo() { return RGB(48, 79, 254); }
+    static Color MaterialBlue() { return RGB(41, 98, 255); }
+    static Color LightBlue() { return RGB(0, 145, 234); }
+    static Color Cyan() { return RGB(0, 184, 212); }
+    static Color Teal() { return RGB(0, 191, 165); }
+    static Color MaterialYellow() { return RGB(255, 214, 0); }
+    static Color Amber() { return RGB(255, 171, 0); }
+    static Color Orange() { return RGB(255, 109, 0); }
+    static Color DeepOrange() { return RGB(221, 44, 0); }
+    static Color MaterialGreen() { return RGB(56, 142, 60); }
+    static Color Lime() { return RGB(174, 234, 0); }
+    static Color Magenta() { return RGB(213, 0, 249); }
+    static Color Gold() { return RGB(255, 241, 118); }
+    static Color BlueGrey() { return RGB(96, 125, 139); }
+    static Color Grey() { return RGB(158, 158, 158); }
+
     static Color Load(const ToolboxIni* ini, const char* section, const char* key, const Color def)
     {
         auto ParseUInt = [](const char* str, unsigned int* val, const int base)
