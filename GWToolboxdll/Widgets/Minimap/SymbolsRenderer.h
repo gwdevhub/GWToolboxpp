@@ -15,7 +15,7 @@ public:
 
 private:
     void Initialize(IDirect3DDevice9* device) override;
-
+    bool ConfigureProgrammablePipeline(IDirect3DDevice9* device);
     Color color_quest = 0;
     Color color_other_quests = 0;
     Color color_north = 0;
