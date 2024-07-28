@@ -22,4 +22,6 @@ public:
     void Terminate() override;
     void SignalTerminate() override;
     void Update(float) override;
+
+    static ImU32 GetQuestColor(GW::Constants::QuestID);
 };

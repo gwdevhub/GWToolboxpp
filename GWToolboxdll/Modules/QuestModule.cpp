@@ -15,7 +15,16 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 
 namespace {
-    Color draw_quest_path_color = 0xFFFFFFFF;
+    static std::vector<ImU32> quest_colors = {
+        Colors::Red(), Colors::Pink(), Colors::Purple(),
+        Colors::DeepPurple(), Colors::Indigo(), Colors::Blue(),
+        Colors::LightBlue(), Colors::Cyan(), Colors::Teal(),
+        Colors::Yellow(), Colors::Amber(), Colors::Orange(),
+        Colors::DeepOrange(), Colors::Green(), Colors::Lime(),
+        Colors::Magenta(), Colors::Gold(), Colors::BlueGrey(),
+        Colors::Grey(), Colors::White()
+    };
+
     bool draw_quest_path_on_terrain = true;
     bool draw_quest_path_on_minimap = true;
     bool redirect_quest_marker = false;
@@ -64,7 +73,7 @@ namespace {
                 const auto l = Minimap::Instance().custom_renderer.AddCustomLine(waypoints[i], waypoints[i + 1], std::format("{} - {}", (uint32_t)quest_id, i).c_str(), true);
                 l->draw_on_terrain = draw_quest_path_on_terrain;
                 l->created_by_toolbox = true;
-                l->color = draw_quest_path_color;
+                l->color = QuestModule::GetQuestColor(quest_id);
                 minimap_lines.push_back(l);
             }
         }
@@ -308,12 +317,17 @@ namespace {
     }
 } // namespace
 
+ImU32 QuestModule::GetQuestColor(GW::Constants::QuestID quest_id) {
+    ASSERT((uint32_t)quest_id >= 0);
+    const auto quest_index = (uint32_t)quest_id % (uint32_t)quest_colors.size();
+    return quest_colors.at(quest_index);
+}
+
 void QuestModule::DrawSettingsInternal()
 {
     ImGui::Text("Draw path to quest marker on:");
     ImGui::Checkbox("Terrain##drawquestpath", &draw_quest_path_on_terrain);
     ImGui::Checkbox("Minimap##drawquestpath", &draw_quest_path_on_minimap);
-    Colors::DrawSettingHueWheel("Color##drawquestpath", &draw_quest_path_color);
     ImGui::Checkbox("Redirect quest marker to nearest stop##redirectquestmarker", &redirect_quest_marker);
 }
 
@@ -323,7 +337,6 @@ void QuestModule::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(draw_quest_path_on_minimap);
     LOAD_BOOL(draw_quest_path_on_terrain);
     LOAD_BOOL(redirect_quest_marker);
-    LOAD_COLOR(draw_quest_path_color);
 }
 
 void QuestModule::SaveSettings(ToolboxIni* ini)
@@ -332,7 +345,6 @@ void QuestModule::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(draw_quest_path_on_minimap);
     SAVE_BOOL(draw_quest_path_on_terrain);
     SAVE_BOOL(redirect_quest_marker);
-    SAVE_COLOR(draw_quest_path_color);
 }
 
 void QuestModule::Initialize()
@@ -361,10 +373,6 @@ void QuestModule::Update(float)
     const auto pos = GetPlayerPos();
     if (!pos)
         return;
-    const uint8_t alpha = (draw_quest_path_color >> IM_COL32_A_SHIFT) & 0xFF;
-    if (!draw_quest_path_on_minimap && !draw_quest_path_on_terrain || alpha == 0) {
-        //return;
-    }
 
     for (const auto& it : calculated_quest_paths) {
         if (it.second->Update(*pos))

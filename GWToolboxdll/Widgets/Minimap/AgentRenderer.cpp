@@ -978,8 +978,9 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
             return (marker.visible && marker.map == GW::Constants::MapID::None || marker.map == GW::Map::GetMapID()) && (marker.color_sub & IM_COL32_A_MASK) != 0 &&
                    GetDistance(living->pos, marker.pos) < 2500.f;
         };
-        const auto is_inside = [](const GW::Vec2f pos, const std::vector<GW::Vec2f>& points) -> bool {
+        const auto is_inside = [](const GW::GamePos pos, const std::vector<GW::GamePos>& points) -> bool {
             bool b = false;
+            //TODO: This might need adjust to take into account zlevels
             for (auto i = 0u, j = points.size() - 1; i < points.size(); j = i++) {
                 if (points[i].y >= pos.y != points[j].y >= pos.y &&
                     pos.x <= (points[j].x - points[i].x) * (pos.y - points[i].y) / (points[j].y - points[i].y) +

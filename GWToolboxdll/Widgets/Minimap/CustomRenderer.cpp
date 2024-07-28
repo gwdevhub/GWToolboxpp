@@ -32,15 +32,15 @@ namespace {
 }
 
 CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const float x2, const float y2, const GW::Constants::MapID m, const char* _name, bool draw_everywhere)
-    : p1(x1, y1),
-      p2(x2, y2),
+    : p1(x1, y1, 0),
+      p2(x2, y2, 0),
       map(m),
       draw_everywhere(draw_everywhere)
 {
     std::snprintf(name, sizeof(name), "%s", _name ? _name : "line");
 }
 
-CustomRenderer::CustomLine::CustomLine(GW::Vec3f p1, GW::Vec3f p2, GW::Constants::MapID m, const char* n, bool draw_everywhere)
+CustomRenderer::CustomLine::CustomLine(GW::GamePos p1, GW::GamePos p2, GW::Constants::MapID m, const char* n, bool draw_everywhere)
     : p1(p1),
       p2(p2),
       map(m),
@@ -50,7 +50,7 @@ CustomRenderer::CustomLine::CustomLine(GW::Vec3f p1, GW::Vec3f p2, GW::Constants
 }
 
 CustomRenderer::CustomMarker::CustomMarker(const float x, const float y, const float s, const Shape sh, const GW::Constants::MapID m, const char* _name)
-    : pos(x, y),
+    : pos(x, y, 0),
       size(s),
       shape(sh),
       map(m)
@@ -273,9 +273,7 @@ bool CustomRenderer::RemoveCustomLine(CustomRenderer::CustomLine* line)
 
 CustomRenderer::CustomLine* CustomRenderer::AddCustomLine(const GW::GamePos& from, const GW::GamePos& to, const char* _name, bool draw_everywhere)
 {
-    const auto p1 = GW::Vec3f{from.x, from.y, static_cast<float>(from.zplane)};
-    const auto p2 = GW::Vec3f{to.x, to.y, static_cast<float>(to.zplane)};
-    const auto line = new CustomLine(p1, p2, GW::Map::GetMapID(), _name, draw_everywhere);
+    const auto line = new CustomLine(from, to, GW::Map::GetMapID(), _name, draw_everywhere);
     lines.push_back(line);
     markers_changed = true;
     return line;
@@ -562,7 +560,7 @@ void CustomRenderer::DrawPolygonSettings()
             ImGui::Indent();
             if (polygon.points.size() < CustomPolygon::max_points && ImGui::Button("Add Polygon Point##add")) {
                 if (const auto player = GW::Agents::GetControlledCharacter()) {
-                    polygon.points.emplace_back(player->pos.x, player->pos.y);
+                    polygon.points.emplace_back(player->pos);
                     polygon_changed = true;
                 }
             }
