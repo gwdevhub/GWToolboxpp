@@ -319,8 +319,11 @@ namespace {
 } // namespace
 
 ImU32 QuestModule::GetQuestColor(GW::Constants::QuestID quest_id) {
-    ASSERT((uint32_t)quest_id >= 0);
-    const auto quest_index = (uint32_t)quest_id % (uint32_t)quest_colors.size();
+    const auto is_active_quest = GW::QuestMgr::GetActiveQuestId() == quest_id;
+    if (is_active_quest) {
+        return Minimap::Instance().symbols_renderer.color_quest;
+    }
+    const auto quest_index = (uint32_t)quest_id % quest_colors.size();
     return quest_colors.at(quest_index);
 }
 

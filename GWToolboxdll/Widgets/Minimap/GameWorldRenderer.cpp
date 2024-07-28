@@ -31,10 +31,6 @@ namespace {
     IDirect3DPixelShader9* pshader = nullptr;
     IDirect3DVertexDeclaration9* vertex_declaration = nullptr;
 
-    constexpr GW::Vec3f lerp(const GW::Vec3f& a, const GW::Vec3f& b, const float t)
-    {
-        return a * t + b * (1.f - t);
-    }
     constexpr GW::Vec2f lerp(const GW::Vec2f& a, const GW::Vec2f& b, const float t)
     {
         return a * t + b * (1.f - t);
@@ -174,8 +170,8 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
                 lerp_points.push_back(points[i]);
             }
             std::vector<GW::Vec2f> poly;
-            std::transform(lerp_points.begin(), lerp_points.end(), poly.begin(), [](const GW::GamePos& p) { return GW::Vec2f(p); });
-            std::vector pl = { {poly} };
+            std::ranges::transform(lerp_points, poly.begin(), [](const GW::GamePos& p) { return GW::Vec2f(p); });
+            const std::vector pl = { {poly} };
             const std::vector<unsigned> indices = mapbox::earcut<unsigned>(pl);
             for (size_t i = 0; i < indices.size(); i++) {
                 const auto& pt = lerp_points[indices[i]];

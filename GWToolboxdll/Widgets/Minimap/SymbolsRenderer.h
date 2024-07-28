@@ -3,6 +3,7 @@
 #include <Widgets/Minimap/VBuffer.h>
 
 class SymbolsRenderer : public VBuffer {
+    friend class QuestModule;
 public:
     SymbolsRenderer() = default;
 
