@@ -40,7 +40,7 @@ CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const flo
     std::snprintf(name, sizeof(name), "%s", _name ? _name : "line");
 }
 
-CustomRenderer::CustomLine::CustomLine(GW::Vec3f p1, GW::Vec3f p2, GW::Constants::MapID m, const char* n, bool draw_everywhere)
+CustomRenderer::CustomLine::CustomLine(GW::GamePos p1, GW::GamePos p2, GW::Constants::MapID m, const char* n, bool draw_everywhere)
     : p1(p1),
       p2(p2),
       map(m),
@@ -273,9 +273,7 @@ bool CustomRenderer::RemoveCustomLine(CustomRenderer::CustomLine* line)
 
 CustomRenderer::CustomLine* CustomRenderer::AddCustomLine(const GW::GamePos& from, const GW::GamePos& to, const char* _name, bool draw_everywhere)
 {
-    const auto p1 = GW::Vec3f{from.x, from.y, static_cast<float>(from.zplane)};
-    const auto p2 = GW::Vec3f{to.x, to.y, static_cast<float>(to.zplane)};
-    const auto line = new CustomLine(p1, p2, GW::Map::GetMapID(), _name, draw_everywhere);
+    const auto line = new CustomLine(from, to, GW::Map::GetMapID(), _name, draw_everywhere);
     lines.push_back(line);
     markers_changed = true;
     return line;

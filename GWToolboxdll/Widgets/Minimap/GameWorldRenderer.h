@@ -10,7 +10,7 @@ class GameWorldRenderer {
 public:
     class GenericPolyRenderable {
     public:
-        GenericPolyRenderable(GW::Constants::MapID map_id, const std::vector<GW::Vec3f>& points, unsigned int col, bool filled) noexcept;
+        GenericPolyRenderable(GW::Constants::MapID map_id, const std::vector<GW::GamePos>& points, unsigned int col, bool filled) noexcept;
         ~GenericPolyRenderable() noexcept;
 
         // copy not allowed
@@ -53,8 +53,9 @@ public:
         void Draw(IDirect3DDevice9* device);
         GW::Constants::MapID map_id{};
         unsigned int col = 0u;
-        std::vector<GW::Vec3f> points{};
+        std::vector<GW::GamePos> points{};
         std::vector<D3DVertex> vertices{};
+        std::vector<uint32_t> vertices_zplanes{};
         bool filled = false;
         unsigned int vertices_processed = 0u;
         IDirect3DVertexBuffer9* vb = nullptr;

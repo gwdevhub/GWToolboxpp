@@ -35,18 +35,23 @@ namespace {
     {
         return a * t + b * (1.f - t);
     }
+    constexpr GW::Vec2f lerp(const GW::Vec2f& a, const GW::Vec2f& b, const float t)
+    {
+        return a * t + b * (1.f - t);
+
+    }
 
     constexpr auto ALTITUDE_UNKNOWN = std::numeric_limits<float>::max();
 
-    std::vector<GW::Vec3f> circular_points_from_marker(const float pos_x, const float pos_y, const float size)
+    std::vector<GW::GamePos> circular_points_from_marker(const GW::GamePos& marker, const float size)
     {
-        std::vector<GW::Vec3f> points{};
+        std::vector<GW::GamePos> points{};
         constexpr float pi = DirectX::XM_PI;
         constexpr size_t num_points_per_circle = 48;
         constexpr auto slice = 2.0f * pi / static_cast<float>(num_points_per_circle);
         for (auto i = 0u; i < num_points_per_circle; i++) {
             const auto angle = slice * static_cast<float>(i);
-            points.emplace_back(pos_x + size * std::cos(angle), pos_y + size * std::sin(angle), 0.f);
+            points.emplace_back(marker.x + size * std::cos(angle), marker.y + size * std::sin(angle), marker.zplane);
         }
         points.push_back(points.at(0)); // to complete the line list
         return points;
@@ -101,8 +106,8 @@ namespace {
             // to appear.
 
             // @Cleanup: zplane needs setting properly here!
-            const auto z_plane =  vertices[i].z == static_cast<int>(vertices[i].z) ? static_cast<unsigned>(vertices[i].z) : 0u; // 0 = unknown
-            GW::Map::QueryAltitude({ vertices[i].x, vertices[i].y, z_plane}, 5.f, altitude);
+            const auto z_plane = poly.vertices_zplanes[i];
+            GW::Map::QueryAltitude({ vertices[i].x, vertices[i].y, z_plane }, 5.f, altitude);
 
             if (altitude < vertices[i].z) {
                 // recall that the Up camera component is inverted
@@ -133,7 +138,7 @@ namespace {
 
 GameWorldRenderer::GenericPolyRenderable::GenericPolyRenderable(
     const GW::Constants::MapID map_id,
-    const std::vector<GW::Vec3f>& points,
+    const std::vector<GW::GamePos>& points,
     const unsigned int col,
     const bool filled) noexcept
     : map_id(map_id)
@@ -141,40 +146,7 @@ GameWorldRenderer::GenericPolyRenderable::GenericPolyRenderable(
     , points(points)
     , filled(filled)
 {
-    if (filled && points.size() >= 3) {
-        // (filling doesn't make sense if there is not at least enough points for one triangle)
-        std::vector<GW::Vec3f> lerp_points{};
-        for (size_t i = 0; i < points.size(); i++) {
-            const GW::Vec3f& pt = points.at(i);
-            if (!lerp_points.empty() && lerp_steps_per_line > 0) {
-                for (auto j = 1u; j < lerp_steps_per_line; j++) {
-                    const float div = static_cast<float>(j) / static_cast<float>(lerp_steps_per_line);
-                    GW::Vec3f split = lerp(points[i], points[i - 1], div);
-                    lerp_points.push_back(split);
-                }
-            }
-            lerp_points.push_back(pt);
-        }
-        const auto poly = std::vector{{lerp_points}};
-        const std::vector<unsigned> indices = mapbox::earcut<unsigned>(poly);
-        for (size_t i = 0; i < indices.size(); i++) {
-            const auto& pt = lerp_points.at(indices.at(i));
-            vertices.push_back(D3DVertex{pt.x, pt.y, ALTITUDE_UNKNOWN, col});
-        }
-    }
-    else {
-        for (size_t i = 0; i < points.size(); i++) {
-            const GW::Vec3f& pt = points.at(i);
-            if (!vertices.empty() && lerp_steps_per_line > 0) {
-                for (auto j = 1u; j < lerp_steps_per_line; j++) {
-                    const auto div = static_cast<float>(j) / static_cast<float>(lerp_steps_per_line);
-                    const auto split = lerp(points[i], points[i - 1], div);
-                    vertices.push_back(D3DVertex{split.x, split.y, ALTITUDE_UNKNOWN, col});
-                }
-            }
-            vertices.push_back(D3DVertex{pt.x, pt.y, ALTITUDE_UNKNOWN, col});
-        }
-    }
+ 
 
 }
 
@@ -187,6 +159,47 @@ GameWorldRenderer::GenericPolyRenderable::~GenericPolyRenderable() noexcept
 
 void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
 {
+    if (vertices.empty()) {
+        if (filled && points.size() >= 3) {
+            // (filling doesn't make sense if there is not at least enough points for one triangle)
+            std::vector<GW::GamePos> lerp_points{};
+            for (size_t i = 0; i < points.size(); i++) {
+                if (!lerp_points.empty() && lerp_steps_per_line > 0) {
+                    for (auto j = 1u; j < lerp_steps_per_line; j++) {
+                        const float div = static_cast<float>(j) / static_cast<float>(lerp_steps_per_line);
+                        auto split = lerp(points[i], points[i - 1], div);
+                        lerp_points.push_back({ split.x,split.y,std::max(points[i].zplane, points[i-1].zplane)});
+                    }
+                }
+                lerp_points.push_back(points[i]);
+            }
+            std::vector<GW::Vec2f> poly;
+            std::transform(lerp_points.begin(), lerp_points.end(), poly.begin(), [](const GW::GamePos& p) { return GW::Vec2f(p); });
+            std::vector pl = { {poly} };
+            const std::vector<unsigned> indices = mapbox::earcut<unsigned>(pl);
+            for (size_t i = 0; i < indices.size(); i++) {
+                const auto& pt = lerp_points[indices[i]];
+                vertices.push_back(D3DVertex{ pt.x, pt.y, ALTITUDE_UNKNOWN, col });
+                vertices_zplanes.push_back(pt.zplane);
+            }
+        }
+        else {
+            for (size_t i = 0; i < points.size(); i++) {
+                const auto& pt = points[i];
+                if (!vertices.empty() && lerp_steps_per_line > 0) {
+                    for (auto j = 1u; j < lerp_steps_per_line; j++) {
+                        const auto div = static_cast<float>(j) / static_cast<float>(lerp_steps_per_line);
+                        const auto split = lerp(points[i], points[i - 1], div);
+                        vertices.push_back(D3DVertex{ split.x, split.y, ALTITUDE_UNKNOWN, col });
+                        vertices_zplanes.push_back(std::max(points[i].zplane, points[i - 1].zplane));
+                    }
+                }
+                vertices.push_back(D3DVertex{ pt.x, pt.y, ALTITUDE_UNKNOWN, col });
+                vertices_zplanes.push_back(pt.zplane);
+            }
+        }
+    }
+
     if (!AddPolyToDevice(*this, device))
         return;
     // draw this specific renderable
@@ -437,7 +450,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines()
         }
         if (!(line->map == map_id || line->map == GW::Constants::MapID::None))
             continue;
-        std::vector points = { GW::Vec3f(line->p1), GW::Vec3f(line->p2) };
+        std::vector points = { line->p1, line->p2 };
 
         auto poly_to_add = GenericPolyRenderable(line->map, points, line->color, false);
 
@@ -470,8 +483,8 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys()
         }
         if (!(poly.map == map_id || poly.map == GW::Constants::MapID::None))
             continue;
-        std::vector<GW::Vec3f> pts{};
-        std::ranges::transform(poly.points, std::back_inserter(pts), [](const GW::Vec2f& pt) { return GW::Vec3f(pt); });
+        std::vector<GW::GamePos> pts{};
+        std::ranges::transform(poly.points, std::back_inserter(pts), [](const GW::Vec2f& pt) { return GW::GamePos(pt); });
 
         auto poly_to_add = GenericPolyRenderable(poly.map, pts, poly.color, poly.filled);
 
@@ -505,7 +518,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers()
         if (!(marker.map == map_id || marker.map == GW::Constants::MapID::None))
             continue;
 
-        std::vector<GW::Vec3f> points = circular_points_from_marker(marker.pos.x, marker.pos.y, marker.size);
+        auto points = circular_points_from_marker(marker.pos, marker.size);
 
         auto poly_to_add = GenericPolyRenderable(marker.map, points, marker.color, marker.IsFilled());
 
