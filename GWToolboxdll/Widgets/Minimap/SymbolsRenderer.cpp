@@ -22,7 +22,6 @@
 
 namespace {
     IDirect3DPixelShader9* pshader = nullptr;
-    IDirect3DVertexDeclaration9* vertex_declaration = nullptr;
     bool need_configure_pipeline = true;
 }
 
@@ -272,12 +271,6 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
 
 bool SymbolsRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
 {
-    constexpr D3DVERTEXELEMENT9 decl[] = {{0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0}, {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0}, D3DDECL_END()};
-    if (device->CreateVertexDeclaration(decl, &vertex_declaration) != D3D_OK) {
-        // Log::Error("SymbolsRenderer: unable to CreateVertexDeclaration");
-        return false;
-    }
-
     if (device->CreatePixelShader(reinterpret_cast<const DWORD*>(&g_ps20_main), &pshader) != D3D_OK) {
         // Log::Error("SymbolsRenderer: unable to CreateVertexShader");
         return false;
