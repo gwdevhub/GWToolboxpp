@@ -22,8 +22,8 @@ namespace {
         Colors::Yellow(), Colors::Amber(), Colors::Orange(),
         Colors::DeepOrange(), Colors::Green(), Colors::Lime(),
         Colors::Magenta(), Colors::Gold(), Colors::BlueGrey(),
-        Colors::Grey(), Colors::White(), Colors::MaterialBlue(),
-        Colors::MaterialGreen(), Colors::MaterialRed(), Colors::MaterialYellow()
+        Colors::White(), Colors::MaterialBlue(), Colors::MaterialGreen(),
+        Colors::MaterialRed(), Colors::MaterialYellow()
     };
 
     bool draw_quest_path_on_terrain = true;
