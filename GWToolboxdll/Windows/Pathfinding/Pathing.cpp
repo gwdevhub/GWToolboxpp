@@ -230,8 +230,9 @@ namespace Pathing {
             GenerateTeleportGraph();
             InsertTeleportsIntoVisibilityGraph();
             volatile clock_t stop = clock();
-            Log::Flash("Processing %s\n", m_terminateThread ? "terminated." : "done.");
-            Log::Flash("processing time: %d ms\n", stop - start);
+#ifdef _DEBUG
+            Log::Flash("Processing %s in %d ms", m_terminateThread ? "terminated" : "done", stop - start);
+#endif
             m_processing = false;
             m_done = true;
             m_progress = 100;
@@ -472,7 +473,9 @@ namespace Pathing {
                 }
             }
         }
-        Log::Flash("Portal count: %d\n", m_portals.size());
+#ifdef _DEBUG
+        Log::Flash("Portal count: %d", m_portals.size());
+#endif
     }
 
     void MilePath::GeneratePoints()
@@ -492,8 +495,9 @@ namespace Pathing {
         for (size_t i = 0; i < m_points.size(); ++i) {
             m_points[i].id = i;
         }
-
-        Log::Flash("Number of points: %d\n", m_points.size());
+#ifdef _DEBUG
+        Log::Flash("Number of points: %d", m_points.size());
+#endif
         m_points.shrink_to_fit();
     }
 
