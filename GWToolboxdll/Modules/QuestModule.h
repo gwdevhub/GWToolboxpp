@@ -8,10 +8,35 @@ namespace GW {
         enum class QuestID : uint32_t;
     }
 }
+namespace GuiUtils {
+    class EncString;
+}
 
 struct QuestObjective {
+    QuestObjective(GW::Constants::QuestID quest_id, const wchar_t* objective_enc, bool is_completed);
+    ~QuestObjective();
+    // copy not allowed
+    QuestObjective(const QuestObjective& other) = delete;
+    QuestObjective(QuestObjective&& other) noexcept {
+        quest_id = other.quest_id;
+        is_completed = other.is_completed;
+        objective_enc = other.objective_enc;
+        other.objective_enc = nullptr;
+    }
+
+    // copy not allowed
+    QuestObjective& operator=(const QuestObjective& other) = delete;
+    QuestObjective& operator=(QuestObjective&& other) noexcept
+    {
+        quest_id = other.quest_id;
+        is_completed = other.is_completed;
+        objective_enc = other.objective_enc;
+        other.objective_enc = nullptr;
+        return *this;
+    }
+
     GW::Constants::QuestID quest_id = (GW::Constants::QuestID)0;
-    std::wstring objective_enc;
+    GuiUtils::EncString* objective_enc = nullptr;
     bool is_completed = false;
 };
 

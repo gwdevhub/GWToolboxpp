@@ -14,6 +14,8 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
+#include <Utils/GuiUtils.h>
+
 namespace {
     constexpr auto quest_colors = std::to_array<Color>({
         Colors::Red(), Colors::Pink(), Colors::Purple(),
@@ -328,18 +330,16 @@ std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::Que
         next_objective_enc = wcschr(current_objective_enc, 0x2);
         size_t current_objective_len = next_objective_enc ? next_objective_enc - current_objective_enc : wcslen(current_objective_enc);
 
-        QuestObjective objective;
-        objective.is_completed = *current_objective_enc == 0x2af5;
-        objective.quest_id = quest_id;
-        objective.objective_enc = std::wstring(current_objective_enc, current_objective_len);
-
-        auto content_start = objective.objective_enc.find(0x10a);
+        auto enc_str = std::wstring(current_objective_enc, current_objective_len);
+        auto content_start = enc_str.find(0x10a);
         ASSERT(content_start != std::wstring::npos);
         content_start++;
 
-        objective.objective_enc = objective.objective_enc.substr(content_start, objective.objective_enc.size() - content_start - 1);
+        enc_str = enc_str.substr(content_start, enc_str.size() - content_start - 1);
 
-        out.push_back(objective);
+        const auto is_complete = *current_objective_enc == 0x2af5;
+
+        out.push_back({quest_id,enc_str.c_str(),is_complete});
 
         current_objective_enc = next_objective_enc ? next_objective_enc + 1 : nullptr;
     }
@@ -415,4 +415,15 @@ void QuestModule::Update(float)
 void QuestModule::Terminate()
 {
     ToolboxModule::Terminate();
+}
+
+QuestObjective::QuestObjective(GW::Constants::QuestID quest_id, const wchar_t* _objective_enc, bool is_completed)
+    :quest_id(quest_id),is_completed(is_completed)
+{
+    objective_enc = new GuiUtils::EncString(_objective_enc);
+}
+
+QuestObjective::~QuestObjective()
+{
+    if(objective_enc) delete objective_enc;
 }
