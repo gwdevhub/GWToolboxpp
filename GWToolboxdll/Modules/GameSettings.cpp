@@ -135,7 +135,8 @@ namespace {
     bool block_zero_experience_gain = true;
     bool lazy_chest_looting = false;
 
-    uint32_t default_status = static_cast<uint32_t>(GW::FriendStatus::Online);
+    uint32_t last_online_status = static_cast<uint32_t>(GW::FriendStatus::Online);
+    bool remember_online_status = true;
 
     bool targeting_nearest_item = false;
 
@@ -776,7 +777,7 @@ namespace {
     // Override the login status dropdown by sending ui message 0x51 if found
     void OverrideDefaultOnlineStatus() {
         uint32_t value_override = 0;
-        switch (static_cast<GW::FriendStatus>(default_status)) {
+        switch (static_cast<GW::FriendStatus>(last_online_status)) {
         case GW::FriendStatus::Online: value_override = 0; break;
         case GW::FriendStatus::Away: value_override = 1; break;
         case GW::FriendStatus::DND: value_override = 2; break;
@@ -1171,7 +1172,9 @@ namespace {
     }
 
     GW::HookEntry OnPostUIMessage_HookEntry;
-    void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*) {
+    void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*) {
+        if (status->blocked)
+            return;
         switch (message_id) {
         case GW::UI::UIMessage::kPartySearchInviteSent: {
             // Automatically send a party window invite when a party search invite is sent
@@ -1183,6 +1186,9 @@ namespace {
             const auto packet = (GW::UI::UIPacket::kPreferenceValueChanged*)wParam;
             if (packet->preference_id == GW::UI::NumberPreference::TextLanguage)
                 FontLoader::LoadFonts(true);
+        } break;
+        case GW::UI::UIMessage::kMapLoaded: {
+            last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
         } break;
         }
     }
@@ -1547,7 +1553,8 @@ void GameSettings::Initialize()
 
     constexpr GW::UI::UIMessage post_ui_messages[] = {
         GW::UI::UIMessage::kPartySearchInviteSent,
-        GW::UI::UIMessage::kPreferenceValueChanged
+        GW::UI::UIMessage::kPreferenceValueChanged,
+        GW::UI::UIMessage::kMapLoaded
     };
     for (const auto message_id : post_ui_messages) {
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
@@ -1568,6 +1575,8 @@ void GameSettings::Initialize()
         RegisterUIMessageCallback(&OnQuestUIMessage_HookEntry, message_id, OnPostQuestUIMessage, 0x8000);
     }
     player_requested_active_quest_id = GW::QuestMgr::GetActiveQuestId();
+
+    last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
 
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();
@@ -1760,7 +1769,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
 
     LOAD_BOOL(automatically_flag_pet_to_fight_called_target);
 
-    LOAD_UINT(default_status);
+    LOAD_UINT(last_online_status);
 
     GW::PartyMgr::SetTickToggle(tick_is_toggle);
     SetWindowTitle(set_window_title_as_charname);
@@ -1903,7 +1912,7 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
 
     SAVE_BOOL(block_enter_area_message);
 
-    SAVE_UINT(default_status);
+    SAVE_UINT(last_online_status);
 
     SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -1987,23 +1996,7 @@ void GameSettings::DrawPartySettings()
 void GameSettings::DrawSettingsInternal()
 {
     ImGui::Checkbox("Hide email address on login screen", &hide_email_address);
-    ImGui::TextUnformatted("Default online status on char select screen:");
-    ImGui::Indent();
-    if (ImGui::RadioButton("Online", default_status == static_cast<uint32_t>(GW::FriendStatus::Online)))
-        default_status = static_cast<uint32_t>(GW::FriendStatus::Online);
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Busy", default_status == static_cast<uint32_t>(GW::FriendStatus::DND)))
-        default_status = static_cast<uint32_t>(GW::FriendStatus::DND);
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Away", default_status == static_cast<uint32_t>(GW::FriendStatus::Away)))
-        default_status = static_cast<uint32_t>(GW::FriendStatus::Away);
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Offline", default_status == static_cast<uint32_t>(GW::FriendStatus::Offline)))
-        default_status = static_cast<uint32_t>(GW::FriendStatus::Offline);
-    if (auto_set_online && default_status == static_cast<uint32_t>(GW::FriendStatus::Away)) {
-        ImGui::TextDisabled("You've got Automatically set 'Online' set; this will conflict with this setting");
-    }
-    ImGui::Unindent();
+    ImGui::Checkbox("Remember my online status when returning to character select screen", &remember_online_status);
     ImGui::Checkbox("Automatic /age on vanquish", &auto_age_on_vanquish);
     ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
     ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
