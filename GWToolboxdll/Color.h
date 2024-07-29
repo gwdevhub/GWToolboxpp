@@ -54,7 +54,7 @@ namespace Colors {
     static constexpr Color Lime() { return RGB(174, 234, 0); }
     static constexpr Color Magenta() { return RGB(213, 0, 249); }
     static constexpr Color Gold() { return RGB(255, 241, 118); }
-    static constexpr Color BlueGrey() { return RGB(96, 125, 1319); }
+    static constexpr Color BlueGrey() { return RGB(96, 125, 139); }
     static constexpr Color Grey() { return RGB(158, 158, 158); }
 
     static Color Load(const ToolboxIni* ini, const char* section, const char* key, const Color def)
