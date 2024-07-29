@@ -26,11 +26,9 @@ float4 main(PS_INPUT input) : COLOR {
         discard;
     }
 
-    // Calculate distance for the dotted pattern
-    float pattern = frac(pixel_dist * 10.0); // Adjust the multiplier to change dot spacing
-
-    // Discard pixels to create the dotted effect
-    if (pattern > 0.5) {
+    // Calculate the modulo to create the dotted effect
+    float pattern = fmod(pixel_dist, 50.0);
+    if (pattern > 25.0) {
         discard;
     }
 
