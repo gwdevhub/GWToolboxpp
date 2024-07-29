@@ -329,7 +329,7 @@ std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::Que
         size_t current_objective_len = next_objective_enc ? next_objective_enc - current_objective_enc : wcslen(current_objective_enc);
 
         QuestObjective objective;
-        objective.is_completed = *current_objective_enc == 0xc1b7;
+        objective.is_completed = *current_objective_enc == 0x2af5;
         objective.quest_id = quest_id;
         objective.objective_enc = std::wstring(current_objective_enc, current_objective_len);
 
