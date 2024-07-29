@@ -29,6 +29,22 @@ namespace {
     using InitChatLog_pt = void(__cdecl*)();
     InitChatLog_pt InitChatLog_Func = nullptr;
 
+    bool ClearChatLog() {
+        if (!ClearChatLog_Func)
+            return false;
+        ClearChatLog_Func();
+        ASSERT(GW::Chat::GetChatLog() == nullptr);
+        return GW::Chat::GetChatLog() == nullptr;
+    }
+    bool InitChatLog() {
+        if (!InitChatLog_Func)
+            return false;
+        InitChatLog_Func();
+        const auto log = GW::Chat::GetChatLog();
+        ASSERT(log && log->messages[log->next] == 0);
+        return log && log->messages[log->next] == 0;
+    }
+
 #pragma warning(push)
 #pragma warning(disable: 4200)
     struct GWSentMessage {
@@ -357,7 +373,7 @@ namespace {
             recv = recv->next;
         }
         auto res = SI_FILE;
-        for (i = 0; i < 3 && res != SI_OK; i++) {
+        for (i = 0; i < 10 && res != SI_OK; i++) {
             res = inifile->SaveFile(LogPath(L"recv").c_str());
         }
         ASSERT(res == SI_OK);
@@ -398,7 +414,11 @@ namespace {
         // Recv log FIFO
         account = _account;
         ToolboxIni inifile;
-        ASSERT(inifile.LoadIfExists(LogPath(L"recv")) == SI_OK);
+        auto res = inifile.LoadIfExists(LogPath(L"recv"));
+        for (size_t i = 0; i < 10 && res != SI_OK; i++) {
+            res = inifile.LoadIfExists(LogPath(L"recv"));
+        }
+        ASSERT(res == SI_OK);
 
         ToolboxIni::TNamesDepend entries;
         inifile.GetAllSections(entries);
@@ -421,7 +441,11 @@ namespace {
 
         // sent log FIFO
         inifile.Reset();
-        ASSERT(inifile.LoadIfExists(LogPath(L"sent")) == SI_OK);
+        res = inifile.LoadIfExists(LogPath(L"sent"));
+        for (size_t i = 0; i < 10 && res != SI_OK; i++) {
+            res = inifile.LoadIfExists(LogPath(L"sent"));
+        }
+        ASSERT(res == SI_OK);
         entries.clear();
         inifile.GetAllSections(entries);
         for (const ToolboxIni::Entry& entry : entries) {
@@ -474,12 +498,10 @@ namespace {
         Fetch();
         TBChatMessage* recv = recv_first;
         if (recv) {
-            ClearChatLog_Func();
-            const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
-            ASSERT(!log);
-            InitChatLog_Func();
-            log = GW::Chat::GetChatLog();
-            ASSERT(log);
+            ClearChatLog();
+            InitChatLog();
+
+            auto log = GW::Chat::GetChatLog();
             // Fill chat log
             size_t log_pos = log ? log->next : 0;
             injecting = true;
@@ -664,6 +686,9 @@ void ChatLog::Terminate() {
 
 void ChatLog::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Enable GWToolbox chat log", &enabled);
+    if (ImGui::Checkbox("Enable GWToolbox chat log", &enabled) && enabled) {
+        Init();
+        pending_inject = true;
+    }
     ImGui::ShowHelp(Description());
 }
