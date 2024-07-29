@@ -5,9 +5,9 @@ set(CMAKE_GENERATOR_PLATFORM win32)
 project(gwtoolbox)
 
 set(GWTOOLBOXEXE_VERSION "4.1")
-set(GWTOOLBOXDLL_VERSION "6.22")
-set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not empty.
-set(GWTOOLBOX_MODULE_VERSION "6,22,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
+set(GWTOOLBOXDLL_VERSION "6.23")
+set(GWTOOLBOXDLL_VERSION_BETA "beta1") # can be anything. Marks beta version if not empty.
+set(GWTOOLBOX_MODULE_VERSION "6,23,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
 
 
 if(MSVC_TOOLSET_VERSION LESS 143)
