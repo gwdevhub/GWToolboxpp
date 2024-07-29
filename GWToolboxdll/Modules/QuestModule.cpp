@@ -15,7 +15,7 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 
 namespace {
-    static std::vector<ImU32> quest_colors = {
+    constexpr auto quest_colors = std::to_array<Color>({
         Colors::Red(), Colors::Pink(), Colors::Purple(),
         Colors::DeepPurple(), Colors::Indigo(), Colors::Blue(),
         Colors::LightBlue(), Colors::Cyan(), Colors::Teal(),
@@ -24,7 +24,7 @@ namespace {
         Colors::Magenta(), Colors::Gold(), Colors::BlueGrey(),
         Colors::White(), Colors::MaterialBlue(), Colors::MaterialGreen(),
         Colors::MaterialRed(), Colors::MaterialYellow()
-    };
+    });
 
     bool draw_quest_path_on_terrain = true;
     bool draw_quest_path_on_minimap = true;

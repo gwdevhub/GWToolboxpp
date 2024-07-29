@@ -204,21 +204,30 @@ void ActiveQuestWidget::Update(float)
             const auto func = queued_functions[active_quest_id];
             func(active_quest_id, active_quest_name.string(), active_quest_objectives);
             queued_functions.erase(active_quest_id);
+            if (original_quest_id != GW::Constants::QuestID::None) {
+                GW::QuestMgr::SetActiveQuestId(original_quest_id);
+                original_quest_id = GW::Constants::QuestID::None;
+            }
         }
         else if (queued_functions.contains(GW::Constants::QuestID::None)) {
             const auto func = queued_functions[active_quest_id];
             func(active_quest_id, active_quest_name.string(), active_quest_objectives);
             queued_functions.erase(GW::Constants::QuestID::None);
+            if (original_quest_id != GW::Constants::QuestID::None) {
+                GW::QuestMgr::SetActiveQuestId(original_quest_id);
+                original_quest_id = GW::Constants::QuestID::None;
+            }
         }
         else if (!queued_functions.empty()) {
             const auto it = queued_functions.begin();
             const auto quest_id = it->first;
             GW::QuestMgr::SetActiveQuestId(quest_id);
-        }
-        else {
             if (original_quest_id != GW::Constants::QuestID::None) {
                 GW::QuestMgr::SetActiveQuestId(original_quest_id);
+                original_quest_id = GW::Constants::QuestID::None;
             }
+        }
+        else {
             original_quest_id = GW::QuestMgr::GetActiveQuestId();
         }
     }
