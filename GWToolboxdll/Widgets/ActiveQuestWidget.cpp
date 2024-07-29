@@ -24,6 +24,7 @@ namespace {
         int index;
         bool completed;
     };
+
     constexpr uint32_t OBJECTIVE_FLAG_BULLET = 0x1;
     constexpr uint32_t OBJECTIVE_FLAG_COMPLETED = 0x2;
     constexpr uint32_t QUEST_MARKER_FILE_ID = 0x1b4d5;
@@ -32,18 +33,24 @@ namespace {
     constexpr ImU32 TEXT_COLOR_ACTIVE = 0xff00ff00;
 
     GW::HookEntry hook_entry;
-    GW::Constants::QuestID active_quest_id = (GW::Constants::QuestID)0;
+    GW::Constants::QuestID active_quest_id = GW::Constants::QuestID::None;
+    GW::Constants::QuestID original_quest_id = GW::Constants::QuestID::None;
     GuiUtils::EncString active_quest_name;
-    std::vector<std::tuple<int, std::string, bool>> active_quest_objectives; // (index, objective, completed)
+    std::vector<ActiveQuestWidget::QuestObjective> active_quest_objectives; // (index, objective, completed)
     IDirect3DTexture9** p_quest_marker_texture;
     bool is_loading_quest_objectives = false;
     bool force_update = false;
+    bool is_initialized = false;
 
-    void SetForceUpdate(GW::HookStatus*, GW::UI::UIMessage,void*,void*) {
+    std::unordered_map<GW::Constants::QuestID, std::function<void(GW::Constants::QuestID, std::string, std::vector<ActiveQuestWidget::QuestObjective>)>> queued_functions;
+
+    void SetForceUpdate(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
+    {
         force_update = true;
     }
 
-    void __cdecl OnQuestObjectivesDecoded(void*, const wchar_t* decoded) {
+    void __cdecl OnQuestObjectivesDecoded(void*, const wchar_t* decoded)
+    {
         std::wstring decoded_objectives = decoded;
         static const std::wregex SANITIZE_REGEX(L"<[^>]+>");
         static const std::wregex OBJECTIVE_REGEX(L"\\{s(c?)\\}([^\\{]+)");
@@ -54,7 +61,7 @@ namespace {
 
         auto regex_begin = std::wsregex_iterator(decoded_objectives.begin(), decoded_objectives.end(), OBJECTIVE_REGEX);
         auto regex_end = std::wsregex_iterator();
-        for(auto& it = regex_begin; it != regex_end; it++) {
+        for (auto& it = regex_begin; it != regex_end; it++) {
             const std::wsmatch& matches = *it;
 
             bool completed = matches[1].compare(L"c") == 0;
@@ -64,7 +71,8 @@ namespace {
         }
     }
 
-    void __cdecl OnMissionObjectiveDecoded(void* param, const wchar_t* decoded) {
+    void __cdecl OnMissionObjectiveDecoded(void* param, const wchar_t* decoded)
+    {
         static std::mutex mutex;
         auto* completion_state = reinterpret_cast<CompletionState*>(param);
         auto& [index, completed] = *completion_state;
@@ -74,7 +82,7 @@ namespace {
         decoded_objective = std::regex_replace(decoded_objective, SANITIZE_REGEX, L"");
 
         std::lock_guard g(mutex);
-        for(auto it = active_quest_objectives.cbegin(); it != active_quest_objectives.cend(); it++) {
+        for (auto it = active_quest_objectives.cbegin(); it != active_quest_objectives.cend(); it++) {
             const auto& [ix, _a, _b] = *it;
             if (ix >= index) {
                 active_quest_objectives.emplace(it, index, TextUtils::WStringToString(decoded_objective), completed);
@@ -88,10 +96,11 @@ namespace {
         delete completion_state;
     }
 
-    void DrawQuestIcon() {
+    void DrawQuestIcon()
+    {
         static const ImVec2 UV0 = ImVec2(0.0F, 0.0f);
         static const ImVec2 ICON_SIZE = ImVec2(24.0f, 24.0f);
-        if(!p_quest_marker_texture || !*p_quest_marker_texture) {
+        if (!p_quest_marker_texture || !*p_quest_marker_texture) {
             return;
         }
 
@@ -102,12 +111,13 @@ namespace {
     }
 }
 
-void ActiveQuestWidget::Initialize() {
+void ActiveQuestWidget::Initialize()
+{
     ToolboxWidget::Initialize();
 
     p_quest_marker_texture = GwDatTextureModule::LoadTextureFromFileId(QUEST_MARKER_FILE_ID);
 
-    const GW::UI::UIMessage ui_messages[] = {
+    constexpr auto ui_messages = {
         GW::UI::UIMessage::kQuestDetailsChanged,
         GW::UI::UIMessage::kQuestAdded,
         GW::UI::UIMessage::kClientActiveQuestChanged,
@@ -115,15 +125,20 @@ void ActiveQuestWidget::Initialize() {
         GW::UI::UIMessage::kObjectiveAdd,
         GW::UI::UIMessage::kObjectiveUpdated
     };
-    for (auto message_id : ui_messages) {
+    for (const auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&hook_entry, message_id, SetForceUpdate);
     }
+
+    is_initialized = true;
 }
 
-void ActiveQuestWidget::Terminate() {
+void ActiveQuestWidget::Terminate()
+{
     GW::UI::RemoveUIMessageCallback(&hook_entry);
 
     ToolboxWidget::Terminate();
+    queued_functions.clear();
+    is_initialized = false;
 }
 
 void ActiveQuestWidget::Update(float)
@@ -139,7 +154,7 @@ void ActiveQuestWidget::Update(float)
             active_quest_name.reset(quest->name);
             active_quest_objectives.clear();
 
-            if(quest->objectives) {
+            if (quest->objectives) {
                 GW::UI::AsyncDecodeStr(quest->objectives, OnQuestObjectivesDecoded);
                 is_loading_quest_objectives = false;
             }
@@ -177,9 +192,34 @@ void ActiveQuestWidget::Update(float)
 
     if (is_loading_quest_objectives) {
         const auto quest = GW::QuestMgr::GetQuest(qid);
-        if(quest && quest->objectives) {
+        if (quest && quest->objectives) {
             is_loading_quest_objectives = false;
             GW::UI::AsyncDecodeStr(quest->objectives, OnQuestObjectivesDecoded);
+        }
+    }
+    else {
+        // Call queued functions after decoding objectives
+        if (active_quest_name.IsDecoding() || active_quest_objectives.empty()) return;
+        if (queued_functions.contains(active_quest_id)) {
+            const auto func = queued_functions[active_quest_id];
+            func(active_quest_id, active_quest_name.string(), active_quest_objectives);
+            queued_functions.erase(active_quest_id);
+        }
+        else if (queued_functions.contains(GW::Constants::QuestID::None)) {
+            const auto func = queued_functions[active_quest_id];
+            func(active_quest_id, active_quest_name.string(), active_quest_objectives);
+            queued_functions.erase(GW::Constants::QuestID::None);
+        }
+        else if (!queued_functions.empty()) {
+            const auto it = queued_functions.begin();
+            const auto quest_id = it->first;
+            GW::QuestMgr::SetActiveQuestId(quest_id);
+        }
+        else {
+            if (original_quest_id != GW::Constants::QuestID::None) {
+                GW::QuestMgr::SetActiveQuestId(original_quest_id);
+            }
+            original_quest_id = GW::QuestMgr::GetActiveQuestId();
         }
     }
 }
@@ -208,12 +248,12 @@ void ActiveQuestWidget::Draw(IDirect3DDevice9*)
         for (const auto& objective : active_quest_objectives) {
             auto& [_, obj_str, completed] = objective;
 
-            if(completed) {
+            if (completed) {
                 ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR_COMPLETED);
             }
             ImGui::Bullet();
             ImGui::Text("%s", obj_str.c_str());
-            if(completed) {
+            if (completed) {
                 ImGui::PopStyleColor();
             }
         }
@@ -221,4 +261,13 @@ void ActiveQuestWidget::Draw(IDirect3DDevice9*)
         ImGui::PopTextWrapPos();
     }
     ImGui::End();
+}
+
+bool ActiveQuestWidget::Enqueue(const GW::Constants::QuestID quest_id, std::function<void(GW::Constants::QuestID, std::string, std::vector<QuestObjective>)> func)
+{
+    if (!is_initialized) {
+        return false;
+    }
+    queued_functions[quest_id] = std::move(func);
+    return true;
 }

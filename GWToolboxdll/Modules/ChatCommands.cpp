@@ -59,6 +59,8 @@
 #include <Utils/TextUtils.h>
 #include <Constants/EncStrings.h>
 
+#include "Widgets/ActiveQuestWidget.h"
+
 constexpr auto CMDTITLE_KEEP_CURRENT = 0xfffe;
 constexpr auto CMDTITLE_REMOVE_CURRENT = 0xffff;
 
@@ -281,6 +283,29 @@ namespace {
             // See OnChatUI_Callback for intercept
             SendUIMessage(GW::UI::UIMessage::kAppendMessageToChat, (void*)L"", (void*)channel);
         });
+    }
+
+    void CHAT_CMD_FUNC(CmdDuncan)
+    {
+        const auto duncan_quest = GW::QuestMgr::GetQuest(GW::Constants::QuestID::The_Last_Hierophant);
+        if (!duncan_quest) {
+            GW::Chat::SendChat('#', "Don't have Duncan quest :(");
+            return;
+        }
+        if (!ActiveQuestWidget::Enqueue(GW::Constants::QuestID::The_Last_Hierophant, [](const GW::Constants::QuestID, std::string quest_name, std::vector<ActiveQuestWidget::QuestObjective> quest_objectives) {
+            auto ready_str = quest_name + ": ";
+            bool ready = true;
+            for (const auto& obj : quest_objectives) {
+                ready_str += std::to_string(obj.index + 1) + "[" + (obj.completed ? "x" : "") + "] ";
+                if (obj.index < 4 && !obj.completed) {
+                    ready = false;
+                }
+            }
+            ready_str += ready ? "ready!" : "not ready! :(";
+            GW::Chat::SendChat('#', ready_str.c_str());
+        })) {
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_WARNING, L"ActiveQuestWidget is not turned on.");
+        };
     }
 
     using FocusChatTab_pt = void(__fastcall*)(void* chat_frame, void* edx, uint32_t tab);
@@ -1131,6 +1156,7 @@ void ChatCommands::Initialize()
         {L"camera", CmdCamera},
         {L"cam", CmdCamera},
         {L"chest", CmdChest},
+        {L"duncan", CmdDuncan},
         {L"xunlai", CmdChest},
         {L"afk", CmdAfk},
         {L"target", CmdTarget},
