@@ -7,11 +7,27 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 6.23
+* [New] imgui windows can now be moved out of the Guild Wars application! Expect some bugginess like transparent backgrounds for now
+* [New] added /duncan chat command to share your quest progress
+* [New] quests (markers) now have different colors
+* [New] added option to render the shortest path to quest markers (either active or all, setting)
+* [New] added message to nicholas items when he will collect them
+* [Minor] /useskill now toggles that skill on/off, you can still only have ONE skill active at a time
+* [Minor] added option in HotkeyWindow to change the autoclicker clicker speed
+* [Minor] changed /prefs command to allow changing almost all preferences by english setting name
+* [Fix] fixed autoclicker potentially rendering your guild wars unresponsive for a short while after using it
+* [Fix] /title applies asuran title in some asura missions now that previously defaulted to your default title
+* [Fix] fixed rare crash that could occur when activating pcons during a loading screen
+* [Fix] fixed /tp command to correctly teleport to explorable areas that start with "The"
+* [Fix] Active quest widget works in non-latin languages now
+* [Fix] fixed toolbox minimap being hard to ping
+
 ## Version 6.22
-* [Minor] Changed UI layout of travel window
-* [Minor] /tp [zm, zv, zb] now does the same as /zm take or /zm travel
 * [New] Added highlight info and right click menu to daily quests window to make doing dailies easier
 * [New] Added option to hide gw compass when toolbox minimap is active
+* [Minor] Changed UI layout of travel window
+* [Minor] /tp [zm, zv, zb] now does the same as /zm take or /zm travel
 * [Fix] Fixed compass being hidden when toolbox starts
 * [Fix] Fixed alcohol being spammed too much
 * [Fix] Fixed rounding issues for SkillMonitor width causing wrong pixel offsets
