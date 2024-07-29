@@ -30,14 +30,11 @@ namespace {
 
     bool draw_quest_path_on_terrain = true;
     bool draw_quest_path_on_minimap = true;
-    bool redirect_quest_marker = false;
     GW::HookEntry ui_message_entry;
 
     void OnQuestPathRecalculated(const std::vector<GW::GamePos>& waypoints, void* args);
 
     void ClearCalculatedPath(GW::Constants::QuestID quest_id);
-
-    void RedirectQuestMarker(const GW::GamePos& new_marker);
 
     struct CalculatedQuestPath {
         CalculatedQuestPath(GW::Constants::QuestID _quest_id)
@@ -168,8 +165,6 @@ namespace {
             if (IsActive() &&
                 waypoint_distance > update_when_waypoint_changed_more_than) {
                 previous_closest_waypoint = waypoints[current_waypoint];
-                if (redirect_quest_marker)
-                    RedirectQuestMarker(waypoints[current_waypoint]);
             }
         }
     };
@@ -221,35 +216,6 @@ namespace {
     {
         const auto p = GW::Agents::GetControlledCharacter();
         return p ? &p->pos : nullptr;
-    }
-
-    // Replace marker for current quest, broadcast update to the game
-    void RedirectQuestMarker(const GW::GamePos& new_marker)
-    {
-        const auto quest = GW::QuestMgr::GetActiveQuest();
-        if (!quest)
-            return;
-        Log::Flash("Overriding quest marker from %.2f, %.2f to %.2f, %.2f", quest->marker.x, quest->marker.y, new_marker.x, new_marker.y);
-        if (quest->marker == new_marker)
-            return; // No change
-
-        quest->marker = new_marker;
-        struct QuestUIMsg {
-            GW::Constants::QuestID quest_id{};
-            GW::GamePos marker{};
-            uint32_t h0024{};
-            GW::Constants::MapID map_to{};
-            uint32_t log_state{};
-        } msg;
-        msg.quest_id = quest->quest_id;
-        msg.marker = quest->marker;
-        msg.h0024 = quest->h0024;
-        msg.map_to = quest->map_to;
-        msg.log_state = quest->log_state;
-
-        is_spoofing_quest_update = true;
-        SendUIMessage(GW::UI::UIMessage::kClientActiveQuestChanged, &msg);
-        is_spoofing_quest_update = false;
     }
 
     // Cast helper
@@ -305,8 +271,6 @@ namespace {
     // Callback invoked by quest related ui messages. All messages sent should have the quest id as first wparam variable
     void OnGWQuestMarkerUpdated(GW::HookStatus*, GW::UI::UIMessage, void* packet, void*)
     {
-        if (is_spoofing_quest_update)
-            return; // Recursive
         GW::Constants::QuestID affected_quest_id = *(GW::Constants::QuestID*)packet;
 
         const auto quest = GW::QuestMgr::GetQuest(affected_quest_id);
@@ -360,7 +324,6 @@ void QuestModule::DrawSettingsInternal()
     ImGui::Text("Draw path to quest marker on:");
     ImGui::Checkbox("Terrain##drawquestpath", &draw_quest_path_on_terrain);
     ImGui::Checkbox("Minimap##drawquestpath", &draw_quest_path_on_minimap);
-    ImGui::Checkbox("Redirect quest marker to nearest stop##redirectquestmarker", &redirect_quest_marker);
 }
 
 void QuestModule::LoadSettings(ToolboxIni* ini)
@@ -368,7 +331,6 @@ void QuestModule::LoadSettings(ToolboxIni* ini)
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(draw_quest_path_on_minimap);
     LOAD_BOOL(draw_quest_path_on_terrain);
-    LOAD_BOOL(redirect_quest_marker);
 }
 
 void QuestModule::SaveSettings(ToolboxIni* ini)
@@ -376,7 +338,6 @@ void QuestModule::SaveSettings(ToolboxIni* ini)
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(draw_quest_path_on_minimap);
     SAVE_BOOL(draw_quest_path_on_terrain);
-    SAVE_BOOL(redirect_quest_marker);
 }
 
 void QuestModule::Initialize()
