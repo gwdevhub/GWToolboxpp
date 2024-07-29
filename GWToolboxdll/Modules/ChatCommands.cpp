@@ -315,7 +315,7 @@ namespace {
     {
         GW::Hook::EnterHook();
         // If a channel was given in the UI message, set it now.
-        if (static_cast<GW::UI::UIMessage>(message->message_id) == GW::UI::UIMessage::kAppendMessageToChat && lParam) {
+        if (message->message_id == GW::UI::UIMessage::kAppendMessageToChat && lParam) {
             uint32_t* frame_ptr = *(uint32_t**)message->wParam;
             const auto tab = (uint32_t)lParam ^ 0x8000;
             if (tab < 6 && FocusChatTab_Func) {
