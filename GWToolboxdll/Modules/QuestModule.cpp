@@ -42,6 +42,7 @@ namespace {
 
         ~CalculatedQuestPath()
         {
+            ASSERT(!calculating);
             ClearMinimapLines();
         }
 
@@ -272,6 +273,8 @@ namespace {
     void OnGWQuestMarkerUpdated(GW::HookStatus*, GW::UI::UIMessage, void* packet, void*)
     {
         GW::Constants::QuestID affected_quest_id = *(GW::Constants::QuestID*)packet;
+
+        ClearCalculatedPaths();
 
         const auto quest = GW::QuestMgr::GetQuest(affected_quest_id);
         auto cqp = GetCalculatedQuestPath(affected_quest_id);
