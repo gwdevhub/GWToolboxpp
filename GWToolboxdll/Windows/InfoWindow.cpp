@@ -959,6 +959,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
                 static wchar_t name_buf[128];
                 GetQuestEntryGroupName(q->quest_id, name_buf, _countof(name_buf));
                 EncInfoField("Quest Entry:", name_buf);
+                EncInfoField("Objectives:", q->objectives);
             }
 #ifdef _DEBUG
             std::string quests;

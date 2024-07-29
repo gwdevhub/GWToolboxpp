@@ -60,6 +60,7 @@
 #include <Constants/EncStrings.h>
 
 #include "Widgets/ActiveQuestWidget.h"
+#include "QuestModule.h"
 
 constexpr auto CMDTITLE_KEEP_CURRENT = 0xfffe;
 constexpr auto CMDTITLE_REMOVE_CURRENT = 0xffff;
@@ -287,25 +288,24 @@ namespace {
 
     void CHAT_CMD_FUNC(CmdDuncan)
     {
-        const auto duncan_quest = GW::QuestMgr::GetQuest(GW::Constants::QuestID::The_Last_Hierophant);
-        if (!duncan_quest) {
-            GW::Chat::SendChat('#', "Don't have Duncan quest :(");
-            return;
+        std::wstring out_message = std::format(L"{}\x2\x108\x107 Status: \x1",GW::EncStrings::Quest::TheLastHeirophant);
+        if (!GW::QuestMgr::GetQuest(GW::Constants::QuestID::The_Last_Hierophant)) {
+            out_message += L"\x108\x107I don't have the quest!\x1";
         }
-        if (!ActiveQuestWidget::Enqueue(GW::Constants::QuestID::The_Last_Hierophant, [](const GW::Constants::QuestID, std::string quest_name, std::vector<ActiveQuestWidget::QuestObjective> quest_objectives) {
-            auto ready_str = quest_name + ": ";
-            bool ready = true;
-            for (const auto& obj : quest_objectives) {
-                ready_str += std::to_string(obj.index + 1) + "[" + (obj.completed ? "x" : "") + "] ";
-                if (obj.index < 4 && !obj.completed) {
-                    ready = false;
-                }
+        else {
+            const auto objectives = QuestModule::ParseQuestObjectives(GW::Constants::QuestID::The_Last_Hierophant);
+            const wchar_t* objective_names[] = {
+                L"Thommis",L"Rand",L"Selvetarm",L"Forgewight",L"Duncan"
+            };
+            for (size_t i = 0; i < _countof(objective_names); i++) {
+                const wchar_t completed_mark = i < objectives.size() && objectives[i].is_completed ? L'\x2705' : ' ';
+                const wchar_t* append_mark = i > 0 ? L", " : L"";
+                out_message += std::format(L"\x2\x108\x107{}{} [{}]\x1", append_mark, objective_names[i], completed_mark);
             }
-            ready_str += ready ? "ready!" : "not ready! :(";
-            GW::Chat::SendChat('#', ready_str.c_str());
-        })) {
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_WARNING, L"ActiveQuestWidget is not turned on.");
-        };
+        }
+        GW::UI::AsyncDecodeStr(out_message.c_str(), [](void*, const wchar_t* s) {
+            GW::Chat::SendChat('#', s);
+        }, nullptr, GW::Constants::Language::English);
     }
 
     using FocusChatTab_pt = void(__fastcall*)(void* chat_frame, void* edx, uint32_t tab);

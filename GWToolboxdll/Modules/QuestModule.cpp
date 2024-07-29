@@ -318,6 +318,34 @@ namespace {
     }
 } // namespace
 
+std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::QuestID quest_id) {
+    const auto quest = GW::QuestMgr::GetQuest(quest_id);
+    std::vector<QuestObjective> out;
+    if (!quest) return out;
+    const wchar_t* next_objective_enc = nullptr;
+    const wchar_t* current_objective_enc = quest->objectives;
+    while (current_objective_enc) {
+        next_objective_enc = wcschr(current_objective_enc, 0x2);
+        size_t current_objective_len = next_objective_enc ? next_objective_enc - current_objective_enc : wcslen(current_objective_enc);
+
+        QuestObjective objective;
+        objective.is_completed = *current_objective_enc == 0xc1b7;
+        objective.quest_id = quest_id;
+        objective.objective_enc = std::wstring(current_objective_enc, current_objective_len);
+
+        auto content_start = objective.objective_enc.find(0x10a);
+        ASSERT(content_start != std::wstring::npos);
+        content_start++;
+
+        objective.objective_enc = objective.objective_enc.substr(content_start, objective.objective_enc.size() - content_start - 1);
+
+        out.push_back(objective);
+
+        current_objective_enc = next_objective_enc ? next_objective_enc + 1 : nullptr;
+    }
+    return out;
+}
+
 ImU32 QuestModule::GetQuestColor(GW::Constants::QuestID quest_id) {
     const auto is_active_quest = GW::QuestMgr::GetActiveQuestId() == quest_id;
     if (is_active_quest) {

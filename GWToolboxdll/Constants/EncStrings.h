@@ -279,6 +279,8 @@ namespace GW {
             static const wchar_t* ZaishenBounty_Rragar_Maneater = L"\x8102\x54F1\xA747\xA10C\x4514"; 
             static const wchar_t* ZaishenBounty_Zhim_Monns = L"\x8102\x5515\xFB97\xECDE\x6DE5";
             static const wchar_t* ZaishenBounty_Magmus = L"\x8102\x5545\xFCCD\x97B4\x1449";
+
+            static const wchar_t* TheLastHeirophant = L"\x8102\x10b5\xbc2f\xb47f\x30a7";
         }
 
         // General settings

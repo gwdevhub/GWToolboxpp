@@ -3,6 +3,18 @@
 
 #include <ToolboxModule.h>
 
+namespace GW {
+    namespace Constants {
+        enum class QuestID : uint32_t;
+    }
+}
+
+struct QuestObjective {
+    GW::Constants::QuestID quest_id = (GW::Constants::QuestID)0;
+    std::wstring objective_enc;
+    bool is_completed = false;
+};
+
 class QuestModule : public ToolboxModule {
 public:
     static QuestModule& Instance()
@@ -24,4 +36,5 @@ public:
     void Update(float) override;
 
     static ImU32 GetQuestColor(GW::Constants::QuestID);
+    static std::vector<QuestObjective> ParseQuestObjectives(GW::Constants::QuestID quest_id);
 };
