@@ -221,23 +221,26 @@ namespace Pathing {
         m_processing = true;
         static volatile clock_t start = clock();
         start = clock();
-        LoadMapSpecificData();
-        GenerateAABBs();
-        GenerateAABBGraph(); //not threaded because it relies on gw client Query altitude.
-        worker_thread = new std::thread([&] {
-            GeneratePoints();
-            GenerateVisibilityGraph();
-            GenerateTeleportGraph();
-            InsertTeleportsIntoVisibilityGraph();
-            volatile clock_t stop = clock();
+        GW::GameThread::Enqueue([&]() {
+            LoadMapSpecificData();
+            GenerateAABBs();
+            GenerateAABBGraph(); //not threaded because it relies on gw client Query altitude.
+            ASSERT(!worker_thread);
+            worker_thread = new std::thread([&] {
+                GeneratePoints();
+                GenerateVisibilityGraph();
+                GenerateTeleportGraph();
+                InsertTeleportsIntoVisibilityGraph();
+                volatile clock_t stop = clock();
 #ifdef _DEBUG
-            Log::Flash("Processing %s in %d ms", m_terminateThread ? "terminated" : "done", stop - start);
+                Log::Flash("Processing %s in %d ms", m_terminateThread ? "terminated" : "done", stop - start);
 #endif
-            m_processing = false;
-            m_done = true;
-            m_progress = 100;
-        });
-        worker_thread->detach();
+                m_processing = false;
+                m_done = true;
+                m_progress = 100;
+                });
+            worker_thread->detach();
+            });
     }
 
     MilePath::~MilePath()
