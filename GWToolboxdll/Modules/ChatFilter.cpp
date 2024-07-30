@@ -107,7 +107,6 @@ namespace {
     }
 #endif
     GW::HookEntry BlockIfApplicable_Entry;
-    GW::HookEntry ClearIfApplicable_Entry;
 
 
     size_t GetSegmentLength(const wchar_t* encoded_segment)
@@ -318,11 +317,10 @@ namespace {
 
     bool IsPlayerName(const wchar_t* encoded_string)
     {
-        return encoded_string && wcscmp(encoded_string, L"\xba9\x107") == 0;
+        return encoded_string && wcsncmp(encoded_string, L"\xba9\x107", 2) == 0;
     }
 
-
-    [[maybe_unused]] bool IsCurrentPlayerName(const wchar_t* encoded_string)
+    bool IsCurrentPlayerName(const wchar_t* encoded_string)
     {
         if (!IsPlayerName(encoded_string)) {
             return false;
@@ -422,7 +420,7 @@ namespace {
                 // 0x7F1 0x9A9D 0xE943 0xB33 0x10A <monster> 0x1 0x10B <rarity> 0x10A <item> 0x1 0x1 0x10F <assignee: playernumber + 0x100>
                 // <monster> is wchar_t id of several wchars
                 // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
-                const bool for_player = GW::PlayerMgr::GetPlayerNumber() == GetNumericSegment(message, 0x10f);
+                const bool for_player = GW::PlayerMgr::GetPlayerNumber() == GetNumericSegment(message, 0x10f) || IsCurrentPlayerName(GetSegment(message, 0x10c));
                 const bool rare = IsRare(GetSecondSegment(message));
                 if (for_player && rare) {
                     return self_drop_rare;
@@ -604,6 +602,7 @@ namespace {
                     case 0x9CD:
                         return item_cannot_be_used; // You must wait before using another tonic.
                 }
+                break;
             case 0xAD2:
                 return item_already_identified; // That item is already identified
             case 0xAD7:
@@ -750,46 +749,6 @@ namespace {
         return ShouldIgnoreByContent(message);
     }
 
-    // Sets HookStatus to blocked if packet has content that hits the filter.
-    void BlockIfApplicable(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet)
-    {
-        if (status->blocked) {
-            return;
-        }
-        uint32_t channel;
-        const wchar_t* message;
-        switch (packet->header) {
-            case GAME_SMSG_CHAT_MESSAGE_GLOBAL: {
-                const auto p = static_cast<GW::Packet::StoC::MessageGlobal*>(packet);
-                channel = p->channel;
-                message = ToolboxUtils::GetMessageCore();
-            }
-            break;
-            case GAME_SMSG_CHAT_MESSAGE_SERVER: {
-                const auto p = static_cast<GW::Packet::StoC::MessageServer*>(packet);
-                channel = p->channel;
-                message = ToolboxUtils::GetMessageCore();
-            }
-            break;
-            case GAME_SMSG_CHAT_MESSAGE_LOCAL: {
-                const auto p = static_cast<GW::Packet::StoC::MessageLocal*>(packet);
-                channel = p->channel;
-                message = ToolboxUtils::GetMessageCore();
-            }
-            break;
-            default:
-                return;
-        }
-        if (ShouldIgnore(message, channel)) {
-            // Message channel is hidden, or message content is blocked
-            status->blocked = true;
-        }
-        else if (ShouldIgnoreBySender(ToolboxUtils::GetSenderFromPacket(packet))) {
-            // Sender is in player's ignore list
-            status->blocked = true;
-        }
-    }
-
     void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
         switch (message_id) {
         case GW::UI::UIMessage::kLogChatMessage: {
@@ -821,14 +780,6 @@ void ChatFilter::Initialize()
 {
     ToolboxModule::Initialize();
 
-    GW::StoC::RegisterPacketCallback(&BlockIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_SERVER, BlockIfApplicable);
-    GW::StoC::RegisterPacketCallback(&BlockIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_GLOBAL, BlockIfApplicable);
-    GW::StoC::RegisterPacketCallback(&BlockIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_LOCAL, BlockIfApplicable);
-
-    GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_SERVER, ClearMessageBufferIfBlocked);
-    GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_GLOBAL, ClearMessageBufferIfBlocked);
-    GW::StoC::RegisterPostPacketCallback(&ClearIfApplicable_Entry, GAME_SMSG_CHAT_MESSAGE_LOCAL, ClearMessageBufferIfBlocked);
-
     const GW::UI::UIMessage message_ids[] = {
         GW::UI::UIMessage::kWriteToChatLog,
         GW::UI::UIMessage::kLogChatMessage
@@ -840,9 +791,6 @@ void ChatFilter::Initialize()
 
 void ChatFilter::Terminate() {
     ToolboxModule::Terminate();
-    GW::StoC::RemoveCallback(GAME_SMSG_CHAT_MESSAGE_SERVER, &BlockIfApplicable_Entry);
-    GW::StoC::RemoveCallback(GAME_SMSG_CHAT_MESSAGE_GLOBAL, &BlockIfApplicable_Entry);
-    GW::StoC::RemoveCallback(GAME_SMSG_CHAT_MESSAGE_LOCAL, &BlockIfApplicable_Entry);
 
     GW::UI::RemoveUIMessageCallback(&BlockIfApplicable_Entry);
 }
