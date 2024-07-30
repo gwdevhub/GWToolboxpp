@@ -241,6 +241,9 @@ namespace ImGui {
         const ImVec2& textsize = CalcTextSize(label);
         const bool clicked = ButtonEx(button_id, size, flags);
 
+        ImGuiContext& g = *GImGui;
+        const auto clip_rect = g.LastItemData.Rect.ToVec4();
+
         const ImVec2& button_size = GetItemRectSize();
         ImVec2 img_size = icon_size;
         if (icon_size.x > 0.f) {
@@ -268,18 +271,19 @@ namespace ImGui {
         const float text_y = pos.y + (button_size.y - textsize.y) * style.ButtonTextAlign.y;
         const auto top_left = ImVec2(img_x, img_y);
         const auto bottom_right = ImVec2(img_x + img_size.x, img_y + img_size.y);
+        const auto draw_list = GetWindowDrawList();
         for (size_t i = 0; i < icons_len; i++) {
             if (!icons[i])
                 continue;
             if (uv0.x == uv1.x && uv0.y == uv1.y) {
-                GetWindowDrawList()->AddImage(icons[i], top_left, bottom_right, uv0, CalculateUvCrop(icons[i], img_size));
+                draw_list->AddImage(icons[i], top_left, bottom_right, uv0, CalculateUvCrop(icons[i], img_size));
             }
             else {
-                GetWindowDrawList()->AddImage(icons[i], top_left, bottom_right, uv0, uv1);
+                draw_list->AddImage(icons[i], top_left, bottom_right, uv0, uv1);
             }
         }
         if (label) {
-            GetWindowDrawList()->AddText(ImVec2(text_x, text_y), ImColor(GetStyle().Colors[ImGuiCol_Text]), label);
+            draw_list->AddText(NULL, 0.0f, ImVec2(text_x, text_y), ImColor(style.Colors[ImGuiCol_Text]), label, nullptr, 0.0f, &clip_rect);
         }
         return clicked;
     }
