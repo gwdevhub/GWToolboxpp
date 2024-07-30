@@ -491,30 +491,38 @@ namespace {
         return result;
     }
 
+    bool pending_refresh_quest_marker = true;
+    bool RefreshQuestMarker() {
+        ASSERT(GW::Render::GetIsInRenderLoop() || GW::GameThread::IsInGameThread());
+        const auto frame = GetCompassFrame();
+        if (!(frame && frame->IsCreated()))
+            return false;
+        if (const auto quest = GW::QuestMgr::GetActiveQuest()) {
+            struct QuestUIMsg {
+                GW::Constants::QuestID quest_id{};
+                GW::GamePos marker{};
+                uint32_t h0024{};
+                GW::Constants::MapID map_to{};
+                uint32_t log_state{};
+            } msg;
+            msg.quest_id = quest->quest_id;
+            msg.marker = quest->marker;
+            msg.h0024 = quest->h0024;
+            msg.map_to = quest->map_to;
+            msg.log_state = quest->log_state;
+
+            SendUIMessage(GW::UI::UIMessage::kClientActiveQuestChanged, &msg);
+        }
+        return true;
+    }
+
     void ToggleCompassQuestMarker(const bool hide_marker)
     {
         if (hide_marker == show_compass_quest_marker_patch.GetIsActive()) {
             return;
         }
         show_compass_quest_marker_patch.TogglePatch(hide_marker);
-        GW::GameThread::Enqueue([] {
-            if (const auto quest = GW::QuestMgr::GetActiveQuest()) {
-                struct QuestUIMsg {
-                    GW::Constants::QuestID quest_id{};
-                    GW::GamePos marker{};
-                    uint32_t h0024{};
-                    GW::Constants::MapID map_to{};
-                    uint32_t log_state{};
-                } msg;
-                msg.quest_id = quest->quest_id;
-                msg.marker = quest->marker;
-                msg.h0024 = quest->h0024;
-                msg.map_to = quest->map_to;
-                msg.log_state = quest->log_state;
-
-                SendUIMessage(GW::UI::UIMessage::kClientActiveQuestChanged, &msg);
-            }
-        });
+        pending_refresh_quest_marker = true;
     }
 
     void PreloadQuestMarkers()
@@ -625,6 +633,7 @@ void Minimap::SignalTerminate()
 
     GW::GameThread::Enqueue([]() {
         show_compass_quest_marker_patch.Reset();
+        RefreshQuestMarker();
         if (compass_frame && compass_frame->frame_callbacks[0] == OnCompassFrame_UICallback) {
             compass_frame->frame_callbacks[0] = OnCompassFrame_UICallback_Ret;
         }
@@ -635,7 +644,7 @@ void Minimap::SignalTerminate()
 
 bool Minimap::CanTerminate()
 {
-    return terminating == false;
+    return !terminating;
 }
 
 void Minimap::Initialize()
@@ -712,6 +721,7 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
             is_observing = GW::Map::GetIsObserving();
             // Cycle active quests to cache their markers
             PreloadQuestMarkers();
+            pending_refresh_quest_marker = true;
         }
         break;
         case GW::UI::UIMessage::kSkillActivated: {
@@ -1299,10 +1309,13 @@ bool Minimap::ShouldDrawAllQuests()
 
 void Minimap::Render(IDirect3DDevice9* device)
 {
-
+    if (pending_refresh_quest_marker && RefreshQuestMarker())
+        pending_refresh_quest_marker = false;
     if (!IsActive()) {
         return;
     }
+
+
     auto& instance = Instance();
     const GW::Agent* me = GW::Agents::GetObservingAgent();
     if (me == nullptr) {
