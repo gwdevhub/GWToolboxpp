@@ -229,8 +229,8 @@ namespace Pathing {
             GenerateVisibilityGraph();
             GenerateTeleportGraph();
             InsertTeleportsIntoVisibilityGraph();
-            volatile clock_t stop = clock();
 #ifdef _DEBUG
+            volatile clock_t stop = clock();
             Log::Flash("Processing %s in %d ms", m_terminateThread ? "terminated" : "done", stop - start);
 #endif
             m_processing = false;

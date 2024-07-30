@@ -357,7 +357,7 @@ bool GameWorldRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
         return false;
     }
     if (device->CreatePixelShader(reinterpret_cast<const DWORD*>(&g_ps20_main), &pshader) != D3D_OK) {
-        //Log::Error("GameWorldRenderer: unable to CreateVertexShader");
+        //Log::Error("GameWorldRenderer: unable to CreatePixelShader");
         return false;
     }
     need_configure_pipeline = false;

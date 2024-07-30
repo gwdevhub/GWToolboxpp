@@ -56,6 +56,7 @@ namespace {
         uint32_t current_waypoint = 0;
         GW::Constants::QuestID quest_id;
         bool calculating = false;
+        bool updatingQuestMarker = false;
 
         void ClearMinimapLines()
         {
@@ -70,6 +71,7 @@ namespace {
             ClearMinimapLines();
             if (!draw_quest_path_on_terrain && !draw_quest_path_on_minimap)
                 return;
+
             for (size_t i = current_waypoint > 0 ? current_waypoint - 1 : 0; i < waypoints.size() - 1; i++) {
                 const auto l = Minimap::Instance().custom_renderer.AddCustomLine(waypoints[i], waypoints[i + 1], std::format("{} - {}", (uint32_t)quest_id, i).c_str(), true);
                 l->draw_on_terrain = draw_quest_path_on_terrain;
@@ -107,6 +109,7 @@ namespace {
                 OnQuestPathRecalculated(waypoints, (void*)quest_id); // No need to recalculate
                 return;
             }
+
             calculated_from = from;
             calculated_to = original_quest_marker;
             if (original_quest_marker.x == INFINITY)
@@ -121,9 +124,23 @@ namespace {
                 ClearCalculatedPath(quest_id);
                 return true;
             }
+            if (!IsActive()) {
+                ClearMinimapLines();
+                return false;
+            }
             if (calculating) {
                 return false;
             }
+            if (!updatingQuestMarker && original_quest_marker.y == INFINITY) {
+                updatingQuestMarker = true;
+                GW::GameThread::Enqueue([this]{
+                    const auto quest = GW::QuestMgr::GetQuest(quest_id);
+                    ASSERT(quest);
+                    original_quest_marker = quest->marker;
+                    updatingQuestMarker = false;
+                });
+            }
+
             if (!calculated_at) {
                 Recalculate(from);
                 return false;
@@ -159,12 +176,12 @@ namespace {
         {
             if (waypoints.empty())
                 return;
+
             DrawMinimapLines();
             const auto& current_waypoint_pos = waypoints[current_waypoint];
             const auto waypoint_distance = GetSquareDistance(current_waypoint_pos, previous_closest_waypoint);
             constexpr float update_when_waypoint_changed_more_than = 300.f * 300.f;
-            if (IsActive() &&
-                waypoint_distance > update_when_waypoint_changed_more_than) {
+            if (waypoint_distance > update_when_waypoint_changed_more_than) {
                 previous_closest_waypoint = waypoints[current_waypoint];
             }
         }
@@ -269,21 +286,25 @@ namespace {
         cqp->UpdateUI();
     }
 
+    void TriggerRecalculatePath(GW::Constants::QuestID quest_id) {
+        const auto quest = GW::QuestMgr::GetQuest(quest_id);
+        if (!quest) {
+            return;
+        }
+        
+        auto cqp = GetCalculatedQuestPath(quest_id);
+
+        cqp->original_quest_marker = quest->marker;
+        const auto pos = GetPlayerPos();
+        if (!pos) return;
+        cqp->Recalculate(*pos);
+    }
+
     // Callback invoked by quest related ui messages. All messages sent should have the quest id as first wparam variable
     void OnGWQuestMarkerUpdated(GW::HookStatus*, GW::UI::UIMessage, void* packet, void*)
     {
         GW::Constants::QuestID affected_quest_id = *(GW::Constants::QuestID*)packet;
-
-        ClearCalculatedPaths();
-
-        const auto quest = GW::QuestMgr::GetQuest(affected_quest_id);
-        auto cqp = GetCalculatedQuestPath(affected_quest_id);
-
-        cqp->original_quest_marker = quest->marker;
-        const auto pos = GetPlayerPos();
-        if (!pos)
-            return;
-        cqp->Recalculate(*pos);
+        TriggerRecalculatePath(affected_quest_id);
     }
 } // namespace
 
@@ -352,6 +373,7 @@ void QuestModule::Initialize()
         (ui_message);
         GW::UI::RegisterUIMessageCallback(&ui_message_entry, ui_message, OnGWQuestMarkerUpdated, 0x4000);
     }
+
     GW::GameThread::Enqueue([] {
         PathfindingWindow::ReadyForPathing();
     });

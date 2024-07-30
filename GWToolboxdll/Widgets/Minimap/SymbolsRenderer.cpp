@@ -240,7 +240,7 @@ bool SymbolsRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
         return true;
     }
     if (device->CreatePixelShader(reinterpret_cast<const DWORD*>(&g_ps20_main), &pshader) != D3D_OK) {
-        Log::Error("SymbolsRenderer: unable to CreateVertexShader");
+        Log::Error("SymbolsRenderer: unable to CreatePixelShader");
         return false;
     }
     need_configure_pipeline = false;
