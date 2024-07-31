@@ -251,7 +251,7 @@ bool PathfindingWindow::CanTerminate()
     return true;
 }
 
-bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args)
+bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, std::stop_token stop_token, void* args)
 {
     if (pending_terminate)
         return false;
@@ -261,33 +261,51 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
 
     pending_worker_task = true;
 
-    Resources::EnqueueWorkerTask([from, to, callback, args] {
+    Resources::EnqueueWorkerTask([from_cpy, to_cpy, callback, args, stop_token] {
+        Pathing::MilePath* milepath = nullptr;
+        Pathing::AStar* tmpAstar = nullptr;
+        Pathing::Error res = Pathing::Error::OK;
+        std::vector<GW::GamePos>* waypoints = new std::vector<GW::GamePos>();
         if (pending_terminate) {
             return;
         }
 
-        const auto milepath = GetMilepathForCurrentMap();
-        if (milepath && milepath->ready()) {
-            auto astr = Pathing::AStar(milepath);
-            const auto res = astr.Search(from, to);
-            if (res != Pathing::Error::OK) {
-                Log::Error("Pathing failed; Pathing::Error code %d", res);
-            }
-            if (!astr.m_path.ready()) {
-                Log::Error("Pathing failed; astar.m_path not ready");
-            }
-            const auto& points = astr.m_path.points();
-            auto waypoints = new std::vector<GW::GamePos>();
-            waypoints->reserve(points.size());
-            for (const auto& p : points) {
-                waypoints->emplace_back(p);
-            }
+        if (stop_token.stop_requested()) {
+            goto trigger_callback;
+        }
 
-            Resources::EnqueueMainTask([waypoints, callback, args] {
-                callback(*waypoints, args);
+        milepath = GetMilepathForCurrentMap();
+        if (!(milepath && milepath->ready())) {
+            goto trigger_callback;
+        }
+        tmpAstar = new Pathing::AStar(milepath);
+        res = tmpAstar->Search(*from_cpy, *to_cpy);
+        if (res != Pathing::Error::OK) {
+            Log::Error("Pathing failed; Pathing::Error code %d", res);
+            goto trigger_callback;
+        }
+        if (!tmpAstar->m_path.ready()) {
+            Log::Error("Pathing failed; tmpAstar->m_path not ready");
+            goto trigger_callback;
+        }
+        for (auto& p : tmpAstar->m_path.points()) {
+            waypoints->push_back(p);
+        }
+
+    trigger_callback:
+        delete tmpAstar;
+        delete from_cpy;
+        delete to_cpy;
+        if (!stop_token.stop_requested()) {
+            Resources::EnqueueMainTask([waypoints, callback, args, stop_token] {
+                if (!stop_token.stop_requested()) {
+                    callback(*waypoints, args);
+                }
+
                 delete waypoints;
             });
         }
+
         pending_worker_task = false;
     });
     return true;

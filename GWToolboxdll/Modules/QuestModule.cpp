@@ -67,6 +67,10 @@ namespace {
 
         ~CalculatedQuestPath()
         {
+            if (stop_source.has_value()) {
+                stop_source.value().request_stop();
+            }
+
             ClearMinimapLines();
         }
 
@@ -83,8 +87,8 @@ namespace {
         GW::GamePos calculated_to{};
         clock_t calculated_at = 0;
         uint32_t current_waypoint = 0;
-        GW::Constants::QuestID quest_id{};
-        bool calculating = false;
+        GW::Constants::QuestID quest_id;
+        std::optional<std::stop_source> stop_source;
 
         void ClearMinimapLines()
         {
@@ -134,21 +138,29 @@ namespace {
 
         void Recalculate(const GW::GamePos& from)
         {
+            if (original_quest_marker.x == INFINITY) return;
+
+            if (stop_source.has_value()) {
+                stop_source.value().request_stop();
+            }
+
+            stop_source = std::stop_source();
             if (from == calculated_from && calculated_to == original_quest_marker) {
-                calculating = true;
                 OnQuestPathRecalculated(waypoints, (void*)quest_id); // No need to recalculate
                 return;
             }
             calculated_from = from;
             calculated_to = original_quest_marker;
-            if (original_quest_marker.x == INFINITY)
-                return;
-            calculating = PathfindingWindow::CalculatePath(calculated_from, calculated_to, OnQuestPathRecalculated, (void*)quest_id);
+
+            // If we fail to start calculating, reset the stop_token so we can try again
+            if (!PathfindingWindow::CalculatePath(calculated_from, calculated_to, OnQuestPathRecalculated, stop_source.value().get_token(), (void*)quest_id)) {
+                stop_source = std::nullopt;
+            }
         }
 
         bool Update(const GW::GamePos& from)
         {
-            if (calculating) {
+            if (stop_source.has_value()) {
                 return false;
             }
             const auto quest = GetQuest();
@@ -220,7 +232,10 @@ namespace {
             return;
         auto cqp = found->second;
         calculated_quest_paths.erase(found);
-        delete cqp;
+        if (!cqp->stop_source.has_value()) {
+            // NB: If its still calculating, it will delete itself later in OnQuestPathRecalculated
+            delete cqp;
+        }
     }
 
     CalculatedQuestPath* GetCalculatedQuestPath(GW::Constants::QuestID quest_id, bool create_if_not_found = true)
@@ -252,8 +267,17 @@ namespace {
     // Called by PathfindingWindow when a path has been calculated. Should be on the main loop.
     void OnQuestPathRecalculated(std::vector<GW::GamePos>& waypoints, void* args)
     {
-        const auto cqp = GetCalculatedQuestPath(*reinterpret_cast<GW::Constants::QuestID*>(&args), false);
-        if (!cqp)
+        const auto cqp = GetCalculatedQuestPath(*(GW::Constants::QuestID*)&args, false);
+        if (!cqp) 
+            return;
+        // TODO: @3vcloud idc to look at it atm but this crashes me when changing zones if a path had already been calculated
+        ASSERT(cqp->stop_source.has_value());
+
+        cqp->stop_source.value().request_stop();
+        cqp->stop_source = std::nullopt;
+        if (GetCalculatedQuestPath(cqp->quest_id) != cqp) {
+            // Calculated path is stale, delete and drop out
+            delete cqp;
             return;
         cqp->current_waypoint = 0;
         cqp->waypoints = std::move(waypoints); // Move
@@ -265,7 +289,6 @@ namespace {
 
         const auto waypoint_len = cqp->waypoints.size();
         if (!waypoint_len) {
-            cqp->calculating = false;
             cqp->calculated_at = TIMER_INIT();
             return;
         }
@@ -281,7 +304,6 @@ namespace {
         }
 
         cqp->calculated_at = TIMER_INIT();
-        cqp->calculating = false;
         cqp->UpdateUI();
     }
 
@@ -302,6 +324,11 @@ namespace {
             cqp->original_quest_marker = quest->marker;
             cqp->Recalculate(*pos);
         });
+    }
+
+
+    void OnMapChange(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
+        ClearCalculatedPaths();
     }
 
     // Callback invoked by quest related ui messages. All messages sent should have the quest id as first wparam variable
@@ -397,6 +424,8 @@ void QuestModule::Initialize()
         // Post callbacks, non blocking
         GW::UI::RegisterUIMessageCallback(&ui_message_entry, ui_message, OnUIMessage, 0x4000);
     }
+
+    GW::UI::RegisterUIMessageCallback(&ui_message_entry, GW::UI::UIMessage::kMapChange, OnMapChange, 0x4000);
     RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
 }
 
