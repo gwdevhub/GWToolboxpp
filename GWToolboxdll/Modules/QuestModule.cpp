@@ -45,6 +45,8 @@ namespace {
             return false;
         if (quest_id == active_quest->quest_id)
             return true;
+        if (!Minimap::ShouldDrawAllQuests())
+            return false;
         const auto quest = GW::QuestMgr::GetQuest(quest_id);
         auto lowest_quest_id_by_position = quest_id;
         for (const auto q : *questlog) {
@@ -206,8 +208,8 @@ namespace {
 
     void ClearCalculatedPaths()
     {
-        for (auto& it : calculated_quest_paths) {
-            delete it.second;
+        for (const auto cqp : calculated_quest_paths | std::views::values) {
+            delete cqp;
         }
         calculated_quest_paths.clear();
     }
@@ -230,7 +232,7 @@ namespace {
 
     CalculatedQuestPath* GetCalculatedQuestPath(GW::Constants::QuestID quest_id, bool create_if_not_found = true)
     {
-        if (!IsActiveQuestPath(quest_id) && !Minimap::ShouldDrawAllQuests()) {
+        if (!IsActiveQuestPath(quest_id)) {
             return nullptr;
         }
 

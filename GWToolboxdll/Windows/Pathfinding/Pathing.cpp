@@ -221,7 +221,7 @@ namespace Pathing {
         m_processing = true;
         static volatile clock_t start = clock();
         start = clock();
-        GW::GameThread::Enqueue([&]() {
+        GW::GameThread::Enqueue([&] {
             LoadMapSpecificData();
             GenerateAABBs();
             GenerateAABBGraph(); //not threaded because it relies on gw client Query altitude.
