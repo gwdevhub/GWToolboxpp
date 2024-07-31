@@ -313,7 +313,7 @@ namespace {
     void RefreshQuestPath(GW::Constants::QuestID quest_id)
     {
         GW::GameThread::Enqueue([quest_id] {
-            if (quest_id != GW::QuestMgr::GetActiveQuestId() && !Minimap::ShouldDrawAllQuests()) {
+            if (IsActiveQuestPath(quest_id)) {
                 ClearCalculatedPath(quest_id);
                 return;
             }
@@ -322,12 +322,12 @@ namespace {
             if (!pos)
                 return;
             auto cqp = GetCalculatedQuestPath(quest_id);
-            ASSERT(cqp);
+            if (!cqp)
+                return;
             cqp->original_quest_marker = quest->marker;
             cqp->Recalculate(*pos);
         });
     }
-
 
     // Callback invoked by quest related ui messages. All messages sent should have the quest id as first wparam variable
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* packet, void*)

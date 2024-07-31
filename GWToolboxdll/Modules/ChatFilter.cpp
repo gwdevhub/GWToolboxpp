@@ -58,6 +58,7 @@ namespace {
     bool inventory_is_full = false;
     bool item_cannot_be_used = false; // Includes other error messages, see ChatFilter.cpp.
     bool not_enough_energy = false;   // Includes other error messages, see ChatFilter.cpp.
+    bool attacking_or_targeting = false;   // Includes other error messages, see ChatFilter.cpp.
     bool item_already_identified = false;
 
     bool messagebycontent = false;
@@ -346,10 +347,12 @@ namespace {
                 return guild_announcement; // Guild Announcement by X: X
             case 0x4C32:
                 return item_cannot_be_used; // Item can only be used in towns or outposts.
+            case 0x76B:
+                return attacking_or_targeting; // I'm targeting x / I'm attacking x (sent by player)
             case 0x76D:
                 return false; // whisper received.
             case 0x76E:
-                return false; // whisper sended.
+                return false; // whisper sent.
             case 0x777:
                 return false; // I'm level x and x% of the way earning my next skill point  (author is not part of the message)
             case 0x778:
@@ -357,13 +360,13 @@ namespace {
             case 0x77B:
                 return false; // I'm talking to x           (author is not part of the message)
             case 0x77C:
-                return false; // I'm wielding x         (author is not part of the message)
+                return false; // I'm wielding x             (author is not part of the message)
             case 0x77D:
                 return false; // I'm wielding x and y       (author is not part of the message)
             case 0x781:
-                return false; // I'm targeting x            (author is not part of the message)
+                return attacking_or_targeting; // I'm targeting x            (author is not part of the message)
             case 0x783:
-                return false; // I'm targeting myself!  (author is not part of the message)
+                return attacking_or_targeting; // I'm targeting myself!      (author is not part of the message)
             case 0x791:
                 return false; // emote agree
             case 0x792:
@@ -780,7 +783,7 @@ void ChatFilter::Initialize()
 {
     ToolboxModule::Initialize();
 
-    const GW::UI::UIMessage message_ids[] = {
+    constexpr auto message_ids = {
         GW::UI::UIMessage::kWriteToChatLog,
         GW::UI::UIMessage::kLogChatMessage
     };
@@ -830,6 +833,7 @@ void ChatFilter::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(opening_chest_messages);
     LOAD_BOOL(inventory_is_full);
     LOAD_BOOL(not_enough_energy);
+    LOAD_BOOL(attacking_or_targeting);
     LOAD_BOOL(item_cannot_be_used);
     LOAD_BOOL(item_already_identified);
     LOAD_BOOL(faction_gain);
@@ -908,6 +912,7 @@ void ChatFilter::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(opening_chest_messages);
     SAVE_BOOL(inventory_is_full);
     SAVE_BOOL(not_enough_energy);
+    SAVE_BOOL(attacking_or_targeting);
     SAVE_BOOL(item_cannot_be_used);
     SAVE_BOOL(item_already_identified);
     SAVE_BOOL(faction_gain);
@@ -1036,6 +1041,7 @@ void ChatFilter::DrawSettingsInternal()
     ImGui::Checkbox("Item already identified", &item_already_identified);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Not enough Adrenaline/Energy", &not_enough_energy);
+    ImGui::Checkbox("I'm targeting X / I'm attacking X", &attacking_or_targeting);
 
     ImGui::Separator();
     ImGui::Text("Others");
