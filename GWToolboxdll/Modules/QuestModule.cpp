@@ -35,7 +35,7 @@ namespace {
 
     bool waiting_for_pathing = false;
 
-    void OnQuestPathRecalculated(std::vector<GW::GamePos> waypoints, void* args);
+    void OnQuestPathRecalculated(std::vector<GW::GamePos>& waypoints, void* args);
     void ClearCalculatedPath(GW::Constants::QuestID quest_id);
     bool IsActiveQuestPath(GW::Constants::QuestID quest_id)
     {
@@ -85,7 +85,6 @@ namespace {
         uint32_t current_waypoint = 0;
         GW::Constants::QuestID quest_id{};
         bool calculating = false;
-        bool pending_removal = false;
 
         void ClearMinimapLines()
         {
@@ -120,7 +119,7 @@ namespace {
         bool IsActive()
         {
             const auto a = GW::QuestMgr::GetActiveQuestId() == quest_id;
-            return a || GetQuest() && Minimap::ShouldDrawAllQuests();
+            return a || (GetQuest() && Minimap::ShouldDrawAllQuests());
         }
 
         const GW::GamePos* CurrentWaypoint()
@@ -221,23 +220,12 @@ namespace {
             return;
         auto cqp = found->second;
         calculated_quest_paths.erase(found);
-        if (!cqp->calculating) {
-            // NB: If its still calculating, it will delete itself later in OnQuestPathRecalculated
-            delete cqp;
-        }
-        else {
-            cqp->pending_removal = true;
-        }
+        delete cqp;
     }
 
     CalculatedQuestPath* GetCalculatedQuestPath(GW::Constants::QuestID quest_id, bool create_if_not_found = true)
     {
-        if (!IsActiveQuestPath(quest_id)) {
-            return nullptr;
-        }
-
         const auto found = calculated_quest_paths.find(quest_id);
-        if (found != calculated_quest_paths.end()) {}
         if (found != calculated_quest_paths.end()) return found->second;
         if (!create_if_not_found)
             return nullptr;
@@ -262,40 +250,31 @@ namespace {
     }
 
     // Called by PathfindingWindow when a path has been calculated. Should be on the main loop.
-    void OnQuestPathRecalculated(std::vector<GW::GamePos> waypoints, void* args)
+    void OnQuestPathRecalculated(std::vector<GW::GamePos>& waypoints, void* args)
     {
         const auto cqp = GetCalculatedQuestPath(*reinterpret_cast<GW::Constants::QuestID*>(&args), false);
-        if (!(cqp && cqp->calculating))
+        if (!cqp)
             return;
-        // TODO: @3vcloud idc to look at it atm but this crashes me when changing zones if a path had already been calculated
-        ASSERT(cqp->calculating);
-
-        if (GetCalculatedQuestPath(cqp->quest_id) != cqp) {
-            // Calculated path is stale, delete and drop out
-            delete cqp;
-            return;
-        }
-
         cqp->current_waypoint = 0;
-        cqp->waypoints = waypoints; // Copy
+        cqp->waypoints = std::move(waypoints); // Move
 
         if (!cqp->waypoints.empty() && GetSquareDistance(cqp->waypoints.back(), cqp->calculated_from) < GetSquareDistance(cqp->waypoints.front(), cqp->calculated_from)) {
             // Waypoint array is in descending distance, flip it
             std::ranges::reverse(cqp->waypoints);
         }
 
-        const auto waypoint_len = waypoints.size();
+        const auto waypoint_len = cqp->waypoints.size();
         if (!waypoint_len) {
             cqp->calculating = false;
             cqp->calculated_at = TIMER_INIT();
             return;
         }
 
-        const auto from_end_waypoint = GetSquareDistance(cqp->calculated_from, waypoints.back());
+        const auto from_end_waypoint = GetSquareDistance(cqp->calculated_from, cqp->waypoints.back());
         // Find next waypoint
         cqp->current_waypoint = waypoint_len - 1;
         for (size_t i = 1; i < waypoint_len; i++) {
-            if (GetSquareDistance(cqp->calculated_from, waypoints[i]) < from_end_waypoint) {
+            if (GetSquareDistance(cqp->calculated_from, cqp->waypoints[i]) < from_end_waypoint) {
                 cqp->current_waypoint = i;
                 break;
             }
@@ -304,16 +283,12 @@ namespace {
         cqp->calculated_at = TIMER_INIT();
         cqp->calculating = false;
         cqp->UpdateUI();
-        if (cqp->pending_removal) {
-            cqp->ClearMinimapLines();
-            delete cqp;
-        }
     }
 
     void RefreshQuestPath(GW::Constants::QuestID quest_id)
     {
         GW::GameThread::Enqueue([quest_id] {
-            if (IsActiveQuestPath(quest_id)) {
+            if (!IsActiveQuestPath(quest_id)) {
                 ClearCalculatedPath(quest_id);
                 return;
             }
@@ -437,14 +412,18 @@ void QuestModule::Update(float)
     const auto pos = GetPlayerPos();
     if (!pos)
         return;
-
+    size_t size = calculated_quest_paths.size();
+    check_paths:
     for (const auto& [quest_id, calculated_quest_path] : calculated_quest_paths) {
         if (!IsActiveQuestPath(quest_id)) {
             ClearCalculatedPath(quest_id);
-            break; // deleted, skip frame
+            ASSERT(size != calculated_quest_paths.size());
+            goto check_paths;
         }
-        if (calculated_quest_path->Update(*pos))
-            break; // deleted, skip frame
+        if (calculated_quest_path->Update(*pos)) {
+            ASSERT(size != calculated_quest_paths.size());
+            goto check_paths;
+        }
     }
 }
 

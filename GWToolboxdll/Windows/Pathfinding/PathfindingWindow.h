@@ -3,7 +3,7 @@
 #include <ToolboxWindow.h>
 #include <Windows/Pathfinding/Pathing.h>
 
-using CalculatedCallback = std::function<void (const std::vector<GW::GamePos>& waypoints, void* args)>;
+using CalculatedCallback = std::function<void (std::vector<GW::GamePos>& waypoints, void* args)>;
 
 class PathfindingWindow : public ToolboxWindow {
     PathfindingWindow() = default;
