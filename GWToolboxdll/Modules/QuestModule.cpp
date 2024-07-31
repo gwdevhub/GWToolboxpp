@@ -313,7 +313,7 @@ namespace {
     void RefreshQuestPath(GW::Constants::QuestID quest_id)
     {
         GW::GameThread::Enqueue([quest_id] {
-            if (IsActiveQuestPath(quest_id)) {
+            if (!IsActiveQuestPath(quest_id)) {
                 ClearCalculatedPath(quest_id);
                 return;
             }
