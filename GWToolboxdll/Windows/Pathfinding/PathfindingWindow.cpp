@@ -234,7 +234,7 @@ bool PathfindingWindow::CanTerminate()
     return true;
 }
 
-bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args)
+bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, std::stop_token stop_token, void* args)
 {
     if (pending_terminate)
         return false;
@@ -248,12 +248,16 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
 
     pending_worker_task = true;
 
-    Resources::EnqueueWorkerTask([from_cpy, to_cpy, callback, args ] {
+    Resources::EnqueueWorkerTask([from_cpy, to_cpy, callback, args, stop_token] {
         Pathing::MilePath* milepath = nullptr;
         Pathing::AStar* tmpAstar = nullptr;
         Pathing::Error res = Pathing::Error::OK;
         std::vector<GW::GamePos>* waypoints = new std::vector<GW::GamePos>();
         if (pending_terminate) {
+            goto trigger_callback;
+        }
+
+        if (stop_token.stop_requested()) {
             goto trigger_callback;
         }
 
@@ -279,11 +283,16 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
         delete tmpAstar;
         delete from_cpy;
         delete to_cpy;
-        Resources::EnqueueMainTask([waypoints, callback, args] {
-            callback(*waypoints,args);
-            delete waypoints;
+        if (!stop_token.stop_requested()) {
+            Resources::EnqueueMainTask([waypoints, callback, args, stop_token] {
+                if (!stop_token.stop_requested()) {
+                    callback(*waypoints, args);
+                }
 
+                delete waypoints;
             });
+        }
+
         pending_worker_task = false;
         });
     return true;
