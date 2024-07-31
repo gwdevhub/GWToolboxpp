@@ -276,10 +276,10 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
             if (!astr.m_path.ready()) {
                 Log::Error("Pathing failed; astar.m_path not ready");
             }
-            std::vector<GW::GamePos> waypoints{};
-            for (auto& p : astr.m_path.points()) {
-                waypoints.push_back(p);
-            }
+            std::vector<GW::GamePos> waypoints{astr.m_path.points().size()};
+            std::ranges::transform(astr.m_path.points(), std::back_inserter(waypoints), [](const Pathing::MilePath::point& p) {
+                return GW::GamePos{p};
+            });
 
             Resources::EnqueueMainTask([waypoints = std::move(waypoints), callback, args] {
                 callback(waypoints, args);
