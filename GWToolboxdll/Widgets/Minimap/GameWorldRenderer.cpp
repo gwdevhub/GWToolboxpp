@@ -34,7 +34,6 @@ namespace {
     constexpr GW::Vec2f lerp(const GW::Vec2f& a, const GW::Vec2f& b, const float t)
     {
         return a * t + b * (1.f - t);
-
     }
 
     constexpr auto ALTITUDE_UNKNOWN = std::numeric_limits<float>::max();
@@ -53,35 +52,37 @@ namespace {
         return points;
     }
 
-    GameWorldRenderer::GenericPolyRenderable* find_matching_poly(const GameWorldRenderer::GenericPolyRenderable& poly_to_find) {
+    GameWorldRenderer::GenericPolyRenderable* find_matching_poly(const GameWorldRenderer::GenericPolyRenderable& poly_to_find)
+    {
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
         const auto found = std::ranges::find_if(renderables, [&poly_to_find](const GameWorldRenderer::GenericPolyRenderable& check) {
             if (!(check.map_id == poly_to_find.map_id
-                && check.col == poly_to_find.col
-                && check.filled == poly_to_find.filled
-                && check.points.size() == poly_to_find.points.size()))
+                  && check.col == poly_to_find.col
+                  && check.filled == poly_to_find.filled
+                  && check.points.size() == poly_to_find.points.size()))
                 return false;
             for (size_t i = 0; i < check.points.size(); i++) {
                 if (check.points[i] != poly_to_find.points[i])
                     return false;
             }
             return true;
-            });
+        });
         if (found != renderables.end()) {
             return &(*found);
         }
         return nullptr;
     }
-    
+
     // update altitudes if not done already, then add to the device buffer
-    bool AddPolyToDevice(GameWorldRenderer::GenericPolyRenderable& poly, IDirect3DDevice9* device) {
+    bool AddPolyToDevice(GameWorldRenderer::GenericPolyRenderable& poly, IDirect3DDevice9* device)
+    {
         if (poly.vb)
             return true; // Already created the vertex buffer for this poly, which means altitudes have been done!
         auto& vertices = poly.vertices;
-        if(poly.vertices_processed == vertices.size())
+        if (poly.vertices_processed == vertices.size())
             return true;
         // altitudes (Z value) for each vertex can't be known until we are in the correct map,
-            // so these are dynamically computed, one-time.
+        // so these are dynamically computed, one-time.
         float altitude = ALTITUDE_UNKNOWN;
 
         // in order to properly query altitudes, we have to use the pathing map
@@ -103,7 +104,7 @@ namespace {
 
             // @Cleanup: zplane needs setting properly here!
             const auto z_plane = poly.vertices_zplanes[i];
-            GW::Map::QueryAltitude({ vertices[i].x, vertices[i].y, z_plane }, 5.f, altitude);
+            GW::Map::QueryAltitude({vertices[i].x, vertices[i].y, z_plane}, 5.f, altitude);
 
             if (altitude < vertices[i].z) {
                 // recall that the Up camera component is inverted
@@ -137,14 +138,10 @@ GameWorldRenderer::GenericPolyRenderable::GenericPolyRenderable(
     const std::vector<GW::GamePos>& points,
     const unsigned int col,
     const bool filled) noexcept
-    : map_id(map_id)
-    , col(col)
-    , points(points)
-    , filled(filled)
-{
- 
-
-}
+    : map_id(map_id),
+      col(col),
+      points(points),
+      filled(filled) {}
 
 GameWorldRenderer::GenericPolyRenderable::~GenericPolyRenderable() noexcept
 {
@@ -164,18 +161,15 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
                     for (auto j = 1u; j < lerp_steps_per_line; j++) {
                         const float div = static_cast<float>(j) / static_cast<float>(lerp_steps_per_line);
                         auto split = lerp(points[i], points[i - 1], div);
-                        lerp_points.push_back({ split.x,split.y,std::max(points[i].zplane, points[i-1].zplane)});
+                        lerp_points.push_back({split.x, split.y, std::max(points[i].zplane, points[i - 1].zplane)});
                     }
                 }
                 lerp_points.push_back(points[i]);
             }
-            std::vector<GW::Vec2f> poly;
-            std::ranges::transform(lerp_points, poly.begin(), [](const GW::GamePos& p) { return GW::Vec2f(p); });
-            const std::vector pl = { {poly} };
-            const std::vector<unsigned> indices = mapbox::earcut<unsigned>(pl);
+            const std::vector<unsigned> indices = mapbox::earcut<unsigned>(std::vector{{lerp_points}});
             for (size_t i = 0; i < indices.size(); i++) {
                 const auto& pt = lerp_points[indices[i]];
-                vertices.push_back(D3DVertex{ pt.x, pt.y, ALTITUDE_UNKNOWN, col });
+                vertices.push_back(D3DVertex{pt.x, pt.y, ALTITUDE_UNKNOWN, col});
                 vertices_zplanes.push_back(pt.zplane);
             }
         }
@@ -186,11 +180,11 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
                     for (auto j = 1u; j < lerp_steps_per_line; j++) {
                         const auto div = static_cast<float>(j) / static_cast<float>(lerp_steps_per_line);
                         const auto split = lerp(points[i], points[i - 1], div);
-                        vertices.push_back(D3DVertex{ split.x, split.y, ALTITUDE_UNKNOWN, col });
+                        vertices.push_back(D3DVertex{split.x, split.y, ALTITUDE_UNKNOWN, col});
                         vertices_zplanes.push_back(std::max(points[i].zplane, points[i - 1].zplane));
                     }
                 }
-                vertices.push_back(D3DVertex{ pt.x, pt.y, ALTITUDE_UNKNOWN, col });
+                vertices.push_back(D3DVertex{pt.x, pt.y, ALTITUDE_UNKNOWN, col});
                 vertices_zplanes.push_back(pt.zplane);
             }
         }
@@ -205,7 +199,7 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
     }
 
 
-    
+
     // copy the vertex buffer to the back buffer
     filled ? device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices.size() / 3) : device->DrawPrimitive(D3DPT_LINESTRIP, 0, vertices.size() - 1);
 }
@@ -446,7 +440,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines()
         }
         if (!(line->map == map_id || line->map == GW::Constants::MapID::None))
             continue;
-        std::vector points = { line->p1, line->p2 };
+        std::vector points = {line->p1, line->p2};
 
         auto poly_to_add = GenericPolyRenderable(line->map, points, line->color, false);
 
@@ -527,7 +521,6 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers()
         else {
             out.emplace_back(std::move(poly_to_add));
         }
-
     }
     return out;
 }
