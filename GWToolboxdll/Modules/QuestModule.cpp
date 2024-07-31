@@ -41,22 +41,27 @@ namespace {
 
     struct CalculatedQuestPath {
         CalculatedQuestPath(GW::Constants::QuestID _quest_id)
-            : quest_id(_quest_id) {};
+            : quest_id(_quest_id) {}
 
         ~CalculatedQuestPath()
         {
             ClearMinimapLines();
         }
 
-        std::vector<GW::GamePos> waypoints;
-        std::vector<CustomRenderer::CustomLine*> minimap_lines;
-        GW::GamePos previous_closest_waypoint;
-        GW::GamePos original_quest_marker;
-        GW::GamePos calculated_from;
-        GW::GamePos calculated_to;
+        CalculatedQuestPath(const CalculatedQuestPath&) = delete;
+        CalculatedQuestPath& operator=(const CalculatedQuestPath&) = delete;
+        CalculatedQuestPath(CalculatedQuestPath&&) = delete;
+        CalculatedQuestPath& operator=(CalculatedQuestPath&&) = delete;
+
+        std::vector<GW::GamePos> waypoints{};
+        std::vector<CustomRenderer::CustomLine*> minimap_lines{};
+        GW::GamePos previous_closest_waypoint{};
+        GW::GamePos original_quest_marker{};
+        GW::GamePos calculated_from{};
+        GW::GamePos calculated_to{};
         clock_t calculated_at = 0;
         uint32_t current_waypoint = 0;
-        GW::Constants::QuestID quest_id;
+        GW::Constants::QuestID quest_id{};
         bool calculating = false;
 
         void ClearMinimapLines()
@@ -73,7 +78,10 @@ namespace {
             if (!draw_quest_path_on_terrain && !draw_quest_path_on_minimap)
                 return;
             for (size_t i = current_waypoint > 0 ? current_waypoint - 1 : 0; i < waypoints.size() - 1; i++) {
-                const auto l = Minimap::Instance().custom_renderer.AddCustomLine(waypoints[i], waypoints[i + 1], std::format("{} - {}", (uint32_t)quest_id, i).c_str(), true);
+                const auto l = Minimap::Instance().custom_renderer.AddCustomLine(
+                    waypoints[i], waypoints[i + 1],
+                    std::format("{} - {}", (uint32_t)quest_id, i).c_str(), true
+                );
                 l->draw_on_terrain = draw_quest_path_on_terrain;
                 l->created_by_toolbox = true;
                 l->color = QuestModule::GetQuestColor(quest_id);
@@ -88,8 +96,8 @@ namespace {
 
         bool IsActive()
         {
-            const auto a = GW::QuestMgr::GetActiveQuest();
-            return a && a == GetQuest();
+            const auto a = GW::QuestMgr::GetActiveQuestId() == quest_id;
+            return a || GetQuest() && Minimap::ShouldDrawAllQuests();
         }
 
         const GW::GamePos* CurrentWaypoint()
@@ -198,7 +206,13 @@ namespace {
 
     CalculatedQuestPath* GetCalculatedQuestPath(GW::Constants::QuestID quest_id, bool create_if_not_found = true)
     {
+        if (quest_id != GW::QuestMgr::GetActiveQuestId() && !Minimap::ShouldDrawAllQuests()) {
+            return nullptr;
+        }
         const auto found = calculated_quest_paths.find(quest_id);
+        if (found != calculated_quest_paths.end()) {
+
+        }
         if (found != calculated_quest_paths.end()) return found->second;
         if (!create_if_not_found)
             return nullptr;
@@ -206,13 +220,6 @@ namespace {
         calculated_quest_paths[quest_id] = cqp;
         return cqp;
     }
-
-    constexpr auto ui_messages = {
-        GW::UI::UIMessage::kQuestDetailsChanged,
-        GW::UI::UIMessage::kQuestAdded,
-        GW::UI::UIMessage::kClientActiveQuestChanged,
-        GW::UI::UIMessage::kMapLoaded
-    };
 
     bool is_spoofing_quest_update = false;
 
@@ -232,7 +239,7 @@ namespace {
     // Called by PathfindingWindow when a path has been calculated. Should be on the main loop.
     void OnQuestPathRecalculated(std::vector<GW::GamePos> waypoints, void* args)
     {
-        const auto cqp = GetCalculatedQuestPath(*(GW::Constants::QuestID*)&args, false);
+        const auto cqp = GetCalculatedQuestPath(*reinterpret_cast<GW::Constants::QuestID*>(&args), false);
         if (!(cqp && cqp->calculating))
             return;
         // TODO: @3vcloud idc to look at it atm but this crashes me when changing zones if a path had already been calculated
@@ -276,7 +283,11 @@ namespace {
 
     void RefreshQuestPath(GW::Constants::QuestID quest_id)
     {
-        GW::GameThread::Enqueue([quest_id]() {
+        GW::GameThread::Enqueue([quest_id] {
+            if (quest_id != GW::QuestMgr::GetActiveQuestId() && !Minimap::ShouldDrawAllQuests()) {
+                ClearCalculatedPath(quest_id);
+                return;
+            }
             const auto quest = GW::QuestMgr::GetQuest(quest_id);
             const auto pos = quest ? GetPlayerPos() : nullptr;
             if (!pos)
@@ -296,9 +307,14 @@ namespace {
             case GW::UI::UIMessage::kQuestDetailsChanged:
             case GW::UI::UIMessage::kQuestAdded:
             case GW::UI::UIMessage::kClientActiveQuestChanged:
-                RefreshQuestPath(*(GW::Constants::QuestID*)packet);
+                RefreshQuestPath(*static_cast<GW::Constants::QuestID*>(packet));
                 break;
+            case GW::UI::UIMessage::kMapLoaded:
             default:
+                for (auto quest_path : calculated_quest_paths | std::views::values) {
+                    quest_path->ClearMinimapLines();
+                }
+                calculated_quest_paths.clear();
                 RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
                 break;
         }
@@ -367,7 +383,13 @@ void QuestModule::Initialize()
 {
     ToolboxModule::Initialize();
 
-    for (auto ui_message : ui_messages) {
+    constexpr auto ui_messages = {
+        GW::UI::UIMessage::kQuestDetailsChanged,
+        GW::UI::UIMessage::kQuestAdded,
+        GW::UI::UIMessage::kClientActiveQuestChanged,
+        GW::UI::UIMessage::kMapLoaded
+    };
+    for (const auto ui_message : ui_messages) {
         // Post callbacks, non blocking
         GW::UI::RegisterUIMessageCallback(&ui_message_entry, ui_message, OnUIMessage, 0x4000);
     }

@@ -175,13 +175,15 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
             return;
         }
 
-        const auto quest_im_color = QuestModule::GetQuestColor(quest.quest_id);
-        const auto quest_color = ImGui::ColorConvertU32ToFloat4(quest_im_color);
-        device->SetPixelShaderConstantF(0, &quest_color.x, 1);
         const GW::Vec2f qpos = { quest.marker.x, quest.marker.y };
         if (std::ranges::contains(markers_drawn, qpos))
             return; // Don't draw more than 1 marker for a position
         markers_drawn.push_back(qpos);
+
+        const auto quest_im_color = QuestModule::GetQuestColor(quest.quest_id);
+        const auto quest_color = ImGui::ColorConvertU32ToFloat4(quest_im_color);
+        device->SetPixelShaderConstantF(0, &quest_color.x, 1);
+
         const float compass_scale = Minimap::Instance().Scale();
         const float marker_scale = 1.0f / compass_scale;
         auto rotate = DirectX::XMMatrixRotationZ(-tau / 5);
