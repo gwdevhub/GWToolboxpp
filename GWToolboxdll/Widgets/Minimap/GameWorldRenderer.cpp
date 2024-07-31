@@ -397,6 +397,15 @@ void GameWorldRenderer::Terminate()
 {
     // free up any vertex buffers
     renderables.clear();
+    if (vshader)
+        vshader->Release();
+    vshader = nullptr;
+    if (pshader)
+        pshader->Release();
+    pshader = nullptr;
+    if (vertex_declaration)
+        vertex_declaration->Release();
+    vertex_declaration = nullptr;
 }
 
 void GameWorldRenderer::SyncAllMarkers()
