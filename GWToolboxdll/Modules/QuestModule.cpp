@@ -35,7 +35,7 @@ namespace {
 
     bool waiting_for_pathing = false;
 
-    void OnQuestPathRecalculated(const std::vector<GW::GamePos>& waypoints, void* args);
+    void OnQuestPathRecalculated(std::vector<GW::GamePos> waypoints, void* args);
 
     void ClearCalculatedPath(GW::Constants::QuestID quest_id);
 
@@ -230,10 +230,10 @@ namespace {
     }
 
     // Called by PathfindingWindow when a path has been calculated. Should be on the main loop.
-    void OnQuestPathRecalculated(const std::vector<GW::GamePos>& waypoints, void* args)
+    void OnQuestPathRecalculated(std::vector<GW::GamePos> waypoints, void* args)
     {
         const auto cqp = GetCalculatedQuestPath(*(GW::Constants::QuestID*)&args, false);
-        if (!(cqp && cqp->calculating)) 
+        if (!(cqp && cqp->calculating))
             return;
         // TODO: @3vcloud idc to look at it atm but this crashes me when changing zones if a path had already been calculated
         ASSERT(cqp->calculating);
@@ -273,7 +273,9 @@ namespace {
         cqp->calculating = false;
         cqp->UpdateUI();
     }
-    void RefreshQuestPath(GW::Constants::QuestID quest_id) {
+
+    void RefreshQuestPath(GW::Constants::QuestID quest_id)
+    {
         GW::GameThread::Enqueue([quest_id]() {
             const auto quest = GW::QuestMgr::GetQuest(quest_id);
             const auto pos = quest ? GetPlayerPos() : nullptr;
@@ -283,7 +285,7 @@ namespace {
             ASSERT(cqp);
             cqp->original_quest_marker = quest->marker;
             cqp->Recalculate(*pos);
-            });
+        });
     }
 
 
@@ -303,7 +305,8 @@ namespace {
     }
 } // namespace
 
-std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::QuestID quest_id) {
+std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::QuestID quest_id)
+{
     const auto quest = GW::QuestMgr::GetQuest(quest_id);
     std::vector<QuestObjective> out;
     if (!quest) return out;
@@ -322,14 +325,15 @@ std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::Que
 
         const auto is_complete = *current_objective_enc == 0x2af5;
 
-        out.push_back({quest_id,enc_str.c_str(),is_complete});
+        out.push_back({quest_id, enc_str.c_str(), is_complete});
 
         current_objective_enc = next_objective_enc ? next_objective_enc + 1 : nullptr;
     }
     return out;
 }
 
-ImU32 QuestModule::GetQuestColor(GW::Constants::QuestID quest_id) {
+ImU32 QuestModule::GetQuestColor(GW::Constants::QuestID quest_id)
+{
     const auto is_active_quest = GW::QuestMgr::GetActiveQuestId() == quest_id;
     if (is_active_quest) {
         return Minimap::Instance().symbols_renderer.color_quest;
@@ -365,7 +369,6 @@ void QuestModule::Initialize()
 
     for (auto ui_message : ui_messages) {
         // Post callbacks, non blocking
-        (ui_message);
         GW::UI::RegisterUIMessageCallback(&ui_message_entry, ui_message, OnUIMessage, 0x4000);
     }
     RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
@@ -380,7 +383,6 @@ void QuestModule::SignalTerminate()
 
 void QuestModule::Update(float)
 {
-
     const auto pos = GetPlayerPos();
     if (!pos)
         return;
@@ -398,12 +400,13 @@ void QuestModule::Terminate()
 }
 
 QuestObjective::QuestObjective(GW::Constants::QuestID quest_id, const wchar_t* _objective_enc, bool is_completed)
-    :quest_id(quest_id),is_completed(is_completed)
+    : quest_id(quest_id),
+      is_completed(is_completed)
 {
     objective_enc = new GuiUtils::EncString(_objective_enc);
 }
 
 QuestObjective::~QuestObjective()
 {
-    if(objective_enc) delete objective_enc;
+    if (objective_enc) delete objective_enc;
 }

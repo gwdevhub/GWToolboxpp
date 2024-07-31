@@ -25,7 +25,8 @@
 namespace {
     std::unordered_map<uint32_t, Pathing::MilePath*> mile_paths_by_map_file_id;
     // Returns milepath pointer for the current map, nullptr if we're not in a valid state
-    Pathing::MilePath* GetMilepathForCurrentMap() {
+    Pathing::MilePath* GetMilepathForCurrentMap()
+    {
         const auto pathing_map = GW::Map::GetPathingMap();
         const auto info = pathing_map ? GW::Map::GetCurrentMapInfo() : nullptr;
         if (!info)
@@ -51,31 +52,39 @@ namespace {
 
     std::vector<CustomRenderer::CustomLine*> minimap_lines;
 
-    void OnMapLoaded(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
+    void OnMapLoaded(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
+    {
         GetMilepathForCurrentMap();
     }
 
-    GW::GamePos* GetPlayerPos() {
+    GW::GamePos* GetPlayerPos()
+    {
         const auto p = GW::Agents::GetObservingAgent();
         return p ? &p->pos : nullptr;
     }
 
     // Returns false if our last AStar calculation matches what we're asking for.
-    bool NeedsRecalculating(GW::GamePos& from, GW::GamePos& to) {
+    bool NeedsRecalculating(const GW::GamePos& from, const GW::GamePos& to)
+    {
         if (!(astar && astar->m_path.ready() && astar->m_path.points().size()))
             return true;
         return from != astar->m_path.points().at(0)
-            || to != astar->m_path.points().at(astar->m_path.points().size() - 1);
+               || to != astar->m_path.points().at(astar->m_path.points().size() - 1);
     }
 
-    void RecalculatePath(GW::GamePos& from, GW::GamePos& to) {
+    void RecalculatePath(const GW::GamePos& from, const GW::GamePos& to)
+    {
         if (!NeedsRecalculating(from, to))
             return;
         delete astar;
         astar = nullptr;
-        Resources::EnqueueWorkerTask([from_cpy = from, to_cpy = to] {
-            auto tmpAstar = new Pathing::AStar(GetMilepathForCurrentMap());
-            const auto res = tmpAstar->Search(from_cpy, to_cpy);
+        Resources::EnqueueWorkerTask([from, to] {
+            const auto milepath = GetMilepathForCurrentMap();
+            if (!milepath) {
+                return;
+            }
+            auto tmpAstar = new Pathing::AStar(milepath);
+            const auto res = tmpAstar->Search(from, to);
             if (res != Pathing::Error::OK) {
                 Log::Error("Pathing failed; Pathing::Error code %d", res);
                 delete tmpAstar;
@@ -90,18 +99,22 @@ namespace {
             draw_pos = 0;
             last_draw = 0;
             astar = tmpAstar;
-            });
+        });
     }
-    void RecalculatePathTo(GW::GamePos& to) {
+
+    void RecalculatePathTo(const GW::GamePos& to)
+    {
         const auto from = GetPlayerPos();
         if (!from) {
             return; // Invalid player position
         }
         RecalculatePath(*from, to);
     }
+
     clock_t last_recalculate = 0;
 
-    void RecalculatePathToQuest() {
+    void RecalculatePathToQuest()
+    {
         last_recalculate = TIMER_INIT();
         const auto q = GW::QuestMgr::GetActiveQuest();
         if (!(q && q->marker.x)) return;
@@ -109,16 +122,19 @@ namespace {
         RecalculatePathTo(q->marker);
     }
 
-    void DrawPathOnMinimap() {
+    void DrawPathOnMinimap()
+    {
         if (!astar)
             return;
-
     }
 }
-bool PathfindingWindow::ReadyForPathing() {
+
+bool PathfindingWindow::ReadyForPathing()
+{
     const auto m = GetMilepathForCurrentMap();
     return m && m->ready();
 }
+
 void PathfindingWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
@@ -163,9 +179,9 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
     if (pos) {
         ImGui::TextUnformatted("Player: ");
         ImGui::SameLine();
-        ImGui::InputFloat("##player_x", &pos->x, 1.f, 100.f, "%.3f",ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputFloat("##player_x", &pos->x, 1.f, 100.f, "%.3f", ImGuiInputTextFlags_ReadOnly);
         ImGui::SameLine();
-        ImGui::InputFloat("##player_y", &pos->y, 1.f, 100.f, "%.3f",ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputFloat("##player_y", &pos->y, 1.f, 100.f, "%.3f", ImGuiInputTextFlags_ReadOnly);
     }
     ImGui::Separator();
     ImGui::TextUnformatted("From: ");
@@ -179,7 +195,7 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
     ImGui::SameLine();
     ImGui::InputFloat("##to_y", &to.y, 1.f, 100.f, "%.3f");
     if (ImGui::Button("Find Path")) {
-        RecalculatePath(from,to);
+        RecalculatePath(from, to);
         pending_redraw = true;
     }
     if (!astar)
@@ -189,7 +205,7 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
     ImGui::Text("n points: %d", points.size());
     for (auto& p : points) {
         const auto& gp = static_cast<GW::GamePos>(p);
-        ImGui::Text("%.2f, %.2f, %d", gp.x, gp.y,gp.zplane);
+        ImGui::Text("%.2f, %.2f, %d", gp.x, gp.y, gp.zplane);
     }
 
     if (pending_redraw) {
@@ -223,6 +239,7 @@ void PathfindingWindow::SignalTerminate()
         m.second->stopProcessing();
     }
 }
+
 bool PathfindingWindow::CanTerminate()
 {
     if (pending_worker_task)
@@ -241,53 +258,38 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
 
     if (!ReadyForPathing())
         return false;
-    GW::GamePos* from_cpy = new GW::GamePos();
-    memcpy(from_cpy, &from, sizeof(from));
-    GW::GamePos* to_cpy = new GW::GamePos();
-    memcpy(to_cpy, &to, sizeof(to));
 
     pending_worker_task = true;
 
-    Resources::EnqueueWorkerTask([from_cpy, to_cpy, callback, args ] {
-        Pathing::MilePath* milepath = nullptr;
-        Pathing::AStar* tmpAstar = nullptr;
-        Pathing::Error res = Pathing::Error::OK;
-        std::vector<GW::GamePos>* waypoints = new std::vector<GW::GamePos>();
+    Resources::EnqueueWorkerTask([from, to, callback, args] {
         if (pending_terminate) {
-            goto trigger_callback;
+            return;
         }
 
-        milepath = GetMilepathForCurrentMap();
-        if (!(milepath && milepath->ready())) {
-            goto trigger_callback;
-        }
-        tmpAstar = new Pathing::AStar(milepath);
-        res = tmpAstar->Search(*from_cpy, *to_cpy);
-        if (res != Pathing::Error::OK) {
-            Log::Error("Pathing failed; Pathing::Error code %d", res);
-            goto trigger_callback;
-        }
-        if (!tmpAstar->m_path.ready()) {
-            Log::Error("Pathing failed; tmpAstar->m_path not ready");
-            goto trigger_callback;
-        }
-        for (auto& p : tmpAstar->m_path.points()) {
-            waypoints->push_back(p);
-        }
+        const auto milepath = GetMilepathForCurrentMap();
+        if (milepath && milepath->ready()) {
+            auto astr = Pathing::AStar(milepath);
+            const auto res = astr.Search(from, to);
+            if (res != Pathing::Error::OK) {
+                Log::Error("Pathing failed; Pathing::Error code %d", res);
+            }
+            if (!astr.m_path.ready()) {
+                Log::Error("Pathing failed; astar.m_path not ready");
+            }
+            std::vector<GW::GamePos> waypoints{};
+            for (auto& p : astr.m_path.points()) {
+                waypoints.push_back(p);
+            }
 
-    trigger_callback:
-        delete tmpAstar;
-        delete from_cpy;
-        delete to_cpy;
-        Resources::EnqueueMainTask([waypoints, callback, args] {
-            callback(*waypoints,args);
-            delete waypoints;
-
+            Resources::EnqueueMainTask([waypoints = std::move(waypoints), callback, args] {
+                callback(waypoints, args);
             });
+        }
         pending_worker_task = false;
-        });
+    });
     return true;
 }
+
 void PathfindingWindow::Terminate()
 {
     ToolboxWindow::Terminate();
