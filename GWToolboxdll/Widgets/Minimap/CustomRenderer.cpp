@@ -259,7 +259,7 @@ void CustomRenderer::SetTooltipMapID(const GW::Constants::MapID& map_id)
     ImGui::SetTooltip(map_id_tooltip.tooltip_str);
 }
 
-bool CustomRenderer::RemoveCustomLine(CustomRenderer::CustomLine* line)
+bool CustomRenderer::RemoveCustomLine(CustomLine* line)
 {
     const auto found = std::ranges::find(lines, line);
     if (found != lines.end()) {

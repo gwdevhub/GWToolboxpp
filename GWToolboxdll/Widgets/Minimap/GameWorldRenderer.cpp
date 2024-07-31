@@ -198,8 +198,6 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
         return;
     }
 
-
-
     // copy the vertex buffer to the back buffer
     filled ? device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices.size() / 3) : device->DrawPrimitive(D3DPT_LINESTRIP, 0, vertices.size() - 1);
 }
@@ -411,14 +409,14 @@ void GameWorldRenderer::SyncAllMarkers()
     renderables.clear();
     renderables.reserve(lines.size() + polys.size() + markers.size());
 
-    for (auto& poly : lines) {
-        renderables.push_back(std::move(poly));
+    for (auto& line : lines) {
+        renderables.push_back(std::move(line));
     }
     for (auto& poly : polys) {
         renderables.push_back(std::move(poly));
     }
-    for (auto& poly : markers) {
-        renderables.push_back(std::move(poly));
+    for (auto& marker : markers) {
+        renderables.push_back(std::move(marker));
     }
     renderables_mutex.unlock();
     need_sync_markers = false;

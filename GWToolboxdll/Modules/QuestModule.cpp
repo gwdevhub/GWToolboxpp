@@ -36,8 +36,28 @@ namespace {
     bool waiting_for_pathing = false;
 
     void OnQuestPathRecalculated(std::vector<GW::GamePos> waypoints, void* args);
-
     void ClearCalculatedPath(GW::Constants::QuestID quest_id);
+    bool IsActiveQuestPath(GW::Constants::QuestID quest_id)
+    {
+        const auto questlog = GW::QuestMgr::GetQuestLog();
+        const auto active_quest = GW::QuestMgr::GetActiveQuest();
+        if (!questlog || !active_quest)
+            return false;
+        if (quest_id == active_quest->quest_id)
+            return true;
+        const auto quest = GW::QuestMgr::GetQuest(quest_id);
+        auto lowest_quest_id_by_position = quest_id;
+        for (const auto q : *questlog) {
+            if (quest->marker == q.marker) {
+                lowest_quest_id_by_position = std::min(lowest_quest_id_by_position, q.quest_id);
+                break;
+            }
+        }
+        if (quest_id != lowest_quest_id_by_position) {
+            return false;
+        }
+        return true;
+    }
 
     struct CalculatedQuestPath {
         CalculatedQuestPath(GW::Constants::QuestID _quest_id)
@@ -63,6 +83,7 @@ namespace {
         uint32_t current_waypoint = 0;
         GW::Constants::QuestID quest_id{};
         bool calculating = false;
+        bool pending_removal = false;
 
         void ClearMinimapLines()
         {
@@ -202,17 +223,19 @@ namespace {
             // NB: If its still calculating, it will delete itself later in OnQuestPathRecalculated
             delete cqp;
         }
+        else {
+            cqp->pending_removal = true;
+        }
     }
 
     CalculatedQuestPath* GetCalculatedQuestPath(GW::Constants::QuestID quest_id, bool create_if_not_found = true)
     {
-        if (quest_id != GW::QuestMgr::GetActiveQuestId() && !Minimap::ShouldDrawAllQuests()) {
+        if (!IsActiveQuestPath(quest_id) && !Minimap::ShouldDrawAllQuests()) {
             return nullptr;
         }
-        const auto found = calculated_quest_paths.find(quest_id);
-        if (found != calculated_quest_paths.end()) {
 
-        }
+        const auto found = calculated_quest_paths.find(quest_id);
+        if (found != calculated_quest_paths.end()) {}
         if (found != calculated_quest_paths.end()) return found->second;
         if (!create_if_not_found)
             return nullptr;
@@ -279,6 +302,10 @@ namespace {
         cqp->calculated_at = TIMER_INIT();
         cqp->calculating = false;
         cqp->UpdateUI();
+        if (cqp->pending_removal) {
+            cqp->ClearMinimapLines();
+            delete cqp;
+        }
     }
 
     void RefreshQuestPath(GW::Constants::QuestID quest_id)
@@ -312,7 +339,7 @@ namespace {
             case GW::UI::UIMessage::kMapLoaded:
             default:
                 for (auto quest_path : calculated_quest_paths | std::views::values) {
-                    quest_path->ClearMinimapLines();
+                    delete quest_path;
                 }
                 calculated_quest_paths.clear();
                 RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
@@ -409,10 +436,13 @@ void QuestModule::Update(float)
     if (!pos)
         return;
 
-
-    for (const auto& it : calculated_quest_paths) {
-        if (it.second->Update(*pos))
-            break; // Deleted, skip frame
+    for (const auto& [quest_id, calculated_quest_path] : calculated_quest_paths) {
+        if (!IsActiveQuestPath(quest_id)) {
+            ClearCalculatedPath(quest_id);
+            break; // deleted, skip frame
+        }
+        if (calculated_quest_path->Update(*pos))
+            break; // deleted, skip frame
     }
 }
 
