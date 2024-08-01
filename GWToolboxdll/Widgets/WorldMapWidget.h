@@ -15,7 +15,7 @@ public:
 
     void Initialize() override;
 
-    void Terminate() override;
+    void SignalTerminate() override;
 
     void RegisterSettingsContent() override { };
 
@@ -28,6 +28,7 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawSettingsInternal() override;
     bool WndProc(UINT, WPARAM, LPARAM) override;
+    bool CanTerminate() override;
 
     static void ShowAllOutposts(bool show);
 };

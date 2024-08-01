@@ -338,7 +338,9 @@ std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::Que
 
         auto enc_str = std::wstring(current_objective_enc, current_objective_len);
         auto content_start = enc_str.find(0x10a);
-        ASSERT(content_start != std::wstring::npos);
+        if (!content_start)
+            break;
+        //ASSERT(content_start != std::wstring::npos);
         content_start++;
 
         enc_str = enc_str.substr(content_start, enc_str.size() - content_start - 1);
