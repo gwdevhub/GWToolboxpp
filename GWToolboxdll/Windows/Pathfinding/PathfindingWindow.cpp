@@ -274,6 +274,10 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
             goto trigger_callback;
         }
 
+        if (stop_token.stop_requested()) {
+            goto trigger_callback;
+        }
+
         milepath = GetMilepathForCurrentMap();
         if (!(milepath && milepath->ready())) {
             goto trigger_callback;
