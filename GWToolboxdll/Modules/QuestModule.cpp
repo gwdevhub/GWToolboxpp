@@ -268,8 +268,7 @@ namespace {
     void OnQuestPathRecalculated(std::vector<GW::GamePos>& waypoints, void* args)
     {
         const auto cqp = GetCalculatedQuestPath(*(GW::Constants::QuestID*)&args, false);
-        if (!cqp) 
-            return;
+        if (!cqp) return;
         // TODO: @3vcloud idc to look at it atm but this crashes me when changing zones if a path had already been calculated
         ASSERT(cqp->stop_source.has_value());
 
@@ -279,6 +278,8 @@ namespace {
             // Calculated path is stale, delete and drop out
             delete cqp;
             return;
+        }
+
         cqp->current_waypoint = 0;
         cqp->waypoints = std::move(waypoints); // Move
 
