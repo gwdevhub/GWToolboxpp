@@ -289,8 +289,9 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
                 Resources::EnqueueMainTask([waypoints, callback, stop_token, args] {
                     if (!stop_token.stop_requested()) {
                         callback(*waypoints, args);
-                        delete waypoints;
                     }
+
+                    delete waypoints;
                 });
             }
         }
