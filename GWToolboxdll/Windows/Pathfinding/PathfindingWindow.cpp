@@ -277,13 +277,15 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
                 Log::Error("Pathing failed; astar.m_path not ready");
             }
             const auto& points = astr.m_path.points();
-            auto waypoints = std::make_shared<std::vector<GW::GamePos>>(points.size());
+            auto waypoints = new std::vector<GW::GamePos>();
+            waypoints->reserve(points.size());
             for (const auto& p : points) {
                 waypoints->emplace_back(p);
             }
 
             Resources::EnqueueMainTask([waypoints, callback, args] {
-                callback(std::move(*waypoints), args);
+                callback(*waypoints, args);
+                delete waypoints;
             });
         }
         pending_worker_task = false;

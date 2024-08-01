@@ -35,7 +35,7 @@ namespace {
 
     bool waiting_for_pathing = false;
 
-    void OnQuestPathRecalculated(std::vector<GW::GamePos> waypoints, void* args);
+    void OnQuestPathRecalculated(std::vector<GW::GamePos>& waypoints, void* args);
     void ClearCalculatedPath(GW::Constants::QuestID quest_id);
     bool IsActiveQuestPath(GW::Constants::QuestID quest_id)
     {
@@ -250,7 +250,7 @@ namespace {
     }
 
     // Called by PathfindingWindow when a path has been calculated. Should be on the main loop.
-    void OnQuestPathRecalculated(std::vector<GW::GamePos> waypoints, void* args)
+    void OnQuestPathRecalculated(std::vector<GW::GamePos>& waypoints, void* args)
     {
         const auto cqp = GetCalculatedQuestPath(*reinterpret_cast<GW::Constants::QuestID*>(&args), false);
         if (!cqp)
