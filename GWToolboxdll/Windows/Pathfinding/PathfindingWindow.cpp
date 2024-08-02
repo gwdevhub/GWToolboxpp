@@ -242,7 +242,7 @@ bool PathfindingWindow::CanTerminate()
     return true;
 }
 
-bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, std::stop_token stop_token, void* args)
+bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, const std::stop_token& stop_token, void* args)
 {
     if (pending_terminate) return false;
 
