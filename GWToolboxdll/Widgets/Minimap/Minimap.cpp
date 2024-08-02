@@ -511,7 +511,7 @@ namespace {
             msg.map_to = quest->map_to;
             msg.log_state = quest->log_state;
 
-            GW::GameThread::Enqueue([&msg] {
+            GW::GameThread::Enqueue([msg]() mutable {
                 SendUIMessage(GW::UI::UIMessage::kClientActiveQuestChanged, &msg);
             });
             
