@@ -269,7 +269,6 @@ namespace {
     {
         const auto cqp = GetCalculatedQuestPath(*(GW::Constants::QuestID*)&args, false);
         if (!cqp) return;
-        // TODO: @3vcloud idc to look at it atm but this crashes me when changing zones if a path had already been calculated
         ASSERT(cqp->stop_source.has_value());
 
         cqp->stop_source.value().request_stop();
