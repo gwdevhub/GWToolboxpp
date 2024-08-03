@@ -166,7 +166,6 @@ namespace {
         const auto quest = GW::QuestMgr::GetQuest(custom_quest_id);
         ASSERT(quest);
         custom_quest_marker = *quest;
-        Log::Flash("Quest %d", custom_quest_id);
     }
 
     bool WorldMapContextMenu(void*) {
@@ -263,11 +262,7 @@ namespace {
         // NB: World map is 96 gwinches per unit, this is hard coded in the GW source 
 
         world_map_pos->x = (game_map_pos.x / 96.f) + map_mid_world_point.x;
-        //         game_map_pos->y = ((world_map_pos.y - map_mid_world_point.y) * 96.f) * -1.f; // Inverted Y Axis
         world_map_pos->y = ((game_map_pos.y * -1.f) / 96.f) + map_mid_world_point.y; // Inverted Y Axis
-
-        GW::GamePos world_map_pos_check;
-        WorldMapToGamePos(*world_map_pos, &world_map_pos_check);
         return true;
     }
 
