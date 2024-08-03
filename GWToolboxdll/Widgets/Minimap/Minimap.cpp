@@ -1227,7 +1227,8 @@ void Minimap::Draw(IDirect3DDevice9*)
 
         if (has_flags) {
             if (hero_flag_window_attach) {
-                ImGui::SetNextWindowPos(ImVec2(static_cast<float>(location.x), static_cast<float>(location.y + size.y)));
+                const auto viewport = ImGui::GetMainViewport();
+                ImGui::SetNextWindowPos(ImVec2(static_cast<float>(location.x) + viewport->Pos.x, static_cast<float>(location.y + size.y) + viewport->Pos.y));
                 ImGui::SetNextWindowSize(ImVec2(static_cast<float>(size.x), 40.0f));
             }
             ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(hero_flag_controls_background).Value);
