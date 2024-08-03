@@ -347,7 +347,7 @@ namespace {
             return;
         }
         // Received log FIFO
-        auto inifile = new ToolboxIni(false, false, false);
+        auto inifile = ToolboxIni(false, false, false);
         std::string msg_buf;
         char addr_buf[8];
         const TBChatMessage* recv = recv_first;
@@ -357,11 +357,11 @@ namespace {
             if (TextUtils::TimeToString(recv->timestamp, datetime_str)) {
                 snprintf(addr_buf, 8, "%03x", i++);
                 ASSERT(GuiUtils::ArrayToIni(recv->msg.data(), &msg_buf));
-                inifile->SetValue(addr_buf, "message", msg_buf.c_str());
-                inifile->SetLongValue(addr_buf, "dwLowDateTime", recv->timestamp.dwLowDateTime);
-                inifile->SetLongValue(addr_buf, "dwHighDateTime", recv->timestamp.dwHighDateTime);
-                inifile->SetLongValue(addr_buf, "channel", recv->channel);
-                inifile->SetValue(addr_buf, "datetime", datetime_str.c_str());
+                inifile.SetValue(addr_buf, "message", msg_buf.c_str());
+                inifile.SetLongValue(addr_buf, "dwLowDateTime", recv->timestamp.dwLowDateTime);
+                inifile.SetLongValue(addr_buf, "dwHighDateTime", recv->timestamp.dwHighDateTime);
+                inifile.SetLongValue(addr_buf, "channel", recv->channel);
+                inifile.SetValue(addr_buf, "datetime", datetime_str.c_str());
             }
             else {
                 Log::Log("Failed to turn timestamp for message %d into string", i);
@@ -373,28 +373,27 @@ namespace {
             recv = recv->next;
         }
         auto res = SI_FILE;
+        const auto file = LogPath(L"recv");
         for (i = 0; i < 10 && res != SI_OK; i++) {
-            res = inifile->SaveFile(LogPath(L"recv").c_str());
+            res = inifile.SaveFile(file.c_str());
         }
         ASSERT(res == SI_OK);
-        delete inifile;
 
         // Sent log FIFO
-        inifile = new ToolboxIni(false, false, false);
+        auto ini2 = ToolboxIni(false, false, false);
         const TBSentMessage* sent = sent_first;
         i = 0;
         while (sent) {
             snprintf(addr_buf, 8, "%03x", i++);
-            ASSERT(GuiUtils::ArrayToIni(sent->msg.c_str(), &msg_buf));
-            inifile->SetValue(addr_buf, "message", msg_buf.c_str());
-            inifile->SetLongValue(addr_buf, "addr", sent->gw_message_address);
+            ASSERT(GuiUtils::ArrayToIni(sent->msg, &msg_buf));
+            ini2.SetValue(addr_buf, "message", msg_buf.c_str());
+            ini2.SetLongValue(addr_buf, "addr", sent->gw_message_address);
             if (sent == sent_last) {
                 break;
             }
             sent = sent->next;
         }
-        ASSERT(inifile->SaveFile(LogPath(L"sent").c_str()) == SI_OK);
-        delete inifile;
+        ASSERT(ini2.SaveFile(LogPath(L"sent").c_str()) == SI_OK);
     }
     void Reset()
     {
