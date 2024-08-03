@@ -242,22 +242,20 @@ bool PathfindingWindow::CanTerminate()
     return true;
 }
 
-bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, std::stop_token stop_token, void* args)
+// - we want the stop token to be copied, in order to not worry about lifetimes of the stop source
+bool PathfindingWindow::CalculatePath(
+    const GW::GamePos& from, const GW::GamePos& to,
+    CalculatedCallback callback, std::stop_token stop_token, // NOLINT(performance-unnecessary-value-param)
+    void* args)
 {
-    if (pending_terminate) return false;
+    if (pending_terminate || stop_token.stop_requested()) return false;
 
     if (!ReadyForPathing()) return false;
 
     pending_worker_task = true;
 
     Resources::EnqueueWorkerTask([from, to, callback, stop_token, args] {
-        if (pending_terminate) {
-            return;
-        }
-
-        if (stop_token.stop_requested()) {
-            return;
-        }
+        if (pending_terminate || stop_token.stop_requested()) return;
 
         const auto milepath = GetMilepathForCurrentMap();
         if (milepath && milepath->ready()) {
@@ -274,6 +272,7 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
             }
             if (!astr.m_path.ready()) {
                 Log::Error("Pathing failed; astar.m_path not ready");
+                return;
             }
             const auto& points = astr.m_path.points();
             auto waypoints = new std::vector<GW::GamePos>();
@@ -282,18 +281,13 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
                 waypoints->emplace_back(p);
             }
 
-            if (stop_token.stop_requested()) {
-                delete waypoints;
-            }
-            else {
-                Resources::EnqueueMainTask([waypoints, callback, stop_token, args] {
-                    if (!stop_token.stop_requested()) {
-                        callback(*waypoints, args);
-                    }
+            Resources::EnqueueMainTask([waypoints, callback, stop_token, args] {
+                if (!stop_token.stop_requested()) {
+                    callback(*waypoints, args);
+                }
 
-                    delete waypoints;
-                });
-            }
+                delete waypoints;
+            });
         }
         pending_worker_task = false;
     });
