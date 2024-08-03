@@ -548,18 +548,21 @@ namespace {
 
     void prompt_split_stack(const GW::Item* item)
     {
-        PreMoveItemStruct details;
-        details.item_id = item->item_id;
-        // Doesn't matter where the prompt is asking to move to, as long as its not the same slot; we're going to override later.
-        details.bag_id = std::to_underlying(GW::Constants::Bag::None); // empty_bag_id;
-        details.slot = 0;                                                     // empty_slot;
-        if (item->bag->index == details.bag_id && item->slot == details.slot) {
-            details.slot++;
-        }
-        details.prompt_split_stack = true;
-        SendUIMessage(GW::UI::UIMessage::kMoveItem, &details);
-        //OnPreMoveItem(7, &details);
-        InventoryManager::Instance().stack_prompt_item_id = item->item_id;
+        GW::GameThread::Enqueue([item] {
+            PreMoveItemStruct details{
+                .item_id = item->item_id,
+                .bag_id = std::to_underlying(GW::Constants::Bag::None),
+                .slot = 0,
+                .prompt_split_stack = true
+            };
+            // Doesn't matter where the prompt is asking to move to, as long as its not the same slot; we're going to override later.
+            if (item->bag->index == details.bag_id && item->slot == details.slot) {
+                details.slot++;
+            }
+            SendUIMessage(GW::UI::UIMessage::kMoveItem, &details);
+            //OnPreMoveItem(7, &details);
+            InventoryManager::Instance().stack_prompt_item_id = item->item_id;
+        });
     }
 
     uint32_t right_clicked_item = 0;

@@ -223,7 +223,7 @@ namespace GuiUtils {
         auto cmd = new char[buf_len];
         const std::string encoded = UrlEncode(WStringToString(RemoveDiacritics(term)));
         ASSERT(snprintf(cmd, buf_len, "%s?search=%s", GetWikiPrefix(), encoded.c_str()) != -1);
-        GW::GameThread::Enqueue([cmd]() {
+        GW::GameThread::Enqueue([cmd] {
             SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, cmd);
             delete[] cmd;
         });
