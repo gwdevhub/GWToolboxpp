@@ -439,7 +439,8 @@ uint32_t DialogModule::AcceptFirstAvailableBounty() {
     }
     // NB: For all other bounties, we don't need to check because the dialog will no longer be available.
     for (auto dialog : dialog_buttons) {
-        if (dialog->skill_id != 0xffffffff) {
+        if (dialog->button_icon == 0x1b 
+            && dialog->skill_id != 0xffffffff) {
             SendDialog(dialog->dialog_id);
             return 1;
         }
