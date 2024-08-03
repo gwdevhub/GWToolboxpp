@@ -134,7 +134,8 @@ namespace {
 
         void Recalculate(const GW::GamePos& from)
         {
-            if (from == calculated_from && calculated_to == original_quest_marker) {
+            if (calculated_at &&
+                from == calculated_from && calculated_to == original_quest_marker) {
                 calculating = true;
                 OnQuestPathRecalculated(waypoints, (void*)quest_id); // No need to recalculate
                 return;
@@ -144,6 +145,9 @@ namespace {
             if (original_quest_marker.x == INFINITY)
                 return;
             calculating = PathfindingWindow::CalculatePath(calculated_from, calculated_to, OnQuestPathRecalculated, (void*)quest_id);
+            if (!calculating) {
+                calculated_at = 0;
+            }
         }
 
         bool Update(const GW::GamePos& from)
