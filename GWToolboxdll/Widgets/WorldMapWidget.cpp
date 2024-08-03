@@ -24,12 +24,14 @@
 #include <Modules/GwDatTextureModule.h>
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/Constants/Maps.h>
+#include <Widgets/Minimap/Minimap.h>
 
 namespace {
     ImRect show_all_rect;
     ImRect hard_mode_rect;
     ImRect place_marker_rect;
     ImRect remove_marker_rect;
+    ImRect show_lines_on_world_map_rect;
 
     bool showing_all_outposts = false;
 
@@ -48,6 +50,8 @@ namespace {
     GW::Constants::QuestID custom_quest_id = (GW::Constants::QuestID)0x0000fdd;
     GW::Quest custom_quest_marker;
     GW::Vec2f custom_quest_marker_world_pos;
+
+    bool show_lines_on_world_map = true;
 
     bool WorldMapToGamePos(GW::Vec2f& world_map_pos, GW::GamePos* game_map_pos);
 
@@ -237,6 +241,36 @@ namespace {
             });
     }
 
+    bool GamePosToWorldMap(GW::GamePos& game_map_pos, GW::Vec2f* world_map_pos) {
+        const auto area_info = GW::Map::GetMapInfo();
+        if (!area_info)
+            return false;
+        const auto world_map_rect = GetMapWorldMapBounds(area_info);
+        const auto current_map_context = GW::GetMapContext();
+        if (!current_map_context)
+            return false;
+
+        ImRect game_map_rect = ImRect({
+            current_map_context->map_boundaries[1],current_map_context->map_boundaries[2],
+            current_map_context->map_boundaries[3],current_map_context->map_boundaries[4],
+            });
+
+        GW::Vec2f map_mid_world_point = {
+            world_map_rect.Min.x + (abs(game_map_rect.Min.x) / 96.f),
+            world_map_rect.Min.y + (abs(game_map_rect.Max.y) / 96.f),
+        };
+
+        // NB: World map is 96 gwinches per unit, this is hard coded in the GW source 
+
+        world_map_pos->x = (game_map_pos.x / 96.f) + map_mid_world_point.x;
+        //         game_map_pos->y = ((world_map_pos.y - map_mid_world_point.y) * 96.f) * -1.f; // Inverted Y Axis
+        world_map_pos->y = ((game_map_pos.y * -1.f) / 96.f) + map_mid_world_point.y; // Inverted Y Axis
+
+        GW::GamePos world_map_pos_check;
+        WorldMapToGamePos(*world_map_pos, &world_map_pos_check);
+        return true;
+    }
+
     bool WorldMapToGamePos(GW::Vec2f& world_map_pos, GW::GamePos* game_map_pos) {
         const auto area_info = GW::Map::GetMapInfo();
         if (!area_info)
@@ -317,12 +351,24 @@ void WorldMapWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
     LOAD_BOOL(showing_all_outposts);
+    LOAD_BOOL(show_lines_on_world_map);
+    float custom_quest_marker_world_pos_x = .0f;
+    float custom_quest_marker_world_pos_y = .0f;
+    LOAD_FLOAT(custom_quest_marker_world_pos_x);
+    LOAD_FLOAT(custom_quest_marker_world_pos_y);
+    custom_quest_marker_world_pos = { custom_quest_marker_world_pos_x, custom_quest_marker_world_pos_y };
+    SetCustomQuestMarker(custom_quest_marker_world_pos);
 }
 
 void WorldMapWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
     SAVE_BOOL(showing_all_outposts);
+    SAVE_BOOL(show_lines_on_world_map);
+    float custom_quest_marker_world_pos_x = custom_quest_marker_world_pos.x;
+    float custom_quest_marker_world_pos_y = custom_quest_marker_world_pos.y;
+    SAVE_FLOAT(custom_quest_marker_world_pos_x);
+    SAVE_FLOAT(custom_quest_marker_world_pos_y);
 }
 
 void WorldMapWidget::Draw(IDirect3DDevice9*)
@@ -345,22 +391,34 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         ImGui::Checkbox("Show all areas", &showing_all_outposts);
         show_all_rect = c->LastItemData.Rect;
         show_all_rect.Translate(viewport_offset);
-        bool is_hard_mode = GW::PartyMgr::GetIsPartyInHardMode();
-        ImGui::Checkbox("Hard mode", &is_hard_mode);
-        hard_mode_rect = c->LastItemData.Rect;
-        hard_mode_rect.Translate(viewport_offset);
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+            bool is_hard_mode = GW::PartyMgr::GetIsPartyInHardMode();
+            ImGui::Checkbox("Hard mode", &is_hard_mode);
+            hard_mode_rect = c->LastItemData.Rect;
+            hard_mode_rect.Translate(viewport_offset);
+        }
+        else {
+            memset(&hard_mode_rect, 0, sizeof(hard_mode_rect));
+        }
+
+        ImGui::Checkbox("Show toolbox minimap lines", &show_lines_on_world_map);
+        show_lines_on_world_map_rect = c->LastItemData.Rect;
+        show_lines_on_world_map_rect.Translate(viewport_offset);
     }
     ImGui::End();
     ImGui::PopStyleColor();
 
+    const auto world_map_context = GW::Map::GetWorldMapContext();
+    if (!(world_map_context && world_map_context->zoom == 1.0f))
+        return;
+    const auto viewport = ImGui::GetMainViewport();
+    const auto& viewport_offset = viewport->Pos;
+
+    const auto draw_list = ImGui::GetBackgroundDrawList(viewport);
+
     // Draw custom quest marker on world map
     if (custom_quest_marker_world_pos.x || custom_quest_marker_world_pos.y) {
-        const auto world_map_context = GW::Map::GetWorldMapContext();
-        if (!(world_map_context && world_map_context->zoom == 1.0f))
-            return;
 
-        const auto viewport = ImGui::GetMainViewport();
-        const auto& viewport_offset = viewport->Pos;
         static const ImVec2 UV0 = ImVec2(0.0F, 0.0f);
         static const ImVec2 ICON_SIZE = ImVec2(24.0f, 24.0f);
 
@@ -376,9 +434,30 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         const auto texture = GwDatTextureModule::LoadTextureFromFileId(0x1b4d5);
 
         auto uv1 = ImGui::CalculateUvCrop(*texture, ICON_SIZE);
-        ImGui::GetBackgroundDrawList(viewport)->AddImage(*texture, quest_marker_image_rect.Min, quest_marker_image_rect.Max, UV0, uv1);
+        draw_list->AddImage(*texture, quest_marker_image_rect.Min, quest_marker_image_rect.Max, UV0, uv1);
         if (quest_marker_image_rect.Contains(ImGui::GetMousePos())) {
             ImGui::SetTooltip("Custom marker placed @ %.2f, %.2f", custom_quest_marker_world_pos.x, custom_quest_marker_world_pos.y);
+        }
+    }
+    if (show_lines_on_world_map) {
+        const auto lines = Minimap::Instance().custom_renderer.GetLines();
+        const auto map_id = GW::Map::GetMapID();
+        GW::Vec2f line_start;
+        GW::Vec2f line_end;
+        for (auto& line : lines) {
+            if (line->map != map_id)
+                continue;
+            if (!GamePosToWorldMap(line->p1, &line_start))
+                continue;
+            if (!GamePosToWorldMap(line->p2, &line_end))
+                continue;
+
+            line_start.x = (line_start.x - world_map_context->top_left.x) + viewport_offset.x;
+            line_start.y = (line_start.y - world_map_context->top_left.y) + viewport_offset.y;
+            line_end.x = (line_end.x - world_map_context->top_left.x) + viewport_offset.x;
+            line_end.y = (line_end.y - world_map_context->top_left.y) + viewport_offset.y;
+
+            draw_list->AddLine(line_start, line_end, line->color);
         }
     }
     drawn = true;
@@ -421,17 +500,21 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
             if (check_rect(place_marker_rect)) {
                 return true;
             }
+            if (check_rect(show_lines_on_world_map_rect)) {
+                show_lines_on_world_map = !show_lines_on_world_map;
+                return true;
+            }
             if (check_rect(hard_mode_rect)) {
-                GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
+                GW::GameThread::Enqueue([]() {
+                    GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
+                    });
                 return true;
             }
             if (check_rect(show_all_rect)) {
                 showing_all_outposts = !showing_all_outposts;
-                ShowAllOutposts(showing_all_outposts);
-                return true;
-            }
-            if (check_rect(hard_mode_rect)) {
-                GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
+                GW::GameThread::Enqueue([]() {
+                    ShowAllOutposts(showing_all_outposts);
+                    });
                 return true;
             }
             break;
