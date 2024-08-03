@@ -14,8 +14,7 @@ namespace Pathing {
         FailedToFinializePath,
         InvalidMapContext,
         BuildPathLengthExceeded,
-        FailedToGetPathingMapBlock,
-        Cancelled
+        FailedToGetPathingMapBlock
     };
 
 
@@ -235,7 +234,7 @@ namespace Pathing {
 
         inline float TeleporterHeuristic(const MilePath::point& start, const MilePath::point& goal) const;
 
-        Error Search(const GW::GamePos& start_pos, const GW::GamePos& goal_pos, std::optional<std::stop_token> stop_token = std::nullopt);
+        Error Search(const GW::GamePos& start_pos, const GW::GamePos& goal_pos);
 
         GW::GamePos GetClosestPoint(const GW::Vec2f& pos);
         static GW::GamePos GetClosestPoint(Path& path, const GW::Vec2f& pos);

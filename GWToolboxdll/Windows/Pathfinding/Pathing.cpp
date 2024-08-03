@@ -981,7 +981,7 @@ namespace Pathing {
         return cost;
     }
 
-    Error AStar::Search(const GamePos& _start_pos, const GamePos& _goal_pos, std::optional<std::stop_token> stop_token)
+    Error AStar::Search(const GamePos& _start_pos, const GamePos& _goal_pos)
     {
         std::lock_guard lock(pathing_mutex);
 
@@ -990,10 +990,6 @@ namespace Pathing {
 
         if (res != Error::OK)
             return res;
-
-        if (stop_token.has_value() && stop_token.value().stop_requested())
-            return Error::Cancelled;
-
         MilePath::point::Id point_id = m_mp->m_points.size();
         MilePath::point start;
         bool new_start = false;
@@ -1072,9 +1068,6 @@ namespace Pathing {
             if (current == goal.id)
                 break;
 
-            if (stop_token.has_value() && stop_token.value().stop_requested())
-                break;
-
             for (const auto& vis : m_mp->m_visGraph[current]) {
                 if (std::ranges::any_of(vis.blocking_ids, [&block](auto& id) { return block[id]; }))
                     continue;
@@ -1094,9 +1087,6 @@ namespace Pathing {
                 }
             }
         }
-
-        if (stop_token.has_value() && stop_token.value().stop_requested())
-            return Error::Cancelled;
 
         if (current == goal.id) {
             BuildPath(start, goal, came_from);

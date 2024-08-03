@@ -28,7 +28,7 @@ public:
     // False if still calculating current map
     static bool ReadyForPathing();
     // False if still calculating current map
-    static bool CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, const std::stop_token& stop_token, void* args = nullptr);
+    static bool CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args = nullptr);
 
 private:
     GW::GamePos m_saved_pos;
