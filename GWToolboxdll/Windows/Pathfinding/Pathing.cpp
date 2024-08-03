@@ -906,7 +906,7 @@ namespace Pathing {
                 continue;
 
             float distance = sqrtf(sqdistance);
-            vis_graph[point.id].emplace_back(it.id, distance, std::move(blocking_ids));
+            vis_graph[point.id].emplace_back(it.id, distance, blocking_ids);
             vis_graph[it.id].emplace_back(point.id, distance, std::move(blocking_ids));
         }
     }
