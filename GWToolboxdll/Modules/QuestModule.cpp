@@ -6,16 +6,21 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+
+#include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Utilities/Hooker.h>
 
 #include "QuestModule.h"
 
+#include <Windows/TravelWindow.h>
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Widgets/Minimap/CustomRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
-#include <GWCA/Managers/GameThreadMgr.h>
+#include <Modules/Resources.h>
 
 #include <Utils/GuiUtils.h>
-#include "Resources.h"
 
 namespace {
     constexpr auto quest_colors = std::to_array<Color>({
@@ -34,6 +39,33 @@ namespace {
     GW::HookEntry ui_message_entry;
 
     bool waiting_for_pathing = false;
+
+    clock_t last_quest_clicked = 0;
+
+    GW::UI::UIInteractionCallback QuestLogRow_UICallback_Func = nullptr, QuestLogRow_UICallback_Ret = nullptr;
+
+    // If double clicked on a quest entry, teleport to nearest outpost
+    void OnQuestLogRow_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+        GW::Hook::EnterHook();
+
+        if (message->message_id == GW::UI::UIMessage::kMouseClick2) {
+            const auto packet = (GW::UI::UIPacket::kMouseAction*)wParam;
+            if (packet->current_state == 0x7 && (packet->child_frame_id_dupe & 0xffff0000) == 0x80000000) {
+                if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+                    if (last_quest_clicked && TIMER_DIFF(last_quest_clicked) < 250) {
+                        const auto quest_id = static_cast<GW::Constants::QuestID>(packet->child_frame_id_dupe & 0xffff);
+                        const auto quest = GW::QuestMgr::GetQuest(quest_id);
+                        if (quest && quest->map_to != GW::Constants::MapID::Count) {
+                            TravelWindow::Instance().TravelNearest(quest->map_to);
+                        }
+                    }
+                    last_quest_clicked = TIMER_INIT();
+                }
+            }
+        }
+        QuestLogRow_UICallback_Ret(message, wParam, lParam);
+        GW::Hook::LeaveHook();
+    }
 
     void OnQuestPathRecalculated(std::vector<GW::GamePos>& waypoints, void* args);
     void ClearCalculatedPath(GW::Constants::QuestID quest_id);
@@ -403,6 +435,14 @@ void QuestModule::Initialize()
         GW::UI::RegisterUIMessageCallback(&ui_message_entry, ui_message, OnUIMessage, 0x4000);
     }
     RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
+
+
+
+    QuestLogRow_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::Find("\x83\xc0\xfc\x83\xf8\x54", "xxxxxx", -0xe);
+    if (QuestLogRow_UICallback_Func) {
+        GW::Hook::CreateHook((void**)&QuestLogRow_UICallback_Func, OnQuestLogRow_UICallback, (void**)&QuestLogRow_UICallback_Ret);
+        GW::Hook::EnableHooks(QuestLogRow_UICallback_Func);
+    }
 }
 
 void QuestModule::SignalTerminate()
@@ -410,6 +450,9 @@ void QuestModule::SignalTerminate()
     ToolboxModule::SignalTerminate();
     GW::UI::RemoveUIMessageCallback(&ui_message_entry);
     ClearCalculatedPaths();
+    if (QuestLogRow_UICallback_Func) {
+        GW::Hook::RemoveHook(QuestLogRow_UICallback_Func);
+    }
 }
 
 void QuestModule::Update(float)
