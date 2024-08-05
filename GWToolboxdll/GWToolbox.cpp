@@ -183,7 +183,7 @@ namespace {
 
         io.MouseDrawCursor = false;
         io.IniFilename = imgui_inifile.bytes;
-        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+        //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
         io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
         io.ConfigFlags |= ImGuiConfigFlags_NavNoCaptureKeyboard;
 
@@ -885,7 +885,8 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 #endif
     ImGui::DrawContextMenu();
     ImGui::DrawConfirmDialog();
-    //ImGui::ClampAllWindowsToScreen(gwtoolbox_state < GWToolboxState::DrawTerminating && ToolboxSettings::clamp_windows_to_screen);
+    if((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
+        ImGui::ClampAllWindowsToScreen(gwtoolbox_state < GWToolboxState::DrawTerminating && ToolboxSettings::clamp_windows_to_screen);
     ImGui::EndFrame();
     ImGui::Render();
     ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());

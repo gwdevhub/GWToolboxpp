@@ -539,8 +539,9 @@ namespace ImGui {
     void ClampWindowToScreen(ImGuiWindow* window)
     {
         ImVec2 window_pos = window->Pos;                        // Get the current window position
-        const ImVec2 window_size = window->Size;                // Get the current window size
-        const ImVec2 display_size = ImGui::GetIO().DisplaySize; // Get the display size
+        ImVec2 window_size = window->Size;                // Get the current window size
+        const auto viewport = ImGui::GetMainViewport();
+        const ImVec2 display_size = viewport->Size; // Get the display size
         const std::string_view window_name = window->Name;      // Get the window name
 
         // Check if the window position needs to be clamped based on the original position if available
@@ -548,7 +549,9 @@ namespace ImGui {
 
         // Determine if clamping is needed
         const bool needs_clamping = original_pos.x + window_size.x > display_size.x ||
-                                    original_pos.y + window_size.y > display_size.y;
+                                    original_pos.y + window_size.y > display_size.y ||
+                                    original_pos.x < 0 ||
+                                    original_pos.y < 0;
 
         if (needs_clamping) {
             // Save the original position if not already saved
@@ -558,12 +561,20 @@ namespace ImGui {
 
             // Clamp window position to ensure the entire content is on screen
             if (window_pos.x + window_size.x > display_size.x) window_pos.x = display_size.x - window_size.x;
+            if (window_pos.x < 0) window_pos.x = 0;
             if (window_pos.y + window_size.y > display_size.y) window_pos.y = display_size.y - window_size.y;
+            if (window_pos.y < 0) window_pos.y = 0;
 
             // Set the new window position
             ImGui::SetWindowPos(window, window_pos, ImGuiCond_Always);
             if (window->Collapsed) {
                 original_positions[window_name] = window_pos;
+            }
+            if (window_size.x > display_size.x
+                || window_size.y > display_size.y) {
+                window_size.x = std::min(window_size.x, display_size.x);
+                window_size.y = std::min(window_size.y, display_size.y);
+                ImGui::SetWindowSize(window, window_size);
             }
         }
         else {
