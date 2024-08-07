@@ -214,6 +214,20 @@ namespace {
 
     bool automatically_flag_pet_to_fight_called_target = true;
 
+    bool skip_fade_animations = false;
+    using FadeFrameContent_pt = void(__cdecl*)(uint32_t frame_id, float source_opacity, float target_opacity, float duration_seconds, uint32_t unk);
+    FadeFrameContent_pt FadeFrameContent_Func = nullptr, FadeFrameContent_Ret = nullptr;
+
+    void OnFadeFrameContent(uint32_t frame_id, float source_opacity, float target_opacity, float duration_seconds, uint32_t unk) {
+        GW::Hook::EnterHook();
+        if (skip_fade_animations) {
+            duration_seconds = 0.0f;
+            source_opacity = target_opacity;
+        }
+        FadeFrameContent_Ret(frame_id, source_opacity, target_opacity, duration_seconds, unk);
+        GW::Hook::LeaveHook();
+    }
+
     Color nametag_color_npc = static_cast<Color>(DEFAULT_NAMETAG_COLOR::NPC);
     Color nametag_color_player_self = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_SELF);
     Color nametag_color_player_other = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_OTHER);
@@ -1450,10 +1464,15 @@ void GameSettings::Initialize()
     printf("[SCAN] ShowAgentFactionGain_Func = %p\n", (void*)ShowAgentFactionGain_Func);
     printf("[SCAN] ShowAgentExperienceGain_Func = %p\n", (void*)ShowAgentExperienceGain_Func);
 
+    FadeFrameContent_Func = (FadeFrameContent_pt)GW::Scanner::FindAssertion("p:\\code\\engine\\frame\\frapi.cpp", "sourceOpacity >= 0", -0x46);
+    printf("[SCAN] FadeFrameContent_Func = %p\n", (void*)FadeFrameContent_Func);
+
     GW::HookBase::CreateHook((void**)&ShowAgentFactionGain_Func, OnShowAgentFactionGain, reinterpret_cast<void**>(&ShowAgentFactionGain_Ret));
     GW::HookBase::EnableHooks(ShowAgentFactionGain_Func);
     GW::HookBase::CreateHook((void**)&ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, reinterpret_cast<void**>(&ShowAgentExperienceGain_Ret));
     GW::HookBase::EnableHooks(ShowAgentExperienceGain_Func);
+    GW::HookBase::CreateHook((void**)&FadeFrameContent_Func, OnFadeFrameContent, reinterpret_cast<void**>(&FadeFrameContent_Ret));
+    GW::HookBase::EnableHooks(FadeFrameContent_Func);
 
     RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendAgentDialog, bind_member(this, &GameSettings::OnFactionDonate));
     RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillbar, &OnPreLoadSkillBar);
@@ -1673,6 +1692,8 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
 
+    LOAD_BOOL(skip_fade_animations);
+
     LOAD_BOOL(disable_camera_smoothing);
     LOAD_BOOL(tick_is_toggle);
 
@@ -1829,11 +1850,15 @@ void GameSettings::Terminate()
     GW::UI::RemoveUIMessageCallback(&OnQuestUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnPreUIMessage_HookEntry);
+    if(FadeFrameContent_Func)
+        GW::Hook::RemoveHook(FadeFrameContent_Func);
 }
 
 void GameSettings::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
+
+    SAVE_BOOL(skip_fade_animations);
 
     SAVE_BOOL(tick_is_toggle);
 
@@ -2022,6 +2047,8 @@ void GameSettings::DrawSettingsInternal()
         remove_skill_warmup_duration_patch.TogglePatch(remove_min_skill_warmup_duration);
     }
     ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
+
+    ImGui::Checkbox("Disable loading screen fade animation", &skip_fade_animations);
 
     ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
     ImGui::Checkbox("Automatically return to outpost on defeat", &auto_return_on_defeat);
