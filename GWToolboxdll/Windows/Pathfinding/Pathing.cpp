@@ -707,10 +707,12 @@ namespace Pathing {
     {
         if (m_terminateThread) return;
 
+        const size_t vis_graph_size = m_portals.size() * 2 + m_teleports.size() * 2 + 2;
+
         m_visGraph.clear();
-        m_visGraph.resize(m_portals.size() * 2 + m_teleports.size() * 2 + 2);
+        m_visGraph.resize(vis_graph_size);
         for (auto& it : m_visGraph) {
-            it.reserve(0x100);
+            it.reserve(0x50);
         }
 
         float range = m_visibility_range;
@@ -723,13 +725,20 @@ namespace Pathing {
         std::mutex progressMutex;
         std::mutex terminateMutex;
 
+        struct VisGraphUpdate {
+            size_t id1;
+            size_t id2;
+            float distl;
+            std::vector<uint32_t> blocks = std::vector<uint32_t>(0);
+        };
+
         // Function to be executed by each thread
         auto worker = [&](size_t start, size_t end) {
             std::vector<const AABB*> open;
-            std::vector<bool> visited;
-            visited.reserve(0xd00);
-            std::vector<uint32_t> blocking_ids;
-            std::vector<std::tuple<size_t, size_t, float, std::vector<uint32_t>>> localUpdates;
+            auto visited = std::vector<bool>(0xd00, false);
+            auto blocking_ids = std::vector<uint32_t>(0);
+            auto localUpdates = std::vector<VisGraphUpdate>();
+            localUpdates.reserve(vis_graph_size * 2);
 
             float min_range, max_range, sqdist, dist;
             point* p1;
@@ -756,11 +765,14 @@ namespace Pathing {
                         continue;
 
                     {
+                        // Tiny bit faster than std::any_of
                         std::lock_guard lock(visGraphMutex);
-                        if (std::any_of(
-                            std::begin(m_visGraph[p1->id]),
-                            std::end(m_visGraph[p1->id]),
-                            [p2](const PointVisElement& a) { return a.point_id == p2->id; }))
+                        auto m_visGraph_it = m_visGraph[p1->id].begin(), m_visGraph_end = m_visGraph[p1->id].end();
+                        bool found = false;
+                        for (m_visGraph_it; m_visGraph_it != m_visGraph_end && !found; m_visGraph_it++) {
+                            found = m_visGraph_it->point_id == p2->id;
+                        }
+                        if (found)
                             continue;
                     }
 
@@ -768,7 +780,8 @@ namespace Pathing {
                     if (HasLineOfSight(*p1, *p2, open, visited, &blocking_ids)) {
                         dist = sqrtf(sqdist);
 
-                        // Collect updates
+                        // Collect updates (copy in worker thread)
+                        localUpdates.emplace_back(p2->id, p1->id, dist, blocking_ids);
                         localUpdates.emplace_back(p1->id, p2->id, dist, std::move(blocking_ids));
                     }
                 }
@@ -783,8 +796,7 @@ namespace Pathing {
             {
                 std::lock_guard lock(visGraphMutex);
                 for (auto& [id1, id2, distl, blocks] : localUpdates) {
-                    m_visGraph[id1].emplace_back(id2, distl, blocks);
-                    m_visGraph[id2].emplace_back(id1, distl, std::move(blocks));
+                    m_visGraph[id1].emplace_back(id2, distl, std::move(blocks));
                 }
             }
         };
