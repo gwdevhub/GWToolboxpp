@@ -39,6 +39,21 @@ namespace {
 }
 
 namespace GW {
+    namespace Map {
+        bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out) {
+            if (!map) return false;
+            auto bounds = &map->icon_start_x;
+            if (*bounds == 0)
+                bounds = &map->icon_start_x_dupe;
+
+            // NB: Even though area info holds map bounds as uints, the world map uses signed floats anyway - a cast should be fine here.
+            *out = {
+                { static_cast<float> (bounds[0]), static_cast<float>(bounds[1]) },
+                { static_cast<float> (bounds[2]), static_cast<float>(bounds[3]) }
+            };
+            return true;
+        }
+    }
     namespace PartyMgr {
         GW::PlayerPartyMemberArray* GetPartyPlayers(uint32_t party_id) {
             const auto party = GW::PartyMgr::GetPartyInfo(party_id);

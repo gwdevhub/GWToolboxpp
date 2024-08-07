@@ -25,7 +25,10 @@ public:
     }
 };
 
+struct ImRect;
+
 namespace GW {
+    struct AreaInfo;
     struct Player;
     struct Agent;
     struct AgentLiving;
@@ -93,6 +96,9 @@ namespace GW {
 
 }
 namespace GW {
+    namespace Map {
+        bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out);
+    }
     namespace PartyMgr {
         GW::PlayerPartyMemberArray* GetPartyPlayers(uint32_t party_id = 0);
         size_t GetPlayerPartyIndex(uint32_t player_number, uint32_t party_id = 0);

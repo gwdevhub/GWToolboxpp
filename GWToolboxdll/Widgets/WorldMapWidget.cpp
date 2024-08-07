@@ -1,35 +1,39 @@
 #include "stdafx.h"
 
+#include <GWCA/Constants/Maps.h>
+
 #include <GWCA/Utilities/MemoryPatcher.h>
 #include <GWCA/Utilities/Scanner.h>
+
+#include <GWCA/GameEntities/Quest.h>
+#include <GWCA/GameEntities/Map.h>
+
+#include <GWCA/Context/MapContext.h>
+#include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
-
-#include <GWCA/GameEntities/Map.h>
+#include <GWCA/Managers/MapMgr.h>
 
 #include <GWCA/Packets/StoC.h>
 
 #include <Widgets/WorldMapWidget.h>
-
-#include "Defines.h"
-#include <GWCA/Managers/MapMgr.h>
-#include <ImGuiAddons.h>
-#include <GWCA/GameEntities/Quest.h>
-
-#include <Constants/EncStrings.h>
-#include <Modules/GwDatTextureModule.h>
-#include <GWCA/Context/MapContext.h>
-#include <GWCA/Constants/Maps.h>
 #include <Widgets/Minimap/Minimap.h>
-
+#include <Modules/GwDatTextureModule.h>
 #include <Modules/Resources.h>
 
 #include <Utils/GuiUtils.h>
-#include <GWCA/Context/WorldContext.h>
+#include <Utils/ToolboxUtils.h>
+
+#include "Defines.h"
+
+#include <ImGuiAddons.h>
+#include <Constants/EncStrings.h>
+
+
 namespace {
     ImRect show_all_rect;
     ImRect hard_mode_rect;
@@ -63,25 +67,12 @@ namespace {
 
     bool WorldMapToGamePos(GW::Vec2f& world_map_pos, GW::GamePos* game_map_pos);
 
-    ImRect GetMapWorldMapBounds(GW::AreaInfo* map) {
-
-        auto bounds = &map->icon_start_x;
-        if (*bounds == 0)
-            bounds = &map->icon_start_x_dupe;
-
-        // NB: Even though area info holds map bounds as uints, the world map uses signed floats anyway - a cast should be fine here.
-        return ImRect(
-            { static_cast<float> (bounds[0]), static_cast<float>(bounds[1]) },
-            { static_cast<float> (bounds[2]), static_cast<float>(bounds[3]) }
-        );
-    }
-
     bool MapContainsWorldPos(GW::Constants::MapID map_id, const GW::Vec2f& world_map_pos) {
         const auto map = GW::Map::GetMapInfo(map_id);
         if (!(map && map->GetIsOnWorldMap()))
             return false;
-        const auto map_bounds = GetMapWorldMapBounds(map);
-        return map_bounds.Contains(world_map_pos);
+        ImRect map_bounds;
+        return GW::Map::GetMapWorldMapBounds(map,&map_bounds) && map_bounds.Contains(world_map_pos);
     }
 
     GW::Constants::MapID GetMapIdForLocation(const GW::Vec2f& world_map_pos) {
@@ -289,10 +280,9 @@ namespace {
     }
 
     bool GamePosToWorldMap(GW::GamePos& game_map_pos, GW::Vec2f* world_map_pos) {
-        const auto area_info = GW::Map::GetMapInfo();
-        if (!area_info)
+        ImRect map_bounds;
+        if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds))
             return false;
-        const auto world_map_rect = GetMapWorldMapBounds(area_info);
         const auto current_map_context = GW::GetMapContext();
         if (!current_map_context)
             return false;
@@ -303,8 +293,8 @@ namespace {
             });
 
         GW::Vec2f map_mid_world_point = {
-            world_map_rect.Min.x + (abs(game_map_rect.Min.x) / 96.f),
-            world_map_rect.Min.y + (abs(game_map_rect.Max.y) / 96.f),
+            map_bounds.Min.x + (abs(game_map_rect.Min.x) / 96.f),
+            map_bounds.Min.y + (abs(game_map_rect.Max.y) / 96.f),
         };
 
         // NB: World map is 96 gwinches per unit, this is hard coded in the GW source 
@@ -315,11 +305,10 @@ namespace {
     }
 
     bool WorldMapToGamePos(GW::Vec2f& world_map_pos, GW::GamePos* game_map_pos) {
-        const auto area_info = GW::Map::GetMapInfo();
-        if (!area_info)
+        ImRect map_bounds;
+        if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds))
             return false;
-        const auto world_map_rect = GetMapWorldMapBounds(area_info);
-        if (!world_map_rect.Contains({ world_map_pos.x, world_map_pos.y }))
+        if (!map_bounds.Contains({ world_map_pos.x, world_map_pos.y }))
             return false; // Current map doesn't contain these coords; we can't plot a position
 
         const auto current_map_context = GW::GetMapContext();
@@ -332,8 +321,8 @@ namespace {
             });
 
         GW::Vec2f map_mid_world_point = {
-            world_map_rect.Min.x + (abs(game_map_rect.Min.x) / 96.f),
-            world_map_rect.Min.y + (abs(game_map_rect.Max.y) / 96.f),
+            map_bounds.Min.x + (abs(game_map_rect.Min.x) / 96.f),
+            map_bounds.Min.y + (abs(game_map_rect.Max.y) / 96.f),
         };
 
         // NB: World map is 96 gwinches per unit, this is hard coded in the GW source 
