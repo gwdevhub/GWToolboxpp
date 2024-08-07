@@ -18,23 +18,28 @@
 
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/Pathfinding/Pathing.h>
-#include <Modules/Resources.h>
 #include <Widgets/Minimap/Minimap.h>
+#include <Modules/Resources.h>
+#include <Utils/ToolboxUtils.h>
 
 
 namespace {
-    std::unordered_map<uint32_t, Pathing::MilePath*> mile_paths_by_map_file_id;
+    std::unordered_map<uint64_t, Pathing::MilePath*> mile_paths_by_coords;
     // Returns milepath pointer for the current map, nullptr if we're not in a valid state
     Pathing::MilePath* GetMilepathForCurrentMap()
     {
-        const auto pathing_map = GW::Map::GetPathingMap();
-        const auto info = pathing_map ? GW::Map::GetCurrentMapInfo() : nullptr;
-        if (!info)
+        ImRect map_bounds;
+        if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds))
             return nullptr;
-        if (mile_paths_by_map_file_id.contains(info->name_id))
-            return mile_paths_by_map_file_id[info->name_id];
+
+        uint64_t hash = (uint64_t)map_bounds.Min.y;
+        hash |= ((uint64_t)map_bounds.Min.x) << 32;
+
+        if (mile_paths_by_coords.contains(hash))
+            return mile_paths_by_coords[hash];
+
         auto m = new Pathing::MilePath();
-        mile_paths_by_map_file_id[info->name_id] = m;
+        mile_paths_by_coords[hash] = m;
         return m;
     }
 
@@ -235,7 +240,7 @@ void PathfindingWindow::SignalTerminate()
     ToolboxWindow::SignalTerminate();
     pending_terminate = true;
     GW::UI::RemoveUIMessageCallback(&gw_ui_hookentry);
-    for (const auto m : mile_paths_by_map_file_id) {
+    for (const auto m : mile_paths_by_coords) {
         m.second->stopProcessing();
     }
 }
@@ -244,7 +249,7 @@ bool PathfindingWindow::CanTerminate()
 {
     if (pending_worker_task)
         return false;
-    for (const auto m : mile_paths_by_map_file_id) {
+    for (const auto m : mile_paths_by_coords) {
         if (m.second->isProcessing())
             return false;
     }
@@ -296,10 +301,10 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
 void PathfindingWindow::Terminate()
 {
     ToolboxWindow::Terminate();
-    for (const auto m : mile_paths_by_map_file_id) {
+    for (const auto m : mile_paths_by_coords) {
         delete m.second; // Blocking
     }
-    mile_paths_by_map_file_id.clear();
+    mile_paths_by_coords.clear();
     delete astar;
     astar = nullptr;
 }
