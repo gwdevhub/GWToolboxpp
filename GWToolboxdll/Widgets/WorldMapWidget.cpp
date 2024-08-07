@@ -54,6 +54,8 @@ namespace {
     GW::Constants::QuestID custom_quest_id = (GW::Constants::QuestID)0x0000fdd;
     GW::Quest custom_quest_marker;
     GW::Vec2f custom_quest_marker_world_pos;
+    GW::Constants::QuestID player_chosen_quest_id = GW::Constants::QuestID::None;
+    bool setting_custom_quest_marker = false;
 
     const wchar_t* custom_quest_marker_enc_name = L"\x452"; // "Map Travel"
 
@@ -94,29 +96,8 @@ namespace {
         return GW::Constants::MapID::None;
     }
 
-    void EmulateSelectedQuest(const GW::Quest* quest) {
-        if (!quest) return;
-        struct QuestSetActive : GW::Packet::StoC::PacketBase {
-            GW::Constants::QuestID quest_id;
-            GW::GamePos marker;
-            GW::Constants::MapID map_id;
-        };
-        QuestSetActive packet;
-        packet.header = GAME_SMSG_QUEST_ADD_MARKER;
-        packet.quest_id = quest->quest_id;
-        packet.map_id = quest->map_to;
-        packet.marker = quest->marker;
-        GW::StoC::EmulatePacket(&packet);
-    }
-
     void SetCustomQuestMarker(const GW::Vec2f world_pos) {
         custom_quest_marker_world_pos = world_pos;
-        if (!GW::GameThread::IsInGameThread()) {
-            GW::GameThread::Enqueue([pos_cpy = world_pos]() {
-                SetCustomQuestMarker(pos_cpy);
-                });
-            return;
-        }
         if (GW::QuestMgr::GetQuest(custom_quest_id)) {
             struct QuestRemovePacket : GW::Packet::StoC::PacketBase {
                 GW::Constants::QuestID quest_id = custom_quest_id;
@@ -128,6 +109,10 @@ namespace {
         }
         if (custom_quest_marker_world_pos.x == 0 && custom_quest_marker_world_pos.y == 0)
             return;
+
+        setting_custom_quest_marker = true;
+
+
 
         const auto map_id = GetMapIdForLocation(custom_quest_marker_world_pos);
 
@@ -174,6 +159,8 @@ namespace {
             WorldMapToGamePos(custom_quest_marker_world_pos, &quest_marker_packet.marker);
         GW::StoC::EmulatePacket(&quest_marker_packet);
 
+        setting_custom_quest_marker = false;
+
         const auto quest = GW::QuestMgr::GetQuest(custom_quest_id);
         ASSERT(quest);
         custom_quest_marker = *quest;
@@ -200,8 +187,8 @@ namespace {
         ImGui::TextUnformatted(Resources::GetMapName(map_id)->string().c_str());
 
         if (ImGui::Button("Place Marker")) {
-            SetCustomQuestMarker(world_map_click_pos);
             GW::GameThread::Enqueue([]() {
+                SetCustomQuestMarker(world_map_click_pos);
                 GW::QuestMgr::SetActiveQuestId(custom_quest_id);
                 });
             return false;
@@ -211,7 +198,9 @@ namespace {
         memset(&remove_marker_rect, 0, sizeof(remove_marker_rect));
         if (GW::QuestMgr::GetQuest(custom_quest_id)) {
             if(ImGui::Button("Remove Marker")) {
-                SetCustomQuestMarker({ 0, 0 });
+                GW::GameThread::Enqueue([]() {
+                    SetCustomQuestMarker({ 0, 0 });
+                    });
                 return false;
             }
             remove_marker_rect = c->LastItemData.Rect;
@@ -222,36 +211,46 @@ namespace {
 
     GW::HookEntry OnUIMessage_HookEntry;
 
+    // Fake an action of the user selecting an active quest, without making any server request.
+    void EmulateQuestSelected(GW::Quest* quest) {
+        if (!quest)
+            return;
+        GW::UI::UIPacket::kServerActiveQuestChanged packet = {
+            .quest_id = quest->quest_id,
+            .marker = quest->marker,
+            .h0024 = quest->h0024,
+            .map_id = quest->map_to,
+            .log_state = quest->log_state
+        };
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kClientActiveQuestChanged, &packet);
+        GW::GetWorldContext()->active_quest_id = quest->quest_id;
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kServerActiveQuestChanged, &packet);
+    }
+
     void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
         if (status->blocked)
             return;
         
         switch (message_id) {
-        case GW::UI::UIMessage::kQuestAdded:
-        case GW::UI::UIMessage::kQuestDetailsChanged: {
+        case GW::UI::UIMessage::kQuestAdded: {
             const auto quest_id = *(GW::Constants::QuestID*)wparam;
             if (quest_id == custom_quest_id) {
-                const auto quest = GW::QuestMgr::GetQuest(quest_id);
-                quest->log_state |= 1; // Avoid asking for description about this quest
+                GW::QuestMgr::GetQuest(quest_id)->log_state |= 1; // Avoid asking for description about this quest
             }
         } break;
         case GW::UI::UIMessage::kSendSetActiveQuest: {
             const auto quest_id = static_cast<GW::Constants::QuestID>((uint32_t)wparam);
-            if (quest_id == custom_quest_id) {
+            if (setting_custom_quest_marker) {
+                // This triggers if the player has no quests, or the map has just loaded; we want to "undo" this by spoofing the previous quest selection if there is one
                 status->blocked = true;
-                const auto current = GW::QuestMgr::GetQuest(quest_id);
-                if (current) {
-                    GW::UI::UIPacket::kServerActiveQuestChanged packet = {
-                        .quest_id = current->quest_id,
-                        .marker = current->marker,
-                        .h0024 = current->h0024,
-                        .map_id = current->map_to,
-                        .log_state = current->log_state
-                    };
-                    GW::UI::SendUIMessage(GW::UI::UIMessage::kClientActiveQuestChanged, &packet);
-                    GW::GetWorldContext()->active_quest_id = quest_id;
-                    GW::UI::SendUIMessage(GW::UI::UIMessage::kServerActiveQuestChanged, &packet);
-                }
+                EmulateQuestSelected(GW::QuestMgr::GetActiveQuest());
+                return;
+            }
+            player_chosen_quest_id = quest_id;
+            if (quest_id == custom_quest_id) {
+                // If the player has chosen the custom quest, spoof the response without asking the server
+                status->blocked = true;
+                EmulateQuestSelected(GW::QuestMgr::GetQuest(quest_id));
             }
         } break;
         case GW::UI::UIMessage::kSendAbandonQuest: {
@@ -264,14 +263,16 @@ namespace {
         case GW::UI::UIMessage::kMapLoaded:
             if (custom_quest_marker.quest_id != (GW::Constants::QuestID)0) {
                 SetCustomQuestMarker(custom_quest_marker_world_pos);
-            }
+                if (player_chosen_quest_id == custom_quest_marker.quest_id) {
+                    GW::QuestMgr::SetActiveQuestId(custom_quest_marker.quest_id);
+                }
+            } 
             break;
         case GW::UI::UIMessage::kOnScreenMessage: {
-            wchar_t* enc_str = *(wchar_t**)wparam;
             // Block the on-screen message when the custom marker is placed
-            if (wcsncmp(enc_str, L"\x7c7\x10a", 2) == 0 
-                && wcsncmp(&enc_str[2],custom_quest_marker_enc_name,wcslen(custom_quest_marker_enc_name)) == 0)
+            if (setting_custom_quest_marker) {
                 status->blocked = true;
+            }
         } break;
         }
     }
@@ -280,7 +281,10 @@ namespace {
         GW::GameThread::Enqueue([] {
             // Trigger a benign ui message e.g. guild context update; world map subscribes to this, and automatically updates the view.
             // GW::UI::SendUIMessage((GW::UI::UIMessage)0x100000ca); // disables guild/ally chat until reloading char/map
-            GW::UI::SendUIMessage(GW::UI::UIMessage::kMapLoaded);
+            const auto world_map_context = GW::Map::GetWorldMapContext();
+            const auto frame = GW::UI::GetFrameById(world_map_context->frame_id);
+            GW::UI::SendFrameUIMessage(frame, GW::UI::UIMessage::kMapLoaded, nullptr);
+            //GW::UI::SendFrameUIMessage(frame,(GW::UI::UIMessage)0x1000008e, nullptr);
             });
     }
 
@@ -360,7 +364,6 @@ void WorldMapWidget::Initialize()
 
     const GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kQuestAdded,
-        GW::UI::UIMessage::kQuestDetailsChanged,
         GW::UI::UIMessage::kSendSetActiveQuest,
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kOnScreenMessage,
@@ -373,7 +376,9 @@ void WorldMapWidget::Initialize()
 }
 void WorldMapWidget::SignalTerminate() {
     ToolboxWidget::Terminate();
-    SetCustomQuestMarker({ 0,0 });
+    GW::GameThread::Enqueue([]() {
+        SetCustomQuestMarker({ 0,0 });
+        });
     view_all_outposts_patch.Reset();
     view_all_carto_areas_patch.Reset();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
@@ -398,7 +403,9 @@ void WorldMapWidget::LoadSettings(ToolboxIni* ini)
     LOAD_FLOAT(custom_quest_marker_world_pos_x);
     LOAD_FLOAT(custom_quest_marker_world_pos_y);
     custom_quest_marker_world_pos = { custom_quest_marker_world_pos_x, custom_quest_marker_world_pos_y };
-    SetCustomQuestMarker(custom_quest_marker_world_pos);
+    GW::GameThread::Enqueue([]() {
+        SetCustomQuestMarker(custom_quest_marker_world_pos);
+        });
 }
 
 void WorldMapWidget::SaveSettings(ToolboxIni* ini)
