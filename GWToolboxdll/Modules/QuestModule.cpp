@@ -428,6 +428,7 @@ void QuestModule::Initialize()
         GW::UI::UIMessage::kQuestDetailsChanged,
         GW::UI::UIMessage::kQuestAdded,
         GW::UI::UIMessage::kClientActiveQuestChanged,
+        GW::UI::UIMessage::kServerActiveQuestChanged,
         GW::UI::UIMessage::kMapLoaded
     };
     for (const auto ui_message : ui_messages) {

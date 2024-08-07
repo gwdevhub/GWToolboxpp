@@ -361,7 +361,7 @@ namespace Pathing {
         const SimplePT* pt2 = box2->m_t;
 
         // ignore portals smaller than tolerance.
-        constexpr float tolerance = 0.001f;
+        constexpr float tolerance = 32.f;
         constexpr float square_tolerance = tolerance * tolerance;
 
         switch (ts) {
@@ -702,7 +702,8 @@ namespace Pathing {
 
         return closest ? *closest : GW::GamePos();
     }
-
+    // Start optimization for the computation-heavy loop
+#pragma optimize("gty", on)  // Enable optimizations
     void MilePath::GenerateVisibilityGraph()
     {
         if (m_terminateThread) return;
@@ -792,6 +793,8 @@ namespace Pathing {
                 }
             }
 
+
+
             // Apply collected updates
             {
                 std::lock_guard lock(visGraphMutex);
@@ -817,7 +820,8 @@ namespace Pathing {
             }
         }
     }
-
+    // End optimization
+#pragma optimize( "", on ) // Restore global optimizations to project default
 #endif
 
     void MilePath::insertTeleportPointIntoVisGraph(point& point, teleport_point_type type)

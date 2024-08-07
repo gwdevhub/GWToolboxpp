@@ -23,9 +23,12 @@
 #include <Modules/Resources.h>
 #include <Utils/GuiUtils.h>
 
+#pragma warning(push) // Save current warning state
+#pragma warning(disable : 4189) // local variable is initialized but not referenced
 #include <include/nfd.h>
 #include <nfd_common.c>
 #include <nfd_win.cpp>
+#pragma warning(pop)
 #include <wolfssl/wolfcrypt/asn.h>
 
 #include <Modules/GwDatTextureModule.h>

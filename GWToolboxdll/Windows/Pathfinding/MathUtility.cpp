@@ -96,7 +96,7 @@ namespace MathUtil {
 
     // Given three collinear points p, q, r, the function checks if
     // point q lies on line segment 'pr'
-    bool onSegment(const GW::Vec2f& p, const GW::Vec2f& q, const GW::Vec2f& r)
+    inline bool onSegment(const GW::Vec2f& p, const GW::Vec2f& q, const GW::Vec2f& r)
     {
         if (q.x <= (std::max)(p.x, r.x) && q.x >= (std::min)(p.x, r.x) &&
             q.y <= (std::max)(p.y, r.y) && q.y >= (std::min)(p.y, r.y))
@@ -108,7 +108,7 @@ namespace MathUtil {
     // The main function that returns true if line segment 'p1q1'
     // and 'p2q2' intersect.
     bool Intersect(const GW::Vec2f& p1, const GW::Vec2f& q1, const GW::Vec2f& p2, const GW::Vec2f& q2) {
-        float eps = 0.001f;
+        constexpr float eps = 0.001f;
         float denom = (q2.y - p2.y) * (q1.x - p1.x) - (q2.x - p2.x) * (q1.y - p1.y);
 
         /* Are the line parallel */
@@ -141,7 +141,7 @@ namespace MathUtil {
     }
 
     bool collinear(const GW::Vec2f& a1, const GW::Vec2f& a2, const GW::Vec2f& b1, const GW::Vec2f& b2) {
-        float tolerance = 0.1f;
+        constexpr float tolerance = 0.1f;
 
         auto s = b2 - b1;
         auto inv = 1.0f / Dot(s, s) * s;

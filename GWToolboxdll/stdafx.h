@@ -5,6 +5,10 @@
 #pragma warning(disable: 4099) // PDB '*.pdb' was not found with '*.lib(*.obj)' or at '..\..\..\*.pdb'; linking object as if no debug info
 #pragma warning(disable: 26495) //  Variable 'variable' is uninitialized. Always initialize a member variable(type .6)
 
+#define _SECURE_SCL 0
+#define _ITERATOR_DEBUG_LEVEL 0
+#undef _GLIBCXX_DEBUG // Ensure that STL debug mode is not enabled
+
 #include <GWCA/Source/stdafx.h>
 
 // c++ style c headers
