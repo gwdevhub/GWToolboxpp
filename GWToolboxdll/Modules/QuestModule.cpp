@@ -137,6 +137,7 @@ namespace {
                     std::format("{} - {}", (uint32_t)quest_id, i).c_str(), true
                 );
                 l->draw_on_terrain = draw_quest_path_on_terrain;
+                l->draw_on_minimap = draw_quest_path_on_minimap;
                 l->created_by_toolbox = true;
                 l->color = QuestModule::GetQuestColor(quest_id);
                 minimap_lines.push_back(l);

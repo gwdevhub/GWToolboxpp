@@ -918,7 +918,7 @@ void CustomRenderer::DrawCustomLines(const IDirect3DDevice9*)
 
     for (const auto line : lines) {
         // Draw everywhere besides the DoA outpost. Only draw the lines with draw_everywhere in DoA
-        if (line->visible && (line->map == GW::Constants::MapID::None || line->map == GW::Map::GetMapID()) &&
+        if (line->visible && line->draw_on_minimap && (line->map == GW::Constants::MapID::None || line->map == GW::Map::GetMapID()) &&
             (!doa_outpost || line->draw_everywhere)) {
             EnqueueVertex(line->p1.x, line->p1.y, line->color);
             EnqueueVertex(line->p2.x, line->p2.y, line->color);
