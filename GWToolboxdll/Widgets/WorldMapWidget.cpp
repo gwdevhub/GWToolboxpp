@@ -180,7 +180,7 @@ namespace {
         ImGui::TextUnformatted(Resources::GetMapName(map_id)->string().c_str());
 
         if (ImGui::Button("Place Marker")) {
-            GW::GameThread::Enqueue([]() {
+            GW::GameThread::Enqueue([] {
                 SetCustomQuestMarker(world_map_click_pos);
                 GW::QuestMgr::SetActiveQuestId(custom_quest_id);
             });
@@ -191,7 +191,7 @@ namespace {
         memset(&remove_marker_rect, 0, sizeof(remove_marker_rect));
         if (GW::QuestMgr::GetQuest(custom_quest_id)) {
             if (ImGui::Button("Remove Marker")) {
-                GW::GameThread::Enqueue([]() {
+                GW::GameThread::Enqueue([] {
                     SetCustomQuestMarker({0, 0});
                 });
                 return false;
@@ -464,9 +464,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
 
     const auto draw_list = ImGui::GetBackgroundDrawList(viewport);
 
-    // @Fixme: we need to do something with this to scale the point on the world map!!
-    [[maybe_unused]] const auto ui_scale = GW::UI::GetFrameById(world_map_context->frame_id)->position.GetViewportScale(GW::UI::GetRootFrame());
-    [[maybe_unused]] const auto ui_scale2 = GuiUtils::GetGWScaleMultiplier();
+    const auto ui_scale = GW::UI::GetFrameById(world_map_context->frame_id)->position.GetViewportScale(GW::UI::GetRootFrame());
 
     // Draw custom quest marker on world map
     if (custom_quest_marker_world_pos.x || custom_quest_marker_world_pos.y) {
@@ -474,18 +472,14 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         static constexpr auto ICON_SIZE = ImVec2(24.0f, 24.0f);
 
         const ImVec2 viewport_quest_pos = {
-            custom_quest_marker_world_pos.x - world_map_context->top_left.x + viewport_offset.x - (ICON_SIZE.x / 2.f),
-            custom_quest_marker_world_pos.y - world_map_context->top_left.y + viewport_offset.y - (ICON_SIZE.y / 2.f)
+            ui_scale.x * (custom_quest_marker_world_pos.x - world_map_context->top_left.x) + viewport_offset.x - (ICON_SIZE.x / 2.f),
+            ui_scale.y * (custom_quest_marker_world_pos.y - world_map_context->top_left.y) + viewport_offset.y - (ICON_SIZE.y / 2.f)
         };
 
         const ImRect quest_marker_image_rect = {
             viewport_quest_pos, {viewport_quest_pos.x + ICON_SIZE.x, viewport_quest_pos.y + ICON_SIZE.y}
         };
 
-        const auto texture = GwDatTextureModule::LoadTextureFromFileId(0x1b4d5);
-
-        const auto uv1 = ImGui::CalculateUvCrop(*texture, ICON_SIZE);
-        draw_list->AddImage(*texture, quest_marker_image_rect.Min, quest_marker_image_rect.Max, uv0, uv1);
         if (quest_marker_image_rect.Contains(ImGui::GetMousePos())) {
             ImGui::SetTooltip("Custom marker placed @ %.2f, %.2f", custom_quest_marker_world_pos.x, custom_quest_marker_world_pos.y);
         }
@@ -533,7 +527,14 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
             if (!(world_map_context && world_map_context->zoom == 1.0f))
                 break;
 
-            world_map_click_pos = {GET_X_LPARAM(lParam),GET_Y_LPARAM(lParam)};
+            const auto world_map_frame = GW::UI::GetFrameById(world_map_context->frame_id);
+            const auto ui_scale =
+                world_map_frame ?
+                    world_map_frame->position.GetViewportScale(GW::UI::GetRootFrame()) :
+                    GW::Vec2f{GuiUtils::GetGWScaleMultiplier(), GuiUtils::GetGWScaleMultiplier()};
+            world_map_click_pos = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+            world_map_click_pos.x /= ui_scale.x;
+            world_map_click_pos.y /= ui_scale.y;
             world_map_click_pos.x += world_map_context->top_left.x;
             world_map_click_pos.y += world_map_context->top_left.y;
             ImGui::SetContextMenu(WorldMapContextMenu);
