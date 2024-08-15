@@ -224,21 +224,6 @@ void PluginModule::Initialize()
 
 void PluginModule::Draw(IDirect3DDevice9* device)
 {
-    static bool message_displayed = false;
-    if (!plugins_loaded.empty() && !message_displayed) {
-        GW::Chat::WriteChat(
-            GW::Chat::Channel::CHANNEL_GWCA2,
-            L"<c=#FFFF00>Plugins detected, these may be unsafe to use and are not officially supported by GWToolbox++ developers.\n"
-            "Use at your own risk if you trust the author.\n"
-            "Do not report bugs that occur while you play with plugins.</c>", GWTOOLBOX_SENDER, true);
-        GW::Chat::WriteChat(
-            GW::Chat::Channel::CHANNEL_GWCA2,
-            L"<c=#FF0000>Plugins are NOT permitted by ArenaNet.</c>", GWTOOLBOX_SENDER, true);
-        GW::Chat::WriteChat(
-            GW::Chat::Channel::CHANNEL_WARNING,
-            L"Plugins are NOT permitted by ArenaNet.", nullptr, true);
-        message_displayed = true;
-    }
     for (const auto plugin : plugins_loaded) {
         if (!InitializePlugin(plugin)) {
             continue;
@@ -294,7 +279,24 @@ void PluginModule::SaveSettings(ToolboxIni* ini)
 
 void PluginModule::Update(const float delta)
 {
+    static bool message_displayed = false;
+    if (!plugins_loaded.empty() && !message_displayed) {
+        GW::Chat::WriteChat(
+            GW::Chat::Channel::CHANNEL_GWCA2,
+            L"<c=#FFFF00>Plugins detected, these may be unsafe to use and are not officially supported by GWToolbox++ developers.\n"
+            "Use at your own risk if you trust the author.\n"
+            "Do not report bugs that occur while you play with plugins.</c>", GWTOOLBOX_SENDER, true);
+        GW::Chat::WriteChat(
+            GW::Chat::Channel::CHANNEL_GWCA2,
+            L"<c=#FF0000>Plugins are NOT permitted by ArenaNet.</c>", GWTOOLBOX_SENDER, true);
+        GW::Chat::WriteChat(
+            GW::Chat::Channel::CHANNEL_WARNING,
+            L"Plugins are NOT permitted by ArenaNet.", nullptr, true);
+        message_displayed = true;
+    }
     for (const auto plugin : plugins_loaded) {
+        if (!plugin->initialized)
+            continue;
         plugin->instance->Update(delta);
         if (plugin->terminating) {
             if (UnloadPlugin(plugin)) {
