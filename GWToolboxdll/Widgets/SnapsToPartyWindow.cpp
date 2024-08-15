@@ -85,8 +85,6 @@ bool SnapsToPartyWindow::FetchPartyInfo()
     if (!info) {
         return false;
     }
-    party_indeces_by_agent_id.clear();
-    party_agent_ids_by_index.clear();
 
     auto append_agent = [&](uint32_t agent_id) {
         if (party_indeces_by_agent_id.contains(agent_id))
