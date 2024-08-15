@@ -471,7 +471,8 @@ namespace GuiUtils {
         if (!sanitised && !decoded_ws.empty()) {
             sanitised = true;
             static const std::wregex sanitiser(L"<[^>]+>");
-            decoded_ws = std::regex_replace(decoded_ws, sanitiser, L"");
+            auto sanitised_ws = std::regex_replace(decoded_ws, sanitiser, L"");
+            decoded_ws = std::move(sanitised_ws);
         }
     }
 

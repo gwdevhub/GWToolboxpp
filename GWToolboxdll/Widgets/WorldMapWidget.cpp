@@ -67,9 +67,9 @@ namespace {
 
     bool WorldMapToGamePos(GW::Vec2f& world_map_pos, GW::GamePos* game_map_pos);
 
-    bool MapContainsWorldPos(GW::Constants::MapID map_id, const GW::Vec2f& world_map_pos) {
+    bool MapContainsWorldPos(GW::Constants::MapID map_id, const GW::Vec2f& world_map_pos, GW::Constants::Campaign campaign) {
         const auto map = GW::Map::GetMapInfo(map_id);
-        if (!(map && map->GetIsOnWorldMap()))
+        if (!(map && map->campaign == campaign && map->GetIsOnWorldMap()))
             return false;
         ImRect map_bounds;
         return GW::Map::GetMapWorldMapBounds(map,&map_bounds) && map_bounds.Contains(world_map_pos);
@@ -77,11 +77,12 @@ namespace {
 
     GW::Constants::MapID GetMapIdForLocation(const GW::Vec2f& world_map_pos) {
         auto map_id = GW::Map::GetMapID();
-        if (MapContainsWorldPos(map_id, world_map_pos))
+        auto campaign = GW::Map::GetMapInfo()->campaign;
+        if (MapContainsWorldPos(map_id, world_map_pos, campaign))
             return map_id;
         for (size_t i = 1; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
             map_id = static_cast<GW::Constants::MapID>(i);
-            if (MapContainsWorldPos(map_id, world_map_pos))
+            if (MapContainsWorldPos(map_id, world_map_pos, campaign))
                 return map_id;
         }
         return GW::Constants::MapID::None;
@@ -448,6 +449,10 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     const auto& viewport_offset = viewport->Pos;
 
     const auto draw_list = ImGui::GetBackgroundDrawList(viewport);
+
+    // @Fixme: we need to do something with this to scale the point on the world map!!
+    const auto ui_scale = GW::UI::GetFrameById(world_map_context->frame_id)->position.GetViewportScale(GW::UI::GetRootFrame());
+    (ui_scale);
 
     // Draw custom quest marker on world map
     if (custom_quest_marker_world_pos.x || custom_quest_marker_world_pos.y) {
