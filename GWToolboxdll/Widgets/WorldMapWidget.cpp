@@ -454,6 +454,10 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
 
     const auto draw_list = ImGui::GetBackgroundDrawList(viewport);
 
+    // @Fixme: we need to do something with this to scale the point on the world map!!
+    const auto ui_scale = GW::UI::GetFrameById(world_map_context->frame_id)->position.GetViewportScale(GW::UI::GetRootFrame());
+    (ui_scale);
+
     // Draw custom quest marker on world map
     if (custom_quest_marker_world_pos.x || custom_quest_marker_world_pos.y) {
 
