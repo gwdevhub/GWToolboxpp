@@ -78,7 +78,7 @@ namespace {
     GW::Constants::MapID GetMapIdForLocation(const GW::Vec2f& world_map_pos) {
         auto map_id = GW::Map::GetMapID();
         auto campaign = GW::Map::GetMapInfo()->campaign;
-        if (MapContainsWorldPos(map_id, world_map_pos))
+        if (MapContainsWorldPos(map_id, world_map_pos, campaign))
             return map_id;
         for (size_t i = 1; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
             map_id = static_cast<GW::Constants::MapID>(i);
