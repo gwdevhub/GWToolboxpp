@@ -163,7 +163,7 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
                     for (auto j = 1u; j < lerp_steps_per_line; j++) {
                         const float div = static_cast<float>(j) / static_cast<float>(lerp_steps_per_line);
                         auto split = lerp(points[i], points[i - 1], div);
-                        lerp_points.emplace_back(split.x, split.y, std::max(points[i].zplane, points[i - 1].zplane));
+                        lerp_points.emplace_back(split.x, split.y, points[i].zplane);
                     }
                 }
                 lerp_points.push_back(points[i]);
@@ -183,7 +183,7 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
                         const auto div = static_cast<float>(j) / static_cast<float>(lerp_steps_per_line);
                         const auto split = lerp(points[i], points[i - 1], div);
                         vertices.emplace_back(split.x, split.y, ALTITUDE_UNKNOWN, col);
-                        vertices_zplanes.push_back(std::max(points[i].zplane, points[i - 1].zplane));
+                        vertices_zplanes.push_back(points[i].zplane);
                     }
                 }
                 vertices.emplace_back(pt.x, pt.y, ALTITUDE_UNKNOWN, col);
