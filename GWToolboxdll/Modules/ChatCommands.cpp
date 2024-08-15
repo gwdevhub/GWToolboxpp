@@ -1778,7 +1778,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         }
     }
     else if (arg2 == L"toggle") {
-        // e.g. /tb travel show
+        // e.g. /tb travel toggle
         for (const auto& window : windows) {
             window->visible = !window->visible;
         }
