@@ -267,10 +267,6 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         }
     }
 
-    if (!Minimap::ShouldMarkersDrawOnMap()) {
-        return;
-    }
-
     if (vshader == nullptr || device->SetVertexShader(vshader) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to SetVertexShader, aborting render.");
         return;
@@ -449,6 +445,10 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines()
         }
         if (!(line->map == map_id || line->map == GW::Constants::MapID::None))
             continue;
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && map_id == GW::Constants::MapID::Domain_of_Anguish && !line->draw_everywhere) {
+            // don't draw normal lines in doa outpost
+            continue;
+        }
         std::vector points = {line->p1, line->p2};
 
         auto poly_to_add = GenericPolyRenderable(line->map, points, line->color, false);
@@ -481,6 +481,10 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys()
         }
         if (!(poly.map == map_id || poly.map == GW::Constants::MapID::None))
             continue;
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && map_id == GW::Constants::MapID::Domain_of_Anguish) {
+            // don't draw normal polys in doa outpost
+            continue;
+        }
         std::vector<GW::GamePos> pts{};
         std::ranges::transform(poly.points, std::back_inserter(pts), [](const GW::Vec2f& pt) { return GW::GamePos(pt); });
 
@@ -513,8 +517,13 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers()
         if (!(marker.draw_on_terrain && marker.visible)) {
             continue;
         }
-        if (!(marker.map == map_id || marker.map == GW::Constants::MapID::None))
+        if (!(marker.map == map_id || marker.map == GW::Constants::MapID::None)) {
             continue;
+        }
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && map_id == GW::Constants::MapID::Domain_of_Anguish) {
+            // don't draw normal markers in doa outpost
+            continue;
+        }
 
         auto points = circular_points_from_marker(marker.pos, marker.size);
 
