@@ -808,6 +808,14 @@ void TravelWindow::Update(const float)
 
 GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID map_to)
 {
+    static const auto special_cases = std::map<GW::Constants::MapID, GW::Constants::MapID>{
+        {GW::Constants::MapID::Kessex_Peak, GW::Constants::MapID::Temple_of_the_Ages},
+    };
+
+    if (special_cases.contains(map_to)) {
+        return special_cases.at(map_to);
+    }
+
     const GW::AreaInfo* this_map = GW::Map::GetMapInfo(map_to);
     float nearest_distance = std::numeric_limits<float>::max();
     auto nearest_map_id = GW::Constants::MapID::None;
