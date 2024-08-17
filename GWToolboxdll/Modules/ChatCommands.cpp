@@ -1665,11 +1665,16 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDialog)
         return;
     }
     uint32_t id = 0;
-    const auto dialog_str = std::wstring{argv[1]};
+    auto dialog_str = std::wstring{argv[1]};
+    int base = 10;
+    if (dialog_str.starts_with(L"0x")) {
+        base = 16;
+        dialog_str = dialog_str.substr(2);
+    }
     if (dialog_str == L"take" || dialog_str == L"0") {
         id = 0;
     }
-    else if (!(TextUtils::ParseUInt(argv[1], &id) && id)) {
+    else if (!(TextUtils::ParseUInt(argv[1], &id, base) && id)) {
         Log::Error(syntax);
         return;
     }

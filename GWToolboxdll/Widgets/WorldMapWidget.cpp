@@ -83,7 +83,7 @@ namespace {
         const auto map_info = GW::Map::GetMapInfo();
         if (!map_info)
             return GW::Constants::MapID::None;
-        auto campaign = map_info->campaign;
+        const auto campaign = map_info->campaign;
         if (MapContainsWorldPos(map_id, world_map_pos, campaign))
             return map_id;
         for (size_t i = 1; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
