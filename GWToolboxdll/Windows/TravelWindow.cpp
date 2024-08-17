@@ -810,6 +810,8 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
 {
     static const auto special_cases = std::map<GW::Constants::MapID, GW::Constants::MapID>{
         {GW::Constants::MapID::Kessex_Peak, GW::Constants::MapID::Temple_of_the_Ages},
+        {GW::Constants::MapID::Cursed_Lands, GW::Constants::MapID::Bergen_Hot_Springs_outpost},
+        {GW::Constants::MapID::The_Arid_Sea, GW::Constants::MapID::Dunes_of_Despair},
     };
 
     if (special_cases.contains(map_to)) {
