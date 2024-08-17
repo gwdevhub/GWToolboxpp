@@ -813,7 +813,8 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
     };
 
     if (special_cases.contains(map_to)) {
-        return special_cases.at(map_to);
+        const auto nearest_outpost = special_cases.at(map_to);
+        if (GW::Map::GetIsMapUnlocked(nearest_outpost)) return nearest_outpost;
     }
 
     const GW::AreaInfo* this_map = GW::Map::GetMapInfo(map_to);
