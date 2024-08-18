@@ -812,6 +812,8 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
         {GW::Constants::MapID::Kessex_Peak, GW::Constants::MapID::Temple_of_the_Ages},
         {GW::Constants::MapID::Cursed_Lands, GW::Constants::MapID::Bergen_Hot_Springs_outpost},
         {GW::Constants::MapID::The_Arid_Sea, GW::Constants::MapID::Dunes_of_Despair},
+        {GW::Constants::MapID::Dry_Top, GW::Constants::MapID::Aurora_Glade},
+        {GW::Constants::MapID::Iron_Horse_Mine, GW::Constants::MapID::Yaks_Bend_outpost},
     };
 
     if (special_cases.contains(map_to)) {
