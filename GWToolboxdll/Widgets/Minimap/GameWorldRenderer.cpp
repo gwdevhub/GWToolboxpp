@@ -128,14 +128,13 @@ namespace {
             }
 
             const auto guessed_altitude = altitude0 + (altitude_diff * static_cast<float>(i) / static_cast<float>(vertices.size() - 1));
-
             if (std::abs(altitude - guessed_altitude) > 20.f) {
                 auto min_diff = std::abs(altitude - guessed_altitude);
                 // TODO: 62 is not correct, each map seems to have its own maximum after which calling QueryAltitude hits an Assertion
                 for (unsigned zplane = 62; zplane >= 1; zplane -= 1) {
                     GW::Map::QueryAltitude({vertices[i].x, vertices[i].y, zplane}, 5.f, altitude);
                     const auto cur_diff = std::abs(altitude - guessed_altitude);
-                    if (cur_diff < min_diff) {
+                    if (cur_diff < min_diff && altitude < vertices[i].z) {
                         min_diff = cur_diff;
                         vertices[i].z = altitude;
                     }
