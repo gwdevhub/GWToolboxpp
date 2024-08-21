@@ -96,7 +96,21 @@ namespace {
         if (!pmap_size)
             return false;
 
-        for (size_t i = poly.vertices_processed; i < vertices.size(); i++, poly.vertices_processed++) {
+
+        const auto z_plane0 = poly.vertices_zplanes[0];
+        GW::Map::QueryAltitude({vertices[0].x, vertices[0].y, z_plane0}, 5.f, altitude);
+        [[maybe_unused]] const auto altitude0 = altitude;
+        ++poly.vertices_processed;
+        vertices[0].z = altitude;
+
+        const auto z_planeZ = poly.vertices_zplanes[vertices.size() - 1];
+        GW::Map::QueryAltitude({vertices[vertices.size() - 1].x, vertices[vertices.size() - 1].y, z_planeZ}, 5.f, altitude);
+        [[maybe_unused]] const auto altitudeZ = altitude;
+        vertices[vertices.size() - 1].z = altitude;
+
+        const auto altitude_diff = altitudeZ - altitude0;
+
+        for (size_t i = poly.vertices_processed; i < vertices.size() - 1; i++, poly.vertices_processed++) {
             // until we have a better solution, all Z planes will be queried per vertex
             // to avoid a significant delay in the render thread, query one plane per frame
             // until all have been queried. this might result in some renderables shifting
@@ -112,7 +126,23 @@ namespace {
                 // recall that the Up camera component is inverted
                 vertices[i].z = altitude;
             }
+
+            const auto guessed_altitude = altitude0 + (altitude_diff * static_cast<float>(i) / static_cast<float>(vertices.size() - 1));
+
+            if (std::abs(altitude - guessed_altitude) > 20.f) {
+                auto min_diff = std::abs(altitude - guessed_altitude);
+                for (unsigned zplane = 62; zplane >= 1; zplane -= 1) {
+                    GW::Map::QueryAltitude({vertices[i].x, vertices[i].y, zplane}, 5.f, altitude);
+                    const auto cur_diff = std::abs(altitude - guessed_altitude);
+                    if (cur_diff < min_diff) {
+                        min_diff = cur_diff;
+                        vertices[i].z = altitude;
+                    }
+                }
+            }
         }
+        ++poly.vertices_processed;
+
         // commit the completed vertices to vram
         auto res = device->CreateVertexBuffer(vertices.size() * sizeof(D3DVertex), D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &poly.vb, nullptr);
         if (res != S_OK) {
@@ -183,7 +213,9 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
                         const auto div = static_cast<float>(j) / static_cast<float>(lerp_steps_per_line);
                         const auto split = lerp(points[i], points[i - 1], div);
                         vertices.emplace_back(split.x, split.y, ALTITUDE_UNKNOWN, col);
-                        vertices_zplanes.push_back(points[i].zplane);
+                        const auto zplanes = std::vector{points[i].zplane, points[i - 1].zplane, points[0].zplane, points[points.size() - 1].zplane};
+                        const auto zplane = std::ranges::max_element(zplanes);
+                        vertices_zplanes.push_back(*zplane);
                     }
                 }
                 vertices.emplace_back(pt.x, pt.y, ALTITUDE_UNKNOWN, col);

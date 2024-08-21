@@ -115,11 +115,12 @@ namespace {
         }
     }
 
-    bool IsDialogButtonAvailable(uint32_t dialog_id)
+    bool IsDialogButtonAvailable(uint32_t /*dialog_id*/)
     {
-        return !dialog_body.encoded().empty() && std::ranges::any_of(dialog_buttons, [dialog_id](const GW::UI::DialogButtonInfo* d) {
-            return d->dialog_id == dialog_id;
-        });
+        return true;
+        // return !dialog_body.encoded().empty() && std::ranges::any_of(dialog_buttons, [dialog_id](const GW::UI::DialogButtonInfo* d) {
+        //     return d->dialog_id == dialog_id;
+        // });
     }
 }
 
