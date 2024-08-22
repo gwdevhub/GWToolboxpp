@@ -239,6 +239,10 @@ struct HallOfMonumentsAchievements {
         Done
     } state = State::Pending;
 
+    ~HallOfMonumentsAchievements() {
+        ASSERT(state != State::Loading);
+    }
+
     [[nodiscard]] bool isReady() const { return state == State::Done; }
     [[nodiscard]] bool isPending() const { return state == State::Pending; }
     [[nodiscard]] bool isLoading() const { return state == State::Loading; }

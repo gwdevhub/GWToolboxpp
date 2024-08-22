@@ -1523,15 +1523,6 @@ void CompletionWindow::Initialize()
     RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kDialogButton, OnDialogButton);
     RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kSendAgentDialog, OnSendDialog);
 
-    ParseCompletionBuffer(CompletionType::Mission);
-    ParseCompletionBuffer(CompletionType::MissionBonus);
-    ParseCompletionBuffer(CompletionType::MissionBonusHM);
-    ParseCompletionBuffer(CompletionType::MissionHM);
-    ParseCompletionBuffer(CompletionType::Skills);
-    ParseCompletionBuffer(CompletionType::Vanquishes);
-    ParseCompletionBuffer(CompletionType::Heroes);
-    ParseCompletionBuffer(CompletionType::MapsUnlocked);
-    CheckProgress();
     const wchar_t* player_name = GetPlayerName();
     if (player_name) {
         wcscpy(last_player_name, player_name);
@@ -1539,7 +1530,7 @@ void CompletionWindow::Initialize()
 
     RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kCheckUIState, OnPostCheckUIState, 0x8000);
 
-    RefreshAccountCharacters();
+    //RefreshAccountCharacters();
 }
 
 void CompletionWindow::Initialize_Prophecies()
@@ -2784,6 +2775,15 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
         c->is_pvp = completion_ini->GetBoolValue(ini_section, "is_pvp", false);
         c->is_pre_searing = completion_ini->GetBoolValue(ini_section, "is_pre_searing", false);
     }
+    RefreshAccountCharacters();
+    ParseCompletionBuffer(CompletionType::Mission);
+    ParseCompletionBuffer(CompletionType::MissionBonus);
+    ParseCompletionBuffer(CompletionType::MissionBonusHM);
+    ParseCompletionBuffer(CompletionType::MissionHM);
+    ParseCompletionBuffer(CompletionType::Skills);
+    ParseCompletionBuffer(CompletionType::Vanquishes);
+    ParseCompletionBuffer(CompletionType::Heroes);
+    ParseCompletionBuffer(CompletionType::MapsUnlocked);
     CheckProgress();
 }
 
