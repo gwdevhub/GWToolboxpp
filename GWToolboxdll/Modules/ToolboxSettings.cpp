@@ -32,6 +32,7 @@
 #include <Modules/PriceCheckerModule.h>
 #include <Modules/SalvageInfoModule.h>
 #include <Modules/ResignLogModule.h>
+#include <Modules/PartyBroadcastModule.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -145,7 +146,8 @@ namespace {
         PriceCheckerModule::Instance(),
         SalvageInfoModule::Instance(),
         ResignLogModule::Instance(),
-        QuestModule::Instance()
+        QuestModule::Instance(),
+        PartyBroadcast::Instance()
     };
 
     std::vector<WidgetToggle> optional_widgets = {

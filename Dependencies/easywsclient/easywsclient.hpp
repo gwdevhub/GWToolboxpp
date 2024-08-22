@@ -11,6 +11,10 @@
 #include <string>
 
 namespace easywsclient {
+    struct HeaderKeyValuePair {
+        std::string key;
+        std::string value;
+    };
 
 class WebSocket {
   public:
@@ -19,8 +23,8 @@ class WebSocket {
 
     // Factories:
     static pointer create_dummy();
-    static pointer from_url(const std::string& url, const std::string& origin = std::string());
-    static pointer from_url_no_mask(const std::string& url, const std::string& origin = std::string());
+    static pointer from_url(const std::string& url, std::vector<HeaderKeyValuePair> additional_headers = std::vector<HeaderKeyValuePair>(), const std::string& origin = std::string());
+    static pointer from_url_no_mask(const std::string& url, std::vector<HeaderKeyValuePair> additional_headers = std::vector<HeaderKeyValuePair>(), const std::string& origin = std::string());
 
     // Interfaces:
     virtual ~WebSocket() { }

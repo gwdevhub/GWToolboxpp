@@ -260,7 +260,7 @@ void SalvageInfoModule::SaveSettings(ToolboxIni* ini)
 
 void SalvageInfoModule::LoadSettings(ToolboxIni* ini)
 {
-    ToolboxModule::SaveSettings(ini);
+    ToolboxModule::LoadSettings(ini);
 }
 
 void SalvageInfoModule::RegisterSettingsContent()
