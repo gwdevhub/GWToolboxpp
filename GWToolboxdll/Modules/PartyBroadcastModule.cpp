@@ -22,7 +22,7 @@ using json = nlohmann::json;
 
 namespace {
     bool enabled;
-    char api_key[256];
+    std::string api_key(256, 0);
     easywsclient::WebSocket* ws;
     std::string last_update_content;
     time_t last_update_timestamp = 0;
@@ -142,10 +142,9 @@ namespace {
             }
         }
 
-        const auto key = std::string(api_key);
         std::vector<easywsclient::HeaderKeyValuePair> headers;
         headers.push_back({"User-Agent", user_agent});
-        headers.push_back({"X-Api-Key", key});
+        headers.push_back({"X-Api-Key", api_key});
         headers.push_back({"X-Account-Uuid", uuid});
         headers.push_back({"X-Bot-Version", "100"});
         ws = easywsclient::WebSocket::from_url("wss://party.gwtoolbox.com", headers);
@@ -180,16 +179,18 @@ void PartyBroadcast::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(enabled);
+    SAVE_STRING(api_key);
 }
 
 void PartyBroadcast::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(enabled);
+    LOAD_STRING(api_key);
 }
 
 void PartyBroadcast::Update(float) {
-    if (!enabled || strnlen_s(api_key, 256) == 0) {
+    if (!enabled || api_key.size() == 0) {
         if (ws) {
             ws->close();
             delete ws;
@@ -244,9 +245,6 @@ void PartyBroadcast::Update(float) {
         ads.push_back(ad);
     }
 
-    if (ads.size() == 0) {
-        return;
-    }
     j["parties"] = ads;
     const auto payload = j.dump();
     send_payload(player_name, player_uuid_str, payload);
@@ -264,6 +262,10 @@ void PartyBroadcast::Terminate() {
 void PartyBroadcast::DrawSettingsInternal()
 {
     ImGui::Checkbox("Post Party Search Updates", &enabled);
-    ImGui::InputText("API Key", api_key, 256);
+    ImGui::ShowHelp("Post party searches to https://party.gwtoolbox.com");
+    if (ImGui::InputText("API Key", api_key.data(), 256)) {
+        api_key.resize(strlen(api_key.c_str()));
+    }
+
     ImGui::ShowHelp("This key is used to post party search updates to https://party.gwtoolbox.com");
 }
