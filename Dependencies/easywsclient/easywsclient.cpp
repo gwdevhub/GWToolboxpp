@@ -462,7 +462,7 @@ int verify_callback(int res, void*) {
     return SSL_SUCCESS;
 }
 
-easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, const std::vector<easywsclient::HeaderKeyValuePair> additional_headers, const std::string& origin) {
+easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, easywsclient::HeaderKeyValuePair additional_headers, const std::string& origin) {
 	char sc[128];
     char host[128];
     int port;
@@ -561,21 +561,19 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
         int status;
         int i;
         snprintf(line, 256, "GET /%s HTTP/1.1\r\n", path); kWrite(ptConnCtx, line, strlen(line), 0);
-        if (port == 80) {
-            snprintf(line, 256, "Host: %s\r\n", host); kWrite(ptConnCtx, line, strlen(line), 0);
-        }
-        else {
-            snprintf(line, 256, "Host: %s:%d\r\n", host, port); kWrite(ptConnCtx, line, strlen(line), 0);
-        }
-        snprintf(line, 256, "Upgrade: websocket\r\n"); kWrite(ptConnCtx, line, strlen(line), 0);
-        snprintf(line, 256, "Connection: keep-alive, Upgrade\r\n"); kWrite(ptConnCtx, line, strlen(line), 0);
+        char host_and_port[_countof(host) + 12];
+        snprintf(host_and_port, _countof(host_and_port), "%s:%d", host, port);
+        additional_headers["Host"] = host_and_port;
+        additional_headers["Upgrade"] = "websocket";
+        additional_headers["Connection"] = "keep-alive, Upgrade";
+        additional_headers["Sec-WebSocket-Key"] = "hLuO7MKwvHBxsv/ureQI9w==";
+        additional_headers["Sec-WebSocket-Version"] = "13";
         if (!origin.empty()) {
-            snprintf(line, 256, "Origin: %s\r\n", origin.c_str()); kWrite(ptConnCtx, line, strlen(line), 0);
+            additional_headers["Origin"] = origin;
         }
-        snprintf(line, 256, "Sec-WebSocket-Key: hLuO7MKwvHBxsv/ureQI9w==\r\n"); kWrite(ptConnCtx, line, strlen(line), 0);
-        snprintf(line, 256, "Sec-WebSocket-Version: 13\r\n"); kWrite(ptConnCtx, line, strlen(line), 0);
-        for (const auto it : additional_headers) {
-            snprintf(line, 256, "%s: %s\r\n", it.key.c_str(), it.value.c_str()); kWrite(ptConnCtx, line, strlen(line), 0);
+
+        for (const auto& it : additional_headers) {
+            snprintf(line, 256, "%s: %s\r\n", it.first.c_str(), it.second.c_str()); kWrite(ptConnCtx, line, strlen(line), 0);
         }
         snprintf(line, 256, "\r\n"); kWrite(ptConnCtx, line, strlen(line), 0);
         for (i = 0; i < 2 || (i < 255 && line[i-2] != '\r' && line[i-1] != '\n'); ++i) { if (kRead(ptConnCtx, line+i, 1, 0) == 0) { return NULL; } }
@@ -611,11 +609,11 @@ WebSocket::pointer WebSocket::create_dummy() {
 }
 
 
-WebSocket::pointer WebSocket::from_url(const std::string& url, std::vector<HeaderKeyValuePair> additional_headers, const std::string& origin) {
+WebSocket::pointer WebSocket::from_url(const std::string& url, HeaderKeyValuePair additional_headers, const std::string& origin) {
     return ::from_url(url, true, additional_headers, origin);
 }
 
-WebSocket::pointer WebSocket::from_url_no_mask(const std::string& url, std::vector<HeaderKeyValuePair> additional_headers, const std::string& origin) {
+WebSocket::pointer WebSocket::from_url_no_mask(const std::string& url, HeaderKeyValuePair additional_headers, const std::string& origin) {
     return ::from_url(url, false, additional_headers, origin);
 }
 
