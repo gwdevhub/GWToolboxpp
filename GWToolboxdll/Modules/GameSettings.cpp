@@ -2082,7 +2082,17 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Checkbox("Auto use available keys when interacting with locked chest", &auto_open_locked_chest_with_key);
     ImGui::Checkbox("Auto use lockpick when interacting with locked chest", &auto_open_locked_chest);
     ImGui::Checkbox("Keep current quest when accepting a new one", &keep_current_quest_when_new_quest_added);
+    ImGui::Checkbox("Block sparkle effect on dropped items", &block_sparkly_drops_effect);
+    ImGui::ShowHelp("Applies to drops that appear after this setting has been changed");
+    ImGui::Checkbox("Limit signet of capture to 10 in skills window", &limit_signets_of_capture);
+    ImGui::ShowHelp("If your character has purchased more than 10 signets of capture, only show 10 of them in the skills window");
+    if (ImGui::Checkbox("Block full screen message when entering a new area", &block_enter_area_message)) {
+        skip_map_entry_message_patch.TogglePatch(block_enter_area_message);
+    }
+    char buf[64] = "None";
+    ImGui::ChooseKey("Hold key to toggle mouse walk:", buf, _countof(buf), &toggle_mouse_walk_key);
 
+    ImGui::NewLine();
     ImGui::Text("Block floating numbers above character when:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
@@ -2093,6 +2103,8 @@ void GameSettings::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Gaining 0 experience", &block_zero_experience_gain);
     ImGui::Unindent();
+
+    ImGui::NewLine();
     ImGui::Text("Disable animation and sound from consumables:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
@@ -2118,10 +2130,7 @@ void GameSettings::DrawSettingsInternal()
     ImGui::ShowHelp("Also applies to ghost-in-the-boxes that you use");
 #endif
     ImGui::Unindent();
-    ImGui::Checkbox("Block sparkle effect on dropped items", &block_sparkly_drops_effect);
-    ImGui::ShowHelp("Applies to drops that appear after this setting has been changed");
-    ImGui::Checkbox("Limit signet of capture to 10 in skills window", &limit_signets_of_capture);
-    ImGui::ShowHelp("If your character has purchased more than 10 signets of capture, only show 10 of them in the skills window");
+    ImGui::NewLine();
     ImGui::Text("In-game name tag colors:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
@@ -2142,6 +2151,7 @@ void GameSettings::DrawSettingsInternal()
     Colors::DrawSettingHueWheel("Item", &nametag_color_item, flags);
     ImGui::Unindent();
 
+    ImGui::NewLine();
     ImGui::Text("Hide skill descriptions in:");
     ImGui::ShowHelp("When hovering a skill in the game,\nonly show the skill name  and cooldown etc in the tooltip that appears.");
     ImGui::Indent();
@@ -2154,11 +2164,6 @@ void GameSettings::DrawSettingsInternal()
         ImGui::Unindent();
     }
     ImGui::Unindent();
-    if (ImGui::Checkbox("Block full screen message when entering a new area", &block_enter_area_message)) {
-        skip_map_entry_message_patch.TogglePatch(block_enter_area_message);
-    }
-    char buf[64] = "None";
-    ImGui::ChooseKey("Hold key to toggle mouse walk:",buf,_countof(buf), &toggle_mouse_walk_key);
 }
 
 void GameSettings::FactionEarnedCheckAndWarn()

@@ -2,6 +2,13 @@
 
 #include <ToolboxUIElement.h>
 
+struct GWToolboxRelease {
+    std::string body;
+    std::string version;
+    std::string download_url;
+    uintmax_t size = 0;
+};
+
 class Updater : public ToolboxUIElement {
     Updater() { can_show_in_main_window = false; };
     ~Updater() override = default;
@@ -23,6 +30,8 @@ public:
     }
 
     static void CheckForUpdate(bool forced = false);
+
+    static const GWToolboxRelease* GetCurrentVersionInfo(GWToolboxRelease* out);
 
     void Draw(IDirect3DDevice9* device) override;
 

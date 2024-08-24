@@ -16,6 +16,7 @@
 
 #include <Modules/Resources.h>
 #include <Modules/PartyBroadcastModule.h>
+#include <Modules/Updater.h>
 
 #include <Utils/GuiUtils.h>
 #include <Utils/TextUtils.h>
@@ -30,12 +31,14 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <base64.h>
+#include <wincrypt.h>
 
 using json = nlohmann::json;
 
 namespace {
-    bool enabled;
-    std::string api_key(256, 0);
+    bool faulty = false;
+    bool enabled = false;
+    std::string api_key;
     easywsclient::WebSocket* ws = nullptr;
     std::string last_update_content;
     clock_t last_update_timestamp = 0;
@@ -71,6 +74,107 @@ namespace {
         if (p.district_number) j["dn"] = p.district_number;
         if (p.message.size()) j["ms"] = p.message;
         if (p.level != 20) j["l"] = p.level;
+    }
+
+    std::string encode_to_base64(std::vector<BYTE>& input)
+    {
+        unsigned input_size = input.size();
+        unsigned output_size = ((input_size + 2) / 3) * 4 + 1; // +1 for the null terminator
+        std::string output_buffer;
+        output_buffer.resize(output_size);
+        const auto encoded_length = b64_enc(input.data(), input_size, output_buffer.data());
+        return std::string(output_buffer.data(), encoded_length + 1); // +1, b64 returns the index of the last char
+    }
+
+    std::optional<std::vector<BYTE>> get_module_hash_bytes(HMODULE hModule)
+    {
+        MODULEINFO modInfo = {0};
+        if (!GetModuleInformation(GetCurrentProcess(), hModule, &modInfo, sizeof(MODULEINFO))) {
+            Log::Error("Failed to get toolbox module information");
+            return std::nullopt;
+        }
+
+        auto modBase = (BYTE*)modInfo.lpBaseOfDll;
+        auto modSize = modInfo.SizeOfImage;
+
+        HCRYPTPROV hProv = 0;
+        HCRYPTHASH hHash = 0;
+
+        if (!CryptAcquireContext(&hProv, NULL, NULL, PROV_RSA_AES, CRYPT_VERIFYCONTEXT)) {
+            Log::Error("Failed to get crypt context");
+            return std::nullopt;
+        }
+        if (!CryptCreateHash(hProv, CALG_SHA_256, 0, 0, &hHash)) {
+            CryptReleaseContext(hProv, 0);
+            Log::Error("Failed to create a hash of toolbox module");
+            return std::nullopt;
+        }
+        if (!CryptHashData(hHash, modBase, modSize, 0)) {
+            CryptDestroyHash(hHash);
+            CryptReleaseContext(hProv, 0);
+            Log::Error("Failed to create a hashdata of toolbox module");
+            return std::nullopt;
+        }
+
+        DWORD hash_size = 0;
+        DWORD hash_size_len = sizeof(DWORD);
+        if (!CryptGetHashParam(hHash, HP_HASHSIZE, (BYTE*)&hash_size, &hash_size_len, 0)) {
+            CryptDestroyHash(hHash);
+            CryptReleaseContext(hProv, 0);
+            Log::Error("Failed to get hash parameters of toolbox module");
+            return std::nullopt;
+        }
+
+        std::vector<BYTE> hash_result;
+        hash_result.resize(hash_size);
+        if (!CryptGetHashParam(hHash, HP_HASHVAL, hash_result.data(), &hash_size, 0)) {
+            CryptDestroyHash(hHash);
+            CryptReleaseContext(hProv, 0);
+            return std::nullopt;
+        }
+
+        CryptDestroyHash(hHash);
+        CryptReleaseContext(hProv, 0);
+
+        return hash_result;
+    }
+
+    std::optional<std::string> calculate_toolbox_hash()
+    {
+        HMODULE hModule = NULL;
+        if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCTSTR)calculate_toolbox_hash, &hModule) == 0) {
+            Log::Error("Failed to get toolbox module handle");
+            return std::nullopt;
+        }
+
+        TCHAR module_path[MAX_PATH] = {0};
+        if (GetModuleFileName(hModule, module_path, MAX_PATH) == 0) {
+            std::cerr << "Failed to get module file name" << std::endl;
+            return std::nullopt;
+        }
+
+        auto hash_bytes = get_module_hash_bytes(hModule);
+        if (!hash_bytes.has_value()) {
+            return std::nullopt;
+        }
+
+        return encode_to_base64(hash_bytes.value());
+    }
+
+    std::optional<std::string> get_api_key() {
+        const auto module_hash = calculate_toolbox_hash();
+        if (!module_hash.has_value()) {
+            Log::Error("Failed to create party.toolbox.com API key. Failed to calculate toolbox hash");
+            return std::nullopt;
+        }
+
+        GWToolboxRelease current_release;
+        if (!Updater::GetCurrentVersionInfo(&current_release)) {
+            Log::Error("Failed to get current toolbox version info");
+            return std::nullopt;
+        }
+
+        return std::format("gwtoolbox-{}-{}", current_release.version, module_hash.value());
     }
 
     void disconnect_ws() {
@@ -233,21 +337,18 @@ namespace {
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
         need_to_send_party_searches = true;
     }
-
 }
 
 void PartyBroadcast::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(enabled);
-    SAVE_STRING(api_key);
 }
 
 void PartyBroadcast::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(enabled);
-    LOAD_STRING(api_key);
 }
 
 void PartyBroadcast::Update(float) {
@@ -267,6 +368,15 @@ void PartyBroadcast::Update(float) {
 void PartyBroadcast::Initialize()
 {
     ToolboxModule::Initialize();
+    const auto key_result = get_api_key();
+    if (!key_result.has_value()) {
+        Log::Error("Failed to get API key for party.gwtoolbox.com. Disabling PartyBroadcast module");
+        enabled = false;
+        faulty = true;
+        return;
+    }
+
+    api_key = key_result.value();
     need_to_send_party_searches = true;
 
     const GW::UI::UIMessage ui_messages[] = {
@@ -284,17 +394,24 @@ void PartyBroadcast::Initialize()
 
 void PartyBroadcast::Terminate() {
     ToolboxModule::Terminate();
+    if (faulty) {
+        return;
+    }
+
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_Hook);
     disconnect_ws();
 }
 
 void PartyBroadcast::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Post Party Search Updates", &enabled);
-    ImGui::ShowHelp("Post party searches to https://party.gwtoolbox.com");
-    if (ImGui::InputText("API Key", api_key.data(), 256)) {
-        api_key.resize(strlen(api_key.c_str()));
+    if (faulty) {
+        return;
     }
 
-    ImGui::ShowHelp("This key is used to post party search updates to https://party.gwtoolbox.com");
+    ImGui::NewLine();
+    ImGui::Text("Party Broadcast Integration - https://party.gwtoolbox.com", "");
+    ImGui::Indent();
+    ImGui::Checkbox("Broadcast Party Searches", &enabled);
+    ImGui::ShowHelp("Post party searches to https://party.gwtoolbox.com");
+    ImGui::Unindent();
 }

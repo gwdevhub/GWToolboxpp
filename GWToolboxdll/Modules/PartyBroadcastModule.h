@@ -17,7 +17,7 @@ public:
 
     [[nodiscard]] const char* Name() const override { return "Party Broadcast"; }
     [[nodiscard]] const char* Description() const override { return "Broadcast party searches to https://party.gwtoolbox.com"; }
-    [[nodiscard]] const char* SettingsName() const override { return "Party Settings"; }
+    [[nodiscard]] const char* SettingsName() const override { return "Game Settings"; }
 
     void Initialize() override;
     void Terminate() override;

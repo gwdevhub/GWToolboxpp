@@ -584,7 +584,9 @@ void PconsWindow::RegisterSettingsContent()
 
 void PconsWindow::DrawLunarsAndAlcoholSettings()
 {
+    ImGui::NewLine();
     ImGui::Text("Lunars and Alcohol");
+    ImGui::Indent();
     ImGui::Text("Current drunk level: %d", Pcon::alcohol_level);
     ImGui::StartSpacedElements(380.f);
     ImGui::NextSpacedElement();
@@ -601,6 +603,7 @@ void PconsWindow::DrawLunarsAndAlcoholSettings()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Hide Spiritual Possession and Lucky Aura", &Pcon::suppress_lunar_skills);
     ImGui::ShowHelp("Will hide the skills in your effect monitor");
+    ImGui::Unindent();
 }
 
 void PconsWindow::CheckObjectivesCompleteAutoDisable()

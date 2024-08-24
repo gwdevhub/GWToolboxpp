@@ -40,13 +40,6 @@ namespace {
     bool forced_ask = false;
     clock_t last_check = 0;
 
-    struct GWToolboxRelease {
-        std::string body;
-        std::string version;
-        std::string download_url;
-        uintmax_t size = 0;
-    };
-
     GWToolboxRelease latest_release;
     GWToolboxRelease current_release;
 
@@ -111,20 +104,6 @@ namespace {
             }
         }
         return nullptr;
-    }
-
-    GWToolboxRelease* GetCurrentVersionInfo(GWToolboxRelease* out)
-    {
-        // server and client versions match
-        char path[MAX_PATH];
-        if (GetModuleFileNameA(GWToolbox::GetDLLModule(), path, sizeof(path)) == 0) {
-            return nullptr;
-        }
-        out->size = std::filesystem::file_size(path);
-        out->version = GWTOOLBOXDLL_VERSION;
-        out->version.append(GWTOOLBOXDLL_VERSION_BETA);
-        std::ranges::transform(out->version, out->version.begin(), [](const auto chr) { return static_cast<char>(std::tolower(chr)); });
-        return out;
     }
 
     char update_available_text[128];
@@ -207,6 +186,22 @@ namespace {
 const std::string& Updater::GetServerVersion()
 {
     return latest_release.version;
+}
+
+const GWToolboxRelease* Updater::GetCurrentVersionInfo(GWToolboxRelease* out)
+{
+    // server and client versions match
+    char path[MAX_PATH];
+    if (GetModuleFileNameA(GWToolbox::GetDLLModule(), path, sizeof(path)) == 0) {
+        return nullptr;
+    }
+    out->size = std::filesystem::file_size(path);
+    out->version = GWTOOLBOXDLL_VERSION;
+    out->version.append(GWTOOLBOXDLL_VERSION_BETA);
+    std::ranges::transform(out->version, out->version.begin(), [](const auto chr) {
+        return static_cast<char>(std::tolower(chr));
+    });
+    return out;
 }
 
 void Updater::LoadSettings(ToolboxIni* ini)
