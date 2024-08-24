@@ -6,6 +6,9 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+
+#include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
@@ -36,7 +39,6 @@
 using json = nlohmann::json;
 
 namespace {
-    bool faulty = false;
     bool enabled = false;
     std::string api_key;
     easywsclient::WebSocket* ws = nullptr;
@@ -44,6 +46,8 @@ namespace {
     clock_t last_update_timestamp = 0;
     bool need_to_send_party_searches = true;
     clock_t failed_to_send_ts = 0;
+
+    const char* websocket_url = "wss://party.gwtoolbox.com";
 
     struct PartySearchAdvertisement {
         uint32_t party_id = 0;
@@ -76,105 +80,14 @@ namespace {
         if (p.level != 20) j["l"] = p.level;
     }
 
-    std::string encode_to_base64(std::vector<BYTE>& input)
-    {
-        unsigned input_size = input.size();
-        unsigned output_size = ((input_size + 2) / 3) * 4 + 1; // +1 for the null terminator
-        std::string output_buffer;
-        output_buffer.resize(output_size);
-        const auto encoded_length = b64_enc(input.data(), input_size, output_buffer.data());
-        return std::string(output_buffer.data(), encoded_length + 1); // +1, b64 returns the index of the last char
-    }
-
-    std::optional<std::vector<BYTE>> get_module_hash_bytes(HMODULE hModule)
-    {
-        MODULEINFO modInfo = {0};
-        if (!GetModuleInformation(GetCurrentProcess(), hModule, &modInfo, sizeof(MODULEINFO))) {
-            Log::Error("Failed to get toolbox module information");
-            return std::nullopt;
-        }
-
-        auto modBase = (BYTE*)modInfo.lpBaseOfDll;
-        auto modSize = modInfo.SizeOfImage;
-
-        HCRYPTPROV hProv = 0;
-        HCRYPTHASH hHash = 0;
-
-        if (!CryptAcquireContext(&hProv, NULL, NULL, PROV_RSA_AES, CRYPT_VERIFYCONTEXT)) {
-            Log::Error("Failed to get crypt context");
-            return std::nullopt;
-        }
-        if (!CryptCreateHash(hProv, CALG_SHA_256, 0, 0, &hHash)) {
-            CryptReleaseContext(hProv, 0);
-            Log::Error("Failed to create a hash of toolbox module");
-            return std::nullopt;
-        }
-        if (!CryptHashData(hHash, modBase, modSize, 0)) {
-            CryptDestroyHash(hHash);
-            CryptReleaseContext(hProv, 0);
-            Log::Error("Failed to create a hashdata of toolbox module");
-            return std::nullopt;
-        }
-
-        DWORD hash_size = 0;
-        DWORD hash_size_len = sizeof(DWORD);
-        if (!CryptGetHashParam(hHash, HP_HASHSIZE, (BYTE*)&hash_size, &hash_size_len, 0)) {
-            CryptDestroyHash(hHash);
-            CryptReleaseContext(hProv, 0);
-            Log::Error("Failed to get hash parameters of toolbox module");
-            return std::nullopt;
-        }
-
-        std::vector<BYTE> hash_result;
-        hash_result.resize(hash_size);
-        if (!CryptGetHashParam(hHash, HP_HASHVAL, hash_result.data(), &hash_size, 0)) {
-            CryptDestroyHash(hHash);
-            CryptReleaseContext(hProv, 0);
-            return std::nullopt;
-        }
-
-        CryptDestroyHash(hHash);
-        CryptReleaseContext(hProv, 0);
-
-        return hash_result;
-    }
-
-    std::optional<std::string> calculate_toolbox_hash()
-    {
-        HMODULE hModule = NULL;
-        if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCTSTR)calculate_toolbox_hash, &hModule) == 0) {
-            Log::Error("Failed to get toolbox module handle");
-            return std::nullopt;
-        }
-
-        TCHAR module_path[MAX_PATH] = {0};
-        if (GetModuleFileName(hModule, module_path, MAX_PATH) == 0) {
-            std::cerr << "Failed to get module file name" << std::endl;
-            return std::nullopt;
-        }
-
-        auto hash_bytes = get_module_hash_bytes(hModule);
-        if (!hash_bytes.has_value()) {
-            return std::nullopt;
-        }
-
-        return encode_to_base64(hash_bytes.value());
-    }
-
-    std::optional<std::string> get_api_key() {
-        const auto module_hash = calculate_toolbox_hash();
-        if (!module_hash.has_value()) {
-            Log::Error("Failed to create party.toolbox.com API key. Failed to calculate toolbox hash");
-            return std::nullopt;
-        }
-
+    bool get_api_key(std::string& out) {
         GWToolboxRelease current_release;
         if (!Updater::GetCurrentVersionInfo(&current_release)) {
             Log::Error("Failed to get current toolbox version info");
-            return std::nullopt;
+            return false;
         }
-
-        return std::format("gwtoolbox-{}-{}", current_release.version, module_hash.value());
+        out = std::format("gwtoolbox-{}-{}", current_release.version, current_release.size);
+        return true;
     }
 
     void disconnect_ws() {
@@ -185,6 +98,7 @@ namespace {
             ws = nullptr;
             last_update_content = "";
             last_update_timestamp = 0;
+            Log::Log("Websocket disconnected");
         }
     }
     bool is_websocket_ready() {
@@ -192,11 +106,12 @@ namespace {
     }
 
     // @Cleanup: Get gw account uuid for this.
-    std::string get_uuid() {
+     bool get_uuid(std::string& out) {
         const auto c = GW::GetCharContext();
         if (!(c && c->player_uuid))
-            return "";
-        return std::format("{}-{}-{}-{}", c->player_uuid[0], c->player_uuid[1], c->player_uuid[2], c->player_uuid[3]);
+            return false;
+        out = std::format("{:x}-{:x}-{:x}-{:x}", c->player_uuid[0], c->player_uuid[1], c->player_uuid[2], c->player_uuid[3]);
+        return true;
     }
 
     // Run this on a worker thread!!
@@ -208,15 +123,19 @@ namespace {
         if (!api_key.size())
             return false;
 
-
+        std::string uuid;
+        if (!get_uuid(uuid))
+            return false;
 
         easywsclient::HeaderKeyValuePair headers = {
             {"User-Agent", "GWToolboxpp"},
             {"X-Api-Key", api_key},
-            {"X-Account-Uuid", get_uuid()},
+            {"X-Account-Uuid", uuid},
             {"X-Bot-Version", "100"}
         };
-        ws = easywsclient::WebSocket::from_url("wss://party.gwtoolbox.com", headers);
+        Log::Log("Connecting to %s (X-Api-Key: %s, X-Account-Uuid: %s)", websocket_url, headers["X-Api-Key"].c_str(), headers["X-Account-Uuid"].c_str());
+
+        ws = easywsclient::WebSocket::from_url(websocket_url, headers);
         if (!ws) {
             return false;
         }
@@ -226,6 +145,7 @@ namespace {
             disconnect_ws();
             return false;
         }
+        Log::Log("Websocket connected");
         last_update_content = "";
         last_update_timestamp = 0;
         return true;
@@ -303,13 +223,17 @@ namespace {
         return ads;
     }
 
-
     std::string last_party_searches_payload = "";
     // Run on game thread!
     bool send_current_party_searches() {
         if (!GW::Map::GetIsMapLoaded()) {
             return false;
         }
+
+        std::string uuid;
+        if (!get_uuid(uuid))
+            return false;
+
 
         json j;
         j["type"] = "client_parties";
@@ -337,6 +261,9 @@ namespace {
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
         need_to_send_party_searches = true;
     }
+    void OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* ) {
+        need_to_send_party_searches = true;
+    }
 }
 
 void PartyBroadcast::SaveSettings(ToolboxIni* ini)
@@ -352,6 +279,12 @@ void PartyBroadcast::LoadSettings(ToolboxIni* ini)
 }
 
 void PartyBroadcast::Update(float) {
+    if (enabled) {
+        if (!(api_key.size() || get_api_key(api_key))) {
+            Log::Error("Failed to get API key for %s. Disabling PartyBroadcast module", websocket_url);
+            enabled = false;
+        }
+    }
     if (!(enabled && api_key.size() && is_websocket_ready()))
         disconnect_ws();
     if (need_to_send_party_searches && (!failed_to_send_ts || TIMER_DIFF(failed_to_send_ts) > 5000)) {
@@ -368,15 +301,7 @@ void PartyBroadcast::Update(float) {
 void PartyBroadcast::Initialize()
 {
     ToolboxModule::Initialize();
-    const auto key_result = get_api_key();
-    if (!key_result.has_value()) {
-        Log::Error("Failed to get API key for party.gwtoolbox.com. Disabling PartyBroadcast module");
-        enabled = false;
-        faulty = true;
-        return;
-    }
 
-    api_key = key_result.value();
     need_to_send_party_searches = true;
 
     const GW::UI::UIMessage ui_messages[] = {
@@ -390,28 +315,23 @@ void PartyBroadcast::Initialize()
     for (auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&OnUIMessage_Hook, message_id, OnUIMessage, 0x8000);
     }
+    GW::StoC::RegisterPacketCallback(&OnUIMessage_Hook, GAME_SMSG_AGENT_DESPAWNED, OnStoCPacket, 0x8000);
 }
 
 void PartyBroadcast::Terminate() {
     ToolboxModule::Terminate();
-    if (faulty) {
-        return;
-    }
-
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_Hook);
+    GW::StoC::RemoveCallbacks(&OnUIMessage_Hook);
     disconnect_ws();
+
 }
 
 void PartyBroadcast::DrawSettingsInternal()
 {
-    if (faulty) {
-        return;
-    }
-
     ImGui::NewLine();
-    ImGui::Text("Party Broadcast Integration - https://party.gwtoolbox.com", "");
+    ImGui::Text("Party Broadcast Integration - %s", websocket_url);
     ImGui::Indent();
     ImGui::Checkbox("Broadcast Party Searches", &enabled);
-    ImGui::ShowHelp("Post party searches to https://party.gwtoolbox.com");
+    ImGui::ShowHelp(std::format("Post party searches to {}", websocket_url).c_str());
     ImGui::Unindent();
 }
