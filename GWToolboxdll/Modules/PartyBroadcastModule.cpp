@@ -35,6 +35,7 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <base64.h>
 #include <wincrypt.h>
+#include <Utils/ToolboxUtils.h>
 
 using json = nlohmann::json;
 
@@ -49,6 +50,23 @@ namespace {
 
     const char* websocket_url = "wss://party.gwtoolbox.com";
 
+    struct MapDistrictInfo {
+        GW::Constants::MapID map_id = (GW::Constants::MapID)0;
+        GW::Constants::ServerRegion region = (GW::Constants::ServerRegion)0;
+        GW::Constants::Language language = (GW::Constants::Language)0;
+        int district_number = 0;
+    };
+
+    MapDistrictInfo GetDistrictInfo() {
+        return {
+            GW::Map::GetMapID(),
+            GW::Map::GetRegion(),
+            GW::Map::GetLanguage(),
+            GW::Map::GetDistrict()
+        };
+    }
+
+
     struct PartySearchAdvertisement {
         uint32_t party_id = 0;
         uint8_t party_size = 0;
@@ -60,14 +78,23 @@ namespace {
         uint8_t primary = 0;
         uint8_t secondary = 0;
         uint8_t level = 0;
-        std::string message;
-        std::string sender;
+        char message[65] = { 0 };
+        char sender[42] = { 0 };
     };
-    std::vector<PartySearchAdvertisement> party_search_advertisements;
+    std::vector<PartySearchAdvertisement> last_sent_parties;
+    MapDistrictInfo last_sent_district_info;
 
     void to_json(nlohmann::json& j, const PartySearchAdvertisement& p)
     {
-        j = nlohmann::json{{"i", p.party_id}, {"t", p.search_type}, {"p", p.primary}, {"s", p.sender}};
+        j = nlohmann::json{ {"i", p.party_id} };
+        if (!p.party_size) {
+             // Aka "remove"
+            j["r"] = 1;
+            return;
+        }
+        j["t"] = p.search_type;
+        j["p"] = p.primary;
+        j["s"] = p.sender;
 
         // The following fields can be assumed to be reasonable defaults by the server, so only need to send if they're not standard.
         if (p.party_size > 1) j["ps"] = p.party_size;
@@ -76,7 +103,7 @@ namespace {
         if (p.language) j["dl"] = p.language;
         if (p.secondary) j["sc"] = p.secondary;
         if (p.district_number) j["dn"] = p.district_number;
-        if (p.message.size()) j["ms"] = p.message;
+        if (*p.message) j["ms"] = p.message;
         if (p.level != 20) j["l"] = p.level;
     }
 
@@ -98,6 +125,9 @@ namespace {
             ws = nullptr;
             last_update_content = "";
             last_update_timestamp = 0;
+            last_sent_parties.clear();
+            need_to_send_party_searches = true;
+            memset(&last_sent_district_info, 0, sizeof(last_sent_district_info));
             Log::Log("Websocket disconnected");
         }
     }
@@ -105,13 +135,11 @@ namespace {
         return ws && ws->getReadyState() == easywsclient::WebSocket::readyStateValues::OPEN;
     }
 
-    // @Cleanup: Get gw account uuid for this.
      bool get_uuid(std::string& out) {
-        const auto c = GW::GetCharContext();
-        if (!(c && c->player_uuid))
-            return false;
-        out = std::format("{:x}-{:x}-{:x}-{:x}", c->player_uuid[0], c->player_uuid[1], c->player_uuid[2], c->player_uuid[3]);
-        return true;
+         const auto account_uuid = GW::AccountMgr::GetPortalAccountUuid();
+         if (!account_uuid) return false;
+         out = TextUtils::GuidToString(account_uuid);
+         return true;
     }
 
     // Run this on a worker thread!!
@@ -186,9 +214,9 @@ namespace {
                 ad.primary = static_cast<uint8_t>(search->primary);
                 ad.secondary = static_cast<uint8_t>(search->secondary);
                 ad.level = static_cast<uint8_t>(search->level);
-                ad.sender = TextUtils::WStringToString(search->party_leader);
+                strcpy(ad.sender, TextUtils::WStringToString(search->party_leader).c_str());
                 if (search->message && *search->message) {
-                    ad.message = TextUtils::WStringToString(search->message);
+                    strcpy(ad.message, TextUtils::WStringToString(search->message).c_str());
                 }
                 ads.push_back(ad);
             }
@@ -215,7 +243,7 @@ namespace {
                 ad.primary = static_cast<uint8_t>(player.primary);
                 ad.secondary = static_cast<uint8_t>(player.secondary);
                 ad.level = static_cast<uint8_t>(agent->level);
-                ad.sender = sender;
+                strcpy(ad.sender,sender.c_str());
                 ads.push_back(ad);
             }
         }
@@ -225,7 +253,7 @@ namespace {
 
     std::string last_party_searches_payload = "";
     // Run on game thread!
-    bool send_current_party_searches() {
+    bool send_all_party_searches() {
         if (!GW::Map::GetIsMapLoaded()) {
             return false;
         }
@@ -234,22 +262,83 @@ namespace {
         if (!get_uuid(uuid))
             return false;
 
+        auto to_send = collect_party_searches();
 
         json j;
         j["type"] = "client_parties";
         j["map_id"] = (uint32_t)GW::Map::GetMapID();
         j["district_region"] = (int)GW::Map::GetRegion();
-        j["parties"] = collect_party_searches();
+        j["parties"] = to_send;
 
         const auto payload = j.dump();
-        if (last_party_searches_payload != payload) {
-            if (send_payload(payload)) {
-                last_party_searches_payload = payload;
-                last_update_timestamp = TIMER_INIT();
-                return true;
+        if (!send_payload(payload))
+            return false;
+        last_sent_district_info = GetDistrictInfo();
+        last_sent_parties = std::move(to_send);
+        last_update_timestamp = TIMER_INIT();
+        return true;
+
+    }
+
+    bool send_changed_party_searches() {
+        if (!GW::Map::GetIsMapLoaded()) {
+            return false;
+        }
+        std::string uuid;
+        if (!get_uuid(uuid))
+            return false;
+
+        const auto current_map_info = GetDistrictInfo();
+        if (memcmp(&current_map_info, &last_sent_district_info, sizeof(current_map_info)) != 0) {
+            // Map has changed since last attempt; send full list
+            return send_all_party_searches();
+        }
+
+
+        auto parties = collect_party_searches();
+
+        std::vector<PartySearchAdvertisement> to_send;
+
+        for (auto& existing_party : parties) {
+            const auto found = std::ranges::find_if(last_sent_parties.begin(), last_sent_parties.end(), [existing_party](const PartySearchAdvertisement& entry) {
+                return entry.party_id == existing_party.party_id;
+                });
+            if (found != last_sent_parties.end()
+                && memcmp(&existing_party, &(*found), sizeof(existing_party)) == 0) {
+                continue; // No change, don't send
+            }
+            to_send.push_back(existing_party);
+        }
+
+        for (auto& last_sent_party : last_sent_parties) {
+            if (!last_sent_party.party_size)
+                continue; // Already flagged for removal
+            const auto found = std::ranges::find_if(parties.begin(), parties.end(), [last_sent_party](const PartySearchAdvertisement& entry) {
+                return entry.party_id == last_sent_party.party_id;
+                });
+            if (found == parties.end()) {
+                // Party no longer exists, flag for removal
+                auto cpy = last_sent_party;
+                cpy.party_size = 0; // Aka "remove"
+                to_send.push_back(cpy);
             }
         }
-        return false;
+
+        if (to_send.empty())
+            return true; // No change
+        json j;
+        j["type"] = "updated_parties";
+        j["map_id"] = (uint32_t)GW::Map::GetMapID();
+        j["district_region"] = (int)GW::Map::GetRegion();
+        j["parties"] = to_send;
+
+        const auto payload = j.dump();
+        if (!send_payload(payload))
+            return false;
+        last_sent_district_info = GetDistrictInfo();
+        last_sent_parties = std::move(to_send);
+        last_update_timestamp = TIMER_INIT();
+        return true;
     }
 
     void on_websocket_message(const std::string& message) {
@@ -285,17 +374,22 @@ void PartyBroadcast::Update(float) {
             enabled = false;
         }
     }
-    if (!(enabled && api_key.size() && is_websocket_ready()))
+    if (!(enabled && api_key.size() && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)) {
         disconnect_ws();
+        return;
+    }
     if (need_to_send_party_searches && (!failed_to_send_ts || TIMER_DIFF(failed_to_send_ts) > 5000)) {
-        need_to_send_party_searches = !send_current_party_searches();
+        need_to_send_party_searches = !send_changed_party_searches();
         if(need_to_send_party_searches)
             failed_to_send_ts = TIMER_INIT();
     }
     if (ws) {
         ws->poll();
         ws->dispatch(on_websocket_message);
+        if (ws->getReadyState() != easywsclient::WebSocket::OPEN)
+            disconnect_ws();
     }
+
 }
 
 void PartyBroadcast::Initialize()
