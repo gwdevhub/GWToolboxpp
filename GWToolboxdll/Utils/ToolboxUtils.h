@@ -111,6 +111,7 @@ namespace GW {
 
         // Try not to be a dick with this info
         const wchar_t* GetAccountEmail();
+        const UUID* GetPortalAccountUuid();
 
         AvailableCharacterInfo* GetAvailableCharacter(const wchar_t* name);
     }

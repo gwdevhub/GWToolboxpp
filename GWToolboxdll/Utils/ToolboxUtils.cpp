@@ -30,6 +30,9 @@
 
 namespace {
     
+    typedef UUID* (__cdecl* PortalGetUserId_pt)();
+    PortalGetUserId_pt PortalGetUserId_Func = 0;
+
     GW::Array<GW::AvailableCharacterInfo>* available_chars_ptr = nullptr;
     
     bool IsInfused(const GW::Item* item)
@@ -87,6 +90,14 @@ namespace GW {
         {
             const auto c = GetCharContext();
             return c ? c->player_email : nullptr;
+        }
+        const UUID* GetPortalAccountUuid()
+        {
+            if (!PortalGetUserId_Func) {
+                HMODULE hPortalDll = GetModuleHandle("GwLoginClient.dll");
+                PortalGetUserId_Func = hPortalDll ? (PortalGetUserId_pt)GetProcAddress(hPortalDll, "PortalGetUserId") : nullptr;
+            }
+            return PortalGetUserId_Func ? PortalGetUserId_Func() : nullptr;
         }
         AvailableCharacterInfo* GetAvailableCharacter(const wchar_t* name) {
             const auto characters = name ? GetAvailableChars() : nullptr;
