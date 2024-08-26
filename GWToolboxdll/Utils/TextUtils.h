@@ -8,6 +8,8 @@ namespace TextUtils {
     std::string SanitiseFilename(std::string_view str);
     std::wstring SanitiseFilename(std::wstring_view str);
 
+    std::string GuidToString(const GUID* guid);
+
     std::string RemovePunctuation(std::string s);
     std::wstring RemovePunctuation(std::wstring s);
     std::string ToSlug(std::string s);
