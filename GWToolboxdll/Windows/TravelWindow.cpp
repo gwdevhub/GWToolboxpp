@@ -145,7 +145,7 @@ namespace {
     bool IsValidOutpost(GW::Constants::MapID map_id)
     {
         const auto map_info = GW::Map::GetMapInfo(map_id);
-        if (!map_info || !map_info->thumbnail_id || !map_info->name_id || !map_info->icon_start_x)
+        if (!map_info || !map_info->thumbnail_id || !map_info->name_id || !(map_info->x || map_info->y))
             return false;
         if ((map_info->flags & 0x5000000) == 0x5000000)
             return false; // e.g. "wrong" augury rock is map 119, no NPCs
