@@ -39,6 +39,32 @@ namespace {
         } while (true);
         return res;
     }
+
+    uint32_t FileHashToFileId(wchar_t* param_1) {
+        if (!param_1)
+            return 0;
+        if (((0xff < *param_1) && (0xff < param_1[1])) &&
+            ((param_1[2] == 0 || ((0xff < param_1[2] && (param_1[3] == 0)))))) {
+            return (*param_1 - 0xff00ff) + (uint32_t)param_1[1] * 0xff00;
+        }
+        return 0;
+    }
+
+    const uint32_t GetMapPropModelFileId(GW::MapProp* prop) {
+        if (!(prop && prop->h0034[4]))
+            return (uint32_t)0;
+        uint32_t* sub_deets = (uint32_t*)prop->h0034[4];
+        return FileHashToFileId((wchar_t*)sub_deets[1]);
+        };
+
+    bool IsTravelPortal(GW::MapProp* prop) {
+        switch (GetMapPropModelFileId(prop)) {
+        case 0xa825: // Prophecies, Factions
+            return true;
+        }
+        return false;
+    }
+
 }
 
 namespace Pathing {
@@ -215,6 +241,20 @@ namespace Pathing {
         m_msd = MapSpecific::MapSpecificData(Map::GetMapID());
         m_teleports = m_msd.m_teleports;
     }
+    void MilePath::LoadTravelPortals()
+    {
+        const auto m = GetMapContext();
+        const auto p = m ? m->props : nullptr;
+        const auto props = p ? &p->propArray : nullptr;
+        travel_portals.clear();
+        if (!props) return;
+        for (const auto prop : *props) {
+            if (IsTravelPortal(prop)) {
+                // NB: May need to guess height and width for these - 1100.f ?
+                travel_portals.push_back(prop);
+            }
+        }
+    }
 
     MilePath::MilePath()
     {
@@ -223,6 +263,7 @@ namespace Pathing {
         start = clock();
         GW::GameThread::Enqueue([&] {
             LoadMapSpecificData();
+            LoadTravelPortals();
             GenerateAABBs();
             GenerateAABBGraph(); //not threaded because it relies on gw client Query altitude.
             ASSERT(!worker_thread);

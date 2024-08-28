@@ -133,6 +133,7 @@ namespace Pathing {
         std::vector<std::vector<const Portal*>> m_PTPortalGraph; // [simple_pt.id]
         std::vector<point> m_points;                             // [point.id]
         MapSpecific::Teleports m_teleports;
+        std::vector<GW::MapProp*> travel_portals;
         std::vector<MapSpecific::teleport_node> m_teleportGraph;
 
         //Generate distance graph among teleports
@@ -151,6 +152,9 @@ namespace Pathing {
 
     private:
         void LoadMapSpecificData();
+
+        // Traverse map props and copy an array of valid in-game portals; later used for travel calcs
+        void LoadTravelPortals();
 
         //Generate Axis Aligned Bounding Boxes around trapezoids
         //This is used for quick intersection checks.
