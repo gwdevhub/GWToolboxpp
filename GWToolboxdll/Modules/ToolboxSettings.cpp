@@ -33,6 +33,7 @@
 #include <Modules/SalvageInfoModule.h>
 #include <Modules/ResignLogModule.h>
 #include <Modules/PartyBroadcastModule.h>
+#include <Modules/CodeOptimiserModule.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -147,7 +148,8 @@ namespace {
         SalvageInfoModule::Instance(),
         ResignLogModule::Instance(),
         QuestModule::Instance(),
-        PartyBroadcast::Instance()
+        PartyBroadcast::Instance(),
+        CodeOptimiserModule::Instance()
     };
 
     std::vector<WidgetToggle> optional_widgets = {

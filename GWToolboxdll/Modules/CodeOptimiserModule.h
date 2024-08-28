@@ -14,7 +14,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "CodeOptimiserModule"; }
+    [[nodiscard]] const char* Name() const override { return "Code Optimiser"; }
     bool HasSettings() override { return false; }
 
 
