@@ -124,7 +124,7 @@ namespace Pathing {
             std::vector<uint32_t> blocking_ids; //Holds all layer changes; for checking if it's passable or blocked.
         } PointVisElement;
 
-        float m_visibility_range = 5000;
+        constexpr static float m_visibility_range = 20000;
         std::vector<AABB> m_aabbs;
         std::vector<SimplePT> m_trapezoids;
         std::vector<std::vector<PointVisElement>> m_visGraph;    // [point.id]

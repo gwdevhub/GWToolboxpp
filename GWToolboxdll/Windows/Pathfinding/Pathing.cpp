@@ -535,7 +535,7 @@ namespace Pathing {
         }
 
         // Not needed. But if they are sorted binary search can be used.
-        std::sort(m_points.begin(), m_points.end(), [](const point& a, const point& b) { return a.pos.y > b.pos.y; });
+        std::ranges::sort(m_points, [](const point& a, const point& b) { return a.pos.y > b.pos.y; });
         for (size_t i = 0; i < m_points.size(); ++i) {
             m_points[i].id = i;
         }
@@ -978,7 +978,7 @@ namespace Pathing {
 
         int count = 0;
         while (current.id != start.id) {
-            if (count++ > 64) {
+            if (count++ > 256) {
                 Log::Error("build path failed\n");
                 return Error::BuildPathLengthExceeded;
             }
