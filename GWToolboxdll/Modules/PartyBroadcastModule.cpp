@@ -81,7 +81,7 @@ namespace {
         char message[65] = { 0 };
         char sender[42] = { 0 };
     };
-    std::vector<PartySearchAdvertisement> last_sent_parties;
+    std::map<uint32_t,PartySearchAdvertisement> server_parties;
     MapDistrictInfo last_sent_district_info;
 
     void to_json(nlohmann::json& j, const PartySearchAdvertisement& p)
@@ -125,7 +125,7 @@ namespace {
             ws = nullptr;
             last_update_content = "";
             last_update_timestamp = 0;
-            last_sent_parties.clear();
+            server_parties.clear();
             need_to_send_party_searches = true;
             memset(&last_sent_district_info, 0, sizeof(last_sent_district_info));
             Log::Log("Websocket disconnected");
@@ -236,7 +236,7 @@ namespace {
                 if (found != ads.end())
                     continue; // Player has a party search entry
                 PartySearchAdvertisement ad;
-                ad.party_id = (0xffff0000 | player.player_number);
+                ad.party_id = (0xf00 | player.player_number);
                 ad.party_size = static_cast<uint8_t>(player.party_size);
                 ad.district_number = static_cast<uint16_t>(district_number);
                 ad.language = static_cast<uint8_t>(district_language);
@@ -274,7 +274,11 @@ namespace {
         if (!send_payload(payload))
             return false;
         last_sent_district_info = GetDistrictInfo();
-        last_sent_parties = std::move(to_send);
+
+        server_parties.clear();
+        for (auto& party : to_send) {
+            server_parties[party.party_id] = party;
+        }
         last_update_timestamp = TIMER_INIT();
         return true;
 
@@ -300,17 +304,16 @@ namespace {
         std::vector<PartySearchAdvertisement> to_send;
 
         for (auto& existing_party : parties) {
-            const auto found = std::ranges::find_if(last_sent_parties.begin(), last_sent_parties.end(), [existing_party](const PartySearchAdvertisement& entry) {
-                return entry.party_id == existing_party.party_id;
-                });
-            if (found != last_sent_parties.end()
-                && memcmp(&existing_party, &(*found), sizeof(existing_party)) == 0) {
+            const auto found = server_parties.find(existing_party.party_id);
+            if (found != server_parties.end()
+                && memcmp(&existing_party, &found->second, sizeof(existing_party)) == 0) {
                 continue; // No change, don't send
             }
             to_send.push_back(existing_party);
         }
 
-        for (auto& last_sent_party : last_sent_parties) {
+        for (auto& it : server_parties) {
+            const auto& last_sent_party = it.second;
             if (!last_sent_party.party_size)
                 continue; // Already flagged for removal
             const auto found = std::ranges::find_if(parties.begin(), parties.end(), [last_sent_party](const PartySearchAdvertisement& entry) {
@@ -336,7 +339,9 @@ namespace {
         if (!send_payload(payload))
             return false;
         last_sent_district_info = GetDistrictInfo();
-        last_sent_parties = std::move(to_send);
+        for (auto& party : to_send) {
+            server_parties[party.party_id] = party;
+        }
         last_update_timestamp = TIMER_INIT();
         return true;
     }
