@@ -223,8 +223,26 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
         }
     }
 
+
     if (!AddPolyToDevice(*this, device))
         return;
+
+    if (from_player_pos && !vertices.empty()) {
+        const auto player = GW::Agents::GetControlledCharacter();
+        if (player) {
+            auto& vertex = vertices[0];
+            vertex.x = player->pos.x;
+            vertex.y = player->pos.y;
+            vertex.z = player->name_tag_z;
+            void* mem_loc = nullptr;
+            auto res = vb->Lock(0, sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD);
+            if (res == S_OK) {
+                memcpy(mem_loc, &vertex, sizeof(D3DVertex));
+                vb->Unlock();
+            }
+        }
+    }
+
     // draw this specific renderable
     if (device->SetStreamSource(0, vb, 0, sizeof(D3DVertex)) != D3D_OK) {
         // a safe failure mode
@@ -483,6 +501,8 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines()
         std::vector points = {line->p1, line->p2};
 
         auto poly_to_add = GenericPolyRenderable(line->map, points, line->color, false);
+
+        poly_to_add.from_player_pos = line->from_player_pos;
 
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
 

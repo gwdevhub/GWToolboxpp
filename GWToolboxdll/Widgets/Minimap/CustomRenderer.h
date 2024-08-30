@@ -109,6 +109,7 @@ public:
         bool draw_on_minimap = true;
         bool draw_everywhere = false;
         bool created_by_toolbox = false;
+        bool from_player_pos = false;
         char name[128]{};
     };
 

@@ -20,6 +20,7 @@ public:
             : vb(other.vb), map_id(other.map_id)
             , col(other.col)
             , filled(other.filled)
+            , from_player_pos(other.from_player_pos)
             , vertices_processed(other.vertices_processed)
         {
             other.vb = nullptr;
@@ -46,6 +47,7 @@ public:
             col = other.col;
             filled = other.filled;
             vertices_processed = other.vertices_processed;
+            from_player_pos = other.from_player_pos;
 
             return *this;
         }
@@ -57,6 +59,7 @@ public:
         std::vector<D3DVertex> vertices{};
         std::vector<uint32_t> vertices_zplanes{};
         bool filled = false;
+        bool from_player_pos = false;
         unsigned int vertices_processed = 0u;
         IDirect3DVertexBuffer9* vb = nullptr;
 

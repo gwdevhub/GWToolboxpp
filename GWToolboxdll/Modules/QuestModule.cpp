@@ -131,11 +131,13 @@ namespace {
             ClearMinimapLines();
             if (!draw_quest_path_on_terrain && !draw_quest_path_on_minimap)
                 return;
-            for (size_t i = current_waypoint > 0 ? current_waypoint - 1 : 0; i < waypoints.size() - 1; i++) {
+            size_t start_idx = current_waypoint > 0 ? current_waypoint - 1 : 0;
+            for (size_t i = start_idx; i < waypoints.size() - 1; i++) {
                 const auto l = Minimap::Instance().custom_renderer.AddCustomLine(
                     waypoints[i], waypoints[i + 1],
                     std::format("{} - {}", (uint32_t)quest_id, i).c_str(), true
                 );
+                l->from_player_pos = i == start_idx;
                 l->draw_on_terrain = draw_quest_path_on_terrain;
                 l->draw_on_minimap = draw_quest_path_on_minimap;
                 l->created_by_toolbox = true;
