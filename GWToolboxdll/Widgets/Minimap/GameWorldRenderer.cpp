@@ -144,16 +144,16 @@ namespace {
             poly.vb = nullptr;
             return false;
         }
-        void* mem_loc = nullptr;
-        // map the vertex buffer memory and write vertices to it.
 
+        // map the vertex buffer memory and write vertices to it.
+        void* mem_loc = nullptr;
         res = poly.vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD);
-        if (!(res == S_OK && mem_loc)) {
+        if (res != S_OK || !mem_loc) {
             poly.vb->Release();
             poly.vb = nullptr;
             return false;
         }
-        // this should avoid an invalid memcpy, if locking fails for some reason
+
         memcpy(mem_loc, vertices.data(), vertices.size() * sizeof(D3DVertex));
         poly.vb->Unlock();
         return true;
