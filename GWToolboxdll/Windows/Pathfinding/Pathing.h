@@ -17,8 +17,7 @@ namespace Pathing {
         FailedToGetPathingMapBlock
     };
 
-
-    //basdically a copy of Pathing trapezoid with additional layer and corner points.
+    // basically a copy of Pathing trapezoid with additional layer and corner points.
     //  a----d
     //   \    \
     //    b____c
@@ -39,8 +38,8 @@ namespace Pathing {
 
     class AABB {
     public:
-        //https://noonat.github.io/intersect/
-        typedef uint32_t boxId;
+        // https://noonat.github.io/intersect/
+        using box_id = uint32_t;
 
         AABB(const SimplePT& t);
         bool intersect(const GW::Vec2f& rhs) const;                                           // point
@@ -48,7 +47,7 @@ namespace Pathing {
         bool intersect(const GW::Vec2f& a, const GW::Vec2f& b, GW::Vec2f padding = {}) const; // segment
         bool intersect(const AABB& rhs, GW::Vec2f padding = {}) const;                        // aabb
 
-        boxId m_id;
+        box_id m_id;
         GW::Vec2f m_pos, m_half;
         const SimplePT* m_t;
     };
@@ -118,13 +117,13 @@ namespace Pathing {
             }
         };
 
-        typedef struct {
-            point::Id point_id; //other point
+        struct PointVisElement {
+            point::Id point_id; // other point
             float distance;
-            std::vector<uint32_t> blocking_ids; //Holds all layer changes; for checking if it's passable or blocked.
-        } PointVisElement;
+            std::vector<uint32_t> blocking_ids; // Holds all layer changes; for checking if it's passable or blocked.
+        } ;
 
-        constexpr static float m_visibility_range = 20000;
+        constexpr static float MAX_VISIBILITY_RANGE = 5000;
         std::vector<AABB> m_aabbs;
         std::vector<SimplePT> m_trapezoids;
         std::vector<std::vector<PointVisElement>> m_visGraph;    // [point.id]
@@ -136,7 +135,7 @@ namespace Pathing {
         std::vector<GW::MapProp*> travel_portals;
         std::vector<MapSpecific::teleport_node> m_teleportGraph;
 
-        //Generate distance graph among teleports
+        // Generate distance graph among teleports
         void GenerateTeleportGraph();
         MilePath::point CreatePoint(const GW::GamePos& pos);
 
@@ -156,20 +155,20 @@ namespace Pathing {
         // Traverse map props and copy an array of valid in-game portals; later used for travel calcs
         void LoadTravelPortals();
 
-        //Generate Axis Aligned Bounding Boxes around trapezoids
-        //This is used for quick intersection checks.
+        // Generate Axis Aligned Bounding Boxes around trapezoids
+        // This is used for quick intersection checks.
         void GenerateAABBs();
 
         bool CreatePortal(const AABB* box1, const AABB* box2, const SimplePT::adjacentSide& ts);
 
-        //Connect trapezoid AABBS.
+        // Connect trapezoid AABBS.
         void GenerateAABBGraph();
 
         void GeneratePoints();
 
         void GenerateVisibilityGraph();
 
-        typedef enum { enter, exit, both } teleport_point_type;
+        enum class teleport_point_type : uint8_t { enter, exit, both } ;
 
         void insertTeleportPointIntoVisGraph(MilePath::point& point, teleport_point_type type);
         void InsertTeleportsIntoVisibilityGraph();
@@ -217,7 +216,7 @@ namespace Pathing {
             void finalize()
             {
                 if (!finalized)
-                    std::reverse(m_points.begin(), m_points.end());
+                    std::ranges::reverse(m_points);
                 finalized = true;
             }
 
@@ -225,7 +224,7 @@ namespace Pathing {
             bool finalized = false;
             AStar* m_astar;
             std::vector<MilePath::point> m_points;
-            float m_cost; //distance
+            float m_cost; // distance
         };
 
         Path m_path;
