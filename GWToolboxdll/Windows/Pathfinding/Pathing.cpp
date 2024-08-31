@@ -389,7 +389,7 @@ namespace Pathing {
             }
         }
         std::sort(m_aabbs.begin(), m_aabbs.end(), [](const AABB& a, const AABB& b) { return a.m_pos.y - a.m_half.y > b.m_pos.y - b.m_half.y; });
-        AABB::boxId id = 0;
+        AABB::box_id id = 0;
         for (auto& box : m_aabbs) {
             box.m_id = id++;
         }
@@ -681,7 +681,7 @@ namespace Pathing {
         for (auto& it : m_visGraph) {
             it.reserve(0x100);
         }
-        float range = m_visibility_range;
+        float range = MAX_VISIBILITY_RANGE;
         float sqrange = range * range;
 
         std::vector<const AABB*> open;
@@ -757,7 +757,7 @@ namespace Pathing {
             it.reserve(0x50);
         }
 
-        float range = m_visibility_range;
+        float range = MAX_VISIBILITY_RANGE;
         float sqrange = range * range;
 
         size_t size = m_points.size();
@@ -782,45 +782,38 @@ namespace Pathing {
             auto localUpdates = std::vector<VisGraphUpdate>();
             localUpdates.reserve(vis_graph_size * 2);
 
-            float min_range, max_range, sqdist, dist;
-            point* p1;
-            point* p2;
-
             for (size_t i = start; i < end; ++i) {
                 {
                     std::lock_guard lock(terminateMutex);
                     if (m_terminateThread) return; // Check termination flag
                 }
 
-                p1 = &m_points[i];
-                min_range = p1->pos.y - range;
-                max_range = p1->pos.y + range;
+                point* p1 = &m_points[i];
+                const float min_range = p1->pos.y - range;
+                const float max_range = p1->pos.y + range;
 
                 for (size_t j = i + 1; j < size; ++j) {
-                    p2 = &m_points[j];
+                    point* p2 = &m_points[j];
 
                     if (min_range > p2->pos.y || max_range < p2->pos.y)
                         continue;
 
-                    sqdist = GetSquareDistance(p1->pos, p2->pos);
+                    const float sqdist = GetSquareDistance(p1->pos, p2->pos);
                     if (sqdist > sqrange)
                         continue;
 
-                    {
-                        // Tiny bit faster than std::any_of
-                        std::lock_guard lock(visGraphMutex);
-                        auto m_visGraph_it = m_visGraph[p1->id].begin(), m_visGraph_end = m_visGraph[p1->id].end();
-                        bool found = false;
-                        for (m_visGraph_it; m_visGraph_it != m_visGraph_end && !found; m_visGraph_it++) {
-                            found = m_visGraph_it->point_id == p2->id;
-                        }
-                        if (found)
-                            continue;
+                    // Tiny bit faster than std::any_of
+                    std::lock_guard lock(visGraphMutex);
+                    bool found = false;
+                    for (auto m_visGraph_it = m_visGraph[p1->id].begin(); m_visGraph_it != m_visGraph[p1->id].end() && !found; ++m_visGraph_it) {
+                        found = m_visGraph_it->point_id == p2->id;
                     }
+                    if (found)
+                        continue;
 
                     blocking_ids.clear();
                     if (HasLineOfSight(*p1, *p2, open, visited, &blocking_ids)) {
-                        dist = sqrtf(sqdist);
+                        const float dist = sqrtf(sqdist);
 
                         // Collect updates (copy in worker thread)
                         localUpdates.emplace_back(p2->id, p1->id, dist, blocking_ids);
@@ -874,14 +867,14 @@ namespace Pathing {
             if (!HasLineOfSight(p, point, open, visited, &blocking_ids)) continue;
 
             float distance = GetDistance(point.pos, p.pos);
-            if (type == both) {
+            if (type == teleport_point_type::both) {
                 m_visGraph[p.id].emplace_back(point.id, distance, blocking_ids);
                 m_visGraph[point.id].emplace_back(p.id, distance, blocking_ids);
             }
-            else if (type == enter) {
+            else if (type == teleport_point_type::enter) {
                 m_visGraph[p.id].emplace_back(point.id, distance, blocking_ids);
             }
-            else if (type == exit) {
+            else if (type == teleport_point_type::exit) {
                 m_visGraph[point.id].emplace_back(p.id, distance, blocking_ids);
             }
         }
@@ -894,17 +887,17 @@ namespace Pathing {
         using namespace MapSpecific;
 
         for (const auto& teleport : m_teleports) {
-            bool bidir = teleport.m_directionality == Teleport::direction::both_ways;
+            const bool bidir = teleport.m_directionality == Teleport::direction::both_ways;
 
             auto point_enter = CreatePoint(teleport.m_enter);
             point_enter.id = m_points.size();
             m_points.emplace_back(point_enter);
-            insertTeleportPointIntoVisGraph(m_points.back(), bidir ? both : enter);
+            insertTeleportPointIntoVisGraph(m_points.back(), bidir ? teleport_point_type::both : teleport_point_type::enter);
 
             auto point_exit = CreatePoint(teleport.m_exit);
             point_exit.id = m_points.size();
             m_points.emplace_back(point_exit);
-            insertTeleportPointIntoVisGraph(m_points.back(), bidir ? both : exit);
+            insertTeleportPointIntoVisGraph(m_points.back(), bidir ? teleport_point_type::both : teleport_point_type::exit);
 
             // although the distance between teleports is 0, a tiny value is used as a penalty for various reasons.
             float dist = GetDistance(teleport.m_enter, teleport.m_exit) * 0.01f;
@@ -925,17 +918,17 @@ namespace Pathing {
     };
 
     AStar::AStar(MilePath* mp) : m_mp(mp), m_path(this) {
-        //Visibility graph challenge: integrating start and goal points requires careful
-        //handling to prevent continuous graph expansion and search slowdown. 
-        //Previous method involved copying the entire graph for each search.
-        //There's a slight improvement in performance by directly inserting and 
-        //subsequently removing start and stop points in the visibility graph.
+        // Visibility graph challenge: integrating start and goal points requires careful
+        // handling to prevent continuous graph expansion and search slowdown.
+        // Previous method involved copying the entire graph for each search.
+        // There's a slight improvement in performance by directly inserting and
+        // subsequently removing start and stop points in the visibility graph.
 
-        //create temporary vis graph to hold start and goal points
-        //m_visGraph.resize(m_mp->m_points.size() + 2);
-        //for (size_t i = 0; i < m_mp->m_points.size(); ++i) {
-        //    m_visGraph[i] = m_mp->m_visGraph[i];
-        //}
+        // create temporary vis graph to hold start and goal points
+        // m_visGraph.resize(m_mp->m_points.size() + 2);
+        // for (size_t i = 0; i < m_mp->m_points.size(); ++i) {
+        //     m_visGraph[i] = m_mp->m_visGraph[i];
+        // }
     };
 
     class Path {
@@ -945,12 +938,10 @@ namespace Pathing {
         int visited_index{};
     };
 
-    Path m_path;
-
     void AStar::InsertPointIntoVisGraph(MilePath::point& point) const
     {
         auto& vis_graph = m_mp->m_visGraph;
-        const float sqrange = m_mp->m_visibility_range * m_mp->m_visibility_range;
+        constexpr float sqrange = MilePath::MAX_VISIBILITY_RANGE * MilePath::MAX_VISIBILITY_RANGE;
         std::vector<const AABB*> open;
         std::vector<bool> visited;
         for (const auto& it : m_mp->m_points) {
@@ -1030,7 +1021,7 @@ namespace Pathing {
 
         for (const auto& ttd : m_mp->m_teleportGraph) {
             if (ttd.tp1 == ts && ttd.tp2 == tg) {
-                //cost = sqrtf(dist_start) + ttd.distance + sqrtf(dist_goal);
+                // cost = sqrtf(dist_start) + ttd.distance + sqrtf(dist_goal);
                 cost = sqrtf(dist_start);
                 break;
             }
@@ -1043,7 +1034,7 @@ namespace Pathing {
         std::lock_guard lock(pathing_mutex);
 
         std::vector<uint32_t> block;
-        Error res = CopyPathingMapBlocks(block);
+        const Error res = CopyPathingMapBlocks(block);
 
         if (res != Error::OK)
             return res;
@@ -1096,10 +1087,10 @@ namespace Pathing {
         }
 
 #ifdef _DEBUG
-        volatile clock_t start_timestamp = clock();
+        const clock_t start_timestamp = clock();
 #endif
 
-        //@Cleanup: Maybe I'm not using milepath for its intended purpose, but this function will ALWAYS add more points to the graph!!
+        // TODO: Maybe I'm not using milepath for its intended purpose, but this function will ALWAYS add more points to the graph!!
         if (new_start) {
             m_mp->m_points.push_back(start);
             InsertPointIntoVisGraph(start);
@@ -1150,7 +1141,7 @@ namespace Pathing {
             m_path.setCost(cost_so_far[current]);
         }
 
-        //TODO: Implement a pop list so there is no need to search every node?
+        // TODO: Implement a pop list so there is no need to search every node?
         if (new_goal) {
             auto& other_elements = m_mp->m_visGraph[goal.id];
 
@@ -1162,18 +1153,18 @@ namespace Pathing {
             m_mp->m_visGraph[goal.id].clear();
         }
         if (new_start) {
-            auto& other_elements = m_mp->m_visGraph[start.id];
+            const auto& other_elements = m_mp->m_visGraph[start.id];
 
             for (const auto& elem : other_elements) {
                 auto& points = m_mp->m_visGraph[elem.point_id];
-                std::erase_if(points, [&start](const auto& elem) { return elem.point_id == start.id; });
+                std::erase_if(points, [&start](const auto& point) { return point.point_id == start.id; });
             }
             m_mp->m_points.pop_back();
             m_mp->m_visGraph[start.id].clear();
         }
 
 #ifdef _DEBUG
-        volatile clock_t stop_timestamp = clock();
+        const clock_t stop_timestamp = clock();
         Log::Log("Find path: %d ms\n", stop_timestamp - start_timestamp);
 #endif
         m_path.finalize();
@@ -1188,7 +1179,7 @@ namespace Pathing {
     GamePos AStar::GetClosestPoint(Path& path, const Vec2f& pos)
     {
         auto& points = path.points();
-        size_t size = points.size();
+        const size_t size = points.size();
         if (!size) return {};
         if (size < 2)
             return {points.front().pos.x, points.front().pos.y, points.front().box->m_t->layer};
@@ -1200,17 +1191,13 @@ namespace Pathing {
         };
 
         std::vector<pqdist> pq(size);
-        Vec2f AP;
-        Vec2f AB;
-        float mag, ABAP, distance;
 
         for (size_t i = 1; i < size; ++i) {
-            AP = pos - points[i - 1].pos;
-            AB = points[i].pos - points[i - 1].pos;
-            mag = GetSquaredNorm(AB);
-            ABAP = Dot(AP, AB);
-            distance = ABAP / mag;
-            distance = std::clamp(distance, 0.0f, 1.0f);
+            Vec2f AP = pos - points[i - 1].pos;
+            Vec2f AB = points[i].pos - points[i - 1].pos;
+            float mag = GetSquaredNorm(AB);
+            float ABAP = Dot(AP, AB);
+            const auto distance = std::clamp(ABAP / mag, 0.0f, 1.0f);
 
             pqdist& e = pq[i];
             e.point.box = points[i - 1].box;
@@ -1218,7 +1205,7 @@ namespace Pathing {
             e.distance = GetDistance(pos, e.point.pos);
         }
 
-        auto min_element = std::ranges::min_element(pq, [](const auto& lhs, const auto& rhs) {
+        const auto min_element = std::ranges::min_element(pq, [](const auto& lhs, const auto& rhs) {
             return lhs.distance < rhs.distance;
         });
 
