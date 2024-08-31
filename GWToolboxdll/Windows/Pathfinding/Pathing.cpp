@@ -16,20 +16,19 @@ namespace {
     {
         volatile Pathing::Error res = Pathing::Error::Unknown;
         std::mutex mutex;
-        auto res_pt = &res;
         auto block_pt = &block;
         // Enqueue
-        GW::GameThread::Enqueue([block_pt, res_pt, &mutex] {
+        GW::GameThread::Enqueue([block_pt, &res, &mutex] {
             const std::lock_guard lock(mutex);
             GW::MapContext* mapContext = GW::GetMapContext();
             if (!mapContext) {
-                *res_pt = Pathing::Error::InvalidMapContext;
+                res = Pathing::Error::InvalidMapContext;
                 return;
             }
             GW::Array<uint32_t>& block = mapContext->sub1->pathing_map_block;
             if (block.m_size)
                 block_pt->assign(block.m_buffer, block.m_buffer + block.m_size);
-            *res_pt = Pathing::Error::OK;
+            res = Pathing::Error::OK;
         });
         // Wait
         do {
@@ -262,21 +261,20 @@ namespace Pathing {
     MilePath::MilePath()
     {
         m_processing = true;
-        static volatile clock_t start = clock();
-        start = clock();
         GW::GameThread::Enqueue([&] {
+            const clock_t start = clock();
             LoadMapSpecificData();
             LoadTravelPortals();
             GenerateAABBs();
             GenerateAABBGraph(); //not threaded because it relies on gw client Query altitude.
             ASSERT(!worker_thread);
-            worker_thread = new std::thread([&] {
+            worker_thread = new std::thread([&, start] {
                 GeneratePoints();
                 GenerateVisibilityGraph();
                 GenerateTeleportGraph();
                 InsertTeleportsIntoVisibilityGraph();
 #ifdef _DEBUG
-                volatile clock_t stop = clock();
+                const clock_t stop = clock();
                 Log::Flash("Processing %s in %d ms", m_terminateThread ? "terminated" : "done", stop - start);
 #endif
                 m_processing = false;
@@ -626,11 +624,11 @@ namespace Pathing {
         if (start.box2) open.emplace_back(start.box2);
         uint32_t last_layer = 0;
 
-        const AABB* current; // current open box
         visited.assign(m_aabbs.size(), false);
 
         while (!open.empty()) {
-            current = open.back();
+            // current open box
+            const AABB* current = open.back();
             open.pop_back();
             if (visited[current->m_id]) continue;
             visited[current->m_id] = true; // close box
@@ -765,8 +763,6 @@ namespace Pathing {
         constexpr float sqrange = range * range;
 
         const size_t size = m_points.size();
-        const size_t num_threads = std::thread::hardware_concurrency(); // Get number of supported hardware threads
-        std::vector<std::jthread> threads;
         std::mutex visGraphMutex;
         std::mutex progressMutex;
         std::mutex terminateMutex;
@@ -838,6 +834,8 @@ namespace Pathing {
             }
         };
 
+        const size_t num_threads = std::thread::hardware_concurrency(); // Get number of supported hardware threads
+        std::vector<std::jthread> threads;
         // Determine the range of work each thread will handle
         size_t chunk_size = size / num_threads;
 
@@ -847,9 +845,7 @@ namespace Pathing {
             threads.emplace_back(worker, start, end);
         }
     }
-
-    // End optimization
-#pragma optimize( "", on ) // Restore global optimizations to project default
+#pragma optimize("", on) // Restore global optimizations to project default
 #endif
 
     void MilePath::insertTeleportPointIntoVisGraph(point& point, teleport_point_type type)
@@ -912,8 +908,8 @@ namespace Pathing {
     };
 
     AStar::AStar(MilePath* mp)
-        : m_mp(mp),
-          m_path(this)
+        : m_path(this),
+          m_mp(mp)
     {
         // Visibility graph challenge: integrating start and goal points requires careful
         // handling to prevent continuous graph expansion and search slowdown.
