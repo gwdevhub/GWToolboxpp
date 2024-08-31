@@ -230,14 +230,20 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
     if (from_player_pos && !vertices.empty()) {
         const auto player = GW::Agents::GetControlledCharacter();
         if (player) {
-            auto& vertex = vertices[0];
-            vertex.x = player->pos.x;
-            vertex.y = player->pos.y;
-            vertex.z = player->name_tag_z;
+            size_t vertices_write_cnt = 0;
+            for (vertices_write_cnt = 0; vertices_write_cnt < vertices.size(); vertices_write_cnt++) {
+                auto& vertex = vertices[vertices_write_cnt];
+                if (vertices_write_cnt == 0 || GW::GetSquareDistance(player->pos, { vertex.x,vertex.y }) < GW::Constants::SqrRange::Area) {
+                    vertex.x = player->pos.x;
+                    vertex.y = player->pos.y;
+                    vertex.z = player->name_tag_z;
+                }
+            }
+
             void* mem_loc = nullptr;
-            auto res = vb->Lock(0, sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD);
+            auto res = vb->Lock(0, vertices_write_cnt * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD);
             if (res == S_OK) {
-                memcpy(mem_loc, &vertex, sizeof(D3DVertex));
+                memcpy(mem_loc, vertices.data(), vertices_write_cnt * sizeof(D3DVertex));
                 vb->Unlock();
             }
         }
