@@ -30,7 +30,7 @@ namespace {
             if (block.m_size)
                 block_pt->assign(block.m_buffer, block.m_buffer + block.m_size);
             *res_pt = Pathing::Error::OK;
-            });
+        });
         // Wait
         do {
             const std::lock_guard lock(mutex);
@@ -40,7 +40,8 @@ namespace {
         return res;
     }
 
-    uint32_t FileHashToFileId(wchar_t* param_1) {
+    uint32_t FileHashToFileId(wchar_t* param_1)
+    {
         if (!param_1)
             return 0;
         if (((0xff < *param_1) && (0xff < param_1[1])) &&
@@ -50,21 +51,22 @@ namespace {
         return 0;
     }
 
-    const uint32_t GetMapPropModelFileId(GW::MapProp* prop) {
+    const uint32_t GetMapPropModelFileId(GW::MapProp* prop)
+    {
         if (!(prop && prop->h0034[4]))
             return (uint32_t)0;
         uint32_t* sub_deets = (uint32_t*)prop->h0034[4];
         return FileHashToFileId((wchar_t*)sub_deets[1]);
     };
 
-    bool IsTravelPortal(GW::MapProp* prop) {
+    bool IsTravelPortal(GW::MapProp* prop)
+    {
         switch (GetMapPropModelFileId(prop)) {
-        case 0xa825: // Prophecies, Factions
-            return true;
+            case 0xa825: // Prophecies, Factions
+                return true;
         }
         return false;
     }
-
 }
 
 namespace Pathing {
@@ -73,11 +75,11 @@ namespace Pathing {
 
     SimplePT::SimplePT(const PathingTrapezoid& pt, uint32_t layer)
         : id(pt.id),
-        a(pt.XTL, pt.YT),
-        b(pt.XBL, pt.YB),
-        c(pt.XBR, pt.YB),
-        d(pt.XTR, pt.YT),
-        layer(layer) {}
+          a(pt.XTL, pt.YT),
+          b(pt.XBL, pt.YB),
+          c(pt.XBR, pt.YB),
+          d(pt.XTR, pt.YT),
+          layer(layer) {}
 
     SimplePT::adjacentSide SimplePT::Touching(const SimplePT& rhs) const
     {
@@ -168,12 +170,12 @@ namespace Pathing {
 
     AABB::AABB(const SimplePT& t)
         : m_id(0),
-        m_t(&t)
+          m_t(&t)
     {
         float min_x = std::min(t.b.x, t.a.x);
         float max_x = std::max(t.c.x, t.d.x);
-        m_pos = { (min_x + max_x) / 2, (t.a.y + t.b.y) / 2 };
-        m_half = { (max_x - min_x) / 2, (t.a.y - t.b.y) / 2 };
+        m_pos = {(min_x + max_x) / 2, (t.a.y + t.b.y) / 2};
+        m_half = {(max_x - min_x) / 2, (t.a.y - t.b.y) / 2};
     }
 
     // point
@@ -241,6 +243,7 @@ namespace Pathing {
         m_msd = MapSpecific::MapSpecificData(Map::GetMapID());
         m_teleports = m_msd.m_teleports;
     }
+
     void MilePath::LoadTravelPortals()
     {
         const auto m = GetMapContext();
@@ -279,9 +282,9 @@ namespace Pathing {
                 m_processing = false;
                 m_done = true;
                 m_progress = 100;
-                });
-            worker_thread->detach();
             });
+            worker_thread->detach();
+        });
     }
 
     MilePath::~MilePath()
@@ -291,9 +294,9 @@ namespace Pathing {
 
     MilePath::Portal::Portal(const Vec2f& start, const Vec2f& goal, const AABB* box1, const AABB* box2)
         : m_start(start),
-        m_goal(goal),
-        m_box1(box1),
-        m_box2(box2)
+          m_goal(goal),
+          m_box1(box1),
+          m_box2(box2)
     {
         Vec2f diff(goal - start);
     }
@@ -324,29 +327,29 @@ namespace Pathing {
                         GetDistance(p1.m_exit, p2.m_enter),
                         GetDistance(p1.m_exit, p2.m_exit),
                         GetDistance(p1.m_enter, p2.m_enter)
-                        });
-                    m_teleportGraph.push_back({ &p1, &p2, dist });
+                    });
+                    m_teleportGraph.push_back({&p1, &p2, dist});
                     if (&p1 == &p2) continue;
-                    m_teleportGraph.push_back({ &p2, &p1, dist });
+                    m_teleportGraph.push_back({&p2, &p1, dist});
                 }
                 else if (p1.m_directionality == Teleport::direction::both_ways) {
                     float dist = std::min(GetDistance(p1.m_enter, p2.m_enter), GetDistance(p1.m_exit, p2.m_enter));
-                    m_teleportGraph.push_back({ &p1, &p2, dist });
+                    m_teleportGraph.push_back({&p1, &p2, dist});
                     dist = std::min(GetDistance(p2.m_exit, p1.m_enter), GetDistance(p2.m_exit, p1.m_exit));
-                    m_teleportGraph.push_back({ &p2, &p1, dist });
+                    m_teleportGraph.push_back({&p2, &p1, dist});
                 }
                 else if (p2.m_directionality == Teleport::direction::both_ways) {
                     float dist = std::min(GetDistance(p2.m_enter, p1.m_enter), GetDistance(p2.m_exit, p1.m_enter));
-                    m_teleportGraph.push_back({ &p2, &p1, dist });
+                    m_teleportGraph.push_back({&p2, &p1, dist});
                     dist = std::min(GetDistance(p1.m_exit, p2.m_enter), GetDistance(p1.m_exit, p2.m_exit));
-                    m_teleportGraph.push_back({ &p1, &p2, dist });
+                    m_teleportGraph.push_back({&p1, &p2, dist});
                 }
                 else {
                     float dist = GetDistance(p1.m_exit, p2.m_enter);
-                    m_teleportGraph.push_back({ &p1, &p2, dist });
+                    m_teleportGraph.push_back({&p1, &p2, dist});
                     if (&p1 == &p2) continue;
                     dist = GetDistance(p2.m_exit, p1.m_enter);
-                    m_teleportGraph.push_back({ &p2, &p1, dist });
+                    m_teleportGraph.push_back({&p2, &p1, dist});
                 }
             }
         }
@@ -406,78 +409,78 @@ namespace Pathing {
         constexpr float square_tolerance = tolerance * tolerance;
 
         switch (ts) {
-        case SimplePT::adjacentSide::aBottom_bTop: {
-            auto a = std::max(pt1->a.x, pt2->b.x);
-            auto b = std::min(pt1->d.x, pt2->c.x);
-            if (fabsf(a - b) < tolerance)
+            case SimplePT::adjacentSide::aBottom_bTop: {
+                auto a = std::max(pt1->a.x, pt2->b.x);
+                auto b = std::min(pt1->d.x, pt2->c.x);
+                if (fabsf(a - b) < tolerance)
+                    return false;
+                Vec2f p1{a, pt1->a.y};
+                Vec2f p2{b, pt1->a.y};
+                m_portals.emplace_back(p1, p2, box1, box2);
+            }
+            break;
+            case SimplePT::adjacentSide::aTop_bBottom: {
+                auto a = std::max(pt1->b.x, pt2->a.x);
+                auto b = std::min(pt1->c.x, pt2->d.x);
+                if (fabsf(a - b) < tolerance)
+                    return false;
+                Vec2f p1{a, pt1->b.y};
+                Vec2f p2{b, pt1->b.y};
+                m_portals.emplace_back(p1, p2, box1, box2);
+            }
+            break;
+            case SimplePT::adjacentSide::aLeft_bRight: {
+                bool o1 = onSegment(pt1->c, pt2->a, pt1->d);
+                bool o2 = onSegment(pt1->c, pt2->b, pt1->d);
+                if (o1 && o2) {
+                    if (GetSquareDistance(pt2->a, pt2->b) < square_tolerance)
+                        return false;
+                    m_portals.emplace_back(pt2->a, pt2->b, box1, box2);
+                }
+                else if (o1) {
+                    if (GetSquareDistance(pt2->a, pt1->c) < square_tolerance)
+                        return false;
+                    m_portals.emplace_back(pt2->a, pt1->c, box1, box2);
+                }
+                else if (o2) {
+                    if (GetSquareDistance(pt1->d, pt2->b) < square_tolerance)
+                        return false;
+                    m_portals.emplace_back(pt1->d, pt2->b, box1, box2);
+                }
+                else {
+                    if (GetSquareDistance(pt1->c, pt1->d) < square_tolerance)
+                        return false;
+                    m_portals.emplace_back(pt1->c, pt1->d, box1, box2);
+                }
+            }
+            break;
+            case SimplePT::adjacentSide::aRight_bLeft: {
+                bool o1 = onSegment(pt1->a, pt2->c, pt1->b);
+                bool o2 = onSegment(pt1->a, pt2->d, pt1->b);
+                if (o1 && o2) {
+                    if (GetSquareDistance(pt2->c, pt2->d) < square_tolerance)
+                        return false;
+                    m_portals.emplace_back(pt2->c, pt2->d, box1, box2);
+                }
+                else if (o1) {
+                    if (GetSquareDistance(pt2->c, pt1->a) < square_tolerance)
+                        return false;
+                    m_portals.emplace_back(pt2->c, pt1->a, box1, box2);
+                }
+                else if (o2) {
+                    if (GetSquareDistance(pt1->b, pt2->d) < square_tolerance)
+                        return false;
+                    m_portals.emplace_back(pt1->b, pt2->d, box1, box2);
+                }
+                else {
+                    if (GetSquareDistance(pt1->a, pt1->b) < square_tolerance)
+                        return false;
+                    m_portals.emplace_back(pt1->a, pt1->b, box1, box2);
+                }
+            }
+            break;
+            default:
                 return false;
-            Vec2f p1{ a, pt1->a.y };
-            Vec2f p2{ b, pt1->a.y };
-            m_portals.emplace_back(p1, p2, box1, box2);
-        }
-                                                 break;
-        case SimplePT::adjacentSide::aTop_bBottom: {
-            auto a = std::max(pt1->b.x, pt2->a.x);
-            auto b = std::min(pt1->c.x, pt2->d.x);
-            if (fabsf(a - b) < tolerance)
-                return false;
-            Vec2f p1{ a, pt1->b.y };
-            Vec2f p2{ b, pt1->b.y };
-            m_portals.emplace_back(p1, p2, box1, box2);
-        }
-                                                 break;
-        case SimplePT::adjacentSide::aLeft_bRight: {
-            bool o1 = onSegment(pt1->c, pt2->a, pt1->d);
-            bool o2 = onSegment(pt1->c, pt2->b, pt1->d);
-            if (o1 && o2) {
-                if (GetSquareDistance(pt2->a, pt2->b) < square_tolerance)
-                    return false;
-                m_portals.emplace_back(pt2->a, pt2->b, box1, box2);
-            }
-            else if (o1) {
-                if (GetSquareDistance(pt2->a, pt1->c) < square_tolerance)
-                    return false;
-                m_portals.emplace_back(pt2->a, pt1->c, box1, box2);
-            }
-            else if (o2) {
-                if (GetSquareDistance(pt1->d, pt2->b) < square_tolerance)
-                    return false;
-                m_portals.emplace_back(pt1->d, pt2->b, box1, box2);
-            }
-            else {
-                if (GetSquareDistance(pt1->c, pt1->d) < square_tolerance)
-                    return false;
-                m_portals.emplace_back(pt1->c, pt1->d, box1, box2);
-            }
-        }
-                                                 break;
-        case SimplePT::adjacentSide::aRight_bLeft: {
-            bool o1 = onSegment(pt1->a, pt2->c, pt1->b);
-            bool o2 = onSegment(pt1->a, pt2->d, pt1->b);
-            if (o1 && o2) {
-                if (GetSquareDistance(pt2->c, pt2->d) < square_tolerance)
-                    return false;
-                m_portals.emplace_back(pt2->c, pt2->d, box1, box2);
-            }
-            else if (o1) {
-                if (GetSquareDistance(pt2->c, pt1->a) < square_tolerance)
-                    return false;
-                m_portals.emplace_back(pt2->c, pt1->a, box1, box2);
-            }
-            else if (o2) {
-                if (GetSquareDistance(pt1->b, pt2->d) < square_tolerance)
-                    return false;
-                m_portals.emplace_back(pt1->b, pt2->d, box1, box2);
-            }
-            else {
-                if (GetSquareDistance(pt1->a, pt1->b) < square_tolerance)
-                    return false;
-                m_portals.emplace_back(pt1->a, pt1->b, box1, box2);
-            }
-        }
-                                                 break;
-        default:
-            return false;
         }
 
         m_PTPortalGraph[pt1->id].emplace_back(&m_portals.back());
@@ -501,8 +504,8 @@ namespace Pathing {
         for (size_t i = 0; i < m_aabbs.size(); ++i) {
             for (size_t j = i + 1; j < m_aabbs.size(); ++j) {
                 // coarse intersection
-                if (!m_aabbs[i].intersect(m_aabbs[j], { 1.0f, 1.0f })) continue;
-                auto* a = &m_aabbs[i], * b = &m_aabbs[j];
+                if (!m_aabbs[i].intersect(m_aabbs[j], {1.0f, 1.0f})) continue;
+                auto* a = &m_aabbs[i],* b = &m_aabbs[j];
 
                 // fine intersection
                 SimplePT::adjacentSide ts;
@@ -600,8 +603,8 @@ namespace Pathing {
     }
 
     bool MilePath::HasLineOfSight(const point& start, const point& goal,
-        std::vector<const AABB*>& open, std::vector<bool>& visited,
-        std::vector<uint32_t>* blocking_ids)
+                                  std::vector<const AABB*>& open, std::vector<bool>& visited,
+                                  std::vector<uint32_t>* blocking_ids)
     {
         if ((start.box && goal.box && start.box->m_id == goal.box->m_id)
             || (start.box && goal.box2 && start.box->m_id == goal.box2->m_id)
@@ -725,7 +728,8 @@ namespace Pathing {
     }
 #else
 
-    GW::GamePos MilePath::GetClosestPoint(const GW::GamePos& pos) {
+    GW::GamePos MilePath::GetClosestPoint(const GW::GamePos& pos)
+    {
         if (FindAABB(pos)) {
             return pos; // Already on pathing map
         }
@@ -743,6 +747,7 @@ namespace Pathing {
 
         return closest ? *closest : GW::GamePos();
     }
+
     // Start optimization for the computation-heavy loop
 #pragma optimize("gty", on)  // Enable optimizations
     void MilePath::GenerateVisibilityGraph()
@@ -760,7 +765,7 @@ namespace Pathing {
         float range = MAX_VISIBILITY_RANGE;
         float sqrange = range * range;
 
-        size_t size = m_points.size();
+        const size_t size = m_points.size();
         const size_t num_threads = std::thread::hardware_concurrency(); // Get number of supported hardware threads
         std::vector<std::thread> threads;
         std::mutex visGraphMutex;
@@ -782,36 +787,31 @@ namespace Pathing {
             auto localUpdates = std::vector<VisGraphUpdate>();
             localUpdates.reserve(vis_graph_size * 2);
 
-            float min_range, max_range, sqdist, dist;
-            point* p1;
-            point* p2;
-
             for (size_t i = start; i < end; ++i) {
                 {
                     std::lock_guard lock(terminateMutex);
                     if (m_terminateThread) return; // Check termination flag
                 }
 
-                p1 = &m_points[i];
-                min_range = p1->pos.y - range;
-                max_range = p1->pos.y + range;
+                point* p1 = &m_points[i];
+                float min_range = p1->pos.y - range;
+                float max_range = p1->pos.y + range;
 
                 for (size_t j = i + 1; j < size; ++j) {
-                    p2 = &m_points[j];
+                    point* p2 = &m_points[j];
 
                     if (min_range > p2->pos.y || max_range < p2->pos.y)
                         continue;
 
-                    sqdist = GetSquareDistance(p1->pos, p2->pos);
+                    const float sqdist = GetSquareDistance(p1->pos, p2->pos);
                     if (sqdist > sqrange)
                         continue;
 
                     {
                         // Tiny bit faster than std::any_of
                         std::lock_guard lock(visGraphMutex);
-                        auto m_visGraph_it = m_visGraph[p1->id].begin(), m_visGraph_end = m_visGraph[p1->id].end();
                         bool found = false;
-                        for (m_visGraph_it; m_visGraph_it != m_visGraph_end && !found; m_visGraph_it++) {
+                        for (auto m_visGraph_it = m_visGraph[p1->id].begin(); m_visGraph_it != m_visGraph[p1->id].end() && !found; ++m_visGraph_it) {
                             found = m_visGraph_it->point_id == p2->id;
                         }
                         if (found)
@@ -820,7 +820,7 @@ namespace Pathing {
 
                     blocking_ids.clear();
                     if (HasLineOfSight(*p1, *p2, open, visited, &blocking_ids)) {
-                        dist = sqrtf(sqdist);
+                        const float dist = sqrtf(sqdist);
 
                         // Collect updates (copy in worker thread)
                         localUpdates.emplace_back(p2->id, p1->id, dist, blocking_ids);
@@ -834,8 +834,6 @@ namespace Pathing {
                 }
             }
 
-
-
             // Apply collected updates
             {
                 std::lock_guard lock(visGraphMutex);
@@ -843,7 +841,7 @@ namespace Pathing {
                     m_visGraph[id1].emplace_back(id2, distl, std::move(blocks));
                 }
             }
-            };
+        };
 
         // Determine the range of work each thread will handle
         size_t chunk_size = size / num_threads;
@@ -861,6 +859,7 @@ namespace Pathing {
             }
         }
     }
+
     // End optimization
 #pragma optimize( "", on ) // Restore global optimizations to project default
 #endif
@@ -915,8 +914,8 @@ namespace Pathing {
     }
 
     using PQElement = std::pair<float, MilePath::point::Id>;
-    class MyPQueue : public std::priority_queue<PQElement, std::vector<PQElement>, std::greater<PQElement>>
-    {
+
+    class MyPQueue : public std::priority_queue<PQElement, std::vector<PQElement>, std::greater<PQElement>> {
     public:
         MyPQueue(size_t reserve_size)
         {
@@ -924,7 +923,10 @@ namespace Pathing {
         }
     };
 
-    AStar::AStar(MilePath* mp) : m_mp(mp), m_path(this) {
+    AStar::AStar(MilePath* mp)
+        : m_mp(mp),
+          m_path(this)
+    {
         // Visibility graph challenge: integrating start and goal points requires careful
         // handling to prevent continuous graph expansion and search slowdown.
         // Previous method involved copying the entire graph for each search.
@@ -968,7 +970,7 @@ namespace Pathing {
 
     // https://github.com/Rikora/A-star/blob/master/src/AStar.cpp
     Error AStar::BuildPath(const MilePath::point& start, const MilePath::point& goal,
-        const std::vector<MilePath::point::Id>& came_from)
+                           const std::vector<MilePath::point::Id>& came_from)
     {
         MilePath::point current(goal);
 
@@ -1056,7 +1058,7 @@ namespace Pathing {
 
         //if (m_mp->m_pointLookup.contains(start_pos)) {
         //    start = *m_mp->m_pointLookup.at(start_pos);
-        //} else 
+        //} else
         {
             start = m_mp->CreatePoint(start_pos);
             if (!start.box)
@@ -1069,7 +1071,7 @@ namespace Pathing {
         bool new_goal = false;
         //if (m_mp->m_pointLookup.contains(goal_pos)) {
         //    goal = *m_mp->m_pointLookup.at(goal_pos);
-        //} else 
+        //} else
         {
             goal = m_mp->CreatePoint(goal_pos);
             if (!goal.box)
@@ -1189,7 +1191,7 @@ namespace Pathing {
         const size_t size = points.size();
         if (!size) return {};
         if (size < 2)
-            return { points.front().pos.x, points.front().pos.y, points.front().box->m_t->layer };
+            return {points.front().pos.x, points.front().pos.y, points.front().box->m_t->layer};
 
         struct pqdist {
             float distance = 0.0f;
@@ -1198,17 +1200,13 @@ namespace Pathing {
         };
 
         std::vector<pqdist> pq(size);
-        Vec2f AP;
-        Vec2f AB;
-        float mag, ABAP, distance;
 
         for (size_t i = 1; i < size; ++i) {
-            AP = pos - points[i - 1].pos;
-            AB = points[i].pos - points[i - 1].pos;
-            mag = GetSquaredNorm(AB);
-            ABAP = Dot(AP, AB);
-            distance = ABAP / mag;
-            distance = std::clamp(distance, 0.0f, 1.0f);
+            Vec2f AP = pos - points[i - 1].pos;
+            Vec2f AB = points[i].pos - points[i - 1].pos;
+            float mag = GetSquaredNorm(AB);
+            float ABAP = Dot(AP, AB);
+            const float distance = std::clamp(ABAP / mag, 0.0f, 1.0f);
 
             pqdist& e = pq[i];
             e.point.box = points[i - 1].box;
@@ -1218,8 +1216,8 @@ namespace Pathing {
 
         const auto min_element = std::ranges::min_element(pq, [](const auto& lhs, const auto& rhs) {
             return lhs.distance < rhs.distance;
-            });
+        });
 
-        return { min_element->point.pos.x, min_element->point.pos.y, min_element->point.box->m_t->layer };
+        return {min_element->point.pos.x, min_element->point.pos.y, min_element->point.box->m_t->layer};
     }
 }
