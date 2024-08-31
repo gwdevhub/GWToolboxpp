@@ -339,8 +339,11 @@ void ToolboxSettings::DrawSettingsInternal()
 
 void ToolboxSettings::DrawFreezeSetting()
 {
+    ImGui::StartSpacedElements(300.f);
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("Unlock Move All", &move_all);
     ImGui::ShowHelp("Will allow movement and resize of all widgets and windows");
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("Clamp growing windows to screen bounds", &clamp_windows_to_screen);
 }
 
@@ -351,6 +354,7 @@ void ToolboxSettings::LoadSettings(ToolboxIni* ini)
 
     move_all = false;
     LOAD_BOOL(clamp_windows_to_screen);
+    LOAD_BOOL(send_anonymous_gameplay_info);
 
     for (auto& m : optional_modules) {
         m.enabled = ini->GetBoolValue(modules_ini_section, m.name, m.enabled);
@@ -371,6 +375,7 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini)
     }
 
     SAVE_BOOL(clamp_windows_to_screen);
+    SAVE_BOOL(send_anonymous_gameplay_info);
 
     for (const auto& m : optional_modules) {
         ini->SetBoolValue(modules_ini_section, m.name, m.enabled);

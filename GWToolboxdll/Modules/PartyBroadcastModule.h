@@ -22,9 +22,7 @@ public:
     void Initialize() override;
     void Terminate() override;
     void SignalTerminate() override;
-    void DrawSettingsInternal() override;
     bool CanTerminate() override;
     void Update(float) override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    bool HasSettings() override { return false; }
 };

@@ -37,11 +37,11 @@
 #include <wincrypt.h>
 #include <Utils/ToolboxUtils.h>
 #include <Utils/RateLimiter.h>
+#include "ToolboxSettings.h"
 
 using json = nlohmann::json;
 
 namespace {
-    bool enabled = true;
     std::string api_key;
     
     std::string last_update_content;
@@ -389,18 +389,6 @@ namespace {
     }
 }
 
-void PartyBroadcast::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxModule::SaveSettings(ini);
-    SAVE_BOOL(enabled);
-}
-
-void PartyBroadcast::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxModule::LoadSettings(ini);
-    LOAD_BOOL(enabled);
-}
-
 void PartyBroadcast::Update(float) {
     if (pending_websocket_disconnect && websocket_thread && websocket_thread->joinable()) {
         websocket_thread->join();
@@ -411,7 +399,7 @@ void PartyBroadcast::Update(float) {
     }
     if (terminating) return;
 
-    if (!(enabled && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)) {
+    if (!(ToolboxSettings::send_anonymous_gameplay_info && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)) {
         pending_websocket_disconnect |= websocket_thread != nullptr;
         return;
     }
@@ -457,14 +445,4 @@ void PartyBroadcast::Initialize()
 void PartyBroadcast::Terminate() {
     ToolboxModule::Terminate();
     ASSERT(!websocket_thread);
-}
-
-void PartyBroadcast::DrawSettingsInternal()
-{
-    ImGui::NewLine();
-    ImGui::Text("Party Broadcast Integration - %s", websocket_url);
-    ImGui::Indent();
-    ImGui::Checkbox("Broadcast Party Searches", &enabled);
-    ImGui::ShowHelp(std::format("Post party searches to {}", websocket_url).c_str());
-    ImGui::Unindent();
 }
