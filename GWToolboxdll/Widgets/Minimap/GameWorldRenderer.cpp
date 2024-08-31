@@ -231,7 +231,9 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
                     vertex.x = player->pos.x;
                     vertex.y = player->pos.y;
                     vertex.z = player->name_tag_z;
+                    continue;
                 }
+                break;
             }
 
             void* mem_loc = nullptr;
