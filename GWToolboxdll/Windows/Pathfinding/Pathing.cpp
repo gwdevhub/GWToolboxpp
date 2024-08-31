@@ -54,7 +54,7 @@ namespace {
     const uint32_t GetMapPropModelFileId(GW::MapProp* prop)
     {
         if (!(prop && prop->h0034[4]))
-            return (uint32_t)0;
+            return 0;
         uint32_t* sub_deets = (uint32_t*)prop->h0034[4];
         return FileHashToFileId((wchar_t*)sub_deets[1]);
     };
@@ -808,14 +808,10 @@ namespace Pathing {
                         continue;
 
                     {
-                        // Tiny bit faster than std::any_of
                         std::lock_guard lock(visGraphMutex);
-                        bool found = false;
-                        for (auto m_visGraph_it = m_visGraph[p1->id].begin(); m_visGraph_it != m_visGraph[p1->id].end() && !found; ++m_visGraph_it) {
-                            found = m_visGraph_it->point_id == p2->id;
-                        }
-                        if (found)
+                        if (std::ranges::any_of(m_visGraph[p1->id], [p2](const PointVisElement& a) { return a.point_id == p2->id; })) {
                             continue;
+                        }
                     }
 
                     blocking_ids.clear();
