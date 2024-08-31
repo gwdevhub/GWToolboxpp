@@ -748,7 +748,6 @@ namespace Pathing {
         return closest ? *closest : GW::GamePos();
     }
 
-    // Start optimization for the computation-heavy loop
 #pragma optimize("gty", on)  // Enable optimizations
     void MilePath::GenerateVisibilityGraph()
     {
@@ -762,30 +761,30 @@ namespace Pathing {
             it.reserve(0x50);
         }
 
-        float range = MAX_VISIBILITY_RANGE;
-        float sqrange = range * range;
+        constexpr float range = MAX_VISIBILITY_RANGE;
+        constexpr float sqrange = range * range;
 
         const size_t size = m_points.size();
         const size_t num_threads = std::thread::hardware_concurrency(); // Get number of supported hardware threads
-        std::vector<std::thread> threads;
+        std::vector<std::jthread> threads;
         std::mutex visGraphMutex;
         std::mutex progressMutex;
         std::mutex terminateMutex;
 
         struct VisGraphUpdate {
-            size_t id1;
-            size_t id2;
-            float distl;
-            std::vector<uint32_t> blocks = std::vector<uint32_t>(0);
+            size_t id1{};
+            size_t id2{};
+            float distl{};
+            std::vector<uint32_t> blocks{};
         };
 
         // Function to be executed by each thread
-        auto worker = [&](size_t start, size_t end) {
+        auto worker = [&](const size_t start, const size_t end) {
             std::vector<const AABB*> open;
             auto visited = std::vector<bool>(0xd00, false);
             auto blocking_ids = std::vector<uint32_t>(0);
-            auto localUpdates = std::vector<VisGraphUpdate>();
-            localUpdates.reserve(vis_graph_size * 2);
+            auto local_updates = std::vector<VisGraphUpdate>();
+            local_updates.reserve(vis_graph_size * 2);
 
             for (size_t i = start; i < end; ++i) {
                 {
@@ -819,8 +818,8 @@ namespace Pathing {
                         const float dist = sqrtf(sqdist);
 
                         // Collect updates (copy in worker thread)
-                        localUpdates.emplace_back(p2->id, p1->id, dist, blocking_ids);
-                        localUpdates.emplace_back(p1->id, p2->id, dist, std::move(blocking_ids));
+                        local_updates.emplace_back(p2->id, p1->id, dist, blocking_ids);
+                        local_updates.emplace_back(p1->id, p2->id, dist, std::move(blocking_ids));
                     }
                 }
 
@@ -833,7 +832,7 @@ namespace Pathing {
             // Apply collected updates
             {
                 std::lock_guard lock(visGraphMutex);
-                for (auto& [id1, id2, distl, blocks] : localUpdates) {
+                for (auto& [id1, id2, distl, blocks] : local_updates) {
                     m_visGraph[id1].emplace_back(id2, distl, std::move(blocks));
                 }
             }
@@ -846,13 +845,6 @@ namespace Pathing {
             size_t start = t * chunk_size;
             size_t end = (t == num_threads - 1) ? size : (t + 1) * chunk_size;
             threads.emplace_back(worker, start, end);
-        }
-
-        // Join all threads
-        for (auto& thread : threads) {
-            if (thread.joinable()) {
-                thread.join();
-            }
         }
     }
 
