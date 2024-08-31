@@ -5,9 +5,9 @@
 #include <GWCA/Utilities/Scanner.h>
 
 namespace {
-    //Benchmarks:
-//100MB -> GW: 240 ms, this: 45 ms
-//1MB -> GW: <3 ms, this: <1 ms
+    // Benchmarks:
+    // 100MB -> GW: 240 ms, this: 45 ms
+    // 1MB -> GW: <3 ms, this: <1 ms
 
     typedef uint32_t(__cdecl* ComputeCRC32_pt)(uint32_t crc_init, const void* data, uint32_t bytes);
     ComputeCRC32_pt ComputeCRC32_func = nullptr;
@@ -94,6 +94,7 @@ void CodeOptimiserModule::Initialize() {
     GW::Hook::CreateHook((void**)&ComputeCRC32_func, ComputeCRC32, nullptr);
     GW::Hook::EnableHooks(ComputeCRC32_func);
 }
+
 void CodeOptimiserModule::SignalTerminate() {
     GW::Hook::RemoveHook(ComputeCRC32_func);
 }

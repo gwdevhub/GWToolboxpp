@@ -90,21 +90,18 @@ namespace {
         // in order to properly query altitudes, we have to use the pathing map
         // to determine the number of Z planes in the current map.
         const GW::PathingMapArray* pathing_map = GW::Map::GetPathingMap();
-        if (!pathing_map)
-            return false;
-        const size_t pmap_size = pathing_map->size();
-        if (!pmap_size)
+        if (!pathing_map || pathing_map->size() == 0)
             return false;
 
         const auto z_plane0 = poly.vertices_zplanes[0];
         GW::Map::QueryAltitude({vertices[0].x, vertices[0].y, z_plane0}, 5.f, altitude);
-        [[maybe_unused]] const auto altitude0 = altitude;
+        const auto altitude0 = altitude;
         ++poly.vertices_processed;
         vertices[0].z = altitude;
 
         const auto z_planeZ = poly.vertices_zplanes[vertices.size() - 1];
         GW::Map::QueryAltitude({vertices[vertices.size() - 1].x, vertices[vertices.size() - 1].y, z_planeZ}, 5.f, altitude);
-        [[maybe_unused]] const auto altitudeZ = altitude;
+        const auto altitudeZ = altitude;
         vertices[vertices.size() - 1].z = altitude;
 
         const auto altitude_diff = altitudeZ - altitude0;
@@ -129,7 +126,7 @@ namespace {
             const auto guessed_altitude = altitude0 + (altitude_diff * static_cast<float>(i) / static_cast<float>(vertices.size() - 1));
             if (std::abs(altitude - guessed_altitude) > 20.f) {
                 auto min_diff = std::abs(altitude - guessed_altitude);
-                for (unsigned zplane = pmap_size - 1; zplane >= 1; zplane -= 1) {
+                for (unsigned zplane = pathing_map->size() - 1; zplane >= 1; --zplane) {
                     GW::Map::QueryAltitude({vertices[i].x, vertices[i].y, zplane}, 5.f, altitude);
                     const auto cur_diff = std::abs(altitude - guessed_altitude);
                     if (cur_diff < min_diff && altitude < vertices[i].z) {
@@ -225,11 +222,10 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
     if (!AddPolyToDevice(*this, device))
         return;
 
-    if (from_player_pos && !vertices.empty()) {
-        const auto player = GW::Agents::GetControlledCharacter();
-        if (player) {
+    if (from_player_pos && vertices.size() > 1) {
+        if (const auto player = GW::Agents::GetControlledCharacter()) {
             size_t vertices_write_cnt = 0;
-            for (vertices_write_cnt = 0; vertices_write_cnt < vertices.size(); vertices_write_cnt++) {
+            for (vertices_write_cnt = 0; vertices_write_cnt < vertices.size() - 1; ++vertices_write_cnt) {
                 auto& vertex = vertices[vertices_write_cnt];
                 if (vertices_write_cnt == 0 || GW::GetSquareDistance(player->pos, { vertex.x,vertex.y }) < GW::Constants::SqrRange::Area) {
                     vertex.x = player->pos.x;
