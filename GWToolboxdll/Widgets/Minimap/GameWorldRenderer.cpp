@@ -96,7 +96,6 @@ namespace {
         if (!pmap_size)
             return false;
 
-
         const auto z_plane0 = poly.vertices_zplanes[0];
         GW::Map::QueryAltitude({vertices[0].x, vertices[0].y, z_plane0}, 5.f, altitude);
         [[maybe_unused]] const auto altitude0 = altitude;
@@ -222,7 +221,6 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
             }
         }
     }
-
 
     if (!AddPolyToDevice(*this, device))
         return;

@@ -62,8 +62,6 @@ public:
         bool from_player_pos = false;
         unsigned int vertices_processed = 0u;
         IDirect3DVertexBuffer9* vb = nullptr;
-
-
     };
 
     static void Render(IDirect3DDevice9* device);
