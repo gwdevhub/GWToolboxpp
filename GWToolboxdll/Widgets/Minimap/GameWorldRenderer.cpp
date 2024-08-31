@@ -227,7 +227,7 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
             size_t vertices_write_cnt = 0;
             for (vertices_write_cnt = 0; vertices_write_cnt < vertices.size() - 1; ++vertices_write_cnt) {
                 auto& vertex = vertices[vertices_write_cnt];
-                if (vertices_write_cnt == 0 || GW::GetSquareDistance(player->pos, { vertex.x,vertex.y }) < GW::Constants::SqrRange::Area) {
+                if (vertices_write_cnt == 0 || GW::GetSquareDistance(player->pos, { vertex.x,vertex.y }) < GW::Constants::SqrRange::Earshot) {
                     vertex.x = player->pos.x;
                     vertex.y = player->pos.y;
                     vertex.z = player->name_tag_z;
