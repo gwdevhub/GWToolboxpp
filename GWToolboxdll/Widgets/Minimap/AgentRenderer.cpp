@@ -1242,7 +1242,7 @@ void AgentRenderer::Enqueue(const Shape_e shape, const GW::MapProp* agent, const
     const RenderPosition pos = {
         agent->rotation_cos,
         agent->rotation_sin,
-        agent->position
+        {agent->position.x, agent->position.y}
     };
     return Enqueue(shape, pos, size, color);
 }
