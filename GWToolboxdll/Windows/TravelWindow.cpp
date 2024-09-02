@@ -808,6 +808,21 @@ void TravelWindow::Update(const float)
 
 GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID map_to)
 {
+    static const auto special_cases = std::map<GW::Constants::MapID, GW::Constants::MapID>{
+        {GW::Constants::MapID::Kessex_Peak, GW::Constants::MapID::Temple_of_the_Ages},
+        {GW::Constants::MapID::Cursed_Lands, GW::Constants::MapID::Temple_of_the_Ages},
+        {GW::Constants::MapID::The_Arid_Sea, GW::Constants::MapID::Dunes_of_Despair}, // could also be augury rock
+        {GW::Constants::MapID::Dry_Top, GW::Constants::MapID::Aurora_Glade},
+        {GW::Constants::MapID::Iron_Horse_Mine, GW::Constants::MapID::Yaks_Bend_outpost},
+        {GW::Constants::MapID::Fahranur_The_First_City, GW::Constants::MapID::Blacktide_Den}, // 8 player outpost is better to start with
+        {GW::Constants::MapID::Cliffs_of_Dohjok, GW::Constants::MapID::Blacktide_Den}, // 8 player outpost is better to start with
+    };
+
+    if (special_cases.contains(map_to)) {
+        const auto nearest_outpost = special_cases.at(map_to);
+        if (GW::Map::GetIsMapUnlocked(nearest_outpost)) return nearest_outpost;
+    }
+
     const GW::AreaInfo* this_map = GW::Map::GetMapInfo(map_to);
     float nearest_distance = std::numeric_limits<float>::max();
     auto nearest_map_id = GW::Constants::MapID::None;
