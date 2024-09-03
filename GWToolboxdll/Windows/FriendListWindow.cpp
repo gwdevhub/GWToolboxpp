@@ -451,7 +451,7 @@ namespace {
         case GW::UI::UIMessage::kWriteToChatLog: {
             const auto packet = (GW::UI::UIPacket::kWriteToChatLog*)wparam;
             wchar_t* message = packet->message;
-            switch (static_cast<MessageType>(message[0])) {
+            switch (static_cast<MessageType>(message[1])) {
             case MessageType::CANNOT_ADD_YOURSELF_AS_A_FRIEND: // You cannot add yourself as a friend.
             case MessageType::EXCEEDED_MAX_NUMBER_OF_FRIENDS:  // You have exceeded the maximum number of characters on your Friends list.
             case MessageType::PLAYER_NAME_IS_INVALID:          // The player name is invalid
