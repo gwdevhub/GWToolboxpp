@@ -1463,10 +1463,9 @@ bool get_next_bag_slot(const InventoryManager::Item* item, GW::Constants::Bag* b
     if (slot >= bag->items.size()) {
         bag_id = GW::Constants::Bag::Max;
         slot = 0;
-        for (auto it_bag_id = ++bag->bag_id(); it_bag_id < GW::Constants::Bag::Max; it_bag_id++) {
-            const auto it_bag = GW::Items::GetBag(it_bag_id);
-            if (it_bag) {
-                bag_id = it_bag_id;
+        for (auto it = static_cast<GW::Constants::Bag>(std::to_underlying(bag->bag_id()) + 1); it < GW::Constants::Bag::Max; ++it) {
+            if (GW::Items::GetBag(it)) {
+                bag_id = it;
                 break;
             }
         }
