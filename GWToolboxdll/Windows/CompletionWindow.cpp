@@ -573,11 +573,22 @@ namespace {
         return p ? &p->chars : nullptr;
     }
 
+    bool pending_refresh_account_characters = false;
+
+    void RefreshAccountCharacters() {
+        pending_refresh_account_characters = true;
+    }
+
     // Check login screen; assign missing characters to email account
-    void RefreshAccountCharacters()
+    bool UpdateRefreshAccountCharacters()
     {
         const auto email = GetAccountEmail();
-        if (!email) return;
+        if (!email) return false;
+        auto loading = std::ranges::find_if(character_completion, [](const std::pair<std::wstring, CharacterCompletion*>& t) {
+            return t.second->hom_achievements.isLoading();
+            });
+        if (loading != character_completion.end())
+            return false;
         const auto chars = GW::AccountMgr::GetAvailableChars();
         if (chars) {
             for (const auto& character : *chars) {
@@ -614,6 +625,7 @@ namespace {
                 cc->is_pre_searing = map_info && map_info->region == GW::Region::Region_Presearing;
             }
         }
+        return true;
     }
 
     void OnPostCheckUIState(GW::HookStatus*, GW::UI::UIMessage, void*, void* state)
@@ -2444,6 +2456,13 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     DrawHallOfMonuments(device);
     ImGui::EndChild();
     ImGui::End();
+}
+
+void CompletionWindow::Update(float)
+{
+    if (pending_refresh_account_characters) {
+        pending_refresh_account_characters = !UpdateRefreshAccountCharacters();
+    }
 }
 
 void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device)

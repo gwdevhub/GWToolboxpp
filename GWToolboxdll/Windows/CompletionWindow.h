@@ -259,6 +259,7 @@ public:
     static void Initialize_Dungeons();
     void Terminate() override;
     void Draw(IDirect3DDevice9* pDevice) override;
+    void Update(float) override;
     static void DrawHallOfMonuments(IDirect3DDevice9* device);
 
     static bool IsAreaComplete(const wchar_t*, const GW::Constants::MapID map, CompletionCheck check = CompletionCheck::Both);
