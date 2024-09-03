@@ -18,7 +18,6 @@
 #include <Modules/TeamspeakModule.h>
 #include <Modules/Teamspeak5Module.h>
 #include <Modules/ObserverModule.h>
-#include <Modules/ChatLog.h>
 #include <Modules/HintsModule.h>
 #include <Modules/PluginModule.h>
 #include <Modules/QuestModule.h>
@@ -139,7 +138,6 @@ namespace {
         TeamspeakModule::Instance(),
         Teamspeak5Module::Instance(),
         ObserverModule::Instance(),
-        ChatLog::Instance(),
         HintsModule::Instance(),
         MouseFix::Instance(),
         KeyboardLanguageFix::Instance(),
