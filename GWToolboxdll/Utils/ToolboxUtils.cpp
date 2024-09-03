@@ -27,6 +27,7 @@
 #include "ToolboxUtils.h"
 #include <GWCA/Utilities/Scanner.h>
 #include <Utils/TextUtils.h>
+#include <GWCA/Context/MapContext.h>
 
 namespace {
     
@@ -55,6 +56,11 @@ namespace GW {
                 { static_cast<float> (bounds[2]), static_cast<float>(bounds[3]) }
             };
             return true;
+        }
+        GW::Array<GW::MapProp*>* GetMapProps() {
+            const auto m = GetMapContext();
+            const auto p = m ? m->props : nullptr;
+            return p ? &p->propArray : nullptr;
         }
     }
     namespace PartyMgr {

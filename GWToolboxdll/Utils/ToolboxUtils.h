@@ -28,6 +28,7 @@ public:
 struct ImRect;
 
 namespace GW {
+    struct MapProp;
     struct AreaInfo;
     struct Player;
     struct Agent;
@@ -97,6 +98,7 @@ namespace GW {
 }
 namespace GW {
     namespace Map {
+        GW::Array<GW::MapProp*>* GetMapProps();
         bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out);
     }
     namespace PartyMgr {
