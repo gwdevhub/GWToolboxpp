@@ -130,7 +130,7 @@ namespace {
 
         const auto reduceCostBasedOnAttribute = [&](GW::Constants::Attribute attribute) 
         {
-            const auto player = GW::Agents::GetPlayerAsAgentLiving();
+            const auto player = GW::Agents::GetControlledCharacter();
             if (!player) return;
             const auto playerAttributes = GW::PartyMgr::GetAgentAttributes(player->agent_id);
             if (!playerAttributes) return;
@@ -498,7 +498,7 @@ void OnlyTriggerOnceCondition::drawSettings()
 /// ------------- PlayerIsNearPositionCondition -------------
 PlayerIsNearPositionCondition::PlayerIsNearPositionCondition()
 {
-    if (auto player = GW::Agents::GetPlayerAsAgentLiving()) {
+    if (auto player = GW::Agents::GetControlledCharacter()) {
         pos = player->pos;
     }
 }
@@ -514,7 +514,7 @@ void PlayerIsNearPositionCondition::serialize(OutputStream& stream) const
 }
 bool PlayerIsNearPositionCondition::check() const
 {
-    const auto player = GW::Agents::GetPlayerAsAgentLiving(); 
+    const auto player = GW::Agents::GetControlledCharacter(); 
     if (!player) return false;
     return GW::GetDistance(player->pos, pos) < accuracy + eps;
 }
@@ -613,7 +613,7 @@ void PlayerHasSkillCondition::serialize(OutputStream& stream) const
 }
 bool PlayerHasSkillCondition::check() const
 {
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     const auto bar = GW::SkillbarMgr::GetPlayerSkillbar();
     if (!player || !bar || !bar->IsValid()) return false;
 
@@ -664,7 +664,7 @@ void PlayerHasClassCondition::serialize(OutputStream& stream) const
 }
 bool PlayerHasClassCondition::check() const
 {
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return false;
     return (primary == Class::Any || primary == (Class)player->primary) && (secondary == Class::Any || secondary == (Class)player->secondary);
 }
@@ -703,7 +703,7 @@ void PlayerHasNameCondition::serialize(OutputStream& stream) const
 bool PlayerHasNameCondition::check() const
 {
     if (name.empty()) return false;
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return false;
 
     auto& instanceInfo = InstanceInfo::getInstance();
@@ -732,7 +732,7 @@ void PlayerHasEnergyCondition::serialize(OutputStream& stream) const
 }
 bool PlayerHasEnergyCondition::check() const
 {
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return false;
 
     return player->energy * player->max_energy >= minEnergy;
@@ -789,7 +789,7 @@ void CurrentTargetDistanceCondition::serialize(OutputStream& stream) const
 }
 bool CurrentTargetDistanceCondition::check() const
 {
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     const auto target = GW::Agents::GetTargetAsAgentLiving();
     if (!player || !target) return false;
 
@@ -1124,7 +1124,7 @@ void NearbyAgentCondition::serialize(OutputStream& stream) const
 }
 bool NearbyAgentCondition::check() const
 {
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     const auto agents = GW::Agents::GetAgentArray();
     if (!player || !agents) return false;
 
@@ -1303,7 +1303,7 @@ void CanPopAgentCondition::drawSettings()
 
 bool PlayerIsIdleCondition::check() const
 {
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return false;
     return player->GetIsIdle();
 }
@@ -1357,7 +1357,7 @@ void PlayerHasHpBelowCondition::serialize(OutputStream& stream) const
 }
 bool PlayerHasHpBelowCondition::check() const
 {
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     return player && player->hp * 100.f < hp;
 }
 void PlayerHasHpBelowCondition::drawSettings()
@@ -1416,7 +1416,7 @@ void PlayerStatusCondition::serialize(OutputStream& stream) const
 }
 bool PlayerStatusCondition::check() const
 {
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return false;
 
     switch (status) 
@@ -1513,7 +1513,7 @@ void PlayerInPolygonCondition::serialize(OutputStream& stream) const
 }
 bool PlayerInPolygonCondition::check() const
 {
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     if (!player || polygon.size() < 3) return false;
     return pointIsInsidePolygon(player->pos, polygon);
 }

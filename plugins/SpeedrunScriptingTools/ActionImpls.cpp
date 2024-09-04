@@ -77,7 +77,7 @@ namespace {
     void SafeEquip(GW::Item* item)
     {
         using namespace std::chrono_literals;
-        GW::AgentLiving* p = GW::Agents::GetCharacter();
+        GW::AgentLiving* p = GW::Agents::GetControlledCharacter();
         const GW::Skillbar* s = GW::SkillbarMgr::GetPlayerSkillbar();
         if (!item || !p || p->GetIsDead() || p->GetIsKnockedDown() || (s && s->casting)) return;
         if (p->skill) {
@@ -134,7 +134,7 @@ namespace {
         if (!party_heros.valid()) 
             return {};
 
-        const auto player = GW::Agents::GetPlayerAsAgentLiving();
+        const auto player = GW::Agents::GetControlledCharacter();
         if (!player) 
             return {};
         
@@ -151,7 +151,7 @@ namespace {
 /// ------------- MoveToAction -------------
 MoveToAction::MoveToAction()
 {
-    if (auto player = GW::Agents::GetPlayerAsAgentLiving()) 
+    if (auto player = GW::Agents::GetControlledCharacter()) 
     {
         pos = player->pos;
     }
@@ -180,7 +180,7 @@ ActionStatus MoveToAction::isComplete() const
 {
     if (moveBehaviour == MoveToBehaviour::ImmediateFinish) return ActionStatus::Complete;
 
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return ActionStatus::Error;
 
     const auto distance = GW::GetDistance(player->pos, pos);
@@ -263,7 +263,7 @@ ActionStatus MoveToTargetPositionAction::isComplete() const
     if (!hasTarget) return ActionStatus::Error;
     if (moveBehaviour == MoveToBehaviour::ImmediateFinish) return ActionStatus::Complete;
 
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return ActionStatus::Error;
 
     const auto distance = GW::GetDistance(player->pos, pos);
@@ -350,7 +350,7 @@ ActionStatus CastAction::isComplete() const
 {
     if (!hasSkillReady || id == GW::Constants::SkillID::No_Skill) return ActionStatus::Error;
 
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return ActionStatus::Error;
 
     const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
@@ -408,7 +408,7 @@ ActionStatus CastBySlotAction::isComplete() const
 {
     if (!hasSkillReady || id == GW::Constants::SkillID::No_Skill) return ActionStatus::Error;
 
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return ActionStatus::Error;
 
     const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
@@ -457,7 +457,7 @@ void ChangeTargetAction::initialAction()
 {
     Action::initialAction();
 
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     const auto currentTarget = GW::Agents::GetTargetAsAgentLiving();
     const auto agents = GW::Agents::GetAgentArray();
     if (!player || !agents) return;
@@ -927,7 +927,7 @@ ActionStatus GoToTargetAction::isComplete() const
         {
             if (!target || target->allegiance == GW::Constants::Allegiance::Enemy) return ActionStatus::Error;
 
-            const auto player = GW::Agents::GetPlayerAsAgentLiving();
+            const auto player = GW::Agents::GetControlledCharacter();
             if (!player) return ActionStatus::Error;
 
             const auto distance = GW::GetDistance(player->pos, target->pos);
@@ -1499,7 +1499,7 @@ void PingHardModeAction::initialAction()
 
     if (!GW::Effects::GetPlayerEffectBySkillId(GW::Constants::SkillID::Hard_mode)) return;
 
-    const auto player = GW::Agents::GetPlayerAsAgentLiving();
+    const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return;
 
     GW::GameThread::Enqueue([pingId = player->agent_id]() {

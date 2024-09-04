@@ -207,7 +207,7 @@ void SpeedrunScriptingTools::DrawSettings()
 {
     ToolboxPlugin::DrawSettings();
 
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Agents::GetPlayerAsAgentLiving()) 
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Agents::GetControlledCharacter()) 
     {
         return;
     }
@@ -507,7 +507,7 @@ void SpeedrunScriptingTools::Update(float delta)
     }
 
     const auto map = GW::Map::GetMapInfo();
-    if (isInLoadingScreen || !map || map->GetIsPvP() || !GW::Agents::GetPlayerAsAgentLiving() || (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !runInOutposts))
+    if (isInLoadingScreen || !map || map->GetIsPvP() || !GW::Agents::GetControlledCharacter() || (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !runInOutposts))
     {
         return;
     }
