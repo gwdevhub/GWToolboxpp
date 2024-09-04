@@ -468,7 +468,7 @@ void drawPolygonSelector(std::vector<GW::Vec2f>& polygon)
 {
     ImGui::PushItemWidth(200);
     if (ImGui::Button("Add Polygon Point")) {
-        if (const auto player = GW::Agents::GetPlayerAsAgentLiving()) {
+        if (const auto player = GW::Agents::GetControlledCharacter()) {
             polygon.emplace_back(player->pos.x, player->pos.y);
         }
     }
