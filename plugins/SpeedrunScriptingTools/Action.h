@@ -33,6 +33,7 @@ enum class ActionType : int {
     ClearTarget,
     WaitUntil,
     MoveToTargetPosition,
+    MoveInchwise,
 
     Count
 };

@@ -15,6 +15,7 @@
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/CameraMgr.h>
 
 #include <GWCA/Packets/Opcodes.h>
 #include <GWCA/Packets/StoC.h>
@@ -22,6 +23,7 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Camera.h>
 
 #include <ImGuiCppWrapper.h>
 #include <thread>
@@ -236,24 +238,29 @@ void MoveToAction::drawSettings(){
 /// ------------- MoveToTargetPositionAction -------------
 MoveToTargetPositionAction::MoveToTargetPositionAction(InputStream& stream)
 {
-    stream >> accuracy >> moveBehaviour;
+    stream >> targetDistance >> moveBehaviour >> accuracy;
 }
 void MoveToTargetPositionAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << accuracy << moveBehaviour;
+    stream << targetDistance << moveBehaviour << accuracy;
 }
 void MoveToTargetPositionAction::initialAction()
 {
     Action::initialAction();
 
     hasBegunWalking = false;
+    const auto player = GW::Agents::GetControlledCharacter();
     const auto target = GW::Agents::GetTargetAsAgentLiving();
     hasTarget = target;
-    pos = target->pos;
+    if (!player || !hasTarget) return;
 
-    if (!hasTarget) return;
+    pos = target->pos;
+    if (targetDistance > 0.f) {
+        const auto direction = GW::Normalize(pos - player->pos);
+        pos = pos - direction * targetDistance;
+    }
     GW::GameThread::Enqueue([pos = this->pos]() -> void {
         GW::Agents::Move(pos);
     });
@@ -274,7 +281,7 @@ ActionStatus MoveToTargetPositionAction::isComplete() const
 
     if (!player->GetIsMoving() && distance > accuracy + eps) {
         if (moveBehaviour == MoveToBehaviour::RepeatIfIdle) {
-            const auto radius = std::min((int)(accuracy / 4), 10);
+            const auto radius = std::min((int)(accuracy + eps), 10);
             float px = radius > 0 ? pos.x + (rand() % radius - radius / 2) : pos.x;
             float py = radius > 0 ? pos.y + (rand() % radius - radius / 2) : pos.y;
 
@@ -300,12 +307,80 @@ void MoveToTargetPositionAction::drawSettings()
 {
     ImGui::PushID(drawId());
 
-    ImGui::Text("Move to current position of current target");
+    ImGui::Text("Move to distance from current target");
     ImGui::SameLine();
     ImGui::PushItemWidth(90.f);
-    ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
+    ImGui::InputFloat("Distance", &targetDistance, 0.0f, 0.0f);
+    if (moveBehaviour != MoveToBehaviour::ImmediateFinish) {
+        ImGui::SameLine();
+        ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
+    }
     ImGui::SameLine();
     drawEnumButton(MoveToBehaviour::SendOnce, MoveToBehaviour::ImmediateFinish, moveBehaviour, 0, 310.f);
+
+    ImGui::PopID();
+}
+
+/// ------------- MoveInchwiseAction -------------
+MoveInchwiseAction::MoveInchwiseAction(InputStream& stream)
+{
+    stream >> forward >> right >> refFrame;
+}
+void MoveInchwiseAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << forward << right << refFrame;
+}
+void MoveInchwiseAction::initialAction()
+{
+    Action::initialAction();
+
+    const auto position = [&]() -> GW::Vec2f {
+        const auto player = GW::Agents::GetControlledCharacter();
+        if (!player) return {};
+
+        if (refFrame == ReferenceFrame::Player) {
+            constexpr auto pi = 3.141592741f;
+
+            const auto forwardsVec = GW::Normalize(GW::Vec2f{player->rotation_cos, player->rotation_sin});
+            const auto rightVec = GW::Vec2f{std::cos(player->rotation_angle + pi / 2), std::sin(player->rotation_angle + pi / 2)};
+
+            return player->pos + forward * forwardsVec + right * rightVec;
+        }
+        else {
+            const auto camera = GW::CameraMgr::GetCamera();
+            if (!camera) return player->pos;
+
+            const auto forwardsVec = GW::Normalize(GW::Vec2f{camera->look_at_target - camera->position});
+            const auto rightVec = GW::Vec2f{forwardsVec.y, -forwardsVec.x}; // Cross product with up vector (0,0,-1)
+
+            return player->pos + forward * forwardsVec + right * rightVec;
+        }
+    }();
+    GW::GameThread::Enqueue([position]{ GW::Agents::Move(position); });
+}
+ActionStatus MoveInchwiseAction::isComplete() const
+{
+    const auto player = GW::Agents::GetControlledCharacter();
+    if (!player) return ActionStatus::Error;
+
+    return player->GetIsMoving() ? ActionStatus::Running : ActionStatus::Complete;
+}
+void MoveInchwiseAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("Move inchwise:");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(90.f);
+    ImGui::InputFloat("Forwards", &forward, 0.0f, 0.0f);
+    ImGui::SameLine();
+    ImGui::InputFloat("Right", &right, 0.0f, 0.0f);
+    ImGui::SameLine();
+    ImGui::Text("based on");
+    ImGui::SameLine();
+    drawEnumButton(ReferenceFrame::Player, ReferenceFrame::Camera, refFrame,0, 180.f);
 
     ImGui::PopID();
 }
