@@ -8,10 +8,13 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 6.23
-* [New] imgui windows can now be moved out of the Guild Wars application! Expect some bugginess like transparent backgrounds for now
+* [New] slightly optimised GW's dat loading ccode
+* [New] added EnemyWindow (party window but for enemies)
+* [New] added PartySearchModule, allows broadcasting parties in current outpost to party.gwtoolbox.com (anonymously)
 * [New] added /duncan chat command to share your quest progress
 * [New] quests (markers) now have different colors
-* [New] added option to render the shortest path to quest markers (either active or all, setting)
+* [New] added option to render the shortest path to quest markers (either active or all, setting), in game, on minimap and on world map (mission map coming)
+* [New] right click on world map (with WorldMapWidget active) to place a quest marker to any location you want
 * [New] added message to nicholas items when he will collect them
 * [Minor] /useskill now toggles that skill on/off, you can still only have ONE skill active at a time
 * [Minor] added option in HotkeyWindow to change the autoclicker clicker speed
@@ -22,6 +25,8 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] fixed /tp command to correctly teleport to explorable areas that start with "The"
 * [Fix] Active quest widget works in non-latin languages now
 * [Fix] fixed toolbox minimap being hard to ping
+* [Fix] fixed friend list alias in whispers
+* [Removed] removed chat log module because it led to too many issues
 
 ## Version 6.22
 * [New] Added highlight info and right click menu to daily quests window to make doing dailies easier
