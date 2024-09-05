@@ -6,7 +6,7 @@
 namespace {
     std::shared_ptr<Action> makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 28);
+        static_assert((int)ActionType::Count == 29);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -62,6 +62,8 @@ namespace {
                 return std::make_shared<ClearTargetAction>();
             case ActionType::WaitUntil:
                 return std::make_shared<WaitUntilAction>();
+            case ActionType::MoveInchwise:
+                return std::make_shared<MoveInchwiseAction>();
             default:
                 return nullptr;
         }
@@ -70,12 +72,12 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 28);
+    static_assert((int)ActionType::Count == 29);
     switch (type) {
         case ActionType::MoveTo:
             return "Position";
         case ActionType::MoveToTargetPosition:
-            return "Target position";
+            return "Distance from target";
         case ActionType::Cast:
             return "Use skill by id";
         case ActionType::CastBySlot:
@@ -126,6 +128,8 @@ std::string_view toString(ActionType type)
             return "Clear target";
         case ActionType::WaitUntil:
             return "Wait until";
+        case ActionType::MoveInchwise:
+            return "Inchwise";
         default:
             return "Unknown";
     }
@@ -133,7 +137,7 @@ std::string_view toString(ActionType type)
 
 std::shared_ptr<Action> readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 28);
+    static_assert((int)ActionType::Count == 29);
     int type;
 
     stream >> type;
@@ -142,6 +146,8 @@ std::shared_ptr<Action> readAction(InputStream& stream)
             return std::make_shared<MoveToAction>(stream);
         case ActionType::MoveToTargetPosition:
             return std::make_shared<MoveToTargetPositionAction>(stream);
+        case ActionType::MoveInchwise:
+            return std::make_shared<MoveInchwiseAction>(stream);
         case ActionType::Cast:
             return std::make_shared<CastAction>(stream);
         case ActionType::CastBySlot:
@@ -227,7 +233,7 @@ std::shared_ptr<Action> drawActionSelector(float width)
 
     if (ImGui::BeginPopup("Add action")) 
     {
-        drawSubMenu("Move to", std::array{ActionType::MoveTo, ActionType::MoveToTargetPosition});
+        drawSubMenu("Move to", std::array{ActionType::MoveTo, ActionType::MoveToTargetPosition, ActionType::MoveInchwise});
         drawSubMenu("Skill", std::array{ActionType::Cast, ActionType::CastBySlot, ActionType::DropBuff, ActionType::UseHeroSkill});
         drawSubMenu("Interaction", std::array{ActionType::SendDialog, ActionType::GoToTarget, ActionType::AutoAttackTarget});
         drawSubMenu("Targeting", std::array{ActionType::ChangeTarget, ActionType::StoreTarget, ActionType::RestoreTarget, ActionType::ClearTarget});

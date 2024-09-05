@@ -16,6 +16,7 @@ enum class Status {Enchanted, WeaponSpelled, Alive, Bleeding, Crippled, DeepWoun
 enum class EquippedItemSlot {Mainhand, Offhand, Chest, Legs, Head, Feet, Hands};
 enum class TrueFalse {True, False};
 enum class MoveToBehaviour {SendOnce, RepeatIfIdle, ImmediateFinish};
+enum class ReferenceFrame { Player, Camera };
 
 enum class ActionBehaviourFlag : uint32_t 
 {

@@ -46,13 +46,31 @@ public:
     ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
-    float accuracy = GW::Constants::Range::Adjacent;
+    float accuracy = 0.f;
+    float targetDistance = 0.f;
     MoveToBehaviour moveBehaviour = MoveToBehaviour::RepeatIfIdle;
 
     GW::GamePos pos{}; // Set in initial action
     mutable std::chrono::steady_clock::time_point lastMovePacketTime = std::chrono::steady_clock::now();
     mutable bool hasBegunWalking = false;
     mutable bool hasTarget = false;
+};
+
+class MoveInchwiseAction : public Action {
+public:
+    MoveInchwiseAction() = default;
+    MoveInchwiseAction(InputStream&);
+    ActionType type() const final { return ActionType::MoveInchwise; }
+    void initialAction() final;
+    ActionStatus isComplete() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
+
+private:
+    float forward = 1.;
+    float right = 0.;
+    ReferenceFrame refFrame = ReferenceFrame::Camera;
 };
 
 class CastAction : public Action {

@@ -263,6 +263,17 @@ std::string_view toString(MoveToBehaviour behaviour)
     return "";
 }
 
+std::string_view toString(ReferenceFrame refFrame)
+{
+    switch (refFrame) {
+        case ReferenceFrame::Player:
+            return "Player viewing direction";
+        case ReferenceFrame::Camera:
+            return "Camera viewing direction";
+    }
+    return "";
+}
+
 std::string_view toString(Trigger type)
 {
     switch (type) {
