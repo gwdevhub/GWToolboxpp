@@ -100,7 +100,7 @@ foreach(FILE ${HLSL_VERTEX_SHADER_FILES} ${HLSL_PIXEL_SHADER_FILES})
   get_filename_component(FILE_DIR ${FILE} DIRECTORY)
   get_source_file_property(shadertype ${FILE} ShaderType)
   add_custom_command(TARGET shaders
-                     COMMAND ${FXC} /nologo /E main /T ${shadertype}_2_0 /O3 /Zi /Fh ${FILE_DIR}/${FILE_NOEXT}.h ${FILE}
+                     COMMAND ${FXC} /nologo /E main /T ${shadertype}_3_0 /Vn ${FILE_NOEXT} /O3 /Zi /Fh ${FILE_DIR}/${FILE_NOEXT}.h ${FILE}
                      MAIN_DEPENDENCY ${FILE}
                      COMMENT "HLSL ${FILE}"
                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

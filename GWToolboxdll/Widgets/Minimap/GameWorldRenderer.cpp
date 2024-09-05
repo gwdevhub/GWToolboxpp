@@ -251,6 +251,13 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
         return;
     }
 
+    // Set the use_dotted_effect value as a pixel shader constant
+    const BOOL dotted_effect_constant[1] = {static_cast<BOOL>(use_dotted_effect)};
+    if (device->SetPixelShaderConstantB(0, dotted_effect_constant, 1) != D3D_OK) {
+        Log::Error("GameWorldRenderer: unable to SetPixelShaderConstantF#3, aborting render.");
+        return;
+    }
+
     // copy the vertex buffer to the back buffer
     filled ? device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices.size() / 3) : device->DrawPrimitive(D3DPT_LINESTRIP, 0, vertices.size() - 1);
 }
@@ -387,18 +394,21 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
 
 bool GameWorldRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
 {
-    constexpr D3DVERTEXELEMENT9 decl[] = {{0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0}, {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0}, D3DDECL_END()};
+    constexpr D3DVERTEXELEMENT9 decl[] = {
+        {0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
+        {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0},
+        D3DDECL_END()};
     if (device->CreateVertexDeclaration(decl, &vertex_declaration) != D3D_OK) {
         //Log::Error("GameWorldRenderer: unable to CreateVertexDeclaration");
         return false;
     }
 
-    if (device->CreateVertexShader(reinterpret_cast<const DWORD*>(&g_vs20_main), &vshader) != D3D_OK) {
+    if (device->CreateVertexShader(reinterpret_cast<const DWORD*>(&game_world_renderer_vs), &vshader) != D3D_OK) {
         //Log::Error("GameWorldRenderer: unable to CreateVertexShader");
         return false;
     }
-    if (device->CreatePixelShader(reinterpret_cast<const DWORD*>(&g_ps20_main), &pshader) != D3D_OK) {
-        //Log::Error("GameWorldRenderer: unable to CreateVertexShader");
+    if (device->CreatePixelShader(reinterpret_cast<const DWORD*>(&game_world_renderer_dotted_ps), &pshader) != D3D_OK) {
+        //Log::Error("GameWorldRenderer: unable to CreatePixelShader");
         return false;
     }
     need_configure_pipeline = false;
@@ -505,6 +515,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines()
         auto poly_to_add = GenericPolyRenderable(line->map, points, line->color, false);
 
         poly_to_add.from_player_pos = line->from_player_pos;
+        poly_to_add.use_dotted_effect = line->created_by_toolbox;
 
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
 

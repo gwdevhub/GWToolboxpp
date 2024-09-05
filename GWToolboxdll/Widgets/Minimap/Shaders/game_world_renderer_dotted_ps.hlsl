@@ -2,6 +2,7 @@
 float4 cur_pos : register(c0);  // only xyz components are used
 float4 max_dist : register(c1); // only x component is used
 float4 fog_starts_at : register(c2); // only x component is used
+bool use_dotted_effect : register(b0);
 
 // Compute the euclidean distance between two 3D points.
 float euclidean(float3 p1, float3 p2) {
@@ -26,10 +27,12 @@ float4 main(PS_INPUT input) : COLOR {
         discard;
     }
 
-    // Calculate the modulo to create the dotted effect
-    float pattern = fmod(pixel_dist, 50.0);
-    if (pattern > 25.0) {
-        discard;
+    if (use_dotted_effect) {
+        // Calculate the modulo to create the dotted effect
+        float pattern = fmod(pixel_dist, 200.0);
+        if (pattern > 100.0) {
+            discard;
+        }
     }
 
     float4 output = input.color;
