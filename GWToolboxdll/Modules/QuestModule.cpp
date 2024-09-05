@@ -405,7 +405,7 @@ void QuestModule::DrawSettingsInternal()
     ImGui::Text("Draw path to quest marker on:");
     ImGui::Checkbox("Terrain##drawquestpath", &draw_quest_path_on_terrain);
     ImGui::Checkbox("Minimap##drawquestpath", &draw_quest_path_on_minimap);
-    ImGui::DragFloat("Max distance between two points##max_visibility_range", &Pathing::max_visibility_range, 10.f, 0.f, 50000.f);
+    ImGui::DragFloat("Max distance between two points##max_visibility_range", &Pathing::max_visibility_range, 1'000.f, 1'000.f, 50'000.f);
     ImGui::ShowHelp("The higher this value, the more accurate the path will be, but the more CPU it will use.");
 }
 
