@@ -12,7 +12,7 @@ enum class QuestStatus { NotStarted, Started, Completed, Failed };
 enum class GoToTargetFinishCondition { None, StoppedMovingNextToTarget, DialogOpen };
 enum class HasSkillRequirement {OnBar, OffCooldown, ReadyToUse};
 enum class PlayerConnectednessRequirement {All, Individual};
-enum class Status {Enchanted, WeaponSpelled, Alive, Bleeding, Crippled, DeepWounded, Poisoned, Hexed};
+enum class Status {Enchanted, WeaponSpelled, Alive, Bleeding, Crippled, DeepWounded, Poisoned, Hexed, Idle, KnockedDown, Moving, Attacking, Casting};
 enum class EquippedItemSlot {Mainhand, Offhand, Chest, Legs, Head, Feet, Hands};
 enum class TrueFalse {True, False};
 enum class MoveToBehaviour {SendOnce, RepeatIfIdle, ImmediateFinish};

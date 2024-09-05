@@ -214,6 +214,16 @@ std::string_view toString(Status status)
             return "Poisoned";
         case Status::Hexed:
             return "Hexed";
+        case Status::Idle:
+            return "Idle";
+        case Status::KnockedDown:
+            return "Knocked down";
+        case Status::Moving:
+            return "Moving";
+        case Status::Attacking:
+            return "Attacking";
+        case Status::Casting:
+            return "Casting";
     }
     return "";
 }
