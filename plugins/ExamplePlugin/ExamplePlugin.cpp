@@ -6,9 +6,7 @@
 #include <Utils/GuiUtils.h>
 #include <GWCA/GWCA.h>
 #include <GWCA/Utilities/Hooker.h>
-
 #include "GWCA/Managers/ChatMgr.h"
-#include "Modules/ChatLog.h"
 
 namespace {
     bool redirect_slash_ee_to_eee = false;
