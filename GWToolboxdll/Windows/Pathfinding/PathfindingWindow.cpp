@@ -3,15 +3,12 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 
+#include <GWCA/GameEntities/Agent.h>
+
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
-#include <GWCA/Managers/QuestMgr.h>
-
-#include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Map.h>
-#include <GWCA/GameEntities/Quest.h>
 
 #include <Timer.h>
 #include <ImGuiAddons.h>
@@ -32,7 +29,7 @@ namespace {
         if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds))
             return nullptr;
 
-        uint64_t hash = (uint64_t)map_bounds.Min.y;
+        auto hash = static_cast<uint64_t>(map_bounds.Min.y);
         hash |= ((uint64_t)map_bounds.Min.x) << 32;
 
         if (mile_paths_by_coords.contains(hash))
@@ -107,31 +104,6 @@ namespace {
         });
     }
 
-    void RecalculatePathTo(const GW::GamePos& to)
-    {
-        const auto from = GetPlayerPos();
-        if (!from) {
-            return; // Invalid player position
-        }
-        RecalculatePath(*from, to);
-    }
-
-    clock_t last_recalculate = 0;
-
-    void RecalculatePathToQuest()
-    {
-        last_recalculate = TIMER_INIT();
-        const auto q = GW::QuestMgr::GetActiveQuest();
-        if (!(q && q->marker.x)) return;
-
-        RecalculatePathTo(q->marker);
-    }
-
-    void DrawPathOnMinimap()
-    {
-        if (!astar)
-            return;
-    }
 }
 
 bool PathfindingWindow::ReadyForPathing()

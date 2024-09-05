@@ -682,7 +682,7 @@ namespace Pathing {
         for (auto& it : m_visGraph) {
             it.reserve(0x100);
         }
-        float range = MAX_VISIBILITY_RANGE;
+        float range = max_visibility_range;
         float sqrange = range * range;
 
         std::vector<const AABB*> open;
@@ -759,8 +759,8 @@ namespace Pathing {
             it.reserve(0x50);
         }
 
-        constexpr float range = MAX_VISIBILITY_RANGE;
-        constexpr float sqrange = range * range;
+        const float range = max_visibility_range;
+        const float sqrange = range * range;
 
         const size_t size = m_points.size();
         std::mutex visGraphMutex;
@@ -934,7 +934,7 @@ namespace Pathing {
     void AStar::InsertPointIntoVisGraph(MilePath::point& point) const
     {
         auto& vis_graph = m_mp->m_visGraph;
-        constexpr float sqrange = MilePath::MAX_VISIBILITY_RANGE * MilePath::MAX_VISIBILITY_RANGE;
+        const float sqrange = max_visibility_range * max_visibility_range;
         std::vector<const AABB*> open;
         std::vector<bool> visited;
         for (const auto& it : m_mp->m_points) {

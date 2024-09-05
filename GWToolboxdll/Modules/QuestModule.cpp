@@ -38,8 +38,6 @@ namespace {
     bool draw_quest_path_on_minimap = true;
     GW::HookEntry ui_message_entry;
 
-    bool waiting_for_pathing = false;
-
     clock_t last_quest_clicked = 0;
 
     GW::UI::UIInteractionCallback QuestLogRow_UICallback_Func = nullptr, QuestLogRow_UICallback_Ret = nullptr;
@@ -407,6 +405,8 @@ void QuestModule::DrawSettingsInternal()
     ImGui::Text("Draw path to quest marker on:");
     ImGui::Checkbox("Terrain##drawquestpath", &draw_quest_path_on_terrain);
     ImGui::Checkbox("Minimap##drawquestpath", &draw_quest_path_on_minimap);
+    ImGui::DragFloat("Max distance between two points##max_visibility_range", &Pathing::max_visibility_range, 10.f, 0.f, 50000.f);
+    ImGui::ShowHelp("The higher this value, the more accurate the path will be, but the more CPU it will use.");
 }
 
 void QuestModule::LoadSettings(ToolboxIni* ini)
@@ -414,6 +414,8 @@ void QuestModule::LoadSettings(ToolboxIni* ini)
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(draw_quest_path_on_minimap);
     LOAD_BOOL(draw_quest_path_on_terrain);
+    using namespace Pathing;
+    LOAD_FLOAT(max_visibility_range);
 }
 
 void QuestModule::SaveSettings(ToolboxIni* ini)
@@ -421,6 +423,8 @@ void QuestModule::SaveSettings(ToolboxIni* ini)
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(draw_quest_path_on_minimap);
     SAVE_BOOL(draw_quest_path_on_terrain);
+    using namespace Pathing;
+    SAVE_FLOAT(max_visibility_range);
 }
 
 void QuestModule::Initialize()
