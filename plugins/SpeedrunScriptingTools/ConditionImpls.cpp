@@ -1437,6 +1437,16 @@ bool PlayerStatusCondition::check() const
             return player->GetIsPoisoned();
         case Status::Hexed:
             return player->GetIsHexed() || player->GetIsDegenHexed();
+        case Status::Idle:
+            return player->GetIsIdle();
+        case Status::KnockedDown:
+            return player->GetIsKnockedDown();
+        case Status::Moving:
+            return player->GetIsMoving();
+        case Status::Attacking:
+            return player->GetIsAttacking();
+        case Status::Casting:
+            return player->GetIsCasting();
         default:
             return false;
     }
@@ -1447,7 +1457,7 @@ void PlayerStatusCondition::drawSettings()
 
     ImGui::Text("If player is");
     ImGui::SameLine();
-    drawEnumButton(Status::Enchanted, Status::Hexed, status);
+    drawEnumButton(Status::Enchanted, Status::Casting, status);
 
     ImGui::PopID();
 }
@@ -1485,6 +1495,16 @@ bool CurrentTargetStatusCondition::check() const
             return target->GetIsPoisoned();
         case Status::Hexed:
             return target->GetIsHexed() || target->GetIsDegenHexed();
+        case Status::Idle:
+            return target->GetIsIdle();
+        case Status::KnockedDown:
+            return target->GetIsKnockedDown();
+        case Status::Moving:
+            return target->GetIsMoving();
+        case Status::Attacking:
+            return target->GetIsAttacking();
+        case Status::Casting:
+            return target->GetIsCasting();
         default:
             return false;
     }
@@ -1495,7 +1515,7 @@ void CurrentTargetStatusCondition::drawSettings()
 
     ImGui::Text("If current target is");
     ImGui::SameLine();
-    drawEnumButton(Status::Enchanted, Status::Hexed, status);
+    drawEnumButton(Status::Enchanted, Status::Casting, status);
 
     ImGui::PopID();
 }

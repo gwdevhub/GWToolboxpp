@@ -22,7 +22,7 @@ enum class ConditionType : int {
     PlayerHasClass,
     PlayerHasName,
     PlayerHasEnergy,
-    PlayerIsIdle,
+    PlayerIsIdle, //Deprecated, replaced with PlayerStatusCondition
     PlayerHasItemEquipped,
     KeyIsPressed,
     CurrentTargetHasHpBelow,
