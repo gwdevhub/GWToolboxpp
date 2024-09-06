@@ -34,6 +34,7 @@ enum class ActionType : int {
     WaitUntil,
     MoveToTargetPosition,
     MoveInchwise,
+    GWKey,
 
     Count
 };

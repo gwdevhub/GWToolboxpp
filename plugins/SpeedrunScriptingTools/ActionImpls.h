@@ -11,6 +11,7 @@
 #include <GWCA/Constants/Skills.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Utilities/Hook.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <chrono>
 #include <unordered_set>
@@ -449,4 +450,18 @@ public:
 
 private:
     std::shared_ptr<Condition> condition = nullptr;
+};
+
+class GWKeyAction : public Action {
+public:
+    GWKeyAction() = default;
+    GWKeyAction(InputStream&);
+    ActionType type() const final { return ActionType::GWKey; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost | ActionBehaviourFlag::ImmediateFinish; }
+
+private:
+    GW::UI::ControlAction action = GW::UI::ControlAction::ControlAction_Interact;
 };
