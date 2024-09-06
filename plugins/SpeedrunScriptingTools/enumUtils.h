@@ -15,6 +15,11 @@ namespace GW::Constants
     enum class MapID : uint32_t;
     enum class InstanceType;
     enum HeroID : uint32_t;
+} // namespace GW::Constants
+
+namespace GW::UI 
+{
+    enum ControlAction : uint32_t;
 }
 
 std::string_view toString(AgentType);
@@ -33,6 +38,7 @@ std::string_view toString(MoveToBehaviour);
 std::string_view toString(ReferenceFrame);
 std::string_view toString(GW::Constants::InstanceType);
 std::string_view toString(GW::Constants::HeroID);
+std::string_view toString(GW::UI::ControlAction);
 
 void drawHotkeySelector(long& keyData, long& modifier, std::string& description, float selectorWidth);
 std::string makeHotkeyDescription(long keyData, long modifier);

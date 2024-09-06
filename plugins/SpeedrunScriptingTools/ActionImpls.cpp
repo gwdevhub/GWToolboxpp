@@ -1873,3 +1873,29 @@ ActionStatus WaitUntilAction::isComplete() const
         return ActionStatus::Complete;
     return ActionStatus::Running;
 }
+
+/// ------------- GWKeyAction -------------
+GWKeyAction::GWKeyAction(InputStream& stream)
+{
+    stream >> action;
+}
+void GWKeyAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << action;
+}
+void GWKeyAction::initialAction()
+{
+    Action::initialAction();
+    GW::GameThread::Enqueue([action = this->action]{ GW::UI::Keypress(action); });
+}
+
+void GWKeyAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+    ImGui::Text("Guild Wars Key");
+    ImGui::SameLine();
+    drawEnumButton<GW::UI::ControlAction>(GW::UI::ControlAction_Interact, GW::UI::ControlAction_OpenHeroCommander7, action, 0, 400.f);
+    ImGui::PopID();
+}

@@ -80,33 +80,30 @@ void InstanceInfo::initialize()
         }
     });
 
-    RegisterUIMessageCallback(&UseItem_Entry, GW::UI::UIMessage::kSendUseItem, 
-        [&](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*){
-            if (!wparam)return;
+    RegisterUIMessageCallback(&UseItem_Entry, GW::UI::UIMessage::kSendUseItem, [&](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        if (!wparam) return;
 
-            const auto item = GW::Items::GetItemById((uint32_t)wparam);
-            if (!item) return;
+        const auto item = GW::Items::GetItemById((uint32_t)wparam);
+        if (!item) return;
 
-            const auto isGhostInTheBox = item->model_id == GW::Constants::ItemID::GhostInTheBox;
-            if (!isGhostInTheBox && !isTargetableMiniPet(item->model_id)) return;
+        const auto isGhostInTheBox = item->model_id == GW::Constants::ItemID::GhostInTheBox;
+        if (!isGhostInTheBox && !isTargetableMiniPet(item->model_id)) return;
 
-            if (mpStatus.poppedMinipetId && mpStatus.poppedMinipetId.value() == item->model_id) {
-                mpStatus.poppedMinipetId = std::nullopt;
-                return;
-            }
-
-            const auto now = std::chrono::steady_clock::now();
-            if (std::chrono::duration_cast<std::chrono::milliseconds>(now - mpStatus.lastPop).count() < 10'010) 
-            {
-                return;
-            }
-            mpStatus.lastPop = now;
-
-            if (!isGhostInTheBox) {
-                mpStatus.poppedMinipetId = item->model_id;
-            }
+        if (mpStatus.poppedMinipetId && mpStatus.poppedMinipetId.value() == item->model_id) {
+            mpStatus.poppedMinipetId = std::nullopt;
+            return;
         }
-    );
+
+        const auto now = std::chrono::steady_clock::now();
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - mpStatus.lastPop).count() < 10'010) {
+            return;
+        }
+        mpStatus.lastPop = now;
+
+        if (!isGhostInTheBox) {
+            mpStatus.poppedMinipetId = item->model_id;
+        }
+    });
 }
 
 void InstanceInfo::terminate() 
