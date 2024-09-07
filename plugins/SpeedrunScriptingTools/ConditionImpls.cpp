@@ -1110,7 +1110,7 @@ NearbyAgentCondition::NearbyAgentCondition(InputStream& stream)
     stream >> agentType >> primary >> secondary >> alive >> hexed >> skill >> modelId >> minDistance >> maxDistance >> minHp >> maxHp;
     agentName = readStringWithSpaces(stream);
     polygon = readPositions(stream);
-    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding;
+    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding >> minSpeed >> maxSpeed;
 }
 void NearbyAgentCondition::serialize(OutputStream& stream) const
 {
@@ -1119,7 +1119,7 @@ void NearbyAgentCondition::serialize(OutputStream& stream) const
     stream << agentType << primary << secondary << alive << hexed << skill << modelId << minDistance << maxDistance << minHp << maxHp;
     writeStringWithSpaces(stream, agentName);
     writePositions(stream, polygon);
-    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding;
+    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding << minSpeed << maxSpeed;
 }
 bool NearbyAgentCondition::check() const
 {
@@ -1159,16 +1159,21 @@ bool NearbyAgentCondition::check() const
 
         const auto correctSkill = (skill == GW::Constants::SkillID::No_Skill) || (skill == (GW::Constants::SkillID)living->skill);
         const auto correctModelId = (modelId == 0) || (living->player_number == modelId);
-        const auto distance = GW::GetDistance(player->pos, living->pos);
-        const auto goodDistance = (minDistance <= distance) && (distance <= maxDistance);
         const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedAgentName(living->agent_id) == agentName);
         const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(living->pos, polygon);
         const auto goodHp = minHp <= 100.f * living->hp && 100.f * living->hp <= maxHp;
+        
+        const auto distance = GW::GetDistance(player->pos, living->pos);
+        const auto goodDistance = (minDistance <= distance) && (distance <= maxDistance);
+
         const auto angle = angleToAgent(player, living);
         const auto goodAngle = minAngle - eps < angle && angle < maxAngle + eps;
 
-        return correctType && correctPrimary && correctSecondary && correctStatus && correctHex && correctEnch && correctWeaponSpell && correctBleed && correctPoison 
-                && correctSkill && correctModelId && goodDistance && goodName && goodPosition && goodHp && goodAngle;
+        const auto speed = GW::GetNorm(living->velocity);
+        const auto goodSpeed = minSpeed - eps < speed && speed < maxSpeed + eps;
+
+        return correctType && correctPrimary && correctSecondary && correctStatus && correctHex && correctEnch && correctWeaponSpell && correctBleed && correctPoison && correctSkill && correctModelId && goodDistance && goodName && goodPosition && goodHp &&
+               goodAngle && goodSpeed;
     };
     if (agentType == AgentType::PartyMember) 
     {
@@ -1276,6 +1281,17 @@ void NearbyAgentCondition::drawSettings()
         if (minAngle > 180.f) minAngle = 180.f;
         if (maxAngle < 0.f) maxAngle = 0.f;
         if (maxAngle > 180.f) maxAngle = 180.f;
+
+        ImGui::Bullet();
+        ImGui::Text("Speed");
+        ImGui::SameLine();
+        ImGui::PushItemWidth(70.f);
+        ImGui::InputFloat("min###14", &minSpeed);
+        ImGui::SameLine();
+        ImGui::InputFloat("max###15", &maxSpeed);
+        ImGui::PopItemWidth();
+        if (minSpeed < 0.f) minSpeed = 0.f;
+        if (maxSpeed < 0.f) maxSpeed = 0.f;
 
         ImGui::Bullet();
         ImGui::Text("Is within polygon");

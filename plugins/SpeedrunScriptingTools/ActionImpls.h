@@ -144,6 +144,8 @@ private:
     float maxHp = 100.f;
     float minAngle = 0.f;
     float maxAngle = 180.f;
+    float minSpeed = 0.f;
+    float maxSpeed = 1000.f;
 };
 
 class UseItemAction : public Action {
