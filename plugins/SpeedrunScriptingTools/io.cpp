@@ -63,6 +63,7 @@ OutputStream::operator bool() const
 }
 std::string readStringWithSpaces(InputStream& stream)
 {
+    if (stream.isAtSeparator()) return "";
     std::string result;
     std::string word;
     while (stream >> word) {
