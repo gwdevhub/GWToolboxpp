@@ -146,6 +146,9 @@ private:
     float maxAngle = 180.f;
     float minSpeed = 0.f;
     float maxSpeed = 1000.f;
+    int minRegen = -10;
+    int maxRegen = 10;
+    WeaponType weapon;
 };
 
 class UseItemAction : public Action {

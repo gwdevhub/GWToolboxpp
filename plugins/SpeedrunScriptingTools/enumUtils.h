@@ -39,6 +39,9 @@ std::string_view toString(ReferenceFrame);
 std::string_view toString(GW::Constants::InstanceType);
 std::string_view toString(GW::Constants::HeroID);
 std::string_view toString(GW::UI::ControlAction);
+std::string_view toString(WeaponType);
+
+bool checkWeaponType(WeaponType, uint16_t);
 
 void drawHotkeySelector(long& keyData, long& modifier, std::string& description, float selectorWidth);
 std::string makeHotkeyDescription(long keyData, long modifier);
