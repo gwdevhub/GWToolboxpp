@@ -46,7 +46,7 @@ std::string makeHotkeyDescription(long keyData, long modifier);
 void drawSkillIDSelector(GW::Constants::SkillID& id);
 void drawMapIDSelector(GW::Constants::MapID& id);
 void drawModelIDSelector(uint16_t& id, std::optional<std::string_view> label = std::nullopt);
-void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& hotkeyMod);
+void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& hotkeyMod, std::string& triggerMessage);
 
 void drawPolygonSelector(std::vector<GW::Vec2f>& polygon);
 bool pointIsInsidePolygon(const GW::GamePos pos, const std::vector<GW::Vec2f>& polygon);

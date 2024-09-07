@@ -1105,7 +1105,6 @@ void InstanceTimeCondition::drawSettings()
 }
 
 /// ------------- NearbyAgentCondition -------------
-
 NearbyAgentCondition::NearbyAgentCondition(InputStream& stream)
 {
     stream >> agentType >> primary >> secondary >> alive >> hexed >> skill >> modelId >> minDistance >> maxDistance >> minHp >> maxHp;

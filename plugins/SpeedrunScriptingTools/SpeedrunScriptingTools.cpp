@@ -70,6 +70,7 @@ namespace {
         stream << script.enabledToggleHotkey.modifier;
         stream << script.showMessageWhenTriggered;
         stream << script.showMessageWhenToggled;
+        writeStringWithSpaces(stream, script.triggerMessage);
 
         stream.writeSeparator();
 
@@ -106,6 +107,7 @@ namespace {
                     stream >> result->enabledToggleHotkey.modifier;
                     stream >> result->showMessageWhenTriggered;
                     stream >> result->showMessageWhenToggled;
+                    result->triggerMessage = readStringWithSpaces(stream);
                     stream.proceedPastSeparator();
                     break;
                 case 'A':
@@ -359,7 +361,7 @@ void SpeedrunScriptingTools::DrawSettings()
                 }
 
                 ImGui::SameLine();
-                drawTriggerSelector(scriptIt->trigger, 100.f, scriptIt->triggerHotkey.keyData, scriptIt->triggerHotkey.modifier);
+                drawTriggerSelector(scriptIt->trigger, 100.f, scriptIt->triggerHotkey.keyData, scriptIt->triggerHotkey.modifier, scriptIt->triggerMessage);
                 
                 ImGui::SameLine();
                 ImGui::Checkbox("Log trigger", &scriptIt->showMessageWhenTriggered);
@@ -726,6 +728,15 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
                     s.triggered = true;
             });
         }
+        std::ranges::for_each(m_scripts, [&](Script& s) 
+        {
+            if (s.enabled && s.trigger == Trigger::ChatMessage && !s.triggerMessage.empty() && checkConditions(s)) {
+                if (WStringToString(packet->message).contains(s.triggerMessage))
+                {
+                    s.triggered = true;
+                }
+            }
+        });
     });
     InstanceInfo::getInstance().initialize();
     srand((unsigned int)time(NULL));

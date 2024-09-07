@@ -2,6 +2,7 @@
 
 #include <commonIncludes.h>
 #include <Keys.h>
+#include <ImGuiCppWrapper.h>
 
 #include <GWCA/Constants/Skills.h>
 #include <GWCA/Constants/Maps.h>
@@ -295,6 +296,8 @@ std::string_view toString(Trigger type)
             return "Trigger on hard mode ping";
         case Trigger::Hotkey:
             return "Trigger on keypress";
+        case Trigger::ChatMessage:
+            return "Trigger on chat message";
     }
     return "";
 }
@@ -633,11 +636,11 @@ void drawHotkeySelector(long& keyData, long& modifier, std::string& description,
     }
 }
 
-void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& hotkeyMod)
+void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& hotkeyMod, std::string& triggerMessage)
 {
     if (trigger == Trigger::None) 
     {
-        drawEnumButton(Trigger::InstanceLoad, Trigger::Hotkey, trigger, 0, 100.f, "Add trigger");
+        drawEnumButton(Trigger::InstanceLoad, Trigger::ChatMessage, trigger, 0, 100.f, "Add trigger");
     }
     else if (trigger == Trigger::Hotkey) 
     {
@@ -650,6 +653,17 @@ void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& 
             trigger = Trigger::None;
             hotkeyData = 0;
             hotkeyMod = 0;
+        }
+    }
+    else if (trigger == Trigger::ChatMessage)
+    {
+        ImGui::PushItemWidth(200);
+        ImGui::InputText("Trigger message", &triggerMessage);
+        ImGui::PopItemWidth();
+        ImGui::SameLine();
+        if (ImGui::Button("X", ImVec2(20.f, 0))) {
+            trigger = Trigger::None;
+            triggerMessage = "";
         }
     }
     else 

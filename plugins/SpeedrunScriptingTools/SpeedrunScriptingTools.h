@@ -23,6 +23,7 @@ struct Script {
 
     Hotkey enabledToggleHotkey{};
     Hotkey triggerHotkey{};
+    std::string triggerMessage{};
 };
 
 class SpeedrunScriptingTools : public ToolboxPlugin {
