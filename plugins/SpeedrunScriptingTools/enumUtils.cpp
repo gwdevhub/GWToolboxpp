@@ -314,6 +314,34 @@ std::string_view toString(GW::Constants::InstanceType type)
     }
     return "";
 }
+std::string_view toString(WeaponType type)
+{
+    switch (type) {
+        case WeaponType::Any:
+            return "Any";
+        case WeaponType::None:
+            return "None";
+        case WeaponType::Bow:
+            return "Bow";
+        case WeaponType::Axe:
+            return "Axe";
+        case WeaponType::Hammer:
+            return "Hammer";
+        case WeaponType::Daggers:
+            return "Daggers";
+        case WeaponType::Scythe:
+            return "Scythe";
+        case WeaponType::Spear:
+            return "Spear";
+        case WeaponType::Sword:
+            return "Sword";
+        case WeaponType::Wand:
+            return "Wand";
+        case WeaponType::Staff:
+            return "Staff";
+    }
+    return "";
+}
 std::string_view toString(GW::Constants::HeroID hero) 
 {
     switch (hero)
@@ -574,6 +602,35 @@ std::string_view toString(GW::UI::ControlAction action)
         "Panel: Open Hero Commander 7"
     };
     return names[static_cast<int>(action - 0x80)];
+}
+
+bool checkWeaponType(WeaponType targetType, uint16_t gameType) 
+{
+    switch (targetType) {
+        case WeaponType::Any:
+            return true;
+        case WeaponType::None:
+            return gameType == 0;
+        case WeaponType::Bow:
+            return gameType == 1;
+        case WeaponType::Axe:
+            return gameType == 2;
+        case WeaponType::Hammer:
+            return gameType == 3;
+        case WeaponType::Daggers:
+            return gameType == 4;
+        case WeaponType::Scythe:
+            return gameType == 5;
+        case WeaponType::Spear:
+            return gameType == 6;
+        case WeaponType::Sword:
+            return gameType == 7;
+        case WeaponType::Wand:
+            return gameType == 10;
+        case WeaponType::Staff:
+            return gameType == 12 || gameType == 14;
+    }
+    return false;
 }
 
 std::string makeHotkeyDescription(long keyData, long modifier) 

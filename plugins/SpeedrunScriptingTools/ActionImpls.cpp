@@ -148,6 +148,13 @@ namespace {
         }
         return {};
     }
+
+    int GetHealthRegenPips(const GW::AgentLiving* agent)
+    {
+        if (!agent || agent->GetIsDead()) return 0;
+        const float health_regen_per_second = agent->max_hp * agent->hp_pips;
+        return (int)std::ceil(health_regen_per_second / 2.f); // 1 pip = 2 health per second
+    }
 } // namespace
 
 /// ------------- MoveToAction -------------
@@ -517,7 +524,7 @@ ChangeTargetAction::ChangeTargetAction(InputStream& stream)
     stream >> agentType >> primary >> secondary >> alive >> skill >> sorting >> modelId >> minDistance >> maxDistance >> requireSameModelIdAsTarget >> preferNonHexed >> rotateThroughTargets;
     agentName = readStringWithSpaces(stream);
     polygon = readPositions(stream);
-    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding >> hexed >> minSpeed >> maxSpeed;
+    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding >> hexed >> minSpeed >> maxSpeed >> minRegen >> maxRegen >> weapon;
 }
 void ChangeTargetAction::serialize(OutputStream& stream) const
 {
@@ -526,7 +533,7 @@ void ChangeTargetAction::serialize(OutputStream& stream) const
     stream << agentType << primary << secondary << alive << skill << sorting << modelId << minDistance << maxDistance << requireSameModelIdAsTarget << preferNonHexed << rotateThroughTargets;
     writeStringWithSpaces(stream, agentName);
     writePositions(stream, polygon);
-    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding << hexed << minSpeed << maxSpeed;
+    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding << hexed << minSpeed << maxSpeed << minRegen << maxRegen << weapon;
 }
 void ChangeTargetAction::initialAction()
 {
@@ -582,17 +589,23 @@ void ChangeTargetAction::initialAction()
         const auto correctModelId = (requireSameModelIdAsTarget && currentTarget) 
             ? (currentTarget->player_number == agent->player_number) 
             : ((modelId == 0) || (agent->player_number == modelId));
-        const auto distance = GW::GetDistance(player->pos, agent->pos);
-        const auto goodDistance = (minDistance - eps < distance) && (distance < maxDistance + eps);
         const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedAgentName(agent->agent_id) == agentName);
         const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(agent->pos, polygon);
         const auto goodHp = minHp <= 100.f * agent->hp && 100.f * agent->hp <= maxHp;
         const auto goodAngle = angleToAgent(player, agent) - eps < maxAngle;
+        const auto goodWeapon = checkWeaponType(weapon, agent->weapon_type);
+        
+        const auto distance = GW::GetDistance(player->pos, agent->pos);
+        const auto goodDistance = (minDistance - eps < distance) && (distance < maxDistance + eps);
+
         const auto speed = GW::GetNorm(agent->velocity);
         const auto goodSpeed = minSpeed - eps < speed && speed < maxSpeed + eps;
 
+        const auto regen = GetHealthRegenPips(agent);
+        const auto goodRegen = minRegen <= regen && regen <= maxRegen;
+
         return correctType && correctPrimary && correctSecondary && correctStatus && correctEnch && correctWeaponSpell && correctHex && correctBleed && correctPoison && correctSkill && correctModelId && goodDistance && goodName && goodPosition && goodHp &&
-               goodAngle && goodSpeed;
+               goodAngle && goodSpeed && goodRegen && goodWeapon;
     };
 
     const GW::AgentLiving* currentBestTarget = nullptr;
@@ -796,9 +809,23 @@ void ChangeTargetAction::drawSettings()
             if (minSpeed < 0.f) minSpeed = 0.f;
             if (maxSpeed < 0.f) maxSpeed = 0.f;
 
+            ImGui::Bullet();
+            ImGui::Text("HP Regen");
+            ImGui::SameLine();
+            ImGui::InputInt("min###17", &minRegen, 0);
+            ImGui::SameLine();
+            ImGui::InputInt("max###18", &maxRegen, 0);
+            if (minRegen < -10) minRegen = -10;
+            if (maxRegen > 10) maxRegen = 10;
+
+            ImGui::Bullet();
+            ImGui::Text("Weapon Type");
+            ImGui::SameLine();
+            drawEnumButton(WeaponType::Any, WeaponType::Staff, weapon, 19);
+
             ImGui::BulletText("Sort candidates by:");
             ImGui::SameLine();
-            drawEnumButton(Sorting::AgentId, Sorting::ModelID, sorting, 17, 150.);
+            drawEnumButton(Sorting::AgentId, Sorting::ModelID, sorting, 20, 150.);
 
             ImGui::Bullet();
             ImGui::Text("Is within polygon");

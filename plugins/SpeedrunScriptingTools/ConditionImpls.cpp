@@ -149,6 +149,13 @@ namespace {
 
         return (uint32_t)std::round(cost);
     }
+
+    int GetHealthRegenPips(const GW::AgentLiving* agent)
+    {
+        if (!agent || agent->GetIsDead()) return 0;
+        const float health_regen_per_second = agent->max_hp * agent->hp_pips;
+        return (int)std::ceil(health_regen_per_second / 2.f); // 1 pip = 2 health per second
+    }
 }
 
 /// ------------- InvertedCondition -------------
@@ -1110,7 +1117,7 @@ NearbyAgentCondition::NearbyAgentCondition(InputStream& stream)
     stream >> agentType >> primary >> secondary >> alive >> hexed >> skill >> modelId >> minDistance >> maxDistance >> minHp >> maxHp;
     agentName = readStringWithSpaces(stream);
     polygon = readPositions(stream);
-    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding >> minSpeed >> maxSpeed;
+    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding >> minSpeed >> maxSpeed >> minRegen >> maxRegen >> weapon;
 }
 void NearbyAgentCondition::serialize(OutputStream& stream) const
 {
@@ -1119,7 +1126,7 @@ void NearbyAgentCondition::serialize(OutputStream& stream) const
     stream << agentType << primary << secondary << alive << hexed << skill << modelId << minDistance << maxDistance << minHp << maxHp;
     writeStringWithSpaces(stream, agentName);
     writePositions(stream, polygon);
-    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding << minSpeed << maxSpeed;
+    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding << minSpeed << maxSpeed << minRegen << maxRegen << weapon;
 }
 bool NearbyAgentCondition::check() const
 {
@@ -1162,6 +1169,7 @@ bool NearbyAgentCondition::check() const
         const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedAgentName(living->agent_id) == agentName);
         const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(living->pos, polygon);
         const auto goodHp = minHp <= 100.f * living->hp && 100.f * living->hp <= maxHp;
+        const auto goodWeapon = checkWeaponType(weapon,living->weapon_type);
         
         const auto distance = GW::GetDistance(player->pos, living->pos);
         const auto goodDistance = (minDistance <= distance) && (distance <= maxDistance);
@@ -1172,8 +1180,11 @@ bool NearbyAgentCondition::check() const
         const auto speed = GW::GetNorm(living->velocity);
         const auto goodSpeed = minSpeed - eps < speed && speed < maxSpeed + eps;
 
+        const auto regen = GetHealthRegenPips(living);
+        const auto goodRegen = minRegen <= regen && regen <= maxRegen;
+
         return correctType && correctPrimary && correctSecondary && correctStatus && correctHex && correctEnch && correctWeaponSpell && correctBleed && correctPoison && correctSkill && correctModelId && goodDistance && goodName && goodPosition && goodHp &&
-               goodAngle && goodSpeed;
+               goodAngle && goodSpeed && goodRegen && goodWeapon;
     };
     if (agentType == AgentType::PartyMember) 
     {
@@ -1292,6 +1303,20 @@ void NearbyAgentCondition::drawSettings()
         ImGui::PopItemWidth();
         if (minSpeed < 0.f) minSpeed = 0.f;
         if (maxSpeed < 0.f) maxSpeed = 0.f;
+
+        ImGui::Bullet();
+        ImGui::Text("HP Regen");
+        ImGui::SameLine();
+        ImGui::InputInt("min###16", &minRegen, 0);
+        ImGui::SameLine();
+        ImGui::InputInt("max###17", &maxRegen, 0);
+        if (minRegen < -10) minRegen = -10;
+        if (maxRegen > 10) maxRegen = 10;
+
+        ImGui::Bullet();
+        ImGui::Text("Weapon Type");
+        ImGui::SameLine();
+        drawEnumButton(WeaponType::Any, WeaponType::Staff, weapon, 18);
 
         ImGui::Bullet();
         ImGui::Text("Is within polygon");
