@@ -2252,7 +2252,8 @@ void CHAT_CMD_FUNC(ChatCommands::CmdUseSkill)
         return;
     const std::wstring arg1 = TextUtils::ToLower(argv[1]);
     if (arg1 == L"stop" || arg1 == L"off") {
-        return; // do nothing, already cleared skills_to_use
+        Instance().skill_to_use.slot = 0;
+        return;
     }
     uint32_t num = 0;
     if (!TextUtils::ParseUInt(argv[1], &num) || num > 8) {
@@ -2260,7 +2261,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdUseSkill)
         return;
     }
     auto& skill_to_use = Instance().skill_to_use;
-    if (skill_to_use.slot == num) 
+    if (skill_to_use.slot == num)
         num = 0;
     skill_to_use.slot = num;
     skill_to_use.skill_usage_delay = .0f;
