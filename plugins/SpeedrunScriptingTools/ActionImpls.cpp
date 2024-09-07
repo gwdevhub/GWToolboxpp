@@ -517,7 +517,7 @@ ChangeTargetAction::ChangeTargetAction(InputStream& stream)
     stream >> agentType >> primary >> secondary >> alive >> skill >> sorting >> modelId >> minDistance >> maxDistance >> requireSameModelIdAsTarget >> preferNonHexed >> rotateThroughTargets;
     agentName = readStringWithSpaces(stream);
     polygon = readPositions(stream);
-    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding >> hexed;
+    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding >> hexed >> minSpeed >> maxSpeed;
 }
 void ChangeTargetAction::serialize(OutputStream& stream) const
 {
@@ -526,7 +526,7 @@ void ChangeTargetAction::serialize(OutputStream& stream) const
     stream << agentType << primary << secondary << alive << skill << sorting << modelId << minDistance << maxDistance << requireSameModelIdAsTarget << preferNonHexed << rotateThroughTargets;
     writeStringWithSpaces(stream, agentName);
     writePositions(stream, polygon);
-    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding << hexed;
+    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding << hexed << minSpeed << maxSpeed;
 }
 void ChangeTargetAction::initialAction()
 {
@@ -588,9 +588,11 @@ void ChangeTargetAction::initialAction()
         const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(agent->pos, polygon);
         const auto goodHp = minHp <= 100.f * agent->hp && 100.f * agent->hp <= maxHp;
         const auto goodAngle = angleToAgent(player, agent) - eps < maxAngle;
+        const auto speed = GW::GetNorm(agent->velocity);
+        const auto goodSpeed = minSpeed - eps < speed && speed < maxSpeed + eps;
 
-        return correctType && correctPrimary && correctSecondary && correctStatus && correctEnch && correctWeaponSpell && correctHex &&  correctBleed && correctPoison && correctSkill && 
-                correctModelId && goodDistance && goodName && goodPosition && goodHp && goodAngle;
+        return correctType && correctPrimary && correctSecondary && correctStatus && correctEnch && correctWeaponSpell && correctHex && correctBleed && correctPoison && correctSkill && correctModelId && goodDistance && goodName && goodPosition && goodHp &&
+               goodAngle && goodSpeed;
     };
 
     const GW::AgentLiving* currentBestTarget = nullptr;
@@ -783,9 +785,20 @@ void ChangeTargetAction::drawSettings()
             if (maxAngle < 0.f) maxAngle = 0.f;
             if (maxAngle > 180.f) maxAngle = 180.f;
 
+            ImGui::Bullet();
+            ImGui::Text("Speed");
+            ImGui::SameLine();
+            ImGui::PushItemWidth(70.f);
+            ImGui::InputFloat("min###15", &minSpeed);
+            ImGui::SameLine();
+            ImGui::InputFloat("max###16", &maxSpeed);
+            ImGui::PopItemWidth();
+            if (minSpeed < 0.f) minSpeed = 0.f;
+            if (maxSpeed < 0.f) maxSpeed = 0.f;
+
             ImGui::BulletText("Sort candidates by:");
             ImGui::SameLine();
-            drawEnumButton(Sorting::AgentId, Sorting::ModelID, sorting, 15, 150.);
+            drawEnumButton(Sorting::AgentId, Sorting::ModelID, sorting, 17, 150.);
 
             ImGui::Bullet();
             ImGui::Text("Is within polygon");
