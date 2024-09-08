@@ -148,7 +148,7 @@ private:
     float maxSpeed = 1000.f;
     int minRegen = -10;
     int maxRegen = 10;
-    WeaponType weapon;
+    WeaponType weapon = WeaponType::Any;
 };
 
 class UseItemAction : public Action {
