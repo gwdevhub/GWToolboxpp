@@ -8,17 +8,37 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 6.23
-* [New] slightly optimised GW's dat loading ccode
-* [New] added EnemyWindow (party window but for enemies)
-* [New] added PartySearchModule, allows broadcasting parties in current outpost to party.gwtoolbox.com (anonymously)
-* [New] added /duncan chat command to share your quest progress
-* [New] quests (markers) now have different colors
-* [New] added option to render the shortest path to quest markers (either active or all, setting), in game, on minimap and on world map (mission map coming)
-* [New] right click on world map (with WorldMapWidget active) to place a quest marker to any location you want
-* [New] added message to nicholas items when he will collect them
+* [New] Slightly optimised GW's dat loading ccode
+* [New] Added EnemyWindow (party window but for enemies)
+* [New] Added party broadcast module to anonymously send outpost party info to https://party.gwtoolbox.com 
+* [New] Added `/duncan` chat command to share your quest progress
+* [New] Quests (markers) now have different colors
+* [New] Added option to show the path to the current quest in the 3d world via Toolbox Settings > Quest Module
+* [New] Added option to show the path to the current quest in the toolbox minimap via Toolbox Settings > Quest Module
+* [New] Added tickbox option on the world map to show toolbox minimap lines
+* [New] Added context menu with right clicking anywhere on the world map to place a custom marker when WorldMapWidget is enabled. Custom markers create a quest in the gw quest log called "Map Travel" to allow you to plot a route.
+* [New] Added message to nicholas items when he will collect them
+* [New] Added hover tooltip for daily quests and completion window to easily check who needs an area or skill
+* [New] Added option in item context menu to store all nicholas items if you're hovering one
+* [New] Double clicking on a quest in the GW quest log will now take you to the nearest unlocked outpost to that quest
+* [New] When sending a whisper to another player whilst offline, toolbox will let you know in chat and suggest changing your FL status
+* [New] Daily quests window now checks your inventory for nick items to show you how many you already have
+* [New] Added tooltip to build codes in builds and hero builds windows ot show you the build at a glance without having to view it
+* [New] Added "are you sure?" prompt if you try to enter a mission in NM/HM that you've already completed fully on that character
 * [Minor] /useskill now toggles that skill on/off, you can still only have ONE skill active at a time
 * [Minor] added option in HotkeyWindow to change the autoclicker clicker speed
 * [Minor] changed /prefs command to allow changing almost all preferences by english setting name
+* [Minor] When ctrl-spacing enemy whilst holding an item, the game will call the target instead of "I'm following <enemy>"
+* [Minor] Added `/travel nick` to travel to Nicholas the Traveller's nearest unlocked outpost
+* [Minor] Adjusted the nearest outpost calc to add some special exceptions when the nearest outpost by world coords isn't the closest by foot
+* [Minor] Some toolbox info messages are now "temporary", meaning they will not stay in the chat log, and will be removed when changing map
+* [Minor] Added more Prophecies NPCs to party window module by default
+* [Minor] Added notification when an invite via party search window is received
+* [Minor] Salvage info now fetches from in-game memory instead of asking GWW; armor items now also show salvage info when hovered
+* [Minor] Salvage info now also shows on hover for items listed the "Salvage All" window
+* [Minor] Completion window automatically removes deleted characters, and doesn't show pre searing or pvp chars
+* [Fix] Fixed party window related widgets (damage monitor etc) from not moving when the main gw window is moved
+* [Fix] Fixed bug causing armory module to display equipped weapons on your character when in an outpost
 * [Fix] fixed autoclicker potentially rendering your guild wars unresponsive for a short while after using it
 * [Fix] /title applies asuran title in some asura missions now that previously defaulted to your default title
 * [Fix] fixed rare crash that could occur when activating pcons during a loading screen
@@ -26,6 +46,11 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Active quest widget works in non-latin languages now
 * [Fix] fixed toolbox minimap being hard to ping
 * [Fix] fixed friend list alias in whispers
+* [Fix] Fixed bug preventing player from moving the gw compass if toolbox minimap is enabled
+* [Fix] Fixed bug preventing friend aliasing from working when receiving or sending whispers
+* [Fix] Fixed crash when trying to set ready status outside of an outpost
+* [Fix] Fixed party damage widget not recording stats until shown
+* [Fix] Fixed bug preventing minimap drawing when spectating someone else outside of your own character's compass range
 * [Removed] removed chat log module because it led to too many issues
 
 ## Version 6.22
