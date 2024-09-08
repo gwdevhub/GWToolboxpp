@@ -186,17 +186,13 @@ namespace {
         ObserverTargetWindow::Instance(),
         ObserverPartyWindow::Instance(),
         ObserverExportWindow::Instance(),
-
         CompletionWindow::Instance(),
         RerollWindow::Instance(),
         PartyStatisticsWindow::Instance(),
         DupingWindow::Instance(),
         ArmoryWindow::Instance(),
         PathfindingWindow::Instance(),
-#ifdef _DEBUG
         EnemyWindow::Instance(),
-        
-#endif
     };
 
     bool modules_sorted = false;
