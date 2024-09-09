@@ -628,7 +628,7 @@ bool checkWeaponType(WeaponType targetType, uint16_t gameType)
         case WeaponType::Wand:
             return gameType == 10;
         case WeaponType::Staff:
-            return gameType == 12 || gameType == 14;
+            return gameType == 9 || gameType == 12 || gameType == 14;
     }
     return false;
 }
