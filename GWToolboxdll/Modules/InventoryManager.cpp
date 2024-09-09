@@ -2050,6 +2050,7 @@ void InventoryManager::Draw(IDirect3DDevice9*)
                     ImGui::SetTooltip("%s", pi->desc.string().c_str());
                 }
                 ImGui::SameLine(longest_item_name_length + wiki_btn_width);
+                pi->wiki_name.wstring();
                 if (ImGui::Button("Wiki", ImVec2(wiki_btn_width, 0))) {
                     GuiUtils::SearchWiki(pi->wiki_name.wstring());
                 }
@@ -2252,6 +2253,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
             goto end_popup;
         }
     }
+    context_item.wiki_name.wstring();
     if (wiki_link_on_context_menu && ImGui::Button("Guild Wars Wiki", size)) {
         ImGui::CloseCurrentPopup();
         GuiUtils::SearchWiki(context_item.wiki_name.wstring());
@@ -2547,7 +2549,6 @@ bool InventoryManager::PendingItem::set(const Item* item)
     // NB: This doesn't work for inscriptions; gww doesn't have a page per inscription.
     wiki_name.reset(ItemDescriptionHandler::GetItemEncNameWithoutMods(item).c_str());
     wiki_name.language(GW::Constants::Language::English);
-    wiki_name.wstring(); // Trigger decode; this isn't done any other time
     const auto plural_item_enc = std::format(L"\xa35\x101\x100\x10a{}\x1", item->name_enc);
     plural_item_name.reset(plural_item_enc.c_str());
     desc.reset(ItemDescriptionHandler::GetItemDescription(item).c_str());
