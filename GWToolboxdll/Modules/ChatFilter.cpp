@@ -431,7 +431,14 @@ namespace {
                 // 0x7F1 0x9A9D 0xE943 0xB33 0x10A <monster> 0x1 0x10B <rarity> 0x10A <item> 0x1 0x1 0x10F <assignee: playernumber + 0x100>
                 // <monster> is wchar_t id of several wchars
                 // <rarity> is 0x108 for common, 0xA40 gold, 0xA42 purple, 0xA43 green
-                const bool for_player = GW::PlayerMgr::GetPlayerNumber() == GetNumericSegment(message, 0x10f);
+                const auto player_number = GetNumericSegment(message, 0x10f);
+                bool for_player = false;
+                if (player_number) {
+                    for_player = player_number == GW::PlayerMgr::GetPlayerNumber();
+                } else {
+                    auto player_name = wcsstr(message, L"\xba9\x107");
+                    for_player = player_name && IsCurrentPlayerName(player_name + 2);
+                }
                 const bool rare = IsRare(GetSecondSegment(message));
                 if (for_player && rare) {
                     return self_drop_rare;
