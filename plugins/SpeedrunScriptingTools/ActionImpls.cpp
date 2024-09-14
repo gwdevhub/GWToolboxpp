@@ -592,9 +592,11 @@ void ChangeTargetAction::initialAction()
         const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedAgentName(agent->agent_id) == agentName);
         const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(agent->pos, polygon);
         const auto goodHp = minHp <= 100.f * agent->hp && 100.f * agent->hp <= maxHp;
-        const auto goodAngle = angleToAgent(player, agent) - eps < maxAngle;
         const auto goodWeapon = checkWeaponType(weapon, agent->weapon_type);
         
+        const auto angle = angleToAgent(player, agent);
+        const auto goodAngle = minAngle - eps < angle && angle < maxAngle + eps;
+
         const auto distance = GW::GetDistance(player->pos, agent->pos);
         const auto goodDistance = (minDistance - eps < distance) && (distance < maxDistance + eps);
 
