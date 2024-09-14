@@ -49,6 +49,7 @@ enum class ConditionType : int {
     After,
     CurrentTargetName,
     Throttle,
+    PlayerIsCastingSkill,
 
     Count
 };

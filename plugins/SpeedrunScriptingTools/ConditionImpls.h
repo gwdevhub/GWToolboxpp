@@ -229,6 +229,19 @@ private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
 };
 
+class PlayerIsCastingSkillCondition : public Condition {
+public:
+    PlayerIsCastingSkillCondition() = default;
+    PlayerIsCastingSkillCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::PlayerIsCastingSkill; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
+};
+
 class CurrentTargetDistanceCondition : public Condition {
 public:
     CurrentTargetDistanceCondition() = default;
