@@ -783,6 +783,35 @@ void CurrentTargetIsCastingSkillCondition::drawSettings()
     ImGui::PopID();
 }
 
+/// ------------- PlayerIsCastingSkillCondition -------------
+PlayerIsCastingSkillCondition::PlayerIsCastingSkillCondition(InputStream& stream)
+{
+    stream >> id;
+}
+void PlayerIsCastingSkillCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << id;
+}
+bool PlayerIsCastingSkillCondition::check() const
+{
+    const auto player = GW::Agents::GetControlledCharacter();
+    return player && static_cast<GW::Constants::SkillID>(player->skill) == id;
+}
+void PlayerIsCastingSkillCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("If player is casting the skill");
+    ImGui::SameLine();
+    drawSkillIDSelector(id);
+    ImGui::SameLine();
+    ImGui::Text("(0 for none)");
+
+    ImGui::PopID();
+}
+
 /// ------------- CurrentTargetDistanceCondition -------------
 CurrentTargetDistanceCondition::CurrentTargetDistanceCondition(InputStream& stream)
 {
