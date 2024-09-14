@@ -524,7 +524,7 @@ ChangeTargetAction::ChangeTargetAction(InputStream& stream)
     stream >> agentType >> primary >> secondary >> alive >> skill >> sorting >> modelId >> minDistance >> maxDistance >> requireSameModelIdAsTarget >> preferNonHexed >> rotateThroughTargets;
     agentName = readStringWithSpaces(stream);
     polygon = readPositions(stream);
-    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding >> hexed >> minSpeed >> maxSpeed >> minRegen >> maxRegen >> weapon;
+    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding >> hexed >> minSpeed >> maxSpeed >> minRegen >> maxRegen >> weapon >> minHp >> maxHp;
 }
 void ChangeTargetAction::serialize(OutputStream& stream) const
 {
@@ -533,7 +533,7 @@ void ChangeTargetAction::serialize(OutputStream& stream) const
     stream << agentType << primary << secondary << alive << skill << sorting << modelId << minDistance << maxDistance << requireSameModelIdAsTarget << preferNonHexed << rotateThroughTargets;
     writeStringWithSpaces(stream, agentName);
     writePositions(stream, polygon);
-    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding << hexed << minSpeed << maxSpeed << minRegen << maxRegen << weapon;
+    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding << hexed << minSpeed << maxSpeed << minRegen << maxRegen << weapon << minHp << maxHp;
 }
 void ChangeTargetAction::initialAction()
 {
