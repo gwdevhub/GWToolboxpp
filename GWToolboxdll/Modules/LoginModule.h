@@ -13,11 +13,14 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Login Screen"; }
+    [[nodiscard]] const char* Name() const override { return "Login Module"; }
+    [[nodiscard]] const char* Description() const override { return "Allows fix to allow reconnect when starting GW with charname argument.\nAdds feature to choose login scene"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_DOOR_OPEN; }
 
-    bool HasSettings() override { return false; }
+    bool HasSettings() override;
 
     void Initialize() override;
     void Terminate() override;
     void Update(float) override;
+    void DrawSettingsInternal() override;
 };
