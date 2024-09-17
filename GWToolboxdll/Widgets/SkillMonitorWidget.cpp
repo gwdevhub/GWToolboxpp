@@ -53,6 +53,8 @@ namespace {
     Color status_color_cancelled = Colors::ARGB(255, 71, 24, 102);
     Color status_color_interrupted = Colors::ARGB(255, 71, 24, 102);
 
+    bool overlay_party_window = false;
+
     int history_length = 5;
     int history_timeout = 5000;
     std::unordered_map<uint32_t, GW::HookEntry*> packet_hooks;
@@ -236,10 +238,20 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
     const auto width = img_size * history_length;
 
     const auto user_offset_x = abs(static_cast<float>(user_offset));
-    float window_x = party_health_bars_position.top_left.x - user_offset_x - width;
-    if (window_x < 0 || user_offset < 0) {
-        // Right placement
-        window_x = party_health_bars_position.bottom_right.x + user_offset_x;
+    float window_x = .0f;
+    if (overlay_party_window) {
+        window_x = party_health_bars_position.top_left.x + user_offset_x;
+        if (user_offset < 0) {
+            window_x = party_health_bars_position.bottom_right.x - user_offset_x - width;
+        }
+
+    }
+    else {
+        window_x = party_health_bars_position.top_left.x - user_offset_x - width;
+        if (window_x < 0 || user_offset < 0) {
+            // Right placement
+            window_x = party_health_bars_position.bottom_right.x + user_offset_x;
+        }
     }
 
     // Add a window to capture mouse clicks.
@@ -341,6 +353,8 @@ void SkillMonitorWidget::LoadSettings(ToolboxIni* ini)
 
     LOAD_UINT(history_length);
     LOAD_UINT(history_timeout);
+
+    LOAD_BOOL(overlay_party_window);
 }
 
 void SkillMonitorWidget::SaveSettings(ToolboxIni* ini)
@@ -364,17 +378,28 @@ void SkillMonitorWidget::SaveSettings(ToolboxIni* ini)
 
     SAVE_UINT(history_length);
     SAVE_UINT(history_timeout);
+
+    SAVE_BOOL(overlay_party_window);
 }
 
 void SkillMonitorWidget::DrawSettingsInternal()
 {
-    ImGui::SameLine();
+    ImGui::StartSpacedElements(292.f);
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("Show non party-members (allies)", &show_non_party_members);
-    ImGui::InputInt("Party window offset", &user_offset);
-    ImGui::ShowHelp("Distance away from the party window");
-
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("Flip history direction (left/right)", &history_flip_direction);
+    ImGui::StartSpacedElements(292.f);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show on top of health bars", &overlay_party_window);
+    ImGui::ShowHelp("Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
+    ImGui::NextSpacedElement();
+    ImGui::PushItemWidth(120.f);
+    ImGui::DragInt("Party window offset", &user_offset);
+    ImGui::PopItemWidth();
+    ImGui::ShowHelp("Distance away from the party window");
 
     ImGui::Text("Cast Indicator");
     ImGui::DragInt("Threshold", &cast_indicator_threshold, 1.0f, 0, 0, "%d milliseconds");
