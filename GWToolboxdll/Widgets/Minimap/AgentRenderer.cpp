@@ -268,6 +268,7 @@ void AgentRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
     Colors::Save(ini, section, VAR_NAME(color_ally_spirit), color_ally_spirit);
     Colors::Save(ini, section, VAR_NAME(color_ally_minion), color_ally_minion);
     Colors::Save(ini, section, VAR_NAME(color_ally_dead), color_ally_dead);
+    Colors::Save(ini, section, VAR_NAME(color_marked_target), color_marked_target);
 
     ini->SetDoubleValue(section, VAR_NAME(size_default), size_default);
     ini->SetDoubleValue(section, VAR_NAME(size_player), size_player);
@@ -275,6 +276,7 @@ void AgentRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
     ini->SetDoubleValue(section, VAR_NAME(size_item), size_item);
     ini->SetDoubleValue(section, VAR_NAME(size_boss), size_boss);
     ini->SetDoubleValue(section, VAR_NAME(size_minion), size_minion);
+    ini->SetDoubleValue(section, VAR_NAME(size_marked_target), size_marked_target);
     ini->SetLongValue(section, VAR_NAME(default_shape), default_shape);
     ini->SetLongValue(section, VAR_NAME(agent_border_thickness), agent_border_thickness);
 
