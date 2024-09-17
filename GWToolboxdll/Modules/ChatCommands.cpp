@@ -727,7 +727,170 @@ namespace {
         found->second->ChatCommandCallback(status, message, argc, argv);
     }
 
+    void DrawChatCommandsHelp() {
+        if (!ImGui::TreeNodeEx("Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            return;
+        }
 
+        ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
+        ImGui::TextDisabled("Below, <xyz> denotes an argument, use an appropriate value without the quotes.\n"
+            "(a|b) denotes a mandatory argument, in this case 'a' or 'b'.\n"
+            "[a|b] denotes an optional argument, in this case nothing, 'a' or 'b'.");
+
+        ImGui::Bullet();
+        ImGui::Text("'/age2' prints the instance time to chat.");
+        ImGui::Bullet();
+        ImGui::Text("'/animation [me|target] [animation_id (1-2076)]' to make you (or a target) do a specific animation");
+        ImGui::Bullet();
+        ImGui::Text("'/armor' is an alias for '/pingitem armor'.");
+        ImGui::Bullet();
+        ImGui::Text("'/bonds [remove|add] [party_member_index|all] [all|skill_id]' remove or add bonds from a single party member, or all party members");
+        ImGui::Bullet();
+        ImGui::Text("'/borderless [on|off]' toggles, enables or disables borderless window.");
+        ImGui::Bullet();
+        ImGui::Text("'/call' ping current target.");
+        ImGui::Bullet();
+        ImGui::Text("'/camera (lock|unlock)' to lock or unlock the camera.");
+        ImGui::Bullet();
+        ImGui::Text("'/camera fog (on|off)' sets game fog effect on or off.");
+        ImGui::Bullet();
+        ImGui::Text("'/camera fov <value>' sets the field of view. '/camera fov' resets to default.");
+        ImGui::Bullet();
+        ImGui::Text("'/camera speed <value>' sets the unlocked camera speed.");
+        ImGui::Bullet();
+        ImGui::Text(chat_tab_syntax);
+        ImGui::Bullet();
+        ImGui::Text("'/chest' opens xunlai in outposts.");
+        ImGui::Bullet();
+        ImGui::Text("'/damage' or '/dmg' to print party damage to chat.\n"
+            "'/damage me' sends your own damage only.\n"
+            "'/damage <number>' sends the damage of a party member (e.g. '/damage 3').\n"
+            "'/damage reset' resets the damage in party window.");
+        ImGui::Bullet();
+        ImGui::Text("'/dialog <id>' sends a dialog id to the current NPC you're talking to.\n"
+            "'/dailog take' automatically takes the first available quest/reward from the NPC you're talking to.");
+        ImGui::Bullet();
+        ImGui::Text("'/enter [fow|uw]' to enter the mission for your outpost.\n"
+            "If in embark, toa, urgoz or deep, it will use a scroll.\n"
+            "If in an outpost with an available mission, it will begin the mission countdown.");
+        ImGui::Bullet();
+        ImGui::Text("'/ff' alias for '/resign'");
+        ImGui::Bullet();
+        ImGui::Text("'/flag [all|clear|<number>]' to flag a hero in the minimap (same as using the buttons by the minimap).");
+        ImGui::Bullet();
+        ImGui::Text("'/flag [all|<number>] [x] [y]' to flag a hero to coordinates [x],[y].");
+        ImGui::Bullet();
+        ImGui::Text("'/flag <number> clear' to clear flag for a hero.");
+        ImGui::Bullet();
+        ImGui::Text(fps_syntax);
+        ImGui::Bullet();
+        ImGui::Text("'/hero [avoid|guard|attack]' to set your hero behavior in an explorable area.");
+        const auto toggle_hint = "<name> options: helm, costume, costume_head, cape, <window_or_widget_name>";
+        ImGui::Bullet();
+        ImGui::Text("'/hide <name>' closes the window, in-game feature or widget titled <name>.");
+        ImGui::ShowHelp(toggle_hint);
+        ImGui::Bullet();
+        ImGui::Text("'/hm' or '/hardmode' to set hard mode difficulty in an outpost.");
+        ImGui::Bullet();
+        ImGui::Text("'/hom' opens the Hall of Monuments calculator with the current target player's achievements.");
+        ImGui::Bullet();
+        ImGui::Text("'/load [build template|build name] [Hero index]' loads a build. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/loadprefs' to load GW settings from '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
+            "'/loadprefs <filename>' to load GW settings from '<GWToolbox Dir>/<filename>.ini'");
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/nm' or '/normalmode' to set normal mode difficulty in an outpost.");
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/morale' to send your current morale/death penalty info to team chat.");
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/marktarget' to highlight the current target on the gwtoolbox minimap.\n"
+            "'/marktarget clear' to unhighlight the current target on the gwtoolbox minimap.\n"
+            "'/marktarget clearall' to clear all highlighted targets on the gwtoolbox minimap.");
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/observer:reset' resets observer mode data.");
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/pingitem <equipped_item>' to ping your equipment in chat.\n"
+            "<equipped_item> options: armor, head, chest, legs, boots, gloves, offhand, weapon, weapons, costume");
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/pcons [on|off]' toggles, enables or disables pcons.");
+        ImGui::Bullet();
+        ImGui::TextUnformatted(pref_syntax);
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/resize <width> <height>' resize the GW window");
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/saveprefs' to save GW settings to '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
+            "'/saveprefs <filename>' to save GW settings to '<GWToolbox Dir>/<filename>.ini'");
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/scwiki [<search_term>]' search https://wiki.fbgmguild.com.");
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/show <name>' opens the window, in-game feature or widget titled <name>.");
+        ImGui::ShowHelp(toggle_hint);
+        ImGui::Bullet();
+        ImGui::Text("'/toggle <name> [on|off|toggle]' toggles the window, in-game feature or widget titled <name>.");
+        ImGui::ShowHelp(toggle_hint);
+        ImGui::Bullet();
+        ImGui::Text("'/target closest' to target the closest agent to you.\n"
+            "'/target ee' to target best ebon escape agent.\n"
+            "'/target hos' to target best vipers/hos agent.\n"
+            "'/target [name|model_id] [index]' target nearest NPC by name or model_id. \n\tIf index is specified, it will target index-th by ID.\n"
+            "'/target player [name|player_number]' target nearest player by name or player number.\n"
+            "'/target gadget [name|gadget_id]' target nearest interactive object by name or gadget_id.\n"
+            "'/target priority [partymember]' to target priority target of party member.");
+        ImGui::Bullet();
+        ImGui::Text("'/tb <name>' toggles the window or widget titled <name>.");
+        ImGui::Bullet();
+        ImGui::Text("'/tb reset' moves Toolbox and Settings window to the top-left corner.");
+        ImGui::Bullet();
+        ImGui::Text("'/tb quit' or '/tb exit' completely closes toolbox and all its windows.");
+        const auto transmo_hint = "<npc_name> options: eye, zhu, kuunavang, beetle, polar, celepig, \n"
+            "  destroyer, koss, bonedragon, smite, kanaxai, skeletonic, moa";
+        ImGui::Bullet();
+        ImGui::Text("'/transmo <npc_name> [size (6-255)]' to change your appearance into an NPC.\n"
+            "'/transmo' to change your appearance into target NPC.\n"
+            "'/transmo reset' to reset your appearance.");
+        ImGui::ShowHelp(transmo_hint);
+        ImGui::Bullet();
+        ImGui::Text("'/transmoparty <npc_name> [size (6-255)]' to change your party's appearance into an NPC.\n"
+            "'/transmoparty' to change your party's appearance into target NPC.\n"
+            "'/transmoparty reset' to reset your party's appearance.");
+        ImGui::ShowHelp(transmo_hint);
+        ImGui::Bullet();
+        ImGui::Text("'/transmotarget <npc_name> [size (6-255)]' to change your target's appearance into an NPC.\n"
+            "'/transmotarget reset' to reset your target's appearance.");
+        ImGui::ShowHelp(transmo_hint);
+        ImGui::Bullet();
+        ImGui::Text("'/travel <town> [dis]', '/tp <town> [dis]' or '/to <town> [dis]' travel to outpost best matching <town> name. \n"
+            "[dis] can be any of: ae, ae1, ee, eg, int, etc");
+        ImGui::Bullet();
+        ImGui::Text("'/travel [zv|zb|zm]' travel to nearest unlocked outpost to daily quest.");
+        ImGui::Bullet();
+        ImGui::Text("'/useskill <skill>' starts using the skill on recharge. "
+            "Use the skill number instead of <skill> (e.g. '/useskill 5'). "
+            "Use empty '/useskill' or '/useskill stop' to stop all. "
+            "Use '/useskill <skill>' to stop the skill.");
+        ImGui::Bullet();
+        ImGui::Text("'/volume [master|music|background|effects|dialog|ui] <amount (0-100)>' set in-game volume.");
+        ImGui::Bullet();
+        ImGui::Text("'/wiki [quest|<search_term>]' search GWW for current quest or search term. By default, will search for the current map.");
+        ImGui::Bullet();
+        ImGui::Text(withdraw_syntax);
+        ImGui::Bullet();
+        ImGui::Text(deposit_syntax);
+
+        ImGui::TreePop();
+    }
+
+    void DrawToolboxSettingChatCommandsHelp() {
+        if (settings_via_chat_commands.empty() || !ImGui::TreeNodeEx("Chat Commands for Toolbox Settings", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            return;
+        }
+        ImGui::TextUnformatted("These commands allow you to directly toggle or change values inside toolbox as you play.");
+        for (auto& it : settings_via_chat_commands) {
+            ImGui::Bullet();
+            ImGui::TextUnformatted(TextUtils::WStringToString(it.second->ChatCommandSyntax()).c_str());
+        }
+        ImGui::TreePop();
+    }
 
 } // namespace
 
@@ -872,171 +1035,8 @@ bool ChatCommands::GetNPCInfoByName(const std::wstring& name, PendingTransmo& tr
 
 void ChatCommands::DrawHelp()
 {
-    if (!ImGui::TreeNodeEx("Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        return;
-    }
-
-    ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
-    ImGui::TextDisabled("Below, <xyz> denotes an argument, use an appropriate value without the quotes.\n"
-        "(a|b) denotes a mandatory argument, in this case 'a' or 'b'.\n"
-        "[a|b] denotes an optional argument, in this case nothing, 'a' or 'b'.");
-
-    ImGui::Bullet();
-    ImGui::Text("'/age2' prints the instance time to chat.");
-    ImGui::Bullet();
-    ImGui::Text("'/animation [me|target] [animation_id (1-2076)]' to make you (or a target) do a specific animation");
-    ImGui::Bullet();
-    ImGui::Text("'/armor' is an alias for '/pingitem armor'.");
-    ImGui::Bullet();
-    ImGui::Text("'/bonds [remove|add] [party_member_index|all] [all|skill_id]' remove or add bonds from a single party member, or all party members");
-    ImGui::Bullet();
-    ImGui::Text("'/borderless [on|off]' toggles, enables or disables borderless window.");
-    ImGui::Bullet();
-    ImGui::Text("'/call' ping current target.");
-    ImGui::Bullet();
-    ImGui::Text("'/camera (lock|unlock)' to lock or unlock the camera.");
-    ImGui::Bullet();
-    ImGui::Text("'/camera fog (on|off)' sets game fog effect on or off.");
-    ImGui::Bullet();
-    ImGui::Text("'/camera fov <value>' sets the field of view. '/camera fov' resets to default.");
-    ImGui::Bullet();
-    ImGui::Text("'/camera speed <value>' sets the unlocked camera speed.");
-    ImGui::Bullet();
-    ImGui::Text(chat_tab_syntax);
-    ImGui::Bullet();
-    ImGui::Text("'/chest' opens xunlai in outposts.");
-    ImGui::Bullet();
-    ImGui::Text("'/damage' or '/dmg' to print party damage to chat.\n"
-        "'/damage me' sends your own damage only.\n"
-        "'/damage <number>' sends the damage of a party member (e.g. '/damage 3').\n"
-        "'/damage reset' resets the damage in party window.");
-    ImGui::Bullet();
-    ImGui::Text("'/dialog <id>' sends a dialog id to the current NPC you're talking to.\n"
-        "'/dailog take' automatically takes the first available quest/reward from the NPC you're talking to.");
-    ImGui::Bullet();
-    ImGui::Text("'/enter [fow|uw]' to enter the mission for your outpost.\n"
-        "If in embark, toa, urgoz or deep, it will use a scroll.\n"
-        "If in an outpost with an available mission, it will begin the mission countdown.");
-    ImGui::Bullet();
-    ImGui::Text("'/ff' alias for '/resign'");
-    ImGui::Bullet();
-    ImGui::Text("'/flag [all|clear|<number>]' to flag a hero in the minimap (same as using the buttons by the minimap).");
-    ImGui::Bullet();
-    ImGui::Text("'/flag [all|<number>] [x] [y]' to flag a hero to coordinates [x],[y].");
-    ImGui::Bullet();
-    ImGui::Text("'/flag <number> clear' to clear flag for a hero.");
-    ImGui::Bullet();
-    ImGui::Text(fps_syntax);
-    ImGui::Bullet();
-    ImGui::Text("'/hero [avoid|guard|attack]' to set your hero behavior in an explorable area.");
-    const auto toggle_hint = "<name> options: helm, costume, costume_head, cape, <window_or_widget_name>";
-    ImGui::Bullet();
-    ImGui::Text("'/hide <name>' closes the window, in-game feature or widget titled <name>.");
-    ImGui::ShowHelp(toggle_hint);
-    ImGui::Bullet();
-    ImGui::Text("'/hm' or '/hardmode' to set hard mode difficulty in an outpost.");
-    ImGui::Bullet();
-    ImGui::Text("'/hom' opens the Hall of Monuments calculator with the current target player's achievements.");
-    ImGui::Bullet();
-    ImGui::Text("'/load [build template|build name] [Hero index]' loads a build. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
-    ImGui::Bullet();
-    ImGui::TextUnformatted("'/loadprefs' to load GW settings from '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
-        "'/loadprefs <filename>' to load GW settings from '<GWToolbox Dir>/<filename>.ini'");
-    ImGui::Bullet();
-    ImGui::TextUnformatted("'/nm' or '/normalmode' to set normal mode difficulty in an outpost.");
-    ImGui::Bullet();
-    ImGui::TextUnformatted("'/morale' to send your current morale/death penalty info to team chat.");
-    ImGui::Bullet();
-    ImGui::TextUnformatted("'/marktarget' to highlight the current target on the gwtoolbox minimap.\n"
-                "'/marktarget clear' to unhighlight the current target on the gwtoolbox minimap.\n"
-                "'/marktarget clearall' to clear all highlighted targets on the gwtoolbox minimap.");
-    ImGui::Bullet();
-    ImGui::TextUnformatted("'/observer:reset' resets observer mode data.");
-    ImGui::Bullet();
-    ImGui::TextUnformatted("'/pingitem <equipped_item>' to ping your equipment in chat.\n"
-        "<equipped_item> options: armor, head, chest, legs, boots, gloves, offhand, weapon, weapons, costume");
-    ImGui::Bullet();
-    ImGui::TextUnformatted("'/pcons [on|off]' toggles, enables or disables pcons.");
-    ImGui::Bullet();
-    ImGui::TextUnformatted(pref_syntax);
-    ImGui::Bullet();
-    ImGui::TextUnformatted("'/resize <width> <height>' resize the GW window");
-    ImGui::Bullet();
-    ImGui::TextUnformatted("'/saveprefs' to save GW settings to '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
-        "'/saveprefs <filename>' to save GW settings to '<GWToolbox Dir>/<filename>.ini'");
-    ImGui::Bullet();
-    ImGui::TextUnformatted("'/scwiki [<search_term>]' search https://wiki.fbgmguild.com.");
-    ImGui::Bullet();
-    ImGui::TextUnformatted("'/show <name>' opens the window, in-game feature or widget titled <name>.");
-    ImGui::ShowHelp(toggle_hint);
-
-    if (!settings_via_chat_commands.empty()) {
-        ImGui::Bullet();
-        ImGui::Text("'/%s' directly change toolbox settings or features via chat command.", TextUtils::WStringToString(settings_via_chat_commands_cmd).c_str());
-        ImGui::Indent();
-        if (ImGui::TreeNodeEx("Options Available###settings_via_chat_commands_options", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            for (auto& it : settings_via_chat_commands) {
-                ImGui::Bullet();
-                ImGui::TextUnformatted(TextUtils::WStringToString(it.second->ChatCommandSyntax()).c_str());
-            }
-            ImGui::TreePop();
-        }
-        ImGui::Unindent();
-    }
-
-    ImGui::Bullet();
-    ImGui::Text("'/toggle <name> [on|off|toggle]' toggles the window, in-game feature or widget titled <name>.");
-    ImGui::ShowHelp(toggle_hint);
-    ImGui::Bullet();
-    ImGui::Text("'/target closest' to target the closest agent to you.\n"
-        "'/target ee' to target best ebon escape agent.\n"
-        "'/target hos' to target best vipers/hos agent.\n"
-        "'/target [name|model_id] [index]' target nearest NPC by name or model_id. \n\tIf index is specified, it will target index-th by ID.\n"
-        "'/target player [name|player_number]' target nearest player by name or player number.\n"
-        "'/target gadget [name|gadget_id]' target nearest interactive object by name or gadget_id.\n"
-        "'/target priority [partymember]' to target priority target of party member.");
-    ImGui::Bullet();
-    ImGui::Text("'/tb <name>' toggles the window or widget titled <name>.");
-    ImGui::Bullet();
-    ImGui::Text("'/tb reset' moves Toolbox and Settings window to the top-left corner.");
-    ImGui::Bullet();
-    ImGui::Text("'/tb quit' or '/tb exit' completely closes toolbox and all its windows.");
-    const auto transmo_hint = "<npc_name> options: eye, zhu, kuunavang, beetle, polar, celepig, \n"
-        "  destroyer, koss, bonedragon, smite, kanaxai, skeletonic, moa";
-    ImGui::Bullet();
-    ImGui::Text("'/transmo <npc_name> [size (6-255)]' to change your appearance into an NPC.\n"
-        "'/transmo' to change your appearance into target NPC.\n"
-        "'/transmo reset' to reset your appearance.");
-    ImGui::ShowHelp(transmo_hint);
-    ImGui::Bullet();
-    ImGui::Text("'/transmoparty <npc_name> [size (6-255)]' to change your party's appearance into an NPC.\n"
-        "'/transmoparty' to change your party's appearance into target NPC.\n"
-        "'/transmoparty reset' to reset your party's appearance.");
-    ImGui::ShowHelp(transmo_hint);
-    ImGui::Bullet();
-    ImGui::Text("'/transmotarget <npc_name> [size (6-255)]' to change your target's appearance into an NPC.\n"
-        "'/transmotarget reset' to reset your target's appearance.");
-    ImGui::ShowHelp(transmo_hint);
-    ImGui::Bullet();
-    ImGui::Text("'/travel <town> [dis]', '/tp <town> [dis]' or '/to <town> [dis]' travel to outpost best matching <town> name. \n"
-        "[dis] can be any of: ae, ae1, ee, eg, int, etc");
-    ImGui::Bullet();
-    ImGui::Text("'/travel [zv|zb|zm]' travel to nearest unlocked outpost to daily quest.");
-    ImGui::Bullet();
-    ImGui::Text("'/useskill <skill>' starts using the skill on recharge. "
-        "Use the skill number instead of <skill> (e.g. '/useskill 5'). "
-        "Use empty '/useskill' or '/useskill stop' to stop all. "
-        "Use '/useskill <skill>' to stop the skill.");
-    ImGui::Bullet();
-    ImGui::Text("'/volume [master|music|background|effects|dialog|ui] <amount (0-100)>' set in-game volume.");
-    ImGui::Bullet();
-    ImGui::Text("'/wiki [quest|<search_term>]' search GWW for current quest or search term. By default, will search for the current map.");
-    ImGui::Bullet();
-    ImGui::Text(withdraw_syntax);
-    ImGui::Bullet();
-    ImGui::Text(deposit_syntax);
-
-    ImGui::TreePop();
+    DrawChatCommandsHelp();
+    DrawToolboxSettingChatCommandsHelp();
 }
 
 void ChatCommands::DrawSettingsInternal()
