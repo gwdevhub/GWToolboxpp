@@ -11,6 +11,7 @@ public:
     }
 
     [[nodiscard]] const char* Name() const override { return "Target Info"; }
+    [[nodiscard]] const char* Description() const override { return "Displays info about current target including any notes from GWW"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_CROSSHAIRS; }
 
     void Initialize() override;

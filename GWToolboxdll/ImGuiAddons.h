@@ -57,6 +57,8 @@ namespace ImGui {
     // Add cropped image to current window
     IMGUI_API void ImageCropped(ImTextureID user_texture_id, const ImVec2& size);
 
+    IMGUI_API void ImageFit(const ImTextureID user_texture_id, const ImVec2& size_of_container);
+
     // Shim to cast
     IMGUI_API bool IsKeyDown(long key);
 

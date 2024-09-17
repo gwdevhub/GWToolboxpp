@@ -414,27 +414,35 @@ namespace ImGui {
         EndCombo();
         return value_changed;
     }
+    
+
+    // Get float ratio for height/width of image, e.g. image 200px x 100px would be 2.0f ratio
+    float GetImageRatio(const ImTextureID user_texture_id) {
+        if (!user_texture_id)
+            return .0f;
+        const auto texture = static_cast<IDirect3DTexture9*>(user_texture_id);
+        D3DSURFACE_DESC desc;
+        const HRESULT res = texture->GetLevelDesc(0, &desc);
+        if (!SUCCEEDED(res))
+            return .0f;
+        return static_cast<float>(desc.Width) / static_cast<float>(desc.Height);
+    }
+
 
     ImVec2 CalculateUvCrop(const ImTextureID user_texture_id, const ImVec2& size)
     {
         ImVec2 uv1 = {1.f, 1.f};
-        if (user_texture_id) {
-            const auto texture = static_cast<IDirect3DTexture9*>(user_texture_id);
-            D3DSURFACE_DESC desc;
-            const HRESULT res = texture->GetLevelDesc(0, &desc);
-            if (!SUCCEEDED(res)) {
-                return uv1; // Don't throw anything into the log here; this function is called every frame by modules that use it!
-            }
-            const float ratio = size.x / size.y;
-            const float image_ratio = static_cast<float>(desc.Width) / static_cast<float>(desc.Height);
-            if (image_ratio < ratio) {
-                // Image is taller than the required crop; remove bottom of image to fit.
-                uv1.y = ratio * image_ratio;
-            }
-            else if (image_ratio > ratio) {
-                // Image is wider than the required crop; remove right of image to fit.
-                uv1.x = ratio / image_ratio;
-            }
+        float image_ratio = GetImageRatio(user_texture_id);
+        if (image_ratio == 0.f)
+            return uv1;
+        float container_ratio = size.x / size.y;
+        if (image_ratio < container_ratio) {
+            // Image is taller than the required crop; remove bottom of image to fit.
+            uv1.y = container_ratio * image_ratio;
+        }
+        else if (image_ratio > container_ratio) {
+            // Image is wider than the required crop; remove right of image to fit.
+            uv1.x = container_ratio / image_ratio;
         }
         return uv1;
     }
@@ -474,6 +482,35 @@ namespace ImGui {
     void ImageCropped(const ImTextureID user_texture_id, const ImVec2& size)
     {
         Image(user_texture_id, size, {0, 0}, CalculateUvCrop(user_texture_id, size));
+    }
+    void ImageFit(const ImTextureID user_texture_id, const ImVec2& size_of_container) {
+        const auto texture_ratio = GetImageRatio(user_texture_id);
+        if (texture_ratio == .0f) return;
+
+        const auto container_ratio = size_of_container.x / size_of_container.y;
+
+        ImVec2 image_size;  // Final image size
+        ImVec2 offset = { 0.0f, 0.0f };  // Offset for centering the image
+
+        // Check if texture is wider or taller in relation to the container
+        if (texture_ratio > container_ratio) {
+            // The texture is wider, scale by container width
+            image_size.x = size_of_container.x;
+            image_size.y = size_of_container.x / texture_ratio;
+            // Center the image vertically
+            offset.y = (size_of_container.y - image_size.y) * 0.5f;
+        }
+        else {
+            // The texture is taller, scale by container height
+            image_size.y = size_of_container.y;
+            image_size.x = size_of_container.y * texture_ratio;
+            // Center the image horizontally
+            offset.x = (size_of_container.x - image_size.x) * 0.5f;
+        }
+
+        ImVec2 current_cursor_pos = ImGui::GetCursorPos();
+        ImGui::SetCursorPos(ImVec2(current_cursor_pos.x + offset.x, current_cursor_pos.y + offset.y));
+        ImGui::Image(user_texture_id, image_size);        // Render the image
     }
 
     bool ImageButton(ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, int, const ImVec4& bg_col, const ImVec4& tint_col) {

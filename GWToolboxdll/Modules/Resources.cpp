@@ -1227,7 +1227,7 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
     }
     const auto callback = [item_name](const bool success, const std::wstring& error) {
         if (!success) {
-            Log::ErrorW(L"Failed to load item image %s\n%s", item_name.c_str(), error.c_str());
+            Log::LogW(L"Error: Failed to load item image %s\n%s", item_name.c_str(), error.c_str());
         }
         else {
             Log::LogW(L"Loaded item image %s", item_name.c_str());

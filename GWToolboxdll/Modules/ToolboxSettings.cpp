@@ -63,8 +63,8 @@
 #include <Windows/DoorMonitorWindow.h>
 #include <Windows/StringDecoderWindow.h>
 #include <Windows/SkillListingWindow.h>
-#include <Windows/TargetInfoWindow.h>
 #endif
+#include <Windows/TargetInfoWindow.h>
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
@@ -193,6 +193,7 @@ namespace {
         ArmoryWindow::Instance(),
         PathfindingWindow::Instance(),
         EnemyWindow::Instance(),
+        TargetInfoWindow::Instance()
     };
 
     bool modules_sorted = false;
