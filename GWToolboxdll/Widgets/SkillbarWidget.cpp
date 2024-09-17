@@ -567,12 +567,53 @@ void SkillbarWidget::DrawSettingsInternal()
 void SkillbarWidget::Initialize()
 {
     ToolboxWidget::Initialize();
+    GW::Chat::CreateCommand(L"skillbar", [](GW::HookStatus*, const wchar_t*, const int argc, const LPWSTR* argv) {
+        const auto print_usage = [] {
+            Log::Info("Usage: /skillbar [effect] [show|hide|toggle]\neffect - toggles the effect monitor");
+        };
+        if (argc > 1) {
+            if (wcscmp(argv[1], L"effect") == 0) {
+                if (argc == 3) {
+                    if (wcscmp(argv[2], L"show") == 0) {
+                        Instance().display_effect_monitor = true;
+                        return;
+                    }
+                    if (wcscmp(argv[2], L"hide") == 0) {
+                        Instance().display_effect_monitor = false;
+                        return;
+                    }
+                    if (wcscmp(argv[2], L"toggle") == 0) {
+                        Instance().display_effect_monitor = !Instance().display_effect_monitor;
+                        return;
+                    }
+                    return print_usage();
+                }
+                Instance().display_effect_monitor = !Instance().display_effect_monitor;
+                return;
+            }
+            if (wcscmp(argv[1], L"show") == 0) {
+                Instance().display_skill_overlay = true;
+                return;
+            }
+            if (wcscmp(argv[1], L"hide") == 0) {
+                Instance().display_skill_overlay = false;
+                return;
+            }
+            if (wcscmp(argv[1], L"toggle") == 0) {
+                Instance().ToggleVisible();
+                return;
+            }
+            return print_usage();
+        }
+        Instance().ToggleVisible();
+    });
     GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kUIPositionChanged, OnUIMessage, 0x8000);
     GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kPreferenceValueChanged, OnUIMessage, 0x8000);
 }
 void SkillbarWidget::Terminate()
 {
     ToolboxWidget::Terminate();
+    GW::Chat::DeleteCommand(L"skillbar");
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 
     if (skillbar_frame && skillbar_frame->frame_callbacks[0] == OnSkillbar_UICallback) {
