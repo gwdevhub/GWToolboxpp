@@ -60,39 +60,6 @@ private:
 
     std::array<Skill, 8> m_skills{};
 
-    // duration -> color settings
-    int medium_treshold = 5000; // long to medium color
-    int short_treshold = 2500;  // medium to short color
-    Color color_long = Colors::ARGB(50, 0, 255, 0);
-    Color color_medium = Colors::ARGB(50, 255, 255, 0);
-    Color color_short = Colors::ARGB(80, 255, 0, 0);
-
-    // duration -> string settings
-    int decimal_threshold = 600; // when to start displaying decimals
-    bool round_up = true;        // round up or down?
-
-    // Skill overlay settings
-    bool display_skill_overlay = true;
-    FontLoader::FontSize font_recharge = FontLoader::FontSize::header1;
-    Color color_text_recharge = Colors::White();
-    Color color_border = Colors::ARGB(100, 255, 255, 255);
-
-    // Effect monitor settings
-    bool display_effect_monitor = false;
-    int effect_monitor_size = 0;
-    int effect_monitor_offset = -100;
-    bool effects_symmetric = true;
-    bool display_multiple_effects = false;
-    bool effects_flip_order = false;
-    bool effects_flip_direction = false;
-    bool effect_text_color = false;
-    bool effect_progress_bar_color = false;
-    FontLoader::FontSize font_effects = FontLoader::FontSize::text;
-    Color color_text_effects = Colors::White();
-    Color color_effect_background = Colors::ARGB(100, 0, 0, 0);
-    Color color_effect_border = Colors::ARGB(255, 0, 0, 0);
-    Color color_effect_progress = Colors::Blue();
-
     // Internal utils
     [[nodiscard]] Color UptimeToColor(uint32_t uptime) const;
     static std::vector<Effect> get_effects(GW::Constants::SkillID skillId);

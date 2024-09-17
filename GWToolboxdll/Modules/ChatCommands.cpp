@@ -664,6 +664,71 @@ namespace {
     }
 
     std::vector<std::pair< const wchar_t*, GW::Chat::ChatCommandCallback>> chat_commands;
+
+    const wchar_t* settings_via_chat_commands_cmd = L"tb_setting";
+
+    struct ToolboxChatCommandSetting {
+        enum class SettingType : uint32_t {
+            Bool,
+            String,
+            Color,
+            Float,
+            Uint,
+            Int
+        } setting_type;
+        void* setting_ptr;
+        const wchar_t* setting_name;
+        const wchar_t* description;
+        std::wstring ChatCommandSyntax() {
+            switch (setting_type) {
+            case SettingType::Bool:
+                if(description)
+                    return std::format(L"'/{} {} [on|off|toggle]' {}", settings_via_chat_commands_cmd, setting_name, description);
+                return std::format(L"'/{} {} [on|off|toggle]'", settings_via_chat_commands_cmd, setting_name);
+            }
+            return std::format(L"Failed to get ChatCommandSyntax for SettingType {} ({})", (uint32_t)setting_type, setting_name);
+        }
+        void ChatCommandCallback(GW::HookStatus*, const wchar_t*, int argc, const LPWSTR* argv) {
+            switch (setting_type) {
+            case SettingType::Bool:
+                if (argc < 2)
+                    return Log::WarningW(L"Invalid syntax for %s\n%s", setting_name, ChatCommandSyntax().c_str());
+                auto current_val = (bool*)setting_ptr;
+                bool new_val = !*current_val;
+                if (wcscmp(argv[1], L"on") == 0 || wcscmp(argv[1], L"1") == 0)
+                    new_val = true;
+                if (wcscmp(argv[1], L"off") == 0 || wcscmp(argv[1], L"0") == 0)
+                    new_val = false;
+                if (*current_val == new_val)
+                    return;
+                *current_val = new_val;
+                // TODO: Maybe OnChanged callback?
+                return;
+            }
+            Log::WarningW(L"Failed to process ToolboxChatCommandSetting %s", setting_name);
+        }
+    public:
+        ToolboxChatCommandSetting(const wchar_t* setting_name, const bool* bool_setting_ptr, const wchar_t* description = nullptr) :
+            setting_name(setting_name), setting_ptr((void*)bool_setting_ptr), description(description) {
+            setting_type = SettingType::Bool;
+        }
+    };
+
+    std::map<std::wstring, ToolboxChatCommandSetting*> settings_via_chat_commands;
+
+    void CHAT_CMD_FUNC(CmdSettingViaChatCommand) {
+        
+        const auto found = argc > 1 ? settings_via_chat_commands.find(argv[1]) : settings_via_chat_commands.end();
+
+        if (found == settings_via_chat_commands.end()) {
+            Log::WarningW(L"Failed to find setting");
+            return;
+        }
+        found->second->ChatCommandCallback(status, message, argc, argv);
+    }
+
+
+
 } // namespace
 
 void ChatCommands::CreateAlias(const wchar_t* alias, const wchar_t* message) {
@@ -689,6 +754,17 @@ void ChatCommands::CreateAlias(const wchar_t* alias, const wchar_t* message) {
     const auto message_cstr = TextUtils::WStringToString(message);
     strcpy(alias_obj->command_cstr, message_cstr.c_str());
     wcscpy(alias_obj->command_wstr, message);
+}
+void ChatCommands::RegisterSettingChatCommand(const wchar_t* setting_name, const bool* static_setting_ptr, const wchar_t* description)
+{
+    settings_via_chat_commands[setting_name] = new ToolboxChatCommandSetting( setting_name,static_setting_ptr,description );
+}
+void ChatCommands::RemoveSettingChatCommand(const wchar_t* setting_name) {
+    const auto found = settings_via_chat_commands.find(setting_name);
+    if (found != settings_via_chat_commands.end()) {
+        delete found->second;
+        settings_via_chat_commands.erase(found);
+    }
 }
 void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
 {
@@ -864,35 +940,50 @@ void ChatCommands::DrawHelp()
     ImGui::Bullet();
     ImGui::Text("'/load [build template|build name] [Hero index]' loads a build. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
     ImGui::Bullet();
-    ImGui::Text("'/loadprefs' to load GW settings from '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
+    ImGui::TextUnformatted("'/loadprefs' to load GW settings from '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
         "'/loadprefs <filename>' to load GW settings from '<GWToolbox Dir>/<filename>.ini'");
     ImGui::Bullet();
-    ImGui::Text("'/nm' or '/normalmode' to set normal mode difficulty in an outpost.");
+    ImGui::TextUnformatted("'/nm' or '/normalmode' to set normal mode difficulty in an outpost.");
     ImGui::Bullet();
-    ImGui::Text("'/morale' to send your current morale/death penalty info to team chat.");
+    ImGui::TextUnformatted("'/morale' to send your current morale/death penalty info to team chat.");
     ImGui::Bullet();
-    ImGui::Text("'/marktarget' to highlight the current target on the gwtoolbox minimap.\n"
+    ImGui::TextUnformatted("'/marktarget' to highlight the current target on the gwtoolbox minimap.\n"
                 "'/marktarget clear' to unhighlight the current target on the gwtoolbox minimap.\n"
                 "'/marktarget clearall' to clear all highlighted targets on the gwtoolbox minimap.");
     ImGui::Bullet();
-    ImGui::Text("'/observer:reset' resets observer mode data.");
+    ImGui::TextUnformatted("'/observer:reset' resets observer mode data.");
     ImGui::Bullet();
-    ImGui::Text("'/pingitem <equipped_item>' to ping your equipment in chat.\n"
+    ImGui::TextUnformatted("'/pingitem <equipped_item>' to ping your equipment in chat.\n"
         "<equipped_item> options: armor, head, chest, legs, boots, gloves, offhand, weapon, weapons, costume");
     ImGui::Bullet();
-    ImGui::Text("'/pcons [on|off]' toggles, enables or disables pcons.");
+    ImGui::TextUnformatted("'/pcons [on|off]' toggles, enables or disables pcons.");
     ImGui::Bullet();
-    ImGui::Text(pref_syntax);
+    ImGui::TextUnformatted(pref_syntax);
     ImGui::Bullet();
-    ImGui::Text("'/resize <width> <height>' resize the GW window");
+    ImGui::TextUnformatted("'/resize <width> <height>' resize the GW window");
     ImGui::Bullet();
-    ImGui::Text("'/saveprefs' to save GW settings to '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
+    ImGui::TextUnformatted("'/saveprefs' to save GW settings to '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
         "'/saveprefs <filename>' to save GW settings to '<GWToolbox Dir>/<filename>.ini'");
     ImGui::Bullet();
-    ImGui::Text("'/scwiki [<search_term>]' search https://wiki.fbgmguild.com.");
+    ImGui::TextUnformatted("'/scwiki [<search_term>]' search https://wiki.fbgmguild.com.");
     ImGui::Bullet();
-    ImGui::Text("'/show <name>' opens the window, in-game feature or widget titled <name>.");
+    ImGui::TextUnformatted("'/show <name>' opens the window, in-game feature or widget titled <name>.");
     ImGui::ShowHelp(toggle_hint);
+
+    if (!settings_via_chat_commands.empty()) {
+        ImGui::Bullet();
+        ImGui::Text("'/%s' directly change toolbox settings or features via chat command.", TextUtils::WStringToString(settings_via_chat_commands_cmd).c_str());
+        ImGui::Indent();
+        if (ImGui::TreeNodeEx("Options Available###settings_via_chat_commands_options", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            for (auto& it : settings_via_chat_commands) {
+                ImGui::Bullet();
+                ImGui::TextUnformatted(TextUtils::WStringToString(it.second->ChatCommandSyntax()).c_str());
+            }
+            ImGui::TreePop();
+        }
+        ImGui::Unindent();
+    }
+
     ImGui::Bullet();
     ImGui::Text("'/toggle <name> [on|off|toggle]' toggles the window, in-game feature or widget titled <name>.");
     ImGui::ShowHelp(toggle_hint);
@@ -1189,7 +1280,8 @@ void ChatCommands::Initialize()
         {L"hom", CmdHom},
         {L"fps", CmdFps},
         {L"pref", CmdPref},
-        {L"call", CmdCallTarget}
+        {L"call", CmdCallTarget},
+        {settings_via_chat_commands_cmd, CmdSettingViaChatCommand}
     };
 
 
@@ -1234,6 +1326,10 @@ void ChatCommands::Initialize()
 
 void ChatCommands::Terminate()
 {
+    for (auto& it : settings_via_chat_commands) {
+        delete it.second;
+    }
+    settings_via_chat_commands.clear();
     for (auto& it : chat_commands) {
         GW::Chat::DeleteCommand(it.first);
     }

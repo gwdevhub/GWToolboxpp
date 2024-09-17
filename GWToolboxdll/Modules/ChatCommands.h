@@ -64,6 +64,11 @@ public:
 
     static void CHAT_CMD_FUNC(CmdReapplyTitle);
 
+    // Add a /setting <setting_name> [1|0|toggle] command to easily change a static setting in memory. NB: static_setting_ptr MUST be a pointer to a STATIC location in memory!
+    static void RegisterSettingChatCommand(const wchar_t* setting_name, const bool* static_setting_ptr, const wchar_t* description = nullptr);
+
+    static void RemoveSettingChatCommand(const wchar_t* setting_name);
+
 private:
     static bool ReadTemplateFile(const std::wstring& path, char* buff, size_t buffSize);
 
@@ -104,6 +109,8 @@ private:
     static void CHAT_CMD_FUNC(CmdHom);
     static void CHAT_CMD_FUNC(CmdWithdraw);
     static void CHAT_CMD_FUNC(CmdDeposit);
+
+
 
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
     static bool GetNPCInfoByName(const std::string& name, PendingTransmo& transmo);

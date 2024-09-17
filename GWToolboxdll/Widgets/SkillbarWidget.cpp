@@ -15,6 +15,7 @@
 #include <Defines.h>
 #include <ImGuiAddons.h>
 #include "SkillbarWidget.h"
+#include <Modules/ChatCommands.h>
 
 /*
  * Based off of @JuliusPunhal April skill timer - https://github.com/JuliusPunhal/April-old/blob/master/Source/April/SkillbarOverlay.cpp
@@ -34,6 +35,40 @@ namespace {
     Layout layout = Layout::Row;
     float m_skill_width = 50.f;
     float m_skill_height = 50.f;
+
+    // duration -> color settings
+    int medium_treshold = 5000; // long to medium color
+    int short_treshold = 2500;  // medium to short color
+    Color color_long = Colors::ARGB(50, 0, 255, 0);
+    Color color_medium = Colors::ARGB(50, 255, 255, 0);
+    Color color_short = Colors::ARGB(80, 255, 0, 0);
+
+    // duration -> string settings
+    int decimal_threshold = 600; // when to start displaying decimals
+    bool round_up = true;        // round up or down?
+
+    // Skill overlay settings
+    bool display_skill_overlay = true;
+    FontLoader::FontSize font_recharge = FontLoader::FontSize::header1;
+    Color color_text_recharge = Colors::White();
+    Color color_border = Colors::ARGB(100, 255, 255, 255);
+
+    // Effect monitor settings
+    bool display_effect_monitor = false;
+    int effect_monitor_size = 0;
+    int effect_monitor_offset = -100;
+    bool effects_symmetric = true;
+    bool display_multiple_effects = false;
+    bool effects_flip_order = false;
+    bool effects_flip_direction = false;
+    bool effect_text_color = false;
+    bool effect_progress_bar_color = false;
+    FontLoader::FontSize font_effects = FontLoader::FontSize::text;
+    Color color_text_effects = Colors::White();
+    Color color_effect_background = Colors::ARGB(100, 0, 0, 0);
+    Color color_effect_border = Colors::ARGB(255, 0, 0, 0);
+    Color color_effect_progress = Colors::Blue();
+
 
     GW::UI::Frame* skillbar_frame = nullptr;
     bool skillbar_position_dirty = true;
@@ -114,6 +149,10 @@ namespace {
     GW::HookEntry OnUIMessage_HookEntry;
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
         skillbar_position_dirty = true;
+    }
+
+    ToolboxUIElement& Instance() {
+        return SkillbarWidget::Instance();
     }
 }
 void SkillbarWidget::skill_cooldown_to_string(char arr[16], uint32_t cd) const
@@ -567,58 +606,22 @@ void SkillbarWidget::DrawSettingsInternal()
 void SkillbarWidget::Initialize()
 {
     ToolboxWidget::Initialize();
-    GW::Chat::CreateCommand(L"skillbar", [](GW::HookStatus*, const wchar_t*, const int argc, const LPWSTR* argv) {
-        const auto print_usage = [] {
-            Log::Info("Usage: /skillbar [effect] [show|hide|toggle]\neffect - toggles the effect monitor");
-        };
-        if (argc > 1) {
-            if (wcscmp(argv[1], L"effect") == 0) {
-                if (argc == 3) {
-                    if (wcscmp(argv[2], L"show") == 0) {
-                        Instance().display_effect_monitor = true;
-                        return;
-                    }
-                    if (wcscmp(argv[2], L"hide") == 0) {
-                        Instance().display_effect_monitor = false;
-                        return;
-                    }
-                    if (wcscmp(argv[2], L"toggle") == 0) {
-                        Instance().display_effect_monitor = !Instance().display_effect_monitor;
-                        return;
-                    }
-                    return print_usage();
-                }
-                Instance().display_effect_monitor = !Instance().display_effect_monitor;
-                return;
-            }
-            if (wcscmp(argv[1], L"show") == 0) {
-                Instance().display_skill_overlay = true;
-                return;
-            }
-            if (wcscmp(argv[1], L"hide") == 0) {
-                Instance().display_skill_overlay = false;
-                return;
-            }
-            if (wcscmp(argv[1], L"toggle") == 0) {
-                Instance().ToggleVisible();
-                return;
-            }
-            return print_usage();
-        }
-        Instance().ToggleVisible();
-    });
     GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kUIPositionChanged, OnUIMessage, 0x8000);
     GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kPreferenceValueChanged, OnUIMessage, 0x8000);
+
+    ChatCommands::RegisterSettingChatCommand(L"skillbar_effects_overlay",&display_effect_monitor,L"Toggles the effect monitor overlay on the skillbar widget");
+    ChatCommands::RegisterSettingChatCommand(L"skillbar_skills_overlay", &display_skill_overlay, L"Toggles the skill monitor overlay on the skillbar widget");
 }
 void SkillbarWidget::Terminate()
 {
     ToolboxWidget::Terminate();
-    GW::Chat::DeleteCommand(L"skillbar");
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 
     if (skillbar_frame && skillbar_frame->frame_callbacks[0] == OnSkillbar_UICallback) {
         skillbar_frame->frame_callbacks[0] = OnSkillbar_UICallback_Ret;
     }
+    ChatCommands::RemoveSettingChatCommand(L"skillbar_effects_overlay");
+    ChatCommands::RemoveSettingChatCommand(L"skillbar_skills_overlay");
 }
 
 Color SkillbarWidget::UptimeToColor(const uint32_t uptime) const
