@@ -218,6 +218,10 @@ namespace {
             case ItemType::Quest_Item:
             case ItemType::Minipet:
                 return false;
+            case ItemType::Key:
+                if (!item.value)
+                    return false; // Dungeon keys are also keys, but have no value.
+                break;
             default:
                 break;
         }
