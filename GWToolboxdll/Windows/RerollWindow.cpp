@@ -555,6 +555,11 @@ void RerollWindow::Update(float)
         RerollFailed(L"Reroll timed out");
         return;
     }
+    if (GWToolbox::ShouldDisableToolbox()) {
+        RerollSuccess();
+        return;
+    }
+
     GW::PreGameContext* pgc = GW::GetPreGameContext();
     switch (reroll_stage) {
         case PendingLogout: {
