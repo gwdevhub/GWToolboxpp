@@ -2344,8 +2344,12 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTarget)
 
 void CHAT_CMD_FUNC(ChatCommands::CmdUseSkill)
 {
-    if (!(IsMapReady() && argc > 1))
+    if (!IsMapReady())
         return;
+    if (argc < 2) {
+        Instance().skill_to_use.slot = 0;
+        return;
+    }
     const std::wstring arg1 = TextUtils::ToLower(argv[1]);
     if (arg1 == L"stop" || arg1 == L"off") {
         Instance().skill_to_use.slot = 0;
