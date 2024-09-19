@@ -2344,15 +2344,13 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTarget)
 
 void CHAT_CMD_FUNC(ChatCommands::CmdUseSkill)
 {
-    if (!IsMapReady())
-        return;
-    if (argc < 2) {
-        Instance().skill_to_use.slot = 0;
+    auto& skill_to_use = Instance().skill_to_use;
+    skill_to_use.slot = 0;
+    if (!IsMapReady() || argc < 2) {
         return;
     }
     const std::wstring arg1 = TextUtils::ToLower(argv[1]);
     if (arg1 == L"stop" || arg1 == L"off") {
-        Instance().skill_to_use.slot = 0;
         return;
     }
     uint32_t num = 0;
@@ -2360,7 +2358,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdUseSkill)
         Log::ErrorW(L"Invalid argument '%s', please use an integer value of 1 to 8", argv[1]);
         return;
     }
-    auto& skill_to_use = Instance().skill_to_use;
     if (skill_to_use.slot == num)
         num = 0;
     skill_to_use.slot = num;
