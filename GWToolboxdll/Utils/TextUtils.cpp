@@ -288,6 +288,22 @@ namespace TextUtils {
         return out;
     }
 
+    std::string PrintFilename(std::string path)
+    {
+        for (auto& c : path) {
+            if (c == '\\') c = '/';
+        }
+        return path;
+    }
+
+    std::wstring PrintFilename(std::wstring path)
+    {
+        for (auto& c : path) {
+            if (c == L'\\') c = L'/';
+        }
+        return path;
+    }
+
     std::wstring RemoveDiacritics(const std::wstring_view s)
     {
         if (diacritics_charmap.empty()) {

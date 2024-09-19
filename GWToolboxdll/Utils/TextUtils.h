@@ -7,6 +7,8 @@ namespace TextUtils {
     std::string HtmlEncode(std::string_view s);
     std::string SanitiseFilename(std::string_view str);
     std::wstring SanitiseFilename(std::wstring_view str);
+    std::string PrintFilename(std::string path);
+    std::wstring PrintFilename(std::wstring path);
 
     std::string GuidToString(const GUID* guid);
 

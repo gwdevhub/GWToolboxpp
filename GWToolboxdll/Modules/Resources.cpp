@@ -745,7 +745,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
             callback(success, error);
         }
         else if (!success) {
-            Log::LogW(L"Failed to load texture from file %s\n%s", path_to_file.wstring().c_str(), error.c_str());
+            Log::LogW(L"Failed to load texture from file %s\n%s", TextUtils::PrintFilename(path_to_file.wstring()).c_str(), error.c_str());
         }
     });
 }
@@ -775,7 +775,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
                 callback(success, error);
             }
             else {
-                Log::LogW(L"Failed to EnsureFileExists %s\n%S", path_to_file.wstring().c_str(), error.c_str());
+                Log::LogW(L"Failed to EnsureFileExists %s\n%S", TextUtils::PrintFilename(path_to_file.wstring()).c_str(), error.c_str());
             }
         }
     });
@@ -816,7 +816,7 @@ bool Resources::ResourceToFile(const WORD id, const std::filesystem::path& path_
     DWORD bytesWritten;
     const BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, nullptr);
     if (wfRes != TRUE) {
-        StrSwprintf(error, L"Error writing file %s - Error is %lu", path_to_file.filename().wstring().c_str(), GetLastError());
+        StrSwprintf(error, L"Error writing file %s - Error is %lu", TextUtils::PrintFilename(path_to_file.filename().wstring()).c_str(), GetLastError());
         return false;
     }
     if (bytesWritten != size) {

@@ -11,6 +11,7 @@
 #include <string>
 
 #include "GWCA/Managers/UIMgr.h"
+#include "Utils/TextUtils.h"
 
 namespace {
     std::wstring pluginsfoldername;
@@ -58,14 +59,14 @@ namespace {
         }
         if (!plugin.dll) {
             UnloadPlugin(plugin_ptr);
-            Log::Error("Failed to load plugin %s (LoadLibraryW)", plugin.path.filename().string().c_str());
+            Log::Error("Failed to load plugin %s (LoadLibraryW)", TextUtils::PrintFilename(plugin.path.filename().string()).c_str());
             return false;
         }
         using ToolboxPluginInstanceFn = ToolboxPlugin* (*)();
         const auto instance_fn = reinterpret_cast<ToolboxPluginInstanceFn>(GetProcAddress(plugin.dll, "ToolboxPluginInstance"));
         if (!instance_fn) {
             UnloadPlugin(plugin_ptr);
-            Log::Error("Failed to load plugin %s (ToolboxPluginInstance)", plugin.path.filename().string().c_str());
+            Log::Error("Failed to load plugin %s (ToolboxPluginInstance)", TextUtils::PrintFilename(plugin.path.filename().string()).c_str());
             return false;
         }
 
