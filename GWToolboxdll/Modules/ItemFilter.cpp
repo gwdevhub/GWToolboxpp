@@ -216,7 +216,6 @@ namespace {
         switch (static_cast<ItemType>(item.type)) {
             case ItemType::Bundle:
             case ItemType::Quest_Item:
-            case ItemType::Key:
             case ItemType::Minipet:
                 return false;
             default:
