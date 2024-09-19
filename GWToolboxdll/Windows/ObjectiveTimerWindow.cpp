@@ -28,6 +28,7 @@
 #include <GWToolbox.h>
 #include <Utils/GuiUtils.h>
 #include <Logger.h>
+#include <GWCA/Context/CharContext.h>
 
 constexpr uint32_t TIME_UNKNOWN = std::numeric_limits<uint32_t>::max();
 unsigned int ObjectiveTimerWindow::ObjectiveSet::cur_ui_id = 0;
@@ -228,6 +229,8 @@ void ObjectiveTimerWindow::Initialize()
                                                                                  InstanceLoadInfo = new GW::Packet::StoC::InstanceLoadInfo;
                                                                                  memcpy(InstanceLoadInfo, packet, sizeof(GW::Packet::StoC::InstanceLoadInfo));
                                                                                  CheckIsMapLoaded();
+                                                                                 if (current_objective_set && current_objective_set->character_name != GW::GetCharContext()->player_name)
+                                                                                     StopObjectives();
                                                                              });
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
         &InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile* packet) {
@@ -1430,6 +1433,7 @@ ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet()
     system_time = static_cast<DWORD>(time(nullptr));
     run_start_time_point = TimerWidget::Instance().GetStartPoint() != TIME_UNKNOWN ? TimerWidget::Instance().GetStartPoint() : time_point_ms();
     duration = TIME_UNKNOWN;
+    character_name = GW::GetCharContext()->player_name;
 }
 
 ObjectiveTimerWindow::ObjectiveSet::~ObjectiveSet()

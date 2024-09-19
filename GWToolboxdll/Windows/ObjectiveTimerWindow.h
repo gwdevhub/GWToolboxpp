@@ -162,6 +162,7 @@ private:
         DWORD run_start_time_point = 0;
         DWORD duration = static_cast<DWORD>(-1);
         DWORD GetDuration();
+        std::wstring character_name;
         const char* GetDurationStr();
         const char* GetStartTimeStr();
 
