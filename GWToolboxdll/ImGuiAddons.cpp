@@ -70,10 +70,13 @@ namespace ImGui {
 
     void DrawContextMenu() {
         if (imguiaddons_context_menu_pending) {
-            imguiaddons_context_menu_callback = imguiaddons_context_menu_pending;
+            if (!ImGui::IsPopupOpen(imguiaddons_context_menu_id)) {
+                imguiaddons_context_menu_callback = imguiaddons_context_menu_pending;
+                ImGui::OpenPopup(imguiaddons_context_menu_id);
+                imguiaddons_context_menu_pending = nullptr;
+                return;
+            }
             imguiaddons_context_menu_pending = nullptr;
-            ImGui::OpenPopup(imguiaddons_context_menu_id);
-            return;
         }
         if (!ImGui::BeginPopup(imguiaddons_context_menu_id))
             return;
@@ -112,10 +115,13 @@ namespace ImGui {
 
     void DrawConfirmDialog() {
         if (imguiaddons_confirm_dialog_pending) {
-            imguiaddons_confirm_dialog_callback = imguiaddons_confirm_dialog_pending;
+            if (!ImGui::IsPopupOpen(imguiaddons_confirm_dialog_id)) {
+                imguiaddons_confirm_dialog_callback = imguiaddons_confirm_dialog_pending;
+                ImGui::OpenPopup(imguiaddons_confirm_dialog_id);
+                imguiaddons_confirm_dialog_pending = nullptr;
+                return;
+            }
             imguiaddons_confirm_dialog_pending = nullptr;
-            ImGui::OpenPopup(imguiaddons_confirm_dialog_id);
-            return;
         }
         if (!ImGui::BeginPopupModal(imguiaddons_confirm_dialog_id, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             if (imguiaddons_confirm_dialog_callback) {

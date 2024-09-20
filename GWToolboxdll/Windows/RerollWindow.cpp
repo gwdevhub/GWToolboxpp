@@ -445,6 +445,7 @@ void RerollWindow::Draw(IDirect3DDevice9*)
                 "Continue?",
                 charname_str, Resources::GetMapName(reroll_to_player_current_map)->string());
             ImGui::ConfirmDialog(msg.c_str(), OnRerollPromptReply);
+            reroll_stage = PromptPendingReply;
             return;
         }
         reroll_stage = PendingLogout;
