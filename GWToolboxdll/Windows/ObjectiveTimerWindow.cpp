@@ -224,14 +224,15 @@ void ObjectiveTimerWindow::Initialize()
     // NB: Server may not send packets in the order we want them
     // e.g. InstanceLoadInfo comes in before ExamplePlugin which means the run start is whacked out
     // keep track of the packets and only trigger relevent events when the needed packets are in.
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry,
-                                                                             [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadInfo* packet) {
-                                                                                 InstanceLoadInfo = new GW::Packet::StoC::InstanceLoadInfo;
-                                                                                 memcpy(InstanceLoadInfo, packet, sizeof(GW::Packet::StoC::InstanceLoadInfo));
-                                                                                 CheckIsMapLoaded();
-                                                                                 if (current_objective_set && current_objective_set->character_name != GW::GetCharContext()->player_name)
-                                                                                     StopObjectives();
-                                                                             });
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
+        &InstanceLoadInfo_Entry,
+        [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadInfo* packet) {
+            InstanceLoadInfo = new GW::Packet::StoC::InstanceLoadInfo;
+            memcpy(InstanceLoadInfo, packet, sizeof(GW::Packet::StoC::InstanceLoadInfo));
+            CheckIsMapLoaded();
+            if (!GW::GetCharContext() || current_objective_set && current_objective_set->character_name != GW::GetCharContext()->player_name)
+                StopObjectives();
+        });
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
         &InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile* packet) {
             InstanceLoadFile = new GW::Packet::StoC::InstanceLoadFile;
@@ -334,9 +335,9 @@ void ObjectiveTimerWindow::Initialize()
         });
     GW::StoC::RegisterPacketCallback(
         &CountdownStart_Enty, GAME_SMSG_INSTANCE_COUNTDOWN,
-             [this](GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
-                 Event(EventType::CountdownStart, std::to_underlying(GW::Map::GetMapID()));
-             });
+        [this](GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
+            Event(EventType::CountdownStart, std::to_underlying(GW::Map::GetMapID()));
+        });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(
         &DungeonReward_Entry, [this](GW::HookStatus*, GW::Packet::StoC::DungeonReward*) {
             Event(EventType::DungeonReward);
@@ -1109,9 +1110,9 @@ void ObjectiveTimerWindow::StopObjectives()
 // =============================================================================
 
 ObjectiveTimerWindow::Objective::Objective(const char* _name)
-    : start(TIME_UNKNOWN)
-    , done(TIME_UNKNOWN)
-    , duration(TIME_UNKNOWN)
+    : start(TIME_UNKNOWN),
+      done(TIME_UNKNOWN),
+      duration(TIME_UNKNOWN)
 {
     std::snprintf(name, _countof(name), "%s", _name);
 }
@@ -1428,12 +1429,12 @@ void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone()
 }
 
 ObjectiveTimerWindow::ObjectiveSet::ObjectiveSet()
-    : ui_id(cur_ui_id++)
+    : system_time(static_cast<DWORD>(time(nullptr))),
+      duration(TIME_UNKNOWN),
+      ui_id(cur_ui_id++)
 {
-    system_time = static_cast<DWORD>(time(nullptr));
     run_start_time_point = TimerWidget::Instance().GetStartPoint() != TIME_UNKNOWN ? TimerWidget::Instance().GetStartPoint() : time_point_ms();
-    duration = TIME_UNKNOWN;
-    character_name = GW::GetCharContext()->player_name;
+    character_name = GW::GetCharContext() ? GW::GetCharContext()->player_name : L"";
 }
 
 ObjectiveTimerWindow::ObjectiveSet::~ObjectiveSet()
