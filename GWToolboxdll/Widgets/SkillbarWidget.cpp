@@ -49,6 +49,13 @@ namespace {
 
     // Skill overlay settings
     bool display_skill_overlay = true;
+    std::array font_sizes = {
+        FontLoader::FontSize::text,
+        FontLoader::FontSize::header2,
+        FontLoader::FontSize::header1,
+        FontLoader::FontSize::widget_label,
+        FontLoader::FontSize::widget_small
+    };
     FontLoader::FontSize font_recharge = FontLoader::FontSize::header1;
     Color color_text_recharge = Colors::White();
     Color color_border = Colors::ARGB(100, 255, 255, 255);
@@ -73,24 +80,27 @@ namespace {
     GW::UI::Frame* skillbar_frame = nullptr;
     bool skillbar_position_dirty = true;
     GW::UI::UIInteractionCallback OnSkillbar_UICallback_Ret = nullptr;
-    void __cdecl OnSkillbar_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+
+    void __cdecl OnSkillbar_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
+    {
         GW::Hook::EnterHook();
         OnSkillbar_UICallback_Ret(message, wParam, lParam);
         switch (static_cast<uint32_t>(message->message_id)) {
-        case 0xb:
-            skillbar_frame = nullptr;
-            skillbar_position_dirty = true;
-            break;
-        case 0x13:
-        case 0x30:
-        case 0x33:
-            skillbar_position_dirty = true; // Forces a recalculation
-            break;
+            case 0xb:
+                skillbar_frame = nullptr;
+                skillbar_position_dirty = true;
+                break;
+            case 0x13:
+            case 0x30:
+            case 0x33:
+                skillbar_position_dirty = true; // Forces a recalculation
+                break;
         }
         GW::Hook::LeaveHook();
     }
 
-    GW::UI::Frame* GetSkillbarFrame() {
+    GW::UI::Frame* GetSkillbarFrame()
+    {
         if (skillbar_frame)
             return skillbar_frame;
         skillbar_frame = GW::UI::GetFrameByLabel(L"Skillbar");
@@ -104,7 +114,8 @@ namespace {
         return skillbar_frame;
     }
 
-    bool GetSkillbarPos() {
+    bool GetSkillbarPos()
+    {
         if (!skillbar_position_dirty)
             return true;
         const auto frame = GetSkillbarFrame();
@@ -146,15 +157,20 @@ namespace {
         skillbar_position_dirty = false;
         return true;
     }
+
     GW::HookEntry OnUIMessage_HookEntry;
-    void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
+
+    void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
+    {
         skillbar_position_dirty = true;
     }
 
-    ToolboxUIElement& Instance() {
+    ToolboxUIElement& Instance()
+    {
         return SkillbarWidget::Instance();
     }
 }
+
 void SkillbarWidget::skill_cooldown_to_string(char arr[16], uint32_t cd) const
 {
     if (cd > 1800'000u || cd == 0) {
@@ -297,7 +313,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
         const Skill& skill = m_skills[i];
         // NB: Y axis inverted for imgui
         const ImVec2& top_left = skill_positions_calculated[i];
-        const ImVec2& bottom_right = { skill_positions_calculated[i].x + m_skill_width, skill_positions_calculated[i].y + m_skill_height };
+        const ImVec2& bottom_right = {skill_positions_calculated[i].x + m_skill_width, skill_positions_calculated[i].y + m_skill_height};
 
         // draw overlay
         if (display_skill_overlay) {
@@ -531,7 +547,7 @@ void SkillbarWidget::DrawSettingsInternal()
 {
     ToolboxWidget::DrawSettingsInternal();
 
-    constexpr const char* font_sizes[] = {"16", "18", "20", "24", "42", "48"};
+    constexpr const char* font_size_names[] = {"16", "18", "20", "24", "42", "48"};
 
     const bool is_vertical = layout == Layout::Column || layout == Layout::Columns;
 
@@ -540,7 +556,10 @@ void SkillbarWidget::DrawSettingsInternal()
     ImGui::Spacing();
     ImGui::Indent();
     ImGui::PushID("skill_overlay_settings");
-    ImGui::Combo("Text size", reinterpret_cast<int*>(&font_recharge), font_sizes, 6);
+    int current_index = std::distance(font_sizes.begin(), std::ranges::find(font_sizes, font_recharge));
+    if (ImGui::Combo("Text size", &current_index, font_size_names, _countof(font_size_names))) {
+        font_recharge = font_sizes[current_index];
+    }
     Colors::DrawSettingHueWheel("Text color", &color_text_recharge);
     Colors::DrawSettingHueWheel("Border color", &color_border);
     ImGui::Checkbox("Paint skills according to effect duration", &display_skill_overlay);
@@ -589,7 +608,10 @@ void SkillbarWidget::DrawSettingsInternal()
         if (effect_text_color || effect_progress_bar_color) {
             DrawDurationThresholds();
         }
-        ImGui::Combo("Text size", reinterpret_cast<int*>(&font_effects), font_sizes, 6);
+        current_index = std::distance(font_sizes.begin(), std::ranges::find(font_sizes, font_effects));
+        if (ImGui::Combo("Text size", &current_index, font_size_names, _countof(font_size_names))) {
+            font_effects = font_sizes[current_index];
+        }
         if (!effect_text_color) {
             Colors::DrawSettingHueWheel("Text color", &color_text_effects);
         }
@@ -609,9 +631,10 @@ void SkillbarWidget::Initialize()
     GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kUIPositionChanged, OnUIMessage, 0x8000);
     GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kPreferenceValueChanged, OnUIMessage, 0x8000);
 
-    ChatCommands::RegisterSettingChatCommand(L"skillbar_effects_overlay",&display_effect_monitor,L"Toggles the effect monitor overlay on the skillbar widget");
+    ChatCommands::RegisterSettingChatCommand(L"skillbar_effects_overlay", &display_effect_monitor, L"Toggles the effect monitor overlay on the skillbar widget");
     ChatCommands::RegisterSettingChatCommand(L"skillbar_skills_overlay", &display_skill_overlay, L"Toggles the skill monitor overlay on the skillbar widget");
 }
+
 void SkillbarWidget::Terminate()
 {
     ToolboxWidget::Terminate();
