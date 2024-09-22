@@ -223,7 +223,7 @@ void ObjectiveTimerWindow::Initialize()
 
     // NB: Server may not send packets in the order we want them
     // e.g. InstanceLoadInfo comes in before ExamplePlugin which means the run start is whacked out
-    // keep track of the packets and only trigger relevent events when the needed packets are in.
+    // keep track of the packets and only trigger relevant events when the needed packets are in.
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
         &InstanceLoadInfo_Entry,
         [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadInfo* packet) {
@@ -284,21 +284,23 @@ void ObjectiveTimerWindow::Initialize()
             map_load_pending = true;
         }, -5);
     // packet hooks that trigger events:
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(&MessageServer_Entry,
-                                                                      [this](GW::HookStatus*, GW::Packet::StoC::MessageServer*) {
-                                                                          const GW::Array<wchar_t>* buff = &GW::GetGameContext()->world->message_buff;
-                                                                          if (!buff || !buff->valid() || !buff->size()) {
-                                                                              return; // Message buffer empty!?
-                                                                          }
-                                                                          const wchar_t* msg = buff->begin();
-                                                                          // NB: buff->size() includes null terminating char. All GW strings are null terminated, use wcslen instead
-                                                                          Event(EventType::ServerMessage, wcslen(msg), msg);
-                                                                      });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry,
-                                                                        [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* packet) {
-                                                                            // NB: All GW strings are null terminated, use wcslen to avoid having to check all 122 chars
-                                                                            Event(EventType::DisplayDialogue, wcslen(packet->message), packet->message);
-                                                                        });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(
+        &MessageServer_Entry,
+        [this](GW::HookStatus*, GW::Packet::StoC::MessageServer*) {
+            const GW::Array<wchar_t>* buff = &GW::GetGameContext()->world->message_buff;
+            if (!buff || !buff->valid() || !buff->size()) {
+                return; // Message buffer empty!?
+            }
+            const wchar_t* msg = buff->begin();
+            // NB: buff->size() includes null terminating char. All GW strings are null terminated, use wcslen instead
+            Event(EventType::ServerMessage, wcslen(msg), msg);
+        });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(
+        &DisplayDialogue_Entry,
+        [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* packet) {
+            // NB: All GW strings are null terminated, use wcslen to avoid having to check all 122 chars
+            Event(EventType::DisplayDialogue, wcslen(packet->message), packet->message);
+        });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(
         &ManipulateMapObject_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ManipulateMapObject* packet) {
             if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
