@@ -69,8 +69,15 @@ void ToolboxModule::RegisterSettingsContent(const char* section, const char* ico
         }
         ASSERT(settings_icons.at(section) == icon && "Trying to set different icon for the same setting!");
     }
-    const auto it = std::ranges::find_if(settings_draw_callbacks[section], [weighting](const auto& pair) {
+    auto& callbacks = settings_draw_callbacks[section];
+    const auto found = std::ranges::find_if(callbacks, [this](const auto& pair) {
+        return pair.module == this;
+        });
+    if (found != callbacks.end()) {
+        return; // Already added this callback for this section.
+    }
+    const auto it = std::ranges::find_if(callbacks, [weighting](const auto& pair) {
         return pair.weighting > weighting;
     });
-    settings_draw_callbacks[section].insert(it, {weighting, callback, this});
+    callbacks.insert(it, {weighting, callback, this});
 }
