@@ -313,7 +313,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
         const Skill& skill = m_skills[i];
         // NB: Y axis inverted for imgui
         const ImVec2& top_left = skill_positions_calculated[i];
-        const ImVec2& bottom_right = {skill_positions_calculated[i].x + m_skill_width, skill_positions_calculated[i].y + m_skill_height};
+        const ImVec2 bottom_right = {skill_positions_calculated[i].x + m_skill_width, skill_positions_calculated[i].y + m_skill_height};
 
         // draw overlay
         if (display_skill_overlay) {
