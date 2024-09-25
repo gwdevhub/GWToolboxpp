@@ -80,7 +80,7 @@ namespace v8
             stream << agentType << primary << secondary << alive << hexed << skill << modelId << minDistance << maxDistance << minHp << maxHp;
             writeStringWithSpaces(stream, agentName);
             writePositions(stream, polygon);
-            stream << 0.f << 180.f << 0 << 0 << 0 << 0; // new members: Min angle, max angle, enchanted, weaponspelled, poisoned, bleeding
+            stream << 0.f << 180.f << 0 << 0 << 0 << 0 << 0 << 1000 << -10 << 10 << 0; // new members: Min angle, max angle, enchanted, weaponspelled, poisoned, bleeding, minSpeed, maxSpeed, minRegen, maxRegen, weapon;
 
             return stream.str();
         }
@@ -131,7 +131,7 @@ namespace v8
             stream << agentType << primary << secondary << alive << skill << sorting << modelId << minDistance << maxDistance << requireSameModelIdAsTarget << preferNonHexed << rotateThroughTargets;
             writeStringWithSpaces(stream, agentName);
             writePositions(stream, polygon);
-            stream << 0.f << 180.f << 0 << 0 << 0 << 0; // new members: Min angle, max angle, enchanted, weaponspelled, poisoned, bleeding
+            stream << 0.f << 180.f << 0 << 0 << 0 << 0 << 0 << 0 << 1000 << -10 << 10 << 0 << 0 << 100; // new members: Min angle, max angle, enchanted, weaponspelled, poisoned, bleeding, hexed, minSpeed, maxSpeed, minRegen, maxRegen, weapon, minHp, maxHp
 
             return stream.str();
         }
