@@ -11,6 +11,7 @@
 namespace {
     void CmdTB(GW::HookStatus* status, const wchar_t*, const int argc, const LPWSTR* argv)
     {
+        status->blocked = false;
         const auto instance = static_cast<ToolboxUIPlugin*>(ToolboxPluginInstance());
         if (!instance) {
             status->blocked = false;
@@ -43,8 +44,9 @@ namespace {
             // /tb PluginName hide
             *instance->GetVisiblePtr() = !*instance->GetVisiblePtr();
         }
-        if (arg1 != pluginname) {
-            status->blocked = false;
+
+        if (arg1 == pluginname) {
+            status->blocked = true;
         }
     }
 }
