@@ -14,21 +14,15 @@ namespace {
         status->blocked = false;
         const auto instance = static_cast<ToolboxUIPlugin*>(ToolboxPluginInstance());
         if (!instance) {
-            status->blocked = false;
             return;
-        }
-        if (argc < 3) {
-            status->blocked = false;
         }
         const std::wstring arg1 = PluginUtils::ToLower(argv[1]);
         auto pluginname = PluginUtils::ToLower(PluginUtils::StringToWString(instance->Name()));
         pluginname.erase(std::ranges::remove_if(pluginname, [](const wchar_t x) { return std::isspace(x); }).begin(), pluginname.end());
         if (arg1.empty()) {
-            status->blocked = false;
             return;
         }
         if (!(arg1 == L"all" || arg1 == L"plugins" || pluginname.find(arg1) == 0)) {
-            status->blocked = false;
             return;
         }
         const std::wstring arg2 = PluginUtils::ToLower(argv[2]);
