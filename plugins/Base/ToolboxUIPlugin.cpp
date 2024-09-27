@@ -11,23 +11,21 @@
 namespace {
     void CmdTB(GW::HookStatus* status, const wchar_t*, const int argc, const LPWSTR* argv)
     {
+        status->blocked = false;
         const auto instance = static_cast<ToolboxUIPlugin*>(ToolboxPluginInstance());
         if (!instance) {
-            status->blocked = false;
             return;
         }
         if (argc < 3) {
-            status->blocked = false;
+            return;
         }
         const std::wstring arg1 = PluginUtils::ToLower(argv[1]);
         auto pluginname = PluginUtils::ToLower(PluginUtils::StringToWString(instance->Name()));
         pluginname.erase(std::ranges::remove_if(pluginname, [](const wchar_t x) { return std::isspace(x); }).begin(), pluginname.end());
         if (arg1.empty()) {
-            status->blocked = false;
             return;
         }
         if (!(arg1 == L"all" || arg1 == L"plugins" || pluginname.find(arg1) == 0)) {
-            status->blocked = false;
             return;
         }
         const std::wstring arg2 = PluginUtils::ToLower(argv[2]);
@@ -43,8 +41,8 @@ namespace {
             // /tb PluginName hide
             *instance->GetVisiblePtr() = !*instance->GetVisiblePtr();
         }
-        if (arg1 != pluginname) {
-            status->blocked = false;
+        if (arg1 == pluginname) {
+            status->blocked = true;
         }
     }
 }
