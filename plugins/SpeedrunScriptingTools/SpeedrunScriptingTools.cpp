@@ -44,14 +44,16 @@ namespace {
         return type == ConditionType::OnlyTriggerOncePerInstance || type == ConditionType::Once || type == ConditionType::Throttle;
     }
 
-    bool canAddCondition(const std::vector<ConditionPtr>& conditions) {
+    bool canAddCondition(const std::vector<ConditionPtr>& conditions)
+    {
         return !std::ranges::any_of(conditions, [](const auto& cond) {
             return mustComeLast(cond->type());
         });
     }
 
-    bool checkConditions(const Script& script) {
-        return std::ranges::all_of(script.conditions, [](const auto& cond) {
+    bool checkConditions(const std::vector<ConditionPtr>& conditions)
+    {
+        return std::ranges::all_of(conditions, [](const auto& cond) {
             return cond->check();
         });
     }
@@ -340,45 +342,46 @@ namespace {
                 ImGui::PushID(2);
                 // Script settings
                 ImGui::Separator();
-                {
-                    ImGui::Checkbox("Enabled", &scriptIt->enabled);
-                    ImGui::SameLine();
+                ImGui::Checkbox("Enabled", &scriptIt->enabled);
+                ImGui::SameLine();
 
-                    auto& keyData = scriptIt->enabledToggleHotkey.keyData;
-                    auto& keyMod = scriptIt->enabledToggleHotkey.modifier;
-                    auto description = keyData ? makeHotkeyDescription(keyData, keyMod) : "Set enable toggle";
-                    drawHotkeySelector(keyData, keyMod, description, 80.f);
-                    if (keyData) {
-                        ImGui::SameLine();
-                        ImGui::Text("Toggle");
-                        ImGui::SameLine();
-                        if (ImGui::Button("X", ImVec2(20.f, 0))) {
-                            keyData = 0;
-                            keyMod = 0;
-                            scriptIt->showMessageWhenToggled = false;
-                        }
-                        ImGui::SameLine();
-                        ImGui::Checkbox("Log toggle", &scriptIt->showMessageWhenToggled);
+                auto& keyData = scriptIt->enabledToggleHotkey.keyData;
+                auto& keyMod = scriptIt->enabledToggleHotkey.modifier;
+                auto description = keyData ? makeHotkeyDescription(keyData, keyMod) : "Set enable toggle";
+                drawHotkeySelector(keyData, keyMod, description, 80.f);
+                if (keyData) {
+                    ImGui::SameLine();
+                    ImGui::Text("Toggle");
+                    ImGui::SameLine();
+                    if (ImGui::Button("X", ImVec2(20.f, 0))) {
+                        keyData = 0;
+                        keyMod = 0;
+                        scriptIt->showMessageWhenToggled = false;
                     }
                     ImGui::SameLine();
-
-                    if (ImGui::Button("Copy script", ImVec2(100, 0))) {
-                        if (const auto encoded = encodeString(std::to_string(currentVersion) + " " + serialize(*scriptIt))) {
-                            logMessage("Copy script " + scriptIt->name + " to clipboard");
-                            ImGui::SetClipboardText(encoded->c_str());
-                        }
-                    }
-
-                    ImGui::SameLine();
-                    drawTriggerSelector(scriptIt->trigger, 100.f, scriptIt->triggerHotkey.keyData, scriptIt->triggerHotkey.modifier, scriptIt->triggerMessage);
-
-                    ImGui::SameLine();
-                    ImGui::Checkbox("Log trigger", &scriptIt->showMessageWhenTriggered);
-
-                    ImGui::SameLine();
-                    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 50);
-                    ImGui::InputText("Name", &scriptIt->name);
+                    ImGui::Checkbox("Log toggle", &scriptIt->showMessageWhenToggled);
                 }
+                ImGui::SameLine();
+
+                if (ImGui::Button("Copy script", ImVec2(100, 0))) {
+                    if (const auto encoded = encodeString(std::to_string(currentVersion) + " " + serialize(*scriptIt))) {
+                        logMessage("Copy script " + scriptIt->name + " to clipboard");
+                        ImGui::SetClipboardText(encoded->c_str());
+                    }
+                }
+
+                ImGui::PopID();
+                ImGui::PushID(3);
+
+                ImGui::SameLine();
+                drawTriggerSelector(scriptIt->trigger, 100.f, scriptIt->triggerHotkey.keyData, scriptIt->triggerHotkey.modifier, scriptIt->triggerMessage);
+
+                ImGui::SameLine();
+                ImGui::Checkbox("Log trigger", &scriptIt->showMessageWhenTriggered);
+
+                ImGui::SameLine();
+                ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 50);
+                ImGui::InputText("Name", &scriptIt->name);
                 ImGui::PopID();
 
                 ImGui::TreePop();
@@ -502,7 +505,7 @@ void SpeedrunScriptingTools::DrawSettings()
         m_groups.push_back({});
     }
     ImGui::SameLine();
-    if (ImGui::Button("Import script from clipboard", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+    if (ImGui::Button("Import from clipboard", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
         if (const auto clipboardContent = ImGui::GetClipboardText()) {
             if (const auto combined = decodeString(clipboardContent)) {
                 InputStream stream{combined.value()};
@@ -647,34 +650,28 @@ void SpeedrunScriptingTools::Update(float delta)
 {
     ToolboxPlugin::Update(delta);
 
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading && !isInLoadingScreen) 
-    {
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading && !isInLoadingScreen) {
         // First frame on new loading screen
         isInLoadingScreen = true;
         clear();
     }
 
     const auto map = GW::Map::GetMapInfo();
-    if (isInLoadingScreen || !map || map->GetIsPvP() || !GW::Agents::GetControlledCharacter() || (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !runInOutposts))
-    {
+    if (isInLoadingScreen || !map || map->GetIsPvP() || !GW::Agents::GetControlledCharacter() || (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !runInOutposts)) {
         return;
     }
 
-    while (m_currentScript && !m_currentScript->actions.empty()) 
-    {
+    while (m_currentScript && !m_currentScript->actions.empty()) {
         // Execute current script
         auto& currentActions = m_currentScript->actions;
         auto& currentAction = **currentActions.begin();
-        if (currentAction.behaviour().test(ActionBehaviourFlag::ImmediateFinish)) 
-        {
+        if (currentAction.behaviour().test(ActionBehaviourFlag::ImmediateFinish)) {
             currentAction.initialAction();
             currentAction.finalAction();
             currentActions.erase(currentActions.begin(), currentActions.begin() + 1);
         }
-        else if (currentAction.hasBeenStarted()) 
-        {
-            switch (currentAction.isComplete()) 
-            {
+        else if (currentAction.hasBeenStarted()) {
+            switch (currentAction.isComplete()) {
                 case ActionStatus::Running:
                     break;
                 case ActionStatus::Complete:
@@ -687,38 +684,36 @@ void SpeedrunScriptingTools::Update(float delta)
             }
             break;
         }
-        else 
-        {
+        else {
             currentAction.initialAction();
             break;
         }
     }
-    
-    const auto canRunScript = [&](const Script& script) 
-    {
+
+    const auto canRunScript = [&](const Script& script) {
         if (!script.enabled || (script.conditions.empty() && script.trigger == Trigger::None) || script.actions.empty()) return false;
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !canBeRunInOutPost(script)) return false;
-        return checkConditions(script);
+        return checkConditions(script.conditions);
     };
-    const auto setCurrentScript = [&](Script& script) 
-    {
-        if (script.showMessageWhenTriggered) 
-            logMessage(std::string{"Run script "} + script.name);
+    const auto setCurrentScript = [&](Script& script) {
+        if (script.showMessageWhenTriggered) logMessage(std::string{"Run script "} + script.name);
         script.triggered = false;
         m_currentScript = script;
     };
-    const auto hasTrigger = [](const Script& s) { return s.trigger != Trigger::None; };
-    const auto isTriggered = [](const Script& s) { return s.triggered; };
+    const auto hasTrigger = [](const Script& s) {
+        return s.trigger != Trigger::None;
+    };
+    const auto isTriggered = [](const Script& s) {
+        return s.triggered;
+    };
 
-    if (!m_currentScript || m_currentScript->actions.empty())
-    {
-        // Find script to use
+    // Find script to use
+    const auto checkScripts = [&](std::vector<Script>& scripts) {
+        if (m_currentScript && m_currentScript->actions.size()) return;
 
         // Check scripts with triggers first, as these are typically more time-sensitive
-        for (auto& script : m_scripts | std::views::filter(hasTrigger) | std::views::filter(isTriggered))
-        {
-            if (!canRunScript(script)) 
-            {
+        for (auto& script : scripts | std::views::filter(hasTrigger) | std::views::filter(isTriggered)) {
+            if (!canRunScript(script)) {
                 script.triggered = false;
                 continue;
             }
@@ -726,10 +721,8 @@ void SpeedrunScriptingTools::Update(float delta)
             return;
         }
         // Run any scripts still waiting for execution
-        for (auto& script : m_scripts | std::views::filter(std::not_fn(hasTrigger)) | std::views::filter(isTriggered))
-        {
-            if (!canRunScript(script)) 
-            {
+        for (auto& script : scripts | std::views::filter(std::not_fn(hasTrigger)) | std::views::filter(isTriggered)) {
+            if (!canRunScript(script)) {
                 script.triggered = false;
                 continue;
             }
@@ -737,15 +730,20 @@ void SpeedrunScriptingTools::Update(float delta)
             return;
         }
         // Find new "Always on" scripts to run
-        for (auto& script : m_scripts | std::views::filter(std::not_fn(hasTrigger))) 
-        {
-            if (canRunScript(script)) 
-            {
+        for (auto& script : scripts | std::views::filter(std::not_fn(hasTrigger))) {
+            if (canRunScript(script)) {
                 script.triggered = true;
                 if (!m_currentScript || m_currentScript->actions.empty()) setCurrentScript(script);
             }
         }
+    };
+
+    for (auto& group : m_groups)
+    {
+        if (checkConditions(group.conditions)) 
+            checkScripts(group.scripts);
     }
+    checkScripts(m_scripts);
 }
 
 bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LPARAM lparam)
@@ -830,7 +828,7 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
                 if (script.enabled && script.trigger == Trigger::Hotkey && script.triggerHotkey.keyData == keyData && script.triggerHotkey.modifier == modifier 
                     && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) 
                 {
-                    const auto conditionsMet = checkConditions(script);
+                    const auto conditionsMet = checkConditions(script.conditions);
 
                     script.triggered = conditionsMet;
                     triggered = conditionsMet || alwaysBlockHotkeyKeys;
@@ -870,13 +868,13 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         {
             std::ranges::for_each(m_scripts, [](Script& s) 
             {
-                if (s.enabled && s.trigger == Trigger::HardModePing && checkConditions(s)) 
+                if (s.enabled && s.trigger == Trigger::HardModePing && checkConditions(s.conditions)) 
                     s.triggered = true;
             });
         }
         std::ranges::for_each(m_scripts, [&](Script& s) 
         {
-            if (s.enabled && s.trigger == Trigger::ChatMessage && !s.triggerMessage.empty() && checkConditions(s)) {
+            if (s.enabled && s.trigger == Trigger::ChatMessage && !s.triggerMessage.empty() && checkConditions(s.conditions)) {
                 if (WStringToString(packet->message).contains(s.triggerMessage))
                 {
                     s.triggered = true;

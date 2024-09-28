@@ -36,6 +36,7 @@ struct Group
 class SpeedrunScriptingTools : public ToolboxPlugin {
 public:
     const char* Name() const override { return "SpeedrunScriptingTools"; }
+    const char* Icon() const override { return ICON_FA_KEYBOARD; }
 
     void Update(float) override;
 
