@@ -408,9 +408,10 @@ void PartyPlayerCountCondition::drawSettings()
 {
     ImGui::PushID(drawId());
     ImGui::Text("If the party size is");
-    ImGui::PushItemWidth(30);
+    ImGui::PushItemWidth(30.f);
     ImGui::SameLine();
     ImGui::InputInt("", &count, 0);
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -448,6 +449,7 @@ void PartyHasLoadedInCondition::drawSettings()
         ImGui::SameLine();
         ImGui::PushItemWidth(50.f);
         ImGui::InputInt("", &slot, 0);
+        ImGui::PopItemWidth();
         if (slot < 1) slot = 1;
         if (slot > 12) slot = 12;
     }
@@ -480,9 +482,10 @@ void InstanceProgressCondition::drawSettings()
 {
     ImGui::PushID(drawId());
     ImGui::Text("If the instance progress is greater than or equal");
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(90.f);
     ImGui::SameLine();
     ImGui::InputFloat("%", &requiredProgress, 0);
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -529,13 +532,14 @@ void PlayerIsNearPositionCondition::drawSettings()
 {
     ImGui::PushID(drawId());
     ImGui::Text("If the player is near position");
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(90.f);
     ImGui::SameLine();
     ImGui::InputFloat("x", &pos.x, 0.0f, 0.0f);
     ImGui::SameLine();
     ImGui::InputFloat("y", &pos.y, 0.0f, 0.0f);
     ImGui::SameLine();
     ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -572,7 +576,6 @@ void PlayerHasBuffCondition::drawSettings()
     ImGui::Text("Remaining duration (ms):");
     ImGui::PushItemWidth(50.f);
     ImGui::SameLine();
-    
 
     if (hasMinimumDuration)
     {
@@ -604,6 +607,7 @@ void PlayerHasBuffCondition::drawSettings()
         if (ImGui::Button("Add max")) hasMaximumDuration = true;
     }
 
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -721,8 +725,9 @@ void PlayerHasNameCondition::drawSettings()
     ImGui::PushID(drawId());
     ImGui::Text("If player character has name");
     ImGui::SameLine();
-    ImGui::PushItemWidth(300);
+    ImGui::PushItemWidth(300.f);
     ImGui::InputText("name", &name);
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -749,8 +754,9 @@ void PlayerHasEnergyCondition::drawSettings()
     ImGui::PushID(drawId());
     ImGui::Text("If player has at least");
     ImGui::SameLine();
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(90.f);
     ImGui::InputInt("energy", &minEnergy, 0);
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -835,14 +841,15 @@ bool CurrentTargetDistanceCondition::check() const
 void CurrentTargetDistanceCondition::drawSettings()
 {
     ImGui::PushID(drawId());
+    ImGui::PushItemWidth(80.f);
     
     ImGui::Text("If the target has distance to player");
     ImGui::SameLine();
-    ImGui::PushItemWidth(80.f);
     ImGui::InputFloat("min", &minDistance, 0);
     ImGui::SameLine();
     ImGui::InputFloat("max", &maxDistance, 0);
-    
+
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -865,10 +872,13 @@ bool CurrentTargetHasHpBelowCondition::check() const
 void CurrentTargetHasHpBelowCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::Text("If the target has HP below");
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(90.f);
+
+    ImGui::Text("If the target has HP below");    
     ImGui::SameLine();
     ImGui::InputFloat("%", &hp, 0);
+
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -904,9 +914,8 @@ void CurrentTargetAllegianceCondition::drawSettings()
 {
     ImGui::PushID(drawId());
     ImGui::Text("If the target has type");
-    ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    drawEnumButton(AgentType::Any, AgentType::Hostile, agentType);
+    drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, 0, 90.f);
     ImGui::PopID();
 }
 
@@ -930,9 +939,10 @@ void CurrentTargetModelCondition::drawSettings()
 {
     ImGui::PushID(drawId());
     ImGui::Text("If the target has model");
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(90.f);
     ImGui::SameLine();
     drawModelIDSelector(modelId);
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -971,8 +981,9 @@ void HasPartyWindowAllyOfNameCondition::drawSettings()
     ImGui::PushID(drawId());
     ImGui::Text("If party window ally of name");
     ImGui::SameLine();
-    ImGui::PushItemWidth(300);
+    ImGui::PushItemWidth(300.f);
     ImGui::InputText("Ally name", &name);
+    ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::Text("exists");
     ImGui::PopID();
@@ -1021,8 +1032,9 @@ void PartyMemberStatusCondition::drawSettings()
     ImGui::SameLine();
     drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, alive);
     ImGui::SameLine();
-    ImGui::PushItemWidth(300);
+    ImGui::PushItemWidth(300.f);
     ImGui::InputText("Ally name", &name);
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -1046,13 +1058,14 @@ void QuestHasStateCondition::drawSettings()
 {
     ImGui::PushID(drawId());
     ImGui::Text("If the quest objective has status");
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(90.f);
     ImGui::SameLine();
     ImGui::InputInt("id", reinterpret_cast<int*>(&id), 0);
     ImGui::SameLine();
     drawEnumButton(QuestStatus::NotStarted, QuestStatus::Failed, status);
     ImGui::SameLine();
     ImGui::ShowHelp("Objective ID, NOT quest ID!\nUW: Chamber 146, Restore 147, Escort 148, UWG 149, Vale 150, Waste 151, Pits 152, Planes 153, Mnts 154, Pools 155, Dhuum 157");
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -1135,8 +1148,9 @@ void InstanceTimeCondition::drawSettings()
     ImGui::PushID(drawId());
     ImGui::Text("If the instance is older than");
     ImGui::SameLine();
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(90.f);
     ImGui::InputInt("seconds", &timeInSeconds, 0);
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -1240,7 +1254,7 @@ bool NearbyAgentCondition::check() const
 void NearbyAgentCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::PushItemWidth(120);
+    ImGui::PushItemWidth(120.f);
 
     if (ImGui::TreeNodeEx("If there exists an agent with characteristics", ImGuiTreeNodeFlags_FramePadding)) {
         ImGui::BulletText("Allegiance");
@@ -1297,6 +1311,7 @@ void NearbyAgentCondition::drawSettings()
         ImGui::BulletText("Has name");
         ImGui::SameLine();
         ImGui::InputText("name (empty for any)", &agentName);
+        ImGui::PopItemWidth();
 
         ImGui::PushItemWidth(80.f);
         ImGui::Bullet();
@@ -1305,6 +1320,7 @@ void NearbyAgentCondition::drawSettings()
         ImGui::InputFloat("min###9", &minHp);
         ImGui::SameLine();
         ImGui::InputFloat("max###10", &maxHp);
+        ImGui::PopItemWidth();
 
         ImGui::Bullet();
         ImGui::Text("Has model");
@@ -1354,6 +1370,7 @@ void NearbyAgentCondition::drawSettings()
 
         ImGui::TreePop();
     }
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -1409,6 +1426,7 @@ void PlayerHasItemEquippedCondition::drawSettings()
     ImGui::SameLine();
     ImGui::PushItemWidth(90);
     ImGui::InputInt("model id", &modelId, 0);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -1436,6 +1454,7 @@ void PlayerHasHpBelowCondition::drawSettings()
     ImGui::PushItemWidth(90);
     ImGui::SameLine();
     ImGui::InputFloat("%", &hp, 0);
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -1468,6 +1487,7 @@ void ItemInInventoryCondition::drawSettings()
     ImGui::SameLine();
     ImGui::PushItemWidth(90);
     ImGui::InputInt("model id", &modelId, 0);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -1736,6 +1756,7 @@ void FoeCountCondition::drawSettings()
     ImGui::SameLine();
     ImGui::PushItemWidth(80);
     ImGui::InputInt("enemies left in the instance", &maximum, 0);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -1765,6 +1786,7 @@ void MoraleCondition::drawSettings()
     ImGui::SameLine();
     ImGui::PushItemWidth(80);
     ImGui::InputInt("% (negative values for DP)", &minimumMorale, 0);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -2086,6 +2108,7 @@ void CurrentTargetNameCondition::drawSettings()
     ImGui::SameLine();
     ImGui::PushItemWidth(300);
     ImGui::InputText("name", &name);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -2119,6 +2142,7 @@ void ThrottleCondition::drawSettings()
     ImGui::SameLine();
     ImGui::PushItemWidth(80);
     ImGui::InputInt("ms", &delayInMs, 0);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }

@@ -40,6 +40,7 @@ std::string_view toString(GW::Constants::InstanceType);
 std::string_view toString(GW::Constants::HeroID);
 std::string_view toString(GW::UI::ControlAction);
 std::string_view toString(WeaponType);
+std::string_view toString(Bag);
 
 bool checkWeaponType(WeaponType, uint16_t);
 

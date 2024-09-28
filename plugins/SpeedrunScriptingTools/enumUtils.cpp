@@ -342,6 +342,23 @@ std::string_view toString(WeaponType type)
     }
     return "";
 }
+std::string_view toString(Bag bag) 
+{
+    switch (bag) {
+        case Bag::Backpack:
+            return "Backpack";
+        case Bag::BeltPouch:
+            return "Belt Pouch";
+        case Bag::Bag1:
+            return "Bag 1";
+        case Bag::Bag2:
+            return "Bag 2";
+        case Bag::EquipmentPack:
+            return "Equipment Pack";
+    }
+    return "";
+}
+
 std::string_view toString(GW::Constants::HeroID hero) 
 {
     switch (hero)
@@ -691,6 +708,7 @@ void drawHotkeySelector(long& keyData, long& modifier, std::string& description,
 
         ImGui::EndPopup();
     }
+    ImGui::PopItemWidth();
 }
 
 void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& hotkeyMod, std::string& triggerMessage)
@@ -758,6 +776,7 @@ void drawPolygonSelector(std::vector<GW::Vec2f>& polygon)
     }
 
     ImGui::Unindent();
+    ImGui::PopItemWidth();
 }
 bool pointIsInsidePolygon(const GW::GamePos pos, const std::vector<GW::Vec2f>& points)
 {
@@ -779,6 +798,7 @@ void drawSkillIDSelector(GW::Constants::SkillID& id)
     }
     ImGui::SameLine();
     ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
+    ImGui::PopItemWidth();
 }
 
 void drawMapIDSelector(GW::Constants::MapID& id) 
@@ -791,6 +811,7 @@ void drawMapIDSelector(GW::Constants::MapID& id)
     }
     
     ImGui::InputInt("Map ID", reinterpret_cast<int*>(&id), 0);
+    ImGui::PopItemWidth();
 }
 void drawModelIDSelector(uint16_t& id, std::optional<std::string_view> label)
 {
@@ -811,4 +832,5 @@ void drawModelIDSelector(uint16_t& id, std::optional<std::string_view> label)
         else
             id = 0;
     }
+    ImGui::PopItemWidth();
 }
