@@ -359,6 +359,26 @@ std::string_view toString(Bag bag)
     return "";
 }
 
+std::string_view toString(ComparisonOperator comp)
+{
+    switch (comp) 
+    {
+        case ComparisonOperator::Equals:
+            return "==";
+        case ComparisonOperator::Less:
+            return "<";
+        case ComparisonOperator::Greater:
+            return ">";
+        case ComparisonOperator::LessOrEqual:
+            return "<=";
+        case ComparisonOperator::GreaterOrEqual:
+            return ">=";
+        case ComparisonOperator::NotEquals:
+            return "!=";
+    }
+    return "";
+}
+
 std::string_view toString(GW::Constants::HeroID hero) 
 {
     switch (hero)

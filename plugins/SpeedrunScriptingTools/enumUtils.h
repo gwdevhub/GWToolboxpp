@@ -41,9 +41,9 @@ std::string_view toString(GW::Constants::HeroID);
 std::string_view toString(GW::UI::ControlAction);
 std::string_view toString(WeaponType);
 std::string_view toString(Bag);
+std::string_view toString(ComparisonOperator);
 
 bool checkWeaponType(WeaponType, uint16_t);
-
 void drawHotkeySelector(long& keyData, long& modifier, std::string& description, float selectorWidth);
 std::string makeHotkeyDescription(long keyData, long modifier);
 
@@ -80,5 +80,26 @@ void drawEnumButton(T firstValue, T lastValue, T& currentValue, int id = 0, floa
 
     ImGui::PopID();
 }
+
+template<typename T>
+bool compare(const T& a, const T& b, ComparisonOperator comp)
+{
+    switch (comp) {
+        case ComparisonOperator::Equals:
+            return a == b;
+        case ComparisonOperator::Less:
+            return a < b;
+        case ComparisonOperator::Greater:
+            return a > b;
+        case ComparisonOperator::LessOrEqual:
+            return a <= b;
+        case ComparisonOperator::GreaterOrEqual:
+            return a >= b;
+        case ComparisonOperator::NotEquals:
+            return a != b;
+    }
+    return false;
+}
+
 
 std::string WStringToString(const std::wstring_view str);
