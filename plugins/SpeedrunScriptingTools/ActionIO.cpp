@@ -6,7 +6,7 @@
 namespace {
     ActionPtr makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 30);
+        static_assert((int)ActionType::Count == 31);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -66,6 +66,8 @@ namespace {
                 return std::make_shared<MoveInchwiseAction>();
             case ActionType::GWKey:
                 return std::make_shared<GWKeyAction>();
+            case ActionType::EquipItemBySlot:
+                return std::make_shared<EquipItemBySlotAction>();
             default:
                 return nullptr;
         }
@@ -74,7 +76,7 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 30);
+    static_assert((int)ActionType::Count == 31);
     switch (type) {
         case ActionType::MoveTo:
             return "Position";
@@ -134,6 +136,8 @@ std::string_view toString(ActionType type)
             return "Inchwise";
         case ActionType::GWKey:
             return "Guild Wars Key";
+        case ActionType::EquipItemBySlot:
+            return "Equip item by slot";
         default:
             return "Unknown";
     }
@@ -141,7 +145,7 @@ std::string_view toString(ActionType type)
 
 ActionPtr readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 30);
+    static_assert((int)ActionType::Count == 31);
     int type;
 
     stream >> type;
@@ -204,6 +208,8 @@ ActionPtr readAction(InputStream& stream)
             return std::make_shared<WaitUntilAction>(stream);
         case ActionType::GWKey:
             return std::make_shared<GWKeyAction>(stream);
+        case ActionType::EquipItemBySlot:
+            return std::make_shared<EquipItemBySlotAction>(stream);
         default:
             return nullptr;
     }
@@ -243,7 +249,7 @@ ActionPtr drawActionSelector(float width)
         drawSubMenu("Skill", std::array{ActionType::Cast, ActionType::CastBySlot, ActionType::DropBuff, ActionType::UseHeroSkill});
         drawSubMenu("Interaction", std::array{ActionType::SendDialog, ActionType::GoToTarget, ActionType::AutoAttackTarget});
         drawSubMenu("Targeting", std::array{ActionType::ChangeTarget, ActionType::StoreTarget, ActionType::RestoreTarget, ActionType::ClearTarget});
-        drawSubMenu("Items", std::array{ActionType::EquipItem, ActionType::ChangeWeaponSet, ActionType::UseItem, ActionType::RepopMinipet, ActionType::UnequipItem});
+        drawSubMenu("Items", std::array{ActionType::EquipItem, ActionType::EquipItemBySlot, ActionType::ChangeWeaponSet, ActionType::UseItem, ActionType::RepopMinipet, ActionType::UnequipItem});
         drawSubMenu("Chat", std::array{ActionType::SendChat, ActionType::PingTarget, ActionType::PingHardMode});
         drawSubMenu("Other", std::array{ActionType::Wait, ActionType::WaitUntil, ActionType::Cancel, ActionType::LogOut, ActionType::StopScript, ActionType::GWKey});
         drawActionSelector(ActionType::Conditioned);

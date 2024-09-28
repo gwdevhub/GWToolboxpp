@@ -35,6 +35,7 @@ enum class ActionType : int {
     MoveToTargetPosition,
     MoveInchwise,
     GWKey,
+    EquipItemBySlot,
 
     Count
 };

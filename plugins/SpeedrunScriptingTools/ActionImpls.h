@@ -181,6 +181,21 @@ private:
     bool hasModstruct = false;
 };
 
+class EquipItemBySlotAction : public Action {
+public:
+    EquipItemBySlotAction() = default;
+    EquipItemBySlotAction(InputStream&);
+    ActionType type() const final { return ActionType::EquipItemBySlot; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::ImmediateFinish | ActionBehaviourFlag::CanBeRunInOutpost; }
+
+private:
+    Bag bag = Bag::EquipmentPack;
+    int slot = 1;
+};
+
 class UnequipItemAction : public Action {
 public:
     UnequipItemAction() = default;

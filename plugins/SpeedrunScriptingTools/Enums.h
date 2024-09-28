@@ -18,6 +18,7 @@ enum class WeaponType {Any, None, Bow, Axe, Hammer, Daggers, Scythe, Spear, Swor
 enum class TrueFalse {True, False};
 enum class MoveToBehaviour {SendOnce, RepeatIfIdle, ImmediateFinish};
 enum class ReferenceFrame { Player, Camera };
+enum class Bag {Backpack, BeltPouch, Bag1, Bag2, EquipmentPack};
 
 enum class ActionBehaviourFlag : uint32_t 
 {

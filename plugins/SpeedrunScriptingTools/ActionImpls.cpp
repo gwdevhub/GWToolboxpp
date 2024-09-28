@@ -34,6 +34,31 @@ namespace {
     constexpr float indent = 25.f;
     constexpr double eps = 1e-3;
 
+    GW::Item* FindMatchingItem(Bag _bag_idx, uint8_t slot)
+    {
+        const auto gwcaBag = [&]() -> GW::Constants::Bag
+        {
+            switch (_bag_idx) {
+                case Bag::Backpack:
+                    return GW::Constants::Bag::Backpack;
+                case Bag::BeltPouch:
+                    return GW::Constants::Bag::Belt_Pouch;
+                case Bag::Bag1:
+                    return GW::Constants::Bag::Bag_1;
+                case Bag::Bag2:
+                    return GW::Constants::Bag::Bag_2;
+                case Bag::EquipmentPack:
+                    return GW::Constants::Bag::Equipment_Pack;
+                default:
+                    return GW::Constants::Bag::Backpack;
+            }
+        }();
+        const auto* bag = GW::Items::GetBag(gwcaBag);
+        if (!bag) return nullptr;
+        for (auto item : bag->items)
+            if (item && item->slot == slot) return item;
+        return nullptr;
+    }
     GW::Item* FindMatchingItem(GW::Constants::Bag _bag_idx, uint32_t model_id, std::optional<uint32_t> modstruct = std::nullopt)
     {
         GW::Bag* bag = GW::Items::GetBag(_bag_idx);
@@ -239,6 +264,7 @@ void MoveToAction::drawSettings(){
     ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
     ImGui::SameLine();
     drawEnumButton(MoveToBehaviour::SendOnce, MoveToBehaviour::ImmediateFinish, moveBehaviour, 0, 310.f);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -324,6 +350,7 @@ void MoveToTargetPositionAction::drawSettings()
     }
     ImGui::SameLine();
     drawEnumButton(MoveToBehaviour::SendOnce, MoveToBehaviour::ImmediateFinish, moveBehaviour, 0, 310.f);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -388,6 +415,7 @@ void MoveInchwiseAction::drawSettings()
     ImGui::Text("based on");
     ImGui::SameLine();
     drawEnumButton(ReferenceFrame::Player, ReferenceFrame::Camera, refFrame,0, 180.f);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -514,6 +542,7 @@ void CastBySlotAction::drawSettings()
     ImGui::InputInt("Slot", reinterpret_cast<int*>(&slot), 0);
     if (slot < 1) slot = 1;
     if (slot > 8) slot = 8;
+    ImGui::PopItemWidth();
     
     ImGui::PopID();
 }
@@ -708,8 +737,7 @@ void ChangeTargetAction::initialAction()
 void ChangeTargetAction::drawSettings()
 {
     ImGui::PushID(drawId());
-
-    ImGui::PushItemWidth(120);
+    ImGui::PushItemWidth(120.f);
 
     if (ImGui::TreeNodeEx("Change target to agent with characteristics", ImGuiTreeNodeFlags_FramePadding)) {
         ImGui::BulletText("Allegiance");
@@ -766,6 +794,7 @@ void ChangeTargetAction::drawSettings()
             ImGui::SameLine();
             ImGui::PushItemWidth(200.f);
             ImGui::InputText("###9", &agentName);
+            ImGui::PopItemWidth();
 
             ImGui::PushItemWidth(80.f);
             ImGui::Bullet();
@@ -774,6 +803,7 @@ void ChangeTargetAction::drawSettings()
             ImGui::InputFloat("min###10", &minHp);
             ImGui::SameLine();
             ImGui::InputFloat("max###11", &maxHp);
+            ImGui::PopItemWidth();
 
             ImGui::Bullet();
             ImGui::Checkbox("Prefer enemies that are not hexed", &preferNonHexed);
@@ -807,7 +837,6 @@ void ChangeTargetAction::drawSettings()
             ImGui::InputFloat("min###15", &minSpeed);
             ImGui::SameLine();
             ImGui::InputFloat("max###16", &maxSpeed);
-            ImGui::PopItemWidth();
             if (minSpeed < 0.f) minSpeed = 0.f;
             if (maxSpeed < 0.f) maxSpeed = 0.f;
 
@@ -817,6 +846,7 @@ void ChangeTargetAction::drawSettings()
             ImGui::InputInt("min###17", &minRegen, 0);
             ImGui::SameLine();
             ImGui::InputInt("max###18", &maxRegen, 0);
+            ImGui::PopItemWidth();
             if (minRegen < -10) minRegen = -10;
             if (maxRegen > 10) maxRegen = 10;
 
@@ -837,7 +867,7 @@ void ChangeTargetAction::drawSettings()
 
         ImGui::TreePop();
     }
-
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -873,9 +903,10 @@ void UseItemAction::drawSettings()
     ImGui::Text("Use item:");
     ImGui::SameLine();
     ImGui::Text("%s", itemName.c_str());
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(90.f);
     ImGui::SameLine();
     ImGui::InputInt("model ID", &id, 0);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -909,9 +940,10 @@ void EquipItemAction::drawSettings()
     ImGui::Text("Equip item:");
     ImGui::SameLine();
     ImGui::Text("%s", itemName.c_str());
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(90.f);
     ImGui::SameLine();
     ImGui::InputInt("model ID", &id, 0);
+    ImGui::PopItemWidth();
     ImGui::SameLine();
     if (hasModstruct)
     {
@@ -932,6 +964,47 @@ void EquipItemAction::drawSettings()
             hasModstruct = true;
         }
     }
+
+    ImGui::PopID();
+}
+
+/// ------------- EquipItemBySlotAction -------------
+EquipItemBySlotAction::EquipItemBySlotAction(InputStream& stream)
+{
+    stream >> bag >> slot;
+}
+void EquipItemBySlotAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << bag << slot;    
+}
+void EquipItemBySlotAction::initialAction()
+{
+    Action::initialAction();
+
+    const auto item = FindMatchingItem(bag, (uint8_t)slot);
+    if (!item) return;
+
+    GW::GameThread::Enqueue([item] {
+        SafeEquip(item);
+    });
+}
+void EquipItemBySlotAction::drawSettings()
+{
+    const auto item = FindMatchingItem(bag, (uint8_t)slot);
+    const auto itemName = item ? InstanceInfo::getInstance().getDecodedItemName(item->item_id) : "";
+    ImGui::PushID(drawId());
+
+    ImGui::Text("Equip item by slot:");
+    ImGui::SameLine();
+    ImGui::Text("%s", itemName.c_str());
+    ImGui::SameLine();
+    drawEnumButton(Bag::Backpack, Bag::EquipmentPack, bag, 0, 120.f);
+    ImGui::SameLine();
+    ImGui::PushItemWidth(80.f);
+    ImGui::InputInt("Slot", &slot, 0);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -965,9 +1038,8 @@ void UnequipItemAction::drawSettings()
     ImGui::PushID(drawId());
 
     ImGui::Text("Unequip item in slot");
-    ImGui::PushItemWidth(90);
     ImGui::SameLine();
-    drawEnumButton(EquippedItemSlot::Mainhand, EquippedItemSlot::Hands, slot);
+    drawEnumButton(EquippedItemSlot::Mainhand, EquippedItemSlot::Hands, slot, 0, 90.f);
 
     ImGui::PopID();
 }
@@ -996,9 +1068,10 @@ void SendDialogAction::drawSettings()
     ImGui::PushID(drawId());
 
     ImGui::Text("Send Dialog:");
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(90.f);
     ImGui::SameLine();
     ImGui::InputInt("ID", &id, 0);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -1098,9 +1171,10 @@ void WaitAction::drawSettings()
     ImGui::PushID(drawId());
 
     ImGui::Text("Wait for:");
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(90.f);
     ImGui::SameLine();
     ImGui::InputInt("ms", &waitTime, 0);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -1159,9 +1233,10 @@ void SendChatAction::drawSettings()
     ImGui::Text("Send Chat Message:");
     ImGui::SameLine();
     drawEnumButton(Channel::All, Channel::Log, channel);
-    ImGui::PushItemWidth(300);
+    ImGui::PushItemWidth(300.f);
     ImGui::SameLine();
     ImGui::InputText("", &message);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -1218,9 +1293,10 @@ void DropBuffAction::drawSettings()
     ImGui::PushID(drawId());
 
     ImGui::Text("Drop buff");
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(90.f);
     ImGui::SameLine();
     drawSkillIDSelector(id);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -1598,13 +1674,14 @@ void RepopMinipetAction::drawSettings()
     ImGui::PushID(drawId());
 
     ImGui::Text("(Unpop and) repop minipet as soon as its available:");
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(90.f);
     ImGui::SameLine();
     ImGui::Text("%s", itemName.c_str());
     ImGui::SameLine();
     ImGui::InputInt("Item model ID", &itemModelId, 0);
     ImGui::SameLine();
     drawModelIDSelector(agentModelId, "Agent model ID");
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }
@@ -1709,11 +1786,12 @@ void ChangeWeaponSetAction::drawSettings()
     ImGui::PushID(drawId());
 
     ImGui::Text("Switch to weapon set:");
-    ImGui::PushItemWidth(90);
+    ImGui::PushItemWidth(90.f);
     ImGui::SameLine();
     ImGui::InputInt("Slot", &id, 0);
     if (id < 1) id = 1;
     if (id > 4) id = 4;
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }

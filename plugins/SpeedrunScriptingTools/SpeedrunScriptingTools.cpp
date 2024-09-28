@@ -353,24 +353,6 @@ namespace {
             const auto offset = 127.f + (treeOpen ? 0.f : 21.f) - (groupIndex ? 20.f : 0.f);
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - offset);
 
-            if (groupIndex) 
-            {
-                if (ImGui::Button("R", ImVec2(20, 0))) result = ScriptMoveAction{ScriptMoveAction::Type::Remove, scriptIt - scripts.begin(), *groupIndex};
-            }
-            else 
-            {
-                if (ImGui::Button("G", ImVec2(20, 0))) ImGui::OpenPopup("Group popup");
-                if (ImGui::BeginPopup("Group popup")) {
-                    for (auto groupIt = groups.begin(); groupIt != groups.end(); ++groupIt)
-                    {
-                        if (ImGui::Selectable(groupIt->name.c_str()))
-                            result = ScriptMoveAction{ScriptMoveAction::Type::Move, scriptIt - scripts.begin(), groupIt - groups.begin()};
-                    }
-                    ImGui::EndPopup();
-                }
-                
-            }
-            ImGui::SameLine();
             if (ImGui::Button("X", ImVec2(20, 0))) {
                 scriptToDelete = scriptIt;
             }
@@ -381,6 +363,19 @@ namespace {
             ImGui::SameLine();
             if (ImGui::Button("v", ImVec2(20, 0)) && scriptIt + 1 != scripts.end()) {
                 scriptsToSwap = {scriptIt, scriptIt + 1};
+            }
+            ImGui::SameLine();
+            if (groupIndex) {
+                if (ImGui::Button("R", ImVec2(20, 0))) result = ScriptMoveAction{ScriptMoveAction::Type::Remove, scriptIt - scripts.begin(), *groupIndex};
+            }
+            else {
+                if (ImGui::Button("G", ImVec2(20, 0))) ImGui::OpenPopup("Group popup");
+                if (ImGui::BeginPopup("Group popup")) {
+                    for (auto groupIt = groups.begin(); groupIt != groups.end(); ++groupIt) {
+                        if (ImGui::Selectable(groupIt->name.c_str())) result = ScriptMoveAction{ScriptMoveAction::Type::Move, scriptIt - scripts.begin(), groupIt - groups.begin()};
+                    }
+                    ImGui::EndPopup();
+                }
             }
 
             if (treeOpen) {
@@ -435,6 +430,7 @@ namespace {
                 ImGui::SameLine();
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 50);
                 ImGui::InputText("Name", &scriptIt->name);
+                ImGui::PopItemWidth();
                 ImGui::PopID();
 
                 ImGui::TreePop();
@@ -559,7 +555,6 @@ void SpeedrunScriptingTools::DrawSettings()
     }
 
     // Add script
-    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 3);
     if (ImGui::Button("Add script", ImVec2(ImGui::GetContentRegionAvail().x / 3, 0))) {
         m_scripts.push_back({});
     }
