@@ -69,3 +69,5 @@ private:
     int m_drawId = 0;
     bool m_hasBeenStarted{false};
 };
+
+using ActionPtr = std::shared_ptr<Action>;

@@ -6,5 +6,5 @@
 
 #include <memory>
 
-std::shared_ptr<Action> readV8Action(InputStream&);
-std::shared_ptr<Condition> readV8Condition(InputStream&);
+ActionPtr readV8Action(InputStream&);
+ConditionPtr readV8Condition(InputStream&);

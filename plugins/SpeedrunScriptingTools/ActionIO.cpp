@@ -4,7 +4,7 @@
 #include <imgui.h>
 
 namespace {
-    std::shared_ptr<Action> makeAction(ActionType type)
+    ActionPtr makeAction(ActionType type)
     {
         static_assert((int)ActionType::Count == 30);
         switch (type) {
@@ -139,7 +139,7 @@ std::string_view toString(ActionType type)
     }
 }
 
-std::shared_ptr<Action> readAction(InputStream& stream)
+ActionPtr readAction(InputStream& stream)
 {
     static_assert((int)ActionType::Count == 30);
     int type;
@@ -209,9 +209,9 @@ std::shared_ptr<Action> readAction(InputStream& stream)
     }
 }
 
-std::shared_ptr<Action> drawActionSelector(float width)
+ActionPtr drawActionSelector(float width)
 {
-    std::shared_ptr<Action> result = nullptr;
+    ActionPtr result = nullptr;
 
     const auto drawActionSelector = [&result](ActionType type) 
     {

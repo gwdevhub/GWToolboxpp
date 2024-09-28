@@ -72,3 +72,5 @@ protected:
 private:
     int m_drawId = 0;
 };
+
+using ConditionPtr = std::shared_ptr<Condition>;

@@ -3,8 +3,8 @@
 #include <Action.h>
 #include <memory>
 
-std::shared_ptr<Action> readV8Action(InputStream& stream);
-std::shared_ptr<Action> readAction(InputStream& stream);
+ActionPtr readV8Action(InputStream& stream);
+ActionPtr readAction(InputStream& stream);
 
-std::shared_ptr<Action> drawActionSelector(float width);
+ActionPtr drawActionSelector(float width);
 std::string_view toString(ActionType type);

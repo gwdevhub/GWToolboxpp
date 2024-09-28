@@ -22,7 +22,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::shared_ptr<Condition> cond = nullptr;
+    ConditionPtr cond = nullptr;
 };
 
 class DisjunctionCondition : public Condition {
@@ -35,7 +35,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::vector<std::shared_ptr<Condition>> conditions{};
+    std::vector<ConditionPtr> conditions{};
 };
 
 class ConjunctionCondition : public Condition {
@@ -48,7 +48,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::vector<std::shared_ptr<Condition>> conditions{};
+    std::vector<ConditionPtr> conditions{};
 };
 
 class IsInMapCondition : public Condition {
@@ -568,7 +568,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::shared_ptr<Condition> cond = nullptr;
+    ConditionPtr cond = nullptr;
     mutable int triggeredLastInInstanceId = 0;
 };
 
@@ -582,7 +582,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::shared_ptr<Condition> cond = nullptr;
+    ConditionPtr cond = nullptr;
     mutable int conditionLastTrueInInstanceId = 0;
     mutable bool currentState = true;
 };
@@ -597,7 +597,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::shared_ptr<Condition> cond = nullptr;
+    ConditionPtr cond = nullptr;
     mutable int conditionLastTrueInInstanceId = 0;
     mutable bool currentState = false;
 };
@@ -613,8 +613,8 @@ public:
 
 private:
     TrueFalse defaultState = TrueFalse::False;
-    std::shared_ptr<Condition> toggleOnCond = nullptr;
-    std::shared_ptr<Condition> toggleOffCond = nullptr;
+    ConditionPtr toggleOnCond = nullptr;
+    ConditionPtr toggleOffCond = nullptr;
     mutable int lastResetInInstanceId = 0;
     mutable bool currentState = false;
 };
