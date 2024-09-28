@@ -5,7 +5,7 @@
 
 namespace
 {
-std::shared_ptr<Condition> makeCondition(ConditionType type)
+ConditionPtr makeCondition(ConditionType type)
 {
     static_assert((int)ConditionType::Count == 46);
     switch (type) {
@@ -218,7 +218,7 @@ std::string_view toString(ConditionType type)
 }
 } // namespace
 
-std::shared_ptr<Condition> readCondition(InputStream& stream)
+ConditionPtr readCondition(InputStream& stream)
 {
 static_assert((int)ConditionType::Count == 46);
 int type;
@@ -327,9 +327,9 @@ switch (static_cast<ConditionType>(type))
 }
 }
 
-std::shared_ptr<Condition> drawConditionSelector(float width)
+ConditionPtr drawConditionSelector(float width)
 {
-    std::shared_ptr<Condition> result = nullptr;
+    ConditionPtr result = nullptr;
 
     const auto drawConditionSelector = [&result](ConditionType type)
     {

@@ -295,11 +295,11 @@ public:
     ActionBehaviourFlags behaviour() const final;
 
 private:
-    std::shared_ptr<Condition> cond = nullptr;
-    std::vector<std::shared_ptr<Action>> actionsIf = {};
-    std::vector<std::shared_ptr<Action>> actionsElse = {};
-    std::vector<std::pair<std::shared_ptr<Condition>, std::vector<std::shared_ptr<Action>>>> actionsElseIf = {};
-    mutable std::vector<std::shared_ptr<Action>> currentlyExecutedActions = {};
+    ConditionPtr cond = nullptr;
+    std::vector<ActionPtr> actionsIf = {};
+    std::vector<ActionPtr> actionsElse = {};
+    std::vector<std::pair<ConditionPtr, std::vector<ActionPtr>>> actionsElseIf = {};
+    mutable std::vector<ActionPtr> currentlyExecutedActions = {};
 };
 
 class RepopMinipetAction : public Action {
@@ -454,7 +454,7 @@ public:
     ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
-    std::shared_ptr<Condition> condition = nullptr;
+    ConditionPtr condition = nullptr;
 };
 
 class GWKeyAction : public Action {

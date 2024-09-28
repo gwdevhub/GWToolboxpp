@@ -49,7 +49,7 @@ namespace v8
 
             return stream.str();
         }
-        std::vector<std::shared_ptr<Condition>> conditions;
+        std::vector<ConditionPtr> conditions;
     };
     struct PlayerHasSkillCondition 
     {
@@ -231,9 +231,9 @@ namespace v8
             return stream.str();
         }
 
-        std::shared_ptr<Condition> cond = nullptr;
-        std::vector<std::shared_ptr<Action>> actionsIf = {};
-        std::vector<std::shared_ptr<Action>> actionsElse = {};
+        ConditionPtr cond = nullptr;
+        std::vector<ActionPtr> actionsIf = {};
+        std::vector<ActionPtr> actionsElse = {};
     };
     struct EquipItemAction {
         EquipItemAction(InputStream& stream)
@@ -250,7 +250,7 @@ namespace v8
     };
 }
 
-std::shared_ptr<Condition> readV8Condition(InputStream& stream) 
+ConditionPtr readV8Condition(InputStream& stream) 
 {
     int type;
     stream >> type;
@@ -336,7 +336,7 @@ std::shared_ptr<Condition> readV8Condition(InputStream& stream)
     }
 }
 
-std::shared_ptr<Action> readV8Action(InputStream& stream)
+ActionPtr readV8Action(InputStream& stream)
 {
     int type;
     stream >> type;

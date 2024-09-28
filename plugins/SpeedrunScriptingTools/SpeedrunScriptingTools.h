@@ -12,8 +12,8 @@ struct Hotkey {
 };
 
 struct Script {
-    std::vector<std::shared_ptr<Condition>> conditions;
-    std::vector<std::shared_ptr<Action>> actions;
+    std::vector<ConditionPtr> conditions;
+    std::vector<ActionPtr> actions;
     std::string name = "New script";
     Trigger trigger = Trigger::None;
     bool enabled = true;
@@ -24,6 +24,13 @@ struct Script {
     Hotkey enabledToggleHotkey{};
     Hotkey triggerHotkey{};
     std::string triggerMessage{};
+};
+
+struct Group 
+{
+    std::vector<ConditionPtr> conditions;
+    std::vector<Script> scripts;
+    std::string name = "New group";
 };
 
 class SpeedrunScriptingTools : public ToolboxPlugin {
@@ -47,6 +54,7 @@ public:
 private:
     void clear();
 
+    std::vector<Group> m_groups;
     std::vector<Script> m_scripts;
     std::optional<Script> m_currentScript = std::nullopt;
     bool runInOutposts = false;

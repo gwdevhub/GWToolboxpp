@@ -44,8 +44,8 @@ namespace {
         return type == ConditionType::OnlyTriggerOncePerInstance || type == ConditionType::Once || type == ConditionType::Throttle;
     }
 
-    bool canAddCondition(const Script& script) {
-        return !std::ranges::any_of(script.conditions, [](const auto& cond) {
+    bool canAddCondition(const std::vector<ConditionPtr>& conditions) {
+        return !std::ranges::any_of(conditions, [](const auto& cond) {
             return mustComeLast(cond->type());
         });
     }
@@ -85,57 +85,72 @@ namespace {
         return stream.str();
     }
 
-    std::optional<Script> deserialize(InputStream& stream, int version)
+    std::string serialize(const Group& group)
     {
-        std::optional<Script> result;
+        OutputStream stream;
+
+        stream << 'G';
+        writeStringWithSpaces(stream, group.name);
+
+        stream.writeSeparator();
+
+        for (const auto& condition : group.conditions) {
+            condition->serialize(stream);
+            stream.writeSeparator();
+        }
+
+        for (const auto& script : group.scripts) 
+        {
+            stream << serialize(script);
+            stream.writeSeparator();
+        }
+
+        return stream.str();
+    }
+
+    std::optional<Script> deserializeScript(InputStream& stream, int version)
+    {
+        Script result;
+
+        result.name = readStringWithSpaces(stream);
+        stream >> result.trigger;
+        stream >> result.enabled;
+        stream >> result.triggerHotkey.keyData;
+        stream >> result.triggerHotkey.modifier;
+        stream >> result.enabledToggleHotkey.keyData;
+        stream >> result.enabledToggleHotkey.modifier;
+        stream >> result.showMessageWhenTriggered;
+        stream >> result.showMessageWhenToggled;
+        result.triggerMessage = readStringWithSpaces(stream);
+        stream.proceedPastSeparator();
 
         do {
-            if (result.has_value() && stream.peek() == 'S') return result;
-            std::string token = "";
-            stream >> token;
-            if (token.length() != 1) return result;
-            switch (token[0]) {
-                case 'S':
-                    if (result.has_value()) return result;
-                    result = Script{};
-                    result->name = readStringWithSpaces(stream);
-                    stream >> result->trigger;
-                    stream >> result->enabled;
-                    stream >> result->triggerHotkey.keyData;
-                    stream >> result->triggerHotkey.modifier;
-                    stream >> result->enabledToggleHotkey.keyData;
-                    stream >> result->enabledToggleHotkey.modifier;
-                    stream >> result->showMessageWhenTriggered;
-                    stream >> result->showMessageWhenToggled;
-                    result->triggerMessage = readStringWithSpaces(stream);
-                    stream.proceedPastSeparator();
-                    break;
+            switch (stream.peek()) {
                 case 'A':
-                    if (!result) return std::nullopt;
-
+                    stream.get();
                     if (version == 8) 
                     {
                         if (auto newAction = readV8Action(stream)) 
-                            result->actions.push_back(std::move(newAction));
+                            result.actions.push_back(std::move(newAction));
                     }
                     else 
                     {
                         if (auto newAction = readAction(stream)) 
-                            result->actions.push_back(std::move(newAction));
+                            result.actions.push_back(std::move(newAction));
                     }
                     stream.proceedPastSeparator();
                     break;
                 case 'C':
-                    if (!result) return std::nullopt;
+                    stream.get();
                     if (version == 8) 
                     {
                         if (auto newCondition = readV8Condition(stream)) 
-                            result->conditions.push_back(std::move(newCondition));
+                            result.conditions.push_back(std::move(newCondition));
                     }
                     else 
                     {
                         if (auto newCondition = readCondition(stream)) 
-                            result->conditions.push_back(std::move(newCondition));
+                            result.conditions.push_back(std::move(newCondition));
                     }
                     stream.proceedPastSeparator();
                     break;
@@ -146,8 +161,44 @@ namespace {
 
         return result;
     }
+    std::optional<Group> deserializeGroup(InputStream& stream, int version)
+    {
+        Group result;
+        std::optional<Script> nextScript;
 
-    std::string makeScriptHeaderName(const Script& script, int id)
+        result.name = readStringWithSpaces(stream);
+        stream.proceedPastSeparator();         
+
+        do {
+            switch (stream.peek()) {
+                case 'C':
+                    stream.get();
+                    if (version == 8) 
+                    {
+                        if (auto newCondition = readV8Condition(stream)) result.conditions.push_back(std::move(newCondition));
+                    }
+                    else 
+                    {
+                        if (auto newCondition = readCondition(stream)) result.conditions.push_back(std::move(newCondition));
+                    }
+                    stream.proceedPastSeparator();
+                    break;
+                case 'S':
+                    stream.get();
+                    nextScript = deserializeScript(stream, version);
+                    if (nextScript)
+                        result.scripts.push_back(*nextScript);
+                    stream.proceedPastSeparator();
+                    break;
+                default:
+                    return result;
+            }
+        } while (stream);
+
+        return result;
+    }
+
+    std::string makeScriptHeaderName(const Script& script)
     {
         std::string result = script.name + " [";
         if (!script.enabled) 
@@ -182,7 +233,7 @@ namespace {
         }
 
 
-        result += "###" + std::to_string(id);
+        result += "###0";
         return result;
     }
 
@@ -192,6 +243,211 @@ namespace {
         {
             return !action || action->behaviour().test(ActionBehaviourFlag::CanBeRunInOutpost);
         });
+    }
+
+    void drawConditionSetSelector(std::vector<ConditionPtr>& conditions) {
+        using ConditionIt = decltype(conditions.begin());
+        std::optional<ConditionIt> conditionToDelete = std::nullopt;
+        std::optional<std::pair<ConditionIt, ConditionIt>> conditionsToSwap = std::nullopt;
+        for (auto it = conditions.begin(); it < conditions.end(); ++it) {
+            ImGui::PushID(it - conditions.begin() + 1);
+            if (ImGui::Button("X", ImVec2(20, 0))) {
+                conditionToDelete = it;
+            }
+            if (!mustComeLast(it->get()->type())) {
+                ImGui::SameLine();
+                if (ImGui::Button("^", ImVec2(20, 0))) {
+                    if (it != conditions.begin()) conditionsToSwap = {it - 1, it};
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("v", ImVec2(20, 0))) {
+                    if (it + 1 != conditions.end() && !mustComeLast((it + 1)->get()->type())) conditionsToSwap = {it, it + 1};
+                }
+            }
+            ImGui::SameLine();
+            (*it)->drawSettings();
+            ImGui::PopID();
+        }
+        if (conditionToDelete.has_value()) conditions.erase(conditionToDelete.value());
+        if (conditionsToSwap.has_value()) std::swap(*conditionsToSwap->first, *conditionsToSwap->second);
+        // Add condition
+        if (canAddCondition(conditions)) {
+            if (auto newCondition = drawConditionSelector(ImGui::GetContentRegionAvail().x)) {
+                conditions.push_back(std::move(newCondition));
+            }
+        }
+    }
+    void drawActionSequenceSelector(std::vector<ActionPtr>& actions) {
+        using ActionIt = decltype(actions.begin());
+        std::optional<ActionIt> actionToDelete = std::nullopt;
+        std::optional<std::pair<ActionIt, ActionIt>> actionsToSwap = std::nullopt;
+        for (auto it = actions.begin(); it < actions.end(); ++it) {
+            ImGui::PushID(it - actions.begin());
+            if (ImGui::Button("X", ImVec2(20, 0))) {
+                actionToDelete = it;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("^", ImVec2(20, 0))) {
+                if (it != actions.begin()) actionsToSwap = {it - 1, it};
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("v", ImVec2(20, 0))) {
+                if (it + 1 != actions.end()) actionsToSwap = {it, it + 1};
+            }
+            ImGui::SameLine();
+            (*it)->drawSettings();
+            ImGui::PopID();
+        }
+        if (actionToDelete.has_value()) actions.erase(actionToDelete.value());
+        if (actionsToSwap.has_value()) std::swap(*actionsToSwap->first, *actionsToSwap->second);
+        // Add action
+        if (auto newAction = drawActionSelector(ImGui::GetContentRegionAvail().x)) {
+            actions.push_back(std::move(newAction));
+        }
+    }
+
+    void drawScriptSetSelector(std::vector<Script>& scripts) {
+        using ScriptIt = decltype(scripts.begin());
+        std::optional<ScriptIt> scriptToDelete = std::nullopt;
+        std::optional<std::pair<ScriptIt, ScriptIt>> scriptsToSwap = std::nullopt;
+
+        for (auto scriptIt = scripts.begin(); scriptIt < scripts.end(); ++scriptIt) {
+            ImGui::PushID(scriptIt - scripts.begin());
+            const auto treeHeader = makeScriptHeaderName(*scriptIt);
+            const auto treeOpen = ImGui::TreeNodeEx(treeHeader.c_str(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x - (treeOpen ? 127.f : 148.f));
+            if (ImGui::Button("X", ImVec2(20, 0))) {
+                scriptToDelete = scriptIt;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("^", ImVec2(20, 0)) && scriptIt != scripts.begin()) {
+                scriptsToSwap = {scriptIt - 1, scriptIt};
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("v", ImVec2(20, 0)) && scriptIt + 1 != scripts.end()) {
+                scriptsToSwap = {scriptIt, scriptIt + 1};
+            }
+
+            if (treeOpen) {
+                ImGui::PushID(0);
+                drawConditionSetSelector(scriptIt->conditions);
+                ImGui::PopID();
+                ImGui::Separator();
+                ImGui::PushID(1);
+                drawActionSequenceSelector(scriptIt->actions);
+                ImGui::PopID();
+
+                ImGui::PushID(2);
+                // Script settings
+                ImGui::Separator();
+                {
+                    ImGui::Checkbox("Enabled", &scriptIt->enabled);
+                    ImGui::SameLine();
+
+                    auto& keyData = scriptIt->enabledToggleHotkey.keyData;
+                    auto& keyMod = scriptIt->enabledToggleHotkey.modifier;
+                    auto description = keyData ? makeHotkeyDescription(keyData, keyMod) : "Set enable toggle";
+                    drawHotkeySelector(keyData, keyMod, description, 80.f);
+                    if (keyData) {
+                        ImGui::SameLine();
+                        ImGui::Text("Toggle");
+                        ImGui::SameLine();
+                        if (ImGui::Button("X", ImVec2(20.f, 0))) {
+                            keyData = 0;
+                            keyMod = 0;
+                            scriptIt->showMessageWhenToggled = false;
+                        }
+                        ImGui::SameLine();
+                        ImGui::Checkbox("Log toggle", &scriptIt->showMessageWhenToggled);
+                    }
+                    ImGui::SameLine();
+
+                    if (ImGui::Button("Copy script", ImVec2(100, 0))) {
+                        if (const auto encoded = encodeString(std::to_string(currentVersion) + " " + serialize(*scriptIt))) {
+                            logMessage("Copy script " + scriptIt->name + " to clipboard");
+                            ImGui::SetClipboardText(encoded->c_str());
+                        }
+                    }
+
+                    ImGui::SameLine();
+                    drawTriggerSelector(scriptIt->trigger, 100.f, scriptIt->triggerHotkey.keyData, scriptIt->triggerHotkey.modifier, scriptIt->triggerMessage);
+
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Log trigger", &scriptIt->showMessageWhenTriggered);
+
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 50);
+                    ImGui::InputText("Name", &scriptIt->name);
+                }
+                ImGui::PopID();
+
+                ImGui::TreePop();
+            }
+            ImGui::PopID();
+        }
+        if (scriptToDelete.has_value()) scripts.erase(scriptToDelete.value());
+        if (scriptsToSwap.has_value()) std::swap(*scriptsToSwap->first, *scriptsToSwap->second);
+    }
+
+    void drawGroups(std::vector<Group>& groups) {
+        using GroupIt = decltype(groups.begin());
+        std::optional<GroupIt> groupToDelete = std::nullopt;
+        std::optional<std::pair<GroupIt, GroupIt>> groupsToSwap = std::nullopt;
+
+        for (auto groupIt = groups.begin(); groupIt < groups.end(); ++groupIt) {
+            ImGui::PushID(groupIt - groups.begin());
+            ImGui::PushStyleColor(ImGuiCol_Header, {100.f/255, 100.f/255, 100.f/255, 0.5});
+
+            const auto groupHeader = groupIt->name + "###0";
+            const auto treeOpen = ImGui::TreeNodeEx(groupHeader.c_str(), ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x - (treeOpen ? 127.f : 148.f));
+            if (ImGui::Button("X", ImVec2(20, 0))) {
+                groupToDelete = groupIt;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("^", ImVec2(20, 0)) && groupIt != groups.begin()) {
+                groupsToSwap = {groupIt - 1, groupIt};
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("v", ImVec2(20, 0)) && groupIt + 1 != groups.end()) {
+                groupsToSwap = {groupIt, groupIt + 1};
+            }
+
+            if (treeOpen) {
+                ImGui::PushID(0);
+                drawConditionSetSelector(groupIt->conditions);
+                ImGui::PopID();
+                if (groupIt->scripts.size() > 0) ImGui::Separator();
+                ImGui::PushID(1);
+                drawScriptSetSelector(groupIt->scripts);
+                ImGui::PopID();
+
+                // Group settings
+                ImGui::Separator();
+                if (ImGui::Button("Add script to group", ImVec2(150, 0))) {
+                    groupIt->scripts.push_back({});
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Copy group", ImVec2(150, 0))) 
+                {
+                    if (const auto encoded = encodeString(std::to_string(currentVersion) + " " + serialize(*groupIt))) {
+                        logMessage("Copy group " + groupIt->name + " to clipboard");
+                        ImGui::SetClipboardText(encoded->c_str());
+                    }
+                }
+                ImGui::SameLine();
+                ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 85);
+                ImGui::InputText("Group name", &groupIt->name);
+                ImGui::PopItemWidth();
+
+                ImGui::TreePop();
+            }
+
+            ImGui::PopStyleColor();
+            ImGui::PopID();
+        }
+        if (groupToDelete.has_value()) groups.erase(groupToDelete.value());
+        if (groupsToSwap.has_value()) std::swap(*groupsToSwap->first, *groupsToSwap->second);
     }
 }
 
@@ -212,186 +468,38 @@ void SpeedrunScriptingTools::DrawSettings()
 {
     ToolboxPlugin::DrawSettings();
 
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Agents::GetControlledCharacter()) 
-    {
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Agents::GetControlledCharacter()) {
         return;
     }
 
-    using ScriptIt = decltype(m_scripts.begin());
-    std::optional<ScriptIt> scriptToDelete = std::nullopt;
-    std::optional<std::pair<ScriptIt, ScriptIt>> scriptsToSwap = std::nullopt;
+    ImGui::PushID(0);
+    drawGroups(m_groups);
+    ImGui::PopID();
 
-    for (auto scriptIt = m_scripts.begin(); scriptIt < m_scripts.end(); ++scriptIt) {
-        ImGui::PushID(scriptIt - m_scripts.begin());
-        auto drawId = 0;
-
-        const auto treeHeader = makeScriptHeaderName(*scriptIt, scriptIt - m_scripts.begin());
-        const auto treeOpen = ImGui::TreeNodeEx(treeHeader.c_str(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - (treeOpen ? 127.f : 148.f));
-        if (ImGui::Button("X", ImVec2(20, 0))) 
-        {
-            scriptToDelete = scriptIt;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("^", ImVec2(20, 0)) && scriptIt != m_scripts.begin())
-        {
-            scriptsToSwap = {scriptIt - 1, scriptIt};
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("v", ImVec2(20, 0)) && scriptIt + 1 != m_scripts.end()) 
-        {
-            scriptsToSwap = {scriptIt, scriptIt+1};
-        }
-
-        if (treeOpen) {
-            // Conditions
-            {
-                using ConditionIt = decltype(scriptIt->conditions.begin());
-                std::optional<ConditionIt> conditionToDelete = std::nullopt;
-                std::optional<std::pair<ConditionIt, ConditionIt>> conditionsToSwap = std::nullopt;
-                for (auto it = scriptIt->conditions.begin(); it < scriptIt->conditions.end(); ++it) 
-                {
-                    ImGui::PushID(drawId++);
-                    if (ImGui::Button("X", ImVec2(20, 0))) 
-                    {
-                        conditionToDelete = it;
-                    }
-                    if (!mustComeLast(it->get()->type())) 
-                    {
-                        ImGui::SameLine();
-                        if (ImGui::Button("^", ImVec2(20, 0))) 
-                        {
-                            if (it != scriptIt->conditions.begin()) conditionsToSwap = {it - 1, it};
-                        }
-                        ImGui::SameLine();
-                        if (ImGui::Button("v", ImVec2(20, 0))) 
-                        {
-                            if (it + 1 != scriptIt->conditions.end() && !mustComeLast((it + 1)->get()->type())) 
-                                conditionsToSwap = {it, it + 1};
-                        }
-                    }
-                    ImGui::SameLine();
-                    (*it)->drawSettings();
-                    ImGui::PopID();
-                }
-                if (conditionToDelete.has_value()) scriptIt->conditions.erase(conditionToDelete.value());
-                if (conditionsToSwap.has_value()) std::swap(*conditionsToSwap->first, *conditionsToSwap->second);
-                // Add condition
-                if (canAddCondition(*scriptIt)) 
-                {
-                    if (auto newCondition = drawConditionSelector(ImGui::GetContentRegionAvail().x)) 
-                    {
-                        scriptIt->conditions.push_back(std::move(newCondition));
-                    }
-                }
-            }
-
-            // Actions
-            ImGui::Separator();
-            {
-                using ActionIt = decltype(scriptIt->actions.begin());
-                std::optional<ActionIt> actionToDelete = std::nullopt;
-                std::optional<std::pair<ActionIt, ActionIt>> actionsToSwap = std::nullopt;
-                for (auto it = scriptIt->actions.begin(); it < scriptIt->actions.end(); ++it) 
-                {
-                    ImGui::PushID(drawId++);
-
-                    if (ImGui::Button("X", ImVec2(20, 0))) 
-                    {
-                        actionToDelete = it;
-                    }
-                    ImGui::SameLine();
-                    if (ImGui::Button("^", ImVec2(20, 0))) 
-                    {
-                        if (it != scriptIt->actions.begin()) actionsToSwap = {it - 1, it};
-                    }
-                    ImGui::SameLine();
-                    if (ImGui::Button("v", ImVec2(20, 0))) 
-                    {
-                        if (it + 1 != scriptIt->actions.end()) actionsToSwap = {it, it + 1};
-                    }
-                    ImGui::SameLine();
-                    (*it)->drawSettings();
-
-                    ImGui::PopID();
-                }
-                if (actionToDelete.has_value()) scriptIt->actions.erase(actionToDelete.value());
-                if (actionsToSwap.has_value()) std::swap(*actionsToSwap->first, *actionsToSwap->second);
-                // Add action
-                if (auto newAction = drawActionSelector(ImGui::GetContentRegionAvail().x)) 
-                {
-                    scriptIt->actions.push_back(std::move(newAction));
-                }
-            }
-
-            // Script settings
-            ImGui::Separator();
-            {
-                ImGui::PushID(drawId++);
-
-                ImGui::Checkbox("Enabled", &scriptIt->enabled);
-                ImGui::SameLine();
-                
-                auto& keyData = scriptIt->enabledToggleHotkey.keyData;
-                auto& keyMod = scriptIt->enabledToggleHotkey.modifier;
-                auto description = keyData ? makeHotkeyDescription(keyData, keyMod) : "Set enable toggle";
-                drawHotkeySelector(keyData, keyMod, description, 80.f);
-                if (keyData) 
-                {
-                    ImGui::SameLine();
-                    ImGui::Text("Toggle");
-                    ImGui::SameLine();
-                    if (ImGui::Button("X", ImVec2(20.f, 0))) {
-                        keyData = 0;
-                        keyMod = 0;
-                        scriptIt->showMessageWhenToggled = false;
-                    }
-                    ImGui::SameLine();
-                    ImGui::Checkbox("Log toggle", &scriptIt->showMessageWhenToggled);
-                }
-                ImGui::SameLine();
-
-                ImGui::PopID();
-                ImGui::PushID(drawId++);
-
-                if (ImGui::Button("Copy script", ImVec2(100, 0))) 
-                {
-                    if (const auto encoded = encodeString(std::to_string(currentVersion) + " " + serialize(*scriptIt))) 
-                    {
-                        logMessage("Copy script " + scriptIt->name + " to clipboard");
-                        ImGui::SetClipboardText(encoded->c_str());
-                    }
-                }
-
-                ImGui::SameLine();
-                drawTriggerSelector(scriptIt->trigger, 100.f, scriptIt->triggerHotkey.keyData, scriptIt->triggerHotkey.modifier, scriptIt->triggerMessage);
-                
-                ImGui::SameLine();
-                ImGui::Checkbox("Log trigger", &scriptIt->showMessageWhenTriggered);
-
-                ImGui::SameLine();
-                ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 50);
-                ImGui::InputText("Name", &scriptIt->name);
-
-                ImGui::PopID();
-            }
-
-            ImGui::TreePop();
-        }
-        
-        ImGui::PopID();
+    if (m_groups.size() > 0) {
+        ImGui::Dummy(ImVec2(0.0f, 5.0f));
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0.0f, 5.0f));
     }
-    if (scriptToDelete.has_value()) m_scripts.erase(scriptToDelete.value());
-    if (scriptsToSwap.has_value()) std::swap(*scriptsToSwap->first, *scriptsToSwap->second);
 
-    ImGui::Dummy(ImVec2(0.0f, 5.0f));
-    ImGui::Separator();
-    ImGui::Dummy(ImVec2(0.0f, 5.0f));
+    ImGui::PushID(1);
+    drawScriptSetSelector(m_scripts);
+    ImGui::PopID();
+
+    if (m_scripts.size() > 0) {
+        ImGui::Dummy(ImVec2(0.0f, 5.0f));
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0.0f, 5.0f));
+    }
 
     // Add script
-    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 2);
-    if (ImGui::Button("Add script", ImVec2(ImGui::GetContentRegionAvail().x / 2, 0))) {
+    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x / 3);
+    if (ImGui::Button("Add script", ImVec2(ImGui::GetContentRegionAvail().x / 3, 0))) {
         m_scripts.push_back({});
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Add group", ImVec2(ImGui::GetContentRegionAvail().x / 2, 0))) {
+        m_groups.push_back({});
     }
     ImGui::SameLine();
     if (ImGui::Button("Import script from clipboard", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
@@ -400,12 +508,25 @@ void SpeedrunScriptingTools::DrawSettings()
                 InputStream stream{combined.value()};
 
                 int version = 8; // Version 8 and earlier do not write a version into the export string
-                if (stream.peek() != 'S') 
+
+                if (stream.peek() != 'S' && stream.peek() != 'G') 
                 {
                     stream >> version;
                 }
-                if (auto importedScript = deserialize(stream, version)) 
-                    m_scripts.push_back(std::move(importedScript.value()));
+                while (stream && std::isspace(stream.peek()))
+                {
+                    stream.get();
+                }
+                if (stream.peek() == 'S')
+                {
+                    stream.get();
+                    if (auto importedScript = deserializeScript(stream, version)) m_scripts.push_back(std::move(importedScript.value()));
+                }
+                else if (stream.peek() == 'G') 
+                {
+                    stream.get();
+                    if (auto importedGroup = deserializeGroup(stream, version)) m_groups.push_back(std::move(importedGroup.value()));
+                }
             }
         }
     }
@@ -457,19 +578,30 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
     
     if (savedVersion < 8) return; // Prerelease versions
     
-    std::string read = ini.GetValue(Name(), "scripts", "");
-    if (read.empty()) return;
+    if (std::string read = ini.GetValue(Name(), "scripts", ""); !read.empty()) {
+        const auto decoded = decodeString(std::move(read));
+        if (!decoded) return;
+        InputStream stream(decoded.value());
+        while (stream && stream.peek() == 'S') {
+            stream.get();
+            if (auto nextScript = deserializeScript(stream, savedVersion))
+                m_scripts.push_back(std::move(*nextScript));
+            else
+                break;
+        }
+    }
 
-    const auto decoded = decodeString(std::move(read));
-
-    if (!decoded) return;
-    InputStream stream(decoded.value());
-    while (stream) 
-    {
-        if (auto nextScript = deserialize(stream, savedVersion))
-            m_scripts.push_back(std::move(*nextScript));
-        else
-            break;
+    if (std::string read = ini.GetValue(Name(), "groups", ""); !read.empty()) {
+        const auto decoded = decodeString(std::move(read));
+        if (!decoded) return;
+        InputStream stream(decoded.value());
+        while (stream && stream.get() == 'G') {
+            stream.get();
+            if (auto nextGroup = deserializeGroup(stream, savedVersion))
+                m_groups.push_back(std::move(*nextGroup));
+            else
+                break;
+        }
     }
 }
 
@@ -482,17 +614,28 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
     ini.SetLongValue(Name(), "clearScriptsKey", clearScriptsKey.keyData);
     ini.SetLongValue(Name(), "clearScriptsMod", clearScriptsKey.modifier);
 
-    OutputStream stream;
-    for (const auto& script : m_scripts) 
     {
-        stream << serialize(script);
+        OutputStream stream;
+        for (const auto& script : m_scripts) {
+            stream << serialize(script);
+        }
+
+        if (const auto encoded = encodeString(stream.str())) {
+            ini.SetValue(Name(), "scripts", encoded->c_str());   
+        }
     }
-    
-    if (const auto encoded = encodeString(stream.str())) 
     {
-        ini.SetValue(Name(), "scripts", encoded->c_str());
-        PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+        OutputStream stream;
+        for (const auto& group : m_groups) 
+        {
+            stream << serialize(group);
+        }
+        if (const auto encoded = encodeString(stream.str())) 
+        {
+            ini.SetValue(Name(), "groups", encoded->c_str());
+        }
     }
+    PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
 }
 
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
