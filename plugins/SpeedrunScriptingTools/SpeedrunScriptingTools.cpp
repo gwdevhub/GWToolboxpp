@@ -308,16 +308,69 @@ namespace {
         }
     }
 
-    void drawScriptSetSelector(std::vector<Script>& scripts) {
+    struct ScriptMoveAction {
+        enum class Type { Remove, Move };
+
+        Type type;
+        int scriptIndex;
+        int groupIndex;
+    };
+
+    /*
+    
+    if (ImGui::Button((buttonText ? buttonText.value() : toString(currentValue)).data(), ImVec2(width, 0)))
+    {
+        ImGui::OpenPopup("Enum popup");
+    }
+    if (ImGui::BeginPopup("Enum popup"))
+    {
+        for (auto i = (UnderlyingT)firstValue; i <= (UnderlyingT)lastValue; ++i)
+        {
+            if (skipValue && (UnderlyingT)skipValue.value() == i)
+                continue;
+
+            if (ImGui::Selectable(toString((T)i).data()))
+                currentValue = (T)i;
+        }
+        ImGui::EndPopup();
+    }
+    
+    */
+
+    // Groups are passed for the names
+    std::optional<ScriptMoveAction> drawScriptSetSelector(std::vector<Script>& scripts, const std::vector<Group>& groups, std::optional<int> groupIndex) {
         using ScriptIt = decltype(scripts.begin());
         std::optional<ScriptIt> scriptToDelete = std::nullopt;
         std::optional<std::pair<ScriptIt, ScriptIt>> scriptsToSwap = std::nullopt;
+
+        std::optional<ScriptMoveAction> result;
 
         for (auto scriptIt = scripts.begin(); scriptIt < scripts.end(); ++scriptIt) {
             ImGui::PushID(scriptIt - scripts.begin());
             const auto treeHeader = makeScriptHeaderName(*scriptIt);
             const auto treeOpen = ImGui::TreeNodeEx(treeHeader.c_str(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
-            ImGui::SameLine(ImGui::GetContentRegionAvail().x - (treeOpen ? 127.f : 148.f));
+
+            const auto offset = 127.f + (treeOpen ? 0.f : 21.f) - (groupIndex ? 20.f : 0.f);
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x - offset);
+
+            if (groupIndex) 
+            {
+                if (ImGui::Button("R", ImVec2(20, 0))) result = ScriptMoveAction{ScriptMoveAction::Type::Remove, scriptIt - scripts.begin(), *groupIndex};
+            }
+            else 
+            {
+                if (ImGui::Button("G", ImVec2(20, 0))) ImGui::OpenPopup("Group popup");
+                if (ImGui::BeginPopup("Group popup")) {
+                    for (auto groupIt = groups.begin(); groupIt != groups.end(); ++groupIt)
+                    {
+                        if (ImGui::Selectable(groupIt->name.c_str()))
+                            result = ScriptMoveAction{ScriptMoveAction::Type::Move, scriptIt - scripts.begin(), groupIt - groups.begin()};
+                    }
+                    ImGui::EndPopup();
+                }
+                
+            }
+            ImGui::SameLine();
             if (ImGui::Button("X", ImVec2(20, 0))) {
                 scriptToDelete = scriptIt;
             }
@@ -390,12 +443,17 @@ namespace {
         }
         if (scriptToDelete.has_value()) scripts.erase(scriptToDelete.value());
         if (scriptsToSwap.has_value()) std::swap(*scriptsToSwap->first, *scriptsToSwap->second);
+
+        return result;
     }
 
-    void drawGroups(std::vector<Group>& groups) {
+    std::optional<ScriptMoveAction> drawGroups(std::vector<Group>& groups)
+    {
         using GroupIt = decltype(groups.begin());
         std::optional<GroupIt> groupToDelete = std::nullopt;
         std::optional<std::pair<GroupIt, GroupIt>> groupsToSwap = std::nullopt;
+
+        std::optional<ScriptMoveAction> result;
 
         for (auto groupIt = groups.begin(); groupIt < groups.end(); ++groupIt) {
             ImGui::PushID(groupIt - groups.begin());
@@ -422,7 +480,10 @@ namespace {
                 ImGui::PopID();
                 if (groupIt->scripts.size() > 0) ImGui::Separator();
                 ImGui::PushID(1);
-                drawScriptSetSelector(groupIt->scripts);
+                if (const auto action = drawScriptSetSelector(groupIt->scripts, groups, groupIt-groups.begin()))
+                {
+                    result = *action;
+                }
                 ImGui::PopID();
 
                 // Group settings
@@ -451,6 +512,8 @@ namespace {
         }
         if (groupToDelete.has_value()) groups.erase(groupToDelete.value());
         if (groupsToSwap.has_value()) std::swap(*groupsToSwap->first, *groupsToSwap->second);
+
+        return result;
     }
 }
 
@@ -476,7 +539,7 @@ void SpeedrunScriptingTools::DrawSettings()
     }
 
     ImGui::PushID(0);
-    drawGroups(m_groups);
+    const auto groupAction = drawGroups(m_groups);
     ImGui::PopID();
 
     if (m_groups.size() > 0) {
@@ -486,7 +549,7 @@ void SpeedrunScriptingTools::DrawSettings()
     }
 
     ImGui::PushID(1);
-    drawScriptSetSelector(m_scripts);
+    const auto scriptAction = drawScriptSetSelector(m_scripts, m_groups, std::nullopt);
     ImGui::PopID();
 
     if (m_scripts.size() > 0) {
@@ -567,6 +630,24 @@ void SpeedrunScriptingTools::DrawSettings()
     {
         ShellExecute(nullptr, "open", discordInviteLink, nullptr, nullptr, SW_SHOWNORMAL);
     }
+
+    const auto executeScriptMoveAction = [&](std::optional<ScriptMoveAction> action) 
+    {
+        if (!action) return;
+        if (action->type == ScriptMoveAction::Type::Move)
+        {
+            m_groups[action->groupIndex].scripts.push_back(m_scripts[action->scriptIndex]);
+            m_scripts.erase(m_scripts.begin() + action->scriptIndex);
+        }
+        else if (action->type == ScriptMoveAction::Type::Remove)
+        {
+            m_scripts.push_back(m_groups[action->groupIndex].scripts[action->scriptIndex]);
+            m_groups[action->groupIndex].scripts.erase(m_groups[action->groupIndex].scripts.begin() + action->scriptIndex);
+        }
+    };
+
+    executeScriptMoveAction(groupAction);
+    executeScriptMoveAction(scriptAction);
 }
 
 void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
