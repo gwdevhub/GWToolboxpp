@@ -3098,6 +3098,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdReapplyTitle)
         case GW::Constants::MapID::Domain_of_Fear:
         case GW::Constants::MapID::Domain_of_Pain:
         case GW::Constants::MapID::Domain_of_Secrets:
+        case GW::Constants::MapID::The_Ebony_Citadel_of_Mallyx_mission:
         case GW::Constants::MapID::Dzagonur_Bastion:
         case GW::Constants::MapID::Forum_Highlands:
         case GW::Constants::MapID::Gate_of_Desolation:
