@@ -4,6 +4,8 @@
 
 #include "Inject.h"
 
+#include "Settings.h"
+
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 // @Cleanup: @Remark:
@@ -179,7 +181,7 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
         return InjectReply_NoValidProcess;
     }
 
-    if (settings.quiet && inject_processes.size() == 1) {
+    if (inject_processes.size() == 1) {
         *target_process = std::move(inject_processes[0].m_Process);
         return InjectReply_Inject; // Inject if 1 process found
     }
@@ -229,7 +231,6 @@ InjectWindow::InjectWindow()
     : m_hCharacters(nullptr)
     , m_hLaunchButton(nullptr)
     , m_hRestartAsAdmin(nullptr)
-    , m_hSettings(nullptr)
     , m_Selected(-1) {}
 
 InjectWindow::~InjectWindow() {}
@@ -343,33 +344,16 @@ void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         SendMessageW(m_hRestartAsAdmin, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
         Button_SetElevationRequiredState(m_hRestartAsAdmin, TRUE);
     }
-
-    m_hSettings = CreateWindowW(
-        WC_BUTTONW,
-        L"Settings...",
-        WS_VISIBLE | WS_CHILD | WS_TABSTOP,
-        200,
-        65,
-        80,
-        25,
-        hWnd,
-        nullptr,
-        m_hInstance,
-        nullptr);
-    SendMessageW(m_hSettings, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
 }
 
-void InjectWindow::OnCommand(HWND hWnd, const LONG ControlId, LONG NotificationCode)
+void InjectWindow::OnCommand(HWND hwnd, LONG ControlId, LONG NotificateCode)
 {
-    if (hWnd == m_hLaunchButton && ControlId == STN_CLICKED) {
+    if (hwnd == m_hLaunchButton && ControlId == STN_CLICKED) {
         m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
         DestroyWindow(m_hWnd);
     }
-    else if (hWnd == m_hRestartAsAdmin && ControlId == STN_CLICKED) {
+    else if (hwnd == m_hRestartAsAdmin && ControlId == STN_CLICKED) {
         RestartWithSameArgs(true);
-    }
-    else if (hWnd == m_hSettings && ControlId == STN_CLICKED) {
-        m_SettingsWindow.Create();
     }
 }
 
