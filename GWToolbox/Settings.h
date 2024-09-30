@@ -1,14 +1,11 @@
 #pragma once
 
-#include "Window.h"
-
 struct Settings {
     bool help = false;
     bool version = false;
     bool install = false;
     bool uninstall = false;
     bool reinstall = false;
-    bool asadmin = false;
     bool noinstall = false;
     bool localdll = false;
     uint32_t pid;

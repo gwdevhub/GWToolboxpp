@@ -129,10 +129,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         return 0;
     }
 
-    if (settings.asadmin && !IsRunningAsAdmin()) {
-        RestartWithSameArgs(true);
-    }
-
     AsyncRestScopeInit RestInitializer;
 
     Process proc;
