@@ -742,6 +742,16 @@ void SpeedrunScriptingTools::Update(float delta)
                 switch (currentAction.isComplete()) {
                     case ActionStatus::Running:
                         break;
+                    case ActionStatus::CompleteAndEnteringCriticalSection:
+                        currentAction.finalAction();
+                        currentActions.erase(currentActions.begin(), currentActions.begin() + 1);
+                        currentScript.globallyExclusive = true;
+                        break;
+                    case ActionStatus::CompleteAndLeavingCriticalSection:
+                        currentAction.finalAction();
+                        currentActions.erase(currentActions.begin(), currentActions.begin() + 1);
+                        currentScript.globallyExclusive = false;
+                        break;
                     case ActionStatus::Complete:
                         currentAction.finalAction();
                         currentActions.erase(currentActions.begin(), currentActions.begin() + 1);
@@ -759,11 +769,10 @@ void SpeedrunScriptingTools::Update(float delta)
         }
     }
 
-    const auto canRunScript = [&](const Script& script, bool isRunningOtherScript, bool isRunningGloballyExclusiveScript) {
+    const auto canRunScript = [&](const Script& script, bool isRunningOtherScript) {
         if (!script.enabled || (script.conditions.empty() && script.trigger == Trigger::None) || script.actions.empty()) return false;
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !canBeRunInOutPost(script)) return false;
         if (isRunningOtherScript && !script.canLaunchInParallel) return false;
-        if (isRunningGloballyExclusiveScript && script.globallyExclusive) return false;
         return checkConditions(script.conditions);
     };
     const auto addToCurrentScripts = [&](Script& script) {
@@ -778,15 +787,16 @@ void SpeedrunScriptingTools::Update(float delta)
         return s.triggered;
     };
 
+    if (std::ranges::any_of(m_currentScripts, [](const Script& s){ return s.globallyExclusive; })) return;
+
     // Find script to use
     const auto checkScripts = [&](std::vector<Script>& scripts) {
         const auto isRunningAnyScript = m_currentScripts.size() > 0;
-        const auto isRunningGloballyExclusiveScript = std::ranges::any_of(m_currentScripts, [](const Script& s){ return s.globallyExclusive; });
 
         // Check scripts with triggers first, as these are typically more time-sensitive
         for (auto& script : scripts | std::views::filter(hasTrigger) | std::views::filter(isTriggered)) 
         {
-            if (!canRunScript(script, isRunningAnyScript, isRunningGloballyExclusiveScript)) 
+            if (!canRunScript(script, isRunningAnyScript)) 
             {
                 script.triggered = false;
                 continue;
@@ -797,7 +807,7 @@ void SpeedrunScriptingTools::Update(float delta)
         // Run any scripts still waiting for execution
         for (auto& script : scripts | std::views::filter(std::not_fn(hasTrigger)) | std::views::filter(isTriggered)) 
         {
-            if (!canRunScript(script, isRunningAnyScript, isRunningGloballyExclusiveScript)) 
+            if (!canRunScript(script, isRunningAnyScript)) 
             {
                 script.triggered = false;
                 continue;
@@ -809,7 +819,7 @@ void SpeedrunScriptingTools::Update(float delta)
         // Find new "Always on" scripts to run
         for (auto& script : scripts | std::views::filter(std::not_fn(hasTrigger))) 
         {
-            if (canRunScript(script, isRunningAnyScript, isRunningGloballyExclusiveScript)) 
+            if (canRunScript(script, isRunningAnyScript)) 
             {
                 script.triggered = true;
                 if (!hasAddedScript) 

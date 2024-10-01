@@ -424,6 +424,26 @@ public:
     ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
 };
 
+class EnterCriticalSectionAction : public Action {
+public:
+    EnterCriticalSectionAction() = default;
+    EnterCriticalSectionAction(InputStream&) {}
+    ActionType type() const final { return ActionType::EnterCriticalSection; }
+    ActionStatus isComplete() const final { return ActionStatus::CompleteAndEnteringCriticalSection; }
+    void drawSettings() final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
+};
+
+class LeaveCriticalSectionAction : public Action {
+public:
+    LeaveCriticalSectionAction() = default;
+    LeaveCriticalSectionAction(InputStream&) {}
+    ActionType type() const final { return ActionType::LeaveCriticalSection; }
+    ActionStatus isComplete() const final { return ActionStatus::CompleteAndLeavingCriticalSection; }
+    void drawSettings() final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
+};
+
 class LogOutAction : public Action {
 public:
     LogOutAction() = default;

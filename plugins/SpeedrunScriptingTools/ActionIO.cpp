@@ -6,7 +6,7 @@
 namespace {
     ActionPtr makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 31);
+        static_assert((int)ActionType::Count == 33);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -68,6 +68,10 @@ namespace {
                 return std::make_shared<GWKeyAction>();
             case ActionType::EquipItemBySlot:
                 return std::make_shared<EquipItemBySlotAction>();
+            case ActionType::EnterCriticalSection:
+                return std::make_shared<EnterCriticalSectionAction>();
+            case ActionType::LeaveCriticalSection:
+                return std::make_shared<LeaveCriticalSectionAction>();
             default:
                 return nullptr;
         }
@@ -76,7 +80,7 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 31);
+    static_assert((int)ActionType::Count == 33);
     switch (type) {
         case ActionType::MoveTo:
             return "Position";
@@ -138,6 +142,10 @@ std::string_view toString(ActionType type)
             return "Guild Wars Key";
         case ActionType::EquipItemBySlot:
             return "Equip item by slot";
+        case ActionType::EnterCriticalSection:
+            return "Enter critical section";
+        case ActionType::LeaveCriticalSection:
+            return "Leave critical section";
         default:
             return "Unknown";
     }
@@ -145,7 +153,7 @@ std::string_view toString(ActionType type)
 
 ActionPtr readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 31);
+    static_assert((int)ActionType::Count == 33);
     int type;
 
     stream >> type;
@@ -210,6 +218,10 @@ ActionPtr readAction(InputStream& stream)
             return std::make_shared<GWKeyAction>(stream);
         case ActionType::EquipItemBySlot:
             return std::make_shared<EquipItemBySlotAction>(stream);
+        case ActionType::EnterCriticalSection:
+            return std::make_shared<EnterCriticalSectionAction>(stream);
+        case ActionType::LeaveCriticalSection:
+            return std::make_shared<LeaveCriticalSectionAction>(stream);
         default:
             return nullptr;
     }
@@ -251,7 +263,7 @@ ActionPtr drawActionSelector(float width)
         drawSubMenu("Targeting", std::array{ActionType::ChangeTarget, ActionType::StoreTarget, ActionType::RestoreTarget, ActionType::ClearTarget});
         drawSubMenu("Items", std::array{ActionType::EquipItem, ActionType::EquipItemBySlot, ActionType::ChangeWeaponSet, ActionType::UseItem, ActionType::RepopMinipet, ActionType::UnequipItem});
         drawSubMenu("Chat", std::array{ActionType::SendChat, ActionType::PingTarget, ActionType::PingHardMode});
-        drawSubMenu("Other", std::array{ActionType::Wait, ActionType::WaitUntil, ActionType::Cancel, ActionType::LogOut, ActionType::StopScript, ActionType::GWKey});
+        drawSubMenu("Other", std::array{ActionType::Wait, ActionType::WaitUntil, ActionType::Cancel, ActionType::LogOut, ActionType::GWKey, ActionType::StopScript, ActionType::EnterCriticalSection, ActionType::LeaveCriticalSection});
         drawActionSelector(ActionType::Conditioned);
 
         ImGui::EndPopup();
