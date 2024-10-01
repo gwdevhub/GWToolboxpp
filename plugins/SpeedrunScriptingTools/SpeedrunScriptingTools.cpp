@@ -73,6 +73,8 @@ namespace {
         stream << script.showMessageWhenTriggered;
         stream << script.showMessageWhenToggled;
         writeStringWithSpaces(stream, script.triggerMessage);
+        stream << script.globallyExclusive;
+        stream << script.canLaunchInParallel;
 
         stream.writeSeparator();
 
@@ -124,6 +126,8 @@ namespace {
         stream >> result.showMessageWhenTriggered;
         stream >> result.showMessageWhenToggled;
         result.triggerMessage = readStringWithSpaces(stream);
+        stream >> result.globallyExclusive;
+        stream >> result.canLaunchInParallel;
         stream.proceedPastSeparator();
 
         do {
@@ -316,27 +320,6 @@ namespace {
         int groupIndex;
     };
 
-    /*
-    
-    if (ImGui::Button((buttonText ? buttonText.value() : toString(currentValue)).data(), ImVec2(width, 0)))
-    {
-        ImGui::OpenPopup("Enum popup");
-    }
-    if (ImGui::BeginPopup("Enum popup"))
-    {
-        for (auto i = (UnderlyingT)firstValue; i <= (UnderlyingT)lastValue; ++i)
-        {
-            if (skipValue && (UnderlyingT)skipValue.value() == i)
-                continue;
-
-            if (ImGui::Selectable(toString((T)i).data()))
-                currentValue = (T)i;
-        }
-        ImGui::EndPopup();
-    }
-    
-    */
-
     // Groups are passed for the names
     std::optional<ScriptMoveAction> drawScriptSetSelector(std::vector<Script>& scripts, const std::vector<Group>& groups, std::optional<int> groupIndex) {
         using ScriptIt = decltype(scripts.begin());
@@ -431,6 +414,10 @@ namespace {
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 50);
                 ImGui::InputText("Name", &scriptIt->name);
                 ImGui::PopItemWidth();
+
+                ImGui::Checkbox("Globally Exclusive", &scriptIt->globallyExclusive);
+                ImGui::SameLine();
+                ImGui::Checkbox("Can launch in parallel", &scriptIt->canLaunchInParallel);
                 ImGui::PopID();
 
                 ImGui::TreePop();
@@ -515,12 +502,12 @@ namespace {
 
 void SpeedrunScriptingTools::clear() 
 {
-    if (m_currentScript) 
+    for (auto& script : m_currentScripts)
     {
-        for (auto& action : m_currentScript->actions)
+        for (auto& action : script.actions)
             action->finalAction();
     }
-    m_currentScript = std::nullopt;
+    m_currentScripts.clear();
 
     for (auto& script : m_scripts)
         script.triggered = false;
@@ -592,11 +579,12 @@ void SpeedrunScriptingTools::DrawSettings()
         }
     }
     // Debug info
-    ImGui::Text("Current action: %s", (m_currentScript.has_value() && !m_currentScript->actions.empty()) ? toString(m_currentScript->actions.front()->type()).data() : "None");
-    ImGui::SameLine();
     if (ImGui::Button("Clear")) clear();
     ImGui::SameLine();
-    ImGui::Text("Actions in queue: %i", m_currentScript ? m_currentScript->actions.size() : 0u);
+
+    auto scriptActionCounts = std::string{};
+    for (const auto& script : m_currentScripts) scriptActionCounts += std::to_string(script.actions.size()) + ", ";
+    ImGui::Text("Actions in queue: [%s]", scriptActionCounts.c_str());
     ImGui::SameLine();
     ImGui::Text("Clear scripts hotkey:");
     ImGui::SameLine();
@@ -737,44 +725,51 @@ void SpeedrunScriptingTools::Update(float delta)
         return;
     }
 
-    while (m_currentScript && !m_currentScript->actions.empty()) {
-        // Execute current script
-        auto& currentActions = m_currentScript->actions;
-        auto& currentAction = **currentActions.begin();
-        if (currentAction.behaviour().test(ActionBehaviourFlag::ImmediateFinish)) {
-            currentAction.initialAction();
-            currentAction.finalAction();
-            currentActions.erase(currentActions.begin(), currentActions.begin() + 1);
-        }
-        else if (currentAction.hasBeenStarted()) {
-            switch (currentAction.isComplete()) {
-                case ActionStatus::Running:
-                    break;
-                case ActionStatus::Complete:
-                    currentAction.finalAction();
-                    currentActions.erase(currentActions.begin(), currentActions.begin() + 1);
-                    break;
-                default:
-                    currentAction.finalAction();
-                    currentActions.clear();
+    std::erase_if(m_currentScripts, [](const Script& s){return s.actions.empty();});
+    for (auto& currentScript : m_currentScripts) 
+    {
+        while (currentScript.actions.size() > 0) 
+        {
+            // Execute current script
+            auto& currentActions = currentScript.actions;
+            auto& currentAction = **currentActions.begin();
+            if (currentAction.behaviour().test(ActionBehaviourFlag::ImmediateFinish)) {
+                currentAction.initialAction();
+                currentAction.finalAction();
+                currentActions.erase(currentActions.begin(), currentActions.begin() + 1);
             }
-            break;
-        }
-        else {
-            currentAction.initialAction();
-            break;
+            else if (currentAction.hasBeenStarted()) {
+                switch (currentAction.isComplete()) {
+                    case ActionStatus::Running:
+                        break;
+                    case ActionStatus::Complete:
+                        currentAction.finalAction();
+                        currentActions.erase(currentActions.begin(), currentActions.begin() + 1);
+                        break;
+                    default:
+                        currentAction.finalAction();
+                        currentActions.clear();
+                }
+                break;
+            }
+            else {
+                currentAction.initialAction();
+                break;
+            }
         }
     }
 
-    const auto canRunScript = [&](const Script& script) {
+    const auto canRunScript = [&](const Script& script, bool isRunningOtherScript, bool isRunningGloballyExclusiveScript) {
         if (!script.enabled || (script.conditions.empty() && script.trigger == Trigger::None) || script.actions.empty()) return false;
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !canBeRunInOutPost(script)) return false;
+        if (isRunningOtherScript && !script.canLaunchInParallel) return false;
+        if (isRunningGloballyExclusiveScript && script.globallyExclusive) return false;
         return checkConditions(script.conditions);
     };
-    const auto setCurrentScript = [&](Script& script) {
+    const auto addToCurrentScripts = [&](Script& script) {
         if (script.showMessageWhenTriggered) logMessage(std::string{"Run script "} + script.name);
         script.triggered = false;
-        m_currentScript = script;
+        m_currentScripts.push_back(script);
     };
     const auto hasTrigger = [](const Script& s) {
         return s.trigger != Trigger::None;
@@ -785,31 +780,43 @@ void SpeedrunScriptingTools::Update(float delta)
 
     // Find script to use
     const auto checkScripts = [&](std::vector<Script>& scripts) {
-        if (m_currentScript && m_currentScript->actions.size()) return;
+        const auto isRunningAnyScript = m_currentScripts.size() > 0;
+        const auto isRunningGloballyExclusiveScript = std::ranges::any_of(m_currentScripts, [](const Script& s){ return s.globallyExclusive; });
 
         // Check scripts with triggers first, as these are typically more time-sensitive
-        for (auto& script : scripts | std::views::filter(hasTrigger) | std::views::filter(isTriggered)) {
-            if (!canRunScript(script)) {
+        for (auto& script : scripts | std::views::filter(hasTrigger) | std::views::filter(isTriggered)) 
+        {
+            if (!canRunScript(script, isRunningAnyScript, isRunningGloballyExclusiveScript)) 
+            {
                 script.triggered = false;
                 continue;
             }
-            setCurrentScript(script);
+            addToCurrentScripts(script);
             return;
         }
         // Run any scripts still waiting for execution
-        for (auto& script : scripts | std::views::filter(std::not_fn(hasTrigger)) | std::views::filter(isTriggered)) {
-            if (!canRunScript(script)) {
+        for (auto& script : scripts | std::views::filter(std::not_fn(hasTrigger)) | std::views::filter(isTriggered)) 
+        {
+            if (!canRunScript(script, isRunningAnyScript, isRunningGloballyExclusiveScript)) 
+            {
                 script.triggered = false;
                 continue;
             }
-            setCurrentScript(script);
+            addToCurrentScripts(script);
             return;
         }
+        bool hasAddedScript = false; // Do we need this? Check again
         // Find new "Always on" scripts to run
-        for (auto& script : scripts | std::views::filter(std::not_fn(hasTrigger))) {
-            if (canRunScript(script)) {
+        for (auto& script : scripts | std::views::filter(std::not_fn(hasTrigger))) 
+        {
+            if (canRunScript(script, isRunningAnyScript, isRunningGloballyExclusiveScript)) 
+            {
                 script.triggered = true;
-                if (!m_currentScript || m_currentScript->actions.empty()) setCurrentScript(script);
+                if (!hasAddedScript) 
+                {
+                    hasAddedScript = true;
+                    addToCurrentScripts(script);
+                }
             }
         }
     };

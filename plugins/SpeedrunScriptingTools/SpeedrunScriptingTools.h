@@ -21,6 +21,9 @@ struct Script {
     bool showMessageWhenTriggered = false;
     bool showMessageWhenToggled = false;
 
+    bool canLaunchInParallel = false;
+    bool globallyExclusive = true;
+
     Hotkey enabledToggleHotkey{};
     Hotkey triggerHotkey{};
     std::string triggerMessage{};
@@ -57,7 +60,7 @@ private:
 
     std::vector<Group> m_groups;
     std::vector<Script> m_scripts;
-    std::optional<Script> m_currentScript = std::nullopt;
+    std::vector<Script> m_currentScripts;
     bool runInOutposts = false;
     bool alwaysBlockHotkeyKeys = false;
     bool isInLoadingScreen = false;
