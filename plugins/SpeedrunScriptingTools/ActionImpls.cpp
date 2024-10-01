@@ -1861,6 +1861,26 @@ void StopScriptAction::drawSettings()
     ImGui::PopID();
 }
 
+/// ------------- EnterCriticalSectionAction -------------
+void EnterCriticalSectionAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("Allow other scripts to start in parallel");
+
+    ImGui::PopID();
+}
+
+/// ------------- LeaveCriticalSectionAction -------------
+void LeaveCriticalSectionAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("Disallow other scripts to start in parallel");
+
+    ImGui::PopID();
+}
+
 /// ------------- LogOutAction -------------
 void LogOutAction::initialAction()
 {

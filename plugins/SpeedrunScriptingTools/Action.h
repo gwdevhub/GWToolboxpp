@@ -36,6 +36,8 @@ enum class ActionType : int {
     MoveInchwise,
     GWKey,
     EquipItemBySlot,
+    EnterCriticalSection,
+    LeaveCriticalSection,
 
     Count
 };
@@ -43,7 +45,9 @@ enum class ActionType : int {
 enum class ActionStatus {
     Running,
     Complete,
-    Error
+    Error,
+    CompleteAndEnteringCriticalSection,
+    CompleteAndLeavingCriticalSection,
 };
 
 class Action {
