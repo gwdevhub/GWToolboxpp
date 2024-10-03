@@ -113,7 +113,7 @@ private:
 class ChangeTargetAction : public Action 
 {
 public:
-    ChangeTargetAction() = default;
+    ChangeTargetAction();
     ChangeTargetAction(InputStream&);
     ActionType type() const final { return ActionType::ChangeTarget; }
     void initialAction() final;
@@ -128,7 +128,7 @@ private:
     bool rotateThroughTargets = false;
     std::unordered_set<GW::AgentID> recentlyTargetedEnemies;
     
-    std::vector<CharacteristicPtr> characteristics = std::vector<CharacteristicPtr>(1);
+    std::vector<CharacteristicPtr> characteristics{};
 };
 
 class UseItemAction : public Action {

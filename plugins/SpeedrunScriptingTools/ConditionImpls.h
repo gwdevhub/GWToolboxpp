@@ -425,7 +425,7 @@ private:
 
 class PlayerHasCharacteristicsCondition : public Condition {
 public:
-    PlayerHasCharacteristicsCondition() = default;
+    PlayerHasCharacteristicsCondition();
     PlayerHasCharacteristicsCondition(InputStream&);
     ConditionType type() const final { return ConditionType::PlayerHasCharacteristics; }
     bool check() const final;
@@ -433,12 +433,12 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::vector<CharacteristicPtr> characteristics = std::vector<CharacteristicPtr>(1);
+    std::vector<CharacteristicPtr> characteristics{};
 };
 
 class TargetHasCharacteristicsCondition : public Condition {
 public:
-    TargetHasCharacteristicsCondition() = default;
+    TargetHasCharacteristicsCondition();
     TargetHasCharacteristicsCondition(InputStream&);
     ConditionType type() const final { return ConditionType::TargetHasCharacteristics; }
     bool check() const final;
@@ -446,12 +446,12 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::vector<CharacteristicPtr> characteristics = std::vector<CharacteristicPtr>(1);
+    std::vector<CharacteristicPtr> characteristics{};
 };
 
 class AgentWithCharacteristicsCountCondition : public Condition {
 public:
-    AgentWithCharacteristicsCountCondition() = default;
+    AgentWithCharacteristicsCountCondition();
     AgentWithCharacteristicsCountCondition(InputStream&);
     ConditionType type() const final { return ConditionType::AgentWithCharacteristicsCount; }
     bool check() const final;
@@ -459,7 +459,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::vector<CharacteristicPtr> characteristics = std::vector<CharacteristicPtr>(1);
+    std::vector<CharacteristicPtr> characteristics{};
     int count = 1;
     ComparisonOperator comp = ComparisonOperator::GreaterOrEqual;
 };

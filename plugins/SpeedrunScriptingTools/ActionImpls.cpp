@@ -549,16 +549,32 @@ void CastBySlotAction::drawSettings()
 }
 
 /// ------------- ChangeTargetAction -------------
+ChangeTargetAction::ChangeTargetAction()
+{
+    // Adds an empty entry to save a click when creating a new condition
+    characteristics.push_back(nullptr);
+}
 ChangeTargetAction::ChangeTargetAction(InputStream& stream)
 {
     stream >> sorting >> preferNonHexed >> requireSameModelIdAsTarget >> rotateThroughTargets;
 
-    while (stream && stream.peek() == 'X') {
-        stream.get();
-        if (auto characteristic = readCharacteristic(stream))
-            characteristics.push_back(std::move(characteristic));
-        else
+    while (stream) {
+        std::string token;
+        stream >> token;
+        if (token == "X") {
+            if (auto characteristic = readCharacteristic(stream))
+                characteristics.push_back(std::move(characteristic));
+            else
+                break;
+            stream.proceedPastSeparator(3);
+        }
+        else if (token == missingContentToken) {
+            characteristics.push_back(nullptr);
+            stream.proceedPastSeparator(3);
+        }
+        else {
             break;
+        }
     }
 }
 void ChangeTargetAction::serialize(OutputStream& stream) const
@@ -566,8 +582,13 @@ void ChangeTargetAction::serialize(OutputStream& stream) const
     Action::serialize(stream);
 
     stream << sorting << preferNonHexed << requireSameModelIdAsTarget << rotateThroughTargets;
-    for (const auto& c : characteristics)
-        c->serialize(stream);
+
+    for (const auto& c : characteristics) {
+        if (c) c->serialize(stream);
+        else stream << missingContentToken;
+
+        stream.writeSeparator(3);
+    }
 }
 void ChangeTargetAction::initialAction()
 {
