@@ -2,6 +2,7 @@
 #include <Enums.h>
 
 #include <GWCA/GameContainers/GamePos.h>
+#include <GWCA/Constants/Skills.h>
 
 class PositionCharacteristic : public Characteristic 
 {
@@ -197,6 +198,21 @@ public:
 
 private:
     Status status = Status::Alive;
+    IsIsNot comp = IsIsNot::Is;
+};
+
+class SkillCharacteristic : public Characteristic {
+public:
+    SkillCharacteristic() = default;
+    SkillCharacteristic(InputStream&);
+    void serialize(OutputStream&) const final;
+
+    CharacteristicType type() const final { return CharacteristicType::Status; }
+    bool check(const GW::AgentLiving& agent) const final;
+    void drawSettings() final;
+
+private:
+    GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
     IsIsNot comp = IsIsNot::Is;
 };
 
