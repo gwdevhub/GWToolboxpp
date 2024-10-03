@@ -1431,23 +1431,45 @@ void ThrottleCondition::drawSettings()
 }
 
 /// ------------- PlayerHasCharacteristicsCondition -------------
+PlayerHasCharacteristicsCondition::PlayerHasCharacteristicsCondition()
+{
+    // Adds an empty entry to save a click when creating a new condition
+    characteristics.push_back(nullptr);
+}
 PlayerHasCharacteristicsCondition::PlayerHasCharacteristicsCondition(InputStream& stream)
 {
-    while (stream && stream.peek() == 'X') 
+    while (stream) 
     {
-        stream.get();
-        if (auto characteristic = readCharacteristic(stream))
-            characteristics.push_back(std::move(characteristic));
-        else 
+        std::string token;
+        stream >> token;
+        if (token == "X") {
+            if (auto characteristic = readCharacteristic(stream))
+                characteristics.push_back(std::move(characteristic));
+            else
+                break;
+            stream.proceedPastSeparator(3);
+        }
+        else if (token == missingContentToken) 
+        {
+            characteristics.push_back(nullptr);
+            stream.proceedPastSeparator(3);
+        }
+        else {
             break;
+        }
     }
 }
 void PlayerHasCharacteristicsCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    for (const auto& c : characteristics)
-        c->serialize(stream);
+    for (const auto& c : characteristics) 
+    {
+        if (c) c->serialize(stream);
+        else stream << missingContentToken;
+
+        stream.writeSeparator(3);
+    }
 }
 bool PlayerHasCharacteristicsCondition::check() const
 {
@@ -1490,23 +1512,44 @@ void PlayerHasCharacteristicsCondition::drawSettings()
 }
 
 /// ------------- TargetHasCharacteristicsCondition -------------
+TargetHasCharacteristicsCondition::TargetHasCharacteristicsCondition() 
+{
+    // Adds an empty entry to save a click when creating a new condition
+    characteristics.push_back(nullptr);
+}
 TargetHasCharacteristicsCondition::TargetHasCharacteristicsCondition(InputStream& stream)
 {
-    while (stream && stream.peek() == 'X') 
+    while (stream) 
     {
-        stream.get();
-        if (auto characteristic = readCharacteristic(stream)) 
-            characteristics.push_back(std::move(characteristic));
-        else
+        std::string token;
+        stream >> token;
+        if (token == "X") {
+            if (auto characteristic = readCharacteristic(stream))
+                characteristics.push_back(std::move(characteristic));
+            else
+                break;
+            stream.proceedPastSeparator(3);
+        }
+        else if (token == missingContentToken) {
+            characteristics.push_back(nullptr);
+            stream.proceedPastSeparator(3);
+        }
+        else {
             break;
+        }
     }
 }
 void TargetHasCharacteristicsCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    for (const auto& c : characteristics)
-        c->serialize(stream);
+    for (const auto& c : characteristics) 
+    {
+        if (c) c->serialize(stream);
+        else stream << missingContentToken;
+
+        stream.writeSeparator(3);
+    }
 }
 bool TargetHasCharacteristicsCondition::check() const
 {
@@ -1549,16 +1592,36 @@ void TargetHasCharacteristicsCondition::drawSettings()
 }
 
 /// ------------- AgentWithCharacteristicsCountCondition -------------
+AgentWithCharacteristicsCountCondition::AgentWithCharacteristicsCountCondition()
+{
+    // Adds an empty entry to save a click when creating a new condition
+    characteristics.push_back(nullptr);
+}
 AgentWithCharacteristicsCountCondition::AgentWithCharacteristicsCountCondition(InputStream& stream)
 {
     stream >> comp >> count;
-    while (stream && stream.peek() == 'X') 
+
+    while (stream) 
     {
-        stream.get();
-        if (auto characteristic = readCharacteristic(stream)) 
-            characteristics.push_back(std::move(characteristic));
-        else
+        std::string token;
+        stream >> token;
+        if (token == "X") 
+        {
+            if (auto characteristic = readCharacteristic(stream))
+                characteristics.push_back(std::move(characteristic));
+            else
+                break;
+            stream.proceedPastSeparator(3);
+        }
+        else if (token == missingContentToken) 
+        {
+            characteristics.push_back(nullptr);
+            stream.proceedPastSeparator(3);
+        }
+        else 
+        {
             break;
+        }
     }
 }
 void AgentWithCharacteristicsCountCondition::serialize(OutputStream& stream) const
@@ -1566,8 +1629,14 @@ void AgentWithCharacteristicsCountCondition::serialize(OutputStream& stream) con
     Condition::serialize(stream);
 
     stream << comp << count;
+
     for (const auto& c : characteristics)
-        c->serialize(stream);
+    {
+        if (c) c->serialize(stream);
+        else stream << missingContentToken;
+
+        stream.writeSeparator(3);
+    }    
 }
 bool AgentWithCharacteristicsCountCondition::check() const
 {

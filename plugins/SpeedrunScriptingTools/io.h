@@ -28,6 +28,7 @@ public:
     {
         stream >> std::ws;
         if (!isAtSeparator()) stream >> val;
+        stream >> std::ws;
         return *this;
     }
     int peek();

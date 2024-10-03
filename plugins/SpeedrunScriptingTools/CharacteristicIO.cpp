@@ -68,7 +68,7 @@ namespace {
             case CharacteristicType::Speed:
                 return "Speed";
             case CharacteristicType::HPRegen:
-                return "HP Regeneration";
+                return "Regeneration";
             case CharacteristicType::WeaponType:
                 return "Weapon type";
             case CharacteristicType::Model:
@@ -168,7 +168,7 @@ CharacteristicPtr drawCharacteristicSelector(float width)
         drawSubMenu("Position", positionCharacteristics);
         drawSubMenu("Distance", distanceCharacteristics);
         drawSubMenu("Angle", angleCharacteristics);
-        drawSubMenu("HP", hpCharacteristics);
+        drawSubMenu("Health", hpCharacteristics);
         drawSubMenu("Skill", skillCharacteristics);
         drawSubMenu("Properties", propertyCharacteristics);
         drawCharacteristicSelector(CharacteristicType::Status);
