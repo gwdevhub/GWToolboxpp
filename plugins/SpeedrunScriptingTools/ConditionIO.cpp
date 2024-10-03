@@ -277,20 +277,21 @@ ConditionPtr drawConditionSelector(float width)
         ImGui::OpenPopup("Add condition");
     }
 
-    constexpr auto playerConditions = std::array{ConditionType::PlayerHasCharacteristics, ConditionType::PlayerHasBuff,    ConditionType::PlayerHasSkill, ConditionType::RemainingCooldown,
-                                                 ConditionType::PlayerHasEnergy,
-                                                 ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory, ConditionType::PlayerMorale,     ConditionType::CanPopAgent};
-    constexpr auto partyCondtions = std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName};
+    constexpr auto skillConditions = std::array{ConditionType::PlayerHasBuff,    ConditionType::PlayerHasSkill, ConditionType::RemainingCooldown, ConditionType::PlayerHasEnergy, ConditionType::PlayerMorale};
+    constexpr auto itemConditions = std::array{ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory, ConditionType::CanPopAgent};
+    constexpr auto partyConditions = std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName};
     constexpr auto instanceConditions = std::array{ConditionType::IsInMap, ConditionType::InstanceType, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime, ConditionType::FoeCount};
     constexpr auto logicConditions = std::array{ConditionType::Not, ConditionType::Or, ConditionType::And, ConditionType::True, ConditionType::False};
     constexpr auto controlFlowCondition = std::array{ConditionType::OnlyTriggerOncePerInstance, ConditionType::Once, ConditionType::Until, ConditionType::After, ConditionType::Toggle, ConditionType::Throttle};
 
     if (ImGui::BeginPopup("Add condition")) 
     {
-        drawSubMenu("Player", playerConditions);
+        drawConditionSelector(ConditionType::PlayerHasCharacteristics);
         drawConditionSelector(ConditionType::TargetHasCharacteristics);
         drawConditionSelector(ConditionType::AgentWithCharacteristicsCount);
-        drawSubMenu("Party", partyCondtions);
+        drawSubMenu("Skill", skillConditions);
+        drawSubMenu("Item", itemConditions);
+        drawSubMenu("Party", partyConditions);
         drawSubMenu("Instance", instanceConditions);
         drawSubMenu("Logic", logicConditions);
         drawSubMenu("Control flow", controlFlowCondition);

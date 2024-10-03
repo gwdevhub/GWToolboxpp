@@ -1595,14 +1595,30 @@ void AgentWithCharacteristicsCountCondition::drawSettings()
     ImGui::InputInt("", &count, 0);
     ImGui::PopItemWidth();
 
-    int drawId = 0;
+    int rowToDelete = -1;
+    for (int i = 0; i < int(characteristics.size()); ++i) {
+        ImGui::PushID(i);
 
-    for (auto& c : characteristics) {
         ImGui::Bullet();
-        ImGui::PushID(drawId++);
-        c->drawSettings();
+        if (ImGui::Button("X")) {
+            if (characteristics[i])
+                characteristics[i] = nullptr;
+            else
+                rowToDelete = i;
+        }
+
+        ImGui::SameLine();
+        if (characteristics[i])
+            characteristics[i]->drawSettings();
+        else
+            characteristics[i] = drawCharacteristicSelector(120.f);
+
         ImGui::PopID();
     }
+    if (rowToDelete != -1) characteristics.erase(characteristics.begin() + rowToDelete);
+
+    ImGui::Bullet();
+    if (ImGui::Button("+")) characteristics.push_back(nullptr);
 
     ImGui::PopID();
 }

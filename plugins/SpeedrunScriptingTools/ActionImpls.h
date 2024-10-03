@@ -128,7 +128,7 @@ private:
     bool rotateThroughTargets = false;
     std::unordered_set<GW::AgentID> recentlyTargetedEnemies;
     
-    std::vector<CharacteristicPtr> characteristics;
+    std::vector<CharacteristicPtr> characteristics = std::vector<CharacteristicPtr>(1);
 };
 
 class UseItemAction : public Action {
