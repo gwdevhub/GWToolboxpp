@@ -697,13 +697,13 @@ void ChangeTargetAction::drawSettings()
     drawEnumButton(Sorting::AgentId, Sorting::ModelID, sorting, 20, 150.);
 
     ImGui::SameLine();
-    ImGui::Checkbox("Rotate through eligible targets", &rotateThroughTargets);
+    ImGui::Checkbox("Rotate", &rotateThroughTargets);
 
     ImGui::SameLine();
-    ImGui::Checkbox("Require same model as current target", &requireSameModelIdAsTarget);
+    ImGui::Checkbox("Require same model as target", &requireSameModelIdAsTarget);
 
     ImGui::SameLine();
-    ImGui::Checkbox("Prefer enemies that are not hexed", &preferNonHexed);
+    ImGui::Checkbox("Prefer non-hexed", &preferNonHexed);
 
     ImGui::PopID();
 }

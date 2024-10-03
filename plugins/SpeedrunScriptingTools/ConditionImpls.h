@@ -433,7 +433,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::vector<CharacteristicPtr> characteristics;
+    std::vector<CharacteristicPtr> characteristics = std::vector<CharacteristicPtr>(1);
 };
 
 class TargetHasCharacteristicsCondition : public Condition {
@@ -446,7 +446,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::vector<CharacteristicPtr> characteristics;
+    std::vector<CharacteristicPtr> characteristics = std::vector<CharacteristicPtr>(1);
 };
 
 class AgentWithCharacteristicsCountCondition : public Condition {
@@ -459,7 +459,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::vector<CharacteristicPtr> characteristics;
+    std::vector<CharacteristicPtr> characteristics = std::vector<CharacteristicPtr>(1);
     int count = 1;
     ComparisonOperator comp = ComparisonOperator::GreaterOrEqual;
 };

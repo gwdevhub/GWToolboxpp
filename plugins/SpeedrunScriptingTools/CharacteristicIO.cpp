@@ -147,9 +147,8 @@ CharacteristicPtr drawCharacteristicSelector(float width)
     };
     const auto drawSubMenu = [&drawCharacteristicSelector](std::string_view title, const auto& types) {
         if (ImGui::BeginMenu(title.data())) {
-            for (const auto& type : types) {
+            for (const auto& type : types)
                 drawCharacteristicSelector(type);
-            }
             ImGui::EndMenu();
         }
     };
@@ -161,22 +160,19 @@ CharacteristicPtr drawCharacteristicSelector(float width)
     constexpr auto positionCharacteristics = std::array{CharacteristicType::Position, CharacteristicType::PositionPolygon};
     constexpr auto distanceCharacteristics = std::array{CharacteristicType::DistanceToPlayer, CharacteristicType::DistanceToTarget};
     constexpr auto angleCharacteristics = std::array{CharacteristicType::AngleToPlayerForward, CharacteristicType::AngleToCameraForward};
+    constexpr auto hpCharacteristics = std::array{CharacteristicType::HP, CharacteristicType::HPRegen};
+    constexpr auto skillCharacteristics = std::array{CharacteristicType::Skill, CharacteristicType::Bond};
+    constexpr auto propertyCharacteristics = std::array{CharacteristicType::Model, CharacteristicType::Class, CharacteristicType::Name, CharacteristicType::Speed, CharacteristicType::WeaponType};
 
     if (ImGui::BeginPopup("Add Characteristic")) {
         drawSubMenu("Position", positionCharacteristics);
         drawSubMenu("Distance", distanceCharacteristics);
-        drawCharacteristicSelector(CharacteristicType::Status);
-        drawCharacteristicSelector(CharacteristicType::Model);
-        drawCharacteristicSelector(CharacteristicType::Allegiance);
-        drawCharacteristicSelector(CharacteristicType::Skill);
-        drawCharacteristicSelector(CharacteristicType::Bond);
-        drawCharacteristicSelector(CharacteristicType::Class);
-        drawCharacteristicSelector(CharacteristicType::Name);
-        drawCharacteristicSelector(CharacteristicType::HP);
-        drawCharacteristicSelector(CharacteristicType::HPRegen);
-        drawCharacteristicSelector(CharacteristicType::Speed);
-        drawCharacteristicSelector(CharacteristicType::WeaponType);
         drawSubMenu("Angle", angleCharacteristics);
+        drawSubMenu("HP", hpCharacteristics);
+        drawSubMenu("Skill", skillCharacteristics);
+        drawSubMenu("Properties", propertyCharacteristics);
+        drawCharacteristicSelector(CharacteristicType::Status);
+        drawCharacteristicSelector(CharacteristicType::Allegiance);
 
         ImGui::EndPopup();
     }

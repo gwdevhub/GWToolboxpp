@@ -36,8 +36,9 @@ namespace {
     // Versions 1-7: Prerelease, can be ignored
     // Version 8: 1.0-1.2. See SerializationIncrement for deprecation context
     // Version 9: Skipped because exported scripts started with profanity lol
-    // Version 10: Current
-    constexpr long currentVersion = 10;
+    // Version 10: 1.3-1.6. Removed when most conditions were moved to use characteristics
+    // Version 11: Current.
+    constexpr long currentVersion = 11;
 
     bool mustComeLast(ConditionType type) 
     {
