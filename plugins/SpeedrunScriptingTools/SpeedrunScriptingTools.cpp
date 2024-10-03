@@ -853,6 +853,7 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
     switch (Message) {
         case WM_KEYDOWN:
             if (const auto isRepeated = (int)lparam & (1 << 30)) break;
+            [[fallthrough]];
         case WM_SYSKEYDOWN:
         case WM_KEYUP:
         case WM_SYSKEYUP:
@@ -903,30 +904,35 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
             }
 
             bool triggered = false;
-            if (clearScriptsKey.keyData && clearScriptsKey.keyData == keyData && clearScriptsKey.modifier == modifier)
-            {
+            if (clearScriptsKey.keyData && clearScriptsKey.keyData == keyData && clearScriptsKey.modifier == modifier) {
                 clear();
                 return true; // Don't set scripts to triggered if we just cleared.
             }
-            for (auto& script : m_scripts) 
+
+            const auto triggerScripts = [alwaysBlockHotkeyKeys = this->alwaysBlockHotkeyKeys, keyData, modifier, &triggered](std::vector<Script>& scripts) {
+                for (auto& script : scripts) {
+                    if (script.enabledToggleHotkey.keyData == keyData && script.enabledToggleHotkey.modifier == modifier) {
+                        if (script.showMessageWhenToggled) logMessage(script.enabled ? std::string{"Disable script "} + script.name : std::string{"Enable script "} + script.name);
+                        script.enabled = !script.enabled;
+                        triggered = true;
+                    }
+
+                    if (script.enabled && script.trigger == Trigger::Hotkey && script.triggerHotkey.keyData == keyData && script.triggerHotkey.modifier == modifier && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
+                        const auto conditionsMet = checkConditions(script.conditions);
+
+                        script.triggered = conditionsMet;
+                        triggered = conditionsMet || alwaysBlockHotkeyKeys;
+                    }
+                }
+            };
+
+            for (auto& group : m_groups) 
             {
-                if (script.enabledToggleHotkey.keyData == keyData && script.enabledToggleHotkey.modifier == modifier)
-                {
-                    if (script.showMessageWhenToggled)
-                        logMessage(script.enabled ? std::string{"Disable script "} + script.name : std::string{"Enable script "} + script.name);
-                    script.enabled = !script.enabled;
-                    triggered = true;
-                }
-
-                if (script.enabled && script.trigger == Trigger::Hotkey && script.triggerHotkey.keyData == keyData && script.triggerHotkey.modifier == modifier 
-                    && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) 
-                {
-                    const auto conditionsMet = checkConditions(script.conditions);
-
-                    script.triggered = conditionsMet;
-                    triggered = conditionsMet || alwaysBlockHotkeyKeys;
-                }
+                if (checkConditions(group.conditions)) 
+                    triggerScripts(group.scripts);
             }
+            triggerScripts(m_scripts);
+        
             if (InstanceInfo::getInstance().keyIsDisabled({keyData, modifier})) return true;
             return triggered;
         }
@@ -950,34 +956,52 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         &InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) 
     {
         isInLoadingScreen = false;
-        std::ranges::for_each(m_scripts, [](Script& s) {
-            if (s.enabled && s.trigger == Trigger::InstanceLoad)
-                s.triggered = true;
-        });
-        
-    });
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MessageCore>(&CoreMessage_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::MessageCore* packet) {
-        if (wmemcmp(packet->message, L"\x8101\x7f84", 2) == 0) 
-        {
-            std::ranges::for_each(m_scripts, [](Script& s) 
-            {
-                if (s.enabled && s.trigger == Trigger::HardModePing && checkConditions(s.conditions)) 
+
+        const auto triggerScripts = [](auto& scripts) {
+            std::ranges::for_each(scripts, [](Script& s) {
+                if (s.enabled && s.trigger == Trigger::InstanceLoad) 
                     s.triggered = true;
             });
-        }
-        std::ranges::for_each(m_scripts, [&](Script& s) 
+        };
+        
+        for (auto& group : m_groups) 
         {
-            if (s.enabled && s.trigger == Trigger::ChatMessage && !s.triggerMessage.empty() && checkConditions(s.conditions)) {
-                if (WStringToString(packet->message).contains(s.triggerMessage))
-                {
-                    s.triggered = true;
-                }
-            }
-        });
+            triggerScripts(group.scripts);
+        }
+        triggerScripts(m_scripts);
     });
+
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MessageCore>(&CoreMessage_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::MessageCore* packet) {
+        const auto triggerHardModePingScripts = [](std::vector<Script>& scripts) {
+            std::ranges::for_each(scripts, [](Script& s) {
+                if (s.enabled && s.trigger == Trigger::HardModePing && checkConditions(s.conditions)) s.triggered = true;
+            });
+        };
+        const auto triggerChatMessageScripts = [&packet](std::vector<Script>& scripts) {
+            std::ranges::for_each(scripts, [&](Script& s) {
+                if (s.enabled && s.trigger == Trigger::ChatMessage && !s.triggerMessage.empty() && checkConditions(s.conditions)) {
+                    if (WStringToString(packet->message).contains(s.triggerMessage)) {
+                        s.triggered = true;
+                    }
+                }
+            });
+        };
+        const auto isHardModeTrigger = wmemcmp(packet->message, L"\x8101\x7f84", 2) == 0;
+        for (auto& group : m_groups) 
+        {
+            if (!checkConditions(group.conditions)) continue;
+            
+            if (isHardModeTrigger) triggerHardModePingScripts(group.scripts);
+            else triggerChatMessageScripts(group.scripts); 
+        }
+        if (isHardModeTrigger) triggerHardModePingScripts(m_scripts);
+        else triggerChatMessageScripts(m_scripts);
+    });
+
     InstanceInfo::getInstance().initialize();
     srand((unsigned int)time(NULL));
 }
+
 void SpeedrunScriptingTools::SignalTerminate()
 {
     ToolboxPlugin::SignalTerminate();
@@ -987,6 +1011,7 @@ void SpeedrunScriptingTools::SignalTerminate()
     GW::StoC::RemovePostCallback<GW::Packet::StoC::MessageCore>(&CoreMessage_Entry);
     GW::DisableHooks();
 }
+
 bool SpeedrunScriptingTools::CanTerminate()
 {
     return GW::HookBase::GetInHookCount() == 0;
