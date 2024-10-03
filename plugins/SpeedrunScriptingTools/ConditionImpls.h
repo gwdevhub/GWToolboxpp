@@ -90,6 +90,7 @@ public:
 
 private:
     int count = 1;
+    ComparisonOperator comp = ComparisonOperator::Equals;
 };
 
 class PartyHasLoadedInCondition : public Condition {
@@ -117,6 +118,7 @@ public:
 
 private:
     float requiredProgress = 50.f;
+    ComparisonOperator comp = ComparisonOperator::GreaterOrEqual;
 };
 
 class OnlyTriggerOnceCondition : public Condition {
@@ -172,7 +174,8 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    int minEnergy = 0;
+    int energy = 0;
+    ComparisonOperator comp = ComparisonOperator::GreaterOrEqual;
 };
 
 class HasPartyWindowAllyOfNameCondition : public Condition {
@@ -230,6 +233,7 @@ public:
 
 private:
     int timeInSeconds = 0;
+    ComparisonOperator comp = ComparisonOperator::GreaterOrEqual;
 };
 
 class CanPopAgentCondition : public Condition {
@@ -307,7 +311,8 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    int maximum = 0;
+    int count = 0;
+    ComparisonOperator comp = ComparisonOperator::LessOrEqual;
 };
 
 class MoraleCondition : public Condition {
@@ -320,7 +325,8 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    int minimumMorale = 0;
+    int morale = 0;
+    ComparisonOperator comp = ComparisonOperator::GreaterOrEqual;
 };
 
 class FalseCondition : public Condition {

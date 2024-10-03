@@ -17,6 +17,7 @@
 namespace {
     std::string getSkillName(GW::Constants::SkillID id)
     {
+        if (id == GW::Constants::SkillID::No_Skill) return "No skill";
         static std::unordered_map<GW::Constants::SkillID, std::wstring> decodedNames;
         if (const auto it = decodedNames.find(id); it != decodedNames.end()) 
         {
@@ -824,10 +825,8 @@ bool pointIsInsidePolygon(const GW::GamePos pos, const std::vector<GW::Vec2f>& p
 void drawSkillIDSelector(GW::Constants::SkillID& id)
 {
     ImGui::PushItemWidth(50.f);
-    if (id != GW::Constants::SkillID::No_Skill) {
-        ImGui::Text("%s", getSkillName(id).c_str());
-        ImGui::SameLine();
-    }
+    ImGui::Text("%s", getSkillName(id).c_str());
+    ImGui::SameLine();
     ImGui::SameLine();
     ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);
     ImGui::PopItemWidth();

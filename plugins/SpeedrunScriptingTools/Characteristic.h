@@ -22,6 +22,7 @@ enum class CharacteristicType : int {
     Model,
     Allegiance,
     Status,
+    Skill,
     AngleToPlayerForward,
     AngleToCameraForward,
 

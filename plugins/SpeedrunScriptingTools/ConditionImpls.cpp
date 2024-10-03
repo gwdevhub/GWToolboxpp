@@ -393,22 +393,24 @@ void IsInMapCondition::drawSettings() {
 /// ------------- PartyPlayerCountCondition -------------
 PartyPlayerCountCondition::PartyPlayerCountCondition(InputStream& stream)
 {
-    stream >> count;
+    stream >> count >> comp;
 }
 void PartyPlayerCountCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << count;
+    stream << count << comp;
 }
 bool PartyPlayerCountCondition::check() const
 {
-    return GW::PartyMgr::GetPartySize() == uint32_t(count);
+    return compare(GW::PartyMgr::GetPartySize(), comp, (uint32_t)count);
 }
 void PartyPlayerCountCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::Text("If the party size is");
+    ImGui::Text("If the party size");
+    ImGui::SameLine();
+    drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
     ImGui::PushItemWidth(30.f);
     ImGui::SameLine();
     ImGui::InputInt("", &count, 0);
@@ -468,13 +470,13 @@ void PartyHasLoadedInCondition::drawSettings()
 /// ------------- InstanceProgressCondition -------------
 InstanceProgressCondition::InstanceProgressCondition(InputStream& stream)
 {
-    stream >> requiredProgress;
+    stream >> requiredProgress >> comp;
 }
 void InstanceProgressCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << requiredProgress;
+    stream << requiredProgress << comp;
 }
 bool InstanceProgressCondition::check() const {
     return GW::GetGameContext()->character->progress_bar->progress * 100.f + eps > requiredProgress;
@@ -482,9 +484,12 @@ bool InstanceProgressCondition::check() const {
 void InstanceProgressCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::Text("If the instance progress is greater than or equal");
-    ImGui::PushItemWidth(90.f);
+    ImGui::Text("If the instance progress");
     ImGui::SameLine();
+    drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
+    
+    ImGui::SameLine();
+    ImGui::PushItemWidth(90.f);
     ImGui::InputFloat("%", &requiredProgress, 0);
     ImGui::PopItemWidth();
     ImGui::PopID();
@@ -628,28 +633,30 @@ void PlayerHasSkillCondition::drawSettings()
 /// ------------- PlayerHasEnergyCondition -------------
 PlayerHasEnergyCondition::PlayerHasEnergyCondition(InputStream& stream)
 {
-    stream >> minEnergy;
+    stream >> energy >> comp;
 }
 void PlayerHasEnergyCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << minEnergy;
+    stream << energy << comp;
 }
 bool PlayerHasEnergyCondition::check() const
 {
     const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return false;
 
-    return player->energy * player->max_energy >= minEnergy;
+    return compare(player->energy * player->max_energy, comp, (float)energy);
 }
 void PlayerHasEnergyCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::Text("If player has at least");
+    ImGui::Text("If player energy");
+    ImGui::SameLine();
+    drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
     ImGui::SameLine();
     ImGui::PushItemWidth(90.f);
-    ImGui::InputInt("energy", &minEnergy, 0);
+    ImGui::InputInt("", &energy, 0);
     ImGui::PopItemWidth();
     ImGui::PopID();
 }
@@ -836,26 +843,28 @@ void KeyIsPressedCondition::drawSettings()
 }
 
 /// ------------- InstanceTimeCondition -------------
-
 InstanceTimeCondition::InstanceTimeCondition(InputStream& stream)
 {
-    stream >> timeInSeconds;
+    stream >> timeInSeconds >> comp;
 }
 void InstanceTimeCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << timeInSeconds;
+    stream << timeInSeconds << comp;
 }
 bool InstanceTimeCondition::check() const
 {
-    return (int)(GW::Map::GetInstanceTime() / 1000) >= timeInSeconds;
+    return compare((int)(GW::Map::GetInstanceTime() / 1000), comp, timeInSeconds);
 }
 void InstanceTimeCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::Text("If the instance is older than");
+    ImGui::Text("If the instance time");
     ImGui::SameLine();
+    drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
+    ImGui::SameLine();
+
     ImGui::PushItemWidth(90.f);
     ImGui::InputInt("seconds", &timeInSeconds, 0);
     ImGui::PopItemWidth();
@@ -1039,26 +1048,28 @@ void RemainingCooldownCondition::drawSettings()
 /// ------------- FoeCountCondition -------------
 FoeCountCondition::FoeCountCondition(InputStream& stream)
 {
-    stream >> maximum;
+    stream >> count >> comp;
 }
 void FoeCountCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << maximum;
+    stream << count << comp;
 }
 bool FoeCountCondition::check() const
 {
-    return (int)GW::Map::GetFoesToKill() <= maximum;
+    return compare((int)GW::Map::GetFoesToKill(), comp, count);
 }
 void FoeCountCondition::drawSettings()
 {
     ImGui::PushID(drawId());
 
-    ImGui::Text("If there are at most");
+    ImGui::Text("If the number of enemies left in the instance");
     ImGui::SameLine();
-    ImGui::PushItemWidth(80);
-    ImGui::InputInt("enemies left in the instance", &maximum, 0);
+    drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
+    ImGui::SameLine();
+    ImGui::PushItemWidth(80.f);
+    ImGui::InputInt("", &count, 0);
     ImGui::PopItemWidth();
 
     ImGui::PopID();
@@ -1067,28 +1078,30 @@ void FoeCountCondition::drawSettings()
 /// ------------- MoraleCondition -------------
 MoraleCondition::MoraleCondition(InputStream& stream)
 {
-    stream >> minimumMorale;
+    stream >> morale >> comp;
 }
 void MoraleCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << minimumMorale;
+    stream << morale << comp;
 }
 bool MoraleCondition::check() const
 {
     const auto worldContext = GW::GetWorldContext();
     if (!worldContext) return false;
-    return int(worldContext->morale) - 100 >= minimumMorale;
+    return compare(int(worldContext->morale) - 100, comp, morale);
 }
 void MoraleCondition::drawSettings()
 {
     ImGui::PushID(drawId());
 
-    ImGui::Text("If morale is greater than or equal to");
+    ImGui::Text("If player morale");
+    ImGui::SameLine();
+    drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
     ImGui::SameLine();
     ImGui::PushItemWidth(80);
-    ImGui::InputInt("% (negative values for DP)", &minimumMorale, 0);
+    ImGui::InputInt("% (negative values for DP)", &morale, 0);
     ImGui::PopItemWidth();
 
     ImGui::PopID();

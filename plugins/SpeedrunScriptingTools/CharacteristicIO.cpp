@@ -6,7 +6,7 @@
 namespace {
     CharacteristicPtr makeCharacteristic(CharacteristicType type)
     {
-        static_assert((int)CharacteristicType::Count == 15);
+        static_assert((int)CharacteristicType::Count == 16);
         switch (type) {
             case CharacteristicType::Position:
                 return std::make_unique<PositionCharacteristic>();
@@ -34,6 +34,8 @@ namespace {
                 return std::make_unique<AllegianceCharacteristic>();
             case CharacteristicType::Status:
                 return std::make_unique<StatusCharacteristic>();
+            case CharacteristicType::Skill:
+                return std::make_unique<SkillCharacteristic>();
             case CharacteristicType::AngleToPlayerForward:
                 return std::make_unique<AngleToPlayerForwardCharacteristic>();
             case CharacteristicType::AngleToCameraForward:
@@ -45,7 +47,7 @@ namespace {
 
     std::string_view toString(CharacteristicType type)
     {
-        static_assert((int)CharacteristicType::Count == 15);
+        static_assert((int)CharacteristicType::Count == 16);
         switch (type) {
             case CharacteristicType::Position:
                 return "Position";
@@ -73,6 +75,8 @@ namespace {
                 return "Allegiance";
             case CharacteristicType::Status:
                 return "Status";
+            case CharacteristicType::Skill:
+                return "Uses skill";
             case CharacteristicType::AngleToPlayerForward:
                 return "Angle to player forward";
             case CharacteristicType::AngleToCameraForward:
@@ -85,7 +89,7 @@ namespace {
 
 CharacteristicPtr readCharacteristic(InputStream& stream)
 {
-    static_assert((int)CharacteristicType::Count == 15);
+    static_assert((int)CharacteristicType::Count == 16);
     int type;
     stream >> type;
     switch (static_cast<CharacteristicType>(type)) {
@@ -115,6 +119,8 @@ CharacteristicPtr readCharacteristic(InputStream& stream)
             return std::make_unique<AllegianceCharacteristic>(stream);
         case CharacteristicType::Status:
             return std::make_unique<StatusCharacteristic>(stream);
+        case CharacteristicType::Skill:
+            return std::make_unique<SkillCharacteristic>(stream);
         case CharacteristicType::AngleToPlayerForward:
             return std::make_unique<AngleToPlayerForwardCharacteristic>(stream);
         case CharacteristicType::AngleToCameraForward:
@@ -156,6 +162,7 @@ CharacteristicPtr drawCharacteristicSelector(float width)
         drawCharacteristicSelector(CharacteristicType::Status);
         drawCharacteristicSelector(CharacteristicType::Model);
         drawCharacteristicSelector(CharacteristicType::Allegiance);
+        drawCharacteristicSelector(CharacteristicType::Skill);
         drawCharacteristicSelector(CharacteristicType::Class);
         drawCharacteristicSelector(CharacteristicType::Name);
         drawCharacteristicSelector(CharacteristicType::HP);

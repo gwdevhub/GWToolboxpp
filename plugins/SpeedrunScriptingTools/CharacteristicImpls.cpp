@@ -433,6 +433,30 @@ void StatusCharacteristic::drawSettings()
     drawEnumButton(Status::Enchanted, Status::Casting, status, 1);
 }
 
+/// ------------- SkillCharacteristic -------------
+SkillCharacteristic::SkillCharacteristic(InputStream& stream)
+{
+    stream >> skill >> comp;
+}
+void SkillCharacteristic::serialize(OutputStream& stream) const
+{
+    Characteristic::serialize(stream);
+
+    stream << skill << comp;
+}
+bool SkillCharacteristic::check(const GW::AgentLiving& agent) const
+{
+    return compare(agent.skill, comp, (uint16_t)skill);
+}
+void SkillCharacteristic::drawSettings()
+{
+    ImGui::Text("Currently used skill");
+    ImGui::SameLine();
+    drawEnumButton(IsIsNot::Is, IsIsNot::IsNot, comp, 0, 40.f);
+    ImGui::SameLine();
+    drawSkillIDSelector(skill);
+}
+
 /// ------------- AngleToPlayerForwardCharacteristic -------------
 AngleToPlayerForwardCharacteristic::AngleToPlayerForwardCharacteristic(InputStream& stream)
 {
