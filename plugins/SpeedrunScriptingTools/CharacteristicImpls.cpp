@@ -5,7 +5,10 @@
 
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Skill.h>
+
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 
 #include <ImGuiCppWrapper.h>
@@ -455,6 +458,38 @@ void SkillCharacteristic::drawSettings()
     drawEnumButton(IsIsNot::Is, IsIsNot::IsNot, comp, 0, 40.f);
     ImGui::SameLine();
     drawSkillIDSelector(skill);
+}
+
+/// ------------- BondCharacteristic -------------
+BondCharacteristic::BondCharacteristic(InputStream& stream)
+{
+    stream >> skill >> comp;
+}
+void BondCharacteristic::serialize(OutputStream& stream) const
+{
+    Characteristic::serialize(stream);
+
+    stream << skill << comp;
+}
+bool BondCharacteristic::check(const GW::AgentLiving& agent) const
+{
+    const auto bonds = GW::Effects::GetPlayerBuffs();
+    if (!bonds) return false;
+
+    const auto isMaintaining = std::ranges::any_of(*bonds, [&](const auto& bond){ return bond.target_agent_id == agent.agent_id && bond.skill_id == skill; });
+    return (comp == IsIsNot::Is) == isMaintaining;
+}
+void BondCharacteristic::drawSettings()
+{
+    ImGui::Text("Player");
+    ImGui::SameLine();
+    drawEnumButton(IsIsNot::Is, IsIsNot::IsNot, comp, 0, 40.f);
+    ImGui::SameLine();
+    ImGui::Text("maintaining");
+    ImGui::SameLine();
+    drawSkillIDSelector(skill);
+    ImGui::SameLine();
+    ImGui::Text("on this target");
 }
 
 /// ------------- AngleToPlayerForwardCharacteristic -------------

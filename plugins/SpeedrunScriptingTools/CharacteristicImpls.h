@@ -216,6 +216,21 @@ private:
     IsIsNot comp = IsIsNot::Is;
 };
 
+class BondCharacteristic : public Characteristic {
+public:
+    BondCharacteristic() = default;
+    BondCharacteristic(InputStream&);
+    void serialize(OutputStream&) const final;
+
+    CharacteristicType type() const final { return CharacteristicType::Bond; }
+    bool check(const GW::AgentLiving& agent) const final;
+    void drawSettings() final;
+
+private:
+    GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
+    IsIsNot comp = IsIsNot::Is;
+};
+
 class AngleToPlayerForwardCharacteristic : public Characteristic {
 public:
     AngleToPlayerForwardCharacteristic() = default;
