@@ -1,6 +1,7 @@
 #include <ActionImpls.h>
 
 #include <ConditionIO.h>
+#include <CharacteristicIO.h>
 #include <ActionIO.h>
 #include <InstanceInfo.h>
 #include <enumUtils.h>
@@ -550,19 +551,23 @@ void CastBySlotAction::drawSettings()
 /// ------------- ChangeTargetAction -------------
 ChangeTargetAction::ChangeTargetAction(InputStream& stream)
 {
-    stream >> agentType >> primary >> secondary >> alive >> skill >> sorting >> modelId >> minDistance >> maxDistance >> requireSameModelIdAsTarget >> preferNonHexed >> rotateThroughTargets;
-    agentName = readStringWithSpaces(stream);
-    polygon = readPositions(stream);
-    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding >> hexed >> minSpeed >> maxSpeed >> minRegen >> maxRegen >> weapon >> minHp >> maxHp;
+    stream >> sorting >> preferNonHexed >> requireSameModelIdAsTarget >> rotateThroughTargets;
+
+    while (stream && stream.peek() == 'X') {
+        stream.get();
+        if (auto characteristic = readCharacteristic(stream))
+            characteristics.push_back(std::move(characteristic));
+        else
+            break;
+    }
 }
 void ChangeTargetAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << agentType << primary << secondary << alive << skill << sorting << modelId << minDistance << maxDistance << requireSameModelIdAsTarget << preferNonHexed << rotateThroughTargets;
-    writeStringWithSpaces(stream, agentName);
-    writePositions(stream, polygon);
-    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding << hexed << minSpeed << maxSpeed << minRegen << maxRegen << weapon << minHp << maxHp;
+    stream << sorting << preferNonHexed << requireSameModelIdAsTarget << rotateThroughTargets;
+    for (const auto& c : characteristics)
+        c->serialize(stream);
 }
 void ChangeTargetAction::initialAction()
 {
@@ -573,71 +578,10 @@ void ChangeTargetAction::initialAction()
     const auto agents = GW::Agents::GetAgentArray();
     if (!player || !agents) return;
 
-    if (agentType == AgentType::Self) 
-    {
-        GW::GameThread::Enqueue([id = player->agent_id]() -> void {
-            GW::Agents::ChangeTarget(id);
-        });
-        return;
-    }
-
     if (rotateThroughTargets && recentlyTargetedEnemies.empty() && currentTarget)
     {
         recentlyTargetedEnemies.insert(currentTarget->agent_id);
     }
-
-    auto& instanceInfo = InstanceInfo::getInstance();
-
-    const auto fulfillsConditions = [&](const GW::AgentLiving* agent) 
-    {
-        if (!agent) return false;
-        if (agent->agent_id == player->agent_id) return false; // Target self handled seperately
-        const auto correctType = [&]() -> bool {
-            switch (agentType) {
-                case AgentType::Any:
-                    return true;
-                case AgentType::PartyMember:
-                    return true;
-                case AgentType::Friendly:
-                    return agent->allegiance != GW::Constants::Allegiance::Enemy;
-                case AgentType::Hostile:
-                    return agent->allegiance == GW::Constants::Allegiance::Enemy;
-                default:
-                    return false;
-            }
-        }();
-        const auto correctPrimary = (primary == Class::Any) || primary == (Class)agent->primary;
-        const auto correctSecondary = (secondary == Class::Any) || secondary == (Class)agent->secondary;
-        const auto correctStatus = (alive == AnyNoYes::Any) || ((alive == AnyNoYes::Yes) == agent->GetIsAlive());
-        const auto correctEnch = (enchanted == AnyNoYes::Any) || ((enchanted == AnyNoYes::Yes) == agent->GetIsEnchanted());
-        const auto correctWeaponSpell = (weaponspelled == AnyNoYes::Any) || ((weaponspelled == AnyNoYes::Yes) == agent->GetIsWeaponSpelled());
-        const auto correctHex = (hexed == AnyNoYes::Any) || ((hexed == AnyNoYes::Yes) == (agent->GetIsHexed() || agent->GetIsDegenHexed()));
-        const auto correctBleed = (bleeding == AnyNoYes::Any) || ((bleeding == AnyNoYes::Yes) == agent->GetIsBleeding());
-        const auto correctPoison = (poisoned == AnyNoYes::Any) || ((poisoned == AnyNoYes::Yes) == agent->GetIsPoisoned());
-        const auto correctSkill = (skill == GW::Constants::SkillID::No_Skill) || (skill == (GW::Constants::SkillID)agent->skill);
-        const auto correctModelId = (requireSameModelIdAsTarget && currentTarget) 
-            ? (currentTarget->player_number == agent->player_number) 
-            : ((modelId == 0) || (agent->player_number == modelId));
-        const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedAgentName(agent->agent_id) == agentName);
-        const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(agent->pos, polygon);
-        const auto goodHp = minHp <= 100.f * agent->hp && 100.f * agent->hp <= maxHp;
-        const auto goodWeapon = checkWeaponType(weapon, agent->weapon_type);
-        
-        const auto angle = angleToAgent(player, agent);
-        const auto goodAngle = minAngle - eps < angle && angle < maxAngle + eps;
-
-        const auto distance = GW::GetDistance(player->pos, agent->pos);
-        const auto goodDistance = (minDistance - eps < distance) && (distance < maxDistance + eps);
-
-        const auto speed = GW::GetNorm(agent->velocity);
-        const auto goodSpeed = minSpeed - eps < speed && speed < maxSpeed + eps;
-
-        const auto regen = GetHealthRegenPips(agent);
-        const auto goodRegen = minRegen <= regen && regen <= maxRegen;
-
-        return correctType && correctPrimary && correctSecondary && correctStatus && correctEnch && correctWeaponSpell && correctHex && correctBleed && correctPoison && correctSkill && correctModelId && goodDistance && goodName && goodPosition && goodHp &&
-               goodAngle && goodSpeed && goodRegen && goodWeapon;
-    };
 
     const GW::AgentLiving* currentBestTarget = nullptr;
 
@@ -689,36 +633,19 @@ void ChangeTargetAction::initialAction()
 
     const auto testAgent = [&](const GW::Agent* agent) 
     {
-        if (!agent) return;
+        if (!agent || !agent->GetIsLivingType()) return;
 
         const auto living = agent->GetAsAgentLiving();
-        if (!fulfillsConditions(living)) return;
+        if (currentTarget && requireSameModelIdAsTarget && living->player_number != currentTarget->player_number) return;
+        if (!std::ranges::all_of(characteristics, [&living](const auto& c){ return !c || c->check(*living);} )) return;
         if (isNewBest(living)) currentBestTarget = living;
     };
 
-
-
-    if (agentType == AgentType::PartyMember) 
+    for (const auto* agent : *agents) 
     {
-        const auto info = GW::PartyMgr::GetPartyInfo();
-        if (!info) return;
-
-        for (const auto& partyMember : info->players)
-            testAgent(GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(partyMember.login_number)));
-        for (const auto& hero : info->heroes)
-            testAgent(GW::Agents::GetAgentByID(hero.agent_id));
-        for (const auto& henchman : info->henchmen)
-            testAgent(GW::Agents::GetAgentByID(henchman.agent_id));
+        testAgent(agent);
+        if (currentBestTarget && sorting == Sorting::AgentId && !rotateThroughTargets) break;
     }
-    else 
-    {
-        for (const auto* agent : *agents) 
-        {
-            testAgent(agent);
-            if (currentBestTarget && sorting == Sorting::AgentId && !rotateThroughTargets) break;
-        }
-    }
-
 
     if (!currentBestTarget) 
         return;
@@ -737,137 +664,47 @@ void ChangeTargetAction::initialAction()
 void ChangeTargetAction::drawSettings()
 {
     ImGui::PushID(drawId());
-    ImGui::PushItemWidth(120.f);
 
-    if (ImGui::TreeNodeEx("Change target to agent with characteristics", ImGuiTreeNodeFlags_FramePadding)) {
-        ImGui::BulletText("Allegiance");
-        ImGui::SameLine();
-        drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, 0);
+    ImGui::Text("Select target with characteristics");
 
-        if (agentType != AgentType::Self) {
-            ImGui::BulletText("Distance to player");
-            ImGui::SameLine();
-            ImGui::InputFloat("min", &minDistance);
-            ImGui::SameLine();
-            ImGui::InputFloat("max", &maxDistance);
+    int rowToDelete = -1;
+    for (int i = 0; i < int(characteristics.size()); ++i) {
+        ImGui::PushID(i);
 
-            ImGui::BulletText("Class");
-            ImGui::SameLine();
-            drawEnumButton(Class::Any, Class::Dervish, primary, 1);
-
-            ImGui::SameLine();
-            ImGui::Text("/");
-            ImGui::SameLine();
-            drawEnumButton(Class::Any, Class::Dervish, secondary, 2);
-
-            ImGui::BulletText("Is alive");
-            ImGui::SameLine();
-            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, alive, 3);
-
-            ImGui::BulletText("Is enchanted");
-            ImGui::SameLine();
-            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, enchanted, 4);
-
-            ImGui::BulletText("Is affected by weapon spell");
-            ImGui::SameLine();
-            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, weaponspelled, 5);
-
-            ImGui::BulletText("Is hexed");
-            ImGui::SameLine();
-            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, hexed, 6);
-
-            ImGui::BulletText("Is poisoned");
-            ImGui::SameLine();
-            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, poisoned, 7);
-
-            ImGui::BulletText("Is bleeding");
-            ImGui::SameLine();
-            drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, bleeding, 8);
-
-            ImGui::BulletText("Uses skill");
-            ImGui::SameLine();
-            ImGui::PushID(0);
-            drawSkillIDSelector(skill);
-            ImGui::PopID();
-
-            ImGui::BulletText("Name");
-            ImGui::SameLine();
-            ImGui::PushItemWidth(200.f);
-            ImGui::InputText("###9", &agentName);
-            ImGui::PopItemWidth();
-
-            ImGui::PushItemWidth(80.f);
-            ImGui::Bullet();
-            ImGui::Text("HP percent");
-            ImGui::SameLine();
-            ImGui::InputFloat("min###10", &minHp);
-            ImGui::SameLine();
-            ImGui::InputFloat("max###11", &maxHp);
-            ImGui::PopItemWidth();
-
-            ImGui::Bullet();
-            ImGui::Checkbox("Prefer enemies that are not hexed", &preferNonHexed);
-
-            ImGui::Bullet();
-            ImGui::Checkbox("Rotate through eligible targets", &rotateThroughTargets);
-
-            ImGui::Bullet();
-            ImGui::Checkbox("Require same model as current target", &requireSameModelIdAsTarget);
-
-            ImGui::Bullet();
-            ImGui::Text(requireSameModelIdAsTarget ? "If no target is selected: Model" : "Model");
-            ImGui::SameLine();
-            drawModelIDSelector(modelId, "id (0 for any)###12");
-
-            ImGui::Bullet();
-            ImGui::Text("Angle to player forward (degrees)");
-            ImGui::SameLine();
-            ImGui::InputFloat("min###13", &minAngle);
-            ImGui::SameLine();
-            ImGui::InputFloat("max###14", &maxAngle);
-            if (minAngle < 0.f) minAngle = 0.f;
-            if (minAngle > 180.f) minAngle = 180.f;
-            if (maxAngle < 0.f) maxAngle = 0.f;
-            if (maxAngle > 180.f) maxAngle = 180.f;
-
-            ImGui::Bullet();
-            ImGui::Text("Speed");
-            ImGui::SameLine();
-            ImGui::PushItemWidth(70.f);
-            ImGui::InputFloat("min###15", &minSpeed);
-            ImGui::SameLine();
-            ImGui::InputFloat("max###16", &maxSpeed);
-            if (minSpeed < 0.f) minSpeed = 0.f;
-            if (maxSpeed < 0.f) maxSpeed = 0.f;
-
-            ImGui::Bullet();
-            ImGui::Text("HP Regen");
-            ImGui::SameLine();
-            ImGui::InputInt("min###17", &minRegen, 0);
-            ImGui::SameLine();
-            ImGui::InputInt("max###18", &maxRegen, 0);
-            ImGui::PopItemWidth();
-            if (minRegen < -10) minRegen = -10;
-            if (maxRegen > 10) maxRegen = 10;
-
-            ImGui::Bullet();
-            ImGui::Text("Weapon Type");
-            ImGui::SameLine();
-            drawEnumButton(WeaponType::Any, WeaponType::Staff, weapon, 19);
-
-            ImGui::BulletText("Sort candidates by:");
-            ImGui::SameLine();
-            drawEnumButton(Sorting::AgentId, Sorting::ModelID, sorting, 20, 150.);
-
-            ImGui::Bullet();
-            ImGui::Text("Is within polygon");
-            ImGui::SameLine();
-            drawPolygonSelector(polygon);
+        ImGui::Bullet();
+        if (ImGui::Button("X")) {
+            if (characteristics[i])
+                characteristics[i] = nullptr;
+            else
+                rowToDelete = i;
         }
 
-        ImGui::TreePop();
+        ImGui::SameLine();
+        if (characteristics[i])
+            characteristics[i]->drawSettings();
+        else
+            characteristics[i] = drawCharacteristicSelector(120.f);
+
+        ImGui::PopID();
     }
-    ImGui::PopItemWidth();
+    if (rowToDelete != -1) characteristics.erase(characteristics.begin() + rowToDelete);
+
+    ImGui::Bullet();
+    if (ImGui::Button("+")) characteristics.push_back(nullptr);
+    
+    ImGui::Text("Sorting:");
+    ImGui::SameLine();
+    drawEnumButton(Sorting::AgentId, Sorting::ModelID, sorting, 20, 150.);
+
+    ImGui::SameLine();
+    ImGui::Checkbox("Rotate through eligible targets", &rotateThroughTargets);
+
+    ImGui::SameLine();
+    ImGui::Checkbox("Require same model as current target", &requireSameModelIdAsTarget);
+
+    ImGui::SameLine();
+    ImGui::Checkbox("Prefer enemies that are not hexed", &preferNonHexed);
+
     ImGui::PopID();
 }
 

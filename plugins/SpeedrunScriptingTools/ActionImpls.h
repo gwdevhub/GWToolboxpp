@@ -4,6 +4,7 @@
 #include <Enums.h>
 #include <Action.h>
 #include <Condition.h>
+#include <Characteristic.h>
 #include <commonIncludes.h>
 
 #include <GWCA/GameContainers/GamePos.h>
@@ -109,7 +110,8 @@ private:
     mutable bool hasBegunCasting = false;
 };
 
-class ChangeTargetAction : public Action {
+class ChangeTargetAction : public Action 
+{
 public:
     ChangeTargetAction() = default;
     ChangeTargetAction(InputStream&);
@@ -120,35 +122,13 @@ public:
     ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
-    AgentType agentType = AgentType::Any;
-    Class primary = Class::Any;
-    Class secondary = Class::Any;
-    AnyNoYes alive = AnyNoYes::Yes;
-    AnyNoYes bleeding = AnyNoYes::Any;
-    AnyNoYes poisoned = AnyNoYes::Any;
-    AnyNoYes weaponspelled = AnyNoYes::Any;
-    AnyNoYes enchanted = AnyNoYes::Any;
-    AnyNoYes hexed = AnyNoYes::Any;
-    GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
     Sorting sorting = Sorting::AgentId;
-    uint16_t modelId = 0;
-    float minDistance = 0.f;
-    float maxDistance = 5000.f;
     bool preferNonHexed = false;
     bool requireSameModelIdAsTarget = false;
-    std::string agentName = "";
-    std::vector<GW::Vec2f> polygon;
     bool rotateThroughTargets = false;
     std::unordered_set<GW::AgentID> recentlyTargetedEnemies;
-    float minHp = 0.f;
-    float maxHp = 100.f;
-    float minAngle = 0.f;
-    float maxAngle = 180.f;
-    float minSpeed = 0.f;
-    float maxSpeed = 1000.f;
-    int minRegen = -10;
-    int maxRegen = 10;
-    WeaponType weapon = WeaponType::Any;
+    
+    std::vector<CharacteristicPtr> characteristics;
 };
 
 class UseItemAction : public Action {
