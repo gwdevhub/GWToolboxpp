@@ -9,6 +9,7 @@
 #include <GWCA/Constants/Skills.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/GamePos.h>
+#include <Characteristic.h>
 
 #include <chrono>
 
@@ -130,20 +131,6 @@ private:
     mutable int triggeredLastInInstanceId = 0;
 };
 
-class PlayerIsNearPositionCondition : public Condition {
-public:
-    PlayerIsNearPositionCondition();
-    PlayerIsNearPositionCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::PlayerIsNearPosition; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    GW::GamePos pos = {};
-    float accuracy = GW::Constants::Range::Adjacent;
-};
-
 class PlayerHasBuffCondition : public Condition {
 public:
     PlayerHasBuffCondition() = default;
@@ -175,20 +162,6 @@ private:
     HasSkillRequirement requirement = HasSkillRequirement::OffCooldown;
 };
 
-class PlayerHasClassCondition : public Condition {
-public:
-    PlayerHasClassCondition() = default;
-    PlayerHasClassCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::PlayerHasClass; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    Class primary = Class::Any;
-    Class secondary = Class::Any;
-};
-
 class PlayerHasEnergyCondition : public Condition {
 public:
     PlayerHasEnergyCondition() = default;
@@ -200,99 +173,6 @@ public:
 
 private:
     int minEnergy = 0;
-};
-
-
-class PlayerHasNameCondition : public Condition {
-public:
-    PlayerHasNameCondition() = default;
-    PlayerHasNameCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::PlayerHasName; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    std::string name = "";
-};
-
-class CurrentTargetIsCastingSkillCondition : public Condition {
-public:
-    CurrentTargetIsCastingSkillCondition() = default;
-    CurrentTargetIsCastingSkillCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::CurrentTargetIsUsingSkill; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
-};
-
-class PlayerIsCastingSkillCondition : public Condition {
-public:
-    PlayerIsCastingSkillCondition() = default;
-    PlayerIsCastingSkillCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::PlayerIsCastingSkill; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
-};
-
-class CurrentTargetDistanceCondition : public Condition {
-public:
-    CurrentTargetDistanceCondition() = default;
-    CurrentTargetDistanceCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::CurrentTargetDistance; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    float minDistance = 0.f;
-    float maxDistance = 5000.f;
-};
-
-class CurrentTargetHasHpBelowCondition : public Condition {
-public:
-    CurrentTargetHasHpBelowCondition() = default;
-    CurrentTargetHasHpBelowCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::CurrentTargetHasHpBelow; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    float hp = 50.f;
-};
-
-class CurrentTargetAllegianceCondition : public Condition {
-public:
-    CurrentTargetAllegianceCondition() = default;
-    CurrentTargetAllegianceCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::CurrentTargetAllegiance; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    AgentType agentType = AgentType::Hostile;
-};
-
-class CurrentTargetModelCondition : public Condition {
-public:
-    CurrentTargetModelCondition() = default;
-    CurrentTargetModelCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::CurrentTargetHasModel; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    uint16_t modelId = 0;
 };
 
 class HasPartyWindowAllyOfNameCondition : public Condition {
@@ -352,56 +232,11 @@ private:
     int timeInSeconds = 0;
 };
 
-class NearbyAgentCondition : public Condition {
-public:
-    NearbyAgentCondition() = default;
-    NearbyAgentCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::NearbyAgent; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    AgentType agentType = AgentType::Any;
-    Class primary = Class::Any;
-    Class secondary = Class::Any;
-    AnyNoYes alive = AnyNoYes::Yes;
-    AnyNoYes hexed = AnyNoYes::Any;
-    AnyNoYes bleeding = AnyNoYes::Any;
-    AnyNoYes poisoned = AnyNoYes::Any;
-    AnyNoYes weaponspelled = AnyNoYes::Any;
-    AnyNoYes enchanted = AnyNoYes::Any;
-    GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
-    uint16_t modelId = 0;
-    float minDistance = 0.f;
-    float maxDistance = 5000.f;
-    std::string agentName = "";
-    std::vector<GW::Vec2f> polygon;
-    float minHp = 0.f;
-    float maxHp = 100.f;
-    float minAngle = 0.f;
-    float maxAngle = 180.f;
-    float minSpeed = 0.f;
-    float maxSpeed = 1000.f;
-    int minRegen = -10;
-    int maxRegen = 10;
-    WeaponType weapon = WeaponType::Any;
-};
-
 class CanPopAgentCondition : public Condition {
 public:
     CanPopAgentCondition() = default;
     CanPopAgentCondition(InputStream&) {}
     ConditionType type() const final { return ConditionType::CanPopAgent; }
-    bool check() const final;
-    void drawSettings() final;
-};
-
-class PlayerIsIdleCondition : public Condition {
-public:
-    PlayerIsIdleCondition() = default;
-    PlayerIsIdleCondition(InputStream&) {}
-    ConditionType type() const final { return ConditionType::PlayerIsIdle; }
     bool check() const final;
     void drawSettings() final;
 };
@@ -419,19 +254,6 @@ private:
     int modelId = 0;
 };
 
-class PlayerHasHpBelowCondition : public Condition {
-public:
-    PlayerHasHpBelowCondition() = default;
-    PlayerHasHpBelowCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::PlayerHasHpBelow; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    float hp = 50.f;
-};
-
 class ItemInInventoryCondition : public Condition {
 public:
     ItemInInventoryCondition() = default;
@@ -443,45 +265,6 @@ public:
 
 private:
     int modelId = 0;
-};
-
-class PlayerStatusCondition : public Condition {
-public:
-    PlayerStatusCondition() = default;
-    PlayerStatusCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::PlayerStatus; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    Status status = Status::Enchanted;
-};
-
-class CurrentTargetStatusCondition : public Condition {
-public:
-    CurrentTargetStatusCondition() = default;
-    CurrentTargetStatusCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::CurrentTargetStatus; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    Status status = Status::Enchanted;
-};
-
-class PlayerInPolygonCondition : public Condition {
-public:
-    PlayerInPolygonCondition() = default;
-    PlayerInPolygonCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::PlayerInPolygon; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    std::vector<GW::Vec2f> polygon;
 };
 
 class InstanceTypeCondition : public Condition {
@@ -619,19 +402,6 @@ private:
     mutable bool currentState = false;
 };
 
-class CurrentTargetNameCondition : public Condition {
-public:
-    CurrentTargetNameCondition() = default;
-    CurrentTargetNameCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::CurrentTargetName; }
-    bool check() const final;
-    void drawSettings() final;
-    void serialize(OutputStream&) const final;
-
-private:
-    std::string name = "";
-};
-
 class ThrottleCondition : public Condition {
 public:
     ThrottleCondition() = default;
@@ -645,4 +415,45 @@ private:
     int delayInMs = 100;
 
     mutable std::chrono::steady_clock::time_point lastTimeReturnedTrue = std::chrono::steady_clock::now() - std::chrono::days{1};
+};
+
+class PlayerHasCharacteristicsCondition : public Condition {
+public:
+    PlayerHasCharacteristicsCondition() = default;
+    PlayerHasCharacteristicsCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::PlayerHasCharacteristics; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    std::vector<CharacteristicPtr> characteristics;
+};
+
+class TargetHasCharacteristicsCondition : public Condition {
+public:
+    TargetHasCharacteristicsCondition() = default;
+    TargetHasCharacteristicsCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::TargetHasCharacteristics; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    std::vector<CharacteristicPtr> characteristics;
+};
+
+class AgentWithCharacteristicsCountCondition : public Condition {
+public:
+    AgentWithCharacteristicsCountCondition() = default;
+    AgentWithCharacteristicsCountCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::AgentWithCharacteristicsCount; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    std::vector<CharacteristicPtr> characteristics;
+    int count = 1;
+    ComparisonOperator comp = ComparisonOperator::GreaterOrEqual;
 };

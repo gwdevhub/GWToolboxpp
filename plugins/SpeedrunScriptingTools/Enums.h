@@ -20,6 +20,7 @@ enum class MoveToBehaviour {SendOnce, RepeatIfIdle, ImmediateFinish};
 enum class ReferenceFrame { Player, Camera };
 enum class Bag {Backpack, BeltPouch, Bag1, Bag2, EquipmentPack};
 enum class ComparisonOperator {Equals, Less, Greater, LessOrEqual, GreaterOrEqual, NotEquals};
+enum class IsIsNot {Is, IsNot};
 
 enum class ActionBehaviourFlag : uint32_t 
 {

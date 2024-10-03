@@ -3,6 +3,7 @@
 #include <ConditionIO.h>
 #include <enumUtils.h>
 #include <InstanceInfo.h>
+#include <CharacteristicIO.h>
 
 #include <GWCA/Constants/Constants.h>
 
@@ -505,44 +506,6 @@ void OnlyTriggerOnceCondition::drawSettings()
     ImGui::PopID();
 }
 
-/// ------------- PlayerIsNearPositionCondition -------------
-PlayerIsNearPositionCondition::PlayerIsNearPositionCondition()
-{
-    if (auto player = GW::Agents::GetControlledCharacter()) {
-        pos = player->pos;
-    }
-}
-PlayerIsNearPositionCondition::PlayerIsNearPositionCondition(InputStream& stream) 
-{
-    stream >> pos.x >> pos.y >> accuracy;
-}
-void PlayerIsNearPositionCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    stream << pos.x << pos.y << accuracy;
-}
-bool PlayerIsNearPositionCondition::check() const
-{
-    const auto player = GW::Agents::GetControlledCharacter(); 
-    if (!player) return false;
-    return GW::GetDistance(player->pos, pos) < accuracy + eps;
-}
-void PlayerIsNearPositionCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-    ImGui::Text("If the player is near position");
-    ImGui::PushItemWidth(90.f);
-    ImGui::SameLine();
-    ImGui::InputFloat("x", &pos.x, 0.0f, 0.0f);
-    ImGui::SameLine();
-    ImGui::InputFloat("y", &pos.y, 0.0f, 0.0f);
-    ImGui::SameLine();
-    ImGui::InputFloat("Accuracy", &accuracy, 0.0f, 0.0f);
-    ImGui::PopItemWidth();
-    ImGui::PopID();
-}
-
 /// ------------- PlayerHasBuffCondition -------------
 PlayerHasBuffCondition::PlayerHasBuffCondition(InputStream& stream)
 {
@@ -662,75 +625,6 @@ void PlayerHasSkillCondition::drawSettings()
     ImGui::PopID();
 }
 
-/// ------------- PlayerHasClassCondition -------------
-PlayerHasClassCondition::PlayerHasClassCondition(InputStream& stream)
-{
-    stream >> primary >> secondary;
-}
-void PlayerHasClassCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    stream << primary << secondary;
-}
-bool PlayerHasClassCondition::check() const
-{
-    const auto player = GW::Agents::GetControlledCharacter();
-    if (!player) return false;
-    return (primary == Class::Any || primary == (Class)player->primary) && (secondary == Class::Any || secondary == (Class)player->secondary);
-}
-void PlayerHasClassCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-    
-    ImGui::PushID(0);
-    ImGui::Text("If the player has primary");
-    ImGui::SameLine();
-    drawEnumButton(Class::Any, Class::Dervish, primary);
-    ImGui::PopID();
-
-    ImGui::SameLine();
-
-    ImGui::PushID(1);
-    ImGui::Text("and secondary");
-    ImGui::SameLine();
-    drawEnumButton(Class::Any, Class::Dervish, secondary);
-    ImGui::PopID();
-
-    ImGui::PopID();
-}
-
-/// ------------- PlayerHasNameCondition -------------
-PlayerHasNameCondition::PlayerHasNameCondition(InputStream& stream)
-{
-    name = readStringWithSpaces(stream);
-}
-void PlayerHasNameCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    writeStringWithSpaces(stream, name);
-}
-bool PlayerHasNameCondition::check() const
-{
-    if (name.empty()) return false;
-    const auto player = GW::Agents::GetControlledCharacter();
-    if (!player) return false;
-
-    auto& instanceInfo = InstanceInfo::getInstance();
-    return instanceInfo.getDecodedAgentName(player->agent_id) == name;
-}
-void PlayerHasNameCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-    ImGui::Text("If player character has name");
-    ImGui::SameLine();
-    ImGui::PushItemWidth(300.f);
-    ImGui::InputText("name", &name);
-    ImGui::PopItemWidth();
-    ImGui::PopID();
-}
-
 /// ------------- PlayerHasEnergyCondition -------------
 PlayerHasEnergyCondition::PlayerHasEnergyCondition(InputStream& stream)
 {
@@ -756,192 +650,6 @@ void PlayerHasEnergyCondition::drawSettings()
     ImGui::SameLine();
     ImGui::PushItemWidth(90.f);
     ImGui::InputInt("energy", &minEnergy, 0);
-    ImGui::PopItemWidth();
-    ImGui::PopID();
-}
-
-/// ------------- CurrentTargetIsCastingSkillCondition -------------
-CurrentTargetIsCastingSkillCondition::CurrentTargetIsCastingSkillCondition(InputStream& stream)
-{
-    stream >> id;
-}
-void CurrentTargetIsCastingSkillCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    stream << id;
-}
-bool CurrentTargetIsCastingSkillCondition::check() const
-{
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
-    return target && static_cast<GW::Constants::SkillID>(target->skill) == id;
-}
-void CurrentTargetIsCastingSkillCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-
-    ImGui::Text("If the target is casting the skill");
-    ImGui::SameLine();
-    drawSkillIDSelector(id);
-    ImGui::SameLine();
-    ImGui::Text("(0 for none)");
-
-    ImGui::PopID();
-}
-
-/// ------------- PlayerIsCastingSkillCondition -------------
-PlayerIsCastingSkillCondition::PlayerIsCastingSkillCondition(InputStream& stream)
-{
-    stream >> id;
-}
-void PlayerIsCastingSkillCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    stream << id;
-}
-bool PlayerIsCastingSkillCondition::check() const
-{
-    const auto player = GW::Agents::GetControlledCharacter();
-    return player && static_cast<GW::Constants::SkillID>(player->skill) == id;
-}
-void PlayerIsCastingSkillCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-
-    ImGui::Text("If player is casting the skill");
-    ImGui::SameLine();
-    drawSkillIDSelector(id);
-    ImGui::SameLine();
-    ImGui::Text("(0 for none)");
-
-    ImGui::PopID();
-}
-
-/// ------------- CurrentTargetDistanceCondition -------------
-CurrentTargetDistanceCondition::CurrentTargetDistanceCondition(InputStream& stream)
-{
-    stream >> minDistance >> maxDistance;
-}
-void CurrentTargetDistanceCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    stream << minDistance << maxDistance;
-}
-bool CurrentTargetDistanceCondition::check() const
-{
-    const auto player = GW::Agents::GetControlledCharacter();
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
-    if (!player || !target) return false;
-
-    const auto distance = GW::GetDistance(player->pos, target->pos);
-    return minDistance <= distance + eps && distance - eps <= maxDistance;
-}
-void CurrentTargetDistanceCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-    ImGui::PushItemWidth(80.f);
-    
-    ImGui::Text("If the target has distance to player");
-    ImGui::SameLine();
-    ImGui::InputFloat("min", &minDistance, 0);
-    ImGui::SameLine();
-    ImGui::InputFloat("max", &maxDistance, 0);
-
-    ImGui::PopItemWidth();
-    ImGui::PopID();
-}
-
-/// ------------- CurrentTargetHasHpBelowCondition -------------
-CurrentTargetHasHpBelowCondition::CurrentTargetHasHpBelowCondition(InputStream& stream)
-{
-    stream >> hp;
-}
-void CurrentTargetHasHpBelowCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    stream << hp;
-}
-bool CurrentTargetHasHpBelowCondition::check() const
-{
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
-    return target && target->hp * 100.f < hp;
-}
-void CurrentTargetHasHpBelowCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-    ImGui::PushItemWidth(90.f);
-
-    ImGui::Text("If the target has HP below");    
-    ImGui::SameLine();
-    ImGui::InputFloat("%", &hp, 0);
-
-    ImGui::PopItemWidth();
-    ImGui::PopID();
-}
-
-/// ------------- CurrentTargetAllegianceCondition -------------
-CurrentTargetAllegianceCondition::CurrentTargetAllegianceCondition(InputStream& stream)
-{
-    stream >> agentType;
-}
-void CurrentTargetAllegianceCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    stream << agentType;
-}
-bool CurrentTargetAllegianceCondition::check() const
-{
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
-    if (!target) return false;
-    switch (agentType) {
-        case AgentType::Any:
-            return true;
-        case AgentType::PartyMember:
-            return target->IsPlayer();
-        case AgentType::Friendly:
-            return target->allegiance != GW::Constants::Allegiance::Enemy;
-        case AgentType::Hostile:
-            return target->allegiance == GW::Constants::Allegiance::Enemy;
-        default:
-            return false;
-    }
-}
-void CurrentTargetAllegianceCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-    ImGui::Text("If the target has type");
-    ImGui::SameLine();
-    drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, 0, 90.f);
-    ImGui::PopID();
-}
-
-/// ------------- CurrentTargetModelCondition -------------
-CurrentTargetModelCondition::CurrentTargetModelCondition(InputStream& stream)
-{
-    stream >> modelId;
-}
-void CurrentTargetModelCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    stream << modelId;
-}
-bool CurrentTargetModelCondition::check() const
-{
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
-    return target && target->player_number == modelId;
-}
-void CurrentTargetModelCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-    ImGui::Text("If the target has model");
-    ImGui::PushItemWidth(90.f);
-    ImGui::SameLine();
-    drawModelIDSelector(modelId);
     ImGui::PopItemWidth();
     ImGui::PopID();
 }
@@ -1154,226 +862,6 @@ void InstanceTimeCondition::drawSettings()
     ImGui::PopID();
 }
 
-/// ------------- NearbyAgentCondition -------------
-NearbyAgentCondition::NearbyAgentCondition(InputStream& stream)
-{
-    stream >> agentType >> primary >> secondary >> alive >> hexed >> skill >> modelId >> minDistance >> maxDistance >> minHp >> maxHp;
-    agentName = readStringWithSpaces(stream);
-    polygon = readPositions(stream);
-    stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding >> minSpeed >> maxSpeed >> minRegen >> maxRegen >> weapon;
-}
-void NearbyAgentCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    stream << agentType << primary << secondary << alive << hexed << skill << modelId << minDistance << maxDistance << minHp << maxHp;
-    writeStringWithSpaces(stream, agentName);
-    writePositions(stream, polygon);
-    stream << minAngle << maxAngle << enchanted << weaponspelled << poisoned << bleeding << minSpeed << maxSpeed << minRegen << maxRegen << weapon;
-}
-bool NearbyAgentCondition::check() const
-{
-    const auto player = GW::Agents::GetControlledCharacter();
-    const auto agents = GW::Agents::GetAgentArray();
-    if (!player || !agents) return false;
-
-    auto& instanceInfo = InstanceInfo::getInstance();
-
-    const auto fulfillsConditions = [&](const GW::Agent* agent) {
-        if (!agent || !agent->GetIsLivingType() || agent->agent_id == player->agent_id) return false;
-        const auto living = agent->GetAsAgentLiving();
-
-        const auto correctType = [&]() -> bool {
-            switch (agentType) {
-                case AgentType::Any:
-                    return true;
-                case AgentType::PartyMember:
-                    return true;
-                case AgentType::Friendly:
-                    return living->allegiance != GW::Constants::Allegiance::Enemy;
-                case AgentType::Hostile:
-                    return living->allegiance == GW::Constants::Allegiance::Enemy;
-                default:
-                    return false;
-            }
-        }();
-
-        const auto correctPrimary = (primary == Class::Any) || primary == (Class)living->primary;
-        const auto correctSecondary = (secondary == Class::Any) || secondary == (Class)living->secondary;
-        const auto correctStatus = (alive == AnyNoYes::Any) || ((alive == AnyNoYes::Yes) == living->GetIsAlive());
-        const auto correctHex = (hexed == AnyNoYes::Any) || ((hexed == AnyNoYes::Yes) == living->GetIsHexed());
-        const auto correctEnch = (enchanted == AnyNoYes::Any) || ((enchanted == AnyNoYes::Yes) == living->GetIsEnchanted());
-        const auto correctWeaponSpell = (weaponspelled == AnyNoYes::Any) || ((weaponspelled == AnyNoYes::Yes) == living->GetIsWeaponSpelled());
-        const auto correctBleed = (bleeding == AnyNoYes::Any) || ((bleeding == AnyNoYes::Yes) == living->GetIsBleeding());
-        const auto correctPoison = (poisoned == AnyNoYes::Any) || ((poisoned == AnyNoYes::Yes) == living->GetIsPoisoned());
-
-        const auto correctSkill = (skill == GW::Constants::SkillID::No_Skill) || (skill == (GW::Constants::SkillID)living->skill);
-        const auto correctModelId = (modelId == 0) || (living->player_number == modelId);
-        const auto goodName = (agentName.empty()) || (instanceInfo.getDecodedAgentName(living->agent_id) == agentName);
-        const auto goodPosition = (polygon.size() < 3u) || pointIsInsidePolygon(living->pos, polygon);
-        const auto goodHp = minHp <= 100.f * living->hp && 100.f * living->hp <= maxHp;
-        const auto goodWeapon = checkWeaponType(weapon,living->weapon_type);
-        
-        const auto distance = GW::GetDistance(player->pos, living->pos);
-        const auto goodDistance = (minDistance <= distance) && (distance <= maxDistance);
-
-        const auto angle = angleToAgent(player, living);
-        const auto goodAngle = minAngle - eps < angle && angle < maxAngle + eps;
-
-        const auto speed = GW::GetNorm(living->velocity);
-        const auto goodSpeed = minSpeed - eps < speed && speed < maxSpeed + eps;
-
-        const auto regen = GetHealthRegenPips(living);
-        const auto goodRegen = minRegen <= regen && regen <= maxRegen;
-
-        return correctType && correctPrimary && correctSecondary && correctStatus && correctHex && correctEnch && correctWeaponSpell && correctBleed && correctPoison && correctSkill && correctModelId && goodDistance && goodName && goodPosition && goodHp &&
-               goodAngle && goodSpeed && goodRegen && goodWeapon;
-    };
-    if (agentType == AgentType::PartyMember) 
-    {
-        const auto info = GW::PartyMgr::GetPartyInfo();
-        if (!info) return false;
-
-        for (const auto& partyMember : info->players) 
-            if (fulfillsConditions(GW::Agents::GetAgentByID(GW::Agents::GetAgentIdByLoginNumber(partyMember.login_number)))) return true;
-        for (const auto& hero : info->heroes)
-            if (fulfillsConditions(GW::Agents::GetAgentByID(hero.agent_id))) return true;
-        for (const auto& henchman : info->henchmen)
-            if (fulfillsConditions(GW::Agents::GetAgentByID(henchman.agent_id))) return true;
-    }
-    else 
-    {
-        for (const auto* agent : *agents) 
-        {
-            if (fulfillsConditions(agent)) 
-                return true;
-        }
-    }
-    return false;
-}
-void NearbyAgentCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-    ImGui::PushItemWidth(120.f);
-
-    if (ImGui::TreeNodeEx("If there exists an agent with characteristics", ImGuiTreeNodeFlags_FramePadding)) {
-        ImGui::BulletText("Allegiance");
-        ImGui::SameLine();
-        drawEnumButton(AgentType::Any, AgentType::Hostile, agentType, 0, 100.f, std::nullopt, std::optional{AgentType::Self});
-
-        ImGui::BulletText("Distance to player");
-        ImGui::SameLine();
-        ImGui::InputFloat("min###0", &minDistance);
-        ImGui::SameLine();
-        ImGui::InputFloat("max###1", &maxDistance);
-
-        ImGui::BulletText("Class");
-        ImGui::SameLine();
-        drawEnumButton(Class::Any, Class::Dervish, primary, 1);
-        ImGui::SameLine();
-        ImGui::Text("/");
-        ImGui::SameLine();
-        drawEnumButton(Class::Any, Class::Dervish, secondary, 2);
-
-        ImGui::BulletText("Is alive");
-        ImGui::SameLine();
-        drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, alive, 3);
-
-        ImGui::BulletText("Is enchanted");
-        ImGui::SameLine();
-        drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, enchanted, 4);
-
-        ImGui::BulletText("Is affected by weapon spell");
-        ImGui::SameLine();
-        drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, weaponspelled, 5);
-
-        ImGui::BulletText("Is hexed");
-        ImGui::SameLine();
-        drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, hexed, 6);
-
-        ImGui::BulletText("Is poisoned");
-        ImGui::SameLine();
-        drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, poisoned, 7);
-
-        ImGui::BulletText("Is bleeding");
-        ImGui::SameLine();
-        drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, bleeding, 8);
-
-        ImGui::BulletText("Uses skill");
-        ImGui::SameLine();
-        ImGui::PushID(2);
-        drawSkillIDSelector(skill);
-        ImGui::PopID();
-        ImGui::SameLine();
-        ImGui::Text("(0 for any)");
-
-        ImGui::PushItemWidth(200.f);
-        ImGui::BulletText("Has name");
-        ImGui::SameLine();
-        ImGui::InputText("name (empty for any)", &agentName);
-        ImGui::PopItemWidth();
-
-        ImGui::PushItemWidth(80.f);
-        ImGui::Bullet();
-        ImGui::Text("HP percent");
-        ImGui::SameLine();
-        ImGui::InputFloat("min###9", &minHp);
-        ImGui::SameLine();
-        ImGui::InputFloat("max###10", &maxHp);
-        ImGui::PopItemWidth();
-
-        ImGui::Bullet();
-        ImGui::Text("Has model");
-        ImGui::SameLine();
-        drawModelIDSelector(modelId, "id (0 for any)###11");
-
-        ImGui::Bullet();
-        ImGui::Text("Angle to player forward (degrees)");
-        ImGui::SameLine();
-        ImGui::InputFloat("min###12", &minAngle);
-        ImGui::SameLine();
-        ImGui::InputFloat("max###13", &maxAngle);
-        if (minAngle < 0.f) minAngle = 0.f;
-        if (minAngle > 180.f) minAngle = 180.f;
-        if (maxAngle < 0.f) maxAngle = 0.f;
-        if (maxAngle > 180.f) maxAngle = 180.f;
-
-        ImGui::Bullet();
-        ImGui::Text("Speed");
-        ImGui::SameLine();
-        ImGui::PushItemWidth(70.f);
-        ImGui::InputFloat("min###14", &minSpeed);
-        ImGui::SameLine();
-        ImGui::InputFloat("max###15", &maxSpeed);
-        ImGui::PopItemWidth();
-        if (minSpeed < 0.f) minSpeed = 0.f;
-        if (maxSpeed < 0.f) maxSpeed = 0.f;
-
-        ImGui::Bullet();
-        ImGui::Text("HP Regen");
-        ImGui::SameLine();
-        ImGui::InputInt("min###16", &minRegen, 0);
-        ImGui::SameLine();
-        ImGui::InputInt("max###17", &maxRegen, 0);
-        if (minRegen < -10) minRegen = -10;
-        if (maxRegen > 10) maxRegen = 10;
-
-        ImGui::Bullet();
-        ImGui::Text("Weapon Type");
-        ImGui::SameLine();
-        drawEnumButton(WeaponType::Any, WeaponType::Staff, weapon, 18);
-
-        ImGui::Bullet();
-        ImGui::Text("Is within polygon");
-        ImGui::SameLine();
-        drawPolygonSelector(polygon);
-
-        ImGui::TreePop();
-    }
-    ImGui::PopItemWidth();
-    ImGui::PopID();
-}
-
 /// ------------- CanPopAgentCondition -------------
 
 bool CanPopAgentCondition::check() const
@@ -1383,19 +871,6 @@ bool CanPopAgentCondition::check() const
 void CanPopAgentCondition::drawSettings()
 {
     ImGui::Text("If player can pop minipet or ghost in the box");
-}
-
-/// ------------- PlayerIsIdleCondition -------------
-
-bool PlayerIsIdleCondition::check() const
-{
-    const auto player = GW::Agents::GetControlledCharacter();
-    if (!player) return false;
-    return player->GetIsIdle();
-}
-void PlayerIsIdleCondition::drawSettings()
-{
-    ImGui::Text("If player is idle");
 }
 
 /// ------------- PlayerHasItemEquippedCondition -------------
@@ -1431,33 +906,6 @@ void PlayerHasItemEquippedCondition::drawSettings()
     ImGui::PopID();
 }
 
-/// ------------- PlayerHasHpBelowCondition -------------
-PlayerHasHpBelowCondition::PlayerHasHpBelowCondition(InputStream& stream)
-{
-    stream >> hp;
-}
-void PlayerHasHpBelowCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    stream << hp;
-}
-bool PlayerHasHpBelowCondition::check() const
-{
-    const auto player = GW::Agents::GetControlledCharacter();
-    return player && player->hp * 100.f < hp;
-}
-void PlayerHasHpBelowCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-    ImGui::Text("If the player has HP below");
-    ImGui::PushItemWidth(90);
-    ImGui::SameLine();
-    ImGui::InputFloat("%", &hp, 0);
-    ImGui::PopItemWidth();
-    ImGui::PopID();
-}
-
 /// ------------- ItemInInventoryCondition -------------
 ItemInInventoryCondition::ItemInInventoryCondition(InputStream& stream)
 {
@@ -1488,151 +936,6 @@ void ItemInInventoryCondition::drawSettings()
     ImGui::PushItemWidth(90);
     ImGui::InputInt("model id", &modelId, 0);
     ImGui::PopItemWidth();
-
-    ImGui::PopID();
-}
-
-/// ------------- PlayerStatusCondition -------------
-PlayerStatusCondition::PlayerStatusCondition(InputStream& stream)
-{
-    stream >> status;
-}
-void PlayerStatusCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    stream << status;
-}
-bool PlayerStatusCondition::check() const
-{
-    const auto player = GW::Agents::GetControlledCharacter();
-    if (!player) return false;
-
-    switch (status) 
-    {
-        case Status::Enchanted:
-            return player->GetIsEnchanted();
-        case Status::WeaponSpelled:
-            return player->GetIsWeaponSpelled();
-        case Status::Alive:
-            return player->GetIsAlive();
-        case Status::Bleeding:
-            return player->GetIsBleeding();
-        case Status::Crippled:
-            return player->GetIsCrippled();
-        case Status::DeepWounded:
-            return player->GetIsDeepWounded();
-        case Status::Poisoned:
-            return player->GetIsPoisoned();
-        case Status::Hexed:
-            return player->GetIsHexed() || player->GetIsDegenHexed();
-        case Status::Idle:
-            return player->GetIsIdle();
-        case Status::KnockedDown:
-            return player->GetIsKnockedDown();
-        case Status::Moving:
-            return player->GetIsMoving();
-        case Status::Attacking:
-            return player->GetIsAttacking();
-        case Status::Casting:
-            return player->GetIsCasting();
-        default:
-            return false;
-    }
-}
-void PlayerStatusCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-
-    ImGui::Text("If player is");
-    ImGui::SameLine();
-    drawEnumButton(Status::Enchanted, Status::Casting, status);
-
-    ImGui::PopID();
-}
-
-/// ------------- CurrentTargetStatusCondition -------------
-CurrentTargetStatusCondition::CurrentTargetStatusCondition(InputStream& stream)
-{
-    stream >> status;
-}
-void CurrentTargetStatusCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    stream << status;
-}
-bool CurrentTargetStatusCondition::check() const
-{
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
-    if (!target) return false;
-
-    switch (status) {
-        case Status::Enchanted:
-            return target->GetIsEnchanted();
-        case Status::WeaponSpelled:
-            return target->GetIsWeaponSpelled();
-        case Status::Alive:
-            return target->GetIsAlive();
-        case Status::Bleeding:
-            return target->GetIsBleeding();
-        case Status::Crippled:
-            return target->GetIsCrippled();
-        case Status::DeepWounded:
-            return target->GetIsDeepWounded();
-        case Status::Poisoned:
-            return target->GetIsPoisoned();
-        case Status::Hexed:
-            return target->GetIsHexed() || target->GetIsDegenHexed();
-        case Status::Idle:
-            return target->GetIsIdle();
-        case Status::KnockedDown:
-            return target->GetIsKnockedDown();
-        case Status::Moving:
-            return target->GetIsMoving();
-        case Status::Attacking:
-            return target->GetIsAttacking();
-        case Status::Casting:
-            return target->GetIsCasting();
-        default:
-            return false;
-    }
-}
-void CurrentTargetStatusCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-
-    ImGui::Text("If current target is");
-    ImGui::SameLine();
-    drawEnumButton(Status::Enchanted, Status::Casting, status);
-
-    ImGui::PopID();
-}
-
-/// ------------- PlayerInPolygonCondition -------------
-PlayerInPolygonCondition::PlayerInPolygonCondition(InputStream& stream)
-{
-    polygon = readPositions(stream);
-}
-void PlayerInPolygonCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    writePositions(stream, polygon);
-}
-bool PlayerInPolygonCondition::check() const
-{
-    const auto player = GW::Agents::GetControlledCharacter();
-    if (!player || polygon.size() < 3) return false;
-    return pointIsInsidePolygon(player->pos, polygon);
-}
-void PlayerInPolygonCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-
-    ImGui::Text("If player is inside polygon");
-    ImGui::SameLine();
-    drawPolygonSelector(polygon);
 
     ImGui::PopID();
 }
@@ -2080,39 +1383,6 @@ void ToggleCondition::drawSettings()
     ImGui::PopID();
 }
 
-/// ------------- CurrentTargetNameCondition -------------
-CurrentTargetNameCondition::CurrentTargetNameCondition(InputStream& stream) 
-{
-    name = readStringWithSpaces(stream);
-}
-void CurrentTargetNameCondition::serialize(OutputStream& stream) const
-{
-    Condition::serialize(stream);
-
-    writeStringWithSpaces(stream, name);
-}
-bool CurrentTargetNameCondition::check() const
-{
-    if (name.empty()) return false;
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
-    if (!target) return false;
-
-    auto& instanceInfo = InstanceInfo::getInstance();
-    return instanceInfo.getDecodedAgentName(target->agent_id) == name;
-}
-void CurrentTargetNameCondition::drawSettings()
-{
-    ImGui::PushID(drawId());
-
-    ImGui::Text("If current target has name");
-    ImGui::SameLine();
-    ImGui::PushItemWidth(300);
-    ImGui::InputText("name", &name);
-    ImGui::PopItemWidth();
-
-    ImGui::PopID();
-}
-
 /// ------------- ThrottleCondition -------------
 ThrottleCondition::ThrottleCondition(InputStream& stream)
 {
@@ -2143,6 +1413,183 @@ void ThrottleCondition::drawSettings()
     ImGui::PushItemWidth(80);
     ImGui::InputInt("ms", &delayInMs, 0);
     ImGui::PopItemWidth();
+
+    ImGui::PopID();
+}
+
+/// ------------- PlayerHasCharacteristicsCondition -------------
+PlayerHasCharacteristicsCondition::PlayerHasCharacteristicsCondition(InputStream& stream)
+{
+    while (stream && stream.peek() == 'X') 
+    {
+        stream.get();
+        if (auto characteristic = readCharacteristic(stream))
+            characteristics.push_back(std::move(characteristic));
+        else 
+            break;
+    }
+}
+void PlayerHasCharacteristicsCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    for (const auto& c : characteristics)
+        c->serialize(stream);
+}
+bool PlayerHasCharacteristicsCondition::check() const
+{
+    const auto player = GW::Agents::GetControlledCharacter();
+    if (!player) return false;
+    return std::ranges::all_of(characteristics, [&player](const auto& c){return !c || c->check(*player); });
+}
+void PlayerHasCharacteristicsCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("If the player fulfills characteristics:");
+
+    int rowToDelete = -1;
+    for (int i = 0; i < int(characteristics.size()); ++i) {
+        ImGui::PushID(i);
+
+        ImGui::Bullet();
+        if (ImGui::Button("X")) {
+            if (characteristics[i])
+                characteristics[i] = nullptr;
+            else
+                rowToDelete = i;
+        }
+
+        ImGui::SameLine();
+        if (characteristics[i])
+            characteristics[i]->drawSettings();
+        else
+            characteristics[i] = drawCharacteristicSelector(120.f);
+
+        ImGui::PopID();
+    }
+    if (rowToDelete != -1) characteristics.erase(characteristics.begin() + rowToDelete);
+
+    ImGui::Bullet();
+    if (ImGui::Button("+")) characteristics.push_back(nullptr);
+
+    ImGui::PopID();
+}
+
+/// ------------- TargetHasCharacteristicsCondition -------------
+TargetHasCharacteristicsCondition::TargetHasCharacteristicsCondition(InputStream& stream)
+{
+    while (stream && stream.peek() == 'X') 
+    {
+        stream.get();
+        if (auto characteristic = readCharacteristic(stream)) 
+            characteristics.push_back(std::move(characteristic));
+        else
+            break;
+    }
+}
+void TargetHasCharacteristicsCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    for (const auto& c : characteristics)
+        c->serialize(stream);
+}
+bool TargetHasCharacteristicsCondition::check() const
+{
+    const auto target = GW::Agents::GetTargetAsAgentLiving();
+    if (!target) return false;
+    return std::ranges::all_of(characteristics, [&target](const auto& c){return !c || c->check(*target); });
+}
+void TargetHasCharacteristicsCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("If the target fulfills characteristics:");
+
+    int rowToDelete = -1;
+    for (int i = 0; i < int(characteristics.size()); ++i) {
+        ImGui::PushID(i);
+
+        ImGui::Bullet();
+        if (ImGui::Button("X")) {
+            if (characteristics[i])
+                characteristics[i] = nullptr;
+            else
+                rowToDelete = i;
+        }
+
+        ImGui::SameLine();
+        if (characteristics[i])
+            characteristics[i]->drawSettings();
+        else
+            characteristics[i] = drawCharacteristicSelector(120.f);
+
+        ImGui::PopID();
+    }
+    if (rowToDelete != -1) characteristics.erase(characteristics.begin() + rowToDelete);
+
+    ImGui::Bullet();
+    if (ImGui::Button("+")) characteristics.push_back(nullptr);
+
+    ImGui::PopID();
+}
+
+/// ------------- AgentWithCharacteristicsCountCondition -------------
+AgentWithCharacteristicsCountCondition::AgentWithCharacteristicsCountCondition(InputStream& stream)
+{
+    stream >> comp >> count;
+    while (stream && stream.peek() == 'X') 
+    {
+        stream.get();
+        if (auto characteristic = readCharacteristic(stream)) 
+            characteristics.push_back(std::move(characteristic));
+        else
+            break;
+    }
+}
+void AgentWithCharacteristicsCountCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << comp << count;
+    for (const auto& c : characteristics)
+        c->serialize(stream);
+}
+bool AgentWithCharacteristicsCountCondition::check() const
+{
+    const auto agents = GW::Agents::GetAgentArray();
+    if (!agents) return false;
+
+    const auto actualCount = std::ranges::count_if(*agents, [&](GW::Agent* agent)
+    {
+        if (!agent || !agent->GetIsLivingType()) 
+            return false;
+        return std::ranges::all_of(characteristics, [living = agent->GetAsAgentLiving()](const auto& c){ return !c || c->check(*living);} );
+    });
+
+    return compare(actualCount, comp, count);
+}
+void AgentWithCharacteristicsCountCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("If the number of nearby agents fulfilling characteristics");
+    ImGui::SameLine();
+    drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
+    ImGui::SameLine();
+    ImGui::PushItemWidth(50.f);
+    ImGui::InputInt("", &count, 0);
+    ImGui::PopItemWidth();
+
+    int drawId = 0;
+
+    for (auto& c : characteristics) {
+        ImGui::Bullet();
+        ImGui::PushID(drawId++);
+        c->drawSettings();
+        ImGui::PopID();
+    }
 
     ImGui::PopID();
 }

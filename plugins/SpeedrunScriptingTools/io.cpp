@@ -25,10 +25,12 @@ namespace {
 
 int InputStream::peek()
 {
+    stream >> std::ws;
     return stream.peek();
 }
 int InputStream::get()
 {
+    stream >> std::ws;
     return stream.get();
 }
 InputStream::operator bool() const

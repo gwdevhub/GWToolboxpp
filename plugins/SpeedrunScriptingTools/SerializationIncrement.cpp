@@ -6,8 +6,7 @@
 // The v8 -> v9 version change was necessary because the OR & AND conditions and the conditioned action did not write seperators between the actions & conditions.
 // When the actions and conditions had received additional member variables, this meant that the deserialization failed.
 // Store the v8 schema of the changed actions & conditions here so they can still be read.
-namespace v8 
-{
+/* namespace v8 {
     const std::string missingContentToken = "/";
     const std::string endOfListToken = ">";
 
@@ -404,4 +403,14 @@ ActionPtr readV8Action(InputStream& stream)
         default:
             return nullptr;
     }
+}
+*/
+
+ActionPtr readV8Action(InputStream&)
+{
+    return nullptr;
+}
+ConditionPtr readV8Condition(InputStream&)
+{
+    return nullptr;
 }
