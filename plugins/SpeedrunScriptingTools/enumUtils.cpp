@@ -379,6 +379,18 @@ std::string_view toString(ComparisonOperator comp)
     return "";
 }
 
+std::string_view toString(IsIsNot comp)
+{
+    switch (comp) 
+    {
+        case IsIsNot::Is:
+            return "is";
+        case IsIsNot::IsNot:
+            return "is not";
+    }
+    return "";
+}
+
 std::string_view toString(GW::Constants::HeroID hero) 
 {
     switch (hero)

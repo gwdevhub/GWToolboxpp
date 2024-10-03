@@ -7,7 +7,7 @@ namespace
 {
 ConditionPtr makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 46);
+    static_assert((int)ConditionType::Count == 49);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -34,51 +34,20 @@ ConditionPtr makeCondition(ConditionType type)
         case ConditionType::InstanceType:
             return std::make_shared<InstanceTypeCondition>();
 
-        case ConditionType::PlayerIsNearPosition:
-            return std::make_shared<PlayerIsNearPositionCondition>();
         case ConditionType::PlayerHasBuff:
             return std::make_shared<PlayerHasBuffCondition>();
         case ConditionType::PlayerHasSkill:
             return std::make_shared<PlayerHasSkillCondition>();
-        case ConditionType::PlayerHasClass:
-            return std::make_shared<PlayerHasClassCondition>();
-        case ConditionType::PlayerHasName:
-            return std::make_shared<PlayerHasNameCondition>();
         case ConditionType::PlayerHasEnergy:
             return std::make_shared<PlayerHasEnergyCondition>();
-        case ConditionType::PlayerIsIdle:
-            return std::make_shared<PlayerIsIdleCondition>();
         case ConditionType::PlayerHasItemEquipped:
             return std::make_shared<PlayerHasItemEquippedCondition>();
-        case ConditionType::PlayerHasHpBelow:
-            return std::make_shared<PlayerHasHpBelowCondition>();
-        case ConditionType::PlayerStatus:
-            return std::make_shared<PlayerStatusCondition>();
-        case ConditionType::PlayerInPolygon:
-            return std::make_shared<PlayerInPolygonCondition>();
         case ConditionType::PlayerMorale:
             return std::make_shared<MoraleCondition>();
-        case ConditionType::PlayerIsCastingSkill:
-            return std::make_shared<PlayerIsCastingSkillCondition>();
         case ConditionType::ItemInInventory:
             return std::make_shared<ItemInInventoryCondition>();
         case ConditionType::RemainingCooldown:
             return std::make_shared<RemainingCooldownCondition>();
-
-        case ConditionType::CurrentTargetHasHpBelow:
-            return std::make_shared<CurrentTargetHasHpBelowCondition>();
-        case ConditionType::CurrentTargetIsUsingSkill:
-            return std::make_shared<CurrentTargetIsCastingSkillCondition>();
-        case ConditionType::CurrentTargetHasModel:
-            return std::make_shared<CurrentTargetModelCondition>();
-        case ConditionType::CurrentTargetAllegiance:
-            return std::make_shared<CurrentTargetAllegianceCondition>();
-        case ConditionType::CurrentTargetDistance:
-            return std::make_shared<CurrentTargetDistanceCondition>();
-        case ConditionType::CurrentTargetStatus:
-            return std::make_shared<CurrentTargetStatusCondition>();
-        case ConditionType::CurrentTargetName:
-            return std::make_shared<CurrentTargetNameCondition>();
 
         case ConditionType::KeyIsPressed:
             return std::make_shared<KeyIsPressedCondition>();
@@ -86,8 +55,6 @@ ConditionPtr makeCondition(ConditionType type)
             return std::make_shared<InstanceTimeCondition>();
         case ConditionType::FoeCount:
             return std::make_shared<FoeCountCondition>();
-        case ConditionType::NearbyAgent:
-            return std::make_shared<NearbyAgentCondition>();
         case ConditionType::CanPopAgent:
             return std::make_shared<CanPopAgentCondition>();
         case ConditionType::Throttle:
@@ -106,6 +73,13 @@ ConditionPtr makeCondition(ConditionType type)
         case ConditionType::After:
             return std::make_shared<AfterCondition>();
 
+        case ConditionType::PlayerHasCharacteristics:
+            return std::make_shared<PlayerHasCharacteristicsCondition>();
+        case ConditionType::TargetHasCharacteristics:
+            return std::make_shared<TargetHasCharacteristicsCondition>();
+        case ConditionType::AgentWithCharacteristicsCount:
+            return std::make_shared<AgentWithCharacteristicsCountCondition>();
+
         default:
             return nullptr;
     }
@@ -113,7 +87,7 @@ ConditionPtr makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 46);
+    static_assert((int)ConditionType::Count == 49);
     switch (type) {
         case ConditionType::Not:
             return "Not";
@@ -140,60 +114,27 @@ std::string_view toString(ConditionType type)
         case ConditionType::InstanceType:
             return "Type";
 
-        case ConditionType::PlayerIsNearPosition:
-            return "Position";
         case ConditionType::PlayerHasBuff:
             return "Buff";
         case ConditionType::PlayerHasSkill:
             return "Has skill";
-        case ConditionType::PlayerHasClass:
-            return "Class";
-        case ConditionType::PlayerHasName:
-            return "Name";
         case ConditionType::PlayerHasEnergy:
             return "Energy";
-        case ConditionType::PlayerIsIdle:
-            return "Is idle";
-        case ConditionType::PlayerStatus:
-            return "Status";
         case ConditionType::PlayerMorale:
             return "Morale";
         case ConditionType::PlayerHasItemEquipped:
             return "Equipped item";
-        case ConditionType::PlayerInPolygon:
-            return "Inside polygon";
-        case ConditionType::PlayerIsCastingSkill:
-            return "Skill";
         case ConditionType::ItemInInventory:
             return "Item in inventory";
-        case ConditionType::PlayerHasHpBelow:
-            return "HP";
         case ConditionType::CanPopAgent:
             return "Can pop agent";
         case ConditionType::RemainingCooldown:
             return "Skill cooldown";
 
-        case ConditionType::CurrentTargetHasHpBelow:
-            return "HP";
-        case ConditionType::CurrentTargetIsUsingSkill:
-            return "Skill";
-        case ConditionType::CurrentTargetHasModel:
-            return "Model";
-        case ConditionType::CurrentTargetAllegiance:
-            return "Allegiance";
-        case ConditionType::CurrentTargetDistance:
-            return "Distance";
-        case ConditionType::CurrentTargetStatus:
-            return "Status";
-        case ConditionType::CurrentTargetName:
-            return "Name";
-
         case ConditionType::KeyIsPressed:
             return "Keypress";
         case ConditionType::InstanceTime:
             return "Time";
-        case ConditionType::NearbyAgent:
-            return "Nearby agent exists";
         case ConditionType::FoeCount:
             return "Number of enemies";
         case ConditionType::Throttle:
@@ -212,6 +153,13 @@ std::string_view toString(ConditionType type)
         case ConditionType::After:
             return "After";
 
+        case ConditionType::PlayerHasCharacteristics:
+            return "Player characteristics";
+        case ConditionType::TargetHasCharacteristics:
+            return "Target characteristics";
+        case ConditionType::AgentWithCharacteristicsCount:
+            return "Agent characteristics";
+
         default:
             return "Unknown";
     }
@@ -220,7 +168,7 @@ std::string_view toString(ConditionType type)
 
 ConditionPtr readCondition(InputStream& stream)
 {
-static_assert((int)ConditionType::Count == 46);
+static_assert((int)ConditionType::Count == 49);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -250,58 +198,25 @@ switch (static_cast<ConditionType>(type))
     case ConditionType::InstanceType:
         return std::make_shared<InstanceTypeCondition>(stream);
 
-    case ConditionType::PlayerIsNearPosition:
-        return std::make_shared<PlayerIsNearPositionCondition>(stream);
     case ConditionType::PlayerHasBuff:
         return std::make_shared<PlayerHasBuffCondition>(stream);
     case ConditionType::PlayerHasSkill:
         return std::make_shared<PlayerHasSkillCondition>(stream);
-    case ConditionType::PlayerHasClass:
-        return std::make_shared<PlayerHasClassCondition>(stream);
-    case ConditionType::PlayerHasName:
-        return std::make_shared<PlayerHasNameCondition>(stream);
     case ConditionType::PlayerHasEnergy:
         return std::make_shared<PlayerHasEnergyCondition>(stream);
-    case ConditionType::PlayerIsIdle:
-        return std::make_shared<PlayerIsIdleCondition>(stream);
     case ConditionType::PlayerHasItemEquipped:
         return std::make_shared<PlayerHasItemEquippedCondition>(stream);
     case ConditionType::ItemInInventory:
         return std::make_shared<ItemInInventoryCondition>(stream);
-    case ConditionType::PlayerHasHpBelow:
-        return std::make_shared<PlayerHasHpBelowCondition>(stream);
-    case ConditionType::PlayerStatus:
-        return std::make_shared<PlayerStatusCondition>(stream);
-    case ConditionType::PlayerInPolygon:
-        return std::make_shared<PlayerInPolygonCondition>(stream);
-    case ConditionType::PlayerIsCastingSkill:
-        return std::make_shared<PlayerIsCastingSkillCondition>(stream);
     case ConditionType::PlayerMorale:
         return std::make_shared<MoraleCondition>(stream);
     case ConditionType::RemainingCooldown:
         return std::make_shared<RemainingCooldownCondition>(stream);
 
-    case ConditionType::CurrentTargetHasHpBelow:
-        return std::make_shared<CurrentTargetHasHpBelowCondition>(stream);
-    case ConditionType::CurrentTargetIsUsingSkill:
-        return std::make_shared<CurrentTargetIsCastingSkillCondition>(stream);
-    case ConditionType::CurrentTargetHasModel:
-        return std::make_shared<CurrentTargetModelCondition>(stream);
-    case ConditionType::CurrentTargetAllegiance:
-        return std::make_shared<CurrentTargetAllegianceCondition>(stream);
-    case ConditionType::CurrentTargetDistance:
-        return std::make_shared<CurrentTargetDistanceCondition>(stream);
-    case ConditionType::CurrentTargetStatus:
-        return std::make_shared<CurrentTargetStatusCondition>(stream);
-    case ConditionType::CurrentTargetName:
-        return std::make_shared<CurrentTargetNameCondition>(stream);
-
     case ConditionType::KeyIsPressed:
         return std::make_shared<KeyIsPressedCondition>(stream);
     case ConditionType::InstanceTime:
         return std::make_shared<InstanceTimeCondition>(stream);
-    case ConditionType::NearbyAgent:
-        return std::make_shared<NearbyAgentCondition>(stream);
     case ConditionType::CanPopAgent:
         return std::make_shared<CanPopAgentCondition>(stream);
     case ConditionType::FoeCount:
@@ -321,6 +236,13 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<ToggleCondition>(stream);
     case ConditionType::After:
         return std::make_shared<AfterCondition>(stream);
+
+    case ConditionType::PlayerHasCharacteristics:
+        return std::make_shared<PlayerHasCharacteristicsCondition>(stream);
+    case ConditionType::TargetHasCharacteristics:
+        return std::make_shared<TargetHasCharacteristicsCondition>(stream);
+    case ConditionType::AgentWithCharacteristicsCount:
+        return std::make_shared<AgentWithCharacteristicsCountCondition>(stream);
 
     default:
         return nullptr;
@@ -355,11 +277,9 @@ ConditionPtr drawConditionSelector(float width)
         ImGui::OpenPopup("Add condition");
     }
 
-    constexpr auto playerConditions = std::array{ConditionType::PlayerIsNearPosition,  ConditionType::PlayerInPolygon, ConditionType::PlayerHasBuff,    ConditionType::PlayerHasSkill, ConditionType::RemainingCooldown, ConditionType::PlayerHasClass,
-                                                 ConditionType::PlayerHasName,         ConditionType::PlayerHasEnergy, ConditionType::PlayerHasHpBelow, ConditionType::PlayerStatus,
-                                                 ConditionType::PlayerHasItemEquipped, ConditionType::PlayerIsCastingSkill, ConditionType::ItemInInventory, ConditionType::PlayerMorale,     ConditionType::CanPopAgent};
-    constexpr auto targetConditions = std::array{ConditionType::CurrentTargetHasHpBelow, ConditionType::CurrentTargetStatus, ConditionType::CurrentTargetIsUsingSkill, ConditionType::CurrentTargetHasModel,
-                                                 ConditionType::CurrentTargetAllegiance, ConditionType::CurrentTargetDistance, ConditionType::CurrentTargetName};
+    constexpr auto playerConditions = std::array{ConditionType::PlayerHasCharacteristics, ConditionType::PlayerHasBuff,    ConditionType::PlayerHasSkill, ConditionType::RemainingCooldown,
+                                                 ConditionType::PlayerHasEnergy,
+                                                 ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory, ConditionType::PlayerMorale,     ConditionType::CanPopAgent};
     constexpr auto partyCondtions = std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName};
     constexpr auto instanceConditions = std::array{ConditionType::IsInMap, ConditionType::InstanceType, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime, ConditionType::FoeCount};
     constexpr auto logicConditions = std::array{ConditionType::Not, ConditionType::Or, ConditionType::And, ConditionType::True, ConditionType::False};
@@ -368,12 +288,12 @@ ConditionPtr drawConditionSelector(float width)
     if (ImGui::BeginPopup("Add condition")) 
     {
         drawSubMenu("Player", playerConditions);
-        drawSubMenu("Current target", targetConditions);
+        drawConditionSelector(ConditionType::TargetHasCharacteristics);
+        drawConditionSelector(ConditionType::AgentWithCharacteristicsCount);
         drawSubMenu("Party", partyCondtions);
         drawSubMenu("Instance", instanceConditions);
         drawSubMenu("Logic", logicConditions);
         drawSubMenu("Control flow", controlFlowCondition);
-        drawConditionSelector(ConditionType::NearbyAgent);
         drawConditionSelector(ConditionType::KeyIsPressed);
 
         ImGui::EndPopup();
