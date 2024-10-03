@@ -4,7 +4,9 @@
 #include <InstanceInfo.h>
 
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Party.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <ImGuiCppWrapper.h>
 
@@ -342,6 +344,8 @@ void AllegianceCharacteristic::serialize(OutputStream& stream) const
 bool AllegianceCharacteristic::check(const GW::AgentLiving& agent) const
 {
     const auto player = GW::Agents::GetControlledCharacter();
+    const auto info = GW::PartyMgr::GetPartyInfo();
+
     switch (agentType) 
     {
         case AgentType::Any:
@@ -349,7 +353,15 @@ bool AllegianceCharacteristic::check(const GW::AgentLiving& agent) const
         case AgentType::Self:
             return player && agent.agent_id == player->agent_id;
         case AgentType::PartyMember:
-            return false; //TODO
+            if (agent.IsPlayer()) 
+                return true;
+            if (!info) 
+                return false;
+            for (const auto& hero : info->heroes)
+                if (agent.agent_id == hero.agent_id) return true;
+            for (const auto& henchman : info->henchmen)
+                if (agent.agent_id == henchman.agent_id) return true;
+            return false;
         case AgentType::Friendly:
             return agent.allegiance != GW::Constants::Allegiance::Enemy;
         case AgentType::Hostile:
