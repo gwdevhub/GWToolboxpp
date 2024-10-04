@@ -2270,28 +2270,66 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
     InventoryManager& im = Instance();
     const Item* item = nullptr;
     switch (type) {
-        case 7: // Left click + ctrl
-            if (!ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
-                return;
+        case 7: // Left click
+            if (ImGui::IsKeyDown(ImGuiMod_Ctrl) && !ImGui::IsKeyDown(ImGuiMod_Alt)
+                && GameSettings::GetSettingBool("move_item_on_ctrl_click")
+                && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+                // Ctrl+Click: Move item to inventory/chest
+                if (bag) {
+                    item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
+                }
+                else {
+                    item = static_cast<Item*>(GW::Items::GetHoveredItem());
+                }
+                if (!item) {
+                    return;
+                }
+
+                if (ImGui::IsKeyDown(ImGuiMod_Shift) && item->quantity > 1) {
+                    prompt_split_stack(item);
+                }
+                else {
+                    move_item(item);
+                }
             }
-            break;
-        case 8: // Double click - add to trade window if available
+            else if (ImGui::IsKeyDown(ImGuiMod_Alt) && !ImGui::IsKeyDown(ImGuiMod_Ctrl) && IsTradeWindowOpen()
+                && GameSettings::GetSettingBool("move_to_trade_on_double_click") && GameSettings::GetSettingBool("move_to_trade_on_alt_click")) {
+                // Alt+Click: Add to trade window if available
+                status->blocked = true;
+                item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
+                if (!item || !item->CanOfferToTrade()) {
+                    return;
+                }
+                if (!item->bag->IsInventoryBag()) {
+                    const uint16_t moved = move_to_first_empty_slot(item, GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2);
+                    if (!moved) {
+                        Log::ErrorW(L"Failed to move item to inventory for trading");
+                        return;
+                    }
+                }
+                pending_item_move_for_trade = item->item_id;
+            }
+            return;
+        case 8: // Double click
             if (!IsTradeWindowOpen()) {
                 return;
             }
-            status->blocked = true;
-            item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
-            if (!item || !item->CanOfferToTrade()) {
-                return;
-            }
-            if (!item->bag->IsInventoryBag()) {
-                const uint16_t moved = move_to_first_empty_slot(item, GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2);
-                if (!moved) {
-                    Log::ErrorW(L"Failed to move item to inventory for trading");
+            else if (GameSettings::GetSettingBool("move_to_trade_on_double_click") && !GameSettings::GetSettingBool("move_to_trade_on_alt_click")) {
+                // Add to trade if available
+                status->blocked = true;
+                item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
+                if (!item || !item->CanOfferToTrade()) {
                     return;
                 }
+                if (!item->bag->IsInventoryBag()) {
+                    const uint16_t moved = move_to_first_empty_slot(item, GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2);
+                    if (!moved) {
+                        Log::ErrorW(L"Failed to move item to inventory for trading");
+                        return;
+                    }
+                }
+                pending_item_move_for_trade = item->item_id;
             }
-            pending_item_move_for_trade = item->item_id;
             return;
         case 999: // Right click (via GWToolbox)
             if (!Instance().right_click_context_menu_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
@@ -2300,47 +2338,29 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
             if (!Instance().right_click_context_menu_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
                 return;
             }
-            break;
+
+            if (bag) {
+                item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
+            }
+            else {
+                item = static_cast<Item*>(GW::Items::GetHoveredItem());
+            }
+            if (!item) {
+                return;
+            }
+
+            // Context menu applies
+            if (im.context_item.item_id == item->item_id && im.show_item_context_menu) {
+                return; // Double looped.
+            }
+            if (!im.context_item.set(item)) {
+                return;
+            }
+            im.show_item_context_menu = true;
+            status->blocked = true;
+            return;
         default:
             return;
-    }
-
-    if (bag) {
-        item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
-    }
-    else {
-        item = static_cast<Item*>(GW::Items::GetHoveredItem());
-    }
-
-    if (!item) {
-        return;
-    }
-
-    const bool show_context_menu = item->IsIdentificationKit() || item->IsSalvageKit() || type == 999;
-
-    if (show_context_menu) {
-        // Context menu applies
-        if (im.context_item.item_id == item->item_id && im.show_item_context_menu) {
-            return; // Double looped.
-        }
-        if (!im.context_item.set(item)) {
-            return;
-        }
-        im.show_item_context_menu = true;
-        status->blocked = true;
-        return;
-    }
-    if (type == 7
-        && ImGui::IsKeyDown(ImGuiMod_Ctrl)
-        && GameSettings::GetSettingBool("move_item_on_ctrl_click")
-        && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-        // Move item on ctrl click
-        if (ImGui::IsKeyDown(ImGuiMod_Shift) && item->quantity > 1) {
-            prompt_split_stack(item);
-        }
-        else {
-            move_item(item);
-        }
     }
 }
 
