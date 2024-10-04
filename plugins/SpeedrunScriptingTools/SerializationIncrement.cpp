@@ -2,84 +2,318 @@
 
 #include <ActionImpls.h>
 #include <ConditionImpls.h>
+#include <Characteristic.h>
 
-// The v8 -> v9 version change was necessary because the OR & AND conditions and the conditioned action did not write seperators between the actions & conditions.
-// When the actions and conditions had received additional member variables, this meant that the deserialization failed.
-// Store the v8 schema of the changed actions & conditions here so they can still be read.
-/* namespace v8 {
+// v10 was deprecated when most conditions were moved to use characteristics. Save the schema to stll be able to read them.
+namespace v10 {
     const std::string missingContentToken = "/";
     const std::string endOfListToken = ">";
 
-    // Disjunction and Conjunction are serialized identically
-    struct DisjunctionConjunctionCondition 
+    struct PlayerIsNearPositionCondition
     {
-        DisjunctionConjunctionCondition(InputStream& stream) 
+        PlayerIsNearPositionCondition(InputStream& stream) 
         { 
-            std::string token;
-
-            while (stream >> token) 
-            {
-                if (token == endOfListToken)
-                    return;
-                else if (token == missingContentToken)
-                    conditions.push_back(nullptr);
-                else if (token == "C") {
-                    if (auto read = readV8Condition(stream)) conditions.push_back(std::move(read));
-                }
-                else
-                    return;
-            }
+            stream >> pos.x >> pos.y >> accuracy;
         }
         std::string serialize()
         {
             OutputStream stream;
-
-            stream << conditions.size();
-
-            for (const auto& condition : conditions) 
-            {
-                if (condition)
-                    condition->serialize(stream);
-                else
-                    stream << missingContentToken;
-
-                stream.writeSeparator(2);
-            }
-
+            stream << "X" << CharacteristicType::Position << pos.x << pos.y << accuracy << ComparisonOperator::LessOrEqual;
+            stream.writeSeparator(3);
             return stream.str();
         }
-        std::vector<ConditionPtr> conditions;
+        GW::GamePos pos = {};
+        float accuracy = GW::Constants::Range::Adjacent;
     };
-    struct PlayerHasSkillCondition 
+
+    struct PlayerHasClassCondition 
     {
-        PlayerHasSkillCondition(InputStream& stream) 
+        PlayerHasClassCondition(InputStream& stream) 
         { 
-            stream >> id;
-        } 
+            stream >> primary >> secondary;
+        }
         std::string serialize()
         {
             OutputStream stream;
-            stream << id << HasSkillRequirement::OffCooldown;
+            stream << "X" << CharacteristicType::Class << primary << secondary << IsIsNot::Is;
+            stream.writeSeparator(3);
+            return stream.str();
+        }
+
+        Class primary = Class::Any;
+        Class secondary = Class::Any;
+    };
+
+    struct PlayerOrTargetHasHpBelowCondition 
+    {
+        PlayerOrTargetHasHpBelowCondition(InputStream& stream) 
+        { 
+            stream >> hp;
+        }
+        std::string serialize()
+        {
+            OutputStream stream;
+            stream << "X" << CharacteristicType::HP << hp << ComparisonOperator::LessOrEqual;
+            stream.writeSeparator(3);
+            return stream.str();
+        }
+
+        float hp = 50.f;
+    };
+
+    struct PlayerOrTargetHasNameCondition 
+    {
+        PlayerOrTargetHasNameCondition(InputStream& stream) 
+        { 
+            name = readStringWithSpaces(stream); 
+        }
+        std::string serialize()
+        {
+            OutputStream stream;
+            stream << "X" << CharacteristicType::Name;
+            writeStringWithSpaces(stream, name);
+            stream << IsIsNot::Is;
+            stream.writeSeparator(3);
+            return stream.str();
+        }
+
+        std::string name;
+    };
+
+    struct PlayerOrTargetStatusCondition 
+    {
+        PlayerOrTargetStatusCondition(InputStream& stream) 
+        { 
+            stream >> status;
+        }
+        std::string serialize()
+        {
+            OutputStream stream;
+            stream << "X" << CharacteristicType::Status << status << IsIsNot::Is;
+            stream.writeSeparator(3);
+            return stream.str();
+        }
+
+        Status status = Status::Enchanted;
+    };
+
+    struct PlayerIsIdleCondition 
+    {
+        std::string serialize()
+        {
+            OutputStream stream;
+            stream << "X" << CharacteristicType::Status << Status::Idle << IsIsNot::Is;
+            stream.writeSeparator(3);
+            return stream.str();
+        }
+    };
+
+    struct PlayerInPolygonCondition 
+    {
+        PlayerInPolygonCondition(InputStream& stream) 
+        { 
+            polygon = readPositions(stream);
+        }
+        std::string serialize()
+        {
+            OutputStream stream;
+            stream << "X" << CharacteristicType::Status;
+            writePositions(stream, polygon);
+            stream.writeSeparator(3);
+            return stream.str();
+        }
+        std::vector<GW::Vec2f> polygon;
+    };
+
+    struct PlayerOrTargetIsCastingSkillCondition 
+    {
+        PlayerOrTargetIsCastingSkillCondition(InputStream& stream) 
+        { 
+            stream >> id;
+        }
+        std::string serialize()
+        {
+            OutputStream stream;
+            stream << "X" << CharacteristicType::Skill << id << IsIsNot::Is;
+            stream.writeSeparator(3);
             return stream.str();
         }
         GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
     };
-    struct NearbyAgentCondition 
+
+    struct TargetHasModelCondition 
     {
-        NearbyAgentCondition(InputStream& stream) 
+        TargetHasModelCondition(InputStream& stream) 
         { 
-            stream >> agentType >> primary >> secondary >> alive >> hexed >> skill >> modelId >> minDistance >> maxDistance >> minHp >> maxHp;
-            agentName = readStringWithSpaces(stream);
-            polygon = readPositions(stream);
-        } 
+            stream >> modelId;
+        }
         std::string serialize()
         {
             OutputStream stream;
+            stream << "X" << CharacteristicType::Model << modelId << IsIsNot::Is;
+            stream.writeSeparator(3);
+            return stream.str();
+        }
+        uint16_t modelId = 0;
+    };
 
-            stream << agentType << primary << secondary << alive << hexed << skill << modelId << minDistance << maxDistance << minHp << maxHp;
-            writeStringWithSpaces(stream, agentName);
-            writePositions(stream, polygon);
-            stream << 0.f << 180.f << 0 << 0 << 0 << 0 << 0 << 1000 << -10 << 10 << 0; // new members: Min angle, max angle, enchanted, weaponspelled, poisoned, bleeding, minSpeed, maxSpeed, minRegen, maxRegen, weapon;
+    struct TargetHasAllegianceCondition 
+    {
+        TargetHasAllegianceCondition(InputStream& stream) 
+        { 
+            stream >> agentType;
+        }
+        std::string serialize()
+        {
+            OutputStream stream;
+            stream << "X" << CharacteristicType::Allegiance << agentType << IsIsNot::Is;
+            stream.writeSeparator(3);
+            return stream.str();
+        }
+        AgentType agentType = AgentType::Hostile;
+    };
+
+    struct TargetDistanceCondition 
+    {
+        TargetDistanceCondition(InputStream& stream) 
+        { 
+            stream >> minDistance >> maxDistance;
+        }
+        std::string serialize()
+        {
+            OutputStream stream;
+            if (minDistance > 0.f) 
+            {
+                stream << "X" << CharacteristicType::DistanceToPlayer << minDistance << ComparisonOperator::GreaterOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (maxDistance < 5000.f) 
+            {
+                stream << "X" << CharacteristicType::DistanceToPlayer << maxDistance << ComparisonOperator::LessOrEqual;
+                stream.writeSeparator(3);
+            }
+
+            return stream.str();
+        }
+        float minDistance = 0.f;
+        float maxDistance = 5000.f;
+    };
+
+    struct NearbyAgentCondition 
+    {
+        NearbyAgentCondition(InputStream& stream) 
+        {
+            stream >> agentType >> primary >> secondary >> alive >> hexed >> skill >> modelId >> minDistance >> maxDistance >> minHp >> maxHp;
+            agentName = readStringWithSpaces(stream);
+            polygon = readPositions(stream);
+            stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding >> minSpeed >> maxSpeed >> minRegen >> maxRegen >> weapon;
+        }
+        std::string serialize()
+        {
+            OutputStream stream;
+            
+            stream << ComparisonOperator::GreaterOrEqual << 1;
+
+            const auto maybeWriteStatus = [&stream](AnyNoYes any, Status status) 
+            {
+                if (any != AnyNoYes::Any) {
+                    stream << "X" << CharacteristicType::Status << status << (any == AnyNoYes::No ? IsIsNot::IsNot : IsIsNot::Is);
+                    stream.writeSeparator(3);
+                }
+            };
+            
+            if (agentType != AgentType::Any) 
+            {
+                stream << "X" << CharacteristicType::Allegiance << agentType << IsIsNot::Is;
+                stream.writeSeparator(3);
+            }
+            if (primary != Class::Any || secondary != Class::Any) 
+            {
+                stream << "X" << CharacteristicType::Class << primary << secondary << IsIsNot::Is;
+                stream.writeSeparator(3);
+            }
+            maybeWriteStatus(alive, Status::Alive);
+            maybeWriteStatus(hexed, Status::Hexed);
+            maybeWriteStatus(bleeding, Status::Bleeding);
+            maybeWriteStatus(poisoned, Status::Poisoned);
+            maybeWriteStatus(weaponspelled, Status::WeaponSpelled);
+            maybeWriteStatus(enchanted, Status::Enchanted);
+
+            if (skill != GW::Constants::SkillID::No_Skill) 
+            {
+                stream << "X" << CharacteristicType::Skill << skill << IsIsNot::Is;
+                stream.writeSeparator(3);
+            }
+            if (modelId != 0) 
+            {
+                stream << "X" << CharacteristicType::Model << modelId << IsIsNot::Is;
+                stream.writeSeparator(3);
+            }
+            if (minDistance > 0.f) 
+            {
+                stream << "X" << CharacteristicType::DistanceToPlayer << minDistance << ComparisonOperator::GreaterOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (maxDistance < 5000.f) 
+            {
+                stream << "X" << CharacteristicType::DistanceToPlayer << maxDistance << ComparisonOperator::LessOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (!agentName.empty()) 
+            {
+                stream << "X" << CharacteristicType::Name;
+                writeStringWithSpaces(stream, agentName);
+                stream << IsIsNot::Is;
+                stream.writeSeparator(3);
+            }
+            if (minHp > 0.f) 
+            {
+                stream << "X" << CharacteristicType::HP << minHp << ComparisonOperator::GreaterOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (maxHp < 100.f) 
+            {
+                stream << "X" << CharacteristicType::HP << maxHp << ComparisonOperator::LessOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (minAngle > 0.f) 
+            {
+                stream << "X" << CharacteristicType::AngleToPlayerForward << minAngle << ComparisonOperator::GreaterOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (maxAngle < 180.f) 
+            {
+                stream << "X" << CharacteristicType::AngleToPlayerForward << maxAngle << ComparisonOperator::LessOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (minSpeed > 0.f) 
+            {
+                stream << "X" << CharacteristicType::Speed << minSpeed << ComparisonOperator::GreaterOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (std::abs(maxSpeed - 1000.f) > 0.1f) 
+            {
+                stream << "X" << CharacteristicType::Speed << maxSpeed << ComparisonOperator::LessOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (minRegen > -10) {
+                stream << "X" << CharacteristicType::HPRegen << minRegen << ComparisonOperator::GreaterOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (maxRegen < 10) {
+                stream << "X" << CharacteristicType::HPRegen << maxRegen << ComparisonOperator::LessOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (weapon != WeaponType::Any) 
+            {
+                stream << "X" << CharacteristicType::WeaponType << weapon << IsIsNot::Is;
+                stream.writeSeparator(3);
+            }
+            if (!polygon.empty()) {
+                stream << "X" << CharacteristicType::PositionPolygon;
+                writePositions(stream, polygon);
+                stream.writeSeparator(3);
+            }
 
             return stream.str();
         }
@@ -88,49 +322,126 @@
         Class secondary = Class::Any;
         AnyNoYes alive = AnyNoYes::Yes;
         AnyNoYes hexed = AnyNoYes::Any;
+        AnyNoYes bleeding = AnyNoYes::Any;
+        AnyNoYes poisoned = AnyNoYes::Any;
+        AnyNoYes weaponspelled = AnyNoYes::Any;
+        AnyNoYes enchanted = AnyNoYes::Any;
         GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
-        int modelId = 0;
+        uint16_t modelId = 0;
         float minDistance = 0.f;
         float maxDistance = 5000.f;
         std::string agentName = "";
         std::vector<GW::Vec2f> polygon;
         float minHp = 0.f;
         float maxHp = 100.f;
-    };
-    struct KeyPressCondition 
-    {
-        KeyPressCondition(InputStream& stream)
-        {
-            stream >> shortcut >> modifier;
-        }
-        std::string serialize()
-        {
-            OutputStream stream;
-
-            stream << shortcut << modifier << 0; //New Member: Block key
-
-            return stream.str();
-        }
-        long shortcut;
-        long modifier;
+        float minAngle = 0.f;
+        float maxAngle = 180.f;
+        float minSpeed = 0.f;
+        float maxSpeed = 1000.f;
+        int minRegen = -10;
+        int maxRegen = 10;
+        WeaponType weapon = WeaponType::Any;
     };
 
-    struct ChangeTargetAction 
-    {
+    struct ChangeTargetAction {
         ChangeTargetAction(InputStream& stream)
         {
             stream >> agentType >> primary >> secondary >> alive >> skill >> sorting >> modelId >> minDistance >> maxDistance >> requireSameModelIdAsTarget >> preferNonHexed >> rotateThroughTargets;
             agentName = readStringWithSpaces(stream);
             polygon = readPositions(stream);
+            stream >> minAngle >> maxAngle >> enchanted >> weaponspelled >> poisoned >> bleeding >> hexed >> minSpeed >> maxSpeed >> minRegen >> maxRegen >> weapon >> minHp >> maxHp;
         }
         std::string serialize()
         {
             OutputStream stream;
 
-            stream << agentType << primary << secondary << alive << skill << sorting << modelId << minDistance << maxDistance << requireSameModelIdAsTarget << preferNonHexed << rotateThroughTargets;
-            writeStringWithSpaces(stream, agentName);
-            writePositions(stream, polygon);
-            stream << 0.f << 180.f << 0 << 0 << 0 << 0 << 0 << 0 << 1000 << -10 << 10 << 0 << 0 << 100; // new members: Min angle, max angle, enchanted, weaponspelled, poisoned, bleeding, hexed, minSpeed, maxSpeed, minRegen, maxRegen, weapon, minHp, maxHp
+            stream << sorting << preferNonHexed << requireSameModelIdAsTarget << rotateThroughTargets;
+
+            const auto maybeWriteStatus = [&stream](AnyNoYes any, Status status) {
+                if (any != AnyNoYes::Any) {
+                    stream << "X" << CharacteristicType::Status << status << (any == AnyNoYes::No ? IsIsNot::IsNot : IsIsNot::Is);
+                    stream.writeSeparator(3);
+                }
+            };
+
+            if (agentType != AgentType::Any) {
+                stream << "X" << CharacteristicType::Allegiance << agentType << IsIsNot::Is;
+                stream.writeSeparator(3);
+            }
+            if (primary != Class::Any || secondary != Class::Any) {
+                stream << "X" << CharacteristicType::Class << primary << secondary << IsIsNot::Is;
+                stream.writeSeparator(3);
+            }
+            maybeWriteStatus(alive, Status::Alive);
+            maybeWriteStatus(hexed, Status::Hexed);
+            maybeWriteStatus(bleeding, Status::Bleeding);
+            maybeWriteStatus(poisoned, Status::Poisoned);
+            maybeWriteStatus(weaponspelled, Status::WeaponSpelled);
+            maybeWriteStatus(enchanted, Status::Enchanted);
+
+            if (skill != GW::Constants::SkillID::No_Skill) {
+                stream << "X" << CharacteristicType::Skill << skill << IsIsNot::Is;
+                stream.writeSeparator(3);
+            }
+            if (modelId != 0) {
+                stream << "X" << CharacteristicType::Model << modelId << IsIsNot::Is;
+                stream.writeSeparator(3);
+            }
+            if (minDistance > 0.f) {
+                stream << "X" << CharacteristicType::DistanceToPlayer << minDistance << ComparisonOperator::GreaterOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (maxDistance < 5000.f) {
+                stream << "X" << CharacteristicType::DistanceToPlayer << maxDistance << ComparisonOperator::LessOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (!agentName.empty()) {
+                stream << "X" << CharacteristicType::Name;
+                writeStringWithSpaces(stream, agentName);
+                stream << IsIsNot::Is;
+                stream.writeSeparator(3);
+            }
+            if (minHp > 0.f) {
+                stream << "X" << CharacteristicType::HP << minHp << ComparisonOperator::GreaterOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (maxHp < 100.f) {
+                stream << "X" << CharacteristicType::HP << maxHp << ComparisonOperator::LessOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (minAngle > 0.f) {
+                stream << "X" << CharacteristicType::AngleToPlayerForward << minAngle << ComparisonOperator::GreaterOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (maxAngle < 180.f) {
+                stream << "X" << CharacteristicType::AngleToPlayerForward << maxAngle << ComparisonOperator::LessOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (minSpeed > 0.f) {
+                stream << "X" << CharacteristicType::Speed << minSpeed << ComparisonOperator::GreaterOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (std::abs(maxSpeed - 1000.f) > 0.1f) {
+                stream << "X" << CharacteristicType::Speed << maxSpeed << ComparisonOperator::LessOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (minRegen > -10) {
+                stream << "X" << CharacteristicType::HPRegen << minRegen << ComparisonOperator::GreaterOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (maxRegen < 10) {
+                stream << "X" << CharacteristicType::HPRegen << maxRegen << ComparisonOperator::LessOrEqual;
+                stream.writeSeparator(3);
+            }
+            if (weapon != WeaponType::Any) {
+                stream << "X" << CharacteristicType::WeaponType << weapon << IsIsNot::Is;
+                stream.writeSeparator(3);
+            }
+            if (!polygon.empty()) {
+                stream << "X" << CharacteristicType::PositionPolygon;
+                writePositions(stream, polygon);
+                stream.writeSeparator(3);
+            }
 
             return stream.str();
         }
@@ -138,9 +449,14 @@
         Class primary = Class::Any;
         Class secondary = Class::Any;
         AnyNoYes alive = AnyNoYes::Yes;
+        AnyNoYes bleeding = AnyNoYes::Any;
+        AnyNoYes poisoned = AnyNoYes::Any;
+        AnyNoYes weaponspelled = AnyNoYes::Any;
+        AnyNoYes enchanted = AnyNoYes::Any;
+        AnyNoYes hexed = AnyNoYes::Any;
         GW::Constants::SkillID skill = GW::Constants::SkillID::No_Skill;
         Sorting sorting = Sorting::AgentId;
-        int modelId = 0;
+        uint16_t modelId = 0;
         float minDistance = 0.f;
         float maxDistance = 5000.f;
         bool preferNonHexed = false;
@@ -151,223 +467,256 @@
         std::unordered_set<GW::AgentID> recentlyTargetedEnemies;
         float minHp = 0.f;
         float maxHp = 100.f;
+        float minAngle = 0.f;
+        float maxAngle = 180.f;
+        float minSpeed = 0.f;
+        float maxSpeed = 1000.f;
+        int minRegen = -10;
+        int maxRegen = 10;
+        WeaponType weapon = WeaponType::Any;
     };
-    struct GoToTargetAction 
-    {
-        GoToTargetAction(InputStream&)
-        {
-            // No member variables
-        } 
-        std::string serialize()
-        {
-            OutputStream stream;
-            stream << GoToTargetFinishCondition::StoppedMovingNextToTarget;
-            return stream.str();
-        }
-    };
-    struct ConditionedAction
-    {
-        ConditionedAction(InputStream& stream)
-        {
-            std::string read;
-            stream >> read;
-            if (read == missingContentToken)
-                cond = nullptr;
-            else if (read == "C")
-                cond = readV8Condition(stream);
-            else
-                return;
 
-            while (stream >> read) {
-                if (read == endOfListToken)
-                    break;
-                else if (read == missingContentToken)
-                    actionsIf.push_back(nullptr);
-                else if (read == "A")
-                    actionsIf.push_back(readV8Action(stream));
-                else
-                    return;
-            }
-            while (stream >> read) {
-                if (read == endOfListToken)
-                    break;
-                else if (read == missingContentToken)
-                    actionsElse.push_back(nullptr);
-                else if (read == "A")
-                    actionsElse.push_back(readV8Action(stream));
-                else
-                    return;
-            }
-        }
-        std::string serialize()
-        {
-            OutputStream stream;
-            
-            const auto writeCondition = [&](const auto& condition) {
-                if (condition)
-                    condition->serialize(stream);
-                else
-                    stream << missingContentToken;
-                stream.writeSeparator(2);
-            };
-            const auto writeActionSequence = [&](const auto& sequence) {
-                stream << sequence.size();
-                for (const auto& action : sequence) {
-                    if (action)
-                        action->serialize(stream);
-                    else
-                        stream << missingContentToken;
-                    stream.writeSeparator(2);
-                }
-            };
-
-            writeCondition(cond);
-            writeActionSequence(actionsIf);
-            writeActionSequence(actionsElse);
-
-            stream << 0; //actionsElseIfSize
-
-            return stream.str();
-        }
-
-        ConditionPtr cond = nullptr;
-        std::vector<ActionPtr> actionsIf = {};
-        std::vector<ActionPtr> actionsElse = {};
-    };
-    struct EquipItemAction {
-        EquipItemAction(InputStream& stream)
-        { 
-            stream >> id;
-        }
-        std::string serialize()
-        {
-            OutputStream stream;
-            stream << id << 0 << 0; // New Members: modstruct, hasModStruct
-            return stream.str();
-        }
-        int id;
+    enum class ConditionType : int {
+        Not,
+        Or,
+        And,
+        IsInMap,
+        QuestHasState,
+        PartyPlayerCount,
+        PartyMemberStatus,
+        HasPartyWindowAllyOfName,
+        InstanceProgress,
+        InstanceTime,
+        OnlyTriggerOncePerInstance,
+        CanPopAgent,
+        PlayerIsNearPosition,
+        PlayerHasBuff,
+        PlayerHasSkill,
+        PlayerHasClass,
+        PlayerHasName,
+        PlayerHasEnergy,
+        PlayerIsIdle,
+        PlayerHasItemEquipped,
+        KeyIsPressed,
+        CurrentTargetHasHpBelow,
+        CurrentTargetIsUsingSkill,
+        CurrentTargetHasModel,
+        CurrentTargetAllegiance,
+        NearbyAgent,
+        CurrentTargetDistance,
+        PlayerHasHpBelow,
+        PartyHasLoadedIn,
+        ItemInInventory,
+        PlayerStatus,
+        CurrentTargetStatus,
+        PlayerInPolygon,
+        InstanceType,
+        RemainingCooldown,
+        FoeCount,
+        PlayerMorale,
+        False,
+        True,
+        Until,
+        Once,
+        Toggle,
+        After,
+        CurrentTargetName,
+        Throttle,
+        PlayerIsCastingSkill
     };
 }
 
-ConditionPtr readV8Condition(InputStream& stream) 
+ConditionPtr readV10Condition(InputStream& stream) 
 {
     int type;
     stream >> type;
-    switch (static_cast<ConditionType>(type)) {
-        case ConditionType::Or : 
+    switch (static_cast<v10::ConditionType>(type)) {
+        case v10::ConditionType::PlayerIsNearPosition:
         {
-            const auto converted = v8::DisjunctionConjunctionCondition(stream).serialize();
+            const auto converted = v10::PlayerIsNearPositionCondition{stream}.serialize();
             auto convertedStream = InputStream{converted};
-            return std::make_shared<DisjunctionCondition>(convertedStream);
+            return std::make_shared<PlayerHasCharacteristicsCondition>(convertedStream);
         }
-        case ConditionType::And: 
+        case v10::ConditionType::PlayerHasClass: 
         {
-            const auto converted = v8::DisjunctionConjunctionCondition(stream).serialize();
+            const auto converted = v10::PlayerHasClassCondition{stream}.serialize();
             auto convertedStream = InputStream{converted};
-            return std::make_shared<ConjunctionCondition>(convertedStream);
+            return std::make_shared<PlayerHasCharacteristicsCondition>(convertedStream);
         }
-        case ConditionType::NearbyAgent: 
+        case v10::ConditionType::PlayerHasName: 
         {
-            const auto converted = v8::NearbyAgentCondition(stream).serialize();
+            const auto converted = v10::PlayerOrTargetHasNameCondition{stream}.serialize();
             auto convertedStream = InputStream{converted};
-            return std::make_shared<NearbyAgentCondition>(convertedStream);
+            return std::make_shared<PlayerHasCharacteristicsCondition>(convertedStream);
         }
-        case ConditionType::PlayerHasSkill: 
+        case v10::ConditionType::PlayerHasHpBelow: 
         {
-            const auto converted = v8::PlayerHasSkillCondition(stream).serialize();
+            const auto converted = v10::PlayerOrTargetHasHpBelowCondition{stream}.serialize();
             auto convertedStream = InputStream{converted};
-            return std::make_shared<PlayerHasSkillCondition>(convertedStream);
+            return std::make_shared<PlayerHasCharacteristicsCondition>(convertedStream);
         }
-        case ConditionType::KeyIsPressed: 
+        case v10::ConditionType::PlayerStatus: 
         {
-            const auto converted = v8::KeyPressCondition(stream).serialize();
+            const auto converted = v10::PlayerOrTargetStatusCondition{stream}.serialize();
             auto convertedStream = InputStream{converted};
-            return std::make_shared<KeyIsPressedCondition>(convertedStream);
+            return std::make_shared<PlayerHasCharacteristicsCondition>(convertedStream);
         }
-        // No changes, read with current deserializer:
-        case ConditionType::Not:
+        case v10::ConditionType::PlayerIsIdle: 
+        {
+            const auto converted = v10::PlayerIsIdleCondition{}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<PlayerHasCharacteristicsCondition>(convertedStream);
+        }
+        case v10::ConditionType::PlayerInPolygon: 
+        {
+            const auto converted = v10::PlayerInPolygonCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<PlayerHasCharacteristicsCondition>(convertedStream);
+        }
+        case v10::ConditionType::PlayerIsCastingSkill: 
+        {
+            const auto converted = v10::PlayerOrTargetIsCastingSkillCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<PlayerHasCharacteristicsCondition>(convertedStream);
+        }
+        case v10::ConditionType::CurrentTargetHasHpBelow: 
+        {
+            const auto converted = v10::PlayerOrTargetHasHpBelowCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<TargetHasCharacteristicsCondition>(convertedStream); 
+        }
+        case v10::ConditionType::CurrentTargetIsUsingSkill: 
+        {
+            const auto converted = v10::PlayerOrTargetIsCastingSkillCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<TargetHasCharacteristicsCondition>(convertedStream);
+        }
+        case v10::ConditionType::CurrentTargetStatus: 
+        {
+            const auto converted = v10::PlayerOrTargetStatusCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<TargetHasCharacteristicsCondition>(convertedStream);
+        }
+        case v10::ConditionType::CurrentTargetName: 
+        {
+            const auto converted = v10::PlayerOrTargetHasNameCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<TargetHasCharacteristicsCondition>(convertedStream);
+        }
+        case v10::ConditionType::CurrentTargetHasModel: 
+        {
+            const auto converted = v10::TargetHasModelCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<TargetHasCharacteristicsCondition>(convertedStream);
+        }
+        case v10::ConditionType::CurrentTargetAllegiance: 
+        {
+            const auto converted = v10::TargetHasAllegianceCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<TargetHasCharacteristicsCondition>(convertedStream);
+        }
+        case v10::ConditionType::CurrentTargetDistance: 
+        {
+            const auto converted = v10::TargetDistanceCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<TargetHasCharacteristicsCondition>(convertedStream);
+        }
+        case v10::ConditionType::NearbyAgent:
+        {
+            const auto converted = v10::NearbyAgentCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<AgentWithCharacteristicsCountCondition>(convertedStream);
+        }
+
+        // Unchanged:
+        case v10::ConditionType::Not:
             return std::make_shared<NegatedCondition>(stream);
-        case ConditionType::IsInMap:
+        case v10::ConditionType::Or:
+            return std::make_shared<DisjunctionCondition>(stream);
+        case v10::ConditionType::And:
+            return std::make_shared<ConjunctionCondition>(stream);
+        case v10::ConditionType::IsInMap:
             return std::make_shared<IsInMapCondition>(stream);
-        case ConditionType::QuestHasState:
+        case v10::ConditionType::QuestHasState:
             return std::make_shared<QuestHasStateCondition>(stream);
-        case ConditionType::PartyPlayerCount:
+        case v10::ConditionType::PartyPlayerCount:
             return std::make_shared<PartyPlayerCountCondition>(stream);
-        case ConditionType::InstanceProgress:
+        case v10::ConditionType::PartyHasLoadedIn:
+            return std::make_shared<PartyHasLoadedInCondition>(stream);
+        case v10::ConditionType::InstanceProgress:
             return std::make_shared<InstanceProgressCondition>(stream);
-        case ConditionType::HasPartyWindowAllyOfName:
+        case v10::ConditionType::HasPartyWindowAllyOfName:
             return std::make_shared<HasPartyWindowAllyOfNameCondition>(stream);
-        case ConditionType::OnlyTriggerOncePerInstance:
+        case v10::ConditionType::OnlyTriggerOncePerInstance:
             return std::make_shared<OnlyTriggerOnceCondition>(stream);
-        case ConditionType::PartyMemberStatus:
+        case v10::ConditionType::PartyMemberStatus:
             return std::make_shared<PartyMemberStatusCondition>(stream);
-        case ConditionType::PlayerIsNearPosition:
-            return std::make_shared<PlayerIsNearPositionCondition>(stream);
-        case ConditionType::PlayerHasBuff:
+        case v10::ConditionType::InstanceType:
+            return std::make_shared<InstanceTypeCondition>(stream);
+
+        case v10::ConditionType::PlayerHasBuff:
             return std::make_shared<PlayerHasBuffCondition>(stream);
-        case ConditionType::PlayerHasClass:
-            return std::make_shared<PlayerHasClassCondition>(stream);
-        case ConditionType::PlayerHasName:
-            return std::make_shared<PlayerHasNameCondition>(stream);
-        case ConditionType::PlayerHasEnergy:
+        case v10::ConditionType::PlayerHasSkill:
+            return std::make_shared<PlayerHasSkillCondition>(stream);
+        case v10::ConditionType::PlayerHasEnergy:
             return std::make_shared<PlayerHasEnergyCondition>(stream);
-        case ConditionType::PlayerIsIdle:
-            return std::make_shared<PlayerIsIdleCondition>(stream);
-        case ConditionType::PlayerHasItemEquipped:
+        case v10::ConditionType::PlayerHasItemEquipped:
             return std::make_shared<PlayerHasItemEquippedCondition>(stream);
-        case ConditionType::CurrentTargetHasHpBelow:
-            return std::make_shared<CurrentTargetHasHpBelowCondition>(stream);
-        case ConditionType::CurrentTargetIsUsingSkill:
-            return std::make_shared<CurrentTargetIsCastingSkillCondition>(stream);
-        case ConditionType::CurrentTargetHasModel:
-            return std::make_shared<CurrentTargetModelCondition>(stream);
-        case ConditionType::CurrentTargetAllegiance:
-            return std::make_shared<CurrentTargetAllegianceCondition>(stream);
-        case ConditionType::CurrentTargetDistance:
-            return std::make_shared<CurrentTargetDistanceCondition>(stream);
-        case ConditionType::InstanceTime:
+        case v10::ConditionType::ItemInInventory:
+            return std::make_shared<ItemInInventoryCondition>(stream);
+        case v10::ConditionType::PlayerMorale:
+            return std::make_shared<MoraleCondition>(stream);
+        case v10::ConditionType::RemainingCooldown:
+            return std::make_shared<RemainingCooldownCondition>(stream);
+        case v10::ConditionType::KeyIsPressed:
+            return std::make_shared<KeyIsPressedCondition>(stream);
+        case v10::ConditionType::InstanceTime:
             return std::make_shared<InstanceTimeCondition>(stream);
-        case ConditionType::CanPopAgent:
+
+        case v10::ConditionType::CanPopAgent:
             return std::make_shared<CanPopAgentCondition>(stream);
+        case v10::ConditionType::FoeCount:
+            return std::make_shared<FoeCountCondition>(stream);
+        case v10::ConditionType::Throttle:
+            return std::make_shared<ThrottleCondition>(stream);
+
+        case v10::ConditionType::True:
+            return std::make_shared<TrueCondition>(stream);
+        case v10::ConditionType::False:
+            return std::make_shared<FalseCondition>(stream);
+        case v10::ConditionType::Once:
+            return std::make_shared<OnceCondition>(stream);
+        case v10::ConditionType::Until:
+            return std::make_shared<UntilCondition>(stream);
+        case v10::ConditionType::Toggle:
+            return std::make_shared<ToggleCondition>(stream);
+        case v10::ConditionType::After:
+            return std::make_shared<AfterCondition>(stream);
 
         default:
             return nullptr;
     }
 }
 
-ActionPtr readV8Action(InputStream& stream)
+ActionPtr readV10Action(InputStream& stream)
 {
     int type;
     stream >> type;
     switch (static_cast<ActionType>(type)) {
         case ActionType::ChangeTarget: 
         {
-            const auto converted = v8::ChangeTargetAction(stream).serialize();
+            const auto converted = v10::ChangeTargetAction{stream}.serialize();
             auto convertedStream = InputStream{converted};
             return std::make_shared<ChangeTargetAction>(convertedStream);
         }
-        case ActionType::Conditioned: 
-        {
-            const auto converted = v8::ConditionedAction(stream).serialize();
-            auto convertedStream = InputStream{converted};
-            return std::make_shared<ConditionedAction>(convertedStream);
-        }
-        case ActionType::GoToTarget: 
-        {
-            const auto converted = v8::GoToTargetAction(stream).serialize();
-            auto convertedStream = InputStream{converted};
-            return std::make_shared<GoToTargetAction>(convertedStream);
-        }
-        case ActionType::EquipItem: 
-        {
-            const auto converted = v8::EquipItemAction(stream).serialize();
-            auto convertedStream = InputStream{converted};
-            return std::make_shared<EquipItemAction>(convertedStream);
-        }
 
-        // No changes, read with current deserializer:
+        // Unchanged:
         case ActionType::MoveTo:
             return std::make_shared<MoveToAction>(stream);
+        case ActionType::MoveToTargetPosition:
+            return std::make_shared<MoveToTargetPositionAction>(stream);
+        case ActionType::MoveInchwise:
+            return std::make_shared<MoveInchwiseAction>(stream);
         case ActionType::Cast:
             return std::make_shared<CastAction>(stream);
         case ActionType::CastBySlot:
@@ -376,6 +725,8 @@ ActionPtr readV8Action(InputStream& stream)
             return std::make_shared<UseItemAction>(stream);
         case ActionType::SendDialog:
             return std::make_shared<SendDialogAction>(stream);
+        case ActionType::GoToTarget:
+            return std::make_shared<GoToTargetAction>(stream);
         case ActionType::Wait:
             return std::make_shared<WaitAction>(stream);
         case ActionType::SendChat:
@@ -384,6 +735,10 @@ ActionPtr readV8Action(InputStream& stream)
             return std::make_shared<CancelAction>(stream);
         case ActionType::DropBuff:
             return std::make_shared<DropBuffAction>(stream);
+        case ActionType::EquipItem:
+            return std::make_shared<EquipItemAction>(stream);
+        case ActionType::Conditioned:
+            return std::make_shared<ConditionedAction>(stream);
         case ActionType::RepopMinipet:
             return std::make_shared<RepopMinipetAction>(stream);
         case ActionType::PingHardMode:
@@ -400,17 +755,19 @@ ActionPtr readV8Action(InputStream& stream)
             return std::make_shared<RestoreTargetAction>(stream);
         case ActionType::StopScript:
             return std::make_shared<StopScriptAction>(stream);
+        case ActionType::LogOut:
+            return std::make_shared<LogOutAction>(stream);
+        case ActionType::UseHeroSkill:
+            return std::make_shared<UseHeroSkillAction>(stream);
+        case ActionType::UnequipItem:
+            return std::make_shared<UnequipItemAction>(stream);
+        case ActionType::ClearTarget:
+            return std::make_shared<ClearTargetAction>(stream);
+        case ActionType::WaitUntil:
+            return std::make_shared<WaitUntilAction>(stream);
+        case ActionType::GWKey:
+            return std::make_shared<GWKeyAction>(stream);
         default:
             return nullptr;
     }
-}
-*/
-
-ActionPtr readV8Action(InputStream&)
-{
-    return nullptr;
-}
-ConditionPtr readV8Condition(InputStream&)
-{
-    return nullptr;
 }

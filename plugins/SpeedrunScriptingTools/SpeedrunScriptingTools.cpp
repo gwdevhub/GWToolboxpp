@@ -113,7 +113,7 @@ namespace {
         return stream.str();
     }
 
-    std::optional<Script> deserializeScript(InputStream& stream, int version)
+    std::optional<Script> deserializeScript(InputStream& stream, int version = currentVersion)
     {
         Script result;
 
@@ -135,9 +135,9 @@ namespace {
             switch (stream.peek()) {
                 case 'A':
                     stream.get();
-                    if (version == 8) 
+                    if (version == 10) 
                     {
-                        if (auto newAction = readV8Action(stream)) 
+                        if (auto newAction = readV10Action(stream)) 
                             result.actions.push_back(std::move(newAction));
                     }
                     else 
@@ -149,9 +149,9 @@ namespace {
                     break;
                 case 'C':
                     stream.get();
-                    if (version == 8) 
+                    if (version == 10) 
                     {
-                        if (auto newCondition = readV8Condition(stream)) 
+                        if (auto newCondition = readV10Condition(stream)) 
                             result.conditions.push_back(std::move(newCondition));
                     }
                     else 
@@ -168,7 +168,7 @@ namespace {
 
         return result;
     }
-    std::optional<Group> deserializeGroup(InputStream& stream, int version)
+    std::optional<Group> deserializeGroup(InputStream& stream)
     {
         Group result;
         std::optional<Script> nextScript;
@@ -180,19 +180,12 @@ namespace {
             switch (stream.peek()) {
                 case 'C':
                     stream.get();
-                    if (version == 8) 
-                    {
-                        if (auto newCondition = readV8Condition(stream)) result.conditions.push_back(std::move(newCondition));
-                    }
-                    else 
-                    {
-                        if (auto newCondition = readCondition(stream)) result.conditions.push_back(std::move(newCondition));
-                    }
+                    if (auto newCondition = readCondition(stream)) result.conditions.push_back(std::move(newCondition));
                     stream.proceedPastSeparator();
                     break;
                 case 'S':
                     stream.get();
-                    nextScript = deserializeScript(stream, version);
+                    nextScript = deserializeScript(stream);
                     if (nextScript)
                         result.scripts.push_back(*nextScript);
                     stream.proceedPastSeparator();
@@ -574,7 +567,7 @@ void SpeedrunScriptingTools::DrawSettings()
                 else if (stream.peek() == 'G') 
                 {
                     stream.get();
-                    if (auto importedGroup = deserializeGroup(stream, version)) m_groups.push_back(std::move(importedGroup.value()));
+                    if (auto importedGroup = deserializeGroup(stream)) m_groups.push_back(std::move(importedGroup.value()));
                 }
             }
         }
@@ -644,7 +637,10 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
     clearScriptsKey.keyData = ini.GetLongValue(Name(), "clearScriptsKey", 0);
     clearScriptsKey.modifier = ini.GetLongValue(Name(), "clearScriptsMod", 0);
     
-    if (savedVersion < 8) return; // Prerelease versions
+    if (savedVersion < 10) {
+        logMessage("Scripts from versions before 1.3 cannot be imported");
+        return;
+    }
     
     if (std::string read = ini.GetValue(Name(), "scripts", ""); !read.empty()) {
         const auto decoded = decodeString(std::move(read));
@@ -665,7 +661,7 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
         InputStream stream(decoded.value());
         while (stream && stream.get() == 'G') {
             stream.get();
-            if (auto nextGroup = deserializeGroup(stream, savedVersion))
+            if (auto nextGroup = deserializeGroup(stream))
                 m_groups.push_back(std::move(*nextGroup));
             else
                 break;

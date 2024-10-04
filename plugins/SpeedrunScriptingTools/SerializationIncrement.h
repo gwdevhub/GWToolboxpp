@@ -6,5 +6,5 @@
 
 #include <memory>
 
-ActionPtr readV8Action(InputStream&);
-ConditionPtr readV8Condition(InputStream&);
+ActionPtr readV10Action(InputStream&);
+ConditionPtr readV10Condition(InputStream&);
