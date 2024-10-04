@@ -95,13 +95,13 @@ void PositionPolygonCharacteristic::drawSettings()
 /// ------------- DistanceToPlayerCharacteristic -------------
 DistanceToPlayerCharacteristic::DistanceToPlayerCharacteristic(InputStream& stream)
 {
-    stream >> comp >> distance;
+    stream >> distance >> comp;
 }
 void DistanceToPlayerCharacteristic::serialize(OutputStream& stream) const
 {
     Characteristic::serialize(stream);
 
-    stream << comp << distance;
+    stream << distance << comp;
 }
 bool DistanceToPlayerCharacteristic::check(const GW::AgentLiving& agent) const
 {
@@ -124,13 +124,13 @@ void DistanceToPlayerCharacteristic::drawSettings()
 /// ------------- DistanceToTargetCharacteristic -------------
 DistanceToTargetCharacteristic::DistanceToTargetCharacteristic(InputStream& stream)
 {
-    stream >> comp >> distance;
+    stream >> distance >> comp;
 }
 void DistanceToTargetCharacteristic::serialize(OutputStream& stream) const
 {
     Characteristic::serialize(stream);
 
-    stream << comp << distance;
+    stream << distance << comp;
 }
 bool DistanceToTargetCharacteristic::check(const GW::AgentLiving& agent) const
 {

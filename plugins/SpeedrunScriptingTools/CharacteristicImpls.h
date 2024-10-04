@@ -18,7 +18,7 @@ public:
 private:
     GW::Vec2f position{};
     ComparisonOperator comp = ComparisonOperator::LessOrEqual;
-    float distance = 1248.f;
+    float distance = 166.f;
 };
 
 class PositionPolygonCharacteristic : public Characteristic {
@@ -47,7 +47,7 @@ public:
 
 private:
     ComparisonOperator comp = ComparisonOperator::LessOrEqual;
-    float distance = 1248.f;
+    float distance = 166.f;
 };
 
 class DistanceToTargetCharacteristic : public Characteristic {
@@ -62,7 +62,7 @@ public:
 
 private:
     ComparisonOperator comp = ComparisonOperator::LessOrEqual;
-    float distance = 1248.f;
+    float distance = 166.f;
 };
 
 class ClassCharacteristic : public Characteristic {
