@@ -6,6 +6,7 @@
 #include <Keys.h>
 #include <enumUtils.h>
 #include <SerializationIncrement.h>
+#include <ScriptVariables.h>
 
 #include <GWCA/GWCA.h>
 
@@ -950,6 +951,7 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
         &InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) 
     {
+        ScriptVariableManager::getInstance().clear();
         isInLoadingScreen = false;
 
         const auto triggerScripts = [](auto& scripts) {
