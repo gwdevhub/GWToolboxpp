@@ -1725,7 +1725,7 @@ void EnterCriticalSectionAction::drawSettings()
 {
     ImGui::PushID(drawId());
 
-    ImGui::Text("Allow other scripts to start in parallel");
+    ImGui::Text("Disallow other scripts to start in parallel");
 
     ImGui::PopID();
 }
@@ -1735,7 +1735,7 @@ void LeaveCriticalSectionAction::drawSettings()
 {
     ImGui::PushID(drawId());
 
-    ImGui::Text("Disallow other scripts to start in parallel");
+    ImGui::Text("Allow other scripts to start in parallel");
 
     ImGui::PopID();
 }

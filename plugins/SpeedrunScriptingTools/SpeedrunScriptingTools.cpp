@@ -599,7 +599,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Checkbox("Block hotkey keys even if conditions not met", &alwaysBlockHotkeyKeys);
 
-    ImGui::Text("Version 1.6.3. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 2.0-beta1. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
@@ -784,9 +784,9 @@ void SpeedrunScriptingTools::Update(float delta)
     };
 
     if (std::ranges::any_of(m_currentScripts, [](const Script& s){ return s.globallyExclusive; })) return;
-
     // Find script to use
-    const auto checkScripts = [&](std::vector<Script>& scripts) {
+    const auto checkScripts = [&](std::vector<Script>& scripts) 
+    {
         const auto isRunningAnyScript = m_currentScripts.size() > 0;
 
         // Check scripts with triggers first, as these are typically more time-sensitive
