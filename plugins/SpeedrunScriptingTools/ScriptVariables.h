@@ -15,8 +15,8 @@ public:
         return info;
     }
 
-    void set(const std::string& name, float value) { variables[name] = value; }
-    std::optional<float> get(const std::string& name) const 
+    void set(const std::string& name, int value) { variables[name] = value; }
+    std::optional<int> get(const std::string& name) const 
     {
         if (variables.contains(name)) 
         {
@@ -31,5 +31,5 @@ private:
     ScriptVariableManager(const ScriptVariableManager&) = delete;
     ScriptVariableManager(ScriptVariableManager&&) = delete;
 
-    std::unordered_map<std::string, float> variables;
+    std::unordered_map<std::string, int> variables;
 };
