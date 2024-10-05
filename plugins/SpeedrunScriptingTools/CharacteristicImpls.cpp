@@ -6,10 +6,12 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Camera.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/CameraMgr.h>
 
 #include <ImGuiCppWrapper.h>
 
@@ -22,14 +24,26 @@ namespace {
         const float health_regen_per_second = agent.max_hp * agent.hp_pips;
         return (int)std::ceil(health_regen_per_second / 2.f); // 1 pip = 2 health per second
     }
-    float angleToAgent(const GW::AgentLiving& centerAgent, const GW::AgentLiving& positionedAgent)
+    float angleToAgent(const GW::AgentLiving& centerAgent, const GW::AgentLiving& positionedAgent, ReferenceFrame refFrame)
     {
         if (GW::GetSquareDistance(centerAgent.pos, positionedAgent.pos) < eps) return 0.f;
-        constexpr auto radiansToDegree = 180.f / 3.141592741f;
+
         const auto angleBetweenNormalizedVectors = [](GW::Vec2f a, GW::Vec2f b){ return std::acos(a.x * b.x + a.y * b.y); };
-        const auto forwards = GW::Normalize(GW::Vec2f{centerAgent.rotation_cos, centerAgent.rotation_sin});
-        const auto toTarget = GW::Normalize(GW::Vec2f{positionedAgent.pos.x - centerAgent.pos.x, positionedAgent.pos.y - centerAgent.pos.y});
-        return angleBetweenNormalizedVectors(forwards, toTarget) * radiansToDegree;
+        constexpr auto radiansToDegree = 180.f / 3.141592741f;
+
+        if (refFrame == ReferenceFrame::Player) {        
+            const auto forwards = GW::Normalize(GW::Vec2f{centerAgent.rotation_cos, centerAgent.rotation_sin});
+            const auto toTarget = GW::Normalize(GW::Vec2f{positionedAgent.pos.x - centerAgent.pos.x, positionedAgent.pos.y - centerAgent.pos.y});
+            return angleBetweenNormalizedVectors(forwards, toTarget) * radiansToDegree;
+        }
+        else
+        {
+            const auto camera = GW::CameraMgr::GetCamera();
+            if (!camera) return 0.f;
+            const auto forwards = GW::Normalize(GW::Vec2f{camera->look_at_target - camera->position});
+            const auto toTarget = GW::Normalize(GW::Vec2f{positionedAgent.pos.x - centerAgent.pos.x, positionedAgent.pos.y - centerAgent.pos.y});
+            return angleBetweenNormalizedVectors(forwards, toTarget) * radiansToDegree;
+        }
     }
 }
 
@@ -509,7 +523,7 @@ bool AngleToPlayerForwardCharacteristic::check(const GW::AgentLiving& agent) con
 {
     const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return false;
-    return compare(angleToAgent(*player, agent), comp, angle);
+    return compare(angleToAgent(*player, agent, ReferenceFrame::Player), comp, angle);
 }
 void AngleToPlayerForwardCharacteristic::drawSettings()
 {
@@ -533,10 +547,11 @@ void AngleToCameraForwardCharacteristic::serialize(OutputStream& stream) const
 
     stream << angle << comp;
 }
-bool AngleToCameraForwardCharacteristic::check(const GW::AgentLiving&) const
+bool AngleToCameraForwardCharacteristic::check(const GW::AgentLiving& agent) const
 {
-    // TODO
-    return false;
+    const auto player = GW::Agents::GetControlledCharacter();
+    if (!player) return false;
+    return compare(angleToAgent(*player, agent, ReferenceFrame::Camera), comp, angle);
 }
 void AngleToCameraForwardCharacteristic::drawSettings()
 {

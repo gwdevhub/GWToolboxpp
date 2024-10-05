@@ -22,7 +22,7 @@ struct Script {
     bool showMessageWhenToggled = false;
 
     bool canLaunchInParallel = false;
-    bool globallyExclusive = true;
+    bool globallyExclusive = false;
 
     Hotkey enabledToggleHotkey{};
     Hotkey triggerHotkey{};
