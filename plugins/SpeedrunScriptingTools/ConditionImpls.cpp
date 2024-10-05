@@ -4,6 +4,7 @@
 #include <enumUtils.h>
 #include <InstanceInfo.h>
 #include <CharacteristicIO.h>
+#include <ScriptVariables.h>
 
 #include <GWCA/Constants/Constants.h>
 
@@ -1605,6 +1606,46 @@ void AgentWithCharacteristicsCountCondition::drawSettings()
 
     ImGui::Bullet();
     if (ImGui::Button("+")) characteristics.push_back(nullptr);
+
+    ImGui::PopID();
+}
+
+/// ------------- ScriptVariableCondition -------------
+ScriptVariableCondition::ScriptVariableCondition(InputStream& stream)
+{
+    name = readStringWithSpaces(stream);
+    stream >> value >> comp;
+}
+void ScriptVariableCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    writeStringWithSpaces(stream, name);
+    stream << value << comp;
+}
+bool ScriptVariableCondition::check() const
+{
+    const auto state = ScriptVariableManager::getInstance().get(name);
+    if (!state.has_value()) return false;
+
+    return compare(state.value(), comp, value);
+}
+void ScriptVariableCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+    
+    ImGui::PushItemWidth(200.f);
+    ImGui::Text("If variable");
+    ImGui::SameLine();
+    ImGui::InputText("Name", &name);
+    ImGui::PopItemWidth();
+
+    ImGui::PushItemWidth(100.f);
+    ImGui::SameLine();
+    drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
+    ImGui::SameLine();
+    ImGui::InputFloat("Value", &value, 0.0f, 0.0f);
+    ImGui::PopItemWidth();
 
     ImGui::PopID();
 }

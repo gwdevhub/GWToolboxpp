@@ -38,6 +38,7 @@ enum class ActionType : int {
     EquipItemBySlot,
     EnterCriticalSection,
     LeaveCriticalSection,
+    SetVariable,
 
     Count
 };

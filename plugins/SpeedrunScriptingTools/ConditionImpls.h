@@ -463,3 +463,18 @@ private:
     int count = 1;
     ComparisonOperator comp = ComparisonOperator::GreaterOrEqual;
 };
+
+class ScriptVariableCondition : public Condition {
+public:
+    ScriptVariableCondition() = default;
+    ScriptVariableCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::ScriptVariable; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    std::string name = "";
+    float value;
+    ComparisonOperator comp = ComparisonOperator::Equals;
+};

@@ -485,3 +485,18 @@ public:
 private:
     GW::UI::ControlAction action = GW::UI::ControlAction::ControlAction_Interact;
 };
+
+class SetVariableAction : public Action {
+public:
+    SetVariableAction() = default;
+    SetVariableAction(InputStream&);
+    ActionType type() const final { return ActionType::SetVariable; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost | ActionBehaviourFlag::ImmediateFinish; }
+
+private:
+    std::string name = "";
+    float value = 0.f;
+};

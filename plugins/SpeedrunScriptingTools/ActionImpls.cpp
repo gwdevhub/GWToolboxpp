@@ -4,6 +4,7 @@
 #include <CharacteristicIO.h>
 #include <ActionIO.h>
 #include <InstanceInfo.h>
+#include <ScriptVariables.h>
 #include <enumUtils.h>
 
 #include <GWCA/Managers/AgentMgr.h>
@@ -1895,5 +1896,40 @@ void GWKeyAction::drawSettings()
     ImGui::Text("Guild Wars Key");
     ImGui::SameLine();
     drawEnumButton<GW::UI::ControlAction>(GW::UI::ControlAction_Interact, GW::UI::ControlAction_OpenHeroCommander7, action, 0, 400.f);
+    ImGui::PopID();
+}
+
+/// ------------- SetVariableAction -------------
+SetVariableAction::SetVariableAction(InputStream& stream)
+{
+    stream >> name >> value;
+}
+void SetVariableAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << name << value;
+}
+void SetVariableAction::initialAction()
+{
+    Action::initialAction();
+    ScriptVariableManager::getInstance().set(name, value);
+}
+
+void SetVariableAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+    
+    ImGui::PushItemWidth(200.f);
+    ImGui::Text("Set variable");
+    ImGui::SameLine();
+    ImGui::InputText("Name", &name);
+    ImGui::PopItemWidth();
+
+    ImGui::SameLine();
+    ImGui::PushItemWidth(100.f);
+    ImGui::InputFloat("Value", &value, 0.0f, 0.0f);
+    ImGui::PopItemWidth();
+    
     ImGui::PopID();
 }
