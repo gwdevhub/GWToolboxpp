@@ -1431,162 +1431,79 @@ void ThrottleCondition::drawSettings()
 }
 
 /// ------------- PlayerHasCharacteristicsCondition -------------
-PlayerHasCharacteristicsCondition::PlayerHasCharacteristicsCondition()
+PlayerHasCharacteristicsCondition::PlayerHasCharacteristicsCondition(CharacteristicType type)
 {
-    // Adds an empty entry to save a click when creating a new condition
-    characteristics.push_back(nullptr);
+    characteristic = makeCharacteristic(type);
 }
 PlayerHasCharacteristicsCondition::PlayerHasCharacteristicsCondition(InputStream& stream)
 {
-    while (stream) 
-    {
-        std::string token;
-        stream >> token;
-        if (token == "X") {
-            if (auto characteristic = readCharacteristic(stream))
-                characteristics.push_back(std::move(characteristic));
-            else
-                break;
-            stream.proceedPastSeparator(3);
-        }
-        else if (token == missingContentToken) 
-        {
-            characteristics.push_back(nullptr);
-            stream.proceedPastSeparator(3);
-        }
-        else {
-            break;
-        }
+    if (stream && stream.peek() == 'X') {
+        stream.get();
+        characteristic = readCharacteristic(stream);
     }
+    stream.proceedPastSeparator(3);
 }
 void PlayerHasCharacteristicsCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    for (const auto& c : characteristics) 
-    {
-        if (c) c->serialize(stream);
-        else stream << missingContentToken;
-
-        stream.writeSeparator(3);
-    }
+    if (characteristic) characteristic->serialize(stream);
+    stream.writeSeparator(3);
 }
 bool PlayerHasCharacteristicsCondition::check() const
 {
-    const auto player = GW::Agents::GetControlledCharacter();
-    if (!player) return false;
-    return std::ranges::all_of(characteristics, [&player](const auto& c){return !c || c->check(*player); });
+    const auto target = GW::Agents::GetTargetAsAgentLiving();
+    if (!target) return false;
+    return characteristic && characteristic->check(*target);
 }
 void PlayerHasCharacteristicsCondition::drawSettings()
 {
     ImGui::PushID(drawId());
 
-    ImGui::Text("If the player fulfills characteristics:");
-
-    int rowToDelete = -1;
-    for (int i = 0; i < int(characteristics.size()); ++i) {
-        ImGui::PushID(i);
-
-        ImGui::Bullet();
-        if (ImGui::Button("X")) {
-            if (characteristics[i])
-                characteristics[i] = nullptr;
-            else
-                rowToDelete = i;
-        }
-
-        ImGui::SameLine();
-        if (characteristics[i])
-            characteristics[i]->drawSettings();
-        else
-            characteristics[i] = drawCharacteristicSelector(120.f);
-
-        ImGui::PopID();
-    }
-    if (rowToDelete != -1) characteristics.erase(characteristics.begin() + rowToDelete);
-
-    ImGui::Bullet();
-    if (ImGui::Button("+")) characteristics.push_back(nullptr);
+    ImGui::Text("If the player");
+    ImGui::SameLine();
+    if (characteristic)
+        characteristic->drawSettings();
 
     ImGui::PopID();
 }
 
 /// ------------- TargetHasCharacteristicsCondition -------------
-TargetHasCharacteristicsCondition::TargetHasCharacteristicsCondition() 
+TargetHasCharacteristicsCondition::TargetHasCharacteristicsCondition(CharacteristicType type) 
 {
-    // Adds an empty entry to save a click when creating a new condition
-    characteristics.push_back(nullptr);
+    characteristic = makeCharacteristic(type);
 }
 TargetHasCharacteristicsCondition::TargetHasCharacteristicsCondition(InputStream& stream)
 {
-    while (stream) 
+    if (stream && stream.peek() == 'X') 
     {
-        std::string token;
-        stream >> token;
-        if (token == "X") {
-            if (auto characteristic = readCharacteristic(stream))
-                characteristics.push_back(std::move(characteristic));
-            else
-                break;
-            stream.proceedPastSeparator(3);
-        }
-        else if (token == missingContentToken) {
-            characteristics.push_back(nullptr);
-            stream.proceedPastSeparator(3);
-        }
-        else {
-            break;
-        }
+        stream.get();
+        characteristic = readCharacteristic(stream);
     }
+    stream.proceedPastSeparator(3);
 }
 void TargetHasCharacteristicsCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    for (const auto& c : characteristics) 
-    {
-        if (c) c->serialize(stream);
-        else stream << missingContentToken;
-
-        stream.writeSeparator(3);
-    }
+    if (characteristic) 
+        characteristic->serialize(stream);
+    stream.writeSeparator(3);
 }
 bool TargetHasCharacteristicsCondition::check() const
 {
     const auto target = GW::Agents::GetTargetAsAgentLiving();
     if (!target) return false;
-    return std::ranges::all_of(characteristics, [&target](const auto& c){return !c || c->check(*target); });
+    return characteristic && characteristic->check(*target);
 }
 void TargetHasCharacteristicsCondition::drawSettings()
 {
     ImGui::PushID(drawId());
 
-    ImGui::Text("If the target fulfills characteristics:");
-
-    int rowToDelete = -1;
-    for (int i = 0; i < int(characteristics.size()); ++i) {
-        ImGui::PushID(i);
-
-        ImGui::Bullet();
-        if (ImGui::Button("X")) {
-            if (characteristics[i])
-                characteristics[i] = nullptr;
-            else
-                rowToDelete = i;
-        }
-
-        ImGui::SameLine();
-        if (characteristics[i])
-            characteristics[i]->drawSettings();
-        else
-            characteristics[i] = drawCharacteristicSelector(120.f);
-
-        ImGui::PopID();
-    }
-    if (rowToDelete != -1) characteristics.erase(characteristics.begin() + rowToDelete);
-
-    ImGui::Bullet();
-    if (ImGui::Button("+")) characteristics.push_back(nullptr);
+    ImGui::Text("If the target");
+    ImGui::SameLine();
+    if (characteristic) 
+        characteristic->drawSettings();
 
     ImGui::PopID();
 }

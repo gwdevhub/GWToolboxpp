@@ -425,7 +425,7 @@ private:
 
 class PlayerHasCharacteristicsCondition : public Condition {
 public:
-    PlayerHasCharacteristicsCondition();
+    PlayerHasCharacteristicsCondition(CharacteristicType);
     PlayerHasCharacteristicsCondition(InputStream&);
     ConditionType type() const final { return ConditionType::PlayerHasCharacteristics; }
     bool check() const final;
@@ -433,12 +433,12 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::vector<CharacteristicPtr> characteristics{};
+    CharacteristicPtr characteristic{nullptr};
 };
 
 class TargetHasCharacteristicsCondition : public Condition {
 public:
-    TargetHasCharacteristicsCondition();
+    TargetHasCharacteristicsCondition(CharacteristicType);
     TargetHasCharacteristicsCondition(InputStream&);
     ConditionType type() const final { return ConditionType::TargetHasCharacteristics; }
     bool check() const final;
@@ -446,7 +446,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    std::vector<CharacteristicPtr> characteristics{};
+    CharacteristicPtr characteristic{nullptr};
 };
 
 class AgentWithCharacteristicsCountCondition : public Condition {

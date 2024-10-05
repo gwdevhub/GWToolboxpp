@@ -4,49 +4,6 @@
 #include <imgui.h>
 
 namespace {
-    CharacteristicPtr makeCharacteristic(CharacteristicType type)
-    {
-        static_assert((int)CharacteristicType::Count == 17);
-        switch (type) {
-            case CharacteristicType::Position:
-                return std::make_unique<PositionCharacteristic>();
-            case CharacteristicType::PositionPolygon:
-                return std::make_unique<PositionPolygonCharacteristic>();
-            case CharacteristicType::DistanceToPlayer:
-                return std::make_unique<DistanceToPlayerCharacteristic>();
-            case CharacteristicType::DistanceToTarget:
-                return std::make_unique<DistanceToTargetCharacteristic>();
-            case CharacteristicType::Class:
-                return std::make_unique<ClassCharacteristic>();
-            case CharacteristicType::Name:
-                return std::make_unique<NameCharacteristic>();
-            case CharacteristicType::HP:
-                return std::make_unique<HPCharacteristic>();
-            case CharacteristicType::Speed:
-                return std::make_unique<SpeedCharacteristic>();
-            case CharacteristicType::HPRegen:
-                return std::make_unique<HPRegenCharacteristic>();
-            case CharacteristicType::WeaponType:
-                return std::make_unique<WeaponTypeCharacteristic>();
-            case CharacteristicType::Model:
-                return std::make_unique<ModelCharacteristic>();
-            case CharacteristicType::Allegiance:
-                return std::make_unique<AllegianceCharacteristic>();
-            case CharacteristicType::Status:
-                return std::make_unique<StatusCharacteristic>();
-            case CharacteristicType::Skill:
-                return std::make_unique<SkillCharacteristic>();
-            case CharacteristicType::Bond:
-                return std::make_unique<BondCharacteristic>();
-            case CharacteristicType::AngleToPlayerForward:
-                return std::make_unique<AngleToPlayerForwardCharacteristic>();
-            case CharacteristicType::AngleToCameraForward:
-                return std::make_unique<AngleToCameraForwardCharacteristic>();
-            default:
-                return nullptr;
-        }
-    }
-
     std::string_view toString(CharacteristicType type)
     {
         static_assert((int)CharacteristicType::Count == 17);
@@ -90,6 +47,49 @@ namespace {
         }
     }
 } // namespace
+
+CharacteristicPtr makeCharacteristic(CharacteristicType type)
+{
+    static_assert((int)CharacteristicType::Count == 17);
+    switch (type) {
+        case CharacteristicType::Position:
+            return std::make_unique<PositionCharacteristic>();
+        case CharacteristicType::PositionPolygon:
+            return std::make_unique<PositionPolygonCharacteristic>();
+        case CharacteristicType::DistanceToPlayer:
+            return std::make_unique<DistanceToPlayerCharacteristic>();
+        case CharacteristicType::DistanceToTarget:
+            return std::make_unique<DistanceToTargetCharacteristic>();
+        case CharacteristicType::Class:
+            return std::make_unique<ClassCharacteristic>();
+        case CharacteristicType::Name:
+            return std::make_unique<NameCharacteristic>();
+        case CharacteristicType::HP:
+            return std::make_unique<HPCharacteristic>();
+        case CharacteristicType::Speed:
+            return std::make_unique<SpeedCharacteristic>();
+        case CharacteristicType::HPRegen:
+            return std::make_unique<HPRegenCharacteristic>();
+        case CharacteristicType::WeaponType:
+            return std::make_unique<WeaponTypeCharacteristic>();
+        case CharacteristicType::Model:
+            return std::make_unique<ModelCharacteristic>();
+        case CharacteristicType::Allegiance:
+            return std::make_unique<AllegianceCharacteristic>();
+        case CharacteristicType::Status:
+            return std::make_unique<StatusCharacteristic>();
+        case CharacteristicType::Skill:
+            return std::make_unique<SkillCharacteristic>();
+        case CharacteristicType::Bond:
+            return std::make_unique<BondCharacteristic>();
+        case CharacteristicType::AngleToPlayerForward:
+            return std::make_unique<AngleToPlayerForwardCharacteristic>();
+        case CharacteristicType::AngleToCameraForward:
+            return std::make_unique<AngleToCameraForwardCharacteristic>();
+        default:
+            return nullptr;
+    }
+}
 
 CharacteristicPtr readCharacteristic(InputStream& stream)
 {
@@ -136,13 +136,12 @@ CharacteristicPtr readCharacteristic(InputStream& stream)
     }
 }
 
-CharacteristicPtr drawCharacteristicSelector(float width)
+std::optional<CharacteristicType> drawCharacteristicSubMenu()
 {
-    CharacteristicPtr result = nullptr;
-
+    std::optional<CharacteristicType> result;
     const auto drawCharacteristicSelector = [&result](CharacteristicType type) {
         if (ImGui::MenuItem(toString(type).data())) {
-            result = makeCharacteristic(type);
+            result = type;
         }
     };
     const auto drawSubMenu = [&drawCharacteristicSelector](std::string_view title, const auto& types) {
@@ -153,10 +152,6 @@ CharacteristicPtr drawCharacteristicSelector(float width)
         }
     };
 
-    if (ImGui::Button("Add Characteristic", ImVec2(width, 0))) {
-        ImGui::OpenPopup("Add Characteristic");
-    }
-
     constexpr auto positionCharacteristics = std::array{CharacteristicType::Position, CharacteristicType::PositionPolygon};
     constexpr auto distanceCharacteristics = std::array{CharacteristicType::DistanceToPlayer, CharacteristicType::DistanceToTarget};
     constexpr auto angleCharacteristics = std::array{CharacteristicType::AngleToPlayerForward, CharacteristicType::AngleToCameraForward};
@@ -164,16 +159,31 @@ CharacteristicPtr drawCharacteristicSelector(float width)
     constexpr auto skillCharacteristics = std::array{CharacteristicType::Skill, CharacteristicType::Bond};
     constexpr auto propertyCharacteristics = std::array{CharacteristicType::Model, CharacteristicType::Class, CharacteristicType::Name, CharacteristicType::Speed, CharacteristicType::WeaponType};
 
-    if (ImGui::BeginPopup("Add Characteristic")) {
-        drawSubMenu("Position", positionCharacteristics);
-        drawSubMenu("Distance", distanceCharacteristics);
-        drawSubMenu("Angle", angleCharacteristics);
-        drawSubMenu("Health", hpCharacteristics);
-        drawSubMenu("Skill", skillCharacteristics);
-        drawSubMenu("Properties", propertyCharacteristics);
-        drawCharacteristicSelector(CharacteristicType::Status);
-        drawCharacteristicSelector(CharacteristicType::Allegiance);
+    drawSubMenu("Position", positionCharacteristics);
+    drawSubMenu("Distance", distanceCharacteristics);
+    drawSubMenu("Angle", angleCharacteristics);
+    drawSubMenu("Health", hpCharacteristics);
+    drawSubMenu("Skill", skillCharacteristics);
+    drawSubMenu("Properties", propertyCharacteristics);
+    drawCharacteristicSelector(CharacteristicType::Status);
+    drawCharacteristicSelector(CharacteristicType::Allegiance);
 
+    return result;
+}
+
+CharacteristicPtr drawCharacteristicSelector(float width)
+{
+    CharacteristicPtr result = nullptr;
+
+    if (ImGui::Button("Add Characteristic", ImVec2(width, 0))) 
+    {
+        ImGui::OpenPopup("Add Characteristic");
+    }
+
+    if (ImGui::BeginPopup("Add Characteristic")) 
+    {
+        if (const auto type = drawCharacteristicSubMenu())
+            result = makeCharacteristic(*type);
         ImGui::EndPopup();
     }
 

@@ -33,6 +33,7 @@ public:
 
 private:
     std::vector<GW::Vec2f> polygon{};
+    IsIsNot comp = IsIsNot::Is;
 };
 
 class DistanceToPlayerCharacteristic : public Characteristic {

@@ -58,15 +58,15 @@ bool PositionCharacteristic::check(const GW::AgentLiving& agent) const
 void PositionCharacteristic::drawSettings()
 {
     ImGui::PushItemWidth(90.f);
-    ImGui::Text("Is within");
-    ImGui::SameLine();
-    ImGui::InputFloat("distance", &distance, 0.0f, 0.0f);
-    ImGui::SameLine();
-    ImGui::Text("of position");
+    ImGui::Text("Distance to position");
     ImGui::SameLine();
     ImGui::InputFloat("x", &position.x, 0.0f, 0.0f);
     ImGui::SameLine();
     ImGui::InputFloat("y", &position.y, 0.0f, 0.0f);
+    ImGui::SameLine();
+    drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
+    ImGui::SameLine();
+    ImGui::InputFloat("", &distance, 0.0f, 0.0f);
     ImGui::PopItemWidth();
 }
 
@@ -74,20 +74,26 @@ void PositionCharacteristic::drawSettings()
 PositionPolygonCharacteristic::PositionPolygonCharacteristic(InputStream& stream)
 {
     polygon = readPositions(stream);
+    stream >> comp;
 }
 void PositionPolygonCharacteristic::serialize(OutputStream& stream) const
 {
     Characteristic::serialize(stream);
 
     writePositions(stream, polygon);
+    stream << comp;
 }
 bool PositionPolygonCharacteristic::check(const GW::AgentLiving& agent) const
 {
-    return (polygon.size() < 3u) || pointIsInsidePolygon(agent.pos, polygon);
+    if (polygon.size() < 3u) return false;
+    const auto isWithin = pointIsInsidePolygon(agent.pos, polygon);
+    return (comp == IsIsNot::Is) == isWithin;
 }
 void PositionPolygonCharacteristic::drawSettings()
 {
-    ImGui::Text("Is within polygon");
+    drawEnumButton(IsIsNot::Is, IsIsNot::IsNot, comp, 0, 40.f);
+    ImGui::SameLine();
+    ImGui::Text("within polygon");
     ImGui::SameLine();
     drawPolygonSelector(polygon);
 }
@@ -113,11 +119,11 @@ bool DistanceToPlayerCharacteristic::check(const GW::AgentLiving& agent) const
 void DistanceToPlayerCharacteristic::drawSettings()
 {
     ImGui::PushItemWidth(90.f);
-    ImGui::Text("Is within");
+    ImGui::Text("Distance to player");
     ImGui::SameLine();
-    ImGui::InputFloat("distance", &distance, 0.0f, 0.0f);
+    drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
     ImGui::SameLine();
-    ImGui::Text("of player");
+    ImGui::InputFloat("", &distance, 0.0f, 0.0f);
     ImGui::PopItemWidth();
 }
 
@@ -142,11 +148,11 @@ bool DistanceToTargetCharacteristic::check(const GW::AgentLiving& agent) const
 void DistanceToTargetCharacteristic::drawSettings()
 {
     ImGui::PushItemWidth(90.f);
-    ImGui::Text("Is within");
+    ImGui::Text("Distance to target");
     ImGui::SameLine();
-    ImGui::InputFloat("distance", &distance, 0.0f, 0.0f);
+    drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
     ImGui::SameLine();
-    ImGui::Text("of target");
+    ImGui::InputFloat("", &distance, 0.0f, 0.0f);
     ImGui::PopItemWidth();
 }
 
@@ -453,9 +459,9 @@ bool SkillCharacteristic::check(const GW::AgentLiving& agent) const
 }
 void SkillCharacteristic::drawSettings()
 {
-    ImGui::Text("Currently used skill");
-    ImGui::SameLine();
     drawEnumButton(IsIsNot::Is, IsIsNot::IsNot, comp, 0, 40.f);
+    ImGui::SameLine();
+    ImGui::Text("using skill");
     ImGui::SameLine();
     drawSkillIDSelector(skill);
 }
@@ -481,15 +487,11 @@ bool BondCharacteristic::check(const GW::AgentLiving& agent) const
 }
 void BondCharacteristic::drawSettings()
 {
-    ImGui::Text("Player");
-    ImGui::SameLine();
     drawEnumButton(IsIsNot::Is, IsIsNot::IsNot, comp, 0, 40.f);
     ImGui::SameLine();
-    ImGui::Text("maintaining");
+    ImGui::Text("target of player maintained bond");
     ImGui::SameLine();
     drawSkillIDSelector(skill);
-    ImGui::SameLine();
-    ImGui::Text("on this target");
 }
 
 /// ------------- AngleToPlayerForwardCharacteristic -------------
@@ -512,7 +514,7 @@ bool AngleToPlayerForwardCharacteristic::check(const GW::AgentLiving& agent) con
 void AngleToPlayerForwardCharacteristic::drawSettings()
 {
     ImGui::PushItemWidth(90.f);
-    ImGui::Text("Angle to player forward");
+    ImGui::Text("Has angle to player forward");
     ImGui::SameLine();
     drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
     ImGui::SameLine();
@@ -539,7 +541,7 @@ bool AngleToCameraForwardCharacteristic::check(const GW::AgentLiving&) const
 void AngleToCameraForwardCharacteristic::drawSettings()
 {
     ImGui::PushItemWidth(90.f);
-    ImGui::Text("Angle to camera forward");
+    ImGui::Text("Has angle to camera forward");
     ImGui::SameLine();
     drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
     ImGui::SameLine();
