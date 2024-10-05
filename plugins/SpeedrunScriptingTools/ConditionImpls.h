@@ -475,6 +475,6 @@ public:
 
 private:
     std::string name = "";
-    float value;
+    int value;
     ComparisonOperator comp = ComparisonOperator::Equals;
 };

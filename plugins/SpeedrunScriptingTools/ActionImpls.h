@@ -139,7 +139,7 @@ public:
     void initialAction() final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
-    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::ImmediateFinish; }
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::ImmediateFinish | ActionBehaviourFlag::CanBeRunInOutpost; }
 
 private:
     int id = 0;
@@ -498,5 +498,5 @@ public:
 
 private:
     std::string name = "";
-    float value = 0.f;
+    int value = 0;
 };

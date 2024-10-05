@@ -1928,7 +1928,7 @@ void SetVariableAction::drawSettings()
 
     ImGui::SameLine();
     ImGui::PushItemWidth(100.f);
-    ImGui::InputFloat("Value", &value, 0.0f, 0.0f);
+    ImGui::InputInt("Value", &value, 0);
     ImGui::PopItemWidth();
     
     ImGui::PopID();

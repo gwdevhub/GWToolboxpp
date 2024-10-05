@@ -1644,7 +1644,7 @@ void ScriptVariableCondition::drawSettings()
     ImGui::SameLine();
     drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
     ImGui::SameLine();
-    ImGui::InputFloat("Value", &value, 0.0f, 0.0f);
+    ImGui::InputInt("Value", &value, 0);
     ImGui::PopItemWidth();
 
     ImGui::PopID();

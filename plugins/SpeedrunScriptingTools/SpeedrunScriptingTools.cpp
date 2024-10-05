@@ -412,6 +412,8 @@ namespace {
 
                 ImGui::Checkbox("Globally Exclusive", &scriptIt->globallyExclusive);
                 ImGui::SameLine();
+                ImGui::ShowHelp("Disallow any other script from launching while this script is running");
+                ImGui::SameLine();
                 ImGui::Checkbox("Can launch in parallel", &scriptIt->canLaunchInParallel);
                 ImGui::PopID();
 
