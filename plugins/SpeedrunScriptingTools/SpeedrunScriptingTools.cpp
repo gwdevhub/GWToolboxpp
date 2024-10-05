@@ -637,10 +637,8 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
     clearScriptsKey.keyData = ini.GetLongValue(Name(), "clearScriptsKey", 0);
     clearScriptsKey.modifier = ini.GetLongValue(Name(), "clearScriptsMod", 0);
     
-    if (savedVersion < 10) {
-        logMessage("Scripts from versions before 1.3 cannot be imported");
-        return;
-    }
+    if (savedVersion == 8) logMessage("Scripts from versions before 1.3 cannot be imported");
+    if (savedVersion < 10) return;
     
     if (std::string read = ini.GetValue(Name(), "scripts", ""); !read.empty()) {
         const auto decoded = decodeString(std::move(read));

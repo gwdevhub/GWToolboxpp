@@ -1,6 +1,8 @@
 #include <ConditionIO.h>
 #include <ConditionImpls.h>
 
+#include <CharacteristicIO.h>
+
 #include <imgui.h>
 
 namespace
@@ -73,10 +75,11 @@ ConditionPtr makeCondition(ConditionType type)
         case ConditionType::After:
             return std::make_shared<AfterCondition>();
 
-        case ConditionType::PlayerHasCharacteristics:
+        // Handled differently, we should never run into these here.
+        /* case ConditionType::PlayerHasCharacteristics:
             return std::make_shared<PlayerHasCharacteristicsCondition>();
         case ConditionType::TargetHasCharacteristics:
-            return std::make_shared<TargetHasCharacteristicsCondition>();
+            return std::make_shared<TargetHasCharacteristicsCondition>();*/
         case ConditionType::AgentWithCharacteristicsCount:
             return std::make_shared<AgentWithCharacteristicsCountCondition>();
 
@@ -277,7 +280,7 @@ ConditionPtr drawConditionSelector(float width)
         ImGui::OpenPopup("Add condition");
     }
 
-    constexpr auto skillConditions = std::array{ConditionType::PlayerHasBuff,    ConditionType::PlayerHasSkill, ConditionType::RemainingCooldown, ConditionType::PlayerHasEnergy, ConditionType::PlayerMorale};
+    constexpr auto skillConditions = std::array{ConditionType::PlayerHasBuff, ConditionType::PlayerHasSkill, ConditionType::RemainingCooldown, ConditionType::PlayerHasEnergy, ConditionType::PlayerMorale};
     constexpr auto itemConditions = std::array{ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory, ConditionType::CanPopAgent};
     constexpr auto partyConditions = std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName};
     constexpr auto instanceConditions = std::array{ConditionType::IsInMap, ConditionType::InstanceType, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime, ConditionType::FoeCount};
@@ -286,10 +289,19 @@ ConditionPtr drawConditionSelector(float width)
 
     if (ImGui::BeginPopup("Add condition")) 
     {
-        drawConditionSelector(ConditionType::PlayerHasCharacteristics);
-        drawConditionSelector(ConditionType::TargetHasCharacteristics);
+        if (ImGui::BeginMenu("Player")) 
+        {
+            drawSubMenu("Skillbar info", skillConditions);
+            if (const auto type = drawCharacteristicSubMenu()) result = std::make_shared<PlayerHasCharacteristicsCondition>(*type);
+
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Target")) {
+            if (const auto type = drawCharacteristicSubMenu()) result = std::make_shared<TargetHasCharacteristicsCondition>(*type);
+            ImGui::EndMenu();
+        }
         drawConditionSelector(ConditionType::AgentWithCharacteristicsCount);
-        drawSubMenu("Skill", skillConditions);
+        
         drawSubMenu("Item", itemConditions);
         drawSubMenu("Party", partyConditions);
         drawSubMenu("Instance", instanceConditions);

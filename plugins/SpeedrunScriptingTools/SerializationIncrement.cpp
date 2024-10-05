@@ -117,8 +117,9 @@ namespace v10 {
         std::string serialize()
         {
             OutputStream stream;
-            stream << "X" << CharacteristicType::Status;
+            stream << "X" << CharacteristicType::PositionPolygon;
             writePositions(stream, polygon);
+            stream << IsIsNot::Is;
             stream.writeSeparator(3);
             return stream.str();
         }
@@ -187,7 +188,7 @@ namespace v10 {
                 stream << "X" << CharacteristicType::DistanceToPlayer << minDistance << ComparisonOperator::GreaterOrEqual;
                 stream.writeSeparator(3);
             }
-            if (maxDistance < 5000.f) 
+            else if (maxDistance < 5000.f) 
             {
                 stream << "X" << CharacteristicType::DistanceToPlayer << maxDistance << ComparisonOperator::LessOrEqual;
                 stream.writeSeparator(3);
@@ -312,6 +313,7 @@ namespace v10 {
             if (!polygon.empty()) {
                 stream << "X" << CharacteristicType::PositionPolygon;
                 writePositions(stream, polygon);
+                stream << IsIsNot::Is;
                 stream.writeSeparator(3);
             }
 
@@ -440,6 +442,7 @@ namespace v10 {
             if (!polygon.empty()) {
                 stream << "X" << CharacteristicType::PositionPolygon;
                 writePositions(stream, polygon);
+                stream << IsIsNot::Is;
                 stream.writeSeparator(3);
             }
 
