@@ -479,6 +479,296 @@ namespace v10 {
         WeaponType weapon = WeaponType::Any;
     };
 
+    struct NegatedCondition {
+        NegatedCondition(InputStream& stream)
+        {
+            std::string read;
+            stream >> read;
+            if (read == missingContentToken)
+                cond = nullptr;
+            else if (read == "C")
+                cond = readV10Condition(stream);
+            else
+                return;
+        }
+        std::string serialize() const
+        {
+            OutputStream stream;
+            if (cond)
+                cond->serialize(stream);
+            else
+                stream << missingContentToken;
+            return stream.str();
+        }
+        ConditionPtr cond;
+    };
+    struct DisjunctionConjunctionCondition {
+        DisjunctionConjunctionCondition(InputStream& stream)
+        {
+            int count;
+            std::string token;
+            stream >> count;
+
+            for (int i = 0; i < count; ++i) {
+                if (stream.isAtSeparator() || !(stream >> token)) continue;
+
+                if (token == missingContentToken)
+                    conditions.push_back(nullptr);
+                else if (token == "C") {
+                    if (auto read = readV10Condition(stream)) conditions.push_back(std::move(read));
+                }
+                else {
+                    return;
+                }
+
+                stream.proceedPastSeparator(2);
+            }
+        }
+        std::string serialize() const
+        {
+            OutputStream stream;
+            stream << conditions.size();
+
+            for (const auto& condition : conditions) {
+                if (condition)
+                    condition->serialize(stream);
+                else
+                    stream << missingContentToken;
+
+                stream.writeSeparator(2);
+            }
+            return stream.str();
+        }
+        std::vector<ConditionPtr> conditions;
+    };
+
+    struct OnceCondition {
+        OnceCondition(InputStream& stream)
+        {
+            std::string read;
+            stream >> read;
+            if (read == missingContentToken)
+                cond = nullptr;
+            else if (read == "C")
+                cond = readV10Condition(stream);
+            else
+                return;
+        }
+        std::string serialize() const
+        {
+            OutputStream stream;
+            if (cond)
+                cond->serialize(stream);
+            else
+                stream << missingContentToken;
+            return stream.str();
+        }
+        ConditionPtr cond = nullptr;
+    };
+    struct UntilCondition {
+        UntilCondition(InputStream& stream)
+        {
+            std::string read;
+            stream >> read;
+            if (read == missingContentToken)
+                cond = nullptr;
+            else if (read == "C")
+                cond = readV10Condition(stream);
+            else
+                return;
+        }
+        std::string serialize() const
+        {
+            OutputStream stream;
+            if (cond)
+                cond->serialize(stream);
+            else
+                stream << missingContentToken;
+            return stream.str();
+        }
+        ConditionPtr cond = nullptr;
+    };
+    struct AfterCondition 
+    {
+        AfterCondition(InputStream& stream)
+        {
+            std::string read;
+            stream >> read;
+            if (read == missingContentToken)
+                cond = nullptr;
+            else if (read == "C")
+                cond = readV10Condition(stream);
+            else
+                return;
+        }
+        std::string serialize() const
+        {
+            OutputStream stream;
+            if (cond)
+                cond->serialize(stream);
+            else
+                stream << missingContentToken;
+            return stream.str();
+        }
+
+        ConditionPtr cond = nullptr;
+    };
+    struct ToggleCondition {
+        ToggleCondition(InputStream& stream)
+        {
+            stream >> defaultState;
+
+            std::string read;
+
+            stream >> read;
+            if (read == missingContentToken)
+                toggleOnCond = nullptr;
+            else if (read == "C") {
+                toggleOnCond = readV10Condition(stream);
+                stream.proceedPastSeparator(2);
+            }
+            else
+                return;
+
+            stream >> read;
+            if (read == missingContentToken)
+                toggleOffCond = nullptr;
+            else if (read == "C") {
+                toggleOffCond = readV10Condition(stream);
+                stream.proceedPastSeparator(2);
+            }
+        }
+        std::string serialize() const
+        {
+            OutputStream stream;
+            stream << defaultState;
+
+            if (toggleOnCond) {
+                toggleOnCond->serialize(stream);
+                stream.writeSeparator(2);
+            }
+            else
+                stream << missingContentToken;
+
+            if (toggleOffCond) {
+                toggleOffCond->serialize(stream);
+                stream.writeSeparator(2);
+            }
+            else
+                stream << missingContentToken;
+            return stream.str();
+        }
+
+        TrueFalse defaultState = TrueFalse::False;
+        ConditionPtr toggleOnCond = nullptr;
+        ConditionPtr toggleOffCond = nullptr;
+    };
+    struct ConditionedAction {
+        ConditionedAction(InputStream& stream)
+        {
+            std::string read;
+            const auto readCond = [&](auto& condition) {
+                stream >> read;
+                if (read == missingContentToken)
+                    condition = nullptr;
+                else if (read == "C")
+                    condition = readV10Condition(stream);
+                else
+                    throw std::runtime_error("Invalid string");
+
+                stream.proceedPastSeparator(2);
+            };
+            const auto readActionSequence = [&](auto& sequence) {
+                size_t size;
+                stream >> size;
+                for (size_t i = 0; i < size; ++i) {
+                    if (stream.isAtSeparator() || !(stream >> read)) continue;
+
+                    if (read == missingContentToken)
+                        sequence.push_back(nullptr);
+                    else if (read == "A")
+                        sequence.push_back(readV10Action(stream));
+                    else
+                        throw std::runtime_error("Invalid string");
+
+                    stream.proceedPastSeparator(2);
+                }
+            };
+
+            try {
+                readCond(cond);
+                readActionSequence(actionsIf);
+                readActionSequence(actionsElse);
+
+                size_t actionsElseIfSize;
+                stream >> actionsElseIfSize;
+
+                for (size_t i = 0; i < actionsElseIfSize; ++i) {
+                    actionsElseIf.push_back({});
+                    readCond(actionsElseIf.back().first);
+                    readActionSequence(actionsElseIf.back().second);
+                }
+            } catch (...) {}
+        }
+        std::string serialize() const
+        {
+            OutputStream stream;
+            const auto writeCondition = [&](const auto& condition) {
+                if (condition)
+                    condition->serialize(stream);
+                else
+                    stream << missingContentToken;
+                stream.writeSeparator(2);
+            };
+            const auto writeActionSequence = [&](const auto& sequence) {
+                stream << sequence.size();
+                for (const auto& action : sequence) {
+                    if (action)
+                        action->serialize(stream);
+                    else
+                        stream << missingContentToken;
+                    stream.writeSeparator(2);
+                }
+            };
+
+            writeCondition(cond);
+            writeActionSequence(actionsIf);
+            writeActionSequence(actionsElse);
+
+            stream << actionsElseIf.size();
+            for (const auto& [condEI, actionsEI] : actionsElseIf) {
+                writeCondition(condEI);
+                writeActionSequence(actionsEI);
+            }
+            return stream.str();
+        }
+        ConditionPtr cond = nullptr;
+        std::vector<ActionPtr> actionsIf = {};
+        std::vector<ActionPtr> actionsElse = {};
+        std::vector<std::pair<ConditionPtr, std::vector<ActionPtr>>> actionsElseIf = {};
+    };
+    struct WaitUntilAction {
+        WaitUntilAction(InputStream& stream)
+        {
+            std::string read;
+            stream >> read;
+            if (read == missingContentToken)
+                condition = nullptr;
+            else if (read == "C")
+                condition = readV10Condition(stream);
+        }
+        std::string serialize() const
+        {
+            OutputStream stream;
+            if (condition)
+                condition->serialize(stream);
+            else
+                stream << missingContentToken;
+            return stream.str();
+        }
+        ConditionPtr condition;
+    };
+
     enum class ConditionType : int {
         Not,
         Or,
@@ -631,13 +921,51 @@ ConditionPtr readV10Condition(InputStream& stream)
             return std::make_shared<AgentWithCharacteristicsCountCondition>(convertedStream);
         }
 
-        // Unchanged:
-        case v10::ConditionType::Not:
-            return std::make_shared<NegatedCondition>(stream);
+        // Unchanged, but read/write Conditions
+        case v10::ConditionType::Not: 
+        {
+            const auto converted = v10::NegatedCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<NegatedCondition>(convertedStream);
+        }
         case v10::ConditionType::Or:
-            return std::make_shared<DisjunctionCondition>(stream);
+        {
+            const auto converted = v10::DisjunctionConjunctionCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<DisjunctionCondition>(convertedStream);
+        }
         case v10::ConditionType::And:
-            return std::make_shared<ConjunctionCondition>(stream);
+        {
+            const auto converted = v10::DisjunctionConjunctionCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<ConjunctionCondition>(convertedStream);
+        }
+        case v10::ConditionType::Once:
+        {
+            const auto converted = v10::OnceCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<OnceCondition>(convertedStream);
+        }
+        case v10::ConditionType::Until:
+        {
+            const auto converted = v10::UntilCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<UntilCondition>(convertedStream);
+        }
+        case v10::ConditionType::Toggle:
+        {
+            const auto converted = v10::ToggleCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<ToggleCondition>(convertedStream);
+        }
+        case v10::ConditionType::After:
+        {
+            const auto converted = v10::AfterCondition{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<AfterCondition>(convertedStream);
+        }
+
+        // Unchanged:
         case v10::ConditionType::IsInMap:
             return std::make_shared<IsInMapCondition>(stream);
         case v10::ConditionType::QuestHasState:
@@ -687,14 +1015,6 @@ ConditionPtr readV10Condition(InputStream& stream)
             return std::make_shared<TrueCondition>(stream);
         case v10::ConditionType::False:
             return std::make_shared<FalseCondition>(stream);
-        case v10::ConditionType::Once:
-            return std::make_shared<OnceCondition>(stream);
-        case v10::ConditionType::Until:
-            return std::make_shared<UntilCondition>(stream);
-        case v10::ConditionType::Toggle:
-            return std::make_shared<ToggleCondition>(stream);
-        case v10::ConditionType::After:
-            return std::make_shared<AfterCondition>(stream);
 
         default:
             return nullptr;
@@ -713,6 +1033,20 @@ ActionPtr readV10Action(InputStream& stream)
             return std::make_shared<ChangeTargetAction>(convertedStream);
         }
 
+        // Unchanged, but read/write Conditions
+        case ActionType::Conditioned: 
+        {
+            const auto converted = v10::ConditionedAction{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<ConditionedAction>(convertedStream);
+        }
+        case ActionType::WaitUntil: 
+        {
+            const auto converted = v10::WaitUntilAction{stream}.serialize();
+            auto convertedStream = InputStream{converted};
+            return std::make_shared<WaitUntilAction>(convertedStream);
+        }
+        
         // Unchanged:
         case ActionType::MoveTo:
             return std::make_shared<MoveToAction>(stream);
@@ -740,8 +1074,6 @@ ActionPtr readV10Action(InputStream& stream)
             return std::make_shared<DropBuffAction>(stream);
         case ActionType::EquipItem:
             return std::make_shared<EquipItemAction>(stream);
-        case ActionType::Conditioned:
-            return std::make_shared<ConditionedAction>(stream);
         case ActionType::RepopMinipet:
             return std::make_shared<RepopMinipetAction>(stream);
         case ActionType::PingHardMode:
@@ -766,8 +1098,6 @@ ActionPtr readV10Action(InputStream& stream)
             return std::make_shared<UnequipItemAction>(stream);
         case ActionType::ClearTarget:
             return std::make_shared<ClearTargetAction>(stream);
-        case ActionType::WaitUntil:
-            return std::make_shared<WaitUntilAction>(stream);
         case ActionType::GWKey:
             return std::make_shared<GWKeyAction>(stream);
         default:
