@@ -468,10 +468,6 @@ namespace {
 
                 // Group settings
                 ImGui::Separator();
-                if (ImGui::Button("Add script to group", ImVec2(150, 0))) {
-                    groupIt->scripts.push_back({});
-                }
-                ImGui::SameLine();
                 if (ImGui::Button("Copy group", ImVec2(150, 0))) 
                 {
                     if (const auto encoded = encodeString(std::to_string(currentVersion) + " " + serialize(*groupIt))) {
@@ -601,7 +597,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Checkbox("Block hotkey keys even if conditions not met", &alwaysBlockHotkeyKeys);
 
-    ImGui::Text("Version 2.0-beta1. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 2.0-beta2. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
