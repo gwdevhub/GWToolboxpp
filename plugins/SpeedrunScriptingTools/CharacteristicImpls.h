@@ -208,7 +208,7 @@ public:
     SkillCharacteristic(InputStream&);
     void serialize(OutputStream&) const final;
 
-    CharacteristicType type() const final { return CharacteristicType::Status; }
+    CharacteristicType type() const final { return CharacteristicType::Skill; }
     bool check(const GW::AgentLiving& agent) const final;
     void drawSettings() final;
 

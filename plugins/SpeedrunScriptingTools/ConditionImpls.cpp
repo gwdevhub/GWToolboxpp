@@ -1453,9 +1453,9 @@ void PlayerHasCharacteristicsCondition::serialize(OutputStream& stream) const
 }
 bool PlayerHasCharacteristicsCondition::check() const
 {
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
-    if (!target) return false;
-    return characteristic && characteristic->check(*target);
+    const auto player = GW::Agents::GetControlledCharacter();
+    if (!player) return false;
+    return characteristic && characteristic->check(*player);
 }
 void PlayerHasCharacteristicsCondition::drawSettings()
 {
