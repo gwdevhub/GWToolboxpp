@@ -33,6 +33,8 @@ struct Group
 {
     std::vector<ConditionPtr> conditions;
     std::vector<Script> scripts;
+
+    bool enabled = true;
     std::string name = "New group";
 };
 

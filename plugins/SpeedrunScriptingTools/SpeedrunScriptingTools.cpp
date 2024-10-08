@@ -97,6 +97,7 @@ namespace {
 
         stream << 'G';
         writeStringWithSpaces(stream, group.name);
+        stream << group.enabled;
 
         stream.writeSeparator();
 
@@ -175,6 +176,7 @@ namespace {
         std::optional<Script> nextScript;
 
         result.name = readStringWithSpaces(stream);
+        stream >> result.enabled;
         stream.proceedPastSeparator();         
 
         do {
@@ -468,6 +470,8 @@ namespace {
 
                 // Group settings
                 ImGui::Separator();
+                ImGui::Checkbox("Enabled", &groupIt->enabled);
+                ImGui::SameLine();
                 if (ImGui::Button("Copy group", ImVec2(150, 0))) 
                 {
                     if (const auto encoded = encodeString(std::to_string(currentVersion) + " " + serialize(*groupIt))) {
@@ -826,7 +830,7 @@ void SpeedrunScriptingTools::Update(float delta)
 
     for (auto& group : m_groups)
     {
-        if (checkConditions(group.conditions)) 
+        if (group.enabled && checkConditions(group.conditions)) 
             checkScripts(group.scripts);
     }
     checkScripts(m_scripts);
@@ -921,7 +925,7 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
 
             for (auto& group : m_groups) 
             {
-                if (checkConditions(group.conditions)) 
+                if (group.enabled && checkConditions(group.conditions)) 
                     triggerScripts(group.scripts);
             }
             triggerScripts(m_scripts);
@@ -960,7 +964,8 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         
         for (auto& group : m_groups) 
         {
-            triggerScripts(group.scripts);
+            if (group.enabled)
+                triggerScripts(group.scripts);
         }
         triggerScripts(m_scripts);
     });
@@ -983,7 +988,7 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         const auto isHardModeTrigger = wmemcmp(packet->message, L"\x8101\x7f84", 2) == 0;
         for (auto& group : m_groups) 
         {
-            if (!checkConditions(group.conditions)) continue;
+            if (!group.enabled || !checkConditions(group.conditions)) continue;
             
             if (isHardModeTrigger) triggerHardModePingScripts(group.scripts);
             else triggerChatMessageScripts(group.scripts); 
