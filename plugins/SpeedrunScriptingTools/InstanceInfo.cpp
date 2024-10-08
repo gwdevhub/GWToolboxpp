@@ -15,6 +15,7 @@
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/Constants/ItemIDs.h>
 
+#include <io.h>
 #include <enumUtils.h>
 
 namespace {
@@ -23,6 +24,7 @@ namespace {
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry UseItem_Entry;
     GW::HookEntry DisplayDialogue_Entry;
+    GW::HookEntry FinishSkill_Entry;
 
     bool isTargetableMiniPet(uint32_t itemId) 
     {
