@@ -152,15 +152,13 @@ std::optional<CharacteristicType> drawCharacteristicSubMenu()
         }
     };
 
-    constexpr auto positionCharacteristics = std::array{CharacteristicType::Position, CharacteristicType::PositionPolygon};
-    constexpr auto distanceCharacteristics = std::array{CharacteristicType::DistanceToPlayer, CharacteristicType::DistanceToTarget};
+    constexpr auto positionCharacteristics = std::array{CharacteristicType::Position, CharacteristicType::PositionPolygon, CharacteristicType::DistanceToPlayer, CharacteristicType::DistanceToTarget};
     constexpr auto angleCharacteristics = std::array{CharacteristicType::AngleToPlayerForward, CharacteristicType::AngleToCameraForward};
     constexpr auto hpCharacteristics = std::array{CharacteristicType::HP, CharacteristicType::HPRegen};
     constexpr auto skillCharacteristics = std::array{CharacteristicType::Skill, CharacteristicType::Bond};
     constexpr auto propertyCharacteristics = std::array{CharacteristicType::Model, CharacteristicType::Class, CharacteristicType::Name, CharacteristicType::Speed, CharacteristicType::WeaponType};
 
     drawSubMenu("Position", positionCharacteristics);
-    drawSubMenu("Distance", distanceCharacteristics);
     drawSubMenu("Angle", angleCharacteristics);
     drawSubMenu("Health", hpCharacteristics);
     drawSubMenu("Skill", skillCharacteristics);

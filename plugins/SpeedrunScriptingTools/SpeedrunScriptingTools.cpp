@@ -657,7 +657,6 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
         if (!decoded) return;
         InputStream stream(decoded.value());
         while (stream && stream.get() == 'G') {
-            stream.get();
             if (auto nextGroup = deserializeGroup(stream))
                 m_groups.push_back(std::move(*nextGroup));
             else
