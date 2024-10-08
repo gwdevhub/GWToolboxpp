@@ -12,6 +12,12 @@ struct Hotkey {
 };
 
 struct Script {
+    Script()
+    { 
+        static int idCounter = 0;
+        id = idCounter++;
+    }
+    int getId() const { return id; }
     std::vector<ConditionPtr> conditions;
     std::vector<ActionPtr> actions;
     std::string name = "New script";
@@ -27,6 +33,9 @@ struct Script {
     Hotkey enabledToggleHotkey{};
     Hotkey triggerHotkey{};
     std::string triggerMessage{};
+
+  private:
+    size_t id = 0;
 };
 
 struct Group 
