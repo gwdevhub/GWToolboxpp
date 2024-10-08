@@ -14,26 +14,23 @@
 
 #include <ModelNames.h>
 
-namespace {
-    std::string getSkillName(GW::Constants::SkillID id)
-    {
-        if (id == GW::Constants::SkillID::No_Skill) return "No skill";
-        static std::unordered_map<GW::Constants::SkillID, std::wstring> decodedNames;
-        if (const auto it = decodedNames.find(id); it != decodedNames.end()) 
-        {
-            return WStringToString(it->second);
-        }
-
-        const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
-        if (!skillData || (uint32_t)id >= (uint32_t)GW::Constants::SkillID::Count) return "";
-
-        wchar_t out[8] = {0};
-        if (GW::UI::UInt32ToEncStr(skillData->name, out, _countof(out))) 
-        {
-            GW::UI::AsyncDecodeStr(out, &decodedNames[id]);
-        }
-        return "";
+std::string getSkillName(GW::Constants::SkillID id, bool zeroIsAny)
+{
+    if (id == GW::Constants::SkillID::No_Skill) 
+        return zeroIsAny ? "Any" : "No skill";
+    static std::unordered_map<GW::Constants::SkillID, std::wstring> decodedNames;
+    if (const auto it = decodedNames.find(id); it != decodedNames.end()) {
+        return WStringToString(it->second);
     }
+
+    const auto skillData = GW::SkillbarMgr::GetSkillConstantData(id);
+    if (!skillData || (uint32_t)id >= (uint32_t)GW::Constants::SkillID::Count) return "";
+
+    wchar_t out[8] = {0};
+    if (GW::UI::UInt32ToEncStr(skillData->name, out, _countof(out))) {
+        GW::UI::AsyncDecodeStr(out, &decodedNames[id]);
+    }
+    return "";
 }
 
 std::string WStringToString(const std::wstring_view str)
@@ -299,6 +296,8 @@ std::string_view toString(Trigger type)
             return "Trigger on keypress";
         case Trigger::ChatMessage:
             return "Trigger on chat message";
+        case Trigger::FinishSkillCast:
+            return "Trigger on finish skill cast";
     }
     return "";
 }
@@ -744,11 +743,11 @@ void drawHotkeySelector(long& keyData, long& modifier, std::string& description,
     ImGui::PopItemWidth();
 }
 
-void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& hotkeyMod, std::string& triggerMessage)
+void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& hotkeyMod, std::string& triggerMessage, GW::Constants::SkillID& triggerSkill)
 {
     if (trigger == Trigger::None) 
     {
-        drawEnumButton(Trigger::InstanceLoad, Trigger::ChatMessage, trigger, 0, 100.f, "Add trigger");
+        drawEnumButton(Trigger::InstanceLoad, Trigger::FinishSkillCast, trigger, 0, 100.f, "Add trigger");
     }
     else if (trigger == Trigger::Hotkey) 
     {
@@ -772,6 +771,17 @@ void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& 
         if (ImGui::Button("X", ImVec2(20.f, 0))) {
             trigger = Trigger::None;
             triggerMessage = "";
+        }
+    }
+    else if (trigger == Trigger::FinishSkillCast) 
+    {
+        ImGui::Text("Trigger on finish skill");
+        ImGui::SameLine();
+        drawSkillIDSelector(triggerSkill, true);
+        ImGui::SameLine();
+        if (ImGui::Button("X", ImVec2(20.f, 0))) {
+            trigger = Trigger::None;
+            triggerSkill = GW::Constants::SkillID::No_Skill;
         }
     }
     else 
@@ -822,10 +832,10 @@ bool pointIsInsidePolygon(const GW::GamePos pos, const std::vector<GW::Vec2f>& p
     return b;
 }
 
-void drawSkillIDSelector(GW::Constants::SkillID& id)
+void drawSkillIDSelector(GW::Constants::SkillID& id, bool zeroIsAny)
 {
     ImGui::PushItemWidth(50.f);
-    ImGui::Text("%s", getSkillName(id).c_str());
+    ImGui::Text("%s", getSkillName(id, zeroIsAny).c_str());
     ImGui::SameLine();
     ImGui::SameLine();
     ImGui::InputInt("Skill ID", reinterpret_cast<int*>(&id), 0);

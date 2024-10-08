@@ -5,6 +5,7 @@
 #include <Enums.h>
 
 #include <ToolboxPlugin.h>
+#include <GWCA/Constants/Skills.h>
 
 struct Hotkey {
     long keyData = 0;
@@ -33,6 +34,7 @@ struct Script {
     Hotkey enabledToggleHotkey{};
     Hotkey triggerHotkey{};
     std::string triggerMessage{};
+    GW::Constants::SkillID triggerFinishSkillId{};
 
   private:
     size_t id = 0;

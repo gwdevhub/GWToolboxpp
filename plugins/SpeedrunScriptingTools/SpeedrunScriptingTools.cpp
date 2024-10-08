@@ -20,6 +20,7 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
@@ -33,6 +34,7 @@
 namespace {
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry CoreMessage_Entry;
+    GW::HookEntry FinishSkillCast_Entry;
 
     // Versions 1-7: Prerelease, can be ignored
     // Version 8: 1.0-1.2. See SerializationIncrement for deprecation context
@@ -77,6 +79,7 @@ namespace {
         writeStringWithSpaces(stream, script.triggerMessage);
         stream << script.globallyExclusive;
         stream << script.canLaunchInParallel;
+        stream << script.triggerFinishSkillId;
 
         stream.writeSeparator();
 
@@ -131,6 +134,7 @@ namespace {
         result.triggerMessage = readStringWithSpaces(stream);
         stream >> result.globallyExclusive;
         stream >> result.canLaunchInParallel;
+        stream >> result.triggerFinishSkillId;
         stream.proceedPastSeparator();
 
         do {
@@ -224,6 +228,9 @@ namespace {
                     break;
                 case Trigger::ChatMessage:
                     result += "On chat message \"" + script.triggerMessage + "\"";
+                    break;
+                case Trigger::FinishSkillCast:
+                    result += "On finish casting " + getSkillName(script.triggerFinishSkillId, true);
                     break;
                 default:
                     result += "Unknown trigger";
@@ -402,7 +409,7 @@ namespace {
                 ImGui::PushID(3);
 
                 ImGui::SameLine();
-                drawTriggerSelector(scriptIt->trigger, 100.f, scriptIt->triggerHotkey.keyData, scriptIt->triggerHotkey.modifier, scriptIt->triggerMessage);
+                drawTriggerSelector(scriptIt->trigger, 100.f, scriptIt->triggerHotkey.keyData, scriptIt->triggerHotkey.modifier, scriptIt->triggerMessage, scriptIt->triggerFinishSkillId);
 
                 ImGui::SameLine();
                 ImGui::Checkbox("Log trigger", &scriptIt->showMessageWhenTriggered);
@@ -969,6 +976,30 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         }
         triggerScripts(m_scripts);
     });
+    RegisterUIMessageCallback(&FinishSkillCast_Entry, GW::UI::UIMessage::kFinishSkillCast, [&](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        struct FinishSkillCastParameters {
+            uint32_t agentId;
+            uint32_t skillId;
+        };
+
+        const auto parameters = *reinterpret_cast<FinishSkillCastParameters*>(wparam);
+        const auto player = GW::Agents::GetControlledCharacter();
+        if (!player || parameters.agentId != player->agent_id) return;
+
+        const auto triggerScripts = [&](std::vector<Script>& scripts) {
+            std::ranges::for_each(scripts, [&](Script& s) {
+                const auto correctSkill = (uint32_t)s.triggerFinishSkillId == parameters.skillId || s.triggerFinishSkillId == GW::Constants::SkillID::No_Skill;
+                if (correctSkill && s.enabled && s.trigger == Trigger::FinishSkillCast && checkConditions(s.conditions)) 
+                {
+                    s.triggered = true;
+                }
+            });
+        };
+        for (auto& group : m_groups) {
+            if (group.enabled) triggerScripts(group.scripts);
+        }
+        triggerScripts(m_scripts);
+    });
 
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MessageCore>(&CoreMessage_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::MessageCore* packet) {
         const auto triggerHardModePingScripts = [](std::vector<Script>& scripts) {
@@ -1008,6 +1039,7 @@ void SpeedrunScriptingTools::SignalTerminate()
     InstanceInfo::getInstance().terminate();
     GW::StoC::RemovePostCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry);
     GW::StoC::RemovePostCallback<GW::Packet::StoC::MessageCore>(&CoreMessage_Entry);
+    RemoveUIMessageCallback(&FinishSkillCast_Entry, GW::UI::UIMessage::kFinishSkillCast);
     GW::DisableHooks();
 }
 
