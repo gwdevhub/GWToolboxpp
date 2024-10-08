@@ -67,7 +67,7 @@ void PositionCharacteristic::serialize(OutputStream& stream) const
 }
 bool PositionCharacteristic::check(const GW::AgentLiving& agent) const
 {
-    return compare(distance, comp, GW::GetDistance(position, agent.pos));
+    return compare(GW::GetDistance(position, agent.pos), comp, distance);
 }
 void PositionCharacteristic::drawSettings()
 {
@@ -128,7 +128,7 @@ bool DistanceToPlayerCharacteristic::check(const GW::AgentLiving& agent) const
     const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return false;
 
-    return compare(distance, comp, GW::GetDistance(player->pos, agent.pos));
+    return compare(GW::GetDistance(player->pos, agent.pos), comp, distance);
 }
 void DistanceToPlayerCharacteristic::drawSettings()
 {
@@ -157,7 +157,7 @@ bool DistanceToTargetCharacteristic::check(const GW::AgentLiving& agent) const
     const auto target = GW::Agents::GetTargetAsAgentLiving();
     if (!target) return false;
 
-    return compare(distance, comp, GW::GetDistance(target->pos, agent.pos));
+    return compare(GW::GetDistance(target->pos, agent.pos), comp, distance);
 }
 void DistanceToTargetCharacteristic::drawSettings()
 {
@@ -214,7 +214,8 @@ void NameCharacteristic::serialize(OutputStream& stream) const
 }
 bool NameCharacteristic::check(const GW::AgentLiving& agent) const
 {
-    return compare(name, comp, InstanceInfo::getInstance().getDecodedAgentName(agent.agent_id));
+    const auto correctName = !name.empty() && InstanceInfo::getInstance().getDecodedAgentName(agent.agent_id).contains(name);
+    return (comp == IsIsNot::Is) == correctName;
 }
 void NameCharacteristic::drawSettings()
 {
