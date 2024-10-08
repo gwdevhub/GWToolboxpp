@@ -1014,6 +1014,7 @@ void RemainingCooldownCondition::drawSettings()
     ImGui::Text("has remaining cooldown (in ms)");
     ImGui::SameLine();
     
+    ImGui::PushItemWidth(100.f);
     if (hasMinimumCooldown) 
     {
         ImGui::InputInt("min", &minimumCooldown, 0);
@@ -1042,7 +1043,7 @@ void RemainingCooldownCondition::drawSettings()
         if (ImGui::Button("Add max")) hasMaximumCooldown = true;
     }
 
-
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 

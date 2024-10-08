@@ -441,7 +441,7 @@ namespace {
             ImGui::PushID(groupIt - groups.begin());
             ImGui::PushStyleColor(ImGuiCol_Header, {100.f/255, 100.f/255, 100.f/255, 0.5});
 
-            const auto groupHeader = groupIt->name + "###0";
+            const auto groupHeader = groupIt->name + (groupIt->enabled ? "" : " [Disabled]") + "###0";
             const auto treeOpen = ImGui::TreeNodeEx(groupHeader.c_str(), ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - (treeOpen ? 127.f : 148.f));
             if (ImGui::Button("X", ImVec2(20, 0))) {
@@ -576,12 +576,11 @@ void SpeedrunScriptingTools::DrawSettings()
         }
     }
     // Debug info
-    if (ImGui::Button("Clear")) clear();
-    ImGui::SameLine();
-
     auto scriptActionCounts = std::string{};
     for (const auto& script : m_currentScripts) scriptActionCounts += std::to_string(script.actions.size()) + ", ";
     ImGui::Text("Actions in queue: [%s]", scriptActionCounts.c_str());
+    ImGui::SameLine();
+    if (ImGui::Button("Clear")) clear();
     ImGui::SameLine();
     ImGui::Text("Clear scripts hotkey:");
     ImGui::SameLine();
@@ -770,6 +769,7 @@ void SpeedrunScriptingTools::Update(float delta)
         if (!script.enabled || (script.conditions.empty() && script.trigger == Trigger::None) || script.actions.empty()) return false;
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !canBeRunInOutPost(script)) return false;
         if (isRunningOtherScript && !script.canLaunchInParallel) return false;
+        if (std::ranges::any_of(m_currentScripts,[&](const Script& s){ return s.getId() == script.getId();})) return false;
         return checkConditions(script.conditions);
     };
     const auto addToCurrentScripts = [&](Script& script) {
