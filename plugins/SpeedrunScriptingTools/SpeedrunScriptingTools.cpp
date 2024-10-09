@@ -35,6 +35,7 @@ namespace {
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry CoreMessage_Entry;
     GW::HookEntry FinishSkillCast_Entry;
+    GW::HookEntry Interrupt_Entry;
 
     // Versions 1-7: Prerelease, can be ignored
     // Version 8: 1.0-1.2. See SerializationIncrement for deprecation context
@@ -231,6 +232,9 @@ namespace {
                     break;
                 case Trigger::FinishSkillCast:
                     result += "On finish casting " + getSkillName(script.triggerFinishSkillId, true);
+                    break;
+                case Trigger::SkillCastInterrupted:
+                    result += "On interrupt of " + getSkillName(script.triggerFinishSkillId, true);
                     break;
                 default:
                     result += "Unknown trigger";
@@ -607,7 +611,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Checkbox("Block hotkey keys even if conditions not met", &alwaysBlockHotkeyKeys);
 
-    ImGui::Text("Version 2.0-beta2. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 2.0-beta3. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
@@ -976,6 +980,29 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         }
         triggerScripts(m_scripts);
     });
+    RegisterUIMessageCallback(&Interrupt_Entry, GW::UI::UIMessage::kSpellCastInterrupted, [&](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        struct SpellCastInterruptedParameters {
+            uint32_t agentId;
+            uint32_t skillId;
+        };
+
+        const auto parameters = *reinterpret_cast<SpellCastInterruptedParameters*>(wparam);
+        const auto player = GW::Agents::GetControlledCharacter();
+        if (!player || parameters.agentId != player->agent_id) return;
+
+        const auto triggerScripts = [&](std::vector<Script>& scripts) {
+            std::ranges::for_each(scripts, [&](Script& s) {
+                const auto correctSkill = (uint32_t)s.triggerFinishSkillId == parameters.skillId || s.triggerFinishSkillId == GW::Constants::SkillID::No_Skill;
+                if (correctSkill && s.enabled && s.trigger == Trigger::SkillCastInterrupted && checkConditions(s.conditions)) {
+                    s.triggered = true;
+                }
+            });
+        };
+        for (auto& group : m_groups) {
+            if (group.enabled) triggerScripts(group.scripts);
+        }
+        triggerScripts(m_scripts);
+    });
     RegisterUIMessageCallback(&FinishSkillCast_Entry, GW::UI::UIMessage::kFinishSkillCast, [&](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
         struct FinishSkillCastParameters {
             uint32_t agentId;
@@ -985,7 +1012,7 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         const auto parameters = *reinterpret_cast<FinishSkillCastParameters*>(wparam);
         const auto player = GW::Agents::GetControlledCharacter();
         if (!player || parameters.agentId != player->agent_id) return;
-
+        
         const auto triggerScripts = [&](std::vector<Script>& scripts) {
             std::ranges::for_each(scripts, [&](Script& s) {
                 const auto correctSkill = (uint32_t)s.triggerFinishSkillId == parameters.skillId || s.triggerFinishSkillId == GW::Constants::SkillID::No_Skill;
@@ -1040,6 +1067,7 @@ void SpeedrunScriptingTools::SignalTerminate()
     GW::StoC::RemovePostCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry);
     GW::StoC::RemovePostCallback<GW::Packet::StoC::MessageCore>(&CoreMessage_Entry);
     RemoveUIMessageCallback(&FinishSkillCast_Entry, GW::UI::UIMessage::kFinishSkillCast);
+    RemoveUIMessageCallback(&Interrupt_Entry, GW::UI::UIMessage::kSpellCastInterrupted);
     GW::DisableHooks();
 }
 

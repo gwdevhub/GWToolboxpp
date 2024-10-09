@@ -298,6 +298,8 @@ std::string_view toString(Trigger type)
             return "Trigger on chat message";
         case Trigger::FinishSkillCast:
             return "Trigger on finish skill cast";
+        case Trigger::SkillCastInterrupted:
+            return "Trigger on interrupt";
     }
     return "";
 }
@@ -747,7 +749,7 @@ void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& 
 {
     if (trigger == Trigger::None) 
     {
-        drawEnumButton(Trigger::InstanceLoad, Trigger::FinishSkillCast, trigger, 0, 100.f, "Add trigger");
+        drawEnumButton(Trigger::InstanceLoad, Trigger::SkillCastInterrupted, trigger, 0, 100.f, "Add trigger");
     }
     else if (trigger == Trigger::Hotkey) 
     {
@@ -776,6 +778,17 @@ void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& 
     else if (trigger == Trigger::FinishSkillCast) 
     {
         ImGui::Text("Trigger on finish skill");
+        ImGui::SameLine();
+        drawSkillIDSelector(triggerSkill, true);
+        ImGui::SameLine();
+        if (ImGui::Button("X", ImVec2(20.f, 0))) {
+            trigger = Trigger::None;
+            triggerSkill = GW::Constants::SkillID::No_Skill;
+        }
+    }
+    else if (trigger == Trigger::SkillCastInterrupted) 
+    {
+        ImGui::Text("Trigger on interrupt of");
         ImGui::SameLine();
         drawSkillIDSelector(triggerSkill, true);
         ImGui::SameLine();
