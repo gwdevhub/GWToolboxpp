@@ -733,6 +733,8 @@ void TradeWindow::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(filter_local_trade);
     LOAD_BOOL(is_kamadan_chat);
 
+    strcpy(player_party_search_text, ini->GetValue(Name(), "player_party_search_text", ""));
+
     std::ifstream alert_file;
     alert_file.open(Resources::GetSettingFile(L"AlertKeywords.txt"));
     if (alert_file.is_open()) {
@@ -753,6 +755,8 @@ void TradeWindow::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(filter_alerts);
     SAVE_BOOL(filter_local_trade);
     SAVE_BOOL(is_kamadan_chat);
+
+    ini->SetValue(Name(), "player_party_search_text", player_party_search_text);
 
     if (alertfile_dirty || GWToolbox::SettingsFolderChanged()) {
         std::ofstream bycontent_file;
