@@ -367,7 +367,7 @@ void TradeWindow::fetch()
                     continue;
                 }
                 messages.add(msg);
-                if (print_search_results && i < 5) {
+                if (print_search_results && i < 15) {
                     std::wstring name_ws = GuiUtils::ToWstr(msg.name);
                     std::wstring msg_ws = GuiUtils::ToWstr(msg.message);
                     time_t ts = msg.timestamp;
