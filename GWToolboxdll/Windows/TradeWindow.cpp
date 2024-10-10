@@ -363,7 +363,7 @@ void TradeWindow::fetch()
                     continue;
                 }
                 messages.add(msg);
-                if (print_search_results && i < 5) {
+                if (print_search_results && i < 12) {
                     std::wstring name_ws = TextUtils::StringToWString(msg.name);
                     std::wstring msg_ws = TextUtils::StringToWString(msg.message);
                     time_t ts = msg.timestamp;
