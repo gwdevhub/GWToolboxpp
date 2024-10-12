@@ -6,7 +6,7 @@
 namespace {
     std::string_view toString(CharacteristicType type)
     {
-        static_assert((int)CharacteristicType::Count == 17);
+        static_assert((int)CharacteristicType::Count == 18);
         switch (type) {
             case CharacteristicType::Position:
                 return "Position";
@@ -16,6 +16,8 @@ namespace {
                 return "Distance to player";
             case CharacteristicType::DistanceToTarget:
                 return "Distance to target";
+            case CharacteristicType::DistanceToModelId:
+                return "Distance to model ID";
             case CharacteristicType::Class:
                 return "Class";
             case CharacteristicType::Name:
@@ -50,7 +52,7 @@ namespace {
 
 CharacteristicPtr makeCharacteristic(CharacteristicType type)
 {
-    static_assert((int)CharacteristicType::Count == 17);
+    static_assert((int)CharacteristicType::Count == 18);
     switch (type) {
         case CharacteristicType::Position:
             return std::make_unique<PositionCharacteristic>();
@@ -60,6 +62,8 @@ CharacteristicPtr makeCharacteristic(CharacteristicType type)
             return std::make_unique<DistanceToPlayerCharacteristic>();
         case CharacteristicType::DistanceToTarget:
             return std::make_unique<DistanceToTargetCharacteristic>();
+        case CharacteristicType::DistanceToModelId:
+            return std::make_unique<DistanceToModelIdCharacteristic>();
         case CharacteristicType::Class:
             return std::make_unique<ClassCharacteristic>();
         case CharacteristicType::Name:
@@ -93,7 +97,7 @@ CharacteristicPtr makeCharacteristic(CharacteristicType type)
 
 CharacteristicPtr readCharacteristic(InputStream& stream)
 {
-    static_assert((int)CharacteristicType::Count == 17);
+    static_assert((int)CharacteristicType::Count == 18);
     int type;
     stream >> type;
     switch (static_cast<CharacteristicType>(type)) {
@@ -105,6 +109,8 @@ CharacteristicPtr readCharacteristic(InputStream& stream)
             return std::make_unique<DistanceToPlayerCharacteristic>(stream);
         case CharacteristicType::DistanceToTarget:
             return std::make_unique<DistanceToTargetCharacteristic>(stream);
+        case CharacteristicType::DistanceToModelId:
+            return std::make_unique<DistanceToModelIdCharacteristic>(stream);
         case CharacteristicType::Class:
             return std::make_unique<ClassCharacteristic>(stream);
         case CharacteristicType::Name:
@@ -152,7 +158,7 @@ std::optional<CharacteristicType> drawCharacteristicSubMenu()
         }
     };
 
-    constexpr auto positionCharacteristics = std::array{CharacteristicType::Position, CharacteristicType::PositionPolygon, CharacteristicType::DistanceToPlayer, CharacteristicType::DistanceToTarget};
+    constexpr auto positionCharacteristics = std::array{CharacteristicType::Position, CharacteristicType::PositionPolygon, CharacteristicType::DistanceToPlayer, CharacteristicType::DistanceToTarget, CharacteristicType::DistanceToModelId};
     constexpr auto angleCharacteristics = std::array{CharacteristicType::AngleToPlayerForward, CharacteristicType::AngleToCameraForward};
     constexpr auto hpCharacteristics = std::array{CharacteristicType::HP, CharacteristicType::HPRegen};
     constexpr auto skillCharacteristics = std::array{CharacteristicType::Skill, CharacteristicType::Bond};

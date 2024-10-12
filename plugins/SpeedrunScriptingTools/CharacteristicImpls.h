@@ -66,6 +66,22 @@ private:
     float distance = 166.f;
 };
 
+class DistanceToModelIdCharacteristic : public Characteristic {
+public:
+    DistanceToModelIdCharacteristic() = default;
+    DistanceToModelIdCharacteristic(InputStream&);
+    void serialize(OutputStream&) const final;
+
+    CharacteristicType type() const final { return CharacteristicType::DistanceToModelId; }
+    bool check(const GW::AgentLiving& agent) const final;
+    void drawSettings() final;
+
+private:
+    ComparisonOperator comp = ComparisonOperator::LessOrEqual;
+    uint16_t modelId = 0;
+    float distance = 166.f;
+};
+
 class ClassCharacteristic : public Characteristic {
 public:
     ClassCharacteristic() = default;
