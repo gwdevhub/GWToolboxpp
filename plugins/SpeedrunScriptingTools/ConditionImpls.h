@@ -216,8 +216,7 @@ public:
     void serialize(OutputStream&) const final;
 
 private:
-    long shortcutKey = 0;
-    long shortcutMod = 0;
+    Hotkey shortcut{};
     std::string description = "Click to change key";
     bool blockKey = false;
 };

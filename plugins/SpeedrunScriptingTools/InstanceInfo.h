@@ -10,14 +10,14 @@
 #include <unordered_map>
 
 template<>
-struct std::hash<std::pair<long, long>>
+struct std::hash<Hotkey>
 {
-    std::size_t operator()(const std::pair<long, long>& key) const
+    std::size_t operator()(const Hotkey& key) const
     { 
         const auto hasher = std::hash<long>{};
-        auto hash = hasher(key.first);
+        auto hash = hasher(key.keyData);
         // Taken from boost::hash_combine
-        hash ^= hasher(key.second) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        hash ^= hasher(key.modifier) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
         return hash;
     }
 };
@@ -47,9 +47,9 @@ public:
     void initialize();
     void terminate();
 
-    void requestDisableKey(std::pair<long, long> key) { ++disabledKeys[key]; }
-    void requestEnableKey(std::pair<long, long> key) { --disabledKeys[key]; }
-    bool keyIsDisabled(std::pair<long, long> key) { return disabledKeys[key] != 0; }
+    void requestDisableKey(Hotkey key) { ++disabledKeys[key]; }
+    void requestEnableKey(Hotkey key) { --disabledKeys[key]; }
+    bool keyIsDisabled(Hotkey key) { return disabledKeys[key] != 0; }
 
     InstanceInfo(const InstanceInfo&) = delete;
     InstanceInfo(InstanceInfo&&) = delete;
@@ -60,7 +60,7 @@ private:
     std::unordered_map<GW::AgentID, std::wstring> decodedAgentNames;
     std::unordered_map<uint32_t, std::wstring> decodedItemNames;
     std::unordered_map<int, GW::AgentID> storedTargets;
-    std::unordered_map<std::pair<long, long>, int> disabledKeys;
+    std::unordered_map<Hotkey, int> disabledKeys;
     int instanceId = 0;
     MiniPetStatus mpStatus;
 };

@@ -7,11 +7,6 @@
 #include <ToolboxPlugin.h>
 #include <GWCA/Constants/Skills.h>
 
-struct Hotkey {
-    long keyData = 0;
-    long modifier = 0;
-};
-
 struct Script {
     Script()
     { 
@@ -19,23 +14,24 @@ struct Script {
         id = idCounter++;
     }
     int getId() const { return id; }
+
     std::vector<ConditionPtr> conditions;
     std::vector<ActionPtr> actions;
     std::string name = "New script";
-    Trigger trigger = Trigger::None;
+
     bool enabled = true;
-    bool triggered = false;
     bool showMessageWhenTriggered = false;
     bool showMessageWhenToggled = false;
-
     bool canLaunchInParallel = false;
     bool globallyExclusive = false;
 
     Hotkey enabledToggleHotkey{};
-    Hotkey triggerHotkey{};
-    std::string triggerMessage{};
-    GW::Constants::SkillID triggerFinishSkillId{};
+    Trigger trigger = Trigger::None;
+    TriggerData triggerData{};
 
+    // Runtime data, not serialized
+    bool triggered = false;
+    
   private:
     size_t id = 0;
 };

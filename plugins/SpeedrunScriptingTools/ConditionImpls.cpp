@@ -788,30 +788,30 @@ void QuestHasStateCondition::drawSettings()
 /// ------------- KeyIsPressedCondition -------------
 KeyIsPressedCondition::KeyIsPressedCondition(InputStream& stream)
 {
-    stream >> shortcutKey >> shortcutMod >> blockKey;
-    description = makeHotkeyDescription(shortcutKey, shortcutMod);
-    if (shortcutKey && blockKey) 
+    stream >> shortcut.keyData >> shortcut.modifier >> blockKey;
+    description = makeHotkeyDescription(shortcut);
+    if (shortcut.keyData && blockKey) 
     {
-        InstanceInfo::getInstance().requestDisableKey({shortcutKey, shortcutMod});
+        InstanceInfo::getInstance().requestDisableKey(shortcut);
     }
 }
 void KeyIsPressedCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    stream << shortcutKey << shortcutMod << blockKey;
+    stream << shortcut.keyData << shortcut.modifier << blockKey;
 }
 KeyIsPressedCondition::~KeyIsPressedCondition() 
 {
-    if (blockKey) InstanceInfo::getInstance().requestEnableKey({shortcutKey, shortcutMod});
+    if (blockKey) InstanceInfo::getInstance().requestEnableKey(shortcut);
 }
 bool KeyIsPressedCondition::check() const
 {
     if (GW::Chat::GetIsTyping()) return false;
-    bool keyIsPressed = GetAsyncKeyState(shortcutKey) & (1 << 15);
-    if (shortcutMod & ModKey_Control) keyIsPressed &= ImGui::IsKeyDown(ImGuiKey_ModCtrl);
-    if (shortcutMod & ModKey_Shift) keyIsPressed &= ImGui::IsKeyDown(ImGuiKey_ModShift);
-    if (shortcutMod & ModKey_Alt) keyIsPressed &= ImGui::IsKeyDown(ImGuiKey_ModAlt);
+    bool keyIsPressed = GetAsyncKeyState(shortcut.keyData) & (1 << 15);
+    if (shortcut.modifier & ModKey_Control) keyIsPressed &= ImGui::IsKeyDown(ImGuiKey_ModCtrl);
+    if (shortcut.modifier & ModKey_Shift) keyIsPressed &= ImGui::IsKeyDown(ImGuiKey_ModShift);
+    if (shortcut.modifier & ModKey_Alt) keyIsPressed &= ImGui::IsKeyDown(ImGuiKey_ModAlt);
 
     return keyIsPressed;
 }
@@ -820,9 +820,9 @@ void KeyIsPressedCondition::drawSettings()
     ImGui::PushID(drawId());
     ImGui::Text("If key is held down:");
     ImGui::SameLine();
-    const auto oldKey = std::pair{shortcutKey, shortcutMod};
-    drawHotkeySelector(shortcutKey, shortcutMod, description, 100.f);
-    if (const auto newKey = std::pair{shortcutKey, shortcutMod}; blockKey && newKey != oldKey)
+    const auto oldKey = shortcut;
+    drawHotkeySelector(shortcut, description, 100.f);
+    if (const auto newKey = shortcut; blockKey && newKey != oldKey)
     {
         InstanceInfo::getInstance().requestEnableKey(oldKey);
         InstanceInfo::getInstance().requestDisableKey(newKey);
@@ -833,11 +833,11 @@ void KeyIsPressedCondition::drawSettings()
     ImGui::Checkbox("Block key", &blockKey);
     if (wasBlocking && !blockKey) 
     {
-        InstanceInfo::getInstance().requestEnableKey({shortcutKey, shortcutMod});
+        InstanceInfo::getInstance().requestEnableKey(shortcut);
     }
     else if (!wasBlocking && blockKey)
     {
-        InstanceInfo::getInstance().requestDisableKey({shortcutKey, shortcutMod});
+        InstanceInfo::getInstance().requestDisableKey(shortcut);
     }
 
     ImGui::PopID();

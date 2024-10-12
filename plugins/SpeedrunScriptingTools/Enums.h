@@ -1,8 +1,13 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
-enum class Trigger { None, InstanceLoad, HardModePing, Hotkey, ChatMessage, FinishSkillCast, SkillCastInterrupted };
+namespace GW::Constants {
+    enum class SkillID : uint32_t;
+}
+
+enum class Trigger { None, InstanceLoad, HardModePing, Hotkey, ChatMessage, BeginSkillCast, BeginCooldown, SkillCastInterrupt };
 enum class Class { Any, Warrior, Ranger, Monk, Necro, Mesmer, Elementalist, Assassin, Ritualist, Paragon, Dervish };
 enum class AgentType { Any, Self, PartyMember, Friendly, Hostile };
 enum class Sorting { AgentId, ClosestToPlayer, FurthestFromPlayer, ClosestToTarget, FurthestFromTarget, LowestHp, HighestHp, ModelID };
@@ -56,3 +61,17 @@ inline ActionBehaviourFlags operator|(ActionBehaviourFlag a, ActionBehaviourFlag
 {
     return ActionBehaviourFlags{} | a | b;
 }
+
+struct Hotkey 
+{
+    long keyData = 0;
+    long modifier = 0;
+    bool operator==(const Hotkey&) const = default;
+};
+
+struct TriggerData 
+{
+    Hotkey hotkey{};
+    std::string message{};
+    GW::Constants::SkillID skillId{};
+};

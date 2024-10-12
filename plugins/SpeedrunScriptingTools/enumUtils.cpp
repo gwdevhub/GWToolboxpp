@@ -296,10 +296,12 @@ std::string_view toString(Trigger type)
             return "Trigger on keypress";
         case Trigger::ChatMessage:
             return "Trigger on chat message";
-        case Trigger::FinishSkillCast:
-            return "Trigger on finish skill cast";
-        case Trigger::SkillCastInterrupted:
+        case Trigger::BeginSkillCast:
+            return "Trigger on begin skill cast";
+        case Trigger::SkillCastInterrupt:
             return "Trigger on interrupt";
+        case Trigger::BeginCooldown:
+            return "Trigger on end skill cast";
     }
     return "";
 }
@@ -684,14 +686,14 @@ bool checkWeaponType(WeaponType targetType, uint16_t gameType)
     return false;
 }
 
-std::string makeHotkeyDescription(long keyData, long modifier) 
+std::string makeHotkeyDescription(Hotkey hotkey) 
 {
     char newDescription[256];
-    ModKeyName(newDescription, _countof(newDescription), modifier, keyData);
+    ModKeyName(newDescription, _countof(newDescription), hotkey.modifier, hotkey.keyData);
     return std::string{newDescription};
 }
 
-void drawHotkeySelector(long& keyData, long& modifier, std::string& description, float selectorWidth) 
+void drawHotkeySelector(Hotkey& hotkey, std::string& description, float selectorWidth) 
 {
     ImGui::PushItemWidth(selectorWidth);
     if (ImGui::Button(description.c_str())) {
@@ -730,9 +732,9 @@ void drawHotkeySelector(long& keyData, long& modifier, std::string& description,
             }
         }
         else if (!(::GetKeyState(newkey) & 0x8000)) { // We have a key, check if it was released
-            keyData = newkey;
-            modifier = newmod;
-            description = makeHotkeyDescription(newkey, newmod);
+            hotkey.keyData = newkey;
+            hotkey.modifier = newmod;
+            description = makeHotkeyDescription(hotkey);
             newkey = 0;
             ImGui::CloseCurrentPopup();
         }
@@ -745,56 +747,67 @@ void drawHotkeySelector(long& keyData, long& modifier, std::string& description,
     ImGui::PopItemWidth();
 }
 
-void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& hotkeyMod, std::string& triggerMessage, GW::Constants::SkillID& triggerSkill)
+void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, float width)
 {
     if (trigger == Trigger::None) 
     {
-        drawEnumButton(Trigger::InstanceLoad, Trigger::SkillCastInterrupted, trigger, 0, 100.f, "Add trigger");
+        drawEnumButton(Trigger::InstanceLoad, Trigger::SkillCastInterrupt, trigger, 0, 100.f, "Add trigger");
     }
     else if (trigger == Trigger::Hotkey) 
     {
-        auto description = hotkeyData ? makeHotkeyDescription(hotkeyData, hotkeyMod) : "Click to change key";
-        drawHotkeySelector(hotkeyData, hotkeyMod, description, width - 20.f);
+        auto description = triggerData.hotkey.keyData ? makeHotkeyDescription(triggerData.hotkey) : "Click to change key";
+        drawHotkeySelector(triggerData.hotkey, description, width - 20.f);
         ImGui::SameLine();
         ImGui::Text("Hotkey");
         ImGui::SameLine();
         if (ImGui::Button("X", ImVec2(20.f, 0))) {
             trigger = Trigger::None;
-            hotkeyData = 0;
-            hotkeyMod = 0;
+            triggerData.hotkey.keyData = 0;
+            triggerData.hotkey.modifier = 0;
         }
     }
     else if (trigger == Trigger::ChatMessage)
     {
         ImGui::PushItemWidth(200);
-        ImGui::InputText("Trigger message", &triggerMessage);
+        ImGui::InputText("Trigger message", &triggerData.message);
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("X", ImVec2(20.f, 0))) {
             trigger = Trigger::None;
-            triggerMessage = "";
+            triggerData.message = "";
         }
     }
-    else if (trigger == Trigger::FinishSkillCast) 
+    else if (trigger == Trigger::BeginSkillCast) 
     {
-        ImGui::Text("Trigger on finish skill");
+        ImGui::Text("Trigger on begin skill");
         ImGui::SameLine();
-        drawSkillIDSelector(triggerSkill, true);
+        drawSkillIDSelector(triggerData.skillId, true);
         ImGui::SameLine();
         if (ImGui::Button("X", ImVec2(20.f, 0))) {
             trigger = Trigger::None;
-            triggerSkill = GW::Constants::SkillID::No_Skill;
+            triggerData.skillId = GW::Constants::SkillID::No_Skill;
         }
     }
-    else if (trigger == Trigger::SkillCastInterrupted) 
+    else if (trigger == Trigger::SkillCastInterrupt) 
     {
         ImGui::Text("Trigger on interrupt of");
         ImGui::SameLine();
-        drawSkillIDSelector(triggerSkill, true);
+        drawSkillIDSelector(triggerData.skillId, true);
         ImGui::SameLine();
         if (ImGui::Button("X", ImVec2(20.f, 0))) {
             trigger = Trigger::None;
-            triggerSkill = GW::Constants::SkillID::No_Skill;
+            triggerData.skillId = GW::Constants::SkillID::No_Skill;
+        }
+    }
+    else if (trigger == Trigger::BeginCooldown) 
+    {
+        ImGui::Text("Trigger on end skill");
+        ImGui::SameLine();
+        drawSkillIDSelector(triggerData.skillId, true);
+        ImGui::SameLine();
+        if (ImGui::Button("X", ImVec2(20.f, 0))) {
+            trigger = Trigger::None;
+            triggerData.skillId = GW::Constants::SkillID::No_Skill;
         }
     }
     else 
