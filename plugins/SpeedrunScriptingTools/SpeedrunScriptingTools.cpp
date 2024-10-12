@@ -291,6 +291,14 @@ namespace {
                     break;
                 case Trigger::BeginSkillCast:
                     result += "On begin casting " + getSkillName(script.triggerData.skillId, true);
+                    if (script.triggerData.hsr == AnyNoYes::Yes) 
+                    {
+                        result += " with HSR";
+                    }
+                    else if (script.triggerData.hsr == AnyNoYes::No) 
+                    {
+                        result += " without HSR";
+                    }
                     break;
                 case Trigger::BeginCooldown:
                     result += "On finish casting " + getSkillName(script.triggerData.skillId, true);
@@ -668,7 +676,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Checkbox("Block hotkey keys even if conditions not met", &alwaysBlockHotkeyKeys);
 
-    ImGui::Text("Version 2.0-beta3. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 2.0. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
