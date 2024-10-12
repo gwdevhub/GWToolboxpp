@@ -161,7 +161,21 @@ public:
 
 private:
     GW::Constants::SkillID id = GW::Constants::SkillID::No_Skill;
-    HasSkillRequirement requirement = HasSkillRequirement::OffCooldown;
+    HasSkillRequirement requirement = HasSkillRequirement::ReadyToUse;
+};
+
+class PlayerHasSkillBySlotCondition : public Condition {
+public:
+    PlayerHasSkillBySlotCondition() = default;
+    PlayerHasSkillBySlotCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::PlayerHasSkillBySlot; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    int slot = 1;
+    HasSkillRequirement requirement = HasSkillRequirement::ReadyToUse;
 };
 
 class PlayerHasEnergyCondition : public Condition {

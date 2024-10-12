@@ -632,6 +632,62 @@ void PlayerHasSkillCondition::drawSettings()
     ImGui::PopID();
 }
 
+/// ------------- PlayerHasSkillBySlotCondition -------------
+PlayerHasSkillBySlotCondition::PlayerHasSkillBySlotCondition(InputStream& stream)
+{
+    stream >> slot >> requirement;
+}
+void PlayerHasSkillBySlotCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << slot << requirement;
+}
+bool PlayerHasSkillBySlotCondition::check() const
+{
+    const auto player = GW::Agents::GetControlledCharacter();
+    const auto bar = GW::SkillbarMgr::GetPlayerSkillbar();
+    if (!player || !bar || !bar->IsValid() || slot < 1 || slot > 7) return false;
+
+    const auto skill = bar->skills[slot - 1];
+    if (skill.skill_id == GW::Constants::SkillID::No_Skill || (uint32_t)skill.skill_id >= (uint32_t)GW::Constants::SkillID::Count) 
+        return false;
+
+    switch (requirement) 
+    {
+    case HasSkillRequirement::OnBar:
+        return true;
+    case HasSkillRequirement::OffCooldown:
+        return skill.GetRecharge() == 0;
+    case HasSkillRequirement::ReadyToUse:
+        if (player->skill) return false;
+        const auto& skilldata = *GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
+        if (skill.GetRecharge() > 0) return false;
+        if (skill.adrenaline_a < skilldata.adrenaline) return false;
+        if (getEnergyCost(skilldata) > player->energy * player->max_energy) return false;
+        return weaponFulfillsRequirement((EquippedWeaponType)player->weapon_type, (WeaponRequirement)skilldata.weapon_req, skilldata.type);
+    }   
+    return false;
+}
+void PlayerHasSkillBySlotCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+    ImGui::PushItemWidth(50.f);
+
+    ImGui::Text("If the player has skill in slot");
+    ImGui::SameLine();
+    ImGui::InputInt("", &slot, 0);
+    if (slot < 1) slot = 1;
+    if (slot > 8) slot = 8;
+    ImGui::SameLine();
+    drawEnumButton(HasSkillRequirement::OffCooldown, HasSkillRequirement::ReadyToUse, requirement);
+    ImGui::SameLine();
+    ImGui::ShowHelp("'Ready to use' checks energy requirement, cooldown, adrenaline and weapon type.\r\nEnergy requirement only takes into account base cost, QZ, expertise and mysticism.");
+
+    ImGui::PopItemWidth();
+    ImGui::PopID();
+}
+
 /// ------------- PlayerHasEnergyCondition -------------
 PlayerHasEnergyCondition::PlayerHasEnergyCondition(InputStream& stream)
 {

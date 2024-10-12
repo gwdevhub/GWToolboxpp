@@ -9,7 +9,7 @@ namespace
 {
 ConditionPtr makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 50);
+    static_assert((int)ConditionType::Count == 51);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -85,6 +85,8 @@ ConditionPtr makeCondition(ConditionType type)
 
         case ConditionType::ScriptVariable:
             return std::make_shared<ScriptVariableCondition>();
+        case ConditionType::PlayerHasSkillBySlot:
+            return std::make_shared<PlayerHasSkillBySlotCondition>();
 
         default:
             return nullptr;
@@ -93,7 +95,7 @@ ConditionPtr makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 50);
+    static_assert((int)ConditionType::Count == 51);
     switch (type) {
         case ConditionType::Not:
             return "Not";
@@ -168,6 +170,8 @@ std::string_view toString(ConditionType type)
 
         case ConditionType::ScriptVariable:
             return "Variable";
+        case ConditionType::PlayerHasSkillBySlot:
+            return "Has skill by slot";
 
         default:
             return "Unknown";
@@ -177,7 +181,7 @@ std::string_view toString(ConditionType type)
 
 ConditionPtr readCondition(InputStream& stream)
 {
-static_assert((int)ConditionType::Count == 50);
+static_assert((int)ConditionType::Count == 51);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -252,6 +256,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<TargetHasCharacteristicsCondition>(stream);
     case ConditionType::AgentWithCharacteristicsCount:
         return std::make_shared<AgentWithCharacteristicsCountCondition>(stream);
+    case ConditionType::PlayerHasSkillBySlot:
+        return std::make_shared<PlayerHasSkillBySlotCondition>(stream);
 
         
     case ConditionType::ScriptVariable:
@@ -290,7 +296,7 @@ ConditionPtr drawConditionSelector(float width)
         ImGui::OpenPopup("Add condition");
     }
 
-    constexpr auto skillConditions = std::array{ConditionType::PlayerHasBuff, ConditionType::PlayerHasSkill, ConditionType::RemainingCooldown, ConditionType::PlayerHasEnergy, ConditionType::PlayerMorale};
+    constexpr auto skillConditions = std::array{ConditionType::PlayerHasBuff, ConditionType::PlayerHasSkill, ConditionType::PlayerHasSkillBySlot, ConditionType::RemainingCooldown, ConditionType::PlayerHasEnergy, ConditionType::PlayerMorale};
     constexpr auto itemConditions = std::array{ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory, ConditionType::CanPopAgent};
     constexpr auto partyConditions = std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName};
     constexpr auto instanceConditions = std::array{ConditionType::IsInMap, ConditionType::InstanceType, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime, ConditionType::FoeCount};
