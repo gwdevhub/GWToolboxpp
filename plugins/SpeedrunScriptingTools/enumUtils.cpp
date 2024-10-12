@@ -783,9 +783,14 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, float width
         ImGui::SameLine();
         drawSkillIDSelector(triggerData.skillId, true);
         ImGui::SameLine();
+        drawEnumButton(AnyNoYes::Any, AnyNoYes::Yes, triggerData.hsr, 0, 50.f);
+        ImGui::SameLine();
+        ImGui::Text("HSR");
+        ImGui::SameLine();
         if (ImGui::Button("X", ImVec2(20.f, 0))) {
             trigger = Trigger::None;
             triggerData.skillId = GW::Constants::SkillID::No_Skill;
+            triggerData.hsr = AnyNoYes::Any;
         }
     }
     else if (trigger == Trigger::SkillCastInterrupt) 

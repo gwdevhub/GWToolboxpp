@@ -479,8 +479,9 @@ void InstanceProgressCondition::serialize(OutputStream& stream) const
 
     stream << requiredProgress << comp;
 }
-bool InstanceProgressCondition::check() const {
-    return GW::GetGameContext()->character->progress_bar->progress * 100.f + eps > requiredProgress;
+bool InstanceProgressCondition::check() const 
+{
+    return compare(GW::GetGameContext()->character->progress_bar->progress * 100.f, comp, requiredProgress);
 }
 void InstanceProgressCondition::drawSettings()
 {
