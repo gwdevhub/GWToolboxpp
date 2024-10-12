@@ -833,10 +833,9 @@ void SpeedrunScriptingTools::Update(float delta)
         }
     }
 
-    const auto canRunScript = [&](const Script& script, bool isRunningOtherScript) {
+    const auto canRunScript = [&](const Script& script) {
         if (!script.enabled || (script.conditions.empty() && script.trigger == Trigger::None) || script.actions.empty()) return false;
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !canBeRunInOutPost(script)) return false;
-        if (isRunningOtherScript && !script.canLaunchInParallel) return false;
         if (std::ranges::any_of(m_currentScripts,[&](const Script& s){ return s.getId() == script.getId();})) return false;
         return checkConditions(script.conditions);
     };
@@ -861,7 +860,8 @@ void SpeedrunScriptingTools::Update(float delta)
         // Check scripts with triggers first, as these are typically more time-sensitive
         for (auto& script : scripts | std::views::filter(hasTrigger) | std::views::filter(isTriggered)) 
         {
-            if (!canRunScript(script, isRunningAnyScript)) 
+            if (isRunningAnyScript && !script.canLaunchInParallel) continue;
+            if (!canRunScript(script)) 
             {
                 script.triggered = false;
                 continue;
@@ -872,7 +872,8 @@ void SpeedrunScriptingTools::Update(float delta)
         // Run any scripts still waiting for execution
         for (auto& script : scripts | std::views::filter(std::not_fn(hasTrigger)) | std::views::filter(isTriggered)) 
         {
-            if (!canRunScript(script, isRunningAnyScript)) 
+            if (isRunningAnyScript && !script.canLaunchInParallel) continue;
+            if (!canRunScript(script)) 
             {
                 script.triggered = false;
                 continue;
@@ -884,7 +885,8 @@ void SpeedrunScriptingTools::Update(float delta)
         // Find new "Always on" scripts to run
         for (auto& script : scripts | std::views::filter(std::not_fn(hasTrigger))) 
         {
-            if (canRunScript(script, isRunningAnyScript)) 
+            if (isRunningAnyScript && !script.canLaunchInParallel) continue;
+            if (canRunScript(script)) 
             {
                 script.triggered = true;
                 if (!hasAddedScript) 
