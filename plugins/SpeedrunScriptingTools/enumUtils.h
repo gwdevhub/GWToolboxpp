@@ -45,14 +45,14 @@ std::string_view toString(ComparisonOperator);
 std::string_view toString(IsIsNot);
 
 bool checkWeaponType(WeaponType, uint16_t);
-void drawHotkeySelector(long& keyData, long& modifier, std::string& description, float selectorWidth);
-std::string makeHotkeyDescription(long keyData, long modifier);
+void drawHotkeySelector(Hotkey& hotkey, std::string& description, float selectorWidth);
+std::string makeHotkeyDescription(Hotkey);
 std::string getSkillName(GW::Constants::SkillID id, bool zeroIsAny);
 
 void drawSkillIDSelector(GW::Constants::SkillID& id, bool zeroIsAny = false);
 void drawMapIDSelector(GW::Constants::MapID& id);
 void drawModelIDSelector(uint16_t& id, std::optional<std::string_view> label = std::nullopt);
-void drawTriggerSelector(Trigger& trigger, float width, long& hotkeyData, long& hotkeyMod, std::string& triggerMessage, GW::Constants::SkillID& triggerSkill);
+void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, float width);
 
 void drawPolygonSelector(std::vector<GW::Vec2f>& polygon);
 bool pointIsInsidePolygon(const GW::GamePos pos, const std::vector<GW::Vec2f>& polygon);

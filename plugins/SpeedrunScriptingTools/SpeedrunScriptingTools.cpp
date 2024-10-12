@@ -34,8 +34,15 @@
 namespace {
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry CoreMessage_Entry;
+    GW::HookEntry BeginSkillCast_Entry;
     GW::HookEntry FinishSkillCast_Entry;
     GW::HookEntry Interrupt_Entry;
+
+    struct SkillCastParameters 
+    {
+        uint32_t agentId;
+        uint32_t skillId;
+    };
 
     // Versions 1-7: Prerelease, can be ignored
     // Version 8: 1.0-1.2. See SerializationIncrement for deprecation context
@@ -71,16 +78,34 @@ namespace {
         writeStringWithSpaces(stream, script.name);
         stream << script.trigger;
         stream << script.enabled;
-        stream << script.triggerHotkey.keyData;
-        stream << script.triggerHotkey.modifier;
+        switch (script.trigger) 
+        {
+            case Trigger::None:
+            case Trigger::InstanceLoad:
+            case Trigger::HardModePing:
+                break;
+            case Trigger::Hotkey:
+                stream << script.triggerData.hotkey.keyData;
+                stream << script.triggerData.hotkey.modifier;
+                break;
+            case Trigger::ChatMessage:
+                writeStringWithSpaces(stream, script.triggerData.message);
+                break;
+            case Trigger::BeginCooldown:
+            case Trigger::BeginSkillCast:
+            case Trigger::SkillCastInterrupt:
+                stream << script.triggerData.skillId;
+                break;
+            default:
+                assert(false);
+        }
+
         stream << script.enabledToggleHotkey.keyData;
         stream << script.enabledToggleHotkey.modifier;
         stream << script.showMessageWhenTriggered;
         stream << script.showMessageWhenToggled;
-        writeStringWithSpaces(stream, script.triggerMessage);
         stream << script.globallyExclusive;
         stream << script.canLaunchInParallel;
-        stream << script.triggerFinishSkillId;
 
         stream.writeSeparator();
 
@@ -126,16 +151,33 @@ namespace {
         result.name = readStringWithSpaces(stream);
         stream >> result.trigger;
         stream >> result.enabled;
-        stream >> result.triggerHotkey.keyData;
-        stream >> result.triggerHotkey.modifier;
+        switch (result.trigger) 
+        {
+            case Trigger::None:
+            case Trigger::InstanceLoad:
+            case Trigger::HardModePing:
+                break;
+            case Trigger::Hotkey:
+                stream >> result.triggerData.hotkey.keyData;
+                stream >> result.triggerData.hotkey.modifier;
+                break;
+            case Trigger::ChatMessage:
+                result.triggerData.message = readStringWithSpaces(stream);
+                break;
+            case Trigger::BeginCooldown:
+            case Trigger::BeginSkillCast:
+            case Trigger::SkillCastInterrupt:
+                stream >> result.triggerData.skillId;
+                break;
+            default:
+                assert(false);
+        }
         stream >> result.enabledToggleHotkey.keyData;
         stream >> result.enabledToggleHotkey.modifier;
         stream >> result.showMessageWhenTriggered;
         stream >> result.showMessageWhenToggled;
-        result.triggerMessage = readStringWithSpaces(stream);
         stream >> result.globallyExclusive;
         stream >> result.canLaunchInParallel;
-        stream >> result.triggerFinishSkillId;
         stream.proceedPastSeparator();
 
         do {
@@ -222,19 +264,22 @@ namespace {
                     result += "On instance load";
                     break;
                 case Trigger::Hotkey:
-                    result += script.triggerHotkey.keyData ? makeHotkeyDescription(script.triggerHotkey.keyData, script.triggerHotkey.modifier) : "Undefined hotkey";
+                    result += script.triggerData.hotkey.keyData ? makeHotkeyDescription(script.triggerData.hotkey) : "Undefined hotkey";
                     break;
                 case Trigger::HardModePing:
                     result += "On hard mode ping";
                     break;
                 case Trigger::ChatMessage:
-                    result += "On chat message \"" + script.triggerMessage + "\"";
+                    result += "On chat message \"" + script.triggerData.message + "\"";
                     break;
-                case Trigger::FinishSkillCast:
-                    result += "On finish casting " + getSkillName(script.triggerFinishSkillId, true);
+                case Trigger::BeginSkillCast:
+                    result += "On begin casting " + getSkillName(script.triggerData.skillId, true);
                     break;
-                case Trigger::SkillCastInterrupted:
-                    result += "On interrupt of " + getSkillName(script.triggerFinishSkillId, true);
+                case Trigger::BeginCooldown:
+                    result += "On finish casting " + getSkillName(script.triggerData.skillId, true);
+                    break;
+                case Trigger::SkillCastInterrupt:
+                    result += "On interrupt of " + getSkillName(script.triggerData.skillId, true);
                     break;
                 default:
                     result += "Unknown trigger";
@@ -243,7 +288,7 @@ namespace {
         result += "]";
         if (script.enabledToggleHotkey.keyData)
         {
-            result += "[Toggle " + makeHotkeyDescription(script.enabledToggleHotkey.keyData, script.enabledToggleHotkey.modifier) + "]";
+            result += "[Toggle " + makeHotkeyDescription(script.enabledToggleHotkey) + "]";
         }
 
 
@@ -384,17 +429,14 @@ namespace {
                 ImGui::Checkbox("Enabled", &scriptIt->enabled);
                 ImGui::SameLine();
 
-                auto& keyData = scriptIt->enabledToggleHotkey.keyData;
-                auto& keyMod = scriptIt->enabledToggleHotkey.modifier;
-                auto description = keyData ? makeHotkeyDescription(keyData, keyMod) : "Set enable toggle";
-                drawHotkeySelector(keyData, keyMod, description, 80.f);
-                if (keyData) {
+                auto description = scriptIt->enabledToggleHotkey.keyData ? makeHotkeyDescription(scriptIt->enabledToggleHotkey) : "Set enable toggle";
+                drawHotkeySelector(scriptIt->enabledToggleHotkey, description, 80.f);
+                if (scriptIt->enabledToggleHotkey.keyData) {
                     ImGui::SameLine();
                     ImGui::Text("Toggle");
                     ImGui::SameLine();
                     if (ImGui::Button("X", ImVec2(20.f, 0))) {
-                        keyData = 0;
-                        keyMod = 0;
+                        scriptIt->enabledToggleHotkey.keyData = {};
                         scriptIt->showMessageWhenToggled = false;
                     }
                     ImGui::SameLine();
@@ -413,7 +455,7 @@ namespace {
                 ImGui::PushID(3);
 
                 ImGui::SameLine();
-                drawTriggerSelector(scriptIt->trigger, 100.f, scriptIt->triggerHotkey.keyData, scriptIt->triggerHotkey.modifier, scriptIt->triggerMessage, scriptIt->triggerFinishSkillId);
+                drawTriggerSelector(scriptIt->trigger, scriptIt->triggerData, 100.f);
 
                 ImGui::SameLine();
                 ImGui::Checkbox("Log trigger", &scriptIt->showMessageWhenTriggered);
@@ -595,8 +637,8 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Text("Clear scripts hotkey:");
     ImGui::SameLine();
-    auto description = clearScriptsKey.keyData ? makeHotkeyDescription(clearScriptsKey.keyData, clearScriptsKey.modifier) : "Set key";
-    drawHotkeySelector(clearScriptsKey.keyData, clearScriptsKey.modifier, description, 80.f);
+    auto description = clearScriptsKey.keyData ? makeHotkeyDescription(clearScriptsKey) : "Set key";
+    drawHotkeySelector(clearScriptsKey, description, 80.f);
     if (clearScriptsKey.keyData) 
     {
         ImGui::SameLine();
@@ -823,7 +865,7 @@ void SpeedrunScriptingTools::Update(float delta)
             addToCurrentScripts(script);
             return;
         }
-        bool hasAddedScript = false; // Do we need this? Check again
+        bool hasAddedScript = false;
         // Find new "Always on" scripts to run
         for (auto& script : scripts | std::views::filter(std::not_fn(hasTrigger))) 
         {
@@ -857,7 +899,7 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
     {
         return false;
     }
-    long keyData = 0;
+    Hotkey pressedKey{};
     switch (Message) {
         case WM_KEYDOWN:
             if (const auto isRepeated = (int)lparam & (1 << 30)) break;
@@ -865,19 +907,19 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
         case WM_SYSKEYDOWN:
         case WM_KEYUP:
         case WM_SYSKEYUP:
-            keyData = static_cast<int>(wParam);
+            pressedKey.keyData = static_cast<int>(wParam);
             break;
         case WM_XBUTTONDOWN:
         case WM_MBUTTONDOWN:
         case WM_XBUTTONDBLCLK:
             if (LOWORD(wParam) & MK_MBUTTON) {
-                keyData = VK_MBUTTON;
+                pressedKey.keyData = VK_MBUTTON;
             }
             if (LOWORD(wParam) & MK_XBUTTON1) {
-                keyData = VK_XBUTTON1;
+                pressedKey.keyData = VK_XBUTTON1;
             }
             if (LOWORD(wParam) & MK_XBUTTON2) {
-                keyData = VK_XBUTTON2;
+                pressedKey.keyData = VK_XBUTTON2;
             }
             break;
         case WM_XBUTTONUP:
@@ -885,13 +927,13 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
             // leave keydata to none, need to handle special case below
             break;
         case WM_MBUTTONDBLCLK:
-             keyData = VK_MBUTTON;
+            pressedKey.keyData = VK_MBUTTON;
              break;
         default:
             break;
     }
 
-    if (!keyData) return false;
+    if (!pressedKey.keyData) return false;
 
     switch (Message) {
         case WM_KEYDOWN:
@@ -900,32 +942,31 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
         case WM_XBUTTONDBLCLK:
         case WM_MBUTTONDOWN:
         case WM_MBUTTONDBLCLK: {
-            long modifier = 0;
             if (GetKeyState(VK_CONTROL) < 0) {
-                modifier |= ModKey_Control;
+                pressedKey.modifier |= ModKey_Control;
             }
             if (GetKeyState(VK_SHIFT) < 0) {
-                modifier |= ModKey_Shift;
+                pressedKey.modifier |= ModKey_Shift;
             }
             if (GetKeyState(VK_MENU) < 0) {
-                modifier |= ModKey_Alt;
+                pressedKey.modifier |= ModKey_Alt;
             }
 
             bool triggered = false;
-            if (clearScriptsKey.keyData && clearScriptsKey.keyData == keyData && clearScriptsKey.modifier == modifier) {
+            if (clearScriptsKey.keyData && clearScriptsKey == pressedKey) {
                 clear();
                 return true; // Don't set scripts to triggered if we just cleared.
             }
 
-            const auto triggerScripts = [alwaysBlockHotkeyKeys = this->alwaysBlockHotkeyKeys, keyData, modifier, &triggered](std::vector<Script>& scripts) {
+            const auto triggerScripts = [alwaysBlockHotkeyKeys = this->alwaysBlockHotkeyKeys, pressedKey, &triggered](std::vector<Script>& scripts) {
                 for (auto& script : scripts) {
-                    if (script.enabledToggleHotkey.keyData == keyData && script.enabledToggleHotkey.modifier == modifier) {
+                    if (script.enabledToggleHotkey == pressedKey) {
                         if (script.showMessageWhenToggled) logMessage(script.enabled ? std::string{"Disable script "} + script.name : std::string{"Enable script "} + script.name);
                         script.enabled = !script.enabled;
                         triggered = true;
                     }
 
-                    if (script.enabled && script.trigger == Trigger::Hotkey && script.triggerHotkey.keyData == keyData && script.triggerHotkey.modifier == modifier && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
+                    if (script.enabled && script.trigger == Trigger::Hotkey && script.triggerData.hotkey == pressedKey && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
                         const auto conditionsMet = checkConditions(script.conditions);
 
                         script.triggered = conditionsMet;
@@ -941,7 +982,7 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
             }
             triggerScripts(m_scripts);
         
-            if (InstanceInfo::getInstance().keyIsDisabled({keyData, modifier})) return true;
+            if (InstanceInfo::getInstance().keyIsDisabled(pressedKey)) return true;
             return triggered;
         }
 
@@ -960,8 +1001,7 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
     ToolboxPlugin::Initialize(ctx, fns, toolbox_dll);
     GW::Initialize();
 
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
-        &InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) 
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) 
     {
         ScriptVariableManager::getInstance().clear();
         isInLoadingScreen = false;
@@ -980,20 +1020,15 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         }
         triggerScripts(m_scripts);
     });
-    RegisterUIMessageCallback(&Interrupt_Entry, GW::UI::UIMessage::kSpellCastInterrupted, [&](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
-        struct SpellCastInterruptedParameters {
-            uint32_t agentId;
-            uint32_t skillId;
-        };
-
-        const auto parameters = *reinterpret_cast<SpellCastInterruptedParameters*>(wparam);
+    RegisterUIMessageCallback(&Interrupt_Entry, GW::UI::UIMessage::kSpellCastInterrupted, [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        const auto parameters = *reinterpret_cast<SkillCastParameters*>(wparam);
         const auto player = GW::Agents::GetControlledCharacter();
         if (!player || parameters.agentId != player->agent_id) return;
 
         const auto triggerScripts = [&](std::vector<Script>& scripts) {
             std::ranges::for_each(scripts, [&](Script& s) {
-                const auto correctSkill = (uint32_t)s.triggerFinishSkillId == parameters.skillId || s.triggerFinishSkillId == GW::Constants::SkillID::No_Skill;
-                if (correctSkill && s.enabled && s.trigger == Trigger::SkillCastInterrupted && checkConditions(s.conditions)) {
+                const auto correctSkill = (uint32_t)s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;
+                if (correctSkill && s.enabled && s.trigger == Trigger::SkillCastInterrupt && checkConditions(s.conditions)) {
                     s.triggered = true;
                 }
             });
@@ -1003,21 +1038,34 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         }
         triggerScripts(m_scripts);
     });
-    RegisterUIMessageCallback(&FinishSkillCast_Entry, GW::UI::UIMessage::kFinishSkillCast, [&](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
-        struct FinishSkillCastParameters {
-            uint32_t agentId;
-            uint32_t skillId;
-        };
-
-        const auto parameters = *reinterpret_cast<FinishSkillCastParameters*>(wparam);
+    RegisterUIMessageCallback(&FinishSkillCast_Entry, GW::UI::UIMessage::kSkillCooldownStart, [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        const auto parameters = *reinterpret_cast<SkillCastParameters*>(wparam);
         const auto player = GW::Agents::GetControlledCharacter();
         if (!player || parameters.agentId != player->agent_id) return;
         
         const auto triggerScripts = [&](std::vector<Script>& scripts) {
             std::ranges::for_each(scripts, [&](Script& s) {
-                const auto correctSkill = (uint32_t)s.triggerFinishSkillId == parameters.skillId || s.triggerFinishSkillId == GW::Constants::SkillID::No_Skill;
-                if (correctSkill && s.enabled && s.trigger == Trigger::FinishSkillCast && checkConditions(s.conditions)) 
+                const auto correctSkill = (uint32_t)s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;
+                if (correctSkill && s.enabled && s.trigger == Trigger::BeginCooldown && checkConditions(s.conditions)) 
                 {
+                    s.triggered = true;
+                }
+            });
+        };
+        for (auto& group : m_groups) {
+            if (group.enabled) triggerScripts(group.scripts);
+        }
+        triggerScripts(m_scripts);
+    });
+    RegisterUIMessageCallback(&BeginSkillCast_Entry, GW::UI::UIMessage::kAgentStartCasting, [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        const auto parameters = *reinterpret_cast<SkillCastParameters*>(wparam);
+        const auto player = GW::Agents::GetControlledCharacter();
+        if (!player || parameters.agentId != player->agent_id) return;
+
+        const auto triggerScripts = [&](std::vector<Script>& scripts) {
+            std::ranges::for_each(scripts, [&](Script& s) {
+                const auto correctSkill = (uint32_t)s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;
+                if (correctSkill && s.enabled && s.trigger == Trigger::BeginSkillCast && checkConditions(s.conditions)) {
                     s.triggered = true;
                 }
             });
@@ -1036,8 +1084,8 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         };
         const auto triggerChatMessageScripts = [&packet](std::vector<Script>& scripts) {
             std::ranges::for_each(scripts, [&](Script& s) {
-                if (s.enabled && s.trigger == Trigger::ChatMessage && !s.triggerMessage.empty() && checkConditions(s.conditions)) {
-                    if (WStringToString(packet->message).contains(s.triggerMessage)) {
+                if (s.enabled && s.trigger == Trigger::ChatMessage && !s.triggerData.message.empty() && checkConditions(s.conditions)) {
+                    if (WStringToString(packet->message).contains(s.triggerData.message)) {
                         s.triggered = true;
                     }
                 }
@@ -1066,7 +1114,8 @@ void SpeedrunScriptingTools::SignalTerminate()
     InstanceInfo::getInstance().terminate();
     GW::StoC::RemovePostCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry);
     GW::StoC::RemovePostCallback<GW::Packet::StoC::MessageCore>(&CoreMessage_Entry);
-    RemoveUIMessageCallback(&FinishSkillCast_Entry, GW::UI::UIMessage::kFinishSkillCast);
+    RemoveUIMessageCallback(&BeginSkillCast_Entry, GW::UI::UIMessage::kAgentStartCasting);
+    RemoveUIMessageCallback(&FinishSkillCast_Entry, GW::UI::UIMessage::kSkillCooldownStart);
     RemoveUIMessageCallback(&Interrupt_Entry, GW::UI::UIMessage::kSpellCastInterrupted);
     GW::DisableHooks();
 }
