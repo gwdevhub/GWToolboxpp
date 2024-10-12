@@ -38,6 +38,7 @@ enum class ConditionType : int {
     TargetHasCharacteristics,
     AgentWithCharacteristicsCount,
     ScriptVariable,
+    PlayerHasSkillBySlot,
 
     Count
 };

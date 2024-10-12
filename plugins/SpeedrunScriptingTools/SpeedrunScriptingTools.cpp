@@ -101,8 +101,6 @@ namespace {
                 stream << script.triggerData.skillId;
                 stream << script.triggerData.hsr;
                 break;
-            default:
-                assert(false);
         }
 
         stream << script.enabledToggleHotkey.keyData;
@@ -189,8 +187,6 @@ namespace {
                     stream >> result.triggerData.skillId;
                     stream >> result.triggerData.hsr;
                     break;
-                default:
-                    assert(false);
             }
             stream >> result.enabledToggleHotkey.keyData;
             stream >> result.enabledToggleHotkey.modifier;
