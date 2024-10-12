@@ -170,6 +170,46 @@ void DistanceToTargetCharacteristic::drawSettings()
     ImGui::PopItemWidth();
 }
 
+/// ------------- DistanceToModelIdCharacteristic -------------
+DistanceToModelIdCharacteristic::DistanceToModelIdCharacteristic(InputStream& stream)
+{
+    stream >> modelId >> distance >> comp;
+}
+void DistanceToModelIdCharacteristic::serialize(OutputStream& stream) const
+{
+    Characteristic::serialize(stream);
+
+    stream << modelId << distance << comp;
+}
+bool DistanceToModelIdCharacteristic::check(const GW::AgentLiving& reference) const
+{
+    const auto agents = GW::Agents::GetAgentArray();
+    if (!agents) return false;
+
+    auto minDistance = std::numeric_limits<float>::max();
+    for (const auto& agent : *agents) 
+    {
+        if (!agent || !agent->GetIsLivingType()) continue;
+        const auto living = agent->GetAsAgentLiving();
+        if (living->player_number != (uint16_t)modelId) continue;
+        minDistance = std::min(minDistance, GW::GetDistance(reference.pos, living->pos));
+    }
+
+    return compare(minDistance, comp, distance);
+}
+void DistanceToModelIdCharacteristic::drawSettings()
+{
+    ImGui::PushItemWidth(90.f);
+    ImGui::Text("Distance to closest agent of model Id");
+    ImGui::SameLine();
+    drawModelIDSelector(modelId);
+    ImGui::SameLine();
+    drawEnumButton(ComparisonOperator::Equals, ComparisonOperator::NotEquals, comp, 0, 30.f);
+    ImGui::SameLine();
+    ImGui::InputFloat("", &distance, 0.0f, 0.0f);
+    ImGui::PopItemWidth();
+}
+
 /// ------------- ClassCharacteristic -------------
 ClassCharacteristic::ClassCharacteristic(InputStream& stream)
 {
@@ -369,30 +409,34 @@ bool AllegianceCharacteristic::check(const GW::AgentLiving& agent) const
 {
     const auto player = GW::Agents::GetControlledCharacter();
     const auto info = GW::PartyMgr::GetPartyInfo();
-
-    switch (agentType) 
-    {
-        case AgentType::Any:
-            return true;
-        case AgentType::Self:
-            return player && agent.agent_id == player->agent_id;
-        case AgentType::PartyMember:
-            if (agent.IsPlayer()) 
+    if (!player || !info) return false;
+        
+    const auto hasCorrectType = [&] {
+        switch (agentType) 
+        {
+            case AgentType::Any:
                 return true;
-            if (!info) 
+            case AgentType::Self:
+                return player && agent.agent_id == player->agent_id;
+            case AgentType::PartyMember:
+                if (agent.agent_id == player->agent_id) return false;
+                if (agent.IsPlayer()) return true;
+                for (const auto& hero : info->heroes)
+                    if (agent.agent_id == hero.agent_id) return true;
+                for (const auto& henchman : info->henchmen)
+                    if (agent.agent_id == henchman.agent_id) return true;
                 return false;
-            for (const auto& hero : info->heroes)
-                if (agent.agent_id == hero.agent_id) return true;
-            for (const auto& henchman : info->henchmen)
-                if (agent.agent_id == henchman.agent_id) return true;
-            return false;
-        case AgentType::Friendly:
-            return agent.allegiance != GW::Constants::Allegiance::Enemy;
-        case AgentType::Hostile:
-            return agent.allegiance == GW::Constants::Allegiance::Enemy;
-        default:
-            return false;
-    }
+            case AgentType::Friendly:
+                if (agent.agent_id == player->agent_id) return false;
+                return agent.allegiance != GW::Constants::Allegiance::Enemy;
+            case AgentType::Hostile:
+                return agent.allegiance == GW::Constants::Allegiance::Enemy;
+            default:
+                return false;
+        }
+    }();
+
+    return hasCorrectType == (comp == IsIsNot::Is);
 }
 void AllegianceCharacteristic::drawSettings()
 {
