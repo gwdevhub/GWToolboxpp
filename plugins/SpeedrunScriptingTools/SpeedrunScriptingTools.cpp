@@ -20,9 +20,11 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/GameEntities/Skill.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <imgui.h>
@@ -92,9 +94,12 @@ namespace {
                 writeStringWithSpaces(stream, script.triggerData.message);
                 break;
             case Trigger::BeginCooldown:
-            case Trigger::BeginSkillCast:
             case Trigger::SkillCastInterrupt:
                 stream << script.triggerData.skillId;
+                break;
+            case Trigger::BeginSkillCast:
+                stream << script.triggerData.skillId;
+                stream << script.triggerData.hsr;
                 break;
             default:
                 assert(false);
@@ -151,33 +156,49 @@ namespace {
         result.name = readStringWithSpaces(stream);
         stream >> result.trigger;
         stream >> result.enabled;
-        switch (result.trigger) 
+        if (version == 10) 
         {
-            case Trigger::None:
-            case Trigger::InstanceLoad:
-            case Trigger::HardModePing:
-                break;
-            case Trigger::Hotkey:
-                stream >> result.triggerData.hotkey.keyData;
-                stream >> result.triggerData.hotkey.modifier;
-                break;
-            case Trigger::ChatMessage:
-                result.triggerData.message = readStringWithSpaces(stream);
-                break;
-            case Trigger::BeginCooldown:
-            case Trigger::BeginSkillCast:
-            case Trigger::SkillCastInterrupt:
-                stream >> result.triggerData.skillId;
-                break;
-            default:
-                assert(false);
+            // V10 Scripts always serialized all trigger data
+            stream >> result.triggerData.hotkey.keyData;
+            stream >> result.triggerData.hotkey.modifier;
+            stream >> result.enabledToggleHotkey.keyData;
+            stream >> result.enabledToggleHotkey.modifier;
+            stream >> result.showMessageWhenTriggered;
+            stream >> result.showMessageWhenToggled;
+            result.triggerData.message = readStringWithSpaces(stream);
         }
-        stream >> result.enabledToggleHotkey.keyData;
-        stream >> result.enabledToggleHotkey.modifier;
-        stream >> result.showMessageWhenTriggered;
-        stream >> result.showMessageWhenToggled;
-        stream >> result.globallyExclusive;
-        stream >> result.canLaunchInParallel;
+        else 
+        {
+            switch (result.trigger) {
+                case Trigger::None:
+                case Trigger::InstanceLoad:
+                case Trigger::HardModePing:
+                    break;
+                case Trigger::Hotkey:
+                    stream >> result.triggerData.hotkey.keyData;
+                    stream >> result.triggerData.hotkey.modifier;
+                    break;
+                case Trigger::ChatMessage:
+                    result.triggerData.message = readStringWithSpaces(stream);
+                    break;
+                case Trigger::BeginCooldown:
+                case Trigger::SkillCastInterrupt:
+                    stream >> result.triggerData.skillId;
+                    break;
+                case Trigger::BeginSkillCast:
+                    stream >> result.triggerData.skillId;
+                    stream >> result.triggerData.hsr;
+                    break;
+                default:
+                    assert(false);
+            }
+            stream >> result.enabledToggleHotkey.keyData;
+            stream >> result.enabledToggleHotkey.modifier;
+            stream >> result.showMessageWhenTriggered;
+            stream >> result.showMessageWhenToggled;
+            stream >> result.globallyExclusive;
+            stream >> result.canLaunchInParallel;
+        }
         stream.proceedPastSeparator();
 
         do {
@@ -455,16 +476,14 @@ namespace {
                 ImGui::PushID(3);
 
                 ImGui::SameLine();
-                drawTriggerSelector(scriptIt->trigger, scriptIt->triggerData, 100.f);
-
-                ImGui::SameLine();
-                ImGui::Checkbox("Log trigger", &scriptIt->showMessageWhenTriggered);
-
-                ImGui::SameLine();
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 50);
                 ImGui::InputText("Name", &scriptIt->name);
                 ImGui::PopItemWidth();
 
+                drawTriggerSelector(scriptIt->trigger, scriptIt->triggerData, 100.f);
+                ImGui::SameLine();
+                ImGui::Checkbox("Log trigger", &scriptIt->showMessageWhenTriggered);
+                ImGui::SameLine();
                 ImGui::Checkbox("Globally Exclusive", &scriptIt->globallyExclusive);
                 ImGui::SameLine();
                 ImGui::ShowHelp("Disallow any other script from launching while this script is running");
@@ -1028,9 +1047,8 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         const auto triggerScripts = [&](std::vector<Script>& scripts) {
             std::ranges::for_each(scripts, [&](Script& s) {
                 const auto correctSkill = (uint32_t)s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;
-                if (correctSkill && s.enabled && s.trigger == Trigger::SkillCastInterrupt && checkConditions(s.conditions)) {
+                if (correctSkill && s.enabled && s.trigger == Trigger::SkillCastInterrupt && checkConditions(s.conditions)) 
                     s.triggered = true;
-                }
             });
         };
         for (auto& group : m_groups) {
@@ -1039,10 +1057,18 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         triggerScripts(m_scripts);
     });
     RegisterUIMessageCallback(&FinishSkillCast_Entry, GW::UI::UIMessage::kSkillCooldownStart, [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
-        const auto parameters = *reinterpret_cast<SkillCastParameters*>(wparam);
+        
+        struct Test {
+            uint32_t agentId;
+            uint32_t skillId;
+            uint32_t always0;
+            float coolDownInSeconds;
+        };
+
+        const auto parameters = *reinterpret_cast<Test*>(wparam);
         const auto player = GW::Agents::GetControlledCharacter();
         if (!player || parameters.agentId != player->agent_id) return;
-        
+
         const auto triggerScripts = [&](std::vector<Script>& scripts) {
             std::ranges::for_each(scripts, [&](Script& s) {
                 const auto correctSkill = (uint32_t)s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;
@@ -1058,14 +1084,32 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         triggerScripts(m_scripts);
     });
     RegisterUIMessageCallback(&BeginSkillCast_Entry, GW::UI::UIMessage::kAgentStartCasting, [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
-        const auto parameters = *reinterpret_cast<SkillCastParameters*>(wparam);
+
+        struct AgentCastMessage 
+        {
+            uint32_t agentId;
+            GW::Constants::SkillID skillId;
+            float activation_time;
+        };
+        const auto parameters = *reinterpret_cast<AgentCastMessage*>(wparam);
         const auto player = GW::Agents::GetControlledCharacter();
         if (!player || parameters.agentId != player->agent_id) return;
 
         const auto triggerScripts = [&](std::vector<Script>& scripts) {
             std::ranges::for_each(scripts, [&](Script& s) {
-                const auto correctSkill = (uint32_t)s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;
-                if (correctSkill && s.enabled && s.trigger == Trigger::BeginSkillCast && checkConditions(s.conditions)) {
+                const auto correctSkill = s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;
+                if (!correctSkill || !s.enabled || s.trigger != Trigger::BeginSkillCast || !checkConditions(s.conditions)) return;
+
+                if (s.triggerData.hsr == AnyNoYes::Any) {
+                    s.triggered = true;
+                    return;
+                }
+
+                const auto skillData = GW::SkillbarMgr::GetSkillConstantData(parameters.skillId);
+                if (!skillData) return;
+                const auto isHSR = skillData->activation != parameters.activation_time;
+                if (isHSR == (s.triggerData.hsr == AnyNoYes::Yes)) 
+                {
                     s.triggered = true;
                 }
             });

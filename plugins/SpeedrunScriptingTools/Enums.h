@@ -74,4 +74,5 @@ struct TriggerData
     Hotkey hotkey{};
     std::string message{};
     GW::Constants::SkillID skillId{};
+    AnyNoYes hsr = AnyNoYes::Any;
 };
