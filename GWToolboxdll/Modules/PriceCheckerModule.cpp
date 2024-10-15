@@ -41,7 +41,7 @@ namespace {
         }
 
         prices_by_identifier.clear();
-        const auto& it_buy = prices_json.find("buy");
+        const auto& it_buy = prices_json.find("sell");
         if (it_buy == prices_json.end() || !it_buy->is_object()) {
             return false;
         }
