@@ -327,11 +327,12 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
     if (!visible) {
         return;
     }
-    DecodeSkillNames();
-    UpdateAgentInfos();
+
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+        DecodeSkillNames();
+        UpdateAgentInfos();
         if (!current_agent_info) {
             ImGui::TextUnformatted("No target info");
             return ImGui::End();
