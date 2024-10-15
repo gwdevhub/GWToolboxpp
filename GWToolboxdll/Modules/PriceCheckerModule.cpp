@@ -441,6 +441,49 @@ namespace {
         return false;
     }
 
+    float GetPriceByItem(const GW::Item* item, std::string* item_name_out = nullptr) {
+        const auto prices = PriceCheckerModule::FetchPrices();
+        auto price = .0f;
+        const auto model_id_str = std::to_string(item->model_id);
+        if (item->type == GW::Constants::ItemType::Materials_Zcoins) {
+            // Find my model id
+            const auto found = prices.find(model_id_str);
+            if (found == prices.end())
+                return price;
+            price = static_cast<float>(found->second);
+        }
+        else {
+            std::string mod_to_find;
+            std::string model_id_to_find;
+            // Find by mod struct id and model id
+            for (size_t i = 0; i < item->mod_struct_size; i++) {
+                const auto found = mod_to_id.find(item->mod_struct[i].mod);
+                if (found != mod_to_id.end() && found->second) {
+                    mod_to_find = std::format("{:08X}", found->first);
+                    model_id_to_find = std::string(found->second, strchr(found->second, '-'));
+                    if (item_name_out) {
+                        const auto name_found = mod_to_name.find(found->first);
+                        if (name_found != mod_to_name.end())
+                            *item_name_out = name_found->second;
+                    }
+                    break;
+                }
+            }
+            if (mod_to_find.empty())
+                return price;
+             
+            for (auto& it : prices) {
+                if (!it.first.starts_with(model_id_to_find))
+                    continue;
+                if (!it.first.contains(mod_to_find))
+                    continue;
+                price = static_cast<float>(it.second);
+                break;
+            }
+        }
+        return price;
+    }
+
     float GetPriceById(const char* id)
     {
         const auto prices = PriceCheckerModule::FetchPrices();
@@ -504,29 +547,13 @@ namespace {
 
         if (description.empty())
             description += L"\x101";
-        
-        for (size_t i = 0; i < item->mod_struct_size; i++) {
-            const auto found = mod_to_id.find(item->mod_struct[i].mod);
-            if (found == mod_to_id.end())
-                continue;
-            auto price = GetPriceById(found->second);
-            if (price < .1f)
-                continue;
-            const auto name = mod_to_name.find(found->first);
-            if (name == mod_to_name.end())
-                continue;
-            description.append(PrintPrice(price, name->second));
-        }
-        if (item->type == GW::Constants::ItemType::Materials_Zcoins) {
-            const auto model_id_str = std::to_string(item->model_id);
-            auto price = GetPriceById(model_id_str.c_str());
-            if (price > .0f) {
-                if (IsCommonMaterial(item)) {
-                    price = price / 10;
-                }
-                description += PrintPrice(price);
-            }
-        }
+
+        std::string item_name;
+        auto price = GetPriceByItem(item,&item_name);
+        if (price < .1f)
+            return;
+
+        description.append(PrintPrice(price, item_name.empty() ? nullptr : item_name.c_str()));
     }
     std::wstring tmp_item_description;
     void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc) 
