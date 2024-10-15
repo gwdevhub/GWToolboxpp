@@ -2196,7 +2196,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdSCWiki)
         return;
     }
     if (argc == 1) {
-        ShellExecuteW(nullptr, L"open", L"https://wiki.fbgmguild.com/Main_Page", nullptr, nullptr, SW_SHOWNORMAL);
+        ShellExecuteW(nullptr, L"open", L"https://wiki.fbgmguild.com/wiki/Main_Page", nullptr, nullptr, SW_SHOWNORMAL);
     }
     else {
         // the buffer is large enough, because you can type only 120 characters at once in the chat.
