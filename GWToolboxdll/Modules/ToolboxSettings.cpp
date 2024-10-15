@@ -82,6 +82,7 @@
 #include <Widgets/EffectsMonitorWidget.h>
 #include <Widgets/LatencyWidget.h>
 #include <Widgets/ActiveQuestWidget.h>
+#include <Widgets/MissionMapWidget.h>
 #include "ToolboxSettings.h"
 
 
@@ -223,7 +224,7 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini)
     GWToolbox::ToggleModule(StringDecoderWindow::Instance());
     GWToolbox::ToggleModule(DoorMonitorWindow::Instance());
     GWToolbox::ToggleModule(SkillListingWindow::Instance());
-    GWToolbox::ToggleModule(TargetInfoWindow::Instance());
+    GWToolbox::ToggleModule(MissionMapWidget::Instance());
 #endif
 
     GWToolbox::ToggleModule(VendorFix::Instance());

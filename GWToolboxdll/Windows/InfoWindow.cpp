@@ -57,6 +57,7 @@
 #include <Logger.h>
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
+#include <GWCA/Context/GameplayContext.h>
 
 namespace {
 
@@ -642,7 +643,13 @@ namespace {
         }
     }
 
-
+    void HighlightFrame(GW::UI::Frame* frame) {
+        const auto root = GW::UI::GetRootFrame();
+        const auto top_left = frame->position.GetTopLeftOnScreen(root);
+        const auto bottom_right = frame->position.GetBottomRightOnScreen(root);
+        const auto draw_list = ImGui::GetBackgroundDrawList();
+        draw_list->AddRect({ top_left.x, top_left.y }, { bottom_right.x, bottom_right.y }, IM_COL32_WHITE);
+    }
 
 
     void PostDraw() {
@@ -769,32 +776,20 @@ namespace {
         [[maybe_unused]] const GW::Chat::ChatBuffer* log = GW::Chat::GetChatLog();
         [[maybe_unused]] const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
         [[maybe_unused]] const auto ac = me_player ? GW::AccountMgr::GetAvailableCharacter(me_player->name) : nullptr;
+        [[maybe_unused]] const auto gpc = GW::GetGameplayContext();
+        
+
+        [[maybe_unused]] const auto mission_map_context = GW::Map::GetMissionMapContext();
+        [[maybe_unused]] const auto mission_map_frame = mission_map_context ? GW::UI::GetFrameById(mission_map_context->frame_id) : nullptr;
+        [[maybe_unused]] const auto world_map_context = GW::Map::GetWorldMapContext();
 
         [[maybe_unused]]  const auto campaign = ac ? ac->campaign() : 0;
         [[maybe_unused]]  const auto level = ac ? ac->level() : 0;
         [[maybe_unused]]  const auto primary = ac ? ac->primary() : 0;
         [[maybe_unused]] const auto secondary = ac ? ac->secondary() : 0;
+
 #ifdef _DEBUG
-        const auto frame = GW::UI::GetFrameByLabel(L"NPCInteract");
-        if (frame && frame->IsVisible()) {
-            auto dialog_buttons_frame = GW::UI::GetChildFrame(frame, 2); // Scrollable frame
-            dialog_buttons_frame = GW::UI::GetChildFrame(dialog_buttons_frame, 0);
-            dialog_buttons_frame = GW::UI::GetChildFrame(dialog_buttons_frame, 0);
-            dialog_buttons_frame = GW::UI::GetChildFrame(dialog_buttons_frame, 1);
-            if (dialog_buttons_frame) {
-                for (auto& sibling : dialog_buttons_frame->relation.siblings) {
-                    const auto button_frame = sibling.GetFrame();
-                    if (button_frame->child_offset_id != 0x1)
-                        continue; // Not a button frame
-                    const auto top_left = button_frame->position.GetTopLeftOnScreen(frame);
-                    const auto bottom_right = button_frame->position.GetBottomRightOnScreen(frame);
-                    const auto label = std::to_string(button_frame->field100_0x1a8);
-                    const auto draw_list = ImGui::GetBackgroundDrawList();
-                    draw_list->AddRect({ top_left.x, top_left.y }, { bottom_right.x, bottom_right.y }, IM_COL32_WHITE);
-                    draw_list->AddText({ top_left.x, top_left.y }, IM_COL32_WHITE, label.c_str());
-                }
-            }
-        }
+        //HighlightFrame(mission_map_frame);
 #endif
     }
 }
