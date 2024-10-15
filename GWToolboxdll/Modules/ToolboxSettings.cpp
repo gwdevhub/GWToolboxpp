@@ -33,6 +33,7 @@
 #include <Modules/ResignLogModule.h>
 #include <Modules/PartyBroadcastModule.h>
 #include <Modules/CodeOptimiserModule.h>
+#include <Modules/VendorFix.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -224,6 +225,9 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini)
     GWToolbox::ToggleModule(SkillListingWindow::Instance());
     GWToolbox::ToggleModule(TargetInfoWindow::Instance());
 #endif
+
+    GWToolbox::ToggleModule(VendorFix::Instance());
+
     for (const auto& m : optional_modules) {
         GWToolbox::ToggleModule(*m.toolbox_module, m.enabled);
     }
