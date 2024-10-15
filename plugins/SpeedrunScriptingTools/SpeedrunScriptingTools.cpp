@@ -43,7 +43,7 @@ namespace {
     struct SkillCastParameters 
     {
         uint32_t agentId;
-        uint32_t skillId;
+        GW::Constants::SkillID skillId;
     };
 
     // Versions 1-7: Prerelease, can be ignored
@@ -1052,7 +1052,7 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
 
         const auto triggerScripts = [&](std::vector<Script>& scripts) {
             std::ranges::for_each(scripts, [&](Script& s) {
-                const auto correctSkill = (uint32_t)s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;
+                const auto correctSkill = s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;
                 if (correctSkill && s.enabled && s.trigger == Trigger::SkillCastInterrupt && checkConditions(s.conditions)) 
                     s.triggered = true;
             });
@@ -1063,21 +1063,20 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         triggerScripts(m_scripts);
     });
     RegisterUIMessageCallback(&FinishSkillCast_Entry, GW::UI::UIMessage::kSkillCooldownStart, [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
-        
-        struct Test {
+        struct CooldownStartMessage {
             uint32_t agentId;
-            uint32_t skillId;
-            uint32_t always0;
+            GW::Constants::SkillID skillId;
+            uint32_t always0; // hero ID probably?
             float coolDownInSeconds;
         };
 
-        const auto parameters = *reinterpret_cast<Test*>(wparam);
+        const auto parameters = *reinterpret_cast<CooldownStartMessage*>(wparam);
         const auto player = GW::Agents::GetControlledCharacter();
         if (!player || parameters.agentId != player->agent_id) return;
 
         const auto triggerScripts = [&](std::vector<Script>& scripts) {
             std::ranges::for_each(scripts, [&](Script& s) {
-                const auto correctSkill = (uint32_t)s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;
+                const auto correctSkill = s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;
                 if (correctSkill && s.enabled && s.trigger == Trigger::BeginCooldown && checkConditions(s.conditions)) 
                 {
                     s.triggered = true;
@@ -1090,7 +1089,6 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         triggerScripts(m_scripts);
     });
     RegisterUIMessageCallback(&BeginSkillCast_Entry, GW::UI::UIMessage::kAgentStartCasting, [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
-
         struct AgentCastMessage 
         {
             uint32_t agentId;
