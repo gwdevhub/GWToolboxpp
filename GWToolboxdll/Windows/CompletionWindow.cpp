@@ -2766,16 +2766,17 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
         ParseCompletionBuffer(type, name_ws.data(), completion_buf.data(), completion_buf.size());
     };
 
-    for (const auto& camp : character_completion) {
-        delete camp.second;
-    }
-    character_completion.clear();
-
     ToolboxIni::TNamesDepend entries;
     completion_ini->GetAllSections(entries);
     for (const ToolboxIni::Entry& entry : entries) {
         ini_section = entry.pItem;
         name_ws = TextUtils::StringToWString(ini_section);
+
+        const auto c = GetCharacterCompletion(name_ws.data(), true);
+        c->profession = static_cast<Profession>(completion_ini->GetLongValue(ini_section, "profession", 0));
+        c->account = TextUtils::StringToWString(completion_ini->GetValue(ini_section, "account", ""));
+        c->is_pvp = completion_ini->GetBoolValue(ini_section, "is_pvp", false);
+        c->is_pre_searing = completion_ini->GetBoolValue(ini_section, "is_pre_searing", false);
 
         read_ini_to_buf(CompletionType::Mission, "mission");
         read_ini_to_buf(CompletionType::MissionBonus, "mission_bonus");
@@ -2788,11 +2789,7 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
         read_ini_to_buf(CompletionType::MinipetsUnlocked, "minipets_unlocked");
         read_ini_to_buf(CompletionType::FestivalHats, "festival_hats");
 
-        const auto c = GetCharacterCompletion(name_ws.data(), true);
-        c->profession = static_cast<Profession>(completion_ini->GetLongValue(ini_section, "profession", 0));
-        c->account = TextUtils::StringToWString(completion_ini->GetValue(ini_section, "account", ""));
-        c->is_pvp = completion_ini->GetBoolValue(ini_section, "is_pvp", false);
-        c->is_pre_searing = completion_ini->GetBoolValue(ini_section, "is_pre_searing", false);
+
     }
     RefreshAccountCharacters();
     ParseCompletionBuffer(CompletionType::Mission);
