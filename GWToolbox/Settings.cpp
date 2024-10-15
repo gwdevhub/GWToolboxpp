@@ -12,14 +12,12 @@ void PrintUsage(const bool terminate)
 
             "    /?, /help                  Print this help\n"
             "    /version                   Print version and exist\n"
-            "    /quiet                     Doesn't create any interaction with the user\n\n"
 
             "    /install                   Create necessary folders and download GWToolboxdll\n"
             "    /uninstall                 Remove all data used by GWToolbox\n"
             "    /reinstall                 Do a fresh installation\n\n"
 
             "    /asadmin                   GWToolbox will try to run as admin\n"
-            "    /noupdate                  Won't try to update\n"
             "    /noinstall                 Won't try to install if missing\n"
             "    /localdll                  Check launcher directory for toolbox dll, won't try to install or update\n\n"
 
@@ -29,46 +27,6 @@ void PrintUsage(const bool terminate)
     if (terminate) {
         exit(0);
     }
-}
-
-void ParseRegSettings()
-{
-    HKEY SettingsKey;
-    if (!OpenSettingsKey(&SettingsKey)) {
-        fprintf(stderr, "OpenSettingsKey failed\n");
-        return;
-    }
-
-    DWORD asadmin;
-    if (RegReadDWORD(SettingsKey, L"asadmin", &asadmin)) {
-        settings.asadmin = asadmin != 0;
-    }
-
-    DWORD noupdate;
-    if (RegReadDWORD(SettingsKey, L"noupdate", &noupdate)) {
-        settings.noupdate = noupdate != 0;
-    }
-
-    RegCloseKey(SettingsKey);
-}
-
-static void WriteRegSettings()
-{
-    HKEY SettingsKey;
-    if (!OpenSettingsKey(&SettingsKey)) {
-        fprintf(stderr, "OpenUninstallKey failed\n");
-        return;
-    }
-
-    if (RegWriteDWORD(SettingsKey, L"asadmin", settings.asadmin)) {
-        fprintf(stderr, "Failed to write 'asadmin' registry key\n");
-    }
-
-    if (RegWriteDWORD(SettingsKey, L"noupdate", settings.noupdate)) {
-        fprintf(stderr, "Failed to write 'noupdate' registry key\n");
-    }
-
-    RegCloseKey(SettingsKey);
 }
 
 static bool IsOneOrZeroOf3(const bool b1, const bool b2, const bool b3)
@@ -104,7 +62,6 @@ void ParseCommandLine()
         }
         else if (wcscmp(arg, L"/install") == 0) {
             settings.install = true;
-            settings.noupdate = false;
         }
         else if (wcscmp(arg, L"/uninstall") == 0) {
             settings.uninstall = true;
@@ -125,24 +82,14 @@ void ParseCommandLine()
             }
             settings.pid = static_cast<uint32_t>(pid);
         }
-        else if (wcscmp(arg, L"/asadmin") == 0) {
-            settings.asadmin = true;
-        }
-        else if (wcscmp(arg, L"/noupdate") == 0) {
-            settings.noupdate = true;
-        }
         else if (wcscmp(arg, L"/help") == 0) {
             settings.help = true;
         }
         else if (wcscmp(arg, L"/noinstall") == 0) {
             settings.noinstall = true;
         }
-        else if (wcscmp(arg, L"/quiet") == 0) {
-            settings.quiet = true;
-        }
         else if (wcscmp(arg, L"/localdll") == 0) {
             settings.localdll = true;
-            settings.noupdate = true;
             settings.noinstall = true;
         }
         else if (wcscmp(arg, L"/?") == 0) {
@@ -337,80 +284,4 @@ static bool ToggleCheckbox(HWND hWnd)
     const bool Checked = State == BST_CHECKED;
     SetCheckbox(hWnd, !Checked);
     return !Checked;
-}
-
-bool SettingsWindow::Create()
-{
-    SetWindowName(L"GWToolbox - Settings");
-    SetWindowDimension(305, 135);
-    return Window::Create();
-}
-
-LRESULT SettingsWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
-{
-    switch (uMsg) {
-        case WM_CREATE:
-            OnCreate(hWnd, uMsg, wParam, lParam);
-            break;
-
-        case WM_CLOSE:
-            DestroyWindow(hWnd);
-            break;
-
-        case WM_DESTROY:
-            SignalStop();
-            break;
-
-        case WM_COMMAND:
-            OnCommand(reinterpret_cast<HWND>(lParam), LOWORD(wParam), HIWORD(wParam));
-            break;
-    }
-
-    return DefWindowProcW(hWnd, uMsg, wParam, lParam);
-}
-
-void SettingsWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-    m_hNoUpdate = CreateWindowW(
-        WC_BUTTONW,
-        L"Never check for update",
-        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_CHECKBOX,
-        10,
-        10,
-        150,
-        15,
-        hWnd,
-        nullptr,
-        m_hInstance,
-        nullptr);
-    SendMessageW(m_hNoUpdate, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-
-    m_hStartAsAdmin = CreateWindowW(
-        WC_BUTTONW,
-        L"Always start as admin",
-        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_CHECKBOX,
-        10,
-        30,
-        150,
-        15,
-        hWnd,
-        nullptr,
-        m_hInstance,
-        nullptr);
-    SendMessageW(m_hStartAsAdmin, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
-
-    SetCheckbox(m_hNoUpdate, settings.noupdate);
-    SetCheckbox(m_hStartAsAdmin, settings.asadmin);
-}
-
-void SettingsWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificateCode) const
-{
-    if (hWnd == m_hNoUpdate) {
-        settings.noupdate = ToggleCheckbox(m_hNoUpdate);
-        WriteRegSettings();
-    }
-    else if (hWnd == m_hStartAsAdmin) {
-        settings.asadmin = ToggleCheckbox(m_hStartAsAdmin);
-        WriteRegSettings();
-    }
 }

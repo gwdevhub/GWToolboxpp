@@ -1,6 +1,6 @@
 #pragma once
 
-bool Install(bool quiet);
-bool Uninstall(bool quiet);
+bool Install();
+bool Uninstall();
 
 bool IsInstalled();
