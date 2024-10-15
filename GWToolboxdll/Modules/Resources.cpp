@@ -108,6 +108,9 @@ namespace {
     // tasks to be done in main thread
     std::queue<std::function<void()>> main_jobs;
 
+
+    IDirect3DTexture9* empty_texture_ptr = 0;
+
     bool should_stop = false;
 
     std::vector<std::thread*> workers;
@@ -1006,8 +1009,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
 IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id)
 {
     const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-    ASSERT(skill && skill->icon_file_id);
-    return GwDatTextureModule::LoadTextureFromFileId(skill->icon_file_id);
+    return skill && skill->icon_file_id ? GwDatTextureModule::LoadTextureFromFileId(skill->icon_file_id) : &empty_texture_ptr;
 }
 
 IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill_id)
