@@ -144,11 +144,14 @@ namespace {
     // Run on game thread!
     std::vector<PartySearchAdvertisement> collect_party_searches() {
         ASSERT(GW::GameThread::IsInGameThread());
+
         const auto pc = GW::GetPartyContext();
         const auto searches = pc ? &pc->party_search : nullptr;
         const auto district_number = GW::Map::GetDistrict();
         const auto district_language = GW::Map::GetLanguage();
         std::vector<PartySearchAdvertisement> ads;
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+            return ads;
         if (searches) {
             for (const auto search : *searches) {
                 if (!search) {
@@ -211,13 +214,17 @@ namespace {
             return false;
         }
 
-        auto to_send = collect_party_searches();
+        auto parties = collect_party_searches();
+        if (parties.empty()) {
+            pending_websocket_disconnect = true;
+            return true;
+        }
 
         json j;
         j["type"] = "client_parties";
         j["map_id"] = (uint32_t)GW::Map::GetMapID();
         j["district_region"] = (int)GW::Map::GetRegion();
-        j["parties"] = to_send;
+        j["parties"] = parties;
 
         const auto payload = j.dump();
         if (!send_payload(payload))
@@ -225,7 +232,7 @@ namespace {
         last_sent_district_info = GetDistrictInfo();
 
         server_parties.clear();
-        for (auto& party : to_send) {
+        for (auto& party : parties) {
             server_parties[party.party_id] = party;
         }
         last_update_timestamp = TIMER_INIT();
@@ -237,6 +244,11 @@ namespace {
         if (!GW::Map::GetIsMapLoaded()) {
             return false;
         }
+        auto parties = collect_party_searches();
+        if (parties.empty()) {
+            pending_websocket_disconnect = true;
+            return true;
+        }
 
         const auto current_map_info = GetDistrictInfo();
         if (memcmp(&current_map_info, &last_sent_district_info, sizeof(current_map_info)) != 0) {
@@ -244,7 +256,7 @@ namespace {
             return send_all_party_searches();
         }
 
-        auto parties = collect_party_searches();
+
 
         std::vector<PartySearchAdvertisement> to_send;
 
@@ -390,10 +402,12 @@ namespace {
 }
 
 void PartyBroadcast::Update(float) {
-    if (pending_websocket_disconnect && websocket_thread && websocket_thread->joinable()) {
-        websocket_thread->join();
-        delete websocket_thread;
-        websocket_thread = nullptr;
+    if (pending_websocket_disconnect) {
+        if (websocket_thread && websocket_thread->joinable()) {
+            websocket_thread->join();
+            delete websocket_thread;
+            websocket_thread = nullptr;
+        }
         pending_websocket_disconnect = false;
         window_rate_limiter = RateLimiter(); // Graceful disconnect, reset limiter
     }
