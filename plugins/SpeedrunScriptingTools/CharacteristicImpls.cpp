@@ -460,37 +460,39 @@ void StatusCharacteristic::serialize(OutputStream& stream) const
 }
 bool StatusCharacteristic::check(const GW::AgentLiving& agent) const
 {
-    switch (status) 
-    {
-        case Status::Enchanted:
-            return agent.GetIsEnchanted();
-        case Status::WeaponSpelled:
-            return agent.GetIsWeaponSpelled();
-        case Status::Alive:
-            return agent.GetIsAlive();
-        case Status::Bleeding:
-            return agent.GetIsBleeding();
-        case Status::Crippled:
-            return agent.GetIsCrippled();
-        case Status::DeepWounded:
-            return agent.GetIsDeepWounded();
-        case Status::Poisoned:
-            return agent.GetIsPoisoned();
-        case Status::Hexed:
-            return agent.GetIsHexed() || agent.GetIsDegenHexed();
-        case Status::Idle:
-            return agent.GetIsIdle();
-        case Status::KnockedDown:
-            return agent.GetIsKnockedDown();
-        case Status::Moving:
-            return agent.GetIsMoving();
-        case Status::Attacking:
-            return agent.GetIsAttacking();
-        case Status::Casting:
-            return agent.GetIsCasting();
-        default:
-            return false;
-    }
+    const auto hasCorrectStatus = [&] {
+        switch (status) {
+            case Status::Enchanted:
+                return agent.GetIsEnchanted();
+            case Status::WeaponSpelled:
+                return agent.GetIsWeaponSpelled();
+            case Status::Alive:
+                return agent.GetIsAlive();
+            case Status::Bleeding:
+                return agent.GetIsBleeding();
+            case Status::Crippled:
+                return agent.GetIsCrippled();
+            case Status::DeepWounded:
+                return agent.GetIsDeepWounded();
+            case Status::Poisoned:
+                return agent.GetIsPoisoned();
+            case Status::Hexed:
+                return agent.GetIsHexed() || agent.GetIsDegenHexed();
+            case Status::Idle:
+                return agent.GetIsIdle();
+            case Status::KnockedDown:
+                return agent.GetIsKnockedDown();
+            case Status::Moving:
+                return agent.GetIsMoving();
+            case Status::Attacking:
+                return agent.GetIsAttacking();
+            case Status::Casting:
+                return agent.GetIsCasting();
+            default:
+                return false;
+        }
+    }();
+    return hasCorrectStatus == (comp == IsIsNot::Is);
 }
 void StatusCharacteristic::drawSettings()
 {
