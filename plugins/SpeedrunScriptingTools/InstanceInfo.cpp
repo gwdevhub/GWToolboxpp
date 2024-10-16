@@ -213,3 +213,10 @@ const GW::AgentLiving* InstanceInfo::retrieveTarget(int storageId) const
     }
     return nullptr;
 }
+
+bool InstanceInfo::isStoredTarget(const GW::AgentLiving& agent) const
+{
+    return std::ranges::any_of(storedTargets, [agent](const auto& element) {
+        return element.second == agent.agent_id;
+    });
+}

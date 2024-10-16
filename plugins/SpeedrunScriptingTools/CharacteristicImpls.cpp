@@ -610,3 +610,19 @@ void AngleToCameraForwardCharacteristic::drawSettings()
     ImGui::InputFloat("", &angle, 0.0f, 0.0f);
     ImGui::PopItemWidth();
 }
+/// ------------- IsStoredTargetCharacteristic -------------
+IsStoredTargetCharacteristic::IsStoredTargetCharacteristic(InputStream&)
+{
+}
+void IsStoredTargetCharacteristic::serialize(OutputStream& stream) const
+{
+    Characteristic::serialize(stream);
+}
+bool IsStoredTargetCharacteristic::check(const GW::AgentLiving& agent) const
+{
+    return InstanceInfo::getInstance().isStoredTarget(agent);
+}
+void IsStoredTargetCharacteristic::drawSettings()
+{
+    ImGui::Text("Is stored target");
+}

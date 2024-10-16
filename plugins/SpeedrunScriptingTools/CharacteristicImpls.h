@@ -277,3 +277,16 @@ private:
     float angle = 180.;
     ComparisonOperator comp = ComparisonOperator::LessOrEqual;
 };
+
+class IsStoredTargetCharacteristic : public Characteristic {
+public:
+    IsStoredTargetCharacteristic() = default;
+    IsStoredTargetCharacteristic(InputStream&);
+    void serialize(OutputStream&) const final;
+
+    CharacteristicType type() const final { return CharacteristicType::IsStoredTarget; }
+    bool check(const GW::AgentLiving& agent) const final;
+    void drawSettings() final;
+
+private:
+};
