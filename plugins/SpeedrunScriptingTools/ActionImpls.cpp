@@ -1675,9 +1675,13 @@ void StoreTargetAction::initialAction()
 void StoreTargetAction::drawSettings()
 {
     ImGui::PushID(drawId());
+    ImGui::PushItemWidth(100.f);
 
-    ImGui::Text("Store current target");
+    ImGui::Text("Store current target as");
+    ImGui::SameLine();
+    ImGui::InputInt("ID", &id, 0);
 
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
@@ -1704,9 +1708,13 @@ void RestoreTargetAction::initialAction()
 void RestoreTargetAction::drawSettings()
 {
     ImGui::PushID(drawId());
+    ImGui::PushItemWidth(100.f);
 
     ImGui::Text("Restore target");
+    ImGui::SameLine();
+    ImGui::InputInt("ID", &id, 0);
 
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
 
