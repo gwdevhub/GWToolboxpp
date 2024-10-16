@@ -162,6 +162,8 @@ namespace {
         ASSERT(quest);
         custom_quest_marker = *quest;
     }
+    // Custom quests have ids greater than the count in-game - there are some assertions that don't like this!
+    GW::MemoryPatcher bypass_custom_quest_assertion_patch;
 
     bool WorldMapContextMenu(void*)
     {
@@ -361,6 +363,13 @@ void WorldMapWidget::Initialize()
     if (address) {
         view_all_carto_areas_patch.SetRedirect(address, GetCartographyFlagsForArea);
     }
+
+    address = GW::Scanner::FindAssertion("p:\\code\\gw\\ui\\controls\\uictlweblink.cpp", "challengeId < CHALLENGES", -0x7);
+    if (address) {
+        bypass_custom_quest_assertion_patch.SetPatch(address, "\xeb", 1);
+        bypass_custom_quest_assertion_patch.TogglePatch(true);
+    }
+
 
     ASSERT(view_all_outposts_patch.IsValid());
     ASSERT(view_all_carto_areas_patch.IsValid());
