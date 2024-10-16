@@ -308,12 +308,12 @@ ConditionPtr drawConditionSelector(float width)
         if (ImGui::BeginMenu("Player")) 
         {
             drawSubMenu("Skillbar info", skillConditions);
-            if (const auto type = drawCharacteristicSubMenu()) result = std::make_shared<PlayerHasCharacteristicsCondition>(*type);
+        if (const auto type = drawCharacteristicSubMenu({CharacteristicType::DistanceToPlayer, CharacteristicType::AngleToCameraForward, CharacteristicType::AngleToPlayerForward})) result = std::make_shared<PlayerHasCharacteristicsCondition>(*type);
 
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Target")) {
-            if (const auto type = drawCharacteristicSubMenu()) result = std::make_shared<TargetHasCharacteristicsCondition>(*type);
+            if (const auto type = drawCharacteristicSubMenu({CharacteristicType::DistanceToTarget})) result = std::make_shared<TargetHasCharacteristicsCondition>(*type);
             ImGui::EndMenu();
         }
         drawConditionSelector(ConditionType::AgentWithCharacteristicsCount);

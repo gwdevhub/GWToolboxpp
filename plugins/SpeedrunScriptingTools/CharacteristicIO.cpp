@@ -142,15 +142,17 @@ CharacteristicPtr readCharacteristic(InputStream& stream)
     }
 }
 
-std::optional<CharacteristicType> drawCharacteristicSubMenu()
+std::optional<CharacteristicType> drawCharacteristicSubMenu(std::unordered_set<CharacteristicType> toSkip)
 {
     std::optional<CharacteristicType> result;
-    const auto drawCharacteristicSelector = [&result](CharacteristicType type) {
+    const auto drawCharacteristicSelector = [&](CharacteristicType type) {
+        if (toSkip.contains(type)) return;
         if (ImGui::MenuItem(toString(type).data())) {
             result = type;
         }
     };
-    const auto drawSubMenu = [&drawCharacteristicSelector](std::string_view title, const auto& types) {
+    const auto drawSubMenu = [&](std::string_view title, const auto& types) {
+        if (std::ranges::all_of(types, [&](const auto& type){ return toSkip.contains(type); })) return;
         if (ImGui::BeginMenu(title.data())) {
             for (const auto& type : types)
                 drawCharacteristicSelector(type);
