@@ -43,6 +43,7 @@ public:
     int getInstanceId() const { return instanceId; }
     void storeTarget(const GW::AgentLiving* agent, int storageId);
     const GW::AgentLiving* retrieveTarget(int storageId) const;
+    bool isStoredTarget(const GW::AgentLiving& agent) const;
 
     void initialize();
     void terminate();

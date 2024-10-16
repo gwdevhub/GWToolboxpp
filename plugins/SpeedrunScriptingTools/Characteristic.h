@@ -27,6 +27,7 @@ enum class CharacteristicType : int {
     AngleToPlayerForward,
     AngleToCameraForward,
     DistanceToModelId,
+    IsStoredTarget,
 
     Count
 };

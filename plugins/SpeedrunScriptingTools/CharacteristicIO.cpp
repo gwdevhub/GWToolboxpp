@@ -6,7 +6,7 @@
 namespace {
     std::string_view toString(CharacteristicType type)
     {
-        static_assert((int)CharacteristicType::Count == 18);
+        static_assert((int)CharacteristicType::Count == 19);
         switch (type) {
             case CharacteristicType::Position:
                 return "Position";
@@ -44,6 +44,8 @@ namespace {
                 return "Angle to player forward";
             case CharacteristicType::AngleToCameraForward:
                 return "Angle to camera forward";
+            case CharacteristicType::IsStoredTarget:
+                return "Is stored target";
             default:
                 return "";
         }
@@ -52,7 +54,7 @@ namespace {
 
 CharacteristicPtr makeCharacteristic(CharacteristicType type)
 {
-    static_assert((int)CharacteristicType::Count == 18);
+    static_assert((int)CharacteristicType::Count == 19);
     switch (type) {
         case CharacteristicType::Position:
             return std::make_unique<PositionCharacteristic>();
@@ -90,6 +92,8 @@ CharacteristicPtr makeCharacteristic(CharacteristicType type)
             return std::make_unique<AngleToPlayerForwardCharacteristic>();
         case CharacteristicType::AngleToCameraForward:
             return std::make_unique<AngleToCameraForwardCharacteristic>();
+        case CharacteristicType::IsStoredTarget:
+            return std::make_unique<IsStoredTargetCharacteristic>();
         default:
             return nullptr;
     }
@@ -97,7 +101,7 @@ CharacteristicPtr makeCharacteristic(CharacteristicType type)
 
 CharacteristicPtr readCharacteristic(InputStream& stream)
 {
-    static_assert((int)CharacteristicType::Count == 18);
+    static_assert((int)CharacteristicType::Count == 19);
     int type;
     stream >> type;
     switch (static_cast<CharacteristicType>(type)) {
@@ -137,6 +141,8 @@ CharacteristicPtr readCharacteristic(InputStream& stream)
             return std::make_unique<AngleToPlayerForwardCharacteristic>(stream);
         case CharacteristicType::AngleToCameraForward:
             return std::make_unique<AngleToCameraForwardCharacteristic>(stream);
+        case CharacteristicType::IsStoredTarget:
+            return std::make_unique<IsStoredTargetCharacteristic>(stream);
         default:
             return nullptr;
     }
@@ -164,7 +170,7 @@ std::optional<CharacteristicType> drawCharacteristicSubMenu(std::unordered_set<C
     constexpr auto angleCharacteristics = std::array{CharacteristicType::AngleToPlayerForward, CharacteristicType::AngleToCameraForward};
     constexpr auto hpCharacteristics = std::array{CharacteristicType::HP, CharacteristicType::HPRegen};
     constexpr auto skillCharacteristics = std::array{CharacteristicType::Skill, CharacteristicType::Bond};
-    constexpr auto propertyCharacteristics = std::array{CharacteristicType::Model, CharacteristicType::Class, CharacteristicType::Name, CharacteristicType::Speed, CharacteristicType::WeaponType};
+    constexpr auto propertyCharacteristics = std::array{CharacteristicType::Model, CharacteristicType::Class, CharacteristicType::Name, CharacteristicType::Speed, CharacteristicType::WeaponType, CharacteristicType::IsStoredTarget};
 
     drawSubMenu("Position", positionCharacteristics);
     drawSubMenu("Angle", angleCharacteristics);
