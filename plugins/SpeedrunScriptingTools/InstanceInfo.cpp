@@ -3,6 +3,7 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/NPC.h>
+#include <GWCA/GameEntities/Quest.h>
 
 #include <GWCA/Context/WorldContext.h>
 
@@ -11,6 +12,7 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
 
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/Constants/ItemIDs.h>
@@ -61,13 +63,28 @@ void InstanceInfo::initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveDone* packet) {
         this->objectiveStatus[packet->objective_id] = QuestStatus::Completed;
     });
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {
+
+    const auto updateQuestNames = [this] {
+        const auto questLog = GW::QuestMgr::GetQuestLog();
+        if (!questLog) 
+            return;
+
+        for (const auto& quest : *questLog) 
+        {
+            if (questNames.contains(quest.quest_id)) continue;
+            GW::UI::AsyncDecodeStr(quest.name, &questNames[quest.quest_id]);
+        }
+    };
+    updateQuestNames();
+
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this, updateQuestNames](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) {
         using namespace std::chrono_literals;
 
         this->objectiveStatus.clear();
         this->decodedAgentNames.clear();
         this->decodedItemNames.clear();
         this->storedTargets.clear();
+        updateQuestNames();
 
         mpStatus.poppedMinipetId = std::nullopt;
         mpStatus.lastPop = std::chrono::steady_clock::now() - 1h;
@@ -157,6 +174,11 @@ std::string InstanceInfo::getDecodedAgentName(GW::AgentID id)
         GW::UI::AsyncDecodeStr(encodedName, &wName);
     }
     return WStringToString(wName);
+}
+std::string InstanceInfo::getDecodedQuestName(GW::Constants::QuestID id) const
+{
+    if (!questNames.contains(id)) return "";
+    return WStringToString(questNames.at(id));
 }
 std::string InstanceInfo::getDecodedItemName(uint32_t item_id)
 {

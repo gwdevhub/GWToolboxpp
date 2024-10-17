@@ -39,6 +39,7 @@ enum class ActionType : int {
     EnterCriticalSection,
     LeaveCriticalSection,
     SetVariable,
+    AbandonQuest,
 
     Count
 };
