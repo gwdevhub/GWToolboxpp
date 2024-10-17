@@ -477,17 +477,31 @@ private:
     ComparisonOperator comp = ComparisonOperator::GreaterOrEqual;
 };
 
-class ScriptVariableCondition : public Condition {
+class ScriptVariableValueCondition : public Condition {
 public:
-    ScriptVariableCondition() = default;
-    ScriptVariableCondition(InputStream&);
-    ConditionType type() const final { return ConditionType::ScriptVariable; }
+    ScriptVariableValueCondition() = default;
+    ScriptVariableValueCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::ScriptVariableValue; }
     bool check() const final;
     void drawSettings() final;
     void serialize(OutputStream&) const final;
 
 private:
     std::string name = "";
-    int value;
+    int value = 0;
     ComparisonOperator comp = ComparisonOperator::Equals;
+};
+
+class ScriptVariableIsSetCondition : public Condition {
+public:
+    ScriptVariableIsSetCondition() = default;
+    ScriptVariableIsSetCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::ScriptVariableIsSet; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    std::string name = "";
+    IsIsNot comp = IsIsNot::Is;
 };

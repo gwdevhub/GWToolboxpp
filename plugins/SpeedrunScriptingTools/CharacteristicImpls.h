@@ -289,4 +289,5 @@ public:
     void drawSettings() final;
 
 private:
+    IsIsNot comp = IsIsNot::Is;
 };

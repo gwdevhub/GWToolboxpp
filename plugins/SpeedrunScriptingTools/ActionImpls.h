@@ -499,6 +499,7 @@ public:
 private:
     std::string name = "";
     int value = 0;
+    bool preserveThroughInstanceLoad = false;
 };
 
 class AbandonQuestAction : public Action {

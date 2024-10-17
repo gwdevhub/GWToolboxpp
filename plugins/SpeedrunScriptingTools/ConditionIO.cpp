@@ -9,7 +9,7 @@ namespace
 {
 ConditionPtr makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 51);
+    static_assert((int)ConditionType::Count == 52);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -83,8 +83,10 @@ ConditionPtr makeCondition(ConditionType type)
         case ConditionType::AgentWithCharacteristicsCount:
             return std::make_shared<AgentWithCharacteristicsCountCondition>();
 
-        case ConditionType::ScriptVariable:
-            return std::make_shared<ScriptVariableCondition>();
+        case ConditionType::ScriptVariableValue:
+            return std::make_shared<ScriptVariableValueCondition>();
+        case ConditionType::ScriptVariableIsSet:
+            return std::make_shared<ScriptVariableIsSetCondition>();
         case ConditionType::PlayerHasSkillBySlot:
             return std::make_shared<PlayerHasSkillBySlotCondition>();
 
@@ -95,7 +97,7 @@ ConditionPtr makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 51);
+    static_assert((int)ConditionType::Count == 52);
     switch (type) {
         case ConditionType::Not:
             return "Not";
@@ -168,8 +170,10 @@ std::string_view toString(ConditionType type)
         case ConditionType::AgentWithCharacteristicsCount:
             return "Agent characteristics";
 
-        case ConditionType::ScriptVariable:
-            return "Variable";
+        case ConditionType::ScriptVariableValue:
+            return "Value";
+        case ConditionType::ScriptVariableIsSet:
+            return "Is set";
         case ConditionType::PlayerHasSkillBySlot:
             return "Has skill by slot";
 
@@ -181,7 +185,7 @@ std::string_view toString(ConditionType type)
 
 ConditionPtr readCondition(InputStream& stream)
 {
-static_assert((int)ConditionType::Count == 51);
+static_assert((int)ConditionType::Count == 52);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -259,9 +263,10 @@ switch (static_cast<ConditionType>(type))
     case ConditionType::PlayerHasSkillBySlot:
         return std::make_shared<PlayerHasSkillBySlotCondition>(stream);
 
-        
-    case ConditionType::ScriptVariable:
-        return std::make_shared<ScriptVariableCondition>(stream);
+    case ConditionType::ScriptVariableValue:
+        return std::make_shared<ScriptVariableValueCondition>(stream);
+    case ConditionType::ScriptVariableIsSet:
+        return std::make_shared<ScriptVariableIsSetCondition>(stream);
 
     default:
         return nullptr;
@@ -301,7 +306,8 @@ ConditionPtr drawConditionSelector(float width)
     constexpr auto partyConditions = std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName};
     constexpr auto instanceConditions = std::array{ConditionType::IsInMap, ConditionType::InstanceType, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime, ConditionType::FoeCount};
     constexpr auto logicConditions = std::array{ConditionType::Not, ConditionType::Or, ConditionType::And, ConditionType::True, ConditionType::False};
-    constexpr auto controlFlowCondition = std::array{ConditionType::OnlyTriggerOncePerInstance, ConditionType::Throttle, ConditionType::Once, ConditionType::Until, ConditionType::After, ConditionType::Toggle, ConditionType::ScriptVariable};
+    constexpr auto variableConditions = std::array{ConditionType::ScriptVariableValue, ConditionType::ScriptVariableIsSet};
+    constexpr auto controlFlowCondition = std::array{ConditionType::OnlyTriggerOncePerInstance, ConditionType::Throttle, ConditionType::Once, ConditionType::Until, ConditionType::After, ConditionType::Toggle};
 
     if (ImGui::BeginPopup("Add condition")) 
     {
@@ -322,6 +328,7 @@ ConditionPtr drawConditionSelector(float width)
         drawSubMenu("Party", partyConditions);
         drawSubMenu("Instance", instanceConditions);
         drawSubMenu("Logic", logicConditions);
+        drawSubMenu("Variable", variableConditions);
         drawSubMenu("Control flow", controlFlowCondition);
         drawConditionSelector(ConditionType::KeyIsPressed);
 
