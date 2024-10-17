@@ -53,22 +53,20 @@ namespace {
     // Version 11: Current.
     constexpr long currentVersion = 11;
 
-    bool mustComeLast(ConditionType type) 
+    enum CheckType 
     {
-        return type == ConditionType::OnlyTriggerOncePerInstance || type == ConditionType::Once || type == ConditionType::Throttle;
-    }
-
-    bool canAddCondition(const std::vector<ConditionPtr>& conditions)
+        NonFinal,
+        Final
+    };
+    bool checkConditions(const std::vector<ConditionPtr>& conditions, CheckType check = CheckType::NonFinal)
     {
-        return !std::ranges::any_of(conditions, [](const auto& cond) {
-            return mustComeLast(cond->type());
-        });
-    }
-
-    bool checkConditions(const std::vector<ConditionPtr>& conditions)
-    {
-        return std::ranges::all_of(conditions, [](const auto& cond) {
-            return cond->check();
+        return std::ranges::all_of(conditions, [&](const auto& cond) {
+            const auto type = cond->type();
+            const auto onlyCheckInFinal = type == ConditionType::OnlyTriggerOncePerInstance || type == ConditionType::Once || type == ConditionType::Throttle;
+            if ((check == CheckType::Final) == onlyCheckInFinal)
+                return cond->check();
+            else
+                return true;
         });
     }
 
@@ -338,16 +336,14 @@ namespace {
             if (ImGui::Button("X", ImVec2(20, 0))) {
                 conditionToDelete = it;
             }
-            if (!mustComeLast(it->get()->type())) {
                 ImGui::SameLine();
                 if (ImGui::Button("^", ImVec2(20, 0))) {
                     if (it != conditions.begin()) conditionsToSwap = {it - 1, it};
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("v", ImVec2(20, 0))) {
-                    if (it + 1 != conditions.end() && !mustComeLast((it + 1)->get()->type())) conditionsToSwap = {it, it + 1};
+                    if (it + 1 != conditions.end()) conditionsToSwap = {it, it + 1};
                 }
-            }
             ImGui::SameLine();
             (*it)->drawSettings();
             ImGui::PopID();
@@ -355,10 +351,8 @@ namespace {
         if (conditionToDelete.has_value()) conditions.erase(conditionToDelete.value());
         if (conditionsToSwap.has_value()) std::swap(*conditionsToSwap->first, *conditionsToSwap->second);
         // Add condition
-        if (canAddCondition(conditions)) {
-            if (auto newCondition = drawConditionSelector(ImGui::GetContentRegionAvail().x)) {
-                conditions.push_back(std::move(newCondition));
-            }
+        if (auto newCondition = drawConditionSelector(ImGui::GetContentRegionAvail().x)) {
+            conditions.push_back(std::move(newCondition));
         }
     }
     void drawActionSequenceSelector(std::vector<ActionPtr>& actions) {
@@ -676,7 +670,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Checkbox("Block hotkey keys even if conditions not met", &alwaysBlockHotkeyKeys);
 
-    ImGui::Text("Version 2.0.1-storeRestoreTargets. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 2.0.1-fixSimultaneouslyScriptTrigger. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
@@ -845,6 +839,7 @@ void SpeedrunScriptingTools::Update(float delta)
         if (!script.enabled || (script.conditions.empty() && script.trigger == Trigger::None) || script.actions.empty()) return false;
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !canBeRunInOutPost(script)) return false;
         if (std::ranges::any_of(m_currentScripts,[&](const Script& s){ return s.getId() == script.getId();})) return false;
+
         return checkConditions(script.conditions);
     };
     const auto addToCurrentScripts = [&](Script& script) {
@@ -860,8 +855,10 @@ void SpeedrunScriptingTools::Update(float delta)
     };
 
     if (std::ranges::any_of(m_currentScripts, [](const Script& s){ return s.globallyExclusive; })) return;
+    bool hasAddedGloballyExclusiveScript = false;
+
     // Find script to use
-    const auto checkScripts = [&](std::vector<Script>& scripts) 
+    const auto checkScripts = [&](std::vector<Script>& scripts, std::vector<ConditionPtr>& groupConditions) 
     {
         const auto isRunningAnyScript = m_currentScripts.size() > 0;
 
@@ -874,7 +871,8 @@ void SpeedrunScriptingTools::Update(float delta)
                 script.triggered = false;
                 continue;
             }
-            addToCurrentScripts(script);
+            if (checkConditions(script.conditions, CheckType::Final) && checkConditions(groupConditions, CheckType::Final))
+                addToCurrentScripts(script);
             return;
         }
         // Run any scripts still waiting for execution
@@ -886,10 +884,11 @@ void SpeedrunScriptingTools::Update(float delta)
                 script.triggered = false;
                 continue;
             }
-            addToCurrentScripts(script);
+            if (checkConditions(script.conditions, CheckType::Final) && checkConditions(groupConditions, CheckType::Final))
+                addToCurrentScripts(script);
             return;
         }
-        bool hasAddedScript = false;
+        
         // Find new "Always on" scripts to run
         for (auto& script : scripts | std::views::filter(std::not_fn(hasTrigger))) 
         {
@@ -897,11 +896,10 @@ void SpeedrunScriptingTools::Update(float delta)
             if (canRunScript(script)) 
             {
                 script.triggered = true;
-                if (!hasAddedScript) 
-                {
-                    hasAddedScript = true;
+                
+                if (!hasAddedGloballyExclusiveScript && checkConditions(script.conditions, CheckType::Final) && checkConditions(groupConditions, CheckType::Final))
                     addToCurrentScripts(script);
-                }
+                hasAddedGloballyExclusiveScript |= script.globallyExclusive;
             }
         }
     };
@@ -909,9 +907,10 @@ void SpeedrunScriptingTools::Update(float delta)
     for (auto& group : m_groups)
     {
         if (group.enabled && checkConditions(group.conditions)) 
-            checkScripts(group.scripts);
+            checkScripts(group.scripts, group.conditions);
     }
-    checkScripts(m_scripts);
+    std::vector<ConditionPtr> none;
+    checkScripts(m_scripts, none);
 }
 
 bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LPARAM lparam)
