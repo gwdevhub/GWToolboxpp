@@ -620,9 +620,12 @@ void IsStoredTargetCharacteristic::serialize(OutputStream& stream) const
 }
 bool IsStoredTargetCharacteristic::check(const GW::AgentLiving& agent) const
 {
-    return InstanceInfo::getInstance().isStoredTarget(agent);
+    const auto actual = InstanceInfo::getInstance().isStoredTarget(agent);
+    return actual == (comp == IsIsNot::Is);
 }
 void IsStoredTargetCharacteristic::drawSettings()
 {
-    ImGui::Text("Is stored target");
+    drawEnumButton(IsIsNot::Is, IsIsNot::IsNot, comp, 0, 40.f);
+    ImGui::SameLine();
+    ImGui::Text("stored target");
 }

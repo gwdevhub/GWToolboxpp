@@ -1913,19 +1913,19 @@ void GWKeyAction::drawSettings()
 SetVariableAction::SetVariableAction(InputStream& stream)
 {
     name = readStringWithSpaces(stream);
-    stream >> value;
+    stream >> value >> preserveThroughInstanceLoad;
 }
 void SetVariableAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
     writeStringWithSpaces(stream, name);
-    stream << value;
+    stream << value << preserveThroughInstanceLoad;
 }
 void SetVariableAction::initialAction()
 {
     Action::initialAction();
-    ScriptVariableManager::getInstance().set(name, value);
+    ScriptVariableManager::getInstance().set(name, {value, preserveThroughInstanceLoad});
 }
 
 void SetVariableAction::drawSettings()
@@ -1936,7 +1936,6 @@ void SetVariableAction::drawSettings()
     ImGui::Text("Set variable");
     ImGui::SameLine();
     ImGui::InputText("Name", &name);
-    std::erase_if(name, [](char c) { return std::isspace(c); });
 
     ImGui::PopItemWidth();
 
@@ -1944,6 +1943,9 @@ void SetVariableAction::drawSettings()
     ImGui::PushItemWidth(100.f);
     ImGui::InputInt("Value", &value, 0);
     ImGui::PopItemWidth();
+
+    ImGui::SameLine();
+    ImGui::Checkbox("Preserve through instance load", &preserveThroughInstanceLoad);
     
     ImGui::PopID();
 }

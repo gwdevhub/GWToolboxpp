@@ -1668,27 +1668,27 @@ void AgentWithCharacteristicsCountCondition::drawSettings()
     ImGui::PopID();
 }
 
-/// ------------- ScriptVariableCondition -------------
-ScriptVariableCondition::ScriptVariableCondition(InputStream& stream)
+/// ------------- ScriptVariableValueCondition -------------
+ScriptVariableValueCondition::ScriptVariableValueCondition(InputStream& stream)
 {
     name = readStringWithSpaces(stream);
     stream >> value >> comp;
 }
-void ScriptVariableCondition::serialize(OutputStream& stream) const
+void ScriptVariableValueCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
     writeStringWithSpaces(stream, name);
     stream << value << comp;
 }
-bool ScriptVariableCondition::check() const
+bool ScriptVariableValueCondition::check() const
 {
     const auto state = ScriptVariableManager::getInstance().get(name);
     if (!state.has_value()) return false;
 
-    return compare(state.value(), comp, value);
+    return compare(state->value, comp, value);
 }
-void ScriptVariableCondition::drawSettings()
+void ScriptVariableValueCondition::drawSettings()
 {
     ImGui::PushID(drawId());
     
@@ -1704,6 +1704,40 @@ void ScriptVariableCondition::drawSettings()
     ImGui::SameLine();
     ImGui::InputInt("Value", &value, 0);
     ImGui::PopItemWidth();
+
+    ImGui::PopID();
+}
+
+/// ------------- ScriptVariableIsSetCondition -------------
+ScriptVariableIsSetCondition::ScriptVariableIsSetCondition(InputStream& stream)
+{
+    name = readStringWithSpaces(stream);
+}
+void ScriptVariableIsSetCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    writeStringWithSpaces(stream, name);
+}
+bool ScriptVariableIsSetCondition::check() const
+{
+    const auto actual = ScriptVariableManager::getInstance().get(name).has_value();
+    return actual == (comp == IsIsNot::Is);
+}
+void ScriptVariableIsSetCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::PushItemWidth(200.f);
+    ImGui::Text("If variable");
+    ImGui::SameLine();
+    ImGui::InputText("Name", &name);
+    ImGui::PopItemWidth();
+
+    ImGui::SameLine();
+    drawEnumButton(IsIsNot::Is, IsIsNot::IsNot, comp, 0, 40.f);
+    ImGui::SameLine();
+    ImGui::Text("is set");
 
     ImGui::PopID();
 }

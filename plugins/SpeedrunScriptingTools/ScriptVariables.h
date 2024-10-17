@@ -7,6 +7,11 @@
 #include <string>
 #include <optional>
 
+struct Variable 
+{
+    int value = 0;
+    bool preserveThroughInstanceLoad = false;
+};
 class ScriptVariableManager {
 public:
     static ScriptVariableManager& getInstance()
@@ -15,8 +20,8 @@ public:
         return info;
     }
 
-    void set(const std::string& name, int value) { variables[name] = value; }
-    std::optional<int> get(const std::string& name) const 
+    void set(const std::string& name, Variable var) { variables[name] = var; }
+    std::optional<Variable> get(const std::string& name) const 
     {
         if (variables.contains(name)) 
         {
@@ -24,12 +29,12 @@ public:
         }
         return std::nullopt;
     }
-    void clear() { variables.clear(); }
+    void clear() { std::erase_if(variables, [](const auto& elem){return !elem.second.preserveThroughInstanceLoad;}); }
 
 private:
     ScriptVariableManager() = default;
     ScriptVariableManager(const ScriptVariableManager&) = delete;
     ScriptVariableManager(ScriptVariableManager&&) = delete;
 
-    std::unordered_map<std::string, int> variables;
+    std::unordered_map<std::string, Variable> variables;
 };
