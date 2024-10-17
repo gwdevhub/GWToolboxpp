@@ -500,3 +500,17 @@ private:
     std::string name = "";
     int value = 0;
 };
+
+class AbandonQuestAction : public Action {
+public:
+    AbandonQuestAction() = default;
+    AbandonQuestAction(InputStream&);
+    ActionType type() const final { return ActionType::AbandonQuest; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost | ActionBehaviourFlag::ImmediateFinish; }
+
+private:
+    std::string name = "";
+};

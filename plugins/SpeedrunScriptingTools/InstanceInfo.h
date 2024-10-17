@@ -36,6 +36,7 @@ public:
     }
     QuestStatus getObjectiveStatus(uint32_t);
     std::string getDecodedAgentName(GW::AgentID);
+    std::string getDecodedQuestName(GW::Constants::QuestID) const;
     std::string getDecodedItemName(uint32_t);
 
     bool canPopAgent() const;
@@ -62,6 +63,7 @@ private:
     std::unordered_map<uint32_t, std::wstring> decodedItemNames;
     std::unordered_map<int, GW::AgentID> storedTargets;
     std::unordered_map<Hotkey, int> disabledKeys;
+    std::unordered_map<GW::Constants::QuestID, std::wstring> questNames;
     int instanceId = 0;
     MiniPetStatus mpStatus;
 };

@@ -6,7 +6,7 @@
 namespace {
     ActionPtr makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 34);
+        static_assert((int)ActionType::Count == 35);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -74,6 +74,8 @@ namespace {
                 return std::make_shared<LeaveCriticalSectionAction>();
             case ActionType::SetVariable:
                 return std::make_shared<SetVariableAction>();
+            case ActionType::AbandonQuest:
+                return std::make_shared<AbandonQuestAction>();
             default:
                 return nullptr;
         }
@@ -82,7 +84,7 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 34);
+    static_assert((int)ActionType::Count == 35);
     switch (type) {
         case ActionType::MoveTo:
             return "Position";
@@ -150,6 +152,8 @@ std::string_view toString(ActionType type)
             return "Leave critical section";
         case ActionType::SetVariable:
             return "Set variable";
+        case ActionType::AbandonQuest:
+            return "Abandon quest";
         default:
             return "Unknown";
     }
@@ -157,7 +161,7 @@ std::string_view toString(ActionType type)
 
 ActionPtr readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 34);
+    static_assert((int)ActionType::Count == 35);
     int type;
 
     stream >> type;
@@ -228,6 +232,8 @@ ActionPtr readAction(InputStream& stream)
             return std::make_shared<LeaveCriticalSectionAction>(stream);
         case ActionType::SetVariable:
             return std::make_shared<SetVariableAction>(stream);
+        case ActionType::AbandonQuest:
+            return std::make_shared<AbandonQuestAction>(stream);
         default:
             return nullptr;
     }
@@ -269,7 +275,7 @@ ActionPtr drawActionSelector(float width)
         drawSubMenu("Targeting", std::array{ActionType::ChangeTarget, ActionType::StoreTarget, ActionType::RestoreTarget, ActionType::ClearTarget});
         drawSubMenu("Items", std::array{ActionType::EquipItem, ActionType::EquipItemBySlot, ActionType::ChangeWeaponSet, ActionType::UseItem, ActionType::RepopMinipet, ActionType::UnequipItem});
         drawSubMenu("Chat", std::array{ActionType::SendChat, ActionType::PingTarget, ActionType::PingHardMode});
-        drawSubMenu("Other", std::array{ActionType::Wait, ActionType::WaitUntil, ActionType::Cancel, ActionType::LogOut, ActionType::GWKey, ActionType::StopScript, ActionType::EnterCriticalSection, ActionType::LeaveCriticalSection, ActionType::SetVariable});
+        drawSubMenu("Other", std::array{ActionType::Wait, ActionType::WaitUntil, ActionType::Cancel, ActionType::LogOut, ActionType::GWKey, ActionType::StopScript, ActionType::EnterCriticalSection, ActionType::LeaveCriticalSection, ActionType::SetVariable, ActionType::AbandonQuest});
         drawActionSelector(ActionType::Conditioned);
 
         ImGui::EndPopup();

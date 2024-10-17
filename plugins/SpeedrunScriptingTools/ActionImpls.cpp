@@ -18,6 +18,7 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
 
 #include <GWCA/Packets/Opcodes.h>
 #include <GWCA/Packets/StoC.h>
@@ -25,6 +26,7 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Camera.h>
 
 #include <ImGuiCppWrapper.h>
@@ -1910,13 +1912,15 @@ void GWKeyAction::drawSettings()
 /// ------------- SetVariableAction -------------
 SetVariableAction::SetVariableAction(InputStream& stream)
 {
-    stream >> name >> value;
+    name = readStringWithSpaces(stream);
+    stream >> value;
 }
 void SetVariableAction::serialize(OutputStream& stream) const
 {
     Action::serialize(stream);
 
-    stream << name << value;
+    writeStringWithSpaces(stream, name);
+    stream << value;
 }
 void SetVariableAction::initialAction()
 {
@@ -1932,6 +1936,8 @@ void SetVariableAction::drawSettings()
     ImGui::Text("Set variable");
     ImGui::SameLine();
     ImGui::InputText("Name", &name);
+    std::erase_if(name, [](char c) { return std::isspace(c); });
+
     ImGui::PopItemWidth();
 
     ImGui::SameLine();
@@ -1939,5 +1945,48 @@ void SetVariableAction::drawSettings()
     ImGui::InputInt("Value", &value, 0);
     ImGui::PopItemWidth();
     
+    ImGui::PopID();
+}
+
+/// ------------- AbandonQuestAction -------------
+AbandonQuestAction::AbandonQuestAction(InputStream& stream)
+{
+    name = readStringWithSpaces(stream);
+}
+void AbandonQuestAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    writeStringWithSpaces(stream, name);
+}
+void AbandonQuestAction::initialAction()
+{
+    Action::initialAction();
+
+    const auto questLog = GW::QuestMgr::GetQuestLog();
+    if (!questLog || name.empty()) return;
+    const auto& instanceInfo = InstanceInfo::getInstance();
+
+    for (auto& quest : *questLog) 
+    {
+        const auto questName = instanceInfo.getDecodedQuestName(quest.quest_id);
+        if (questName == name) 
+        {
+            GW::QuestMgr::AbandonQuest(&quest);
+        }
+    }
+}
+
+void AbandonQuestAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::PushItemWidth(200.f);
+    ImGui::Text("Abandon quest");
+    ImGui::SameLine();
+    ImGui::InputText("Name", &name);
+
+    ImGui::PopItemWidth();
+
     ImGui::PopID();
 }
