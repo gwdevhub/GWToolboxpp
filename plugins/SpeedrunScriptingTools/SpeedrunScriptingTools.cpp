@@ -854,23 +854,20 @@ void SpeedrunScriptingTools::Update(float delta)
         return s.triggered;
     };
 
-    if (std::ranges::any_of(m_currentScripts, [](const Script& s){ return s.globallyExclusive; })) return;
-    bool hasAddedGloballyExclusiveScript = false;
-
     // Find script to use
     const auto checkScripts = [&](std::vector<Script>& scripts, std::vector<ConditionPtr>& groupConditions) 
     {
+        if (std::ranges::any_of(m_currentScripts, [](const Script& s){ return s.globallyExclusive; })) return;
         const auto isRunningAnyScript = m_currentScripts.size() > 0;
 
         // Check scripts with triggers first, as these are typically more time-sensitive
-        for (auto& script : scripts | std::views::filter(hasTrigger) | std::views::filter(isTriggered)) 
-        {
+        for (auto& script : scripts | std::views::filter(hasTrigger) | std::views::filter(isTriggered)) {
             if (isRunningAnyScript && !script.canLaunchInParallel) continue;
-            if (!canRunScript(script)) 
-            {
-                script.triggered = false;
+            
+            script.triggered = false;
+
+            if (!canRunScript(script))
                 continue;
-            }
             if (checkConditions(script.conditions, CheckType::Final) && checkConditions(groupConditions, CheckType::Final))
                 addToCurrentScripts(script);
             return;
@@ -879,28 +876,18 @@ void SpeedrunScriptingTools::Update(float delta)
         for (auto& script : scripts | std::views::filter(std::not_fn(hasTrigger)) | std::views::filter(isTriggered)) 
         {
             if (isRunningAnyScript && !script.canLaunchInParallel) continue;
-            if (!canRunScript(script)) 
-            {
-                script.triggered = false;
-                continue;
-            }
-            if (checkConditions(script.conditions, CheckType::Final) && checkConditions(groupConditions, CheckType::Final))
-                addToCurrentScripts(script);
+            
+            script.triggered = false;
+
+            if (!canRunScript(script)) continue;
+            if (checkConditions(script.conditions, CheckType::Final) && checkConditions(groupConditions, CheckType::Final)) addToCurrentScripts(script);
             return;
         }
         
-        // Find new "Always on" scripts to run
+        // Trigger "Always on" scripts
         for (auto& script : scripts | std::views::filter(std::not_fn(hasTrigger))) 
         {
-            if (isRunningAnyScript && !script.canLaunchInParallel) continue;
-            if (canRunScript(script)) 
-            {
-                script.triggered = true;
-                
-                if (!hasAddedGloballyExclusiveScript && checkConditions(script.conditions, CheckType::Final) && checkConditions(groupConditions, CheckType::Final))
-                    addToCurrentScripts(script);
-                hasAddedGloballyExclusiveScript |= script.globallyExclusive;
-            }
+            script.triggered = (!isRunningAnyScript || script.canLaunchInParallel) && canRunScript(script) && checkConditions(script.conditions);
         }
     };
 
