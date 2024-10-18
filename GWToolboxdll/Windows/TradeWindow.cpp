@@ -733,7 +733,7 @@ void TradeWindow::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(filter_local_trade);
     LOAD_BOOL(is_kamadan_chat);
 
-    strcpy(player_party_search_text, ini->GetValue(Name(), "player_party_search_text", ""));
+    strncpy(player_party_search_text, ini->GetValue(Name(), "player_party_search_text", ""), _countof(player_party_search_text) - 1);
 
     std::ifstream alert_file;
     alert_file.open(Resources::GetSettingFile(L"AlertKeywords.txt"));
