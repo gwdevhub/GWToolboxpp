@@ -1950,6 +1950,79 @@ void SetVariableAction::drawSettings()
     ImGui::PopID();
 }
 
+/// ------------- IncrementVariableAction -------------
+IncrementVariableAction::IncrementVariableAction(InputStream& stream)
+{
+    name = readStringWithSpaces(stream);
+}
+void IncrementVariableAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    writeStringWithSpaces(stream, name);
+}
+void IncrementVariableAction::initialAction()
+{
+    Action::initialAction();
+
+    auto& scriptManager = ScriptVariableManager::getInstance();
+    if (auto value = scriptManager.get(name))
+    {
+        value->value += 1;
+        scriptManager.set(name, *value);
+    } 
+}
+
+void IncrementVariableAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::PushItemWidth(200.f);
+    ImGui::Text("Increment variable");
+    ImGui::SameLine();
+    ImGui::InputText("Name", &name);
+
+    ImGui::PopItemWidth();
+
+    ImGui::PopID();
+}
+
+/// ------------- DecrementVariableAction -------------
+DecrementVariableAction::DecrementVariableAction(InputStream& stream)
+{
+    name = readStringWithSpaces(stream);
+}
+void DecrementVariableAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    writeStringWithSpaces(stream, name);
+}
+void DecrementVariableAction::initialAction()
+{
+    Action::initialAction();
+
+    auto& scriptManager = ScriptVariableManager::getInstance();
+    if (auto value = scriptManager.get(name)) {
+        value->value -= 1;
+        scriptManager.set(name, *value);
+    }
+}
+
+void DecrementVariableAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::PushItemWidth(200.f);
+    ImGui::Text("Decrement variable");
+    ImGui::SameLine();
+    ImGui::InputText("Name", &name);
+
+    ImGui::PopItemWidth();
+
+    ImGui::PopID();
+}
+
 /// ------------- AbandonQuestAction -------------
 AbandonQuestAction::AbandonQuestAction(InputStream& stream)
 {

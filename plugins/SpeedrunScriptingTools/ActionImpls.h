@@ -502,6 +502,34 @@ private:
     bool preserveThroughInstanceLoad = false;
 };
 
+class IncrementVariableAction : public Action {
+public:
+    IncrementVariableAction() = default;
+    IncrementVariableAction(InputStream&);
+    ActionType type() const final { return ActionType::IncrementVariable; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost | ActionBehaviourFlag::ImmediateFinish; }
+
+private:
+    std::string name = "";
+};
+
+class DecrementVariableAction : public Action {
+public:
+    DecrementVariableAction() = default;
+    DecrementVariableAction(InputStream&);
+    ActionType type() const final { return ActionType::DecrementVariable; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost | ActionBehaviourFlag::ImmediateFinish; }
+
+private:
+    std::string name = "";
+};
+
 class AbandonQuestAction : public Action {
 public:
     AbandonQuestAction() = default;

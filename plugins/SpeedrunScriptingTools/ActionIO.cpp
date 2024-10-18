@@ -6,7 +6,7 @@
 namespace {
     ActionPtr makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 35);
+        static_assert((int)ActionType::Count == 37);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -74,6 +74,10 @@ namespace {
                 return std::make_shared<LeaveCriticalSectionAction>();
             case ActionType::SetVariable:
                 return std::make_shared<SetVariableAction>();
+            case ActionType::DecrementVariable:
+                return std::make_shared<DecrementVariableAction>();
+            case ActionType::IncrementVariable:
+                return std::make_shared<IncrementVariableAction>();
             case ActionType::AbandonQuest:
                 return std::make_shared<AbandonQuestAction>();
             default:
@@ -84,7 +88,7 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 35);
+    static_assert((int)ActionType::Count == 37);
     switch (type) {
         case ActionType::MoveTo:
             return "Position";
@@ -151,7 +155,11 @@ std::string_view toString(ActionType type)
         case ActionType::LeaveCriticalSection:
             return "Leave critical section";
         case ActionType::SetVariable:
-            return "Set variable";
+            return "Set";
+        case ActionType::DecrementVariable:
+            return "Decrement";
+        case ActionType::IncrementVariable:
+            return "Increment";
         case ActionType::AbandonQuest:
             return "Abandon quest";
         default:
@@ -161,7 +169,7 @@ std::string_view toString(ActionType type)
 
 ActionPtr readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 35);
+    static_assert((int)ActionType::Count == 37);
     int type;
 
     stream >> type;
@@ -232,6 +240,10 @@ ActionPtr readAction(InputStream& stream)
             return std::make_shared<LeaveCriticalSectionAction>(stream);
         case ActionType::SetVariable:
             return std::make_shared<SetVariableAction>(stream);
+        case ActionType::DecrementVariable:
+            return std::make_shared<DecrementVariableAction>(stream);
+        case ActionType::IncrementVariable:
+            return std::make_shared<IncrementVariableAction>(stream);
         case ActionType::AbandonQuest:
             return std::make_shared<AbandonQuestAction>(stream);
         default:
@@ -275,7 +287,9 @@ ActionPtr drawActionSelector(float width)
         drawSubMenu("Targeting", std::array{ActionType::ChangeTarget, ActionType::StoreTarget, ActionType::RestoreTarget, ActionType::ClearTarget});
         drawSubMenu("Items", std::array{ActionType::EquipItem, ActionType::EquipItemBySlot, ActionType::ChangeWeaponSet, ActionType::UseItem, ActionType::RepopMinipet, ActionType::UnequipItem});
         drawSubMenu("Chat", std::array{ActionType::SendChat, ActionType::PingTarget, ActionType::PingHardMode});
-        drawSubMenu("Other", std::array{ActionType::Wait, ActionType::WaitUntil, ActionType::Cancel, ActionType::LogOut, ActionType::GWKey, ActionType::StopScript, ActionType::EnterCriticalSection, ActionType::LeaveCriticalSection, ActionType::SetVariable, ActionType::AbandonQuest});
+        drawSubMenu("Control flow", std::array{ActionType::Wait, ActionType::WaitUntil, ActionType::StopScript, ActionType::EnterCriticalSection, ActionType::LeaveCriticalSection});
+        drawSubMenu("Variables", std::array{ActionType::SetVariable, ActionType::IncrementVariable, ActionType::DecrementVariable});
+        drawSubMenu("Other", std::array{ActionType::Cancel, ActionType::LogOut, ActionType::GWKey, ActionType::AbandonQuest});
         drawActionSelector(ActionType::Conditioned);
 
         ImGui::EndPopup();
