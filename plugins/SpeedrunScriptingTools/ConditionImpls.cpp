@@ -1712,12 +1712,14 @@ void ScriptVariableValueCondition::drawSettings()
 ScriptVariableIsSetCondition::ScriptVariableIsSetCondition(InputStream& stream)
 {
     name = readStringWithSpaces(stream);
+    stream >> comp;
 }
 void ScriptVariableIsSetCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
     writeStringWithSpaces(stream, name);
+    stream << comp;
 }
 bool ScriptVariableIsSetCondition::check() const
 {
@@ -1737,7 +1739,7 @@ void ScriptVariableIsSetCondition::drawSettings()
     ImGui::SameLine();
     drawEnumButton(IsIsNot::Is, IsIsNot::IsNot, comp, 0, 40.f);
     ImGui::SameLine();
-    ImGui::Text("is set");
+    ImGui::Text("set");
 
     ImGui::PopID();
 }

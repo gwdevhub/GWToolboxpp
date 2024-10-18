@@ -68,7 +68,7 @@ std::string readStringWithSpaces(InputStream& stream)
     if (stream.isAtSeparator()) return "";
     std::string result;
     std::string word;
-    while (stream >> word) {
+    while (!stream.isAtSeparator() && stream >> word) {
         if (word == endOfStringSignifier) break;
         result += word + " ";
     }
