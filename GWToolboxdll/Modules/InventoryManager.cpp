@@ -44,6 +44,8 @@ namespace {
     ImVec4 ItemGold = ImColor(255, 204, 86).Value;
 
     bool trade_whole_stacks = false;
+    bool move_to_trade_on_double_click = true;
+    bool move_to_trade_on_alt_click = false;
 
     const char* bag_names[5] = {
         "None",
@@ -1033,6 +1035,8 @@ void InventoryManager::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(change_secondary_for_tome);
     SAVE_BOOL(right_click_context_menu_in_outpost);
     SAVE_BOOL(right_click_context_menu_in_explorable);
+    SAVE_BOOL(move_to_trade_on_double_click);
+    SAVE_BOOL(move_to_trade_on_alt_click);
 
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_backpack), bags_to_salvage_from[GW::Constants::Bag::Backpack]);
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
@@ -1055,6 +1059,8 @@ void InventoryManager::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(change_secondary_for_tome);
     LOAD_BOOL(right_click_context_menu_in_outpost);
     LOAD_BOOL(right_click_context_menu_in_explorable);
+    LOAD_BOOL(move_to_trade_on_double_click);
+    LOAD_BOOL(move_to_trade_on_alt_click);
 
     bags_to_salvage_from[GW::Constants::Bag::Backpack] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_backpack), bags_to_salvage_from[GW::Constants::Bag::Backpack]);
     bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
@@ -1772,6 +1778,15 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::Checkbox("Hide weapon sets and customized items from merchant window", &hide_weapon_sets_and_customized_items);
     ImGui::Checkbox("Move whole stacks by default", &trade_whole_stacks);
     ImGui::ShowHelp("Shift drag to prompt for amount, drag without shift to move the whole stack without any item quantity prompts");
+    ImGui::TextUnformatted("Move items to trade on:");
+    ImGui::ShowHelp("When trading with another player, you normally have to drag an item from inventory to the trade window. Enable an option below to make it easier.");
+    ImGui::Indent();
+    if (ImGui::Checkbox("Double Click", &move_to_trade_on_double_click) && move_to_trade_on_alt_click)
+        move_to_trade_on_alt_click = false;
+    ImGui::SameLine();
+    if (ImGui::Checkbox("Alt+Click", &move_to_trade_on_alt_click) && move_to_trade_on_alt_click)
+        move_to_trade_on_double_click = false;
+    ImGui::Unindent();
     ImGui::Checkbox("Show 'Guild Wars Wiki' link on item context menu", &wiki_link_on_context_menu);
     ImGui::Checkbox("Prompt to change secondary profession when using a tome", &change_secondary_for_tome);
     ImGui::Text("Right click an item to open context menu in:");
@@ -2271,8 +2286,8 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
     const Item* item = nullptr;
     switch (type) {
         case 7: // Left click
-            if (ImGui::IsKeyDown(ImGuiMod_Ctrl) && !ImGui::IsKeyDown(ImGuiMod_Alt)
-                && GameSettings::GetSettingBool("move_item_on_ctrl_click")
+            if (ImGui::IsKeyDown(ImGuiMod_Ctrl) 
+                && GameSettings::GetSettingBool("move_item_on_ctrl_click") 
                 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
                 // Ctrl+Click: Move item to inventory/chest
                 if (bag) {
@@ -2291,11 +2306,10 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
                 else {
                     move_item(item);
                 }
+                return;
             }
-            else if (ImGui::IsKeyDown(ImGuiMod_Alt) && !ImGui::IsKeyDown(ImGuiMod_Ctrl) && IsTradeWindowOpen()
-                && GameSettings::GetSettingBool("move_to_trade_on_double_click") && GameSettings::GetSettingBool("move_to_trade_on_alt_click")) {
+            if (ImGui::IsKeyDown(ImGuiMod_Alt) && move_to_trade_on_alt_click && IsTradeWindowOpen()) {
                 // Alt+Click: Add to trade window if available
-                status->blocked = true;
                 item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
                 if (!item || !item->CanOfferToTrade()) {
                     return;
@@ -2311,12 +2325,8 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
             }
             return;
         case 8: // Double click
-            if (!IsTradeWindowOpen()) {
-                return;
-            }
-            else if (GameSettings::GetSettingBool("move_to_trade_on_double_click") && !GameSettings::GetSettingBool("move_to_trade_on_alt_click")) {
-                // Add to trade if available
-                status->blocked = true;
+            if (move_to_trade_on_double_click && IsTradeWindowOpen()) {
+                // Alt+Click: Add to trade window if available
                 item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
                 if (!item || !item->CanOfferToTrade()) {
                     return;

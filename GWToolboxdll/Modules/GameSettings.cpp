@@ -165,8 +165,6 @@ namespace {
     bool move_item_on_ctrl_click = false;
     bool move_item_to_current_storage_pane = true;
     bool move_materials_to_current_storage_pane = false;
-    bool move_to_trade_on_double_click = true;
-    bool move_to_trade_on_alt_click = false;
     bool drop_ua_on_cast = false;
 
     bool focus_window_on_launch = true;
@@ -1219,8 +1217,6 @@ bool GameSettings::GetSettingBool(const char* setting)
     RETURN_SETTING_IF_MATCH(move_materials_to_current_storage_pane);
     RETURN_SETTING_IF_MATCH(move_item_to_current_storage_pane);
     RETURN_SETTING_IF_MATCH(move_item_on_ctrl_click);
-    RETURN_SETTING_IF_MATCH(move_to_trade_on_double_click);
-    RETURN_SETTING_IF_MATCH(move_to_trade_on_alt_click);
 
     ASSERT("Failed to find valid setting" && false);
     return false;
@@ -1705,8 +1701,6 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(move_item_on_ctrl_click);
     LOAD_BOOL(move_item_to_current_storage_pane);
     LOAD_BOOL(move_materials_to_current_storage_pane);
-    LOAD_BOOL(move_to_trade_on_double_click);
-    LOAD_BOOL(move_to_trade_on_alt_click);
 
     LOAD_BOOL(flash_window_on_zoning);
     LOAD_BOOL(flash_window_on_cinematic);
@@ -1877,8 +1871,6 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(move_item_on_ctrl_click);
     SAVE_BOOL(move_item_to_current_storage_pane);
     SAVE_BOOL(move_materials_to_current_storage_pane);
-    SAVE_BOOL(move_to_trade_on_double_click);
-    SAVE_BOOL(move_to_trade_on_alt_click);
     SAVE_BOOL(stop_screen_shake);
 
     SAVE_BOOL(flash_window_on_zoning);
@@ -1997,11 +1989,6 @@ void GameSettings::DrawInventorySettings()
     }
     ImGui::TextDisabled(logic);
     ImGui::Unindent();
-    ImGui::Unindent();
-
-    ImGui::Checkbox("Move items to trade on Double Click", &move_to_trade_on_double_click);
-    ImGui::Indent();
-    ImGui::Checkbox("Use Alt+Click instead", &move_to_trade_on_alt_click);
     ImGui::Unindent();
 
     ImGui::Checkbox("Shorthand item description on weapon ping", &shorthand_item_ping);
