@@ -790,6 +790,11 @@ void SpeedrunScriptingTools::Update(float delta)
     if (isInLoadingScreen || !map || map->GetIsPvP() || !GW::Agents::GetControlledCharacter() || (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !runInOutposts)) {
         return;
     }
+    if (framesSinceLoadingFinished < 3) 
+    {
+        ++framesSinceLoadingFinished;
+        return;
+    }
 
     std::erase_if(m_currentScripts, [](const Script& s){return s.actions.empty();});
     for (auto& currentScript : m_currentScripts) 
@@ -1016,6 +1021,7 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
     {
         ScriptVariableManager::getInstance().clear();
         isInLoadingScreen = false;
+        framesSinceLoadingFinished = 0;
 
         const auto triggerScripts = [](auto& scripts) {
             std::ranges::for_each(scripts, [](Script& s) {

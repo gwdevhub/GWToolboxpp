@@ -73,5 +73,6 @@ private:
     bool runInOutposts = false;
     bool alwaysBlockHotkeyKeys = false;
     bool isInLoadingScreen = false;
+    int framesSinceLoadingFinished = 0;
     Hotkey clearScriptsKey{};
 };
