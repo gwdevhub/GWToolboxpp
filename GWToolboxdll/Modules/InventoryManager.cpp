@@ -2332,12 +2332,14 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
                     return;
                 }
                 if (!item->bag->IsInventoryBag()) {
+                    status->blocked = true;
                     const uint16_t moved = move_to_first_empty_slot(item, GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2);
                     if (!moved) {
                         Log::ErrorW(L"Failed to move item to inventory for trading");
                         return;
                     }
                 }
+                status->blocked = true;
                 pending_item_move_for_trade = item->item_id;
             }
             return;
