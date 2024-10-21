@@ -2326,6 +2326,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
             return;
         case 8: // Double click
             if (move_to_trade_on_double_click && IsTradeWindowOpen()) {
+                status->blocked = true;
                 // Alt+Click: Add to trade window if available
                 item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
                 if (!item || !item->CanOfferToTrade()) {
