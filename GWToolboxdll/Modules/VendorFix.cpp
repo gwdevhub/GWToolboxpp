@@ -48,6 +48,7 @@ namespace {
                 ui_message.item_id = item->item_id;
                 ui_message.slot_id = item->slot;
                 ui_message.bag_index = bag->index;
+                GW::UI::SendFrameUIMessage(frame, GW::UI::UIMessage::kInventorySlotCleared, &ui_message);
                 GW::UI::SendFrameUIMessage(frame, GW::UI::UIMessage::kInventorySlotUpdated, &ui_message);
             }
         }
