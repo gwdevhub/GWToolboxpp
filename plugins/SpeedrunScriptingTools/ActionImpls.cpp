@@ -232,9 +232,9 @@ ActionStatus MoveToAction::isComplete() const
     {
         if (moveBehaviour == MoveToBehaviour::RepeatIfIdle) 
         {
-            const auto radius = std::min((int)(accuracy / 4), 10);
-            float px = radius > 0 ? pos.x + (rand() % radius - radius / 2) : pos.x;
-            float py = radius > 0 ? pos.y + (rand() % radius - radius / 2) : pos.y;
+            constexpr auto radius = 5;
+            float px = pos.x + float(rand() % radius - radius / 2) / radius;
+            float py = pos.y + float(rand() % radius - radius / 2) / radius;
 
             const auto now = std::chrono::steady_clock::now();
             const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastMovePacketTime).count();
@@ -318,9 +318,9 @@ ActionStatus MoveToTargetPositionAction::isComplete() const
 
     if (!player->GetIsMoving() && distance > accuracy + eps) {
         if (moveBehaviour == MoveToBehaviour::RepeatIfIdle) {
-            const auto radius = std::min((int)(accuracy + eps), 10);
-            float px = radius > 0 ? pos.x + (rand() % radius - radius / 2) : pos.x;
-            float py = radius > 0 ? pos.y + (rand() % radius - radius / 2) : pos.y;
+            constexpr auto radius = 5;
+            float px = pos.x + float(rand() % radius - radius / 2) / radius;
+            float py = pos.y + float(rand() % radius - radius / 2) / radius;
 
             const auto now = std::chrono::steady_clock::now();
             const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastMovePacketTime).count();
