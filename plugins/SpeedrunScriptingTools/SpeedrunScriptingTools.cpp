@@ -790,7 +790,7 @@ void SpeedrunScriptingTools::Update(float delta)
     if (isInLoadingScreen || !map || map->GetIsPvP() || !GW::Agents::GetControlledCharacter() || (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !runInOutposts)) {
         return;
     }
-    if (framesSinceLoadingFinished < 3) 
+    if (framesSinceLoadingFinished < 1) 
     {
         ++framesSinceLoadingFinished;
         return;
