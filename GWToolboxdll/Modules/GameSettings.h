@@ -75,7 +75,6 @@ public:
     static void OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
     static void OnCinematic(const GW::HookStatus*, const GW::Packet::StoC::CinematicPlay*);
     static void OnMapTravel(const GW::HookStatus*, const GW::Packet::StoC::GameSrvTransfer*);
-    static void OnTradeStarted(GW::HookStatus*, GW::Packet::StoC::TradeStart*);
     static void OnPlayerLeaveInstance(GW::HookStatus*, const GW::Packet::StoC::PlayerLeaveInstance*);
     static void OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::PlayerJoinInstance*);
     static void OnPartyInviteReceived(const GW::HookStatus*, const GW::Packet::StoC::PartyInviteReceived_Create*);

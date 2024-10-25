@@ -1190,6 +1190,14 @@ namespace {
         if (status->blocked)
             return;
         switch (message_id) {
+        case GW::UI::UIMessage::kTradeSessionStart: {
+            if (flash_window_on_trade) {
+                FlashWindow();
+            }
+            if (focus_window_on_trade) {
+                FocusWindow();
+            }
+        } break;
         case GW::UI::UIMessage::kPartySearchInviteSent: {
             // Automatically send a party window invite when a party search invite is sent
             const auto packet = (GW::UI::UIPacket::kPartySearchInvite*)wParam;
@@ -1502,7 +1510,6 @@ void GameSettings::Initialize()
         if (false && !GW::Agents::GetAgentByID(packet->agent_id))
             status->blocked = true;
         });*/
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TradeStart>(&TradeStart_Entry, OnTradeStarted);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&TradeStart_Entry, OnPlayEffect);
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PartyPlayerAdd_Entry, OnPartyInviteReceived);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, bind_member(this, &GameSettings::OnPartyPlayerJoined));
@@ -1573,7 +1580,8 @@ void GameSettings::Initialize()
     constexpr GW::UI::UIMessage post_ui_messages[] = {
         GW::UI::UIMessage::kPartySearchInviteSent,
         GW::UI::UIMessage::kPreferenceValueChanged,
-        GW::UI::UIMessage::kMapLoaded
+        GW::UI::UIMessage::kMapLoaded,
+        GW::UI::UIMessage::kTradeSessionStart
     };
     for (const auto message_id : post_ui_messages) {
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
@@ -2547,20 +2555,6 @@ void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::Dun
 {
     if (hide_dungeon_chest_popup) {
         status->blocked = true;
-    }
-}
-
-// Flash/focus window on trade
-void GameSettings::OnTradeStarted(GW::HookStatus* status, GW::Packet::StoC::TradeStart*)
-{
-    if (status->blocked) {
-        return;
-    }
-    if (flash_window_on_trade) {
-        FlashWindow();
-    }
-    if (focus_window_on_trade) {
-        FocusWindow();
     }
 }
 
