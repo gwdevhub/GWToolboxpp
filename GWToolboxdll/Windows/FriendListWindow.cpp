@@ -376,13 +376,10 @@ namespace {
     };
     GW::HookEntry OnPreStoCPacket_Entry;
     void OnPreStoCPacket(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak) {
-        if (status->blocked)
-            return;
         switch (pak->header) {
         case GW::Packet::StoC::MessageLocal::STATIC_HEADER: 
         case GW::Packet::StoC::MessageGlobal::STATIC_HEADER: {
-            if (FriendListWindow::GetIsPlayerIgnored(pak))
-                status->blocked = true;
+            status->blocked |= FriendListWindow::GetIsPlayerIgnored(pak);
         } break;
         }
     }
@@ -392,15 +389,9 @@ namespace {
         if (status->blocked)
             return;
         switch (pak->header) {
-        case GW::Packet::StoC::TradeStart::STATIC_HEADER: {
-            if (FriendListWindow::GetIsPlayerIgnored(pak))
-                GW::Trade::CancelTrade();
-        } break;
         case GW::Packet::StoC::PartyInviteReceived_Create::STATIC_HEADER: {
-            if (FriendListWindow::GetIsPlayerIgnored(pak)) {
-                const auto p = (GW::Packet::StoC::PartyInviteReceived_Create*)pak;
-                GW::PartyMgr::RespondToPartyRequest(p->target_party_id, false);
-            }
+            if (FriendListWindow::GetIsPlayerIgnored(pak) && !GW::PartyMgr::RespondToPartyRequest(((uint32_t*)pak)[1], false))
+                Log::Warning("Failed to reject invite from ignored player");
         } break;
         case GW::Packet::StoC::PlayerJoinInstance::STATIC_HEADER: {
             const auto p = (GW::Packet::StoC::PlayerJoinInstance*)pak;
@@ -421,10 +412,17 @@ namespace {
     clock_t offline_status_reminder_last_sent = 0;
     bool check_currently_offline_reminder = false;
 
+    clock_t pending_cancel_trade = 0;
+
     GW::HookEntry OnUIMessage_Entry;
     void OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
+        case GW::UI::UIMessage::kTradeSessionStart:
+            // NB: At this point, the trade invitation window isn't drawn in the UI, so trying to cancel in the current frame would fail.
+            if (FriendListWindow::GetIsPlayerIgnored(((uint32_t*)wparam)[1]))
+                pending_cancel_trade = TIMER_INIT();
+            break;
         case GW::UI::UIMessage::kSetAgentNameTagAttribs:
         case GW::UI::UIMessage::kShowAgentNameTag: {
             if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !friend_name_tag_enabled) {
@@ -870,7 +868,8 @@ void FriendListWindow::Initialize()
         GW::UI::UIMessage::kShowAgentNameTag,
         GW::UI::UIMessage::kWriteToChatLog,
         GW::UI::UIMessage::kOpenWhisper,
-        GW::UI::UIMessage::kSendChatMessage
+        GW::UI::UIMessage::kSendChatMessage,
+        GW::UI::UIMessage::kTradeSessionStart
     };
 
     for (const auto message_id : OnUIMessage_Headers) {
@@ -962,11 +961,16 @@ void FriendListWindow::AddFriendAliasToMessage(wchar_t** message_ptr)
 
 void FriendListWindow::Update(const float)
 {
-    if (loading) {
+    if (loading || !GW::Map::GetIsMapLoaded()) {
         return;
     }
-    if (!GW::Map::GetIsMapLoaded()) {
-        return;
+    if (pending_cancel_trade) {
+        if (GW::Trade::CancelTrade())
+            pending_cancel_trade = 0;
+        else if (TIMER_DIFF(pending_cancel_trade) > 1000) {
+            pending_cancel_trade = 0;
+            Log::Warning("Failed to reject trade from ignored player");
+        }
     }
 
     const GW::FriendList* fl = GW::FriendListMgr::GetFriendList();
