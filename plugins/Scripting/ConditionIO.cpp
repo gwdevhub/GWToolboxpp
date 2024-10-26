@@ -328,8 +328,10 @@ ConditionPtr drawConditionSelector(float width)
         drawSubMenu("Party", partyConditions);
         drawSubMenu("Instance", instanceConditions);
         drawSubMenu("Logic", logicConditions);
+        #ifndef LiveSplitMode
         drawSubMenu("Variable", variableConditions);
         drawSubMenu("Control flow", controlFlowCondition);
+        #endif
         drawConditionSelector(ConditionType::KeyIsPressed);
 
         ImGui::EndPopup();

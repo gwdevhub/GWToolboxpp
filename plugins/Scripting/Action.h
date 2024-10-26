@@ -6,14 +6,14 @@
 // This struct is append only, do NOT change the ordering of the values or add new ones at any place but the end
 enum class ActionType : int {
     MoveTo,
-    //CastOnSelf, Removed
-    Cast = 2, 
+    // CastOnSelf, Removed
+    Cast = 2,
     CastBySlot,
-    DropBuff, 
+    DropBuff,
     ChangeTarget,
     UseItem,
-    EquipItem, 
-    RepopMinipet, 
+    EquipItem,
+    RepopMinipet,
     PingHardMode,
     PingTarget,
     AutoAttackTarget,
@@ -21,7 +21,7 @@ enum class ActionType : int {
     GoToTarget,
     Wait,
     SendChat,
-    Cancel, 
+    Cancel,
     Conditioned,
     ChangeWeaponSet,
     StoreTarget,
