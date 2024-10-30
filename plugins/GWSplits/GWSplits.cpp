@@ -560,10 +560,10 @@ void GWSplits::Draw(IDirect3DDevice9* pDevice)
                 if (split.completed) {
                     const auto timeDiff = split.currentTime - split.trackedTime;
                     ImGui::PushStyleColor(ImGuiCol_Text, getTimerColor(timeDiff, split.isPB));
-                    rightAlignedText(timeToString(timeDiff, ToStringStyle::SecondsCentiseconds).c_str());
+                    ImGui::Text(timeToString(timeDiff, ToStringStyle::SecondsCentiseconds).c_str());
                     ImGui::PopStyleColor();
                 }
-                else if (row == (currentSplitIt - currentSplits.begin())) {
+                else if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable && row == (currentSplitIt - currentSplits.begin())) {
                     const auto currentTime = getRunTime();
                     const auto timeDiff = currentTime - split.trackedTime;
                     if (timeDiff > -earlyResultTimeMs) {
@@ -574,13 +574,13 @@ void GWSplits::Draw(IDirect3DDevice9* pDevice)
                             lastSegmentColor = getTimerColor(timeDiff, false);
                         }
                         ImGui::PushStyleColor(ImGuiCol_Text, getTimerColor(timeDiff, split.isPB));
-                        rightAlignedText(timeToString(timeDiff, ToStringStyle::SecondsCentiseconds).c_str());
+                        ImGui::Text(timeToString(timeDiff, ToStringStyle::SecondsCentiseconds).c_str());
                         ImGui::PopStyleColor();
                     }
                 }
 
                 ImGui::TableNextColumn();
-                rightAlignedText(timeToString(split.trackedTime).c_str());
+                ImGui::Text(timeToString(split.trackedTime).c_str());
 
                 ++row;
             }
