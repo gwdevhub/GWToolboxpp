@@ -822,6 +822,7 @@ std::string FriendListWindow::Friend::GetCharactersHover(const bool include_char
 // Find existing record for friend by char name.
 FriendListWindow::Friend* FriendListWindow::GetFriend(const wchar_t* name)
 {
+    if (!(name && *name)) return nullptr;
     const auto it = uuid_by_name.find(name);
     return it == uuid_by_name.end() ? nullptr : it->second;
 }
