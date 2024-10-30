@@ -243,12 +243,12 @@ namespace {
     }
     auto getTimerColor(int timeDiff, bool isPB)
     {
-        constexpr auto offWhite = 200.f / 255.f;
+        constexpr auto offWhite = 220.f / 255.f;
         constexpr auto lime  = ImVec4{offWhite, 1.f, offWhite, 1.f};
-        constexpr auto green = ImVec4{0,        1.f, 0,        1.f};
+        constexpr auto green = ImVec4{0.1f,     1.f, 0.f,      1.f};
         
         constexpr auto lightRed = ImVec4{1.f, offWhite, offWhite, 1.f};
-        constexpr auto red      = ImVec4{1.f, 0,        0,        1.f};
+        constexpr auto red      = ImVec4{1.f, 0.1f,     0.1f,     1.f};
 
         if (isPB) 
         {
@@ -683,7 +683,7 @@ void GWSplits::DrawSettings()
         }
     }
 
-    ImGui::Text("Version 1.0. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 1.1. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
     ImGui::TextColored(ImColor{102, 187, 238, 255}, discordInviteLink);
