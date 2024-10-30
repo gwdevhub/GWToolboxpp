@@ -2,7 +2,7 @@
 
 #include <Condition.h>
 #include <ToolboxUIPlugin.h>
-#include <chrono>
+#include <Utils/GuiUtils.h>
 
 struct Split 
 {
@@ -56,6 +56,7 @@ private:
     bool showBestPossibleTime = true;
     bool showSumOfBest = true;
     bool showLastSegment = true;
+    GuiUtils::FontSize fontSize = GuiUtils::FontSize::header1;
 
     // Store these here to be able to keep the value when traveling to outpost
     int segmentStart = 0;

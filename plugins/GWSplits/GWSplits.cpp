@@ -13,7 +13,6 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Hook.h>
 
-#include <Utils/GuiUtils.h>
 #include <ImGuiCppWrapper.h>
 
 namespace {
@@ -61,7 +60,7 @@ namespace {
         if (minutes > 0 || style == ToStringStyle::MinutesSecondsCentiseconds) {
             result += std::to_string(minutes) + ":";
         }
-        if (seconds < 10 && style == ToStringStyle::MinutesSecondsCentiseconds) {
+        if (seconds < 10 && (style == ToStringStyle::MinutesSecondsCentiseconds || minutes > 0)) {
             result += "0";
         }
         
@@ -465,7 +464,7 @@ void GWSplits::Draw(IDirect3DDevice9* pDevice)
 
     ImGui::SetNextWindowSize(ImVec2(100, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_label));
+        ImGui::PushFont(GetFont(fontSize));
         if (settingsFolder && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) 
         {
             if (std::ranges::any_of(currentSplits, &Split::isPB)) {
@@ -510,9 +509,7 @@ void GWSplits::Draw(IDirect3DDevice9* pDevice)
                 if (split.completed) {
                     const auto timeDiff = split.currentTime - split.trackedTime;
                     ImGui::PushStyleColor(ImGuiCol_Text, getTimerColor(timeDiff, split.isPB));
-                    ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_label));
                     rightAlignedText(timeToString(timeDiff, ToStringStyle::SecondsCentiseconds).c_str());
-                    ImGui::PopFont();
                     ImGui::PopStyleColor();
                 }
                 else if (row == (currentSplitIt - currentSplits.begin())) {
@@ -543,7 +540,7 @@ void GWSplits::Draw(IDirect3DDevice9* pDevice)
             ImGui::Separator();
         if (showRunTime)
         {
-            ImGui::PushFont(GetFont(GuiUtils::FontSize::widget_large));
+            ImGui::PushFont(GetFont(GuiUtils::FontSize(int(fontSize) + 2)));
             ImGui::PushStyleColor(ImGuiCol_Text, lastSegmentColor);
             rightAlignedText(timeToString(runTime));
             ImGui::PopStyleColor();
@@ -586,9 +583,17 @@ void GWSplits::Draw(IDirect3DDevice9* pDevice)
 
 void GWSplits::DrawSettings()
 {
+    constexpr const char* fontSizeNames[] = {"Very small", "Small", "Medium", "Large"};
+
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+
     ImGui::Checkbox("Lock Position", &lock_move);
     ImGui::SameLine();
     ImGui::Checkbox("Lock Size", &lock_size);
+    ImGui::SameLine();
+    ImGui::PushItemWidth(150.f);
+    ImGui::Combo("Text size", reinterpret_cast<int*>(&fontSize), fontSizeNames, 4);
+    ImGui::PopItemWidth();
 
     ImGui::Text("Show: ");
     ImGui::SameLine();
@@ -601,9 +606,6 @@ void GWSplits::DrawSettings()
     ImGui::Checkbox("Sum of best", &showSumOfBest);
     ImGui::SameLine();
     ImGui::Checkbox("Last segment", &showLastSegment);
-    
-
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
 
     drawRuns();
     if (ImGui::Button("Add Run", ImVec2(ImGui::GetContentRegionAvail().x / 2, 0)))
@@ -651,6 +653,7 @@ void GWSplits::LoadSettings(const wchar_t* folder)
     showBestPossibleTime = ini.GetBoolValue(Name(), "showBestPossibleTime", true);
     showSumOfBest = ini.GetBoolValue(Name(), "showSumOfBest", true);
     showLastSegment = ini.GetBoolValue(Name(), "showLastSegment", true);
+    fontSize = (GuiUtils::FontSize)ini.GetLongValue(Name(), "fontSize", 2);
 
     if (std::string read = ini.GetValue(Name(), "runs", ""); !read.empty()) {
         const auto decoded = decodeString(std::move(read));
@@ -684,6 +687,7 @@ void GWSplits::SaveSettings(const wchar_t* folder)
     ini.SetBoolValue(Name(), "showBestPossibleTime", showBestPossibleTime);
     ini.SetBoolValue(Name(), "showSumOfBest", showSumOfBest);
     ini.SetBoolValue(Name(), "showLastSegment", showLastSegment);
+    ini.SetLongValue(Name(), "fontSize", (long)fontSize);
 
     OutputStream stream;
     for (const auto& run : runs) {
