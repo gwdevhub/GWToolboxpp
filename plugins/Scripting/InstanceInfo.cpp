@@ -12,6 +12,7 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
 
 #include <GWCA/Packets/StoC.h>
@@ -27,6 +28,7 @@ namespace {
     GW::HookEntry UseItem_Entry;
     GW::HookEntry DisplayDialogue_Entry;
     GW::HookEntry FinishSkill_Entry;
+    GW::HookEntry ManipulateMapObject_Entry;
 
     bool isTargetableMiniPet(uint32_t itemId) 
     {
@@ -84,6 +86,7 @@ void InstanceInfo::initialize()
         this->decodedAgentNames.clear();
         this->decodedItemNames.clear();
         this->storedTargets.clear();
+        this->doorStatus.clear();
         updateQuestNames();
 
         mpStatus.poppedMinipetId = std::nullopt;
@@ -121,6 +124,21 @@ void InstanceInfo::initialize()
 
         if (!isGhostInTheBox) {
             mpStatus.poppedMinipetId = item->model_id;
+        }
+    });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(&ManipulateMapObject_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ManipulateMapObject* packet) 
+    {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable || packet->animation_stage != 2) return;
+
+        if (packet->animation_type == 16)
+        {
+            logMessage("Open door");
+            doorStatus[(DoorID)packet->object_id] = DoorStatus::Open;
+        }
+        else if (packet->animation_type == 9 || packet->animation_type == 3)
+        {
+            logMessage("Close door");
+            doorStatus[(DoorID)packet->object_id] = DoorStatus::Closed;
         }
     });
 }

@@ -9,7 +9,7 @@ namespace
 {
 ConditionPtr makeCondition(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 52);
+    static_assert((int)ConditionType::Count == 53);
     switch (type) {
         case ConditionType::Not:
             return std::make_shared<NegatedCondition>();
@@ -89,6 +89,8 @@ ConditionPtr makeCondition(ConditionType type)
             return std::make_shared<ScriptVariableIsSetCondition>();
         case ConditionType::PlayerHasSkillBySlot:
             return std::make_shared<PlayerHasSkillBySlotCondition>();
+        case ConditionType::DoorStatus:
+            return std::make_shared<DoorStatusCondition>();
 
         default:
             return nullptr;
@@ -97,7 +99,7 @@ ConditionPtr makeCondition(ConditionType type)
 
 std::string_view toString(ConditionType type)
 {
-    static_assert((int)ConditionType::Count == 52);
+    static_assert((int)ConditionType::Count == 53);
     switch (type) {
         case ConditionType::Not:
             return "Not";
@@ -176,6 +178,8 @@ std::string_view toString(ConditionType type)
             return "Is set";
         case ConditionType::PlayerHasSkillBySlot:
             return "Has skill by slot";
+        case ConditionType::DoorStatus:
+            return "Door status";
 
         default:
             return "Unknown";
@@ -185,7 +189,7 @@ std::string_view toString(ConditionType type)
 
 ConditionPtr readCondition(InputStream& stream)
 {
-static_assert((int)ConditionType::Count == 52);
+static_assert((int)ConditionType::Count == 53);
 int type;
 stream >> type;
 switch (static_cast<ConditionType>(type))
@@ -267,6 +271,8 @@ switch (static_cast<ConditionType>(type))
         return std::make_shared<ScriptVariableValueCondition>(stream);
     case ConditionType::ScriptVariableIsSet:
         return std::make_shared<ScriptVariableIsSetCondition>(stream);
+    case ConditionType::DoorStatus:
+        return std::make_shared<DoorStatusCondition>(stream);
 
     default:
         return nullptr;
@@ -304,7 +310,7 @@ ConditionPtr drawConditionSelector(float width)
     constexpr auto skillConditions = std::array{ConditionType::PlayerHasBuff, ConditionType::PlayerHasSkill, ConditionType::PlayerHasSkillBySlot, ConditionType::RemainingCooldown, ConditionType::PlayerHasEnergy, ConditionType::PlayerMorale};
     constexpr auto itemConditions = std::array{ConditionType::PlayerHasItemEquipped, ConditionType::ItemInInventory, ConditionType::CanPopAgent};
     constexpr auto partyConditions = std::array{ConditionType::PartyPlayerCount, ConditionType::PartyHasLoadedIn, ConditionType::PartyMemberStatus, ConditionType::HasPartyWindowAllyOfName};
-    constexpr auto instanceConditions = std::array{ConditionType::IsInMap, ConditionType::InstanceType, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime, ConditionType::FoeCount};
+    constexpr auto instanceConditions = std::array{ConditionType::IsInMap, ConditionType::InstanceType, ConditionType::DoorStatus, ConditionType::QuestHasState, ConditionType::InstanceProgress, ConditionType::InstanceTime, ConditionType::FoeCount};
     constexpr auto logicConditions = std::array{ConditionType::Not, ConditionType::Or, ConditionType::And, ConditionType::True, ConditionType::False};
     constexpr auto variableConditions = std::array{ConditionType::ScriptVariableValue, ConditionType::ScriptVariableIsSet};
     constexpr auto controlFlowCondition = std::array{ConditionType::OnlyTriggerOncePerInstance, ConditionType::Throttle, ConditionType::Once, ConditionType::Until, ConditionType::After, ConditionType::Toggle};

@@ -505,3 +505,18 @@ private:
     std::string name = "";
     IsIsNot comp = IsIsNot::Is;
 };
+
+class DoorStatusCondition : public Condition {
+public:
+    DoorStatusCondition() = default;
+    DoorStatusCondition(InputStream&);
+    ConditionType type() const final { return ConditionType::DoorStatus; }
+    bool check() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+
+private:
+    DoorID id = DoorID::DoA_city_entrance;
+    DoorStatus status = DoorStatus::Open;
+    Area area = Area::Doa;
+};

@@ -43,6 +43,7 @@ std::string_view toString(WeaponType);
 std::string_view toString(Bag);
 std::string_view toString(ComparisonOperator);
 std::string_view toString(IsIsNot);
+std::string_view toString(DoorStatus);
 
 bool checkWeaponType(WeaponType, uint16_t);
 void drawHotkeySelector(Hotkey& hotkey, std::string& description, float selectorWidth);
@@ -56,6 +57,7 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, float width
 
 void drawPolygonSelector(std::vector<GW::Vec2f>& polygon);
 bool pointIsInsidePolygon(const GW::GamePos pos, const std::vector<GW::Vec2f>& polygon);
+void drawDoorSelector(DoorID& id, Area& area);
 
 template <typename T>
 void drawEnumButton(T firstValue, T lastValue, T& currentValue, int id = 0, float width = 100., std::optional<std::string_view> buttonText = std::nullopt, std::optional<T> skipValue = std::nullopt)

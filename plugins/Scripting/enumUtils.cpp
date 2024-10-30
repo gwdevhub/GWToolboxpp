@@ -16,7 +16,7 @@
 
 std::string getSkillName(GW::Constants::SkillID id, bool zeroIsAny)
 {
-    if (id == GW::Constants::SkillID::No_Skill) 
+    if (id == GW::Constants::SkillID::No_Skill)
         return zeroIsAny ? "Any" : "No skill";
     static std::unordered_map<GW::Constants::SkillID, std::wstring> decodedNames;
     if (const auto it = decodedNames.find(id); it != decodedNames.end()) {
@@ -395,6 +395,130 @@ std::string_view toString(IsIsNot comp)
     return "";
 }
 
+std::string_view toString(DoorStatus status)
+{
+    switch (status) 
+    {
+        case DoorStatus::Closed:
+            return "Closed";
+        case DoorStatus::Open:
+            return "Open";
+    }
+    return "";
+}
+
+std::string_view toString(DoorID id, Area area)
+{
+    switch (area) 
+    {
+        case Area::Urgoz:
+            switch (id) 
+            {
+                case DoorID::Urgoz_zone_2:
+                    return "Zone 2 entrace (Life Drain)";
+                case DoorID::Urgoz_zone_3:
+                    return "Zone 3 entrace (Levers)";
+                case DoorID::Urgoz_zone_4:
+                    return "Zone 4 entrace (Bridge Wolves)";
+                case DoorID::Urgoz_zone_5:
+                    return "Zone 5 entrace (More Wolves)";
+                case DoorID::Urgoz_zone_6:
+                    return "Zone 6 entrace (Energy Drain)";
+                case DoorID::Urgoz_zone_7:
+                    return "Zone 7 entrace (Exhaustion)";
+                case DoorID::Urgoz_zone_8:
+                    return "Zone 8 entrace (Pillars)";
+                case DoorID::Urgoz_zone_9:
+                    return "Zone 9 entrace (Blood Drinkers)";
+                case DoorID::Urgoz_zone_10:
+                    return "Zone 10 entrace (Bridge)";
+                case DoorID::Urgoz_zone_11:
+                    return "Zone 11 entrace (Urgoz)";
+            }
+            return "";
+        case Area::Deep:
+            switch (id) {
+                case DoorID::Deep_room_1_first:
+                    return "Room 1 (first)";
+                case DoorID::Deep_room_1_second:
+                    return "Room 1 (second)";
+                case DoorID::Deep_room_2_first:
+                    return "Room 2 (first)";
+                case DoorID::Deep_room_2_second:
+                    return "Room 2 (second)";
+                case DoorID::Deep_room_3_first:
+                    return "Room 3 (first)";
+                case DoorID::Deep_room_3_second:
+                    return "Room 3 (second)";
+                case DoorID::Deep_room_4_first:
+                    return "Room 4 (first)";
+                case DoorID::Deep_room_4_second:
+                    return "Room 4 (second)";
+                case DoorID::Deep_room_5:
+                    return "Room 5 entrance";
+                case DoorID::Deep_room_6:
+                    return "Room 6 entrance";
+                case DoorID::Deep_room_7:
+                    return "Room 7 entrance";
+                case DoorID::Deep_room_9:
+                    return "Room 9 entrance";
+                case DoorID::Deep_room_11:
+                    return "Room 11 entrance";
+            }
+            return "";
+        case Area::Doa:
+            switch (id) {
+                case DoorID::DoA_foundry_entrance_r1:
+                    return "Room 1 entrance";
+                case DoorID::DoA_foundry_r1_r2:
+                    return "Room 1 to room 2";
+                case DoorID::DoA_foundry_r2_r3:
+                    return "Room 2 to room 3";
+                case DoorID::DoA_foundry_r3_r4:
+                    return "Room 3 to room 4";
+                case DoorID::DoA_foundry_r4_r5:
+                    return "Room 4 to room 5";
+                case DoorID::DoA_foundry_r5_bb:
+                    return "Room 5 to black beast";
+                case DoorID::DoA_foundry_behind_bb:
+                    return "Black beast to city";
+                case DoorID::DoA_city_entrance:
+                    return "City entrance";
+                case DoorID::DoA_city_wall:
+                    return "Wall";
+                case DoorID::DoA_city_jadoth:
+                    return "Veil entrance (Jadoth)";
+                case DoorID::DoA_veil_360_left:
+                    return "360 left";
+                case DoorID::DoA_veil_360_middle:
+                    return "360 middle";
+                case DoorID::DoA_veil_360_right:
+                    return "360 right";
+                case DoorID::DoA_veil_derv:
+                    return "360 derv";
+                case DoorID::DoA_veil_ranger:
+                    return "360 ranger";
+                case DoorID::DoA_veil_trench_necro:
+                    return "Necro trench";
+                case DoorID::DoA_veil_trench_mes:
+                    return "Mesmer trench";
+                case DoorID::DoA_veil_trench_ele:
+                    return "Ele trench";
+                case DoorID::DoA_veil_trench_monk:
+                    return "Monk trench";
+                case DoorID::DoA_veil_trench_gloom:
+                    return "Gloom trench";
+                case DoorID::DoA_veil_to_gloom:
+                    return "Gloom entrance";
+                case DoorID::DoA_gloom_to_foundry:
+                    return "Necro trench";
+                case DoorID::DoA_gloom_rift:
+                    return "Rift closure";
+            }
+    }
+    return "";
+}
+
 std::string_view toString(GW::Constants::HeroID hero) 
 {
     switch (hero)
@@ -657,7 +781,7 @@ std::string_view toString(GW::UI::ControlAction action)
     return names[static_cast<int>(action - 0x80)];
 }
 
-bool checkWeaponType(WeaponType targetType, uint16_t gameType) 
+bool checkWeaponType(WeaponType targetType, uint16_t gameType)
 {
     switch (targetType) {
         case WeaponType::Any:
@@ -686,14 +810,14 @@ bool checkWeaponType(WeaponType targetType, uint16_t gameType)
     return false;
 }
 
-std::string makeHotkeyDescription(Hotkey hotkey) 
+std::string makeHotkeyDescription(Hotkey hotkey)
 {
     char newDescription[256];
     ModKeyName(newDescription, _countof(newDescription), hotkey.modifier, hotkey.keyData);
     return std::string{newDescription};
 }
 
-void drawHotkeySelector(Hotkey& hotkey, std::string& description, float selectorWidth) 
+void drawHotkeySelector(Hotkey& hotkey, std::string& description, float selectorWidth)
 {
     ImGui::PushItemWidth(selectorWidth);
     if (ImGui::Button(description.c_str())) {
@@ -749,12 +873,10 @@ void drawHotkeySelector(Hotkey& hotkey, std::string& description, float selector
 
 void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, float width)
 {
-    if (trigger == Trigger::None) 
-    {
+    if (trigger == Trigger::None) {
         drawEnumButton(Trigger::InstanceLoad, Trigger::SkillCastInterrupt, trigger, 0, 100.f, "Add trigger");
     }
-    else if (trigger == Trigger::Hotkey) 
-    {
+    else if (trigger == Trigger::Hotkey) {
         auto description = triggerData.hotkey.keyData ? makeHotkeyDescription(triggerData.hotkey) : "Click to change key";
         drawHotkeySelector(triggerData.hotkey, description, width - 20.f);
         ImGui::SameLine();
@@ -766,8 +888,7 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, float width
             triggerData.hotkey.modifier = 0;
         }
     }
-    else if (trigger == Trigger::ChatMessage)
-    {
+    else if (trigger == Trigger::ChatMessage) {
         ImGui::PushItemWidth(200);
         ImGui::InputText("Trigger message", &triggerData.message);
         ImGui::PopItemWidth();
@@ -777,8 +898,7 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, float width
             triggerData.message = "";
         }
     }
-    else if (trigger == Trigger::BeginSkillCast) 
-    {
+    else if (trigger == Trigger::BeginSkillCast) {
         ImGui::Text("Trigger on begin skill");
         ImGui::SameLine();
         drawSkillIDSelector(triggerData.skillId, true);
@@ -793,8 +913,7 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, float width
             triggerData.hsr = AnyNoYes::Any;
         }
     }
-    else if (trigger == Trigger::SkillCastInterrupt) 
-    {
+    else if (trigger == Trigger::SkillCastInterrupt) {
         ImGui::Text("Trigger on interrupt of");
         ImGui::SameLine();
         drawSkillIDSelector(triggerData.skillId, true);
@@ -804,8 +923,7 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, float width
             triggerData.skillId = GW::Constants::SkillID::No_Skill;
         }
     }
-    else if (trigger == Trigger::BeginCooldown) 
-    {
+    else if (trigger == Trigger::BeginCooldown) {
         ImGui::Text("Trigger on end skill");
         ImGui::SameLine();
         drawSkillIDSelector(triggerData.skillId, true);
@@ -815,8 +933,7 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, float width
             triggerData.skillId = GW::Constants::SkillID::No_Skill;
         }
     }
-    else 
-    {
+    else {
         ImGui::Text(toString(trigger).data());
         ImGui::SameLine();
         if (ImGui::Button("X", ImVec2(20.f, 0))) {
@@ -833,7 +950,7 @@ void drawPolygonSelector(std::vector<GW::Vec2f>& polygon)
             polygon.emplace_back(player->pos.x, player->pos.y);
         }
     }
-    
+
     ImGui::Indent();
 
     std::optional<int> remove_point;
@@ -873,15 +990,14 @@ void drawSkillIDSelector(GW::Constants::SkillID& id, bool zeroIsAny)
     ImGui::PopItemWidth();
 }
 
-void drawMapIDSelector(GW::Constants::MapID& id) 
+void drawMapIDSelector(GW::Constants::MapID& id)
 {
     ImGui::PushItemWidth(50.f);
-    if (id != GW::Constants::MapID::None && (uint32_t)id < GW::Constants::NAME_FROM_ID.size()) 
-    {
+    if (id != GW::Constants::MapID::None && (uint32_t)id < GW::Constants::NAME_FROM_ID.size()) {
         ImGui::Text("%s", GW::Constants::NAME_FROM_ID[(uint32_t)id]);
         ImGui::SameLine();
     }
-    
+
     ImGui::InputInt("Map ID", reinterpret_cast<int*>(&id), 0);
     ImGui::PopItemWidth();
 }
@@ -890,19 +1006,56 @@ void drawModelIDSelector(uint16_t& id, std::optional<std::string_view> label)
     ImGui::PushItemWidth(50.f);
     const auto& modelNames = getModelNames();
     const auto& modelNameIt = modelNames.find(id);
-    if (modelNameIt != modelNames.end())
-    {
+    if (modelNameIt != modelNames.end()) {
         ImGui::Text("%s", modelNameIt->second.data());
         ImGui::SameLine();
     }
     int editValue = id;
 
-    if (ImGui::InputInt(label ? label->data() : "Model ID", &editValue, 0))
-    {
+    if (ImGui::InputInt(label ? label->data() : "Model ID", &editValue, 0)) {
         if (editValue >= 0 && editValue <= 0xFFFF)
             id = uint16_t(editValue);
         else
             id = 0;
     }
     ImGui::PopItemWidth();
+}
+
+void drawDoorSelector(DoorID& id, Area& area)
+{
+    const auto drawSubMenu = [&](std::string_view title, const auto& candidates, Area candidateArea) 
+    {
+        if (ImGui::BeginMenu(title.data())) {
+            for (const auto& candidate : candidates) {
+                if (ImGui::MenuItem(toString(candidate, candidateArea).data())) {
+                    id = candidate;
+                    area = candidateArea;
+                }
+            }
+            ImGui::EndMenu();
+        }
+    };
+    
+    constexpr auto foundry = std::array{DoorID::DoA_foundry_entrance_r1, DoorID::DoA_foundry_r1_r2, DoorID::DoA_foundry_r2_r3, DoorID::DoA_foundry_r3_r4, DoorID::DoA_foundry_r4_r5, DoorID::DoA_foundry_r5_bb, DoorID::DoA_foundry_behind_bb};
+    constexpr auto city = std::array{DoorID::DoA_city_entrance, DoorID::DoA_city_wall};
+    constexpr auto veil = std::array{DoorID::DoA_city_jadoth,       DoorID::DoA_veil_360_left,   DoorID::DoA_veil_360_middle, DoorID::DoA_veil_360_right,   DoorID::DoA_veil_derv, DoorID::DoA_veil_ranger,
+                                     DoorID::DoA_veil_trench_necro, DoorID::DoA_veil_trench_mes, DoorID::DoA_veil_trench_ele, DoorID::DoA_veil_trench_monk, DoorID::DoA_veil_trench_gloom};
+    constexpr auto gloom = std::array{DoorID::DoA_veil_to_gloom, DoorID::DoA_gloom_to_foundry};
+    constexpr auto urgoz = std::array{DoorID::Urgoz_zone_2, DoorID::Urgoz_zone_3, DoorID::Urgoz_zone_4, DoorID::Urgoz_zone_5, DoorID::Urgoz_zone_6, DoorID::Urgoz_zone_7, DoorID::Urgoz_zone_8, DoorID::Urgoz_zone_9, DoorID::Urgoz_zone_10, DoorID::Urgoz_zone_11};
+    constexpr auto deep = std::array{DoorID::Deep_room_1_first, DoorID::Deep_room_1_second, DoorID::Deep_room_2_first, DoorID::Deep_room_2_second, DoorID::Deep_room_3_first, DoorID::Deep_room_3_second,
+                                     DoorID::Deep_room_4_first, DoorID::Deep_room_4_second, DoorID::Deep_room_5,       DoorID::Deep_room_6,        DoorID::Deep_room_7,       DoorID::Deep_room_11};
+
+    if (ImGui::Button(toString(id, area).data()))
+        ImGui::OpenPopup("DoorSelector");
+
+    if (ImGui::BeginPopup("DoorSelector")) {
+        drawSubMenu("Foundry", foundry, Area::Doa);
+        drawSubMenu("City", city, Area::Doa);
+        drawSubMenu("Veil", veil, Area::Doa);
+        drawSubMenu("Gloom", gloom, Area::Doa);
+        drawSubMenu("Urgoz", urgoz, Area::Urgoz);
+        drawSubMenu("Deep", deep, Area::Deep);
+
+        ImGui::EndPopup();
+    }
 }

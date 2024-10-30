@@ -1743,3 +1743,33 @@ void ScriptVariableIsSetCondition::drawSettings()
 
     ImGui::PopID();
 }
+
+/// ------------- DoorStatusCondition -------------
+DoorStatusCondition::DoorStatusCondition(InputStream& stream)
+{
+    stream >> id >> status >> area;
+}
+void DoorStatusCondition::serialize(OutputStream& stream) const
+{
+    Condition::serialize(stream);
+
+    stream << id << status << area;
+}
+bool DoorStatusCondition::check() const
+{
+    return InstanceInfo::getInstance().getDoorStatus(id) == status;
+}
+void DoorStatusCondition::drawSettings()
+{
+    ImGui::PushID(drawId());
+
+    ImGui::Text("If door");
+    ImGui::SameLine();
+    drawDoorSelector(id, area);
+    ImGui::SameLine();
+    ImGui::Text("is");;
+    ImGui::SameLine();
+    drawEnumButton(DoorStatus::Open, DoorStatus::Closed, status, 1, 70.f);
+
+    ImGui::PopID();
+}
