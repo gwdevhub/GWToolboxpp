@@ -33,18 +33,35 @@
 #include <filesystem>
 #include <ranges>
 
+DLLAPI ToolboxPlugin* ToolboxPluginInstance()
+{
+    static SpeedrunScriptingTools instance;
+    return &instance;
+}
+
 namespace {
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry CoreMessage_Entry;
     GW::HookEntry BeginSkillCast_Entry;
     GW::HookEntry FinishSkillCast_Entry;
     GW::HookEntry Interrupt_Entry;
+    GW::HookEntry DisplayDialogue_Entry;
+    GW::HookEntry DungeonReward_Entry;
+    GW::HookEntry DoACompleteZone_Entry;
 
     struct SkillCastParameters 
     {
         uint32_t agentId;
         GW::Constants::SkillID skillId;
     };
+
+    static void onDisplayDialogDecoded(void* instancePtr, const wchar_t* decoded)
+    {
+        if (!decoded || !instancePtr) return;
+        const auto sst = reinterpret_cast<SpeedrunScriptingTools*>(instancePtr);
+        
+        sst->triggerScripts(Trigger::DisplayDialog, [&](const Script& s){ return !s.triggerData.message.empty() && WStringToString(decoded).contains(s.triggerData.message); });
+    }
 
     // Versions 1-7: Prerelease, can be ignored
     // Version 8: 1.0-1.2. See SerializationIncrement for deprecation context
@@ -83,6 +100,7 @@ namespace {
             case Trigger::None:
             case Trigger::InstanceLoad:
             case Trigger::HardModePing:
+            case Trigger::DungeonReward:
                 break;
             case Trigger::Hotkey:
                 stream << script.triggerData.hotkey.keyData;
@@ -98,6 +116,12 @@ namespace {
             case Trigger::BeginSkillCast:
                 stream << script.triggerData.skillId;
                 stream << script.triggerData.hsr;
+                break;
+            case Trigger::DoaZoneComplete:
+                stream << script.triggerData.doaZone;
+                break;
+            case Trigger::DisplayDialog:
+                writeStringWithSpaces(stream, script.triggerData.message);
                 break;
         }
 
@@ -169,6 +193,7 @@ namespace {
                 case Trigger::None:
                 case Trigger::InstanceLoad:
                 case Trigger::HardModePing:
+                case Trigger::DungeonReward:
                     break;
                 case Trigger::Hotkey:
                     stream >> result.triggerData.hotkey.keyData;
@@ -184,6 +209,12 @@ namespace {
                 case Trigger::BeginSkillCast:
                     stream >> result.triggerData.skillId;
                     stream >> result.triggerData.hsr;
+                    break;
+                case Trigger::DoaZoneComplete:
+                    stream >> result.triggerData.doaZone;
+                    break;
+                case Trigger::DisplayDialog:
+                    result.triggerData.message = readStringWithSpaces(stream);
                     break;
             }
             stream >> result.enabledToggleHotkey.keyData;
@@ -303,6 +334,15 @@ namespace {
                     break;
                 case Trigger::SkillCastInterrupt:
                     result += "On interrupt of " + getSkillName(script.triggerData.skillId, true);
+                    break;
+                case Trigger::DoaZoneComplete:
+                    result += "On completion of " + std::string{toString(script.triggerData.doaZone)};
+                    break;
+                case Trigger::DungeonReward:
+                    result += "On receiving dungeon reward";
+                    break;
+                case Trigger::DisplayDialog:
+                    result += "On display dialog \"" + script.triggerData.message + "\"";
                     break;
                 default:
                     result += "Unknown trigger";
@@ -771,11 +811,6 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
     PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
 }
 
-DLLAPI ToolboxPlugin* ToolboxPluginInstance()
-{
-    static SpeedrunScriptingTools instance;
-    return &instance;
-}
 void SpeedrunScriptingTools::Update(float delta)
 {
     ToolboxPlugin::Update(delta);
@@ -974,7 +1009,7 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
                 return true; // Don't set scripts to triggered if we just cleared.
             }
 
-            const auto triggerScripts = [alwaysBlockHotkeyKeys = this->alwaysBlockHotkeyKeys, pressedKey, &triggered](std::vector<Script>& scripts) {
+            const auto enableScripts = [alwaysBlockHotkeyKeys = this->alwaysBlockHotkeyKeys, pressedKey, &triggered](std::vector<Script>& scripts) {
                 for (auto& script : scripts) {
                     if (script.enabledToggleHotkey == pressedKey) {
                         if (script.showMessageWhenToggled) logMessage(script.enabled ? std::string{"Disable script "} + script.name : std::string{"Enable script "} + script.name);
@@ -994,9 +1029,9 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
             for (auto& group : m_groups) 
             {
                 if (group.enabled && checkConditions(group.conditions)) 
-                    triggerScripts(group.scripts);
+                    enableScripts(group.scripts);
             }
-            triggerScripts(m_scripts);
+            enableScripts(m_scripts);
         
             if (InstanceInfo::getInstance().keyIsDisabled(pressedKey)) return true;
             return triggered;
@@ -1023,36 +1058,14 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         isInLoadingScreen = false;
         framesSinceLoadingFinished = 0;
 
-        const auto triggerScripts = [](auto& scripts) {
-            std::ranges::for_each(scripts, [](Script& s) {
-                if (s.enabled && s.trigger == Trigger::InstanceLoad) 
-                    s.triggered = true;
-            });
-        };
-        
-        for (auto& group : m_groups) 
-        {
-            if (group.enabled)
-                triggerScripts(group.scripts);
-        }
-        triggerScripts(m_scripts);
+        triggerScripts(Trigger::InstanceLoad);
     });
     RegisterUIMessageCallback(&Interrupt_Entry, GW::UI::UIMessage::kSpellCastInterrupted, [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
         const auto parameters = *reinterpret_cast<SkillCastParameters*>(wparam);
         const auto player = GW::Agents::GetControlledCharacter();
         if (!player || parameters.agentId != player->agent_id) return;
 
-        const auto triggerScripts = [&](std::vector<Script>& scripts) {
-            std::ranges::for_each(scripts, [&](Script& s) {
-                const auto correctSkill = s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;
-                if (correctSkill && s.enabled && s.trigger == Trigger::SkillCastInterrupt && checkConditions(s.conditions)) 
-                    s.triggered = true;
-            });
-        };
-        for (auto& group : m_groups) {
-            if (group.enabled) triggerScripts(group.scripts);
-        }
-        triggerScripts(m_scripts);
+        triggerScripts(Trigger::SkillCastInterrupt, [&](const Script& s){return s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;});
     });
     RegisterUIMessageCallback(&FinishSkillCast_Entry, GW::UI::UIMessage::kSkillCooldownStart, [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
         struct CooldownStartMessage {
@@ -1066,19 +1079,7 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         const auto player = GW::Agents::GetControlledCharacter();
         if (!player || parameters.agentId != player->agent_id) return;
 
-        const auto triggerScripts = [&](std::vector<Script>& scripts) {
-            std::ranges::for_each(scripts, [&](Script& s) {
-                const auto correctSkill = s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;
-                if (correctSkill && s.enabled && s.trigger == Trigger::BeginCooldown && checkConditions(s.conditions)) 
-                {
-                    s.triggered = true;
-                }
-            });
-        };
-        for (auto& group : m_groups) {
-            if (group.enabled) triggerScripts(group.scripts);
-        }
-        triggerScripts(m_scripts);
+        triggerScripts(Trigger::BeginCooldown, [&](const Script& s){return s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;});
     });
     RegisterUIMessageCallback(&BeginSkillCast_Entry, GW::UI::UIMessage::kAgentStartCasting, [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
         struct AgentCastMessage 
@@ -1089,75 +1090,78 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         };
         const auto parameters = *reinterpret_cast<AgentCastMessage*>(wparam);
         const auto player = GW::Agents::GetControlledCharacter();
-        if (!player || parameters.agentId != player->agent_id) return;
+        const auto skillData = GW::SkillbarMgr::GetSkillConstantData(parameters.skillId);
+        if (!player || parameters.agentId != player->agent_id || !skillData) return;
 
-        const auto triggerScripts = [&](std::vector<Script>& scripts) {
-            std::ranges::for_each(scripts, [&](Script& s) {
-                const auto correctSkill = s.triggerData.skillId == parameters.skillId || s.triggerData.skillId == GW::Constants::SkillID::No_Skill;
-                if (!correctSkill || !s.enabled || s.trigger != Trigger::BeginSkillCast || !checkConditions(s.conditions)) return;
-
-                if (s.triggerData.hsr == AnyNoYes::Any) {
-                    s.triggered = true;
-                    return;
-                }
-
-                const auto skillData = GW::SkillbarMgr::GetSkillConstantData(parameters.skillId);
-                if (!skillData) return;
-                const auto isHSR = skillData->activation != parameters.activation_time;
-                if (isHSR == (s.triggerData.hsr == AnyNoYes::Yes)) 
-                {
-                    s.triggered = true;
-                }
-            });
-        };
-        for (auto& group : m_groups) {
-            if (group.enabled) triggerScripts(group.scripts);
-        }
-        triggerScripts(m_scripts);
+        triggerScripts(Trigger::BeginSkillCast, [&](const Script& s) 
+        {
+            if (s.triggerData.skillId != parameters.skillId && s.triggerData.skillId != GW::Constants::SkillID::No_Skill) return false;
+            if (s.triggerData.hsr == AnyNoYes::Any) return true;
+            
+            const auto isHSR = skillData->activation != parameters.activation_time;
+            return isHSR == (s.triggerData.hsr == AnyNoYes::Yes);
+        });
     });
 
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MessageCore>(&CoreMessage_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::MessageCore* packet) {
-        const auto triggerHardModePingScripts = [](std::vector<Script>& scripts) {
-            std::ranges::for_each(scripts, [](Script& s) {
-                if (s.enabled && s.trigger == Trigger::HardModePing && checkConditions(s.conditions)) s.triggered = true;
-            });
-        };
-        const auto triggerChatMessageScripts = [&packet](std::vector<Script>& scripts) {
-            std::ranges::for_each(scripts, [&](Script& s) {
-                if (s.enabled && s.trigger == Trigger::ChatMessage && !s.triggerData.message.empty() && checkConditions(s.conditions)) {
-                    if (WStringToString(packet->message).contains(s.triggerData.message)) {
-                        s.triggered = true;
-                    }
-                }
-            });
-        };
-        const auto isHardModeTrigger = wmemcmp(packet->message, L"\x8101\x7f84", 2) == 0;
-        for (auto& group : m_groups) 
-        {
-            if (!group.enabled || !checkConditions(group.conditions)) continue;
-            
-            if (isHardModeTrigger) triggerHardModePingScripts(group.scripts);
-            else triggerChatMessageScripts(group.scripts); 
-        }
-        if (isHardModeTrigger) triggerHardModePingScripts(m_scripts);
-        else triggerChatMessageScripts(m_scripts);
+        if (const auto isHardModeTrigger = wmemcmp(packet->message, L"\x8101\x7f84", 2) == 0)
+            triggerScripts(Trigger::HardModePing);
+        else
+            triggerScripts(Trigger::ChatMessage, [&](const Script& s){ return !s.triggerData.message.empty() && WStringToString(packet->message).contains(s.triggerData.message); });
+    });
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* packet) {
+        GW::UI::AsyncDecodeStr(packet->message, &onDisplayDialogDecoded, this);
+    });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&DungeonReward_Entry, [this](GW::HookStatus*, GW::Packet::StoC::DungeonReward*) 
+    {
+        triggerScripts(Trigger::DungeonReward);
+    });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DoACompleteZone>(&DoACompleteZone_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::DoACompleteZone* packet) 
+    {
+        const auto doaZone = (DoaZone)packet->message[1];
+        triggerScripts(Trigger::DoaZoneComplete, [&](const Script& s){ return s.triggerData.doaZone == doaZone; });
     });
 
     InstanceInfo::getInstance().initialize();
     srand((unsigned int)time(NULL));
 }
 
+bool SpeedrunScriptingTools::triggerScripts(Trigger triggerType, std::function<bool(const Script&)> extraConditions) 
+{
+    bool triggeredAny = false;
+
+    const auto checkScripts = [&](auto& scripts) 
+    {
+        std::ranges::for_each(scripts, [&](Script& s) 
+        {
+            const auto triggered = s.enabled && s.trigger == triggerType && checkConditions(s.conditions) && extraConditions(s);
+            s.triggered |= triggered;
+            triggeredAny |= triggered;
+        });
+    };
+
+    for (auto& group : m_groups)
+        if (group.enabled) checkScripts(group.scripts);
+    checkScripts(m_scripts);
+
+    return triggeredAny;
+}
+
 void SpeedrunScriptingTools::SignalTerminate()
 {
-    ToolboxPlugin::SignalTerminate();
-
     InstanceInfo::getInstance().terminate();
+
     GW::StoC::RemovePostCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry);
     GW::StoC::RemovePostCallback<GW::Packet::StoC::MessageCore>(&CoreMessage_Entry);
-    RemoveUIMessageCallback(&BeginSkillCast_Entry, GW::UI::UIMessage::kAgentStartCasting);
-    RemoveUIMessageCallback(&FinishSkillCast_Entry, GW::UI::UIMessage::kSkillCooldownStart);
+    GW::StoC::RemovePostCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry);
+    GW::StoC::RemovePostCallback<GW::Packet::StoC::DungeonReward>(&DungeonReward_Entry);
+    GW::StoC::RemovePostCallback<GW::Packet::StoC::DoACompleteZone>(&DoACompleteZone_Entry);
     RemoveUIMessageCallback(&Interrupt_Entry, GW::UI::UIMessage::kSpellCastInterrupted);
+    RemoveUIMessageCallback(&FinishSkillCast_Entry, GW::UI::UIMessage::kSkillCooldownStart);
+    RemoveUIMessageCallback(&BeginSkillCast_Entry, GW::UI::UIMessage::kAgentStartCasting);
+
     GW::DisableHooks();
+    ToolboxPlugin::SignalTerminate();
 }
 
 bool SpeedrunScriptingTools::CanTerminate()

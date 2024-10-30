@@ -2,12 +2,14 @@
 
 #include <ConditionIO.h>
 #include <InstanceInfo.h>
+#include <enumUtils.h>
 
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/GWCA.h>
 #include <GWCA/Utilities/Hooker.h>
@@ -15,8 +17,25 @@
 
 #include <ImGuiCppWrapper.h>
 
+DLLAPI ToolboxPlugin* ToolboxPluginInstance()
+{
+    static GWSplits instance;
+    return &instance;
+}
+
 namespace {
-    GW::HookEntry PostGameSrvTransfer_Entry;
+    GW::HookEntry InstanceLoadInfo_Entry;
+    GW::HookEntry DisplayDialogue_Entry;
+    GW::HookEntry DungeonReward_Entry;
+    GW::HookEntry DoACompleteZone_Entry;
+
+    static void onDisplayDialogDecoded(void* instancePtr, const wchar_t* decoded)
+    {
+        if (!decoded || !instancePtr) return;
+        const auto gwsplits = reinterpret_cast<GWSplits*>(instancePtr);
+
+        gwsplits->handleTrigger(Trigger::DisplayDialog, [&](const Split& s){ return !s.triggerData.message.empty() && WStringToString(decoded).contains(s.triggerData.message); });
+    }
 
     constexpr int earlyResultTimeMs = 10'000;
     constexpr long currentVersion = 11;
@@ -29,9 +48,9 @@ namespace {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return 0;
         return (int)GW::Map::GetInstanceTime();
     }
-    bool checkConditions(const std::vector<ConditionPtr>& conditions)
+    bool checkConditions(const std::vector<ConditionPtr>& conditions, bool allowEmpty)
     {
-        return conditions.size() > 0 && std::ranges::all_of(conditions, [&](const auto& cond) { return cond->check(); });
+        return (allowEmpty || !conditions.empty()) && std::ranges::all_of(conditions, [&](const auto& cond) { return cond->check(); });
     }
 
     enum class ToStringStyle 
@@ -148,7 +167,8 @@ namespace {
         if (conditionToDelete.has_value()) conditions.erase(conditionToDelete.value());
         if (conditionsToSwap.has_value()) std::swap(*conditionsToSwap->first, *conditionsToSwap->second);
         // Add condition
-        if (auto newCondition = drawConditionSelector(200.f)) {
+        if (auto newCondition = drawConditionSelector(200.f)) 
+        {
             conditions.push_back(std::move(newCondition));
         }
     }
@@ -185,7 +205,11 @@ namespace {
             }
 
             if (treeOpen) {
+                ImGui::PushID(0);
                 drawConditionSetSelector(splitIt->conditions);
+                ImGui::SameLine();
+                drawTriggerSelector(splitIt->trigger, splitIt->triggerData, 100.f);
+                ImGui::PopID();
                 ImGui::SameLine();
                 ImGui::PushItemWidth(200.f);
                 ImGui::InputText("Name", &splitIt->name);
@@ -256,6 +280,20 @@ namespace {
         stream << split.trackedTime;
         stream << split.pbSegmentTime;
 
+        stream << split.trigger;
+        switch (split.trigger) 
+        {
+            case Trigger::None:
+            case Trigger::DungeonReward:
+                break;
+            case Trigger::DoaZoneComplete:
+                stream << split.triggerData.doaZone;
+                break;
+            case Trigger::DisplayDialog:
+                writeStringWithSpaces(stream, split.triggerData.message);
+                break;
+        }
+        
         stream.writeSeparator();
 
         for (const auto& condition : split.conditions) {
@@ -272,6 +310,20 @@ namespace {
         result.name = readStringWithSpaces(stream);
         stream >> result.trackedTime;
         stream >> result.pbSegmentTime;
+
+        stream >> result.trigger;
+        switch (result.trigger) 
+        {
+            case Trigger::None:
+            case Trigger::DungeonReward:
+                break;
+            case Trigger::DoaZoneComplete:
+                stream >> result.triggerData.doaZone;
+                break;
+            case Trigger::DisplayDialog:
+                result.triggerData.message = readStringWithSpaces(stream);
+                break;
+        }
 
         stream.proceedPastSeparator();
 
@@ -396,12 +448,6 @@ void GWSplits::drawRuns()
     if (runsToSwap.has_value()) std::swap(*runsToSwap->first, *runsToSwap->second);
 }
 
-DLLAPI ToolboxPlugin* ToolboxPluginInstance()
-{
-    static GWSplits instance;
-    return &instance;
-}
-
 void GWSplits::Update(float diff)
 {
     ToolboxUIPlugin::Update(diff);
@@ -433,25 +479,30 @@ void GWSplits::Update(float diff)
         bestPossibleTime = runTime;
     }
 
-    if (currentSplitIt == currentSplits.end() || !checkConditions(currentSplitIt->conditions)) return;
+    if (currentSplitIt == currentSplits.end() || !checkConditions(currentSplitIt->conditions, false)) return;
+    completeSplit(currentSplitIt);
+}
 
-    // We finished a segment
+void GWSplits::completeSplit(std::vector<Split>::iterator currentSplitIt)
+{
     currentSplitIt->completed = true;
 
     currentSplitIt->currentTime = getRunTime();
     const auto finishedSegmentTime = currentSplitIt->currentTime - segmentStart;
-    if (currentSplitIt->pbSegmentTime == 0 || finishedSegmentTime < currentSplitIt->pbSegmentTime) 
-    {
+    if (currentSplitIt->pbSegmentTime == 0 || finishedSegmentTime < currentSplitIt->pbSegmentTime) {
         currentSplitIt->isPB = true;
         currentSplitIt->pbSegmentTime = finishedSegmentTime;
         currentSplitIt->displayPBTime = timeToString(finishedSegmentTime);
     }
 
-    const auto lastSegmentDiff = currentSplitIt == currentSplits.begin() ? 0 : std::prev(currentSplitIt)->currentTime - std::prev(currentSplitIt)->trackedTime;
+    const auto lastSegmentDiff = currentSplitIt == currentRun->splits.begin() ? 0 : std::prev(currentSplitIt)->currentTime - std::prev(currentSplitIt)->trackedTime;
     lastSegmentGain = currentSplitIt->currentTime - currentSplitIt->trackedTime - lastSegmentDiff;
-    sumOfBest = std::accumulate(currentSplits.begin(), currentSplits.end(), 0, [](int sum, const Split& s) { return sum + s.pbSegmentTime; });
+    sumOfBest = std::accumulate(currentRun->splits.begin(), currentRun->splits.end(), 0, [](int sum, const Split& s) {
+        return sum + s.pbSegmentTime;
+    });
 
     segmentStart = currentSplitIt->currentTime;
+
 }
 
 void GWSplits::Draw(IDirect3DDevice9* pDevice)
@@ -701,28 +752,51 @@ void GWSplits::SaveSettings(const wchar_t* folder)
     PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
 }
 
+void GWSplits::handleTrigger(Trigger triggerType, std::function<bool(const Split&)> extraConditions)
+{
+    if (!currentRun) return;
+
+    for (auto splitIt = currentRun->splits.begin(); splitIt != currentRun->splits.end(); ++splitIt) 
+    {
+        if (splitIt->completed) continue;
+        if (splitIt->trigger != triggerType || !extraConditions(*splitIt)) return;
+
+        completeSplit(splitIt);
+    }
+}
+
 void GWSplits::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_dll)
 {
     ToolboxUIPlugin::Initialize(ctx, fns, toolbox_dll);
 
     lastSegmentColor = ImGui::ColorConvertFloat4ToU32(white);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&PostGameSrvTransfer_Entry, [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadInfo* pak) -> void 
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry, [this](GW::HookStatus*, GW::Packet::StoC::InstanceLoadInfo* pak) -> void 
     {
-        if (pak->is_explorable) 
+        if (!pak->is_explorable) return;
+        
+        segmentStart = 0;
+        lastSegmentColor = ImGui::ColorConvertFloat4ToU32(white);
+        lastSegmentGain = 0;
+        
+        for (auto& run : runs) 
         {
-            segmentStart = 0;
-            lastSegmentColor = ImGui::ColorConvertFloat4ToU32(white);
-            lastSegmentGain = 0;
-            for (auto& run : runs) 
+            for (auto& split : run->splits) 
             {
-                for (auto& split : run->splits) 
-                {
-                    split.isPB = false;
-                    split.completed = false;
-                    split.currentTime = 0;
-                }
+                split.isPB = false;
+                split.completed = false;
+                split.currentTime = 0;
             }
         }
+    });
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* packet) {
+        GW::UI::AsyncDecodeStr(packet->message, &onDisplayDialogDecoded, this);
+    });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&DungeonReward_Entry, [this](GW::HookStatus*, GW::Packet::StoC::DungeonReward*) {
+        handleTrigger(Trigger::DungeonReward);
+    });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DoACompleteZone>(&DoACompleteZone_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::DoACompleteZone* packet) {
+        const auto doaZone = (DoaZone)packet->message[1];
+        handleTrigger(Trigger::DungeonReward, [&](const Split& s){ return s.triggerData.doaZone == doaZone; });
     });
 
     InstanceInfo::getInstance().initialize();
@@ -731,6 +805,9 @@ void GWSplits::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_
 
 void GWSplits::SignalTerminate()
 {
-    GW::StoC::RemovePostCallback<GW::Packet::StoC::InstanceLoadInfo>(&PostGameSrvTransfer_Entry);
+    GW::StoC::RemovePostCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadInfo_Entry);
+    GW::StoC::RemovePostCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry);
+    GW::StoC::RemovePostCallback<GW::Packet::StoC::DungeonReward>(&DungeonReward_Entry);
+    GW::StoC::RemovePostCallback<GW::Packet::StoC::DoACompleteZone>(&DoACompleteZone_Entry);
     ToolboxUIPlugin::SignalTerminate();
 }

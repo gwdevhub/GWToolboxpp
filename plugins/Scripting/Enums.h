@@ -7,7 +7,7 @@ namespace GW::Constants {
     enum class SkillID : uint32_t;
 }
 
-enum class Trigger { None, InstanceLoad, HardModePing, Hotkey, ChatMessage, BeginSkillCast, BeginCooldown, SkillCastInterrupt };
+enum class Trigger { None, InstanceLoad, HardModePing, Hotkey, ChatMessage, BeginSkillCast, BeginCooldown, SkillCastInterrupt, DisplayDialog, DungeonReward, DoaZoneComplete };
 enum class Class { Any, Warrior, Ranger, Monk, Necro, Mesmer, Elementalist, Assassin, Ritualist, Paragon, Dervish };
 enum class AgentType { Any, Self, PartyMember, Friendly, Hostile };
 enum class Sorting { AgentId, ClosestToPlayer, FurthestFromPlayer, ClosestToTarget, FurthestFromTarget, LowestHp, HighestHp, ModelID };
@@ -28,6 +28,7 @@ enum class ComparisonOperator {Equals, Less, Greater, LessOrEqual, GreaterOrEqua
 enum class IsIsNot {Is, IsNot};
 enum class DoorStatus {Open, Closed };
 enum class Area { Urgoz, Deep, Doa }; // Some Door IDs are duplicated between areas
+enum class DoaZone: uint32_t { Foundry = 0x273F, Veil, Gloom, City };
 
 enum class ActionBehaviourFlag : uint32_t 
 {
@@ -77,6 +78,7 @@ struct TriggerData
     std::string message{};
     GW::Constants::SkillID skillId{};
     AnyNoYes hsr = AnyNoYes::Any;
+    DoaZone doaZone = DoaZone::Foundry;
 };
 
 

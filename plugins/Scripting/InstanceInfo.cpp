@@ -24,11 +24,14 @@
 namespace {
     GW::HookEntry ObjectiveUpdateName_Entry;
     GW::HookEntry ObjectiveDone_Entry;
+    GW::HookEntry QuestAdd_Entry;
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry UseItem_Entry;
     GW::HookEntry DisplayDialogue_Entry;
     GW::HookEntry FinishSkill_Entry;
     GW::HookEntry ManipulateMapObject_Entry;
+    GW::HookEntry DungeonReward_Entry;
+    GW::HookEntry CountdownStart_Entry;
 
     bool isTargetableMiniPet(uint32_t itemId) 
     {
@@ -87,6 +90,7 @@ void InstanceInfo::initialize()
         this->decodedItemNames.clear();
         this->storedTargets.clear();
         this->doorStatus.clear();
+        instanceIsCompleted = false;
         updateQuestNames();
 
         mpStatus.poppedMinipetId = std::nullopt;
@@ -94,12 +98,22 @@ void InstanceInfo::initialize()
 
         ++instanceId;
     });
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::QuestAdd>(&QuestAdd_Entry, [this, updateQuestNames](GW::HookStatus*, const GW::Packet::StoC::QuestAdd*) 
+    {
+        updateQuestNames();
+    });
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* packet) {
         if (wmemcmp(packet->message, L"\x8102\x5d41\xa992\xf927\x29f7", 5) == 0) 
         {
             // Dhuum quest does not send a `ObjectiveUpdateName` StoC
             this->objectiveStatus[157] = QuestStatus::Started;
         }
+    });
+    GW::StoC::RegisterPacketCallback(&CountdownStart_Entry, GAME_SMSG_INSTANCE_COUNTDOWN, [this](GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
+        this->instanceIsCompleted = true;
+    });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&DungeonReward_Entry, [this](GW::HookStatus*, GW::Packet::StoC::DungeonReward*) {
+        this->instanceIsCompleted = true;
     });
 
     RegisterUIMessageCallback(&UseItem_Entry, GW::UI::UIMessage::kSendUseItem, [&](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
@@ -132,12 +146,10 @@ void InstanceInfo::initialize()
 
         if (packet->animation_type == 16)
         {
-            logMessage("Open door");
             doorStatus[(DoorID)packet->object_id] = DoorStatus::Open;
         }
         else if (packet->animation_type == 9 || packet->animation_type == 3)
         {
-            logMessage("Close door");
             doorStatus[(DoorID)packet->object_id] = DoorStatus::Closed;
         }
     });
@@ -148,6 +160,10 @@ void InstanceInfo::terminate()
     GW::StoC::RemovePostCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry);
     GW::StoC::RemovePostCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry);
     GW::StoC::RemovePostCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry);
+    GW::StoC::RemovePostCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry);
+    GW::StoC::RemovePostCallback<GW::Packet::StoC::DungeonReward>(&DungeonReward_Entry);
+    GW::StoC::RemovePostCallback<GW::Packet::StoC::ManipulateMapObject>(&ManipulateMapObject_Entry);
+    GW::StoC::RemovePostCallback<GW::Packet::StoC::QuestAdd>(&QuestAdd_Entry);
     RemoveUIMessageCallback(&UseItem_Entry, GW::UI::UIMessage::kSendUseItem);
 }
 

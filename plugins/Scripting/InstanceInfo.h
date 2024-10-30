@@ -8,6 +8,7 @@
 
 #include <chrono>
 #include <unordered_map>
+#include <unordered_set>
 
 template<>
 struct std::hash<Hotkey>
@@ -67,5 +68,6 @@ private:
     std::unordered_map<GW::Constants::QuestID, std::wstring> questNames;
     std::unordered_map<DoorID, DoorStatus> doorStatus;
     int instanceId = 0;
+    bool instanceIsCompleted = false;
     MiniPetStatus mpStatus;
 };

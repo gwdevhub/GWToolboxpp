@@ -64,6 +64,8 @@ public:
     void SignalTerminate() override;
     void Terminate() override;
 
+    bool triggerScripts(Trigger triggerType, std::function<bool(const Script&)> extraConditions = [](const Script&) { return true; });
+
 private:
     void clear();
 

@@ -302,6 +302,12 @@ std::string_view toString(Trigger type)
             return "Trigger on interrupt";
         case Trigger::BeginCooldown:
             return "Trigger on end skill cast";
+        case Trigger::DungeonReward:
+            return "Trigger on dungeon reward";
+        case Trigger::DoaZoneComplete:
+            return "Trigger on DoA zone complete";
+        case Trigger::DisplayDialog:
+            return "Trigger on displaying dialog";
     }
     return "";
 }
@@ -403,6 +409,22 @@ std::string_view toString(DoorStatus status)
             return "Closed";
         case DoorStatus::Open:
             return "Open";
+    }
+    return "";
+}
+
+std::string_view toString(DoaZone status)
+{
+    switch (status) 
+    {
+        case DoaZone::Foundry:
+            return "Foundry";
+        case DoaZone::City:
+            return "City";
+        case DoaZone::Gloom:
+            return "Gloom";
+        case DoaZone::Veil:
+            return "Veil";
     }
     return "";
 }
@@ -871,10 +893,15 @@ void drawHotkeySelector(Hotkey& hotkey, std::string& description, float selector
     ImGui::PopItemWidth();
 }
 
-void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, float width)
+void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, [[maybe_unused]] float width)
 {
-    if (trigger == Trigger::None) {
-        drawEnumButton(Trigger::InstanceLoad, Trigger::SkillCastInterrupt, trigger, 0, 100.f, "Add trigger");
+    if (trigger == Trigger::None) 
+    {
+        #ifdef LiveSplitMode
+        drawEnumButton(Trigger::DisplayDialog, Trigger::DoaZoneComplete, trigger, 0, 100.f, "Add trigger");
+        #else
+        drawEnumButton(Trigger::InstanceLoad, Trigger::DoaZoneComplete, trigger, 0, 100.f, "Add trigger");
+        #endif
     }
     else if (trigger == Trigger::Hotkey) {
         auto description = triggerData.hotkey.keyData ? makeHotkeyDescription(triggerData.hotkey) : "Click to change key";
@@ -890,7 +917,7 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, float width
     }
     else if (trigger == Trigger::ChatMessage) {
         ImGui::PushItemWidth(200);
-        ImGui::InputText("Trigger message", &triggerData.message);
+        ImGui::InputText("Trigger chat message", &triggerData.message);
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("X", ImVec2(20.f, 0))) {
@@ -931,6 +958,26 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, float width
         if (ImGui::Button("X", ImVec2(20.f, 0))) {
             trigger = Trigger::None;
             triggerData.skillId = GW::Constants::SkillID::No_Skill;
+        }
+    }
+    else if (trigger == Trigger::DisplayDialog) {
+        ImGui::PushItemWidth(200);
+        ImGui::InputText("Trigger display dialog", &triggerData.message);
+        ImGui::PopItemWidth();
+        ImGui::SameLine();
+        if (ImGui::Button("X", ImVec2(20.f, 0))) {
+            trigger = Trigger::None;
+            triggerData.message = "";
+        }
+    }
+    else if (trigger == Trigger::DoaZoneComplete) {
+        ImGui::Text("Trigger DoA zone complete");
+        ImGui::SameLine();
+        drawEnumButton(DoaZone::Foundry,DoaZone::City, triggerData.doaZone);
+        ImGui::SameLine();
+        if (ImGui::Button("X", ImVec2(20.f, 0))) {
+            trigger = Trigger::None;
+            triggerData.doaZone = DoaZone::Foundry;
         }
     }
     else {

@@ -3,6 +3,7 @@
 #include <Condition.h>
 #include <ToolboxUIPlugin.h>
 #include <Utils/GuiUtils.h>
+#include <Enums.h>
 
 struct Split 
 {
@@ -18,6 +19,8 @@ struct Split
     int trackedTime   = 0;
     int pbSegmentTime = 0;
     std::vector<ConditionPtr> conditions;
+    Trigger trigger = Trigger::None;
+    TriggerData triggerData = {};
 };
 
 struct Run 
@@ -47,7 +50,11 @@ public:
     void Initialize(ImGuiContext*, ImGuiAllocFns, HMODULE) override;
     void SignalTerminate() override;
      
+    void handleTrigger(Trigger triggerType, std::function<bool(const Split&)> extraConditions = [](const Split&) { return true; });
+
 private:
+    void completeSplit(std::vector<Split>::iterator);
+
     std::shared_ptr<Run> currentRun = nullptr;
     std::vector<std::shared_ptr<Run>> runs;
 
