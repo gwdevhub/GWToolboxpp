@@ -83,6 +83,7 @@
 #include <Widgets/LatencyWidget.h>
 #include <Widgets/ActiveQuestWidget.h>
 #include <Widgets/MissionMapWidget.h>
+#include <Widgets/Navmap/Navmap.h>
 #include "ToolboxSettings.h"
 
 
@@ -158,6 +159,7 @@ namespace {
         SkillbarWidget::Instance(),
         DistanceWidget::Instance(),
         Minimap::Instance(),
+		Navmap::Instance(),
         PartyDamage::Instance(),
         BondsWidget::Instance(),
         ClockWidget::Instance(),

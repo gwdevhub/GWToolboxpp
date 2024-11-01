@@ -15,6 +15,14 @@ file(GLOB SOURCES
     "Widgets/*.cpp"
     "Widgets/Minimap/*.h"
     "Widgets/Minimap/*.cpp"
+	"Widgets/Navmap/*.h"
+    "Widgets/Navmap/*.cpp"
+	"Widgets/Navmap/Navigation/*.h"
+    "Widgets/Navmap/Navigation/*.cpp"
+	"Widgets/Navmap/Navigation/RecastDemo/*.h"
+    "Widgets/Navmap/Navigation/RecastDemo/*.cpp"
+	"Widgets/Navmap/Navigation/RecastDemo/GL/*.h"
+    "Widgets/Navmap/Navigation/RecastDemo/GL/*.cpp"
     "Windows/*.h" 
     "Windows/*.cpp"
     "Windows/Pathfinding/*.h"
@@ -49,6 +57,11 @@ target_link_options(GWToolboxdll PRIVATE
 
 target_include_directories(GWToolboxdll PRIVATE
     "${PROJECT_SOURCE_DIR}/Dependencies"
+	"${PROJECT_SOURCE_DIR}/Dependencies/recastnavigation/Recast/include"
+	"${PROJECT_SOURCE_DIR}/Dependencies/recastnavigation/DebugUtils/include"
+	"${PROJECT_SOURCE_DIR}/Dependencies/recastnavigation/Detour/include"
+	"${PROJECT_SOURCE_DIR}/Dependencies/recastnavigation/DetourCrowd/include"
+	"${PROJECT_SOURCE_DIR}/Dependencies/recastnavigation/DetourTileCache/include"
     "${CMAKE_CURRENT_SOURCE_DIR}"
     )
 
@@ -72,6 +85,12 @@ target_link_libraries(GWToolboxdll PRIVATE
     nativefiledialog
     wintoast
     wolfssl
+	DebugUtils
+	Detour
+	DetourCrowd
+	DetourTileCache
+	Recast
+	fastlz
 
     # libs:
     Dbghelp.lib # for MiniDump
@@ -87,9 +106,11 @@ add_custom_target(shaders)
 
 file(GLOB HLSL_VERTEX_SHADER_FILES
     Widgets/Minimap/Shaders/*_vs.hlsl
+	Widgets/Navmap/Shaders/*_vs.hlsl
 )
 file(GLOB HLSL_PIXEL_SHADER_FILES
     Widgets/Minimap/Shaders/*_ps.hlsl
+	Widgets/Navmap/Shaders/*_ps.hlsl
 )
 
 set_source_files_properties(${HLSL_VERTEX_SHADER_FILES} PROPERTIES ShaderType "vs")

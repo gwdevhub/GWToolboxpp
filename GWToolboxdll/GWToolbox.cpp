@@ -38,6 +38,7 @@
 
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
+#include <Widgets/Navmap/Navmap.h>
 #include <hidusage.h>
 
 #include "GWCA/Utilities/Scanner.h"
@@ -853,6 +854,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 
     if (!world_map_showing && minimap_enabled) {
         Minimap::Render(device);
+		Navmap::Render(device);
     }
 
     ImGui::NewFrame();
