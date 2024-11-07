@@ -246,6 +246,8 @@ namespace {
     using PostMute_pt = void(__cdecl*)(int param);
     PostMute_pt PostMuted_Func;
 
+    GW::HookEntry createuicomponent_hook;
+
     GW::UI::UIInteractionCallback OnChatInteraction_Callback_Func = nullptr;
     GW::UI::UIInteractionCallback OnChatInteraction_Callback_Ret = nullptr;
 
@@ -316,10 +318,19 @@ namespace {
         GW::Hook::EnterHook();
         // If a channel was given in the UI message, set it now.
         if (message->message_id == GW::UI::UIMessage::kAppendMessageToChat && lParam) {
-            uint32_t* frame_ptr = *(uint32_t**)message->wParam;
-            const auto tab = (uint32_t)lParam ^ 0x8000;
-            if (tab < 6 && FocusChatTab_Func) {
-                FocusChatTab_Func(frame_ptr, nullptr, tab);
+            const auto frame = GW::UI::GetFrameById(message->frame_id);
+            uint32_t control_action = 0xff;
+            // Map tab number > key for the ui message
+            switch ((uint32_t)lParam ^ 0x8000) {
+            case 0: control_action = 0x31; break;
+            case 1: control_action = 0x35; break;
+            case 2: control_action = 0x32; break;
+            case 3: control_action = 0x33; break;
+            case 4: control_action = 0x34; break;
+            case 5: control_action = 3; break;
+            }
+            if (frame && control_action != 0xff) {
+                GW::UI::Keydown((GW::UI::ControlAction)control_action, frame);
                 GW::Hook::LeaveHook();
                 return;
             }
@@ -1302,20 +1313,28 @@ void ChatCommands::Initialize()
 
 #endif
 
-    address = GW::Scanner::Find("\x3d\x7d\x00\x00\x10\x0f\x87\xe5\x02\x00\x00", "xxxxxxxxxxx", -0x11);
-    if (address) {
-        OnChatInteraction_Callback_Func = (GW::UI::UIInteractionCallback)address;
-        FocusChatTab_Func = (FocusChatTab_pt)GW::Scanner::FunctionFromNearCall(address + 0x248);
+    if (auto frame = GW::UI::GetFrameByLabel(L"Chat")) {
+        OnChatInteraction_Callback_Func = frame->frame_callbacks[0];
         GW::HookBase::CreateHook((void**)&OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
-        GW::HookBase::EnableHooks();
+        GW::HookBase::EnableHooks(OnChatInteraction_Callback_Func);
     }
+    else {
+        GW::UI::RegisterCreateUIComponentCallback(&createuicomponent_hook, [](GW::UI::CreateUIComponentPacket* packet) {
+            if (!(!OnChatInteraction_Callback_Func && packet && packet->component_label && wcscmp(packet->component_label, L"Chat") == 0 && packet->event_callback))
+                return;
+            OnChatInteraction_Callback_Func = reinterpret_cast<GW::UI::UIInteractionCallback>(packet->event_callback);
+            GW::HookBase::CreateHook((void**)&OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
+            GW::HookBase::EnableHooks(OnChatInteraction_Callback_Func);
+            });
+    }
+
+
 
 #ifdef _DEBUG
     ASSERT(SetMuted_Func);
     ASSERT(PostMuted_Func);
     ASSERT(is_muted);
     ASSERT(OnChatInteraction_Callback_Func);
-    ASSERT(FocusChatTab_Func);
 #endif
 
     for (auto& it : chat_commands) {
