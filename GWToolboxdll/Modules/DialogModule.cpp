@@ -16,6 +16,7 @@
 #include <Logger.h>
 #include <Timer.h>
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 namespace {
     GW::UI::UIInteractionCallback NPCDialogUICallback_Func = nullptr;
@@ -253,10 +254,8 @@ void DialogModule::Initialize()
         RegisterUIMessageCallback(&dialog_hook, message_id, OnPreUIMessage, -0x1);
         RegisterUIMessageCallback(&dialog_hook, message_id, OnPostUIMessage, 0x500);
     }
-    GW::UI::RegisterCreateUIComponentCallback(&dialog_hook, [](GW::UI::CreateUIComponentPacket* packet) {
-        if (!(!NPCDialogUICallback_Func && packet && packet->component_label && wcscmp(packet->component_label, L"NPCInteract") == 0 && packet->event_callback))
-            return;
-        NPCDialogUICallback_Func = reinterpret_cast<GW::UI::UIInteractionCallback>(packet->event_callback);
+    GW::WaitForFrame(L"NPCInteract", [](GW::UI::Frame* frame) {
+        NPCDialogUICallback_Func = frame->frame_callbacks[0];
         GW::HookBase::CreateHook((void**)&NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
         GW::HookBase::EnableHooks(NPCDialogUICallback_Func);
         });

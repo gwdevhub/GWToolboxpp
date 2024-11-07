@@ -42,6 +42,7 @@
 
 #include "GWCA/Utilities/Scanner.h"
 #include "Utils/FontLoader.h"
+#include <Utils/ToolboxUtils.h>
 
 
 
@@ -638,17 +639,12 @@ void GWToolbox::Initialize()
             AttachRenderCallback();
             GW::EnableHooks();
 
-        // Stop GW from force closing the game when clicking on the exit button in window fullscreen; instead route it through the close signal.
-            if (!OnMinOrRestoreOrExitBtnClicked_Func) {
-                OnMinOrRestoreOrExitBtnClicked_Func = (GW::UI::UIInteractionCallback)GW::Scanner::Find("\x83\xc4\x0c\xa9\x00\x00\x80\x00", "xxxxxxxx", -0x54);
-#ifdef _DEBUG
-                ASSERT(OnMinOrRestoreOrExitBtnClicked_Func);
-#endif
-                if (OnMinOrRestoreOrExitBtnClicked_Func) {
-                    GW::HookBase::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
-                    GW::HookBase::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
-                }
-            }
+            GW::WaitForFrame(L"BtnRestore", [](GW::UI::Frame* frame) {
+                OnMinOrRestoreOrExitBtnClicked_Func = frame->frame_callbacks[0];
+                GW::HookBase::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
+                GW::HookBase::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
+                });
+
             UpdateInitialising(.0f);
             AttachGameLoopCallback();
             pending_detach_dll = false;

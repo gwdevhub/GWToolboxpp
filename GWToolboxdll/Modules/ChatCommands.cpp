@@ -61,6 +61,7 @@
 
 #include "Widgets/ActiveQuestWidget.h"
 #include "QuestModule.h"
+#include <Utils/ToolboxUtils.h>
 
 constexpr auto CMDTITLE_KEEP_CURRENT = 0xfffe;
 constexpr auto CMDTITLE_REMOVE_CURRENT = 0xffff;
@@ -1313,28 +1314,16 @@ void ChatCommands::Initialize()
 
 #endif
 
-    if (auto frame = GW::UI::GetFrameByLabel(L"Chat")) {
+    GW::WaitForFrame(L"Chat", [](GW::UI::Frame* frame) {
         OnChatInteraction_Callback_Func = frame->frame_callbacks[0];
         GW::HookBase::CreateHook((void**)&OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
         GW::HookBase::EnableHooks(OnChatInteraction_Callback_Func);
-    }
-    else {
-        GW::UI::RegisterCreateUIComponentCallback(&createuicomponent_hook, [](GW::UI::CreateUIComponentPacket* packet) {
-            if (!(!OnChatInteraction_Callback_Func && packet && packet->component_label && wcscmp(packet->component_label, L"Chat") == 0 && packet->event_callback))
-                return;
-            OnChatInteraction_Callback_Func = reinterpret_cast<GW::UI::UIInteractionCallback>(packet->event_callback);
-            GW::HookBase::CreateHook((void**)&OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
-            GW::HookBase::EnableHooks(OnChatInteraction_Callback_Func);
-            });
-    }
-
-
+        });
 
 #ifdef _DEBUG
     ASSERT(SetMuted_Func);
     ASSERT(PostMuted_Func);
     ASSERT(is_muted);
-    ASSERT(OnChatInteraction_Callback_Func);
 #endif
 
     for (auto& it : chat_commands) {

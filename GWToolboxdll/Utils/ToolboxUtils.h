@@ -1,4 +1,5 @@
 #pragma once
+#include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
 class StoCCallback {
@@ -97,6 +98,8 @@ namespace GW {
 
 }
 namespace GW {
+    typedef void(__cdecl* OnGotFrame_Callback)(UI::Frame*);
+    void WaitForFrame(const wchar_t* frame_label, OnGotFrame_Callback callback);
     namespace Map {
         GW::Array<GW::MapProp*>* GetMapProps();
         bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out);
