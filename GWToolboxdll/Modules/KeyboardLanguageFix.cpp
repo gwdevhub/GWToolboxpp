@@ -33,6 +33,9 @@ void KeyboardLanguageFix::Initialize()
     const auto en_us_keyboard_name = "00000409";
 
     HKL* address = *(HKL**)GW::Scanner::Find("\x81\xe6\xff\xff\xff\x7f\x85\xc0", "xxxxxxxx", -0x4);
+#ifdef _DEBUG
+    ASSERT(address && "Failed to find keyboard layout address");
+#endif
     if (!address) {
         Log::Error("Failed to find keyboard layout address");
         return;

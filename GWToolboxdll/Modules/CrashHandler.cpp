@@ -180,4 +180,7 @@ void CrashHandler::Initialize()
         GW::Hook::CreateHook((void**)&HandleCrash_Func, OnGWCrash, (void**)&RetHandleCrash);
         GW::Hook::EnableHooks(HandleCrash_Func);
     }
+#ifdef _DEBUG
+    ASSERT(HandleCrash_Func);
+#endif
 }

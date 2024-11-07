@@ -90,9 +90,14 @@ namespace {
 
 void CodeOptimiserModule::Initialize() {
     ComputeCRC32_func = (ComputeCRC32_pt)GW::Scanner::Find("\xf7\xd6\x85", "xxx", -0xF);
-    compute_tabular_method_tables(g_tbl, 16);
-    GW::Hook::CreateHook((void**)&ComputeCRC32_func, ComputeCRC32, nullptr);
-    GW::Hook::EnableHooks(ComputeCRC32_func);
+    if (ComputeCRC32_func) {
+        compute_tabular_method_tables(g_tbl, 16);
+        GW::Hook::CreateHook((void**)&ComputeCRC32_func, ComputeCRC32, nullptr);
+        GW::Hook::EnableHooks(ComputeCRC32_func);
+    }
+#ifdef _DEBUG
+    ASSERT(ComputeCRC32_func);
+#endif
 }
 
 void CodeOptimiserModule::SignalTerminate() {
