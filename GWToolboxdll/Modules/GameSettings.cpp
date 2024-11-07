@@ -1414,6 +1414,7 @@ void GameSettings::Initialize()
     uintptr_t address = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
     printf("[SCAN] StoragePatch = %p\n", (void*)address);
 
+
     // Xunlai Chest has a behavior where if you
     // 1. Open chest on page 1 to 14
     // 2. Close chest & open it again
@@ -1452,9 +1453,11 @@ void GameSettings::Initialize()
 
     // Call our CreateCodedTextLabel function instead of default CreateCodedTextLabel for patching skill descriptions
     address = GW::Scanner::FindAssertion("p:\\code\\gw\\ui\\game\\gmtipskill.cpp", "!(m_tipSkillFlags & TipSkillMsgCreate::FLAG_SHOW_ENABLE_AI_HINT)", 0x7b);
-    CreateEncodedTextLabel_Func = (CreateCodedTextLabel_pt)GW::Scanner::FunctionFromNearCall(address);
-    skill_description_patch.SetRedirect(address, CreateCodedTextLabel_SkillDescription);
-    skill_description_patch.TogglePatch(true);
+    if (address) {
+        CreateEncodedTextLabel_Func = (CreateCodedTextLabel_pt)GW::Scanner::FunctionFromNearCall(address);
+        skill_description_patch.SetRedirect(address, CreateCodedTextLabel_SkillDescription);
+        skill_description_patch.TogglePatch(true);
+    }
 
     // See OnAgentAllegianceChanged
     address = GW::Scanner::Find("\x75\x18\x81\xce\x00\x00\x00\x02\x56", "xxxxxxxxx", 0x9);
@@ -1474,6 +1477,22 @@ void GameSettings::Initialize()
 
     FadeFrameContent_Func = (FadeFrameContent_pt)GW::Scanner::FindAssertion("p:\\code\\engine\\frame\\frapi.cpp", "sourceOpacity >= 0", -0x46);
     printf("[SCAN] FadeFrameContent_Func = %p\n", (void*)FadeFrameContent_Func);
+
+#ifdef _DEBUG
+    ASSERT(ctrl_click_patch.IsValid());
+    ASSERT(tome_patch.IsValid());
+    ASSERT(skip_map_entry_message_patch.IsValid());
+    ASSERT(gold_confirm_patch.IsValid());
+    ASSERT(remove_skill_warmup_duration_patch.IsValid());
+    ASSERT(CreateEncodedTextLabel_Func);
+    ASSERT(skill_description_patch.IsValid());
+    ASSERT(SetGlobalNameTagVisibility_Func);
+    ASSERT(GlobalNameTagVisibilityFlags);
+    ASSERT(ShowAgentFactionGain_Func);
+    ASSERT(ShowAgentExperienceGain_Func);
+    ASSERT(FadeFrameContent_Func);
+#endif
+
 
     GW::HookBase::CreateHook((void**)&ShowAgentFactionGain_Func, OnShowAgentFactionGain, reinterpret_cast<void**>(&ShowAgentFactionGain_Ret));
     GW::HookBase::EnableHooks(ShowAgentFactionGain_Func);
