@@ -253,19 +253,20 @@ void DialogModule::Initialize()
         RegisterUIMessageCallback(&dialog_hook, message_id, OnPreUIMessage, -0x1);
         RegisterUIMessageCallback(&dialog_hook, message_id, OnPostUIMessage, 0x500);
     }
-    // NB: Can also be found via floating dialogs array in memory. We're not using hooks for any of the other floating dialogs, but would be good to document later.
-    NPCDialogUICallback_Func = reinterpret_cast<GW::UI::UIInteractionCallback>(GW::Scanner::FindAssertion(
-        "p:\\code\\gw\\ui\\game\\gmnpc.cpp", "interactMsg.codedText && interactMsg.codedText[0]", -0xfb));
-    if (NPCDialogUICallback_Func) {
+    GW::UI::RegisterCreateUIComponentCallback(&dialog_hook, [](GW::UI::CreateUIComponentPacket* packet) {
+        if (!(!NPCDialogUICallback_Func && packet && packet->component_label && wcscmp(packet->component_label, L"NPCInteract") == 0 && packet->event_callback))
+            return;
+        NPCDialogUICallback_Func = reinterpret_cast<GW::UI::UIInteractionCallback>(packet->event_callback);
         GW::HookBase::CreateHook((void**)&NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
         GW::HookBase::EnableHooks(NPCDialogUICallback_Func);
-    }
+        });
 }
 
 void DialogModule::Terminate()
 {
     ToolboxModule::Terminate();
     GW::UI::RemoveUIMessageCallback(&dialog_hook);
+    GW::UI::RemoveCreateUIComponentCallback(&dialog_hook);
     GW::HookBase::RemoveHook(NPCDialogUICallback_Func);
 }
 
