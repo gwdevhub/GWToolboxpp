@@ -1299,9 +1299,10 @@ void ChatCommands::Initialize()
 
     GW::UI::RegisterUIMessageCallback(&OnSentChat_HookEntry, GW::UI::UIMessage::kSendChatMessage, OnSendChat);
 
+
+#if _DEBUG
     // Experimental chat commands
     uintptr_t address = 0;
-#if _DEBUG
     chat_commands.push_back({ L"skillimage", CmdSkillImage });
     address = GW::Scanner::Find("\x83\xc4\x04\xc7\x45\x08\x00\x00\x00\x00", "xxxxxxxxxx", -5);
     if (address) {
