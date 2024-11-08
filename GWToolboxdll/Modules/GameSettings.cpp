@@ -1209,6 +1209,10 @@ namespace {
             if (packet->preference_id == GW::UI::NumberPreference::TextLanguage)
                 FontLoader::LoadFonts(true);
         } break;
+        case GW::UI::UIMessage::kPartyDefeated: {
+            if (auto_return_on_defeat && GW::PartyMgr::GetIsLeader() && !GW::PartyMgr::ReturnToOutpost())
+                Log::Warning("Failed to return to outpost");
+        } break;
         case GW::UI::UIMessage::kMapLoaded: {
             last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
         } break;
@@ -1507,7 +1511,7 @@ void GameSettings::Initialize()
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, OnUpdateSkillCount, -0x3000);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_2, OnUpdateSkillCount, -0x3000);
 
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, &GameSettings::OnPartyDefeated);
+    //GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyDefeated>(&PartyDefeated_Entry, &GameSettings::OnPartyDefeated);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&PartyDefeated_Entry, [this](GW::HookStatus* status, GW::Packet::StoC::GenericValue* packet) {
         switch (packet->value_id) {
             case 11:
@@ -1600,7 +1604,8 @@ void GameSettings::Initialize()
         GW::UI::UIMessage::kPartySearchInviteSent,
         GW::UI::UIMessage::kPreferenceValueChanged,
         GW::UI::UIMessage::kMapLoaded,
-        GW::UI::UIMessage::kTradeSessionStart
+        GW::UI::UIMessage::kTradeSessionStart,
+        GW::UI::UIMessage::kPartyDefeated
     };
     for (const auto message_id : post_ui_messages) {
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
@@ -2541,10 +2546,7 @@ void GameSettings::OnPlayerLeaveInstance(GW::HookStatus*, const GW::Packet::StoC
 // Automatically return to outpost on defeat
 void GameSettings::OnPartyDefeated(const GW::HookStatus*, GW::Packet::StoC::PartyDefeated*)
 {
-    if (!auto_return_on_defeat || !GW::PartyMgr::GetIsLeader()) {
-        return;
-    }
-    GW::PartyMgr::ReturnToOutpost();
+
 }
 
 // Automatically send /age2 on /age.
