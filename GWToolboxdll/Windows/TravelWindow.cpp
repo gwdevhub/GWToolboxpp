@@ -516,7 +516,7 @@ namespace {
                         outpost = GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost;
                     }
                     else if (first_char_of_last_arg == 'k') {
-                        outpost = GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost;
+                        outpost = GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost;
                     }
                     else {
                         outpost = IsLuxon() ? GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost : GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost;
