@@ -1263,14 +1263,6 @@ void FriendListWindow::DrawSettingsInternal()
     ImGui::SameLine();
     ImGui::Text("in explorable");
 
-    ImGui::Text("Show as");
-    ImGui::SameLine();
-    ImGui::PushItemWidth(dropdown_width);
-    ImGui::Combo("###show_as_loading", &loading_show_as, "Window\0Widget\0Hidden");
-    ImGui::PopItemWidth();
-    ImGui::SameLine();
-    ImGui::Text("while loading");
-
     ImGui::Checkbox("Temporarily add offline players you whisper as friends", &add_offline_players_to_friends);
     ImGui::ShowHelp("When you whisper someone and they are offline, toolbox will attempt to add these players to your friendlist"
         " to figure out if they are online on another character.\nIf they are, toolbox will redirect your whisper to that character instead.\n"

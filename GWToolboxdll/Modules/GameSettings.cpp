@@ -1034,7 +1034,7 @@ namespace {
                     wcscpy(packet.location, quest->location);
                     wcscpy(packet.name, quest->name);
                     wcscpy(packet.npc, quest->npc);
-                    GW::StoC::EmulatePacket(&packet);
+                    GW::StoC::EmulatePacket(&packet); // Why? Can we not send more ui messages if thats the need?
                     GW::QuestMgr::SetActiveQuestId(quest->quest_id);
                 }
 
