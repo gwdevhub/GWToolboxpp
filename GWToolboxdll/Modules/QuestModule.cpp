@@ -21,6 +21,7 @@
 #include <Modules/Resources.h>
 
 #include <Utils/GuiUtils.h>
+#include <GWCA/Context/WorldContext.h>
 
 namespace {
     constexpr auto quest_colors = std::to_array<Color>({
@@ -444,13 +445,32 @@ void QuestModule::Initialize()
     }
     RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
 
-
-
-    QuestLogRow_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::Find("\x83\xc0\xfc\x83\xf8\x54", "xxxxxx", -0xe);
-    if (QuestLogRow_UICallback_Func) {
+    const auto address = GW::Scanner::Find("\x83\xc0\xfc\x83\xf8\x54", "xxxxxx", -0xe);
+    if (GW::Scanner::IsValidPtr(address,GW::Scanner::TEXT)) {
+        QuestLogRow_UICallback_Func = (GW::UI::UIInteractionCallback)address;
         GW::Hook::CreateHook((void**)&QuestLogRow_UICallback_Func, OnQuestLogRow_UICallback, (void**)&QuestLogRow_UICallback_Ret);
         GW::Hook::EnableHooks(QuestLogRow_UICallback_Func);
     }
+#ifdef _DEBUG
+    ASSERT(QuestLogRow_UICallback_Func);
+#endif
+}
+
+void QuestModule::EmulateQuestSelected(GW::Constants::QuestID quest_id)
+{
+    const auto quest = GW::QuestMgr::GetQuest(quest_id);
+    if (!quest)
+        return;
+    GW::UI::UIPacket::kServerActiveQuestChanged packet = {
+        .quest_id = quest->quest_id,
+        .marker = quest->marker,
+        .h0024 = quest->h0024,
+        .map_id = quest->map_to,
+        .log_state = quest->log_state
+    };
+    GW::UI::SendUIMessage(GW::UI::UIMessage::kClientActiveQuestChanged, &packet);
+    GW::GetWorldContext()->active_quest_id = quest->quest_id;
+    GW::UI::SendUIMessage(GW::UI::UIMessage::kServerActiveQuestChanged, &packet);
 }
 
 void QuestModule::SignalTerminate()
