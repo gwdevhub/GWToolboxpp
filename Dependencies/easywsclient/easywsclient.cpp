@@ -22,10 +22,10 @@
     #include <string.h>
     #include <sys/types.h>
     #include <io.h>
-    #ifndef _SSIZE_T_DEFINED
-        typedef int ssize_t;
-        #define _SSIZE_T_DEFINED
-    #endif
+    // #ifndef _SSIZE_T_DEFINED
+    //     typedef int ssize_t;
+    //     #define _SSIZE_T_DEFINED
+    // #endif
     #ifndef _SOCKET_T_DEFINED
         typedef SOCKET socket_t;
         #define _SOCKET_T_DEFINED

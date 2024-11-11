@@ -2,7 +2,7 @@
 
 #include <ToolboxModule.h>
 
-#include <wintoast/wintoastlib.h>
+#include <wintoastlib.h>
 
 class ToastNotifications : public ToolboxModule {
     ToastNotifications() = default;
@@ -42,7 +42,7 @@ public:
         void toastActivated() const override;
         void toastActivated(int) const override;
         void toastDismissed(WinToastDismissalReason) const override;
-        void toastFailed(HRESULT err = 0) const override;
+        void toastFailed() const override;
         INT64 toast_id = -1;
         bool send();
         bool dismiss();
