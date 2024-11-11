@@ -2,6 +2,11 @@
 
 #include <ToolboxWidget.h>
 
+namespace GW {
+    struct GamePos;
+    struct Vec2f;
+}
+
 class WorldMapWidget : public ToolboxWidget {
     WorldMapWidget() = default;
     ~WorldMapWidget() override = default;
@@ -31,4 +36,5 @@ public:
     bool CanTerminate() override;
 
     static void ShowAllOutposts(bool show);
+    static bool GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f* world_map_pos);
 };

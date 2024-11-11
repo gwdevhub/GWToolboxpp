@@ -10,6 +10,7 @@
 
 #include <Widgets/Minimap/Minimap.h>
 #include <Utils/ToolboxUtils.h>
+#include "WorldMapWidget.h"
 
 namespace {
     GW::Vec2f mission_map_top_left;
@@ -22,32 +23,6 @@ namespace {
     GW::Vec2f current_pan_offset;
 
     GW::Vec2f mission_map_screen_pos;
-
-    bool GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f* world_map_pos)
-    {
-        ImRect map_bounds;
-        if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds)) return false;
-        const auto current_map_context = GW::GetMapContext();
-        if (!current_map_context) return false;
-
-        const auto game_map_rect = ImRect({
-            current_map_context->map_boundaries[1],
-            current_map_context->map_boundaries[2],
-            current_map_context->map_boundaries[3],
-            current_map_context->map_boundaries[4],
-        });
-
-        // NB: World map is 96 gwinches per unit, this is hard coded in the GW source
-        const auto gwinches_per_unit = 96.f;
-        GW::Vec2f map_mid_world_point = {
-            map_bounds.Min.x + (abs(game_map_rect.Min.x) / gwinches_per_unit),
-            map_bounds.Min.y + (abs(game_map_rect.Max.y) / gwinches_per_unit),
-        };
-
-        world_map_pos->x = (game_map_pos.x / gwinches_per_unit) + map_mid_world_point.x;
-        world_map_pos->y = ((game_map_pos.y * -1.f) / gwinches_per_unit) + map_mid_world_point.y; // Inverted Y Axis
-        return true;
-    }
 
     GW::Vec2f GetMissionMapScreenCenterPos() {
         return mission_map_top_left + (mission_map_bottom_right - mission_map_top_left) / 2;
@@ -62,7 +37,7 @@ namespace {
     GW::Vec2f ProjectGameMapToScreen(const GW::GamePos position)
     {
         GW::Vec2f world_map_pos;
-        if (!GamePosToWorldMap(position, &world_map_pos))
+        if (!WorldMapWidget::GamePosToWorldMap(position, &world_map_pos))
         {
             return GW::Vec2f(0, 0);
         }

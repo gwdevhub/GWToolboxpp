@@ -7,6 +7,7 @@
 
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -32,6 +33,7 @@
 
 #include <ImGuiAddons.h>
 #include <Constants/EncStrings.h>
+#include <Modules/QuestModule.h>
 
 
 namespace {
@@ -207,24 +209,121 @@ namespace {
         return true;
     }
 
-    GW::HookEntry OnUIMessage_HookEntry;
-
-    // Fake an action of the user selecting an active quest, without making any server request.
-    void EmulateQuestSelected(GW::Quest* quest)
+    const uint32_t GetMapPropModelFileId(GW::MapProp* prop)
     {
-        if (!quest)
-            return;
-        GW::UI::UIPacket::kServerActiveQuestChanged packet = {
-            .quest_id = quest->quest_id,
-            .marker = quest->marker,
-            .h0024 = quest->h0024,
-            .map_id = quest->map_to,
-            .log_state = quest->log_state
-        };
-        GW::UI::SendUIMessage(GW::UI::UIMessage::kClientActiveQuestChanged, &packet);
-        GW::GetWorldContext()->active_quest_id = quest->quest_id;
-        GW::UI::SendUIMessage(GW::UI::UIMessage::kServerActiveQuestChanged, &packet);
+        if (!(prop && prop->h0034[4]))
+            return 0;
+        uint32_t* sub_deets = (uint32_t*)prop->h0034[4];
+        return GwDatTextureModule::FileHashToFileId((wchar_t*)sub_deets[1]);
+    };
+
+    bool IsTravelPortal(GW::MapProp* prop)
+    {
+        switch (GetMapPropModelFileId(prop)) {
+        case 0xa825: // Prophecies, Factions
+            return true;
+        }
+        return false;
     }
+
+    bool IsValidOutpost(GW::Constants::MapID map_id)
+    {
+        const auto map_info = GW::Map::GetMapInfo(map_id);
+        if (!map_info || !map_info->thumbnail_id || !map_info->name_id || !(map_info->x || map_info->y))
+            return false;
+        if ((map_info->flags & 0x5000000) == 0x5000000)
+            return false; // e.g. "wrong" augury rock is map 119, no NPCs
+        if ((map_info->flags & 0x80000000) == 0x80000000)
+            return false; // e.g. Debug map
+        switch (map_info->type) {
+        case GW::RegionType::City:
+        case GW::RegionType::CompetitiveMission:
+        case GW::RegionType::CooperativeMission:
+        case GW::RegionType::EliteMission:
+        case GW::RegionType::MissionOutpost:
+        case GW::RegionType::Outpost:
+            break;
+        default:
+            return false;
+        }
+        return true;
+    }
+
+    struct MapPortal {
+        GW::Constants::MapID from;
+        GW::Constants::MapID to;
+        GW::Vec2f world_pos;
+    };
+    std::vector<MapPortal> map_portals;
+
+    GW::Constants::MapID GetClosestMapToPoint(GW::Vec2f world_map_point) {
+        for (size_t i = 0; i < (size_t)GW::Constants::MapID::Count; i++) {
+            const auto map_info = GW::Map::GetMapInfo((GW::Constants::MapID)i);
+            if (!map_info || !map_info->thumbnail_id || !map_info->name_id || !(map_info->x || map_info->y))
+                continue;
+            if ((map_info->flags & 0x5000000) == 0x5000000)
+                continue; // e.g. "wrong" augury rock is map 119, no NPCs
+            if ((map_info->flags & 0x80000000) == 0x80000000)
+                continue; // e.g. Debug map
+            if(!map_info->GetIsOnWorldMap())
+                continue;
+            (world_map_point);
+            // TODO: distance from point to rect
+        }
+        return GW::Constants::MapID::None;
+    }
+
+    
+
+    bool WorldMapToGamePos(GW::Vec2f& world_map_pos, GW::GamePos* game_map_pos)
+    {
+        ImRect map_bounds;
+        if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds))
+            return false;
+        if (!map_bounds.Contains({ world_map_pos.x, world_map_pos.y }))
+            return false; // Current map doesn't contain these coords; we can't plot a position
+
+        const auto current_map_context = GW::GetMapContext();
+        if (!current_map_context)
+            return false;
+
+        const auto game_map_rect = ImRect({
+            current_map_context->map_boundaries[1], current_map_context->map_boundaries[2],
+            current_map_context->map_boundaries[3], current_map_context->map_boundaries[4],
+            });
+
+        // NB: World map is 96 gwinches per unit, this is hard coded in the GW source
+        constexpr auto gwinches_per_unit = 96.f;
+        GW::Vec2f map_mid_world_point = {
+            map_bounds.Min.x + (abs(game_map_rect.Min.x) / gwinches_per_unit),
+            map_bounds.Min.y + (abs(game_map_rect.Max.y) / gwinches_per_unit),
+        };
+
+        game_map_pos->x = (world_map_pos.x - map_mid_world_point.x) * gwinches_per_unit;
+        game_map_pos->y = ((world_map_pos.y - map_mid_world_point.y) * gwinches_per_unit) * -1.f; // Inverted Y Axis
+        return true;
+    }
+
+    bool AppendMapPortals() {
+        const auto props = GW::Map::GetMapProps();
+        const auto map_id = GW::Map::GetMapID();
+        if (!props) return false;
+        for (auto prop : *props) {
+            if (IsTravelPortal(prop)) {
+                GW::Vec2f world_pos;
+                if (!GamePosToWorldMap({ prop->position.x, prop->position.y }, &world_pos))
+                    continue;
+                map_portals.push_back({
+                    map_id,GetClosestMapToPoint(world_pos),world_pos
+                    });
+            }
+
+        }
+        return true;
+    }
+
+
+    GW::HookEntry OnUIMessage_HookEntry;
 
     void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
     {
@@ -244,14 +343,14 @@ namespace {
                 if (setting_custom_quest_marker) {
                     // This triggers if the player has no quests, or the map has just loaded; we want to "undo" this by spoofing the previous quest selection if there is one
                     status->blocked = true;
-                    EmulateQuestSelected(GW::QuestMgr::GetActiveQuest());
+                    QuestModule::EmulateQuestSelected(GW::QuestMgr::GetActiveQuestId());
                     return;
                 }
                 player_chosen_quest_id = quest_id;
                 if (quest_id == custom_quest_id) {
                     // If the player has chosen the custom quest, spoof the response without asking the server
                     status->blocked = true;
-                    EmulateQuestSelected(GW::QuestMgr::GetQuest(quest_id));
+                    QuestModule::EmulateQuestSelected(quest_id);
                 }
             }
             break;
@@ -270,6 +369,8 @@ namespace {
                         GW::QuestMgr::SetActiveQuestId(custom_quest_marker.quest_id);
                     }
                 }
+                map_portals.clear();
+                AppendMapPortals();
                 break;
             case GW::UI::UIMessage::kOnScreenMessage: {
                 // Block the on-screen message when the custom marker is placed
@@ -293,60 +394,10 @@ namespace {
         });
     }
 
-    bool GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f* world_map_pos)
-    {
-        ImRect map_bounds;
-        if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds))
-            return false;
-        const auto current_map_context = GW::GetMapContext();
-        if (!current_map_context)
-            return false;
 
-        const auto game_map_rect = ImRect({
-            current_map_context->map_boundaries[1], current_map_context->map_boundaries[2],
-            current_map_context->map_boundaries[3], current_map_context->map_boundaries[4],
-        });
 
-        // NB: World map is 96 gwinches per unit, this is hard coded in the GW source
-        const auto gwinches_per_unit = 96.f;
-        GW::Vec2f map_mid_world_point = {
-            map_bounds.Min.x + (abs(game_map_rect.Min.x) / gwinches_per_unit),
-            map_bounds.Min.y + (abs(game_map_rect.Max.y) / gwinches_per_unit),
-        };
 
-        world_map_pos->x = (game_map_pos.x / gwinches_per_unit) + map_mid_world_point.x;
-        world_map_pos->y = ((game_map_pos.y * -1.f) / gwinches_per_unit) + map_mid_world_point.y; // Inverted Y Axis
-        return true;
-    }
 
-    bool WorldMapToGamePos(GW::Vec2f& world_map_pos, GW::GamePos* game_map_pos)
-    {
-        ImRect map_bounds;
-        if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds))
-            return false;
-        if (!map_bounds.Contains({world_map_pos.x, world_map_pos.y}))
-            return false; // Current map doesn't contain these coords; we can't plot a position
-
-        const auto current_map_context = GW::GetMapContext();
-        if (!current_map_context)
-            return false;
-
-        const auto game_map_rect = ImRect({
-            current_map_context->map_boundaries[1], current_map_context->map_boundaries[2],
-            current_map_context->map_boundaries[3], current_map_context->map_boundaries[4],
-        });
-
-        // NB: World map is 96 gwinches per unit, this is hard coded in the GW source
-        constexpr auto gwinches_per_unit = 96.f;
-        GW::Vec2f map_mid_world_point = {
-            map_bounds.Min.x + (abs(game_map_rect.Min.x) / gwinches_per_unit),
-            map_bounds.Min.y + (abs(game_map_rect.Max.y) / gwinches_per_unit),
-        };
-
-        game_map_pos->x = (world_map_pos.x - map_mid_world_point.x) * gwinches_per_unit;
-        game_map_pos->y = ((world_map_pos.y - map_mid_world_point.y) * gwinches_per_unit) * -1.f; // Inverted Y Axis
-        return true;
-    }
 }
 
 void WorldMapWidget::Initialize()
@@ -384,6 +435,32 @@ void WorldMapWidget::Initialize()
     for (auto ui_message : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, ui_message, OnUIMessage);
     }
+}
+
+bool WorldMapWidget::GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f* world_map_pos)
+{
+    ImRect map_bounds;
+    if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds))
+        return false;
+    const auto current_map_context = GW::GetMapContext();
+    if (!current_map_context)
+        return false;
+
+    const auto game_map_rect = ImRect({
+        current_map_context->map_boundaries[1], current_map_context->map_boundaries[2],
+        current_map_context->map_boundaries[3], current_map_context->map_boundaries[4],
+        });
+
+    // NB: World map is 96 gwinches per unit, this is hard coded in the GW source
+    const auto gwinches_per_unit = 96.f;
+    GW::Vec2f map_mid_world_point = {
+        map_bounds.Min.x + (abs(game_map_rect.Min.x) / gwinches_per_unit),
+        map_bounds.Min.y + (abs(game_map_rect.Max.y) / gwinches_per_unit),
+    };
+
+    world_map_pos->x = (game_map_pos.x / gwinches_per_unit) + map_mid_world_point.x;
+    world_map_pos->y = ((game_map_pos.y * -1.f) / gwinches_per_unit) + map_mid_world_point.y; // Inverted Y Axis
+    return true;
 }
 
 void WorldMapWidget::SignalTerminate()
@@ -492,10 +569,34 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             viewport_quest_pos, {viewport_quest_pos.x + ICON_SIZE.x, viewport_quest_pos.y + ICON_SIZE.y}
         };
 
+        //draw_list->AddImage(*GwDatTextureModule::LoadTextureFromFileId(0x1b4d5), quest_marker_image_rect.GetTL(), quest_marker_image_rect.GetBR());
+
         if (quest_marker_image_rect.Contains(ImGui::GetMousePos())) {
             ImGui::SetTooltip("Custom marker placed @ %.2f, %.2f", custom_quest_marker_world_pos.x, custom_quest_marker_world_pos.y);
         }
     }
+    /*for (const auto& portal : map_portals) {
+        static constexpr auto uv0 = ImVec2(0.0f, 0.0f);
+        static constexpr auto ICON_SIZE = ImVec2(24.0f, 24.0f);
+
+        const ImVec2 portal_pos = {
+            ui_scale.x * (portal.world_pos.x - world_map_context->top_left.x) + viewport_offset.x - (ICON_SIZE.x / 2.f),
+            ui_scale.y * (portal.world_pos.y - world_map_context->top_left.y) + viewport_offset.y - (ICON_SIZE.y / 2.f)
+        };
+
+
+
+        const ImRect hover_rect = {
+            portal_pos, {portal_pos.x + ICON_SIZE.x, portal_pos.y + ICON_SIZE.y}
+        };
+
+        draw_list->AddImage(*GwDatTextureModule::LoadTextureFromFileId(0x1b4d5), hover_rect.GetTL(), hover_rect.GetBR());
+
+
+        if (hover_rect.Contains(ImGui::GetMousePos())) {
+            ImGui::SetTooltip("Portal");
+        }
+    }*/
     if (show_lines_on_world_map) {
         const auto& lines = Minimap::Instance().custom_renderer.GetLines();
         const auto map_id = GW::Map::GetMapID();
