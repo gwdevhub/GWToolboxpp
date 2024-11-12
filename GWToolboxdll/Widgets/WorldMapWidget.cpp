@@ -311,7 +311,7 @@ namespace {
         for (auto prop : *props) {
             if (IsTravelPortal(prop)) {
                 GW::Vec2f world_pos;
-                if (!GamePosToWorldMap({ prop->position.x, prop->position.y }, &world_pos))
+                if (!WorldMapWidget::GamePosToWorldMap({ prop->position.x, prop->position.y }, &world_pos))
                     continue;
                 map_portals.push_back({
                     map_id,GetClosestMapToPoint(world_pos),world_pos

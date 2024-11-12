@@ -18,4 +18,5 @@ public:
 
     void Initialize() override;
     void Terminate() override;
+    bool HasSettings() override { return false;  }
 };
