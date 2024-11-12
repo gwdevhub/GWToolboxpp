@@ -52,10 +52,12 @@ include(simpleini)
 include(discord_game_sdk)
 include(gwtoolboxdll_plugins)
 include(nativefiledialog)
+include(fastlz)
 
 add_subdirectory(GWToolboxdll)
 add_subdirectory(Core)
 add_subdirectory(RestClient)
 add_subdirectory(GWToolbox)
+add_subdirectory(Dependencies/recastnavigation)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT GWToolbox)
