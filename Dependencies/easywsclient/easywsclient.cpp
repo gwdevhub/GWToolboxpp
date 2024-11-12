@@ -548,8 +548,10 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
       if (SSL_set_fd (ptConnCtx->sslHandle, ptConnCtx->sockfd) != SSL_SUCCESS)
           return err_out();
 
-      if(SSL_set_tlsext_host_name(ptConnCtx->sslHandle, host) != SSL_SUCCESS)
-          return err_out();
+      // TODO: this needs WOLFSSL_SNI which we already set to 'yes', but it doesn't work for whatever fucked reason
+      // see vcpkg-overlays/ports/wolfssl/portfile.cmake
+      // if(SSL_set_tlsext_host_name(ptConnCtx->sslHandle, host) != SSL_SUCCESS)
+      //     return err_out();
 
       // Initiate SSL handshake
       if (SSL_connect(ptConnCtx->sslHandle) != SSL_SUCCESS)
