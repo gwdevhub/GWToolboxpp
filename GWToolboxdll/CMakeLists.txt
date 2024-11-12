@@ -66,7 +66,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     imgui::fonts
     IconFontCppHeaders
     nativefiledialog
-    unofficial::wintoast::wintoast
+    wintoast
     wolfssl::wolfssl
 
     # libs:

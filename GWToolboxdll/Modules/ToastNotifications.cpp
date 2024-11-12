@@ -19,7 +19,7 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 
-#include <wintoastlib.h>
+#include <wintoast/wintoastlib.h>
 #include <Utils/GuiUtils.h>
 #include <Utils/ToolboxUtils.h>
 #include <Defines.h>
@@ -341,9 +341,9 @@ void ToastNotifications::Toast::toastDismissed(WinToastDismissalReason) const
     TriggerToastCallback(this, false);
 };
 
-void ToastNotifications::Toast::toastFailed() const
+void ToastNotifications::Toast::toastFailed(HRESULT err) const
 {
-    Log::Error("Failed to show toast");
+    Log::Error("Failed to show toast, error code: %d", err);
     TriggerToastCallback(this, false);
 }
 

@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.29)
 
 set(CMAKE_GENERATOR_PLATFORM win32)
-set(VCPKG_CRT_LINKAGE static)
-set(VCPKG_LIBRARY_LINKAGE static)
 
 project(gwtoolbox)
 
@@ -51,12 +49,12 @@ include(easywsclient)
 include(imgui)
 include(gwtoolboxdll_plugins)
 include(nativefiledialog)
+include(wintoast)
 
 find_library(GAME_SDK discord_game_sdk)
 find_path(GAME_SDK_INCLUDE discord-game-sdk/discord.h)
 find_path(EARCUT_HPP_INCLUDE_DIRS "mapbox/earcut.hpp")
 find_path(SIMPLEINI_INCLUDE_DIRS "ConvertUTF.c")
-find_package(unofficial-wintoast CONFIG REQUIRED)
 find_package(wolfssl CONFIG REQUIRED)
 find_package(minhook CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
