@@ -83,6 +83,7 @@
 #include <Widgets/LatencyWidget.h>
 #include <Widgets/ActiveQuestWidget.h>
 #include <Widgets/MissionMapWidget.h>
+#include <Widgets/InventoryOverlayWidget.h>
 #include "ToolboxSettings.h"
 
 
@@ -167,7 +168,11 @@ namespace {
         EffectsMonitorWidget::Instance(),
         LatencyWidget::Instance(),
         SkillMonitorWidget::Instance(),
-        ActiveQuestWidget::Instance()
+#if _DEBUG
+        InventoryOverlayWidget::Instance(),
+#endif
+        ActiveQuestWidget::Instance(),
+
     };
 
     std::vector<WindowToggle> optional_windows = {
