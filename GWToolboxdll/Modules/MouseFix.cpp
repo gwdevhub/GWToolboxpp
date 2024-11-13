@@ -320,8 +320,8 @@ namespace {
             // Force redraw
             const auto user_data = (GWWindowUserData*)GetWindowLongA(GW::MemoryMgr::GetGWWindowHandle(), -0x15);
             current_cursor = nullptr;
-            if (user_data) {
-                OnChangeCursorIcon(user_data);
+            if (user_data && ChangeCursorIcon_Func) {
+                ChangeCursorIcon_Func(user_data);
             }
         });
     }
@@ -351,12 +351,17 @@ void MouseFix::Initialize()
 {
     ToolboxModule::Initialize();
 
-    const uintptr_t address = GW::Scanner::Find("\x8b\x41\x08\x89\x82\x50\x0c\x00\x00", "xxxxxxxxx", 0x9);
-    ChangeCursorIcon_Func = (ChangeCursorIcon_pt)GW::Scanner::FunctionFromNearCall(address);
-    if (ChangeCursorIcon_Func) {
+    auto address = GW::Scanner::Find("\xf7\xc3\x80\x20\x00\x00\x74\x09\x56", "xxxxxxxxx", 0x9);
+    address = GW::Scanner::FunctionFromNearCall(address);
+    if (GW::Scanner::IsValidPtr(address,GW::Scanner::TEXT)) {
+        ChangeCursorIcon_Func = (ChangeCursorIcon_pt)address;
         GW::HookBase::CreateHook((void**)&ChangeCursorIcon_Func, OnChangeCursorIcon, (void**)&ChangeCursorIcon_Ret);
         GW::HookBase::EnableHooks(ChangeCursorIcon_Func);
     }
+
+#if _DEBUG
+    ASSERT(ChangeCursorIcon_Func);
+#endif
 
     const GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kLogout,
