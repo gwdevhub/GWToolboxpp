@@ -7,7 +7,7 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
-## Version 6.23_beta2
+## Version 6.23
 * [New] Slightly optimised GW's dat loading ccode
 * [New] Added EnemyWindow (party window but for enemies)
 * [New] Added party broadcast module to anonymously send outpost party info to https://party.gwtoolbox.com 
