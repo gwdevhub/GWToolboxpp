@@ -20,7 +20,7 @@ If you are here to check toolbox features and for a download link to go [https:/
 3. Navigate to the GWToolboxpp folder: 
 `cd GWToolboxpp`
 
-4. Build: `cmake --preset=vcpkg
+4. Build: `cmake --preset=vcpkg`
 
 5. Open: `cmake --open build`
 
