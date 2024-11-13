@@ -41,6 +41,7 @@ vcpkg_cmake_configure(
       -DWOLFSSL_BUILD_OUT_OF_TREE=yes
       -DWOLFSSL_EXAMPLES=no
       -DWOLFSSL_CRYPT_TESTS=no
+      -DWOLFSSL_OPENSSLALL=yes
       -DWOLFSSL_OPENSSLEXTRA=yes
       -DWOLFSSL_TPM=yes
       -DWOLFSSL_TLSX=yes
