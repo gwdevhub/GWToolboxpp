@@ -28,31 +28,34 @@ jobs:
       run: |
         echo "VCPKG_ROOT=$(Get-Location)\vcpkg" >> $env:GITHUB_ENV
       shell: powershell
+      
+    - name: Export GitHub Actions cache environment variables
+      uses: actions/github-script@v7
+      with:
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
     - name: Create Build Environment
       # Some projects don't allow in-source building, so create a separate build directory
       # We'll use this as our working directory for all subsequent commands
-      run: cmake -E make_directory ${{runner.workspace}}/build
+      run: cmake -E make_directory ${{runner.workspace}}/GWToolboxpp/build
 
     - name: Configure CMake
       # Use a bash shell so we can use the same syntax for environment variable
       # access regardless of the host operating system
       shell: bash
-      working-directory: ${{runner.workspace}}/build
-      # Note the current convention is to use the -S and -B options here to specify source 
-      # and build directories, but this is only available with CMake 3.13 and higher.  
-      # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
+      working-directory: ${{runner.workspace}}/GWToolboxpp/build
       run: cmake $GITHUB_WORKSPACE --preset=vcpkg
       env:
         VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
+        VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
 
     - name: Build
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{runner.workspace}}/GWToolboxpp/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: cmake --build . --config RelWithDebInfo
-      env:
-        VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
 
     - name: Save output
       uses: actions/upload-artifact@v4

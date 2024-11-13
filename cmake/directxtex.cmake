@@ -10,7 +10,10 @@ if (directxtex_POPULATED)
     return()
 endif()
 
-FetchContent_MakeAvailable(directxtex)
+cmake_policy(PUSH)
+cmake_policy(SET CMP0169 OLD)
+FetchContent_Populate(directxtex)
+cmake_policy(POP)
 
 add_library(directxtex)
 set(SOURCES
