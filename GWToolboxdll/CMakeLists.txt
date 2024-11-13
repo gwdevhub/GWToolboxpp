@@ -37,7 +37,6 @@ set_target_properties(GWToolboxdll PROPERTIES
     VS_GLOBAL_EnableClangTidyCodeAnalysis false
 )
 
-
 target_link_options(GWToolboxdll PRIVATE
     /WX /OPT:REF /OPT:ICF /SAFESEH:NO
     $<$<NOT:$<CONFIG:Debug>>:/INCREMENTAL:NO>
@@ -50,11 +49,10 @@ target_link_options(GWToolboxdll PRIVATE
 target_include_directories(GWToolboxdll PRIVATE
     "${PROJECT_SOURCE_DIR}/Dependencies"
     "${CMAKE_CURRENT_SOURCE_DIR}"
+	"${SIMPLEINI_INCLUDE_DIRS}"
     )
 
-include(json)
 include(imgui_fonts)
-include(earcut)
 
 target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
@@ -62,16 +60,14 @@ target_link_libraries(GWToolboxdll PRIVATE
     imgui
     directxtex
     gwca
-    earcut
     easywsclient
-    discord_game_sdk
+    ${CPP_GAME_SDK}
     nlohmann_json::nlohmann_json
-    simpleini
     imgui::fonts
     IconFontCppHeaders
     nativefiledialog
     wintoast
-    wolfssl
+    wolfssl::wolfssl
 
     # libs:
     Dbghelp.lib # for MiniDump

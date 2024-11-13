@@ -17,8 +17,6 @@ set_target_properties(GWToolbox PROPERTIES
     VS_GLOBAL_EnableClangTidyCodeAnalysis true
 )
 
-include(json)
-
 target_link_libraries(GWToolbox PRIVATE
     # cmake dependencies:
     GWToolboxdll

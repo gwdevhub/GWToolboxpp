@@ -343,7 +343,7 @@ void ToastNotifications::Toast::toastDismissed(WinToastDismissalReason) const
 
 void ToastNotifications::Toast::toastFailed(HRESULT err) const
 {
-    Log::Error("Failed to show toast, error code %d",err);
+    Log::Error("Failed to show toast, error code: %d", err);
     TriggerToastCallback(this, false);
 }
 

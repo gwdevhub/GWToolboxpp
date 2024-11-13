@@ -67,7 +67,7 @@
 
 // libraries
 #include <Logger.h>
-#include <discord_game_sdk.h>
+#include <discord-game-sdk/discord_game_sdk.h>
 #include <ToolboxIni.h>
 
 #include <nlohmann/json.hpp>

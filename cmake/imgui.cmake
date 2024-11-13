@@ -11,7 +11,7 @@ if (imgui_POPULATED)
     return()
 endif()
 
-FetchContent_Populate(imgui)
+FetchContent_MakeAvailable(imgui)
 
 # Apply the patch without halting the build on failure, in case it's already applied
 execute_process(

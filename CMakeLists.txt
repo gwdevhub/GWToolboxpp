@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.29)
 
 set(CMAKE_GENERATOR_PLATFORM win32)
 
@@ -44,14 +44,20 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin/")
 
 include(gwca)
-include(imgui)
-include(wintoast)
 include(directxtex)
 include(easywsclient)
-include(simpleini)
-include(discord_game_sdk)
+include(imgui)
 include(gwtoolboxdll_plugins)
 include(nativefiledialog)
+include(wintoast)
+
+find_library(GAME_SDK discord_game_sdk)
+find_path(GAME_SDK_INCLUDE discord-game-sdk/discord.h)
+find_path(EARCUT_HPP_INCLUDE_DIRS "mapbox/earcut.hpp")
+find_path(SIMPLEINI_INCLUDE_DIRS "ConvertUTF.c")
+find_package(wolfssl CONFIG REQUIRED)
+find_package(minhook CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 add_subdirectory(GWToolboxdll)
 add_subdirectory(Core)

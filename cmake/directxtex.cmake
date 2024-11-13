@@ -4,13 +4,16 @@ include(FetchContent)
 FetchContent_Declare(
     DirectXTex
     GIT_REPOSITORY https://github.com/microsoft/DirectXTex
-    GIT_TAG jul2022)
+    GIT_TAG oct2024)
 FetchContent_GetProperties(directxtex)
 if (directxtex_POPULATED)
     return()
 endif()
 
+cmake_policy(PUSH)
+cmake_policy(SET CMP0169 OLD)
 FetchContent_Populate(directxtex)
+cmake_policy(POP)
 
 add_library(directxtex)
 set(SOURCES

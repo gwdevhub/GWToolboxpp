@@ -11,10 +11,10 @@ target_sources(plugin_base INTERFACE
 target_include_directories(plugin_base INTERFACE
     "plugins/Base"
     "GWToolboxdll" # careful here, we only get access to exported and header functions!
+    ${SIMPLEINI_INCLUDE_DIRS}
     )
 target_link_libraries(plugin_base INTERFACE
     imgui
-    simpleini
     nlohmann_json::nlohmann_json
     gwca
     IconFontCppHeaders

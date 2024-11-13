@@ -1,4 +1,3 @@
-
 set(wintoast_FOLDER "${PROJECT_SOURCE_DIR}/Dependencies/wintoast/")
 
 add_library(wintoast)

@@ -8,8 +8,8 @@ If you are here to check toolbox features and for a download link to go [https:/
 ### Requirements
 * Visual Studio 2022 version 17.10+. You can download [Visual Studio Community](https://visualstudio.microsoft.com/vs/community/) for free. You will also need the "Desktop development with C++" package.
 * C++23 compatible v143 MSVC Platform Toolset
-* Windows 10 or 11 SDK
-* CMake 3.16 or higher. This is integrated in the [Visual Studio Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2022). Alternatively download the latest version from [https://cmake.org/download/](https://cmake.org/download/).
+* Windows 11 SDK
+* CMake 3.29 or higher. This is integrated in the [Visual Studio Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2022). Alternatively download the latest version from [https://cmake.org/download/](https://cmake.org/download/).
 * [Git](https://git-scm.com/)
 
 1. Open **Git Bash**. Use all the following commands in **Git Bash**. 
@@ -20,11 +20,11 @@ If you are here to check toolbox features and for a download link to go [https:/
 3. Navigate to the GWToolboxpp folder: 
 `cd GWToolboxpp`
 
-4. Build: `cmake -B build`
+4. Build: `cmake --preset=vcpkg
 
 5. Open: `cmake --open build`
 
-6. Build the solution.
+6. Build the solution. `cmake --build build --config RelWithDebInfo`
 
 7. Run.
 

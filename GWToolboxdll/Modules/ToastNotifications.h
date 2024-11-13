@@ -2,7 +2,7 @@
 
 #include <ToolboxModule.h>
 
-#include <wintoast/wintoastlib.h>
+#include <wintoastlib.h>
 
 class ToastNotifications : public ToolboxModule {
     ToastNotifications() = default;
