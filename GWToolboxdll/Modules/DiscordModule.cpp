@@ -47,6 +47,10 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include <Windows/TravelWindow.h>
 #include <Utils/ToolboxUtils.h>
 
+#ifndef DISCORD_API
+#define DISCORD_API 
+#endif
+
 namespace {
 
 
@@ -229,27 +233,27 @@ namespace {
 
     std::vector<StoCCallback> stoc_callbacks;
 
-    void __stdcall UpdateActivityCallback(void*, const EDiscordResult result)
+    void DISCORD_API UpdateActivityCallback(void*, const EDiscordResult result)
     {
         Log::Log(result == DiscordResult_Ok ? "Activity updated successfully.\n" : "Activity update FAILED!\n");
     }
 
-    void __stdcall OnJoinRequestReplyCallback(void*, const EDiscordResult result)
+    void DISCORD_API OnJoinRequestReplyCallback(void*, const EDiscordResult result)
     {
         Log::Log(result == DiscordResult_Ok ? "Join request reply sent successfully.\n" : "Join request reply send FAILED!\n");
     }
 
-    void __stdcall OnSendInviteCallback(void*, const EDiscordResult result)
+    void DISCORD_API OnSendInviteCallback(void*, const EDiscordResult result)
     {
         Log::Log(result == DiscordResult_Ok ? "Invite sent successfully.\n" : "Invite send FAILED!\n");
     }
 
-    void __stdcall OnNetworkMessage(void*, DiscordNetworkPeerId, DiscordNetworkChannelId, uint8_t*, const uint32_t)
+    void DISCORD_API OnNetworkMessage(void*, DiscordNetworkPeerId, DiscordNetworkChannelId, uint8_t*, const uint32_t)
     {
         Log::Log("Discord: Network message\n");
     }
 
-    void __stdcall OnJoinParty([[maybe_unused]] void* event_data, const char* secret)
+    void DISCORD_API OnJoinParty([[maybe_unused]] void* event_data, const char* secret)
     {
         Log::Log("Discord: on_activity_join %s\n", secret);
         memset(&join_in_progress, 0, sizeof(join_in_progress));
@@ -257,18 +261,18 @@ namespace {
     }
 
     // NOTE: In our game, anyone can join anyone else's party - work around for "ask to join" by auto-accepting.
-    void __stdcall OnJoinRequest([[maybe_unused]] void* data, DiscordUser* user)
+    void DISCORD_API OnJoinRequest([[maybe_unused]] void* data, DiscordUser* user)
     {
         Log::Log("Join request received from %s; automatically accept\n", user->username);
         app.activities->send_request_reply(app.activities, user->id, DiscordActivityJoinRequestReply_Yes, &app, OnJoinRequestReplyCallback);
     }
 
-    void __stdcall OnPartyInvite([[maybe_unused]] void* event_data, EDiscordActivityActionType, DiscordUser* user, DiscordActivity*)
+    void DISCORD_API OnPartyInvite([[maybe_unused]] void* event_data, EDiscordActivityActionType, DiscordUser* user, DiscordActivity*)
     {
         Log::Log("Party invite received from %s\n", user->username);
     }
 
-    void __stdcall OnDiscordLog([[maybe_unused]] void* data, const EDiscordLogLevel level, const char* message)
+    void DISCORD_API OnDiscordLog([[maybe_unused]] void* data, const EDiscordLogLevel level, const char* message)
     {
         Log::Log("Discord Log Level %d: %s\n", level, message);
     }
