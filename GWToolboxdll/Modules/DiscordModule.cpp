@@ -48,7 +48,7 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include <Utils/ToolboxUtils.h>
 
 #ifndef DISCORD_API
-#define DISCORD_API __stdcall
+#define DISCORD_API
 #endif
 
 namespace {
