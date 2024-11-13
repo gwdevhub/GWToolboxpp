@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.29)
 
 set(CMAKE_GENERATOR_PLATFORM win32)
-set(CMAKE_TOOLCHAIN_FILE OFF)
 
 project(gwtoolbox)
 
