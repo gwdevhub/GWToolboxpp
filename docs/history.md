@@ -7,7 +7,7 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
-## Version 6.23
+## Version 6.24
 * [New] Slightly optimised GW's dat loading ccode
 * [New] Added EnemyWindow (party window but for enemies)
 * [New] Added party broadcast module to anonymously send outpost party info to https://party.gwtoolbox.com 
@@ -51,6 +51,7 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Fixed crash when trying to set ready status outside of an outpost
 * [Fix] Fixed party damage widget not recording stats until shown
 * [Fix] Fixed bug preventing minimap drawing when spectating someone else outside of your own character's compass range
+* [Fix] Fixed working with gw build 37503
 * [Removed] removed chat log module because it led to too many issues
 
 ## Version 6.22
