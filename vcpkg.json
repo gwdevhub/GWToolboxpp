@@ -12,5 +12,11 @@
     "nlohmann-json",
     "simpleini",
     "wolfssl"
+  ],
+  "overrides": [
+    {
+      "name": "discord-game-sdk",
+	  "version": "2.5.6"
+    }
   ]
 }
