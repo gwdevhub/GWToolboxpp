@@ -59,77 +59,36 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 			<td><a href="settings#game_settings">URLs in equipment templates</a></td>
 		</tr>
 		<tr>
-			<td><a href="reroll">Reroll</a></td>
-			<td><a href="widgets#alcohol">Alcohol Monitor</a></td>
-			<td><a href="settings#game_settings">URLs in equipment templates</a></td>
-		</tr>
-		<tr>
 			<td>Hero Builds</td>
             <td><a href="misc_widgets">Miscellaneous Widgets</a></td>
-            <td></td>
+			<td><a href="integrations">Integrations</a></td>
 		</tr>
 		<tr>
 			<td><a href="trade">Trade</a></td>
-            <td></td>
-            <td></td>
+			<td><a href="items">Items</a></td>
+			<td><a href="input_modules">Input</a></td>
 		</tr>
 		<tr>
 			<td><a href="hallofmonuments">Hall of Monuments</a></td>
-            <td></td>
-            <td></td>
-		</tr>
-		<tr>
-			<td><a href="completion">Completion Window</a></td>
-            <td></td>
-            <td></td>
-		</tr>
-		<tr>
-			<td><a href="integrations">Integrations</a></td>
-            <td></td>
-            <td></td>
-		</tr>
-		<tr>
-			<td><a href="items">Items</a></td>
-            <td></td>
-            <td></td>
-		</tr>
-		<tr>
-			<td><a href="input_modules">Input Modules</a></td>
-            <td></td>
-            <td></td>
-		</tr>
-		<tr>
-			<td><a href="plugins">Plugins</a></td>
-            <td></td>
-            <td></td>
-		</tr>
-		<tr>
 			<td><a href="quest">Quest Features</a></td>
-            <td></td>
+			<td><a href="plugins">Plugins</a></td>
+		</tr>
+		<tr>
+			<td><a href="completion">Completion</a></td>
+			<td><a href="party_window">Party</a></td>
             <td></td>
 		</tr>
 		<tr>
-			<td><a href="party_window">Party Window Enhancements</a></td>
-            <td></td>
-            <td></td>
-		</tr>
-		<tr>
-			<td><a href="target_widgets">Target Widgets</a></td>
-            <td></td>
+			<td><a href="armory_window">Armory</a></td>
+			<td><a href="target_widgets">Target</a></td>
             <td></td>
 		</tr>
 		<tr>
-			<td><a href="armory_window">Armory Window</a></td>
-            <td></td>
-            <td></td>
-		</tr>
-		<tr>
-			<td><a href="duping_window">Duping Window</a></td>
-            <td></td>
+			<td><a href="duping_window">Duping</a></td>
+			<td><a href="enemy_window">Enemy</a></td>
             <td></td>
 		</tr>
 		<tr>
-			<td><a href="enemy_window">Enemy Window</a></td>
             <td></td>
             <td></td>
 		</tr>
