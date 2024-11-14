@@ -48,7 +48,7 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include <Utils/ToolboxUtils.h>
 
 #ifndef DISCORD_API
-#define DISCORD_API 
+#define DISCORD_API
 #endif
 
 namespace {
@@ -85,7 +85,8 @@ namespace {
 
     constexpr auto DISCORD_APP_ID = 378706083788881961;
 
-    using DiscordCreate_pt = EDiscordResult(__cdecl*)(DiscordVersion version, DiscordCreateParams* params, IDiscordCore** result);
+    using DiscordCreate_pt = EDiscordResult(DISCORD_API*)(DiscordVersion version, DiscordCreateParams* params, IDiscordCore** result);
+    using DiscordVersion_pt = int(__cdecl*)(int unk, int* out);
 
     const char* region_assets[] = {
         "region_kryta",
@@ -444,6 +445,21 @@ namespace {
             Log::LogW(L"Failed to LoadLibraryW %s\n", dll_location.c_str());
             return false;
         }
+
+        DiscordVersion_pt discordVersion = (DiscordVersion_pt)GetProcAddress(hGetProcIDDLL, "DiscordVersion");
+        if (!discordVersion) {
+            ASSERT(UnloadDll());
+            Log::LogW(L"Failed to find address for DiscordVersion\n");
+            return false;
+        }
+        int out[3] = { 0 };
+        const auto res = discordVersion(0, out);
+        if (res || *out != DISCORD_VERSION) {
+            ASSERT(UnloadDll());
+            Log::LogW(L"Discord version mismatch: %d %d.%d.%d\n", DISCORD_VERSION, out[0],out[1],out[2]);
+            return false;
+        }
+
         // resolve function address here
         discordCreate = (DiscordCreate_pt)(uintptr_t)GetProcAddress(hGetProcIDDLL, "DiscordCreate");
         if (!discordCreate) {
