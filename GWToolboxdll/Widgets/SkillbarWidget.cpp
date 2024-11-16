@@ -49,14 +49,6 @@ namespace {
 
     // Skill overlay settings
     bool display_skill_overlay = true;
-    std::array font_sizes = {
-        FontLoader::FontSize::text,
-        FontLoader::FontSize::header2,
-        FontLoader::FontSize::header1,
-        FontLoader::FontSize::widget_label,
-        FontLoader::FontSize::widget_small,
-        FontLoader::FontSize::widget_large
-    };
     FontLoader::FontSize font_recharge = FontLoader::FontSize::header1;
     Color color_text_recharge = Colors::White();
     Color color_border = Colors::ARGB(100, 255, 255, 255);
@@ -551,7 +543,6 @@ void SkillbarWidget::DrawSettingsInternal()
 {
     ToolboxWidget::DrawSettingsInternal();
 
-    constexpr const char* font_size_names[] = {"16", "18", "20", "24", "40", "48"};
 
     const bool is_vertical = layout == Layout::Column || layout == Layout::Columns;
 
@@ -560,9 +551,9 @@ void SkillbarWidget::DrawSettingsInternal()
     ImGui::Spacing();
     ImGui::Indent();
     ImGui::PushID("skill_overlay_settings");
-    int current_index = std::distance(font_sizes.begin(), std::ranges::find(font_sizes, font_recharge));
-    if (ImGui::Combo("Text size", &current_index, font_size_names, _countof(font_size_names))) {
-        font_recharge = font_sizes[current_index];
+    int current_index = std::distance(FontLoader::font_sizes.begin(), std::ranges::find(FontLoader::font_sizes, font_recharge));
+    if (ImGui::Combo("Text size", &current_index, FontLoader::font_size_names.data(), FontLoader::font_size_names.size())) {
+        font_recharge = FontLoader::font_sizes[current_index];
     }
     Colors::DrawSettingHueWheel("Text color", &color_text_recharge);
     Colors::DrawSettingHueWheel("Border color", &color_border);
@@ -612,9 +603,9 @@ void SkillbarWidget::DrawSettingsInternal()
         if (effect_text_color || effect_progress_bar_color) {
             DrawDurationThresholds();
         }
-        current_index = std::distance(font_sizes.begin(), std::ranges::find(font_sizes, font_effects));
-        if (ImGui::Combo("Text size", &current_index, font_size_names, _countof(font_size_names))) {
-            font_effects = font_sizes[current_index];
+        current_index = std::distance(FontLoader::font_sizes.begin(), std::ranges::find(FontLoader::font_sizes, font_effects));
+        if (ImGui::Combo("Text size", &current_index, FontLoader::font_size_names.data(), FontLoader::font_size_names.size())) {
+            font_effects = FontLoader::font_sizes[current_index];
         }
         if (!effect_text_color) {
             Colors::DrawSettingHueWheel("Text color", &color_text_effects);

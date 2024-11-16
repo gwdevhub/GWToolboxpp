@@ -9,7 +9,6 @@
 #endif
 
 namespace FontLoader {
-
     enum class FontSize {
         text         = 16,
         header2      = 18,
@@ -18,6 +17,16 @@ namespace FontLoader {
         widget_small = 40,
         widget_large = 48
     };
+    constexpr std::array font_sizes = {
+        FontSize::text,
+        FontSize::header2,
+        FontSize::header1,
+        FontSize::widget_label,
+        FontSize::widget_small,
+        FontSize::widget_large
+    };
+    constexpr std::array font_size_names = {"16", "18", "20", "24", "40", "48"};
+
     // Cycle through our own fonts, release any valid textures
     bool ReleaseFontTextures();
     // Cycle through our own fonts, create any missing textures

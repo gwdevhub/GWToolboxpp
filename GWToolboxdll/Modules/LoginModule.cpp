@@ -12,7 +12,6 @@
 #include <Timer.h>
 
 #include "LoginModule.h"
-#include <GWCA/Utilities/MemoryPatcher.h>
 
 namespace {
     clock_t state_timestamp = 0;
