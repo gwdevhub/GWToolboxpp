@@ -378,7 +378,7 @@ std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::Que
 
         auto enc_str = std::wstring(current_objective_enc, current_objective_len);
         auto content_start = enc_str.find(0x10a);
-        if (content_start != std::wstring::npos)
+        if (content_start == std::wstring::npos)
             break;
         content_start++;
 
