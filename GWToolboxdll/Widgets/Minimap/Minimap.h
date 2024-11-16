@@ -93,7 +93,6 @@ private:
     [[nodiscard]] bool IsInside(int x, int y) const;
     // returns true if the map is visible, valid, not loading, etc
 
-
     static void SelectTarget(GW::Vec2f pos);
     static size_t GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);
 

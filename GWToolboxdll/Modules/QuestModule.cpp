@@ -37,6 +37,7 @@ namespace {
 
     bool draw_quest_path_on_terrain = true;
     bool draw_quest_path_on_minimap = true;
+    bool show_paths_to_all_quests = false;
     GW::HookEntry ui_message_entry;
 
     clock_t last_quest_clicked = 0;
@@ -68,6 +69,7 @@ namespace {
 
     void OnQuestPathRecalculated(std::vector<GW::GamePos>& waypoints, void* args);
     void ClearCalculatedPath(GW::Constants::QuestID quest_id);
+
     bool IsActiveQuestPath(GW::Constants::QuestID quest_id)
     {
         const auto questlog = GW::QuestMgr::GetQuestLog();
@@ -76,7 +78,7 @@ namespace {
             return false;
         if (quest_id == active_quest->quest_id)
             return true;
-        if (!Minimap::ShouldDrawAllQuests())
+        if (!Minimap::ShouldDrawAllQuests() || show_paths_to_all_quests)
             return false;
         const auto quest = GW::QuestMgr::GetQuest(quest_id);
         auto lowest_quest_id_by_position = quest_id;
@@ -406,6 +408,9 @@ void QuestModule::DrawSettingsInternal()
     ImGui::Text("Draw path to quest marker on:");
     ImGui::Checkbox("Terrain##drawquestpath", &draw_quest_path_on_terrain);
     ImGui::Checkbox("Minimap##drawquestpath", &draw_quest_path_on_minimap);
+#ifdef _DEBUG
+    ImGui::Checkbox("Show paths to all quests##drawquestpath", &show_paths_to_all_quests);
+#endif
     ImGui::DragFloat("Max distance between two points##max_visibility_range", &Pathing::max_visibility_range, 1'000.f, 1'000.f, 50'000.f);
     ImGui::ShowHelp("The higher this value, the more accurate the path will be, but the more CPU it will use.");
 }
@@ -415,6 +420,7 @@ void QuestModule::LoadSettings(ToolboxIni* ini)
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(draw_quest_path_on_minimap);
     LOAD_BOOL(draw_quest_path_on_terrain);
+    LOAD_BOOL(show_paths_to_all_quests);
     using namespace Pathing;
     LOAD_FLOAT(max_visibility_range);
 }
@@ -424,6 +430,7 @@ void QuestModule::SaveSettings(ToolboxIni* ini)
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(draw_quest_path_on_minimap);
     SAVE_BOOL(draw_quest_path_on_terrain);
+    SAVE_BOOL(show_paths_to_all_quests);
     using namespace Pathing;
     SAVE_FLOAT(max_visibility_range);
 }
