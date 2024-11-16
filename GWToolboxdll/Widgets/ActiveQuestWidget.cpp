@@ -17,7 +17,6 @@
 
 #include <Utils/GuiUtils.h>
 #include <Utils/FontLoader.h>
-#include <Utils/TextUtils.h>
 
 #include <Modules/QuestModule.h>
 
@@ -34,11 +33,10 @@ namespace {
     constexpr ImU32 TEXT_COLOR_ACTIVE = 0xff00ff00;
 
     GW::HookEntry hook_entry;
-    GW::Constants::QuestID active_quest_id = (GW::Constants::QuestID)0;
+    GW::Constants::QuestID active_quest_id = GW::Constants::QuestID::None;
     GuiUtils::EncString active_quest_name;
     std::vector<QuestObjective> active_quest_objectives; // (index, objective, completed)
     IDirect3DTexture9** p_quest_marker_texture;
-    bool is_loading_quest_objectives = false;
     bool force_update = false;
 
     void SetForceUpdate(GW::HookStatus*, GW::UI::UIMessage,void*,void*) {
@@ -46,8 +44,8 @@ namespace {
     }
 
     void DrawQuestIcon() {
-        static const ImVec2 UV0 = ImVec2(0.0F, 0.0f);
-        static const ImVec2 ICON_SIZE = ImVec2(24.0f, 24.0f);
+        static constexpr auto UV0 = ImVec2(0.0f, 0.0f);
+        static constexpr auto ICON_SIZE = ImVec2(24.0f, 24.0f);
         if(!p_quest_marker_texture || !*p_quest_marker_texture) {
             return;
         }
@@ -64,15 +62,15 @@ void ActiveQuestWidget::Initialize() {
 
     p_quest_marker_texture = GwDatTextureModule::LoadTextureFromFileId(QUEST_MARKER_FILE_ID);
 
-    const GW::UI::UIMessage ui_messages[] = {
+    constexpr auto ui_messages = std::to_array({
         GW::UI::UIMessage::kQuestDetailsChanged,
         GW::UI::UIMessage::kQuestAdded,
         GW::UI::UIMessage::kClientActiveQuestChanged,
         GW::UI::UIMessage::kObjectiveComplete,
         GW::UI::UIMessage::kObjectiveAdd,
         GW::UI::UIMessage::kObjectiveUpdated
-    };
-    for (auto message_id : ui_messages) {
+    });
+    for (const auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&hook_entry, message_id, SetForceUpdate);
     }
 }
@@ -91,22 +89,21 @@ void ActiveQuestWidget::Update(float)
         force_update = false;
         active_quest_id = qid;
 
-        const auto quest = GW::QuestMgr::GetQuest(qid);
-        if (quest) {
+        if (const auto quest = GW::QuestMgr::GetQuest(qid)) {
             active_quest_name.reset(quest->name);
             active_quest_objectives = QuestModule::ParseQuestObjectives(qid);
         }
         else if (static_cast<int32_t>(qid) == -1) {
             // Mission objectives
-            const auto worldContext = GW::GetWorldContext();
-            const auto areaInfo = GW::Map::GetCurrentMapInfo();
-            active_quest_name.reset(areaInfo && areaInfo->name_id ? areaInfo->name_id : 3);
+            const auto world_context = GW::GetWorldContext();
+            const auto area_info = GW::Map::GetCurrentMapInfo();
+            active_quest_name.reset(area_info && area_info->name_id ? area_info->name_id : 3);
 
             active_quest_objectives.clear();
 
             int index = 0;
 
-            for (const auto& objective : worldContext->mission_objectives) {
+            for (const auto& objective : world_context->mission_objectives) {
                 if (!objective.enc_str)
                     continue;
                 bool objective_completed = (objective.type & OBJECTIVE_FLAG_COMPLETED) != 0;

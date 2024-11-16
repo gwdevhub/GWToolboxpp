@@ -45,7 +45,8 @@ namespace {
     GW::UI::UIInteractionCallback QuestLogRow_UICallback_Func = nullptr, QuestLogRow_UICallback_Ret = nullptr;
 
     // If double clicked on a quest entry, teleport to nearest outpost
-    void OnQuestLogRow_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+    void OnQuestLogRow_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
+    {
         GW::Hook::EnterHook();
 
         if (message->message_id == GW::UI::UIMessage::kMouseClick2) {
@@ -372,6 +373,8 @@ std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::Que
     if (!quest) return out;
     const wchar_t* next_objective_enc = nullptr;
     const wchar_t* current_objective_enc = quest->objectives;
+    if (!quest->objectives)
+        GW::QuestMgr::RequestQuestInfo(quest);
     while (current_objective_enc) {
         next_objective_enc = wcschr(current_objective_enc, 0x2);
         size_t current_objective_len = next_objective_enc ? next_objective_enc - current_objective_enc : wcslen(current_objective_enc);
@@ -453,7 +456,7 @@ void QuestModule::Initialize()
     RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
 
     const auto address = GW::Scanner::Find("\x83\xc0\xfc\x83\xf8\x54", "xxxxxx", -0xe);
-    if (GW::Scanner::IsValidPtr(address,GW::Scanner::TEXT)) {
+    if (GW::Scanner::IsValidPtr(address, GW::Scanner::TEXT)) {
         QuestLogRow_UICallback_Func = (GW::UI::UIInteractionCallback)address;
         GW::Hook::CreateHook((void**)&QuestLogRow_UICallback_Func, OnQuestLogRow_UICallback, (void**)&QuestLogRow_UICallback_Ret);
         GW::Hook::EnableHooks(QuestLogRow_UICallback_Func);
@@ -496,7 +499,7 @@ void QuestModule::Update(float)
     if (!pos)
         return;
     size_t size = calculated_quest_paths.size();
-    check_paths:
+check_paths:
     for (const auto& [quest_id, calculated_quest_path] : calculated_quest_paths) {
         if (!IsActiveQuestPath(quest_id)) {
             ClearCalculatedPath(quest_id);
