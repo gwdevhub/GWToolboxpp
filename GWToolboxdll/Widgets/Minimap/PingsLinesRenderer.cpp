@@ -20,13 +20,7 @@
 void PingsLinesRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {
     color_drawings = Colors::Load(ini, section, "color_drawings", Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF));
-    if ((color_drawings & IM_COL32_A_MASK) == 0) {
-        color_drawings |= Colors::ARGB(255, 0, 0, 0);
-    }
     ping_circle.color = Colors::Load(ini, section, "color_pings", Colors::ARGB(128, 255, 0, 0));
-    if ((ping_circle.color & IM_COL32_A_MASK) == 0) {
-        ping_circle.color |= Colors::ARGB(128, 0, 0, 0);
-    }
     marker.color = Colors::Load(ini, section, "color_shadowstep_mark", Colors::ARGB(200, 128, 0, 128));
     color_shadowstep_line = Colors::Load(ini, section, VAR_NAME(color_shadowstep_line), color_shadowstep_line);
     color_shadowstep_line_maxrange = Colors::Load(ini, section, VAR_NAME(color_shadowstep_line_maxrange), color_shadowstep_line_maxrange);
