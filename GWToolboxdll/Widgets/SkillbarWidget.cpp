@@ -54,7 +54,8 @@ namespace {
         FontLoader::FontSize::header2,
         FontLoader::FontSize::header1,
         FontLoader::FontSize::widget_label,
-        FontLoader::FontSize::widget_small
+        FontLoader::FontSize::widget_small,
+        FontLoader::FontSize::widget_large
     };
     FontLoader::FontSize font_recharge = FontLoader::FontSize::header1;
     Color color_text_recharge = Colors::White();
@@ -303,12 +304,14 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
         return; // Failed to get skillbar pos
     }
 
-    ImGui::PushFont(FontLoader::GetFont(font_recharge));
+    const auto font = FontLoader::GetFont(font_recharge);
+    ImGui::PushFont(font);
     ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 
     ImGui::Begin(Name(), nullptr, GetWinFlags());
     const auto draw_list = ImGui::GetBackgroundDrawList();
+    draw_list->PushTextureID(font->ContainerAtlas->TexID);
     for (size_t i = 0; i < m_skills.size(); i++) {
         const Skill& skill = m_skills[i];
         // NB: Y axis inverted for imgui
@@ -332,6 +335,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
             DrawEffect(i, top_left);
         }
     }
+    draw_list->PopTextureID();
 
     ImGui::End();
     ImGui::PopStyleVar();
@@ -547,7 +551,7 @@ void SkillbarWidget::DrawSettingsInternal()
 {
     ToolboxWidget::DrawSettingsInternal();
 
-    constexpr const char* font_size_names[] = {"16", "18", "20", "24", "42", "48"};
+    constexpr const char* font_size_names[] = {"16", "18", "20", "24", "40", "48"};
 
     const bool is_vertical = layout == Layout::Column || layout == Layout::Columns;
 
