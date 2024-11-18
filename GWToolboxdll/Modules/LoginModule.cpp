@@ -51,7 +51,7 @@ namespace {
     }
 
 
-#ifdef _DEBUG
+#if 0
     const bool enable_login_scene_changing = true;
 #else
     const bool enable_login_scene_changing = false;
@@ -439,7 +439,7 @@ void LoginModule::Initialize()
         return InitialiationFailure("Failed to initialize PortalAccountLogin_Func");
     }
 
-    GetStringParameter_Func = (GetStringParameter_pt)GW::Scanner::FindAssertion("p:\\code\\gw\\param\\param.cpp", "string - PARAM_STRING_FIRST < (sizeof(s_strings) / sizeof((s_strings)[0]))", -0x13);
+    GetStringParameter_Func = (GetStringParameter_pt)GW::Scanner::FindAssertion("Param.cpp", "string - PARAM_STRING_FIRST < (sizeof(s_strings) / sizeof((s_strings)[0]))", -0x13);
     if (!GetStringParameter_Func) {
         return InitialiationFailure("Failed to initialize GetStringParameter_Func");
     }
@@ -458,9 +458,9 @@ void LoginModule::Initialize()
         GW::HookBase::EnableHooks(GetStringParameter_Func);
     }
 
-    uintptr_t address = GW::Scanner::FindAssertion("p:\\code\\gw\\ui\\uipregame.cpp", "!s_scene", -0x58);
+    uintptr_t address = GW::Scanner::FindAssertion("UiPregame.cpp", "!s_scene");
 
-    PreGameScene_UICallback_Func = (GW::UI::UIInteractionCallback)address;
+    PreGameScene_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(address);
 
     uintptr_t CreateLoginBackgroundScene_Func = GW::Scanner::FunctionFromNearCall(address + 0x90);
     uintptr_t FreeLoginBackgroundScene_Func = GW::Scanner::FunctionFromNearCall(address + 0xa8);
@@ -474,7 +474,7 @@ void LoginModule::Initialize()
         GetFileId_Func = (GetFileId_pt)GW::Scanner::FunctionFromNearCall(address - 0x10);
         OpenFileAtPath_Func = (OpenFileAtPath_pt)GW::Scanner::FunctionFromNearCall(address + 0x6);
         OpenFileById_Func = (OpenFileById_pt)GW::Scanner::FunctionFromNearCall(address + 0x22);
-        CreateTexture_Func = (CreateTexture_pt)GW::Scanner::FindAssertion("p:\\code\\engine\\gr\\grtex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)", -0x32);
+        CreateTexture_Func = (CreateTexture_pt)GW::Scanner::FindAssertion("\\Code\\Engine\\Gr\\grtex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)", -0x32);
         DecompressFile_Func = (DecompressFile_pt)GW::Scanner::Find("\x75\x14\x68\x1d\x09\x00\x00", "xxxxxxx", -0xc);
 
         GW::HookBase::CreateHook((void**)&OpenFileAtPath_Func, OnOpenFileAtPath, (void**)&OpenFileAtPath_Ret);

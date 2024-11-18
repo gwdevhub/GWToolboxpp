@@ -129,7 +129,6 @@ namespace {
     bool hide_compass_agents = false;
     bool hide_compass_drawings = false;
     bool hide_compass_quest_marker = false;
-    GW::MemoryPatcher show_compass_quest_marker_patch;
     bool render_all_quests = false;
 
     bool in_interface_settings = false;
@@ -291,6 +290,7 @@ namespace {
     void __cdecl OnCompassFrame_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
     {
         GW::Hook::EnterHook();
+
         compass_context = *(CompassContext**)message->wParam;
         // frame + 0x40 is the ai control handler bits. Zero it out to prevent actions from interacting with the flagging controls.
         switch (static_cast<uint32_t>(message->message_id)) {
@@ -333,6 +333,19 @@ namespace {
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 compass_position_dirty = true; // Forces a recalculation
                 break;
+            case 0x10000149:
+            case 0x1000014c:
+            case 0x1000014e:
+            case 0x1000014f:
+                if (!hide_compass_quest_marker) {
+                    OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+                }
+                else {
+                    const auto prev = message->message_id;
+                    message->message_id = (GW::UI::UIMessage)0x1000014b;
+                    OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+                    message->message_id = prev;
+                } break;
             default:
                 if (hide_flagging_controls) {
                     // Temporarily nullify the pointer to flagging controls for all other message ids
@@ -519,15 +532,6 @@ namespace {
         return true;
     }
 
-    void ToggleCompassQuestMarker(const bool hide_marker)
-    {
-        if (hide_marker == show_compass_quest_marker_patch.GetIsActive()) {
-            return;
-        }
-        show_compass_quest_marker_patch.TogglePatch(hide_marker);
-        pending_refresh_quest_marker = true;
-    }
-
     void PreloadQuestMarkers()
     {
         if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
@@ -623,8 +627,6 @@ void Minimap::SignalTerminate()
 
     hide_flagging_controls_patch.Reset();
 
-    ToggleCompassQuestMarker(false);
-
     GW::UI::RemoveKeydownCallback(&Generic_HookEntry);
     GW::UI::RemoveKeyupCallback(&Generic_HookEntry);
     GW::StoC::RemoveCallbacks(&Generic_HookEntry);
@@ -635,7 +637,6 @@ void Minimap::SignalTerminate()
     GW::Chat::DeleteCommand(L"flag");
 
     GW::GameThread::Enqueue([]() {
-        show_compass_quest_marker_patch.Reset();
         RefreshQuestMarker();
         if (compass_frame && compass_frame->frame_callbacks[0] == OnCompassFrame_UICallback) {
             compass_frame->frame_callbacks[0] = OnCompassFrame_UICallback_Ret;
@@ -659,15 +660,21 @@ void Minimap::Initialize()
         hide_flagging_controls_patch.SetPatch(address, "\xeb", 1);
     }
 
-    DrawCompassAgentsByType_Func = (DrawCompassAgentsByType_pt)GW::Scanner::Find("\x8b\x46\x08\x8d\x5e\x18\x53", "xxxxxxx", -0xb);
-    GW::HookBase::CreateHook((void**)&DrawCompassAgentsByType_Func, OnDrawCompassAgentsByType, (void**)&DrawCompassAgentsByType_Ret);
-    GW::HookBase::EnableHooks(DrawCompassAgentsByType_Func);
+    address = GW::Scanner::Find("\x68\x00\x09\x14\x00", "xxxxx");
+    if (address)
+        DrawCompassAgentsByType_Func = (DrawCompassAgentsByType_pt)GW::Scanner::FunctionFromNearCall(GW::Scanner::FindInRange("\xe8", "x", 0, address, address + 0xf));
 
-    address = GW::Scanner::Find("\xdd\xd8\x6a\x01\x52", "xxxxx");
-    if (address) {
-        show_compass_quest_marker_patch.SetPatch(address, "\xEB\xEC", 2);
+#ifdef _DEBUG
+    ASSERT(DrawCompassAgentsByType_Func);
+    ASSERT(hide_flagging_controls_patch.IsValid());
+#endif
+
+    if (DrawCompassAgentsByType_Func) {
+        GW::HookBase::CreateHook((void**)&DrawCompassAgentsByType_Func, OnDrawCompassAgentsByType, (void**)&DrawCompassAgentsByType_Ret);
+        GW::HookBase::EnableHooks(DrawCompassAgentsByType_Func);
     }
-    ToggleCompassQuestMarker(hide_compass_quest_marker);
+
+    pending_refresh_quest_marker = true;
 
     GW::UI::RegisterKeydownCallback(&Generic_HookEntry, OnKeydown);
     GW::UI::RegisterKeyupCallback(&Generic_HookEntry, OnKeyup);
@@ -878,8 +885,8 @@ void Minimap::DrawSettingsInternal()
     }
     ImGui::ShowHelp("Resize and position minimap to match in-game compass size and position.");
     ImGui::Checkbox("Hide GW compass agents", &hide_compass_agents);
-    if (ImGui::Checkbox("Hide GW compass quest marker", &hide_compass_quest_marker)) {
-        ToggleCompassQuestMarker(hide_compass_quest_marker);
+    if(ImGui::Checkbox("Hide GW compass quest marker", &hide_compass_quest_marker)) {
+        pending_refresh_quest_marker = true;
     }
     ImGui::ShowHelp("To disable the toolbox minimap quest marker, set the quest marker color to transparent in the Symbols section below.");
 #ifdef _DEBUG
@@ -1029,7 +1036,6 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(hide_flagging_controls);
     LOAD_BOOL(hide_compass_when_minimap_draws);
 
-    ToggleCompassQuestMarker(hide_compass_quest_marker);
     hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
 
     key_none_behavior = static_cast<MinimapModifierBehaviour>(ini->GetLongValue(Name(), VAR_NAME(key_none_behavior), 1));
@@ -1045,6 +1051,8 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     custom_renderer.LoadSettings(ini, Name());
     effect_renderer.LoadSettings(ini, Name());
     game_world_renderer.LoadSettings(ini, Name());
+
+    pending_refresh_quest_marker = true;
 }
 
 void Minimap::SaveSettings(ToolboxIni* ini)

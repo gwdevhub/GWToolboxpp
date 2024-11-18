@@ -64,9 +64,8 @@ namespace {
 }
 void InventoryOverlayWidget::Initialize() {
     ToolboxWidget::Initialize();
-    const auto address = GW::Scanner::FindAssertion("p:\\code\\gw\\ui\\game\\inventory\\invequipment.cpp","formName",0x19);
-    if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address, GW::Scanner::TEXT)) {
-        InventorySlot_UICallback_Func = *(GW::UI::UIInteractionCallback*)address;
+    InventorySlot_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("InvSlot.cpp","!m_dragOverlayTexture"),0xfff);
+    if (InventorySlot_UICallback_Func) {
         GW::Hook::CreateHook((void**)&InventorySlot_UICallback_Func, OnInventorySlot_UICallback, (void**)&InventorySlot_UICallback_Ret);
         GW::Hook::EnableHooks(InventorySlot_UICallback_Func);
     }

@@ -377,7 +377,8 @@ namespace GWArmory {
 
             // Clear the slot(s)
             gwarmory_setitem = true;
-            UndrawAgentEquipment_Func(equip, nullptr, slot);
+            if(UndrawAgentEquipment_Func)
+                UndrawAgentEquipment_Func(equip, nullptr, slot);
             gwarmory_setitem = false;
 
             // Swap the data back
@@ -425,7 +426,8 @@ namespace GWArmory {
 
         // Draw the slot again
         gwarmory_setitem = true;
-        RedrawAgentEquipment_Func(equip, nullptr, slot);
+        if(RedrawAgentEquipment_Func)
+            RedrawAgentEquipment_Func(equip, nullptr, slot);
         gwarmory_setitem = false;
 
         // Swap the data back
@@ -941,12 +943,13 @@ void ArmoryWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 
-    RedrawAgentEquipment_Func = (EquipmentSlotAction_pt)GW::Scanner::FindAssertion("p:\\code\\gw\\composite\\cpsplayer.cpp", "itemData.fileId",-0x1fc);
+    RedrawAgentEquipment_Func = (EquipmentSlotAction_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("CpsPlayer.cpp", "itemData.fileId"),0xfff);
     if (RedrawAgentEquipment_Func) {
         GW::Hook::CreateHook((void**)&RedrawAgentEquipment_Func, OnRedrawAgentEquipment, (void**)&RedrawAgentEquipment_Ret);
         GW::Hook::EnableHooks(RedrawAgentEquipment_Func);
     }
-    UndrawAgentEquipment_Func = (EquipmentSlotAction_pt)GW::Scanner::Find("\x0f\xb7\x8f\xe0\x03\x00\x00\x0f\xb7\x87\xe2\x03\x00\x00", "xxxxxxxxxxxxxx",-0x2f);
+    
+    UndrawAgentEquipment_Func = (EquipmentSlotAction_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("CpsPlayer.cpp", "component < arrsize(m_componentItem)"),0xfff);
     if (UndrawAgentEquipment_Func) {
         GW::Hook::CreateHook((void**)&UndrawAgentEquipment_Func, OnUndrawAgentEquipment, (void**)&UndrawAgentEquipment_Ret);
         GW::Hook::EnableHooks(UndrawAgentEquipment_Func);
@@ -970,6 +973,12 @@ void ArmoryWindow::Initialize()
     if (equip) {
         memcpy(original_armor_pieces, equip->items, sizeof(original_armor_pieces));
     }
+#ifdef _DEBUG 
+    ASSERT(RedrawAgentEquipment_Func);
+    ASSERT(UndrawAgentEquipment_Func);
+    ASSERT(costume_data_ptr);
+    ASSERT(festival_hat_data_ptr);
+#endif
 }
 
 void ArmoryWindow::Terminate()

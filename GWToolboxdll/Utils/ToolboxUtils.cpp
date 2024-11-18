@@ -152,6 +152,8 @@ namespace ToolboxUtils {
     }
     uint8_t GetMissionState(GW::Constants::MapID map_id, const GW::Array<uint32_t>& missions_completed, const GW::Array<uint32_t>& missions_bonus) {
         const auto area_info = GW::Map::GetMapInfo(map_id);
+        if (!area_info)
+            return 0;
         switch (area_info->type) {
         case GW::RegionType::CooperativeMission:
         case GW::RegionType::MissionOutpost:

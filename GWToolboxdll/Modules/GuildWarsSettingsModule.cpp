@@ -673,7 +673,7 @@ void GuildWarsSettingsModule::Initialize()
 {
     ToolboxModule::Initialize();
     // NB: This address is fond twice, we only care about the first.
-    uintptr_t address = GW::Scanner::FindAssertion("p:\\code\\engine\\frame\\frkey.cpp", "count == arrsize(s_remapTable)", 0x13);
+    uintptr_t address = GW::Scanner::FindAssertion("\\Code\\Engine\\Frame\\frkey.cpp", "count == arrsize(s_remapTable)", 0x13);
     if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address)) {
         key_mappings_array = *(uint32_t**)address;
     }

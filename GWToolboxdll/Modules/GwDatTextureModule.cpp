@@ -8,6 +8,7 @@
 #include "GwDatTextureModule.h"
 
 #include "Resources.h"
+#include <GWCA/Managers/MemoryMgr.h>
 
 namespace {
 
@@ -38,22 +39,19 @@ namespace {
     FileIdToRecObj_pt FileHashToRecObj_func;
 
     typedef uint8_t*(__cdecl* GetRecObjectBytes_pt)(RecObj* rec, int* size_out);
-    GetRecObjectBytes_pt GetRecObjectBytes_func;
+    GetRecObjectBytes_pt ReadFileBuffer_Func;
 
     typedef uint32_t(__cdecl* DecodeImage_pt)(int size, uint8_t* bytes, gw_image_bits* bits, uint8_t* pallete, GR_FORMAT* format, Vec2i* dims, int* levels);
     DecodeImage_pt DecodeImage_func;
 
     typedef void(__cdecl* UnkRecObjBytes_pt)(RecObj* rec, uint8_t* bytes);
-    UnkRecObjBytes_pt UnkRecObjBytes_func;
+    UnkRecObjBytes_pt FreeFileBuffer_Func;
 
     typedef void(__cdecl* CloseRecObj_pt)(RecObj* rec);
     CloseRecObj_pt CloseRecObj_func;
 
     typedef gw_image_bits(__cdecl* AllocateImage_pt)(GR_FORMAT format, Vec2i* destDims, uint32_t levels, uint32_t unk2);
     AllocateImage_pt AllocateImage_func;
-
-    typedef void(__cdecl* FreeImage_pt)(gw_image_bits bits);
-    FreeImage_pt FreeImage_func;
 
     typedef void(__cdecl* Depalletize_pt)(
         gw_image_bits destBits, uint8_t* destPalette, GR_FORMAT destFormat, int* destMipWidths, gw_image_bits sourceBits, uint8_t* sourcePallete, GR_FORMAT sourceFormat, int* sourceMipWidths, Vec2i* sourceDims, uint32_t sourceLevels,
@@ -110,7 +108,7 @@ namespace {
         auto rec = FileHashToRecObj_func(fileHash, 1, 0);
         if (!rec) return 0;
 
-        const auto bytes = GetRecObjectBytes_func(rec, &size);
+        const auto bytes = ReadFileBuffer_Func(rec, &size);
         if (!bytes) {
             CloseRecObj_func(rec);
             return 0;
@@ -121,7 +119,7 @@ namespace {
             // Model file format; try to find first instance of image from this.
             const auto found = strnstr((char*)bytes, "ATEX",size);
             if (!found) {
-                UnkRecObjBytes_func(rec, bytes);
+                FreeFileBuffer_Func(rec, bytes);
                 CloseRecObj_func(rec);
                 return 0;
             }
@@ -131,7 +129,7 @@ namespace {
 
         uint32_t result = DecodeImage_func(image_size, image_bytes, &bits, pallete, &format, &dims, &levels);
         if (rec) {
-            UnkRecObjBytes_func(rec, bytes);
+            FreeFileBuffer_Func(rec, bytes);
             if (levels > 13)                return 0;
 
             CloseRecObj_func(rec);
@@ -144,7 +142,7 @@ namespace {
         *dst_bits = AllocateImage_func(GR_FORMAT_A8R8G8B8, &dims, levels, 0);
         Depalletize_func((gw_image_bits)dst_bits, nullptr, GR_FORMAT_A8R8G8B8, nullptr, bits, pallete, format, nullptr, &dims, levels, 0, 0);
 
-        FreeImage_func(bits);
+        GW::MemoryMgr::MemFree(bits);
 
         // todo: free bytes;
         return result;
@@ -162,7 +160,7 @@ namespace {
         auto ret = OpenImage(file_id, &bits, dims, levels, format);
         if (!ret || !bits || !dims.x || !dims.y) {
             if (bits) {
-                FreeImage_func(bits);
+                GW::MemoryMgr::MemFree(bits);
             }
             return nullptr;
         }
@@ -193,8 +191,7 @@ namespace {
                 srcdata++;
             }*/
         }
-        
-        FreeImage_func(bits);
+        GW::MemoryMgr::MemFree(bits);
 
         // Unlock the texture so it can be used.
         tex->UnlockRect(0);
@@ -218,26 +215,49 @@ void GwDatTextureModule::Initialize()
 
     using namespace GW;
 
-    // @Cleanup: Reduce size of signature and offset jumps
-    uintptr_t address = (uintptr_t)Scanner::Find("\x83\xc4\x0c\x33\xc0\x89\x45\xfc\x85\xf6\x74\x14\x8d\x45\xfc", "xxxxxxxxxxxxxxx", 0);
+    
+    uintptr_t address = 0;
+
+    DecodeImage_func = (DecodeImage_pt)Scanner::ToFunctionStart(Scanner::FindAssertion("GrImage.cpp", "bits || !palette"));
+
+    address = Scanner::FindAssertion("Amet.cpp", "data");
     if (address) {
-        FileHashToRecObj_func = (FileIdToRecObj_pt)Scanner::FunctionFromNearCall(address - 7);
-        GetRecObjectBytes_func = (GetRecObjectBytes_pt)Scanner::FunctionFromNearCall(address + 0x11);
-        DecodeImage_func = (DecodeImage_pt)Scanner::FunctionFromNearCall(address + 0x33);
-        UnkRecObjBytes_func = (UnkRecObjBytes_pt)Scanner::FunctionFromNearCall(address + 0x43);
-        CloseRecObj_func = (CloseRecObj_pt)Scanner::FunctionFromNearCall(address + 0x49);
-        AllocateImage_func = (AllocateImage_pt)Scanner::FunctionFromNearCall((uintptr_t)DecodeImage_func + 0x1ef);
-        FreeImage_func = (FreeImage_pt)Scanner::FunctionFromNearCall((uintptr_t)DecodeImage_func + 0x298);
-        Depalletize_func = (Depalletize_pt)Scanner::Find("\x83\xc4\x18\x39\xb5\x70\xff\xff\xff\x74\x21\x8b\x57\x04\x0f\xaf\x17\xc1\xe2\x02", "xxxxxxxxxxxxxxxxxxxx", -0x127);
+        address = Scanner::FindInRange("\xe8", "x", 0, address + 0xc, address + 0xff);
+        FileHashToRecObj_func = (FileIdToRecObj_pt)Scanner::FunctionFromNearCall(address);
+        address = Scanner::FindInRange("\xe8", "x", 0, address + 1, address + 0xff);
+        ReadFileBuffer_Func = (GetRecObjectBytes_pt)Scanner::FunctionFromNearCall(address);
     }
+    address = Scanner::Find("\x81\x3a\x41\x4d\x45\x54", "xxxxxx");
+    if (address) {
+        address = Scanner::FindInRange("\xe8", "x", 0, address, address - 0xff);
+        CloseRecObj_func = (CloseRecObj_pt)Scanner::FunctionFromNearCall(address);
+        address = Scanner::FindInRange("\xe8", "x", 0, address - 1, address - 0xff);
+        FreeFileBuffer_Func = (UnkRecObjBytes_pt)Scanner::FunctionFromNearCall(address);
+    }
+    
+    address = (uintptr_t)DecodeImage_func;
+
+
+    AllocateImage_func = (AllocateImage_pt)Scanner::ToFunctionStart(Scanner::Find("\x7c\x11\x6a\x5c", "xxxx"));
+
+    address = Scanner::ToFunctionStart(Scanner::Find("\x68\xf2\x0c\x00\x00", "xxxxx"));
+    Depalletize_func = (Depalletize_pt)address;
+
+
+    Log::Log("[GwDatTextureModule] FileHashToRecObj_func = %p", FileHashToRecObj_func);
+    Log::Log("[GwDatTextureModule] ReadFileBuffer_Func = %p", ReadFileBuffer_Func);
+    Log::Log("[GwDatTextureModule] DecodeImage_func = %p", DecodeImage_func);
+    Log::Log("[GwDatTextureModule] FreeFileBuffer_Func = %p", FreeFileBuffer_Func);
+    Log::Log("[GwDatTextureModule] CloseRecObj_func = %p", CloseRecObj_func);
+    Log::Log("[GwDatTextureModule] AllocateImage_func = %p", AllocateImage_func);
+    Log::Log("[GwDatTextureModule] Depalletize_func = %p", Depalletize_func);
 #ifdef _DEBUG
     ASSERT(FileHashToRecObj_func);
-    ASSERT(GetRecObjectBytes_func);
+    ASSERT(ReadFileBuffer_Func);
     ASSERT(DecodeImage_func);
-    ASSERT(UnkRecObjBytes_func);
+    ASSERT(FreeFileBuffer_Func);
     ASSERT(CloseRecObj_func);
     ASSERT(AllocateImage_func);
-    ASSERT(FreeImage_func);
     ASSERT(Depalletize_func);
 #endif
 }

@@ -1413,74 +1413,82 @@ bool PendingChatMessage::PrintMessage()
 void GameSettings::Initialize()
 {
     ToolboxModule::Initialize();
-
+    //return;
     // Patch that allow storage page (and Anniversary page) to work.
     uintptr_t address = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
-    printf("[SCAN] StoragePatch = %p\n", (void*)address);
-
-
-    // Xunlai Chest has a behavior where if you
-    // 1. Open chest on page 1 to 14
-    // 2. Close chest & open it again
-    // -> You should still be on the same page
-    // But, if you try with the material page (or anniversary page in the case when you bought all other storage page)
-    // you will get back the the page 1. I think it was a intended use for material page & forgot to fix it
-    // when they added anniversary page so we do it ourself.
-    constexpr DWORD page_max = 14;
-    ctrl_click_patch.SetPatch(address, (const char*)&page_max, 1);
-    ctrl_click_patch.TogglePatch(true);
+    if (address)
+        return;
+    if (address) {
+        // Xunlai Chest has a behavior where if you
+        // 1. Open chest on page 1 to 14
+        // 2. Close chest & open it again
+        // -> You should still be on the same page
+        // But, if you try with the material page (or anniversary page in the case when you bought all other storage page)
+        // you will get back the the page 1. I think it was a intended use for material page & forgot to fix it
+        // when they added anniversary page so we do it ourself.
+        constexpr DWORD page_max = 14;
+        ctrl_click_patch.SetPatch(address, (const char*)&page_max, 1);
+        ctrl_click_patch.TogglePatch(true);
+    }
+    Log::Log("[GameSettings] ctrl_click_patch = %p\n", ctrl_click_patch.GetAddress());
 
     address = GW::Scanner::Find("\x5F\x6A\x00\xFF\x75\xE4\x6A\x4C\xFF\x75\xF8", "xxxxxxxxxxx", -0x44);
-    printf("[SCAN] TomePatch = %p\n", (void*)address);
-    if (address) {
+    if (address)
         tome_patch.SetPatch(address, "\x75\x1E\x90\x90\x90\x90\x90", 7);
-    }
-
+    Log::Log("[GameSettings] tome_patch = %p\n", tome_patch.GetAddress());
+   
     address = GW::Scanner::Find("\x81\xff\x86\x02\x00\x00", "xxxxxx", 6);
-    printf("[SCAN] MapEntryMessagePatch = %p\n", (void*)address);
-    if (address) {
+    if (address)
         skip_map_entry_message_patch.SetPatch(address, "\x90\xe9", 2);
-    }
+    Log::Log("[GameSettings] skip_map_entry_message_patch = %p\n", skip_map_entry_message_patch.GetAddress());
 
     address = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxx??", +7);
-    printf("[SCAN] GoldConfirmationPatch = %p\n", (void*)address);
-    if (address) {
+    if (address)
         gold_confirm_patch.SetPatch(address, "\x90\x90", 2);
-    }
+    Log::Log("[GameSettings] gold_confirm_patch = %p\n", gold_confirm_patch.GetAddress());
 
     address = GW::Scanner::Find("\xdf\xe0\xf6\xc4\x41\x7a\x78", "xxxxxxx", 0x5);
-    if (address) {
+    if (address)
         remove_skill_warmup_duration_patch.SetPatch(address, "\x90\x90", 2);
-    }
+    Log::Log("[GameSettings] remove_skill_warmup_duration_patch = %p\n", remove_skill_warmup_duration_patch.GetAddress());
 
     ItemDescriptionHandler::RegisterDescriptionCallback(OnGetItemDescription, 9999);
 
     // Call our CreateCodedTextLabel function instead of default CreateCodedTextLabel for patching skill descriptions
-    address = GW::Scanner::FindAssertion("p:\\code\\gw\\ui\\game\\gmtipskill.cpp", "!(m_tipSkillFlags & TipSkillMsgCreate::FLAG_SHOW_ENABLE_AI_HINT)", 0x7b);
+    address = GW::Scanner::FindAssertion("\\Code\\Gw\\Ui\\Game\\GmTipSkill.cpp", "!(m_tipSkillFlags & TipSkillMsgCreate::FLAG_SHOW_ENABLE_AI_HINT)", 0x7b);
     if (address) {
         CreateEncodedTextLabel_Func = (CreateCodedTextLabel_pt)GW::Scanner::FunctionFromNearCall(address);
         skill_description_patch.SetRedirect(address, CreateCodedTextLabel_SkillDescription);
         skill_description_patch.TogglePatch(true);
     }
+    Log::Log("[GameSettings] CreateEncodedTextLabel_Func = %p\n", CreateEncodedTextLabel_Func);
+    Log::Log("[GameSettings] skill_description_patch = %p\n", skill_description_patch.GetAddress());
 
     // See OnAgentAllegianceChanged
-    address = GW::Scanner::Find("\x75\x18\x81\xce\x00\x00\x00\x02\x56", "xxxxxxxxx", 0x9);
-    SetGlobalNameTagVisibility_Func = (SetGlobalNameTagVisibility_pt)GW::Scanner::FunctionFromNearCall(address);
-    if (SetGlobalNameTagVisibility_Func) {
-        GlobalNameTagVisibilityFlags = *(uint32_t**)((uintptr_t)SetGlobalNameTagVisibility_Func + 0xb);
+    address = GW::Scanner::Find("\x81\xce\xa0\x06\x00\x00", "xxxxxx");
+    if (address)
+        address = GW::Scanner::FunctionFromNearCall(GW::Scanner::FindInRange("\xe8", "x", 0, address, address + 0xff));
+    if (address) {
+        SetGlobalNameTagVisibility_Func = (SetGlobalNameTagVisibility_pt)address;
+        if (GW::Scanner::IsValidPtr(*(uintptr_t*)(address + 0xa)))
+            GlobalNameTagVisibilityFlags = *(uint32_t**)(address + 0xa);
+        else if (GW::Scanner::IsValidPtr(*(uintptr_t*)(address + 0xb)))
+            GlobalNameTagVisibilityFlags = *(uint32_t**)(address + 0xb);
         GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(&PartyDefeated_Entry, &OnAgentAllegianceChanged);
     }
-    printf("[SCAN] SetGlobalNameTagVisibility_Func = %p", (void*)SetGlobalNameTagVisibility_Func);
-    printf("[SCAN] GlobalNameTagVisibilityFlags = %p", static_cast<void*>(GlobalNameTagVisibilityFlags));
+    Log::Log("[GameSettings] SetGlobalNameTagVisibility_Func = %p", (void*)SetGlobalNameTagVisibility_Func);
+    Log::Log("[GameSettings] GlobalNameTagVisibilityFlags = %p", static_cast<void*>(GlobalNameTagVisibilityFlags));
 
     address = GW::Scanner::Find("\x8b\x7d\x08\x8b\x70\x2c\x83\xff\x0f", "xxxxxxxxx");
-    ShowAgentFactionGain_Func = (ShowAgentFactionGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x6c);
-    ShowAgentExperienceGain_Func = (ShowAgentExperienceGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x4f);
-    printf("[SCAN] ShowAgentFactionGain_Func = %p\n", (void*)ShowAgentFactionGain_Func);
-    printf("[SCAN] ShowAgentExperienceGain_Func = %p\n", (void*)ShowAgentExperienceGain_Func);
+    if (address) {
+        ShowAgentFactionGain_Func = (ShowAgentFactionGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x6c);
+        ShowAgentExperienceGain_Func = (ShowAgentExperienceGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x4f);
+    }
+    Log::Log("[GameSettings] ShowAgentFactionGain_Func = %p\n", (void*)ShowAgentFactionGain_Func);
+    Log::Log("[GameSettings] ShowAgentExperienceGain_Func = %p\n", (void*)ShowAgentExperienceGain_Func);
 
-    FadeFrameContent_Func = (FadeFrameContent_pt)GW::Scanner::FindAssertion("p:\\code\\engine\\frame\\frapi.cpp", "sourceOpacity >= 0", -0x46);
-    printf("[SCAN] FadeFrameContent_Func = %p\n", (void*)FadeFrameContent_Func);
+    FadeFrameContent_Func = (FadeFrameContent_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("\\Code\\Engine\\Frame\\FrApi.cpp", "sourceOpacity >= 0"));
+    printf("[GameSettings] FadeFrameContent_Func = %p\n", (void*)FadeFrameContent_Func);
 
 #ifdef _DEBUG
     ASSERT(ctrl_click_patch.IsValid());
@@ -1497,13 +1505,19 @@ void GameSettings::Initialize()
     ASSERT(FadeFrameContent_Func);
 #endif
 
+    if (ShowAgentFactionGain_Func) {
+        GW::HookBase::CreateHook((void**)&ShowAgentFactionGain_Func, OnShowAgentFactionGain, reinterpret_cast<void**>(&ShowAgentFactionGain_Ret));
+        GW::HookBase::EnableHooks(ShowAgentFactionGain_Func);
+    }
+    if (ShowAgentExperienceGain_Func) {
+        GW::HookBase::CreateHook((void**)&ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, reinterpret_cast<void**>(&ShowAgentExperienceGain_Ret));
+        GW::HookBase::EnableHooks(ShowAgentExperienceGain_Func);
+    }
+    if (FadeFrameContent_Func) {
+        GW::HookBase::CreateHook((void**)&FadeFrameContent_Func, OnFadeFrameContent, reinterpret_cast<void**>(&FadeFrameContent_Ret));
+        GW::HookBase::EnableHooks(FadeFrameContent_Func);
+    }
 
-    GW::HookBase::CreateHook((void**)&ShowAgentFactionGain_Func, OnShowAgentFactionGain, reinterpret_cast<void**>(&ShowAgentFactionGain_Ret));
-    GW::HookBase::EnableHooks(ShowAgentFactionGain_Func);
-    GW::HookBase::CreateHook((void**)&ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, reinterpret_cast<void**>(&ShowAgentExperienceGain_Ret));
-    GW::HookBase::EnableHooks(ShowAgentExperienceGain_Func);
-    GW::HookBase::CreateHook((void**)&FadeFrameContent_Func, OnFadeFrameContent, reinterpret_cast<void**>(&FadeFrameContent_Ret));
-    GW::HookBase::EnableHooks(FadeFrameContent_Func);
 
     RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendAgentDialog, bind_member(this, &GameSettings::OnFactionDonate));
     RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillbar, &OnPreLoadSkillBar);
@@ -2297,11 +2311,13 @@ void GameSettings::Update(float)
 
     if (disable_camera_smoothing && !GW::CameraMgr::GetCameraUnlock()) {
         GW::Camera* cam = GW::CameraMgr::GetCamera();
-        cam->position = cam->camera_pos_to_go;
-        cam->look_at_target = cam->look_at_to_go;
-        cam->cam_pos_inverted = cam->cam_pos_inverted_to_go;
-        cam->yaw = cam->yaw_to_go;
-        cam->pitch = cam->pitch_to_go;
+        if (cam) {
+            cam->position = cam->camera_pos_to_go;
+            cam->look_at_target = cam->look_at_to_go;
+            cam->cam_pos_inverted = cam->cam_pos_inverted_to_go;
+            cam->yaw = cam->yaw_to_go;
+            cam->pitch = cam->pitch_to_go;
+        }
     }
 
 #ifdef APRIL_FOOLS

@@ -63,6 +63,8 @@ namespace {
     bool must_self_destruct = false; // is true when toolbox should quit
     GW::HookEntry Update_Entry;
 
+    std::recursive_mutex module_management_mutex;
+
     bool event_handler_attached = false;
 
     bool AttachWndProcHandler()
@@ -383,6 +385,7 @@ bool GWToolbox::IsInitialized() { return gwtoolbox_state == GWToolboxState::Init
 
 bool GWToolbox::ToggleModule(ToolboxWidget& m, const bool enable)
 {
+    std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
     const bool added = ToggleTBModule(m, reinterpret_cast<std::vector<ToolboxModule*>&>(widgets_enabled), enable);
     UpdateEnabledWidgetVectors(&m, added);
     return added;
@@ -390,6 +393,7 @@ bool GWToolbox::ToggleModule(ToolboxWidget& m, const bool enable)
 
 bool GWToolbox::ToggleModule(ToolboxWindow& m, const bool enable)
 {
+    std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
     const bool added = ToggleTBModule(m, reinterpret_cast<std::vector<ToolboxModule*>&>(windows_enabled), enable);
     UpdateEnabledWidgetVectors(&m, added);
     return added;
@@ -397,6 +401,7 @@ bool GWToolbox::ToggleModule(ToolboxWindow& m, const bool enable)
 
 bool GWToolbox::ToggleModule(ToolboxModule& m, const bool enable)
 {
+    std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
     const bool added = ToggleTBModule(m, modules_enabled, enable);
     UpdateEnabledWidgetVectors(&m, added);
     return added;
@@ -688,10 +693,12 @@ bool GWToolbox::SetSettingsFolder(const std::filesystem::path& path)
 
 bool GWToolbox::IsModuleEnabled(ToolboxModule* m)
 {
+    std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
     return m && std::ranges::find(all_modules_enabled, m) != all_modules_enabled.end();
 }
 bool GWToolbox::IsModuleEnabled(const char* name)
 {
+    std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
     return name && std::ranges::find_if(all_modules_enabled, [name](ToolboxModule* m) {
         return strcmp(m->Name(), name) == 0;
         }) != all_modules_enabled.end();
@@ -870,6 +877,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     io.AddKeyEvent(ImGuiMod_Shift, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
     io.AddKeyEvent(ImGuiMod_Alt, (GetKeyState(VK_MENU) & 0x8000) != 0);
 
+    std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
     for (const auto uielement : ui_elements_enabled) {
         if (world_map_showing && !uielement->ShowOnWorldMap()) {
             continue;

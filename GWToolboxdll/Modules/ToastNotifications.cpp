@@ -510,6 +510,10 @@ void ToastNotifications::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("In Explorable", &show_notifications_when_in_explorable);
     ImGui::Unindent();
+
+    if (ImGui::Button("Show Test Notification")) {
+        SendToast(L"Test toast", L"This is a test toast sent from GWToolbox");
+    }
 }
 
 void ToastNotifications::LoadSettings(ToolboxIni* ini)

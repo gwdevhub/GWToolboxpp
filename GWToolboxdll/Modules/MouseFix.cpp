@@ -39,7 +39,7 @@ namespace {
     // This could be a patch really, but rewriting the function out is a bit more readable.
     
     bool initialized = false;
-    bool enable_cursor_fix = true;
+    bool enable_cursor_fix = false;
     int cursor_size = 32;
     HCURSOR current_cursor = nullptr;
     bool cursor_size_hooked = false;
@@ -153,15 +153,17 @@ namespace {
     }
 
     void CursorFixEnable(const bool enable)
-    {  
+    {
+        CursorFixInitialise();
+        if (!(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func))
+            return;
         if (!enable) {
             GW::HookBase::DisableHooks(ProcessInput_Func);
             GW::HookBase::DisableHooks(SetCursorPosCenter_Func);
         }
         else {
-            CursorFixInitialise();
-            if(ProcessInput_Func) GW::HookBase::EnableHooks(ProcessInput_Func);
-            if(SetCursorPosCenter_Func) GW::HookBase::EnableHooks(SetCursorPosCenter_Func);
+            GW::HookBase::EnableHooks(ProcessInput_Func);
+            GW::HookBase::EnableHooks(SetCursorPosCenter_Func);
         }
     }
 
@@ -270,18 +272,12 @@ namespace {
         return new_cursor;
     }
 
-    struct GWWindowUserData {
-        uint8_t unk[0xc43];
-        HCURSOR cursor; // h0c44
-        uint8_t unk1[0xb0];
-        HWND window_handle; // h0cf8
-    };
 
-    using ChangeCursorIcon_pt = void(__cdecl*)(GWWindowUserData*);
+    using ChangeCursorIcon_pt = void(__cdecl*)(void*);
     ChangeCursorIcon_pt ChangeCursorIcon_Func = nullptr;
     ChangeCursorIcon_pt ChangeCursorIcon_Ret = nullptr;
 
-    void OnChangeCursorIcon(GWWindowUserData* user_data)
+    void OnChangeCursorIcon(char* user_data)
     {
         GW::Hook::EnterHook();
         ChangeCursorIcon_Ret(user_data);
@@ -289,27 +285,31 @@ namespace {
         if (cursor_size < 0 || cursor_size > 64 || cursor_size == 32) {
             return GW::Hook::LeaveHook();
         }
-        if (!(user_data && user_data->cursor && user_data->cursor != current_cursor)) {
+
+        HCURSOR* cursor = (HCURSOR*)&user_data[0xd6c];
+        HWND* window_handle = (HWND*)&user_data[0xe20];
+
+        if (!(user_data && *cursor && *cursor != current_cursor)) {
             return GW::Hook::LeaveHook();
         }
-        const HCURSOR new_cursor = ScaleCursor(user_data->cursor, cursor_size);
+        const HCURSOR new_cursor = ScaleCursor(*cursor, cursor_size);
         if (!new_cursor) {
             return GW::Hook::LeaveHook();
         }
-        if (user_data->cursor == new_cursor) {
+        if (*cursor == new_cursor) {
             return GW::Hook::LeaveHook();
         }
-        if (user_data->cursor) {
+        if (*cursor) {
             // Don't forget to free the original cursor before overwriting the handle
-            DestroyCursor(user_data->cursor);
-            SetClassLongA(user_data->window_handle, GCL_HCURSOR, 0);
+            DestroyCursor(*cursor);
+            SetClassLongA(*window_handle, GCL_HCURSOR, 0);
             SetCursor(nullptr);
-            user_data->cursor = nullptr;
+            *cursor = nullptr;
         }
-        user_data->cursor = new_cursor;
+        *cursor = new_cursor;
         SetCursor(new_cursor);
         // Also override the window class for the cursor
-        SetClassLongA(user_data->window_handle, GCL_HCURSOR, reinterpret_cast<LONG>(new_cursor));
+        SetClassLongA(*window_handle, GCL_HCURSOR, reinterpret_cast<LONG>(new_cursor));
         current_cursor = new_cursor;
         GW::Hook::LeaveHook();
     }
@@ -318,7 +318,7 @@ namespace {
     {
         GW::GameThread::Enqueue([] {
             // Force redraw
-            const auto user_data = (GWWindowUserData*)GetWindowLongA(GW::MemoryMgr::GetGWWindowHandle(), -0x15);
+            const auto user_data = (void*)GetWindowLongA(GW::MemoryMgr::GetGWWindowHandle(), -0xc);
             current_cursor = nullptr;
             if (user_data && ChangeCursorIcon_Func) {
                 ChangeCursorIcon_Func(user_data);
@@ -375,14 +375,14 @@ void MouseFix::Initialize()
 
 void MouseFix::LoadSettings(ToolboxIni* ini)
 {
-    LOAD_BOOL(enable_cursor_fix);
+    //LOAD_BOOL(enable_cursor_fix);
     SetCursorSize(ini->GetLongValue(Name(), VAR_NAME(cursor_size), cursor_size));
     RedrawCursorIcon();
 }
 
 void MouseFix::SaveSettings(ToolboxIni* ini)
 {
-    SAVE_BOOL(enable_cursor_fix);
+    //SAVE_BOOL(enable_cursor_fix);
     SAVE_UINT(cursor_size);
 }
 
@@ -399,9 +399,11 @@ void MouseFix::Terminate()
 
 void MouseFix::DrawSettingsInternal()
 {
+#if 0
     if (ImGui::Checkbox("Enable cursor fix", &enable_cursor_fix)) {
         CursorFixEnable(enable_cursor_fix);
     }
+#endif
     ImGui::SliderInt("Guild Wars cursor size", &cursor_size, 16, 64);
     ImGui::ShowHelp("Sizes other than 32 might lead the the cursor disappearing at random.\n"
         "Right click to make the cursor dis- and reappear for this to take effect.");

@@ -227,7 +227,9 @@ namespace {
         DecodedTitleName(const GW::Constants::TitleID in)
             : title(in)
         {
-            name.reset(GW::PlayerMgr::GetTitleData(title)->name_id);
+            const auto title_info = GW::PlayerMgr::GetTitleData(title);
+            if(title_info)
+                name.reset(title_info->name_id);
         };
         GW::Constants::TitleID title;
         GuiUtils::EncString name;

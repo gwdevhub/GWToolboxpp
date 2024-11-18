@@ -1116,7 +1116,10 @@ GuiUtils::EncString* Resources::GetMapName(const GW::Constants::MapID map_id)
         return map_names[map_id];
     }
     const auto area = GW::Map::GetMapInfo(map_id);
-    ASSERT(area && area->name_id);
+    if (!(area && area->name_id)) {
+        map_names[map_id] = DecodeStringId(0x3);
+        return map_names[map_id];
+    }
     map_names[map_id] = DecodeStringId(area->name_id);
     return map_names[map_id];
 }
@@ -1124,7 +1127,7 @@ GuiUtils::EncString* Resources::GetMapName(const GW::Constants::MapID map_id)
 const wchar_t* Resources::GetRegionName(const GW::Constants::MapID map_id)
 {
     const auto area_info = GW::Map::GetMapInfo(map_id);
-    switch (area_info->region) {
+    switch (area_info ? area_info->region : GW::Region_DevRegion) {
     case GW::Region_BattleIslands:
         return GW::EncStrings::MapRegion::BattleIsles;
 
@@ -1208,9 +1211,9 @@ IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
     if (is_composite_item) {
         // Armor/runes
         const auto model_file_info = GW::Items::GetCompositeModelInfo(item->model_file_id);
-        if (!model_id_to_load)
+        if (model_file_info && !model_id_to_load)
             model_id_to_load = model_file_info->file_ids[0xa];
-        if (!model_id_to_load)
+        if (model_file_info && !model_id_to_load)
             model_id_to_load = is_female ? model_file_info->file_ids[5] : model_file_info->file_ids[0];
     }
     if (!model_id_to_load)

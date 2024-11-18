@@ -415,7 +415,7 @@ void WorldMapWidget::Initialize()
         view_all_carto_areas_patch.SetRedirect(address, GetCartographyFlagsForArea);
     }
 
-    address = GW::Scanner::FindAssertion("p:\\code\\gw\\ui\\controls\\uictlweblink.cpp", "challengeId < CHALLENGES", -0x7);
+    address = GW::Scanner::FindAssertion("UiCtlWebLink.cpp", "challengeId < CHALLENGES", -0x7);
     if (address) {
         bypass_custom_quest_assertion_patch.SetPatch(address, "\xeb", 1);
         bypass_custom_quest_assertion_patch.TogglePatch(true);
@@ -424,6 +424,7 @@ void WorldMapWidget::Initialize()
 
     ASSERT(view_all_outposts_patch.IsValid());
     ASSERT(view_all_carto_areas_patch.IsValid());
+    ASSERT(bypass_custom_quest_assertion_patch.IsValid());
 
     const GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kQuestAdded,
@@ -471,6 +472,7 @@ void WorldMapWidget::SignalTerminate()
     });
     view_all_outposts_patch.Reset();
     view_all_carto_areas_patch.Reset();
+    bypass_custom_quest_assertion_patch.Reset();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }
 

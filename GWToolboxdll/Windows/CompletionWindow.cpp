@@ -123,6 +123,7 @@ namespace {
             }
         };
         const auto area_info = GW::Map::GetMapInfo(map_id);
+        if (!area_info) return;
 
         if (area_info->type == GW::RegionType::ExplorableZone) {
             *icon_file_ids = WorldMapIcon::HardMode;
@@ -1114,11 +1115,11 @@ FactionsPvESkill::FactionsPvESkill(const SkillID skill_id)
     : PvESkill(skill_id)
 {
     GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-    uint32_t faction_id = 0x6C3D;
-    if (static_cast<TitleID>(s->title) == TitleID::Luxon) {
-        faction_id = 0x6C3E;
-    }
     if (s) {
+        uint32_t faction_id = 0x6C3D;
+        if (static_cast<TitleID>(s->title) == TitleID::Luxon) {
+            faction_id = 0x6C3E;
+        }
         std::wstring buf;
         buf.resize(32, 0);
         GW::UI::UInt32ToEncStr(s->name, buf.data(), buf.size());
@@ -1205,7 +1206,7 @@ void CompletionWindow::Initialize()
     for (size_t i = 0; i < _countof(encoded_weapon_names); i++) {
         hom_weapons.push_back(new WeaponAchievement(i, encoded_weapon_names[i]));
     }
-    /*auto address = GW::Scanner::FindAssertion("p:\\code\\gw\\const\\constitempvp.cpp", "unlockIndex < ITEM_PVP_UNLOCK_COUNT");
+    /*auto address = GW::Scanner::FindAssertion("\\Code\\Gw\\Const\\constitempvp.cpp", "unlockIndex < ITEM_PVP_UNLOCK_COUNT");
     if (address) {
         unlocked_pvp_item_array_buffer = *(PvPItemInfo**)(address + 0x15);
         unlocked_pvp_item_array_size = *(size_t*)(address - 0xb);
@@ -1214,7 +1215,7 @@ void CompletionWindow::Initialize()
         unlocked_pvp_items.push_back(new UnlockedPvPItem(i));
     }*/
 
-    /*auto address = GW::Scanner::FindAssertion("p:\\code\\gw\\const\\constitempvp.cpp", "index < ITEM_PVP_ITEM_COUNT");
+    /*auto address = GW::Scanner::FindAssertion("\\Code\\Gw\\Const\\constitempvp.cpp", "index < ITEM_PVP_ITEM_COUNT");
     if (address) {
         unlocked_pvp_item_array_buffer = *(PvPItemInfo**)(address + 0x15);
         unlocked_pvp_item_array_size = *(size_t*)(address - 0xb);
