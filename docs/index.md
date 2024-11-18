@@ -59,8 +59,8 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 			<td><a href="settings#game_settings">URLs in equipment templates</a></td>
 		</tr>
 		<tr>
-			<td>Hero Builds</td>
-            <td><a href="misc_widgets">Miscellaneous Widgets</a></td>
+			<td><a href="herobuilds">Hero Builds</a></td>
+                        <td><a href="misc_widgets">Miscellaneous Widgets</a></td>
 			<td><a href="integrations">Integrations</a></td>
 		</tr>
 		<tr>
