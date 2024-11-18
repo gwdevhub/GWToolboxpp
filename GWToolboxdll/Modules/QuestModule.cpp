@@ -37,6 +37,7 @@ namespace {
 
     bool draw_quest_path_on_terrain = true;
     bool draw_quest_path_on_minimap = true;
+    bool show_paths_to_all_quests = false;
     GW::HookEntry ui_message_entry;
 
     clock_t last_quest_clicked = 0;
@@ -44,7 +45,8 @@ namespace {
     GW::UI::UIInteractionCallback QuestLogRow_UICallback_Func = nullptr, QuestLogRow_UICallback_Ret = nullptr;
 
     // If double clicked on a quest entry, teleport to nearest outpost
-    void OnQuestLogRow_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+    void OnQuestLogRow_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
+    {
         GW::Hook::EnterHook();
 
         if (message->message_id == GW::UI::UIMessage::kMouseClick2) {
@@ -68,6 +70,7 @@ namespace {
 
     void OnQuestPathRecalculated(std::vector<GW::GamePos>& waypoints, void* args);
     void ClearCalculatedPath(GW::Constants::QuestID quest_id);
+
     bool IsActiveQuestPath(GW::Constants::QuestID quest_id)
     {
         const auto questlog = GW::QuestMgr::GetQuestLog();
@@ -76,7 +79,7 @@ namespace {
             return false;
         if (quest_id == active_quest->quest_id)
             return true;
-        if (!Minimap::ShouldDrawAllQuests())
+        if (!Minimap::ShouldDrawAllQuests() || show_paths_to_all_quests)
             return false;
         const auto quest = GW::QuestMgr::GetQuest(quest_id);
         auto lowest_quest_id_by_position = quest_id;
@@ -370,13 +373,15 @@ std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::Que
     if (!quest) return out;
     const wchar_t* next_objective_enc = nullptr;
     const wchar_t* current_objective_enc = quest->objectives;
+    if (!quest->objectives)
+        GW::QuestMgr::RequestQuestInfo(quest);
     while (current_objective_enc) {
         next_objective_enc = wcschr(current_objective_enc, 0x2);
         size_t current_objective_len = next_objective_enc ? next_objective_enc - current_objective_enc : wcslen(current_objective_enc);
 
         auto enc_str = std::wstring(current_objective_enc, current_objective_len);
         auto content_start = enc_str.find(0x10a);
-        if (content_start != std::wstring::npos)
+        if (content_start == std::wstring::npos)
             break;
         content_start++;
 
@@ -406,6 +411,9 @@ void QuestModule::DrawSettingsInternal()
     ImGui::Text("Draw path to quest marker on:");
     ImGui::Checkbox("Terrain##drawquestpath", &draw_quest_path_on_terrain);
     ImGui::Checkbox("Minimap##drawquestpath", &draw_quest_path_on_minimap);
+#ifdef _DEBUG
+    ImGui::Checkbox("Show paths to all quests##drawquestpath", &show_paths_to_all_quests);
+#endif
     ImGui::DragFloat("Max distance between two points##max_visibility_range", &Pathing::max_visibility_range, 1'000.f, 1'000.f, 50'000.f);
     ImGui::ShowHelp("The higher this value, the more accurate the path will be, but the more CPU it will use.");
 }
@@ -415,6 +423,7 @@ void QuestModule::LoadSettings(ToolboxIni* ini)
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(draw_quest_path_on_minimap);
     LOAD_BOOL(draw_quest_path_on_terrain);
+    LOAD_BOOL(show_paths_to_all_quests);
     using namespace Pathing;
     LOAD_FLOAT(max_visibility_range);
 }
@@ -424,6 +433,7 @@ void QuestModule::SaveSettings(ToolboxIni* ini)
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(draw_quest_path_on_minimap);
     SAVE_BOOL(draw_quest_path_on_terrain);
+    SAVE_BOOL(show_paths_to_all_quests);
     using namespace Pathing;
     SAVE_FLOAT(max_visibility_range);
 }
@@ -446,7 +456,7 @@ void QuestModule::Initialize()
     RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
 
     const auto address = GW::Scanner::Find("\x83\xc0\xfc\x83\xf8\x54", "xxxxxx", -0xe);
-    if (GW::Scanner::IsValidPtr(address,GW::Scanner::TEXT)) {
+    if (GW::Scanner::IsValidPtr(address, GW::Scanner::TEXT)) {
         QuestLogRow_UICallback_Func = (GW::UI::UIInteractionCallback)address;
         GW::Hook::CreateHook((void**)&QuestLogRow_UICallback_Func, OnQuestLogRow_UICallback, (void**)&QuestLogRow_UICallback_Ret);
         GW::Hook::EnableHooks(QuestLogRow_UICallback_Func);
@@ -489,7 +499,7 @@ void QuestModule::Update(float)
     if (!pos)
         return;
     size_t size = calculated_quest_paths.size();
-    check_paths:
+check_paths:
     for (const auto& [quest_id, calculated_quest_path] : calculated_quest_paths) {
         if (!IsActiveQuestPath(quest_id)) {
             ClearCalculatedPath(quest_id);

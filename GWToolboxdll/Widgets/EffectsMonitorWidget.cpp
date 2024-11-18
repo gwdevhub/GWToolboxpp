@@ -48,7 +48,8 @@ namespace {
         return snprintf(arr, 8, "%.1f", static_cast<double>(cd) / 1000.0);
     }
 
-    void DrawTextOverlay(const char* text, const GW::UI::Frame* frame) {
+    void DrawTextOverlay(const char* text, const GW::UI::Frame* frame)
+    {
         if (!(frame && text && *text && effects_frame)) return;
         auto skill_bottom_right = frame->position.GetBottomRightOnScreen();
 
@@ -64,11 +65,10 @@ namespace {
             draw_list->AddRectFilled(label_pos, skill_bottom_right, color_background);
         }
         if ((color_text_shadow & IM_COL32_A_MASK) != 0) {
-            draw_list->AddText({ label_pos.x + 1, label_pos.y + 1 }, color_text_shadow, text);
+            draw_list->AddText({label_pos.x + 1, label_pos.y + 1}, color_text_shadow, text);
         }
         draw_list->AddText(label_pos, color_text_effects, text);
     }
-
 }
 
 void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
@@ -80,24 +80,26 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     if (!effects_frame) {
         return;
     }
-    ImGui::PushFont(FontLoader::GetFont(font_effects));
-
-    char remaining_str[16];
+    const auto font = FontLoader::GetFont(font_effects);
+    ImGui::PushFont(font);
 
     const auto hard_mode_frame = GW::UI::GetChildFrame(effects_frame, 1);
     // const auto minion_count_frame = GW::UI::GetChildFrame(effects_frame, 2);
     // const auto morale_frame = GW::UI::GetChildFrame(effects_frame, 3);
 
     if (hard_mode_frame && show_vanquish_counter) {
-        const auto foes_left = GW::Map::GetFoesToKill();
-        if (foes_left) {
+        if (const auto foes_left = GW::Map::GetFoesToKill()) {
             const auto foes_killed = GW::Map::GetFoesKilled();
-            snprintf(remaining_str, 16, "%d/%d", foes_killed, foes_killed + foes_left);
-            DrawTextOverlay(remaining_str, hard_mode_frame);
+            std::array<char, 16> remaining_str;
+            snprintf(remaining_str.data(), 16, "%d/%d", foes_killed, foes_killed + foes_left);
+            DrawTextOverlay(remaining_str.data(), hard_mode_frame);
         }
     }
     const auto effects = GW::Effects::GetPlayerEffects();
+    const auto viewport = ImGui::GetMainViewport();
+    const auto draw_list = ImGui::GetBackgroundDrawList(viewport);
     if (effects) {
+        draw_list->PushTextureID(font->ContainerAtlas->TexID);
         std::unordered_map<GW::Constants::SkillID, DWORD> time_remaining_by_effect;
         for (auto& effect : *effects) {
             if (effect.duration <= 0)
@@ -114,9 +116,11 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
             const auto skill_frame = GW::UI::GetChildFrame(effects_frame, (uint32_t)skill_id + 0x4);
             if (!skill_frame)
                 continue;
-            if(UptimeToString(remaining_str, static_cast<int>(remaining)) > 0)
-                DrawTextOverlay(remaining_str, skill_frame);
+            std::array<char, 16> remaining_str;
+            if (UptimeToString(remaining_str.data(), static_cast<int>(remaining)) > 0)
+                DrawTextOverlay(remaining_str.data(), skill_frame);
         }
+        draw_list->PopTextureID();
     }
 
     ImGui::PopFont();
@@ -130,8 +134,7 @@ void EffectsMonitorWidget::LoadSettings(ToolboxIni* ini)
     LOAD_UINT(only_under_seconds);
     LOAD_BOOL(round_up);
     LOAD_BOOL(show_vanquish_counter);
-    font_effects = static_cast<FontLoader::FontSize>(
-        ini->GetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects)));
+    font_effects = static_cast<FontLoader::FontSize>(ini->GetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects)));
     LOAD_COLOR(color_text_effects);
     LOAD_COLOR(color_text_shadow);
     LOAD_COLOR(color_background);
@@ -145,7 +148,6 @@ void EffectsMonitorWidget::SaveSettings(ToolboxIni* ini)
     SAVE_UINT(only_under_seconds);
     SAVE_BOOL(round_up);
     SAVE_BOOL(show_vanquish_counter);
-
     ini->SetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects));
     SAVE_COLOR(color_text_effects);
     SAVE_COLOR(color_text_shadow);
@@ -156,10 +158,12 @@ void EffectsMonitorWidget::DrawSettingsInternal()
 {
     ToolboxWidget::DrawSettingsInternal();
 
-    constexpr const char* font_sizes[] = {"16", "18", "20", "24", "42", "48"};
-
     ImGui::PushID("effects_monitor_overlay_settings");
-    ImGui::Combo("Text size", reinterpret_cast<int*>(&font_effects), font_sizes, 6);
+
+    int current_index = std::distance(FontLoader::font_sizes.begin(), std::ranges::find(FontLoader::font_sizes, font_effects));
+    if (ImGui::Combo("Text size", &current_index, FontLoader::font_size_names.data(), FontLoader::font_size_names.size())) {
+        font_effects = FontLoader::font_sizes[current_index];
+    }
     Colors::DrawSettingHueWheel("Text color", &color_text_effects);
     Colors::DrawSettingHueWheel("Text shadow", &color_text_shadow);
     Colors::DrawSettingHueWheel("Effect duration background", &color_background);

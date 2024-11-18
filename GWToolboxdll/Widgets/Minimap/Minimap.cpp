@@ -889,10 +889,8 @@ void Minimap::DrawSettingsInternal()
         pending_refresh_quest_marker = true;
     }
     ImGui::ShowHelp("To disable the toolbox minimap quest marker, set the quest marker color to transparent in the Symbols section below.");
-#ifdef _DEBUG
     ImGui::Checkbox("Draw all quest markers", &render_all_quests);
     ImGui::ShowHelp("Draw quest markers for all quests in your quest log, not just the active quest");
-#endif
 
     ImGui::Checkbox("Hide GW compass drawings", &hide_compass_drawings);
     ImGui::ShowHelp("Drawings made by other players will be visible on the minimap, but not the compass");
@@ -1312,11 +1310,7 @@ bool Minimap::ShouldMarkersDrawOnMap()
 bool Minimap::ShouldDrawAllQuests()
 {
     // NB: Drawing all quest markers is unstable; there are a bunch of times when the quest marker is stale and we don't know about it. Disable unless debug.
-#ifdef _DEBUG
     return render_all_quests;
-#else
-    return false;
-#endif
 }
 
 void Minimap::Render(IDirect3DDevice9* device)
