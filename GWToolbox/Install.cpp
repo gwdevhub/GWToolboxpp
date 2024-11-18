@@ -112,7 +112,7 @@ bool DeleteInstallationDirectory()
     return true;
 }
 
-bool Install()
+bool Install(const bool quiet)
 {
     if (IsInstalled()) {
         return true;
@@ -133,17 +133,36 @@ bool Install()
         return false;
     }
 
-    MessageBoxW(nullptr, L"Installation successful", L"Installation", 0);
+    if (!quiet) {
+        MessageBoxW(nullptr, L"Installation successful", L"Installation", 0);
+    }
 
     return true;
 }
 
-bool Uninstall()
+bool Uninstall(const bool quiet)
 {
-    // Delete all files
-    DeleteInstallationDirectory();
+    bool DeleteAllFiles = true;
+    if (quiet == false) {
+        const int iRet = MessageBoxW(
+            nullptr,
+            L"Do you want to delete *all* possible files from installation folder? (Default: no)\n",
+            L"Uninstallation",
+            MB_YESNO);
 
-    MessageBoxW(nullptr, L"Uninstallation successful", L"Uninstallation", 0);
+        if (iRet != IDYES) {
+            DeleteAllFiles = false;
+        }
+    }
+
+    if (DeleteAllFiles) {
+        // Delete all files
+        DeleteInstallationDirectory();
+    }
+
+    if (quiet == false) {
+        MessageBoxW(nullptr, L"Uninstallation successful", L"Uninstallation", 0);
+    }
 
     return true;
 }

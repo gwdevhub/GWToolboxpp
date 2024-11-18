@@ -34,6 +34,7 @@
 #include <ImGuiAddons.h>
 #include <Constants/EncStrings.h>
 #include <Modules/QuestModule.h>
+#include <GWCA/Managers/AgentMgr.h>
 
 
 namespace {
@@ -98,6 +99,8 @@ namespace {
 
     void SetCustomQuestMarker(const GW::Vec2f world_pos)
     {
+        if (!GW::Agents::GetControlledCharacter())
+            return; // Map not ready
         custom_quest_marker_world_pos = world_pos;
         if (GW::QuestMgr::GetQuest(custom_quest_id)) {
             struct QuestRemovePacket : GW::Packet::StoC::PacketBase {

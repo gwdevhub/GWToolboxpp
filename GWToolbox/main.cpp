@@ -123,33 +123,46 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         return 0;
     }
 
+    ParseRegSettings();
+    ParseCommandLine();
+
     assert(settings.help == false);
     if (settings.version) {
         printf("GWToolbox version %s\n", GWTOOLBOXEXE_VERSION);
         return 0;
     }
 
+    if (settings.asadmin && !IsRunningAsAdmin()) {
+        RestartWithSameArgs(true);
+    }
+
     AsyncRestScopeInit RestInitializer;
 
     Process proc;
     if (settings.install) {
-        Install();
+        Install(settings.quiet);
         return 0;
     }
     if (settings.uninstall) {
-        Uninstall();
+        Uninstall(settings.quiet);
         return 0;
     }
     if (settings.reinstall) {
         // @Enhancement:
         // Uninstall shouldn't remove the existing data, that would instead be a
         // "repair" or something along those lines.
-        Uninstall();
-        Install();
+        Uninstall(settings.quiet);
+        Install(settings.quiet);
         return 0;
     }
 
     if (!IsInstalled() && !settings.noinstall) {
+        if (settings.quiet) {
+            ShowError(L"Can't ask to install if started with '/quiet'");
+            fprintf(stderr, "Can't ask to install if started with '/quiet'\n");
+            return 1;
+        }
+
         const int iRet = MessageBoxW(
             nullptr,
             L"GWToolbox doesn't seem to be installed, do you want to install it?",
@@ -163,10 +176,17 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
         if (iRet == IDYES) {
             // @Cleanup: Check return value
-            if (!Install()) {
+            if (!Install(settings.quiet)) {
                 fprintf(stderr, "Failed to install\n");
                 return 1;
             }
+        }
+    }
+    else if (!settings.noupdate) {
+        if (!DownloadWindow::DownloadAllFiles()) {
+            ShowError(L"Failed to download GWToolbox DLL");
+            fprintf(stderr, "DownloadWindow::DownloadAllFiles failed\n");
+            return 1;
         }
     }
 
