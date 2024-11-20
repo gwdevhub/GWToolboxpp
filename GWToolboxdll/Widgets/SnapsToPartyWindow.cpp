@@ -85,6 +85,10 @@ bool SnapsToPartyWindow::FetchPartyInfo()
     if (!info) {
         return false;
     }
+    for (auto str : party_names_by_index) {
+        if (str->IsDecoding())
+            return false; // Wait for last pass before retry
+    }
 
     auto append_agent = [&](uint32_t agent_id) {
         if (party_indeces_by_agent_id.contains(agent_id))
