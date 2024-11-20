@@ -164,8 +164,11 @@ namespace {
                     items += L"\x2\x108\x107, \x1\x2";
                 items += i;
             }
-            NewLineIfNotEmpty(description);
-            description += std::format(L"{}\x10a\x108\x107" L"Common Materials: \x1\x1\x2{}", GW::EncStrings::ItemCommon, items);
+            if (!items.empty()) {
+                NewLineIfNotEmpty(description);
+                description += std::format(L"{}\x10a\x108\x107" L"Common Materials: \x1\x1\x2{}", GW::EncStrings::ItemCommon, items);
+            }
+
         }
         if (!rare_materials.empty()) {
             std::wstring items;
@@ -175,8 +178,10 @@ namespace {
                     items += L"\x2\x108\x107, \x1\x2";
                 items += i;
             }
-            NewLineIfNotEmpty(description);
-            description += std::format(L"{}\x10a\x108\x107" L"Rare Materials: \x1\x1\x2{}", GW::EncStrings::ItemRare, items);
+            if (!items.empty()) {
+                NewLineIfNotEmpty(description);
+                description += std::format(L"{}\x10a\x108\x107" L"Rare Materials: \x1\x1\x2{}", GW::EncStrings::ItemRare, items);
+            }
         }
 
     }
