@@ -168,6 +168,7 @@ namespace {
         EffectsMonitorWidget::Instance(),
         LatencyWidget::Instance(),
         SkillMonitorWidget::Instance(),
+        MissionMapWidget::Instance(),
 #if _DEBUG
         InventoryOverlayWidget::Instance(),
 #endif
@@ -229,7 +230,6 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini)
     GWToolbox::ToggleModule(StringDecoderWindow::Instance());
     GWToolbox::ToggleModule(DoorMonitorWindow::Instance());
     GWToolbox::ToggleModule(SkillListingWindow::Instance());
-    GWToolbox::ToggleModule(MissionMapWidget::Instance());
 #endif
 
     GWToolbox::ToggleModule(VendorFix::Instance());
