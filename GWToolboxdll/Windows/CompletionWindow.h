@@ -262,6 +262,7 @@ public:
     void Update(float) override;
     static void DrawHallOfMonuments(IDirect3DDevice9* device);
 
+    static bool IsAreaComplete(const GW::Constants::MapID map_id, CompletionCheck check = CompletionCheck::Both);
     static bool IsAreaComplete(const wchar_t*, const GW::Constants::MapID map, CompletionCheck check = CompletionCheck::Both);
     static bool IsAreaUnlocked(const wchar_t* player_name, const GW::Constants::MapID map_id);
     static bool IsSkillUnlocked(const wchar_t* player_name, const GW::Constants::SkillID map_id);

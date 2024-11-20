@@ -646,6 +646,39 @@ namespace {
         return subject;
     }
 
+    bool IsAreaComplete(const GW::Constants::MapID map_id, CompletionCheck check) {
+        if (map_id == GW::Constants::MapID::None)
+            return true;
+        if (map_id == GW::Constants::MapID::Tomb_of_the_Primeval_Kings)
+            return true; // Topk special case
+
+        const auto map = GW::Map::GetMapInfo();
+        const auto w = GW::GetWorldContext();
+        if (!(map && w))
+            return false;
+        switch (map->type) {
+        case GW::RegionType::EliteMission:
+            return true;
+        case GW::RegionType::ExplorableZone:
+            if (map->continent == GW::Continent::BattleIsles)
+                return true; // Fow, Uw
+            return !map->GetIsOnWorldMap() || ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(map_id));
+        }
+
+        if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(w->missions_completed, static_cast<uint32_t>(map_id)))
+            return false;
+        if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(map_id)))
+            return false;
+        const bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
+        if (has_bonus) {
+            if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(map_id)))
+                return false;
+            if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(map_id)))
+                return false;
+        }
+        return true;
+    }
+
     bool IsAreaComplete(const wchar_t* player_name, const GW::Constants::MapID map_id, CompletionCheck check, const GW::AreaInfo* map) {
         if (map_id == GW::Constants::MapID::None)
             return true;
@@ -2929,7 +2962,38 @@ CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* cha
     }
     return this_character_completion;
 }
+bool CompletionWindow::IsAreaComplete(const GW::Constants::MapID map_id, CompletionCheck check) {
+    if (map_id == GW::Constants::MapID::None)
+        return true;
+    if (map_id == GW::Constants::MapID::Tomb_of_the_Primeval_Kings)
+        return true; // Topk special case
 
+    const auto map = GW::Map::GetMapInfo();
+    const auto w = GW::GetWorldContext();
+    if (!(map && w))
+        return false;
+    switch (map->type) {
+    case GW::RegionType::EliteMission:
+        return true;
+    case GW::RegionType::ExplorableZone:
+        if (map->continent == GW::Continent::BattleIsles)
+            return true; // Fow, Uw
+        return !map->GetIsOnWorldMap() || ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(map_id));
+    }
+
+    if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(w->missions_completed, static_cast<uint32_t>(map_id)))
+        return false;
+    if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(map_id)))
+        return false;
+    const bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
+    if (has_bonus) {
+        if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(map_id)))
+            return false;
+        if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(map_id)))
+            return false;
+    }
+    return true;
+}
 bool CompletionWindow::IsAreaComplete(const wchar_t* player_name, const GW::Constants::MapID map_id, CompletionCheck check) {
     return ::IsAreaComplete(player_name, map_id, check, GW::Map::GetMapInfo(map_id));
 }

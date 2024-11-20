@@ -134,6 +134,8 @@ namespace {
     bool block_experience_gain = false;
     bool block_zero_experience_gain = true;
     bool lazy_chest_looting = false;
+    
+    bool check_and_prompt_if_mission_already_completed = true; // When entering a mission you've completed, check whether you should be doing it in HM/NM instead
 
     uint32_t last_online_status = static_cast<uint32_t>(GW::FriendStatus::Online);
     bool remember_online_status = true;
@@ -1097,12 +1099,13 @@ namespace {
 
     // We've just asked the game to enter mission; check (and prompt) if we should really be in NM or HM instead
     void CheckPromptBeforeEnterMission(GW::HookStatus* status) {
+        if (!check_and_prompt_if_mission_already_completed)
+            return;
         if (mission_prompted || GW::PartyMgr::GetPartyPlayerCount() > 1)
             return;
-        const auto player_name = GW::AccountMgr::GetCurrentPlayerName();
         const auto map_id = GW::Map::GetMapID();
-        const auto nm_complete = CompletionWindow::IsAreaComplete(player_name, map_id, CompletionCheck::NormalMode);
-        const auto hm_complete = CompletionWindow::IsAreaComplete(player_name, map_id, CompletionCheck::HardMode);
+        const auto nm_complete = CompletionWindow::IsAreaComplete(map_id, CompletionCheck::NormalMode);
+        const auto hm_complete = CompletionWindow::IsAreaComplete(map_id, CompletionCheck::HardMode);
 
         auto on_enter_mission_prompt = [](bool result, void*) {
             mission_prompted = true;
@@ -1773,6 +1776,8 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
 
     LOAD_BOOL(lazy_chest_looting);
 
+    LOAD_BOOL(check_and_prompt_if_mission_already_completed);
+
     LOAD_BOOL(block_transmogrify_effect);
     LOAD_BOOL(block_sugar_rush_effect);
     LOAD_BOOL(block_snowman_summoner);
@@ -1939,6 +1944,8 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(skip_entering_name_for_faction_donate);
     SAVE_BOOL(drop_ua_on_cast);
 
+    SAVE_BOOL(check_and_prompt_if_mission_already_completed);
+
     SAVE_BOOL(lazy_chest_looting);
 
     SAVE_BOOL(block_transmogrify_effect);
@@ -2079,7 +2086,7 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
 
     ImGui::Checkbox("Disable loading screen fade animation", &skip_fade_animations);
-
+    ImGui::Checkbox("Prompt if entring a mission you've already completed", &check_and_prompt_if_mission_already_completed);
     ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
     ImGui::Checkbox("Automatically return to outpost on defeat", &auto_return_on_defeat);
     ImGui::ShowHelp("Automatically return party to outpost on party wipe if player is leading");
