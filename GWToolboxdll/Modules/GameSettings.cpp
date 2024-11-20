@@ -1087,25 +1087,6 @@ namespace {
         }
     }
 
-    bool pending_toggle_mouse_walk_on_key_up = false;
-    long toggle_mouse_walk_key = 0;
-    void UpdateMouseWalkToggle() {
-        if (toggle_mouse_walk_key == ImGuiKey_None)
-            return;
-        if (pending_toggle_mouse_walk_on_key_up) {
-            if (!ImGui::IsKeyDown(toggle_mouse_walk_key)) {
-                GW::UI::SetPreference(GW::UI::FlagPreference::DisableMouseWalking, !GetPreference(GW::UI::FlagPreference::DisableMouseWalking));
-                pending_toggle_mouse_walk_on_key_up = false;
-            }
-        }
-        else {
-            if (ImGui::IsKeyDown(toggle_mouse_walk_key)) {
-                GW::UI::SetPreference(GW::UI::FlagPreference::DisableMouseWalking, !GetPreference(GW::UI::FlagPreference::DisableMouseWalking));
-                pending_toggle_mouse_walk_on_key_up = true;
-            }
-        }
-    }
-
     const wchar_t* GetPartySearchLeader(uint32_t party_search_id) {
         const auto p = GW::PartyMgr::GetPartySearch(party_search_id);
         return p && p->party_leader && *p->party_leader ? p->party_leader : nullptr;
@@ -2140,9 +2121,6 @@ void GameSettings::DrawSettingsInternal()
     if (ImGui::Checkbox("Block full screen message when entering a new area", &block_enter_area_message)) {
         skip_map_entry_message_patch.TogglePatch(block_enter_area_message);
     }
-    char buf[64] = "None";
-    ImGui::ChooseKey("Hold key to toggle mouse walk:", buf, _countof(buf), &toggle_mouse_walk_key);
-
     ImGui::NewLine();
     ImGui::Text("Block floating numbers above character when:");
     ImGui::Indent();
@@ -2284,7 +2262,6 @@ void GameSettings::FactionEarnedCheckAndWarn()
 
 void GameSettings::Update(float)
 {
-    UpdateMouseWalkToggle();
     UpdateSkillTooltip();
     UpdateReinvite();
     UpdateItemTooltip();

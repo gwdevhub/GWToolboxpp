@@ -204,6 +204,8 @@ TBHotkey::TBHotkey(const ToolboxIni* ini, const char* section)
         trigger_on_pvp_character = ini->GetBoolValue(section, VAR_NAME(trigger_on_pvp_character), trigger_on_pvp_character);
         trigger_on_lose_focus = ini->GetBoolValue(section, VAR_NAME(trigger_on_lose_focus), trigger_on_lose_focus);
         trigger_on_gain_focus = ini->GetBoolValue(section, VAR_NAME(trigger_on_gain_focus), trigger_on_gain_focus);
+        trigger_on_key_up = ini->GetBoolValue(section, VAR_NAME(trigger_on_key_up), trigger_on_key_up);
+
 
         in_range_of_distance = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(in_range_of_distance), in_range_of_distance));
         in_range_of_npc_id = ini->GetLongValue(section, VAR_NAME(in_range_of_npc_id), in_range_of_npc_id);
@@ -258,6 +260,8 @@ void TBHotkey::Save(ToolboxIni* ini, const char* section) const
                       trigger_on_outpost);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_pvp_character),
                       trigger_on_pvp_character);
+    ini->SetBoolValue(section, VAR_NAME(trigger_on_key_up),
+        trigger_on_key_up);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_lose_focus), trigger_on_lose_focus);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_gain_focus), trigger_on_gain_focus);
     ini->SetValue(section, VAR_NAME(player_name), player_name);
@@ -400,7 +404,18 @@ bool TBHotkey::Draw(Op* op)
         if (ImGui::IsItemDeactivatedAfterEdit()) {
             hotkey_changed = true;
         }
+        if (trigger_on_key_up) {
+            ImGuiContext& g = *GImGui;
+            ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
+        }
         hotkey_changed |= ImGui::Checkbox("Block key in Guild Wars when triggered", &block_gw);
+        if (trigger_on_key_up) {
+            ImGui::PopStyleColor();
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Unable to block key - this hotkey is set to trigger on key up!");
+            }
+            block_gw = false;
+        }
         ImGui::ShowHelp("Will prevent Guild Wars from receiving the keypress event");
         ImGui::SameLine(offset_sameline);
         hotkey_changed |= ImGui::Checkbox("Trigger hotkey when playing on PvP character", &trigger_on_pvp_character);
@@ -589,6 +604,11 @@ bool TBHotkey::Draw(Op* op)
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
+        }
+        ImGui::SameLine();
+        hotkey_changed |= ImGui::Checkbox("Trigger on key up?", &trigger_on_key_up);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Hotkeys usually trigger as soon as the key combination is pressed.\nYou can change this to instead only trigger when the key is released");
         }
         ImGui::SameLine();
         if (ImGui::Button(ongoing ? "Stop" : "Run", ImVec2(140.0f * scale, 0.0f))) {

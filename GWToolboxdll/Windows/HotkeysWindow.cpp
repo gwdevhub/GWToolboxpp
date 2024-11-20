@@ -613,7 +613,16 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
         default:
             break;
     }
-
+    long modifier = 0;
+    if (GetKeyState(VK_CONTROL) < 0) {
+        modifier |= ModKey_Control;
+    }
+    if (GetKeyState(VK_SHIFT) < 0) {
+        modifier |= ModKey_Shift;
+    }
+    if (GetKeyState(VK_MENU) < 0) {
+        modifier |= ModKey_Alt;
+    }
     switch (Message) {
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
@@ -624,23 +633,15 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
             if (block_hotkeys) {
                 return true;
             }
-            long modifier = 0;
-            if (GetKeyState(VK_CONTROL) < 0) {
-                modifier |= ModKey_Control;
-            }
-            if (GetKeyState(VK_SHIFT) < 0) {
-                modifier |= ModKey_Shift;
-            }
-            if (GetKeyState(VK_MENU) < 0) {
-                modifier |= ModKey_Alt;
-            }
+
 
             bool triggered = false;
             for (TBHotkey* hk : valid_hotkeys) {
                 if (!block_hotkeys
-                    && !hk->pressed
                     && keyData == hk->hotkey
-                    && modifier == hk->modifier) {
+                    && modifier == hk->modifier
+                    && !hk->pressed
+                    && !hk->trigger_on_key_up) {
                     PushPendingHotkey(hk);
                     if (hk->block_gw) {
                         triggered = true;
@@ -652,25 +653,29 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
 
         case WM_KEYUP:
         case WM_SYSKEYUP:
-            for (TBHotkey* hk : hotkeys) {
-                if (hk->pressed && keyData == hk->hotkey) {
-                    hk->pressed = false;
-                }
+            for (TBHotkey* hk : valid_hotkeys) {
+                hk->pressed = false;
+                if(modifier == hk->modifier && keyData == hk->hotkey && hk->trigger_on_key_up)
+                    PushPendingHotkey(hk);
             }
             return false;
 
         case WM_XBUTTONUP:
-            for (TBHotkey* hk : hotkeys) {
-                if (hk->pressed && (hk->hotkey == VK_XBUTTON1 || hk->hotkey == VK_XBUTTON2)) {
-                    hk->pressed = false;
-                }
+            for (TBHotkey* hk : valid_hotkeys) {
+                hk->pressed = false;
+                if (!(hk->hotkey == VK_XBUTTON1 || hk->hotkey == VK_XBUTTON2))
+                    continue;
+                if (modifier == hk->modifier && hk->trigger_on_key_up)
+                    PushPendingHotkey(hk);
             }
             return false;
         case WM_MBUTTONUP:
-            for (TBHotkey* hk : hotkeys) {
-                if (hk->pressed && hk->hotkey == VK_MBUTTON) {
-                    hk->pressed = false;
-                }
+            for (TBHotkey* hk : valid_hotkeys) {
+                hk->pressed = false;
+                if (hk->hotkey != VK_MBUTTON)
+                    continue;
+                if (modifier == hk->modifier && hk->trigger_on_key_up)
+                    PushPendingHotkey(hk);
             }
         default:
             return false;
@@ -683,6 +688,9 @@ void HotkeysWindow::Update(const float)
         if (map_change_triggered) {
             map_change_triggered = false;
             while (PopPendingHotkey()) {} // Clear any pending hotkeys from the last map
+            for (auto hk : hotkeys) {
+                hk->pressed = false;
+            }
         }
         return;
     }
@@ -700,6 +708,5 @@ void HotkeysWindow::Update(const float)
         current_hotkey = hk;
         hk->Toggle();
         current_hotkey = nullptr;
-        hk->pressed = false;
     }
 }

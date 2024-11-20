@@ -41,6 +41,7 @@ public:
     static void HotkeySelector(LONG* key, LONG* modifier = nullptr);
 
     char group[128] = "";
+    bool trigger_on_key_up = false;            // Should the key be triggered on key down, or key up
     bool pressed = false;                      // if the key has been pressed
     bool active = true;                        // if the hotkey is enabled/active
     bool show_message_in_emote_channel = true; // if hotkey should show message in emote channel when triggered
