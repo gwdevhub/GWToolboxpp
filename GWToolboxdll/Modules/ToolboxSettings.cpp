@@ -199,7 +199,6 @@ namespace {
         PartyStatisticsWindow::Instance(),
         DupingWindow::Instance(),
         ArmoryWindow::Instance(),
-        PathfindingWindow::Instance(),
         EnemyWindow::Instance(),
         TargetInfoWindow::Instance()
     };
@@ -231,7 +230,7 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini)
     GWToolbox::ToggleModule(DoorMonitorWindow::Instance());
     GWToolbox::ToggleModule(SkillListingWindow::Instance());
 #endif
-
+    GWToolbox::ToggleModule(PathfindingWindow::Instance());
     GWToolbox::ToggleModule(VendorFix::Instance());
 
     for (const auto& m : optional_modules) {

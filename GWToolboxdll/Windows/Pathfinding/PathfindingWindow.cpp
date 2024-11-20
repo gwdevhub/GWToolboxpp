@@ -114,6 +114,9 @@ bool PathfindingWindow::ReadyForPathing()
 
 void PathfindingWindow::Draw(IDirect3DDevice9*)
 {
+#ifndef _DEBUG
+    return;
+#endif
     if (!visible) {
         return;
     }
