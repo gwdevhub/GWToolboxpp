@@ -7,6 +7,20 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 6.25
+* [New] Code overhaul to GWCA and GWToolbox to work with vs2022 compiler update
+* [New] Added pathing to mission map
+* [New] Added ability to trigger hotkeys on key up instead of key down
+* [Fix] Fixed bug causing the "are you sure" dialog for entering a mission to show in error - added an option to disable this feature
+* [Fix] Fixed crash when dropping zaishen coins with salvage info module enabled
+* [Fix] Fixed occasional crashes when using any widget that is snapped to the party health bars
+* [Fix] Fixed a bug causing incoming messages getting mixed up with other messages that have been blocked by toolbox
+* [Fix] Fixed text glitches for text sizes > 16
+* [Fix] Fixed bugs with quest markers not showing or showing incorrectly
+* [Fix] Fixed autologin not working when injecting via gwlauncher
+* [Removed] Removed option specifically related to holding a button down to toggle mouse walking - use `/pref disablemousewalking [0|1]` in combination with hotkey key up/down
+* [Removed] Removed Pathfinding window from release, not used.
+
 ## Version 6.24
 * [New] Slightly optimised GW's dat loading ccode
 * [New] Added EnemyWindow (party window but for enemies)
