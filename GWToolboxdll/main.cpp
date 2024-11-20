@@ -6,6 +6,7 @@
 #include <GWToolbox.h>
 #include <Logger.h>
 #include <Modules/CrashHandler.h>
+#include <GWCA/GWCA.h>
 
 namespace {
     HMODULE dllmodule;
@@ -40,15 +41,6 @@ DWORD WINAPI Init() noexcept
     ASSERT(!thread_running);
     thread_running = true;
     __try {
-        if (!Log::InitializeLog()) {
-            MessageBoxA(nullptr, "Failed to create outgoing log file.\nThis could be due to a file permissions error or antivirus blocking.", "GWToolbox++ - Clientside Error Detected", 0);
-            thread_running = false;
-            if (!is_detaching) {
-                FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
-            }
-            return 0;
-        }
-        GW::Scanner::Initialize();
         Log::Log("Creating toolbox thread\n");
         SafeThreadEntry(dllmodule);
     } __except (EXCEPT_EXPRESSION_ENTRY) { }
@@ -66,7 +58,20 @@ BOOL WINAPI DllMain(_In_ const HMODULE hDllHandle, _In_ const DWORD reason, _In_
     switch (reason) {
         case DLL_PROCESS_ATTACH: {
             dllmodule = hDllHandle;
+
+            if (!Log::InitializeLog()) {
+                MessageBoxA(nullptr, "Failed to create outgoing log file.\nThis could be due to a file permissions error or antivirus blocking.", "GWToolbox++ - Clientside Error Detected", 0);
+                thread_running = false;
+                if (!is_detaching) {
+                    FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
+                }
+                return FALSE;
+            }
             __try {
+                // Initialise GW and GWCA on attach - this is so we can hook any function signatures before the game does anything!
+                GWToolbox::Initialize(dllmodule);
+
+                // Once we've done that, run a thread to handle shutdown proc
                 const HANDLE hThread = CreateThread(
                     nullptr,
                     0,
@@ -74,11 +79,13 @@ BOOL WINAPI DllMain(_In_ const HMODULE hDllHandle, _In_ const DWORD reason, _In_
                     nullptr,
                     0,
                     nullptr);
-
+                
                 if (hThread != nullptr) {
                     CloseHandle(hThread);
                 }
-            } __except (EXCEPT_EXPRESSION_ENTRY) { }
+            } __except (EXCEPT_EXPRESSION_ENTRY) { 
+                return FALSE;
+            }
         }
         break;
         case DLL_PROCESS_DETACH: {

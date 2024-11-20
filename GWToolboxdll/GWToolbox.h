@@ -35,7 +35,7 @@ public:
     static HMODULE GetDLLModule();
     static void Draw(IDirect3DDevice9* device);
 
-    static void Initialize();
+    static void Initialize(const LPVOID);
     static void SignalTerminate(bool detach_dll = true);
     static void Update(GW::HookStatus* status = nullptr);
     static void Enable();

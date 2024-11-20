@@ -423,7 +423,7 @@ DWORD __stdcall SafeThreadEntry(const LPVOID module) noexcept
     return EXIT_SUCCESS;
 }
 
-DWORD __stdcall ThreadEntry(LPVOID)
+DWORD __stdcall ThreadEntry(const LPVOID module)
 {
     Log::Log("Initializing API\n");
 
@@ -436,7 +436,7 @@ DWORD __stdcall ThreadEntry(LPVOID)
 
     // Some modules rely on the gwdx_ptr being present for stuff like getting viewport coords.
     // Because this ptr isn't set until the Render loop runs at least once, let it run and then reassign SetRenderCallback.
-    GWToolbox::Initialize();
+    GWToolbox::Initialize(module);
 
     Log::Log("Installed dx hooks\n");
 
@@ -636,11 +636,16 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
     return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
 }
 
-void GWToolbox::Initialize()
+void GWToolbox::Initialize(const LPVOID module)
 {
+    if (module) {
+        dllmodule = static_cast<HMODULE>(module);
+    }
     switch (gwtoolbox_state) {
         case GWToolboxState::Terminated:
             gwtoolbox_state = GWToolboxState::Initialising;
+            GW::Scanner::Initialize();
+            GW::Initialize();
             AttachRenderCallback();
             GW::EnableHooks();
 
