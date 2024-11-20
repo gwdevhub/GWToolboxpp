@@ -433,12 +433,12 @@ void LoginModule::Initialize()
 
     state = LoginState::Idle;
 
-    PortalAccountLogin_Func = (PortalAccountLogin_pt)GW::Scanner::Find("\xc7\x45\xe8\x38\x00\x00\x00\x89\x4d\xf0", "xxxxxxxxxx", -0x2b);
+    PortalAccountLogin_Func = (PortalAccountLogin_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\xc7\x45\xe8\x38\x00\x00\x00\x89\x4d\xf0", "xxxxxxxxxx"));
     if (!PortalAccountLogin_Func) {
         return InitialiationFailure("Failed to initialize PortalAccountLogin_Func");
     }
 
-    GetStringParameter_Func = (GetStringParameter_pt)GW::Scanner::FindAssertion("Param.cpp", "string - PARAM_STRING_FIRST < (sizeof(s_strings) / sizeof((s_strings)[0]))", -0x13);
+    GetStringParameter_Func = (GetStringParameter_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("Param.cpp", "string - PARAM_STRING_FIRST < (sizeof(s_strings) / sizeof((s_strings)[0]))"));
     if (!GetStringParameter_Func) {
         return InitialiationFailure("Failed to initialize GetStringParameter_Func");
     }
