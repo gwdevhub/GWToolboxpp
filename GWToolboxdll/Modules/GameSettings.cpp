@@ -1397,8 +1397,6 @@ void GameSettings::Initialize()
     //return;
     // Patch that allow storage page (and Anniversary page) to work.
     uintptr_t address = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
-    if (address)
-        return;
     if (address) {
         // Xunlai Chest has a behavior where if you
         // 1. Open chest on page 1 to 14
