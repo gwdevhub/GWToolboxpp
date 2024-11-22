@@ -883,8 +883,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     io.AddKeyEvent(ImGuiMod_Alt, (GetKeyState(VK_MENU) & 0x8000) != 0);
 
     std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
-    for (const auto uielement : ui_elements_enabled) {
-        if (world_map_showing && !uielement->ShowOnWorldMap()) {
+    // NB: Don't use an iterator here, because it could be invalidated during draw
+    for (size_t i = 0; i < ui_elements_enabled.size();i++) {
+        const auto uielement = ui_elements_enabled[i];
+        if (world_map_showing && uielement->ShowOnWorldMap()) {
             continue;
         }
         uielement->Draw(device);
