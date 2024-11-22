@@ -375,14 +375,14 @@ void MouseFix::Initialize()
 
 void MouseFix::LoadSettings(ToolboxIni* ini)
 {
-    //LOAD_BOOL(enable_cursor_fix);
+    LOAD_BOOL(enable_cursor_fix);
     SetCursorSize(ini->GetLongValue(Name(), VAR_NAME(cursor_size), cursor_size));
     RedrawCursorIcon();
 }
 
 void MouseFix::SaveSettings(ToolboxIni* ini)
 {
-    //SAVE_BOOL(enable_cursor_fix);
+    SAVE_BOOL(enable_cursor_fix);
     SAVE_UINT(cursor_size);
 }
 
@@ -399,11 +399,9 @@ void MouseFix::Terminate()
 
 void MouseFix::DrawSettingsInternal()
 {
-#if 0
     if (ImGui::Checkbox("Enable cursor fix", &enable_cursor_fix)) {
         CursorFixEnable(enable_cursor_fix);
     }
-#endif
     ImGui::SliderInt("Guild Wars cursor size", &cursor_size, 16, 64);
     ImGui::ShowHelp("Sizes other than 32 might lead the the cursor disappearing at random.\n"
         "Right click to make the cursor dis- and reappear for this to take effect.");
