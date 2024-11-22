@@ -22,7 +22,7 @@
 * We don't actually want GW to install a language if its not found - load it if you have it, otherwise keep using the one that the OS is using instead.
 * 
 * SIDE EFFECTS:
-* Labels on the chat tabs will be wrong - GW still thinks we're now using en-US, so SHIFT + " on a en-UK keyboard layout would actually open Guild Chat (SHIFT + @)
+* Labels on the chat tabs will be wrong - GW still thinks we're now using en-US, so SHIFT + " on a en-GB keyboard layout would actually open Guild Chat (SHIFT + @)
 * 
 */
 
@@ -52,6 +52,7 @@ void KeyboardLanguageFix::Initialize()
         Log::Error("Failed to GetKeyboardLayoutList, GetLastError = %#08x", GetLastError());
         return;
     }
+    const auto current_keyboard_layout = GetKeyboardLayout(0);
     char layout_name[KL_NAMELENGTH];
     for (auto i = 0; i < keyboard_languages_count; i++) {
         if (!ActivateKeyboardLayout(loaded_languages[i], 0)) {
@@ -69,5 +70,6 @@ void KeyboardLanguageFix::Initialize()
         }
     }
     // Got this far; en-US isn't already installed, but we don't want Windows to add it as a new language, so keep with the current one.
-    *address = GetKeyboardLayout(0);
+    ActivateKeyboardLayout(current_keyboard_layout, 0);
+    *address = current_keyboard_layout;
 }

@@ -418,7 +418,7 @@ void WorldMapWidget::Initialize()
         view_all_carto_areas_patch.SetRedirect(address, GetCartographyFlagsForArea);
     }
 
-    address = GW::Scanner::FindAssertion("UiCtlWebLink.cpp", "challengeId < CHALLENGES", -0x7);
+    address = GW::Scanner::FindAssertion("UiCtlWebLink.cpp", "challengeId < CHALLENGES", 0, -0x7);
     if (address) {
         bypass_custom_quest_assertion_patch.SetPatch(address, "\xeb", 1);
         bypass_custom_quest_assertion_patch.TogglePatch(true);
