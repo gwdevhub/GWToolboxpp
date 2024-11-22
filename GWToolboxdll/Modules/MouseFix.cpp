@@ -127,7 +127,7 @@ namespace {
         if (!hwnd) {
             return false;
         }
-        uintptr_t address = GW::Scanner::FindAssertion(R"(p:\code\base\os\win32\osinput.cpp)", "osMsg", 0x32);
+        uintptr_t address = GW::Scanner::FindAssertion(R"(p:\code\base\os\win32\osinput.cpp)", "osMsg", 0,0x32);
         address = GW::Scanner::FunctionFromNearCall(address);
         if (address) {
             ProcessInput_Func = reinterpret_cast<OnProcessInput_pt>(address);

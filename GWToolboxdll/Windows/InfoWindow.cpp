@@ -611,7 +611,7 @@ namespace {
         if (hook && CreateTexture_Func)
             return;
         if (hook) {
-            CreateTexture_Func = (CreateTexture_pt)GW::Scanner::FindAssertion("\\Code\\Engine\\Gr\\grtex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)", -0x32);
+            CreateTexture_Func = (CreateTexture_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GrTex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)", 0,0));
             if (CreateTexture_Func) {
                 GW::HookBase::CreateHook((void**)&CreateTexture_Func, OnCreateTexture, (void**)&CreateTexture_Ret);
                 GW::HookBase::EnableHooks(CreateTexture_Func);

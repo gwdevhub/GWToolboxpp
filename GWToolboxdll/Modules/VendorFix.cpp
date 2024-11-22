@@ -77,16 +77,20 @@ namespace {
 void VendorFix::Initialize() {
     ToolboxModule::Initialize();
 
-    Collector_Create_UICtlCallback_Func = (UICtlCallback)GW::Scanner::FindAssertion("\\Code\\Gw\\Ui\\Game\\vendor\\vncollect.cpp", "collect.service == CHAR_TRANSACTION_COLLECT", -0x47);
+    Collector_Create_UICtlCallback_Func = (UICtlCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("\\Code\\Gw\\Ui\\Game\\vendor\\vncollect.cpp", "collect.service == CHAR_TRANSACTION_COLLECT", 0,0));
     if (Collector_Create_UICtlCallback_Func) {
         GW::Hook::CreateHook((void**)&Collector_Create_UICtlCallback_Func, OnCollectorCreateWindow, (void**)&Collector_Create_UICtlCallback_Ret);
         GW::Hook::EnableHooks(Collector_Create_UICtlCallback_Func);
     }
-    Crafter_Create_UICtlCallback_Func = (UICtlCallback)GW::Scanner::FindAssertion("\\Code\\Gw\\Ui\\Game\\vendor\\vncraft.cpp", "service.service == CHAR_TRANSACTION_CRAFT", -0x37);
+    Crafter_Create_UICtlCallback_Func = (UICtlCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("\\Code\\Gw\\Ui\\Game\\vendor\\vncraft.cpp", "service.service == CHAR_TRANSACTION_CRAFT", 0,0));
     if (Crafter_Create_UICtlCallback_Func) {
         GW::Hook::CreateHook((void**)&Crafter_Create_UICtlCallback_Func, OnCrafterCreateWindow, (void**)&Crafter_Create_UICtlCallback_Ret);
         GW::Hook::EnableHooks(Crafter_Create_UICtlCallback_Func);
     }
+#ifdef _DEBUG
+    ASSERT(Collector_Create_UICtlCallback_Func);
+    ASSERT(Crafter_Create_UICtlCallback_Func);
+#endif
 }
 void VendorFix::Terminate() {
     ToolboxModule::Terminate();

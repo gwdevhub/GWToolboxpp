@@ -64,7 +64,7 @@ namespace {
 }
 void InventoryOverlayWidget::Initialize() {
     ToolboxWidget::Initialize();
-    InventorySlot_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("InvSlot.cpp","!m_dragOverlayTexture"),0xfff);
+    InventorySlot_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("InvSlot.cpp","!m_dragOverlayTexture",0,0),0xfff);
     if (InventorySlot_UICallback_Func) {
         GW::Hook::CreateHook((void**)&InventorySlot_UICallback_Func, OnInventorySlot_UICallback, (void**)&InventorySlot_UICallback_Ret);
         GW::Hook::EnableHooks(InventorySlot_UICallback_Func);

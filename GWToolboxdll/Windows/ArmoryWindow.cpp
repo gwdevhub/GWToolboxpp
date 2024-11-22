@@ -943,13 +943,13 @@ void ArmoryWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 
-    RedrawAgentEquipment_Func = (EquipmentSlotAction_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("CpsPlayer.cpp", "itemData.fileId"),0xfff);
+    RedrawAgentEquipment_Func = (EquipmentSlotAction_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("CpsPlayer.cpp", "itemData.fileId",0,0),0xfff);
     if (RedrawAgentEquipment_Func) {
         GW::Hook::CreateHook((void**)&RedrawAgentEquipment_Func, OnRedrawAgentEquipment, (void**)&RedrawAgentEquipment_Ret);
         GW::Hook::EnableHooks(RedrawAgentEquipment_Func);
     }
     
-    UndrawAgentEquipment_Func = (EquipmentSlotAction_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("CpsPlayer.cpp", "component < arrsize(m_componentItem)"),0xfff);
+    UndrawAgentEquipment_Func = (EquipmentSlotAction_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("CpsPlayer.cpp", "component < arrsize(m_componentItem)",0,0),0xfff);
     if (UndrawAgentEquipment_Func) {
         GW::Hook::CreateHook((void**)&UndrawAgentEquipment_Func, OnUndrawAgentEquipment, (void**)&UndrawAgentEquipment_Ret);
         GW::Hook::EnableHooks(UndrawAgentEquipment_Func);

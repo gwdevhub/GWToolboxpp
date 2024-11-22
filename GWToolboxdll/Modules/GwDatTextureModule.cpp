@@ -218,9 +218,9 @@ void GwDatTextureModule::Initialize()
     
     uintptr_t address = 0;
 
-    DecodeImage_func = (DecodeImage_pt)Scanner::ToFunctionStart(Scanner::FindAssertion("GrImage.cpp", "bits || !palette"));
+    DecodeImage_func = (DecodeImage_pt)Scanner::ToFunctionStart(Scanner::FindAssertion("GrImage.cpp", "bits || !palette",0,0));
 
-    address = Scanner::FindAssertion("Amet.cpp", "data");
+    address = Scanner::FindAssertion("Amet.cpp", "data",0,0);
     if (address) {
         address = Scanner::FindInRange("\xe8", "x", 0, address + 0xc, address + 0xff);
         FileHashToRecObj_func = (FileIdToRecObj_pt)Scanner::FunctionFromNearCall(address);

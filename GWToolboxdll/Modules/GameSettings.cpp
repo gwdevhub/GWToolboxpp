@@ -1437,7 +1437,7 @@ void GameSettings::Initialize()
     ItemDescriptionHandler::RegisterDescriptionCallback(OnGetItemDescription, 9999);
 
     // Call our CreateCodedTextLabel function instead of default CreateCodedTextLabel for patching skill descriptions
-    address = GW::Scanner::FindAssertion("\\Code\\Gw\\Ui\\Game\\GmTipSkill.cpp", "!(m_tipSkillFlags & TipSkillMsgCreate::FLAG_SHOW_ENABLE_AI_HINT)", 0x7b);
+    address = GW::Scanner::FindAssertion("\\Code\\Gw\\Ui\\Game\\GmTipSkill.cpp", "!(m_tipSkillFlags & TipSkillMsgCreate::FLAG_SHOW_ENABLE_AI_HINT)", 0, 0x7b);
     if (address) {
         CreateEncodedTextLabel_Func = (CreateCodedTextLabel_pt)GW::Scanner::FunctionFromNearCall(address);
         skill_description_patch.SetRedirect(address, CreateCodedTextLabel_SkillDescription);
@@ -1469,7 +1469,7 @@ void GameSettings::Initialize()
     Log::Log("[GameSettings] ShowAgentFactionGain_Func = %p\n", (void*)ShowAgentFactionGain_Func);
     Log::Log("[GameSettings] ShowAgentExperienceGain_Func = %p\n", (void*)ShowAgentExperienceGain_Func);
 
-    FadeFrameContent_Func = (FadeFrameContent_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("\\Code\\Engine\\Frame\\FrApi.cpp", "sourceOpacity >= 0"));
+    FadeFrameContent_Func = (FadeFrameContent_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("\\Code\\Engine\\Frame\\FrApi.cpp", "sourceOpacity >= 0",0,0));
     printf("[GameSettings] FadeFrameContent_Func = %p\n", (void*)FadeFrameContent_Func);
 
 #ifdef _DEBUG

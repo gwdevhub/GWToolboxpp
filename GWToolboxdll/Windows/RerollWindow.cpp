@@ -519,7 +519,7 @@ void RerollWindow::Initialize()
     // Add an entry to check available characters at login screen
     RegisterUIMessageCallback(&OnGoToCharSelect_Entry, GW::UI::UIMessage::kCheckUIState, OnUIMessage, 0x4000);
     // Hook to override status on login - allows us to keep FL status across rerolls without messing with UI
-    SetOnlineStatus_Func = (SetOnlineStatus_pt)GW::Scanner::FindAssertion(R"(p:\code\gw\friend\friendapi.cpp)", "status < FRIEND_STATUSES", -0x11);
+    SetOnlineStatus_Func = (SetOnlineStatus_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("FriendApi.cpp", "status < FRIEND_STATUSES", 0, 0));
     if (SetOnlineStatus_Func) {
         GW::Hook::CreateHook((void**)&SetOnlineStatus_Func, OnSetStatus, (void**)&RetSetOnlineStatus);
         GW::Hook::EnableHooks(SetOnlineStatus_Func);
@@ -528,6 +528,10 @@ void RerollWindow::Initialize()
 
     GW::Chat::CreateCommand(L"reroll", CmdReroll);
     GW::Chat::CreateCommand(L"rr", CmdReroll);
+
+#ifdef _DEBUG
+    ASSERT(SetOnlineStatus_Func);
+#endif
 
 
 }

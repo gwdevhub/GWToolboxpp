@@ -850,18 +850,18 @@ void Obfuscator::Initialize()
     ToolboxModule::Initialize();
     Reset();
 
-    const auto GetCharacterSummary_Assertion = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\char\uichinfo.cpp)", "!StrCmp(m_characterName, characterInfo.characterName)");
+    const auto GetCharacterSummary_Assertion = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\char\uichinfo.cpp)", "!StrCmp(m_characterName, characterInfo.characterName)",0,0);
     if (GetCharacterSummary_Assertion) {
         // Hook to override character names on login screen
-        GetCharacterSummary_Func = reinterpret_cast<GetCharacterSummary_pt>(GetCharacterSummary_Assertion - 0x4F);
+        GetCharacterSummary_Func = reinterpret_cast<GetCharacterSummary_pt>(GW::Scanner::ToFunctionStart(GetCharacterSummary_Assertion));
         GW::HookBase::CreateHook((void**)&GetCharacterSummary_Func, OnGetCharacterSummary, reinterpret_cast<void**>(&RetGetCharacterSummary));
         GW::HookBase::EnableHooks(GetCharacterSummary_Func);
         // Patch to allow missing character summary
         GetCharacterSummary_AssertionPatch.SetPatch(GetCharacterSummary_Assertion - 0x7, "\xEB", 1);
         GetCharacterSummary_AssertionPatch.TogglePatch(true);
     }
-    const uintptr_t address = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\game\vendor\vnacctnameset.cpp)", "charName", -0x30);
-    GetAccountData_Func = reinterpret_cast<GetAccountData_pt>(GW::Scanner::FunctionFromNearCall(address));
+
+    GetAccountData_Func = (GetAccountData_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(R"(p:\code\gw\ui\game\vendor\vnacctnameset.cpp)", "charName", 0, 0));
     if (GetAccountData_Func) {
         GW::HookBase::CreateHook((void**)&GetAccountData_Func, OnGetAccountInfo, reinterpret_cast<void**>(&GetAccountData_Ret));
         GW::HookBase::EnableHooks(GetAccountData_Func);
