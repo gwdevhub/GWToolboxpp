@@ -524,7 +524,8 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
 
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowPos(ImVec2(16.f, 16.f), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin(Name(), nullptr, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
+    visible = true;
+    if (ImGui::Begin(Name(), &visible, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
         const auto c = ImGui::GetCurrentContext();
         auto viewport_offset = c->CurrentViewport->Pos;
         viewport_offset.x *= -1;
