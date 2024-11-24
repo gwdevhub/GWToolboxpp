@@ -297,7 +297,6 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     }
 
     const auto font = FontLoader::GetFont(font_recharge);
-    ImGui::PushFont(font);
     ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 
@@ -331,12 +330,14 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
 
     ImGui::End();
     ImGui::PopStyleVar();
-    ImGui::PopFont();
 }
 
 void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
 {
-    ImGui::PushFont(FontLoader::GetFont(font_effects));
+    const auto font = FontLoader::GetFont(font_effects);
+    ImGui::PushFont(font);
+    const auto draw_list = ImGui::GetBackgroundDrawList();
+    draw_list->PushTextureID(font->ContainerAtlas->TexID);
 
     const Skill& skill = m_skills[skill_idx];
 
@@ -410,7 +411,7 @@ void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
 
         ImVec2 pos2(pos1.x + size.x, pos1.y + size.y); // base + size
 
-        ImGui::GetBackgroundDrawList()->AddRectFilled(pos1, pos2, color_effect_background);
+        draw_list->AddRectFilled(pos1, pos2, color_effect_background);
 
         if (effect.progress >= 0.0f && effect.progress <= 1.0f) {
             ImVec2 pos3, pos4;
@@ -422,16 +423,17 @@ void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
                 pos3 = pos1;
                 pos4 = ImVec2(pos1.x + size.x * effect.progress, pos2.y);
             }
-            ImGui::GetBackgroundDrawList()->AddRectFilled(pos3, pos4, effect_progress_bar_color ? effect.color : color_effect_progress);
+            draw_list->AddRectFilled(pos3, pos4, effect_progress_bar_color ? effect.color : color_effect_progress);
         }
 
-        ImGui::GetBackgroundDrawList()->AddRect(pos1, pos2, color_effect_border);
+        draw_list->AddRect(pos1, pos2, color_effect_border);
 
         const ImVec2 label_size = ImGui::CalcTextSize(effect.text);
         const ImVec2 label_pos(pos1.x + size.x / 2 - label_size.x / 2, pos1.y + size.y / 2 - label_size.y / 2);
-        ImGui::GetBackgroundDrawList()->AddText(label_pos, effect_text_color ? Colors::FullAlpha(effect.color) : color_text_effects, effect.text);
+        draw_list->AddText(label_pos, effect_text_color ? Colors::FullAlpha(effect.color) : color_text_effects, effect.text);
     }
 
+    draw_list->PopTextureID();
     ImGui::PopFont();
 }
 
