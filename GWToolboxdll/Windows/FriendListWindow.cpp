@@ -374,15 +374,6 @@ namespace {
         GW::Packet::StoC::PartyInviteReceived_Create::STATIC_HEADER,
         GW::Packet::StoC::PlayerJoinInstance::STATIC_HEADER
     };
-    GW::HookEntry OnPreStoCPacket_Entry;
-    void OnPreStoCPacket(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak) {
-        switch (pak->header) {
-        case GW::Packet::StoC::MessageLocal::STATIC_HEADER: 
-        case GW::Packet::StoC::MessageGlobal::STATIC_HEADER: {
-            status->blocked |= FriendListWindow::GetIsPlayerIgnored(pak);
-        } break;
-        }
-    }
 
     GW::HookEntry OnPostStoCPacket_Entry;
     void OnPostStoCPacket(GW::HookStatus* status, GW::Packet::StoC::PacketBase* pak) {
@@ -882,7 +873,6 @@ void FriendListWindow::Initialize()
     }
 
     for (const auto header_id : OnStoCPacket_Headers) {
-        GW::StoC::RegisterPacketCallback(&OnPreStoCPacket_Entry, header_id, OnPreStoCPacket, -0x8001);
         GW::StoC::RegisterPacketCallback(&OnPostStoCPacket_Entry, header_id, OnPostStoCPacket, 0x8001);
     }
 
@@ -914,7 +904,6 @@ void FriendListWindow::SignalTerminate()
     }
     // Try to remove callbacks here.
     GW::FriendListMgr::RemoveFriendStatusCallback(&FriendStatusUpdate_Entry);
-    GW::StoC::RemoveCallbacks(&OnPreStoCPacket_Entry);
     GW::StoC::RemoveCallbacks(&OnPostStoCPacket_Entry);
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_Entry);
 }

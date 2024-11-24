@@ -794,9 +794,6 @@ namespace {
             }
         } break;
         }
-        if (status->blocked) {
-            ToolboxUtils::ClearMessageCore();
-        }
     }
 }
 
