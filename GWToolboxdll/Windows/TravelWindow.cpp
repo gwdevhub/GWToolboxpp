@@ -153,6 +153,7 @@ namespace {
             return false; // e.g. Debug map
         switch (map_info->type) {
             case GW::RegionType::City:
+            case GW::RegionType::Challenge:
             case GW::RegionType::CompetitiveMission:
             case GW::RegionType::CooperativeMission:
             case GW::RegionType::EliteMission:
