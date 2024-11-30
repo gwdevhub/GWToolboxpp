@@ -456,7 +456,7 @@ void QuestModule::Initialize()
     RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
 
     const auto address = GW::Scanner::Find("\x83\xc0\xfc\x83\xf8\x54", "xxxxxx", -0xe);
-    if (GW::Scanner::IsValidPtr(address, GW::Scanner::TEXT)) {
+    if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) {
         QuestLogRow_UICallback_Func = (GW::UI::UIInteractionCallback)address;
         GW::Hook::CreateHook((void**)&QuestLogRow_UICallback_Func, OnQuestLogRow_UICallback, (void**)&QuestLogRow_UICallback_Ret);
         GW::Hook::EnableHooks(QuestLogRow_UICallback_Func);

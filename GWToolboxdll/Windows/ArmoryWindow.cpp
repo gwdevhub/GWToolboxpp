@@ -956,7 +956,7 @@ void ArmoryWindow::Initialize()
     }
 
     uintptr_t address = GW::Scanner::Find("\x81\xc6\xa0\x00\x00\x00\x83\xf8\x17", "xxxxxxxxx", -0xb);
-    if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address, GW::Scanner::Section::RDATA)) {
+    if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address, GW::ScannerSection::Section_RDATA)) {
         address = *(uintptr_t*)address;
         address -= 0xC;
         costume_data_ptr = (CostumeData*)address;
@@ -965,7 +965,7 @@ void ArmoryWindow::Initialize()
     if (address) {
         address = *(uintptr_t*)address;
         address -= 0x28;
-        if (GW::Scanner::IsValidPtr(address, GW::Scanner::Section::RDATA)) {
+        if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_RDATA)) {
             festival_hat_data_ptr = (FestivalHatData*)address;
         }
     }

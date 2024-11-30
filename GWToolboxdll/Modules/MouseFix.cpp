@@ -353,7 +353,7 @@ void MouseFix::Initialize()
 
     auto address = GW::Scanner::Find("\xf7\xc3\x80\x20\x00\x00\x74\x09\x56", "xxxxxxxxx", 0x9);
     address = GW::Scanner::FunctionFromNearCall(address);
-    if (GW::Scanner::IsValidPtr(address,GW::Scanner::TEXT)) {
+    if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) {
         ChangeCursorIcon_Func = (ChangeCursorIcon_pt)address;
         GW::HookBase::CreateHook((void**)&ChangeCursorIcon_Func, OnChangeCursorIcon, (void**)&ChangeCursorIcon_Ret);
         GW::HookBase::EnableHooks(ChangeCursorIcon_Func);
