@@ -61,7 +61,6 @@ target_include_directories(scripting INTERFACE
     )
 target_link_libraries(scripting INTERFACE
     imgui
-    simpleini
     nlohmann_json::nlohmann_json
     gwca
     IconFontCppHeaders

@@ -374,6 +374,8 @@ void MoveInchwiseAction::initialAction()
 {
     Action::initialAction();
 
+     const auto removeZ = [](const GW::Vec3f& v) { return GW::Vec2f{v.x, v.y}; };
+
     const auto position = [&]() -> GW::Vec2f {
         const auto player = GW::Agents::GetControlledCharacter();
         if (!player) return {};
@@ -390,7 +392,7 @@ void MoveInchwiseAction::initialAction()
             const auto camera = GW::CameraMgr::GetCamera();
             if (!camera) return player->pos;
 
-            const auto forwardsVec = GW::Normalize(GW::Vec2f{camera->look_at_target - camera->position});
+            const auto forwardsVec = GW::Normalize(removeZ(camera->look_at_target - camera->position));
             const auto rightVec = GW::Vec2f{forwardsVec.y, -forwardsVec.x}; // Cross product with up vector (0,0,-1)
 
             return player->pos + forward * forwardsVec + right * rightVec;

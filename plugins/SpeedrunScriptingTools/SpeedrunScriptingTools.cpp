@@ -29,7 +29,6 @@
 
 #include <imgui.h>
 #include <ImGuiCppWrapper.h>
-#include <SimpleIni.h>
 #include <filesystem>
 #include <ranges>
 
@@ -443,7 +442,7 @@ namespace {
         for (auto scriptIt = scripts.begin(); scriptIt < scripts.end(); ++scriptIt) {
             ImGui::PushID(scriptIt - scripts.begin());
             const auto treeHeader = makeScriptHeaderName(*scriptIt);
-            const auto treeOpen = ImGui::TreeNodeEx(treeHeader.c_str(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
+            const auto treeOpen = ImGui::TreeNodeEx(treeHeader.c_str(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
 
             const auto offset = 127.f + (treeOpen ? 0.f : 21.f) - (groupIndex ? 20.f : 0.f);
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - offset);
@@ -552,7 +551,7 @@ namespace {
             ImGui::PushStyleColor(ImGuiCol_Header, {100.f/255, 100.f/255, 100.f/255, 0.5});
 
             const auto groupHeader = groupIt->name + (groupIt->enabled ? "" : " [Disabled]") + "###0";
-            const auto treeOpen = ImGui::TreeNodeEx(groupHeader.c_str(), ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
+            const auto treeOpen = ImGui::TreeNodeEx(groupHeader.c_str(), ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_AllowOverlap | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth);
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - (treeOpen ? 127.f : 148.f));
             if (ImGui::Button("X", ImVec2(20, 0))) {
                 groupToDelete = groupIt;
@@ -710,7 +709,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Checkbox("Block hotkey keys even if conditions not met", &alwaysBlockHotkeyKeys);
 
-    ImGui::Text("Version 2.1.1. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 2.1.2. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";

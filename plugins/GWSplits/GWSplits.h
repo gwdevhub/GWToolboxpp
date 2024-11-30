@@ -2,7 +2,7 @@
 
 #include <Condition.h>
 #include <ToolboxUIPlugin.h>
-#include <Utils/GuiUtils.h>
+#include <Utils/FontLoader.h>
 #include <Enums.h>
 
 struct Split 
@@ -63,7 +63,7 @@ private:
     bool showBestPossibleTime = true;
     bool showSumOfBest = true;
     bool showLastSegment = true;
-    GuiUtils::FontSize fontSize = GuiUtils::FontSize::header1;
+    int fontSizeIndex = 2;
 
     // Store these here to be able to keep the value when traveling to outpost
     int segmentStart = 0;

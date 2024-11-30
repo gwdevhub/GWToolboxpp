@@ -26,6 +26,7 @@ namespace {
     }
     float angleToAgent(const GW::AgentLiving& centerAgent, const GW::AgentLiving& positionedAgent, ReferenceFrame refFrame)
     {
+        const auto removeZ = [](const GW::Vec3f& v) { return GW::Vec2f{v.x, v.y}; };
         if (GW::GetSquareDistance(centerAgent.pos, positionedAgent.pos) < eps) return 0.f;
 
         const auto angleBetweenNormalizedVectors = [](GW::Vec2f a, GW::Vec2f b){ return std::acos(a.x * b.x + a.y * b.y); };
@@ -40,7 +41,7 @@ namespace {
         {
             const auto camera = GW::CameraMgr::GetCamera();
             if (!camera) return 0.f;
-            const auto forwards = GW::Normalize(GW::Vec2f{camera->look_at_target - camera->position});
+            const auto forwards = GW::Normalize(removeZ(camera->look_at_target - camera->position));
             const auto toTarget = GW::Normalize(GW::Vec2f{positionedAgent.pos.x - centerAgent.pos.x, positionedAgent.pos.y - centerAgent.pos.y});
             return angleBetweenNormalizedVectors(forwards, toTarget) * radiansToDegree;
         }

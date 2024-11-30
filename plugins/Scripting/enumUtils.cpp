@@ -852,9 +852,9 @@ void drawHotkeySelector(Hotkey& hotkey, std::string& description, float selector
         long newmod = 0;
 
         ImGui::Text("Press key");
-        if (ImGui::IsKeyDown(ImGuiKey_ModCtrl)) newmod |= ModKey_Control;
-        if (ImGui::IsKeyDown(ImGuiKey_ModShift)) newmod |= ModKey_Shift;
-        if (ImGui::IsKeyDown(ImGuiKey_ModAlt)) newmod |= ModKey_Alt;
+        if (ImGui::IsKeyDown(ImGuiMod_Ctrl)) newmod |= ModKey_Control;
+        if (ImGui::IsKeyDown(ImGuiMod_Shift)) newmod |= ModKey_Shift;
+        if (ImGui::IsKeyDown(ImGuiMod_Alt)) newmod |= ModKey_Alt;
 
         if (newkey == 0) { // we are looking for the key
             for (WORD i = 0; i < 512; i++) {

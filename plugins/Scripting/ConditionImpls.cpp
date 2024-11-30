@@ -866,9 +866,9 @@ bool KeyIsPressedCondition::check() const
 {
     if (GW::Chat::GetIsTyping()) return false;
     bool keyIsPressed = GetAsyncKeyState(shortcut.keyData) & (1 << 15);
-    if (shortcut.modifier & ModKey_Control) keyIsPressed &= ImGui::IsKeyDown(ImGuiKey_ModCtrl);
-    if (shortcut.modifier & ModKey_Shift) keyIsPressed &= ImGui::IsKeyDown(ImGuiKey_ModShift);
-    if (shortcut.modifier & ModKey_Alt) keyIsPressed &= ImGui::IsKeyDown(ImGuiKey_ModAlt);
+    if (shortcut.modifier & ModKey_Control) keyIsPressed &= ImGui::IsKeyDown(ImGuiMod_Ctrl);
+    if (shortcut.modifier & ModKey_Shift) keyIsPressed &= ImGui::IsKeyDown(ImGuiMod_Shift);
+    if (shortcut.modifier & ModKey_Alt) keyIsPressed &= ImGui::IsKeyDown(ImGuiMod_Alt);
 
     return keyIsPressed;
 }

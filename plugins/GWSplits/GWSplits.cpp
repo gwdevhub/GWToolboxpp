@@ -181,7 +181,7 @@ namespace {
         for (auto splitIt = splits.begin(); splitIt < splits.end(); ++splitIt) {
             ImGui::PushID(splitIt - splits.begin());
             const auto treeHeader = splitIt->name + "###0";
-            const auto treeOpen = ImGui::TreeNodeEx(treeHeader.c_str(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap);
+            const auto treeOpen = ImGui::TreeNodeEx(treeHeader.c_str(), ImGuiTreeNodeFlags_AllowOverlap | ImGuiTreeNodeFlags_FramePadding);
 
             const auto offset = 126.f + (treeOpen ? 0.f : 21.f);
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - offset);
@@ -392,7 +392,7 @@ void GWSplits::drawRuns()
         ImGui::PushStyleColor(ImGuiCol_Header, {100.f / 255, 100.f / 255, 100.f / 255, 0.5});
 
         const auto header = (*runIt)->name + "###0";
-        const auto treeOpen = ImGui::TreeNodeEx(header.c_str(), ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanAvailWidth);
+        const auto treeOpen = ImGui::TreeNodeEx(header.c_str(), ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_AllowOverlap | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth);
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - (treeOpen ? 127.f : 148.f));
         if (currentRun && currentRun == *runIt) 
         {
@@ -515,7 +515,7 @@ void GWSplits::Draw(IDirect3DDevice9* pDevice)
 
     ImGui::SetNextWindowSize(ImVec2(100, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        ImGui::PushFont(GetFont(fontSize));
+        ImGui::PushFont(FontLoader::GetFont(FontLoader::font_sizes[fontSizeIndex]));
         if (settingsFolder && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) 
         {
             if (std::ranges::any_of(currentSplits, &Split::isPB)) {
@@ -591,7 +591,7 @@ void GWSplits::Draw(IDirect3DDevice9* pDevice)
             ImGui::Separator();
         if (showRunTime)
         {
-            ImGui::PushFont(GetFont(GuiUtils::FontSize(int(fontSize) + 2)));
+            ImGui::PushFont(FontLoader::GetFont(FontLoader::font_sizes[fontSizeIndex + 2]));
             ImGui::PushStyleColor(ImGuiCol_Text, lastSegmentColor);
             rightAlignedText(timeToString(runTime));
             ImGui::PopStyleColor();
@@ -643,7 +643,7 @@ void GWSplits::DrawSettings()
     ImGui::Checkbox("Lock Size", &lock_size);
     ImGui::SameLine();
     ImGui::PushItemWidth(150.f);
-    ImGui::Combo("Text size", reinterpret_cast<int*>(&fontSize), fontSizeNames, 4);
+    ImGui::Combo("Text size", &fontSizeIndex, fontSizeNames, 4);
     ImGui::PopItemWidth();
 
     ImGui::Text("Show: ");
@@ -683,7 +683,7 @@ void GWSplits::DrawSettings()
         }
     }
 
-    ImGui::Text("Version 1.1. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 1.1.1 For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
     ImGui::TextColored(ImColor{102, 187, 238, 255}, discordInviteLink);
@@ -704,7 +704,7 @@ void GWSplits::LoadSettings(const wchar_t* folder)
     showBestPossibleTime = ini.GetBoolValue(Name(), "showBestPossibleTime", true);
     showSumOfBest = ini.GetBoolValue(Name(), "showSumOfBest", true);
     showLastSegment = ini.GetBoolValue(Name(), "showLastSegment", true);
-    fontSize = (GuiUtils::FontSize)ini.GetLongValue(Name(), "fontSize", 2);
+    fontSizeIndex = ini.GetLongValue(Name(), "fontSize", 2);
 
     if (std::string read = ini.GetValue(Name(), "runs", ""); !read.empty()) {
         const auto decoded = decodeString(std::move(read));
@@ -738,7 +738,7 @@ void GWSplits::SaveSettings(const wchar_t* folder)
     ini.SetBoolValue(Name(), "showBestPossibleTime", showBestPossibleTime);
     ini.SetBoolValue(Name(), "showSumOfBest", showSumOfBest);
     ini.SetBoolValue(Name(), "showLastSegment", showLastSegment);
-    ini.SetLongValue(Name(), "fontSize", (long)fontSize);
+    ini.SetLongValue(Name(), "fontSize", fontSizeIndex);
 
     OutputStream stream;
     for (const auto& run : runs) {
