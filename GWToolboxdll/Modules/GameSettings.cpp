@@ -71,7 +71,6 @@ using namespace ToolboxUtils;
 
 namespace {
     GW::MemoryPatcher ctrl_click_patch;
-    GW::MemoryPatcher tome_patch;
     GW::MemoryPatcher gold_confirm_patch;
     GW::MemoryPatcher skill_description_patch;
     GW::MemoryPatcher remove_skill_warmup_duration_patch;
@@ -227,6 +226,19 @@ namespace {
             source_opacity = target_opacity;
         }
         FadeFrameContent_Ret(frame_id, source_opacity, target_opacity, duration_seconds, unk);
+        GW::Hook::LeaveHook();
+    }
+
+    GW::HookEntry SkillList_UICallback_HookEntry;
+    GW::UI::UIInteractionCallback SkillList_UICallback_Func = 0, SkillList_UICallback_Ret = 0;
+
+    // If this ui message is adding an unlearnt skill to the tome window, block it
+    void OnSkillList_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+        GW::Hook::EnterHook();
+        const auto is_show_unlearned_skill = message->message_id == (GW::UI::UIMessage)0x47 && ((uint32_t*)wParam)[1] == 0x3;
+        if (!(is_show_unlearned_skill && show_unlearned_skill)) {
+            SkillList_UICallback_Ret(message, wParam, lParam);
+        }
         GW::Hook::LeaveHook();
     }
 
@@ -1408,16 +1420,16 @@ void GameSettings::Initialize()
         // But, if you try with the material page (or anniversary page in the case when you bought all other storage page)
         // you will get back the the page 1. I think it was a intended use for material page & forgot to fix it
         // when they added anniversary page so we do it ourself.
+
+        // @Cleanup: Change this to be a post CreateUIComponent hook instead
         constexpr DWORD page_max = 14;
         ctrl_click_patch.SetPatch(address, (const char*)&page_max, 1);
         ctrl_click_patch.TogglePatch(true);
     }
     Log::Log("[GameSettings] ctrl_click_patch = %p\n", ctrl_click_patch.GetAddress());
 
-    address = GW::Scanner::Find("\x5F\x6A\x00\xFF\x75\xE4\x6A\x4C\xFF\x75\xF8", "xxxxxxxxxxx", -0x44);
-    if (address)
-        tome_patch.SetPatch(address, "\x75\x1E\x90\x90\x90\x90\x90", 7);
-    Log::Log("[GameSettings] tome_patch = %p\n", tome_patch.GetAddress());
+    SkillList_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmCtlSkList.cpp", "!obj", 0xc71,0));
+    Log::Log("[GameSettings] SkillList_UICallback_Func = %p\n", SkillList_UICallback_Func);
    
     address = GW::Scanner::Find("\x81\xff\x86\x02\x00\x00", "xxxxxx", 6);
     if (address)
@@ -1437,7 +1449,7 @@ void GameSettings::Initialize()
     ItemDescriptionHandler::RegisterDescriptionCallback(OnGetItemDescription, 9999);
 
     // Call our CreateCodedTextLabel function instead of default CreateCodedTextLabel for patching skill descriptions
-    address = GW::Scanner::FindAssertion("\\Code\\Gw\\Ui\\Game\\GmTipSkill.cpp", "!(m_tipSkillFlags & TipSkillMsgCreate::FLAG_SHOW_ENABLE_AI_HINT)", 0, 0x7b);
+    address = GW::Scanner::FindAssertion("GmTipSkill.cpp", "!(m_tipSkillFlags & TipSkillMsgCreate::FLAG_SHOW_ENABLE_AI_HINT)", 0, 0x7b);
     if (address) {
         CreateEncodedTextLabel_Func = (CreateCodedTextLabel_pt)GW::Scanner::FunctionFromNearCall(address);
         skill_description_patch.SetRedirect(address, CreateCodedTextLabel_SkillDescription);
@@ -1474,7 +1486,7 @@ void GameSettings::Initialize()
 
 #ifdef _DEBUG
     ASSERT(ctrl_click_patch.IsValid());
-    ASSERT(tome_patch.IsValid());
+    ASSERT(SkillList_UICallback_Func);
     ASSERT(skip_map_entry_message_patch.IsValid());
     ASSERT(gold_confirm_patch.IsValid());
     ASSERT(remove_skill_warmup_duration_patch.IsValid());
@@ -1486,6 +1498,11 @@ void GameSettings::Initialize()
     ASSERT(ShowAgentExperienceGain_Func);
     ASSERT(FadeFrameContent_Func);
 #endif
+
+    if (SkillList_UICallback_Func) {
+        GW::HookBase::CreateHook((void**)&SkillList_UICallback_Func, OnSkillList_UICallback, reinterpret_cast<void**>(&SkillList_UICallback_Ret));
+        GW::HookBase::EnableHooks(SkillList_UICallback_Func);
+    }
 
     if (ShowAgentFactionGain_Func) {
         GW::HookBase::CreateHook((void**)&ShowAgentFactionGain_Func, OnShowAgentFactionGain, reinterpret_cast<void**>(&ShowAgentFactionGain_Ret));
@@ -1827,7 +1844,6 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     GW::PartyMgr::SetTickToggle(tick_is_toggle);
     SetWindowTitle(set_window_title_as_charname);
 
-    tome_patch.TogglePatch(show_unlearned_skill);
     remove_skill_warmup_duration_patch.TogglePatch(remove_min_skill_warmup_duration);
     gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
     skip_map_entry_message_patch.TogglePatch(block_enter_area_message);
@@ -1873,7 +1889,6 @@ void GameSettings::Terminate()
 {
     ToolboxModule::Terminate();
     ctrl_click_patch.Reset();
-    tome_patch.Reset();
     gold_confirm_patch.Reset();
     skill_description_patch.Reset();
     skip_map_entry_message_patch.Reset();
@@ -1882,6 +1897,9 @@ void GameSettings::Terminate()
     GW::UI::RemoveUIMessageCallback(&OnQuestUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnPreUIMessage_HookEntry);
+
+    if (SkillList_UICallback_Func)
+        GW::Hook::RemoveHook(SkillList_UICallback_Func);
     if(FadeFrameContent_Func)
         GW::Hook::RemoveHook(FadeFrameContent_Func);
 }
@@ -2076,9 +2094,7 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Checkbox("Automatically set 'Online' after an input to Guild Wars", &auto_set_online);
     ImGui::ShowHelp("Only if you were 'Away'");
 
-    if (ImGui::Checkbox("Only show non learned skills when using a tome", &show_unlearned_skill)) {
-        tome_patch.TogglePatch(show_unlearned_skill);
-    }
+    ImGui::Checkbox("Only show non learned skills when using a tome", &show_unlearned_skill);
 
     if (ImGui::Checkbox("Remove 1.5 second minimum for the cast bar to show.", &remove_min_skill_warmup_duration)) {
         remove_skill_warmup_duration_patch.TogglePatch(remove_min_skill_warmup_duration);
