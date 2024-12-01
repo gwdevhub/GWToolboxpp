@@ -1441,7 +1441,7 @@ void GameSettings::Initialize()
         gold_confirm_patch.SetPatch(address, "\x90\x90", 2);
     Log::Log("[GameSettings] gold_confirm_patch = %p\n", gold_confirm_patch.GetAddress());
 
-    address = GW::Scanner::Find("\xdf\xe0\xf6\xc4\x41\x7a\x78", "xxxxxxx", 0x5);
+    address = GW::Scanner::Find("\xdf\xe0\xf6\xc4\x41\x7a\x79", "xxxxxxx", 0x5);
     if (address)
         remove_skill_warmup_duration_patch.SetPatch(address, "\x90\x90", 2);
     Log::Log("[GameSettings] remove_skill_warmup_duration_patch = %p\n", remove_skill_warmup_duration_patch.GetAddress());
