@@ -22,6 +22,7 @@ target_include_directories(gwca PUBLIC "${GWCA_FOLDER}/Include/")
 set_target_properties(gwca PROPERTIES CXX_STANDARD 17)
 target_compile_options(gwca PRIVATE /W4 /WX)
 target_link_options(gwca PRIVATE /WX /SAFESEH:NO)
+target_compile_options(gwca PRIVATE /D IsPlugin)
 
 find_package(minhook CONFIG REQUIRED)
 
