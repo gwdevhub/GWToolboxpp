@@ -127,19 +127,12 @@ namespace {
         if (!hwnd) {
             return false;
         }
-        uintptr_t address = GW::Scanner::FindAssertion(R"(p:\code\base\os\win32\osinput.cpp)", "osMsg", 0,0x32);
-        address = GW::Scanner::FunctionFromNearCall(address);
-        if (address) {
-            ProcessInput_Func = reinterpret_cast<OnProcessInput_pt>(address);
-            address += 0x2b3;
-            HasRegisteredTrackMouseEvent = *reinterpret_cast<bool**>(address);
-            address += 0x85;
-            gw_mouse_move = *reinterpret_cast<GwMouseMove**>(address);
-            address += 0x7;
-            SetCursorPosCenter_Func = reinterpret_cast<SetCursorPosCenter_pt>(GW::Scanner::FunctionFromNearCall(address));
-
-            GW::Hook::CreateHook((void**)&ProcessInput_Func, OnProcessInput, reinterpret_cast<void**>(&ProcessInput_Ret));
-            GW::Hook::CreateHook((void**)&SetCursorPosCenter_Func, OnSetCursorPosCenter, reinterpret_cast<void**>(&SetCursorPosCenter_Ret));
+        uintptr_t address = GW::Scanner::Find("\xc7\x45\xf0\x10\x00\x00\x00\xc7\x45\xf4\x02\x00\x00\x00", "xx?xxxxxx?xxxx", 0x15);
+        if(address && GW::Scanner::IsValidPtr(*(uintptr_t*)address)) {
+            ProcessInput_Func = (OnProcessInput_pt)GW::Scanner::ToFunctionStart(address, 0xfff);
+            HasRegisteredTrackMouseEvent = *(bool**)address;
+            gw_mouse_move = (GwMouseMove*)(HasRegisteredTrackMouseEvent - 0x20);
+            SetCursorPosCenter_Func = (SetCursorPosCenter_pt)GW::Scanner::FunctionFromNearCall(GW::Scanner::FindInRange("\x89\x46\x08\xe8????", "xxxx????", 3, address, address + 0xff));
         }
 
         GWCA_INFO("[SCAN] ProcessInput_Func = %p", ProcessInput_Func);
@@ -147,7 +140,13 @@ namespace {
         GWCA_INFO("[SCAN] gw_mouse_move = %p", gw_mouse_move);
         GWCA_INFO("[SCAN] SetCursorPosCenter_Func = %p", SetCursorPosCenter_Func);
 
-        //ASSERT(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func);
+#ifdef _DEBUG
+        ASSERT(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func);
+#endif
+        if (!ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func) {
+            GW::Hook::CreateHook((void**)&ProcessInput_Func, OnProcessInput, reinterpret_cast<void**>(&ProcessInput_Ret));
+            GW::Hook::CreateHook((void**)&SetCursorPosCenter_Func, OnSetCursorPosCenter, reinterpret_cast<void**>(&SetCursorPosCenter_Ret));
+        }            
 
         return gw_mouse_move != nullptr;
     }
