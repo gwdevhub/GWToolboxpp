@@ -452,11 +452,19 @@ void GWSplits::Update(float diff)
 {
     ToolboxUIPlugin::Update(diff);
 
-    if (!currentRun || currentRun->splits.empty() || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable)
+    if (!currentRun || currentRun->splits.empty())
         return;
+    if (sumOfBest == 0) 
+    {
+        sumOfBest = std::accumulate(currentRun->splits.begin(), currentRun->splits.end(), 0, [](int sum, const Split& s) {
+            return sum + s.pbSegmentTime;
+        });
+    }
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
+
     auto& currentSplits = currentRun->splits;
     auto currentSplitIt = std::ranges::find_if(currentSplits, [](const Split& split) { return !split.completed; });
-
+    
     if (currentSplitIt != currentSplits.end()) 
     {
         runTime = getRunTime();
@@ -677,13 +685,17 @@ void GWSplits::DrawSettings()
                 if (auto importedRun = deserializeRun(stream)) 
                 {
                     removePBs(*importedRun);
+                    for (auto& split : importedRun->splits) {
+                        split.displayPBTime = timeToString(split.pbSegmentTime);
+                        split.displayTrackedTime = timeToString(split.trackedTime);
+                    }
                     runs.push_back(std::make_shared<Run>(std::move(*importedRun)));
                 }
             }
         }
     }
 
-    ImGui::Text("Version 1.1.1 For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 1.1.2 For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
     ImGui::TextColored(ImColor{102, 187, 238, 255}, discordInviteLink);
