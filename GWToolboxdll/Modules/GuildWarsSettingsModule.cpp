@@ -673,12 +673,12 @@ void GuildWarsSettingsModule::Initialize()
 {
     ToolboxModule::Initialize();
     // NB: This address is fond twice, we only care about the first.
-    uintptr_t address = GW::Scanner::FindAssertion("\\Code\\Engine\\Frame\\frkey.cpp", "count == arrsize(s_remapTable)", 0, 0x13);
+    uintptr_t address = GW::Scanner::FindAssertion("FrKey.cpp", "count == arrsize(s_remapTable)", 0, 0x13);
     if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address)) {
         key_mappings_array = *(uint32_t**)address;
     }
 
-    address = GW::Scanner::Find("\x89\x77\x1c\x5f\x5e\x8b\xe5\x5d\xc2\x04\x00", "xxxxxxxxxxx", -0x155);
+    address = GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("QuestEntryGroup.cpp", "staticData", 0xf6, 0),0x200);
     if (address) {
         OnQuestEntryGroupInteract_Func = (OnQuestEntryGroupInteract_pt)address;
         GW::Hook::CreateHook((void**)&OnQuestEntryGroupInteract_Func, OnQuestEntryGroupInteract, (void**)&OnQuestEntryGroupInteract_Ret);
@@ -703,6 +703,12 @@ void GuildWarsSettingsModule::Initialize()
         }
 
     }
+#ifdef _DEBUG
+    ASSERT(key_mappings_array);
+    ASSERT(OnQuestEntryGroupInteract_Func);
+    ASSERT(GetOrCreateQuestEntryGroup_Func);
+    ASSERT(display_graphics_version_ui_component.IsValid());
+#endif
 
     GW::Chat::CreateCommand(L"saveprefs", CmdSave);
 
