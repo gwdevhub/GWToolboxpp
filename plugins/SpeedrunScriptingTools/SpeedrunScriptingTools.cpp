@@ -709,7 +709,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Checkbox("Block hotkey keys even if conditions not met", &alwaysBlockHotkeyKeys);
 
-    ImGui::Text("Version 2.1.2. For new releases, feature requests and bug reports check out");
+    ImGui::Text("Version 2.1.3. For new releases, feature requests and bug reports check out");
     ImGui::SameLine();
 
     constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
@@ -1057,7 +1057,7 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
         isInLoadingScreen = false;
         framesSinceLoadingFinished = 0;
 
-        triggerScripts(Trigger::InstanceLoad);
+        triggerScripts(Trigger::InstanceLoad, [](auto) { return true; }, false);
     });
     RegisterUIMessageCallback(&Interrupt_Entry, GW::UI::UIMessage::kSpellCastInterrupted, [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
         const auto parameters = *reinterpret_cast<SkillCastParameters*>(wparam);
@@ -1125,7 +1125,7 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
     srand((unsigned int)time(NULL));
 }
 
-bool SpeedrunScriptingTools::triggerScripts(Trigger triggerType, std::function<bool(const Script&)> extraConditions) 
+bool SpeedrunScriptingTools::triggerScripts(Trigger triggerType, std::function<bool(const Script&)> extraConditions, bool checkConds) 
 {
     bool triggeredAny = false;
 
@@ -1133,7 +1133,7 @@ bool SpeedrunScriptingTools::triggerScripts(Trigger triggerType, std::function<b
     {
         std::ranges::for_each(scripts, [&](Script& s) 
         {
-            const auto triggered = s.enabled && s.trigger == triggerType && checkConditions(s.conditions) && extraConditions(s);
+            const auto triggered = s.enabled && s.trigger == triggerType && (!checkConds || checkConditions(s.conditions) && extraConditions(s));
             s.triggered |= triggered;
             triggeredAny |= triggered;
         });
