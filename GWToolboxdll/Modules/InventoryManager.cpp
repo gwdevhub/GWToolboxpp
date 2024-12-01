@@ -1070,18 +1070,8 @@ void InventoryManager::LoadSettings(ToolboxIni* ini)
     hide_from_merchant_items = GuiUtils::IniToMap<std::map<uint32_t, std::string>>(ini, Name(), VAR_NAME(hide_from_merchant_items));
 }
 
-void InventoryManager::ClearSalvageSession(GW::HookStatus* status, void*)
-{
-    if (status) {
-        status->blocked = true;
-    }
-    Instance().current_salvage_session.salvage_item_id = 0;
-}
-
 void InventoryManager::CancelSalvage()
 {
-    DetachSalvageListeners();
-    ClearSalvageSession();
     potential_salvage_all_items.clear();
     is_salvaging = has_prompted_salvage = is_salvaging_all = false;
     pending_salvage_item.item_id = 0;
@@ -1090,6 +1080,7 @@ void InventoryManager::CancelSalvage()
     salvaged_count = 0;
     context_item.item_id = 0;
     pending_cancel_salvage = false;
+    GW::Items::SalvageSessionCancel(); // NB: Don't care about failure
 }
 
 void InventoryManager::CancelTransaction()
@@ -1126,29 +1117,6 @@ void InventoryManager::CancelAll()
     CancelSalvage();
     CancelIdentify();
     CancelTransaction();
-}
-
-void InventoryManager::AttachSalvageListeners()
-{
-    if (salvage_listeners_attached) {
-        return;
-    }
-    GW::StoC::RegisterPacketCallback(&salvage_hook_entry, GW::Packet::StoC::SalvageSessionCancel::STATIC_HEADER, &ClearSalvageSession);
-    GW::StoC::RegisterPacketCallback(&salvage_hook_entry, GW::Packet::StoC::SalvageSessionDone::STATIC_HEADER, &ClearSalvageSession);
-    GW::StoC::RegisterPacketCallback(&salvage_hook_entry, GW::Packet::StoC::SalvageSessionItemKept::STATIC_HEADER, &ClearSalvageSession);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SalvageSessionSuccess>(
-        &salvage_hook_entry,
-        [this](GW::HookStatus* status, GW::Packet::StoC::SalvageSessionSuccess*) {
-            ClearSalvageSession(status);
-            GW::Items::SalvageSessionDone();
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SalvageSession>(
-        &salvage_hook_entry,
-        [this](GW::HookStatus* status, const GW::Packet::StoC::SalvageSession* packet) {
-            current_salvage_session = *packet;
-            status->blocked = true;
-        });
-    salvage_listeners_attached = true;
 }
 
 void InventoryManager::AttachTransactionListeners()
@@ -1191,19 +1159,6 @@ void InventoryManager::DetachTransactionListeners()
     GW::StoC::RemoveCallback(GAME_SMSG_TRANSACTION_REJECT, &salvage_hook_entry);
     GW::StoC::RemoveCallback(GW::Packet::StoC::QuotedItemPrice::STATIC_HEADER, &salvage_hook_entry);
     transaction_listeners_attached = false;
-}
-
-void InventoryManager::DetachSalvageListeners()
-{
-    if (!salvage_listeners_attached) {
-        return;
-    }
-    GW::StoC::RemoveCallback(GW::Packet::StoC::SalvageSessionCancel::STATIC_HEADER, &salvage_hook_entry);
-    GW::StoC::RemoveCallback(GW::Packet::StoC::SalvageSessionDone::STATIC_HEADER, &salvage_hook_entry);
-    GW::StoC::RemoveCallback(GW::Packet::StoC::SalvageSession::STATIC_HEADER, &salvage_hook_entry);
-    GW::StoC::RemoveCallback(GW::Packet::StoC::SalvageSessionItemKept::STATIC_HEADER, &salvage_hook_entry);
-    GW::StoC::RemoveCallback(GW::Packet::StoC::SalvageSessionSuccess::STATIC_HEADER, &salvage_hook_entry);
-    salvage_listeners_attached = false;
 }
 
 void InventoryManager::IdentifyAll(const IdentifyAllType type)
@@ -1249,37 +1204,45 @@ void InventoryManager::ContinueIdentify()
 
 void InventoryManager::ContinueSalvage()
 {
-    is_salvaging = false;
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
-        CancelSalvage();
-        return;
-    }
-    if (!IsMapReady()) {
-        pending_cancel_salvage = true;
-    }
-    const Item* current_item = pending_salvage_item.item();
-    if (current_item && current_salvage_session.salvage_item_id != 0) {
-        // Popup dialog for salvage; salvage materials and cycle.
-        ClearSalvageSession();
-        GW::Items::SalvageMaterials();
-        pending_salvage_at = clock() / CLOCKS_PER_SEC;
-        is_salvaging = true;
-        return;
-    }
-    if (pending_salvage_item.item_id) {
-        salvaged_count++;
-    }
-    if (current_item && current_item->quantity == pending_salvage_item.quantity) {
-        CancelSalvage();
-        Log::Error("Salvage flagged as complete, but item still exists in slot %d/%d", current_item->bag->index + 1, current_item->slot + 1);
-        return;
-    }
     if (pending_cancel_salvage) {
         CancelSalvage();
         return;
     }
+    if (TIMER_DIFF(pending_salvage_at) > 5000) {
+        Log::Warning("Failed to salvage item in slot %d/%d", pending_salvage_item.bag, pending_salvage_item.slot);
+        CancelSalvage();
+        return;
+    }
+    if (!IsMapReady()) {
+        CancelSalvage();
+        return;
+    }
+    if (IsPendingSalvage()) {
+        const auto salvage_info = GW::Items::GetSalvageSessionInfo();
+        if (salvage_info) {
+            if (salvage_info->item_id != pending_salvage_item.item_id) {
+                Log::Warning("Unexpected salvage item prompt - different item id!");
+                CancelSalvage();
+                return;
+            }
+            if (!GW::Items::SalvageMaterials()) {
+                Log::Warning("GW::Items::SalvageMaterials failure");
+                CancelSalvage();
+                return;
+            }
+            pending_salvage_at = TIMER_INIT();
+        }
+        return;
+    }
+    is_salvaging = false;
+    if (pending_salvage_item.item_id) {
+        salvaged_count++;
+    }
     if (is_salvaging_all) {
         SalvageAll(salvage_all_type);
+    }
+    else {
+        CancelSalvage();
     }
 }
 
@@ -1375,10 +1338,6 @@ void InventoryManager::SalvageAll(const SalvageAllType type)
     if (!is_salvaging_all || is_salvaging) {
         return;
     }
-    if (pending_cancel_salvage) {
-        CancelSalvage();
-        return;
-    }
     const Item* kit = context_item.item();
     if (!kit || !kit->IsSalvageKit()) {
         CancelSalvage();
@@ -1423,9 +1382,8 @@ void InventoryManager::Salvage(Item* item, const Item* kit)
     if (!(pending_salvage_item.set(item) && pending_salvage_kit.set(kit))) {
         return;
     }
-    AttachSalvageListeners();
     GW::Items::SalvageStart(pending_salvage_kit.item_id, pending_salvage_item.item_id);
-    pending_salvage_at = clock() / CLOCKS_PER_SEC;
+    pending_salvage_at = TIMER_INIT();
     is_salvaging = true;
 }
 
@@ -1757,9 +1715,6 @@ bool InventoryManager::IsPendingSalvage() const
     if (!pending_salvage_kit.item_id || !pending_salvage_item.item_id) {
         return false;
     }
-    if (current_salvage_session.salvage_item_id) {
-        return false;
-    }
     const Item* current_kit = pending_salvage_kit.item();
     if (current_kit && current_kit->GetUses() == pending_salvage_kit.uses) {
         return true;
@@ -1875,16 +1830,7 @@ void InventoryManager::Update(float)
         }
     }
     if (is_salvaging) {
-        if (IsPendingSalvage()) {
-            if (clock() / CLOCKS_PER_SEC - pending_salvage_at > 5) {
-                is_salvaging = is_salvaging_all = false;
-                Log::Warning("Failed to salvage item in slot %d/%d", pending_salvage_item.bag, pending_salvage_item.slot);
-            }
-        }
-        else {
-            // Salvage complete
-            ContinueSalvage();
-        }
+        ContinueSalvage();
     }
     if (is_identifying) {
         if (IsPendingIdentify()) {

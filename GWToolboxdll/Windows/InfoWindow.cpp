@@ -787,7 +787,7 @@ namespace {
         [[maybe_unused]]  const auto level = ac ? ac->level() : 0;
         [[maybe_unused]]  const auto primary = ac ? ac->primary() : 0;
         [[maybe_unused]] const auto secondary = ac ? ac->secondary() : 0;
-
+        [[maybe_unused]] const auto salvage_session = GW::Items::GetSalvageSessionInfo();
 #ifdef _DEBUG
         //HighlightFrame(mission_map_frame);
 #endif

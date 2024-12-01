@@ -125,9 +125,9 @@ private:
     size_t identified_count = 0;
     size_t salvaged_count = 0;
 
-    GW::Packet::StoC::SalvageSession current_salvage_session{};
-
     void ContinueIdentify();
+
+    // Process ongoing logic for salvaging on the update loop
     void ContinueSalvage();
 
     GW::HookEntry on_map_change_entry;
@@ -137,9 +137,6 @@ private:
 
 
     void FetchPotentialItems();
-    void AttachSalvageListeners();
-    void DetachSalvageListeners();
-    static void ClearSalvageSession(GW::HookStatus* status = nullptr, void* packet = nullptr);
     void CancelSalvage();
     void CancelIdentify();
     void CancelAll();
