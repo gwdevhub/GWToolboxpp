@@ -109,8 +109,6 @@ namespace {
     }
 
 
-    std::wstring rewritten_message;
-
     // Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
     void OnLocalChatMessage(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*)
     {
@@ -121,8 +119,7 @@ namespace {
             return;
         if (*packet->message != 0x778 && *packet->message != 0x781)
             return; // Not "I'm Following X" or "I'm Targeting X" message.
-
-        rewritten_message = packet->message;
+        std::wstring rewritten_message = packet->message;
         size_t start_idx = rewritten_message.find(L"\xba9\x107");
         if (start_idx == std::wstring::npos) {
             return; // Not a player name.
@@ -145,6 +142,9 @@ namespace {
         // Allow clickable player name
         rewritten_message.insert(start_idx, L"<a=1>");
         rewritten_message.insert(end_idx + 5, L"</a>");
+
+        status->blocked = true;
+        GW::Chat::WriteChatEnc(packet->channel, rewritten_message.c_str(), sender->name_enc);
 
         packet->message = rewritten_message.data();
     }
@@ -298,6 +298,8 @@ namespace {
             } break;
             case GW::UI::UIMessage::kPlayerChatMessage: {
                 OnLocalChatMessage(status, message_id, wParam, lParam);
+                if (status->blocked)
+                    return;
                 // Hide player chat message speech bubbles by redirecting from 0x10000081 to 0x1000007E
                 if (hide_player_speech_bubbles)
                     return;
