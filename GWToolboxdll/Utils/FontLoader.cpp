@@ -22,11 +22,11 @@ namespace {
     {
         return {
             font_text,
-            font_widget_large,
-            font_widget_small,
-            font_widget_label,
+            font_header2,
             font_header1,
-            font_header2
+            font_widget_label,
+            font_widget_small,
+            font_widget_large
         };
     }
 
@@ -502,6 +502,22 @@ namespace FontLoader {
             ReleaseFont(*font);
             *font = nullptr;
         }
+    }
+
+    ImFont* GetFontByPx(float size)
+    {
+        const auto fonts = GetFonts(); // Smallest to largest!!
+        ImFont* chosen = nullptr;
+        for (auto font : fonts) {
+            if (!(font && font->IsLoaded()))
+                continue;
+            chosen = font;
+            if (font->FontSize >= size)
+                break;
+        }
+        if (!chosen)
+            chosen = ImGui::GetIO().Fonts->Fonts[0];
+        return chosen;
     }
 
     ImFont* GetFont(const FontSize size)

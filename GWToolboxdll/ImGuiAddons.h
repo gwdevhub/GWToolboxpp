@@ -16,6 +16,14 @@ namespace ImGui {
 
     IMGUI_API void DrawConfirmDialog();
 
+    // Push font, but with a different size to the default one.
+    IMGUI_API void PushFont(ImFont* font, float font_size);
+
+    // If we're using a draw list that isn't the current window one, we need to explicitly state it
+    IMGUI_API void PushFont(ImFont* font, ImDrawList* draw_list, float font_size = 0.f);
+    // Remove a font added to an explicit draw list
+    IMGUI_API void PopFont(ImDrawList* draw_list);
+
     IMGUI_API void SetTooltip(std::function<void()> tooltip_callback);
 
     // Shorthand for ImGui::GetIO().GlobalFontScale

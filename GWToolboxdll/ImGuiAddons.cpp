@@ -33,6 +33,31 @@ namespace ImGui {
         EndTooltip();
     }
 
+    void PushFont(ImFont* font, float font_size) {
+        ImGui::PushFont(font);
+        ImGuiContext& g = *GImGui;
+        if (font_size > 0.f) {
+            g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * font_size * g.Font->Scale);
+            g.FontSize = g.FontBaseSize;
+            g.DrawListSharedData.FontSize = g.FontSize;
+        }
+    }
+
+    void PushFont(ImFont* font, ImDrawList* draw_list, float font_size) {
+        ImGui::PushFont(font, font_size);
+        ImGuiContext& g = *GImGui;
+        if (g.CurrentWindow && g.CurrentWindow->DrawList != draw_list) {
+            draw_list->PushTextureID(font->ContainerAtlas->TexID);
+        }
+    }
+    void PopFont(ImDrawList* draw_list) {
+        ImGui::PopFont();
+        ImGuiContext& g = *GImGui;
+        if (g.CurrentWindow && g.CurrentWindow->DrawList != draw_list) {
+            draw_list->PopTextureID();
+        }
+    }
+
     const float& FontScale()
     {
         return GetIO().FontGlobalScale;

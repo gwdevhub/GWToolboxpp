@@ -254,11 +254,12 @@ void DialogModule::Initialize()
         RegisterUIMessageCallback(&dialog_hook, message_id, OnPreUIMessage, -0x1);
         RegisterUIMessageCallback(&dialog_hook, message_id, OnPostUIMessage, 0x500);
     }
-    GW::WaitForFrame(L"NPCInteract", [](GW::UI::Frame* frame) {
-        NPCDialogUICallback_Func = frame->frame_callbacks[0];
+
+    NPCDialogUICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmNpc.cpp", "msg.createParam", 0x3fe, 0));
+    if (NPCDialogUICallback_Func) {
         GW::HookBase::CreateHook((void**)&NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
         GW::HookBase::EnableHooks(NPCDialogUICallback_Func);
-        });
+    }
 }
 
 void DialogModule::Terminate()
@@ -336,9 +337,8 @@ void DialogModule::Update(float)
             AcceptFirstAvailableQuest() || AcceptFirstAvailableBounty();
             break;
         }
-        if (IsDialogButtonAvailable(dialog_id)) {
+        if (IsDialogButtonAvailable(dialog_id) && GW::Agents::SendDialog(dialog_id)) {
             queued_dialogs_to_send.erase(it);
-            GW::Agents::SendDialog(dialog_id);
             break;
         }
     }
