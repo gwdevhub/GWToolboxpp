@@ -20,7 +20,7 @@
 
 
 namespace {
-    auto font_effects = FontLoader::FontSize::header2;
+    auto font_effects = 18.f;
     Color color_text_effects = Colors::White();
     Color color_background = Colors::ARGB(128, 0, 0, 0);
     Color color_text_shadow = Colors::Black();
@@ -80,8 +80,10 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     if (!effects_frame) {
         return;
     }
-    const auto font = FontLoader::GetFont(font_effects);
-    ImGui::PushFont(font);
+    const auto viewport = ImGui::GetMainViewport();
+    const auto draw_list = ImGui::GetBackgroundDrawList(viewport);
+    const auto font = FontLoader::GetFontByPx(font_effects);
+    ImGui::PushFont(font, draw_list, font_effects);
 
     const auto hard_mode_frame = GW::UI::GetChildFrame(effects_frame, 1);
     // const auto minion_count_frame = GW::UI::GetChildFrame(effects_frame, 2);
@@ -96,10 +98,8 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
         }
     }
     const auto effects = GW::Effects::GetPlayerEffects();
-    const auto viewport = ImGui::GetMainViewport();
-    const auto draw_list = ImGui::GetBackgroundDrawList(viewport);
+
     if (effects) {
-        draw_list->PushTextureID(font->ContainerAtlas->TexID);
         std::unordered_map<GW::Constants::SkillID, DWORD> time_remaining_by_effect;
         for (auto& effect : *effects) {
             if (effect.duration <= 0)
@@ -120,10 +120,9 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
             if (UptimeToString(remaining_str.data(), static_cast<int>(remaining)) > 0)
                 DrawTextOverlay(remaining_str.data(), skill_frame);
         }
-        draw_list->PopTextureID();
     }
 
-    ImGui::PopFont();
+    ImGui::PopFont(draw_list);
 }
 
 void EffectsMonitorWidget::LoadSettings(ToolboxIni* ini)
@@ -134,7 +133,7 @@ void EffectsMonitorWidget::LoadSettings(ToolboxIni* ini)
     LOAD_UINT(only_under_seconds);
     LOAD_BOOL(round_up);
     LOAD_BOOL(show_vanquish_counter);
-    font_effects = static_cast<FontLoader::FontSize>(ini->GetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects)));
+    LOAD_FLOAT(font_effects);
     LOAD_COLOR(color_text_effects);
     LOAD_COLOR(color_text_shadow);
     LOAD_COLOR(color_background);
@@ -148,7 +147,7 @@ void EffectsMonitorWidget::SaveSettings(ToolboxIni* ini)
     SAVE_UINT(only_under_seconds);
     SAVE_BOOL(round_up);
     SAVE_BOOL(show_vanquish_counter);
-    ini->SetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects));
+    SAVE_FLOAT(font_effects);
     SAVE_COLOR(color_text_effects);
     SAVE_COLOR(color_text_shadow);
     SAVE_COLOR(color_background);
@@ -160,10 +159,7 @@ void EffectsMonitorWidget::DrawSettingsInternal()
 
     ImGui::PushID("effects_monitor_overlay_settings");
 
-    int current_index = std::distance(FontLoader::font_sizes.begin(), std::ranges::find(FontLoader::font_sizes, font_effects));
-    if (ImGui::Combo("Text size", &current_index, FontLoader::font_size_names.data(), FontLoader::font_size_names.size())) {
-        font_effects = FontLoader::font_sizes[current_index];
-    }
+    ImGui::DragFloat("Text size", &font_effects, 1.f, 16.f, 48.f, "%.f");
     Colors::DrawSettingHueWheel("Text color", &color_text_effects);
     Colors::DrawSettingHueWheel("Text shadow", &color_text_shadow);
     Colors::DrawSettingHueWheel("Effect duration background", &color_background);

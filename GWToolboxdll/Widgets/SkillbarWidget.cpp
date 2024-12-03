@@ -49,13 +49,13 @@ namespace {
 
     // Skill overlay settings
     bool display_skill_overlay = true;
-    FontLoader::FontSize font_recharge = FontLoader::FontSize::header1;
+    float font_recharge = 20.f;
     Color color_text_recharge = Colors::White();
     Color color_border = Colors::ARGB(100, 255, 255, 255);
 
     // Effect monitor settings
     bool display_effect_monitor = false;
-    int effect_monitor_size = 0;
+    float effect_monitor_size = 20.f;
     int effect_monitor_offset = -100;
     bool effects_symmetric = true;
     bool display_multiple_effects = false;
@@ -63,7 +63,7 @@ namespace {
     bool effects_flip_direction = false;
     bool effect_text_color = false;
     bool effect_progress_bar_color = false;
-    FontLoader::FontSize font_effects = FontLoader::FontSize::text;
+    float font_effects = 16.f;
     Color color_text_effects = Colors::White();
     Color color_effect_background = Colors::ARGB(100, 0, 0, 0);
     Color color_effect_border = Colors::ARGB(255, 0, 0, 0);
@@ -296,13 +296,16 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
         return; // Failed to get skillbar pos
     }
 
-    const auto font = FontLoader::GetFont(font_recharge);
+    const auto font_size = ImMin(font_recharge, m_skill_width);
+
+    const auto font = FontLoader::GetFontByPx(font_size);
     ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 
     ImGui::Begin(Name(), nullptr, GetWinFlags());
     const auto draw_list = ImGui::GetBackgroundDrawList();
-    draw_list->PushTextureID(font->ContainerAtlas->TexID);
+    ImGui::PushFont(font, draw_list, font_size);
+
     for (size_t i = 0; i < m_skills.size(); i++) {
         const Skill& skill = m_skills[i];
         // NB: Y axis inverted for imgui
@@ -326,18 +329,18 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
             DrawEffect(i, top_left);
         }
     }
-    draw_list->PopTextureID();
-
+    ImGui::PopFont(draw_list);
     ImGui::End();
     ImGui::PopStyleVar();
 }
 
 void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
 {
-    const auto font = FontLoader::GetFont(font_effects);
-    ImGui::PushFont(font);
+    const auto font = FontLoader::GetFontByPx(font_effects);
     const auto draw_list = ImGui::GetBackgroundDrawList();
-    draw_list->PushTextureID(font->ContainerAtlas->TexID);
+    ImGui::PushFont(font, draw_list, font_effects);
+
+    const auto widget_height = ImMax(font_effects, effect_monitor_size);
 
     const Skill& skill = m_skills[skill_idx];
 
@@ -349,7 +352,7 @@ void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
     else if (layout == Layout::Rows) {
         if (effects_symmetric && std::floor(skill_idx / 4) == 0) {
             base.y += m_skill_height;
-            base.y -= effect_monitor_size == 0 ? ImGui::GetTextLineHeightWithSpacing() : effect_monitor_size;
+            base.y -= widget_height;
             base.y += effect_monitor_offset;
         }
         else {
@@ -362,7 +365,7 @@ void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
     else if (layout == Layout::Columns) {
         if (effects_symmetric && skill_idx % 2 == 0) {
             base.x += m_skill_width;
-            base.x -= effect_monitor_size == 0 ? ImGui::GetTextLineHeightWithSpacing() : effect_monitor_size; // not really correct but works
+            base.x -= widget_height; // not really correct but works
             base.x += effect_monitor_offset;
         }
         else {
@@ -372,12 +375,12 @@ void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
 
     ImVec2 size;
     if (layout == Layout::Column || layout == Layout::Columns) {
-        size.x = effect_monitor_size == 0 ? ImGui::GetTextLineHeightWithSpacing() : effect_monitor_size; // not really correct but works
+        size.x = widget_height; // not really correct but works
         size.y = m_skill_height;
     }
     else {
         size.x = m_skill_width;
-        size.y = effect_monitor_size == 0 ? ImGui::GetTextLineHeightWithSpacing() : effect_monitor_size;
+        size.y = widget_height;
     }
 
     for (size_t i = 0; i < skill.effects.size(); i++) {
@@ -432,9 +435,7 @@ void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
         const ImVec2 label_pos(pos1.x + size.x / 2 - label_size.x / 2, pos1.y + size.y / 2 - label_size.y / 2);
         draw_list->AddText(label_pos, effect_text_color ? Colors::FullAlpha(effect.color) : color_text_effects, effect.text);
     }
-
-    draw_list->PopTextureID();
-    ImGui::PopFont();
+    ImGui::PopFont(draw_list);
 }
 
 void SkillbarWidget::LoadSettings(ToolboxIni* ini)
@@ -450,12 +451,12 @@ void SkillbarWidget::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(round_up);
 
     LOAD_BOOL(display_skill_overlay);
-    font_recharge = static_cast<FontLoader::FontSize>(ini->GetLongValue(Name(), VAR_NAME(font_recharge), static_cast<long>(font_recharge)));
+    LOAD_FLOAT(font_recharge);
     LOAD_COLOR(color_text_recharge);
     LOAD_COLOR(color_border);
 
     LOAD_BOOL(display_effect_monitor);
-    LOAD_UINT(effect_monitor_size);
+    LOAD_FLOAT(effect_monitor_size);
     LOAD_UINT(effect_monitor_offset);
     LOAD_BOOL(effects_symmetric);
     LOAD_BOOL(display_multiple_effects);
@@ -463,7 +464,7 @@ void SkillbarWidget::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(effects_flip_direction);
     LOAD_BOOL(effect_text_color);
     LOAD_BOOL(effect_progress_bar_color);
-    font_effects = static_cast<FontLoader::FontSize>(ini->GetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects)));
+    LOAD_FLOAT(font_effects);
     LOAD_COLOR(color_text_effects);
     LOAD_COLOR(color_effect_background);
     LOAD_COLOR(color_effect_progress);
@@ -484,12 +485,12 @@ void SkillbarWidget::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(round_up);
 
     SAVE_BOOL(display_skill_overlay);
-    ini->SetLongValue(Name(), VAR_NAME(font_recharge), static_cast<long>(font_recharge));
+    SAVE_FLOAT(font_recharge);
     SAVE_COLOR(color_text_recharge);
     SAVE_COLOR(color_border);
 
     SAVE_BOOL(display_effect_monitor);
-    SAVE_UINT(effect_monitor_size);
+    SAVE_FLOAT(effect_monitor_size);
     SAVE_UINT(effect_monitor_offset);
     SAVE_BOOL(effects_symmetric);
     SAVE_BOOL(display_multiple_effects);
@@ -497,7 +498,7 @@ void SkillbarWidget::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(effects_flip_direction);
     SAVE_BOOL(effect_text_color);
     SAVE_BOOL(effect_progress_bar_color);
-    ini->SetLongValue(Name(), VAR_NAME(font_effects), static_cast<long>(font_effects));
+    SAVE_FLOAT(font_effects);
     SAVE_COLOR(color_text_effects);
     SAVE_COLOR(color_effect_background);
     SAVE_COLOR(color_effect_progress);
@@ -553,10 +554,7 @@ void SkillbarWidget::DrawSettingsInternal()
     ImGui::Spacing();
     ImGui::Indent();
     ImGui::PushID("skill_overlay_settings");
-    int current_index = std::distance(FontLoader::font_sizes.begin(), std::ranges::find(FontLoader::font_sizes, font_recharge));
-    if (ImGui::Combo("Text size", &current_index, FontLoader::font_size_names.data(), FontLoader::font_size_names.size())) {
-        font_recharge = FontLoader::font_sizes[current_index];
-    }
+    ImGui::DragFloat("Text size", &font_recharge, 1.f, 16.f, 48.f, "%.f");
     Colors::DrawSettingHueWheel("Text color", &color_text_recharge);
     Colors::DrawSettingHueWheel("Border color", &color_border);
     ImGui::Checkbox("Paint skills according to effect duration", &display_skill_overlay);
@@ -578,7 +576,7 @@ void SkillbarWidget::DrawSettingsInternal()
     ImGui::PushID("effect_monitor_settings");
     ImGui::Checkbox("Display effect monitor", &display_effect_monitor);
     if (display_effect_monitor) {
-        ImGui::DragInt(is_vertical ? "Effect width" : "Effect height", &effect_monitor_size, 1, 0);
+        ImGui::DragFloat(is_vertical ? "Effect width" : "Effect height", &effect_monitor_size, 1.f, 16.f,48.f,"%.f");
         ImGui::ShowHelp(is_vertical ? "Width in pixels of a single effect on the effect monitor.\n0 matches font size." : "Height in pixels of a single effect on the effect monitor.\n0 matches font size.");
         ImGui::DragInt("Offset", &effect_monitor_offset, 1, -200, 200);
         ImGui::ShowHelp(is_vertical ? "Distance to the left or right of an effect relative to the related skill on your skillbar" : "Distance above or below of an effect relative to the related skill on your skillbar");
@@ -605,10 +603,7 @@ void SkillbarWidget::DrawSettingsInternal()
         if (effect_text_color || effect_progress_bar_color) {
             DrawDurationThresholds();
         }
-        current_index = std::distance(FontLoader::font_sizes.begin(), std::ranges::find(FontLoader::font_sizes, font_effects));
-        if (ImGui::Combo("Text size", &current_index, FontLoader::font_size_names.data(), FontLoader::font_size_names.size())) {
-            font_effects = FontLoader::font_sizes[current_index];
-        }
+        ImGui::DragFloat("Text size", &font_effects, 1.f, 16.f, 48.f, "%.f");
         if (!effect_text_color) {
             Colors::DrawSettingHueWheel("Text color", &color_text_effects);
         }
