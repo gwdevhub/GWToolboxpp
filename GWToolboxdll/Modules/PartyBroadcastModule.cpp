@@ -49,6 +49,7 @@ namespace {
     bool need_to_send_party_searches = true;
     clock_t failed_to_send_ts = 0;
     
+    WSAData wsaData = { 0 };
 
     static constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
     static constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
@@ -89,8 +90,8 @@ namespace {
         uint8_t primary = 0;
         uint8_t secondary = 0;
         uint8_t level = 0;
-        char message[65] = { 0 };
-        char sender[42] = { 0 };
+        std::string message;
+        std::string sender;
     };
     std::map<uint32_t,PartySearchAdvertisement> server_parties;
     MapDistrictInfo last_sent_district_info;
@@ -116,7 +117,7 @@ namespace {
         if (p.language) j["dl"] = p.language;
         if (p.secondary) j["sc"] = p.secondary;
         if (p.district_number) j["dn"] = p.district_number;
-        if (*p.message) j["ms"] = p.message;
+        if (!p.message.empty()) j["ms"] = p.message;
         if (p.level != 20) j["l"] = p.level;
     }
 
@@ -170,10 +171,8 @@ namespace {
                 ad.primary = static_cast<uint8_t>(search->primary);
                 ad.secondary = static_cast<uint8_t>(search->secondary);
                 ad.level = static_cast<uint8_t>(search->level);
-                strcpy(ad.sender, TextUtils::WStringToString(search->party_leader).c_str());
-                if (search->message && *search->message) {
-                    strcpy(ad.message, TextUtils::WStringToString(search->message).c_str());
-                }
+                ad.sender = TextUtils::WStringToString(search->party_leader);
+                ad.message = TextUtils::WStringToString(search->message);
                 ads.push_back(ad);
             }
         }
@@ -199,7 +198,7 @@ namespace {
                 ad.primary = static_cast<uint8_t>(player.primary);
                 ad.secondary = static_cast<uint8_t>(player.secondary);
                 ad.level = static_cast<uint8_t>(agent->level);
-                strcpy(ad.sender,sender.c_str());
+                ad.sender = std::move(sender);
                 ads.push_back(ad);
             }
         }
@@ -437,7 +436,10 @@ void PartyBroadcast::SignalTerminate() {
 void PartyBroadcast::Initialize()
 {
     ToolboxModule::Initialize();
-
+    int res;
+    if (!wsaData.wVersion && (res = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
+        return; // WSAStartup failed
+    }
     pending_websocket_disconnect = terminating = false;
 
     need_to_send_party_searches = true;
@@ -458,5 +460,9 @@ void PartyBroadcast::Initialize()
 
 void PartyBroadcast::Terminate() {
     ToolboxModule::Terminate();
+    if (wsaData.wVersion) {
+        WSACleanup();
+        wsaData = { 0 };
+    }
     ASSERT(!websocket_thread);
 }
