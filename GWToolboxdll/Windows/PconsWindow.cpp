@@ -12,6 +12,9 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
+
+#include <GWCA/GameEntities/Skill.h>
+
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
 
@@ -24,6 +27,238 @@
 using namespace GW::Constants;
 
 bool Pcon::map_has_effects_array = false;
+
+namespace {
+
+    PconAlcohol* pcon_alcohol = nullptr;
+    clock_t scan_inventory_timer = 0;
+    bool enabled = false;
+
+    // Interface Settings
+    bool tick_with_pcons = false;
+    int items_per_row = 3;
+    bool show_enable_button = true;
+
+    bool disable_pcons_on_map_change = false;
+    bool disable_cons_on_vanquish_completion = true;
+    bool disable_cons_on_dungeon_completion = true;
+    bool disable_cons_on_mission_completion = true;
+    bool disable_cons_on_objective_completion = false;
+    bool disable_cons_in_final_room = false;
+
+    bool show_auto_refill_pcons_tickbox = true;
+    bool show_auto_disable_pcons_tickbox = false;
+
+    GW::Agent* player = nullptr;
+
+    // Pcon Settings
+    // todo: tonic pop?
+    // todo: morale / dp removal
+    GW::HookEntry AgentSetPlayer_Entry;
+    GW::HookEntry AddExternalBond_Entry;
+    GW::HookEntry PostProcess_Entry;
+    GW::HookEntry GenericValue_Entry;
+    GW::HookEntry AgentState_Entry;
+    GW::HookEntry SpeechBubble_Entry;
+    GW::HookEntry ObjectiveDone_Entry;
+    GW::HookEntry VanquishComplete_Entry;
+
+
+
+    GW::Constants::MapID map_id = GW::Constants::MapID::None;
+    GW::Constants::InstanceType instance_type = GW::Constants::InstanceType::Loading;
+    GW::Constants::InstanceType previous_instance_type = GW::Constants::InstanceType::Loading;
+    bool in_vanquishable_area = false;
+
+    bool elite_area_disable_triggered = false; // Already triggered in this run?
+    clock_t elite_area_check_timer = 0;
+
+    // Map of which objectives to check per map_id
+    std::vector<DWORD> objectives_complete = {};
+    const std::map<GW::Constants::MapID, std::vector<DWORD>>
+        objectives_to_complete_by_map_id = {
+            {GW::Constants::MapID::The_Fissure_of_Woe, {309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319}}, // Can be done in any order - check them all.
+            {GW::Constants::MapID::The_Deep, {421}},
+            {GW::Constants::MapID::Urgozs_Warren, {357}},
+            {GW::Constants::MapID::The_Underworld, {157}} // Only need to check for Nightman Cometh for Underworld.
+    };
+    std::vector<DWORD> current_objectives_to_check = {};
+
+    // Map of which locations to turn off near by map_id e.g. Kanaxai, Urgoz
+    const std::map<GW::Constants::MapID, GW::Vec2f>
+        final_room_location_by_map_id = {
+            {GW::Constants::MapID::The_Deep, GW::Vec2f(30428.0f, -5842.0f)},     // Rough location of Kanaxai
+            {GW::Constants::MapID::Urgozs_Warren, GW::Vec2f(-2800.0f, 14316.0f)} // Front entrance of Urgoz's room
+    };
+    GW::Vec2f current_final_room_location = GW::Vec2f(0, 0);
+
+    const char* disable_cons_on_objective_completion_hint = "Disable cons when final objective(s) completed";
+    const char* disable_cons_in_final_room_hint = "Disable cons when reaching the final room in Urgoz and Deep";
+    const char* disable_cons_on_vanquish_completion_hint = "Disable cons when completing a vanquish";
+
+    constexpr std::initializer_list<std::wstring_view> drunk_messages = {
+        L"\x8CA\xA4F7\xF552\xA32",   // i love you man!
+        L"\x8CB\xE20B\x9835\x4C75",  // I'm the king of the world!
+        L"\x8CC\xFA4D\xF068\x393",   // I think I need to sit down
+        L"\x8CD\xF2C2\xBBAD\x1EAD",  // I think I'm gonna be sick
+        L"\x8CE\x85E5\xF726\x68B1",  // Oh no, not again
+        L"\x8CF\xEDD3\xF2B9\x3F34",  // It's spinning...
+        L"\x8D0\xF056\xE7AD\x7EE6",  // Everyone stop shouting!
+        L"\x8101\x6671\xCBF8\xE717", // "BE GONE!"
+        L"\x8101\x6672\xB0D6\xCE2F", // "Soon you will all be crushed."
+        L"\x8101\x6673\xDAA5\xD0A1", // "You are no match for my almighty power."
+        L"\x8101\x6674\x8BF9\x8C19", // "Such fools to think you can attack me here. Come closer so you can see the face of your doom!"
+        L"\x8101\x6675\x996D\x87BA", // "No one can stop me, let alone you puny mortals!"
+        L"\x8101\x6676\xBAFA\x8E15", // "You are messing with affairs that are beyond your comprehension. Leave now and I may let you live!"
+        L"\x8101\x6677\xA186\xF84C", // "His blood has blocked = trueed me to my mortal body."
+        L"\x8101\x6678\xD2ED\xE693", // "I have blocked = trueed!"
+        L"\x8101\x6679\xA546\xF24A", // "Abaddon will feast on your eyes!"
+        L"\x8101\x667A\xB477\xA79A", // "Abaddon's sword has been drawn. He sends me back to you with tokens of renewed power!"
+        L"\x8101\x667B\x8FBB\xC739", // "Are you the Keymaster?"
+        L"\x8101\x667C\xFE50\xC173", // "Human sacrifice. Dogs and cats living together. Mass hysteria!"
+        L"\x8101\x667D\xBBC6\xAC9E", // "Take me now, subcreature."'
+        L"\x8101\x667E\xCD71\xDEE3", // "We must prepare for the coming of Banjo the Clown, God of Puppets."
+        L"\x8101\x667F\xE823\x9435", // "This house is clean."
+        L"\x8101\x6680\x82FC\xDCEC",
+        L"\x8101\x6681\xC86C\xB975", // "Mommy? Where are you? I can't find you. I can't. I'm afraid of the light, mommy. I'm afraid of the light."
+        L"\x8101\x6682\xE586\x9311", // "Get away from my baby!"
+        L"\x8101\x6683\xA949\xE643", // "This house has many hearts."'
+        L"\x8101\x6684\xB765\x93F1", // "As a boy I spent much time in these lands."
+        L"\x8101\x6685\xEDE0\xAF1D", // "I see dead people."
+        L"\x8101\x6686\xD356\xDC69", // "Do you like my fish balloon? Can you hear it singing to you...?"
+        L"\x8101\x6687\xEA3C\x96F0", // "4...Itchy...Tasty..."
+        L"\x8101\x6688\xCBDD\xB1CF", // "Gracious me, was I raving? Please forgive me. I'm mad."
+        L"\x8101\x6689\xE770\xEEA4", // "Keep away. The sow is mine."
+        L"\x8101\x668A\x885F\xE61D", // "All is well. I'm not insane."
+        L"\x8101\x668B\xCCDD\x88AA", // "I like how they've decorated this place. The talking lights are a nice touch."
+        L"\x8101\x668C\x8873\x9A16", // "There's a reason there's a festival ticket in my ear. I'm trying to lure the evil spirits out of my head."
+        L"\x8101\x668D\xAF68\xF84A", // "And this is where I met the Lich. He told me to burn things."
+        L"\x8101\x668E\xFE43\x9CB3", // "When I grow up, I want to be a principal or a caterpillar."
+        L"\x8101\x668F\xDAFF\x903E", // "Oh boy, sleep! That's where I'm a Luxon."
+        L"\x8101\x6690\xA1F5\xD15F", // "My cat's breath smells like cat food."
+        L"\x8101\x6691\xAE54\x8EC6", // "My cat's name is Mittens."
+        L"\x8101\x6692\xDFBB\xD674", // "Then the healer told me that BOTH my eyes were lazy. And that's why it was the best summer ever!"
+        L"\x8101\x6693\xAC9F\xDCBE", // "Go, banana!"
+        L"\x8101\x6694\x9ACA\xC746", // "It's a trick. Get an axe."
+        L"\x8101\x6695\x8ED8\xD572", // "Klaatu...barada...necktie?"
+        L"\x8101\x6696\xE883\xFED7", // "You're disgusting, but I love you!"
+        L"\x8101\x68BA\xA875\xA785", // "Cross over, children. All are welcome. All welcome. Go into the light. There is peace and serenity in the light."
+        L"\x8102\x4939\xD402\x99F3", // start grog messages
+        L"\x1FAA\xD6B1\x8599\x7B2D",
+        L"\x1FB2\xD54E\x9029\x151A",
+        L"\x1FAB\xFCDD\xA466\x3243",
+        L"\x1FB3\xB822\xF276\x2B0C",
+        L"\x1FAC\xBC27\xAC6B\x32C2",
+        L"\x1FAD\xA6B8\xC903\x5EAE",
+        L"\x8102\x4918\xCA53\xE82F",
+        L"\x1FB4\xFF89\xC048\x17A6",
+        L"\x1FB5\xE225\x97D1\x122C",
+        L"\x1FAE\xD24E\x9E99\x6D3 ",
+        L"\x8102\x491A\x9B62\xF12C",
+        L"\x1FAF\x8265\xD9B0\x300D",
+        L"\x1FB6\xBD6A\x88D1\x4F59",
+        L"\x8102\x493B\x96C7\x8B03",
+        L"\x8102\x4929\xA216\xC64B",
+        L"\x8103\xAC8\xD5E7\x951E",
+        L"\x8103\xA6C\xDAFC\xDC30",
+        L"\x8102\x4916\x9FC6\x913A",
+        L"\x8102\x4930\xEB29\xA9A1",
+        L"\x8102\x4938\xC1E8\xC1E7",
+        L"\x8102\x4932\x8516\xBF4C",
+        L"\x8102\x4936\xB245\xCA89",
+        L"\x8102\x4942\xA195\xF718",
+        L"\x8102\x4927\x8AA7\xD5AB",
+        L"\x8102\x492F\xA315\x9062",
+        L"\x8103\xA90\xD7A3\x9B78",
+        L"\x8102\x4933\x82F9\xEE62",
+        L"\x8102\x492D\xAE7F\x9205",
+        L"\x8102\x4924\x9EED\xED02",
+        L"\x8102\x4931\xEA9D\xD3D5",
+        L"\x8102\x4921\xA36D\xCE7A",
+        L"\x8102\x4937\xACEA\x8B90",
+        L"\x8102\x4928\xC8E9\x8953", // the ship, it's spinning
+        L"\x8102\x4919\xBC36\xB446",
+        L"\x8102\x492B\xC39F\xD6FA",
+        L"\x8102\x4923\xAA60\x9F98", // end grog messages
+    };
+
+
+    PconsWindow& Instance() {
+        return PconsWindow::Instance();
+    }
+
+    void CheckObjectivesCompleteAutoDisable()
+    {
+        if (!enabled || elite_area_disable_triggered || instance_type != InstanceType::Explorable) {
+            return; // Pcons disabled, auto disable already triggered, or not in explorable area.
+        }
+        if (!disable_cons_on_objective_completion || objectives_complete.empty() || current_objectives_to_check.empty()) {
+            return; // No objectives complete, or no objectives to check for this map.
+        }
+        bool objective_complete = false;
+        for (size_t i = 0; i < current_objectives_to_check.size(); i++) {
+            objective_complete = false;
+            for (size_t j = 0; j < objectives_complete.size() && !objective_complete; j++) {
+                objective_complete = current_objectives_to_check.at(i) == objectives_complete.at(j);
+            }
+            if (!objective_complete) {
+                return; // Not all objectives complete.
+            }
+        }
+        if (objective_complete) {
+            elite_area_disable_triggered = true;
+            Instance().SetEnabled(false);
+            Log::Flash("Cons auto-disabled on completion");
+        }
+    }
+
+    GW::HookEntry OnUIMessage_HookEntry;
+    void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
+        switch (message_id) {
+        case GW::UI::UIMessage::kAgentSpeechBubble: {
+            const auto packet = (GW::UI::UIPacket::kAgentSpeechBubble*)wparam;
+            const std::wstring_view msg{ packet->message, 4 };
+            if (PconAlcohol::suppress_drunk_text && std::ranges::contains(drunk_messages, msg))
+                status->blocked = true;
+        } break;
+        case GW::UI::UIMessage::kVanquishComplete:
+            if(enabled && disable_cons_on_vanquish_completion)
+                Instance().SetEnabled(false);
+            break;
+        case GW::UI::UIMessage::kDungeonComplete:
+            if (enabled && disable_cons_on_dungeon_completion)
+                Instance().SetEnabled(false);
+            break;
+        case GW::UI::UIMessage::kMissionComplete:
+            if (enabled && disable_cons_on_mission_completion)
+                Instance().SetEnabled(false);
+            break;
+        case GW::UI::UIMessage::kObjectiveComplete: {
+            const auto packet = (GW::UI::UIPacket::kObjectiveComplete*)wparam;
+            objectives_complete.push_back(packet->objective_id);
+            CheckObjectivesCompleteAutoDisable();
+        } break;
+        case GW::UI::UIMessage::kPostProcessingEffect: {
+            auto packet = (GW::UI::UIPacket::kPostProcessingEffect*)wparam;
+            PconAlcohol::alcohol_level = (uint32_t)(packet->amount * 5.f);
+            // printf("Level = %d, tint = %d\n", pak->level, pak->tint);
+            if (enabled) {
+                pcon_alcohol->Update();
+            }
+            if (PconAlcohol::suppress_drunk_effect) {
+                packet->amount = 0.f;
+            }
+        } break;
+        case GW::UI::UIMessage::kEffectAdd: {
+            auto packet = (GW::UI::UIPacket::kEffectAdd*)wparam;
+            if (PconAlcohol::suppress_lunar_skills
+                && (packet->effect->skill_id == SkillID::Spiritual_Possession || packet->effect->skill_id == SkillID::Lucky_Aura)) {
+                status->blocked = true;
+            }
+        } break;
+        }
+    }
+}
 
 PconsWindow::PconsWindow()
 {
@@ -146,19 +381,28 @@ void PconsWindow::Initialize()
     ToolboxWindow::Initialize();
     AlcoholWidget::Instance().Initialize(); // Pcons depend on alcohol widget to track current drunk level.
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AddExternalBond>(&AddExternalBond_Entry, &OnAddExternalBond);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry, &OnPostProcessEffect,-0x4000);
+    const GW::UI::UIMessage ui_messages[] = {
+         GW::UI::UIMessage::kAgentSpeechBubble,
+         GW::UI::UIMessage::kVanquishComplete,
+         GW::UI::UIMessage::kDungeonComplete,
+         GW::UI::UIMessage::kMissionComplete,
+         GW::UI::UIMessage::kPostProcessingEffect,
+         GW::UI::UIMessage::kObjectiveComplete,
+         GW::UI::UIMessage::kEffectAdd
+    };
+    for (auto message_id : ui_messages) {
+        GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, message_id, OnUIMessage);
+    }
+
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry, &OnGenericValue);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry, &OnAgentState);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry, &OnSpeechBubble);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry, &OnObjectiveDone);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(&VanquishComplete_Entry, &OnVanquishComplete);
     GW::Chat::CreateCommand(L"pcons", &CmdPcons);
 }
 
 void PconsWindow::Terminate()
 {
     ToolboxWindow::Terminate();
+    GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
     for (Pcon* pcon : pcons) {
         delete pcon;
     }
@@ -173,19 +417,6 @@ void PconsWindow::OnAddExternalBond(GW::HookStatus* status, const GW::Packet::St
         && (pak->skill_id == static_cast<DWORD>(SkillID::Spiritual_Possession) || pak->skill_id == static_cast<DWORD>(SkillID::Lucky_Aura))) {
         // printf("blocked skill %d\n", pak->skill_id);
         status->blocked = true;
-    }
-}
-
-void PconsWindow::OnPostProcessEffect(GW::HookStatus*, GW::Packet::StoC::PostProcess* pak)
-{
-    PconAlcohol::alcohol_level = pak->level;
-    const PconsWindow& instance = Instance();
-    // printf("Level = %d, tint = %d\n", pak->level, pak->tint);
-    if (instance.enabled) {
-        instance.pcon_alcohol->Update();
-    }
-    if (PconAlcohol::suppress_drunk_effect) {
-        pak->level = 0;
     }
 }
 
@@ -218,123 +449,6 @@ void PconsWindow::OnAgentState(GW::HookStatus*, GW::Packet::StoC::AgentState* pa
     if (PconAlcohol::suppress_drunk_emotes && pak->agent_id == GW::Agents::GetObservingId() && pak->state & 0x2000) {
         pak->state ^= 0x2000;
     }
-}
-
-void PconsWindow::OnSpeechBubble(GW::HookStatus* status, const GW::Packet::StoC::SpeechBubble* pak)
-{
-    if (!PconAlcohol::suppress_drunk_text || status->blocked) {
-        return;
-    }
-
-    const wchar_t* m = pak->message;
-    const std::wstring_view msg{m, 4};
-    constexpr std::initializer_list<std::wstring_view> msgs = {
-        L"\x8CA\xA4F7\xF552\xA32",   // i love you man!
-        L"\x8CB\xE20B\x9835\x4C75",  // I'm the king of the world!
-        L"\x8CC\xFA4D\xF068\x393",   // I think I need to sit down
-        L"\x8CD\xF2C2\xBBAD\x1EAD",  // I think I'm gonna be sick
-        L"\x8CE\x85E5\xF726\x68B1",  // Oh no, not again
-        L"\x8CF\xEDD3\xF2B9\x3F34",  // It's spinning...
-        L"\x8D0\xF056\xE7AD\x7EE6",  // Everyone stop shouting!
-        L"\x8101\x6671\xCBF8\xE717", // "BE GONE!"
-        L"\x8101\x6672\xB0D6\xCE2F", // "Soon you will all be crushed."
-        L"\x8101\x6673\xDAA5\xD0A1", // "You are no match for my almighty power."
-        L"\x8101\x6674\x8BF9\x8C19", // "Such fools to think you can attack me here. Come closer so you can see the face of your doom!"
-        L"\x8101\x6675\x996D\x87BA", // "No one can stop me, let alone you puny mortals!"
-        L"\x8101\x6676\xBAFA\x8E15", // "You are messing with affairs that are beyond your comprehension. Leave now and I may let you live!"
-        L"\x8101\x6677\xA186\xF84C", // "His blood has blocked = trueed me to my mortal body."
-        L"\x8101\x6678\xD2ED\xE693", // "I have blocked = trueed!"
-        L"\x8101\x6679\xA546\xF24A", // "Abaddon will feast on your eyes!"
-        L"\x8101\x667A\xB477\xA79A", // "Abaddon's sword has been drawn. He sends me back to you with tokens of renewed power!"
-        L"\x8101\x667B\x8FBB\xC739", // "Are you the Keymaster?"
-        L"\x8101\x667C\xFE50\xC173", // "Human sacrifice. Dogs and cats living together. Mass hysteria!"
-        L"\x8101\x667D\xBBC6\xAC9E", // "Take me now, subcreature."'
-        L"\x8101\x667E\xCD71\xDEE3", // "We must prepare for the coming of Banjo the Clown, God of Puppets."
-        L"\x8101\x667F\xE823\x9435", // "This house is clean."
-        L"\x8101\x6680\x82FC\xDCEC",
-        L"\x8101\x6681\xC86C\xB975", // "Mommy? Where are you? I can't find you. I can't. I'm afraid of the light, mommy. I'm afraid of the light."
-        L"\x8101\x6682\xE586\x9311", // "Get away from my baby!"
-        L"\x8101\x6683\xA949\xE643", // "This house has many hearts."'
-        L"\x8101\x6684\xB765\x93F1", // "As a boy I spent much time in these lands."
-        L"\x8101\x6685\xEDE0\xAF1D", // "I see dead people."
-        L"\x8101\x6686\xD356\xDC69", // "Do you like my fish balloon? Can you hear it singing to you...?"
-        L"\x8101\x6687\xEA3C\x96F0", // "4...Itchy...Tasty..."
-        L"\x8101\x6688\xCBDD\xB1CF", // "Gracious me, was I raving? Please forgive me. I'm mad."
-        L"\x8101\x6689\xE770\xEEA4", // "Keep away. The sow is mine."
-        L"\x8101\x668A\x885F\xE61D", // "All is well. I'm not insane."
-        L"\x8101\x668B\xCCDD\x88AA", // "I like how they've decorated this place. The talking lights are a nice touch."
-        L"\x8101\x668C\x8873\x9A16", // "There's a reason there's a festival ticket in my ear. I'm trying to lure the evil spirits out of my head."
-        L"\x8101\x668D\xAF68\xF84A", // "And this is where I met the Lich. He told me to burn things."
-        L"\x8101\x668E\xFE43\x9CB3", // "When I grow up, I want to be a principal or a caterpillar."
-        L"\x8101\x668F\xDAFF\x903E", // "Oh boy, sleep! That's where I'm a Luxon."
-        L"\x8101\x6690\xA1F5\xD15F", // "My cat's breath smells like cat food."
-        L"\x8101\x6691\xAE54\x8EC6", // "My cat's name is Mittens."
-        L"\x8101\x6692\xDFBB\xD674", // "Then the healer told me that BOTH my eyes were lazy. And that's why it was the best summer ever!"
-        L"\x8101\x6693\xAC9F\xDCBE", // "Go, banana!"
-        L"\x8101\x6694\x9ACA\xC746", // "It's a trick. Get an axe."
-        L"\x8101\x6695\x8ED8\xD572", // "Klaatu...barada...necktie?"
-        L"\x8101\x6696\xE883\xFED7", // "You're disgusting, but I love you!"
-        L"\x8101\x68BA\xA875\xA785", // "Cross over, children. All are welcome. All welcome. Go into the light. There is peace and serenity in the light."
-        L"\x8102\x4939\xD402\x99F3", // start grog messages
-        L"\x1FAA\xD6B1\x8599\x7B2D",
-        L"\x1FB2\xD54E\x9029\x151A",
-        L"\x1FAB\xFCDD\xA466\x3243",
-        L"\x1FB3\xB822\xF276\x2B0C",
-        L"\x1FAC\xBC27\xAC6B\x32C2",
-        L"\x1FAD\xA6B8\xC903\x5EAE",
-        L"\x8102\x4918\xCA53\xE82F",
-        L"\x1FB4\xFF89\xC048\x17A6",
-        L"\x1FB5\xE225\x97D1\x122C",
-        L"\x1FAE\xD24E\x9E99\x6D3 ",
-        L"\x8102\x491A\x9B62\xF12C",
-        L"\x1FAF\x8265\xD9B0\x300D",
-        L"\x1FB6\xBD6A\x88D1\x4F59",
-        L"\x8102\x493B\x96C7\x8B03",
-        L"\x8102\x4929\xA216\xC64B",
-        L"\x8103\xAC8\xD5E7\x951E",
-        L"\x8103\xA6C\xDAFC\xDC30",
-        L"\x8102\x4916\x9FC6\x913A",
-        L"\x8102\x4930\xEB29\xA9A1",
-        L"\x8102\x4938\xC1E8\xC1E7",
-        L"\x8102\x4932\x8516\xBF4C",
-        L"\x8102\x4936\xB245\xCA89",
-        L"\x8102\x4942\xA195\xF718",
-        L"\x8102\x4927\x8AA7\xD5AB",
-        L"\x8102\x492F\xA315\x9062",
-        L"\x8103\xA90\xD7A3\x9B78",
-        L"\x8102\x4933\x82F9\xEE62",
-        L"\x8102\x492D\xAE7F\x9205",
-        L"\x8102\x4924\x9EED\xED02",
-        L"\x8102\x4931\xEA9D\xD3D5",
-        L"\x8102\x4921\xA36D\xCE7A",
-        L"\x8102\x4937\xACEA\x8B90",
-        L"\x8102\x4928\xC8E9\x8953", // the ship, it's spinning
-        L"\x8102\x4919\xBC36\xB446",
-        L"\x8102\x492B\xC39F\xD6FA",
-        L"\x8102\x4923\xAA60\x9F98", // end grog messages
-    };
-    if (std::ranges::contains(msgs, msg)) {
-        status->blocked = true;
-    }
-
-    // printf("\\x%X\\x%X\\x%X\\x%X\n", m[0], m[1], m[2], m[3]);
-}
-
-void PconsWindow::OnObjectiveDone(GW::HookStatus*, const GW::Packet::StoC::ObjectiveDone* packet)
-{
-    PconsWindow& instance = Instance();
-    instance.objectives_complete.push_back(packet->objective_id);
-    instance.CheckObjectivesCompleteAutoDisable();
-}
-
-void PconsWindow::OnVanquishComplete(GW::HookStatus*, GW::Packet::StoC::VanquishComplete*)
-{
-    PconsWindow& instance = Instance();
-    if (!instance.disable_cons_on_vanquish_completion || !instance.enabled) {
-        return;
-    }
-    instance.SetEnabled(false);
-    Log::Flash("Cons auto-disabled on completion");
 }
 
 void CHAT_CMD_FUNC(PconsWindow::CmdPcons) {
@@ -539,6 +653,7 @@ bool PconsWindow::GetEnabled() const
     return enabled;
 }
 
+void PconsWindow::ToggleEnable() { SetEnabled(!enabled); }
 bool PconsWindow::SetEnabled(const bool b)
 {
     if (enabled == b) {
@@ -606,30 +721,7 @@ void PconsWindow::DrawLunarsAndAlcoholSettings()
     ImGui::Unindent();
 }
 
-void PconsWindow::CheckObjectivesCompleteAutoDisable()
-{
-    if (!enabled || elite_area_disable_triggered || instance_type != InstanceType::Explorable) {
-        return; // Pcons disabled, auto disable already triggered, or not in explorable area.
-    }
-    if (!disable_cons_on_objective_completion || objectives_complete.empty() || current_objectives_to_check.empty()) {
-        return; // No objectives complete, or no objectives to check for this map.
-    }
-    bool objective_complete = false;
-    for (size_t i = 0; i < current_objectives_to_check.size(); i++) {
-        objective_complete = false;
-        for (size_t j = 0; j < objectives_complete.size() && !objective_complete; j++) {
-            objective_complete = current_objectives_to_check.at(i) == objectives_complete.at(j);
-        }
-        if (!objective_complete) {
-            return; // Not all objectives complete.
-        }
-    }
-    if (objective_complete) {
-        elite_area_disable_triggered = true;
-        SetEnabled(false);
-        Log::Flash("Cons auto-disabled on completion");
-    }
-}
+
 
 void PconsWindow::CheckBossRangeAutoDisable()
 {
@@ -681,6 +773,8 @@ void PconsWindow::LoadSettings(ToolboxIni* ini)
 
     LOAD_BOOL(disable_pcons_on_map_change);
     LOAD_BOOL(disable_cons_on_vanquish_completion);
+    LOAD_BOOL(disable_cons_on_dungeon_completion);
+    LOAD_BOOL(disable_cons_on_mission_completion);
     LOAD_BOOL(disable_cons_in_final_room);
     LOAD_BOOL(disable_cons_on_objective_completion);
 
@@ -736,6 +830,8 @@ void PconsWindow::SaveSettings(ToolboxIni* ini)
 
     SAVE_BOOL(disable_pcons_on_map_change);
     SAVE_BOOL(disable_cons_on_vanquish_completion);
+    SAVE_BOOL(disable_cons_on_dungeon_completion);
+    SAVE_BOOL(disable_cons_on_mission_completion);
     SAVE_BOOL(disable_cons_in_final_room);
     SAVE_BOOL(disable_cons_on_objective_completion);
 
@@ -838,6 +934,10 @@ void PconsWindow::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Auto Disable on Vanquish completion", &disable_cons_on_vanquish_completion);
     ImGui::ShowHelp(disable_cons_on_vanquish_completion_hint);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Auto Disable on Dungeon completion", &disable_cons_on_dungeon_completion);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Auto Disable on Mission completion", &disable_cons_on_mission_completion);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Auto Disable in final room of Urgoz/Deep", &disable_cons_in_final_room);
     ImGui::ShowHelp(disable_cons_in_final_room_hint);
