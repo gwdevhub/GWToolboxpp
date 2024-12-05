@@ -325,38 +325,39 @@ namespace TextUtils {
         return out;
     }
 
-    std::wstring SanitizePlayerName(const std::wstring_view str)
-    {
-        // e.g. "Player Name (2)" => "Player Name", for pvp player names
-        // e.g. "Player Name [TAG]" = >"Player Name", for alliance message sender name
-        wchar_t out[64]{};
-        size_t len = 0;
+    std::string SanitizePlayerName(const std::string_view str) {
+        return WStringToString(SanitizePlayerName(StringToWString(str)));
+    }
+
+    std::wstring SanitizePlayerName(const std::wstring_view str) {
+        std::wstring result;
         wchar_t remove_char_token = 0;
+
         for (const auto& wchar : str) {
             if (remove_char_token) {
                 if (wchar == remove_char_token) {
-                    remove_char_token = 0;
+                    remove_char_token = 0;  // End removal mode if closing character is found
+                }
+                continue;  // Skip characters inside the brackets/parentheses
+            }
+            if (wchar == L'[') {
+                remove_char_token = L']';  // Set to skip until the closing bracket
+                if (!result.empty()) {
+                    result.pop_back();  // Remove the space before the opening bracket if needed
                 }
                 continue;
             }
-            if (wchar == '[') {
-                remove_char_token = ']';
-                if (len > 0) {
-                    len--;
+            if (wchar == L'(') {
+                remove_char_token = L')';  // Set to skip until the closing parenthesis
+                if (!result.empty()) {
+                    result.pop_back();
                 }
                 continue;
             }
-            if (wchar == '(') {
-                remove_char_token = ')';
-                if (len > 0) {
-                    len--;
-                }
-                continue;
-            }
-            out[len++] = wchar;
+            result.push_back(wchar);  // Add valid character to result
         }
-        out[len] = 0;
-        return {out};
+
+        return result;
     }
 
     // Extract first unencoded substring from gw encoded string. Pass second and third args to know where the player name was found in the original string.
@@ -477,5 +478,65 @@ namespace TextUtils {
     size_t TimeToString(const FILETIME utc_timestamp, std::string& out)
     {
         return TimeToString(filetime_to_timet(utc_timestamp), out);
+    }
+
+    std::vector<std::string> Split(const std::string& in, const std::string& token) {
+        std::vector<std::string> result;
+        size_t start = 0;
+        size_t pos = 0;
+
+        while ((pos = in.find(token, start)) != std::string::npos) {
+            std::string part = in.substr(start, pos - start);
+            if (!part.empty()) {  // Skip empty substrings
+                result.push_back(part);
+            }
+            start = pos + token.length();
+        }
+
+        // Add the last remaining part if it's not empty
+        std::string lastPart = in.substr(start);
+        if (!lastPart.empty()) {
+            result.push_back(lastPart);
+        }
+
+        return result;
+    }
+    std::string Join(const std::vector<std::string>& parts, const std::string& token) {
+        std::string result;
+        bool first = true;  // Track if it's the first valid part
+
+        for (const auto& part : parts) {
+            if (!part.empty()) {
+                if (!first) {
+                    result += token;  // Add the delimiter before non-first parts
+                }
+                result += part;
+                first = false;  // Switch after adding the first valid part
+            }
+        }
+
+        return result;
+    }
+
+    std::string UcWords(const std::string_view input) {
+#pragma warning(push)
+#pragma warning(disable : 4244)
+        std::string result(input);  // Create a copy of the input
+        bool capitalizeNext = true;
+
+        for (size_t i = 0; i < result.length(); ++i) {
+            if (std::isspace(static_cast<unsigned char>(result[i]))) {
+                capitalizeNext = true;  // Set flag to capitalize next letter after space
+            }
+            else if (capitalizeNext && std::isalpha(static_cast<unsigned char>(result[i]))) {
+                result[i] = std::toupper(static_cast<unsigned char>(result[i]));
+                capitalizeNext = false; // Reset flag after capitalization
+            }
+            else {
+                result[i] = std::tolower(static_cast<unsigned char>(result[i])); // Ensure other characters are lowercase
+            }
+        }
+#pragma warning(pop)
+        return result;  // Return the modified string
     }
 }

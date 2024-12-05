@@ -20,7 +20,8 @@ namespace TextUtils {
     std::wstring ToLower(std::wstring s);
     std::wstring RemoveDiacritics(std::wstring_view s);
 
-    std::wstring SanitizePlayerName(std::wstring_view str);
+    std::wstring SanitizePlayerName(const std::wstring_view str);
+    std::string SanitizePlayerName(const std::string_view str);
     std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out = nullptr, const wchar_t** end_pos_out = nullptr);
 
     bool ParseInt(const char* str, int* val, int base = 10);
@@ -33,4 +34,10 @@ namespace TextUtils {
     size_t TimeToString(time_t utc_timestamp, std::string& out);
     size_t TimeToString(uint32_t utc_timestamp, std::string& out);
     size_t TimeToString(FILETIME utc_timestamp, std::string& out);
+    std::vector<std::string> Split(const std::string& in, const std::string& token);
+    // Turn and array of strings into a single string
+    std::string Join(const std::vector<std::string>& parts, const std::string& token);
+    // Capitalise the first letter of each word. Replaces original.
+    std::string UcWords(const std::string_view input);
+
 }

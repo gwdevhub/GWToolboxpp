@@ -56,9 +56,9 @@ public:
     bool can_trigger_on_map_change = true;     // Some hotkeys cant trigger on map change e.g. Guild Wars Key
 
     std::vector<uint32_t> map_ids{};
+    std::vector<std::string> player_names{};
     bool prof_ids[11]{};
     int instance_type = -1;
-    char player_name[20] = "";
     uint32_t in_range_of_npc_id = 0;
     float in_range_of_distance = 0.f;
 

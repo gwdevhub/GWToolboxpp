@@ -154,10 +154,12 @@ namespace {
                 by_instance_type[hotkey->instance_type] = std::vector<TBHotkey*>();
             }
             by_instance_type[hotkey->instance_type].push_back(hotkey);
-            if (!by_player_name.contains(hotkey->player_name)) {
-                by_player_name[hotkey->player_name] = std::vector<TBHotkey*>();
+            for (const auto& h_player_name : hotkey->player_names) {
+                if (!by_player_name.contains(h_player_name)) {
+                    by_player_name[h_player_name] = std::vector<TBHotkey*>();
+                }
+                by_player_name[player_name].push_back(hotkey);
             }
-            by_player_name[hotkey->player_name].push_back(hotkey);
             if (!by_group.contains(hotkey->group)) {
                 by_group[hotkey->group] = std::vector<TBHotkey*>();
             }

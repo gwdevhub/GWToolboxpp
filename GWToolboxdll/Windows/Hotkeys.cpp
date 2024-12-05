@@ -25,6 +25,7 @@
 #include <Keys.h>
 #include <Logger.h>
 
+#include <Modules/Resources.h>
 #include <Modules/DialogModule.h>
 #include <Windows/BuildsWindow.h>
 #include <Windows/HeroBuildsWindow.h>
@@ -209,11 +210,11 @@ TBHotkey::TBHotkey(const ToolboxIni* ini, const char* section)
 
         in_range_of_distance = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(in_range_of_distance), in_range_of_distance));
         in_range_of_npc_id = ini->GetLongValue(section, VAR_NAME(in_range_of_npc_id), in_range_of_npc_id);
+        player_names = TextUtils::Split(ini->GetValue(section, VAR_NAME(player_names), ""), ",");
+        // Legacy value
         const std::string player_name_s = ini->GetValue(section, VAR_NAME(player_name), "");
-        memset(player_name, 0, sizeof(player_name));
-        if (!player_name_s.empty()) {
-            strncpy(player_name, player_name_s.c_str(), _countof(player_name));
-        }
+        if (!player_name_s.empty())
+            player_names.push_back(player_name_s);
     }
 }
 
@@ -235,7 +236,7 @@ bool TBHotkey::IsValid(const char* _player_name, const GW::Constants::InstanceTy
            && (instance_type == -1 || static_cast<GW::Constants::InstanceType>(instance_type) == _instance_type)
            && (prof_ids[static_cast<size_t>(_profession)] || !HasProfession())
            && (map_ids.empty() || std::ranges::contains(map_ids, std::to_underlying(_map_id)))
-           && (!player_name[0] || strcmp(_player_name, player_name) == 0);
+           && (player_names.empty() || std::ranges::contains(player_names, _player_name));
 }
 
 bool TBHotkey::CanUse()
@@ -264,7 +265,8 @@ void TBHotkey::Save(ToolboxIni* ini, const char* section) const
         trigger_on_key_up);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_lose_focus), trigger_on_lose_focus);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_gain_focus), trigger_on_gain_focus);
-    ini->SetValue(section, VAR_NAME(player_name), player_name);
+
+    ini->SetValue(section, VAR_NAME(player_names), TextUtils::Join(player_names, ",").c_str());
     ini->SetValue(section, VAR_NAME(group), group);
 
     std::string out;
@@ -367,18 +369,23 @@ bool TBHotkey::Draw(Op* op)
     }
     switch (map_ids.size()) {
         case 1:
-            if (map_ids[0] < GW::Constants::NAME_FROM_ID.size()) {
-                written += snprintf(&header[written], _countof(header) - written, " [%s]", GW::Constants::NAME_FROM_ID[map_ids[0]]);
-            }
-            else {
-                written += snprintf(&header[written], _countof(header) - written, " [Map %d]", map_ids[0]);
-            }
+            written += snprintf(&header[written], _countof(header) - written, " [%s]", Resources::GetMapName((GW::Constants::MapID)map_ids[0])->string().c_str());
             break;
         case 0:
             break;
         default:
             written += snprintf(&header[written], _countof(header) - written, " [%d Maps]", map_ids.size());
             break;
+    }
+    switch (player_names.size()) {
+    case 1:
+        written += snprintf(&header[written], _countof(header) - written, " [%s]", player_names[0].c_str());
+        break;
+    case 0:
+        break;
+    default:
+        written += snprintf(&header[written], _countof(header) - written, " [%d Chars]", player_names.size());
+        break;
     }
 
     ASSERT(ModKeyName(keybuf, _countof(keybuf), modifier, hotkey, "<None>") != -1);
@@ -445,21 +452,30 @@ bool TBHotkey::Draw(Op* op)
             instance_type = 1;
             hotkey_changed = true;
         }
-        if (ImGui::CollapsingHeader("Map IDs")) {
+        ImGui::PushItemWidth(60.0f * scale);
+        ImGui::Text("Only use this within ");
+        ImGui::SameLine(0, 0);
+        hotkey_changed |= ImGui::InputFloat("##in_range_of_distance", &in_range_of_distance, 0.f, 0.f, "%.0f");
+        ImGui::SameLine(0, 0);
+        ImGui::Text(" gwinches of NPC Id: ");
+        ImGui::SameLine(0, 0);
+        hotkey_changed |= ImGui::InputInt("###in_range_of_npc_id", (int*)&in_range_of_npc_id, 0, 0);
+        ImGui::PopItemWidth();
+        ImGui::ShowHelp("Only trigger when in range of a certain NPC");
+
+        const auto map_ids_header = std::format("Map IDs ({})###map_ids", map_ids.size());
+        if (ImGui::CollapsingHeader(map_ids_header.c_str())) {
             ImGui::Indent();
 
             ImGui::TextDisabled("Only trigger in selected maps:");
-            const float map_id_w = 140.f * scale;
-            if (map_ids.empty()) {
-                ImGui::Text("    This hotkey will trigger in any map - add a map ID below to limit to a map");
-            }
-            for (int i = 0; i < static_cast<int>(map_ids.size()); i++) {
-                ImGui::PushID(i);
-                ImGui::Text("%d", map_ids[i]);
+            const float map_id_w = 200.f * scale;
+            ImGui::Indent();
+            for (auto it = map_ids.begin(); !hotkey_changed && it != map_ids.end(); it++) {
+                ImGui::PushID(*it);
+                ImGui::Text("%d: %s", *it, Resources::GetMapName((GW::Constants::MapID)*it)->string().c_str());
                 ImGui::SameLine(indent_offset + map_id_w);
                 if (ImGui::Button("X")) {
-                    map_ids.erase(map_ids.begin() + i);
-                    i--;
+                    map_ids.erase(it);
                     hotkey_changed = true;
                 }
                 ImGui::PopID();
@@ -467,27 +483,22 @@ bool TBHotkey::Draw(Op* op)
 
             static char map_id_input_buf[4];
             ImGui::Separator();
-            ImGui::Text("Add Map ID:");
-            ImGui::SameLine();
-            ImGui::PushItemWidth(map_id_w);
-            bool add_map_id = ImGui::InputText("##add_map_id", map_id_input_buf, _countof(map_id_input_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue);
-            ImGui::PopItemWidth();
-            ImGui::SameLine();
-            add_map_id |= ImGui::Button("Add##add_map_id_for_hotkey", {64.f * scale, 0.f});
+            bool add_map_id = ImGui::InputTextWithHint("###add_map_id", "Add Map ID", map_id_input_buf, _countof(map_id_input_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue);
             if (add_map_id) {
                 uint32_t map_id_out;
-                if (strlen(map_id_input_buf)
-                    && TextUtils::ParseUInt(map_id_input_buf, &map_id_out)
-                    && !std::ranges::contains(map_ids, reinterpret_cast<uint32_t>(map_id_input_buf))) {
-                    map_ids.push_back(map_id_out);
+                if (*map_id_input_buf 
+                    && TextUtils::ParseUInt(map_id_input_buf, &map_id_out)) {
+                    if (!std::ranges::contains(map_ids, reinterpret_cast<uint32_t>(map_id_input_buf))) {
+                        map_ids.push_back(map_id_out);
+                        hotkey_changed = true;
+                    }
                     memset(map_id_input_buf, 0, sizeof(map_id_input_buf));
-                    hotkey_changed = true;
                 }
             }
             ImGui::Unindent();
         }
-
-        if (ImGui::CollapsingHeader("Professions")) {
+        const auto professions_header = std::format("Professions ({})###professions", std::count(&prof_ids[0], &prof_ids[_countof(prof_ids) - 1], true));
+        if (ImGui::CollapsingHeader(professions_header.c_str())) {
             ImGui::Indent();
             const float prof_w = 140.f * scale;
             const int per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / prof_w));
@@ -501,19 +512,37 @@ bool TBHotkey::Draw(Op* op)
             }
             ImGui::Unindent();
         }
+        const auto character_names_header = std::format("Character Names ({})###character_names", player_names.size());
+        if (ImGui::CollapsingHeader(character_names_header.c_str())) {
+            ImGui::Indent();
 
-        ImGui::PushItemWidth(60.0f * scale);
-        ImGui::Text("Only use this within ");
-        ImGui::SameLine(0, 0);
-        hotkey_changed |= ImGui::InputFloat("##in_range_of_distance", &in_range_of_distance, 0.f, 0.f, "%.0f");
-        ImGui::SameLine(0, 0);
-        ImGui::Text(" gwinches of NPC Id: ");
-        ImGui::SameLine(0, 0);
-        hotkey_changed |= ImGui::InputInt("##in_range_of_npc_id", (int*)&in_range_of_npc_id, 0, 0);
-        ImGui::PopItemWidth();
-        ImGui::ShowHelp("Only trigger when in range of a certain NPC");
-        hotkey_changed |= ImGui::InputTextEx("Character Name##hotkey_player_name", "Any Character Name", player_name, sizeof(player_name), ImVec2(0, 0), 0, nullptr, nullptr);
-        ImGui::ShowHelp("Only trigger for this character name (leave blank for any character name)");
+            ImGui::TextDisabled("Only trigger for the following player names:");
+            const float map_id_w = 200.f * scale;
+            ImGui::Indent();
+            for(auto it = player_names.begin();!hotkey_changed && it != player_names.end();it++) {
+                ImGui::PushID(it->data());
+                ImGui::TextUnformatted(it->c_str());
+                ImGui::SameLine(indent_offset + map_id_w);
+                if (ImGui::Button("X")) {
+                    player_names.erase(it);
+                    hotkey_changed = true;
+                }
+                ImGui::PopID();
+            }
+            ImGui::Unindent();
+            static char player_name_input_buf[20];
+            ImGui::Separator();
+            bool add_player_name = ImGui::InputTextWithHint("###player_name_input_buf", "Add Player Name",player_name_input_buf, _countof(player_name_input_buf), ImGuiInputTextFlags_EnterReturnsTrue);
+            if (add_player_name && *player_name_input_buf) {
+                const auto sanitised = TextUtils::UcWords(player_name_input_buf);
+                if (!std::ranges::contains(player_names, sanitised)) {
+                    player_names.push_back(sanitised);
+                    hotkey_changed = true;
+                }
+                memset(player_name_input_buf, 0, sizeof(player_name_input_buf));
+            }
+            ImGui::Unindent();
+        }
 
         ImGui::Separator();
         hotkey_changed |= ImGui::Checkbox("###active", &active);
