@@ -219,21 +219,20 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             if (ImGui::Button("Add Teambuild from current", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 auto tb = TeamHeroBuild("");
                 tb.edit_open = true;
+                GW::SkillbarMgr::SkillTemplate skill_template;
                 for (auto i = 0u; i < 8; i++) {
-                    const auto skill_template = GW::SkillbarMgr::GetSkillTemplate(i);
+                    if (!GW::SkillbarMgr::GetSkillTemplate(i, skill_template))
+                        continue;
                     char buf[BUFFER_SIZE]{};
-                    GW::SkillbarMgr::EncodeSkillTemplate(skill_template, buf, BUFFER_SIZE);
-                    constexpr std::string_view empty_code = "OAAAAAAAAAAAAAAA";
+                    if (!GW::SkillbarMgr::EncodeSkillTemplate(skill_template, buf, BUFFER_SIZE))
+                        continue;
                     const auto party_info = GW::PartyMgr::GetPartyInfo();
                     const auto hero_id = party_info && party_info->heroes.size() > i - 1 ? party_info->heroes[i - 1].hero_id : HeroID::NoHero;
                     const auto it = std::ranges::find_if(HeroIndexToID, [hero_id](const auto& p) { return p == hero_id; });
                     const GW::HeroFlag* flag = GetHeroFlagInfo(hero_id);
                     if (it != HeroIndexToID.end()) {
                         const auto hero_idx = std::distance(HeroIndexToID.begin(), it);
-                        tb.builds[i] = HeroBuild("", empty_code != buf ? buf : "", hero_idx, 0, static_cast<uint32_t>(flag ? flag->hero_behavior : GW::HeroBehavior::Guard));
-                    }
-                    else {
-                        tb.builds[i] = HeroBuild("", empty_code != buf ? buf : "");
+                        tb.builds[i] = HeroBuild("", buf, hero_idx, 0, static_cast<uint32_t>(flag ? flag->hero_behavior : GW::HeroBehavior::Guard));
                     }
                 }
 
@@ -631,7 +630,7 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, const size_t idx)
         // Player
         // note: build.hero_index should be -1
         if (!code.empty()) {
-            GW::SkillbarMgr::LoadSkillTemplate(build.code);
+            GW::SkillbarMgr::LoadSkillTemplate(GW::Agents::GetControlledCharacterId(),build.code);
         }
     }
     else if (build.hero_index > 0) {
@@ -867,7 +866,7 @@ bool HeroBuildsWindow::CodeOnHero::Process()
             }
             if (code[0]) // Build optional
             {
-                GW::SkillbarMgr::LoadSkillTemplate(code, party_hero_index);
+                GW::SkillbarMgr::LoadSkillTemplate(hero->agent_id, code);
             }
             if (show_panel) {
                 SendUIMessage(GW::UI::UIMessage::kShowHeroPanel, (void*)heroid);

@@ -2429,7 +2429,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdLoad)
         temp[len] = 0;
     }
     if (argc == 2) {
-        GW::SkillbarMgr::LoadSkillTemplate(temp);
+        GW::SkillbarMgr::LoadSkillTemplate(GW::Agents::GetControlledCharacterId(), temp);
     }
     else if (argc == 3) {
         uint32_t ihero_number;
@@ -2437,7 +2437,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdLoad)
             // @Robustness:
             // Check that the number is actually valid or make sure LoadSkillTemplate is safe
             if (0 < ihero_number && ihero_number <= 8) {
-                GW::SkillbarMgr::LoadSkillTemplate(temp, ihero_number);
+                GW::SkillbarMgr::LoadSkillTemplate(GW::Agents::GetHeroAgentID(ihero_number), temp);
             }
         }
     }
@@ -2479,7 +2479,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdPingBuild)
 
         // If template file does not exist, skip
         GW::SkillbarMgr::SkillTemplate skill_template{};
-        if (!DecodeSkillTemplate(&skill_template, temp)) {
+        if (!DecodeSkillTemplate(skill_template, temp)) {
             continue;
         }
 

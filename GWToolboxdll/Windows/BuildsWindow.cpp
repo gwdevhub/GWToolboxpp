@@ -41,7 +41,7 @@ BuildsWindow::Build::Build(const char* n, const char* c)
 
 const GW::SkillbarMgr::SkillTemplate* BuildsWindow::Build::decode()
 {
-    if (!decoded() && !DecodeSkillTemplate(&skill_template, code)) {
+    if (!decoded() && !DecodeSkillTemplate(skill_template, code)) {
         skill_template.primary = skill_template.secondary = GW::Constants::Profession::None;
     }
     return decoded() ? &skill_template : nullptr;
@@ -537,7 +537,7 @@ void BuildsWindow::DrawPreferredSkillOrders(IDirect3DDevice9*)
 const char* BuildsWindow::AddPreferredBuild(const char* code)
 {
     GW::SkillbarMgr::SkillTemplate templ;
-    if (!DecodeSkillTemplate(&templ, code)) {
+    if (!DecodeSkillTemplate(templ, code)) {
         return "Failed to decode skill template from build code";
     }
     size_t found = 0;
@@ -554,8 +554,9 @@ bool BuildsWindow::GetCurrentSkillBar(char* out, const size_t out_len)
     if (!(out && out_len)) {
         return false;
     }
-    auto templ = GW::SkillbarMgr::GetSkillTemplate();
-    return EncodeSkillTemplate(templ, out, out_len) && DecodeSkillTemplate(&templ, out);
+    GW::SkillbarMgr::SkillTemplate skill_template;
+    return GetSkillTemplate(GW::Agents::GetControlledCharacterId(), skill_template)
+        && EncodeSkillTemplate(skill_template, out, out_len) && DecodeSkillTemplate(skill_template, out);
 }
 
 const char* BuildsWindow::BuildName(const unsigned int idx) const
@@ -633,7 +634,7 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name)
     }
     GW::SkillbarMgr::SkillTemplate t;
     const auto prof = static_cast<GW::Constants::Profession>(GW::Agents::GetControlledCharacter()->primary);
-    const bool is_skill_template = DecodeSkillTemplate(&t, build_name);
+    const bool is_skill_template = DecodeSkillTemplate(t, build_name);
     if (is_skill_template && t.primary != prof) {
         Log::Error("Invalid profession for %s (%s)", build_name, GetProfessionAcronym(t.primary));
         return;
@@ -665,7 +666,7 @@ void BuildsWindow::Load(const char* tbuild_name, const char* build_name)
                     continue;
                 }
                 GW::SkillbarMgr::SkillTemplate bt;
-                if (!DecodeSkillTemplate(&bt, tb.builds[i].code)) {
+                if (!DecodeSkillTemplate(bt, tb.builds[i].code)) {
                     continue; // Invalid build code
                 }
                 if (bt.primary != prof) {

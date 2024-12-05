@@ -105,7 +105,7 @@ namespace GuiUtils {
 
     void DrawSkillbar(const char* build_code) {
         GW::SkillbarMgr::SkillTemplate skill_template;
-        if (!GW::SkillbarMgr::DecodeSkillTemplate(&skill_template, build_code))
+        if (!GW::SkillbarMgr::DecodeSkillTemplate(skill_template, build_code))
             return;
 
         const float text_size = ImGui::CalcTextSize(" ").y;
@@ -115,17 +115,17 @@ namespace GuiUtils {
         std::string attributes_str;
 
         size_t cnt = 0;
-        for (auto& attribute : skill_template.attributes) {
-            if (!attribute.points)
+        for(size_t i=0;i<_countof(skill_template.attribute_values);i++) {
+            if (!skill_template.attribute_values[i])
                 continue;
-            const auto attribute_data = GetAttributeInfo(attribute.attribute);
+            const auto attribute_data = GetAttributeInfo(skill_template.attribute_ids[i]);
             const auto attribute_str = Resources::DecodeStringId(attribute_data.name_id)->string().c_str();
             if (!attributes_str.empty())
                 attributes_str += ", ";
             if (cnt > 0 && (cnt % 2) == 0) {
                 attributes_str += "\n";
             }
-            attributes_str += std::format("{} {}", attribute_str, attribute.points);
+            attributes_str += std::format("{} {}", attribute_str, skill_template.attribute_values[i]);
             cnt++;
         }
         ImGui::TextUnformatted(attributes_str.c_str());
