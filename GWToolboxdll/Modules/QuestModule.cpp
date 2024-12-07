@@ -43,6 +43,7 @@ namespace {
     bool show_paths_to_all_quests = false;
     GW::HookEntry pre_ui_message_entry;
     GW::HookEntry post_ui_message_entry;
+    bool initialised = false;
 
     GW::Constants::QuestID custom_quest_id = (GW::Constants::QuestID)0x0000fdd;
     GW::Quest custom_quest_marker;
@@ -433,6 +434,7 @@ const GW::Quest* QuestModule::GetCustomQuestMarker() {
 
 void QuestModule::SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_active)
 {
+    Instance().Initialize();
     if (!GW::Agents::GetControlledCharacter())
         return; // Map not ready
     custom_quest_marker_world_pos = world_pos;
@@ -590,6 +592,9 @@ void QuestModule::SaveSettings(ToolboxIni* ini)
 
 void QuestModule::Initialize()
 {
+    if (initialised)
+        return;
+    initialised = true;
     ToolboxModule::Initialize();
 
     memset(&custom_quest_marker, 0, sizeof(custom_quest_marker));
@@ -630,6 +635,7 @@ void QuestModule::Initialize()
 
 void QuestModule::EmulateQuestSelected(GW::Constants::QuestID quest_id)
 {
+    Instance().Initialize();
     const auto quest = GW::QuestMgr::GetQuest(quest_id);
     if (!quest)
         return;
@@ -687,6 +693,7 @@ bool QuestModule::CanTerminate()
 void QuestModule::Terminate()
 {
     ToolboxModule::Terminate();
+    initialised = false;
 }
 
 QuestObjective::QuestObjective(GW::Constants::QuestID quest_id, const wchar_t* _objective_enc, bool is_completed)
