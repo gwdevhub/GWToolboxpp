@@ -240,6 +240,10 @@ namespace {
 
     bool minimap_enabled = false;
 
+    bool is_right_clicking = false;
+    bool mouse_moved_whilst_right_clicking = false;
+    LPARAM right_click_lparam;
+
     enum class GWToolboxState {
         Initialising,
         UpdateInitialising,
@@ -511,11 +515,23 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
         return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
     }
 
+    const auto& io = ImGui::GetIO();
+
+    auto& tb = GWToolbox::Instance();
+
     if (Message == WM_RBUTTONUP) {
+        if (right_mouse_down && !mouse_moved_whilst_right_clicking && !io.WantCaptureMouse) {
+            for (const auto m : tb.GetAllModules()) {
+                m->WndProc(WM_GW_RBUTTONCLICK, 0, right_click_lparam);
+            }
+        }
+        mouse_moved_whilst_right_clicking = 0;
         right_mouse_down = false;
     }
     if (Message == WM_RBUTTONDOWN) {
         right_mouse_down = true;
+        right_click_lparam = lParam;
+        mouse_moved_whilst_right_clicking = 0;
     }
     if (Message == WM_RBUTTONDBLCLK) {
         right_mouse_down = true;
@@ -524,13 +540,20 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
     GWToolbox::Instance().right_mouse_down = right_mouse_down;
 
     // === Send events to ImGui ===
-    const auto& io = ImGui::GetIO();
+
     const bool skip_mouse_capture = right_mouse_down || GW::UI::GetIsWorldMapShowing() || GW::Map::GetIsInCinematic();
     if (ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam) && !skip_mouse_capture)
         return TRUE;
 
     // === Send events to toolbox ===
-    auto& tb = GWToolbox::Instance();
+
+    /* GW Deliberately makes a WM_MOUSEMOVE event right after right button is pressed.
+        Does this to "hide" the cursor when looking around.
+
+        To easily send a "rmb clicked" event to toolbox modules, figure the logic out ourselves and send a custom message WM_GW_RBUTTONCLICK
+     */
+
+
     switch (Message) {
         case WM_MOUSELEAVE:
         case WM_NCMOUSELEAVE:
@@ -538,22 +561,34 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
                 ::SetCapture(hWnd);
             break;
         // Send button up mouse events to everything, to avoid being stuck on mouse-down
-        case WM_LBUTTONUP:
-        case WM_RBUTTONUP:
-        case WM_INPUT:
+        case WM_INPUT: {
+            if (right_mouse_down && !mouse_moved_whilst_right_clicking && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam) {
+                UINT dwSize = sizeof(RAWINPUT);
+                BYTE lpb[sizeof(RAWINPUT)];
+                ASSERT(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize);
+
+                const RAWINPUT* raw = (RAWINPUT*)lpb;
+                if ((raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) == 0 && raw->data.mouse.lLastX && raw->data.mouse.lLastY) {
+                    // If its a relative mouse move, process the action
+                    mouse_moved_whilst_right_clicking = 1;
+                }
+            }
+
             for (const auto m : tb.GetAllModules()) {
                 m->WndProc(Message, wParam, lParam);
             }
-            break;
+        } break;
 
         // Other mouse events:
         // - If right mouse down, leave it to gw
         // - ImGui first (above), if WantCaptureMouse that's it
         // - Toolbox module second (e.g.: minimap), if captured, that's it
         // - otherwise pass to gw
+        case WM_RBUTTONDOWN:
+        case WM_LBUTTONUP:
+        case WM_RBUTTONUP:
         case WM_LBUTTONDOWN:
         case WM_LBUTTONDBLCLK:
-        case WM_RBUTTONDOWN:
         case WM_RBUTTONDBLCLK:
         case WM_MOUSEMOVE:
         case WM_MOUSEWHEEL: {

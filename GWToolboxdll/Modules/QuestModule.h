@@ -7,6 +7,7 @@ namespace GW {
     namespace Constants {
         enum class QuestID : uint32_t;
     }
+    struct Quest;
 }
 namespace GuiUtils {
     class EncString;
@@ -59,7 +60,11 @@ public:
     void Terminate() override;
     void SignalTerminate() override;
     void Update(float) override;
+    bool CanTerminate() override;
 
+    static const GW::Quest* GetCustomQuestMarker();
+
+    static void SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_active = false);
     // Fake an action of the user selecting an active quest, without making any server request.
     static void EmulateQuestSelected(GW::Constants::QuestID);
 

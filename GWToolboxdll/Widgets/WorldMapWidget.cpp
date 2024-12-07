@@ -59,17 +59,7 @@ namespace {
     bool world_map_clicking = false;
     GW::Vec2f world_map_click_pos;
 
-    GW::Constants::QuestID custom_quest_id = (GW::Constants::QuestID)0x0000fdd;
-    GW::Quest custom_quest_marker;
-    GW::Vec2f custom_quest_marker_world_pos;
-    GW::Constants::QuestID player_chosen_quest_id = GW::Constants::QuestID::None;
-    bool setting_custom_quest_marker = false;
-
-    const wchar_t* custom_quest_marker_enc_name = L"\x452"; // "Map Travel"
-
     bool show_lines_on_world_map = true;
-
-    bool WorldMapToGamePos(GW::Vec2f& world_map_pos, GW::GamePos* game_map_pos);
 
     bool MapContainsWorldPos(GW::Constants::MapID map_id, const GW::Vec2f& world_map_pos, GW::Constants::Campaign campaign)
     {
@@ -79,96 +69,6 @@ namespace {
         ImRect map_bounds;
         return GW::Map::GetMapWorldMapBounds(map, &map_bounds) && map_bounds.Contains(world_map_pos);
     }
-
-    GW::Constants::MapID GetMapIdForLocation(const GW::Vec2f& world_map_pos)
-    {
-        auto map_id = GW::Map::GetMapID();
-        const auto map_info = GW::Map::GetMapInfo();
-        if (!map_info)
-            return GW::Constants::MapID::None;
-        const auto campaign = map_info->campaign;
-        if (MapContainsWorldPos(map_id, world_map_pos, campaign))
-            return map_id;
-        for (size_t i = 1; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
-            map_id = static_cast<GW::Constants::MapID>(i);
-            if (MapContainsWorldPos(map_id, world_map_pos, campaign))
-                return map_id;
-        }
-        return GW::Constants::MapID::None;
-    }
-
-    void SetCustomQuestMarker(const GW::Vec2f world_pos)
-    {
-        if (!GW::Agents::GetControlledCharacter())
-            return; // Map not ready
-        custom_quest_marker_world_pos = world_pos;
-        if (GW::QuestMgr::GetQuest(custom_quest_id)) {
-            struct QuestRemovePacket : GW::Packet::StoC::PacketBase {
-                GW::Constants::QuestID quest_id = custom_quest_id;
-            };
-            QuestRemovePacket quest_remove_packet;
-            quest_remove_packet.header = GAME_SMSG_QUEST_REMOVE;
-            GW::StoC::EmulatePacket(&quest_remove_packet);
-            memset(&custom_quest_marker, 0, sizeof(custom_quest_marker));
-        }
-        if (custom_quest_marker_world_pos.x == 0 && custom_quest_marker_world_pos.y == 0)
-            return;
-
-        setting_custom_quest_marker = true;
-
-        const auto map_id = GetMapIdForLocation(custom_quest_marker_world_pos);
-
-        struct QuestInfoPacket : GW::Packet::StoC::PacketBase {
-            GW::Constants::QuestID quest_id = custom_quest_id;
-            uint32_t log_state = 0x20;
-            wchar_t location[8] = {0};
-            wchar_t name[8] = {0};
-            wchar_t npc[8] = {0};
-            GW::Constants::MapID map_from;
-        };
-
-        QuestInfoPacket quest_add_packet;
-        quest_add_packet.header = GAME_SMSG_QUEST_GENERAL_INFO;
-        quest_add_packet.quest_id = custom_quest_id;
-        wcscpy(quest_add_packet.location, L"\x564"); // Primary Quests
-        wcscpy(quest_add_packet.name, custom_quest_marker_enc_name);
-        quest_add_packet.map_from = GW::Constants::MapID::Count;
-        GW::StoC::EmulatePacket(&quest_add_packet);
-
-        struct QuestDescriptionPacket : GW::Packet::StoC::PacketBase {
-            GW::Constants::QuestID quest_id = custom_quest_id;
-            wchar_t description[128] = {0};
-            wchar_t objective[128] = {0};
-        };
-        QuestDescriptionPacket quest_description_packet;
-        quest_description_packet.header = GAME_SMSG_QUEST_DESCRIPTION;
-
-        swprintf(quest_description_packet.description, _countof(quest_description_packet.description),
-                 L"\x108\x107You've placed a custom marker on the map.\x1");
-
-        GW::StoC::EmulatePacket(&quest_description_packet);
-
-        struct QuestMarkerPacket : GW::Packet::StoC::PacketBase {
-            GW::Constants::QuestID quest_id = custom_quest_id;
-            GW::GamePos marker;
-            GW::Constants::MapID map_id;
-        };
-        QuestMarkerPacket quest_marker_packet;
-        quest_marker_packet.header = GAME_SMSG_QUEST_UPDATE_MARKER;
-        quest_marker_packet.marker = {INFINITY, INFINITY};
-        quest_marker_packet.map_id = map_id;
-        if (map_id == GW::Map::GetMapID())
-            WorldMapToGamePos(custom_quest_marker_world_pos, &quest_marker_packet.marker);
-        GW::StoC::EmulatePacket(&quest_marker_packet);
-
-        setting_custom_quest_marker = false;
-
-        const auto quest = GW::QuestMgr::GetQuest(custom_quest_id);
-        ASSERT(quest);
-        custom_quest_marker = *quest;
-    }
-    // Custom quests have ids greater than the count in-game - there are some assertions that don't like this!
-    GW::MemoryPatcher bypass_custom_quest_assertion_patch;
 
     bool WorldMapContextMenu(void*)
     {
@@ -182,27 +82,26 @@ namespace {
         ImGui::Text("%.2f, %.2f", world_map_click_pos.x, world_map_click_pos.y);
 #ifdef _DEBUG
         GW::GamePos game_pos;
-        if (WorldMapToGamePos(world_map_click_pos, &game_pos)) {
+        if (WorldMapWidget::WorldMapToGamePos(world_map_click_pos, game_pos)) {
             ImGui::Text("%.2f, %.2f", game_pos.x, game_pos.y);
         }
 #endif
-        const auto map_id = GetMapIdForLocation(world_map_click_pos);
+        const auto map_id = WorldMapWidget::GetMapIdForLocation(world_map_click_pos);
         ImGui::TextUnformatted(Resources::GetMapName(map_id)->string().c_str());
 
         if (ImGui::Button("Place Marker")) {
             GW::GameThread::Enqueue([] {
-                SetCustomQuestMarker(world_map_click_pos);
-                GW::QuestMgr::SetActiveQuestId(custom_quest_id);
+                QuestModule::SetCustomQuestMarker(world_map_click_pos, true);
             });
             return false;
         }
         place_marker_rect = c->LastItemData.Rect;
         place_marker_rect.Translate(viewport_offset);
         memset(&remove_marker_rect, 0, sizeof(remove_marker_rect));
-        if (GW::QuestMgr::GetQuest(custom_quest_id)) {
+        if (QuestModule::GetCustomQuestMarker()) {
             if (ImGui::Button("Remove Marker")) {
                 GW::GameThread::Enqueue([] {
-                    SetCustomQuestMarker({0, 0});
+                    QuestModule::SetCustomQuestMarker({0, 0});
                 });
                 return false;
             }
@@ -276,37 +175,6 @@ namespace {
         return GW::Constants::MapID::None;
     }
 
-    
-
-    bool WorldMapToGamePos(GW::Vec2f& world_map_pos, GW::GamePos* game_map_pos)
-    {
-        ImRect map_bounds;
-        if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds))
-            return false;
-        if (!map_bounds.Contains({ world_map_pos.x, world_map_pos.y }))
-            return false; // Current map doesn't contain these coords; we can't plot a position
-
-        const auto current_map_context = GW::GetMapContext();
-        if (!current_map_context)
-            return false;
-
-        const auto game_map_rect = ImRect({
-            current_map_context->map_boundaries[1], current_map_context->map_boundaries[2],
-            current_map_context->map_boundaries[3], current_map_context->map_boundaries[4],
-            });
-
-        // NB: World map is 96 gwinches per unit, this is hard coded in the GW source
-        constexpr auto gwinches_per_unit = 96.f;
-        GW::Vec2f map_mid_world_point = {
-            map_bounds.Min.x + (abs(game_map_rect.Min.x) / gwinches_per_unit),
-            map_bounds.Min.y + (abs(game_map_rect.Max.y) / gwinches_per_unit),
-        };
-
-        game_map_pos->x = (world_map_pos.x - map_mid_world_point.x) * gwinches_per_unit;
-        game_map_pos->y = ((world_map_pos.y - map_mid_world_point.y) * gwinches_per_unit) * -1.f; // Inverted Y Axis
-        return true;
-    }
-
     bool AppendMapPortals() {
         const auto props = GW::Map::GetMapProps();
         const auto map_id = GW::Map::GetMapID();
@@ -314,7 +182,7 @@ namespace {
         for (auto prop : *props) {
             if (IsTravelPortal(prop)) {
                 GW::Vec2f world_pos;
-                if (!WorldMapWidget::GamePosToWorldMap({ prop->position.x, prop->position.y }, &world_pos))
+                if (!WorldMapWidget::GamePosToWorldMap({ prop->position.x, prop->position.y }, world_pos))
                     continue;
                 map_portals.push_back({
                     map_id,GetClosestMapToPoint(world_pos),world_pos
@@ -328,59 +196,16 @@ namespace {
 
     GW::HookEntry OnUIMessage_HookEntry;
 
-    void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
+    void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void*, void*)
     {
         if (status->blocked)
             return;
 
         switch (message_id) {
-            case GW::UI::UIMessage::kQuestAdded: {
-                const auto quest_id = *(GW::Constants::QuestID*)wparam;
-                if (quest_id == custom_quest_id) {
-                    GW::QuestMgr::GetQuest(quest_id)->log_state |= 1; // Avoid asking for description about this quest
-                }
-            }
-            break;
-            case GW::UI::UIMessage::kSendSetActiveQuest: {
-                const auto quest_id = static_cast<GW::Constants::QuestID>((uint32_t)wparam);
-                if (setting_custom_quest_marker) {
-                    // This triggers if the player has no quests, or the map has just loaded; we want to "undo" this by spoofing the previous quest selection if there is one
-                    status->blocked = true;
-                    QuestModule::EmulateQuestSelected(GW::QuestMgr::GetActiveQuestId());
-                    return;
-                }
-                player_chosen_quest_id = quest_id;
-                if (quest_id == custom_quest_id) {
-                    // If the player has chosen the custom quest, spoof the response without asking the server
-                    status->blocked = true;
-                    QuestModule::EmulateQuestSelected(quest_id);
-                }
-            }
-            break;
-            case GW::UI::UIMessage::kSendAbandonQuest: {
-                const auto quest_id = static_cast<GW::Constants::QuestID>((uint32_t)wparam);
-                if (quest_id == custom_quest_id) {
-                    status->blocked = true;
-                    SetCustomQuestMarker({0, 0});
-                }
-            }
-            break;
             case GW::UI::UIMessage::kMapLoaded:
-                if (custom_quest_marker.quest_id != (GW::Constants::QuestID)0) {
-                    SetCustomQuestMarker(custom_quest_marker_world_pos);
-                    if (player_chosen_quest_id == custom_quest_marker.quest_id) {
-                        GW::QuestMgr::SetActiveQuestId(custom_quest_marker.quest_id);
-                    }
-                }
                 map_portals.clear();
                 AppendMapPortals();
                 break;
-            case GW::UI::UIMessage::kOnScreenMessage: {
-                // Block the on-screen message when the custom marker is placed
-                if (setting_custom_quest_marker) {
-                    status->blocked = true;
-                }
-            }
             break;
         }
     }
@@ -402,12 +227,26 @@ namespace {
 
 
 }
-
+GW::Constants::MapID WorldMapWidget::GetMapIdForLocation(const GW::Vec2f& world_map_pos) {
+    auto map_id = GW::Map::GetMapID();
+    const auto map_info = GW::Map::GetMapInfo();
+    if (!map_info)
+        return GW::Constants::MapID::None;
+    const auto campaign = map_info->campaign;
+    if (MapContainsWorldPos(map_id, world_map_pos, campaign))
+        return map_id;
+    for (size_t i = 1; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
+        map_id = static_cast<GW::Constants::MapID>(i);
+        if (MapContainsWorldPos(map_id, world_map_pos, campaign))
+            return map_id;
+    }
+    return GW::Constants::MapID::None;
+}
 void WorldMapWidget::Initialize()
 {
     ToolboxWidget::Initialize();
 
-    memset(&custom_quest_marker, 0, sizeof(custom_quest_marker));
+
 
     uintptr_t address = GW::Scanner::Find("\x8b\x45\xfc\xf7\x40\x10\x00\x00\x01\x00", "xxxxxxxxxx", 0xa);
     if (address) {
@@ -418,16 +257,9 @@ void WorldMapWidget::Initialize()
         view_all_carto_areas_patch.SetRedirect(address, GetCartographyFlagsForArea);
     }
 
-    address = GW::Scanner::FindAssertion("UiCtlWebLink.cpp", "challengeId < CHALLENGES", 0, -0x7);
-    if (address) {
-        bypass_custom_quest_assertion_patch.SetPatch(address, "\xeb", 1);
-        bypass_custom_quest_assertion_patch.TogglePatch(true);
-    }
-
 
     ASSERT(view_all_outposts_patch.IsValid());
     ASSERT(view_all_carto_areas_patch.IsValid());
-    ASSERT(bypass_custom_quest_assertion_patch.IsValid());
 
     const GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kQuestAdded,
@@ -440,8 +272,35 @@ void WorldMapWidget::Initialize()
         GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, ui_message, OnUIMessage);
     }
 }
+bool WorldMapWidget::WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GamePos& game_map_pos) {
+    ImRect map_bounds;
+    if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds))
+        return false;
 
-bool WorldMapWidget::GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f* world_map_pos)
+    const auto current_map_context = GW::GetMapContext();
+    if (!current_map_context)
+        return false;
+
+    const auto game_map_rect = ImRect({
+        current_map_context->map_boundaries[1], current_map_context->map_boundaries[2],
+        current_map_context->map_boundaries[3], current_map_context->map_boundaries[4],
+        });
+
+    const auto gwinches_per_unit = 96.f;
+
+    // Calculate the mid-point of the map in world coordinates
+    GW::Vec2f map_mid_world_point = {
+        map_bounds.Min.x + (abs(game_map_rect.Min.x) / gwinches_per_unit),
+        map_bounds.Min.y + (abs(game_map_rect.Max.y) / gwinches_per_unit),
+    };
+
+    // Convert from world map position to game map position
+    game_map_pos.x = (world_map_pos.x - map_mid_world_point.x) * gwinches_per_unit;
+    game_map_pos.y = (world_map_pos.y - map_mid_world_point.y) * gwinches_per_unit * -1.f; // Invert Y axis
+
+    return true;
+}
+bool WorldMapWidget::GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f& world_map_pos)
 {
     ImRect map_bounds;
     if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds))
@@ -462,20 +321,17 @@ bool WorldMapWidget::GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2
         map_bounds.Min.y + (abs(game_map_rect.Max.y) / gwinches_per_unit),
     };
 
-    world_map_pos->x = (game_map_pos.x / gwinches_per_unit) + map_mid_world_point.x;
-    world_map_pos->y = ((game_map_pos.y * -1.f) / gwinches_per_unit) + map_mid_world_point.y; // Inverted Y Axis
+    world_map_pos.x = (game_map_pos.x / gwinches_per_unit) + map_mid_world_point.x;
+    world_map_pos.y = ((game_map_pos.y * -1.f) / gwinches_per_unit) + map_mid_world_point.y; // Inverted Y Axis
     return true;
 }
 
 void WorldMapWidget::SignalTerminate()
 {
     ToolboxWidget::Terminate();
-    GW::GameThread::Enqueue([]() {
-        SetCustomQuestMarker({0, 0});
-    });
+
     view_all_outposts_patch.Reset();
     view_all_carto_areas_patch.Reset();
-    bypass_custom_quest_assertion_patch.Reset();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }
 
@@ -493,14 +349,6 @@ void WorldMapWidget::LoadSettings(ToolboxIni* ini)
     ToolboxWidget::LoadSettings(ini);
     LOAD_BOOL(showing_all_outposts);
     LOAD_BOOL(show_lines_on_world_map);
-    float custom_quest_marker_world_pos_x = .0f;
-    float custom_quest_marker_world_pos_y = .0f;
-    LOAD_FLOAT(custom_quest_marker_world_pos_x);
-    LOAD_FLOAT(custom_quest_marker_world_pos_y);
-    custom_quest_marker_world_pos = {custom_quest_marker_world_pos_x, custom_quest_marker_world_pos_y};
-    GW::GameThread::Enqueue([]() {
-        SetCustomQuestMarker(custom_quest_marker_world_pos);
-    });
 }
 
 void WorldMapWidget::SaveSettings(ToolboxIni* ini)
@@ -508,10 +356,6 @@ void WorldMapWidget::SaveSettings(ToolboxIni* ini)
     ToolboxWidget::SaveSettings(ini);
     SAVE_BOOL(showing_all_outposts);
     SAVE_BOOL(show_lines_on_world_map);
-    float custom_quest_marker_world_pos_x = custom_quest_marker_world_pos.x;
-    float custom_quest_marker_world_pos_y = custom_quest_marker_world_pos.y;
-    SAVE_FLOAT(custom_quest_marker_world_pos_x);
-    SAVE_FLOAT(custom_quest_marker_world_pos_y);
 }
 
 void WorldMapWidget::Draw(IDirect3DDevice9*)
@@ -562,7 +406,9 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     const auto ui_scale = GW::UI::GetFrameById(world_map_context->frame_id)->position.GetViewportScale(GW::UI::GetRootFrame());
 
     // Draw custom quest marker on world map
-    if (custom_quest_marker_world_pos.x || custom_quest_marker_world_pos.y) {
+    const auto custom_quest = QuestModule::GetCustomQuestMarker();
+    GW::Vec2f custom_quest_marker_world_pos;
+    if (custom_quest && GamePosToWorldMap(custom_quest->marker, custom_quest_marker_world_pos)) {
         static constexpr auto uv0 = ImVec2(0.0f, 0.0f);
         static constexpr auto ICON_SIZE = ImVec2(24.0f, 24.0f);
 
@@ -611,9 +457,9 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         for (auto& line : lines | std::views::filter([](auto line) { return line->visible; })) {
             if (line->map != map_id)
                 continue;
-            if (!GamePosToWorldMap(line->p1, &line_start))
+            if (!GamePosToWorldMap(line->p1, line_start))
                 continue;
-            if (!GamePosToWorldMap(line->p2, &line_end))
+            if (!GamePosToWorldMap(line->p2, line_end))
                 continue;
 
             line_start.x = (line_start.x - world_map_context->top_left.x) * ui_scale.x + viewport_offset.x;
@@ -630,18 +476,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
 bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
 {
     switch (Message) {
-        case WM_RBUTTONDOWN: {
-            world_map_clicking = true;
-        }
-        break;
-        case WM_MOUSEMOVE: {
-            world_map_clicking = false;
-        }
-        break;
-        case WM_RBUTTONUP: {
-            if (!world_map_clicking)
-                break;
-            world_map_clicking = false;
+        case WM_GW_RBUTTONCLICK: {
             const auto world_map_context = GW::Map::GetWorldMapContext();
             if (!(world_map_context && world_map_context->zoom == 1.0f))
                 break;
@@ -649,16 +484,15 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
             const auto world_map_frame = GW::UI::GetFrameById(world_map_context->frame_id);
             const auto ui_scale =
                 world_map_frame ?
-                    world_map_frame->position.GetViewportScale(GW::UI::GetRootFrame()) :
-                    GW::Vec2f{GuiUtils::GetGWScaleMultiplier(), GuiUtils::GetGWScaleMultiplier()};
-            world_map_click_pos = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+                world_map_frame->position.GetViewportScale(GW::UI::GetRootFrame()) :
+                GW::Vec2f{ GuiUtils::GetGWScaleMultiplier(), GuiUtils::GetGWScaleMultiplier() };
+            world_map_click_pos = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
             world_map_click_pos.x /= ui_scale.x;
             world_map_click_pos.y /= ui_scale.y;
             world_map_click_pos.x += world_map_context->top_left.x;
             world_map_click_pos.y += world_map_context->top_left.y;
             ImGui::SetContextMenu(WorldMapContextMenu);
-        }
-        break;
+        } break;
         case WM_LBUTTONDOWN:
             if (!drawn || !GW::UI::GetIsWorldMapShowing()) {
                 return false;
@@ -693,11 +527,6 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
             break;
     }
     return false;
-}
-
-bool WorldMapWidget::CanTerminate()
-{
-    return !GW::QuestMgr::GetQuest(custom_quest_id);
 }
 
 void WorldMapWidget::DrawSettingsInternal()

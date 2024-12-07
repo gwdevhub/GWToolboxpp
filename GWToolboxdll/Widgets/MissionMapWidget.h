@@ -17,4 +17,6 @@ public:
     [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE; }
 
     void Draw(IDirect3DDevice9* pDevice) override;
+    void Terminate() override;
+    bool WndProc(const UINT Message, WPARAM, LPARAM lParam) override;
 };

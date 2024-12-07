@@ -536,9 +536,6 @@ namespace {
     }
 
     GW::HookEntry on_offer_item_hook;
-    clock_t check_context_menu_position = 0;
-    DWORD is_right_clicking = 0;
-    DWORD mouse_moved = 0;
     bool change_secondary_for_tome = true;
 
     struct PreMoveItemStruct {
@@ -566,8 +563,6 @@ namespace {
             InventoryManager::Instance().stack_prompt_item_id = item->item_id;
         });
     }
-
-    uint32_t right_clicked_item = 0;
 
     enum PendingTomeUseStage {
         None,
@@ -963,43 +958,24 @@ void InventoryManager::Terminate()
 
 }
 
-bool InventoryManager::WndProc(const UINT message, const WPARAM wParam, const LPARAM lParam)
+bool InventoryManager::WndProc(const UINT message, const WPARAM, const LPARAM)
 {
     // GW Deliberately makes a WM_MOUSEMOVE event right after right button is pressed.
     // Does this to "hide" the cursor when looking around.
     switch (message) {
-        case WM_INPUT: {
-            if (!(is_right_clicking && !mouse_moved && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam)) {
-                break; // Not raw input
-            }
-            UINT dwSize = sizeof(RAWINPUT);
-            BYTE lpb[sizeof(RAWINPUT)];
-            ASSERT(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize);
-
-            const RAWINPUT* raw = (RAWINPUT*)lpb;
-            if ((raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) == 0 && raw->data.mouse.lLastX && raw->data.mouse.lLastY) {
-                // If its a relative mouse move, process the action
-                mouse_moved = 1;
-            }
-        }
-        break;
-
-        case WM_RBUTTONDOWN: {
-            is_right_clicking = 1;
-            mouse_moved = 0;
+        case WM_GW_RBUTTONCLICK: {
             const auto item = GW::Items::GetHoveredItem();
-            right_clicked_item = item ? item->item_id : 0;
-        }
-        break;
-        case WM_RBUTTONUP:
-            // 100ms delay allows gw to reset cursor position, otherwise the context menu will show in the middle of the screen
-            check_context_menu_position = mouse_moved != 1 ? TIMER_INIT() + 50 : 0;
-            is_right_clicking = mouse_moved = 0;
-            break;
+            if (!item) break;
+            GW::GameThread::Enqueue([item]() {
+                // Item right clicked - spoof a click event
+                GW::HookStatus status;
+                ItemClickCallback(&status, 999, item->slot, item->bag);
+                });
+        } break;
         case WM_LBUTTONDOWN:
         case WM_LBUTTONDBLCLK: {
-            const Item* item = static_cast<Item*>(GW::Items::GetHoveredItem());
-            const GW::Bag* bag = item ? item->bag : nullptr;
+            const auto item = GW::Items::GetHoveredItem();
+            const auto bag = item ? item->bag : nullptr;
             if (!bag) {
                 break;
             }
@@ -1806,15 +1782,6 @@ void InventoryManager::DrawSettingsInternal()
 void InventoryManager::Update(float)
 {
     ProcessQueuedButtonPresses();
-    if (check_context_menu_position && TIMER_DIFF(check_context_menu_position) > 0) {
-        const auto item = right_clicked_item ? GW::Items::GetItemById(right_clicked_item) : nullptr;
-        if (item) {
-            // Item right clicked - spoof a click event
-            GW::HookStatus status;
-            ItemClickCallback(&status, 999, item->slot, item->bag);
-        }
-        check_context_menu_position = 0;
-    }
 
     if (pending_item_move_for_trade) {
         const auto item = reinterpret_cast<Item*>(GW::Items::GetItemById(pending_item_move_for_trade));

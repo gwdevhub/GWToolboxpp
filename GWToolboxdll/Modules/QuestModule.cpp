@@ -22,6 +22,9 @@
 
 #include <Utils/GuiUtils.h>
 #include <GWCA/Context/WorldContext.h>
+#include <Widgets/WorldMapWidget.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Utilities/MemoryPatcher.h>
 
 namespace {
     constexpr auto quest_colors = std::to_array<Color>({
@@ -38,7 +41,16 @@ namespace {
     bool draw_quest_path_on_terrain = true;
     bool draw_quest_path_on_minimap = true;
     bool show_paths_to_all_quests = false;
-    GW::HookEntry ui_message_entry;
+    GW::HookEntry pre_ui_message_entry;
+    GW::HookEntry post_ui_message_entry;
+
+    GW::Constants::QuestID custom_quest_id = (GW::Constants::QuestID)0x0000fdd;
+    GW::Quest custom_quest_marker;
+    GW::Vec2f custom_quest_marker_world_pos;
+    GW::Constants::QuestID player_chosen_quest_id = GW::Constants::QuestID::None;
+    bool setting_custom_quest_marker = false;
+
+    const wchar_t* custom_quest_marker_enc_name = L"\x452"; // "Map Travel"
 
     clock_t last_quest_clicked = 0;
 
@@ -242,7 +254,13 @@ namespace {
                 previous_closest_waypoint = waypoints[current_waypoint];
             }
         }
+    
+
+
     };
+
+    // Custom quests have ids greater than the count in-game - there are some assertions that don't like this!
+    GW::MemoryPatcher bypass_custom_quest_assertion_patch;
 
     std::unordered_map<GW::Constants::QuestID, CalculatedQuestPath*> calculated_quest_paths;
 
@@ -345,8 +363,48 @@ namespace {
         });
     }
 
+    void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
+    {
+        switch (message_id) {
+        case GW::UI::UIMessage::kQuestAdded: {
+            const auto quest_id = *(GW::Constants::QuestID*)wparam;
+            if (quest_id == custom_quest_id) {
+                GW::QuestMgr::GetQuest(quest_id)->log_state |= 1; // Avoid asking for description about this quest
+            }
+        }  break;
+        case GW::UI::UIMessage::kSendSetActiveQuest: {
+            const auto quest_id = static_cast<GW::Constants::QuestID>((uint32_t)wparam);
+            if (setting_custom_quest_marker) {
+                // This triggers if the player has no quests, or the map has just loaded; we want to "undo" this by spoofing the previous quest selection if there is one
+                status->blocked = true;
+                QuestModule::EmulateQuestSelected(GW::QuestMgr::GetActiveQuestId());
+                return;
+            }
+            player_chosen_quest_id = quest_id;
+            if (quest_id == custom_quest_id) {
+                // If the player has chosen the custom quest, spoof the response without asking the server
+                status->blocked = true;
+                QuestModule::EmulateQuestSelected(quest_id);
+            }
+        } break;
+        case GW::UI::UIMessage::kSendAbandonQuest: {
+            const auto quest_id = static_cast<GW::Constants::QuestID>((uint32_t)wparam);
+            if (quest_id == custom_quest_id) {
+                status->blocked = true;
+                QuestModule::SetCustomQuestMarker({ 0, 0 });
+            }
+        } break;
+        case GW::UI::UIMessage::kOnScreenMessage: {
+            // Block the on-screen message when the custom marker is placed
+            if (setting_custom_quest_marker) {
+                status->blocked = true;
+            }
+        } break;
+        }
+    }
+
     // Callback invoked by quest related ui messages. All messages sent should have the quest id as first wparam variable
-    void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* packet, void*)
+    void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* packet, void*)
     {
         switch (message_id) {
             case GW::UI::UIMessage::kQuestDetailsChanged:
@@ -355,6 +413,9 @@ namespace {
                 RefreshQuestPath(*static_cast<GW::Constants::QuestID*>(packet));
                 break;
             case GW::UI::UIMessage::kMapLoaded:
+                if (custom_quest_marker.quest_id != (GW::Constants::QuestID)0) {
+                    QuestModule::SetCustomQuestMarker(custom_quest_marker_world_pos, player_chosen_quest_id == custom_quest_marker.quest_id);
+                }
             default:
                 for (auto quest_path : calculated_quest_paths | std::views::values) {
                     delete quest_path;
@@ -365,6 +426,83 @@ namespace {
         }
     }
 } // namespace
+
+const GW::Quest* QuestModule::GetCustomQuestMarker() {
+    return GW::QuestMgr::GetQuest(custom_quest_id);
+}
+
+void QuestModule::SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_active)
+{
+    if (!GW::Agents::GetControlledCharacter())
+        return; // Map not ready
+    custom_quest_marker_world_pos = world_pos;
+    if (GW::QuestMgr::GetQuest(custom_quest_id)) {
+        struct QuestRemovePacket : GW::Packet::StoC::PacketBase {
+            GW::Constants::QuestID quest_id = custom_quest_id;
+        };
+        QuestRemovePacket quest_remove_packet;
+        quest_remove_packet.header = GAME_SMSG_QUEST_REMOVE;
+        GW::StoC::EmulatePacket(&quest_remove_packet);
+        memset(&custom_quest_marker, 0, sizeof(custom_quest_marker));
+    }
+    if (custom_quest_marker_world_pos.x == 0 && custom_quest_marker_world_pos.y == 0)
+        return;
+
+    setting_custom_quest_marker = true;
+
+    const auto map_id = WorldMapWidget::GetMapIdForLocation(custom_quest_marker_world_pos);
+
+    struct QuestInfoPacket : GW::Packet::StoC::PacketBase {
+        GW::Constants::QuestID quest_id = custom_quest_id;
+        uint32_t log_state = 0x20;
+        wchar_t location[8] = { 0 };
+        wchar_t name[8] = { 0 };
+        wchar_t npc[8] = { 0 };
+        GW::Constants::MapID map_from;
+    };
+
+    QuestInfoPacket quest_add_packet;
+    quest_add_packet.header = GAME_SMSG_QUEST_GENERAL_INFO;
+    quest_add_packet.quest_id = custom_quest_id;
+    wcscpy(quest_add_packet.location, L"\x564"); // Primary Quests
+    wcscpy(quest_add_packet.name, custom_quest_marker_enc_name);
+    quest_add_packet.map_from = GW::Constants::MapID::Count;
+    GW::StoC::EmulatePacket(&quest_add_packet);
+
+    struct QuestDescriptionPacket : GW::Packet::StoC::PacketBase {
+        GW::Constants::QuestID quest_id = custom_quest_id;
+        wchar_t description[128] = { 0 };
+        wchar_t objective[128] = { 0 };
+    };
+    QuestDescriptionPacket quest_description_packet;
+    quest_description_packet.header = GAME_SMSG_QUEST_DESCRIPTION;
+
+    swprintf(quest_description_packet.description, _countof(quest_description_packet.description),
+        L"\x108\x107You've placed a custom marker on the map.\x1");
+
+    GW::StoC::EmulatePacket(&quest_description_packet);
+
+    struct QuestMarkerPacket : GW::Packet::StoC::PacketBase {
+        GW::Constants::QuestID quest_id = custom_quest_id;
+        GW::GamePos marker;
+        GW::Constants::MapID map_id;
+    };
+    QuestMarkerPacket quest_marker_packet;
+    quest_marker_packet.header = GAME_SMSG_QUEST_UPDATE_MARKER;
+    quest_marker_packet.marker = { INFINITY, INFINITY };
+    quest_marker_packet.map_id = map_id;
+    if (map_id == GW::Map::GetMapID())
+        WorldMapWidget::WorldMapToGamePos(custom_quest_marker_world_pos, quest_marker_packet.marker);
+    GW::StoC::EmulatePacket(&quest_marker_packet);
+
+    setting_custom_quest_marker = false;
+
+    const auto quest = GetCustomQuestMarker();
+    ASSERT(quest);
+    custom_quest_marker = *quest;
+    if (set_active)
+        GW::QuestMgr::SetActiveQuestId(custom_quest_id);
+}
 
 std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::QuestID quest_id)
 {
@@ -426,6 +564,14 @@ void QuestModule::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_paths_to_all_quests);
     using namespace Pathing;
     LOAD_FLOAT(max_visibility_range);
+    float custom_quest_marker_world_pos_x = .0f;
+    float custom_quest_marker_world_pos_y = .0f;
+    LOAD_FLOAT(custom_quest_marker_world_pos_x);
+    LOAD_FLOAT(custom_quest_marker_world_pos_y);
+    custom_quest_marker_world_pos = { custom_quest_marker_world_pos_x, custom_quest_marker_world_pos_y };
+    GW::GameThread::Enqueue([]() {
+        SetCustomQuestMarker(custom_quest_marker_world_pos);
+        });
 }
 
 void QuestModule::SaveSettings(ToolboxIni* ini)
@@ -436,26 +582,41 @@ void QuestModule::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_paths_to_all_quests);
     using namespace Pathing;
     SAVE_FLOAT(max_visibility_range);
+    float custom_quest_marker_world_pos_x = custom_quest_marker_world_pos.x;
+    float custom_quest_marker_world_pos_y = custom_quest_marker_world_pos.y;
+    SAVE_FLOAT(custom_quest_marker_world_pos_x);
+    SAVE_FLOAT(custom_quest_marker_world_pos_y);
 }
 
 void QuestModule::Initialize()
 {
     ToolboxModule::Initialize();
 
+    memset(&custom_quest_marker, 0, sizeof(custom_quest_marker));
+    uintptr_t address = GW::Scanner::FindAssertion("UiCtlWebLink.cpp", "challengeId < CHALLENGES", 0, -0x7);
+    if (address) {
+        bypass_custom_quest_assertion_patch.SetPatch(address, "\xeb", 1);
+        bypass_custom_quest_assertion_patch.TogglePatch(true);
+    }
+
     constexpr auto ui_messages = {
         GW::UI::UIMessage::kQuestDetailsChanged,
         GW::UI::UIMessage::kQuestAdded,
         GW::UI::UIMessage::kClientActiveQuestChanged,
         GW::UI::UIMessage::kServerActiveQuestChanged,
-        GW::UI::UIMessage::kMapLoaded
+        GW::UI::UIMessage::kMapLoaded,
+        GW::UI::UIMessage::kOnScreenMessage,
+        GW::UI::UIMessage::kSendSetActiveQuest,
+        GW::UI::UIMessage::kSendAbandonQuest
     };
     for (const auto ui_message : ui_messages) {
         // Post callbacks, non blocking
-        GW::UI::RegisterUIMessageCallback(&ui_message_entry, ui_message, OnUIMessage, 0x4000);
+        GW::UI::RegisterUIMessageCallback(&pre_ui_message_entry, ui_message, OnPreUIMessage, -0x4000);
+        GW::UI::RegisterUIMessageCallback(&post_ui_message_entry, ui_message, OnPostUIMessage, 0x4000);
     }
     RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
 
-    const auto address = GW::Scanner::Find("\x83\xc0\xfc\x83\xf8\x54", "xxxxxx", -0xe);
+    address = GW::Scanner::Find("\x83\xc0\xfc\x83\xf8\x54", "xxxxxx", -0xe);
     if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) {
         QuestLogRow_UICallback_Func = (GW::UI::UIInteractionCallback)address;
         GW::Hook::CreateHook((void**)&QuestLogRow_UICallback_Func, OnQuestLogRow_UICallback, (void**)&QuestLogRow_UICallback_Ret);
@@ -463,6 +624,7 @@ void QuestModule::Initialize()
     }
 #ifdef _DEBUG
     ASSERT(QuestLogRow_UICallback_Func);
+    ASSERT(bypass_custom_quest_assertion_patch.GetAddress());
 #endif
 }
 
@@ -486,11 +648,17 @@ void QuestModule::EmulateQuestSelected(GW::Constants::QuestID quest_id)
 void QuestModule::SignalTerminate()
 {
     ToolboxModule::SignalTerminate();
-    GW::UI::RemoveUIMessageCallback(&ui_message_entry);
+    GW::GameThread::Enqueue([]() {
+        SetCustomQuestMarker({ 0, 0 });
+        });
+    GW::UI::RemoveUIMessageCallback(&pre_ui_message_entry);
+    GW::UI::RemoveUIMessageCallback(&post_ui_message_entry);
     ClearCalculatedPaths();
     if (QuestLogRow_UICallback_Func) {
         GW::Hook::RemoveHook(QuestLogRow_UICallback_Func);
     }
+    if (bypass_custom_quest_assertion_patch.IsValid())
+        bypass_custom_quest_assertion_patch.Reset();
 }
 
 void QuestModule::Update(float)
@@ -512,7 +680,10 @@ check_paths:
         }
     }
 }
-
+bool QuestModule::CanTerminate()
+{
+    return !GetCustomQuestMarker();
+}
 void QuestModule::Terminate()
 {
     ToolboxModule::Terminate();

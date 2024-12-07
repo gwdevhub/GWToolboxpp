@@ -5,6 +5,9 @@
 namespace GW {
     struct GamePos;
     struct Vec2f;
+    namespace Constants {
+        enum class MapID : uint32_t;
+    }
 }
 
 class WorldMapWidget : public ToolboxWidget {
@@ -33,8 +36,9 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawSettingsInternal() override;
     bool WndProc(UINT, WPARAM, LPARAM) override;
-    bool CanTerminate() override;
 
     static void ShowAllOutposts(bool show);
-    static bool GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f* world_map_pos);
+    static GW::Constants::MapID GetMapIdForLocation(const GW::Vec2f& world_map_pos);
+    static bool WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GamePos& game_map_pos);
+    static bool GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f& world_map_pos);
 };
