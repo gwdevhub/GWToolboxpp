@@ -1035,16 +1035,8 @@ void GWToolbox::UpdateTerminating(float delta_f)
 {
     ASSERT(gwtoolbox_state == GWToolboxState::Terminating);
 
-    if (all_modules_enabled.size()) {
-        while (modules_enabled.size()) {
-            ASSERT(ToggleModule(*modules_enabled[0], false) == false);
-        }
-        while (widgets_enabled.size()) {
-            ASSERT(ToggleModule(*widgets_enabled[0], false) == false);
-        }
-        while (windows_enabled.size()) {
-            ASSERT(ToggleModule(*windows_enabled[0], false) == false);
-        }
+    while (all_modules_enabled.size()) {
+        ASSERT(ToggleModule(*all_modules_enabled[0], false) == false);
     }
     ASSERT(all_modules_enabled.empty());
     UpdateModulesTerminating(delta_f);

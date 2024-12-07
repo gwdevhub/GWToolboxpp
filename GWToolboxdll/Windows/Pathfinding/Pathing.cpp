@@ -287,7 +287,7 @@ namespace Pathing {
 
     MilePath::~MilePath()
     {
-        stopProcessing();
+        shutdown();
     }
 
     MilePath::Portal::Portal(const Vec2f& start, const Vec2f& goal, const AABB* box1, const AABB* box2)
