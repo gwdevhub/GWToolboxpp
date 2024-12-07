@@ -390,6 +390,8 @@ bool GWToolbox::IsInitialized() { return gwtoolbox_state == GWToolboxState::Init
 bool GWToolbox::ToggleModule(ToolboxWidget& m, const bool enable)
 {
     std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
+    if (IsModuleEnabled(&m) == enable)
+        return enable;
     const bool added = ToggleTBModule(m, reinterpret_cast<std::vector<ToolboxModule*>&>(widgets_enabled), enable);
     UpdateEnabledWidgetVectors(&m, added);
     return added;
@@ -398,6 +400,8 @@ bool GWToolbox::ToggleModule(ToolboxWidget& m, const bool enable)
 bool GWToolbox::ToggleModule(ToolboxWindow& m, const bool enable)
 {
     std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
+    if (IsModuleEnabled(&m) == enable)
+        return enable;
     const bool added = ToggleTBModule(m, reinterpret_cast<std::vector<ToolboxModule*>&>(windows_enabled), enable);
     UpdateEnabledWidgetVectors(&m, added);
     return added;
@@ -406,6 +410,8 @@ bool GWToolbox::ToggleModule(ToolboxWindow& m, const bool enable)
 bool GWToolbox::ToggleModule(ToolboxModule& m, const bool enable)
 {
     std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
+    if (IsModuleEnabled(&m) == enable)
+        return enable;
     const bool added = ToggleTBModule(m, modules_enabled, enable);
     UpdateEnabledWidgetVectors(&m, added);
     return added;
