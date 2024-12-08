@@ -2,6 +2,8 @@ include_guard()
 
 set(GWCA_FOLDER "${PROJECT_SOURCE_DIR}/Dependencies/GWCA")
 
+find_package(minhook CONFIG REQUIRED)
+
 if(EXISTS "${GWCA_FOLDER}/Source")
     add_library(gwca)
     file(GLOB SOURCES
@@ -21,12 +23,12 @@ if(EXISTS "${GWCA_FOLDER}/Source")
     set_target_properties(gwca PROPERTIES CXX_STANDARD 23)
     target_compile_options(gwca PRIVATE /W4 /WX)
     target_link_options(gwca PRIVATE /WX /SAFESEH:NO)
+	target_link_libraries(gwca PUBLIC minhook::minhook)
 else()
     add_library(gwca STATIC IMPORTED GLOBAL)
-	set_target_properties(gwca PROPERTIES 
-		IMPORTED_LOCATION "${GWCA_FOLDER}/lib/gwca.lib"
+	set_target_properties(gwca PROPERTIES
+		IMPORTED_LOCATION_DEBUG "${GWCA_FOLDER}/lib/gwcad.lib"
+		IMPORTED_LOCATION_RELEASE "${GWCA_FOLDER}/lib/gwca.lib"
 		INTERFACE_INCLUDE_DIRECTORIES "${GWCA_FOLDER}/include")
+    target_link_libraries(gwca INTERFACE minhook::minhook)
 endif()
-
-find_package(minhook CONFIG REQUIRED)
-target_link_libraries(gwca PUBLIC minhook::minhook)
