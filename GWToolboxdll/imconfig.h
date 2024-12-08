@@ -66,7 +66,7 @@
 //---- Define constructor and implicit cast operators to convert back<>forth between your math types and ImVec2/ImVec4.
 // This will be inlined as part of ImVec2 and ImVec4 class declarations.
 
-#include <GWCA/Source/stdafx.h>
+#include <GWCA/Include/GWCA/stdafx.h>
 #include <GWCA/Include/GWCA/GameContainers/GamePos.h>
 
 #define IM_VEC2_CLASS_EXTRA                                                 \
