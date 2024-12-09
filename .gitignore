@@ -4,6 +4,7 @@
 # Build directories
 Debug/
 Release/
+RelWithDebInfo/
 ipch/
 Archive/
 bin/
