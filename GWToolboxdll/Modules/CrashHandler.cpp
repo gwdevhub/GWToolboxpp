@@ -35,7 +35,7 @@ void CrashHandler::GWCAPanicHandler(
 
 void CrashHandler::OnGWCrash(GWDebugInfo* details, const uint32_t param_2, EXCEPTION_POINTERS* pExceptionPointers, char* exception_message, char* exception_file, const uint32_t exception_line)
 {
-    GW::HookBase::EnterHook();
+    GW::Hook::EnterHook();
     if (!Instance().gw_debug_info) {
         Instance().gw_debug_info = details;
     }
@@ -54,7 +54,7 @@ void CrashHandler::OnGWCrash(GWDebugInfo* details, const uint32_t param_2, EXCEP
     Instance().gw_debug_info = nullptr;
     Instance().RetHandleCrash(details, param_2, pExceptionPointers, exception_message, exception_file, exception_line);
 
-    GW::HookBase::LeaveHook();
+    GW::Hook::LeaveHook();
     abort();
 }
 

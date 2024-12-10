@@ -504,7 +504,7 @@ namespace {
 
     void __fastcall OnQuestEntryGroupInteract(uint32_t* context, void* edx, uint32_t* wparam)
     {
-        GW::HookBase::EnterHook();
+        GW::Hook::EnterHook();
         if (wparam[1] == 0 && wparam[2] == 6) {
             // Player manually toggled visibility
             const bool is_visible = static_cast<bool>(wparam[3]);
@@ -521,7 +521,7 @@ namespace {
             }
         }
         OnQuestEntryGroupInteract_Ret(context, edx, wparam);
-        GW::HookBase::LeaveHook();
+        GW::Hook::LeaveHook();
     }
 
     const char* section_name = "GuildWarsSettingsModule:Quest Log Entries Visible";

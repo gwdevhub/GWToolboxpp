@@ -32,6 +32,9 @@ BEGIN
     END
 END
 
+IDR_GWCA_DLL RCDATA "..\\..\\Dependencies\\GWCA\\bin\\gwca.dll"
+
+
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
 //

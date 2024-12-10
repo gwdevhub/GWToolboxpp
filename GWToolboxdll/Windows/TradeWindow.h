@@ -29,7 +29,7 @@ public:
     bool IsTradeAlert(std::string& message) const;
     void Update(float delta) override;
     void Draw(IDirect3DDevice9* pDevice) override;
-    void SignalTerminate() override;
+    void Terminate() override;
     void RegisterSettingsContent() override;
 
     void LoadSettings(ToolboxIni* ini) override;
@@ -56,7 +56,7 @@ private:
     // tasks to be done async by the worker thread
     std::queue<std::function<void()>> thread_jobs{};
     bool should_stop = false;
-    std::thread worker;
+    std::thread* worker = nullptr;
 
     static void ParseBuffer(const char* text, std::vector<std::string>& words);
     static void ParseBuffer(std::fstream stream, std::vector<std::string>& words);

@@ -68,7 +68,7 @@ void ToolboxUIPlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocato
 
 bool ToolboxUIPlugin::CanTerminate()
 {
-    return GW::HookBase::GetInHookCount() == 0;
+    return GW::Hook::GetInHookCount() == 0;
 }
 
 void ToolboxUIPlugin::SignalTerminate()

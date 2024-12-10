@@ -70,7 +70,7 @@ namespace {
     std::vector<GW::UI::UIMessage> messages_hit;
     GW::UI::UIInteractionCallback OnMissionMap_UICallback_Func = 0, OnMissionMap_UICallback_Ret = 0;
     void OnMissionMap_UICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam) {
-        GW::HookBase::EnterHook();
+        GW::Hook::EnterHook();
         switch (message->message_id) {
         case GW::UI::UIMessage::kInitFrame:
             OnMissionMap_UICallback_Ret(message, wparam, lparam);
@@ -84,7 +84,7 @@ namespace {
             OnMissionMap_UICallback_Ret(message, wparam, lparam);
             break;
         }
-        GW::HookBase::LeaveHook();
+        GW::Hook::LeaveHook();
     }
 
 
@@ -97,8 +97,8 @@ namespace {
         if (!(mission_map_frame && mission_map_frame->frame_callbacks[0]))
             return false;
         OnMissionMap_UICallback_Func = mission_map_frame->frame_callbacks[0];
-        GW::HookBase::CreateHook((void**)&OnMissionMap_UICallback_Func, OnMissionMap_UICallback, (void**)&OnMissionMap_UICallback_Ret);
-        GW::HookBase::EnableHooks(OnMissionMap_UICallback_Func);
+        GW::Hook::CreateHook((void**)&OnMissionMap_UICallback_Func, OnMissionMap_UICallback, (void**)&OnMissionMap_UICallback_Ret);
+        GW::Hook::EnableHooks(OnMissionMap_UICallback_Func);
         return true;
     }
 
@@ -200,6 +200,6 @@ bool MissionMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
 void MissionMapWidget::Terminate() {
     ToolboxWidget::Terminate();
     if (OnMissionMap_UICallback_Func)
-        GW::HookBase::RemoveHook(OnMissionMap_UICallback_Func);
+        GW::Hook::RemoveHook(OnMissionMap_UICallback_Func);
     OnMissionMap_UICallback_Func = 0;
 }

@@ -218,9 +218,6 @@ void PathfindingWindow::SignalTerminate()
     for (const auto m : mile_paths_by_coords) {
         m.second->stopProcessing();
     }
-    for (const auto m : mile_paths_by_coords) {
-        delete m.second;
-    }
     mile_paths_by_coords.clear();
 }
 

@@ -44,13 +44,14 @@
 #include "Utils/FontLoader.h"
 #include <Utils/ToolboxUtils.h>
 
-
-
+#include <EmbeddedResource.h>
+#include "resource.h"
 
 // declare method here as recommended by imgui
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace {
+    HMODULE gwcamodule = nullptr;
     HMODULE dllmodule = nullptr;
     WNDPROC OldWndProc = nullptr;
     bool defer_close = false;
@@ -128,6 +129,27 @@ namespace {
         }
         OnMinOrRestoreOrExitBtnClicked_Ret(message, wparam, lparam);
         GW::Hook::LeaveHook();
+    }
+
+    bool LoadGWCA() {
+        if (gwcamodule) return true;
+        if (!dllmodule) return false;
+        EmbeddedResource resource(MAKEINTRESOURCE(IDR_GWCA_DLL), "RCDATA", dllmodule);
+        if (!resource.data())
+            return false;
+        const auto gwca_dll_path = Resources::GetPath(L"gwca.dll");
+        if (!std::filesystem::exists(gwca_dll_path)) {
+            FILE* fp = fopen(gwca_dll_path.string().c_str(), "wb");
+            if (!fp)
+                return false;
+            const auto written = fwrite(resource.data(), resource.size(), 1, fp);
+            fclose(fp);
+            if (written != 1)
+                return false;
+        }
+        gwcamodule = LoadLibrary(gwca_dll_path.string().c_str());
+        if (!gwcamodule)
+            return false;
     }
 
     bool render_callback_attached = false;
@@ -233,7 +255,6 @@ namespace {
     std::vector<ToolboxWidget*> widgets_enabled{};
     std::vector<ToolboxWindow*> windows_enabled{};
 
-    std::vector<ToolboxModule*> all_modules_enabled{};
     std::vector<ToolboxUIElement*> ui_elements_enabled{};
 
     std::vector<ToolboxModule*> modules_terminating{};
@@ -267,6 +288,39 @@ namespace {
         std::ranges::sort(modules, [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
             return std::string(lhs->SettingsName()).compare(rhs->SettingsName()) < 0;
         });
+    }
+
+    HMODULE LoadGWCADll(HMODULE module) {
+        if (gwcamodule)
+            return gwcamodule;
+        // This doesn't work, but needs to!
+        EmbeddedResource resource(IDR_GWCA_DLL, "RCDATA", module);
+        if (!resource.data())
+            return NULL;
+
+        const auto gwca_dll_path = Resources::GetPath("gwca.dll");
+        if (std::filesystem::exists(gwca_dll_path))
+            std::filesystem::remove(gwca_dll_path);
+        if (std::filesystem::exists(gwca_dll_path))
+            return NULL;
+        FILE* fp = fopen(gwca_dll_path.string().c_str(), "wb");
+        if (!fp)
+            return NULL;
+        const auto written = fwrite(resource.data(), resource.size(), 1, fp);
+        fclose(fp);
+        if (written != 1)
+            return NULL;
+        gwcamodule = LoadLibraryA(gwca_dll_path.string().c_str());
+        if (!gwcamodule) {
+            Log::Log("LoadGWCADll fail: %d", GetLastError());
+            return NULL;
+        }
+        return gwcamodule;
+    }
+    bool UnloadGWCADll() {
+        if (gwcamodule && FreeLibrary(gwcamodule))
+            gwcamodule = NULL;
+        return gwcamodule == NULL;
     }
 
     ToolboxIni* OpenSettingsFile()
@@ -325,7 +379,7 @@ namespace {
 
 const std::vector<ToolboxModule*>& GWToolbox::GetAllModules()
 {
-    return all_modules_enabled;
+    return modules_enabled;
 }
 
 const std::vector<ToolboxUIElement*>& GWToolbox::GetUIElements()
@@ -350,31 +404,25 @@ const std::vector<ToolboxWidget*>& GWToolbox::GetWidgets()
 
 void UpdateEnabledWidgetVectors(ToolboxModule* m, bool added)
 {
-    const auto update_vec = [added](std::vector<void*>& vec, void* m) {
-        const auto found = std::ranges::find(vec, m);
-        if (added) {
-            if (found == vec.end()) {
-                vec.push_back(m);
-            }
-        }
-        else {
-            if (found != vec.end()) {
-                vec.erase(found);
-            }
-        }
-    };
-    update_vec(reinterpret_cast<std::vector<void*>&>(all_modules_enabled), m);
-    if (m->IsUIElement()) {
-        update_vec(reinterpret_cast<std::vector<void*>&>(ui_elements_enabled), m);
-        if (m->IsWidget()) {
-            update_vec(reinterpret_cast<std::vector<void*>&>(widgets_enabled), m);
-        }
-        if (m->IsWindow()) {
-            update_vec(reinterpret_cast<std::vector<void*>&>(windows_enabled), m);
+    const auto found = std::ranges::find(modules_enabled, m);
+    if (added) {
+        if (found == modules_enabled.end()) {
+            modules_enabled.push_back(m);
         }
     }
     else {
-        update_vec(reinterpret_cast<std::vector<void*>&>(modules_enabled), m);
+        if (found != modules_enabled.end()) {
+            modules_enabled.erase(found);
+        }
+    }
+
+    ui_elements_enabled.clear();
+    widgets_enabled.clear();
+    windows_enabled.clear();
+    for (auto module : modules_enabled) {
+        if(module->IsUIElement()) ui_elements_enabled.push_back((ToolboxUIElement*)module);
+        if (module->IsWidget()) widgets_enabled.push_back((ToolboxWidget*)module);
+        if (module->IsWindow()) windows_enabled.push_back((ToolboxWindow*)module);
     }
     minimap_enabled = GWToolbox::IsModuleEnabled(&Minimap::Instance());
 }
@@ -386,26 +434,6 @@ bool GWToolbox::ShouldDisableToolbox(GW::Constants::MapID map_id)
 }
 
 bool GWToolbox::IsInitialized() { return gwtoolbox_state == GWToolboxState::Initialised; }
-
-bool GWToolbox::ToggleModule(ToolboxWidget& m, const bool enable)
-{
-    std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
-    if (IsModuleEnabled(&m) == enable)
-        return enable;
-    const bool added = ToggleTBModule(m, reinterpret_cast<std::vector<ToolboxModule*>&>(widgets_enabled), enable);
-    UpdateEnabledWidgetVectors(&m, added);
-    return added;
-}
-
-bool GWToolbox::ToggleModule(ToolboxWindow& m, const bool enable)
-{
-    std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
-    if (IsModuleEnabled(&m) == enable)
-        return enable;
-    const bool added = ToggleTBModule(m, reinterpret_cast<std::vector<ToolboxModule*>&>(windows_enabled), enable);
-    UpdateEnabledWidgetVectors(&m, added);
-    return added;
-}
 
 bool GWToolbox::ToggleModule(ToolboxModule& m, const bool enable)
 {
@@ -435,6 +463,7 @@ DWORD __stdcall SafeThreadEntry(const LPVOID module) noexcept
 
 DWORD __stdcall ThreadEntry(const LPVOID module)
 {
+    LoadGWCADll(dllmodule);
     Log::Log("Initializing API\n");
 
     if (!GW::Initialize()) {
@@ -469,7 +498,7 @@ DWORD __stdcall ThreadEntry(const LPVOID module)
     // @Remark:
     // Hooks are disable from Guild Wars thread (safely), so we just make sure we exit the last hooks
     GW::DisableHooks();
-    while (GW::HookBase::GetInHookCount()) {
+    while (GW::Hook::GetInHookCount()) {
         Sleep(16);
     }
 
@@ -488,6 +517,7 @@ DWORD __stdcall ThreadEntry(const LPVOID module)
         // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
         SendMessage(gw_window_handle, WM_CLOSE, NULL, NULL);
     }
+    UnloadGWCADll();
     return 0;
 }
 
@@ -692,8 +722,8 @@ void GWToolbox::Initialize(const LPVOID module)
 
             GW::WaitForFrame(L"BtnRestore", [](GW::UI::Frame* frame) {
                 OnMinOrRestoreOrExitBtnClicked_Func = frame->frame_callbacks[0];
-                GW::HookBase::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
-                GW::HookBase::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
+                GW::Hook::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
+                GW::Hook::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
                 });
 
             UpdateInitialising(.0f);
@@ -740,14 +770,14 @@ bool GWToolbox::SetSettingsFolder(const std::filesystem::path& path)
 bool GWToolbox::IsModuleEnabled(ToolboxModule* m)
 {
     std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
-    return m && std::ranges::find(all_modules_enabled, m) != all_modules_enabled.end();
+    return m && std::ranges::find(modules_enabled, m) != modules_enabled.end();
 }
 bool GWToolbox::IsModuleEnabled(const char* name)
 {
     std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
-    return name && std::ranges::find_if(all_modules_enabled, [name](ToolboxModule* m) {
+    return name && std::ranges::find_if(modules_enabled, [name](ToolboxModule* m) {
         return strcmp(m->Name(), name) == 0;
-        }) != all_modules_enabled.end();
+        }) != modules_enabled.end();
 }
 
 bool GWToolbox::SettingsFolderChanged()
@@ -806,7 +836,7 @@ void GWToolbox::Disable()
     GW::DisableHooks();
     GW::RenderModule.enable_hooks();
     if (OnMinOrRestoreOrExitBtnClicked_Func)
-        GW::HookBase::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
+        GW::Hook::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
     AttachRenderCallback();
     gwtoolbox_disabled = true;
 }
@@ -815,7 +845,7 @@ bool GWToolbox::CanTerminate()
 {
     return modules_terminating.empty()
            && FontLoader::FontsLoaded()
-           && all_modules_enabled.empty()
+           && modules_enabled.empty()
            && !imgui_initialized
            && !event_handler_attached;
 }
@@ -847,7 +877,7 @@ void GWToolbox::Update(GW::HookStatus*)
     UpdateModulesTerminating(delta_f);
 
     // Update loop
-    for (const auto m : all_modules_enabled) {
+    for (const auto m : modules_enabled) {
         m->Update(delta_f);
     }
 
@@ -1035,10 +1065,10 @@ void GWToolbox::UpdateTerminating(float delta_f)
 {
     ASSERT(gwtoolbox_state == GWToolboxState::Terminating);
 
-    while (all_modules_enabled.size()) {
-        ASSERT(ToggleModule(*all_modules_enabled[0], false) == false);
+    while (modules_enabled.size()) {
+        ASSERT(ToggleModule(*modules_enabled[0], false) == false);
     }
-    ASSERT(all_modules_enabled.empty());
+    ASSERT(modules_enabled.empty());
     UpdateModulesTerminating(delta_f);
     if (!modules_terminating.empty())
         return;

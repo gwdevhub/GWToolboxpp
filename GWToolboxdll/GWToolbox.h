@@ -65,8 +65,6 @@ public:
 
     static bool IsInitialized();
 
-    static bool ToggleModule(ToolboxWidget& m, bool enable = true);
-    static bool ToggleModule(ToolboxWindow& m, bool enable = true);
     static bool ToggleModule(ToolboxModule& m, bool enable = true);
 
 private:

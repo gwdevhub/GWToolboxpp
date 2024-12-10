@@ -50,5 +50,5 @@ namespace Log {
     // Shows a temporary message in chat in the form of a yellow chat message from toolbox. This message will disappear on map change.
     void WarningW(const wchar_t* format, ...);
 
-    void FatalAssert(const char* expr, const char* file, unsigned int line);
+    void FatalAssert(const char* expr, const char* file, const unsigned line);
 }

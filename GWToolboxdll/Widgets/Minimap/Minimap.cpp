@@ -632,7 +632,7 @@ void Minimap::SignalTerminate()
     GW::StoC::RemoveCallbacks(&Generic_HookEntry);
     GW::UI::RemoveUIMessageCallback(&Generic_HookEntry);
 
-    GW::HookBase::RemoveHook(DrawCompassAgentsByType_Func);
+    GW::Hook::RemoveHook(DrawCompassAgentsByType_Func);
 
     GW::Chat::DeleteCommand(L"flag");
 
@@ -670,8 +670,8 @@ void Minimap::Initialize()
 #endif
 
     if (DrawCompassAgentsByType_Func) {
-        GW::HookBase::CreateHook((void**)&DrawCompassAgentsByType_Func, OnDrawCompassAgentsByType, (void**)&DrawCompassAgentsByType_Ret);
-        GW::HookBase::EnableHooks(DrawCompassAgentsByType_Func);
+        GW::Hook::CreateHook((void**)&DrawCompassAgentsByType_Func, OnDrawCompassAgentsByType, (void**)&DrawCompassAgentsByType_Ret);
+        GW::Hook::EnableHooks(DrawCompassAgentsByType_Func);
     }
 
     pending_refresh_quest_marker = true;

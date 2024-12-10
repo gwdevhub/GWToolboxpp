@@ -19,7 +19,6 @@ CMakeCache.txt
 *cmake_install.cmake
 *.tlog
 *.recipe
-*.lib
 *.res
 
 # Bloated Windows Databases

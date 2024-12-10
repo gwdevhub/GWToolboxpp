@@ -74,11 +74,12 @@ namespace Pathing {
         void shutdown()
         {
             stopProcessing();
-            if (worker_thread) {
+            while (isProcessing())
+                Sleep(10);
+            if (worker_thread->joinable())
                 worker_thread->join();
-                delete worker_thread;
-                worker_thread = nullptr;
-            }
+            delete worker_thread;
+            worker_thread = nullptr;
         }
 
         int progress()

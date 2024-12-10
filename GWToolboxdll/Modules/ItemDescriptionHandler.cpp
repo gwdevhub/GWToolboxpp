@@ -108,8 +108,8 @@ void ItemDescriptionHandler::Initialize()
     const auto address = GW::Scanner::Find("\x8b\xc3\x25\xfd\x00\x00\x00\x3c\xfd", "xxxxxxxxx", -0x5f);
     if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) {
         GetItemDescription_Func = (GetItemDescriptionCallback)address;
-        GW::HookBase::CreateHook((void**) & GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret);
-        GW::HookBase::EnableHooks(GetItemDescription_Func);
+        GW::Hook::CreateHook((void**) & GetItemDescription_Func, OnGetItemDescription, (void**)&GetItemDescription_Ret);
+        GW::Hook::EnableHooks(GetItemDescription_Func);
     }
 #ifdef _DEBUG
     ASSERT(GetItemDescription_Func);
@@ -120,7 +120,7 @@ void ItemDescriptionHandler::SignalTerminate()
 {
     ToolboxModule::SignalTerminate();
     if (GetItemDescription_Func) {
-        GW::HookBase::RemoveHook(GetItemDescription_Func);
+        GW::Hook::RemoveHook(GetItemDescription_Func);
         GetItemDescription_Func = nullptr;
     }
 }

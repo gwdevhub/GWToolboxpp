@@ -49,6 +49,7 @@ target_link_options(GWToolboxdll PRIVATE
 
 target_include_directories(GWToolboxdll PRIVATE
     "${PROJECT_SOURCE_DIR}/Dependencies"
+    "${PROJECT_SOURCE_DIR}/Dependencies/GWCA/include"
     "${CMAKE_CURRENT_SOURCE_DIR}"
 	"${SIMPLEINI_INCLUDE_DIRS}"
     )

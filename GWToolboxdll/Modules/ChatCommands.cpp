@@ -1319,8 +1319,8 @@ void ChatCommands::Initialize()
 
     GW::WaitForFrame(L"Chat", [](GW::UI::Frame* frame) {
         OnChatInteraction_Callback_Func = frame->frame_callbacks[0];
-        GW::HookBase::CreateHook((void**)&OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
-        GW::HookBase::EnableHooks(OnChatInteraction_Callback_Func);
+        GW::Hook::CreateHook((void**)&OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
+        GW::Hook::EnableHooks(OnChatInteraction_Callback_Func);
         });
 
 #ifdef _DEBUG
@@ -1346,10 +1346,10 @@ void ChatCommands::Terminate()
     }
     chat_commands.clear();
     if (FocusChatTab_Func) {
-        GW::HookBase::RemoveHook(FocusChatTab_Func);
+        GW::Hook::RemoveHook(FocusChatTab_Func);
     }
     if (OnChatInteraction_Callback_Func) {
-        GW::HookBase::RemoveHook(OnChatInteraction_Callback_Func);
+        GW::Hook::RemoveHook(OnChatInteraction_Callback_Func);
     }
 
     GW::UI::RemoveUIMessageCallback(&OnSentChat_HookEntry);
