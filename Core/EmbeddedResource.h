@@ -14,25 +14,12 @@ private:
     Parameters p;
 
 public:
-    EmbeddedResource(const int resource_id, const std::wstring_view resource_class = L"RCDATA", const HMODULE module = nullptr)
-    {
-        hResource = FindResourceW(module, MAKEINTRESOURCEW(resource_id), resource_class.data());
-        if (!hResource) {
-            return;
-        }
-        hMemory = LoadResource(module, hResource);
-        if (!hMemory) {
-            return;
-        }
-
-        p.size_bytes = SizeofResource(module, hResource);
-        p.ptr = LockResource(hMemory);
-    }
-
-    EmbeddedResource(const int resource_id, const std::string_view resource_class = "RCDATA", const HMODULE module = nullptr)
+    EmbeddedResource(const int resource_id, const std::string_view resource_class = RT_RCDATA, const HMODULE module = nullptr)
     {
         hResource = FindResourceA(module, MAKEINTRESOURCEA(resource_id), resource_class.data());
         if (!hResource) {
+            DWORD error = GetLastError();
+            Log::Error("FindResourceA failed with error: %d", error);
             return;
         }
         hMemory = LoadResource(module, hResource);
@@ -44,25 +31,12 @@ public:
         p.ptr = LockResource(hMemory);
     }
 
-    EmbeddedResource(const LPCWSTR resource_id, const std::wstring_view resource_class = L"RCDATA", const HMODULE module = nullptr)
-    {
-        hResource = FindResourceW(module, resource_id, resource_class.data());
-        if (!hResource) {
-            return;
-        }
-        hMemory = LoadResource(module, hResource);
-        if (!hMemory) {
-            return;
-        }
-
-        p.size_bytes = SizeofResource(module, hResource);
-        p.ptr = LockResource(hMemory);
-    }
-
-    EmbeddedResource(const LPCSTR resource_id, const std::string_view resource_class = "RCDATA", const HMODULE module = nullptr)
+    EmbeddedResource(const LPCSTR resource_id, const std::string_view resource_class = RT_RCDATA, const HMODULE module = nullptr)
     {
         hResource = FindResourceA(module, resource_id, resource_class.data());
         if (!hResource) {
+            DWORD error = GetLastError();
+            Log::Error("FindResourceA failed with error: %d", error);
             return;
         }
         hMemory = LoadResource(module, hResource);
