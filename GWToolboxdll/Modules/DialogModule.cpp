@@ -92,7 +92,7 @@ namespace {
 
     void OnNPCDialogUICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
     {
-        GW::HookBase::EnterHook();
+        GW::Hook::EnterHook();
         if (message->message_id == GW::UI::UIMessage::kDestroyFrame) {
             ResetDialog();
             if (dialog_info.agent_id) {
@@ -101,7 +101,7 @@ namespace {
             dialog_info.agent_id = 0;
         }
         NPCDialogUICallback_Ret(message, wparam, lparam);
-        GW::HookBase::LeaveHook();
+        GW::Hook::LeaveHook();
     }
 
     void OnDialogClosedByServer()
@@ -257,8 +257,8 @@ void DialogModule::Initialize()
 
     NPCDialogUICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmNpc.cpp", "msg.createParam", 0x3fe, 0));
     if (NPCDialogUICallback_Func) {
-        GW::HookBase::CreateHook((void**)&NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
-        GW::HookBase::EnableHooks(NPCDialogUICallback_Func);
+        GW::Hook::CreateHook((void**)&NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
+        GW::Hook::EnableHooks(NPCDialogUICallback_Func);
     }
 }
 
@@ -267,7 +267,7 @@ void DialogModule::Terminate()
     ToolboxModule::Terminate();
     GW::UI::RemoveUIMessageCallback(&dialog_hook);
     GW::UI::RemoveCreateUIComponentCallback(&dialog_hook);
-    GW::HookBase::RemoveHook(NPCDialogUICallback_Func);
+    GW::Hook::RemoveHook(NPCDialogUICallback_Func);
 }
 
 void DialogModule::SendDialog(const uint32_t dialog_id, clock_t time)
@@ -415,7 +415,7 @@ uint32_t DialogModule::AcceptFirstAvailableBounty() {
     const wchar_t* luxon_priest = L"\x3F69\xBAA2\xF307\x2CC1";
     const wchar_t* kurzick_priest = L"\x3E98\xDA05\xAA38\x45D";
 
-    const auto agent_name = GW::Agents::GetAgentEncName(GetDialogAgent());
+    const auto agent_name = GW::Agents::GetAgentEncName(GW::Agents::GetAgentByID(GetDialogAgent()));
     if (!agent_name)
         return 0;
 

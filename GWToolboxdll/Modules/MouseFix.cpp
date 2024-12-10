@@ -157,12 +157,12 @@ namespace {
         if (!(ProcessInput_Func && HasRegisteredTrackMouseEvent && gw_mouse_move && SetCursorPosCenter_Func))
             return;
         if (!enable) {
-            GW::HookBase::DisableHooks(ProcessInput_Func);
-            GW::HookBase::DisableHooks(SetCursorPosCenter_Func);
+            GW::Hook::DisableHooks(ProcessInput_Func);
+            GW::Hook::DisableHooks(SetCursorPosCenter_Func);
         }
         else {
-            GW::HookBase::EnableHooks(ProcessInput_Func);
-            GW::HookBase::EnableHooks(SetCursorPosCenter_Func);
+            GW::Hook::EnableHooks(ProcessInput_Func);
+            GW::Hook::EnableHooks(SetCursorPosCenter_Func);
         }
     }
 
@@ -354,8 +354,8 @@ void MouseFix::Initialize()
     address = GW::Scanner::FunctionFromNearCall(address);
     if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) {
         ChangeCursorIcon_Func = (ChangeCursorIcon_pt)address;
-        GW::HookBase::CreateHook((void**)&ChangeCursorIcon_Func, OnChangeCursorIcon, (void**)&ChangeCursorIcon_Ret);
-        GW::HookBase::EnableHooks(ChangeCursorIcon_Func);
+        GW::Hook::CreateHook((void**)&ChangeCursorIcon_Func, OnChangeCursorIcon, (void**)&ChangeCursorIcon_Ret);
+        GW::Hook::EnableHooks(ChangeCursorIcon_Func);
     }
 
 #if _DEBUG
@@ -390,7 +390,7 @@ void MouseFix::Terminate()
     ToolboxModule::Terminate();
     CursorFixEnable(false);
     GW::UI::RemoveUIMessageCallback(&UIMessage_HookEntry);
-    GW::HookBase::RemoveHook(ChangeCursorIcon_Func);
+    GW::Hook::RemoveHook(ChangeCursorIcon_Func);
 
     gw_mouse_move = nullptr;
 

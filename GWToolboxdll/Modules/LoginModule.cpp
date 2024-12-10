@@ -443,18 +443,18 @@ void LoginModule::Initialize()
         return InitialiationFailure("Failed to initialize GetStringParameter_Func");
     }
     {
-        int res = GW::HookBase::CreateHook((void**)&PortalAccountLogin_Func, OnPortalAccountLogin, (void**)&PortalAccountLogin_Ret);
+        int res = GW::Hook::CreateHook((void**)&PortalAccountLogin_Func, OnPortalAccountLogin, (void**)&PortalAccountLogin_Ret);
         if (res == -1) {
             return InitialiationFailure("Failed to hook PortalAccountLogin_Func");
         }
 
-        res = GW::HookBase::CreateHook((void**)&GetStringParameter_Func, OnGetStringParameter, (void**)&GetStringParameter_Ret);
+        res = GW::Hook::CreateHook((void**)&GetStringParameter_Func, OnGetStringParameter, (void**)&GetStringParameter_Ret);
         if (res == -1) {
             return InitialiationFailure("Failed to hook GetStringParameter_Func");
         }
 
-        GW::HookBase::EnableHooks(PortalAccountLogin_Func);
-        GW::HookBase::EnableHooks(GetStringParameter_Func);
+        GW::Hook::EnableHooks(PortalAccountLogin_Func);
+        GW::Hook::EnableHooks(GetStringParameter_Func);
     }
 
     uintptr_t address = GW::Scanner::FindAssertion("UiPregame.cpp", "!s_scene",0,0);
@@ -476,23 +476,23 @@ void LoginModule::Initialize()
         CreateTexture_Func = (CreateTexture_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("\\Code\\Engine\\Gr\\grtex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)",0, 0));
         DecompressFile_Func = (DecompressFile_pt)GW::Scanner::Find("\x75\x14\x68\x1d\x09\x00\x00", "xxxxxxx", -0xc);
 
-        GW::HookBase::CreateHook((void**)&OpenFileAtPath_Func, OnOpenFileAtPath, (void**)&OpenFileAtPath_Ret);
-        GW::HookBase::EnableHooks(OpenFileAtPath_Func);
+        GW::Hook::CreateHook((void**)&OpenFileAtPath_Func, OnOpenFileAtPath, (void**)&OpenFileAtPath_Ret);
+        GW::Hook::EnableHooks(OpenFileAtPath_Func);
 
-        GW::HookBase::CreateHook((void**)&OpenFileById_Func, OnOpenFilebyId, (void**)&OpenFileById_Ret);
-        GW::HookBase::EnableHooks(OpenFileById_Func);
+        GW::Hook::CreateHook((void**)&OpenFileById_Func, OnOpenFilebyId, (void**)&OpenFileById_Ret);
+        GW::Hook::EnableHooks(OpenFileById_Func);
 
-        GW::HookBase::CreateHook((void**)&GetFileId_Func, OnGetFileId, (void**)&GetFileId_Ret);
-        //GW::HookBase::EnableHooks(GetFileId_Func);
+        GW::Hook::CreateHook((void**)&GetFileId_Func, OnGetFileId, (void**)&GetFileId_Ret);
+        //GW::Hook::EnableHooks(GetFileId_Func);
 
-        GW::HookBase::CreateHook((void**)&CreateTexture_Func, OnCreateTexture, (void**)&CreateTexture_Ret);
-        //GW::HookBase::EnableHooks(CreateTexture_Func);
+        GW::Hook::CreateHook((void**)&CreateTexture_Func, OnCreateTexture, (void**)&CreateTexture_Ret);
+        //GW::Hook::EnableHooks(CreateTexture_Func);
 
-        GW::HookBase::CreateHook((void**)&LoadModelFromDat_Func, OnLoadModelFromDat, (void**)&LoadModelFromDat_Ret);
-        GW::HookBase::EnableHooks(LoadModelFromDat_Func);
+        GW::Hook::CreateHook((void**)&LoadModelFromDat_Func, OnLoadModelFromDat, (void**)&LoadModelFromDat_Ret);
+        GW::Hook::EnableHooks(LoadModelFromDat_Func);
 
-        GW::HookBase::CreateHook((void**)&DecompressFile_Func, OnDecompressFile, (void**)&DecompressFile_Ret);
-        //GW::HookBase::EnableHooks(DecompressFile_Func);
+        GW::Hook::CreateHook((void**)&DecompressFile_Func, OnDecompressFile, (void**)&DecompressFile_Ret);
+        //GW::Hook::EnableHooks(DecompressFile_Func);
 
         // Build asset map for login scenes
 
@@ -539,9 +539,9 @@ void LoginModule::DrawSettingsInternal() {
 void LoginModule::Terminate()
 {
 
-    GW::HookBase::RemoveHook(GetStringParameter_Func);
-    GW::HookBase::RemoveHook(PortalAccountLogin_Func);
-    GW::HookBase::RemoveHook(PreGameScene_UICallback_Func);
+    GW::Hook::RemoveHook(GetStringParameter_Func);
+    GW::Hook::RemoveHook(PortalAccountLogin_Func);
+    GW::Hook::RemoveHook(PreGameScene_UICallback_Func);
 }
 
 void LoginModule::Update(float)

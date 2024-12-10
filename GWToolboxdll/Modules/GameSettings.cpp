@@ -1505,21 +1505,21 @@ void GameSettings::Initialize()
 #endif
 
     if (SkillList_UICallback_Func) {
-        GW::HookBase::CreateHook((void**)&SkillList_UICallback_Func, OnSkillList_UICallback, reinterpret_cast<void**>(&SkillList_UICallback_Ret));
-        GW::HookBase::EnableHooks(SkillList_UICallback_Func);
+        GW::Hook::CreateHook((void**)&SkillList_UICallback_Func, OnSkillList_UICallback, reinterpret_cast<void**>(&SkillList_UICallback_Ret));
+        GW::Hook::EnableHooks(SkillList_UICallback_Func);
     }
 
     if (ShowAgentFactionGain_Func) {
-        GW::HookBase::CreateHook((void**)&ShowAgentFactionGain_Func, OnShowAgentFactionGain, reinterpret_cast<void**>(&ShowAgentFactionGain_Ret));
-        GW::HookBase::EnableHooks(ShowAgentFactionGain_Func);
+        GW::Hook::CreateHook((void**)&ShowAgentFactionGain_Func, OnShowAgentFactionGain, reinterpret_cast<void**>(&ShowAgentFactionGain_Ret));
+        GW::Hook::EnableHooks(ShowAgentFactionGain_Func);
     }
     if (ShowAgentExperienceGain_Func) {
-        GW::HookBase::CreateHook((void**)&ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, reinterpret_cast<void**>(&ShowAgentExperienceGain_Ret));
-        GW::HookBase::EnableHooks(ShowAgentExperienceGain_Func);
+        GW::Hook::CreateHook((void**)&ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, reinterpret_cast<void**>(&ShowAgentExperienceGain_Ret));
+        GW::Hook::EnableHooks(ShowAgentExperienceGain_Func);
     }
     if (FadeFrameContent_Func) {
-        GW::HookBase::CreateHook((void**)&FadeFrameContent_Func, OnFadeFrameContent, reinterpret_cast<void**>(&FadeFrameContent_Ret));
-        GW::HookBase::EnableHooks(FadeFrameContent_Func);
+        GW::Hook::CreateHook((void**)&FadeFrameContent_Func, OnFadeFrameContent, reinterpret_cast<void**>(&FadeFrameContent_Ret));
+        GW::Hook::EnableHooks(FadeFrameContent_Func);
     }
 
 
@@ -2578,7 +2578,7 @@ void GameSettings::OnServerMessage(const GW::HookStatus*, GW::Packet::StoC::Mess
     // 0x8101 0x641F 0x86C3 0xE149 0x53E8 0x101 0x107 = You have been in this map for n minutes.
     // 0x8101 0x641E 0xE7AD 0xEF64 0x1676 0x101 0x107 0x102 0x107 = You have been in this map for n hours and n minutes.
     if (wmemcmp(msg, L"\x8101\x641F\x86C3\xE149\x53E8", 5) == 0 || wmemcmp(msg, L"\x8101\x641E\xE7AD\xEF64\x1676", 5) == 0) {
-        GW::Chat::SendChat('/', "age2");
+        GW::Chat::SendChat(GW::Chat::Channel::CHANNEL_EMOTE, L"age2");
     }
 }
 
@@ -2588,7 +2588,7 @@ void GameSettings::OnVanquishComplete(const GW::HookStatus*, GW::Packet::StoC::V
     if (!auto_age_on_vanquish) {
         return;
     }
-    GW::Chat::SendChat('/', "age");
+    GW::Chat::SendChat(GW::Chat::Channel::CHANNEL_EMOTE, L"age");
 }
 
 void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::DungeonReward*) const

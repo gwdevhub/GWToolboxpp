@@ -501,6 +501,7 @@ namespace Pathing {
 
         for (size_t i = 0; i < m_aabbs.size(); ++i) {
             for (size_t j = i + 1; j < m_aabbs.size(); ++j) {
+                if (m_terminateThread) return;
                 // coarse intersection
                 if (!m_aabbs[i].intersect(m_aabbs[j], {1.0f, 1.0f})) continue;
                 auto* a = &m_aabbs[i],* b = &m_aabbs[j];

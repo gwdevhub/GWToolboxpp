@@ -593,8 +593,8 @@ namespace {
         if (hook) {
             ValidateAsyncDecodeStr_Func = (DoAsyncDecodeStr_pt)GW::Scanner::Find("\x8b\x47\x14\x8d\x9f\x80\xfe\xff\xff", "xxxxxxxxx", -0x8);
             if (ValidateAsyncDecodeStr_Func) {
-                GW::HookBase::CreateHook((void**)&ValidateAsyncDecodeStr_Func, OnValidateAsyncDecodeStr, (void**)&ValidateAsyncDecodeStr_Ret);
-                GW::HookBase::EnableHooks(ValidateAsyncDecodeStr_Func);
+                GW::Hook::CreateHook((void**)&ValidateAsyncDecodeStr_Func, OnValidateAsyncDecodeStr, (void**)&ValidateAsyncDecodeStr_Ret);
+                GW::Hook::EnableHooks(ValidateAsyncDecodeStr_Func);
             }
 
         }
@@ -613,8 +613,8 @@ namespace {
         if (hook) {
             CreateTexture_Func = (CreateTexture_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GrTex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)", 0,0));
             if (CreateTexture_Func) {
-                GW::HookBase::CreateHook((void**)&CreateTexture_Func, OnCreateTexture, (void**)&CreateTexture_Ret);
-                GW::HookBase::EnableHooks(CreateTexture_Func);
+                GW::Hook::CreateHook((void**)&CreateTexture_Func, OnCreateTexture, (void**)&CreateTexture_Ret);
+                GW::Hook::EnableHooks(CreateTexture_Func);
             }
 
         }
@@ -632,8 +632,8 @@ namespace {
         if (hook) {
             GWCA_SendUIMessage_Func = (GWCA_SendUIMessage_pt)GW::UI::SendUIMessage;
             if (GWCA_SendUIMessage_Func) {
-                GW::HookBase::CreateHook((void**)&GWCA_SendUIMessage_Func, OnGWCASendUIMessage, (void**)&GWCA_SendUIMessage_Ret);
-                GW::HookBase::EnableHooks(GWCA_SendUIMessage_Func);
+                GW::Hook::CreateHook((void**)&GWCA_SendUIMessage_Func, OnGWCASendUIMessage, (void**)&GWCA_SendUIMessage_Ret);
+                GW::Hook::EnableHooks(GWCA_SendUIMessage_Func);
             }
         }
         else if (GWCA_SendUIMessage_Func) {

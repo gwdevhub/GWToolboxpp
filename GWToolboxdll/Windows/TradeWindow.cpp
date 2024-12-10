@@ -208,7 +208,7 @@ void TradeWindow::Initialize()
     messages = CircularBuffer<Message>(100);
 
     should_stop = false;
-    worker = std::thread([this] {
+    worker = new std::thread([this] {
         while (!should_stop) {
             if (thread_jobs.empty()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -239,13 +239,15 @@ void TradeWindow::Initialize()
     FindPlayerPartySearch();
 
 }
-
-void TradeWindow::SignalTerminate()
+void TradeWindow::Terminate()
 {
-    ToolboxWindow::SignalTerminate();
+    ToolboxWindow::Terminate();
     should_stop = true;
-    if (worker.joinable()) {
-        worker.join();
+    if (worker) {
+        ASSERT(worker->joinable());
+        worker->join();
+        delete worker;
+        worker = nullptr;
     }
     DeleteWebSocket(ws_window);
     ws_window = nullptr;
@@ -254,7 +256,6 @@ void TradeWindow::SignalTerminate()
         wsaData = { 0 };
     }
 }
-
 bool TradeWindow::GetInKamadanAE1(const bool check_district)
 {
     using namespace GW::Constants;

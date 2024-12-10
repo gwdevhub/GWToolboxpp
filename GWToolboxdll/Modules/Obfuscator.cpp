@@ -403,7 +403,7 @@ namespace {
     // This is called when the game accesses account into via world contect e.g. to find account name when opening hero window
     GW::AccountInfo* OnGetAccountInfo()
     {
-        GW::HookBase::EnterHook();
+        GW::Hook::EnterHook();
         GW::AccountInfo* accountInfo = GetAccountData_Ret();
         if (accountInfo && IsObfuscatorEnabled()) {
             ObfuscateGuildRoster(false);
@@ -416,7 +416,7 @@ namespace {
             account_info_obfuscated.account_name = account_info_obfuscated_name.data();
             accountInfo = &account_info_obfuscated;
         }
-        GW::HookBase::LeaveHook();
+        GW::Hook::LeaveHook();
         return accountInfo;
     }
 
@@ -424,10 +424,10 @@ namespace {
     // This function is called when the login screen wants to display your currently highlighted character name at the top of the screen.
     void __fastcall OnGetCharacterSummary(void* ctx, const uint32_t edx, wchar_t* character_name)
     {
-        GW::HookBase::EnterHook();
+        GW::Hook::EnterHook();
         if (edx != 2 && edx != 3) {
             RetGetCharacterSummary(ctx, edx, character_name);
-            GW::HookBase::LeaveHook();
+            GW::Hook::LeaveHook();
             return;
         }
         if (pending_state == ObfuscatorState::Enabled) {
@@ -441,7 +441,7 @@ namespace {
             }
         }
         RetGetCharacterSummary(ctx, edx, character_name);
-        GW::HookBase::LeaveHook();
+        GW::Hook::LeaveHook();
     }
 
     // This should return the original unobfuscated player's invited name
@@ -854,8 +854,8 @@ void Obfuscator::Initialize()
     if (GetCharacterSummary_Assertion) {
         // Hook to override character names on login screen
         GetCharacterSummary_Func = reinterpret_cast<GetCharacterSummary_pt>(GW::Scanner::ToFunctionStart(GetCharacterSummary_Assertion));
-        GW::HookBase::CreateHook((void**)&GetCharacterSummary_Func, OnGetCharacterSummary, reinterpret_cast<void**>(&RetGetCharacterSummary));
-        GW::HookBase::EnableHooks(GetCharacterSummary_Func);
+        GW::Hook::CreateHook((void**)&GetCharacterSummary_Func, OnGetCharacterSummary, reinterpret_cast<void**>(&RetGetCharacterSummary));
+        GW::Hook::EnableHooks(GetCharacterSummary_Func);
         // Patch to allow missing character summary
         GetCharacterSummary_AssertionPatch.SetPatch(GetCharacterSummary_Assertion - 0x7, "\xEB", 1);
         GetCharacterSummary_AssertionPatch.TogglePatch(true);
@@ -863,8 +863,8 @@ void Obfuscator::Initialize()
 
     GetAccountData_Func = (GetAccountData_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(R"(p:\code\gw\ui\game\vendor\vnacctnameset.cpp)", "charName", 0, 0));
     if (GetAccountData_Func) {
-        GW::HookBase::CreateHook((void**)&GetAccountData_Func, OnGetAccountInfo, reinterpret_cast<void**>(&GetAccountData_Ret));
-        GW::HookBase::EnableHooks(GetAccountData_Func);
+        GW::Hook::CreateHook((void**)&GetAccountData_Func, OnGetAccountInfo, reinterpret_cast<void**>(&GetAccountData_Ret));
+        GW::Hook::EnableHooks(GetAccountData_Func);
     }
 
     constexpr auto pre_hook_altitude = -0x9000; // Hooks that run before other RegisterPacketCallback hooks
@@ -919,7 +919,7 @@ void Obfuscator::Initialize()
 void Obfuscator::SignalTerminate()
 {
     if (GetCharacterSummary_Func) {
-        GW::HookBase::RemoveHook(GetCharacterSummary_Func);
+        GW::Hook::RemoveHook(GetCharacterSummary_Func);
         GetCharacterSummary_AssertionPatch.Reset();
     }
     Obfuscate(false);
