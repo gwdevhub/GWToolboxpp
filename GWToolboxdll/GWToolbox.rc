@@ -96,7 +96,7 @@ END
 // RCDATA
 //
 
-IDR_GWCA_DLL            RCDATA                  "..\\..\\Dependencies\\GWCA\\bin\\gwca.dll"
+IDR_GWCA_DLL            RCDATA                  "..\\Dependencies\\GWCA\\bin\\gwca.dll"
 
 #endif    // English (United Kingdom) resources
 /////////////////////////////////////////////////////////////////////////////
