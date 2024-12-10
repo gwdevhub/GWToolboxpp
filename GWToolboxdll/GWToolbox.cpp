@@ -273,8 +273,14 @@ namespace {
         if (gwcamodule)
             return gwcamodule;
         // This doesn't work, but needs to!
-        EmbeddedResource resource(IDR_GWCA_DLL, RT_RCDATA, resource_module);
-        if (!resource.data())
+        HRSRC hResource = FindResource(resource_module, MAKEINTRESOURCE(IDR_GWCA_DLL), RT_RCDATA);
+        if (!hResource)
+            return NULL;
+
+        // Load the resource data
+        DWORD dllSize = SizeofResource(resource_module, hResource);
+        HGLOBAL dllData = LoadResource(resource_module, hResource);
+        if (!dllData)
             return NULL;
 
         const auto gwca_dll_path = Resources::GetPath("gwca.dll");
@@ -285,7 +291,7 @@ namespace {
         FILE* fp = fopen(gwca_dll_path.string().c_str(), "wb");
         if (!fp)
             return NULL;
-        const auto written = fwrite(resource.data(), resource.size(), 1, fp);
+        const auto written = fwrite(dllData, dllSize, 1, fp);
         fclose(fp);
         if (written != 1)
             return NULL;
