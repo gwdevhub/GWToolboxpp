@@ -131,27 +131,6 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
-    bool LoadGWCA() {
-        if (gwcamodule) return true;
-        if (!dllmodule) return false;
-        EmbeddedResource resource(MAKEINTRESOURCE(IDR_GWCA_DLL), "RCDATA", dllmodule);
-        if (!resource.data())
-            return false;
-        const auto gwca_dll_path = Resources::GetPath(L"gwca.dll");
-        if (!std::filesystem::exists(gwca_dll_path)) {
-            FILE* fp = fopen(gwca_dll_path.string().c_str(), "wb");
-            if (!fp)
-                return false;
-            const auto written = fwrite(resource.data(), resource.size(), 1, fp);
-            fclose(fp);
-            if (written != 1)
-                return false;
-        }
-        gwcamodule = LoadLibrary(gwca_dll_path.string().c_str());
-        if (!gwcamodule)
-            return false;
-    }
-
     bool render_callback_attached = false;
 
     bool AttachRenderCallback()
@@ -290,12 +269,18 @@ namespace {
         });
     }
 
-    HMODULE LoadGWCADll(HMODULE module) {
+    HMODULE LoadGWCADll(HMODULE resource_module) {
         if (gwcamodule)
             return gwcamodule;
         // This doesn't work, but needs to!
-        EmbeddedResource resource(IDR_GWCA_DLL, "RCDATA", module);
-        if (!resource.data())
+        HRSRC hResource = FindResource(resource_module, MAKEINTRESOURCE(IDR_GWCA_DLL), RT_RCDATA);
+        if (!hResource)
+            return NULL;
+
+        // Load the resource data
+        DWORD dllSize = SizeofResource(resource_module, hResource);
+        HGLOBAL dllData = LoadResource(resource_module, hResource);
+        if (!dllData)
             return NULL;
 
         const auto gwca_dll_path = Resources::GetPath("gwca.dll");
@@ -306,7 +291,7 @@ namespace {
         FILE* fp = fopen(gwca_dll_path.string().c_str(), "wb");
         if (!fp)
             return NULL;
-        const auto written = fwrite(resource.data(), resource.size(), 1, fp);
+        const auto written = fwrite(dllData, dllSize, 1, fp);
         fclose(fp);
         if (written != 1)
             return NULL;
