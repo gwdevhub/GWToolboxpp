@@ -58,15 +58,6 @@ BOOL WINAPI DllMain(_In_ const HMODULE hDllHandle, _In_ const DWORD reason, _In_
     switch (reason) {
         case DLL_PROCESS_ATTACH: {
             dllmodule = hDllHandle;
-
-            if (!Log::InitializeLog()) {
-                MessageBoxA(nullptr, "Failed to create outgoing log file.\nThis could be due to a file permissions error or antivirus blocking.", "GWToolbox++ - Clientside Error Detected", 0);
-                thread_running = false;
-                if (!is_detaching) {
-                    FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
-                }
-                return FALSE;
-            }
             __try {
                 // Initialise GW and GWCA on attach - this is so we can hook any function signatures before the game does anything!
                 GWToolbox::Initialize(dllmodule);

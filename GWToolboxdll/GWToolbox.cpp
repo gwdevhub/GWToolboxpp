@@ -442,7 +442,7 @@ DWORD __stdcall SafeThreadEntry(const LPVOID module) noexcept
 
 DWORD __stdcall ThreadEntry(const LPVOID module)
 {
-    LoadGWCADll(dllmodule);
+    ASSERT(LoadGWCADll(dllmodule));
     Log::Log("Initializing API\n");
 
     if (!GW::Initialize()) {
@@ -691,6 +691,8 @@ void GWToolbox::Initialize(const LPVOID module)
     if (module) {
         dllmodule = static_cast<HMODULE>(module);
     }
+    ASSERT(LoadGWCADll(dllmodule));
+    Log::InitializeLog();
     switch (gwtoolbox_state) {
         case GWToolboxState::Terminated:
             gwtoolbox_state = GWToolboxState::Initialising;
