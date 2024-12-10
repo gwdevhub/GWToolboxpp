@@ -144,9 +144,9 @@ namespace {
         rewritten_message.insert(end_idx + 5, L"</a>");
 
         status->blocked = true;
-        GW::Chat::WriteChatEnc(packet->channel, rewritten_message.c_str(), sender->name_enc);
-
-        packet->message = rewritten_message.data();
+        GW::GameThread::Enqueue([channel = packet->channel, message = rewritten_message, sender = std::wstring(sender->name_enc)] {
+            GW::Chat::WriteChatEnc(channel, message.c_str(), sender.c_str());
+            });
     }
 
     // Print NPC speech bubbles to emote chat.
@@ -166,10 +166,9 @@ namespace {
         if (!agent || agent->login_number) {
             return; // Agent not found or Speech bubble from player e.g. drunk message.
         }
-        PendingChatMessage* m = PendingChatMessage::queuePrint(GW::Chat::Channel::CHANNEL_EMOTE, pak->message, GW::Agents::GetAgentEncName(agent));
-        if (m) {
-            pending_messages.push_back(m);
-        }
+        GW::GameThread::Enqueue([message = std::wstring(pak->message), sender = std::wstring(GW::Agents::GetAgentEncName(agent))] {
+            GW::Chat::WriteChatEnc(GW::Chat::Channel::CHANNEL_EMOTE, message.c_str(), sender.c_str());
+            });
     }
 
     // NPC dialog messages to emote chat
@@ -389,17 +388,16 @@ void ChatSettings::Terminate()
 void ChatSettings::Update(float)
 {
     // Try to print any pending messages.
+    cycle_messages:
     for (auto it = pending_messages.begin(); it != pending_messages.end(); ++it) {
         PendingChatMessage* m = *it;
         if (m->IsSend() && PendingChatMessage::Cooldown()) {
             continue;
         }
         if (m->Consume()) {
-            it = pending_messages.erase(it);
+            pending_messages.erase(it);
             delete m;
-            if (it == pending_messages.end()) {
-                break;
-            }
+            goto cycle_messages;
         }
     }
 }
