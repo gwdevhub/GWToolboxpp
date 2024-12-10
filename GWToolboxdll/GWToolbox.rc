@@ -2,38 +2,6 @@
 //
 #include "resource.h"
 
-#include <windows.h>
-#include "Defines.h"
-
-VS_VERSION_INFO VERSIONINFO
-FILEVERSION     GWTOOLBOX_MODULE_VERSION
-PRODUCTVERSION  GWTOOLBOX_MODULE_VERSION
-BEGIN
-    BLOCK "StringFileInfo"
-    BEGIN
-        BLOCK "040904E4"
-        BEGIN
-            VALUE "CompanyName",        "gwdevhub"
-            VALUE "FileDescription",    "Tools for Guild Wars"
-            VALUE "FileVersion",        GWTOOLBOX_MODULE_VERSION
-            VALUE "InternalName",       "GWToolboxdll"
-            VALUE "LegalCopyright",     "Guild Wars and all associated logos and designs are trademarks or registered trademarks of NCsoft Corporation. All other trademarks are the property of their respective owners."
-            VALUE "LegalTrademarks1",   ""
-            VALUE "LegalTrademarks2",   ""
-            VALUE "OriginalFilename",   "GWToolboxdll.dll"
-            VALUE "ProductName",        "GWToolbox++"
-            VALUE "ProductVersion",     GWTOOLBOXDLL_VERSION
-        END
-    END
-
-    BLOCK "VarFileInfo"
-    BEGIN
-        VALUE "Translation", LANG_ENGLISH, SUBLANG_NEUTRAL
-    END
-END
-
-IDR_GWCA_DLL RCDATA "..\\Dependencies\\GWCA\\bin\\gwca.dll"
-
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -46,8 +14,10 @@ IDR_GWCA_DLL RCDATA "..\\Dependencies\\GWCA\\bin\\gwca.dll"
 
 /////////////////////////////////////////////////////////////////////////////
 // English (Neutral) resources
+
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
 LANGUAGE LANG_ENGLISH, SUBLANG_NEUTRAL
+#pragma code_page(1252)
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -75,6 +45,60 @@ END
 #endif    // APSTUDIO_INVOKED
 
 #endif    // English (Neutral) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// English (United Kingdom) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENG)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_UK
+#pragma code_page(1252)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+#include <windows.h>
+#include "Defines.h"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     GWTOOLBOX_MODULE_VERSION
+PRODUCTVERSION  GWTOOLBOX_MODULE_VERSION
+BEGIN
+BLOCK "StringFileInfo"
+BEGIN
+BLOCK "040904E4"
+BEGIN
+VALUE "CompanyName", "gwdevhub"
+VALUE "FileDescription", "Tools for Guild Wars"
+VALUE "FileVersion", GWTOOLBOX_MODULE_VERSION
+VALUE "InternalName", "GWToolboxdll"
+VALUE "LegalCopyright", "Guild Wars and all associated logos and designs are trademarks or registered trademarks of NCsoft Corporation. All other trademarks are the property of their respective owners."
+VALUE "LegalTrademarks1", ""
+VALUE "LegalTrademarks2", ""
+VALUE "OriginalFilename", "GWToolboxdll.dll"
+VALUE "ProductName", "GWToolbox++"
+VALUE "ProductVersion", GWTOOLBOXDLL_VERSION
+END
+END
+
+BLOCK "VarFileInfo"
+BEGIN
+VALUE "Translation", LANG_ENGLISH, SUBLANG_NEUTRAL
+END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// RCDATA
+//
+
+IDR_GWCA_DLL            RCDATA                  "..\\..\\Dependencies\\GWCA\\bin\\gwca.dll"
+
+#endif    // English (United Kingdom) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
