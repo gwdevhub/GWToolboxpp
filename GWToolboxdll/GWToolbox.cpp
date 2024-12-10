@@ -156,7 +156,7 @@ namespace {
 
     bool AttachGameLoopCallback()
     {
-        GW::GameThreadModule.enable_hooks();
+        GW::GameThread::EnableHooks();
         if (!game_loop_callback_attached) {
             GW::GameThread::RegisterGameThreadCallback(&game_loop_callback_entry, GWToolbox::Update);
             game_loop_callback_attached = true;
@@ -813,7 +813,7 @@ void GWToolbox::Disable()
     if (gwtoolbox_disabled)
         return;
     GW::DisableHooks();
-    GW::RenderModule.enable_hooks();
+    GW::Render::EnableHooks();
     if (OnMinOrRestoreOrExitBtnClicked_Func)
         GW::Hook::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
     AttachRenderCallback();

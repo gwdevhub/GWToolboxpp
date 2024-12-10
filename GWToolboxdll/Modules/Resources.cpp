@@ -536,6 +536,31 @@ void Resources::Download(const std::filesystem::path& path_to_file, const std::s
     });
 }
 
+bool Resources::ReadFile(const std::filesystem::path& path, std::string& response)
+{
+    if (!std::filesystem::exists(path))
+        return false;
+    std::ifstream file(path);
+    if (!file.is_open())
+        return false;
+    std::stringstream ss;
+    ss << file.rdbuf();
+    response = ss.str();
+    return !response.empty();
+}
+bool Resources::ReadFile(const std::filesystem::path& path, std::wstring& response)
+{
+    if (!std::filesystem::exists(path))
+        return false;
+    std::ifstream file(path);
+    if (!file.is_open())
+        return false;
+    std::wstringstream ss;
+    ss << file.rdbuf();
+    response = ss.str();
+    return !response.empty();
+}
+
 bool Resources::Download(const std::string& url, std::string& response)
 {
     int statusCode = 0;
