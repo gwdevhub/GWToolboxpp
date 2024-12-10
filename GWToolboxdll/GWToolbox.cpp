@@ -272,7 +272,7 @@ namespace {
     HMODULE LoadGWCADll(HMODULE resource_module) {
         if (gwcamodule)
             return gwcamodule;
-        // This doesn't work, but needs to!
+
         EmbeddedResource resource(IDR_GWCA_DLL, RT_RCDATA, resource_module);
         if (!resource.data())
             return NULL;

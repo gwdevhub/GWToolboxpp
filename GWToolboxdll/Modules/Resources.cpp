@@ -718,7 +718,7 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* pDevice, const HMODULE hSr
     HRESULT res = D3DERR_NOTAVAILABLE;
     size_t tries = 0;
     while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
-        EmbeddedResource resource(pSrcResource, "RCDATA", hSrcModule);
+        EmbeddedResource resource(pSrcResource, RT_RCDATA, hSrcModule);
         if (!resource.data()) {
             StrSwprintf(error, L"Error loading resource for id %p, module %p - texture not found", pSrcResource, hSrcModule);
             return D3DERR_NOTFOUND;
