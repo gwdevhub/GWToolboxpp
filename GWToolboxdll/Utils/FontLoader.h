@@ -2,7 +2,7 @@
 
 #ifndef DLLAPI
 #ifdef GWCA_IMPORT
-#define DLLAPI __declspec(dllimport)
+#define DLLAPI
 #else
 #define DLLAPI extern "C" __declspec(dllexport)
 #endif

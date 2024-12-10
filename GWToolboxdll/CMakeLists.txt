@@ -26,7 +26,7 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
  
 target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
-target_compile_definitions(GWToolboxdll PRIVATE "_USRDLL")
+target_compile_definitions(GWToolboxdll PRIVATE "_USRDLL" "GWCA_IMPORT")
 
 target_compile_options(GWToolboxdll PRIVATE /W4 /WX /Gy)
 target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
@@ -45,6 +45,7 @@ target_link_options(GWToolboxdll PRIVATE
     $<$<CONFIG:RelWithDebInfo>:/OPT:NOICF>
     $<$<CONFIG:DEBUG>:/NODEFAULTLIB:LIBCMT>
     /IGNORE:4099 # pdb not found for github action
+	"/DELAYLOAD:gwca.dll"
     )
 
 target_include_directories(GWToolboxdll PRIVATE
@@ -62,6 +63,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     imgui
     directxtex
     gwca
+	# delayimp
     easywsclient
     ${CPP_GAME_SDK}
     nlohmann_json::nlohmann_json
