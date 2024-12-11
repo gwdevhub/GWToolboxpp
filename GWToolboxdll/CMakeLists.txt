@@ -63,7 +63,6 @@ target_link_libraries(GWToolboxdll PRIVATE
     imgui
     directxtex
     gwca
-	# delayimp
     easywsclient
     ${CPP_GAME_SDK}
     nlohmann_json::nlohmann_json
@@ -75,6 +74,7 @@ target_link_libraries(GWToolboxdll PRIVATE
 
     # libs:
     Dbghelp.lib # for MiniDump
+	delayimp # for delay loading gwca
     )
       
 file(GLOB FXC_PATHS "C:/Program Files (x86)/Windows Kits/10/bin/*/x86")
