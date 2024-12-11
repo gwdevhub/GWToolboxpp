@@ -79,7 +79,11 @@ bool Log::InitializeLog()
     }
 #endif
 
-    RegisterLogHandler(GWCALogHandler, nullptr);
+    return true;
+}
+
+bool Log::InitializeGWCALog() {
+    GW::RegisterLogHandler(GWCALogHandler, nullptr);
     return true;
 }
 

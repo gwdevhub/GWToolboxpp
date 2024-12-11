@@ -186,12 +186,16 @@ namespace {
 Resources::Resources()
 {
     InitCurl();
+    co_initialized = SUCCEEDED(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
 }
 
 Resources::~Resources()
 {
     Cleanup();
     ShutdownCurl();
+    if (co_initialized) {
+        CoUninitialize();
+    }
     for (const auto& tex : skill_images | std::views::values) {
         delete tex;
     }
@@ -328,7 +332,6 @@ HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path
     // Get a pointer to the IShellLink interface
     hRes = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLink, (void**)&psl);
     if (!SUCCEEDED(hRes)) {
-        CoUninitialize();
         return hRes;
     }
     // Get a pointer to the IPersistFile interface
@@ -339,31 +342,26 @@ HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path
     // Open the shortcut file and initialize it from its contents
     hRes = ppf->Load(in_shortcut_path.wstring().c_str(), STGM_READ);
     if (!SUCCEEDED(hRes)) {
-        CoUninitialize();
         return hRes;
     }
     // Try to find the target of a shortcut,
     // even if it has been moved or renamed
     hRes = psl->Resolve(nullptr, SLR_UPDATE);
     if (!SUCCEEDED(hRes)) {
-        CoUninitialize();
         return hRes;
     }
     // Get the path to the shortcut target
     hRes = psl->GetPath(szPath, MAX_PATH, &wfd, SLGP_RAWPATH);
     if (!SUCCEEDED(hRes)) {
-        CoUninitialize();
         return hRes;
     }
 
     // Get the description of the target
     hRes = psl->GetDescription(szDesc, MAX_PATH);
     if (!SUCCEEDED(hRes)) {
-        CoUninitialize();
         return hRes;
     }
     out_actual_path = szPath;
-    CoUninitialize();
     return hRes;
 }
 

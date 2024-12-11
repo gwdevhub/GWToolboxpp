@@ -16,6 +16,7 @@ namespace Log {
     // in release redirects stdout and stderr to log file
     // in debug creates console
     bool InitializeLog();
+    bool InitializeGWCALog();
     void InitializeChat();
     void Terminate();
 

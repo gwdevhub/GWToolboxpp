@@ -129,7 +129,7 @@ public:
     // download to memory, blocking. If an error occurs, details are held in response string
     static bool Download(const std::string& url, std::string& response, int& statusCode);
     // download to memory, async, calls callback on completion. If an error occurs, details are held in response string
-    static void Download(const std::string& url, AsyncLoadMbCallback callback, void* wparam = nullptr);
+    static void Download(const std::string& url, AsyncLoadMbCallback callback, void* context = nullptr);
     // download to memory, async, calls callback on completion and caches the response locally for the duration specified. If an error occurs, details are held in response string
     static void Download(const std::string& url, AsyncLoadMbCallback callback, void* context, std::chrono::seconds cache_duration);
 
@@ -149,4 +149,6 @@ private:
     static HRESULT TryCreateTexture(IDirect3DDevice9* pDevice, HMODULE hSrcModule, LPCSTR pSrcResource, IDirect3DTexture9** texture, std::wstring& error);
     // Copy from compiled resource binary to file on local disk.
     static bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error);
+
+    bool co_initialized = false;
 };

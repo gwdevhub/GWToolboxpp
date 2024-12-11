@@ -294,9 +294,12 @@ namespace {
                             file_version_patch == GWCA::VersionPatch) {
                             // don't compare build number, stable api
                             gwcamodule = LoadLibraryA(gwca_dll_path.string().c_str());
-                            if (gwcamodule) {
-                                return gwcamodule;
+                            if (!gwcamodule) {
+                                Log::Log("LoadGWCADll fail: %d", GetLastError());
+                                return NULL;
                             }
+                            Log::Log("LoadGWCADll succeeded: %p", gwcamodule);
+                            return gwcamodule;
                         }
                     }
                 }
@@ -320,6 +323,7 @@ namespace {
             Log::Log("LoadGWCADll fail: %d", GetLastError());
             return NULL;
         }
+        Log::Log("LoadGWCADll succeeded: %p", gwcamodule);
         return gwcamodule;
     }
 
@@ -720,8 +724,9 @@ void GWToolbox::Initialize(const LPVOID module)
     if (module) {
         dllmodule = static_cast<HMODULE>(module);
     }
-    ASSERT(LoadGWCADll(dllmodule));
     Log::InitializeLog();
+    ASSERT(LoadGWCADll(dllmodule));
+    Log::InitializeGWCALog();
     switch (gwtoolbox_state) {
         case GWToolboxState::Terminated:
             gwtoolbox_state = GWToolboxState::Initialising;
