@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <GWCA/GWCA.h>
+#include <GWCA/GWCAVersion.h>
 #include <GWCA/Utilities/Hooker.h>
 
 #include <GWCA/Context/PreGameContext.h>
@@ -8,7 +9,6 @@
 
 #include <GWCA/GameEntities/Map.h>
 
-#include <GWCA/Managers/Module.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
@@ -24,17 +24,16 @@
 #include <Modules/ToolboxSettings.h>
 #include <Modules/CrashHandler.h>
 #include <Modules/DialogModule.h>
-#include "Modules/AprilFools.h"
-#include "Modules/ChatSettings.h"
-#include "Modules/GameSettings.h"
-#include "Modules/GwDatTextureModule.h"
-#include "Modules/HallOfMonumentsModule.h"
-#include "Modules/InventoryManager.h"
-#include "Modules/ItemDescriptionHandler.h"
-#include "Modules/LoginModule.h"
-#include "Modules/Updater.h"
-#include "Modules/PriceCheckerModule.h"
-#include "Windows/SettingsWindow.h"
+#include <Modules/AprilFools.h>
+#include <Modules/ChatSettings.h>
+#include <Modules/GameSettings.h>
+#include <Modules/GwDatTextureModule.h>
+#include <Modules/HallOfMonumentsModule.h>
+#include <Modules/InventoryManager.h>
+#include <Modules/ItemDescriptionHandler.h>
+#include <Modules/LoginModule.h>
+#include <Modules/Updater.h>
+#include <Windows/SettingsWindow.h>
 
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
@@ -269,18 +268,45 @@ namespace {
         });
     }
 
-    HMODULE LoadGWCADll(HMODULE resource_module) {
+    HMODULE LoadGWCADll(HMODULE resource_module)
+    {
         if (gwcamodule)
             return gwcamodule;
 
-        EmbeddedResource resource(IDR_GWCA_DLL, RT_RCDATA, resource_module);
-        if (!resource.data())
-            return NULL;
+        const auto gwca_dll_path = Resources::GetPath(L"gwca.dll");
+        if (std::filesystem::exists(gwca_dll_path)) {
+            DWORD handle;
+            const auto dll_path_str = gwca_dll_path.wstring();
+            DWORD version_info_size = GetFileVersionInfoSizeW(dll_path_str.c_str(), &handle);
+            if (version_info_size > 0) {
+                std::vector<BYTE> version_data(version_info_size);
+                if (GetFileVersionInfoW(dll_path_str.c_str(), handle, version_info_size, version_data.data())) {
+                    VS_FIXEDFILEINFO* file_info;
+                    UINT len;
+                    if (VerQueryValueA(version_data.data(), "\\", (LPVOID*)&file_info, &len)) {
+                        WORD file_version_major = HIWORD(file_info->dwFileVersionMS);
+                        WORD file_version_minor = LOWORD(file_info->dwFileVersionMS);
+                        WORD file_version_patch = HIWORD(file_info->dwFileVersionLS);
+                        [[maybe_unused]] WORD file_version_build = LOWORD(file_info->dwFileVersionLS);
 
-        const auto gwca_dll_path = Resources::GetPath("gwca.dll");
+                        if (file_version_major == GWCA::VersionMajor &&
+                            file_version_minor == GWCA::VersionMinor &&
+                            file_version_patch == GWCA::VersionPatch) {
+                            // don't compare build number, stable api
+                            gwcamodule = LoadLibraryA(gwca_dll_path.string().c_str());
+                            if (gwcamodule) {
+                                return gwcamodule;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        std::filesystem::remove(gwca_dll_path);
         if (std::filesystem::exists(gwca_dll_path))
-            std::filesystem::remove(gwca_dll_path);
-        if (std::filesystem::exists(gwca_dll_path))
+            return NULL;
+        const EmbeddedResource resource(IDR_GWCA_DLL, RT_RCDATA, resource_module);
+        if (!resource.data())
             return NULL;
         FILE* fp = fopen(gwca_dll_path.string().c_str(), "wb");
         if (!fp)
@@ -296,7 +322,9 @@ namespace {
         }
         return gwcamodule;
     }
-    bool UnloadGWCADll() {
+
+    bool UnloadGWCADll()
+    {
         if (gwcamodule && FreeLibrary(gwcamodule))
             gwcamodule = NULL;
         return gwcamodule == NULL;
@@ -399,7 +427,7 @@ void UpdateEnabledWidgetVectors(ToolboxModule* m, bool added)
     widgets_enabled.clear();
     windows_enabled.clear();
     for (auto module : modules_enabled) {
-        if(module->IsUIElement()) ui_elements_enabled.push_back((ToolboxUIElement*)module);
+        if (module->IsUIElement()) ui_elements_enabled.push_back((ToolboxUIElement*)module);
         if (module->IsWidget()) widgets_enabled.push_back((ToolboxWidget*)module);
         if (module->IsWindow()) windows_enabled.push_back((ToolboxWindow*)module);
     }
@@ -592,7 +620,8 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
             for (const auto m : tb.GetAllModules()) {
                 m->WndProc(Message, wParam, lParam);
             }
-        } break;
+        }
+        break;
 
         // Other mouse events:
         // - If right mouse down, leave it to gw
@@ -705,7 +734,7 @@ void GWToolbox::Initialize(const LPVOID module)
                 OnMinOrRestoreOrExitBtnClicked_Func = frame->frame_callbacks[0];
                 GW::Hook::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
                 GW::Hook::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
-                });
+            });
 
             UpdateInitialising(.0f);
             AttachGameLoopCallback();
@@ -753,12 +782,13 @@ bool GWToolbox::IsModuleEnabled(ToolboxModule* m)
     std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
     return m && std::ranges::find(modules_enabled, m) != modules_enabled.end();
 }
+
 bool GWToolbox::IsModuleEnabled(const char* name)
 {
     std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
     return name && std::ranges::find_if(modules_enabled, [name](ToolboxModule* m) {
         return strcmp(m->Name(), name) == 0;
-        }) != modules_enabled.end();
+    }) != modules_enabled.end();
 }
 
 bool GWToolbox::SettingsFolderChanged()
@@ -936,7 +966,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 
     std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
     // NB: Don't use an iterator here, because it could be invalidated during draw
-    for (size_t i = 0; i < ui_elements_enabled.size();i++) {
+    for (size_t i = 0; i < ui_elements_enabled.size(); i++) {
         const auto uielement = ui_elements_enabled[i];
         if (world_map_showing && !uielement->ShowOnWorldMap()) {
             continue;
@@ -951,15 +981,14 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 #endif
     ImGui::DrawContextMenu();
     ImGui::DrawConfirmDialog();
-    if((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
+    if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
         ImGui::ClampAllWindowsToScreen(gwtoolbox_state < GWToolboxState::DrawTerminating && ToolboxSettings::clamp_windows_to_screen);
     ImGui::EndFrame();
     ImGui::Render();
     ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
 
     // Update and Render additional Platform Windows
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();
         // TODO for OpenGL: restore current GL context.
@@ -981,7 +1010,7 @@ void GWToolbox::DrawInitialising(IDirect3DDevice9* device)
     if (!FontLoader::FontsLoaded()) {
         Resources::Instance().Update(0.f); // necessary, because this won't be called in
         Resources::DxUpdate(device);
-        return;                            // GWToolbox::Update() until fonts are initialised
+        return; // GWToolbox::Update() until fonts are initialised
     }
 
     gwtoolbox_state = GWToolboxState::Initialised;
