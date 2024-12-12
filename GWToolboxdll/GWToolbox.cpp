@@ -272,7 +272,7 @@ namespace {
     {
         if (gwcamodule)
             return gwcamodule;
-        const auto gwca_dll_path = Resources::GetPath(GWCA_DLL_NAME);
+        const auto gwca_dll_path = Resources::GetPath("gwca.dll");
         const auto dll_path_str = gwca_dll_path.wstring();
         if (std::filesystem::exists(gwca_dll_path)) {
             DWORD handle;
