@@ -36,6 +36,8 @@
 #include <Utils/TextUtils.h>
 
 namespace {
+    bool initialised_curl = false;
+
     const char* d3dErrorMessage(HRESULT code)
     {
         switch (code) {
@@ -186,28 +188,13 @@ namespace {
 Resources::Resources()
 {
     InitCurl();
+    initialised_curl = true;
     co_initialized = SUCCEEDED(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
 }
 
 Resources::~Resources()
 {
-    Cleanup();
-    ShutdownCurl();
-    if (co_initialized) {
-        CoUninitialize();
-    }
-    for (const auto& tex : skill_images | std::views::values) {
-        delete tex;
-    }
-    skill_images.clear();
-    for (const auto& tex : item_images | std::views::values) {
-        delete tex;
-    }
-    item_images.clear();
-    for (const auto& tex : map_names | std::views::values) {
-        delete tex;
-    }
-    map_names.clear();
+    Terminate();
 };
 
 void Resources::EnqueueWorkerTask(const std::function<void()>& f)
@@ -416,6 +403,24 @@ void Resources::Terminate()
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_Hook);
 
     Cleanup();
+    if(initialised_curl)
+        ShutdownCurl();
+    initialised_curl = false;
+    if (co_initialized) {
+        CoUninitialize();
+    }
+    for (const auto& tex : skill_images | std::views::values) {
+        delete tex;
+    }
+    skill_images.clear();
+    for (const auto& tex : item_images | std::views::values) {
+        delete tex;
+    }
+    item_images.clear();
+    for (const auto& tex : map_names | std::views::values) {
+        delete tex;
+    }
+    map_names.clear();
 }
 
 void Resources::EndLoading() const

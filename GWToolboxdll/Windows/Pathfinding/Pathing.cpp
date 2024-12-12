@@ -285,11 +285,6 @@ namespace Pathing {
         });
     }
 
-    MilePath::~MilePath()
-    {
-        shutdown();
-    }
-
     MilePath::Portal::Portal(const Vec2f& start, const Vec2f& goal, const AABB* box1, const AABB* box2)
         : m_start(start),
           m_goal(goal),

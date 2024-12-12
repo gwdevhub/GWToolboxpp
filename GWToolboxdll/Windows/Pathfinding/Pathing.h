@@ -64,7 +64,7 @@ namespace Pathing {
 
     public:
         MilePath();
-        ~MilePath();
+        ~MilePath() { shutdown(); }
 
         MilePath* instance();
         // Signals terminate to worker thread. Usually followed late by shutdown() to grab the thread again.
@@ -76,10 +76,12 @@ namespace Pathing {
             stopProcessing();
             while (isProcessing())
                 Sleep(10);
-            if (worker_thread->joinable())
+            if (worker_thread) {
+                ASSERT(worker_thread->joinable());
                 worker_thread->join();
-            delete worker_thread;
-            worker_thread = nullptr;
+                delete worker_thread;
+                worker_thread = nullptr;
+            }
         }
 
         int progress()

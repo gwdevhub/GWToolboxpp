@@ -198,6 +198,13 @@ void ObjectiveTimerWindow::CheckIsMapLoaded()
     }
 }
 
+void ObjectiveTimerWindow::Terminate() {
+    ToolboxWindow::Terminate();
+    if (run_loader.joinable()) {
+        run_loader.join();
+    }
+    ClearObjectiveSets();
+}
 void ObjectiveTimerWindow::Initialize()
 {
     ToolboxWindow::Initialize();

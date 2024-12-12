@@ -20,14 +20,6 @@ each list of objectives can be either sequential or independent
 class ObjectiveTimerWindow : public ToolboxWindow {
     ObjectiveTimerWindow() = default;
 
-    ~ObjectiveTimerWindow() override
-    {
-        if (run_loader.joinable()) {
-            run_loader.join();
-        }
-        ClearObjectiveSets();
-    }
-
 public:
     static ObjectiveTimerWindow& Instance()
     {
@@ -39,6 +31,7 @@ public:
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BULLSEYE; }
 
     void Initialize() override;
+    void Terminate() override;
 
     void Update(float delta) override;
     void Draw(IDirect3DDevice9* pDevice) override;

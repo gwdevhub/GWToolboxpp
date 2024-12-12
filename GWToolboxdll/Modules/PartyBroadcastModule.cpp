@@ -402,7 +402,8 @@ namespace {
 
 void PartyBroadcast::Update(float) {
     if (pending_websocket_disconnect) {
-        if (websocket_thread && websocket_thread->joinable()) {
+        if (websocket_thread) {
+            ASSERT(websocket_thread->joinable());
             websocket_thread->join();
             delete websocket_thread;
             websocket_thread = nullptr;
