@@ -270,56 +270,58 @@ namespace {
         });
     }
 
+    bool IsValidGWCADll(const std::filesystem::path& dll_path_str) {
+        if (!std::filesystem::exists(dll_path_str))
+            return false;
+        DWORD handle;
+        DWORD version_info_size = GetFileVersionInfoSizeW(dll_path_str.c_str(), &handle);
+        if (!version_info_size)
+            return false;
+        std::vector<BYTE> version_data(version_info_size);
+        if (!GetFileVersionInfoW(dll_path_str.c_str(), handle, version_info_size, version_data.data()))
+            return false;
+        VS_FIXEDFILEINFO* file_info;
+        UINT len;
+        if (!VerQueryValueA(version_data.data(), "\\", (LPVOID*)&file_info, &len))
+            return false;
+
+        WORD file_version_major = HIWORD(file_info->dwFileVersionMS);
+        WORD file_version_minor = LOWORD(file_info->dwFileVersionMS);
+        WORD file_version_patch = HIWORD(file_info->dwFileVersionLS);
+        [[maybe_unused]] WORD file_version_build = LOWORD(file_info->dwFileVersionLS);
+
+        return (file_version_major == GWCA::VersionMajor &&
+            file_version_minor == GWCA::VersionMinor &&
+            file_version_patch == GWCA::VersionPatch);
+    }
+
     HMODULE LoadGWCADll(HMODULE resource_module)
     {
         if (gwcamodule)
             return gwcamodule;
         const auto gwca_dll_path = Resources::GetPath("gwca.dll");
         const auto dll_path_str = gwca_dll_path.wstring();
-        if (std::filesystem::exists(gwca_dll_path)) {
-            DWORD handle;
-            DWORD version_info_size = GetFileVersionInfoSizeW(dll_path_str.c_str(), &handle);
-            if (version_info_size > 0) {
-                std::vector<BYTE> version_data(version_info_size);
-                if (GetFileVersionInfoW(dll_path_str.c_str(), handle, version_info_size, version_data.data())) {
-                    VS_FIXEDFILEINFO* file_info;
-                    UINT len;
-                    if (VerQueryValueA(version_data.data(), "\\", (LPVOID*)&file_info, &len)) {
-                        WORD file_version_major = HIWORD(file_info->dwFileVersionMS);
-                        WORD file_version_minor = LOWORD(file_info->dwFileVersionMS);
-                        WORD file_version_patch = HIWORD(file_info->dwFileVersionLS);
-                        [[maybe_unused]] WORD file_version_build = LOWORD(file_info->dwFileVersionLS);
-
-                        if (file_version_major == GWCA::VersionMajor &&
-                            file_version_minor == GWCA::VersionMinor &&
-                            file_version_patch == GWCA::VersionPatch) {
-                            // don't compare build number, stable api
-                            gwcamodule = LoadLibraryW(dll_path_str.c_str());
-                            if (!gwcamodule) {
-                                Log::Log("LoadGWCADll fail: %d", GetLastError());
-                                return NULL;
-                            }
-                            Log::Log("LoadGWCADll succeeded: %p", gwcamodule);
-                            return gwcamodule;
-                        }
-                    }
-                }
-            }
+        
+        if (!IsValidGWCADll(gwca_dll_path)) {
+            // Write new dll
+            std::filesystem::remove(gwca_dll_path);
+            if (std::filesystem::exists(gwca_dll_path))
+                return NULL;
+            const EmbeddedResource resource(IDR_GWCA_DLL, RT_RCDATA, resource_module);
+            if (!resource.data())
+                return NULL;
+            FILE* fp = fopen(gwca_dll_path.string().c_str(), "wb");
+            if (!fp)
+                return NULL;
+            const auto written = fwrite(resource.data(), resource.size(), 1, fp);
+            fclose(fp);
+            if (written != 1)
+                return NULL;
         }
-        std::filesystem::remove(gwca_dll_path);
-        if (std::filesystem::exists(gwca_dll_path))
+        if (!IsValidGWCADll(gwca_dll_path))
             return NULL;
-        const EmbeddedResource resource(IDR_GWCA_DLL, RT_RCDATA, resource_module);
-        if (!resource.data())
-            return NULL;
-        FILE* fp = fopen(gwca_dll_path.string().c_str(), "wb");
-        if (!fp)
-            return NULL;
-        const auto written = fwrite(resource.data(), resource.size(), 1, fp);
-        fclose(fp);
-        if (written != 1)
-            return NULL;
-        gwcamodule = LoadLibraryW(dll_path_str.c_str());
+
+        gwcamodule = LoadLibraryW(gwca_dll_path.wstring().c_str());
         if (!gwcamodule) {
             Log::Log("LoadGWCADll fail: %d", GetLastError());
             return NULL;
@@ -330,12 +332,8 @@ namespace {
 
     bool UnloadGWCADll()
     {
-        if (gwcamodule) {
-            if (FreeLibrary(gwcamodule)) {
-                gwcamodule = NULL;
-            }
-        }
-        return gwcamodule == NULL;
+        ASSERT(!gwcamodule || FreeLibrary(gwcamodule));
+        return true;
     }
 
     ToolboxIni* OpenSettingsFile()
@@ -392,19 +390,21 @@ namespace {
     }
 }
 
-FARPROC WINAPI CustomDliNotifyHook(unsigned dliNotify, PDelayLoadInfo pdli) {
-    if (dliNotify == dliNotePreLoadLibrary) {
-        if (_stricmp(pdli->szDll, "gwca.dll") == 0) {
-            if (!gwcamodule) {
-                gwcamodule = LoadGWCADll(dllmodule);
-            }
-            return (FARPROC)gwcamodule;
-        }
+FARPROC WINAPI CustomDliHook(unsigned dliNotify, PDelayLoadInfo pdli) {
+    switch (dliNotify) {
+        case dliNotePreLoadLibrary: {
+            if (_stricmp(pdli->szDll, "gwca.dll") != 0)
+                break;
+            const auto loaded = LoadGWCADll(dllmodule);
+            ASSERT(loaded);
+            return (FARPROC)loaded;
+        } break;
+        // Add other sliNotify cases for debugging if you need to later
     }
     return NULL;
 }
-
-extern const PfnDliHook __pfnDliNotifyHook2 = CustomDliNotifyHook;
+extern const PfnDliHook __pfnDliFailureHook2 = CustomDliHook;
+extern const PfnDliHook __pfnDliNotifyHook2 = CustomDliHook;
 
 const std::vector<ToolboxModule*>& GWToolbox::GetAllModules()
 {
@@ -744,6 +744,7 @@ void GWToolbox::Initialize(LPVOID module)
         dllmodule = static_cast<HMODULE>(module);
     }
     Log::InitializeLog();
+    // @Cleanup: atm its just an ASSERT - this could be a valid issue where the user can't write gwca.dll to disk, so need to handle it better later.
     ASSERT(LoadGWCADll(dllmodule));
     Log::InitializeGWCALog();
     switch (gwtoolbox_state) {
