@@ -48,8 +48,7 @@ target_link_options(GWToolboxdll PRIVATE
     $<$<CONFIG:RelWithDebInfo>:/OPT:NOICF>
     $<$<CONFIG:Debug>:/NODEFAULTLIB:LIBCMT>
     /IGNORE:4099 # pdb not found for github action
-    $<$<CONFIG:Debug>:/DELAYLOAD:${GWCA_DLL_DEBUG_NAME}>
-    $<$<NOT:$<CONFIG:Debug>>:/DELAYLOAD:${GWCA_DLL_RELEASE_NAME}>
+    "/DELAYLOAD:gwca.dll"
     )
 
 target_include_directories(GWToolboxdll PRIVATE
