@@ -19,7 +19,7 @@ namespace GW {
 class Resources : public ToolboxModule {
     friend class GWToolbox;
     Resources();
-    ~Resources() override;
+    ~Resources() = default;
 
 public:
     Resources(const Resources&) = delete;

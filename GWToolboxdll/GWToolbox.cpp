@@ -46,6 +46,8 @@
 #include <EmbeddedResource.h>
 #include "resource.h"
 
+#include <DelayImp.h>
+
 // declare method here as recommended by imgui
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -390,6 +392,20 @@ namespace {
     }
 }
 
+FARPROC WINAPI CustomDliNotifyHook(unsigned dliNotify, PDelayLoadInfo pdli) {
+    if (dliNotify == dliNotePreLoadLibrary) {
+        if (_stricmp(pdli->szDll, "gwca.dll") == 0) {
+            if (!gwcamodule) {
+                gwcamodule = LoadGWCADll(dllmodule);
+            }
+            return (FARPROC)gwcamodule;
+        }
+    }
+    return NULL;
+}
+
+extern const PfnDliHook __pfnDliNotifyHook2 = CustomDliNotifyHook;
+
 const std::vector<ToolboxModule*>& GWToolbox::GetAllModules()
 {
     return modules_enabled;
@@ -524,6 +540,8 @@ DWORD __stdcall ThreadEntry([[maybe_unused]] LPVOID module)
     Log::Log("Closing log/console, bye!\n");
     Log::Terminate();
     GW::Terminate();
+
+    Sleep(160);
 
     UnloadGWCADll();
     if (defer_close) {

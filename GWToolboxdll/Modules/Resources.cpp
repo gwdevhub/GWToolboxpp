@@ -192,11 +192,6 @@ Resources::Resources()
     co_initialized = SUCCEEDED(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
 }
 
-Resources::~Resources()
-{
-    Terminate();
-};
-
 void Resources::EnqueueWorkerTask(const std::function<void()>& f)
 {
     worker_mutex.lock();
