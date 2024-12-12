@@ -26,7 +26,12 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
  
 target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
-target_compile_definitions(GWToolboxdll PRIVATE "_USRDLL" "GWCA_IMPORT")
+target_compile_definitions(GWToolboxdll PRIVATE
+    "_USRDLL"
+    "GWCA_IMPORT" 
+    $<$<CONFIG:Debug>:GWCA_DLL_NAME=\"${GWCA_DLL_DEBUG_NAME}\">
+    $<$<NOT:$<CONFIG:Debug>>:GWCA_DLL_NAME=\"${GWCA_DLL_RELEASE_NAME}\">
+    )
 
 target_compile_options(GWToolboxdll PRIVATE /W4 /WX /Gy)
 target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
