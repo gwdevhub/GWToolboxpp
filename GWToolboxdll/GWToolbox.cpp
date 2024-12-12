@@ -399,6 +399,10 @@ FARPROC WINAPI CustomDliHook(unsigned dliNotify, PDelayLoadInfo pdli) {
             ASSERT(loaded);
             return (FARPROC)loaded;
         } break;
+        case dliFailGetProc: {
+            ASSERT(pdli && *(pdli->dlp.szProcName));
+            Log::Log("Something is trying to access %ls, but failed", pdli->dlp.szProcName);
+        } break;
         // Add other sliNotify cases for debugging if you need to later
     }
     return NULL;
