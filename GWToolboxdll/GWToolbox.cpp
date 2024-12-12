@@ -304,29 +304,41 @@ namespace {
         
         if (!IsValidGWCADll(gwca_dll_path)) {
             // Write new dll
-            std::filesystem::remove(gwca_dll_path);
-            if (std::filesystem::exists(gwca_dll_path))
-                return NULL;
             const EmbeddedResource resource(IDR_GWCA_DLL, RT_RCDATA, resource_module);
-            if (!resource.data())
+            if (!resource.data()) {
+                Log::Log("[LoadGWCADll] resource fail, couldn't get dll from resources");
                 return NULL;
+            }
+
+            std::filesystem::remove(gwca_dll_path);
+            if (std::filesystem::exists(gwca_dll_path)) {
+                Log::Log("[LoadGWCADll] std::filesystem::remove fail, file still exists - permission error?");
+                return NULL;
+            }
+
             FILE* fp = fopen(gwca_dll_path.string().c_str(), "wb");
-            if (!fp)
+            if (!fp) {
+                Log::Log("[LoadGWCADll] fopen fail, %d", GetLastError());
                 return NULL;
+            }
             const auto written = fwrite(resource.data(), resource.size(), 1, fp);
             fclose(fp);
-            if (written != 1)
+            if (written != 1) {
+                Log::Log("[LoadGWCADll] fwrite fail, %d", GetLastError());
                 return NULL;
+            }
         }
-        if (!IsValidGWCADll(gwca_dll_path))
+        if (!IsValidGWCADll(gwca_dll_path)) {
+            Log::Log("[LoadGWCADll] resource fail, GWCA not valid after replacing");
             return NULL;
+        }
 
         gwcamodule = LoadLibraryW(gwca_dll_path.wstring().c_str());
         if (!gwcamodule) {
-            Log::Log("LoadGWCADll fail: %d", GetLastError());
+            Log::Log("[LoadGWCADll] LoadLibraryW fail, %d", GetLastError());
             return NULL;
         }
-        Log::Log("LoadGWCADll succeeded: %p", gwcamodule);
+        Log::Log("[LoadGWCADll] success, module ptr %p", gwcamodule);
         return gwcamodule;
     }
 
