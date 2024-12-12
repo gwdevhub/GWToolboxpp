@@ -272,11 +272,14 @@ namespace {
     {
         if (gwcamodule)
             return gwcamodule;
-
+#ifdef _DEBUG
+        const auto gwca_dll_path = Resources::GetPath(L"gwcad.dll");
+#else
         const auto gwca_dll_path = Resources::GetPath(L"gwca.dll");
+#endif
+        const auto dll_path_str = gwca_dll_path.wstring();
         if (std::filesystem::exists(gwca_dll_path)) {
             DWORD handle;
-            const auto dll_path_str = gwca_dll_path.wstring();
             DWORD version_info_size = GetFileVersionInfoSizeW(dll_path_str.c_str(), &handle);
             if (version_info_size > 0) {
                 std::vector<BYTE> version_data(version_info_size);
@@ -293,7 +296,7 @@ namespace {
                             file_version_minor == GWCA::VersionMinor &&
                             file_version_patch == GWCA::VersionPatch) {
                             // don't compare build number, stable api
-                            gwcamodule = LoadLibraryA(gwca_dll_path.string().c_str());
+                            gwcamodule = LoadLibraryW(dll_path_str.c_str());
                             if (!gwcamodule) {
                                 Log::Log("LoadGWCADll fail: %d", GetLastError());
                                 return NULL;
@@ -318,7 +321,7 @@ namespace {
         fclose(fp);
         if (written != 1)
             return NULL;
-        gwcamodule = LoadLibraryA(gwca_dll_path.string().c_str());
+        gwcamodule = LoadLibraryW(dll_path_str.c_str());
         if (!gwcamodule) {
             Log::Log("LoadGWCADll fail: %d", GetLastError());
             return NULL;
@@ -329,8 +332,11 @@ namespace {
 
     bool UnloadGWCADll()
     {
-        if (gwcamodule && FreeLibrary(gwcamodule))
-            gwcamodule = NULL;
+        if (gwcamodule) {
+            if (FreeLibrary(gwcamodule)) {
+                gwcamodule = NULL;
+            }
+        }
         return gwcamodule == NULL;
     }
 
@@ -461,7 +467,7 @@ HMODULE GWToolbox::GetDLLModule()
     return dllmodule;
 }
 
-DWORD __stdcall SafeThreadEntry(const LPVOID module) noexcept
+DWORD __stdcall SafeThreadEntry(LPVOID module) noexcept
 {
     dllmodule = static_cast<HMODULE>(module);
     __try {
@@ -472,7 +478,7 @@ DWORD __stdcall SafeThreadEntry(const LPVOID module) noexcept
     return EXIT_SUCCESS;
 }
 
-DWORD __stdcall ThreadEntry(const LPVOID module)
+DWORD __stdcall ThreadEntry([[maybe_unused]] LPVOID module)
 {
     ASSERT(LoadGWCADll(dllmodule));
     Log::Log("Initializing API\n");
@@ -519,16 +525,15 @@ DWORD __stdcall ThreadEntry(const LPVOID module)
     Sleep(16);
 
     Log::Log("Destroying API\n");
-    GW::Terminate();
-
     Log::Log("Closing log/console, bye!\n");
     Log::Terminate();
+    GW::Terminate();
 
+    UnloadGWCADll();
     if (defer_close) {
         // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
         SendMessage(gw_window_handle, WM_CLOSE, NULL, NULL);
     }
-    UnloadGWCADll();
     return 0;
 }
 
@@ -719,7 +724,7 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
     return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
 }
 
-void GWToolbox::Initialize(const LPVOID module)
+void GWToolbox::Initialize(LPVOID module)
 {
     if (module) {
         dllmodule = static_cast<HMODULE>(module);

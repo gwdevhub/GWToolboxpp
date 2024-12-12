@@ -7,8 +7,8 @@
 
 #include "Windows/HeroBuildsWindow.h"
 
-DWORD __stdcall SafeThreadEntry(LPVOID mod) noexcept;
-DWORD __stdcall ThreadEntry(LPVOID);
+DWORD __stdcall SafeThreadEntry(LPVOID module) noexcept;
+DWORD __stdcall ThreadEntry(LPVOID module);
 
 LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) noexcept;
 LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
