@@ -231,9 +231,14 @@ namespace {
         return true;
     }
 
+    // All modules including widgets and windows
     std::vector<ToolboxModule*> modules_enabled{};
+    // Widgets
     std::vector<ToolboxWidget*> widgets_enabled{};
+    // Windows
     std::vector<ToolboxWindow*> windows_enabled{};
+    // Modules that aren't widgets or windows
+    std::vector<ToolboxModule*> other_modules_enabled{};
 
     std::vector<ToolboxUIElement*> ui_elements_enabled{};
 
@@ -434,7 +439,7 @@ const std::vector<ToolboxUIElement*>& GWToolbox::GetUIElements()
 
 const std::vector<ToolboxModule*>& GWToolbox::GetModules()
 {
-    return modules_enabled;
+    return other_modules_enabled;
 }
 
 const std::vector<ToolboxWindow*>& GWToolbox::GetWindows()
@@ -464,10 +469,12 @@ void UpdateEnabledWidgetVectors(ToolboxModule* m, bool added)
     ui_elements_enabled.clear();
     widgets_enabled.clear();
     windows_enabled.clear();
+    other_modules_enabled.clear();
     for (auto module : modules_enabled) {
         if (module->IsUIElement()) ui_elements_enabled.push_back((ToolboxUIElement*)module);
         if (module->IsWidget()) widgets_enabled.push_back((ToolboxWidget*)module);
-        if (module->IsWindow()) windows_enabled.push_back((ToolboxWindow*)module);
+        else if (module->IsWindow()) windows_enabled.push_back((ToolboxWindow*)module);
+        else other_modules_enabled.push_back((ToolboxModule*)module);
     }
     minimap_enabled = GWToolbox::IsModuleEnabled(&Minimap::Instance());
 }
