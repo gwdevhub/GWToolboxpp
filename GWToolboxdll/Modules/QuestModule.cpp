@@ -45,6 +45,8 @@ namespace {
     GW::HookEntry post_ui_message_entry;
     bool initialised = false;
 
+    bool double_click_to_travel_to_quest = true;
+
     GW::Constants::QuestID custom_quest_id = (GW::Constants::QuestID)0x0000fdd;
     GW::Quest custom_quest_marker;
     GW::Vec2f custom_quest_marker_world_pos;
@@ -62,7 +64,7 @@ namespace {
     {
         GW::Hook::EnterHook();
 
-        if (message->message_id == GW::UI::UIMessage::kMouseClick2) {
+        if (double_click_to_travel_to_quest && message->message_id == GW::UI::UIMessage::kMouseClick2) {
             const auto packet = (GW::UI::UIPacket::kMouseAction*)wParam;
             if (packet->current_state == 0x7 && (packet->child_frame_id_dupe & 0xffff0000) == 0x80000000) {
                 if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
@@ -548,6 +550,7 @@ ImU32 QuestModule::GetQuestColor(GW::Constants::QuestID quest_id)
 
 void QuestModule::DrawSettingsInternal()
 {
+    ImGui::Checkbox("Double click a quest in the quest log window to travel to nearest outpost", &double_click_to_travel_to_quest);
     ImGui::Text("Draw path to quest marker on:");
     ImGui::Checkbox("Terrain##drawquestpath", &draw_quest_path_on_terrain);
     ImGui::Checkbox("Minimap##drawquestpath", &draw_quest_path_on_minimap);
@@ -570,6 +573,7 @@ void QuestModule::LoadSettings(ToolboxIni* ini)
     float custom_quest_marker_world_pos_y = .0f;
     LOAD_FLOAT(custom_quest_marker_world_pos_x);
     LOAD_FLOAT(custom_quest_marker_world_pos_y);
+    LOAD_BOOL(double_click_to_travel_to_quest);
     custom_quest_marker_world_pos = { custom_quest_marker_world_pos_x, custom_quest_marker_world_pos_y };
     GW::GameThread::Enqueue([]() {
         SetCustomQuestMarker(custom_quest_marker_world_pos);
@@ -588,6 +592,7 @@ void QuestModule::SaveSettings(ToolboxIni* ini)
     float custom_quest_marker_world_pos_y = custom_quest_marker_world_pos.y;
     SAVE_FLOAT(custom_quest_marker_world_pos_x);
     SAVE_FLOAT(custom_quest_marker_world_pos_y);
+    SAVE_BOOL(double_click_to_travel_to_quest);
 }
 
 void QuestModule::Initialize()
