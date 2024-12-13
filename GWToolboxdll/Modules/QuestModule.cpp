@@ -38,7 +38,7 @@ namespace {
         Colors::MaterialRed(), Colors::MaterialYellow()
     });
 
-    bool draw_quest_path_on_terrain = true;
+    bool draw_quest_path_on_terrain = false;
     bool draw_quest_path_on_minimap = true;
     bool show_paths_to_all_quests = false;
     GW::HookEntry pre_ui_message_entry;
