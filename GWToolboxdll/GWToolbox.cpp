@@ -489,7 +489,7 @@ bool GWToolbox::IsInitialized() { return gwtoolbox_state == GWToolboxState::Init
 
 bool GWToolbox::ToggleModule(ToolboxModule& m, const bool enable)
 {
-    std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
+    std::lock_guard lock(module_management_mutex);
     if (IsModuleEnabled(&m) == enable)
         return enable;
     const bool added = ToggleTBModule(m, modules_enabled, enable);
