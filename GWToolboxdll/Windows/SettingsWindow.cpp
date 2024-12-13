@@ -167,9 +167,7 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
 
         auto modules = GWToolbox::GetModules();
         std::ranges::sort(modules, sort);
-        for (const auto m : modules | std::views::filter([](const ToolboxModule* module) {
-            return !module->IsUIElement();
-        })) {
+        for (const auto m : modules) {
             if (m->HasSettings()) {
                 DrawSettingsSection(m->SettingsName());
             }
