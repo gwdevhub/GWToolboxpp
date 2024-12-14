@@ -223,7 +223,7 @@ void PathfindingWindow::SignalTerminate()
 
 bool PathfindingWindow::CanTerminate()
 {
-    if (pending_worker_task)
+    if (!pending_terminate && pending_worker_task)
         return false;
     for (const auto m : mile_paths_by_coords) {
         if (m.second->isProcessing())
