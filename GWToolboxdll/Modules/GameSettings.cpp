@@ -1217,7 +1217,7 @@ namespace {
 
             // Display close/restore/min buttons top right
             GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnMin"), true);
-            GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnRestore"), true);
+            GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnRestore"), false); // @TODO: Show this, but make it maximise the window on click instead
             GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnExit"), true);
         }
     }
