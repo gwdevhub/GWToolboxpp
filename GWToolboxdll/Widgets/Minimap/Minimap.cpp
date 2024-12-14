@@ -28,6 +28,7 @@
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/RenderMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
