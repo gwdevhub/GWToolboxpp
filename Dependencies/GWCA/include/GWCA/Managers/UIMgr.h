@@ -7,8 +7,6 @@
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/Managers/MerchantMgr.h>
 
-#include "RenderMgr.h"
-
 namespace GW {
 
     struct Module;
@@ -1078,7 +1076,7 @@ namespace GW {
         GWCA_API bool SetFrameLimit(uint32_t value);
 
         //GWCA_API void SetPreference(Preference pref, uint32_t value);
-
+        GWCA_API bool SetFrameVisible(UI::Frame* frame, bool is_visible);
 
         typedef HookCallback<uint32_t> KeyCallback;
         // Listen for a gw hotkey press

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <GWCA/Utilities/Export.h>
-#include <GWCA/Utilities/Hook.h>
 
 namespace GW {
     struct Module;

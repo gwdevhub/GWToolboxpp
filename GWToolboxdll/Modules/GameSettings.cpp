@@ -215,6 +215,8 @@ namespace {
 
     bool automatically_flag_pet_to_fight_called_target = true;
 
+    bool remove_window_border_in_windowed_mode = false;
+
     bool skip_fade_animations = false;
     using FadeFrameContent_pt = void(__cdecl*)(uint32_t frame_id, float source_opacity, float target_opacity, float duration_seconds, uint32_t unk);
     FadeFrameContent_pt FadeFrameContent_Func = nullptr, FadeFrameContent_Ret = nullptr;
@@ -1186,6 +1188,40 @@ namespace {
         }
     }
 
+    void CheckRemoveWindowBorder() {
+        // @TODO: When frame is removed, the game "expands" to fill the space, but the UI is still offset as if its factoring in the for title bar. Intercept SetWindowPos on the game side instead of doing this???
+        const auto pref = GW::UI::GetPreference(GW::UI::NumberPreference::ScreenBorderless);
+        Log::Log("Pref changed %d", pref);
+        if (remove_window_border_in_windowed_mode && pref == 0) {
+            const auto hwnd = GW::MemoryMgr::GetGWWindowHandle();
+            if (!hwnd) return;
+
+            auto remove_styles = (WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
+            auto lStyle = GetWindowLong(hwnd, GWL_STYLE);
+
+            if (!lStyle) return;
+            if ((lStyle & remove_styles) != 0) {
+                lStyle &= ~remove_styles;
+                SetWindowLong(hwnd, GWL_STYLE, lStyle);
+            }
+
+            remove_styles = (WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
+            lStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+            if ((lStyle & remove_styles) != 0) {
+                lStyle &= ~remove_styles;
+                //SetWindowLong(hwnd, GWL_EXSTYLE, lStyle);
+            }
+            //SetWindowLong(hwnd, GWL_EXSTYLE, lExStyle);
+
+            //SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER);
+
+            // Display close/restore/min buttons top right
+            GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnMin"), true);
+            GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnRestore"), true);
+            GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnExit"), true);
+        }
+    }
+
     GW::HookEntry OnPostUIMessage_HookEntry;
     void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*) {
         if (status->blocked)
@@ -1207,8 +1243,8 @@ namespace {
         } break;
         case GW::UI::UIMessage::kPreferenceValueChanged: {
             const auto packet = (GW::UI::UIPacket::kPreferenceValueChanged*)wParam;
-            if (packet->preference_id == GW::UI::NumberPreference::TextLanguage)
-                FontLoader::LoadFonts(true);
+            if (packet->preference_id == GW::UI::NumberPreference::ScreenBorderless)
+                CheckRemoveWindowBorder();
         } break;
         case GW::UI::UIMessage::kPartyDefeated: {
             if (auto_return_on_defeat && GW::PartyMgr::GetIsLeader() && !GW::PartyMgr::ReturnToOutpost())
@@ -1433,6 +1469,8 @@ void GameSettings::Initialize()
     }
     Log::Log("[GameSettings] ctrl_click_patch = %p\n", ctrl_click_patch.GetAddress());
 
+
+
     SkillList_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmCtlSkList.cpp", "!obj", 0xc71,0));
     Log::Log("[GameSettings] SkillList_UICallback_Func = %p\n", SkillList_UICallback_Func);
    
@@ -1646,6 +1684,8 @@ void GameSettings::Initialize()
     player_requested_active_quest_id = GW::QuestMgr::GetActiveQuestId();
 
     last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
+
+    GW::GameThread::Enqueue(CheckRemoveWindowBorder);
 
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();
