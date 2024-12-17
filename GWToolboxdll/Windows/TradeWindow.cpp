@@ -26,6 +26,7 @@
 #include <Utils/TextUtils.h>
 
 namespace {
+    GW::HookEntry ChatCmd_HookEntry;
     // Every connection cost 30 seconds.
     // You have 2 tries.
     // After that, you can try every 30 seconds.
@@ -219,7 +220,7 @@ void TradeWindow::Initialize()
             }
         }
     });
-    GW::Chat::CreateCommand(L"pc", CmdPricecheck);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"pc", CmdPricecheck);
     // local messages
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&OnMessageLocal_Entry, OnMessageLocal);
     GW::StoC::RegisterPostPacketCallback(&OnPartySearch_Entry, GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT, [](GW::HookStatus*, void* pak) {
@@ -255,6 +256,7 @@ void TradeWindow::Terminate()
         WSACleanup();
         wsaData = { 0 };
     }
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 bool TradeWindow::GetInKamadanAE1(const bool check_district)
 {

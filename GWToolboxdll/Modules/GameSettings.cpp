@@ -252,6 +252,8 @@ namespace {
     Color nametag_color_enemy = static_cast<Color>(DEFAULT_NAMETAG_COLOR::ENEMY);
     Color nametag_color_item = static_cast<Color>(DEFAULT_NAMETAG_COLOR::ITEM);
 
+    GW::HookEntry ChatCmd_HookEntry;
+
     constexpr float checkbox_w = 270.f;
 
     enum PING_PARTS {
@@ -1668,7 +1670,7 @@ void GameSettings::Initialize()
     }
     
 
-    GW::Chat::CreateCommand(L"reinvite", CmdReinvite);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"reinvite", CmdReinvite);
 
     RegisterCreateUIComponentCallback(&OnCreateUIComponent_Entry, OnCreateUIComponent);
 
@@ -1947,6 +1949,8 @@ void GameSettings::Terminate()
         GW::Hook::RemoveHook(SkillList_UICallback_Func);
     if(FadeFrameContent_Func)
         GW::Hook::RemoveHook(FadeFrameContent_Func);
+
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
 void GameSettings::SaveSettings(ToolboxIni* ini)

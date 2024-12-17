@@ -18,6 +18,8 @@
 
 #include <GWCA/Managers/ChatMgr.h>
 
+#include <GWCA/Utilities/Hook.h>
+
 #include <Utils/GuiUtils.h>
 #include <ImGuiAddons.h>
 
@@ -30,6 +32,9 @@ using nlohmann::json;
 using json_vec = std::vector<json>;
 
 namespace {
+
+    GW::HookEntry ChatCmd_HookEntry;
+
     int ws_port = 5899;
     std::string ws_host;
     std::string gwtoolbox_teamspeak5_api_key;
@@ -272,8 +277,8 @@ namespace {
                     Log::Flash("Teamspeak 5 connected");
                 }
                 SendTeamspeakHandshake();
-                GW::Chat::CreateCommand(L"ts", OnTeamspeakCommand);
-                GW::Chat::CreateCommand(L"ts5", OnTeamspeakCommand);
+                GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"ts", OnTeamspeakCommand);
+                GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"ts5", OnTeamspeakCommand);
             }
             step = Idle;
             pending_connect = false;
@@ -481,7 +486,7 @@ namespace {
 void Teamspeak5Module::Initialize()
 {
     ToolboxModule::Initialize();
-    GW::Chat::CreateCommand(L"ts", OnTeamspeakCommand);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"ts", OnTeamspeakCommand);
     Connect();
 }
 
@@ -493,7 +498,7 @@ void Teamspeak5Module::Terminate()
         WSACleanup();
         wsaData = {0};
     }
-    GW::Chat::DeleteCommand(L"ts");
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
 void Teamspeak5Module::LoadSettings(ToolboxIni* ini)

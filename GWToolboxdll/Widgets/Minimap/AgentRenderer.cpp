@@ -29,6 +29,8 @@
 constexpr auto AGENTCOLOR_INIFILENAME = L"AgentColors.ini";
 
 namespace {
+
+    GW::HookEntry ChatCmd_HookEntry;
     unsigned int GetAgentProfession(const GW::AgentLiving* agent)
     {
         if (!agent) {
@@ -487,6 +489,7 @@ void AgentRenderer::Terminate()
     custom_agents.clear();
     custom_agents_map.clear();
     RemoveMarkedTarget();
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
 AgentRenderer& AgentRenderer::Instance() { return *instance; }
@@ -640,8 +643,8 @@ void AgentRenderer::Initialize(IDirect3DDevice9* device)
     }
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAgentAdded_HookEntry, OnAgentAdded);
 
-    GW::Chat::CreateCommand(L"marktarget", CmdMarkTarget);
-    GW::Chat::CreateCommand(L"clearmarktarget", CmdClearMarkTarget);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"marktarget", CmdMarkTarget);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"clearmarktarget", CmdClearMarkTarget);
 }
 
 std::vector<const AgentRenderer::CustomAgent*>* AgentRenderer::GetCustomAgentsToDraw(const GW::Agent* agent)

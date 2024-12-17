@@ -23,6 +23,8 @@ constexpr const char* IniSection = "health";
 
 namespace {
 
+    GW::HookEntry ChatCmd_HookEntry;
+
     // damage values
 
 
@@ -286,8 +288,8 @@ void PartyDamage::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericModifier>(&GenericModifier_Entry, DamagePacketCallback,0x8000);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&MapLoaded_Entry, MapLoadedCallback, 0x8000);
 
-    GW::Chat::CreateCommand(L"dmg", CmdDamage);
-    GW::Chat::CreateCommand(L"damage", CmdDamage);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"dmg", CmdDamage);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"damage", CmdDamage);
     ResetDamage();
 }
 
@@ -296,8 +298,7 @@ void PartyDamage::Terminate()
     SnapsToPartyWindow::Terminate();
     GW::StoC::RemoveCallbacks(&GenericModifier_Entry);
     GW::StoC::RemoveCallbacks(&MapLoaded_Entry);
-    GW::Chat::DeleteCommand(L"dmg");
-    GW::Chat::DeleteCommand(L"damage");
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
     for (auto str : party_names_by_index) {
         delete str;

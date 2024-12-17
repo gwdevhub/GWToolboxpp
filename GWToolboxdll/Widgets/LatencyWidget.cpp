@@ -14,6 +14,7 @@
 #include "Utils/FontLoader.h"
 
 namespace {
+    GW::HookEntry ChatCmd_HookEntry;
     constexpr size_t ping_history_len = 10; // GW checks last 10 pings for avg
     uint32_t ping_history[ping_history_len] = {0};
     size_t ping_index = 0;
@@ -56,11 +57,11 @@ void LatencyWidget::Initialize()
 {
     ToolboxWidget::Initialize();
     GW::StoC::RegisterPacketCallback(&Ping_Entry, GAME_SMSG_PING_REPLY, OnServerPing, 0x800);
-    GW::Chat::CreateCommand(L"ping", CmdPing);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"ping", CmdPing);
 }
 void LatencyWidget::Terminate() {
     ToolboxWidget::Terminate();
-    GW::Chat::DeleteCommand(L"ping");
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
     GW::StoC::RemoveCallback(GAME_SMSG_PING_REPLY, &Ping_Entry);
 }
 

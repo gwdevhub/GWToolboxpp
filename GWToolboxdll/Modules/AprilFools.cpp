@@ -25,6 +25,7 @@ namespace {
     GW::HookEntry AgentRemove_Hook;
     GW::HookEntry GameSrvTransfer_Hook;
     GW::HookEntry ChatCommand_Hook;
+    GW::HookEntry ChatCmd_HookEntry;
 
     const wchar_t* af_2020_quotes[] = {
         L"Happy April Fools Da-- *cough*",
@@ -111,7 +112,7 @@ namespace {
 void AprilFools::Initialize()
 {
     ToolboxModule::Initialize();
-    GW::Chat::CreateCommand(L"aprilfools", CmdAprilFools);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"aprilfools", CmdAprilFools);
 
     const auto now = time(nullptr);
     const auto ltm = gmtime(&now);
@@ -121,7 +122,7 @@ void AprilFools::Initialize()
 void AprilFools::Terminate()
 {
     ToolboxModule::Terminate();
-    GW::Chat::DeleteCommand(L"aprilfools");
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
     RemoveListeners();
 }
 

@@ -30,6 +30,8 @@ bool Pcon::map_has_effects_array = false;
 
 namespace {
 
+    GW::HookEntry ChatCmd_HookEntry;
+
     PconAlcohol* pcon_alcohol = nullptr;
     clock_t scan_inventory_timer = 0;
     bool enabled = false;
@@ -396,7 +398,7 @@ void PconsWindow::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry, &OnGenericValue);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry, &OnAgentState);
-    GW::Chat::CreateCommand(L"pcons", &CmdPcons);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"pcons", &CmdPcons);
 }
 
 void PconsWindow::Terminate()
@@ -407,6 +409,7 @@ void PconsWindow::Terminate()
         delete pcon;
     }
     pcons.clear();
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
 void PconsWindow::OnAddExternalBond(GW::HookStatus* status, const GW::Packet::StoC::AddExternalBond* pak)

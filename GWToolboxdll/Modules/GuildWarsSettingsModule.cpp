@@ -189,6 +189,8 @@ namespace {
     const char* ini_label_windows = "Window Positions";
     std::map<std::wstring, bool> quest_entry_group_visibility;
 
+    GW::HookEntry ChatCmd_HookEntry;
+
     struct QuestEntryGroup {
         void* vtable;
         wchar_t* encoded_name;
@@ -710,9 +712,9 @@ void GuildWarsSettingsModule::Initialize()
     ASSERT(display_graphics_version_ui_component.IsValid());
 #endif
 
-    GW::Chat::CreateCommand(L"saveprefs", CmdSave);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"saveprefs", CmdSave);
 
-    GW::Chat::CreateCommand(L"loadprefs", CmdLoad);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"loadprefs", CmdLoad);
 }
 
 void GuildWarsSettingsModule::Update(float)
@@ -794,8 +796,7 @@ void GuildWarsSettingsModule::SaveSettings(ToolboxIni* ini)
 void GuildWarsSettingsModule::Terminate()
 {
     ToolboxModule::Terminate();
-    GW::Chat::DeleteCommand(L"saveprefs");
-    GW::Chat::DeleteCommand(L"loadprefs");
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
     if (OnQuestEntryGroupInteract_Func) {
         GW::Hook::RemoveHook(OnQuestEntryGroupInteract_Func);
     }

@@ -26,6 +26,8 @@
 using namespace std::chrono;
 
 namespace {
+
+    GW::HookEntry ChatCmd_HookEntry;
     steady_clock::time_point now() { return steady_clock::now(); }
 
     bool instance_timer_valid = true;
@@ -444,11 +446,11 @@ void TimerWidget::Initialize()
             instance_timer_valid = true;
         }, 5);
     in_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
-    GW::Chat::CreateCommand(L"resettimer", [](GW::HookStatus*, const wchar_t*, const int, const LPWSTR*) {
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"resettimer", [](GW::HookStatus*, const wchar_t*, const int, const LPWSTR*) {
         reset_next_loading_screen = true;
         Log::Flash("Resetting timer at the next loading screen.");
     });
-    GW::Chat::CreateCommand(L"timerreset", [](GW::HookStatus*,const wchar_t*, const int, const LPWSTR*) {
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"timerreset", [](GW::HookStatus*,const wchar_t*, const int, const LPWSTR*) {
         reset_next_loading_screen = true;
     });
     if (!is_valid(run_started)) {
@@ -456,6 +458,10 @@ void TimerWidget::Initialize()
     }
 }
 
+void TimerWidget::Terminate() {
+    ToolboxWidget::Terminate();
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
+}
 
 void TimerWidget::LoadSettings(ToolboxIni* ini)
 {

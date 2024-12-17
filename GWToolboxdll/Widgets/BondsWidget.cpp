@@ -29,6 +29,8 @@
 #include <Windows/FriendListWindow.h>
 
 namespace {
+    GW::HookEntry ChatCmd_HookEntry;
+
     struct AvailableBond {
         GW::Constants::SkillID skill_id = GW::Constants::SkillID::No_Skill;
         GuiUtils::EncString skill_name;
@@ -281,7 +283,7 @@ bool BondsWidget::IsBondLikeSkill(GW::Constants::SkillID skill_id) {
 void BondsWidget::Initialize()
 {
     SnapsToPartyWindow::Initialize();
-    GW::Chat::CreateCommand(L"bonds", CmdBondsAddRemove);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"bonds", CmdBondsAddRemove);
     for (auto& b : available_bonds) {
         b.Initialize();
     }
@@ -289,7 +291,7 @@ void BondsWidget::Initialize()
 void BondsWidget::Terminate()
 {
     SnapsToPartyWindow::Terminate();
-    GW::Chat::DeleteCommand(L"bonds");
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
 bool BondsWidget::DrawBondImage(uint32_t agent_id, GW::Constants::SkillID skill_id, ImVec2* top_left_out, ImVec2* bottom_right_out) {

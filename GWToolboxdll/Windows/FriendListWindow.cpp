@@ -35,6 +35,8 @@ using namespace ToolboxUtils;
 namespace {
     std::thread settings_thread;
 
+    GW::HookEntry ChatCmd_HookEntry;
+
     FriendListWindow& Instance()
     {
         return FriendListWindow::Instance();
@@ -892,16 +894,14 @@ chat_commands = {
     {L"busy", CmdSetFriendListStatus}
 };
     for (auto& it : chat_commands) {
-        GW::Chat::CreateCommand(it.first, it.second);
+        GW::Chat::CreateCommand(&ChatCmd_HookEntry, it.first, it.second);
     }
 
 }
 
 void FriendListWindow::SignalTerminate()
 {
-    for (auto& it : chat_commands) {
-        GW::Chat::DeleteCommand(it.first);
-    }
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
     // Try to remove callbacks here.
     GW::FriendListMgr::RemoveFriendStatusCallback(&FriendStatusUpdate_Entry);
     GW::StoC::RemoveCallbacks(&OnPostStoCPacket_Entry);

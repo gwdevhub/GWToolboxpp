@@ -27,9 +27,14 @@
 
 unsigned int BuildsWindow::TeamBuild::cur_ui_id = 0;
 
-bool order_by_changed = false;
+namespace {
+    bool order_by_changed = false;
 
-constexpr auto INI_FILENAME = L"builds.ini";
+    constexpr auto INI_FILENAME = L"builds.ini";
+    GW::HookEntry ChatCmd_HookEntry;
+}
+
+
 
 BuildsWindow::Build::Build(const char* n, const char* c)
 {
@@ -103,7 +108,7 @@ void BuildsWindow::Initialize()
     ToolboxWindow::Initialize();
     send_timer = TIMER_INIT();
 
-    GW::Chat::CreateCommand(L"loadbuild", CmdLoad);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"loadbuild", CmdLoad);
     RegisterUIMessageCallback(&on_load_skills_entry, GW::UI::UIMessage::kSendLoadSkillbar, OnSkillbarLoad);
     //GW::CtoS::RegisterPacketCallback(&on_load_skills_entry, GAME_CMSG_SKILLBAR_LOAD, OnSkillbarLoad);
 }
@@ -178,6 +183,7 @@ void BuildsWindow::Terminate()
         delete inifile;
         inifile = nullptr;
     }
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
 void BuildsWindow::DrawSettingsInternal()

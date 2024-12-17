@@ -43,6 +43,7 @@
 #include <Utils/TextUtils.h>
 
 namespace {
+    GW::HookEntry ChatCmd_HookEntry;
     struct Vec2i {
         Vec2i(const int _x, const int _y)
             : x(_x),
@@ -635,7 +636,7 @@ void Minimap::SignalTerminate()
 
     GW::Hook::RemoveHook(DrawCompassAgentsByType_Func);
 
-    GW::Chat::DeleteCommand(L"flag");
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
     GW::GameThread::Enqueue([]() {
         RefreshQuestMarker();
@@ -705,7 +706,7 @@ void Minimap::Initialize()
 
     pmap_renderer.Invalidate();
 
-    GW::Chat::CreateCommand(L"flag", &OnFlagHeroCmd);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"flag", &OnFlagHeroCmd);
 }
 
 void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid, void* wParam, void* lParam)

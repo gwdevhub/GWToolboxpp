@@ -34,6 +34,7 @@ namespace {
     clock_t last_sent = 0;
 
     GW::HookEntry ResignLog_HookEntry;
+    GW::HookEntry ChatCmd_HookEntry;
 
     bool show_last_to_resign_message = false;
 
@@ -219,14 +220,14 @@ void ResignLogModule::Initialize() {
         GW::UI::RegisterUIMessageCallback(&ResignLog_HookEntry, message_id, OnUIMessage, 0x8000);
     }
 
-    GW::Chat::CreateCommand(L"resignlog", CmdResignLog);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"resignlog", CmdResignLog);
 
     UpdatePlayerStates();
 
 }
 void ResignLogModule::SignalTerminate() {
     GW::UI::RemoveUIMessageCallback(&ResignLog_HookEntry);
-    GW::Chat::DeleteCommand(L"resignlog");
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
 void ResignLogModule::Update(float) {

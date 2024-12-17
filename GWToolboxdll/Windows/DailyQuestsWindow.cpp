@@ -776,6 +776,8 @@ namespace {
 
     DailyQuests::QuestData* pending_quest_take = nullptr;
 
+    GW::HookEntry ChatCmd_HookEntry;
+
 
     bool GetIsPreSearing()
     {
@@ -1528,7 +1530,7 @@ void DailyQuests::Initialize()
         }}
     };
     for (const auto& it : chat_commands) {
-        GW::Chat::CreateCommand(it.first, it.second);
+        GW::Chat::CreateCommand(&ChatCmd_HookEntry,it.first, it.second);
     }
 
     GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kPreferenceValueChanged, OnUIMessage, 0x8000);
@@ -1555,9 +1557,7 @@ void DailyQuests::Terminate()
     }
     region_names.clear();
 
-    for (const auto& it : chat_commands) {
-        GW::Chat::DeleteCommand(it.first);
-    }
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
     ClearQuestLogInfo();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }

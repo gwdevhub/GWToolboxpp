@@ -637,6 +637,7 @@ namespace {
     }
 
     GW::HookEntry OnSentChat_HookEntry;
+    GW::HookEntry ChatCmd_HookEntry;
 
     void OnSendChat(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
     {
@@ -1330,7 +1331,7 @@ void ChatCommands::Initialize()
 #endif
 
     for (auto& it : chat_commands) {
-        GW::Chat::CreateCommand(it.first, it.second);
+        GW::Chat::CreateCommand(&ChatCmd_HookEntry,it.first, it.second);
     }
     getPrefCommandOptions();
 }
@@ -1341,9 +1342,7 @@ void ChatCommands::Terminate()
         delete it.second;
     }
     settings_via_chat_commands.clear();
-    for (auto& it : chat_commands) {
-        GW::Chat::DeleteCommand(it.first);
-    }
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
     chat_commands.clear();
     if (FocusChatTab_Func) {
         GW::Hook::RemoveHook(FocusChatTab_Func);

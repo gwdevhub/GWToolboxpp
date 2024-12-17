@@ -27,6 +27,8 @@
 #include <Utils/TextUtils.h>
 
 namespace {
+
+    GW::HookEntry ChatCmd_HookEntry;
     bool search_in_english = true;
 
     std::string SanitiseForSearch(const std::wstring& in)
@@ -594,9 +596,9 @@ void TravelWindow::Initialize()
     district = GW::Constants::District::Current;
     district_number = 0;
 
-    GW::Chat::CreateCommand(L"tp", &CmdTP);
-    GW::Chat::CreateCommand(L"to", &CmdTP);
-    GW::Chat::CreateCommand(L"travel", &CmdTP);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"tp", &CmdTP);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"to", &CmdTP);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"travel", &CmdTP);
 
     for (const auto message_id : messages_to_hook) {
         RegisterUIMessageCallback(&OnUIMessage_HookEntry, message_id, OnUIMessage);

@@ -25,7 +25,10 @@
 #include <Timer.h>
 #include <Utils/TextUtils.h>
 
+#include <GWCA/Utilities/Hook.h>
+
 namespace {
+    GW::HookEntry ChatCmd_HookEntry;
     const char* teamspeak3_host = "127.0.0.1";
     char teamspeak3_api_key[128] = {0};
     u_short teamspeak3_port = 25639;
@@ -322,8 +325,8 @@ namespace {
             Log::Flash("Teamspeak 3 connected");
         }
 
-        GW::Chat::CreateCommand(L"ts", OnTeamspeakCommand);
-        GW::Chat::CreateCommand(L"ts3", OnTeamspeakCommand);
+        GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"ts", OnTeamspeakCommand);
+        GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"ts3", OnTeamspeakCommand);
 
         GetServerInfo();
 
@@ -425,7 +428,7 @@ namespace {
 void TeamspeakModule::Initialize()
 {
     ToolboxModule::Initialize();
-    GW::Chat::CreateCommand(L"ts", OnTeamspeakCommand);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"ts", OnTeamspeakCommand);
     GetServerInfo();
 }
 
@@ -437,7 +440,7 @@ void TeamspeakModule::Terminate()
         WSACleanup();
         wsaData = {0};
     }
-    GW::Chat::DeleteCommand(L"ts");
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
 void TeamspeakModule::LoadSettings(ToolboxIni* ini)

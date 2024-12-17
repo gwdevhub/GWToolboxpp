@@ -408,12 +408,18 @@ namespace GW {
             kRecvWhisper                = 0x30000000 | 0x1E, // wparam = UIPacket::kRecvWhisper*
             kPrintChatMessage           = 0x30000000 | 0x1F, // wparam = UIPacket::kPrintChatMessage*. Triggered when a message wants to be added to the in-game chat window.
             kSendWorldAction            = 0x30000000 | 0x20, // wparam = UIPacket::kSendWorldAction*
+            kSetRendererValue           = 0x30000000 | 0x21 // wparam = UIPacket::kSetRendererValue
         };
         enum class FlagPreference : uint32_t;
         enum class NumberPreference : uint32_t;
         enum class EnumPreference : uint32_t;
 
         namespace UIPacket {
+            struct kSetRendererValue {
+                uint32_t renderer_mode; // 0 for window, 2 for full screen
+                uint32_t metric_id; // TODO: Enum this!
+                uint32_t value;
+            };
             struct kEffectAdd {
                 uint32_t agent_id;
                 Effect* effect;

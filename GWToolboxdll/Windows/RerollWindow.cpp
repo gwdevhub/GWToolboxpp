@@ -39,6 +39,8 @@
 
 namespace {
 
+    GW::HookEntry ChatCmd_HookEntry;
+
     bool travel_to_same_location_after_rerolling = true;
     bool rejoin_party_after_rerolling = true;
 
@@ -526,8 +528,8 @@ void RerollWindow::Initialize()
     }
 
 
-    GW::Chat::CreateCommand(L"reroll", CmdReroll);
-    GW::Chat::CreateCommand(L"rr", CmdReroll);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"reroll", CmdReroll);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"rr", CmdReroll);
 
 #ifdef _DEBUG
     ASSERT(SetOnlineStatus_Func);
@@ -538,8 +540,7 @@ void RerollWindow::Initialize()
 
 void RerollWindow::Terminate() {
 
-    GW::Chat::DeleteCommand(L"reroll");
-    GW::Chat::DeleteCommand(L"rr");
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
     GW::Hook::RemoveHook(SetOnlineStatus_Func);
     GW::UI::RemoveUIMessageCallback(&OnGoToCharSelect_Entry);

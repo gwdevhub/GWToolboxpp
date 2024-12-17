@@ -2,12 +2,13 @@
 
 namespace GW {
 
+    struct HookEntry;
+    struct Module;
+    extern Module MemoryMgrModule;
+
     namespace MemoryMgr {
 
         GWCA_API uint32_t GetGWVersion();
-
-        // Basics
-        bool Scan();
 
         DWORD GetSkillTimer();
 
@@ -21,5 +22,10 @@ namespace GW {
         GWCA_API void* MemAlloc(size_t size);
         GWCA_API void* MemRealloc(void* buf, size_t newSize);
         GWCA_API void MemFree(void* buf);
+
+        HMODULE GetModuleForPointer(void* ptr, bool refresh = false);
+
+        void RemoveFreeLibraryCallback(GW::HookEntry*);
+        void RegisterFreeLibraryCallback(GW::HookEntry*, std::function<void(HMODULE)>);
     };
 }

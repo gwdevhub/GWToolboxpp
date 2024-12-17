@@ -29,6 +29,8 @@
 constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 
 namespace {
+    GW::HookEntry ChatCmd_HookEntry;
+
     using GW::Constants::HeroID;
 
     // hero index is an arbitrary index.
@@ -163,14 +165,15 @@ void HeroBuildsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
     send_timer = TIMER_INIT();
-    GW::Chat::CreateCommand(L"heroteam", &CmdHeroTeamBuild);
-    GW::Chat::CreateCommand(L"herobuild", &CmdHeroTeamBuild);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"heroteam", &CmdHeroTeamBuild);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"herobuild", &CmdHeroTeamBuild);
 }
 
 void HeroBuildsWindow::Terminate()
 {
     ToolboxWindow::Terminate();
     teambuilds.clear();
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
 void HeroBuildsWindow::Draw(IDirect3DDevice9*)

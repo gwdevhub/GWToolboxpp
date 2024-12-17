@@ -26,7 +26,7 @@
 
 namespace {
 
-
+    GW::HookEntry ChatCmd_HookEntry;
 
     void CHAT_CMD_FUNC(CmdObserverReset)
     {
@@ -239,13 +239,13 @@ void ObserverModule::Initialize()
         InitializeObserverSession();
     }
 
-    GW::Chat::CreateCommand(L"observer:reset", CmdObserverReset);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"observer:reset", CmdObserverReset);
 }
 
 void ObserverModule::Terminate()
 {
     ToolboxModule::Terminate();
-    GW::Chat::DeleteCommand(L"observer:reset");
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
     Reset();
 
     // TODO: Clear stoc callbacks

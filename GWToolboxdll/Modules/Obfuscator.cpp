@@ -44,6 +44,7 @@ namespace {
     std::default_random_engine dre = std::default_random_engine(static_cast<uint32_t>(time(nullptr)));
     GW::HookEntry stoc_hook;
     GW::HookEntry ctos_hook;
+    GW::HookEntry ChatCmd_HookEntry;
 
 #ifdef DETECT_STREAMING_APPLICATION
     HWND streaming_window_handle = 0;
@@ -905,8 +906,8 @@ void Obfuscator::Initialize()
     GW::UI::RegisterUIMessageCallback(&ctos_hook, GW::UI::UIMessage::kWriteToChatLog, OnPrintChat);
     GW::UI::RegisterUIMessageCallback(&ctos_hook, GW::UI::UIMessage::kSendChatMessage, OnSendChat);
 
-    GW::Chat::CreateCommand(L"obfuscate", CmdObfuscate);
-    GW::Chat::CreateCommand(L"hideme", CmdObfuscate);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"obfuscate", CmdObfuscate);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"hideme", CmdObfuscate);
 
 #ifdef DETECT_STREAMING_APPLICATION
 

@@ -28,6 +28,8 @@
 /*************************/
 
 namespace {
+    GW::HookEntry ChatCmd_HookEntry;
+
     constexpr wchar_t NONE_PLAYER_NAME[] = L"Hero/Henchman Slot";
     constexpr uint32_t NONE_SKILL = std::to_underlying(GW::Constants::SkillID::No_Skill);
     constexpr wchar_t UNKNOWN_SKILL_NAME[] = L"Unknown Skill";
@@ -552,7 +554,7 @@ void PartyStatisticsWindow::Initialize()
 
     send_timer = TIMER_INIT();
 
-    GW::Chat::CreateCommand(L"skillstats", CmdSkillStatistics);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"skillstats", CmdSkillStatistics);
 
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MapLoaded>(&MapLoaded_Entry, &MapLoadedCallback);
 
@@ -654,7 +656,7 @@ void PartyStatisticsWindow::Terminate()
 {
     ToolboxWindow::Terminate();
 
-    GW::Chat::DeleteCommand(L"skillstats");
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
     GW::StoC::RemoveCallback<GW::Packet::StoC::MapLoaded>(&MapLoaded_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::GenericValueTarget>(&GenericValueTarget_Entry);
