@@ -78,7 +78,7 @@ namespace GW {
         // callbacks that handle chat commands; always blocks gw command, unless you set hook_status->blocked = false;
         typedef void (__cdecl* ChatCommandCallback)(GW::HookStatus*, const wchar_t* cmd, int argc, const LPWSTR* argv);
         GWCA_API void CreateCommand(const wchar_t* cmd, ChatCommandCallback callback);
-        GWCA_API void DeleteCommand(const wchar_t* cmd);
+        GWCA_API void DeleteCommand(const wchar_t* cmd, ChatCommandCallback callback = nullptr);
 
         GWCA_API void ToggleTimestamps(bool enable);
         GWCA_API void SetTimestampsFormat(bool use_24h, bool show_timestamp_seconds = false);

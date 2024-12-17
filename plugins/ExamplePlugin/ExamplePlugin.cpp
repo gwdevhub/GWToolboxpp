@@ -37,19 +37,23 @@ void ExamplePlugin::DrawSettings()
     ImGui::Checkbox("Redirect ee to eee", &redirect_slash_ee_to_eee);
 }
 
+void EeCmd(GW::HookStatus*, const wchar_t*, const int, const LPWSTR*)
+{
+    if (redirect_slash_ee_to_eee) {
+        GW::Chat::SendChat('/', "eee");
+    }
+}
+
 void ExamplePlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
 {
     ToolboxUIPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
-    GW::Chat::CreateCommand(L"ee", [](GW::HookStatus*, const wchar_t*, const int, const LPWSTR*) {
-        if (redirect_slash_ee_to_eee) {
-            GW::Chat::SendChat('/', "eee");
-        }
-    });
+    GW::Chat::CreateCommand(L"ee", EeCmd);
 }
+
 void ExamplePlugin::SignalTerminate()
 {
     ToolboxUIPlugin::SignalTerminate();
-    GW::Chat::DeleteCommand(L"ee");
+    GW::Chat::DeleteCommand(L"ee", EeCmd);
 }
 
 bool ExamplePlugin::CanTerminate() {
