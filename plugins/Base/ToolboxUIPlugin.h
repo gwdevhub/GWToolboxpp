@@ -8,7 +8,6 @@ public:
     bool ShowInMainMenu() const override;
 
     void Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMODULE toolbox_dll) override;
-    bool CanTerminate() override;
     void SignalTerminate() override;
     void Terminate() override;
     bool HasSettings() const override { return true; }

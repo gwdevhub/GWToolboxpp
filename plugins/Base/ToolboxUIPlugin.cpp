@@ -1,11 +1,9 @@
 #include "ToolboxUIPlugin.h"
 #include <imgui.h>
 
-#include <GWCA/Utilities/Hooker.h>
 #include "GWCA/Utilities/Hook.h"
 #include <GWCA/Managers/ChatMgr.h>
 
-#include <GWCA/GWCA.h>
 #include "PluginUtils.h"
 
 namespace {
@@ -62,26 +60,18 @@ bool ToolboxUIPlugin::ShowInMainMenu() const
 void ToolboxUIPlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
 {
     ToolboxPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
-    GW::Initialize();
     GW::Chat::CreateCommand(L"tb", CmdTB);
-}
-
-bool ToolboxUIPlugin::CanTerminate()
-{
-    return GW::Hook::GetInHookCount() == 0;
 }
 
 void ToolboxUIPlugin::SignalTerminate()
 {
     ToolboxPlugin::SignalTerminate();
     GW::Chat::DeleteCommand(L"tb");
-    GW::DisableHooks();
 }
 
 void ToolboxUIPlugin::Terminate()
 {
     ToolboxPlugin::Terminate();
-    GW::Terminate();
 }
 
 void ToolboxUIPlugin::DrawSettings()

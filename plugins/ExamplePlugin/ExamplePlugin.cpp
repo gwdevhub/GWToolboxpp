@@ -4,8 +4,6 @@
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Utils/GuiUtils.h>
-#include <GWCA/GWCA.h>
-#include <GWCA/Utilities/Hooker.h>
 #include "GWCA/Managers/ChatMgr.h"
 
 namespace {
@@ -52,11 +50,10 @@ void ExamplePlugin::SignalTerminate()
 {
     ToolboxUIPlugin::SignalTerminate();
     GW::Chat::DeleteCommand(L"ee");
-    GW::DisableHooks();
 }
 
 bool ExamplePlugin::CanTerminate() {
-    return GW::Hook::GetInHookCount() == 0;
+    return true;
 }
 
 void ExamplePlugin::Draw(IDirect3DDevice9*)
