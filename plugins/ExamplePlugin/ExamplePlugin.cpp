@@ -8,6 +8,7 @@
 
 namespace {
     bool redirect_slash_ee_to_eee = false;
+    GW::HookEntry ChatCmd_HookEntry;
 }
 
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
@@ -47,13 +48,13 @@ void EeCmd(GW::HookStatus*, const wchar_t*, const int, const LPWSTR*)
 void ExamplePlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
 {
     ToolboxUIPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
-    GW::Chat::CreateCommand(L"ee", EeCmd);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"ee", EeCmd);
 }
 
 void ExamplePlugin::SignalTerminate()
 {
     ToolboxUIPlugin::SignalTerminate();
-    GW::Chat::DeleteCommand(L"ee", EeCmd);
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
 bool ExamplePlugin::CanTerminate() {
