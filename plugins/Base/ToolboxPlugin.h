@@ -85,10 +85,22 @@ public:
     virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; }
 
     // Load settings from folder
-    virtual void LoadSettings(const wchar_t*) {}
+    virtual void LoadSettings(const wchar_t* folder)
+    {
+        if (!HasSettings()) {
+            return;
+        }
+        ini.LoadFile(GetSettingFile(folder).c_str());
+    }
 
     // Save settings from folder
-    virtual void SaveSettings(const wchar_t*) {}
+    virtual void SaveSettings(const wchar_t* folder)
+    {
+        if (!HasSettings()) {
+            return;
+        }
+        PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+    }
 
     // Will be drawn in the Settings/Plugins menu. Must use ImGui.
     virtual void DrawSettings() {}

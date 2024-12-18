@@ -26,9 +26,8 @@ void ExamplePlugin::LoadSettings(const wchar_t* folder)
 
 void ExamplePlugin::SaveSettings(const wchar_t* folder)
 {
-    ToolboxPlugin::SaveSettings(folder);
     PLUGIN_SAVE_BOOL(redirect_slash_ee_to_eee);
-    PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+    ToolboxPlugin::SaveSettings(folder);
 }
 
 void ExamplePlugin::DrawSettings()
