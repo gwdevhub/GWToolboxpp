@@ -366,6 +366,8 @@ namespace {
         });
     }
 
+    GW::Constants::QuestID quest_id_before_map_load = GW::Constants::QuestID::None;
+
     void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
@@ -375,6 +377,9 @@ namespace {
                 GW::QuestMgr::GetQuest(quest_id)->log_state |= 1; // Avoid asking for description about this quest
             }
         }  break;
+        case GW::UI::UIMessage::kStartMapLoad:
+            quest_id_before_map_load = GW::QuestMgr::GetActiveQuestId();
+            break;
         case GW::UI::UIMessage::kSendSetActiveQuest: {
             const auto quest_id = static_cast<GW::Constants::QuestID>((uint32_t)wparam);
             if (setting_custom_quest_marker) {
@@ -405,7 +410,6 @@ namespace {
         } break;
         }
     }
-
     // Callback invoked by quest related ui messages. All messages sent should have the quest id as first wparam variable
     void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* packet, void*)
     {
@@ -418,6 +422,9 @@ namespace {
             case GW::UI::UIMessage::kMapLoaded:
                 if (custom_quest_marker.quest_id != (GW::Constants::QuestID)0) {
                     QuestModule::SetCustomQuestMarker(custom_quest_marker_world_pos, player_chosen_quest_id == custom_quest_marker.quest_id);
+                }
+                if (quest_id_before_map_load == custom_quest_marker.quest_id) {
+                    GW::QuestMgr::SetActiveQuestId(quest_id_before_map_load);
                 }
             default:
                 for (auto quest_path : calculated_quest_paths | std::views::values) {
@@ -617,7 +624,8 @@ void QuestModule::Initialize()
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kOnScreenMessage,
         GW::UI::UIMessage::kSendSetActiveQuest,
-        GW::UI::UIMessage::kSendAbandonQuest
+        GW::UI::UIMessage::kSendAbandonQuest,
+        GW::UI::UIMessage::kStartMapLoad
     };
     for (const auto ui_message : ui_messages) {
         // Post callbacks, non blocking
