@@ -591,7 +591,9 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers()
 
         auto points = circular_points_from_marker(marker.pos, marker.size);
 
-        auto poly_to_add = GenericPolyRenderable(marker.map, points, marker.color, marker.IsFilled());
+        const auto color = (marker.color & IM_COL32_A_MASK) == 0 ? CustomRenderer::color : marker.color;
+
+        auto poly_to_add = GenericPolyRenderable(marker.map, points, color, marker.IsFilled());
 
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
         auto found = find_matching_poly(poly_to_add);

@@ -44,8 +44,7 @@ namespace mapbox::util {
 
 class CustomRenderer : public VBuffer {
     friend class AgentRenderer;
-
-
+    friend class GameWorldRenderer;
 
     enum class Shape {
         LineCircle,

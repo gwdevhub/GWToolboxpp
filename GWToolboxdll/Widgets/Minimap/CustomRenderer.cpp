@@ -743,7 +743,7 @@ void CustomRenderer::CustomPolygon::Render(IDirect3DDevice9* device)
 
 void CustomRenderer::CustomMarker::Initialize(IDirect3DDevice9* device)
 {
-    const auto colour = color >> IM_COL32_A_SHIFT == 0 ? CustomRenderer::color : color;
+    const auto colour = (color & IM_COL32_A_MASK) == 0 ? CustomRenderer::color : color;
     if (shape == Shape::FullCircle) {
         type = D3DPT_TRIANGLEFAN;
         count = 48;
