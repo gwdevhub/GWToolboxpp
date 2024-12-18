@@ -7,6 +7,26 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+##Version 7.0
+* [Fix] Fixed occasional crashing when disabling or enabling modules whilst toolbox is running
+* [Fix] Fixed bug mixing up messages if a previous message is received (and blocked) from an ignored player
+* [Fix] Fixed issue preventing compass drawing
+* [Fix] Fixed issue preventing world map widget from being shown
+* [Fix] Fixed crash when trying to use a skill tome with "only show non learned skills" setting checked
+* [Fix] Fixes crash when loading settings whilst toolbox is running
+* [Fix] Fixed bug preventing salvaging via right click menu from working
+* [Fix] Fixed bug preventing identifying via right click menu from working
+* [Fix] Fixed skil warmup setting not working
+* [Fix] Fixed /cam fog working the wrong way round
+* [Fix] Fixed crash when using /reinvite command
+* [Fix] Fixed custom markers not showing immediately by default
+* [Minor] Challenge mission outposts work with /travel now
+* [Minor] Re-enabled cursor fix module
+* [Minor] Allowed more fine grained control over text size for skillbar, clock and effect monitor widgets
+* [New] Added option to disable pcons on mission complete, vanquish complete and dungeon complete
+* [New] Added option to assign multiple character names to a single hotkey
+* [New] Added custom marker context menu to mission map
+
 ## Version 6.25
 * [New] Code overhaul to GWCA and GWToolbox to work with vs2022 compiler update
 * [New] Added pathing to mission map
