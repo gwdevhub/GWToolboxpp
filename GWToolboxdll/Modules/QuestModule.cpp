@@ -366,6 +366,13 @@ namespace {
         });
     }
 
+    void ClearCalculatedQuestPaths() {
+        for (auto quest_path : calculated_quest_paths | std::views::values) {
+            delete quest_path;
+        }
+        calculated_quest_paths.clear();
+    }
+
     GW::Constants::QuestID quest_id_before_map_load = GW::Constants::QuestID::None;
 
     void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
@@ -411,26 +418,24 @@ namespace {
         }
     }
     // Callback invoked by quest related ui messages. All messages sent should have the quest id as first wparam variable
-    void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* packet, void*)
+    void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* packet, void*)
     {
+        if (status->blocked)
+            return;
         switch (message_id) {
+
             case GW::UI::UIMessage::kQuestDetailsChanged:
             case GW::UI::UIMessage::kQuestAdded:
             case GW::UI::UIMessage::kClientActiveQuestChanged:
                 RefreshQuestPath(*static_cast<GW::Constants::QuestID*>(packet));
                 break;
             case GW::UI::UIMessage::kMapLoaded:
+                ClearCalculatedQuestPaths();
                 if (custom_quest_marker.quest_id != (GW::Constants::QuestID)0) {
                     QuestModule::SetCustomQuestMarker(custom_quest_marker_world_pos, player_chosen_quest_id == custom_quest_marker.quest_id);
+                    if (quest_id_before_map_load == custom_quest_marker.quest_id)
+                        GW::QuestMgr::SetActiveQuestId(quest_id_before_map_load);
                 }
-                if (quest_id_before_map_load == custom_quest_marker.quest_id) {
-                    GW::QuestMgr::SetActiveQuestId(quest_id_before_map_load);
-                }
-            default:
-                for (auto quest_path : calculated_quest_paths | std::views::values) {
-                    delete quest_path;
-                }
-                calculated_quest_paths.clear();
                 RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
                 break;
         }
@@ -513,6 +518,7 @@ void QuestModule::SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_acti
     custom_quest_marker = *quest;
     if (set_active)
         GW::QuestMgr::SetActiveQuestId(custom_quest_id);
+    RefreshQuestPath(custom_quest_id);
 }
 
 std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::QuestID quest_id)
