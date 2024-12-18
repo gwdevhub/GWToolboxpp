@@ -1117,13 +1117,13 @@ bool HotkeyEquipItem::IsEquippable(const GW::Item* _item)
            wcscmp(c->player_name, _item->customized) == 0;*/
 }
 
-GW::Item* HotkeyEquipItem::FindMatchingItem(const GW::Constants::Bag _bag_idx) const
+GW::Item* HotkeyEquipItem::FindMatchingItem(const GW::Constants::Bag _bag_idx, GW::Bag** bag) const
 {
-    GW::Bag* bag = GW::Items::GetBag(_bag_idx);
-    if (!bag) {
+    *bag = GW::Items::GetBag(_bag_idx);
+    if (!(*bag)) {
         return nullptr;
     }
-    GW::ItemArray& items = bag->items;
+    GW::ItemArray& items = (*bag)->items;
     for (const auto _item : items) {
         if (item_attributes.check(_item)) {
             return _item;
@@ -1137,6 +1137,7 @@ void HotkeyEquipItem::Execute()
     if (!CanUse()) {
         return;
     }
+    GW::Bag* bag = nullptr;
     if (!ongoing) {
         if (equip_by == SLOT) {
             const auto bag_id = static_cast<GW::Constants::Bag>(bag_idx);
@@ -1146,28 +1147,28 @@ void HotkeyEquipItem::Execute()
                 }
                 return;
             }
-            GW::Bag* b = GW::Items::GetBag(bag_id);
-            if (!b) {
+            bag = GW::Items::GetBag(bag_id);
+            if (!bag) {
                 if (show_error_on_failure) {
                     Log::Error("Bag #%d not found!", bag_id);
                 }
                 return;
             }
-            GW::ItemArray& items = b->items;
-            if (!items.valid() || slot_idx > items.size()) {
+            GW::ItemArray& items = bag->items;
+            item = (items.valid() && slot_idx <= items.size()) ? items[slot_idx - 1] : nullptr;
+            if (!(item && item->bag == bag)) {
                 if (show_error_on_failure) {
                     Log::Error("Invalid bag slot %d/%d!", bag_id, slot_idx);
                 }
                 return;
             }
-            item = items.at(slot_idx - 1);
         }
         else {
-            item = FindMatchingItem(GW::Constants::Bag::Equipped_Items);
+            item = FindMatchingItem(GW::Constants::Bag::Equipped_Items, &bag);
             for (auto i = GW::Constants::Bag::Backpack; i <= GW::Constants::Bag::Equipment_Pack && !item; i = (GW::Constants::Bag)((size_t) i + 1)) {
-                item = FindMatchingItem(i);
+                item = FindMatchingItem(i, &bag);
             }
-            if (!item) {
+            if (!(item && item->bag == bag)) {
                 if (show_error_on_failure) {
                     Log::Error("No equippable item matching your hotkey");
                 }
@@ -1223,7 +1224,7 @@ void HotkeyEquipItem::Execute()
         return; // Success!
     }
     const GW::AgentLiving* p = GW::Agents::GetControlledCharacter();
-    if (!p || p->GetIsDead()) {
+    if (!(p && p->GetIsAlive())) {
         if (show_error_on_failure) {
             Log::Error("Failed to equip item in bag %d slot %d", bag_idx,
                        slot_idx);
@@ -1239,6 +1240,9 @@ void HotkeyEquipItem::Execute()
     }
     if (p->skill) {
         // Casting atm
+        return;
+    }
+    if (!p->model_state) {
         return;
     }
     if (p->GetIsIdle() || p->GetIsMoving()) {

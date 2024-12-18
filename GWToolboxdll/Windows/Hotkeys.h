@@ -169,7 +169,7 @@ public:
 
     static bool IsEquippable(const GW::Item* item);
 
-    GW::Item* FindMatchingItem(GW::Constants::Bag bag_idx) const;
+    GW::Item* FindMatchingItem(GW::Constants::Bag bag_idx, GW::Bag** bag) const;
 };
 
 // hotkey to use an item
