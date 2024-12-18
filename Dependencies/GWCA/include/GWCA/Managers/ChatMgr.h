@@ -7,6 +7,7 @@ namespace GW {
     extern Module ChatModule;
 
     struct HookStatus;
+    struct HookEntry;
 
     namespace Chat {
         typedef uint32_t Color;

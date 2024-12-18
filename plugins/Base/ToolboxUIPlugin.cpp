@@ -7,6 +7,8 @@
 #include "PluginUtils.h"
 
 namespace {
+    GW::HookEntry pluginCmd_HookEntry;
+
     void CmdTB(GW::HookStatus* status, const wchar_t*, const int argc, const LPWSTR* argv)
     {
         const auto instance = static_cast<ToolboxUIPlugin*>(ToolboxPluginInstance());
@@ -60,13 +62,13 @@ bool ToolboxUIPlugin::ShowInMainMenu() const
 void ToolboxUIPlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
 {
     ToolboxPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
-    GW::Chat::CreateCommand(L"tb", CmdTB);
+    GW::Chat::CreateCommand(&pluginCmd_HookEntry, L"tb", CmdTB);
 }
 
 void ToolboxUIPlugin::SignalTerminate()
 {
     ToolboxPlugin::SignalTerminate();
-    GW::Chat::DeleteCommand(L"tb");
+    GW::Chat::DeleteCommand(&pluginCmd_HookEntry, L"tb");
 }
 
 void ToolboxUIPlugin::Terminate()

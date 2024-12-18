@@ -2,6 +2,7 @@
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Utilities/Hook.h>
 
 #include <Utils/GuiUtils.h>
 #include "GWCA/Managers/ChatMgr.h"
