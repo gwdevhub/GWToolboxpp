@@ -62,7 +62,7 @@ class CustomRenderer : public VBuffer {
         bool visible = true;
         bool draw_on_terrain = false;
         char name[128]{};
-        Color color{0xFFFFFFFF};
+        Color color{0x00FFFFFF};
         Color color_sub{0x00FFFFFF};
         void Render(IDirect3DDevice9* device) override;
         [[nodiscard]] bool IsFilled() const { return shape == Shape::FullCircle; }
