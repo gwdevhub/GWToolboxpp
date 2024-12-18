@@ -2,15 +2,9 @@
 
 #include <ToolboxUIPlugin.h>
 
-class ExamplePlugin : public ToolboxUIPlugin {
+class ExamplePlugin : public ToolboxPlugin {
 public:
-    ExamplePlugin()
-    {
-        can_show_in_main_window = false;
-        show_title = false;
-        can_collapse = false;
-        can_close = false;
-    }
+    ExamplePlugin() = default;
     ~ExamplePlugin() override = default;
 
     const char* Name() const override { return "Example Plugin"; }

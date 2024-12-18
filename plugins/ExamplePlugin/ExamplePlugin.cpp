@@ -20,13 +20,13 @@ DLLAPI ToolboxPlugin* ToolboxPluginInstance()
 
 void ExamplePlugin::LoadSettings(const wchar_t* folder)
 {
-    ToolboxUIPlugin::LoadSettings(folder);
+    ToolboxPlugin::LoadSettings(folder);
     PLUGIN_LOAD_BOOL(redirect_slash_ee_to_eee);
 }
 
 void ExamplePlugin::SaveSettings(const wchar_t* folder)
 {
-    ToolboxUIPlugin::SaveSettings(folder);
+    ToolboxPlugin::SaveSettings(folder);
     PLUGIN_SAVE_BOOL(redirect_slash_ee_to_eee);
     PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
 }
@@ -48,13 +48,13 @@ void EeCmd(GW::HookStatus*, const wchar_t*, const int, const LPWSTR*)
 
 void ExamplePlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)
 {
-    ToolboxUIPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
+    ToolboxPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"ee", EeCmd);
 }
 
 void ExamplePlugin::SignalTerminate()
 {
-    ToolboxUIPlugin::SignalTerminate();
+    ToolboxPlugin::SignalTerminate();
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
