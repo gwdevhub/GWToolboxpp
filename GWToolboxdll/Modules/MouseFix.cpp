@@ -234,9 +234,9 @@ namespace {
 
     HCURSOR ScaleCursor(const HCURSOR cursor, const int targetSize)
     {
-        ICONINFO icon_info;
+        ICONINFO icon_info = { 0 };
         HCURSOR new_cursor = nullptr;
-        BITMAP tmpBitmap;
+        BITMAP tmpBitmap = { 0 };
         HBITMAP scaledMask = nullptr, scaledColor = nullptr;
         if (!GetIconInfo(cursor, &icon_info)) {
             goto cleanup;
@@ -244,6 +244,8 @@ namespace {
         if (GetObject(icon_info.hbmMask, sizeof(BITMAP), &tmpBitmap) == 0) {
             goto cleanup;
         }
+        if (!(tmpBitmap.bmHeight && tmpBitmap.bmWidth))
+            goto cleanup;
         if (tmpBitmap.bmWidth == targetSize) {
             goto cleanup;
         }
@@ -262,12 +264,14 @@ namespace {
         icon_info.hbmMask = scaledMask;
         new_cursor = CreateIconIndirect(&icon_info);
     cleanup:
-        if (scaledColor) {
+        if (icon_info.hbmColor)
+            DeleteObject(icon_info.hbmColor);
+        if (icon_info.hbmMask)
+            DeleteObject(icon_info.hbmMask);
+        if (scaledColor)
             DeleteObject(scaledColor);
-        }
-        if (scaledMask) {
+        if (scaledMask)
             DeleteObject(scaledMask);
-        }
         return new_cursor;
     }
 
