@@ -21,6 +21,8 @@ public:
 
     void SaveSettings(ToolboxIni* ini) override;
 
+    [[nodiscard]] virtual ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0) const;
+
     // returns true if clicked
     virtual bool DrawTabButton(bool show_icon = true, bool show_text = true, bool center_align_text = true);
 
@@ -38,13 +40,11 @@ public:
     bool lock_move = false;
     bool lock_size = false;
     bool show_menubutton = false;
+    bool auto_size = false;
 
-    bool* GetVisiblePtr(const bool force_show = false)
+    bool* GetVisiblePtr()
     {
-        if (!has_closebutton || show_closebutton || force_show) {
-            return &visible;
-        }
-        return nullptr;
+        return &visible;
     }
 
     bool show_closebutton = true;
@@ -54,6 +54,9 @@ protected:
     bool has_closebutton = false;
     bool is_resizable = true;
     bool is_movable = true;
+
+    float min_size[2] = { 250.f,90.f };
+    float max_size[2] = { FLT_MAX, FLT_MAX };
 
     virtual void ShowVisibleRadio();
 };

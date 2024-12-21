@@ -5,6 +5,9 @@
 #include <ToolboxUIElement.h>
 #include <Windows/MainWindow.h>
 
+#include <Modules/ToolboxSettings.h>
+
+
 const char* ToolboxUIElement::UIName() const
 {
     if (Icon()) {
@@ -30,6 +33,9 @@ void ToolboxUIElement::LoadSettings(ToolboxIni* ini)
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(visible);
     LOAD_BOOL(show_menubutton);
+    LOAD_BOOL(lock_move);
+    LOAD_BOOL(lock_size);
+    LOAD_BOOL(auto_size);
 }
 
 void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
@@ -37,6 +43,25 @@ void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(visible);
     SAVE_BOOL(show_menubutton);
+    SAVE_BOOL(lock_move);
+    SAVE_BOOL(lock_size);
+    SAVE_BOOL(auto_size);
+}
+
+ImGuiWindowFlags ToolboxUIElement::GetWinFlags(ImGuiWindowFlags flags) const
+{
+    if (!ToolboxSettings::move_all) {
+        if (lock_move) {
+            flags |= ImGuiWindowFlags_NoMove;
+        }
+        if (lock_size) {
+            flags |= ImGuiWindowFlags_NoResize;
+        }
+        if (auto_size) {
+            flags |= ImGuiWindowFlags_AlwaysAutoResize;
+        }
+    }
+    return flags;
 }
 
 void ToolboxUIElement::RegisterSettingsContent()
@@ -66,42 +91,37 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
     if (is_movable || is_resizable) {
         char buf[128];
         sprintf(buf, "You need to show the %s for this control to work", TypeName());
-        if (is_movable) {
+        if (is_movable && !lock_move) {
             if (ImGui::DragFloat2("Position", reinterpret_cast<float*>(&pos), 1.0f, 0.0f, 0.0f, "%.0f")) {
                 ImGui::SetWindowPos(Name(), pos);
             }
             ImGui::ShowHelp(buf);
         }
-        if (is_resizable) {
+        if (is_resizable && !lock_size && !auto_size) {
             if (ImGui::DragFloat2("Size", reinterpret_cast<float*>(&size), 1.0f, 0.0f, 0.0f, "%.0f")) {
                 ImGui::SetWindowSize(Name(), size);
             }
             ImGui::ShowHelp(buf);
         }
     }
-    auto count = 0;
+    ImGui::StartSpacedElements(180.f);
     if (is_movable) {
-        if (++count % 2 == 0) {
-            ImGui::SameLine();
-        }
+        ImGui::NextSpacedElement();
         ImGui::Checkbox("Lock Position", &lock_move);
     }
     if (is_resizable) {
-        if (++count % 2 == 0) {
-            ImGui::SameLine();
-        }
+        ImGui::NextSpacedElement();
         ImGui::Checkbox("Lock Size", &lock_size);
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Auto Size", &auto_size);
     }
+    ImGui::StartSpacedElements(180.f);
     if (has_closebutton) {
-        if (++count % 2 == 0) {
-            ImGui::SameLine();
-        }
+        ImGui::NextSpacedElement();
         ImGui::Checkbox("Show close button", &show_closebutton);
     }
     if (can_show_in_main_window) {
-        if (++count % 2 == 0) {
-            ImGui::SameLine();
-        }
+        ImGui::NextSpacedElement();
         if (ImGui::Checkbox("Show in main window", &show_menubutton)) {
             MainWindow::Instance().pending_refresh_buttons = true;
         }

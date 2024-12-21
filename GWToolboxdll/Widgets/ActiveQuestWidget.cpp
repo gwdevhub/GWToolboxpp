@@ -124,12 +124,9 @@ void ActiveQuestWidget::Update(float)
 
 void ActiveQuestWidget::Draw(IDirect3DDevice9*)
 {
-    if (!visible) {
-        return;
-    }
-
-    ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
+    if (!visible) return;
+    ImGui::SetNextWindowSizeConstraints({ min_size[0], min_size[1] }, { max_size[0], max_size[1] });
+    if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         ImVec2 cursor = ImGui::GetCursorPos();
         ImGui::PushTextWrapPos(ImGui::GetWindowWidth() - cursor.x);
         DrawQuestIcon();

@@ -10,7 +10,7 @@ public:
     [[nodiscard]] bool IsWidget() const override { return true; }
     [[nodiscard]] const char* TypeName() const override { return "widget"; }
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
-    [[nodiscard]] virtual ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, bool noinput_if_frozen = true) const;
+    [[nodiscard]] virtual ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0) const override;
+
+    [[nodiscard]] virtual ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags, bool noinput_if_frozen) const;
 };
