@@ -7,7 +7,7 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
-## Version 7.0
+## Version 7.0 beta1
 * [Fix] Fixed occasional crashing when disabling or enabling modules whilst toolbox is running
 * [Fix] Fixed bug mixing up messages if a previous message is received (and blocked) from an ignored player
 * [Fix] Fixed issue preventing compass drawing
@@ -20,9 +20,12 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Fixed /cam fog working the wrong way round
 * [Fix] Fixed crash when using /reinvite command
 * [Fix] Fixed custom markers not showing immediately by default
+* [Fix] Fixed disconnect on map load when using an equip item hotkey on map entry
 * [Minor] Challenge mission outposts work with /travel now
 * [Minor] Re-enabled cursor fix module
 * [Minor] Allowed more fine grained control over text size for skillbar, clock and effect monitor widgets
+* [Minor] Added auto resize option for all widgets and windows
+* [Minor] Show/Hide position and size settings when lock position/size is checked
 * [New] Added option to disable pcons on mission complete, vanquish complete and dungeon complete
 * [New] Added option to assign multiple character names to a single hotkey
 * [New] Added custom marker context menu to mission map
