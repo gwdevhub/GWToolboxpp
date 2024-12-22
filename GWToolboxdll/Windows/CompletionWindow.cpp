@@ -1192,6 +1192,8 @@ void CompletionWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 
+    *min_size = 780.f;
+
     //Resources::LoadTexture(&button_texture, Resources::GetPath(L"img/missions", L"MissionIcon.png"), IDB_Missions_MissionIcon);
     outposts = {
         {Campaign::Prophecies, {}},
@@ -2119,7 +2121,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 
     // TODO Button at the top to go to current daily
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(768, 768), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(min_size[0], min_size[1]), ImVec2(max_size[0], max_size[1]));
 
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         ImGui::End();
