@@ -25,6 +25,7 @@
 
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 
@@ -224,7 +225,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 tb.edit_open = true;
                 GW::SkillbarMgr::SkillTemplate skill_template;
                 for (auto i = 0u; i < 8; i++) {
-                    if (!GW::SkillbarMgr::GetSkillTemplate(i, skill_template))
+                    if (!GW::SkillbarMgr::GetSkillTemplate(GW::PartyMgr::GetPartyMemberAgentId(i), skill_template))
                         continue;
                     char buf[BUFFER_SIZE]{};
                     if (!GW::SkillbarMgr::EncodeSkillTemplate(skill_template, buf, BUFFER_SIZE))

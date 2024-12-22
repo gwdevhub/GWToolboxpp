@@ -187,34 +187,7 @@ namespace {
         }
     }
 
-    // Fetches agent id of party member (hero, player or henchman) by index. This is NOT player number!
-    uint32_t GetPartyMemberAgentId(uint32_t party_member_index) {
-        uint32_t current_idx = (uint32_t)-1;
-        const auto party = GW::PartyMgr::GetPartyInfo();
-        if (!party) return 0;
-        for (const auto& player_member : party->players) {
-            current_idx++;
-            if (current_idx == party_member_index) {
-                const auto player = GW::PlayerMgr::GetPlayerByID(player_member.login_number);
-                return player ? player->agent_id : 0;
-            }
-            for (const auto& hero : party->heroes) {
-                if (hero.owner_player_id != player_member.login_number)
-                    continue;
-                current_idx++;
-                if (current_idx == party_member_index) {
-                    return hero.agent_id;
-                }
-            }
-        }
-        for (const auto& hench_member : party->henchmen) {
-            current_idx++;
-            if (current_idx == party_member_index) {
-                return hench_member.agent_id;
-            }
-        }
-        return 0;
-    }
+
 
     bool IsNearestStr(const wchar_t* str)
     {

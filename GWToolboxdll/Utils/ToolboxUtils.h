@@ -107,6 +107,8 @@ namespace GW {
     namespace PartyMgr {
         GW::PlayerPartyMemberArray* GetPartyPlayers(uint32_t party_id = 0);
         size_t GetPlayerPartyIndex(uint32_t player_number, uint32_t party_id = 0);
+        // Fetches agent id of party member (hero, player or henchman) by index. This is NOT player number! party_member_index is ZERO based
+        uint32_t GetPartyMemberAgentId(uint32_t party_member_index, uint32_t party_id = 0);
     }
     namespace AccountMgr {
         // Return pointer to array containing list of playable characters from character select screen.

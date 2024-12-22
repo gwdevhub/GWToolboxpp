@@ -27,6 +27,7 @@
 #include <Modules/Resources.h>
 #include <Widgets/BondsWidget.h>
 #include <Windows/FriendListWindow.h>
+#include <Utils/ToolboxUtils.h>
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
@@ -170,36 +171,6 @@ namespace {
         return dropped > 0;
     }
 
-    uint32_t GetPartyMemberAgentId(uint32_t index) {
-        const auto info = GW::PartyMgr::GetPartyInfo();
-        if (!info)
-            return 0;
-        uint32_t i = 0;
-        for (auto& player : info->players) {
-            if (i == index)
-                return GW::PlayerMgr::GetPlayerAgentId(player.login_number);
-            i++;
-            for (auto& hero : info->heroes) {
-                if (hero.owner_player_id != player.login_number)
-                    continue;
-                if (i == index)
-                    return hero.agent_id;
-                i++;
-            }
-        }
-        for (auto& henchman : info->henchmen) {
-            if (i == index)
-                return henchman.agent_id;
-            i++;
-        }
-        for (auto& agent_id : info->others) {
-            if (i == index)
-                return agent_id;
-            i++;
-        }
-        return 0;
-    }
-
     bool ToggleBuff(GW::AgentID agent_id, GW::Constants::SkillID skill_id) {
         return DropBuffs(agent_id, skill_id) || UseBuff(agent_id, skill_id);
     }
@@ -237,7 +208,7 @@ namespace {
                 syntax_err();
                 return;
             }
-            agent_id = GetPartyMemberAgentId(party_member_idx);
+            agent_id = GW::PartyMgr::GetPartyMemberAgentId(party_member_idx);
             if (!agent_id) {
                 return; // Failed to find party member
             }
