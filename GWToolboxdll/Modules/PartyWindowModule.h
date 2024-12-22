@@ -14,6 +14,7 @@ public:
     }
 
     [[nodiscard]] const char* Name() const override { return "Party Window"; }
+    [[nodiscard]] const char* Description() const override { return "Includes features to:\nAdd player numbers to party window in explorable area\nAbility to add other NPCs to the party window"; }
     [[nodiscard]] const char* SettingsName() const override { return "Party Settings"; }
     void Initialize() override;
     void Terminate() override;

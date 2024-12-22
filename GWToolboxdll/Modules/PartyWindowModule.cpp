@@ -27,6 +27,7 @@
 #include <Defines.h>
 #include <Modules/PartyWindowModule.h>
 #include <Windows/FriendListWindow.h>
+#include "Resources.h"
 
 namespace {
     std::map<uint32_t, GW::Constants::SkillID> summon_elites = {
@@ -73,11 +74,10 @@ namespace {
             : alias(_alias)
             , model_id(static_cast<uint32_t>(_model_id))
             , map_id(_map_id) { };
-
-        std::wstring map_name;
-        bool decode_pending = false;
-        std::wstring* GetMapName();
         std::string alias;
+        const char* GetMapName() {
+            return map_id > GW::Constants::MapID::None ? Resources::GetMapName(map_id)->string().c_str() : "Any";
+        }
         uint32_t model_id = 0;
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
     };
@@ -208,7 +208,7 @@ namespace {
         }
     }
 
-    void AddSpecialNPC(SpecialNPCToAdd npc)
+    void AddSpecialNPC(const SpecialNPCToAdd& npc)
     {
         auto new_npc = new SpecialNPCToAdd(npc);
         user_defined_npcs.push_back(new_npc);
@@ -403,31 +403,6 @@ namespace {
             return nullptr;
         }
         return a;
-    }
-
-    std::wstring* SpecialNPCToAdd::GetMapName()
-    {
-        if (decode_pending) {
-            return &map_name;
-        }
-        decode_pending = true;
-        if (map_id != GW::Constants::MapID::None) {
-            GW::GameThread::Enqueue([this] {
-                const GW::AreaInfo* info = GW::Map::GetMapInfo(map_id);
-                if (!info) {
-                    return;
-                }
-                static wchar_t enc_str[16];
-                if (!GW::UI::UInt32ToEncStr(info->name_id, enc_str, 16)) {
-                    return;
-                }
-                GW::UI::AsyncDecodeStr(enc_str, &map_name);
-            });
-        }
-        else {
-            map_name = std::wstring(L"Any");
-        }
-        return &map_name;
     }
 }
 
@@ -652,11 +627,11 @@ void PartyWindowModule::DrawSettingsInternal()
             continue;
         }
         ImGui::PushID(static_cast<int>(npc->model_id));
-        ImGui::Text("%s", npc->alias.c_str());
+        ImGui::TextUnformatted(npc->alias.c_str());
         ImGui::SameLine(cols[0]);
         ImGui::Text("%d", npc->model_id);
         ImGui::SameLine(cols[1]);
-        ImGui::Text("%ls", npc->GetMapName()->c_str());
+        ImGui::TextUnformatted(npc->GetMapName());
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - 48.0f * fontScale);
         const bool clicked = ImGui::Button(" X ");
         ImGui::PopID();
