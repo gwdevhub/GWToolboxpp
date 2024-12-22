@@ -64,7 +64,7 @@ namespace {
     bool MapContainsWorldPos(GW::Constants::MapID map_id, const GW::Vec2f& world_map_pos, GW::Constants::Campaign campaign)
     {
         const auto map = GW::Map::GetMapInfo(map_id);
-        if (!(map && map->campaign == campaign && map->GetIsOnWorldMap()))
+        if (!(map && map->campaign == campaign))
             return false;
         ImRect map_bounds;
         return GW::Map::GetMapWorldMapBounds(map, &map_bounds) && map_bounds.Contains(world_map_pos);
@@ -222,14 +222,10 @@ namespace {
         });
     }
 
-
-
-
-
 }
 GW::Constants::MapID WorldMapWidget::GetMapIdForLocation(const GW::Vec2f& world_map_pos) {
     auto map_id = GW::Map::GetMapID();
-    const auto map_info = GW::Map::GetMapInfo();
+    auto map_info = GW::Map::GetMapInfo();
     if (!map_info)
         return GW::Constants::MapID::None;
     const auto campaign = map_info->campaign;
@@ -237,6 +233,9 @@ GW::Constants::MapID WorldMapWidget::GetMapIdForLocation(const GW::Vec2f& world_
         return map_id;
     for (size_t i = 1; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
         map_id = static_cast<GW::Constants::MapID>(i);
+        map_info = GW::Map::GetMapInfo(map_id);
+        if (!(map_info && map_info->GetIsOnWorldMap()))
+            continue;
         if (MapContainsWorldPos(map_id, world_map_pos, campaign))
             return map_id;
     }
