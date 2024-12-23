@@ -37,7 +37,7 @@ namespace FontLoader {
 
     // Given an ideal font size in px, return the best fit font.
     // NOTE: This font will NOT be automatically resized to the desired scale.
-    DLLAPI ImFont* GetFontByPx(float px);
+    DLLAPI ImFont* GetFontByPx(float px, bool include_global_font_scale = true);
 
     void Terminate();
 }
