@@ -44,7 +44,7 @@ public:
 
     bool* GetVisiblePtr()
     {
-        return &visible;
+        return has_closebutton && !show_closebutton  ? nullptr : &visible;
     }
 
     bool show_closebutton = true;
