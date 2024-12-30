@@ -384,7 +384,6 @@ namespace GW {
 
             // GWCA Client to Server commands. Only added the ones that are used for hooks, everything else goes straight into GW
             
-            kSendEnterMission           = 0x30000000 | 0x2,  // wparam = uint32_t arena_id
             kSendLoadSkillbar           = 0x30000000 | 0x3,  // wparam = UIPacket::kSendLoadSkillbar*
             kSendPingWeaponSet          = 0x30000000 | 0x4,  // wparam = UIPacket::kSendPingWeaponSet*
             kSendMoveItem               = 0x30000000 | 0x5,  // wparam = UIPacket::kSendMoveItem*
