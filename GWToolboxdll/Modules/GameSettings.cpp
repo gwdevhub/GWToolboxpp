@@ -1178,15 +1178,6 @@ namespace {
                 DialogModule::ReloadDialog();
             }
         } break;
-        case GW::UI::UIMessage::kSendEnterMission: {
-            CheckPromptBeforeEnterMission(status);
-            if (status->blocked) {
-                // Re-enable the enter mission button if triggered via party window
-                uint32_t packet = 0;
-                GW::UI::SendUIMessage((GW::UI::UIMessage)0x10000128, &packet);
-            }
-            break;
-        }
         }
     }
 
@@ -1255,6 +1246,12 @@ namespace {
         case GW::UI::UIMessage::kMapLoaded: {
             last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
         } break;
+        case GW::UI::UIMessage::kShowCancelEnterMissionBtn: {
+            CheckPromptBeforeEnterMission(status);
+            if (status->blocked && !GW::Map::CancelEnterChallenge())
+                Log::Warning("Failed to cancel mission entry");
+            break;
+        }
         }
     }
 
@@ -1650,7 +1647,7 @@ void GameSettings::Initialize()
 
     constexpr GW::UI::UIMessage pre_ui_messages[] = {
         GW::UI::UIMessage::kSendCallTarget,
-        GW::UI::UIMessage::kSendEnterMission,
+        //GW::UI::UIMessage::kSendEnterMission,
         GW::UI::UIMessage::kSendAgentDialog,
         GW::UI::UIMessage::kMapLoaded
     };
@@ -1663,6 +1660,7 @@ void GameSettings::Initialize()
         GW::UI::UIMessage::kPreferenceValueChanged,
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kTradeSessionStart,
+        GW::UI::UIMessage::kShowCancelEnterMissionBtn,
         GW::UI::UIMessage::kPartyDefeated
     };
     for (const auto message_id : post_ui_messages) {

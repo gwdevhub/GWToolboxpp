@@ -347,6 +347,8 @@ namespace GW {
             kPartyRemoveHero            = 0x10000000 | 0x11d,
             kPartyAddPlayer             = 0x10000000 | 0x122,
             kPartyRemovePlayer          = 0x10000000 | 0x124,
+            kDisableEnterMissionBtn     = 0x10000000 | 0x128, // wparam = boolean (1 = disabled, 0 = enabled)
+            kShowCancelEnterMissionBtn  = 0x10000000 | 0x12b,
             kPartyDefeated              = 0x10000000 | 0x12d,
             kPartySearchInviteReceived  = 0x10000000 | 0x135, // wparam = UIPacket::kPartySearchInviteReceived*
             kPartySearchInviteSent      = 0x10000000 | 0x137,
