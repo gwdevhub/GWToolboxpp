@@ -217,20 +217,6 @@ namespace {
 
     bool remove_window_border_in_windowed_mode = false;
 
-    bool skip_fade_animations = false;
-    using FadeFrameContent_pt = void(__cdecl*)(uint32_t frame_id, float source_opacity, float target_opacity, float duration_seconds, uint32_t unk);
-    FadeFrameContent_pt FadeFrameContent_Func = nullptr, FadeFrameContent_Ret = nullptr;
-
-    void OnFadeFrameContent(uint32_t frame_id, float source_opacity, float target_opacity, float duration_seconds, uint32_t unk) {
-        GW::Hook::EnterHook();
-        if (skip_fade_animations) {
-            duration_seconds = 0.0f;
-            source_opacity = target_opacity;
-        }
-        FadeFrameContent_Ret(frame_id, source_opacity, target_opacity, duration_seconds, unk);
-        GW::Hook::LeaveHook();
-    }
-
     GW::HookEntry SkillList_UICallback_HookEntry;
     GW::UI::UIInteractionCallback SkillList_UICallback_Func = 0, SkillList_UICallback_Ret = 0;
 
@@ -1523,8 +1509,6 @@ void GameSettings::Initialize()
     Log::Log("[GameSettings] ShowAgentFactionGain_Func = %p\n", (void*)ShowAgentFactionGain_Func);
     Log::Log("[GameSettings] ShowAgentExperienceGain_Func = %p\n", (void*)ShowAgentExperienceGain_Func);
 
-    FadeFrameContent_Func = (FadeFrameContent_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("\\Code\\Engine\\Frame\\FrApi.cpp", "sourceOpacity >= 0",0,0));
-    printf("[GameSettings] FadeFrameContent_Func = %p\n", (void*)FadeFrameContent_Func);
 
 #ifdef _DEBUG
     ASSERT(ctrl_click_patch.IsValid());
@@ -1538,7 +1522,6 @@ void GameSettings::Initialize()
     ASSERT(GlobalNameTagVisibilityFlags);
     ASSERT(ShowAgentFactionGain_Func);
     ASSERT(ShowAgentExperienceGain_Func);
-    ASSERT(FadeFrameContent_Func);
 #endif
 
     if (SkillList_UICallback_Func) {
@@ -1553,10 +1536,6 @@ void GameSettings::Initialize()
     if (ShowAgentExperienceGain_Func) {
         GW::Hook::CreateHook((void**)&ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, reinterpret_cast<void**>(&ShowAgentExperienceGain_Ret));
         GW::Hook::EnableHooks(ShowAgentExperienceGain_Func);
-    }
-    if (FadeFrameContent_Func) {
-        GW::Hook::CreateHook((void**)&FadeFrameContent_Func, OnFadeFrameContent, reinterpret_cast<void**>(&FadeFrameContent_Ret));
-        GW::Hook::EnableHooks(FadeFrameContent_Func);
     }
 
 
@@ -1782,7 +1761,6 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
 
-    LOAD_BOOL(skip_fade_animations);
 
     LOAD_BOOL(disable_camera_smoothing);
     LOAD_BOOL(tick_is_toggle);
@@ -1945,8 +1923,6 @@ void GameSettings::Terminate()
 
     if (SkillList_UICallback_Func)
         GW::Hook::RemoveHook(SkillList_UICallback_Func);
-    if(FadeFrameContent_Func)
-        GW::Hook::RemoveHook(FadeFrameContent_Func);
 
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
@@ -1955,7 +1931,6 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
 
-    SAVE_BOOL(skip_fade_animations);
 
     SAVE_BOOL(tick_is_toggle);
 
@@ -2148,7 +2123,6 @@ void GameSettings::DrawSettingsInternal()
     }
     ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
 
-    ImGui::Checkbox("Disable loading screen fade animation", &skip_fade_animations);
     ImGui::Checkbox("Prompt if entring a mission you've already completed", &check_and_prompt_if_mission_already_completed);
     ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
     ImGui::Checkbox("Automatically return to outpost on defeat", &auto_return_on_defeat);
