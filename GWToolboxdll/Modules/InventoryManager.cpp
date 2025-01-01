@@ -827,7 +827,7 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessa
             clear_pending_move((uint32_t)wparam);
         }
         break;
-        case GW::UI::UIMessage::kInitMerchantList: {
+        case GW::UI::UIMessage::kVendorWindow: {
             merchant_list_tab = *static_cast<uint32_t*>(wparam);
         }
         // About to request a quote for an item
@@ -855,7 +855,7 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessa
         }
         break;
         // Quote for item has been received
-        case GW::UI::UIMessage::kQuotedItemPrice: {
+        case GW::UI::UIMessage::kVendorQuote: {
             if (!requesting_quote_type) {
                 return;
             }
@@ -912,12 +912,12 @@ void InventoryManager::Initialize()
     GW::UI::UIMessage message_id_hooks[] = {
         GW::UI::UIMessage::kSendMoveItem,
         GW::UI::UIMessage::kSendMerchantRequestQuote,
-        GW::UI::UIMessage::kQuotedItemPrice,
+        GW::UI::UIMessage::kVendorQuote,
         GW::UI::UIMessage::kMapChange,
         GW::UI::UIMessage::kMoveItem,
         GW::UI::UIMessage::kSendUseItem,
         GW::UI::UIMessage::kItemUpdated,
-        GW::UI::UIMessage::kInitMerchantList
+        GW::UI::UIMessage::kVendorWindow
     };
     for (const auto message_id : message_id_hooks) {
         RegisterUIMessageCallback(&ItemClick_Entry, message_id, OnUIMessage);

@@ -16,6 +16,7 @@ namespace GW {
 
     enum class CallTargetType : uint32_t;
     enum class WorldActionId : uint32_t;
+    enum class TransactionType : uint32_t;
     typedef uint32_t AgentID;
 
     namespace Constants {
@@ -321,8 +322,10 @@ namespace GW {
             kDialogButton               = 0x10000000 | 0xA1, // wparam = DialogButtonInfo*
             kTargetNPCPartyMember       = 0x10000000 | 0xB1, // wparam = { uint32_t unk, uint32_t agent_id }
             kTargetPlayerPartyMember    = 0x10000000 | 0xB2, // wparam = { uint32_t unk, uint32_t player_number }
-            kInitMerchantList           = 0x10000000 | 0xB3, // wparam = { uint32_t merchant_tab_type, uint32_t unk, uint32_t merchant_agent_id, uint32_t is_pending }
-            kQuotedItemPrice            = 0x10000000 | 0xBB, // wparam = { uint32_t item_id, uint32_t price }
+            kVendorWindow               = 0x10000000 | 0xB3, // wparam = UIPacket::kVendorWindow
+            kVendorItems                = 0x10000000 | 0xB7, // wparam = UIPacket::kVendorItems
+            kVendorTransComplete        = 0x10000000 | 0xB9, // wparam = *TransactionType
+            kVendorQuote                = 0x10000000 | 0xBB, // wparam = UIPacket::kVendorQuote
             kStartMapLoad               = 0x10000000 | 0xC0, // wparam = { uint32_t map_id, ...}
             kWorldMapUpdated            = 0x10000000 | 0xC5, // Triggered when an area in the world map has been discovered/updated
             kGuildMemberUpdated         = 0x10000000 | 0xD8, // wparam = { GuildPlayer::name_ptr }
@@ -416,6 +419,22 @@ namespace GW {
         enum class EnumPreference : uint32_t;
 
         namespace UIPacket {
+            struct kVendorWindow {
+                TransactionType transaction_type;
+                uint32_t unk;
+                uint32_t merchant_agent_id;
+                uint32_t is_pending;
+            };
+            struct kVendorQuote {
+                uint32_t item_id;
+                uint32_t price;
+            };
+            struct kVendorItems {
+                TransactionType transaction_type;
+                uint32_t item_ids_count;
+                uint32_t* item_ids_buffer1; // world->merchant_items.buffer
+                uint32_t* item_ids_buffer2; // world->merchant_items2.buffer
+            };
             struct kSetRendererValue {
                 uint32_t renderer_mode; // 0 for window, 2 for full screen
                 uint32_t metric_id; // TODO: Enum this!

@@ -268,7 +268,7 @@ void HintsModule::Initialize()
     RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kWriteToChatLog, OnWriteToChatLog_UIMessage);
     RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kShowXunlaiChest, OnShowXunlaiChest_UIMessage);
     RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kQuestAdded, OnQuestAdded_UIMessage);
-    RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kQuotedItemPrice, OnQuotedItemPrice_UIMessage);
+    RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kVendorQuote, OnQuotedItemPrice_UIMessage);
     RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kPvPWindowContent, OnShowPvpWindowContent_UIMessage);
 }
 
