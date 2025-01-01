@@ -70,7 +70,6 @@ public:
     static void OnAgentEffect(GW::HookStatus*, const GW::Packet::StoC::GenericValue*);
     void OnFactionDonate(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
     static void OnPartyDefeated(const GW::HookStatus*, GW::Packet::StoC::PartyDefeated*);
-    static void OnVanquishComplete(const GW::HookStatus*, GW::Packet::StoC::VanquishComplete*);
     void OnDungeonReward(GW::HookStatus*, GW::Packet::StoC::DungeonReward*) const;
     static void OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
     static void OnCinematic(const GW::HookStatus*, const GW::Packet::StoC::CinematicPlay*);

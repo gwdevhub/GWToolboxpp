@@ -1237,7 +1237,11 @@ namespace {
             if (status->blocked && !GW::Map::CancelEnterChallenge())
                 Log::Warning("Failed to cancel mission entry");
             break;
-        }
+        } break;
+        case GW::UI::UIMessage::kVanquishComplete: {
+            if (auto_age_on_vanquish)
+                GW::Chat::SendChat('/', L"age");
+        } break;
         }
     }
 
@@ -1572,7 +1576,6 @@ void GameSettings::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, bind_member(this, &GameSettings::OnPartyPlayerJoined));
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, OnMapTravel);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CinematicPlay>(&CinematicPlay_Entry, OnCinematic);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::VanquishComplete>(&VanquishComplete_Entry, OnVanquishComplete);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&VanquishComplete_Entry, bind_member(this, &GameSettings::OnDungeonReward));
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&PlayerJoinInstance_Entry, OnMapLoaded);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, OnPlayerJoinInstance);
@@ -1640,7 +1643,8 @@ void GameSettings::Initialize()
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kTradeSessionStart,
         GW::UI::UIMessage::kShowCancelEnterMissionBtn,
-        GW::UI::UIMessage::kPartyDefeated
+        GW::UI::UIMessage::kPartyDefeated,
+        GW::UI::UIMessage::kVanquishComplete
     };
     for (const auto message_id : post_ui_messages) {
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
@@ -2594,19 +2598,9 @@ void GameSettings::OnServerMessage(const GW::HookStatus*, GW::Packet::StoC::Mess
     // 0x8101 0x641F 0x86C3 0xE149 0x53E8 0x101 0x107 = You have been in this map for n minutes.
     // 0x8101 0x641E 0xE7AD 0xEF64 0x1676 0x101 0x107 0x102 0x107 = You have been in this map for n hours and n minutes.
     if (wmemcmp(msg, L"\x8101\x641F\x86C3\xE149\x53E8", 5) == 0 || wmemcmp(msg, L"\x8101\x641E\xE7AD\xEF64\x1676", 5) == 0) {
-        GW::Chat::SendChat(GW::Chat::Channel::CHANNEL_EMOTE, L"age2");
+        GW::Chat::SendChat('/', L"age2");
     }
 }
-
-// Automatic /age on vanquish
-void GameSettings::OnVanquishComplete(const GW::HookStatus*, GW::Packet::StoC::VanquishComplete*)
-{
-    if (!auto_age_on_vanquish) {
-        return;
-    }
-    GW::Chat::SendChat(GW::Chat::Channel::CHANNEL_EMOTE, L"age");
-}
-
 void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::DungeonReward*) const
 {
     if (hide_dungeon_chest_popup) {
