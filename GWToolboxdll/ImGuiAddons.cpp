@@ -25,6 +25,15 @@ namespace ImGui {
     int element_spacing_col_idx = 0;
     float* element_spacing_indent = nullptr;
 
+    bool InputText(const char* label, std::string& buf, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
+    {
+        if (InputText(label, buf.data(), (int)buf.capacity(), flags, callback, user_data)) {
+            buf.resize(strlen(buf.data()) + 1);
+            return true;
+        }
+        return false;
+    }
+
     void SetTooltip(std::function<void()> tooltip_callback)
     {
         if (!BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_None))

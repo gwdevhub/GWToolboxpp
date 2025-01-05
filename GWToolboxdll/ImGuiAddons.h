@@ -24,6 +24,9 @@ namespace ImGui {
     // Remove a font added to an explicit draw list
     IMGUI_API void PopFont(ImDrawList* draw_list);
 
+    // InputText using a std::string - make sure you set the capacity for the string first, otherwise it won't be able to be filled.
+    IMGUI_API bool InputText(const char* label, std::string& buf, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL);
+
     IMGUI_API void SetTooltip(std::function<void()> tooltip_callback);
 
     // Shorthand for ImGui::GetIO().GlobalFontScale
