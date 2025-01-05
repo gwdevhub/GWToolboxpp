@@ -205,6 +205,8 @@ namespace {
     bool block_ghostinthebox_effect = false;
     bool block_sparkly_drops_effect = false;
 
+    bool skip_characters_from_another_campaign_prompt = true;
+
     bool auto_age2_on_age = true;
     bool auto_age_on_vanquish = false;
 
@@ -1111,10 +1113,8 @@ namespace {
 
         auto on_enter_mission_prompt = [](bool result, void*) {
             mission_prompted = true;
-            if (result) {
-                // User want to change mode
-                GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
-            }
+            result && GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
+            GW::Map::EnterChallenge();
             };
         const char* confirm_text = nullptr;
         if (GW::PartyMgr::GetIsPartyInHardMode() && hm_complete && !nm_complete) {
@@ -1201,6 +1201,13 @@ namespace {
         if (status->blocked)
             return;
         switch (message_id) {
+        case GW::UI::UIMessage::kPartyShowConfirmDialog: {
+            const auto packet = (GW::UI::UIPacket::kPartyShowConfirmDialog*)wParam;
+            if (skip_characters_from_another_campaign_prompt && wcscmp(packet->prompt_enc_str,L"\x8101\x05d2") == 0) {
+                // "Yes" to skip the confirm prompt
+                GW::UI::ButtonClick(GW::UI::GetChildFrame(GW::UI::GetChildFrame(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Party"), 1), 10), 6));
+            }
+        } break;
         case GW::UI::UIMessage::kTradeSessionStart: {
             if (flash_window_on_trade) {
                 FlashWindow();
@@ -1627,7 +1634,8 @@ void GameSettings::Initialize()
         GW::UI::UIMessage::kTradeSessionStart,
         GW::UI::UIMessage::kShowCancelEnterMissionBtn,
         GW::UI::UIMessage::kPartyDefeated,
-        GW::UI::UIMessage::kVanquishComplete
+        GW::UI::UIMessage::kVanquishComplete,
+        GW::UI::UIMessage::kPartyShowConfirmDialog
     };
     for (const auto message_id : post_ui_messages) {
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
