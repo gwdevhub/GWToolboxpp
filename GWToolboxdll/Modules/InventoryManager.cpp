@@ -474,7 +474,7 @@ namespace {
     }
 
     void consume_all(InventoryManager::Item* like_item) {
-        for (uint16_t i = 0; i < like_item->quantity; i++) {
+        for (uint16_t i = 0; like_item && i < like_item->GetUses(); i++) {
             GW::Items::UseItem(like_item);
         }
     }
@@ -782,6 +782,29 @@ namespace {
         }
     }
 
+
+    bool CanBulkConsume(InventoryManager::Item* item) {
+        if (!(item && item->IsUsable()))
+            return false;
+        auto mod = item->GetModifier(0x2788);
+        switch (mod ? mod->arg2() : 0) {
+        case 0x1: // Double click to use. Excessive alcohol consumption...
+        case 0x8: // Double click to use. Eating excessive sweets...
+        case 0x24: //Double click to use in town
+            return true;
+        }
+
+        mod = item->GetModifier(0x25e8);
+        switch (mod ? mod->arg1() : 0) {
+        case 0x7: // Nicholas keg quote
+            return true;
+        }
+        switch (item->model_file_id) {
+        case 0x26858: // Squash serum
+            return true;
+        }
+        return false;
+    }
 
     GW::UI::UIInteractionCallback UICallback_ChooseQuantityPopup_Func = nullptr, UICallback_ChooseQuantityPopup_Ret = nullptr;
     
@@ -2053,6 +2076,19 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
             move_item(context_item_actual);
             goto end_popup;
         }
+        char c_all_label[128];
+        *c_all_label = 0;
+        snprintf(c_all_label, _countof(c_all_label), "Consume All %s", context_item.plural_item_name.string().c_str());
+        if (CanBulkConsume(context_item_actual) && ImGui::Button(c_all_label, size)) {
+            ImGui::CloseCurrentPopup();
+            const auto msg = std::format("Are you sure you want to consume all {} {}(s)?", context_item_actual->GetUses(), context_item.plural_item_name.string());
+            ImGui::ConfirmDialog(msg.c_str(), [](bool result, void* wparam) {
+                if(result)
+                    consume_all((InventoryManager::Item *)GW::Items::GetItemById((uint32_t)wparam));
+                }, (void*)context_item_actual->item_id);
+            
+            goto end_popup;
+        }
         char move_all_label[128];
         *move_all_label = 0;
         if (context_item_actual->IsInventoryItem()) {
@@ -2408,7 +2444,7 @@ GW::ItemModifier* InventoryManager::Item::GetModifier(const uint32_t identifier)
 uint32_t InventoryManager::Item::GetUses() const
 {
     const GW::ItemModifier* mod = GetModifier(0x2458);
-    return mod ? mod->arg2() : quantity;
+    return (mod ? mod->arg2() : 1) * quantity;
 }
 
 bool InventoryManager::Item::IsSalvageKit() const
