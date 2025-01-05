@@ -10,6 +10,7 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <Color.h>
@@ -17,6 +18,7 @@
 #include "EffectsMonitorWidget.h"
 
 #include "Utils/FontLoader.h"
+
 
 
 namespace {
@@ -68,6 +70,25 @@ namespace {
             draw_list->AddText({label_pos.x + 1, label_pos.y + 1}, color_text_shadow, text);
         }
         draw_list->AddText(label_pos, color_text_effects, text);
+    }
+    
+    std::unordered_map<uint32_t, clock_t> effect_timestamps;
+    
+    GW::HookEntry OnPreUIMessage_HookEntry;
+    void OnPreUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
+        switch (message_id) {
+        case GW::UI::UIMessage::kEffectAdd: {
+            const auto packet = (GW::UI::UIPacket::kEffectAdd*)wparam;
+            switch (packet->effect->skill_id) {
+            case GW::Constants::SkillID::Aspect_of_Exhaustion:
+            case GW::Constants::SkillID::Aspect_of_Depletion_energy_loss:
+            case GW::Constants::SkillID::Scorpion_Aspect:
+                if (!effect_timestamps.contains((uint32_t)packet->effect->skill_id))
+                    effect_timestamps[(uint32_t)packet->effect->skill_id] = GW::MemoryMgr::GetSkillTimer();
+                break;
+            }
+        } break;
+        }
     }
 }
 
@@ -123,6 +144,50 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     }
 
     ImGui::PopFont(draw_list);
+}
+
+void EffectsMonitorWidget::Initialize()
+{
+    ToolboxWidget::Initialize();
+    GW::UI::UIMessage message_ids[] = {
+        GW::UI::UIMessage::kEffectAdd
+    };
+    for (auto message_id : message_ids) {
+        GW::UI::RegisterUIMessageCallback(&OnPreUIMessage_HookEntry, message_id, OnPreUIMessage, -0x6000);
+    }
+}
+void EffectsMonitorWidget::Terminate()
+{
+    ToolboxWidget::Terminate();
+    GW::UI::RemoveUIMessageCallback(&OnPreUIMessage_HookEntry);
+}
+void EffectsMonitorWidget::Update(float)
+{
+    for (auto [skill_id, timestamp] : effect_timestamps) {
+        auto effect = GW::Effects::GetPlayerEffectBySkillId((GW::Constants::SkillID)skill_id);
+        if (!effect) {
+            effect_timestamps.erase(skill_id);
+            break;
+        }
+        const auto elapsed = effect->GetTimeElapsed();
+        if (!effect->duration || (elapsed / 1000.f) > effect->duration) {
+            const auto now = GW::MemoryMgr::GetSkillTimer();
+            const clock_t diff = (now - timestamp) / 1000;
+
+            // a 30s timer starts when you enter the aspect
+            // a 30s timer starts 100s after you enter the aspect
+            // a 30s timer starts 200s after you enter the aspect
+            long duration = 30 - diff % 30;
+            if (diff > 100) {
+                duration = std::min(duration, 30 - (diff - 100) % 30);
+            }
+            if (diff > 200) {
+                duration = std::min(duration, 30 - (diff - 200) % 30);
+            }
+            effect->timestamp = now;
+            effect->duration = (float)duration;
+        }
+    }
 }
 
 void EffectsMonitorWidget::LoadSettings(ToolboxIni* ini)

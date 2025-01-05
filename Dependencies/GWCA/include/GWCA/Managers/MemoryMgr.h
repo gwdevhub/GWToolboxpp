@@ -10,7 +10,7 @@ namespace GW {
 
         GWCA_API uint32_t GetGWVersion();
 
-        DWORD GetSkillTimer();
+        GWCA_API DWORD GetSkillTimer();
 
         GWCA_API bool GetPersonalDir(size_t buf_len, wchar_t* buf);
 
