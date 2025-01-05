@@ -130,9 +130,6 @@ TBHotkey* TBHotkey::HotkeyFactory(ToolboxIni* ini, const char* section)
     if (type == HotkeyDialog::IniSection()) {
         return new HotkeyDialog(ini, section);
     }
-    if (type == HotkeyPingBuild::IniSection()) {
-        return new HotkeyPingBuild(ini, section);
-    }
     if (type == HotkeyHeroTeamBuild::IniSection()) {
         return new HotkeyHeroTeamBuild(ini, section);
     }
@@ -1831,55 +1828,6 @@ void HotkeyDialog::Execute()
     if (show_message_in_emote_channel) {
         Log::Flash("Sent dialog %s (%d)", name, id);
     }
-}
-
-const char* HotkeyPingBuild::GetText(void*, const int idx)
-{
-    if (idx >= static_cast<int>(BuildsWindow::Instance().BuildCount())) {
-        return nullptr;
-    }
-    return BuildsWindow::Instance().BuildName(static_cast<size_t>(idx));
-}
-
-HotkeyPingBuild::HotkeyPingBuild(const ToolboxIni* ini, const char* section)
-    : TBHotkey(ini, section), index(static_cast<size_t>(ini->GetLongValue(section, "BuildIndex", 0))) {}
-
-void HotkeyPingBuild::Save(ToolboxIni* ini, const char* section) const
-{
-    TBHotkey::Save(ini, section);
-    ini->SetLongValue(section, "BuildIndex", index);
-}
-
-int HotkeyPingBuild::Description(char* buf, const size_t bufsz)
-{
-    const char* buildname = BuildsWindow::Instance().BuildName(index);
-    if (buildname == nullptr) {
-        buildname = "<not found>";
-    }
-    return snprintf(buf, bufsz, "Ping build '%s'", buildname);
-}
-
-bool HotkeyPingBuild::Draw()
-{
-    bool hotkey_changed = false;
-    const int icount = static_cast<int>(BuildsWindow::Instance().BuildCount());
-    int iindex = static_cast<int>(index);
-    if (ImGui::Combo("Build", &iindex, GetText, nullptr, icount)) {
-        if (0 <= iindex) {
-            index = static_cast<size_t>(iindex);
-        }
-        hotkey_changed = true;
-    }
-    return hotkey_changed;
-}
-
-void HotkeyPingBuild::Execute()
-{
-    if (!CanUse()) {
-        return;
-    }
-
-    BuildsWindow::Instance().Send(index);
 }
 
 const char* HotkeyHeroTeamBuild::GetText(void*, const int idx)

@@ -122,6 +122,9 @@ namespace GW {
 
         AvailableCharacterInfo* GetAvailableCharacter(const wchar_t* name);
     }
+    namespace MemoryMgr {
+        bool GetPersonalDir(std::wstring& out);
+    }
 }
 
 namespace ToolboxUtils {

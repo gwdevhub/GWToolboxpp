@@ -333,12 +333,6 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Send a Dialog");
             }
-            if (ImGui::Selectable("Ping Build")) {
-                new_hotkey = new HotkeyPingBuild(nullptr, nullptr);
-            }
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Ping a build from the Build Panel");
-            }
             if (ImGui::Selectable("Load Hero Team Build")) {
                 new_hotkey = new HotkeyHeroTeamBuild(nullptr, nullptr);
             }

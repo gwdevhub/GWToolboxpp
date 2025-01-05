@@ -29,7 +29,9 @@ namespace GW {
         enum Channel : int;
         typedef uint32_t Color;
     }
-
+    namespace SkillbarMgr {
+        struct SkillTemplate;
+    }
     namespace UI {
         struct TooltipInfo;
         typedef GW::Array<unsigned char> ArrayByte;
@@ -389,7 +391,7 @@ namespace GW {
 
             // GWCA Client to Server commands. Only added the ones that are used for hooks, everything else goes straight into GW
             
-            kSendLoadSkillbar           = 0x30000000 | 0x3,  // wparam = UIPacket::kSendLoadSkillbar*
+            kSendLoadSkillTemplate      = 0x30000000 | 0x3,  // wparam = SkillbarMgr::SkillTemplate*
             kSendPingWeaponSet          = 0x30000000 | 0x4,  // wparam = UIPacket::kSendPingWeaponSet*
             kSendMoveItem               = 0x30000000 | 0x5,  // wparam = UIPacket::kSendMoveItem*
             kSendMerchantRequestQuote   = 0x30000000 | 0x6,  // wparam = UIPacket::kSendMerchantRequestQuote*
@@ -418,7 +420,13 @@ namespace GW {
         enum class NumberPreference : uint32_t;
         enum class EnumPreference : uint32_t;
 
+
+
         namespace UIPacket {
+            struct kSendLoadSkillTemplate {
+                uint32_t agent_id;
+                SkillbarMgr::SkillTemplate* skill_template;
+            };
             struct kVendorWindow {
                 TransactionType transaction_type;
                 uint32_t unk;
@@ -561,10 +569,6 @@ namespace GW {
                 wchar_t* sender_enc;
             };
 
-            struct kSendLoadSkillbar {
-                uint32_t agent_id;
-                uint32_t* skill_ids;
-            };
             struct kSendPingWeaponSet {
                 uint32_t agent_id;
                 uint32_t weapon_item_id;

@@ -18,6 +18,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
 
 #include <GWCA/Packets/Opcodes.h>
 #include <GWCA/Packets/StoC.h>
@@ -162,6 +163,16 @@ namespace GW {
                     return &ac;
             }
             return nullptr;
+        }
+    }
+
+    namespace MemoryMgr {
+        bool GetPersonalDir(std::wstring& out) {
+            out.resize(512, 0);
+            if (!GetPersonalDir(out.capacity(), out.data()))
+                return false;
+            out.resize(wcslen(out.data()));
+            return !out.empty();
         }
     }
 }

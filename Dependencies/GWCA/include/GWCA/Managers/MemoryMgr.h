@@ -12,7 +12,7 @@ namespace GW {
 
         DWORD GetSkillTimer();
 
-        GWCA_API bool GetPersonalDir(std::wstring& out);
+        GWCA_API bool GetPersonalDir(size_t buf_len, wchar_t* buf);
 
         GWCA_API HWND GetGWWindowHandle();
 

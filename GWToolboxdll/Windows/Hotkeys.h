@@ -363,24 +363,6 @@ public:
     void Execute() override;
 };
 
-class HotkeyPingBuild : public TBHotkey {
-    static const char* GetText(void*, int idx);
-
-public:
-    size_t index = 0;
-
-    static const char* IniSection() { return "PingBuild"; }
-    [[nodiscard]] const char* Name() const override { return IniSection(); }
-
-    HotkeyPingBuild(const ToolboxIni* ini, const char* section);
-
-    void Save(ToolboxIni* ini, const char* section) const override;
-
-    bool Draw() override;
-    int Description(char* buf, size_t bufsz) override;
-    void Execute() override;
-};
-
 class HotkeyHeroTeamBuild : public TBHotkey {
     static const char* GetText(void*, int idx);
 

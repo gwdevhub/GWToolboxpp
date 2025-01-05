@@ -105,7 +105,7 @@ namespace GuiUtils {
 
     void DrawSkillbar(const char* build_code) {
         GW::SkillbarMgr::SkillTemplate skill_template;
-        if (!GW::SkillbarMgr::DecodeSkillTemplate(skill_template, build_code))
+        if (!(build_code && *build_code && GW::SkillbarMgr::DecodeSkillTemplate(skill_template, build_code)))
             return;
 
         const float text_size = ImGui::CalcTextSize(" ").y;
