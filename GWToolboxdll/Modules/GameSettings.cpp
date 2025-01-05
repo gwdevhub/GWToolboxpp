@@ -311,18 +311,7 @@ namespace {
         GW::Constants::SkillID skill_ids[8]{};
     } skillbar_packet;
 
-    // Before the game loads the skill bar you want, copy the data over for checking once the bar is loaded.
-    void OnPreLoadSkillBar(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
-    {
-        ASSERT(message_id == GW::UI::UIMessage::kSendLoadSkillbar && wparam);
-        const struct Pack {
-            uint32_t agent_id = 0;
-            GW::Constants::SkillID skill_ids[8]{};
-        }* packet = static_cast<Pack*>(wparam);
-        // @Enhancement: may cause weird stuff if we load loads of builds at once; heros could get mixed up with player. Use a map.
-        memcpy(skillbar_packet.skill_ids, packet->skill_ids, sizeof(skillbar_packet.skill_ids));
-        skillbar_packet.agent_id = packet->agent_id;
-    }
+
 
     // Takes SkillData* ptr, rectifies any missing dupe skills. True if bar has been tweaked.
     bool FixLoadSkillData(GW::Constants::SkillID* skill_ids)
@@ -406,51 +395,57 @@ namespace {
         }
         return tweaked;
     }
-
-    // Checks loaded skillbar for any missing skills once the game has sent the packet
-    void OnPostLoadSkillBar(GW::HookStatus*, void* packet)
+    
+    // Before the game loads the skill bar you want, copy the data over for checking once the bar is loaded.
+    void OnPreLoadSkillBar(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
-        const auto post_pack = static_cast<LoadSkillBarPacket*>(packet);
-        if (post_pack->agent_id != skillbar_packet.agent_id) {
-            skillbar_packet.agent_id = 0;
+        ASSERT(message_id == GW::UI::UIMessage::kSendLoadSkillTemplate && wparam);
+        const auto packet = (GW::UI::UIPacket::kSendLoadSkillTemplate*)wparam;
+        if (packet->agent_id != GW::Agents::GetControlledCharacterId())
             return;
-        }
-        if (std::ranges::equal(skillbar_packet.skill_ids, post_pack->skill_ids)) {
-            skillbar_packet.agent_id = 0;
-            return;
-        }
-        GW::SkillbarMgr::SkillTemplate tmpl;
-        if (!GW::SkillbarMgr::GetSkillTemplate(skillbar_packet.agent_id, tmpl)) {
-            skillbar_packet.agent_id = 0;
-            return;
-        }
-        if (FixLoadSkillData(tmpl.skills)) {
-            GW::SkillbarMgr::LoadSkillTemplate(skillbar_packet.agent_id,tmpl);
-        }
-        skillbar_packet.agent_id = 0;
+        FixLoadSkillData(packet->skill_template->skills);
     }
+    enum class CharStat : uint32_t {
+        Experience,
+        KurzickFactionCurrent,
+        KurzickFactionTotal,
+        LuxonFactionCurrent,
+        LuxonFactionTotal,
+        ImperialFactionCurrent,
+        ImperialFactionTotal,
+        MysteryMagicalFactionCurrent,
+        MysteryMagicalFactionTotal,
+        Level,
+        Morale,
+        BalthazarFactionCurrent,
+        BalthazarFactionTotal,
+        CurrentSkillPoints
+    };
 
-    using ShowAgentFactionGain_pt = void(__cdecl*)(uint32_t agent_id, uint32_t stat_type, uint32_t amount_gained);
-    ShowAgentFactionGain_pt ShowAgentFactionGain_Func = nullptr, ShowAgentFactionGain_Ret = nullptr;
-    // Block overhead faction gain numbers
-    void OnShowAgentFactionGain(const uint32_t agent_id, const uint32_t stat_type, const uint32_t amount_gained)
-    {
-        GW::Hook::EnterHook();
-        if (!block_faction_gain) {
-            ShowAgentFactionGain_Ret(agent_id, stat_type, amount_gained);
-        }
-        GW::Hook::LeaveHook();
-    }
-
-    using ShowAgentExperienceGain_pt = void(__cdecl*)(uint32_t agent_id, uint32_t amount_gained);
-    ShowAgentExperienceGain_pt ShowAgentExperienceGain_Func = nullptr, ShowAgentExperienceGain_Ret = nullptr;
+    using CharacterStatIncreased_pt = void(__cdecl*)(CharStat stat, uint32_t amount_gained);
+    CharacterStatIncreased_pt CharacterStatIncreased_Func = nullptr, CharacterStatIncreased_Ret = nullptr;
     // Block overhead experience gain numbers
-    void OnShowAgentExperienceGain(const uint32_t agent_id, const uint32_t amount_gained)
-    {
+    void OnCharacterStatIncreased(CharStat stat, uint32_t amount_gained) {
+        bool blocked = false;
         GW::Hook::EnterHook();
-        const bool blocked = block_experience_gain || (block_zero_experience_gain && amount_gained == 0);
+        switch (stat) {
+        case CharStat::ImperialFactionCurrent:
+        case CharStat::BalthazarFactionCurrent:
+        case CharStat::KurzickFactionCurrent:
+        case CharStat::LuxonFactionCurrent:
+            blocked = block_faction_gain;
+            break;
+        case CharStat::Experience:
+            blocked = block_experience_gain || (block_zero_experience_gain && amount_gained == 0);
+            break;
+        }
         if (!blocked) {
-            ShowAgentExperienceGain_Ret(agent_id, amount_gained);
+            CharacterStatIncreased_Ret(stat, amount_gained);
+        } else {
+            // we need to be sure to increase the stat ourselves because this function would normally do it for us
+            const auto w = GW::GetWorldContext();
+            uint32_t* char_stat_values = &w->experience;
+            char_stat_values[(uint32_t)stat * 2] += amount_gained;
         }
         GW::Hook::LeaveHook();
     }
@@ -1505,13 +1500,8 @@ void GameSettings::Initialize()
     Log::Log("[GameSettings] SetGlobalNameTagVisibility_Func = %p", (void*)SetGlobalNameTagVisibility_Func);
     Log::Log("[GameSettings] GlobalNameTagVisibilityFlags = %p", static_cast<void*>(GlobalNameTagVisibilityFlags));
 
-    address = GW::Scanner::Find("\x8b\x7d\x08\x8b\x70\x2c\x83\xff\x0f", "xxxxxxxxx");
-    if (address) {
-        ShowAgentFactionGain_Func = (ShowAgentFactionGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x6c);
-        ShowAgentExperienceGain_Func = (ShowAgentExperienceGain_pt)GW::Scanner::FunctionFromNearCall(address + 0x4f);
-    }
-    Log::Log("[GameSettings] ShowAgentFactionGain_Func = %p\n", (void*)ShowAgentFactionGain_Func);
-    Log::Log("[GameSettings] ShowAgentExperienceGain_Func = %p\n", (void*)ShowAgentExperienceGain_Func);
+    CharacterStatIncreased_Func = (CharacterStatIncreased_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("ChCliApi.cpp","stat < CHAR_STATS",0,0));
+    Log::Log("[GameSettings] CharacterStatIncreased_Func = %p\n", (void*)CharacterStatIncreased_Func);
 
 
 #ifdef _DEBUG
@@ -1524,28 +1514,21 @@ void GameSettings::Initialize()
     ASSERT(skill_description_patch.IsValid());
     ASSERT(SetGlobalNameTagVisibility_Func);
     ASSERT(GlobalNameTagVisibilityFlags);
-    ASSERT(ShowAgentFactionGain_Func);
-    ASSERT(ShowAgentExperienceGain_Func);
+    ASSERT(CharacterStatIncreased_Func);
 #endif
 
     if (SkillList_UICallback_Func) {
         GW::Hook::CreateHook((void**)&SkillList_UICallback_Func, OnSkillList_UICallback, reinterpret_cast<void**>(&SkillList_UICallback_Ret));
         GW::Hook::EnableHooks(SkillList_UICallback_Func);
     }
-
-    if (ShowAgentFactionGain_Func) {
-        GW::Hook::CreateHook((void**)&ShowAgentFactionGain_Func, OnShowAgentFactionGain, reinterpret_cast<void**>(&ShowAgentFactionGain_Ret));
-        GW::Hook::EnableHooks(ShowAgentFactionGain_Func);
-    }
-    if (ShowAgentExperienceGain_Func) {
-        GW::Hook::CreateHook((void**)&ShowAgentExperienceGain_Func, OnShowAgentExperienceGain, reinterpret_cast<void**>(&ShowAgentExperienceGain_Ret));
-        GW::Hook::EnableHooks(ShowAgentExperienceGain_Func);
+    if (CharacterStatIncreased_Func) {
+        GW::Hook::CreateHook((void**)&CharacterStatIncreased_Func, OnCharacterStatIncreased, reinterpret_cast<void**>(&CharacterStatIncreased_Ret));
+        GW::Hook::EnableHooks(CharacterStatIncreased_Func);
     }
 
 
     RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendAgentDialog, bind_member(this, &GameSettings::OnFactionDonate));
-    RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillbar, &OnPreLoadSkillBar);
-    GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILLBAR_UPDATE, OnPostLoadSkillBar, 0x8000);
+    RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillTemplate, &OnPreLoadSkillBar);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, OnUpdateSkillCount, -0x3000);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_2, OnUpdateSkillCount, -0x3000);
 
@@ -1927,6 +1910,8 @@ void GameSettings::Terminate()
 
     if (SkillList_UICallback_Func)
         GW::Hook::RemoveHook(SkillList_UICallback_Func);
+    if(CharacterStatIncreased_Func)
+        GW::Hook::RemoveHook(CharacterStatIncreased_Func);
 
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
