@@ -516,6 +516,8 @@ namespace {
                 return invalid_target; // Invalid spell target.
             case 0x8C3:
                 return invalid_target; // Target is out of range.
+            case 0x8C4:
+                return invalid_target; // That skill is still recharging
             case 0x52C3:               // 0x52C3 0xDE9C 0xCD2F 0x78E4 0x101 0x100 - Hold-out bonus: +(message[5] - 0x100) points
                 return FullMatch(&message[1], {0xDE9C, 0xCD2F, 0x78E4, 0x101}) && challenge_mission_messages;
             case 0x6C9C: // 0x6C9C 0x866F 0xB8D2 0x5A20 0x101 0x100 - You gain (message[5] - 0x100) Kurzick faction
