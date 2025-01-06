@@ -235,28 +235,7 @@ void CustomRenderer::Invalidate()
 
 void CustomRenderer::SetTooltipMapID(const GW::Constants::MapID& map_id)
 {
-    if (map_id_tooltip.map_id != map_id) {
-        map_id_tooltip.map_id = map_id;
-        if (map_id == GW::Constants::MapID::None) {
-            snprintf(map_id_tooltip.tooltip_str, sizeof(map_id_tooltip.tooltip_str), "Map ID (Any)");
-        }
-        else {
-            snprintf(map_id_tooltip.tooltip_str, sizeof(map_id_tooltip.tooltip_str), "Map ID");
-            const GW::AreaInfo* map_info = map_id < GW::Constants::MapID::Count ? GW::Map::GetMapInfo(map_id) : nullptr;
-            if (map_info && map_info->name_id) {
-                wchar_t map_id_buf[8];
-                map_id_tooltip.map_name_ws.clear();
-                if (GW::UI::UInt32ToEncStr(map_info->name_id, map_id_buf, 8)) {
-                    GW::UI::AsyncDecodeStr(map_id_buf, &map_id_tooltip.map_name_ws);
-                }
-            }
-        }
-    }
-    if (!map_id_tooltip.map_name_ws.empty()) {
-        snprintf(map_id_tooltip.tooltip_str, sizeof(map_id_tooltip.tooltip_str), "Map ID (%s)", TextUtils::WStringToString(map_id_tooltip.map_name_ws).c_str());
-        map_id_tooltip.map_name_ws.clear();
-    }
-    ImGui::SetTooltip(map_id_tooltip.tooltip_str);
+    ImGui::SetTooltip(std::format("Map ID ({})",Resources::GetMapName(map_id)->string()).c_str());
 }
 
 bool CustomRenderer::RemoveCustomLine(CustomLine* line)

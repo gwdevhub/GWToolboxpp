@@ -1078,10 +1078,8 @@ namespace GW {
         GWCA_API bool GetIsShiftScreenShot();
         GWCA_API bool GetIsWorldMapShowing();
 
-        GWCA_API void AsyncDecodeStr(const wchar_t *enc_str, char    *buffer, size_t size);
         GWCA_API void AsyncDecodeStr(const wchar_t *enc_str, wchar_t *buffer, size_t size);
         GWCA_API void AsyncDecodeStr(const wchar_t* enc_str, DecodeStr_Callback callback, void* callback_param = 0, GW::Constants::Language language_id = (GW::Constants::Language)0xff);
-        GWCA_API void AsyncDecodeStr(const wchar_t *enc_str, std::wstring *out, GW::Constants::Language language_id = (GW::Constants::Language)0xff);
 
         GWCA_API bool IsValidEncStr(const wchar_t* enc_str);
 

@@ -115,7 +115,5 @@ namespace GW {
         // Might be bugged, avoid to use.
         GWCA_API wchar_t* GetAgentEncName(const Agent* agent);
         GWCA_API wchar_t* GetAgentEncName(uint32_t agent_id);
-
-        GWCA_API bool AsyncGetAgentName(const Agent *agent, std::wstring& name);
     };
 }

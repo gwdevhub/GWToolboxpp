@@ -11,7 +11,7 @@
 
 #include <Windows/StringDecoderWindow.h>
 #include <Utils/TextUtils.h>
-
+#include <Utils/ToolboxUtils.h>
 namespace {
     void printchar(const wchar_t c)
     {

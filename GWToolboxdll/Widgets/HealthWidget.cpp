@@ -18,6 +18,7 @@
 #include <Widgets/HealthWidget.h>
 #include <Utils/FontLoader.h>
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 constexpr auto HEALTH_THRESHOLD_INIFILENAME = L"HealthThreshold.ini";
 

@@ -1,6 +1,7 @@
 #pragma once
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
 
 class StoCCallback {
     GW::HookEntry* hook_entry = nullptr;
@@ -124,6 +125,12 @@ namespace GW {
     }
     namespace MemoryMgr {
         bool GetPersonalDir(std::wstring& out);
+    }
+    namespace UI {
+        void AsyncDecodeStr(const wchar_t* enc_str, std::wstring* out, GW::Constants::Language language_id = (GW::Constants::Language)0xff);
+    }
+    namespace Agents {
+        void AsyncGetAgentName(const Agent* agent, std::wstring& out);
     }
 }
 

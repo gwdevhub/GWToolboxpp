@@ -163,7 +163,7 @@ private:
         bool failed = false;
         bool from_disk = false;
         bool need_to_collapse = false;
-        char name[256] = {0};
+        std::string name;
 
         std::vector<Objective*> objectives{};
 

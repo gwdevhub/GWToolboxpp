@@ -23,7 +23,7 @@
 
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
-
+#include <Utils/ToolboxUtils.h>
 namespace {
     wchar_t* GetMessageCore()
     {

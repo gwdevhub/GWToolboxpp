@@ -23,7 +23,7 @@
 
 #include <Logger.h>
 #include <Utils/TextUtils.h>
-
+#include <Utils/ToolboxUtils.h>
 namespace {
 
     GW::HookEntry ChatCmd_HookEntry;
@@ -2024,7 +2024,7 @@ ObserverModule::ObservableAgent::ObservableAgent(ObserverModule& parent, const G
     , is_npc(agent_living.IsNPC())
 {
     // async initialise the agents name now because we probably want it later
-    GW::Agents::AsyncGetAgentName(&agent_living, _raw_name_w);
+    GW::UI::AsyncDecodeStr(GW::Agents::GetAgentEncName(&agent_living), &_raw_name_w);
 
     if (primary != GW::Constants::Profession::None) {
         std::string prof = GetProfessionAcronym(primary);

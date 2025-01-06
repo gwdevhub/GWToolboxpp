@@ -151,17 +151,6 @@ namespace {
         }
     }
 
-    void AsyncGetMapName(char* buffer, const size_t n, const GW::Constants::MapID mapID = GW::Map::GetMapID())
-    {
-        static wchar_t enc_str[16];
-        const GW::AreaInfo* info = GW::Map::GetMapInfo(mapID);
-        if (!GW::UI::UInt32ToEncStr(info->name_id, enc_str, n)) {
-            buffer[0] = 0;
-            return;
-        }
-        GW::UI::AsyncDecodeStr(enc_str, buffer, n);
-    }
-
     void ComputeNColumns()
     {
         n_columns = 0 + (show_start_column ? 1 : 0) + (show_end_column ? 1 : 0) + (show_time_column ? 1 : 0);
@@ -552,7 +541,8 @@ void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os)
 void ObjectiveTimerWindow::AddDungeonObjectiveSet(const std::vector<GW::Constants::MapID>& levels)
 {
     const auto os = new ObjectiveSet;
-    AsyncGetMapName(os->name, sizeof(os->name));
+    ASSERT(!levels.empty());
+    os->name = Resources::GetMapName(levels[0])->string();
     for (size_t i = 0; i < levels.size(); i++) {
         char name[256];
         snprintf(name, sizeof(name), "Level %d", i);
@@ -592,7 +582,8 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
     }
 
     const auto os = new ObjectiveSet;
-    AsyncGetMapName(os->name, sizeof(os->name));
+
+    os->name = Resources::GetMapName(GW::Constants::MapID::Domain_of_Anguish)->string();
 
     const std::vector<std::function<void()>> add_doa_obj = {
         [&] {
@@ -713,7 +704,7 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet()
     // Objective for Urgoz = 357
 
     const auto os = new ObjectiveSet;
-    AsyncGetMapName(os->name, sizeof(os->name));
+    os->name = Resources::GetMapName(GW::Constants::MapID::Urgozs_Warren)->string();
     os->AddObjective(new Objective("Zone 1 | Weakness"))->SetStarted();
     os->AddObjectiveAfterAll(new Objective("Zone 2 | Life Drain"))->AddStartEvent(EventType::DoorOpen, 45420);
     os->AddObjectiveAfterAll(new Objective("Zone 3 | Levers"))->AddStartEvent(EventType::DoorOpen, 11692);
@@ -737,7 +728,7 @@ void ObjectiveTimerWindow::AddUrgozObjectiveSet()
 void ObjectiveTimerWindow::AddDeepObjectiveSet()
 {
     const auto os = new ObjectiveSet;
-    AsyncGetMapName(os->name, sizeof(os->name));
+    os->name = Resources::GetMapName(GW::Constants::MapID::The_Deep)->string();
     os->AddObjective(new Objective("Room 1 | Soothing"))
       ->SetStarted()
       ->AddEndEvent(EventType::DoorOpen, Deep_room_1_first)
@@ -789,7 +780,7 @@ void ObjectiveTimerWindow::AddDeepObjectiveSet()
 void ObjectiveTimerWindow::AddFoWObjectiveSet()
 {
     const auto os = new ObjectiveSet;
-    AsyncGetMapName(os->name, sizeof(os->name));
+    os->name = Resources::GetMapName(GW::Constants::MapID::The_Fissure_of_Woe)->string();
 
     os->AddQuestObjective("ToC", 309);
     os->AddQuestObjective("Wailing Lord", 310);
@@ -808,7 +799,7 @@ void ObjectiveTimerWindow::AddFoWObjectiveSet()
 void ObjectiveTimerWindow::AddUWObjectiveSet()
 {
     const auto os = new ObjectiveSet;
-    AsyncGetMapName(os->name, sizeof(os->name));
+    os->name = Resources::GetMapName(GW::Constants::MapID::The_Underworld)->string();
     os->AddQuestObjective("Chamber", 146);
     os->AddQuestObjective("Restore", 147);
     os->AddQuestObjective("Escort", 148);
@@ -828,23 +819,21 @@ void ObjectiveTimerWindow::AddUWObjectiveSet()
 void ObjectiveTimerWindow::AddToPKObjectiveSet()
 {
     const auto os = new ObjectiveSet;
-
-    // we could read out the name of the maps...
-    os->AddObjective(new Objective("The Underworld"))
+    os->name = Resources::GetMapName(GW::Constants::MapID::Tomb_of_the_Primeval_Kings)->string();
+    os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Underworld_PvP)->string().c_str()))
       ->SetStarted()
       ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Underworld_PvP))
       ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Underworld_PvP));
-    os->AddObjective(new Objective("Scarred Earth"))
+    os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::Scarred_Earth)->string().c_str()))
       ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::Scarred_Earth))
       ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::Scarred_Earth));
-    os->AddObjective(new Objective("The Courtyard"))
+    os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Courtyard)->string().c_str()))
       ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Courtyard))
       ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Courtyard));
-    os->AddObjective(new Objective("The Hall of Heroes"))
+    os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Hall_of_Heroes)->string().c_str()))
       ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Hall_of_Heroes))
       ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Hall_of_Heroes));
 
-    AsyncGetMapName(os->name, sizeof(os->name), GW::Constants::MapID::Tomb_of_the_Primeval_Kings);
     AddObjectiveSet(os);
 }
 
@@ -893,7 +882,7 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
         char buf[256];
-        sprintf(buf, "%s - %s###ObjectiveTimerCurrentRun", current_objective_set->name, current_objective_set->GetDurationStr());
+        sprintf(buf, "%s - %s###ObjectiveTimerCurrentRun", current_objective_set->name.c_str(), current_objective_set->GetDurationStr());
 
         if (ImGui::Begin(buf, &show_current_run_window, GetWinFlags())) {
             ImGui::PushID(static_cast<int>(current_objective_set->ui_id));
@@ -1461,8 +1450,7 @@ ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson
     const auto os = new ObjectiveSet;
     os->active = false;
     os->system_time = json.at("utc_start").get<DWORD>();
-    const auto name = json.at("name").get<std::string>();
-    snprintf(os->name, sizeof(os->name), "%s", name.c_str());
+    os->name = json.at("name").get<std::string>();
     os->run_start_time_point = json.at("instance_start").get<DWORD>();
     if (json.contains("duration")) {
         os->duration = json.at("duration").get<DWORD>();
@@ -1575,10 +1563,10 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw()
         }
     }
     if (show_start_date_time) {
-        sprintf(buf, "%s - %s - %s%s###header%u", GetStartTimeStr(), name, GetDurationStr(), failed ? " [Failed]" : "", ui_id);
+        sprintf(buf, "%s - %s - %s%s###header%u", GetStartTimeStr(), name.c_str(), GetDurationStr(), failed ? " [Failed]" : "", ui_id);
     }
     else {
-        sprintf(buf, "%s - %s%s###header%u", name, GetDurationStr(), failed ? " [Failed]" : "", ui_id);
+        sprintf(buf, "%s - %s%s###header%u", name.c_str(), GetDurationStr(), failed ? " [Failed]" : "", ui_id);
     }
 
     bool is_open = true;

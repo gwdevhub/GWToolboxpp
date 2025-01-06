@@ -175,6 +175,19 @@ namespace GW {
             return !out.empty();
         }
     }
+    namespace UI {
+        void AsyncDecodeStr(const wchar_t* enc_str, std::wstring* out, GW::Constants::Language language_id) {
+            out->clear();
+            AsyncDecodeStr(enc_str, [](void* param, const wchar_t* s) {
+                *(std::wstring*)param = s;
+                }, &out, language_id);
+        }
+    }
+    namespace Agents {
+        void AsyncGetAgentName(const Agent* agent, std::wstring& out) {
+            UI::AsyncDecodeStr(GetAgentEncName(agent), &out);
+        }
+    }
 }
 
 namespace ToolboxUtils {

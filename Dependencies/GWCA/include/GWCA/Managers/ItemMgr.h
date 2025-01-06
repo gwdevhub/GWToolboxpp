@@ -149,8 +149,6 @@ namespace GW {
         // Returns the slot of the materials in the storage page. (-1 if not found)
         GWCA_API Constants::MaterialSlot GetMaterialSlot(const Item *item);
 
-        GWCA_API void AsyncGetItemName(const Item *item, std::wstring& name);
-
         GWCA_API EquipmentStatus GetEquipmentVisibility(EquipmentType type);
         GWCA_API bool SetEquipmentVisibility(EquipmentType type, EquipmentStatus state);
 
