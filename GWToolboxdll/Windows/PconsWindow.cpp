@@ -663,7 +663,7 @@ bool PconsWindow::SetEnabled(const bool b)
         return enabled; // Do nothing - already enabled/disabled.
     }
     enabled = b;
-    Refill(enabled);
+    Refill(enabled && Pcon::refill_if_below_threshold);
     switch (GW::Map::GetInstanceType()) {
         case InstanceType::Outpost:
             if (tick_with_pcons) {
