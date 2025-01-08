@@ -303,7 +303,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
 
     const auto font = FontLoader::GetFontByPx(font_size);
     const auto draw_list = ImGui::GetBackgroundDrawList();
-    ImGui::PushFont(font, draw_list, font_size);
+    
 
     for (size_t i = 0; i < m_skills.size(); i++) {
         const Skill& skill = m_skills[i];
@@ -319,16 +319,18 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
 
         // label
         if (*skill.cooldown) {
+            ImGui::PushFont(font, draw_list, font_size);
             const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown);
             ImVec2 label_pos(top_left.x + m_skill_width / 2 - label_size.x / 2, top_left.y + m_skill_width / 2 - label_size.y / 2);
             draw_list->AddText(label_pos, color_text_recharge, skill.cooldown);
+            ImGui::PopFont(draw_list);
         }
 
         if (display_effect_monitor) {
             DrawEffect(i, top_left);
         }
     }
-    ImGui::PopFont(draw_list);
+    
 }
 
 void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
