@@ -18,6 +18,8 @@
 #include <Utils/GuiUtils.h>
 #include "ChatSettings.h"
 #include <Utils/TextUtils.h>
+#include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Utilities/Hooker.h>
 
 namespace {
     // Settings
@@ -32,6 +34,15 @@ namespace {
     bool auto_url = true;
 
     Color timestamps_color = Colors::RGB(0xc0, 0xc0, 0xbf);
+
+    struct ChatTokenColor {
+        const wchar_t* token;
+        GW::Chat::Color color;
+    };
+
+    constexpr size_t chat_token_colors_size = 0x12;
+    std::map<std::wstring, GW::Chat::Color> chat_token_colors_original;
+    std::map<std::wstring, GW::Chat::Color> chat_token_colors;
 
     // Runtime
     bool ctrl_enter_whisper = false;
@@ -51,8 +62,29 @@ namespace {
     GW::HookEntry OnUIMessage_Entry;
 
     // used by chat colors grid
-    constexpr float chat_colors_grid_x[] = {0, 100, 160, 240};
+    constexpr float chat_colors_grid_x[] = {0, 150.f, 210.f, 250.f};
     std::vector<PendingChatMessage*> pending_messages;
+
+    typedef wchar_t* (__cdecl* ColorHexOrLabelToColor_pt)(wchar_t* token, GW::Chat::Color* color_out, uint32_t color_out_len);
+    ColorHexOrLabelToColor_pt ColorHexOrLabelToColor_Func = 0, ColorHexOrLabelToColor_Ret = 0;
+    // This function takes a decoded string that has found a color tag - it sets the color for the tag based on the token, then returns the rest of the decoded string
+    wchar_t* OnColorHexOrLabelToColor(wchar_t* token, GW::Chat::Color* color_out, uint32_t color_out_len) {
+        GW::Hook::EnterHook();
+        if (token && *token == L'@' && color_out_len == 1) {
+            // Replace
+            const auto out = wcschr(token, L'>');
+            std::wstring token_label(&token[1], out);
+            if (chat_token_colors.contains(token_label)) {
+                *color_out = chat_token_colors[token_label];
+                GW::Hook::LeaveHook();
+                return out;
+            }   
+        }
+        const auto ret = ColorHexOrLabelToColor_Ret(token, color_out, color_out_len);
+        GW::Hook::LeaveHook();
+        return ret;
+    }
+
 
     std::wstring PrintTime(const DWORD time_sec)
     {
@@ -86,19 +118,21 @@ namespace {
         GW::Chat::Color color, sender_col, message_col;
         GetChannelColors(chan, &sender_col, &message_col);
 
-        ImGui::SameLine(chat_colors_grid_x[1]);
+        const auto scale = ImGui::FontScale();
+
+        ImGui::SameLine(chat_colors_grid_x[1] * scale);
         color = sender_col;
         if (Colors::DrawSettingHueWheel("Sender Color:", &color, flags) && color != sender_col) {
             SetSenderColor(chan, color);
         }
 
-        ImGui::SameLine(chat_colors_grid_x[2]);
+        ImGui::SameLine(chat_colors_grid_x[2] * scale);
         color = message_col;
         if (Colors::DrawSettingHueWheel("Message Color:", &color, flags) && color != message_col) {
             SetMessageColor(chan, color);
         }
 
-        ImGui::SameLine(chat_colors_grid_x[3]);
+        ImGui::SameLine(chat_colors_grid_x[3] * scale);
         if (ImGui::Button("Reset")) {
             GW::Chat::Color col1, col2;
             GetDefaultColors(chan, &col1, &col2);
@@ -107,7 +141,6 @@ namespace {
         }
         ImGui::PopID();
     }
-
 
     // Allow clickable name when a player pings "I'm following X" or "I'm targeting X"
     void OnLocalChatMessage(GW::HookStatus* status, GW::UI::UIMessage, void* wParam, void*)
@@ -373,6 +406,27 @@ void ChatSettings::Initialize()
     for (auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);
     }
+    chat_token_colors.clear();
+    chat_token_colors_original.clear();
+    /* 
+        GW uses a load of caches to copy away this rdata when the game loads because its used in lots of places - its not as easy as channel colours.
+        We get the original rdata just to seed, then we intercept using a function hook to do the actual swapping
+        We could JUST intercept the chat window, but that would be a bit disjointed if the player changed colours for rare items and it didn't carry through.
+    */
+    auto chat_token_colors_rdata = (ChatTokenColor*)GW::Scanner::Find("\x73\xd3\xff\xff", "xxxx", -4,GW::ScannerSection::Section_DATA);
+    if (chat_token_colors_rdata) {
+        for (size_t i = 0; i < chat_token_colors_size; i++) {
+            if (!chat_token_colors_rdata[i].token) continue;
+            chat_token_colors[chat_token_colors_rdata[i].token] = chat_token_colors_rdata[i].color;
+            chat_token_colors_original[chat_token_colors_rdata[i].token] = chat_token_colors_rdata[i].color;
+        }
+    }
+    ColorHexOrLabelToColor_Func = (ColorHexOrLabelToColor_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("CtlTextMl.cpp", "value", 0, 0));
+    if (ColorHexOrLabelToColor_Func) {
+        GW::Hook::CreateHook((void**)&ColorHexOrLabelToColor_Func, OnColorHexOrLabelToColor, (void**)&ColorHexOrLabelToColor_Ret);
+        GW::Hook::EnableHooks(ColorHexOrLabelToColor_Func);
+    }
+
 }
 
 void ChatSettings::Terminate()
@@ -383,6 +437,9 @@ void ChatSettings::Terminate()
     GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry);
 
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_Entry);
+    if (ColorHexOrLabelToColor_Func) {
+        GW::Hook::RemoveHook(ColorHexOrLabelToColor_Func);
+    }
 }
 
 void ChatSettings::Update(float)
@@ -428,6 +485,30 @@ void ChatSettings::DrawSettingsInternal()
         ImGui::TreePop();
         ImGui::Spacing();
     }
+    if (chat_token_colors.size() && ImGui::TreeNodeEx("Chat Token Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        const auto scale = ImGui::FontScale();
+
+        ImGui::TextDisabled("Some text throughout the game are highlighted depending on their rarity or other properties. Changes will be seen on map change.");
+        for (auto& [token,color] : chat_token_colors) {
+            const auto token_s = TextUtils::WStringToString(token)+":";
+            ImGui::PushID(&token);
+            constexpr ImGuiColorEditFlags chat_token_color_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
+            ImGui::TextUnformatted(token_s.c_str());
+            ImGui::SameLine(chat_colors_grid_x[1] * scale);
+            Colors::DrawSettingHueWheel(token_s.c_str(), &color, chat_token_color_flags);
+
+            ImGui::SameLine(chat_colors_grid_x[3] * scale);
+            if (ImGui::Button("Reset")) {
+                color = chat_token_colors_original[token];
+            }
+                
+            ImGui::PopID();
+        }
+        ImGui::TextDisabled("(Left-click on a color to edit it)");
+        ImGui::TreePop();
+        ImGui::Spacing();
+    }
+
     show_timestamps = GW::UI::GetPreference(GW::UI::FlagPreference::ShowChatTimestamps);
     if (ImGui::Checkbox("Show chat messages timestamp", &show_timestamps)) {
         GW::Chat::ToggleTimestamps(show_timestamps);
@@ -484,6 +565,11 @@ void ChatSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(openlinks);
     LOAD_BOOL(auto_url);
 
+    for (auto& [token, color] : chat_token_colors_original) {
+        auto key = std::format("chat_token_color_{}", TextUtils::WStringToString(token));
+        chat_token_colors[token] = Colors::Load(ini, Name(), key.c_str(), color);
+    }
+
     timestamps_color = Colors::Load(ini, Name(), VAR_NAME(timestamps_color), Colors::RGB(0xc0, 0xc0, 0xbf));
     GW::UI::SetOpenLinks(openlinks);
     GW::Chat::ToggleTimestamps(show_timestamps);
@@ -506,6 +592,12 @@ void ChatSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(auto_url);
 
     SAVE_COLOR(timestamps_color);
+
+    for (auto& [token, color] : chat_token_colors) {
+        auto key = std::format("chat_token_color_{}", TextUtils::WStringToString(token));
+        Colors::Save(ini, Name(), key.c_str(), color);
+    }
+
 }
 
 bool ChatSettings::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
