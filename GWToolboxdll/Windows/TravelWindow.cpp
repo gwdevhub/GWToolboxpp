@@ -851,7 +851,7 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
         const auto& map_id = static_cast<GW::Constants::MapID>(i);
         if (!GW::Map::GetIsMapUnlocked(map_id))
             continue;
-        if (!IsValidOutpost(map_id))
+        if (!(IsValidOutpost(map_id) && GW::Map::GetMapInfo(map_id)->GetIsOnWorldMap()))
             continue;
         const auto map_info = GW::Map::GetMapInfo(map_id);
         if (map_info->campaign != this_map->campaign || map_info->region == GW::Region_Presearing)
