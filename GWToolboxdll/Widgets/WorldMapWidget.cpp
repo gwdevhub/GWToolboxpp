@@ -374,7 +374,11 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         viewport_offset.x *= -1;
         viewport_offset.y *= -1;
 
-        ImGui::Checkbox("Show all areas", &showing_all_outposts);
+        if (ImGui::Checkbox("Show all areas", &showing_all_outposts)) {
+            GW::GameThread::Enqueue([] {
+                ShowAllOutposts(showing_all_outposts);
+                });
+        }
         show_all_rect = c->LastItemData.Rect;
         show_all_rect.Translate(viewport_offset);
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
@@ -507,7 +511,7 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
                 return true;
             }
             if (check_rect(show_lines_on_world_map_rect)) {
-                show_lines_on_world_map = !show_lines_on_world_map;
+                //show_lines_on_world_map = !show_lines_on_world_map;
                 return true;
             }
             if (check_rect(hard_mode_rect)) {
@@ -517,10 +521,8 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
                 return true;
             }
             if (check_rect(show_all_rect)) {
-                showing_all_outposts = !showing_all_outposts;
-                GW::GameThread::Enqueue([] {
-                    ShowAllOutposts(showing_all_outposts);
-                });
+                //showing_all_outposts = !showing_all_outposts;
+
                 return true;
             }
             break;
