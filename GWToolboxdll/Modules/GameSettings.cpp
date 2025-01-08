@@ -219,6 +219,8 @@ namespace {
 
     bool remove_window_border_in_windowed_mode = false;
 
+    bool prevent_weapon_spell_animation_on_player = false;
+
     GW::HookEntry SkillList_UICallback_HookEntry;
     GW::UI::UIInteractionCallback SkillList_UICallback_Func = 0, SkillList_UICallback_Ret = 0;
 
@@ -1834,6 +1836,8 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(disable_skill_descriptions_in_outpost);
     LOAD_BOOL(disable_skill_descriptions_in_explorable);
 
+    LOAD_BOOL(prevent_weapon_spell_animation_on_player);
+
     LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
     LoadChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
@@ -2012,6 +2016,8 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
 
     SAVE_UINT(last_online_status);
 
+    SAVE_BOOL(prevent_weapon_spell_animation_on_player);
+
     SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
     SaveChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
@@ -2160,6 +2166,7 @@ void GameSettings::DrawSettingsInternal()
     if (ImGui::Checkbox("Block full screen message when entering a new area", &block_enter_area_message)) {
         skip_map_entry_message_patch.TogglePatch(block_enter_area_message);
     }
+    ImGui::Checkbox("Prevent weapon spell skin showing on player weapons", &prevent_weapon_spell_animation_on_player);
     ImGui::NewLine();
     ImGui::Text("Block floating numbers above character when:");
     ImGui::Indent();
@@ -2478,8 +2485,12 @@ void GameSettings::OnAgentAdd(GW::HookStatus*, const GW::Packet::StoC::AgentAdd*
 }
 
 // Block ghost in the box death animation & sound
-void GameSettings::OnUpdateAgentState(GW::HookStatus*, GW::Packet::StoC::AgentState*)
+void GameSettings::OnUpdateAgentState(GW::HookStatus*, GW::Packet::StoC::AgentState* packet)
 {
+    if (prevent_weapon_spell_animation_on_player && packet->agent_id == GW::Agents::GetControlledCharacterId()) {
+        packet->state ^= 0x8000;
+    }
+
     // @Cleanup: Not found an elegent way to do this; prematurely destroying the agent will crash the client when the id it recycled. Disable for now, here for reference.
 }
 
