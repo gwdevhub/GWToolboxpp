@@ -41,7 +41,25 @@ namespace {
     };
 
     constexpr size_t chat_token_colors_size = 0x12;
-    std::map<std::wstring, GW::Chat::Color> chat_token_colors_original;
+    std::map<std::wstring, GW::Chat::Color> chat_token_colors_original = {
+        {L"ItemCommon", 0xFFFFD373},
+        {L"ItemEnhance", 0xFFFFFFFF},
+        {L"ItemUncommon", 0xFFA0F5F8},
+        {L"ItemRare", 0xFFB38AEC},
+        {L"ItemUnique", 0xFFFFD24F},
+        {L"ItemUniquePvp", 0xFF00FF00},
+        {L"ItemDull", 0xFFED1C24},
+        {L"ItemBasic", 0xFFA0A0A0},
+        {L"ItemBonus", 0xFFFFFFFF},
+        {L"ItemAssign", 0xFFA0F5F8},
+        {L"ItemCustom", 0xFF6CC16D},
+        {L"ItemRestrict", 0xFFA0A0A0},
+        {L"ItemSell", 0xFFF67D4D},
+        {L"Label", 0xFFFFFF00},
+        {L"Quest", 0xFFFFEAB8},
+        {L"SkillDull", 0xFF00FF00},
+        {L"Warning", 0xFFE00002}
+    };
     std::map<std::wstring, GW::Chat::Color> chat_token_colors;
 
     // Runtime
@@ -406,21 +424,6 @@ void ChatSettings::Initialize()
     for (auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);
     }
-    chat_token_colors.clear();
-    chat_token_colors_original.clear();
-    /* 
-        GW uses a load of caches to copy away this rdata when the game loads because its used in lots of places - its not as easy as channel colours.
-        We get the original rdata just to seed, then we intercept using a function hook to do the actual swapping
-        We could JUST intercept the chat window, but that would be a bit disjointed if the player changed colours for rare items and it didn't carry through.
-    */
-    auto chat_token_colors_rdata = (ChatTokenColor*)GW::Scanner::Find("\x73\xd3\xff\xff", "xxxx", -4,GW::ScannerSection::Section_DATA);
-    if (chat_token_colors_rdata) {
-        for (size_t i = 0; i < chat_token_colors_size; i++) {
-            if (!chat_token_colors_rdata[i].token) continue;
-            chat_token_colors[chat_token_colors_rdata[i].token] = chat_token_colors_rdata[i].color;
-            chat_token_colors_original[chat_token_colors_rdata[i].token] = chat_token_colors_rdata[i].color;
-        }
-    }
     ColorHexOrLabelToColor_Func = (ColorHexOrLabelToColor_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("CtlTextMl.cpp", "value", 0, 0));
     if (ColorHexOrLabelToColor_Func) {
         GW::Hook::CreateHook((void**)&ColorHexOrLabelToColor_Func, OnColorHexOrLabelToColor, (void**)&ColorHexOrLabelToColor_Ret);
@@ -488,7 +491,7 @@ void ChatSettings::DrawSettingsInternal()
     if (chat_token_colors.size() && ImGui::TreeNodeEx("Chat Token Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         const auto scale = ImGui::FontScale();
 
-        ImGui::TextDisabled("Some text throughout the game are highlighted depending on their rarity or other properties. Changes will be seen on map change.");
+        ImGui::TextDisabled("Some text throughout the game are highlighted depending on their rarity or other properties.");
         for (auto& [token,color] : chat_token_colors) {
             const auto token_s = TextUtils::WStringToString(token)+":";
             ImGui::PushID(&token);
