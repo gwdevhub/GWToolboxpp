@@ -371,6 +371,8 @@ namespace GWArmory {
         const auto equip = GetPlayerEquipment();
         if (!equip)
             return;
+        if (!IsEquipmentSlotSupportedByArmory(slot))
+            return;
         if (drawn_pieces[slot].model_file_id && drawn_pieces[slot].interaction) {
             // Backup via copy
             equip->items[slot] = drawn_pieces[slot];
@@ -397,6 +399,8 @@ namespace GWArmory {
 
     void SetArmorItem(ItemSlot slot, uint32_t model_file_id, GW::DyeInfo dye, uint32_t interaction = 0, GW::Constants::ItemType type = GW::Constants::ItemType::Unknown) {      
         if (slot == ItemSlot::Unknown)
+            return;
+        if (!IsEquipmentSlotSupportedByArmory(slot))
             return;
         const auto equip = GetPlayerEquipment();
         if (!equip)
