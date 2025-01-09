@@ -40,24 +40,24 @@ namespace {
         GW::Chat::Color color;
     };
 
-    constexpr size_t chat_token_colors_size = 0x12;
     std::map<std::wstring, GW::Chat::Color> chat_token_colors_original = {
-        {L"ItemCommon", 0xFFFFD373},
-        {L"ItemEnhance", 0xFFFFFFFF},
-        {L"ItemUncommon", 0xFFA0F5F8},
-        {L"ItemRare", 0xFFB38AEC},
-        {L"ItemUnique", 0xFFFFD24F},
-        {L"ItemUniquePvp", 0xFF00FF00},
-        {L"ItemDull", 0xFFED1C24},
-        {L"ItemBasic", 0xFFA0A0A0},
-        {L"ItemBonus", 0xFFFFFFFF},
-        {L"ItemAssign", 0xFFA0F5F8},
-        {L"ItemCustom", 0xFF6CC16D},
-        {L"ItemRestrict", 0xFFA0A0A0},
-        {L"ItemSell", 0xFFF67D4D},
-        {L"Label", 0xFFFFFF00},
-        {L"Quest", 0xFFFFEAB8},
-        {L"SkillDull", 0xFF00FF00},
+        {L"CinName", 0xFFFFD373},
+        {L"ItemCommon", 0xFFFFFFFF},
+        {L"ItemEnhance", 0xFFA0F5F8},
+        {L"ItemUncommon", 0xFFB38AEC},
+        {L"ItemRare", 0xFFFFD24F},
+        {L"ItemUnique", 0xFF00FF00},
+        {L"ItemUniquePvp", 0xFFED1C24},
+        {L"ItemDull", 0xFFa0a0a0},
+        {L"ItemBasic", 0xFFFFFFFF},
+        {L"ItemBonus", 0xFFA0F5F8},
+        {L"ItemAssign", 0xFF6CC16D},
+        {L"ItemCustom", 0xFFa0a0a0},
+        {L"ItemRestrict", 0xFFF67D4D},
+        {L"ItemSell", 0xFFFFFF00},
+        {L"Label", 0xFFFFEAB8},
+        {L"Quest", 0xFF00FF00},
+        {L"SkillDull", 0xFFA0A0A0},
         {L"Warning", 0xFFE00002}
     };
     std::map<std::wstring, GW::Chat::Color> chat_token_colors;
@@ -495,7 +495,7 @@ void ChatSettings::DrawSettingsInternal()
         for (auto& [token,color] : chat_token_colors) {
             const auto token_s = TextUtils::WStringToString(token)+":";
             ImGui::PushID(&token);
-            constexpr ImGuiColorEditFlags chat_token_color_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
+            constexpr ImGuiColorEditFlags chat_token_color_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel;
             ImGui::TextUnformatted(token_s.c_str());
             ImGui::SameLine(chat_colors_grid_x[1] * scale);
             Colors::DrawSettingHueWheel(token_s.c_str(), &color, chat_token_color_flags);
