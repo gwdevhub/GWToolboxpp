@@ -1287,6 +1287,16 @@ namespace {
         }
     }
 
+    void DrawAudioSettings() {
+        if (ImGui::Button("Open Advanced Audio Window")) {
+            GW::GameThread::Enqueue([]() {
+                GW::GetCharContext()->player_flags |= 0x8;
+                GW::UI::Keypress((GW::UI::ControlAction)0x24);
+                GW::GetCharContext()->player_flags ^= 0x8;
+                });
+        }
+    }
+
 }
 
 bool GameSettings::GetSettingBool(const char* setting)
@@ -1919,10 +1929,9 @@ void GameSettings::RegisterSettingsContent()
     ToolboxModule::RegisterSettingsContent(
         "Party Settings", ICON_FA_USERS,
         [this](const std::string&, const bool is_showing) {
-            if (!is_showing) {
-                return;
+            if (is_showing) {
+                DrawPartySettings();
             }
-            DrawPartySettings();
         }, 0.9f);
 
     ToolboxModule::RegisterSettingsContent(
@@ -1939,6 +1948,14 @@ void GameSettings::RegisterSettingsContent()
         [this](const std::string&, const bool is_showing) {
             if (is_showing) {
                 DrawInventorySettings();
+            }
+        },
+        0.9f);
+    ToolboxModule::RegisterSettingsContent(
+        "Audio Settings", ICON_FA_MUSIC,
+        [](const std::string&, const bool is_showing) {
+            if (is_showing) {
+                DrawAudioSettings();
             }
         },
         0.9f);
