@@ -30,6 +30,10 @@ namespace GW {
             0x801, 0x802, 0x803, 0x804, 0x805, 0x806, 0x807, 0x808, 0x809, 0x7b41, 0x7b42
         };
 
+        constexpr uint32_t Campaign[6] = {
+            0xa374, 0xa375, 0xa376, 0xa377, 0xe228, 0x11b81
+        };
+
         namespace MapRegion {
             static const wchar_t* BattleIsles = L"\xE63";
 

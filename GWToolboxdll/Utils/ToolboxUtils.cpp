@@ -180,7 +180,7 @@ namespace GW {
             out->clear();
             AsyncDecodeStr(enc_str, [](void* param, const wchar_t* s) {
                 *(std::wstring*)param = s;
-                }, &out, language_id);
+                }, out, language_id);
         }
     }
     namespace Agents {

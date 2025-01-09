@@ -9,6 +9,7 @@
 
 #include <GWCA/Context/GuildContext.h>
 #include <GWCA/Context/WorldContext.h>
+#include <GWCA/Context/CharContext.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
@@ -62,6 +63,7 @@
 #include <Defines.h>
 #include <Utils/FontLoader.h>
 #include <Utils/TextUtils.h>
+#include <Constants/EncStrings.h>
 
 #pragma warning(disable : 6011)
 #pragma comment(lib,"Version.lib")
@@ -72,7 +74,6 @@ using namespace ToolboxUtils;
 namespace {
     GW::MemoryPatcher ctrl_click_patch;
     GW::MemoryPatcher gold_confirm_patch;
-    GW::MemoryPatcher skill_description_patch;
     GW::MemoryPatcher remove_skill_warmup_duration_patch;
 
     void SetWindowTitle(const bool enabled)
@@ -462,18 +463,55 @@ namespace {
     constexpr int modifier_key_skill_descriptions = VK_MENU;
     int modifier_key_skill_descriptions_key_state = 0;
 
-    using CreateCodedTextLabel_pt = void(__cdecl*)(uint32_t frame_id, const wchar_t* encoded_string);
-    CreateCodedTextLabel_pt CreateEncodedTextLabel_Func = nullptr;
+    struct SetFrameSkillDescriptionParam {
+        uint32_t frame_id;
+        GW::Constants::SkillID skill_id;
+        uint32_t h0008;
+        uint32_t h000c;
+        uint32_t h0010;
+    };
+
+    using SetFrameSkillDescription_pt = void(__fastcall*)(SetFrameSkillDescriptionParam* param);
+    SetFrameSkillDescription_pt SetFrameSkillDescription_Func = nullptr, SetFrameSkillDescription_Ret = nullptr;
+
     // Hide skill description in tooltip; called by GW to add the description of the skill to a skill tooltip
-    void CreateCodedTextLabel_SkillDescription(const uint32_t frame_id, const wchar_t* encoded_string)
-    {
+    void __fastcall OnSetFrameSkillDescription(SetFrameSkillDescriptionParam* param) {
         GW::Hook::EnterHook();
+        const auto frame_set_text_ui_message = (GW::UI::UIMessage)0x52;
+        const auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameById(param->frame_id),0xb);
         bool block_description = disable_skill_descriptions_in_outpost && IsOutpost() || disable_skill_descriptions_in_explorable && IsExplorable();
         block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
         if (block_description) {
-            encoded_string = L"\x101"; // Decodes to ""
+            GW::UI::SendFrameUIMessage(frame, frame_set_text_ui_message, (void*)L"\x101");
+            GW::Hook::LeaveHook();
+            return;
         }
-        CreateEncodedTextLabel_Func(frame_id, encoded_string);
+        // Add a catch to grab the encoded text back out
+        static std::wstring encoded_text_set;
+        static GW::UI::UIInteractionCallback prev_callback = 0;
+        if (frame && frame->frame_callbacks[0]) {
+            prev_callback = frame->frame_callbacks[0];
+            frame->frame_callbacks[0] = [](GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+                if (message->message_id == frame_set_text_ui_message)
+                    encoded_text_set = (wchar_t*)wParam;
+                prev_callback(message, wParam, lParam);
+                };
+        }
+        SetFrameSkillDescription_Ret(param);
+        if (prev_callback)
+            frame->frame_callbacks[0] = prev_callback;
+
+        // Add campaign info
+        const auto skill = GW::SkillbarMgr::GetSkillConstantData(param->skill_id);
+        const auto campaign_id = (uint32_t)skill->campaign;
+        if (campaign_id < _countof(GW::EncStrings::Campaign)) {
+            wchar_t buf[16] = { 0 };
+            if (GW::UI::UInt32ToEncStr(GW::EncStrings::Campaign[(uint32_t)skill->campaign], buf, _countof(buf))) {
+                encoded_text_set += std::format(L"\x2\x102\x2\x108\x107<c=@SkillDull>\x1\x2{}\x2\x108\x107</c>\x1", buf);
+                GW::UI::SendFrameUIMessage(frame, frame_set_text_ui_message, (void*)encoded_text_set.c_str());
+            }
+
+        }
         GW::Hook::LeaveHook();
     }
 
@@ -1485,14 +1523,9 @@ void GameSettings::Initialize()
     ItemDescriptionHandler::RegisterDescriptionCallback(OnGetItemDescription, 9999);
 
     // Call our CreateCodedTextLabel function instead of default CreateCodedTextLabel for patching skill descriptions
-    address = GW::Scanner::FindAssertion("GmTipSkill.cpp", "!(m_tipSkillFlags & TipSkillMsgCreate::FLAG_SHOW_ENABLE_AI_HINT)", 0, 0x7b);
-    if (address) {
-        CreateEncodedTextLabel_Func = (CreateCodedTextLabel_pt)GW::Scanner::FunctionFromNearCall(address);
-        skill_description_patch.SetRedirect(address, CreateCodedTextLabel_SkillDescription);
-        skill_description_patch.TogglePatch(true);
-    }
-    Log::Log("[GameSettings] CreateEncodedTextLabel_Func = %p\n", CreateEncodedTextLabel_Func);
-    Log::Log("[GameSettings] skill_description_patch = %p\n", skill_description_patch.GetAddress());
+    SetFrameSkillDescription_Func = (SetFrameSkillDescription_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmTipSkill.cpp", "No valid case for switch variable \'m_powerType\'", 0, 0));
+
+    Log::Log("[GameSettings] SetFrameSkillDescription_Func = %p\n", SetFrameSkillDescription_Func);
 
     // See OnAgentAllegianceChanged
     address = GW::Scanner::Find("\x81\xce\xa0\x06\x00\x00", "xxxxxx");
@@ -1519,13 +1552,17 @@ void GameSettings::Initialize()
     ASSERT(skip_map_entry_message_patch.IsValid());
     ASSERT(gold_confirm_patch.IsValid());
     ASSERT(remove_skill_warmup_duration_patch.IsValid());
-    ASSERT(CreateEncodedTextLabel_Func);
-    ASSERT(skill_description_patch.IsValid());
+    ASSERT(SetFrameSkillDescription_Func);
     ASSERT(SetGlobalNameTagVisibility_Func);
     ASSERT(GlobalNameTagVisibilityFlags);
     ASSERT(CharacterStatIncreased_Func);
 #endif
-
+    if (SetFrameSkillDescription_Func) {
+        if (SetFrameSkillDescription_Func) {
+            GW::Hook::CreateHook((void**)&SetFrameSkillDescription_Func, OnSetFrameSkillDescription, reinterpret_cast<void**>(&SetFrameSkillDescription_Ret));
+            GW::Hook::EnableHooks(SetFrameSkillDescription_Func);
+        }
+    }
     if (SkillList_UICallback_Func) {
         GW::Hook::CreateHook((void**)&SkillList_UICallback_Func, OnSkillList_UICallback, reinterpret_cast<void**>(&SkillList_UICallback_Ret));
         GW::Hook::EnableHooks(SkillList_UICallback_Func);
@@ -1912,7 +1949,6 @@ void GameSettings::Terminate()
     ToolboxModule::Terminate();
     ctrl_click_patch.Reset();
     gold_confirm_patch.Reset();
-    skill_description_patch.Reset();
     skip_map_entry_message_patch.Reset();
     remove_skill_warmup_duration_patch.Reset();
 
@@ -1924,6 +1960,8 @@ void GameSettings::Terminate()
         GW::Hook::RemoveHook(SkillList_UICallback_Func);
     if(CharacterStatIncreased_Func)
         GW::Hook::RemoveHook(CharacterStatIncreased_Func);
+    if (SetFrameSkillDescription_Func)
+        GW::Hook::RemoveHook(SetFrameSkillDescription_Func);
 
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
@@ -2308,6 +2346,7 @@ void GameSettings::FactionEarnedCheckAndWarn()
 
 void GameSettings::Update(float)
 {
+    GW::GetCharContext()->player_flags |= (1 << 3);
     UpdateSkillTooltip();
     UpdateReinvite();
     UpdateItemTooltip();
