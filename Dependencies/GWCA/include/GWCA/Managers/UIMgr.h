@@ -519,7 +519,7 @@ namespace GW {
             struct kKeyAction {
                 uint32_t gw_key;
                 uint32_t h0004 = 0x4000;
-                uint32_t h0008 = 0;
+                uint32_t h0008 = 6;
             };
             struct kMouseClick {
                 uint32_t mouse_button; // 0x0 = left, 0x1 = middle, 0x2 = right

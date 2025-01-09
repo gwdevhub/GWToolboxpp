@@ -296,23 +296,12 @@ HealthWidget::Threshold::Threshold(const char* _name, const Color _color, const 
 
 bool HealthWidget::Threshold::DrawHeader()
 {
-    constexpr size_t buffer_size = 64;
-    char mapbuf[buffer_size] = {'\0'};
-    if (mapId) {
-        if (mapId < sizeof(GW::Constants::NAME_FROM_ID) / sizeof(GW::Constants::NAME_FROM_ID.at(0))) {
-            snprintf(mapbuf, buffer_size, "[%s]", GW::Constants::NAME_FROM_ID[mapId]);
-        }
-        else {
-            snprintf(mapbuf, buffer_size, "[Map %d]", mapId);
-        }
-    }
-
     ImGui::SameLine(0, 18);
     const bool changed = ImGui::Checkbox("##active", &active);
     ImGui::SameLine();
     ImGui::ColorButton("", ImColor(color));
     ImGui::SameLine();
-    ImGui::Text("%s (<%d%%) %s", name, value, mapbuf);
+    ImGui::Text("%s (<%d%%) %s", name, value, Resources::GetMapName((GW::Constants::MapID)mapId)->string().c_str());
     return changed;
 }
 

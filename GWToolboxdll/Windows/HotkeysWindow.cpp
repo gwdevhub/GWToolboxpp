@@ -20,6 +20,7 @@
 #include <Timer.h>
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
+#include <Modules/Resources.h>
 
 namespace {
     std::vector<TBHotkey*> hotkeys; // list of hotkeys
@@ -443,18 +444,9 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
                 }
                 break;
             case GroupBy::Map: {
-                const char* map_name;
                 for (auto& [map, tb_hotkeys] : by_map) {
-                    if (map == 0) {
-                        map_name = "Any";
-                    }
-                    else if (map >= 0 && static_cast<size_t>(map) < GW::Constants::NAME_FROM_ID.size()) {
-                        map_name = GW::Constants::NAME_FROM_ID[map];
-                    }
-                    else {
-                        map_name = "Unknown";
-                    }
-                    if (ImGui::CollapsingHeader(map_name)) {
+                    const auto& map_name = map == 0 ? "Any" : Resources::GetMapName((GW::Constants::MapID)map)->string();
+                    if (ImGui::CollapsingHeader(map_name.c_str())) {
                         ImGui::Indent();
                         if (draw_hotkeys_vec(tb_hotkeys)) {
                             hotkeys_changed = true;
