@@ -158,20 +158,46 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
             }
         }
 
+        const auto& settings_sections = GetSettingsCallbacks();
+
+        std::vector<std::string> sections_to_draw;
+
         DrawSettingsSection(ToolboxTheme::Instance().SettingsName());
         DrawSettingsSection(ToolboxSettings::Instance().SettingsName());
 
         const auto sort = [](const ToolboxModule* a, const ToolboxModule* b) {
             return strcmp(a->Name(), b->Name()) < 0;
         };
+        const auto queue_settings_for_module = [&](ToolboxModule* m) {
+            for (const auto& [section, cb] : settings_sections) {
+                for (const auto& cbs : cb) {
+                    if (cbs.module == m) {
+                        sections_to_draw.push_back(section);
+                        break;
+                    }
+
+                }
+            }
+            sections_to_draw.push_back(m->SettingsName());
+            };
+        const auto sort_and_draw_settings = [&]() {
+            std::sort(sections_to_draw.begin(), sections_to_draw.end());
+            for (auto& s : sections_to_draw) {
+                DrawSettingsSection(s.c_str());
+            }
+            sections_to_draw.clear();
+            };
+
 
         auto modules = GWToolbox::GetModules();
         std::ranges::sort(modules, sort);
         for (const auto m : modules) {
             if (m->HasSettings()) {
-                DrawSettingsSection(m->SettingsName());
+                queue_settings_for_module(m);
             }
         }
+        sort_and_draw_settings();
+
         auto windows = GWToolbox::GetWindows();
         std::ranges::sort(windows, sort);
         if (!windows.empty()) {
@@ -179,9 +205,11 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
         }
         for (const auto m : windows) {
             if (m->HasSettings()) {
-                DrawSettingsSection(m->SettingsName());
+                queue_settings_for_module(m);
             }
         }
+        sort_and_draw_settings();
+
         auto widgets = GWToolbox::GetWidgets();
         std::ranges::sort(widgets, sort);
         if (!widgets.empty()) {
@@ -189,9 +217,10 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
         }
         for (const auto m : widgets) {
             if (m->HasSettings()) {
-                DrawSettingsSection(m->SettingsName());
+                queue_settings_for_module(m);
             }
         }
+        sort_and_draw_settings();
 
         if (ImGui::Button("Save Now", ImVec2(w, 0))) {
             GWToolbox::SaveSettings();
