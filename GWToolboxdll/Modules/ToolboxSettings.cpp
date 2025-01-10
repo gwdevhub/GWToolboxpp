@@ -34,6 +34,7 @@
 #include <Modules/PartyBroadcastModule.h>
 #include <Modules/CodeOptimiserModule.h>
 #include <Modules/VendorFix.h>
+#include <Modules/AudioSettings.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -150,7 +151,8 @@ namespace {
         ResignLogModule::Instance(),
         QuestModule::Instance(),
         PartyBroadcast::Instance(),
-        CodeOptimiserModule::Instance()
+        CodeOptimiserModule::Instance(),
+        AudioSettings::Instance()
     };
 
     std::vector<WidgetToggle> optional_widgets = {
