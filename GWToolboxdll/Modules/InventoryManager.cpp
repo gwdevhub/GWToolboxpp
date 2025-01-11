@@ -2455,7 +2455,7 @@ bool InventoryManager::Item::IsSalvageKit() const
 bool InventoryManager::Item::IsTome() const
 {
     const GW::ItemModifier* mod = GetModifier(0x2788);
-    const uint32_t use_id = mod ? mod->arg2() : 0;
+    const uint32_t use_id = mod ? mod->arg() : 0;
     return use_id > 15 && use_id < 36;
 }
 
