@@ -38,4 +38,4 @@ The Enemy Window can be customized with the following settings:
 3. Use the information to make tactical decisions about targeting, skill usage, and positioning.
 4. Click on an enemy's entry to target them in-game.
 
-This tool is valuable for both PvE and PvP scenarios, providing quick access to important enemy information without the need to manually target and inspect each unit. It can help players make faster, more informed decisions during combat.
+This tool is valuable for PvE scenarios, providing quick access to important enemy information without the need to manually target and inspect each unit. It can help players make faster, more informed decisions during combat.
