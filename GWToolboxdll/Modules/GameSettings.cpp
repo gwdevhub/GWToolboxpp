@@ -196,7 +196,6 @@ namespace {
 
     bool disable_gold_selling_confirmation = false;
     bool collectors_edition_emotes = true;
-
     bool block_transmogrify_effect = false;
     bool block_sugar_rush_effect = false;
     bool block_snowman_summoner = false;
@@ -205,22 +204,16 @@ namespace {
     bool block_bottle_rockets = false;
     bool block_ghostinthebox_effect = false;
     bool block_sparkly_drops_effect = false;
-
     bool skip_characters_from_another_campaign_prompt = true;
-
     bool auto_age2_on_age = true;
     bool auto_age_on_vanquish = false;
-
     bool auto_open_locked_chest = false;
     bool auto_open_locked_chest_with_key = false;
-
     bool keep_current_quest_when_new_quest_added = false;
-
     bool automatically_flag_pet_to_fight_called_target = true;
-
     bool remove_window_border_in_windowed_mode = false;
-
     bool prevent_weapon_spell_animation_on_player = false;
+    bool block_vanquish_complete_popup = false;
 
     GW::HookEntry SkillList_UICallback_HookEntry;
     GW::UI::UIInteractionCallback SkillList_UICallback_Func = 0, SkillList_UICallback_Ret = 0;
@@ -1283,6 +1276,8 @@ namespace {
         case GW::UI::UIMessage::kVanquishComplete: {
             if (auto_age_on_vanquish)
                 GW::Chat::SendChat('/', L"age");
+            if (block_vanquish_complete_popup)
+                GW::UI::SetFrameVisible(GW::UI::GetChildFrame(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6), 8), 0) || (Log::Warning("Failed to hide vanquish popup"), true);
         } break;
         }
     }
@@ -1668,7 +1663,7 @@ void GameSettings::Initialize()
 
     constexpr GW::UI::UIMessage pre_ui_messages[] = {
         GW::UI::UIMessage::kSendCallTarget,
-        //GW::UI::UIMessage::kSendEnterMission,
+        GW::UI::UIMessage::kVanquishComplete,
         GW::UI::UIMessage::kSendAgentDialog,
         GW::UI::UIMessage::kMapLoaded
     };
@@ -1884,6 +1879,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(disable_skill_descriptions_in_explorable);
 
     LOAD_BOOL(prevent_weapon_spell_animation_on_player);
+    LOAD_BOOL(block_vanquish_complete_popup);
 
     LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
@@ -2093,6 +2089,7 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(keep_current_quest_when_new_quest_added);
 
     SAVE_BOOL(automatically_flag_pet_to_fight_called_target);
+    SAVE_BOOL(block_vanquish_complete_popup);
 }
 
 void GameSettings::DrawInventorySettings()
@@ -2222,6 +2219,8 @@ void GameSettings::DrawSettingsInternal()
         skip_map_entry_message_patch.TogglePatch(block_enter_area_message);
     }
     ImGui::Checkbox("Prevent weapon spell skin showing on player weapons", &prevent_weapon_spell_animation_on_player);
+    ImGui::Checkbox("Block full screen popup what shows when completing a vanquish", &block_vanquish_complete_popup);
+
     ImGui::NewLine();
     ImGui::Text("Block floating numbers above character when:");
     ImGui::Indent();
