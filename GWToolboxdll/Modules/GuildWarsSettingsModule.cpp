@@ -178,7 +178,8 @@ namespace {
         "AlwaysShowAllyNames",
         "AlwaysShowFoeNames",
         "FlagPref_0x5B",
-        "LockCompassRotation"
+        "LockCompassRotation",
+        "EnableGamepad"
     };
     static_assert(_countof(flag_pref_names) == std::to_underlying(GW::UI::FlagPreference::Count));
 

@@ -768,7 +768,8 @@ namespace GW {
             AlwaysShowAllyNames,
             AlwaysShowFoeNames,
             LockCompassRotation = 0x5c,
-            Count = 0x5d
+            EnableGamepad = 0x5d,
+            Count = 0x5e
         };
         // Used with GetWindowPosition
         enum WindowID : uint32_t {

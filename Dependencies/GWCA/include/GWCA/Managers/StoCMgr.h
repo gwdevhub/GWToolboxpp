@@ -18,7 +18,7 @@ namespace GW {
             struct Packet;
         }
     }
-
+    
     struct Module;
     extern Module StoCModule;
 

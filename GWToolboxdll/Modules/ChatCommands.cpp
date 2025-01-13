@@ -537,7 +537,8 @@ namespace {
                 {GW::UI::NumberPreference::MusicVolume, GW::EncStrings::MusicVolume},
                 {GW::UI::FlagPreference::DisableMouseWalking, GW::EncStrings::DisableMouseWalking},
                 {GW::UI::FlagPreference::AlwaysShowFoeNames, L"\x108\x107Show Foe Names\x1"},
-                {GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1"}
+                {GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1"},
+                { GW::UI::FlagPreference::EnableGamepad, L"\x108\x107" "Enable Gamepad\x1" },
             };
             for (auto& it : pref_map) {
                 it.label->wstring();
