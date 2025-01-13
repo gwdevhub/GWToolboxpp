@@ -146,7 +146,9 @@ namespace {
         void DrawMinimapLines()
         {
             ClearMinimapLines();
-            if (!draw_quest_path_on_terrain && !draw_quest_path_on_minimap)
+            if (!(draw_quest_path_on_terrain || draw_quest_path_on_minimap))
+                return;
+            if (waypoints.empty())
                 return;
             size_t start_idx = current_waypoint > 0 ? current_waypoint - 1 : 0;
             for (size_t i = start_idx; i < waypoints.size() - 1; i++) {
@@ -194,8 +196,15 @@ namespace {
             }
             calculated_from = from;
             calculated_to = original_quest_marker;
-            if (original_quest_marker.x == INFINITY)
+            if (original_quest_marker.x == INFINITY) {
+                if (waypoints.size()) {
+                    // Quest marker has changed to infinity; clear any current markers
+                    waypoints.clear();
+                    calculating = true;
+                    OnQuestPathRecalculated(waypoints, (void*)quest_id); // No need to recalculate
+                }
                 return;
+            }
             calculating = PathfindingWindow::CalculatePath(calculated_from, calculated_to, OnQuestPathRecalculated, (void*)quest_id);
             if (!calculating) {
                 calculated_at = 0;
@@ -320,28 +329,22 @@ namespace {
         cqp->current_waypoint = 0;
         cqp->waypoints = std::move(waypoints); // Move
 
-        if (!cqp->waypoints.empty() && GetSquareDistance(cqp->waypoints.back(), cqp->calculated_from) < GetSquareDistance(cqp->waypoints.front(), cqp->calculated_from)) {
-            // Waypoint array is in descending distance, flip it
-            std::ranges::reverse(cqp->waypoints);
-        }
-
         const auto waypoint_len = cqp->waypoints.size();
-        if (!waypoint_len) {
-            cqp->calculating = false;
-            cqp->calculated_at = TIMER_INIT();
-            return;
-        }
-
-        const auto from_end_waypoint = GetSquareDistance(cqp->calculated_from, cqp->waypoints.back());
-        // Find next waypoint
-        cqp->current_waypoint = waypoint_len - 1;
-        for (size_t i = 1; i < waypoint_len; i++) {
-            if (GetSquareDistance(cqp->calculated_from, cqp->waypoints[i]) < from_end_waypoint) {
-                cqp->current_waypoint = i;
-                break;
+        if (waypoint_len) {
+            if(GetSquareDistance(cqp->waypoints.back(), cqp->calculated_from) < GetSquareDistance(cqp->waypoints.front(), cqp->calculated_from)) {
+                // Waypoint array is in descending distance, flip it
+                std::ranges::reverse(cqp->waypoints);
+            }
+            const auto from_end_waypoint = GetSquareDistance(cqp->calculated_from, cqp->waypoints.back());
+            // Find next waypoint
+            cqp->current_waypoint = waypoint_len - 1;
+            for (size_t i = 1; i < waypoint_len; i++) {
+                if (GetSquareDistance(cqp->calculated_from, cqp->waypoints[i]) < from_end_waypoint) {
+                    cqp->current_waypoint = i;
+                    break;
+                }
             }
         }
-
         cqp->calculated_at = TIMER_INIT();
         cqp->calculating = false;
         cqp->UpdateUI();
