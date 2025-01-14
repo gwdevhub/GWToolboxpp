@@ -88,11 +88,6 @@ GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancemen
 			<td><a href="enemy_window">Enemy</a></td>
             <td></td>
 		</tr>
-		<tr>
-			<td><a href="main_window">Main Window</a></td>
-            <td></td>
-            <td></td>
-		</tr>
 	</table>
 </div>
 

@@ -10,6 +10,7 @@ If you are here to check toolbox features and for a download link to go [https:/
 * C++23 compatible v143 MSVC Platform Toolset
 * Windows 11 SDK
 * CMake 3.29 or higher. This is integrated in the [Visual Studio Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2022). Alternatively download the latest version from [https://cmake.org/download/](https://cmake.org/download/).
+* vcpkg. This is integrated in the [Visual Studio Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2022). Alternatively download the latest version from [https://github.com/microsoft/vcpkg/releases/](https://github.com/microsoft/vcpkg/releases/latest).
 * [Git](https://git-scm.com/)
 
 1. Open **Git Bash**. Use all the following commands in **Git Bash**. 
