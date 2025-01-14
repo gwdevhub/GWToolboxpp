@@ -7,7 +7,7 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
-## Version 7.0 beta1
+## Version 7.0
 * [Fix] Fixed occasional crashing when disabling or enabling modules whilst toolbox is running
 * [Fix] Fixed bug mixing up messages if a previous message is received (and blocked) from an ignored player
 * [Fix] Fixed issue preventing compass drawing
@@ -16,19 +16,36 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Fixes crash when loading settings whilst toolbox is running
 * [Fix] Fixed bug preventing salvaging via right click menu from working
 * [Fix] Fixed bug preventing identifying via right click menu from working
-* [Fix] Fixed skil warmup setting not working
+* [Fix] Fixed skill warmup setting not working
 * [Fix] Fixed /cam fog working the wrong way round
 * [Fix] Fixed crash when using /reinvite command
 * [Fix] Fixed custom markers not showing immediately by default
 * [Fix] Fixed disconnect on map load when using an equip item hotkey on map entry
+* [Fix] Fixed bug preventing custom map marker from checking current map
+* [Fix] Fixed crash when targetted enemy is despawned
+* [Fix] Fixed materials window now working as expected
+* [Fix] Fixed /age2 on /age and /age on vanquish not working
+* [Fix] Fixed bug causing travel to deep/urgoz when using `/tp` to visit the nearest outpost
+* [Fix] Fixed crash caused by armory module clearing currently held weapon when tb is closed
+* [Fix] Fixed some items being incorrectly labelled as tomes when right clicking
+* [Minor] Added "That skill is still recharging" message block when invalid target messages are filtered
+* [Minor] Removed "Ping Build" hotkey, added `/pingbuild` command instead
+* [Minor] Removed "Disable loading screen fade animation" - unstable
 * [Minor] Challenge mission outposts work with /travel now
 * [Minor] Re-enabled cursor fix module
 * [Minor] Allowed more fine grained control over text size for skillbar, clock and effect monitor widgets
 * [Minor] Added auto resize option for all widgets and windows
 * [Minor] Show/Hide position and size settings when lock position/size is checked
+* [Minor] Addded campaign name to skill description tooltip
 * [New] Added option to disable pcons on mission complete, vanquish complete and dungeon complete
 * [New] Added option to assign multiple character names to a single hotkey
 * [New] Added custom marker context menu to mission map
+* [New] Added option to skip "You have characters from another campaign" prompt when entering a mission
+* [New] Added option on chat settings to change colour of highlighted text items e.g. rarity, skill and quest descriptions
+* [New] Added an option in game settings to prevent weapon spell skin showing on player weapons
+* [New] Added audio settings section to access gw window to change rolloff etc in Audio Settings section
+* [New] Added feature to log and block in-game sounds in Audio Settings section
+* [New] Added option to block the vanquish complete popup
 
 ## Version 6.25
 * [New] Code overhaul to GWCA and GWToolbox to work with vs2022 compiler update
