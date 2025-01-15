@@ -7,7 +7,7 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
-## Version 7.0
+## Version 7.1
 * [Fix] Fixed occasional crashing when disabling or enabling modules whilst toolbox is running
 * [Fix] Fixed bug mixing up messages if a previous message is received (and blocked) from an ignored player
 * [Fix] Fixed issue preventing compass drawing
