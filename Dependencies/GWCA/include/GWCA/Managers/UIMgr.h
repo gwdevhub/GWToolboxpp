@@ -1050,6 +1050,10 @@ namespace GW {
 
         GWCA_API bool ButtonClick(Frame* btn_frame);
 
+        GWCA_API bool SelectDropdownOption(Frame* frame, uint32_t value);
+
+        GWCA_API void* GetFrameContext(GW::UI::Frame* frame);
+
         GWCA_API Frame* GetRootFrame();
 
         GWCA_API Frame* GetChildFrame(Frame* parent, uint32_t child_offset);

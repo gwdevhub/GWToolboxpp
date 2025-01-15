@@ -645,6 +645,7 @@ namespace {
     }
 
     void HighlightFrame(GW::UI::Frame* frame) {
+        if (!frame) return;
         const auto root = GW::UI::GetRootFrame();
         const auto top_left = frame->position.GetTopLeftOnScreen(root);
         const auto bottom_right = frame->position.GetBottomRightOnScreen(root);
@@ -790,7 +791,8 @@ namespace {
         [[maybe_unused]] const auto secondary = ac ? ac->secondary() : 0;
         [[maybe_unused]] const auto salvage_session = GW::Items::GetSalvageSessionInfo();
 #ifdef _DEBUG
-        //HighlightFrame(mission_map_frame);
+        auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"DeckBuilder"), 1);
+        HighlightFrame(frame);
 #endif
     }
 }

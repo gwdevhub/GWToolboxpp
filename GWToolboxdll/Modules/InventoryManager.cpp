@@ -670,10 +670,9 @@ namespace {
                     tome_pending_stage = UseItem;
                     return;
                 }
-                if (!GW::PlayerMgr::ChangeSecondProfession(tome_pending_profession)) {
-                    Log::Error("ChangeSecondProfession call failed");
-                    goto cancel;
-                }
+                GW::GameThread::Enqueue([]() {
+                    GW::PlayerMgr::ChangeSecondProfession(tome_pending_profession);
+                    });
                 tome_pending_stage = AwaitProfession;
                 return;
             }
