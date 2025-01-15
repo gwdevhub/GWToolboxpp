@@ -202,6 +202,8 @@ void EffectsMonitorWidget::LoadSettings(ToolboxIni* ini)
     LOAD_COLOR(color_text_effects);
     LOAD_COLOR(color_text_shadow);
     LOAD_COLOR(color_background);
+
+    font_effects = std::clamp(font_effects, 16.f, 48.f);
 }
 
 void EffectsMonitorWidget::SaveSettings(ToolboxIni* ini)

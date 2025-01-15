@@ -2542,7 +2542,7 @@ void GameSettings::OnAgentAdd(GW::HookStatus*, const GW::Packet::StoC::AgentAdd*
 // Block ghost in the box death animation & sound
 void GameSettings::OnUpdateAgentState(GW::HookStatus*, GW::Packet::StoC::AgentState* packet)
 {
-    if (prevent_weapon_spell_animation_on_player && packet->agent_id == GW::Agents::GetControlledCharacterId() && (packet->state & 0x8000)) {
+    if (prevent_weapon_spell_animation_on_player && (packet->state & 0x8000) && packet->agent_id == GW::Agents::GetControlledCharacterId()) {
         packet->state ^= 0x8000;
     }
 
