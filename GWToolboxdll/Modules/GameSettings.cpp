@@ -1238,7 +1238,7 @@ namespace {
             const auto packet = (GW::UI::UIPacket::kPartyShowConfirmDialog*)wParam;
             if (skip_characters_from_another_campaign_prompt && wcscmp(packet->prompt_enc_str,L"\x8101\x05d2") == 0) {
                 // "Yes" to skip the confirm prompt
-                GW::UI::ButtonClick(GW::UI::GetChildFrame(GW::UI::GetChildFrame(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Party"), 1), 10), 6));
+                GW::UI::ButtonClick(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Party"), 1, 10, 6));
             }
         } break;
         case GW::UI::UIMessage::kTradeSessionStart: {
@@ -1277,7 +1277,7 @@ namespace {
             if (auto_age_on_vanquish)
                 GW::Chat::SendChat('/', L"age");
             if (block_vanquish_complete_popup)
-                GW::UI::SetFrameVisible(GW::UI::GetChildFrame(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6), 8), 0) || (Log::Warning("Failed to hide vanquish popup"), true);
+                GW::UI::SetFrameVisible(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6, 8), false) || (Log::Warning("Failed to hide vanquish popup"), true);
         } break;
         }
     }

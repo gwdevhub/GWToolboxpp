@@ -1056,8 +1056,15 @@ namespace GW {
 
         GWCA_API Frame* GetRootFrame();
 
-        GWCA_API Frame* GetChildFrame(Frame* parent, uint32_t child_offset);
-        GWCA_API Frame* GetChildFrame(Frame* parent, std::initializer_list<uint32_t> child_offsets);
+        GWCA_API Frame* GetSingleChildFrame(Frame* parent, uint32_t child_offset);
+        template<typename... Offsets>
+        requires (std::is_integral_v<Offsets> && ...)
+        Frame* GetChildFrame(Frame* parent, Offsets... offsets) {
+            Frame* result = parent;
+            ((result = result ? GetSingleChildFrame(result, offsets) : nullptr), ...);
+            return result;
+        }
+
         GWCA_API Frame* GetParentFrame(Frame* frame);
         GWCA_API Frame* GetFrameById(uint32_t frame_id);
         GWCA_API Frame* GetFrameByLabel(const wchar_t* frame_label);
