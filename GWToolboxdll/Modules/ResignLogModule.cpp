@@ -109,7 +109,7 @@ namespace {
             if (GetResignStatus(player.login_number) != Status::Resigned)
                 not_resigned++;
         }
-        if (not_resigned == 0) {
+        if (not_resigned <= 1) { // one of the players who hasn't resigned is us
             Log::Warning("You're the only player left to resign. Type /resign in chat to resign.");
         }
     }
