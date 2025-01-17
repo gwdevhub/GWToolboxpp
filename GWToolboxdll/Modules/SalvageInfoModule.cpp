@@ -46,7 +46,7 @@ namespace {
                 return;
             const auto item_name_without_mods = ItemDescriptionHandler::GetItemEncNameWithoutMods(item);
             if (wcscmp(item_name_without_mods.c_str(), enc_name) == 0) {
-                GW::UI::SendFrameUIMessage(GW::UI::GetChildFrame(GW::UI::GetRootFrame(),0xffffffff),GW::UI::UIMessage::kItemUpdated, item);
+                GW::UI::SendFrameUIMessage(GW::UI::GetChildFrame(GW::UI::GetRootFrame(),0xffffffff) ,GW::UI::UIMessage::kItemUpdated, item);
             }
             });
     }
