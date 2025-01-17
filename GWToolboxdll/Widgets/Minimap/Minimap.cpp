@@ -638,7 +638,7 @@ void Minimap::SignalTerminate()
 
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
-    GW::GameThread::Enqueue([]() {
+    GW::GameThread::Enqueue([] {
         RefreshQuestMarker();
         if (compass_frame && compass_frame->frame_callbacks[0] == OnCompassFrame_UICallback) {
             compass_frame->frame_callbacks[0] = OnCompassFrame_UICallback_Ret;
