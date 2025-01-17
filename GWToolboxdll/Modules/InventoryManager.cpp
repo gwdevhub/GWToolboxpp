@@ -1230,6 +1230,8 @@ void InventoryManager::ContinueSalvage()
             }
             pending_salvage_at = TIMER_INIT();
         }
+        // Auto accept "you can only salvage materials with a lesser salvage kit"
+        GW::UI::ButtonClick(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), { 0x6, 0x62, 0x6 }));
         return;
     }
     is_salvaging = false;
