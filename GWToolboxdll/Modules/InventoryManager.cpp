@@ -670,7 +670,7 @@ namespace {
                     tome_pending_stage = UseItem;
                     return;
                 }
-                GW::GameThread::Enqueue([]() {
+                GW::GameThread::Enqueue([] {
                     GW::PlayerMgr::ChangeSecondProfession(tome_pending_profession);
                     });
                 tome_pending_stage = AwaitProfession;

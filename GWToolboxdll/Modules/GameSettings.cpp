@@ -1284,7 +1284,7 @@ namespace {
 
     void DrawAudioSettings() {
         if (ImGui::Button("Open Advanced Audio Window")) {
-            GW::GameThread::Enqueue([]() {
+            GW::GameThread::Enqueue([] {
                 GW::GetCharContext()->player_flags |= 0x8;
                 GW::UI::Keypress((GW::UI::ControlAction)0x24);
                 GW::GetCharContext()->player_flags ^= 0x8;

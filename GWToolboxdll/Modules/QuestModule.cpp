@@ -591,7 +591,7 @@ void QuestModule::LoadSettings(ToolboxIni* ini)
     LOAD_FLOAT(custom_quest_marker_world_pos_y);
     LOAD_BOOL(double_click_to_travel_to_quest);
     custom_quest_marker_world_pos = { custom_quest_marker_world_pos_x, custom_quest_marker_world_pos_y };
-    GW::GameThread::Enqueue([]() {
+    GW::GameThread::Enqueue([] {
         SetCustomQuestMarker(custom_quest_marker_world_pos);
         });
 }
@@ -676,7 +676,7 @@ void QuestModule::EmulateQuestSelected(GW::Constants::QuestID quest_id)
 void QuestModule::SignalTerminate()
 {
     ToolboxModule::SignalTerminate();
-    GW::GameThread::Enqueue([]() {
+    GW::GameThread::Enqueue([] {
         SetCustomQuestMarker({ 0, 0 });
         });
     GW::UI::RemoveUIMessageCallback(&pre_ui_message_entry);
