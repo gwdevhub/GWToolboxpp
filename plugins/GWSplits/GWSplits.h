@@ -51,6 +51,7 @@ public:
     void SignalTerminate() override;
      
     void handleTrigger(Trigger triggerType, std::function<bool(const Split&)> extraConditions = [](const Split&) { return true; });
+    void loadFromIniFile(const wchar_t*);
 
 private:
     void completeSplit(std::vector<Split>::iterator);

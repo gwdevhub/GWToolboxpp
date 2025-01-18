@@ -3,6 +3,8 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 
 namespace {
     const char* GetWikiPrefix()
@@ -798,4 +800,18 @@ namespace PluginUtils {
         }
         return decoded_s;
     }
+
+    void logMessage(std::string_view message, std::string_view pluginName)
+    {
+        const auto wMessage = std::wstring{message.begin(), message.end()};
+        const auto wName = std::wstring{pluginName.begin(), pluginName.end()};
+        const size_t len = 27 + wcslen(wMessage.c_str()) + wcslen(wName.c_str());
+        auto to_send = new wchar_t[len];
+        swprintf(to_send, len - 1, L"<a=1>%s</a><c=#%6X>: %s</c>", wName.c_str(), 0xFFFFFF, wMessage.c_str());
+        GW::GameThread::Enqueue([to_send] {
+            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA2, to_send, nullptr);
+            delete[] to_send;
+        });
+    }
+
 }

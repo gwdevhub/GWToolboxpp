@@ -8,6 +8,9 @@
 #include <SerializationIncrement.h>
 #include <ScriptVariables.h>
 
+#include <BackupManager.h>
+#include <PluginUtils.h>
+
 #include <GWCA/GWCA.h>
 
 #include <GWCA/Utilities/Hooker.h>
@@ -738,19 +741,21 @@ void SpeedrunScriptingTools::DrawSettings()
     executeScriptMoveAction(scriptAction);
 }
 
-void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
+void SpeedrunScriptingTools::loadFromIniFile(const wchar_t* file)
 {
-    ToolboxPlugin::LoadSettings(folder);
-    ini.LoadFile(GetSettingFile(folder).c_str());
+    ini.LoadFile(file);
+    m_scripts.clear();
+    m_groups.clear();
+
     const long savedVersion = ini.GetLongValue(Name(), "version", 1);
     runInOutposts = ini.GetBoolValue(Name(), "runInOutpost", false);
     alwaysBlockHotkeyKeys = ini.GetBoolValue(Name(), "alwaysBlockHotkeyKeys", false);
     clearScriptsKey.keyData = ini.GetLongValue(Name(), "clearScriptsKey", 0);
     clearScriptsKey.modifier = ini.GetLongValue(Name(), "clearScriptsMod", 0);
-    
+
     if (savedVersion == 8) logMessage("Scripts from versions before 1.3 cannot be imported");
     if (savedVersion < 10) return;
-    
+
     if (std::string read = ini.GetValue(Name(), "scripts", ""); !read.empty()) {
         const auto decoded = decodeString(std::move(read));
         if (!decoded) return;
@@ -774,6 +779,16 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
             else
                 break;
         }
+    }
+}
+void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
+{
+    ToolboxPlugin::LoadSettings(folder);
+    BackupManager::getInstance().initialize(folder);
+    loadFromIniFile(GetSettingFile(folder).c_str());
+
+    if (m_scripts.empty() && m_groups.empty() && BackupManager::getInstance().backupCount(PluginUtils::StringToWString(Name())) > 0) {
+        PluginUtils::logMessage("No scripts loaded, but automatic backups found. Type \"/restore SST help\" to see options for restoring backups", Name());
     }
 }
 
@@ -808,6 +823,8 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
         }
     }
     PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+    if (m_scripts.size() || m_groups.size())
+        BackupManager::getInstance().save(PluginUtils::StringToWString(Name()), GetSettingFile(folder));
 }
 
 void SpeedrunScriptingTools::Update(float delta)
@@ -1119,6 +1136,60 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HM
     {
         const auto doaZone = (DoaZone)packet->message[1];
         triggerScripts(Trigger::DoaZoneComplete, [&](const Script& s){ return s.triggerData.doaZone == doaZone; });
+    });
+
+    GW::Chat::CreateCommand(L"restore", [](GW::HookStatus* status, const wchar_t*, const int argc, const LPWSTR* argv) {
+        const auto instance = static_cast<SpeedrunScriptingTools*>(ToolboxPluginInstance());
+        if (!instance || argc < 2) {
+            status->blocked = false;
+            return;
+        }
+        const auto arg1 = PluginUtils::ToLower(argv[1]);
+        const auto pluginName = PluginUtils::StringToWString(instance->Name());
+
+        std::filesystem::path iniToLoad;
+        if (arg1 != PluginUtils::ToLower(pluginName) && arg1 != L"sst") {
+            status->blocked = false;
+            return;
+        }
+        if (argc < 3 || PluginUtils::ToLower(argv[2]) == L"recent") {
+            PluginUtils::logMessage("Restore most recent backup", instance->Name());
+            iniToLoad = BackupManager::getInstance().load(pluginName, BackupManager::LoadType::Latest);
+        }
+        else if (PluginUtils::ToLower(argv[2]) == L"largest") {
+            PluginUtils::logMessage("Restore largest backup", instance->Name());
+            iniToLoad = BackupManager::getInstance().load(pluginName, BackupManager::LoadType::Largest);
+        }
+        else if (PluginUtils::ToLower(argv[2]) == L"list") {
+            PluginUtils::logMessage("Available backups:", instance->Name());
+            const auto paths = BackupManager::getInstance().list(pluginName);
+            for (const auto& path : paths) {
+                const auto name = path.filename().string().substr(0, 1);
+                const auto time = std::format("{:%Y-%m-%d %H:%M}", std::filesystem::last_write_time(path));
+                const auto size = std::filesystem::file_size(path);
+                PluginUtils::logMessage(std::format("Backup {}, Last change {}, File size {}", name, time, size), instance->Name());
+            }
+        }
+        else if (PluginUtils::ToLower(argv[2]) == L"help") {
+            PluginUtils::logMessage("Type \"/restore SST recent\" to restore the most recent backup", instance->Name());
+            PluginUtils::logMessage("Type \"/restore SST largest\" to restore the largest backup", instance->Name());
+            PluginUtils::logMessage("Type \"/restore SST list\" to show the available backups", instance->Name());
+            PluginUtils::logMessage("Type \"/restore SST $NUMBER\" to restore a specific backup", instance->Name());
+            PluginUtils::logMessage("Type \"/restore SST help\" to show this menu", instance->Name());
+        }
+        else {
+            try {
+                const auto index = std::stoi(argv[2]);
+                PluginUtils::logMessage("Restore backup " + std::to_string(index), instance->Name());
+                iniToLoad = BackupManager::getInstance().load(pluginName, BackupManager::LoadType::Index, index);
+            } catch (...) {
+                status->blocked = false;
+                return;
+            }
+        }
+        if (!iniToLoad.empty()) {
+            instance->loadFromIniFile(iniToLoad.c_str());
+        }
     });
 
     InstanceInfo::getInstance().initialize();

@@ -4,12 +4,16 @@
 #include <InstanceInfo.h>
 #include <enumUtils.h>
 
+#include <BackupManager.h>
+#include <PluginUtils.h>
+
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 
 #include <GWCA/GWCA.h>
 #include <GWCA/Utilities/Hooker.h>
@@ -704,12 +708,10 @@ void GWSplits::DrawSettings()
     }
 }
 
-void GWSplits::LoadSettings(const wchar_t* folder)
+void GWSplits::loadFromIniFile(const wchar_t* filePath)
 {
-    ToolboxUIPlugin::LoadSettings(folder);
-    ini.LoadFile(GetSettingFile(folder).c_str());
-    settingsFolder = folder;
-
+    ini.LoadFile(filePath);
+    runs.clear();
     [[maybe_unused]] const long savedVersion = ini.GetLongValue(Name(), "version", 11);
     showRunTime = ini.GetBoolValue(Name(), "showRunTime", true);
     showSegmentTime = ini.GetBoolValue(Name(), "showSegmentTime", true);
@@ -731,13 +733,25 @@ void GWSplits::LoadSettings(const wchar_t* folder)
         }
     }
 
-    for (auto& run : runs) 
-    {
-        for (auto& split : run->splits) 
-        {
+    for (auto& run : runs) {
+        for (auto& split : run->splits) {
             split.displayPBTime = timeToString(split.pbSegmentTime);
             split.displayTrackedTime = timeToString(split.trackedTime);
         }
+    }
+}
+
+void GWSplits::LoadSettings(const wchar_t* folder)
+{
+    ToolboxUIPlugin::LoadSettings(folder);
+    BackupManager::getInstance().initialize(folder);
+    settingsFolder = folder;
+
+    loadFromIniFile(GetSettingFile(folder).c_str());
+
+    if (runs.empty() && BackupManager::getInstance().backupCount(PluginUtils::StringToWString(Name())) > 0) 
+    {
+        PluginUtils::logMessage("No runs loaded, but automatic backups found. Type \"/restore " + std::string{Name()} + " help\" to see options for restoring backups", Name());
     }
 }
 
@@ -762,6 +776,8 @@ void GWSplits::SaveSettings(const wchar_t* folder)
     }
     
     PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+    if (runs.size())
+        BackupManager::getInstance().save(PluginUtils::StringToWString(Name()), GetSettingFile(folder));
 }
 
 void GWSplits::handleTrigger(Trigger triggerType, std::function<bool(const Split&)> extraConditions)
@@ -809,6 +825,68 @@ void GWSplits::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DoACompleteZone>(&DoACompleteZone_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::DoACompleteZone* packet) {
         const auto doaZone = (DoaZone)packet->message[1];
         handleTrigger(Trigger::DungeonReward, [&](const Split& s){ return s.triggerData.doaZone == doaZone; });
+    });
+
+    GW::Chat::CreateCommand(L"restore", [](GW::HookStatus* status, const wchar_t*, const int argc, const LPWSTR* argv) {
+        const auto instance = static_cast<GWSplits*>(ToolboxPluginInstance());
+        if (!instance || argc < 2) {
+            status->blocked = false;
+            return;
+        }
+        const auto arg1 = PluginUtils::ToLower(argv[1]);
+        const auto pluginName = PluginUtils::StringToWString(instance->Name());
+
+        std::filesystem::path iniToLoad;
+        if (arg1 != PluginUtils::ToLower(pluginName)) {
+            status->blocked = false;
+            return;
+        }
+        if (argc < 3 || PluginUtils::ToLower(argv[2]) == L"recent")
+        {
+            PluginUtils::logMessage("Restore most recent backup", instance->Name());
+            iniToLoad = BackupManager::getInstance().load(pluginName, BackupManager::LoadType::Latest);
+        }
+        else if (PluginUtils::ToLower(argv[2]) == L"largest")
+        {
+            PluginUtils::logMessage("Restore largest backup", instance->Name());
+            iniToLoad = BackupManager::getInstance().load(pluginName, BackupManager::LoadType::Largest);
+        }
+        else if (PluginUtils::ToLower(argv[2]) == L"list")
+        {
+            PluginUtils::logMessage("Available backups:", instance->Name());
+            const auto paths = BackupManager::getInstance().list(pluginName);
+            for (const auto& path : paths) 
+            {
+                const auto name = path.filename().string().substr(0, 1);
+                const auto time = std::format("{:%Y-%m-%d %H:%M}", std::filesystem::last_write_time(path));
+                const auto size = std::filesystem::file_size(path);
+                PluginUtils::logMessage(std::format("Backup {}, Last change {}, File size {}", name, time, size), instance->Name());
+            }
+        }
+        else if (PluginUtils::ToLower(argv[2]) == L"help")
+        {
+            PluginUtils::logMessage("Type \"/restore " + std::string{instance->Name()} + " recent\" to restore the most recent backup", instance->Name());
+            PluginUtils::logMessage("Type \"/restore " + std::string{instance->Name()} + " largest\" to restore the largest backup", instance->Name());
+            PluginUtils::logMessage("Type \"/restore " + std::string{instance->Name()} + " list\" to show the available backups", instance->Name());
+            PluginUtils::logMessage("Type \"/restore " + std::string{instance->Name()} + " $NUMBER\" to restore a specific backup", instance->Name());
+            PluginUtils::logMessage("Type \"/restore " + std::string{instance->Name()} + " help\" to show this menu", instance->Name());
+        }
+        else {
+            try 
+            {
+                const auto index = std::stoi(argv[2]);
+                PluginUtils::logMessage("Restore backup " + std::to_string(index), instance->Name());
+                iniToLoad = BackupManager::getInstance().load(pluginName, BackupManager::LoadType::Index, index);
+            }
+            catch (...) {
+                status->blocked = false;
+                return;
+            }
+        }
+        if (!iniToLoad.empty()) 
+        {
+            instance->loadFromIniFile(iniToLoad.c_str());
+        }
     });
 
     InstanceInfo::getInstance().initialize();
