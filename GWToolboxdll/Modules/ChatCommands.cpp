@@ -2382,7 +2382,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdLoad)
     const std::filesystem::path build_file = std::format(L"{}/GUILD WARS/Templates/Skills/{}.txt", dir, argv[1]);
     std::string content;
     if (!Resources::ReadFile(build_file, content))
-        return;
+        content = TextUtils::WStringToString(argv[1]);
     if (argc == 2) {
         GW::SkillbarMgr::LoadSkillTemplate(GW::Agents::GetControlledCharacterId(), content.c_str());
     }
