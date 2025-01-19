@@ -5,6 +5,7 @@
 class MissionMapWidget : public ToolboxWidget {
     MissionMapWidget()
     {
+        visible = true;
         can_show_in_main_window = false;
         has_closebutton = false;
         is_resizable = false;
