@@ -106,6 +106,7 @@ public:
         bool visible = true;
         bool draw_on_terrain = false;
         bool draw_on_minimap = true;
+        bool draw_on_mission_map = true;
         bool draw_everywhere = false;
         bool created_by_toolbox = false;
         bool from_player_pos = false;

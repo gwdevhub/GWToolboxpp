@@ -40,6 +40,7 @@ namespace {
 
     bool draw_quest_path_on_terrain = false;
     bool draw_quest_path_on_minimap = true;
+    bool draw_quest_path_on_mission_map = true;
     bool show_paths_to_all_quests = false;
     GW::HookEntry pre_ui_message_entry;
     GW::HookEntry post_ui_message_entry;
@@ -146,7 +147,7 @@ namespace {
         void DrawMinimapLines()
         {
             ClearMinimapLines();
-            if (!(draw_quest_path_on_terrain || draw_quest_path_on_minimap))
+            if (!(draw_quest_path_on_terrain || draw_quest_path_on_minimap || draw_quest_path_on_mission_map))
                 return;
             if (waypoints.empty())
                 return;
@@ -159,6 +160,7 @@ namespace {
                 l->from_player_pos = i == start_idx;
                 l->draw_on_terrain = draw_quest_path_on_terrain;
                 l->draw_on_minimap = draw_quest_path_on_minimap;
+                l->draw_on_mission_map = draw_quest_path_on_mission_map;
                 l->created_by_toolbox = true;
                 l->color = QuestModule::GetQuestColor(quest_id);
                 minimap_lines.push_back(l);
@@ -570,6 +572,7 @@ void QuestModule::DrawSettingsInternal()
     ImGui::Text("Draw path to quest marker on:");
     ImGui::Checkbox("Terrain##drawquestpath", &draw_quest_path_on_terrain);
     ImGui::Checkbox("Minimap##drawquestpath", &draw_quest_path_on_minimap);
+    ImGui::Checkbox("Mission Map##drawquestpath", &draw_quest_path_on_mission_map);
 #ifdef _DEBUG
     ImGui::Checkbox("Show paths to all quests##drawquestpath", &show_paths_to_all_quests);
 #endif
@@ -581,6 +584,7 @@ void QuestModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(draw_quest_path_on_minimap);
+    LOAD_BOOL(draw_quest_path_on_mission_map);
     LOAD_BOOL(draw_quest_path_on_terrain);
     LOAD_BOOL(show_paths_to_all_quests);
     using namespace Pathing;
@@ -600,6 +604,7 @@ void QuestModule::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(draw_quest_path_on_minimap);
+    SAVE_BOOL(draw_quest_path_on_mission_map);
     SAVE_BOOL(draw_quest_path_on_terrain);
     SAVE_BOOL(show_paths_to_all_quests);
     using namespace Pathing;

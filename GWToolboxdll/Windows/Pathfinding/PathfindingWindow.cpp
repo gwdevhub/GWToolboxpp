@@ -201,7 +201,7 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
         Log::Flash("Path drawn on minimap");
     }
     if (pending_undraw && TIMER_INIT() > pending_undraw) {
-        for (auto line : minimap_lines) {
+        for (const auto line : minimap_lines) {
             Minimap::Instance().custom_renderer.RemoveCustomLine(line);
         }
         minimap_lines.clear();
@@ -215,8 +215,8 @@ void PathfindingWindow::SignalTerminate()
     ToolboxWindow::SignalTerminate();
     pending_terminate = true;
     GW::UI::RemoveUIMessageCallback(&gw_ui_hookentry);
-    for (const auto m : mile_paths_by_coords) {
-        m.second->stopProcessing();
+    for (const auto mile_path : mile_paths_by_coords | std::views::values) {
+        mile_path->stopProcessing();
     }
     mile_paths_by_coords.clear();
 }

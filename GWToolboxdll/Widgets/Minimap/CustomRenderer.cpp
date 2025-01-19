@@ -844,7 +844,7 @@ void CustomRenderer::Render(IDirect3DDevice9* device)
 
     vertices_count = 0;
     if (const HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, reinterpret_cast<void**>(&vertices), D3DLOCK_DISCARD); FAILED(res)) {
-        printf("PingsLinesRenderer Lock() error: HRESULT: 0x%lX\n", res);
+        printf("CustomRenderer Lock() error: HRESULT: 0x%lX\n", res);
     }
 
     DrawCustomLines(device);
