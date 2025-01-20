@@ -289,6 +289,7 @@ bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out)
 
 void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& character_name, HallOfMonumentsAchievements* out, OnAchievementsLoadedCallback callback)
 {
+    if (character_name.empty()) return;
     out->state = HallOfMonumentsAchievements::State::Loading;
     std::string character_name_s = TextUtils::WStringToString(character_name);
     for (size_t x = 0; x < character_name_s.length(); x++) {
