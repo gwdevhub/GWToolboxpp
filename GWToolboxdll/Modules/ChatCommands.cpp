@@ -762,8 +762,6 @@ namespace {
         ImGui::Bullet();
         ImGui::Text("'/camera fog (on|off)' sets game fog effect on or off.");
         ImGui::Bullet();
-        ImGui::Text("'/camera fov <value>' sets the field of view. '/camera fov' resets to default.");
-        ImGui::Bullet();
         ImGui::Text("'/camera speed <value>' sets the unlocked camera speed.");
         ImGui::Bullet();
         ImGui::Text(chat_tab_syntax);
@@ -1256,7 +1254,6 @@ void ChatCommands::Initialize()
         {L"hide", CmdHide},
         {L"toggle", CmdToggle},
         {L"tb", CmdTB},
-        {L"zoom", CmdZoom},
         {L"camera", CmdCamera},
         {L"cam", CmdCamera},
         {L"chest", CmdChest},
@@ -2088,27 +2085,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
                 break;
         }
         SetWindowVisible(gw_window, set);
-    }
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdZoom)
-{
-    if (argc <= 1) {
-        GW::CameraMgr::SetMaxDist();
-    }
-    else {
-        int distance;
-        if (TextUtils::ParseInt(argv[1], &distance)) {
-            if (distance > 0) {
-                GW::CameraMgr::SetMaxDist(static_cast<float>(distance));
-            }
-            else {
-                Log::Error("Invalid argument '%ls', please use a positive integer value", argv[1]);
-            }
-        }
-        else {
-            Log::Error("Invalid argument '%ls', please use an integer value", argv[1]);
-        }
     }
 }
 
