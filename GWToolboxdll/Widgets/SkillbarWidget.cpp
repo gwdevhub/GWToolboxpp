@@ -55,7 +55,6 @@ namespace {
 
     // Effect monitor settings
     bool display_effect_monitor = false;
-    bool display_effects_text = true;
     float effect_monitor_size = 20.f;
     int effect_monitor_offset = -100;
     bool effects_symmetric = true;
@@ -70,7 +69,7 @@ namespace {
     Color color_effect_border = Colors::ARGB(255, 0, 0, 0);
     Color color_effect_progress = Colors::Blue();
 
-    constexpr float text_size_min = 16.f;
+    constexpr float text_size_min = 0.f;
     constexpr float text_size_max = 48.f;
 
 
@@ -304,7 +303,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
 
     const auto font = FontLoader::GetFontByPx(font_size);
     const auto draw_list = ImGui::GetBackgroundDrawList();
-
+    
 
     for (size_t i = 0; i < m_skills.size(); i++) {
         const Skill& skill = m_skills[i];
@@ -331,6 +330,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
             DrawEffect(i, top_left);
         }
     }
+    
 }
 
 void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
@@ -339,7 +339,7 @@ void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
     const auto draw_list = ImGui::GetBackgroundDrawList();
     ImGui::PushFont(font, draw_list, font_effects);
 
-    const auto widget_height = std::max(display_effects_text ? font_effects : 0, effect_monitor_size);
+    const auto widget_height = ImMax(font_effects, effect_monitor_size);
 
     const Skill& skill = m_skills[skill_idx];
 
@@ -432,8 +432,7 @@ void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
 
         const ImVec2 label_size = ImGui::CalcTextSize(effect.text);
         const ImVec2 label_pos(pos1.x + size.x / 2 - label_size.x / 2, pos1.y + size.y / 2 - label_size.y / 2);
-        if (display_effects_text)
-            draw_list->AddText(label_pos, effect_text_color ? Colors::FullAlpha(effect.color) : color_text_effects, effect.text);
+        draw_list->AddText(label_pos, effect_text_color ? Colors::FullAlpha(effect.color) : color_text_effects, effect.text);
     }
     ImGui::PopFont(draw_list);
 }
@@ -451,7 +450,6 @@ void SkillbarWidget::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(round_up);
 
     LOAD_BOOL(display_skill_overlay);
-    LOAD_BOOL(display_effects_text);
     LOAD_FLOAT(font_recharge);
     LOAD_COLOR(color_text_recharge);
     LOAD_COLOR(color_border);
@@ -473,6 +471,7 @@ void SkillbarWidget::LoadSettings(ToolboxIni* ini)
 
     font_recharge = std::clamp(font_recharge, text_size_min, text_size_max);
     font_effects = std::clamp(font_effects, text_size_min, text_size_max);
+
 }
 
 void SkillbarWidget::SaveSettings(ToolboxIni* ini)
@@ -489,7 +488,6 @@ void SkillbarWidget::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(round_up);
 
     SAVE_BOOL(display_skill_overlay);
-    SAVE_BOOL(display_effects_text);
     SAVE_FLOAT(font_recharge);
     SAVE_COLOR(color_text_recharge);
     SAVE_COLOR(color_border);
@@ -581,8 +579,8 @@ void SkillbarWidget::DrawSettingsInternal()
     ImGui::PushID("effect_monitor_settings");
     ImGui::Checkbox("Display effect monitor", &display_effect_monitor);
     if (display_effect_monitor) {
-        ImGui::DragFloat(is_vertical ? "Effect width" : "Effect height", &effect_monitor_size, 1.f, 3.f, text_size_max, "%.f");
-        ImGui::ShowHelp(is_vertical ? "Width in pixels of a single effect on the effect monitor.\nClamped to font size, if drawing text." : "Height in pixels of a single effect on the effect monitor.\nClamped to font size, if drawing text.");
+        ImGui::DragFloat(is_vertical ? "Effect width" : "Effect height", &effect_monitor_size, 1.f, text_size_min, text_size_max,"%.f");
+        ImGui::ShowHelp(is_vertical ? "Width in pixels of a single effect on the effect monitor.\n0 matches font size." : "Height in pixels of a single effect on the effect monitor.\n0 matches font size.");
         ImGui::DragInt("Offset", &effect_monitor_offset, 1, -200, 200);
         ImGui::ShowHelp(is_vertical ? "Distance to the left or right of an effect relative to the related skill on your skillbar" : "Distance above or below of an effect relative to the related skill on your skillbar");
         if (layout == Layout::Columns) {
@@ -608,8 +606,6 @@ void SkillbarWidget::DrawSettingsInternal()
         if (effect_text_color || effect_progress_bar_color) {
             DrawDurationThresholds();
         }
-        ImGui::Checkbox("Show seconds as text", &display_effects_text);
-        ImGui::ShowHelp("When this is ticked, the minimum size of the monitor will be at least the font size");
         ImGui::DragFloat("Text size", &font_effects, 1.f, text_size_min, text_size_max, "%.f");
         if (!effect_text_color) {
             Colors::DrawSettingHueWheel("Text color", &color_text_effects);

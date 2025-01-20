@@ -20,7 +20,7 @@ namespace ImGui {
     IMGUI_API void PushFont(ImFont* font, float font_size);
 
     // If we're using a draw list that isn't the current window one, we need to explicitly state it
-    IMGUI_API void PushFont(ImFont* font, ImDrawList* draw_list, float font_size = 0.f);
+    IMGUI_API void PushFont(ImFont* font, ImDrawList* draw_list, float font_size = -1.f);
     // Remove a font added to an explicit draw list
     IMGUI_API void PopFont(ImDrawList* draw_list);
 

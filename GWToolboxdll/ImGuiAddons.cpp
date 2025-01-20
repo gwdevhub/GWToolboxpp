@@ -45,8 +45,8 @@ namespace ImGui {
     void PushFont(ImFont* font, float font_size) {
         ImGui::PushFont(font);
         ImGuiContext& g = *GImGui;
-        if (font_size > 0.f) {
-            g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * font_size * g.Font->Scale);
+        if (font_size >= 0.f) {
+            g.FontBaseSize = g.IO.FontGlobalScale * font_size * g.Font->Scale;
             g.FontSize = g.FontBaseSize;
             g.DrawListSharedData.FontSize = g.FontSize;
         }
