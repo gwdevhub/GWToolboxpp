@@ -1,10 +1,6 @@
 #include "stdafx.h"
 
-#include <Defines.h>
 #include <Logger.h>
-#include <base64.h>
-#include <ctime>
-#include <regex>
 
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Agent.h>
@@ -14,25 +10,17 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/TextParser.h>
-
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/Constants/ItemIDs.h>
 
 #include <GWCA/Utilities/Hook.h>
-#include <GWCA/Utilities/Hooker.h>
-#include <GWCA/Utilities/Scanner.h>
 
 #include <Modules/ItemDescriptionHandler.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/Resources.h>
-#include <Modules/GameSettings.h>
 #include <Modules/SalvageInfoModule.h>
 #include <Windows/DailyQuestsWindow.h>
 
 #include <Utils/GuiUtils.h>
-#include <Timer.h>
 #include <Constants/EncStrings.h>
 
 using nlohmann::json;
