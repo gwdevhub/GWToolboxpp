@@ -62,7 +62,8 @@ namespace ImGui {
     IMGUI_API void ClosePopup(const char* popup_id);
 
     // Button with 1 or more icon textures overlaid
-    IMGUI_API bool CompositeIconButton(const char* label, const ImTextureID* icons, size_t icons_len, const ImVec2& size, ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ImVec2& icon_size = {0.f, 0.f}, const ImVec2& uv0 = {0.f, 0.f}, ImVec2 uv1 = {0.f, 0.f});
+    IMGUI_API bool CompositeIconButton(const char* label, const ImTextureID* icons, size_t icons_len, const ImVec2& size, ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ImVec2& icon_size = {0.f, 0.f}, const ImVec2& uv0 = {0.f, 0.f},
+                                       ImVec2 uv1 = {0.f, 0.f});
 
     IMGUI_API bool ColorButtonPicker(const char*, Color*, ImGuiColorEditFlags = 0);
     // Add cropped image to current window
@@ -74,7 +75,8 @@ namespace ImGui {
     IMGUI_API bool IsKeyDown(long key);
 
     // Shim to new ImageButton definition; an frame_padding isn't needed now.
-    IMGUI_API bool ImageButton(ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0 = ImVec2(0, 0), const ImVec2& uv1 = ImVec2(1, 1), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0, 0, 0, 0), const ImVec4& tint_col = ImVec4(1, 1, 1, 1));
+    IMGUI_API bool ImageButton(ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0 = ImVec2(0, 0), const ImVec2& uv1 = ImVec2(1, 1), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0, 0, 0, 0),
+                               const ImVec4& tint_col = ImVec4(1, 1, 1, 1));
 
     // Window/context independent check
     IMGUI_API bool IsMouseInRect(const ImVec2& top_left, const ImVec2& bottom_right);
@@ -90,4 +92,27 @@ namespace ImGui {
     IMGUI_API void ClampAllWindowsToScreen(bool clamp);
 
     IMGUI_API bool ButtonWithHint(const char* label, const char* tooltip, const ImVec2& size_arg);
+
+    IMGUI_API void DrawTextWithShadow(const char* text, const ImVec2& pos,
+                                      ImU32 textColor = IM_COL32(255, 255, 255, 255),
+                                      ImU32 shadowColor = IM_COL32(0, 0, 0, 255),
+                                      float shadowOffset = 1.0f);
+    IMGUI_API void DrawTextWithShadow(const char* text,
+                                      ImU32 textColor = IM_COL32(255, 255, 255, 255),
+                                      ImU32 shadowColor = IM_COL32(0, 0, 0, 255),
+                                      float shadowOffset = 1.0f);
+    IMGUI_API void DrawTextWithOutline(const char* text, const ImVec2& pos,
+                                       ImU32 textColor = IM_COL32(255, 255, 255, 255),
+                                       ImU32 outlineColor = IM_COL32(0, 0, 0, 255),
+                                       float thickness = 1.0f);
+    IMGUI_API void DrawTextWithOutline(const char* text,
+                                       ImU32 textColor = IM_COL32(255, 255, 255, 255),
+                                       ImU32 outlineColor = IM_COL32(0, 0, 0, 255),
+                                       float thickness = 1.0f);
+    IMGUI_API void DrawTextWithShadow(ImDrawList* draw_list, ImFont* font, const char* text,
+                                      const ImVec2& center_pos, ImU32 textColor, ImU32 shadowColor,
+                                      float shadowOffset = 1.0f);
+    IMGUI_API void DrawTextWithOutline(ImDrawList* draw_list, ImFont* font, const char* text,
+                                       const ImVec2& center_pos, ImU32 textColor, ImU32 outlineColor,
+                                       float thickness = 1.0f);
 }

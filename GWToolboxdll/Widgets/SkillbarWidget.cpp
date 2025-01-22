@@ -51,6 +51,7 @@ namespace {
     bool display_skill_overlay = true;
     float font_recharge = 20.f;
     Color color_text_recharge = Colors::White();
+    Color color_text_outline = 0;
     Color color_border = Colors::ARGB(100, 255, 255, 255);
 
     // Effect monitor settings
@@ -320,9 +321,15 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
         // label
         if (*skill.cooldown) {
             ImGui::PushFont(font, draw_list, font_size);
-            const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown);
-            ImVec2 label_pos(top_left.x + m_skill_width / 2 - label_size.x / 2, top_left.y + m_skill_width / 2 - label_size.y / 2);
-            draw_list->AddText(label_pos, color_text_recharge, skill.cooldown);
+            if (IM_COL32_A_MASK & color_text_outline) {
+                ImVec2 center_pos(top_left.x + m_skill_width / 2, top_left.y + m_skill_width / 2);
+                ImGui::DrawTextWithOutline(draw_list, font, skill.cooldown, center_pos, color_text_recharge, Colors::Black());
+            }
+            else {
+                const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown);
+                ImVec2 label_pos(top_left.x + m_skill_width / 2 - label_size.x / 2, top_left.y + m_skill_width / 2 - label_size.y / 2);
+                draw_list->AddText(label_pos, color_text_recharge, skill.cooldown);
+            }
             ImGui::PopFont(draw_list);
         }
 
@@ -452,6 +459,7 @@ void SkillbarWidget::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(display_skill_overlay);
     LOAD_FLOAT(font_recharge);
     LOAD_COLOR(color_text_recharge);
+    LOAD_COLOR(color_text_outline);
     LOAD_COLOR(color_border);
 
     LOAD_BOOL(display_effect_monitor);
@@ -490,6 +498,7 @@ void SkillbarWidget::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(display_skill_overlay);
     SAVE_FLOAT(font_recharge);
     SAVE_COLOR(color_text_recharge);
+    SAVE_COLOR(color_text_outline);
     SAVE_COLOR(color_border);
 
     SAVE_BOOL(display_effect_monitor);
@@ -559,6 +568,7 @@ void SkillbarWidget::DrawSettingsInternal()
     ImGui::PushID("skill_overlay_settings");
     ImGui::DragFloat("Text size", &font_recharge, 1.f, text_size_min, text_size_max, "%.f");
     Colors::DrawSettingHueWheel("Text color", &color_text_recharge);
+    Colors::DrawSettingHueWheel("Text outline color", &color_text_outline);
     Colors::DrawSettingHueWheel("Border color", &color_border);
     ImGui::Checkbox("Paint skills according to effect duration", &display_skill_overlay);
     ImGui::ShowHelp("Change the color of the skill dependent on the long/medium/short duration colors");
