@@ -42,6 +42,7 @@ enum class ActionType : int {
     AbandonQuest,
     IncrementVariable,
     DecrementVariable,
+    MoveItemToSlot,
 
     Count
 };

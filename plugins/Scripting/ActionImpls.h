@@ -543,3 +543,21 @@ public:
 private:
     std::string name = "";
 };
+
+class MoveItemToSlotAction : public Action {
+public:
+    MoveItemToSlotAction() = default;
+    MoveItemToSlotAction(InputStream&);
+    ActionType type() const final { return ActionType::MoveItemToSlot; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
+
+private:
+    int id = 0;
+    int modstruct = 0;
+    bool hasModstruct = false;
+    Bag bagId = Bag::Backpack;
+    int slot = 0;
+};

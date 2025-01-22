@@ -14,6 +14,7 @@ namespace GW::Constants
     enum class SkillID : uint32_t;
     enum class MapID : uint32_t;
     enum class InstanceType;
+    enum class Bag : uint8_t;
     enum HeroID : uint32_t;
 } // namespace GW::Constants
 

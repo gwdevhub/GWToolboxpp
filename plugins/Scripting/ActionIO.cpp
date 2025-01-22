@@ -6,7 +6,7 @@
 namespace {
     ActionPtr makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 37);
+        static_assert((int)ActionType::Count == 38);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -80,6 +80,8 @@ namespace {
                 return std::make_shared<IncrementVariableAction>();
             case ActionType::AbandonQuest:
                 return std::make_shared<AbandonQuestAction>();
+            case ActionType::MoveItemToSlot:
+                return std::make_shared<MoveItemToSlotAction>();
             default:
                 return nullptr;
         }
@@ -88,7 +90,7 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 37);
+    static_assert((int)ActionType::Count == 38);
     switch (type) {
         case ActionType::MoveTo:
             return "Position";
@@ -162,6 +164,8 @@ std::string_view toString(ActionType type)
             return "Increment";
         case ActionType::AbandonQuest:
             return "Abandon quest";
+        case ActionType::MoveItemToSlot:
+            return "Move item to slot";
         default:
             return "Unknown";
     }
@@ -169,7 +173,7 @@ std::string_view toString(ActionType type)
 
 ActionPtr readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 37);
+    static_assert((int)ActionType::Count == 38);
     int type;
 
     stream >> type;
@@ -246,6 +250,8 @@ ActionPtr readAction(InputStream& stream)
             return std::make_shared<IncrementVariableAction>(stream);
         case ActionType::AbandonQuest:
             return std::make_shared<AbandonQuestAction>(stream);
+        case ActionType::MoveItemToSlot:
+            return std::make_shared<MoveItemToSlotAction>(stream);
         default:
             return nullptr;
     }
@@ -285,7 +291,7 @@ ActionPtr drawActionSelector(float width)
         drawSubMenu("Skill", std::array{ActionType::Cast, ActionType::CastBySlot, ActionType::DropBuff, ActionType::UseHeroSkill});
         drawSubMenu("Interaction", std::array{ActionType::SendDialog, ActionType::GoToTarget, ActionType::AutoAttackTarget});
         drawSubMenu("Targeting", std::array{ActionType::ChangeTarget, ActionType::StoreTarget, ActionType::RestoreTarget, ActionType::ClearTarget});
-        drawSubMenu("Items", std::array{ActionType::EquipItem, ActionType::EquipItemBySlot, ActionType::ChangeWeaponSet, ActionType::UseItem, ActionType::RepopMinipet, ActionType::UnequipItem});
+        drawSubMenu("Items", std::array{ActionType::EquipItem, ActionType::EquipItemBySlot, ActionType::MoveItemToSlot, ActionType::ChangeWeaponSet, ActionType::UseItem, ActionType::RepopMinipet, ActionType::UnequipItem});
         drawSubMenu("Chat", std::array{ActionType::SendChat, ActionType::PingTarget, ActionType::PingHardMode});
         drawSubMenu("Control flow", std::array{ActionType::Wait, ActionType::WaitUntil, ActionType::StopScript, ActionType::EnterCriticalSection, ActionType::LeaveCriticalSection});
         drawSubMenu("Variables", std::array{ActionType::SetVariable, ActionType::IncrementVariable, ActionType::DecrementVariable});

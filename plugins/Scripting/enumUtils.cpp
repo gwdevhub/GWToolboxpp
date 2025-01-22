@@ -352,22 +352,6 @@ std::string_view toString(WeaponType type)
     }
     return "";
 }
-std::string_view toString(Bag bag) 
-{
-    switch (bag) {
-        case Bag::Backpack:
-            return "Backpack";
-        case Bag::BeltPouch:
-            return "Belt Pouch";
-        case Bag::Bag1:
-            return "Bag 1";
-        case Bag::Bag2:
-            return "Bag 2";
-        case Bag::EquipmentPack:
-            return "Equipment Pack";
-    }
-    return "";
-}
 
 std::string_view toString(ComparisonOperator comp)
 {
@@ -425,6 +409,24 @@ std::string_view toString(DoaZone status)
             return "Gloom";
         case DoaZone::Veil:
             return "Veil";
+    }
+    return "";
+}
+
+std::string_view toString(Bag bag) 
+{
+    switch (bag) 
+    {
+        case Bag::Backpack:
+            return "Backpack";
+        case Bag::BeltPouch:
+            return "Belt Pouch";
+        case Bag::Bag1:
+            return "Bag 1";
+        case Bag::Bag2:
+            return "Bag 2";
+        case Bag::EquipmentPack:
+            return "Equipment pack";
     }
     return "";
 }

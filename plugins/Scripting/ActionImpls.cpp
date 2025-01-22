@@ -38,26 +38,50 @@ namespace {
     constexpr float indent = 25.f;
     constexpr double eps = 1e-3;
 
-    GW::Item* FindMatchingItem(Bag _bag_idx, uint8_t slot)
+    GW::Constants::Bag toGwcaBag(Bag bag)
     {
-        const auto gwcaBag = [&]() -> GW::Constants::Bag
-        {
-            switch (_bag_idx) {
-                case Bag::Backpack:
-                    return GW::Constants::Bag::Backpack;
-                case Bag::BeltPouch:
-                    return GW::Constants::Bag::Belt_Pouch;
-                case Bag::Bag1:
-                    return GW::Constants::Bag::Bag_1;
-                case Bag::Bag2:
-                    return GW::Constants::Bag::Bag_2;
-                case Bag::EquipmentPack:
-                    return GW::Constants::Bag::Equipment_Pack;
-                default:
-                    return GW::Constants::Bag::Backpack;
-            }
-        }();
-        const auto* bag = GW::Items::GetBag(gwcaBag);
+        switch (bag) {
+            case Bag::Backpack:
+                return GW::Constants::Bag::Backpack;
+            case Bag::BeltPouch:
+                return GW::Constants::Bag::Belt_Pouch;
+            case Bag::Bag1:
+                return GW::Constants::Bag::Bag_1;
+            case Bag::Bag2:
+                return GW::Constants::Bag::Bag_2;
+            case Bag::EquipmentPack:
+                return GW::Constants::Bag::Equipment_Pack;
+            default:
+                return GW::Constants::Bag::Backpack;
+        }
+    }
+    bool isEquippable(GW::Constants::ItemType type) 
+    {
+        switch (type) {
+            case GW::Constants::ItemType::Axe:
+            case GW::Constants::ItemType::Boots:
+            case GW::Constants::ItemType::Bow:
+            case GW::Constants::ItemType::Chestpiece:
+            case GW::Constants::ItemType::Offhand:
+            case GW::Constants::ItemType::Gloves:
+            case GW::Constants::ItemType::Hammer:
+            case GW::Constants::ItemType::Headpiece:
+            case GW::Constants::ItemType::Leggings:
+            case GW::Constants::ItemType::Wand:
+            case GW::Constants::ItemType::Shield:
+            case GW::Constants::ItemType::Staff:
+            case GW::Constants::ItemType::Sword:
+            case GW::Constants::ItemType::Daggers:
+            case GW::Constants::ItemType::Scythe:
+            case GW::Constants::ItemType::Spear:
+                return true;
+            default:
+                return false;
+        }
+    }
+    GW::Item* FindMatchingItem(Bag bagId, uint8_t slot)
+    {
+        const auto* bag = GW::Items::GetBag(toGwcaBag(bagId));
         if (!bag) return nullptr;
         for (auto item : bag->items)
             if (item && item->slot == slot) return item;
@@ -810,6 +834,7 @@ void EquipItemAction::drawSettings()
     ImGui::SameLine();
     if (hasModstruct)
     {
+        ImGui::PushItemWidth(100.f);
         ImGui::Text("0x");
         ImGui::SameLine();
         ImGui::InputInt("Modstruct", &modstruct, 0, 0, ImGuiInputTextFlags_CharsHexadecimal);
@@ -819,6 +844,7 @@ void EquipItemAction::drawSettings()
             hasModstruct = false;
             modstruct = 0;
         }
+        ImGui::PopItemWidth();
     }
     else 
     {
@@ -2063,6 +2089,82 @@ void AbandonQuestAction::drawSettings()
     ImGui::SameLine();
     ImGui::InputText("Name", &name);
 
+    ImGui::PopItemWidth();
+
+    ImGui::PopID();
+}
+
+/// ------------- MoveItemToSlotAction -------------
+MoveItemToSlotAction::MoveItemToSlotAction(InputStream& stream)
+{
+    stream >> id >> modstruct >> hasModstruct >> bagId >> slot;
+}
+void MoveItemToSlotAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << id << modstruct << hasModstruct << bagId << slot;
+}
+void MoveItemToSlotAction::initialAction()
+{
+    Action::initialAction();
+
+    const auto item = FindMatchingItem(id, hasModstruct ? std::optional{modstruct} : std::nullopt);
+    const auto bag = GW::Items::GetBag(toGwcaBag(bagId));
+
+    if (!item || !bag || slot < 0) 
+    {
+        return;
+    }
+    if (item->bag->bag_id() == toGwcaBag(bagId) && item->slot == slot) 
+    {
+        return;
+    }
+    if (bag->bag_id() == GW::Constants::Bag::Equipment_Pack && !isEquippable(item->type)) 
+    {
+        return;
+    }
+
+    GW::GameThread::Enqueue([item, bag, slot = this->slot] { GW::Items::MoveItem(item, bag, slot); });
+    
+}
+
+void MoveItemToSlotAction::drawSettings()
+{
+    const auto item = FindMatchingItem(id, hasModstruct ? std::optional{modstruct} : std::nullopt);
+    const auto itemName = item ? InstanceInfo::getInstance().getDecodedItemName(item->item_id) : "";
+    ImGui::PushID(drawId());
+
+    ImGui::Text("Move item to slot:");
+    ImGui::SameLine();
+    ImGui::Text("%s", itemName.c_str());
+    ImGui::PushItemWidth(90.f);
+    ImGui::SameLine();
+    ImGui::InputInt("model ID", &id, 0);
+    ImGui::PopItemWidth();
+    ImGui::SameLine();
+    if (hasModstruct) {
+        ImGui::PushItemWidth(100.f);
+        ImGui::Text("0x");
+        ImGui::SameLine();
+        ImGui::InputInt("Modstruct", &modstruct, 0, 0, ImGuiInputTextFlags_CharsHexadecimal);
+        ImGui::SameLine();
+        if (ImGui::Button("X")) {
+            hasModstruct = false;
+            modstruct = 0;
+        }
+        ImGui::PopItemWidth();
+    }
+    else {
+        if (ImGui::Button("Add modstruct")) {
+            hasModstruct = true;
+        }
+    }
+    ImGui::SameLine();
+    drawEnumButton(Bag::Backpack, Bag::EquipmentPack, bagId, 0, 120.f);
+    ImGui::SameLine();
+    ImGui::PushItemWidth(50.f);
+    ImGui::InputInt("Slot", &slot, 0);
     ImGui::PopItemWidth();
 
     ImGui::PopID();
