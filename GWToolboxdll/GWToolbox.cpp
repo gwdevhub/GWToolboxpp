@@ -594,7 +594,9 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
         defer_close = true;
         GWToolbox::SignalTerminate();
 
-        return 0;
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
+            return 0;
+        }
     }
 
     if (!(!GW::GetPreGameContext() && GWToolbox::IsInitialized())) {
