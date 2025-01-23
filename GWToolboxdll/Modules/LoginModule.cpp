@@ -376,7 +376,7 @@ b4 7b 01 01 00 00 00 00
     {
         GW::Hook::EnterHook();
         wchar_t* parameter_value = GetStringParameter_Ret(param_id_plus_0x27);
-        if (param_id_plus_0x27 == 0x26) {
+        if (param_id_plus_0x27 == 0x27) {
             // charname parameter
             original_charname_parameter = parameter_value;
             parameter_value = const_cast<wchar_t*>(L"NA");
