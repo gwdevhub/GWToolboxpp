@@ -323,7 +323,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
             ImGui::PushFont(font, draw_list, font_size);
             if (IM_COL32_A_MASK & color_text_outline) {
                 ImVec2 center_pos(top_left.x + m_skill_width / 2, top_left.y + m_skill_width / 2);
-                ImGui::DrawTextWithOutline(draw_list, font, skill.cooldown, center_pos, color_text_recharge, Colors::Black());
+                ImGui::DrawTextWithOutline(draw_list, font, skill.cooldown, center_pos, color_text_recharge, color_text_outline);
             }
             else {
                 const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown);
