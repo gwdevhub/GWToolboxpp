@@ -518,13 +518,6 @@ DWORD __stdcall ThreadEntry([[maybe_unused]] LPVOID module)
     ASSERT(LoadGWCADll(dllmodule));
     Log::Log("Initializing API\n");
 
-    if (!GW::Initialize()) {
-        if (MessageBoxA(nullptr, "Initialize Failed at finding all addresses, contact Developers about this.", "GWToolbox++ API Error", 0) == IDOK) {}
-        return 0;
-    }
-
-    Log::Log("Installing dx hooks\n");
-
     // Some modules rely on the gwdx_ptr being present for stuff like getting viewport coords.
     // Because this ptr isn't set until the Render loop runs at least once, let it run and then reassign SetRenderCallback.
     GWToolbox::Initialize(module);
@@ -777,10 +770,10 @@ void GWToolbox::Initialize(LPVOID module)
     // @Cleanup: atm its just an ASSERT - this could be a valid issue where the user can't write gwca.dll to disk, so need to handle it better later.
     ASSERT(LoadGWCADll(dllmodule));
     Log::InitializeGWCALog();
+    GW::RegisterPanicHandler(CrashHandler::GWCAPanicHandler, nullptr);
     switch (gwtoolbox_state) {
         case GWToolboxState::Terminated:
             gwtoolbox_state = GWToolboxState::Initialising;
-            GW::Scanner::Initialize();
             GW::Initialize();
             AttachRenderCallback();
             GW::EnableHooks();
