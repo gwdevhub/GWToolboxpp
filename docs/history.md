@@ -8,6 +8,20 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 7.1
+* [Fix] Fixed crash in combination with steam overlay
+* [Fix] Fixed problem where chat messages from ignored players would still be seen
+* [Fix] Fixed /call command
+* [Fix] Fixed /fps command crash
+* [Fix] Fixed /fps command crash
+* [Fix] Fixed changing secondary profession
+* [Fix] Fixed salvage all uncommon showing a popup
+* [Fix] Fixed crash after equipping a weapon in game when armory was no longer active
+* [Fix] Fixed weapon skill incorrectly showing on normal enchantments
+* [Minor] Skillbar widget can shrink to any size now
+* [New] Skillbar widget has new option to outline the recharge text
+* [Removed] Removed /zoom and /cam fov as they had no effect due to gw updates
+
+## Version 7.0
 * [Fix] Fixed occasional crashing when disabling or enabling modules whilst toolbox is running
 * [Fix] Fixed bug mixing up messages if a previous message is received (and blocked) from an ignored player
 * [Fix] Fixed issue preventing compass drawing
