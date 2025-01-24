@@ -9,6 +9,7 @@
 #include <Modules/Resources.h>
 #include <GWToolbox.h>
 #include <Defines.h>
+#include <Utils/TextUtils.h>
 
 namespace {
     char* tb_exception_message = nullptr;
@@ -52,13 +53,6 @@ namespace {
         }
     }
 
-
-
-    
-
-
-    
-
     void OnGWCrash(GWDebugInfo* details, const uint32_t param_2, EXCEPTION_POINTERS* pExceptionPointers, char* exception_message, char* exception_file, const uint32_t exception_line)
     {
         GW::Hook::EnterHook();
@@ -68,12 +62,13 @@ namespace {
         if (!pExceptionPointers) {
             CrashHandler::FatalAssert(exception_message, exception_file, exception_line);
         }
+#ifdef _DEBUG
         __try {
             // Debug break here to catch stack trace in debug mode before dumping
             __debugbreak();
         }
         __except (EXCEPTION_CONTINUE_EXECUTION) {}
-
+#endif
         // Assertion here will throw a GWToolbox exception if pExceptionPointers isn't found; this will give us the correct call stack for a GW Assertion failure in the subsequent crash dump.
         if (CrashHandler::Crash(pExceptionPointers)) {
             abort();
@@ -99,10 +94,13 @@ void CrashHandler::GWCAPanicHandler(
 void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigned line)
 {
     __try {
-        __debugbreak();
-        const size_t len = snprintf(nullptr, 0, "Assertion Error(expr: '%s', file : '%s', line : %u", expr, file, line);
+        const char* fmt = "Assertion Error: '%s' in '%s' line %u";
+        const size_t len = snprintf(nullptr, 0, fmt, expr, file, line);
         tb_exception_message = new char[len + 1];
-        snprintf(tb_exception_message, len + 1, "Assertion Error(expr: '%s', file : '%s', line : %u", expr, file, line);
+        snprintf(tb_exception_message, len + 1, fmt, expr, file, line);
+        #ifdef _DEBUG
+            __debugbreak();
+        #endif
         throw std::runtime_error(tb_exception_message);
     }
     __except (EXCEPT_EXPRESSION_ENTRY) {}
@@ -160,7 +158,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
         const auto s = new MINIDUMP_USER_STREAM();
         s->Type = CommentStreamA;
         s->Buffer = extra_info;
-        s->BufferSize = (strlen(extra_info) + 1) * sizeof(extra_info[0]);
+        s->BufferSize = static_cast<ULONG>(strlen(extra_info) + 1);
         UserStreamParam->UserStreamCount = 1;
         UserStreamParam->UserStreamArray = s;
     }
