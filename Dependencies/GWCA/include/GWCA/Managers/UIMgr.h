@@ -401,8 +401,6 @@ namespace GW {
             kSendAbandonQuest           = 0x30000000 | 0xA, // wparam = uint32_t quest_id
             kSendChangeTarget           = 0x30000000 | 0xB, // wparam = UIPacket::kSendChangeTarget* // e.g. tell the gw client to focus on a different target
             kSendCallTarget             = 0x30000000 | 0x13, // wparam = { uint32_t call_type, uint32_t agent_id } // also used to broadcast morale, death penalty, "I'm following X", etc
-            kSendAgentDialog            = 0x30000000 | 0x14, // wparam = uint32_t agent_id // e.g. switching tabs on a merchant window, choosing a response to an NPC dialog
-            kSendGadgetDialog           = 0x30000000 | 0x15, // wparam = uint32_t agent_id // e.g. opening locked chest with a key
             kSendDialog                 = 0x30000000 | 0x16, // wparam = dialog_id // internal use
 
 
@@ -664,8 +662,9 @@ namespace GW {
         enum class NumberCommandLineParameter : uint32_t {
             Unk1,
             Unk2,
+            Unk3,
             FPS,
-            Count = 0x3
+            Count
         };
 
         enum class EnumPreference : uint32_t {

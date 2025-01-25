@@ -399,7 +399,7 @@ namespace {
     // Flag miniature as unlocked for current character when dedicated
     void OnSendDialog(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
-        ASSERT(message_id == GW::UI::UIMessage::kSendAgentDialog);
+        ASSERT(message_id == GW::UI::UIMessage::kSendDialog);
         if (GW::Map::GetMapID() != MapID::Hall_of_Monuments) {
             return;
         }
@@ -1569,7 +1569,7 @@ void CompletionWindow::Initialize()
     });
 
     RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kDialogButton, OnDialogButton);
-    RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kSendAgentDialog, OnSendDialog);
+    RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kSendDialog, OnSendDialog);
 
     const wchar_t* player_name = GetPlayerName();
     if (player_name) {

@@ -1179,7 +1179,7 @@ namespace {
         case GW::UI::UIMessage::kMapLoaded: {
             mission_prompted = false;
         } break;
-        case GW::UI::UIMessage::kSendAgentDialog: {
+        case GW::UI::UIMessage::kSendDialog: {
             const auto dialog_id = (uint32_t)wParam;
             const auto& buttons = DialogModule::GetDialogButtons();
             const auto button = std::ranges::find_if(buttons, [dialog_id](GW::UI::DialogButtonInfo* btn) {
@@ -1578,7 +1578,7 @@ void GameSettings::Initialize()
     }
 
 
-    RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendAgentDialog, bind_member(this, &GameSettings::OnFactionDonate));
+    RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendDialog, bind_member(this, &GameSettings::OnFactionDonate));
     RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillTemplate, &OnPreLoadSkillBar);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, OnUpdateSkillCount, -0x3000);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_2, OnUpdateSkillCount, -0x3000);
@@ -1639,7 +1639,7 @@ void GameSettings::Initialize()
     RegisterUIMessageCallback(&OnPreSendDialog_Entry, GW::UI::UIMessage::kSendPingWeaponSet, OnPingWeaponSet);
 
     constexpr GW::UI::UIMessage dialog_ui_messages[] = {
-        GW::UI::UIMessage::kSendAgentDialog,
+        GW::UI::UIMessage::kSendDialog,
         GW::UI::UIMessage::kDialogBody,
         GW::UI::UIMessage::kDialogButton
     };
@@ -1664,7 +1664,7 @@ void GameSettings::Initialize()
     constexpr GW::UI::UIMessage pre_ui_messages[] = {
         GW::UI::UIMessage::kSendCallTarget,
         GW::UI::UIMessage::kVanquishComplete,
-        GW::UI::UIMessage::kSendAgentDialog,
+        GW::UI::UIMessage::kSendDialog,
         GW::UI::UIMessage::kMapLoaded
     };
     for (const auto message_id : pre_ui_messages) {

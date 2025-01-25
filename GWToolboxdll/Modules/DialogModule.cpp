@@ -135,7 +135,7 @@ void DialogModule::OnPreUIMessage(
             }
         }
         break;
-        case GW::UI::UIMessage::kSendAgentDialog: {
+        case GW::UI::UIMessage::kSendDialog: {
             const auto dialog_id = reinterpret_cast<uint32_t>(wparam);
             if ((dialog_id & 0xff000000) != 0) {
                 break; // Don't handle merchant interaction dialogs.
@@ -174,7 +174,7 @@ void DialogModule::OnPostUIMessage(const GW::HookStatus* status, const GW::UI::U
             OnDialogButtonAdded(static_cast<GW::UI::DialogButtonInfo*>(wparam));
         }
         break;
-        case GW::UI::UIMessage::kSendAgentDialog: {
+        case GW::UI::UIMessage::kSendDialog: {
             OnDialogSent(reinterpret_cast<uint32_t>(wparam));
         }
         break;
@@ -246,7 +246,7 @@ void DialogModule::Initialize()
 {
     ToolboxModule::Initialize();
     constexpr GW::UI::UIMessage dialog_ui_messages[] = {
-        GW::UI::UIMessage::kSendAgentDialog,
+        GW::UI::UIMessage::kSendDialog,
         GW::UI::UIMessage::kDialogBody,
         GW::UI::UIMessage::kDialogButton
     };
