@@ -43,6 +43,8 @@ using namespace Missions;
 using namespace CompletionWindow_Constants;
 
 namespace {
+    bool successfully_loaded = false;
+
     bool ArrayBoolAt(GW::Array<uint32_t>& array, const uint32_t index)
     {
         const uint32_t real_index = index >> 5;
@@ -2832,6 +2834,7 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
     ParseCompletionBuffer(CompletionType::Heroes);
     ParseCompletionBuffer(CompletionType::MapsUnlocked);
     CheckProgress();
+    successfully_loaded = true;
 }
 
 CompletionWindow* CompletionWindow::CheckProgress(const bool fetch_hom)
@@ -2900,7 +2903,7 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
     ToolboxIni completion_ini(false, false, false);
-    if (character_completion.empty()) {
+    if (character_completion.empty() || !successfully_loaded) {
         return;
     }
 
