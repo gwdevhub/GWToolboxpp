@@ -95,7 +95,7 @@ namespace {
         return c && *c->player_name ? c->player_name : nullptr;
     }
 
-    wchar_t last_player_name[20];
+    std::wstring last_player_name;
 
     void GetOutpostIcons(GW::Constants::MapID map_id, IDirect3DTexture9** icons_out[4], uint8_t mission_state, bool is_hard_mode = false) {
         memset(icons_out, 0, sizeof(icons_out) * sizeof(*icons_out));
@@ -284,7 +284,7 @@ namespace {
     };
 
     std::unordered_map<std::wstring, CharacterCompletion*> character_completion;
-    GW::HookEntry skills_unlocked_stoc_entry;
+    GW::HookEntry OnPostUIMessage_Entry;
 
     std::map<Campaign, std::vector<OutpostUnlock*>> outposts;
     std::map<Campaign, std::vector<Mission*>> missions;
@@ -387,15 +387,6 @@ namespace {
             }
         }
         Instance().CheckProgress();
-    }
-
-    // Check for "Cycle displayed minipets" button - if present, this is our hom dialog!
-    void OnDialogButton(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
-    {
-        ASSERT(message_id == GW::UI::UIMessage::kDialogButton);
-        const GW::UI::DialogButtonInfo* button = static_cast<GW::UI::DialogButtonInfo*>(wparam);
-        OnCycleDisplayedMinipetsButton(button);
-        OnFestivalHatButton(button);
     }
 
     // Flag miniature as unlocked for current character when dedicated
@@ -631,11 +622,19 @@ namespace {
         return true;
     }
 
-    void OnPostCheckUIState(GW::HookStatus*, GW::UI::UIMessage, void*, void* state)
-    {
-        if (state && *static_cast<uint32_t*>(state) == 2) {
-            RefreshAccountCharacters();
+    // Cycle through all available professions - this will trigger the ui message to update the skills unlocked
+    void CheckAllSkills() {
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+            return;
+        const auto my_id = GW::Agents::GetControlledCharacterId();
+        GW::SkillbarMgr::SkillTemplate original_template;
+        if (!GW::SkillbarMgr::GetSkillTemplate(my_id, original_template))
+            return;
+        for (size_t i = (size_t)GW::Constants::Profession::Dervish; i > 0; i--) {
+            GW::PlayerMgr::ChangeSecondProfession((GW::Constants::Profession)i);
         }
+        GW::PlayerMgr::ChangeSecondProfession(original_template.secondary);
+        GW::SkillbarMgr::LoadSkillTemplate(my_id, original_template);
     }
 
     std::wstring& ReplaceString(std::wstring& subject, const std::wstring& search, const std::wstring& replace)
@@ -710,6 +709,64 @@ namespace {
                 return false;
         }
         return true;
+    }
+
+    void OnMapLoaded() {
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
+            return;
+        const auto current_player_name = GetPlayerName();
+        if (!(current_player_name && *current_player_name))
+            return;
+        if (current_player_name != last_player_name) {
+            last_player_name = current_player_name;
+            chosen_player_name_s.clear();
+            chosen_player_name.clear();
+            FetchHom();
+        }
+        ParseCompletionBuffer(CompletionType::Skills);
+        ParseCompletionBuffer(CompletionType::Mission);
+        ParseCompletionBuffer(CompletionType::Vanquishes);
+        ParseCompletionBuffer(CompletionType::MissionBonus);
+        ParseCompletionBuffer(CompletionType::MissionBonusHM);
+        ParseCompletionBuffer(CompletionType::MissionHM);
+        ParseCompletionBuffer(CompletionType::MapsUnlocked);
+        ParseCompletionBuffer(CompletionType::Heroes);
+        RefreshAccountCharacters();
+        CompletionWindow::Instance().CheckProgress();
+        CheckAllSkills();
+    }
+
+    void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void* lparam)
+    {
+        switch (message_id) {
+            case GW::UI::UIMessage::kUpdateSkillsAvailable: {
+                ParseCompletionBuffer(CompletionType::Skills);
+                Instance().CheckProgress();
+            } break;
+            case GW::UI::UIMessage::kVanquishComplete: {
+                ParseCompletionBuffer(CompletionType::Vanquishes);
+                Instance().CheckProgress();
+            } break;
+            case GW::UI::UIMessage::kDungeonComplete:
+            case GW::UI::UIMessage::kMissionComplete: {
+                ParseCompletionBuffer(CompletionType::Mission);
+                ParseCompletionBuffer(CompletionType::MissionBonus);
+                ParseCompletionBuffer(CompletionType::MissionBonusHM);
+                ParseCompletionBuffer(CompletionType::MissionHM);
+                Instance().CheckProgress();
+            } break;
+            case GW::UI::UIMessage::kMapLoaded: {
+                OnMapLoaded();
+            } break;
+            case GW::UI::UIMessage::kDialogButton: {
+                const GW::UI::DialogButtonInfo* button = static_cast<GW::UI::DialogButtonInfo*>(wparam);
+                OnCycleDisplayedMinipetsButton(button);
+                OnFestivalHatButton(button);
+            } break;
+            case GW::UI::UIMessage::kSendDialog: {
+                OnSendDialog(status, message_id, wparam, lparam);
+            } break;
+        }
     }
 
 }
@@ -1511,76 +1568,19 @@ void CompletionWindow::Initialize()
     skills.push_back(new PvESkill(SkillID::Vow_of_Revolution));
     skills.push_back(new PvESkill(SkillID::Heroic_Refrain));
 
-    GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_MAPS_UNLOCKED, [](GW::HookStatus*, void*) {
-        ParseCompletionBuffer(CompletionType::Mission);
-        ParseCompletionBuffer(CompletionType::MissionBonus);
-        ParseCompletionBuffer(CompletionType::MissionBonusHM);
-        ParseCompletionBuffer(CompletionType::MissionHM);
-        ParseCompletionBuffer(CompletionType::MapsUnlocked);
-        Instance().CheckProgress();
-    });
-    GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_VANQUISH_PROGRESS, [](GW::HookStatus*, void*) {
-        ParseCompletionBuffer(CompletionType::Vanquishes);
-        Instance().CheckProgress();
-    });
-    GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_VANQUISH_COMPLETE, [](GW::HookStatus*, void*) {
-        ParseCompletionBuffer(CompletionType::Vanquishes);
-        Instance().CheckProgress();
-    });
-
-    GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILLS_UNLOCKED, [](GW::HookStatus*, void*) {
-        ParseCompletionBuffer(CompletionType::Skills);
-        Instance().CheckProgress();
-    });
-    GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_AGENT_CREATE_PLAYER, [](GW::HookStatus*, void* pak) {
-        const uint32_t player_number = static_cast<uint32_t*>(pak)[1];
-        const auto c = GW::GetCharContext();
-        if (!c || player_number != c->player_number) {
-            return;
-        }
-        const auto me = GW::PlayerMgr::GetPlayerByID(c->player_number);
-        if (!me) {
-            return;
-        }
-        if (const auto comp = GetCharacterCompletion(c->player_name)) {
-            comp->profession = static_cast<Profession>(me->primary);
-        }
-        ParseCompletionBuffer(CompletionType::Heroes);
-        Instance().CheckProgress();
-    });
-    GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, [](GW::HookStatus*, void*) {
-        ParseCompletionBuffer(CompletionType::Skills);
-        Instance().CheckProgress();
-    });
-    // Reset chosen player name to be current character on login
-    GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_INSTANCE_LOADED, [&](GW::HookStatus*, void*) {
-        if (wcscmp(GetPlayerName(), last_player_name) != 0) {
-            wcscpy(last_player_name, GetPlayerName());
-            chosen_player_name_s.clear();
-            chosen_player_name.clear();
-            FetchHom();
-        }
-        ParseCompletionBuffer(CompletionType::Skills);
-        ParseCompletionBuffer(CompletionType::Mission);
-        ParseCompletionBuffer(CompletionType::MissionBonus);
-        ParseCompletionBuffer(CompletionType::MissionBonusHM);
-        ParseCompletionBuffer(CompletionType::MissionHM);
-        ParseCompletionBuffer(CompletionType::MapsUnlocked);
-        RefreshAccountCharacters();
-        CheckProgress();
-    });
-
-    RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kDialogButton, OnDialogButton);
-    RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kSendDialog, OnSendDialog);
-
-    const wchar_t* player_name = GetPlayerName();
-    if (player_name) {
-        wcscpy(last_player_name, player_name);
+    const GW::UI::UIMessage message_ids[] = {
+        GW::UI::UIMessage::kMapLoaded,
+        GW::UI::UIMessage::kSendDialog,
+        GW::UI::UIMessage::kDialogButton,
+        GW::UI::UIMessage::kMissionComplete,
+        GW::UI::UIMessage::kVanquishComplete,
+        GW::UI::UIMessage::kDungeonComplete,
+        GW::UI::UIMessage::kUpdateSkillsAvailable
+    };
+    for (const auto message_id : message_ids) {
+        RegisterUIMessageCallback(&OnPostUIMessage_Entry, message_id, OnPostUIMessage, 0x8000);
     }
-
-    RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kCheckUIState, OnPostCheckUIState, 0x8000);
-
-    //RefreshAccountCharacters();
+    GW::GameThread::Enqueue(OnMapLoaded);
 }
 
 void CompletionWindow::Initialize_Prophecies()
@@ -2085,8 +2085,7 @@ void CompletionWindow::Initialize_Dungeons()
 
 void CompletionWindow::Terminate()
 {
-    GW::StoC::RemoveCallbacks(&skills_unlocked_stoc_entry);
-    GW::UI::RemoveUIMessageCallback(&skills_unlocked_stoc_entry);
+    GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_Entry);
     auto clear_vec = [](auto& vec) {
         for (auto& c : vec) {
             CLEAR_PTR_VEC(c.second);
