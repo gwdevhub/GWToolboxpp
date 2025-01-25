@@ -2774,7 +2774,10 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
     ToolboxIni completion_ini(false, false, false);
-    completion_ini.LoadFile(Resources::GetPath(completion_ini_filename).c_str());
+    const auto success = completion_ini.LoadFile(Resources::GetPath(completion_ini_filename).c_str());
+    if (success < 0) {
+        return Log::Error("Failed to load completion ini");
+    }
 
     LOAD_BOOL(show_as_list);
     LOAD_BOOL(hide_unlocked_skills);
