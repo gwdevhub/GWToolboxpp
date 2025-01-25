@@ -43,6 +43,8 @@ using namespace Missions;
 using namespace CompletionWindow_Constants;
 
 namespace {
+    bool successfully_loaded = false;
+
     bool ArrayBoolAt(GW::Array<uint32_t>& array, const uint32_t index)
     {
         const uint32_t real_index = index >> 5;
@@ -2771,11 +2773,11 @@ void CompletionWindow::DrawSettingsInternal()
 void CompletionWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    const auto completion_ini = new ToolboxIni(false, false, false);
-    completion_ini->LoadFile(Resources::GetPath(completion_ini_filename).c_str());
-    std::string ini_str;
-    std::wstring name_ws;
-    const char* ini_section;
+    ToolboxIni completion_ini(false, false, false);
+    const auto success = completion_ini.LoadFile(Resources::GetPath(completion_ini_filename).c_str());
+    if (success < 0) {
+        return Log::Error("Failed to load completion ini");
+    }
 
     LOAD_BOOL(show_as_list);
     LOAD_BOOL(hide_unlocked_skills);
@@ -2785,15 +2787,15 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(hide_collected_hats);
     LOAD_BOOL(only_show_account_chars);
 
-    auto read_ini_to_buf = [&](const CompletionType type, const char* section) {
+    auto read_ini_to_buf = [&](const CompletionType type, const char* section, const char* ini_section, const std::wstring_view name_ws) {
         char ini_key_buf[64];
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_length", section);
-        const int len = completion_ini->GetLongValue(ini_section, ini_key_buf, 0);
+        const int len = completion_ini.GetLongValue(ini_section, ini_key_buf, 0);
         if (len < 1) {
             return;
         }
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_values", section);
-        const std::string val = completion_ini->GetValue(ini_section, ini_key_buf, "");
+        const std::string val = completion_ini.GetValue(ini_section, ini_key_buf, "");
         if (val.empty()) {
             return;
         }
@@ -2803,29 +2805,27 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
     };
 
     ToolboxIni::TNamesDepend entries;
-    completion_ini->GetAllSections(entries);
+    completion_ini.GetAllSections(entries);
     for (const ToolboxIni::Entry& entry : entries) {
-        ini_section = entry.pItem;
-        name_ws = TextUtils::StringToWString(ini_section);
+        const char* ini_section = entry.pItem;
+        const auto name_ws = TextUtils::StringToWString(ini_section);
 
         const auto c = GetCharacterCompletion(name_ws.data(), true);
-        c->profession = static_cast<Profession>(completion_ini->GetLongValue(ini_section, "profession", 0));
-        c->account = TextUtils::StringToWString(completion_ini->GetValue(ini_section, "account", ""));
-        c->is_pvp = completion_ini->GetBoolValue(ini_section, "is_pvp", false);
-        c->is_pre_searing = completion_ini->GetBoolValue(ini_section, "is_pre_searing", false);
+        c->profession = static_cast<Profession>(completion_ini.GetLongValue(ini_section, "profession", 0));
+        c->account = TextUtils::StringToWString(completion_ini.GetValue(ini_section, "account", ""));
+        c->is_pvp = completion_ini.GetBoolValue(ini_section, "is_pvp", false);
+        c->is_pre_searing = completion_ini.GetBoolValue(ini_section, "is_pre_searing", false);
 
-        read_ini_to_buf(CompletionType::Mission, "mission");
-        read_ini_to_buf(CompletionType::MissionBonus, "mission_bonus");
-        read_ini_to_buf(CompletionType::MissionHM, "mission_hm");
-        read_ini_to_buf(CompletionType::MissionBonusHM, "mission_bonus_hm");
-        read_ini_to_buf(CompletionType::Skills, "skills");
-        read_ini_to_buf(CompletionType::Vanquishes, "vanquishes");
-        read_ini_to_buf(CompletionType::Heroes, "heros");
-        read_ini_to_buf(CompletionType::MapsUnlocked, "maps_unlocked");
-        read_ini_to_buf(CompletionType::MinipetsUnlocked, "minipets_unlocked");
-        read_ini_to_buf(CompletionType::FestivalHats, "festival_hats");
-
-
+        read_ini_to_buf(CompletionType::Mission, "mission", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::MissionBonus, "mission_bonus", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::MissionHM, "mission_hm", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::MissionBonusHM, "mission_bonus_hm", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::Skills, "skills", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::Vanquishes, "vanquishes", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::Heroes, "heros", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::MapsUnlocked, "maps_unlocked", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::MinipetsUnlocked, "minipets_unlocked", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::FestivalHats, "festival_hats", ini_section, name_ws);
     }
     RefreshAccountCharacters();
     ParseCompletionBuffer(CompletionType::Mission);
@@ -2837,43 +2837,44 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
     ParseCompletionBuffer(CompletionType::Heroes);
     ParseCompletionBuffer(CompletionType::MapsUnlocked);
     CheckProgress();
+    successfully_loaded = true;
 }
 
 CompletionWindow* CompletionWindow::CheckProgress(const bool fetch_hom)
 {
-    for (auto& camp : pve_skills) {
-        for (const auto& skill : camp.second) {
+    for (auto& skills : pve_skills | std::views::values) {
+        for (const auto& skill : skills) {
             skill->CheckProgress(chosen_player_name);
         }
     }
-    for (auto& camp : elite_skills) {
-        for (const auto& skill : camp.second) {
+    for (auto& skills : elite_skills | std::views::values) {
+        for (const auto& skill : skills) {
             skill->CheckProgress(chosen_player_name);
         }
     }
-    for (auto& camp : outposts) {
-        for (const auto& skill : camp.second) {
+    for (auto& skills : outposts | std::views::values) {
+        for (const auto& skill : skills) {
             skill->CheckProgress(chosen_player_name);
         }
     }
-    for (auto& camp : missions) {
-        for (const auto& skill : camp.second) {
-            skill->CheckProgress(chosen_player_name);
+    for (auto& completed_missions : missions | std::views::values) {
+        for (const auto& mission : completed_missions) {
+            mission->CheckProgress(chosen_player_name);
         }
     }
-    for (auto& camp : vanquishes) {
-        for (const auto& skill : camp.second) {
-            skill->CheckProgress(chosen_player_name);
+    for (auto& completed_missions : vanquishes | std::views::values) {
+        for (const auto& mission : completed_missions) {
+            mission->CheckProgress(chosen_player_name);
         }
     }
-    for (auto& camp : heros) {
-        for (const auto& skill : camp.second) {
-            skill->CheckProgress(chosen_player_name);
+    for (auto& unlocks : heros | std::views::values) {
+        for (const auto& unlock : unlocks) {
+            unlock->CheckProgress(chosen_player_name);
         }
     }
-    for (auto& camp : unlocked_pvp_items) {
-        for (const auto& skill : camp.second) {
-            skill->CheckProgress(chosen_player_name);
+    for (auto& items : unlocked_pvp_items | std::views::values) {
+        for (const auto& item : items) {
+            item->CheckProgress(chosen_player_name);
         }
     }
     for (const auto achievement : festival_hats) {
@@ -2904,8 +2905,10 @@ CompletionWindow* CompletionWindow::CheckProgress(const bool fetch_hom)
 void CompletionWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    auto completion_ini = new ToolboxIni(false, false, false);
-    std::string ini_str;
+    ToolboxIni completion_ini(false, false, false);
+    if (character_completion.empty() || !successfully_loaded) {
+        return;
+    }
 
     SAVE_BOOL(show_as_list);
     SAVE_BOOL(hide_unlocked_skills);
@@ -2915,38 +2918,37 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(hide_collected_hats);
     SAVE_BOOL(only_show_account_chars);
 
-    auto write_buf_to_ini = [completion_ini](const char* section, const std::vector<uint32_t>* read, std::string& ini_str, const std::string* name) {
+    auto write_buf_to_ini = [&completion_ini](const char* section, const std::vector<uint32_t>* read, const std::string_view name) {
         char ini_key_buf[64];
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_length", section);
-        completion_ini->SetLongValue(name->c_str(), ini_key_buf, read->size());
+        completion_ini.SetLongValue(name.data(), ini_key_buf, read->size());
+        std::string ini_str;
         ASSERT(GuiUtils::ArrayToIni(read->data(), read->size(), &ini_str));
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_values", section);
-        completion_ini->SetValue(name->c_str(), ini_key_buf, ini_str.c_str());
+        completion_ini.SetValue(name.data(), ini_key_buf, ini_str.c_str());
     };
 
-    for (const auto& char_unlocks : character_completion) {
-        CharacterCompletion* char_comp = char_unlocks.second;
-        const std::string* name = &char_comp->name_str;
-        completion_ini->SetLongValue(name->c_str(), "profession", std::to_underlying(char_comp->profession));
-        completion_ini->SetValue(name->c_str(), "account", TextUtils::WStringToString(char_comp->account).c_str());
-        completion_ini->SetBoolValue(name->c_str(), "is_pvp", char_comp->is_pvp);
-        completion_ini->SetBoolValue(name->c_str(), "is_pre_searing", char_comp->is_pre_searing);
+    for (const auto& char_comp : character_completion | std::views::values) {
+        const std::string& name = char_comp->name_str;
+        completion_ini.SetLongValue(name.c_str(), "profession", std::to_underlying(char_comp->profession));
+        completion_ini.SetValue(name.c_str(), "account", TextUtils::WStringToString(char_comp->account).c_str());
+        completion_ini.SetBoolValue(name.c_str(), "is_pvp", char_comp->is_pvp);
+        completion_ini.SetBoolValue(name.c_str(), "is_pre_searing", char_comp->is_pre_searing);
 
-        write_buf_to_ini("mission", &char_comp->mission, ini_str, name);
-        write_buf_to_ini("mission_bonus", &char_comp->mission_bonus, ini_str, name);
-        write_buf_to_ini("mission_hm", &char_comp->mission_hm, ini_str, name);
-        write_buf_to_ini("mission_bonus_hm", &char_comp->mission_bonus_hm, ini_str, name);
-        write_buf_to_ini("skills", &char_comp->skills, ini_str, name);
-        write_buf_to_ini("vanquishes", &char_comp->vanquishes, ini_str, name);
-        write_buf_to_ini("heros", &char_comp->heroes, ini_str, name);
-        write_buf_to_ini("maps_unlocked", &char_comp->maps_unlocked, ini_str, name);
-        write_buf_to_ini("minipets_unlocked", &char_comp->minipets_unlocked, ini_str, name);
-        write_buf_to_ini("festival_hats", &char_comp->festival_hats, ini_str, name);
+        write_buf_to_ini("mission", &char_comp->mission, name);
+        write_buf_to_ini("mission_bonus", &char_comp->mission_bonus, name);
+        write_buf_to_ini("mission_hm", &char_comp->mission_hm, name);
+        write_buf_to_ini("mission_bonus_hm", &char_comp->mission_bonus_hm, name);
+        write_buf_to_ini("skills", &char_comp->skills, name);
+        write_buf_to_ini("vanquishes", &char_comp->vanquishes, name);
+        write_buf_to_ini("heros", &char_comp->heroes, name);
+        write_buf_to_ini("maps_unlocked", &char_comp->maps_unlocked, name);
+        write_buf_to_ini("minipets_unlocked", &char_comp->minipets_unlocked, name);
+        write_buf_to_ini("festival_hats", &char_comp->festival_hats, name);
 
-        completion_ini->SetValue(name->c_str(), "hom_code", char_comp->hom_code.c_str());
+        completion_ini.SetValue(name.c_str(), "hom_code", char_comp->hom_code.c_str());
     }
-    completion_ini->SaveFile(Resources::GetPath(completion_ini_filename).c_str());
-    delete completion_ini;
+    completion_ini.SaveFile(Resources::GetPath(completion_ini_filename).c_str());
 }
 
 CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* character_name, const bool create_if_not_found)
