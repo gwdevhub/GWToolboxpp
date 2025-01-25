@@ -2771,8 +2771,8 @@ void CompletionWindow::DrawSettingsInternal()
 void CompletionWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    const auto completion_ini = new ToolboxIni(false, false, false);
-    completion_ini->LoadFile(Resources::GetPath(completion_ini_filename).c_str());
+    ToolboxIni completion_ini(false, false, false);
+    completion_ini.LoadFile(Resources::GetPath(completion_ini_filename).c_str());
     std::string ini_str;
     std::wstring name_ws;
     const char* ini_section;
@@ -2788,12 +2788,12 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
     auto read_ini_to_buf = [&](const CompletionType type, const char* section) {
         char ini_key_buf[64];
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_length", section);
-        const int len = completion_ini->GetLongValue(ini_section, ini_key_buf, 0);
+        const int len = completion_ini.GetLongValue(ini_section, ini_key_buf, 0);
         if (len < 1) {
             return;
         }
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_values", section);
-        const std::string val = completion_ini->GetValue(ini_section, ini_key_buf, "");
+        const std::string val = completion_ini.GetValue(ini_section, ini_key_buf, "");
         if (val.empty()) {
             return;
         }
@@ -2803,16 +2803,16 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
     };
 
     ToolboxIni::TNamesDepend entries;
-    completion_ini->GetAllSections(entries);
+    completion_ini.GetAllSections(entries);
     for (const ToolboxIni::Entry& entry : entries) {
         ini_section = entry.pItem;
         name_ws = TextUtils::StringToWString(ini_section);
 
         const auto c = GetCharacterCompletion(name_ws.data(), true);
-        c->profession = static_cast<Profession>(completion_ini->GetLongValue(ini_section, "profession", 0));
-        c->account = TextUtils::StringToWString(completion_ini->GetValue(ini_section, "account", ""));
-        c->is_pvp = completion_ini->GetBoolValue(ini_section, "is_pvp", false);
-        c->is_pre_searing = completion_ini->GetBoolValue(ini_section, "is_pre_searing", false);
+        c->profession = static_cast<Profession>(completion_ini.GetLongValue(ini_section, "profession", 0));
+        c->account = TextUtils::StringToWString(completion_ini.GetValue(ini_section, "account", ""));
+        c->is_pvp = completion_ini.GetBoolValue(ini_section, "is_pvp", false);
+        c->is_pre_searing = completion_ini.GetBoolValue(ini_section, "is_pre_searing", false);
 
         read_ini_to_buf(CompletionType::Mission, "mission");
         read_ini_to_buf(CompletionType::MissionBonus, "mission_bonus");
@@ -2904,7 +2904,7 @@ CompletionWindow* CompletionWindow::CheckProgress(const bool fetch_hom)
 void CompletionWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    auto completion_ini = new ToolboxIni(false, false, false);
+    ToolboxIni completion_ini(false, false, false);
     std::string ini_str;
 
     SAVE_BOOL(show_as_list);
@@ -2915,22 +2915,21 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(hide_collected_hats);
     SAVE_BOOL(only_show_account_chars);
 
-    auto write_buf_to_ini = [completion_ini](const char* section, const std::vector<uint32_t>* read, std::string& ini_str, const std::string* name) {
+    auto write_buf_to_ini = [&completion_ini](const char* section, const std::vector<uint32_t>* read, std::string& ini_str, const std::string* name) {
         char ini_key_buf[64];
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_length", section);
-        completion_ini->SetLongValue(name->c_str(), ini_key_buf, read->size());
+        completion_ini.SetLongValue(name->c_str(), ini_key_buf, read->size());
         ASSERT(GuiUtils::ArrayToIni(read->data(), read->size(), &ini_str));
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_values", section);
-        completion_ini->SetValue(name->c_str(), ini_key_buf, ini_str.c_str());
+        completion_ini.SetValue(name->c_str(), ini_key_buf, ini_str.c_str());
     };
 
-    for (const auto& char_unlocks : character_completion) {
-        CharacterCompletion* char_comp = char_unlocks.second;
+    for (const auto& char_comp : character_completion | std::views::values) {
         const std::string* name = &char_comp->name_str;
-        completion_ini->SetLongValue(name->c_str(), "profession", std::to_underlying(char_comp->profession));
-        completion_ini->SetValue(name->c_str(), "account", TextUtils::WStringToString(char_comp->account).c_str());
-        completion_ini->SetBoolValue(name->c_str(), "is_pvp", char_comp->is_pvp);
-        completion_ini->SetBoolValue(name->c_str(), "is_pre_searing", char_comp->is_pre_searing);
+        completion_ini.SetLongValue(name->c_str(), "profession", std::to_underlying(char_comp->profession));
+        completion_ini.SetValue(name->c_str(), "account", TextUtils::WStringToString(char_comp->account).c_str());
+        completion_ini.SetBoolValue(name->c_str(), "is_pvp", char_comp->is_pvp);
+        completion_ini.SetBoolValue(name->c_str(), "is_pre_searing", char_comp->is_pre_searing);
 
         write_buf_to_ini("mission", &char_comp->mission, ini_str, name);
         write_buf_to_ini("mission_bonus", &char_comp->mission_bonus, ini_str, name);
@@ -2943,10 +2942,9 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
         write_buf_to_ini("minipets_unlocked", &char_comp->minipets_unlocked, ini_str, name);
         write_buf_to_ini("festival_hats", &char_comp->festival_hats, ini_str, name);
 
-        completion_ini->SetValue(name->c_str(), "hom_code", char_comp->hom_code.c_str());
+        completion_ini.SetValue(name->c_str(), "hom_code", char_comp->hom_code.c_str());
     }
-    completion_ini->SaveFile(Resources::GetPath(completion_ini_filename).c_str());
-    delete completion_ini;
+    completion_ini.SaveFile(Resources::GetPath(completion_ini_filename).c_str());
 }
 
 CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* character_name, const bool create_if_not_found)
