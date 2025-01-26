@@ -18,6 +18,7 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Fixed crash after equipping a weapon in game when armory was no longer active
 * [Fix] Fixed weapon skill incorrectly showing on normal enchantments
 * [Fix] Fixed completion window not properly loading completions on startup
+* [Fix] Fixed skip entering character name when donating faction
 * [Minor] Skillbar widget can shrink to any size now
 * [New] Skillbar widget has new option to outline the recharge text
 * [New] Options for Distance and Health widgets to not show the header name, introduce font scale (0.1-2.0)
