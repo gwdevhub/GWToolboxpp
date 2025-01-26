@@ -1,10 +1,13 @@
 #pragma once
 
-#include <Color.h>
 #include <ToolboxWidget.h>
 
 class HealthWidget : public ToolboxWidget {
-    HealthWidget() = default;
+    HealthWidget()
+    {
+        is_resizable = false;
+        auto_size = true;
+    }
 
     ~HealthWidget() override
     {
@@ -37,6 +40,8 @@ public:
     bool hide_in_outpost = false;
     bool show_abs_value = true;
     bool show_perc_value = true;
+    bool show_header = true;
+    float font_scale = 1.f;
 
     bool thresholds_changed = false;
 
@@ -73,5 +78,5 @@ private:
     };
 
     std::vector<Threshold*> thresholds{};
-    ToolboxIni* inifile = nullptr;
+    ToolboxIni inifile{};
 };

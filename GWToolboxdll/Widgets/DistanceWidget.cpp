@@ -6,11 +6,11 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
+#include <Color.h>
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
+#include <Utils/FontLoader.h>
 #include <Widgets/DistanceWidget.h>
-
-#include "Utils/FontLoader.h"
 
 void DistanceWidget::DrawSettingsInternal()
 {
@@ -20,6 +20,8 @@ void DistanceWidget::DrawSettingsInternal()
     ImGui::Checkbox("Show percentage value", &show_perc_value);
     ImGui::SameLine();
     ImGui::Checkbox("Show absolute value", &show_abs_value);
+    ImGui::Checkbox("Show header name ('Distance')", &show_header);
+    ImGui::DragFloat("Font scale", &font_scale, 0.05f, 0.1f, 2.0f, "%.2f");
     Colors::DrawSettingHueWheel("Adjacent Range", &color_adjacent, 0);
     Colors::DrawSettingHueWheel("Nearby Range", &color_nearby, 0);
     Colors::DrawSettingHueWheel("Area Range", &color_area, 0);
@@ -32,9 +34,11 @@ void DistanceWidget::DrawSettingsInternal()
 void DistanceWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
+    LOAD_FLOAT(font_scale);
     LOAD_BOOL(hide_in_outpost);
     LOAD_BOOL(show_perc_value);
     LOAD_BOOL(show_abs_value);
+    LOAD_BOOL(show_header);
     LOAD_COLOR(color_adjacent);
     LOAD_COLOR(color_nearby);
     LOAD_COLOR(color_area);
@@ -42,14 +46,17 @@ void DistanceWidget::LoadSettings(ToolboxIni* ini)
     LOAD_COLOR(color_cast);
     LOAD_COLOR(color_spirit);
     LOAD_COLOR(color_compass);
+    auto_size = true;
 }
 
 void DistanceWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
+    SAVE_FLOAT(font_scale);
     SAVE_BOOL(hide_in_outpost);
     SAVE_BOOL(show_perc_value);
     SAVE_BOOL(show_abs_value);
+    SAVE_BOOL(show_header);
     SAVE_COLOR(color_adjacent);
     SAVE_COLOR(color_nearby);
     SAVE_COLOR(color_area);
@@ -73,7 +80,7 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
-        
+        ImGui::SetWindowFontScale(font_scale);
         const auto target = GW::Agents::GetTarget();
         const auto me = target ? GW::Agents::GetObservingAgent() : nullptr;
         if (me && me != target) {
@@ -111,15 +118,17 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
                 color = ImColor(color_compass);
             }
 
-            const auto background = ImColor(Colors::Black());
-            // 'distance'
-            ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header1));
             ImVec2 cur = ImGui::GetCursorPos();
-            ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
-            ImGui::TextColored(background, "Distance");
-            ImGui::SetCursorPos(cur);
-            ImGui::Text("Distance");
-            ImGui::PopFont();
+            constexpr auto background = ImColor(Colors::Black());
+            // 'distance'
+            if (show_header) {
+                ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header1));
+                ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
+                ImGui::TextColored(background, "Distance");
+                ImGui::SetCursorPos(cur);
+                ImGui::Text("Distance");
+                ImGui::PopFont();
+            }
 
             // perc
             if (show_perc_value) {

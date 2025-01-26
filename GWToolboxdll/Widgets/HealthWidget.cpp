@@ -19,6 +19,7 @@
 #include <Utils/FontLoader.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
+#include <Color.h>
 
 constexpr auto HEALTH_THRESHOLD_INIFILENAME = L"HealthThreshold.ini";
 
@@ -29,17 +30,17 @@ void HealthWidget::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(hide_in_outpost);
     LOAD_BOOL(show_abs_value);
     LOAD_BOOL(show_perc_value);
+    LOAD_BOOL(show_header);
+    LOAD_FLOAT(font_scale);
+    auto_size = true;
 
-    if (inifile == nullptr) {
-        inifile = new ToolboxIni();
-    }
-    ASSERT(inifile->LoadIfExists(Resources::GetSettingFile(HEALTH_THRESHOLD_INIFILENAME)) == SI_OK);
+    ASSERT(inifile.LoadIfExists(Resources::GetSettingFile(HEALTH_THRESHOLD_INIFILENAME)) == SI_OK);
 
     ToolboxIni::TNamesDepend entries;
-    inifile->GetAllSections(entries);
+    inifile.GetAllSections(entries);
 
     for (const ToolboxIni::Entry& entry : entries) {
-        auto threshold = new Threshold(inifile, entry.pItem);
+        auto threshold = new Threshold(&inifile, entry.pItem);
         threshold->index = thresholds.size();
         thresholds.push_back(threshold);
     }
@@ -65,18 +66,20 @@ void HealthWidget::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(hide_in_outpost);
     SAVE_BOOL(show_abs_value);
     SAVE_BOOL(show_perc_value);
+    SAVE_BOOL(show_header);
+    SAVE_FLOAT(font_scale);
 
-    if (thresholds_changed && inifile) {
-        inifile->Reset();
+    if (thresholds_changed) {
+        inifile.Reset();
 
         constexpr size_t buffer_size = 32;
         char buf[buffer_size];
         for (size_t i = 0; i < thresholds.size(); i++) {
             snprintf(buf, sizeof(buf), "threshold%03zu", i);
-            thresholds[i]->SaveSettings(inifile, buf);
+            thresholds[i]->SaveSettings(&inifile, buf);
         }
 
-        ASSERT(inifile->SaveFile(Resources::GetSettingFile(HEALTH_THRESHOLD_INIFILENAME).c_str()) == SI_OK);
+        ASSERT(inifile.SaveFile(Resources::GetSettingFile(HEALTH_THRESHOLD_INIFILENAME).c_str()) == SI_OK);
         thresholds_changed = false;
     }
 }
@@ -90,7 +93,10 @@ void HealthWidget::DrawSettingsInternal()
     ImGui::Checkbox("Show absolute value", &show_abs_value);
     ImGui::SameLine();
     ImGui::Checkbox("Show percentage value", &show_perc_value);
+    ImGui::Checkbox("Show header name ('Health')", &show_header);
+    ImGui::SameLine();
     ImGui::Checkbox("Ctrl+Click to print target health", &click_to_print_health);
+    ImGui::DragFloat("Font scale", &font_scale, 0.05f, 0.1f, 2.0f, "%.2f");
 
     const bool thresholdsNode = ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth);
     if (ImGui::IsItemHovered()) {
@@ -160,6 +166,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
     const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiMod_Ctrl);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(ctrl_pressed && click_to_print_health)))) {
+        ImGui::SetWindowFontScale(font_scale);
         constexpr size_t buffer_size = 32;
         static char health_perc[buffer_size];
         static char health_abs[buffer_size];
@@ -184,7 +191,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
             }
 
             ImColor color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
-            const auto background = ImColor(Colors::Black());
+            constexpr auto background = ImColor(Colors::Black());
 
             for (size_t i = 0; i < thresholds.size(); i++) {
                 Threshold* threshold = thresholds[i];
@@ -220,14 +227,16 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                 }
             }
 
-            // 'health'
-            ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header1));
             ImVec2 cur = ImGui::GetCursorPos();
-            ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
-            ImGui::TextColored(background, "Health");
-            ImGui::SetCursorPos(cur);
-            ImGui::Text("Health");
-            ImGui::PopFont();
+            if (show_header) {
+                // 'health'
+                ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header1));
+                ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
+                ImGui::TextColored(background, "Health");
+                ImGui::SetCursorPos(cur);
+                ImGui::Text("Health");
+                ImGui::PopFont();
+            }
 
             // perc
             if (show_perc_value) {
