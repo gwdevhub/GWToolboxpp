@@ -282,7 +282,7 @@ namespace {
         FestivalHats
     };
 
-    std::unordered_map<std::wstring, CharacterCompletion*> character_completion;
+    std::map<std::wstring, CharacterCompletion*> character_completion;
     GW::HookEntry OnPostUIMessage_Entry;
 
     std::map<Campaign, std::vector<OutpostUnlock*>> outposts;
