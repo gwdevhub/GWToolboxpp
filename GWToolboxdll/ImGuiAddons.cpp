@@ -102,6 +102,11 @@ namespace ImGui {
 
     }
 
+    IMGUI_API bool ShowingContextMenu()
+    {
+        return imguiaddons_context_menu_callback != nullptr;
+    }
+
     void DrawContextMenu() {
         if (imguiaddons_context_menu_pending) {
             if (!ImGui::IsPopupOpen(imguiaddons_context_menu_id)) {
@@ -115,6 +120,7 @@ namespace ImGui {
         if (!ImGui::BeginPopup(imguiaddons_context_menu_id))
             return;
         if (!(imguiaddons_context_menu_callback && imguiaddons_context_menu_callback(imguiaddons_context_menu_wparam))) {
+            imguiaddons_context_menu_callback = nullptr;
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();

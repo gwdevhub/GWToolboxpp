@@ -694,6 +694,8 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
             if (!drawn || !GW::UI::GetIsWorldMapShowing()) {
                 return false;
             }
+            if (ImGui::ShowingContextMenu())
+                return true;
             auto check_rect = [lParam](const ImRect& rect) {
                 ImVec2 p = {(float)GET_X_LPARAM(lParam), (float)GET_Y_LPARAM(lParam)};
                 return rect.Contains(p);

@@ -12,6 +12,8 @@ namespace ImGui {
 
     IMGUI_API void SetContextMenu(ImGuiContextMenuCallback callback, void* wparam = nullptr);
 
+    IMGUI_API bool ShowingContextMenu();
+
     IMGUI_API void DrawContextMenu();
 
     IMGUI_API void DrawConfirmDialog();
