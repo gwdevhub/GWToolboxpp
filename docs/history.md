@@ -17,8 +17,10 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Fixed salvage all uncommon showing a popup
 * [Fix] Fixed crash after equipping a weapon in game when armory was no longer active
 * [Fix] Fixed weapon skill incorrectly showing on normal enchantments
+* [Fix] Fixed completion window not properly loading completions on startup
 * [Minor] Skillbar widget can shrink to any size now
 * [New] Skillbar widget has new option to outline the recharge text
+* [New] Options for Distance and Health widgets to not show the header name, introduce font scale (0.1-2.0)
 * [Removed] Removed /zoom and /cam fov as they had no effect due to gw updates
 
 ## Version 7.0
