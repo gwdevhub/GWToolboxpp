@@ -584,7 +584,7 @@ namespace {
         if (loading != character_completion.end())
             return false;
         const auto chars = GW::AccountMgr::GetAvailableChars();
-        if (chars) {
+        if (chars && chars->size()) {
             for (const auto& character : *chars) {
                 const auto cc = CompletionWindow::GetCharacterCompletion(character.player_name, true);
                 cc->account = email;
