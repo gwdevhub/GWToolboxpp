@@ -10,6 +10,7 @@ namespace GW {
     struct AreaInfo;
     struct PathingMap;
     struct MissionMapIcon;
+    enum class Continent : uint32_t;
 
     typedef Array<PathingMap> PathingMapArray;
     typedef Array<MissionMapIcon> MissionMapIconArray;
@@ -64,7 +65,7 @@ namespace GW {
 
     struct WorldMapContext {
         uint32_t frame_id;
-        uint32_t h0004;
+        GW::Continent continent;
         uint32_t h0008;
         float h000c;
         float h0010;

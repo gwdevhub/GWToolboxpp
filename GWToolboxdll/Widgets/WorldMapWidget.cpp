@@ -25,6 +25,7 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/Resources.h>
+#include <Windows/TravelWindow.h>
 
 #include <Utils/GuiUtils.h>
 #include <Utils/ToolboxUtils.h>
@@ -35,6 +36,7 @@
 #include <Constants/EncStrings.h>
 #include <Modules/QuestModule.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <corecrt_math_defines.h>
 
 
 namespace {
@@ -58,6 +60,10 @@ namespace {
 
     bool world_map_clicking = false;
     GW::Vec2f world_map_click_pos;
+
+    GW::Constants::QuestID hovered_quest_id = GW::Constants::QuestID::None;
+    GuiUtils::EncString hovered_quest_name;
+    GuiUtils::EncString hovered_quest_description;
 
     bool show_lines_on_world_map = true;
 
@@ -107,6 +113,49 @@ namespace {
             }
             remove_marker_rect = c->LastItemData.Rect;
             remove_marker_rect.Translate(viewport_offset);
+        }
+        return true;
+    }
+
+    bool HoveredQuestContextMenu(void* wparam)
+    {
+        if (!GW::Map::GetWorldMapContext())
+            return false;
+        const auto quest_id = (GW::Constants::QuestID)((uint32_t)wparam);
+        const auto quest = GW::QuestMgr::GetQuest(quest_id);
+        if (!quest)
+            return false;
+        if(!hovered_quest_name.IsDecoding())
+            hovered_quest_name.reset(quest->name);
+        ImGui::TextUnformatted(hovered_quest_name.string().c_str());
+
+        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
+        const auto size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
+        ImGui::Separator();
+        bool set_active = ImGui::Button("Set active quest", size);
+        bool travel = ImGui::Button("Travel to nearest outpost", size);
+        bool wiki = ImGui::Button("Guild Wars Wiki", size);
+
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+        if (set_active) {
+            GW::QuestMgr::SetActiveQuestId(quest_id);
+            return false;
+        }
+        if (travel) {
+            if (TravelWindow::Instance().TravelNearest(quest->map_to))
+                return false;
+        }
+        if (wiki) {
+            GW::GameThread::Enqueue([quest_id]() {
+                const auto quest = GW::QuestMgr::GetQuest(quest_id);
+                if (!quest)
+                    return;
+                const auto wiki_url = std::format("{}Game_link:Quest_{}", GuiUtils::WikiUrl(L""), (uint32_t)quest->quest_id);
+                SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)wiki_url.c_str());
+                });
+            return false;
         }
         return true;
     }
@@ -222,6 +271,150 @@ namespace {
         });
     }
 
+    void HighlightFrame(GW::UI::Frame* frame) {
+        if (!frame) return;
+        const auto root = GW::UI::GetRootFrame();
+        const auto top_left = frame->position.GetTopLeftOnScreen(root);
+        const auto bottom_right = frame->position.GetBottomRightOnScreen(root);
+        const auto draw_list = ImGui::GetBackgroundDrawList();
+        draw_list->AddRect({ top_left.x, top_left.y }, { bottom_right.x, bottom_right.y }, IM_COL32_WHITE);
+    }
+
+    bool DrawQuestMarkerOnWorldMap(const GW::Quest* quest, ImDrawList* draw_list, const ImVec2& viewport_offset, const GW::Vec2f& ui_scale) {
+        const auto world_map_context = GW::Map::GetWorldMapContext();
+        if (!(world_map_context && quest))
+            return false;
+        if (world_map_context->zoom != 1.f && world_map_context->zoom != .0f)
+            return false; // Map is animating
+        auto ICON_SIZE = ImVec2(24.0f * ui_scale.x, 24.0f * ui_scale.y);
+
+        constexpr float FULL_ROTATION_TIME = 16.0f;
+        const auto icon_w_half = ICON_SIZE.x * 0.5f;
+        const auto icon_h_half = ICON_SIZE.y * 0.5f;
+
+        ImVec2 viewport_quest_pos;
+        GW::Vec2f custom_quest_marker_world_pos;
+
+        bool is_hovered = false;
+
+        const GW::Vec2f world_map_size_in_coords = {
+            (float)world_map_context->h004c[5],
+            (float)world_map_context->h004c[6]
+        };
+        const GW::Vec2f world_map_zoomed_out_size = {
+            world_map_context->h0030,
+            world_map_context->h0034
+        };
+
+        auto world_map_scale = 1.f;
+        if (world_map_context->zoom != 1.0f) {
+            // If we're zoomed out, the world map coordinates aren't 1:1 scale; we need to find the scale factor
+            if (world_map_context->top_left.y == 0.f) {
+                // The zoomed out map fills vertically
+                world_map_scale = world_map_zoomed_out_size.y / world_map_size_in_coords.y;
+            }
+            else {
+                // The zoomed out map fills horizontally
+                world_map_scale = world_map_zoomed_out_size.x / world_map_size_in_coords.x;
+            }
+        }
+     
+        auto draw_quest_marker = [&]() {
+            viewport_quest_pos = {
+            ui_scale.x * world_map_scale * (custom_quest_marker_world_pos.x - world_map_context->top_left.x) + viewport_offset.x,
+            ui_scale.y * world_map_scale * (custom_quest_marker_world_pos.y - world_map_context->top_left.y) + viewport_offset.y
+            };
+
+
+            const ImRect quest_marker_image_rect = {
+                {viewport_quest_pos.x - icon_w_half, viewport_quest_pos.y - icon_h_half},
+                {viewport_quest_pos.x + icon_w_half, viewport_quest_pos.y + icon_h_half}
+            };
+
+            // Calculate rotation angle based on time
+            const float elapsed_seconds = static_cast<float>(TIMER_INIT()) / CLOCKS_PER_SEC;
+
+            // Calculate rotation angle based on time
+            const float rotation_angle = 2.0f * (float)M_PI * fmod(elapsed_seconds, FULL_ROTATION_TIME) / FULL_ROTATION_TIME;
+
+
+            // Compute rotation center
+            const ImVec2& center = viewport_quest_pos;
+
+            // Compute the rotated points of the rectangle
+            const ImVec2 points[4] = {
+                quest_marker_image_rect.Min, // Top-left
+                {quest_marker_image_rect.Max.x, quest_marker_image_rect.Min.y}, // Top-right
+                quest_marker_image_rect.Max, // Bottom-right
+                {quest_marker_image_rect.Min.x, quest_marker_image_rect.Max.y}  // Bottom-left
+            };
+
+            ImVec2 rotated_points[4];
+            for (int i = 0; i < 4; ++i) {
+                const ImVec2 offset = { points[i].x - center.x, points[i].y - center.y };
+                rotated_points[i] = {
+                    center.x + offset.x * cos(rotation_angle) - offset.y * sin(rotation_angle),
+                    center.y + offset.x * sin(rotation_angle) + offset.y * cos(rotation_angle)
+                };
+            }
+            const auto texture = *GwDatTextureModule::LoadTextureFromFileId(0x1b4d5);
+
+            // Set UV coordinates for the left-hand image in the sprite map
+            const ImVec2 uv_min = { 0.0f, 0.0f }; // Top-left corner of the left image
+            const ImVec2 uv_max = { .5f, 1.f }; // Bottom-right corner of the left image
+
+            
+
+            // Calculate the UV coordinates for each corner
+            const ImVec2 uv_points[4] = {
+                {uv_min.x, uv_min.y},  // Top-left
+                {uv_max.x, uv_min.y},  // Top-right
+                {uv_max.x, uv_max.y},  // Bottom-right
+                {uv_min.x, uv_max.y}   // Bottom-left
+            };
+
+            // Draw the rotated texture with the left-hand image
+            draw_list->AddImageQuad(
+                texture,
+                rotated_points[0], // Top-left
+                rotated_points[1], // Top-right
+                rotated_points[2], // Bottom-right
+                rotated_points[3], // Bottom-left
+                uv_points[0], uv_points[1], uv_points[2], uv_points[3]
+            );
+
+            return quest_marker_image_rect.Contains(ImGui::GetMousePos());
+            };
+
+        // The quest doesn't end in this map; the marker icon needs to be an arrow, and the actual marker needs to be positioned onto the label of the destination map
+        const auto map_info = GW::Map::GetMapInfo(quest->map_to);
+        if (!(map_info && map_info->continent == world_map_context->continent))
+            return false;
+        if (WorldMapWidget::GamePosToWorldMap(quest->marker, custom_quest_marker_world_pos)) {
+            is_hovered |= draw_quest_marker();
+        }
+        if (quest->map_to != GW::Map::GetMapID()) {
+            if (map_info->x && map_info->y) {
+                // If the map has an icon x and y coord, use that as the custom quest marker position
+                // NB: GW places this marker at the top of the outpost icon, not the center - probably to make it easier to see? sounds daft, don't copy it.
+                custom_quest_marker_world_pos = {
+                    (float)map_info->x,
+                    (float)map_info->y
+                };
+            }
+            else {
+                // Otherwise use the center position of the map name label
+                custom_quest_marker_world_pos = {
+                    (float)(map_info->icon_start_x + ((map_info->icon_end_x - map_info->icon_start_x) / 2)),
+                    (float)(map_info->icon_start_y + ((map_info->icon_end_y - map_info->icon_start_y) / 2))
+                };
+            }
+            is_hovered |= draw_quest_marker();
+        }
+        return is_hovered;
+        
+    }
+
 }
 GW::Constants::MapID WorldMapWidget::GetMapIdForLocation(const GW::Vec2f& world_map_pos) {
     auto map_id = GW::Map::GetMapID();
@@ -245,8 +438,6 @@ void WorldMapWidget::Initialize()
 {
     ToolboxWidget::Initialize();
 
-
-
     uintptr_t address = GW::Scanner::Find("\x8b\x45\xfc\xf7\x40\x10\x00\x00\x01\x00", "xxxxxxxxxx", 0xa);
     if (address) {
         view_all_outposts_patch.SetPatch(address, "\xeb", 1);
@@ -255,7 +446,6 @@ void WorldMapWidget::Initialize()
     if (address) {
         view_all_carto_areas_patch.SetRedirect(address, GetCartographyFlagsForArea);
     }
-
 
     ASSERT(view_all_outposts_patch.IsValid());
     ASSERT(view_all_carto_areas_patch.IsValid());
@@ -301,6 +491,8 @@ bool WorldMapWidget::WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GameP
 }
 bool WorldMapWidget::GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f& world_map_pos)
 {
+    if (game_map_pos.x == INFINITY || game_map_pos.y == INFINITY)
+        return false;
     ImRect map_bounds;
     if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds))
         return false;
@@ -399,37 +591,33 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     ImGui::PopStyleColor();
 
     const auto world_map_context = GW::Map::GetWorldMapContext();
-    if (!(world_map_context && world_map_context->zoom == 1.0f))
+    if (!world_map_context)
         return;
     const auto viewport = ImGui::GetMainViewport();
     const auto& viewport_offset = viewport->Pos;
-
     const auto draw_list = ImGui::GetBackgroundDrawList(viewport);
-
     const auto ui_scale = GW::UI::GetFrameById(world_map_context->frame_id)->position.GetViewportScale(GW::UI::GetRootFrame());
 
-    // Draw custom quest marker on world map
-    const auto custom_quest = QuestModule::GetCustomQuestMarker();
-    GW::Vec2f custom_quest_marker_world_pos;
-    if (custom_quest && GamePosToWorldMap(custom_quest->marker, custom_quest_marker_world_pos)) {
-        static constexpr auto uv0 = ImVec2(0.0f, 0.0f);
-        static constexpr auto ICON_SIZE = ImVec2(24.0f, 24.0f);
-
-        const ImVec2 viewport_quest_pos = {
-            ui_scale.x * (custom_quest_marker_world_pos.x - world_map_context->top_left.x) + viewport_offset.x - (ICON_SIZE.x / 2.f),
-            ui_scale.y * (custom_quest_marker_world_pos.y - world_map_context->top_left.y) + viewport_offset.y - (ICON_SIZE.y / 2.f)
-        };
-
-        const ImRect quest_marker_image_rect = {
-            viewport_quest_pos, {viewport_quest_pos.x + ICON_SIZE.x, viewport_quest_pos.y + ICON_SIZE.y}
-        };
-
-        //draw_list->AddImage(*GwDatTextureModule::LoadTextureFromFileId(0x1b4d5), quest_marker_image_rect.GetTL(), quest_marker_image_rect.GetBR());
-
-        if (quest_marker_image_rect.Contains(ImGui::GetMousePos())) {
-            ImGui::SetTooltip("Custom marker placed @ %.2f, %.2f", custom_quest_marker_world_pos.x, custom_quest_marker_world_pos.y);
+    hovered_quest_id = GW::Constants::QuestID::None;
+    // Draw all quest markers on world map if applicable
+    const auto quest_log = GW::QuestMgr::GetQuestLog();
+    if (quest_log) {
+        for (auto& quest : *quest_log) {
+            if (DrawQuestMarkerOnWorldMap(&quest, draw_list, viewport_offset, ui_scale)) {
+                hovered_quest_id = quest.quest_id;
+            }
         }
     }
+    if (hovered_quest_id != GW::Constants::QuestID::None) {
+        if (const auto hovered_quest = GW::QuestMgr::GetQuest(hovered_quest_id)) {
+            static GuiUtils::EncString quest_name;
+            if (!quest_name.IsDecoding())
+                quest_name.reset(hovered_quest->name);
+            ImGui::SetTooltip("%s", quest_name.string().c_str());
+        }
+
+    }
+
     /*for (const auto& portal : map_portals) {
         static constexpr auto uv0 = ImVec2(0.0f, 0.0f);
         static constexpr auto ICON_SIZE = ImVec2(24.0f, 24.0f);
@@ -481,6 +669,12 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
     switch (Message) {
         case WM_GW_RBUTTONCLICK: {
             const auto world_map_context = GW::Map::GetWorldMapContext();
+            if (!world_map_context)
+                break;
+            if (const auto hovered_quest = GW::QuestMgr::GetQuest(hovered_quest_id)) {
+                ImGui::SetContextMenu(HoveredQuestContextMenu, (void*)hovered_quest_id);
+                break;
+            }
             if (!(world_map_context && world_map_context->zoom == 1.0f))
                 break;
 
