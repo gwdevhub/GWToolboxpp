@@ -321,24 +321,23 @@ void DialogModule::SendDialogs(const std::initializer_list<uint32_t> dialog_ids)
 
 void DialogModule::Update(float)
 {
-    for (auto it = queued_dialogs_to_send.begin(); it != queued_dialogs_to_send.end(); ++it) {
-        if (TIMER_DIFF(it->second) > 3000) {
+    for (const auto& [dialog_id, time] : queued_dialogs_to_send) {
+        if (TIMER_DIFF(time) > 3000) {
             // NB: Show timeout error message?
-            queued_dialogs_to_send.erase(it);
+            queued_dialogs_to_send.erase(dialog_id);
             break;
         }
         if (!GetDialogAgent()) {
             continue;
         }
-        const auto dialog_id = it->first;
         if (dialog_id == 0) {
             // If dialog queued is id 0, this means the player wants to take (or accept reward for) the first available quest.
-            queued_dialogs_to_send.erase(it);
+            queued_dialogs_to_send.erase(dialog_id);
             AcceptFirstAvailableQuest() || AcceptFirstAvailableBounty();
             break;
         }
         if (IsDialogButtonAvailable(dialog_id) && GW::Agents::SendDialog(dialog_id)) {
-            queued_dialogs_to_send.erase(it);
+            queued_dialogs_to_send.erase(dialog_id);
             break;
         }
     }
