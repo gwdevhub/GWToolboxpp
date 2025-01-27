@@ -225,16 +225,9 @@ void DialogModule::OnDialogSent(const uint32_t dialog_id)
             default:
                 return;
         }
-        for (auto it = queued_dialogs_to_send.begin(); it != queued_dialogs_to_send.end();) {
-            const auto other_dialog_id = it->first;
-            // make sure we don't delete dialogs for the same quest queued up earlier or later, e.g. separate reward dialog!
-            if (GetQuestID(other_dialog_id) == quest_id && queued_at == it->second) {
-                it = queued_dialogs_to_send.erase(it);
-            }
-            else {
-                ++it;
-            }
-        }
+        std::erase_if(queued_dialogs_to_send, [quest_id, queued_at](const auto& pair) {
+            return GetQuestID(pair.first) == quest_id && queued_at == pair.second;
+        });
     }
     if (IsUWTele(dialog_id)) {
         queued_dialogs_to_send.erase(GW::Constants::DialogID::UwTeleEnquire);
