@@ -504,10 +504,10 @@ namespace FontLoader {
         }
     }
 
-    ImFont* GetFontByPx(float size, bool include_global_font_scale)
+    ImFont* GetFontByPx(float size_in_px, const bool include_global_font_scale)
     {
         if (include_global_font_scale)
-            size *= ImGui::GetIO().FontGlobalScale;
+            size_in_px *= ImGui::GetIO().FontGlobalScale;
 
         const auto fonts = GetFonts(); // Smallest to largest!!
         ImFont* chosen = nullptr;
@@ -515,7 +515,7 @@ namespace FontLoader {
             if (!(font && font->IsLoaded()))
                 continue;
             chosen = font;
-            if (font->FontSize >= size)
+            if (font->FontSize >= size_in_px)
                 break;
         }
         if (!chosen)

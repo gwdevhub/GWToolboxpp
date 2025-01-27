@@ -87,7 +87,7 @@ namespace {
         dialog_button_messages.clear();
 
         dialog_body.reset(nullptr);
-        dialog_info = { 0 };
+        dialog_info = {};
     }
 
     void OnNPCDialogUICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
@@ -206,7 +206,7 @@ void DialogModule::ReloadDialog()
     for (auto& btn : buttons) {
         GW::UI::SendUIMessage(GW::UI::UIMessage::kDialogButton, &btn);
     }
-    for (auto msg : dialog_btn_messages) {
+    for (const auto msg : dialog_btn_messages) {
         delete msg;
     }
 }

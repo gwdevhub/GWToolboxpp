@@ -25,17 +25,4 @@ public:
     void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    bool hide_in_outpost = false;
-    bool show_abs_value = true;
-    bool show_perc_value = true;
-    bool show_header = true;
-    float font_scale = 1.f;
-
-    Color color_adjacent = 0xFFFFFFFF;
-    Color color_nearby = 0xFFFFFFFF;
-    Color color_area = 0xFFFFFFFF;
-    Color color_earshot = 0xFFFFFFFF;
-    Color color_cast = 0xFFFFFFFF;
-    Color color_spirit = 0xFFFFFFFF;
-    Color color_compass = 0xFFFFFFFF;
 };
