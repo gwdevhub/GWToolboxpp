@@ -781,7 +781,7 @@ namespace {
                 ImGui::TextUnformatted("Location");
                 ImGui::Separator();
                 for (const auto prop : *props) {
-                    float distance = GW::GetDistance(target->pos, prop->position);
+                    float distance = GW::GetDistance(target->pos, GW::GamePos({ prop->position.x,prop->position.y,0 }));
                     if (distance > range)
                         continue;
                     ImGui::PushID(prop);
@@ -791,7 +791,7 @@ namespace {
                     ImGui::SameLine(256.f);
                     const auto label = std::format("{}, {}", prop->position.x, prop->position.y);
                     if (ImGui::Button(label.c_str())) {
-                        GW::Map::PingCompass(prop->position);
+                        GW::Map::PingCompass(GW::GamePos({ prop->position.x, prop->position.y ,0}));
                     }
                     ImGui::PopID();
                 }
