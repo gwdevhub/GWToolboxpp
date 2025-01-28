@@ -33,18 +33,6 @@ public:
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
-
-    bool click_to_print_health = false;
-
-    std::wstring agent_name_ping;
-    bool hide_in_outpost = false;
-    bool show_abs_value = true;
-    bool show_perc_value = true;
-    bool show_header = true;
-    float font_scale = 1.f;
-
-    bool thresholds_changed = false;
-
 private:
     class Threshold {
         static unsigned int cur_ui_id;
@@ -76,7 +64,5 @@ private:
         int value = 0;
         Color color = 0xFFFFFFFF;
     };
-
     std::vector<Threshold*> thresholds{};
-    ToolboxIni inifile{};
 };

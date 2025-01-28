@@ -21,6 +21,19 @@
 #include <Utils/ToolboxUtils.h>
 #include <Color.h>
 
+namespace {
+    bool click_to_print_health = false;
+
+    std::wstring agent_name_ping;
+    bool hide_in_outpost = false;
+    float font_size_header = static_cast<float>(FontLoader::FontSize::header1);
+    float font_size_perc_value = static_cast<float>(FontLoader::FontSize::widget_small);
+    float font_size_abs_value = static_cast<float>(FontLoader::FontSize::widget_label);
+
+    bool thresholds_changed = false;
+    ToolboxIni inifile{};
+}
+
 constexpr auto HEALTH_THRESHOLD_INIFILENAME = L"HealthThreshold.ini";
 
 void HealthWidget::LoadSettings(ToolboxIni* ini)
@@ -28,10 +41,9 @@ void HealthWidget::LoadSettings(ToolboxIni* ini)
     ToolboxWidget::LoadSettings(ini);
     LOAD_BOOL(click_to_print_health);
     LOAD_BOOL(hide_in_outpost);
-    LOAD_BOOL(show_abs_value);
-    LOAD_BOOL(show_perc_value);
-    LOAD_BOOL(show_header);
-    LOAD_FLOAT(font_scale);
+    LOAD_FLOAT(font_size_header);
+    LOAD_FLOAT(font_size_perc_value);
+    LOAD_FLOAT(font_size_abs_value);
     auto_size = true;
 
     ASSERT(inifile.LoadIfExists(Resources::GetSettingFile(HEALTH_THRESHOLD_INIFILENAME)) == SI_OK);
@@ -64,10 +76,9 @@ void HealthWidget::SaveSettings(ToolboxIni* ini)
     ToolboxWidget::SaveSettings(ini);
     SAVE_BOOL(click_to_print_health);
     SAVE_BOOL(hide_in_outpost);
-    SAVE_BOOL(show_abs_value);
-    SAVE_BOOL(show_perc_value);
-    SAVE_BOOL(show_header);
-    SAVE_FLOAT(font_scale);
+    SAVE_FLOAT(font_size_header);
+    SAVE_FLOAT(font_size_perc_value);
+    SAVE_FLOAT(font_size_abs_value);
 
     if (thresholds_changed) {
         inifile.Reset();
@@ -90,13 +101,14 @@ void HealthWidget::DrawSettingsInternal()
     ImGui::SameLine();
     ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     ImGui::SameLine();
-    ImGui::Checkbox("Show absolute value", &show_abs_value);
-    ImGui::SameLine();
-    ImGui::Checkbox("Show percentage value", &show_perc_value);
-    ImGui::Checkbox("Show header name ('Health')", &show_header);
-    ImGui::SameLine();
     ImGui::Checkbox("Ctrl+Click to print target health", &click_to_print_health);
-    ImGui::DragFloat("Font scale", &font_scale, 0.05f, 0.1f, 2.0f, "%.2f");
+    ImGui::Text("Text sizes:");
+    ImGui::ShowHelp("A text size of 0 means that it's not drawn.");
+    ImGui::Indent();
+    ImGui::DragFloat("'Distance' header", &font_size_header, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::DragFloat("Percent value", &font_size_perc_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::DragFloat("Absolute value", &font_size_abs_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::Unindent();
 
     const bool thresholdsNode = ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth);
     if (ImGui::IsItemHovered()) {
@@ -166,30 +178,8 @@ void HealthWidget::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
     const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiMod_Ctrl);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(ctrl_pressed && click_to_print_health)))) {
-        ImGui::SetWindowFontScale(font_scale);
-        constexpr size_t buffer_size = 32;
-        static char health_perc[buffer_size];
-        static char health_abs[buffer_size];
         const GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
         if (target) {
-            if (show_perc_value) {
-                if (target->hp >= 0) {
-                    snprintf(health_perc, buffer_size, "%.0f %%", target->hp * 100.0f);
-                }
-                else {
-                    snprintf(health_perc, buffer_size, "-");
-                }
-            }
-            if (show_abs_value) {
-                if (target->max_hp > 0) {
-                    const float abs = target->hp * target->max_hp;
-                    snprintf(health_abs, buffer_size, "%.0f / %d", abs, target->max_hp);
-                }
-                else {
-                    snprintf(health_abs, buffer_size, "-");
-                }
-            }
-
             ImColor color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
             constexpr auto background = ImColor(Colors::Black());
 
@@ -228,9 +218,9 @@ void HealthWidget::Draw(IDirect3DDevice9*)
             }
 
             ImVec2 cur = ImGui::GetCursorPos();
-            if (show_header) {
+            if (font_size_header > 0.f) {
                 // 'health'
-                ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header1));
+                ImGui::PushFont(FontLoader::GetFontByPx(font_size_header));
                 ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
                 ImGui::TextColored(background, "Health");
                 ImGui::SetCursorPos(cur);
@@ -239,24 +229,26 @@ void HealthWidget::Draw(IDirect3DDevice9*)
             }
 
             // perc
-            if (show_perc_value) {
-                ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_small));
+            if (font_size_perc_value > 0.f) {
+                ImGui::PushFont(FontLoader::GetFontByPx(font_size_perc_value));
                 cur = ImGui::GetCursorPos();
+                const auto health_perc = target->hp >= 0 ? std::format("{:.0f} %%", target->hp * 100.0f) : "-";
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-                ImGui::TextColored(background, "%s", health_perc);
+                ImGui::TextColored(background, health_perc.c_str());
                 ImGui::SetCursorPos(cur);
-                ImGui::TextColored(color, "%s", health_perc);
+                ImGui::TextColored(color, health_perc.c_str());
                 ImGui::PopFont();
             }
 
             // abs
-            if (show_abs_value) {
-                ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_label));
+            if (font_size_abs_value > 0.f) {
+                ImGui::PushFont(FontLoader::GetFontByPx(font_size_abs_value));
                 cur = ImGui::GetCursorPos();
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-                ImGui::TextColored(background, health_abs);
+                const auto health_abs = target->max_hp > 0 ? std::format("{:.0f} / {}", target->hp * target->max_hp, target->max_hp) : "-";
+                ImGui::TextColored(background, health_abs.c_str());
                 ImGui::SetCursorPos(cur);
-                ImGui::Text(health_abs);
+                ImGui::Text(health_abs.c_str());
                 ImGui::PopFont();
             }
 
@@ -265,11 +257,10 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                     if (target) {
                         GW::Agents::AsyncGetAgentName(target, agent_name_ping);
                         if (!agent_name_ping.empty()) {
-                            char buffer[512];
                             const std::string agent_name_str = TextUtils::WStringToString(agent_name_ping);
                             const auto current_hp = static_cast<int>(target->hp * target->max_hp);
-                            snprintf(buffer, sizeof(buffer), "%s's Health is %d of %d. (%.0f %%)", agent_name_str.c_str(), current_hp, target->max_hp, target->hp * 100.f);
-                            GW::Chat::SendChat('#', buffer);
+                            const auto message = std::format("{}'s Health is {} of {}. ({:.0f} %%)", agent_name_str.c_str(), current_hp, target->max_hp, target->hp * 100.f);
+                            GW::Chat::SendChat('#', message.c_str());
                         }
                     }
                 }

@@ -70,10 +70,6 @@ namespace {
     Color color_effect_border = Colors::ARGB(255, 0, 0, 0);
     Color color_effect_progress = Colors::Blue();
 
-    constexpr float text_size_min = 0.f;
-    constexpr float text_size_max = 48.f;
-
-
     GW::UI::Frame* skillbar_frame = nullptr;
     bool skillbar_position_dirty = true;
     GW::UI::UIInteractionCallback OnSkillbar_UICallback_Ret = nullptr;
@@ -477,8 +473,8 @@ void SkillbarWidget::LoadSettings(ToolboxIni* ini)
     LOAD_COLOR(color_effect_progress);
     LOAD_COLOR(color_effect_border);
 
-    font_recharge = std::clamp(font_recharge, text_size_min, text_size_max);
-    font_effects = std::clamp(font_effects, text_size_min, text_size_max);
+    font_recharge = std::clamp(font_recharge, FontLoader::text_size_min, FontLoader::text_size_max);
+    font_effects = std::clamp(font_effects, FontLoader::text_size_min, FontLoader::text_size_max);
 
 }
 
@@ -566,7 +562,7 @@ void SkillbarWidget::DrawSettingsInternal()
     ImGui::Spacing();
     ImGui::Indent();
     ImGui::PushID("skill_overlay_settings");
-    ImGui::DragFloat("Text size", &font_recharge, 1.f, text_size_min, text_size_max, "%.f");
+    ImGui::DragFloat("Text size", &font_recharge, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
     Colors::DrawSettingHueWheel("Text color", &color_text_recharge);
     Colors::DrawSettingHueWheel("Text outline color", &color_text_outline);
     Colors::DrawSettingHueWheel("Border color", &color_border);
@@ -589,7 +585,7 @@ void SkillbarWidget::DrawSettingsInternal()
     ImGui::PushID("effect_monitor_settings");
     ImGui::Checkbox("Display effect monitor", &display_effect_monitor);
     if (display_effect_monitor) {
-        ImGui::DragFloat(is_vertical ? "Effect width" : "Effect height", &effect_monitor_size, 1.f, text_size_min, text_size_max,"%.f");
+        ImGui::DragFloat(is_vertical ? "Effect width" : "Effect height", &effect_monitor_size, 1.f, FontLoader::text_size_min, FontLoader::text_size_max,"%.f");
         ImGui::ShowHelp(is_vertical ? "Width in pixels of a single effect on the effect monitor.\n0 matches font size." : "Height in pixels of a single effect on the effect monitor.\n0 matches font size.");
         ImGui::DragInt("Offset", &effect_monitor_offset, 1, -200, 200);
         ImGui::ShowHelp(is_vertical ? "Distance to the left or right of an effect relative to the related skill on your skillbar" : "Distance above or below of an effect relative to the related skill on your skillbar");
@@ -616,7 +612,7 @@ void SkillbarWidget::DrawSettingsInternal()
         if (effect_text_color || effect_progress_bar_color) {
             DrawDurationThresholds();
         }
-        ImGui::DragFloat("Text size", &font_effects, 1.f, text_size_min, text_size_max, "%.f");
+        ImGui::DragFloat("Text size", &font_effects, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
         if (!effect_text_color) {
             Colors::DrawSettingHueWheel("Text color", &color_text_effects);
         }
