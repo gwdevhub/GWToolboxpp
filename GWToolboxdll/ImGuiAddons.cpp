@@ -102,7 +102,7 @@ namespace ImGui {
 
     }
 
-    IMGUI_API bool ShowingContextMenu()
+    bool ShowingContextMenu()
     {
         return imguiaddons_context_menu_callback != nullptr;
     }
@@ -117,8 +117,10 @@ namespace ImGui {
             }
             imguiaddons_context_menu_pending = nullptr;
         }
-        if (!ImGui::BeginPopup(imguiaddons_context_menu_id))
+        if (!ImGui::BeginPopup(imguiaddons_context_menu_id)) {
+            imguiaddons_context_menu_callback = nullptr;
             return;
+        }
         if (!(imguiaddons_context_menu_callback && imguiaddons_context_menu_callback(imguiaddons_context_menu_wparam))) {
             imguiaddons_context_menu_callback = nullptr;
             ImGui::CloseCurrentPopup();

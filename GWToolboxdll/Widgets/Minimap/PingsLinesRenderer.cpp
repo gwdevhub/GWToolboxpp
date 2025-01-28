@@ -17,6 +17,10 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <GWCA/Managers/PlayerMgr.h>
 
+namespace {
+    bool is_minimap_compass_draw = false;
+}
+
 void PingsLinesRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {
     color_drawings = Colors::Load(ini, section, "color_drawings", Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF));
@@ -106,7 +110,7 @@ void PingsLinesRenderer::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_
 
     bool new_session;
 
-    if (packet->player_number == GW::PlayerMgr::GetPlayerNumber()) {
+    if (is_minimap_compass_draw) {
         return;
     }
     if (drawings[packet->player_number].player == packet->player_number) {
@@ -560,7 +564,9 @@ void PingsLinesRenderer::SendQueue()
             .number_of_points = queue.size(),
             .points = pts
         };
+        is_minimap_compass_draw = true;
         GW::UI::SendUIMessage(GW::UI::UIMessage::kCompassDraw, &packet);
+        is_minimap_compass_draw = false;
     }
 
     queue.clear();
