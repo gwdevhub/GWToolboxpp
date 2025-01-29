@@ -31,7 +31,7 @@
 
 #include <ImGuiCppWrapper.h>
 #include <thread>
-
+#include <span>
 namespace {
     const std::string missingContentToken = "/";
     const std::string endOfListToken = ">";
@@ -469,20 +469,16 @@ void CastAction::initialAction()
     hasBegunCasting = false;
     hasSkillReady = false;
 
-    const auto bar = GW::SkillbarMgr::GetPlayerSkillbar();
-    int slot = -1;
-    if (bar && bar->IsValid()) {
-        for (int i = 0; i < 8; ++i) {
-            if (bar->skills[i].skill_id == id) {
-                slot = i;
-                hasSkillReady = bar->skills[i].GetRecharge() == 0;
-            }
-        }
+    const auto skills = std::span<GW::SkillbarSkill>{GW::SkillbarMgr::GetPlayerSkillbar()->skills};
+    const auto skillIt = std::ranges::find_if(skills, [&](const auto& s) { return s.skill_id == id && s.GetRecharge() == 0; });
+    if (skillIt == skills.end()) {
+        hasSkillReady = false;
+        return;
     }
-    if (slot < 0 || !hasSkillReady) return;
+    hasSkillReady = true;
 
     const auto target = GW::Agents::GetTargetAsAgentLiving();
-    GW::GameThread::Enqueue([slot, targetId = target ? target->agent_id : 0]() -> void {
+    GW::GameThread::Enqueue([slot = skillIt - skills.begin(), targetId = target ? target->agent_id : 0]() -> void {
         GW::SkillbarMgr::UseSkill(slot, targetId);
     });
 }
