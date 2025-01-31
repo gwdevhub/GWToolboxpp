@@ -21,6 +21,7 @@
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Title.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Pathing.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -60,7 +61,6 @@
 #include <GWCA/Context/GameplayContext.h>
 
 namespace {
-
 
     DWORD mapfile = 0;
     std::map<std::wstring, HallOfMonumentsAchievements*> target_achievements;
@@ -659,7 +659,13 @@ namespace {
         HookOnValidateAsyncDecodeStr(record_enc_strings);
         HookOnGWCASendUIMessage(record_ui_messages);
     }
-
+    const uint32_t GetMapPropModelFileId(GW::MapProp* prop)
+    {
+        if (!(prop && prop->h0034[4]))
+            return 0;
+        uint32_t* sub_deets = (uint32_t*)prop->h0034[4];
+        return GwDatTextureModule::FileHashToFileId((wchar_t*)sub_deets[1]);
+    };
     void DrawDebugInfo() {
         if (ImGui::CollapsingHeader("Account Features")) {
             const auto& features = GW::GetGameContext()->account->account_unlocked_counts;
@@ -761,6 +767,36 @@ namespace {
                 ImGui::PopID();
             }
             ImGui::PopID();
+        }
+        const auto target = GW::Agents::GetTarget();
+        if (target && ImGui::CollapsingHeader("Props within range of target")) {
+            float range = GW::Constants::Range::Area;
+            const auto props = target ? GW::Map::GetMapProps() : nullptr;
+            if (props) {
+                ImGui::Indent();
+                ImGui::TextUnformatted("Model File ID");
+                ImGui::SameLine(128.f);
+                ImGui::TextUnformatted("Distance");
+                ImGui::SameLine(256.f);
+                ImGui::TextUnformatted("Location");
+                ImGui::Separator();
+                for (const auto prop : *props) {
+                    float distance = GW::GetDistance(target->pos, GW::GamePos({ prop->position.x,prop->position.y,0 }));
+                    if (distance > range)
+                        continue;
+                    ImGui::PushID(prop);
+                    ImGui::Text("%08X", GetMapPropModelFileId(prop));
+                    ImGui::SameLine(128.f);
+                    ImGui::Text("%.2f", distance);
+                    ImGui::SameLine(256.f);
+                    const auto label = std::format("{}, {}", prop->position.x, prop->position.y);
+                    if (ImGui::Button(label.c_str())) {
+                        GW::Map::PingCompass(GW::GamePos({ prop->position.x, prop->position.y ,0}));
+                    }
+                    ImGui::PopID();
+                }
+                ImGui::Unindent();
+            }
         }
 
 
