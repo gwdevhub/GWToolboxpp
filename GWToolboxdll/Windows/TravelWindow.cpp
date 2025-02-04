@@ -391,7 +391,7 @@ namespace {
         std::string compare = TextUtils::ToLower(TextUtils::RemovePunctuation(TextUtils::WStringToString(s)));
         const std::string first_word = compare.substr(0, compare.find(' '));
 
-        static const std::regex district_regex("([a-z]{2,3})(\\d)?");
+        static const std::regex district_regex("([a-z]{2,3})(\\d+)?");
         std::smatch m;
         if (!std::regex_search(first_word, m, district_regex)) {
             return false;
