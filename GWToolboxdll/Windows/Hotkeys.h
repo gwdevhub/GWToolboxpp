@@ -263,9 +263,7 @@ private:
 };
 
 class HotkeyAction : public TBHotkey {
-    const int n_actions = 5;
-
-    enum Action {
+    enum Action : uint8_t {
         OpenXunlaiChest,
         DropGoldCoin = 2,
         ReapplyTitle,

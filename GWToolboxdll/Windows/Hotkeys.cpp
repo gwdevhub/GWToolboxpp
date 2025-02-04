@@ -1555,7 +1555,18 @@ int HotkeyAction::Description(char* buf, const size_t bufsz)
 
 bool HotkeyAction::Draw()
 {
-    ImGui::Combo("Action###actioncombo", (int*)&action, GetText, nullptr, n_actions);
+    if (ImGui::BeginCombo("Actions###actionscombo", GetText(nullptr, action))) {
+        for (const auto hk_action : { OpenXunlaiChest, DropGoldCoin, ReapplyTitle, EnterChallenge }) {
+            const bool selected = action == hk_action;
+            if (ImGui::Selectable(GetText(nullptr, hk_action), selected)) {
+                action = hk_action;
+            }
+            if (selected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
     return true;
 }
 

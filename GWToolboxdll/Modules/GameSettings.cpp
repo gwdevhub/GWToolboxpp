@@ -844,11 +844,11 @@ namespace {
         case GW::FriendStatus::DND: value_override = 2; break;
         case GW::FriendStatus::Offline: value_override = 3;break;
         }
-        GW::GameThread::Enqueue([value_override]() {
+        GW::GameThread::Enqueue([value_override] {
             const auto frame = GW::UI::GetFrameByLabel(L"StatusOverride");
             if (!frame) return;
             GW::UI::SendFrameUIMessage(frame, (GW::UI::UIMessage)0x51, (void*)value_override);
-            });
+        });
     }
     
     GW::HookEntry OnCreateUIComponent_Entry;
@@ -1570,6 +1570,7 @@ void GameSettings::Initialize()
     ASSERT(GlobalNameTagVisibilityFlags);
     ASSERT(CharacterStatIncreased_Func);
 #endif
+
     if (SetFrameSkillDescription_Func) {
         if (SetFrameSkillDescription_Func) {
             GW::Hook::CreateHook((void**)&SetFrameSkillDescription_Func, OnSetFrameSkillDescription, reinterpret_cast<void**>(&SetFrameSkillDescription_Ret));
@@ -1584,7 +1585,6 @@ void GameSettings::Initialize()
         GW::Hook::CreateHook((void**)&CharacterStatIncreased_Func, OnCharacterStatIncreased, reinterpret_cast<void**>(&CharacterStatIncreased_Ret));
         GW::Hook::EnableHooks(CharacterStatIncreased_Func);
     }
-
 
     RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendDialog, bind_member(this, &GameSettings::OnFactionDonate));
     RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillTemplate, &OnPreLoadSkillBar);
@@ -1711,7 +1711,9 @@ void GameSettings::Initialize()
 
     last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
 
+    Log::Log("[GameSettings] Enqueueing CheckRemoveWindowBorder");
     GW::GameThread::Enqueue(CheckRemoveWindowBorder);
+    Log::Log("[GameSettings] Enqueued CheckRemoveWindowBorder");
 
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();

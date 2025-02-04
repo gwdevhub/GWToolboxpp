@@ -556,7 +556,6 @@ namespace {
         for (size_t i = 0; i < len; i++) {
             write[i] |= buffer[i];
         }
-        Log::Log("Completion type %d for %S: %d entries", static_cast<uint32_t>(type), character_name, len);
         return true;
     }
 
