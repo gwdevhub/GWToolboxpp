@@ -83,14 +83,13 @@ namespace GW {
 
         GWCA_API bool FlagAll(GamePos pos);
         GWCA_API bool UnflagAll();
-        GWCA_API bool SetHeroBehavior(uint32_t agent_id, HeroBehavior behavior);
-        // Set pet behavior. Pass an agent_id as the second argument when in fight mode, otherwise will use current target
-        GWCA_API bool SetPetBehavior(HeroBehavior behavior,uint32_t lock_target_id = 0);
+        GWCA_API bool SetHeroTarget(uint32_t hero_agent_id, uint32_t target_agent_id = 0);
+        GWCA_API bool SetHeroBehavior(uint32_t hero_agent_id, HeroBehavior behavior);
+        GWCA_API bool SetPetBehavior(uint32_t owner_agent_id, HeroBehavior behavior);
 
         GWCA_API PetInfo* GetPetInfo(uint32_t owner_agent_id = 0);
 
         GWCA_API uint32_t GetHeroAgentID(uint32_t hero_index);
-        GWCA_API uint32_t GetAgentHeroID(uint32_t agent_id);
 
         GWCA_API HeroInfo* GetHeroInfo(uint32_t hero_id);
 

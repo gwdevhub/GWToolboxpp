@@ -928,6 +928,7 @@ namespace GW {
             ControlAction_OpenHeroCommander1 = 0xDC,
             ControlAction_OpenHeroCommander2,
             ControlAction_OpenHeroCommander3,
+            ControlAction_OpenPetCommander,
             ControlAction_OpenHeroCommander4 = 0x126,
             ControlAction_OpenHeroCommander5,
             ControlAction_OpenHeroCommander6,

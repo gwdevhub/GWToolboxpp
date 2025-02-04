@@ -548,7 +548,15 @@ namespace {
             break;
             case GW::UI::UIMessage::kCalledTargetChange: {
                 if (automatically_flag_pet_to_fight_called_target && party_target_info->source == GW::PlayerMgr::GetPlayerNumber()) {
-                    GW::PartyMgr::SetPetBehavior(GW::HeroBehavior::Fight, party_target_info->identifier);
+                    if (const auto w = GW::GetWorldContext()) {
+                        for (auto& pet : w->pets) {
+                            GW::PartyMgr::SetPetBehavior(pet.owner_agent_id, GW::HeroBehavior::Fight);
+                        }
+                        for (auto& hero : w->hero_flags) {
+                            GW::PartyMgr::SetHeroTarget(hero.agent_id, party_target_info->identifier);
+                        }
+                    }
+
                 }
             }
             break;
@@ -2147,7 +2155,7 @@ void GameSettings::DrawPartySettings()
     ImGui::ShowHelp("When you're invited to join someone elses party");
     ImGui::Checkbox("Automatically accept party join requests when ticked", &auto_accept_join_requests);
     ImGui::ShowHelp("When a player wants to join your existing party");
-    ImGui::Checkbox("Automatically flag your pet to fight when calling a target", &automatically_flag_pet_to_fight_called_target);
+    ImGui::Checkbox("Automatically flag your heroes and pets to lock onto your called target", &automatically_flag_pet_to_fight_called_target);
 }
 
 void GameSettings::DrawSettingsInternal()

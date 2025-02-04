@@ -2082,6 +2082,8 @@ bool HotkeyCommandPet::Draw()
 void HotkeyCommandPet::Execute()
 {
     GW::GameThread::Enqueue([&] {
-        GW::PartyMgr::SetPetBehavior(behavior);
+        for (auto& pet : GW::GetWorldContext()->pets) {
+            GW::PartyMgr::SetPetBehavior(pet.owner_agent_id, behavior);
+        }
     });
 }

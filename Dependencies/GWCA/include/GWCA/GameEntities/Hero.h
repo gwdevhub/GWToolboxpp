@@ -17,8 +17,8 @@ namespace GW {
         /* +h000C */ HeroBehavior hero_behavior;
         /* +h0010 */ Vec2f flag;
         /* +h0018 */ uint32_t h0018;
-        /* +h001C */ AgentID locked_target_id;
-        /* +h0020 */ uint32_t h0020; // type is unknown too, added for padding
+        /* +h001C */ uint32_t h001c;
+        /* +h0020 */ AgentID locked_target_id;
     };
     static_assert(sizeof(HeroFlag) == 0x24, "struct HeroFlag has incorrect size");
 
