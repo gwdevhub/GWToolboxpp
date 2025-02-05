@@ -1,12 +1,9 @@
 #include "stdafx.h"
 
-#include <GWCA/Utilities/Scanner.h>
-
 #include <Defines.h>
 #include <GWToolbox.h>
 #include <Logger.h>
 #include <Modules/CrashHandler.h>
-#include <GWCA/GWCA.h>
 
 namespace {
     HMODULE dllmodule;
@@ -43,7 +40,7 @@ DWORD WINAPI Init() noexcept
     __try {
         Log::Log("Creating toolbox thread\n");
         SafeThreadEntry(dllmodule);
-    } __except (EXCEPT_EXPRESSION_ENTRY) { }
+    } __except (EXCEPT_EXPRESSION_ENTRY) {}
     thread_running = false;
     if (!is_detaching) {
         FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);
@@ -59,7 +56,10 @@ BOOL WINAPI DllMain(_In_ const HMODULE hDllHandle, _In_ const DWORD reason, _In_
         case DLL_PROCESS_ATTACH: {
             dllmodule = hDllHandle;
             __try {
-                // Initialise GW and GWCA on attach - this is so we can hook any function signatures before the game does anything!
+                /* Initialise GW and GWCA on attach - this is so we can hook any function signatures before the game does anything!
+                 * Had to comment this out because it was causing deadlocks on Wine
+                 * calling LoadLibrary in DllMains thread lock is discouraged by MS for this reason and GW::Initialize() loads GWCA.dll
+                 */
                 // GWToolbox::Initialize(dllmodule);
 
                 // Once we've done that, run a thread to handle shutdown proc
@@ -70,11 +70,11 @@ BOOL WINAPI DllMain(_In_ const HMODULE hDllHandle, _In_ const DWORD reason, _In_
                     nullptr,
                     0,
                     nullptr);
-                
+
                 if (hThread != nullptr) {
                     CloseHandle(hThread);
                 }
-            } __except (EXCEPT_EXPRESSION_ENTRY) { 
+            } __except (EXCEPT_EXPRESSION_ENTRY) {
                 return FALSE;
             }
         }
