@@ -59,6 +59,8 @@ target_include_directories(GWToolboxdll PRIVATE
 
 include(imgui_fonts)
 
+find_package(minhook CONFIG REQUIRED)
+
 target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
     RestClient
@@ -73,6 +75,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     nativefiledialog
     wintoast
     wolfssl::wolfssl
+	minhook::minhook
 
     # libs:
     Dbghelp.lib # for MiniDump

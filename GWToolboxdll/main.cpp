@@ -4,6 +4,7 @@
 #include <GWToolbox.h>
 #include <Logger.h>
 #include <Modules/CrashHandler.h>
+#include <MinHook.h>
 
 namespace {
     HMODULE dllmodule;
@@ -61,6 +62,8 @@ BOOL WINAPI DllMain(_In_ const HMODULE hDllHandle, _In_ const DWORD reason, _In_
                  * calling LoadLibrary in DllMains thread lock is discouraged by MS for this reason and GW::Initialize() loads GWCA.dll
                  */
                 // GWToolbox::Initialize(dllmodule);
+                MH_Initialize();
+                // TODO: @jon do your naughty shit here
 
                 // Once we've done that, run a thread to handle shutdown proc
                 const HANDLE hThread = CreateThread(

@@ -16,7 +16,7 @@
   "overrides": [
     {
       "name": "discord-game-sdk",
-	  "version": "2.5.6"
+      "version": "2.5.6"
     }
   ]
 }
