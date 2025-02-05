@@ -67,40 +67,6 @@ namespace {
 
     std::recursive_mutex module_management_mutex;
 
-    bool event_handler_attached = false;
-
-    bool AttachWndProcHandler()
-    {
-        if (event_handler_attached) {
-            return true;
-        }
-        Log::Log("installing event handler\n");
-        gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
-        OldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(SafeWndProc)));
-        Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
-
-        // RegisterRawInputDevices to be able to receive WM_INPUT via WndProc
-        static RAWINPUTDEVICE rid;
-        rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
-        rid.usUsage = HID_USAGE_GENERIC_MOUSE;
-        rid.dwFlags = RIDEV_INPUTSINK;
-        rid.hwndTarget = gw_window_handle;
-        ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
-
-        event_handler_attached = true;
-        return true;
-    }
-
-    bool DetachWndProcHandler()
-    {
-        if (!event_handler_attached) {
-            return true;
-        }
-        Log::Log("Restoring input hook\n");
-        SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(OldWndProc));
-        event_handler_attached = false;
-        return true;
-    }
 
     GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Func = nullptr;
     GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Ret = nullptr;
@@ -268,6 +234,8 @@ namespace {
 
     bool greeted = false;
 
+    std::recursive_mutex initialize_mutex;
+
     void ReorderModules(std::vector<ToolboxModule*>& modules)
     {
         std::ranges::sort(modules, [](const ToolboxModule* lhs, const ToolboxModule* rhs) {
@@ -405,251 +373,110 @@ namespace {
         ReorderModules(vec);
         return true; // Added successfully
     }
-}
 
-FARPROC WINAPI CustomDliHook(unsigned dliNotify, PDelayLoadInfo pdli) {
-    switch (dliNotify) {
-        case dliNotePreLoadLibrary: {
-            if (_stricmp(pdli->szDll, "gwca.dll") != 0)
-                break;
-            const auto loaded = LoadGWCADll(dllmodule);
-            ASSERT(loaded);
-            return (FARPROC)loaded;
-        } break;
-        case dliFailGetProc: {
-            ASSERT(pdli && *(pdli->dlp.szProcName));
-            Log::Log("Something is trying to access %ls, but failed", pdli->dlp.szProcName);
-        } break;
-        // Add other sliNotify cases for debugging if you need to later
-    }
-    return NULL;
-}
-extern const PfnDliHook __pfnDliFailureHook2 = CustomDliHook;
-extern const PfnDliHook __pfnDliNotifyHook2 = CustomDliHook;
-
-const std::vector<ToolboxModule*>& GWToolbox::GetAllModules()
-{
-    return modules_enabled;
-}
-
-const std::vector<ToolboxUIElement*>& GWToolbox::GetUIElements()
-{
-    return ui_elements_enabled;
-}
-
-const std::vector<ToolboxModule*>& GWToolbox::GetModules()
-{
-    return other_modules_enabled;
-}
-
-const std::vector<ToolboxWindow*>& GWToolbox::GetWindows()
-{
-    return windows_enabled;
-}
-
-const std::vector<ToolboxWidget*>& GWToolbox::GetWidgets()
-{
-    return widgets_enabled;
-}
-
-void UpdateEnabledWidgetVectors(ToolboxModule* m, bool added)
-{
-    const auto found = std::ranges::find(modules_enabled, m);
-    if (added) {
-        if (found == modules_enabled.end()) {
-            modules_enabled.push_back(m);
-        }
-    }
-    else {
-        if (found != modules_enabled.end()) {
-            modules_enabled.erase(found);
-        }
-    }
-
-    ui_elements_enabled.clear();
-    widgets_enabled.clear();
-    windows_enabled.clear();
-    other_modules_enabled.clear();
-    for (auto module : modules_enabled) {
-        if (module->IsUIElement()) ui_elements_enabled.push_back((ToolboxUIElement*)module);
-        if (module->IsWidget()) widgets_enabled.push_back((ToolboxWidget*)module);
-        else if (module->IsWindow()) windows_enabled.push_back((ToolboxWindow*)module);
-        else other_modules_enabled.push_back((ToolboxModule*)module);
-    }
-    minimap_enabled = GWToolbox::IsModuleEnabled(&Minimap::Instance());
-}
-
-bool GWToolbox::ShouldDisableToolbox(GW::Constants::MapID map_id)
-{
-    const auto m = GW::Map::GetMapInfo(map_id);
-    return m && (m->GetIsPvP() || m->GetIsGuildHall());
-}
-
-bool GWToolbox::IsInitialized() { return gwtoolbox_state == GWToolboxState::Initialised; }
-
-bool GWToolbox::ToggleModule(ToolboxModule& m, const bool enable)
-{
-    std::lock_guard lock(module_management_mutex);
-    if (IsModuleEnabled(&m) == enable)
-        return enable;
-    const bool added = ToggleTBModule(m, modules_enabled, enable);
-    UpdateEnabledWidgetVectors(&m, added);
-    return added;
-}
-
-HMODULE GWToolbox::GetDLLModule()
-{
-    return dllmodule;
-}
-
-DWORD __stdcall SafeThreadEntry(LPVOID module) noexcept
-{
-    dllmodule = static_cast<HMODULE>(module);
-    __try {
-        ThreadEntry(nullptr);
-    } __except (EXCEPT_EXPRESSION_ENTRY) {
-        Log::Log("SafeThreadEntry __except body\n");
-    }
-    return EXIT_SUCCESS;
-}
-
-DWORD __stdcall ThreadEntry([[maybe_unused]] LPVOID module)
-{
-    ASSERT(LoadGWCADll(dllmodule));
-    Log::Log("Initializing API\n");
-
-    // Some modules rely on the gwdx_ptr being present for stuff like getting viewport coords.
-    // Because this ptr isn't set until the Render loop runs at least once, let it run and then reassign SetRenderCallback.
-    GWToolbox::Initialize(module);
-
-    Log::Log("Installed dx hooks\n");
-
-    Log::InitializeChat();
-
-    Log::Log("Installed chat hooks\n");
-
-    while (gwtoolbox_state != GWToolboxState::Terminated) {
-        // wait until destruction
-        Sleep(100);
-
-        // Feel free to uncomment to get this behavior for testing, but don't commit.
-        //#ifdef _DEBUG
-        //        if (GetAsyncKeyState(VK_END) & 1) {
-        //            GWToolbox::Instance().StartSelfDestruct();
-        //        }
-        //#endif
-    }
-
-    // @Remark:
-    // Hooks are disable from Guild Wars thread (safely), so we just make sure we exit the last hooks
-    GW::DisableHooks();
-    while (GW::Hook::GetInHookCount()) {
-        Sleep(16);
-    }
-
-    // @Remark:
-    // We can't guarantee that the code in Guild Wars thread isn't still in the trampoline, but
-    // practically a short sleep is fine.
-    Sleep(16);
-
-    Log::Log("Destroying API\n");
-    Log::Log("Closing log/console, bye!\n");
-    Log::Terminate();
-    GW::Terminate();
-
-    Sleep(160);
-
-    UnloadGWCADll();
-    if (defer_close) {
-        // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
-        SendMessage(gw_window_handle, WM_CLOSE, NULL, NULL);
-    }
-    return 0;
-}
-
-LRESULT CALLBACK SafeWndProc(const HWND hWnd, const UINT Message, const WPARAM wParam, const LPARAM lParam) noexcept
-{
-    __try {
-        return WndProc(hWnd, Message, wParam, lParam);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
-    }
-}
-
-LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wParam, const LPARAM lParam)
-{
-    static bool right_mouse_down = false;
-
-    if (Message == WM_CLOSE || (Message == WM_SYSCOMMAND && wParam == SC_CLOSE)) {
-        // This is naughty, but we need to defer the closing signal until toolbox has terminated properly.
-        // we can't sleep here, because toolbox modules will probably be using the render loop to close off things
-        // like hooks
-        defer_close = true;
-        GWToolbox::SignalTerminate();
-
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
-            return 0;
-        }
-    }
-
-    if (!(!GW::GetPreGameContext() && GWToolbox::IsInitialized())) {
-        return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
-    }
-    if (gwtoolbox_disabled) {
-        return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
-    }
-
-    auto& io = ImGui::GetIO();
-
-    auto& tb = GWToolbox::Instance();
-
-    if (Message == WM_RBUTTONUP) {
-        if (right_mouse_down && !mouse_moved_whilst_right_clicking && !io.WantCaptureMouse) {
-            // Tell imgui that the mouse cursor is in its original clicked position - GW messes with the cursor in-game
-#pragma warning( push )
-#pragma warning( disable : 4244 ) // conversion from 'int' to 'float', possible loss of data
-            io.MousePos = { (float)GET_X_LPARAM(right_click_lparam), (float)GET_Y_LPARAM(right_click_lparam) };
-#pragma warning( pop )
-            for (const auto m : tb.GetAllModules()) {
-                m->WndProc(WM_GW_RBUTTONCLICK, 0, right_click_lparam);
+    void UpdateEnabledWidgetVectors(ToolboxModule* m, bool added)
+    {
+        const auto found = std::ranges::find(modules_enabled, m);
+        if (added) {
+            if (found == modules_enabled.end()) {
+                modules_enabled.push_back(m);
             }
         }
-        mouse_moved_whilst_right_clicking = 0;
-        right_mouse_down = false;
+        else {
+            if (found != modules_enabled.end()) {
+                modules_enabled.erase(found);
+            }
+        }
+
+        ui_elements_enabled.clear();
+        widgets_enabled.clear();
+        windows_enabled.clear();
+        other_modules_enabled.clear();
+        for (auto module : modules_enabled) {
+            if (module->IsUIElement()) ui_elements_enabled.push_back((ToolboxUIElement*)module);
+            if (module->IsWidget()) widgets_enabled.push_back((ToolboxWidget*)module);
+            else if (module->IsWindow()) windows_enabled.push_back((ToolboxWindow*)module);
+            else other_modules_enabled.push_back((ToolboxModule*)module);
+        }
+        minimap_enabled = GWToolbox::IsModuleEnabled(&Minimap::Instance());
     }
-    if (Message == WM_RBUTTONDOWN) {
-        right_mouse_down = true;
-        right_click_lparam = lParam;
-        mouse_moved_whilst_right_clicking = 0;
-    }
-    if (Message == WM_RBUTTONDBLCLK) {
-        right_mouse_down = true;
-    }
-
-    GWToolbox::Instance().right_mouse_down = right_mouse_down;
-
-    // === Send events to ImGui ===
-
-    const bool skip_mouse_capture = right_mouse_down || GW::UI::GetIsWorldMapShowing() || GW::Map::GetIsInCinematic();
-    if (ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam) && !skip_mouse_capture)
-        return TRUE;
-
-    // === Send events to toolbox ===
-
-    /* GW Deliberately makes a WM_MOUSEMOVE event right after right button is pressed.
-        Does this to "hide" the cursor when looking around.
-
-        To easily send a "rmb clicked" event to toolbox modules, figure the logic out ourselves and send a custom message WM_GW_RBUTTONCLICK
-     */
 
 
-    switch (Message) {
+
+    LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wParam, const LPARAM lParam)
+    {
+        static bool right_mouse_down = false;
+
+        if (Message == WM_CLOSE || (Message == WM_SYSCOMMAND && wParam == SC_CLOSE)) {
+            // This is naughty, but we need to defer the closing signal until toolbox has terminated properly.
+            // we can't sleep here, because toolbox modules will probably be using the render loop to close off things
+            // like hooks
+            defer_close = true;
+            GWToolbox::SignalTerminate();
+
+            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
+                return 0;
+            }
+        }
+
+        if (!(!GW::GetPreGameContext() && GWToolbox::IsInitialized())) {
+            return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
+        }
+        if (gwtoolbox_disabled) {
+            return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
+        }
+
+        auto& io = ImGui::GetIO();
+
+        auto& tb = GWToolbox::Instance();
+
+        if (Message == WM_RBUTTONUP) {
+            if (right_mouse_down && !mouse_moved_whilst_right_clicking && !io.WantCaptureMouse) {
+                // Tell imgui that the mouse cursor is in its original clicked position - GW messes with the cursor in-game
+#pragma warning( push )
+#pragma warning( disable : 4244 ) // conversion from 'int' to 'float', possible loss of data
+                io.MousePos = { (float)GET_X_LPARAM(right_click_lparam), (float)GET_Y_LPARAM(right_click_lparam) };
+#pragma warning( pop )
+                for (const auto m : tb.GetAllModules()) {
+                    m->WndProc(WM_GW_RBUTTONCLICK, 0, right_click_lparam);
+                }
+            }
+            mouse_moved_whilst_right_clicking = 0;
+            right_mouse_down = false;
+        }
+        if (Message == WM_RBUTTONDOWN) {
+            right_mouse_down = true;
+            right_click_lparam = lParam;
+            mouse_moved_whilst_right_clicking = 0;
+        }
+        if (Message == WM_RBUTTONDBLCLK) {
+            right_mouse_down = true;
+        }
+
+        GWToolbox::Instance().right_mouse_down = right_mouse_down;
+
+        // === Send events to ImGui ===
+
+        const bool skip_mouse_capture = right_mouse_down || GW::UI::GetIsWorldMapShowing() || GW::Map::GetIsInCinematic();
+        if (ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam) && !skip_mouse_capture)
+            return TRUE;
+
+        // === Send events to toolbox ===
+
+        /* GW Deliberately makes a WM_MOUSEMOVE event right after right button is pressed.
+            Does this to "hide" the cursor when looking around.
+
+            To easily send a "rmb clicked" event to toolbox modules, figure the logic out ourselves and send a custom message WM_GW_RBUTTONCLICK
+         */
+
+
+        switch (Message) {
         case WM_MOUSELEAVE:
         case WM_NCMOUSELEAVE:
             if (::GetCapture() == nullptr && ImGui::IsMouseDown(ImGuiMouseButton_Left))
                 ::SetCapture(hWnd);
             break;
-        // Send button up mouse events to everything, to avoid being stuck on mouse-down
+            // Send button up mouse events to everything, to avoid being stuck on mouse-down
         case WM_INPUT: {
             if (right_mouse_down && !mouse_moved_whilst_right_clicking && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam) {
                 UINT dwSize = sizeof(RAWINPUT);
@@ -667,13 +494,13 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
                 m->WndProc(Message, wParam, lParam);
             }
         }
-        break;
+                     break;
 
-        // Other mouse events:
-        // - If right mouse down, leave it to gw
-        // - ImGui first (above), if WantCaptureMouse that's it
-        // - Toolbox module second (e.g.: minimap), if captured, that's it
-        // - otherwise pass to gw
+                     // Other mouse events:
+                     // - If right mouse down, leave it to gw
+                     // - ImGui first (above), if WantCaptureMouse that's it
+                     // - Toolbox module second (e.g.: minimap), if captured, that's it
+                     // - otherwise pass to gw
         case WM_RBUTTONDOWN:
         case WM_LBUTTONUP:
         case WM_RBUTTONUP:
@@ -695,18 +522,18 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
                 return true;
             }
         }
-        //if (!skip_mouse_capture) {
+                          //if (!skip_mouse_capture) {
 
-        //}
-        break;
+                          //}
+                          break;
 
-        // keyboard messages
+                          // keyboard messages
         case WM_KEYUP:
         case WM_SYSKEYUP:
             if (io.WantTextInput) {
                 break; // if imgui wants them, send to imgui (above) and to gw
             }
-        // else fallthrough
+            // else fallthrough
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
         case WM_CHAR:
@@ -722,7 +549,7 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
                 return true; // if imgui wants them, send just to imgui (above)
             }
 
-        // send input to chat commands for camera movement
+            // send input to chat commands for camera movement
             if (ChatCommands::Instance().WndProc(Message, wParam, lParam)) {
                 return true;
             }
@@ -756,38 +583,208 @@ LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wPara
                 }
             }
             break;
+        }
+
+        return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
     }
 
-    return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
+    LRESULT CALLBACK SafeWndProc(const HWND hWnd, const UINT Message, const WPARAM wParam, const LPARAM lParam) noexcept
+    {
+        __try {
+            return WndProc(hWnd, Message, wParam, lParam);
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER) {
+            return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
+        }
+    }
+
+    bool event_handler_attached = false;
+
+    bool AttachWndProcHandler()
+    {
+        if (event_handler_attached) {
+            return true;
+        }
+        Log::Log("installing event handler\n");
+        gw_window_handle = GW::MemoryMgr::GetGWWindowHandle();
+        OldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(SafeWndProc)));
+        Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
+
+        // RegisterRawInputDevices to be able to receive WM_INPUT via WndProc
+        static RAWINPUTDEVICE rid;
+        rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
+        rid.usUsage = HID_USAGE_GENERIC_MOUSE;
+        rid.dwFlags = RIDEV_INPUTSINK;
+        rid.hwndTarget = gw_window_handle;
+        ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
+
+        event_handler_attached = true;
+        return true;
+    }
+
+    bool DetachWndProcHandler()
+    {
+        if (!event_handler_attached) {
+            return true;
+        }
+        Log::Log("Restoring input hook\n");
+        SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(OldWndProc));
+        event_handler_attached = false;
+        return true;
+    }
+
+
+    FARPROC WINAPI CustomDliHook(unsigned dliNotify, PDelayLoadInfo pdli) {
+        switch (dliNotify) {
+        case dliNotePreLoadLibrary: {
+            if (_stricmp(pdli->szDll, "gwca.dll") != 0)
+                break;
+            const auto loaded = LoadGWCADll(dllmodule);
+            ASSERT(loaded);
+            return (FARPROC)loaded;
+        } break;
+        case dliFailGetProc: {
+            ASSERT(pdli && *(pdli->dlp.szProcName));
+            Log::Log("Something is trying to access %ls, but failed", pdli->dlp.szProcName);
+        } break;
+                           // Add other sliNotify cases for debugging if you need to later
+        }
+        return NULL;
+    }
+}
+
+extern const PfnDliHook __pfnDliFailureHook2 = CustomDliHook;
+extern const PfnDliHook __pfnDliNotifyHook2 = CustomDliHook;
+
+const std::vector<ToolboxModule*>& GWToolbox::GetAllModules()
+{
+    return modules_enabled;
+}
+
+const std::vector<ToolboxUIElement*>& GWToolbox::GetUIElements()
+{
+    return ui_elements_enabled;
+}
+
+const std::vector<ToolboxModule*>& GWToolbox::GetModules()
+{
+    return other_modules_enabled;
+}
+
+const std::vector<ToolboxWindow*>& GWToolbox::GetWindows()
+{
+    return windows_enabled;
+}
+
+const std::vector<ToolboxWidget*>& GWToolbox::GetWidgets()
+{
+    return widgets_enabled;
+}
+
+
+bool GWToolbox::ShouldDisableToolbox(GW::Constants::MapID map_id)
+{
+    const auto m = GW::Map::GetMapInfo(map_id);
+    return m && (m->GetIsPvP() || m->GetIsGuildHall());
+}
+
+bool GWToolbox::IsInitialized() { return gwtoolbox_state == GWToolboxState::Initialised; }
+
+bool GWToolbox::ToggleModule(ToolboxModule& m, const bool enable)
+{
+    std::lock_guard lock(module_management_mutex);
+    if (IsModuleEnabled(&m) == enable)
+        return enable;
+    const bool added = ToggleTBModule(m, modules_enabled, enable);
+    UpdateEnabledWidgetVectors(&m, added);
+    return added;
+}
+
+HMODULE GWToolbox::GetDLLModule()
+{
+    return dllmodule;
+}
+
+DWORD __stdcall GWToolbox::MainLoop(LPVOID module) noexcept
+{
+    dllmodule = static_cast<HMODULE>(module);
+    __try {
+        GWToolbox::Initialize(module);
+        while (gwtoolbox_state != GWToolboxState::Terminated) {
+            // wait until destruction
+            Sleep(100);
+
+            // Feel free to uncomment to get this behavior for testing, but don't commit.
+            //#ifdef _DEBUG
+            //        if (GetAsyncKeyState(VK_END) & 1) {
+            //            GWToolbox::Instance().StartSelfDestruct();
+            //        }
+            //#endif
+        }
+
+        // @Remark:
+        // Hooks are disable from Guild Wars thread (safely), so we just make sure we exit the last hooks
+        GW::DisableHooks();
+        while (GW::Hook::GetInHookCount()) {
+            Sleep(16);
+        }
+
+        // @Remark:
+        // We can't guarantee that the code in Guild Wars thread isn't still in the trampoline, but
+        // practically a short sleep is fine.
+        Sleep(16);
+
+        Log::Log("Destroying API\n");
+        Log::Log("Closing log/console, bye!\n");
+        Log::Terminate();
+        GW::Terminate();
+
+        Sleep(160);
+
+        UnloadGWCADll();
+        if (defer_close) {
+            // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
+            SendMessage(gw_window_handle, WM_CLOSE, NULL, NULL);
+        }
+    }
+    __except (EXCEPT_EXPRESSION_ENTRY) {
+        Log::Log("SafeThreadEntry __except body\n");
+    }
+    return EXIT_SUCCESS;
 }
 
 void GWToolbox::Initialize(LPVOID module)
 {
+    std::lock_guard<std::recursive_mutex> lock(initialize_mutex);
     if (module) {
         dllmodule = static_cast<HMODULE>(module);
     }
+    if (gwtoolbox_state != GWToolboxState::Terminated)
+        return;
+    gwtoolbox_state = GWToolboxState::Initialising;
+
     Log::InitializeLog();
+
     // @Cleanup: atm its just an ASSERT - this could be a valid issue where the user can't write gwca.dll to disk, so need to handle it better later.
     ASSERT(LoadGWCADll(dllmodule));
+
     Log::InitializeGWCALog();
     GW::RegisterPanicHandler(CrashHandler::GWCAPanicHandler, nullptr);
-    switch (gwtoolbox_state) {
-        case GWToolboxState::Terminated:
-            gwtoolbox_state = GWToolboxState::Initialising;
-            GW::Initialize();
-            AttachRenderCallback();
-            GW::EnableHooks();
+    GW::Initialize();
+    Log::InitializeChat();
 
-            GW::WaitForFrame(L"BtnRestore", [](GW::UI::Frame* frame) {
-                OnMinOrRestoreOrExitBtnClicked_Func = frame->frame_callbacks[0];
-                GW::Hook::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
-                GW::Hook::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
-            });
+    AttachRenderCallback();
+    GW::EnableHooks();
 
-            UpdateInitialising(.0f);
-            AttachGameLoopCallback();
-            pending_detach_dll = false;
-    }
+    GW::WaitForFrame(L"BtnRestore", [](GW::UI::Frame* frame) {
+        OnMinOrRestoreOrExitBtnClicked_Func = frame->frame_callbacks[0];
+        GW::Hook::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
+        GW::Hook::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
+        });
+
+    UpdateInitialising(.0f);
+    AttachGameLoopCallback();
+    pending_detach_dll = false;
 }
 
 std::filesystem::path GWToolbox::LoadSettings()
