@@ -25,7 +25,7 @@ the latest version, go to the [Home Page](./) instead.
 * [Minor] Completion window dropdown is ordered now
 * [New] Skillbar widget has new option to outline the recharge text
 * [New] Options for Distance and Health widgets to not show the header name, introduce font sizes for these and Timer too
-* [New] Feature to flag all heroes and pets on target call
+* [New] Feature to set target for all heroes and pets on target call
 * [New] Added quest markers to worldmap (game has these, but they were so small that you couldn't see them)
 * [Removed] Removed /zoom and /cam fov as they had no effect due to gw updates
 
