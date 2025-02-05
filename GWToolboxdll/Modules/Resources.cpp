@@ -115,7 +115,7 @@ namespace {
 
     bool should_stop = false;
 
-    std::vector<std::thread*> workers;
+    
 
     // snprintf error message, pass to callback as a failure. Used internally.
     void trigger_failure_callback(const std::function<void(bool, const std::wstring&)>& callback, const wchar_t* format, ...)
@@ -144,22 +144,38 @@ namespace {
         }
     }
 
-    void WorkerUpdate()
-    {
-        while (!should_stop) {
-            worker_mutex.lock();
-            if (thread_jobs.empty()) {
-                worker_mutex.unlock();
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-            else {
-                std::function<void()> func = thread_jobs.front();
-                thread_jobs.pop();
-                worker_mutex.unlock();
-                func();
-            }
+    class WorkerThread {
+    public:
+        bool is_running = false;
+        std::thread* thread = nullptr;
+        WorkerThread() {
+            ASSERT(!is_running && !thread);
+            is_running = true;
+            thread = new std::thread([&]() {
+                while (!should_stop) {
+                    worker_mutex.lock();
+                    if (thread_jobs.empty()) {
+                        worker_mutex.unlock();
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    }
+                    else {
+                        std::function<void()> func = thread_jobs.front();
+                        thread_jobs.pop();
+                        worker_mutex.unlock();
+                        func();
+                    }
+                }
+                is_running = false;
+                });
         }
-    }
+        ~WorkerThread() {
+            ASSERT(!is_running);
+            if (thread && thread->joinable())
+                thread->join();
+            delete thread;
+        }
+    };
+    std::vector<WorkerThread*> workers;
 
     void InitRestClient(RestClient* r)
     {
@@ -351,22 +367,15 @@ void Resources::Initialize()
 {
     ToolboxModule::Initialize();
     for (size_t i = 0; i < MAX_WORKERS; i++) {
-        workers.push_back(new std::thread([this] {
-            WorkerUpdate();
-        }));
+        workers.push_back(new WorkerThread());
     }
     RegisterUIMessageCallback(&OnUIMessage_Hook, GW::UI::UIMessage::kPreferenceEnumChanged, OnUIMessage, 0x8000);
 }
 
 void Resources::Cleanup()
 {
-    should_stop = true;
-    for (std::thread* worker : workers) {
-        if (!worker) {
-            continue;
-        }
-        ASSERT(worker->joinable());
-        worker->join();
+
+    for (const auto worker : workers) {
         delete worker;
     }
     workers.clear();
@@ -416,6 +425,20 @@ void Resources::Terminate()
         delete tex;
     }
     map_names.clear();
+}
+
+bool Resources::CanTerminate()
+{
+    for (const auto worker : workers) {
+        if (worker->is_running)
+            return false;
+    }
+    return true;
+}
+void Resources::SignalTerminate()
+{
+    ToolboxModule::SignalTerminate();
+    should_stop = true;
 }
 
 void Resources::EndLoading() const
