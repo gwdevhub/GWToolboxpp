@@ -14,7 +14,7 @@ namespace {
     typedef UINT(WINAPI* GetUserDefaultLCID_t)();
     GetUserDefaultLCID_t GetUserDefaultLCID_Func = nullptr, GetUserDefaultLCID_Ret = nullptr;
 
-    UINT OntimeBeginPeriod() {
+    UINT OnGetUserDefaultLCID() {
         MH_DisableHook(GetUserDefaultLCID_Func);
         GWToolbox::Initialize(dllmodule);
         return GetUserDefaultLCID_Ret();
@@ -29,7 +29,7 @@ namespace {
         GetUserDefaultLCID_Func = hTimeApi ? (GetUserDefaultLCID_t)GetProcAddress(hTimeApi, "GetUserDefaultLCID") : nullptr;
         ASSERT(GetUserDefaultLCID_Func);
         MH_Initialize();
-        MH_CreateHook(GetUserDefaultLCID_Func, OntimeBeginPeriod, (void**)&GetUserDefaultLCID_Ret);
+        MH_CreateHook(GetUserDefaultLCID_Func, OnGetUserDefaultLCID, (void**)&GetUserDefaultLCID_Ret);
         MH_EnableHook(GetUserDefaultLCID_Func);
     }
 
