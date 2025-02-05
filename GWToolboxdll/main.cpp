@@ -60,7 +60,7 @@ BOOL WINAPI DllMain(_In_ const HMODULE hDllHandle, _In_ const DWORD reason, _In_
             dllmodule = hDllHandle;
             __try {
                 // Initialise GW and GWCA on attach - this is so we can hook any function signatures before the game does anything!
-                GWToolbox::Initialize(dllmodule);
+                // GWToolbox::Initialize(dllmodule);
 
                 // Once we've done that, run a thread to handle shutdown proc
                 const HANDLE hThread = CreateThread(
