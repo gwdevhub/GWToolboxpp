@@ -19,9 +19,14 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Fixed weapon skill incorrectly showing on normal enchantments
 * [Fix] Fixed completion window not properly loading completions on startup
 * [Fix] Fixed skip entering character name when donating faction
+* [Fix] Fixed /tp interpreting district numbers as single digit
+* [Fix] Hopefully fixed linux loading issue
 * [Minor] Skillbar widget can shrink to any size now
+* [Minor] Completion window dropdown is ordered now
 * [New] Skillbar widget has new option to outline the recharge text
-* [New] Options for Distance and Health widgets to not show the header name, introduce font scale (0.1-2.0)
+* [New] Options for Distance and Health widgets to not show the header name, introduce font sizes for these and Timer too
+* [New] Feature to flag all heroes and pets on target call
+* [New] Added quest markers to worldmap (game has these, but they were so small that you couldn't see them)
 * [Removed] Removed /zoom and /cam fov as they had no effect due to gw updates
 
 ## Version 7.0

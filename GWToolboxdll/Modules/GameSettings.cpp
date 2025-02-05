@@ -134,7 +134,7 @@ namespace {
     bool block_experience_gain = false;
     bool block_zero_experience_gain = true;
     bool lazy_chest_looting = false;
-    
+
     bool check_and_prompt_if_mission_already_completed = true; // When entering a mission you've completed, check whether you should be doing it in HM/NM instead
 
     uint32_t last_online_status = static_cast<uint32_t>(GW::FriendStatus::Online);
@@ -393,7 +393,7 @@ namespace {
         }
         return tweaked;
     }
-    
+
     // Before the game loads the skill bar you want, copy the data over for checking once the bar is loaded.
     void OnPreLoadSkillBar(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
@@ -556,7 +556,6 @@ namespace {
                             GW::PartyMgr::SetHeroTarget(hero.agent_id, party_target_info->identifier);
                         }
                     }
-
                 }
             }
             break;
@@ -850,7 +849,7 @@ namespace {
             GW::UI::SendFrameUIMessage(frame, (GW::UI::UIMessage)0x51, (void*)value_override);
         });
     }
-    
+
     GW::HookEntry OnCreateUIComponent_Entry;
     // Flag email address entry field as a password format (e.g. asterisks instead of email)
     void OnCreateUIComponent(GW::UI::CreateUIComponentPacket* msg)
@@ -1124,7 +1123,7 @@ namespace {
     }
 
     // Block full item descriptions
-    void OnGetItemDescription(uint32_t, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc) 
+    void OnGetItemDescription(uint32_t, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc)
     {
         bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
         block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
@@ -1261,7 +1260,7 @@ namespace {
             // Automatically send a party window invite when a party search invite is sent
             const auto packet = (GW::UI::UIPacket::kPartySearchInvite*)wParam;
             if(GW::PartyMgr::GetIsLeader())
-                GW::PartyMgr::InvitePlayer(GetPartySearchLeader(packet->source_party_search_id));            
+                GW::PartyMgr::InvitePlayer(GetPartySearchLeader(packet->source_party_search_id));
         } break;
         case GW::UI::UIMessage::kPreferenceValueChanged: {
             const auto packet = (GW::UI::UIPacket::kPreferenceValueChanged*)wParam;
@@ -1517,7 +1516,7 @@ void GameSettings::Initialize()
 
     SkillList_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmCtlSkList.cpp", "!obj", 0xc71,0));
     Log::Log("[GameSettings] SkillList_UICallback_Func = %p\n", SkillList_UICallback_Func);
-   
+
     address = GW::Scanner::Find("\x81\xff\x86\x02\x00\x00", "xxxxxx", 6);
     if (address)
         skip_map_entry_message_patch.SetPatch(address, "\x90\xe9", 2);
@@ -1692,7 +1691,7 @@ void GameSettings::Initialize()
     for (const auto message_id : post_ui_messages) {
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
     }
-    
+
 
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"reinvite", CmdReinvite);
 
