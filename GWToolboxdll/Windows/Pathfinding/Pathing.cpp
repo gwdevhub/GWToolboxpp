@@ -1075,7 +1075,7 @@ namespace Pathing {
             }
         }
 
-#ifdef _DEBUG
+#ifdef DEBUG_PATHING
         const clock_t start_timestamp = clock();
 #endif
 
@@ -1152,7 +1152,7 @@ namespace Pathing {
             m_mp->m_visGraph[start.id].clear();
         }
 
-#ifdef _DEBUG
+#ifdef DEBUG_PATHING
         const clock_t stop_timestamp = clock();
         Log::Log("Find path: %d ms\n", stop_timestamp - start_timestamp);
 #endif
