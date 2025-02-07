@@ -369,10 +369,17 @@ namespace {
                 (float)map_info->y
             };
         }
+        if (map_info->icon_start_x && map_info->icon_start_y) {
+            // Otherwise use the center position of the map name label
+            return {
+                (float)(map_info->icon_start_x + ((map_info->icon_end_x - map_info->icon_start_x) / 2)),
+                (float)(map_info->icon_start_y + ((map_info->icon_end_y - map_info->icon_start_y) / 2))
+            };
+        }
         // Otherwise use the center position of the map name label
         return {
-            (float)(map_info->icon_start_x + ((map_info->icon_end_x - map_info->icon_start_x) / 2)),
-            (float)(map_info->icon_start_y + ((map_info->icon_end_y - map_info->icon_start_y) / 2))
+            (float)(map_info->icon_start_x_dupe + ((map_info->icon_end_x_dupe - map_info->icon_start_x_dupe) / 2)),
+            (float)(map_info->icon_start_y_dupe + ((map_info->icon_end_y_dupe - map_info->icon_start_y_dupe) / 2))
         };
     }
 
