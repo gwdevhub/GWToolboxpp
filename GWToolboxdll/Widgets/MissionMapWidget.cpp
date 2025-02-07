@@ -226,6 +226,8 @@ bool MissionMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
             GW::Vec2f cursor_pos = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
             if (!IsScreenPosOnMissionMap(cursor_pos))
                 break;
+            if (GW::UI::GetCurrentTooltip())
+                break;
             world_map_click_pos = ScreenPosToMissionMapCoords(cursor_pos);
             ImGui::SetContextMenu(MissionMapContextMenu);
             break;
