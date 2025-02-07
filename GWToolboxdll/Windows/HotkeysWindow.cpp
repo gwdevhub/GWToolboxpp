@@ -248,7 +248,6 @@ namespace {
 
     TBHotkey* pending_being_assigned = nullptr;
     TBHotkey* keys_being_assigned = nullptr;
-    KeysHeldBitset previous_keys_held;
     KeysHeldBitset keys_selected;
     bool hotkey_popup_first_draw = true;
     void DrawSelectHotkeyPopup() {
@@ -258,15 +257,13 @@ namespace {
             pending_being_assigned = nullptr;
             return;
         }
+        if (!keys_being_assigned) {
+            return;
+        }
         if (!ImGui::BeginPopup("Select Hotkey")) {
-            previous_keys_held.reset();
             keys_selected.reset();
             hotkey_popup_first_draw = true;
             keys_being_assigned = nullptr;
-            return;
-        }
-        if (!keys_being_assigned) {
-            ImGui::CloseCurrentPopup();
             return;
         }
         if (hotkey_popup_first_draw) {
@@ -275,35 +272,13 @@ namespace {
         }
 
         // Record any new key presses
-        previous_keys_held |= wndproc_keys_held;
+        keys_selected |= wndproc_keys_held;
 
-        std::string keys_held_buf;
-        if (!previous_keys_held.none()) {
-
-            keys_held_buf = ModKeyName(previous_keys_held);
-
-            // Check if any previously held key is still in the current keys
-            bool still_held = (previous_keys_held & wndproc_keys_held).any();
-
-            if (!still_held) {
-                keys_selected = previous_keys_held;
-            }
-        }
-        else {
-            keys_held_buf = ModKeyName(keys_selected);
-        }
+        std::string keys_held_buf = ModKeyName(keys_selected);
 
         ImGui::TextUnformatted(keys_held_buf.c_str());
-        if (ImGui::Button("Left Mouse")) {
-            previous_keys_held.set(VK_LBUTTON, !previous_keys_held.test(VK_LBUTTON));
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Right Mouse")) {
-            previous_keys_held.set(VK_RBUTTON, !previous_keys_held.test(VK_RBUTTON));
-        }
         if (ImGui::Button("Clear")) {
             keys_selected.reset();
-            ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
         if (ImGui::Button("Cancel")) {
@@ -328,9 +303,6 @@ namespace {
         case WM_MBUTTONDOWN:
         case WM_MBUTTONUP:
             return VK_MBUTTON;
-        case WM_LBUTTONDOWN:
-        case WM_LBUTTONUP:
-            return VK_LBUTTON;
         case WM_XBUTTONDOWN:
         case WM_XBUTTONUP: {
             WORD xButton = GET_XBUTTON_WPARAM(wParam);
@@ -689,7 +661,7 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
                 hk->pressed = false;
             if (!hk->pressed
                 && hk->trigger_on_key_up == is_key_up
-                && (hk->key_combo & wndproc_keys_held) == hk->key_combo 
+                && hk->key_combo == wndproc_keys_held
                 && hk->key_combo.test(keyData)) {
                 PushPendingHotkey(hk);
                 if (!is_key_up && hk->block_gw) {
@@ -708,12 +680,10 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
         case WM_LBUTTONDOWN:
         case WM_RBUTTONDOWN: {
             const auto keyData = KeyDataFromWndProc(Message, wParam);
-            if (!keyData || keyData > wndproc_keys_held.size())
+            if (!keyData || keyData >= wndproc_keys_held.size())
                 return false;
             wndproc_keys_held.set(keyData);
-            if (keys_being_assigned)
-                return true;
-            return check_triggers(false, keyData);
+            return keys_being_assigned || check_triggers(false, keyData);
         }
         case WM_KEYUP:
         case WM_SYSKEYUP:
@@ -722,13 +692,12 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
         case WM_RBUTTONUP:
         case WM_XBUTTONUP: {
             const auto keyData = KeyDataFromWndProc(Message, wParam);
-            if (!keyData || keyData > wndproc_keys_held.size())
+            if (!keyData || keyData >= wndproc_keys_held.size())
                 return false;
-            if (keys_being_assigned)
-                return true;
-            check_triggers(true, keyData);
+            if (!keys_being_assigned)
+                check_triggers(true, keyData);
             wndproc_keys_held.reset(keyData);
-            return false;
+            return keys_being_assigned;
         }
         default:
             return false;
