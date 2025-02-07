@@ -516,6 +516,25 @@ constexpr LONG ModKey_Shift = 0x10000;
 constexpr LONG ModKey_Control = 0x20000;
 constexpr LONG ModKey_Alt = 0x40000;
 
+inline std::string ModKeyName(const std::bitset<256>& keys) {
+    std::string out;
+    char vkey_c[32];
+
+    for (uint32_t key = 0; key < 256; ++key) {
+        if (keys[key]) { // Check if the key is held
+            if (!KeyName(key, vkey_c, _countof(vkey_c))) {
+                snprintf(vkey_c, _countof(vkey_c), "%s", KeyName(key));
+            }
+            if (!out.empty()) {
+                out += " + ";
+            }
+            out += vkey_c;
+        }
+    }
+
+    return out.empty() ? "<none>" : out;
+}
+
 inline int ModKeyName(char* buf, const size_t bufsz, const LONG mod, const LONG vkey, const char* ifempty = "")
 {
     char vkey_c[32];

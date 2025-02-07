@@ -34,11 +34,8 @@ public:
     static bool show_active_in_header;
     static bool show_run_in_header;
     static bool hotkeys_changed;
-    static LONG* key_out;
-    static LONG* mod_out;
 
     static TBHotkey* HotkeyFactory(ToolboxIni* ini, const char* section);
-    static void HotkeySelector(LONG* key, LONG* modifier = nullptr);
 
     char group[128] = "";
     bool trigger_on_key_up = false;            // Should the key be triggered on key down, or key up
@@ -62,8 +59,7 @@ public:
     uint32_t in_range_of_npc_id = 0;
     float in_range_of_distance = 0.f;
 
-    long hotkey = 0;
-    long modifier = 0;
+    std::bitset<256> key_combo;
 
     // Create hotkey, load from file if 'ini' is not null
     TBHotkey(const ToolboxIni* ini, const char* section);
