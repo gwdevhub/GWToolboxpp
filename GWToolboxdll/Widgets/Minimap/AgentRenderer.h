@@ -189,6 +189,8 @@ private:
     float size_minion = 50.f;
     float size_marked_target = 75.f;
     Shape_e default_shape = Tear;
+    Shape_e shape_player = Tear;
+    Shape_e shape_players = Tear;
 
     bool agentcolors_changed = false;
     ToolboxIni* agentcolorinifile = nullptr;
