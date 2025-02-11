@@ -280,6 +280,7 @@ namespace GW {
 
         enum class UIMessage : uint32_t {
             kNone = 0x0,
+            kResize                     = 0x8,
             kInitFrame                  = 0x9,
             kDestroyFrame               = 0xb,
             kKeyDown                    = 0x1e, // wparam = UIPacket::kKeyAction*
@@ -422,6 +423,10 @@ namespace GW {
 
 
         namespace UIPacket {
+            struct kResize {
+                uint32_t h0000;
+                float h0004[9];
+            };
             struct kSendLoadSkillTemplate {
                 uint32_t agent_id;
                 SkillbarMgr::SkillTemplate* skill_template;
@@ -1051,6 +1056,8 @@ namespace GW {
 
         GWCA_API bool ButtonClick(Frame* btn_frame);
 
+        GWCA_API uint32_t CreateUIComponent(uint32_t parent_frame_id, uint32_t component_flags, uint32_t tab_index, void* event_callback, wchar_t* wparam, const wchar_t* component_label);
+
         GWCA_API bool SelectDropdownOption(Frame* frame, uint32_t value);
 
         GWCA_API void* GetFrameContext(GW::UI::Frame* frame);
@@ -1123,6 +1130,10 @@ namespace GW {
 
         //GWCA_API void SetPreference(Preference pref, uint32_t value);
         GWCA_API bool SetFrameVisible(UI::Frame* frame, bool is_visible);
+
+        GWCA_API bool TriggerFrameRedraw(UI::Frame* frame);
+
+        GWCA_API bool SetFramePosition(UI::Frame* frame, UI::FramePosition& position);
 
         typedef HookCallback<uint32_t> KeyCallback;
         // Listen for a gw hotkey press
