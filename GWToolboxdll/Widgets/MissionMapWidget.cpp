@@ -176,32 +176,6 @@ namespace {
         const auto& lines = Minimap::Instance().custom_renderer.GetLines();
         const auto map_id = GW::Map::GetMapID();
 
-        // Save render states
-        DWORD oldAlphaBlend, oldSrcBlend, oldDestBlend, oldScissorTest;
-        RECT oldScissorRect;
-        dx_device->GetRenderState(D3DRS_ALPHABLENDENABLE, &oldAlphaBlend);
-        dx_device->GetRenderState(D3DRS_SRCBLEND, &oldSrcBlend);
-        dx_device->GetRenderState(D3DRS_DESTBLEND, &oldDestBlend);
-        dx_device->GetRenderState(D3DRS_SCISSORTESTENABLE, &oldScissorTest);
-        dx_device->GetScissorRect(&oldScissorRect);
-
-        // Enable scissor testing for clipping
-        dx_device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
-
-        // Set the scissor rectangle
-        RECT scissorRect;
-        scissorRect.left = static_cast<LONG>(mission_map_top_left.x);
-        scissorRect.top = static_cast<LONG>(mission_map_top_left.y);
-        scissorRect.right = static_cast<LONG>(mission_map_bottom_right.x);
-        scissorRect.bottom = static_cast<LONG>(mission_map_bottom_right.y);
-        dx_device->SetScissorRect(&scissorRect);
-
-        // Modify render states for line drawing
-        dx_device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-        dx_device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-        dx_device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-        dx_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);  // Use a flexible vertex format
-
         struct Vertex {
             float x, y, z, w;
             DWORD color;
@@ -228,17 +202,44 @@ namespace {
             vertices.push_back({ projected_p2.x, projected_p2.y, 0.0f, 1.0f, (DWORD)line->color });
 
         }
+        if (vertices.empty())
+            return;
 
-        if (!vertices.empty()) {
-            dx_device->DrawPrimitiveUP(D3DPT_LINELIST, vertices.size() / 2, vertices.data(), sizeof(Vertex));
-        }
+        // Save render states
+        DWORD oldAlphaBlend, oldSrcBlend, oldDestBlend, oldScissorTest, oldFVF;
+        RECT oldScissorRect;
+        dx_device->GetRenderState(D3DRS_ALPHABLENDENABLE, &oldAlphaBlend);
+        dx_device->GetRenderState(D3DRS_SRCBLEND, &oldSrcBlend);
+        dx_device->GetRenderState(D3DRS_DESTBLEND, &oldDestBlend);
+        dx_device->GetRenderState(D3DRS_SCISSORTESTENABLE, &oldScissorTest);
+        dx_device->GetScissorRect(&oldScissorRect);
+        dx_device->GetFVF(&oldFVF);
+
+        // Enable scissor testing for clipping
+        dx_device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+
+        // Set the scissor rectangle
+        RECT scissorRect;
+        scissorRect.left = static_cast<LONG>(mission_map_top_left.x);
+        scissorRect.top = static_cast<LONG>(mission_map_top_left.y);
+        scissorRect.right = static_cast<LONG>(mission_map_bottom_right.x);
+        scissorRect.bottom = static_cast<LONG>(mission_map_bottom_right.y);
+        dx_device->SetScissorRect(&scissorRect);
+
+        // Modify render states for line drawing
+        dx_device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+        dx_device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+        dx_device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+        dx_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);  // Use a flexible vertex format
+
+        dx_device->DrawPrimitiveUP(D3DPT_LINELIST, vertices.size() / 2, vertices.data(), sizeof(Vertex));
 
         // Restore original scissor rect and render states
-        dx_device->SetScissorRect(&oldScissorRect);
-        dx_device->SetRenderState(D3DRS_SCISSORTESTENABLE, oldScissorTest);
-        dx_device->SetRenderState(D3DRS_ALPHABLENDENABLE, oldAlphaBlend);
-        dx_device->SetRenderState(D3DRS_SRCBLEND, oldSrcBlend);
+        dx_device->SetFVF(oldFVF);
         dx_device->SetRenderState(D3DRS_DESTBLEND, oldDestBlend);
+        dx_device->SetRenderState(D3DRS_SRCBLEND, oldSrcBlend);
+        dx_device->SetRenderState(D3DRS_ALPHABLENDENABLE, oldAlphaBlend);
+        dx_device->SetRenderState(D3DRS_SCISSORTESTENABLE, oldScissorTest);
     }
 }
 
