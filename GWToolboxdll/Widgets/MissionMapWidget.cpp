@@ -11,6 +11,7 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <Modules/QuestModule.h>
 #include <ImGuiAddons.h>
+#include <GWCA/Managers/RenderMgr.h>
 
 namespace {
     bool draw_all_terrain_lines = false;
@@ -72,6 +73,10 @@ namespace {
         return WorldMapWidget::GamePosToWorldMap(game_map_position, world_map_pos) && WorldMapCoordsToMissionMapScreenPos(world_map_pos, screen_coords);
     }
 
+
+
+    void Draw(IDirect3DDevice9*);
+
     std::vector<GW::UI::UIMessage> messages_hit;
     GW::UI::UIInteractionCallback OnMissionMap_UICallback_Func = 0, OnMissionMap_UICallback_Ret = 0;
 
@@ -79,17 +84,17 @@ namespace {
     {
         GW::Hook::EnterHook();
         switch (message->message_id) {
-            case GW::UI::UIMessage::kInitFrame:
-                OnMissionMap_UICallback_Ret(message, wparam, lparam);
-                mission_map_frame = GW::UI::GetFrameById(message->frame_id);
-                break;
-            case GW::UI::UIMessage::kDestroyFrame:
-                mission_map_frame = nullptr;
-                OnMissionMap_UICallback_Ret(message, wparam, lparam);
-                break;
-            default:
-                OnMissionMap_UICallback_Ret(message, wparam, lparam);
-                break;
+        case GW::UI::UIMessage::kInitFrame:
+            OnMissionMap_UICallback_Ret(message, wparam, lparam);
+            mission_map_frame = GW::UI::GetFrameById(message->frame_id);
+            break;
+        case GW::UI::UIMessage::kDestroyFrame:
+            mission_map_frame = nullptr;
+            OnMissionMap_UICallback_Ret(message, wparam, lparam);
+            break;
+        default:
+            OnMissionMap_UICallback_Ret(message, wparam, lparam);
+            break;
         }
         GW::Hook::LeaveHook();
     }
@@ -100,6 +105,7 @@ namespace {
     {
         if (OnMissionMap_UICallback_Func)
             return true;
+
         const auto mission_map_context = GW::Map::GetMissionMapContext();
         mission_map_frame = mission_map_context ? GW::UI::GetFrameById(mission_map_context->frame_id) : nullptr;
         if (!(mission_map_frame && mission_map_frame->frame_callbacks[0]))
@@ -161,6 +167,79 @@ namespace {
         }
         return true;
     }
+    void Draw(IDirect3DDevice9* dx_device) {
+        if (!HookMissionMapFrame())
+            return;
+        if (!InitializeMissionMapParameters())
+            return;
+
+        const auto& lines = Minimap::Instance().custom_renderer.GetLines();
+        const auto map_id = GW::Map::GetMapID();
+
+        // Save render states
+        DWORD oldAlphaBlend, oldSrcBlend, oldDestBlend, oldScissorTest;
+        RECT oldScissorRect;
+        dx_device->GetRenderState(D3DRS_ALPHABLENDENABLE, &oldAlphaBlend);
+        dx_device->GetRenderState(D3DRS_SRCBLEND, &oldSrcBlend);
+        dx_device->GetRenderState(D3DRS_DESTBLEND, &oldDestBlend);
+        dx_device->GetRenderState(D3DRS_SCISSORTESTENABLE, &oldScissorTest);
+        dx_device->GetScissorRect(&oldScissorRect);
+
+        // Enable scissor testing for clipping
+        dx_device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+
+        // Set the scissor rectangle
+        RECT scissorRect;
+        scissorRect.left = static_cast<LONG>(mission_map_top_left.x);
+        scissorRect.top = static_cast<LONG>(mission_map_top_left.y);
+        scissorRect.right = static_cast<LONG>(mission_map_bottom_right.x);
+        scissorRect.bottom = static_cast<LONG>(mission_map_bottom_right.y);
+        dx_device->SetScissorRect(&scissorRect);
+
+        // Modify render states for line drawing
+        dx_device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+        dx_device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+        dx_device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+        dx_device->SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);  // Use a flexible vertex format
+
+        struct Vertex {
+            float x, y, z, w;
+            DWORD color;
+        };
+
+        std::vector<Vertex> vertices;
+
+        for (const auto& line : lines) {
+            if (!line->visible) continue;
+            if (!line->draw_on_mission_map &&
+                !(draw_all_minimap_lines && line->draw_on_minimap) &&
+                !(draw_all_terrain_lines && line->draw_on_terrain))
+                continue;
+            if (line->map != map_id) continue;
+
+            GW::Vec2f projected_p1, projected_p2;
+            if (!GamePosToMissionMapScreenPos(line->p1, projected_p1))
+                continue;
+            if (!GamePosToMissionMapScreenPos(line->p2, projected_p2))
+                continue;
+
+            // Add two vertices for the line
+            vertices.push_back({ projected_p1.x, projected_p1.y, 0.0f, 1.0f, (DWORD)line->color });
+            vertices.push_back({ projected_p2.x, projected_p2.y, 0.0f, 1.0f, (DWORD)line->color });
+
+        }
+
+        if (!vertices.empty()) {
+            dx_device->DrawPrimitiveUP(D3DPT_LINELIST, vertices.size() / 2, vertices.data(), sizeof(Vertex));
+        }
+
+        // Restore original scissor rect and render states
+        dx_device->SetScissorRect(&oldScissorRect);
+        dx_device->SetRenderState(D3DRS_SCISSORTESTENABLE, oldScissorTest);
+        dx_device->SetRenderState(D3DRS_ALPHABLENDENABLE, oldAlphaBlend);
+        dx_device->SetRenderState(D3DRS_SRCBLEND, oldSrcBlend);
+        dx_device->SetRenderState(D3DRS_DESTBLEND, oldDestBlend);
+    }
 }
 
 void MissionMapWidget::LoadSettings(ToolboxIni* ini)
@@ -177,40 +256,11 @@ void MissionMapWidget::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(draw_all_minimap_lines);
 }
 
-void MissionMapWidget::Draw(IDirect3DDevice9*)
-{
-    if (!visible)
-        return;
-    if (!HookMissionMapFrame())
-        return;
-    if (!InitializeMissionMapParameters())
-        return;
-
-    const auto viewport = ImGui::GetMainViewport();
-    const auto draw_list = ImGui::GetBackgroundDrawList(viewport);
-    const auto& lines = Minimap::Instance().custom_renderer.GetLines();
-
-    draw_list->PushClipRect({mission_map_top_left.x, mission_map_top_left.y}, {mission_map_bottom_right.x, mission_map_bottom_right.y});
-
-    const auto map_id = GW::Map::GetMapID();
-    for (const auto& line : lines) {
-        if (!line->visible) continue;
-        if (!line->draw_on_mission_map &&
-            !(draw_all_minimap_lines && line->draw_on_minimap) &&
-            !(draw_all_terrain_lines && line->draw_on_terrain))
-            continue;
-        if (line->map != map_id) continue;
-
-        GW::Vec2f projected_p1;
-        if (!GamePosToMissionMapScreenPos(line->p1, projected_p1))
-            continue;
-        GW::Vec2f projected_p2;
-        if (!GamePosToMissionMapScreenPos(line->p2, projected_p2))
-            continue;
-        draw_list->AddLine(projected_p1, projected_p2, line->color, 1.0F);
-    }
-
-    draw_list->PopClipRect();
+void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
+{ 
+    if (visible)
+        ::Draw(dx_device);
+    HookMissionMapFrame();
 }
 
 void MissionMapWidget::DrawSettingsInternal()
