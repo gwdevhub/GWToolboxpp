@@ -1076,28 +1076,24 @@ void HotkeyEquipItem::Execute()
         return;
     }
     GW::Bag* bag = nullptr;
+    GW::Item* item = nullptr;
     if (!ongoing) {
+        item_id = 0;
         if (equip_by == SLOT) {
             const auto bag_id = static_cast<GW::Constants::Bag>(bag_idx);
             if (bag_id < GW::Constants::Bag::Backpack || bag_id > GW::Constants::Bag::Equipment_Pack || slot_idx < 1 || slot_idx > 25) {
-                if (show_error_on_failure) {
-                    Log::Error("Invalid bag slot %d/%d!", bag_id, slot_idx);
-                }
+                show_error_on_failure && (Log::Error("Invalid bag slot %d/%d!", bag_id, slot_idx), true);
                 return;
             }
             bag = GW::Items::GetBag(bag_id);
             if (!bag) {
-                if (show_error_on_failure) {
-                    Log::Error("Bag #%d not found!", bag_id);
-                }
+                show_error_on_failure && (Log::Error("Bag #%d not found!", bag_id), true);
                 return;
             }
             GW::ItemArray& items = bag->items;
             item = (items.valid() && slot_idx <= items.size()) ? items[slot_idx - 1] : nullptr;
             if (!(item && item->bag == bag)) {
-                if (show_error_on_failure) {
-                    Log::Error("Invalid bag slot %d/%d!", bag_id, slot_idx);
-                }
+                show_error_on_failure && (Log::Error("Invalid bag slot %d/%d!", bag_id, slot_idx), true);
                 return;
             }
         }
@@ -1107,88 +1103,63 @@ void HotkeyEquipItem::Execute()
                 item = FindMatchingItem(i, &bag);
             }
             if (!(item && item->bag == bag)) {
-                if (show_error_on_failure) {
-                    Log::Error("No equippable item matching your hotkey");
-                }
-                item = nullptr;
+                show_error_on_failure && (Log::Error("No equippable item matching your hotkey"), true);
                 return;
             }
         }
 
-        if (!IsEquippable(item)) {
-            if (show_error_on_failure) {
-                Log::Error("No equippable item in bag %d slot %d", bag_idx,
-                           slot_idx);
-            }
-            item = nullptr;
+        if (!(item && IsEquippable(item))) {
+            show_error_on_failure && (Log::Error("No equippable item in bag %d slot %d", bag_idx, slot_idx), true);
             return;
         }
+        item_id = item->item_id;
         ongoing = true;
-        start_time = std::chrono::steady_clock::now();
+        start_time = TIMER_INIT();
+        last_try = 0;
     }
-    else {
-        last_try = std::chrono::steady_clock::now();
-        const __int64 diff_mills =
-            std::chrono::duration_cast<std::chrono::milliseconds>(last_try -
-                                                                  start_time)
-            .count();
-        if (diff_mills < 500) {
-            return; // Wait 250ms between tries.
-        }
-        if (diff_mills > 5000) {
-            if (show_error_on_failure) {
-                Log::Error("Failed to equip item in bag %d slot %d", bag_idx,
-                           slot_idx);
-            }
-            ongoing = false;
-            item = nullptr;
-            return;
-        }
+    ongoing = false;
+    if (TIMER_DIFF(start_time) > 5000) {
+        show_error_on_failure && (Log::Error("Failed to equip item"), true);
+        return;
     }
-
-    if (!item || !item->item_id) {
-        if (show_error_on_failure) {
-            Log::Error("Failed to equip item in bag %d slot %d", bag_idx,
-                       slot_idx);
-        }
-        ongoing = false;
-        item = nullptr;
+    item = GW::Items::GetItemById(item_id);
+    if (!(item && IsEquippable(item))) {
+        show_error_on_failure && (Log::Error("Failed to equip item"), true);
         return;
     }
     if (item->bag && item->bag->bag_type == GW::Constants::BagType::Equipped) {
-        // Log::Info("Success!");
-        ongoing = false;
-        item = nullptr;
         return; // Success!
     }
     const GW::AgentLiving* p = GW::Agents::GetControlledCharacter();
     if (!(p && p->GetIsAlive())) {
-        if (show_error_on_failure) {
-            Log::Error("Failed to equip item in bag %d slot %d", bag_idx,
-                       slot_idx);
-        }
-        ongoing = false;
-        item = nullptr;
+        show_error_on_failure && (Log::Error("Failed to equip item in bag %d slot %d", bag_idx, slot_idx), true);
         return;
     }
     const GW::Skillbar* s = GW::SkillbarMgr::GetPlayerSkillbar();
     if (p->GetIsKnockedDown() || (s && s->casting)) {
+        ongoing = true;
         // Player knocked down or casting; wait.
         return;
     }
     if (p->skill) {
+        ongoing = true;
         // Casting atm
         return;
     }
     if (!p->model_state) {
+        ongoing = true;
         return;
     }
-    if (p->GetIsIdle() || p->GetIsMoving()) {
-        GW::Items::EquipItem(item);
-    }
-    else {
-        // Move to clear model state e.g. attacking, aftercast
-        GW::Agents::Move(p->pos);
+    if (TIMER_DIFF(last_try) > 500) {
+        last_try = TIMER_INIT();
+        if (p->GetIsIdle() || p->GetIsMoving()) {
+            GW::Items::EquipItem(item);
+        }
+        else {
+            // Move to clear model state e.g. attacking, aftercast
+            GW::Agents::Move(p->pos);
+        }
+
     }
 }
 

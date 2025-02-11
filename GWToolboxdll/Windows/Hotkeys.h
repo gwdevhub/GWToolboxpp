@@ -145,9 +145,9 @@ class HotkeyEquipItem : public TBHotkey {
         SLOT
     } equip_by = SLOT;
 
-    GW::Item* item = nullptr;
-    std::chrono::time_point<std::chrono::steady_clock> start_time{};
-    std::chrono::time_point<std::chrono::steady_clock> last_try{};
+    uint32_t item_id = 0;
+    clock_t start_time = 0;
+    clock_t last_try = 0;
     const wchar_t* item_name = L"";
 
 public:
