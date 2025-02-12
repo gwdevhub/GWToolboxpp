@@ -98,8 +98,8 @@ namespace {
 
     bool overlay_party_window = false;
 
-    Color background = 0;
-    Color low_attribute_overlay = 0;
+    Color background = Colors::ARGB(76, 0, 0, 0);
+    Color low_attribute_overlay = Colors::ARGB(76, 0, 0, 0);
 
     std::vector<GW::Constants::SkillID> bond_list{};               // index to skill id
     std::unordered_map<GW::Constants::SkillID, size_t> bond_map{}; // skill id to index
@@ -438,8 +438,8 @@ void BondsWidget::Draw(IDirect3DDevice9*)
 void BondsWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
-    background = Colors::Load(ini, Name(), VAR_NAME(background), Colors::ARGB(76, 0, 0, 0));
-    low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(low_attribute_overlay), Colors::ARGB(76, 0, 0, 0));
+    background = Colors::Load(ini, Name(), VAR_NAME(background), background);
+    low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(low_attribute_overlay), low_attribute_overlay);
 
     LOAD_BOOL(click_to_cast);
     LOAD_BOOL(click_to_drop);
