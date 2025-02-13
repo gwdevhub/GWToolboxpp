@@ -31,9 +31,9 @@ namespace TextUtils {
     bool ParseFloat(const char* str, float* val);
     bool ParseFloat(const wchar_t* str, float* val);
 
-    size_t TimeToString(time_t utc_timestamp, std::string& out);
-    size_t TimeToString(uint32_t utc_timestamp, std::string& out);
-    size_t TimeToString(FILETIME utc_timestamp, std::string& out);
+    std::string TimeToString(time_t utc_timestamp = 0, bool include_seconds = false);
+    std::string TimeToString(uint32_t utc_timestamp, bool include_seconds = false);
+    std::string TimeToString(FILETIME utc_timestamp, bool include_seconds = false);
     std::vector<std::string> Split(const std::string& in, const std::string& token);
     // Turn and array of strings into a single string
     std::string Join(const std::vector<std::string>& parts, const std::string& token);
