@@ -895,7 +895,10 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
             if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 auto tbuild = new TeamBuild("");
                 tbuild->edit_open = true;
-                tbuild->builds.resize(4, new Build("", ""));
+                for (size_t i = 0; i < 4; i++) {
+                    tbuild->builds.push_back(new Build(*tbuild, "", ""));
+                }
+                teambuilds.push_back(tbuild);
                 builds_changed = true;
             }
         }
