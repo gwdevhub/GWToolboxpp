@@ -680,13 +680,13 @@ void TimerWidget::Draw(IDirect3DDevice9*)
         const auto font = FontLoader::GetFontByPx(font_size);
         // Main timer:
         print_time(GetTimer(), show_decimals, 32, timer_buffer);
-        ImGui::PushFont(font);
+        ImGui::PushFont(font, font_size);
         ImGui::TextShadowed(timer_buffer, {2, 2});
         ImGui::PopFont();
 
         if (also_show_instance_timer) {
             print_time(milliseconds(GW::Map::GetInstanceTime()), show_decimals, 32, timer_buffer);
-            ImGui::PushFont(font);
+            ImGui::PushFont(font, font_size);
             ImGui::TextShadowed(timer_buffer, {2, 2});
             ImGui::PopFont();
         }
@@ -705,7 +705,7 @@ void TimerWidget::Draw(IDirect3DDevice9*)
         };
         if (font_size_extra_timers > 0.f) {
             const auto extra_timer_font = FontLoader::GetFontByPx(font_size_extra_timers);
-            ImGui::PushFont(extra_timer_font);
+            ImGui::PushFont(extra_timer_font, font_size_extra_timers);
 
             if (show_deep_timer && GetDeepTimer()) {
                 draw_timer(extra_buffer, &extra_color);

@@ -23,6 +23,7 @@ namespace {
     int red_threshold = 250;
     bool show_avg_ping = false;
     int font_size = 0;
+    float text_size = 40.f;
 
     GW::HookEntry ChatCommand_Hook;
 
@@ -95,7 +96,7 @@ void LatencyWidget::Draw(IDirect3DDevice9*)
 
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !ctrl_pressed))) {
         const ImVec2 cur = ImGui::GetCursorPos();
-        ImGui::PushFont(FontLoader::GetFont(static_cast<FontLoader::FontSize>(font_size)));
+        ImGui::PushFont(FontLoader::GetFontByPx(text_size), text_size);
         ImGui::SetCursorPos(cur);
         uint32_t ping = GetPing();
         ImGui::TextColored(GetColorForPing(ping), "%ums", ping);
@@ -124,16 +125,15 @@ void LatencyWidget::LoadSettings(ToolboxIni* ini)
 
     LOAD_UINT(red_threshold);
     LOAD_BOOL(show_avg_ping);
-    LOAD_UINT(red_threshold);
+    LOAD_FLOAT(text_size);
+    // Legacy font size
     LOAD_UINT(font_size);
     switch (font_size) {
-        case static_cast<int>(FontLoader::FontSize::widget_label):
-        case static_cast<int>(FontLoader::FontSize::widget_small):
-        case static_cast<int>(FontLoader::FontSize::widget_large):
-            break;
-        default:
-            font_size = static_cast<int>(FontLoader::FontSize::widget_small);
-            break;
+    case static_cast<int>(FontLoader::FontSize::widget_label):
+    case static_cast<int>(FontLoader::FontSize::widget_small):
+    case static_cast<int>(FontLoader::FontSize::widget_large):
+        text_size = static_cast<float>(font_size);
+        break;
     }
 }
 
@@ -142,27 +142,14 @@ void LatencyWidget::SaveSettings(ToolboxIni* ini)
     ToolboxWidget::SaveSettings(ini);
     SAVE_UINT(red_threshold);
     SAVE_BOOL(show_avg_ping);
-    SAVE_UINT(font_size);
+    SAVE_FLOAT(text_size);
 }
 
 void LatencyWidget::DrawSettingsInternal()
 {
     ImGui::SliderInt("Red ping threshold", &red_threshold, 0, 1000);
     ImGui::Checkbox("Show average ping", &show_avg_ping);
-    ImGui::Text("Font Size");
-    ImGui::Indent();
-    if (ImGui::RadioButton("Small", font_size == static_cast<int>(FontLoader::FontSize::widget_label))) {
-        font_size = static_cast<int>(FontLoader::FontSize::widget_label);
-    }
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Medium", font_size == static_cast<int>(FontLoader::FontSize::widget_small))) {
-        font_size = static_cast<int>(FontLoader::FontSize::widget_small);
-    }
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Large", font_size == static_cast<int>(FontLoader::FontSize::widget_large))) {
-        font_size = static_cast<int>(FontLoader::FontSize::widget_large);
-    }
-    ImGui::Unindent();
+    ImGui::DragFloat("Text size", &text_size, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
 }
 
 ImColor LatencyWidget::GetColorForPing(const uint32_t ping)
