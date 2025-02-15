@@ -95,20 +95,18 @@ namespace {
             return false;
         if (quest_id == active_quest->quest_id)
             return true;
-        if (!Minimap::ShouldDrawAllQuests() || show_paths_to_all_quests)
+        if (!show_paths_to_all_quests)
             return false;
+        // De-duplicate other quests that are pointing to the same place!
         const auto quest = GW::QuestMgr::GetQuest(quest_id);
-        auto lowest_quest_id_by_position = quest_id;
+        if (!quest)
+            return false;// Quest has just been removed?
         for (const auto q : *questlog) {
             if (quest->marker == q.marker) {
-                lowest_quest_id_by_position = std::min(lowest_quest_id_by_position, q.quest_id);
-                break;
+                return q.quest_id == quest_id;
             }
         }
-        if (quest_id != lowest_quest_id_by_position) {
-            return false;
-        }
-        return true;
+        return false;
     }
 
     struct CalculatedQuestPath {
@@ -257,9 +255,10 @@ namespace {
 
         void UpdateUI()
         {
+            DrawMinimapLines();
             if (waypoints.empty())
                 return;
-            DrawMinimapLines();
+            
             const auto& current_waypoint_pos = waypoints[current_waypoint];
             const auto waypoint_distance = GetSquareDistance(current_waypoint_pos, previous_closest_waypoint);
             constexpr float update_when_waypoint_changed_more_than = 300.f * 300.f;
@@ -380,6 +379,14 @@ namespace {
 
     GW::Constants::QuestID quest_id_before_map_load = GW::Constants::QuestID::None;
 
+    void RefreshAllQuestPaths() {
+        const auto q = GW::QuestMgr::GetQuestLog();
+        if (!q) return;
+        for (auto& quest : *q) {
+            RefreshQuestPath(quest.quest_id);
+        }
+    }
+
     void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
@@ -441,7 +448,7 @@ namespace {
                     if (quest_id_before_map_load == custom_quest_marker.quest_id)
                         GW::QuestMgr::SetActiveQuestId(quest_id_before_map_load);
                 }
-                RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
+                RefreshAllQuestPaths();
                 break;
         }
     }
@@ -574,7 +581,8 @@ void QuestModule::DrawSettingsInternal()
     ImGui::Checkbox("Minimap##drawquestpath", &draw_quest_path_on_minimap);
     ImGui::Checkbox("Mission Map##drawquestpath", &draw_quest_path_on_mission_map);
 #ifdef _DEBUG
-    ImGui::Checkbox("Show paths to all quests##drawquestpath", &show_paths_to_all_quests);
+    if (ImGui::Checkbox("Show paths to all quests##drawquestpath", &show_paths_to_all_quests))
+        RefreshAllQuestPaths();
 #endif
     ImGui::DragFloat("Max distance between two points##max_visibility_range", &Pathing::max_visibility_range, 1'000.f, 1'000.f, 50'000.f);
     ImGui::ShowHelp("The higher this value, the more accurate the path will be, but the more CPU it will use.");
@@ -658,6 +666,7 @@ void QuestModule::Initialize()
     ASSERT(QuestLogRow_UICallback_Func);
     ASSERT(bypass_custom_quest_assertion_patch.GetAddress());
 #endif
+    RefreshAllQuestPaths();
 }
 
 void QuestModule::EmulateQuestSelected(GW::Constants::QuestID quest_id)
