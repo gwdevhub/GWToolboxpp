@@ -740,7 +740,6 @@ namespace {
         ParseCompletionBuffer(CompletionType::Heroes);
         RefreshAccountCharacters();
         CompletionWindow::Instance().CheckProgress();
-        CheckAllSkills();
     }
 
     void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void* lparam)
@@ -2361,6 +2360,13 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         ImGui::Text(title);
         ImGui::ShowHelp("Guild Wars only shows skills learned for the current primary/secondary profession.\n\n"
             "GWToolbox remembers skills learned for other professions,\nbut is only able to update this info when you switch to that profession.");
+        ImGui::SameLine(checkbox_offset - 100.f);
+        if (ImGui::Button("Check Now")) {
+            GW::GameThread::Enqueue(CheckAllSkills);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Will cycle through your available secondary professions to detect all unlocked skills");
+        }
         ImGui::SameLine(checkbox_offset);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
         ImGui::Checkbox("Hide learned skills", &hide_unlocked_skills);
