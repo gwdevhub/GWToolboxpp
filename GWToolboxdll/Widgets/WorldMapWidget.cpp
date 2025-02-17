@@ -682,7 +682,11 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         show_all_rect.Translate(mouse_offset);
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
             bool is_hard_mode = GW::PartyMgr::GetIsPartyInHardMode();
-            ImGui::Checkbox("Hard mode", &is_hard_mode);
+            if (ImGui::Checkbox("Hard mode", &is_hard_mode)) {
+                GW::GameThread::Enqueue([] {
+                    GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
+                });
+            }
             hard_mode_rect = c->LastItemData.Rect;
             hard_mode_rect.Translate(mouse_offset);
         }
@@ -799,12 +803,8 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
                 return true;
             if (check_rect(show_lines_on_world_map_rect))
                 return true;
-            if (check_rect(hard_mode_rect)) {
-                GW::GameThread::Enqueue([] {
-                    GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
-                });
+            if (check_rect(hard_mode_rect))
                 return true;
-            }
             if (check_rect(show_all_rect))
                 return true;
             break;
