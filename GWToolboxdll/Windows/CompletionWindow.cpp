@@ -632,12 +632,14 @@ namespace {
             return;
         const auto my_id = GW::Agents::GetControlledCharacterId();
         GW::SkillbarMgr::SkillTemplate original_template;
-        if (!GW::SkillbarMgr::GetSkillTemplate(my_id, original_template))
+        if (!GW::SkillbarMgr::GetSkillTemplate(my_id, original_template) ||
+            original_template.primary == Profession::None ||
+            original_template.secondary == Profession::None)
             return;
-        for (size_t i = (size_t)GW::Constants::Profession::Dervish; i > 0; i--) {
-            GW::PlayerMgr::ChangeSecondProfession((GW::Constants::Profession)i);
+        for (size_t i = (size_t)Profession::Dervish; i > 0; i--) {
+            GW::PlayerMgr::ChangeSecondProfession((Profession)i);
         }
-        GW::PlayerMgr::ChangeSecondProfession(original_template.secondary);
+        ASSERT(GW::PlayerMgr::ChangeSecondProfession(original_template.secondary) && "Failed to restore original build/profession");;
         GW::SkillbarMgr::LoadSkillTemplate(my_id, original_template);
     }
 
