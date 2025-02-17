@@ -30,6 +30,7 @@ namespace GW {
             CollectorBuy,
             CrafterBuy,
             WeaponsmithCustomize,
+            DonateFaction = 0x6,
 
             MerchantSell = 0xB,
             TraderBuy,
