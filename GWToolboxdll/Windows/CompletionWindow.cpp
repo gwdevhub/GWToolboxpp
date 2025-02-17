@@ -613,8 +613,7 @@ namespace {
                 it++;
             }
         }
-        const auto pn = GetPlayerName();
-        if (pn) {
+        if (const auto pn = GetPlayerName()) {
             const auto cc = CompletionWindow::GetCharacterCompletion(pn);
             if (cc) {
                 cc->account = email;
