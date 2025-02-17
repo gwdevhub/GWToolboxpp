@@ -115,7 +115,7 @@ namespace {
 
     bool should_stop = false;
 
-    std::vector<std::thread*> workers;
+
 
     // snprintf error message, pass to callback as a failure. Used internally.
     void trigger_failure_callback(const std::function<void(bool, const std::wstring&)>& callback, const wchar_t* format, ...)
@@ -144,22 +144,40 @@ namespace {
         }
     }
 
-    void WorkerUpdate()
-    {
-        while (!should_stop) {
-            worker_mutex.lock();
-            if (thread_jobs.empty()) {
-                worker_mutex.unlock();
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-            else {
-                std::function<void()> func = thread_jobs.front();
-                thread_jobs.pop();
-                worker_mutex.unlock();
-                func();
-            }
+    class WorkerThread {
+    public:
+        bool is_running = false;
+        std::jthread thread;
+
+        WorkerThread()
+        {
+            ASSERT(!is_running);
+            is_running = true;
+            thread = std::jthread([&] {
+                while (!should_stop) {
+                    worker_mutex.lock();
+                    if (thread_jobs.empty()) {
+                        worker_mutex.unlock();
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    }
+                    else {
+                        std::function<void()> func = thread_jobs.front();
+                        thread_jobs.pop();
+                        worker_mutex.unlock();
+                        func();
+                    }
+                }
+                is_running = false;
+            });
         }
-    }
+
+        ~WorkerThread()
+        {
+            ASSERT(!is_running);
+        }
+    };
+
+    std::vector<WorkerThread*> workers;
 
     void InitRestClient(RestClient* r)
     {
@@ -172,7 +190,8 @@ namespace {
         r->SetVerifyHost(false);
     }
 
-    const std::string HashStr(const std::string& str) {
+    const std::string HashStr(const std::string& str)
+    {
         const auto bytes_to_hash = std::vector<byte>(str.begin(), str.end());
         auto hash = std::vector<byte>(WC_SHA256_DIGEST_SIZE);
         wc_Sha256Hash(bytes_to_hash.data(), bytes_to_hash.size(), hash.data());
@@ -182,7 +201,7 @@ namespace {
             hexstream << std::setw(2) << static_cast<unsigned>(b);
         }
         return hexstream.str();
-        };
+    };
 } // namespace
 
 Resources::Resources()
@@ -351,22 +370,14 @@ void Resources::Initialize()
 {
     ToolboxModule::Initialize();
     for (size_t i = 0; i < MAX_WORKERS; i++) {
-        workers.push_back(new std::thread([this] {
-            WorkerUpdate();
-        }));
+        workers.push_back(new WorkerThread());
     }
     RegisterUIMessageCallback(&OnUIMessage_Hook, GW::UI::UIMessage::kPreferenceEnumChanged, OnUIMessage, 0x8000);
 }
 
 void Resources::Cleanup()
 {
-    should_stop = true;
-    for (std::thread* worker : workers) {
-        if (!worker) {
-            continue;
-        }
-        ASSERT(worker->joinable());
-        worker->join();
+    for (const auto worker : workers) {
         delete worker;
     }
     workers.clear();
@@ -398,7 +409,7 @@ void Resources::Terminate()
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_Hook);
 
     Cleanup();
-    if(initialised_curl)
+    if (initialised_curl)
         ShutdownCurl();
     initialised_curl = false;
     if (co_initialized) {
@@ -416,6 +427,21 @@ void Resources::Terminate()
         delete tex;
     }
     map_names.clear();
+}
+
+bool Resources::CanTerminate()
+{
+    for (const auto worker : workers) {
+        if (worker->is_running)
+            return false;
+    }
+    return true;
+}
+
+void Resources::SignalTerminate()
+{
+    ToolboxModule::SignalTerminate();
+    should_stop = true;
 }
 
 void Resources::EndLoading() const
@@ -546,6 +572,7 @@ bool Resources::ReadFile(const std::filesystem::path& path, std::string& respons
     response = ss.str();
     return !response.empty();
 }
+
 bool Resources::ReadFile(const std::filesystem::path& path, std::wstring& response)
 {
     if (!std::filesystem::exists(path))
@@ -595,8 +622,6 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
 void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, void* context, std::chrono::seconds cache_duration)
 {
     EnqueueWorkerTask([url, callback, context, &cache_duration] {
-
-
         const auto get_cache_modified_time = [](const std::filesystem::path& file_name) -> std::optional<std::filesystem::file_time_type> {
             if (!std::filesystem::exists(file_name)) {
                 return std::optional<std::filesystem::file_time_type>();
@@ -604,7 +629,7 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
 
             const auto file_time = std::filesystem::last_write_time(file_name);
             return file_time;
-            };
+        };
 
         const auto load_from_cache = [](const std::filesystem::path& file_name) -> std::optional<std::string> {
             std::ifstream cache_file(file_name);
@@ -614,7 +639,7 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
 
             std::string contents((std::istreambuf_iterator<char>(cache_file)), std::istreambuf_iterator<char>());
             return contents;
-            };
+        };
 
         const auto save_to_cache = [](const std::filesystem::path& file_name, const std::string& content) -> bool {
             std::filesystem::create_directories(file_name.parent_path());
@@ -625,7 +650,7 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
 
             cache_file << content;
             return true;
-            };
+        };
 
         const auto remove_protocol = [](const std::string& url) -> std::string {
             const std::string http = "http://";
@@ -639,7 +664,7 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
                 return url.substr(https.size());
             }
             return url; // Return the original if no match is found
-            };
+        };
         const auto cache_path = Resources::GetPath("cache") / HashStr(remove_protocol(url));
         const auto expiration = get_cache_modified_time(cache_path);
         if (expiration.has_value() &&
@@ -985,7 +1010,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
         trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());
         return texture;
     }
-    const auto path_to_file = std::format("{}\\{}",path.string(), filename_sanitised);
+    const auto path_to_file = std::format("{}\\{}", path.string(), filename_sanitised);
     // Check for local file
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
@@ -1151,58 +1176,58 @@ const wchar_t* Resources::GetRegionName(const GW::Constants::MapID map_id)
 {
     const auto area_info = GW::Map::GetMapInfo(map_id);
     switch (area_info ? area_info->region : GW::Region_DevRegion) {
-    case GW::Region_BattleIslands:
-        return GW::EncStrings::MapRegion::BattleIsles;
+        case GW::Region_BattleIslands:
+            return GW::EncStrings::MapRegion::BattleIsles;
 
-    // Prophecies
-    case GW::Region::Region_Maguuma:
-        return GW::EncStrings::MapRegion::MaguumaJungle;
-    case GW::Region::Region_Ascalon:
-    case GW::Region::Region_Presearing:
-        return GW::EncStrings::MapRegion::Ascalon;
-    case GW::Region::Region_Kryta:
-        return GW::EncStrings::MapRegion::Kryta;
-    case GW::Region::Region_NorthernShiverpeaks: {
-        // TODO: Southern vs northern shivers
-        return GW::EncStrings::MapRegion::NorthernShiverpeaks;
-    }
-    case GW::Region_CrystalDesert:
-        return GW::EncStrings::MapRegion::CrystalDesert;
-    case GW::Region_FissureOfWoe: {
-        // TODO: Ring of fire?
+        // Prophecies
+        case GW::Region::Region_Maguuma:
+            return GW::EncStrings::MapRegion::MaguumaJungle;
+        case GW::Region::Region_Ascalon:
+        case GW::Region::Region_Presearing:
+            return GW::EncStrings::MapRegion::Ascalon;
+        case GW::Region::Region_Kryta:
+            return GW::EncStrings::MapRegion::Kryta;
+        case GW::Region::Region_NorthernShiverpeaks: {
+            // TODO: Southern vs northern shivers
+            return GW::EncStrings::MapRegion::NorthernShiverpeaks;
+        }
+        case GW::Region_CrystalDesert:
+            return GW::EncStrings::MapRegion::CrystalDesert;
+        case GW::Region_FissureOfWoe: {
+            // TODO: Ring of fire?
             // TODO: Underworld
-        return GW::EncStrings::MapRegion::FissureOfWoe;
-    }
+            return GW::EncStrings::MapRegion::FissureOfWoe;
+        }
 
-    // Factions
-    case GW::Region::Region_Kurzick:
-        return GW::EncStrings::MapRegion::EchovaldForest;
-    case GW::Region::Region_Luxon:
-        return GW::EncStrings::MapRegion::TheJadeSea;
-    case GW::Region::Region_ShingJea:
-        return GW::EncStrings::MapRegion::ShingJeaIsland;
-    case GW::Region::Region_Kaineng:
-        return GW::EncStrings::MapRegion::KainengCity;
+        // Factions
+        case GW::Region::Region_Kurzick:
+            return GW::EncStrings::MapRegion::EchovaldForest;
+        case GW::Region::Region_Luxon:
+            return GW::EncStrings::MapRegion::TheJadeSea;
+        case GW::Region::Region_ShingJea:
+            return GW::EncStrings::MapRegion::ShingJeaIsland;
+        case GW::Region::Region_Kaineng:
+            return GW::EncStrings::MapRegion::KainengCity;
 
-    // Nightfall
-    case GW::Region::Region_Kourna:
-        return GW::EncStrings::MapRegion::Kourna;
-    case GW::Region::Region_Vaabi:
-        return GW::EncStrings::MapRegion::Vabbi;
-    case GW::Region::Region_Istan:
-        return GW::EncStrings::MapRegion::Istan;
-    case GW::Region::Region_DomainOfAnguish:
-        return GW::EncStrings::MapRegion::RealmOfTorment;
+        // Nightfall
+        case GW::Region::Region_Kourna:
+            return GW::EncStrings::MapRegion::Kourna;
+        case GW::Region::Region_Vaabi:
+            return GW::EncStrings::MapRegion::Vabbi;
+        case GW::Region::Region_Istan:
+            return GW::EncStrings::MapRegion::Istan;
+        case GW::Region::Region_DomainOfAnguish:
+            return GW::EncStrings::MapRegion::RealmOfTorment;
 
-    // Eye of the north
-    case GW::Region::Region_CharrHomelands:
-        return GW::EncStrings::MapRegion::CharrHomelands;
-    case GW::Region::Region_DepthsOfTyria:
-        return GW::EncStrings::MapRegion::DepthsOfTyria;
-    case GW::Region::Region_FarShiverpeaks:
-        return GW::EncStrings::MapRegion::FarShiverpeaks;
-    case GW::Region::Region_TarnishedCoast:
-        return GW::EncStrings::MapRegion::TarnishedCoast;
+        // Eye of the north
+        case GW::Region::Region_CharrHomelands:
+            return GW::EncStrings::MapRegion::CharrHomelands;
+        case GW::Region::Region_DepthsOfTyria:
+            return GW::EncStrings::MapRegion::DepthsOfTyria;
+        case GW::Region::Region_FarShiverpeaks:
+            return GW::EncStrings::MapRegion::FarShiverpeaks;
+        case GW::Region::Region_TarnishedCoast:
+            return GW::EncStrings::MapRegion::TarnishedCoast;
     }
     return L"\x108\107No region name yet :(\x1";
 }

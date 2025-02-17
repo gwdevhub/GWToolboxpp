@@ -38,7 +38,7 @@ public:
     bool WndProc(UINT, WPARAM, LPARAM) override;
 
     static void ShowAllOutposts(bool show);
-    static GW::Constants::MapID GetMapIdForLocation(const GW::Vec2f& world_map_pos);
+    static GW::Constants::MapID GetMapIdForLocation(const GW::Vec2f& world_map_pos, GW::Constants::MapID exclude_map_id = (GW::Constants::MapID)0);
     static bool WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GamePos& game_map_pos);
     static bool GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f& world_map_pos);
 };

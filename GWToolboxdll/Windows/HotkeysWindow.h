@@ -25,6 +25,8 @@ public:
     static bool ToggleClicker();
     static bool ToggleCoinDrop();
 
+    static void ChooseKeyCombo(TBHotkey* hotkey);
+
     static const TBHotkey* CurrentHotkey();
 
     // Update. Will always be called every frame.

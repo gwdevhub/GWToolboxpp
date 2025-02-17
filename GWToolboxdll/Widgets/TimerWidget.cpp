@@ -21,12 +21,11 @@
 #include <Modules/GameSettings.h>
 #include <Widgets/TimerWidget.h>
 
-#include "Utils/FontLoader.h"
+#include <Utils/FontLoader.h>
 
 using namespace std::chrono;
 
 namespace {
-
     GW::HookEntry ChatCmd_HookEntry;
     steady_clock::time_point now() { return steady_clock::now(); }
 
@@ -84,6 +83,8 @@ namespace {
     bool show_dhuum_timer = true;
     bool show_dungeon_traps_timer = true;
     bool show_spirit_timers = true;
+    float font_size = static_cast<float>(FontLoader::FontSize::widget_large);
+    float font_size_extra_timers = static_cast<float>(FontLoader::FontSize::widget_label);
     std::map<GW::Constants::SkillID, bool> spirit_effects_enabled{
         {GW::Constants::SkillID::Edge_of_Extinction, true},
         {GW::Constants::SkillID::Quickening_Zephyr, true}
@@ -466,6 +467,8 @@ void TimerWidget::Terminate() {
 void TimerWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
+    LOAD_FLOAT(font_size);
+    LOAD_FLOAT(font_size_extra_timers);
     LOAD_BOOL(hide_in_outpost);
     LOAD_BOOL(use_instance_timer);
     LOAD_BOOL(never_reset);
@@ -493,6 +496,8 @@ void TimerWidget::LoadSettings(ToolboxIni* ini)
 void TimerWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
+    SAVE_FLOAT(font_size);
+    SAVE_FLOAT(font_size_extra_timers);
     SAVE_BOOL(hide_in_outpost);
     SAVE_BOOL(use_instance_timer);
     SAVE_BOOL(never_reset);
@@ -519,7 +524,7 @@ void TimerWidget::DrawSettingsInternal()
 {
     ToolboxWidget::DrawSettingsInternal();
 
-    ImGui::SameLine();
+    ImGui::DragFloat("Text size", &font_size, 1.0f, FontLoader::text_size_min, FontLoader::text_size_max, "%.0f");
     ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
     if (ImGui::RadioButton("Instance timer", use_instance_timer)) {
         use_instance_timer = true;
@@ -552,6 +557,7 @@ void TimerWidget::DrawSettingsInternal()
     ImGui::Checkbox("When leaving explorables", &print_time_zoning);
     ImGui::Unindent();
 
+    ImGui::DragFloat("Text size for extra timers", &font_size_extra_timers, 1.0f, FontLoader::text_size_min, FontLoader::text_size_max, "%.0f");
     ImGui::Text("Show extra timers:");
     ImGui::Indent();
 
@@ -671,21 +677,21 @@ void TimerWidget::Draw(IDirect3DDevice9*)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
+        const auto font = FontLoader::GetFontByPx(font_size);
         // Main timer:
         print_time(GetTimer(), show_decimals, 32, timer_buffer);
-        ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_large));
+        ImGui::PushFont(font, font_size);
         ImGui::TextShadowed(timer_buffer, {2, 2});
         ImGui::PopFont();
 
         if (also_show_instance_timer) {
             print_time(milliseconds(GW::Map::GetInstanceTime()), show_decimals, 32, timer_buffer);
-            ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_large));
+            ImGui::PushFont(font, font_size);
             ImGui::TextShadowed(timer_buffer, {2, 2});
             ImGui::PopFont();
         }
 
-        auto drawTimer = [](const char* buffer, const ImColor* _extra_color = nullptr) {
-            ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_label));
+        const auto draw_timer = [](const char* buffer, const ImColor* _extra_color = nullptr) {
             const ImVec2 cur2 = ImGui::GetCursorPos();
             ImGui::SetCursorPos(ImVec2(cur2.x + 1, cur2.y + 1));
             ImGui::TextColored(ImColor(0, 0, 0), buffer);
@@ -696,25 +702,31 @@ void TimerWidget::Draw(IDirect3DDevice9*)
             else {
                 ImGui::Text(buffer);
             }
-            ImGui::PopFont();
         };
-        if (show_deep_timer && GetDeepTimer()) {
-            drawTimer(extra_buffer, &extra_color);
-        }
-        if (show_urgoz_timer && GetUrgozTimer()) {
-            drawTimer(extra_buffer, &extra_color);
-        }
-        if (show_doa_timer && GetDoATimer()) {
-            drawTimer(extra_buffer, &extra_color);
-        }
-        if (show_dungeon_traps_timer && GetTrapTimer()) {
-            drawTimer(extra_buffer, &extra_color);
-        }
-        if (show_dhuum_timer && GetDhuumTimer()) {
-            drawTimer(extra_buffer, &extra_color);
-        }
-        if (show_spirit_timers && GetSpiritTimer()) {
-            drawTimer(spirits_buffer);
+        if (font_size_extra_timers > 0.f) {
+            const auto extra_timer_font = FontLoader::GetFontByPx(font_size_extra_timers);
+            ImGui::PushFont(extra_timer_font, font_size_extra_timers);
+
+            if (show_deep_timer && GetDeepTimer()) {
+                draw_timer(extra_buffer, &extra_color);
+            }
+            if (show_urgoz_timer && GetUrgozTimer()) {
+                draw_timer(extra_buffer, &extra_color);
+            }
+            if (show_doa_timer && GetDoATimer()) {
+                draw_timer(extra_buffer, &extra_color);
+            }
+            if (show_dungeon_traps_timer && GetTrapTimer()) {
+                draw_timer(extra_buffer, &extra_color);
+            }
+            if (show_dhuum_timer && GetDhuumTimer()) {
+                draw_timer(extra_buffer, &extra_color);
+            }
+            if (show_spirit_timers && GetSpiritTimer()) {
+                draw_timer(spirits_buffer);
+            }
+
+            ImGui::PopFont();
         }
 
         if (click_to_print_time) {

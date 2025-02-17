@@ -7,6 +7,28 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 7.1
+* [Fix] Fixed crash in combination with steam overlay
+* [Fix] Fixed problem where chat messages from ignored players would still be seen
+* [Fix] Fixed /call command
+* [Fix] Fixed /fps command crash
+* [Fix] Fixed /fps command crash
+* [Fix] Fixed changing secondary profession
+* [Fix] Fixed salvage all uncommon showing a popup
+* [Fix] Fixed crash after equipping a weapon in game when armory was no longer active
+* [Fix] Fixed weapon skill incorrectly showing on normal enchantments
+* [Fix] Fixed completion window not properly loading completions on startup
+* [Fix] Fixed skip entering character name when donating faction
+* [Fix] Fixed /tp interpreting district numbers as single digit
+* [Fix] Hopefully fixed linux loading issue
+* [Minor] Skillbar widget can shrink to any size now
+* [Minor] Completion window dropdown is ordered now
+* [New] Skillbar widget has new option to outline the recharge text
+* [New] Options for Distance and Health widgets to not show the header name, introduce font sizes for these and Timer too
+* [New] Feature to set target for all heroes and pets on target call
+* [New] Added quest markers to worldmap (game has these, but they were so small that you couldn't see them)
+* [Removed] Removed /zoom and /cam fov as they had no effect due to gw updates
+
 ## Version 7.0
 * [Fix] Fixed occasional crashing when disabling or enabling modules whilst toolbox is running
 * [Fix] Fixed bug mixing up messages if a previous message is received (and blocked) from an ignored player

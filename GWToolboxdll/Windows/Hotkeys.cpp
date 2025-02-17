@@ -32,13 +32,12 @@
 #include <Windows/Hotkeys.h>
 #include <Windows/PconsWindow.h>
 #include <Utils/TextUtils.h>
+#include "HotkeysWindow.h"
 
 bool TBHotkey::show_active_in_header = true;
 bool TBHotkey::show_run_in_header = true;
 bool TBHotkey::hotkeys_changed = false;
 unsigned int TBHotkey::cur_ui_id = 0;
-LONG* TBHotkey::key_out = nullptr;
-LONG* TBHotkey::mod_out = nullptr;
 std::unordered_map<WORD, HotkeyToggle*> HotkeyToggle::toggled;
 
 typedef std::pair<GW::UI::ControlAction, GuiUtils::EncString*> ControlLabelPair;
@@ -89,6 +88,8 @@ namespace {
         }
         return 0;
     }
+
+
 }
 
 
@@ -153,8 +154,19 @@ TBHotkey::TBHotkey(const ToolboxIni* ini, const char* section)
 {
     memset(prof_ids, false, sizeof(prof_ids));
     if (ini) {
-        hotkey = ini->GetLongValue(section, VAR_NAME(hotkey), hotkey);
-        modifier = ini->GetLongValue(section, VAR_NAME(modifier), modifier);
+        const auto hotkey = ini->GetLongValue(section, VAR_NAME(hotkey), 0);
+        auto modifier = ini->GetLongValue(section, VAR_NAME(modifier), 0);
+        const auto key_combo_str = ini->GetValue(section, VAR_NAME(key_combo), "");
+        GuiUtils::IniToBitset(key_combo_str, key_combo);
+        if (hotkey)
+            key_combo.set(hotkey);
+
+        modifier >>= 16;  // Shift right to extract actual modifier bits (from higher bits)
+        if (modifier & MOD_SHIFT) key_combo.set(VK_SHIFT);      // 0x10
+        if (modifier & MOD_CONTROL) key_combo.set(VK_CONTROL);  // 0x11
+        if (modifier & MOD_ALT) key_combo.set(VK_MENU);         // 0x12
+        if (modifier & MOD_WIN) key_combo.set(VK_LWIN);         // 0x5B (Left Win Key)
+
         active = ini->GetBoolValue(section, VAR_NAME(active), active);
 
         std::string ini_str = ini->GetValue(section, VAR_NAME(map_ids), "");
@@ -243,8 +255,11 @@ bool TBHotkey::CanUse()
 
 void TBHotkey::Save(ToolboxIni* ini, const char* section) const
 {
-    ini->SetLongValue(section, VAR_NAME(hotkey), hotkey);
-    ini->SetLongValue(section, VAR_NAME(modifier), modifier);
+    if (key_combo.any()) {
+        std::string key_combo_str;
+        GuiUtils::BitsetToIni(key_combo, key_combo_str);
+        ini->SetValue(section, VAR_NAME(key_combo), key_combo_str.c_str());
+    }    
     ini->SetLongValue(section, VAR_NAME(instance_type), instance_type);
     ini->SetBoolValue(section, VAR_NAME(active), active);
     ini->SetBoolValue(section, VAR_NAME(block_gw), block_gw);
@@ -263,8 +278,10 @@ void TBHotkey::Save(ToolboxIni* ini, const char* section) const
     ini->SetBoolValue(section, VAR_NAME(trigger_on_lose_focus), trigger_on_lose_focus);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_gain_focus), trigger_on_gain_focus);
 
-    ini->SetValue(section, VAR_NAME(player_names), TextUtils::Join(player_names, ",").c_str());
-    ini->SetValue(section, VAR_NAME(group), group);
+    if(player_names.size())
+        ini->SetValue(section, VAR_NAME(player_names), TextUtils::Join(player_names, ",").c_str());
+    if(*group)
+        ini->SetValue(section, VAR_NAME(group), group);
 
     std::string out;
     std::vector<uint32_t> prof_ids_tmp;
@@ -273,14 +290,20 @@ void TBHotkey::Save(ToolboxIni* ini, const char* section) const
             prof_ids_tmp.push_back(i);
         }
     }
-    GuiUtils::ArrayToIni(prof_ids_tmp.data(), prof_ids_tmp.size(), &out);
-    ini->SetValue(section, VAR_NAME(prof_ids), out.c_str());
+    if (prof_ids_tmp.size()) {
+        GuiUtils::ArrayToIni(prof_ids_tmp.data(), prof_ids_tmp.size(), &out);
+        ini->SetValue(section, VAR_NAME(prof_ids), out.c_str());
+    }
 
-    GuiUtils::ArrayToIni(map_ids.data(), map_ids.size(), &out);
-    ini->SetValue(section, VAR_NAME(map_ids), out.c_str());
+    if (map_ids.size()) {
+        GuiUtils::ArrayToIni(map_ids.data(), map_ids.size(), &out);
+        ini->SetValue(section, VAR_NAME(map_ids), out.c_str());
+    }
 
-    ini->SetDoubleValue(section, VAR_NAME(in_range_of_distance), in_range_of_distance);
-    ini->SetLongValue(section, VAR_NAME(in_range_of_npc_id), in_range_of_npc_id);
+    if (in_range_of_npc_id) {
+        ini->SetDoubleValue(section, VAR_NAME(in_range_of_distance), in_range_of_distance);
+        ini->SetLongValue(section, VAR_NAME(in_range_of_npc_id), in_range_of_npc_id);
+    }
 }
 
 const char* TBHotkey::professions[] = {"Any", "Warrior", "Ranger",
@@ -289,15 +312,9 @@ const char* TBHotkey::professions[] = {"Any", "Warrior", "Ranger",
                                        "Paragon", "Dervish"};
 const char* TBHotkey::instance_types[] = {"Any", "Outpost", "Explorable"};
 
-void TBHotkey::HotkeySelector(LONG* key, LONG* modifier)
-{
-    key_out = key;
-    mod_out = modifier;
-    ImGui::OpenPopup("Select Hotkey");
-}
-
 bool TBHotkey::Draw(Op* op)
 {
+
     bool hotkey_changed = false;
     const float scale = ImGui::GetIO().FontGlobalScale;
     auto ShowHeaderButtons = [&] {
@@ -333,7 +350,6 @@ bool TBHotkey::Draw(Op* op)
 
     // === Header ===
     char header[256]{};
-    char keybuf[64]{};
 
     int written = 0;
     written += Description(&header[written], _countof(header) - written);
@@ -385,8 +401,9 @@ bool TBHotkey::Draw(Op* op)
         break;
     }
 
-    ASSERT(ModKeyName(keybuf, _countof(keybuf), modifier, hotkey, "<None>") != -1);
-    ASSERT(snprintf(&header[written], _countof(header) - written, " [%s]###header%u", keybuf, ui_id) != -1);
+    const auto keybuf_s = ModKeyName(key_combo);
+
+    ASSERT(snprintf(&header[written], _countof(header) - written, " [%s]###header%u", keybuf_s.c_str(), ui_id) != -1);
     const ImGuiTreeNodeFlags flags = show_active_in_header || show_run_in_header
                                          ? ImGuiTreeNodeFlags_AllowOverlap
                                          : 0;
@@ -547,90 +564,14 @@ bool TBHotkey::Draw(Op* op)
             ImGui::SetTooltip("The hotkey can trigger only when selected");
         }
         ImGui::SameLine();
-        char keybuf2[_countof(keybuf) + 8];
-        snprintf(keybuf2, _countof(keybuf2), "Hotkey: %s", keybuf);
-        if (ImGui::Button(keybuf2, ImVec2(-140.0f * scale, 0))) {
-            HotkeySelector(&hotkey, &modifier);
+        const auto keybuf2 = std::format("Hotkey: {}", keybuf_s);
+        if (ImGui::Button(keybuf2.c_str(), ImVec2(-140.0f * scale, 0))) {
+            HotkeysWindow::ChooseKeyCombo(this);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Click to change hotkey");
         }
-        if (ImGui::BeginPopup("Select Hotkey")) {
-            static WORD newkey = 0;
-            *op = Op_BlockInput;
-            ImGui::Text("Press key");
-            DWORD newmod = 0;
-            if (mod_out) {
-                if (ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
-                    newmod |= ModKey_Control;
-                }
-                if (ImGui::IsKeyDown(ImGuiMod_Shift)) {
-                    newmod |= ModKey_Shift;
-                }
-                if (ImGui::IsKeyDown(ImGuiMod_Alt)) {
-                    newmod |= ModKey_Alt;
-                }
-            }
-
-            if (newkey == 0) {
-                // we are looking for the key
-                BYTE keyboard_state[256]{};
-                const auto ret = GetKeyboardState(keyboard_state);
-                for (WORD i = 0; ret && i < 256; i++) {
-                    switch (i) {
-                        case VK_CONTROL:
-                        case VK_LCONTROL:
-                        case VK_RCONTROL:
-                        case VK_SHIFT:
-                        case VK_LSHIFT:
-                        case VK_RSHIFT:
-                        case VK_MENU:
-                        case VK_LMENU:
-                        case VK_RMENU:
-                            continue;
-                        case VK_PACKET:
-                            continue; // ((KBDLLHOOKSTRUCT*)lParam)->scanCode should contain the unicode source input
-                        default: {
-                            if (keyboard_state[i] & 0x80) {
-                                newkey = i;
-                            }
-                        }
-                    }
-                }
-            }
-            else {
-                // key was pressed, close if it's released
-                if (!(GetKeyState(newkey) & 0x8000)) {
-                    *key_out = newkey;
-                    if (mod_out) {
-                        *mod_out = newmod;
-                    }
-                    newkey = 0;
-                    ImGui::CloseCurrentPopup();
-                    hotkey_changed = true;
-                }
-            }
-
-            // write the key
-            char newkey_buf[256];
-            ModKeyName(newkey_buf, _countof(newkey_buf), newmod, newkey);
-            ImGui::Text("%s", newkey_buf);
-            if (ImGui::Button("Clear")) {
-                *key_out = 0;
-                if (mod_out) {
-                    *mod_out = 0;
-                }
-                newkey = 0;
-                ImGui::CloseCurrentPopup();
-                hotkey_changed = true;
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Cancel")) {
-                newkey = 0;
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::EndPopup();
-        }
+        
         ImGui::SameLine();
         hotkey_changed |= ImGui::Checkbox("Trigger on key up?", &trigger_on_key_up);
         if (ImGui::IsItemHovered()) {
@@ -1135,28 +1076,24 @@ void HotkeyEquipItem::Execute()
         return;
     }
     GW::Bag* bag = nullptr;
+    GW::Item* item = nullptr;
     if (!ongoing) {
+        item_id = 0;
         if (equip_by == SLOT) {
             const auto bag_id = static_cast<GW::Constants::Bag>(bag_idx);
             if (bag_id < GW::Constants::Bag::Backpack || bag_id > GW::Constants::Bag::Equipment_Pack || slot_idx < 1 || slot_idx > 25) {
-                if (show_error_on_failure) {
-                    Log::Error("Invalid bag slot %d/%d!", bag_id, slot_idx);
-                }
+                show_error_on_failure && (Log::Error("Invalid bag slot %d/%d!", bag_id, slot_idx), true);
                 return;
             }
             bag = GW::Items::GetBag(bag_id);
             if (!bag) {
-                if (show_error_on_failure) {
-                    Log::Error("Bag #%d not found!", bag_id);
-                }
+                show_error_on_failure && (Log::Error("Bag #%d not found!", bag_id), true);
                 return;
             }
             GW::ItemArray& items = bag->items;
             item = (items.valid() && slot_idx <= items.size()) ? items[slot_idx - 1] : nullptr;
             if (!(item && item->bag == bag)) {
-                if (show_error_on_failure) {
-                    Log::Error("Invalid bag slot %d/%d!", bag_id, slot_idx);
-                }
+                show_error_on_failure && (Log::Error("Invalid bag slot %d/%d!", bag_id, slot_idx), true);
                 return;
             }
         }
@@ -1166,88 +1103,63 @@ void HotkeyEquipItem::Execute()
                 item = FindMatchingItem(i, &bag);
             }
             if (!(item && item->bag == bag)) {
-                if (show_error_on_failure) {
-                    Log::Error("No equippable item matching your hotkey");
-                }
-                item = nullptr;
+                show_error_on_failure && (Log::Error("No equippable item matching your hotkey"), true);
                 return;
             }
         }
 
-        if (!IsEquippable(item)) {
-            if (show_error_on_failure) {
-                Log::Error("No equippable item in bag %d slot %d", bag_idx,
-                           slot_idx);
-            }
-            item = nullptr;
+        if (!(item && IsEquippable(item))) {
+            show_error_on_failure && (Log::Error("No equippable item in bag %d slot %d", bag_idx, slot_idx), true);
             return;
         }
+        item_id = item->item_id;
         ongoing = true;
-        start_time = std::chrono::steady_clock::now();
+        start_time = TIMER_INIT();
+        last_try = 0;
     }
-    else {
-        last_try = std::chrono::steady_clock::now();
-        const __int64 diff_mills =
-            std::chrono::duration_cast<std::chrono::milliseconds>(last_try -
-                                                                  start_time)
-            .count();
-        if (diff_mills < 500) {
-            return; // Wait 250ms between tries.
-        }
-        if (diff_mills > 5000) {
-            if (show_error_on_failure) {
-                Log::Error("Failed to equip item in bag %d slot %d", bag_idx,
-                           slot_idx);
-            }
-            ongoing = false;
-            item = nullptr;
-            return;
-        }
+    ongoing = false;
+    if (TIMER_DIFF(start_time) > 5000) {
+        show_error_on_failure && (Log::Error("Failed to equip item"), true);
+        return;
     }
-
-    if (!item || !item->item_id) {
-        if (show_error_on_failure) {
-            Log::Error("Failed to equip item in bag %d slot %d", bag_idx,
-                       slot_idx);
-        }
-        ongoing = false;
-        item = nullptr;
+    item = GW::Items::GetItemById(item_id);
+    if (!(item && IsEquippable(item))) {
+        show_error_on_failure && (Log::Error("Failed to equip item"), true);
         return;
     }
     if (item->bag && item->bag->bag_type == GW::Constants::BagType::Equipped) {
-        // Log::Info("Success!");
-        ongoing = false;
-        item = nullptr;
         return; // Success!
     }
     const GW::AgentLiving* p = GW::Agents::GetControlledCharacter();
     if (!(p && p->GetIsAlive())) {
-        if (show_error_on_failure) {
-            Log::Error("Failed to equip item in bag %d slot %d", bag_idx,
-                       slot_idx);
-        }
-        ongoing = false;
-        item = nullptr;
+        show_error_on_failure && (Log::Error("Failed to equip item in bag %d slot %d", bag_idx, slot_idx), true);
         return;
     }
     const GW::Skillbar* s = GW::SkillbarMgr::GetPlayerSkillbar();
     if (p->GetIsKnockedDown() || (s && s->casting)) {
+        ongoing = true;
         // Player knocked down or casting; wait.
         return;
     }
     if (p->skill) {
+        ongoing = true;
         // Casting atm
         return;
     }
     if (!p->model_state) {
+        ongoing = true;
         return;
     }
-    if (p->GetIsIdle() || p->GetIsMoving()) {
-        GW::Items::EquipItem(item);
-    }
-    else {
-        // Move to clear model state e.g. attacking, aftercast
-        GW::Agents::Move(p->pos);
+    if (TIMER_DIFF(last_try) > 500) {
+        last_try = TIMER_INIT();
+        if (p->GetIsIdle() || p->GetIsMoving()) {
+            GW::Items::EquipItem(item);
+        }
+        else {
+            // Move to clear model state e.g. attacking, aftercast
+            GW::Agents::Move(p->pos);
+        }
+
     }
 }
 
@@ -1555,7 +1467,18 @@ int HotkeyAction::Description(char* buf, const size_t bufsz)
 
 bool HotkeyAction::Draw()
 {
-    ImGui::Combo("Action###actioncombo", (int*)&action, GetText, nullptr, n_actions);
+    if (ImGui::BeginCombo("Actions###actionscombo", GetText(nullptr, action))) {
+        for (const auto hk_action : { OpenXunlaiChest, DropGoldCoin, ReapplyTitle, EnterChallenge }) {
+            const bool selected = action == hk_action;
+            if (ImGui::Selectable(GetText(nullptr, hk_action), selected)) {
+                action = hk_action;
+            }
+            if (selected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
     return true;
 }
 
@@ -2082,6 +2005,8 @@ bool HotkeyCommandPet::Draw()
 void HotkeyCommandPet::Execute()
 {
     GW::GameThread::Enqueue([&] {
-        GW::PartyMgr::SetPetBehavior(behavior);
+        for (auto& pet : GW::GetWorldContext()->pets) {
+            GW::PartyMgr::SetPetBehavior(pet.owner_agent_id, behavior);
+        }
     });
 }

@@ -175,13 +175,12 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
                         sections_to_draw.push_back(section);
                         break;
                     }
-
                 }
             }
             sections_to_draw.push_back(m->SettingsName());
             };
-        const auto sort_and_draw_settings = [&]() {
-            std::sort(sections_to_draw.begin(), sections_to_draw.end());
+        const auto sort_and_draw_settings = [&] {
+            std::ranges::sort(sections_to_draw);
             for (auto& s : sections_to_draw) {
                 DrawSettingsSection(s.c_str());
             }

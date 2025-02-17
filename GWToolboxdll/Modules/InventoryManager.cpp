@@ -670,10 +670,9 @@ namespace {
                     tome_pending_stage = UseItem;
                     return;
                 }
-                if (!GW::PlayerMgr::ChangeSecondProfession(tome_pending_profession)) {
-                    Log::Error("ChangeSecondProfession call failed");
-                    goto cancel;
-                }
+                GW::GameThread::Enqueue([] {
+                    GW::PlayerMgr::ChangeSecondProfession(tome_pending_profession);
+                    });
                 tome_pending_stage = AwaitProfession;
                 return;
             }
@@ -1231,6 +1230,8 @@ void InventoryManager::ContinueSalvage()
             }
             pending_salvage_at = TIMER_INIT();
         }
+        // Auto accept "you can only salvage materials with a lesser salvage kit"
+        GW::UI::ButtonClick(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 0x6, 0x62, 0x6));
         return;
     }
     is_salvaging = false;

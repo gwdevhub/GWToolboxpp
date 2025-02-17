@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <GWCA/Packets/Opcodes.h>
-
 #include <GWCA/Context/PreGameContext.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -11,7 +9,6 @@
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Map.h>
-#include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Item.h>
 
@@ -93,19 +90,20 @@ namespace {
         return c && *c->player_name ? c->player_name : nullptr;
     }
 
-    wchar_t last_player_name[20];
+    std::wstring last_player_name;
 
-    void GetOutpostIcons(GW::Constants::MapID map_id, IDirect3DTexture9** icons_out[4], uint8_t mission_state, bool is_hard_mode = false) {
+    void GetOutpostIcons(MapID map_id, IDirect3DTexture9** icons_out[4], uint8_t mission_state, bool is_hard_mode = false)
+    {
         memset(icons_out, 0, sizeof(icons_out) * sizeof(*icons_out));
 
-        WorldMapIcon icon_file_ids[4] = { WorldMapIcon::None };
+        WorldMapIcon icon_file_ids[4] = {WorldMapIcon::None};
         uint32_t icon_idx = 0;
 
         auto hardModeMissionIcons = [mission_state](WorldMapIcon icon_file_ids[4], bool has_master = true) {
             uint32_t icon_idx = 0;
             if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
                 icon_file_ids[icon_idx++] = WorldMapIcon::HardMode_CompletePrimary;
-            if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+            if ((mission_state & ToolboxUtils::MissionState::Expert) != 0)
                 icon_file_ids[icon_idx++] = WorldMapIcon::HardMode_CompleteExpert;
 
             if (has_master && (mission_state & ToolboxUtils::MissionState::Master) != 0)
@@ -133,123 +131,126 @@ namespace {
         else {
             // TODO: Change these icons out for Hard Mode
             switch (area_info->continent) {
-            case GW::Continent::Kryta: {
-                switch (area_info->type) {
-                case GW::RegionType::MissionOutpost:
-                case GW::RegionType::CooperativeMission:
-                    if (is_hard_mode) {
-                        hardModeMissionIcons(icon_file_ids, false);
+                case GW::Continent::Kryta: {
+                    switch (area_info->type) {
+                        case GW::RegionType::MissionOutpost:
+                        case GW::RegionType::CooperativeMission:
+                            if (is_hard_mode) {
+                                hardModeMissionIcons(icon_file_ids, false);
+                            }
+                            else {
+                                if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
+                                    icon_file_ids[icon_idx++] = WorldMapIcon::Kryta_CompletePrimary;
+                                if ((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                                    icon_file_ids[icon_idx++] = WorldMapIcon::Kryta_CompleteSecondary;
+                                icon_file_ids[icon_idx++] = WorldMapIcon::Kryta_Mission;
+                            }
+                            break;
+                        case GW::RegionType::City:
+                            icon_file_ids[0] = WorldMapIcon::Kryta_City;
+                            break;
+                        case GW::RegionType::Outpost:
+                            icon_file_ids[0] = WorldMapIcon::Kryta_Outpost;
+                            break;
+                        case GW::RegionType::Challenge:
+                            icon_file_ids[0] = WorldMapIcon::Kryta_Outpost;
+                            break;
+                        case GW::RegionType::Dungeon:
+                            icon_file_ids[0] = is_hard_mode ? WorldMapIcon::EyeOfTheNorth_HardMode_Dungeon : WorldMapIcon::EyeOfTheNorth_Dungeon;
+                            break;
+                        case GW::RegionType::EotnMission:
+                            icon_file_ids[0] = is_hard_mode ? WorldMapIcon::EyeOfTheNorth_HardMode_Mission : WorldMapIcon::EyeOfTheNorth_Mission;
+                            break;
                     }
-                    else {
-                        if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
-                            icon_file_ids[icon_idx++] = WorldMapIcon::Kryta_CompletePrimary;
-                        if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
-                            icon_file_ids[icon_idx++] = WorldMapIcon::Kryta_CompleteSecondary;
-                        icon_file_ids[icon_idx++] = WorldMapIcon::Kryta_Mission;
-                    }
-                    break;
-                case GW::RegionType::City:
-                    icon_file_ids[0] = WorldMapIcon::Kryta_City;
-                    break;
-                case GW::RegionType::Outpost:
-                    icon_file_ids[0] = WorldMapIcon::Kryta_Outpost;
-                    break;
-                case GW::RegionType::Challenge:
-                    icon_file_ids[0] = WorldMapIcon::Kryta_Outpost;
-                    break;
-                case GW::RegionType::Dungeon:
-                    icon_file_ids[0] =  is_hard_mode ? WorldMapIcon::EyeOfTheNorth_HardMode_Dungeon : WorldMapIcon::EyeOfTheNorth_Dungeon;
-                    break;
-                case GW::RegionType::EotnMission:
-                    icon_file_ids[0] =  is_hard_mode ? WorldMapIcon::EyeOfTheNorth_HardMode_Mission : WorldMapIcon::EyeOfTheNorth_Mission;
-                    break;
                 }
-            } break;
-            case GW::Continent::Cantha: {
-                switch (area_info->type) {
-                case GW::RegionType::MissionOutpost:
-                case GW::RegionType::CooperativeMission:
-                    if (is_hard_mode) {
-                        hardModeMissionIcons(icon_file_ids);
-                    }
-                    else {
-                        icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_Mission;
-                        if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
-                            icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_CompletePrimary;
-                        if ((mission_state & ToolboxUtils::MissionState::Expert) != 0)
-                            icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_CompleteExpert;
-                        if ((mission_state & ToolboxUtils::MissionState::Master) != 0)
-                            icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_CompleteMaster;
-                    }
+                break;
+                case GW::Continent::Cantha: {
+                    switch (area_info->type) {
+                        case GW::RegionType::MissionOutpost:
+                        case GW::RegionType::CooperativeMission:
+                            if (is_hard_mode) {
+                                hardModeMissionIcons(icon_file_ids);
+                            }
+                            else {
+                                icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_Mission;
+                                if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
+                                    icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_CompletePrimary;
+                                if ((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                                    icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_CompleteExpert;
+                                if ((mission_state & ToolboxUtils::MissionState::Master) != 0)
+                                    icon_file_ids[icon_idx++] = WorldMapIcon::Cantha_CompleteMaster;
+                            }
 
-                    break;
-                case GW::RegionType::City:
-                    icon_file_ids[0] = WorldMapIcon::Cantha_City;
-                    break;
-                case GW::RegionType::Outpost:
-                case GW::RegionType::Challenge:
-                    icon_file_ids[0] = WorldMapIcon::Cantha_Outpost;
-                    break;
-                } break;
-            }
-            case GW::Continent::Elona: {
-                switch (area_info->type) {
-                case GW::RegionType::MissionOutpost:
-                case GW::RegionType::CooperativeMission:
-                    if (is_hard_mode) {
-                        hardModeMissionIcons(icon_file_ids);
+                            break;
+                        case GW::RegionType::City:
+                            icon_file_ids[0] = WorldMapIcon::Cantha_City;
+                            break;
+                        case GW::RegionType::Outpost:
+                        case GW::RegionType::Challenge:
+                            icon_file_ids[0] = WorldMapIcon::Cantha_Outpost;
+                            break;
                     }
-                    else {
-                        icon_file_ids[icon_idx++] = WorldMapIcon::Elona_Mission;
-                        if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
-                            icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompletePrimary;
-                        if((mission_state & ToolboxUtils::MissionState::Expert) != 0)
-                            icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompleteExpert;
-                        if((mission_state & ToolboxUtils::MissionState::Master) != 0)
-                            icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompleteMaster;
-                    }
-                    break;
-                case GW::RegionType::City:
-                    icon_file_ids[0] = WorldMapIcon::Elona_City;
-                    break;
-                case GW::RegionType::Outpost:
-                case GW::RegionType::Challenge:
-                    icon_file_ids[0] = WorldMapIcon::Elona_Outpost;
                     break;
                 }
-            } break;
-            case GW::Continent::RealmOfTorment: {
-                switch (area_info->type) {
-                case GW::RegionType::MissionOutpost:
-                case GW::RegionType::CooperativeMission:
-                    if (is_hard_mode) {
-                        hardModeMissionIcons(icon_file_ids);
+                case GW::Continent::Elona: {
+                    switch (area_info->type) {
+                        case GW::RegionType::MissionOutpost:
+                        case GW::RegionType::CooperativeMission:
+                            if (is_hard_mode) {
+                                hardModeMissionIcons(icon_file_ids);
+                            }
+                            else {
+                                icon_file_ids[icon_idx++] = WorldMapIcon::Elona_Mission;
+                                if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
+                                    icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompletePrimary;
+                                if ((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                                    icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompleteExpert;
+                                if ((mission_state & ToolboxUtils::MissionState::Master) != 0)
+                                    icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompleteMaster;
+                            }
+                            break;
+                        case GW::RegionType::City:
+                            icon_file_ids[0] = WorldMapIcon::Elona_City;
+                            break;
+                        case GW::RegionType::Outpost:
+                        case GW::RegionType::Challenge:
+                            icon_file_ids[0] = WorldMapIcon::Elona_Outpost;
+                            break;
                     }
-                    else {
-                        icon_file_ids[icon_idx++] = WorldMapIcon::RealmOfTorment_Mission;
-                        if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
-                            icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompletePrimary;
-                        if ((mission_state & ToolboxUtils::MissionState::Expert) != 0)
-                            icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompleteExpert;
-                        if ((mission_state & ToolboxUtils::MissionState::Master) != 0)
-                            icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompleteMaster;
-                    }
-                    break;
-                case GW::RegionType::City:
-                    icon_file_ids[0] = WorldMapIcon::RealmOfTorment_City;
-                    break;
-                case GW::RegionType::Outpost:
-                case GW::RegionType::Challenge:
-                    icon_file_ids[0] = WorldMapIcon::RealmOfTorment_Outpost;
-                    break;
                 }
-            } break;
+                break;
+                case GW::Continent::RealmOfTorment: {
+                    switch (area_info->type) {
+                        case GW::RegionType::MissionOutpost:
+                        case GW::RegionType::CooperativeMission:
+                            if (is_hard_mode) {
+                                hardModeMissionIcons(icon_file_ids);
+                            }
+                            else {
+                                icon_file_ids[icon_idx++] = WorldMapIcon::RealmOfTorment_Mission;
+                                if ((mission_state & ToolboxUtils::MissionState::Primary) != 0)
+                                    icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompletePrimary;
+                                if ((mission_state & ToolboxUtils::MissionState::Expert) != 0)
+                                    icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompleteExpert;
+                                if ((mission_state & ToolboxUtils::MissionState::Master) != 0)
+                                    icon_file_ids[icon_idx++] = WorldMapIcon::Elona_CompleteMaster;
+                            }
+                            break;
+                        case GW::RegionType::City:
+                            icon_file_ids[0] = WorldMapIcon::RealmOfTorment_City;
+                            break;
+                        case GW::RegionType::Outpost:
+                        case GW::RegionType::Challenge:
+                            icon_file_ids[0] = WorldMapIcon::RealmOfTorment_Outpost;
+                            break;
+                    }
+                }
+                break;
             }
         }
         for (size_t i = 0; i < _countof(icon_file_ids) && icon_file_ids[i] != WorldMapIcon::None; i++) {
             icons_out[i] = GwDatTextureModule::LoadTextureFromFileId(std::to_underlying(icon_file_ids[i]));
         }
-
     }
 
     bool show_as_list = true;
@@ -281,8 +282,8 @@ namespace {
         FestivalHats
     };
 
-    std::unordered_map<std::wstring, CharacterCompletion*> character_completion;
-    GW::HookEntry skills_unlocked_stoc_entry;
+    std::map<std::wstring, CharacterCompletion*> character_completion;
+    GW::HookEntry OnPostUIMessage_Entry;
 
     std::map<Campaign, std::vector<OutpostUnlock*>> outposts;
     std::map<Campaign, std::vector<Mission*>> missions;
@@ -387,19 +388,10 @@ namespace {
         Instance().CheckProgress();
     }
 
-    // Check for "Cycle displayed minipets" button - if present, this is our hom dialog!
-    void OnDialogButton(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
-    {
-        ASSERT(message_id == GW::UI::UIMessage::kDialogButton);
-        const GW::UI::DialogButtonInfo* button = static_cast<GW::UI::DialogButtonInfo*>(wparam);
-        OnCycleDisplayedMinipetsButton(button);
-        OnFestivalHatButton(button);
-    }
-
     // Flag miniature as unlocked for current character when dedicated
     void OnSendDialog(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
-        ASSERT(message_id == GW::UI::UIMessage::kSendAgentDialog);
+        ASSERT(message_id == GW::UI::UIMessage::kSendDialog);
         if (GW::Map::GetMapID() != MapID::Hall_of_Monuments) {
             return;
         }
@@ -569,14 +561,16 @@ namespace {
 
     bool only_show_account_chars = true;
 
-    GW::Array<GW::LoginCharacter>* GetAccountChars() {
+    GW::Array<GW::LoginCharacter>* GetAccountChars()
+    {
         const auto p = GW::GetPreGameContext();
         return p ? &p->chars : nullptr;
     }
 
     bool pending_refresh_account_characters = false;
 
-    void RefreshAccountCharacters() {
+    void RefreshAccountCharacters()
+    {
         pending_refresh_account_characters = true;
     }
 
@@ -585,17 +579,19 @@ namespace {
     {
         const auto email = GetAccountEmail();
         if (!email) return false;
-        auto loading = std::ranges::find_if(character_completion, [](const std::pair<std::wstring, CharacterCompletion*>& t) {
+        const auto loading = std::ranges::find_if(character_completion, [](const std::pair<std::wstring, CharacterCompletion*>& t) {
             return t.second->hom_achievements.isLoading();
-            });
+        });
         if (loading != character_completion.end())
             return false;
         const auto chars = GW::AccountMgr::GetAvailableChars();
-        if (chars) {
+        if (chars && chars->size()) {
             for (const auto& character : *chars) {
+                if (character_completion.contains(character.player_name))
+                    continue; // already loaded this character, don't overwrite loaded settings
                 const auto cc = CompletionWindow::GetCharacterCompletion(character.player_name, true);
                 cc->account = email;
-                cc->profession = static_cast<GW::Constants::Profession>(character.primary());
+                cc->profession = static_cast<Profession>(character.primary());
                 cc->is_pvp = character.is_pvp();
                 const auto map_info = GW::Map::GetMapInfo(character.map_id());
                 cc->is_pre_searing = map_info && map_info->region == GW::Region::Region_Presearing;
@@ -606,7 +602,7 @@ namespace {
                 if (it->second->account == email) {
                     const auto exists = std::ranges::find_if(*chars, [char_name = it->first](const GW::AvailableCharacterInfo& character) {
                         return character.player_name == char_name;
-                        });
+                    });
                     if (exists == chars->end()) {
                         delete it->second;
                         character_completion.erase(it);
@@ -617,8 +613,7 @@ namespace {
                 it++;
             }
         }
-        const auto pn = GetPlayerName();
-        if (pn) {
+        if (const auto pn = GetPlayerName()) {
             const auto cc = CompletionWindow::GetCharacterCompletion(pn);
             if (cc) {
                 cc->account = email;
@@ -629,11 +624,22 @@ namespace {
         return true;
     }
 
-    void OnPostCheckUIState(GW::HookStatus*, GW::UI::UIMessage, void*, void* state)
+    // Cycle through all available professions - this will trigger the ui message to update the skills unlocked
+    void CheckAllSkills()
     {
-        if (state && *static_cast<uint32_t*>(state) == 2) {
-            RefreshAccountCharacters();
+        if (GW::Map::GetInstanceType() != InstanceType::Outpost)
+            return;
+        const auto my_id = GW::Agents::GetControlledCharacterId();
+        GW::SkillbarMgr::SkillTemplate original_template;
+        if (!GW::SkillbarMgr::GetSkillTemplate(my_id, original_template) ||
+            original_template.primary == Profession::None ||
+            original_template.secondary == Profession::None)
+            return;
+        for (size_t i = (size_t)Profession::Dervish; i > 0; i--) {
+            GW::PlayerMgr::ChangeSecondProfession((Profession)i);
         }
+        ASSERT(GW::PlayerMgr::ChangeSecondProfession(original_template.secondary) && "Failed to restore original build/profession");;
+        GW::SkillbarMgr::LoadSkillTemplate(my_id, original_template);
     }
 
     std::wstring& ReplaceString(std::wstring& subject, const std::wstring& search, const std::wstring& replace)
@@ -646,10 +652,11 @@ namespace {
         return subject;
     }
 
-    bool IsAreaComplete(const GW::Constants::MapID map_id, CompletionCheck check) {
-        if (map_id == GW::Constants::MapID::None)
+    bool IsAreaComplete(const MapID map_id, CompletionCheck check)
+    {
+        if (map_id == MapID::None)
             return true;
-        if (map_id == GW::Constants::MapID::Tomb_of_the_Primeval_Kings)
+        if (map_id == MapID::Tomb_of_the_Primeval_Kings)
             return true; // Topk special case
 
         const auto map = GW::Map::GetMapInfo();
@@ -657,59 +664,123 @@ namespace {
         if (!(map && w))
             return false;
         switch (map->type) {
-        case GW::RegionType::EliteMission:
-            return true;
-        case GW::RegionType::ExplorableZone:
-            if (map->continent == GW::Continent::BattleIsles)
-                return true; // Fow, Uw
-            return !map->GetIsOnWorldMap() || ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(map_id));
+            case GW::RegionType::EliteMission:
+                return true;
+            case GW::RegionType::ExplorableZone:
+                if (map->continent == GW::Continent::BattleIsles)
+                    return true; // Fow, Uw
+                return !map->GetIsOnWorldMap() || ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(map_id));
         }
 
-        if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(w->missions_completed, static_cast<uint32_t>(map_id)))
+        if ((check & NormalMode) && !ArrayBoolAt(w->missions_completed, static_cast<uint32_t>(map_id)))
             return false;
-        if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(map_id)))
+        if ((check & HardMode) && !ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(map_id)))
             return false;
-        const bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
+        const bool has_bonus = map->campaign != Campaign::EyeOfTheNorth;
         if (has_bonus) {
-            if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(map_id)))
+            if ((check & NormalMode) && !ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(map_id)))
                 return false;
-            if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(map_id)))
+            if ((check & HardMode) && !ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(map_id)))
                 return false;
         }
         return true;
     }
 
-    bool IsAreaComplete(const wchar_t* player_name, const GW::Constants::MapID map_id, CompletionCheck check, const GW::AreaInfo* map) {
-        if (map_id == GW::Constants::MapID::None)
+    bool IsAreaComplete(const wchar_t* player_name, const MapID map_id, CompletionCheck check, const GW::AreaInfo* map)
+    {
+        if (map_id == MapID::None)
             return true;
-        if (map_id == GW::Constants::MapID::Tomb_of_the_Primeval_Kings)
+        if (map_id == MapID::Tomb_of_the_Primeval_Kings)
             return true; // Topk special case
         const auto completion = CompletionWindow::GetCharacterCompletion(player_name, false);
         if (!(map && completion)) return false;
 
         switch (map->type) {
-        case GW::RegionType::EliteMission:
-            return true;
-        case GW::RegionType::ExplorableZone:
-            if (map->continent == GW::Continent::BattleIsles)
-                return true; // Fow, Uw
-            return !map->GetIsOnWorldMap() || ArrayBoolAt(completion->vanquishes, static_cast<uint32_t>(map_id));
+            case GW::RegionType::EliteMission:
+                return true;
+            case GW::RegionType::ExplorableZone:
+                if (map->continent == GW::Continent::BattleIsles)
+                    return true; // Fow, Uw
+                return !map->GetIsOnWorldMap() || ArrayBoolAt(completion->vanquishes, static_cast<uint32_t>(map_id));
         }
 
-        if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(completion->mission, static_cast<uint32_t>(map_id)))
+        if ((check & NormalMode) && !ArrayBoolAt(completion->mission, static_cast<uint32_t>(map_id)))
             return false;
-        if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(completion->mission_hm, static_cast<uint32_t>(map_id)))
+        if ((check & HardMode) && !ArrayBoolAt(completion->mission_hm, static_cast<uint32_t>(map_id)))
             return false;
-        const bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
+        const bool has_bonus = map->campaign != Campaign::EyeOfTheNorth;
         if (has_bonus) {
-            if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(completion->mission_bonus, static_cast<uint32_t>(map_id)))
+            if ((check & NormalMode) && !ArrayBoolAt(completion->mission_bonus, static_cast<uint32_t>(map_id)))
                 return false;
-            if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(completion->mission_bonus_hm, static_cast<uint32_t>(map_id)))
+            if ((check & HardMode) && !ArrayBoolAt(completion->mission_bonus_hm, static_cast<uint32_t>(map_id)))
                 return false;
         }
         return true;
     }
 
+    void OnMapLoaded()
+    {
+        if (GW::Map::GetInstanceType() == InstanceType::Loading)
+            return;
+        const auto current_player_name = GetPlayerName();
+        if (!(current_player_name && *current_player_name))
+            return;
+        if (current_player_name != last_player_name) {
+            last_player_name = current_player_name;
+            chosen_player_name_s.clear();
+            chosen_player_name.clear();
+            FetchHom();
+        }
+        ParseCompletionBuffer(CompletionType::Skills);
+        ParseCompletionBuffer(CompletionType::Mission);
+        ParseCompletionBuffer(CompletionType::Vanquishes);
+        ParseCompletionBuffer(CompletionType::MissionBonus);
+        ParseCompletionBuffer(CompletionType::MissionBonusHM);
+        ParseCompletionBuffer(CompletionType::MissionHM);
+        ParseCompletionBuffer(CompletionType::MapsUnlocked);
+        ParseCompletionBuffer(CompletionType::Heroes);
+        RefreshAccountCharacters();
+        CompletionWindow::Instance().CheckProgress();
+    }
+
+    void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void* lparam)
+    {
+        switch (message_id) {
+            case GW::UI::UIMessage::kUpdateSkillsAvailable: {
+                ParseCompletionBuffer(CompletionType::Skills);
+                Instance().CheckProgress();
+            }
+            break;
+            case GW::UI::UIMessage::kVanquishComplete: {
+                ParseCompletionBuffer(CompletionType::Vanquishes);
+                Instance().CheckProgress();
+            }
+            break;
+            case GW::UI::UIMessage::kDungeonComplete:
+            case GW::UI::UIMessage::kMissionComplete: {
+                ParseCompletionBuffer(CompletionType::Mission);
+                ParseCompletionBuffer(CompletionType::MissionBonus);
+                ParseCompletionBuffer(CompletionType::MissionBonusHM);
+                ParseCompletionBuffer(CompletionType::MissionHM);
+                Instance().CheckProgress();
+            }
+            break;
+            case GW::UI::UIMessage::kMapLoaded: {
+                OnMapLoaded();
+            }
+            break;
+            case GW::UI::UIMessage::kDialogButton: {
+                const GW::UI::DialogButtonInfo* button = static_cast<GW::UI::DialogButtonInfo*>(wparam);
+                OnCycleDisplayedMinipetsButton(button);
+                OnFestivalHatButton(button);
+            }
+            break;
+            case GW::UI::UIMessage::kSendDialog: {
+                OnSendDialog(status, message_id, wparam, lparam);
+            }
+            break;
+        }
+    }
 }
 
 
@@ -721,7 +792,8 @@ ImVec2 Mission::icon_size = {48.0f, 48.0f};
 
 Mission::Mission(const MapID _outpost,
                  const QuestID _zm_quest)
-    : outpost(_outpost), zm_quest(_zm_quest)
+    : outpost(_outpost),
+      zm_quest(_zm_quest)
 {
     map_to = outpost;
     const GW::AreaInfo* map_info = GW::Map::GetMapInfo(outpost);
@@ -735,7 +807,8 @@ MapID Mission::GetOutpost() const
     return TravelWindow::GetNearestOutpost(map_to);
 }
 
-size_t Mission::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
+size_t Mission::GetLoadedIcons(IDirect3DTexture9* icons_out[4])
+{
     size_t icons_added = 0;
     for (size_t i = 0; i < _countof(icons) && icons_added < 4; i++) {
         if (!icons[i])
@@ -749,7 +822,6 @@ size_t Mission::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
 
 bool Mission::Draw(IDirect3DDevice9*)
 {
-
     const float scale = ImGui::GetIO().FontGlobalScale;
 
     ImVec2 s(icon_size.x * scale, icon_size.y * scale);
@@ -770,7 +842,7 @@ bool Mission::Draw(IDirect3DDevice9*)
     bool clicked = false;
     bool hovered = false;
 
-    IDirect3DTexture9* icons_out[4] = { nullptr };
+    IDirect3DTexture9* icons_out[4] = {nullptr};
     size_t icons_len = GetLoadedIcons(icons_out);
 
 
@@ -779,14 +851,14 @@ bool Mission::Draw(IDirect3DDevice9*)
         if (!map_unlocked) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
         }
-        clicked = ImGui::CompositeIconButton(Name(), (ImTextureID*)icons_out, icons_len, {s.x * 5.f, s.y}, 0, {s.x / 2.f, s.y},icon_uv_offset[0],icon_uv_offset[1]);
+        clicked = ImGui::CompositeIconButton(Name(), (ImTextureID*)icons_out, icons_len, {s.x * 5.f, s.y}, 0, {s.x / 2.f, s.y}, icon_uv_offset[0], icon_uv_offset[1]);
         hovered = ImGui::IsItemHovered();
         if (!map_unlocked) {
             ImGui::PopStyleColor();
         }
     }
     else {
-        clicked = ImGui::CompositeIconButton("", (ImTextureID*)icons_out, icons_len,  s, 0, s,icon_uv_offset[0],icon_uv_offset[1]);
+        clicked = ImGui::CompositeIconButton("", (ImTextureID*)icons_out, icons_len, s, 0, s, icon_uv_offset[0], icon_uv_offset[1]);
         hovered = ImGui::IsItemHovered();
     }
     if (clicked) {
@@ -859,7 +931,7 @@ void Mission::OnHover()
                 ImGui::TextUnformatted(char_completion->name_str.c_str());
             }
         }
-        });
+    });
 }
 
 void Mission::CheckProgress(const std::wstring& player_name)
@@ -893,7 +965,8 @@ void Mission::CheckProgress(const std::wstring& player_name)
     GetOutpostIcons(outpost, icons, mission_state, hard_mode);
 }
 
-void OutpostUnlock::CheckProgress(const std::wstring& player_name) {
+void OutpostUnlock::CheckProgress(const std::wstring& player_name)
+{
     const auto& completion = character_completion;
     if (!completion.contains(player_name)) {
         return;
@@ -903,7 +976,9 @@ void OutpostUnlock::CheckProgress(const std::wstring& player_name) {
 
     GetOutpostIcons(outpost, icons, 0);
 }
-bool OutpostUnlock::Draw(IDirect3DDevice9* device) {
+
+bool OutpostUnlock::Draw(IDirect3DDevice9* device)
+{
     if (!Mission::Draw(device))
         return false;
     return true;
@@ -925,7 +1000,7 @@ void OutpostUnlock::OnHover()
                 ImGui::TextUnformatted(char_completion->name_str.c_str());
             }
         }
-        });
+    });
 }
 
 bool Mission::IsDaily()
@@ -949,17 +1024,18 @@ bool EotNMission::HasQuest()
 }
 
 
-void EotNMission::CheckProgress(const std::wstring& player_name) {
+void EotNMission::CheckProgress(const std::wstring& player_name)
+{
     Mission::CheckProgress(player_name);
     bonus = is_completed;
     // EotN mission icons are sprited - first sprite for incomplete, second for complete
     if (is_completed) {
-        icon_uv_offset[0] = { .5f,0.f };
-        icon_uv_offset[1] = { 1.f,1.f };
+        icon_uv_offset[0] = {.5f, 0.f};
+        icon_uv_offset[1] = {1.f, 1.f};
     }
     else {
-        icon_uv_offset[0] = { .0f,0.f };
-        icon_uv_offset[1] = { .5f,1.f };
+        icon_uv_offset[0] = {.0f, 0.f};
+        icon_uv_offset[1] = {.5f, 1.f};
     }
 }
 
@@ -985,9 +1061,10 @@ const char* HeroUnlock::Name()
     return hero_names[std::to_underlying(skill_id)];
 }
 
-size_t HeroUnlock::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
+size_t HeroUnlock::GetLoadedIcons(IDirect3DTexture9* icons_out[4])
+{
     if (!icons_loaded) {
-        *icons = new IDirect3DTexture9 * ();
+        *icons = new IDirect3DTexture9*();
         const auto path = Resources::GetPath(L"img/heros");
         Resources::EnsureFolderExists(path);
         wchar_t local_image[MAX_PATH];
@@ -999,9 +1076,11 @@ size_t HeroUnlock::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
     }
     return Mission::GetLoadedIcons(icons_out);
 }
-HeroUnlock::~HeroUnlock() {
+
+HeroUnlock::~HeroUnlock()
+{
     if (*icons)
-        delete* icons;
+        delete*icons;
 }
 
 void HeroUnlock::OnClick()
@@ -1026,7 +1105,8 @@ const char* ItemAchievement::Name()
     return name.string().c_str();
 }
 
-size_t ItemAchievement::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
+size_t ItemAchievement::GetLoadedIcons(IDirect3DTexture9* icons_out[4])
+{
     if (!icons_loaded && !name.wstring().empty()) {
         if (name.wstring() == L"Brown Rabbit") {
             *icons = Resources::GetItemImage(L"Brown Rabbit (miniature)");
@@ -1054,7 +1134,9 @@ void ItemAchievement::OnClick()
         GuiUtils::OpenWiki(url);
     });
 }
-size_t PvESkill::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
+
+size_t PvESkill::GetLoadedIcons(IDirect3DTexture9* icons_out[4])
+{
     if (!icons_loaded) {
         *icons = Resources::GetSkillImage(skill_id);
         icons_loaded = true;
@@ -1063,7 +1145,8 @@ size_t PvESkill::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
 }
 
 PvESkill::PvESkill(const SkillID _skill_id)
-    : Mission(MapID::None), skill_id(_skill_id)
+    : Mission(MapID::None),
+      skill_id(_skill_id)
 {
     if (_skill_id != SkillID::No_Skill) {
         const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
@@ -1099,7 +1182,7 @@ void PvESkill::OnHover()
                 ImGui::TextUnformatted(char_completion->name_str.c_str());
             }
         }
-        });
+    });
 }
 
 bool PvESkill::Draw(IDirect3DDevice9* device)
@@ -1185,7 +1268,6 @@ void Vanquish::CheckProgress(const std::wstring& player_name)
     mission_state = is_completed ? 0x7 : 0x0;
 
     GetOutpostIcons(outpost, icons, mission_state, true);
-
 }
 
 void CompletionWindow::Initialize()
@@ -1286,40 +1368,40 @@ void CompletionWindow::Initialize()
             if (info->campaign != campaign) continue;
             if (info->region == GW::Region::Region_Presearing) continue;
             switch (info->type) {
-            case GW::RegionType::CooperativeMission:
-            case GW::RegionType::MissionOutpost:
-                if (!info->thumbnail_id)
-                    break;
-                missions[campaign].push_back(new Mission(static_cast<MapID>(i)));
-            case GW::RegionType::City:
-            case GW::RegionType::CompetitiveMission:
-            case GW::RegionType::Outpost:
-            case GW::RegionType::Challenge:
-            case GW::RegionType::Arena:
-                switch (map_id) {
-                    case MapID::Augury_Rock_outpost:
-                    case MapID::Fort_Aspenwood_mission:
-                    case MapID::The_Jade_Quarry_mission:
-                        continue;
-                    default:
+                case GW::RegionType::CooperativeMission:
+                case GW::RegionType::MissionOutpost:
+                    if (!info->thumbnail_id)
                         break;
-                }
-                outposts[campaign].push_back(new OutpostUnlock(static_cast<MapID>(i)));
-                dupes[info->name_id] = 1;
-                break;
-            case GW::RegionType::EliteMission:
-                if (map_id == MapID::Domain_of_Anguish) {
+                    missions[campaign].push_back(new Mission(static_cast<MapID>(i)));
+                case GW::RegionType::City:
+                case GW::RegionType::CompetitiveMission:
+                case GW::RegionType::Outpost:
+                case GW::RegionType::Challenge:
+                case GW::RegionType::Arena:
+                    switch (map_id) {
+                        case MapID::Augury_Rock_outpost:
+                        case MapID::Fort_Aspenwood_mission:
+                        case MapID::The_Jade_Quarry_mission:
+                            continue;
+                        default:
+                            break;
+                    }
                     outposts[campaign].push_back(new OutpostUnlock(static_cast<MapID>(i)));
-                }
-                break;
-            case GW::RegionType::ExplorableZone:
-                if (!info->GetIsVanquishableArea())
+                    dupes[info->name_id] = 1;
                     break;
-                if (map_id == MapID::War_in_Kryta_Talmark_Wilderness)
-                    continue;
-                vanquishes[campaign].push_back(new Vanquish(static_cast<MapID>(i)));
-                dupes[info->name_id] = 1;
-                break;
+                case GW::RegionType::EliteMission:
+                    if (map_id == MapID::Domain_of_Anguish) {
+                        outposts[campaign].push_back(new OutpostUnlock(static_cast<MapID>(i)));
+                    }
+                    break;
+                case GW::RegionType::ExplorableZone:
+                    if (!info->GetIsVanquishableArea())
+                        break;
+                    if (map_id == MapID::War_in_Kryta_Talmark_Wilderness)
+                        continue;
+                    vanquishes[campaign].push_back(new Vanquish(static_cast<MapID>(i)));
+                    dupes[info->name_id] = 1;
+                    break;
             }
         }
     }
@@ -1509,81 +1591,23 @@ void CompletionWindow::Initialize()
     skills.push_back(new PvESkill(SkillID::Vow_of_Revolution));
     skills.push_back(new PvESkill(SkillID::Heroic_Refrain));
 
-    GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_MAPS_UNLOCKED, [](GW::HookStatus*, void*) {
-        ParseCompletionBuffer(CompletionType::Mission);
-        ParseCompletionBuffer(CompletionType::MissionBonus);
-        ParseCompletionBuffer(CompletionType::MissionBonusHM);
-        ParseCompletionBuffer(CompletionType::MissionHM);
-        ParseCompletionBuffer(CompletionType::MapsUnlocked);
-        Instance().CheckProgress();
-    });
-    GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_VANQUISH_PROGRESS, [](GW::HookStatus*, void*) {
-        ParseCompletionBuffer(CompletionType::Vanquishes);
-        Instance().CheckProgress();
-    });
-    GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_VANQUISH_COMPLETE, [](GW::HookStatus*, void*) {
-        ParseCompletionBuffer(CompletionType::Vanquishes);
-        Instance().CheckProgress();
-    });
-
-    GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILLS_UNLOCKED, [](GW::HookStatus*, void*) {
-        ParseCompletionBuffer(CompletionType::Skills);
-        Instance().CheckProgress();
-    });
-    GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_AGENT_CREATE_PLAYER, [](GW::HookStatus*, void* pak) {
-        const uint32_t player_number = static_cast<uint32_t*>(pak)[1];
-        const auto c = GW::GetCharContext();
-        if (!c || player_number != c->player_number) {
-            return;
-        }
-        const auto me = GW::PlayerMgr::GetPlayerByID(c->player_number);
-        if (!me) {
-            return;
-        }
-        if (const auto comp = GetCharacterCompletion(c->player_name)) {
-            comp->profession = static_cast<Profession>(me->primary);
-        }
-        ParseCompletionBuffer(CompletionType::Heroes);
-        Instance().CheckProgress();
-    });
-    GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, [](GW::HookStatus*, void*) {
-        ParseCompletionBuffer(CompletionType::Skills);
-        Instance().CheckProgress();
-    });
-    // Reset chosen player name to be current character on login
-    GW::StoC::RegisterPostPacketCallback(&skills_unlocked_stoc_entry, GAME_SMSG_INSTANCE_LOADED, [&](GW::HookStatus*, void*) {
-        if (wcscmp(GetPlayerName(), last_player_name) != 0) {
-            wcscpy(last_player_name, GetPlayerName());
-            chosen_player_name_s.clear();
-            chosen_player_name.clear();
-            FetchHom();
-        }
-        ParseCompletionBuffer(CompletionType::Skills);
-        ParseCompletionBuffer(CompletionType::Mission);
-        ParseCompletionBuffer(CompletionType::MissionBonus);
-        ParseCompletionBuffer(CompletionType::MissionBonusHM);
-        ParseCompletionBuffer(CompletionType::MissionHM);
-        ParseCompletionBuffer(CompletionType::MapsUnlocked);
-        RefreshAccountCharacters();
-        CheckProgress();
-    });
-
-    RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kDialogButton, OnDialogButton);
-    RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kSendAgentDialog, OnSendDialog);
-
-    const wchar_t* player_name = GetPlayerName();
-    if (player_name) {
-        wcscpy(last_player_name, player_name);
+    const GW::UI::UIMessage message_ids[] = {
+        GW::UI::UIMessage::kMapLoaded,
+        GW::UI::UIMessage::kSendDialog,
+        GW::UI::UIMessage::kDialogButton,
+        GW::UI::UIMessage::kMissionComplete,
+        GW::UI::UIMessage::kVanquishComplete,
+        GW::UI::UIMessage::kDungeonComplete,
+        GW::UI::UIMessage::kUpdateSkillsAvailable
+    };
+    for (const auto message_id : message_ids) {
+        RegisterUIMessageCallback(&OnPostUIMessage_Entry, message_id, OnPostUIMessage, 0x8000);
     }
-
-    RegisterUIMessageCallback(&skills_unlocked_stoc_entry, GW::UI::UIMessage::kCheckUIState, OnPostCheckUIState, 0x8000);
-
-    //RefreshAccountCharacters();
+    GW::GameThread::Enqueue(OnMapLoaded);
 }
 
 void CompletionWindow::Initialize_Prophecies()
 {
-
     auto& eskills = elite_skills.at(Campaign::Prophecies);
     eskills.push_back(new PvESkill(SkillID::Victory_Is_Mine));
     eskills.push_back(new PvESkill(SkillID::Backbreaker));
@@ -1650,7 +1674,6 @@ void CompletionWindow::Initialize_Prophecies()
     eskills.push_back(new PvESkill(SkillID::Thunderclap));
     eskills.push_back(new PvESkill(SkillID::Ward_Against_Harm));
     eskills.push_back(new PvESkill(SkillID::Water_Trident));
-
 }
 
 void CompletionWindow::Initialize_Factions()
@@ -2083,8 +2106,7 @@ void CompletionWindow::Initialize_Dungeons()
 
 void CompletionWindow::Terminate()
 {
-    GW::StoC::RemoveCallbacks(&skills_unlocked_stoc_entry);
-    GW::UI::RemoveUIMessageCallback(&skills_unlocked_stoc_entry);
+    GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_Entry);
     auto clear_vec = [](auto& vec) {
         for (auto& c : vec) {
             CLEAR_PTR_VEC(c.second);
@@ -2276,7 +2298,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         }
         char label[128];
         snprintf(label, _countof(label), "%s (%d of %d unlocked) - %.0f%%###campaign_outposts_%d",
-            CampaignName(campaign), completed, unlockable_outposts.size(), static_cast<float>(completed) / static_cast<float>(unlockable_outposts.size()) * 100.f, campaign);
+                 CampaignName(campaign), completed, unlockable_outposts.size(), static_cast<float>(completed) / static_cast<float>(unlockable_outposts.size()) * 100.f, campaign);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
@@ -2339,6 +2361,13 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         ImGui::Text(title);
         ImGui::ShowHelp("Guild Wars only shows skills learned for the current primary/secondary profession.\n\n"
             "GWToolbox remembers skills learned for other professions,\nbut is only able to update this info when you switch to that profession.");
+        ImGui::SameLine(checkbox_offset - 100.f);
+        if (ImGui::Button("Check Now")) {
+            GW::GameThread::Enqueue(CheckAllSkills);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Will cycle through your available secondary professions to detect all unlocked skills");
+        }
         ImGui::SameLine(checkbox_offset);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
         ImGui::Checkbox("Hide learned skills", &hide_unlocked_skills);
@@ -2771,11 +2800,11 @@ void CompletionWindow::DrawSettingsInternal()
 void CompletionWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    const auto completion_ini = new ToolboxIni(false, false, false);
-    completion_ini->LoadFile(Resources::GetPath(completion_ini_filename).c_str());
-    std::string ini_str;
-    std::wstring name_ws;
-    const char* ini_section;
+    ToolboxIni completion_ini(false, false, false);
+    const auto success = completion_ini.LoadFile(Resources::GetPath(completion_ini_filename).c_str());
+    if (success < 0) {
+        return Log::Error("Failed to load completion ini");
+    }
 
     LOAD_BOOL(show_as_list);
     LOAD_BOOL(hide_unlocked_skills);
@@ -2785,15 +2814,15 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(hide_collected_hats);
     LOAD_BOOL(only_show_account_chars);
 
-    auto read_ini_to_buf = [&](const CompletionType type, const char* section) {
+    auto read_ini_to_buf = [&](const CompletionType type, const char* section, const char* ini_section, const std::wstring_view name_ws) {
         char ini_key_buf[64];
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_length", section);
-        const int len = completion_ini->GetLongValue(ini_section, ini_key_buf, 0);
+        const int len = completion_ini.GetLongValue(ini_section, ini_key_buf, 0);
         if (len < 1) {
             return;
         }
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_values", section);
-        const std::string val = completion_ini->GetValue(ini_section, ini_key_buf, "");
+        const std::string val = completion_ini.GetValue(ini_section, ini_key_buf, "");
         if (val.empty()) {
             return;
         }
@@ -2803,29 +2832,27 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
     };
 
     ToolboxIni::TNamesDepend entries;
-    completion_ini->GetAllSections(entries);
+    completion_ini.GetAllSections(entries);
     for (const ToolboxIni::Entry& entry : entries) {
-        ini_section = entry.pItem;
-        name_ws = TextUtils::StringToWString(ini_section);
+        const char* ini_section = entry.pItem;
+        const auto name_ws = TextUtils::StringToWString(ini_section);
 
         const auto c = GetCharacterCompletion(name_ws.data(), true);
-        c->profession = static_cast<Profession>(completion_ini->GetLongValue(ini_section, "profession", 0));
-        c->account = TextUtils::StringToWString(completion_ini->GetValue(ini_section, "account", ""));
-        c->is_pvp = completion_ini->GetBoolValue(ini_section, "is_pvp", false);
-        c->is_pre_searing = completion_ini->GetBoolValue(ini_section, "is_pre_searing", false);
+        c->profession = static_cast<Profession>(completion_ini.GetLongValue(ini_section, "profession", 0));
+        c->account = TextUtils::StringToWString(completion_ini.GetValue(ini_section, "account", ""));
+        c->is_pvp = completion_ini.GetBoolValue(ini_section, "is_pvp", false);
+        c->is_pre_searing = completion_ini.GetBoolValue(ini_section, "is_pre_searing", false);
 
-        read_ini_to_buf(CompletionType::Mission, "mission");
-        read_ini_to_buf(CompletionType::MissionBonus, "mission_bonus");
-        read_ini_to_buf(CompletionType::MissionHM, "mission_hm");
-        read_ini_to_buf(CompletionType::MissionBonusHM, "mission_bonus_hm");
-        read_ini_to_buf(CompletionType::Skills, "skills");
-        read_ini_to_buf(CompletionType::Vanquishes, "vanquishes");
-        read_ini_to_buf(CompletionType::Heroes, "heros");
-        read_ini_to_buf(CompletionType::MapsUnlocked, "maps_unlocked");
-        read_ini_to_buf(CompletionType::MinipetsUnlocked, "minipets_unlocked");
-        read_ini_to_buf(CompletionType::FestivalHats, "festival_hats");
-
-
+        read_ini_to_buf(CompletionType::Mission, "mission", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::MissionBonus, "mission_bonus", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::MissionHM, "mission_hm", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::MissionBonusHM, "mission_bonus_hm", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::Skills, "skills", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::Vanquishes, "vanquishes", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::Heroes, "heros", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::MapsUnlocked, "maps_unlocked", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::MinipetsUnlocked, "minipets_unlocked", ini_section, name_ws);
+        read_ini_to_buf(CompletionType::FestivalHats, "festival_hats", ini_section, name_ws);
     }
     RefreshAccountCharacters();
     ParseCompletionBuffer(CompletionType::Mission);
@@ -2841,39 +2868,39 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
 
 CompletionWindow* CompletionWindow::CheckProgress(const bool fetch_hom)
 {
-    for (auto& camp : pve_skills) {
-        for (const auto& skill : camp.second) {
+    for (auto& skills : pve_skills | std::views::values) {
+        for (const auto& skill : skills) {
             skill->CheckProgress(chosen_player_name);
         }
     }
-    for (auto& camp : elite_skills) {
-        for (const auto& skill : camp.second) {
+    for (auto& skills : elite_skills | std::views::values) {
+        for (const auto& skill : skills) {
             skill->CheckProgress(chosen_player_name);
         }
     }
-    for (auto& camp : outposts) {
-        for (const auto& skill : camp.second) {
+    for (auto& skills : outposts | std::views::values) {
+        for (const auto& skill : skills) {
             skill->CheckProgress(chosen_player_name);
         }
     }
-    for (auto& camp : missions) {
-        for (const auto& skill : camp.second) {
-            skill->CheckProgress(chosen_player_name);
+    for (auto& completed_missions : missions | std::views::values) {
+        for (const auto& mission : completed_missions) {
+            mission->CheckProgress(chosen_player_name);
         }
     }
-    for (auto& camp : vanquishes) {
-        for (const auto& skill : camp.second) {
-            skill->CheckProgress(chosen_player_name);
+    for (auto& completed_missions : vanquishes | std::views::values) {
+        for (const auto& mission : completed_missions) {
+            mission->CheckProgress(chosen_player_name);
         }
     }
-    for (auto& camp : heros) {
-        for (const auto& skill : camp.second) {
-            skill->CheckProgress(chosen_player_name);
+    for (auto& unlocks : heros | std::views::values) {
+        for (const auto& unlock : unlocks) {
+            unlock->CheckProgress(chosen_player_name);
         }
     }
-    for (auto& camp : unlocked_pvp_items) {
-        for (const auto& skill : camp.second) {
-            skill->CheckProgress(chosen_player_name);
+    for (auto& items : unlocked_pvp_items | std::views::values) {
+        for (const auto& item : items) {
+            item->CheckProgress(chosen_player_name);
         }
     }
     for (const auto achievement : festival_hats) {
@@ -2904,8 +2931,11 @@ CompletionWindow* CompletionWindow::CheckProgress(const bool fetch_hom)
 void CompletionWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    auto completion_ini = new ToolboxIni(false, false, false);
-    std::string ini_str;
+    ToolboxIni completion_ini(false, false, false);
+    if (character_completion.empty() ||
+        (character_completion.size() == 1 && character_completion.contains(L""))) {
+        return;
+    }
 
     SAVE_BOOL(show_as_list);
     SAVE_BOOL(hide_unlocked_skills);
@@ -2915,38 +2945,40 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(hide_collected_hats);
     SAVE_BOOL(only_show_account_chars);
 
-    auto write_buf_to_ini = [completion_ini](const char* section, const std::vector<uint32_t>* read, std::string& ini_str, const std::string* name) {
+    auto write_buf_to_ini = [&completion_ini](const char* section, const std::vector<uint32_t>* read, const std::string_view name) {
         char ini_key_buf[64];
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_length", section);
-        completion_ini->SetLongValue(name->c_str(), ini_key_buf, read->size());
+        completion_ini.SetLongValue(name.data(), ini_key_buf, read->size());
+        std::string ini_str;
         ASSERT(GuiUtils::ArrayToIni(read->data(), read->size(), &ini_str));
         snprintf(ini_key_buf, _countof(ini_key_buf), "%s_values", section);
-        completion_ini->SetValue(name->c_str(), ini_key_buf, ini_str.c_str());
+        completion_ini.SetValue(name.data(), ini_key_buf, ini_str.c_str());
     };
 
-    for (const auto& char_unlocks : character_completion) {
-        CharacterCompletion* char_comp = char_unlocks.second;
-        const std::string* name = &char_comp->name_str;
-        completion_ini->SetLongValue(name->c_str(), "profession", std::to_underlying(char_comp->profession));
-        completion_ini->SetValue(name->c_str(), "account", TextUtils::WStringToString(char_comp->account).c_str());
-        completion_ini->SetBoolValue(name->c_str(), "is_pvp", char_comp->is_pvp);
-        completion_ini->SetBoolValue(name->c_str(), "is_pre_searing", char_comp->is_pre_searing);
+    for (const auto& [entry_name, char_comp] : character_completion) {
+        if (entry_name.empty()) {
+            continue;
+        }
+        const std::string& name = char_comp->name_str;
+        completion_ini.SetLongValue(name.c_str(), "profession", std::to_underlying(char_comp->profession));
+        completion_ini.SetValue(name.c_str(), "account", TextUtils::WStringToString(char_comp->account).c_str());
+        completion_ini.SetBoolValue(name.c_str(), "is_pvp", char_comp->is_pvp);
+        completion_ini.SetBoolValue(name.c_str(), "is_pre_searing", char_comp->is_pre_searing);
 
-        write_buf_to_ini("mission", &char_comp->mission, ini_str, name);
-        write_buf_to_ini("mission_bonus", &char_comp->mission_bonus, ini_str, name);
-        write_buf_to_ini("mission_hm", &char_comp->mission_hm, ini_str, name);
-        write_buf_to_ini("mission_bonus_hm", &char_comp->mission_bonus_hm, ini_str, name);
-        write_buf_to_ini("skills", &char_comp->skills, ini_str, name);
-        write_buf_to_ini("vanquishes", &char_comp->vanquishes, ini_str, name);
-        write_buf_to_ini("heros", &char_comp->heroes, ini_str, name);
-        write_buf_to_ini("maps_unlocked", &char_comp->maps_unlocked, ini_str, name);
-        write_buf_to_ini("minipets_unlocked", &char_comp->minipets_unlocked, ini_str, name);
-        write_buf_to_ini("festival_hats", &char_comp->festival_hats, ini_str, name);
+        write_buf_to_ini("mission", &char_comp->mission, name);
+        write_buf_to_ini("mission_bonus", &char_comp->mission_bonus, name);
+        write_buf_to_ini("mission_hm", &char_comp->mission_hm, name);
+        write_buf_to_ini("mission_bonus_hm", &char_comp->mission_bonus_hm, name);
+        write_buf_to_ini("skills", &char_comp->skills, name);
+        write_buf_to_ini("vanquishes", &char_comp->vanquishes, name);
+        write_buf_to_ini("heros", &char_comp->heroes, name);
+        write_buf_to_ini("maps_unlocked", &char_comp->maps_unlocked, name);
+        write_buf_to_ini("minipets_unlocked", &char_comp->minipets_unlocked, name);
+        write_buf_to_ini("festival_hats", &char_comp->festival_hats, name);
 
-        completion_ini->SetValue(name->c_str(), "hom_code", char_comp->hom_code.c_str());
+        completion_ini.SetValue(name.c_str(), "hom_code", char_comp->hom_code.c_str());
     }
-    completion_ini->SaveFile(Resources::GetPath(completion_ini_filename).c_str());
-    delete completion_ini;
+    completion_ini.SaveFile(Resources::GetPath(completion_ini_filename).c_str());
 }
 
 CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* character_name, const bool create_if_not_found)
@@ -2964,10 +2996,12 @@ CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* cha
     }
     return this_character_completion;
 }
-bool CompletionWindow::IsAreaComplete(const GW::Constants::MapID map_id, CompletionCheck check) {
-    if (map_id == GW::Constants::MapID::None)
+
+bool CompletionWindow::IsAreaComplete(const MapID map_id, CompletionCheck check)
+{
+    if (map_id == MapID::None)
         return true;
-    if (map_id == GW::Constants::MapID::Tomb_of_the_Primeval_Kings)
+    if (map_id == MapID::Tomb_of_the_Primeval_Kings)
         return true; // Topk special case
 
     const auto map = GW::Map::GetMapInfo();
@@ -2975,46 +3009,51 @@ bool CompletionWindow::IsAreaComplete(const GW::Constants::MapID map_id, Complet
     if (!(map && w))
         return false;
     switch (map->type) {
-    case GW::RegionType::EliteMission:
-        return true;
-    case GW::RegionType::ExplorableZone:
-        if (map->continent == GW::Continent::BattleIsles)
-            return true; // Fow, Uw
-        return !map->GetIsOnWorldMap() || ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(map_id));
+        case GW::RegionType::EliteMission:
+            return true;
+        case GW::RegionType::ExplorableZone:
+            if (map->continent == GW::Continent::BattleIsles)
+                return true; // Fow, Uw
+            return !map->GetIsOnWorldMap() || ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(map_id));
     }
 
-    if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(w->missions_completed, static_cast<uint32_t>(map_id)))
+    if ((check & NormalMode) && !ArrayBoolAt(w->missions_completed, static_cast<uint32_t>(map_id)))
         return false;
-    if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(map_id)))
+    if ((check & HardMode) && !ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(map_id)))
         return false;
-    const bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
+    const bool has_bonus = map->campaign != Campaign::EyeOfTheNorth;
     if (has_bonus) {
-        if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(map_id)))
+        if ((check & NormalMode) && !ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(map_id)))
             return false;
-        if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(map_id)))
+        if ((check & HardMode) && !ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(map_id)))
             return false;
     }
     return true;
 }
-bool CompletionWindow::IsAreaComplete(const wchar_t* player_name, const GW::Constants::MapID map_id, CompletionCheck check) {
+
+bool CompletionWindow::IsAreaComplete(const wchar_t* player_name, const MapID map_id, CompletionCheck check)
+{
     return ::IsAreaComplete(player_name, map_id, check, GW::Map::GetMapInfo(map_id));
 }
 
-bool CompletionWindow::IsAreaUnlocked(const wchar_t* player_name, const GW::Constants::MapID map_id) {
+bool CompletionWindow::IsAreaUnlocked(const wchar_t* player_name, const MapID map_id)
+{
     const auto completion = GetCharacterCompletion(player_name, false);
     const auto map = completion ? GW::Map::GetMapInfo(map_id) : nullptr;
     if (!(map && completion)) return false;
     return ArrayBoolAt(completion->maps_unlocked, static_cast<uint32_t>(map_id));
 }
-bool CompletionWindow::IsSkillUnlocked(const wchar_t* player_name, const GW::Constants::SkillID skill_id) {
+
+bool CompletionWindow::IsSkillUnlocked(const wchar_t* player_name, const SkillID skill_id)
+{
     const auto completion = GetCharacterCompletion(player_name, false);
     return completion && ArrayBoolAt(completion->skills, static_cast<uint32_t>(skill_id));
 }
 
-std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaComplete(GW::Constants::MapID map_id, CompletionCheck check)
+std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaComplete(MapID map_id, CompletionCheck check)
 {
     std::vector<CharacterCompletion*> out;
-    if (map_id == GW::Constants::MapID::None)
+    if (map_id == MapID::None)
         return out;
     const auto info = GW::Map::GetMapInfo(map_id);
     const auto email = GW::AccountMgr::GetAccountEmail();
@@ -3023,16 +3062,16 @@ std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaComp
             continue;
         if (only_show_account_chars && it.second->account != email)
             continue;
-        if(!::IsAreaComplete(it.first.c_str(), map_id, check, info))
+        if (!::IsAreaComplete(it.first.c_str(), map_id, check, info))
             out.push_back(it.second);
     }
     std::ranges::sort(out, [](CharacterCompletion* a, CharacterCompletion* b) {
         return a->name_str.compare(b->name_str) < 0;
-        });
+    });
     return out;
 }
 
-std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaUnlocked(GW::Constants::MapID map_id)
+std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaUnlocked(MapID map_id)
 {
     std::vector<CharacterCompletion*> out;
     const auto email = GW::AccountMgr::GetAccountEmail();
@@ -3046,11 +3085,11 @@ std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaUnlo
     }
     std::ranges::sort(out, [](CharacterCompletion* a, CharacterCompletion* b) {
         return a->name_str.compare(b->name_str) < 0;
-        });
+    });
     return out;
 }
 
-std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutSkillUnlocked(GW::Constants::SkillID skill_id)
+std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutSkillUnlocked(SkillID skill_id)
 {
     std::vector<CharacterCompletion*> out;
     const auto email = GW::AccountMgr::GetAccountEmail();
@@ -3064,7 +3103,7 @@ std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutSkillUnl
     }
     std::ranges::sort(out, [](CharacterCompletion* a, CharacterCompletion* b) {
         return a->name_str.compare(b->name_str) < 0;
-        });
+    });
     return out;
 }
 
@@ -3095,7 +3134,8 @@ void WeaponAchievement::CheckProgress(const std::wstring& player_name)
     is_completed = bonus = unlocked[encoded_name_index] != 0;
 }
 
-size_t AchieventWithWikiFile::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
+size_t AchieventWithWikiFile::GetLoadedIcons(IDirect3DTexture9* icons_out[4])
+{
     if (!icons_loaded && !wiki_file_name.empty()) {
         *icons = Resources::GetGuildWarsWikiImage(wiki_file_name.c_str(), 64);
         icons_loaded = true;
@@ -3159,7 +3199,8 @@ void FestivalHat::CheckProgress(const std::wstring& player_name)
     is_completed = bonus = ArrayBoolAt(unlocked, encoded_name_index);
 }
 
-size_t UnlockedPvPItemUpgrade::GetLoadedIcons(IDirect3DTexture9* icons_out[4]) {
+size_t UnlockedPvPItemUpgrade::GetLoadedIcons(IDirect3DTexture9* icons_out[4])
+{
     if (!icons_loaded) {
         const auto info = GW::Items::GetPvPItemUpgrade(encoded_name_index);
         if (info) {

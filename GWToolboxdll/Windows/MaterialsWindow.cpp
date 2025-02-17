@@ -713,7 +713,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         if (ImGui::Button("Buy##common", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
             const auto mat = materials[common_idx];
             const int material_stock = CountItemByMaterialSlot(mat, stock_start, stock_end);
-            const int to_buy = common_qty - (use_stock ? material_stock : 0);
+            const int to_buy = common_qty - (use_stock ? material_stock / 10 : 0);
             for (int i = 0; i < to_buy; i++) {
                 EnqueuePurchase(mat);
             }

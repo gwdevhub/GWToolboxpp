@@ -35,6 +35,8 @@ public:
 
     void Initialize() override;
     void Terminate() override;
+    bool CanTerminate() override;
+    void SignalTerminate() override;
 
     void Update(float delta) override;
     static void DxUpdate(IDirect3DDevice9* device);

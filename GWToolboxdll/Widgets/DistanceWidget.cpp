@@ -6,20 +6,40 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
+#include <Color.h>
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
+#include <Utils/FontLoader.h>
 #include <Widgets/DistanceWidget.h>
 
-#include "Utils/FontLoader.h"
+namespace {
+    bool hide_in_outpost = false;
+    float font_size_header = static_cast<float>(FontLoader::FontSize::header1);
+    float font_size_perc_value = static_cast<float>(FontLoader::FontSize::widget_small);
+    float font_size_abs_value = static_cast<float>(FontLoader::FontSize::widget_label);
+
+    Color color_adjacent = 0xFFFFFFFF;
+    Color color_nearby = 0xFFFFFFFF;
+    Color color_area = 0xFFFFFFFF;
+    Color color_earshot = 0xFFFFFFFF;
+    Color color_cast = 0xFFFFFFFF;
+    Color color_spirit = 0xFFFFFFFF;
+    Color color_compass = 0xFFFFFFFF;
+}
 
 void DistanceWidget::DrawSettingsInternal()
 {
     ImGui::SameLine();
     ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
-    ImGui::SameLine();
-    ImGui::Checkbox("Show percentage value", &show_perc_value);
-    ImGui::SameLine();
-    ImGui::Checkbox("Show absolute value", &show_abs_value);
+    ImGui::Text("Text sizes:");
+    ImGui::ShowHelp("A text size of 0 means that it's not drawn.");
+    ImGui::Indent();
+    ImGui::DragFloat("'Distance' header", &font_size_header, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::DragFloat("Percent value", &font_size_perc_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::DragFloat("Absolute value", &font_size_abs_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::Unindent();
+    ImGui::Text("Colors:");
+    ImGui::Indent();
     Colors::DrawSettingHueWheel("Adjacent Range", &color_adjacent, 0);
     Colors::DrawSettingHueWheel("Nearby Range", &color_nearby, 0);
     Colors::DrawSettingHueWheel("Area Range", &color_area, 0);
@@ -27,14 +47,16 @@ void DistanceWidget::DrawSettingsInternal()
     Colors::DrawSettingHueWheel("Cast Range", &color_cast, 0);
     Colors::DrawSettingHueWheel("Spirit Range", &color_spirit, 0);
     Colors::DrawSettingHueWheel("Compass Range", &color_compass, 0);
+    ImGui::Unindent();
 }
 
 void DistanceWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
+    LOAD_FLOAT(font_size_header);
+    LOAD_FLOAT(font_size_perc_value);
+    LOAD_FLOAT(font_size_abs_value);
     LOAD_BOOL(hide_in_outpost);
-    LOAD_BOOL(show_perc_value);
-    LOAD_BOOL(show_abs_value);
     LOAD_COLOR(color_adjacent);
     LOAD_COLOR(color_nearby);
     LOAD_COLOR(color_area);
@@ -42,14 +64,16 @@ void DistanceWidget::LoadSettings(ToolboxIni* ini)
     LOAD_COLOR(color_cast);
     LOAD_COLOR(color_spirit);
     LOAD_COLOR(color_compass);
+    auto_size = true;
 }
 
 void DistanceWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
+    SAVE_FLOAT(font_size_header);
+    SAVE_FLOAT(font_size_perc_value);
+    SAVE_FLOAT(font_size_abs_value);
     SAVE_BOOL(hide_in_outpost);
-    SAVE_BOOL(show_perc_value);
-    SAVE_BOOL(show_abs_value);
     SAVE_COLOR(color_adjacent);
     SAVE_COLOR(color_nearby);
     SAVE_COLOR(color_area);
@@ -67,26 +91,13 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
     if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         return;
     }
-    if (!show_perc_value && !show_abs_value) {
-        return;
-    }
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
-        
         const auto target = GW::Agents::GetTarget();
         const auto me = target ? GW::Agents::GetObservingAgent() : nullptr;
         if (me && me != target) {
-            constexpr size_t buffer_size = 32;
-            static char dist_perc[buffer_size];
-            static char dist_abs[buffer_size];
             const float dist = GetDistance(me->pos, target->pos);
-            if (show_perc_value) {
-                snprintf(dist_perc, buffer_size, "%2.0f %s", dist * 100 / GW::Constants::Range::Compass, "%%");
-            }
-            if (show_abs_value) {
-                snprintf(dist_abs, buffer_size, "%.0f", dist);
-            }
 
             ImColor color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
             if (dist <= GW::Constants::Range::Adjacent) {
@@ -111,35 +122,39 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
                 color = ImColor(color_compass);
             }
 
-            const auto background = ImColor(Colors::Black());
-            // 'distance'
-            ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header1));
             ImVec2 cur = ImGui::GetCursorPos();
-            ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
-            ImGui::TextColored(background, "Distance");
-            ImGui::SetCursorPos(cur);
-            ImGui::Text("Distance");
-            ImGui::PopFont();
+            constexpr auto background = ImColor(Colors::Black());
+            // 'distance'
+            if (font_size_header > 0.f) {
+                ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header1));
+                ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
+                ImGui::TextColored(background, "Distance");
+                ImGui::SetCursorPos(cur);
+                ImGui::Text("Distance");
+                ImGui::PopFont();
+            }
 
             // perc
-            if (show_perc_value) {
-                ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_small));
+            if (font_size_perc_value > 0.f) {
+                ImGui::PushFont(FontLoader::GetFontByPx(font_size_perc_value));
                 cur = ImGui::GetCursorPos();
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-                ImGui::TextColored(background, dist_perc);
+                const auto dist_perc = std::format("{:2.0f} %%", dist * 100 / GW::Constants::Range::Compass);
+                ImGui::TextColored(background, dist_perc.c_str());
                 ImGui::SetCursorPos(cur);
-                ImGui::TextColored(color, dist_perc);
+                ImGui::TextColored(color, dist_perc.c_str());
                 ImGui::PopFont();
             }
 
             // abs
-            if (show_abs_value) {
-                ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_label));
+            if (font_size_abs_value > 0.f) {
+                ImGui::PushFont(FontLoader::GetFontByPx(font_size_abs_value));
                 cur = ImGui::GetCursorPos();
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-                ImGui::TextColored(background, dist_abs);
+                const auto dist_abs = std::format("{:.0f}", dist);
+                ImGui::TextColored(background, dist_abs.c_str());
                 ImGui::SetCursorPos(cur);
-                ImGui::Text(dist_abs);
+                ImGui::Text(dist_abs.c_str());
                 ImGui::PopFont();
             }
         }

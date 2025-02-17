@@ -64,6 +64,8 @@ BOOL WINAPI ConsoleCtrlHandler(const DWORD dwCtrlType)
 // === Setup and cleanup ====
 bool Log::InitializeLog()
 {
+    if (logfile)
+        return true;
 #ifdef _DEBUG
     logfile = stdout;
     AllocConsole();

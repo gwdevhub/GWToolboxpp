@@ -201,7 +201,7 @@ namespace {
             : title(in)
         {
             const auto title_info = GW::PlayerMgr::GetTitleData(title);
-            if(title_info)
+            if (title_info)
                 name.reset(title_info->name_id);
         };
         GW::Constants::TitleID title;
@@ -266,14 +266,14 @@ namespace {
 
     void CHAT_CMD_FUNC(CmdDuncan)
     {
-        std::wstring out_message = std::format(L"{}\x2\x108\x107 Status: \x1",GW::EncStrings::Quest::TheLastHeirophant);
+        std::wstring out_message = std::format(L"{}\x2\x108\x107 Status: \x1", GW::EncStrings::Quest::TheLastHeirophant);
         if (!GW::QuestMgr::GetQuest(GW::Constants::QuestID::The_Last_Hierophant)) {
             out_message += L"\x108\x107I don't have the quest!\x1";
         }
         else {
             const auto objectives = QuestModule::ParseQuestObjectives(GW::Constants::QuestID::The_Last_Hierophant);
             const wchar_t* objective_names[] = {
-                L"Thommis",L"Rand",L"Selvetarm",L"Forgewight",L"Duncan"
+                L"Thommis", L"Rand", L"Selvetarm", L"Forgewight", L"Duncan"
             };
             for (size_t i = 0; i < _countof(objective_names); i++) {
                 const wchar_t completed_mark = i < objectives.size() && objectives[i].is_completed ? L'\x2705' : ' ';
@@ -345,7 +345,7 @@ namespace {
         GW::GameThread::Enqueue([packet] {
             GW::StoC::EmulatePacket(packet);
             delete packet;
-            });
+        });
     }
 
     HallOfMonumentsAchievements hom_achievements;
@@ -464,16 +464,19 @@ namespace {
         PrefLabel(const uint32_t _enc_string) : EncString(_enc_string, false) {};
     protected:
         static void OnPrefLabelDecoded(void* param, const wchar_t* decoded);
-        void decode() override {
+
+        void decode() override
+        {
             language(GW::Constants::Language::English);
             if (!decoded && !decoding && !encoded_ws.empty()) {
                 decoding = true;
                 GW::GameThread::Enqueue([&] {
                     GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnPrefLabelDecoded, this, language_id);
-                    });
+                });
             }
         }
     };
+
     void PrefLabel::OnPrefLabelDecoded(void* param, const wchar_t* decoded)
     {
         GuiUtils::EncString::OnStringDecoded(param, decoded);
@@ -524,7 +527,7 @@ namespace {
             pref_map = {
                 {GW::UI::EnumPreference::AntiAliasing, GW::EncStrings::AntiAliasing},
                 {GW::UI::EnumPreference::ShaderQuality, GW::EncStrings::ShaderQuality},
-                {GW::UI::EnumPreference::TerrainQuality, GW::EncStrings::TerrainQuality },
+                {GW::UI::EnumPreference::TerrainQuality, GW::EncStrings::TerrainQuality},
                 {GW::UI::EnumPreference::Reflections, GW::EncStrings::Reflections},
                 {GW::UI::EnumPreference::ShadowQuality, GW::EncStrings::ShadowQuality},
                 {GW::UI::EnumPreference::InterfaceSize, GW::EncStrings::InterfaceSize},
@@ -538,7 +541,7 @@ namespace {
                 {GW::UI::FlagPreference::DisableMouseWalking, GW::EncStrings::DisableMouseWalking},
                 {GW::UI::FlagPreference::AlwaysShowFoeNames, L"\x108\x107Show Foe Names\x1"},
                 {GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1"},
-                { GW::UI::FlagPreference::EnableGamepad, L"\x108\x107" "Enable Gamepad\x1" },
+                {GW::UI::FlagPreference::EnableGamepad, L"\x108\x107" "Enable Gamepad\x1"},
             };
             for (auto& it : pref_map) {
                 it.label->wstring();
@@ -569,7 +572,7 @@ namespace {
         // Find preference by name
         const auto found = std::ranges::find_if(options, [argv](const PrefMapCommand& cmd) {
             return cmd.label->wstring() == argv[1];
-            });
+        });
         if (found == options.end()) {
             return Log::Error(pref_syntax);
         }
@@ -598,7 +601,8 @@ namespace {
 
     std::vector<CmdAlias*> cmd_aliases;
 
-    void sort_cmd_aliases() {
+    void sort_cmd_aliases()
+    {
         std::ranges::stable_sort(cmd_aliases, [](const auto* a, const auto* b) {
             if (a->alias_cstr[0] == '\0' && b->alias_cstr[0] != '\0') {
                 return false;
@@ -641,18 +645,24 @@ namespace {
         }
     }
 
-    void CHAT_CMD_FUNC(CmdTick) {
+    void CHAT_CMD_FUNC(CmdTick)
+    {
         GW::PartyMgr::Tick(!GW::PartyMgr::GetIsPlayerTicked());
     }
-    void CHAT_CMD_FUNC(CmdCallTarget) {
+
+    void CHAT_CMD_FUNC(CmdCallTarget)
+    {
         const auto* target = GW::Agents::GetTarget();
         if (!target)
             return;
-        auto call_packet = GW::UI::UIPacket::kSendCallTarget{ GW::CallTargetType::AttackingOrTargetting, target->agent_id };
+        auto call_packet = GW::UI::UIPacket::kSendCallTarget{
+            .call_type = GW::CallTargetType::AttackingOrTargetting,
+            .agent_id = target->agent_id
+        };
         GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &call_packet);
     }
 
-    std::vector<std::pair< const wchar_t*, GW::Chat::ChatCommandCallback>> chat_commands;
+    std::vector<std::pair<const wchar_t*, GW::Chat::ChatCommandCallback>> chat_commands;
 
     const wchar_t* settings_via_chat_commands_cmd = L"tb_setting";
 
@@ -665,48 +675,56 @@ namespace {
             Uint,
             Int
         } setting_type;
+
         void* setting_ptr;
         const wchar_t* setting_name;
         const wchar_t* description;
-        std::wstring ChatCommandSyntax() {
+
+        std::wstring ChatCommandSyntax()
+        {
             switch (setting_type) {
-            case SettingType::Bool:
-                if(description)
-                    return std::format(L"'/{} {} [on|off|toggle]' {}", settings_via_chat_commands_cmd, setting_name, description);
-                return std::format(L"'/{} {} [on|off|toggle]'", settings_via_chat_commands_cmd, setting_name);
+                case SettingType::Bool:
+                    if (description)
+                        return std::format(L"'/{} {} [on|off|toggle]' {}", settings_via_chat_commands_cmd, setting_name, description);
+                    return std::format(L"'/{} {} [on|off|toggle]'", settings_via_chat_commands_cmd, setting_name);
             }
             return std::format(L"Failed to get ChatCommandSyntax for SettingType {} ({})", (uint32_t)setting_type, setting_name);
         }
-        void ChatCommandCallback(GW::HookStatus*, const wchar_t*, int argc, const LPWSTR* argv) {
+
+        void ChatCommandCallback(GW::HookStatus*, const wchar_t*, int argc, const LPWSTR* argv)
+        {
             switch (setting_type) {
-            case SettingType::Bool:
-                if (argc < 2)
-                    return Log::WarningW(L"Invalid syntax for %s\n%s", setting_name, ChatCommandSyntax().c_str());
-                auto current_val = (bool*)setting_ptr;
-                bool new_val = !*current_val;
-                if (wcscmp(argv[1], L"on") == 0 || wcscmp(argv[1], L"1") == 0)
-                    new_val = true;
-                if (wcscmp(argv[1], L"off") == 0 || wcscmp(argv[1], L"0") == 0)
-                    new_val = false;
-                if (*current_val == new_val)
-                    return;
-                *current_val = new_val;
+                case SettingType::Bool:
+                    if (argc < 2)
+                        return Log::WarningW(L"Invalid syntax for %s\n%s", setting_name, ChatCommandSyntax().c_str());
+                    auto current_val = (bool*)setting_ptr;
+                    bool new_val = !*current_val;
+                    if (wcscmp(argv[1], L"on") == 0 || wcscmp(argv[1], L"1") == 0)
+                        new_val = true;
+                    if (wcscmp(argv[1], L"off") == 0 || wcscmp(argv[1], L"0") == 0)
+                        new_val = false;
+                    if (*current_val == new_val)
+                        return;
+                    *current_val = new_val;
                 // TODO: Maybe OnChanged callback?
-                return;
+                    return;
             }
             Log::WarningW(L"Failed to process ToolboxChatCommandSetting %s", setting_name);
         }
-    public:
-        ToolboxChatCommandSetting(const wchar_t* setting_name, const bool* bool_setting_ptr, const wchar_t* description = nullptr) :
-            setting_name(setting_name), setting_ptr((void*)bool_setting_ptr), description(description) {
+
+        ToolboxChatCommandSetting(const wchar_t* setting_name, const bool* bool_setting_ptr, const wchar_t* description = nullptr)
+            : setting_name(setting_name),
+              setting_ptr((void*)bool_setting_ptr),
+              description(description)
+        {
             setting_type = SettingType::Bool;
         }
     };
 
     std::map<std::wstring, ToolboxChatCommandSetting*> settings_via_chat_commands;
 
-    void CHAT_CMD_FUNC(CmdSettingViaChatCommand) {
-        
+    void CHAT_CMD_FUNC(CmdSettingViaChatCommand)
+    {
         const auto found = argc > 1 ? settings_via_chat_commands.find(argv[1]) : settings_via_chat_commands.end();
 
         if (found == settings_via_chat_commands.end()) {
@@ -716,7 +734,8 @@ namespace {
         found->second->ChatCommandCallback(status, message, argc, argv);
     }
 
-    void DrawChatCommandsHelp() {
+    void DrawChatCommandsHelp()
+    {
         if (!ImGui::TreeNodeEx("Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             return;
         }
@@ -742,8 +761,6 @@ namespace {
         ImGui::Text("'/camera (lock|unlock)' to lock or unlock the camera.");
         ImGui::Bullet();
         ImGui::Text("'/camera fog (on|off)' sets game fog effect on or off.");
-        ImGui::Bullet();
-        ImGui::Text("'/camera fov <value>' sets the field of view. '/camera fov' resets to default.");
         ImGui::Bullet();
         ImGui::Text("'/camera speed <value>' sets the unlocked camera speed.");
         ImGui::Bullet();
@@ -869,7 +886,8 @@ namespace {
         ImGui::TreePop();
     }
 
-    void DrawToolboxSettingChatCommandsHelp() {
+    void DrawToolboxSettingChatCommandsHelp()
+    {
         if (settings_via_chat_commands.empty() || !ImGui::TreeNodeEx("Chat Commands for Toolbox Settings", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             return;
         }
@@ -880,10 +898,10 @@ namespace {
         }
         ImGui::TreePop();
     }
-
 } // namespace
 
-void ChatCommands::CreateAlias(const wchar_t* alias, const wchar_t* message) {
+void ChatCommands::CreateAlias(const wchar_t* alias, const wchar_t* message)
+{
     if (alias && *alias == L'/')
         alias++;
     if (!(alias && *alias && message && *message))
@@ -907,17 +925,21 @@ void ChatCommands::CreateAlias(const wchar_t* alias, const wchar_t* message) {
     strcpy(alias_obj->command_cstr, message_cstr.c_str());
     wcscpy(alias_obj->command_wstr, message);
 }
+
 void ChatCommands::RegisterSettingChatCommand(const wchar_t* setting_name, const bool* static_setting_ptr, const wchar_t* description)
 {
-    settings_via_chat_commands[setting_name] = new ToolboxChatCommandSetting( setting_name,static_setting_ptr,description );
+    settings_via_chat_commands[setting_name] = new ToolboxChatCommandSetting(setting_name, static_setting_ptr, description);
 }
-void ChatCommands::RemoveSettingChatCommand(const wchar_t* setting_name) {
+
+void ChatCommands::RemoveSettingChatCommand(const wchar_t* setting_name)
+{
     const auto found = settings_via_chat_commands.find(setting_name);
     if (found != settings_via_chat_commands.end()) {
         delete found->second;
         settings_via_chat_commands.erase(found);
     }
 }
+
 void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
 {
     if (!transmo.npc_id || !agent_id) {
@@ -1078,7 +1100,7 @@ void ChatCommands::DrawSettingsInternal()
         if (!result)
             return;
         auto alias = (CmdAlias*)wparam;
-        const auto found = std::ranges::find(cmd_aliases,alias);
+        const auto found = std::ranges::find(cmd_aliases, alias);
         if (found != cmd_aliases.end()) {
             cmd_aliases.erase(found);
             delete alias;
@@ -1101,7 +1123,7 @@ void ChatCommands::DrawSettingsInternal()
         const auto text_height = ImGui::GetTextLineHeightWithSpacing();
         const auto num_newlines = 1 + std::count((*it)->command_cstr, (*it)->command_cstr + _countof(CmdAlias::command_cstr), '\n');
         if (ImGui::InputTextMultiline("##cmd_command", (*it)->command_cstr,
-            _countof(CmdAlias::command_cstr), ImVec2(avail_w * .6f, text_height + num_newlines * ImGui::GetTextLineHeight()))) {
+                                      _countof(CmdAlias::command_cstr), ImVec2(avail_w * .6f, text_height + num_newlines * ImGui::GetTextLineHeight()))) {
             swprintf((*it)->command_wstr, _countof(CmdAlias::command_wstr), L"%S", (*it)->command_cstr);
         }
         if (ImGui::IsItemHovered()) {
@@ -1232,7 +1254,6 @@ void ChatCommands::Initialize()
         {L"hide", CmdHide},
         {L"toggle", CmdToggle},
         {L"tb", CmdTB},
-        {L"zoom", CmdZoom},
         {L"camera", CmdCamera},
         {L"cam", CmdCamera},
         {L"chest", CmdChest},
@@ -1280,15 +1301,15 @@ void ChatCommands::Initialize()
 #if _DEBUG
     // Experimental chat commands
     uintptr_t address = 0;
-    chat_commands.push_back({ L"skillimage", CmdSkillImage });
+    chat_commands.push_back({L"skillimage", CmdSkillImage});
     address = GW::Scanner::Find("\x83\xc4\x04\xc7\x45\x08\x00\x00\x00\x00", "xxxxxxxxxx", -5);
     if (address) {
         SetMuted_Func = (SetMuted_pt)GW::Scanner::FunctionFromNearCall(address);
         PostMuted_Func = (PostMute_pt)GW::Scanner::FunctionFromNearCall(address + 0x10);
         is_muted = *(bool**)((uintptr_t)SetMuted_Func + 0x6);
     }
-    chat_commands.push_back({ L"mute", CmdMute }); // Doesn't unmute!
-    chat_commands.push_back({ L"effect", CmdPlayEffect });
+    chat_commands.push_back({L"mute", CmdMute}); // Doesn't unmute!
+    chat_commands.push_back({L"effect", CmdPlayEffect});
 
 #endif
 
@@ -1296,7 +1317,7 @@ void ChatCommands::Initialize()
         OnChatInteraction_Callback_Func = frame->frame_callbacks[0];
         GW::Hook::CreateHook((void**)&OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
         GW::Hook::EnableHooks(OnChatInteraction_Callback_Func);
-        });
+    });
 
 #ifdef _DEBUG
     ASSERT(SetMuted_Func);
@@ -1305,7 +1326,7 @@ void ChatCommands::Initialize()
 #endif
 
     for (auto& it : chat_commands) {
-        GW::Chat::CreateCommand(&ChatCmd_HookEntry,it.first, it.second);
+        GW::Chat::CreateCommand(&ChatCmd_HookEntry, it.first, it.second);
     }
     getPrefCommandOptions();
 }
@@ -1724,7 +1745,10 @@ void CHAT_CMD_FUNC(ChatCommands::CmdMorale)
         GW::Chat::SendChat('#', L"I have no Morale Boost or Death Penalty!");
     }
     else {
-        auto packet = GW::UI::UIPacket::kSendCallTarget { GW::CallTargetType::Morale, GW::Agents::GetControlledCharacterId() };
+        auto packet = GW::UI::UIPacket::kSendCallTarget{
+            .call_type = GW::CallTargetType::Morale,
+            .agent_id= GW::Agents::GetControlledCharacterId()
+        };
         GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &packet);
     }
 }
@@ -2064,27 +2088,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
     }
 }
 
-void CHAT_CMD_FUNC(ChatCommands::CmdZoom)
-{
-    if (argc <= 1) {
-        GW::CameraMgr::SetMaxDist();
-    }
-    else {
-        int distance;
-        if (TextUtils::ParseInt(argv[1], &distance)) {
-            if (distance > 0) {
-                GW::CameraMgr::SetMaxDist(static_cast<float>(distance));
-            }
-            else {
-                Log::Error("Invalid argument '%ls', please use a positive integer value", argv[1]);
-            }
-        }
-        else {
-            Log::Error("Invalid argument '%ls', please use an integer value", argv[1]);
-        }
-    }
-}
-
 void CHAT_CMD_FUNC(ChatCommands::CmdCamera)
 {
     if (argc == 1) {
@@ -2160,7 +2163,7 @@ const wchar_t* ChatCommands::GetRemainingArgsWstr(const wchar_t* message, const 
         }
     }
 
-    if(!out) {
+    if (!out) {
         return L"";
     }
     return out;
@@ -2382,7 +2385,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdLoad)
     const std::filesystem::path build_file = std::format(L"{}/GUILD WARS/Templates/Skills/{}.txt", dir, argv[1]);
     std::string content;
     if (!Resources::ReadFile(build_file, content))
-        return;
+        content = TextUtils::WStringToString(argv[1]);
     if (argc == 2) {
         GW::SkillbarMgr::LoadSkillTemplate(GW::Agents::GetControlledCharacterId(), content.c_str());
     }
@@ -2422,7 +2425,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdPingBuild)
             continue;
         }
 
-        GW::Chat::SendChat('#', std::format(L"[{};{}]",arg,TextUtils::StringToWString(content)).c_str());
+        GW::Chat::SendChat('#', std::format(L"[{};{}]", arg, TextUtils::StringToWString(content)).c_str());
     }
 }
 

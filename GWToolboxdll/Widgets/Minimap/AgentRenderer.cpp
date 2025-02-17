@@ -212,6 +212,8 @@ void AgentRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
     size_boss = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_boss), size_boss));
     size_minion = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(size_minion), size_minion));
     default_shape = static_cast<Shape_e>(ini->GetLongValue(section, VAR_NAME(default_shape), default_shape));
+    shape_player = static_cast<Shape_e>(ini->GetDoubleValue(section, VAR_NAME(shape_player), shape_player));
+    shape_players = static_cast<Shape_e>(ini->GetDoubleValue(section, VAR_NAME(shape_players), shape_players));
     agent_border_thickness =
         static_cast<uint32_t>(ini->GetLongValue(section, VAR_NAME(agent_border_thickness), agent_border_thickness));
 
@@ -280,6 +282,8 @@ void AgentRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
     ini->SetDoubleValue(section, VAR_NAME(size_minion), size_minion);
     ini->SetDoubleValue(section, VAR_NAME(size_marked_target), size_marked_target);
     ini->SetLongValue(section, VAR_NAME(default_shape), default_shape);
+    ini->SetLongValue(section, VAR_NAME(shape_player), shape_player);
+    ini->SetLongValue(section, VAR_NAME(shape_players), shape_players);
     ini->SetLongValue(section, VAR_NAME(agent_border_thickness), agent_border_thickness);
 
     SAVE_BOOL(show_props_on_minimap);
@@ -386,7 +390,7 @@ void AgentRenderer::DrawSettings()
 
     if (ImGui::TreeNodeEx("Agent Sizes", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n",
-            [&](bool result, void*) {
+            [&](const bool result, void*) {
                 if (result) {
                     LoadDefaultSizes();
                 }
@@ -399,8 +403,10 @@ void AgentRenderer::DrawSettings()
         ImGui::DragFloat("Minion Size", &size_minion, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::DragFloat("Marked Target Size", &size_marked_target, 1.0f, 1.0f, 0.0f, "%.0f");
         ImGui::ShowHelp("Agents highlighted as marked target via /marktarget command");
-        static const char* items[] = {"Tear", "Circle", "Square", "Big Circle"};
-        ImGui::Combo("Shape", reinterpret_cast<int*>(&default_shape), items, 4);
+        static std::array items = {"Tear", "Circle", "Square", "Big Circle"};
+        ImGui::Combo("Default Shape", reinterpret_cast<int*>(&default_shape), items.data(), items.size());
+        ImGui::Combo("Player Shape", reinterpret_cast<int*>(&shape_player), items.data(), items.size());
+        ImGui::Combo("Other Player Shape", reinterpret_cast<int*>(&shape_players), items.data(), items.size());
         ImGui::ShowHelp("The default shape of agents.");
 
         ImGui::TreePop();
@@ -1189,7 +1195,9 @@ AgentRenderer::Shape_e AgentRenderer::GetShape(const GW::Agent* agent, const Cus
 
     const GW::AgentLiving* living = agent->GetAsAgentLiving();
     if (living->login_number > 0) {
-        return Tear; // players
+        if (living->agent_id == GW::Agents::GetControlledCharacterId())
+            return shape_player;
+        return shape_players; // players
     }
 
     if (show_quest_npcs_on_minimap && living->GetHasQuest()) {

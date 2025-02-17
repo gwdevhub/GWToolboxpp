@@ -87,7 +87,7 @@ namespace {
         dialog_button_messages.clear();
 
         dialog_body.reset(nullptr);
-        dialog_info = { 0 };
+        dialog_info = {};
     }
 
     void OnNPCDialogUICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
@@ -135,7 +135,7 @@ void DialogModule::OnPreUIMessage(
             }
         }
         break;
-        case GW::UI::UIMessage::kSendAgentDialog: {
+        case GW::UI::UIMessage::kSendDialog: {
             const auto dialog_id = reinterpret_cast<uint32_t>(wparam);
             if ((dialog_id & 0xff000000) != 0) {
                 break; // Don't handle merchant interaction dialogs.
@@ -174,7 +174,7 @@ void DialogModule::OnPostUIMessage(const GW::HookStatus* status, const GW::UI::U
             OnDialogButtonAdded(static_cast<GW::UI::DialogButtonInfo*>(wparam));
         }
         break;
-        case GW::UI::UIMessage::kSendAgentDialog: {
+        case GW::UI::UIMessage::kSendDialog: {
             OnDialogSent(reinterpret_cast<uint32_t>(wparam));
         }
         break;
@@ -206,7 +206,7 @@ void DialogModule::ReloadDialog()
     for (auto& btn : buttons) {
         GW::UI::SendUIMessage(GW::UI::UIMessage::kDialogButton, &btn);
     }
-    for (auto msg : dialog_btn_messages) {
+    for (const auto msg : dialog_btn_messages) {
         delete msg;
     }
 }
@@ -225,16 +225,9 @@ void DialogModule::OnDialogSent(const uint32_t dialog_id)
             default:
                 return;
         }
-        for (auto it = queued_dialogs_to_send.begin(); it != queued_dialogs_to_send.end();) {
-            const auto other_dialog_id = it->first;
-            // make sure we don't delete dialogs for the same quest queued up earlier or later, e.g. separate reward dialog!
-            if (GetQuestID(other_dialog_id) == quest_id && queued_at == it->second) {
-                it = queued_dialogs_to_send.erase(it);
-            }
-            else {
-                ++it;
-            }
-        }
+        std::erase_if(queued_dialogs_to_send, [quest_id, queued_at](const auto& pair) {
+            return GetQuestID(pair.first) == quest_id && queued_at == pair.second;
+        });
     }
     if (IsUWTele(dialog_id)) {
         queued_dialogs_to_send.erase(GW::Constants::DialogID::UwTeleEnquire);
@@ -246,7 +239,7 @@ void DialogModule::Initialize()
 {
     ToolboxModule::Initialize();
     constexpr GW::UI::UIMessage dialog_ui_messages[] = {
-        GW::UI::UIMessage::kSendAgentDialog,
+        GW::UI::UIMessage::kSendDialog,
         GW::UI::UIMessage::kDialogBody,
         GW::UI::UIMessage::kDialogButton
     };
@@ -321,24 +314,23 @@ void DialogModule::SendDialogs(const std::initializer_list<uint32_t> dialog_ids)
 
 void DialogModule::Update(float)
 {
-    for (auto it = queued_dialogs_to_send.begin(); it != queued_dialogs_to_send.end(); ++it) {
-        if (TIMER_DIFF(it->second) > 3000) {
+    for (const auto& [dialog_id, time] : queued_dialogs_to_send) {
+        if (TIMER_DIFF(time) > 3000) {
             // NB: Show timeout error message?
-            queued_dialogs_to_send.erase(it);
+            queued_dialogs_to_send.erase(dialog_id);
             break;
         }
         if (!GetDialogAgent()) {
             continue;
         }
-        const auto dialog_id = it->first;
         if (dialog_id == 0) {
             // If dialog queued is id 0, this means the player wants to take (or accept reward for) the first available quest.
-            queued_dialogs_to_send.erase(it);
+            queued_dialogs_to_send.erase(dialog_id);
             AcceptFirstAvailableQuest() || AcceptFirstAvailableBounty();
             break;
         }
         if (IsDialogButtonAvailable(dialog_id) && GW::Agents::SendDialog(dialog_id)) {
-            queued_dialogs_to_send.erase(it);
+            queued_dialogs_to_send.erase(dialog_id);
             break;
         }
     }

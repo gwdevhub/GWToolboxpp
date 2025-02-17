@@ -19,6 +19,7 @@
 #include <Modules/Resources.h>
 #include <Modules/ChatFilter.h>
 #include <Utils/ToolboxUtils.h>
+#include <Windows/FriendListWindow.h>
 
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
@@ -335,7 +336,8 @@ namespace {
 
     bool ShouldIgnoreBySender(const std::wstring& sender)
     {
-        return GW::FriendListMgr::GetFriend(nullptr, sender.c_str(), GW::FriendType::Ignore) != nullptr;
+        const auto sanitised = TextUtils::SanitizePlayerName(sender);
+        return FriendListWindow::GetIsPlayerIgnored(sanitised) || GW::FriendListMgr::GetFriend(nullptr, sanitised.c_str(), GW::FriendType::Ignore) != nullptr;
     }
 
     // Should this message be ignored by encoded string?

@@ -323,8 +323,8 @@ namespace {
 
     }
 
-    void on_websocket_message(const std::string& message) {
-        Log::Log("Websocket message\n%s", message.c_str());
+    void on_websocket_message(const std::string&) {
+        //Log::Log("Websocket message\n%s", message.c_str());
     }
 
     void websocket_thread_loop() {
@@ -367,7 +367,7 @@ namespace {
             while (ws && !websocket_send_queue.empty()) {
                 std::lock_guard<std::recursive_mutex> lk(websocket_mutex);
                 const auto it = websocket_send_queue.begin();
-                Log::Log("Websocket Send:\n%s", it->c_str());
+                //Log::Log("Websocket Send:\n%s", it->c_str());
                 ws->send(*it);
                 websocket_send_queue.erase(it);
             }

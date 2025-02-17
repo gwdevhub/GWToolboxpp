@@ -103,13 +103,13 @@ namespace {
             return;
 
         uint32_t not_resigned = 0;
-        for (auto& p : *players) {
-            if (!p.connected())
+        for (const auto& player : *players) {
+            if (!player.connected())
                 continue;
-            if (GetResignStatus(p.login_number) != Status::Resigned)
+            if (GetResignStatus(player.login_number) != Status::Resigned)
                 not_resigned++;
         }
-        if (not_resigned == 0) {
+        if (not_resigned <= 1) { // one of the players who hasn't resigned is us
             Log::Warning("You're the only player left to resign. Type /resign in chat to resign.");
         }
     }
@@ -128,11 +128,11 @@ namespace {
         std::wstring resigned_player_name(start, end - start);
         const auto players = GW::PartyMgr::GetPartyPlayers();
         if (!players) return;
-        for (auto& p : *players) {
-            const auto player_name = TextUtils::SanitizePlayerName(GW::PlayerMgr::GetPlayerName(p.login_number));
+        for (const auto& player : *players) {
+            const auto player_name = TextUtils::SanitizePlayerName(GW::PlayerMgr::GetPlayerName(player.login_number));
             if (resigned_player_name != player_name)
                 continue;
-            party_member_statuses[p.login_number] = {
+            party_member_statuses[player.login_number] = {
                 Status::Resigned,
                 GW::Map::GetInstanceTime()
             };

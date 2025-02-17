@@ -290,6 +290,39 @@ namespace GuiUtils {
                 return GW::Constants::HealthbarHeight::Normal;
         }
     }
+    void IniToBitset(const std::string& str, std::bitset<256>& key_combo) {
+        key_combo.reset();  // Clear previous data before setting bits
+        std::istringstream iss(str);
+        std::string token;
+
+        while (iss >> token) {  // Read each space-separated number
+            try {
+                int key = std::stoi(token);  // Convert to int
+                if (key >= 0 && key < 256) { // Ensure valid range
+                    key_combo.set(key);
+                }
+            }
+            catch (...) {
+                // Handle conversion errors (e.g., if str contains invalid characters)
+            }
+        }
+    }
+    void BitsetToIni(const std::bitset<256>& key_combo, std::string& out_str) {
+        std::ostringstream oss;
+        bool first = true;
+
+        for (uint32_t key = 0; key < 256; ++key) {
+            if (key_combo[key]) {
+                if (!first) {
+                    oss << " ";  // Space-separated values
+                }
+                oss << key;  // Store key as a number
+                first = false;
+            }
+        }
+
+        out_str = oss.str();
+    }
 
     size_t IniToArray(const std::string& in, std::wstring& out)
     {

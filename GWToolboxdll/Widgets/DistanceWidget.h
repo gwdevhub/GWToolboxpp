@@ -1,10 +1,13 @@
 #pragma once
 
-#include <Color.h>
 #include <ToolboxWidget.h>
 
 class DistanceWidget : public ToolboxWidget {
-    DistanceWidget() = default;
+    DistanceWidget()
+    {
+        is_resizable = false;
+        auto_size = true;
+    }
     ~DistanceWidget() override = default;
 
 public:
@@ -22,15 +25,4 @@ public:
     void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-    bool hide_in_outpost = false;
-    bool show_abs_value = true;
-    bool show_perc_value = true;
-
-    Color color_adjacent = 0xFFFFFFFF;
-    Color color_nearby = 0xFFFFFFFF;
-    Color color_area = 0xFFFFFFFF;
-    Color color_earshot = 0xFFFFFFFF;
-    Color color_cast = 0xFFFFFFFF;
-    Color color_spirit = 0xFFFFFFFF;
-    Color color_compass = 0xFFFFFFFF;
 };

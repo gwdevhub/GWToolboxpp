@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GWCA/GameContainers/Array.h>
+#include <GWCA/Constants/Constants.h>
 
 #include <GWCA/Utilities/Export.h>
 
@@ -84,6 +85,7 @@ namespace GW {
         // Returns array of alternate agent array that can be read beyond compass range.
         // Holds limited info and needs to be explored more.
         GWCA_API MapAgentArray* GetMapAgentArray();
+        GWCA_API uint32_t CountAllegianceInRange(GW::Constants::Allegiance allegiance, float sqr_range);
 
         GWCA_API MapAgent* GetMapAgentByID(uint32_t agent_id);
 

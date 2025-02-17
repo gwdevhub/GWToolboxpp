@@ -7,12 +7,6 @@
 
 #include "Windows/HeroBuildsWindow.h"
 
-DWORD __stdcall SafeThreadEntry(LPVOID module) noexcept;
-DWORD __stdcall ThreadEntry(LPVOID module);
-
-LRESULT CALLBACK SafeWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam) noexcept;
-LRESULT CALLBACK WndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
-
 class ToolboxWidget;
 class ToolboxWindow;
 class ToolboxModule;
@@ -33,9 +27,11 @@ public:
     static bool ShouldDisableToolbox(GW::Constants::MapID = (GW::Constants::MapID)0);
 
     static HMODULE GetDLLModule();
+    static DWORD __stdcall MainLoop(LPVOID module) noexcept;
+
     static void Draw(IDirect3DDevice9* device);
 
-    static void Initialize(const LPVOID);
+    static void Initialize(LPVOID);
     static void SignalTerminate(bool detach_dll = true);
     static void Update(GW::HookStatus* status = nullptr);
     static void Enable();

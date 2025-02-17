@@ -23,9 +23,14 @@
 #include <Modules/Resources.h>
 
 namespace {
+    typedef std::bitset<256> KeysHeldBitset;
+
     std::vector<TBHotkey*> hotkeys; // list of hotkeys
     // Subset of hotkeys that are valid to current character/map combo
     std::vector<TBHotkey*> valid_hotkeys;
+
+    KeysHeldBitset keys_currently_held;
+    KeysHeldBitset wndproc_keys_held;
 
     // Ordered subsets
     enum class GroupBy : int {
@@ -43,7 +48,6 @@ namespace {
     std::unordered_map<std::string, std::vector<TBHotkey*>> by_player_name;
     std::unordered_map<std::string, std::vector<TBHotkey*>> by_group;
 
-    bool block_hotkeys = false;
     bool clickerActive = false;   // clicker is active or not
     bool dropCoinsActive = false; // coin dropper is active or not
     bool map_change_triggered = false;
@@ -187,8 +191,7 @@ namespace {
         }
         // NB: CheckSetValidHotkeys() has already checked validity of char/map etc
         for (TBHotkey* hk : valid_hotkeys) {
-            if (!block_hotkeys
-                && ((hk->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable)
+            if (((hk->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable)
                     || (hk->trigger_on_outpost && mt == GW::Constants::InstanceType::Outpost))
                 && !hk->pressed) {
                 hk->pressed = true;
@@ -215,8 +218,7 @@ namespace {
         }
         // NB: CheckSetValidHotkeys() has already checked validity of char/map etc
         for (TBHotkey* hk : valid_hotkeys) {
-            if (!block_hotkeys && !hk->pressed
-                && ((activated && hk->trigger_on_gain_focus)
+            if (((activated && hk->trigger_on_gain_focus)
                     || (!activated && hk->trigger_on_lose_focus))) {
                 // Would be nice to use PushPendingHotkey here, but losing/gaining focus is a special case
                 hk->pressed = true;
@@ -227,6 +229,87 @@ namespace {
             }
         }
         return true;
+    }
+
+    inline void GetKeysHeld(KeysHeldBitset& keysHeld) {
+        keysHeld.reset(); // Clear previous key states
+        BYTE keyState[256];
+
+        // Get the current keyboard state
+        if (GetKeyboardState(keyState)) {
+            for (uint32_t vkey = 0; vkey < 256; ++vkey) {
+                // Check if the high-order bit is set (key is pressed)
+                if (keyState[vkey] & 0x80) {
+                    keysHeld.set(vkey); // Mark key as pressed
+                }
+            }
+        }
+    }
+
+    TBHotkey* pending_being_assigned = nullptr;
+    TBHotkey* keys_being_assigned = nullptr;
+    KeysHeldBitset keys_selected;
+    bool hotkey_popup_first_draw = true;
+    void DrawSelectHotkeyPopup() {
+        if (pending_being_assigned) {
+            keys_being_assigned = pending_being_assigned;
+            ImGui::OpenPopup("Select Hotkey");
+            pending_being_assigned = nullptr;
+            return;
+        }
+        if (!keys_being_assigned) {
+            return;
+        }
+        if (!ImGui::BeginPopup("Select Hotkey")) {
+            keys_selected.reset();
+            hotkey_popup_first_draw = true;
+            keys_being_assigned = nullptr;
+            return;
+        }
+        if (hotkey_popup_first_draw) {
+            keys_selected = keys_being_assigned->key_combo;
+            hotkey_popup_first_draw = false;
+        }
+
+        // Record any new key presses
+        keys_selected |= wndproc_keys_held;
+
+        std::string keys_held_buf = ModKeyName(keys_selected);
+
+        ImGui::TextUnformatted(keys_held_buf.c_str());
+        if (ImGui::Button("Clear")) {
+            keys_selected.reset();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Save")) {
+            keys_being_assigned->key_combo = keys_selected;
+            ImGui::CloseCurrentPopup();
+            TBHotkey::hotkeys_changed = true;
+        }
+        ImGui::EndPopup();
+    }
+
+    size_t KeyDataFromWndProc(const UINT Message, const WPARAM wParam) {
+        switch (Message) {
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
+        case WM_KEYUP:
+        case WM_SYSKEYUP:
+            return static_cast<size_t>(wParam);
+        case WM_MBUTTONDOWN:
+        case WM_MBUTTONUP:
+            return VK_MBUTTON;
+        case WM_XBUTTONDOWN:
+        case WM_XBUTTONUP: {
+            WORD xButton = GET_XBUTTON_WPARAM(wParam);
+            return (xButton == XBUTTON1) ? VK_XBUTTON1 : VK_XBUTTON2;
+        }
+        }
+        return 0;
     }
 }
 
@@ -260,8 +343,14 @@ void HotkeysWindow::Terminate()
 bool HotkeysWindow::ToggleClicker() { return clickerActive = !clickerActive; }
 bool HotkeysWindow::ToggleCoinDrop() { return dropCoinsActive = !dropCoinsActive; }
 
+void HotkeysWindow::ChooseKeyCombo(TBHotkey* hotkey)
+{
+    pending_being_assigned = hotkey;
+}
+
 void HotkeysWindow::Draw(IDirect3DDevice9*)
 {
+    DrawSelectHotkeyPopup();
     if (!visible) {
         return;
     }
@@ -366,7 +455,6 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
         }
 
         // === each hotkey ===
-        block_hotkeys = false;
         const auto draw_hotkeys_vec = [&](const std::vector<TBHotkey*>& in) -> bool {
             bool these_hotkeys_changed = false;
             for (unsigned int i = 0; i < in.size(); ++i) {
@@ -400,9 +488,6 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
                         }
                     }
                     break;
-                    case TBHotkey::Op_BlockInput:
-                        block_hotkeys = true;
-                        break;
                     default:
                         break;
                 }
@@ -569,102 +654,51 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
     if (GW::Chat::GetIsTyping()) {
         return false;
     }
-
-    long keyData = 0;
-    switch (Message) {
-        case WM_KEYDOWN:
-        case WM_SYSKEYDOWN:
-        case WM_KEYUP:
-        case WM_SYSKEYUP:
-            keyData = static_cast<int>(wParam);
-            break;
-        case WM_XBUTTONDOWN:
-        case WM_MBUTTONDOWN:
-        case WM_XBUTTONDBLCLK:
-            if (LOWORD(wParam) & MK_MBUTTON) {
-                keyData = VK_MBUTTON;
-            }
-            if (LOWORD(wParam) & MK_XBUTTON1) {
-                keyData = VK_XBUTTON1;
-            }
-            if (LOWORD(wParam) & MK_XBUTTON2) {
-                keyData = VK_XBUTTON2;
-            }
-            break;
-        case WM_XBUTTONUP:
-        case WM_MBUTTONUP:
-            // leave keydata to none, need to handle special case below
-            break;
-        // case WM_MBUTTONDBLCLK:
-        //     keyData = VK_MBUTTON;
-        //     break;
-        default:
-            break;
-    }
-    long modifier = 0;
-    if (GetKeyState(VK_CONTROL) < 0) {
-        modifier |= ModKey_Control;
-    }
-    if (GetKeyState(VK_SHIFT) < 0) {
-        modifier |= ModKey_Shift;
-    }
-    if (GetKeyState(VK_MENU) < 0) {
-        modifier |= ModKey_Alt;
-    }
-    switch (Message) {
-        case WM_KEYDOWN:
-        case WM_SYSKEYDOWN:
-        case WM_XBUTTONDOWN:
-        case WM_XBUTTONDBLCLK:
-        case WM_MBUTTONDOWN:
-        case WM_MBUTTONDBLCLK: {
-            if (block_hotkeys) {
-                return true;
-            }
-
-
-            bool triggered = false;
-            for (TBHotkey* hk : valid_hotkeys) {
-                if (!block_hotkeys
-                    && keyData == hk->hotkey
-                    && modifier == hk->modifier
-                    && !hk->pressed
-                    && !hk->trigger_on_key_up) {
-                    PushPendingHotkey(hk);
-                    if (hk->block_gw) {
-                        triggered = true;
-                    }
+    auto check_triggers = [](bool is_key_up, uint32_t keyData) {
+        bool triggered = false;
+        for (TBHotkey* hk : valid_hotkeys) {
+            if(is_key_up)
+                hk->pressed = false;
+            if (!hk->pressed
+                && hk->trigger_on_key_up == is_key_up
+                && hk->key_combo == wndproc_keys_held
+                && hk->key_combo.test(keyData)) {
+                PushPendingHotkey(hk);
+                if (!is_key_up && hk->block_gw) {
+                    // Don't block key up messages from the game
+                    triggered = true;
                 }
             }
-            return triggered;
         }
-
+        return triggered;
+        };
+    switch (Message) {
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
+        case WM_XBUTTONDOWN:
+        case WM_MBUTTONDOWN:
+        case WM_LBUTTONDOWN:
+        case WM_RBUTTONDOWN: {
+            const auto keyData = KeyDataFromWndProc(Message, wParam);
+            if (!keyData || keyData >= wndproc_keys_held.size())
+                return false;
+            wndproc_keys_held.set(keyData);
+            return keys_being_assigned || check_triggers(false, keyData);
+        }
         case WM_KEYUP:
         case WM_SYSKEYUP:
-            for (TBHotkey* hk : valid_hotkeys) {
-                hk->pressed = false;
-                if(modifier == hk->modifier && keyData == hk->hotkey && hk->trigger_on_key_up)
-                    PushPendingHotkey(hk);
-            }
-            return false;
-
-        case WM_XBUTTONUP:
-            for (TBHotkey* hk : valid_hotkeys) {
-                hk->pressed = false;
-                if (!(hk->hotkey == VK_XBUTTON1 || hk->hotkey == VK_XBUTTON2))
-                    continue;
-                if (modifier == hk->modifier && hk->trigger_on_key_up)
-                    PushPendingHotkey(hk);
-            }
-            return false;
         case WM_MBUTTONUP:
-            for (TBHotkey* hk : valid_hotkeys) {
-                hk->pressed = false;
-                if (hk->hotkey != VK_MBUTTON)
-                    continue;
-                if (modifier == hk->modifier && hk->trigger_on_key_up)
-                    PushPendingHotkey(hk);
-            }
+        case WM_LBUTTONUP:
+        case WM_RBUTTONUP:
+        case WM_XBUTTONUP: {
+            const auto keyData = KeyDataFromWndProc(Message, wParam);
+            if (!keyData || keyData >= wndproc_keys_held.size())
+                return false;
+            if (!keys_being_assigned)
+                check_triggers(true, keyData);
+            wndproc_keys_held.reset(keyData);
+            return keys_being_assigned;
+        }
         default:
             return false;
     }

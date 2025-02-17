@@ -618,7 +618,8 @@ namespace GWArmory {
     void __fastcall OnUndrawAgentEquipment(GW::Equipment* equip, void* edx, const ItemSlot equipment_slot)
     {
         GW::Hook::EnterHook();
-        UndrawAgentEquipment_Ret(equip, edx, equipment_slot);
+        if (equip && equip->items[equipment_slot].model_file_id)
+            UndrawAgentEquipment_Ret(equip, edx, equipment_slot);
         GW::Hook::LeaveHook();
 
         const auto player_equip = GetPlayerEquipment();
@@ -723,6 +724,7 @@ namespace GWArmory {
     }
 
     bool DrawArmorPieceNew(ItemSlot slot) {
+        ImGui::PushID(slot);
         const auto state = &combo_list_states[slot];
         const auto player_piece = &gwarmory_window_pieces[slot];
         bool value_changed = false;
@@ -851,6 +853,7 @@ namespace GWArmory {
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
         ImGui::PopStyleVar();
+        ImGui::PopID();
         return value_changed;
     }
 

@@ -280,6 +280,7 @@ namespace GW {
 
         enum class UIMessage : uint32_t {
             kNone = 0x0,
+            kResize                     = 0x8,
             kInitFrame                  = 0x9,
             kDestroyFrame               = 0xb,
             kKeyDown                    = 0x1e, // wparam = UIPacket::kKeyAction*
@@ -307,8 +308,9 @@ namespace GW {
             kEffectAdd                  = 0x10000000 | 0x55, // wparam = {agent_id, GW::Effect*}
             kEffectRenew                = 0x10000000 | 0x56, // wparam = GW::Effect*
             kEffectRemove               = 0x10000000 | 0x57, // wparam = effect id
-            kUpdateSkillbar             = 0x10000000 | 0x5E, // wparam ={ uint32_t agent_id , ... }
             kSkillActivated             = 0x10000000 | 0x5b, // wparam ={ uint32_t agent_id , uint32_t skill_id }
+            kUpdateSkillbar             = 0x10000000 | 0x5E, // wparam ={ uint32_t agent_id , ... }
+            kUpdateSkillsAvailable      = 0x10000000 | 0x5f, // Triggered on a skill unlock, profession change or map load
             kTitleProgressUpdated       = 0x10000000 | 0x65, // wparam = title_id
             kExperienceGained           = 0x10000000 | 0x66, // wparam = experience amount
             kWriteToChatLog             = 0x10000000 | 0x7E, // wparam = UIPacket::kWriteToChatLog*. Triggered by the game when it wants to add a new message to chat.
@@ -401,8 +403,6 @@ namespace GW {
             kSendAbandonQuest           = 0x30000000 | 0xA, // wparam = uint32_t quest_id
             kSendChangeTarget           = 0x30000000 | 0xB, // wparam = UIPacket::kSendChangeTarget* // e.g. tell the gw client to focus on a different target
             kSendCallTarget             = 0x30000000 | 0x13, // wparam = { uint32_t call_type, uint32_t agent_id } // also used to broadcast morale, death penalty, "I'm following X", etc
-            kSendAgentDialog            = 0x30000000 | 0x14, // wparam = uint32_t agent_id // e.g. switching tabs on a merchant window, choosing a response to an NPC dialog
-            kSendGadgetDialog           = 0x30000000 | 0x15, // wparam = uint32_t agent_id // e.g. opening locked chest with a key
             kSendDialog                 = 0x30000000 | 0x16, // wparam = dialog_id // internal use
 
 
@@ -423,6 +423,10 @@ namespace GW {
 
 
         namespace UIPacket {
+            struct kResize {
+                uint32_t h0000;
+                float h0004[9];
+            };
             struct kSendLoadSkillTemplate {
                 uint32_t agent_id;
                 SkillbarMgr::SkillTemplate* skill_template;
@@ -664,8 +668,9 @@ namespace GW {
         enum class NumberCommandLineParameter : uint32_t {
             Unk1,
             Unk2,
+            Unk3,
             FPS,
-            Count = 0x3
+            Count
         };
 
         enum class EnumPreference : uint32_t {
@@ -928,6 +933,7 @@ namespace GW {
             ControlAction_OpenHeroCommander1 = 0xDC,
             ControlAction_OpenHeroCommander2,
             ControlAction_OpenHeroCommander3,
+            ControlAction_OpenPetCommander,
             ControlAction_OpenHeroCommander4 = 0x126,
             ControlAction_OpenHeroCommander5,
             ControlAction_OpenHeroCommander6,
@@ -1050,9 +1056,27 @@ namespace GW {
 
         GWCA_API bool ButtonClick(Frame* btn_frame);
 
+        GWCA_API uint32_t CreateUIComponent(uint32_t parent_frame_id, uint32_t component_flags, uint32_t tab_index, void* event_callback, wchar_t* wparam, const wchar_t* component_label);
+
+        GWCA_API bool SelectDropdownOption(Frame* frame, uint32_t value);
+
+        GWCA_API void* GetFrameContext(GW::UI::Frame* frame);
+
         GWCA_API Frame* GetRootFrame();
 
         GWCA_API Frame* GetChildFrame(Frame* parent, uint32_t child_offset);
+        template<typename First, typename... Rest>
+            requires (std::integral<First> && (std::integral<Rest> && ...))
+        Frame* GetChildFrame(Frame* parent, First first, Rest... rest) {
+            Frame* intermediate = GetChildFrame(parent, static_cast<uint32_t>(first));
+            if constexpr (sizeof...(rest) > 0) {
+                return GetChildFrame(intermediate, rest...);
+            }
+            else {
+                return intermediate;
+            }
+        }
+
         GWCA_API Frame* GetParentFrame(Frame* frame);
         GWCA_API Frame* GetFrameById(uint32_t frame_id);
         GWCA_API Frame* GetFrameByLabel(const wchar_t* frame_label);
@@ -1106,6 +1130,10 @@ namespace GW {
 
         //GWCA_API void SetPreference(Preference pref, uint32_t value);
         GWCA_API bool SetFrameVisible(UI::Frame* frame, bool is_visible);
+
+        GWCA_API bool TriggerFrameRedraw(UI::Frame* frame);
+
+        GWCA_API bool SetFramePosition(UI::Frame* frame, UI::FramePosition& position);
 
         typedef HookCallback<uint32_t> KeyCallback;
         // Listen for a gw hotkey press

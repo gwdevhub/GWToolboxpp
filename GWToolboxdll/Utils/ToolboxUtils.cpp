@@ -31,6 +31,7 @@
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <Timer.h>
 
 namespace {
     
@@ -77,6 +78,20 @@ namespace GW {
                 { static_cast<float> (bounds[2]), static_cast<float>(bounds[3]) }
             };
             return true;
+        }
+        void PingCompass(const GW::GamePos& position)
+        {
+            constexpr float compass_scale = 96.f;
+            GW::GameThread::Enqueue([cpy = position]() {
+                GW::UI::CompassPoint point({ std::lroundf(cpy.x / compass_scale), std::lroundf(cpy.y / compass_scale) });
+                GW::UI::UIPacket::kCompassDraw packet = {
+                    .player_number = GW::PlayerMgr::GetPlayerNumber(),
+                    .session_id = (uint32_t)TIMER_INIT(),
+                    .number_of_points = 1,
+                    .points = &point
+                };
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kCompassDraw, &packet);
+                });
         }
         GW::Array<GW::MapProp*>* GetMapProps() {
             const auto m = GetMapContext();

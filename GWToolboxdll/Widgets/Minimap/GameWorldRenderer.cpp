@@ -555,9 +555,8 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys()
         auto poly_to_add = GenericPolyRenderable(poly.map, pts, poly.color, poly.filled);
 
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
-        auto found = find_matching_poly(poly_to_add);
 
-        if (found) {
+        if (const auto found = find_matching_poly(poly_to_add)) {
             out.emplace_back(std::move(*found));
         }
         else {

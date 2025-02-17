@@ -66,6 +66,8 @@ namespace GuiUtils {
     bool ArrayToIni(const std::wstring& in, std::string* out);
     bool ArrayToIni(const uint32_t* in, size_t len, std::string* out);
     size_t IniToArray(const std::string& in, std::wstring& out);
+    void BitsetToIni(const std::bitset<256>& key_combo, std::string& out_str);
+    void IniToBitset(const std::string& str, std::bitset<256>& key_combo);
     // Convert token separated cstring into array of strings
     size_t IniToArray(const char* in, std::vector<std::string>& out, char separator = ',');
     size_t IniToArray(const std::string& in, uint32_t* out, size_t out_len);

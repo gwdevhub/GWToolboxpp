@@ -17,6 +17,10 @@ namespace FontLoader {
         widget_small = 40,
         widget_large = 48
     };
+
+    constexpr float text_size_min = 0.f;
+    constexpr float text_size_max = static_cast<float>(FontSize::widget_large);
+
     constexpr std::array font_sizes = {
         FontSize::text,
         FontSize::header2,
@@ -37,7 +41,7 @@ namespace FontLoader {
 
     // Given an ideal font size in px, return the best fit font.
     // NOTE: This font will NOT be automatically resized to the desired scale.
-    DLLAPI ImFont* GetFontByPx(float px, bool include_global_font_scale = true);
+    DLLAPI ImFont* GetFontByPx(float size_in_px, bool include_global_font_scale = true);
 
     void Terminate();
 }

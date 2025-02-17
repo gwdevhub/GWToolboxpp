@@ -45,8 +45,8 @@ namespace ImGui {
     void PushFont(ImFont* font, float font_size) {
         ImGui::PushFont(font);
         ImGuiContext& g = *GImGui;
-        if (font_size > 0.f) {
-            g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * font_size * g.Font->Scale);
+        if (font_size >= 0.f) {
+            g.FontBaseSize = g.IO.FontGlobalScale * font_size * g.Font->Scale;
             g.FontSize = g.FontBaseSize;
             g.DrawListSharedData.FontSize = g.FontSize;
         }
@@ -102,6 +102,11 @@ namespace ImGui {
 
     }
 
+    bool ShowingContextMenu()
+    {
+        return imguiaddons_context_menu_callback != nullptr;
+    }
+
     void DrawContextMenu() {
         if (imguiaddons_context_menu_pending) {
             if (!ImGui::IsPopupOpen(imguiaddons_context_menu_id)) {
@@ -112,9 +117,12 @@ namespace ImGui {
             }
             imguiaddons_context_menu_pending = nullptr;
         }
-        if (!ImGui::BeginPopup(imguiaddons_context_menu_id))
+        if (!ImGui::BeginPopup(imguiaddons_context_menu_id)) {
+            imguiaddons_context_menu_callback = nullptr;
             return;
+        }
         if (!(imguiaddons_context_menu_callback && imguiaddons_context_menu_callback(imguiaddons_context_menu_wparam))) {
+            imguiaddons_context_menu_callback = nullptr;
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -685,6 +693,7 @@ namespace ImGui {
             }
         }
     }
+
     bool ButtonWithHint(const char* label, const char* tooltip, const ImVec2& size_arg)
     {
         bool clicked = ButtonEx(label, size_arg, ImGuiButtonFlags_None);
@@ -692,4 +701,88 @@ namespace ImGui {
             SetTooltip(tooltip);
         return clicked;
     }
+
+    void DrawTextWithShadow(const char* text, const ImVec2& pos,
+                           ImU32 textColor,
+                           ImU32 shadowColor,
+                           float shadowOffset)
+    {
+        ImDrawList* drawList = GetWindowDrawList();
+        drawList->AddText(ImVec2(pos.x + shadowOffset, pos.y + shadowOffset), shadowColor, text);
+        drawList->AddText(pos, textColor, text);
+    }
+
+    void DrawTextWithShadow(const char* text,
+                           ImU32 textColor,
+                           ImU32 shadowColor,
+                           float shadowOffset)
+    {
+        DrawTextWithShadow(text, GetCursorScreenPos(), textColor, shadowColor, shadowOffset);
+        ImVec2 textSize = CalcTextSize(text);
+        SetCursorPosY(GetCursorPosY() + textSize.y);
+    }
+
+    void DrawTextWithOutline(const char* text, const ImVec2& pos,
+                            ImU32 textColor,
+                            ImU32 outlineColor,
+                            float thickness)
+    {
+        ImDrawList* drawList = GetWindowDrawList();
+
+        drawList->AddText(ImVec2(pos.x - thickness, pos.y), outlineColor, text);
+        drawList->AddText(ImVec2(pos.x + thickness, pos.y), outlineColor, text);
+        drawList->AddText(ImVec2(pos.x, pos.y - thickness), outlineColor, text);
+        drawList->AddText(ImVec2(pos.x, pos.y + thickness), outlineColor, text);
+
+        drawList->AddText(ImVec2(pos.x - thickness, pos.y - thickness), outlineColor, text);
+        drawList->AddText(ImVec2(pos.x + thickness, pos.y - thickness), outlineColor, text);
+        drawList->AddText(ImVec2(pos.x - thickness, pos.y + thickness), outlineColor, text);
+        drawList->AddText(ImVec2(pos.x + thickness, pos.y + thickness), outlineColor, text);
+
+        drawList->AddText(pos, textColor, text);
+    }
+
+    void DrawTextWithOutline(const char* text,
+                            ImU32 textColor,
+                            ImU32 outlineColor,
+                            float thickness)
+    {
+        DrawTextWithOutline(text, GetCursorScreenPos(), textColor, outlineColor, thickness);
+        ImVec2 textSize = CalcTextSize(text);
+        SetCursorPosY(GetCursorPosY() + textSize.y);
+    }
+
+    void DrawTextWithShadow(ImDrawList* draw_list, ImFont* font, const char* text,
+                            const ImVec2& center_pos, ImU32 textColor, ImU32 shadowColor,
+                            float shadowOffset)
+    {
+        ImGui::PushFont(font);
+        const ImVec2 label_size = ImGui::CalcTextSize(text);
+        ImVec2 label_pos(center_pos.x - label_size.x / 2, center_pos.y - label_size.y / 2);
+
+        draw_list->AddText(ImVec2(label_pos.x + shadowOffset, label_pos.y + shadowOffset),
+                          shadowColor, text);
+        draw_list->AddText(label_pos, textColor, text);
+
+        ImGui::PopFont();
+    }
+
+    void DrawTextWithOutline(ImDrawList* draw_list, ImFont* font, const char* text,
+                                 const ImVec2& center_pos, ImU32 textColor, ImU32 outlineColor,
+                                 float thickness)
+    {
+        ImGui::PushFont(font);
+        const ImVec2 label_size = ImGui::CalcTextSize(text);
+        ImVec2 label_pos(center_pos.x - label_size.x / 2, center_pos.y - label_size.y / 2);
+
+        draw_list->AddText(ImVec2(label_pos.x - thickness, label_pos.y), outlineColor, text);
+        draw_list->AddText(ImVec2(label_pos.x + thickness, label_pos.y), outlineColor, text);
+        draw_list->AddText(ImVec2(label_pos.x, label_pos.y - thickness), outlineColor, text);
+        draw_list->AddText(ImVec2(label_pos.x, label_pos.y + thickness), outlineColor, text);
+
+        draw_list->AddText(label_pos, textColor, text);
+
+        ImGui::PopFont();
+    }
+
 }

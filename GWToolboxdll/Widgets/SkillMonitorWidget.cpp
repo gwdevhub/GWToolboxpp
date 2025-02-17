@@ -355,6 +355,8 @@ void SkillMonitorWidget::LoadSettings(ToolboxIni* ini)
     LOAD_UINT(history_timeout);
 
     LOAD_BOOL(overlay_party_window);
+
+    LOAD_COLOR(background);
 }
 
 void SkillMonitorWidget::SaveSettings(ToolboxIni* ini)
@@ -380,6 +382,8 @@ void SkillMonitorWidget::SaveSettings(ToolboxIni* ini)
     SAVE_UINT(history_timeout);
 
     SAVE_BOOL(overlay_party_window);
+
+    SAVE_COLOR(background);
 }
 
 void SkillMonitorWidget::DrawSettingsInternal()
@@ -407,6 +411,8 @@ void SkillMonitorWidget::DrawSettingsInternal()
         "Minimum cast time a skill has to have to display the indicator. Note that instantly casted skill will never be displayed.");
     ImGui::InputInt("Height", &cast_indicator_height);
     Colors::DrawSettingHueWheel("Color", &cast_indicator_color);
+
+    Colors::DrawSettingHueWheel("Background", &background, 0);
 
     ImGui::Text("Status Border");
     ImGui::InputInt("Border Thickness", &status_border_thickness);
