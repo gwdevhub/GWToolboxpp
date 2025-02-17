@@ -92,7 +92,7 @@ namespace {
 
     std::wstring last_player_name;
 
-    void GetOutpostIcons(GW::Constants::MapID map_id, IDirect3DTexture9** icons_out[4], uint8_t mission_state, bool is_hard_mode = false)
+    void GetOutpostIcons(MapID map_id, IDirect3DTexture9** icons_out[4], uint8_t mission_state, bool is_hard_mode = false)
     {
         memset(icons_out, 0, sizeof(icons_out) * sizeof(*icons_out));
 
@@ -591,7 +591,7 @@ namespace {
                     continue; // already loaded this character, don't overwrite loaded settings
                 const auto cc = CompletionWindow::GetCharacterCompletion(character.player_name, true);
                 cc->account = email;
-                cc->profession = static_cast<GW::Constants::Profession>(character.primary());
+                cc->profession = static_cast<Profession>(character.primary());
                 cc->is_pvp = character.is_pvp();
                 const auto map_info = GW::Map::GetMapInfo(character.map_id());
                 cc->is_pre_searing = map_info && map_info->region == GW::Region::Region_Presearing;
@@ -628,7 +628,7 @@ namespace {
     // Cycle through all available professions - this will trigger the ui message to update the skills unlocked
     void CheckAllSkills()
     {
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost)
+        if (GW::Map::GetInstanceType() != InstanceType::Outpost)
             return;
         const auto my_id = GW::Agents::GetControlledCharacterId();
         GW::SkillbarMgr::SkillTemplate original_template;
@@ -651,11 +651,11 @@ namespace {
         return subject;
     }
 
-    bool IsAreaComplete(const GW::Constants::MapID map_id, CompletionCheck check)
+    bool IsAreaComplete(const MapID map_id, CompletionCheck check)
     {
-        if (map_id == GW::Constants::MapID::None)
+        if (map_id == MapID::None)
             return true;
-        if (map_id == GW::Constants::MapID::Tomb_of_the_Primeval_Kings)
+        if (map_id == MapID::Tomb_of_the_Primeval_Kings)
             return true; // Topk special case
 
         const auto map = GW::Map::GetMapInfo();
@@ -671,25 +671,25 @@ namespace {
                 return !map->GetIsOnWorldMap() || ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(map_id));
         }
 
-        if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(w->missions_completed, static_cast<uint32_t>(map_id)))
+        if ((check & NormalMode) && !ArrayBoolAt(w->missions_completed, static_cast<uint32_t>(map_id)))
             return false;
-        if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(map_id)))
+        if ((check & HardMode) && !ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(map_id)))
             return false;
-        const bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
+        const bool has_bonus = map->campaign != Campaign::EyeOfTheNorth;
         if (has_bonus) {
-            if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(map_id)))
+            if ((check & NormalMode) && !ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(map_id)))
                 return false;
-            if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(map_id)))
+            if ((check & HardMode) && !ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(map_id)))
                 return false;
         }
         return true;
     }
 
-    bool IsAreaComplete(const wchar_t* player_name, const GW::Constants::MapID map_id, CompletionCheck check, const GW::AreaInfo* map)
+    bool IsAreaComplete(const wchar_t* player_name, const MapID map_id, CompletionCheck check, const GW::AreaInfo* map)
     {
-        if (map_id == GW::Constants::MapID::None)
+        if (map_id == MapID::None)
             return true;
-        if (map_id == GW::Constants::MapID::Tomb_of_the_Primeval_Kings)
+        if (map_id == MapID::Tomb_of_the_Primeval_Kings)
             return true; // Topk special case
         const auto completion = CompletionWindow::GetCharacterCompletion(player_name, false);
         if (!(map && completion)) return false;
@@ -703,15 +703,15 @@ namespace {
                 return !map->GetIsOnWorldMap() || ArrayBoolAt(completion->vanquishes, static_cast<uint32_t>(map_id));
         }
 
-        if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(completion->mission, static_cast<uint32_t>(map_id)))
+        if ((check & NormalMode) && !ArrayBoolAt(completion->mission, static_cast<uint32_t>(map_id)))
             return false;
-        if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(completion->mission_hm, static_cast<uint32_t>(map_id)))
+        if ((check & HardMode) && !ArrayBoolAt(completion->mission_hm, static_cast<uint32_t>(map_id)))
             return false;
-        const bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
+        const bool has_bonus = map->campaign != Campaign::EyeOfTheNorth;
         if (has_bonus) {
-            if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(completion->mission_bonus, static_cast<uint32_t>(map_id)))
+            if ((check & NormalMode) && !ArrayBoolAt(completion->mission_bonus, static_cast<uint32_t>(map_id)))
                 return false;
-            if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(completion->mission_bonus_hm, static_cast<uint32_t>(map_id)))
+            if ((check & HardMode) && !ArrayBoolAt(completion->mission_bonus_hm, static_cast<uint32_t>(map_id)))
                 return false;
         }
         return true;
@@ -719,7 +719,7 @@ namespace {
 
     void OnMapLoaded()
     {
-        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
+        if (GW::Map::GetInstanceType() == InstanceType::Loading)
             return;
         const auto current_player_name = GetPlayerName();
         if (!(current_player_name && *current_player_name))
@@ -2996,11 +2996,11 @@ CharacterCompletion* CompletionWindow::GetCharacterCompletion(const wchar_t* cha
     return this_character_completion;
 }
 
-bool CompletionWindow::IsAreaComplete(const GW::Constants::MapID map_id, CompletionCheck check)
+bool CompletionWindow::IsAreaComplete(const MapID map_id, CompletionCheck check)
 {
-    if (map_id == GW::Constants::MapID::None)
+    if (map_id == MapID::None)
         return true;
-    if (map_id == GW::Constants::MapID::Tomb_of_the_Primeval_Kings)
+    if (map_id == MapID::Tomb_of_the_Primeval_Kings)
         return true; // Topk special case
 
     const auto map = GW::Map::GetMapInfo();
@@ -3016,26 +3016,26 @@ bool CompletionWindow::IsAreaComplete(const GW::Constants::MapID map_id, Complet
             return !map->GetIsOnWorldMap() || ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(map_id));
     }
 
-    if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(w->missions_completed, static_cast<uint32_t>(map_id)))
+    if ((check & NormalMode) && !ArrayBoolAt(w->missions_completed, static_cast<uint32_t>(map_id)))
         return false;
-    if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(map_id)))
+    if ((check & HardMode) && !ArrayBoolAt(w->missions_completed_hm, static_cast<uint32_t>(map_id)))
         return false;
-    const bool has_bonus = map->campaign != GW::Constants::Campaign::EyeOfTheNorth;
+    const bool has_bonus = map->campaign != Campaign::EyeOfTheNorth;
     if (has_bonus) {
-        if ((check & CompletionCheck::NormalMode) && !ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(map_id)))
+        if ((check & NormalMode) && !ArrayBoolAt(w->missions_bonus, static_cast<uint32_t>(map_id)))
             return false;
-        if ((check & CompletionCheck::HardMode) && !ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(map_id)))
+        if ((check & HardMode) && !ArrayBoolAt(w->missions_bonus_hm, static_cast<uint32_t>(map_id)))
             return false;
     }
     return true;
 }
 
-bool CompletionWindow::IsAreaComplete(const wchar_t* player_name, const GW::Constants::MapID map_id, CompletionCheck check)
+bool CompletionWindow::IsAreaComplete(const wchar_t* player_name, const MapID map_id, CompletionCheck check)
 {
     return ::IsAreaComplete(player_name, map_id, check, GW::Map::GetMapInfo(map_id));
 }
 
-bool CompletionWindow::IsAreaUnlocked(const wchar_t* player_name, const GW::Constants::MapID map_id)
+bool CompletionWindow::IsAreaUnlocked(const wchar_t* player_name, const MapID map_id)
 {
     const auto completion = GetCharacterCompletion(player_name, false);
     const auto map = completion ? GW::Map::GetMapInfo(map_id) : nullptr;
@@ -3043,16 +3043,16 @@ bool CompletionWindow::IsAreaUnlocked(const wchar_t* player_name, const GW::Cons
     return ArrayBoolAt(completion->maps_unlocked, static_cast<uint32_t>(map_id));
 }
 
-bool CompletionWindow::IsSkillUnlocked(const wchar_t* player_name, const GW::Constants::SkillID skill_id)
+bool CompletionWindow::IsSkillUnlocked(const wchar_t* player_name, const SkillID skill_id)
 {
     const auto completion = GetCharacterCompletion(player_name, false);
     return completion && ArrayBoolAt(completion->skills, static_cast<uint32_t>(skill_id));
 }
 
-std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaComplete(GW::Constants::MapID map_id, CompletionCheck check)
+std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaComplete(MapID map_id, CompletionCheck check)
 {
     std::vector<CharacterCompletion*> out;
-    if (map_id == GW::Constants::MapID::None)
+    if (map_id == MapID::None)
         return out;
     const auto info = GW::Map::GetMapInfo(map_id);
     const auto email = GW::AccountMgr::GetAccountEmail();
@@ -3070,7 +3070,7 @@ std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaComp
     return out;
 }
 
-std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaUnlocked(GW::Constants::MapID map_id)
+std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaUnlocked(MapID map_id)
 {
     std::vector<CharacterCompletion*> out;
     const auto email = GW::AccountMgr::GetAccountEmail();
@@ -3088,7 +3088,7 @@ std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaUnlo
     return out;
 }
 
-std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutSkillUnlocked(GW::Constants::SkillID skill_id)
+std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutSkillUnlocked(SkillID skill_id)
 {
     std::vector<CharacterCompletion*> out;
     const auto email = GW::AccountMgr::GetAccountEmail();
