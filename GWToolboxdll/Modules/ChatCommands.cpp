@@ -2719,6 +2719,42 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmo)
         if (wcsncmp(argv[1], L"reset", 5) == 0) {
             transmo.npc_id = std::numeric_limits<int>::max();
         }
+        else if (wcsncmp(argv[1], L"model", 5) == 0) {
+            bool invalid_data = argc < 6;
+            int npc_id = transmo.npc_id;
+            if (!invalid_data && argc > 2 && !TextUtils::ParseInt(argv[3], &npc_id)) {
+                Log::Error("Transmo model: invalid NPC ID '%ls', expected an integer. Example: 4581", argv[3]);
+                invalid_data = true;
+            }
+            int model_file_id = transmo.npc_model_file_id;
+            if (!invalid_data && argc > 3 && !TextUtils::ParseInt(argv[3], &model_file_id)) {
+                Log::Error("Transmo model: invalid NPC ModelFileID '%ls', expected an integer. Example: 204020", argv[3]);
+                invalid_data = true;
+            }
+            int model_file_data = transmo.npc_model_file_data;
+            if (!invalid_data && argc > 4 && !TextUtils::ParseInt(argv[4], &model_file_data)) {
+                Log::Error("Transmo model: invalid NPC ModelFile'%ls', expected an integer. Example: 245127", argv[4]);
+                invalid_data = true;
+            }
+            int flags = transmo.flags;
+            if (!invalid_data && argc > 5 && !TextUtils::ParseInt(argv[5], &flags)) {
+                Log::Error("Transmo model: invalid NPC Flags '%ls', expected an integer. Example: 540", argv[5]);
+                invalid_data = true;
+            }
+
+            if (invalid_data) {
+                Log::Info("HELP for /transmo model");
+                Log::Info("Usage: /transmo model NPC_ID MODEL_FILE_ID MODEL_FILE FLAGS");
+                Log::Info("Example, transfo as Gehraz: /transmo model 4581 204020 245127 540");
+                Log::Info("The numbers required by the command can be obtained from the GWToolbox 'Info' window, in the 'Advanced' section under the 'Target' menu. Note: the numbers must be converted from hexadecimal to decimal.");
+                return;
+            }
+
+            transmo.npc_id = npc_id;
+            transmo.npc_model_file_id = model_file_id;
+            transmo.npc_model_file_data = model_file_data;
+            transmo.flags = flags;
+        }
         else if (TextUtils::ParseInt(argv[1], &iscale)) {
             if (!ParseScale(iscale, transmo)) {
                 return;
@@ -2728,7 +2764,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmo)
             Log::Error("unknown transmo '%ls'", argv[1]);
             return;
         }
-        if (argc > 2 && TextUtils::ParseInt(argv[2], &iscale)) {
+        else if (argc > 2 && TextUtils::ParseInt(argv[2], &iscale)) {
             if (!ParseScale(iscale, transmo)) {
                 return;
             }
