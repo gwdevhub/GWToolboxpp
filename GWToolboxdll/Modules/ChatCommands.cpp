@@ -110,6 +110,11 @@ namespace {
         return tan_angle;
     };
 
+    void SafeChangeTarget(uint32_t agent_id) {
+        GW::GameThread::Enqueue([agent_id] {
+            GW::Agents::ChangeTarget(GW::Agents::GetAgentByID(agent_id));
+            });
+    };
     void TargetVipers()
     {
         // target best vipers target (closest)
@@ -142,7 +147,7 @@ namespace {
             max_distance = this_distance;
         }
         if (closest != static_cast<size_t>(-1)) {
-            GW::Agents::ChangeTarget(agents->at(closest));
+            SafeChangeTarget(agents->at(closest)->agent_id);
         }
     }
 
@@ -183,7 +188,7 @@ namespace {
             distance = this_distance;
         }
         if (closest != static_cast<size_t>(-1)) {
-            GW::Agents::ChangeTarget(agents->at(closest));
+            SafeChangeTarget(agents->at(closest)->agent_id);
         }
     }
 
@@ -2919,7 +2924,7 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, const TargetTy
         }
     }
     if (closest) {
-        GW::Agents::ChangeTarget(closest);
+        SafeChangeTarget(closest);
     }
 }
 
