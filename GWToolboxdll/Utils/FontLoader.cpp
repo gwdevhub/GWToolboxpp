@@ -321,11 +321,12 @@ namespace {
         cfg.OversampleH = 1; // OversampleH = 2 for base text size (harder to read if OversampleH < 2)
         cfg.OversampleV = 1;
 
+        // Always load the defualt font
         cfg.MergeMode = false;
-        if (first_only) {
-            atlas->AddFontFromMemoryCompressedTTF(toolbox_default_font_compressed_data, toolbox_default_font_compressed_size, size, &cfg, toolbox_default_font_glyph_ranges);
-        }
-        else {
+        atlas->AddFontFromMemoryCompressedTTF(toolbox_default_font_compressed_data, toolbox_default_font_compressed_size, size, &cfg, toolbox_default_font_glyph_ranges);
+
+        if(!first_only) {
+            // Load more fonts from disk, overriding glyph ranges from original
             for (const auto& font : GetFontData()) {
                 void* data;
                 size_t data_size;
@@ -334,8 +335,10 @@ namespace {
                 const auto path = Resources::GetPath(font.font_name);
                 data = ImFileLoadToMemory(path.string().c_str(), "rb", &data_size, 0);
 
+                if (!data)
+                    continue; // Failed to load data from disk
+                cfg.MergeMode = true;
                 atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
-                cfg.MergeMode = true; // for all but the first
             }
         }
         if (size <= 20.f) {
