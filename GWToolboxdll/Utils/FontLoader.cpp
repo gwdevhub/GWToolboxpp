@@ -6,6 +6,7 @@
 
 #include "FontLoader.h"
 #include <Modules/Resources.h>
+#include <Utils/TextUtils.h>
 #include "toolbox_default_font.h"
 
 #include "fonts/fontawesome5.h"
@@ -325,20 +326,19 @@ namespace {
         cfg.MergeMode = false;
         atlas->AddFontFromMemoryCompressedTTF(toolbox_default_font_compressed_data, toolbox_default_font_compressed_size, size, &cfg, toolbox_default_font_glyph_ranges);
 
-        if(!first_only) {
+        if (!first_only) {
             // Load more fonts from disk, overriding glyph ranges from original
-            for (const auto& font : GetFontData()) {
-                void* data;
+            for (const auto& [glyph_ranges, font_name] : GetFontData()) {
                 size_t data_size;
 
-                ASSERT(!font.font_name.empty() && "Font name is empty, this shouldn't happen. Contact the developers.");
-                const auto path = Resources::GetPath(font.font_name);
-                data = ImFileLoadToMemory(path.string().c_str(), "rb", &data_size, 0);
+                ASSERT(!font_name.empty() && "Font name is empty, this shouldn't happen. Contact the developers.");
+                const auto font_name_str = TextUtils::WStringToString(font_name);
+                void* data = ImFileLoadToMemory(font_name_str.c_str(), "rb", &data_size, 0);
 
                 if (!data)
                     continue; // Failed to load data from disk
                 cfg.MergeMode = true;
-                atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
+                atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, glyph_ranges.data());
             }
         }
         if (size <= 20.f) {
@@ -426,7 +426,7 @@ namespace {
 
         Resources::EnqueueDxTask([assign_fonts, fonts = second_pass](IDirect3DDevice9*) {
             assign_fonts(fonts);
-            });
+        });
     }
 }
 
