@@ -660,7 +660,7 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
                 hk->pressed = false;
             if (!hk->pressed
                 && hk->trigger_on_key_up == is_key_up
-                && hk->key_combo == wndproc_keys_held
+                && (hk->key_combo & wndproc_keys_held) == hk->key_combo
                 && hk->key_combo.test(keyData)) {
                 PushPendingHotkey(hk);
                 if (!is_key_up && hk->block_gw) {
