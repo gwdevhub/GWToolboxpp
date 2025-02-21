@@ -2,7 +2,6 @@
 
 #include <Defines.h>
 
-#include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <Widgets/SnapsToPartyWindow.h>

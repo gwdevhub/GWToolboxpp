@@ -5,7 +5,6 @@
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/GameEntities/Hero.h>
 
@@ -14,14 +13,13 @@
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/UIMgr.h>
 
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/CustomRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Color.h>
 #include <GWToolbox.h>
-#include <Utils/TextUtils.h>
+#include <Utils/GuiUtils.h>
 
 using namespace std::string_literals;
 
@@ -235,7 +233,7 @@ void CustomRenderer::Invalidate()
 
 void CustomRenderer::SetTooltipMapID(const GW::Constants::MapID& map_id)
 {
-    ImGui::SetTooltip(std::format("Map ID ({})",Resources::GetMapName(map_id)->string()).c_str());
+    ImGui::SetTooltip(std::format("Map ID ({})", Resources::GetMapName(map_id)->string()).c_str());
 }
 
 bool CustomRenderer::RemoveCustomLine(CustomLine* line)
@@ -612,7 +610,6 @@ void CustomRenderer::DrawSettings()
         ImGui::EndChild();
         ImGui::TreePop();
     }
-
 }
 
 void CustomRenderer::Initialize(IDirect3DDevice9* device)

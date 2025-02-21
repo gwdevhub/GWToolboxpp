@@ -4,8 +4,6 @@
 
 #include <GWCA/GameEntities/Item.h>
 
-#include <GWCA/Packets/StoC.h>
-
 #include <Utils/GuiUtils.h>
 
 #include <ToolboxWidget.h>

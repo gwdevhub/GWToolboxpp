@@ -39,7 +39,6 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <hidusage.h>
 
-#include "GWCA/Utilities/Scanner.h"
 #include "Utils/FontLoader.h"
 #include <Utils/ToolboxUtils.h>
 

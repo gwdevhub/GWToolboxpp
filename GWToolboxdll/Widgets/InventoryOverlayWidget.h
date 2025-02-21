@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Color.h>
 #include <ToolboxWidget.h>
 
 class InventoryOverlayWidget : public ToolboxWidget {

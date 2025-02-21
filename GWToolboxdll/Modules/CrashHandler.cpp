@@ -9,7 +9,6 @@
 #include <Modules/Resources.h>
 #include <GWToolbox.h>
 #include <Defines.h>
-#include <Utils/TextUtils.h>
 
 namespace {
     char* tb_exception_message = nullptr;
@@ -22,7 +21,7 @@ namespace {
 
     static_assert(sizeof(GWDebugInfo) == 0x80210, "struct GWDebugInfo has incorrect size");
 
-    typedef void(__cdecl* HandleCrash_pt)(GWDebugInfo* details, uint32_t param_2, void* pExceptionPointers, char* exception_message, char* exception_file, uint32_t exception_line);
+    typedef void (__cdecl*HandleCrash_pt)(GWDebugInfo* details, uint32_t param_2, void* pExceptionPointers, char* exception_message, char* exception_file, uint32_t exception_line);
     HandleCrash_pt HandleCrash_Func = nullptr;
     HandleCrash_pt RetHandleCrash = nullptr;
 
@@ -34,12 +33,12 @@ namespace {
     {
         wchar_t error_info[512];
         swprintf(error_info, _countof(error_info),
-            L"Guild Wars crashed!\n\n"
-            "GWToolbox tried to create a crash dump, but failed\n\n"
-            "%S\n"
-            "GetLastError code: %d\n\n"
-            "I don't really know what to do, sorry, contact the developers.\n",
-            failure_message, GetLastError());
+                 L"Guild Wars crashed!\n\n"
+                 "GWToolbox tried to create a crash dump, but failed\n\n"
+                 "%S\n"
+                 "GetLastError code: %d\n\n"
+                 "I don't really know what to do, sorry, contact the developers.\n",
+                 failure_message, GetLastError());
 
         MessageBoxW(nullptr, error_info, L"GWToolbox++ crash dump error", 0);
         return 1;
@@ -66,8 +65,7 @@ namespace {
         __try {
             // Debug break here to catch stack trace in debug mode before dumping
             __debugbreak();
-        }
-        __except (EXCEPTION_CONTINUE_EXECUTION) {}
+        } __except (EXCEPTION_CONTINUE_EXECUTION) {}
 #endif
         // Assertion here will throw a GWToolbox exception if pExceptionPointers isn't found; this will give us the correct call stack for a GW Assertion failure in the subsequent crash dump.
         if (CrashHandler::Crash(pExceptionPointers)) {
@@ -98,12 +96,11 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigne
         const size_t len = snprintf(nullptr, 0, fmt, expr, file, line);
         tb_exception_message = new char[len + 1];
         snprintf(tb_exception_message, len + 1, fmt, expr, file, line);
-        #ifdef _DEBUG
-            __debugbreak();
-        #endif
+#ifdef _DEBUG
+        __debugbreak();
+#endif
         throw std::runtime_error(tb_exception_message);
-    }
-    __except (EXCEPT_EXPRESSION_ENTRY) {}
+    } __except (EXCEPT_EXPRESSION_ENTRY) {}
 
     abort();
 }
@@ -120,8 +117,8 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
     GetLocalTime(&stLocalTime);
     wchar_t szFileName[MAX_PATH];
     const auto fn_print = swprintf(szFileName, MAX_PATH, L"%s\\%S%S-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp",
-        crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA, stLocalTime.wYear, stLocalTime.wMonth,
-        stLocalTime.wDay, stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond, ProcessId, ThreadId);
+                                   crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA, stLocalTime.wYear, stLocalTime.wMonth,
+                                   stLocalTime.wDay, stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond, ProcessId, ThreadId);
 
     MINIDUMP_USER_STREAM_INFORMATION* UserStreamParam = nullptr;
     char* extra_info = nullptr;
@@ -174,7 +171,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
         ExpParam, UserStreamParam, nullptr);
     CloseHandle(hFile);
 
-    if(tb_exception_message)
+    if (tb_exception_message)
         delete[] tb_exception_message;
 
     if (UserStreamParam) {

@@ -11,16 +11,12 @@
 #include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/Context/MapContext.h>
-#include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-
-#include <GWCA/Packets/StoC.h>
 
 #include <Widgets/WorldMapWidget.h>
 #include <Widgets/Minimap/Minimap.h>
@@ -34,7 +30,6 @@
 #include "Defines.h"
 
 #include <ImGuiAddons.h>
-#include <Constants/EncStrings.h>
 #include <Modules/QuestModule.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <corecrt_math_defines.h>

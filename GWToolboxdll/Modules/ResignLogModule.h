@@ -1,7 +1,5 @@
 #pragma once
 
-#include <GWCA/Managers/UIMgr.h>
-
 #include <ToolboxModule.h>
 
 

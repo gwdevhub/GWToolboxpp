@@ -6,7 +6,6 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 
-#include <Utils/GuiUtils.h>
 #include <Widgets/VanquishWidget.h>
 
 #include "Utils/FontLoader.h"

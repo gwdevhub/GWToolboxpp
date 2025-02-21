@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include <ToolboxWidget.h>
-#include <Defines.h>
 #include <Modules/ToolboxSettings.h>
 
 ImGuiWindowFlags ToolboxWidget::GetWinFlags(ImGuiWindowFlags flags) const

@@ -12,6 +12,7 @@
 #include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Item.h>
 
+#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>

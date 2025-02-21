@@ -1,7 +1,6 @@
 #pragma once
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
-#include <GWCA/Managers/AgentMgr.h>
 
 class StoCCallback {
     GW::HookEntry* hook_entry = nullptr;

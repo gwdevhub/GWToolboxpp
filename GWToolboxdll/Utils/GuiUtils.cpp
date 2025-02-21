@@ -8,7 +8,6 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 
 #include <Modules/Resources.h>
-#include <Constants/EncStrings.h>
 
 #include "GuiUtils.h"
 #include <Utils/TextUtils.h>
