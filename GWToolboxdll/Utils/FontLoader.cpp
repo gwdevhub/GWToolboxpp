@@ -418,7 +418,7 @@ namespace {
             pending.build();
         }
 
-        Resources::EnqueueDxTask([assign_fonts, fonts = all_fonts](IDirect3DDevice9*) {
+        Resources::EnqueueDxTask([assign_fonts, fonts = std::move(all_fonts)](IDirect3DDevice9*) {
             assign_fonts(fonts);
             printf("Loaded all fonts\n");
         });

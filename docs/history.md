@@ -7,6 +7,16 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 7.2
+* [Fix] Fixed bug causing hotkeys not to trigger
+* [Fix] Fixed crash when font paths contained cyrillic or chinese characters
+* [Fix] Fixed crash when changing targets through Toolbox UI controls
+* [Fix] Fixed skipping factions character name input not working
+* [Fix] Fixed bug preventing chat commmands /wiki /report and /help when triggered through toolbox
+* [Fix] Fixed bug preventing shouts to be listed in the Target Info window
+* [Minor] Changed visibility checkbox for widgets and windows to eye / eye-slash symbols.
+* [New] /transmo model command (see website)
+ 
 ## Version 7.1
 * [Fix] Fixed crash in combination with steam overlay
 * [Fix] Fixed problem where chat messages from ignored players would still be seen
