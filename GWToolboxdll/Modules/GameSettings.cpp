@@ -55,6 +55,7 @@
 #include <Modules/ChatSettings.h>
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>
+#include <Modules/Resources.h>
 #include <Windows/CompletionWindow.h>
 
 #include <Color.h>
@@ -1235,15 +1236,25 @@ namespace {
         }
     }
 
-    void OnVendorWindow(GW::UI::UIPacket::kVendorWindow* packet) {
-        // Pre-fill character name when donating faction
-        if (!(skip_entering_name_for_faction_donate && packet && packet->transaction_type == GW::Merchant::TransactionType::DonateFaction))
+    // Pre-fill character name when donating faction
+    void SkipCharacterNameEntryForFactionDonation(bool immediate = true)
+    {
+        if (!skip_entering_name_for_faction_donate) return;
+        if (!immediate) {
+            Resources::EnqueueWorkerTask([]() {
+                // When a donation is complete, there are several different ui messages that come in varying sequence; give 500ms to ensure all are processed by the game first
+                Sleep(500);
+                GW::GameThread::Enqueue([]() {
+                    SkipCharacterNameEntryForFactionDonation(true);
+                });
+            });
             return;
+        }
         auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"NPCInteract"), 0, 0);
         const auto sign_btn = GW::UI::GetChildFrame(frame, 2);
-        if (!(sign_btn && sign_btn->IsVisible()))
-            return; // If sign button isn't visible, the player doesn't have enough faction
+        if (!(sign_btn && sign_btn->IsVisible() && sign_btn->IsDisabled())) return; // If sign button isn't visible, the player doesn't have enough faction
         const auto name_input = GW::UI::GetChildFrame(frame, 4, 2);
+        if (!name_input) return;
         const auto agent_enc_name = GW::PlayerMgr::GetPlayerName();
         // Prefill and hide the name input
         GW::UI::SendFrameUIMessage(name_input, (GW::UI::UIMessage)0x4e, (void*)agent_enc_name);
@@ -1289,8 +1300,11 @@ namespace {
                 FocusWindow();
             }
         } break;
+        case GW::UI::UIMessage::kVendorTransComplete: {
+            SkipCharacterNameEntryForFactionDonation(false);
+        } break;
         case GW::UI::UIMessage::kVendorWindow: {
-            OnVendorWindow((GW::UI::UIPacket::kVendorWindow*)wParam);
+            SkipCharacterNameEntryForFactionDonation(true);
         } break;
         case GW::UI::UIMessage::kPartySearchInviteSent: {
             // Automatically send a party window invite when a party search invite is sent
@@ -1714,7 +1728,8 @@ void GameSettings::Initialize()
         GW::UI::UIMessage::kVendorWindow,
         GW::UI::UIMessage::kDialogButton,
         GW::UI::UIMessage::kQuestAdded,
-        GW::UI::UIMessage::kSendSetActiveQuest
+        GW::UI::UIMessage::kSendSetActiveQuest,
+        GW::UI::UIMessage::kVendorTransComplete
     };
     for (const auto message_id : post_ui_messages) {
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
