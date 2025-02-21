@@ -406,7 +406,7 @@ namespace {
             fonts_loading = false;
         });
 
-        auto all_fonts = std::vector<FontPending> {
+        auto all_fonts = std::vector<FontPending>{
             {&font_text, FontLoader::FontSize::text},
             {&font_header2, FontLoader::FontSize::header2},
             {&font_header1, FontLoader::FontSize::header1},

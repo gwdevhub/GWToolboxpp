@@ -102,7 +102,7 @@ namespace {
         if (ImGui::Button("Place Marker")) {
             GW::GameThread::Enqueue([] {
                 QuestModule::SetCustomQuestMarker(world_map_click_pos, true);
-                });
+            });
             return false;
         }
         place_marker_rect = c->LastItemData.Rect;
@@ -111,8 +111,8 @@ namespace {
         if (QuestModule::GetCustomQuestMarker()) {
             if (ImGui::Button("Remove Marker")) {
                 GW::GameThread::Enqueue([] {
-                    QuestModule::SetCustomQuestMarker({ 0, 0 });
-                    });
+                    QuestModule::SetCustomQuestMarker({0, 0});
+                });
                 return false;
             }
             remove_marker_rect = c->LastItemData.Rect;
@@ -158,7 +158,7 @@ namespace {
                     return;
                 const auto wiki_url = std::format("{}Game_link:Quest_{}", GuiUtils::WikiUrl(L""), (uint32_t)quest->quest_id);
                 SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)wiki_url.c_str());
-                });
+            });
             return false;
         }
         return true;
@@ -175,10 +175,10 @@ namespace {
     bool IsTravelPortal(GW::MapProp* prop)
     {
         switch (GetMapPropModelFileId(prop)) {
-        case 0x4e6b2: // Eotn asura gate
-        case 0x3c5ac: // Eotn, Nightfall
-        case 0xa825: // Prophecies, Factions
-            return true;
+            case 0x4e6b2: // Eotn asura gate
+            case 0x3c5ac: // Eotn, Nightfall
+            case 0xa825:  // Prophecies, Factions
+                return true;
         }
         return false;
     }
@@ -193,15 +193,15 @@ namespace {
         if ((map_info->flags & 0x80000000) == 0x80000000)
             return false; // e.g. Debug map
         switch (map_info->type) {
-        case GW::RegionType::City:
-        case GW::RegionType::CompetitiveMission:
-        case GW::RegionType::CooperativeMission:
-        case GW::RegionType::EliteMission:
-        case GW::RegionType::MissionOutpost:
-        case GW::RegionType::Outpost:
-            break;
-        default:
-            return false;
+            case GW::RegionType::City:
+            case GW::RegionType::CompetitiveMission:
+            case GW::RegionType::CooperativeMission:
+            case GW::RegionType::EliteMission:
+            case GW::RegionType::MissionOutpost:
+            case GW::RegionType::Outpost:
+                break;
+            default:
+                return false;
         }
         return true;
     }
@@ -211,9 +211,11 @@ namespace {
         GW::Constants::MapID to;
         GW::Vec2f world_pos;
     };
+
     std::vector<MapPortal> map_portals;
 
-    GW::Constants::MapID GetClosestMapToPoint(const GW::Vec2f& world_map_point) {
+    GW::Constants::MapID GetClosestMapToPoint(const GW::Vec2f& world_map_point)
+    {
         for (size_t i = 0; i < (size_t)GW::Constants::MapID::Count; i++) {
             const auto map_info = GW::Map::GetMapInfo((GW::Constants::MapID)i);
             if (!map_info || !map_info->thumbnail_id || !map_info->name_id || !(map_info->x || map_info->y))
@@ -230,7 +232,8 @@ namespace {
         return GW::Constants::MapID::None;
     }
 
-    GW::MapProp* GetClosestPortalToLocation(const GW::Vec2f& game_pos) {
+    GW::MapProp* GetClosestPortalToLocation(const GW::Vec2f& game_pos)
+    {
         GW::MapProp* found = nullptr;
         float closest_distance = .9999f;
         const auto props = GW::Map::GetMapProps();
@@ -240,7 +243,7 @@ namespace {
             if (!IsTravelPortal(prop))
                 continue;
             // TOOD: If found is null or this prop->location is closer than the found one, this wins
-                    // Calculate the distance between the current portal and the given location
+            // Calculate the distance between the current portal and the given location
             float distance = GW::GetDistance(prop->position, game_pos);
 
             // If found is null or this portal is closer than the currently found one, update found
@@ -248,25 +251,24 @@ namespace {
                 found = prop;
                 closest_distance = distance;
             }
-
         }
         return found;
     }
 
-    bool AppendMapPortals() {
+    bool AppendMapPortals()
+    {
         const auto props = GW::Map::GetMapProps();
         const auto map_id = GW::Map::GetMapID();
         if (!props) return false;
         for (auto prop : *props) {
             if (IsTravelPortal(prop)) {
                 GW::Vec2f world_pos;
-                if (!WorldMapWidget::GamePosToWorldMap({ prop->position.x, prop->position.y }, world_pos))
+                if (!WorldMapWidget::GamePosToWorldMap({prop->position.x, prop->position.y}, world_pos))
                     continue;
                 map_portals.push_back({
-                    map_id,GetClosestMapToPoint(world_pos),world_pos
-                    });
+                    map_id, GetClosestMapToPoint(world_pos), world_pos
+                });
             }
-
         }
         return true;
     }
@@ -280,11 +282,11 @@ namespace {
             return;
 
         switch (message_id) {
-        case GW::UI::UIMessage::kMapLoaded:
-            map_portals.clear();
-            AppendMapPortals();
-            break;
-            break;
+            case GW::UI::UIMessage::kMapLoaded:
+                map_portals.clear();
+                AppendMapPortals();
+                break;
+                break;
         }
     }
 
@@ -297,25 +299,27 @@ namespace {
             const auto frame = GW::UI::GetFrameById(world_map_context->frame_id);
             GW::UI::SendFrameUIMessage(frame, GW::UI::UIMessage::kMapLoaded, nullptr);
             //GW::UI::SendFrameUIMessage(frame,(GW::UI::UIMessage)0x1000008e, nullptr);
-            });
+        });
     }
 
-    void HighlightFrame(GW::UI::Frame* frame) {
+    void HighlightFrame(GW::UI::Frame* frame)
+    {
         if (!frame) return;
         const auto root = GW::UI::GetRootFrame();
         const auto top_left = frame->position.GetTopLeftOnScreen(root);
         const auto bottom_right = frame->position.GetBottomRightOnScreen(root);
         const auto draw_list = ImGui::GetBackgroundDrawList();
-        draw_list->AddRect({ top_left.x, top_left.y }, { bottom_right.x, bottom_right.y }, IM_COL32_WHITE);
+        draw_list->AddRect({top_left.x, top_left.y}, {bottom_right.x, bottom_right.y}, IM_COL32_WHITE);
     }
 
     // Helper function to calculate rotated points
-    void CalculateRotatedPoints(const ImRect& rect, const ImVec2& center, float rotation_angle, ImVec2 out_points[4]) {
+    void CalculateRotatedPoints(const ImRect& rect, const ImVec2& center, float rotation_angle, ImVec2 out_points[4])
+    {
         ImVec2 points[4] = {
-            rect.Min,                                 // Top-left
-            {rect.Max.x, rect.Min.y},                // Top-right
-            rect.Max,                                // Bottom-right
-            {rect.Min.x, rect.Max.y}                 // Bottom-left
+            rect.Min,                 // Top-left
+            {rect.Max.x, rect.Min.y}, // Top-right
+            rect.Max,                 // Bottom-right
+            {rect.Min.x, rect.Max.y}  // Bottom-left
         };
 
         for (int i = 0; i < 4; ++i) {
@@ -331,11 +335,12 @@ namespace {
     }
 
     // Helper function to calculate UV coordinates for a sprite map
-    void CalculateUVCoords(float uv_start_x, float uv_end_x, ImVec2 uv_points[4]) {
-        uv_points[0] = { uv_start_x, 0.0f }; // Top-left
-        uv_points[1] = { uv_end_x, 0.0f };  // Top-right
-        uv_points[2] = { uv_end_x, 1.0f };  // Bottom-right
-        uv_points[3] = { uv_start_x, 1.0f }; // Bottom-left
+    void CalculateUVCoords(float uv_start_x, float uv_end_x, ImVec2 uv_points[4])
+    {
+        uv_points[0] = {uv_start_x, 0.0f}; // Top-left
+        uv_points[1] = {uv_end_x, 0.0f};   // Top-right
+        uv_points[2] = {uv_end_x, 1.0f};   // Bottom-right
+        uv_points[3] = {uv_start_x, 1.0f}; // Bottom-left
     }
 
     // Cached vars that are updated every draw; avoids having to do the calculation inside DrawQuestMarkerOnWorldMap
@@ -351,14 +356,16 @@ namespace {
     ImDrawList* draw_list = nullptr;
 
     // Function to calculate viewport position
-    ImVec2 CalculateViewportPos(const GW::Vec2f& marker_world_pos, const ImVec2& top_left) {
+    ImVec2 CalculateViewportPos(const GW::Vec2f& marker_world_pos, const ImVec2& top_left)
+    {
         return {
             ui_scale.x * world_map_scale * (marker_world_pos.x - top_left.x) + viewport_offset.x,
             ui_scale.y * world_map_scale * (marker_world_pos.y - top_left.y) + viewport_offset.y
         };
     }
 
-    GW::Vec2f GetMapMarkerPoint(GW::AreaInfo* map_info) {
+    GW::Vec2f GetMapMarkerPoint(GW::AreaInfo* map_info)
+    {
         if (!map_info)
             return {};
         if (map_info->x && map_info->y) {
@@ -384,7 +391,8 @@ namespace {
     }
 
     // Pre-calculate some cached vars for this frame to avoid having to recalculate more than once
-    bool PreCalculateFrameVars() {
+    bool PreCalculateFrameVars()
+    {
         world_map_context = GW::Map::GetWorldMapContext();
         if (!world_map_context)
             return false;
@@ -429,8 +437,8 @@ namespace {
         return true;
     }
 
-    bool DrawQuestMarkerOnWorldMap(const GW::Quest* quest) {
-
+    bool DrawQuestMarkerOnWorldMap(const GW::Quest* quest)
+    {
         if (!(world_map_context && quest))
             return false;
         if (world_map_context->zoom != 1.f && world_map_context->zoom != .0f)
@@ -462,11 +470,10 @@ namespace {
             );
 
             return icon_rect.Contains(ImGui::GetMousePos());
-            };
+        };
 
         // draw_quest_arrow
         auto draw_quest_arrow = [&](const GW::Vec2f& quest_marker_pos) {
-
             const auto viewport_quest_pos = CalculateViewportPos(quest_marker_pos, world_map_context->top_left);
             const auto viewport_player_pos = CalculateViewportPos(player_world_map_pos, world_map_context->top_left);
             // Calculate the vector from your position to the quest marker
@@ -495,7 +502,7 @@ namespace {
             );
 
             return icon_rect.Contains(ImGui::GetMousePos());
-            };
+        };
 
         // The quest doesn't end in this map; the marker icon needs to be an arrow, and the actual marker needs to be positioned onto the label of the destination map
         const auto map_info = GW::Map::GetMapInfo(quest->map_to);
@@ -509,17 +516,16 @@ namespace {
             else {
                 is_hovered |= draw_quest_marker(pos);
             }
-
         }
         if (quest->map_to != GW::Map::GetMapID() || world_map_context->zoom == .0f) {
             is_hovered |= draw_quest_marker(GetMapMarkerPoint(map_info));
         }
         return is_hovered;
-
     }
-
 }
-GW::Constants::MapID WorldMapWidget::GetMapIdForLocation(const GW::Vec2f& world_map_pos, GW::Constants::MapID exclude_map_id) {
+
+GW::Constants::MapID WorldMapWidget::GetMapIdForLocation(const GW::Vec2f& world_map_pos, GW::Constants::MapID exclude_map_id)
+{
     auto map_id = GW::Map::GetMapID();
     auto map_info = GW::Map::GetMapInfo();
     if (!map_info)
@@ -539,6 +545,7 @@ GW::Constants::MapID WorldMapWidget::GetMapIdForLocation(const GW::Vec2f& world_
     }
     return GW::Constants::MapID::None;
 }
+
 void WorldMapWidget::Initialize()
 {
     ToolboxWidget::Initialize();
@@ -568,7 +575,9 @@ void WorldMapWidget::Initialize()
         GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, ui_message, OnUIMessage);
     }
 }
-bool WorldMapWidget::WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GamePos& game_map_pos) {
+
+bool WorldMapWidget::WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GamePos& game_map_pos)
+{
     ImRect map_bounds;
     if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds))
         return false;
@@ -580,7 +589,7 @@ bool WorldMapWidget::WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GameP
     const auto game_map_rect = ImRect({
         current_map_context->map_boundaries[1], current_map_context->map_boundaries[2],
         current_map_context->map_boundaries[3], current_map_context->map_boundaries[4],
-        });
+    });
 
     const auto gwinches_per_unit = 96.f;
 
@@ -596,6 +605,7 @@ bool WorldMapWidget::WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GameP
 
     return true;
 }
+
 bool WorldMapWidget::GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f& world_map_pos)
 {
     if (game_map_pos.x == INFINITY || game_map_pos.y == INFINITY)
@@ -610,7 +620,7 @@ bool WorldMapWidget::GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2
     const auto game_map_rect = ImRect({
         current_map_context->map_boundaries[1], current_map_context->map_boundaries[2],
         current_map_context->map_boundaries[3], current_map_context->map_boundaries[4],
-        });
+    });
 
     // NB: World map is 96 gwinches per unit, this is hard coded in the GW source
     const auto gwinches_per_unit = 96.f;
@@ -676,7 +686,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         if (ImGui::Checkbox("Show all areas", &showing_all_outposts)) {
             GW::GameThread::Enqueue([] {
                 ShowAllOutposts(showing_all_outposts);
-                });
+            });
         }
         show_all_rect = c->LastItemData.Rect;
         show_all_rect.Translate(mouse_offset);
@@ -685,7 +695,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             if (ImGui::Checkbox("Hard mode", &is_hard_mode)) {
                 GW::GameThread::Enqueue([] {
                     GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
-                    });
+                });
             }
             hard_mode_rect = c->LastItemData.Rect;
             hard_mode_rect.Translate(mouse_offset);
@@ -721,7 +731,6 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
                 quest_name.reset(hovered_quest->name);
             ImGui::SetTooltip("%s", quest_name.string().c_str());
         }
-
     }
 
 
@@ -774,40 +783,41 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
 bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
 {
     auto check_rect = [lParam](const ImRect& rect) {
-        ImVec2 p = { (float)GET_X_LPARAM(lParam), (float)GET_Y_LPARAM(lParam) };
+        ImVec2 p = {(float)GET_X_LPARAM(lParam), (float)GET_Y_LPARAM(lParam)};
         return rect.Contains(p);
-        };
+    };
 
     switch (Message) {
-    case WM_GW_RBUTTONCLICK: {
-        if (!(world_map_context && GW::UI::GetIsWorldMapShowing()))
-            break;
-        if (const auto hovered_quest = GW::QuestMgr::GetQuest(hovered_quest_id)) {
-            ImGui::SetContextMenu(HoveredQuestContextMenu, (void*)hovered_quest_id);
-            break;
+        case WM_GW_RBUTTONCLICK: {
+            if (!(world_map_context && GW::UI::GetIsWorldMapShowing()))
+                break;
+            if (const auto hovered_quest = GW::QuestMgr::GetQuest(hovered_quest_id)) {
+                ImGui::SetContextMenu(HoveredQuestContextMenu, (void*)hovered_quest_id);
+                break;
+            }
+            if (!(world_map_context && world_map_context->zoom == 1.0f))
+                break;
+            world_map_click_pos = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+            world_map_click_pos.x /= ui_scale.x;
+            world_map_click_pos.y /= ui_scale.y;
+            world_map_click_pos.x += world_map_context->top_left.x;
+            world_map_click_pos.y += world_map_context->top_left.y;
+            ImGui::SetContextMenu(WorldMapContextMenu);
         }
-        if (!(world_map_context && world_map_context->zoom == 1.0f))
-            break;
-        world_map_click_pos = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-        world_map_click_pos.x /= ui_scale.x;
-        world_map_click_pos.y /= ui_scale.y;
-        world_map_click_pos.x += world_map_context->top_left.x;
-        world_map_click_pos.y += world_map_context->top_left.y;
-        ImGui::SetContextMenu(WorldMapContextMenu);
-    } break;
-    case WM_LBUTTONUP:
-    case WM_LBUTTONDOWN:
-        if (!drawn || !GW::UI::GetIsWorldMapShowing())
-            return false;
-        if (ImGui::ShowingContextMenu())
-            return true;
-        if (check_rect(show_lines_on_world_map_rect))
-            return true;
-        if (check_rect(hard_mode_rect))
-            return true;
-        if (check_rect(show_all_rect))
-            return true;
         break;
+        case WM_LBUTTONUP:
+        case WM_LBUTTONDOWN:
+            if (!drawn || !GW::UI::GetIsWorldMapShowing())
+                return false;
+            if (ImGui::ShowingContextMenu())
+                return true;
+            if (check_rect(show_lines_on_world_map_rect))
+                return true;
+            if (check_rect(hard_mode_rect))
+                return true;
+            if (check_rect(show_all_rect))
+                return true;
+            break;
     }
     return false;
 }
