@@ -102,7 +102,7 @@ namespace {
         if (ImGui::Button("Place Marker")) {
             GW::GameThread::Enqueue([] {
                 QuestModule::SetCustomQuestMarker(world_map_click_pos, true);
-            });
+                });
             return false;
         }
         place_marker_rect = c->LastItemData.Rect;
@@ -111,8 +111,8 @@ namespace {
         if (QuestModule::GetCustomQuestMarker()) {
             if (ImGui::Button("Remove Marker")) {
                 GW::GameThread::Enqueue([] {
-                    QuestModule::SetCustomQuestMarker({0, 0});
-                });
+                    QuestModule::SetCustomQuestMarker({ 0, 0 });
+                    });
                 return false;
             }
             remove_marker_rect = c->LastItemData.Rect;
@@ -129,7 +129,7 @@ namespace {
         const auto quest = GW::QuestMgr::GetQuest(quest_id);
         if (!quest)
             return false;
-        if(!hovered_quest_name.IsDecoding())
+        if (!hovered_quest_name.IsDecoding())
             hovered_quest_name.reset(quest->name);
         ImGui::TextUnformatted(hovered_quest_name.string().c_str());
 
@@ -222,7 +222,7 @@ namespace {
                 continue; // e.g. "wrong" augury rock is map 119, no NPCs
             if ((map_info->flags & 0x80000000) == 0x80000000)
                 continue; // e.g. Debug map
-            if(!map_info->GetIsOnWorldMap())
+            if (!map_info->GetIsOnWorldMap())
                 continue;
             (world_map_point);
             // TODO: distance from point to rect
@@ -280,10 +280,10 @@ namespace {
             return;
 
         switch (message_id) {
-            case GW::UI::UIMessage::kMapLoaded:
-                map_portals.clear();
-                AppendMapPortals();
-                break;
+        case GW::UI::UIMessage::kMapLoaded:
+            map_portals.clear();
+            AppendMapPortals();
+            break;
             break;
         }
     }
@@ -297,7 +297,7 @@ namespace {
             const auto frame = GW::UI::GetFrameById(world_map_context->frame_id);
             GW::UI::SendFrameUIMessage(frame, GW::UI::UIMessage::kMapLoaded, nullptr);
             //GW::UI::SendFrameUIMessage(frame,(GW::UI::UIMessage)0x1000008e, nullptr);
-        });
+            });
     }
 
     void HighlightFrame(GW::UI::Frame* frame) {
@@ -394,7 +394,7 @@ namespace {
         ui_scale = GW::UI::GetFrameById(world_map_context->frame_id)->position.GetViewportScale(GW::UI::GetRootFrame());
 
         const auto me = GW::Agents::GetControlledCharacter();
-        if(!(me && WorldMapWidget::GamePosToWorldMap(me->pos, player_world_map_pos)))
+        if (!(me && WorldMapWidget::GamePosToWorldMap(me->pos, player_world_map_pos)))
             return false;
         player_rotation = me->rotation_angle;
 
@@ -430,7 +430,7 @@ namespace {
     }
 
     bool DrawQuestMarkerOnWorldMap(const GW::Quest* quest) {
-        
+
         if (!(world_map_context && quest))
             return false;
         if (world_map_context->zoom != 1.f && world_map_context->zoom != .0f)
@@ -509,13 +509,13 @@ namespace {
             else {
                 is_hovered |= draw_quest_marker(pos);
             }
-            
+
         }
         if (quest->map_to != GW::Map::GetMapID() || world_map_context->zoom == .0f) {
             is_hovered |= draw_quest_marker(GetMapMarkerPoint(map_info));
         }
         return is_hovered;
-        
+
     }
 
 }
@@ -685,7 +685,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             if (ImGui::Checkbox("Hard mode", &is_hard_mode)) {
                 GW::GameThread::Enqueue([] {
                     GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
-                });
+                    });
             }
             hard_mode_rect = c->LastItemData.Rect;
             hard_mode_rect.Translate(mouse_offset);
@@ -779,35 +779,35 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
         };
 
     switch (Message) {
-        case WM_GW_RBUTTONCLICK: {
-            if (!(world_map_context && GW::UI::GetIsWorldMapShowing()))
-                break;
-            if (const auto hovered_quest = GW::QuestMgr::GetQuest(hovered_quest_id)) {
-                ImGui::SetContextMenu(HoveredQuestContextMenu, (void*)hovered_quest_id);
-                break;
-            }
-            if (!(world_map_context && world_map_context->zoom == 1.0f))
-                break;
-            world_map_click_pos = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-            world_map_click_pos.x /= ui_scale.x;
-            world_map_click_pos.y /= ui_scale.y;
-            world_map_click_pos.x += world_map_context->top_left.x;
-            world_map_click_pos.y += world_map_context->top_left.y;
-            ImGui::SetContextMenu(WorldMapContextMenu);
-        } break;
-        case WM_LBUTTONUP:
-        case WM_LBUTTONDOWN:
-            if (!drawn || !GW::UI::GetIsWorldMapShowing())
-                return false;
-            if (ImGui::ShowingContextMenu())
-                return true;
-            if (check_rect(show_lines_on_world_map_rect))
-                return true;
-            if (check_rect(hard_mode_rect))
-                return true;
-            if (check_rect(show_all_rect))
-                return true;
+    case WM_GW_RBUTTONCLICK: {
+        if (!(world_map_context && GW::UI::GetIsWorldMapShowing()))
             break;
+        if (const auto hovered_quest = GW::QuestMgr::GetQuest(hovered_quest_id)) {
+            ImGui::SetContextMenu(HoveredQuestContextMenu, (void*)hovered_quest_id);
+            break;
+        }
+        if (!(world_map_context && world_map_context->zoom == 1.0f))
+            break;
+        world_map_click_pos = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+        world_map_click_pos.x /= ui_scale.x;
+        world_map_click_pos.y /= ui_scale.y;
+        world_map_click_pos.x += world_map_context->top_left.x;
+        world_map_click_pos.y += world_map_context->top_left.y;
+        ImGui::SetContextMenu(WorldMapContextMenu);
+    } break;
+    case WM_LBUTTONUP:
+    case WM_LBUTTONDOWN:
+        if (!drawn || !GW::UI::GetIsWorldMapShowing())
+            return false;
+        if (ImGui::ShowingContextMenu())
+            return true;
+        if (check_rect(show_lines_on_world_map_rect))
+            return true;
+        if (check_rect(hard_mode_rect))
+            return true;
+        if (check_rect(show_all_rect))
+            return true;
+        break;
     }
     return false;
 }
