@@ -431,7 +431,7 @@ namespace FontLoader {
         if (!GImGui)
             return false;
 
-        for (auto font : GetFonts()) {
+        for (const auto font : GetFonts()) {
             if (font && font->ContainerAtlas == ImGui::GetIO().Fonts)
                 continue;
             ReleaseFontTexture(font);
@@ -446,7 +446,7 @@ namespace FontLoader {
         if (fonts_loading)
             return false;
 
-        for (auto font : GetFonts()) {
+        for (const auto font : GetFonts()) {
             if (!(font && font->ContainerAtlas))
                 continue;
             if (font->ContainerAtlas == ImGui::GetIO().Fonts)
