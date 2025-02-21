@@ -2723,7 +2723,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmo)
         if (wcsncmp(argv[1], L"reset", 5) == 0) {
             transmo.npc_id = std::numeric_limits<int>::max();
         }
-        else if (wcsncmp(argv[1], L"model", 5) == 0) {
+        else if (wcsncmp(argv[1], L"model", wcslen(L"model")) == 0) {
             bool invalid_data = argc < 6;
             int npc_id = transmo.npc_id;
             if (!invalid_data && argc > 2 && !TextUtils::ParseInt(argv[3], &npc_id)) {
@@ -2745,11 +2745,17 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmo)
                 Log::Error("Transmo model: invalid NPC Flags '%ls', expected an integer. Example: 540", argv[5]);
                 invalid_data = true;
             }
+            unsigned int scale = transmo.scale;
+            if (!invalid_data && argc > 6 && !TextUtils::ParseUInt(argv[6], &scale)) {
+                Log::Error("Transmo model: invalid scale '%ls', expected an integer between 6 and 255", argv[6]);
+                invalid_data = true;
+                scale = scale << 24;
+            }
 
             if (invalid_data) {
                 Log::Info("HELP for /transmo model");
-                Log::Info("Usage: /transmo model NPC_ID MODEL_FILE_ID MODEL_FILE FLAGS");
-                Log::Info("Example, transfo as Gehraz: /transmo model 4581 204020 245127 540");
+                Log::Info("Usage: /transmo model NPC_ID MODEL_FILE_ID MODEL_FILE FLAGS [SCALE]");
+                Log::Info("Example, transmo as Gehraz: /transmo model 4581 204020 245127 540 [15]");
                 Log::Info("The numbers required by the command can be obtained from the GWToolbox 'Info' window, in the 'Advanced' section under the 'Target' menu. Note: the numbers must be converted from hexadecimal to decimal.");
                 return;
             }
@@ -2758,6 +2764,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTransmo)
             transmo.npc_model_file_id = model_file_id;
             transmo.npc_model_file_data = model_file_data;
             transmo.flags = flags;
+            transmo.scale = scale;
         }
         else if (TextUtils::ParseInt(argv[1], &iscale)) {
             if (!ParseScale(iscale, transmo)) {

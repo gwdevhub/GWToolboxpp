@@ -4,6 +4,7 @@
 
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -12,19 +13,14 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
-
-#include <GWCA/GameEntities/Skill.h>
-
+#include <Color.h>
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
-
+#include <Utils/TextUtils.h>
 #include <Widgets/AlcoholWidget.h>
 #include <Windows/HotkeysWindow.h>
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
-#include <Utils/TextUtils.h>
-
-#include "Color.h"
 
 using namespace GW::Constants;
 
