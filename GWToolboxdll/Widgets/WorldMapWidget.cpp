@@ -780,7 +780,7 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
 
     switch (Message) {
         case WM_GW_RBUTTONCLICK: {
-            if (!world_map_context)
+            if (!(world_map_context && GW::UI::GetIsWorldMapShowing()))
                 break;
             if (const auto hovered_quest = GW::QuestMgr::GetQuest(hovered_quest_id)) {
                 ImGui::SetContextMenu(HoveredQuestContextMenu, (void*)hovered_quest_id);
