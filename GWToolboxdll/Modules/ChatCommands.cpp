@@ -59,7 +59,6 @@
 #include <Utils/TextUtils.h>
 #include <Constants/EncStrings.h>
 
-#include "Widgets/ActiveQuestWidget.h"
 #include "QuestModule.h"
 #include <Utils/ToolboxUtils.h>
 
