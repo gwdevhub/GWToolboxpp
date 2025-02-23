@@ -697,10 +697,8 @@ bool Resources::Post(const std::string& url, const std::string& payload, std::st
     r.SetMethod(HttpMethod::Post);
     r.SetPostContent(payload.c_str(), payload.size(), ContentFlag::ByRef);
 
-    const nlohmann::json& is_json = nlohmann::json::parse(payload);
-    if (is_json != nlohmann::json::value_t::discarded) {
-        r.SetHeader("Content-Type", "application/json");
-    }
+    std::string content_type = nlohmann::json::accept(payload) ? "application/json" : "application/x-www-form-urlencoded";
+    r.SetHeader("Content-Type", content_type.c_str());
     r.SetUrl(url.c_str());
     r.Execute();
     if (!(r.IsSuccessful() || r.GetStatusCode() == 415)) {
