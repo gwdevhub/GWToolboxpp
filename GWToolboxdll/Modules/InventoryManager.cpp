@@ -47,6 +47,7 @@ namespace {
     bool move_to_trade_on_double_click = true;
     bool move_to_trade_on_alt_click = false;
     bool salvage_all_on_ctrl_click = false;
+    bool identify_all_on_ctrl_click = false;
 
     const char* bag_names[5] = {
         "None",
@@ -1037,6 +1038,7 @@ void InventoryManager::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(move_to_trade_on_double_click);
     SAVE_BOOL(move_to_trade_on_alt_click);
     SAVE_BOOL(salvage_all_on_ctrl_click);
+    SAVE_BOOL(identify_all_on_ctrl_click);
 
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_backpack), bags_to_salvage_from[GW::Constants::Bag::Backpack]);
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
@@ -1062,6 +1064,7 @@ void InventoryManager::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(move_to_trade_on_double_click);
     LOAD_BOOL(move_to_trade_on_alt_click);
     LOAD_BOOL(salvage_all_on_ctrl_click);
+    LOAD_BOOL(identify_all_on_ctrl_click);
 
     bags_to_salvage_from[GW::Constants::Bag::Backpack] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_backpack), bags_to_salvage_from[GW::Constants::Bag::Backpack]);
     bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
@@ -1772,6 +1775,8 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::Checkbox("Bag 2", &bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
     ImGui::Checkbox("Salvage All with Control+Click", &salvage_all_on_ctrl_click);
     ImGui::ShowHelp("Control+Click a salvage kit to open the Salvage All window");
+    ImGui::Checkbox("Identify All with Control+Click", &identify_all_on_ctrl_click);
+    ImGui::ShowHelp("Control+Click an identification kit to identify all items with it");
 
     ImGui::Separator();
     ImGui::Text("Hide items from merchant sell window:");
@@ -2241,43 +2246,54 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
     const Item* item = nullptr;
     switch (type) {
         case 7: // Left click
-            if (salvage_all_on_ctrl_click && ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
-                // Ctrl+Click on salvage kit: Open salvage all window
+            if (ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
+                // Get any hovered item in order to get info about it for Ctrl+Click shortcuts.
+                // May be null, in which case said shortcuts are ignored.
                 item = static_cast<Item*>(GW::Items::GetHoveredItem());
-                if (!item) {
+
+                if (item && identify_all_on_ctrl_click && item->IsIdentificationKit() && ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
+                    // Ctrl+Click on identification kit: Identify all items
+                    ImGui::CloseCurrentPopup();
+                    im.CancelIdentify();
+                    if (im.context_item.set(item)) {
+                        IdentifyAllType identify_type = IdentifyAllType::All;
+                        im.is_identifying_all = true;
+                        im.identify_all_type = identify_type;
+                        im.IdentifyAll(identify_type);
+                    }
                     return;
                 }
-
-                ImGui::CloseCurrentPopup();
-                im.CancelSalvage();
-                if (im.context_item.set(item)) {
-                    SalvageAllType salvage_type = SalvageAllType::GoldAndLower;
-                    im.salvage_all_type = salvage_type;
-                    im.SalvageAll(salvage_type);
-                }
-                return;
-            }
-            else if (ImGui::IsKeyDown(ImGuiMod_Ctrl) 
-                && GameSettings::GetSettingBool("move_item_on_ctrl_click") 
-                && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-                // Ctrl+Click: Move item to inventory/chest
-                if (bag) {
-                    item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
-                }
-                else {
-                    item = static_cast<Item*>(GW::Items::GetHoveredItem());
-                }
-                if (!item) {
+                else if (item && salvage_all_on_ctrl_click && item->IsSalvageKit() && ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
+                    // Ctrl+Click on salvage kit: Open salvage all window
+                    ImGui::CloseCurrentPopup();
+                    im.CancelSalvage();
+                    if (im.context_item.set(item)) {
+                        SalvageAllType salvage_type = SalvageAllType::GoldAndLower;
+                        im.salvage_all_type = salvage_type;
+                        im.SalvageAll(salvage_type);
+                    }
                     return;
                 }
+                else if (GameSettings::GetSettingBool("move_item_on_ctrl_click") && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+                    // Ctrl+Click: Move item to inventory/chest
+                    if (bag) {
+                        item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
+                    }
+                    else {
+                        item = static_cast<Item*>(GW::Items::GetHoveredItem());
+                    }
+                    if (!item) {
+                        return;
+                    }
 
-                if (ImGui::IsKeyDown(ImGuiMod_Shift) && item->quantity > 1) {
-                    prompt_split_stack(item);
+                    if (ImGui::IsKeyDown(ImGuiMod_Shift) && item->quantity > 1) {
+                        prompt_split_stack(item);
+                    }
+                    else {
+                        move_item(item);
+                    }
+                    return;
                 }
-                else {
-                    move_item(item);
-                }
-                return;
             }
             if (ImGui::IsKeyDown(ImGuiMod_Alt) && move_to_trade_on_alt_click && IsTradeWindowOpen()) {
                 // Alt+Click: Add to trade window if available
