@@ -46,6 +46,7 @@ namespace {
     bool trade_whole_stacks = false;
     bool move_to_trade_on_double_click = true;
     bool move_to_trade_on_alt_click = false;
+    bool salvage_all_on_ctrl_click = false;
 
     const char* bag_names[5] = {
         "None",
@@ -1035,6 +1036,7 @@ void InventoryManager::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(right_click_context_menu_in_explorable);
     SAVE_BOOL(move_to_trade_on_double_click);
     SAVE_BOOL(move_to_trade_on_alt_click);
+    SAVE_BOOL(salvage_all_on_ctrl_click);
 
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_backpack), bags_to_salvage_from[GW::Constants::Bag::Backpack]);
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
@@ -1059,6 +1061,7 @@ void InventoryManager::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(right_click_context_menu_in_explorable);
     LOAD_BOOL(move_to_trade_on_double_click);
     LOAD_BOOL(move_to_trade_on_alt_click);
+    LOAD_BOOL(salvage_all_on_ctrl_click);
 
     bags_to_salvage_from[GW::Constants::Bag::Backpack] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_backpack), bags_to_salvage_from[GW::Constants::Bag::Backpack]);
     bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
@@ -1767,6 +1770,8 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::Checkbox("Bag 1", &bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
     ImGui::SameLine();
     ImGui::Checkbox("Bag 2", &bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
+    ImGui::Checkbox("Salvage All with Control+Click", &salvage_all_on_ctrl_click);
+    ImGui::ShowHelp("Control+Click a salvage kit to open the Salvage All window");
 
     ImGui::Separator();
     ImGui::Text("Hide items from merchant sell window:");
@@ -2236,7 +2241,23 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
     const Item* item = nullptr;
     switch (type) {
         case 7: // Left click
-            if (ImGui::IsKeyDown(ImGuiMod_Ctrl) 
+            if (salvage_all_on_ctrl_click && ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
+                // Ctrl+Click on salvage kit: Open salvage all window
+                item = static_cast<Item*>(GW::Items::GetHoveredItem());
+                if (!item) {
+                    return;
+                }
+
+                ImGui::CloseCurrentPopup();
+                im.CancelSalvage();
+                if (im.context_item.set(item)) {
+                    SalvageAllType salvage_type = SalvageAllType::GoldAndLower;
+                    im.salvage_all_type = salvage_type;
+                    im.SalvageAll(salvage_type);
+                }
+                return;
+            }
+            else if (ImGui::IsKeyDown(ImGuiMod_Ctrl) 
                 && GameSettings::GetSettingBool("move_item_on_ctrl_click") 
                 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
                 // Ctrl+Click: Move item to inventory/chest
