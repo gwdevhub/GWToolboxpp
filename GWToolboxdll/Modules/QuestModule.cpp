@@ -729,6 +729,18 @@ bool QuestModule::CanTerminate()
 {
     return !GetCustomQuestMarker();
 }
+void QuestModule::FetchMissingQuestInfo() {
+    GW::GameThread::Enqueue([]() {
+        const auto quest_log = GW::QuestMgr::GetQuestLog();
+        if (!quest_log) return;
+        for (auto& quest : *quest_log) {
+            if ((quest.log_state & 1) == 0) {
+                GW::QuestMgr::RequestQuestInfo(&quest);
+            }
+        }
+    });
+
+}
 void QuestModule::Terminate()
 {
     ToolboxModule::Terminate();
