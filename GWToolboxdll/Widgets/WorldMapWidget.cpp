@@ -65,6 +65,7 @@ namespace {
     GuiUtils::EncString hovered_quest_description;
 
     bool show_lines_on_world_map = true;
+    bool showing_all_quests = true;
 
     bool MapContainsWorldPos(GW::Constants::MapID map_id, const GW::Vec2f& world_map_pos, GW::Constants::Campaign campaign)
     {
@@ -588,7 +589,7 @@ bool WorldMapWidget::WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GameP
         current_map_context->map_boundaries[3], current_map_context->map_boundaries[4],
     });
 
-    const auto gwinches_per_unit = 96.f;
+    constexpr auto gwinches_per_unit = 96.f;
 
     // Calculate the mid-point of the map in world coordinates
     GW::Vec2f map_mid_world_point = {
@@ -620,7 +621,7 @@ bool WorldMapWidget::GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2
     });
 
     // NB: World map is 96 gwinches per unit, this is hard coded in the GW source
-    const auto gwinches_per_unit = 96.f;
+    constexpr auto gwinches_per_unit = 96.f;
     GW::Vec2f map_mid_world_point = {
         map_bounds.Min.x + (abs(game_map_rect.Min.x) / gwinches_per_unit),
         map_bounds.Min.y + (abs(game_map_rect.Max.y) / gwinches_per_unit),
@@ -654,6 +655,7 @@ void WorldMapWidget::LoadSettings(ToolboxIni* ini)
     ToolboxWidget::LoadSettings(ini);
     LOAD_BOOL(showing_all_outposts);
     LOAD_BOOL(show_lines_on_world_map);
+    LOAD_BOOL(showing_all_quests);
 }
 
 void WorldMapWidget::SaveSettings(ToolboxIni* ini)
@@ -661,6 +663,7 @@ void WorldMapWidget::SaveSettings(ToolboxIni* ini)
     ToolboxWidget::SaveSettings(ini);
     SAVE_BOOL(showing_all_outposts);
     SAVE_BOOL(show_lines_on_world_map);
+    SAVE_BOOL(showing_all_quests);
 }
 
 void WorldMapWidget::Draw(IDirect3DDevice9*)
@@ -704,11 +707,10 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         ImGui::Checkbox("Show toolbox minimap lines", &show_lines_on_world_map);
         show_lines_on_world_map_rect = c->LastItemData.Rect;
         show_lines_on_world_map_rect.Translate(mouse_offset);
+        ImGui::Checkbox("Show quest markers for all quests", &showing_all_quests);
     }
     ImGui::End();
     ImGui::PopStyleColor();
-
-
 
     hovered_quest_id = GW::Constants::QuestID::None;
     // Draw all quest markers on world map if applicable
@@ -716,7 +718,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         AppendMapPortals();
         const auto active_quest_id = GW::QuestMgr::GetActiveQuestId();
         for (auto& quest : *quest_log) {
-            if (Minimap::ShouldDrawAllQuests() || quest.quest_id == active_quest_id) {
+            if (showing_all_quests || quest.quest_id == active_quest_id) {
                 if (DrawQuestMarkerOnWorldMap(&quest)) {
                     hovered_quest_id = quest.quest_id;
                 }
