@@ -139,7 +139,7 @@ namespace {
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
         if (set_active) {
-            GW::GameThread::Enqueue([] {
+            GW::GameThread::Enqueue([quest_id] {
                 GW::QuestMgr::SetActiveQuestId(quest_id);
             });
             return false;
@@ -149,12 +149,11 @@ namespace {
                 return false;
         }
         if (wiki) {
-            GW::GameThread::Enqueue([quest_id]() {
-                const auto quest = GW::QuestMgr::GetQuest(quest_id);
-                if (!quest)
-                    return;
-                const auto wiki_url = std::format("{}Game_link:Quest_{}", GuiUtils::WikiUrl(L""), (uint32_t)quest->quest_id);
-                SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)wiki_url.c_str());
+            GW::GameThread::Enqueue([quest_id] {
+                if (GW::QuestMgr::GetQuest(quest_id)) {
+                    const auto wiki_url = std::format("{}Game_link:Quest_{}", GuiUtils::WikiUrl(L""), (uint32_t)quest_id);
+                    SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)wiki_url.c_str());
+                }
             });
             return false;
         }
