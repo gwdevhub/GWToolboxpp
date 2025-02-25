@@ -132,9 +132,9 @@ namespace {
         ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
         const auto size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
         ImGui::Separator();
-        bool set_active = ImGui::Button("Set active quest", size);
-        bool travel = ImGui::Button("Travel to nearest outpost", size);
-        bool wiki = ImGui::Button("Guild Wars Wiki", size);
+        const bool set_active = ImGui::Button("Set active quest", size);
+        const bool travel = ImGui::Button("Travel to nearest outpost", size);
+        const bool wiki = ImGui::Button("Guild Wars Wiki", size);
 
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
@@ -159,7 +159,7 @@ namespace {
         return true;
     }
 
-    const uint32_t GetMapPropModelFileId(GW::MapProp* prop)
+    uint32_t GetMapPropModelFileId(GW::MapProp* prop)
     {
         if (!(prop && prop->h0034[4]))
             return 0;
@@ -441,10 +441,11 @@ namespace {
 
 
         bool is_hovered = false;
+        const auto color = QuestModule::GetQuestColor(quest->quest_id);
 
 
         // draw_quest_marker
-        auto draw_quest_marker = [&](const GW::Vec2f& quest_marker_pos) {
+        const auto draw_quest_marker = [&](const GW::Vec2f& quest_marker_pos) {
             const auto viewport_quest_pos = CalculateViewportPos(quest_marker_pos, world_map_context->top_left);
 
             const ImRect icon_rect = {
@@ -461,14 +462,14 @@ namespace {
             draw_list->AddImageQuad(
                 *quest_icon_texture,
                 rotated_points[0], rotated_points[1], rotated_points[2], rotated_points[3],
-                uv_points[0], uv_points[1], uv_points[2], uv_points[3]
+                uv_points[0], uv_points[1], uv_points[2], uv_points[3], color
             );
 
             return icon_rect.Contains(ImGui::GetMousePos());
         };
 
         // draw_quest_arrow
-        auto draw_quest_arrow = [&](const GW::Vec2f& quest_marker_pos) {
+        const auto draw_quest_arrow = [&](const GW::Vec2f& quest_marker_pos) {
             const auto viewport_quest_pos = CalculateViewportPos(quest_marker_pos, world_map_context->top_left);
             const auto viewport_player_pos = CalculateViewportPos(player_world_map_pos, world_map_context->top_left);
             // Calculate the vector from your position to the quest marker
@@ -476,8 +477,8 @@ namespace {
             const float dy = viewport_quest_pos.y - viewport_player_pos.y;
 
             // Calculate the rotation angle in radians using atan2, pointing away from the player
-            float rotation_angle = atan2f(-dy, -dx);
-            rotation_angle += (float)M_PI;
+            float rotation_angle = std::atan2f(-dy, -dx);
+            rotation_angle += DirectX::XM_PI;
 
             const ImRect icon_rect = {
                 {viewport_quest_pos.x - quest_icon_size_half, viewport_quest_pos.y - quest_icon_size_half},
@@ -493,7 +494,7 @@ namespace {
             draw_list->AddImageQuad(
                 *quest_icon_texture,
                 rotated_points[0], rotated_points[1], rotated_points[2], rotated_points[3],
-                uv_points[0], uv_points[1], uv_points[2], uv_points[3]
+                uv_points[0], uv_points[1], uv_points[2], uv_points[3], color
             );
 
             return icon_rect.Contains(ImGui::GetMousePos());
@@ -710,8 +711,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
 
     hovered_quest_id = GW::Constants::QuestID::None;
     // Draw all quest markers on world map if applicable
-    const auto quest_log = GW::QuestMgr::GetQuestLog();
-    if (quest_log) {
+    if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
         AppendMapPortals();
         for (auto& quest : *quest_log) {
             if (DrawQuestMarkerOnWorldMap(&quest)) {
@@ -786,7 +786,7 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
         case WM_GW_RBUTTONCLICK: {
             if (!(world_map_context && GW::UI::GetIsWorldMapShowing()))
                 break;
-            if (const auto hovered_quest = GW::QuestMgr::GetQuest(hovered_quest_id)) {
+            if (GW::QuestMgr::GetQuest(hovered_quest_id)) {
                 ImGui::SetContextMenu(HoveredQuestContextMenu, (void*)hovered_quest_id);
                 break;
             }
