@@ -565,11 +565,14 @@ std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::Que
 
 ImU32 QuestModule::GetQuestColor(GW::Constants::QuestID quest_id)
 {
-    const auto is_active_quest = GW::QuestMgr::GetActiveQuestId() == quest_id;
-    if (is_active_quest) {
+    if (GW::QuestMgr::GetActiveQuestId() == quest_id) {
         return Minimap::Instance().symbols_renderer.color_quest;
     }
-    const auto quest_index = (uint32_t)quest_id % quest_colors.size();
+    const auto other_quests_color = Minimap::Instance().symbols_renderer.color_other_quests;
+    if (other_quests_color & IM_COL32_A_MASK) {
+        return other_quests_color;
+    }
+    const auto quest_index = static_cast<uint32_t>(quest_id) % quest_colors.size();
     return quest_colors.at(quest_index);
 }
 

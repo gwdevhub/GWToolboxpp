@@ -120,7 +120,7 @@ namespace {
     {
         if (!GW::Map::GetWorldMapContext())
             return false;
-        const auto quest_id = (GW::Constants::QuestID)((uint32_t)wparam);
+        const auto quest_id = static_cast<GW::Constants::QuestID>(reinterpret_cast<uint32_t>(wparam));
         const auto quest = GW::QuestMgr::GetQuest(quest_id);
         if (!quest)
             return false;
@@ -151,7 +151,7 @@ namespace {
         if (wiki) {
             GW::GameThread::Enqueue([quest_id] {
                 if (GW::QuestMgr::GetQuest(quest_id)) {
-                    const auto wiki_url = std::format("{}Game_link:Quest_{}", GuiUtils::WikiUrl(L""), (uint32_t)quest_id);
+                    const auto wiki_url = std::format("{}Game_lmink:Quest_{}", GuiUtils::WikiUrl(L""), static_cast<uint32_t>(quest_id));
                     SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)wiki_url.c_str());
                 }
             });
@@ -714,9 +714,12 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     // Draw all quest markers on world map if applicable
     if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
         AppendMapPortals();
+        const auto active_quest_id = GW::QuestMgr::GetActiveQuestId();
         for (auto& quest : *quest_log) {
-            if (DrawQuestMarkerOnWorldMap(&quest)) {
-                hovered_quest_id = quest.quest_id;
+            if (Minimap::ShouldDrawAllQuests() || quest.quest_id == active_quest_id) {
+                if (DrawQuestMarkerOnWorldMap(&quest)) {
+                    hovered_quest_id = quest.quest_id;
+                }
             }
         }
     }
@@ -728,7 +731,6 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             ImGui::SetTooltip("%s", quest_name.string().c_str());
         }
     }
-
 
     /*for (const auto& portal : map_portals) {
         static constexpr auto uv0 = ImVec2(0.0f, 0.0f);

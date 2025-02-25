@@ -28,6 +28,7 @@ namespace {
 void SymbolsRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {
     color_quest = Colors::Load(ini, section, "color_quest", 0xFF22EF22);
+    color_other_quests = Colors::Load(ini, section, "color_other_quests", 0x00006400);
     color_north = Colors::Load(ini, section, "color_north", 0xFFFF8000);
     color_modifier = Colors::Load(ini, section, "color_symbols_modifier", 0x001E1E1E);
 
@@ -37,6 +38,7 @@ void SymbolsRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 void SymbolsRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
 {
     Colors::Save(ini, section, "color_quest", color_quest);
+    Colors::Save(ini, section, "color_other_quests", color_other_quests);
     Colors::Save(ini, section, "color_north", color_north);
     Colors::Save(ini, section, "color_symbols_modifier", color_modifier);
 }
@@ -46,14 +48,20 @@ void SymbolsRenderer::DrawSettings()
     ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?", [&](bool result, void*) {
         if (result) {
             color_quest = 0xFF22EF22;
+            color_other_quests = 0x00006400;
             color_north = 0xFFFF8000;
             color_modifier = 0x001E1E1E;
             Invalidate();
         }
         });
-    if (Colors::DrawSettingHueWheel("Quest marker", &color_quest)) {
+    if (Colors::DrawSettingHueWheel("Active quest marker", &color_quest)) {
         Invalidate();
     }
+    if (Colors::DrawSettingHueWheel("Other quest markers", &color_other_quests)) {
+        Invalidate();
+    }
+    ImGui::ShowHelp("Quest markers that are not the active quest will be shown in this colour, if the option 'Draw all quests' is enabled.\n"
+                    "If this colour has an alpha of 0, the inactive quest markers will all have random colours.");
     if (Colors::DrawSettingHueWheel("North marker", &color_north)) {
         Invalidate();
     }
