@@ -2024,8 +2024,9 @@ void InventoryManager::Draw(IDirect3DDevice9*)
                 CancelSalvage();
                 ImGui::CloseCurrentPopup();
             }
-            else if (check_all_items && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            else if (has_items_to_salvage && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                 check_all_items = false;
+                has_items_to_salvage = false;
                 for (size_t i = 0; i < potential_salvage_all_items.size(); i++) {
                     potential_salvage_all_items[i]->proceed = false;
                 }
