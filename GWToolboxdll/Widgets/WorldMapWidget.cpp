@@ -139,7 +139,9 @@ namespace {
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
         if (set_active) {
-            GW::QuestMgr::SetActiveQuestId(quest_id);
+            GW::GameThread::Enqueue([] {
+                GW::QuestMgr::SetActiveQuestId(quest_id);
+            });
             return false;
         }
         if (travel) {
