@@ -2013,12 +2013,12 @@ void InventoryManager::Draw(IDirect3DDevice9*)
             auto btn_width = ImVec2(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x, 0);
             if (has_items_to_salvage) {
                 btn_width.x /= 2;
-                if (ImGui::Button("OK", btn_width)) {
+                if (ImGui::Button("OK", btn_width) || ImGui::IsKeyDown(ImGuiKey_Space) || ImGui::IsKeyDown(ImGuiKey_Enter)) {
                     is_salvaging_all = true;
                 }
                 ImGui::SameLine();
             }
-            if (ImGui::Button("Cancel", btn_width)) {
+            if (ImGui::Button("Cancel", btn_width) || ImGui::IsKeyDown(ImGuiKey_Escape)) {
                 CancelSalvage();
                 ImGui::CloseCurrentPopup();
             }
