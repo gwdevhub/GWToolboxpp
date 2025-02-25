@@ -27,17 +27,6 @@
 #include <GWCA/Utilities/MemoryPatcher.h>
 
 namespace {
-    constexpr auto quest_colors = std::to_array<Color>({
-        Colors::Red(), Colors::Pink(), Colors::Purple(),
-        Colors::DeepPurple(), Colors::Indigo(), Colors::Blue(),
-        Colors::LightBlue(), Colors::Cyan(), Colors::Teal(),
-        Colors::Yellow(), Colors::Amber(), Colors::Orange(),
-        Colors::DeepOrange(), Colors::Green(), Colors::Lime(),
-        Colors::Magenta(), Colors::Gold(), Colors::BlueGrey(),
-        Colors::White(), Colors::MaterialBlue(), Colors::MaterialGreen(),
-        Colors::MaterialRed(), Colors::MaterialYellow()
-    });
-
     bool draw_quest_path_on_terrain = false;
     bool draw_quest_path_on_minimap = true;
     bool draw_quest_path_on_mission_map = true;
@@ -568,12 +557,7 @@ ImU32 QuestModule::GetQuestColor(GW::Constants::QuestID quest_id)
     if (GW::QuestMgr::GetActiveQuestId() == quest_id) {
         return Minimap::Instance().symbols_renderer.color_quest;
     }
-    const auto other_quests_color = Minimap::Instance().symbols_renderer.color_other_quests;
-    if (other_quests_color & IM_COL32_A_MASK) {
-        return other_quests_color;
-    }
-    const auto quest_index = static_cast<uint32_t>(quest_id) % quest_colors.size();
-    return quest_colors.at(quest_index);
+    return Minimap::Instance().symbols_renderer.color_other_quests;
 }
 
 void QuestModule::DrawSettingsInternal()

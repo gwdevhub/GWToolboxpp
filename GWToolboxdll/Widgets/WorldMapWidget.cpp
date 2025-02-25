@@ -437,7 +437,6 @@ namespace {
         bool is_hovered = false;
         const auto color = QuestModule::GetQuestColor(quest->quest_id);
 
-
         // draw_quest_marker
         const auto draw_quest_marker = [&](const GW::Vec2f& quest_marker_pos) {
             const auto viewport_quest_pos = CalculateViewportPos(quest_marker_pos, world_map_context->top_left);
@@ -456,7 +455,7 @@ namespace {
             draw_list->AddImageQuad(
                 *quest_icon_texture,
                 rotated_points[0], rotated_points[1], rotated_points[2], rotated_points[3],
-                uv_points[0], uv_points[1], uv_points[2], uv_points[3], color
+                uv_points[0], uv_points[1], uv_points[2], uv_points[3], color & IM_COL32_A_MASK ? color : IM_COL32_WHITE
             );
 
             return icon_rect.Contains(ImGui::GetMousePos());
