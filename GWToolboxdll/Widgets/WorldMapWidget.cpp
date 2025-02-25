@@ -36,11 +36,8 @@
 
 
 namespace {
-    ImRect show_all_rect;
-    ImRect hard_mode_rect;
-    ImRect place_marker_rect;
-    ImRect remove_marker_rect;
-    ImRect show_lines_on_world_map_rect;
+
+    ImRect controls_window_rect = {0, 0, 0, 0};
 
     IDirect3DTexture9** quest_icon_texture = nullptr;
     IDirect3DTexture9** player_icon_texture = nullptr;
@@ -101,9 +98,6 @@ namespace {
             });
             return false;
         }
-        place_marker_rect = c->LastItemData.Rect;
-        place_marker_rect.Translate(viewport_offset);
-        memset(&remove_marker_rect, 0, sizeof(remove_marker_rect));
         if (QuestModule::GetCustomQuestMarker()) {
             if (ImGui::Button("Remove Marker")) {
                 GW::GameThread::Enqueue([] {
@@ -111,8 +105,6 @@ namespace {
                 });
                 return false;
             }
-            remove_marker_rect = c->LastItemData.Rect;
-            remove_marker_rect.Translate(viewport_offset);
         }
         return true;
     }
@@ -677,19 +669,17 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowPos(ImVec2(16.f, 16.f), ImGuiCond_FirstUseEver);
     visible = true;
+    ImGuiWindow* window = nullptr;
+    auto mouse_offset = viewport_offset;
+    mouse_offset.x *= -1;
+    mouse_offset.y *= -1;
     if (ImGui::Begin(Name(), &visible, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
-        const auto c = ImGui::GetCurrentContext();
-        auto mouse_offset = viewport_offset;
-        mouse_offset.x *= -1;
-        mouse_offset.y *= -1;
-
+        window = ImGui::GetCurrentWindowRead();
         if (ImGui::Checkbox("Show all areas", &showing_all_outposts)) {
             GW::GameThread::Enqueue([] {
                 ShowAllOutposts(showing_all_outposts);
             });
         }
-        show_all_rect = c->LastItemData.Rect;
-        show_all_rect.Translate(mouse_offset);
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
             bool is_hard_mode = GW::PartyMgr::GetIsPartyInHardMode();
             if (ImGui::Checkbox("Hard mode", &is_hard_mode)) {
@@ -697,20 +687,21 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
                     GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
                 });
             }
-            hard_mode_rect = c->LastItemData.Rect;
-            hard_mode_rect.Translate(mouse_offset);
         }
-        else {
-            memset(&hard_mode_rect, 0, sizeof(hard_mode_rect));
-        }
-
         ImGui::Checkbox("Show toolbox minimap lines", &show_lines_on_world_map);
-        show_lines_on_world_map_rect = c->LastItemData.Rect;
-        show_lines_on_world_map_rect.Translate(mouse_offset);
-        ImGui::Checkbox("Show quest markers for all quests", &showing_all_quests);
+        if (ImGui::Checkbox("Show quest markers for all quests", &showing_all_quests)) {
+            QuestModule::FetchMissingQuestInfo();
+        }
     }
+
+    
     ImGui::End();
     ImGui::PopStyleColor();
+
+    if (window) {
+        controls_window_rect = window->Rect();
+        controls_window_rect.Translate(mouse_offset);
+    }
 
     hovered_quest_id = GW::Constants::QuestID::None;
     // Draw all quest markers on world map if applicable
@@ -805,17 +796,14 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
             ImGui::SetContextMenu(WorldMapContextMenu);
         }
         break;
+        case WM_LBUTTONDBLCLK:
         case WM_LBUTTONUP:
         case WM_LBUTTONDOWN:
             if (!drawn || !GW::UI::GetIsWorldMapShowing())
                 return false;
             if (ImGui::ShowingContextMenu())
                 return true;
-            if (check_rect(show_lines_on_world_map_rect))
-                return true;
-            if (check_rect(hard_mode_rect))
-                return true;
-            if (check_rect(show_all_rect))
+            if (check_rect(controls_window_rect))
                 return true;
             break;
     }
