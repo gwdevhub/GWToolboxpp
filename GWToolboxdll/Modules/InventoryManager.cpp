@@ -2018,9 +2018,17 @@ void InventoryManager::Draw(IDirect3DDevice9*)
                 }
                 ImGui::SameLine();
             }
-            if (ImGui::Button("Cancel", btn_width) || ImGui::IsKeyDown(ImGuiKey_Escape)) {
+            // Pressing [Escape] when no item is selected results in the window being closed.
+            // Or pressing [Escape] when some items are selected results in everything being unselected.
+            if (ImGui::Button("Cancel", btn_width) || ImGui::IsKeyPressed(ImGuiKey_Escape) && !has_items_to_salvage) {
                 CancelSalvage();
                 ImGui::CloseCurrentPopup();
+            }
+            else if (check_all_items && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+                check_all_items = false;
+                for (size_t i = 0; i < potential_salvage_all_items.size(); i++) {
+                    potential_salvage_all_items[i]->proceed = false;
+                }
             }
         }
         ImGui::EndPopup();
