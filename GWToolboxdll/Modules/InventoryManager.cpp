@@ -1941,7 +1941,7 @@ void InventoryManager::Draw(IDirect3DDevice9*)
         else if (is_salvaging_all) {
             // Salvage in progress
             ImGui::Text("Salvaging items...");
-            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            if (ImGui::Button("Cancel", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                 pending_cancel_salvage = true;
                 ImGui::CloseCurrentPopup();
             }
