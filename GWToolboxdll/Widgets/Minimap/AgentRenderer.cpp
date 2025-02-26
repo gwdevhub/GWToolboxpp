@@ -214,9 +214,9 @@ void AgentRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
     default_shape = static_cast<Shape_e>(ini->GetLongValue(section, VAR_NAME(default_shape), default_shape));
     shape_player = static_cast<Shape_e>(ini->GetDoubleValue(section, VAR_NAME(shape_player), shape_player));
     shape_players = static_cast<Shape_e>(ini->GetDoubleValue(section, VAR_NAME(shape_players), shape_players));
-    agent_border_thickness =
-        static_cast<uint32_t>(ini->GetLongValue(section, VAR_NAME(agent_border_thickness), agent_border_thickness));
-
+    agent_border_thickness = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(agent_border_thickness), agent_border_thickness));
+    target_border_thickness = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(target_border_thickness), target_border_thickness));
+    
     show_hidden_npcs = ini->GetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
 
     LoadCustomAgents();
@@ -284,8 +284,8 @@ void AgentRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
     ini->SetLongValue(section, VAR_NAME(default_shape), default_shape);
     ini->SetLongValue(section, VAR_NAME(shape_player), shape_player);
     ini->SetLongValue(section, VAR_NAME(shape_players), shape_players);
-    ini->SetLongValue(section, VAR_NAME(agent_border_thickness), agent_border_thickness);
-
+    ini->SetDoubleValue(section, VAR_NAME(target_border_thickness), target_border_thickness);
+    ini->SetDoubleValue(section, VAR_NAME(agent_border_thickness), agent_border_thickness);
     SAVE_BOOL(show_props_on_minimap);
 
     ini->SetBoolValue(section, VAR_NAME(show_hidden_npcs), show_hidden_npcs);
@@ -319,7 +319,8 @@ void AgentRenderer::LoadDefaultSizes()
     size_boss = 125.0f;
     size_minion = 50.0f;
     size_marked_target = 75.0f;
-    agent_border_thickness = 0;
+    agent_border_thickness = 0.f;
+    target_border_thickness = 50.0f;
 }
 
 void AgentRenderer::LoadDefaultColors()
@@ -1238,11 +1239,11 @@ void AgentRenderer::Enqueue(const Shape_e shape, const GW::Agent* agent, const f
         }
         // Add agent border if applicable
         if (agent_border_thickness && agent->GetIsLivingType()) {
-            Enqueue(shape, pos, size + static_cast<float>(agent_border_thickness), Colors::ARGB(static_cast<int>(alpha * 0.8), 0, 0, 0));
+            Enqueue(shape, pos, size + agent_border_thickness, Colors::ARGB(static_cast<int>(alpha * 0.8), 0, 0, 0));
         }
         // Add target highlight if applicable
         if (is_target) {
-            Enqueue(shape, pos, size + 50.0f, color_target);
+            Enqueue(shape, pos, size + target_border_thickness, color_target);
             target_drawn = true;
         }
     }

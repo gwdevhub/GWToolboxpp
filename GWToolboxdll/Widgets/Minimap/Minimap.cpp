@@ -964,7 +964,8 @@ void Minimap::DrawSettingsInternal()
     ImGui::Checkbox("Show symbol for quest NPCs", &agent_renderer.show_quest_npcs_on_minimap);
     ImGui::ShowHelp("Show a star for NPCs that have quest progress available");
 
-    ImGui::SliderInt("Agent Border thickness", reinterpret_cast<int*>(&agent_renderer.agent_border_thickness), 0, 50);
+    ImGui::SliderFloat("Agent Border thickness", &agent_renderer.agent_border_thickness, 0.f, 100.f, "%.0f");
+    ImGui::SliderFloat("Target Border thickness", &agent_renderer.target_border_thickness, 0.f, 100.f, "%.0f");
 
     ImGui::Text("Allow mouse click-through in:");
     ImGui::Indent();

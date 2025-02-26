@@ -41,7 +41,8 @@ public:
     bool show_hidden_npcs = false;
     bool show_quest_npcs_on_minimap = false;
     bool boss_colors = true;
-    uint32_t agent_border_thickness = 0;
+    float agent_border_thickness = 0.f;
+    float target_border_thickness = 50.f;
 
     uint32_t auto_target_id = 0;
 
