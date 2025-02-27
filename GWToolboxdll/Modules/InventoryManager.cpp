@@ -1011,6 +1011,13 @@ bool InventoryManager::WndProc(const UINT message, const WPARAM, const LPARAM)
             }
         }
         break;
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN: {
+            if (ImGui::GetIO().WantCaptureKeyboard) {
+                return true;
+            }
+        }
+        break;
     }
     return false;
 }
@@ -1951,7 +1958,7 @@ void InventoryManager::Draw(IDirect3DDevice9*)
         else if (is_salvaging_all) {
             // Salvage in progress
             ImGui::Text("Salvaging items...");
-            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            if (ImGui::Button("Cancel", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                 pending_cancel_salvage = true;
                 ImGui::CloseCurrentPopup();
             }
@@ -2023,14 +2030,23 @@ void InventoryManager::Draw(IDirect3DDevice9*)
             auto btn_width = ImVec2(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x, 0);
             if (has_items_to_salvage) {
                 btn_width.x /= 2;
-                if (ImGui::Button("OK", btn_width)) {
+                if (ImGui::Button("OK", btn_width) || ImGui::IsKeyDown(ImGuiKey_Space) || ImGui::IsKeyDown(ImGuiKey_Enter)) {
                     is_salvaging_all = true;
                 }
                 ImGui::SameLine();
             }
-            if (ImGui::Button("Cancel", btn_width)) {
+            // Pressing [Escape] when no item is selected results in the window being closed.
+            // Or pressing [Escape] when some items are selected results in everything being unselected.
+            if (ImGui::Button("Cancel", btn_width) || ImGui::IsKeyPressed(ImGuiKey_Escape) && !has_items_to_salvage) {
                 CancelSalvage();
                 ImGui::CloseCurrentPopup();
+            }
+            else if (has_items_to_salvage && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+                check_all_items = false;
+                has_items_to_salvage = false;
+                for (size_t i = 0; i < potential_salvage_all_items.size(); i++) {
+                    potential_salvage_all_items[i]->proceed = false;
+                }
             }
         }
         ImGui::EndPopup();
