@@ -1011,13 +1011,6 @@ bool InventoryManager::WndProc(const UINT message, const WPARAM, const LPARAM)
             }
         }
         break;
-        case WM_KEYDOWN:
-        case WM_SYSKEYDOWN: {
-            if (ImGui::GetIO().WantCaptureKeyboard) {
-                return true;
-            }
-        }
-        break;
     }
     return false;
 }
