@@ -6,6 +6,7 @@
 
 #include "FontLoader.h"
 #include <Modules/Resources.h>
+#include <Utils/TextUtils.h>
 #include "toolbox_default_font.h"
 
 #include "fonts/fontawesome5.h"
@@ -305,7 +306,7 @@ namespace {
     }
 
 
-    ImFont* BuildFont(const float size, bool first_only = false)
+    ImFont* BuildFont(const float size, bool default_only = false)
     {
         const auto atlas = IM_NEW(ImFontAtlas);
 
@@ -321,21 +322,23 @@ namespace {
         cfg.OversampleH = 1; // OversampleH = 2 for base text size (harder to read if OversampleH < 2)
         cfg.OversampleV = 1;
 
+        // Always load the default font
         cfg.MergeMode = false;
-        if (first_only) {
-            atlas->AddFontFromMemoryCompressedTTF(toolbox_default_font_compressed_data, toolbox_default_font_compressed_size, size, &cfg, toolbox_default_font_glyph_ranges);
-        }
-        else {
-            for (const auto& font : GetFontData()) {
-                void* data;
+        atlas->AddFontFromMemoryCompressedTTF(toolbox_default_font_compressed_data, toolbox_default_font_compressed_size, size, &cfg, toolbox_default_font_glyph_ranges);
+
+        if (!default_only) {
+            // Load more fonts from disk, overriding glyph ranges from original
+            for (const auto& [glyph_ranges, font_name] : GetFontData()) {
                 size_t data_size;
 
-                ASSERT(!font.font_name.empty() && "Font name is empty, this shouldn't happen. Contact the developers.");
-                const auto path = Resources::GetPath(font.font_name);
-                data = ImFileLoadToMemory(path.string().c_str(), "rb", &data_size, 0);
+                ASSERT(!font_name.empty() && "Font name is empty, this shouldn't happen. Contact the developers.");
+                const auto font_name_str = TextUtils::WStringToString(font_name);
+                void* data = ImFileLoadToMemory(font_name_str.c_str(), "rb", &data_size, 0);
 
-                atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, font.glyph_ranges.data());
-                cfg.MergeMode = true; // for all but the first
+                if (!data)
+                    continue; // Failed to load data from disk
+                cfg.MergeMode = true;
+                atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, glyph_ranges.data());
             }
         }
         if (size <= 20.f) {
@@ -349,7 +352,7 @@ namespace {
         return atlas->Fonts.back();
     }
 
-    // Do dont loading into memory; run on a separate thread.
+    // Load fonts into memory; run on a separate thread.
     void LoadFontsThread()
     {
         Hook_ImGui_ImplDX9_Functions();
@@ -375,55 +378,50 @@ namespace {
                 : dst_font(dst_font),
                   font_size(font_size) {}
 
-            void build(bool first_font_only = false)
+            void build(const bool default_font_only = false)
             {
-                src_font = BuildFont(static_cast<float>(font_size), first_font_only);
+                src_font = BuildFont(static_cast<float>(font_size), default_font_only);
             }
         };
 
-        auto assign_fonts = [](std::vector<FontPending>* fonts_built) {
+        const auto assign_fonts = [](const std::vector<FontPending>& fonts_built) {
             ImGui_ImplDX9_InvalidateDeviceObjects();
-            for (auto& pending : *fonts_built) {
+            for (auto& pending : fonts_built) {
                 ReleaseFont(*pending.dst_font);
             }
             IM_DELETE(ImGui::GetIO().Fonts);
-            for (auto& pending : *fonts_built) {
+            for (auto& pending : fonts_built) {
                 *pending.dst_font = pending.src_font;
             }
-            ImGui::GetIO().Fonts = fonts_built->at(0).src_font->ContainerAtlas;
-            delete fonts_built;
+            ImGui::GetIO().Fonts = fonts_built.at(0).src_font->ContainerAtlas;
         };
 
-        auto first_pass = new std::vector<FontPending>({
+        FontPending default_font = {&font_text, FontLoader::FontSize::text};
+        default_font.build(true);
+
+        Resources::EnqueueDxTask([assign_fonts, default_font](IDirect3DDevice9*) {
+            assign_fonts({default_font});
+            printf("Loaded default font\n");
+            fonts_loaded = true;
+            fonts_loading = false;
+        });
+
+        auto all_fonts = std::vector<FontPending>{
             {&font_text, FontLoader::FontSize::text},
             {&font_header2, FontLoader::FontSize::header2},
             {&font_header1, FontLoader::FontSize::header1},
             {&font_widget_label, FontLoader::FontSize::widget_label},
             {&font_widget_small, FontLoader::FontSize::widget_small},
             {&font_widget_large, FontLoader::FontSize::widget_large}
-        });
-
-        // First pass; only build the first font.
-        for (auto& pending : *first_pass) {
-            pending.build(true);
-        }
-
-        Resources::EnqueueDxTask([assign_fonts, fonts = first_pass](IDirect3DDevice9*) {
-            assign_fonts(fonts);
-            printf("Fonts loaded\n");
-            fonts_loaded = true;
-            fonts_loading = false;
-        });
-
-        // First pass; build full glyph ranges
-        auto second_pass = new std::vector<FontPending>(*first_pass);
-        for (auto& pending : *second_pass) {
+        };
+        for (auto& pending : all_fonts) {
             pending.build();
         }
 
-        Resources::EnqueueDxTask([assign_fonts, fonts = second_pass](IDirect3DDevice9*) {
+        Resources::EnqueueDxTask([assign_fonts, fonts = std::move(all_fonts)](IDirect3DDevice9*) {
             assign_fonts(fonts);
-            });
+            printf("Loaded all fonts\n");
+        });
     }
 }
 
@@ -433,7 +431,7 @@ namespace FontLoader {
         if (!GImGui)
             return false;
 
-        for (auto font : GetFonts()) {
+        for (const auto font : GetFonts()) {
             if (font && font->ContainerAtlas == ImGui::GetIO().Fonts)
                 continue;
             ReleaseFontTexture(font);
@@ -448,7 +446,7 @@ namespace FontLoader {
         if (fonts_loading)
             return false;
 
-        for (auto font : GetFonts()) {
+        for (const auto font : GetFonts()) {
             if (!(font && font->ContainerAtlas))
                 continue;
             if (font->ContainerAtlas == ImGui::GetIO().Fonts)

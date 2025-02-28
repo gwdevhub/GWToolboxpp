@@ -11,7 +11,6 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <Modules/QuestModule.h>
 #include <ImGuiAddons.h>
-#include <GWCA/Managers/RenderMgr.h>
 
 namespace {
     bool draw_all_terrain_lines = false;

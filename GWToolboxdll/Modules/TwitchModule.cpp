@@ -12,6 +12,9 @@
 #include <ImGuiAddons.h>
 #include <Utils/TextUtils.h>
 
+#include <Modules/Resources.h>
+#include <Timer.h>
+
 namespace {
     // IRC details
     std::string irc_server = "irc.chat.twitch.tv";
@@ -21,6 +24,7 @@ namespace {
     std::string irc_channel;
     std::string irc_alias = "Twitch";
     Color irc_chat_color = Colors::RGB(0xAD, 0x83, 0xFA);
+    const char* client_id = "8vlivyypw5qmaxtknh44t98h9uun6l";
 
     bool show_messages = true;
     bool notify_on_user_leave = true;
@@ -37,15 +41,86 @@ namespace {
     GW::HookEntry SendChatCallback_Entry;
     GW::HookEntry StartWhisperCallback_Entry;
 
+    bool fetch_oauth_token = false;
+    bool cancel_fetch_oauth_token = false;
+    void GetOauthToken() {
+        if (fetch_oauth_token) return;
+        fetch_oauth_token = true;
+        Resources::EnqueueWorkerTask([]() {
+            const auto scopes = "chat:edit chat:read";
+            const auto url = "https://id.twitch.tv/oauth2/device"; // No parameters in URL
+            std::string request_body = std::format("client_id={}&scope={}", client_id, scopes);
+            std::string response;
+            if (!Resources::Post(url, request_body, response)) { // Set correct content type
+                return Log::Warning(response.c_str()), fetch_oauth_token = false;
+            }
+
+            const auto json = nlohmann::json::parse(response);
+            if (!json.contains("verification_uri") || !json.contains("device_code") || !json.contains("interval")) {
+                return Log::Warning("Invalid or missing response fields for Twitch auth"), fetch_oauth_token = false;
+            }
+
+            auto verification_uri = json["verification_uri"].get<std::string>();
+            auto device_code = json["device_code"].get<std::string>();
+            auto interval = json["interval"].get<int>();
+
+            ShellExecuteA(nullptr, "open", verification_uri.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+
+            std::string access_token;
+
+            // Poll Twitch for token
+            const auto token_url = "https://id.twitch.tv/oauth2/token";
+            auto start_time = TIMER_INIT();
+
+            while (access_token.empty() && !cancel_fetch_oauth_token) {
+                if (TIMER_DIFF(start_time) > 30000) {
+                    break;
+                }
+                std::this_thread::sleep_for(std::chrono::seconds(interval)); // Wait for polling interval
+
+                // Manually format as form-urlencoded data
+                std::string request_data = std::format("client_id={}&scopes={}&device_code={}&grant_type=urn:ietf:params:oauth:grant-type:device_code",
+                        TextUtils::UrlEncode(client_id), 
+                        TextUtils::UrlEncode(scopes),
+                        TextUtils::UrlEncode(device_code));
+                std::string token_response;
+
+                if (!Resources::Post(token_url, request_data, token_response)) {
+                    continue;
+                }
+
+                auto token_json = nlohmann::json::parse(token_response);
+                if (token_json.contains("access_token")) {
+                    access_token = token_json["access_token"].get<std::string>();
+                    break;
+                }
+                if (token_json.contains("error")) {
+                    std::string error = token_json["error"].get<std::string>();
+                    if (error == "authorization_pending") {
+                        continue;
+                    }
+                    if (error == "slow_down") {
+                        interval += 5; // Increase wait time
+                        continue;
+                    }
+                    else {
+                        Log::Warning(error.c_str());
+                        break;
+                    }
+                }
+            }
+            if (!access_token.empty()) {
+                irc_password = std::move(access_token);
+                Log::Info("Oauth token updated successfully");
+            }
+            return fetch_oauth_token = false;
+        });
+    }
+
+
     void WriteChat(const wchar_t* message, const char* nick = nullptr)
     {
-        char sender[128];
-        if (nick) {
-            snprintf(sender, std::size(sender), "%s @ %s", nick, irc_alias.c_str());
-        }
-        else {
-            snprintf(sender, std::size(sender), "%s", irc_alias.c_str());
-        }
+        const auto sender = nick ? std::format("{} @ {}", nick, irc_alias) : irc_alias;
         std::wstring sender_ws = TextUtils::StringToWString(sender);
         auto message_ws = new wchar_t[255];
         size_t message_len = 0;
@@ -102,7 +177,7 @@ namespace {
         if (!notify_on_user_join) {
             return 0;
         }
-        swprintf(buf, 599, L"%s joined your channel.", TextUtils::StringToWString(hostd->nick).c_str());
+        swprintf(buf, 599, L"%s joined the channel.", TextUtils::StringToWString(hostd->nick).c_str());
         WriteChat(buf);
         return 0;
     }
@@ -115,7 +190,7 @@ namespace {
         }
 
         wchar_t buf[600];
-        swprintf(buf, 599, L"%s left your channel.", TextUtils::StringToWString(hostd->nick).c_str());
+        swprintf(buf, 599, L"%s left the channel.", TextUtils::StringToWString(hostd->nick).c_str());
         WriteChat(buf);
         return 0;
     }
@@ -135,6 +210,7 @@ namespace {
         Log::Log("%s: Connected %s", irc_alias.c_str(), params);
         sprintf(buf, "#%s", irc_channel.c_str());
         conn->join(buf);
+        conn->raw("CAP REQ :twitch.tv/membership twitch.tv/commands\r\n");
         return 0;
     }
 
@@ -240,8 +316,6 @@ void TwitchModule::Initialize()
     SetMessageColor(GW::Chat::Channel::CHANNEL_GWCA1, col2);
 }
 
-
-
 bool TwitchModule::IsConnected() { return connected; }
 IRC* TwitchModule::irc() { return &irc_conn; }
 
@@ -255,12 +329,14 @@ void TwitchModule::Disconnect()
     connected = irc_conn.is_connected();
 }
 
-void TwitchModule::Terminate()
-{
-    ToolboxModule::Terminate();
+void TwitchModule::SignalTerminate() {
     Disconnect();
     GW::UI::RemoveUIMessageCallback(&SendChatCallback_Entry);
     GW::UI::RemoveUIMessageCallback(&StartWhisperCallback_Entry);
+    cancel_fetch_oauth_token = true;
+}
+bool TwitchModule::CanTerminate() {
+    return !fetch_oauth_token;
 }
 
 bool TwitchModule::Connect()
@@ -299,13 +375,13 @@ bool TwitchModule::Connect()
             return static_cast<char>(tolower(c));
         });
 
+    auto with_oauth_prefix = std::format("{}{}", irc_password.starts_with("oauth:") ? "" : "oauth:", irc_password);
     if (irc_connection->start(
             irc_server.c_str(),
             irc_port,
             "unused",
             "unused",
-            "unused",
-            irc_password.c_str()) != 0) {
+            "unused", with_oauth_prefix.c_str()) != 0) {
         printf("IRC::start failed!\n");
         return false;
     }
@@ -380,11 +456,8 @@ void TwitchModule::DrawSettingsInternal()
         ImGui::Indent();
         const ImColor col(102, 187, 238, 255);
         ImGui::TextColored(col.Value, "Click Here to get a Twitch Oauth Token");
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Go to %s", "https://twitchapps.com/tmi/");
-        }
         if (ImGui::IsItemClicked()) {
-            ShellExecute(nullptr, "open", "https://twitchapps.com/tmi/", nullptr, nullptr, SW_SHOWNORMAL);
+            GetOauthToken();
         }
         ImGui::Unindent();
         ImGui::PushItemWidth(width);

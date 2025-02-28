@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include <GWCA/Utilities/Scanner.h>
-#include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 
 #include <Logger.h>

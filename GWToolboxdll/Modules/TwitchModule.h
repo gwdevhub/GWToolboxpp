@@ -22,7 +22,8 @@ public:
     [[nodiscard]] const char* SettingsName() const override { return "Third Party Integration"; }
 
     void Initialize() override;
-    void Terminate() override;
+    void SignalTerminate() override;
+    bool CanTerminate() override;
     void Update(float delta) override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;

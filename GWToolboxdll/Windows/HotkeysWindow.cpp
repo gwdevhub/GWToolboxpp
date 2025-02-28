@@ -645,13 +645,12 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
         HotkeyToggle::processing = false;
     }
     if (Message == WM_ACTIVATE) {
+        wndproc_keys_held.reset();
         OnWindowActivated(LOWORD(wParam) != WA_INACTIVE);
         return false;
     }
-    if (GW::MemoryMgr::GetGWWindowHandle() != GetActiveWindow()) {
-        return false;
-    }
-    if (GW::Chat::GetIsTyping()) {
+    if (GW::MemoryMgr::GetGWWindowHandle() != GetActiveWindow() || GW::Chat::GetIsTyping()) {
+        wndproc_keys_held.reset();
         return false;
     }
     auto check_triggers = [](bool is_key_up, uint32_t keyData) {
@@ -661,7 +660,7 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
                 hk->pressed = false;
             if (!hk->pressed
                 && hk->trigger_on_key_up == is_key_up
-                && hk->key_combo == wndproc_keys_held
+                && (hk->key_combo & wndproc_keys_held) == hk->key_combo
                 && hk->key_combo.test(keyData)) {
                 PushPendingHotkey(hk);
                 if (!is_key_up && hk->block_gw) {

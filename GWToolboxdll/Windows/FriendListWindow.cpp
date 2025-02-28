@@ -6,7 +6,6 @@
 
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Party.h>
 
 #include <GWCA/Managers/StoCMgr.h>

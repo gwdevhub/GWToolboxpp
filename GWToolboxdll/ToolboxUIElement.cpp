@@ -130,14 +130,18 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
 
 void ToolboxUIElement::ShowVisibleRadio()
 {
-    ImGui::SameLine(ImGui::GetContentRegionAvail().x
-                    - ImGui::GetTextLineHeight()
-                    - ImGui::GetStyle().FramePadding.y * 2);
+    const auto style = ImGui::GetStyle();
+    const auto btn_width = ImGui::GetTextLineHeight() * 1.6f;
+    ImGui::SameLine(ImGui::GetContentRegionAvail().x - btn_width + (style.FramePadding.x * 3));
     ImGui::PushID(Name());
-    ImGui::Checkbox("##check", &visible);
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Visible");
+    ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0.5f));
+    const auto color = visible ? ImGui::GetStyleColorVec4(ImGuiCol_Text) : ImVec4(0.1f, 0.1f, 0.1f, 1.f);
+    ImGui::PushStyleColor(ImGuiCol_Text, color);
+    if (ImGui::Button(visible ? ICON_FA_EYE : ICON_FA_EYE_SLASH, { btn_width ,0})) {
+        visible = !visible;
     }
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
     ImGui::PopID();
 }
 

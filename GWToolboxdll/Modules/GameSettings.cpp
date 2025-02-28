@@ -43,6 +43,7 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
+#include <GWCA/Managers/MerchantMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
 
@@ -54,6 +55,7 @@
 #include <Modules/ChatSettings.h>
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>
+#include <Modules/Resources.h>
 #include <Windows/CompletionWindow.h>
 
 #include <Color.h>
@@ -214,6 +216,16 @@ namespace {
     bool remove_window_border_in_windowed_mode = false;
     bool prevent_weapon_spell_animation_on_player = false;
     bool block_vanquish_complete_popup = false;
+
+    bool was_leading = true;
+    bool hide_dungeon_chest_popup = false;
+    bool skip_entering_name_for_faction_donate = false;
+    bool stop_screen_shake = false;
+    bool disable_camera_smoothing = false;
+
+    bool check_message_on_party_change = true;
+
+    bool is_prompting_hard_mode_mission = false;
 
     GW::HookEntry SkillList_UICallback_HookEntry;
     GW::UI::UIInteractionCallback SkillList_UICallback_Func = 0, SkillList_UICallback_Ret = 0;
@@ -1049,43 +1061,31 @@ namespace {
 
     GW::HookEntry OnQuestUIMessage_HookEntry;
 
-    void OnPostQuestUIMessage(const GW::HookStatus* status, const GW::UI::UIMessage message_id, void*, void*)
-    {
-        switch (message_id) {
-            case GW::UI::UIMessage::kSendSetActiveQuest:
-                if (status->blocked) {
-                    break;
-                }
-                player_requested_active_quest_id = GW::QuestMgr::GetActiveQuestId();
-                break;
-            case GW::UI::UIMessage::kQuestAdded:
-                if (status->blocked) {
-                    break;
-                }
-                if (GW::QuestMgr::GetActiveQuestId() == player_requested_active_quest_id) {
-                    break;
-                }
-                if (keep_current_quest_when_new_quest_added) {
-                    // Re-request a quest change
-                    const auto quest = GW::QuestMgr::GetQuest(player_requested_active_quest_id);
-                    if (!quest) {
-                        break;
-                    }
-                    GW::Packet::StoC::QuestAdd packet;
-                    packet.quest_id = quest->quest_id;
-                    packet.marker = quest->marker;
-                    packet.map_to = quest->map_to;
-                    packet.log_state = quest->log_state;
-                    packet.map_from = quest->map_from;
-                    wcscpy(packet.location, quest->location);
-                    wcscpy(packet.name, quest->name);
-                    wcscpy(packet.npc, quest->npc);
-                    GW::StoC::EmulatePacket(&packet); // Why? Can we not send more ui messages if thats the need?
-                    GW::QuestMgr::SetActiveQuestId(quest->quest_id);
-                }
-
-                break;
+    void OnQuestAdded(uint32_t) {
+        if (GW::QuestMgr::GetActiveQuestId() == player_requested_active_quest_id) {
+            return;
         }
+        if (keep_current_quest_when_new_quest_added) {
+            // Re-request a quest change
+            const auto quest = GW::QuestMgr::GetQuest(player_requested_active_quest_id);
+            if (!quest) {
+                return;
+            }
+            // Emulate the StoC packet because the packet handler itself sorts memory out, and then calls affected modules via UI messages with the new (current) data...
+            GW::Packet::StoC::QuestAdd packet;
+            packet.quest_id = quest->quest_id;
+            packet.marker = quest->marker;
+            packet.map_to = quest->map_to;
+            packet.log_state = quest->log_state;
+            packet.map_from = quest->map_from;
+            wcscpy(packet.location, quest->location);
+            wcscpy(packet.name, quest->name);
+            wcscpy(packet.npc, quest->npc);
+            // ...We do this because sending UI messages doesn't actually update the quest data, it only notifies te ui that stuff has changed
+            GW::StoC::EmulatePacket(&packet);
+            GW::QuestMgr::SetActiveQuestId(quest->quest_id);
+        }
+
     }
 
     void CHAT_CMD_FUNC(CmdReinvite)
@@ -1236,6 +1236,44 @@ namespace {
         }
     }
 
+    // Pre-fill character name when donating faction
+    void SkipCharacterNameEntryForFactionDonation(bool immediate = true)
+    {
+        if (!skip_entering_name_for_faction_donate) return;
+        if (!immediate) {
+            Resources::EnqueueWorkerTask([]() {
+                // When a donation is complete, there are several different ui messages that come in varying sequence; give 500ms to ensure all are processed by the game first
+                Sleep(500);
+                GW::GameThread::Enqueue([]() {
+                    SkipCharacterNameEntryForFactionDonation(true);
+                });
+            });
+            return;
+        }
+        auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"NPCInteract"), 0, 0);
+        const auto sign_btn = GW::UI::GetChildFrame(frame, 2);
+        if (!(sign_btn && sign_btn->IsVisible() && sign_btn->IsDisabled())) return; // If sign button isn't visible, the player doesn't have enough faction
+        const auto name_input = GW::UI::GetChildFrame(frame, 4, 2);
+        if (!name_input) return;
+        const auto agent_enc_name = GW::PlayerMgr::GetPlayerName();
+        // Prefill and hide the name input
+        GW::UI::SendFrameUIMessage(name_input, (GW::UI::UIMessage)0x4e, (void*)agent_enc_name);
+        GW::UI::SetFrameVisible(name_input, 0);
+        // Show and enable the "Sign" button
+        GW::UI::SetFrameDisabled(sign_btn, 0);
+    }
+
+    void OnDialogButton(GW::UI::DialogButtonInfo* packet) {
+        if (auto_open_locked_chest_with_key && wcscmp(packet->message, L"\x8101\x7F88\x10A\x8101\x13BE\x1") == 0) {
+            // Auto use key
+            DialogModule::SendDialog(packet->dialog_id);
+        }
+        if (auto_open_locked_chest && wcscmp(packet->message, L"\x8101\x7f88\x010a\x8101\x730e\x1") == 0) {
+            // Auto use lockpick
+            DialogModule::SendDialog(packet->dialog_id);
+        }
+    }
+
     GW::HookEntry OnPostUIMessage_HookEntry;
     void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*) {
         if (status->blocked)
@@ -1248,6 +1286,12 @@ namespace {
                 GW::UI::ButtonClick(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Party"), 1, 10, 6));
             }
         } break;
+        case GW::UI::UIMessage::kSendSetActiveQuest:
+            player_requested_active_quest_id = GW::QuestMgr::GetActiveQuestId();
+            break;
+        case GW::UI::UIMessage::kQuestAdded:
+            OnQuestAdded(*(uint32_t*)wParam);
+            break;
         case GW::UI::UIMessage::kTradeSessionStart: {
             if (flash_window_on_trade) {
                 FlashWindow();
@@ -1255,6 +1299,12 @@ namespace {
             if (focus_window_on_trade) {
                 FocusWindow();
             }
+        } break;
+        case GW::UI::UIMessage::kVendorTransComplete: {
+            SkipCharacterNameEntryForFactionDonation(false);
+        } break;
+        case GW::UI::UIMessage::kVendorWindow: {
+            SkipCharacterNameEntryForFactionDonation(true);
         } break;
         case GW::UI::UIMessage::kPartySearchInviteSent: {
             // Automatically send a party window invite when a party search invite is sent
@@ -1268,16 +1318,16 @@ namespace {
                 CheckRemoveWindowBorder();
         } break;
         case GW::UI::UIMessage::kPartyDefeated: {
-            if (auto_return_on_defeat && GW::PartyMgr::GetIsLeader() && !GW::PartyMgr::ReturnToOutpost())
-                Log::Warning("Failed to return to outpost");
+            if (auto_return_on_defeat && GW::PartyMgr::GetIsLeader())
+                GW::PartyMgr::ReturnToOutpost() || (Log::Warning("Failed to return to outpost"), true);
         } break;
         case GW::UI::UIMessage::kMapLoaded: {
             last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
         } break;
         case GW::UI::UIMessage::kShowCancelEnterMissionBtn: {
             CheckPromptBeforeEnterMission(status);
-            if (status->blocked && !GW::Map::CancelEnterChallenge())
-                Log::Warning("Failed to cancel mission entry");
+            if (status->blocked)
+                GW::Map::CancelEnterChallenge() || (Log::Warning("Failed to cancel mission entry"), true);
             break;
         } break;
         case GW::UI::UIMessage::kVanquishComplete: {
@@ -1285,6 +1335,9 @@ namespace {
                 GW::Chat::SendChat('/', L"age");
             if (block_vanquish_complete_popup)
                 GW::UI::SetFrameVisible(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6, 8), false) || (Log::Warning("Failed to hide vanquish popup"), true);
+        } break;
+        case GW::UI::UIMessage::kDialogButton: {
+            OnDialogButton((GW::UI::DialogButtonInfo*)wParam);
         } break;
         }
     }
@@ -1585,7 +1638,6 @@ void GameSettings::Initialize()
         GW::Hook::EnableHooks(CharacterStatIncreased_Func);
     }
 
-    RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendDialog, bind_member(this, &GameSettings::OnFactionDonate));
     RegisterUIMessageCallback(&OnDialog_Entry, GW::UI::UIMessage::kSendLoadSkillTemplate, &OnPreLoadSkillBar);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_1, OnUpdateSkillCount, -0x3000);
     GW::StoC::RegisterPacketCallback(&OnDialog_Entry, GAME_SMSG_SKILL_UPDATE_SKILL_COUNT_2, OnUpdateSkillCount, -0x3000);
@@ -1645,20 +1697,6 @@ void GameSettings::Initialize()
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusCallback_Entry, FriendStatusCallback);
     RegisterUIMessageCallback(&OnPreSendDialog_Entry, GW::UI::UIMessage::kSendPingWeaponSet, OnPingWeaponSet);
 
-    constexpr GW::UI::UIMessage dialog_ui_messages[] = {
-        GW::UI::UIMessage::kSendDialog,
-        GW::UI::UIMessage::kDialogBody,
-        GW::UI::UIMessage::kDialogButton
-    };
-    for (const auto message_id : dialog_ui_messages) {
-        RegisterUIMessageCallback(
-            &OnPostSendDialog_Entry,
-            message_id,
-            OnDialogUIMessage,
-            0x8000
-        );
-    }
-
     constexpr GW::UI::UIMessage party_target_ui_messages[] = {
         GW::UI::UIMessage::kTargetPlayerPartyMember,
         GW::UI::UIMessage::kTargetNPCPartyMember,
@@ -1686,7 +1724,12 @@ void GameSettings::Initialize()
         GW::UI::UIMessage::kShowCancelEnterMissionBtn,
         GW::UI::UIMessage::kPartyDefeated,
         GW::UI::UIMessage::kVanquishComplete,
-        GW::UI::UIMessage::kPartyShowConfirmDialog
+        GW::UI::UIMessage::kPartyShowConfirmDialog,
+        GW::UI::UIMessage::kVendorWindow,
+        GW::UI::UIMessage::kDialogButton,
+        GW::UI::UIMessage::kQuestAdded,
+        GW::UI::UIMessage::kSendSetActiveQuest,
+        GW::UI::UIMessage::kVendorTransComplete
     };
     for (const auto message_id : post_ui_messages) {
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
@@ -1699,13 +1742,6 @@ void GameSettings::Initialize()
 
     set_window_title_delay = TIMER_INIT();
 
-    GW::UI::UIMessage ui_message_ids[] = {
-        GW::UI::UIMessage::kQuestAdded,
-        GW::UI::UIMessage::kSendSetActiveQuest
-    };
-    for (const auto message_id : ui_message_ids) {
-        RegisterUIMessageCallback(&OnQuestUIMessage_HookEntry, message_id, OnPostQuestUIMessage, 0x8000);
-    }
     player_requested_active_quest_id = GW::QuestMgr::GetActiveQuestId();
 
     last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
@@ -1717,24 +1753,6 @@ void GameSettings::Initialize()
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();
 #endif
-}
-
-void GameSettings::OnDialogUIMessage(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
-{
-    switch (message_id) {
-        case GW::UI::UIMessage::kDialogButton: {
-            const auto info = static_cast<GW::UI::DialogButtonInfo*>(wparam);
-            if (auto_open_locked_chest_with_key && wcscmp(info->message, L"\x8101\x7F88\x10A\x8101\x13BE\x1") == 0) {
-                // Auto use key
-                DialogModule::SendDialog(info->dialog_id);
-            }
-            if (auto_open_locked_chest && wcscmp(info->message, L"\x8101\x7f88\x010a\x8101\x730e\x1") == 0) {
-                // Auto use lockpick
-                DialogModule::SendDialog(info->dialog_id);
-            }
-        }
-        break;
-    }
 }
 
 
@@ -2582,48 +2600,6 @@ void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::St
         }
     }
     GW::StoC::EmulatePacket(&pak2);
-}
-
-// Skip char name entry dialog when donating faction
-void GameSettings::OnFactionDonate(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) const
-{
-    const auto dialog_id = (uint32_t)wparam;
-    if (!(dialog_id == 0x87 && skip_entering_name_for_faction_donate)) {
-        return;
-    }
-    uint32_t allegiance = 2;
-    const auto raising_luxon_faction_cap = L"\x8102\x4A32\xAF32\xBDB5\x21AE";
-    const auto raising_kurzick_faction_cap = L"\x8102\x4A26\x814C\x89CC\x5B0";
-    // Look for "Raising Luxon/Kurzick faction cap" dialog option to check allegiance
-    for (const auto dialog : DialogModule::Instance().GetDialogButtons()) {
-        if (wcscmp(dialog->message, raising_luxon_faction_cap) == 0) {
-            allegiance = 1; // Luxon
-        }
-        if (wcscmp(dialog->message, raising_kurzick_faction_cap) == 0) {
-            allegiance = 0; // Kurzick
-        }
-    }
-    const uint32_t* current_faction = nullptr;
-    switch (allegiance) {
-        case 0: // Kurzick
-            current_faction = &GW::GetWorldContext()->current_kurzick;
-            break;
-        case 1: // Luxon
-            current_faction = &GW::GetWorldContext()->current_luxon;
-            break;
-        default: // Didn't find an allegiance, not the relevent dialog
-            return;
-    }
-    GW::GuildContext* c = GW::GetGuildContext();
-    if (!c || !c->player_guild_index || c->guilds[c->player_guild_index]->faction != allegiance) {
-        return; // Alliance isn't the right faction. Return here and the NPC will reply.
-    }
-    if (*current_faction < 5000) {
-        return; // Not enough to donate. Return here and the NPC will reply.
-    }
-    status->blocked = true;
-    GW::PlayerMgr::DepositFaction(allegiance);
-    GW::Agents::InteractAgent(GW::Agents::GetAgentByID(DialogModule::GetDialogAgent()));
 }
 
 // Show a message when player leaves the outpost

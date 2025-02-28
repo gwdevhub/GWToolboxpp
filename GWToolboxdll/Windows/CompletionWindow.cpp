@@ -12,6 +12,7 @@
 #include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Item.h>
 
+#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
@@ -1591,7 +1592,7 @@ void CompletionWindow::Initialize()
     skills.push_back(new PvESkill(SkillID::Vow_of_Revolution));
     skills.push_back(new PvESkill(SkillID::Heroic_Refrain));
 
-    const GW::UI::UIMessage message_ids[] = {
+    constexpr auto message_ids = {
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kSendDialog,
         GW::UI::UIMessage::kDialogButton,

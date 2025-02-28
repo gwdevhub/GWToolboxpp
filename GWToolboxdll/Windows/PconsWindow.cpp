@@ -4,6 +4,7 @@
 
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Skill.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -12,24 +13,20 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
-
-#include <GWCA/GameEntities/Skill.h>
-
+#include <Color.h>
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
-
+#include <Utils/TextUtils.h>
 #include <Widgets/AlcoholWidget.h>
 #include <Windows/HotkeysWindow.h>
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
-#include <Utils/TextUtils.h>
 
 using namespace GW::Constants;
 
 bool Pcon::map_has_effects_array = false;
 
 namespace {
-
     GW::HookEntry ChatCmd_HookEntry;
 
     PconAlcohol* pcon_alcohol = nullptr;
@@ -78,19 +75,19 @@ namespace {
     // Map of which objectives to check per map_id
     std::vector<DWORD> objectives_complete = {};
     const std::map<GW::Constants::MapID, std::vector<DWORD>>
-        objectives_to_complete_by_map_id = {
-            {GW::Constants::MapID::The_Fissure_of_Woe, {309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319}}, // Can be done in any order - check them all.
-            {GW::Constants::MapID::The_Deep, {421}},
-            {GW::Constants::MapID::Urgozs_Warren, {357}},
-            {GW::Constants::MapID::The_Underworld, {157}} // Only need to check for Nightman Cometh for Underworld.
+    objectives_to_complete_by_map_id = {
+        {GW::Constants::MapID::The_Fissure_of_Woe, {309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319}}, // Can be done in any order - check them all.
+        {GW::Constants::MapID::The_Deep, {421}},
+        {GW::Constants::MapID::Urgozs_Warren, {357}},
+        {GW::Constants::MapID::The_Underworld, {157}} // Only need to check for Nightman Cometh for Underworld.
     };
     std::vector<DWORD> current_objectives_to_check = {};
 
     // Map of which locations to turn off near by map_id e.g. Kanaxai, Urgoz
     const std::map<GW::Constants::MapID, GW::Vec2f>
-        final_room_location_by_map_id = {
-            {GW::Constants::MapID::The_Deep, GW::Vec2f(30428.0f, -5842.0f)},     // Rough location of Kanaxai
-            {GW::Constants::MapID::Urgozs_Warren, GW::Vec2f(-2800.0f, 14316.0f)} // Front entrance of Urgoz's room
+    final_room_location_by_map_id = {
+        {GW::Constants::MapID::The_Deep, GW::Vec2f(30428.0f, -5842.0f)},     // Rough location of Kanaxai
+        {GW::Constants::MapID::Urgozs_Warren, GW::Vec2f(-2800.0f, 14316.0f)} // Front entrance of Urgoz's room
     };
     GW::Vec2f current_final_room_location = GW::Vec2f(0, 0);
 
@@ -185,7 +182,8 @@ namespace {
     };
 
 
-    PconsWindow& Instance() {
+    PconsWindow& Instance()
+    {
         return PconsWindow::Instance();
     }
 
@@ -215,49 +213,55 @@ namespace {
     }
 
     GW::HookEntry OnUIMessage_HookEntry;
-    void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
+
+    void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
+    {
         switch (message_id) {
-        case GW::UI::UIMessage::kAgentSpeechBubble: {
-            const auto packet = (GW::UI::UIPacket::kAgentSpeechBubble*)wparam;
-            const std::wstring_view msg{ packet->message, 4 };
-            if (PconAlcohol::suppress_drunk_text && std::ranges::contains(drunk_messages, msg))
-                status->blocked = true;
-        } break;
-        case GW::UI::UIMessage::kVanquishComplete:
-            if(enabled && disable_cons_on_vanquish_completion)
-                Instance().SetEnabled(false);
-            break;
-        case GW::UI::UIMessage::kDungeonComplete:
-            if (enabled && disable_cons_on_dungeon_completion)
-                Instance().SetEnabled(false);
-            break;
-        case GW::UI::UIMessage::kMissionComplete:
-            if (enabled && disable_cons_on_mission_completion)
-                Instance().SetEnabled(false);
-            break;
-        case GW::UI::UIMessage::kObjectiveComplete: {
-            const auto packet = (GW::UI::UIPacket::kObjectiveComplete*)wparam;
-            objectives_complete.push_back(packet->objective_id);
-            CheckObjectivesCompleteAutoDisable();
-        } break;
-        case GW::UI::UIMessage::kPostProcessingEffect: {
-            auto packet = (GW::UI::UIPacket::kPostProcessingEffect*)wparam;
-            PconAlcohol::alcohol_level = (uint32_t)(packet->amount * 5.f);
-            // printf("Level = %d, tint = %d\n", pak->level, pak->tint);
-            if (enabled) {
-                pcon_alcohol->Update();
+            case GW::UI::UIMessage::kAgentSpeechBubble: {
+                const auto packet = (GW::UI::UIPacket::kAgentSpeechBubble*)wparam;
+                const std::wstring_view msg{packet->message, 4};
+                if (PconAlcohol::suppress_drunk_text && std::ranges::contains(drunk_messages, msg))
+                    status->blocked = true;
             }
-            if (PconAlcohol::suppress_drunk_effect) {
-                packet->amount = 0.f;
+            break;
+            case GW::UI::UIMessage::kVanquishComplete:
+                if (enabled && disable_cons_on_vanquish_completion)
+                    Instance().SetEnabled(false);
+                break;
+            case GW::UI::UIMessage::kDungeonComplete:
+                if (enabled && disable_cons_on_dungeon_completion)
+                    Instance().SetEnabled(false);
+                break;
+            case GW::UI::UIMessage::kMissionComplete:
+                if (enabled && disable_cons_on_mission_completion)
+                    Instance().SetEnabled(false);
+                break;
+            case GW::UI::UIMessage::kObjectiveComplete: {
+                const auto packet = (GW::UI::UIPacket::kObjectiveComplete*)wparam;
+                objectives_complete.push_back(packet->objective_id);
+                CheckObjectivesCompleteAutoDisable();
             }
-        } break;
-        case GW::UI::UIMessage::kEffectAdd: {
-            auto packet = (GW::UI::UIPacket::kEffectAdd*)wparam;
-            if (PconAlcohol::suppress_lunar_skills
-                && (packet->effect->skill_id == SkillID::Spiritual_Possession || packet->effect->skill_id == SkillID::Lucky_Aura)) {
-                status->blocked = true;
+            break;
+            case GW::UI::UIMessage::kPostProcessingEffect: {
+                auto packet = (GW::UI::UIPacket::kPostProcessingEffect*)wparam;
+                PconAlcohol::alcohol_level = (uint32_t)(packet->amount * 5.f);
+                // printf("Level = %d, tint = %d\n", pak->level, pak->tint);
+                if (enabled) {
+                    pcon_alcohol->Update();
+                }
+                if (PconAlcohol::suppress_drunk_effect) {
+                    packet->amount = 0.f;
+                }
             }
-        } break;
+            break;
+            case GW::UI::UIMessage::kEffectAdd: {
+                auto packet = (GW::UI::UIPacket::kEffectAdd*)wparam;
+                if (PconAlcohol::suppress_lunar_skills
+                    && (packet->effect->skill_id == SkillID::Spiritual_Possession || packet->effect->skill_id == SkillID::Lucky_Aura)) {
+                    status->blocked = true;
+                }
+            }
+            break;
         }
     }
 }
@@ -339,7 +343,7 @@ PconsWindow::PconsWindow()
                                     ItemID::PahnaiSalad, SkillID::Pahnai_Salad_item_effect, 10));
 
     pcons.push_back(new PconScroll("XP scroll", "XP scroll", "scroll", L"Scroll of Hunter's Insight",
-                                 {0, 0}, {1, 1}, 20));
+                                   {0, 0}, {1, 1}, 20));
 
     // Refillers
 
@@ -384,13 +388,13 @@ void PconsWindow::Initialize()
     AlcoholWidget::Instance().Initialize(); // Pcons depend on alcohol widget to track current drunk level.
 
     const GW::UI::UIMessage ui_messages[] = {
-         GW::UI::UIMessage::kAgentSpeechBubble,
-         GW::UI::UIMessage::kVanquishComplete,
-         GW::UI::UIMessage::kDungeonComplete,
-         GW::UI::UIMessage::kMissionComplete,
-         GW::UI::UIMessage::kPostProcessingEffect,
-         GW::UI::UIMessage::kObjectiveComplete,
-         GW::UI::UIMessage::kEffectAdd
+        GW::UI::UIMessage::kAgentSpeechBubble,
+        GW::UI::UIMessage::kVanquishComplete,
+        GW::UI::UIMessage::kDungeonComplete,
+        GW::UI::UIMessage::kMissionComplete,
+        GW::UI::UIMessage::kPostProcessingEffect,
+        GW::UI::UIMessage::kObjectiveComplete,
+        GW::UI::UIMessage::kEffectAdd
     };
     for (auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, message_id, OnUIMessage);
@@ -414,9 +418,9 @@ void PconsWindow::Terminate()
 
 void PconsWindow::OnAddExternalBond(GW::HookStatus* status, const GW::Packet::StoC::AddExternalBond* pak)
 {
-    if (PconAlcohol::suppress_lunar_skills 
+    if (PconAlcohol::suppress_lunar_skills
         && pak->caster_id == GW::Agents::GetObservingId()
-        && pak->receiver_id == 0 
+        && pak->receiver_id == 0
         && (pak->skill_id == static_cast<DWORD>(SkillID::Spiritual_Possession) || pak->skill_id == static_cast<DWORD>(SkillID::Lucky_Aura))) {
         // printf("blocked skill %d\n", pak->skill_id);
         status->blocked = true;
@@ -454,7 +458,8 @@ void PconsWindow::OnAgentState(GW::HookStatus*, GW::Packet::StoC::AgentState* pa
     }
 }
 
-void CHAT_CMD_FUNC(PconsWindow::CmdPcons) {
+void CHAT_CMD_FUNC(PconsWindow::CmdPcons)
+{
     if (argc <= 1) {
         Instance().ToggleEnable();
     }
@@ -561,9 +566,8 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(1, 1));
-    
-    if (ImGui::BeginTable("#pcons_table", std::max(items_per_row,1)))
-    {
+
+    if (ImGui::BeginTable("#pcons_table", std::max(items_per_row, 1))) {
         for (auto pcon : pcons) {
             if (!pcon->IsVisible())
                 continue;
@@ -657,6 +661,7 @@ bool PconsWindow::GetEnabled() const
 }
 
 void PconsWindow::ToggleEnable() { SetEnabled(!enabled); }
+
 bool PconsWindow::SetEnabled(const bool b)
 {
     if (enabled == b) {

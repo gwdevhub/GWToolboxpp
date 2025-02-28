@@ -68,7 +68,6 @@ public:
     static void OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::StoC::GenericValue*);
     static void OnAgentMarker(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak);
     static void OnAgentEffect(GW::HookStatus*, const GW::Packet::StoC::GenericValue*);
-    void OnFactionDonate(GW::HookStatus*, GW::UI::UIMessage, void*, void*) const;
     static void OnPartyDefeated(const GW::HookStatus*, GW::Packet::StoC::PartyDefeated*);
     void OnDungeonReward(GW::HookStatus*, GW::Packet::StoC::DungeonReward*) const;
     static void OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
@@ -83,12 +82,10 @@ public:
     static void OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*);
     static void OnAgentStartCast(GW::HookStatus* status, GW::UI::UIMessage, void*, void*);
     static void OnOpenWiki(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
-    static void OnCast(GW::HookStatus*, uint32_t agent_id, uint32_t slot, uint32_t target_id, uint32_t call_target);
     static void OnAgentAdd(GW::HookStatus* status, const GW::Packet::StoC::AgentAdd* packet);
     static void OnUpdateAgentState(GW::HookStatus* status, GW::Packet::StoC::AgentState* packet);
     static void OnUpdateSkillCount(GW::HookStatus*, void* packet);
     static void OnAgentNameTag(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*);
-    static void OnDialogUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
 private:
     void FactionEarnedCheckAndWarn();
     bool faction_checked = false;
@@ -100,15 +97,7 @@ private:
 
     std::vector<uint32_t> available_dialog_ids{};
 
-    bool was_leading = true;
-    bool hide_dungeon_chest_popup = false;
-    bool skip_entering_name_for_faction_donate = false;
-    bool stop_screen_shake = false;
-    bool disable_camera_smoothing = false;
 
-    bool check_message_on_party_change = true;
-
-    bool is_prompting_hard_mode_mission = false;
 
     GW::HookEntry VanquishComplete_Entry;
     GW::HookEntry ItemClickCallback_Entry;

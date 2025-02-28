@@ -6,6 +6,7 @@
 
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Quest.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/PartyContext.h>
@@ -25,6 +26,7 @@
 #include <Windows/TravelWindow.h>
 #include <Windows/TravelWindowConstants.h>
 #include <Utils/TextUtils.h>
+#include <GWCA/Managers/QuestMgr.h>
 
 namespace {
 
@@ -437,11 +439,7 @@ namespace {
             return;
         }
 
-        if (argOutpost == L"nick" || argOutpost == L"nicholas") {
-            const auto nick = DailyQuests::GetNicholasTheTraveller();
-            Instance().TravelNearest(nick->map_id);
-            return;
-        }
+
         if (argOutpost == L"zv") {
             GW::Chat::SendChat('/', L"zv travel");
             return;
@@ -456,6 +454,18 @@ namespace {
         }
 
         TravelWindow& instance = Instance();
+        if (argOutpost == L"nick" || argOutpost == L"nicholas") {
+            const auto nick = DailyQuests::GetNicholasTheTraveller();
+            instance.TravelNearest(nick->map_id);
+            return;
+        }
+        if (argOutpost == L"quest") {
+            const auto quest = GW::QuestMgr::GetActiveQuest();
+            if (quest && quest->map_to != GW::Constants::MapID::None) {
+                instance.TravelNearest(quest->map_to);
+            }
+            return;
+        }
         if (argOutpost.size() > 2 && argOutpost.compare(0, 3, L"fav", 3) == 0) {
             const std::wstring fav_s_num = argOutpost.substr(3, std::wstring::npos);
             if (fav_s_num.empty()) {

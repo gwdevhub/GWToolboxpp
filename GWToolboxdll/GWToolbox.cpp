@@ -39,7 +39,6 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <hidusage.h>
 
-#include "GWCA/Utilities/Scanner.h"
 #include "Utils/FontLoader.h"
 #include <Utils/ToolboxUtils.h>
 
@@ -530,10 +529,6 @@ namespace {
                           // keyboard messages
         case WM_KEYUP:
         case WM_SYSKEYUP:
-            if (io.WantTextInput) {
-                break; // if imgui wants them, send to imgui (above) and to gw
-            }
-            // else fallthrough
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
         case WM_CHAR:
@@ -545,7 +540,7 @@ namespace {
         case WM_MBUTTONDOWN:
         case WM_MBUTTONDBLCLK:
         case WM_MBUTTONUP:
-            if (io.WantTextInput) {
+            if (io.WantCaptureKeyboard) {
                 return true; // if imgui wants them, send just to imgui (above)
             }
 

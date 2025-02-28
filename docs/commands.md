@@ -58,6 +58,7 @@ GWToolbox++ supports a variety of chat commands that enhance your gameplay exper
 - `/transmo`: Change your character model to that of the target NPC (only visible to you).
   - `/transmo [size (6-255)]`: Set the size of your model.
   - `/transmo <npc_name> [size (6-255)]`: Change your appearance into a specific NPC.
+  - `/transmo model <npc_id> <npc_model_file_id> <npc_model_file> <flags>`: Change your appearance into a specific NPC model.
   - `/transmo reset`: Reset your appearance.
 - `/transmotarget <npc_name> [size (6-255)]`: Change your target's appearance into an NPC (only visible to you).
   - `/transmotarget reset`: Reset your target's appearance.

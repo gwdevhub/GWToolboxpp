@@ -1,7 +1,5 @@
 #pragma once
 
-#include <GWCA/Utilities/Hook.h>
-
 #include <ToolboxWindow.h>
 
 class MaterialsWindow : public ToolboxWindow {

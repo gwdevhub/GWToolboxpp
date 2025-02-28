@@ -256,20 +256,21 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     }
     drawn_settings[section] = true;
 
-    static char buf[128];
-    sprintf(buf, "      %s", section);
-    const auto pos = ImGui::GetCursorScreenPos();
-    const bool is_showing = ImGui::CollapsingHeader(buf, ImGuiTreeNodeFlags_AllowOverlap);
-
     const char* icon = nullptr;
     if (const auto it = icons.find(section); it != icons.end()) {
         icon = it->second;
     }
+    const auto text_height = ImGui::GetTextLineHeightWithSpacing();
+    const auto pos = ImGui::GetCursorScreenPos();
+    const auto padding = ImGui::GetStyle().FramePadding;
+    float header_text_offset_x = text_height + padding.x * 3;
+    const bool is_showing = ImGui::CollapsingHeader(std::format("##{}",section).c_str(), ImGuiTreeNodeFlags_AllowOverlap);
+    ImGui::SameLine(header_text_offset_x);
     if (icon) {
-        const auto& style = ImGui::GetStyle();
-        const float text_offset_x = ImGui::GetTextLineHeightWithSpacing() + 4.0f; // TODO: find a proper number
-        ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x + text_offset_x, pos.y + style.ItemSpacing.y / 2), ImColor(style.Colors[ImGuiCol_Text]), icon);
+        ImGui::TextUnformatted(icon);
+        ImGui::SameLine(header_text_offset_x += text_height + padding.x);
     }
+    ImGui::TextUnformatted(section);
 
     ImGui::PushID(section);
     size_t i = 0;

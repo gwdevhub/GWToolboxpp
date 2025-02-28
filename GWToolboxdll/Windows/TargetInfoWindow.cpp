@@ -17,13 +17,13 @@
 #include <Utils/FontLoader.h>
 
 namespace {
-
     std::map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names_by_id;
     std::unordered_map<std::string, GW::Constants::SkillID> skill_ids_by_name;
 
 
-    const ImVec2 get_texture_size(IDirect3DTexture9* texture) {
-        const ImVec2 uv1 = { 0.f, 0.f };
+    const ImVec2 get_texture_size(IDirect3DTexture9* texture)
+    {
+        const ImVec2 uv1 = {0.f, 0.f};
         if (!texture)
             return uv1;
         D3DSURFACE_DESC desc;
@@ -31,7 +31,7 @@ namespace {
         if (!SUCCEEDED(res)) {
             return uv1; // Don't throw anything into the log here; this function is called every frame by modules that use it!
         }
-        return { static_cast<float>(desc.Width),static_cast<float>(desc.Height) };
+        return {static_cast<float>(desc.Width), static_cast<float>(desc.Height)};
     }
 
     const char* ws = " \t\n\r\f\v";
@@ -55,10 +55,11 @@ namespace {
     {
         return ltrim(rtrim(s, t), t);
     }
+
     // Make sure you pass valid html e.g. start with a < tag
-    std::string& strip_tags(std::string& html) {
-        while (1)
-        {
+    std::string& strip_tags(std::string& html)
+    {
+        while (1) {
             auto startpos = html.find("<");
             if (startpos == std::string::npos)
                 break;
@@ -70,7 +71,9 @@ namespace {
 
         return html;
     }
-    std::string& from_html(std::string& html) {
+
+    std::string& from_html(std::string& html)
+    {
         strip_tags(html);
         trim(html);
         return html;
@@ -87,20 +90,24 @@ namespace {
         std::vector<std::string> items_dropped;
         std::vector<std::string> notes;
         std::unordered_map<std::string, std::string> wiki_armor_ratings; // rating type, rating value
-        std::unordered_map<std::string, std::string> infobox_deets; // key, value
+        std::unordered_map<std::string, std::string> infobox_deets;      // key, value
         enum class TargetInfoState {
             DecodingName,
             FetchingWikiPage,
             ParsingWikiPage,
             Done
         } state;
-        AgentInfo(const wchar_t* _name) {
+
+        AgentInfo(const wchar_t* _name)
+        {
             state = TargetInfoState::DecodingName;
             name.language(GW::Constants::Language::English);
             name.reset(_name);
             name.wstring();
         }
-        static void OnFetchedWikiPage(bool success, const std::string& response, void* context) {
+
+        static void OnFetchedWikiPage(bool success, const std::string& response, void* context)
+        {
             ASSERT(context);
             auto ctx_agent_info = (AgentInfo*)context;
             if (!success) {
@@ -114,13 +121,14 @@ namespace {
         }
     };
 
-    std::unordered_map<std::wstring,AgentInfo*> agent_info_by_name;
+    std::unordered_map<std::wstring, AgentInfo*> agent_info_by_name;
 
     AgentInfo* current_agent_info = nullptr;
 
     GW::HookEntry ui_message_entry;
 
-    void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
+    void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
+    {
         const auto info_target = GW::Agents::GetTarget();
         if (!(info_target && info_target->GetIsLivingType() && info_target->GetAsAgentLiving()->IsNPC()))
             return;
@@ -133,10 +141,14 @@ namespace {
         }
         current_agent_info = agent_info_by_name[name];
     }
-    bool SkillNamesDecoded() {
+
+    bool SkillNamesDecoded()
+    {
         return !skill_ids_by_name.empty();
     }
-    void DecodeSkillNames() {
+
+    void DecodeSkillNames()
+    {
         if (SkillNamesDecoded())
             return;
         if (skill_names_by_id.empty()) {
@@ -159,145 +171,172 @@ namespace {
         }
         for (auto it : skill_names_by_id) {
             // Only match the first of this name to the id
-            if(!skill_ids_by_name.contains(it.second->string()))
+            if (!skill_ids_by_name.contains(it.second->string()))
                 skill_ids_by_name[it.second->string()] = it.first;
             delete it.second;
         }
         skill_names_by_id.clear();
     }
 
+    std::string replace_all(
+        const std::string& str,
+        const std::string& find,
+        const std::string& replace
+    )
+    {
+        std::string result;
+        size_t find_len = find.size();
+        size_t pos = 0, from = 0;
+        while (std::string::npos != (pos = str.find(find, from))) {
+            result.append(str, from, pos - from);
+            result.append(replace);
+            from = pos + find_len;
+        }
+        result.append(str, from, std::string::npos);
+        return result;
+    }
 
-    void UpdateAgentInfos() {
+    std::string native_html_to_text(const std::string& html)
+    {
+        std::string text = html;
+        text = replace_all(text, "&nbsp;", " ");
+        text = replace_all(text, "&amp;", "&");
+        text = replace_all(text, "&lt;", "<");
+        text = replace_all(text, "&gt;", ">");
+        text = replace_all(text, "&quot;", "\"");
+        text = replace_all(text, "&apos;", "'");
+        return text;
+    }
+
+    void UpdateAgentInfos()
+    {
         if (!SkillNamesDecoded())
             return;
         for (auto& it : agent_info_by_name) {
             auto agent_info = it.second;
             const auto state = agent_info->state;
             switch (state) {
-            case AgentInfo::TargetInfoState::DecodingName: {
-                if (agent_info->name.IsDecoding())
-                    break;
-                if (agent_info->name.string().empty()) {
+                case AgentInfo::TargetInfoState::DecodingName: {
+                    if (agent_info->name.IsDecoding())
+                        break;
+                    if (agent_info->name.string().empty()) {
+                        agent_info->state = AgentInfo::TargetInfoState::Done;
+                        break;
+                    }
+                    agent_info->state = AgentInfo::TargetInfoState::FetchingWikiPage;
+
+                    agent_info->wiki_search_term = TextUtils::WStringToString(
+                        TextUtils::SanitizePlayerName(agent_info->name.wstring())
+                    );
+                    trim(agent_info->wiki_search_term);
+                    std::string wiki_url = "https://wiki.guildwars.com/wiki/?search=";
+                    wiki_url.append(TextUtils::UrlEncode(agent_info->wiki_search_term, '_'));
+                    Resources::Download(wiki_url, AgentInfo::OnFetchedWikiPage, agent_info);
+                }
+                break;
+                case AgentInfo::TargetInfoState::ParsingWikiPage:
+                    static const std::regex skill_list_regex("<h2><span class=\"mw-headline\" id=\"Skills\">(?:[\\s\\S]*?)<ul([\\s\\S]*?)</ul>");
+                    std::smatch m;
+                    if (std::regex_search(agent_info->wiki_content, m, skill_list_regex)) {
+                        std::string skill_list_found = m[1].str();
+
+                        // Iterate over all skills in this list.
+                        const auto skill_link_regex = std::regex("<a href=\"[^\"]+\" title=\"([^\"]+)\"");
+                        auto words_begin = std::sregex_iterator(skill_list_found.begin(), skill_list_found.end(), skill_link_regex);
+                        auto words_end = std::sregex_iterator();
+                        for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
+                            const auto skill_name = i->str(1);
+                            const auto skill_name_text = native_html_to_text(skill_name);
+                            const auto found = skill_ids_by_name.find(skill_name_text);
+                            if (found == skill_ids_by_name.end())
+                                continue;
+                            if (std::ranges::contains(agent_info->wiki_skills, found->second))
+                                continue;
+                            agent_info->wiki_skills.push_back(found->second);
+                        }
+                    }
+
+                    static const std::regex armor_ratings_regex("<h2><span class=\"mw-headline\" id=\"Armor_ratings\">([\\s\\S]*?)</table>");
+                    if (std::regex_search(agent_info->wiki_content, m, armor_ratings_regex)) {
+                        std::string armor_table_found = m[1].str();
+                        armor_table_found.erase(std::ranges::remove(armor_table_found, '\n').begin(), armor_table_found.end());
+
+                        // Iterate over all skills in this list.
+                        static const std::regex armor_cell_regex(R"regex(<td>[\s\S]*?title="([^"]+)"[\s\S]*?<td>([0-9 \(\)]+).*?<\/td>)regex");
+                        auto words_begin = std::sregex_iterator(armor_table_found.begin(), armor_table_found.end(), armor_cell_regex);
+                        auto words_end = std::sregex_iterator();
+                        for (auto i = words_begin; i != words_end; ++i) {
+                            auto key = i->str(1);
+                            auto val = i->str(2);
+                            from_html(key);
+                            from_html(val);
+                            if (key.empty() || val.empty())
+                                continue;
+                            agent_info->wiki_armor_ratings[key] = val;
+                        }
+                    }
+
+                    static const std::regex items_dropped_regex("<h2><span class=\"mw-headline\" id=\"Items_dropped\">(?:[\\s\\S]*?)<ul([\\s\\S]*?)</ul>");
+                    if (std::regex_search(agent_info->wiki_content, m, items_dropped_regex)) {
+                        std::string list_found = m[1].str();
+
+                        // Iterate over all skills in this list.
+                        const auto link_regex = std::regex("<a href=\"[^\"]+\" title=\"([^\"]+)\"");
+                        auto words_begin = std::sregex_iterator(list_found.begin(), list_found.end(), link_regex);
+                        auto words_end = std::sregex_iterator();
+                        for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
+                            const auto title_attr = i->str(1);
+                            if (std::ranges::contains(agent_info->items_dropped, title_attr))
+                                continue;
+                            agent_info->items_dropped.push_back(title_attr);
+                        }
+                    }
+                    static const std::regex notes_regex("<h2><span class=\"mw-headline\" id=\"Notes\">(?:[\\s\\S]*?)<ul([\\s\\S]*?)</ul>");
+                    if (std::regex_search(agent_info->wiki_content, m, notes_regex)) {
+                        std::string list_found = m[1].str();
+
+                        // Iterate over all skills in this list.
+                        const auto link_regex = std::regex("<li>([\\s\\S]*?)</li>");
+                        auto words_begin = std::sregex_iterator(list_found.begin(), list_found.end(), link_regex);
+                        auto words_end = std::sregex_iterator();
+                        for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
+                            auto line = i->str(1);
+                            from_html(line);
+                            if (line.empty()) continue;
+                            agent_info->notes.push_back(line);
+                        }
+                    }
+
+                    const std::regex infobox_regex("<table[^>]+ class=\"[^\"]+infobox([\\s\\S]*?)</table>");
+                    if (std::regex_search(agent_info->wiki_content, m, infobox_regex)) {
+                        std::string infobox_content = m[1].str();
+
+                        const auto infobox_image_regex = std::regex("<td[^>]+class=\"[^\"]*?infobox-image[\\s\\S]*?<a [\\s\\S]*?href=\"[^\"]*?File:([^\"]+)");
+                        if (std::regex_search(infobox_content, m, infobox_image_regex)) {
+                            const auto img_src = m[1].str();
+                            agent_info->image_url = img_src;
+                            agent_info->image = Resources::GetGuildWarsWikiImage(img_src.c_str());
+                        }
+
+                        // Iterate over all skills in this list.
+                        const auto infobox_row_regex = std::regex(
+                            "(?:<tr>|<tr[^>]+>)[\\s\\S]*?(?:<th>|<th[^>]+>)([\\s\\S]*?)</th>[\\s\\S]*?(?:<td>|<td[^>]+>)([\\s\\S]*?)</td>[\\s\\S]*?</tr>"
+                        );
+                        auto words_begin = std::sregex_iterator(infobox_content.begin(), infobox_content.end(), infobox_row_regex);
+                        auto words_end = std::sregex_iterator();
+                        for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
+                            auto key = i->str(1);
+                            auto val = i->str(2);
+                            from_html(key);
+                            from_html(val);
+                            if (key.empty() || val.empty())
+                                continue;
+                            agent_info->infobox_deets[key] = val;
+                        }
+                    }
+
                     agent_info->state = AgentInfo::TargetInfoState::Done;
                     break;
-                }
-                agent_info->state = AgentInfo::TargetInfoState::FetchingWikiPage;
-
-                agent_info->wiki_search_term = TextUtils::WStringToString(
-                    TextUtils::SanitizePlayerName(agent_info->name.wstring())
-                );
-                trim(agent_info->wiki_search_term);
-                std::string wiki_url = "https://wiki.guildwars.com/wiki/?search=";
-                wiki_url.append(TextUtils::UrlEncode(agent_info->wiki_search_term, '_'));
-                Resources::Download(wiki_url, AgentInfo::OnFetchedWikiPage, agent_info);
-            } break;
-            case AgentInfo::TargetInfoState::ParsingWikiPage:
-                static const std::regex skill_list_regex("<h2><span class=\"mw-headline\" id=\"Skills\">(?:[\\s\\S]*?)<ul([\\s\\S]*?)</ul>");
-                std::smatch m;
-                if (std::regex_search(agent_info->wiki_content, m, skill_list_regex)) {
-                    std::string skill_list_found = m[1].str();
-
-                    // Iterate over all skills in this list.
-                    const auto skill_link_regex = std::regex("<a href=\"[^\"]+\" title=\"([^\"]+)\"");
-                    auto words_begin = std::sregex_iterator(skill_list_found.begin(), skill_list_found.end(), skill_link_regex);
-                    auto words_end = std::sregex_iterator();
-                    for (std::sregex_iterator i = words_begin; i != words_end; ++i)
-                    {
-                        const auto skill_name = i->str(1);
-                        const auto found = skill_ids_by_name.find(skill_name);
-                        if (found == skill_ids_by_name.end())
-                            continue;
-                        if (std::ranges::contains(agent_info->wiki_skills, found->second))
-                            continue;
-                        agent_info->wiki_skills.push_back(found->second);
-                    }
-                }
-
-                static const std::regex armor_ratings_regex("<h2><span class=\"mw-headline\" id=\"Armor_ratings\">([\\s\\S]*?)</table>");
-                if (std::regex_search(agent_info->wiki_content, m, armor_ratings_regex)) {
-                    std::string armor_table_found = m[1].str();
-                    armor_table_found.erase(std::ranges::remove(armor_table_found, '\n').begin(), armor_table_found.end());
-
-                    // Iterate over all skills in this list.
-                    static const std::regex armor_cell_regex(R"regex(<td>[\s\S]*?title="([^"]+)"[\s\S]*?<td>([0-9 \(\)]+).*?<\/td>)regex");
-                    auto words_begin = std::sregex_iterator(armor_table_found.begin(), armor_table_found.end(), armor_cell_regex);
-                    auto words_end = std::sregex_iterator();
-                    for (auto i = words_begin; i != words_end; ++i)
-                    {
-                        auto key = i->str(1);
-                        auto val = i->str(2);
-                        from_html(key);
-                        from_html(val);
-                        if (key.empty() || val.empty())
-                            continue;
-                        agent_info->wiki_armor_ratings[key] = val;
-                    }
-                }
-
-                static const std::regex items_dropped_regex("<h2><span class=\"mw-headline\" id=\"Items_dropped\">(?:[\\s\\S]*?)<ul([\\s\\S]*?)</ul>");
-                if (std::regex_search(agent_info->wiki_content, m, items_dropped_regex)) {
-                    std::string list_found = m[1].str();
-
-                    // Iterate over all skills in this list.
-                    const auto link_regex = std::regex("<a href=\"[^\"]+\" title=\"([^\"]+)\"");
-                    auto words_begin = std::sregex_iterator(list_found.begin(), list_found.end(), link_regex);
-                    auto words_end = std::sregex_iterator();
-                    for (std::sregex_iterator i = words_begin; i != words_end; ++i)
-                    {
-                        const auto title_attr = i->str(1);
-                        if (std::ranges::contains(agent_info->items_dropped, title_attr))
-                            continue;
-                        agent_info->items_dropped.push_back(title_attr);
-                    }
-                }
-                static const std::regex notes_regex("<h2><span class=\"mw-headline\" id=\"Notes\">(?:[\\s\\S]*?)<ul([\\s\\S]*?)</ul>");
-                if (std::regex_search(agent_info->wiki_content, m, notes_regex)) {
-                    std::string list_found = m[1].str();
-
-                    // Iterate over all skills in this list.
-                    const auto link_regex = std::regex("<li>([\\s\\S]*?)</li>");
-                    auto words_begin = std::sregex_iterator(list_found.begin(), list_found.end(), link_regex);
-                    auto words_end = std::sregex_iterator();
-                    for (std::sregex_iterator i = words_begin; i != words_end; ++i)
-                    {
-                        auto line = i->str(1);
-                        from_html(line);
-                        if (line.empty()) continue;
-                        agent_info->notes.push_back(line);
-                    }
-                }
-
-                const std::regex infobox_regex("<table[^>]+ class=\"[^\"]+infobox([\\s\\S]*?)</table>");
-                if (std::regex_search(agent_info->wiki_content, m, infobox_regex)) {
-                    std::string infobox_content = m[1].str();
-
-                    const auto infobox_image_regex = std::regex("<td[^>]+class=\"[^\"]*?infobox-image[\\s\\S]*?<a [\\s\\S]*?href=\"[^\"]*?File:([^\"]+)");
-                    if (std::regex_search(infobox_content, m, infobox_image_regex)) {
-                        const auto img_src = m[1].str();
-                        agent_info->image_url = img_src;
-                        agent_info->image = Resources::GetGuildWarsWikiImage(img_src.c_str());
-                    }
-
-                    // Iterate over all skills in this list.
-                    const auto infobox_row_regex = std::regex(
-                        "(?:<tr>|<tr[^>]+>)[\\s\\S]*?(?:<th>|<th[^>]+>)([\\s\\S]*?)</th>[\\s\\S]*?(?:<td>|<td[^>]+>)([\\s\\S]*?)</td>[\\s\\S]*?</tr>"
-                    );
-                    auto words_begin = std::sregex_iterator(infobox_content.begin(), infobox_content.end(), infobox_row_regex);
-                    auto words_end = std::sregex_iterator();
-                    for (std::sregex_iterator i = words_begin; i != words_end; ++i)
-                    {
-                        auto key = i->str(1);
-                        auto val = i->str(2);
-                        from_html(key);
-                        from_html(val);
-                        if (key.empty() || val.empty())
-                            continue;
-                        agent_info->infobox_deets[key] = val;
-                    }
-                }
-
-                agent_info->state = AgentInfo::TargetInfoState::Done;
-                break;
             }
         }
     }
@@ -341,12 +380,13 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             ImGui::TextUnformatted("Target info pending...");
             return ImGui::End();
         }
-        if (ImGui::BeginTable("table1", current_agent_info->image ? 2 : 1))
-        {
+        const auto has_image = current_agent_info->image;
+        if (ImGui::BeginTable("table1", has_image ? 2 : 1)) {
             ImGui::TableSetupColumn("col0", ImGuiTableColumnFlags_WidthStretch, 1.0f);
-            ImGui::TableSetupColumn("col1", ImGuiTableColumnFlags_WidthStretch, 2.0f);
+            if (has_image)
+                ImGui::TableSetupColumn("col1", ImGuiTableColumnFlags_WidthStretch, 2.0f);
             ImGui::TableNextRow();
-            if (current_agent_info->image) {
+            if (has_image) {
                 ImGui::TableNextColumn();
                 ImGui::ImageFit(*current_agent_info->image, ImGui::GetContentRegionAvail());
             }
@@ -363,11 +403,11 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             if (current_agent_info->wiki_skills.size()) {
                 ImGui::Text("Skills Used:");
                 ImGui::BeginTable("skills_used_table", 2);
-                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, { 0.f, .5f });
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
                 for (const auto skill_id : current_agent_info->wiki_skills) {
                     ImGui::TableNextColumn();
                     const float btnw = ImGui::GetContentRegionAvail().x;
-                    const ImVec2 btn_dims = { btnw,.0f };
+                    const ImVec2 btn_dims = {btnw, .0f};
                     const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
                     const auto skill_img = Resources::GetSkillImage(skill_id);
                     if (ImGui::IconButton(Resources::DecodeStringId(skill->name)->string().c_str(), *skill_img, btn_dims)) {
@@ -385,13 +425,13 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
                 for (const auto [damage_type, armour_rating] : current_agent_info->wiki_armor_ratings) {
                     ImGui::TableNextColumn();
                     const float btnw = ImGui::GetContentRegionAvail().x;
-                    const ImVec2 btn_dims = { btnw,.0f };
+                    const ImVec2 btn_dims = {btnw, .0f};
                     const auto open_wiki = [&] {
                         auto damage_type_wstr = TextUtils::StringToWString(damage_type);
                         std::ranges::replace(damage_type_wstr, L' ', L'_');
                         GuiUtils::OpenWiki(damage_type_wstr.c_str());
                     };
-                    ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, { 0.f, .5f });
+                    ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
                     const auto label = std::format("{}: {}", damage_type, armour_rating);
                     if (const auto dmgtype_img = Resources::GetDamagetypeImage(damage_type)) {
                         ImGui::PushID(damage_type.c_str());
@@ -413,11 +453,11 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             if (current_agent_info->items_dropped.size()) {
                 ImGui::Text("Items Dropped:");
                 ImGui::BeginTable("items_dropped_table", 2);
-                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, { 0.f, .5f });
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
                 for (const auto& item_name : current_agent_info->items_dropped) {
                     ImGui::TableNextColumn();
                     const float btnw = ImGui::GetContentRegionAvail().x;
-                    const ImVec2 btn_dims = { btnw,.0f };
+                    const ImVec2 btn_dims = {btnw, .0f};
                     const auto item_name_ws = TextUtils::StringToWString(item_name);
                     const auto item_image = Resources::GetItemImage(item_name_ws);
                     if (ImGui::IconButton(item_name.c_str(), *item_image, btn_dims)) {
@@ -430,7 +470,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             if (current_agent_info->notes.size()) {
                 ImGui::Text("Notes:");
                 for (const auto& note : current_agent_info->notes) {
-                    ImGui::TextWrapped("%s",note.c_str());
+                    ImGui::TextWrapped("%s", note.c_str());
                 }
             }
             ImGui::Separator();
@@ -441,6 +481,4 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
         }
     }
     ImGui::End();
-
-
 }

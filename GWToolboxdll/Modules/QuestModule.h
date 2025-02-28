@@ -61,6 +61,7 @@ public:
     void SignalTerminate() override;
     void Update(float) override;
     bool CanTerminate() override;
+    static void FetchMissingQuestInfo();
 
     static const GW::Quest* GetCustomQuestMarker();
 

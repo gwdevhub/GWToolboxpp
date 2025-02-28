@@ -1010,7 +1010,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             ImGui::SameLine();
             if (ImGui::SmallButton("Request quest info")) {
                 for (const auto& quest : quests_missing_info) {
-                    GW::QuestMgr::RequestQuestInfo(quest);
+                    GW::QuestMgr::RequestQuestInfo(quest, true);
                 }
             }
 #endif

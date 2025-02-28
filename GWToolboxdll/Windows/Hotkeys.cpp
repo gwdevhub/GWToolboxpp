@@ -26,7 +26,6 @@
 #include <Logger.h>
 
 #include <Modules/Resources.h>
-#include <Modules/DialogModule.h>
 #include <Windows/BuildsWindow.h>
 #include <Windows/HeroBuildsWindow.h>
 #include <Windows/Hotkeys.h>

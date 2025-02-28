@@ -30,7 +30,6 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>

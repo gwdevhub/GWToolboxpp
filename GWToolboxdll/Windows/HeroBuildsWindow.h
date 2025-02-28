@@ -4,7 +4,6 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Hero.h>
 
-#include <Utils/GuiUtils.h>
 #include <Timer.h>
 #include <ToolboxWindow.h>
 #include <Defines.h>

@@ -28,6 +28,7 @@ namespace {
 void SymbolsRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 {
     color_quest = Colors::Load(ini, section, "color_quest", 0xFF22EF22);
+    color_other_quests = Colors::Load(ini, section, "color_other_quests", 0x00006400);
     color_north = Colors::Load(ini, section, "color_north", 0xFFFF8000);
     color_modifier = Colors::Load(ini, section, "color_symbols_modifier", 0x001E1E1E);
 
@@ -37,23 +38,30 @@ void SymbolsRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 void SymbolsRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
 {
     Colors::Save(ini, section, "color_quest", color_quest);
+    Colors::Save(ini, section, "color_other_quests", color_other_quests);
     Colors::Save(ini, section, "color_north", color_north);
     Colors::Save(ini, section, "color_symbols_modifier", color_modifier);
 }
 
 void SymbolsRenderer::DrawSettings()
 {
-    ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?", [&](bool result, void*) {
+    ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?", [&](const bool result, void*) {
         if (result) {
             color_quest = 0xFF22EF22;
+            color_other_quests = 0x00006400;
             color_north = 0xFFFF8000;
             color_modifier = 0x001E1E1E;
             Invalidate();
         }
-        });
-    if (Colors::DrawSettingHueWheel("Quest marker", &color_quest)) {
+    });
+    if (Colors::DrawSettingHueWheel("Active quest marker", &color_quest)) {
         Invalidate();
     }
+    if (Colors::DrawSettingHueWheel("Other quest markers", &color_other_quests)) {
+        Invalidate();
+    }
+    ImGui::ShowHelp("Quest markers that are not the active quest will be shown in this colour.\n"
+        "If this colour has an alpha of 0, the inactive quest markers will all have random colours.");
     if (Colors::DrawSettingHueWheel("North marker", &color_north)) {
         Invalidate();
     }
@@ -61,7 +69,7 @@ void SymbolsRenderer::DrawSettings()
         Invalidate();
     }
     ImGui::ShowHelp("Each symbol has this value removed on the border and added at the center\n"
-                    "Zero makes them have solid color, while a high number makes them appear more shaded.");
+        "Zero makes them have solid color, while a high number makes them appear more shaded.");
 }
 
 void SymbolsRenderer::Initialize(IDirect3DDevice9* device)
@@ -166,8 +174,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
 
     const GW::Vec2f mypos = me->pos;
     std::vector<GW::Vec2f> markers_drawn;
-    const auto draw_quest_marker = [&](const GW::Quest& quest)
-    {
+    const auto draw_quest_marker = [&](const GW::Quest& quest) {
         const auto active_quest = GW::QuestMgr::GetActiveQuest();
         const bool is_current_quest = active_quest != nullptr && quest.quest_id == active_quest->quest_id;
 
@@ -175,7 +182,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
             return;
         }
 
-        const GW::Vec2f qpos = { quest.marker.x, quest.marker.y };
+        const GW::Vec2f qpos = {quest.marker.x, quest.marker.y};
         if (std::ranges::contains(markers_drawn, qpos))
             return; // Don't draw more than 1 marker for a position
         markers_drawn.push_back(qpos);

@@ -27,6 +27,8 @@
 #include <Utils/FontLoader.h>
 #include <Utils/TextUtils.h>
 
+#include "Color.h"
+
 float Pcon::size = 46.0f;
 int Pcon::pcons_delay = 5000;
 int Pcon::lunar_delay = 500;

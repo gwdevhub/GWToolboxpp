@@ -4,7 +4,6 @@
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/Managers/MapMgr.h>
 
-#include <Color.h>
 #include <Timer.h>
 
 class Pcon {
