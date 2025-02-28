@@ -529,6 +529,9 @@ namespace {
                           // keyboard messages
         case WM_KEYUP:
         case WM_SYSKEYUP:
+            if (io.WantCaptureKeyboard) {
+                break; // make sure key up events are passed through to gw, already handled in imgui
+            }
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
         case WM_CHAR:
