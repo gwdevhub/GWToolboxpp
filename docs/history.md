@@ -14,8 +14,13 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Fixed skipping factions character name input not working
 * [Fix] Fixed bug preventing chat commmands /wiki /report and /help when triggered through toolbox
 * [Fix] Fixed bug preventing shouts to be listed in the Target Info window
+* [Fix] Fixed bug causing right click weirdness after placing a marker on the world map
 * [Minor] Changed visibility checkbox for widgets and windows to eye / eye-slash symbols.
 * [New] /transmo model command (see website)
+* [New] /tp quest command
+* [New] option to identify and salvage all (gold and lower rarity) items in your inventory on ctrl + click
+* [New] option to set different colour for non-active quest markers (Minimap - Symbols)
+* [New] option to show all quests on the world map, even when the minimap setting is disabled
  
 ## Version 7.1
 * [Fix] Fixed crash in combination with steam overlay
