@@ -7,6 +7,9 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 7.3
+* [Fix] Fix keys being stuck when you hold them as you open an imgui modal
+
 ## Version 7.2
 * [Fix] Fixed bug causing hotkeys not to trigger
 * [Fix] Fixed crash when font paths contained cyrillic or chinese characters
