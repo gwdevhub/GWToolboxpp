@@ -552,7 +552,7 @@ std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::Que
     return out;
 }
 
-ImU32 QuestModule::GetQuestColor(GW::Constants::QuestID quest_id)
+ImU32& QuestModule::GetQuestColor(GW::Constants::QuestID quest_id)
 {
     if (GW::QuestMgr::GetActiveQuestId() == quest_id) {
         return Minimap::Instance().symbols_renderer.color_quest;
