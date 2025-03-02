@@ -750,7 +750,9 @@ void HotkeySendChat::Execute()
     if (show_message_in_emote_channel && channel == L'/') {
         Log::Flash("/%s", message);
     }
-    GW::Chat::SendChat(channel, message);
+    GW::GameThread::Enqueue([&]() {
+        GW::Chat::SendChat(channel, message);
+    });
 }
 
 HotkeyUseItem::HotkeyUseItem(const ToolboxIni* ini, const char* section)

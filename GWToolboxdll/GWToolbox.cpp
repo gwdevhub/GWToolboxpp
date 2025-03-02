@@ -456,7 +456,7 @@ namespace {
 
         // === Send events to ImGui ===
 
-        const bool skip_mouse_capture = right_mouse_down || GW::UI::GetIsWorldMapShowing() || GW::Map::GetIsInCinematic();
+        const bool skip_mouse_capture = right_mouse_down || /* GW::UI::GetIsWorldMapShowing() || */GW::Map::GetIsInCinematic();
         if (ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam) && !skip_mouse_capture)
             return TRUE;
 

@@ -43,6 +43,7 @@ namespace {
     IDirect3DTexture9** player_icon_texture = nullptr;
 
     bool showing_all_outposts = false;
+    bool apply_quest_colors = false;
 
     bool drawn = false;
 
@@ -435,7 +436,7 @@ namespace {
 
 
         bool is_hovered = false;
-        const auto color = QuestModule::GetQuestColor(quest->quest_id);
+        const auto color = apply_quest_colors ? QuestModule::GetQuestColor(quest->quest_id) : 0;
 
         // draw_quest_marker
         const auto draw_quest_marker = [&](const GW::Vec2f& quest_marker_pos) {
@@ -647,6 +648,7 @@ void WorldMapWidget::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(showing_all_outposts);
     LOAD_BOOL(show_lines_on_world_map);
     LOAD_BOOL(showing_all_quests);
+    LOAD_BOOL(apply_quest_colors);
 }
 
 void WorldMapWidget::SaveSettings(ToolboxIni* ini)
@@ -655,6 +657,7 @@ void WorldMapWidget::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(showing_all_outposts);
     SAVE_BOOL(show_lines_on_world_map);
     SAVE_BOOL(showing_all_quests);
+    SAVE_BOOL(apply_quest_colors);
 }
 
 void WorldMapWidget::Draw(IDirect3DDevice9*)
@@ -690,6 +693,24 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         ImGui::Checkbox("Show toolbox minimap lines", &show_lines_on_world_map);
         if (ImGui::Checkbox("Show quest markers for all quests", &showing_all_quests)) {
             QuestModule::FetchMissingQuestInfo();
+        }
+        ImGui::Checkbox("Apply quest marker color overlays", &apply_quest_colors);
+        if (apply_quest_colors) {
+            ImGui::Indent();
+            auto color = &QuestModule::GetQuestColor((GW::Constants::QuestID)0xfff);
+            ImGui::ColorButtonPicker("Other Quests", color, ImGuiColorEditFlags_NoLabel);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Color overlay for quests that aren't active.");
+            }
+            if (GW::QuestMgr::GetActiveQuestId() != GW::Constants::QuestID::None) {
+                ImGui::SameLine();
+                color = &QuestModule::GetQuestColor(GW::QuestMgr::GetActiveQuestId());
+                ImGui::ColorButtonPicker("Active Quest", color, ImGuiColorEditFlags_NoLabel);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Color overlay for the active quest.");
+                }
+            }
+            ImGui::Unindent();
         }
     }
 

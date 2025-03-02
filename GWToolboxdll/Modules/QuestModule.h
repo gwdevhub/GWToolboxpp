@@ -69,6 +69,6 @@ public:
     // Fake an action of the user selecting an active quest, without making any server request.
     static void EmulateQuestSelected(GW::Constants::QuestID);
 
-    static ImU32 GetQuestColor(GW::Constants::QuestID);
+    static ImU32& GetQuestColor(GW::Constants::QuestID);
     static std::vector<QuestObjective> ParseQuestObjectives(GW::Constants::QuestID quest_id);
 };
