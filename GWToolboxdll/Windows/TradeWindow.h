@@ -24,9 +24,7 @@ public:
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BALANCE_SCALE; }
 
     void Initialize() override;
-    static void OnMessageLocal(GW::HookStatus* status, const GW::Packet::StoC::MessageLocal* pak);
 
-    bool IsTradeAlert(std::string& message) const;
     void Update(float delta) override;
     void Draw(IDirect3DDevice9* pDevice) override;
     void Terminate() override;

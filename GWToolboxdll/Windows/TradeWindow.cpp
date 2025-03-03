@@ -54,7 +54,6 @@ namespace {
         std::string message;
     };
 
-    GW::HookEntry OnMessageLocal_Entry;
     GW::HookEntry OnPartySearch_Entry;
     GW::PartySearch player_party_search = { 0 };
     char player_party_search_text[64] = { 0 };
@@ -100,6 +99,8 @@ namespace {
     easywsclient::WebSocket* ws_window = nullptr;
 
     RateLimiter window_rate_limiter;
+
+    bool external_trade_message = false;
 
     void search(const std::string& query, const bool print_results_in_chat = false)
     {
@@ -157,49 +158,72 @@ namespace {
         search(item_to_search, true);
     }
 
-}
-
-void TradeWindow::OnMessageLocal(GW::HookStatus* status, const GW::Packet::StoC::MessageLocal* pak)
-{
-    if (pak->channel != GW::Chat::CHANNEL_TRADE || status->blocked || !filter_alerts) {
-        return;
-    }
-    // Only filter incoming trade messages if the user wants them filtered.
-    if (!filter_local_trade) {
-        return;
-    }
-    const wchar_t* message = GetMessageCore();
-    if (!message) {
-        return;
-    }
-
-    const wchar_t* start = nullptr;
-    const wchar_t* end = nullptr;
-    size_t i = 0;
-    while (start == nullptr && message[i]) {
-        if (message[i] == 0x107) {
-            start = &message[i + 1];
+    bool IsTradeAlert(std::string& message)
+    {
+        if (!filter_alerts) {
+            return true;
         }
-        i++;
-    }
-    if (start == nullptr) {
-        return; // no string segment in this packet
-    }
-    while (end == nullptr && message[i]) {
-        if (message[i] == 0x1) {
-            end = &message[i];
+        std::regex word_regex;
+        std::smatch m;
+        static const auto regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
+        for (const auto& word : alert_words) {
+            if (std::regex_search(word, m, regex_check)) {
+                try {
+                    word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
+                } catch (const std::exception&) {
+                    // Silent fail; invalid regex
+                }
+                if (std::regex_search(message, word_regex)) {
+                    return true;
+                }
+            }
+            else {
+                auto found = std::ranges::search(message, word, [](const char c1, const char c2) -> bool {
+                                 return tolower(c1) == c2;
+                             }).begin();
+                if (found != message.end()) {
+                    return true;
+                }
+            }
         }
-        i++;
-    }
-    if (end == nullptr) {
-        end = &message[i];
+        return false;
     }
 
-    // std::string temp(start, end);
-    std::string message_utf8 = TextUtils::WStringToString(std::wstring(start, end));
-    if (!Instance().IsTradeAlert(message_utf8)) {
-        status->blocked = true;
+    GW::HookEntry OnUIMessage_Entry;
+    void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
+        if (status->blocked) return;
+
+        const wchar_t* message = nullptr;
+        switch (message_id) {
+            case GW::UI::UIMessage::kPlayerChatMessage: { 
+                const auto packet = (GW::UI::UIPacket::kPlayerChatMessage*)wparam;
+                if (packet->channel != GW::Chat::Channel::CHANNEL_TRADE) break;
+                message = packet->message;
+                break;
+            } break;
+                case GW::UI::UIMessage::kWriteToChatLog: {
+                const auto packet = (GW::UI::UIPacket::kWriteToChatLog*)wparam;
+                if (packet->channel != GW::Chat::Channel::CHANNEL_TRADE) break;
+                message = packet->message;
+            } break;
+        }
+        if (message && filter_alerts && (external_trade_message || filter_local_trade)) {
+            auto start = wcschr(message, 0x107);
+            if (!start) {
+                return;
+            }
+            start++;
+            const auto end = wcschr(start, 0x1);
+            if (!end) {
+                return;
+            }
+            std::string message_utf8 = TextUtils::WStringToString(std::wstring(start, end));
+            if (!IsTradeAlert(message_utf8)) {
+                status->blocked = true;
+            }
+        }
     }
+
 }
 
 void TradeWindow::Initialize()
@@ -222,7 +246,6 @@ void TradeWindow::Initialize()
     });
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"pc", CmdPricecheck);
     // local messages
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageLocal>(&OnMessageLocal_Entry, OnMessageLocal);
     GW::StoC::RegisterPostPacketCallback(&OnPartySearch_Entry, GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT, [](GW::HookStatus*, void* pak) {
         const struct Packet {
             uint32_t header;
@@ -238,6 +261,14 @@ void TradeWindow::Initialize()
     GW::StoC::RegisterPostPacketCallback(&OnPartySearch_Entry, GAME_SMSG_PARTY_SEARCH_REMOVE, FindPlayerPartySearch);
     GW::StoC::RegisterPostPacketCallback(&OnPartySearch_Entry, GAME_SMSG_TRANSFER_GAME_SERVER_INFO, FindPlayerPartySearch);
     FindPlayerPartySearch();
+
+    const auto ui_messages = {
+        GW::UI::UIMessage::kWriteToChatLog,
+        GW::UI::UIMessage::kPlayerChatMessage
+    };
+    for (const auto ui_message : ui_messages) {
+        GW::UI::RegisterUIMessageCallback(&OnUIMessage_Entry, ui_message, OnUIMessage);
+    }
 
 }
 void TradeWindow::Terminate()
@@ -257,6 +288,7 @@ void TradeWindow::Terminate()
         wsaData = { 0 };
     }
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
+    GW::UI::RemoveUIMessageCallback(&OnUIMessage_Entry);
 }
 bool TradeWindow::GetInKamadanAE1(const bool check_district)
 {
@@ -416,38 +448,11 @@ void TradeWindow::fetch()
             std::wstring name_ws = TextUtils::StringToWString(msg.name);
             std::wstring msg_ws = TextUtils::StringToWString(msg.message);
             swprintf(buffer, 512, L"<a=1>%s</a>: <c=#f96677><quote>%s", name_ws.c_str(), msg_ws.c_str());
+            external_trade_message = true;
             WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buffer);
+            external_trade_message = false;
         }
     });
-}
-
-bool TradeWindow::IsTradeAlert(std::string& message) const
-{
-    if (!filter_alerts) {
-        return true;
-    }
-    std::regex word_regex;
-    std::smatch m;
-    static const auto regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
-    for (const auto& word : alert_words) {
-        if (std::regex_search(word, m, regex_check)) {
-            try {
-                word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
-            } catch (const std::exception&) {
-                // Silent fail; invalid regex
-            }
-            if (std::regex_search(message, word_regex)) {
-                return true;
-            }
-        }
-        else {
-            auto found = std::ranges::search(message, word, [](const char c1, const char c2) -> bool { return tolower(c1) == c2; }).begin();
-            if (found != message.end()) {
-                return true;
-            }
-        }
-    }
-    return false;
 }
 
 void TradeWindow::FindPlayerPartySearch(GW::HookStatus*, void*)
@@ -700,6 +705,7 @@ void TradeWindow::DrawAlertsWindowContent(bool)
     ImGui::Checkbox("Send Pre-Searing Ascalon AE1 trade chat to your trade chat", &print_game_chat_asc);
     ImGui::ShowHelp("Only when trade chat channel is visible in-game");
     ImGui::Checkbox("Only show messages containing:", &filter_alerts);
+    ImGui::Indent();
     ImGui::ShowHelp("Only shows messages from the currently active trade channel (Kamadan OR Ascalon)");
     ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
     if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
@@ -708,11 +714,12 @@ void TradeWindow::DrawAlertsWindowContent(bool)
         alertfile_dirty = true;
     }
     DrawChatSettings(true);
+    ImGui::Unindent();
 }
 
 void TradeWindow::DrawChatSettings(const bool ownwindow)
 {
-    ImGui::Checkbox("Apply trade alerts to local trade messages", &filter_local_trade);
+    ImGui::Checkbox("Apply trade filters to local trade messages", &filter_local_trade);
     ImGui::ShowHelp("If enabled, only trade messages matching your alerts will be shown in chat");
     if (!ownwindow) {
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - 120.f * ImGui::GetIO().FontGlobalScale, 0);
