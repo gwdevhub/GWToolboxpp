@@ -4,10 +4,29 @@
 #include <Windows/NotePadWindow.h>
 #include <Utils/FontLoader.h>
 
-constexpr auto TEXT_SIZE = 2024 * 16;
-const int MIN_FONT_SIZE = 16;
+#include <ImGuiAddons.h>
 
-float font_size = static_cast<float>(FontLoader::FontSize::widget_label);
+namespace {
+    constexpr auto text_buffer_length = 2024 * 16;
+    char* text_buffer = nullptr;
+
+    constexpr float text_size_min = static_cast<float>(FontLoader::FontSize::text);
+    float font_size = static_cast<float>(FontLoader::FontSize::text);
+
+    bool filedirty = false;
+}
+
+void NotePadWindow::Initialize()
+{
+    ToolboxWindow::Initialize();
+    text_buffer = new char[text_buffer_length];
+    memset(text_buffer, 0, text_buffer_length);
+}
+void NotePadWindow::Terminate()
+{
+    ToolboxWindow::Terminate();
+    delete[] text_buffer;
+}
 
 void NotePadWindow::Draw(IDirect3DDevice9*)
 {
@@ -21,8 +40,8 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
         const ImVec2 cmax = ImGui::GetWindowContentRegionMax();
         const ImVec2 cmin = ImGui::GetWindowContentRegionMin();
         const auto font = FontLoader::GetFontByPx(font_size);
-        ImGui::PushFont(font);
-        if (ImGui::InputTextMultiline("##source", text, TEXT_SIZE,
+        ImGui::PushFont(font, font_size);
+        if (ImGui::InputTextMultiline("##source", text_buffer, text_buffer_length,
                                       ImVec2(cmax.x - cmin.x, cmax.y - cmin.y), ImGuiInputTextFlags_AllowTabInput)) {
             filedirty = true;
         }
@@ -38,7 +57,7 @@ void NotePadWindow::LoadSettings(ToolboxIni* ini)
 
     std::ifstream file(Resources::GetPath(L"Notepad.txt"));
     if (file) {
-        file.get(text, TEXT_SIZE, '\0');
+        file.get(text_buffer, text_buffer_length, '\0');
         file.close();
     }
 }
@@ -50,7 +69,7 @@ void NotePadWindow::SaveSettings(ToolboxIni* ini)
     if (filedirty) {
         std::ofstream file(Resources::GetPath(L"Notepad.txt"));
         if (file) {
-            file.write(text, strlen(text));
+            file.write(text_buffer, strlen(text_buffer));
             file.close();
             filedirty = false;
         }
@@ -60,5 +79,5 @@ void NotePadWindow::SaveSettings(ToolboxIni* ini)
 void NotePadWindow::DrawSettingsInternal()
 {
     ToolboxWindow::DrawSettingsInternal();
-    ImGui::DragFloat("Text size", &font_size, 1.0, MIN_FONT_SIZE, FontLoader::text_size_max, "%.0f");
+    ImGui::DragFloat("Text size", &font_size, 1.0, text_size_min, FontLoader::text_size_max, "%.0f");
 }
