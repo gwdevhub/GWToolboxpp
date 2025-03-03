@@ -2,8 +2,12 @@
 
 #include <Modules/Resources.h>
 #include <Windows/NotePadWindow.h>
+#include <Utils/FontLoader.h>
 
 constexpr auto TEXT_SIZE = 2024 * 16;
+const int MIN_FONT_SIZE = 16;
+
+float font_size = static_cast<float>(FontLoader::FontSize::widget_label);
 
 void NotePadWindow::Draw(IDirect3DDevice9*)
 {
@@ -16,10 +20,13 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         const ImVec2 cmax = ImGui::GetWindowContentRegionMax();
         const ImVec2 cmin = ImGui::GetWindowContentRegionMin();
+        const auto font = FontLoader::GetFontByPx(font_size);
+        ImGui::PushFont(font);
         if (ImGui::InputTextMultiline("##source", text, TEXT_SIZE,
                                       ImVec2(cmax.x - cmin.x, cmax.y - cmin.y), ImGuiInputTextFlags_AllowTabInput)) {
             filedirty = true;
         }
+        ImGui::PopFont();
     }
     ImGui::End();
     ImGui::PopStyleVar();
@@ -48,4 +55,10 @@ void NotePadWindow::SaveSettings(ToolboxIni* ini)
             filedirty = false;
         }
     }
+}
+
+void NotePadWindow::DrawSettingsInternal()
+{
+    ToolboxWindow::DrawSettingsInternal();
+    ImGui::DragFloat("Text size", &font_size, 1.0, MIN_FONT_SIZE, FontLoader::text_size_max, "%.0f");
 }

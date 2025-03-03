@@ -2,7 +2,7 @@
 
 ## A set of tools for Guild Wars Players
 
-If you are here to check toolbox features and for a download link to go [https://gwtoolbox.com](https://gwtoolbox.com). Keep reading for information on how to download and build from the source.
+If you are here to check toolbox features or for a download link, go to [https://gwtoolbox.com](https://gwtoolbox.com). Stay here and keep reading for information on how to download and build from source.
 
 ## How to download, build, and run
 ### Requirements
