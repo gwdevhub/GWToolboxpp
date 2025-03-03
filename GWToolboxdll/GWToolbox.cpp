@@ -529,7 +529,7 @@ namespace {
                           // keyboard messages
         case WM_KEYUP:
         case WM_SYSKEYUP:
-            if (io.WantCaptureKeyboard) {
+            if (io.WantCaptureKeyboard || io.WantTextInput) {
                 break; // make sure key up events are passed through to gw, already handled in imgui
             }
         case WM_KEYDOWN:
@@ -543,7 +543,7 @@ namespace {
         case WM_MBUTTONDOWN:
         case WM_MBUTTONDBLCLK:
         case WM_MBUTTONUP:
-            if (io.WantCaptureKeyboard) {
+            if (io.WantCaptureKeyboard || io.WantTextInput) {
                 return true; // if imgui wants them, send just to imgui (above)
             }
 

@@ -369,6 +369,7 @@ namespace ImGui {
         }
 
         GetIO().WantTextInput = true;
+        GetIO().WantCaptureKeyboard = true;
         static char word[64] = "";
         static float time_since_last_update = 0.0f;
         time_since_last_update += g.IO.DeltaTime;
