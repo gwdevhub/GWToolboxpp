@@ -21,6 +21,7 @@ public:
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
+    void DrawSettingsInternal() override;
 
 private:
     char text[2024 * 16]{}; // 2024 characters max
