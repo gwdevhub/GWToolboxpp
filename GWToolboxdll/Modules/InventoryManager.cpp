@@ -1300,9 +1300,7 @@ void InventoryManager::ContinueTransaction()
             pending_transaction.setState(PendingTransaction::State::Transacting);
             auto packet = pending_transaction.transact();
             AttachTransactionListeners();
-            GW::Merchant::TransactItems(static_cast<GW::Merchant::TransactionType>(packet.type),
-                                        packet.gold_give, {packet.item_give_count, packet.item_give_ids, packet.item_give_quantities},
-                                        packet.gold_recv, {packet.item_recv_count, packet.item_recv_ids, packet.item_recv_quantities});
+            GW::Merchant::TransactItems();
         }
         break;
         case PendingTransaction::State::Transacting:

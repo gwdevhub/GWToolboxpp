@@ -205,17 +205,9 @@ namespace {
             return false;
         GW::Merchant::TransactionInfo give, recv;
         switch (trans->type) {
-        case Transaction::Buy: {
-            recv.item_count = 1;
-            recv.item_ids = &trans->item_id;
-            recv.item_quantities = nullptr;
-            return TransactItems(GW::Merchant::TransactionType::TraderBuy, trans->price, give, 0, recv);
-        } break;
+        case Transaction::Buy:
         case Transaction::Sell: {
-            give.item_count = 1;
-            give.item_ids = &trans->item_id;
-            give.item_quantities = nullptr;
-            return TransactItems(GW::Merchant::TransactionType::TraderSell, 0, give, trans->price, recv);
+            return GW::Merchant::TransactItems();
         } break;
         }
         return false;
