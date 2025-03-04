@@ -38,16 +38,9 @@ namespace GW {
 
             UnlockRunePriestOfBalth = 0xF
         };
+        GWCA_API bool TransactItems();
 
-        GWCA_API bool TransactItems(TransactionType type,
-            uint32_t gold_give, TransactionInfo give,
-            uint32_t gold_recv, TransactionInfo recv
-        );
-
-        GWCA_API bool RequestQuote(TransactionType type,
-            QuoteInfo give,
-            QuoteInfo recv
-        );
+        GWCA_API bool RequestQuote(TransactionType type, uint32_t item_id);
 
         // note: can contain pointers to random items from your inventory
         GWCA_API MerchItemArray* GetMerchantItemsArray();

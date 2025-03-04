@@ -186,14 +186,7 @@ namespace {
         if (!item) {
             return 0;
         }
-        GW::Merchant::QuoteInfo give, recv;
-        give.unknown = 0;
-        give.item_count = 0;
-        give.item_ids = nullptr;
-        recv.unknown = 0;
-        recv.item_count = 1;
-        recv.item_ids = &item->item_id;
-        RequestQuote(GW::Merchant::TransactionType::TraderBuy, give, recv);
+        RequestQuote(GW::Merchant::TransactionType::TraderBuy, item->item_id);
         return item->item_id;
     }
 
@@ -203,14 +196,7 @@ namespace {
         if (!item) {
             return 0;
         }
-        GW::Merchant::QuoteInfo give, recv;
-        give.unknown = 0;
-        give.item_count = 1;
-        give.item_ids = &item->item_id;
-        recv.unknown = 0;
-        recv.item_count = 0;
-        recv.item_ids = nullptr;
-        RequestQuote(GW::Merchant::TransactionType::TraderSell, give, recv);
+        RequestQuote(GW::Merchant::TransactionType::TraderSell, item->item_id);
         return item->item_id;
     }
 

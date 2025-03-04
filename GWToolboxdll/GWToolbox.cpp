@@ -775,7 +775,7 @@ void GWToolbox::Initialize(LPVOID module)
     GW::EnableHooks();
 
     GW::WaitForFrame(L"BtnRestore", [](GW::UI::Frame* frame) {
-        OnMinOrRestoreOrExitBtnClicked_Func = frame->frame_callbacks[0];
+        OnMinOrRestoreOrExitBtnClicked_Func = frame->frame_callbacks[0].callback;
         GW::Hook::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
         GW::Hook::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
         });

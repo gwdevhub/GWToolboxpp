@@ -125,6 +125,12 @@ namespace GW {
             GWCA_API [[nodiscard]] GW::Vec2f GetViewportScale(const Frame* frame = nullptr) const;
         };
 
+        struct FrameInteractionCallback {
+            UIInteractionCallback callback;
+            void* uictl_context;
+            uint32_t h0008;
+        };
+
         struct Frame {
             uint32_t field1_0x0;
             uint32_t field2_0x4;
@@ -163,7 +169,7 @@ namespace GW {
             uint32_t field34_0x94;
             uint32_t field35_0x98;
             uint32_t field36_0x9c;
-            GW::Array<UIInteractionCallback> frame_callbacks;
+            GW::Array<FrameInteractionCallback> frame_callbacks;
             uint32_t child_offset_id; // Offset of this child in relation to its parent
             uint32_t frame_id; // Offset in the global frame array
             uint32_t field40_0xb8;
@@ -539,8 +545,8 @@ namespace GW {
                 uint32_t unknown_type_screen_pos;
             };
             struct kMouseAction {
-                uint32_t child_frame_id;
-                uint32_t child_frame_id_dupe;
+                uint32_t frame_id;
+                uint32_t child_offset_id;
                 uint32_t current_state; // 0x5 = hovered, 0x6 = mouse down
                 void* wparam = 0;
             };

@@ -1318,7 +1318,7 @@ void ChatCommands::Initialize()
 #endif
 
     GW::WaitForFrame(L"Chat", [](GW::UI::Frame* frame) {
-        OnChatInteraction_Callback_Func = frame->frame_callbacks[0];
+        OnChatInteraction_Callback_Func = frame->frame_callbacks[0].callback;
         GW::Hook::CreateHook((void**)&OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
         GW::Hook::EnableHooks(OnChatInteraction_Callback_Func);
     });

@@ -1274,7 +1274,7 @@ void InventoryManager::ContinueTransaction()
             pending_transaction.setState(PendingTransaction::State::Quoting);
             auto packet = pending_transaction.quote();
             AttachTransactionListeners();
-            RequestQuote(static_cast<GW::Merchant::TransactionType>(packet.type), {0, packet.item_give_count, packet.item_give_ids}, {0, packet.item_recv_count, packet.item_recv_ids});
+            RequestQuote(static_cast<GW::Merchant::TransactionType>(packet.type), *packet.item_give_ids);
         }
         break;
         case PendingTransaction::State::Quoting:

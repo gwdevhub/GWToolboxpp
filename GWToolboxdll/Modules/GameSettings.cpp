@@ -494,17 +494,16 @@ namespace {
         // Add a catch to grab the encoded text back out
         static std::wstring encoded_text_set;
         static GW::UI::UIInteractionCallback prev_callback = 0;
-        if (frame && frame->frame_callbacks[0]) {
-            prev_callback = frame->frame_callbacks[0];
-            frame->frame_callbacks[0] = [](GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+        if (frame && frame->frame_callbacks.size()) {
+            prev_callback = frame->frame_callbacks[0].callback;
+            frame->frame_callbacks[0].callback = [](GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
                 if (message->message_id == frame_set_text_ui_message)
                     encoded_text_set = (wchar_t*)wParam;
                 prev_callback(message, wParam, lParam);
                 };
         }
         SetFrameSkillDescription_Ret(param);
-        if (prev_callback)
-            frame->frame_callbacks[0] = prev_callback;
+        if (prev_callback) frame->frame_callbacks[0].callback = prev_callback;
 
         // Add campaign info
         const auto skill = GW::SkillbarMgr::GetSkillConstantData(param->skill_id);

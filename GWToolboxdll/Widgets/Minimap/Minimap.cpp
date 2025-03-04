@@ -372,9 +372,9 @@ namespace {
         compass_frame = GW::UI::GetFrameByLabel(L"Compass");
         if (compass_frame) {
             ASSERT(compass_frame->frame_callbacks.size());
-            if (compass_frame->frame_callbacks[0] != OnCompassFrame_UICallback) {
-                OnCompassFrame_UICallback_Ret = compass_frame->frame_callbacks[0];
-                compass_frame->frame_callbacks[0] = OnCompassFrame_UICallback;
+            if (compass_frame->frame_callbacks[0].callback != OnCompassFrame_UICallback) {
+                OnCompassFrame_UICallback_Ret = compass_frame->frame_callbacks[0].callback;
+                compass_frame->frame_callbacks[0].callback = OnCompassFrame_UICallback;
             }
             compass_position_dirty = true;
         }
@@ -640,8 +640,8 @@ void Minimap::SignalTerminate()
 
     GW::GameThread::Enqueue([] {
         RefreshQuestMarker();
-        if (compass_frame && compass_frame->frame_callbacks[0] == OnCompassFrame_UICallback) {
-            compass_frame->frame_callbacks[0] = OnCompassFrame_UICallback_Ret;
+        if (compass_frame && compass_frame->frame_callbacks[0].callback == OnCompassFrame_UICallback) {
+            compass_frame->frame_callbacks[0].callback = OnCompassFrame_UICallback_Ret;
         }
         ResetWindowPosition(GW::UI::WindowID_Compass, compass_frame);
         terminating = false;

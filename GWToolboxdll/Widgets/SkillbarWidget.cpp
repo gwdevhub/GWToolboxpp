@@ -99,9 +99,9 @@ namespace {
         skillbar_frame = GW::UI::GetFrameByLabel(L"Skillbar");
         if (skillbar_frame) {
             ASSERT(skillbar_frame->frame_callbacks.size());
-            if (skillbar_frame->frame_callbacks[0] != OnSkillbar_UICallback) {
-                OnSkillbar_UICallback_Ret = skillbar_frame->frame_callbacks[0];
-                skillbar_frame->frame_callbacks[0] = OnSkillbar_UICallback;
+            if (skillbar_frame->frame_callbacks[0].callback != OnSkillbar_UICallback) {
+                OnSkillbar_UICallback_Ret = skillbar_frame->frame_callbacks[0].callback;
+                skillbar_frame->frame_callbacks[0].callback = OnSkillbar_UICallback;
             }
         }
         return skillbar_frame;
@@ -641,8 +641,8 @@ void SkillbarWidget::Terminate()
     ToolboxWidget::Terminate();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 
-    if (skillbar_frame && skillbar_frame->frame_callbacks[0] == OnSkillbar_UICallback) {
-        skillbar_frame->frame_callbacks[0] = OnSkillbar_UICallback_Ret;
+    if (skillbar_frame && skillbar_frame->frame_callbacks[0].callback == OnSkillbar_UICallback) {
+        skillbar_frame->frame_callbacks[0].callback = OnSkillbar_UICallback_Ret;
     }
     ChatCommands::RemoveSettingChatCommand(L"skillbar_effects_overlay");
     ChatCommands::RemoveSettingChatCommand(L"skillbar_skills_overlay");

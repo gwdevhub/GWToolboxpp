@@ -56,10 +56,10 @@ namespace {
 
         if (double_click_to_travel_to_quest && message->message_id == GW::UI::UIMessage::kMouseClick2) {
             const auto packet = (GW::UI::UIPacket::kMouseAction*)wParam;
-            if (packet->current_state == 0x7 && (packet->child_frame_id_dupe & 0xffff0000) == 0x80000000) {
+            if (packet->current_state == 0x7 && (packet->child_offset_id & 0xffff0000) == 0x80000000) {
                 if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
                     if (last_quest_clicked && TIMER_DIFF(last_quest_clicked) < 250) {
-                        const auto quest_id = static_cast<GW::Constants::QuestID>(packet->child_frame_id_dupe & 0xffff);
+                        const auto quest_id = static_cast<GW::Constants::QuestID>(packet->child_offset_id & 0xffff);
                         const auto quest = GW::QuestMgr::GetQuest(quest_id);
                         if (quest && quest->map_to != GW::Constants::MapID::Count) {
                             TravelWindow::Instance().TravelNearest(quest->map_to);

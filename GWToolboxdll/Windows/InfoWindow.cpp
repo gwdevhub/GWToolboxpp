@@ -22,6 +22,8 @@
 #include <GWCA/GameEntities/Title.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Pathing.h>
+#include <GWCA/GameEntities/Frame.h>
+
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -827,8 +829,29 @@ namespace {
         [[maybe_unused]] const auto secondary = ac ? ac->secondary() : 0;
         [[maybe_unused]] const auto salvage_session = GW::Items::GetSalvageSessionInfo();
 #ifdef _DEBUG
-        auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"DeckBuilder"), 1);
-        HighlightFrame(frame);
+        //auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"DeckBuilder"), 1);
+        //HighlightFrame(frame);
+
+        auto frame = GW::UI::GetFrameByLabel(L"Vendor");
+        auto tab_frame = (GW::TabsFrame*)GW::UI::GetChildFrame(frame, 0);
+        uint32_t tab_index = 0;
+        tab_frame->GetCurrentTabIndex(&tab_index);
+        uint32_t tab_frame_id = 0;
+        tab_frame->GetTabFrameId(tab_index, &tab_frame_id);
+        auto tab = GW::UI::GetFrameById(tab_frame_id);
+        auto tab_context = GW::UI::GetFrameContext(tab);
+
+        auto tab_btn = tab ? (GW::ButtonFrame*)GW::UI::GetChildFrame(tab_frame, ~(tab->child_offset_id))
+                              : nullptr;
+
+        const wchar_t* label = nullptr;
+        if (tab_btn) {
+            tab_btn->GetLabel(&label);
+        }
+
+        // TODO: tab_context not working - find the name of the button!
+        HighlightFrame(tab);
+        (tab_context, label);
 #endif
     }
 }

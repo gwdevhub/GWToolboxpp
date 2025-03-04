@@ -107,9 +107,9 @@ namespace {
 
         const auto mission_map_context = GW::Map::GetMissionMapContext();
         mission_map_frame = mission_map_context ? GW::UI::GetFrameById(mission_map_context->frame_id) : nullptr;
-        if (!(mission_map_frame && mission_map_frame->frame_callbacks[0]))
+        if (!(mission_map_frame && mission_map_frame->frame_callbacks[0].callback))
             return false;
-        OnMissionMap_UICallback_Func = mission_map_frame->frame_callbacks[0];
+        OnMissionMap_UICallback_Func = mission_map_frame->frame_callbacks[0].callback;
         GW::Hook::CreateHook((void**)&OnMissionMap_UICallback_Func, OnMissionMap_UICallback, (void**)&OnMissionMap_UICallback_Ret);
         GW::Hook::EnableHooks(OnMissionMap_UICallback_Func);
         return true;
