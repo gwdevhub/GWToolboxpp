@@ -74,10 +74,33 @@ namespace TextUtils {
     }
 
     template <ctll::fixed_string Pattern>
-    std::wstring ctre_regex_replace_w(const std::wstring_view input, const std::wstring_view replacement) {
-        const auto in = WStringToString(input);
-        const auto res = TextUtils::ctre_regex_replace<Pattern>(in, WStringToString(replacement));
-        return StringToWString(res);
+    std::wstring ctre_regex_replace(const std::wstring_view input, const std::wstring_view replacement) {
+        std::wstring result;
+        // Pre-allocate memory to avoid frequent reallocations
+        result.reserve(input.size());
+
+        size_t last_pos = 0;
+
+        // Iterate through all matches
+        for (const auto match : ctre::search_all<Pattern>(input)) {
+            // Get the matched substring and its position
+            const auto matched_view = match.get<0>().to_view();
+            const auto pos = std::distance(input.begin(), match.get<0>().begin());
+
+            // Append text before the match
+            result.append(input.substr(last_pos, pos - last_pos));
+            // Append the replacement
+            result.append(replacement);
+            // Update position
+            last_pos = pos + matched_view.size();
+        }
+
+        // Append the remaining text
+        if (last_pos < input.size()) {
+            result.append(input.substr(last_pos));
+        }
+
+        return result;
     }
 
     template <ctll::fixed_string Pattern, typename Formatter>

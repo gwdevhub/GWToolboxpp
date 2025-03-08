@@ -48,7 +48,7 @@ public:
     bool invalid = true; // Set when we can't find the agent name for some reason, or arguments passed are empty.
 
 protected:
-    std::vector<std::wstring> SanitiseForSend();
+    std::vector<std::wstring> SanitiseForSend() const;
     bool PrintMessage();
     bool Send();
     void Init();
