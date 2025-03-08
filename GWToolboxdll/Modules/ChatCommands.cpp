@@ -1508,12 +1508,11 @@ void ChatCommands::QuestPing::Update()
         GW::Chat::SendChat('#', print_buf);
     }
     if (!objectives.wstring().empty()) {
-        // Find current objective using regex
-        const std::wregex current_obj_regex(L"\\{s\\}([^\\{]+)");
-        std::wsmatch m;
-        if (std::regex_search(objectives.wstring(), m, current_obj_regex)) {
+        static constexpr ctll::fixed_string current_obj_pattern = LR"(\{s\}([^\{]+))";
+
+        if (auto m = ctre::match<current_obj_pattern>(objectives.wstring())) {
             wchar_t print_buf[128];
-            swprintf(print_buf, _countof(print_buf), L" - %s", m[1].str().c_str());
+            swprintf(print_buf, _countof(print_buf), L" - %s", m.get<1>().to_string().c_str());
             GW::Chat::SendChat('#', print_buf);
         }
         objectives.reset(nullptr);
