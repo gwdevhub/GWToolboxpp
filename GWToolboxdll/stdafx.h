@@ -72,11 +72,14 @@
 #include <ToolboxIni.h>
 
 #include <nlohmann/json.hpp>
-#include <ctre.hpp>
 #include <easywsclient.hpp>
 #include <mp3.h>
 #include <IconsFontAwesome5.h>
 #include <mapbox/earcut.hpp>
+
+#define __forceinline
+#include <ctre.hpp>
+#undef __forceinline
 
 #include <imgui.h>
 #include <imgui_internal.h>

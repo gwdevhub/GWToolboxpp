@@ -1,6 +1,8 @@
 #pragma once
 
-#include "ctre.hpp"
+#define __forceinline
+#include <ctre.hpp>
+#undef __forceinline
 
 namespace TextUtils {
     std::string WStringToString(std::wstring_view str);

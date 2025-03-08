@@ -275,12 +275,11 @@ namespace {
                             std::string title_attr = item_match.get<1>().to_string();
                             if (!std::ranges::contains(agent_info->items_dropped, title_attr))
                                 agent_info->items_dropped.push_back(title_attr);
-
                         }
                     }
 
                     static constexpr ctll::fixed_string notes_regex = "<h2><span class=\"mw-headline\" id=\"Notes\">(?:[\\s\\S]*?)<ul([\\s\\S]*?)</ul>";
-                                                if (auto m = ctre::search<notes_regex>(agent_info->wiki_content)) {
+                    if (auto m = ctre::search<notes_regex>(agent_info->wiki_content)) {
                         std::string list_found = m.get<1>().to_string();
 
                         static constexpr ctll::fixed_string list_item_regex = "<li>([\\s\\S]*?)</li>";
