@@ -1958,9 +1958,6 @@ void InventoryManager::Draw(IDirect3DDevice9*)
             // Are you sure prompt; at this point we've already got the list of items via FetchPotentialItems()
             ImGui::Text("You're about to salvage %d item%s:", potential_salvage_all_items.size(), potential_salvage_all_items.size() == 1 ? "" : "s");
             ImGui::TextDisabled("Untick an item to skip salvaging");
-            static const std::regex sanitiser("<[^>]+>");
-            static const std::wregex wsanitiser(L"<[^>]+>");
-            static const std::wstring wiki_url(L"https://wiki.guildwars.com/wiki/");
             const float& font_scale = ImGui::GetIO().FontGlobalScale;
             const float wiki_btn_width = 50.0f * font_scale;
             static float longest_item_name_length = 280.0f * font_scale;
