@@ -450,7 +450,7 @@ void ObserverExportWindow::ExportToJSON(Version version)
                 return static_cast<unsigned char>(c == ' ' ? '_' : c);
             });
             // replace non-alphanumeric with "x" to make simply FS safe, but also show something is missing
-            name = std::regex_replace(name, std::regex("[^A-Za-z0-9.-_]/g"), "x");
+            name = TextUtils::ctre_regex_replace<"[^A-Za-z0-9.-_]/g">(name, "x");
             filename = export_time + "_" + name + ".json";
             json["filename"] = filename;
             break;

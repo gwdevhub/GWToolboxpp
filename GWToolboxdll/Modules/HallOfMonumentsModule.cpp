@@ -315,28 +315,32 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& char
             }
             return;
         }
-        static const std::regex json_regex("legacy_bits\":\"([^\"]+)");
-        std::smatch m;
-        if (!std::regex_search(response, m, json_regex)) {
+
+        static constexpr ctll::fixed_string json_regex = "legacy_bits\":\"([^\"]+)";
+
+        if (auto m = ctre::search<json_regex>(response)) {
+            const std::string hom_code = m.get<1>().to_string();
+
+            if (!Instance().DecodeHomCode(hom_code.c_str(), out)) {
+                Log::Log("Failed to DecodeHomCode from %s", hom_code.c_str());
+                out->state = HallOfMonumentsAchievements::State::Error;
+                if (callback) {
+                    callback(out);
+                }
+                return;
+            }
+
+            out->state = HallOfMonumentsAchievements::State::Done;
+            if (callback) {
+                callback(out);
+            }
+        }
+        else {
             Log::Log("Failed to find regex code from %s", response.c_str());
             out->state = HallOfMonumentsAchievements::State::Error;
             if (callback) {
                 callback(out);
             }
-            return;
-        }
-        const std::string hom_code = m[1].str();
-        if (!Instance().DecodeHomCode(hom_code.c_str(), out)) {
-            Log::Log("Failed to DecodeHomCode from %s", m[1].str().c_str());
-            out->state = HallOfMonumentsAchievements::State::Error;
-            if (callback) {
-                callback(out);
-            }
-            return;
-        }
-        out->state = HallOfMonumentsAchievements::State::Done;
-        if (callback) {
-            callback(out);
         }
     });
 }

@@ -197,7 +197,8 @@ namespace TextUtils {
         return out;
     }
 
-    std::string GuidToString(const GUID* guid) {
+    std::string GuidToString(const GUID* guid)
+    {
         ASSERT(guid);
         char guid_string[37]; // 32 hex chars + 4 hyphens + null terminator
         snprintf(
@@ -325,36 +326,38 @@ namespace TextUtils {
         return out;
     }
 
-    std::string SanitizePlayerName(const std::string_view str) {
+    std::string SanitizePlayerName(const std::string_view str)
+    {
         return WStringToString(SanitizePlayerName(StringToWString(str)));
     }
 
-    std::wstring SanitizePlayerName(const std::wstring_view str) {
+    std::wstring SanitizePlayerName(const std::wstring_view str)
+    {
         std::wstring result;
         wchar_t remove_char_token = 0;
 
         for (const auto& wchar : str) {
             if (remove_char_token) {
                 if (wchar == remove_char_token) {
-                    remove_char_token = 0;  // End removal mode if closing character is found
+                    remove_char_token = 0; // End removal mode if closing character is found
                 }
-                continue;  // Skip characters inside the brackets/parentheses
+                continue; // Skip characters inside the brackets/parentheses
             }
             if (wchar == L'[') {
-                remove_char_token = L']';  // Set to skip until the closing bracket
+                remove_char_token = L']'; // Set to skip until the closing bracket
                 if (!result.empty()) {
-                    result.pop_back();  // Remove the space before the opening bracket if needed
+                    result.pop_back(); // Remove the space before the opening bracket if needed
                 }
                 continue;
             }
             if (wchar == L'(') {
-                remove_char_token = L')';  // Set to skip until the closing parenthesis
+                remove_char_token = L')'; // Set to skip until the closing parenthesis
                 if (!result.empty()) {
                     result.pop_back();
                 }
                 continue;
             }
-            result.push_back(wchar);  // Add valid character to result
+            result.push_back(wchar); // Add valid character to result
         }
 
         return result;
@@ -444,7 +447,8 @@ namespace TextUtils {
         return str != end && errno != ERANGE;
     }
 
-    std::string TimeToString(time_t utc_timestamp, bool include_seconds) {
+    std::string TimeToString(time_t utc_timestamp, bool include_seconds)
+    {
         const time_t now = time(nullptr);
         if (!utc_timestamp) {
             utc_timestamp = now;
@@ -456,7 +460,7 @@ namespace TextUtils {
 
         std::string out;
         if (timeinfo->tm_yday != nowinfo->tm_yday || timeinfo->tm_year != nowinfo->tm_year) {
-            static constexpr const char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+            static constexpr const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
             out += std::format("{} {:02d} ", months[timeinfo->tm_mon], timeinfo->tm_mday);
         }
         if (timeinfo->tm_year != nowinfo->tm_year) {
@@ -479,14 +483,16 @@ namespace TextUtils {
         return TimeToString(filetime_to_timet(utc_timestamp), include_seconds);
     }
 
-    std::vector<std::string> Split(const std::string& in, const std::string& token) {
+    std::vector<std::string> Split(const std::string& in, const std::string& token)
+    {
         std::vector<std::string> result;
         size_t start = 0;
         size_t pos = 0;
 
         while ((pos = in.find(token, start)) != std::string::npos) {
             std::string part = in.substr(start, pos - start);
-            if (!part.empty()) {  // Skip empty substrings
+            if (!part.empty()) {
+                // Skip empty substrings
                 result.push_back(part);
             }
             start = pos + token.length();
@@ -500,32 +506,35 @@ namespace TextUtils {
 
         return result;
     }
-    std::string Join(const std::vector<std::string>& parts, const std::string& token) {
+
+    std::string Join(const std::vector<std::string>& parts, const std::string& token)
+    {
         std::string result;
-        bool first = true;  // Track if it's the first valid part
+        bool first = true; // Track if it's the first valid part
 
         for (const auto& part : parts) {
             if (!part.empty()) {
                 if (!first) {
-                    result += token;  // Add the delimiter before non-first parts
+                    result += token; // Add the delimiter before non-first parts
                 }
                 result += part;
-                first = false;  // Switch after adding the first valid part
+                first = false; // Switch after adding the first valid part
             }
         }
 
         return result;
     }
 
-    std::string UcWords(const std::string_view input) {
+    std::string UcWords(const std::string_view input)
+    {
 #pragma warning(push)
 #pragma warning(disable : 4244)
-        std::string result(input);  // Create a copy of the input
+        std::string result(input); // Create a copy of the input
         bool capitalizeNext = true;
 
         for (size_t i = 0; i < result.length(); ++i) {
             if (std::isspace(static_cast<unsigned char>(result[i]))) {
-                capitalizeNext = true;  // Set flag to capitalize next letter after space
+                capitalizeNext = true; // Set flag to capitalize next letter after space
             }
             else if (capitalizeNext && std::isalpha(static_cast<unsigned char>(result[i]))) {
                 result[i] = std::toupper(static_cast<unsigned char>(result[i]));
@@ -536,6 +545,6 @@ namespace TextUtils {
             }
         }
 #pragma warning(pop)
-        return result;  // Return the modified string
+        return result; // Return the modified string
     }
 }

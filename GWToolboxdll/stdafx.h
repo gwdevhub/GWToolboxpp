@@ -34,6 +34,7 @@
 #include <memory>
 #include <mutex>
 #include <numbers>
+#include <print>
 #include <queue>
 #include <ranges>
 #include <regex>
@@ -75,6 +76,10 @@
 #include <mp3.h>
 #include <IconsFontAwesome5.h>
 #include <mapbox/earcut.hpp>
+
+#define __forceinline
+#include <ctre.hpp>
+#undef __forceinline
 
 #include <imgui.h>
 #include <imgui_internal.h>

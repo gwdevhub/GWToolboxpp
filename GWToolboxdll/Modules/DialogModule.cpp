@@ -47,30 +47,30 @@ namespace {
         dialog_buttons.push_back(button_info);
     }
 
-    // Parse any buttons held within the dialog body
-    // ReSharper disable once CppParameterMayBeConst
-    // ReSharper disable once CppParameterMayBeConstPtrOrRef
-    void OnDialogBodyDecoded(void*, const wchar_t* decoded)
-    {
-        const std::wregex button_regex(L"<a=([0-9]+)>([^<]+)(<|$)");
-        std::wsmatch m;
-        std::wstring subject(decoded);
+    void OnDialogBodyDecoded(void*, const wchar_t* decoded) {
+        static constexpr ctll::fixed_string button_pattern = LR"(<a=([0-9]+)>([^<]+)(<|$))";
+
+        std::wstring_view subject(decoded);
         GW::UI::DialogButtonInfo embedded_button{};
         embedded_button.dialog_id = 0;
         embedded_button.skill_id = 0xFFFFFFF;
-        while (std::regex_search(subject, m, button_regex)) {
-            if (!TextUtils::ParseUInt(m[1].str().c_str(), &embedded_button.dialog_id)) {
-                Log::ErrorW(L"Failed to parse dialog id for %s, %s", m[1].str().c_str(), m[2].str().c_str());
+
+        for (auto m : ctre::search_all<button_pattern>(subject)) {
+            if (!TextUtils::ParseUInt(m.get<1>().to_string().c_str(), &embedded_button.dialog_id)) {
+                Log::ErrorW(L"Failed to parse dialog id for %s, %s", m.get<1>().to_string().c_str(), m.get<2>().to_string().c_str());
                 return;
             }
-            // Technically theres no encoded string for this button, wrap it to avoid issues later.
+
+            // Technically, there's no encoded string for this button, wrap it to avoid issues later.
             std::wstring msg = L"\x108\x107";
-            msg += m[2].str();
+            msg += m.get<2>().to_string();
             msg += L"\x1";
 
             embedded_button.message = msg.data();
             OnDialogButtonAdded(&embedded_button);
-            subject = m.suffix().str();
+
+            // Correct way to move subject forward using std::distance()
+            subject.remove_prefix(std::distance(subject.begin(), m.get<0>().end()));
         }
     }
 

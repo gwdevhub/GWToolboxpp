@@ -334,33 +334,32 @@ namespace {
         if (!(dialog_body && wcsncmp(dialog_body, L"\x8102\x2B9D\xDE1D\xB19F\x52DD", 5) == 0)) {
             return; // Not devotion dialog "Miniatures on display"
         }
-        const std::wregex displayed_miniatures(L"\x2\x102\x2([^\x102\x2]+)");
-        std::wsmatch m;
-        std::wstring subject(dialog_body);
+        static constexpr ctll::fixed_string displayed_miniatures = L"\x2\x102\x2([^\x102\x2]+)";
+        std::wstring_view subject(dialog_body);
         std::wstring msg;
         const auto cc = character_completion[GetPlayerName()];
         auto& minipets_unlocked = cc->minipets_unlocked;
         minipets_unlocked.clear();
-        while (std::regex_search(subject, m, displayed_miniatures)) {
-            std::wstring miniature_encoded_name(m[1].str());
+        for (auto m : ctre::search_all<displayed_miniatures>(subject)) {
+            std::wstring miniature_encoded_name = m.get<1>().to_string();
             for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
                 if (encoded_minipet_names[i] == miniature_encoded_name) {
                     ArrayBoolSet(minipets_unlocked, i, true);
                     break;
                 }
             }
-            subject = m.suffix().str();
+            subject.remove_prefix(std::distance(subject.begin(), m.get<0>().end()));
         }
-        const std::wregex available_miniatures(L"\x2\x109\x2([^\x109\x2]+)");
-        while (std::regex_search(subject, m, available_miniatures)) {
-            std::wstring miniature_encoded_name(m[1].str());
+        static constexpr ctll::fixed_string available_miniatures = L"\x2\x109\x2([^\x109\x2]+)";
+        for (auto m : ctre::search_all<available_miniatures>(subject)) {
+            std::wstring miniature_encoded_name = m.get<1>().to_string();
             for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
                 if (encoded_minipet_names[i] == miniature_encoded_name) {
                     ArrayBoolSet(minipets_unlocked, i, true);
                     break;
                 }
             }
-            subject = m.suffix().str();
+            subject.remove_prefix(std::distance(subject.begin(), m.get<0>().end()));
         }
         Instance().CheckProgress();
     }
@@ -402,21 +401,19 @@ namespace {
         if (this_dialog_button == available_dialogs.end()) {
             return;
         }
-        const std::wregex miniature_displayed_regex(L"\x8102\x2B91\xDAA2\xD19F\x32DB\x10A([^\x1]+)");
-        std::wsmatch m;
-        const std::wstring subject((*this_dialog_button)->message);
+        const std::wstring_view subject((*this_dialog_button)->message);
         std::wstring msg;
         const auto cc = character_completion[GetPlayerName()];
         auto& minipets_unlocked = cc->minipets_unlocked;
-        if (!std::regex_search(subject, m, miniature_displayed_regex)) {
-            return;
-        }
-        const std::wstring miniature_encoded_name(m[1].str());
-        for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
-            if (encoded_minipet_names[i] == miniature_encoded_name) {
-                ArrayBoolSet(minipets_unlocked, i, true);
-                Instance().CheckProgress();
-                break;
+        static constexpr ctll::fixed_string miniature_displayed_regex = L"\x8102\x2B91\xDAA2\xD19F\x32DB\x10A([^\x1]+)";
+        if (auto m = ctre::search<miniature_displayed_regex>(subject)) {
+            const std::wstring miniature_encoded_name = m.get<1>().to_string();
+            for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
+                if (encoded_minipet_names[i] == miniature_encoded_name) {
+                    ArrayBoolSet(minipets_unlocked, i, true);
+                    Instance().CheckProgress();
+                    break;
+                }
             }
         }
     }

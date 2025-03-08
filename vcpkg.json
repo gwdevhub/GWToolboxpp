@@ -11,7 +11,8 @@
     "minhook",
     "nlohmann-json",
     "simpleini",
-    "wolfssl"
+    "wolfssl",
+    "ctre"
   ],
   "overrides": [
     {
