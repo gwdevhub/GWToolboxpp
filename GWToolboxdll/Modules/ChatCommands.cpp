@@ -1173,14 +1173,14 @@ void ChatCommands::LoadSettings(ToolboxIni* ini)
             continue;
         }
         std::ranges::replace(cmd, '\x2', '\n');
-        static const std::regex index_regex("(\\d+):(.+)");
-        std::smatch match;
-        if (std::regex_match(alias, match, index_regex)) {
-            alias = match[2];
+        static constexpr ctll::fixed_string index_regex = "(\\d+):(.+)";
+        if (auto match = ctre::match<index_regex>(alias)) {
+            alias = match.get<2>().to_string();
         }
         const auto alias_wstr = TextUtils::StringToWString(alias);
         const auto command_wstr = TextUtils::StringToWString(cmd);
         CreateAlias(alias_wstr.c_str(), command_wstr.c_str());
+
     }
     if (cmd_aliases.empty()) {
         CreateAlias(L"ff", L"/resign");
