@@ -654,23 +654,45 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
         return false;
     }
     auto check_triggers = [](bool is_key_up, uint32_t keyData) {
-        bool triggered = false;
+        std::vector<TBHotkey*> matching_hotkeys;
+        size_t max_modifier_count = 0;
+
+        // Step 1: Find all hotkeys that match the currently pressed keys
         for (TBHotkey* hk : valid_hotkeys) {
-            if(is_key_up)
-                hk->pressed = false;
-            if (!hk->pressed
-                && hk->trigger_on_key_up == is_key_up
-                && (hk->key_combo & wndproc_keys_held) == hk->key_combo
-                && hk->key_combo.test(keyData)) {
+            if (is_key_up) hk->pressed = false;
+
+            // A hotkey is considered "matching" if:
+            // - It hasn't already been triggered (`hk->pressed == false`)
+            // - It should trigger on key-up (if we're processing a key-up event)
+            // - All its required keys are currently held (`hk->key_combo & wndproc_keys_held == hk->key_combo`)
+            // - The key that was just pressed/released is part of this hotkey (`hk->key_combo.test(keyData)`)
+            if (!hk->pressed && hk->trigger_on_key_up == is_key_up && (hk->key_combo & wndproc_keys_held) == hk->key_combo && hk->key_combo.test(keyData)) {
+                // Count how many keys (modifiers + main key) are required for this hotkey
+                size_t modifier_count = hk->key_combo.count();
+                matching_hotkeys.push_back(hk);
+
+                // Track the highest number of required keys (most specific hotkey)
+                max_modifier_count = std::max(max_modifier_count, modifier_count);
+            }
+        }
+
+        bool triggered = false;
+
+        // Step 2: Trigger only the most specific hotkeys
+        for (TBHotkey* hk : matching_hotkeys) {
+            if (hk->key_combo.count() == max_modifier_count) {
                 PushPendingHotkey(hk);
+
+                // If this hotkey is set to block Guild Wars input, mark it as triggered
                 if (!is_key_up && hk->block_gw) {
-                    // Don't block key up messages from the game
                     triggered = true;
                 }
             }
         }
-        return triggered;
-        };
+
+        return triggered; // If any hotkey blocked input, return true to prevent the key event from reaching GW
+    };
+
     switch (Message) {
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
