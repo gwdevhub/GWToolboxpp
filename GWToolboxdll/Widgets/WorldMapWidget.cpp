@@ -436,7 +436,10 @@ namespace {
 
 
         bool is_hovered = false;
-        const auto color = apply_quest_colors ? QuestModule::GetQuestColor(quest->quest_id) : 0;
+        auto color = GW::QuestMgr::GetActiveQuestId() == quest->quest_id ? 0 : 0x80FFFFFF;
+        if (apply_quest_colors) {
+            color = QuestModule::GetQuestColor(quest->quest_id);
+        }
 
         // draw_quest_marker
         const auto draw_quest_marker = [&](const GW::Vec2f& quest_marker_pos) {
