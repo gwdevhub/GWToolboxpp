@@ -230,8 +230,7 @@ namespace GuiUtils {
 
     std::string SanitizeWikiUrl(std::string s)
     {
-        const std::regex strip_bracket_whitespace(R"([\s_]*\[.*?\][\s_]*)");
-        return std::regex_replace(s, strip_bracket_whitespace, "");
+        return TextUtils::ctre_regex_replace<R"([\s_]*\[.*?\][\s_]*)">(s, "");
     }
 
     void OpenWiki(const std::wstring& url_path)

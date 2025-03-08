@@ -34,6 +34,7 @@
 #include <memory>
 #include <mutex>
 #include <numbers>
+#include <print>
 #include <queue>
 #include <ranges>
 #include <regex>
@@ -71,6 +72,7 @@
 #include <ToolboxIni.h>
 
 #include <nlohmann/json.hpp>
+#include <ctre.hpp>
 #include <easywsclient.hpp>
 #include <mp3.h>
 #include <IconsFontAwesome5.h>

@@ -41,6 +41,7 @@
 
 #include "Utils/FontLoader.h"
 #include <Utils/ToolboxUtils.h>
+#include <Utils/TextUtils.h>
 
 #include <EmbeddedResource.h>
 #include "resource.h"
@@ -854,9 +855,9 @@ std::filesystem::path GWToolbox::SaveSettings()
     ToolboxSettings::LoadModules(ini);
     ASSERT(Resources::SaveIniToFile(ini->location_on_disk, ini) == 0);
     const auto dir = ini->location_on_disk.parent_path();
-    const auto dirstr = dir.wstring();
-    const std::wstring printable = std::regex_replace(dirstr, std::wregex(L"\\\\"), L"/");
-    Log::LogW(L"Toolbox settings saved to %s", printable.c_str());
+    const auto dirstr = dir.string();
+    const auto printable = TextUtils::ctre_regex_replace<R"(\\)">(dirstr, "/");
+    Log::Log("Toolbox settings saved to %s", printable.c_str());
     settings_folder_changed = false;
     return ini->location_on_disk;
 }

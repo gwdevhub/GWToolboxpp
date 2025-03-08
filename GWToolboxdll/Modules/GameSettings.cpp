@@ -1360,19 +1360,19 @@ void GameSettings::PingItem(GW::Item* item, const uint32_t parts)
     }
     std::wstring out;
     if (parts & NAME && item->complete_name_enc) {
-        if (out.length()) {
+        if (!out.empty()) {
             out += L"\x2\x102\x2";
         }
         out += item->complete_name_enc;
     }
     else if (parts & NAME && item->name_enc) {
-        if (out.length()) {
+        if (!out.empty()) {
             out += L"\x2\x102\x2";
         }
         out += item->name_enc;
     }
     if (parts & DESC && item->info_string) {
-        if (out.length()) {
+        if (!out.empty()) {
             out += L"\x2\x102\x2";
         }
         out += ShorthandItemDescription(item);

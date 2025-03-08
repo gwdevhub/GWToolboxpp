@@ -76,6 +76,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     wintoast
     wolfssl::wolfssl
 	minhook::minhook
+	ctre::ctre
 
     # libs:
     Dbghelp.lib # for MiniDump
