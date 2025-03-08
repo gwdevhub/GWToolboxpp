@@ -490,8 +490,7 @@ namespace {
 
             draw_list->AddImageQuad(
                 *quest_icon_texture,
-                rotated_points[0], rotated_points[1], rotated_points[2], rotated_points[3],
-                uv_points[0], uv_points[1], uv_points[2], uv_points[3], color
+                rotated_points[0], rotated_points[1], rotated_points[2], rotated_points[3], uv_points[0], uv_points[1], uv_points[2], uv_points[3], color & IM_COL32_A_MASK ? color : IM_COL32_WHITE
             );
 
             return icon_rect.Contains(ImGui::GetMousePos());
@@ -726,18 +725,22 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         controls_window_rect.Translate(mouse_offset);
     }
 
+    AppendMapPortals();
+
     hovered_quest_id = GW::Constants::QuestID::None;
     // Draw all quest markers on world map if applicable
-    if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
-        AppendMapPortals();
-        const auto active_quest_id = GW::QuestMgr::GetActiveQuestId();
-        for (auto& quest : *quest_log) {
-            if (showing_all_quests || quest.quest_id == active_quest_id) {
+    if (showing_all_quests) {
+        if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
+            for (auto& quest : *quest_log) {
                 if (DrawQuestMarkerOnWorldMap(&quest)) {
                     hovered_quest_id = quest.quest_id;
                 }
             }
         }
+    }
+    const auto active = GW::QuestMgr::GetActiveQuest();
+    if (DrawQuestMarkerOnWorldMap(active)) {
+        hovered_quest_id = active->quest_id;
     }
     if (hovered_quest_id != GW::Constants::QuestID::None) {
         if (const auto hovered_quest = GW::QuestMgr::GetQuest(hovered_quest_id)) {
