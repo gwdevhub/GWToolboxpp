@@ -68,8 +68,8 @@ namespace TextUtils {
         // Iterate through all matches
         for (auto match : ctre::search_all<Pattern, Modifiers...>(input)) {
             // Get the matched substring and its position
-            auto matched = match.get<0>().to_view();
-            auto pos = std::distance(input.begin(), match.get<0>().begin());
+            auto matched = match.template get<0>().to_view();
+            auto pos = std::distance(input.begin(), match.template get<0>().begin());
 
             // Append text before the match
             result.append(input.substr(last_pos, pos - last_pos));
