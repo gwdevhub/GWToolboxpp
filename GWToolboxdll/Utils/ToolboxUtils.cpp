@@ -613,14 +613,15 @@ namespace ToolboxUtils {
                 original = item->complete_name_enc;
                 const std::wstring_view item_str(item->info_string);
 
-                auto stacking_match = ctre::match<L"\x2.\x10A\xA84\x10A(.{1,2})\x1\x101\x101\x1\x2\xA3E\x10A\xAA8\x10A\xAB1\x1\x1">(item_str);
-                if (stacking_match) {
+                static constexpr ctll::fixed_string stacking_pattern = L"\x2.\x10A\xA84\x10A(.{1,2})\x1\x101\x101\x1\x2\xA3E\x10A\xAA8\x10A\xAB1\x1\x1";
+                if (const auto stacking_match = ctre::match<stacking_pattern>(item_str)) {
                     auto capture = stacking_match.get<1>().to_view();
                     swprintf(buffer, _countof(buffer), L"\x2\xAA8\x10A\xA84\x10A%ls\x1\x101\x101\x1", capture.data());
                     original += buffer;
                 }
 
-                if (auto armor_match = ctre::match<L"\xA3B\x10A\xA86\x10A\xA44\x1\x101(.)\x1\x2">(item_str)) {
+                static constexpr ctll::fixed_string armor_pattern = L"\xA3B\x10A\xA86\x10A\xA44\x1\x101(.)\x1\x2";
+                if (auto armor_match = ctre::match<armor_pattern>(item_str)) {
                     auto capture = armor_match.get<1>().to_view();
                     swprintf(buffer, _countof(buffer), L"\x2\x102\x2\xA86\x10A\xA44\x1\x101%ls", capture.data());
                     original += buffer;
@@ -744,15 +745,17 @@ namespace ToolboxUtils {
             });
 
         // Change "Life draining -3, Health regeneration -1" > "Vampiric" (add at end of description)
-        if (ctre::match<L"\x2\x102\x2.\x10A\xA86\x10A\xA54\x1\x101.\x1\x2\x102\x2.\x10A\xA7E\x10A\xA53\x1\x101.\x1">(original)) {
-            original = TextUtils::ctre_regex_replace<L"\x2\x102\x2.\x10A\xA86\x10A\xA54\x1\x101.\x1\x2\x102\x2.\x10A\xA7E\x10A\xA53\x1\x101.\x1">(original, L"");
-            original += L"\x2\x102\x2\x108\x107Vampiric\x1";
+        static constexpr ctll::fixed_string vampiric_pattern = L"\x2\x102\x2.\x10A\xA86\x10A\xA54\x1\x101.\x1\x2\x102\x2.\x10A\xA7E\x10A\xA53\x1\x101.\x1";
+        if (ctre::match<vampiric_pattern>(original)) {
+            original = TextUtils::ctre_regex_replace<vampiric_pattern>(original, L"");
+            original += L"\x2\x102\x2\x108\x107" L"Vampiric\x1";
         }
 
         // Change "Energy gain on hit 1, Energy regeneration -1" > "Zealous" (add at end of description)
-        if (ctre::match<L"\x2\x102\x2.\x10A\xA86\x10A\xA50\x1\x101.\x1\x2\x102\x2.\x10A\xA7E\x10A\xA51\x1\x101.\x1">(original)) {
-            original = TextUtils::ctre_regex_replace<L"\x2\x102\x2.\x10A\xA86\x10A\xA50\x1\x101.\x1\x2\x102\x2.\x10A\xA7E\x10A\xA51\x1\x101.\x1">(original, L"");
-            original += L"\x2\x102\x2\x108\x107Zealous\x1";
+        static constexpr ctll::fixed_string zealous_pattern = L"\x2\x102\x2.\x10A\xA86\x10A\xA50\x1\x101.\x1\x2\x102\x2.\x10A\xA7E\x10A\xA51\x1\x101.\x1";
+        if (ctre::match<zealous_pattern>(original)) {
+            original = TextUtils::ctre_regex_replace<zealous_pattern>(original, L"");
+            original += L"\x2\x102\x2\x108\x107" L"Zealous\x1";
         }
 
         // Change "Damage" > "Dmg"
@@ -762,10 +765,10 @@ namespace ToolboxUtils {
         original = TextUtils::ctre_regex_replace<L"\x8102\x1227">(original, L"\xA3E");
 
         // Change "Halves casting time of spells" > "HCT"
-        original = TextUtils::ctre_regex_replace<L"\xA80\x10A\xA47\x1">(original, L"\x108\x107HCT\x1");
+        original = TextUtils::ctre_regex_replace<L"\xA80\x10A\xA47\x1">(original, L"\x108\x107" L"HCT\x1");
 
         // Change "Halves skill recharge of spells" > "HSR"
-        original = TextUtils::ctre_regex_replace<L"\xA80\x10A\xA58\x1">(original, L"\x108\x107HSR\x1");
+        original = TextUtils::ctre_regex_replace<L"\xA80\x10A\xA58\x1">(original, L"\x108\x107" "HSR\x1");
 
         // Remove (Stacking) and (Non-stacking) rubbish
         original = TextUtils::ctre_regex_replace<L"\x2.\x10A\xAA8\x10A[\xAB1\xAB2]\x1\x1">(original, L"");
@@ -819,11 +822,12 @@ namespace ToolboxUtils {
             original, L"\xA85\x10A\xA4E\x1\x101\x114\x2\xAA8\x10A\x108\x107" L"Festival\x1\x1");
 
         // Check for customized item with +20% damage
-        if (item->customized && ctre::match<L"\x2\x102\x2.\x10A\xA85\x10A[\xA4C\xA4E]\x1\x101\x114\x1">(original)) {
+        static constexpr ctll::fixed_string dmg_plus_20_pattern = L"\x2\x102\x2.\x10A\xA85\x10A[\xA4C\xA4E]\x1\x101\x114\x1";
+        if (item->customized && ctre::search<dmg_plus_20_pattern>(original)) {
             // Remove "\nDamage +20%" > "\n"
-            original = TextUtils::ctre_regex_replace<L"\x2\x102\x2.\x10A\xA85\x10A[\xA4C\xA4E]\x1\x101\x114\x1">(original, L"");
+            original = TextUtils::ctre_regex_replace<dmg_plus_20_pattern>(original, L"");
             // Append "Customized"
-            original += L"\x2\x102\x2\x108\x107Customized\x1";
+            original += L"\x2\x102\x2\x108\x107" L"Customized\x1";
         }
 
         return original;
