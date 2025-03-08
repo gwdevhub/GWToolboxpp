@@ -42,75 +42,29 @@ namespace TextUtils {
     // Capitalise the first letter of each word. Replaces original.
     std::string UcWords(std::string_view input);
 
-
-    template <ctll::fixed_string Pattern>
-    std::string ctre_regex_replace(std::string_view input, const std::string_view replacement) {
-        std::string result;
-        // Pre-allocate memory to avoid frequent reallocations
-        result.reserve(input.size());
-
-        size_t last_pos = 0;
-
-        // Iterate through all matches
-        for (const auto match : ctre::search_all<Pattern>(input)) {
-            // Get the matched substring and its position
-            const auto matched_view = match.get<0>().to_view();
-            const auto pos = std::distance(input.begin(), match.get<0>().begin());
-
-            // Append text before the match
-            result.append(input.substr(last_pos, pos - last_pos));
-            // Append the replacement
-            result.append(replacement);
-            // Update position
-            last_pos = pos + matched_view.size();
-        }
-
-        // Append the remaining text
-        if (last_pos < input.size()) {
-            result.append(input.substr(last_pos));
-        }
-
-        return result;
+    template <ctll::fixed_string Pattern, typename ...Modifiers>
+    std::string ctre_regex_replace(std::string_view input, const std::string_view replacement)
+    {
+        auto r = ctre::split<Pattern, Modifiers...>(input);
+        return r | std::views::join_with(replacement) | std::ranges::to<std::string>();
     }
 
-    template <ctll::fixed_string Pattern>
-    std::wstring ctre_regex_replace(const std::wstring_view input, const std::wstring_view replacement) {
-        std::wstring result;
-        // Pre-allocate memory to avoid frequent reallocations
-        result.reserve(input.size());
-
-        size_t last_pos = 0;
-
-        // Iterate through all matches
-        for (const auto match : ctre::search_all<Pattern>(input)) {
-            // Get the matched substring and its position
-            const auto matched_view = match.get<0>().to_view();
-            const auto pos = std::distance(input.begin(), match.get<0>().begin());
-
-            // Append text before the match
-            result.append(input.substr(last_pos, pos - last_pos));
-            // Append the replacement
-            result.append(replacement);
-            // Update position
-            last_pos = pos + matched_view.size();
-        }
-
-        // Append the remaining text
-        if (last_pos < input.size()) {
-            result.append(input.substr(last_pos));
-        }
-
-        return result;
+    template <ctll::fixed_string Pattern, typename ...Modifiers>
+    std::wstring ctre_regex_replace(std::wstring_view input, const std::wstring_view replacement)
+    {
+        auto r = ctre::split<Pattern, Modifiers...>(input);
+        return r | std::views::join_with(replacement) | std::ranges::to<std::wstring>();
     }
 
-    template <ctll::fixed_string Pattern, typename Formatter>
-    std::wstring ctre_regex_replace_with_formatter(std::wstring_view input, Formatter formatter) {
+    template <ctll::fixed_string Pattern, typename Formatter, typename ...Modifiers>
+    std::wstring ctre_regex_replace_with_formatter(std::wstring_view input, Formatter formatter)
+    {
         std::wstring result;
         result.reserve(input.size());
         size_t last_pos = 0;
 
         // Iterate through all matches
-        for (auto match : ctre::search_all<Pattern>(input)) {
+        for (auto match : ctre::search_all<Pattern, Modifiers...>(input)) {
             // Get the matched substring and its position
             auto matched = match.get<0>().to_view();
             auto pos = std::distance(input.begin(), match.get<0>().begin());
