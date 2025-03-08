@@ -1023,31 +1023,41 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
             return; // Already logged whatever errors
         }
 
-        // Find a valid png or jpg image inside the HTML response, <img alt="<skill_id>" src="<location_of_image>"
-        std::regex image_finder(R"(class="fullMedia"[\s\S]*?href=['"]([^"']+))");
-        std::smatch m;
-        std::regex_search(response, m, image_finder);
-        if (!m.size()) {
-            trigger_failure_callback(callback, L"Regex failed loading file %S", filename_sanitised.c_str());
-            return;
-        }
-        std::string image_url = m[1].str();
-        const auto path_to_file2 = std::format("{}\\{}", path.string(), filename_sanitised);
-        if (width) {
-            // Divert to resized version using mediawiki's method
-            image_finder = "/images/(.*)/([^/]+)$";
-            std::regex_search(image_url, m, image_finder);
-            if (!m.size()) {
-                trigger_failure_callback(callback, L"Regex failed evaluating GWW thumbnail from %S", image_url.c_str());
-                return;
+        // Find a valid png or jpg image inside the HTML response
+        static constexpr ctll::fixed_string image_pattern = R"(class="fullMedia"[\s\S]*?href=['"]([^"']+))";
+
+        if (auto m = ctre::search<image_pattern>(response)) {
+            std::string image_url = m.get<1>().to_string();
+            const auto path_to_file2 = std::format("{}\\{}", path.string(), filename_sanitised);
+
+            if (width) {
+                // Divert to resized version using MediaWiki's method
+                static constexpr ctll::fixed_string thumb_pattern = R"(/images/(.*)/([^/]+)$)";
+
+                if (auto m2 = ctre::search<thumb_pattern>(image_url)) {
+                    image_url = std::format(
+                        "/images/thumb/{}/{}/{}px-{}",
+                        m2.get<1>().to_string(),
+                        m2.get<2>().to_string(),
+                        width,
+                        m2.get<2>().to_string());
+                }
+                else {
+                    trigger_failure_callback(callback, L"Regex failed evaluating GWW thumbnail from %S", image_url.c_str());
+                    return;
+                }
             }
-            image_url = std::format("/images/thumb/{}/{}/{}px-{}", m[1].str(), m[2].str(), width, m[2].str());
+
+            // Ensure the image URL is absolute
+            if (!image_url.starts_with("http")) {
+                image_url = std::format("https://wiki.guildwars.com{}", image_url);
+            }
+
+            LoadTexture(texture, path_to_file2, image_url, callback);
         }
-        // https://wiki.guildwars.com/images/thumb/5/5c/Eternal_Protector_of_Tyria.jpg/150px-Eternal_Protector_of_Tyria.jpg
-        if (!image_url.starts_with("http")) {
-            image_url = std::format("https://wiki.guildwars.com{}", image_url);
+        else {
+            trigger_failure_callback(callback, L"Regex failed loading file %S", filename_sanitised.c_str());
         }
-        LoadTexture(texture, path_to_file2, image_url, callback);
     });
     return texture;
 }
