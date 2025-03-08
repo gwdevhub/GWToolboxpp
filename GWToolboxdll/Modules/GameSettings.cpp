@@ -1483,15 +1483,15 @@ void PendingChatMessage::Init()
     }
 }
 
-std::vector<std::wstring> PendingChatMessage::SanitiseForSend()
+std::vector<std::wstring> PendingChatMessage::SanitiseForSend() const
 {
-    const std::wregex no_tags(L"<[^>]+>");
-    const std::wregex no_new_lines(L"\n");
-    std::wstring sanitised, sanitised2, temp;
-    std::regex_replace(std::back_inserter(sanitised), output_message.begin(), output_message.end(), no_tags, L"");
-    std::regex_replace(std::back_inserter(sanitised2), sanitised.begin(), sanitised.end(), no_new_lines, L"|");
+    const std::wstring sanitised = TextUtils::ctre_regex_replace<L"<[^>]+>">(output_message, L"");
+    const std::wstring sanitised2 = TextUtils::ctre_regex_replace<L"\n">(sanitised, L"|");
+
+    // Split the string by '|' character
     std::vector<std::wstring> parts;
     std::wstringstream wss(sanitised2);
+    std::wstring temp;
     while (std::getline(wss, temp, L'|')) {
         parts.push_back(temp);
     }

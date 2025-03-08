@@ -1307,8 +1307,8 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
         }
         const std::string item_name_str = TextUtils::WStringToString(item_name);
         // matches any characters that need to be escaped in RegEx
-        static const std::regex specialChars{R"([-[\]{}()*+?.,\^$|#\s])"};
-        const std::string sanitized = std::regex_replace(item_name_str, specialChars, R"(\$&)");
+        static const std::regex SPECIAL_CHARS{R"([-[\]{}()*+?.,\^$|#\s])"};
+        const std::string sanitized = std::regex_replace(item_name_str, SPECIAL_CHARS, R"(\$&)");
         std::smatch m;
         // Find first png image that has an alt tag matching the html encoded title of the page
         char regex_str[255];
