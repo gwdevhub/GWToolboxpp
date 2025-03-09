@@ -44,21 +44,150 @@ namespace TextUtils {
     // Capitalise the first letter of each word. Replaces original.
     std::string UcWords(std::string_view input);
 
-    template <ctll::fixed_string Pattern, typename ...Modifiers>
-    std::string ctre_regex_replace(std::string_view input, const std::string_view replacement)
+    template <typename CharT, ctll::fixed_string Pattern, typename... Modifiers>
+    constexpr std::basic_string<CharT> ctre_simple_regex_replace(const std::basic_string_view<CharT> input, const std::basic_string_view<CharT> replacement)
     {
         auto r = ctre::split<Pattern, Modifiers...>(input);
-        return r | std::views::join_with(replacement) | std::ranges::to<std::string>();
+        return r | std::views::join_with(replacement) | std::ranges::to<std::basic_string<CharT>>();
     }
 
-    template <ctll::fixed_string Pattern, typename ...Modifiers>
-    std::wstring ctre_regex_replace(std::wstring_view input, const std::wstring_view replacement)
+    template <ctll::fixed_string Pattern, ctll::fixed_string Replacement, typename... Modifiers>
+    constexpr std::string ctre_regex_replace(const std::string_view subject)
     {
-        auto r = ctre::split<Pattern, Modifiers...>(input);
-        return r | std::views::join_with(replacement) | std::ranges::to<std::wstring>();
+        // this is actually SLOWER than the stringstream version, so don't use it.
+        static constexpr ctll::fixed_string special_tokens = R"(\$(\d+|'|&|`|\$))";
+        if constexpr (!ctre::search<special_tokens>(Replacement) && false) {
+            return ctre_simple_regex_replace<char, Pattern, Modifiers...>(subject, Replacement);
+        }
+
+        std::stringstream result;
+        auto search_start = subject.begin();
+#pragma warning(push)
+#pragma warning(disable: 4244)
+        const auto replacement = Replacement | std::ranges::to<std::string>();
+#pragma warning(pop)
+
+        for (auto match : ctre::search_all<Pattern, Modifiers...>(subject)) {
+            result.write(&*search_start, match.begin() - search_start);
+            std::string replaced_match(replacement);
+            std::unordered_map<std::string, std::string> replacements;
+
+            constexpr auto cnt = decltype(match)::count();
+            static_assert(cnt < 10, "Only up to 9 capture groups are supported");
+            if constexpr (ctre::search<R"(\$&)">(Replacement))
+                replacements["$&"] = match.to_string();
+            if constexpr (ctre::search<R"(\$')">(Replacement))
+                replacements["$'"] = std::string(match.end(), subject.end());
+            if constexpr (ctre::search<R"(\$`)">(Replacement))
+                replacements["$`"] = std::string(subject.begin(), match.begin());
+            if constexpr (ctre::search<R"(\$\$)">(Replacement))
+                replacements["$$"] = "$";
+            if constexpr (ctre::search<R"(\$0)">(Replacement) && cnt >= 0)
+                replacements["$0"] = match.template get<0>().to_string();
+            if constexpr (ctre::search<R"(\$1)">(Replacement) && cnt >= 1)
+                replacements["$1"] = match.template get<1>().to_string();
+            if constexpr (ctre::search<R"(\$2)">(Replacement) && cnt >= 2)
+                replacements["$2"] = match.template get<2>().to_string();
+            if constexpr (ctre::search<R"(\$3)">(Replacement) && cnt >= 3)
+                replacements["$3"] = match.template get<3>().to_string();
+            if constexpr (ctre::search<R"(\$4)">(Replacement) && cnt >= 4)
+                replacements["$4"] = match.template get<4>().to_string();
+            if constexpr (ctre::search<R"(\$5)">(Replacement) && cnt >= 5)
+                replacements["$5"] = match.template get<5>().to_string();
+            if constexpr (ctre::search<R"(\$6)">(Replacement) && cnt > 6)
+                replacements["$6"] = match.template get<6>().to_string();
+            if constexpr (ctre::search<R"(\$7)">(Replacement) && cnt > 7)
+                replacements["$7"] = match.template get<7>().to_string();
+            if constexpr (ctre::search<R"(\$8)">(Replacement) && cnt > 8)
+                replacements["$8"] = match.template get<8>().to_string();
+            if constexpr (ctre::search<R"(\$9)">(Replacement) && cnt > 9)
+                replacements["$9"] = match.template get<9>().to_string();
+
+            for (const auto& [key, value] : replacements) {
+                size_t pos = 0;
+                while ((pos = replaced_match.find(key, pos)) != std::string::npos) {
+                    replaced_match.replace(pos, key.length(), value);
+                    pos += value.length();
+                }
+            }
+
+            result << replaced_match;
+            search_start = match.end();
+        }
+
+        result.write(&*search_start, subject.end() - search_start);
+        return result.str();
     }
 
-    template <ctll::fixed_string Pattern, typename Formatter, typename ...Modifiers>
+    template <ctll::fixed_string Pattern, ctll::fixed_string Replacement, typename... Modifiers>
+    constexpr std::wstring ctre_regex_replace(const std::wstring_view subject)
+    {
+        // this is actually SLOWER than the stringstream version, so don't use it.
+        static constexpr ctll::fixed_string special_tokens = LR"(\$(\d+|'|&|`|\$))";
+        if constexpr (!ctre::search<special_tokens>(Replacement) && false) {
+            return ctre_simple_regex_replace<char, Pattern, Modifiers...>(subject, Replacement);
+        }
+
+        std::wstringstream result;
+        auto search_start = subject.begin();
+#pragma warning(push)
+#pragma warning(disable: 4244)
+        const auto replacement = Replacement | std::ranges::to<std::wstring>();
+#pragma warning(pop)
+
+        for (auto match : ctre::search_all<Pattern, Modifiers...>(subject)) {
+            result.write(&*search_start, match.begin() - search_start);
+            std::wstring replaced_match(replacement);
+            std::unordered_map<std::wstring, std::wstring> replacements;
+
+            constexpr auto cnt = decltype(match)::count();
+            static_assert(cnt < 10, "Only up to 9 capture groups are supported");
+            if constexpr (ctre::search<LR"(\$&)">(Replacement))
+                replacements[L"$&"] = match.to_string();
+            if constexpr (ctre::search<LR"(\$')">(Replacement))
+                replacements[L"$'"] = std::string(match.end(), subject.end());
+            if constexpr (ctre::search<LR"(\$`)">(Replacement))
+                replacements[L"$`"] = std::string(subject.begin(), match.begin());
+            if constexpr (ctre::search<LR"(\$\$)">(Replacement))
+                replacements[L"$$"] = L"$";
+            if constexpr (ctre::search<LR"(\$0)">(Replacement) && cnt >= 0)
+                replacements[L"$0"] = match.template get<0>().to_string();
+            if constexpr (ctre::search<LR"(\$1)">(Replacement) && cnt >= 1)
+                replacements[L"$1"] = match.template get<1>().to_string();
+            if constexpr (ctre::search<LR"(\$2)">(Replacement) && cnt >= 2)
+                replacements[L"$2"] = match.template get<2>().to_string();
+            if constexpr (ctre::search<LR"(\$3)">(Replacement) && cnt >= 3)
+                replacements[L"$3"] = match.template get<3>().to_string();
+            if constexpr (ctre::search<LR"(\$4)">(Replacement) && cnt >= 4)
+                replacements[L"$4"] = match.template get<4>().to_string();
+            if constexpr (ctre::search<LR"(\$5)">(Replacement) && cnt >= 5)
+                replacements[L"$5"] = match.template get<5>().to_string();
+            if constexpr (ctre::search<LR"(\$6)">(Replacement) && cnt > 6)
+                replacements[L"$6"] = match.template get<6>().to_string();
+            if constexpr (ctre::search<LR"(\$7)">(Replacement) && cnt > 7)
+                replacements[L"$7"] = match.template get<7>().to_string();
+            if constexpr (ctre::search<LR"(\$8)">(Replacement) && cnt > 8)
+                replacements[L"$8"] = match.template get<8>().to_string();
+            if constexpr (ctre::search<LR"(\$9)">(Replacement) && cnt > 9)
+                replacements[L"$9"] = match.template get<9>().to_string();
+
+            for (const auto& [key, value] : replacements) {
+                size_t pos = 0;
+                while ((pos = replaced_match.find(key, pos)) != std::wstring::npos) {
+                    replaced_match.replace(pos, key.length(), value);
+                    pos += value.length();
+                }
+            }
+
+            result << replaced_match;
+            search_start = match.end();
+        }
+
+        result.write(&*search_start, subject.end() - search_start);
+        return result.str();
+    }
+
+    template <ctll::fixed_string Pattern, typename Formatter, typename... Modifiers>
     std::wstring ctre_regex_replace_with_formatter(std::wstring_view input, Formatter formatter)
     {
         std::wstring result;
@@ -86,4 +215,23 @@ namespace TextUtils {
 
         return result;
     }
+
+    inline std::string str_replace_all(std::string subject, const std::string_view needle, const std::string_view str) {
+        size_t pos = 0;
+        while ((pos = subject.find(needle, pos)) != std::string::npos) {
+            subject.replace(pos, needle.length(), str);
+            pos += str.length();
+        }
+        return subject;
+    }
+
+    inline std::wstring str_replace_all(std::wstring haystack, const std::wstring_view needle, const std::wstring_view str) {
+        size_t pos = 0;
+        while ((pos = haystack.find(needle, pos)) != std::wstring::npos) {
+            haystack.replace(pos, needle.length(), str);
+            pos += str.length();
+        }
+        return haystack;
+    }
+
 }

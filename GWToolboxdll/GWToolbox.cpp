@@ -856,7 +856,7 @@ std::filesystem::path GWToolbox::SaveSettings()
     ASSERT(Resources::SaveIniToFile(ini->location_on_disk, ini) == 0);
     const auto dir = ini->location_on_disk.parent_path();
     const auto dirstr = dir.wstring();
-    const auto printable = TextUtils::ctre_regex_replace<LR"(\\)">(dirstr, L"/");
+    const auto printable = TextUtils::str_replace_all(dirstr, LR"(\\)", L"/");
     Log::LogW(L"Toolbox settings saved to %s", printable.c_str());
     settings_folder_changed = false;
     return ini->location_on_disk;

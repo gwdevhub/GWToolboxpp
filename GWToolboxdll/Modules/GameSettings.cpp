@@ -1485,8 +1485,8 @@ void PendingChatMessage::Init()
 
 std::vector<std::wstring> PendingChatMessage::SanitiseForSend() const
 {
-    const std::wstring sanitised = TextUtils::ctre_regex_replace<L"<[^>]+>">(output_message, L"");
-    const std::wstring sanitised2 = TextUtils::ctre_regex_replace<L"\n">(sanitised, L"|");
+    const std::wstring sanitised = TextUtils::ctre_regex_replace<L"<[^>]+>", L"">(output_message);
+    const std::wstring sanitised2 = TextUtils::ctre_regex_replace<L"\n", L"|">(sanitised);
 
     // Split the string by '|' character
     std::vector<std::wstring> parts;

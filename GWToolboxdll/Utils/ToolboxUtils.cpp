@@ -747,31 +747,31 @@ namespace ToolboxUtils {
         // Change "Life draining -3, Health regeneration -1" > "Vampiric" (add at end of description)
         static constexpr ctll::fixed_string vampiric_pattern = L"\x2\x102\x2.\x10A\xA86\x10A\xA54\x1\x101.\x1\x2\x102\x2.\x10A\xA7E\x10A\xA53\x1\x101.\x1";
         if (ctre::match<vampiric_pattern>(original)) {
-            original = TextUtils::ctre_regex_replace<vampiric_pattern>(original, L"");
+            original = TextUtils::ctre_regex_replace<vampiric_pattern, L"">(original);
             original += L"\x2\x102\x2\x108\x107" L"Vampiric\x1";
         }
 
         // Change "Energy gain on hit 1, Energy regeneration -1" > "Zealous" (add at end of description)
         static constexpr ctll::fixed_string zealous_pattern = L"\x2\x102\x2.\x10A\xA86\x10A\xA50\x1\x101.\x1\x2\x102\x2.\x10A\xA7E\x10A\xA51\x1\x101.\x1";
         if (ctre::match<zealous_pattern>(original)) {
-            original = TextUtils::ctre_regex_replace<zealous_pattern>(original, L"");
+            original = TextUtils::ctre_regex_replace<zealous_pattern, L"">(original);
             original += L"\x2\x102\x2\x108\x107" L"Zealous\x1";
         }
 
         // Change "Damage" > "Dmg"
-        original = TextUtils::ctre_regex_replace<L"\xA4C">(original, L"\xA4E");
+        original = TextUtils::str_replace_all(original, L"\xA4C", L"\xA4E");
 
         // Change Bow "Two-Handed" > ""
-        original = TextUtils::ctre_regex_replace<L"\x8102\x1227">(original, L"\xA3E");
+        original = TextUtils::str_replace_all(original, L"\x8102\x1227", L"\xA3E");
 
         // Change "Halves casting time of spells" > "HCT"
-        original = TextUtils::ctre_regex_replace<L"\xA80\x10A\xA47\x1">(original, L"\x108\x107" L"HCT\x1");
+        original = TextUtils::str_replace_all(original, L"\xA80\x10A\xA47\x1", L"\x108\x107" L"HCT\x1");
 
         // Change "Halves skill recharge of spells" > "HSR"
-        original = TextUtils::ctre_regex_replace<L"\xA80\x10A\xA58\x1">(original, L"\x108\x107" "HSR\x1");
+        original = TextUtils::str_replace_all(original, L"\xA80\x10A\xA58\x1", L"\x108\x107" "HSR\x1");
 
         // Remove (Stacking) and (Non-stacking) rubbish
-        original = TextUtils::ctre_regex_replace<L"\x2.\x10A\xAA8\x10A[\xAB1\xAB2]\x1\x1">(original, L"");
+        original = TextUtils::ctre_regex_replace<L"\x2.\x10A\xAA8\x10A[\xAB1\xAB2]\x1\x1", L"">(original);
 
         // Replace (while affected by a(n) to just (n)
         original = TextUtils::ctre_regex_replace_with_formatter<L"\x8101\x4D9C\x10A.\x1">(
@@ -782,12 +782,12 @@ namespace ToolboxUtils {
             });
 
         // Replace (while xxx) to just (xxx)
-        original = TextUtils::ctre_regex_replace<L"\xAB4">(original, L"\x108\x107" L"Attacking\x1");
-        original = TextUtils::ctre_regex_replace<L"\xAB5">(original, L"\x108\x107" L"Casting\x1");
-        original = TextUtils::ctre_regex_replace<L"\xAB6">(original, L"\x108\x107" L"Condition\x1");
-        original = TextUtils::ctre_regex_replace<L"[\xAB7\x4B6]">(original, L"\x108\x107" L"Enchanted\x1");
-        original = TextUtils::ctre_regex_replace<L"[\xAB8\x4B4]">(original, L"\x108\x107" L"Hexed\x1");
-        original = TextUtils::ctre_regex_replace<L"[\xAB9\xABA]">(original, L"\x108\x107" L"Stance\x1");
+        original = TextUtils::str_replace_all(original, L"\xAB4", L"\x108\x107" L"Attacking\x1");
+        original = TextUtils::str_replace_all(original, L"\xAB5", L"\x108\x107" L"Casting\x1");
+        original = TextUtils::str_replace_all(original, L"\xAB6", L"\x108\x107" L"Condition\x1");
+        original = TextUtils::ctre_regex_replace<L"[\xAB7\x4B6]", L"\x108\x107" L"Enchanted\x1">(original);
+        original = TextUtils::ctre_regex_replace<L"[\xAB8\x4B4]", L"\x108\x107" L"Hexed\x1">(original);
+        original = TextUtils::ctre_regex_replace<L"[\xAB9\xABA]", L"\x108\x107" L"Stance\x1">(original);
 
         // Combine Attribute + 3, Attribute + 1 to Attribute +3 +1 (e.g. headpiece)
         original = TextUtils::ctre_regex_replace_with_formatter<L".\x10A\xA84\x10A.\x1\x101.\x1\x2\x102\x2.\x10A\xA84\x10A.\x1\x101.\x1">(
@@ -803,29 +803,31 @@ namespace ToolboxUtils {
             });
 
         // Remove "Value: 122 gold"
-        original = TextUtils::ctre_regex_replace<L"\x2\x102\x2\xA3E\x10A\xA8A\x10A\xA59\x1\x10B.\x101.(\x102.)?\x1\x1">(original, L"");
+        original = TextUtils::ctre_regex_replace<L"\x2\x102\x2\xA3E\x10A\xA8A\x10A\xA59\x1\x10B.\x101.(\x102.)?\x1\x1", L"">(original);
 
         // Remove other "greyed" generic terms e.g. "Two-Handed", "Unidentified"
-        original = TextUtils::ctre_regex_replace<L"\x2\x102\x2\xA3E\x10A.\x1">(original, L"");
+        original = TextUtils::ctre_regex_replace<L"\x2\x102\x2\xA3E\x10A.\x1", L"">(original);
 
         // Remove "Necromancer Munne sometimes gives these to me in trade" etc
-        original = TextUtils::ctre_regex_replace<L"\x2\x102\x2.\x10A\x8102.\x1">(original, L"");
+        original = TextUtils::ctre_regex_replace<L"\x2\x102\x2.\x10A\x8102.\x1", L"">(original);
 
         // Remove "Inscription: None"
-        original = TextUtils::ctre_regex_replace<L"\x2\x102\x2.\x10A\x8101\x5A1F\x1">(original, L"");
+        original = TextUtils::ctre_regex_replace<L"\x2\x102\x2.\x10A\x8101\x5A1F\x1", L"">(original);
 
         // Remove "Crafted in tribute to an enduring legend." etc
-        original = TextUtils::ctre_regex_replace<L"\x2\x102\x2.\x10A\x8103.\x1">(original, L"");
+        original = TextUtils::ctre_regex_replace<L"\x2\x102\x2.\x10A\x8103.\x1", L"">(original);
 
         // Remove "20% Additional damage during festival events" > "Dmg +20% (Festival)"
-        original = TextUtils::ctre_regex_replace<L".\x10A\x108\x10A\x8103\xB71\x101\x100\x1\x1">(
-            original, L"\xA85\x10A\xA4E\x1\x101\x114\x2\xAA8\x10A\x108\x107" L"Festival\x1\x1");
+        original = TextUtils::ctre_regex_replace<
+            L".\x10A\x108\x10A\x8103\xB71\x101\x100\x1\x1",
+            L"\xA85\x10A\xA4E\x1\x101\x114\x2\xAA8\x10A\x108\x107" L"Festival\x1\x1"
+        >(original);
 
         // Check for customized item with +20% damage
         static constexpr ctll::fixed_string dmg_plus_20_pattern = L"\x2\x102\x2.\x10A\xA85\x10A[\xA4C\xA4E]\x1\x101\x114\x1";
         if (item->customized && ctre::search<dmg_plus_20_pattern>(original)) {
             // Remove "\nDamage +20%" > "\n"
-            original = TextUtils::ctre_regex_replace<dmg_plus_20_pattern>(original, L"");
+            original = TextUtils::ctre_regex_replace<dmg_plus_20_pattern, L"">(original);
             // Append "Customized"
             original += L"\x2\x102\x2\x108\x107" L"Customized\x1";
         }
