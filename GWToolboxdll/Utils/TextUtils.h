@@ -60,7 +60,8 @@ namespace TextUtils {
             return ctre_simple_regex_replace<char, Pattern, Modifiers...>(subject, Replacement);
         }
 
-        std::stringstream result;
+        std::string result;
+        result.reserve(subject.size() * 2);
         auto search_start = subject.begin();
 #pragma warning(push)
 #pragma warning(disable: 4244)
@@ -68,7 +69,7 @@ namespace TextUtils {
 #pragma warning(pop)
 
         for (auto match : ctre::search_all<Pattern, Modifiers...>(subject)) {
-            result.write(&*search_start, match.begin() - search_start);
+            result.append(&*search_start, match.begin() - search_start);
             std::string replaced_match(replacement);
             std::unordered_map<std::string, std::string> replacements;
 
@@ -111,14 +112,14 @@ namespace TextUtils {
                 }
             }
 
-            result << replaced_match;
+            result.append(replaced_match);
             search_start = match.end();
         }
 
         if (search_start != subject.end()) {
-            result.write(&*search_start, std::distance(search_start, subject.end()));
+            result.append(&*search_start, std::distance(search_start, subject.end()));
         }
-        return result.str();
+        return result;
     }
 
     template <ctll::fixed_string Pattern, ctll::fixed_string Replacement, typename... Modifiers>
@@ -130,7 +131,8 @@ namespace TextUtils {
             return ctre_simple_regex_replace<char, Pattern, Modifiers...>(subject, Replacement);
         }
 
-        std::wstringstream result;
+        std::wstring result;
+        result.reserve(subject.size() * 2);
         auto search_start = subject.begin();
 #pragma warning(push)
 #pragma warning(disable: 4244)
@@ -138,7 +140,7 @@ namespace TextUtils {
 #pragma warning(pop)
 
         for (auto match : ctre::search_all<Pattern, Modifiers...>(subject)) {
-            result.write(&*search_start, match.begin() - search_start);
+            result.append(&*search_start, match.begin() - search_start);
             std::wstring replaced_match(replacement);
             std::unordered_map<std::wstring, std::wstring> replacements;
 
@@ -181,14 +183,14 @@ namespace TextUtils {
                 }
             }
 
-            result << replaced_match;
+            result.append(replaced_match);
             search_start = match.end();
         }
 
         if (search_start != subject.end()) {
-            result.write(&*search_start, std::distance(search_start, subject.end()));
+            result.append(&*search_start, std::distance(search_start, subject.end()));
         }
-        return result.str();
+        return result;
     }
 
     template <ctll::fixed_string Pattern, typename Formatter, typename... Modifiers>
