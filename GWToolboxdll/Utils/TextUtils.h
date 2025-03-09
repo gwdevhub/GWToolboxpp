@@ -115,7 +115,9 @@ namespace TextUtils {
             search_start = match.end();
         }
 
-        result.write(&*search_start, subject.end() - search_start);
+        if (search_start != subject.end()) {
+            result.write(&*search_start, std::distance(search_start, subject.end()));
+        }
         return result.str();
     }
 
@@ -183,7 +185,9 @@ namespace TextUtils {
             search_start = match.end();
         }
 
-        result.write(&*search_start, subject.end() - search_start);
+        if (search_start != subject.end()) {
+            result.write(&*search_start, std::distance(search_start, subject.end()));
+        }
         return result.str();
     }
 
@@ -216,7 +220,8 @@ namespace TextUtils {
         return result;
     }
 
-    inline std::string str_replace_all(std::string subject, const std::string_view needle, const std::string_view str) {
+    inline std::string str_replace_all(std::string subject, const std::string_view needle, const std::string_view str)
+    {
         size_t pos = 0;
         while ((pos = subject.find(needle, pos)) != std::string::npos) {
             subject.replace(pos, needle.length(), str);
@@ -225,7 +230,8 @@ namespace TextUtils {
         return subject;
     }
 
-    inline std::wstring str_replace_all(std::wstring haystack, const std::wstring_view needle, const std::wstring_view str) {
+    inline std::wstring str_replace_all(std::wstring haystack, const std::wstring_view needle, const std::wstring_view str)
+    {
         size_t pos = 0;
         while ((pos = haystack.find(needle, pos)) != std::wstring::npos) {
             haystack.replace(pos, needle.length(), str);
@@ -233,5 +239,4 @@ namespace TextUtils {
         }
         return haystack;
     }
-
 }
