@@ -71,38 +71,46 @@ namespace TextUtils {
         for (auto match : ctre::search_all<Pattern, Modifiers...>(subject)) {
             result.append(&*search_start, match.begin() - search_start);
             std::string replaced_match(replacement);
-            std::unordered_map<std::string, std::string> replacements;
+        struct Pair {
+            std::string key;
+            std::string value;
+        };
+        std::vector<Pair> replacements;
 
-            constexpr auto cnt = decltype(match)::count();
-            static_assert(cnt < 10, "Only up to 9 capture groups are supported");
-            if constexpr (ctre::search<R"(\$&)">(Replacement))
-                replacements["$&"] = match.to_string();
-            if constexpr (ctre::search<R"(\$')">(Replacement))
-                replacements["$'"] = std::string(match.end(), subject.end());
-            if constexpr (ctre::search<R"(\$`)">(Replacement))
-                replacements["$`"] = std::string(subject.begin(), match.begin());
-            if constexpr (ctre::search<R"(\$\$)">(Replacement))
-                replacements["$$"] = "$";
-            if constexpr (ctre::search<R"(\$0)">(Replacement) && cnt >= 0)
-                replacements["$0"] = match.template get<0>().to_string();
-            if constexpr (ctre::search<R"(\$1)">(Replacement) && cnt >= 1)
-                replacements["$1"] = match.template get<1>().to_string();
-            if constexpr (ctre::search<R"(\$2)">(Replacement) && cnt >= 2)
-                replacements["$2"] = match.template get<2>().to_string();
-            if constexpr (ctre::search<R"(\$3)">(Replacement) && cnt >= 3)
-                replacements["$3"] = match.template get<3>().to_string();
-            if constexpr (ctre::search<R"(\$4)">(Replacement) && cnt >= 4)
-                replacements["$4"] = match.template get<4>().to_string();
-            if constexpr (ctre::search<R"(\$5)">(Replacement) && cnt >= 5)
-                replacements["$5"] = match.template get<5>().to_string();
-            if constexpr (ctre::search<R"(\$6)">(Replacement) && cnt > 6)
-                replacements["$6"] = match.template get<6>().to_string();
-            if constexpr (ctre::search<R"(\$7)">(Replacement) && cnt > 7)
-                replacements["$7"] = match.template get<7>().to_string();
-            if constexpr (ctre::search<R"(\$8)">(Replacement) && cnt > 8)
-                replacements["$8"] = match.template get<8>().to_string();
-            if constexpr (ctre::search<R"(\$9)">(Replacement) && cnt > 9)
-                replacements["$9"] = match.template get<9>().to_string();
+        constexpr auto cnt = decltype(match)::count();
+        static_assert(cnt < 10, "Only up to 9 capture groups are supported");
+        // Add replacements to vector with emplace_back
+        constexpr auto has_escaped_dollar = ctre::search<R"(\$\$)">(Replacement);
+        if constexpr (has_escaped_dollar)
+            replacements.emplace_back("$$", "~$~");
+        if constexpr (ctre::search<R"(\$&)">(Replacement))
+            replacements.emplace_back("$&", match.to_string());
+        if constexpr (ctre::search<R"(\$')">(Replacement))
+            replacements.emplace_back("$'", std::string(match.end(), subject.end()));
+        if constexpr (ctre::search<R"(\$`)">(Replacement))
+            replacements.emplace_back("$`", std::string(subject.begin(), match.begin()));
+        // if constexpr (ctre::search<R"(\$0)">(Replacement))
+        //     replacements.emplace_back("$0", match.to_string());
+        if constexpr (ctre::search<R"(\$1)">(Replacement) && cnt > 1)
+            replacements.emplace_back("$1", match.template get<1>().to_string());
+        if constexpr (ctre::search<R"(\$2)">(Replacement) && cnt > 2)
+            replacements.emplace_back("$2", match.template get<2>().to_string());
+        if constexpr (ctre::search<R"(\$3)">(Replacement) && cnt > 3)
+            replacements.emplace_back("$3", match.template get<3>().to_string());
+        if constexpr (ctre::search<R"(\$4)">(Replacement) && cnt > 4)
+            replacements.emplace_back("$4", match.template get<4>().to_string());
+        if constexpr (ctre::search<R"(\$5)">(Replacement) && cnt > 5)
+            replacements.emplace_back("$5", match.template get<5>().to_string());
+        if constexpr (ctre::search<R"(\$6)">(Replacement) && cnt > 6)
+            replacements.emplace_back("$6", match.template get<6>().to_string());
+        if constexpr (ctre::search<R"(\$7)">(Replacement) && cnt > 7)
+            replacements.emplace_back("$7", match.template get<7>().to_string());
+        if constexpr (ctre::search<R"(\$8)">(Replacement) && cnt > 8)
+            replacements.emplace_back("$8", match.template get<8>().to_string());
+        if constexpr (ctre::search<R"(\$9)">(Replacement) && cnt > 9)
+            replacements.emplace_back("$9", match.template get<9>().to_string());
+        if constexpr (has_escaped_dollar)
+            replacements.emplace_back("~$~", "$");
 
             for (const auto& [key, value] : replacements) {
                 size_t pos = 0;
@@ -142,38 +150,46 @@ namespace TextUtils {
         for (auto match : ctre::search_all<Pattern, Modifiers...>(subject)) {
             result.append(&*search_start, match.begin() - search_start);
             std::wstring replaced_match(replacement);
-            std::unordered_map<std::wstring, std::wstring> replacements;
+        struct Pair {
+            std::wstring key;
+            std::wstring value;
+        };
+        std::vector<Pair> replacements;
 
-            constexpr auto cnt = decltype(match)::count();
-            static_assert(cnt < 10, "Only up to 9 capture groups are supported");
-            if constexpr (ctre::search<LR"(\$&)">(Replacement))
-                replacements[L"$&"] = match.to_string();
-            if constexpr (ctre::search<LR"(\$')">(Replacement))
-                replacements[L"$'"] = std::string(match.end(), subject.end());
-            if constexpr (ctre::search<LR"(\$`)">(Replacement))
-                replacements[L"$`"] = std::string(subject.begin(), match.begin());
-            if constexpr (ctre::search<LR"(\$\$)">(Replacement))
-                replacements[L"$$"] = L"$";
-            if constexpr (ctre::search<LR"(\$0)">(Replacement) && cnt >= 0)
-                replacements[L"$0"] = match.template get<0>().to_string();
-            if constexpr (ctre::search<LR"(\$1)">(Replacement) && cnt >= 1)
-                replacements[L"$1"] = match.template get<1>().to_string();
-            if constexpr (ctre::search<LR"(\$2)">(Replacement) && cnt >= 2)
-                replacements[L"$2"] = match.template get<2>().to_string();
-            if constexpr (ctre::search<LR"(\$3)">(Replacement) && cnt >= 3)
-                replacements[L"$3"] = match.template get<3>().to_string();
-            if constexpr (ctre::search<LR"(\$4)">(Replacement) && cnt >= 4)
-                replacements[L"$4"] = match.template get<4>().to_string();
-            if constexpr (ctre::search<LR"(\$5)">(Replacement) && cnt >= 5)
-                replacements[L"$5"] = match.template get<5>().to_string();
-            if constexpr (ctre::search<LR"(\$6)">(Replacement) && cnt > 6)
-                replacements[L"$6"] = match.template get<6>().to_string();
-            if constexpr (ctre::search<LR"(\$7)">(Replacement) && cnt > 7)
-                replacements[L"$7"] = match.template get<7>().to_string();
-            if constexpr (ctre::search<LR"(\$8)">(Replacement) && cnt > 8)
-                replacements[L"$8"] = match.template get<8>().to_string();
-            if constexpr (ctre::search<LR"(\$9)">(Replacement) && cnt > 9)
-                replacements[L"$9"] = match.template get<9>().to_string();
+        constexpr auto cnt = decltype(match)::count();
+        static_assert(cnt < 10, "Only up to 9 capture groups are supported");
+        // Add replacements to vector with emplace_back
+        constexpr auto has_escaped_dollar = ctre::search<LR"(\$\$)">(Replacement);
+        if constexpr (has_escaped_dollar)
+            replacements.emplace_back(L"$$", L"~$~");
+        if constexpr (ctre::search<LR"(\$&)">(Replacement))
+            replacements.emplace_back(L"$&", match.to_string());
+        if constexpr (ctre::search<LR"(\$')">(Replacement))
+            replacements.emplace_back(L"$'", std::string(match.end(), subject.end()));
+        if constexpr (ctre::search<LR"(\$`)">(Replacement))
+            replacements.emplace_back(L"$`", std::string(subject.begin(), match.begin()));
+        // if constexpr (ctre::search<LR"(\$0)">(Replacement))
+        //     replacements.emplace_back(L"$0", match.to_string());
+        if constexpr (ctre::search<LR"(\$1)">(Replacement) && cnt > 1)
+            replacements.emplace_back(L"$1", match.template get<1>().to_string());
+        if constexpr (ctre::search<LR"(\$2)">(Replacement) && cnt > 2)
+            replacements.emplace_back(L"$2", match.template get<2>().to_string());
+        if constexpr (ctre::search<LR"(\$3)">(Replacement) && cnt > 3)
+            replacements.emplace_back(L"$3", match.template get<3>().to_string());
+        if constexpr (ctre::search<LR"(\$4)">(Replacement) && cnt > 4)
+            replacements.emplace_back(L"$4", match.template get<4>().to_string());
+        if constexpr (ctre::search<LR"(\$5)">(Replacement) && cnt > 5)
+            replacements.emplace_back(L"$5", match.template get<5>().to_string());
+        if constexpr (ctre::search<LR"(\$6)">(Replacement) && cnt > 6)
+            replacements.emplace_back(L"$6", match.template get<6>().to_string());
+        if constexpr (ctre::search<LR"(\$7)">(Replacement) && cnt > 7)
+            replacements.emplace_back(L"$7", match.template get<7>().to_string());
+        if constexpr (ctre::search<LR"(\$8)">(Replacement) && cnt > 8)
+            replacements.emplace_back(L"$8", match.template get<8>().to_string());
+        if constexpr (ctre::search<LR"(\$9)">(Replacement) && cnt > 9)
+            replacements.emplace_back(L"$9", match.template get<9>().to_string());
+        if constexpr (has_escaped_dollar)
+            replacements.emplace_back(L"~$~", L"$");
 
             for (const auto& [key, value] : replacements) {
                 size_t pos = 0;
