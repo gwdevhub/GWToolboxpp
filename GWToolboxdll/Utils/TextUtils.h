@@ -48,7 +48,7 @@ namespace TextUtils {
     constexpr std::basic_string<CharT> ctre_simple_regex_replace(const std::basic_string_view<CharT> input, const std::basic_string_view<CharT> replacement)
     {
         auto r = ctre::split<Pattern, Modifiers...>(input);
-        return r | std::views::join_with(replacement) | std::ranges::to<std::basic_string<CharT>>();
+        return r | std::views::as_rvalue | std::views::join_with(replacement) | std::ranges::to<std::basic_string<CharT>>();
     }
 
     template <ctll::fixed_string Pattern, ctll::fixed_string Replacement, typename... Modifiers>
