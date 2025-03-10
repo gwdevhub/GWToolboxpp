@@ -92,7 +92,7 @@ namespace {
     std::map<GW::Constants::MapID, GuiUtils::EncString*> region_names;
     std::unordered_map<GW::Constants::Language, std::unordered_map<uint32_t, GuiUtils::EncString*>> encoded_string_ids;
     std::filesystem::path current_settings_folder;
-    constexpr size_t MAX_WORKERS = 5;
+    constexpr size_t MAX_WORKERS = 20;
     const wchar_t* GUILD_WARS_WIKI_FILES_PATH = L"img\\gww_files";
     const wchar_t* SKILL_IMAGES_PATH = L"img\\skills";
     const wchar_t* ITEM_IMAGES_PATH = L"img\\items";
