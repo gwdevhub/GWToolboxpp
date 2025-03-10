@@ -54,7 +54,7 @@ namespace TextUtils {
     template <ctll::fixed_string Pattern, ctll::fixed_string Replacement, typename... Modifiers>
     constexpr std::string ctre_regex_replace(const std::string_view subject)
     {
-        // this is actually SLOWER than the stringstream version, so don't use it.
+        // this is actually SLOWER than the string appending version, so don't use it.
         static constexpr ctll::fixed_string special_tokens = R"(\$(\d+|'|&|`|\$))";
         if constexpr (!ctre::search<special_tokens>(Replacement) && false) {
             return ctre_simple_regex_replace<char, Pattern, Modifiers...>(subject, Replacement);
@@ -79,10 +79,9 @@ namespace TextUtils {
 
         constexpr auto cnt = decltype(match)::count();
         static_assert(cnt < 10, "Only up to 9 capture groups are supported");
-        // Add replacements to vector with emplace_back
         constexpr auto has_escaped_dollar = ctre::search<R"(\$\$)">(Replacement);
         if constexpr (has_escaped_dollar)
-            replacements.emplace_back("$$", "~$~");
+            replacements.emplace_back("$$", "###ESCAPED_DOLLAR###");
         if constexpr (ctre::search<R"(\$&)">(Replacement))
             replacements.emplace_back("$&", match.to_string());
         if constexpr (ctre::search<R"(\$')">(Replacement))
@@ -110,7 +109,7 @@ namespace TextUtils {
         if constexpr (ctre::search<R"(\$9)">(Replacement) && cnt > 9)
             replacements.emplace_back("$9", match.template get<9>().to_string());
         if constexpr (has_escaped_dollar)
-            replacements.emplace_back("~$~", "$");
+            replacements.emplace_back("###ESCAPED_DOLLAR###", "$");
 
             for (const auto& [key, value] : replacements) {
                 size_t pos = 0;
@@ -133,7 +132,7 @@ namespace TextUtils {
     template <ctll::fixed_string Pattern, ctll::fixed_string Replacement, typename... Modifiers>
     constexpr std::wstring ctre_regex_replace(const std::wstring_view subject)
     {
-        // this is actually SLOWER than the stringstream version, so don't use it.
+        // this is actually SLOWER than the string appending version, so don't use it.
         static constexpr ctll::fixed_string special_tokens = LR"(\$(\d+|'|&|`|\$))";
         if constexpr (!ctre::search<special_tokens>(Replacement) && false) {
             return ctre_simple_regex_replace<char, Pattern, Modifiers...>(subject, Replacement);
@@ -158,10 +157,9 @@ namespace TextUtils {
 
         constexpr auto cnt = decltype(match)::count();
         static_assert(cnt < 10, "Only up to 9 capture groups are supported");
-        // Add replacements to vector with emplace_back
         constexpr auto has_escaped_dollar = ctre::search<LR"(\$\$)">(Replacement);
         if constexpr (has_escaped_dollar)
-            replacements.emplace_back(L"$$", L"~$~");
+            replacements.emplace_back(L"$$", L"###ESCAPED_DOLLAR###");
         if constexpr (ctre::search<LR"(\$&)">(Replacement))
             replacements.emplace_back(L"$&", match.to_string());
         if constexpr (ctre::search<LR"(\$')">(Replacement))
@@ -189,7 +187,7 @@ namespace TextUtils {
         if constexpr (ctre::search<LR"(\$9)">(Replacement) && cnt > 9)
             replacements.emplace_back(L"$9", match.template get<9>().to_string());
         if constexpr (has_escaped_dollar)
-            replacements.emplace_back(L"~$~", L"$");
+            replacements.emplace_back(L"###ESCAPED_DOLLAR###", L"$");
 
             for (const auto& [key, value] : replacements) {
                 size_t pos = 0;
