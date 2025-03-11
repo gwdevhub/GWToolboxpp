@@ -30,6 +30,12 @@ namespace MapSpecific {
         MapSpecificData(GW::Constants::MapID id)
         {
             switch (id) {
+                case GW::Constants::MapID::Prophets_Path: {
+                    m_teleports.push_back({{-8112.00f, 9118.00f, 0}, {-5076.00f, 6013.00f, 0}, Teleport::direction::both_ways});
+                    m_teleports.push_back({{2297.00f, -1544.00f, 0}, {6379.00f, -668.00f, 0}, Teleport::direction::both_ways});
+                    m_teleports.push_back({{6311.00f, 13050.00f, 0}, {9935.00f, 14937.00f, 0}, Teleport::direction::both_ways});
+                    m_teleports.push_back({{-6843.00f, -10917.00f, 0}, {-4651.00f, -7494.00f, 0}, Teleport::direction::both_ways});
+                } break;
                 case GW::Constants::MapID::Isle_of_Jade:
                 case GW::Constants::MapID::Isle_of_Jade_mission:
                 case GW::Constants::MapID::Isle_of_Jade_outpost: {
