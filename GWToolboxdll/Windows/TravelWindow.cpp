@@ -29,7 +29,6 @@
 #include <GWCA/Managers/QuestMgr.h>
 
 namespace {
-
     GW::HookEntry ChatCmd_HookEntry;
     bool search_in_english = true;
 
@@ -393,22 +392,19 @@ namespace {
         std::string compare = TextUtils::ToLower(TextUtils::RemovePunctuation(TextUtils::WStringToString(s)));
         const std::string first_word = compare.substr(0, compare.find(' '));
 
-        static const std::regex district_regex("([a-z]{2,3})(\\d+)?");
-        std::smatch m;
-        if (!std::regex_search(first_word, m, district_regex)) {
-            return false;
+        static constexpr ctll::fixed_string district_regex = "([a-z]{2,3})(\\d+)?";
+        if (auto m = ctre::match<district_regex>(first_word)) {
+            const auto& shorthand_outpost = shorthand_district_names.find(m.get<1>().to_string());
+            if (shorthand_outpost == shorthand_district_names.end()) {
+                return false;
+            }
+            district = shorthand_outpost->second.district;
+            if (m.size() > 2 && !TextUtils::ParseUInt(m.get<2>().to_string().c_str(), &number)) {
+                number = 0;
+            }
+            return true;
         }
-        // Shortcut words e.g "/tp ae" for american english
-        const auto& shorthand_outpost = shorthand_district_names.find(m[1].str());
-        if (shorthand_outpost == shorthand_district_names.end()) {
-            return false;
-        }
-        district = shorthand_outpost->second.district;
-        if (m.size() > 2 && !TextUtils::ParseUInt(m[2].str().c_str(), &number)) {
-            number = 0;
-        }
-
-        return true;
+        return false;
     }
 
     void CHAT_CMD_FUNC(CmdTP)
@@ -606,9 +602,9 @@ void TravelWindow::Initialize()
     district = GW::Constants::District::Current;
     district_number = 0;
 
-    GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"tp", &CmdTP);
-    GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"to", &CmdTP);
-    GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"travel", &CmdTP);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"tp", &CmdTP);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"to", &CmdTP);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"travel", &CmdTP);
 
     for (const auto message_id : messages_to_hook) {
         RegisterUIMessageCallback(&OnUIMessage_HookEntry, message_id, OnUIMessage);
@@ -828,7 +824,7 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
         {GW::Constants::MapID::Dry_Top, GW::Constants::MapID::Aurora_Glade},
         {GW::Constants::MapID::Iron_Horse_Mine, GW::Constants::MapID::Yaks_Bend_outpost},
         {GW::Constants::MapID::Fahranur_The_First_City, GW::Constants::MapID::Blacktide_Den}, // 8 player outpost is better to start with
-        {GW::Constants::MapID::Cliffs_of_Dohjok, GW::Constants::MapID::Blacktide_Den}, // 8 player outpost is better to start with
+        {GW::Constants::MapID::Cliffs_of_Dohjok, GW::Constants::MapID::Blacktide_Den},        // 8 player outpost is better to start with
     };
 
     if (special_cases.contains(map_to)) {

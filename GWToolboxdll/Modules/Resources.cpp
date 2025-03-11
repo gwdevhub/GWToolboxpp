@@ -1023,31 +1023,41 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
             return; // Already logged whatever errors
         }
 
-        // Find a valid png or jpg image inside the HTML response, <img alt="<skill_id>" src="<location_of_image>"
-        std::regex image_finder(R"(class="fullMedia"[\s\S]*?href=['"]([^"']+))");
-        std::smatch m;
-        std::regex_search(response, m, image_finder);
-        if (!m.size()) {
-            trigger_failure_callback(callback, L"Regex failed loading file %S", filename_sanitised.c_str());
-            return;
-        }
-        std::string image_url = m[1].str();
-        const auto path_to_file2 = std::format("{}\\{}", path.string(), filename_sanitised);
-        if (width) {
-            // Divert to resized version using mediawiki's method
-            image_finder = "/images/(.*)/([^/]+)$";
-            std::regex_search(image_url, m, image_finder);
-            if (!m.size()) {
-                trigger_failure_callback(callback, L"Regex failed evaluating GWW thumbnail from %S", image_url.c_str());
-                return;
+        // Find a valid png or jpg image inside the HTML response
+        static constexpr ctll::fixed_string image_pattern = R"(class="fullMedia"[\s\S]*?href=['"]([^"']+))";
+
+        if (auto m = ctre::search<image_pattern>(response)) {
+            std::string image_url = m.get<1>().to_string();
+            const auto path_to_file2 = std::format("{}\\{}", path.string(), filename_sanitised);
+
+            if (width) {
+                // Divert to resized version using MediaWiki's method
+                static constexpr ctll::fixed_string thumb_pattern = R"(/images/(.*)/([^/]+)$)";
+
+                if (auto m2 = ctre::search<thumb_pattern>(image_url)) {
+                    image_url = std::format(
+                        "/images/thumb/{}/{}/{}px-{}",
+                        m2.get<1>().to_string(),
+                        m2.get<2>().to_string(),
+                        width,
+                        m2.get<2>().to_string());
+                }
+                else {
+                    trigger_failure_callback(callback, L"Regex failed evaluating GWW thumbnail from %S", image_url.c_str());
+                    return;
+                }
             }
-            image_url = std::format("/images/thumb/{}/{}/{}px-{}", m[1].str(), m[2].str(), width, m[2].str());
+
+            // Ensure the image URL is absolute
+            if (!image_url.starts_with("http")) {
+                image_url = std::format("https://wiki.guildwars.com{}", image_url);
+            }
+
+            LoadTexture(texture, path_to_file2, image_url, callback);
         }
-        // https://wiki.guildwars.com/images/thumb/5/5c/Eternal_Protector_of_Tyria.jpg/150px-Eternal_Protector_of_Tyria.jpg
-        if (!image_url.starts_with("http")) {
-            image_url = std::format("https://wiki.guildwars.com{}", image_url);
+        else {
+            trigger_failure_callback(callback, L"Regex failed loading file %S", filename_sanitised.c_str());
         }
-        LoadTexture(texture, path_to_file2, image_url, callback);
     });
     return texture;
 }
@@ -1104,48 +1114,50 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
             return; // Already logged whatever errors
         }
 
-        char regex_str[255];
-        // Find a valid png or jpg image inside the HTML response, <img alt="<skill_id>" src="<location_of_image>"
-        ASSERT(snprintf(regex_str, sizeof(regex_str), "class=\"skill-image\"[\\s\\S]*?<img[^>]+src=['\"]([^\"']+)([.](png|jpg))") != -1);
-        std::regex image_finder(regex_str);
-        std::smatch m;
-        std::regex_search(response, m, image_finder);
-        if (!m.size()) {
-            // Search condition e..g Crippled
-            ASSERT(snprintf(regex_str, sizeof(regex_str), "<blockquote[\\s\\S]*?<img[^>]+src=['\"]([^\"']+)([.](png|jpg))") != -1);
-            image_finder = regex_str;
-            std::regex_search(response, m, image_finder);
+        static constexpr ctll::fixed_string skill_image_regex =
+            R"(class="skill-image"[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
+        static constexpr ctll::fixed_string condition_image_regex =
+            R"(<blockquote[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
+        static constexpr ctll::fixed_string blessing_image_regex =
+            R"(class="blessing-infobox"[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
+        static constexpr ctll::fixed_string bounty_image_regex =
+            R"(class="bounty-infobox"[\s\S]*?<img[^>]+src=['"]([^"']+)([.](png|jpg)))";
+
+        std::string image_path, image_extension;
+
+        if (auto m = ctre::search<skill_image_regex>(response)) {
+            image_path = m.get<1>().to_string();
+            image_extension = m.get<2>().to_string();
         }
-        if (!m.size()) {
-            // Search blessing
-            ASSERT(snprintf(regex_str, sizeof(regex_str), "class=\"blessing-infobox\"[\\s\\S]*?<img[^>]+src=['\"]([^\"']+)([.](png|jpg))") != -1);
-            image_finder = regex_str;
-            std::regex_search(response, m, image_finder);
+        else if (auto m1 = ctre::search<condition_image_regex>(response)) {
+            image_path = m1.get<1>().to_string();
+            image_extension = m1.get<2>().to_string();
         }
-        if (!m.size()) {
-            // Search bounty
-            ASSERT(snprintf(regex_str, sizeof(regex_str), "class=\"bounty-infobox\"[\\s\\S]*?<img[^>]+src=['\"]([^\"']+)([.](png|jpg))") != -1);
-            image_finder = regex_str;
-            std::regex_search(response, m, image_finder);
+        else if (auto m2 = ctre::search<blessing_image_regex>(response)) {
+            image_path = m2.get<1>().to_string();
+            image_extension = m2.get<2>().to_string();
         }
-        if (!m.size()) {
+        else if (auto m3 = ctre::search<bounty_image_regex>(response)) {
+            image_path = m3.get<1>().to_string();
+            image_extension = m3.get<2>().to_string();
+        }
+        else {
             trigger_failure_callback(callback, L"Regex failed loading skill id %d", skill_id);
             return;
         }
-        const std::string& image_path = m[1].str();
-        const std::string& image_extension = m[2].str();
+
         wchar_t path_to_file[MAX_PATH];
         ASSERT(swprintf(path_to_file, _countof(path_to_file), L"%s\\%d%S", path.c_str(), skill_id, image_extension.c_str()) != -1);
+
         char url[128];
 
         if (strncmp(image_path.c_str(), "http", 4) == 0) {
-            // Image URL is absolute
             snprintf(url, _countof(url), "%s%s", image_path.c_str(), image_extension.c_str());
         }
         else {
-            // Image URL is relative to domain
             snprintf(url, _countof(url), "https://wiki.guildwars.com%s%s", image_path.c_str(), image_extension.c_str());
         }
+
         LoadTexture(texture, path_to_file, url, callback);
     });
     return texture;
@@ -1307,8 +1319,8 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
         }
         const std::string item_name_str = TextUtils::WStringToString(item_name);
         // matches any characters that need to be escaped in RegEx
-        static const std::regex specialChars{R"([-[\]{}()*+?.,\^$|#\s])"};
-        const std::string sanitized = std::regex_replace(item_name_str, specialChars, R"(\$&)");
+        static constexpr ctll::fixed_string SPECIAL_CHARS{R"([\-\[\]{}()*+?.,\^$|#\s])"};
+        const std::string sanitized = TextUtils::ctre_regex_replace<SPECIAL_CHARS, R"(\$&)">(item_name_str);
         std::smatch m;
         // Find first png image that has an alt tag matching the html encoded title of the page
         char regex_str[255];

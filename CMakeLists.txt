@@ -61,6 +61,7 @@ find_path(SIMPLEINI_INCLUDE_DIRS "ConvertUTF.c")
 find_package(wolfssl CONFIG REQUIRED)
 find_package(minhook CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(ctre CONFIG REQUIRED)
 
 add_subdirectory(GWToolboxdll)
 add_subdirectory(Core)

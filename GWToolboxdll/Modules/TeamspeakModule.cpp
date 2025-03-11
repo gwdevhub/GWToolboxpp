@@ -158,37 +158,42 @@ namespace {
         Log::Log("content: %s\n error: %s %s", response->content.c_str(), response->error_id.c_str(), response->error_text.c_str());
 
         {
-            static const std::regex server_info_regex("ip=([^ ]+) port=([0-9]+)");
-            std::smatch m;
-            std::regex_search(response->content, m, server_info_regex);
-            if (!m.size()) {
+            static constexpr ctll::fixed_string server_info_pattern = R"(ip=([^ ]+) port=([0-9]+))";
+
+            if (auto m = ctre::match<server_info_pattern>(response->content)) {
+                server = new TS3Server();
+                server->host = m.get<1>().to_string();
+                server->port = m.get<2>().to_string();
+            } else {
                 return;
             }
 
-            server = new TS3Server();
-
-            server->host = m[1].str();
-            server->port = m[2].str();
             response = PollSocket("whoami\r\n");
             if (!response) {
                 goto cleanup;
             }
-            static const std::regex client_info_regex("clid=([0-9]+) cid=([0-9]+)");
-            if (!std::regex_search(response->content, m, client_info_regex)) {
+
+            static constexpr ctll::fixed_string client_info_pattern = R"(clid=([0-9]+) cid=([0-9]+))";
+
+            if (auto m = ctre::match<client_info_pattern>(response->content)) {
+                server->my_channel_id = m.get<2>().to_string();
+                server->my_client_id = m.get<1>().to_string();
+            } else {
                 goto cleanup;
             }
-            server->my_channel_id = m[2].str();
-            server->my_client_id = m[1].str();
 
             response = PollSocket("servervariable virtualserver_name\r\n");
             if (!response) {
                 goto cleanup;
             }
-            static const std::regex server_name_regex("virtualserver_name=([^\n]+)");
-            if (!std::regex_search(response->content, m, server_name_regex)) {
+
+            static constexpr ctll::fixed_string server_name_pattern = R"(virtualserver_name=([^\n]+))";
+
+            if (auto m = ctre::match<server_name_pattern>(response->content)) {
+                server->name = m.get<1>().to_string();
+            } else {
                 goto cleanup;
             }
-            server->name = m[1].str();
 
             auto replace_all = [](std::string& subject, const std::string& find, const std::string& replace) {
                 while (true) {
@@ -206,6 +211,7 @@ namespace {
             if (!response) {
                 goto cleanup;
             }
+
             const auto& res = response->content;
             size_t offset = 0;
             while (true) {

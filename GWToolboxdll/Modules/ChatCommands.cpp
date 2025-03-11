@@ -1173,14 +1173,14 @@ void ChatCommands::LoadSettings(ToolboxIni* ini)
             continue;
         }
         std::ranges::replace(cmd, '\x2', '\n');
-        static const std::regex index_regex("(\\d+):(.+)");
-        std::smatch match;
-        if (std::regex_match(alias, match, index_regex)) {
-            alias = match[2];
+        static constexpr ctll::fixed_string index_regex = "(\\d+):(.+)";
+        if (auto match = ctre::match<index_regex>(alias)) {
+            alias = match.get<2>().to_string();
         }
         const auto alias_wstr = TextUtils::StringToWString(alias);
         const auto command_wstr = TextUtils::StringToWString(cmd);
         CreateAlias(alias_wstr.c_str(), command_wstr.c_str());
+
     }
     if (cmd_aliases.empty()) {
         CreateAlias(L"ff", L"/resign");
@@ -1508,12 +1508,11 @@ void ChatCommands::QuestPing::Update()
         GW::Chat::SendChat('#', print_buf);
     }
     if (!objectives.wstring().empty()) {
-        // Find current objective using regex
-        const std::wregex current_obj_regex(L"\\{s\\}([^\\{]+)");
-        std::wsmatch m;
-        if (std::regex_search(objectives.wstring(), m, current_obj_regex)) {
+        static constexpr ctll::fixed_string current_obj_pattern = LR"(\{s\}([^\{]+))";
+
+        if (auto m = ctre::match<current_obj_pattern>(objectives.wstring())) {
             wchar_t print_buf[128];
-            swprintf(print_buf, _countof(print_buf), L" - %s", m[1].str().c_str());
+            swprintf(print_buf, _countof(print_buf), L" - %s", m.get<1>().to_string().c_str());
             GW::Chat::SendChat('#', print_buf);
         }
         objectives.reset(nullptr);
@@ -1836,7 +1835,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
             const auto file_location = GWToolbox::SaveSettings();
             const auto dir = file_location.parent_path();
             const auto dirstr = dir.wstring();
-            const auto printable = std::regex_replace(dirstr, std::wregex(L"\\\\"), L"/");
+            const auto printable = TextUtils::str_replace_all(dirstr, LR"(\\)", L"/");
             Log::InfoW(L"Settings saved to %s", printable.c_str());
         }
         else if (arg1 == L"load") {
@@ -1845,7 +1844,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
             const auto file_location = GWToolbox::LoadSettings();
             const auto dir = file_location.parent_path();
             const auto dirstr = dir.wstring();
-            const auto printable = std::regex_replace(dirstr, std::wregex(L"\\\\"), L"/");
+            const auto printable = TextUtils::str_replace_all(dirstr, LR"(\\)", L"/");
             Log::InfoW(L"Settings loaded from %s", printable.c_str());
         }
         else if (arg1 == L"reset") {
@@ -1915,7 +1914,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         const auto file_location = GWToolbox::SaveSettings();
         const auto dir = file_location.parent_path();
         const auto dirstr = dir.wstring();
-        const auto printable = std::regex_replace(dirstr, std::wregex(L"\\\\"), L"/");
+        const auto printable = TextUtils::str_replace_all(dirstr, LR"(\\)", L"/");
         Log::InfoW(L"Settings saved to %s", printable.c_str());
     }
     else if (arg1 == L"load") {
@@ -1931,7 +1930,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         const auto file_location = GWToolbox::LoadSettings();
         const auto dir = file_location.parent_path();
         const auto dirstr = dir.wstring();
-        const auto printable = std::regex_replace(dirstr, std::wregex(L"\\\\"), L"/");
+        const auto printable = TextUtils::str_replace_all(dirstr, LR"(\\)", L"/");
         Log::InfoW(L"Settings loaded from %s", printable.c_str());
     }
     else {
