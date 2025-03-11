@@ -1172,7 +1172,7 @@ namespace {
     }
 
     GW::HookEntry OnPreUIMessage_HookEntry;
-    void OnPreUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*) {
+    void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*) {
         switch (message_id) {
         case GW::UI::UIMessage::kSendCallTarget: {
             auto packet = (GW::UI::UIPacket::kSendCallTarget*)wParam;
@@ -1184,6 +1184,21 @@ namespace {
         } break;
         case GW::UI::UIMessage::kMapLoaded: {
             mission_prompted = false;
+        } break;
+        case GW::UI::UIMessage::kSendDialog: {
+            const auto dialog_id = (uint32_t)wParam;
+            const auto& buttons = DialogModule::GetDialogButtons();
+            const auto button = std::ranges::find_if(buttons, [dialog_id](GW::UI::DialogButtonInfo* btn) {
+                return btn->dialog_id == dialog_id && btn->message && wcscmp(btn->message, L"\x8101\x13D5\x8B48\xD2EF\x7E5A") == 0;
+                });
+            if (button == buttons.end())
+                break;
+            CheckPromptBeforeEnterMission(status);
+            if (status->blocked) {
+                GW::GameThread::Enqueue([]() {
+                    DialogModule::ReloadDialog();
+                });
+            }
         } break;
         }
     }
