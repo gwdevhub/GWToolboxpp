@@ -251,7 +251,7 @@ namespace {
                         }
                     }
 
-                    static constexpr ctll::fixed_string armor_ratings_regex = "<h2><span class=\"mw-headline\" id=\"Armor_ratings\">([\\s\\S]*?)</table>";
+                    static constexpr ctll::fixed_string armor_ratings_regex = R"(<h2><span class=\"mw-headline\" id=\"Armor_ratings\">([\s\S]*?)</table>)";
                     if (auto m = ctre::search<armor_ratings_regex>(agent_info->wiki_content)) {
                         std::string armor_table_found = m.get<1>().to_string();
                         armor_table_found.erase(std::ranges::remove(armor_table_found, '\n').begin(), armor_table_found.end());
@@ -267,7 +267,7 @@ namespace {
                         }
                     }
 
-                    static constexpr ctll::fixed_string items_dropped_regex = "<h2><span class=\"mw-headline\" id=\"Items_dropped\">(?:[\\s\\S]*?)<ul([\\s\\S]*?)</ul>";
+                    static constexpr ctll::fixed_string items_dropped_regex = R"(<h2><span class=\"mw-headline\" id=\"Items_dropped\">(?:[\s\S]*?)<ul([\s\S]*?)<\/ul>)";
                     if (auto m = ctre::search<items_dropped_regex>(agent_info->wiki_content)) {
                         std::string list_found = m.get<1>().to_string();
 
