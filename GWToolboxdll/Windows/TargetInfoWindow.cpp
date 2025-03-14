@@ -205,6 +205,7 @@ namespace {
         text = replace_all(text, "&gt;", ">");
         text = replace_all(text, "&quot;", "\"");
         text = replace_all(text, "&apos;", "'");
+        text = replace_all(text, "&#39;", "'");
         return text;
     }
 
