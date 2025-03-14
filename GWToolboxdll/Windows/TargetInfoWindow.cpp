@@ -235,7 +235,7 @@ namespace {
                 break;
 
                 case AgentInfo::TargetInfoState::ParsingWikiPage: {
-                    static constexpr ctll::fixed_string skill_list_regex = "<h2><span class=\"mw-headline\" id=\"Skills\">(?:[\\s\\S]*?)<ul([\\s\\S]*?)</ul>";
+                    static constexpr ctll::fixed_string skill_list_regex = R"(<h2><span class=\"mw-headline\" id=\"Skills\">(?:[\s\S]*?)(<ul([\s\S]*?))?(<\/ul>|<h2><span class=\"mw-headline\"))";
 
                     if (auto m = ctre::search<skill_list_regex>(agent_info->wiki_content)) {
                         std::string skill_list_found = m.get<1>().to_string();
@@ -279,7 +279,7 @@ namespace {
                         }
                     }
 
-                    static constexpr ctll::fixed_string notes_regex = "<h2><span class=\"mw-headline\" id=\"Notes\">(?:[\\s\\S]*?)<ul([\\s\\S]*?)</ul>";
+                    static constexpr ctll::fixed_string notes_regex = R"(<h2><span class=\"mw-headline\" id=\"Notes\">(?:[\s\S]*?)<ul([\s\S]*?)<\/ul>)";
                     if (auto m = ctre::search<notes_regex>(agent_info->wiki_content)) {
                         std::string list_found = m.get<1>().to_string();
 
