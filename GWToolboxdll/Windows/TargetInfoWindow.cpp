@@ -238,7 +238,7 @@ namespace {
                     static constexpr ctll::fixed_string skill_list_regex = R"(<h2><span class=\"mw-headline\" id=\"Skills\">(?:[\s\S]*?)(<ul([\s\S]*?))?(<\/ul>|<h2><span class=\"mw-headline\"))";
 
                     if (auto m = ctre::search<skill_list_regex>(agent_info->wiki_content)) {
-                        std::string skill_list_found = m.get<1>().to_string();
+                        std::string skill_list_found = m.get<0>().to_string();
 
                         static constexpr ctll::fixed_string skill_link_regex = "<a href=\"[^\"]+\" title=\"([^\"]+)\"";
                         for (auto skill_match : ctre::search_all<skill_link_regex>(skill_list_found)) {
