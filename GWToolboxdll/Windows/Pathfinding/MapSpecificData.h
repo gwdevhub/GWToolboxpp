@@ -1,6 +1,5 @@
 #pragma once
 #include <vector>
-#include <string>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Maps.h>

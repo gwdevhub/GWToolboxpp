@@ -7,7 +7,6 @@
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/Constants/Skills.h>
 
-#include <GWCA/Context/GuildContext.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/Context/CharContext.h>
 
@@ -40,9 +39,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
-#include <GWCA/Managers/MerchantMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
 
@@ -62,7 +59,6 @@
 #include <Logger.h>
 #include <Timer.h>
 #include <Defines.h>
-#include <Utils/FontLoader.h>
 #include <Utils/TextUtils.h>
 #include <Constants/EncStrings.h>
 
