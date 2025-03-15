@@ -812,7 +812,7 @@ namespace {
         ImGui::Bullet();
         ImGui::Text(fps_syntax);
         ImGui::Bullet();
-        ImGui::Text("'/hero [avoid|guard|attack] [hero_index]' to set your hero behavior in an explorable area.\n"
+        ImGui::Text("'/hero [avoid|guard|attack|target] [hero_index]' to set your hero behavior or target in an explorable area.\n"
             "If hero_index is not provided, all heroes behaviours will be adjusted.");
         const auto toggle_hint = "<name> options: helm, costume, costume_head, cape, <window_or_widget_name>";
         ImGui::Bullet();
