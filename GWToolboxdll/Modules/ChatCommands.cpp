@@ -3190,29 +3190,52 @@ void CHAT_CMD_FUNC(ChatCommands::CmdHeroBehaviour)
     else if (arg1 == L"attack") {
         behaviour = GW::HeroBehavior::Fight; // attack
     }
+    else if (arg1 == L"target") {
+    }
     else {
         return Log::Error("Invalid first argument for /hero. It can be one of: avoid | guard | attack");
     }
 
-    if (argc < 3) {
-        GW::WorldContext* w = GW::GetWorldContext();
-        GW::HeroFlagArray* f = w ? &w->hero_flags : nullptr;
-        if (!(f && f->size())) {
+    if (arg1 != L"target") {
+        if (argc < 3) {
+            GW::WorldContext* w = GW::GetWorldContext();
+            GW::HeroFlagArray* f = w ? &w->hero_flags : nullptr;
+            if (!(f && f->size())) {
+                return;
+            }
+            for (const auto& hero : *f) {
+                GW::PartyMgr::SetHeroBehavior(hero.agent_id, behaviour);
+            }
             return;
         }
-        for (const auto& hero : *f) {
-            GW::PartyMgr::SetHeroBehavior(hero.agent_id, behaviour);
+        const auto arg2 = argv[2];
+        unsigned int index = 0;
+        if (!TextUtils::ParseUInt(arg2, &index) || index < 1 || index > GW::PartyMgr::GetPartyInfo()->heroes.size()) {
+            return Log::Error("Invalid second argument for /hero avoid|guard|attack [hero_index]. It can be 1 to the number of heroes in your party.");
         }
-        return;
+        const auto hero_agent_id = GW::Agents::GetHeroAgentID(index);
+        GW::PartyMgr::SetHeroBehavior(hero_agent_id, behaviour);
+    }
+    else {
+        const auto target = GW::Agents::GetTarget();
+        if (!target) {
+            return Log::Error("/hero target command error: No target chosen");
+        }
+        if (argc < 3) {
+            for (const auto hero : GW::PartyMgr::GetPartyInfo()->heroes) {
+                GW::PartyMgr::SetHeroTarget(hero.agent_id, target->agent_id);
+            }
+            return;
+        }
+        const auto arg2 = argv[2];
+        unsigned int index = 0;
+        if (!TextUtils::ParseUInt(arg2, &index) || index < 1 || index > GW::PartyMgr::GetPartyInfo()->heroes.size()) {
+            return Log::Error("Invalid second argument for /hero target [hero_index]. It can be 1 to the number of heroes in your party.");
+        }
+        const auto hero_agent_id = GW::Agents::GetHeroAgentID(index);
+        GW::PartyMgr::SetHeroTarget(hero_agent_id, target->agent_id);
     }
 
-    const auto arg2 = argv[2];
-    unsigned int index = 0;
-    if (!TextUtils::ParseUInt(arg2, &index) || index < 1 || index > 7) {
-        return Log::Error("Invalid second argument for /hero avoid|guard|attack [hero_index]. It can be 1 to the number of your heroes in the party.");
-    }
-    const auto hero_agent_id = GW::Agents::GetHeroAgentID(index);
-    GW::PartyMgr::SetHeroBehavior(hero_agent_id, behaviour);
 }
 
 void CHAT_CMD_FUNC(ChatCommands::CmdVolume)
