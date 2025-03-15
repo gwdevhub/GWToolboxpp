@@ -2175,7 +2175,7 @@ void GameSettings::DrawPartySettings()
     ImGui::ShowHelp("When you're invited to join someone elses party");
     ImGui::Checkbox("Automatically accept party join requests when ticked", &auto_accept_join_requests);
     ImGui::ShowHelp("When a player wants to join your existing party");
-    ImGui::Checkbox("Automatically flag your heroes and pets to lock onto your called target", &automatically_flag_pet_to_fight_called_target);
+    ImGui::Checkbox("Automatically lock heroes and pets onto your called target", &automatically_flag_pet_to_fight_called_target);
 }
 
 void GameSettings::DrawSettingsInternal()
