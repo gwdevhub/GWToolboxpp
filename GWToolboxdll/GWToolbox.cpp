@@ -33,6 +33,7 @@
 #include <Modules/ItemDescriptionHandler.h>
 #include <Modules/LoginModule.h>
 #include <Modules/Updater.h>
+#include <Modules/PetModule.h>
 #include <Windows/SettingsWindow.h>
 
 #include <Windows/MainWindow.h>
@@ -47,7 +48,6 @@
 
 #include <DelayImp.h>
 
-#include "Modules/PetModule.h"
 
 // declare method here as recommended by imgui
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
