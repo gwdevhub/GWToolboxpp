@@ -1,13 +1,17 @@
 #include "PetModule.h"
 
+
 #include "../stdafx.h"
+
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <ToolboxModule.h>
 #include "Defines.h"
+#include "Utils/GuiUtils.h"
 
 namespace {
+    int interval = 0;
     bool display_window = false;
     GW::Constants::MapID map_id = GW::Constants::MapID::None;
     GW::Constants::MapID previous_map_id = GW::Constants::MapID::None;
@@ -39,19 +43,28 @@ void PetModule::Update(const float)
         return;
     }
 
-    if (GW::Map::GetInstanceType() != instance_type || GW::Map::GetMapID() != map_id) {
-        previous_instance_type = instance_type;
-        previous_map_id = map_id;
+    if (interval % 60 == 0) {
 
-        instance_type = GW::Map::GetInstanceType();
-        map_id = GW::Map::GetMapID();
+        if (GW::Map::GetInstanceType() != instance_type || GW::Map::GetMapID() != map_id) {
+            previous_instance_type = instance_type;
+            previous_map_id = map_id;
 
-        display_window = instance_type == GW::Constants::InstanceType::Explorable;
+            instance_type = GW::Map::GetInstanceType();
+            map_id = GW::Map::GetMapID();
+
+            display_window = instance_type == GW::Constants::InstanceType::Explorable;
+        }
+
+        if (display_window) {
+            Keypress(GW::UI::ControlAction_OpenPetCommander);
+            display_window = !display_window;
+        }
+
+        interval = 0;
     }
 
-    if (display_window) {
-        Keypress(GW::UI::ControlAction_OpenPetCommander);
-        display_window = !display_window;
-    }
+
+
+    interval += 1;
 }
 
