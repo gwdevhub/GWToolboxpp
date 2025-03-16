@@ -47,6 +47,8 @@
 
 #include <DelayImp.h>
 
+#include "Modules/PetModule.h"
+
 // declare method here as recommended by imgui
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -1093,6 +1095,7 @@ void GWToolbox::UpdateInitialising(float)
     ToggleModule(LoginModule::Instance());
     ToggleModule(AprilFools::Instance());
     ToggleModule(SettingsWindow::Instance());
+    ToggleModule(PetModule::Instance());
 
     ToolboxSettings::LoadModules(ini); // initialize all other modules as specified by the user
 
