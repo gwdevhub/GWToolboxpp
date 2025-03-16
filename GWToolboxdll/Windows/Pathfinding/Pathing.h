@@ -156,8 +156,6 @@ namespace Pathing {
     private:
         void LoadMapSpecificData();
 
-        // Traverse map props and copy an array of valid in-game portals; later used for travel calcs
-        void LoadTravelPortals();
 
         // Generate Axis Aligned Bounding Boxes around trapezoids
         // This is used for quick intersection checks.

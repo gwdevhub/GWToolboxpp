@@ -11,6 +11,13 @@
 namespace {
     std::mutex pathing_mutex;
 
+    GW::Array<GW::MapProp*>* GetMapProps() {
+        const auto m = GW::GetMapContext();
+        const auto p = m ? m->props : nullptr;
+        return p ? &p->propArray : nullptr;
+    }
+
+
     // Grab a copy of map_context->sub1->pathing_map_block for processing on a different thread - Blocks until copy is complete
     Pathing::Error CopyPathingMapBlocks(std::vector<uint32_t>& block)
     {
@@ -57,11 +64,22 @@ namespace {
         uint32_t* sub_deets = (uint32_t*)prop->h0034[4];
         return FileHashToFileId((wchar_t*)sub_deets[1]);
     };
-
+    bool IsTeleporter(GW::MapProp* prop)
+    {
+        if (!prop) return false;
+        switch (GetMapPropModelFileId(prop)) {
+            case 0xefd0:  // Crystal desert
+                return true;
+        }
+        return false;
+    }
     bool IsTravelPortal(GW::MapProp* prop)
     {
+        if (!prop) return false;
         switch (GetMapPropModelFileId(prop)) {
-            case 0xa825: // Prophecies, Factions
+            case 0x4e6b2: // Eotn asura gate
+            case 0x3c5ac: // Eotn, Nightfall
+            case 0xa825:  // Prophecies, Factions
                 return true;
         }
         return false;
@@ -236,19 +254,13 @@ namespace Pathing {
         if (py <= 0.0f) return false;
         return true;
     }
-
+    // Traverse map props and copy an array of valid in-game portals; later used for travel calcs
     void MilePath::LoadMapSpecificData()
     {
-        m_msd = MapSpecific::MapSpecificData(Map::GetMapID());
-        m_teleports = m_msd.m_teleports;
-    }
-
-    void MilePath::LoadTravelPortals()
-    {
-        const auto m = GetMapContext();
-        const auto p = m ? m->props : nullptr;
-        const auto props = p ? &p->propArray : nullptr;
         travel_portals.clear();
+        MapSpecific::MapSpecificData map_data(GW::Map::GetMapID());
+        m_teleports = map_data.m_teleports;
+        const auto props = GetMapProps();
         if (!props) return;
         for (const auto prop : *props) {
             if (IsTravelPortal(prop)) {
@@ -256,6 +268,7 @@ namespace Pathing {
                 travel_portals.push_back(prop);
             }
         }
+
     }
 
     MilePath::MilePath()
@@ -264,7 +277,6 @@ namespace Pathing {
         GW::GameThread::Enqueue([&] {
             const clock_t start = clock();
             LoadMapSpecificData();
-            LoadTravelPortals();
             GenerateAABBs();
             GenerateAABBGraph(); //not threaded because it relies on gw client Query altitude.
             ASSERT(!worker_thread);
