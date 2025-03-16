@@ -441,7 +441,7 @@ namespace {
         return false;
     }
 
-    float GetPriceByItem(const GW::Item* item, std::string* item_name_out = nullptr) {
+    float GetPriceByItem(const GW::Item* item, std::string* item_name_out = nullptr, unsigned int mod_start_index = 0) {
         const auto prices = PriceCheckerModule::FetchPrices();
         auto price = .0f;
         const auto model_id_str = std::to_string(item->model_id);
@@ -456,7 +456,7 @@ namespace {
             std::string mod_to_find;
             std::string model_id_to_find;
             // Find by mod struct id and model id
-            for (size_t i = 0; i < item->mod_struct_size; i++) {
+            for (size_t i = mod_start_index; i < item->mod_struct_size; i++) {
                 const auto found = mod_to_id.find(item->mod_struct[i].mod);
                 if (found != mod_to_id.end() && found->second) {
                     mod_to_find = std::format("{:08X}", found->first);
@@ -494,7 +494,7 @@ namespace {
         return .0f;
     }
 
-    std::wstring PrintPrice(uint32_t price, const char* name = nullptr) {
+    std::wstring PrintPrice(const uint32_t price, const char* name = nullptr) {
         auto color = GW::EncStrings::ItemCommon;
         if (price > high_price_threshold) {
             color = GW::EncStrings::ItemRare;
@@ -548,15 +548,19 @@ namespace {
         if (description.empty())
             description += L"\x101";
 
-        std::string item_name;
-        auto price = GetPriceByItem(item,&item_name);
-        if (price < .1f)
-            return;
-
-        description.append(PrintPrice(price, item_name.empty() ? nullptr : item_name.c_str()));
+        std::string first_item_name;
+        std::string second_item_name;
+        const auto price_first = GetPriceByItem(item, &first_item_name, 0);
+        const auto price_second = GetPriceByItem(item, &second_item_name, 1);
+        if (price_first >= .1f) {
+            description.append(PrintPrice(price_first, first_item_name.empty() ? nullptr : first_item_name.c_str()));
+        }
+        if (price_second >= .1f) {
+            description.append(PrintPrice(price_second, second_item_name.empty() ? nullptr : second_item_name.c_str()));
+        }
     }
     std::wstring tmp_item_description;
-    void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc) 
+    void OnGetItemDescription(const uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc)
     {
         if (!(out_desc && *out_desc)) return;
         if (*out_desc != tmp_item_description.data()) {
