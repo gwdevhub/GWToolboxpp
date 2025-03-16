@@ -109,11 +109,13 @@ namespace {
         return tan_angle;
     };
 
-    void SafeChangeTarget(uint32_t agent_id) {
+    void SafeChangeTarget(uint32_t agent_id)
+    {
         GW::GameThread::Enqueue([agent_id] {
             GW::Agents::ChangeTarget(GW::Agents::GetAgentByID(agent_id));
-            });
+        });
     };
+
     void TargetVipers()
     {
         // target best vipers target (closest)
@@ -302,12 +304,24 @@ namespace {
             uint32_t control_action = 0xff;
             // Map tab number > key for the ui message
             switch ((uint32_t)lParam ^ 0x8000) {
-            case 0: control_action = 0x31; break;
-            case 1: control_action = 0x35; break;
-            case 2: control_action = 0x32; break;
-            case 3: control_action = 0x33; break;
-            case 4: control_action = 0x34; break;
-            case 5: control_action = 3; break;
+                case 0:
+                    control_action = 0x31;
+                    break;
+                case 1:
+                    control_action = 0x35;
+                    break;
+                case 2:
+                    control_action = 0x32;
+                    break;
+                case 3:
+                    control_action = 0x33;
+                    break;
+                case 4:
+                    control_action = 0x34;
+                    break;
+                case 5:
+                    control_action = 3;
+                    break;
             }
             if (frame && control_action != 0xff) {
                 GW::UI::Keydown((GW::UI::ControlAction)control_action, frame);
@@ -464,8 +478,12 @@ namespace {
 
     class PrefLabel : public GuiUtils::EncString {
     public:
-        PrefLabel(const wchar_t* _enc_string = nullptr) : EncString(_enc_string, false) {};
-        PrefLabel(const uint32_t _enc_string) : EncString(_enc_string, false) {};
+        PrefLabel(const wchar_t* _enc_string = nullptr)
+            : EncString(_enc_string, false) {};
+
+        PrefLabel(const uint32_t _enc_string)
+            : EncString(_enc_string, false) {};
+
     protected:
         static void OnPrefLabelDecoded(void* param, const wchar_t* decoded);
 
@@ -794,7 +812,8 @@ namespace {
         ImGui::Bullet();
         ImGui::Text(fps_syntax);
         ImGui::Bullet();
-        ImGui::Text("'/hero [avoid|guard|attack]' to set your hero behavior in an explorable area.");
+        ImGui::Text("'/hero [avoid|guard|attack|target] [hero_index]' to set your hero behavior or target in an explorable area.\n"
+            "If hero_index is not provided, all heroes behaviours will be adjusted.");
         const auto toggle_hint = "<name> options: helm, costume, costume_head, cape, <window_or_widget_name>";
         ImGui::Bullet();
         ImGui::Text("'/hide <name>' closes the window, in-game feature or widget titled <name>.");
@@ -1180,7 +1199,6 @@ void ChatCommands::LoadSettings(ToolboxIni* ini)
         const auto alias_wstr = TextUtils::StringToWString(alias);
         const auto command_wstr = TextUtils::StringToWString(cmd);
         CreateAlias(alias_wstr.c_str(), command_wstr.c_str());
-
     }
     if (cmd_aliases.empty()) {
         CreateAlias(L"ff", L"/resign");
@@ -1750,7 +1768,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdMorale)
     else {
         auto packet = GW::UI::UIPacket::kSendCallTarget{
             .call_type = GW::CallTargetType::Morale,
-            .agent_id= GW::Agents::GetControlledCharacterId()
+            .agent_id = GW::Agents::GetControlledCharacterId()
         };
         GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &packet);
     }
@@ -3158,7 +3176,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdHeroBehaviour)
     }
     // Argument validation
     if (argc < 2) {
-        return Log::Error("Invalid argument for /hero. It can be one of: avoid | guard | attack");
+        return Log::Error("Missing first argument for /hero. It can be one of: avoid | guard | attack");
     }
     // set behavior based on command message
     auto behaviour = GW::HeroBehavior::Guard; // guard by default
@@ -3172,18 +3190,52 @@ void CHAT_CMD_FUNC(ChatCommands::CmdHeroBehaviour)
     else if (arg1 == L"attack") {
         behaviour = GW::HeroBehavior::Fight; // attack
     }
+    else if (arg1 == L"target") {
+    }
     else {
-        return Log::Error("Invalid argument for /hero. It can be one of: avoid | guard | attack");
+        return Log::Error("Invalid first argument for /hero. It can be one of: avoid | guard | attack");
     }
 
-    GW::WorldContext* w = GW::GetWorldContext();
-    GW::HeroFlagArray* f = w ? &w->hero_flags : nullptr;
-    if (!(f && f->size())) {
-        return;
+    if (arg1 != L"target") {
+        if (argc < 3) {
+            GW::WorldContext* w = GW::GetWorldContext();
+            GW::HeroFlagArray* f = w ? &w->hero_flags : nullptr;
+            if (!(f && f->size())) {
+                return;
+            }
+            for (const auto& hero : *f) {
+                GW::PartyMgr::SetHeroBehavior(hero.agent_id, behaviour);
+            }
+            return;
+        }
+        const auto arg2 = argv[2];
+        unsigned int index = 0;
+        if (!TextUtils::ParseUInt(arg2, &index) || index < 1 || index > GW::PartyMgr::GetPartyInfo()->heroes.size()) {
+            return Log::Error("Invalid second argument for /hero avoid|guard|attack [hero_index]. It can be 1 to the number of heroes in your party.");
+        }
+        const auto hero_agent_id = GW::Agents::GetHeroAgentID(index);
+        GW::PartyMgr::SetHeroBehavior(hero_agent_id, behaviour);
     }
-    for (const auto& hero : *f) {
-        GW::PartyMgr::SetHeroBehavior(hero.agent_id, behaviour);
+    else {
+        const auto target = GW::Agents::GetTarget();
+        if (!target) {
+            return Log::Error("/hero target command error: No target chosen");
+        }
+        if (argc < 3) {
+            for (const auto hero : GW::PartyMgr::GetPartyInfo()->heroes) {
+                GW::PartyMgr::SetHeroTarget(hero.agent_id, target->agent_id);
+            }
+            return;
+        }
+        const auto arg2 = argv[2];
+        unsigned int index = 0;
+        if (!TextUtils::ParseUInt(arg2, &index) || index < 1 || index > GW::PartyMgr::GetPartyInfo()->heroes.size()) {
+            return Log::Error("Invalid second argument for /hero target [hero_index]. It can be 1 to the number of heroes in your party.");
+        }
+        const auto hero_agent_id = GW::Agents::GetHeroAgentID(index);
+        GW::PartyMgr::SetHeroTarget(hero_agent_id, target->agent_id);
     }
+
 }
 
 void CHAT_CMD_FUNC(ChatCommands::CmdVolume)

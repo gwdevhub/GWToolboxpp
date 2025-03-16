@@ -7,7 +7,6 @@
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/Constants/Skills.h>
 
-#include <GWCA/Context/GuildContext.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/Context/CharContext.h>
 
@@ -17,7 +16,6 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Friendslist.h>
-#include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Map.h>
@@ -41,9 +39,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
-#include <GWCA/Managers/MerchantMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
 
@@ -63,7 +59,6 @@
 #include <Logger.h>
 #include <Timer.h>
 #include <Defines.h>
-#include <Utils/FontLoader.h>
 #include <Utils/TextUtils.h>
 #include <Constants/EncStrings.h>
 
@@ -2175,7 +2170,7 @@ void GameSettings::DrawPartySettings()
     ImGui::ShowHelp("When you're invited to join someone elses party");
     ImGui::Checkbox("Automatically accept party join requests when ticked", &auto_accept_join_requests);
     ImGui::ShowHelp("When a player wants to join your existing party");
-    ImGui::Checkbox("Automatically flag your heroes and pets to lock onto your called target", &automatically_flag_pet_to_fight_called_target);
+    ImGui::Checkbox("Automatically lock heroes and pets onto your called target", &automatically_flag_pet_to_fight_called_target);
 }
 
 void GameSettings::DrawSettingsInternal()

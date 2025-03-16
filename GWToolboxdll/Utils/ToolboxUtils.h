@@ -9,7 +9,7 @@ class StoCCallback {
     const int altitude;
 
 public:
-    StoCCallback(const uint32_t _header, const GW::StoC::PacketCallback _callback, const int _altitude = -0x8000)
+    StoCCallback(const uint32_t _header, const GW::StoC::PacketCallback& _callback, const int _altitude = -0x8000)
         : header(_header), callback(_callback), altitude(_altitude) { }
     void detach() {
         if (!hook_entry) return;
@@ -137,7 +137,7 @@ namespace GW {
 
 namespace ToolboxUtils {
 
-    bool ArrayBoolAt(const GW::Array<uint32_t>&, const uint32_t);
+    bool ArrayBoolAt(const GW::Array<uint32_t>&, uint32_t);
     // Map
 
     bool IsOutpost();
