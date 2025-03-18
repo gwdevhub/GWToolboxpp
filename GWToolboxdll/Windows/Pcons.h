@@ -22,6 +22,7 @@ public:
     static bool suppress_drunk_text;
     static bool suppress_drunk_emotes;
     static bool suppress_lunar_skills;
+    static bool suppress_air_of_superiority_text;
 
     static std::array<std::array<clock_t, 25>, 22> reserved_bag_slots;
     static bool hide_city_pcons_in_explorable_areas;

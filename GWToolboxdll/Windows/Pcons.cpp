@@ -41,6 +41,7 @@ bool Pcon::suppress_drunk_effect = false;
 bool Pcon::suppress_drunk_text = false;
 bool Pcon::suppress_drunk_emotes = false;
 bool Pcon::suppress_lunar_skills = false;
+bool Pcon::suppress_air_of_superiority_text = false;
 bool Pcon::pcons_by_character = true;
 bool Pcon::hide_city_pcons_in_explorable_areas = false;
 

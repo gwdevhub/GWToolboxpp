@@ -64,9 +64,9 @@ namespace {
 
 
 
-    GW::Constants::MapID map_id = GW::Constants::MapID::None;
-    GW::Constants::InstanceType instance_type = GW::Constants::InstanceType::Loading;
-    GW::Constants::InstanceType previous_instance_type = GW::Constants::InstanceType::Loading;
+    MapID map_id = MapID::None;
+    InstanceType instance_type = InstanceType::Loading;
+    InstanceType previous_instance_type = InstanceType::Loading;
     bool in_vanquishable_area = false;
 
     bool elite_area_disable_triggered = false; // Already triggered in this run?
@@ -74,26 +74,34 @@ namespace {
 
     // Map of which objectives to check per map_id
     std::vector<DWORD> objectives_complete = {};
-    const std::map<GW::Constants::MapID, std::vector<DWORD>>
+    const std::map<MapID, std::vector<DWORD>>
     objectives_to_complete_by_map_id = {
-        {GW::Constants::MapID::The_Fissure_of_Woe, {309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319}}, // Can be done in any order - check them all.
-        {GW::Constants::MapID::The_Deep, {421}},
-        {GW::Constants::MapID::Urgozs_Warren, {357}},
-        {GW::Constants::MapID::The_Underworld, {157}} // Only need to check for Nightman Cometh for Underworld.
+        {MapID::The_Fissure_of_Woe, {309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319}}, // Can be done in any order - check them all.
+        {MapID::The_Deep, {421}},
+        {MapID::Urgozs_Warren, {357}},
+        {MapID::The_Underworld, {157}} // Only need to check for Nightman Cometh for Underworld.
     };
     std::vector<DWORD> current_objectives_to_check = {};
 
     // Map of which locations to turn off near by map_id e.g. Kanaxai, Urgoz
-    const std::map<GW::Constants::MapID, GW::Vec2f>
+    const std::map<MapID, GW::Vec2f>
     final_room_location_by_map_id = {
-        {GW::Constants::MapID::The_Deep, GW::Vec2f(30428.0f, -5842.0f)},     // Rough location of Kanaxai
-        {GW::Constants::MapID::Urgozs_Warren, GW::Vec2f(-2800.0f, 14316.0f)} // Front entrance of Urgoz's room
+        {MapID::The_Deep, GW::Vec2f(30428.0f, -5842.0f)},     // Rough location of Kanaxai
+        {MapID::Urgozs_Warren, GW::Vec2f(-2800.0f, 14316.0f)} // Front entrance of Urgoz's room
     };
     GW::Vec2f current_final_room_location = GW::Vec2f(0, 0);
 
     const char* disable_cons_on_objective_completion_hint = "Disable cons when final objective(s) completed";
     const char* disable_cons_in_final_room_hint = "Disable cons when reaching the final room in Urgoz and Deep";
     const char* disable_cons_on_vanquish_completion_hint = "Disable cons when completing a vanquish";
+
+    constexpr std::initializer_list<std::wstring_view> air_of_superiority_messages = {
+        L"\x8102\x2399", // Knowledge is power!
+        L"\x8102\x239a", // You're no match for my brains!
+        L"\x8102\x239b", // Is there anything I can't do?
+        L"\x8102\x239c", // Kneel before your master!
+        L"\x8102\x239d", // Buwahaha!
+    };
 
     constexpr std::initializer_list<std::wstring_view> drunk_messages = {
         L"\x8CA\xA4F7\xF552\xA32",   // i love you man!
@@ -221,6 +229,8 @@ namespace {
                 const auto packet = (GW::UI::UIPacket::kAgentSpeechBubble*)wparam;
                 const std::wstring_view msg{packet->message, 4};
                 if (PconAlcohol::suppress_drunk_text && std::ranges::contains(drunk_messages, msg))
+                    status->blocked = true;
+                if (PconAlcohol::suppress_air_of_superiority_text && std::ranges::contains(air_of_superiority_messages, msg))
                     status->blocked = true;
             }
             break;
@@ -718,6 +728,8 @@ void PconsWindow::DrawLunarsAndAlcoholSettings()
     ImGui::Checkbox("Suppress lunar and drunk text", &Pcon::suppress_drunk_text);
     ImGui::ShowHelp("Will hide drunk and lunars messages on top of your and other characters");
     ImGui::NextSpacedElement();
+    ImGui::Checkbox("Suppress air of superiority text", &Pcon::suppress_air_of_superiority_text);
+    ImGui::NextSpacedElement();
     ImGui::Checkbox("Suppress drunk emotes", &Pcon::suppress_drunk_emotes);
     ImGui::ShowHelp("Important:\n"
         "This feature is experimental and might crash your game.\n"
@@ -768,6 +780,7 @@ void PconsWindow::LoadSettings(ToolboxIni* ini)
     Pcon::disable_when_not_found = ini->GetBoolValue(Name(), VAR_NAME(disable_when_not_found), Pcon::disable_when_not_found);
     Pcon::suppress_drunk_effect = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_effect), Pcon::suppress_drunk_effect);
     Pcon::suppress_drunk_text = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_text), Pcon::suppress_drunk_text);
+    Pcon::suppress_air_of_superiority_text = ini->GetBoolValue(Name(), VAR_NAME(suppress_air_of_superiority_text), Pcon::suppress_air_of_superiority_text);
     Pcon::suppress_drunk_emotes = ini->GetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), Pcon::suppress_drunk_emotes);
     Pcon::suppress_lunar_skills = ini->GetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), Pcon::suppress_lunar_skills);
     Pcon::pcons_by_character = ini->GetBoolValue(Name(), VAR_NAME(pcons_by_character), Pcon::pcons_by_character);
@@ -825,6 +838,7 @@ void PconsWindow::SaveSettings(ToolboxIni* ini)
 
     ini->SetBoolValue(Name(), VAR_NAME(suppress_drunk_effect), Pcon::suppress_drunk_effect);
     ini->SetBoolValue(Name(), VAR_NAME(suppress_drunk_text), Pcon::suppress_drunk_text);
+    ini->SetBoolValue(Name(), VAR_NAME(suppress_air_of_superiority_text), Pcon::suppress_air_of_superiority_text);
     ini->SetBoolValue(Name(), VAR_NAME(suppress_drunk_emotes), Pcon::suppress_drunk_emotes);
     ini->SetBoolValue(Name(), VAR_NAME(suppress_lunar_skills), Pcon::suppress_lunar_skills);
     ini->SetBoolValue(Name(), VAR_NAME(pcons_by_character), Pcon::pcons_by_character);
