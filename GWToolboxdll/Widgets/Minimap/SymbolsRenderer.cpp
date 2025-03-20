@@ -255,6 +255,9 @@ bool SymbolsRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
         return true;
     }
     if (device->CreatePixelShader(reinterpret_cast<const DWORD*>(&constant_colour_ps), &pshader) != D3D_OK) {
+        if (pshader)
+            pshader->Release();
+        pshader = nullptr;
         Log::Error("SymbolsRenderer: unable to CreatePixelShader");
         return false;
     }
