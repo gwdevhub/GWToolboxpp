@@ -185,7 +185,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
         const GW::Vec2f qpos = {quest.marker.x, quest.marker.y};
         if (std::ranges::contains(markers_drawn, qpos))
             return; // Don't draw more than 1 marker for a position
-        
+
 
         const auto quest_im_color = QuestModule::GetQuestColor(quest.quest_id);
         if (!((quest_im_color >> IM_COL32_A_SHIFT) & 0xff)) {
@@ -255,6 +255,7 @@ bool SymbolsRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
         return true;
     }
     if (device->CreatePixelShader(reinterpret_cast<const DWORD*>(&constant_colour_ps), &pshader) != D3D_OK) {
+        pshader = nullptr;
         Log::Error("SymbolsRenderer: unable to CreatePixelShader");
         return false;
     }

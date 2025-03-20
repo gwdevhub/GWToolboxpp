@@ -390,6 +390,12 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
     // restore immediate state:
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, old_D3DRS_SCISSORTESTENABLE);
     device->SetRenderState(D3DRS_STENCILENABLE, old_D3DRS_STENCILENABLE);
+    if (device->SetPixelShader(nullptr) != D3D_OK) {
+        Log::Error("GameWorldRenderer: unable to reset SetPixelShader.");
+    }
+    if (device->SetVertexShader(nullptr) != D3D_OK) {
+        Log::Error("GameWorldRenderer: unable to reset SetVertexShader.");
+    }
 }
 
 bool GameWorldRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
