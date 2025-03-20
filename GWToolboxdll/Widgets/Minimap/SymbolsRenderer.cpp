@@ -22,7 +22,19 @@
 
 namespace {
     IDirect3DPixelShader9* pshader = nullptr;
-    bool need_configure_pipeline = true;
+
+    bool ConfigureProgrammablePipeline(IDirect3DDevice9* device)
+    {
+        if (pshader != nullptr) {
+            return true;
+        }
+        if (device->CreatePixelShader(reinterpret_cast<const DWORD*>(&constant_colour_ps), &pshader) != D3D_OK) {
+            pshader = nullptr;
+            Log::Error("SymbolsRenderer: unable to CreatePixelShader");
+            return false;
+        }
+        return true;
+    }
 }
 
 void SymbolsRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
@@ -145,10 +157,8 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
 {
     Initialize(device);
 
-    if (need_configure_pipeline) {
-        if (!ConfigureProgrammablePipeline(device)) {
-            return;
-        }
+    if (!ConfigureProgrammablePipeline(device)) {
+        return;
     }
 
     const GW::Agent* me = GW::Agents::GetObservingAgent();
@@ -247,20 +257,4 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     world = translate;
     device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
     device->DrawPrimitive(type, north_offset, north_ntriangles);
-}
-
-bool SymbolsRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
-{
-    if (pshader != nullptr) {
-        return true;
-    }
-    if (device->CreatePixelShader(reinterpret_cast<const DWORD*>(&constant_colour_ps), &pshader) != D3D_OK) {
-        if (pshader)
-            pshader->Release();
-        pshader = nullptr;
-        Log::Error("SymbolsRenderer: unable to CreatePixelShader");
-        return false;
-    }
-    need_configure_pipeline = false;
-    return true;
 }
