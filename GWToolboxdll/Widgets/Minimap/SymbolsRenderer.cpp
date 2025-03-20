@@ -185,9 +185,13 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
         const GW::Vec2f qpos = {quest.marker.x, quest.marker.y};
         if (std::ranges::contains(markers_drawn, qpos))
             return; // Don't draw more than 1 marker for a position
-        markers_drawn.push_back(qpos);
+        
 
         const auto quest_im_color = QuestModule::GetQuestColor(quest.quest_id);
+        if (!((quest_im_color >> IM_COL32_A_SHIFT) & 0xff)) {
+            return; // Skip invisible quests
+        }
+
         const auto quest_color = ImGui::ColorConvertU32ToFloat4(quest_im_color);
         device->SetPixelShaderConstantF(0, &quest_color.x, 1);
 
@@ -215,6 +219,8 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
             device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
             device->DrawPrimitive(type, arrow_offset, arrow_ntriangles);
         }
+
+        markers_drawn.push_back(qpos);
     };
 
     if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
