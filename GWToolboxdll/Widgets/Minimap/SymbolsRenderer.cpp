@@ -231,7 +231,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
 
         // draw active quest first
         const auto active_quest_id = GW::QuestMgr::GetActiveQuestId();
-        if (auto* quest = GW::QuestMgr::GetQuest(active_quest_id)) {
+        if (const auto quest = GW::QuestMgr::GetQuest(active_quest_id)) {
             draw_quest_marker(*quest);
         }
         for (const auto& quest : *quest_log | std::views::filter([active_quest_id](const GW::Quest& q) {
