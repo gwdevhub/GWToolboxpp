@@ -3169,72 +3169,91 @@ apply:
     }
 }
 
+void GetFlaggableHeroNames(std::function<void(std::map<uint32_t, std::wstring>*)> cb)
+{
+    GW::WorldContext* w = GW::GetWorldContext();
+    GW::HeroFlagArray* f = w ? &w->hero_flags : nullptr;
+    if (!f) return cb(nullptr);
+    auto names_out = new std::map<uint32_t, std::wstring>();
+    struct DecodedParam {
+        uint32_t agent_id = 0;
+        std::map<uint32_t, std::wstring>* names_out;
+        std::function<void(std::map<uint32_t, std::wstring>*)> cb;
+        size_t hero_count;
+    };
+
+    auto decoded_cb = [](void* wparam, const wchar_t* decoded) {
+        auto p = static_cast<DecodedParam*>(wparam);
+        auto names_out = p->names_out;
+        names_out->emplace(p->agent_id, TextUtils::ToLower(decoded));
+        if (names_out->size() == p->hero_count) {
+            GW::GameThread::Enqueue([names_out, cb = p->cb]() {
+                cb(names_out);
+                delete names_out;
+            });
+        }
+        delete p;
+    };
+    for (const auto& flag : *f) {
+        auto decoded_param = new DecodedParam{flag.agent_id, names_out, cb, f->size()};
+        const auto name = GW::Agents::GetAgentEncName(flag.agent_id);
+        GW::UI::AsyncDecodeStr(name, decoded_cb, decoded_param);
+    }
+}
+
 void CHAT_CMD_FUNC(ChatCommands::CmdHeroBehaviour)
 {
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
-        return;
-    }
+    const char* syntax = "Syntax: /hero [avoid|guard|attack|target] [hero_name]";
+
+    GW::WorldContext* w = GW::GetWorldContext();
+    GW::HeroFlagArray* flags = w ? &w->hero_flags : nullptr;
+    if (!flags) return;
     // Argument validation
     if (argc < 2) {
-        return Log::Error("Missing first argument for /hero. It can be one of: avoid | guard | attack");
+        return Log::Error(syntax);
     }
     // set behavior based on command message
-    auto behaviour = GW::HeroBehavior::Guard; // guard by default
+    auto behaviour = 0xff;
     const std::wstring arg1 = TextUtils::ToLower(argv[1]);
     if (arg1 == L"avoid") {
-        behaviour = GW::HeroBehavior::AvoidCombat; // avoid combat
+        behaviour = (uint32_t)GW::HeroBehavior::AvoidCombat; // avoid combat
     }
     else if (arg1 == L"guard") {
-        behaviour = GW::HeroBehavior::Guard; // guard
+        behaviour = (uint32_t)GW::HeroBehavior::Guard; // guard
     }
     else if (arg1 == L"attack") {
-        behaviour = GW::HeroBehavior::Fight; // attack
+        behaviour = (uint32_t)GW::HeroBehavior::Fight; // attack
     }
     else if (arg1 == L"target") {
+        behaviour = 0xff; // target
     }
     else {
-        return Log::Error("Invalid first argument for /hero. It can be one of: avoid | guard | attack");
+        return Log::Error(syntax);
     }
 
-    if (arg1 != L"target") {
-        if (argc < 3) {
-            GW::WorldContext* w = GW::GetWorldContext();
-            GW::HeroFlagArray* f = w ? &w->hero_flags : nullptr;
-            if (!(f && f->size())) {
-                return;
-            }
-            for (const auto& hero : *f) {
-                GW::PartyMgr::SetHeroBehavior(hero.agent_id, behaviour);
-            }
-            return;
+    auto flag_hero = [behaviour](uint32_t agent_id) {
+        if (behaviour == 0xff) return GW::PartyMgr::SetHeroTarget(agent_id, GW::Agents::GetTargetId());
+        return GW::PartyMgr::SetHeroBehavior(agent_id, (GW::HeroBehavior)behaviour);
+    };
+
+
+    if (argc < 3) {
+        for (const auto& flag : *flags) {
+            flag_hero(flag.agent_id);
         }
-        const auto arg2 = argv[2];
-        unsigned int index = 0;
-        if (!TextUtils::ParseUInt(arg2, &index) || index < 1 || index > GW::PartyMgr::GetPartyInfo()->heroes.size()) {
-            return Log::Error("Invalid second argument for /hero avoid|guard|attack [hero_index]. It can be 1 to the number of heroes in your party.");
-        }
-        const auto hero_agent_id = GW::Agents::GetHeroAgentID(index);
-        GW::PartyMgr::SetHeroBehavior(hero_agent_id, behaviour);
+        return;
     }
-    else {
-        const auto target = GW::Agents::GetTarget();
-        if (!target) {
-            return Log::Error("/hero target command error: No target chosen");
-        }
-        if (argc < 3) {
-            for (const auto hero : GW::PartyMgr::GetPartyInfo()->heroes) {
-                GW::PartyMgr::SetHeroTarget(hero.agent_id, target->agent_id);
+    std::wstring* name_arg = new std::wstring(argv[2]);    
+    GetFlaggableHeroNames([name_arg, flag_hero](std::map<uint32_t, std::wstring>* hero_names) {
+        if (hero_names) {
+            for (const auto& [agent_id, name] : *hero_names) {
+                if (name.starts_with(*name_arg)) {
+                    flag_hero(agent_id);
+                }
             }
-            return;
         }
-        const auto arg2 = argv[2];
-        unsigned int index = 0;
-        if (!TextUtils::ParseUInt(arg2, &index) || index < 1 || index > GW::PartyMgr::GetPartyInfo()->heroes.size()) {
-            return Log::Error("Invalid second argument for /hero target [hero_index]. It can be 1 to the number of heroes in your party.");
-        }
-        const auto hero_agent_id = GW::Agents::GetHeroAgentID(index);
-        GW::PartyMgr::SetHeroTarget(hero_agent_id, target->agent_id);
-    }
+        delete name_arg;
+    });
 
 }
 
