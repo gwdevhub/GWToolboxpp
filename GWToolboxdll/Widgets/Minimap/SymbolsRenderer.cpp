@@ -22,7 +22,6 @@
 
 namespace {
     IDirect3DPixelShader9* pshader = nullptr;
-    bool need_configure_pipeline = true;
 }
 
 void SymbolsRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
@@ -145,10 +144,8 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
 {
     Initialize(device);
 
-    if (need_configure_pipeline) {
-        if (!ConfigureProgrammablePipeline(device)) {
-            return;
-        }
+    if (!ConfigureProgrammablePipeline(device)) {
+        return;
     }
 
     const GW::Agent* me = GW::Agents::GetObservingAgent();
@@ -259,6 +256,5 @@ bool SymbolsRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
         Log::Error("SymbolsRenderer: unable to CreatePixelShader");
         return false;
     }
-    need_configure_pipeline = false;
     return true;
 }
