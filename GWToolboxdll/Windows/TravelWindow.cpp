@@ -864,7 +864,7 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
         if (!(IsValidOutpost(map_id) && GW::Map::GetMapInfo(map_id)->GetIsOnWorldMap()))
             continue;
         const auto map_info = GW::Map::GetMapInfo(map_id);
-        if (map_info->campaign != this_map->campaign || map_info->region == GW::Region_Presearing)
+        if (map_info->campaign != this_map->campaign)
             continue;
         //if ((map_info->flags & 0x5000000) != 0)
         //   continue; // e.g. "wrong" augury rock is map 119, no NPCs
