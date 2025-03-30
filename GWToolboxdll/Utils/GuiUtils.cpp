@@ -505,6 +505,10 @@ namespace GuiUtils {
         }
     }
 
+    EncString::~EncString() {
+        ASSERT(!decoding);
+    }
+
     // ReSharper disable once CppParameterMayBeConst
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
     void EncString::OnStringDecoded(void* param, const wchar_t* decoded)

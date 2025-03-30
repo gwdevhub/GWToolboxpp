@@ -134,7 +134,7 @@ namespace GuiUtils {
         // Disable object copying; decoded_ws is passed to GW by reference and would be bad to do this. Pass by pointer instead.
         EncString(const EncString& temp_obj) = delete;
         EncString& operator=(const EncString& temp_obj) = delete;
-        virtual ~EncString() = default;
+        ~EncString();
     };
 
     // Create an ImGui representation of the skill bar
