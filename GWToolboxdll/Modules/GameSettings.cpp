@@ -842,17 +842,8 @@ namespace {
 
     // Override the login status dropdown by sending ui message 0x51 if found
     void OverrideDefaultOnlineStatus() {
-        uint32_t value_override = 0;
-        switch (static_cast<GW::FriendStatus>(last_online_status)) {
-        case GW::FriendStatus::Online: value_override = 0; break;
-        case GW::FriendStatus::Away: value_override = 1; break;
-        case GW::FriendStatus::DND: value_override = 2; break;
-        case GW::FriendStatus::Offline: value_override = 3;break;
-        }
-        GW::GameThread::Enqueue([value_override] {
-            const auto frame = GW::UI::GetFrameByLabel(L"StatusOverride");
-            if (!frame) return;
-            GW::UI::SendFrameUIMessage(frame, (GW::UI::UIMessage)0x51, (void*)value_override);
+        GW::GameThread::Enqueue([] {
+            GW::UI::SelectDropdownOption(GW::UI::GetFrameByLabel(L"StatusOverride"), last_online_status);
         });
     }
 
