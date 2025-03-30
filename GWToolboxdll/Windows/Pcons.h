@@ -67,6 +67,7 @@ public:
     static uint32_t MoveItem(const GW::Item* item, GW::Bag* bag, size_t slot,
                              size_t quantity = 0);
     wchar_t* SetPlayerName();
+    IDirect3DTexture9** GetTexture();
     // Pass true to start refill, or false to stop.
     void Refill(bool do_refill = true);
     void SetEnabled(bool enabled);

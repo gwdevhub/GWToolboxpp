@@ -890,18 +890,19 @@ void PconsWindow::DrawSettingsInternal()
     ImGui::Checkbox("Shift + Click toggles category", &shift_click_toggles_category);
     ImGui::ShowHelp("If this is ticked, clicking on a pcon while holding shift will enable/disable all of the same category\n"
         "Categories: Conset, Rock Candies, Kabob+Soup+Salad");
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show Enable/Disable button", &show_enable_button);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show auto disable pcons checkboxes", &show_auto_disable_pcons_tickbox);
+    ImGui::ShowHelp("Will show a tickbox in the pcons window when in an elite area");
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Hide city Pcons in explorable areas", &Pcon::hide_city_pcons_in_explorable_areas);
+
     ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%d milliseconds");
     ImGui::ShowHelp("After using a pcon, toolbox will not use it again for this amount of time.\n"
         "It is needed to prevent toolbox from using a pcon twice, before it activates.\n"
         "Decrease the value if you have good ping and you die a lot.");
     ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500, "%d milliseconds");
-    if (ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        ImGui::Text("When you have less than this amount:\n-The number in the interface becomes yellow.\n-Warning message is displayed when zoning into outpost.");
-        for (Pcon* pcon : pcons) {
-            ImGui::SliderInt(pcon->chat.c_str(), &pcon->threshold, 0, 250);
-        }
-        ImGui::TreePop();
-    }
 
     ImGui::Separator();
     ImGui::Text("Interface:");
@@ -912,21 +913,49 @@ void PconsWindow::DrawSettingsInternal()
     if (Pcon::size <= 1.0f) {
         Pcon::size = 1.0f;
     }
-    if (ImGui::TreeNodeEx("Visibility", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        ImGui::Checkbox("Show Enable/Disable button", &show_enable_button);
-        ImGui::Checkbox("Show auto disable pcons checkboxes", &show_auto_disable_pcons_tickbox);
-        ImGui::ShowHelp("Will show a tickbox in the pcons window when in an elite area");
-        ImGui::Checkbox("Hide city Pcons in explorable areas", &Pcon::hide_city_pcons_in_explorable_areas);
-        if (ImGui::BeginTable("pcons_visibility", 2)) {
+    if (ImGui::TreeNodeEx("Visibility & Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        if (ImGui::BeginTable("pcons_visibility", 3)) {
+            const auto font_size = ImGui::GetFontSize();
+            const auto threshold_hint = "When you have less than this amount:\n-The number in the interface becomes yellow.\n-Warning message is displayed when zoning into outpost.";
+
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextDisabled("Label");
+            ImGui::TableNextColumn();
+            ImGui::TextDisabled("Threshold");
+            ImGui::TableNextColumn();
+            ImGui::TextDisabled("Order");
+
             for (auto it = pcons.begin(); it != pcons.end(); ++it) {
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 Pcon* pcon = *it;
                 ImGui::PushID(pcon->ini.c_str());
-                ImGui::Checkbox(pcon->chat.c_str(), &pcon->visible);
+                ImGui::Checkbox("###checked", &pcon->visible);
+                ImGui::SameLine();
+                const auto tex = pcon->GetTexture();
+                if (tex) {
+                    ImGui::ImageFit(*tex, ImVec2(font_size, font_size));
+                    ImGui::SameLine();
+                }
+                ImGui::TextUnformatted(pcon->chat.c_str());
+                
+                ImGui::TableNextColumn();
+                if (ImGui::InputInt("###threshold", &pcon->threshold, 1, 10)) {
+                    if (pcon->threshold < 0) {
+                        pcon->threshold = 0;
+                    }
+                    if (pcon->threshold > 250) {
+                        pcon->threshold = 250;
+                    }
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip(threshold_hint);
+                }
+
                 ImGui::TableNextColumn();
                 if (it != pcons.begin()) {
-                    if (ImGui::Button("Up")) {
+                    if (ImGui::Button(ICON_FA_ARROW_UP)) {
                         std::iter_swap(it, it - 1);
                     }
                     if (it != pcons.end() - 1) {
@@ -937,10 +966,11 @@ void PconsWindow::DrawSettingsInternal()
                     ImGui::SameLine(62);
                 }
                 if (it != pcons.end() - 1) {
-                    if (ImGui::Button("Down")) {
+                    if (ImGui::Button(ICON_FA_ARROW_DOWN)) {
                         std::iter_swap(it, it + 1);
                     }
                 }
+
                 ImGui::PopID();
             }
         }
