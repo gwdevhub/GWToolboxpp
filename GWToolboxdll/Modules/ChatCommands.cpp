@@ -1545,13 +1545,11 @@ void ChatCommands::QuestPing::Update()
 
 void ChatCommands::SearchAgent::Init(const wchar_t* _search, const TargetType type)
 {
-    started = 0;
-    npc_names.clear();
+    Reset();
     if (!_search || !_search[0]) {
         return;
     }
     search = TextUtils::ToLower(_search);
-    npc_names.clear();
     started = TIMER_INIT();
     GW::AgentArray* agents = GW::Agents::GetAgentArray();
     if (!agents) {
@@ -1612,7 +1610,7 @@ void ChatCommands::SearchAgent::Update()
     }
     if (TIMER_DIFF(started) > 3000) {
         Log::Error("Timeout getting NPC names");
-        Init(nullptr);
+        Reset();
         return;
     }
     for (const auto& str : npc_names | std::views::values) {
@@ -1645,7 +1643,7 @@ void ChatCommands::SearchAgent::Update()
     if (closest) {
         GW::Agents::ChangeTarget(closest);
     }
-    Init(nullptr);
+    Reset();
 }
 
 void ChatCommands::SkillToUse::Update()

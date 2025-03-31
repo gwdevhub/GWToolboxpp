@@ -97,6 +97,7 @@ namespace GuiUtils {
         bool decoding = false;
         bool decoded = false;
         bool sanitised = false;
+        bool release = false;
         virtual void sanitise();
         virtual void decode();
         GW::Constants::Language language_id = static_cast<GW::Constants::Language>(0xff);
@@ -115,6 +116,8 @@ namespace GuiUtils {
         std::wstring& wstring();
         std::string& string();
 
+        // Free memory used by this EncString. 
+        void Release();
 
         [[nodiscard]] const std::wstring& encoded() const
         {

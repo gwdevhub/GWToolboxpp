@@ -132,11 +132,13 @@ private:
         std::wstring search;
         void Init(const wchar_t* search, TargetType type = Npc);
         void Update();
-
-        void Terminate()
+        void Terminate() { Reset(); }
+        void Reset()
         {
+            started = 0;
+            search.clear();
             for (const auto& name : npc_names | std::views::values) {
-                delete name;
+                name->Release();
             }
             npc_names.clear();
         }

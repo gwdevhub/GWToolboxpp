@@ -505,6 +505,14 @@ namespace GuiUtils {
         }
     }
 
+    void EncString::Release()
+    {
+        release = true;
+        if (!decoding) {
+            delete this;
+        }
+    }
+
     EncString::~EncString() {
         ASSERT(!decoding);
     }
@@ -522,6 +530,9 @@ namespace GuiUtils {
         }
         context->decoded = true;
         context->decoding = false;
+        if (context->release) {
+            delete context;
+        }
     }
 
     std::string& EncString::string()
