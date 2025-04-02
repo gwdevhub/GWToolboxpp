@@ -243,7 +243,8 @@ namespace {
         });
     }
 
-    bool IsValidGWCADll(const std::filesystem::path& dll_path_str) {
+    bool IsValidGWCADll(const std::filesystem::path& dll_path_str)
+    {
         if (!std::filesystem::exists(dll_path_str))
             return false;
         DWORD handle;
@@ -264,8 +265,8 @@ namespace {
         [[maybe_unused]] WORD file_version_build = LOWORD(file_info->dwFileVersionLS);
 
         return (file_version_major == GWCA::VersionMajor &&
-            file_version_minor == GWCA::VersionMinor &&
-            file_version_patch == GWCA::VersionPatch);
+                file_version_minor == GWCA::VersionMinor &&
+                file_version_patch == GWCA::VersionPatch);
     }
 
     HMODULE LoadGWCADll(HMODULE resource_module)
@@ -274,7 +275,7 @@ namespace {
             return gwcamodule;
         const auto gwca_dll_path = Resources::GetPath("gwca.dll");
         const auto dll_path_str = gwca_dll_path.wstring();
-        
+
         if (!IsValidGWCADll(gwca_dll_path)) {
             // Write new dll
             const EmbeddedResource resource(IDR_GWCA_DLL, RT_RCDATA, resource_module);
@@ -435,7 +436,7 @@ namespace {
                 // Tell imgui that the mouse cursor is in its original clicked position - GW messes with the cursor in-game
 #pragma warning( push )
 #pragma warning( disable : 4244 ) // conversion from 'int' to 'float', possible loss of data
-                io.MousePos = { (float)GET_X_LPARAM(right_click_lparam), (float)GET_Y_LPARAM(right_click_lparam) };
+                io.MousePos = {(float)GET_X_LPARAM(right_click_lparam), (float)GET_Y_LPARAM(right_click_lparam)};
 #pragma warning( pop )
                 for (const auto m : tb.GetAllModules()) {
                     m->WndProc(WM_GW_RBUTTONCLICK, 0, right_click_lparam);
@@ -471,117 +472,117 @@ namespace {
 
 
         switch (Message) {
-        case WM_MOUSELEAVE:
-        case WM_NCMOUSELEAVE:
-            if (::GetCapture() == nullptr && ImGui::IsMouseDown(ImGuiMouseButton_Left))
-                ::SetCapture(hWnd);
-            break;
+            case WM_MOUSELEAVE:
+            case WM_NCMOUSELEAVE:
+                if (::GetCapture() == nullptr && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+                    ::SetCapture(hWnd);
+                break;
             // Send button up mouse events to everything, to avoid being stuck on mouse-down
-        case WM_INPUT: {
-            if (right_mouse_down && !mouse_moved_whilst_right_clicking && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam) {
-                UINT dwSize = sizeof(RAWINPUT);
-                BYTE lpb[sizeof(RAWINPUT)];
-                ASSERT(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize);
+            case WM_INPUT: {
+                if (right_mouse_down && !mouse_moved_whilst_right_clicking && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam) {
+                    UINT dwSize = sizeof(RAWINPUT);
+                    BYTE lpb[sizeof(RAWINPUT)];
+                    ASSERT(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize);
 
-                const RAWINPUT* raw = (RAWINPUT*)lpb;
-                if ((raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) == 0 && raw->data.mouse.lLastX && raw->data.mouse.lLastY) {
-                    // If its a relative mouse move, process the action
-                    mouse_moved_whilst_right_clicking = 1;
+                    const RAWINPUT* raw = (RAWINPUT*)lpb;
+                    if ((raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) == 0 && raw->data.mouse.lLastX && raw->data.mouse.lLastY) {
+                        // If its a relative mouse move, process the action
+                        mouse_moved_whilst_right_clicking = 1;
+                    }
                 }
-            }
 
-            for (const auto m : tb.GetAllModules()) {
-                m->WndProc(Message, wParam, lParam);
-            }
-        }
-                     break;
-
-                     // Other mouse events:
-                     // - If right mouse down, leave it to gw
-                     // - ImGui first (above), if WantCaptureMouse that's it
-                     // - Toolbox module second (e.g.: minimap), if captured, that's it
-                     // - otherwise pass to gw
-        case WM_RBUTTONDOWN:
-        case WM_LBUTTONUP:
-        case WM_RBUTTONUP:
-        case WM_LBUTTONDOWN:
-        case WM_LBUTTONDBLCLK:
-        case WM_RBUTTONDBLCLK:
-        case WM_MOUSEMOVE:
-        case WM_MOUSEWHEEL: {
-            if (io.WantCaptureMouse && !skip_mouse_capture) {
-                return true;
-            }
-            bool captured = false;
-            for (const auto m : tb.GetAllModules()) {
-                if (m->WndProc(Message, wParam, lParam)) {
-                    captured = true;
-                }
-            }
-            if (captured) {
-                return true;
-            }
-        }
-                          //if (!skip_mouse_capture) {
-
-                          //}
-                          break;
-
-                          // keyboard messages
-        case WM_KEYUP:
-        case WM_SYSKEYUP:
-            if (io.WantCaptureKeyboard || io.WantTextInput) {
-                break; // make sure key up events are passed through to gw, already handled in imgui
-            }
-        case WM_KEYDOWN:
-        case WM_SYSKEYDOWN:
-        case WM_CHAR:
-        case WM_SYSCHAR:
-        case WM_IME_CHAR:
-        case WM_XBUTTONDOWN:
-        case WM_XBUTTONDBLCLK:
-        case WM_XBUTTONUP:
-        case WM_MBUTTONDOWN:
-        case WM_MBUTTONDBLCLK:
-        case WM_MBUTTONUP:
-            if (io.WantCaptureKeyboard || io.WantTextInput) {
-                return true; // if imgui wants them, send just to imgui (above)
-            }
-
-            // send input to chat commands for camera movement
-            if (ChatCommands::Instance().WndProc(Message, wParam, lParam)) {
-                return true;
-            }
-        case WM_ACTIVATE:
-            // send to toolbox modules and plugins
-        {
-            bool captured = false;
-            for (const auto m : tb.GetAllModules()) {
-                if (m->WndProc(Message, wParam, lParam)) {
-                    captured = true;
-                }
-            }
-            if (captured) {
-                return true;
-            }
-        }
-        // note: capturing those events would prevent typing if you have a hotkey assigned to normal letters.
-        // We may want to not send events to toolbox if the player is typing in-game
-        // Otherwise, we may want to capture events.
-        // For that, we may want to only capture *successfull* hotkey activations.
-        break;
-
-        case WM_SIZE:
-            // ImGui doesn't need this, it reads the viewport size directly
-            break;
-        default:
-            // Custom messages registered via RegisterWindowMessage
-            if (Message >= 0xC000 && Message <= 0xFFFF) {
                 for (const auto m : tb.GetAllModules()) {
                     m->WndProc(Message, wParam, lParam);
                 }
             }
             break;
+
+            // Other mouse events:
+            // - If right mouse down, leave it to gw
+            // - ImGui first (above), if WantCaptureMouse that's it
+            // - Toolbox module second (e.g.: minimap), if captured, that's it
+            // - otherwise pass to gw
+            case WM_RBUTTONDOWN:
+            case WM_LBUTTONUP:
+            case WM_RBUTTONUP:
+            case WM_LBUTTONDOWN:
+            case WM_LBUTTONDBLCLK:
+            case WM_RBUTTONDBLCLK:
+            case WM_MOUSEMOVE:
+            case WM_MOUSEWHEEL: {
+                if (io.WantCaptureMouse && !skip_mouse_capture) {
+                    return true;
+                }
+                bool captured = false;
+                for (const auto m : tb.GetAllModules()) {
+                    if (m->WndProc(Message, wParam, lParam)) {
+                        captured = true;
+                    }
+                }
+                if (captured) {
+                    return true;
+                }
+            }
+            //if (!skip_mouse_capture) {
+
+            //}
+            break;
+
+            // keyboard messages
+            case WM_KEYUP:
+            case WM_SYSKEYUP:
+                if (io.WantCaptureKeyboard || io.WantTextInput) {
+                    break; // make sure key up events are passed through to gw, already handled in imgui
+                }
+            case WM_KEYDOWN:
+            case WM_SYSKEYDOWN:
+            case WM_CHAR:
+            case WM_SYSCHAR:
+            case WM_IME_CHAR:
+            case WM_XBUTTONDOWN:
+            case WM_XBUTTONDBLCLK:
+            case WM_XBUTTONUP:
+            case WM_MBUTTONDOWN:
+            case WM_MBUTTONDBLCLK:
+            case WM_MBUTTONUP:
+                if (io.WantCaptureKeyboard || io.WantTextInput) {
+                    return true; // if imgui wants them, send just to imgui (above)
+                }
+
+            // send input to chat commands for camera movement
+                if (ChatCommands::Instance().WndProc(Message, wParam, lParam)) {
+                    return true;
+                }
+            case WM_ACTIVATE:
+                // send to toolbox modules and plugins
+            {
+                bool captured = false;
+                for (const auto m : tb.GetAllModules()) {
+                    if (m->WndProc(Message, wParam, lParam)) {
+                        captured = true;
+                    }
+                }
+                if (captured) {
+                    return true;
+                }
+            }
+            // note: capturing those events would prevent typing if you have a hotkey assigned to normal letters.
+            // We may want to not send events to toolbox if the player is typing in-game
+            // Otherwise, we may want to capture events.
+            // For that, we may want to only capture *successfull* hotkey activations.
+            break;
+
+            case WM_SIZE:
+                // ImGui doesn't need this, it reads the viewport size directly
+                break;
+            default:
+                // Custom messages registered via RegisterWindowMessage
+                if (Message >= 0xC000 && Message <= 0xFFFF) {
+                    for (const auto m : tb.GetAllModules()) {
+                        m->WndProc(Message, wParam, lParam);
+                    }
+                }
+                break;
         }
 
         return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
@@ -591,8 +592,7 @@ namespace {
     {
         __try {
             return WndProc(hWnd, Message, wParam, lParam);
-        }
-        __except (EXCEPTION_EXECUTE_HANDLER) {
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
             return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
         }
     }
@@ -633,20 +633,23 @@ namespace {
     }
 
 
-    FARPROC WINAPI CustomDliHook(unsigned dliNotify, PDelayLoadInfo pdli) {
+    FARPROC WINAPI CustomDliHook(unsigned dliNotify, PDelayLoadInfo pdli)
+    {
         switch (dliNotify) {
-        case dliNotePreLoadLibrary: {
-            if (_stricmp(pdli->szDll, "gwca.dll") != 0)
-                break;
-            const auto loaded = LoadGWCADll(dllmodule);
-            ASSERT(loaded);
-            return (FARPROC)loaded;
-        } break;
-        case dliFailGetProc: {
-            ASSERT(pdli && *(pdli->dlp.szProcName));
-            Log::Log("Something is trying to access %ls, but failed", pdli->dlp.szProcName);
-        } break;
-                           // Add other sliNotify cases for debugging if you need to later
+            case dliNotePreLoadLibrary: {
+                if (_stricmp(pdli->szDll, "gwca.dll") != 0)
+                    break;
+                const auto loaded = LoadGWCADll(dllmodule);
+                ASSERT(loaded);
+                return (FARPROC)loaded;
+            }
+            break;
+            case dliFailGetProc: {
+                ASSERT(pdli && *(pdli->dlp.szProcName));
+                Log::Log("Something is trying to access %ls, but failed", pdli->dlp.szProcName);
+            }
+            break;
+            // Add other sliNotify cases for debugging if you need to later
         }
         return NULL;
     }
@@ -745,8 +748,7 @@ DWORD __stdcall GWToolbox::MainLoop(LPVOID module) noexcept
             // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
             SendMessage(gw_window_handle, WM_CLOSE, NULL, NULL);
         }
-    }
-    __except (EXCEPT_EXPRESSION_ENTRY) {
+    } __except (EXCEPT_EXPRESSION_ENTRY) {
         Log::Log("SafeThreadEntry __except body\n");
     }
     return EXIT_SUCCESS;
@@ -779,7 +781,7 @@ void GWToolbox::Initialize(LPVOID module)
         OnMinOrRestoreOrExitBtnClicked_Func = frame->frame_callbacks[0].callback;
         GW::Hook::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
         GW::Hook::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
-        });
+    });
 
     UpdateInitialising(.0f);
     AttachGameLoopCallback();
@@ -981,7 +983,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     if (!CanRenderToolbox())
         return;
 
-
+    const bool loading_screen = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading;
+    if (ToolboxSettings::hide_on_loading_screen && loading_screen) {
+        return;
+    }
 
     ImGui_ImplDX9_NewFrame();
     ImGui_ImplWin32_NewFrame();
@@ -1008,7 +1013,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     io.AddKeyEvent(ImGuiMod_Shift, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
     io.AddKeyEvent(ImGuiMod_Alt, (GetKeyState(VK_MENU) & 0x8000) != 0);
 
-    std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
+    std::lock_guard lock(module_management_mutex);
     // NB: Don't use an iterator here, because it could be invalidated during draw
     for (size_t i = 0; i < ui_elements_enabled.size(); i++) {
         const auto uielement = ui_elements_enabled[i];

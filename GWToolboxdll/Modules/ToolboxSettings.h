@@ -37,6 +37,7 @@ public:
 
     static inline bool move_all = false;
     static inline bool clamp_windows_to_screen = false;
+    static inline bool hide_on_loading_screen = false;
     static inline bool send_anonymous_gameplay_info = true;
 private:
     // === location stuff ===
