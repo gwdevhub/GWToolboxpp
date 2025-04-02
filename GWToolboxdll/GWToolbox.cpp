@@ -342,7 +342,8 @@ namespace {
                && GW::UI::GetIsUIDrawn()
                && !GW::GetPreGameContext()
                && !GW::Map::GetIsInCinematic()
-               && !IsIconic(GW::MemoryMgr::GetGWWindowHandle())
+               && !IsIconic(GW::MemoryMgr::GetGWWindowHandle()) 
+               && (!ToolboxSettings::hide_on_loading_screen || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading)
                && FontLoader::FontsLoaded();
     }
 
@@ -982,11 +983,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 
     if (!CanRenderToolbox())
         return;
-
-    const bool loading_screen = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading;
-    if (ToolboxSettings::hide_on_loading_screen && loading_screen) {
-        return;
-    }
 
     ImGui_ImplDX9_NewFrame();
     ImGui_ImplWin32_NewFrame();
