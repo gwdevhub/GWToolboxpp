@@ -220,8 +220,11 @@ namespace {
                 return false;
             case ItemType::Key:
                 if (!item.value)
-                    return false; // Dungeon keys are also keys, but have no value.
+                    return false; // Dungeon keys
                 break;
+            case ItemType::Trophy:
+                if (!item.value)
+                    return false; // Mission keys and Nightfall "treasures"
             default:
                 break;
         }
