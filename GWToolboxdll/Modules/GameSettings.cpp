@@ -1181,7 +1181,7 @@ namespace {
                 break;
             CheckPromptBeforeEnterMission(status);
             if (status->blocked) {
-                GW::GameThread::Enqueue([]() {
+                GW::GameThread::Enqueue([] {
                     DialogModule::ReloadDialog();
                 });
             }
@@ -1228,10 +1228,10 @@ namespace {
     {
         if (!skip_entering_name_for_faction_donate) return;
         if (!immediate) {
-            Resources::EnqueueWorkerTask([]() {
+            Resources::EnqueueWorkerTask([] {
                 // When a donation is complete, there are several different ui messages that come in varying sequence; give 500ms to ensure all are processed by the game first
                 Sleep(500);
-                GW::GameThread::Enqueue([]() {
+                GW::GameThread::Enqueue([] {
                     SkipCharacterNameEntryForFactionDonation(true);
                 });
             });

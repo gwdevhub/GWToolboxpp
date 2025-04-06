@@ -46,7 +46,7 @@ namespace {
     void GetOauthToken() {
         if (fetch_oauth_token) return;
         fetch_oauth_token = true;
-        Resources::EnqueueWorkerTask([]() {
+        Resources::EnqueueWorkerTask([] {
             const auto scopes = "chat:edit chat:read";
             const auto url = "https://id.twitch.tv/oauth2/device"; // No parameters in URL
             std::string request_body = std::format("client_id={}&scope={}", client_id, scopes);
