@@ -2794,9 +2794,7 @@ void GameSettings::OnUpdateSkillCount(GW::HookStatus*, void* packet)
     const auto pak = static_cast<GW::Packet::StoC::UpdateSkillCountAfterMapLoad*>(packet);
     if (limit_signets_of_capture && static_cast<GW::Constants::SkillID>(pak->skill_id) == GW::Constants::SkillID::Signet_of_Capture) {
         actual_signets_of_capture_amount = pak->count;
-        if (pak->count > 10) {
-            pak->count = 10;
-        }
+        pak->count = std::min<uint32_t>(pak->count, 10);
     }
 }
 
