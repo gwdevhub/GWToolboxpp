@@ -951,7 +951,7 @@ void Minimap::DrawSettingsInternal()
         ImGui::TreePop();
     }
     if (ImGui::TreeNodeEx("In-game rendering", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        game_world_renderer.DrawSettings();
+        GameWorldRenderer::DrawSettings();
         ImGui::TreePop();
     }
     ImGui::StartSpacedElements(300.f);
@@ -1051,7 +1051,7 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     symbols_renderer.LoadSettings(ini, Name());
     custom_renderer.LoadSettings(ini, Name());
     effect_renderer.LoadSettings(ini, Name());
-    game_world_renderer.LoadSettings(ini, Name());
+    GameWorldRenderer::LoadSettings(ini, Name());
 
     pending_refresh_quest_marker = true;
 }
@@ -1089,7 +1089,7 @@ void Minimap::SaveSettings(ToolboxIni* ini)
     symbols_renderer.SaveSettings(ini, Name());
     custom_renderer.SaveSettings(ini, Name());
     EffectRenderer::SaveSettings(ini, Name());
-    game_world_renderer.SaveSettings(ini, Name());
+    GameWorldRenderer::SaveSettings(ini, Name());
 }
 
 size_t Minimap::GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags)
@@ -1324,7 +1324,6 @@ void Minimap::Render(IDirect3DDevice9* device)
         return;
     }
 
-
     auto& instance = Instance();
     const GW::Agent* me = GW::Agents::GetObservingAgent();
     if (me == nullptr) {
@@ -1396,7 +1395,7 @@ void Minimap::Render(IDirect3DDevice9* device)
         device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, res, vertices, sizeof(D3DVertex));
     };
 
-    instance.RenderSetupProjection(device);
+    RenderSetupProjection(device);
 
     const D3DCOLOR background = instance.pmap_renderer.GetBackgroundColor();
     device->SetScissorRect(&clipping); // always clip to rect as a fallback if the stenciling fails
@@ -1428,7 +1427,7 @@ void Minimap::Render(IDirect3DDevice9* device)
     const auto scaleM = DirectX::XMMatrixScaling(scale, scale, 1.0f);
     const auto translationM = DirectX::XMMatrixTranslation(translation.x, translation.y, 0);
 
-    float current_gwinch_scale = static_cast<float>(size.x) / 5000.0f / 2.f * scale;
+    const float current_gwinch_scale = static_cast<float>(size.x) / 5000.0f / 2.f * scale;
     if (current_gwinch_scale != gwinch_scale) {
         instance.range_renderer.Invalidate();
         gwinch_scale = current_gwinch_scale;
@@ -1464,8 +1463,6 @@ void Minimap::Render(IDirect3DDevice9* device)
     instance.effect_renderer.Render(device);
 
     instance.pingslines_renderer.Render(device);
-
-    instance.game_world_renderer.Render(device);
 
     if (circular_map) {
         device->SetRenderState(D3DRS_STENCILREF, 0);

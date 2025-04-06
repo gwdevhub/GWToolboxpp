@@ -342,7 +342,7 @@ namespace {
                && GW::UI::GetIsUIDrawn()
                && !GW::GetPreGameContext()
                && !GW::Map::GetIsInCinematic()
-               && !IsIconic(GW::MemoryMgr::GetGWWindowHandle()) 
+               && !IsIconic(GW::MemoryMgr::GetGWWindowHandle())
                && (!ToolboxSettings::hide_on_loading_screen || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading)
                && FontLoader::FontsLoaded();
     }
@@ -989,8 +989,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 
     const bool world_map_showing = GW::UI::GetIsWorldMapShowing();
 
-    if (!world_map_showing && minimap_enabled) {
-        Minimap::Render(device);
+    if (!world_map_showing) {
+        if (minimap_enabled)
+            Minimap::Render(device);
+        GameWorldRenderer::Render(device);
     }
 
     ImGui::NewFrame();

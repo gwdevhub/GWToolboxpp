@@ -1,4 +1,6 @@
-#include <GWCA/Utilities/Hook.h>
+#include "stdafx.h"
+
+#include "QuestModule.h"
 
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Agent.h>
@@ -9,10 +11,9 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
-#include <GWCA/Utilities/Scanner.h>
+#include <GWCA/Utilities/Hook.h>
 #include <GWCA/Utilities/Hooker.h>
-
-#include "QuestModule.h"
+#include <GWCA/Utilities/Scanner.h>
 
 #include <Windows/TravelWindow.h>
 #include <Windows/Pathfinding/PathfindingWindow.h>
@@ -37,7 +38,7 @@ namespace {
 
     bool double_click_to_travel_to_quest = true;
 
-    GW::Constants::QuestID custom_quest_id = (GW::Constants::QuestID)0x0000fdd;
+    GW::Constants::QuestID custom_quest_id = static_cast<GW::Constants::QuestID>(0x0000fdd);
     GW::Quest custom_quest_marker;
     GW::Vec2f custom_quest_marker_world_pos;
     GW::Constants::QuestID player_chosen_quest_id = GW::Constants::QuestID::None;
@@ -76,7 +77,7 @@ namespace {
     void OnQuestPathRecalculated(std::vector<GW::GamePos>& waypoints, void* args);
     void ClearCalculatedPath(GW::Constants::QuestID quest_id);
 
-    bool IsActiveQuestPath(GW::Constants::QuestID quest_id)
+    bool IsActiveQuestPath(const GW::Constants::QuestID quest_id)
     {
         const auto questlog = GW::QuestMgr::GetQuestLog();
         const auto active_quest = GW::QuestMgr::GetActiveQuest();
@@ -99,7 +100,7 @@ namespace {
     }
 
     struct CalculatedQuestPath {
-        CalculatedQuestPath(GW::Constants::QuestID _quest_id)
+        CalculatedQuestPath(const GW::Constants::QuestID _quest_id)
             : quest_id(_quest_id) {}
 
         ~CalculatedQuestPath()
@@ -138,11 +139,11 @@ namespace {
                 return;
             if (waypoints.empty())
                 return;
-            size_t start_idx = current_waypoint > 0 ? current_waypoint - 1 : 0;
+            const size_t start_idx = current_waypoint > 0 ? current_waypoint - 1 : 0;
             for (size_t i = start_idx; i < waypoints.size() - 1; i++) {
                 const auto l = Minimap::Instance().custom_renderer.AddCustomLine(
                     waypoints[i], waypoints[i + 1],
-                    std::format("{} - {}", (uint32_t)quest_id, i).c_str(), true
+                    std::format("{} - {}", static_cast<uint32_t>(quest_id), i).c_str(), true
                 );
                 l->from_player_pos = i == start_idx;
                 l->draw_on_terrain = draw_quest_path_on_terrain;
@@ -152,14 +153,15 @@ namespace {
                 l->color = QuestModule::GetQuestColor(quest_id);
                 minimap_lines.push_back(l);
             }
+            GameWorldRenderer::TriggerSyncAllMarkers();
         }
 
-        const GW::Quest* GetQuest()
+        [[nodiscard]] const GW::Quest* GetQuest() const
         {
             return GW::QuestMgr::GetQuest(quest_id);
         }
 
-        bool IsActive()
+        [[nodiscard]] bool IsActive() const
         {
             const auto a = GW::QuestMgr::GetActiveQuestId() == quest_id;
             return a || (GetQuest() && Minimap::ShouldDrawAllQuests());
@@ -220,7 +222,7 @@ namespace {
                 Recalculate(from);
                 return false;
             }
-            uint32_t original_waypoint = current_waypoint;
+            const uint32_t original_waypoint = current_waypoint;
 
             const auto waypoint_len = waypoints.size();
             if (!waypoint_len)
@@ -287,7 +289,7 @@ namespace {
         if (found != calculated_quest_paths.end()) return found->second;
         if (!create_if_not_found)
             return nullptr;
-        auto cqp = new CalculatedQuestPath(quest_id);
+        const auto cqp = new CalculatedQuestPath(quest_id);
         calculated_quest_paths[quest_id] = cqp;
         return cqp;
     }
@@ -348,7 +350,7 @@ namespace {
             const auto pos = quest ? GetPlayerPos() : nullptr;
             if (!pos)
                 return;
-            auto cqp = GetCalculatedQuestPath(quest_id);
+            const auto cqp = GetCalculatedQuestPath(quest_id);
             if (!cqp)
                 return;
             cqp->original_quest_marker = quest->marker;

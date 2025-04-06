@@ -80,7 +80,6 @@ public:
     SymbolsRenderer symbols_renderer;
     CustomRenderer custom_renderer;
     EffectRenderer effect_renderer;
-    GameWorldRenderer game_world_renderer;
 
     static bool ShouldMarkersDrawOnMap();
     static bool ShouldDrawAllQuests();
