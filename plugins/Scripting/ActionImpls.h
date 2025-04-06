@@ -561,3 +561,17 @@ private:
     Bag bagId = Bag::Backpack;
     int slot = 0;
 };
+
+class RotateCharacterAction : public Action {
+public:
+    RotateCharacterAction() = default;
+    RotateCharacterAction(InputStream&);
+    ActionType type() const final { return ActionType::RotateCharacter; }
+    void initialAction() final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
+
+private:
+    float targetRotation = 0.f;
+};

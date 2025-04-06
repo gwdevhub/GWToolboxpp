@@ -6,7 +6,7 @@
 namespace {
     ActionPtr makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 38);
+        static_assert((int)ActionType::Count == 39);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -82,6 +82,8 @@ namespace {
                 return std::make_shared<AbandonQuestAction>();
             case ActionType::MoveItemToSlot:
                 return std::make_shared<MoveItemToSlotAction>();
+            case ActionType::RotateCharacter:
+                return std::make_shared<RotateCharacterAction>();
             default:
                 return nullptr;
         }
@@ -90,7 +92,7 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 38);
+    static_assert((int)ActionType::Count == 39);
     switch (type) {
         case ActionType::MoveTo:
             return "Position";
@@ -166,6 +168,8 @@ std::string_view toString(ActionType type)
             return "Abandon quest";
         case ActionType::MoveItemToSlot:
             return "Move item to slot";
+        case ActionType::RotateCharacter:
+            return "Rotate character";
         default:
             return "Unknown";
     }
@@ -173,7 +177,7 @@ std::string_view toString(ActionType type)
 
 ActionPtr readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 38);
+    static_assert((int)ActionType::Count == 39);
     int type;
 
     stream >> type;
@@ -252,6 +256,8 @@ ActionPtr readAction(InputStream& stream)
             return std::make_shared<AbandonQuestAction>(stream);
         case ActionType::MoveItemToSlot:
             return std::make_shared<MoveItemToSlotAction>(stream);
+        case ActionType::RotateCharacter:
+            return std::make_shared<RotateCharacterAction>(stream);
         default:
             return nullptr;
     }
@@ -287,7 +293,7 @@ ActionPtr drawActionSelector(float width)
 
     if (ImGui::BeginPopup("Add action")) 
     {
-        drawSubMenu("Move to", std::array{ActionType::MoveTo, ActionType::MoveToTargetPosition, ActionType::MoveInchwise});
+        drawSubMenu("Move to", std::array{ActionType::MoveTo, ActionType::MoveToTargetPosition, ActionType::MoveInchwise, ActionType::RotateCharacter});
         drawSubMenu("Skill", std::array{ActionType::Cast, ActionType::CastBySlot, ActionType::DropBuff, ActionType::UseHeroSkill});
         drawSubMenu("Interaction", std::array{ActionType::SendDialog, ActionType::GoToTarget, ActionType::AutoAttackTarget});
         drawSubMenu("Targeting", std::array{ActionType::ChangeTarget, ActionType::StoreTarget, ActionType::RestoreTarget, ActionType::ClearTarget});

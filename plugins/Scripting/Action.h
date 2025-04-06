@@ -43,6 +43,7 @@ enum class ActionType : int {
     IncrementVariable,
     DecrementVariable,
     MoveItemToSlot,
+    RotateCharacter,
 
     Count
 };

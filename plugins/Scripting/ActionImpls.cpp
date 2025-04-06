@@ -29,9 +29,13 @@
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Camera.h>
 
+#include <GWCA/Utilities/Scanner.h>
+
 #include <ImGuiCppWrapper.h>
 #include <thread>
 #include <span>
+#include <numbers>
+
 namespace {
     const std::string missingContentToken = "/";
     const std::string endOfListToken = ">";
@@ -2163,5 +2167,57 @@ void MoveItemToSlotAction::drawSettings()
     ImGui::InputInt("Slot", &slot, 0);
     ImGui::PopItemWidth();
 
+    ImGui::PopID();
+}
+
+/// ------------- RotateCharacterAction -------------
+RotateCharacterAction::RotateCharacterAction(InputStream& stream)
+{
+    stream >> targetRotation;
+}
+void RotateCharacterAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << targetRotation;
+}
+
+typedef void(__cdecl* RotateCharacter_pt)(GW::AgentID id, float targetRotation, float rotationSpeed, uint32_t always0);
+RotateCharacter_pt RotateCharacter_Func = 0;
+
+void RotateCharacterAction::initialAction()
+{
+    Action::initialAction();
+
+    const auto player = GW::Agents::GetControlledCharacter();
+    if (!player) return;
+    if (!RotateCharacter_Func) 
+    {
+        const auto address = GW::Scanner::FindAssertion(R"(P:\Code\Engine\Agent\AgApi.cpp)", "infinity || (targetAngle >= -PI)", 0, -0x44);
+        if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) 
+            RotateCharacter_Func = (RotateCharacter_pt)address;
+    }
+    if (!RotateCharacter_Func) 
+        return;
+
+    GW::GameThread::Enqueue([id = player->agent_id, rotation = targetRotation]
+    {
+        RotateCharacter_Func(id, rotation, 50.f, 0);
+    });
+}
+void RotateCharacterAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+    ImGui::PushItemWidth(100.f);
+
+    ImGui::Text("Rotate to");
+    ImGui::SameLine();
+    ImGui::InputFloat("Target rotation", &targetRotation, 0.f, 0.f);
+
+    const auto pi = (float)std::numbers::pi;
+    if (targetRotation > pi) targetRotation = pi;
+    if (targetRotation < -pi) targetRotation = -pi;
+
+    ImGui::PopItemWidth();
     ImGui::PopID();
 }
