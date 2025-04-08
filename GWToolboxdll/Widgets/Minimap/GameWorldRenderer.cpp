@@ -325,6 +325,23 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         }
     }
 
+    float old_view_matrix[16];
+    float old_proj_matrix[16];
+    float old_ps_constants[12];
+    device->GetVertexShaderConstantF(0, old_view_matrix, 4);
+    device->GetVertexShaderConstantF(4, old_proj_matrix, 4);
+    device->GetPixelShaderConstantF(0, old_ps_constants, 3);
+
+    IDirect3DVertexShader9* vshader_old = nullptr;
+    IDirect3DPixelShader9* pshader_old = nullptr;
+
+    if (device->GetVertexShader(&vshader_old) != D3D_OK) {
+        Log::Error("GameWorldRenderer: unable to GetVertexShader, aborting render.");
+    }
+    if (device->GetPixelShader(&pshader_old) != D3D_OK) {
+        Log::Error("GameWorldRenderer: unable to GetPixelShader, aborting render.");
+    }
+
     if (vshader == nullptr || device->SetVertexShader(vshader) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to SetVertexShader, aborting render.");
         return;
@@ -333,8 +350,11 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         Log::Error("GameWorldRenderer: unable to SetPixelShader, aborting render.");
         return;
     }
-    IDirect3DVertexDeclaration9* old_vertex_declaration = 0;
-    device->GetVertexDeclaration(&old_vertex_declaration);
+    IDirect3DVertexDeclaration9* old_vertex_declaration = nullptr;
+    if (device->GetVertexDeclaration(&old_vertex_declaration) != D3D_OK) {
+        Log::Error("GameWorldRenderer: unable to GetVertexShader declaration, aborting render.");
+        return;
+    }
     if (device->SetVertexDeclaration(vertex_declaration) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to SetVertexShader declaration, aborting render.");
         return;
@@ -392,14 +412,26 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
     // restore immediate state:
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, old_D3DRS_SCISSORTESTENABLE);
     device->SetRenderState(D3DRS_STENCILENABLE, old_D3DRS_STENCILENABLE);
-    if (device->SetPixelShader(nullptr) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to reset SetPixelShader.");
-    }
-    if (device->SetVertexShader(nullptr) != D3D_OK) {
+    device->SetVertexShaderConstantF(0, old_view_matrix, 4);
+    device->SetVertexShaderConstantF(4, old_proj_matrix, 4);
+    device->SetPixelShaderConstantF(0, old_ps_constants, 3);
+    if (device->SetVertexShader(vshader_old) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to reset SetVertexShader.");
+    }
+    if (device->SetPixelShader(pshader_old) != D3D_OK) {
+        Log::Error("GameWorldRenderer: unable to reset SetPixelShader.");
     }
     if (device->SetVertexDeclaration(old_vertex_declaration) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to set old SetVertexShader declaration, aborting render.");
+    }
+    if (old_vertex_declaration) {
+        old_vertex_declaration->Release();
+    }
+    if (vshader_old) {
+        vshader_old->Release();
+    }
+    if (pshader_old) {
+        pshader_old->Release();
     }
 }
 
