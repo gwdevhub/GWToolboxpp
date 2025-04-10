@@ -67,7 +67,6 @@ public:
     static std::filesystem::path GetPath(const std::filesystem::path& folder, const std::filesystem::path& file);
     static HRESULT ResolveShortcut(const std::filesystem::path& in_shortcut_path, std::filesystem::path& out_actual_path);
 
-    static utf8::string GetPathUtf8(const std::wstring& file);
     static bool EnsureFolderExists(const std::filesystem::path& path);
 
     // Returns current scale multiplier based on gw preferences. Cached for per frame access, pass force = true to get fresh from gw settings.
