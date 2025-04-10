@@ -1158,9 +1158,6 @@ namespace {
         }
         if (confirm_text) {
             ImGui::ConfirmDialog(confirm_text, on_enter_mission_prompt);
-
-            // TODO: Re-enable the clicked dialog button if it was triggered via talking to NPC
-            DialogModule::ReloadDialog();
             status->blocked = true;
         }
     }
