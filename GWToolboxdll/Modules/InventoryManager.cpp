@@ -1327,6 +1327,12 @@ void InventoryManager::SalvageAll(const SalvageAllType type)
         CancelSalvage();
         salvage_all_type = type;
     }
+    const auto available_slot = GetAvailableInventorySlot();
+    if (!available_slot.first) {
+        CancelSalvage();
+        Log::Warning("No more space in inventory");
+        return;
+    }
     if (!has_prompted_salvage) {
         salvage_all_type = type;
         FetchPotentialItems();
@@ -1351,12 +1357,6 @@ void InventoryManager::SalvageAll(const SalvageAllType type)
     if (!potential_salvage_all_items.size()) {
         Log::Info("Salvaged %d items", salvaged_count);
         CancelSalvage();
-        return;
-    }
-    const auto available_slot = GetAvailableInventorySlot();
-    if (!available_slot.first) {
-        CancelSalvage();
-        Log::Warning("No more space in inventory");
         return;
     }
     const PotentialItem* ref = *potential_salvage_all_items.begin();
