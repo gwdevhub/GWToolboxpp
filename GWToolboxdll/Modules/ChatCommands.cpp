@@ -1720,6 +1720,8 @@ void CHAT_CMD_FUNC(ChatCommands::CmdEnterMission)
 
     switch (GW::Map::GetMapID()) {
         case GW::Constants::MapID::Temple_of_the_Ages:
+        case GW::Constants::MapID::Zin_Ku_Corridor_outpost:
+        case GW::Constants::MapID::Chantry_of_Secrets_outpost:
         case GW::Constants::MapID::Embark_Beach: {
             if (argc < 2) {
                 return Log::Error(error_fow_uw_syntax);

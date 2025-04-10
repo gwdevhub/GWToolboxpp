@@ -226,7 +226,8 @@ namespace {
     GW::UI::UIInteractionCallback SkillList_UICallback_Func = 0, SkillList_UICallback_Ret = 0;
 
     // If this ui message is adding an unlearnt skill to the tome window, block it
-    void OnSkillList_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+    void OnSkillList_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
+    {
         GW::Hook::EnterHook();
         const auto is_show_unlearned_skill = message->message_id == (GW::UI::UIMessage)0x47 && ((uint32_t*)wParam)[1] == 0x3;
         if (!(is_show_unlearned_skill && show_unlearned_skill)) {
@@ -410,6 +411,7 @@ namespace {
             return;
         FixLoadSkillData(packet->skill_template->skills);
     }
+
     enum class CharStat : uint32_t {
         Experience,
         KurzickFactionCurrent,
@@ -430,23 +432,25 @@ namespace {
     using CharacterStatIncreased_pt = void(__cdecl*)(CharStat stat, uint32_t amount_gained);
     CharacterStatIncreased_pt CharacterStatIncreased_Func = nullptr, CharacterStatIncreased_Ret = nullptr;
     // Block overhead experience gain numbers
-    void OnCharacterStatIncreased(CharStat stat, uint32_t amount_gained) {
+    void OnCharacterStatIncreased(CharStat stat, uint32_t amount_gained)
+    {
         bool blocked = false;
         GW::Hook::EnterHook();
         switch (stat) {
-        case CharStat::ImperialFactionCurrent:
-        case CharStat::BalthazarFactionCurrent:
-        case CharStat::KurzickFactionCurrent:
-        case CharStat::LuxonFactionCurrent:
-            blocked = block_faction_gain;
-            break;
-        case CharStat::Experience:
-            blocked = block_experience_gain || (block_zero_experience_gain && amount_gained == 0);
-            break;
+            case CharStat::ImperialFactionCurrent:
+            case CharStat::BalthazarFactionCurrent:
+            case CharStat::KurzickFactionCurrent:
+            case CharStat::LuxonFactionCurrent:
+                blocked = block_faction_gain;
+                break;
+            case CharStat::Experience:
+                blocked = block_experience_gain || (block_zero_experience_gain && amount_gained == 0);
+                break;
         }
         if (!blocked) {
             CharacterStatIncreased_Ret(stat, amount_gained);
-        } else {
+        }
+        else {
             // we need to be sure to increase the stat ourselves because this function would normally do it for us
             const auto w = GW::GetWorldContext();
             uint32_t* char_stat_values = &w->experience;
@@ -475,10 +479,11 @@ namespace {
     SetFrameSkillDescription_pt SetFrameSkillDescription_Func = nullptr, SetFrameSkillDescription_Ret = nullptr;
 
     // Hide skill description in tooltip; called by GW to add the description of the skill to a skill tooltip
-    void __fastcall OnSetFrameSkillDescription(SetFrameSkillDescriptionParam* param) {
+    void __fastcall OnSetFrameSkillDescription(SetFrameSkillDescriptionParam* param)
+    {
         GW::Hook::EnterHook();
         constexpr auto frame_set_text_ui_message = static_cast<GW::UI::UIMessage>(0x52);
-        const auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameById(param->frame_id),0xb);
+        const auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameById(param->frame_id), 0xb);
         bool block_description = disable_skill_descriptions_in_outpost && IsOutpost() || disable_skill_descriptions_in_explorable && IsExplorable();
         block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
         if (block_description) {
@@ -495,7 +500,7 @@ namespace {
                 if (message->message_id == frame_set_text_ui_message)
                     encoded_text_set = (wchar_t*)wParam;
                 prev_callback(message, wParam, lParam);
-                };
+            };
         }
         SetFrameSkillDescription_Ret(param);
         if (prev_callback) frame->frame_callbacks[0].callback = prev_callback;
@@ -504,12 +509,11 @@ namespace {
         const auto skill = GW::SkillbarMgr::GetSkillConstantData(param->skill_id);
         const auto campaign_id = (uint32_t)skill->campaign;
         if (campaign_id < _countof(GW::EncStrings::Campaign)) {
-            wchar_t buf[16] = { 0 };
+            wchar_t buf[16] = {0};
             if (GW::UI::UInt32ToEncStr(GW::EncStrings::Campaign[(uint32_t)skill->campaign], buf, _countof(buf))) {
                 encoded_text_set += std::format(L"\x2\x102\x2\x108\x107<c=@SkillDull>\x1\x2{}\x2\x108\x107</c>\x1", buf);
                 GW::UI::SendFrameUIMessage(frame, frame_set_text_ui_message, (void*)encoded_text_set.c_str());
             }
-
         }
         GW::Hook::LeaveHook();
     }
@@ -841,7 +845,8 @@ namespace {
     }
 
     // Override the login status dropdown by sending ui message 0x51 if found
-    void OverrideDefaultOnlineStatus() {
+    void OverrideDefaultOnlineStatus()
+    {
         GW::GameThread::Enqueue([] {
             GW::UI::SelectDropdownOption(GW::UI::GetFrameByLabel(L"StatusOverride"), last_online_status);
         });
@@ -1046,7 +1051,8 @@ namespace {
 
     GW::HookEntry OnQuestUIMessage_HookEntry;
 
-    void OnQuestAdded(uint32_t) {
+    void OnQuestAdded(uint32_t)
+    {
         if (GW::QuestMgr::GetActiveQuestId() == player_requested_active_quest_id) {
             return;
         }
@@ -1070,7 +1076,6 @@ namespace {
             GW::StoC::EmulatePacket(&packet);
             GW::QuestMgr::SetActiveQuestId(quest->quest_id);
         }
-
     }
 
     void CHAT_CMD_FUNC(CmdReinvite)
@@ -1078,7 +1083,8 @@ namespace {
         pending_reinvite.reset(current_party_target_id);
     }
 
-    bool ShouldBlockEffect(uint32_t effect_id) {
+    bool ShouldBlockEffect(uint32_t effect_id)
+    {
         if (effect_id >= 1292 && effect_id <= 1303) {
             return block_fireworks;
         }
@@ -1086,18 +1092,18 @@ namespace {
             return block_fireworks;
         }
         switch (effect_id) {
-        case 905:
-            return block_snowman_summoner;
-        case 1688:
-            return block_bottle_rockets;
-        case 1689:
-            return block_party_poppers;
-        case 758:  // Chocolate bunny
-        case 2063: // e.g. Fruitcake, sugary blue drink
-        case 1176: // e.g. Delicious cake
-            return block_sugar_rush_effect;
-        case 1491:
-            return block_transmogrify_effect;
+            case 905:
+                return block_snowman_summoner;
+            case 1688:
+                return block_bottle_rockets;
+            case 1689:
+                return block_party_poppers;
+            case 758:  // Chocolate bunny
+            case 2063: // e.g. Fruitcake, sugary blue drink
+            case 1176: // e.g. Delicious cake
+                return block_sugar_rush_effect;
+            case 1491:
+                return block_transmogrify_effect;
         }
         return false;
     }
@@ -1118,7 +1124,8 @@ namespace {
         }
     }
 
-    const wchar_t* GetPartySearchLeader(uint32_t party_search_id) {
+    const wchar_t* GetPartySearchLeader(uint32_t party_search_id)
+    {
         const auto p = GW::PartyMgr::GetPartySearch(party_search_id);
         return p && p->party_leader && *p->party_leader ? p->party_leader : nullptr;
     }
@@ -1127,7 +1134,8 @@ namespace {
     bool mission_prompted = false;
 
     // We've just asked the game to enter mission; check (and prompt) if we should really be in NM or HM instead
-    void CheckPromptBeforeEnterMission(GW::HookStatus* status) {
+    void CheckPromptBeforeEnterMission(GW::HookStatus* status)
+    {
         if (!check_and_prompt_if_mission_already_completed)
             return;
         if (mission_prompted || GW::PartyMgr::GetPartyPlayerCount() > 1)
@@ -1136,11 +1144,11 @@ namespace {
         const auto nm_complete = CompletionWindow::IsAreaComplete(map_id, CompletionCheck::NormalMode);
         const auto hm_complete = CompletionWindow::IsAreaComplete(map_id, CompletionCheck::HardMode);
 
-        auto on_enter_mission_prompt = [](bool result, void*) {
+        auto on_enter_mission_prompt = [](const bool result, void*) {
             mission_prompted = true;
             result && GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
             GW::Map::EnterChallenge();
-            };
+        };
         const char* confirm_text = nullptr;
         if (GW::PartyMgr::GetIsPartyInHardMode() && hm_complete && !nm_complete) {
             confirm_text = "You're about to enter a mission in Hard Mode,\nbut you've already completed it on this character.\n\nWould you like to switch to Normal Mode?";
@@ -1150,46 +1158,49 @@ namespace {
         }
         if (confirm_text) {
             ImGui::ConfirmDialog(confirm_text, on_enter_mission_prompt);
-
-            // TODO: Re-enable the clicked dialog button if it was triggered via talking to NPC
-            DialogModule::ReloadDialog();
             status->blocked = true;
         }
     }
 
     GW::HookEntry OnPreUIMessage_HookEntry;
-    void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*) {
+
+    void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*)
+    {
         switch (message_id) {
-        case GW::UI::UIMessage::kSendCallTarget: {
-            auto packet = (GW::UI::UIPacket::kSendCallTarget*)wParam;
-            const auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
-            if (packet->call_type == GW::CallTargetType::Following && agent
-                && agent->GetIsLivingType() && agent->allegiance == GW::Constants::Allegiance::Enemy) {
-                packet->call_type = GW::CallTargetType::AttackingOrTargetting;
+            case GW::UI::UIMessage::kSendCallTarget: {
+                auto packet = (GW::UI::UIPacket::kSendCallTarget*)wParam;
+                const auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
+                if (packet->call_type == GW::CallTargetType::Following && agent
+                    && agent->GetIsLivingType() && agent->allegiance == GW::Constants::Allegiance::Enemy) {
+                    packet->call_type = GW::CallTargetType::AttackingOrTargetting;
+                }
             }
-        } break;
-        case GW::UI::UIMessage::kMapLoaded: {
-            mission_prompted = false;
-        } break;
-        case GW::UI::UIMessage::kSendDialog: {
-            const auto dialog_id = (uint32_t)wParam;
-            const auto& buttons = DialogModule::GetDialogButtons();
-            const auto button = std::ranges::find_if(buttons, [dialog_id](GW::UI::DialogButtonInfo* btn) {
-                return btn->dialog_id == dialog_id && btn->message && wcscmp(btn->message, L"\x8101\x13D5\x8B48\xD2EF\x7E5A") == 0;
-                });
-            if (button == buttons.end())
-                break;
-            CheckPromptBeforeEnterMission(status);
-            if (status->blocked) {
-                GW::GameThread::Enqueue([] {
-                    DialogModule::ReloadDialog();
-                });
+            break;
+            case GW::UI::UIMessage::kMapLoaded: {
+                mission_prompted = false;
             }
-        } break;
+            break;
+            case GW::UI::UIMessage::kSendDialog: {
+                const auto dialog_id = (uint32_t)wParam;
+                const auto& buttons = DialogModule::GetDialogButtons();
+                const auto button = std::ranges::find_if(buttons, [dialog_id](GW::UI::DialogButtonInfo* btn) {
+                    return btn->dialog_id == dialog_id && btn->message && wcscmp(btn->message, L"\x8101\x13D5\x8B48\xD2EF\x7E5A") == 0;
+                });
+                if (button == buttons.end())
+                    break;
+                CheckPromptBeforeEnterMission(status);
+                if (status->blocked) {
+                    GW::GameThread::Enqueue([] {
+                        DialogModule::ReloadDialog();
+                    });
+                }
+            }
+            break;
         }
     }
 
-    void CheckRemoveWindowBorder() {
+    void CheckRemoveWindowBorder()
+    {
         // @TODO: When frame is removed, the game "expands" to fill the space, but the UI is still offset as if its factoring in the for title bar. Intercept SetWindowPos on the game side instead of doing this???
         const auto pref = GW::UI::GetPreference(GW::UI::NumberPreference::ScreenBorderless);
         Log::Log("Pref changed %d", pref);
@@ -1250,7 +1261,8 @@ namespace {
         GW::UI::SetFrameDisabled(sign_btn, 0);
     }
 
-    void OnDialogButton(GW::UI::DialogButtonInfo* packet) {
+    void OnDialogButton(GW::UI::DialogButtonInfo* packet)
+    {
         if (auto_open_locked_chest_with_key && wcscmp(packet->message, L"\x8101\x7F88\x10A\x8101\x13BE\x1") == 0) {
             // Auto use key
             DialogModule::SendDialog(packet->dialog_id);
@@ -1262,83 +1274,96 @@ namespace {
     }
 
     GW::HookEntry OnPostUIMessage_HookEntry;
-    void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*) {
+
+    void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*)
+    {
         if (status->blocked)
             return;
         switch (message_id) {
-        case GW::UI::UIMessage::kPartyShowConfirmDialog: {
-            const auto packet = (GW::UI::UIPacket::kPartyShowConfirmDialog*)wParam;
-            if (skip_characters_from_another_campaign_prompt && wcscmp(packet->prompt_enc_str,L"\x8101\x05d2") == 0) {
-                // "Yes" to skip the confirm prompt
-                GW::UI::ButtonClick(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Party"), 1, 10, 6));
+            case GW::UI::UIMessage::kPartyShowConfirmDialog: {
+                const auto packet = (GW::UI::UIPacket::kPartyShowConfirmDialog*)wParam;
+                if (skip_characters_from_another_campaign_prompt && wcscmp(packet->prompt_enc_str, L"\x8101\x05d2") == 0) {
+                    // "Yes" to skip the confirm prompt
+                    GW::UI::ButtonClick(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Party"), 1, 10, 6));
+                }
             }
-        } break;
-        case GW::UI::UIMessage::kSendSetActiveQuest:
-            player_requested_active_quest_id = GW::QuestMgr::GetActiveQuestId();
             break;
-        case GW::UI::UIMessage::kQuestAdded:
-            OnQuestAdded(*(uint32_t*)wParam);
-            break;
-        case GW::UI::UIMessage::kTradeSessionStart: {
-            if (flash_window_on_trade) {
-                FlashWindow();
+            case GW::UI::UIMessage::kSendSetActiveQuest:
+                player_requested_active_quest_id = GW::QuestMgr::GetActiveQuestId();
+                break;
+            case GW::UI::UIMessage::kQuestAdded:
+                OnQuestAdded(*(uint32_t*)wParam);
+                break;
+            case GW::UI::UIMessage::kTradeSessionStart: {
+                if (flash_window_on_trade) {
+                    FlashWindow();
+                }
+                if (focus_window_on_trade) {
+                    FocusWindow();
+                }
             }
-            if (focus_window_on_trade) {
-                FocusWindow();
-            }
-        } break;
-        case GW::UI::UIMessage::kVendorTransComplete: {
-            SkipCharacterNameEntryForFactionDonation(false);
-        } break;
-        case GW::UI::UIMessage::kVendorWindow: {
-            SkipCharacterNameEntryForFactionDonation(true);
-        } break;
-        case GW::UI::UIMessage::kPartySearchInviteSent: {
-            // Automatically send a party window invite when a party search invite is sent
-            const auto packet = (GW::UI::UIPacket::kPartySearchInvite*)wParam;
-            if(GW::PartyMgr::GetIsLeader())
-                GW::PartyMgr::InvitePlayer(GetPartySearchLeader(packet->source_party_search_id));
-        } break;
-        case GW::UI::UIMessage::kPreferenceValueChanged: {
-            const auto packet = (GW::UI::UIPacket::kPreferenceValueChanged*)wParam;
-            if (packet->preference_id == GW::UI::NumberPreference::ScreenBorderless)
-                CheckRemoveWindowBorder();
-        } break;
-        case GW::UI::UIMessage::kPartyDefeated: {
-            if (auto_return_on_defeat && GW::PartyMgr::GetIsLeader())
-                GW::PartyMgr::ReturnToOutpost() || (Log::Warning("Failed to return to outpost"), true);
-        } break;
-        case GW::UI::UIMessage::kMapLoaded: {
-            last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
-        } break;
-        case GW::UI::UIMessage::kShowCancelEnterMissionBtn: {
-            CheckPromptBeforeEnterMission(status);
-            if (status->blocked)
-                GW::Map::CancelEnterChallenge() || (Log::Warning("Failed to cancel mission entry"), true);
             break;
-        } break;
-        case GW::UI::UIMessage::kVanquishComplete: {
-            if (auto_age_on_vanquish)
-                GW::Chat::SendChat('/', L"age");
-            if (block_vanquish_complete_popup)
-                GW::UI::SetFrameVisible(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6, 8), false) || (Log::Warning("Failed to hide vanquish popup"), true);
-        } break;
-        case GW::UI::UIMessage::kDialogButton: {
-            OnDialogButton((GW::UI::DialogButtonInfo*)wParam);
-        } break;
+            case GW::UI::UIMessage::kVendorTransComplete: {
+                SkipCharacterNameEntryForFactionDonation(false);
+            }
+            break;
+            case GW::UI::UIMessage::kVendorWindow: {
+                SkipCharacterNameEntryForFactionDonation(true);
+            }
+            break;
+            case GW::UI::UIMessage::kPartySearchInviteSent: {
+                // Automatically send a party window invite when a party search invite is sent
+                const auto packet = (GW::UI::UIPacket::kPartySearchInvite*)wParam;
+                if (GW::PartyMgr::GetIsLeader())
+                    GW::PartyMgr::InvitePlayer(GetPartySearchLeader(packet->source_party_search_id));
+            }
+            break;
+            case GW::UI::UIMessage::kPreferenceValueChanged: {
+                const auto packet = (GW::UI::UIPacket::kPreferenceValueChanged*)wParam;
+                if (packet->preference_id == GW::UI::NumberPreference::ScreenBorderless)
+                    CheckRemoveWindowBorder();
+            }
+            break;
+            case GW::UI::UIMessage::kPartyDefeated: {
+                if (auto_return_on_defeat && GW::PartyMgr::GetIsLeader())
+                    GW::PartyMgr::ReturnToOutpost() || (Log::Warning("Failed to return to outpost"), true);
+            }
+            break;
+            case GW::UI::UIMessage::kMapLoaded: {
+                last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
+            }
+            break;
+            case GW::UI::UIMessage::kShowCancelEnterMissionBtn: {
+                CheckPromptBeforeEnterMission(status);
+                if (status->blocked)
+                    GW::Map::CancelEnterChallenge() || (Log::Warning("Failed to cancel mission entry"), true);
+                break;
+            }
+            break;
+            case GW::UI::UIMessage::kVanquishComplete: {
+                if (auto_age_on_vanquish)
+                    GW::Chat::SendChat('/', L"age");
+                if (block_vanquish_complete_popup)
+                    GW::UI::SetFrameVisible(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6, 8), false) || (Log::Warning("Failed to hide vanquish popup"), true);
+            }
+            break;
+            case GW::UI::UIMessage::kDialogButton: {
+                OnDialogButton((GW::UI::DialogButtonInfo*)wParam);
+            }
+            break;
         }
     }
 
-    void DrawAudioSettings() {
+    void DrawAudioSettings()
+    {
         if (ImGui::Button("Open Advanced Audio Window")) {
             GW::GameThread::Enqueue([] {
                 GW::GetCharContext()->player_flags |= 0x8;
                 GW::UI::Keypress((GW::UI::ControlAction)0x24);
                 GW::GetCharContext()->player_flags ^= 0x8;
-                });
+            });
         }
     }
-
 }
 
 bool GameSettings::GetSettingBool(const char* setting)
@@ -1554,7 +1579,7 @@ void GameSettings::Initialize()
 
 
 
-    SkillList_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmCtlSkList.cpp", "!obj", 0xc71,0));
+    SkillList_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmCtlSkList.cpp", "!obj", 0xc71, 0));
     Log::Log("[GameSettings] SkillList_UICallback_Func = %p\n", SkillList_UICallback_Func);
 
     address = GW::Scanner::Find("\x81\xff\x86\x02\x00\x00", "xxxxxx", 6);
@@ -1594,7 +1619,7 @@ void GameSettings::Initialize()
     Log::Log("[GameSettings] SetGlobalNameTagVisibility_Func = %p", (void*)SetGlobalNameTagVisibility_Func);
     Log::Log("[GameSettings] GlobalNameTagVisibilityFlags = %p", static_cast<void*>(GlobalNameTagVisibilityFlags));
 
-    CharacterStatIncreased_Func = (CharacterStatIncreased_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("ChCliApi.cpp","stat < CHAR_STATS",0,0));
+    CharacterStatIncreased_Func = (CharacterStatIncreased_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("ChCliApi.cpp", "stat < CHAR_STATS", 0, 0));
     Log::Log("[GameSettings] CharacterStatIncreased_Func = %p\n", (void*)CharacterStatIncreased_Func);
 
 
@@ -1985,7 +2010,7 @@ void GameSettings::Terminate()
 
     if (SkillList_UICallback_Func)
         GW::Hook::RemoveHook(SkillList_UICallback_Func);
-    if(CharacterStatIncreased_Func)
+    if (CharacterStatIncreased_Func)
         GW::Hook::RemoveHook(CharacterStatIncreased_Func);
     if (SetFrameSkillDescription_Func)
         GW::Hook::RemoveHook(SetFrameSkillDescription_Func);
@@ -2192,7 +2217,7 @@ void GameSettings::DrawSettingsInternal()
     }
     ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
 
-    ImGui::Checkbox("Prompt if entring a mission you've already completed", &check_and_prompt_if_mission_already_completed);
+    ImGui::Checkbox("Prompt if entering a mission you've already completed", &check_and_prompt_if_mission_already_completed);
     ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
     ImGui::Checkbox("Automatically return to outpost on defeat", &auto_return_on_defeat);
     ImGui::ShowHelp("Automatically return party to outpost on party wipe if player is leading");
@@ -2614,10 +2639,7 @@ void GameSettings::OnPlayerLeaveInstance(GW::HookStatus*, const GW::Packet::StoC
 }
 
 // Automatically return to outpost on defeat
-void GameSettings::OnPartyDefeated(const GW::HookStatus*, GW::Packet::StoC::PartyDefeated*)
-{
-
-}
+void GameSettings::OnPartyDefeated(const GW::HookStatus*, GW::Packet::StoC::PartyDefeated*) {}
 
 // Automatically send /age2 on /age.
 void GameSettings::OnServerMessage(const GW::HookStatus*, GW::Packet::StoC::MessageServer* pak)
@@ -2632,6 +2654,7 @@ void GameSettings::OnServerMessage(const GW::HookStatus*, GW::Packet::StoC::Mess
         GW::Chat::SendChat('/', L"age2");
     }
 }
+
 void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::DungeonReward*) const
 {
     if (hide_dungeon_chest_popup) {

@@ -194,7 +194,7 @@ void DialogModule::ReloadDialog()
 
     std::vector<std::wstring*> dialog_btn_messages;
     std::vector<GW::UI::DialogButtonInfo> buttons;
-    for (auto btn : GetDialogButtons()) {
+    for (const auto btn : GetDialogButtons()) {
         auto btn_cpy = *btn;
         auto msg = new std::wstring(btn->message);
         dialog_btn_messages.push_back(msg);
