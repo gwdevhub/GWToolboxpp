@@ -6,7 +6,7 @@
 namespace {
     ActionPtr makeAction(ActionType type)
     {
-        static_assert((int)ActionType::Count == 39);
+        static_assert((int)ActionType::Count == 40);
         switch (type) {
             case ActionType::MoveTo:
                 return std::make_shared<MoveToAction>();
@@ -84,6 +84,8 @@ namespace {
                 return std::make_shared<MoveItemToSlotAction>();
             case ActionType::RotateCharacter:
                 return std::make_shared<RotateCharacterAction>();
+            case ActionType::KeyboardMove:
+                return std::make_shared<KeyboardMoveAction>();
             default:
                 return nullptr;
         }
@@ -92,12 +94,12 @@ namespace {
 
 std::string_view toString(ActionType type)
 {
-    static_assert((int)ActionType::Count == 39);
+    static_assert((int)ActionType::Count == 40);
     switch (type) {
         case ActionType::MoveTo:
-            return "Position";
+            return "Move to Position";
         case ActionType::MoveToTargetPosition:
-            return "Distance from target";
+            return "Move to distance from target";
         case ActionType::Cast:
             return "Use skill by id";
         case ActionType::CastBySlot:
@@ -169,7 +171,9 @@ std::string_view toString(ActionType type)
         case ActionType::MoveItemToSlot:
             return "Move item to slot";
         case ActionType::RotateCharacter:
-            return "Rotate character";
+            return "Rotate";
+        case ActionType::KeyboardMove:
+            return "Keyboard move";
         default:
             return "Unknown";
     }
@@ -177,7 +181,7 @@ std::string_view toString(ActionType type)
 
 ActionPtr readAction(InputStream& stream)
 {
-    static_assert((int)ActionType::Count == 39);
+    static_assert((int)ActionType::Count == 40);
     int type;
 
     stream >> type;
@@ -258,6 +262,8 @@ ActionPtr readAction(InputStream& stream)
             return std::make_shared<MoveItemToSlotAction>(stream);
         case ActionType::RotateCharacter:
             return std::make_shared<RotateCharacterAction>(stream);
+        case ActionType::KeyboardMove:
+            return std::make_shared<KeyboardMoveAction>(stream);
         default:
             return nullptr;
     }
@@ -293,7 +299,7 @@ ActionPtr drawActionSelector(float width)
 
     if (ImGui::BeginPopup("Add action")) 
     {
-        drawSubMenu("Move to", std::array{ActionType::MoveTo, ActionType::MoveToTargetPosition, ActionType::MoveInchwise, ActionType::RotateCharacter});
+        drawSubMenu("Movement", std::array{ActionType::MoveTo, ActionType::MoveToTargetPosition, ActionType::MoveInchwise, ActionType::RotateCharacter, ActionType::KeyboardMove});
         drawSubMenu("Skill", std::array{ActionType::Cast, ActionType::CastBySlot, ActionType::DropBuff, ActionType::UseHeroSkill});
         drawSubMenu("Interaction", std::array{ActionType::SendDialog, ActionType::GoToTarget, ActionType::AutoAttackTarget});
         drawSubMenu("Targeting", std::array{ActionType::ChangeTarget, ActionType::StoreTarget, ActionType::RestoreTarget, ActionType::ClearTarget});

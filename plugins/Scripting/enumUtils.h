@@ -46,6 +46,7 @@ std::string_view toString(ComparisonOperator);
 std::string_view toString(IsIsNot);
 std::string_view toString(DoorStatus);
 std::string_view toString(DoaZone);
+std::string_view toString(MovementDirection);
 
 bool checkWeaponType(WeaponType, uint16_t);
 void drawHotkeySelector(Hotkey& hotkey, std::string& description, float selectorWidth);

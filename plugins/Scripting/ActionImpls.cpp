@@ -2182,7 +2182,11 @@ void RotateCharacterAction::serialize(OutputStream& stream) const
     stream << targetRotation;
 }
 
-typedef void(__cdecl* RotateCharacter_pt)(GW::AgentID id, float targetRotation, float rotationSpeed, uint32_t always0);
+//typedef void(__cdecl* RotateCharacter_pt)(GW::AgentID id, float targetRotation, float rotationSpeed, uint32_t always0);
+//RotateCharacter_pt RotateCharacter_Func = 0;
+
+// 1 or -1
+typedef void(__cdecl* RotateCharacter_pt)(float direction);
 RotateCharacter_pt RotateCharacter_Func = 0;
 
 void RotateCharacterAction::initialAction()
@@ -2193,16 +2197,20 @@ void RotateCharacterAction::initialAction()
     if (!player) return;
     if (!RotateCharacter_Func) 
     {
-        const auto address = GW::Scanner::FindAssertion(R"(P:\Code\Engine\Agent\AgApi.cpp)", "infinity || (targetAngle >= -PI)", 0, -0x44);
-        if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) 
+        const auto address = GW::Scanner::Find("\x8b\xec\xd9\x05\xf0\x14\x25\x01\xd9\x45", "xxxxxxxxxx", -0x1);
+        if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT))
             RotateCharacter_Func = (RotateCharacter_pt)address;
+        //const auto address = GW::Scanner::FindAssertion(R"(P:\Code\Engine\Agent\AgApi.cpp)", "infinity || (targetAngle >= -PI)", 0, -0x44);
+        //if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) 
+        //    RotateCharacter_Func = (RotateCharacter_pt)address;
+
     }
     if (!RotateCharacter_Func) 
         return;
 
-    GW::GameThread::Enqueue([id = player->agent_id, rotation = targetRotation]
+    GW::GameThread::Enqueue([]
     {
-        RotateCharacter_Func(id, rotation, 50.f, 0);
+        RotateCharacter_Func(1.f);
     });
 }
 void RotateCharacterAction::drawSettings()
@@ -2217,6 +2225,93 @@ void RotateCharacterAction::drawSettings()
     const auto pi = (float)std::numbers::pi;
     if (targetRotation > pi) targetRotation = pi;
     if (targetRotation < -pi) targetRotation = -pi;
+
+    ImGui::PopItemWidth();
+    ImGui::PopID();
+}
+
+/// ------------- KeyboardMoveAction -------------
+KeyboardMoveAction::KeyboardMoveAction()
+{
+    if (const auto player = GW::Agents::GetControlledCharacter()) 
+    {
+        targetPosition = player->pos;
+    }
+}
+KeyboardMoveAction::KeyboardMoveAction(InputStream& stream)
+{
+    stream >> targetPosition.x >> targetPosition.y >> movementDirection;
+}
+void KeyboardMoveAction::serialize(OutputStream& stream) const
+{
+    Action::serialize(stream);
+
+    stream << targetPosition.x << targetPosition.y << movementDirection;
+}
+
+typedef void(__cdecl* SideWalk_pt)(float* position, float* direction, float distance, int flag1, int flag2, uint32_t unknown);
+SideWalk_pt SideWalk_Func = 0;
+void KeyboardMoveAction::initialAction()
+{
+    Action::initialAction();
+
+    const auto player = GW::Agents::GetControlledCharacter();
+    if (!player || GW::GetDistance(player->pos, targetPosition) < 5.f) return;
+
+    if (!SideWalk_Func) 
+    {
+        const auto address = GW::Scanner::Find("\xd9\x46\x04\xd9\x5d\xfc\xd9\x45\x0c\xd9\x45", "xxxxxxxxxx", -0x27);
+        if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) SideWalk_Func = (SideWalk_pt)address;
+    }
+    if (!SideWalk_Func) 
+    {
+        return;
+    }
+    startedWalking = false;
+
+    GW::GameThread::Enqueue([playerPos = player->pos, direction = targetPosition - player->pos, movementDirection = movementDirection]() mutable {
+        auto normalizedDirection = GW::Normalize(direction);
+        const int forwardsFlag = movementDirection == MovementDirection::Backwards ? -1 : 0;
+        const int sideWaysFlag = movementDirection == MovementDirection::Right ? 1 : (movementDirection == MovementDirection::Left ? -1 : 0);
+        SideWalk_Func(reinterpret_cast<float*>(&playerPos), reinterpret_cast<float*>(&normalizedDirection), std::min(GW::GetNorm(direction), 1000.f), forwardsFlag, sideWaysFlag, 1);
+    });
+}
+
+ActionStatus KeyboardMoveAction::isComplete() const
+{
+    const auto player = GW::Agents::GetControlledCharacter();
+    if (!player) return ActionStatus::Complete;
+
+    const auto isMoving = player->GetIsMoving();
+    startedWalking |= isMoving;
+
+    if (GW::GetDistance(player->pos, targetPosition) < 5.f || (!isMoving && startedWalking)) 
+    {
+        GW::GameThread::Enqueue([]{ GW::UI::Keypress(GW::UI::ControlAction_CancelAction); });
+        return ActionStatus::Complete;
+    }
+    return ActionStatus::Running;
+}
+
+void KeyboardMoveAction::drawSettings()
+{
+    ImGui::PushID(drawId());
+    ImGui::PushItemWidth(90);
+
+    ImGui::Text("Keyboard move");
+
+    ImGui::SameLine();
+    drawEnumButton(MovementDirection::Forwards, MovementDirection::Backwards, movementDirection, 0, 150.f);
+
+    ImGui::SameLine();
+    ImGui::Text("to");
+    ImGui::SameLine();
+    ImGui::InputFloat("x", &targetPosition.x, 0.0f, 0.0f);
+    ImGui::SameLine();
+    ImGui::InputFloat("y", &targetPosition.y, 0.0f, 0.0f);
+
+    ImGui::SameLine();
+    ImGui::ShowHelp("Beta: No pathfinding, only walks in a straight line. Walks a maximum of 1000 inches.");
 
     ImGui::PopItemWidth();
     ImGui::PopID();

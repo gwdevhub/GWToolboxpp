@@ -413,6 +413,21 @@ std::string_view toString(DoaZone status)
     return "";
 }
 
+std::string_view toString(MovementDirection direction)
+{
+    switch (direction) {
+        case MovementDirection::Forwards:
+            return "Forwards";
+        case MovementDirection::Left:
+            return "Sideways (Left)";
+        case MovementDirection::Right:
+            return "Sideways (Right)";
+        case MovementDirection::Backwards:
+            return "Backwards";
+    }
+    return "";
+}
+
 std::string_view toString(Bag bag) 
 {
     switch (bag) 

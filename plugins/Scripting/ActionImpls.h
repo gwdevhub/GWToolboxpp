@@ -575,3 +575,20 @@ public:
 private:
     float targetRotation = 0.f;
 };
+
+class KeyboardMoveAction : public Action {
+public:
+    KeyboardMoveAction();
+    KeyboardMoveAction(InputStream&);
+    ActionType type() const final { return ActionType::KeyboardMove; }
+    void initialAction() final;
+    ActionStatus isComplete() const final;
+    void drawSettings() final;
+    void serialize(OutputStream&) const final;
+    ActionBehaviourFlags behaviour() const final { return ActionBehaviourFlag::CanBeRunInOutpost; }
+
+private:
+    GW::GamePos targetPosition{};
+    MovementDirection movementDirection = MovementDirection::Right;
+    mutable bool startedWalking = false;
+};

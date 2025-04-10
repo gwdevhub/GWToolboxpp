@@ -44,6 +44,7 @@ enum class ActionType : int {
     DecrementVariable,
     MoveItemToSlot,
     RotateCharacter,
+    KeyboardMove,
 
     Count
 };
