@@ -184,7 +184,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
 
     if (tb_exception_message) 
         delete[] tb_exception_message;
-
+    tb_exception_message = nullptr;
     if (UserStreamParam) {
         delete UserStreamParam->UserStreamArray;
         delete UserStreamParam;
