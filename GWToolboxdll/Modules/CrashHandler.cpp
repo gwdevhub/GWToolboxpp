@@ -9,6 +9,7 @@
 #include <Modules/Resources.h>
 #include <GWToolbox.h>
 #include <Defines.h>
+#include <Utils/TextUtils.h>
 
 namespace {
     char* tb_exception_message = nullptr;
@@ -124,8 +125,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
     char* extra_info = nullptr;
 
     MINIDUMP_EXCEPTION_INFORMATION* ExpParam = nullptr;
-    const HANDLE hFile = CreateFileW(
-        szFileName, GENERIC_READ | GENERIC_WRITE,
+    const HANDLE hFile = CreateFileW(szFileName, GENERIC_READ | GENERIC_WRITE,
         FILE_SHARE_WRITE | FILE_SHARE_READ, nullptr,
         CREATE_ALWAYS, 0, nullptr);
     if (!Resources::EnsureFolderExists(crash_folder.c_str())) {
@@ -171,7 +171,18 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
         ExpParam, UserStreamParam, nullptr);
     CloseHandle(hFile);
 
-    if (tb_exception_message)
+    std::wstring error_info = L"Guild Wars crashed!\n\n";
+
+    if (tb_exception_message && *tb_exception_message) {
+        error_info += std::format(L"{}\n\n", TextUtils::StringToWString(tb_exception_message));
+    }
+    error_info += std::format(
+        L"GWToolbox created a crash dump for more info\n\n"
+        L"Crash file created @ {}\n\n",
+        szFileName
+    );
+
+    if (tb_exception_message) 
         delete[] tb_exception_message;
 
     if (UserStreamParam) {
@@ -182,10 +193,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
     if (!success) {
         return failed("Failed to create MiniDumpWriteDump");
     }
-    std::wstring error_info = std::format(
-        L"Guild Wars crashed!\n\n"
-        L"GWToolbox created a crash dump for more info\n\n"
-        L"Crash file created @ {}\n\n", szFileName);
+
     MessageBoxW(nullptr, error_info.c_str(), L"GWToolbox++ crash dump created!", 0);
     abort();
 }
