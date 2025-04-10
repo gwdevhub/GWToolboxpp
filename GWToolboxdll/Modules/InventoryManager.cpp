@@ -1999,17 +1999,17 @@ void InventoryManager::Draw(IDirect3DDevice9*)
                         break;
                 }
                 ImGui::PushID(static_cast<int>(pi->item_id));
-                ImGui::Checkbox(pi->name.string().c_str(), &pi->proceed);
-                const float item_name_length = ImGui::CalcTextSize(pi->name.string().c_str(), nullptr, true).x;
+                ImGui::Checkbox(pi->name->string().c_str(), &pi->proceed);
+                const float item_name_length = ImGui::CalcTextSize(pi->name->string().c_str(), nullptr, true).x;
                 longest_item_name_length = item_name_length > longest_item_name_length ? item_name_length : longest_item_name_length;
                 ImGui::PopStyleColor();
                 if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("%s", pi->desc.string().c_str());
+                    ImGui::SetTooltip("%s", pi->desc->string().c_str());
                 }
                 ImGui::SameLine(longest_item_name_length + wiki_btn_width);
-                pi->wiki_name.wstring();
+                pi->wiki_name->wstring();
                 if (ImGui::Button("Wiki", ImVec2(wiki_btn_width, 0))) {
-                    GuiUtils::SearchWiki(pi->wiki_name.wstring());
+                    GuiUtils::SearchWiki(pi->wiki_name->wstring());
                 }
                 ImGui::PopID();
                 has_items_to_salvage |= pi->proceed;
@@ -2081,7 +2081,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
         ImGui::Image(*tex, ImVec2(text_height, text_height));
         ImGui::SameLine();
     }*/
-    ImGui::Text(context_item.name.string().c_str());
+    ImGui::Text(context_item.name->string().c_str());
     ImGui::Separator();
     const auto bag = context_item_actual->bag;
     // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
@@ -2093,10 +2093,10 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
         }
         char c_all_label[128];
         *c_all_label = 0;
-        snprintf(c_all_label, _countof(c_all_label), "Consume All %s", context_item.plural_item_name.string().c_str());
+        snprintf(c_all_label, _countof(c_all_label), "Consume All %s", context_item.plural_item_name->string().c_str());
         if (CanBulkConsume(context_item_actual) && ImGui::Button(c_all_label, size)) {
             ImGui::CloseCurrentPopup();
-            const auto msg = std::format("Are you sure you want to consume all {} {}(s)?", context_item_actual->GetUses(), context_item.plural_item_name.string());
+            const auto msg = std::format("Are you sure you want to consume all {} {}(s)?", context_item_actual->GetUses(), context_item.plural_item_name->string());
             ImGui::ConfirmDialog(msg.c_str(), [](bool result, void* wparam) {
                 if(result)
                     consume_all((InventoryManager::Item *)GW::Items::GetItemById((uint32_t)wparam));
@@ -2142,7 +2142,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
                     goto end_popup;
                 }
             }
-            snprintf(move_all_label, _countof(move_all_label), "Store All %s", context_item.plural_item_name.string().c_str());
+            snprintf(move_all_label, _countof(move_all_label), "Store All %s", context_item.plural_item_name->string().c_str());
         }
         if(context_item_actual->IsStorageItem()) {
             if (context_item_actual->type == GW::Constants::ItemType::Dye) {
@@ -2159,7 +2159,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
                     goto end_popup;
                 }
             }
-            snprintf(move_all_label, _countof(move_all_label), "Withdraw All %s", context_item.plural_item_name.string().c_str());
+            snprintf(move_all_label, _countof(move_all_label), "Withdraw All %s", context_item.plural_item_name->string().c_str());
         }
         if (*move_all_label && ImGui::Button(move_all_label, size)) {
             ImGui::CloseCurrentPopup();
@@ -2225,17 +2225,17 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
         }
     }
     if (bag) {
-        const auto btn_text = std::format("Destroy {}", context_item.name.string());
+        const auto btn_text = std::format("Destroy {}", context_item.name->string());
         if (ImGui::Button(btn_text.c_str())) {
             ImGui::CloseCurrentPopup();
             pending_destroy_item_id = context_item.item_id;
             goto end_popup;
         }
     }
-    context_item.wiki_name.wstring();
+    context_item.wiki_name->wstring();
     if (wiki_link_on_context_menu && ImGui::Button("Guild Wars Wiki", size)) {
         ImGui::CloseCurrentPopup();
-        GuiUtils::SearchWiki(context_item.wiki_name.wstring());
+        GuiUtils::SearchWiki(context_item.wiki_name->wstring());
     }
 end_popup:
     ImGui::PopStyleColor();
@@ -2567,13 +2567,13 @@ bool InventoryManager::PendingItem::set(const Item* item)
     quantity = item->quantity;
     uses = item->GetUses();
     bag = item->bag ? item->bag->bag_id() : GW::Constants::Bag::None;
-    name.reset(item->complete_name_enc ? item->complete_name_enc : item->name_enc);
+    name->reset(item->complete_name_enc ? item->complete_name_enc : item->name_enc);
     // NB: This doesn't work for inscriptions; gww doesn't have a page per inscription.
-    wiki_name.reset(ItemDescriptionHandler::GetItemEncNameWithoutMods(item).c_str());
-    wiki_name.language(GW::Constants::Language::English);
+    wiki_name->reset(ItemDescriptionHandler::GetItemEncNameWithoutMods(item).c_str());
+    wiki_name->language(GW::Constants::Language::English);
     const auto plural_item_enc = std::format(L"\xa35\x101\x100\x10a{}\x1", item->name_enc);
-    plural_item_name.reset(plural_item_enc.c_str());
-    desc.reset(ItemDescriptionHandler::GetItemDescription(item).c_str());
+    plural_item_name->reset(plural_item_enc.c_str());
+    desc->reset(ItemDescriptionHandler::GetItemDescription(item).c_str());
     return true;
 }
 

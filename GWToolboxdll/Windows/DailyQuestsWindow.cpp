@@ -1553,7 +1553,7 @@ void DailyQuests::Terminate()
     for (auto& it : pve_weekly_bonus_cycles) { it.Terminate(); }
 
     for (const auto& it : region_names) {
-        delete it.second;
+        it.second->Release();
     }
     region_names.clear();
 
