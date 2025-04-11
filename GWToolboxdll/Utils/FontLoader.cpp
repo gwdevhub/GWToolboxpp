@@ -306,7 +306,7 @@ namespace {
     }
 
 
-    ImFont* BuildFont(const float size, bool default_only = false)
+    ImFont* BuildFont(const float size, const bool default_only = false)
     {
         const auto atlas = IM_NEW(ImFontAtlas);
 
@@ -324,9 +324,11 @@ namespace {
 
         // Always load the default font
         cfg.MergeMode = false;
-        atlas->AddFontFromMemoryCompressedTTF(toolbox_default_font_compressed_data, toolbox_default_font_compressed_size, size, &cfg, toolbox_default_font_glyph_ranges);
 
-        if (!default_only) {
+        if (default_only) {
+            atlas->AddFontFromMemoryCompressedTTF(toolbox_default_font_compressed_data, toolbox_default_font_compressed_size, size, &cfg, toolbox_default_font_glyph_ranges);
+        }
+        else {
             // Load more fonts from disk, overriding glyph ranges from original
             for (const auto& [glyph_ranges, font_name] : GetFontData()) {
                 size_t data_size;
@@ -337,8 +339,8 @@ namespace {
 
                 if (!data)
                     continue; // Failed to load data from disk
-                cfg.MergeMode = true;
                 atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, glyph_ranges.data());
+                cfg.MergeMode = true;
             }
         }
         if (size <= 20.f) {

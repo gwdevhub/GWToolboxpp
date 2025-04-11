@@ -681,21 +681,21 @@ void PacketLoggerWindow::AddMessageLog(const wchar_t* encoded)
 
 void PacketLoggerWindow::SaveMessageLog() const
 {
-    const utf8::string filename = Resources::GetPathUtf8(L"message_log.csv");
-    std::wofstream myFile(filename.bytes);
+    const auto filename = Resources::GetPath(L"message_log.csv");
+    std::wofstream my_file(filename);
 
     // Send column names to the stream
     for (const auto& it : message_log) {
         if (!it.second || !it.second->length()) {
             continue;
         }
-        myFile << it.first.c_str();
-        myFile << L",";
-        myFile << it.second->c_str();
-        myFile << "\n";
+        my_file << it.first.c_str();
+        my_file << L",";
+        my_file << it.second->c_str();
+        my_file << "\n";
     }
     // Close the file
-    myFile.close();
+    my_file.close();
 }
 
 void PacketLoggerWindow::ClearMessageLog()
