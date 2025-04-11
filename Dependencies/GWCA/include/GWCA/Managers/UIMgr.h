@@ -329,6 +329,7 @@ namespace GW {
             kExperienceGained           = 0x10000000 | 0x66, // wparam = experience amount
             kWriteToChatLog             = 0x10000000 | 0x7E, // wparam = UIPacket::kWriteToChatLog*. Triggered by the game when it wants to add a new message to chat.
             kWriteToChatLogWithSender   = 0x10000000 | 0x7f, // wparam = UIPacket::kWriteToChatLogWithSender*. Triggered by the game when it wants to add a new message to chat.
+			kAllyOrGuildMessage         = 0x10000000 | 0x80, // wparam = UIPacket::kAllyOrGuildMessage*
             kPlayerChatMessage          = 0x10000000 | 0x81, // wparam = UIPacket::kPlayerChatMessage*
             kFriendUpdated              = 0x10000000 | 0x89, // wparam = { GW::Friend*, ... }
             kMapLoaded                  = 0x10000000 | 0x8A,
@@ -676,6 +677,12 @@ namespace GW {
                 WorldActionId action_id;
                 GW::AgentID agent_id;
                 bool suppress_call_target; // 1 to block "I'm targetting X", but will also only trigger if the key thing is down
+            };
+            struct kAllyOrGuildMessage {
+                GW::Chat::Channel channel;
+                wchar_t* message;
+				wchar_t* sender;
+                wchar_t* guild_tag;
             };
         }
 
