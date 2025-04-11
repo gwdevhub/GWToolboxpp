@@ -747,5 +747,6 @@ QuestObjective::QuestObjective(const GW::Constants::QuestID quest_id, const wcha
 
 QuestObjective::~QuestObjective()
 {
-    delete objective_enc;
+    if (objective_enc)
+        objective_enc->Release();
 }

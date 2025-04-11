@@ -351,6 +351,17 @@ namespace {
         }
 
         switch (message[0]) {
+            case 0x76b: // Generic message with sender
+            {
+                auto sender_segment = wcsstr(message, L"\x107");
+                if (!sender_segment) break;
+                sender_segment += 1;
+                const wchar_t* end_token = wcschr(sender_segment, 0x1);
+                if (!end_token) break;
+                const auto sender_str = std::wstring(sender_segment, end_token);
+                const auto ignore_by_sender = ShouldIgnoreBySender(sender_str);
+                if (ignore_by_sender) return true;
+            } break;
             // ==== Messages not ignored ====
             case 0x108:
                 return false; // player message

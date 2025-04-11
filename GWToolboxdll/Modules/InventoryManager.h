@@ -298,18 +298,30 @@ private:
         uint32_t uses = 0;
         uint32_t quantity = 0;
         bool set(const Item* item = nullptr);
-        GuiUtils::EncString name;
-        GuiUtils::EncString desc;
-        GuiUtils::EncString wiki_name;
+        GuiUtils::EncString* name = nullptr;
+        GuiUtils::EncString* desc = nullptr;
+        GuiUtils::EncString* wiki_name = nullptr;
 
         class PluralEncString : public GuiUtils::EncString {
         protected:
             void sanitise() override;
         };
 
-        PluralEncString plural_item_name;
+        PluralEncString* plural_item_name = nullptr;
 
         Item* item() const;
+        PendingItem() { 
+            plural_item_name = new PluralEncString{}; 
+            name = new GuiUtils::EncString{};
+            desc = new GuiUtils::EncString{};
+            wiki_name = new GuiUtils::EncString{};
+        }
+        ~PendingItem() { 
+            plural_item_name->Release(); 
+            name->Release();
+            desc->Release();
+            wiki_name->Release(); 
+        }
     };
 
     struct PotentialItem : PendingItem {

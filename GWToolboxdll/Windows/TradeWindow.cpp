@@ -444,12 +444,10 @@ void TradeWindow::fetch()
         bool print_message = ((is_kamadan_chat && print_game_chat && !GetInKamadanAE1()) || (!is_kamadan_chat && print_game_chat_asc && !GetInAscalonAE1())) && IsTradeAlert(msg.message);
 
         if (print_message) {
-            wchar_t buffer[512];
             std::wstring name_ws = TextUtils::StringToWString(msg.name);
-            std::wstring msg_ws = TextUtils::StringToWString(msg.message);
-            swprintf(buffer, 512, L"<a=1>%s</a>: <c=#f96677><quote>%s", name_ws.c_str(), msg_ws.c_str());
+            std::wstring msg_ws = std::format(L"<c=#f96677><quote>{}",TextUtils::StringToWString(msg.message));
             external_trade_message = true;
-            WriteChat(GW::Chat::Channel::CHANNEL_TRADE, buffer);
+            WriteChat(GW::Chat::Channel::CHANNEL_TRADE, msg_ws.c_str(),name_ws.c_str());
             external_trade_message = false;
         }
     });

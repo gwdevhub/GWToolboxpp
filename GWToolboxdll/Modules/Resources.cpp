@@ -395,7 +395,7 @@ void Resources::Cleanup()
     guild_wars_wiki_images.clear();
     for (const auto& enc_strings : encoded_string_ids | std::views::values) {
         for (const auto& enc_string : enc_strings | std::views::values) {
-            delete enc_string;
+            enc_string->Release();
         }
     }
     encoded_string_ids.clear();
@@ -505,12 +505,6 @@ std::filesystem::path Resources::GetPath(const std::filesystem::path& folder, co
 bool Resources::EnsureFolderExists(const std::filesystem::path& path)
 {
     return exists(path) || create_directory(path);
-}
-
-utf8::string Resources::GetPathUtf8(const std::wstring& file)
-{
-    const std::wstring path = GetPath(file);
-    return Unicode16ToUtf8(path.c_str());
 }
 
 bool Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring& response)
