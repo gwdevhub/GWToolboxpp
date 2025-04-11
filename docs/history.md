@@ -7,6 +7,21 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 7.4
+* [Fix] Ctrl + X will no longer trigger X hotkey too.
+* [Fix] Item filter no longer blocks some nightfall mission item
+* [Fix] /enter uw|fow now works from Zin Ku Corridor and Chanty of Secrets too
+* [Fix] prompt if mission is already completed no longer causes crash in some situations in Nightfall
+* [Fix] Fixed a bug causing filtered trade chat messages to show up
+* [Fix] Fixed crash when running send chat hotkey whilst chat is focussed
+* [Minor] Updated pcon settings ui
+* [Minor] Vastly improved regex performance, watch out for bugs though
+* [New] ChatSettings: setting to hide all friendly speech bubbles
+* [New] PconWindow settings: option to block air of superiority messages
+* [New] /hero target [hero_name] added
+* [New] Setting not to draw toolbox during loading screens
+* [New] Game world quest path can now be shown independently from Minimap (settings for it are still in Minimap settings)
+
 ## Version 7.3
 * [Fix] Fix keys being stuck when you hold them as you open an imgui modal
 
