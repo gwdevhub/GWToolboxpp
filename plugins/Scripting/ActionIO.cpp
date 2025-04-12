@@ -299,7 +299,7 @@ ActionPtr drawActionSelector(float width)
 
     if (ImGui::BeginPopup("Add action")) 
     {
-        drawSubMenu("Movement", std::array{ActionType::MoveTo, ActionType::MoveToTargetPosition, ActionType::MoveInchwise, ActionType::RotateCharacter, ActionType::KeyboardMove});
+        drawSubMenu("Movement", std::array{ActionType::MoveTo, ActionType::MoveToTargetPosition, ActionType::MoveInchwise, ActionType::KeyboardMove});
         drawSubMenu("Skill", std::array{ActionType::Cast, ActionType::CastBySlot, ActionType::DropBuff, ActionType::UseHeroSkill});
         drawSubMenu("Interaction", std::array{ActionType::SendDialog, ActionType::GoToTarget, ActionType::AutoAttackTarget});
         drawSubMenu("Targeting", std::array{ActionType::ChangeTarget, ActionType::StoreTarget, ActionType::RestoreTarget, ActionType::ClearTarget});

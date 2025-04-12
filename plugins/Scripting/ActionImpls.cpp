@@ -1575,6 +1575,9 @@ void RepopMinipetAction::drawSettings()
     ImGui::PopID();
 }
 
+typedef void(__cdecl* Ping_pt)(GW::CallTargetType callType, GW::AgentID id);
+Ping_pt Ping_Func = 0;
+
 /// ------------- PingHardModeAction -------------
 void PingHardModeAction::initialAction()
 {
@@ -1585,9 +1588,16 @@ void PingHardModeAction::initialAction()
     const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return;
 
+    if (!Ping_Func) {
+        const auto address = GW::Scanner::Find("\xc7\x45\xf0\x22\x00", "xxxxx", -0x22);
+        if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) Ping_Func = (Ping_pt)address;
+    }
+    if (!Ping_Func) {
+        return;
+    }
+
     GW::GameThread::Enqueue([pingId = player->agent_id]() {
-        auto packet = GW::UI::UIPacket::kSendCallTarget{GW::CallTargetType::HardMode, pingId};
-        GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &packet);
+        Ping_Func(GW::CallTargetType::HardMode, pingId);
     });
 }
 void PingHardModeAction::drawSettings()
@@ -1607,6 +1617,14 @@ void PingTargetAction::initialAction()
     const auto currentTarget = GW::Agents::GetTargetAsAgentLiving();
     if (!currentTarget) return;
 
+    if (!Ping_Func) {
+        const auto address = GW::Scanner::Find("\xc7\x45\xf0\x22\x00", "xxxxx", -0x22);
+        if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) Ping_Func = (Ping_pt)address;
+    }
+    if (!Ping_Func) {
+        return;
+    }
+
     if (const auto currentInstanceId = InstanceInfo::getInstance().getInstanceId(); currentInstanceId != instanceId) {
         instanceId = currentInstanceId;
         pingedTargets.clear();
@@ -1615,11 +1633,9 @@ void PingTargetAction::initialAction()
     if (onlyOncePerInstance && pingedTargets.contains(currentTarget->agent_id)) return;
     pingedTargets.insert(currentTarget->agent_id);
     
-    
     GW::GameThread::Enqueue([id = currentTarget->agent_id]() 
     {
-        auto packet = GW::UI::UIPacket::kSendCallTarget{GW::CallTargetType::AttackingOrTargetting, id};
-        GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &packet);
+        Ping_Func(GW::CallTargetType::AttackingOrTargetting, id);
     });
 }
 void PingTargetAction::drawSettings()
