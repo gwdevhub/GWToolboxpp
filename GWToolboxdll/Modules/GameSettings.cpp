@@ -69,6 +69,9 @@ using namespace GuiUtils;
 using namespace ToolboxUtils;
 
 namespace {
+    GW::MemoryPatcher max_frame_limit_patch;
+    GW::MemoryPatcher default_frame_limit_patch;
+
     GW::MemoryPatcher ctrl_click_patch;
     GW::MemoryPatcher gold_confirm_patch;
     GW::MemoryPatcher remove_skill_warmup_duration_patch;
@@ -1364,6 +1367,21 @@ namespace {
             });
         }
     }
+
+    // GW Limits frame rate to 180hz, but this can be patched to allow 244hz
+    void ApplyFrameLimiterPatch() {
+        const char* max_frame_limit = "\xf4"; // 244hz
+        auto address = GW::Scanner::Find("\xeb\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
+        if (address) {
+            max_frame_limit_patch.SetPatch(address, max_frame_limit, 1);
+            max_frame_limit_patch.TogglePatch(true);
+        }
+        address = GW::Scanner::Find("\x75\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
+        if (address) {
+            default_frame_limit_patch.SetPatch(address, max_frame_limit, 1);
+            default_frame_limit_patch.TogglePatch(true);
+        }
+    }
 }
 
 bool GameSettings::GetSettingBool(const char* setting)
@@ -1575,6 +1593,9 @@ void GameSettings::Initialize()
         ctrl_click_patch.SetPatch(address, (const char*)&page_max, 1);
         ctrl_click_patch.TogglePatch(true);
     }
+    
+    ApplyFrameLimiterPatch();
+
     Log::Log("[GameSettings] ctrl_click_patch = %p\n", ctrl_click_patch.GetAddress());
 
 
@@ -2000,6 +2021,8 @@ void GameSettings::Terminate()
 {
     ToolboxModule::Terminate();
     ctrl_click_patch.Reset();
+    default_frame_limit_patch.Reset();
+    max_frame_limit_patch.Reset();
     gold_confirm_patch.Reset();
     skip_map_entry_message_patch.Reset();
     remove_skill_warmup_duration_patch.Reset();

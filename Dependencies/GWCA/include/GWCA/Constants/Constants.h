@@ -138,7 +138,7 @@ namespace GW {
             MargridTheSly, Zenmai, Olias, Razah, MOX, KeiranThackeray, Jora,
             PyreFierceshot, Anton, Livia, Hayda, Kahmu, Gwen, Xandra, Vekk,
             Ogden, Merc1, Merc2, Merc3, Merc4, Merc5, Merc6, Merc7, Merc8,
-            Miku, ZeiRi
+            Miku, ZeiRi, AllHeroes
         };
 
         enum class MaterialSlot : uint32_t {
