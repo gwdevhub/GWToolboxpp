@@ -317,7 +317,7 @@ namespace {
                         static constexpr ctll::fixed_string infobox_image_regex = R"(<td[^>]+class=\"[^\"]*?infobox-image.*?<a .*?href=\"[^\"]*?File:([^\"]+))";
                         if (const auto img_match = ctre::search<infobox_image_regex>(infobox_content)) {
                             agent_info->image_url = img_match.get<1>().to_string();
-                            agent_info->image = Resources::GetGuildWarsWikiImage(agent_info->image_url.c_str());
+                            agent_info->image = Resources::GetGuildWarsWikiImage(agent_info->image_url.c_str(), 0, false);
                         }
 
                         static constexpr ctll::fixed_string infobox_row_regex = R"((?:<tr>|<tr[^>]+>).*?(?:<th>|<th[^>]+>)(.*?)</th>.*?(?:<td>|<td[^>]+>)(.*?)</td>.*?</tr>)";

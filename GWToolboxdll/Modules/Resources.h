@@ -105,7 +105,7 @@ public:
     // Fetches File page from GWW, parses out the image for the file given
     // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
-    static IDirect3DTexture9** GetGuildWarsWikiImage(const char* filename, size_t width = 0);
+    static IDirect3DTexture9** GetGuildWarsWikiImage(const char* filename, size_t width = 0, bool urlencode_filename = true);
 
     // Guaranteed to return a pointer, but may not yet be decoded.
     static GuiUtils::EncString* GetMapName(GW::Constants::MapID map_id);

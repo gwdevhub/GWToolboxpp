@@ -972,7 +972,7 @@ IDirect3DTexture9** Resources::GetDamagetypeImage(std::string dmg_type)
     return texture;
 }
 
-IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_t width)
+IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_t width, const bool urlencode_filename)
 {
     ASSERT(filename && filename[0]);
     std::string filename_on_disk;
@@ -1010,7 +1010,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     }
     // No local file found; download from wiki via skill link URL
     std::string wiki_url = "https://wiki.guildwars.com/wiki/File:";
-    wiki_url.append(TextUtils::UrlEncode(filename, '_'));
+    wiki_url.append(urlencode_filename ? TextUtils::UrlEncode(filename, '_') : filename);
     Instance().Download(wiki_url, [texture, filename_sanitised, callback, width](const bool ok, const std::string& response, void*) {
         if (!ok) {
             callback(ok, TextUtils::StringToWString(response));
