@@ -60,6 +60,9 @@ ImGuiWindowFlags ToolboxUIElement::GetWinFlags(ImGuiWindowFlags flags) const
         if (auto_size) {
             flags |= ImGuiWindowFlags_AlwaysAutoResize;
         }
+        if (!show_titlebar) {
+            flags |= ImGuiWindowFlags_NoTitleBar;
+        }
     }
     return flags;
 }
@@ -116,6 +119,10 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         ImGui::Checkbox("Auto Size", &auto_size);
     }
     ImGui::StartSpacedElements(180.f);
+    if (has_titlebar) {
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Show titlebar", &show_titlebar);
+    }
     if (has_closebutton) {
         ImGui::NextSpacedElement();
         ImGui::Checkbox("Show close button", &show_closebutton);

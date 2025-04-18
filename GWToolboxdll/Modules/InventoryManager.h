@@ -29,7 +29,7 @@ class InventoryOverlayWidget;
 class InventoryManager : public ToolboxUIElement {
     InventoryManager()
     {
-        is_movable = is_resizable = has_closebutton = can_show_in_main_window = false;
+        is_movable = is_resizable = has_closebutton = has_titlebar = can_show_in_main_window = false;
     }
     ~InventoryManager() override = default;
 public:

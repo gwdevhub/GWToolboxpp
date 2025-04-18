@@ -44,9 +44,11 @@ public:
 
     bool* GetVisiblePtr()
     {
-        return has_closebutton && !show_closebutton  ? nullptr : &visible;
+        return has_closebutton && !show_closebutton ? nullptr : &visible;
     }
 
+    bool has_titlebar = true;
+    bool show_titlebar = true;
     bool show_closebutton = true;
 
 protected:

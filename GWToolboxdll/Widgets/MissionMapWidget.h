@@ -8,6 +8,7 @@ class MissionMapWidget : public ToolboxWidget {
         visible = true;
         can_show_in_main_window = false;
         has_closebutton = false;
+        has_titlebar = false;
         is_resizable = false;
         is_movable = false;
     }
