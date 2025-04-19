@@ -1377,7 +1377,7 @@ namespace {
         while (EnumDisplaySettings(NULL, mode_num++, &dev_mode)) {
             max_refresh_rate = std::max(dev_mode.dmDisplayFrequency, max_refresh_rate);
         }
-        static const uint16_t static_max_refresh = max_refresh_rate;
+        static const uint16_t static_max_refresh = static_cast<uint16_t>(max_refresh_rate);
 
         auto address = GW::Scanner::Find("\xeb\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
         if (!address || static_max_refresh == 180) return false;
