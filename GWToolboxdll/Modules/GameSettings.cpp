@@ -1373,22 +1373,18 @@ namespace {
         DEVMODE dev_mode = {};
         dev_mode.dmSize = sizeof(DEVMODE);
         int mode_num = 0;
-        DWORD max_refresh_rate = 0;
-
+        DWORD max_refresh_rate = 180;
         while (EnumDisplaySettings(NULL, mode_num++, &dev_mode)) {
             max_refresh_rate = std::max(dev_mode.dmDisplayFrequency, max_refresh_rate);
         }
-        static const uint16_t capped_max = static_cast<uint16_t>(std::min(400ul, max_refresh_rate)); // gw capped it to 400fps before the patch
+
         auto address = GW::Scanner::Find("\xeb\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
-        if (address) {
-            max_frame_limit_patch.SetPatch(address, reinterpret_cast<const char*>(&capped_max), sizeof(uint16_t));
-            max_frame_limit_patch.TogglePatch(true);
-        }
+        if (!address) return;
+        max_frame_limit_patch.SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
+
         address = GW::Scanner::Find("\x75\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
-        if (address) {
-            default_frame_limit_patch.SetPatch(address, reinterpret_cast<const char*>(&capped_max), sizeof(uint16_t));
-            default_frame_limit_patch.TogglePatch(true);
-        }
+        if (!address) return;
+        default_frame_limit_patch.SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
     }
 }
 
@@ -1653,6 +1649,7 @@ void GameSettings::Initialize()
 
 
 #ifdef _DEBUG
+    ASSERT(default_frame_limit_patch.IsValid());
     ASSERT(ctrl_click_patch.IsValid());
     ASSERT(SkillList_UICallback_Func);
     ASSERT(skip_map_entry_message_patch.IsValid());
