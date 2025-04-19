@@ -1369,7 +1369,7 @@ namespace {
     }
 
     // GW Limits frame rate to 180hz, but this can be patched to the highest refresh rate a connected monitor supports
-    void ApplyFrameLimiterPatch() {
+    bool ApplyFrameLimiterPatch() {
         DEVMODE dev_mode = {};
         dev_mode.dmSize = sizeof(DEVMODE);
         int mode_num = 0;
@@ -1379,12 +1379,31 @@ namespace {
         }
 
         auto address = GW::Scanner::Find("\xeb\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
-        if (!address) return;
+        if (!address) return false;
         max_frame_limit_patch.SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
 
         address = GW::Scanner::Find("\x75\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
-        if (!address) return;
+        if (!address) return false;
         default_frame_limit_patch.SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
+        return true;
+    }
+
+    // Unload steam api dll, seems to cause issues atm
+    bool UnloadSteamApiDll() {
+        auto message_addr = GW::Scanner::Find("Failed to load steam .dll", 0, 0, GW::ScannerSection::Section_RDATA);
+        if (!message_addr) return false;
+        auto usage_addr = GW::Scanner::Find((const char*)&message_addr, "xxxx");
+        if (!usage_addr) return false;
+        auto cmp_addr = GW::Scanner::FindInRange("\x83\x3d????\x00", "xx????x", 2, usage_addr, usage_addr - 0x20);
+        auto steam_api_dll_handle_ptr = cmp_addr ? *(HMODULE**)cmp_addr : nullptr;
+        if (!steam_api_dll_handle_ptr) return false;
+        if (!*steam_api_dll_handle_ptr) return true; // Not loaded
+        auto shutdown_proc = GetProcAddress(*steam_api_dll_handle_ptr, "SteamAPI_Shutdown");
+        if (!shutdown_proc) return false;
+        shutdown_proc();
+        FreeLibrary(*steam_api_dll_handle_ptr);
+        *steam_api_dll_handle_ptr = nullptr;
+        return true;
     }
 }
 
@@ -1597,7 +1616,9 @@ void GameSettings::Initialize()
         ctrl_click_patch.SetPatch(address, (const char*)&page_max, 1);
         ctrl_click_patch.TogglePatch(true);
     }
-    
+
+    UnloadSteamApiDll();
+
     ApplyFrameLimiterPatch();
 
     Log::Log("[GameSettings] ctrl_click_patch = %p\n", ctrl_click_patch.GetAddress());
