@@ -17,5 +17,9 @@ public:
     void Initialize() override;
     void Terminate() override;
 
+    void LoadSettings(ToolboxIni*) override;
+    void SaveSettings(ToolboxIni*) override;
     void Draw(IDirect3DDevice9* pDevice) override;
+    void DrawSettingsInternal() override;
+    void Update(float) override;
 };
