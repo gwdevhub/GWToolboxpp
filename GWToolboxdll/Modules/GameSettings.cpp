@@ -1377,14 +1377,15 @@ namespace {
         while (EnumDisplaySettings(NULL, mode_num++, &dev_mode)) {
             max_refresh_rate = std::max(dev_mode.dmDisplayFrequency, max_refresh_rate);
         }
+        static const uint16_t static_max_refresh = static_cast<uint16_t>(max_refresh_rate);
 
         auto address = GW::Scanner::Find("\xeb\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
-        if (!address) return false;
-        max_frame_limit_patch.SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
+        if (!address || static_max_refresh == 180) return false;
+        max_frame_limit_patch.SetPatch(address, reinterpret_cast<const char*>(&static_max_refresh), sizeof(static_max_refresh));
 
         address = GW::Scanner::Find("\x75\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
         if (!address) return false;
-        default_frame_limit_patch.SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
+        default_frame_limit_patch.SetPatch(address, reinterpret_cast<const char*>(&static_max_refresh), sizeof(static_max_refresh));
         return true;
     }
 
@@ -1616,9 +1617,7 @@ void GameSettings::Initialize()
         ctrl_click_patch.SetPatch(address, (const char*)&page_max, 1);
         ctrl_click_patch.TogglePatch(true);
     }
-
-    UnloadSteamApiDll();
-
+    
     ApplyFrameLimiterPatch();
 
     Log::Log("[GameSettings] ctrl_click_patch = %p\n", ctrl_click_patch.GetAddress());
@@ -1670,7 +1669,6 @@ void GameSettings::Initialize()
 
 
 #ifdef _DEBUG
-    ASSERT(default_frame_limit_patch.IsValid());
     ASSERT(ctrl_click_patch.IsValid());
     ASSERT(SkillList_UICallback_Func);
     ASSERT(skip_map_entry_message_patch.IsValid());

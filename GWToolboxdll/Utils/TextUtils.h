@@ -236,23 +236,23 @@ namespace TextUtils {
         return result;
     }
 
-    inline std::string str_replace_all(std::string subject, const std::string_view needle, const std::string_view str)
+    inline std::string str_replace_all(std::string subject, const std::string_view needle, const std::string_view replace_with)
     {
         size_t pos = 0;
         while ((pos = subject.find(needle, pos)) != std::string::npos) {
-            subject.replace(pos, needle.length(), str);
-            pos += str.length();
+            subject.replace(pos, needle.length(), replace_with);
+            pos += replace_with.length();
         }
         return subject;
     }
 
-    inline std::wstring str_replace_all(std::wstring haystack, const std::wstring_view needle, const std::wstring_view str)
+    inline std::wstring str_replace_all(std::wstring subject, const std::wstring_view find, const std::wstring_view replace_with)
     {
         size_t pos = 0;
-        while ((pos = haystack.find(needle, pos)) != std::wstring::npos) {
-            haystack.replace(pos, needle.length(), str);
-            pos += str.length();
+        while ((pos = subject.find(find, pos)) != std::wstring::npos) {
+            subject.replace(pos, find.length(), replace_with);
+            pos += replace_with.length();
         }
-        return haystack;
+        return subject;
     }
 }

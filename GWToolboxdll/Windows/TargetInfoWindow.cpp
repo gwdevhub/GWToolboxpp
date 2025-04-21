@@ -17,9 +17,9 @@
 #include <Utils/FontLoader.h>
 
 namespace {
+    bool auto_hide = true;
     std::map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names_by_id;
     std::unordered_map<std::string, GW::Constants::SkillID> skill_ids_by_name;
-
 
     const ImVec2 get_texture_size(IDirect3DTexture9* texture)
     {
@@ -342,12 +342,12 @@ namespace {
 void TargetInfoWindow::Initialize()
 {
     ToolboxWindow::Initialize();
-    const GW::UI::UIMessage ui_messages[] = {
+    constexpr std::array ui_messages = {
         GW::UI::UIMessage::kChangeTarget,
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kMapChange
     };
-    for (auto message_id : ui_messages) {
+    for (const auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&ui_message_entry, message_id, OnUIMessage, 0x100);
     }
 }
@@ -358,9 +358,24 @@ void TargetInfoWindow::Terminate()
     GW::UI::RemoveUIMessageCallback(&ui_message_entry);
 }
 
+void TargetInfoWindow::LoadSettings(ToolboxIni* ini)
+{
+    ToolboxWindow::LoadSettings(ini);
+    LOAD_BOOL(auto_hide);
+}
+
+void TargetInfoWindow::SaveSettings(ToolboxIni* ini)
+{
+    ToolboxWindow::SaveSettings(ini);
+    SAVE_BOOL(auto_hide);
+}
+
 void TargetInfoWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
+        return;
+    }
+    if (auto_hide && !GW::Agents::GetTarget()) {
         return;
     }
 
@@ -478,4 +493,15 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
         }
     }
     ImGui::End();
+}
+
+void TargetInfoWindow::DrawSettingsInternal()
+{
+    ToolboxWindow::DrawSettingsInternal();
+    ImGui::Checkbox("Automatically hide when not targeting anything", &auto_hide);
+}
+
+void TargetInfoWindow::Update(const float x)
+{
+    ToolboxWindow::Update(x);
 }
