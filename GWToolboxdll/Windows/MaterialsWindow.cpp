@@ -183,20 +183,14 @@ namespace {
     DWORD RequestPurchaseQuote(const GW::Constants::MaterialSlot material)
     {
         GW::Item* item = GetVendorItem(material, GW::Merchant::TransactionType::TraderBuy);
-        if (!item) {
-            return 0;
-        }
-        RequestQuote(GW::Merchant::TransactionType::TraderBuy, item->item_id);
+        if (!(item && RequestQuote(GW::Merchant::TransactionType::TraderBuy, item->item_id))) return 0;
         return item->item_id;
     }
 
     DWORD RequestSellQuote(const GW::Constants::MaterialSlot material)
     {
         GW::Item* item = GetVendorItem(material, GW::Merchant::TransactionType::TraderSell);
-        if (!item) {
-            return 0;
-        }
-        RequestQuote(GW::Merchant::TransactionType::TraderSell, item->item_id);
+        if (!(item && RequestQuote(GW::Merchant::TransactionType::TraderSell, item->item_id))) return 0;
         return item->item_id;
     }
 
