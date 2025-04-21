@@ -22,6 +22,9 @@ namespace GW {
     namespace UI {
         enum class UIMessage : uint32_t;
     }
+    namespace Merchant {
+        enum class TransactionType : uint32_t;
+    }
 }
 
 class InventoryOverlayWidget;
@@ -271,7 +274,7 @@ private:
             Transacting
         } state = None;
 
-        uint32_t type = 0;
+        GW::Merchant::TransactionType type = (GW::Merchant::TransactionType)0;
         uint32_t price = 0;
         uint32_t item_id = 0;
         clock_t state_timestamp = 0;
@@ -282,9 +285,6 @@ private:
             state = _state;
             state_timestamp = clock();
         }
-
-        CtoS_QuoteItem quote();
-        TransactItems transact();
         Item* item() const;
         bool in_progress() const { return state > Prompt; }
         bool selling();

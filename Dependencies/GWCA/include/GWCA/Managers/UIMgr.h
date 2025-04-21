@@ -600,11 +600,8 @@ namespace GW {
                 uint32_t slot;
             };
             struct kSendMerchantRequestQuote {
-                Merchant::TransactionType type;
-                uint32_t gold_give;
-                Merchant::TransactionInfo give;
-                uint32_t gold_recv;
-                Merchant::TransactionInfo recv;
+				Merchant::TransactionType type;
+                uint32_t item_id;
             };
             struct kSendMerchantTransactItem {
                 Merchant::TransactionType type;

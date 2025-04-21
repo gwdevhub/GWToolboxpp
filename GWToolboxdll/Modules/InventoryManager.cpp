@@ -518,7 +518,7 @@ namespace {
         return remaining;
     }
 
-    uint32_t requesting_quote_type = 0;
+    GW::Merchant::TransactionType requesting_quote_type = (GW::Merchant::TransactionType)0;
 
     GW::UI::WindowPosition* inventory_bags_window_position = nullptr;
 
@@ -849,20 +849,25 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessa
     switch (message_id) {
         case GW::UI::UIMessage::kItemUpdated: {
             clear_pending_move((uint32_t)wparam);
-        }
-        break;
+        } break;
         case GW::UI::UIMessage::kVendorWindow: {
             merchant_list_tab = *static_cast<uint32_t*>(wparam);
         }
         // About to request a quote for an item
         case GW::UI::UIMessage::kSendMerchantRequestQuote: {
-            requesting_quote_type = 0;
+            const auto packet = (GW::UI::UIPacket::kSendMerchantRequestQuote*)wparam;
+            requesting_quote_type = (GW::Merchant::TransactionType)0;
             if (instance.pending_transaction.in_progress() || !ImGui::IsKeyDown(ImGuiMod_Ctrl) || MaterialsWindow::Instance().GetIsInProgress()) {
                 return;
             }
-            requesting_quote_type = *static_cast<uint32_t*>(wparam);
-        }
-        break;
+            requesting_quote_type = packet->type;
+            instance.CancelTransaction();
+            instance.pending_transaction.type = requesting_quote_type;
+            instance.pending_transaction.item_id = packet->item_id;
+            instance.pending_transaction.price = 0;
+            instance.show_transact_quantity_popup = true;
+            status->blocked = true;
+        } break;
         // About to move an item
         case GW::UI::UIMessage::kSendMoveItem: {
             const uint32_t* packet = static_cast<uint32_t*>(wparam);
@@ -876,45 +881,42 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessa
             instance.stack_prompt_item_id = 0;
             status->blocked = true;
             move_item((InventoryManager::Item*)GW::Items::GetItemById(item_id), static_cast<uint16_t>(quantity));
-        }
-        break;
+        } break;
         // Quote for item has been received
         case GW::UI::UIMessage::kVendorQuote: {
-            if (!requesting_quote_type) {
+            auto& transaction = instance.pending_transaction;
+            if (!transaction.in_progress()) {
                 return;
             }
-            if (instance.pending_transaction.in_progress()) {
+            const auto packet = (GW::UI::UIPacket::kVendorQuote*)wparam;
+
+            if (transaction.item_id != packet->item_id) {
+                Log::ErrorW(L"Received quote for item %u, but expected %u", packet->item_id, transaction.item_id);
+                instance.CancelTransaction();
                 return;
             }
-            instance.pending_cancel_transaction = true;
-            const uint32_t* packet = static_cast<uint32_t*>(wparam);
-            const uint32_t item_id = packet[0];
-            const uint32_t price = packet[1];
-            const GW::Item* requested_item = GW::Items::GetItemById(item_id);
-            if (!requested_item) {
+            transaction.price = packet->price;
+            transaction.setState(PendingTransaction::State::Quoted);
+        }  break;
+        case GW::UI::UIMessage::kVendorTransComplete: {
+            auto& transaction = instance.pending_transaction;
+            if (!transaction.in_progress()) {
                 return;
             }
-            instance.pending_transaction.type = requesting_quote_type;
-            instance.pending_transaction.item_id = item_id;
-            instance.pending_transaction.price = price;
-            requesting_quote_type = 0;
-            instance.show_transact_quantity_popup = true;
-        }
-        break;
+            instance.pending_transaction_amount--;
+            transaction.setState(PendingTransaction::State::Pending);
+        } break;
         // Map left; cancel all actions
         case GW::UI::UIMessage::kMapChange: {
             instance.CancelAll();
-        }
-        break;
+        } break;
         // Item moved; clear prompt
         case GW::UI::UIMessage::kMoveItem: {
             instance.stack_prompt_item_id = 0;
-        }
-        break;
+        } break;
         case GW::UI::UIMessage::kSendUseItem: {
             OnUseItem(status, (uint32_t)wparam);
-        }
-        break;
+        } break;
         default:
             ASSERT(false); // Subscribed to a UI message that we don't use!
     }
@@ -936,6 +938,7 @@ void InventoryManager::Initialize()
     GW::UI::UIMessage message_id_hooks[] = {
         GW::UI::UIMessage::kSendMoveItem,
         GW::UI::UIMessage::kSendMerchantRequestQuote,
+        GW::UI::UIMessage::kVendorTransComplete,
         GW::UI::UIMessage::kVendorQuote,
         GW::UI::UIMessage::kMapChange,
         GW::UI::UIMessage::kMoveItem,
@@ -1128,28 +1131,12 @@ void InventoryManager::AttachTransactionListeners()
     if (transaction_listeners_attached) {
         return;
     }
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::TransactionDone>(&salvage_hook_entry, [this](GW::HookStatus* status, GW::Packet::StoC::TransactionDone*) {
-        pending_transaction_amount--;
-        status->blocked = true;
-        //Log::Info("Transacted item; %d to go", pending_transaction_amount);
-        Instance().pending_transaction.setState(PendingTransaction::State::Pending);
-    });
-    GW::StoC::RegisterPacketCallback(&salvage_hook_entry, GAME_SMSG_TRANSACTION_REJECT, [this](GW::HookStatus* status, void*) {
+    GW::StoC::RegisterPacketCallback(&salvage_hook_entry, GAME_SMSG_TRANSACTION_REJECT, [this](GW::HookStatus*, void*) {
         if (!pending_transaction.in_progress()) {
             return;
         }
         pending_cancel_transaction = true;
         Log::WarningW(L"Trader rejected transaction");
-        status->blocked = true;
-    });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&salvage_hook_entry, [this](GW::HookStatus* status, const GW::Packet::StoC::QuotedItemPrice* packet) {
-        if (pending_transaction.item_id != packet->itemid) {
-            pending_cancel_transaction = true;
-            return;
-        }
-        pending_transaction.price = packet->price;
-        pending_transaction.setState(PendingTransaction::State::Quoted);
-        status->blocked = true;
     });
     transaction_listeners_attached = true;
 }
@@ -1272,9 +1259,11 @@ void InventoryManager::ContinueTransaction()
             }
             Log::Log("PendingTransaction pending, ask for quote\n");
             pending_transaction.setState(PendingTransaction::State::Quoting);
-            auto packet = pending_transaction.quote();
-            AttachTransactionListeners();
-            RequestQuote(static_cast<GW::Merchant::TransactionType>(packet.type), *packet.item_give_ids);
+            if (!RequestQuote(pending_transaction.type, pending_transaction.item_id)) {
+                Log::ErrorW(L"Failed to request quote");
+                CancelTransaction();
+                return;
+            }
         }
         break;
         case PendingTransaction::State::Quoting:
@@ -1298,9 +1287,11 @@ void InventoryManager::ContinueTransaction()
             Log::Log("PendingTransaction quoted %d, moving to buy/sell\n", pending_transaction.price);
             // Got a quote; begin transaction
             pending_transaction.setState(PendingTransaction::State::Transacting);
-            auto packet = pending_transaction.transact();
-            AttachTransactionListeners();
-            GW::Merchant::TransactItems();
+            if (!GW::Merchant::TransactItems()) {
+                Log::ErrorW(L"Failed to transact items");
+                CancelTransaction();
+                return;
+            }
         }
         break;
         case PendingTransaction::State::Transacting:
@@ -1889,14 +1880,10 @@ void InventoryManager::Draw(IDirect3DDevice9*)
                         if (item) {
                             // Set initial transaction amount to be the entire stack
                             pending_transaction_amount = item->quantity;
-                            if (item->GetIsMaterial() && !item->IsRareMaterial()
-                                && static_cast<GW::Merchant::TransactionType>(pending_transaction.type) == GW::Merchant::TransactionType::TraderSell) {
+                            if (item->GetIsMaterial() && !item->IsRareMaterial() && pending_transaction.type == GW::Merchant::TransactionType::TraderSell) {
                                 pending_transaction_amount = static_cast<int>(floor(pending_transaction_amount / 10));
                             }
                         }
-                    }
-                    else {
-                        pending_transaction_amount = static_cast<int>(floor(GW::Items::GetGoldAmountOnCharacter() / pending_transaction.price));
                     }
                 }
                 // Prompt user for amount
@@ -2598,46 +2585,9 @@ InventoryManager::Item* InventoryManager::PendingTransaction::item() const
     return static_cast<Item*>(GW::Items::GetItemById(item_id));
 }
 
-InventoryManager::CtoS_QuoteItem InventoryManager::PendingTransaction::quote()
-{
-    CtoS_QuoteItem q;
-    q.type = type;
-    if (selling()) {
-        q.gold_recv = 0;
-        q.item_give_count = 1;
-        q.item_give_ids[0] = item_id;
-    }
-    else {
-        q.gold_give = 0;
-        q.item_recv_count = 1;
-        q.item_recv_ids[0] = item_id;
-    }
-    return q;
-}
-
-InventoryManager::TransactItems InventoryManager::PendingTransaction::transact()
-{
-    TransactItems q;
-    q.type = type;
-    if (selling()) {
-        q.gold_recv = price;
-        q.item_give_count = 1;
-        q.item_give_ids[0] = item_id;
-        q.item_give_quantities[0] = 1;
-    }
-    else {
-        q.gold_give = price;
-        q.item_recv_count = 1;
-        q.item_recv_ids[0] = item_id;
-        q.item_recv_quantities[0] = 1;
-    }
-    return q;
-}
-
 bool InventoryManager::PendingTransaction::selling()
 {
-    return static_cast<GW::Merchant::TransactionType>(type) == GW::Merchant::TransactionType::MerchantSell
-           || static_cast<GW::Merchant::TransactionType>(type) == GW::Merchant::TransactionType::TraderSell;
+    return type == GW::Merchant::TransactionType::MerchantSell || type == GW::Merchant::TransactionType::TraderSell;
 }
 
 void InventoryManager::PendingItem::PluralEncString::sanitise()
