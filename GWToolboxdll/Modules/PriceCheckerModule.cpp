@@ -448,9 +448,8 @@ namespace {
         if (item->type == GW::Constants::ItemType::Materials_Zcoins) {
             // Find my model id
             const auto found = prices.find(model_id_str);
-            if (found == prices.end())
-                return price;
-            price = static_cast<float>(found->second);
+            if (found != prices.end()) 
+                price = static_cast<float>(found->second);
         }
         else {
             std::string mod_to_find;
@@ -555,7 +554,7 @@ namespace {
         if (price_first >= .1f) {
             description.append(PrintPrice(price_first, first_item_name.empty() ? nullptr : first_item_name.c_str()));
         }
-        if (price_second >= .1f) {
+        if (price_second >= .1f && first_item_name != second_item_name) {
             description.append(PrintPrice(price_second, second_item_name.empty() ? nullptr : second_item_name.c_str()));
         }
     }
