@@ -391,7 +391,7 @@ namespace {
                 if (!redirect_npc_messages_to_emote_chat)
                     return;
                 const auto param = static_cast<GW::UI::UIPacket::kWriteToChatLogWithSender*>(wParam);
-                if (param->channel == GW::Chat::Channel::CHANNEL_GROUP)
+                if (param->channel == GW::Chat::Channel::CHANNEL_GROUP || param->channel == GW::Chat::Channel::CHANNEL_ALLIES)
                     param->channel = GW::Chat::Channel::CHANNEL_EMOTE;
             } break;
             case GW::UI::UIMessage::kStartWhisper: {
