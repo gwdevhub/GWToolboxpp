@@ -1386,6 +1386,9 @@ namespace {
         address = GW::Scanner::Find("\x75\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
         if (!address) return false;
         default_frame_limit_patch.SetPatch(address, reinterpret_cast<const char*>(&static_max_refresh), sizeof(static_max_refresh));
+
+        max_frame_limit_patch.TogglePatch(true);
+        default_frame_limit_patch.TogglePatch(true);
         return true;
     }
 
