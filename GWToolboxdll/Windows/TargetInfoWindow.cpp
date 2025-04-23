@@ -135,7 +135,7 @@ namespace {
         const auto name = GW::Agents::GetAgentEncName(info_target);
         if (!(name && *name))
             return;
-        if (agent_info_by_name.find(name) == agent_info_by_name.end()) {
+        if (!agent_info_by_name.contains(name)) {
             const auto agent_info = new AgentInfo(name);
             agent_info_by_name[name] = agent_info;
         }
@@ -375,7 +375,8 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
     if (!visible) {
         return;
     }
-    if (auto_hide && !GW::Agents::GetTarget()) {
+    const auto target = GW::Agents::GetTarget();
+    if (auto_hide && !target || !target->GetIsLivingType() || !target->GetAsAgentLiving()->IsNPC()) {
         return;
     }
 
