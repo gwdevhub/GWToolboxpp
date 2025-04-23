@@ -3,6 +3,8 @@
 namespace GW {
     namespace EncStrings {
 
+        static const wchar_t* WeAreReady = L"\x8101\x13D5\x8B48\xD2EF\x7E5A"; // When entering a mission via NPC dialog
+
         // Text wrappers, 0x10a = inner text e.g. <c=@ItemBasic>
         static const wchar_t* ItemBasic = L"\xA3B";
         static const wchar_t* ItemCommon = L"\xA3D";

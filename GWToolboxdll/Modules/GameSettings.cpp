@@ -1150,7 +1150,11 @@ namespace {
         auto on_enter_mission_prompt = [](const bool result, void*) {
             mission_prompted = true;
             result && GW::PartyMgr::SetHardMode(!GW::PartyMgr::GetIsPartyInHardMode());
-            GW::Map::EnterChallenge();
+            const auto buttons = DialogModule::GetDialogButtons();
+            const auto button = std::ranges::find_if(buttons, [](GW::UI::DialogButtonInfo* btn) {
+                return btn->message && wcscmp(btn->message, GW::EncStrings::WeAreReady) == 0;
+            });
+            GW::Map::EnterChallenge() || (button != buttons.end() && GW::Agents::SendDialog((*button)->dialog_id));
         };
         const char* confirm_text = nullptr;
         if (GW::PartyMgr::GetIsPartyInHardMode() && hm_complete && !nm_complete) {
@@ -1187,7 +1191,7 @@ namespace {
                 const auto dialog_id = (uint32_t)wParam;
                 const auto& buttons = DialogModule::GetDialogButtons();
                 const auto button = std::ranges::find_if(buttons, [dialog_id](GW::UI::DialogButtonInfo* btn) {
-                    return btn->dialog_id == dialog_id && btn->message && wcscmp(btn->message, L"\x8101\x13D5\x8B48\xD2EF\x7E5A") == 0;
+                    return btn->dialog_id == dialog_id && btn->message && wcscmp(btn->message, GW::EncStrings::WeAreReady) == 0;
                 });
                 if (button == buttons.end())
                     break;
