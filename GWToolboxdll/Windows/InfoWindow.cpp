@@ -655,6 +655,18 @@ namespace {
         draw_list->AddRect({ top_left.x, top_left.y }, { bottom_right.x, bottom_right.y }, IM_COL32_WHITE);
     }
 
+    typedef void(__cdecl* SetFpsLimits_pt)(uint32_t target_fps);
+    SetFpsLimits_pt SetFpsLimits_Func = 0, SetFpsLimits_Ret = 0;
+
+    uint32_t target_fps = 0;
+
+    void OnSetFpsLimits(uint32_t _target_fps)
+    {
+        GW::Hook::EnterHook();
+        target_fps = _target_fps;
+        SetFpsLimits_Ret(_target_fps);
+        GW::Hook::LeaveHook();
+    }
 
     void PostDraw() {
         HookOnCreateTexture(record_textures);
@@ -669,6 +681,14 @@ namespace {
         return GwDatTextureModule::FileHashToFileId((wchar_t*)sub_deets[1]);
     };
     void DrawDebugInfo() {
+        if (!SetFpsLimits_Func) {
+            SetFpsLimits_Func = (SetFpsLimits_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x68\x40\x42\x0f\x00\xe8", "xxxxxx"));
+            if (SetFpsLimits_Func) {
+                GW::Hook::CreateHook((void**)&SetFpsLimits_Func, OnSetFpsLimits, (void**)&SetFpsLimits_Ret);
+                GW::Hook::EnableHooks(SetFpsLimits_Func);
+            }
+        }
+        ImGui::Text("Fps limit: %d", target_fps);
         if (ImGui::CollapsingHeader("Account Features")) {
             const auto& features = GW::GetGameContext()->account->account_unlocked_counts;
             ImGui::PushItemWidth(140.f);
