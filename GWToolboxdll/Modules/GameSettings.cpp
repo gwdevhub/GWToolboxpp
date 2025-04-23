@@ -1619,7 +1619,7 @@ void GameSettings::Initialize()
         ctrl_click_patch.SetPatch(address, (const char*)&page_max, 1);
         ctrl_click_patch.TogglePatch(true);
     }
-    
+
     ApplyFrameLimiterPatch();
 
     Log::Log("[GameSettings] ctrl_click_patch = %p\n", ctrl_click_patch.GetAddress());
