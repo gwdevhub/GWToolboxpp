@@ -8,6 +8,12 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 7.4
+* [Fix] Fixed GW's built in 180 fps limit to allow higher framerates (up to your fastest monitors max refresh rate)
+* [Fix] Fixed enter mission "are you sure" popup not automatically proceeding when triggered from an NPC dialog button
+* [Fix] Fixed item price being shown twice when hovering materials
+* [Fix] Fixed bug preventing ally npc chat being sent to emote channel
+* [Fix] Fixed materials window not working
+* [Fix] Fixed ctrl + request quote not working
 * [Fix] Ctrl + X will no longer trigger X hotkey too.
 * [Fix] Item filter no longer blocks some nightfall mission item
 * [Fix] /enter uw|fow now works from Zin Ku Corridor and Chanty of Secrets too

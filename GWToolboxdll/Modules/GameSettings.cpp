@@ -1397,15 +1397,15 @@ namespace {
 
     // Unload steam api dll, seems to cause issues atm
     bool UnloadSteamApiDll() {
-        auto message_addr = GW::Scanner::Find("Failed to load steam .dll", 0, 0, GW::ScannerSection::Section_RDATA);
+        const auto message_addr = GW::Scanner::Find("Failed to load steam .dll", 0, 0, GW::ScannerSection::Section_RDATA);
         if (!message_addr) return false;
-        auto usage_addr = GW::Scanner::Find((const char*)&message_addr, "xxxx");
+        const auto usage_addr = GW::Scanner::Find((const char*)&message_addr, "xxxx");
         if (!usage_addr) return false;
-        auto cmp_addr = GW::Scanner::FindInRange("\x83\x3d????\x00", "xx????x", 2, usage_addr, usage_addr - 0x20);
-        auto steam_api_dll_handle_ptr = cmp_addr ? *(HMODULE**)cmp_addr : nullptr;
+        const auto cmp_addr = GW::Scanner::FindInRange("\x83\x3d????\x00", "xx????x", 2, usage_addr, usage_addr - 0x20);
+        const auto steam_api_dll_handle_ptr = cmp_addr ? *(HMODULE**)cmp_addr : nullptr;
         if (!steam_api_dll_handle_ptr) return false;
         if (!*steam_api_dll_handle_ptr) return true; // Not loaded
-        auto shutdown_proc = GetProcAddress(*steam_api_dll_handle_ptr, "SteamAPI_Shutdown");
+        const auto shutdown_proc = GetProcAddress(*steam_api_dll_handle_ptr, "SteamAPI_Shutdown");
         if (!shutdown_proc) return false;
         shutdown_proc();
         FreeLibrary(*steam_api_dll_handle_ptr);
