@@ -1380,9 +1380,9 @@ namespace {
         while (EnumDisplaySettings(NULL, mode_num++, &dev_mode)) {
             max_refresh_rate = std::max(dev_mode.dmDisplayFrequency, max_refresh_rate);
         }
-
+        if (max_refresh_rate == 180) return true;
         auto address = GW::Scanner::Find("\xeb\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
-        if (!address || max_refresh_rate == 180) return false;
+        if (!address) return false;
         frame_limit_patches[0].SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
 
         address = GW::Scanner::Find("\x75\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
@@ -1628,7 +1628,7 @@ void GameSettings::Initialize()
         ctrl_click_patch.TogglePatch(true);
     }
 
-    ApplyFrameLimiterPatch();
+    const auto frame_limiter_patched = ApplyFrameLimiterPatch();
 
     Log::Log("[GameSettings] ctrl_click_patch = %p\n", ctrl_click_patch.GetAddress());
 
@@ -1679,6 +1679,7 @@ void GameSettings::Initialize()
 
 
 #ifdef _DEBUG
+    ASSERT(frame_limiter_patched);
     ASSERT(ctrl_click_patch.IsValid());
     ASSERT(SkillList_UICallback_Func);
     ASSERT(skip_map_entry_message_patch.IsValid());
