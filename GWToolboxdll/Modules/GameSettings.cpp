@@ -1376,7 +1376,7 @@ namespace {
         DEVMODE dev_mode = {};
         dev_mode.dmSize = sizeof(DEVMODE);
         int mode_num = 0;
-        DWORD max_refresh_rate = 280;
+        DWORD max_refresh_rate = 180;
         while (EnumDisplaySettings(NULL, mode_num++, &dev_mode)) {
             max_refresh_rate = std::max(dev_mode.dmDisplayFrequency, max_refresh_rate);
         }
