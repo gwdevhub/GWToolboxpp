@@ -255,8 +255,6 @@ namespace {
             return send_all_party_searches();
         }
 
-
-
         std::vector<PartySearchAdvertisement> to_send;
 
         for (auto& existing_party : parties) {

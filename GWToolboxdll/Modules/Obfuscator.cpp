@@ -613,8 +613,6 @@ namespace {
     // TODO: Jon need to hook into gw party window invite and invite current_char rather than the obfuscated name
     [[maybe_unused]] void OnInvitePlayerInPartyWindow([[maybe_unused]] void* packet) { }
 
-
-
     void OnStoCPacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet)
     {
         switch (packet->header) {

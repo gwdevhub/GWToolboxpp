@@ -786,8 +786,6 @@ Color Mission::is_daily_bg_color = Colors::ARGB(102, 0, 255, 0);
 Color Mission::has_quest_bg_color = Colors::ARGB(102, 0, 150, 0);
 ImVec2 Mission::icon_size = {48.0f, 48.0f};
 
-
-
 Mission::Mission(const MapID _outpost,
                  const QuestID _zm_quest)
     : outpost(_outpost),

@@ -157,8 +157,6 @@ namespace {
     bool blocked_packets[packet_max] = {false};
     GW::HookEntry hook_entry;
 
-
-
     void printchar(const wchar_t c)
     {
         if (c >= L' ' && c <= L'~') {
@@ -170,10 +168,6 @@ namespace {
     }
 
     uintptr_t game_srv_object_addr;
-
-
-
-
 
     StoCHandlerArray* GetStoCHandlerArray() {
 
@@ -890,6 +884,25 @@ void PacketLoggerWindow::Update(const float)
     }
 }
 
+void PacketLoggerWindow::LoadSettings(ToolboxIni* ini)
+{
+    ToolboxWindow::LoadSettings(ini);
+
+    LOAD_BOOL(timestamp_type);
+    LOAD_BOOL(timestamp_show_hours);
+    LOAD_BOOL(timestamp_show_seconds);
+    LOAD_BOOL(timestamp_show_milliseconds);
+
+    const char* ignored_packets_bits = ini->GetValue(Name(), VAR_NAME(ignored_packets), "-");
+    if (strcmp(ignored_packets_bits, "-") == 0) {
+        return;
+    }
+    const std::bitset<packet_max> ignored_packets_bitset(ignored_packets_bits);
+    for (size_t i = 0; i < packet_max; i++) {
+        ignored_packets[i] = ignored_packets_bitset[i] == 1;
+    }
+}
+
 void PacketLoggerWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
@@ -906,25 +919,6 @@ void PacketLoggerWindow::SaveSettings(ToolboxIni* ini)
     ini->SetValue(Name(), VAR_NAME(ignored_packets), ignored_packets_bitset.to_string().c_str());
     SaveMessageLog();
     ClearMessageLog();
-}
-
-void PacketLoggerWindow::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::LoadSettings(ini);
-
-
-
-
-
-
-    const char* ignored_packets_bits = ini->GetValue(Name(), VAR_NAME(ignored_packets), "-");
-    if (strcmp(ignored_packets_bits, "-") == 0) {
-        return;
-    }
-    const std::bitset<packet_max> ignored_packets_bitset(ignored_packets_bits);
-    for (size_t i = 0; i < packet_max; i++) {
-        ignored_packets[i] = ignored_packets_bitset[i] == 1;
-    }
 }
 
 void PacketLoggerWindow::Disable()

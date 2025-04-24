@@ -109,8 +109,6 @@ private:
     static void CHAT_CMD_FUNC(CmdWithdraw);
     static void CHAT_CMD_FUNC(CmdDeposit);
 
-
-
     static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
     static bool GetNPCInfoByName(const std::string& name, PendingTransmo& transmo);
     static bool GetNPCInfoByName(const std::wstring& name, PendingTransmo& transmo);

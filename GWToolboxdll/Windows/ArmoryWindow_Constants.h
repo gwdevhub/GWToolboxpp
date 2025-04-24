@@ -1538,8 +1538,6 @@ namespace GWArmory {
         {"Shining Blade Uniform", 0xa60, Profession::None, ItemType::Costume, Campaign::BonusMissionPack, 35},
         {"White Mantle Robes", 0xa5b, Profession::None, ItemType::Costume, Campaign::BonusMissionPack, 21},
 
-
-
         {"Dragonguard", 0xd6b, Profession::None, ItemType::Costume, Campaign::BonusMissionPack, 0},
         {"Aegis of Unity", 0xd70, Profession::None, ItemType::Costume, Campaign::BonusMissionPack, 0},
     };

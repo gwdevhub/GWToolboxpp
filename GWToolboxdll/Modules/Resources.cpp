@@ -110,12 +110,8 @@ namespace {
     // tasks to be done in main thread
     std::queue<std::function<void()>> main_jobs;
 
-
-    IDirect3DTexture9* empty_texture_ptr = 0;
-
+    IDirect3DTexture9* empty_texture_ptr = nullptr;
     bool should_stop = false;
-
-
 
     // snprintf error message, pass to callback as a failure. Used internally.
     void trigger_failure_callback(const std::function<void(bool, const std::wstring&)>& callback, const wchar_t* format, ...)

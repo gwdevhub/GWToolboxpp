@@ -17,9 +17,7 @@
 #include <Defines.h>
 #include "EffectsMonitorWidget.h"
 
-#include "Utils/FontLoader.h"
-
-
+#include <Utils/FontLoader.h>
 
 namespace {
     auto font_effects = 18.f;

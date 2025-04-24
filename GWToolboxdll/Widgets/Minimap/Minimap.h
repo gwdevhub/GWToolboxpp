@@ -34,8 +34,6 @@ public:
         return instance;
     }
 
-
-
     const int ms_before_back = 1000; // time before we snap back to player
     const float acceleration = 0.5f;
     const float max_speed = 15.0f; // game units per frame

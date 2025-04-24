@@ -72,8 +72,6 @@ namespace {
         return WorldMapWidget::GamePosToWorldMap(game_map_position, world_map_pos) && WorldMapCoordsToMissionMapScreenPos(world_map_pos, screen_coords);
     }
 
-
-
     void Draw(IDirect3DDevice9*);
 
     std::vector<GW::UI::UIMessage> messages_hit;
@@ -97,8 +95,6 @@ namespace {
         }
         GW::Hook::LeaveHook();
     }
-
-
 
     bool HookMissionMapFrame()
     {

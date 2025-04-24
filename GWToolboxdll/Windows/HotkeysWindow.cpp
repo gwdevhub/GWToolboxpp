@@ -313,8 +313,6 @@ namespace {
     }
 }
 
-
-
 void HotkeysWindow::Initialize()
 {
     ToolboxWindow::Initialize();

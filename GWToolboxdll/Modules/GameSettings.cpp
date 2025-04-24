@@ -320,7 +320,6 @@ namespace {
     } skillbar_packet;
 
 
-
     // Takes SkillData* ptr, rectifies any missing dupe skills. True if bar has been tweaked.
     bool FixLoadSkillData(GW::Constants::SkillID* skill_ids)
     {
@@ -1631,8 +1630,6 @@ void GameSettings::Initialize()
     [[maybe_unused]] const auto frame_limiter_patched = ApplyFrameLimiterPatch();
 
     Log::Log("[GameSettings] ctrl_click_patch = %p\n", ctrl_click_patch.GetAddress());
-
-
 
     SkillList_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmCtlSkList.cpp", "!obj", 0xc71, 0));
     Log::Log("[GameSettings] SkillList_UICallback_Func = %p\n", SkillList_UICallback_Func);

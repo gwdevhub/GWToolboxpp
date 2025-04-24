@@ -94,8 +94,6 @@ namespace {
     bool mousedown = false;
     bool camera_currently_reversed = false;
 
-
-
     GW::Vec2f shadowstep_location = {0.f, 0.f};
     RECT clipping = {};
 

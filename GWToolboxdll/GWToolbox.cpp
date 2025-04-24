@@ -403,8 +403,6 @@ namespace {
         minimap_enabled = GWToolbox::IsModuleEnabled(&Minimap::Instance());
     }
 
-
-
     LRESULT CALLBACK WndProc(const HWND hWnd, const UINT Message, const WPARAM wParam, const LPARAM lParam)
     {
         static bool right_mouse_down = false;

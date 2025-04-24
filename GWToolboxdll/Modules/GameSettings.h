@@ -92,12 +92,8 @@ private:
 
     void MessageOnPartyChange();
 
-
     std::vector<std::wstring> previous_party_names{};
-
     std::vector<uint32_t> available_dialog_ids{};
-
-
 
     GW::HookEntry VanquishComplete_Entry;
     GW::HookEntry ItemClickCallback_Entry;

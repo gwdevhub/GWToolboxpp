@@ -475,7 +475,6 @@ namespace {
     }
 
 
-
     class PrefLabel : public GuiUtils::EncString {
     public:
         PrefLabel(const wchar_t* _enc_string = nullptr)

@@ -760,8 +760,6 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             ui_scale.y * (portal.world_pos.y - world_map_context->top_left.y) + viewport_offset.y - (ICON_SIZE.y / 2.f)
         };
 
-
-
         const ImRect hover_rect = {
             portal_pos, {portal_pos.x + ICON_SIZE.x, portal_pos.y + ICON_SIZE.y}
         };
