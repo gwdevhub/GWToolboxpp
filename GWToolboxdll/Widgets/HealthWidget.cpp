@@ -105,7 +105,7 @@ void HealthWidget::DrawSettingsInternal()
     ImGui::Text("Text sizes:");
     ImGui::ShowHelp("A text size of 0 means that it's not drawn.");
     ImGui::Indent();
-    ImGui::DragFloat("'Distance' header", &font_size_header, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::DragFloat("'Health' header", &font_size_header, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
     ImGui::DragFloat("Percent value", &font_size_perc_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
     ImGui::DragFloat("Absolute value", &font_size_abs_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
     ImGui::Unindent();
