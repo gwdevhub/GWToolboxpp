@@ -69,8 +69,7 @@ using namespace GuiUtils;
 using namespace ToolboxUtils;
 
 namespace {
-    GW::MemoryPatcher max_frame_limit_patch;
-    GW::MemoryPatcher default_frame_limit_patch;
+    GW::MemoryPatcher frame_limit_patches[3];
 
     GW::MemoryPatcher ctrl_click_patch;
     GW::MemoryPatcher gold_confirm_patch;
@@ -1377,21 +1376,26 @@ namespace {
         DEVMODE dev_mode = {};
         dev_mode.dmSize = sizeof(DEVMODE);
         int mode_num = 0;
-        DWORD max_refresh_rate = 180;
+        DWORD max_refresh_rate = 280;
         while (EnumDisplaySettings(NULL, mode_num++, &dev_mode)) {
             max_refresh_rate = std::max(dev_mode.dmDisplayFrequency, max_refresh_rate);
         }
 
         auto address = GW::Scanner::Find("\xeb\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
         if (!address || max_refresh_rate == 180) return false;
-        max_frame_limit_patch.SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
+        frame_limit_patches[0].SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
 
         address = GW::Scanner::Find("\x75\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
         if (!address) return false;
-        default_frame_limit_patch.SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
+        frame_limit_patches[1].SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
 
-        max_frame_limit_patch.TogglePatch(true);
-        default_frame_limit_patch.TogglePatch(true);
+        address = GW::Scanner::Find("\x81\xfe\xb4\x00\x00\x00", "xxxxxx", 2);
+        if (!address) return false;
+        frame_limit_patches[2].SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
+
+        for (auto& p : frame_limit_patches) {
+            if (p.GetAddress()) p.TogglePatch(true);
+        }
         return true;
     }
 
@@ -2051,8 +2055,9 @@ void GameSettings::Terminate()
 {
     ToolboxModule::Terminate();
     ctrl_click_patch.Reset();
-    default_frame_limit_patch.Reset();
-    max_frame_limit_patch.Reset();
+    for (auto& p : frame_limit_patches) {
+        p.Reset();
+    }
     gold_confirm_patch.Reset();
     skip_map_entry_message_patch.Reset();
     remove_skill_warmup_duration_patch.Reset();
