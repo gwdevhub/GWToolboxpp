@@ -376,7 +376,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
         return;
     }
     const auto target = GW::Agents::GetTarget();
-    if (auto_hide && !target || !target->GetIsLivingType() || !target->GetAsAgentLiving()->IsNPC()) {
+    if (auto_hide && !(target && target->GetIsLivingType() && target->GetAsAgentLiving()->IsNPC())) {
         return;
     }
 
