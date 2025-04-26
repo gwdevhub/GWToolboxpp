@@ -206,8 +206,6 @@ namespace {
     std::map<uint32_t,GwImg*> textures_by_file_id;
 }
 
-
-
 void GwDatTextureModule::Initialize()
 {
     ToolboxModule::Initialize();

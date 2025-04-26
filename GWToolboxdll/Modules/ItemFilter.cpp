@@ -51,6 +51,7 @@ namespace {
     void OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::ItemGeneral_ReuseID*);
     void OnItemUpdateOwner(GW::HookStatus*, GW::Packet::StoC::ItemUpdateOwner*);
 
+    GW::HookEntry ChatCmd_HookEntry;
     GW::HookEntry OnAgentAdd_Entry;
     GW::HookEntry OnAgentRemove_Entry;
     GW::HookEntry OnMapLoad_Entry;
@@ -365,6 +366,10 @@ void ItemFilter::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&OnMapLoad_Entry, OnMapLoad);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemGeneral_ReuseID>(&OnItemReuseId_Entry, OnItemReuseId);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ItemUpdateOwner>(&OnItemUpdateOwner_Entry, OnItemUpdateOwner);
+
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"spawnblockeditems", [](GW::HookStatus*, const wchar_t*, int, const LPWSTR*) {
+        SpawnSuppressedItems();
+    });
 }
 
 void ItemFilter::SignalTerminate()
@@ -377,6 +382,8 @@ void ItemFilter::SignalTerminate()
     GW::StoC::RemoveCallback<GW::Packet::StoC::MapLoaded>(&OnMapLoad_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::ItemGeneral_ReuseID>(&OnItemReuseId_Entry);
     GW::StoC::RemoveCallback<GW::Packet::StoC::ItemUpdateOwner>(&OnItemUpdateOwner_Entry);
+
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
 bool ItemFilter::CanTerminate()

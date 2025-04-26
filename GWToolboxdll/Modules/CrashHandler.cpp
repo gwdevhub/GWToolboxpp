@@ -26,8 +26,6 @@ namespace {
     HandleCrash_pt HandleCrash_Func = nullptr;
     HandleCrash_pt RetHandleCrash = nullptr;
 
-
-
     GWDebugInfo* gw_debug_info = nullptr;
 
     int failed(const char* failure_message)

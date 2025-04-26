@@ -565,24 +565,24 @@ void ObserverPartyWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    LOAD_BOOL(show_player_number);
+    LOAD_BOOL(show_profession);
+    LOAD_BOOL(show_player_guild_tag);
+    LOAD_BOOL(show_player_guild_rank);
+    LOAD_BOOL(show_player_guild_rating);
+    LOAD_BOOL(show_kills);
+    LOAD_BOOL(show_deaths);
+    LOAD_BOOL(show_kdr);
+    LOAD_BOOL(show_cancels);
+    LOAD_BOOL(show_interrupts);
+    LOAD_BOOL(show_knockdowns);
+    LOAD_BOOL(show_received_party_attacks);
+    LOAD_BOOL(show_dealt_party_attacks);
+    LOAD_BOOL(show_received_party_crits);
+    LOAD_BOOL(show_dealt_party_crits);
+    LOAD_BOOL(show_received_party_skills);
+    LOAD_BOOL(show_dealt_party_skills);
+    LOAD_BOOL(show_skills_used);
 }
 
 

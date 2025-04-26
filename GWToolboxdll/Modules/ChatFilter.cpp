@@ -165,8 +165,6 @@ namespace {
         return 0;
     }
 
-
-
     void ParseBuffer(const char* text, std::vector<std::wstring>& words)
     {
         using namespace TextUtils;

@@ -178,8 +178,6 @@ b4 7b 01 01 00 00 00 00
         return 0;
     }
 
-
-
     void SetLoginScene(LoginScreen campaign) {
         switch (campaign) {
         case LoginScreen::Prophecies:
@@ -215,8 +213,6 @@ b4 7b 01 01 00 00 00 00
         GW::Hook::LeaveHook();
         return DecompressFile_Ret(hArchive, file_id, bytes);
     }
-
-
 
     uint32_t* OnCreateTexture(const wchar_t* filename, uint32_t flags) {
         GW::Hook::EnterHook();

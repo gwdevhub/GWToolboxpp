@@ -166,8 +166,6 @@ namespace {
         }
     }
 
-
-
     /*
      *  Logic for scaling gw cursor up or down
      */

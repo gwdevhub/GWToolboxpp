@@ -62,8 +62,6 @@ namespace {
     GW::HookEntry ObjectiveDone_Entry;
     GW::HookEntry VanquishComplete_Entry;
 
-
-
     MapID map_id = MapID::None;
     InstanceType instance_type = InstanceType::Loading;
     InstanceType previous_instance_type = InstanceType::Loading;
@@ -740,8 +738,6 @@ void PconsWindow::DrawLunarsAndAlcoholSettings()
     ImGui::ShowHelp("Will hide the skills in your effect monitor");
     ImGui::Unindent();
 }
-
-
 
 void PconsWindow::CheckBossRangeAutoDisable()
 {

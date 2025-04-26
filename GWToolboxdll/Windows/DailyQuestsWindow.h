@@ -8,8 +8,6 @@ namespace GW::Constants {
     enum class QuestID : uint32_t;
 }
 
-
-
 class DailyQuests : public ToolboxWindow {
     DailyQuests() = default;
     ~DailyQuests() override = default;
@@ -70,8 +68,6 @@ public:
         size_t GetCollectedQuantity();
         void Decode(bool force = false) override;
     };
-
-
 
     static QuestData* GetZaishenBounty(time_t unix = 0);
     static QuestData* GetZaishenVanquish(time_t unix = 0);

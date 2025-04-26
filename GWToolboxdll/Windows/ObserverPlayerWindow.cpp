@@ -219,8 +219,6 @@ void ObserverPlayerWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
 
-
-
     show_comparison = ini->GetBoolValue(Name(), VAR_NAME(show_skills_used_on_self), true);
     show_comparison = ini->GetBoolValue(Name(), VAR_NAME(show_attempts), false);
     show_comparison = ini->GetBoolValue(Name(), VAR_NAME(show_cancels), true);

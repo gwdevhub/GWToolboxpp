@@ -123,8 +123,6 @@ namespace {
         Enqueue(Transaction::Sell, material);
     }
 
-
-
     Transaction* GetCurrentTransaction() {
         return transactions.size() ? &transactions[0] : nullptr;
     }

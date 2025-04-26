@@ -59,8 +59,6 @@ namespace {
     // those function write to extra_buffer and extra_color.
     // they return true if there is something to draw.
 
-
-
     std::map<GW::Constants::SkillID, const char*> spirit_effects{
         {GW::Constants::SkillID::Edge_of_Extinction, "EoE"},
         {GW::Constants::SkillID::Quickening_Zephyr, "QZ"},
