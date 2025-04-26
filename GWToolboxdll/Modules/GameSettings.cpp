@@ -894,8 +894,8 @@ namespace {
         if (!targeting_nearest_item) {
             return;
         }
-        const auto msg = static_cast<GW::UI::ChangeTargetUIMsg*>(wParam);
-        auto chosen_target = GW::Agents::GetAgentByID(msg->manual_target_id);
+        const auto msg = static_cast<GW::UI::UIPacket::kChangeTarget*>(wParam);
+        auto chosen_target = GW::Agents::GetAgentByID(msg->evaluated_target_id);
         if (!chosen_target) {
             return;
         }

@@ -752,7 +752,7 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
         }
         break;
         case GW::UI::UIMessage::kChangeTarget: {
-            const GW::UI::ChangeTargetUIMsg* msg = static_cast<GW::UI::ChangeTargetUIMsg*>(wParam);
+            const auto msg = static_cast<GW::UI::UIPacket::kChangeTarget*>(wParam);
             instance.agent_renderer.auto_target_id = GW::Agents::GetTargetId() ? 0 : msg->auto_target_id;
         }
         break;

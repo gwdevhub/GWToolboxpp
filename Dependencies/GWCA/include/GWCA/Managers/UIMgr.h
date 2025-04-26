@@ -62,16 +62,6 @@ namespace GW {
             uint32_t channel2;
         };
 
-        struct ChangeTargetUIMsg {
-            uint32_t        manual_target_id;
-            uint32_t        h0008;
-            uint32_t        auto_target_id;
-            uint32_t        h0010;
-            uint32_t        current_target_id;
-            uint32_t        h0018;
-            // ...
-        };
-
         struct InteractionMessage {
             uint32_t frame_id;
             UI::UIMessage message_id; // Same as UIMessage from UIMgr, but includes things like mouse move, click etc
@@ -308,7 +298,7 @@ namespace GW {
             kShowAgentNameTag           = 0x10000000 | 0x19, // wparam = AgentNameTagInfo*
             kHideAgentNameTag           = 0x10000000 | 0x1A,
             kSetAgentNameTagAttribs     = 0x10000000 | 0x1B, // wparam = AgentNameTagInfo*
-            kChangeTarget               = 0x10000000 | 0x20, // wparam = ChangeTargetUIMsg*
+            kChangeTarget               = 0x10000000 | 0x20, // wparam = UIPacket::kChangeTarget*
             kAgentStartCasting          = 0x10000000 | 0x27, // wparam = UIPacket::kAgentStartCasting*
             kShowMapEntryMessage        = 0x10000000 | 0x29, // wparam = { wchar_t* title, wchar_t* subtitle }
             kSetCurrentPlayerData       = 0x10000000 | 0x2A, // fired after setting the worldcontext player name
@@ -438,6 +428,14 @@ namespace GW {
 
 
         namespace UIPacket {
+            struct kChangeTarget {
+                uint32_t evaluated_target_id;
+                bool has_evaluated_target_changed;
+                uint32_t auto_target_id;
+                bool has_auto_target_changed;
+                uint32_t manual_target_id;
+                bool has_manual_target_changed;
+            };
             struct kResize {
                 uint32_t h0000;
                 float h0004[9];
