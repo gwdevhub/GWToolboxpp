@@ -48,8 +48,9 @@ namespace GW {
         /* +h022C */ GW::Constants::MapID current_map_id;
         /* +h0230 */ uint32_t observe_map_type;
         /* +h0234 */ uint32_t current_map_type;
-        /* +h0238 */ Array<ObserverMatch *> observer_matchs;
-        /* +h0248 */ uint32_t h0248[22];
+        /* +h0238 */ uint32_t h0238[5];
+        /* +h024C */ Array<ObserverMatch*> observer_matches;
+        /* +h025C */ uint32_t h025C[17];
         /* +h02a0 */ uint32_t player_flags; // bitwise something
         /* +h02A4 */ uint32_t player_number;
         /* +h02A8 */ uint32_t h02A8[40];
