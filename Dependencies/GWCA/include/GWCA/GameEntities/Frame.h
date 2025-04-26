@@ -7,9 +7,13 @@
 #include <GWCA/Managers/UIMgr.h>
 
 namespace GW {
+    struct Module;
+    extern Module FrameModule;
 
     struct ButtonFrame : UI::Frame {
+		GWCA_API static ButtonFrame* Create(uint32_t parent_frame_id, uint32_t flags = 0x300, uint32_t child_offset_id = 0xff, const wchar_t* button_label = nullptr, const wchar_t* frame_label = nullptr);
         GWCA_API bool GetLabel(const wchar_t** enc_string);
+        GWCA_API bool SetLabel(const wchar_t* enc_string);
         GWCA_API bool Click();
         GWCA_API bool MouseDown();
         GWCA_API bool MouseUp();
