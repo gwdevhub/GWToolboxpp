@@ -1052,6 +1052,8 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     return texture;
 }
 
+#pragma comment(linker, "/EXPORT:?GetSkillImage@Resources@@SAPAPAUIDirect3DTexture9@@W4SkillID@Constants@GW@@@Z")
+
 IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id)
 {
     const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
