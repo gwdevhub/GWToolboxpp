@@ -200,6 +200,11 @@ namespace {
     };
 } // namespace
 
+extern "C" __declspec(dllexport) IDirect3DTexture9** __cdecl GetSkillImage(GW::Constants::SkillID skill_id)
+{
+    return Resources::GetSkillImage(skill_id);
+}
+
 Resources::Resources()
 {
     InitCurl();
