@@ -115,6 +115,7 @@ namespace {
         std::string wiki_content;
         std::string wiki_search_term;
         std::vector<GW::Constants::SkillID> wiki_skills;
+        std::vector<GW::Constants::SkillID> skills_offered;
         std::vector<std::string> items_dropped;
         std::vector<std::string> notes;
         std::unordered_map<std::string, std::string> wiki_armor_ratings; // rating type, rating value
@@ -195,7 +196,22 @@ namespace {
                 }
             }
 
-            static constexpr ctll::fixed_string notes_regex = R"(<h2><span class=\"mw-headline\" id=\"Skills\">(?:.*?)<ul.*?>(.*?)(?:<\/ul>|<h2><span class=\"mw-headline\"))";
+            static constexpr ctll::fixed_string skills_offered_regex = R"(<h2><span class=\"mw-headline\" id=\"Skills_offered\">(?:.*?)<table(.*?)<\/table>)";
+
+            if (const auto m = ctre::search<skills_offered_regex>(wiki_content)) {
+                const auto skill_list_found = m.get<1>().to_string();
+
+                static constexpr ctll::fixed_string skill_link_regex = R"(<a href="[^"]+" title="([^"]+)\")";
+                for (const auto skill_match : ctre::search_all<skill_link_regex>(skill_list_found)) {
+                    const auto skill_name = skill_match.get<1>().to_string();
+                    const auto skill_name_text = native_html_to_text(skill_name);
+                    if (skill_ids_by_name.contains(skill_name_text) && !std::ranges::contains(skills_offered, skill_ids_by_name[skill_name_text])) {
+                        skills_offered.push_back(skill_ids_by_name[skill_name_text]);
+                    }
+                }
+            }
+
+            static constexpr ctll::fixed_string notes_regex = R"(<h2><span class=\"mw-headline\" id=\"Notes\">(?:.*?)<ul.*?>(.*?)(?:<\/ul>|<h2><span class=\"mw-headline\"))";
             if (const auto m = ctre::search<notes_regex>(wiki_content)) {
                 const auto list_found = m.get<1>().to_string();
 
@@ -373,122 +389,153 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
         return;
     }
     const auto target = GW::Agents::GetTarget();
-    if (auto_hide && !(target && target->GetIsLivingType() && target->GetAsAgentLiving()->IsNPC())) {
-        return;
-    }
-
+    const auto is_valid_target = target && target->GetIsLivingType() && target->GetAsAgentLiving()->IsNPC();
+    const auto need_to_collapse = auto_hide && !is_valid_target;
+    const auto window_name = std::format("Target Info - {}###TargetInfo", is_valid_target && current_agent_info ? current_agent_info->name.string() : "(No target)");
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        DecodeSkillNames();
-        UpdateAgentInfos();
-        if (!current_agent_info) {
-            ImGui::TextUnformatted("No target info");
-            return ImGui::End();
-        }
-        if (current_agent_info->state != AgentInfo::TargetInfoState::Done) {
-            ImGui::TextUnformatted("Target info pending...");
-            return ImGui::End();
-        }
-        const auto has_image = current_agent_info->image;
-        if (ImGui::BeginTable("table1", has_image ? 2 : 1)) {
-            ImGui::TableSetupColumn("col0", ImGuiTableColumnFlags_WidthStretch, 1.0f);
-            if (has_image)
-                ImGui::TableSetupColumn("col1", ImGuiTableColumnFlags_WidthStretch, 2.0f);
-            ImGui::TableNextRow();
-            if (has_image) {
-                ImGui::TableNextColumn();
-                ImGui::ImageFit(*current_agent_info->image, ImGui::GetContentRegionAvail());
-            }
+    const auto window = ImGui::FindWindowByName(window_name.c_str());
+    if (window && need_to_collapse && !window->Collapsed) {
+        ImGui::SetWindowCollapsed(window, true);
+        ImGui::Begin(window_name.c_str(), GetVisiblePtr(), GetWinFlags());
+        ImGui::End();
+        ImGui::SetWindowCollapsed(window, false);
+        return;
+    }
+    if (!ImGui::Begin(window_name.c_str(), GetVisiblePtr(), GetWinFlags())) {
+        ImGui::End();
+        return;
+    }
+    DecodeSkillNames();
+    UpdateAgentInfos();
+    if (!current_agent_info) {
+        ImGui::TextUnformatted("No target info");
+        return ImGui::End();
+    }
+    if (current_agent_info->state != AgentInfo::TargetInfoState::Done) {
+        ImGui::TextUnformatted("Target info pending...");
+        return ImGui::End();
+    }
+    const auto has_image = current_agent_info->image;
+    if (ImGui::BeginTable("table1", has_image ? 2 : 1)) {
+        ImGui::TableSetupColumn("col0", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        if (has_image)
+            ImGui::TableSetupColumn("col1", ImGuiTableColumnFlags_WidthStretch, 2.0f);
+        ImGui::TableNextRow();
+        if (has_image) {
             ImGui::TableNextColumn();
-            ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header2));
-            ImGui::TextUnformatted(current_agent_info->name.string().c_str());
-            ImGui::PopFont();
-            ImGui::Separator();
-            if (current_agent_info->infobox_deets.size()) {
-                for (const auto it : current_agent_info->infobox_deets) {
-                    ImGui::Text("%s: %s", it.first.c_str(), it.second.c_str());
+            ImGui::ImageFit(*current_agent_info->image, ImGui::GetContentRegionAvail());
+        }
+        ImGui::TableNextColumn();
+        ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header2));
+        ImGui::TextUnformatted(current_agent_info->name.string().c_str());
+        ImGui::PopFont();
+        ImGui::Separator();
+        if (current_agent_info->infobox_deets.size()) {
+            for (const auto it : current_agent_info->infobox_deets) {
+                ImGui::Text("%s: %s", it.first.c_str(), it.second.c_str());
+            }
+        }
+        if (current_agent_info->wiki_skills.size()) {
+            ImGui::Text("Skills Used:");
+            ImGui::BeginTable("skills_used_table", 2);
+            ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
+            for (const auto skill_id : current_agent_info->wiki_skills) {
+                ImGui::TableNextColumn();
+                const float btnw = ImGui::GetContentRegionAvail().x;
+                const ImVec2 btn_dims = {btnw, .0f};
+                const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+                const auto skill_img = Resources::GetSkillImage(skill_id);
+                if (ImGui::IconButton(Resources::DecodeStringId(skill->name)->string().c_str(), *skill_img, btn_dims)) {
+                    wchar_t url_buf[64];
+                    swprintf(url_buf, _countof(url_buf), L"Game_link:Skill_%d", skill_id);
+                    GuiUtils::OpenWiki(url_buf);
                 }
             }
-            if (current_agent_info->wiki_skills.size()) {
-                ImGui::Text("Skills Used:");
-                ImGui::BeginTable("skills_used_table", 2);
+            ImGui::PopStyleVar();
+            ImGui::EndTable();
+        }
+        if (current_agent_info->skills_offered.size()) {
+            ImGui::Text("Skills Offered:");
+            ImGui::BeginTable("skills_offered_table", 2);
+            ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
+            for (const auto skill_id : current_agent_info->skills_offered) {
+                ImGui::TableNextColumn();
+                const float btnw = ImGui::GetContentRegionAvail().x;
+                const ImVec2 btn_dims = {btnw, .0f};
+                const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+                const auto skill_img = Resources::GetSkillImage(skill_id);
+                if (ImGui::IconButton(Resources::DecodeStringId(skill->name)->string().c_str(), *skill_img, btn_dims)) {
+                    wchar_t url_buf[64];
+                    swprintf(url_buf, _countof(url_buf), L"Game_link:Skill_%d", skill_id);
+                    GuiUtils::OpenWiki(url_buf);
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("%s", Resources::DecodeStringId(skill->description)->string().c_str());
+                }
+            }
+            ImGui::PopStyleVar();
+            ImGui::EndTable();
+        }
+        if (current_agent_info->wiki_armor_ratings.size()) {
+            ImGui::Text("Armor Ratings:");
+            ImGui::BeginTable("armor_rating_table", 2);
+            for (const auto [damage_type, armour_rating] : current_agent_info->wiki_armor_ratings) {
+                ImGui::TableNextColumn();
+                const float btnw = ImGui::GetContentRegionAvail().x;
+                const ImVec2 btn_dims = {btnw, .0f};
+                const auto open_wiki = [&] {
+                    auto damage_type_wstr = TextUtils::StringToWString(damage_type);
+                    std::ranges::replace(damage_type_wstr, L' ', L'_');
+                    GuiUtils::OpenWiki(damage_type_wstr.c_str());
+                };
                 ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
-                for (const auto skill_id : current_agent_info->wiki_skills) {
-                    ImGui::TableNextColumn();
-                    const float btnw = ImGui::GetContentRegionAvail().x;
-                    const ImVec2 btn_dims = {btnw, .0f};
-                    const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-                    const auto skill_img = Resources::GetSkillImage(skill_id);
-                    if (ImGui::IconButton(Resources::DecodeStringId(skill->name)->string().c_str(), *skill_img, btn_dims)) {
-                        wchar_t url_buf[64];
-                        swprintf(url_buf, _countof(url_buf), L"Game_link:Skill_%d", skill_id);
-                        GuiUtils::OpenWiki(url_buf);
+                const auto label = std::format("{}: {}", damage_type, armour_rating);
+                if (const auto dmgtype_img = Resources::GetDamagetypeImage(damage_type)) {
+                    ImGui::PushID(damage_type.c_str());
+                    if (ImGui::IconButton(label.c_str(), *dmgtype_img, btn_dims)) {
+                        open_wiki();
+                    }
+                    ImGui::PopID();
+                }
+                else {
+                    ImGui::TextUnformatted(label.c_str());
+                    if (ImGui::IsItemClicked()) {
+                        open_wiki();
                     }
                 }
                 ImGui::PopStyleVar();
-                ImGui::EndTable();
-            }
-            if (current_agent_info->wiki_armor_ratings.size()) {
-                ImGui::Text("Armor Ratings:");
-                ImGui::BeginTable("armor_rating_table", 2);
-                for (const auto [damage_type, armour_rating] : current_agent_info->wiki_armor_ratings) {
-                    ImGui::TableNextColumn();
-                    const float btnw = ImGui::GetContentRegionAvail().x;
-                    const ImVec2 btn_dims = {btnw, .0f};
-                    const auto open_wiki = [&] {
-                        auto damage_type_wstr = TextUtils::StringToWString(damage_type);
-                        std::ranges::replace(damage_type_wstr, L' ', L'_');
-                        GuiUtils::OpenWiki(damage_type_wstr.c_str());
-                    };
-                    ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
-                    const auto label = std::format("{}: {}", damage_type, armour_rating);
-                    if (const auto dmgtype_img = Resources::GetDamagetypeImage(damage_type)) {
-                        ImGui::PushID(damage_type.c_str());
-                        if (ImGui::IconButton(label.c_str(), *dmgtype_img, btn_dims)) {
-                            open_wiki();
-                        }
-                        ImGui::PopID();
-                    }
-                    else {
-                        ImGui::TextUnformatted(label.c_str());
-                        if (ImGui::IsItemClicked()) {
-                            open_wiki();
-                        }
-                    }
-                    ImGui::PopStyleVar();
-                }
-                ImGui::EndTable();
-            }
-            if (current_agent_info->items_dropped.size()) {
-                ImGui::Text("Items Dropped:");
-                ImGui::BeginTable("items_dropped_table", 2);
-                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
-                for (const auto& item_name : current_agent_info->items_dropped) {
-                    ImGui::TableNextColumn();
-                    const float btnw = ImGui::GetContentRegionAvail().x;
-                    const ImVec2 btn_dims = {btnw, .0f};
-                    const auto item_name_ws = TextUtils::StringToWString(item_name);
-                    const auto item_image = Resources::GetItemImage(item_name_ws);
-                    if (ImGui::IconButton(item_name.c_str(), *item_image, btn_dims)) {
-                        GuiUtils::SearchWiki(item_name_ws.c_str());
-                    }
-                }
-                ImGui::PopStyleVar();
-                ImGui::EndTable();
-            }
-            if (current_agent_info->notes.size()) {
-                ImGui::Text("Notes:");
-                for (const auto& note : current_agent_info->notes) {
-                    ImGui::TextWrapped("%s", note.c_str());
-                }
-            }
-            ImGui::Separator();
-            if (ImGui::Button("View More on Guild Wars Wiki")) {
-                GuiUtils::SearchWiki(TextUtils::StringToWString(current_agent_info->wiki_search_term));
             }
             ImGui::EndTable();
         }
+        if (current_agent_info->items_dropped.size()) {
+            ImGui::Text("Items Dropped:");
+            ImGui::BeginTable("items_dropped_table", 2);
+            ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
+            for (const auto& item_name : current_agent_info->items_dropped) {
+                ImGui::TableNextColumn();
+                const float btnw = ImGui::GetContentRegionAvail().x;
+                const ImVec2 btn_dims = {btnw, .0f};
+                const auto item_name_ws = TextUtils::StringToWString(item_name);
+                const auto item_image = Resources::GetItemImage(item_name_ws);
+                if (ImGui::IconButton(item_name.c_str(), *item_image, btn_dims)) {
+                    GuiUtils::SearchWiki(item_name_ws.c_str());
+                }
+            }
+            ImGui::PopStyleVar();
+            ImGui::EndTable();
+        }
+        if (current_agent_info->notes.size()) {
+            ImGui::Text("Notes:");
+            for (const auto& note : current_agent_info->notes) {
+                ImGui::TextWrapped("%s", note.c_str());
+            }
+        }
+        ImGui::Separator();
+        if (ImGui::Button("View More on Guild Wars Wiki")) {
+            GuiUtils::SearchWiki(TextUtils::StringToWString(current_agent_info->wiki_search_term));
+        }
+        ImGui::EndTable();
     }
     ImGui::End();
 }
