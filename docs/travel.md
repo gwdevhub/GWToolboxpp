@@ -33,11 +33,13 @@ Use `/tp`, `/to`, or `/travel` followed by the outpost name or abbreviation to q
 - `/tp doa` for Domain of Anguish
 - `/tp embark` for Embark Beach
 - `/tp gh` to enter or leave your guild hall
+- `/tp zb|zm|zv` for Zaishen Bounty/Mission/Vanquish, will take you to GtoB to accept the quests if you don't have them yet
 
 You can use various shortcuts and partial names for outposts and districts. Some examples include:
 - `kama ae1` - Kamadan, American district 1
 - `fa l` - Fort Aspenwood (Luxon)
-- `deep ee` - The Deep, Europe English district
+- `deep ee` - The Deep, Europe English district, reqauires a scroll in inventory or chest
+- `eee` - Embark Europe English
 
 ## Additional Features
 - Automatically retry if a district is full (can be toggled in settings).
