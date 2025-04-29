@@ -632,7 +632,7 @@ namespace {
     }
 
 
-    FARPROC WINAPI CustomDliHook(unsigned dliNotify, PDelayLoadInfo pdli)
+    FARPROC WINAPI CustomDliHook(const unsigned dliNotify, PDelayLoadInfo pdli)
     {
         switch (dliNotify) {
             case dliNotePreLoadLibrary: {

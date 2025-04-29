@@ -629,7 +629,7 @@ void TravelWindow::TravelButton(const GW::Constants::MapID mapid, const int x_id
     if (x_idx != 0) {
         ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
     }
-    const float w = (ImGui::GetWindowWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2 - ImGui::GetStyle().WindowPadding.x;
+    const float w = (ImGui::GetWindowWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2 - 2.f * ImGui::GetStyle().WindowPadding.x;
     bool clicked = false;
     switch (mapid) {
         case GW::Constants::MapID::The_Deep:
@@ -697,6 +697,21 @@ void TravelWindow::Draw(IDirect3DDevice9*)
             TravelButton(GW::Constants::MapID::Gadds_Encampment_outpost, 1);
             TravelButton(GW::Constants::MapID::Urgozs_Warren, 0);
             TravelButton(GW::Constants::MapID::The_Deep, 1);
+            const float w = (ImGui::GetWindowWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2 - 2.f * ImGui::GetStyle().WindowPadding.x;
+            if (ImGui::Button("Zaishen Bounty", {w, 0})) {
+                GW::Chat::SendChat('/', "tp zb");
+            }
+            ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+            if (ImGui::Button("Zaishen Mission", {w, 0})) {
+                GW::Chat::SendChat('/', "tp zm");
+            }
+            if (ImGui::Button("Zaishen Vanquish", {w, 0})) {
+                GW::Chat::SendChat('/', "tp zv");
+            }
+            ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+            if (ImGui::Button("Zaishen Combat", {w, 0})) {
+                GW::Chat::SendChat('/', "tp zc");
+            }
 
             static int editing = -1;
 #
@@ -729,7 +744,7 @@ void TravelWindow::Draw(IDirect3DDevice9*)
                     if (i + 1 < size) {
                         ImGui::SameLine();
                         if (ImGui::ButtonWithHint(ICON_FA_CHEVRON_DOWN, "Move down", ImVec2(btn_w, 0))) {
-                            auto tmp = favourites[i + 1];
+                            const auto tmp = favourites[i + 1];
                             favourites[i + 1] = map_id;
                             favourites[i] = tmp;
                             editing = i + 1;
