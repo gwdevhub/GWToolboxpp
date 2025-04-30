@@ -69,8 +69,6 @@ using namespace GuiUtils;
 using namespace ToolboxUtils;
 
 namespace {
-    GW::MemoryPatcher frame_limit_patches[3];
-
     GW::MemoryPatcher ctrl_click_patch;
     GW::MemoryPatcher gold_confirm_patch;
     GW::MemoryPatcher remove_skill_warmup_duration_patch;
@@ -1370,34 +1368,6 @@ namespace {
         }
     }
 
-    // GW Limits frame rate to 180hz, but this can be patched to the highest refresh rate a connected monitor supports
-    bool ApplyFrameLimiterPatch() {
-        DEVMODE dev_mode = {};
-        dev_mode.dmSize = sizeof(DEVMODE);
-        int mode_num = 0;
-        DWORD max_refresh_rate = 180;
-        while (EnumDisplaySettings(NULL, mode_num++, &dev_mode)) {
-            max_refresh_rate = std::max(dev_mode.dmDisplayFrequency, max_refresh_rate);
-        }
-        if (max_refresh_rate == 180) return true;
-        auto address = GW::Scanner::Find("\xeb\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
-        if (!address) return false;
-        frame_limit_patches[0].SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
-
-        address = GW::Scanner::Find("\x75\x05\xbe\xb4\x00\x00\x00", "xxxxxxx", 3);
-        if (!address) return false;
-        frame_limit_patches[1].SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
-
-        address = GW::Scanner::Find("\x81\xfe\xb4\x00\x00\x00", "xxxxxx", 2);
-        if (!address) return false;
-        frame_limit_patches[2].SetPatch(address, reinterpret_cast<const char*>(&max_refresh_rate), sizeof(max_refresh_rate));
-
-        for (auto& p : frame_limit_patches) {
-            if (p.GetAddress()) p.TogglePatch(true);
-        }
-        return true;
-    }
-
     // Unload steam api dll, seems to cause issues atm
     bool UnloadSteamApiDll() {
         const auto message_addr = GW::Scanner::Find("Failed to load steam .dll", 0, 0, GW::ScannerSection::Section_RDATA);
@@ -1627,8 +1597,6 @@ void GameSettings::Initialize()
         ctrl_click_patch.TogglePatch(true);
     }
 
-    [[maybe_unused]] const auto frame_limiter_patched = ApplyFrameLimiterPatch();
-
     Log::Log("[GameSettings] ctrl_click_patch = %p\n", ctrl_click_patch.GetAddress());
 
     SkillList_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmCtlSkList.cpp", "!obj", 0xc71, 0));
@@ -1676,7 +1644,6 @@ void GameSettings::Initialize()
 
 
 #ifdef _DEBUG
-    ASSERT(frame_limiter_patched);
     ASSERT(ctrl_click_patch.IsValid());
     ASSERT(SkillList_UICallback_Func);
     ASSERT(skip_map_entry_message_patch.IsValid());
@@ -2053,9 +2020,6 @@ void GameSettings::Terminate()
 {
     ToolboxModule::Terminate();
     ctrl_click_patch.Reset();
-    for (auto& p : frame_limit_patches) {
-        p.Reset();
-    }
     gold_confirm_patch.Reset();
     skip_map_entry_message_patch.Reset();
     remove_skill_warmup_duration_patch.Reset();
