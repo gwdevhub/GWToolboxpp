@@ -412,8 +412,13 @@ namespace {
 
         // Find value and set preference
         uint32_t value = 0xff;
-        if (argc > 2 && TextUtils::ParseUInt(argv[2], &value) && SetPreference(pref, value)) {
-            return; // Success
+        if (argc > 2 && TextUtils::ParseUInt(argv[2], &value)) {
+            GW::GameThread::Enqueue([pref, value] {
+                if (!GW::UI::SetPreference(pref, value)) {
+                    Log::Error("Failed to set preference %d to %d", std::to_underlying(pref), value);
+                }
+            });
+            return;
         }
 
         // Print current value
@@ -431,8 +436,13 @@ namespace {
 
         // Find value and set preference
         uint32_t value = 0xff;
-        if (argc > 2 && TextUtils::ParseUInt(argv[2], &value) && SetPreference(pref, value)) {
-            return; // Success
+        if (argc > 2 && TextUtils::ParseUInt(argv[2], &value)) {
+            GW::GameThread::Enqueue([pref, value] {
+                if (!GW::UI::SetPreference(pref, value)) {
+                    Log::Error("Failed to set preference %d to %d", std::to_underlying(pref), value);
+                }
+            });
+            return;
         }
 
         // Print current value
