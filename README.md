@@ -80,13 +80,13 @@ For developers: there are a few things you should take note of:
 * Major contributor to the GW API used, reverse engineering work.
 * Current maintainer of the project.
  
-**[Dub](https://github.com/DubbleClick)**
+**[Marc](https://github.com/henderkes)**
 * Implemented many new features and improvements.
 * Code quality improvements.
 
 **[Itecka]()** 
 * Original creator of a damage monitor, which inspired the toolbox damage monitor.
-* Created original implementation of the Cursor Fix.
+* Created the original implementation of the Cursor Fix.
 
 **[Misty](https://github.com/Hour-of-the-Owl)/[DarkManic](https://github.com/DarkManic)**
 * Extensive work on the site and documentation.
