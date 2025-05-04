@@ -1278,6 +1278,7 @@ namespace {
 
     GW::HookEntry OnPostUIMessage_HookEntry;
 
+
     void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*)
     {
         if (status->blocked)
@@ -1385,8 +1386,8 @@ namespace {
         *steam_api_dll_handle_ptr = nullptr;
         return true;
     }
-}
 
+}   
 bool GameSettings::GetSettingBool(const char* setting)
 {
 #define RETURN_SETTING_IF_MATCH(var) if (strcmp(setting, #var) == 0) return var
@@ -1641,7 +1642,6 @@ void GameSettings::Initialize()
 
     CharacterStatIncreased_Func = (CharacterStatIncreased_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("ChCliApi.cpp", "stat < CHAR_STATS", 0, 0));
     Log::Log("[GameSettings] CharacterStatIncreased_Func = %p\n", (void*)CharacterStatIncreased_Func);
-
 
 #ifdef _DEBUG
     ASSERT(ctrl_click_patch.IsValid());

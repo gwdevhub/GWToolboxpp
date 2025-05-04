@@ -292,6 +292,7 @@ namespace GW {
             kMouseClick                 = 0x22, // wparam = UIPacket::kMouseClick*
             kMouseClick2                = 0x2e, // wparam = UIPacket::kMouseAction*
             kMouseAction                = 0x2f, // wparam = UIPacket::kMouseAction*
+            kSetLayout                  = 0x33,
             kUpdateAgentEffects         = 0x10000000 | 0x9,
             kRerenderAgentModel         = 0x10000000 | 0x7, // wparam = uint32_t agent_id
             kAgentSpeechBubble          = 0x10000000 | 0x17, 
@@ -339,6 +340,9 @@ namespace GW {
             kWorldMapUpdated            = 0x10000000 | 0xC5, // Triggered when an area in the world map has been discovered/updated
             kGuildMemberUpdated         = 0x10000000 | 0xD8, // wparam = { GuildPlayer::name_ptr }
             kShowHint                   = 0x10000000 | 0xDF, // wparam = { uint32_t icon_type, wchar_t* message_enc }
+            kWeaponSetSwapComplete      = 0x10000000 | 0xE7, // wparam = UIPacket::kWeaponSwap*
+            kWeaponSetSwapCancel        = 0x10000000 | 0xE8, 
+			kWeaponSetUpdated           = 0x10000000 | 0xE9,
             kUpdateGoldCharacter        = 0x10000000 | 0xEA, // wparam = { uint32_t unk, uint32_t gold_character }
             kUpdateGoldStorage          = 0x10000000 | 0xEB, // wparam = { uint32_t unk, uint32_t gold_storage }
             kInventorySlotUpdated       = 0x10000000 | 0xEC, // undocumented. Triggered when an item is moved into a slot
@@ -383,6 +387,7 @@ namespace GW {
             kTradeSessionStart          = 0x10000000 | 0x160, // wparam = { trade_state, player_number }
             kTradeSessionUpdated        = 0x10000000 | 0x166, // no args
             kCheckUIState               = 0x10000000 | 0x170, // Undocumented
+            kRedrawItem                 = 0x10000000 | 0x172, // wparam = uint32_t item_id
             kCloseSettings              = 0x10000000 | 0x174, // Undocumented
             kChangeSettingsTab          = 0x10000000 | 0x175, // wparam = uint32_t is_interface_tab
             kGuildHall                  = 0x10000000 | 0x177, // wparam = gh key (uint32_t[4])
@@ -428,6 +433,16 @@ namespace GW {
 
 
         namespace UIPacket {
+            struct kWeaponSwap {
+                uint32_t weapon_bar_frame_id;
+                uint32_t weapon_set_id;
+            };
+            struct kWeaponSetChanged {
+                uint32_t h0000;
+                uint32_t h0004;
+                uint32_t h0008;
+                uint32_t h000c;
+            };
             struct kChangeTarget {
                 uint32_t evaluated_target_id;
                 bool has_evaluated_target_changed;
@@ -1064,7 +1079,7 @@ namespace GW {
             uint32_t component_flags;
             uint32_t tab_index;
             void* event_callback;
-            wchar_t* name_enc;
+            void* wparam;
             wchar_t* component_label;
         };
 
@@ -1072,7 +1087,9 @@ namespace GW {
 
         GWCA_API bool ButtonClick(Frame* btn_frame);
 
-        GWCA_API uint32_t CreateUIComponent(uint32_t parent_frame_id, uint32_t component_flags, uint32_t tab_index, void* event_callback, wchar_t* wparam, const wchar_t* component_label);
+        GWCA_API uint32_t CreateUIComponent(uint32_t parent_frame_id, uint32_t component_flags, uint32_t tab_index, void* event_callback, void* wparam, const wchar_t* component_label);
+
+        GWCA_API bool DestroyUIComponent(Frame* frame);
 
         GWCA_API bool SelectDropdownOption(Frame* frame, uint32_t value);
 

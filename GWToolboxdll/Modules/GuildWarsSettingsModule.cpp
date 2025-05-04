@@ -531,7 +531,7 @@ namespace {
 
     GW::MemoryPatcher display_graphics_version_ui_component;
 
-    using CreateUIComponent_pt = uint32_t(__cdecl*)(int frame_id,int behavior,int child_frame_id,void *ui_callback,wchar_t *name_enc, wchar_t *label);
+    using CreateUIComponent_pt = uint32_t(__cdecl*)(int frame_id,int behavior,int child_frame_id,void *ui_callback,void *name_enc, wchar_t *label);
 
     CreateUIComponent_pt CreateUIComponent = nullptr;
 

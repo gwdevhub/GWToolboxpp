@@ -22,6 +22,7 @@
 #include <Modules/PluginModule.h>
 #include <Modules/QuestModule.h>
 #include <Modules/KeyboardLanguageFix.h>
+#include <Modules/ExtraWeaponSets.h>
 #if 0
 #include <Modules/GWFileRequester.h>
 #endif
@@ -151,7 +152,10 @@ namespace {
         ResignLogModule::Instance(),
         QuestModule::Instance(),
         PartyBroadcast::Instance(),
-        CodeOptimiserModule::Instance(),
+        CodeOptimiserModule::Instance(), 
+#if _DEBUG
+        ExtraWeaponSets::Instance(),
+#endif
         AudioSettings::Instance()
     };
 

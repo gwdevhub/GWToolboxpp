@@ -28,12 +28,12 @@ namespace GW {
         GWCA_API uintptr_t FindInRange(const char* pattern, const char* mask, int offset, DWORD start, DWORD end);
 
         // Actual pattern finder.
-        GWCA_API uintptr_t Find(const char* pattern, const char* mask = 0, int offset = 0, ScannerSection section = Section_TEXT);
+        GWCA_API uintptr_t Find(const char* pattern, const char* mask = 0, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
 
         GWCA_API void GetSectionAddressRange(ScannerSection section, uintptr_t* start = nullptr, uintptr_t* end = nullptr);
 
         // Check if current address is a valid pointer (usually to a data variable in DATA)
-        GWCA_API bool IsValidPtr(uintptr_t address, ScannerSection section = Section_DATA);
+        GWCA_API bool IsValidPtr(uintptr_t address, ScannerSection section = ScannerSection::Section_DATA);
 
         // Returns actual address of a function call given via CALL <near call> instruction e.g. *call_instruction_address = 0xE8 ?? ?? ?? 0xFF
         GWCA_API uintptr_t FunctionFromNearCall(uintptr_t call_instruction_address, bool check_valid_ptr = true);

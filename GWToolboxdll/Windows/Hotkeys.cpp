@@ -812,7 +812,10 @@ void HotkeyUseItem::Execute()
 
 HotkeyEquipItemAttributes::HotkeyEquipItemAttributes(const GW::Item* item)
 {
-    set(item->model_id, item->complete_name_enc ? item->complete_name_enc : item->name_enc, item->info_string, item->mod_struct, item->mod_struct_size);
+    if (!item) 
+        set();
+    else
+        set(item->model_id, item->complete_name_enc ? item->complete_name_enc : item->name_enc, item->info_string, item->mod_struct, item->mod_struct_size);
 }
 
 HotkeyEquipItemAttributes::~HotkeyEquipItemAttributes()

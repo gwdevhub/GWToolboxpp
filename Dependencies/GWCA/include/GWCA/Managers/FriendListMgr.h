@@ -42,5 +42,6 @@ namespace GW {
         GWCA_API bool AddFriend(const wchar_t *name, const wchar_t *alias = nullptr);
         GWCA_API bool AddIgnore(const wchar_t *name, const wchar_t *alias = nullptr);
         GWCA_API bool RemoveFriend(Friend *_friend);
+        GWCA_API bool ChangeFriendType(Friend* _friend, FriendType type);
     };
 }
