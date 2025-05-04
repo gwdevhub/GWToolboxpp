@@ -553,6 +553,8 @@ namespace {
                 {GW::UI::EnumPreference::ShadowQuality, GW::EncStrings::ShadowQuality},
                 {GW::UI::EnumPreference::InterfaceSize, GW::EncStrings::InterfaceSize},
                 {GW::UI::NumberPreference::TextureQuality, GW::EncStrings::TextureQuality},
+                {GW::UI::NumberPreference::TextLanguage, GW::EncStrings::TextLanguage},
+                {GW::UI::NumberPreference::AudioLanguage, GW::EncStrings::AudioLanguage},
                 {GW::UI::FlagPreference::ChannelAlliance, GW::EncStrings::ChannelAlliance},
                 {GW::UI::FlagPreference::ChannelGuild, GW::EncStrings::ChannelGuild},
                 {GW::UI::FlagPreference::ChannelGroup, GW::EncStrings::ChannelTeam},
@@ -564,7 +566,7 @@ namespace {
                 {GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1"},
                 {GW::UI::FlagPreference::EnableGamepad, L"\x108\x107" "Enable Gamepad\x1"},
             };
-            for (auto& it : pref_map) {
+            for (const auto& it : pref_map) {
                 it.label->wstring();
             }
         }
