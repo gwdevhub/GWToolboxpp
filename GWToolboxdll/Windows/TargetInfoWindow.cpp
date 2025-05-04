@@ -24,11 +24,8 @@ namespace {
     // Make sure you pass valid html e.g. start with a < tag
     std::string& strip_tags(std::string& html)
     {
-        while (1) {
-            auto startpos = html.find("<");
-            if (startpos == std::string::npos)
-                break;
-            auto endpos = html.find(">", startpos) + 1;
+        while (const auto startpos = html.find("<") != std::string::npos) {
+            const auto endpos = html.find(">", startpos) + 1;
             if (endpos == std::string::npos)
                 break;
             html.erase(startpos, endpos - startpos);
