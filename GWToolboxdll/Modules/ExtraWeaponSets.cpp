@@ -21,6 +21,8 @@ namespace {
     GW::UI::UIInteractionCallback OnWeaponBarUICallback_Func = 0, OnWeaponBarUICallback_Ret = 0;
     GW::UI::UIInteractionCallback OnWeaponSetUICallback_Func = 0, OnWeaponSetUICallback_Ret = 0;
 
+    GW::WeaponSet* GetWeaponSet(uint32_t weapon_set_id);
+
     GW::Item* FindMatchingItem(HotkeyEquipItemAttributes& attributes)
     {
         const auto inv = GW::Items::GetInventory();
@@ -41,17 +43,16 @@ namespace {
     }
 
     void AssignExtraWeaponSetItems() {
-        const auto found = GW::Items::GetItemByModelId(15971);
-        weapon_set_item_attributes[0][0].set(found);
-
         for (size_t i = 0; i < _countof(weapon_set_item_attributes); i++) {
             const auto weapon_set = GetWeaponSet(i);
             weapon_set_item_attributes[i][0].set(weapon_set->weapon);
             weapon_set_item_attributes[i][1].set(weapon_set->offhand);
         }
+        const auto found = GW::Items::GetItemByModelId(15971);
+        weapon_set_item_attributes[_countof(GW::Inventory::weapon_sets)][0].set(found);
     }
 
-    GW::WeaponSet* GetWeaponSet(uint32_t weapon_set_id);
+
 
     bool GetWeaponSetItems(uint32_t weapon_set_id, GW::Item** item_id_1, GW::Item** item_id_2)
     {
