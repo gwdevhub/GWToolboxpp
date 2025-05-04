@@ -72,6 +72,26 @@ namespace TextUtils {
         return s;
     }
 
+    // trim from end of string (right)
+    std::string& rtrim(std::string& s, const char* t = ws)
+    {
+        s.erase(s.find_last_not_of(t) + 1);
+        return s;
+    }
+
+    // trim from beginning of string (left)
+    std::string& ltrim(std::string& s, const char* t = ws)
+    {
+        s.erase(0, s.find_first_not_of(t));
+        return s;
+    }
+
+    // trim from both ends of string (right then left)
+    std::string& trim(std::string& s, const char* t = ws)
+    {
+        return ltrim(rtrim(s, t), t);
+    }
+
     std::wstring RemovePunctuation(std::wstring s)
     {
         std::erase_if(s, [](auto c) { return std::ispunct(c, std::locale()); });
@@ -546,5 +566,24 @@ namespace TextUtils {
         }
 #pragma warning(pop)
         return result; // Return the modified string
+    }
+
+    std::string rtrim(const std::string& s, const char* t)
+    {
+        auto cpy = s;
+        cpy.erase(s.find_last_not_of(t) + 1);
+        return cpy;
+    }
+
+    std::string& ltrim(const std::string& s, const char* t)
+    {
+        auto cpy = s;
+        cpy.erase(0, s.find_first_not_of(t));
+        return cpy;
+    }
+
+    std::string& trim(const std::string& s, const char* t)
+    {
+        return ltrim(rtrim(s, t), t);
     }
 }

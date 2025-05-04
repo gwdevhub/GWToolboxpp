@@ -7,7 +7,7 @@ project(gwtoolbox)
 set(GWTOOLBOXEXE_VERSION "4.2")
 set(GWTOOLBOXEXE_MODULE_VERSION "4,2,0,0") # used for exe module info. See GWToolbox/GWToolbox.rc
 set(GWTOOLBOXDLL_VERSION "7.4")
-set(GWTOOLBOXDLL_VERSION_BETA "beta3") # can be anything. Marks beta version if not empty.
+set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not empty.
 set(GWTOOLBOX_MODULE_VERSION "7,4,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
 
 

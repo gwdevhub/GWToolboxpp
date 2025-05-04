@@ -21,41 +21,6 @@ namespace {
     std::map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names_by_id;
     std::unordered_map<std::string, GW::Constants::SkillID> skill_ids_by_name;
 
-    const ImVec2 get_texture_size(IDirect3DTexture9* texture)
-    {
-        const ImVec2 uv1 = {0.f, 0.f};
-        if (!texture)
-            return uv1;
-        D3DSURFACE_DESC desc;
-        const HRESULT res = texture->GetLevelDesc(0, &desc);
-        if (!SUCCEEDED(res)) {
-            return uv1; // Don't throw anything into the log here; this function is called every frame by modules that use it!
-        }
-        return {static_cast<float>(desc.Width), static_cast<float>(desc.Height)};
-    }
-
-    const char* ws = " \t\n\r\f\v";
-
-    // trim from end of string (right)
-    inline std::string& rtrim(std::string& s, const char* t = ws)
-    {
-        s.erase(s.find_last_not_of(t) + 1);
-        return s;
-    }
-
-    // trim from beginning of string (left)
-    inline std::string& ltrim(std::string& s, const char* t = ws)
-    {
-        s.erase(0, s.find_first_not_of(t));
-        return s;
-    }
-
-    // trim from both ends of string (right then left)
-    inline std::string& trim(std::string& s, const char* t = ws)
-    {
-        return ltrim(rtrim(s, t), t);
-    }
-
     // Make sure you pass valid html e.g. start with a < tag
     std::string& strip_tags(std::string& html)
     {
@@ -75,38 +40,22 @@ namespace {
     std::string& from_html(std::string& html)
     {
         strip_tags(html);
-        trim(html);
+        TextUtils::trim(html);
         return html;
-    }
-
-    
-    std::string replace_all(const std::string& str, const std::string& find, const std::string& replace)
-    {
-        std::string result;
-        size_t find_len = find.size();
-        size_t pos = 0, from = 0;
-        while (std::string::npos != (pos = str.find(find, from))) {
-            result.append(str, from, pos - from);
-            result.append(replace);
-            from = pos + find_len;
-        }
-        result.append(str, from, std::string::npos);
-        return result;
     }
 
     std::string native_html_to_text(const std::string& html)
     {
         std::string text = html;
-        text = replace_all(text, "&nbsp;", " ");
-        text = replace_all(text, "&amp;", "&");
-        text = replace_all(text, "&lt;", "<");
-        text = replace_all(text, "&gt;", ">");
-        text = replace_all(text, "&quot;", "\"");
-        text = replace_all(text, "&apos;", "'");
-        text = replace_all(text, "&#39;", "'");
+        text = TextUtils::str_replace_all(text, "&nbsp;", " ");
+        text = TextUtils::str_replace_all(text, "&amp;", "&");
+        text = TextUtils::str_replace_all(text, "&lt;", "<");
+        text = TextUtils::str_replace_all(text, "&gt;", ">");
+        text = TextUtils::str_replace_all(text, "&quot;", "\"");
+        text = TextUtils::str_replace_all(text, "&apos;", "'");
+        text = TextUtils::str_replace_all(text, "&#39;", "'");
         return text;
     }
-
 
     struct AgentInfo {
         GuiUtils::EncString name;
@@ -341,7 +290,7 @@ namespace {
                     agent_info->wiki_search_term = TextUtils::WStringToString(
                         TextUtils::SanitizePlayerName(agent_info->name.wstring())
                     );
-                    trim(agent_info->wiki_search_term);
+                    TextUtils::trim(agent_info->wiki_search_term);
                     std::string wiki_url = "https://wiki.guildwars.com/wiki/?search=";
                     wiki_url.append(TextUtils::UrlEncode(agent_info->wiki_search_term, '_'));
                     Resources::Download(wiki_url, AgentInfo::OnFetchedWikiPage, agent_info);
