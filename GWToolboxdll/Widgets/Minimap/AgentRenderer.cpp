@@ -371,7 +371,7 @@ void AgentRenderer::DrawSettings()
         Colors::DrawSettingHueWheel("Player (dead)", &color_player_dead);
         Colors::DrawSettingHueWheel("Signpost", &color_signpost);
         Colors::DrawSettingHueWheel("Item", &color_item);
-        Colors::DrawSettingHueWheel("Hostile (>90%%)", &color_hostile);
+        Colors::DrawSettingHueWheel("Hostile (>90% HP)", &color_hostile);
         Colors::DrawSettingHueWheel("Hostile (dead)", &color_hostile_dead);
         Colors::DrawSettingHueWheel("Neutral", &color_neutral);
         Colors::DrawSettingHueWheel("Ally (player)", &color_ally);
@@ -1238,7 +1238,7 @@ void AgentRenderer::Enqueue(const Shape_e shape, const GW::Agent* agent, const f
             return; // Don't draw target twice
         }
         // Add agent border if applicable
-        if (agent_border_thickness && agent->GetIsLivingType()) {
+        if (agent_border_thickness != 0.f && agent->GetIsLivingType()) {
             Enqueue(shape, pos, size + agent_border_thickness, Colors::ARGB(static_cast<int>(alpha * 0.8), 0, 0, 0));
         }
         // Add target highlight if applicable

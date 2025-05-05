@@ -57,6 +57,8 @@ namespace GW {
         GWCA_API uint32_t GetControlledCharacterId();
         // Get Agent ID of current target
         GWCA_API uint32_t GetTargetId();
+        // Get Agent ID of current evaluated target - either auto target or actual target
+        GWCA_API uint32_t GetEvaluatedTargetId();
 
         // Returns Agentstruct Array of agents in compass range, full structs.
         GWCA_API AgentArray* GetAgentArray();
@@ -67,7 +69,8 @@ namespace GW {
         inline Agent   *GetObservingAgent() { return GetAgentByID(GetObservingId()); }
         // Get Agent of current target
         inline Agent   *GetTarget() { return GetAgentByID(GetTargetId()); }
-
+        // Get Agent of current evaluated target - either auto target or actual target
+        inline Agent   *GetEvaluatedTarget() { return GetAgentByID(GetEvaluatedTargetId()); }
 
         GWCA_API Agent *GetPlayerByID(uint32_t player_id);
 
