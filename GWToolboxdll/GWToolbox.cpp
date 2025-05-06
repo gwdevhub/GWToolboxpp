@@ -339,7 +339,6 @@ namespace {
     bool CanRenderToolbox()
     {
         return !gwtoolbox_disabled
-               && GW::UI::GetIsUIDrawn()
                && !GW::GetPreGameContext()
                && !GW::Map::GetIsInCinematic()
                && !IsIconic(GW::MemoryMgr::GetGWWindowHandle())
@@ -984,7 +983,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 
     const bool world_map_showing = GW::UI::GetIsWorldMapShowing();
 
-    if (!world_map_showing) {
+    if (!world_map_showing && GW::UI::GetIsUIDrawn()) {
         if (minimap_enabled)
             Minimap::Render(device);
         GameWorldRenderer::Render(device);
@@ -1006,25 +1005,27 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     io.AddKeyEvent(ImGuiMod_Shift, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
     io.AddKeyEvent(ImGuiMod_Alt, (GetKeyState(VK_MENU) & 0x8000) != 0);
 
-    std::lock_guard lock(module_management_mutex);
-    // NB: Don't use an iterator here, because it could be invalidated during draw
-    for (size_t i = 0; i < ui_elements_enabled.size(); i++) {
-        const auto uielement = ui_elements_enabled[i];
-        if (world_map_showing && !uielement->ShowOnWorldMap()) {
-            continue;
+    if (GW::UI::GetIsUIDrawn()) {
+        std::lock_guard lock(module_management_mutex);
+        // NB: Don't use an iterator here, because it could be invalidated during draw
+        for (size_t i = 0; i < ui_elements_enabled.size(); i++) {
+            const auto uielement = ui_elements_enabled[i];
+            if (world_map_showing && !uielement->ShowOnWorldMap()) {
+                continue;
+            }
+            uielement->Draw(device);
         }
-        uielement->Draw(device);
-    }
 
 #ifdef _DEBUG
-    // Feel free to uncomment to play with ImGui's features
-    //ImGui::ShowDemoWindow();
-    //ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
+        // Feel free to uncomment to play with ImGui's features
+        //ImGui::ShowDemoWindow();
+        //ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
 #endif
-    ImGui::DrawContextMenu();
-    ImGui::DrawConfirmDialog();
-    if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
-        ImGui::ClampAllWindowsToScreen(gwtoolbox_state < GWToolboxState::DrawTerminating && ToolboxSettings::clamp_windows_to_screen);
+        ImGui::DrawContextMenu();
+        ImGui::DrawConfirmDialog();
+        if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
+            ImGui::ClampAllWindowsToScreen(gwtoolbox_state < GWToolboxState::DrawTerminating && ToolboxSettings::clamp_windows_to_screen);
+    }
     ImGui::EndFrame();
     ImGui::Render();
     ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
