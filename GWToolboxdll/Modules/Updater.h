@@ -30,6 +30,7 @@ public:
     }
 
     static void CheckForUpdate(bool forced = false);
+    static bool IsLatestVersion();
 
     static const GWToolboxRelease* GetCurrentVersionInfo(GWToolboxRelease* out);
 

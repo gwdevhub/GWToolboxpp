@@ -36,6 +36,7 @@ namespace {
 
     Step step = Checking;
 
+    bool has_latest_version = false;
     bool notified = false;
     bool forced_ask = false;
     clock_t last_check = 0;
@@ -257,16 +258,7 @@ void Updater::CheckForUpdate(const bool forced)
     }
     step = Checking;
     last_check = clock();
-    if (!forced && mode == Mode::DontCheckForUpdates) {
-        step = Done;
-        return;
-    }
-
     Resources::EnqueueWorkerTask([forced] {
-        if (!forced && mode == Mode::DontCheckForUpdates) {
-            return; // Do not check for updates
-        }
-
         // Here we are in the worker thread and can do blocking operations
         // Reminder: do not send stuff to gw chat from this thread!
         if (!GetLatestRelease(&latest_release)) {
@@ -279,10 +271,14 @@ void Updater::CheckForUpdate(const bool forced)
         if (latest_release.version == current_release.version) {
             // Version and size match
             step = Done;
+            has_latest_version = true;
             if (forced) {
                 Log::Flash("GWToolbox++ is up-to-date");
             }
             return;
+        }
+        if (!forced && mode == Mode::DontCheckForUpdates) {
+            return; // Do not check for updates
         }
 
         // we have a new version!
@@ -302,6 +298,11 @@ void Updater::CheckForUpdate(const bool forced)
                 break;
         }
     });
+}
+
+bool Updater::IsLatestVersion()
+{
+    return has_latest_version;
 }
 
 void Updater::Draw(IDirect3DDevice9*)
