@@ -6,6 +6,7 @@
 #include <GWCA/Utilities/Scanner.h>
 
 #include <Modules/CrashHandler.h>
+#include <Modules/PluginModule.h>
 #include <Modules/Resources.h>
 #include <Modules/Updater.h>
 #include <GWToolbox.h>
@@ -107,15 +108,25 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigne
 
 LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
 {
+#ifndef _DEBUG
     // Check if user is running the latest version
     if (!Updater::IsLatestVersion()) {
         const std::wstring error_message = L"YOU ARE NOT USING THE LATEST VERSION OF GWTOOLBOX++!\n\n"
                                      L"Please update to the latest version before reporting any issues.\n"
-                                     L"Your crash dump will not be created because the issue may have already been fixed.";
+                                     L"No crash dump will be created because the issue may have already been fixed.";
 
         MessageBoxW(nullptr, error_message.c_str(), L"GWToolbox++ - Outdated Version", MB_OK | MB_ICONERROR);
         abort();
     }
+    if (PluginModule::GetPlugins().size()) {
+        const std::wstring error_message = L"YOU ARE USING PLUGINS!\n\n"
+                                     L"Do not report issues that happen while you are using plugins.\n"
+                                     L"No crash dump will be created because the issue may not come from Toolbox.";
+
+        MessageBoxW(nullptr, error_message.c_str(), L"GWToolbox++ - Plugins used", MB_OK | MB_ICONERROR);
+        abort();
+    }
+#endif
     const std::wstring crash_folder = Resources::GetPath(L"crashes");
 
     const DWORD ProcessId = GetCurrentProcessId();
