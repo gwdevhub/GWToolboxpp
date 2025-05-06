@@ -36,7 +36,7 @@ namespace {
 
     Step step = Checking;
 
-    bool has_latest_version = false;
+    bool is_latest_version = false;
     bool notified = false;
     bool forced_ask = false;
     clock_t last_check = 0;
@@ -271,7 +271,7 @@ void Updater::CheckForUpdate(const bool forced)
         if (latest_release.version == current_release.version) {
             // Version and size match
             step = Done;
-            has_latest_version = true;
+            is_latest_version = true;
             if (forced) {
                 Log::Flash("GWToolbox++ is up-to-date");
             }
@@ -302,7 +302,7 @@ void Updater::CheckForUpdate(const bool forced)
 
 bool Updater::IsLatestVersion()
 {
-    return has_latest_version;
+    return is_latest_version;
 }
 
 void Updater::Draw(IDirect3DDevice9*)

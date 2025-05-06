@@ -7,6 +7,7 @@
 
 #include <Modules/CrashHandler.h>
 #include <Modules/Resources.h>
+#include <Modules/Updater.h>
 #include <GWToolbox.h>
 #include <Defines.h>
 #include <Utils/TextUtils.h>
@@ -106,6 +107,15 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigne
 
 LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
 {
+    // Check if user is running the latest version
+    if (!Updater::IsLatestVersion()) {
+        const std::wstring error_message = L"YOU ARE NOT USING THE LATEST VERSION OF GWTOOLBOX++!\n\n"
+                                     L"Please update to the latest version before reporting any issues.\n"
+                                     L"Your crash dump will not be created because the issue may have already been fixed.";
+
+        MessageBoxW(nullptr, error_message.c_str(), L"GWToolbox++ - Outdated Version", MB_OK | MB_ICONERROR);
+        abort();
+    }
     const std::wstring crash_folder = Resources::GetPath(L"crashes");
 
     const DWORD ProcessId = GetCurrentProcessId();
