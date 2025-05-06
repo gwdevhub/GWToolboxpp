@@ -118,7 +118,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
         MessageBoxW(nullptr, error_message.c_str(), L"GWToolbox++ - Outdated Version", MB_OK | MB_ICONERROR);
         abort();
     }
-    if (PluginModule::GetPlugins().size()) {
+    if (!PluginModule::GetPlugins().empty()) {
         const std::wstring error_message = L"YOU ARE USING PLUGINS!\n\n"
                                      L"Do not report issues that happen while you are using plugins.\n"
                                      L"No crash dump will be created because the issue may not come from Toolbox.";
