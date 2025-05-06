@@ -433,10 +433,7 @@ namespace {
         if (Message == WM_RBUTTONUP) {
             if (right_mouse_down && !mouse_moved_whilst_right_clicking && !io.WantCaptureMouse) {
                 // Tell imgui that the mouse cursor is in its original clicked position - GW messes with the cursor in-game
-#pragma warning( push )
-#pragma warning( disable : 4244 ) // conversion from 'int' to 'float', possible loss of data
-                io.MousePos = {(float)GET_X_LPARAM(right_click_lparam), (float)GET_Y_LPARAM(right_click_lparam)};
-#pragma warning( pop )
+                io.MousePos = {static_cast<float>(GET_X_LPARAM(right_click_lparam)), static_cast<float>(GET_Y_LPARAM(right_click_lparam))};
                 for (const auto m : tb.GetAllModules()) {
                     m->WndProc(WM_GW_RBUTTONCLICK, 0, right_click_lparam);
                 }
@@ -548,7 +545,7 @@ namespace {
                     return true; // if imgui wants them, send just to imgui (above)
                 }
 
-            // send input to chat commands for camera movement
+                // send input to chat commands for camera movement
                 if (ChatCommands::Instance().WndProc(Message, wParam, lParam)) {
                     return true;
                 }
