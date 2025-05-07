@@ -311,7 +311,7 @@ namespace GW {
         static const uint32_t ShadowQuality = 0x578;
         static const uint32_t ShaderQuality = 0xac88;
         static const uint32_t FrameLimiter = 0x13411;
-        static const uint32_t FullScreenGamme = 0x558;
+        static const uint32_t FullScreenGamma = 0x558;
 
         static const uint32_t UseBestTextureFiltering = 0x11de5;
         static const uint32_t EnablePostProcessing = 0x555;

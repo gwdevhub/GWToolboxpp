@@ -413,9 +413,9 @@ namespace {
         // Find value and set preference
         uint32_t value = 0xff;
         if (argc > 2 && TextUtils::ParseUInt(argv[2], &value)) {
-            GW::GameThread::Enqueue([pref, value] {
+            GW::GameThread::Enqueue([pref, value, pref_str = std::wstring(argv[1])] {
                 if (!GW::UI::SetPreference(pref, value)) {
-                    Log::Error("Failed to set preference %d to %d", std::to_underlying(pref), value);
+                    Log::ErrorW(L"Failed to set preference %s to %d", pref_str.c_str(), value);
                 }
             });
             return;
@@ -437,9 +437,9 @@ namespace {
         // Find value and set preference
         uint32_t value = 0xff;
         if (argc > 2 && TextUtils::ParseUInt(argv[2], &value)) {
-            GW::GameThread::Enqueue([pref, value] {
+            GW::GameThread::Enqueue([pref, value, pref_str = std::wstring(argv[1])] {
                 if (!GW::UI::SetPreference(pref, value)) {
-                    Log::Error("Failed to set preference %d to %d", std::to_underlying(pref), value);
+                    Log::ErrorW(L"Failed to set preference %s to %d", pref_str.c_str(), value);
                 }
             });
             return;
@@ -484,7 +484,6 @@ namespace {
         Log::InfoW(L"Current preference value for %s is %d", argv[1], GetPreference(pref));
     }
 
-
     class PrefLabel : public GuiUtils::EncString {
     public:
         PrefLabel(const wchar_t* _enc_string = nullptr)
@@ -516,6 +515,7 @@ namespace {
     }
 
     struct PrefMapCommand {
+
         PrefMapCommand(GW::UI::EnumPreference p, uint32_t enc_string_id)
             : preference_id(std::to_underlying(p))
         {
@@ -556,6 +556,8 @@ namespace {
     {
         if (pref_map.empty()) {
             pref_map = {
+                {GW::UI::FlagPreference::WaitForVSync, GW::EncStrings::VerticalSync},
+                {GW::UI::NumberPreference::FullscreenGamma, GW::EncStrings::FullScreenGamma},
                 {GW::UI::EnumPreference::AntiAliasing, GW::EncStrings::AntiAliasing},
                 {GW::UI::EnumPreference::ShaderQuality, GW::EncStrings::ShaderQuality},
                 {GW::UI::EnumPreference::TerrainQuality, GW::EncStrings::TerrainQuality},
@@ -570,6 +572,7 @@ namespace {
                 {GW::UI::FlagPreference::ChannelGroup, GW::EncStrings::ChannelTeam},
                 {GW::UI::FlagPreference::ChannelEmotes, GW::EncStrings::ChannelEmotes},
                 {GW::UI::FlagPreference::ChannelTrade, GW::EncStrings::ChannelTrade},
+                {GW::UI::NumberPreference::MasterVolume, GW::EncStrings::MasterVolume},
                 {GW::UI::NumberPreference::MusicVolume, GW::EncStrings::MusicVolume},
                 {GW::UI::FlagPreference::DisableMouseWalking, GW::EncStrings::DisableMouseWalking},
                 {GW::UI::FlagPreference::AlwaysShowFoeNames, L"\x108\x107Show Foe Names\x1"},
