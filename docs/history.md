@@ -22,11 +22,16 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Fixed crash when running send chat hotkey whilst chat is focussed
 * [Minor] Updated pcon settings ui
 * [Minor] Vastly improved regex performance, watch out for bugs though
+* [Minor] Added "skills offered" section to target info
+* [Minor] Improved TargetInfo window performance, 
 * [New] ChatSettings: setting to hide all friendly speech bubbles
+* [New] /pref command now supports 'textlanguage' and 'audiolanguage'
+* [New] TargetInfo window now has a setting to automatically hide if no suitable target is selected
 * [New] PconWindow settings: option to block air of superiority messages
 * [New] /hero target [hero_name] added
 * [New] Setting not to draw toolbox during loading screens
 * [New] Game world quest path can now be shown independently from Minimap (settings for it are still in Minimap settings)
+* [New] /spawnblockeditems to spawn all items the Item Filter settings currently have blocked
 
 ## Version 7.3
 * [Fix] Fix keys being stuck when you hold them as you open an imgui modal

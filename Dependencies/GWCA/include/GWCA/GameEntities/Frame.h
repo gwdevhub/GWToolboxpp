@@ -43,7 +43,9 @@ namespace GW {
         GWCA_API bool GetCount(uint32_t* size);
     };
     struct DropdownFrame : UI::Frame {
-        GWCA_API bool SelectOption(uint32_t option);
+        GWCA_API std::map<uint32_t, uint32_t> GetOptions();
+        GWCA_API bool SelectOption(uint32_t value);
+        GWCA_API bool SelectIndex(uint32_t index);
         GWCA_API bool GetCount(uint32_t* count);
         GWCA_API bool GetOptionValue(uint32_t index, uint32_t* value);
     };

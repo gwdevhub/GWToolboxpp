@@ -386,6 +386,8 @@ namespace GW {
             kObjectiveUpdated           = 0x10000000 | 0x157, // wparam = UIPacket::kObjectiveUpdated*
             kTradeSessionStart          = 0x10000000 | 0x160, // wparam = { trade_state, player_number }
             kTradeSessionUpdated        = 0x10000000 | 0x166, // no args
+            kTriggerLogoutPrompt        = 0x10000000 | 0x16C, // no args
+			kToggleOptionsWindow        = 0x10000000 | 0x16D, // no args
             kCheckUIState               = 0x10000000 | 0x170, // Undocumented
             kRedrawItem                 = 0x10000000 | 0x172, // wparam = uint32_t item_id
             kCloseSettings              = 0x10000000 | 0x174, // Undocumented
@@ -881,6 +883,7 @@ namespace GW {
             ControlAction_OpenSkillsAndAttributes = 0x8F,
             ControlAction_OpenQuestLog = 0x8E,
             ControlAction_OpenWorldMap = 0x8C,
+            ControlAction_OpenOptions = 0x8D,
             ControlAction_OpenHero = 0x8A,
 
             // Weapon sets

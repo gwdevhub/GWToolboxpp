@@ -547,4 +547,23 @@ namespace TextUtils {
 #pragma warning(pop)
         return result; // Return the modified string
     }
+
+    std::string rtrim(const std::string& s, const char* t)
+    {
+        auto cpy = s;
+        cpy.erase(s.find_last_not_of(t) + 1);
+        return cpy;
+    }
+
+    std::string ltrim(const std::string& s, const char* t)
+    {
+        auto cpy = s;
+        cpy.erase(0, s.find_first_not_of(t));
+        return cpy;
+    }
+
+    std::string trim(const std::string& s, const char* t)
+    {
+        return ltrim(rtrim(s, t), t);
+    }
 }

@@ -339,7 +339,6 @@ namespace {
     bool CanRenderToolbox()
     {
         return !gwtoolbox_disabled
-               && GW::UI::GetIsUIDrawn()
                && !GW::GetPreGameContext()
                && !GW::Map::GetIsInCinematic()
                && !IsIconic(GW::MemoryMgr::GetGWWindowHandle())
@@ -433,10 +432,7 @@ namespace {
         if (Message == WM_RBUTTONUP) {
             if (right_mouse_down && !mouse_moved_whilst_right_clicking && !io.WantCaptureMouse) {
                 // Tell imgui that the mouse cursor is in its original clicked position - GW messes with the cursor in-game
-#pragma warning( push )
-#pragma warning( disable : 4244 ) // conversion from 'int' to 'float', possible loss of data
-                io.MousePos = {(float)GET_X_LPARAM(right_click_lparam), (float)GET_Y_LPARAM(right_click_lparam)};
-#pragma warning( pop )
+                io.MousePos = {static_cast<float>(GET_X_LPARAM(right_click_lparam)), static_cast<float>(GET_Y_LPARAM(right_click_lparam))};
                 for (const auto m : tb.GetAllModules()) {
                     m->WndProc(WM_GW_RBUTTONCLICK, 0, right_click_lparam);
                 }
@@ -548,7 +544,7 @@ namespace {
                     return true; // if imgui wants them, send just to imgui (above)
                 }
 
-            // send input to chat commands for camera movement
+                // send input to chat commands for camera movement
                 if (ChatCommands::Instance().WndProc(Message, wParam, lParam)) {
                     return true;
                 }
@@ -987,7 +983,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 
     const bool world_map_showing = GW::UI::GetIsWorldMapShowing();
 
-    if (!world_map_showing) {
+    if (!world_map_showing && GW::UI::GetIsUIDrawn()) {
         if (minimap_enabled)
             Minimap::Render(device);
         GameWorldRenderer::Render(device);
@@ -1009,25 +1005,27 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     io.AddKeyEvent(ImGuiMod_Shift, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
     io.AddKeyEvent(ImGuiMod_Alt, (GetKeyState(VK_MENU) & 0x8000) != 0);
 
-    std::lock_guard lock(module_management_mutex);
-    // NB: Don't use an iterator here, because it could be invalidated during draw
-    for (size_t i = 0; i < ui_elements_enabled.size(); i++) {
-        const auto uielement = ui_elements_enabled[i];
-        if (world_map_showing && !uielement->ShowOnWorldMap()) {
-            continue;
+    if (GW::UI::GetIsUIDrawn()) {
+        std::lock_guard lock(module_management_mutex);
+        // NB: Don't use an iterator here, because it could be invalidated during draw
+        for (size_t i = 0; i < ui_elements_enabled.size(); i++) {
+            const auto uielement = ui_elements_enabled[i];
+            if (world_map_showing && !uielement->ShowOnWorldMap()) {
+                continue;
+            }
+            uielement->Draw(device);
         }
-        uielement->Draw(device);
-    }
 
 #ifdef _DEBUG
-    // Feel free to uncomment to play with ImGui's features
-    //ImGui::ShowDemoWindow();
-    //ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
+        // Feel free to uncomment to play with ImGui's features
+        //ImGui::ShowDemoWindow();
+        //ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
 #endif
-    ImGui::DrawContextMenu();
-    ImGui::DrawConfirmDialog();
-    if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
-        ImGui::ClampAllWindowsToScreen(gwtoolbox_state < GWToolboxState::DrawTerminating && ToolboxSettings::clamp_windows_to_screen);
+        ImGui::DrawContextMenu();
+        ImGui::DrawConfirmDialog();
+        if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
+            ImGui::ClampAllWindowsToScreen(gwtoolbox_state < GWToolboxState::DrawTerminating && ToolboxSettings::clamp_windows_to_screen);
+    }
     ImGui::EndFrame();
     ImGui::Render();
     ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());

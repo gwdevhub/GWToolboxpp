@@ -236,6 +236,15 @@ namespace TextUtils {
         return result;
     }
 
+    // trim from end of string (right)
+    std::string rtrim(const std::string& s, const char* t = " \t\n\r\f\v");
+
+    // trim from beginning of string (left)
+    std::string ltrim(const std::string& s, const char* t = " \t\n\r\f\v");
+
+    // trim from both ends of string (right then left)
+    std::string trim(const std::string& s, const char* t = " \t\n\r\f\v");
+
     inline std::string str_replace_all(std::string subject, const std::string_view needle, const std::string_view replace_with)
     {
         size_t pos = 0;
