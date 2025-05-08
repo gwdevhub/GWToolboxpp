@@ -551,14 +551,27 @@ namespace TextUtils {
     std::string rtrim(const std::string& s, const char* t)
     {
         auto cpy = s;
-        cpy.erase(s.find_last_not_of(t) + 1);
+        const auto found = s.find_last_not_of(t);
+        if (found == std::string::npos) {
+            cpy.clear();
+        }
+        else {
+            cpy.erase(found + 1);
+        }
         return cpy;
     }
 
     std::string ltrim(const std::string& s, const char* t)
     {
         auto cpy = s;
-        cpy.erase(0, s.find_first_not_of(t));
+        const auto found = s.find_first_not_of(t);
+        if (found == std::string::npos) {
+            cpy.clear();
+        }
+        else {
+            cpy.erase(0, found);
+        }
+
         return cpy;
     }
 
