@@ -1166,6 +1166,8 @@ namespace {
     }
 
     GW::HookEntry OnPreUIMessage_HookEntry;
+    
+    bool need_to_hide_inventory_window_after_trade = false;
 
     void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*)
     {
@@ -1199,6 +1201,13 @@ namespace {
                 }
             }
             break;
+            case GW::UI::UIMessage::kTradeSessionStart: {
+                // TODO: This only catches the scenario where the trade window is shown straight away (i.e. player initiates trade)
+                // If another player trades you, this ui message will show the trade "prompt" window and won't show inv until you click "view"
+                // 
+                // Probably need to hook into CreateFloatingWindow and block it if the inv window is trying to be opened without user interaction
+                need_to_hide_inventory_window_after_trade = GW::UI::GetFrameByLabel(L"Inventory") == nullptr;
+            } break;
         }
     }
 
@@ -1278,7 +1287,6 @@ namespace {
 
     GW::HookEntry OnPostUIMessage_HookEntry;
 
-
     void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*)
     {
         if (status->blocked)
@@ -1304,6 +1312,9 @@ namespace {
                 }
                 if (focus_window_on_trade) {
                     FocusWindow();
+                }
+                if (need_to_hide_inventory_window_after_trade) {
+                    GW::UI::DestroyUIComponent(GW::UI::GetFrameByLabel(L"Inventory"));
                 }
             }
             break;
@@ -1353,8 +1364,8 @@ namespace {
             break;
             case GW::UI::UIMessage::kDialogButton: {
                 OnDialogButton((GW::UI::DialogButtonInfo*)wParam);
-            }
-            break;
+            } break;
+            
         }
     }
 
@@ -1742,7 +1753,8 @@ void GameSettings::Initialize()
         GW::UI::UIMessage::kSendCallTarget,
         GW::UI::UIMessage::kVanquishComplete,
         GW::UI::UIMessage::kSendDialog,
-        GW::UI::UIMessage::kMapLoaded
+        GW::UI::UIMessage::kMapLoaded, 
+        GW::UI::UIMessage::kTradeSessionStart
     };
     for (const auto message_id : pre_ui_messages) {
         RegisterUIMessageCallback(&OnPreUIMessage_HookEntry, message_id, OnPreUIMessage, -0x8000);
