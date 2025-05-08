@@ -153,7 +153,7 @@ namespace {
         QuestModule::Instance(),
         PartyBroadcast::Instance(),
         CodeOptimiserModule::Instance(), 
-#if _DEBUG
+#if 0
         ExtraWeaponSets::Instance(),
 #endif
         AudioSettings::Instance()

@@ -476,12 +476,15 @@ void RerollWindow::Draw(IDirect3DDevice9*)
         const ImVec2 btn_dim = {btnw, 0.f};
         std::string buf;
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-        for (size_t i = 0; i < available_chars_ptr->size(); i++) {
-            auto& character = available_chars_ptr->at(i);
+        auto available_chars_vector = std::ranges::to<std::vector>(*available_chars_ptr);
+        std::ranges::sort(available_chars_vector, [](const auto& a, const auto& b) {
+            return std::wstring_view(a.player_name) < std::wstring_view(b.player_name);
+        });
+        for (const auto& [idx, character] : available_chars_vector | std::views::enumerate) {
             const wchar_t* player_name = character.player_name;
             uint32_t profession = character.primary();
             buf = TextUtils::WStringToString(player_name);
-            if (i % 2 != 0) {
+            if (idx % 2 != 0) {
                 ImGui::SameLine();
             }
             const auto is_current_char = wcscmp(character.player_name, GW::AccountMgr::GetCurrentPlayerName()) == 0;
