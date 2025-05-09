@@ -13,7 +13,7 @@ ImGuiWindowFlags ToolboxWidget::GetWinFlags(ImGuiWindowFlags flags, const bool n
     flags = ToolboxUIElement::GetWinFlags(flags);
     flags |= ImGuiWindowFlags_NoTitleBar;
     flags |= ImGuiWindowFlags_NoScrollbar;
-    if (noinput_if_frozen && lock_move && lock_size) {
+    if (noinput_if_frozen && lock_move && lock_size && !ToolboxSettings::move_all) {
         flags |= ImGuiWindowFlags_NoInputs;
     }
     return flags;
