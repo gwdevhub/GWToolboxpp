@@ -938,6 +938,17 @@ void GWToolbox::Update(GW::HookStatus*)
         if (c && c->player_name) {
             Log::Flash("Hello!");
             greeted = true;
+            
+            // we wants here to alert the player if he inits GWToolbox++ in a PvP area that it's disabled 
+            // check here if the player is in a PvP area
+            if (ShouldDisableToolbox()) {
+                GW::Chat::WriteChat(
+                    GW::Chat::Channel::CHANNEL_GWCA2,
+                    L"<c=#FF0000>GWToolbox++ is disabled in PvP areas. (It includes Guild Halls)</c>", GWTOOLBOX_SENDER, true);
+                GW::Chat::WriteChat(
+                    GW::Chat::Channel::CHANNEL_WARNING,
+                    L"Toolbox is disabled in PvP areas.", nullptr, true);
+            }
         }
     }
 
