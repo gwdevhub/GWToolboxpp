@@ -251,12 +251,12 @@ namespace CompletionWindow_Constants {
         L"\x8101\x3EC\xC067\xCE23\x645C",  // Hydra
         L"\x8102\x450C",                   // Irukandji
         L"\x108\x107"
-        "Miniature Island Guardian\x1",   // Island Guardian (need)
-        L"\x8101\x3ED\xF9DD\xCFE6\x144F", // Jade Armor
-        L"\x8101\x7309",                  // Juggernaught
-        L"\x8101\x3F3\x870C\xA10D\xB74",  // Jungle Troll
+        L"\x8101\xF80\xE0F2\xABE6\x2AB1",  // Island Guardian
+        L"\x8101\x3ED\xF9DD\xCFE6\x144F",  // Jade Armor
+        L"\x8101\x7309",                   // Juggernaught
+        L"\x8101\x3F3\x870C\xA10D\xB74",   // Jungle Troll
         L"\x108\x107"
-        "Miniature Kanaxai\x1",            // Kanaxai (need)
+        L"\x8101\xF7C\xB5D7\xEC6E\x4FF3",  // Kanaxai
         L"\x8101\x3EE\xFEE1\x8908\xA80",   // Kirin
         L"\x8101\x7305",                   // Koss
         L"\x8101\x9Bc",                    // Kuunavang
@@ -276,7 +276,7 @@ namespace CompletionWindow_Constants {
         L"\x8102\x4511",                   // Ooze
         L"\x8101\x7304",                   // Palawa Joko
         L"\x108\x107"
-        "Miniature Panda\x1",              // Panda (need)
+        L"\x2719\xB8AA\xCFAF\x7B98",        // Panda
         L"\x8101\x66FC\xC207\xBD26\x40CB", // Pig
         L"\x8101\x3C78",                   // Polar Bear
         L"\x8101\x3EF\xE477\xD632\x3AC",   // Prince Rurik
