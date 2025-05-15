@@ -401,6 +401,7 @@ namespace GW {
             kShowHeroPanel              = 0x10000000 | 0x198, // wparam = hero_id
             kMoveItem                   = 0x10000000 | 0x19e, // wparam = { item_id, to_bag, to_slot, bool prompt }
             kInitiateTrade              = 0x10000000 | 0x1A0,
+			kInventoryAgentChanged      = 0x10000000 | 0x1b0, // Triggered when inventory needs updating due to agent change; no args
             kOpenTemplate               = 0x10000000 | 0x1B9, // wparam = GW::UI::ChatTemplate*
 
             // GWCA Client to Server commands. Only added the ones that are used for hooks, everything else goes straight into GW
@@ -1081,7 +1082,7 @@ namespace GW {
             uint32_t frame_id;
             uint32_t component_flags;
             uint32_t tab_index;
-            void* event_callback;
+            UI::UIInteractionCallback event_callback;
             void* wparam;
             wchar_t* component_label;
         };
@@ -1090,7 +1091,7 @@ namespace GW {
 
         GWCA_API bool ButtonClick(Frame* btn_frame);
 
-        GWCA_API uint32_t CreateUIComponent(uint32_t parent_frame_id, uint32_t component_flags, uint32_t tab_index, void* event_callback, void* wparam, const wchar_t* component_label);
+        GWCA_API uint32_t CreateUIComponent(uint32_t parent_frame_id, uint32_t component_flags, uint32_t tab_index, UIInteractionCallback event_callback, void* wparam, const wchar_t* component_label);
 
         GWCA_API bool DestroyUIComponent(Frame* frame);
 
@@ -1112,6 +1113,8 @@ namespace GW {
                 return intermediate;
             }
         }
+
+        GWCA_API bool SetFrameTitle(GW::UI::Frame*, const wchar_t* title);
 
         GWCA_API Frame* GetParentFrame(Frame* frame);
         GWCA_API Frame* GetFrameById(uint32_t frame_id);
@@ -1167,6 +1170,8 @@ namespace GW {
         //GWCA_API void SetPreference(Preference pref, uint32_t value);
         GWCA_API bool SetFrameVisible(UI::Frame* frame, bool flag);
         GWCA_API bool SetFrameDisabled(UI::Frame* frame, bool flag);
+
+        GWCA_API bool AddFrameUIInteractionCallback(GW::UI::Frame*, UI::UIInteractionCallback callback, void* wparam);
 
         GWCA_API bool TriggerFrameRedraw(UI::Frame* frame);
 

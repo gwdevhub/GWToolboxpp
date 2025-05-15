@@ -5,6 +5,7 @@
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/Managers/UIMgr.h>
+#include <map>
 
 namespace GW {
     struct Module;
@@ -42,12 +43,41 @@ namespace GW {
         GWCA_API bool GetItemRect(uint32_t child_offset_id, float rect[4]);
         GWCA_API bool GetCount(uint32_t* size);
     };
-    struct DropdownFrame : UI::Frame {
+
+    struct FrameWithValue {
+        FrameWithValue() = default;
+        virtual ~FrameWithValue() = default;
+        FrameWithValue(const FrameWithValue&) = default;
+        FrameWithValue(FrameWithValue&&) = default;
+        FrameWithValue& operator=(const FrameWithValue&) = default;
+        FrameWithValue& operator=(FrameWithValue&&) = default;
+
+        virtual uint32_t GetValue();
+        virtual bool SetValue(uint32_t value);
+    };
+
+    struct CheckboxFrame final : ButtonFrame, FrameWithValue {
+        GWCA_API bool IsChecked() const;
+        GWCA_API bool SetChecked(bool checked);
+
+        uint32_t GetValue() override;
+        bool SetValue(uint32_t value) override;
+    };
+    struct DropdownFrame final : UI::Frame, FrameWithValue {
         GWCA_API std::map<uint32_t, uint32_t> GetOptions();
         GWCA_API bool SelectOption(uint32_t value);
         GWCA_API bool SelectIndex(uint32_t index);
         GWCA_API bool GetCount(uint32_t* count);
         GWCA_API bool GetOptionValue(uint32_t index, uint32_t* value);
+
+        uint32_t GetValue() override;
+        bool SetValue(uint32_t value) override;
+    };
+    struct SliderFrame final : UI::Frame, FrameWithValue {
+        GWCA_API bool GetValue(uint32_t* selected_value);
+        GWCA_API bool SetValue(uint32_t value) override;
+
+        uint32_t GetValue() override;
     };
 
 }
