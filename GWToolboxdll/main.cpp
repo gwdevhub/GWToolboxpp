@@ -15,7 +15,7 @@ namespace {
     GetUserDefaultLCID_t GetUserDefaultLCID_Func = nullptr, GetUserDefaultLCID_Ret = nullptr;
 
     UINT OnGetUserDefaultLCID() {
-        MH_DisableHook(GetUserDefaultLCID_Func);
+        if(GetUserDefaultLCID_Func) MH_DisableHook(GetUserDefaultLCID_Func);
         GWToolbox::Initialize(dllmodule);
         return GetUserDefaultLCID_Ret();
     }
@@ -39,6 +39,7 @@ namespace {
         ASSERT(!thread_running);
         thread_running = true;
         GWToolbox::MainLoop(dllmodule);
+        if(GetUserDefaultLCID_Func) MH_DisableHook(GetUserDefaultLCID_Func);
         thread_running = false;
         if (!is_detaching) {
             FreeLibraryAndExitThread(dllmodule, EXIT_SUCCESS);

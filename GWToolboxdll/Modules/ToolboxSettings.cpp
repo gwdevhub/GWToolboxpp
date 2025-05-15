@@ -36,6 +36,7 @@
 #include <Modules/CodeOptimiserModule.h>
 #include <Modules/VendorFix.h>
 #include <Modules/AudioSettings.h>
+#include <Modules/HeroEquipmentModule.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -156,6 +157,9 @@ namespace {
 #if 0
         ExtraWeaponSets::Instance(),
 #endif
+#ifdef _DEBUG
+        HeroEquipmentModule::Instance(),
+    #endif
         AudioSettings::Instance()
     };
 
