@@ -7,6 +7,7 @@ Release/
 RelWithDebInfo/
 ipch/
 Archive/
+vcpkg_installed/
 ./bin/
 
 # Cmake generated
