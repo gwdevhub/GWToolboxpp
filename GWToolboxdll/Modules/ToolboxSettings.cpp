@@ -157,9 +157,7 @@ namespace {
 #if 0
         ExtraWeaponSets::Instance(),
 #endif
-#ifdef _DEBUG
         HeroEquipmentModule::Instance(),
-    #endif
         AudioSettings::Instance()
     };
 

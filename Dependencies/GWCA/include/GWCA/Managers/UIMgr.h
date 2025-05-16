@@ -124,10 +124,7 @@ namespace GW {
         struct Frame {
             uint32_t field1_0x0;
             uint32_t field2_0x4;
-            uint32_t frame_layout;
-            uint32_t field3_0xc;
-            uint32_t field4_0x10;
-            uint32_t field5_0x14;
+            RECT layout_position;
             uint32_t visibility_flags;
             uint32_t field7_0x1c;
             uint32_t type;
@@ -293,6 +290,7 @@ namespace GW {
             kMouseClick2                = 0x2e, // wparam = UIPacket::kMouseAction*
             kMouseAction                = 0x2f, // wparam = UIPacket::kMouseAction*
             kSetLayout                  = 0x33,
+            kFrameMessage_0x47          = 0x47, // Multiple uses depending on frame
             kUpdateAgentEffects         = 0x10000000 | 0x9,
             kRerenderAgentModel         = 0x10000000 | 0x7, // wparam = uint32_t agent_id
             kAgentSpeechBubble          = 0x10000000 | 0x17, 
@@ -322,6 +320,7 @@ namespace GW {
             kWriteToChatLogWithSender   = 0x10000000 | 0x7f, // wparam = UIPacket::kWriteToChatLogWithSender*. Triggered by the game when it wants to add a new message to chat.
 			kAllyOrGuildMessage         = 0x10000000 | 0x80, // wparam = UIPacket::kAllyOrGuildMessage*
             kPlayerChatMessage          = 0x10000000 | 0x81, // wparam = UIPacket::kPlayerChatMessage*
+            kFloatingWindowMoved        = 0x10000000 | 0x83, // wparam = frame_id
             kFriendUpdated              = 0x10000000 | 0x89, // wparam = { GW::Friend*, ... }
             kMapLoaded                  = 0x10000000 | 0x8A,
             kOpenWhisper                = 0x10000000 | 0x90, // wparam = wchar* name
@@ -399,6 +398,8 @@ namespace GW {
             kAppendMessageToChat        = 0x10000000 | 0x189, // wparam = wchar_t* message
             kHideHeroPanel              = 0x10000000 | 0x197, // wparam = hero_id
             kShowHeroPanel              = 0x10000000 | 0x198, // wparam = hero_id
+            kGetInventoryAgentId        = 0x10000000 | 0x19c, // wparam = 0, lparam = uint32_t* agent_id_out. Used to fetch which agent is selected
+            kEquipItem                  = 0x10000000 | 0x19d, // wparam = { item_id, agent_id }
             kMoveItem                   = 0x10000000 | 0x19e, // wparam = { item_id, to_bag, to_slot, bool prompt }
             kInitiateTrade              = 0x10000000 | 0x1A0,
 			kInventoryAgentChanged      = 0x10000000 | 0x1b0, // Triggered when inventory needs updating due to agent change; no args
