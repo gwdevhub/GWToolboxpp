@@ -1,8 +1,8 @@
 #pragma once
 
-#include <ToolboxModule.h>
+#include <ToolboxWidget.h>
 
-class HeroEquipmentModule : public ToolboxModule {
+class HeroEquipmentModule : public ToolboxWidget {
     HeroEquipmentModule() = default;
     ~HeroEquipmentModule() override = default;
 
@@ -14,7 +14,7 @@ public:
     }
 
     [[nodiscard]] const char* Name() const override { return "Hero Equipment"; }
-    [[nodiscard]] const char* Description() const override { return "Allows ability for hero equipment to be viewed separately from the in-game Inventory window"; }
+    [[nodiscard]] const char* Description() const override { return "Allows ability for hero equipment to be viewed separately from the in-game Inventory window.\nAdds an inventory icon to title bar of hero panels."; }
 
     bool HasSettings() override { return false; }
     void Initialize() override;
@@ -24,4 +24,5 @@ public:
     void Update(float) override;
     void SaveSettings(ToolboxIni*) override;
     void LoadSettings(ToolboxIni*) override;
+    void Draw(IDirect3DDevice9*) override;
 };

@@ -825,6 +825,11 @@ namespace {
         ImGui::Text("'/flag <number> clear' to clear flag for a hero.");
         ImGui::Bullet();
         ImGui::Text(fps_syntax);
+        if (GWToolbox::IsModuleEnabled("Hero Equipment")) {
+            ImGui::Bullet();
+            ImGui::Text("'/heroinventory [hero_index]' to toggle separate inventory windows for a hero");
+        }
+
         ImGui::Bullet();
         ImGui::Text("'/hero [avoid|guard|attack|target] [hero_index]' to set your hero behavior or target in an explorable area.\n"
             "If hero_index is not provided, all heroes behaviours will be adjusted.");

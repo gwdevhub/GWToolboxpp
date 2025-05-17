@@ -157,7 +157,7 @@ namespace {
 #if 0
         ExtraWeaponSets::Instance(),
 #endif
-        HeroEquipmentModule::Instance(),
+
         AudioSettings::Instance()
     };
 
@@ -180,6 +180,7 @@ namespace {
 #if _DEBUG
         InventoryOverlayWidget::Instance(),
 #endif
+        HeroEquipmentModule::Instance(),
         ActiveQuestWidget::Instance(),
 
     };
