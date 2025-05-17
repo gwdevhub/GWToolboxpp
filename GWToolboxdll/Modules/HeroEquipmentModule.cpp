@@ -25,7 +25,7 @@ namespace {
 
     IDirect3DTexture9** icon_texture = nullptr;
     // Precompute UV coordinates for each state
-    ImVec2 uv_normal[2], uv_hover[2], uv_active[2], uv_enabled[2], uv_disabled[2];
+    ImVec2 uv_normal[2], uv_hover[2], uv_active[2];
 
     constexpr char hero_index_max = 7;
 
@@ -322,7 +322,6 @@ void HeroEquipmentModule::Initialize()
     constexpr int normal_index = 4; // Normal state (image 4)
     constexpr int hover_index = 5;  // Hovered state (image 5)
     constexpr int active_index = 6; // Clicked/Active state (image 6)
-    constexpr int enabled_index = 7; // Enabled state (image 7)
 
     // Helper function to calculate UV coordinates for an icon index
     auto calcUV = [icon_uv_size](int index, ImVec2* uv) {
@@ -335,7 +334,6 @@ void HeroEquipmentModule::Initialize()
     calcUV(normal_index, uv_normal);
     calcUV(hover_index, uv_hover);
     calcUV(active_index, uv_active);
-    calcUV(enabled_index, uv_enabled);
 
 }
 
@@ -437,9 +435,6 @@ void HeroEquipmentModule::Draw(IDirect3DDevice9*)
         if (!ImGui::Begin(window_label, nullptr, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) continue;
         ImVec2 btn_pos = ImGui::GetCursorScreenPos();
 
-        // Track button state for this hero
-        bool is_enabled = GW::UI::GetFrameByLabel(inventory_window_label) != nullptr;
-
         // Create invisible button for interaction
         if (ImGui::InvisibleButton(btn_label, btn_size)) {
             ToggleHeroInventoryWindow(i + 1);
@@ -458,10 +453,6 @@ void HeroEquipmentModule::Draw(IDirect3DDevice9*)
         else if (hovered) {
             uv_min = &uv_hover[0];
             uv_max = &uv_hover[1];
-        }
-        else if (is_enabled) {
-            uv_min = &uv_enabled[0];
-            uv_max = &uv_enabled[1];
         }
 
         // Draw the button texture
