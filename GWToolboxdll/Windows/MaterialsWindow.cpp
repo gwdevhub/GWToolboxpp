@@ -288,15 +288,15 @@ void MaterialsWindow::Update(const float)
         case Transaction::Type::Buy: {
             if (gold_on_character < trans->price) {
                 if (!(manage_gold && gold_on_character + gold_in_storage >= trans->price && GW::Items::WithdrawGold())) {
-                    Log::Warning("Not enough gold");
+                    Cancel("Not enough gold");
                     return; // Don't cancel, we're out of gold
                 }
             }
         } break;
         case Transaction::Type::Sell: {
             if (gold_on_character + trans->price > 99999) {
-                if (!(manage_gold && gold_in_storage < 100000 - trans->price && GW::Items::DepositGold())) {
-                    Log::Warning("Too much gold");
+                if (!(manage_gold && gold_in_storage < 999999 - trans->price && GW::Items::DepositGold())) {
+                    Cancel("Too much gold");
                     return; // Don't cancel, we're out of gold
                 }
             }
