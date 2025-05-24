@@ -37,6 +37,7 @@
 #include <Modules/VendorFix.h>
 #include <Modules/AudioSettings.h>
 #include <Modules/HeroEquipmentModule.h>
+#include <Modules/NPCVoiceModule.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -153,11 +154,12 @@ namespace {
         ResignLogModule::Instance(),
         QuestModule::Instance(),
         PartyBroadcast::Instance(),
-        CodeOptimiserModule::Instance(), 
+        CodeOptimiserModule::Instance(),
 #if 0
         ExtraWeaponSets::Instance(),
 #endif
 
+        NPCVoiceModule::Instance(),
         AudioSettings::Instance()
     };
 
@@ -180,7 +182,7 @@ namespace {
 #if _DEBUG
         InventoryOverlayWidget::Instance(),
 #endif
-        HeroEquipmentModule::Instance(),
+        //HeroEquipmentModule::Instance(),
         ActiveQuestWidget::Instance(),
 
     };

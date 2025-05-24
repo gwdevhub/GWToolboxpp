@@ -118,6 +118,12 @@ namespace TextUtils {
         return s;
     }
 
+
+    std::wstring StripTags(std::wstring_view str)
+    {
+        return ctre_regex_replace<L"<[^>]+>", L"">(str);
+    }
+
     std::string HtmlEncode(const std::string_view s)
     {
         if (s.empty()) {

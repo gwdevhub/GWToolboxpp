@@ -14,6 +14,8 @@ namespace TextUtils {
     std::string PrintFilename(std::string path);
     std::wstring PrintFilename(std::wstring path);
 
+    std::wstring StripTags(std::wstring_view str);
+
     std::string GuidToString(const GUID* guid);
 
     std::string RemovePunctuation(std::string s);
