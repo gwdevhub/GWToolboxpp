@@ -42,7 +42,7 @@ namespace {
         return true;
     }
     GW::UI::Frame* party_window_health_bars = nullptr;
-    GW::UI::UIInteractionCallback OnPartyWindowHealthBars_UICallback_Ret = nullptr;
+    GW::UI::UIInteractionCallback OnPartyWindowHealthBars_UICallback_Ret = 0, OnPartyWindowHealthBars_UICallback_Func = 0;
     void __cdecl OnPartyWindowHealthBars_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
         GW::Hook::EnterHook();
         switch (static_cast<uint32_t>(message->message_id)) {
@@ -142,10 +142,6 @@ void SnapsToPartyWindow::Initialize()
 void SnapsToPartyWindow::Terminate()
 {
     ToolboxWidget::Terminate();
-    if (party_window_health_bars && party_window_health_bars->frame_callbacks[0].callback == OnPartyWindowHealthBars_UICallback) {
-        party_window_health_bars->frame_callbacks[0].callback = OnPartyWindowHealthBars_UICallback_Ret;
-        party_window_health_bars = nullptr;
-    }
     // NB: Don't remove the ui callback! Other modules that extend this class will use it. Toolbox will remove all hooks at the end
 }
 
@@ -193,9 +189,10 @@ bool SnapsToPartyWindow::RecalculatePartyPositions() {
     if (!party_window_health_bars)
         return false;
     ASSERT(party_window_health_bars->frame_callbacks.size());
-    if (party_window_health_bars->frame_callbacks[0].callback != OnPartyWindowHealthBars_UICallback) {
-        OnPartyWindowHealthBars_UICallback_Ret = party_window_health_bars->frame_callbacks[0].callback;
-        party_window_health_bars->frame_callbacks[0].callback = OnPartyWindowHealthBars_UICallback;
+    if (!OnPartyWindowHealthBars_UICallback_Func) {
+        OnPartyWindowHealthBars_UICallback_Func = party_window_health_bars->frame_callbacks[0].callback;
+        GW::Hook::CreateHook((void**)&OnPartyWindowHealthBars_UICallback_Func, OnPartyWindowHealthBars_UICallback, reinterpret_cast<void**>(&OnPartyWindowHealthBars_UICallback_Ret));
+        GW::Hook::EnableHooks(OnPartyWindowHealthBars_UICallback_Func);
     }
 
     const auto player_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 0);

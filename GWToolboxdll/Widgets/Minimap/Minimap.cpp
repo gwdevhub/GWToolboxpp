@@ -81,7 +81,7 @@ namespace {
     GW::MemoryPatcher hide_flagging_controls_patch;
 
     GW::UI::Frame* compass_frame = nullptr;
-    GW::UI::UIInteractionCallback OnCompassFrame_UICallback_Ret = nullptr;
+    GW::UI::UIInteractionCallback OnCompassFrame_UICallback_Ret = 0, OnCompassFrame_UICallback_Func = 0;
     bool compass_position_dirty = true;
 
     // Flagged when terminating minimap
@@ -291,7 +291,7 @@ namespace {
     {
         GW::Hook::EnterHook();
 
-        compass_context = *(CompassContext**)message->wParam;
+        compass_context = message->wParam ? * (CompassContext**)message->wParam : nullptr;
         // frame + 0x40 is the ai control handler bits. Zero it out to prevent actions from interacting with the flagging controls.
         switch (static_cast<uint32_t>(message->message_id)) {
             case 0x8: // Creates frame + 0x40 if it doesn't exist, but also draws it - we use the patch to make sure it never draws.
@@ -347,7 +347,7 @@ namespace {
                     message->message_id = prev;
                 } break;
             default:
-                if (hide_flagging_controls) {
+                if (compass_context && hide_flagging_controls) {
                     // Temporarily nullify the pointer to flagging controls for all other message ids
                     const auto prev = compass_context->ai_controls;
                     compass_context->ai_controls = nullptr;
@@ -370,9 +370,10 @@ namespace {
         compass_frame = GW::UI::GetFrameByLabel(L"Compass");
         if (compass_frame) {
             ASSERT(compass_frame->frame_callbacks.size());
-            if (compass_frame->frame_callbacks[0].callback != OnCompassFrame_UICallback) {
-                OnCompassFrame_UICallback_Ret = compass_frame->frame_callbacks[0].callback;
-                compass_frame->frame_callbacks[0].callback = OnCompassFrame_UICallback;
+            if (!OnCompassFrame_UICallback_Func) {
+                OnCompassFrame_UICallback_Func = compass_frame->frame_callbacks[0].callback;
+                GW::Hook::CreateHook((void**)&OnCompassFrame_UICallback_Func, OnCompassFrame_UICallback, reinterpret_cast<void**>(&OnCompassFrame_UICallback_Ret));
+                GW::Hook::EnableHooks(OnCompassFrame_UICallback_Func);
             }
             compass_position_dirty = true;
         }
@@ -638,9 +639,6 @@ void Minimap::SignalTerminate()
 
     GW::GameThread::Enqueue([] {
         RefreshQuestMarker();
-        if (compass_frame && compass_frame->frame_callbacks[0].callback == OnCompassFrame_UICallback) {
-            compass_frame->frame_callbacks[0].callback = OnCompassFrame_UICallback_Ret;
-        }
         ResetWindowPosition(GW::UI::WindowID_Compass, compass_frame);
         terminating = false;
         });

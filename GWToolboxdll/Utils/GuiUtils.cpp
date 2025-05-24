@@ -501,7 +501,7 @@ namespace GuiUtils {
     {
         if (!sanitised && !decoded_ws.empty()) {
             sanitised = true;
-            decoded_ws = TextUtils::ctre_regex_replace<L"<[^>]+>", L"">(decoded_ws);
+            decoded_ws = TextUtils::StripTags(decoded_ws);
         }
     }
 
