@@ -1019,18 +1019,18 @@ void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
         GW::NPC npc = {0};
         npc.model_file_id = npc_model_file_id;
         npc.npc_flags = flags;
-        npc.primary = 1;
-        npc.scale = scale;
+        npc.primary = (GW::Constants::Profession)1;
+        npc.visual_adjustment = *(GW::CharAdjustment*)(&scale);
         npc.default_level = 0;
         GW::GameThread::Enqueue([npc_id, npc] {
             GW::Packet::StoC::NpcGeneralStats packet{};
             packet.npc_id = npc_id;
             packet.file_id = npc.model_file_id;
             packet.data1 = 0;
-            packet.scale = npc.scale;
+            packet.scale = *(uint32_t*)(&npc.visual_adjustment);
             packet.data2 = 0;
             packet.flags = npc.npc_flags;
-            packet.profession = npc.primary;
+            packet.profession = (uint32_t)npc.primary;
             packet.level = npc.default_level;
             packet.name[0] = 0;
             GW::StoC::EmulatePacket(&packet);

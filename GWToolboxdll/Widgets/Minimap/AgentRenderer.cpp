@@ -31,7 +31,7 @@ constexpr auto AGENTCOLOR_INIFILENAME = L"AgentColors.ini";
 namespace {
 
     GW::HookEntry ChatCmd_HookEntry;
-    unsigned int GetAgentProfession(const GW::AgentLiving* agent)
+    uint32_t GetAgentProfession(const GW::AgentLiving* agent)
     {
         if (!agent) {
             return 0;
@@ -43,7 +43,7 @@ namespace {
         if (!npc) {
             return 0;
         }
-        return npc->primary;
+        return (uint32_t)npc->primary;
     }
 
     bool show_props_on_minimap = false;

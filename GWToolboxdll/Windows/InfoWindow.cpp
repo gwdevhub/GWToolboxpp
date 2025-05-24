@@ -61,6 +61,7 @@
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
 #include <GWCA/Context/GameplayContext.h>
+#include <GWCA/Context/CharContext.h>
 
 namespace {
 
@@ -436,13 +437,15 @@ namespace {
                 ImGui::PushID("npc_info");
                 InfoField("Addr", "%p", npc);
                 InfoField("NPC ID", "%d", npc_id);
-                InfoField("NPC ModelFileID", "0x%X", npc->model_file_id);
+                InfoField("NPC Model File ID", "0x%X", npc->model_file_id);
+                InfoField("NPC Skin File ID", "0x%X", npc->skin_file_id);
+                InfoField("NPC Adjustment", "0x%X", npc->visual_adjustment);
+                InfoField("NPC Appearance", "0x%X", npc->appearance);
                 if (npc->files_count) {
                     InfoField("NPC ModelFile", "0x%X", npc->model_files[0]);
                 }
                 InfoField("NPC Flags", "0x%X", npc->npc_flags);
                 EncInfoField("NPC Name", npc->name_enc);
-                InfoField("NPC Scale", "0x%X", npc->scale);
                 ImGui::PopID();
             }
             const auto map_agent = GW::Agents::GetMapAgentByID(agent->agent_id);
@@ -820,6 +823,13 @@ namespace {
                 ImGui::Unindent();
             }
         }
+        if (ImGui::Button("Open Text Dev Window")) {
+            GW::GameThread::Enqueue([] {
+                GW::GetCharContext()->player_flags |= 0x8;
+                GW::UI::Keypress((GW::UI::ControlAction)0x25);
+                GW::GetCharContext()->player_flags ^= 0x8;
+            });
+        }
 
 
         // For debugging changes to flags/arrays etc
@@ -849,8 +859,9 @@ namespace {
         [[maybe_unused]] const auto secondary = ac ? ac->secondary() : 0;
         [[maybe_unused]] const auto salvage_session = GW::Items::GetSalvageSessionInfo();
 #ifdef _DEBUG
-        //auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"DeckBuilder"), 1);
-        //HighlightFrame(frame);
+        auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Vendor"), 0,0,2);
+        HighlightFrame(frame); 
+
 #endif
     }
 }

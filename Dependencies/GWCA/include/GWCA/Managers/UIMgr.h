@@ -124,7 +124,10 @@ namespace GW {
         struct Frame {
             uint32_t field1_0x0;
             uint32_t field2_0x4;
-            RECT layout_position;
+            uint32_t frame_layout;
+            uint32_t field3_0xc;
+            uint32_t field4_0x10;
+            uint32_t field5_0x14;
             uint32_t visibility_flags;
             uint32_t field7_0x1c;
             uint32_t type;

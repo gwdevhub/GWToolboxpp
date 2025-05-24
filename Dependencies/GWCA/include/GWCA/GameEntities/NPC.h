@@ -3,14 +3,26 @@
 #include <GWCA/GameContainers/Array.h>
 
 namespace GW {
+
+    namespace Constants {
+        enum class Profession : uint32_t;
+    }
+
+    struct CharAdjustment {
+        char hue;
+        char saturation;
+        char lightness;
+        char scale;  // percent
+    };
+
     struct NPC { // total: 0x30/48
         /* +h0000 */ uint32_t model_file_id;
-        /* +h0004 */ uint32_t h0004;
-        /* +h0008 */ uint32_t scale; // I think, 2 highest order bytes are percent of size, so 0x64000000 is 100%
-        /* +h000C */ uint32_t sex;
-        /* +h0010 */ uint32_t npc_flags;
-        /* +h0014 */ uint32_t primary;
-        /* +h0018 */ uint32_t h0018;
+        /* +h0004 */ uint32_t skin_file_id;
+		/* +h0008 */ CharAdjustment visual_adjustment; // may be overridden
+        /* +h000C */ uint32_t appearance;
+        /* +h0010 */ uint32_t npc_flags; // uses CHAR_CLASS_FLAG_* constants
+        /* +h0014 */ GW::Constants::Profession primary;
+        /* +h0018 */ GW::Constants::Profession secondary;
         /* +h001C */ uint8_t  default_level;
         // +h001D    uint8_t  padding;
         // +h001E    uint16_t padding;
