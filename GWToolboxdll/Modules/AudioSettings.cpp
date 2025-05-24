@@ -45,6 +45,12 @@ namespace {
     using PlaySound_pt = GW::RecObject*(__cdecl*)(const wchar_t* filename, SoundProps* props);
     PlaySound_pt PlaySound_Func = nullptr, PlaySound_Ret = nullptr;
 
+    using StopSound_pt = GW::RecObject*(__cdecl*)(GW::RecObject* sound);
+    StopSound_pt StopSound_Func = nullptr, StopSound_Ret = nullptr;
+
+        using CloseHandle_pt = void(__cdecl*)(GW::RecObject* handle);
+    CloseHandle_pt CloseHandle_Func = nullptr;
+
     bool force_play_sound = false;
 
     GW::RecObject* OnPlaySound(wchar_t* filename, SoundProps* props) {
@@ -75,17 +81,36 @@ namespace {
     }
 }
 
-bool AudioSettings::PlaySound(const wchar_t* filename)
+bool AudioSettings::PlaySound(const wchar_t* filename, void** handle_out)
 {
     if (!PlaySound_Func)
         return false;
-    GW::GameThread::Enqueue([filename]() {
+    GW::GameThread::Enqueue([cpy = std::wstring(filename), handle_out]() {
+        if (handle_out && *handle_out) {
+            
+            StopSound(*handle_out);
+            CloseHandle_Func((GW::RecObject*)*handle_out);
+        }
         SoundProps props = { 0 };
         force_play_sound = true;
-        PlaySound_Func(filename, &props);
+        const auto handle = PlaySound_Func(cpy.c_str(), &props);
+        if (handle_out) {
+            *handle_out = handle;
+        }
+        else {
+            CloseHandle_Func(handle);
+        }
         FreeSoundProps(&props);
         force_play_sound = false;
         });
+    return true;
+}
+bool AudioSettings::StopSound(void* handle)
+{
+    if (!StopSound_Func) return false;
+    GW::GameThread::Enqueue([handle]() {
+        StopSound_Func((GW::RecObject*)handle);
+    });
     return true;
 }
 
@@ -97,6 +122,9 @@ void AudioSettings::Initialize()
         GW::Hook::CreateHook((void**)&PlaySound_Func, OnPlaySound, reinterpret_cast<void**>(&PlaySound_Ret));
         GW::Hook::EnableHooks(PlaySound_Func);
     }
+    StopSound_Func = (StopSound_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("SndMain.cpp", "handle", 0x441, 0));
+    StopSound_Func = (StopSound_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("SndMain.cpp", "handle", 0x3ec, 0));
+    CloseHandle_Func = (CloseHandle_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("Handle.cpp", "handle", 0x90, 0));
     GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kMapChange, OnPostUIMessage, 0x8000);
 }
 void AudioSettings::Terminate()
