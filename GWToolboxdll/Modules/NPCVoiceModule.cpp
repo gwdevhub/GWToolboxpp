@@ -1,6 +1,8 @@
 #include "NPCVoiceModule.h"
 #include "stdafx.h"
 
+#include <GWCA/Managers/GameThreadMgr.h>
+
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Map.h>
@@ -48,6 +50,31 @@ namespace {
     enum class TraderType : uint8_t { Merchant, RuneTrader, ArmorCrafter, WeaponCustomizer, MaterialTrader, RareMaterialTrader, DyeTrader, OtherItemCrafter };
 
     std::map<std::tuple<GW::Region, TraderType>, std::wstring> merchant_greetings;
+
+        // Simple log system - store last 5 messages
+    std::deque<std::string> voice_log_messages;
+    const size_t MAX_LOG_MESSAGES = 5;
+
+    // Replace VoiceLog calls with this function
+    void VoiceLog(const char* format, ...)
+    {
+        char buffer[512];
+        va_list args;
+        va_start(args, format);
+        vsnprintf(buffer, sizeof(buffer), format, args);
+        va_end(args);
+
+        // Add to our internal log
+        voice_log_messages.push_front(std::string(buffer));
+
+        // Keep only last 5 messages
+        while (voice_log_messages.size() > MAX_LOG_MESSAGES) {
+            voice_log_messages.pop_back();
+        }
+
+        // Still log to main log system
+        Log::Log("%s", buffer);
+    }
 
         // Utility function to convert Language enum to ElevenLabs language code
     std::string LanguageToAbbreviation(GW::Constants::Language language)
@@ -118,6 +145,7 @@ namespace {
             case 0x1F816: // male dwarf
             case 0x228EF: // ascalonian warrior/ vanguard
             case 0x228ED: // merc registrar
+            case 0x227E5:
                 return *gender = 1, true;
             case 0x3F8F: // female war
             case 0x3F8B:
@@ -125,12 +153,15 @@ namespace {
             case 0x3212:  // female warrior
             case 0x1c601: // female caster
             case 0x227FF:
+            case 0x3F81:
             case 0x3F82: // Istani female henchman
             case 0x3D67: // Factions hench
             case 0x27872: // Rit hench
             case 0x27699: // Assassin hench
             case 0x31D00: // istani female
             case 0x22940:// white mantle
+            case 0x22906:
+            case 0x227E6:
                 return *gender = 0, true;
         }
         return false;
@@ -166,6 +197,10 @@ namespace {
             case 0x228EF:
             case 0x22940:
             case 0x228ED: // merc registrar
+            case 0x3F81:
+            case 0x22906:
+            case 0x227E5:
+            case 0x227E6:
                 return *race = GWRace::HUMAN, true;
             case 0x1F816:
                 return *race = GWRace::DWARF, true;
@@ -229,6 +264,16 @@ namespace {
     bool audio_is_playing = false;
     bool generating_voice = false;
 
+    GW::Vec3f GetPlayerVec3f() {
+        const auto player = GW::Agents::GetControlledCharacter();
+        return player ? GW::Vec3f(player->pos.x, player->pos.y, player->z) : GW::Vec3f();
+    }
+    GW::GamePos GetPlayerPosition()
+    {
+        const auto player = GW::Agents::GetControlledCharacter();
+        return player ? player->pos : GW::GamePos();
+    }
+
     // Function to estimate audio duration from file size (rough approximation)
     float EstimateAudioDuration(const std::filesystem::path& audio_file)
     {
@@ -262,7 +307,7 @@ namespace {
     // Enhanced audio playback function
     void PlayAudioFile(const std::filesystem::path& file_path)
     {
-        // Stop any currently playing audio
+        // Don't play more than one dialog track at once
         if (IsAudioStillPlaying()) {
             return;
         }
@@ -271,13 +316,16 @@ namespace {
         current_audio_duration = EstimateAudioDuration(file_path);
 
         // Play the new audio
-        AudioSettings::PlaySound(file_path.wstring().c_str());
+        const auto pos = GetPlayerVec3f();
+        // 0x1400 means "this audio file in positional", so it will play in 3D space relative to the position given
+        // 0x4 means "this is a dialog audio file"
+        AudioSettings::PlaySound(file_path.wstring().c_str(), &pos, 0x1400 | 0x4);
 
         // Mark as playing and record start time
         audio_is_playing = true;
         audio_start_time = std::chrono::steady_clock::now();
 
-        Log::Log("Playing audio file: %s (estimated duration: %.1fs)", file_path.filename().string().c_str(), current_audio_duration);
+        VoiceLog("Playing audio file: %s (estimated duration: %.1fs)", file_path.filename().string().c_str(), current_audio_duration);
     }
 
     // Extract first sentence from text
@@ -358,6 +406,7 @@ namespace {
         return first_sentence;
     }
 
+    // Sanitise the encoded dialog to be more generic; avoids extra costs in decoding the current player name and numeric args
     std::wstring PreprocessEncodedTextForTTS(const std::wstring& text)
     {
         // replace player name
@@ -424,6 +473,12 @@ namespace {
         if (!agent) return nullptr;
         const wchar_t* name = GW::Agents::GetAgentEncName(agent);
         if (!(name && *name && agent->GetIsLivingType() && agent->IsNPC())) return nullptr;
+
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost 
+            && agent->allegiance != GW::Constants::Allegiance::Npc_Minipet) {
+            // Only process NPCs when in an explorable area; not players, enemies or pets
+            return nullptr;
+        }
 
         // Check for special named NPC first
         auto special_it = special_npc_voices.find(agent->player_number);
@@ -534,12 +589,22 @@ namespace {
     {
         if (status->blocked) return;
         switch (msgid) {
+            case GW::UI::UIMessage::kAgentSpeechBubble: {
+                // Some NPCs don't have a dialog window, but they can still have speech bubbles
+                const auto packet = (GW::UI::UIPacket::kAgentSpeechBubble*)wParam;
+                const auto agent = GW::Agents::GetAgentByID(packet->agent_id);
+                if (GW::GetDistance(agent->pos, GetPlayerPosition()) > GW::Constants::Range::Adjacent) {
+                    return; // Ignore distant NPCs
+                }
+                GenerateVoiceFromEncodedString(packet->message, GetVoiceProfile(packet->agent_id, GW::Map::GetMapID()));
+            } break;
             case GW::UI::UIMessage::kVendorWindow: {
                 const auto packet = (GW::UI::UIPacket::kVendorWindow*)wParam;
                 if (IsEotnRegion()) 
                     return; // EotN vendors already have greetings
                 switch (packet->transaction_type) {
                     case GW::Merchant::TransactionType::CollectorBuy: {
+                        // Find and use the collector's dialog context
                         auto collector_dialog = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Vendor"), 0, 0, 2);
                         const auto context = (wchar_t**)GW::UI::GetFrameContext(collector_dialog);
                         if (context && *context) GenerateVoiceFromEncodedString(*context, GetVoiceProfile(packet->unk, GW::Map::GetMapID()));
@@ -548,6 +613,8 @@ namespace {
                     case GW::Merchant::TransactionType::CrafterBuy:
                     case GW::Merchant::TransactionType::WeaponsmithCustomize:
                     case GW::Merchant::TransactionType::TraderBuy: {
+                        if (GW::UI::GetTextLanguage() != GW::Constants::Language::English) return; // We only support English trader quotes for now
+                        // For traders, find out the name of the trader and determine which greeting to use
                         const auto profile = GetVoiceProfile(packet->unk, GW::Map::GetMapID());
                         GetNPCName(
                             packet->unk,
@@ -570,51 +637,11 @@ namespace {
 
 // Fixed cache key generation that works with Korean/Japanese/Chinese text
     // Fixed cache key generation that works with Korean/Japanese/Chinese text
-    std::string GenerateOptimizedCacheKey(const VoiceProfile* p, const std::wstring& text, GW::Constants::Language language)
+    std::string GenerateOptimizedCacheKey(const VoiceProfile* p, const std::wstring& text, GW::Constants::Language)
     {
-        std::wstring text_hash;
-
-        // Different approaches based on language
-        switch (language) {
-            case GW::Constants::Language::Korean:
-            case GW::Constants::Language::Japanese:
-            case GW::Constants::Language::TraditionalChinese: {
-                // For Asian languages: just take first few characters (no word concept)
-                size_t max_chars = std::min(text.length(), size_t(8)); // First 8 characters
-                for (size_t i = 0; i < max_chars; ++i) {
-                    text_hash += text[i]; // Keep original characters, no tolower
-                }
-                break;
-            }
-
-            default: {
-                // For European languages: use the original word-start logic
-                bool at_word_start = true;
-                for (wchar_t c : text) {
-                    if (std::isspace(c) || std::ispunct(c)) {
-                        at_word_start = true;
-                    }
-                    else if (at_word_start) {
-                        // For ASCII characters, use tolower; for others, keep as-is
-                        if (c >= 0 && c <= 127) {
-                            text_hash += static_cast<wchar_t>(std::tolower(static_cast<char>(c)));
-                        }
-                        else {
-                            text_hash += c; // Keep Unicode characters as-is
-                        }
-                        at_word_start = false;
-                    }
-                }
-                break;
-            }
-        }
-
-        // If text_hash is empty, use a hash of the full text
-        if (text_hash.empty()) {
-            text_hash = L"hash" + std::to_wstring(std::hash<std::wstring>{}(text));
-        }
-
-        return std::format("{}_{}_{}_{}.mp3", p->voice_id, TextUtils::WStringToString(text_hash), text.size(), LanguageToAbbreviation(language));
+        // Just hash the text - works with ANY language
+        auto text_hash = std::hash<std::wstring>{}(text);
+        return std::format("{}_{:x}_{}.mp3", p->voice_id, text_hash,text.size());
     }
 
     size_t CurlWriteCallback(void* contents, size_t size, size_t nmemb, std::string* userp)
@@ -629,13 +656,13 @@ namespace {
     {
         std::string audio_data;
         if (!openai_api_key.length()) {
-            Log::Log("No OpenAI API Key");
+            VoiceLog("No OpenAI API Key");
             return audio_data;
         }
         CURL* curl = curl_easy_init();
 
         if (!curl) {
-            Log::Log("Failed to initialize CURL for OpenAI");
+            VoiceLog("Failed to initialize CURL for OpenAI");
             return audio_data;
         }
 
@@ -643,7 +670,7 @@ namespace {
             std::string url = "https://api.openai.com/v1/audio/speech";
 
             nlohmann::json request_body;
-            request_body["model"] = "gpt-4o-mini"; // Use cheaper tts-1 model, or tts-1-hd for higher quality
+            request_body["model"] = "gpt-4o-mini-tts"; // Use cheaper tts-1 model, or tts-1-hd for higher quality
             request_body["input"] = TextUtils::WStringToString(text);
 
             // Map gender to OpenAI voices
@@ -652,7 +679,7 @@ namespace {
                 voice_name = "nova"; // Female voice
             }
             else {
-                voice_name = "echo"; // Male voice
+                voice_name = "onyx"; // Male voice
             }
             request_body["voice"] = voice_name;
             request_body["response_format"] = "mp3";
@@ -684,16 +711,15 @@ namespace {
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
 
             if (res != CURLE_OK) {
-                Log::Log("CURL request failed for OpenAI: %s", curl_easy_strerror(res));
+                VoiceLog("CURL request failed for OpenAI: %s", curl_easy_strerror(res));
                 audio_data.clear();
             }
             else if (response_code != 200) {
-                Log::Log("OpenAI API returned error code: %ld", response_code);
-                Log::Log("%s", audio_data.c_str());
+                VoiceLog("OpenAI API returned error code: %ld\n%s", response_code, audio_data.c_str());
                 audio_data.clear();
             }
             else {
-                Log::Log("OpenAI voice generation successful, received %zu bytes", audio_data.size());
+                VoiceLog("OpenAI voice generation successful, received %zu bytes", audio_data.size());
             }
 
             // Cleanup
@@ -701,7 +727,7 @@ namespace {
             curl_easy_cleanup(curl);
 
         } catch (const std::exception& e) {
-            Log::Log("Exception in OpenAI voice generation: %s", e.what());
+            VoiceLog("Exception in OpenAI voice generation: %s", e.what());
             curl_easy_cleanup(curl);
             audio_data.clear();
         }
@@ -719,7 +745,7 @@ namespace {
         CURL* curl = curl_easy_init();
 
         if (!curl) {
-            Log::Log("Failed to initialize CURL");
+            VoiceLog("Failed to initialize CURL");
             return audio_data;
         }
 
@@ -731,7 +757,7 @@ namespace {
 
             request_body["text"] = TextUtils::WStringToString(text);
 
-            request_body["model_id"] = "eleven_turbo_v2_5"; // Cheaper option
+            request_body["model_id"] = "eleven_flash_v2_5"; // Cheaper option
 
             voice_settings["stability"] = profile->stability;
             voice_settings["similarity_boost"] = profile->similarity;
@@ -746,7 +772,7 @@ namespace {
             struct curl_slist* headers = nullptr;
             headers = curl_slist_append(headers, ("xi-api-key: " + elevenlabs_api_key).c_str());
             headers = curl_slist_append(headers, "Content-Type: application/json");
-            headers = curl_slist_append(headers, "Accept: audio/mp3");
+            headers = curl_slist_append(headers, "Accept: audio/mpeg");
 
             // Configure CURL
             const auto request_str = request_body.dump();
@@ -768,15 +794,15 @@ namespace {
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
 
             if (res != CURLE_OK) {
-                Log::Log("CURL request failed: %s", curl_easy_strerror(res));
+                VoiceLog("CURL request failed: %s", curl_easy_strerror(res));
                 audio_data.clear();
             }
             else if (response_code != 200) {
-                Log::Log("ElevenLabs API returned error code: %ld", response_code);
+                VoiceLog("ElevenLabs API returned error code: %ld\n%s", response_code,audio_data.c_str());
                 audio_data.clear();
             }
             else {
-                Log::Log("Voice generation successful, received %zu bytes", audio_data.size());
+                VoiceLog("Voice generation successful, received %zu bytes", audio_data.size());
             }
 
             // Cleanup
@@ -784,7 +810,7 @@ namespace {
             curl_easy_cleanup(curl);
 
         } catch (const std::exception& e) {
-            Log::Log("Exception in voice generation: %s", e.what());
+            VoiceLog("Exception in voice generation: %s", e.what());
             curl_easy_cleanup(curl);
             audio_data.clear();
         }
@@ -821,7 +847,7 @@ namespace {
 
             auto audio_data = GenerateVoice(message, profile, language);
             if (!audio_data.size()) {
-                Log::Log("Failed to generate voice data");
+                VoiceLog("Failed to generate voice data");
                 return generating_voice = false;
             }
 
@@ -832,13 +858,13 @@ namespace {
             Resources::EnsureFolderExists(path.parent_path());
             FILE* fp = fopen(path.string().c_str(), "wb");
             if (!fp) {
-                Log::Log("Failed to open file for writing: %s", path.string().c_str());
+                VoiceLog("Failed to open file for writing: %s", path.string().c_str());
                 return generating_voice = false;
             }
             const auto written = fwrite(audio_data.data(), sizeof(audio_data[0]), audio_data.size(), fp);
             fclose(fp);
             if (written < 1) {
-                Log::Log("Failed to write audio data to file: %s", path.string().c_str());
+                VoiceLog("Failed to write audio data to file: %s", path.string().c_str());
                 return generating_voice = false;
             }
 
@@ -1093,14 +1119,12 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::DyeTrader}] = L"Shadow colors from the realm of anguish.";
     merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::OtherItemCrafter}] = L"Greetings, shadow-walker, I craft with the essence of torment.";
 
-    const GW::UI::UIMessage messages[] = {GW::UI::UIMessage::kDialogBody, GW::UI::UIMessage::kVendorWindow};
+    const GW::UI::UIMessage messages[] = {GW::UI::UIMessage::kDialogBody, GW::UI::UIMessage::kVendorWindow, GW::UI::UIMessage::kAgentSpeechBubble};
 
     for (auto message_id : messages) {
         GW::UI::RegisterUIMessageCallback(&PreUIMessage_HookEntry, message_id, OnPreUIMessage, -0x1);
         GW::UI::RegisterUIMessageCallback(&UIMessage_HookEntry, message_id, OnPostUIMessage, 0x4000);
     }
-
-    Log::Info("NPC Voice Module initialized with AudioPlayerModule integration");
 }
 
 void NPCVoiceModule::Terminate()
@@ -1115,22 +1139,13 @@ void NPCVoiceModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
 
-    // Load TTS provider
-    int provider_int = ini->GetLongValue(Name(), "tts_provider", static_cast<int>(TTSProvider::ElevenLabs));
-    current_tts_provider = static_cast<TTSProvider>(provider_int);
-
-    // Load API keys
-    std::string temp_key = ini->GetValue(Name(), "elevenlabs_api_key", "");
-    if (!temp_key.empty()) {
-        elevenlabs_api_key = temp_key;
-        strncpy_s(elevenlabs_api_key_buffer, temp_key.c_str(), sizeof(elevenlabs_api_key_buffer) - 1);
-    }
-
-    temp_key = ini->GetValue(Name(), "openai_api_key", "");
-    if (!temp_key.empty()) {
-        openai_api_key = temp_key;
-        strncpy_s(openai_api_key_buffer, temp_key.c_str(), sizeof(openai_api_key_buffer) - 1);
-    }
+    auto tmp = (uint32_t)current_tts_provider;
+    LOAD_UINT(tmp);
+    current_tts_provider = static_cast<TTSProvider>(tmp);
+    LOAD_STRING(elevenlabs_api_key);
+    strncpy_s(elevenlabs_api_key_buffer, elevenlabs_api_key.c_str(), sizeof(elevenlabs_api_key_buffer) - 1);
+    LOAD_STRING(openai_api_key);
+    strncpy_s(openai_api_key_buffer, openai_api_key.c_str(), sizeof(openai_api_key_buffer) - 1);
 }
 
 void NPCVoiceModule::SaveSettings(ToolboxIni* ini)
@@ -1138,15 +1153,9 @@ void NPCVoiceModule::SaveSettings(ToolboxIni* ini)
     ToolboxModule::SaveSettings(ini);
 
     // Save TTS provider
-    ini->SetLongValue(Name(), "tts_provider", static_cast<int>(current_tts_provider));
-
-    // Save API keys
-    if (strlen(elevenlabs_api_key_buffer) > 0) {
-        ini->SetValue(Name(), "elevenlabs_api_key", elevenlabs_api_key_buffer);
-    }
-    if (strlen(openai_api_key_buffer) > 0) {
-        ini->SetValue(Name(), "openai_api_key", openai_api_key_buffer);
-    }
+    SAVE_UINT(current_tts_provider);
+    SAVE_STRING(elevenlabs_api_key);
+    SAVE_STRING(openai_api_key);
 }
 
 void NPCVoiceModule::DrawSettingsInternal()
@@ -1163,26 +1172,52 @@ void NPCVoiceModule::DrawSettingsInternal()
 
     ImGui::Separator();
     ImGui::Text("API Configuration:");
-
+    const ImColor col(102, 187, 238, 255);
     // Show appropriate API key input based on selected provider
     if (current_tts_provider == TTSProvider::ElevenLabs) {
-        if (ImGui::InputText("ElevenLabs API Key", elevenlabs_api_key_buffer, sizeof(elevenlabs_api_key_buffer), ImGuiInputTextFlags_Password)) {
+        if (ImGui::InputText("ElevenLabs API Key", elevenlabs_api_key_buffer, sizeof(elevenlabs_api_key_buffer))) {
             elevenlabs_api_key = elevenlabs_api_key_buffer;
         }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Get your API key from https://elevenlabs.io/");
+        
+        ImGui::TextColored(col.Value, "Click Here to get an ElevenLabs API Key");
+        if (ImGui::IsItemClicked()) {
+            GW::GameThread::Enqueue([this]() {
+                SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)"https://elevenlabs.io/app/settings/api-keys");
+            });
         }
     }
     else {
-        if (ImGui::InputText("OpenAI API Key", openai_api_key_buffer, sizeof(openai_api_key_buffer), ImGuiInputTextFlags_Password)) {
+        if (ImGui::InputText("OpenAI API Key", openai_api_key_buffer, sizeof(openai_api_key_buffer))) {
             openai_api_key = openai_api_key_buffer;
         }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Get your API key from https://platform.openai.com/api-keys");
+        ImGui::TextColored(col.Value, "Click Here to get an OpenAI API Key");
+        if (ImGui::IsItemClicked()) {
+            GW::GameThread::Enqueue([this]() {
+                SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)"https://platform.openai.com/api-keys");
+            });
         }
     }
 
     ImGui::Separator();
     ImGui::Checkbox("Only process the first dialog of an NPC", &only_use_first_dialog);
     ImGui::ShowHelp("If enabled, only the first dialog of an NPC will be processed for TTS, similar to Eye of the North dialog.");
+    // Simple log display
+    ImGui::Separator();
+    ImGui::Text("Recent Activity:");
+
+    if (voice_log_messages.empty()) {
+        ImGui::TextDisabled("No recent activity");
+    }
+    else {
+        // Show messages in a read-only text box
+        std::string combined_log;
+        for (const auto& msg : voice_log_messages) {
+            if (!combined_log.empty()) {
+                combined_log += "\n";
+            }
+            combined_log += msg;
+        }
+
+        ImGui::InputTextMultiline("##VoiceLog", const_cast<char*>(combined_log.c_str()), combined_log.size(), ImVec2(-1, 100), ImGuiInputTextFlags_ReadOnly);
+    }
 }

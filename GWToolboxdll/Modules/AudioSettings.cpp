@@ -20,27 +20,26 @@ namespace {
 
     struct SoundProps {
         uint32_t flags;
-        uint32_t h0004[11];
+        uint32_t h0004[4];
+        uint32_t h0014; 
+        uint32_t h0018; 
+        uint32_t h001c;
+        GW::Vec3f position;
+        uint32_t h002c;
         void* h0030;
         uint32_t h0034[5];
         void* h0048;
         uint32_t h004c[5];
         void* h0060;
         uint32_t h0064[5];
+        ~SoundProps() {
+            if (h0030) GW::MemoryMgr::MemFree(h0030);
+            if (h0048) GW::MemoryMgr::MemFree(h0048);
+            if (h0060) GW::MemoryMgr::MemFree(h0060);
+        }
     };
 
     static_assert(sizeof(SoundProps) == 0x78);
-
-    void FreeSoundProps(SoundProps* props) {
-        if (!props) return;
-        if (props->h0030)
-            GW::MemoryMgr::MemFree(props->h0030);
-        if (props->h0048)
-            GW::MemoryMgr::MemFree(props->h0048);
-        if (props->h0060)
-            GW::MemoryMgr::MemFree(props->h0060);
-        memset(props, 0, sizeof(*props));
-    }
 
     using PlaySound_pt = GW::RecObject*(__cdecl*)(const wchar_t* filename, SoundProps* props);
     PlaySound_pt PlaySound_Func = nullptr, PlaySound_Ret = nullptr;
@@ -81,26 +80,20 @@ namespace {
     }
 }
 
-bool AudioSettings::PlaySound(const wchar_t* filename, void** handle_out)
+bool AudioSettings::PlaySound(const wchar_t* filename, const GW::Vec3f* position, uint32_t flags)
 {
-    if (!PlaySound_Func)
+    if (!(PlaySound_Func && filename))
         return false;
-    GW::GameThread::Enqueue([cpy = std::wstring(filename), handle_out]() {
-        if (handle_out && *handle_out) {
-            
-            StopSound(*handle_out);
-            CloseHandle_Func((GW::RecObject*)*handle_out);
-        }
-        SoundProps props = { 0 };
+    auto props = new SoundProps();
+    if (position) {
+        props->position = *position;
+    }
+    props->flags = flags;
+    GW::GameThread::Enqueue([cpy = std::wstring(filename), props]() {
         force_play_sound = true;
-        const auto handle = PlaySound_Func(cpy.c_str(), &props);
-        if (handle_out) {
-            *handle_out = handle;
-        }
-        else {
-            CloseHandle_Func(handle);
-        }
-        FreeSoundProps(&props);
+        const auto handle = PlaySound_Func(cpy.c_str(), props);
+        CloseHandle_Func(handle);
+        delete props;
         force_play_sound = false;
         });
     return true;

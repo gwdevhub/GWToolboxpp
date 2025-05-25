@@ -18,7 +18,7 @@
 #include <unordered_map>
 #include <vector>
 
-enum class TTSProvider { ElevenLabs = 0, OpenAI = 1 };
+enum class TTSProvider : uint32_t { ElevenLabs = 0, OpenAI = 1 };
 
 class NPCVoiceModule : public ToolboxModule {
 public:
