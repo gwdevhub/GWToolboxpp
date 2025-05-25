@@ -10,15 +10,32 @@ The Chat Filter module in GWToolbox++ allows you to customize which messages app
 
 ### Drops
 - Filter messages for rare and common item drops for you and your allies
-- Filter messages for allies picking up rare and common items
+- Filter messages for you or allies picking up rare and common items
+- Filter salvaging messages
+- Filter ashes dropped messages
 
-Note: "Rare" items include anything with a yellow/gold name, Globs of Ectoplasm, or Obsidian Shards. "Common" refers to all other items.
+Note: "Rare" items include anything with a yellow/gold name, Globs of Ectoplasm, Obsidian Shards, or Lockpicks. "Common" refers to all other items.
 
 ### Announcements
+- Filter guild announcements
 - Filter Hall of Heroes winner announcements
 - Filter Favor of the Gods announcements
 - Filter "You have been playing for..." messages
 - Filter "[Player X] has achieved [title]..." messages
+- Filter faction gain messages
+- Filter challenge mission messages (e.g., "Hold-out bonus: +2 points")
+
+### Warnings and Errors
+- Filter "Invalid target" messages (including obstructed view, out of range, etc.)
+- Filter "Inventory is full" messages
+- Filter chest opening messages (locked, empty, in use)
+- Filter "Item already identified" messages
+- Filter "Not enough energy/adrenaline" messages
+- Filter "Unable to use item" messages (including restrictions on usage)
+
+### Targeting Messages
+- Filter targeting messages from yourself ("I'm following...", "I'm attacking...", etc.)
+- Filter targeting messages from others
 
 ### Other Messages
 - Filter skill point gain messages
@@ -26,7 +43,7 @@ Note: "Rare" items include anything with a yellow/gold name, Globs of Ectoplasm,
 - Filter Nine Rings game messages
 - Filter Lunar fortune messages
 - Filter "No one hears you..." messages
-- Filter away status messages
+- Filter away status messages ("Player X might not reply because their status is set to away")
 
 ### Custom Filters
 You can create custom filters to block specific content:

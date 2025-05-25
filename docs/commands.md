@@ -17,6 +17,9 @@ GWToolbox++ supports a variety of chat commands that enhance your gameplay exper
 - `/borderless [on|off]`: Toggle borderless window mode.
 - `/chest` or `/xunlai`: Open Xunlai Chest in a city or outpost.
 - `/dialog [id]`: Send a dialog (use hex number for `[id]`, e.g., `/dialog 0x99`).
+- `/dialog take`: Take the first available quest from an NPC.
+- `/fps [limit]`: Set a frame rate limit for Guild Wars (15-400), or display the current limit. Use `/fps 0` to remove the limit.
+- `/morale`: Display your current morale boost or death penalty in chat.
 - `/pcons [on|off]`: Turn [pcons](pcons) on/off. Using `/pcons` alone will toggle.
 - `/tb close`, `/tb quit`, or `/tb exit`: Completely close Toolbox and all its windows.
 - `/tb reset`: Move [Settings](settings) and the main Toolbox window to the top-left corner of the screen.
@@ -43,6 +46,7 @@ GWToolbox++ supports a variety of chat commands that enhance your gameplay exper
   - `/target ee`: Target the furthest ally within spellcast range in the direction you're facing (for Ebon Escape).
   - `/target hos`: Target the closest enemy or ally within spellcast range in the direction you're facing away from (for Viper's Defense or Heart of Shadow).
 - `/flag`: Used to flag heroes on the GWToolbox minimap. See [Minimap](minimap#chat-commands) for all options.
+- `/call`: Call a target in chat (similar to Ctrl+Shift+Space).
 
 ## Damage and Skill Commands
 
@@ -52,6 +56,8 @@ GWToolbox++ supports a variety of chat commands that enhance your gameplay exper
 ## Travel and Navigation Commands
 
 - `/to [dest]`, `/tp [dest]`, or `/travel [dest]`: Map travel to the specified outpost. See [Travel](travel#chat-commands) for all options.
+- `/enter`: Enter a mission or challenge when in an outpost (if you're the party leader).
+- `/enter (fow|uw)`: Enter Fissure of Woe or Underworld from Temple of the Ages, Zin Ku Corridor, Chantry of Secrets, or Embark Beach.
 
 ## Appearance Commands
 
@@ -71,9 +77,26 @@ GWToolbox++ supports a variety of chat commands that enhance your gameplay exper
 - `/pingitem <equipped_item>`: Ping your equipment in chat.
   - `<equipped_item>` options: armor, head, chest, legs, boots, gloves, offhand, weapon, weapons, costume
 
-## Chat Commands
+## Storage and Inventory Commands
+
+- `/withdraw [quantity] [model_id1] [model_id2] ...`: Withdraw items from storage.
+  - `/withdraw (amount|max|all)`: Withdraw gold from storage. Use 'k' or 'p' suffix for platinum (e.g., `/withdraw 100k`).
+  - `/withdraw [quantity] [model_id1] [model_id2] ...`: Withdraw specific items from storage up to the specified quantity.
+- `/deposit [quantity] [model_id1] [model_id2] ...`: Deposit items to storage.
+  - `/deposit (amount|max|all)`: Deposit gold to storage. Use 'k' or 'p' suffix for platinum (e.g., `/deposit 100k`).
+  - `/deposit [quantity] [model_id1] [model_id2] ...`: Deposit specific items to storage up to the specified quantity.
+
+## Game Mode Commands
+
+- `/nm` or `/normalmode`: Set the game to Normal Mode.
+- `/hm` or `/hardmode`: Set the game to Hard Mode.
+
+## Miscellaneous Commands
 
 - `/chat [all|guild|team|trade|alliance|whisper]`: Open or switch to the specified chat channel.
+- `/duncan`: Display the status of "The Last Hierophant" quest, showing which bosses have been defeated.
+- `/hom [player_name|me]`: Display Hall of Monuments achievements for a player. Use with no arguments to check the targeted player, "me" for yourself, or a player name.
+- `/scwiki [search_term]`: Search the Guild Wars wiki for the specified term.
 
 For more detailed information on specific features, please refer to their respective documentation pages.
 [back](./)
