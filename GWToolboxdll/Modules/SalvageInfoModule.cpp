@@ -181,7 +181,7 @@ namespace {
         const auto collection_time = DailyQuests::GetTimestampFromNicholasTheTraveller(nicholas_info);
         const auto current_time = time(nullptr);
         NewLineIfNotEmpty(description);
-        if (abs(collection_time - current_time) < 86400) {
+        if (collection_time <= current_time) {
             description += std::format(L"{}\x10a\x108\x107Nicholas The Traveller collects {} of these right now!\x1\x1", GW::EncStrings::ItemUnique, nicholas_info->quantity);
         }
         else {
