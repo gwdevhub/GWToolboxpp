@@ -567,6 +567,7 @@ namespace {
                 {GW::UI::NumberPreference::TextureQuality, GW::EncStrings::TextureQuality},
                 {GW::UI::NumberPreference::TextLanguage, GW::EncStrings::TextLanguage},
                 {GW::UI::NumberPreference::AudioLanguage, GW::EncStrings::AudioLanguage},
+                {GW::UI::NumberPreference::ClockMode, GW::EncStrings::InGameClock},
                 {GW::UI::FlagPreference::ChannelAlliance, GW::EncStrings::ChannelAlliance},
                 {GW::UI::FlagPreference::ChannelGuild, GW::EncStrings::ChannelGuild},
                 {GW::UI::FlagPreference::ChannelGroup, GW::EncStrings::ChannelTeam},

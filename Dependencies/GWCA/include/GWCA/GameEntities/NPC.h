@@ -37,7 +37,7 @@ namespace GW {
         inline bool IsMinion() { return (npc_flags & 0x100) != 0; }
         inline bool IsPet() { return (npc_flags & 0xD) != 0; }
     };
-    static_assert(sizeof(NPC) == 48, "struct NPC has incorrect size");
+    static_assert(sizeof(NPC) == 0x30, "struct NPC has incorrect size");
 
     typedef Array<NPC> NPCArray;
 }
