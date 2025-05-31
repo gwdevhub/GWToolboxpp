@@ -34,7 +34,7 @@ namespace {
 
     typedef uint8_t* gw_image_bits; // array of pointers to mipmap images
 
-    typedef RecObj*(__cdecl* FileIdToRecObj_pt)(wchar_t* fileHash, int unk1_1, int unk2_0);
+    typedef RecObj*(__cdecl* FileIdToRecObj_pt)(const wchar_t* fileHash, int unk1_1, int unk2_0);
     FileIdToRecObj_pt FileHashToRecObj_func;
 
     typedef uint8_t*(__cdecl* GetRecObjectBytes_pt)(RecObj* rec, int* size_out);
@@ -69,13 +69,6 @@ namespace {
     // typedef void(__cdecl *GetLevelWidths_pt) (int format, int width, uint32_t levels, int *widths);
     // GetLevelWidths_pt GetLevelWidths_func;
 
-
-    void FileIdToFileHash(uint32_t file_id, wchar_t* fileHash) {
-        fileHash[0] = static_cast<wchar_t>(((file_id - 1) % 0xff00) + 0x100);
-        fileHash[1] = static_cast<wchar_t>(((file_id - 1) / 0xff00) + 0x100);
-        fileHash[2] = 0;
-    }
-
     const char* strnstr(char* str, const char* substr, size_t n)
     {
         char* p = str, * pEnd = str + n;
@@ -93,46 +86,32 @@ namespace {
         return NULL;
     }
 
-
     // OpenImage converts any GW format to ARGB. It is possible to skip conversion if gw format is compatible with D3FMT.
     uint32_t OpenImage(uint32_t file_id, gw_image_bits* dst_bits, Vec2i& dims, int& levels, GR_FORMAT& format)
     {
-        int size = 0;
         uint8_t* pallete = nullptr;
         gw_image_bits bits = nullptr;
 
         wchar_t fileHash[4] = { 0 };
-        FileIdToFileHash(file_id, fileHash);
+        GwDatTextureModule::FileIdToFileHash(file_id, fileHash);
 
-        auto rec = FileHashToRecObj_func(fileHash, 1, 0);
-        if (!rec) return 0;
-
-        const auto bytes = ReadFileBuffer_Func(rec, &size);
-        if (!bytes) {
-            CloseRecObj_func(rec);
+        std::vector<uint8_t> bytes;
+        if (!GwDatTextureModule::ReadDatFile(fileHash, &bytes)) 
             return 0;
-        }
-        int image_size = size;
-        auto image_bytes = bytes;
-        if (memcmp((char*)bytes, "ffna", 4) == 0) {
+
+        uint8_t* image_bytes = bytes.data();
+        size_t image_size = bytes.size();
+
+        if (memcmp((char*)bytes.data(), "ffna", 4) == 0) {
             // Model file format; try to find first instance of image from this.
-            const auto found = strnstr((char*)bytes, "ATEX",size);
-            if (!found) {
-                FreeFileBuffer_Func(rec, bytes);
-                CloseRecObj_func(rec);
+            const auto found = strnstr((char*)bytes.data(), "ATEX", bytes.size());
+            if (!found)
                 return 0;
-            }
             image_bytes = (uint8_t*)found;
             image_size = *(int*)(found - 4);
         }
 
         uint32_t result = DecodeImage_func(image_size, image_bytes, &bits, pallete, &format, &dims, &levels);
-        if (rec) {
-            FreeFileBuffer_Func(rec, bytes);
-            if (levels > 13)                return 0;
-
-            CloseRecObj_func(rec);
-        }
 
         if (format >= GR_FORMATS || !result) return 0;
 
@@ -204,8 +183,27 @@ namespace {
     };
 
     std::map<uint32_t,GwImg*> textures_by_file_id;
+} // namespace
+
+bool GwDatTextureModule::CloseHandle(void* handle) {
+    return handle && CloseRecObj_func ? CloseRecObj_func((RecObj*)handle), true : false;
 }
 
+bool GwDatTextureModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8_t>* bytes_out)
+{
+    if (!(file_name && *file_name && CloseRecObj_func && FileHashToRecObj_func && FreeFileBuffer_Func)) 
+        return false;
+    auto rec = FileHashToRecObj_func ? FileHashToRecObj_func(file_name, 1, 0) : 0;
+    if (!rec) return false;
+    int size = 0;
+    const auto bytes = ReadFileBuffer_Func(rec, &size);
+    if (!bytes) return CloseRecObj_func(rec), false;
+    bytes_out->resize(size);
+    memcpy(bytes_out->data(), bytes, size);
+    FreeFileBuffer_Func(rec, bytes);
+    CloseRecObj_func(rec);
+    return !bytes_out->empty();
+}
 void GwDatTextureModule::Initialize()
 {
     ToolboxModule::Initialize();
@@ -257,6 +255,13 @@ void GwDatTextureModule::Initialize()
     ASSERT(AllocateImage_func);
     ASSERT(Depalletize_func);
 #endif
+}
+
+void GwDatTextureModule::FileIdToFileHash(uint32_t file_id, wchar_t* fileHash)
+{
+    fileHash[0] = static_cast<wchar_t>(((file_id - 1) % 0xff00) + 0x100);
+    fileHash[1] = static_cast<wchar_t>(((file_id - 1) / 0xff00) + 0x100);
+    fileHash[2] = 0;
 }
 
 IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id)

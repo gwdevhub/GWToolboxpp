@@ -37,7 +37,4 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;
-
-    // Cost optimization methods
-    void SetTTSProvider(TTSProvider provider);
 };

@@ -31,8 +31,8 @@ namespace GW {
             CrafterBuy,
             WeaponsmithCustomize,
             DonateFaction = 0x6,
-
-            MerchantSell = 0xB,
+            SkillTrainer = 0xA,
+            MerchantSell,
             TraderBuy,
             TraderSell,
 

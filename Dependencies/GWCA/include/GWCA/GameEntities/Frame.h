@@ -64,12 +64,13 @@ namespace GW {
         bool SetValue(uint32_t value) override;
     };
     struct DropdownFrame final : UI::Frame, FrameWithValue {
-        GWCA_API std::map<uint32_t, uint32_t> GetOptions();
+        GWCA_API  std::vector<uint32_t> GetOptions();
         GWCA_API bool SelectOption(uint32_t value);
         GWCA_API bool SelectIndex(uint32_t index);
         GWCA_API bool GetCount(uint32_t* count);
         GWCA_API bool GetOptionValue(uint32_t index, uint32_t* value);
         GWCA_API bool GetOptionIndex(uint32_t value, uint32_t* index);
+		GWCA_API bool GetSelectedIndex(uint32_t* index);
         // Some dropdowns are only used by reference to their index. Others actually have values assigned to their indeces.
 		GWCA_API bool HasValueMapping();
 

@@ -2,9 +2,11 @@
 #include "stdafx.h"
 
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/Utilities/Scanner.h>
@@ -17,14 +19,19 @@
 #include <Defines.h>
 #include <ImGuiAddons.h> // Add this include
 #include <algorithm>
-#include <curl/curl.h>
+#include <RestClient.h>
 #include <sstream>
 #include <thread>
+#include <Timer.h>
+#include "GwDatTextureModule.h"
+#include <Utils/ArenaNetFileParser.h>
+#include <GWCA/Utilities/Hooker.h>
 
 namespace {
 
     const char* voice_id_human_male = "2EiwWnXFnvU5JabPnv8n";
     const char* voice_id_human_female = "EXAVITQu4vr4xnSDxMaL";
+    const char* voice_id_dwarven_male = "N2lVS1w4EtoT3dr4eOWO";
 
 
         // TTS Provider settings
@@ -37,17 +44,121 @@ namespace {
     // UI buffers for API keys
     char elevenlabs_api_key_buffer[256] = {0};
     char openai_api_key_buffer[256] = {0};
-    namespace GWRace {
-        constexpr uint8_t HUMAN = 0;
-        constexpr uint8_t CHARR = 1;
-        constexpr uint8_t NORN = 2;
-        constexpr uint8_t ASURA = 3;
-        constexpr uint8_t TENGU = 4;
-        constexpr uint8_t DWARF = 5;
-        constexpr uint8_t CENTAUR = 5;
-    } // namespace GWRace
+    enum class GWRace : uint8_t { Human, Charr, Norn, Asura, Tengu, Dwarf, Centaur }; // namespace GWRace
 
-    enum class TraderType : uint8_t { Merchant, RuneTrader, ArmorCrafter, WeaponCustomizer, MaterialTrader, RareMaterialTrader, DyeTrader, OtherItemCrafter };
+
+    enum class Gender : uint8_t {
+        Male,
+        Female,
+        Unknown
+    };
+    std::map<uint32_t, uint32_t> sound_file_by_model_file_id;
+
+    // "If it dies, we can... assign a gender?"
+    bool GetDeathSoundForModelFileId(uint32_t file_id, uint32_t* file_id_out)
+    {
+        std::vector<uint8_t> model_data;
+        wchar_t file_hash[4] = {0};
+        GwDatTextureModule::FileIdToFileHash(file_id, file_hash);
+        wchar_t* filename = file_hash;
+
+        if (!GwDatTextureModule::ReadDatFile(filename, &model_data)) 
+            return false;
+        ArenaNetFileParser parser(model_data.data(), model_data.size());
+        ArenaNetFileParser::GameAssetFile asset;
+        if (!parser.parse(asset)) 
+            return false;
+
+        auto animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBC);
+        if (!animations_chunk) {
+            animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBD);
+            filename = animations_chunk->filenames[0].filename;
+            if (!GwDatTextureModule::ReadDatFile(filename, &model_data)) 
+                return false;
+            parser = ArenaNetFileParser(model_data.data(), model_data.size());
+            if (!parser.parse(asset)) 
+                return false;
+            animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBC);
+        }
+        if (!animations_chunk) 
+            return false;
+        filename = animations_chunk->filenames[0].filename;
+        if (!GwDatTextureModule::ReadDatFile(filename, &model_data)) 
+            return false;
+        parser = ArenaNetFileParser(model_data.data(), model_data.size());
+        if (!parser.parse(asset)) 
+            return false;
+        const auto soundtracks_chunk = (ArenaNetFileParser::FileNamesChunkWithoutLength*)asset.FindChunk(ArenaNetFileParser::ChunkType::SOUND_FILES_1);
+        if (!soundtracks_chunk) 
+            return false;
+        *file_id_out = GwDatTextureModule::FileHashToFileId(soundtracks_chunk->filenames[0].filename);
+        return true;
+    }
+
+
+    Gender GetGenderByFileId(const uint32_t file_id) {
+        Log::Log("GetGenderByFileId 0x%08X", file_id);
+        switch (file_id) {
+            case 0x13fdb: // e.g. Krytan
+            case 0x2f15d: // e.g. Ascalonian
+            case 0x13f6f: // e.g. Male caster
+            case 0x16dfc: // Shining blade
+            case 0x17390: // Dwarf
+            case 0x13e25: // Mesmer
+                return Gender::Male;
+            case 0x2f17e:
+            case 0x97fa:
+            case 0x13f93:
+            case 0x13f22: // e.g. Alesia
+            case 0x13e4f: // e.g. Gwen
+            case 0x13ece: // Farrah Cappo
+                return Gender::Female;
+        }
+        return Gender::Unknown;
+    }
+    GWRace GetRaceByFileId(const uint32_t file_id)
+    {
+        Log::Log("GetRaceByFileId 0x%08X", file_id);
+        switch (file_id) {
+            case 0x17390: // Dwarf
+                return GWRace::Dwarf;
+        }
+        return GWRace::Human;
+    }
+    GWRace GetAgentRace(uint32_t agent_id)
+    {
+        const auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+        if (!(agent && agent->GetIsLivingType())) return GWRace::Human;
+        if (agent->IsNPC()) {
+            const auto npc = GW::Agents::GetNPCByID(agent->player_number);
+            if (!npc) return GWRace::Human;
+            if (!sound_file_by_model_file_id.contains(npc->model_file_id)) {
+                uint32_t file_id;
+                GetDeathSoundForModelFileId(npc->model_file_id, &file_id);
+                sound_file_by_model_file_id[npc->model_file_id] = file_id;
+            }
+            return GetRaceByFileId(sound_file_by_model_file_id[npc->model_file_id]);
+        }
+        return GWRace::Human;
+    }
+
+    Gender GetAgentGender(uint32_t agent_id) {
+        const auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+        if (!(agent && agent->GetIsLivingType())) return Gender::Unknown;
+        if (agent->IsNPC()) {
+            const auto npc = GW::Agents::GetNPCByID(agent->player_number);
+            if (!npc) return Gender::Unknown;
+            if (!sound_file_by_model_file_id.contains(npc->model_file_id)) {
+                uint32_t file_id;
+                GetDeathSoundForModelFileId(npc->model_file_id, &file_id);
+                sound_file_by_model_file_id[npc->model_file_id] = file_id;
+            }
+            return GetGenderByFileId(sound_file_by_model_file_id[npc->model_file_id]);
+        }
+        return Gender::Unknown;
+    }
+
+    enum class TraderType : uint8_t { Merchant, RuneTrader, ArmorCrafter, WeaponCustomizer, MaterialTrader, RareMaterialTrader, DyeTrader, OtherItemCrafter, SkillTrainer };
 
     std::map<std::tuple<GW::Region, TraderType>, std::wstring> merchant_greetings;
 
@@ -119,115 +230,9 @@ namespace {
         if (trader_name.find(L"rare mat") != std::wstring::npos) return TraderType::MaterialTrader;
         if (trader_name.find(L"material") != std::wstring::npos) return TraderType::RareMaterialTrader;
         if (trader_name.find(L"dye") != std::wstring::npos) return TraderType::DyeTrader;
+        if (trader_name.find(L"skill") != std::wstring::npos) return TraderType::SkillTrainer;
         return TraderType::OtherItemCrafter;
     }
-
-
-    const bool GenderFromModelFileId(const uint32_t model_file_id, uint32_t* gender) {
-        switch (model_file_id) {
-            case 0x3c82:  // male caster
-            case 0x1c604: // male warrior
-            case 0x1C603: // male npc
-            case 0x1F812: // male centaur
-            case 0x22839:
-            case 0x17728:
-            case 0x31CF4: // male derv
-            case 0x31BBC: // male para
-            case 0x3EB1: // male henchman, istan
-            case 0x228EE: // Flaming scepter mage
-            case 0x3FF9: // Canthan mesmer
-            case 0x27692: // Canthan sin
-            case 0x2786A: // Canthan rit
-            case 0x2CCF0: // Ludo
-            case 0x2CCF1: // Instructor ng
-            case 0x25F90: // high priest zhang
-            case 0x44264: // istani male
-            case 0x1F816: // male dwarf
-            case 0x228EF: // ascalonian warrior/ vanguard
-            case 0x228ED: // merc registrar
-            case 0x227E5:
-                return *gender = 1, true;
-            case 0x3F8F: // female war
-            case 0x3F8B:
-            case 0x4426B: // female npc
-            case 0x3212:  // female warrior
-            case 0x1c601: // female caster
-            case 0x227FF:
-            case 0x3F81:
-            case 0x3F82: // Istani female henchman
-            case 0x3D67: // Factions hench
-            case 0x27872: // Rit hench
-            case 0x27699: // Assassin hench
-            case 0x31D00: // istani female
-            case 0x22940:// white mantle
-            case 0x22906:
-            case 0x227E6:
-                return *gender = 0, true;
-        }
-        return false;
-    }
-    const bool RaceFromModelFileId(const uint32_t model_file_id, uint8_t* race)
-    {
-        switch (model_file_id) {
-            case 0x3c82:  // male caster
-            case 0x1c604: // male warrior
-            case 0x1C603: // male npc
-            case 0x1F812: // male centaur
-            case 0x22839:
-            case 0x17728:
-            case 0x31CF4: // male derv
-            case 0x31BBC: // male para
-            case 0x3EB1:  // male henchman, istan
-            case 0x3F8F:  // female war
-            case 0x3F8B:
-            case 0x4426B: // female npc
-            case 0x3212:  // female warrior
-            case 0x1c601: // female caster
-            case 0x227FF:
-            case 0x3F82: // Istani female henchman
-            case 0x228EE: // Flaming scepter mage
-            case 0x3D67:
-            case 0x27872: // Rit hench
-            case 0x27699: // Assassin hench
-            case 0x3FF9:  // Canthan mesmer
-            case 0x27692: // Canthan sin
-            case 0x2786A: // Canthan rit
-            case 0x31D00: // istani female
-            case 0x44264: // istani male
-            case 0x228EF:
-            case 0x22940:
-            case 0x228ED: // merc registrar
-            case 0x3F81:
-            case 0x22906:
-            case 0x227E5:
-            case 0x227E6:
-                return *race = GWRace::HUMAN, true;
-            case 0x1F816:
-                return *race = GWRace::DWARF, true;
-        }
-        return false;
-    }
-
-    const bool GenderFromAgent(GW::AgentLiving* agent, uint32_t* gender) {
-        if (!(agent && agent->GetIsLivingType() && gender)) 
-            return false;
-        if (agent->IsNPC()) {
-            const auto npc = GW::Agents::GetNPCByID(agent->player_number);
-            if (!npc) return false;
-            return GenderFromModelFileId(npc->model_file_id, gender);
-        }
-        return false;
-    }
-    const bool RaceFromAgent(GW::AgentLiving* agent, uint8_t* race) {
-        if (!(agent && agent->GetIsLivingType() && race)) return false;
-        if (agent->IsNPC()) {
-            const auto npc = GW::Agents::GetNPCByID(agent->player_number);
-            if (!npc) return false;
-            return RaceFromModelFileId(npc->model_file_id, race);
-        }
-        return false;
-    }
-
 
     struct VoiceProfile {
         std::string voice_id;
@@ -242,31 +247,85 @@ namespace {
     };
 
     // Voice mapping system (unchanged)
-    std::map<std::tuple<uint8_t, uint8_t, GW::Region>, VoiceProfile> voice_matrix;
+    std::map<std::tuple<Gender, GWRace, GW::Region>, VoiceProfile> voice_matrix;
     std::map<uint32_t, VoiceProfile> special_npc_voices;
     uint32_t npc_ids_to_ignore[] = {
         1991 // Durmand
     };
 
     // Cost optimization settings
+    bool stop_speech_when_dialog_closed = false;
     bool only_use_first_dialog = true;
-    bool rate_limiting_enabled = true;
-    float min_delay_between_calls = 2.0f;
-    std::chrono::steady_clock::time_point last_api_call;
+    bool only_use_first_sentence = true; // NB: Not changable because we don't know how to stop a running audio file!
+    bool only_show_speech_from_friendly_npcs = true;
+    bool show_speech_from_party_members_in_explorable_areas = true;
+    float npc_speech_bubble_range = GW::Constants::Range::Adjacent;
 
     uint32_t last_dialog_agent_id = 0;
 
-    size_t max_text_length = 256;
+    size_t max_text_length = 512;
     VoiceProfile default_voice_profile(voice_id_human_male, 0.5f, 0.5f, 0.5f, 1.0f, "");
 
-    std::chrono::steady_clock::time_point audio_start_time;
-    float current_audio_duration = 0.0f; // Duration in seconds
-    bool audio_is_playing = false;
+    std::wstring PreprocessEncodedTextForTTS(const std::wstring& text);
+    VoiceProfile* GetVoiceProfile(uint32_t agent_id, GW::Constants::MapID map_id);
+
+
+
+struct PendingNPCAudio {
+        GW::Constants::Language language = GW::Constants::Language::English;
+        std::wstring encoded_message;
+        std::wstring decoded_message;
+        VoiceProfile* profile = nullptr;
+        uint32_t agent_id = 0;
+        std::filesystem::path path;
+        clock_t started = 0;
+        clock_t duration = 0;
+        void* gw_handle = 0;
+        PendingNPCAudio(uint32_t _agent_id, const wchar_t* message) : agent_id(_agent_id), started(0), duration(0)
+        {
+            encoded_message = PreprocessEncodedTextForTTS(message);
+            profile = GetVoiceProfile(agent_id, GW::Map::GetMapID());
+            language = GW::UI::GetTextLanguage();
+
+        }
+        ~PendingNPCAudio();
+    };
+
+    std::map<uint32_t, PendingNPCAudio*> playing_audio_map; // Maps agent ID to currently playing audio
+
+    void CancelDialogSpeech(uint32_t agent_id)
+    {
+        const auto found = playing_audio_map.find(agent_id);
+        if (found != playing_audio_map.end()) {
+            auto ptr = found->second;
+            playing_audio_map.erase(found);
+            delete ptr;
+        }
+    }
+
+    void ClearSounds() {
+        while (playing_audio_map.size()) {
+            auto ptr = playing_audio_map.begin()->second;
+            playing_audio_map.erase(playing_audio_map.begin());
+            delete ptr;
+        }
+    }
+
+
+    PendingNPCAudio::~PendingNPCAudio()
+    {
+        if (gw_handle) AudioSettings::StopSound(gw_handle);
+        const auto found = playing_audio_map.find(agent_id);
+        if (found != playing_audio_map.end()) {
+            playing_audio_map.erase(found);
+        }
+    }
+
     bool generating_voice = false;
 
-    GW::Vec3f GetPlayerVec3f() {
-        const auto player = GW::Agents::GetControlledCharacter();
-        return player ? GW::Vec3f(player->pos.x, player->pos.y, player->z) : GW::Vec3f();
+    GW::Vec3f GetAgentVec3f(uint32_t agent_id) {
+        const auto agent = GW::Agents::GetAgentByID(agent_id);
+        return agent ? GW::Vec3f(agent->pos.x, agent->pos.y, agent->z) : GW::Vec3f();
     }
     GW::GamePos GetPlayerPosition()
     {
@@ -275,57 +334,39 @@ namespace {
     }
 
     // Function to estimate audio duration from file size (rough approximation)
-    float EstimateAudioDuration(const std::filesystem::path& audio_file)
+    clock_t EstimateAudioDuration(const std::filesystem::path& audio_file)
     {
         try {
             auto file_size = std::filesystem::file_size(audio_file);
             // Rough estimation: WAV files are typically ~16KB per second at 16-bit, 22kHz
             // This is approximate - actual duration depends on sample rate, bit depth, etc.
-            float estimated_duration = static_cast<float>(file_size) / 16000.0f; // bytes per second
-            return std::max(1.0f, estimated_duration) - .5f;                           // Minimum 1 second
+            clock_t duration = static_cast<clock_t>(file_size / 16000.0f) * CLOCKS_PER_SEC; // bytes per second (16-bit stereo, 22kHz)
+            return std::max((clock_t)500, duration);
         } catch (const std::exception&) {
-            return 2.0f; // Default fallback duration
+            return (clock_t)2000; // Default fallback duration
         }
-    }
-
-    // Function to check if current audio is still playing
-    bool IsAudioStillPlaying()
-    {
-        if (!audio_is_playing) return false;
-
-        auto now = std::chrono::steady_clock::now();
-        auto elapsed = std::chrono::duration<float>(now - audio_start_time).count();
-
-        if (elapsed >= current_audio_duration) {
-            audio_is_playing = false;
-            return false;
-        }
-
-        return true;
     }
 
     // Enhanced audio playback function
-    void PlayAudioFile(const std::filesystem::path& file_path)
+    void PlayAudioFile(PendingNPCAudio* audio_file)
     {
         // Don't play more than one dialog track at once
-        if (IsAudioStillPlaying()) {
+        CancelDialogSpeech(audio_file->agent_id);
+        audio_file->duration = EstimateAudioDuration(audio_file->path);
+
+        // Play the new audio
+        const auto pos = GetAgentVec3f(audio_file->agent_id);
+        // 0x1400 means "this audio file in positional", so it will play in 3D space relative to the position given
+        // 0x4 means "this is a dialog audio file"
+        if (!AudioSettings::PlaySound(audio_file->path.wstring().c_str(), &pos, 0x1400 | 0x4, &audio_file->gw_handle)) {
+            delete audio_file;
             return;
         }
 
-        // Estimate duration of the new audio file
-        current_audio_duration = EstimateAudioDuration(file_path);
-
-        // Play the new audio
-        const auto pos = GetPlayerVec3f();
-        // 0x1400 means "this audio file in positional", so it will play in 3D space relative to the position given
-        // 0x4 means "this is a dialog audio file"
-        AudioSettings::PlaySound(file_path.wstring().c_str(), &pos, 0x1400 | 0x4);
-
-        // Mark as playing and record start time
-        audio_is_playing = true;
-        audio_start_time = std::chrono::steady_clock::now();
-
-        VoiceLog("Playing audio file: %s (estimated duration: %.1fs)", file_path.filename().string().c_str(), current_audio_duration);
+        // Add to playing audio map
+        audio_file->started = TIMER_INIT();
+        playing_audio_map[audio_file->agent_id] = audio_file;
+        VoiceLog("Playing audio file: %s (estimated duration: %dms)", audio_file->path.filename().string().c_str(), audio_file->duration);
     }
 
     // Extract first sentence from text
@@ -414,6 +455,22 @@ namespace {
         // replace numeric args
         result = TextUtils::ctre_regex_replace<L"[\x0101\x102\x103\x104].", L"">(result);
         return result;
+    
+    }
+    
+    bool IsInParty(uint32_t agent_id) {
+        const auto p = GW::PartyMgr::GetPartyInfo();
+        if (!p) return false;
+        for (const auto& member : p->henchmen) {
+            if (member.agent_id == agent_id) return true;
+        }
+        for (const auto& member : p->heroes) {
+            if (member.agent_id == agent_id) return true;
+        }
+        for (const auto& other_id : p->others) {
+            if (other_id == agent_id) return true;
+        }
+        return false;
     }
 
     // Cost optimization functions
@@ -426,7 +483,7 @@ namespace {
         processed = TextUtils::StripTags(processed);
 
         // First, extract only the first sentence if enabled
-        processed = ExtractFirstSentence(processed);
+        if(only_use_first_sentence) processed = ExtractFirstSentence(processed);
 
         if (processed.empty()) return L"";
 
@@ -450,16 +507,12 @@ namespace {
             }
         }
 
+        if (TextUtils::RemovePunctuation(processed).empty()) {
+            // If the processed text is empty after sanitization, return a default message
+            return L"";
+        }
+
         return processed;
-    }
-
-    bool CanMakeAPICall()
-    {
-        if (!rate_limiting_enabled) return true;
-
-        auto now = std::chrono::steady_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - last_api_call).count();
-        return elapsed >= min_delay_between_calls;
     }
 
     GW::Region GetRegionFromMapID(GW::Constants::MapID map_id)
@@ -468,15 +521,18 @@ namespace {
         return map_info->region;
     }
 
-    VoiceProfile* GetVoiceProfile(GW::AgentLiving* agent, GW::Constants::MapID map_id)
+    VoiceProfile* GetVoiceProfile(uint32_t agent_id, GW::Constants::MapID map_id)
     {
+        const auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
         if (!agent) return nullptr;
         const wchar_t* name = GW::Agents::GetAgentEncName(agent);
         if (!(name && *name && agent->GetIsLivingType() && agent->IsNPC())) return nullptr;
-
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost 
-            && agent->allegiance != GW::Constants::Allegiance::Npc_Minipet) {
-            // Only process NPCs when in an explorable area; not players, enemies or pets
+        if (only_show_speech_from_friendly_npcs && agent->allegiance == GW::Constants::Allegiance::Enemy) {
+            // Don't process enemies
+            return nullptr;
+        }
+        if (!show_speech_from_party_members_in_explorable_areas && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable && IsInParty(agent_id)) {
+            // Don't process party members in explorable areas
             return nullptr;
         }
 
@@ -486,10 +542,9 @@ namespace {
             return &special_it->second;
         }
 
-        uint8_t race = 0;
-        uint32_t gender = 0;
-        if (!GenderFromAgent(agent, &gender)) return nullptr;
-        if (!RaceFromAgent(agent, &race)) return nullptr;
+        const auto race = GetAgentRace(agent->agent_id);
+        const auto gender = GetAgentGender(agent->agent_id);
+        if (gender == Gender::Unknown) return nullptr;
 
         // Determine region from map
         const auto region = GetRegionFromMapID(map_id);
@@ -508,7 +563,7 @@ namespace {
             return &by_race->second;
         }
 
-        auto sex_key = std::make_tuple(gender, GWRace::HUMAN, GW::Region::Region_DevRegion);
+        auto sex_key = std::make_tuple(gender, GWRace::Human, GW::Region::Region_DevRegion);
         auto by_gender = voice_matrix.find(sex_key);
         if (by_gender != voice_matrix.end()) {
             return &by_gender->second;
@@ -518,21 +573,17 @@ namespace {
         return &default_voice_profile;
     }
 
-    VoiceProfile* GetVoiceProfile(uint32_t agent_id, GW::Constants::MapID map_id)
-    {
-        return GetVoiceProfile(static_cast<GW::AgentLiving*> (GW::Agents::GetAgentByID(agent_id)), map_id);
-    }
-
     GW::HookEntry UIMessage_HookEntry;
     GW::HookEntry PreUIMessage_HookEntry;
-    void GenerateVoiceAPI(const std::wstring& _message, const VoiceProfile* profile, GW::Constants::Language language);
+    void GenerateVoiceAPI(PendingNPCAudio* audio);
 
-    void GenerateVoiceFromDecodedString(const wchar_t* decoded_str, const VoiceProfile* profile, GW::Constants::Language language)
+    void GenerateVoiceFromDecodedString(PendingNPCAudio* audio)
     {
-        if (!(decoded_str && *decoded_str && profile)) return;
-        const auto pre_decoded = PreprocessTextForTTS(decoded_str);
-        if (pre_decoded.empty()) return;
-        GenerateVoiceAPI(pre_decoded, profile, language);
+        if (!(audio && audio->decoded_message.size() && audio->profile)) {
+            delete audio;
+            return;
+        }
+        GenerateVoiceAPI(audio);
     }
     void GetNPCName(uint32_t agent_id, GW::UI::DecodeStr_Callback callback, void* param = nullptr) {
         const auto agent = GW::Agents::GetAgentByID(agent_id);
@@ -544,16 +595,20 @@ namespace {
         GW::UI::AsyncDecodeStr(name, callback, param, GW::Constants::Language::English);
     }
 
-    void GenerateVoiceFromEncodedString(const wchar_t* encoded_str, const VoiceProfile* profile)
+    void GenerateVoiceFromEncodedString(PendingNPCAudio* audio)
     {
-        if (!(encoded_str && *encoded_str && profile)) return;
-        const auto pre_decoded = PreprocessEncodedTextForTTS(encoded_str);
+        if (!(audio && audio->encoded_message.size() && audio->profile)) {
+            delete audio;
+            return;
+        }
         GW::UI::AsyncDecodeStr(
-            pre_decoded.c_str(),
+            audio->encoded_message.c_str(),
             [](void* param, const wchar_t* s) {
-                GenerateVoiceFromDecodedString(s, (VoiceProfile*)param, GW::UI::GetTextLanguage());
+                auto audio = (PendingNPCAudio*)param;
+                audio->decoded_message = PreprocessTextForTTS(s);
+                GenerateVoiceFromDecodedString(audio);
             },
-            (void*)profile, GW::UI::GetTextLanguage()
+            (void*)audio, audio->language
         );
     }
 
@@ -570,18 +625,45 @@ namespace {
         return false;
     }
 
+    GW::UI::Frame* dialog_frame = nullptr;
+
+
+
+    GW::UI::UIInteractionCallback OnNPCInteract_UICallback_Func = nullptr, OnNPCInteract_UICallback_Ret = nullptr;
+
+    void OnNPCInteract_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
+        GW::Hook::EnterHook();
+        OnNPCInteract_UICallback_Ret(message, wParam, lParam);
+        if (message->message_id == GW::UI::UIMessage::kDestroyFrame && stop_speech_when_dialog_closed) {
+            CancelDialogSpeech(last_dialog_agent_id);
+        }
+        GW::Hook::LeaveHook();
+    }
+
+    void HookNPCInteractFrame() {
+        if (OnNPCInteract_UICallback_Func) return;
+        const auto frame = GW::UI::GetFrameByLabel(L"NPCInteract");
+        if (!(frame && frame->frame_callbacks.size())) return;
+        OnNPCInteract_UICallback_Func = frame->frame_callbacks[0].callback;
+        GW::Hook::CreateHook((void**)&OnNPCInteract_UICallback_Func, OnNPCInteract_UICallback, (void**)&OnNPCInteract_UICallback_Ret);
+        GW::Hook::EnableHooks(OnNPCInteract_UICallback_Func);
+    }
+
+
     void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*)
     {
         if (status->blocked) return;
         switch (msgid) {
             case GW::UI::UIMessage::kDialogBody: {
                 const auto packet = (GW::UI::DialogBodyInfo*)wParam;
+                if (!(packet && packet->message_enc && *packet->message_enc)) return;
                 const auto was_dialog_already_open = GW::UI::GetFrameByLabel(L"NPCInteract") && packet->agent_id == last_dialog_agent_id;
                 last_dialog_agent_id = packet->agent_id;
+                CancelDialogSpeech(last_dialog_agent_id);
                 if (only_use_first_dialog && was_dialog_already_open) {
                     return; // Skip if already open and only using first dialog
                 }
-                GenerateVoiceFromEncodedString(packet->message_enc, GetVoiceProfile(packet->agent_id, GW::Map::GetMapID()));
+                GenerateVoiceFromEncodedString(new PendingNPCAudio(packet->agent_id, packet->message_enc));
             } break;
         }
     }
@@ -589,14 +671,22 @@ namespace {
     {
         if (status->blocked) return;
         switch (msgid) {
+            case GW::UI::UIMessage::kDialogBody: {
+                HookNPCInteractFrame();
+            } break;
+            case GW::UI::UIMessage::kMapChange:
+            case GW::UI::UIMessage::kMapLoaded: {
+                ClearSounds();
+            } break;
             case GW::UI::UIMessage::kAgentSpeechBubble: {
                 // Some NPCs don't have a dialog window, but they can still have speech bubbles
                 const auto packet = (GW::UI::UIPacket::kAgentSpeechBubble*)wParam;
+                if (!(packet && packet->message && *packet->message)) return;
                 const auto agent = GW::Agents::GetAgentByID(packet->agent_id);
-                if (GW::GetDistance(agent->pos, GetPlayerPosition()) > GW::Constants::Range::Adjacent) {
+                if (GW::GetDistance(agent->pos, GetPlayerPosition()) > npc_speech_bubble_range) {
                     return; // Ignore distant NPCs
                 }
-                GenerateVoiceFromEncodedString(packet->message, GetVoiceProfile(packet->agent_id, GW::Map::GetMapID()));
+                GenerateVoiceFromEncodedString(new PendingNPCAudio(packet->agent_id, packet->message));
             } break;
             case GW::UI::UIMessage::kVendorWindow: {
                 const auto packet = (GW::UI::UIPacket::kVendorWindow*)wParam;
@@ -607,26 +697,32 @@ namespace {
                         // Find and use the collector's dialog context
                         auto collector_dialog = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Vendor"), 0, 0, 2);
                         const auto context = (wchar_t**)GW::UI::GetFrameContext(collector_dialog);
-                        if (context && *context) GenerateVoiceFromEncodedString(*context, GetVoiceProfile(packet->unk, GW::Map::GetMapID()));
+                        if (context && *context)
+                            GenerateVoiceFromEncodedString(new PendingNPCAudio(packet->unk, *context));
                     } break;
+                    case GW::Merchant::TransactionType::SkillTrainer:
                     case GW::Merchant::TransactionType::MerchantBuy:
                     case GW::Merchant::TransactionType::CrafterBuy:
                     case GW::Merchant::TransactionType::WeaponsmithCustomize:
                     case GW::Merchant::TransactionType::TraderBuy: {
                         if (GW::UI::GetTextLanguage() != GW::Constants::Language::English) return; // We only support English trader quotes for now
                         // For traders, find out the name of the trader and determine which greeting to use
-                        const auto profile = GetVoiceProfile(packet->unk, GW::Map::GetMapID());
+                        auto audio = new PendingNPCAudio(packet->unk, L"");
                         GetNPCName(
                             packet->unk,
                             [](void* param, const wchar_t* s) {
+                                auto audio = (PendingNPCAudio*)param;
                                 const auto region = GetRegionFromMapID(GW::Map::GetMapID());
                                 auto key = std::make_tuple(region, GetTraderType(s));
                                 auto it = merchant_greetings.find(key);
                                 if (it != merchant_greetings.end() && !it->second.empty()) {
-                                    GenerateVoiceFromDecodedString(it->second.c_str(), (VoiceProfile*)param,GW::UI::GetTextLanguage());
+                                    audio->decoded_message = PreprocessTextForTTS(it->second);
+                                    GenerateVoiceFromDecodedString(audio);
+                                    return;
                                 }
+                                delete audio;
                             },
-                            (void*)profile
+                            audio
                         );
 
                     } break;
@@ -652,223 +748,163 @@ namespace {
     }
 
     // Add OpenAI TTS function
-    std::string GenerateVoiceOpenAI(const std::wstring& text, const VoiceProfile* profile, GW::Constants::Language language)
+    std::string GenerateVoiceOpenAI(PendingNPCAudio* audio)
     {
-        std::string audio_data;
         if (!openai_api_key.length()) {
             VoiceLog("No OpenAI API Key");
-            return audio_data;
-        }
-        CURL* curl = curl_easy_init();
-
-        if (!curl) {
-            VoiceLog("Failed to initialize CURL for OpenAI");
-            return audio_data;
+            return "";
         }
 
         try {
-            std::string url = "https://api.openai.com/v1/audio/speech";
-
             nlohmann::json request_body;
-            request_body["model"] = "gpt-4o-mini-tts"; // Use cheaper tts-1 model, or tts-1-hd for higher quality
-            request_body["input"] = TextUtils::WStringToString(text);
+            request_body["model"] = "gpt-4o-mini-tts";
+            request_body["input"] = TextUtils::WStringToString(audio->decoded_message);
 
-            // Map gender to OpenAI voices
-            std::string voice_name;
-            if (profile->voice_id == voice_id_human_female) {
-                voice_name = "nova"; // Female voice
-            }
-            else {
-                voice_name = "onyx"; // Male voice
-            }
+            std::string voice_name = (audio->profile->voice_id == voice_id_human_female) ? "nova" : "onyx";
             request_body["voice"] = voice_name;
             request_body["response_format"] = "mp3";
-            request_body["speed"] = profile->speaking_rate;
-            request_body["language"] = LanguageToAbbreviation(language);
+            request_body["speed"] = audio->profile->speaking_rate;
+            request_body["language"] = LanguageToAbbreviation(audio->language);
 
-            // Set up headers
-            struct curl_slist* headers = nullptr;
-            headers = curl_slist_append(headers, ("Authorization: Bearer " + openai_api_key).c_str());
-            headers = curl_slist_append(headers, "Content-Type: application/json");
+            RestClient client;
+            client.SetUrl("https://api.openai.com/v1/audio/speech");
+            client.SetHeader("Authorization", ("Bearer " + openai_api_key).c_str());
+            client.SetHeader("Content-Type", "application/json");
+            client.SetPostContent(request_body.dump(),ContentFlag::Copy);
+            client.SetFollowLocation(true);
+            client.SetVerifyHost(false);
+            client.SetVerifyPeer(false);
+            client.SetTimeoutSec(2);
 
-            // Configure CURL
-            const auto request_str = request_body.dump();
-            curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request_str.c_str());
-            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &audio_data);
-            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
-            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+            client.Execute();
 
-            // Perform the request
-            CURLcode res = curl_easy_perform(curl);
-
-            // Check response code
-            long response_code;
-            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-
-            if (res != CURLE_OK) {
-                VoiceLog("CURL request failed for OpenAI: %s", curl_easy_strerror(res));
-                audio_data.clear();
-            }
-            else if (response_code != 200) {
-                VoiceLog("OpenAI API returned error code: %ld\n%s", response_code, audio_data.c_str());
-                audio_data.clear();
+            if (client.IsSuccessful()) {
+                std::string audio_data = std::move(client.GetContent());
+                VoiceLog("OpenAI voice generation successful, received %zu bytes", audio_data.size());
+                return audio_data;
             }
             else {
-                VoiceLog("OpenAI voice generation successful, received %zu bytes", audio_data.size());
+                VoiceLog("OpenAI API returned error code: %ld", client.GetStatusCode());
+                std::string error_response = std::move(client.GetContent());
+                if (!error_response.empty()) {
+                    VoiceLog("Error response: %s", error_response.c_str());
+                }
+                return "";
             }
-
-            // Cleanup
-            curl_slist_free_all(headers);
-            curl_easy_cleanup(curl);
 
         } catch (const std::exception& e) {
             VoiceLog("Exception in OpenAI voice generation: %s", e.what());
-            curl_easy_cleanup(curl);
-            audio_data.clear();
+            return "";
         }
-        return audio_data;
     }
-
-    // Modified GenerateVoice function with cheaper model option
-    std::string GenerateVoiceElevenLabs(const std::wstring& text, const VoiceProfile* profile, GW::Constants::Language language)
+    // Refactored ElevenLabs voice generation
+    std::string GenerateVoiceElevenLabs(PendingNPCAudio* audio)
     {
-        std::string audio_data;
         if (!elevenlabs_api_key.length()) {
-            Log::Warning("No ElevenLabs API Key");
-            return audio_data;
-        }
-        CURL* curl = curl_easy_init();
-
-        if (!curl) {
-            VoiceLog("Failed to initialize CURL");
-            return audio_data;
+            VoiceLog("No ElevenLabs API Key");
+            return "";
         }
 
         try {
-            std::string url = "https://api.elevenlabs.io/v1/text-to-speech/" + profile->voice_id;
-
             nlohmann::json request_body;
             nlohmann::json voice_settings;
 
-            request_body["text"] = TextUtils::WStringToString(text);
+            request_body["text"] = TextUtils::WStringToString(audio->decoded_message);
+            request_body["model_id"] = "eleven_flash_v2_5";
 
-            request_body["model_id"] = "eleven_flash_v2_5"; // Cheaper option
-
-            voice_settings["stability"] = profile->stability;
-            voice_settings["similarity_boost"] = profile->similarity;
-            voice_settings["style"] = profile->style;
-            voice_settings["use_speaker_boost"] = false; // Disable to save costs
+            voice_settings["stability"] = audio->profile->stability;
+            voice_settings["similarity_boost"] = audio->profile->similarity;
+            voice_settings["style"] = audio->profile->style;
+            voice_settings["use_speaker_boost"] = false;
 
             request_body["voice_settings"] = voice_settings;
+            request_body["language"] = LanguageToAbbreviation(audio->language);
 
-            request_body["language"] = LanguageToAbbreviation(language);
+            RestClient client;
+            client.SetUrl(("https://api.elevenlabs.io/v1/text-to-speech/" + audio->profile->voice_id).c_str());
+            client.SetHeader("xi-api-key", elevenlabs_api_key.c_str());
+            client.SetHeader("Content-Type", "application/json");
+            client.SetHeader("Accept", "audio/mpeg");
+            client.SetFollowLocation(true);
+            client.SetVerifyHost(false);
+            client.SetVerifyPeer(false);
+            client.SetPostContent(request_body.dump(),ContentFlag::Copy);
+            client.SetTimeoutSec(2); // Longer timeout for audio generation
 
-            // Set up headers
-            struct curl_slist* headers = nullptr;
-            headers = curl_slist_append(headers, ("xi-api-key: " + elevenlabs_api_key).c_str());
-            headers = curl_slist_append(headers, "Content-Type: application/json");
-            headers = curl_slist_append(headers, "Accept: audio/mpeg");
+            client.Execute();
 
-            // Configure CURL
-            const auto request_str = request_body.dump();
-            curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request_str.c_str());
-            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &audio_data);
-            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
-            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
-
-            // Perform the request
-            CURLcode res = curl_easy_perform(curl);
-
-            // Check response code
-            long response_code;
-            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-
-            if (res != CURLE_OK) {
-                VoiceLog("CURL request failed: %s", curl_easy_strerror(res));
-                audio_data.clear();
-            }
-            else if (response_code != 200) {
-                VoiceLog("ElevenLabs API returned error code: %ld\n%s", response_code,audio_data.c_str());
-                audio_data.clear();
+            if (client.IsSuccessful()) {
+                std::string audio_data = std::move(client.GetContent());
+                VoiceLog("ElevenLabs voice generation successful, received %zu bytes", audio_data.size());
+                return audio_data;
             }
             else {
-                VoiceLog("Voice generation successful, received %zu bytes", audio_data.size());
+                VoiceLog("ElevenLabs API returned error code: %ld", client.GetStatusCode());
+                // Log response body for debugging
+                std::string error_response = std::move(client.GetContent());
+                if (!error_response.empty()) {
+                    VoiceLog("Error response: %s", error_response.c_str());
+                }
+                return "";
             }
 
-            // Cleanup
-            curl_slist_free_all(headers);
-            curl_easy_cleanup(curl);
-
         } catch (const std::exception& e) {
-            VoiceLog("Exception in voice generation: %s", e.what());
-            curl_easy_cleanup(curl);
-            audio_data.clear();
+            VoiceLog("Exception in ElevenLabs voice generation: %s", e.what());
+            return "";
         }
-
-        return audio_data;
     }
 
-    std::string GenerateVoice(const std::wstring& text, const VoiceProfile* profile, GW::Constants::Language language)
+    std::string GenerateVoice(PendingNPCAudio* audio)
     {
         switch (current_tts_provider) {
             case TTSProvider::OpenAI:
-                return GenerateVoiceOpenAI(text, profile, language);
+                return GenerateVoiceOpenAI(audio);
             case TTSProvider::ElevenLabs:
             default:
-                return GenerateVoiceElevenLabs(text, profile, language);
+                return GenerateVoiceElevenLabs(audio);
         }
     }
 
 
-    void GenerateVoiceAPI(const std::wstring& _message, const VoiceProfile* profile, GW::Constants::Language language)
+    void GenerateVoiceAPI(PendingNPCAudio* audio)
     {
         if (generating_voice) return;
         generating_voice = true;
 
-        Resources::EnqueueWorkerTask([message = _message, profile, language]() {
-            const auto cache_key = GenerateOptimizedCacheKey(profile, message,language);
-            const auto path = Resources::GetPath("NPCVoiceCache") / LanguageToAbbreviation(language) / cache_key;
+        Resources::EnqueueWorkerTask([audio]() {
+            const auto cache_key = GenerateOptimizedCacheKey(audio->profile, audio->decoded_message, audio->language);
+            audio->path = Resources::GetPath("NPCVoiceCache") / LanguageToAbbreviation(audio->language) / cache_key;
 
             // Check cache first
-            if (std::filesystem::exists(path)) {
-                PlayAudioFile(path);
+            if (std::filesystem::exists(audio->path)) {
+                PlayAudioFile(audio);
                 return generating_voice = false;
             }
 
-            auto audio_data = GenerateVoice(message, profile, language);
+            auto audio_data = GenerateVoice(audio);
             if (!audio_data.size()) {
                 VoiceLog("Failed to generate voice data");
+                delete audio;
                 return generating_voice = false;
             }
 
-            // Update rate limiting
-            last_api_call = std::chrono::steady_clock::now();
-
             // Save to cache
-            Resources::EnsureFolderExists(path.parent_path());
-            FILE* fp = fopen(path.string().c_str(), "wb");
+            Resources::EnsureFolderExists(audio->path.parent_path());
+            FILE* fp = fopen(audio->path.string().c_str(), "wb");
             if (!fp) {
-                VoiceLog("Failed to open file for writing: %s", path.string().c_str());
+                VoiceLog("Failed to open file for writing: %s", audio->path.string().c_str());
+                delete audio;
                 return generating_voice = false;
             }
             const auto written = fwrite(audio_data.data(), sizeof(audio_data[0]), audio_data.size(), fp);
             fclose(fp);
             if (written < 1) {
-                VoiceLog("Failed to write audio data to file: %s", path.string().c_str());
+                VoiceLog("Failed to write audio data to file: %s", audio->path.string().c_str());
+                delete audio;
                 return generating_voice = false;
             }
 
-            PlayAudioFile(path);
+            PlayAudioFile(audio);
             return generating_voice = false;
         });
     }
@@ -881,66 +917,62 @@ void NPCVoiceModule::Initialize()
     voice_matrix.clear();
     special_npc_voices.clear();
 
-    // Human voices by region and sex
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_Ascalon}] = VoiceProfile(voice_id_human_male, 0.7f, 0.6f, 0.5f, 0.95f, "gruff");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_Ascalon}] = VoiceProfile(voice_id_human_female, 0.6f, 0.7f, 0.6f, 1.0f, "determined");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_Kryta}] = VoiceProfile(voice_id_human_male, 0.5f, 0.7f, 0.4f, 1.0f, "refined");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_Kryta}] = VoiceProfile(voice_id_human_female, 0.4f, 0.8f, 0.5f, 1.05f, "noble");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_Maguuma}] = VoiceProfile(voice_id_human_male, 0.6f, 0.5f, 0.6f, 0.90f, "tribal");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_Maguuma}] = VoiceProfile(voice_id_human_female, 0.5f, 0.6f, 0.7f, 0.95f, "wild");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_CrystalDesert}] = VoiceProfile(voice_id_human_male, 0.7f, 0.4f, 0.3f, 0.85f, "mystical");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_CrystalDesert}] = VoiceProfile(voice_id_human_female, 0.6f, 0.5f, 0.4f, 0.90f, "ancient");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_NorthernShiverpeaks}] = VoiceProfile(voice_id_human_male, 0.8f, 0.3f, 0.4f, 0.80f, "mountain");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_NorthernShiverpeaks}] = VoiceProfile(voice_id_human_female, 0.7f, 0.4f, 0.5f, 0.85f, "hardy");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_FarShiverpeaks}] = VoiceProfile(voice_id_human_male, 0.9f, 0.2f, 0.3f, 0.75f, "isolated");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_FarShiverpeaks}] = VoiceProfile(voice_id_human_female, 0.8f, 0.3f, 0.4f, 0.80f, "distant");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_ShingJea}] = VoiceProfile(voice_id_human_male, 0.3f, 0.7f, 0.2f, 1.0f, "canthan_scholarly");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_ShingJea}] = VoiceProfile(voice_id_human_female, 0.2f, 0.8f, 0.3f, 1.05f, "canthan_gentle");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_Kaineng}] = VoiceProfile(voice_id_human_male, 0.4f, 0.6f, 0.3f, 1.0f, "canthan_urban");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_Kaineng}] = VoiceProfile(voice_id_human_female, 0.3f, 0.7f, 0.4f, 1.0f, "canthan_refined");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_Kurzick}] = VoiceProfile(voice_id_human_male, 0.5f, 0.5f, 0.4f, 0.95f, "canthan_forest");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_Kurzick}] = VoiceProfile(voice_id_human_female, 0.4f, 0.6f, 0.5f, 1.0f, "canthan_mystic");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_Luxon}] = VoiceProfile(voice_id_human_male, 0.5f, 0.6f, 0.4f, 0.95f, "canthan_sea");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_Luxon}] = VoiceProfile(voice_id_human_female, 0.4f, 0.7f, 0.5f, 1.0f, "canthan_tide");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_Istan}] = VoiceProfile(voice_id_human_male, 0.4f, 0.7f, 0.5f, 1.0f, "elonian_island");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_Istan}] = VoiceProfile(voice_id_human_female, 0.3f, 0.8f, 0.6f, 1.05f, "elonian_tropical");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_Kourna}] = VoiceProfile(voice_id_human_male, 0.7f, 0.5f, 0.4f, 0.90f, "elonian_warrior");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_Kourna}] = VoiceProfile(voice_id_human_female, 0.6f, 0.6f, 0.5f, 0.95f, "elonian_strong");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_Vaabi}] = VoiceProfile(voice_id_human_male, 0.3f, 0.8f, 0.6f, 1.1f, "elonian_royal");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_Vaabi}] = VoiceProfile(voice_id_human_female, 0.2f, 0.9f, 0.7f, 1.15f, "elonian_luxurious");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_Desolation}] = VoiceProfile(voice_id_human_male, 0.8f, 0.3f, 0.2f, 0.85f, "elonian_cursed");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_Desolation}] = VoiceProfile(voice_id_human_female, 0.7f, 0.4f, 0.3f, 0.90f, "elonian_haunted");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_TarnishedCoast}] = VoiceProfile(voice_id_human_male, 0.4f, 0.6f, 0.3f, 1.05f, "intellectual");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_TarnishedCoast}] = VoiceProfile(voice_id_human_female, 0.3f, 0.7f, 0.4f, 1.10f, "scholarly");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_DepthsOfTyria}] = VoiceProfile(voice_id_human_male, 0.6f, 0.4f, 0.3f, 0.85f, "underground");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_DepthsOfTyria}] = VoiceProfile(voice_id_human_female, 0.5f, 0.5f, 0.4f, 0.90f, "deep");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_CharrHomelands}] = VoiceProfile(voice_id_human_male, 0.9f, 0.2f, 0.2f, 0.80f, "prisoner");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_CharrHomelands}] = VoiceProfile(voice_id_human_female, 0.8f, 0.3f, 0.3f, 0.85f, "captive");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_HeroesAscent}] = VoiceProfile(voice_id_human_male, 0.6f, 0.7f, 0.8f, 1.0f, "legendary");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_HeroesAscent}] = VoiceProfile(voice_id_human_female, 0.5f, 0.8f, 0.9f, 1.05f, "heroic");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_FissureOfWoe}] = VoiceProfile(voice_id_human_male, 0.4f, 0.6f, 0.3f, 0.90f, "eternal");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_FissureOfWoe}] = VoiceProfile(voice_id_human_female, 0.3f, 0.7f, 0.4f, 0.95f, "otherworldly");
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_DomainOfAnguish}] = VoiceProfile(voice_id_human_male, 0.8f, 0.3f, 0.2f, 0.85f, "tormented");
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_DomainOfAnguish}] = VoiceProfile(voice_id_human_female, 0.7f, 0.4f, 0.3f, 0.90f, "anguished");
+    // Human voices by region and gender - FIXED: Using Gender enum instead of uint8_t
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_Ascalon}] = VoiceProfile(voice_id_human_male, 0.7f, 0.6f, 0.5f, 0.95f, "gruff");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_Ascalon}] = VoiceProfile(voice_id_human_female, 0.6f, 0.7f, 0.6f, 1.0f, "determined");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_Kryta}] = VoiceProfile(voice_id_human_male, 0.5f, 0.7f, 0.4f, 1.0f, "refined");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_Kryta}] = VoiceProfile(voice_id_human_female, 0.4f, 0.8f, 0.5f, 1.05f, "noble");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_Maguuma}] = VoiceProfile(voice_id_human_male, 0.6f, 0.5f, 0.6f, 0.90f, "tribal");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_Maguuma}] = VoiceProfile(voice_id_human_female, 0.5f, 0.6f, 0.7f, 0.95f, "wild");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_CrystalDesert}] = VoiceProfile(voice_id_human_male, 0.7f, 0.4f, 0.3f, 0.85f, "mystical");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_CrystalDesert}] = VoiceProfile(voice_id_human_female, 0.6f, 0.5f, 0.4f, 0.90f, "ancient");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_NorthernShiverpeaks}] = VoiceProfile(voice_id_human_male, 0.8f, 0.3f, 0.4f, 0.80f, "mountain");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_NorthernShiverpeaks}] = VoiceProfile(voice_id_human_female, 0.7f, 0.4f, 0.5f, 0.85f, "hardy");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_FarShiverpeaks}] = VoiceProfile(voice_id_human_male, 0.9f, 0.2f, 0.3f, 0.75f, "isolated");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_FarShiverpeaks}] = VoiceProfile(voice_id_human_female, 0.8f, 0.3f, 0.4f, 0.80f, "distant");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_ShingJea}] = VoiceProfile(voice_id_human_male, 0.3f, 0.7f, 0.2f, 1.0f, "canthan_scholarly");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_ShingJea}] = VoiceProfile(voice_id_human_female, 0.2f, 0.8f, 0.3f, 1.05f, "canthan_gentle");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_Kaineng}] = VoiceProfile(voice_id_human_male, 0.4f, 0.6f, 0.3f, 1.0f, "canthan_urban");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_Kaineng}] = VoiceProfile(voice_id_human_female, 0.3f, 0.7f, 0.4f, 1.0f, "canthan_refined");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_Kurzick}] = VoiceProfile(voice_id_human_male, 0.5f, 0.5f, 0.4f, 0.95f, "canthan_forest");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_Kurzick}] = VoiceProfile(voice_id_human_female, 0.4f, 0.6f, 0.5f, 1.0f, "canthan_mystic");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_Luxon}] = VoiceProfile(voice_id_human_male, 0.5f, 0.6f, 0.4f, 0.95f, "canthan_sea");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_Luxon}] = VoiceProfile(voice_id_human_female, 0.4f, 0.7f, 0.5f, 1.0f, "canthan_tide");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_Istan}] = VoiceProfile(voice_id_human_male, 0.4f, 0.7f, 0.5f, 1.0f, "elonian_island");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_Istan}] = VoiceProfile(voice_id_human_female, 0.3f, 0.8f, 0.6f, 1.05f, "elonian_tropical");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_Kourna}] = VoiceProfile(voice_id_human_male, 0.7f, 0.5f, 0.4f, 0.90f, "elonian_warrior");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_Kourna}] = VoiceProfile(voice_id_human_female, 0.6f, 0.6f, 0.5f, 0.95f, "elonian_strong");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_Vaabi}] = VoiceProfile(voice_id_human_male, 0.3f, 0.8f, 0.6f, 1.1f, "elonian_royal");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_Vaabi}] = VoiceProfile(voice_id_human_female, 0.2f, 0.9f, 0.7f, 1.15f, "elonian_luxurious");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_Desolation}] = VoiceProfile(voice_id_human_male, 0.8f, 0.3f, 0.2f, 0.85f, "elonian_cursed");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_Desolation}] = VoiceProfile(voice_id_human_female, 0.7f, 0.4f, 0.3f, 0.90f, "elonian_haunted");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_TarnishedCoast}] = VoiceProfile(voice_id_human_male, 0.4f, 0.6f, 0.3f, 1.05f, "intellectual");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_TarnishedCoast}] = VoiceProfile(voice_id_human_female, 0.3f, 0.7f, 0.4f, 1.10f, "scholarly");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_DepthsOfTyria}] = VoiceProfile(voice_id_human_male, 0.6f, 0.4f, 0.3f, 0.85f, "underground");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_DepthsOfTyria}] = VoiceProfile(voice_id_human_female, 0.5f, 0.5f, 0.4f, 0.90f, "deep");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_CharrHomelands}] = VoiceProfile(voice_id_human_male, 0.9f, 0.2f, 0.2f, 0.80f, "prisoner");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_CharrHomelands}] = VoiceProfile(voice_id_human_female, 0.8f, 0.3f, 0.3f, 0.85f, "captive");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_HeroesAscent}] = VoiceProfile(voice_id_human_male, 0.6f, 0.7f, 0.8f, 1.0f, "legendary");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_HeroesAscent}] = VoiceProfile(voice_id_human_female, 0.5f, 0.8f, 0.9f, 1.05f, "heroic");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_FissureOfWoe}] = VoiceProfile(voice_id_human_male, 0.4f, 0.6f, 0.3f, 0.90f, "eternal");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_FissureOfWoe}] = VoiceProfile(voice_id_human_female, 0.3f, 0.7f, 0.4f, 0.95f, "otherworldly");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_DomainOfAnguish}] = VoiceProfile(voice_id_human_male, 0.8f, 0.3f, 0.2f, 0.85f, "tormented");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_DomainOfAnguish}] = VoiceProfile(voice_id_human_female, 0.7f, 0.4f, 0.3f, 0.90f, "anguished");
 
-    voice_matrix[{1, GWRace::CHARR, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_male, 0.8f, 0.4f, 0.3f, 0.85f, "growling");
-    voice_matrix[{0, GWRace::CHARR, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_female, 0.7f, 0.5f, 0.4f, 0.90f, "fierce");
+    // Non-human races - fallback voices
+    voice_matrix[{Gender::Male, GWRace::Charr, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_male, 0.8f, 0.4f, 0.3f, 0.85f, "growling");
+    voice_matrix[{Gender::Female, GWRace::Charr, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_female, 0.7f, 0.5f, 0.4f, 0.90f, "fierce");
 
-    voice_matrix[{1, GWRace::DWARF, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_male, 0.9f, 0.3f, 0.4f, 0.80f, "gravelly");
-    voice_matrix[{0, GWRace::DWARF, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_female, 0.8f, 0.4f, 0.5f, 0.85f, "robust");
+    voice_matrix[{Gender::Male, GWRace::Dwarf, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_dwarven_male, 0.9f, 0.3f, 0.4f, 0.80f, "gravelly");
+    voice_matrix[{Gender::Female, GWRace::Dwarf, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_dwarven_male, 0.8f, 0.4f, 0.5f, 0.85f, "robust");
 
-    voice_matrix[{1, GWRace::HUMAN, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_male, 0.5f, 0.5f, 0.5f, 1.0f);
-    voice_matrix[{0, GWRace::HUMAN, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_female, 0.5f, 0.5f, 0.5f, 1.0f);
+    // Default fallback voices
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_male, 0.5f, 0.5f, 0.5f, 1.0f);
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_female, 0.5f, 0.5f, 0.5f, 1.0f);
 
-    // Special named NPCs
-    //special_npc_voices[3492] = VoiceProfile("oWAxZDx7w5VEj9dCyTzz", 0.6f, 0.8f, 0.7f); // Devona
-
-    // Replace the merchant_greetings initialization in Initialize() with this:
 
     // Initialize merchant greetings by region and trader type
     merchant_greetings.clear();
-
-    // ASCALON - War-torn, survival focused
     merchant_greetings[{GW::Region::Region_Ascalon, TraderType::Merchant}] = L"Welcome, traveler, times are hard but I still have goods to trade.";
     merchant_greetings[{GW::Region::Region_Ascalon, TraderType::ArmorCrafter}] = L"Need armor that can withstand Charr claws?";
     merchant_greetings[{GW::Region::Region_Ascalon, TraderType::WeaponCustomizer}] = L"Looking for a weapon that can pierce Charr hide?";
@@ -949,6 +981,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_Ascalon, TraderType::RareMaterialTrader}] = L"Rare materials, recovered from the Searing's aftermath.";
     merchant_greetings[{GW::Region::Region_Ascalon, TraderType::DyeTrader}] = L"Colors to brighten these dark times.";
     merchant_greetings[{GW::Region::Region_Ascalon, TraderType::OtherItemCrafter}] = L"Need something crafted by skills that survived the Searing?";
+    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::SkillTrainer}] = L"I teach the combat skills needed to survive in these cursed lands.";
 
     // PRE-SEARING ASCALON - Peaceful, idyllic
     merchant_greetings[{GW::Region::Region_Presearing, TraderType::Merchant}] = L"Good day, welcome to beautiful Ascalon!";
@@ -959,6 +992,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_Presearing, TraderType::RareMaterialTrader}] = L"Rare treasures from the abundant lands of Ascalon.";
     merchant_greetings[{GW::Region::Region_Presearing, TraderType::DyeTrader}] = L"Vibrant colors from our peaceful realm.";
     merchant_greetings[{GW::Region::Region_Presearing, TraderType::OtherItemCrafter}] = L"Greetings, I offer the finest craftsmanship in all of Ascalon.";
+    merchant_greetings[{GW::Region::Region_Presearing, TraderType::SkillTrainer}] = L"Welcome, I teach the honored traditions of Ascalonian warfare.";
 
     // KRYTA - Noble, refined
     merchant_greetings[{GW::Region::Region_Kryta, TraderType::Merchant}] = L"Good day to you, welcome to my establishment!";
@@ -969,6 +1003,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_Kryta, TraderType::RareMaterialTrader}] = L"Rare treasures from the royal vaults of Kryta.";
     merchant_greetings[{GW::Region::Region_Kryta, TraderType::DyeTrader}] = L"Royal colors for distinguished customers.";
     merchant_greetings[{GW::Region::Region_Kryta, TraderType::OtherItemCrafter}] = L"Greetings, I offer the finest crafting services in Kryta.";
+    merchant_greetings[{GW::Region::Region_Kryta, TraderType::SkillTrainer}] = L"I shall teach you the refined combat arts of the Krytan nobility.";
 
     // MAGUUMA JUNGLE - Wild, dangerous
     merchant_greetings[{GW::Region::Region_Maguuma, TraderType::Merchant}] = L"Welcome, brave soul, few venture this deep into the jungle.";
@@ -979,6 +1014,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_Maguuma, TraderType::RareMaterialTrader}] = L"Rare jungle treasures, if you have the courage.";
     merchant_greetings[{GW::Region::Region_Maguuma, TraderType::DyeTrader}] = L"Wild colors from nature's most dangerous realm.";
     merchant_greetings[{GW::Region::Region_Maguuma, TraderType::OtherItemCrafter}] = L"Greetings, I craft with materials blessed by the jungle spirits.";
+    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::SkillTrainer}] = L"The jungle teaches harsh lessons. I can teach you to survive them.";
 
     // CRYSTAL DESERT - Harsh, mystical
     merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::Merchant}] = L"Welcome, desert wanderer, supplies are precious here.";
@@ -989,6 +1025,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::RareMaterialTrader}] = L"Mystical crystals from the heart of the desert.";
     merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::DyeTrader}] = L"Colors as brilliant as crystal formations.";
     merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::OtherItemCrafter}] = L"Greetings, I work with crystal and sand-blessed materials.";
+    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::SkillTrainer}] = L"I teach the ancient arts whispered by the desert winds.";
 
     // NORTHERN SHIVERPEAKS - Cold, dwarven
     merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::Merchant}] = L"Welcome to the peaks, warm yourself and browse my wares.";
@@ -999,6 +1036,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::RareMaterialTrader}] = L"Precious gems from the deepest mountain veins.";
     merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::DyeTrader}] = L"Mountain colors, bold as dwarven courage.";
     merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::OtherItemCrafter}] = L"Greetings, dwarven craftsmanship built to last centuries!";
+    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::SkillTrainer}] = L"I'll teach ye the battle techniques passed down through generations of dwarven warriors!";
 
     // FAR SHIVERPEAKS - Remote, harsh
     merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::Merchant}] = L"By the forge, another traveler reaches these distant peaks!";
@@ -1009,6 +1047,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::RareMaterialTrader}] = L"Treasures from where the world ends.";
     merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::DyeTrader}] = L"Colors from the world's frozen edge.";
     merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::OtherItemCrafter}] = L"Welcome, hardy soul, few seek crafting in these remote lands.";
+    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::SkillTrainer}] = L"At the world's edge, only the strongest techniques survive. Let me teach them to you.";
 
     // CANTHA - SHING JEA - Peaceful, academic
     merchant_greetings[{GW::Region::Region_ShingJea, TraderType::Merchant}] = L"Honorable student, welcome to this place of learning.";
@@ -1019,6 +1058,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_ShingJea, TraderType::RareMaterialTrader}] = L"Rare treasures from the sacred archives.";
     merchant_greetings[{GW::Region::Region_ShingJea, TraderType::DyeTrader}] = L"Colors harmonious as monastery gardens.";
     merchant_greetings[{GW::Region::Region_ShingJea, TraderType::OtherItemCrafter}] = L"Greetings, I craft with the wisdom of ancient masters.";
+    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::SkillTrainer}] = L"Welcome, young student. I shall guide you in the ancient martial ways of Shing Jea.";
 
     // CANTHA - KAINENG CITY - Urban, bustling
     merchant_greetings[{GW::Region::Region_Kaineng, TraderType::Merchant}] = L"Welcome to Kaineng City, the finest goods from across the empire!";
@@ -1029,6 +1069,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_Kaineng, TraderType::RareMaterialTrader}] = L"Rare goods from the empire's endless markets.";
     merchant_greetings[{GW::Region::Region_Kaineng, TraderType::DyeTrader}] = L"Imperial colors from the city of endless hues.";
     merchant_greetings[{GW::Region::Region_Kaineng, TraderType::OtherItemCrafter}] = L"Greetings, city craftsmanship meets ancient tradition.";
+    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::SkillTrainer}] = L"In the empire's greatest city, I teach the most refined combat techniques.";
 
     // CANTHA - KURZICK LANDS - Forest, gothic
     merchant_greetings[{GW::Region::Region_Kurzick, TraderType::Merchant}] = L"Welcome to our sacred forests, nature's bounty awaits.";
@@ -1039,6 +1080,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_Kurzick, TraderType::RareMaterialTrader}] = L"Sacred forest treasures, given freely by nature.";
     merchant_greetings[{GW::Region::Region_Kurzick, TraderType::DyeTrader}] = L"Forest colors, as eternal as the trees.";
     merchant_greetings[{GW::Region::Region_Kurzick, TraderType::OtherItemCrafter}] = L"Greetings, friend of the forest, I craft with nature's blessing.";
+    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::SkillTrainer}] = L"The eternal forest whispers its secrets. I can teach you its ancient fighting ways.";
 
     // CANTHA - LUXON WATERS - Maritime, jade-themed
     merchant_greetings[{GW::Region::Region_Luxon, TraderType::Merchant}] = L"Welcome, sea-friend, the jade winds bring good fortune.";
@@ -1049,6 +1091,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_Luxon, TraderType::RareMaterialTrader}] = L"Rare jade gifts from the eternal sea.";
     merchant_greetings[{GW::Region::Region_Luxon, TraderType::DyeTrader}] = L"Sea colors, shifting like jade waters.";
     merchant_greetings[{GW::Region::Region_Luxon, TraderType::OtherItemCrafter}] = L"Greetings, I craft with materials blessed by the jade sea.";
+    merchant_greetings[{GW::Region::Region_Luxon, TraderType::SkillTrainer}] = L"Like the shifting tides, I teach the fluid combat arts of the Luxon armadas.";
 
     // ELONA - ISTAN - Island paradise
     merchant_greetings[{GW::Region::Region_Istan, TraderType::Merchant}] = L"Ahlan wa sahlan, welcome to the jewel of Elona!";
@@ -1059,6 +1102,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_Istan, TraderType::RareMaterialTrader}] = L"Precious island treasures from hidden coves.";
     merchant_greetings[{GW::Region::Region_Istan, TraderType::DyeTrader}] = L"Tropical colors, bright as paradise.";
     merchant_greetings[{GW::Region::Region_Istan, TraderType::OtherItemCrafter}] = L"Greetings, honored traveler, island craftsmanship at its finest.";
+    merchant_greetings[{GW::Region::Region_Istan, TraderType::SkillTrainer}] = L"Welcome, traveler! I teach the graceful combat arts perfected under Elonian sun.";
 
     // ELONA - KOURNA - Harsh mainland
     merchant_greetings[{GW::Region::Region_Kourna, TraderType::Merchant}] = L"Welcome, desert warrior, Kourna's goods serve the strong.";
@@ -1069,6 +1113,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_Kourna, TraderType::RareMaterialTrader}] = L"War spoils from the harsh mainland.";
     merchant_greetings[{GW::Region::Region_Kourna, TraderType::DyeTrader}] = L"Desert colors, bold as warrior courage.";
     merchant_greetings[{GW::Region::Region_Kourna, TraderType::OtherItemCrafter}] = L"Greetings, I forge in the harsh fires of the mainland.";
+    merchant_greetings[{GW::Region::Region_Kourna, TraderType::SkillTrainer}] = L"In Kourna, only the strong survive. I teach the brutal arts of desert warfare.";
 
     // ELONA - VABBI - Wealthy, luxurious
     merchant_greetings[{GW::Region::Region_Vaabi, TraderType::Merchant}] = L"Welcome to Vabbi, land of princes and prosperity!";
@@ -1079,6 +1124,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_Vaabi, TraderType::RareMaterialTrader}] = L"Princely treasures from royal vaults.";
     merchant_greetings[{GW::Region::Region_Vaabi, TraderType::DyeTrader}] = L"Royal colors, luxurious as palace silks.";
     merchant_greetings[{GW::Region::Region_Vaabi, TraderType::OtherItemCrafter}] = L"Greetings, only the most exquisite craftsmanship in Vabbi.";
+    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::SkillTrainer}] = L"I teach the elegant combat arts favored by Vabbi's noble princes.";
 
     // ELONA - DESOLATION - Cursed, dangerous
     merchant_greetings[{GW::Region::Region_Desolation, TraderType::Merchant}] = L"Welcome, brave soul, few dare trade in these cursed lands.";
@@ -1089,6 +1135,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_Desolation, TraderType::RareMaterialTrader}] = L"Forbidden treasures from the cursed realm.";
     merchant_greetings[{GW::Region::Region_Desolation, TraderType::DyeTrader}] = L"Dark colors from the realm of shadows.";
     merchant_greetings[{GW::Region::Region_Desolation, TraderType::OtherItemCrafter}] = L"Greetings, I work despite the sulfurous winds and darkness.";
+    merchant_greetings[{GW::Region::Region_Desolation, TraderType::SkillTrainer}] = L"In this cursed realm, I teach the forbidden arts needed to fight demons.";
 
     // CHARR HOMELANDS - Enemy territory, rare
     merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::Merchant}] = L"You dare trade in Charr lands, your courage impresses me.";
@@ -1099,6 +1146,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::RareMaterialTrader}] = L"War trophies from the enemy homeland.";
     merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::DyeTrader}] = L"Colors of war from enemy territory.";
     merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::OtherItemCrafter}] = L"By the flame, a human seeks crafting in Charr territory!";
+    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::SkillTrainer}] = L"Incredible! A human seeks training in the heart of Charr territory. I admire your boldness.";
 
     // UNDERWORLD/SPECIAL AREAS - Mystical, otherworldly
     merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::Merchant}] = L"Welcome, eternal warrior, even here commerce finds a way.";
@@ -1109,6 +1157,7 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::RareMaterialTrader}] = L"Treasures from the realm of eternal flame.";
     merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::DyeTrader}] = L"Colors from the eternal realm.";
     merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::OtherItemCrafter}] = L"Greetings, I craft with materials touched by eternity.";
+    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::SkillTrainer}] = L"In the realm of eternal flame, I teach techniques that transcend mortal understanding.";
 
     merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::Merchant}] = L"Welcome to this realm of shadows, trade persists even here.";
     merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::ArmorCrafter}] = L"Protection forged in anguish and shadow.";
@@ -1118,8 +1167,36 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::RareMaterialTrader}] = L"Treasures from the realm of eternal torment.";
     merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::DyeTrader}] = L"Shadow colors from the realm of anguish.";
     merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::OtherItemCrafter}] = L"Greetings, shadow-walker, I craft with the essence of torment.";
+    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::SkillTrainer}] = L"In this realm of endless torment, I teach the dark arts born of eternal suffering.";
 
-    const GW::UI::UIMessage messages[] = {GW::UI::UIMessage::kDialogBody, GW::UI::UIMessage::kVendorWindow, GW::UI::UIMessage::kAgentSpeechBubble};
+    // EYE OF THE NORTH REGIONS - Add these new regions for completeness
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::Merchant}] = L"Welcome, scholar, the Asura have many wondrous inventions to trade.";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::ArmorCrafter}] = L"Asura technology meets traditional protection.";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::WeaponCustomizer}] = L"Weapons enhanced with Asura ingenuity and magical innovation.";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::RuneTrader}] = L"Runic magic refined by Asura intellectual prowess.";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::MaterialTrader}] = L"Advanced materials and technological components from Asura laboratories.";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::RareMaterialTrader}] = L"Rare components from the most advanced Asura research facilities.";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::DyeTrader}] = L"Pigments created through superior Asura alchemical processes.";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::OtherItemCrafter}] = L"Greetings, I craft using the most advanced Asura methodologies.";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::SkillTrainer}] = L"I teach combat techniques enhanced by superior Asura intellectual analysis.";
+
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::Merchant}] = L"Welcome to the depths, few surface dwellers venture this far below.";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::ArmorCrafter}] = L"Protection forged in the deepest caverns and underground forges.";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::WeaponCustomizer}] = L"Weapons crafted from the treasures hidden in Tyria's depths.";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::RuneTrader}] = L"Ancient runes discovered in the deepest underground chambers.";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::MaterialTrader}] = L"Materials mined from the deepest veins beneath the world.";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::RareMaterialTrader}] = L"Precious stones and metals from the world's hidden depths.";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::DyeTrader}] = L"Deep earth colors from the underground realm.";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::OtherItemCrafter}] = L"Greetings, I work with materials from the deepest places of the world.";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::SkillTrainer}] = L"In the depths where few dare tread, I teach the underground fighting arts.";
+
+    const GW::UI::UIMessage messages[] = {
+        GW::UI::UIMessage::kDialogBody, 
+        GW::UI::UIMessage::kVendorWindow, 
+        GW::UI::UIMessage::kAgentSpeechBubble, 
+        GW::UI::UIMessage::kMapChange, 
+        GW::UI::UIMessage::kMapLoaded
+    };
 
     for (auto message_id : messages) {
         GW::UI::RegisterUIMessageCallback(&PreUIMessage_HookEntry, message_id, OnPreUIMessage, -0x1);
@@ -1130,7 +1207,7 @@ void NPCVoiceModule::Initialize()
 void NPCVoiceModule::Terminate()
 {
     ToolboxModule::Terminate();
-
+    ClearSounds();
     GW::UI::RemoveUIMessageCallback(&UIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&PreUIMessage_HookEntry);
 }
@@ -1146,6 +1223,10 @@ void NPCVoiceModule::LoadSettings(ToolboxIni* ini)
     strncpy_s(elevenlabs_api_key_buffer, elevenlabs_api_key.c_str(), sizeof(elevenlabs_api_key_buffer) - 1);
     LOAD_STRING(openai_api_key);
     strncpy_s(openai_api_key_buffer, openai_api_key.c_str(), sizeof(openai_api_key_buffer) - 1);
+    LOAD_BOOL(only_use_first_dialog);
+    LOAD_BOOL(only_show_speech_from_friendly_npcs);
+    LOAD_BOOL(show_speech_from_party_members_in_explorable_areas);
+    LOAD_BOOL(only_use_first_sentence);
 }
 
 void NPCVoiceModule::SaveSettings(ToolboxIni* ini)
@@ -1156,6 +1237,10 @@ void NPCVoiceModule::SaveSettings(ToolboxIni* ini)
     SAVE_UINT(current_tts_provider);
     SAVE_STRING(elevenlabs_api_key);
     SAVE_STRING(openai_api_key);
+    SAVE_BOOL(only_show_speech_from_friendly_npcs);
+    SAVE_BOOL(only_use_first_dialog);
+    SAVE_BOOL(show_speech_from_party_members_in_explorable_areas);
+    SAVE_BOOL(only_use_first_sentence);
 }
 
 void NPCVoiceModule::DrawSettingsInternal()
@@ -1199,8 +1284,34 @@ void NPCVoiceModule::DrawSettingsInternal()
     }
 
     ImGui::Separator();
+
+    bool show_warning = false;
+    ImGui::Checkbox("Only process the first sentence of a dialog", &only_use_first_sentence);
+    ImGui::ShowHelp("If enabled, only the first sentence of an NPC dialog will be processed.");
+    show_warning |= !only_use_first_sentence;
+
     ImGui::Checkbox("Only process the first dialog of an NPC", &only_use_first_dialog);
-    ImGui::ShowHelp("If enabled, only the first dialog of an NPC will be processed for TTS, similar to Eye of the North dialog.");
+    ImGui::ShowHelp("If enabled, only the first dialog of an NPC conversation will be processed.");
+    show_warning |= !only_use_first_dialog;
+
+    ImGui::Checkbox("Stop speech when dialog window is closed", &stop_speech_when_dialog_closed);
+
+    ImGui::Checkbox("Show speech from party members when in an explorable area", &show_speech_from_party_members_in_explorable_areas);
+    show_warning |= show_speech_from_party_members_in_explorable_areas;
+
+    if (ImGui::InputFloat("NPC speech bubble range", &npc_speech_bubble_range, GW::Constants::Range::Adjacent, GW::Constants::Range::Adjacent)) {
+        npc_speech_bubble_range = std::max(npc_speech_bubble_range, 0.f);
+        npc_speech_bubble_range = std::min(npc_speech_bubble_range, 2500.f);
+    }
+    show_warning |= (npc_speech_bubble_range > 166.f);
+
+    ImGui::ShowHelp("The range at which NPC speech bubbles will be processed. Set to 0 to disable.");
+    ImGui::Checkbox("Only show speech from friendly NPCs", &only_show_speech_from_friendly_npcs);
+    show_warning |= !only_show_speech_from_friendly_npcs;
+
+    if (show_warning) {
+        ImGui::TextColored(ImColor(IM_COL32(245, 245, 0, 255)), "Warning: Processing more lines of dialog will use up more API credits!");
+    }
     // Simple log display
     ImGui::Separator();
     ImGui::Text("Recent Activity:");
@@ -1221,3 +1332,4 @@ void NPCVoiceModule::DrawSettingsInternal()
         ImGui::InputTextMultiline("##VoiceLog", const_cast<char*>(combined_log.c_str()), combined_log.size(), ImVec2(-1, 100), ImGuiInputTextFlags_ReadOnly);
     }
 }
+

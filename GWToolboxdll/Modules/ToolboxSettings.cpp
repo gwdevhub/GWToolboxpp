@@ -38,6 +38,7 @@
 #include <Modules/AudioSettings.h>
 #include <Modules/HeroEquipmentModule.h>
 #include <Modules/NPCVoiceModule.h>
+#include <Modules/LoginModule.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -158,7 +159,7 @@ namespace {
 #if 0
         ExtraWeaponSets::Instance(),
 #endif
-
+        LoginModule::Instance(),
         NPCVoiceModule::Instance(),
         AudioSettings::Instance()
     };
