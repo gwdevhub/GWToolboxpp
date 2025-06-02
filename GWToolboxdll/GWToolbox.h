@@ -38,6 +38,7 @@ public:
     static void Disable();
     static bool CanTerminate();
 
+    static ToolboxIni* OpenSettingsFile();
     static std::filesystem::path SaveSettings();
     static std::filesystem::path LoadSettings();
     static bool SetSettingsFolder(const std::filesystem::path& path);
