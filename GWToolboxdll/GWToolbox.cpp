@@ -322,20 +322,6 @@ namespace {
         return true;
     }
 
-    ToolboxIni* OpenSettingsFile()
-    {
-        static ToolboxIni* inifile = nullptr;
-        const auto full_path = Resources::GetSettingFile(GWTOOLBOX_INI_FILENAME);
-        if (!GWToolbox::SettingsFolderChanged() && inifile) {
-            return inifile;
-        }
-        auto tmp = new ToolboxIni(false, false, false);
-        ASSERT(tmp->LoadIfExists(full_path) == SI_OK);
-        tmp->location_on_disk = full_path;
-        inifile = tmp;
-        return inifile;
-    }
-
     bool CanRenderToolbox()
     {
         return !gwtoolbox_disabled
@@ -354,7 +340,7 @@ namespace {
             if (enable) {
                 return true;
             }
-            m.SaveSettings(OpenSettingsFile());
+            m.SaveSettings(GWToolbox::OpenSettingsFile());
             modules_terminating.push_back(&m);
             m.SignalTerminate();
             vec.erase(found);
@@ -370,7 +356,7 @@ namespace {
         }
         vec.push_back(&m);
         m.Initialize();
-        m.LoadSettings(OpenSettingsFile());
+        m.LoadSettings(GWToolbox::OpenSettingsFile());
         ReorderModules(vec);
         return true; // Added successfully
     }
@@ -835,6 +821,20 @@ bool GWToolbox::IsModuleEnabled(const char* name)
 bool GWToolbox::SettingsFolderChanged()
 {
     return settings_folder_changed;
+}
+
+ToolboxIni* GWToolbox::OpenSettingsFile()
+{
+    static ToolboxIni* inifile = nullptr;
+    const auto full_path = Resources::GetSettingFile(GWTOOLBOX_INI_FILENAME);
+    if (!GWToolbox::SettingsFolderChanged() && inifile) {
+        return inifile;
+    }
+    auto tmp = new ToolboxIni(false, false, false);
+    ASSERT(tmp->LoadIfExists(full_path) == SI_OK);
+    tmp->location_on_disk = full_path;
+    inifile = tmp;
+    return inifile;
 }
 
 std::filesystem::path GWToolbox::SaveSettings()

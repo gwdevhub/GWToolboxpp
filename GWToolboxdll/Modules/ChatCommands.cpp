@@ -699,6 +699,123 @@ namespace {
         GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &call_packet);
     }
 
+    void CHAT_CMD_FUNC(CmdConfig)
+    {
+        const char* syntax = "/config set|get|toggle|load [section key [value]]...";
+        if (argc < 4) {
+            Log::Error(syntax);
+            return;
+        }
+        auto modules = GWToolbox::GetAllModules();
+        auto ini = new ToolboxIni();
+        ToolboxIni* ini_disk = GWToolbox::OpenSettingsFile();
+        enum ActionType : uint8_t { Set, Get, Toggle, Load } action = Set;
+
+        const std::wstring arg1 = TextUtils::ToLower(argv[1]);
+        if (arg1 == L"set") {
+            action = Set;
+        }
+        else if (arg1 == L"get") {
+            action = Get;
+        }
+        else if (arg1 == L"toggle") {
+            action = Toggle;
+        }
+        else if (arg1 == L"load") {
+            action = Load;
+        }
+        else {
+            Log::Error(syntax);
+            return;
+        }
+        // make sure the loop will not run out of arguments mid tuple
+        switch (action) {
+            case Set:
+            case Toggle:
+                if (argc % 3 != 2) {
+                    Log::Error(syntax);
+                    return;
+                }
+                break;
+            case Get:
+            case Load:
+                if (argc % 2 != 0) {
+                    Log::Error(syntax);
+                    return;
+                }
+                break;
+        }
+
+        // merge supplied settings with currently applied ini sections
+        for (int i = 2; i < argc;) {
+            std::string section;
+            section.reserve(wcstombs(nullptr, argv[i], (size_t)-1));
+            wcstombs(section.data(), argv[i], section.capacity());
+            section = TextUtils::UcWords(section.c_str());
+            i++;
+
+            ASSERT(i < argc);
+            std::string key;
+            key.reserve(wcstombs(nullptr, argv[i], (size_t)-1));
+            wcstombs(key.data(), argv[i], key.capacity());
+            key = TextUtils::ToLower(key.c_str());
+            i++;
+
+            std::string value;
+            if (action == Set || action == Toggle) {
+                ASSERT(i < argc);
+                value.reserve(wcstombs(nullptr, argv[i], (size_t)-1));
+                wcstombs(value.data(), argv[i], value.capacity());
+                i++;
+            }
+            // add sections only for modules referred to in this command
+            if (!ini->SectionExists(section.c_str())) {
+                for (const auto m : modules) {
+                    if (0 == strcmp(m->Name(), section.c_str())) {
+                        m->SaveSettings(ini);
+                        break;
+                    }
+                }
+            }
+            if (!ini->SectionExists(section.c_str())) {
+                Log::Warning("ignoring unknown section '%s'", section.c_str());
+                continue;
+            }
+            if (!ini->KeyExists(section.c_str(), key.c_str())) {
+                Log::Warning("ignoring unknown key '%s'", key.c_str());
+                continue;
+            }
+            switch (action) {
+                case Set:
+                    ini->SetValue(section.c_str(), key.c_str(), value.c_str());
+                    break;
+                case Get:
+                    Log::Info("[%s] %s = %s", section.c_str(), key.c_str(), ini->GetValue(section.c_str(), key.c_str()));
+                    break;
+                case Toggle:
+                    if (0 == strcmp(ini->GetValue(section.c_str(), key.c_str()), ini_disk->GetValue(section.c_str(), key.c_str(), value.c_str()))) {
+                        ini->SetValue(section.c_str(), key.c_str(), value.c_str());
+                    }
+                    else {
+                        ini->SetValue(section.c_str(), key.c_str(), ini_disk->GetValue(section.c_str(), key.c_str(), value.c_str()));
+                    }
+                    break;
+                case Load:
+                    ini->SetValue(section.c_str(), key.c_str(), ini_disk->GetValue(section.c_str(), key.c_str(), value.c_str()));
+            }
+        }
+
+        if (action == Get) {
+            return;
+        }
+        // apply sections which were affected by this command
+        for (const auto m : modules) {
+            if (ini->SectionExists(m->Name())) {
+                m->LoadSettings(ini);
+            }
+        }
+    }
+
     std::vector<std::pair<const wchar_t*, GW::Chat::ChatCommandCallback>> chat_commands;
 
     const wchar_t* settings_via_chat_commands_cmd = L"tb_setting";
@@ -925,6 +1042,12 @@ namespace {
         ImGui::Text(withdraw_syntax);
         ImGui::Bullet();
         ImGui::Text(deposit_syntax);
+        ImGui::Bullet();
+        ImGui::Text("'/config set|get|toggle|load [section key [value]]...' edit configuration values from GWToolbox.ini.\n"
+                    "\t'set' apply a setting to the running configuration.\n"
+                    "\t'get' show value of given key.\n"
+                    "\t'toggle' alternate between given value and configuration on disk.\n"
+                    "\t'load' reset key to its disk configuration.");
 
         ImGui::TreePop();
     }
@@ -1333,6 +1456,7 @@ void ChatCommands::Initialize()
         {L"fps", CmdFps},
         {L"pref", CmdPref},
         {L"call", CmdCallTarget},
+        {L"config", CmdConfig},
         {settings_via_chat_commands_cmd, CmdSettingViaChatCommand}
     };
 
