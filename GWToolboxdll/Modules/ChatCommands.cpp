@@ -707,11 +707,11 @@ namespace {
             return;
         }
         auto modules = GWToolbox::GetAllModules();
-        auto ini = new ToolboxIni();
-        ToolboxIni* ini_disk = GWToolbox::OpenSettingsFile();
+        ToolboxIni empty_ini;
+        auto ini_disk = GWToolbox::OpenSettingsFile();
         enum ActionType : uint8_t { Set, Get, Toggle, Load } action = Set;
 
-        const std::wstring arg1 = TextUtils::ToLower(argv[1]);
+        const auto arg1 = TextUtils::ToLower(argv[1]);
         if (arg1 == L"set") {
             action = Set;
         }
@@ -748,60 +748,55 @@ namespace {
 
         // merge supplied settings with currently applied ini sections
         for (int i = 2; i < argc;) {
-            std::string section;
-            section.reserve(wcstombs(nullptr, argv[i], (size_t)-1));
-            wcstombs(section.data(), argv[i], section.capacity());
-            section = TextUtils::UcWords(section.c_str());
+            const auto section = TextUtils::UcWords(TextUtils::WStringToString(argv[i]));
             i++;
 
             ASSERT(i < argc);
-            std::string key;
-            key.reserve(wcstombs(nullptr, argv[i], (size_t)-1));
-            wcstombs(key.data(), argv[i], key.capacity());
-            key = TextUtils::ToLower(key.c_str());
+            const auto key = TextUtils::ToLower(TextUtils::WStringToString(argv[i]));
             i++;
 
             std::string value;
             if (action == Set || action == Toggle) {
                 ASSERT(i < argc);
-                value.reserve(wcstombs(nullptr, argv[i], (size_t)-1));
-                wcstombs(value.data(), argv[i], value.capacity());
+                value = TextUtils::WStringToString(argv[i]);
                 i++;
             }
             // add sections only for modules referred to in this command
-            if (!ini->SectionExists(section.c_str())) {
+            if (!empty_ini.SectionExists(section.c_str())) {
                 for (const auto m : modules) {
-                    if (0 == strcmp(m->Name(), section.c_str())) {
-                        m->SaveSettings(ini);
+                    if (section == m->Name()) {
+                        m->SaveSettings(&empty_ini);
                         break;
                     }
                 }
             }
-            if (!ini->SectionExists(section.c_str())) {
+            if (!empty_ini.SectionExists(section.c_str())) {
                 Log::Warning("ignoring unknown section '%s'", section.c_str());
                 continue;
             }
-            if (!ini->KeyExists(section.c_str(), key.c_str())) {
+            if (!empty_ini.KeyExists(section.c_str(), key.c_str())) {
                 Log::Warning("ignoring unknown key '%s'", key.c_str());
                 continue;
             }
             switch (action) {
                 case Set:
-                    ini->SetValue(section.c_str(), key.c_str(), value.c_str());
+                    empty_ini.SetValue(section.c_str(), key.c_str(), value.c_str());
                     break;
                 case Get:
-                    Log::Info("[%s] %s = %s", section.c_str(), key.c_str(), ini->GetValue(section.c_str(), key.c_str()));
+                    Log::Info("[%s] %s = %s", section.c_str(), key.c_str(), empty_ini.GetValue(section.c_str(), key.c_str()));
                     break;
                 case Toggle:
-                    if (0 == strcmp(ini->GetValue(section.c_str(), key.c_str()), ini_disk->GetValue(section.c_str(), key.c_str(), value.c_str()))) {
-                        ini->SetValue(section.c_str(), key.c_str(), value.c_str());
+                    // Wouldn't this feature behave differently once you save the settings???
+                    // e.g. "/config toggle Pcons show_enable_button false" suddenly wouldn't work if it was saved as "false" when you closed toolbox...
+                    if (0 == strcmp(empty_ini.GetValue(section.c_str(), key.c_str()), ini_disk->GetValue(section.c_str(), key.c_str(), value.c_str()))) {
+                        empty_ini.SetValue(section.c_str(), key.c_str(), value.c_str());
                     }
                     else {
-                        ini->SetValue(section.c_str(), key.c_str(), ini_disk->GetValue(section.c_str(), key.c_str(), value.c_str()));
+                        empty_ini.SetValue(section.c_str(), key.c_str(), ini_disk->GetValue(section.c_str(), key.c_str(), value.c_str()));
                     }
                     break;
                 case Load:
-                    ini->SetValue(section.c_str(), key.c_str(), ini_disk->GetValue(section.c_str(), key.c_str(), value.c_str()));
+                    empty_ini.SetValue(section.c_str(), key.c_str(), ini_disk->GetValue(section.c_str(), key.c_str(), value.c_str()));
             }
         }
 
@@ -810,8 +805,8 @@ namespace {
         }
         // apply sections which were affected by this command
         for (const auto m : modules) {
-            if (ini->SectionExists(m->Name())) {
-                m->LoadSettings(ini);
+            if (empty_ini.SectionExists(m->Name())) {
+                m->LoadSettings(&empty_ini);
             }
         }
     }
@@ -922,10 +917,18 @@ namespace {
         ImGui::Bullet();
         ImGui::Text("'/chest' opens xunlai in outposts.");
         ImGui::Bullet();
+        ImGui::Text("'/config set|get|toggle|load [section key [value]]...' edit configuration values from GWToolbox.ini.\n"
+                    "\t'set' apply a setting to the running configuration.\n"
+                    "\t'get' show value of given key.\n"
+                    "\t'toggle' alternate between given value and configuration on disk.\n"
+                    "\t'load' reset key to its disk configuration.");
+        ImGui::Bullet();
         ImGui::Text("'/damage' or '/dmg' to print party damage to chat.\n"
             "'/damage me' sends your own damage only.\n"
             "'/damage <number>' sends the damage of a party member (e.g. '/damage 3').\n"
             "'/damage reset' resets the damage in party window.");
+        ImGui::Bullet();
+        ImGui::Text(deposit_syntax);
         ImGui::Bullet();
         ImGui::Text("'/dialog <id>' sends a dialog id to the current NPC you're talking to.\n"
             "'/dailog take' automatically takes the first available quest/reward from the NPC you're talking to.");
@@ -1040,14 +1043,8 @@ namespace {
         ImGui::Text("'/wiki [quest|<search_term>]' search GWW for current quest or search term. By default, will search for the current map.");
         ImGui::Bullet();
         ImGui::Text(withdraw_syntax);
-        ImGui::Bullet();
-        ImGui::Text(deposit_syntax);
-        ImGui::Bullet();
-        ImGui::Text("'/config set|get|toggle|load [section key [value]]...' edit configuration values from GWToolbox.ini.\n"
-                    "\t'set' apply a setting to the running configuration.\n"
-                    "\t'get' show value of given key.\n"
-                    "\t'toggle' alternate between given value and configuration on disk.\n"
-                    "\t'load' reset key to its disk configuration.");
+
+
 
         ImGui::TreePop();
     }
