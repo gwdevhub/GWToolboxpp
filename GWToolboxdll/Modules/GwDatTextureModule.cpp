@@ -8,6 +8,7 @@
 
 #include "Resources.h"
 #include <GWCA/Managers/MemoryMgr.h>
+#include <Utils/ArenaNetFileParser.h>
 
 namespace {
 
@@ -92,23 +93,24 @@ namespace {
         uint8_t* pallete = nullptr;
         gw_image_bits bits = nullptr;
 
-        wchar_t fileHash[4] = { 0 };
-        GwDatTextureModule::FileIdToFileHash(file_id, fileHash);
+        ArenaNetFileParser::GameAssetFile asset;
+        if (!asset.readFromDat(file_id)) return 0;
 
-        std::vector<uint8_t> bytes;
-        if (!GwDatTextureModule::ReadDatFile(fileHash, &bytes)) 
-            return 0;
+        uint8_t* image_bytes = asset.data.data();
+        size_t image_size = asset.data.size();
 
-        uint8_t* image_bytes = bytes.data();
-        size_t image_size = bytes.size();
-
-        if (memcmp((char*)bytes.data(), "ffna", 4) == 0) {
-            // Model file format; try to find first instance of image from this.
-            const auto found = strnstr((char*)bytes.data(), "ATEX", bytes.size());
-            if (!found)
+        if (strncmp((char*)image_bytes, "ffna", 4) == 0) {
+            const auto anet_file = (ArenaNetFileParser::ArenaNetFile*)&asset;
+            if (!anet_file->isValid())
                 return 0;
-            image_bytes = (uint8_t*)found;
-            image_size = *(int*)(found - 4);
+            const auto chunk = (ArenaNetFileParser::UnknownChunk*)anet_file->FindChunk(ArenaNetFileParser::ChunkType::ATEXFILE);
+            if (!chunk) 
+                return 0;
+            image_bytes = chunk->data;
+            image_size = chunk->chunk_size;
+        }
+        if (strncmp((char*)image_bytes, "ATEX", 4) != 0) {
+            return 0;
         }
 
         uint32_t result = DecodeImage_func(image_size, image_bytes, &bits, pallete, &format, &dims, &levels);
@@ -126,7 +128,8 @@ namespace {
         return result;
     }
 
-    IDirect3DTexture9* CreateTexture(IDirect3DDevice9* device, uint32_t file_id, Vec2i &dims)
+    // Replace your existing CreateTexture function with this:
+    IDirect3DTexture9* CreateTexture(IDirect3DDevice9* device, uint32_t file_id, Vec2i& dims)
     {
         if (!device || !file_id) {
             return nullptr;
@@ -257,12 +260,7 @@ void GwDatTextureModule::Initialize()
 #endif
 }
 
-void GwDatTextureModule::FileIdToFileHash(uint32_t file_id, wchar_t* fileHash)
-{
-    fileHash[0] = static_cast<wchar_t>(((file_id - 1) % 0xff00) + 0x100);
-    fileHash[1] = static_cast<wchar_t>(((file_id - 1) / 0xff00) + 0x100);
-    fileHash[2] = 0;
-}
+
 
 IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id)
 {
@@ -283,12 +281,4 @@ void GwDatTextureModule::Terminate()
     }
     textures_by_file_id.clear();
 }
-uint32_t GwDatTextureModule::FileHashToFileId(const wchar_t* fileHash) {
-    if (!fileHash)
-        return 0;
-    if (((0xff < *fileHash) && (0xff < fileHash[1])) &&
-        ((fileHash[2] == 0 || ((0xff < fileHash[2] && (fileHash[3] == 0)))))) {
-        return (*fileHash - 0xff00ff) + (uint32_t)fileHash[1] * 0xff00;
-    }
-    return 0;
-}
+

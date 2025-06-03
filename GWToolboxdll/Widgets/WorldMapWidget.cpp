@@ -33,6 +33,7 @@
 #include <Modules/QuestModule.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <corecrt_math_defines.h>
+#include <Utils/ArenaNetFileParser.h>
 
 
 namespace {
@@ -159,7 +160,7 @@ namespace {
         if (!(prop && prop->h0034[4]))
             return 0;
         uint32_t* sub_deets = (uint32_t*)prop->h0034[4];
-        return GwDatTextureModule::FileHashToFileId((wchar_t*)sub_deets[1]);
+        return ArenaNetFileParser::FileHashToFileId((wchar_t*)sub_deets[1]);
     };
 
     bool IsTravelPortal(GW::MapProp* prop)

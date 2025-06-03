@@ -57,41 +57,26 @@ namespace {
     // "If it dies, we can... assign a gender?"
     bool GetDeathSoundForModelFileId(uint32_t file_id, uint32_t* file_id_out)
     {
-        std::vector<uint8_t> model_data;
-        wchar_t file_hash[4] = {0};
-        GwDatTextureModule::FileIdToFileHash(file_id, file_hash);
-        wchar_t* filename = file_hash;
-
-        if (!GwDatTextureModule::ReadDatFile(filename, &model_data)) 
-            return false;
-        ArenaNetFileParser parser(model_data.data(), model_data.size());
-        ArenaNetFileParser::GameAssetFile asset;
-        if (!parser.parse(asset)) 
-            return false;
+        ArenaNetFileParser::ArenaNetFile asset;
+        if (!asset.readFromDat(file_id)) return false;
 
         auto animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBC);
         if (!animations_chunk) {
             animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBD);
-            filename = animations_chunk->filenames[0].filename;
-            if (!GwDatTextureModule::ReadDatFile(filename, &model_data)) 
-                return false;
-            parser = ArenaNetFileParser(model_data.data(), model_data.size());
-            if (!parser.parse(asset)) 
+            if (!asset.readFromDat(animations_chunk->filenames[0].filename)) 
                 return false;
             animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBC);
         }
         if (!animations_chunk) 
             return false;
-        filename = animations_chunk->filenames[0].filename;
-        if (!GwDatTextureModule::ReadDatFile(filename, &model_data)) 
+        if (!asset.readFromDat(animations_chunk->filenames[0].filename)) 
             return false;
-        parser = ArenaNetFileParser(model_data.data(), model_data.size());
-        if (!parser.parse(asset)) 
+        if (asset.getFFNAType() != 8) 
             return false;
         const auto soundtracks_chunk = (ArenaNetFileParser::FileNamesChunkWithoutLength*)asset.FindChunk(ArenaNetFileParser::ChunkType::SOUND_FILES_1);
-        if (!soundtracks_chunk) 
+        if (!(soundtracks_chunk && soundtracks_chunk->num_filenames() > 0))
             return false;
-        *file_id_out = GwDatTextureModule::FileHashToFileId(soundtracks_chunk->filenames[0].filename);
+        *file_id_out = ArenaNetFileParser::FileHashToFileId(soundtracks_chunk->filenames[0].filename);
         return true;
     }
 

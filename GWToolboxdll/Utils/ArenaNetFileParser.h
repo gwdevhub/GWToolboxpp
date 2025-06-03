@@ -6,29 +6,10 @@
 
 // ArenaNet File Format (FFNA) Parser
 // Used in Guild Wars and Guild Wars 2 for 3D models, textures, and game assets
-class ArenaNetFileParser {
-private:
-    const uint8_t* data;
-    size_t data_size;
-    size_t offset;
+namespace ArenaNetFileParser {
 
-    // FVF lookup tables (from the pattern)
-    static constexpr uint32_t fvf_array_0[22] = {0x0, 0x8, 0x8, 0x10, 0x8, 0x10, 0x10, 0x18, 0x8, 0x10, 0x10, 0x18, 0x10, 0x18, 0x18, 0x20, 0x0, 0x0, 0x0, 0x1, 0xFFFFFFFF, 0xFFFFFFFF};
-
-    static constexpr uint32_t fvf_array_1[8] = {0x0, 0xC, 0xC, 0x18, 0xC, 0x18, 0x18, 0x24};
-
-    static constexpr uint32_t fvf_array_2[16] = {0x0, 0xC, 0x4, 0x10, 0xC, 0x18, 0x10, 0x1C, 0x4, 0x10, 0x8, 0x14, 0x10, 0x1C, 0x14, 0x20};
-
-    template <typename T>
-    bool read(T& value);
-
-    template <typename T>
-    bool peek(T& value, size_t peek_offset = 0) const;
-
-    bool readString(std::string& result);
-    bool skip(size_t bytes);
-
-public:
+    void FileIdToFileHash(uint32_t file_id, wchar_t* fileHash);
+    uint32_t FileHashToFileId(const wchar_t* fileHash);
     struct Vertex {
         uint32_t FVF;
         uint32_t vertex_size;
@@ -137,6 +118,7 @@ public:
     enum ChunkType { 
         GEOMETRY = 0xFA0, 
         ANIMATION = 0xFA1, 
+        ATEXFILE = 0xFA3,
         FILENAMES_FA5 = 0xFA5, 
         FILENAMES_FA6 = 0xFA6, 
         FILENAMES_FAD = 0xFAD, 
@@ -185,32 +167,36 @@ public:
 
     #pragma warning(pop)
     struct GameAssetFile {
-        char ffna[4]; // ArenaNet File Format header
-        uint8_t file_type;
-        std::vector<Chunk*> chunks;
-
-        // Get chunk by type
-        const Chunk* FindChunk(ChunkType chunk_type) const
-        {
-            for (const auto& chunk : chunks) {
-                if (chunk->chunk_id == chunk_type) {
-                    return chunk;
-                }
-            }
-            return nullptr;
+        std::vector<uint8_t> data; // Reference to the original data
+        size_t data_size;          // Size of the data
+        GameAssetFile() {
+            data.clear();
+            data_size = 0;
         }
+        GameAssetFile(std::vector<uint8_t>& _data) : GameAssetFile() { parse(_data); }
+        char* fileType();
+
+        virtual bool parse(std::vector<uint8_t>& _data);
+
+        virtual const bool isValid() { return fileType() != 0; }
+        bool readFromDat(const wchar_t* file_hash);
+        bool readFromDat(const uint32_t file_id);
     };
 
-    // Public interface
-    ArenaNetFileParser(const uint8_t* data, size_t size);
+    struct ArenaNetFile : GameAssetFile {
 
-    // Convenience function for loading from file
-    static bool LoadGameAssetFile(const wchar_t* file_name, GameAssetFile* asset);
+        // Copy parent constructors
+        ArenaNetFile() : GameAssetFile() {}
+        ArenaNetFile(std::vector<uint8_t>& _data) : ArenaNetFile() { parse(_data); }
 
-    // Main parsing function - now just maps chunk locations
-    bool parse(GameAssetFile& asset);
+        const uint8_t getFFNAType() const;
 
-    // Helper functions
-    static uint32_t getFVF(uint32_t dat_fvf);
-    static uint32_t getVertexSizeFromFVF(uint32_t fvf);
+        const bool isValid() override;
+        // Get chunk by type
+        const Chunk* FindChunk(ChunkType chunk_type);
+    };
+
+    struct ATexFile : GameAssetFile {
+        const bool isValid() override { return GameAssetFile::isValid() && strncmp(fileType(), "atex", 4) == 0; }
+    };
 };

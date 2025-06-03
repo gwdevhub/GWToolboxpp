@@ -3,140 +3,82 @@
 #include <cstring>
 #include <fstream>
 #include <vector>
+#include <Modules/GwDatTextureModule.h>
 
-ArenaNetFileParser::ArenaNetFileParser(const uint8_t* data, size_t size) 
-    : data(data), data_size(size), offset(0) {
-}
+namespace {
+    // FVF lookup tables (from the pattern)
+    static constexpr uint32_t fvf_array_0[22] = {0x0, 0x8, 0x8, 0x10, 0x8, 0x10, 0x10, 0x18, 0x8, 0x10, 0x10, 0x18, 0x10, 0x18, 0x18, 0x20, 0x0, 0x0, 0x0, 0x1, 0xFFFFFFFF, 0xFFFFFFFF};
 
-bool ArenaNetFileParser::LoadGameAssetFile(const wchar_t* file_name, GameAssetFile* asset) {
-    if (!file_name || !asset) {
-        return false;
+    static constexpr uint32_t fvf_array_1[8] = {0x0, 0xC, 0xC, 0x18, 0xC, 0x18, 0x18, 0x24};
+
+    static constexpr uint32_t fvf_array_2[16] = {0x0, 0xC, 0x4, 0x10, 0xC, 0x18, 0x10, 0x1C, 0x4, 0x10, 0x8, 0x14, 0x10, 0x1C, 0x14, 0x20};
+
+    // Helper functions
+    uint32_t getFVF(uint32_t dat_fvf) {
+        return ((dat_fvf & 0xff0) << 4) | ((dat_fvf >> 8) & 0x30) | (dat_fvf & 0xf);
     }
-
-    // Open file in binary mode
-    std::ifstream file(file_name, std::ios::binary | std::ios::ate);
-    if (!file.is_open()) {
-        return false;
+    uint32_t getVertexSizeFromFVF(uint32_t fvf) {
+        return fvf_array_0[(fvf >> 0xc) & 0xf] + fvf_array_0[(fvf >> 8) & 0xf] + fvf_array_1[(fvf >> 4) & 7] + fvf_array_2[fvf & 0xf];
     }
-
-    // Get file size
-    std::streamsize size = file.tellg();
-    if (size <= 0) {
-        return false;
+} // namespace
+namespace ArenaNetFileParser {
+    void FileIdToFileHash(uint32_t file_id, wchar_t* fileHash)
+    {
+        fileHash[0] = static_cast<wchar_t>(((file_id - 1) % 0xff00) + 0x100);
+        fileHash[1] = static_cast<wchar_t>(((file_id - 1) / 0xff00) + 0x100);
+        fileHash[2] = 0;
     }
-    
-    file.seekg(0, std::ios::beg);
-
-    // Read entire file into buffer
-    std::vector<uint8_t> buffer(static_cast<size_t>(size));
-    if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
-        return false;
-    }
-
-    // Parse the file data
-    ArenaNetFileParser parser(buffer.data(), buffer.size());
-    return parser.parse(*asset);
-}
-
-template<typename T>
-bool ArenaNetFileParser::read(T& value) {
-    if (offset + sizeof(T) > data_size) {
-        return false;
-    }
-    std::memcpy(&value, data + offset, sizeof(T));
-    offset += sizeof(T);
-    return true;
-}
-
-template<typename T>
-bool ArenaNetFileParser::peek(T& value, size_t peek_offset) const {
-    if (offset + peek_offset + sizeof(T) > data_size) {
-        return false;
-    }
-    std::memcpy(&value, data + offset + peek_offset, sizeof(T));
-    return true;
-}
-
-bool ArenaNetFileParser::readString(std::string& result) {
-    result.clear();
-    while (offset < data_size) {
-        char c;
-        if (!read(c)) return false;
-        if (c == 0) break;
-        result += c;
-    }
-    return true;
-}
-
-bool ArenaNetFileParser::skip(size_t bytes) {
-    if (offset + bytes > data_size) {
-        return false;
-    }
-    offset += bytes;
-    return true;
-}
-
-uint32_t ArenaNetFileParser::getFVF(uint32_t dat_fvf) {
-    return ((dat_fvf & 0xff0) << 4) | ((dat_fvf >> 8) & 0x30) | (dat_fvf & 0xf);
-}
-
-uint32_t ArenaNetFileParser::getVertexSizeFromFVF(uint32_t fvf) {
-    return fvf_array_0[(fvf >> 0xc) & 0xf] + 
-           fvf_array_0[(fvf >> 8) & 0xf] + 
-           fvf_array_1[(fvf >> 4) & 7] +
-           fvf_array_2[fvf & 0xf];
-}
-
-bool ArenaNetFileParser::parse(GameAssetFile& asset) {
-    offset = 0;
-    asset.chunks.clear();
-    // Read ArenaNet file header
-    for (int i = 0; i < 4; ++i) {
-        if (!read(asset.ffna[i])) {
-            return false;
+    uint32_t FileHashToFileId(const wchar_t* fileHash)
+    {
+        if (!fileHash) return 0;
+        if (((0xff < *fileHash) && (0xff < fileHash[1])) && ((fileHash[2] == 0 || ((0xff < fileHash[2] && (fileHash[3] == 0)))))) {
+            return (*fileHash - 0xff00ff) + (uint32_t)fileHash[1] * 0xff00;
         }
+        return 0;
     }
-    if (!read(asset.file_type)) {
-        return false;
+
+    char* GameAssetFile::fileType()
+    {
+        if (data_size < 4) return 0;
+        return (char*)data.data(); // Read file type from the first 4 bytes
     }
-    
-    // Parse chunk headers and record their locations
-    while (offset < data_size) {
-        if (offset + 8 > data_size) break;
-        
-        size_t chunk_start = offset;
-        ChunkType chunk_id;
-        uint32_t chunk_size;
-        
-        if (!read(chunk_id) || !read(chunk_size)) {
-            return false;
+    bool GameAssetFile::parse(std::vector<uint8_t>& _data)
+    {
+        data = std::move(_data);
+        data_size = data.size();
+        return isValid();
+    }
+    bool GameAssetFile::readFromDat(const uint32_t file_id)
+    {
+        wchar_t fileHash[4] = {0};
+        FileIdToFileHash(file_id, fileHash);
+        return readFromDat(fileHash);
+    }
+    bool GameAssetFile::readFromDat(const wchar_t* file_hash)
+    {
+        std::vector<uint8_t> bytes;
+        if (!GwDatTextureModule::ReadDatFile(file_hash, &bytes)) return false;
+        return parse(bytes);
+    }
+    const uint8_t ArenaNetFile::getFFNAType() const
+    {
+        return (uint8_t)data[4];
+    }
+    const bool ArenaNetFile::isValid() {
+        return GameAssetFile::isValid() && strncmp(fileType(), "ffna", 4) == 0;
+    }
+    const Chunk* ArenaNetFile::FindChunk(ChunkType chunk_type)
+    {
+        ASSERT(isValid());
+        size_t offset = 5;
+        // Parse chunk headers and record their locations
+        while (offset < data_size) {
+            const auto chunk = (Chunk*)&data[offset];
+            if (chunk->chunk_id == chunk_type)
+                return chunk;
+            offset += chunk->chunk_size + 8;
         }
-        
-        // Create chunk info
-        asset.chunks.push_back((Chunk*)(data + chunk_start));
-        
-        // Skip to next chunk
-        if (!skip(chunk_size)) {
-            return false;
-        }
+        return nullptr;
     }
-    
-    return true;
 }
 
-// Explicit template instantiations for the types we use
-template bool ArenaNetFileParser::read<uint8_t>(uint8_t&);
-template bool ArenaNetFileParser::read<uint16_t>(uint16_t&);
-template bool ArenaNetFileParser::read<uint32_t>(uint32_t&);
-template bool ArenaNetFileParser::read<int32_t>(int32_t&);
-template bool ArenaNetFileParser::read<float>(float&);
-template bool ArenaNetFileParser::read<char>(char&);
-template bool ArenaNetFileParser::read<wchar_t>(wchar_t&);
-
-template bool ArenaNetFileParser::peek<uint8_t>(uint8_t&, size_t) const;
-template bool ArenaNetFileParser::peek<uint16_t>(uint16_t&, size_t) const;
-template bool ArenaNetFileParser::peek<uint32_t>(uint32_t&, size_t) const;
-template bool ArenaNetFileParser::peek<int32_t>(int32_t&, size_t) const;
-template bool ArenaNetFileParser::peek<float>(float&, size_t) const;
-template bool ArenaNetFileParser::peek<char>(char&, size_t) const;
-template bool ArenaNetFileParser::peek<wchar_t>(wchar_t&, size_t) const;

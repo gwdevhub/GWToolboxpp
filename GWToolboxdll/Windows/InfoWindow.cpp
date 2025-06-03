@@ -55,6 +55,7 @@
 #include <Modules/DialogModule.h>
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/HallOfMonumentsModule.h>
+#include <Modules/AudioSettings.h>
 #include <Modules/Resources.h>
 #include <Utils/ToolboxUtils.h>
 #include <Logger.h>
@@ -62,6 +63,7 @@
 #include <Utils/TextUtils.h>
 #include <GWCA/Context/GameplayContext.h>
 #include <GWCA/Context/CharContext.h>
+#include <Utils/ArenaNetFileParser.h>
 
 namespace {
 
@@ -563,11 +565,7 @@ namespace {
         GW::Hook::LeaveHook();
         return res;
     }
-    void FileIdToFileHash(uint32_t file_id, wchar_t* fileHash) {
-        fileHash[0] = static_cast<wchar_t>(((file_id - 1) % 0xff00) + 0x100);
-        fileHash[1] = static_cast<wchar_t>(((file_id - 1) / 0xff00) + 0x100);
-        fileHash[2] = 0;
-    }
+
 
     uint32_t FileHashToFileId(wchar_t* param_1) {
         if (!param_1)
@@ -671,6 +669,8 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
+
+
     void PostDraw() {
         HookOnCreateTexture(record_textures);
         HookOnValidateAsyncDecodeStr(record_enc_strings);
@@ -681,7 +681,7 @@ namespace {
         if (!(prop && prop->h0034[4]))
             return 0;
         uint32_t* sub_deets = (uint32_t*)prop->h0034[4];
-        return GwDatTextureModule::FileHashToFileId((wchar_t*)sub_deets[1]);
+        return ArenaNetFileParser::FileHashToFileId((wchar_t*)sub_deets[1]);
     };
     void DrawDebugInfo() {
         if (!SetFpsLimits_Func) {
@@ -748,7 +748,7 @@ namespace {
                 ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, normal_bg, tint);
                 if (ImGui::IsItemHovered()) {
                     static wchar_t out[3];
-                    FileIdToFileHash(texture_file_ids[texture], out);
+                    ArenaNetFileParser::FileIdToFileHash(texture_file_ids[texture], out);
                     ImGui::SetTooltip("File ID: 0x%08x\nFile Hash: 0x%04x 0x%04x", texture_file_ids[texture], out[0], out[1]);
                 }
                 ImGui::PopID();
