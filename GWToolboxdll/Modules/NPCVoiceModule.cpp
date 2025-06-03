@@ -44,6 +44,10 @@ namespace {
     // UI buffers for API keys
     char elevenlabs_api_key_buffer[256] = {0};
     char openai_api_key_buffer[256] = {0};
+
+    char custom_npc_id_buffer[32] = {0};
+    char custom_voice_id_buffer[256] = {0};
+
     enum class GWRace : uint8_t { Human, Charr, Norn, Asura, Tengu, Dwarf, Centaur }; // namespace GWRace
 
 
@@ -1279,6 +1283,25 @@ void NPCVoiceModule::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(only_show_speech_from_friendly_npcs);
     LOAD_BOOL(show_speech_from_party_members_in_explorable_areas);
     LOAD_BOOL(only_use_first_sentence);
+    LOAD_BOOL(play_goodbye_messages);
+
+    CSimpleIniA::TNamesDepend keys;
+    ini->GetAllKeys(Name(), keys);
+
+    for (const auto& key : keys) {
+        std::string key_name = key.pItem;
+        // Only process keys that start with "npc_"
+        if (key_name.find("npc_voice_") == 0) {
+            // Extract NPC ID from key (remove "npc_" prefix)
+            std::string npc_id_str = key_name.substr(4);
+            uint32_t npc_id = std::stoul(npc_id_str);
+            std::string voice_id = ini->GetValue(Name(), key.pItem, voice_id_human_male);
+
+            // Create profile with only voice_id - other settings will be inherited
+            VoiceProfile profile(voice_id, 0.5f, 0.5f, 0.5f, 1.0f, "");
+            special_npc_voices[npc_id] = profile;
+        }
+    }
 }
 
 void NPCVoiceModule::SaveSettings(ToolboxIni* ini)
@@ -1293,6 +1316,24 @@ void NPCVoiceModule::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(only_use_first_dialog);
     SAVE_BOOL(show_speech_from_party_members_in_explorable_areas);
     SAVE_BOOL(only_use_first_sentence);
+    SAVE_BOOL(play_goodbye_messages);
+
+    // Remove existing custom voice entries (don't clear the whole section)
+    CSimpleIniA::TNamesDepend keys;
+    ini->GetAllKeys(Name(), keys);
+
+    for (const auto& key : keys) {
+        std::string key_name = key.pItem;
+        if (key_name.find("npc_voice_") == 0) {
+            ini->Delete(Name(), key.pItem);
+        }
+    }
+
+    // Save each custom NPC voice with "npc_" prefix
+    for (const auto& [npc_id, voice_profile] : special_npc_voices) {
+        std::string key = std::format("npc_voice_{}", npc_id);
+        ini->SetValue(Name(), key.c_str(), voice_profile.voice_id.c_str());
+    }
 }
 
 void NPCVoiceModule::DrawSettingsInternal()
@@ -1368,6 +1409,78 @@ void NPCVoiceModule::DrawSettingsInternal()
     if (show_warning) {
         ImGui::TextColored(ImColor(IM_COL32(245, 245, 0, 255)), "Warning: Processing more lines of dialog will use up more API credits!");
     }
+
+// Custom NPC Voice Assignment Section
+    ImGui::Separator();
+    ImGui::Text("Custom NPC Voice Assignment:");
+    ImGui::Text("Assign specific voices to individual NPCs by their NPC ID.");
+    ImGui::Text("Voice settings (stability, similarity, etc.) will be inherited from the NPC's region/gender.");
+
+    // Input fields for new custom assignment
+    ImGui::PushItemWidth(100);
+    ImGui::InputText("NPC ID##custom", custom_npc_id_buffer, sizeof(custom_npc_id_buffer), ImGuiInputTextFlags_CharsDecimal);
+    ImGui::SameLine();
+    ImGui::PushItemWidth(300);
+    ImGui::InputText("Voice ID##custom", custom_voice_id_buffer, sizeof(custom_voice_id_buffer));
+    ImGui::PopItemWidth();
+
+    // Add button
+    if (ImGui::Button("Add Custom Voice Assignment")) {
+        if (strlen(custom_npc_id_buffer) > 0 && strlen(custom_voice_id_buffer) > 0) {
+            try {
+                uint32_t npc_id = std::stoul(custom_npc_id_buffer);
+
+                // Create profile with only voice_id - everything else will be inherited
+                VoiceProfile profile(custom_voice_id_buffer, 0.5f, 0.5f, 0.5f, 1.0f, "");
+                special_npc_voices[npc_id] = profile;
+
+                // Clear input buffers
+                memset(custom_npc_id_buffer, 0, sizeof(custom_npc_id_buffer));
+                memset(custom_voice_id_buffer, 0, sizeof(custom_voice_id_buffer));
+
+                VoiceLog("Added custom voice assignment for NPC ID %u", npc_id);
+            } catch (const std::exception&) {
+                VoiceLog("Invalid NPC ID entered");
+            }
+        }
+    }
+    ImGui::PopItemWidth();
+
+    // Display existing custom assignments
+    if (!special_npc_voices.empty()) {
+        ImGui::Separator();
+        ImGui::Text("Current Custom Voice Assignments:");
+
+        // Create a vector for iteration since we might modify the map
+        std::vector<uint32_t> to_remove;
+
+        for (const auto& [npc_id, voice_profile] : special_npc_voices) {
+            ImGui::PushID(npc_id);
+
+            // Display the assignment
+            ImGui::Text("NPC ID: %u", npc_id);
+            ImGui::SameLine(120);
+            ImGui::Text("Voice: %s", voice_profile.voice_id.c_str());
+            ImGui::SameLine();
+            ImGui::TextColored(ImColor(150, 150, 150), "(inherits region/gender settings)");
+
+            // Remove button
+            ImGui::SameLine();
+            if (ImGui::Button("Remove")) {
+                to_remove.push_back(npc_id);
+            }
+
+            ImGui::PopID();
+        }
+
+        // Remove marked entries
+        for (uint32_t npc_id : to_remove) {
+            special_npc_voices.erase(npc_id);
+            VoiceLog("Removed custom voice assignment for NPC ID %u", npc_id);
+        }
+    }
+
+
     // Simple log display
     ImGui::Separator();
     ImGui::Text("Recent Activity:");
