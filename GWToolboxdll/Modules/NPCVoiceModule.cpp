@@ -63,13 +63,11 @@ namespace {
         auto animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBC);
         if (!animations_chunk) {
             animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBD);
-            if (!asset.readFromDat(animations_chunk->filenames[0].filename)) 
+            if (!(animations_chunk && asset.readFromDat(animations_chunk->filenames[0].filename))) 
                 return false;
             animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBC);
         }
-        if (!animations_chunk) 
-            return false;
-        if (!asset.readFromDat(animations_chunk->filenames[0].filename)) 
+        if (!(animations_chunk && asset.readFromDat(animations_chunk->filenames[0].filename))) 
             return false;
         if (asset.getFFNAType() != 8) 
             return false;
@@ -90,6 +88,7 @@ namespace {
             case 0x16dfc: // Shining blade
             case 0x17390: // Dwarf
             case 0x13e25: // Mesmer
+            case 0x12b3d: // Male centaur
                 return Gender::Male;
             case 0x2f17e:
             case 0x97fa:
