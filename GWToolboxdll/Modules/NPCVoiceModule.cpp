@@ -96,6 +96,7 @@ namespace {
             case 0x13f22: // e.g. Alesia
             case 0x13e4f: // e.g. Gwen
             case 0x13ece: // Farrah Cappo
+            case 0x16dcf: // White mantle
                 return Gender::Female;
         }
         return Gender::Unknown;
@@ -143,6 +144,11 @@ namespace {
     }
 
     enum class TraderType : uint8_t { Merchant, RuneTrader, ArmorCrafter, WeaponCustomizer, MaterialTrader, RareMaterialTrader, DyeTrader, OtherItemCrafter, SkillTrainer };
+
+    const wchar_t* generic_goodbye_messages[] = {L"Farewell, traveler.",           L"Safe travels on your journey.", L"May your path be clear.", L"Until we meet again.", L"Go well, adventurer.",         L"Good luck on your quest.",
+                                                 L"May fortune favor you.",        L"Travel safely, friend.",        L"Goodbye, and take care.", L"Fare thee well.",      L"May the gods watch over you.", L"Be safe out there.",
+                                                 L"Good journey to you.",          L"May your travels be swift.",    L"Walk in safety.",         L"Go with my blessing.", L"May peace be with you.",       L"Safe passage, hero.",
+                                                 L"Good fortune on your travels.", L"May your way be protected."};
 
     std::map<std::tuple<GW::Region, TraderType>, std::wstring> merchant_greetings;
 
@@ -239,10 +245,11 @@ namespace {
 
     // Cost optimization settings
     bool stop_speech_when_dialog_closed = false;
+    bool play_goodbye_messages = false;
     bool only_use_first_dialog = true;
     bool only_use_first_sentence = true; // NB: Not changable because we don't know how to stop a running audio file!
     bool only_show_speech_from_friendly_npcs = true;
-    bool show_speech_from_party_members_in_explorable_areas = true;
+    bool show_speech_from_party_members_in_explorable_areas = false;
     float npc_speech_bubble_range = GW::Constants::Range::Adjacent;
 
     uint32_t last_dialog_agent_id = 0;
@@ -612,25 +619,82 @@ struct PendingNPCAudio {
     GW::UI::Frame* dialog_frame = nullptr;
 
 
+    float GetDistanceFromAgentId(uint32_t agent_id) {
+        const auto agent = GW::Agents::GetAgentByID(agent_id);
+        if (!agent) return FLT_MAX; // Invalid agent ID
+        const auto player_pos = GetPlayerPosition();
+        return GW::GetDistance(agent->pos, player_pos);
+    }
+
 
     GW::UI::UIInteractionCallback OnNPCInteract_UICallback_Func = nullptr, OnNPCInteract_UICallback_Ret = nullptr;
+    GW::UI::UIInteractionCallback OnVendorInteract_UICallback_Func = nullptr, OnVendorInteract_UICallback_Ret = nullptr;
+
+    bool was_dialog_already_open = false;
+
+    void OnNPCDialogClosed()
+    {
+        if (stop_speech_when_dialog_closed) {
+            CancelDialogSpeech(last_dialog_agent_id);
+        }
+
+        // Generate random goodbye message if enabled
+        if (play_goodbye_messages && !was_dialog_already_open && GetDistanceFromAgentId(last_dialog_agent_id) < GW::Constants::Range::Adjacent) {
+            // Get random message from the pool
+            const auto num_goodbye_messages = sizeof(generic_goodbye_messages) / sizeof(generic_goodbye_messages[0]);
+            size_t random_index = rand() % num_goodbye_messages;
+            const wchar_t* goodbye_msg = generic_goodbye_messages[random_index];
+
+            auto audio = new PendingNPCAudio(last_dialog_agent_id, L"");
+            audio->decoded_message = PreprocessTextForTTS(goodbye_msg);
+            audio->profile = GetVoiceProfile(last_dialog_agent_id, GW::Map::GetMapID());
+            if (audio->profile) {
+                GenerateVoiceFromDecodedString(audio);
+            }
+            else {
+                delete audio;
+            }
+        }
+    }
 
     void OnNPCInteract_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
         GW::Hook::EnterHook();
         OnNPCInteract_UICallback_Ret(message, wParam, lParam);
-        if (message->message_id == GW::UI::UIMessage::kDestroyFrame && stop_speech_when_dialog_closed) {
-            CancelDialogSpeech(last_dialog_agent_id);
+        if (message->message_id == GW::UI::UIMessage::kDestroyFrame) {
+            OnNPCDialogClosed();
+        }
+        GW::Hook::LeaveHook();
+    }
+    void OnVendorInteract_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
+    {
+        GW::Hook::EnterHook();
+        OnVendorInteract_UICallback_Ret(message, wParam, lParam);
+        if (message->message_id == GW::UI::UIMessage::kDestroyFrame) {
+            OnNPCDialogClosed();
         }
         GW::Hook::LeaveHook();
     }
 
+
+
     void HookNPCInteractFrame() {
-        if (OnNPCInteract_UICallback_Func) return;
-        const auto frame = GW::UI::GetFrameByLabel(L"NPCInteract");
-        if (!(frame && frame->frame_callbacks.size())) return;
-        OnNPCInteract_UICallback_Func = frame->frame_callbacks[0].callback;
-        GW::Hook::CreateHook((void**)&OnNPCInteract_UICallback_Func, OnNPCInteract_UICallback, (void**)&OnNPCInteract_UICallback_Ret);
-        GW::Hook::EnableHooks(OnNPCInteract_UICallback_Func);
+        if (!OnNPCInteract_UICallback_Func) {
+            const auto frame = GW::UI::GetFrameByLabel(L"NPCInteract");
+            if (frame && frame->frame_callbacks.size()) {
+                OnNPCInteract_UICallback_Func = frame->frame_callbacks[0].callback;
+                GW::Hook::CreateHook((void**)&OnNPCInteract_UICallback_Func, OnNPCInteract_UICallback, (void**)&OnNPCInteract_UICallback_Ret);
+                GW::Hook::EnableHooks(OnNPCInteract_UICallback_Func);
+            }
+        }
+        if (!OnVendorInteract_UICallback_Func) {
+            const auto vendor_frame = GW::UI::GetFrameByLabel(L"Vendor");
+            if (vendor_frame && vendor_frame->frame_callbacks.size()) {
+                OnVendorInteract_UICallback_Func = vendor_frame->frame_callbacks[0].callback;
+                GW::Hook::CreateHook((void**)&OnVendorInteract_UICallback_Func, OnVendorInteract_UICallback, (void**)&OnVendorInteract_UICallback_Ret);
+                GW::Hook::EnableHooks(OnVendorInteract_UICallback_Func);
+            }
+        }
+
     }
 
 
@@ -641,7 +705,7 @@ struct PendingNPCAudio {
             case GW::UI::UIMessage::kDialogBody: {
                 const auto packet = (GW::UI::DialogBodyInfo*)wParam;
                 if (!(packet && packet->message_enc && *packet->message_enc)) return;
-                const auto was_dialog_already_open = GW::UI::GetFrameByLabel(L"NPCInteract") && packet->agent_id == last_dialog_agent_id;
+                was_dialog_already_open = GW::UI::GetFrameByLabel(L"NPCInteract") && packet->agent_id == last_dialog_agent_id;
                 last_dialog_agent_id = packet->agent_id;
                 CancelDialogSpeech(last_dialog_agent_id);
                 if (only_use_first_dialog && was_dialog_already_open) {
@@ -657,6 +721,7 @@ struct PendingNPCAudio {
         switch (msgid) {
             case GW::UI::UIMessage::kDialogBody: {
                 HookNPCInteractFrame();
+                was_dialog_already_open = false;
             } break;
             case GW::UI::UIMessage::kMapChange:
             case GW::UI::UIMessage::kMapLoaded: {
@@ -673,7 +738,10 @@ struct PendingNPCAudio {
                 GenerateVoiceFromEncodedString(new PendingNPCAudio(packet->agent_id, packet->message));
             } break;
             case GW::UI::UIMessage::kVendorWindow: {
+                HookNPCInteractFrame();
+
                 const auto packet = (GW::UI::UIPacket::kVendorWindow*)wParam;
+                last_dialog_agent_id = packet->unk;
                 if (IsEotnRegion()) 
                     return; // EotN vendors already have greetings
                 switch (packet->transaction_type) {
@@ -1277,6 +1345,10 @@ void NPCVoiceModule::DrawSettingsInternal()
     ImGui::Checkbox("Only process the first dialog of an NPC", &only_use_first_dialog);
     ImGui::ShowHelp("If enabled, only the first dialog of an NPC conversation will be processed.");
     show_warning |= !only_use_first_dialog;
+
+    ImGui::Checkbox("Play goodbye message when closing NPC dialog", &play_goodbye_messages);
+    ImGui::ShowHelp("If enabled, NPCs will say a random goodbye when you close their dialog.");
+    show_warning |= play_goodbye_messages;
 
     ImGui::Checkbox("Stop speech when dialog window is closed", &stop_speech_when_dialog_closed);
 
