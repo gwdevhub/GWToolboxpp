@@ -18,26 +18,7 @@ namespace {
     std::vector<std::wstring> logged_sounds;
     bool log_sounds = false;
 
-    struct SoundProps {
-        uint32_t flags;
-        uint32_t h0004[4];
-        uint32_t h0014; 
-        uint32_t h0018; 
-        uint32_t h001c;
-        GW::Vec3f position;
-        uint32_t h002c;
-        void* h0030;
-        uint32_t h0034[5];
-        void* h0048;
-        uint32_t h004c[5];
-        void* h0060;
-        uint32_t h0064[5];
-        ~SoundProps() {
-            if (h0030) GW::MemoryMgr::MemFree(h0030);
-            if (h0048) GW::MemoryMgr::MemFree(h0048);
-            if (h0060) GW::MemoryMgr::MemFree(h0060);
-        }
-    };
+    std::map<GW::HookEntry*, PlaySoundCallback> play_sound_callbacks;
 
     static_assert(sizeof(SoundProps) == 0x78);
 
@@ -47,7 +28,7 @@ namespace {
     using StopSound_pt = void(__cdecl*)(GW::RecObject* sound, uint32_t flags);
     StopSound_pt StopSound_Func = nullptr;
 
-        using CloseHandle_pt = void(__cdecl*)(GW::RecObject* handle);
+    using CloseHandle_pt = void(__cdecl*)(GW::RecObject* handle);
     CloseHandle_pt CloseHandle_Func = nullptr;
 
     bool force_play_sound = false;
@@ -55,11 +36,17 @@ namespace {
     GW::RecObject* OnPlaySound(wchar_t* filename, SoundProps* props) {
         GW::Hook::EnterHook();
         GW::RecObject* ret = 0;
-        const auto found = force_play_sound ? blocked_sounds.end() : std::ranges::find_if(blocked_sounds.begin(), blocked_sounds.end(), [filename](std::wstring& snd) {
-            return snd == filename;
+        GW::HookStatus status;
+        for (auto& [_, cb] : play_sound_callbacks) {
+            cb(&status, filename, props);
+        }
+        if (!status.blocked) {
+            const auto found = force_play_sound ? blocked_sounds.end() : std::ranges::find_if(blocked_sounds.begin(), blocked_sounds.end(), [filename](std::wstring& snd) {
+                return snd == filename;
             });
-        if (found == blocked_sounds.end())
-            ret = PlaySound_Ret(filename, props);
+            if (found == blocked_sounds.end()) ret = PlaySound_Ret(filename, props);
+        }
+
         if (log_sounds) {
             const auto found_log = std::ranges::find_if(logged_sounds.begin(), logged_sounds.end(), [filename](std::wstring& snd) {
                 return snd == filename;
@@ -78,7 +65,15 @@ namespace {
         log_sounds = false;
         logged_sounds.clear();
     }
+} // namespace
+
+SoundProps ::~SoundProps()
+{
+    if (h0030) GW::MemoryMgr::MemFree(h0030);
+    if (h0048) GW::MemoryMgr::MemFree(h0048);
+    if (h0060) GW::MemoryMgr::MemFree(h0060);
 }
+
 
 bool AudioSettings::PlaySound(const wchar_t* filename, const GW::Vec3f* position, uint32_t flags, void** handle_out)
 {
@@ -102,7 +97,7 @@ bool AudioSettings::PlaySound(const wchar_t* filename, const GW::Vec3f* position
 bool AudioSettings::StopSound(void* handle)
 {
     // This doesn't work :(
-    if (!(StopSound_Func && handle)) return false;
+    if (!(StopSound_Func && CloseHandle_Func && handle)) return false;
     GW::GameThread::Enqueue([handle]() {
         StopSound_Func((GW::RecObject*)handle,0);
         CloseHandle_Func((GW::RecObject*)handle);
@@ -110,6 +105,17 @@ bool AudioSettings::StopSound(void* handle)
     return true;
 }
 
+void AudioSettings::RegisterPlaySoundCallback(GW::HookEntry* hook_entry, PlaySoundCallback callback) {
+    play_sound_callbacks[hook_entry] = callback;
+}
+
+void AudioSettings::RemovePlaySoundCallback(GW::HookEntry* hook_entry)
+{
+    const auto found = play_sound_callbacks.find(hook_entry);
+    if (found != play_sound_callbacks.end()) {
+        play_sound_callbacks.erase(found);
+    }
+}
 void AudioSettings::Initialize()
 {
     ToolboxModule::Initialize();
@@ -120,6 +126,12 @@ void AudioSettings::Initialize()
     }
     CloseHandle_Func = (CloseHandle_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("Handle.cpp", "handle", 0x90, 0));
     StopSound_Func = (StopSound_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("SndMain.cpp", "handle", 0x3d2, 0));
+
+    #ifdef _DEBUG
+    ASSERT(PlaySound_Func);
+    ASSERT(CloseHandle_Func);
+    ASSERT(StopSound_Func);
+    #endif
     GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kMapChange, OnPostUIMessage, 0x8000);
 
 }

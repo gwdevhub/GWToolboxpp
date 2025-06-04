@@ -34,7 +34,7 @@ namespace {
     const char* voice_id_dwarven_male = "N2lVS1w4EtoT3dr4eOWO";
 
 
-        // TTS Provider settings
+    // TTS Provider settings
     TTSProvider current_tts_provider = TTSProvider::ElevenLabs;
 
     // API Keys
@@ -51,12 +51,41 @@ namespace {
     enum class GWRace : uint8_t { Human, Charr, Norn, Asura, Tengu, Dwarf, Centaur }; // namespace GWRace
 
 
-    enum class Gender : uint8_t {
-        Male,
-        Female,
-        Unknown
-    };
+    enum class Gender : uint8_t { Male, Female, Unknown };
     std::map<uint32_t, uint32_t> sound_file_by_model_file_id;
+
+    const std::string& GetApiKey() {
+        switch (current_tts_provider) {
+            case TTSProvider::ElevenLabs:
+                return elevenlabs_api_key;
+        }
+        return openai_api_key;
+    }
+
+    uint32_t GetAgentAtPosition(const GW::Vec2f& position, float tolerance = 50.0f)
+    {
+        const auto agents = GW::Agents::GetAgentArray();
+        if (!agents) return 0;
+
+        uint32_t closest_agent_id = 0;
+        float closest_distance = tolerance;
+
+        for (const auto agent : *agents) {
+            if (!agent) continue;
+
+            // Calculate 2D distance (ignoring Z coordinate)
+            float dx = agent->pos.x - position.x;
+            float dy = agent->pos.y - position.y;
+            float distance = sqrtf(dx * dx + dy * dy);
+
+            if (distance < closest_distance) {
+                closest_distance = distance;
+                closest_agent_id = agent->agent_id;
+            }
+        }
+
+        return closest_agent_id;
+    }
 
     // "If it dies, we can... assign a gender?"
     bool GetDeathSoundForModelFileId(uint32_t file_id, uint32_t* file_id_out)
@@ -67,23 +96,20 @@ namespace {
         auto animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBC);
         if (!animations_chunk) {
             animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBD);
-            if (!(animations_chunk && asset.readFromDat(animations_chunk->filenames[0].filename))) 
-                return false;
+            if (!(animations_chunk && asset.readFromDat(animations_chunk->filenames[0].filename))) return false;
             animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBC);
         }
-        if (!(animations_chunk && asset.readFromDat(animations_chunk->filenames[0].filename))) 
-            return false;
-        if (asset.getFFNAType() != 8) 
-            return false;
+        if (!(animations_chunk && asset.readFromDat(animations_chunk->filenames[0].filename))) return false;
+        if (asset.getFFNAType() != 8) return false;
         const auto soundtracks_chunk = (ArenaNetFileParser::FileNamesChunkWithoutLength*)asset.FindChunk(ArenaNetFileParser::ChunkType::SOUND_FILES_1);
-        if (!(soundtracks_chunk && soundtracks_chunk->num_filenames() > 0))
-            return false;
+        if (!(soundtracks_chunk && soundtracks_chunk->num_filenames() > 0)) return false;
         *file_id_out = ArenaNetFileParser::FileHashToFileId(soundtracks_chunk->filenames[0].filename);
         return true;
     }
 
 
-    Gender GetGenderByFileId(const uint32_t file_id) {
+    Gender GetGenderByFileId(const uint32_t file_id)
+    {
         Log::Log("GetGenderByFileId 0x%08X", file_id);
         switch (file_id) {
             case 0x13fdb: // e.g. Krytan
@@ -131,7 +157,8 @@ namespace {
         return GWRace::Human;
     }
 
-    Gender GetAgentGender(uint32_t agent_id) {
+    Gender GetAgentGender(uint32_t agent_id)
+    {
         const auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
         if (!(agent && agent->GetIsLivingType())) return Gender::Unknown;
         if (agent->IsNPC()) {
@@ -156,7 +183,7 @@ namespace {
 
     std::map<std::tuple<GW::Region, TraderType>, std::wstring> merchant_greetings;
 
-        // Simple log system - store last 5 messages
+    // Simple log system - store last 5 messages
     std::deque<std::string> voice_log_messages;
     const size_t MAX_LOG_MESSAGES = 5;
 
@@ -181,7 +208,7 @@ namespace {
         Log::Log("%s", buffer);
     }
 
-        // Utility function to convert Language enum to ElevenLabs language code
+    // Utility function to convert Language enum to ElevenLabs language code
     std::string LanguageToAbbreviation(GW::Constants::Language language)
     {
         switch (language) {
@@ -264,9 +291,7 @@ namespace {
     std::wstring PreprocessEncodedTextForTTS(const std::wstring& text);
     VoiceProfile* GetVoiceProfile(uint32_t agent_id, GW::Constants::MapID map_id);
 
-
-
-struct PendingNPCAudio {
+    struct PendingNPCAudio {
         GW::Constants::Language language = GW::Constants::Language::English;
         std::wstring encoded_message;
         std::wstring decoded_message;
@@ -281,7 +306,6 @@ struct PendingNPCAudio {
             encoded_message = PreprocessEncodedTextForTTS(message);
             profile = GetVoiceProfile(agent_id, GW::Map::GetMapID());
             language = GW::UI::GetTextLanguage();
-
         }
         ~PendingNPCAudio();
     };
@@ -298,14 +322,14 @@ struct PendingNPCAudio {
         }
     }
 
-    void ClearSounds() {
+    void ClearSounds()
+    {
         while (playing_audio_map.size()) {
             auto ptr = playing_audio_map.begin()->second;
             playing_audio_map.erase(playing_audio_map.begin());
             delete ptr;
         }
     }
-
 
     PendingNPCAudio::~PendingNPCAudio()
     {
@@ -318,7 +342,8 @@ struct PendingNPCAudio {
 
     bool generating_voice = false;
 
-    GW::Vec3f GetAgentVec3f(uint32_t agent_id) {
+    GW::Vec3f GetAgentVec3f(uint32_t agent_id)
+    {
         const auto agent = GW::Agents::GetAgentByID(agent_id);
         return agent ? GW::Vec3f(agent->pos.x, agent->pos.y, agent->z) : GW::Vec3f();
     }
@@ -446,13 +471,14 @@ struct PendingNPCAudio {
     std::wstring PreprocessEncodedTextForTTS(const std::wstring& text)
     {
         // replace player name
-        auto result = TextUtils::ctre_regex_replace<L"\x0ba9\x0107[^\x0001]+\x0001", L"\x0ba9\x0107" "Chosen\x0001">(text);
+        auto result = TextUtils::ctre_regex_replace<
+            L"\x0ba9\x0107[^\x0001]+\x0001", L"\x0ba9\x0107"
+                                             "Chosen\x0001">(text);
         // replace numeric args
         result = TextUtils::ctre_regex_replace<L"[\x0101\x102\x103\x104].", L"">(result);
         return result;
-    
     }
-    
+
     bool IsInParty(uint32_t agent_id) {
         const auto p = GW::PartyMgr::GetPartyInfo();
         if (!p) return false;
@@ -565,7 +591,7 @@ struct PendingNPCAudio {
         }
 
         // Ultimate fallback
-        return &default_voice_profile;
+        return nullptr;
     }
 
     GW::HookEntry UIMessage_HookEntry;
@@ -607,21 +633,7 @@ struct PendingNPCAudio {
         );
     }
 
-    bool IsEotnRegion() {
-        // Check if the current map is EotN
-        const auto map_info = GW::Map::GetMapInfo();
-        switch (map_info->region) {
-            case GW::Region::Region_TarnishedCoast:
-            case GW::Region::Region_DepthsOfTyria:
-            case GW::Region::Region_FarShiverpeaks:
-            case GW::Region::Region_CharrHomelands:
-                return true;
-        }
-        return false;
-    }
-
     GW::UI::Frame* dialog_frame = nullptr;
-
 
     float GetDistanceFromAgentId(uint32_t agent_id) {
         const auto agent = GW::Agents::GetAgentByID(agent_id);
@@ -629,7 +641,6 @@ struct PendingNPCAudio {
         const auto player_pos = GetPlayerPosition();
         return GW::GetDistance(agent->pos, player_pos);
     }
-
 
     GW::UI::UIInteractionCallback OnNPCInteract_UICallback_Func = nullptr, OnNPCInteract_UICallback_Ret = nullptr;
     GW::UI::UIInteractionCallback OnVendorInteract_UICallback_Func = nullptr, OnVendorInteract_UICallback_Ret = nullptr;
@@ -679,8 +690,6 @@ struct PendingNPCAudio {
         GW::Hook::LeaveHook();
     }
 
-
-
     void HookNPCInteractFrame() {
         if (!OnNPCInteract_UICallback_Func) {
             const auto frame = GW::UI::GetFrameByLabel(L"NPCInteract");
@@ -700,7 +709,6 @@ struct PendingNPCAudio {
         }
 
     }
-
 
     void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage msgid, void* wParam, void*)
     {
@@ -746,8 +754,6 @@ struct PendingNPCAudio {
 
                 const auto packet = (GW::UI::UIPacket::kVendorWindow*)wParam;
                 last_dialog_agent_id = packet->unk;
-                if (IsEotnRegion()) 
-                    return; // EotN vendors already have greetings
                 switch (packet->transaction_type) {
                     case GW::Merchant::TransactionType::CollectorBuy: {
                         // Find and use the collector's dialog context
@@ -921,7 +927,6 @@ struct PendingNPCAudio {
         }
     }
 
-
     void GenerateVoiceAPI(PendingNPCAudio* audio)
     {
         if (generating_voice) return;
@@ -964,6 +969,17 @@ struct PendingNPCAudio {
             return generating_voice = false;
         });
     }
+    
+    void OnPlaySound(GW::HookStatus* status, const wchar_t* filename, SoundProps* props) {
+        if (status->blocked) return;
+        if (!(props && (props->flags & 0x1400) != 0x1400)) return;
+        if (GW::Map::GetIsInCinematic()) return;
+        if (wcslen(filename) > 4) return;
+        if (!GetApiKey().size()) return;
+        const auto agent_id = GetAgentAtPosition({props->position.x, props->position.y},20.f);
+        if (agent_id && GetVoiceProfile(agent_id, GW::Map::GetMapID())) status->blocked = true;
+    }
+
 } // namespace
 
 void NPCVoiceModule::Initialize()
@@ -1014,6 +1030,8 @@ void NPCVoiceModule::Initialize()
     voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_FissureOfWoe}] = VoiceProfile(voice_id_human_female, 0.3f, 0.7f, 0.4f, 0.95f, "otherworldly");
     voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_DomainOfAnguish}] = VoiceProfile(voice_id_human_male, 0.8f, 0.3f, 0.2f, 0.85f, "tormented");
     voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_DomainOfAnguish}] = VoiceProfile(voice_id_human_female, 0.7f, 0.4f, 0.3f, 0.90f, "anguished");
+    voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_BattleIslands}] = VoiceProfile(voice_id_human_male, 0.4f, 0.6f, 0.4f, 1.0f, "worldly");
+    voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_BattleIslands}] = VoiceProfile(voice_id_human_female, 0.3f, 0.7f, 0.5f, 1.05f, "cosmopolitan");
 
     // Non-human races - fallback voices
     voice_matrix[{Gender::Male, GWRace::Charr, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_male, 0.8f, 0.4f, 0.3f, 0.85f, "growling");
@@ -1246,6 +1264,16 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::OtherItemCrafter}] = L"Greetings, I work with materials from the deepest places of the world.";
     merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::SkillTrainer}] = L"In the depths where few dare tread, I teach the underground fighting arts.";
 
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::Merchant}] = L"Welcome to Embark Beach! Goods from across the world.";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::ArmorCrafter}] = L"Armor from every tradition, all in one place.";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::WeaponCustomizer}] = L"Weapons from every corner of the world.";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::RuneTrader}] = L"Runes from across the known world.";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::MaterialTrader}] = L"Materials from every land, what do you need?";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::RareMaterialTrader}] = L"Rare treasures from distant shores.";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::DyeTrader}] = L"Colors from every culture and tradition.";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::OtherItemCrafter}] = L"Greetings, I use techniques from across the world.";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::SkillTrainer}] = L"Welcome! I teach arts from every tradition.";
+
     const GW::UI::UIMessage messages[] = {
         GW::UI::UIMessage::kDialogBody, 
         GW::UI::UIMessage::kVendorWindow, 
@@ -1258,6 +1286,7 @@ void NPCVoiceModule::Initialize()
         GW::UI::RegisterUIMessageCallback(&PreUIMessage_HookEntry, message_id, OnPreUIMessage, -0x1);
         GW::UI::RegisterUIMessageCallback(&UIMessage_HookEntry, message_id, OnPostUIMessage, 0x4000);
     }
+    AudioSettings::RegisterPlaySoundCallback(&UIMessage_HookEntry, OnPlaySound);
 }
 
 void NPCVoiceModule::Terminate()
@@ -1266,6 +1295,7 @@ void NPCVoiceModule::Terminate()
     ClearSounds();
     GW::UI::RemoveUIMessageCallback(&UIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&PreUIMessage_HookEntry);
+    AudioSettings::RemovePlaySoundCallback(&UIMessage_HookEntry);
 }
 
 void NPCVoiceModule::LoadSettings(ToolboxIni* ini)
@@ -1418,10 +1448,14 @@ void NPCVoiceModule::DrawSettingsInternal()
 
     // Input fields for new custom assignment
     ImGui::PushItemWidth(100);
-    ImGui::InputText("NPC ID##custom", custom_npc_id_buffer, sizeof(custom_npc_id_buffer), ImGuiInputTextFlags_CharsDecimal);
+    ImGui::InputTextWithHint("##npc_id_custom", "e.g. 1234", custom_npc_id_buffer, sizeof(custom_npc_id_buffer), ImGuiInputTextFlags_CharsDecimal);
+    ImGui::SameLine();
+    ImGui::Text("NPC ID");
     ImGui::SameLine();
     ImGui::PushItemWidth(300);
-    ImGui::InputText("Voice ID##custom", custom_voice_id_buffer, sizeof(custom_voice_id_buffer));
+    ImGui::InputTextWithHint("##voice_id_custom", "e.g. 2EiwWnXFnvU5JabPnv8n", custom_voice_id_buffer, sizeof(custom_voice_id_buffer));
+    ImGui::SameLine();
+    ImGui::Text("Voice ID");
     ImGui::PopItemWidth();
 
     // Add button
