@@ -8,6 +8,8 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 7.4
+* [Fix] Fixed gw sometimes crashing when toolbox is closed
+* [Fix] Fixed bug with nicholas item info not always being correct
 * [Fix] Fixed GW's built in 180 fps limit to allow higher framerates (up to your fastest monitors max refresh rate)
 * [Fix] Fixed enter mission "are you sure" popup not automatically proceeding when triggered from an NPC dialog button
 * [Fix] Fixed item price being shown twice when hovering materials
@@ -20,10 +22,13 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] prompt if mission is already completed no longer causes crash in some situations in Nightfall
 * [Fix] Fixed a bug causing filtered trade chat messages to show up
 * [Fix] Fixed crash when running send chat hotkey whilst chat is focussed
+* [Fix] Fixed bug preventing the new miniatures from being flagged as collected in completion window
 * [Minor] Updated pcon settings ui
 * [Minor] Vastly improved regex performance, watch out for bugs though
 * [Minor] Added "skills offered" section to target info
-* [Minor] Improved TargetInfo window performance, 
+* [Minor] Improved TargetInfo window performance
+* [Minor] Unlock all option now affects all widgets too
+* [Minor] Added a warning message in chat if toolbox is launched in a pvp area
 * [New] ChatSettings: setting to hide all friendly speech bubbles
 * [New] /pref command now supports 'textlanguage' and 'audiolanguage'
 * [New] TargetInfo window now has a setting to automatically hide if no suitable target is selected
@@ -32,6 +37,9 @@ the latest version, go to the [Home Page](./) instead.
 * [New] Setting not to draw toolbox during loading screens
 * [New] Game world quest path can now be shown independently from Minimap (settings for it are still in Minimap settings)
 * [New] /spawnblockeditems to spawn all items the Item Filter settings currently have blocked
+* [New] /config chat command - see help > chat commands
+* [New] Added Hero Equipment module - an inventory icon is shown in the title bar of a hero skill bar
+* [New] Added NPC Voice module - add an API key in settings > NPC Voice to enable in-game text to speech
 
 ## Version 7.3
 * [Fix] Fix keys being stuck when you hold them as you open an imgui modal
