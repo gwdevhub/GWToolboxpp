@@ -94,7 +94,8 @@ namespace {
         gw_image_bits bits = nullptr;
 
         ArenaNetFileParser::GameAssetFile asset;
-        if (!asset.readFromDat(file_id)) return 0;
+        if (!asset.readFromDat(file_id)) 
+            return 0;
 
         uint8_t* image_bytes = asset.data.data();
         size_t image_size = asset.data.size();
@@ -109,13 +110,15 @@ namespace {
             image_bytes = chunk->data;
             image_size = chunk->chunk_size;
         }
-        if (strncmp((char*)image_bytes, "ATEX", 4) != 0) {
+        if (strncmp((char*)image_bytes, "ATEX", 4) != 0 
+            && strncmp((char*)image_bytes, "DDS", 3) != 0) {
             return 0;
         }
 
         uint32_t result = DecodeImage_func(image_size, image_bytes, &bits, pallete, &format, &dims, &levels);
 
-        if (format >= GR_FORMATS || !result) return 0;
+        if (format >= GR_FORMATS || !result) 
+            return 0;
 
         levels = 1;
         
