@@ -183,7 +183,7 @@ namespace {
 #if _DEBUG
         InventoryOverlayWidget::Instance(),
 #endif
-        //HeroEquipmentModule::Instance(),
+        HeroEquipmentModule::Instance(),
         ActiveQuestWidget::Instance(),
 
     };

@@ -63,6 +63,7 @@ namespace {
         return GetMyHeroAgentId(hero_index);
     }
 
+    bool block_inv_agent_changed_packet = false;
 
     std::vector<UICallbackItem> InventoryWindow_UICallbacks;
 
@@ -86,21 +87,23 @@ namespace {
 
     uint32_t hero_inventory_item_slot_clicked = 0;
 
-
+    GW::UI::Frame* GetHeroInventoryFrameBeingInteracted(uint32_t current_frame_id) {
+        auto parent = GW::UI::GetFrameById(current_frame_id);
+        while(true) {
+            if (!parent) return nullptr;
+            if (parent && (parent->child_offset_id & 0x0000fff0) == 0xfff0) {
+                return parent;
+            }
+            parent = GW::UI::GetParentFrame(parent);
+        }
+        return nullptr;
+    }
 
     void __fastcall OnItemSlotClicked(BagFrameContext* bag_context, void* edx, GW::UI::UIPacket::kMouseAction* wparam)
     {
         GW::Hook::EnterHook();
-        hero_inventory_item_slot_clicked = 0;
-        auto parent = GW::UI::GetFrameById(bag_context->frame_id);
-        while (parent) {
-            parent = GW::UI::GetParentFrame(parent);
-            if (parent && (parent->child_offset_id & 0x0000fff0) == 0xfff0) {
-                // This item belongs to one of the hero inventory windows.
-                hero_inventory_item_slot_clicked = GetMyHeroAgentId(parent->child_offset_id & 0xf);
-                break;
-            }
-        }
+        auto parent = GetHeroInventoryFrameBeingInteracted(bag_context->frame_id);
+        hero_inventory_item_slot_clicked = parent ? GetMyHeroAgentId(parent->child_offset_id & 0xf) : 0;
         HandleItemSlotClicked_Ret(bag_context, edx, wparam);
         hero_inventory_item_slot_clicked = 0;
         GW::Hook::LeaveHook();
@@ -132,9 +135,13 @@ namespace {
         GW::UI::DestroyUIComponent(destroy_inv_frame);
         return InventoryWindow_UICallbacks.size() ? &InventoryWindow_UICallbacks : nullptr;
     }
-    
 
-
+    void SaveFramePosition(uint32_t frame_id) {
+        const auto frame = GetHeroInventoryFrameBeingInteracted(frame_id);
+        if (frame) {
+            frame_layouts_by_child_id[frame->child_offset_id] = frame->position;
+        }
+    }
 
     void ReselectHero(GW::UI::Frame* avatar_list_frame)
     {
@@ -149,7 +156,9 @@ namespace {
                 return;
             const auto actual_selected_agent_id = *current_inventory_agent_id;
             *current_inventory_agent_id = hero_agent_id;
+            block_inv_agent_changed_packet = true;
             GW::UI::SendFrameUIMessage(avatar_list_frame, GW::UI::UIMessage::kFrameMessage_0x47, (void*)hero_agent_id);
+            block_inv_agent_changed_packet = false;
             *current_inventory_agent_id = actual_selected_agent_id;
             return;
         }
@@ -172,14 +181,33 @@ namespace {
 
     void OnAvatarList_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
         GW::Hook::EnterHook();
-        OnAvatarList_UICallback_Ret(message, wParam, lParam);
+        if (!GetHeroInventoryFrameBeingInteracted(message->frame_id)) {
+            OnAvatarList_UICallback_Ret(message, wParam, lParam);
+            GW::Hook::LeaveHook();
+            return;
+        }
+        switch (message->message_id) {
+            case GW::UI::UIMessage::kMouseClick2: {
+                const auto packet = (GW::UI::UIPacket::kMouseAction*)wParam;
+                if ((packet->child_offset_id > 0xffffff && packet->child_offset_id < 0x2000000)
+                    && (packet->current_state == 8 && *(uint32_t*)packet->wparam == 0)) {
+                    break; // Avatar image clicked; block the packet
+                }
+                OnAvatarList_UICallback_Ret(message, wParam, lParam);
+            } break;
+            default: {
+                OnAvatarList_UICallback_Ret(message, wParam, lParam);
+            } break;
+        }
 
         switch (message->message_id) {
+            case GW::UI::UIMessage::kFrameMessage_0x47: {
+                ReselectHero(GW::UI::GetFrameById(message->frame_id));
+            } break;
             case GW::UI::UIMessage::kInitFrame:
             case GW::UI::UIMessage::kMouseClick2:
             case GW::UI::UIMessage::kPartyRemoveHero:
-            case GW::UI::UIMessage::kInventoryAgentChanged:
-            case GW::UI::UIMessage::kFrameMessage_0x47: {
+            case GW::UI::UIMessage::kInventoryAgentChanged: {
                 ReselectHero(GW::UI::GetFrameById(message->frame_id));
             } break;
         }
@@ -245,8 +273,6 @@ namespace {
         return hero_frame;
     }
 
-
-
     void ToggleHeroInventoryWindow(char hero_index) {
         GW::GameThread::Enqueue([hero_index]() {
             auto hero_frame = GetHeroInventoryWindow(hero_index);
@@ -267,6 +293,24 @@ namespace {
             ToggleHeroInventoryWindow((char)(argv[1][0] - L'0'));
     }
 
+    void OnPreUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void*, void* lparam)
+    {
+        switch (message_id) {
+            case GW::UI::UIMessage::kGetInventoryAgentId: {
+                if (hero_inventory_item_slot_clicked) {
+                    *(uint32_t*)lparam = hero_inventory_item_slot_clicked;
+                }
+                status->blocked = true;
+            } break;
+            case GW::UI::UIMessage::kInventoryAgentChanged: {
+                if (block_inv_agent_changed_packet) {
+                    status->blocked = true;
+                    block_inv_agent_changed_packet = false;
+                }
+            } break;
+        }
+    }
+
     void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void* lparam) {
         switch (message_id) {
             case GW::UI::UIMessage::kGetInventoryAgentId: {
@@ -276,10 +320,7 @@ namespace {
                 status->blocked = true;
             } break;
             case GW::UI::UIMessage::kFloatingWindowMoved: {
-                const auto frame = GW::UI::GetFrameById(*(uint32_t*)wparam);
-                if (frame && (frame->child_offset_id & 0x0000fff0) == 0xfff0) {
-                    frame_layouts_by_child_id[frame->child_offset_id] = frame->position;
-                }
+                SaveFramePosition(*(uint32_t*)wparam);
             } break;
         }
     }
@@ -308,7 +349,11 @@ void HeroEquipmentModule::Initialize()
     }
     GW::Chat::CreateCommand(&ChatCmdEntry, L"heroinventory", CmdHeroInventory);
 
-    const GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kFloatingWindowMoved, GW::UI::UIMessage::kGetInventoryAgentId};
+    const GW::UI::UIMessage ui_messages[] = {
+        GW::UI::UIMessage::kFloatingWindowMoved, 
+        GW::UI::UIMessage::kGetInventoryAgentId, 
+        GW::UI::UIMessage::kInventoryAgentChanged
+    };
 
     for (const auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&ChatCmdEntry, message_id, OnPostUIMessage, 0x4000);
