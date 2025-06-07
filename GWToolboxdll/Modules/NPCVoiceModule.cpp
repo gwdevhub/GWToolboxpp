@@ -119,6 +119,7 @@ namespace {
             case 0x17390: // Dwarf
             case 0x13e25: // Mesmer
             case 0x12b3d: // Male centaur
+            case 0x13eaa: // Ministry of purity
                 return Gender::Male;
             case 0x2f17e:
             case 0x97fa:
