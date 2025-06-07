@@ -282,6 +282,7 @@ namespace {
     bool only_show_speech_from_friendly_npcs = true;
     bool show_speech_from_party_members_in_explorable_areas = false;
     float npc_speech_bubble_range = GW::Constants::Range::Adjacent;
+    bool play_speech_from_vendors = true;
 
     uint32_t last_dialog_agent_id = 0;
 
@@ -301,92 +302,113 @@ namespace {
         clock_t started = 0;
         clock_t duration = 0;
         void* gw_handle = 0;
-        PendingNPCAudio(uint32_t _agent_id, const wchar_t* message) : agent_id(_agent_id), started(0), duration(0)
-        {
-            encoded_message = PreprocessEncodedTextForTTS(message);
-            profile = GetVoiceProfile(agent_id, GW::Map::GetMapID());
-            language = GW::UI::GetTextLanguage();
+        bool IsPlaying() { 
+            // NB: Duration of 0 implies the file is being generated, so for the purpose of this check, we assume it is about to play
+            return duration == 0 || TIMER_DIFF(started) < duration;
         }
+        void Play();
+        void Stop();
+        PendingNPCAudio(uint32_t _agent_id, const wchar_t* message);
         ~PendingNPCAudio();
     };
-
+    std::vector<PendingNPCAudio*> pending_audio; // Maps agent ID to pending audio generation requests
     std::map<uint32_t, PendingNPCAudio*> playing_audio_map; // Maps agent ID to currently playing audio
 
-    void CancelDialogSpeech(uint32_t agent_id)
+        // Function to estimate audio duration from file size (rough approximation)
+    clock_t EstimateAudioDuration(const std::filesystem::path& audio_file)
     {
-        const auto found = playing_audio_map.find(agent_id);
-        if (found != playing_audio_map.end()) {
-            auto ptr = found->second;
-            playing_audio_map.erase(found);
-            delete ptr;
+        std::error_code err;
+        auto file_size = std::filesystem::file_size(audio_file, err);
+        if (err.value() != 0) {
+            Log::Error("Failed to get file size for %s: %s", audio_file.string().c_str(), err.message().c_str());
+            return 0;
         }
+        // Rough estimation: WAV files are typically ~16KB per second at 16-bit, 22kHz
+        // This is approximate - actual duration depends on sample rate, bit depth, etc.
+        clock_t duration = static_cast<clock_t>(file_size / 16000.0f) * CLOCKS_PER_SEC; // bytes per second (16-bit stereo, 22kHz)
+        return std::max((clock_t)500, duration);
     }
-
-    void ClearSounds()
-    {
-        while (playing_audio_map.size()) {
-            auto ptr = playing_audio_map.begin()->second;
-            playing_audio_map.erase(playing_audio_map.begin());
-            delete ptr;
-        }
-    }
-
-    PendingNPCAudio::~PendingNPCAudio()
-    {
-        if (gw_handle) AudioSettings::StopSound(gw_handle);
-        const auto found = playing_audio_map.find(agent_id);
-        if (found != playing_audio_map.end()) {
-            playing_audio_map.erase(found);
-        }
-    }
-
-    bool generating_voice = false;
 
     GW::Vec3f GetAgentVec3f(uint32_t agent_id)
     {
         const auto agent = GW::Agents::GetAgentByID(agent_id);
         return agent ? GW::Vec3f(agent->pos.x, agent->pos.y, agent->z) : GW::Vec3f();
     }
-    GW::GamePos GetPlayerPosition()
-    {
-        const auto player = GW::Agents::GetControlledCharacter();
-        return player ? player->pos : GW::GamePos();
-    }
 
-    // Function to estimate audio duration from file size (rough approximation)
-    clock_t EstimateAudioDuration(const std::filesystem::path& audio_file)
+    void CancelDialogSpeech(uint32_t agent_id)
     {
-        try {
-            auto file_size = std::filesystem::file_size(audio_file);
-            // Rough estimation: WAV files are typically ~16KB per second at 16-bit, 22kHz
-            // This is approximate - actual duration depends on sample rate, bit depth, etc.
-            clock_t duration = static_cast<clock_t>(file_size / 16000.0f) * CLOCKS_PER_SEC; // bytes per second (16-bit stereo, 22kHz)
-            return std::max((clock_t)500, duration);
-        } catch (const std::exception&) {
-            return (clock_t)2000; // Default fallback duration
+        const auto found = playing_audio_map.find(agent_id);
+        if (found != playing_audio_map.end()) {
+            delete found->second;
         }
     }
 
-    // Enhanced audio playback function
-    void PlayAudioFile(PendingNPCAudio* audio_file)
+    void ClearSounds()
     {
+        while (playing_audio_map.size()) {
+            delete playing_audio_map.begin()->second;
+        }
+        while (pending_audio.size()) {
+            delete pending_audio[0];
+        }
+    }
+    void PendingNPCAudio::Play()
+    {
+        const auto found = playing_audio_map.find(agent_id);
+        if (found != playing_audio_map.end() && found->second != this) {
+            delete found->second;
+        }
         // Don't play more than one dialog track at once
-        CancelDialogSpeech(audio_file->agent_id);
-        audio_file->duration = EstimateAudioDuration(audio_file->path);
+        Stop();
+        if (!duration)
+            duration = EstimateAudioDuration(path);
 
         // Play the new audio
-        const auto pos = GetAgentVec3f(audio_file->agent_id);
+        const auto pos = GetAgentVec3f(agent_id);
         // 0x1400 means "this audio file in positional", so it will play in 3D space relative to the position given
         // 0x4 means "this is a dialog audio file"
-        if (!AudioSettings::PlaySound(audio_file->path.wstring().c_str(), &pos, 0x1400 | 0x4, &audio_file->gw_handle)) {
-            delete audio_file;
+        if (!AudioSettings::PlaySound(path.wstring().c_str(), &pos, 0x1400 | 0x4, &gw_handle)) {
+            delete this; // Too naughty?
             return;
         }
 
         // Add to playing audio map
-        audio_file->started = TIMER_INIT();
-        playing_audio_map[audio_file->agent_id] = audio_file;
-        VoiceLog("Playing audio file: %s (estimated duration: %dms)", audio_file->path.filename().string().c_str(), audio_file->duration);
+        started = TIMER_INIT();
+        pending_audio.erase(std::remove(pending_audio.begin(), pending_audio.end(), this), pending_audio.end());
+        playing_audio_map[agent_id] = this;
+        VoiceLog("Playing audio file: %s (estimated duration: %dms)", path.filename().string().c_str(), duration);
+    }
+    void PendingNPCAudio::Stop() {
+        if (gw_handle) AudioSettings::StopSound(gw_handle);
+        gw_handle = nullptr;
+    }
+    PendingNPCAudio::~PendingNPCAudio()
+    {
+        Stop();
+        const auto found = playing_audio_map.find(agent_id);
+        if (found != playing_audio_map.end()) {
+            playing_audio_map.erase(found);
+        }
+        const auto found_pending = std::find(pending_audio.begin(), pending_audio.end(), this);
+        if (found_pending != pending_audio.end()) {
+            pending_audio.erase(found_pending);
+        }
+    }
+    PendingNPCAudio::PendingNPCAudio(uint32_t _agent_id, const wchar_t* message) : agent_id(_agent_id), started(0), duration(0)
+    {
+        encoded_message = PreprocessEncodedTextForTTS(message);
+        profile = GetVoiceProfile(agent_id, GW::Map::GetMapID());
+        language = GW::UI::GetTextLanguage();
+        pending_audio.push_back(this);
+    }
+
+    bool generating_voice = false;
+
+
+    GW::GamePos GetPlayerPosition()
+    {
+        const auto player = GW::Agents::GetControlledCharacter();
+        return player ? player->pos : GW::GamePos();
     }
 
     // Extract first sentence from text
@@ -768,6 +790,7 @@ namespace {
                     case GW::Merchant::TransactionType::WeaponsmithCustomize:
                     case GW::Merchant::TransactionType::TraderBuy: {
                         if (GW::UI::GetTextLanguage() != GW::Constants::Language::English) return; // We only support English trader quotes for now
+                        if (!play_speech_from_vendors) return;                                     // Don't play vendor speech if disabled
                         // For traders, find out the name of the trader and determine which greeting to use
                         auto audio = new PendingNPCAudio(packet->unk, L"");
                         GetNPCName(
@@ -933,16 +956,20 @@ namespace {
         generating_voice = true;
 
         Resources::EnqueueWorkerTask([audio]() {
+            if (std::ranges::find(pending_audio, audio) == pending_audio.end())
+                return generating_voice = false;
+
             const auto cache_key = GenerateOptimizedCacheKey(audio->profile, audio->decoded_message, audio->language);
             audio->path = Resources::GetPath("NPCVoiceCache") / LanguageToAbbreviation(audio->language) / cache_key;
 
             // Check cache first
             if (std::filesystem::exists(audio->path)) {
-                PlayAudioFile(audio);
+                audio->Play();
                 return generating_voice = false;
             }
 
             auto audio_data = GenerateVoice(audio);
+            if (std::ranges::find(pending_audio, audio) == pending_audio.end()) return generating_voice = false;
             if (!audio_data.size()) {
                 VoiceLog("Failed to generate voice data");
                 delete audio;
@@ -964,20 +991,34 @@ namespace {
                 delete audio;
                 return generating_voice = false;
             }
-
-            PlayAudioFile(audio);
+            if (std::ranges::find(pending_audio, audio) == pending_audio.end()) return generating_voice = false;
+            audio->Play();
             return generating_voice = false;
         });
     }
     
     void OnPlaySound(GW::HookStatus* status, const wchar_t* filename, SoundProps* props) {
         if (status->blocked) return;
-        if (!(props && (props->flags & 0x1400) != 0x1400)) return;
+        if (!(props && (props->flags & 0x1404) != 0x1404)) return; // Positional, dialog
         if (GW::Map::GetIsInCinematic()) return;
         if (wcslen(filename) > 4) return;
         if (!GetApiKey().size()) return;
         const auto agent_id = GetAgentAtPosition({props->position.x, props->position.y},20.f);
-        if (agent_id && GetVoiceProfile(agent_id, GW::Map::GetMapID())) status->blocked = true;
+        if (!(agent_id && GetVoiceProfile(agent_id, GW::Map::GetMapID()))) return;
+        const auto found = playing_audio_map.find(agent_id);
+        if (found != playing_audio_map.end() && found->second->IsPlaying()) {
+            // If we already have a playing audio for this agent, block the sound
+            status->blocked = true;
+            return;
+        }
+        const auto pending_found = std::find_if(pending_audio.begin(), pending_audio.end(), [agent_id](PendingNPCAudio* audio) {
+            return audio->agent_id == agent_id;
+        });
+        if (pending_found != pending_audio.end()) {
+            // If we already have a pending audio for this agent, block the sound
+            status->blocked = true;
+            return;
+        }
     }
 
 } // namespace
@@ -1314,6 +1355,9 @@ void NPCVoiceModule::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_speech_from_party_members_in_explorable_areas);
     LOAD_BOOL(only_use_first_sentence);
     LOAD_BOOL(play_goodbye_messages);
+    LOAD_BOOL(stop_speech_when_dialog_closed);
+    LOAD_FLOAT(npc_speech_bubble_range);
+    LOAD_BOOL(play_speech_from_vendors);
 
     CSimpleIniA::TNamesDepend keys;
     ini->GetAllKeys(Name(), keys);
@@ -1347,6 +1391,10 @@ void NPCVoiceModule::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_speech_from_party_members_in_explorable_areas);
     SAVE_BOOL(only_use_first_sentence);
     SAVE_BOOL(play_goodbye_messages);
+    SAVE_BOOL(stop_speech_when_dialog_closed);
+    SAVE_FLOAT(npc_speech_bubble_range);
+    SAVE_BOOL(play_speech_from_vendors);
+
 
     // Remove existing custom voice entries (don't clear the whole section)
     CSimpleIniA::TNamesDepend keys;
@@ -1423,8 +1471,11 @@ void NPCVoiceModule::DrawSettingsInternal()
 
     ImGui::Checkbox("Stop speech when dialog window is closed", &stop_speech_when_dialog_closed);
 
+    ImGui::Checkbox("Play speech from vendors", &play_speech_from_vendors);
+
     ImGui::Checkbox("Show speech from party members when in an explorable area", &show_speech_from_party_members_in_explorable_areas);
     show_warning |= show_speech_from_party_members_in_explorable_areas;
+    ImGui::ShowHelp("If enabled, speech bubbles from skills and quotes from allied heros and henchmen within speech bubble range will be processed.");
 
     if (ImGui::InputFloat("NPC speech bubble range", &npc_speech_bubble_range, GW::Constants::Range::Adjacent, GW::Constants::Range::Adjacent)) {
         npc_speech_bubble_range = std::max(npc_speech_bubble_range, 0.f);

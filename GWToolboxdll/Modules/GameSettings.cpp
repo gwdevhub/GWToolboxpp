@@ -222,6 +222,8 @@ namespace {
 
     bool is_prompting_hard_mode_mission = false;
 
+    bool add_agent_id_to_enemy_names = false;
+
     GW::HookEntry SkillList_UICallback_HookEntry;
     GW::UI::UIInteractionCallback SkillList_UICallback_Func = 0, SkillList_UICallback_Ret = 0;
 
