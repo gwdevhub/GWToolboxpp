@@ -7,7 +7,7 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
-## Version 7.5
+## Version 7.6
 * [Fix] Fixed gw sometimes crashing when toolbox is closed
 * [Fix] Fixed bug with nicholas item info not always being correct
 * [Fix] Fixed GW's built in 180 fps limit to allow higher framerates (up to your fastest monitors max refresh rate)
