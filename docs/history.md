@@ -7,6 +7,12 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 7.7
+* [Fix] Fixed crash when talking to some faction donation NPCs
+* [Fix] Fixed hanging on toolbox launch caused by poor internet connection
+* [Minor] Added a set of default toolbox window module buttons; previously only showed settings when launching toolbox for the first ever time
+* [Minor] Added option to armory module to globally dye armor pieces
+
 ## Version 7.6
 * [Fix] Fixed gw sometimes crashing when toolbox is closed
 * [Fix] Fixed bug with nicholas item info not always being correct

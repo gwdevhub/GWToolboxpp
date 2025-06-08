@@ -33,6 +33,8 @@ namespace {
     const char* voice_id_human_female = "EXAVITQu4vr4xnSDxMaL";
     const char* voice_id_dwarven_male = "N2lVS1w4EtoT3dr4eOWO";
 
+    constexpr std::string empty_string = "";
+
 
     // TTS Provider settings
     TTSProvider current_tts_provider = TTSProvider::ElevenLabs;
@@ -67,8 +69,14 @@ namespace {
         switch (current_tts_provider) {
             case TTSProvider::ElevenLabs:
                 return elevenlabs_api_key;
+            case TTSProvider::Google:
+                return google_api_key;
+            case TTSProvider::OpenAI:
+                return openai_api_key;
+            case TTSProvider::PlayHT:
+                return playht_api_key;
         }
-        return openai_api_key;
+        return empty_string;
     }
 
     uint32_t GetAgentAtPosition(const GW::Vec2f& position, float tolerance = 50.0f)
@@ -507,7 +515,7 @@ namespace {
             L"\x0ba9\x0107[^\x0001]+\x0001", L"\x0ba9\x0107"
                                              "Chosen\x0001">(text);
         // replace numeric args
-        result = TextUtils::ctre_regex_replace<L"[\x0101\x102\x103\x104].", L"">(result);
+        result = TextUtils::ctre_regex_replace<L"[\x0101\x102\x103\x104]\x8101?.", L"">(result);
         return result;
     }
 
@@ -650,6 +658,10 @@ namespace {
 
     void GenerateVoiceFromEncodedString(PendingNPCAudio* audio)
     {
+        if (GetApiKey().empty()) {
+            delete audio;
+            return;
+        }
         if (!(audio && audio->encoded_message.size() && audio->profile)) {
             delete audio;
             return;
