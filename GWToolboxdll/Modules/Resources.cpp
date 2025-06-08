@@ -184,6 +184,8 @@ namespace {
         r->SetVerifyPeer(false); // idc about mitm or out of date certs
         r->SetMethod(HttpMethod::Get);
         r->SetVerifyHost(false);
+        r->SetConnectTimeoutSec(5);
+        r->SetTimeoutSec(10);
     }
 
     const std::string HashStr(const std::string& str)
