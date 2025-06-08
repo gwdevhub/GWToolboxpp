@@ -14,6 +14,8 @@ namespace TextUtils {
     std::string PrintFilename(std::string path);
     std::wstring PrintFilename(std::wstring path);
 
+    std::string Base64Decode(std::string_view str);
+
     std::wstring StripTags(std::wstring_view str);
 
     std::string GuidToString(const GUID* guid);

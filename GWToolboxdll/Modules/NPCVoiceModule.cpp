@@ -37,13 +37,22 @@ namespace {
     // TTS Provider settings
     TTSProvider current_tts_provider = TTSProvider::ElevenLabs;
 
-    // API Keys
     std::string elevenlabs_api_key = "";
     std::string openai_api_key = "";
+    std::string google_api_key = "";
+    std::string playht_api_key = "";
+    std::string playht_user_id = ""; // (Play.ht requires both API key and user ID)
 
     // UI buffers for API keys
     char elevenlabs_api_key_buffer[256] = {0};
     char openai_api_key_buffer[256] = {0};
+    char google_api_key_buffer[256] = {0};
+    char playht_api_key_buffer[256] = {0};
+    char playht_user_id_buffer[256] = {0};
+    
+    // Add Play.ht voice constants (these are some popular Play.ht voice IDs):
+    const char* playht_voice_male_default = "s3://voice-cloning-zero-shot/a61556e4-d465-492d-9aac-1daac5f0e7cc/original/manifest.json";
+    const char* playht_voice_female_default = "s3://voice-cloning-zero-shot/f28a58a7-269f-4881-bf64-2d9ab025e326/original/manifest.json";
 
     char custom_npc_id_buffer[32] = {0};
     char custom_voice_id_buffer[256] = {0};
@@ -619,7 +628,7 @@ namespace {
 
     GW::HookEntry UIMessage_HookEntry;
     GW::HookEntry PreUIMessage_HookEntry;
-    void GenerateVoiceAPI(PendingNPCAudio* audio);
+    void GenerateVoice(PendingNPCAudio* audio);
 
     void GenerateVoiceFromDecodedString(PendingNPCAudio* audio)
     {
@@ -627,7 +636,7 @@ namespace {
             delete audio;
             return;
         }
-        GenerateVoiceAPI(audio);
+        GenerateVoice(audio);
     }
     void GetNPCName(uint32_t agent_id, GW::UI::DecodeStr_Callback callback, void* param = nullptr) {
         const auto agent = GW::Agents::GetAgentByID(agent_id);
@@ -833,6 +842,31 @@ namespace {
         return total_size;
     }
 
+    // Shared function for making JSON API requests
+    std::string PostJson(RestClient& client, const std::string& url, const nlohmann::json& request_body, const std::string& service_name = "API")
+    {
+        client.SetUrl(url.c_str());
+        client.SetHeader("Content-Type", "application/json");
+        client.SetPostContent(request_body.dump(), ContentFlag::Copy);
+        client.SetFollowLocation(true);
+        client.SetVerifyHost(false);
+        client.SetVerifyPeer(false);
+        client.SetTimeoutSec(2);
+
+        client.Execute();
+
+        if (!client.IsSuccessful()) {
+            VoiceLog("%s returned error code: %ld", service_name.c_str(), client.GetStatusCode());
+            std::string error_response = std::move(client.GetContent());
+            if (!error_response.empty()) {
+                VoiceLog("Error response: %s", error_response.c_str());
+            }
+            return "";
+        }
+
+        return std::move(client.GetContent());
+    }
+
     // Add OpenAI TTS function
     std::string GenerateVoiceOpenAI(PendingNPCAudio* audio)
     {
@@ -841,47 +875,24 @@ namespace {
             return "";
         }
 
-        try {
-            nlohmann::json request_body;
-            request_body["model"] = "gpt-4o-mini-tts";
-            request_body["input"] = TextUtils::WStringToString(audio->decoded_message);
+        nlohmann::json request_body;
+        request_body["model"] = "gpt-4o-mini-tts";
+        request_body["input"] = TextUtils::WStringToString(audio->decoded_message);
 
-            std::string voice_name = (audio->profile->voice_id == voice_id_human_female) ? "nova" : "onyx";
-            request_body["voice"] = voice_name;
-            request_body["response_format"] = "mp3";
-            request_body["speed"] = audio->profile->speaking_rate;
-            request_body["language"] = LanguageToAbbreviation(audio->language);
+        std::string voice_name = (audio->profile->voice_id == voice_id_human_female) ? "nova" : "onyx";
+        request_body["voice"] = voice_name;
+        request_body["response_format"] = "mp3";
+        request_body["speed"] = audio->profile->speaking_rate;
+        request_body["language"] = LanguageToAbbreviation(audio->language);
 
-            RestClient client;
-            client.SetUrl("https://api.openai.com/v1/audio/speech");
-            client.SetHeader("Authorization", ("Bearer " + openai_api_key).c_str());
-            client.SetHeader("Content-Type", "application/json");
-            client.SetPostContent(request_body.dump(),ContentFlag::Copy);
-            client.SetFollowLocation(true);
-            client.SetVerifyHost(false);
-            client.SetVerifyPeer(false);
-            client.SetTimeoutSec(2);
+        RestClient client;
+        client.SetHeader("Authorization", ("Bearer " + openai_api_key).c_str());
 
-            client.Execute();
-
-            if (client.IsSuccessful()) {
-                std::string audio_data = std::move(client.GetContent());
-                VoiceLog("OpenAI voice generation successful, received %zu bytes", audio_data.size());
-                return audio_data;
-            }
-            else {
-                VoiceLog("OpenAI API returned error code: %ld", client.GetStatusCode());
-                std::string error_response = std::move(client.GetContent());
-                if (!error_response.empty()) {
-                    VoiceLog("Error response: %s", error_response.c_str());
-                }
-                return "";
-            }
-
-        } catch (const std::exception& e) {
-            VoiceLog("Exception in OpenAI voice generation: %s", e.what());
-            return "";
+        const auto audio_data = PostJson(client, "https://api.openai.com/v1/audio/speech", request_body, "OpenAI API");
+        if (!audio_data.empty()) {
+            VoiceLog("OpenAI voice generation successful, received %zu bytes", audio_data.size());
         }
+        return audio_data;
     }
     // Refactored ElevenLabs voice generation
     std::string GenerateVoiceElevenLabs(PendingNPCAudio* audio)
@@ -891,67 +902,138 @@ namespace {
             return "";
         }
 
-        try {
-            nlohmann::json request_body;
-            nlohmann::json voice_settings;
+        nlohmann::json request_body;
+        request_body["text"] = TextUtils::WStringToString(audio->decoded_message);
+        request_body["model_id"] = "eleven_flash_v2_5";
 
-            request_body["text"] = TextUtils::WStringToString(audio->decoded_message);
-            request_body["model_id"] = "eleven_flash_v2_5";
+        nlohmann::json voice_settings;
+        voice_settings["stability"] = audio->profile->stability;
+        voice_settings["similarity_boost"] = audio->profile->similarity;
+        voice_settings["style"] = audio->profile->style;
+        voice_settings["use_speaker_boost"] = false;
 
-            voice_settings["stability"] = audio->profile->stability;
-            voice_settings["similarity_boost"] = audio->profile->similarity;
-            voice_settings["style"] = audio->profile->style;
-            voice_settings["use_speaker_boost"] = false;
+        request_body["voice_settings"] = voice_settings;
+        request_body["language"] = LanguageToAbbreviation(audio->language);
 
-            request_body["voice_settings"] = voice_settings;
-            request_body["language"] = LanguageToAbbreviation(audio->language);
+        RestClient client;
+        client.SetHeader("xi-api-key", elevenlabs_api_key.c_str());
+        client.SetHeader("Accept", "audio/mpeg");
+        const auto audio_data = PostJson(client, "https://api.elevenlabs.io/v1/text-to-speech/" + audio->profile->voice_id, request_body, "ElevenLabs API");
+        if (!audio_data.empty()) {
+            VoiceLog("ElevenLabs voice generation successful, received %zu bytes", audio_data.size());
+        }
+        return audio_data;
+    }
 
-            RestClient client;
-            client.SetUrl(("https://api.elevenlabs.io/v1/text-to-speech/" + audio->profile->voice_id).c_str());
-            client.SetHeader("xi-api-key", elevenlabs_api_key.c_str());
-            client.SetHeader("Content-Type", "application/json");
-            client.SetHeader("Accept", "audio/mpeg");
-            client.SetFollowLocation(true);
-            client.SetVerifyHost(false);
-            client.SetVerifyPeer(false);
-            client.SetPostContent(request_body.dump(),ContentFlag::Copy);
-            client.SetTimeoutSec(2); // Longer timeout for audio generation
-
-            client.Execute();
-
-            if (client.IsSuccessful()) {
-                std::string audio_data = std::move(client.GetContent());
-                VoiceLog("ElevenLabs voice generation successful, received %zu bytes", audio_data.size());
-                return audio_data;
-            }
-            else {
-                VoiceLog("ElevenLabs API returned error code: %ld", client.GetStatusCode());
-                // Log response body for debugging
-                std::string error_response = std::move(client.GetContent());
-                if (!error_response.empty()) {
-                    VoiceLog("Error response: %s", error_response.c_str());
-                }
-                return "";
-            }
-
-        } catch (const std::exception& e) {
-            VoiceLog("Exception in ElevenLabs voice generation: %s", e.what());
+    std::string GenerateVoiceGoogle(PendingNPCAudio* audio)
+    {
+        if (!google_api_key.length()) {
+            VoiceLog("No Google API Key");
             return "";
         }
-    }
 
-    std::string GenerateVoice(PendingNPCAudio* audio)
-    {
-        switch (current_tts_provider) {
-            case TTSProvider::OpenAI:
-                return GenerateVoiceOpenAI(audio);
-            case TTSProvider::ElevenLabs:
-            default:
-                return GenerateVoiceElevenLabs(audio);
+        // Build request body using safe JSON construction
+        nlohmann::json request_body = nlohmann::json::object();
+        request_body["input"] = nlohmann::json::object();
+        request_body["input"]["text"] = TextUtils::WStringToString(audio->decoded_message);
+
+        // Voice section - determine voice name based on gender/race
+        std::string voice_name;
+        if (audio->profile->voice_id == voice_id_human_female) {
+            voice_name = "en-US-Studio-O";
         }
+        else {
+            voice_name = "en-US-Studio-Q";
+        }
+
+        request_body["voice"] = nlohmann::json::object();
+        request_body["voice"]["name"] = voice_name;
+        request_body["voice"]["languageCode"] = LanguageToAbbreviation(audio->language);
+
+        // Audio config section
+        request_body["audioConfig"] = nlohmann::json::object();
+        request_body["audioConfig"]["audioEncoding"] = "MP3";
+        request_body["audioConfig"]["speakingRate"] = audio->profile->speaking_rate;
+        request_body["audioConfig"]["pitch"] = 0.0f;
+
+        RestClient client;
+        client.SetHeader("xi-api-key", elevenlabs_api_key.c_str());
+        client.SetHeader("Accept", "audio/mpeg");
+        const auto response_str = PostJson(client, "https://texttospeech.googleapis.com/v1/text:synthesize?key=" + google_api_key, request_body, "Google TTS API");
+        if (response_str.empty())
+            return response_str;
+
+        const auto json_response = nlohmann::json::parse(response_str, nullptr, false);
+        if (!(!json_response.is_discarded() && json_response.contains("audioContent") && json_response["audioContent"].is_string())) {
+            VoiceLog("Failed to parse Google TTS response JSON");
+            return "";
+        }
+
+        std::string base64_audio = json_response["audioContent"].get<std::string>();
+        if (base64_audio.empty()) {
+            VoiceLog("Google TTS returned empty audio content");
+            return "";
+        }
+
+        // Decode base64 to binary audio data
+        std::string audio_data = TextUtils::Base64Decode(base64_audio);
+        VoiceLog("Google voice generation successful, decoded %zu bytes", audio_data.size());
+        return audio_data;
     }
 
-    void GenerateVoiceAPI(PendingNPCAudio* audio)
+    std::string GenerateVoicePlayHT(PendingNPCAudio* audio)
+    {
+        if (!playht_api_key.length() || !playht_user_id.length()) {
+            VoiceLog("No Play.ht API Key or User ID");
+            return "";
+        }
+
+        // Build request body
+        nlohmann::json request_body = nlohmann::json::object();
+
+        request_body["text"] = TextUtils::WStringToString(audio->decoded_message);
+        request_body["output_format"] = "mp3";
+        request_body["quality"] = "medium"; // Options: draft, low, medium, high, premium
+        request_body["speed"] = audio->profile->speaking_rate;
+
+        // Determine voice based on gender/race
+        std::string voice_id;
+        auto gender = GetAgentGender(audio->agent_id);
+
+        if (gender == Gender::Female) {
+            voice_id = playht_voice_female_default;
+        }
+        else {
+            voice_id = playht_voice_male_default;
+        }
+
+        request_body["voice"] = voice_id;
+
+        // Add language if supported (Play.ht auto-detects but we can specify)
+        std::string lang_code = LanguageToAbbreviation(audio->language);
+        if (lang_code == "en") {
+            request_body["voice_engine"] = "PlayHT2.0-turbo";
+        }
+        else {
+            request_body["voice_engine"] = "PlayHT2.0"; // Better for non-English
+        }
+
+        // Make API request using shared function
+        RestClient client;
+        client.SetHeader("Authorization", ("Bearer " + playht_api_key).c_str());
+        client.SetHeader("X-User-ID", playht_user_id.c_str());
+        client.SetHeader("Accept", "audio/mpeg");
+
+        std::string audio_data = PostJson(client, "https://api.play.ht/api/v2/tts", request_body, "Play.ht API");
+
+        if (!audio_data.empty()) {
+            VoiceLog("Play.ht voice generation successful, received %zu bytes", audio_data.size());
+        }
+
+        return audio_data;
+    }
+
+    void GenerateVoice(PendingNPCAudio* audio)
     {
         if (generating_voice) return;
         generating_voice = true;
@@ -969,7 +1051,22 @@ namespace {
                 return generating_voice = false;
             }
 
-            auto audio_data = GenerateVoice(audio);
+            std::string audio_data = "";
+            switch (current_tts_provider) {
+                case TTSProvider::OpenAI:
+                    audio_data = GenerateVoiceOpenAI(audio);
+                    break;
+                case TTSProvider::Google:
+                    audio_data = GenerateVoiceGoogle(audio);
+                    break;
+                case TTSProvider::PlayHT:
+                    audio_data = GenerateVoicePlayHT(audio);
+                    break;
+                case TTSProvider::ElevenLabs:
+                default:
+                    audio_data = GenerateVoiceElevenLabs(audio);
+                    break;
+            }
             if (std::ranges::find(pending_audio, audio) == pending_audio.end()) return generating_voice = false;
             if (!audio_data.size()) {
                 VoiceLog("Failed to generate voice data");
@@ -998,6 +1095,7 @@ namespace {
         });
     }
     
+    // Block any in-game speech from an agent that we're already doing TTS for
     void OnPlaySound(GW::HookStatus* status, const wchar_t* filename, SoundProps* props) {
         if (status->blocked) return;
         if (!(props && (props->flags & 0x1404) != 0x1404)) return; // Positional, dialog
@@ -1347,10 +1445,18 @@ void NPCVoiceModule::LoadSettings(ToolboxIni* ini)
     auto tmp = (uint32_t)current_tts_provider;
     LOAD_UINT(tmp);
     current_tts_provider = static_cast<TTSProvider>(tmp);
+
     LOAD_STRING(elevenlabs_api_key);
     strncpy_s(elevenlabs_api_key_buffer, elevenlabs_api_key.c_str(), sizeof(elevenlabs_api_key_buffer) - 1);
     LOAD_STRING(openai_api_key);
     strncpy_s(openai_api_key_buffer, openai_api_key.c_str(), sizeof(openai_api_key_buffer) - 1);
+    LOAD_STRING(google_api_key); // ADD THIS
+    strncpy_s(google_api_key_buffer, google_api_key.c_str(), sizeof(google_api_key_buffer) - 1);  
+    LOAD_STRING(playht_api_key);                                                                
+    strncpy_s(playht_api_key_buffer, playht_api_key.c_str(), sizeof(playht_api_key_buffer) - 1);
+    LOAD_STRING(playht_user_id);                                                                
+    strncpy_s(playht_user_id_buffer, playht_user_id.c_str(), sizeof(playht_user_id_buffer) - 1);
+
     LOAD_BOOL(only_use_first_dialog);
     LOAD_BOOL(only_show_speech_from_friendly_npcs);
     LOAD_BOOL(show_speech_from_party_members_in_explorable_areas);
@@ -1387,6 +1493,9 @@ void NPCVoiceModule::SaveSettings(ToolboxIni* ini)
     SAVE_UINT(current_tts_provider);
     SAVE_STRING(elevenlabs_api_key);
     SAVE_STRING(openai_api_key);
+    SAVE_STRING(google_api_key);
+    SAVE_STRING(playht_api_key);
+    SAVE_STRING(playht_user_id);
     SAVE_BOOL(only_show_speech_from_friendly_npcs);
     SAVE_BOOL(only_use_first_dialog);
     SAVE_BOOL(show_speech_from_party_members_in_explorable_areas);
@@ -1421,7 +1530,7 @@ void NPCVoiceModule::DrawSettingsInternal()
     ImGui::Text("TTS Provider:");
 
     // TTS Provider selection
-    const char* provider_names[] = {"ElevenLabs", "OpenAI TTS"};
+    const char* provider_names[] = {"ElevenLabs", "OpenAI TTS", "Google Cloud TTS", "Play.ht"};
     int current_provider = static_cast<int>(current_tts_provider);
     if (ImGui::Combo("TTS Service", &current_provider, provider_names, IM_ARRAYSIZE(provider_names))) {
         current_tts_provider = static_cast<TTSProvider>(current_provider);
@@ -1443,7 +1552,7 @@ void NPCVoiceModule::DrawSettingsInternal()
             });
         }
     }
-    else {
+    else if(current_tts_provider == TTSProvider::OpenAI) {
         if (ImGui::InputText("OpenAI API Key", openai_api_key_buffer, sizeof(openai_api_key_buffer))) {
             openai_api_key = openai_api_key_buffer;
         }
@@ -1454,6 +1563,35 @@ void NPCVoiceModule::DrawSettingsInternal()
             });
         }
     }
+    else if (current_tts_provider == TTSProvider::Google)
+    { // ADD THIS BLOCK
+        if (ImGui::InputText("Google Cloud API Key", google_api_key_buffer, sizeof(google_api_key_buffer))) {
+            google_api_key = google_api_key_buffer;
+        }
+        ImGui::TextColored(col.Value, "Click Here to get a Google Cloud API Key");
+        if (ImGui::IsItemClicked()) {
+            GW::GameThread::Enqueue([this]() {
+                SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)"https://console.cloud.google.com/apis/credentials");
+            });
+        }
+        ImGui::TextColored(ImColor(255, 255, 0), "Note: Make sure to enable the Text-to-Speech API in your Google Cloud project");
+    }
+    else if (current_tts_provider == TTSProvider::PlayHT) { // ADD THIS BLOCK
+        if (ImGui::InputText("Play.ht API Key", playht_api_key_buffer, sizeof(playht_api_key_buffer))) {
+            playht_api_key = playht_api_key_buffer;
+        }
+        if (ImGui::InputText("Play.ht User ID", playht_user_id_buffer, sizeof(playht_user_id_buffer))) {
+            playht_user_id = playht_user_id_buffer;
+        }
+        ImGui::TextColored(col.Value, "Click Here to get Play.ht API credentials");
+        if (ImGui::IsItemClicked()) {
+            GW::GameThread::Enqueue([this]() {
+                SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)"https://play.ht/studio/api-access");
+            });
+        }
+        ImGui::TextColored(ImColor(255, 255, 0), "Note: Play.ht requires both an API Key and User ID");
+    }
+
 
     ImGui::Separator();
 
