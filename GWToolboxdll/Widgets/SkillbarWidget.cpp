@@ -49,7 +49,7 @@ namespace {
 
     // Skill overlay settings
     bool display_skill_overlay = true;
-    float font_recharge = 20.f;
+    float font_recharge = 64.f;
     Color color_text_recharge = Colors::White();
     Color color_text_outline = 0;
     Color color_border = Colors::ARGB(100, 255, 255, 255);

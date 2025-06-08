@@ -9,6 +9,9 @@ public:
         static ArmoryWindow instance;
         return instance;
     }
+    ArmoryWindow() { 
+        show_menubutton = can_show_in_main_window;
+    }
 
     [[nodiscard]] const char* Name() const override { return "Armory"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_VEST; }

@@ -179,6 +179,16 @@ void CurlEasy::SetTimeoutSec(const int timeout_sec)
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_TIMEOUT, static_cast<long>(timeout_sec));
 }
 
+void CurlEasy::SetConnectTimeoutMs(const int timeout_ms)
+{
+    CHECK_CURL_EASY_SETOPT(this, CURLOPT_CONNECTTIMEOUT_MS, static_cast<long>(timeout_ms));
+}
+
+void CurlEasy::SetConnectTimeoutSec(const int timeout_sec)
+{
+    CHECK_CURL_EASY_SETOPT(this, CURLOPT_CONNECTTIMEOUT, static_cast<long>(timeout_sec));
+}
+
 void CurlEasy::SetLowSpeedLimit(const int MinBytes, const int TimeSec)
 {
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_LOW_SPEED_TIME, static_cast<long>(TimeSec));

@@ -16,7 +16,7 @@ namespace GW {
 }
 
 class TravelWindow : public ToolboxWindow {
-    TravelWindow() = default;
+    TravelWindow() : ToolboxWindow() { show_menubutton = can_show_in_main_window; }
     ~TravelWindow() override = default;
 
 public:

@@ -53,6 +53,7 @@ class HeroBuildsWindow : public ToolboxWindow {
     HeroBuildsWindow()
     {
         inifile = new ToolboxIni(false, false, false);
+        show_menubutton = can_show_in_main_window;
     }
 
     ~HeroBuildsWindow() override

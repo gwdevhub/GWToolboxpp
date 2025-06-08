@@ -760,7 +760,7 @@ void PconsWindow::CheckBossRangeAutoDisable()
 void PconsWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(show_menubutton);
+
 
     for (Pcon* pcon : pcons) {
         pcon->LoadSettings(ini, Name());

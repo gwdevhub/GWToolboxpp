@@ -70,6 +70,8 @@ public:
     void SetUserAgent(const char* user_agent);
     void SetTimeoutMs(int timeout_ms);
     void SetTimeoutSec(int timeout_sec);
+    void SetConnectTimeoutMs(int timeout_ms);
+    void SetConnectTimeoutSec(int timeout_sec);
     // Transfer aborted if slower than MinBytes/sec during TimeSec seconds,
     // effectively setting m_Status to ResponseStatus::TimedOut
     void SetLowSpeedLimit(int MinBytes, int TimeSec);

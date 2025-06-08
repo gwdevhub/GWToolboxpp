@@ -1025,7 +1025,6 @@ void BuildsWindow::Update(const float)
 void BuildsWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(show_menubutton);
     LOAD_BOOL(order_by_name);
     LOAD_BOOL(auto_load_pcons);
     LOAD_BOOL(auto_send_pcons);

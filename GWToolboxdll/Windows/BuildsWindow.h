@@ -15,7 +15,7 @@ namespace GW::UI {
 }
 
 class BuildsWindow : public ToolboxWindow {
-    BuildsWindow() = default;
+    BuildsWindow() : ToolboxWindow() { show_menubutton = can_show_in_main_window; }
     ~BuildsWindow() override = default;
 public:
     static BuildsWindow& Instance()

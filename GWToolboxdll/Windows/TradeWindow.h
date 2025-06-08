@@ -9,7 +9,7 @@
 #include <Utils/RateLimiter.h>
 
 class TradeWindow : public ToolboxWindow {
-    TradeWindow() = default;
+    TradeWindow() : ToolboxWindow() { show_menubutton = can_show_in_main_window; }
     TradeWindow(const TradeWindow&) = delete;
     ~TradeWindow() override = default;
 
