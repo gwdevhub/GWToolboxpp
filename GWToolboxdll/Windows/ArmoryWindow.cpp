@@ -22,6 +22,9 @@
 
 namespace GWArmory {
 
+    bool use_global_color;
+    std::array<GW::DyeColor, 4> global_dyes = {};
+
     constexpr size_t costume_count = 0x17;
     struct CostumeData {
         // [costume_model_file_id][profession] = { chest file id, legs file id, hands file id, legs file id }
@@ -738,30 +741,30 @@ namespace GWArmory {
 
         auto tmpDyeColor = player_piece->dye.dye1;
         ImGui::SameLine(128.f * scale);
-        if (DyePicker("color1", &tmpDyeColor)) {
+        if (DyePicker("color1", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[0]) {
             value_changed = true;
-            player_piece->dye.dye1 = tmpDyeColor;
+            player_piece->dye.dye1 = use_global_color ? global_dyes[0] : tmpDyeColor;
         }
 
         tmpDyeColor = player_piece->dye.dye2;
         ImGui::SameLine();
-        if (DyePicker("color2", &tmpDyeColor)) {
+        if (DyePicker("color2", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[1]) {
             value_changed = true;
-            player_piece->dye.dye2 = tmpDyeColor;
+            player_piece->dye.dye2 = use_global_color ? global_dyes[1] : tmpDyeColor;
         }
 
         tmpDyeColor = player_piece->dye.dye3;
         ImGui::SameLine();
-        if (DyePicker("color3", &tmpDyeColor)) {
+        if (DyePicker("color3", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[2]) {
             value_changed = true;
-            player_piece->dye.dye3 = tmpDyeColor;
+            player_piece->dye.dye3 = use_global_color ? global_dyes[2] : tmpDyeColor;
         }
 
         tmpDyeColor = player_piece->dye.dye4;
         ImGui::SameLine();
-        if (DyePicker("color4", &tmpDyeColor)) {
+        if (DyePicker("color4", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[3]) {
             value_changed = true;
-            player_piece->dye.dye4 = tmpDyeColor;
+            player_piece->dye.dye4 = use_global_color ? global_dyes[3] : tmpDyeColor;
         }
 
         ImGui::SameLine(280.f * scale);
@@ -925,8 +928,23 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         ImGui::Text("Profession: %s", GetProfessionName(current_profession));
-        ImGui::SameLine(ImGui::GetWindowWidth() - 65.f);
 
+        ImGui::SameLine();
+        ImGui::Checkbox("Use same colour for all pieces", &use_global_color);
+        ImGui::ShowHelp("When this is selected, all armour pieces will be coloured this way.");
+
+        if (use_global_color) {
+            ImGui::SameLine();
+            DyePicker("globalcolor0", &global_dyes[0]);
+            ImGui::SameLine();
+            DyePicker("globalcolor1", &global_dyes[1]);
+            ImGui::SameLine();
+            DyePicker("globalcolor2", &global_dyes[2]);
+            ImGui::SameLine();
+            DyePicker("globalcolor3", &global_dyes[3]);
+        }
+
+        ImGui::SameLine(ImGui::GetWindowWidth() - 65.f);
         if (ImGui::Button("Reset")) {
             pending_reset_equipment = true;
         }
