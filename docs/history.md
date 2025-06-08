@@ -11,7 +11,8 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Fixed crash when talking to some faction donation NPCs
 * [Fix] Fixed hanging on toolbox launch caused by poor internet connection
 * [Minor] Added a set of default toolbox window module buttons; previously only showed settings when launching toolbox for the first ever time
-* [Minor] Added option to armory module to globally dye armor pieces
+* [New] Added option to armory module to globally dye armor pieces
+* [New] Added Google and Play.ht API options to NPC voice module
 
 ## Version 7.6
 * [Fix] Fixed gw sometimes crashing when toolbox is closed
