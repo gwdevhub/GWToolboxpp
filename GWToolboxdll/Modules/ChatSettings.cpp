@@ -343,13 +343,10 @@ namespace {
         switch (message_id) {
             case GW::UI::UIMessage::kAgentSpeechBubble: {
                 const auto packet = static_cast<GW::UI::UIPacket::kAgentSpeechBubble*>(wParam);
-                const auto source_agent = GW::Agents::GetAgentByID(packet->agent_id);
-                const auto source_living = source_agent->GetAsAgentLiving();
-                if (source_living && source_living->allegiance != GW::Constants::Allegiance::Enemy && hide_all_friendly_speech_bubbles) {
+                const auto source_living = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
+                if (hide_all_friendly_speech_bubbles && source_living && source_living->GetIsLivingType() && source_living->allegiance != GW::Constants::Allegiance::Enemy)
                     status->blocked = true;
-                    return;
-                }
-            }
+            } break;
             case GW::UI::UIMessage::kPreferenceFlagChanged: {
                 // Remember user setting for chat timestamps
                 const auto packet = static_cast<GW::UI::UIPacket::kPreferenceFlagChanged*>(wParam);
@@ -358,15 +355,13 @@ namespace {
             } break;
             case GW::UI::UIMessage::kPlayerChatMessage: {
                 OnLocalChatMessage(status, message_id, wParam, lParam);
-                if (status->blocked)
-                    return;
                 // Hide player chat message speech bubbles by redirecting from 0x10000081 to 0x1000007E
-                if (hide_player_speech_bubbles)
-                    return;
+                if (!hide_player_speech_bubbles) 
+                    break;
                 const auto packet = static_cast<GW::UI::UIPacket::kPlayerChatMessage*>(wParam);
                 const auto agent = GW::PlayerMgr::GetPlayerByID(packet->player_number);
                 if (!agent)
-                    return;
+                    break;
                 status->blocked = true;
                 GW::Chat::WriteChatEnc(packet->channel, packet->message, agent->name_enc);
             } break;
@@ -388,8 +383,8 @@ namespace {
             } break;
             case GW::UI::UIMessage::kWriteToChatLogWithSender: {
                 // Redirect NPC messages from team chat to emote chat
-                if (!redirect_npc_messages_to_emote_chat)
-                    return;
+                if (!redirect_npc_messages_to_emote_chat) 
+                    break;
                 const auto param = static_cast<GW::UI::UIPacket::kWriteToChatLogWithSender*>(wParam);
                 if (param->channel == GW::Chat::Channel::CHANNEL_GROUP || param->channel == GW::Chat::Channel::CHANNEL_ALLIES)
                     param->channel = GW::Chat::Channel::CHANNEL_EMOTE;
@@ -403,8 +398,6 @@ namespace {
             case GW::UI::UIMessage::kRecvWhisper: {
                 // Automatically send afk message when whisper is received
                 const auto param = static_cast<GW::UI::UIPacket::kRecvWhisper*>(wParam);
-                ASSERT(param->from && *param->from);
-
                 if (!(GW::FriendListMgr::GetMyStatus() == GW::FriendStatus::Away && !afk_message.empty() && ToolboxUtils::GetPlayerName() != param->from))
                     break;
                 const auto reply = std::format(L"Automatic message: \"{}\" ({} ago)", afk_message, PrintTime((clock() - afk_message_time) / CLOCKS_PER_SEC));
