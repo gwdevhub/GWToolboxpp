@@ -208,7 +208,7 @@ namespace {
             } break;
         }
         if (message && filter_alerts && (external_trade_message || filter_local_trade)) {
-            auto start = wcschr(message, 0x107);
+            auto start = wcsrchr(message, 0x107);
             if (!start) {
                 return;
             }
