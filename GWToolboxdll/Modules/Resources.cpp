@@ -207,6 +207,16 @@ extern "C" __declspec(dllexport) IDirect3DTexture9** __cdecl GetSkillImage(GW::C
     return Resources::GetSkillImage(skill_id);
 }
 
+extern "C" __declspec(dllexport) const char* __cdecl GetMapNameString(GW::Constants::MapID map_id)
+{
+    return Resources::GetMapName(map_id)->string().c_str();
+}
+
+extern "C" __declspec(dllexport) const char* __cdecl DecodeStringIdToString(uint32_t enc_str_id)
+{
+    return Resources::DecodeStringId(enc_str_id)->string().c_str();
+}
+
 Resources::Resources()
 {
     InitCurl();
