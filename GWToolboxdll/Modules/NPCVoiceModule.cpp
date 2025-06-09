@@ -35,22 +35,48 @@ namespace {
 
     constexpr std::string empty_string = "";
 
+    struct PendingNPCAudio;
+    typedef std::string (*GenerateVoiceCallback)(PendingNPCAudio* audio);
+
+    // API Configuration structure
+    struct APIConfig {
+        GenerateVoiceCallback callback;
+        const char* name;
+        const char* signup_url;
+        const char* note = nullptr;
+        bool has_user_id = false;
+        char api_key[128] = {0};
+        char user_id[128] = {0}; // For providers that need user ID
+
+    };
+
+        // Add OpenAI TTS function
+    std::string GenerateVoiceOpenAI(PendingNPCAudio*);
+    std::string GenerateVoiceElevenLabs(PendingNPCAudio*);
+    std::string GenerateVoiceGoogle(PendingNPCAudio*);
+    std::string GenerateVoicePlayHT(PendingNPCAudio* );
+
+
+    // Static API configurations
+    APIConfig api_configs[] = {
+        {GenerateVoiceElevenLabs ,"ElevenLabs", "https://elevenlabs.io/app/settings/api-keys"},
+        {GenerateVoiceOpenAI ,"OpenAI", "https://platform.openai.com/api-keys"},
+        {GenerateVoiceGoogle ,"Google Cloud", "https://console.cloud.google.com/apis/credentials", "Note: Make sure to enable the Text-to-Speech API in your Google Cloud project"},
+        {GenerateVoicePlayHT ,"Play.ht", "https://elevenlabs.io/app/settings/api-keys", "Note: Play.ht requires both an API Key and User ID", true}
+    };
 
     // TTS Provider settings
-    TTSProvider current_tts_provider = TTSProvider::ElevenLabs;
+    std::string current_tts_provider = api_configs[0].name;
 
-    std::string elevenlabs_api_key = "";
-    std::string openai_api_key = "";
-    std::string google_api_key = "";
-    std::string playht_api_key = "";
-    std::string playht_user_id = ""; // (Play.ht requires both API key and user ID)
+    // Helper function to get current API config
+    APIConfig* GetCurrentAPIConfig()
+    {
+        const auto found = std::ranges::find(api_configs, current_tts_provider, &APIConfig::name);
+        return found != std::end(api_configs) ? &(*found) : nullptr;
+    }
 
-    // UI buffers for API keys
-    char elevenlabs_api_key_buffer[256] = {0};
-    char openai_api_key_buffer[256] = {0};
-    char google_api_key_buffer[256] = {0};
-    char playht_api_key_buffer[256] = {0};
-    char playht_user_id_buffer[256] = {0};
+
+
     
     // Add Play.ht voice constants (these are some popular Play.ht voice IDs):
     const char* playht_voice_male_default = "s3://voice-cloning-zero-shot/a61556e4-d465-492d-9aac-1daac5f0e7cc/original/manifest.json";
@@ -65,18 +91,9 @@ namespace {
     enum class Gender : uint8_t { Male, Female, Unknown };
     std::map<uint32_t, uint32_t> sound_file_by_model_file_id;
 
-    const std::string& GetApiKey() {
-        switch (current_tts_provider) {
-            case TTSProvider::ElevenLabs:
-                return elevenlabs_api_key;
-            case TTSProvider::Google:
-                return google_api_key;
-            case TTSProvider::OpenAI:
-                return openai_api_key;
-            case TTSProvider::PlayHT:
-                return playht_api_key;
-        }
-        return empty_string;
+    const char* GetApiKey() {
+        const auto api_config = GetCurrentAPIConfig();
+        return api_config ? api_config->api_key : nullptr;
     }
 
     uint32_t GetAgentAtPosition(const GW::Vec2f& position, float tolerance = 50.0f)
@@ -297,8 +314,10 @@ namespace {
     bool play_goodbye_messages = false;
     bool only_use_first_dialog = true;
     bool only_use_first_sentence = true; // NB: Not changable because we don't know how to stop a running audio file!
-    bool only_show_speech_from_friendly_npcs = true;
-    bool show_speech_from_party_members_in_explorable_areas = false;
+    bool play_speech_from_non_friendly_npcs = true;
+    bool play_speech_bubbles_in_explorable = false;
+    bool play_speech_bubbles_in_outpost = true;
+    bool play_speech_bubbles_from_party_members = false;
     float npc_speech_bubble_range = GW::Constants::Range::Adjacent;
     bool play_speech_from_vendors = true;
 
@@ -383,6 +402,7 @@ namespace {
 
         // Play the new audio
         const auto pos = GetAgentVec3f(agent_id);
+        VoiceLog("Playing audio file: %s (estimated duration: %dms)", path.filename().string().c_str(), duration);
         // 0x1400 means "this audio file in positional", so it will play in 3D space relative to the position given
         // 0x4 means "this is a dialog audio file"
         if (!AudioSettings::PlaySound(path.wstring().c_str(), &pos, 0x1400 | 0x4, &gw_handle)) {
@@ -394,7 +414,7 @@ namespace {
         started = TIMER_INIT();
         pending_audio.erase(std::remove(pending_audio.begin(), pending_audio.end(), this), pending_audio.end());
         playing_audio_map[agent_id] = this;
-        VoiceLog("Playing audio file: %s (estimated duration: %dms)", path.filename().string().c_str(), duration);
+        
     }
     void PendingNPCAudio::Stop() {
         if (gw_handle) AudioSettings::StopSound(gw_handle);
@@ -588,12 +608,8 @@ namespace {
         if (!agent) return nullptr;
         const wchar_t* name = GW::Agents::GetAgentEncName(agent);
         if (!(name && *name && agent->GetIsLivingType() && agent->IsNPC())) return nullptr;
-        if (only_show_speech_from_friendly_npcs && agent->allegiance == GW::Constants::Allegiance::Enemy) {
+        if (!play_speech_from_non_friendly_npcs && agent->allegiance == GW::Constants::Allegiance::Enemy) {
             // Don't process enemies
-            return nullptr;
-        }
-        if (!show_speech_from_party_members_in_explorable_areas && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable && IsInParty(agent_id)) {
-            // Don't process party members in explorable areas
             return nullptr;
         }
 
@@ -658,7 +674,7 @@ namespace {
 
     void GenerateVoiceFromEncodedString(PendingNPCAudio* audio)
     {
-        if (GetApiKey().empty()) {
+        if (!GetApiKey()) {
             delete audio;
             return;
         }
@@ -785,8 +801,11 @@ namespace {
             } break;
             case GW::UI::UIMessage::kAgentSpeechBubble: {
                 // Some NPCs don't have a dialog window, but they can still have speech bubbles
+                if (!play_speech_bubbles_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) break;
+                if (!play_speech_bubbles_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) break;
                 const auto packet = (GW::UI::UIPacket::kAgentSpeechBubble*)wParam;
-                if (!(packet && packet->message && *packet->message)) return;
+                if (!(packet && packet->message && *packet->message)) break;
+                if (!play_speech_bubbles_from_party_members && IsInParty(packet->agent_id)) break;
                 const auto agent = GW::Agents::GetAgentByID(packet->agent_id);
                 if (GW::GetDistance(agent->pos, GetPlayerPosition()) > npc_speech_bubble_range) {
                     return; // Ignore distant NPCs
@@ -882,9 +901,9 @@ namespace {
     // Add OpenAI TTS function
     std::string GenerateVoiceOpenAI(PendingNPCAudio* audio)
     {
-        if (!openai_api_key.length()) {
-            VoiceLog("No OpenAI API Key");
-            return "";
+        const auto api_config = GetCurrentAPIConfig();
+        if (!(api_config && *api_config->api_key)) {
+            return VoiceLog("No API Key"), "";
         }
 
         nlohmann::json request_body;
@@ -898,9 +917,9 @@ namespace {
         request_body["language"] = LanguageToAbbreviation(audio->language);
 
         RestClient client;
-        client.SetHeader("Authorization", ("Bearer " + openai_api_key).c_str());
+        client.SetHeader("Authorization", ("Bearer " + std::string(api_config->api_key)).c_str());
 
-        const auto audio_data = PostJson(client, "https://api.openai.com/v1/audio/speech", request_body, "OpenAI API");
+        const auto audio_data = PostJson(client, "https://api.openai.com/v1/audio/speech", request_body, api_config->name);
         if (!audio_data.empty()) {
             VoiceLog("OpenAI voice generation successful, received %zu bytes", audio_data.size());
         }
@@ -909,9 +928,9 @@ namespace {
     // Refactored ElevenLabs voice generation
     std::string GenerateVoiceElevenLabs(PendingNPCAudio* audio)
     {
-        if (!elevenlabs_api_key.length()) {
-            VoiceLog("No ElevenLabs API Key");
-            return "";
+        const auto api_config = GetCurrentAPIConfig();
+        if (!(api_config && *api_config->api_key)) {
+            return VoiceLog("No API Key"), "";
         }
 
         nlohmann::json request_body;
@@ -928,9 +947,9 @@ namespace {
         request_body["language"] = LanguageToAbbreviation(audio->language);
 
         RestClient client;
-        client.SetHeader("xi-api-key", elevenlabs_api_key.c_str());
+        client.SetHeader("xi-api-key", api_config->api_key);
         client.SetHeader("Accept", "audio/mpeg");
-        const auto audio_data = PostJson(client, "https://api.elevenlabs.io/v1/text-to-speech/" + audio->profile->voice_id, request_body, "ElevenLabs API");
+        const auto audio_data = PostJson(client, "https://api.elevenlabs.io/v1/text-to-speech/" + audio->profile->voice_id, request_body, api_config->name);
         if (!audio_data.empty()) {
             VoiceLog("ElevenLabs voice generation successful, received %zu bytes", audio_data.size());
         }
@@ -939,9 +958,9 @@ namespace {
 
     std::string GenerateVoiceGoogle(PendingNPCAudio* audio)
     {
-        if (!google_api_key.length()) {
-            VoiceLog("No Google API Key");
-            return "";
+        const auto api_config = GetCurrentAPIConfig();
+        if (!(api_config && *api_config->api_key)) {
+            return VoiceLog("No API Key"), "";
         }
 
         // Build request body using safe JSON construction
@@ -969,9 +988,7 @@ namespace {
         request_body["audioConfig"]["pitch"] = 0.0f;
 
         RestClient client;
-        client.SetHeader("xi-api-key", elevenlabs_api_key.c_str());
-        client.SetHeader("Accept", "audio/mpeg");
-        const auto response_str = PostJson(client, "https://texttospeech.googleapis.com/v1/text:synthesize?key=" + google_api_key, request_body, "Google TTS API");
+        const auto response_str = PostJson(client, "https://texttospeech.googleapis.com/v1/text:synthesize?key=" + std::string(api_config->api_key), request_body, api_config->name);
         if (response_str.empty())
             return response_str;
 
@@ -995,9 +1012,12 @@ namespace {
 
     std::string GenerateVoicePlayHT(PendingNPCAudio* audio)
     {
-        if (!playht_api_key.length() || !playht_user_id.length()) {
-            VoiceLog("No Play.ht API Key or User ID");
-            return "";
+        const auto api_config = GetCurrentAPIConfig();
+        if (!(api_config && *api_config->api_key)) {
+            return VoiceLog("No API Key"), "";
+        }
+        if (!*api_config->user_id) {
+            return VoiceLog("No User ID"), "";
         }
 
         // Build request body
@@ -1032,11 +1052,11 @@ namespace {
 
         // Make API request using shared function
         RestClient client;
-        client.SetHeader("Authorization", ("Bearer " + playht_api_key).c_str());
-        client.SetHeader("X-User-ID", playht_user_id.c_str());
+        client.SetHeader("Authorization", ("Bearer " + std::string(api_config->api_key)).c_str());
+        client.SetHeader("X-User-ID", api_config->user_id);
         client.SetHeader("Accept", "audio/mpeg");
 
-        std::string audio_data = PostJson(client, "https://api.play.ht/api/v2/tts", request_body, "Play.ht API");
+        std::string audio_data = PostJson(client, "https://api.play.ht/api/v2/tts", request_body, api_config->name);
 
         if (!audio_data.empty()) {
             VoiceLog("Play.ht voice generation successful, received %zu bytes", audio_data.size());
@@ -1064,21 +1084,8 @@ namespace {
             }
 
             std::string audio_data = "";
-            switch (current_tts_provider) {
-                case TTSProvider::OpenAI:
-                    audio_data = GenerateVoiceOpenAI(audio);
-                    break;
-                case TTSProvider::Google:
-                    audio_data = GenerateVoiceGoogle(audio);
-                    break;
-                case TTSProvider::PlayHT:
-                    audio_data = GenerateVoicePlayHT(audio);
-                    break;
-                case TTSProvider::ElevenLabs:
-                default:
-                    audio_data = GenerateVoiceElevenLabs(audio);
-                    break;
-            }
+            const auto api_config = GetCurrentAPIConfig();
+            audio_data = api_config ? api_config->callback(audio) : "";
             if (std::ranges::find(pending_audio, audio) == pending_audio.end()) return generating_voice = false;
             if (!audio_data.size()) {
                 VoiceLog("Failed to generate voice data");
@@ -1110,10 +1117,10 @@ namespace {
     // Block any in-game speech from an agent that we're already doing TTS for
     void OnPlaySound(GW::HookStatus* status, const wchar_t* filename, SoundProps* props) {
         if (status->blocked) return;
-        if (!(props && (props->flags & 0x1404) != 0x1404)) return; // Positional, dialog
+        if (!(props && (props->flags & 0xffff) == 0x1404)) return; // Positional, dialog
         if (GW::Map::GetIsInCinematic()) return;
         if (wcslen(filename) > 4) return;
-        if (!GetApiKey().size()) return;
+        if (!GetApiKey()) return;
         const auto agent_id = GetAgentAtPosition({props->position.x, props->position.y},20.f);
         if (!(agent_id && GetVoiceProfile(agent_id, GW::Map::GetMapID()))) return;
         const auto found = playing_audio_map.find(agent_id);
@@ -1454,29 +1461,31 @@ void NPCVoiceModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
 
-    auto tmp = (uint32_t)current_tts_provider;
-    LOAD_UINT(tmp);
-    current_tts_provider = static_cast<TTSProvider>(tmp);
+    LOAD_STRING(current_tts_provider);
+    if (!GetCurrentAPIConfig()) {
+        current_tts_provider = api_configs[0].name;
+    }
 
-    LOAD_STRING(elevenlabs_api_key);
-    strncpy_s(elevenlabs_api_key_buffer, elevenlabs_api_key.c_str(), sizeof(elevenlabs_api_key_buffer) - 1);
-    LOAD_STRING(openai_api_key);
-    strncpy_s(openai_api_key_buffer, openai_api_key.c_str(), sizeof(openai_api_key_buffer) - 1);
-    LOAD_STRING(google_api_key); // ADD THIS
-    strncpy_s(google_api_key_buffer, google_api_key.c_str(), sizeof(google_api_key_buffer) - 1);  
-    LOAD_STRING(playht_api_key);                                                                
-    strncpy_s(playht_api_key_buffer, playht_api_key.c_str(), sizeof(playht_api_key_buffer) - 1);
-    LOAD_STRING(playht_user_id);                                                                
-    strncpy_s(playht_user_id_buffer, playht_user_id.c_str(), sizeof(playht_user_id_buffer) - 1);
+    // Load API keys using config array
+    for (auto& config : api_configs) {
+        auto key_name = std::string(config.name) + "_api_key";
+        strncpy(config.api_key, ini->GetValue(Name(), key_name.c_str(), ""), _countof(config.api_key));
 
-    LOAD_BOOL(only_use_first_dialog);
-    LOAD_BOOL(only_show_speech_from_friendly_npcs);
-    LOAD_BOOL(show_speech_from_party_members_in_explorable_areas);
-    LOAD_BOOL(only_use_first_sentence);
-    LOAD_BOOL(play_goodbye_messages);
+        key_name = std::string(config.name) + "_user_id";
+        strncpy(config.user_id, ini->GetValue(Name(), key_name.c_str(), ""), _countof(config.user_id));
+    }
+
     LOAD_BOOL(stop_speech_when_dialog_closed);
-    LOAD_FLOAT(npc_speech_bubble_range);
+    LOAD_BOOL(play_goodbye_messages);
+    LOAD_BOOL(only_use_first_dialog);
+    LOAD_BOOL(only_use_first_sentence);
+    LOAD_BOOL(play_speech_from_non_friendly_npcs);
+    LOAD_BOOL(play_speech_bubbles_in_explorable);
+    LOAD_BOOL(play_speech_bubbles_in_outpost);
+    LOAD_BOOL(play_speech_bubbles_from_party_members);
     LOAD_BOOL(play_speech_from_vendors);
+
+    LOAD_FLOAT(npc_speech_bubble_range);
 
     CSimpleIniA::TNamesDepend keys;
     ini->GetAllKeys(Name(), keys);
@@ -1502,20 +1511,28 @@ void NPCVoiceModule::SaveSettings(ToolboxIni* ini)
     ToolboxModule::SaveSettings(ini);
 
     // Save TTS provider
-    SAVE_UINT(current_tts_provider);
-    SAVE_STRING(elevenlabs_api_key);
-    SAVE_STRING(openai_api_key);
-    SAVE_STRING(google_api_key);
-    SAVE_STRING(playht_api_key);
-    SAVE_STRING(playht_user_id);
-    SAVE_BOOL(only_show_speech_from_friendly_npcs);
-    SAVE_BOOL(only_use_first_dialog);
-    SAVE_BOOL(show_speech_from_party_members_in_explorable_areas);
-    SAVE_BOOL(only_use_first_sentence);
-    SAVE_BOOL(play_goodbye_messages);
+    SAVE_STRING(current_tts_provider);
+
+    // Load API keys using config array
+    for (auto& config : api_configs) {
+        auto key_name = std::string(config.name) + "_api_key";
+        ini->SetValue(Name(), key_name.c_str(), config.api_key);
+
+        key_name = std::string(config.name) + "_user_id";
+        ini->SetValue(Name(), key_name.c_str(), config.user_id);
+    }
+
     SAVE_BOOL(stop_speech_when_dialog_closed);
-    SAVE_FLOAT(npc_speech_bubble_range);
+    SAVE_BOOL(play_goodbye_messages);
+    SAVE_BOOL(only_use_first_dialog);
+    SAVE_BOOL(only_use_first_sentence);
+    SAVE_BOOL(play_speech_from_non_friendly_npcs);
+    SAVE_BOOL(play_speech_bubbles_in_explorable);
+    SAVE_BOOL(play_speech_bubbles_in_outpost);
+    SAVE_BOOL(play_speech_bubbles_from_party_members);
     SAVE_BOOL(play_speech_from_vendors);
+
+    SAVE_FLOAT(npc_speech_bubble_range);
 
 
     // Remove existing custom voice entries (don't clear the whole section)
@@ -1538,72 +1555,42 @@ void NPCVoiceModule::SaveSettings(ToolboxIni* ini)
 
 void NPCVoiceModule::DrawSettingsInternal()
 {
+    static bool show_passwords = false;
     ImGui::Separator();
     ImGui::Text("TTS Provider:");
 
     // TTS Provider selection
-    const char* provider_names[] = {"ElevenLabs", "OpenAI TTS", "Google Cloud TTS", "Play.ht"};
-    int current_provider = static_cast<int>(current_tts_provider);
-    if (ImGui::Combo("TTS Service", &current_provider, provider_names, IM_ARRAYSIZE(provider_names))) {
-        current_tts_provider = static_cast<TTSProvider>(current_provider);
+    std::vector<const char*> provider_names;
+    int current_provider = 0;
+    for (size_t i = 0; i < _countof(api_configs);i++) {
+        provider_names.push_back(api_configs[i].name);
+        if (api_configs[i].name == current_tts_provider) current_provider = i;
+    }
+    if (ImGui::Combo("TTS Service", &current_provider, provider_names.data(), provider_names.size())) {
+        current_tts_provider = api_configs[current_provider].name;
     }
 
     ImGui::Separator();
     ImGui::Text("API Configuration:");
     const ImColor col(102, 187, 238, 255);
-    // Show appropriate API key input based on selected provider
-    if (current_tts_provider == TTSProvider::ElevenLabs) {
-        if (ImGui::InputText("ElevenLabs API Key", elevenlabs_api_key_buffer, sizeof(elevenlabs_api_key_buffer))) {
-            elevenlabs_api_key = elevenlabs_api_key_buffer;
-        }
-        
-        ImGui::TextColored(col.Value, "Click Here to get an ElevenLabs API Key");
-        if (ImGui::IsItemClicked()) {
-            GW::GameThread::Enqueue([this]() {
-                SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)"https://elevenlabs.io/app/settings/api-keys");
-            });
-        }
-    }
-    else if(current_tts_provider == TTSProvider::OpenAI) {
-        if (ImGui::InputText("OpenAI API Key", openai_api_key_buffer, sizeof(openai_api_key_buffer))) {
-            openai_api_key = openai_api_key_buffer;
-        }
-        ImGui::TextColored(col.Value, "Click Here to get an OpenAI API Key");
-        if (ImGui::IsItemClicked()) {
-            GW::GameThread::Enqueue([this]() {
-                SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)"https://platform.openai.com/api-keys");
-            });
-        }
-    }
-    else if (current_tts_provider == TTSProvider::Google)
-    { // ADD THIS BLOCK
-        if (ImGui::InputText("Google Cloud API Key", google_api_key_buffer, sizeof(google_api_key_buffer))) {
-            google_api_key = google_api_key_buffer;
-        }
-        ImGui::TextColored(col.Value, "Click Here to get a Google Cloud API Key");
-        if (ImGui::IsItemClicked()) {
-            GW::GameThread::Enqueue([this]() {
-                SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)"https://console.cloud.google.com/apis/credentials");
-            });
-        }
-        ImGui::TextColored(ImColor(255, 255, 0), "Note: Make sure to enable the Text-to-Speech API in your Google Cloud project");
-    }
-    else if (current_tts_provider == TTSProvider::PlayHT) { // ADD THIS BLOCK
-        if (ImGui::InputText("Play.ht API Key", playht_api_key_buffer, sizeof(playht_api_key_buffer))) {
-            playht_api_key = playht_api_key_buffer;
-        }
-        if (ImGui::InputText("Play.ht User ID", playht_user_id_buffer, sizeof(playht_user_id_buffer))) {
-            playht_user_id = playht_user_id_buffer;
-        }
-        ImGui::TextColored(col.Value, "Click Here to get Play.ht API credentials");
-        if (ImGui::IsItemClicked()) {
-            GW::GameThread::Enqueue([this]() {
-                SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)"https://play.ht/studio/api-access");
-            });
-        }
-        ImGui::TextColored(ImColor(255, 255, 0), "Note: Play.ht requires both an API Key and User ID");
-    }
 
+    if (auto api_config = GetCurrentAPIConfig()) {
+        ImGui::Text("%s API Key: ",api_config->name);
+        ImGui::SameLine();
+        ImGui::InputTextSecret("###current provider API Key", api_config->api_key, _countof(api_config->api_key), &show_passwords);
+        if (api_config->has_user_id) {
+            ImGui::Text("%s User ID: ",api_config->name);
+            ImGui::SameLine();
+            ImGui::InputTextSecret("###current provider User ID", api_config->user_id, _countof(api_config->user_id), &show_passwords);
+        }
+        ImGui::TextColored(col.Value, "Click Here to get %s API credentials",api_config->name);
+        if (ImGui::IsItemClicked()) {
+            GW::GameThread::Enqueue([api_config]() {
+                SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)api_config->signup_url);
+            });
+        }
+        if (api_config->note && *api_config->note) ImGui::TextColored(ImColor(255, 255, 0), api_config->note);
+    }
 
     ImGui::Separator();
 
@@ -1622,11 +1609,20 @@ void NPCVoiceModule::DrawSettingsInternal()
 
     ImGui::Checkbox("Stop speech when dialog window is closed", &stop_speech_when_dialog_closed);
 
-    ImGui::Checkbox("Play speech from vendors", &play_speech_from_vendors);
+    ImGui::Checkbox("Play greetings from merchants and traders", &play_speech_from_vendors);
 
-    ImGui::Checkbox("Show speech from party members when in an explorable area", &show_speech_from_party_members_in_explorable_areas);
-    show_warning |= show_speech_from_party_members_in_explorable_areas;
-    ImGui::ShowHelp("If enabled, speech bubbles from skills and quotes from allied heros and henchmen within speech bubble range will be processed.");
+    ImGui::Checkbox("Play speech bubbles when in an outpost", &play_speech_bubbles_in_outpost);
+    ImGui::ShowHelp("If enabled, speech bubbles above an NPC when in an outpost will be processed");
+
+    ImGui::Checkbox("Play speech bubbles when in an explorable area", &play_speech_bubbles_in_explorable);
+    show_warning |= play_speech_bubbles_in_explorable;
+    ImGui::ShowHelp("If enabled, speech bubbles from skills and quotes from enemies and allies within speech bubble range will be processed.");
+
+    ImGui::Checkbox("Play speech bubbles from party members", &play_speech_bubbles_from_party_members);
+    show_warning |= play_speech_bubbles_from_party_members;
+    ImGui::ShowHelp("If enabled, speech bubbles from skills and quotes from party members within speech bubble range will be processed.");
+
+    
 
     if (ImGui::InputFloat("NPC speech bubble range", &npc_speech_bubble_range, GW::Constants::Range::Adjacent, GW::Constants::Range::Adjacent)) {
         npc_speech_bubble_range = std::max(npc_speech_bubble_range, 0.f);
@@ -1635,8 +1631,8 @@ void NPCVoiceModule::DrawSettingsInternal()
     show_warning |= (npc_speech_bubble_range > 166.f);
 
     ImGui::ShowHelp("The range at which NPC speech bubbles will be processed. Set to 0 to disable.");
-    ImGui::Checkbox("Only show speech from friendly NPCs", &only_show_speech_from_friendly_npcs);
-    show_warning |= !only_show_speech_from_friendly_npcs;
+    ImGui::Checkbox("Play speech bubbles from non-friendly NPCs", &play_speech_from_non_friendly_npcs);
+    show_warning |= play_speech_from_non_friendly_npcs;
 
     if (show_warning) {
         ImGui::TextColored(ImColor(IM_COL32(245, 245, 0, 255)), "Warning: Processing more lines of dialog will use up more API credits!");

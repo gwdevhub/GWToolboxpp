@@ -128,6 +128,29 @@ namespace ImGui {
         ImGui::EndPopup();
     }
 
+    bool InputTextSecret(const char* label, char* buf, size_t buf_size, bool* show_password, const char* hint)
+    {
+        bool value_changed = false;
+
+        // Choose input function and flags based on whether we have a hint
+        ImGuiInputTextFlags flags = (show_password  && *show_password) ? ImGuiInputTextFlags_None : ImGuiInputTextFlags_Password;
+
+
+        if (hint) {
+            value_changed = ImGui::InputTextWithHint(label, hint, buf, buf_size, flags);
+        }
+        else {
+            value_changed = ImGui::InputText(label, buf, buf_size, flags);
+        }
+        if (show_password) {
+            ImGui::SameLine(0, 0);
+            if (ImGui::Button((*show_password) ? ICON_FA_EYE_SLASH : ICON_FA_EYE)) {
+                *show_password = !(*show_password);
+            }
+        }
+        return value_changed;
+    }
+
 
     void ShowHelp(const char* help)
     {

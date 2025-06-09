@@ -16,6 +16,9 @@ namespace ImGui {
 
     IMGUI_API void DrawContextMenu();
 
+    // Similar to InputPassword, but has a button to show/hide the value
+    IMGUI_API bool InputTextSecret(const char* label, char* buf, size_t buf_size, bool* show_password = nullptr, const char* hint = nullptr);
+
     IMGUI_API void DrawConfirmDialog();
 
     // Push font, but with a different size to the default one.
