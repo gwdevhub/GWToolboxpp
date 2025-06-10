@@ -278,6 +278,7 @@ void Updater::CheckForUpdate(const bool forced)
             return;
         }
         if (!forced && mode == Mode::DontCheckForUpdates) {
+            step = Done;
             return; // Do not check for updates
         }
 
