@@ -150,10 +150,12 @@ namespace {
             case 0x2f15d: // e.g. Ascalonian
             case 0x13f6f: // e.g. Male caster
             case 0x16dfc: // Shining blade
+            case 0x8b56: // Dwarf
             case 0x17390: // Dwarf
             case 0x13e25: // Mesmer
             case 0x12b3d: // Male centaur
             case 0x13eaa: // Ministry of purity
+            case 0x2f1a1: // Razah
                 return Gender::Male;
             case 0x2f17e:
             case 0x97fa:
@@ -162,6 +164,7 @@ namespace {
             case 0x13e4f: // e.g. Gwen
             case 0x13ece: // Farrah Cappo
             case 0x16dcf: // White mantle
+            case 0x203e4: // Livia
                 return Gender::Female;
         }
         return Gender::Unknown;
@@ -170,6 +173,7 @@ namespace {
     {
         Log::Log("GetRaceByFileId 0x%08X", file_id);
         switch (file_id) {
+            case 0x8b56:
             case 0x17390: // Dwarf
                 return GWRace::Dwarf;
         }

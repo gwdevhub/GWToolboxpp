@@ -404,10 +404,7 @@ namespace {
             }
         }
 
-        if (!(!GW::GetPreGameContext() && GWToolbox::IsInitialized())) {
-            return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
-        }
-        if (gwtoolbox_disabled) {
+        if (!(CanRenderToolbox() && GWToolbox::IsInitialized())) {
             return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
         }
 
