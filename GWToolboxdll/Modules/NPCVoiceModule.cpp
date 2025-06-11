@@ -141,6 +141,15 @@ namespace {
         return true;
     }
 
+    uint32_t cached_dialog_volume = 0xff;
+    uint32_t GetDialogVolume(bool cache = true) {
+        if (cache && cached_dialog_volume != 0xff) 
+            return cached_dialog_volume;
+        const auto d1 = GW::UI::GetPreference(GW::UI::NumberPreference::DialogVolume);
+        const auto d2 = GW::UI::GetPreference(GW::UI::NumberPreference::MasterVolume);
+        return cached_dialog_volume = std::min(d1, d2), cached_dialog_volume;
+    }
+
 
     Gender GetGenderByFileId(const uint32_t file_id)
     {
@@ -156,6 +165,8 @@ namespace {
             case 0x12b3d: // Male centaur
             case 0x13eaa: // Ministry of purity
             case 0x2f1a1: // Razah
+            case 0x37614: // Istan paragon
+            case 0x37794: // Istan derv
                 return Gender::Male;
             case 0x2f17e:
             case 0x97fa:
@@ -165,6 +176,7 @@ namespace {
             case 0x13ece: // Farrah Cappo
             case 0x16dcf: // White mantle
             case 0x203e4: // Livia
+            case 0x4541c: // Istan caster
                 return Gender::Female;
         }
         return Gender::Unknown;
@@ -799,6 +811,9 @@ namespace {
                 HookNPCInteractFrame();
                 was_dialog_already_open = false;
             } break;
+            case GW::UI::UIMessage::kPreferenceValueChanged: {
+                GetDialogVolume(false);
+            } break;
             case GW::UI::UIMessage::kMapChange:
             case GW::UI::UIMessage::kMapLoaded: {
                 ClearSounds();
@@ -1071,8 +1086,14 @@ namespace {
 
     void GenerateVoice(PendingNPCAudio* audio)
     {
-        if (generating_voice) return;
+        if (generating_voice || !audio) return;
         generating_voice = true;
+        if (!GetDialogVolume()) {
+            VoiceLog("Dialog volume isn't on - check guild wars settings");
+            delete audio;
+            generating_voice = false;
+            return;
+        }
 
         Resources::EnqueueWorkerTask([audio]() {
             if (std::ranges::find(pending_audio, audio) == pending_audio.end())
@@ -1442,7 +1463,8 @@ void NPCVoiceModule::Initialize()
         GW::UI::UIMessage::kVendorWindow, 
         GW::UI::UIMessage::kAgentSpeechBubble, 
         GW::UI::UIMessage::kMapChange, 
-        GW::UI::UIMessage::kMapLoaded
+        GW::UI::UIMessage::kMapLoaded, 
+        GW::UI::UIMessage::kPreferenceValueChanged
     };
 
     for (auto message_id : messages) {
