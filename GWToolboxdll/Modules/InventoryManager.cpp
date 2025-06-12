@@ -960,9 +960,8 @@ void InventoryManager::Initialize()
         GW::Hook::EnableHooks(AddItemRowToWindow_Func);
     }
 
-    uintptr_t address = GW::Scanner::Find("\x6a\x6a\x6a\x30\xff\x75\x08","xxxxxxx", - 0x4);
-    if (address) {
-        UICallback_ChooseQuantityPopup_Func = *(GW::UI::UIInteractionCallback*)address;
+    UICallback_ChooseQuantityPopup_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmItemSplit.cpp", "inventorySlot", 0, 0));
+    if (UICallback_ChooseQuantityPopup_Func) {
         GW::Hook::CreateHook((void**)&UICallback_ChooseQuantityPopup_Func, OnChooseQuantityPopupUIMessage, reinterpret_cast<void**>(&UICallback_ChooseQuantityPopup_Ret));
         GW::Hook::EnableHooks(UICallback_ChooseQuantityPopup_Func);
     }
