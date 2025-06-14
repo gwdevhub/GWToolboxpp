@@ -188,11 +188,16 @@ namespace GW {
     namespace AccountMgr {
         GW::Array<AvailableCharacterInfo>* GetAvailableChars()
         {
-            if (available_chars_ptr)
-                return available_chars_ptr;
-            const uintptr_t address = GW::Scanner::Find("\x8b\x35\x00\x00\x00\x00\x57\x69\xF8\x84\x00\x00\x00", "xx????xxxxxxx", 0x2);
-            ASSERT(address);
-            available_chars_ptr = *(GW::Array<AvailableCharacterInfo>**)address;
+            if (!available_chars_ptr) {
+                const auto address = GW::Scanner::Find("\x8b\x35\x00\x00\x00\x00\x57\x69\xF8\x84\x00\x00\x00", "xx????xxxxxxx", 0x2);
+#ifdef _DEBUG
+                ASSERT(address);
+#endif
+                if (address) {
+                    available_chars_ptr = *(GW::Array<AvailableCharacterInfo>**)address;
+                }
+
+            }
             return available_chars_ptr;
         }
 
