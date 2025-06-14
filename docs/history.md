@@ -7,6 +7,18 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 7.8
+* [Fix] Fixed trade alerts no longer working
+* [Fix] Fixed bug preventing player speech bubbles from showing
+* [Fix] Fixed crash in npc voice module when processing some speech bubbles in explorable areas
+* [Fix] Fixed bug causing updater to get stuck on "checking"
+* [Fix] Fixed crash when whispering an offline player with "redirect whispers" enabled
+* [Fix] Fixed /fps command not working after gw update
+* [Fix] Fixed "trade whole stacks by default" not working after gw update
+* [Fix] Fixed issues interacting with world map widgets after gw update
+* [Minor] NPC voice module checks dialog volume to avoid sending API requests when its off
+* [Minor] Char sort order preference is no longer being messed with when rerolling or auto-login via toolbox
+
 ## Version 7.7
 * [Fix] Fixed crash when talking to some faction donation NPCs
 * [Fix] Fixed hanging on toolbox launch caused by poor internet connection
