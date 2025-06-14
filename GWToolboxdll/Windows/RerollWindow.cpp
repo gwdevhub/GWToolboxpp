@@ -36,6 +36,7 @@
 #include <GWToolbox.h>
 #include <Utils/ToolboxUtils.h>
 #include <Utils/TextUtils.h>
+#include <GWCA/GameEntities/Frame.h>
 
 namespace {
 
@@ -47,10 +48,7 @@ namespace {
     bool check_available_chars = true;
 
     clock_t reroll_timeout = 0;
-    uint32_t char_sort_order = std::numeric_limits<uint32_t>::max();
     clock_t reroll_stage_set = 0;
-    uint32_t reroll_index_needed = 0;
-    uint32_t reroll_index_current = 0xffffffdd;
     GW::FriendStatus online_status = GW::FriendStatus::Online;
     GW::Constants::MapID map_id = static_cast<GW::Constants::MapID>(0);
     int district_id = 0;
@@ -65,8 +63,6 @@ namespace {
     const wchar_t* failed_message = nullptr;
     bool return_on_fail = false;
     bool reverting_reroll = false;
-
-    std::map<std::wstring, std::vector<std::wstring>*> account_characters{};
 
     enum RerollStage {
         None,
@@ -120,24 +116,9 @@ namespace {
         return nullptr;
     }
 
-    using SetOnlineStatus_pt = void(__cdecl*)(GW::FriendStatus status);
-    SetOnlineStatus_pt SetOnlineStatus_Func;
-    SetOnlineStatus_pt RetSetOnlineStatus;
-
     bool GetIsMapReady()
     {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && GW::Map::GetIsMapLoaded() && GW::Agents::GetControlledCharacter();
-    }
-
-    bool GetIsCharSelectReady()
-    {
-        const GW::PreGameContext* pgc = GW::GetPreGameContext();
-        if (!pgc || !pgc->chars.valid()) {
-            return false;
-        }
-        uint32_t ui_state = 10;
-        SendUIMessage(GW::UI::UIMessage::kCheckUIState, nullptr, &ui_state);
-        return ui_state == 2;
     }
 
     GW::Constants::MapID GetScrollableOutpostForEliteArea(const GW::Constants::MapID elite_area)
@@ -289,8 +270,6 @@ namespace {
         reroll_stage = None;
         reverting_reroll = false;
         failed_message = nullptr;
-        char_sort_order = GetPreference(GW::UI::EnumPreference::CharSortOrder);
-        SetPreference(GW::UI::EnumPreference::CharSortOrder, std::to_underlying(GW::Constants::Preference::CharSortOrder::Alphabetize));
         if (!GW::AccountMgr::GetAvailableCharacter(character_name)) {
             return false;
         }
@@ -394,17 +373,6 @@ namespace {
             return;
         }
         Log::Error("Failed to match profession or character name for command");
-    }
-
-    // Hook to override status on login - allows us to keep FL status across rerolls without messing with UI
-    void OnSetStatus(GW::FriendStatus status)
-    {
-        GW::Hook::EnterHook();
-        if (reroll_stage == WaitForCharacterLoad) {
-            status = online_status;
-        }
-        RetSetOnlineStatus(status);
-        GW::Hook::LeaveHook();
     }
 
     void OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msg_id, void*, void*)
@@ -523,44 +491,22 @@ void RerollWindow::Initialize()
 
     // Add an entry to check available characters at login screen
     RegisterUIMessageCallback(&OnGoToCharSelect_Entry, GW::UI::UIMessage::kCheckUIState, OnUIMessage, 0x4000);
-    // Hook to override status on login - allows us to keep FL status across rerolls without messing with UI
-    SetOnlineStatus_Func = (SetOnlineStatus_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("FriendApi.cpp", "status < FRIEND_STATUSES", 0, 0));
-    if (SetOnlineStatus_Func) {
-        GW::Hook::CreateHook((void**)&SetOnlineStatus_Func, OnSetStatus, (void**)&RetSetOnlineStatus);
-        GW::Hook::EnableHooks(SetOnlineStatus_Func);
-    }
-
 
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"reroll", CmdReroll);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"rr", CmdReroll);
-
-#ifdef _DEBUG
-    ASSERT(SetOnlineStatus_Func);
-#endif
-
-
 }
 
 void RerollWindow::Terminate() {
 
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
-
-    GW::Hook::RemoveHook(SetOnlineStatus_Func);
     GW::UI::RemoveUIMessageCallback(&OnGoToCharSelect_Entry);
 
-    for (const auto& char_name : account_characters | std::views::values) {
-        delete char_name;
-    }
-    account_characters.clear();
     guild_hall_uuid = {};
 }
 
 void RerollWindow::Update(float)
 {
     if (reroll_stage != None && TIMER_INIT() > reroll_timeout) {
-        if (char_sort_order != std::numeric_limits<uint32_t>::max()) {
-            SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
-        }
         RerollFailed(L"Reroll timed out");
         return;
     }
@@ -569,7 +515,6 @@ void RerollWindow::Update(float)
         return;
     }
 
-    GW::PreGameContext* pgc = GW::GetPreGameContext();
     switch (reroll_stage) {
         case PendingLogout: {
             const auto char_select_info = GW::AccountMgr::GetAvailableCharacter(reroll_to_player_name);
@@ -581,62 +526,35 @@ void RerollWindow::Update(float)
                 // If toolbox isn't going to be available in the next map, make sure we don't try to do anything after reroll.
                 same_map = same_party = false;
             }
-            auto packet = GW::UI::UIPacket::kLogout{
-                .unknown = 0, 
-                .character_select = 0
-            };
-            SendUIMessage(GW::UI::UIMessage::kLogout, &packet);
+            auto packet = GW::UI::UIPacket::kLogout{.unknown = 0, .character_select = 1u};
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kLogout, &packet);
             reroll_stage = WaitingForCharSelect;
             reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 10000;
             return;
         }
         case WaitingForCharSelect: {
-            if (!GetIsCharSelectReady()) {
+            if (!GW::LoginMgr::IsCharSelectReady()) {
                 return;
             }
-            reroll_stage = CheckForCharname;
+            reroll_stage = NavigateToCharname;
             reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 5000;
             return;
         }
-        case CheckForCharname: {
-            if (!GetIsCharSelectReady()) {
-                return;
-            }
-            for (size_t i = 0; i < pgc->chars.size(); i++) {
-                if (wcscmp(pgc->chars[i].character_name, reroll_to_player_name) == 0) {
-                    reroll_index_needed = i;
-                    reroll_index_current = 0xffffffdd;
-                    reroll_stage = NavigateToCharname;
-                    reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 3000;
-                    return;
-                }
-            }
-            return;
-        }
         case NavigateToCharname: {
-            if (!GetIsCharSelectReady()) {
+            if (!GW::LoginMgr::IsCharSelectReady()) {
                 return;
             }
-            if (pgc->index_1 == reroll_index_current) {
-                return; // Not moved yet
-            }
-            const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
-            if (pgc->index_1 == reroll_index_needed) {
-                // Play
-                SendMessage(hwnd, WM_KEYDOWN, 0x50, 0x00190001);
-                SendMessage(hwnd, WM_CHAR, 'p', 0x00190001);
-                SendMessage(hwnd, WM_KEYUP, 0x50, 0xC0190001);
-                reroll_stage = WaitForCharacterLoad;
-                reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
+            
+            GW::FriendListMgr::SetFriendListStatus(online_status);
+            if (!GW::LoginMgr::SelectCharacterToPlay(reroll_to_player_name, true)) {
+                RerollFailed(L"Failed to select character to play");
                 return;
             }
-            reroll_index_current = pgc->index_1;
-            SendMessage(hwnd, WM_KEYDOWN, VK_RIGHT, 0x014D0001);
-            SendMessage(hwnd, WM_KEYUP, VK_RIGHT, 0xC14D0001);
-            return;
-        }
+            reroll_stage = WaitForCharacterLoad;
+            reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
+        } break;
         case WaitForCharacterLoad: {
-            if (GetIsCharSelectReady()) {
+            if (GW::LoginMgr::IsCharSelectReady()) {
                 return;
             }
             if (!GetIsMapReady() || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
@@ -646,9 +564,6 @@ void RerollWindow::Update(float)
             if (!player_name || wcscmp(player_name, reroll_to_player_name) != 0) {
                 RerollFailed(L"Wrong character was loaded");
                 return;
-            }
-            if (char_sort_order != std::numeric_limits<uint32_t>::max()) {
-                SetPreference(GW::UI::EnumPreference::CharSortOrder, char_sort_order);
             }
             if (same_map) {
                 if (!IsInMap()) {
@@ -790,17 +705,6 @@ void RerollWindow::LoadSettings(ToolboxIni* ini)
 void RerollWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    for (const auto& it : account_characters) {
-        std::string email_s = TextUtils::WStringToString(it.first);
-        const auto chars = it.second;
-        for (auto it2 = chars->begin(); it2 != chars->end(); ++it2) {
-            std::string charname_s = TextUtils::WStringToString(*it2);
-            if (charname_s.empty()) {
-                continue;
-            }
-            ini->SetValue("RerollWindow_AvailableChars", charname_s.c_str(), email_s.c_str());
-        }
-    }
     SAVE_BOOL(travel_to_same_location_after_rerolling);
     SAVE_BOOL(rejoin_party_after_rerolling);
     SAVE_BOOL(return_on_fail);

@@ -12,6 +12,7 @@
 #include <Timer.h>
 
 #include "LoginModule.h"
+#include <Utils/ToolboxUtils.h>
 
 namespace {
     clock_t state_timestamp = 0;
@@ -556,57 +557,18 @@ void LoginModule::Update(float)
                 state = LoginState::Idle;
                 return;
             }
-            if (original_charname_parameter != nullptr && *original_charname_parameter != '\0') {
-                // we want to pre-select a character, set order to alphabetical so we don't get stuck on empty char slots when using arrow keys
-                SetCharSortOrder(std::to_underlying(GW::Constants::Preference::CharSortOrder::Alphabetize));
+            if (!GW::LoginMgr::IsCharSelectReady()) {
+                return;
             }
-            if (IsCharSelectReady()) {
-                state = LoginState::FindCharacterIndex;
-            }
-        }
-        break;
-        case LoginState::FindCharacterIndex: {
-            // No charname to switch to
             if (!(original_charname_parameter && *original_charname_parameter)) {
                 state = LoginState::Idle;
                 return;
             }
-            const auto pgc = GW::GetPreGameContext();
-            for (size_t i = 0; i < pgc->chars.size(); i++) {
-                if (wcscmp(pgc->chars[i].character_name, original_charname_parameter) == 0) {
-                    state_timestamp = TIMER_INIT();
-                    state = LoginState::SelectChar;
-                    reroll_index_needed = i;
-                    reroll_index_current = 0xffff;
-                    // Wipe out the command line parameter for GW here; its only relevant for the first login!
-                    *original_charname_parameter = '\0';
-                    return;
-                }
-            }
-            // Character no found
-            state = LoginState::Idle;
-        }
-        break;
-        case LoginState::SelectChar: {
-            if (TIMER_DIFF(state_timestamp) > 250) {
-                // This could be due to a reconnect dialog in the way, which is fine
+            if (!GW::LoginMgr::SelectCharacterToPlay(original_charname_parameter, false)) {
+                // Failed to pre-select character
                 state = LoginState::Idle;
                 return;
             }
-            const auto pgc = GW::GetPreGameContext();
-            if (pgc->index_1 == reroll_index_current) {
-                return; // Not moved yet
-            }
-            const HWND h = GW::MemoryMgr::GetGWWindowHandle();
-            if (pgc->index_1 == reroll_index_needed) {
-                // We're on the character that was asked for
-                state = LoginState::Idle;
-                SetCharSortOrder(char_sort_order);
-                return;
-            }
-            reroll_index_current = pgc->index_1;
-            SendMessage(h, WM_KEYDOWN, VK_RIGHT, 0x014D0001);
-            SendMessage(h, WM_KEYUP, VK_RIGHT, 0xC14D0001);
         }
         break;
     }

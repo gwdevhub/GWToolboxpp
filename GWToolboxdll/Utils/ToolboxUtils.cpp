@@ -43,6 +43,12 @@ namespace {
     {
         return item && item->info_string && wcschr(item->info_string, 0xAC9);
     }
+
+    GW::UI::Frame* GetSelectorFrame()
+    {
+        return GW::UI::GetFrameByLabel(L"Selector");
+    }
+
 }
 
 namespace GW {
@@ -102,7 +108,34 @@ namespace GW {
             const auto p = m ? m->props : nullptr;
             return p ? &p->propArray : nullptr;
         }
+    } // namespace Map
+    namespace LoginMgr {
+        const bool IsCharSelectReady() {
+            return GW::UI::GetFrameContext(GetSelectorFrame());
+        }
+
+        const bool SelectCharacterToPlay(const wchar_t* name, bool play)
+        {
+            const auto selector = GetSelectorFrame();
+            if (!(selector && GW::UI::GetFrameContext(selector))) return false;
+
+            if (!AccountMgr::GetAvailableCharacter(name)) return false;
+            GW::UI::UIPacket::kMouseAction action{};
+            action.frame_id = selector->frame_id;
+            action.child_offset_id = selector->child_offset_id;
+            struct button_param {
+                const wchar_t* name;
+                uint32_t play;
+            };
+            button_param wparam = {name, 0u}; // NB: We'll explicitly play in a bit
+            action.wparam = &wparam;
+            action.current_state = 0x7;
+            if (!GW::UI::SendFrameUIMessage(GW::UI::GetParentFrame(selector), GW::UI::UIMessage::kMouseClick2, &action)) 
+                return false;
+            return (!play || GW::UI::ButtonClick(GW::UI::GetFrameByLabel(L"Play")));
+        }
     }
+
 
     namespace PartyMgr {
         GW::PlayerPartyMemberArray* GetPartyPlayers(uint32_t party_id)
