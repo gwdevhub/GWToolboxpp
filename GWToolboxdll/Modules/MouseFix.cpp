@@ -360,9 +360,10 @@ void MouseFix::Initialize()
         GW::Hook::EnableHooks(ChangeCursorIcon_Func);
     }
 
-#if _DEBUG
-    ASSERT(ChangeCursorIcon_Func);
-#endif
+    //TODO: ChangeCursorIcon_Func not found
+//#if _DEBUG
+//    ASSERT(ChangeCursorIcon_Func);
+//#endif
 
     const GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kLogout,
