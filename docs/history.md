@@ -7,6 +7,9 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 7.9
+* [Fix] Compatibility with Guild Wars after the 17.06.2025 update
+
 ## Version 7.8
 * [Fix] Fixed trade alerts no longer working
 * [Fix] Fixed bug preventing player speech bubbles from showing
