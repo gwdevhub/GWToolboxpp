@@ -352,7 +352,7 @@ void MouseFix::Initialize()
 {
     ToolboxModule::Initialize();
 
-    auto address = GW::Scanner::Find("\xf7\xc3\x80\x20\x00\x00\x74\x09\x56", "xxxxxxxxx", 0x9);
+    auto address = GW::Scanner::Find("\xf7\xc3\x80\x20\x00\x00\x74\x09\x57", "xxxxxxxxx", 0x9);
     address = GW::Scanner::FunctionFromNearCall(address);
     if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) {
         ChangeCursorIcon_Func = (ChangeCursorIcon_pt)address;
@@ -360,10 +360,9 @@ void MouseFix::Initialize()
         GW::Hook::EnableHooks(ChangeCursorIcon_Func);
     }
 
-    //TODO: ChangeCursorIcon_Func not found
-//#if _DEBUG
-//    ASSERT(ChangeCursorIcon_Func);
-//#endif
+#if _DEBUG
+    ASSERT(ChangeCursorIcon_Func);
+#endif
 
     const GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kLogout,

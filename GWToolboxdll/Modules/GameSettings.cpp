@@ -849,10 +849,9 @@ namespace {
     // Override the login status dropdown by sending ui message 0x51 if found
     void OverrideDefaultOnlineStatus()
     {
-        //TODO: This sends 0x51 which ends up throwing with a MAV inside GW
-        /*GW::GameThread::Enqueue([] {
+        GW::GameThread::Enqueue([] {
             GW::UI::SelectDropdownOption(GW::UI::GetFrameByLabel(L"StatusOverride"), last_online_status);
-        });*/
+        });
     }
 
     GW::HookEntry OnCreateUIComponent_Entry;
