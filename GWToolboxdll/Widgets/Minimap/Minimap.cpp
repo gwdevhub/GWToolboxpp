@@ -301,7 +301,7 @@ namespace {
                     SetWindowVisibleTmp(GW::UI::WindowID_Compass, false);
                 }
                 break;
-            case 0x43: {
+            case 0x44: {
                 if (compass_fix_pending)
                     break; // Block any redrawing until the compass fix has been done
                 if (!compass_context->compass_canvas) {
@@ -314,7 +314,7 @@ namespace {
                 }
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
             } break;
-            case 0x4a: // 0x4a need to pass through to allow hotkey flagging
+            case 0x4b: // 0x4b need to pass through to allow hotkey flagging
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 break;
             case 0xb:

@@ -1,13 +1,11 @@
 #include "stdafx.h"
 
-#include <GWCA/Constants/Constants.h>
 #include <GWCA/Context/PreGameContext.h>
 
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/MemoryMgr.h>
 
 #include <Timer.h>
 
@@ -221,7 +219,7 @@ b4 7b 01 01 00 00 00 00
             GW::Hook::LeaveHook();
             return CreateTexture_Ret(filename, flags);
         }
-        auto file_id = FileHashToFileId(filename);
+        const auto file_id = FileHashToFileId(filename);
         const auto found = file_id ? asset_index_for_login_screen->find(file_id) : asset_index_for_login_screen->end();
         if (found != asset_index_for_login_screen->end()) {
             filename = found->second.c_str();
@@ -236,7 +234,7 @@ b4 7b 01 01 00 00 00 00
             GW::Hook::LeaveHook();
             return GetFileId_Ret(filename);
         }
-        auto file_id = FileHashToFileId(filename);
+        const auto file_id = FileHashToFileId(filename);
         const auto found = file_id ? asset_index_for_login_screen->find(file_id) : asset_index_for_login_screen->end();
         if (found != asset_index_for_login_screen->end()) {
             GW::Hook::LeaveHook();
@@ -357,7 +355,7 @@ b4 7b 01 01 00 00 00 00
             }
         }
         // NB: Nightfall seems to fail loading a material; not sure which one atm
-        auto res =  LoadModelFromDat_Ret(filename, pos, flags, param_4);
+        const auto res =  LoadModelFromDat_Ret(filename, pos, flags, param_4);
         if (wcscmp(filename, L"\x9Ce1\x0104") == 0) {
             replace_assets = false;
         }
@@ -369,18 +367,19 @@ b4 7b 01 01 00 00 00 00
     // Prefilling it ensures that auto login can work without -charname argument being given.
     wchar_t* original_charname_parameter = nullptr;
 
-    wchar_t* OnGetStringParameter(const uint32_t param_id_plus_0x27)
+    wchar_t* OnGetStringParameter(const uint32_t param_id)
     {
         GW::Hook::EnterHook();
-        wchar_t* parameter_value = GetStringParameter_Ret(param_id_plus_0x27);
-        wchar_t* cmp = 0;
+        wchar_t* parameter_value = GetStringParameter_Ret(param_id);
+        wchar_t* cmp = nullptr;
         GW::UI::GetCommandLinePref(L"character", &cmp);
-        if (cmp == parameter_value) {
+        // TODO: @Jon what's going on here, cmp gets a different address every time
+        if (cmp == parameter_value || param_id == 0x29) {
             // charname parameter
             original_charname_parameter = parameter_value;
             parameter_value = const_cast<wchar_t*>(L"NA");
         }
-        //Log::Info("GetStringParameter_Ret %p = %ls", param_id_plus_0x27, parameter_value);
+        //Log::Info("GetStringParameter_Ret %p = %ls", param_id, parameter_value);
         GW::Hook::LeaveHook();
         return parameter_value;
     }

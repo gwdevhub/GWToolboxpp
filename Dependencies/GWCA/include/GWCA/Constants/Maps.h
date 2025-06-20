@@ -429,6 +429,7 @@ namespace GW {
             Crystal_Overlook,
             Kamadan_Jewel_of_Istan_outpost,
             Gate_of_Torment_outpost,
+            Gate_of_Anguish_elite_mission,
 
             Nightfallen_Garden = 455,
             Churrhir_Fields,

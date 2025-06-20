@@ -145,15 +145,17 @@ namespace {
         return map_info && map_info->region == GW::Region::Region_Presearing;
     }
 
-    bool IsValidOutpost(GW::Constants::MapID map_id)
+    bool IsValidOutpost(const GW::Constants::MapID map_id)
     {
+        if (map_id == GW::Constants::MapID::Gate_of_Anguish_elite_mission)
+            return false;
         const auto map_info = GW::Map::GetMapInfo(map_id);
         if (!map_info || !map_info->thumbnail_id || !map_info->name_id || !(map_info->x || map_info->y))
             return false;
         if ((map_info->flags & 0x5000000) == 0x5000000)
             return false; // e.g. "wrong" augury rock is map 119, no NPCs
         if ((map_info->flags & 0x80000000) == 0x80000000)
-            return false; // e.g. Debug map
+            return false; // e.g. Debug map)
         switch (map_info->type) {
             case GW::RegionType::City:
             case GW::RegionType::Challenge:
@@ -376,7 +378,7 @@ namespace {
                 // find explorable area matching this, and then find nearest unlocked outpost.
                 best_match_map_id = FindMatchingMapVec(compare.c_str(), searchable_explorable_areas);
                 if (best_match_map_id != GW::Constants::MapID::None) {
-                    best_match_map_id = Instance().GetNearestOutpost(best_match_map_id);
+                    best_match_map_id = TravelWindow::GetNearestOutpost(best_match_map_id);
                 }
             }
         }
@@ -557,9 +559,9 @@ namespace {
         return true;
     }
 
-    void BuildSearchableAreas(std::vector<SearchableArea*>& vec, std::function<bool(GW::Constants::MapID, const GW::AreaInfo*)> cmp)
+    void BuildSearchableAreas(std::vector<SearchableArea*>& vec, const std::function<bool(GW::Constants::MapID, const GW::AreaInfo*)>& cmp)
     {
-        for (auto& ptr : vec) {
+        for (const auto ptr : vec) {
             delete ptr;
         }
         vec.clear();
@@ -580,7 +582,7 @@ namespace {
             const auto it = vec[i];
             if (!it->Name())
                 return false;
-            // Now that this one has decoded, check that theres nothing already in the searchable areas that have the same name, e.g. festival outposts
+            // Now that this one has decoded, check that there's nothing yet in the searchable areas that have the same name, e.g. festival outposts
             if (searchable_area_indeces_by_name.contains(it->Name())) {
                 vec.erase(vec.begin() + i);
                 delete it;
@@ -588,7 +590,7 @@ namespace {
             }
             searchable_area_indeces_by_name[it->Name()] = it;
         }
-        std::ranges::sort(vec, [](SearchableArea* lhs, SearchableArea* rhs) {
+        std::ranges::sort(vec, [](const SearchableArea* lhs, const SearchableArea* rhs) {
             return strcmp(GetMapName(lhs->map_id), GetMapName(rhs->map_id)) < 0;
         });
         return true;
@@ -815,7 +817,7 @@ void TravelWindow::Update(const float)
     // Dynamically generate a list of all outposts that the game has rather than storing another massive const array.
     switch (fetched_searchable_outposts) {
         case FetchedMapNames::Pending: {
-            BuildSearchableAreas(searchable_outposts, [](GW::Constants::MapID map_id, const GW::AreaInfo*) {
+            BuildSearchableAreas(searchable_outposts, [](const GW::Constants::MapID map_id, const GW::AreaInfo*) {
                 return IsValidOutpost(map_id) && !IsPreSearing(map_id);
             });
             fetched_searchable_outposts = FetchedMapNames::Decoding;
