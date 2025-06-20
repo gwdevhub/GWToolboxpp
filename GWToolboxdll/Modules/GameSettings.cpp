@@ -231,7 +231,7 @@ namespace {
     void OnSkillList_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
     {
         GW::Hook::EnterHook();
-        const auto is_show_unlearned_skill = message->message_id == (GW::UI::UIMessage)0x47 && ((uint32_t*)wParam)[1] == 0x3;
+        const auto is_show_unlearned_skill = message->message_id == (GW::UI::UIMessage)0x48 && ((uint32_t*)wParam)[1] == 0x3;
         if (!(is_show_unlearned_skill && show_unlearned_skill)) {
             SkillList_UICallback_Ret(message, wParam, lParam);
         }
