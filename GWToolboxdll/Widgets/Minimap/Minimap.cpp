@@ -282,7 +282,7 @@ namespace {
         if (hide_compass_when_minimap_draws && Minimap::IsActive()) {
             if (!(frame->IsCreated() && frame->IsVisible()))
                 return false;
-            return SetWindowVisibleTmp(GW::UI::WindowID_Compass, false);
+            return GW::UI::SetFrameVisible(frame, false);
         }
         return ResetWindowPosition(GW::UI::WindowID_Compass, frame);
     }
@@ -909,7 +909,9 @@ void Minimap::DrawSettingsInternal()
 
     ImGui::Checkbox("Hide GW compass drawings", &hide_compass_drawings);
     ImGui::ShowHelp("Drawings made by other players will be visible on the minimap, but not the compass");
-    ImGui::Checkbox("Hide GW compass when minimap is visible", &hide_compass_when_minimap_draws);
+    if (ImGui::Checkbox("Hide GW compass when minimap is visible", &hide_compass_when_minimap_draws)) {
+        GW::GameThread::Enqueue(OverrideCompassVisibility);
+    }
     if (ImGui::Checkbox("Hide GW compass flagging controls", &hide_flagging_controls)) {
         hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
     }
