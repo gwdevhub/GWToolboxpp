@@ -814,7 +814,7 @@ void ChatFilter::Initialize()
 {
     ToolboxModule::Initialize();
 
-    constexpr auto message_ids = {
+    constexpr GW::UI::UIMessage message_ids[] = {
         GW::UI::UIMessage::kPrintChatMessage,
         GW::UI::UIMessage::kLogChatMessage,
         GW::UI::UIMessage::kWriteToChatLog,
