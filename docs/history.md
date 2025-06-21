@@ -7,8 +7,10 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
-## Version 7.10
+## Version 7.11
 * [Fix] Rebased code fixes for June update to fix bugs
+* [Fix] Fixed bug preventing hero builds from loading
+* [Fix] Fixed bug preventing quest log double click to trave feature
 
 ## Version 7.9
 * [Fix] Compatibility with Guild Wars after the 17.06.2025 update
