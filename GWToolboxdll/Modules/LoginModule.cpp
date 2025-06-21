@@ -373,8 +373,7 @@ b4 7b 01 01 00 00 00 00
         wchar_t* parameter_value = GetStringParameter_Ret(param_id);
         wchar_t* cmp = nullptr;
         GW::UI::GetCommandLinePref(L"character", &cmp);
-        // TODO: @Jon what's going on here, cmp gets a different address every time
-        if (cmp == parameter_value || param_id == 0x29) {
+        if (cmp == parameter_value) {
             // charname parameter
             original_charname_parameter = parameter_value;
             parameter_value = const_cast<wchar_t*>(L"NA");
