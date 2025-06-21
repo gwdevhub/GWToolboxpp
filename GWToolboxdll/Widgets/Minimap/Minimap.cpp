@@ -236,6 +236,21 @@ namespace {
 
 
     GW::UI::Frame* GetCompassFrame();
+    bool EnsureCompassIsLoaded()
+    {
+        if (!GW::Map::GetIsMapLoaded()) return false;
+        auto compass = GetCompassFrame();
+        if (compass && compass->IsVisible()) return true;
+        GW::UI::UIPacket::kUIPositionChanged packet = {GW::UI::WindowID::WindowID_Compass, GW::UI::GetWindowPosition(GW::UI::WindowID::WindowID_Compass)};
+        uint32_t prev_state = packet.position->state;
+        packet.position->state |= 1;
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kUIPositionChanged, &packet);
+        compass = GetCompassFrame();
+        ASSERT(compass->IsVisible());
+        packet.position->state = prev_state;
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kUIPositionChanged, &packet);
+        return compass && compass->IsVisible();
+    }
     bool ResetWindowPosition(GW::UI::WindowID, GW::UI::Frame*);
     bool RepositionMinimapToCompass();
 
@@ -703,6 +718,7 @@ void Minimap::Initialize()
     pmap_renderer.Invalidate();
 
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"flag", &OnFlagHeroCmd);
+    GW::GameThread::Enqueue(EnsureCompassIsLoaded);
 }
 
 void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid, void* wParam, void* lParam)
@@ -724,6 +740,7 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
         }
         break;
         case GW::UI::UIMessage::kMapLoaded: {
+            EnsureCompassIsLoaded();
             instance.pmap_renderer.Invalidate();
             loading = false;
             is_observing = GW::Map::GetIsObserving();
