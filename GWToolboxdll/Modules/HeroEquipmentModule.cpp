@@ -151,7 +151,7 @@ namespace {
         const auto hero_agent_id = GetAvatarListHeroAgentId(avatar_list_frame->frame_id);
         if (hero_agent_id) {
             uint32_t currently_selected_agent_id = 0;
-            GW::UI::SendFrameUIMessage(avatar_list_frame, (GW::UI::UIMessage)0x46, 0, (void*)&currently_selected_agent_id);
+            GW::UI::SendFrameUIMessage(avatar_list_frame, GW::UI::UIMessage::kFrameMessage_0x46, 0, (void*)&currently_selected_agent_id);
             if(currently_selected_agent_id == hero_agent_id)
                 return;
             const auto actual_selected_agent_id = *current_inventory_agent_id;

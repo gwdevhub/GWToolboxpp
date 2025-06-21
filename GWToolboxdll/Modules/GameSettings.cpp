@@ -1270,7 +1270,7 @@ namespace {
         if (!name_input) return;
         const auto agent_enc_name = GW::PlayerMgr::GetPlayerName();
         // Prefill and hide the name input
-        GW::UI::SendFrameUIMessage(name_input, (GW::UI::UIMessage)0x4e, (void*)agent_enc_name);
+        GW::UI::SendFrameUIMessage(name_input, GW::UI::UIMessage::kFrameMessage_0x4e, (void*)agent_enc_name);
         GW::UI::SetFrameVisible(name_input, 0);
         // Show and enable the "Sign" button
         GW::UI::SetFrameDisabled(sign_btn, 0);
