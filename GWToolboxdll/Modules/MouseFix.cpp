@@ -15,6 +15,45 @@
 #include <GWCA/Managers/UIMgr.h>
 
 namespace {
+
+    typedef void(__fastcall* ChangeCursorIcon_pt)(void* ctx, int edx, uint32_t cursor_type, void* bitmap_data, void* bitmap_mask, uint32_t* hotspot);
+
+    struct GuildWarsWindowContext_vTable {
+        void* h0000;
+        void* h0004;
+        void(__fastcall* MonitorFromWindow)(int param_1); // Calls MonitorFromWindow API
+        void* h000C;
+        void* h0010;
+        void* h0014;
+        void* h0018;
+        void* h001C;
+        void* h0020;
+        void* h0024;
+        void* h0028;
+        void(__fastcall* ClearCursor_pt)(int param_1); // Destroys cursor, clears class cursor
+        ChangeCursorIcon_pt ChangeCursorIcon;
+    };
+
+    struct Win32WindowUserData {
+        static Win32WindowUserData* Instance() { return (Win32WindowUserData*)GetWindowLongA(GW::MemoryMgr::GetGWWindowHandle(), -0x15); }
+        GuildWarsWindowContext_vTable* vtable; // Offset 0x00 - Vtable pointer
+        DWORD param2;          // Offset 0x04 - Flags/parameters
+        DWORD param3;          // Offset 0x08 - Parameters
+        DWORD param4;          // Offset 0x0C - Parameters
+        DWORD encoding_state;  // Offset 0x10 - Unicode/ANSI state
+        DWORD window_state;    // Offset 0x14 - Window state (init to 2)
+        DWORD field_18;        // Offset 0x18 - Reserved/unused
+        HWND window_handle;    // Offset 0x1C - Window handle
+        DWORD field_20;        // Offset 0x20 - Reserved/unused
+        HCURSOR custom_cursor; // Offset 0x24 - Custom cursor handle ← NEW!
+
+        // ... gap to 0x50 ...
+        DWORD mouse_settings; // Offset 0x50 - Mouse configuration
+        BYTE settings_flags;  // Offset 0x54 - Various bit flags
+
+        // ... rest of 815-byte structure ...
+    };
+
     using OnProcessInput_pt = bool(__cdecl*)(uint32_t* wParam, uint32_t* lParam);
     OnProcessInput_pt ProcessInput_Func = nullptr;
     OnProcessInput_pt ProcessInput_Ret = nullptr;
@@ -274,21 +313,63 @@ namespace {
     }
 
 
-    using ChangeCursorIcon_pt = void(__cdecl*)(void*);
-    ChangeCursorIcon_pt ChangeCursorIcon_Func = nullptr;
-    ChangeCursorIcon_pt ChangeCursorIcon_Ret = nullptr;
+    ChangeCursorIcon_pt ChangeCursorIcon_Func = nullptr, ChangeCursorIcon_Ret = nullptr;
 
-    void OnChangeCursorIcon(char* user_data)
+    struct CachedCursorData {
+        uint32_t cursor_type;
+        std::vector<uint8_t> bitmap_data;
+        std::vector<uint8_t> bitmap_mask;
+        uint32_t hotspot[2];
+        bool is_valid = false;
+    };
+
+    CachedCursorData cached_cursor;
+
+    void __fastcall OnChangeCursorIcon(Win32WindowUserData* user_data, uint32_t edx, uint32_t cursor_type, void* bitmap_data, void* bitmap_mask, uint32_t* hotspot)
     {
         GW::Hook::EnterHook();
-        ChangeCursorIcon_Ret(user_data);
-        // Cursor has been changed by the game; pull it back out, scale it to target size..
+
+        // Cache the cursor arguments before calling the original function
+        if (bitmap_data && bitmap_mask && hotspot) {
+            cached_cursor.cursor_type = cursor_type;
+
+            // Determine bitmap data size based on cursor type
+            size_t bitmap_size;
+            if (cursor_type == 0) {
+                bitmap_size = 32 * 32 * 4; // 32-bit color (RGBA)
+            }
+            else if (cursor_type == 5) {
+                bitmap_size = 32 * 32 * 2; // 16-bit color
+            }
+            else {
+                bitmap_size = 32 * 32 * 4; // Default to 32-bit
+            }
+
+            // Cache bitmap data
+            cached_cursor.bitmap_data.resize(bitmap_size);
+            memcpy(cached_cursor.bitmap_data.data(), bitmap_data, bitmap_size);
+
+            // Cache mask data (always 32x32x4 for RGBA)
+            cached_cursor.bitmap_mask.resize(32 * 32 * 4);
+            memcpy(cached_cursor.bitmap_mask.data(), bitmap_mask, 32 * 32 * 4);
+
+            // Cache hotspot
+            cached_cursor.hotspot[0] = hotspot[0];
+            cached_cursor.hotspot[1] = hotspot[1];
+
+            cached_cursor.is_valid = true;
+        }
+
+        ChangeCursorIcon_Ret(user_data, edx, cursor_type, bitmap_data, bitmap_mask, hotspot);
+
+        // Your existing cursor scaling logic...
         if (cursor_size < 0 || cursor_size > 64 || cursor_size == 32) {
             return GW::Hook::LeaveHook();
         }
 
-        HCURSOR* cursor = (HCURSOR*)&user_data[0xd6c];
-        HWND* window_handle = (HWND*)&user_data[0xe20];
+
+        HCURSOR* cursor = &user_data->custom_cursor;
+        HWND* window_handle = &user_data->window_handle;
 
         if (!(user_data && *cursor && *cursor != current_cursor)) {
             return GW::Hook::LeaveHook();
@@ -319,10 +400,12 @@ namespace {
     {
         GW::GameThread::Enqueue([] {
             // Force redraw
-            const auto user_data = (void*)GetWindowLongA(GW::MemoryMgr::GetGWWindowHandle(), -0xc);
+            const auto user_data = Win32WindowUserData::Instance();
             current_cursor = nullptr;
-            if (user_data && ChangeCursorIcon_Func) {
-                ChangeCursorIcon_Func(user_data);
+            if (user_data && ChangeCursorIcon_Func && cached_cursor.is_valid) {
+                ChangeCursorIcon_Func(user_data,0,
+                    cached_cursor.cursor_type, cached_cursor.bitmap_data.data(), cached_cursor.bitmap_mask.data(), cached_cursor.hotspot
+                );
             }
         });
     }
@@ -352,10 +435,8 @@ void MouseFix::Initialize()
 {
     ToolboxModule::Initialize();
 
-    auto address = GW::Scanner::Find("\xf7\xc3\x80\x20\x00\x00\x74\x09\x56", "xxxxxxxxx", 0x9);
-    address = GW::Scanner::FunctionFromNearCall(address);
-    if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) {
-        ChangeCursorIcon_Func = (ChangeCursorIcon_pt)address;
+    ChangeCursorIcon_Func = (ChangeCursorIcon_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x80\x7e\x01\x80", "xxxx"));
+    if (ChangeCursorIcon_Func) {
         GW::Hook::CreateHook((void**)&ChangeCursorIcon_Func, OnChangeCursorIcon, (void**)&ChangeCursorIcon_Ret);
         GW::Hook::EnableHooks(ChangeCursorIcon_Func);
     }

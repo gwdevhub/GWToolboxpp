@@ -78,7 +78,6 @@ namespace GW {
 
         // hero flagging
         GWCA_API bool FlagHero(uint32_t hero_index, GamePos pos);
-        GWCA_API bool FlagHeroAgent(AgentID agent_id, GamePos pos);
         GWCA_API bool UnflagHero(uint32_t hero_index);
 
         GWCA_API bool FlagAll(GamePos pos);

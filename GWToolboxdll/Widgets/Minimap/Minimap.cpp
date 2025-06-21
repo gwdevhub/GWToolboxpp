@@ -293,15 +293,15 @@ namespace {
 
         compass_context = message->wParam ? * (CompassContext**)message->wParam : nullptr;
         // frame + 0x40 is the ai control handler bits. Zero it out to prevent actions from interacting with the flagging controls.
-        switch (static_cast<uint32_t>(message->message_id)) {
-            case 0x8: // Creates frame + 0x40 if it doesn't exist, but also draws it - we use the patch to make sure it never draws.
+        switch (message->message_id) {
+            case GW::UI::UIMessage::kResize: // Creates frame + 0x40 if it doesn't exist, but also draws it - we use the patch to make sure it never draws.
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 if (compass_fix_pending && compass_context->compass_canvas) {
                     compass_fix_pending = false;
                     SetWindowVisibleTmp(GW::UI::WindowID_Compass, false);
                 }
                 break;
-            case 0x43: {
+            case GW::UI::UIMessage::kRenderFrame_0x43: {
                 if (compass_fix_pending)
                     break; // Block any redrawing until the compass fix has been done
                 if (!compass_context->compass_canvas) {
@@ -314,35 +314,35 @@ namespace {
                 }
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
             } break;
-            case 0x4a: // 0x4a need to pass through to allow hotkey flagging
+            case GW::UI::UIMessage::kFrameMessage_0x4a: // 0x4a need to pass through to allow hotkey flagging
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 break;
-            case 0xb:
+            case GW::UI::UIMessage::kDestroyFrame:
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 compass_context = nullptr;
                 compass_frame = nullptr;
                 compass_fix_pending = false;
                 compass_position_dirty = true;
                 break;
-            case 0x13:
-            case 0x30:
-            case 0x32:
-            case 0x33:
+            case GW::UI::UIMessage::kFrameMessage_0x13:
+            case GW::UI::UIMessage::kRenderFrame_0x30:
+            case GW::UI::UIMessage::kRenderFrame_0x32:
+            case GW::UI::UIMessage::kSetLayout:
                 if (compass_fix_pending)
                     break; // Block any repositioning messages until the compass fix has been done
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 compass_position_dirty = true; // Forces a recalculation
                 break;
-            case 0x10000149:
-            case 0x1000014c:
-            case 0x1000014e:
-            case 0x1000014f:
+            case GW::UI::UIMessage::kQuestAdded:
+            case GW::UI::UIMessage::kQuestDetailsChanged:
+            case GW::UI::UIMessage::kServerActiveQuestChanged:
+            case GW::UI::UIMessage::kUnknownQuestRelated:
                 if (!hide_compass_quest_marker) {
                     OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 }
                 else {
                     const auto prev = message->message_id;
-                    message->message_id = (GW::UI::UIMessage)0x1000014b;
+                    message->message_id = GW::UI::UIMessage::kQuestRemoved;
                     OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                     message->message_id = prev;
                 } break;
@@ -868,7 +868,7 @@ void CHAT_CMD_FUNC(Minimap::OnFlagHeroCmd)
         Log::Error("Please provide command in format /flag [hero number] [x] [y]"); // Invalid coords
         return;
     }
-    GW::PartyMgr::FlagHeroAgent(GW::Agents::GetHeroAgentID(f_hero), GW::GamePos(x, y, 0)); // "/flag 5 -2913.41 3004.78"
+    GW::PartyMgr::FlagHero(f_hero, GW::GamePos(x, y, 0)); // "/flag 5 -2913.41 3004.78"
 }
 
 void Minimap::DrawSettingsInternal()
@@ -1270,16 +1270,13 @@ void Minimap::Draw(IDirect3DDevice9*)
                             GW::PartyMgr::UnflagAll();
                         }
                         else {
-                            GW::PartyMgr::FlagHeroAgent(player_heroes[i - 1], GW::GamePos(HUGE_VALF, HUGE_VALF, 0));
+                            GW::PartyMgr::FlagHero(i, GW::GamePos(HUGE_VALF, HUGE_VALF, 0));
                         }
                     }
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Clear", ImVec2(-1, 0))) {
                     GW::PartyMgr::UnflagAll();
-                    for (const uint32_t agent_id : player_heroes) {
-                        GW::PartyMgr::FlagHeroAgent(agent_id, GW::GamePos(HUGE_VALF, HUGE_VALF, 0));
-                    }
                 }
             }
             ImGui::End();
@@ -1582,15 +1579,13 @@ bool Minimap::FlagHeros(const LPARAM lParam)
                 return false;
             }
             SetFlaggingState(FlagState_None);
-            GW::PartyMgr::FlagAll(GW::GamePos(worldpos));
-            return true;
+            return GW::PartyMgr::FlagAll(GW::GamePos(worldpos));
         default:
             if (flag_state > player_heroes.size()) {
                 return false;
             }
             SetFlaggingState(FlagState_None);
-            GW::PartyMgr::FlagHeroAgent(player_heroes[flag_state - 1], GW::GamePos(worldpos));
-            return true;
+            return GW::PartyMgr::FlagHero((uint32_t)flag_state, GW::GamePos(worldpos));
     }
 }
 

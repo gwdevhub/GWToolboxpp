@@ -78,14 +78,14 @@ namespace {
     {
         GW::Hook::EnterHook();
         OnSkillbar_UICallback_Ret(message, wParam, lParam);
-        switch (static_cast<uint32_t>(message->message_id)) {
-            case 0xb:
+        switch (message->message_id) {
+            case GW::UI::UIMessage::kDestroyFrame:
                 skillbar_frame = nullptr;
                 skillbar_position_dirty = true;
                 break;
-            case 0x13:
-            case 0x30:
-            case 0x33:
+            case GW::UI::UIMessage::kFrameMessage_0x13:
+            case GW::UI::UIMessage::kRenderFrame_0x30:
+            case GW::UI::UIMessage::kSetLayout:
                 skillbar_position_dirty = true; // Forces a recalculation
                 break;
         }

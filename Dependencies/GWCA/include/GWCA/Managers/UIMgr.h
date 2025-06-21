@@ -191,7 +191,7 @@ namespace GW {
             uint32_t field88_0x178;
             uint32_t field89_0x17c;
             uint32_t field90_0x180;
-            uint32_t field91_0x184;
+            uint32_t frame_state;
             uint32_t field92_0x188;
             uint32_t field93_0x18c;
             uint32_t field94_0x190;
@@ -203,17 +203,17 @@ namespace GW {
             uint32_t field100_0x1a8;
 
             bool IsCreated() const {
-                return (field91_0x184 & 0x4) != 0;
+                return (frame_state & 0x4) != 0;
             }
             bool IsVisible() const {
                 return !IsHidden();
             }
             bool IsHidden() const {
-                return (field91_0x184 & 0x200) != 0;
+                return (frame_state & 0x200) != 0;
             }
 
             bool IsDisabled() const {
-                return (field91_0x184 & 0x10) != 0;
+                return (frame_state & 0x10) != 0;
             }
         };
         static_assert(sizeof(Frame) == 0x1ac);
@@ -287,13 +287,34 @@ namespace GW {
             kResize                     = 0x8,
             kInitFrame                  = 0x9,
             kDestroyFrame               = 0xb,
+            kFrameMessage_0x13          = 0x13,
             kKeyDown                    = 0x1e, // wparam = UIPacket::kKeyAction*
             kKeyUp                      = 0x20, // wparam = UIPacket::kKeyAction*
             kMouseClick                 = 0x22, // wparam = UIPacket::kMouseClick*
             kMouseClick2                = 0x2e, // wparam = UIPacket::kMouseAction*
             kMouseAction                = 0x2f, // wparam = UIPacket::kMouseAction*
+            kRenderFrame_0x30 = 0x30,
+            kRenderFrame_0x32 = 0x32,
             kSetLayout                  = 0x33,
-            kFrameMessage_0x47          = 0x47, // Multiple uses depending on frame
+            kRenderFrame_0x43 = 0x43,
+            kFrameMessage_0x46          = 0x47,
+            kFrameMessage_0x47, // Multiple uses depending on frame
+            kFrameMessage_0x48, // Multiple uses depending on frame
+            kFrameMessage_0x49, // Multiple uses depending on frame
+            kFrameMessage_0x4a, // Multiple uses depending on frame
+            kFrameMessage_0x4b, // Multiple uses depending on frame
+            kFrameMessage_0x4c, // Multiple uses depending on frame
+            kFrameMessage_0x4d, // Multiple uses depending on frame
+            kFrameMessage_0x4e, // Multiple uses depending on frame
+            kFrameMessage_0x4f, // Multiple uses depending on frame
+            kFrameMessage_0x50, // Multiple uses depending on frame
+            kFrameMessage_0x51, // Multiple uses depending on frame
+            kFrameMessage_0x52, // Multiple uses depending on frame
+            kFrameMessage_0x53, // Multiple uses depending on frame
+            kFrameMessage_0x54, // Multiple uses depending on frame
+            kFrameMessage_0x55, // Multiple uses depending on frame
+            kFrameMessage_0x56, // Multiple uses depending on frame
+            kFrameMessage_0x57, // Multiple uses depending on frame
             kUpdateAgentEffects         = 0x10000000 | 0x9,
             kRerenderAgentModel         = 0x10000000 | 0x7, // wparam = uint32_t agent_id
             kAgentSpeechBubble          = 0x10000000 | 0x17, 
@@ -377,6 +398,7 @@ namespace GW {
             kUIPositionChanged          = 0x10000000 | 0x141, // wparam = UIPacket::kUIPositionChanged
             kQuestAdded                 = 0x10000000 | 0x149, // wparam = { quest_id, ... }
             kQuestDetailsChanged        = 0x10000000 | 0x14A, // wparam = { quest_id, ... }
+            kQuestRemoved               = 0x10000000 | 0x14B, // wparam = { quest_id, ... }
             kClientActiveQuestChanged   = 0x10000000 | 0x14C, // wparam = { quest_id, ... }. Triggered when the game requests the current quest to change
             kServerActiveQuestChanged   = 0x10000000 | 0x14E, // wparam = UIPacket::kServerActiveQuestChanged*. Triggered when the server requests the current quest to change
             kUnknownQuestRelated        = 0x10000000 | 0x14F, 
