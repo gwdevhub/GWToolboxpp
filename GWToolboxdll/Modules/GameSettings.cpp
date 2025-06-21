@@ -483,7 +483,7 @@ namespace {
     void __fastcall OnSetFrameSkillDescription(SetFrameSkillDescriptionParam* param)
     {
         GW::Hook::EnterHook();
-        constexpr auto frame_set_text_ui_message = static_cast<GW::UI::UIMessage>(0x52);
+        constexpr auto frame_set_text_ui_message = GW::UI::UIMessage::kFrameMessage_0x52;
         const auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameById(param->frame_id), 0xb);
         bool block_description = disable_skill_descriptions_in_outpost && IsOutpost() || disable_skill_descriptions_in_explorable && IsExplorable();
         block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
