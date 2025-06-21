@@ -26,6 +26,7 @@
 #include <Widgets/WorldMapWidget.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
+#include <Utils/ToolboxUtils.h>
 
 namespace {
     bool draw_quest_path_on_terrain = false;
@@ -54,23 +55,23 @@ namespace {
     void OnQuestLogRow_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
     {
         GW::Hook::EnterHook();
-
-        if (double_click_to_travel_to_quest && message->message_id == GW::UI::UIMessage::kMouseClick2) {
-            const auto packet = (GW::UI::UIPacket::kMouseAction*)wParam;
-            if (packet->current_state == 0x7 && (packet->child_offset_id & 0xffff0000) == 0x80000000) {
-                if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-                    if (last_quest_clicked && TIMER_DIFF(last_quest_clicked) < 250) {
-                        const auto quest_id = static_cast<GW::Constants::QuestID>(packet->child_offset_id & 0xffff);
-                        const auto quest = GW::QuestMgr::GetQuest(quest_id);
-                        if (quest && quest->map_to != GW::Constants::MapID::Count) {
-                            TravelWindow::Instance().TravelNearest(quest->map_to);
-                        }
-                    }
-                    last_quest_clicked = TIMER_INIT();
-                }
+        QuestLogRow_UICallback_Ret(message, wParam, lParam);
+        if (!(double_click_to_travel_to_quest
+            && message->message_id == GW::UI::UIMessage::kMouseClick2
+            && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
+            && GW::UI::BelongsToFrame(GW::UI::GetFrameByLabel(L"Quest"), GW::UI::GetFrameById(message->frame_id))) )
+            return GW::Hook::LeaveHook();
+        const auto packet = (GW::UI::UIPacket::kMouseAction*)wParam;
+        if (!(packet->current_state == 0x7 && (packet->child_offset_id & 0xffff0000) == 0x80000000)) 
+            return GW::Hook::LeaveHook(); // Not a double click on a quest entry
+        if (last_quest_clicked && TIMER_DIFF(last_quest_clicked) < 250) {
+            const auto quest_id = static_cast<GW::Constants::QuestID>(packet->child_offset_id & 0xffff);
+            const auto quest = GW::QuestMgr::GetQuest(quest_id);
+            if (quest && quest->map_to != GW::Constants::MapID::Count) {
+                TravelWindow::Instance().TravelNearest(quest->map_to);
             }
         }
-        QuestLogRow_UICallback_Ret(message, wParam, lParam);
+        last_quest_clicked = TIMER_INIT();
         GW::Hook::LeaveHook();
     }
 
@@ -649,12 +650,13 @@ void QuestModule::Initialize()
     }
     RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
 
-    address = GW::Scanner::Find("\x83\xc0\xfc\x83\xf8\x54", "xxxxxx", -0xe);
-    if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_TEXT)) {
-        QuestLogRow_UICallback_Func = (GW::UI::UIInteractionCallback)address;
+    QuestLogRow_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("CtlFrameList.cpp", "selection", 0, 0), 0xfff);
+    
+    if (QuestLogRow_UICallback_Func) {
         GW::Hook::CreateHook((void**)&QuestLogRow_UICallback_Func, OnQuestLogRow_UICallback, (void**)&QuestLogRow_UICallback_Ret);
         GW::Hook::EnableHooks(QuestLogRow_UICallback_Func);
     }
+
 #ifdef _DEBUG
     ASSERT(QuestLogRow_UICallback_Func);
     ASSERT(bypass_custom_quest_assertion_patch.GetAddress());

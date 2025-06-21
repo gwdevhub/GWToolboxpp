@@ -254,6 +254,15 @@ namespace GW {
                 *(std::wstring*)param = s;
             }, out, language_id);
         }
+        bool BelongsToFrame(GW::UI::Frame* parent, GW::UI::Frame* child) {
+            while (child && parent) {
+                if (child == parent) {
+                    return true;
+                }
+                child = GetParentFrame(child);
+            }
+            return false;
+        }
     }
 
     namespace Agents {
