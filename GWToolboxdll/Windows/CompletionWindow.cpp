@@ -1587,7 +1587,7 @@ void CompletionWindow::Initialize()
     skills.push_back(new PvESkill(SkillID::Vow_of_Revolution));
     skills.push_back(new PvESkill(SkillID::Heroic_Refrain));
 
-    constexpr auto message_ids = {
+    constexpr GW::UI::UIMessage message_ids[] = {
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kSendDialog,
         GW::UI::UIMessage::kDialogButton,
