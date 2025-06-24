@@ -13,7 +13,7 @@ If you are here to check toolbox features or for a download link, go to [https:/
 * vcpkg. This is integrated in the [Visual Studio Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2022). Alternatively download the latest version from [https://github.com/microsoft/vcpkg/releases/](https://github.com/microsoft/vcpkg/releases/latest).
 * [Git](https://git-scm.com/)
 
-1. Open **Git Bash**. Use all the following commands in **Git Bash**. 
+1. Open **Visual Studio Developer PowerShell**. Use all the following commands: 
 
 2. Clone the repository recursively: 
 `git clone --recursive https://github.com/gwdevhub/GWToolboxpp.git`
