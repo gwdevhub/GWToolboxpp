@@ -632,7 +632,7 @@ void QuestModule::Initialize()
         bypass_custom_quest_assertion_patch.TogglePatch(true);
     }
 
-    constexpr auto ui_messages = {
+    constexpr GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kQuestDetailsChanged,
         GW::UI::UIMessage::kQuestAdded,
         GW::UI::UIMessage::kClientActiveQuestChanged,

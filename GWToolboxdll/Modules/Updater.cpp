@@ -36,7 +36,7 @@ namespace {
 
     Step step = Checking;
 
-    bool is_latest_version = false;
+    bool is_latest_version = true;
     bool notified = false;
     bool forced_ask = false;
     clock_t last_check = 0;
@@ -277,6 +277,7 @@ void Updater::CheckForUpdate(const bool forced)
             }
             return;
         }
+        is_latest_version = false;
         if (!forced && mode == Mode::DontCheckForUpdates) {
             step = Done;
             return; // Do not check for updates
