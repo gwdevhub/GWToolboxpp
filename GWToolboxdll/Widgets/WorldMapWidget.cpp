@@ -287,7 +287,7 @@ namespace {
             // Trigger a benign ui message e.g. guild context update; world map subscribes to this, and automatically updates the view.
             // GW::UI::SendUIMessage((GW::UI::UIMessage)0x100000ca); // disables guild/ally chat until reloading char/map
             const auto world_map_context = GW::Map::GetWorldMapContext();
-            const auto frame = GW::UI::GetFrameById(world_map_context->frame_id);
+            const auto frame = world_map_context ? GW::UI::GetFrameById(world_map_context->frame_id) : nullptr;
             GW::UI::SendFrameUIMessage(frame, GW::UI::UIMessage::kMapLoaded, nullptr);
             //GW::UI::SendFrameUIMessage(frame,(GW::UI::UIMessage)0x1000008e, nullptr);
         });
@@ -652,6 +652,7 @@ void WorldMapWidget::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_lines_on_world_map);
     LOAD_BOOL(showing_all_quests);
     LOAD_BOOL(apply_quest_colors);
+    ShowAllOutposts(showing_all_outposts);
 }
 
 void WorldMapWidget::SaveSettings(ToolboxIni* ini)
