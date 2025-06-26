@@ -15,8 +15,8 @@ If you are here to check toolbox features or for a download link, go to [https:/
 
 1. Open **Visual Studio Developer PowerShell**. Use all the following commands: 
 
-2. Clone the repository recursively: 
-`git clone --recursive https://github.com/gwdevhub/GWToolboxpp.git`
+2. Clone the repository: 
+`git clone https://github.com/gwdevhub/GWToolboxpp.git`
 
 3. Navigate to the GWToolboxpp folder: 
 `cd GWToolboxpp`
