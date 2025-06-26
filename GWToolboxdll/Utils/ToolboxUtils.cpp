@@ -32,6 +32,7 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <Timer.h>
+#include <GWCA/GameEntities/Frame.h>
 
 namespace {
     typedef UUID* (__cdecl*PortalGetUserId_pt)();
@@ -126,8 +127,9 @@ namespace GW {
             struct button_param {
                 const wchar_t* name;
                 uint32_t play;
+                int h0008 = -1;
             };
-            button_param wparam = {name, 0u}; // NB: We'll explicitly play in a bit
+            button_param wparam = {name, 0u,-1}; // NB: We'll explicitly play in a bit
             action.wparam = &wparam;
             action.current_state = 0x7;
             if (!GW::UI::SendFrameUIMessage(GW::UI::GetParentFrame(selector), GW::UI::UIMessage::kMouseClick2, &action)) 

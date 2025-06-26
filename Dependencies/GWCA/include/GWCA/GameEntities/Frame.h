@@ -74,8 +74,8 @@ namespace GW {
         // Some dropdowns are only used by reference to their index. Others actually have values assigned to their indeces.
 		GWCA_API bool HasValueMapping();
 
-        uint32_t GetValue() override;
-        bool SetValue(uint32_t value) override;
+        GWCA_API uint32_t GetValue() override;
+        GWCA_API bool SetValue(uint32_t value) override;
     };
     struct SliderFrame final : UI::Frame, FrameWithValue {
         GWCA_API bool GetValue(uint32_t* selected_value);
