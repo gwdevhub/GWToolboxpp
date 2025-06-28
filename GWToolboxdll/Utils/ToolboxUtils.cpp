@@ -117,23 +117,55 @@ namespace GW {
 
         const bool SelectCharacterToPlay(const wchar_t* name, bool play)
         {
-            const auto selector = GetSelectorFrame();
-            if (!(selector && GW::UI::GetFrameContext(selector))) return false;
 
-            if (!AccountMgr::GetAvailableCharacter(name)) return false;
-            GW::UI::UIPacket::kMouseAction action{};
-            action.frame_id = selector->frame_id;
-            action.child_offset_id = selector->child_offset_id;
-            struct button_param {
-                const wchar_t* name;
-                uint32_t play;
-                int h0008 = -1;
+            struct CharSelectorChar {
+                uint32_t h0000;
+                uint32_t h0004;
+                uint32_t h0008;
+                uint32_t h000C;
+                uint32_t h0010;
+                uint32_t h0014;
+                uint32_t h0018;
+                uint32_t h001C;
+                wchar_t name[0x14];
+                // ...
             };
-            button_param wparam = {name, 0u,-1}; // NB: We'll explicitly play in a bit
-            action.wparam = &wparam;
-            action.current_state = 0x7;
-            if (!GW::UI::SendFrameUIMessage(GW::UI::GetParentFrame(selector), GW::UI::UIMessage::kMouseClick2, &action)) 
-                return false;
+            struct CharSelectorContext {
+                uint32_t vtable;
+                uint32_t frame_id;
+                GW::Array<CharSelectorChar*> chars;
+                // ...
+            };
+            const auto selector = GetSelectorFrame();
+            const auto ctx = (CharSelectorContext*)GW::UI::GetFrameContext(selector);
+            if (!(name && ctx)) return false;
+
+            const auto panes = GW::UI::GetChildFrame(selector, 0);
+
+            uint32_t selected_idx = 0;
+            GW::UI::SendFrameUIMessage(panes, GW::UI::UIMessage::kFrameMessage_0x4a, 0, (void*)&selected_idx);
+            bool chosen = false;
+            for (size_t i = 0; !chosen && i < ctx->chars.size(); i++) {
+                const auto c = ctx->chars[i];
+                if (!(c && wcscmp(c->name, name) == 0)) 
+                    continue; // Not this character
+                while (selected_idx != i) {
+                    // Traverse the character panes until the correct index is selected
+                    GW::UI::UIPacket::kKeyAction action;
+                    action.gw_key = 0x1c; // Emulate keypress
+                    GW::UI::SendFrameUIMessage(panes, GW::UI::UIMessage::kKeyDown, &action);
+                    auto new_idx = selected_idx;
+                    GW::UI::SendFrameUIMessage(panes, GW::UI::UIMessage::kFrameMessage_0x4a, 0, (void*)&new_idx);
+                    if (new_idx == selected_idx) {
+                        break; // This shouln't happen - the character should have changed
+                    }
+                    selected_idx = new_idx;
+                }
+                chosen = selected_idx == i;
+                break;
+            }
+            if (!chosen) return false;
+
             return (!play || GW::UI::ButtonClick(GW::UI::GetFrameByLabel(L"Play")));
         }
     }
