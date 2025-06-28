@@ -115,7 +115,7 @@ namespace {
     {
         const auto gameplay_context = GW::GetGameplayContext();
         const auto mission_map_context = GW::Map::GetMissionMapContext();
-        if (!(mission_map_frame && mission_map_frame->IsVisible()))
+        if (!(gameplay_context && mission_map_frame && mission_map_frame->IsVisible()))
             return false;
 
         const auto root = GW::UI::GetRootFrame();
