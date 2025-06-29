@@ -71,9 +71,7 @@ namespace GW {
         /* +h003C */ uint32_t portal_count;
         /* +h0040 */ Portal   *portals;
         /* +h0044 */ Node     *root_node;
-        /* +h0048 */ uint32_t *h0048;
-        /* +h004C */ uint32_t *h004C;
-        /* +h0050 */ uint32_t *h0050;
+        /* +h0048 */ BaseArray<Vec2f> dat_vectors; // this is an array of vectors read from the dat file. When reading the xnodes or ynodes from the dat file, an index will be used to get the pos.
     };
     static_assert(sizeof(PathingMap) == 84, "struct PathingMap has incorrect size");
 

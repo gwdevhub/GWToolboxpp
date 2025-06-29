@@ -63,7 +63,7 @@ namespace MathUtil {
 
     GW::Vec3f GetVec3f(const GW::GamePos& gp) {
         auto map = GW::GetMapContext();
-        if (!map || map->sub1->sub2->pmaps.size() <= gp.zplane) [[unlikely]] {
+        if (!map || map->path->pathMaps.size() <= gp.zplane) [[unlikely]] {
             auto player = GW::Agents::GetObservingAgent();
             if (player) return GW::Vec3f(gp.x, gp.y, player->z);
             else return GW::Vec3f(gp.x, gp.y, 0.0f);

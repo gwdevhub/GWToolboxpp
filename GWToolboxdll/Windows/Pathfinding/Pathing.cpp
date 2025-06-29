@@ -32,9 +32,8 @@ namespace {
                 res = Pathing::Error::InvalidMapContext;
                 return;
             }
-            GW::Array<uint32_t>& block = mapContext->sub1->pathing_map_block;
-            if (block.m_size)
-                block_pt->assign(block.m_buffer, block.m_buffer + block.m_size);
+            auto& block = mapContext->path->blockedPlanes;
+            if (block.size()) block_pt->assign(&block[0], &block[0] + block.size());
             res = Pathing::Error::OK;
         });
         // Wait
@@ -380,12 +379,13 @@ namespace Pathing {
         PathingMapArray* map = Map::GetPathingMap();
         MapContext* mapContex = GetMapContext();
         if (!map || !mapContex) return;
-        ASSERT(mapContex->sub1);
+        ASSERT(mapContex->path);
+        const auto total_trapezoid_count = mapContex->path->pathMaps.size();
 
         m_aabbs.clear();
-        m_aabbs.reserve(mapContex->sub1->total_trapezoid_count); //h0014[0] == total trapezoid count
+        m_aabbs.reserve(total_trapezoid_count); // h0014[0] == total trapezoid count
         m_trapezoids.clear();
-        m_trapezoids.reserve(mapContex->sub1->total_trapezoid_count);
+        m_trapezoids.reserve(total_trapezoid_count);
 
         for (uint32_t i = 0; i < map->size(); ++i) {
             auto& m = (*map)[i];
