@@ -36,6 +36,8 @@ void ToolboxUIElement::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(lock_move);
     LOAD_BOOL(lock_size);
     LOAD_BOOL(auto_size);
+    LOAD_BOOL(show_titlebar);
+    LOAD_BOOL(show_closebutton);
 }
 
 void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
@@ -46,6 +48,8 @@ void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(lock_move);
     SAVE_BOOL(lock_size);
     SAVE_BOOL(auto_size);
+    SAVE_BOOL(show_titlebar);
+    SAVE_BOOL(show_closebutton);
 }
 
 ImGuiWindowFlags ToolboxUIElement::GetWinFlags(ImGuiWindowFlags flags) const

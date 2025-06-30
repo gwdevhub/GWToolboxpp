@@ -7,6 +7,7 @@ class DistanceWidget : public ToolboxWidget {
     {
         is_resizable = false;
         auto_size = true;
+        has_titlebar = true;
     }
     ~DistanceWidget() override = default;
 

@@ -218,7 +218,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
             }
 
             ImVec2 cur = ImGui::GetCursorPos();
-            if (font_size_header > 0.f) {
+            if (font_size_header > 0.f && show_titlebar) {
                 // 'health'
                 ImGui::PushFont(FontLoader::GetFontByPx(font_size_header));
                 ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
