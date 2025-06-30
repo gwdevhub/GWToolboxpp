@@ -125,7 +125,7 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
             ImVec2 cur = ImGui::GetCursorPos();
             constexpr auto background = ImColor(Colors::Black());
             // 'distance'
-            if (font_size_header > 0.f) {
+            if (font_size_header > 0.f && show_titlebar) {
                 ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header1));
                 ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
                 ImGui::TextColored(background, "Distance");

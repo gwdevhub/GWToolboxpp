@@ -47,7 +47,7 @@ public:
         return has_closebutton && !show_closebutton ? nullptr : &visible;
     }
 
-    bool has_titlebar = true;
+    bool has_titlebar = false;
     bool show_titlebar = true;
     bool show_closebutton = true;
 
