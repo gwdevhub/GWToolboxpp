@@ -349,7 +349,7 @@ namespace {
                 compass_position_dirty = true; // Forces a recalculation
                 break;
             case GW::UI::UIMessage::kQuestAdded:
-            case GW::UI::UIMessage::kQuestDetailsChanged:
+            case GW::UI::UIMessage::kClientActiveQuestChanged:
             case GW::UI::UIMessage::kServerActiveQuestChanged:
             case GW::UI::UIMessage::kUnknownQuestRelated:
                 if (!hide_compass_quest_marker) {
