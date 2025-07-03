@@ -89,6 +89,12 @@ namespace {
         clock_t started_at;
     };
 
+    bool IsUnid(const GW::Item* item)
+    {
+        const auto inv_item = static_cast<const InventoryManager::Item*>(item);
+        return inv_item && inv_item->CanBeIdentified() && inv_item->GetRarity() == GW::Constants::Rarity::Gold;
+    }
+
     std::unordered_map<uint32_t, PendingMove> pending_moves; // { bag_idx | slot, { quantity_to_move,move_started_at} }
     uint16_t get_pending_move(const GW::Constants::Bag bag_id, const uint32_t slot)
     {
@@ -359,7 +365,14 @@ namespace {
         }
         return out;
     }
-
+    std::vector<InventoryManager::Item*> filter_storage(const std::function<bool(InventoryManager::Item*)>& cmp, const uint32_t limit = 0)
+    {
+        return filter_items(GW::Constants::Bag::Material_Storage, GW::Constants::Bag::Storage_14, cmp, limit);
+    }
+    std::vector<InventoryManager::Item*> filter_inventory(const std::function<bool(InventoryManager::Item*)>& cmp, const uint32_t limit = 0)
+    {
+        return filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, cmp, limit);
+    }
     uint16_t count_items(const GW::Constants::Bag from, const GW::Constants::Bag to, std::function<bool(InventoryManager::Item*)> cmp)
     {
         const auto items = filter_items(from, to, std::move(cmp));
@@ -382,26 +395,37 @@ namespace {
         return &c->player.items;
     }
 
-    void store_all_materials()
-    {
-        const std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [](const GW::Item* item) {
-            return item && item->GetIsMaterial();
-        });
-        for (const auto& item : items) {
+    void store_items(const std::vector<InventoryManager::Item*>& items) {
+        for (const auto item : items) {
             move_item_to_storage(item);
         }
         pending_moves.clear();
     }
+    void withdraw_items(const std::vector<InventoryManager::Item*>& items) {
+        for (const auto item : items) {
+            move_item_to_inventory(item);
+        }
+        pending_moves.clear();
+    }
+
+    void store_all_materials()
+    {
+        store_items(filter_inventory([](const GW::Item* item) {
+            return item && item->GetIsMaterial();
+        }));
+    }
+    void store_all_unids() {
+        store_items(filter_inventory(IsUnid));
+    }
+    void withdraw_all_unids() {
+        withdraw_items(filter_storage(IsUnid));
+    }
 
     void store_all_tomes()
     {
-        const std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [](const InventoryManager::Item* item) {
+        store_items(filter_inventory([](const InventoryManager::Item* item) {
             return item && item->IsTome();
-        });
-        for (const auto& item : items) {
-            move_item_to_storage(item);
-        }
-        pending_moves.clear();
+        }));
     }
 
     void move_all_item(InventoryManager::Item* like_item)
@@ -411,68 +435,41 @@ namespace {
             return cmp && InventoryManager::IsSameItem(like_item, cmp);
         };
         if (like_item->bag->IsInventoryBag()) {
-            const std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, is_same_item);
-            for (const auto& item : items) {
-                move_item_to_storage(item);
-            }
+            store_items(filter_inventory(is_same_item));
         }
         else {
-            const std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Material_Storage, GW::Constants::Bag::Storage_14, is_same_item);
-            for (const auto& item : items) {
-                move_item_to_inventory(item);
-            }
+            withdraw_items(filter_storage(is_same_item));
         }
-        pending_moves.clear();
     }
 
     void store_all_upgrades()
     {
-        const std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [](const InventoryManager::Item* item) {
+        store_items(filter_inventory([](const InventoryManager::Item* item) {
             return item && item->type == GW::Constants::ItemType::Rune_Mod;
-        });
-        for (const auto& item : items) {
-            move_item_to_storage(item);
-        }
-        pending_moves.clear();
+        }));
     }
     void store_all_dyes()
     {
-        const std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [](const InventoryManager::Item* item) {
+        store_items(filter_inventory([](const InventoryManager::Item* item) {
             return item && item->type == GW::Constants::ItemType::Dye;
-            });
-        for (const auto& item : items) {
-            move_item_to_storage(item);
-        }
-        pending_moves.clear();
+            }));
     }
     void withdraw_all_dyes()
     {
-        const std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Storage_1, GW::Constants::Bag::Storage_14, [](const InventoryManager::Item* item) {
+        withdraw_items(filter_storage([](const InventoryManager::Item* item) {
             return item && item->type == GW::Constants::ItemType::Dye;
-            });
-        for (const auto& item : items) {
-            move_item_to_inventory(item);
-        }
-        pending_moves.clear();
+        }));
     }
     void withdraw_all_tomes()
     {
-        const std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Storage_1, GW::Constants::Bag::Storage_14, [](const InventoryManager::Item* item) {
+        withdraw_items(filter_storage([](const InventoryManager::Item* item) {
             return item && item->IsTome();
-            });
-        for (const auto& item : items) {
-            move_item_to_inventory(item);
-        }
-        pending_moves.clear();
+            }));
     }
     void store_all_nicholas_items() {
-        const std::vector<InventoryManager::Item*> items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, [](const InventoryManager::Item* item) {
+        store_items(filter_inventory([](const InventoryManager::Item* item) {
             return item && DailyQuests::GetNicholasItemInfo(item->name_enc);
-            });
-        for (const auto& item : items) {
-            move_item_to_storage(item);
-        }
-        pending_moves.clear();
+        }));
     }
 
     void consume_all(InventoryManager::Item* like_item) {
@@ -2096,6 +2093,13 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
         char move_all_label[128];
         *move_all_label = 0;
         if (context_item_actual->IsInventoryItem()) {
+            if (IsUnid(context_item_actual)) {
+                if (ImGui::Button("Store All Unids", size)) {
+                    ImGui::CloseCurrentPopup();
+                    store_all_unids();
+                    goto end_popup;
+                }
+            }
             if (context_item_actual->GetIsMaterial()) {
                 if (ImGui::Button("Store All Materials", size)) {
                     ImGui::CloseCurrentPopup();
@@ -2134,6 +2138,13 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
             snprintf(move_all_label, _countof(move_all_label), "Store All %s", context_item.plural_item_name->string().c_str());
         }
         if(context_item_actual->IsStorageItem()) {
+            if (IsUnid(context_item_actual)) {
+                if (ImGui::Button("Withdraw All Unids", size)) {
+                    ImGui::CloseCurrentPopup();
+                    withdraw_all_unids();
+                    goto end_popup;
+                }
+            }
             if (context_item_actual->type == GW::Constants::ItemType::Dye) {
                 if (ImGui::Button("Withdraw All Dyes", size)) {
                     ImGui::CloseCurrentPopup();

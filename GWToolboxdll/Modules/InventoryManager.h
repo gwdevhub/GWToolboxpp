@@ -182,6 +182,7 @@ public:
         {
             return (interaction & 1) != 0;
         }
+        [[nodiscard]] bool CanBeIdentified() const { return (interaction & 0x800000) != 0; }
         [[nodiscard]] bool IsPrefixUpgradable() const
         {
             return ((interaction >> 14) & 1) == 0;
