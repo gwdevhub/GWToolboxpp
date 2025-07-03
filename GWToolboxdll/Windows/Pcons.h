@@ -62,6 +62,9 @@ public:
 
     virtual void Draw(IDirect3DDevice9* device);
     virtual void Update(int delay = -1);
+
+    void ItemUpdated(const GW::Item* item);
+
     // Similar to GW::Items::MoveItem, except this returns amount moved and uses the split stack header when needed.
     // Most of this logic should be integrated back into GWCA repo, but I've written it here for GWToolbox
     static uint32_t MoveItem(const GW::Item* item, GW::Bag* bag, size_t slot,

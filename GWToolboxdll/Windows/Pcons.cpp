@@ -233,6 +233,12 @@ void Pcon::Update(int delay)
     }
 }
 
+void Pcon::ItemUpdated(const GW::Item* item)
+{
+    if (item && QuantityForEach(item))
+        ResetCounts();
+}
+
 bool Pcon::ReserveSlotForMove(const size_t bagIndex, const size_t slot)
 {
     if (IsSlotReservedForMove(bagIndex, slot)) {

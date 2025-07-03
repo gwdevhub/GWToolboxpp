@@ -21,6 +21,7 @@
 #include <Windows/HotkeysWindow.h>
 #include <Windows/MainWindow.h>
 #include <Windows/PconsWindow.h>
+#include <GWCA/Managers/ItemMgr.h>
 
 using namespace GW::Constants;
 
@@ -270,6 +271,29 @@ namespace {
                 }
             }
             break;
+            case GW::UI::UIMessage::kInventorySlotUpdated:
+            case GW::UI::UIMessage::kInventorySlotCleared: {
+                struct Packet {
+                    uint32_t h0000;
+                    uint32_t item_id;
+                    uint32_t bag_index;
+                    uint32_t bag_slot;
+                };
+                const auto packet = (Packet*)wparam;
+                const auto current_item = GW::Items::GetItemById(packet->item_id);
+                if (!current_item) break;
+                for (auto& pcon : Instance().pcons) {
+                    pcon->ItemUpdated(current_item);
+                }
+            } break;
+            case GW::UI::UIMessage::kItemUpdated: {
+                const auto packet = (GW::UI::UIPacket::kItemUpdated*)wparam;
+                const auto current_item = GW::Items::GetItemById(packet->item_id);
+                if (!current_item) break;
+                for (auto& pcon : Instance().pcons) {
+                    pcon->ItemUpdated(current_item);
+                }
+            } break;
         }
     }
 }
@@ -402,7 +426,10 @@ void PconsWindow::Initialize()
         GW::UI::UIMessage::kMissionComplete,
         GW::UI::UIMessage::kPostProcessingEffect,
         GW::UI::UIMessage::kObjectiveComplete,
-        GW::UI::UIMessage::kEffectAdd
+        GW::UI::UIMessage::kEffectAdd,       
+        GW::UI::UIMessage::kInventorySlotCleared, 
+        GW::UI::UIMessage::kItemUpdated,     
+        GW::UI::UIMessage::kInventorySlotUpdated
     };
     for (auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, message_id, OnUIMessage);
