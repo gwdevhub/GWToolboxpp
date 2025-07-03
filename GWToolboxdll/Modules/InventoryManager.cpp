@@ -1033,6 +1033,7 @@ void InventoryManager::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(trade_whole_stacks);
     SAVE_BOOL(wiki_link_on_context_menu);
     SAVE_BOOL(hide_unsellable_items);
+    SAVE_BOOL(hide_golds_from_merchant);
     SAVE_BOOL(hide_weapon_sets_and_customized_items);
     SAVE_BOOL(change_secondary_for_tome);
     SAVE_BOOL(right_click_context_menu_in_outpost);
@@ -1058,6 +1059,7 @@ void InventoryManager::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(salvage_nicholas_items);
     LOAD_BOOL(trade_whole_stacks);
     LOAD_BOOL(wiki_link_on_context_menu);
+    LOAD_BOOL(hide_golds_from_merchant);
     LOAD_BOOL(hide_unsellable_items);
     LOAD_BOOL(hide_weapon_sets_and_customized_items);
     LOAD_BOOL(change_secondary_for_tome);
@@ -1725,6 +1727,7 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::TextDisabled("This module is responsible for extra item functions via ctrl+click, right click or double click");
     ImGui::Checkbox("Hide unsellable items from merchant window", &hide_unsellable_items);
     ImGui::Checkbox("Hide weapon sets and customized items from merchant window", &hide_weapon_sets_and_customized_items);
+    ImGui::Checkbox("Hide gold items from merchant window", &hide_golds_from_merchant);
     ImGui::Checkbox("Move whole stacks by default", &trade_whole_stacks);
     ImGui::ShowHelp("Shift drag to prompt for amount, drag without shift to move the whole stack without any item quantity prompts");
     ImGui::TextUnformatted("Move items to trade on:");
@@ -2451,6 +2454,9 @@ bool InventoryManager::Item::IsHiddenFromMerchants()
         return true;
     }
     if (Instance().hide_from_merchant_items.contains(model_id)) {
+        return true;
+    }
+    if (Instance().hide_golds_from_merchant && GetRarity() == GW::Constants::Rarity::Gold) {
         return true;
     }
     return false;

@@ -109,8 +109,11 @@ private:
     bool show_salvage_all_popup = true;
     bool salvage_listeners_attached = false;
     bool only_use_superior_salvage_kits = false;
+
     bool hide_unsellable_items = false;
     bool hide_weapon_sets_and_customized_items = false;
+    bool hide_golds_from_merchant = false;
+
     std::map<uint32_t, std::string> hide_from_merchant_items{};
     bool salvage_rare_mats = false;
     bool salvage_nicholas_items = false;
