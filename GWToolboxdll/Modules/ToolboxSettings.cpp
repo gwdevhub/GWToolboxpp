@@ -39,6 +39,7 @@
 #include <Modules/HeroEquipmentModule.h>
 #include <Modules/NPCVoiceModule.h>
 #include <Modules/LoginModule.h>
+#include <Modules/UIScaler.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -161,7 +162,8 @@ namespace {
 #endif
         LoginModule::Instance(),
         NPCVoiceModule::Instance(),
-        AudioSettings::Instance()
+        AudioSettings::Instance(),   
+        UIScaler::Instance(),
     };
 
     std::vector<WidgetToggle> optional_widgets = {
