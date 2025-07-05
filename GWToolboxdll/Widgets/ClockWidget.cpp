@@ -70,7 +70,7 @@ void ClockWidget::SaveSettings(ToolboxIni* ini)
     ToolboxWidget::SaveSettings(ini);
     SAVE_BOOL(use_24h_clock);
     SAVE_BOOL(show_seconds);
-    LOAD_FLOAT(font_size);
+    SAVE_FLOAT(font_size);
 }
 
 void ClockWidget::DrawSettingsInternal()
