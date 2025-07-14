@@ -32,7 +32,38 @@ namespace GW {
         /* +h0010 */ uint32_t h0010;
         /* +h0014 */ uint32_t trapezoidCount;
         /* +h0018 */ PathingMapArray map;
+        /* +h0028 */ uint32_t h0028;
+        /* +h002C */ uint32_t h002C;
+        /* +h0030 */ uint32_t h0030;
+        /* +h0034 */ uint32_t h0034;
+        /* +h0038 */ uint32_t h0038;
+        /* +h003C */ uint32_t h003C;
+        /* +h0040 */ uint32_t h0040;
+        /* +h0044 */ uint32_t h0044;
+        /* +h0048 */ uint32_t h0048;
+        /* +h004C */ uint32_t h004C;
+        /* +h0050 */ uint32_t h0050;
+        /* +h0054 */ uint32_t h0054;
+        /* +h0058 */ uint32_t h0058;
+        /* +h005C */ uint32_t h005C;
+        /* +h0060 */ uint32_t h0060;
+        /* +h0064 */ uint32_t h0064;
+        /* +h0068 */ uint32_t h0068;
+        /* +h006C */ uint32_t h006C;
+        /* +h0070 */ uint32_t h0070;
+        /* +h0074 */ uint32_t h0074;
+        /* +h0078 */ uint32_t h0078;
+        /* +h007C */ uint32_t h007C;
+        /* +h0080 */ uint32_t h0080;
+        /* +h0084 */ uint32_t h0084;
+        /* +h0088 */ uint32_t h0088;
+        /* +h008C */ uint32_t h008C;
+        /* +h0090 */ uint32_t h0090;
+        /* +h0094 */ uint32_t h0094;
+        /* +h0098 */ uint32_t h0098;
+        /* +h009C */ uint32_t h009C;
     };
+    static_assert(sizeof(MapStaticData) == 0xA0, "struct MapStaticData has incorrect size");
 
     // Those are planes that are blocked and can be unblocked at runtime. e.g., the gates in foundry
     // Those aren't in the dat file, but sent from the server
@@ -82,7 +113,12 @@ namespace GW {
         /* +h0060 */ uint32_t h0060;
         /* +h0064 */ Array<PathWaypoint> waypoints;
         /* +h0074 */ Array<struct Node*> nodeStack;
+        /* +h0084 */ uint32_t h0084;
+        /* +h0088 */ uint32_t h0088;
+        /* +h008C */ uint32_t h008C;
+        /* +h0090 */ uint32_t h0090;
     };
+    static_assert(sizeof(PathContext) == 0x94, "struct PathContext has incorrect size");
 
     struct MapContext {
         /* +h0000 */ float map_boundaries[5];
@@ -98,8 +134,9 @@ namespace GW {
         /* +h0084 */ void* terrain;
         /* +h0088 */ uint32_t h0088[42];
         /* +h0130 */ void* zones;
-        //... Player coords and shit beyond this point if they are desirable :p
+        /* +h0134 */ uint32_t h0134;
     };
+    static_assert(sizeof(MapContext) == 0x138, "struct MapContext has incorrect size");
 
     GWCA_API MapContext* GetMapContext();
 }
