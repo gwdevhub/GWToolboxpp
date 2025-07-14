@@ -1218,7 +1218,7 @@ namespace {
     {
         // @TODO: When frame is removed, the game "expands" to fill the space, but the UI is still offset as if its factoring in the for title bar. Intercept SetWindowPos on the game side instead of doing this???
         const auto pref = GW::UI::GetPreference(GW::UI::NumberPreference::ScreenBorderless);
-        Log::Log("Pref changed %d", pref);
+        //Log::Log("Pref changed %d", pref);
         if (remove_window_border_in_windowed_mode && pref == 0) {
             const auto hwnd = GW::MemoryMgr::GetGWWindowHandle();
             if (!hwnd) return;
