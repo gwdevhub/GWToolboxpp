@@ -33,6 +33,9 @@ namespace {
 
     GW::UI::Frame* effects_frame = nullptr;
 
+    ImGuiViewport* viewport = nullptr;
+    ImDrawList* draw_list = nullptr;
+
     int UptimeToString(char arr[8], int cd)
     {
         cd = std::abs(cd);
@@ -52,14 +55,23 @@ namespace {
     {
         if (!(frame && text && *text && effects_frame)) return;
         auto skill_bottom_right = frame->position.GetBottomRightOnScreen();
+        const auto skill_frame_size = frame->position.GetSizeOnScreen();
 
-        const auto viewport = ImGui::GetMainViewport();
         skill_bottom_right.x += viewport->Pos.x;
         skill_bottom_right.y += viewport->Pos.y;
 
-        const auto draw_list = ImGui::GetBackgroundDrawList(viewport);
+        ImFont* overridden_font = nullptr;
 
-        const ImVec2 label_size = ImGui::CalcTextSize(text);
+        GW::Vec2f label_size = ImGui::CalcTextSize(text);
+        if (label_size.x > skill_frame_size.x) {
+            // If the label is wider than the frame, scale text size.
+            const auto scale_factor = skill_frame_size.x / label_size.x;
+            const auto scaled_size = scale_factor * font_effects;
+            overridden_font = FontLoader::GetFontByPx(scaled_size);
+            ImGui::PushFont(overridden_font, draw_list, scaled_size);
+            label_size *= scale_factor;
+        }
+
         const ImVec2 label_pos(skill_bottom_right.x - label_size.x, skill_bottom_right.y - label_size.y);
         if ((color_background & IM_COL32_A_MASK) != 0) {
             draw_list->AddRectFilled(label_pos, skill_bottom_right, color_background);
@@ -68,6 +80,9 @@ namespace {
             draw_list->AddText({label_pos.x + 1, label_pos.y + 1}, color_text_shadow, text);
         }
         draw_list->AddText(label_pos, color_text_effects, text);
+        if (overridden_font) {
+            ImGui::PopFont(draw_list);
+        }
     }
     
     std::unordered_map<uint32_t, clock_t> effect_timestamps;
@@ -99,8 +114,8 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     if (!effects_frame) {
         return;
     }
-    const auto viewport = ImGui::GetMainViewport();
-    const auto draw_list = ImGui::GetBackgroundDrawList(viewport);
+    viewport = ImGui::GetMainViewport();
+    draw_list = ImGui::GetBackgroundDrawList(viewport);
     const auto font = FontLoader::GetFontByPx(font_effects);
     ImGui::PushFont(font, draw_list, font_effects);
 
