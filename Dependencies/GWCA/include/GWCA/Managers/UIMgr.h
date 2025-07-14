@@ -777,9 +777,9 @@ namespace GW {
             Territory,
             TextureQuality, // TextureLod
             UseBestTextureFiltering,
-            EffectsVolume, // 0 to 100
-            DialogVolume, // 0 to 100
             BackgroundVolume, // 0 to 100
+            DialogVolume, // 0 to 100
+            EffectsVolume, // 0 to 100
             MusicVolume, // 0 to 100
             UIVolume, // 0 to 100
             Vote,
