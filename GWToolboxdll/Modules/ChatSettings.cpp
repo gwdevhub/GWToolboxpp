@@ -415,7 +415,7 @@ void ChatSettings::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry, OnSpeechBubble);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, OnSpeechDialogue);
 
-    constexpr auto ui_messages = {
+    constexpr GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kAgentSpeechBubble,
         GW::UI::UIMessage::kPreferenceFlagChanged,
         GW::UI::UIMessage::kPlayerChatMessage,
