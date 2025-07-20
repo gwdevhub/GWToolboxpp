@@ -7,6 +7,21 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 7.12
+* [Fix] Fixed crashing on startup for some players
+* [Fix] Fixed flagging hotkeys not working for players that don't have the in-game gw compass displayed
+* [Fix] Fixed bug preventing "show all areas" from working when the world map is shown for the first time since tb launch
+* [Fix] Fixed disconnect issue when selecting a character from char select screen in some cases
+* [Fix] Fixed a bug preventing the "hide gw quest marker" setting from working in some cases
+* [Fix] Fixed some edge cases for pcon counts not being correct
+* [Fix] Fixed clock font size being remembered after toolbox restart
+* [Fix] Fixed bug causing some in-game volume preferences to be mixed up when being set via toolbox
+* [Minor] Added logic to make sure that the text for effect countdowns/vanquish progress isn't larger than the icon its overlaying in Effect Monitor
+* [New] Added option to hide gold items from merchant in Toolbox Settings > Inventory Settings
+* [New] Added context menu option to store all/withdraw all unidentified golds in item context menu
+* [New] Added option to further scale the in-game interface size to be smaller or larger than the value set in the F11 settings window in Toolbox Settings > UI Scaler
+
+
 ## Version 7.11
 * [Fix] Rebased code fixes for June update to fix bugs
 * [Fix] Fixed bug preventing hero builds from loading

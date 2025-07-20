@@ -55,7 +55,7 @@ namespace GW {
         /* +h0078 */ uint32_t h0078;
         /* +h007C */ uint32_t h007C;
         /* +h0080 */ uint32_t h0080;
-        /* +h0084 */ uint32_t h0084;
+        /* +h0084 */ uint32_t nextTrapezoidId; // Starts at 0, increment everytime a trapezoid is created. It's used to assign a unique trapezoid id to every trapezoid. Used for path finding.
         /* +h0088 */ uint32_t h0088;
         /* +h008C */ uint32_t h008C;
         /* +h0090 */ uint32_t h0090;
