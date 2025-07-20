@@ -246,7 +246,6 @@ namespace {
         packet.position->state |= 1;
         GW::UI::SendUIMessage(GW::UI::UIMessage::kUIPositionChanged, &packet);
         compass = GetCompassFrame();
-        ASSERT(compass->IsVisible());
         packet.position->state = prev_state;
         GW::UI::SendUIMessage(GW::UI::UIMessage::kUIPositionChanged, &packet);
         return compass && compass->IsVisible();

@@ -7,7 +7,7 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
-## Version 7.12
+## Version 7.13
 * [Fix] Fixed crashing on startup for some players
 * [Fix] Fixed flagging hotkeys not working for players that don't have the in-game gw compass displayed
 * [Fix] Fixed bug preventing "show all areas" from working when the world map is shown for the first time since tb launch
