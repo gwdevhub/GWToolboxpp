@@ -10,6 +10,7 @@ namespace GW {
     GWCA_API uint32_t Hash8(uint8_t data);
     GWCA_API uint32_t Hash16(uint16_t data);
     GWCA_API uint32_t Hash32(uint32_t data);
+    GWCA_API uint32_t HashWString(const wchar_t* str, uint32_t maxLength = -1);
 
     template <typename T>
     struct THash {
