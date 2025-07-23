@@ -151,7 +151,7 @@ namespace {
         uint32_t field4_0x10;
         uint32_t field5_0x14;
         uint32_t field6_0x18;
-        uint32_t field7_0x1c;
+        uint32_t frame_id;
         uint32_t field8_0x20;
         uint32_t field9_0x24;
         uint32_t field10_0x28;
@@ -234,33 +234,12 @@ namespace {
         return v;
     }
 
-
-    GW::UI::Frame* GetCompassFrame();
-    bool EnsureCompassIsLoaded()
+        // Just send the UI message to update frames, bypassing use settings.
+    bool SetWindowVisibleTmp(GW::UI::WindowID window_id, bool visible)
     {
-        if (!GW::Map::GetIsMapLoaded()) return false;
-        auto compass = GetCompassFrame();
-        if (compass && compass->IsVisible()) return true;
-        GW::UI::UIPacket::kUIPositionChanged packet = {GW::UI::WindowID::WindowID_Compass, GW::UI::GetWindowPosition(GW::UI::WindowID::WindowID_Compass)};
-        uint32_t prev_state = packet.position->state;
-        packet.position->state |= 1;
-        GW::UI::SendUIMessage(GW::UI::UIMessage::kUIPositionChanged, &packet);
-        compass = GetCompassFrame();
-        packet.position->state = prev_state;
-        GW::UI::SendUIMessage(GW::UI::UIMessage::kUIPositionChanged, &packet);
-        return compass && compass->IsVisible();
-    }
-    bool ResetWindowPosition(GW::UI::WindowID, GW::UI::Frame*);
-    bool RepositionMinimapToCompass();
-
-    // Just send the UI message to update frames, bypassing use settings.
-    bool SetWindowVisibleTmp(GW::UI::WindowID window_id, bool visible) {
         auto position = GW::UI::GetWindowPosition(window_id);
         auto original_position = *position;
-        GW::UI::UIPacket::kUIPositionChanged packet = {
-            window_id,
-            position
-        };
+        GW::UI::UIPacket::kUIPositionChanged packet = {window_id, position};
         if (visible) {
             position->state |= 1;
         }
@@ -272,6 +251,24 @@ namespace {
         *position = original_position;
         return true;
     }
+
+    GW::UI::Frame* GetCompassFrame();
+    bool EnsureCompassIsLoaded()
+    {
+        if (!GW::Map::GetIsMapLoaded()) return false;
+        const auto compass = GetCompassFrame();
+        if (!compass) return false;
+        const auto context = (CompassContext*)GW::UI::GetFrameContext(compass);
+        if (!context->compass_canvas) {
+            GW::UI::SetFrameVisible(compass, true);
+            GW::UI::TriggerFrameRedraw(compass);
+        }
+        return context->compass_canvas;
+    }
+    bool ResetWindowPosition(GW::UI::WindowID, GW::UI::Frame*);
+    bool RepositionMinimapToCompass();
+
+
 
     // Check whether the compass ought to be hidden or not depending on user settings
     bool OverrideCompassVisibility() {
@@ -306,28 +303,19 @@ namespace {
         GW::Hook::EnterHook();
 
         compass_context = message->wParam ? * (CompassContext**)message->wParam : nullptr;
-        // frame + 0x40 is the ai control handler bits. Zero it out to prevent actions from interacting with the flagging controls.
         switch (message->message_id) {
-            case GW::UI::UIMessage::kResize: // Creates frame + 0x40 if it doesn't exist, but also draws it - we use the patch to make sure it never draws.
-                OnCompassFrame_UICallback_Ret(message, wParam, lParam);
-                if (compass_fix_pending && compass_context->compass_canvas) {
-                    compass_fix_pending = false;
-                    SetWindowVisibleTmp(GW::UI::WindowID_Compass, false);
-                }
-                break;
+             
             case GW::UI::UIMessage::kRenderFrame_0x43: {
-                if (compass_fix_pending)
-                    break; // Block any redrawing until the compass fix has been done
-                if (!compass_context->compass_canvas) {
-                    compass_fix_pending = true;
-                    SetWindowVisibleTmp(GW::UI::WindowID_Compass, true);
-                    break;
-                }
                 if (OverrideCompassVisibility()) {
                     break;
                 }
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
             } break;
+            case GW::UI::UIMessage::kResize: {
+                // NB: Resize packet creates flagging controls and compass canvas
+                OnCompassFrame_UICallback_Ret(message, wParam, lParam);
+                OverrideCompassVisibility();
+            } break;                                    
             case GW::UI::UIMessage::kFrameMessage_0x4a: // 0x4a need to pass through to allow hotkey flagging
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 break;
@@ -342,8 +330,6 @@ namespace {
             case GW::UI::UIMessage::kRenderFrame_0x30:
             case GW::UI::UIMessage::kRenderFrame_0x32:
             case GW::UI::UIMessage::kSetLayout:
-                if (compass_fix_pending)
-                    break; // Block any repositioning messages until the compass fix has been done
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 compass_position_dirty = true; // Forces a recalculation
                 break;
