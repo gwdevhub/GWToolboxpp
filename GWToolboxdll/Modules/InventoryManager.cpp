@@ -849,7 +849,7 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessa
         } break;
         case GW::UI::UIMessage::kVendorWindow: {
             merchant_list_tab = *static_cast<uint32_t*>(wparam);
-        }
+        } break;
         // About to request a quote for an item
         case GW::UI::UIMessage::kSendMerchantRequestQuote: {
             const auto packet = (GW::UI::UIPacket::kSendMerchantRequestQuote*)wparam;
