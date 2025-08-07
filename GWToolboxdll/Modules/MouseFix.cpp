@@ -140,9 +140,9 @@ namespace {
             return; // No gw mouse move ptr; this shouldn't happen
         }
 
-        UINT dwSize = sizeof(RAWINPUT);
-        BYTE lpb[sizeof(RAWINPUT)];
-        ASSERT(GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) == dwSize);
+        BYTE lpb[128];
+        UINT dwSize = _countof(lpb);
+        ASSERT(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) < dwSize);
 
         const RAWINPUT* raw = reinterpret_cast<RAWINPUT*>(lpb);
         if ((raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) == 0) {
