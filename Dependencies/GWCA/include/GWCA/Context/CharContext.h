@@ -13,7 +13,7 @@ namespace GW {
 
     struct ObserverMatch;
 
-    struct ProgressBar {
+    struct ProgressBarContext {
         int     pips;
         uint8_t color[4];      // RGBA
         uint8_t background[4]; // RGBA
@@ -54,7 +54,7 @@ namespace GW {
         /* +h02a0 */ uint32_t player_flags; // bitwise something
         /* +h02A4 */ uint32_t player_number;
         /* +h02A8 */ uint32_t h02A8[40];
-        /* +h0348 */ ProgressBar *progress_bar; // seems to never be nullptr
+        /* +h0348 */ ProgressBarContext* progress_bar; // seems to never be nullptr
         /* +h034C */ uint32_t h034C[27];
         /* +h03B8 */ wchar_t player_email[0x40];
     };

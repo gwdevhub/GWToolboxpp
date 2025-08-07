@@ -558,15 +558,8 @@ void LoginModule::Update(float)
             if (!GW::LoginMgr::IsCharSelectReady()) {
                 return;
             }
-            if (!(original_charname_parameter && *original_charname_parameter)) {
-                state = LoginState::Idle;
-                return;
-            }
-            if (!GW::LoginMgr::SelectCharacterToPlay(original_charname_parameter, false)) {
-                // Failed to pre-select character
-                state = LoginState::Idle;
-                return;
-            }
+            original_charname_parameter && *original_charname_parameter && GW::LoginMgr::SelectCharacterToPlay(original_charname_parameter, false);
+            state = LoginState::Idle;
         }
         break;
     }

@@ -338,6 +338,7 @@ namespace GW {
             kSkillActivated             = 0x10000000 | 0x5b, // wparam ={ uint32_t agent_id , uint32_t skill_id }
             kUpdateSkillbar             = 0x10000000 | 0x5E, // wparam ={ uint32_t agent_id , ... }
             kUpdateSkillsAvailable      = 0x10000000 | 0x5f, // Triggered on a skill unlock, profession change or map load
+            kPlayerTitleChanged         = 0x10000000 | 0x64, // wparam = { uint32_t player_id, uint32_t title_id }
             kTitleProgressUpdated       = 0x10000000 | 0x65, // wparam = title_id
             kExperienceGained           = 0x10000000 | 0x66, // wparam = experience amount
             kWriteToChatLog             = 0x10000000 | 0x7E, // wparam = UIPacket::kWriteToChatLog*. Triggered by the game when it wants to add a new message to chat.

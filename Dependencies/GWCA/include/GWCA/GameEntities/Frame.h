@@ -34,6 +34,9 @@ namespace GW {
 
     };
     struct ScrollableFrame : UI::Frame {
+        typedef int(__cdecl* SortHandler_pt)(uint32_t frame_id_1, uint32_t frame_id_2);
+        GWCA_API bool SetSortHandler(SortHandler_pt sortHandler);
+        GWCA_API SortHandler_pt GetSortHandler();
         GWCA_API bool ClearItems();
         GWCA_API bool RemoveItem(uint32_t child_offset_id);
         GWCA_API bool AddItem(uint32_t flags, uint32_t child_offset_id, GW::UI::UIInteractionCallback* callback);
@@ -43,6 +46,7 @@ namespace GW {
         GWCA_API bool GetItemRect(uint32_t child_offset_id, float rect[4]);
         GWCA_API bool GetCount(uint32_t* size);
     };
+
 
     struct FrameWithValue {
         FrameWithValue() = default;
@@ -56,12 +60,31 @@ namespace GW {
         virtual bool SetValue(uint32_t value);
     };
 
+    struct ProgressBar final : ButtonFrame, FrameWithValue {
+        GWCA_API uint32_t GetValue() override;
+        GWCA_API bool SetValue(uint32_t value) override;
+        GWCA_API bool SetMax(uint32_t value);
+        GWCA_API bool SetColorId(uint32_t color_id);
+        enum class ProgressBarStyle : uint32_t {
+            kPeach,
+            kPink,
+            kGrey,
+            kBlue,
+            kGreen,
+            kRed,
+            kPurple,
+            kOlive,
+            kUnk
+        };
+        GWCA_API bool SetStyle(ProgressBarStyle style);
+    };
+
     struct CheckboxFrame final : ButtonFrame, FrameWithValue {
         GWCA_API bool IsChecked() const;
         GWCA_API bool SetChecked(bool checked);
 
-        uint32_t GetValue() override;
-        bool SetValue(uint32_t value) override;
+        GWCA_API uint32_t GetValue() override;
+        GWCA_API bool SetValue(uint32_t value) override;
     };
     struct DropdownFrame final : UI::Frame, FrameWithValue {
         GWCA_API  std::vector<uint32_t> GetOptions();
@@ -81,7 +104,7 @@ namespace GW {
         GWCA_API bool GetValue(uint32_t* selected_value);
         GWCA_API bool SetValue(uint32_t value) override;
 
-        uint32_t GetValue() override;
+        GWCA_API uint32_t GetValue() override;
     };
 
 }
