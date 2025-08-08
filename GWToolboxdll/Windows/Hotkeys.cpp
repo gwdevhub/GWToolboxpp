@@ -214,6 +214,8 @@ TBHotkey::TBHotkey(const ToolboxIni* ini, const char* section)
         trigger_on_lose_focus = ini->GetBoolValue(section, VAR_NAME(trigger_on_lose_focus), trigger_on_lose_focus);
         trigger_on_gain_focus = ini->GetBoolValue(section, VAR_NAME(trigger_on_gain_focus), trigger_on_gain_focus);
         trigger_on_key_up = ini->GetBoolValue(section, VAR_NAME(trigger_on_key_up), trigger_on_key_up);
+        strict_key_combo = ini->GetBoolValue(section, VAR_NAME(strict_key_combo), strict_key_combo);
+
 
 
         in_range_of_distance = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(in_range_of_distance), in_range_of_distance));
@@ -276,6 +278,8 @@ void TBHotkey::Save(ToolboxIni* ini, const char* section) const
         trigger_on_key_up);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_lose_focus), trigger_on_lose_focus);
     ini->SetBoolValue(section, VAR_NAME(trigger_on_gain_focus), trigger_on_gain_focus);
+    ini->SetBoolValue(section, VAR_NAME(strict_key_combo), strict_key_combo);
+
 
     if(player_names.size())
         ini->SetValue(section, VAR_NAME(player_names), TextUtils::Join(player_names, ",").c_str());
@@ -564,7 +568,8 @@ bool TBHotkey::Draw(Op* op)
         }
         ImGui::SameLine();
         const auto keybuf2 = std::format("Hotkey: {}", keybuf_s);
-        if (ImGui::Button(keybuf2.c_str(), ImVec2(-140.0f * scale, 0))) {
+        const auto control_width = 140.0f * scale;
+        if (ImGui::Button(keybuf2.c_str(), ImVec2(control_width * -3.f, 0))) {
             HotkeysWindow::ChooseKeyCombo(this);
         }
         if (ImGui::IsItemHovered()) {
@@ -572,17 +577,27 @@ bool TBHotkey::Draw(Op* op)
         }
         
         ImGui::SameLine();
+        ImGui::PushItemWidth(control_width);
+        hotkey_changed |= ImGui::Checkbox("Strict key combo?", &strict_key_combo);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Off: Your hotkey will trigger even if other keys are also held down\n\
+e.g. A hotkey with Ctrl + H will trigger even if you've got the W key held aswell\n\n\
+On: Your hotkey will only trigger when no other keys are held\n\
+e.g. A hotkey with Ctrl + H will NOT trigger if you've got the W key held aswell");
+        }
+        ImGui::SameLine();
         hotkey_changed |= ImGui::Checkbox("Trigger on key up?", &trigger_on_key_up);
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Hotkeys usually trigger as soon as the key combination is pressed.\nYou can change this to instead only trigger when the key is released");
         }
         ImGui::SameLine();
-        if (ImGui::Button(ongoing ? "Stop" : "Run", ImVec2(140.0f * scale, 0.0f))) {
+        if (ImGui::Button(ongoing ? "Stop" : "Run", ImVec2(control_width, 0.0f))) {
             Toggle();
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Execute the hotkey now");
         }
+        ImGui::PopItemWidth();
 
         const auto btn_width = ImGui::GetContentRegionAvail().x / 3.0f;
 

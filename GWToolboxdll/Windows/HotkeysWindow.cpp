@@ -651,7 +651,15 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
         wndproc_keys_held.reset();
         return false;
     }
-    auto check_triggers = [](bool is_key_up, uint32_t keyData) {
+    auto check_trigger = [](TBHotkey* hk, bool is_key_up, uint32_t keyData) {
+        if (hk->pressed) return false;
+        if (hk->trigger_on_key_up != is_key_up) return false;
+        if (!hk->key_combo.test(keyData)) return false; // The triggering key isn't included in this hotkey's combo
+        if (hk->strict_key_combo) return hk->key_combo == wndproc_keys_held;
+        return (hk->key_combo & wndproc_keys_held) == hk->key_combo;
+    };
+
+    auto check_triggers = [check_trigger](bool is_key_up, uint32_t keyData) {
         std::vector<TBHotkey*> matching_hotkeys;
         size_t max_modifier_count = 0;
 
@@ -664,7 +672,7 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
             // - It should trigger on key-up (if we're processing a key-up event)
             // - All its required keys are currently held (`hk->key_combo & wndproc_keys_held == hk->key_combo`)
             // - The key that was just pressed/released is part of this hotkey (`hk->key_combo.test(keyData)`)
-            if (!hk->pressed && hk->trigger_on_key_up == is_key_up && (hk->key_combo & wndproc_keys_held) == hk->key_combo && hk->key_combo.test(keyData)) {
+            if (check_trigger(hk,is_key_up,keyData)) {
                 // Count how many keys (modifiers + main key) are required for this hotkey
                 size_t modifier_count = hk->key_combo.count();
                 matching_hotkeys.push_back(hk);

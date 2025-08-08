@@ -60,6 +60,7 @@ public:
     float in_range_of_distance = 0.f;
 
     std::bitset<256> key_combo;
+    bool strict_key_combo = false;
 
     // Create hotkey, load from file if 'ini' is not null
     TBHotkey(const ToolboxIni* ini, const char* section);
