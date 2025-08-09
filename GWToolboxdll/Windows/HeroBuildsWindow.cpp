@@ -212,27 +212,18 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 ImGui::PopID();
             }
             if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-                auto tb = TeamHeroBuild("");
-                tb.edit_open = true;
-                for (auto i = 0; i < 8; i++) {
-                    tb.builds[i] = HeroBuild("", "", i == 0 ? -2 : 0);
-                }
-                builds_changed = true;
-                teambuilds.push_back(tb);
-            }
-            if (ImGui::Button("Add Teambuild from current", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-                auto tb = TeamHeroBuild("");
+                auto tb = TeamHeroBuild(std::format("My New Hero Teambuild, {}", TextUtils::GetFormattedDateTime()));
                 tb.edit_open = true;
                 GW::SkillbarMgr::SkillTemplate skill_template;
                 for (auto i = 0u; i < 8; i++) {
-                    if (!GW::SkillbarMgr::GetSkillTemplate(GW::PartyMgr::GetPartyMemberAgentId(i), skill_template))
-                        continue;
+                    if (!GW::SkillbarMgr::GetSkillTemplate(GW::PartyMgr::GetPartyMemberAgentId(i), skill_template)) continue;
                     char buf[BUFFER_SIZE]{};
-                    if (!GW::SkillbarMgr::EncodeSkillTemplate(skill_template, buf, BUFFER_SIZE))
-                        continue;
+                    if (!GW::SkillbarMgr::EncodeSkillTemplate(skill_template, buf, BUFFER_SIZE)) continue;
                     const auto party_info = GW::PartyMgr::GetPartyInfo();
                     const auto hero_id = party_info && party_info->heroes.size() > i - 1 ? party_info->heroes[i - 1].hero_id : HeroID::NoHero;
-                    const auto it = std::ranges::find_if(HeroIndexToID, [hero_id](const auto& p) { return p == hero_id; });
+                    const auto it = std::ranges::find_if(HeroIndexToID, [hero_id](const auto& p) {
+                        return p == hero_id;
+                    });
                     const GW::HeroFlag* flag = GetHeroFlagInfo(hero_id);
                     if (it != HeroIndexToID.end()) {
                         const auto hero_idx = std::distance(HeroIndexToID.begin(), it);

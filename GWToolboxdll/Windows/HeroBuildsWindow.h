@@ -18,13 +18,13 @@ class HeroBuildsWindow : public ToolboxWindow {
     // and 1+ for heroes, order is in HeroIndexToID array
     struct HeroBuild {
         HeroBuild() = default;
-        HeroBuild(const char* n, const char* c, const int index = -1, const int panel = 0, const uint32_t _behavior = 1)
+        HeroBuild(const std::string_view n, const std::string_view c, const int index = -1, const int panel = 0, const uint32_t _behavior = 1)
             : hero_index(index)
             , behavior(_behavior)
             , show_panel(panel)
         {
-            std::snprintf(name, _countof(name), "%s", n);
-            std::snprintf(code, _countof(code), "%s", c);
+            std::snprintf(name, _countof(name), "%s", n.data());
+            std::snprintf(code, _countof(code), "%s", c.data());
         }
 
         char name[BUFFER_SIZE]{};
@@ -37,10 +37,10 @@ class HeroBuildsWindow : public ToolboxWindow {
     struct TeamHeroBuild {
         static unsigned int cur_ui_id;
 
-        TeamHeroBuild(const char* n)
+        TeamHeroBuild(const std::string_view n)
             : ui_id(++cur_ui_id)
         {
-            std::snprintf(name, sizeof(name), "%s", n);
+            std::snprintf(name, sizeof(name), "%s", n.data());
         }
 
         bool edit_open = false;
