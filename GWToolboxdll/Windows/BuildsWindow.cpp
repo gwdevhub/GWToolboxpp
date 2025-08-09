@@ -476,6 +476,9 @@ namespace {
         if (ImGui::InputText("###name", build->name)) {
             builds_changed = true;
         }
+        if (ImGui::IsItemHovered()&& !build->name.empty()) {
+            ImGui::SetTooltip("%s", build->name.c_str());
+        }
         ImGui::SameLine(0, spacing);
         if (ImGui::InputText("###code", build->code)) {
             builds_changed = true;

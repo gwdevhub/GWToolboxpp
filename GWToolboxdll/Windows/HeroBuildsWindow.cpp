@@ -303,6 +303,9 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 ImGui::SameLine(offset);
                 ImGui::PushItemWidth(text_item_width);
                 builds_changed |= ImGui::InputText("###name", build.name, name_buffer_size);
+                if (ImGui::IsItemHovered() && *build.name) {
+                    ImGui::SetTooltip("%s", build.name);
+                }
                 ImGui::SameLine(offset += text_item_width + item_spacing);
                 builds_changed |= ImGui::InputText("###code", build.code, name_buffer_size);
                 if (ImGui::IsItemHovered()) {
