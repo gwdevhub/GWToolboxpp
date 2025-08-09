@@ -24,6 +24,7 @@
 
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 namespace {
 
@@ -34,14 +35,14 @@ namespace {
 
     struct Build {
 
-        Build(const char* _name, const char* _code) :
+        Build(const std::string_view _name, const std::string_view _code) :
             name(_name),
             code(_code) {
             name.reserve(128);
             code.reserve(128);
             memset(&skill_template, sizeof(skill_template), 0);
         };
-        Build(TeamBuild& _tbuild, const char* _name, const char* _code) : Build(_name, _code) {
+        Build(TeamBuild& _tbuild, const std::string_view _name, const std::string_view _code) : Build(_name, _code) {
             tbuild = &_tbuild;
         };
         ~Build();
@@ -73,7 +74,7 @@ namespace {
     uint32_t cur_ui_id = 0;
 
     struct TeamBuild {
-        TeamBuild(const char* _name) : name(_name)
+        TeamBuild(const std::string_view _name) : name(_name)
             , ui_id(++cur_ui_id) {
             name.reserve(128);
         };
@@ -132,6 +133,53 @@ namespace {
     constexpr auto INI_FILENAME = L"builds.ini";
     GW::HookEntry ChatCmd_HookEntry;
     GW::HookEntry OnUIMessage_HookEntry;
+
+    bool PrefillBuildFromAgent(uint32_t agent_id, Build* build)
+    {
+        if (!build) return false;
+
+        const auto current_skill_bar = GW::SkillbarMgr::GetSkillbar(agent_id);
+        if (!current_skill_bar || !current_skill_bar->IsValid()) return false;
+
+        // Get current skill template
+        GW::SkillbarMgr::SkillTemplate skill_template;
+        if (!GW::SkillbarMgr::GetSkillTemplate(agent_id, skill_template)) return false;
+
+        // Encode the skill template to get the build code
+        char build_code[128];
+        if (GW::SkillbarMgr::EncodeSkillTemplate(skill_template, build_code, sizeof(build_code))) {
+            build->code = build_code;
+        }
+
+        build->name = std::format("{}/{}", GetProfessionAcronym(skill_template.primary), GetProfessionAcronym(skill_template.secondary));
+
+
+        // Try to generate a name based on the elite skill or primary profession
+        std::string generated_name;
+
+        wchar_t encoded_name[8] = {0};
+
+        // Find the elite skill (position 0-7, elites are typically in slots 0-2 for player builds)
+        for (size_t i = 0; i < 8; i++) {
+            const auto skill_id = skill_template.skills[i];
+            if (skill_id != GW::Constants::SkillID(0)) {
+                const auto* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+                if (skill_data && skill_data->IsElite()) {
+                    GW::UI::UInt32ToEncStr(skill_data->name, encoded_name, _countof(encoded_name));
+                    GW::UI::AsyncDecodeStr(
+                        encoded_name,
+                        [](void* param, const wchar_t* s) {
+                            if (s && *s)
+                                ((Build*)param)->name += std::format(" - {}", TextUtils::WStringToString(s));
+                        },
+                        build
+                    );
+                    break;
+                }
+            }
+        }
+        return true;
+    }
 
     void ClearAllBuilds() {
         while (teambuilds.size())
@@ -893,10 +941,13 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
                 ImGui::PopID();
             }
             if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-                auto tbuild = new TeamBuild("");
+                auto tbuild = new TeamBuild(std::format("My New Teambuild, {}",TextUtils::GetFormattedDateTime()));
                 tbuild->edit_open = true;
-                for (size_t i = 0; i < 4; i++) {
-                    tbuild->builds.push_back(new Build(*tbuild, "", ""));
+                const auto party_agent_ids = GW::PartyMgr::GetPartyAgentIds();
+                for (const auto agent_id : party_agent_ids) {
+                    const auto b = new Build(*tbuild, "", "");
+                    if (!PrefillBuildFromAgent(agent_id, b)) break;
+                    tbuild->builds.push_back(b);
                 }
                 teambuilds.push_back(tbuild);
                 builds_changed = true;
@@ -931,7 +982,9 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
             }
             ImGui::SameLine(ImGui::GetContentRegionAvail().x * 0.6f);
             if (ImGui::Button("Add Build", ImVec2(ImGui::GetContentRegionAvail().x * 0.4f, 0))) {
-                tbuild->builds.push_back(new Build(*tbuild,"", ""));
+                const auto b = new Build(*tbuild, "", "");
+                PrefillBuildFromAgent(GW::Agents::GetControlledCharacterId(), b);
+                tbuild->builds.push_back(b);
                 builds_changed = true;
             }
             if (ImGui::IsItemHovered()) {

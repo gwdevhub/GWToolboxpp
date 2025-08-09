@@ -217,6 +217,15 @@ namespace GW {
             }
             return 0;
         }
+        std::vector<uint32_t> GetPartyAgentIds(uint32_t party_id) {
+            std::vector<uint32_t> out;
+            for (size_t i = 0; i < 12; i++) {
+                const auto agent_id = GetPartyMemberAgentId(i, party_id);
+                if (!agent_id) return out;
+                out.push_back(agent_id);
+            }
+            return out;
+        }
     }
 
     namespace AccountMgr {

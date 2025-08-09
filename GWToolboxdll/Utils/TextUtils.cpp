@@ -165,6 +165,21 @@ namespace TextUtils {
         return out;
     }
 
+    std::string GetFormattedDateTime()
+    {
+        auto now = std::chrono::system_clock::now();
+        auto time_t = std::chrono::system_clock::to_time_t(now);
+
+        std::tm tm_buf;
+        localtime_s(&tm_buf, &time_t);
+
+        // Format: "Jan 15, 2024 2:30 PM"
+        char buffer[64];
+        std::strftime(buffer, sizeof(buffer), "%b %d, %Y %I:%M %p", &tm_buf);
+
+        return std::string(buffer);
+    }
+
     std::string UrlEncode(const std::string_view s, const char space_token)
     {
         if (s.empty()) {

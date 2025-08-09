@@ -16,6 +16,8 @@ namespace TextUtils {
 
     std::string Base64Decode(std::string_view str);
 
+    std::string GetFormattedDateTime();
+
     std::wstring StripTags(std::wstring_view str);
 
     std::string GuidToString(const GUID* guid);
