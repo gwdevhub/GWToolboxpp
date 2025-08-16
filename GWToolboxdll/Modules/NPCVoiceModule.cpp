@@ -551,7 +551,7 @@ namespace {
             L"\x0ba9\x0107[^\x0001]+\x0001", L"\x0ba9\x0107"
                                              "Chosen\x0001">(text);
         // replace numeric args
-        result = TextUtils::ctre_regex_replace<L"[\x0101\x102\x103\x104]\x8101?.", L"">(result);
+        result = TextUtils::ctre_regex_replace<L"[\x0101\x102\x103\x104][\x8100-\xffff]*.", L"">(result);
         return result;
     }
 
