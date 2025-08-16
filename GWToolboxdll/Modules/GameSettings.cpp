@@ -61,6 +61,7 @@
 #include <Defines.h>
 #include <Utils/TextUtils.h>
 #include <Constants/EncStrings.h>
+#include <GWCA/GameEntities/Frame.h>
 
 #pragma warning(disable : 6011)
 #pragma comment(lib,"Version.lib")
@@ -223,6 +224,8 @@ namespace {
     bool is_prompting_hard_mode_mission = false;
 
     bool add_agent_id_to_enemy_names = false;
+
+    bool useful_level_progress_label = true;
 
     GW::HookEntry SkillList_UICallback_HookEntry;
     GW::UI::UIInteractionCallback SkillList_UICallback_Func = 0, SkillList_UICallback_Ret = 0;
@@ -523,8 +526,6 @@ namespace {
     using SetGlobalNameTagVisibility_pt = void(__cdecl*)(uint32_t flags);
     SetGlobalNameTagVisibility_pt SetGlobalNameTagVisibility_Func = nullptr;
     uint32_t* GlobalNameTagVisibilityFlags = nullptr;
-
-    GW::MemoryPatcher skip_map_entry_message_patch;
 
     // Refresh agent name tags when allegiance changes ( https://github.com/gwdevhub/GWToolboxpp/issues/781 )
     void OnAgentAllegianceChanged(GW::HookStatus*, GW::Packet::StoC::AgentUpdateAllegiance*)
@@ -1290,6 +1291,46 @@ namespace {
 
     GW::HookEntry OnPostUIMessage_HookEntry;
 
+    uint32_t XpReqForLevel(uint32_t level)
+    {
+        if (!level) return 0;
+        level--; // 0 based
+        if (level < 22) { // Changed from 23 to 22
+            return (level * 300 + 0x6a4) * level;
+        }
+        return level * 15000 - 0x23fc8;
+    }
+
+    uint32_t LevelFromXp(uint32_t currentXp)
+    {
+        uint32_t level = 1;                             // This is correct - start at 0
+        while (XpReqForLevel(level + 1) <= currentXp) { // Check next level
+            level++;
+        }
+        return level;// 1 Based
+    }
+
+    bool SetXpBarLabel() {
+        const auto xp_bar = (GW::ProgressBar*)GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"LevelProgress"), 1);
+        if(!xp_bar) return false;
+        const auto current_xp = GW::GetWorldContext()->experience;
+        const auto current_level = LevelFromXp(current_xp);
+        if (useful_level_progress_label && current_level > 20) {
+            const auto current_level_req = XpReqForLevel(current_level);
+            const auto next_level_req = XpReqForLevel(current_level + 1);
+
+            wchar_t max_amount[4] = {0};
+            GW::UI::UInt32ToEncStr(next_level_req - current_level_req, max_amount, _countof(max_amount));
+            wchar_t current_amount[4] = {0};
+            GW::UI::UInt32ToEncStr(current_xp - current_level_req, current_amount, _countof(current_amount));
+
+            const auto label = std::format(L"\x7b1e\x101{}\x102{}\x2\x408", current_amount, max_amount);
+            return xp_bar->SetLabel(label.c_str());
+        }
+        const auto label = std::format(L"\x435\x101{}", static_cast<wchar_t>(std::min(current_level,20u) + 0x100));
+        return xp_bar->SetLabel(label.c_str());
+    }
+
     void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*)
     {
         if (status->blocked)
@@ -1349,8 +1390,13 @@ namespace {
             break;
             case GW::UI::UIMessage::kMapLoaded: {
                 last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
+                SetXpBarLabel();
+                block_enter_area_message && GW::UI::SetFrameVisible(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6, 0), false);
             }
             break;
+            case GW::UI::UIMessage::kExperienceGained: {
+                SetXpBarLabel();
+            } break;
             case GW::UI::UIMessage::kShowCancelEnterMissionBtn: {
                 CheckPromptBeforeEnterMission(status);
                 if (status->blocked)
@@ -1400,6 +1446,8 @@ namespace {
         *steam_api_dll_handle_ptr = nullptr;
         return true;
     }
+
+
 
 }   
 bool GameSettings::GetSettingBool(const char* setting)
@@ -1617,11 +1665,6 @@ void GameSettings::Initialize()
     SkillList_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmCtlSkList.cpp", "!obj", 0xc71, 0));
     Log::Log("[GameSettings] SkillList_UICallback_Func = %p\n", SkillList_UICallback_Func);
 
-    address = GW::Scanner::Find("\x81\xff\x86\x02\x00\x00", "xxxxxx", 6);
-    if (address)
-        skip_map_entry_message_patch.SetPatch(address, "\x90\xe9", 2);
-    Log::Log("[GameSettings] skip_map_entry_message_patch = %p\n", skip_map_entry_message_patch.GetAddress());
-
     address = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxx??", +7);
     if (address)
         gold_confirm_patch.SetPatch(address, "\x90\x90", 2);
@@ -1660,8 +1703,6 @@ void GameSettings::Initialize()
 #ifdef _DEBUG
     ASSERT(ctrl_click_patch.IsValid());
     ASSERT(SkillList_UICallback_Func);
-    ASSERT(skip_map_entry_message_patch.IsValid());
-    ASSERT(gold_confirm_patch.IsValid());
     ASSERT(remove_skill_warmup_duration_patch.IsValid());
     ASSERT(SetFrameSkillDescription_Func);
     ASSERT(SetGlobalNameTagVisibility_Func);
@@ -1776,7 +1817,8 @@ void GameSettings::Initialize()
         GW::UI::UIMessage::kDialogButton,
         GW::UI::UIMessage::kQuestAdded,
         GW::UI::UIMessage::kSendSetActiveQuest,
-        GW::UI::UIMessage::kVendorTransComplete
+        GW::UI::UIMessage::kVendorTransComplete,
+        GW::UI::UIMessage::kExperienceGained
     };
     for (const auto message_id : post_ui_messages) {
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
@@ -1955,6 +1997,8 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(prevent_weapon_spell_animation_on_player);
     LOAD_BOOL(block_vanquish_complete_popup);
 
+    LOAD_BOOL(useful_level_progress_label);
+
     LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
     LoadChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
@@ -1985,11 +2029,11 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
 
     remove_skill_warmup_duration_patch.TogglePatch(remove_min_skill_warmup_duration);
     gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
-    skip_map_entry_message_patch.TogglePatch(block_enter_area_message);
 
     if (focus_window_on_launch) {
         FocusWindow();
     }
+    GW::GameThread::Enqueue(SetXpBarLabel);
 }
 
 void GameSettings::RegisterSettingsContent()
@@ -2036,7 +2080,6 @@ void GameSettings::Terminate()
     ToolboxModule::Terminate();
     ctrl_click_patch.Reset();
     gold_confirm_patch.Reset();
-    skip_map_entry_message_patch.Reset();
     remove_skill_warmup_duration_patch.Reset();
 
     GW::UI::RemoveUIMessageCallback(&OnQuestUIMessage_HookEntry);
@@ -2143,6 +2186,8 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
 
     SAVE_BOOL(prevent_weapon_spell_animation_on_player);
 
+    SAVE_BOOL(useful_level_progress_label);
+
     SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
     SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
     SaveChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
@@ -2227,7 +2272,11 @@ void GameSettings::DrawPartySettings()
 void GameSettings::DrawSettingsInternal()
 {
     ImGui::Checkbox("Hide email address on login screen", &hide_email_address);
+    ImGui::ShowHelp("When logging out to switch character, your email address is visible on the login screen; tick this to automatically hide it\n\nThis is useful when streaming your gameplay to hide your personal info.");
     ImGui::Checkbox("Remember my online status when returning to character select screen", &remember_online_status);
+    ImGui::ShowHelp(
+        "Guild Wars doesn't remember your friend list status when you return to the character select screen,\n and sets your status to 'Online' when you select a character to play.\nTick this to avoid having to change it when you switch characters."
+    );
     ImGui::Checkbox("Automatic /age on vanquish", &auto_age_on_vanquish);
     ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
     ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
@@ -2246,13 +2295,19 @@ void GameSettings::DrawSettingsInternal()
     ImGui::ShowHelp("Only if you were 'Away'");
 
     ImGui::Checkbox("Only show non learned skills when using a tome", &show_unlearned_skill);
+    ImGui::ShowHelp("When you double click on a tome, the skills window that appears has all skills available for that profession.\nTick this to hide skills that your current character already has.");
 
     if (ImGui::Checkbox("Remove 1.5 second minimum for the cast bar to show.", &remove_min_skill_warmup_duration)) {
         remove_skill_warmup_duration_patch.TogglePatch(remove_min_skill_warmup_duration);
     }
+    ImGui::ShowHelp("When casting a skill, the in-game cast bar only shows up if the skill's cast time is more than 1.5 seconds.\nTick this to show the cast bar regardless of casting time.");
     ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
+    ImGui::ShowHelp("The default mouse camera movement isn't instant, and instead smoothes the action when you move the mouse.\nTick this to disable this smoothing behaviour.");
 
     ImGui::Checkbox("Prompt if entering a mission you've already completed", &check_and_prompt_if_mission_already_completed);
+    ImGui::ShowHelp(
+        "Sometimes a player can forget to set Hard Mode/Normal Mode when starting a mission for their character.\nGwtoolbox can catch this and check your current character's achievements,\nand can show an 'Are you sure?' prompt if you're trying to do a mission\nthat you've already completed in the chosen mode."
+    );
     ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
     ImGui::Checkbox("Automatically return to outpost on defeat", &auto_return_on_defeat);
     ImGui::ShowHelp("Automatically return party to outpost on party wipe if player is leading");
@@ -2273,7 +2328,6 @@ void GameSettings::DrawSettingsInternal()
         "Disable the confirmation request when\n"
         "selling Gold and Green items introduced\n"
         "in February 5, 2019 update.");
-    ImGui::Checkbox("Hide dungeon chest popup", &hide_dungeon_chest_popup);
     ImGui::Checkbox("Stop screen shake from skills or effects", &stop_screen_shake);
     ImGui::ShowHelp("e.g. Aftershock, Earth shaker, Avalanche effect");
     if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &set_window_title_as_charname)) {
@@ -2285,15 +2339,19 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Checkbox("Auto use available keys when interacting with locked chest", &auto_open_locked_chest_with_key);
     ImGui::Checkbox("Auto use lockpick when interacting with locked chest", &auto_open_locked_chest);
     ImGui::Checkbox("Keep current quest when accepting a new one", &keep_current_quest_when_new_quest_added);
+    ImGui::ShowHelp(
+        "By default, Guild Wars changes your currently selected quest to the one you've just taken from an NPC.\nThis can be annoying if you don't realise your quest marker is now taking you somewhere different!\nTick this to make sure your current quest isn't changed when a new quest is added to your log."
+    );
     ImGui::Checkbox("Block sparkle effect on dropped items", &block_sparkly_drops_effect);
     ImGui::ShowHelp("Applies to drops that appear after this setting has been changed");
     ImGui::Checkbox("Limit signet of capture to 10 in skills window", &limit_signets_of_capture);
     ImGui::ShowHelp("If your character has purchased more than 10 signets of capture, only show 10 of them in the skills window");
-    if (ImGui::Checkbox("Block full screen message when entering a new area", &block_enter_area_message)) {
-        skip_map_entry_message_patch.TogglePatch(block_enter_area_message);
-    }
+
     ImGui::Checkbox("Prevent weapon spell skin showing on player weapons", &prevent_weapon_spell_animation_on_player);
+
+    ImGui::Checkbox("Block full screen message when entering a new area", &block_enter_area_message);
     ImGui::Checkbox("Block full screen popup what shows when completing a vanquish", &block_vanquish_complete_popup);
+    ImGui::Checkbox("Block full screen popup what shows when opening a dungeon chest", &hide_dungeon_chest_popup);
 
     ImGui::NewLine();
     ImGui::Text("Block floating numbers above character when:");
@@ -2306,6 +2364,9 @@ void GameSettings::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Gaining 0 experience", &block_zero_experience_gain);
     ImGui::Unindent();
+    if (ImGui::Checkbox("Show experience progress instead of current level on your experience bar", &useful_level_progress_label)) {
+        GW::GameThread::Enqueue(SetXpBarLabel);
+    }
 
     ImGui::NewLine();
     ImGui::Text("Disable animation and sound from consumables:");
