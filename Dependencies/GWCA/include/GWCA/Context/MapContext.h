@@ -104,11 +104,11 @@ namespace GW {
     struct PathContext {
         /* +h0000 */ MapStaticData* staticData;
         /* +h0004 */ BlockedPlaneArray blockedPlanes;
-        /* +h0010 */ PathNodeArray pathMaps;
+        /* +h0010 */ PathNodeArray pathNodes; // This array of pathNodes are indexed with the trapezoid id.
         /* +h001C */ NodeCache nodeCache;
         /* +h0030 */ PrioQ<PathNode> openList;
         /* +h0044 */ ObjectPool freeIPathNode;
-        /* +h0050 */ PathNodeArray pathNodes;
+        /* +h0050 */ PathNodeArray allocatedPathNodes; // This is just an array of all allocated path nodes used to cleanup. The order is the allocation order.
         /* +h005C */ uint32_t h005C;
         /* +h0060 */ uint32_t h0060;
         /* +h0064 */ Array<PathWaypoint> waypoints;
@@ -120,6 +120,19 @@ namespace GW {
     };
     static_assert(sizeof(PathContext) == 0x94, "struct PathContext has incorrect size");
 
+    // The game can optionally load a DLL to do the path finding.
+    // The DLL is named "PathEngine.dll", but not clear if it's a 3rd party or just their name
+    // for development.
+    struct PathEngineContext {
+        /* +h0000 */ void **vtable;
+        /* +h0004 */ uint32_t h0004;
+        /* +h0008 */ uint32_t h0008;
+        /* +h000C */ void *user_data;
+        /* +h0010 */ HMODULE hDll;
+        /* +h0014 */ uint32_t pfnCreateInterface;
+    };
+    static_assert(sizeof(PathEngineContext) == 0x18, "struct PathEngineContext has incorrect size");
+
     struct MapContext {
         /* +h0000 */ float map_boundaries[5];
         /* +h0014 */ uint32_t h0014[6];
@@ -128,7 +141,7 @@ namespace GW {
         /* +h004C */ Array<void *> spawns3; // Same as above
         /* +h005C */ float h005C[6]; // Some trapezoid i think.
         /* +h0074 */ PathContext *path;
-        /* +h0078 */ uint8_t pad1[4];
+        /* +h0078 */ PathEngineContext* path_engine;
         /* +h007C */ PropsContext *props;
         /* +h0080 */ uint32_t h0080;
         /* +h0084 */ void* terrain;

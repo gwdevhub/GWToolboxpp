@@ -380,7 +380,7 @@ namespace Pathing {
         MapContext* mapContex = GetMapContext();
         if (!map || !mapContex) return;
         ASSERT(mapContex->path);
-        const auto total_trapezoid_count = mapContex->path->pathMaps.size();
+        const auto total_trapezoid_count = mapContex->path->pathNodes.size();
 
         m_aabbs.clear();
         m_aabbs.reserve(total_trapezoid_count); // h0014[0] == total trapezoid count

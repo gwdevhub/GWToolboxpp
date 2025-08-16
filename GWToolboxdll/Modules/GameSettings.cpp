@@ -1320,9 +1320,10 @@ namespace {
             const auto next_level_req = XpReqForLevel(current_level + 1);
 
             wchar_t max_amount[4] = {0};
-            GW::UI::UInt32ToEncStr(next_level_req - current_level_req, max_amount, _countof(max_amount));
+            ASSERT(GW::UI::UInt32ToEncStr(next_level_req - current_level_req, max_amount, _countof(max_amount)));
+
             wchar_t current_amount[4] = {0};
-            GW::UI::UInt32ToEncStr(current_xp - current_level_req, current_amount, _countof(current_amount));
+            ASSERT(GW::UI::UInt32ToEncStr(current_xp - current_level_req, current_amount, _countof(current_amount)));
 
             const auto label = std::format(L"\x7b1e\x101{}\x102{}\x2\x408", current_amount, max_amount);
             return xp_bar->SetLabel(label.c_str());

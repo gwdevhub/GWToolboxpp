@@ -53,7 +53,7 @@ namespace GW {
     struct Portal { // total: 0x14/20
         /* +h0000 */ uint16_t portal_plane;
         /* +h0002 */ uint16_t neighbor_plane;
-        /* +h0004 */ uint32_t h0004;
+        /* +h0004 */ uint32_t flags; // 0x4 => "Not used for path finding"
         /* +h0008 */ Portal  *pair;
         /* +h000C */ uint32_t count;
         /* +h0010 */ PathingTrapezoid **trapezoids;
