@@ -1315,7 +1315,7 @@ namespace {
         if(!xp_bar) return false;
         const auto current_xp = GW::GetWorldContext()->experience;
         const auto current_level = LevelFromXp(current_xp);
-        if (useful_level_progress_label && current_level > 20) {
+        if (useful_level_progress_label) {
             const auto current_level_req = XpReqForLevel(current_level);
             const auto next_level_req = XpReqForLevel(current_level + 1);
 
