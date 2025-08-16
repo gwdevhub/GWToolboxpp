@@ -585,8 +585,6 @@ namespace {
         const auto chars = GW::AccountMgr::GetAvailableChars();
         if (chars && chars->size()) {
             for (const auto& character : *chars) {
-                if (character_completion.contains(character.player_name))
-                    continue; // already loaded this character, don't overwrite loaded settings
                 const auto cc = CompletionWindow::GetCharacterCompletion(character.player_name, true);
                 cc->account = email;
                 cc->profession = static_cast<Profession>(character.primary());
