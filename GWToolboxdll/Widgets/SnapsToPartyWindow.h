@@ -4,6 +4,11 @@
 
 #include <Utils/GuiUtils.h>
 
+namespace GW {
+    namespace UI {
+        struct Frame;
+    }
+}
 class SnapsToPartyWindow : public ToolboxWidget {
 protected:
     struct PartyFramePosition {
@@ -26,6 +31,8 @@ protected:
 public:
     void Initialize() override;
     void Terminate() override;
+
+    static GW::UI::Frame* GetPartyWindowHealthBars(GW::UI::Frame** party_frame_out = nullptr);
 
     ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, bool noinput_if_frozen = true) const override;
 

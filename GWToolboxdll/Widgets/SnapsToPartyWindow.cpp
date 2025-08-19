@@ -18,6 +18,26 @@
 
 namespace {
 
+    GW::UI::Frame* GetPartyWindowHealthBars(GW::UI::Frame** party_frame_out = nullptr) {
+        const auto party = GW::PartyMgr::GetPartyInfo();
+        // @Cleanup: Fetch party frame once, only update when it has been destroyed
+        const auto party_frame = party ? GW::UI::GetFrameByLabel(L"Party") : nullptr;
+        if (party_frame_out) *party_frame_out = party_frame;
+        if (!(party_frame && party_frame->IsVisible())) return nullptr;
+
+        // Traverse to health bars
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+            auto sub_frame = GW::UI::GetChildFrame(party_frame, 1);
+            sub_frame = GW::UI::GetChildFrame(sub_frame, 8);
+            sub_frame = GW::UI::GetChildFrame(sub_frame, 0);
+            sub_frame = GW::UI::GetChildFrame(sub_frame, 0);
+            return GW::UI::GetChildFrame(sub_frame, 0);
+        }
+        auto sub_frame = GW::UI::GetChildFrame(party_frame, 0);
+        sub_frame = GW::UI::GetChildFrame(sub_frame, 0);
+        return GW::UI::GetChildFrame(sub_frame, 0);
+    }
+
     bool GetFramePosition(const GW::UI::Frame* frame, const GW::UI::Frame* relative_to, ImVec2* top_left, ImVec2* bottom_right) {
         if (!(frame && relative_to && frame->IsVisible()))
             return false;
@@ -132,6 +152,9 @@ bool SnapsToPartyWindow::FetchPartyInfo()
     return true;
 }
 
+GW::UI::Frame* SnapsToPartyWindow::GetPartyWindowHealthBars(GW::UI::Frame** party_frame_out) {
+    return ::GetPartyWindowHealthBars(party_frame_out);
+}
 void SnapsToPartyWindow::Initialize()
 {
     ToolboxWidget::Initialize();
