@@ -107,4 +107,10 @@ namespace GW {
         GWCA_API uint32_t GetValue() override;
     };
 
+    struct TextLabelFrame final : UI::Frame {
+        GWCA_API bool GetEncodedLabel(wchar_t** enc_string);
+        GWCA_API bool GetDecodedLabel(wchar_t** dec_string);
+        GWCA_API bool SetLabel(const wchar_t* enc_string);
+    };
+
 }

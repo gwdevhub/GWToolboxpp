@@ -321,6 +321,7 @@ namespace GW {
             kShowAgentNameTag           = 0x10000000 | 0x19, // wparam = AgentNameTagInfo*
             kHideAgentNameTag           = 0x10000000 | 0x1A,
             kSetAgentNameTagAttribs     = 0x10000000 | 0x1B, // wparam = AgentNameTagInfo*
+            kSetAgentProfession         = 0x10000000 | 0x1D, // wparam = UIPacket::kSetAgentProfession*
             kChangeTarget               = 0x10000000 | 0x20, // wparam = UIPacket::kChangeTarget*
             kAgentStartCasting          = 0x10000000 | 0x27, // wparam = UIPacket::kAgentStartCasting*
             kShowMapEntryMessage        = 0x10000000 | 0x29, // wparam = { wchar_t* title, wchar_t* subtitle }
@@ -463,6 +464,11 @@ namespace GW {
 
 
         namespace UIPacket {
+            struct kSetAgentProfession {
+                AgentID agent_id;
+                uint32_t primary;
+                uint32_t secondary;
+            };
             struct kWeaponSwap {
                 uint32_t weapon_bar_frame_id;
                 uint32_t weapon_set_id;
