@@ -112,6 +112,7 @@ namespace GW {
     } // namespace LoginMgr
     namespace PartyMgr {
         std::vector<uint32_t> GetPartyAgentIds(uint32_t party_id = 0);
+        bool IsAgentInParty(uint32_t agent_id, uint32_t party_id = 0);
         GW::PlayerPartyMemberArray* GetPartyPlayers(uint32_t party_id = 0);
         size_t GetPlayerPartyIndex(uint32_t player_number, uint32_t party_id = 0);
         // Fetches agent id of party member (hero, player or henchman) by index. This is NOT player number! party_member_index is ZERO based

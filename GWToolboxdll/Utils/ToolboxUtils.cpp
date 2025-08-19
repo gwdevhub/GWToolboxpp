@@ -226,6 +226,11 @@ namespace GW {
             }
             return out;
         }
+        bool IsAgentInParty(uint32_t agent_id, uint32_t party_id)
+        {
+            const auto party_agents = GetPartyAgentIds(party_id);
+            return std::find(party_agents.begin(), party_agents.end(), agent_id) != party_agents.end();
+        }
     }
 
     namespace AccountMgr {
