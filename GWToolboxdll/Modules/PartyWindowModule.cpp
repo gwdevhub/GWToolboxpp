@@ -57,13 +57,7 @@ namespace {
     };
 
     struct PendingAddToParty {
-        PendingAddToParty(const uint32_t _agent_id, const uint32_t _allegiance_bits, const uint32_t _player_number)
-            : agent_id(_agent_id)
-            , player_number(_player_number)
-            , allegiance_bits(_allegiance_bits)
-        {
-            add_timer = TIMER_INIT();
-        }
+        PendingAddToParty(const uint32_t _agent_id, const uint32_t _allegiance_bits, const uint32_t _player_number) : agent_id(_agent_id), player_number(_player_number), allegiance_bits(_allegiance_bits) { add_timer = TIMER_INIT(); }
 
         clock_t add_timer;
         uint32_t agent_id;
@@ -73,14 +67,9 @@ namespace {
     };
 
     struct SpecialNPCToAdd {
-        SpecialNPCToAdd(const char* _alias, const int _model_id, const GW::Constants::MapID _map_id)
-            : alias(_alias)
-            , model_id(static_cast<uint32_t>(_model_id))
-            , map_id(_map_id) { };
+        SpecialNPCToAdd(const char* _alias, const int _model_id, const GW::Constants::MapID _map_id) : alias(_alias), model_id(static_cast<uint32_t>(_model_id)), map_id(_map_id) {};
         std::string alias;
-        const char* GetMapName() {
-            return map_id > GW::Constants::MapID::None ? Resources::GetMapName(map_id)->string().c_str() : "Any";
-        }
+        const char* GetMapName() { return map_id > GW::Constants::MapID::None ? Resources::GetMapName(map_id)->string().c_str() : "Any"; }
         uint32_t model_id = 0;
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
     };
@@ -90,6 +79,7 @@ namespace {
         GW::Constants::SkillID skill_id;
     };
 
+    bool custom_sort_party_window = false;
     bool add_npcs_to_party_window = true; // Quick tickbox to disable the module without restarting TB
     bool add_player_numbers_to_party_window = false;
     bool add_elite_skill_to_summons = false;
@@ -142,10 +132,7 @@ namespace {
     }
 
     struct PartyInfo : GW::PartyInfo {
-        size_t GetPartySize() const
-        {
-            return players.size() + henchmen.size() + heroes.size();
-        }
+        size_t GetPartySize() const { return players.size() + henchmen.size() + heroes.size(); }
     };
 
     PartyInfo* GetPartyInfo(const uint32_t party_id = 0)
@@ -418,8 +405,6 @@ namespace {
 
     PartySorting* chosen_sorting_vector = 0;
 
-
-
     int PartySortHandler(uint32_t frame_id_1, uint32_t frame_id_2)
     {
         if (!chosen_sorting_vector) return 0;
@@ -440,63 +425,35 @@ namespace {
 
         const auto sorting_size = chosen_sorting_vector->sorting_by_profession.size();
 
+        auto CalcSortPos = [sorting_size](GW::AgentLiving* agent, size_t* sort_pos_out, int* match_quality_out) {
+            for (size_t i = 0; i < sorting_size; i++) {
+                uint8_t sorting_primary = chosen_sorting_vector->sorting_by_profession[i] >> 8;
+                uint8_t sorting_secondary = chosen_sorting_vector->sorting_by_profession[i] & 0xff;
+
+                int match_quality = 0;
+                if (sorting_primary != 0 && sorting_primary == agent->primary) {
+                    match_quality++; // Primary match is worth 2 points
+                }
+                if (sorting_secondary != 0 && sorting_secondary == agent->secondary) {
+                    match_quality++; // Secondary match is worth 1 point
+                }
+
+                // Choose this position if it's a better match than what we have
+                if (match_quality > *match_quality_out || (match_quality == *match_quality_out && i < *sort_pos_out)) {
+                    *sort_pos_out = i;
+                    *match_quality_out = match_quality;
+                }
+            }
+        };
         // Find best match for first player
         size_t p1_sort_pos = SIZE_MAX;
         int p1_match_quality = -1; // Higher = better match
-
-        for (size_t i = 0; i < sorting_size; i++) {
-            uint8_t sorting_primary = chosen_sorting_vector->sorting_by_profession[i] >> 8;
-            uint8_t sorting_secondary = chosen_sorting_vector->sorting_by_profession[i] & 0xff;
-
-            int match_quality = 0;
-
-            // Check primary profession match
-            if (sorting_primary != 0) {
-                if (sorting_primary != p1->primary) continue;
-                match_quality += 2; // Primary match is worth 2 points
-            }
-
-            // Check secondary profession match
-            if (sorting_secondary != 0) {
-                if (sorting_secondary != p1->secondary) continue;
-                match_quality += 1; // Secondary match is worth 1 point
-            }
-
-            // Choose this position if it's a better match than what we have
-            if (match_quality > p1_match_quality || (match_quality == p1_match_quality && i < p1_sort_pos)) {
-                p1_sort_pos = i;
-                p1_match_quality = match_quality;
-            }
-        }
+        CalcSortPos(p1, &p1_sort_pos, &p1_match_quality);
 
         // Find best match for second player
         size_t p2_sort_pos = SIZE_MAX;
         int p2_match_quality = -1;
-
-        for (size_t i = 0; i < sorting_size; i++) {
-            uint8_t sorting_primary = chosen_sorting_vector->sorting_by_profession[i] >> 8;
-            uint8_t sorting_secondary = chosen_sorting_vector->sorting_by_profession[i] & 0xff;
-
-            int match_quality = 0;
-
-            // Check primary profession match
-            if (sorting_primary != 0) {
-                if (sorting_primary != p2->primary) continue;
-                match_quality += 2;
-            }
-
-            // Check secondary profession match
-            if (sorting_secondary != 0) {
-                if (sorting_secondary != p2->secondary) continue;
-                match_quality += 1;
-            }
-
-            // Choose this position if it's a better match than what we have
-            if (match_quality > p2_match_quality || (match_quality == p2_match_quality && i < p2_sort_pos)) {
-                p2_sort_pos = i;
-                p2_match_quality = match_quality;
-            }
-        }
+        CalcSortPos(p2, &p2_sort_pos, &p2_match_quality);
 
         // If neither player matches any sorting criteria, maintain original order
         if (p1_sort_pos == SIZE_MAX && p2_sort_pos == SIZE_MAX) {
@@ -516,10 +473,11 @@ namespace {
         if (p1_match_quality < p2_match_quality) return 1;
 
         // Same position and quality - maintain original order
-        return 0;
+        return wcscmp(GW::Agents::GetAgentEncName(p1->agent_id), GW::Agents::GetAgentEncName(p2->agent_id)) > 0;
     }
 
-    const std::string GetProfessionName(uint8_t prof) {
+    const std::string GetProfessionName(uint8_t prof)
+    {
         return GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof));
     }
 
@@ -533,6 +491,10 @@ namespace {
     }
     void RefreshPartySortHandler()
     {
+        if (!custom_sort_party_window) {
+            OverridePartySortOrder(false);
+            return;
+        }
         const auto map_id = GW::Map::GetMapID();
         const auto party_size = GW::PartyMgr::GetPartyPlayerCount();
         PartySorting* best_match = 0;
@@ -551,7 +513,8 @@ namespace {
 
 
     GW::HookEntry OnPostUIMessage_HookEntry;
-    void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*) {
+    void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void*)
+    {
         if (status->blocked) return;
         switch (message_id) {
             case GW::UI::UIMessage::kSetAgentProfession: {
@@ -561,12 +524,302 @@ namespace {
             case GW::UI::UIMessage::kPartyRemovePlayer:
             case GW::UI::UIMessage::kPartyAddPlayer: {
                 const auto party_id = *(uint32_t*)wparam;
-                if (party_id == 0 || party_id == GW::PartyMgr::GetPartyInfo()->party_id)
-                    RefreshPartySortHandler();
+                if (party_id == 0 || party_id == GW::PartyMgr::GetPartyInfo()->party_id) RefreshPartySortHandler();
+            } break;
+            case GW::UI::UIMessage::kMapLoaded: {
+                RefreshPartySortHandler();
             } break;
         }
     }
-}
+
+    void DrawCustomNPCSettings() {
+        ImGui::TextDisabled("Only works in an explorable area. Only works on NPCs; not enemies, minions or spirits.");
+        const float fontScale = ImGui::GetIO().FontGlobalScale;
+        const float cols[3] = {256.0f * fontScale, 352.0f * fontScale, 448.0f * fontScale};
+
+        ImGui::Text("Name");
+        ImGui::SameLine(cols[0]);
+        ImGui::Text("Model ID");
+        ImGui::SameLine(cols[1]);
+        ImGui::Text("Map");
+        ImGui::Separator();
+        ImGui::BeginChild("user_defined_npcs_to_add_scroll", ImVec2(0, 200.0f));
+        for (const auto& npc : user_defined_npcs) {
+            if (!npc) {
+                continue;
+            }
+            if (!npc->model_id) {
+                continue;
+            }
+            ImGui::PushID(static_cast<int>(npc->model_id));
+            ImGui::TextUnformatted(npc->alias.c_str());
+            ImGui::SameLine(cols[0]);
+            ImGui::Text("%d", npc->model_id);
+            ImGui::SameLine(cols[1]);
+            ImGui::TextUnformatted(npc->GetMapName());
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x - 48.0f * fontScale);
+            const bool clicked = ImGui::Button(" X ");
+            ImGui::PopID();
+            if (clicked) {
+                Log::Flash("Removed special NPC %s (%d)", npc->alias.c_str(), npc->model_id);
+                RemoveSpecialNPC(npc->model_id);
+                CheckMap();
+                break;
+            }
+        }
+        ImGui::EndChild();
+        ImGui::Separator();
+        bool submitted = false;
+        ImGui::Text("Add new:");
+        ImGui::InputText("Name", new_npc_alias, 128);
+        ImGui::InputInt("Model ID", &new_npc_model_id);
+        ImGui::InputInt("Map ID (0 = Any)", &new_npc_map_id);
+        submitted |= ImGui::Button("Add");
+        if (submitted) {
+            if (new_npc_model_id < 1) {
+                return Log::Error("Invalid model id");
+            }
+            if (new_npc_map_id < 0 || new_npc_map_id > static_cast<int>(GW::Constants::MapID::Count)) {
+                return Log::Error("Invalid map id");
+            }
+            const std::string alias_str(new_npc_alias);
+            if (alias_str.empty()) {
+                return Log::Error("Empty value for Name");
+            }
+            const auto it = user_defined_npcs_by_model_id.find(static_cast<uint32_t>(new_npc_model_id));
+            if (it != user_defined_npcs_by_model_id.end()) {
+                return Log::Error("Special NPC %s is already defined for model_id %d", it->second->alias.c_str(), new_npc_model_id);
+            }
+            AddSpecialNPC({alias_str.c_str(), new_npc_model_id, static_cast<GW::Constants::MapID>(new_npc_map_id)});
+            Log::Flash("Added special NPC %s (%d)", alias_str.c_str(), new_npc_model_id);
+            CheckMap();
+        }
+    }
+
+    void DrawCustomPartySortingSettings() {
+        const float fontScale = ImGui::GetIO().FontGlobalScale;
+
+        static int edit_sorting_index = -1;
+        static int edit_map_id = 0;
+        static int edit_party_size = 0;
+        static std::vector<uint16_t> edit_profession_order;
+
+        float offset = 0.f;
+        const float sort_cols[3] = {(offset += 200.f) * fontScale, (offset += 100.f) * fontScale, ImGui::GetContentRegionAvail().x - 100.0f * fontScale};
+
+        ImGui::Text("Map");
+        ImGui::SameLine(sort_cols[0]);
+        ImGui::Text("Party Size");
+        ImGui::SameLine(sort_cols[1]);
+        ImGui::Text("Sort Order");
+        ImGui::SameLine(sort_cols[2]);
+        ImGui::Text("Actions");
+        ImGui::Separator();
+
+        ImGui::BeginChild("party_sorting_scroll", ImVec2(0, 200.0f));
+        for (size_t i = 0; i < party_sortings.size(); i++) {
+            auto& sorting = party_sortings[i];
+            ImGui::PushID(static_cast<int>(i));
+
+            // Map name
+            const char* map_name = "Any Map";
+            if (sorting.map_id != GW::Constants::MapID::None) {
+                auto* enc_name = Resources::GetMapName(sorting.map_id);
+                if (enc_name && enc_name->string().size()) {
+                    map_name = enc_name->string().c_str();
+                }
+                else {
+                    static char map_id_str[32];
+                    snprintf(map_id_str, sizeof(map_id_str), "Map %d", static_cast<int>(sorting.map_id));
+                    map_name = map_id_str;
+                }
+            }
+            ImGui::TextUnformatted(map_name);
+            ImGui::SameLine(sort_cols[0]);
+
+            // Party size
+            if (sorting.party_size == 0) {
+                ImGui::Text("Any");
+            }
+            else {
+                ImGui::Text("%u", sorting.party_size);
+            }
+            ImGui::SameLine(sort_cols[1]);
+
+            // Sort order display
+            std::string sort_display;
+            for (size_t j = 0; j < sorting.sorting_by_profession.size(); j++) {
+                if (j > 0) sort_display += " -> ";
+                uint8_t primary = sorting.sorting_by_profession[j] >> 8;
+                uint8_t secondary = sorting.sorting_by_profession[j] & 0xff;
+                sort_display += GetProfessionName(primary) + "/" + GetProfessionName(secondary);
+            }
+            ImGui::TextUnformatted(sort_display.c_str());
+
+            ImGui::SameLine(sort_cols[2]);
+
+            // Edit button
+            if (ImGui::Button("Edit")) {
+                edit_sorting_index = i;
+                edit_map_id = static_cast<int>(sorting.map_id);
+                edit_party_size = static_cast<int>(sorting.party_size);
+                edit_profession_order = sorting.sorting_by_profession;
+            }
+            ImGui::SameLine();
+
+            // Delete button
+            if (ImGui::Button("Delete")) {
+                party_sortings.erase(party_sortings.begin() + i);
+                if (chosen_sorting_vector == &sorting) {
+                    chosen_sorting_vector = nullptr;
+                }
+                RefreshPartySortHandler();
+                ImGui::PopID();
+                break;
+            }
+
+            ImGui::PopID();
+        }
+        ImGui::EndChild();
+
+        ImGui::Separator();
+
+
+
+
+        // Add/Edit party sorting
+        const bool is_editing = (edit_sorting_index >= 0);
+        ImGui::Text(is_editing ? "Edit Party Sorting:" : "Add New Party Sorting:");
+
+        // Map selection
+        ImGui::Text("Map ID (0 = Any):");
+        ImGui::SameLine(200.0f * fontScale);
+        ImGui::SetNextItemWidth(100.0f * fontScale);
+        ImGui::InputInt("##map_id", &edit_map_id);
+        if (edit_map_id) {
+            ImGui::SameLine();
+            ImGui::TextDisabled(Resources::GetMapName((GW::Constants::MapID)edit_map_id)->string().c_str());
+        }
+        // Party size
+        ImGui::Text("Party Size (0 = Any):");
+        ImGui::SameLine(200.0f * fontScale);
+        ImGui::SetNextItemWidth(100.0f * fontScale);
+        ImGui::InputInt("##party_size", &edit_party_size);
+        if (edit_party_size < 0) edit_party_size = 0;
+        if (edit_party_size > 12) edit_party_size = 12;
+
+        // Profession order
+        ImGui::Text("Profession Order:");
+        ImGui::BeginChild("profession_order_edit", ImVec2(0, 150.0f), true);
+
+        for (size_t i = 0; i < edit_profession_order.size(); i++) {
+            ImGui::PushID(static_cast<int>(i));
+
+            uint8_t primary = edit_profession_order[i] >> 8;
+            uint8_t secondary = edit_profession_order[i] & 0xff;
+
+            ImGui::Text("%zu.", i + 1);
+            ImGui::SameLine();
+
+            // Primary profession combo
+            ImGui::SetNextItemWidth(120.0f * fontScale);
+            if (ImGui::BeginCombo("##primary", GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(primary)))) {
+                for (uint8_t prof = 0; prof <= 10; prof++) {
+                    if (ImGui::Selectable(GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof)), primary == prof)) {
+                        primary = prof;
+                        edit_profession_order[i] = (static_cast<uint16_t>(primary) << 8) | secondary;
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
+            ImGui::SameLine();
+            ImGui::Text("/");
+            ImGui::SameLine();
+
+            // Secondary profession combo
+            ImGui::SetNextItemWidth(120.0f * fontScale);
+            if (ImGui::BeginCombo("##secondary", GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(secondary)))) {
+                for (uint8_t prof = 0; prof <= 10; prof++) {
+                    if (ImGui::Selectable(GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof)), secondary == prof)) {
+                        secondary = prof;
+                        edit_profession_order[i] = (static_cast<uint16_t>(primary) << 8) | secondary;
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
+            
+
+            // Move up button
+            ImGui::SameLine();
+            if (ImGui::Button(ICON_FA_ARROW_UP) && i > 0) 
+                std::swap(edit_profession_order[i], edit_profession_order[i - 1]);
+
+            ImGui::SameLine();
+            if (ImGui::Button(ICON_FA_ARROW_DOWN) && i < edit_profession_order.size() - 1)
+                std::swap(edit_profession_order[i], edit_profession_order[i + 1]);
+
+            ImGui::SameLine();
+            // Remove button
+            if (ImGui::Button("Remove")) {
+                edit_profession_order.erase(edit_profession_order.begin() + i);
+                ImGui::PopID();
+                break;
+            }
+
+            ImGui::PopID();
+        }
+        ImGui::EndChild();
+
+        // Add profession button
+        if (ImGui::Button("Add Profession")) {
+            edit_profession_order.push_back(0); // Any/Any
+        }
+
+        ImGui::SameLine();
+
+        // Save button
+        if (ImGui::Button(is_editing ? "Save Changes" : "Add Sorting")) {
+            if (edit_profession_order.empty()) {
+                Log::Error("At least one profession entry is required");
+            }
+            else {
+                PartySorting new_sorting;
+                new_sorting.map_id = static_cast<GW::Constants::MapID>(edit_map_id);
+                new_sorting.party_size = static_cast<uint32_t>(edit_party_size);
+                new_sorting.sorting_by_profession = edit_profession_order;
+
+                if (is_editing) {
+                    party_sortings[edit_sorting_index] = new_sorting;
+                    Log::Flash("Updated party sorting");
+                    edit_sorting_index = -1;
+                }
+                else {
+                    party_sortings.push_back(new_sorting);
+                    Log::Flash("Added new party sorting");
+                }
+
+                // Clear edit state
+                edit_map_id = 0;
+                edit_party_size = 0;
+                edit_profession_order.clear();
+
+                RefreshPartySortHandler();
+            }
+        }
+
+        if (is_editing) {
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel")) {
+                edit_sorting_index = -1;
+                edit_map_id = 0;
+                edit_party_size = 0;
+                edit_profession_order.clear();
+            }
+        }
+    }
+} // namespace
 
 void PartyWindowModule::Update(float delta) {
     ToolboxModule::Update(delta);
@@ -702,7 +955,12 @@ void PartyWindowModule::Initialize()
         }
     );
 
-    const GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kSetAgentProfession, GW::UI::UIMessage::kPartyRemovePlayer, GW::UI::UIMessage::kPartyAddPlayer};
+    const GW::UI::UIMessage ui_messages[] = {
+        GW::UI::UIMessage::kSetAgentProfession, 
+        GW::UI::UIMessage::kPartyRemovePlayer, 
+        GW::UI::UIMessage::kPartyAddPlayer,
+        GW::UI::UIMessage::kMapLoaded
+    };
     for (auto ui_message : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, ui_message, OnPostUIMessage, 0x8000);
     }
@@ -773,323 +1031,22 @@ void PartyWindowModule::DrawSettingsInternal()
         CheckMap();
     }
     ImGui::ShowHelp("Adds special NPCs to the Allies section of the party window within compass range.");
-    if (!add_npcs_to_party_window) {
-        return;
+    if (add_npcs_to_party_window) {
+        ImGui::Indent();
+        DrawCustomNPCSettings();
+        ImGui::Unindent();
     }
-    ImGui::TextDisabled("Only works in an explorable area. Only works on NPCs; not enemies, minions or spirits.");
-    const float fontScale = ImGui::GetIO().FontGlobalScale;
-    const float cols[3] = {256.0f * fontScale, 352.0f * fontScale, 448.0f * fontScale};
-
-    ImGui::Text("Name");
-    ImGui::SameLine(cols[0]);
-    ImGui::Text("Model ID");
-    ImGui::SameLine(cols[1]);
-    ImGui::Text("Map");
-    ImGui::Separator();
-    ImGui::BeginChild("user_defined_npcs_to_add_scroll", ImVec2(0, 200.0f));
-    for (const auto& npc : user_defined_npcs) {
-        if (!npc) {
-            continue;
-        }
-        if (!npc->model_id) {
-            continue;
-        }
-        ImGui::PushID(static_cast<int>(npc->model_id));
-        ImGui::TextUnformatted(npc->alias.c_str());
-        ImGui::SameLine(cols[0]);
-        ImGui::Text("%d", npc->model_id);
-        ImGui::SameLine(cols[1]);
-        ImGui::TextUnformatted(npc->GetMapName());
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 48.0f * fontScale);
-        const bool clicked = ImGui::Button(" X ");
-        ImGui::PopID();
-        if (clicked) {
-            Log::Flash("Removed special NPC %s (%d)", npc->alias.c_str(), npc->model_id);
-            RemoveSpecialNPC(npc->model_id);
-            CheckMap();
-            break;
-        }
-    }
-    ImGui::EndChild();
-    ImGui::Separator();
-    bool submitted = false;
-    ImGui::Text("Add new:");
-    ImGui::InputText("Name", new_npc_alias, 128);
-    ImGui::InputInt("Model ID", &new_npc_model_id);
-    ImGui::InputInt("Map ID (0 = Any)", &new_npc_map_id);
-    submitted |= ImGui::Button("Add");
-    if (submitted) {
-        if (new_npc_model_id < 1) {
-            return Log::Error("Invalid model id");
-        }
-        if (new_npc_map_id < 0 || new_npc_map_id > static_cast<int>(GW::Constants::MapID::Count)) {
-            return Log::Error("Invalid map id");
-        }
-        const std::string alias_str(new_npc_alias);
-        if (alias_str.empty()) {
-            return Log::Error("Empty value for Name");
-        }
-        const auto it = user_defined_npcs_by_model_id.find(static_cast<uint32_t>(new_npc_model_id));
-        if (it != user_defined_npcs_by_model_id.end()) {
-            return Log::Error("Special NPC %s is already defined for model_id %d", it->second->alias.c_str(), new_npc_model_id);
-        }
-        AddSpecialNPC({alias_str.c_str(), new_npc_model_id, static_cast<GW::Constants::MapID>(new_npc_map_id)});
-        Log::Flash("Added special NPC %s (%d)", alias_str.c_str(), new_npc_model_id);
-        CheckMap();
-    }
-
-    
-    // Party Sorting Section
     ImGui::Separator();
 
-        static int edit_sorting_index = -1;
-    static int edit_map_id = 0;
-    static int edit_party_size = 0;
-    static std::vector<uint16_t> edit_profession_order;
-
-    ImGui::Text("Party Sorting");
-
-    const float sort_cols[4] = {200.0f * fontScale, 300.0f * fontScale, 380.0f * fontScale, 500.0f * fontScale};
-
-    ImGui::Text("Map");
-    ImGui::SameLine(sort_cols[0]);
-    ImGui::Text("Party Size");
-    ImGui::SameLine(sort_cols[1]);
-    ImGui::Text("Sort Order");
-    ImGui::SameLine(sort_cols[3]);
-    ImGui::Text("Actions");
-    ImGui::Separator();
-
-    ImGui::BeginChild("party_sorting_scroll", ImVec2(0, 200.0f));
-    for (size_t i = 0; i < party_sortings.size(); i++) {
-        auto& sorting = party_sortings[i];
-        ImGui::PushID(static_cast<int>(i));
-
-        // Map name
-        const char* map_name = "Any Map";
-        if (sorting.map_id != GW::Constants::MapID::None) {
-            auto* enc_name = Resources::GetMapName(sorting.map_id);
-            if (enc_name && enc_name->string().size()) {
-                map_name = enc_name->string().c_str();
-            }
-            else {
-                static char map_id_str[32];
-                snprintf(map_id_str, sizeof(map_id_str), "Map %d", static_cast<int>(sorting.map_id));
-                map_name = map_id_str;
-            }
-        }
-        ImGui::TextUnformatted(map_name);
-        ImGui::SameLine(sort_cols[0]);
-
-        // Party size
-        if (sorting.party_size == 0) {
-            ImGui::Text("Any");
-        }
-        else {
-            ImGui::Text("%u", sorting.party_size);
-        }
-        ImGui::SameLine(sort_cols[1]);
-
-        // Sort order display
-        std::string sort_display;
-        for (size_t j = 0; j < sorting.sorting_by_profession.size(); j++) {
-            if (j > 0) sort_display += " -> ";
-            uint8_t primary = sorting.sorting_by_profession[j] >> 8;
-            uint8_t secondary = sorting.sorting_by_profession[j] & 0xff;
-
-            if (primary == 0 && secondary == 0) {
-                sort_display += "Any";
-            }
-            else if (primary == 0) {
-                sort_display += "?/" + GetProfessionName(secondary);
-            }
-            else if (secondary == 0) {
-                sort_display += GetProfessionName(primary) + "/?";
-            }
-            else {
-                sort_display += GetProfessionName(primary) + "/" + GetProfessionName(secondary);
-            }
-        }
-        ImGui::TextUnformatted(sort_display.c_str());
-        ImGui::SameLine(sort_cols[3]);
-
-        // Edit button
-        if (ImGui::Button("Edit")) {
-            edit_sorting_index = i;
-            edit_map_id = static_cast<int>(sorting.map_id);
-            edit_party_size = static_cast<int>(sorting.party_size);
-            edit_profession_order = sorting.sorting_by_profession;
-        }
-        ImGui::SameLine();
-
-        // Delete button
-        if (ImGui::Button("Delete")) {
-            party_sortings.erase(party_sortings.begin() + i);
-            if (chosen_sorting_vector == &sorting) {
-                chosen_sorting_vector = nullptr;
-            }
-            RefreshPartySortHandler();
-            ImGui::PopID();
-            break;
-        }
-
-        ImGui::PopID();
+    if (ImGui::Checkbox("Add custom sorting to party window", &custom_sort_party_window)) {
+        RefreshPartySortHandler();
     }
-    ImGui::EndChild();
-
-    ImGui::Separator();
-
-
-
-
-    // Add/Edit party sorting
-    const bool is_editing = (edit_sorting_index >= 0);
-    ImGui::Text(is_editing ? "Edit Party Sorting:" : "Add New Party Sorting:");
-
-    // Map selection
-    ImGui::Text("Map:");
-    ImGui::SameLine();
-    if (ImGui::BeginCombo("##map_combo", edit_map_id == 0 ? "Any Map" : Resources::GetMapName(static_cast<GW::Constants::MapID>(edit_map_id))->string().c_str())) {
-        if (ImGui::Selectable("Any Map", edit_map_id == 0)) {
-            edit_map_id = 0;
-        }
-
-        // Add some common maps - you might want to expand this list
-        const std::vector<GW::Constants::MapID> common_maps = {GW::Constants::MapID::Tomb_of_the_Primeval_Kings, GW::Constants::MapID::The_Deep,
-                                                               GW::Constants::MapID::Urgozs_Warren,       GW::Constants::MapID::The_Fissure_of_Woe,         GW::Constants::MapID::The_Underworld,
-                                                               GW::Constants::MapID::Domain_of_Anguish};
-
-        for (auto map_id : common_maps) {
-            bool is_selected = (edit_map_id == static_cast<int>(map_id));
-            if (ImGui::Selectable(Resources::GetMapName(static_cast<GW::Constants::MapID>(edit_map_id))->string().c_str(), is_selected)) {
-                edit_map_id = static_cast<int>(map_id);
-            }
-        }
-        ImGui::EndCombo();
+    ImGui::ShowHelp("Automatically sort players in your party window depending on profession and/or map");
+    if (custom_sort_party_window) {
+        ImGui::Indent();
+        DrawCustomPartySortingSettings();
+        ImGui::Unindent();
     }
-
-    // Party size
-    ImGui::Text("Party Size (0 = Any):");
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(100.0f * fontScale);
-    ImGui::InputInt("##party_size", &edit_party_size);
-    if (edit_party_size < 0) edit_party_size = 0;
-    if (edit_party_size > 12) edit_party_size = 12;
-
-    // Profession order
-    ImGui::Text("Profession Order:");
-    ImGui::BeginChild("profession_order_edit", ImVec2(0, 150.0f), true);
-
-    for (size_t i = 0; i < edit_profession_order.size(); i++) {
-        ImGui::PushID(static_cast<int>(i));
-
-        uint8_t primary = edit_profession_order[i] >> 8;
-        uint8_t secondary = edit_profession_order[i] & 0xff;
-
-        ImGui::Text("%zu.", i + 1);
-        ImGui::SameLine();
-
-        // Primary profession combo
-        ImGui::SetNextItemWidth(120.0f * fontScale);
-        if (ImGui::BeginCombo("##primary", GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(primary)))) {
-            for (uint8_t prof = 0; prof <= 10; prof++) {
-                if (ImGui::Selectable(GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof)), primary == prof)) {
-                    primary = prof;
-                    edit_profession_order[i] = (static_cast<uint16_t>(primary) << 8) | secondary;
-                }
-            }
-            ImGui::EndCombo();
-        }
-
-        ImGui::SameLine();
-        ImGui::Text("/");
-        ImGui::SameLine();
-
-        // Secondary profession combo
-        ImGui::SetNextItemWidth(120.0f * fontScale);
-        if (ImGui::BeginCombo("##secondary", GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(secondary)))) {
-            for (uint8_t prof = 0; prof <= 10; prof++) {
-                if (ImGui::Selectable(GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof)), secondary == prof)) {
-                    secondary = prof;
-                    edit_profession_order[i] = (static_cast<uint16_t>(primary) << 8) | secondary;
-                }
-            }
-            ImGui::EndCombo();
-        }
-
-        ImGui::SameLine();
-
-        // Move up button
-        if (i > 0 && ImGui::Button("↑")) {
-            std::swap(edit_profession_order[i], edit_profession_order[i - 1]);
-        }
-        ImGui::SameLine();
-
-        // Move down button
-        if (i < edit_profession_order.size() - 1 && ImGui::Button("↓")) {
-            std::swap(edit_profession_order[i], edit_profession_order[i + 1]);
-        }
-        ImGui::SameLine();
-
-        // Remove button
-        if (ImGui::Button("Remove")) {
-            edit_profession_order.erase(edit_profession_order.begin() + i);
-            ImGui::PopID();
-            break;
-        }
-
-        ImGui::PopID();
-    }
-    ImGui::EndChild();
-
-    // Add profession button
-    if (ImGui::Button("Add Profession")) {
-        edit_profession_order.push_back(0); // Any/Any
-    }
-
-    ImGui::SameLine();
-
-    // Save button
-    if (ImGui::Button(is_editing ? "Save Changes" : "Add Sorting")) {
-        if (edit_profession_order.empty()) {
-            Log::Error("At least one profession entry is required");
-        }
-        else {
-            PartySorting new_sorting;
-            new_sorting.map_id = static_cast<GW::Constants::MapID>(edit_map_id);
-            new_sorting.party_size = static_cast<uint32_t>(edit_party_size);
-            new_sorting.sorting_by_profession = edit_profession_order;
-
-            if (is_editing) {
-                party_sortings[edit_sorting_index] = new_sorting;
-                Log::Flash("Updated party sorting");
-                edit_sorting_index = -1;
-            }
-            else {
-                party_sortings.push_back(new_sorting);
-                Log::Flash("Added new party sorting");
-            }
-
-            // Clear edit state
-            edit_map_id = 0;
-            edit_party_size = 0;
-            edit_profession_order.clear();
-
-            RefreshPartySortHandler();
-        }
-    }
-
-    if (is_editing) {
-        ImGui::SameLine();
-        if (ImGui::Button("Cancel")) {
-            edit_sorting_index = -1;
-            edit_map_id = 0;
-            edit_party_size = 0;
-            edit_profession_order.clear();
-        }
-    }
-
-
 }
 void PartyWindowModule::SaveSettings(ToolboxIni* ini)
 {
@@ -1100,6 +1057,7 @@ void PartyWindowModule::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(add_player_numbers_to_party_window);
     SAVE_BOOL(add_elite_skill_to_summons);
     SAVE_BOOL(remove_dead_imperials);
+    SAVE_BOOL(custom_sort_party_window);
 
     // - Re-fill settings.
     SAVE_BOOL(add_npcs_to_party_window);
@@ -1149,6 +1107,7 @@ void PartyWindowModule::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(add_player_numbers_to_party_window);
     LOAD_BOOL(add_elite_skill_to_summons);
     LOAD_BOOL(remove_dead_imperials);
+    LOAD_BOOL(custom_sort_party_window);
 
     ClearSpecialNPCs();
     for (const auto& key : keys) {

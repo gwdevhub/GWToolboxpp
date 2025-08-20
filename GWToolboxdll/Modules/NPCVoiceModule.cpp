@@ -26,6 +26,8 @@
 #include "GwDatTextureModule.h"
 #include <Utils/ArenaNetFileParser.h>
 #include <GWCA/Utilities/Hooker.h>
+#include <Utils/ToolboxUtils.h>
+#include <GWCA/GameEntities/Frame.h>
 
 namespace {
 
@@ -555,21 +557,6 @@ namespace {
         return result;
     }
 
-    bool IsInParty(uint32_t agent_id) {
-        const auto p = GW::PartyMgr::GetPartyInfo();
-        if (!p) return false;
-        for (const auto& member : p->henchmen) {
-            if (member.agent_id == agent_id) return true;
-        }
-        for (const auto& member : p->heroes) {
-            if (member.agent_id == agent_id) return true;
-        }
-        for (const auto& other_id : p->others) {
-            if (other_id == agent_id) return true;
-        }
-        return false;
-    }
-
     // Cost optimization functions
     std::wstring PreprocessTextForTTS(const std::wstring& text)
     {
@@ -824,7 +811,7 @@ namespace {
                 if (!play_speech_bubbles_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) break;
                 const auto packet = (GW::UI::UIPacket::kAgentSpeechBubble*)wParam;
                 if (!(packet && packet->message && *packet->message)) break;
-                if (!play_speech_bubbles_from_party_members && IsInParty(packet->agent_id)) break;
+                if (!play_speech_bubbles_from_party_members && GW::PartyMgr::IsAgentInParty(packet->agent_id)) break;
                 const auto agent = GW::Agents::GetAgentByID(packet->agent_id);
                 if (GW::GetDistance(agent->pos, GetPlayerPosition()) > npc_speech_bubble_range) {
                     return; // Ignore distant NPCs
@@ -839,10 +826,9 @@ namespace {
                 switch (packet->transaction_type) {
                     case GW::Merchant::TransactionType::CollectorBuy: {
                         // Find and use the collector's dialog context
-                        auto collector_dialog = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Vendor"), 0, 0, 2);
-                        const auto context = (wchar_t**)GW::UI::GetFrameContext(collector_dialog);
-                        if (context && *context)
-                            GenerateVoiceFromEncodedString(new PendingNPCAudio(packet->unk, *context));
+                        const auto collector_dialog = (GW::TextLabelFrame*)GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Vendor"), 0, 0, 2);
+                        const auto enc_text = collector_dialog ? collector_dialog->GetEncodedLabel() : nullptr;
+                        if (enc_text && *enc_text) GenerateVoiceFromEncodedString(new PendingNPCAudio(packet->unk, enc_text));
                     } break;
                     case GW::Merchant::TransactionType::SkillTrainer:
                     case GW::Merchant::TransactionType::MerchantBuy:
