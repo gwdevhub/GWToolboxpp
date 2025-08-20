@@ -5,6 +5,8 @@ layout: default
 # What is GWToolbox++?
 GWToolbox++ (or just *toolbox*), is a collection of several tools and enhancements for the original Guild Wars. It adds features that should exist in a modern game and tools to visualize information and improve the player experience.
 
+> **Important Note:** GWToolbox++ is completely disabled in PvP areas to maintain fair play. Additionally, Toolbox is designed for active gameplay and will not work as expected when you aren't actively playing Guild Wars - it cannot be used to "bot" the game.
+
 # List of Features
 <div style="float: left; width: 80%;">
 	<table>
