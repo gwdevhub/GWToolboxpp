@@ -70,7 +70,6 @@ using namespace GuiUtils;
 using namespace ToolboxUtils;
 
 namespace {
-    GW::MemoryPatcher ctrl_click_patch;
     GW::MemoryPatcher gold_confirm_patch;
     GW::MemoryPatcher remove_skill_warmup_duration_patch;
 
@@ -1643,30 +1642,12 @@ bool PendingChatMessage::PrintMessage()
 void GameSettings::Initialize()
 {
     ToolboxModule::Initialize();
-    //return;
-    // Patch that allow storage page (and Anniversary page) to work.
-    uintptr_t address = GW::Scanner::Find("\xEB\x17\x33\xD2\x8D\x4A\x06\xEB", "xxxxxxxx", -4);
-    if (address) {
-        // Xunlai Chest has a behavior where if you
-        // 1. Open chest on page 1 to 14
-        // 2. Close chest & open it again
-        // -> You should still be on the same page
-        // But, if you try with the material page (or anniversary page in the case when you bought all other storage page)
-        // you will get back the the page 1. I think it was a intended use for material page & forgot to fix it
-        // when they added anniversary page so we do it ourself.
 
-        // @Cleanup: Change this to be a post CreateUIComponent hook instead
-        constexpr DWORD page_max = 14;
-        ctrl_click_patch.SetPatch(address, (const char*)&page_max, 1);
-        ctrl_click_patch.TogglePatch(true);
-    }
-
-    Log::Log("[GameSettings] ctrl_click_patch = %p\n", ctrl_click_patch.GetAddress());
 
     SkillList_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmCtlSkList.cpp", "!obj", 0xc71, 0));
     Log::Log("[GameSettings] SkillList_UICallback_Func = %p\n", SkillList_UICallback_Func);
 
-    address = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxx??", +7);
+    auto address = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxx??", +7);
     if (address)
         gold_confirm_patch.SetPatch(address, "\x90\x90", 2);
     Log::Log("[GameSettings] gold_confirm_patch = %p\n", gold_confirm_patch.GetAddress());
@@ -1702,7 +1683,6 @@ void GameSettings::Initialize()
     Log::Log("[GameSettings] CharacterStatIncreased_Func = %p\n", (void*)CharacterStatIncreased_Func);
 
 #ifdef _DEBUG
-    ASSERT(ctrl_click_patch.IsValid());
     ASSERT(SkillList_UICallback_Func);
     ASSERT(remove_skill_warmup_duration_patch.IsValid());
     ASSERT(SetFrameSkillDescription_Func);
@@ -2079,7 +2059,6 @@ void GameSettings::RegisterSettingsContent()
 void GameSettings::Terminate()
 {
     ToolboxModule::Terminate();
-    ctrl_click_patch.Reset();
     gold_confirm_patch.Reset();
     remove_skill_warmup_duration_patch.Reset();
 
