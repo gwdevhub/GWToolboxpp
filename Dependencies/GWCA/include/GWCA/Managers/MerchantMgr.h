@@ -11,6 +11,8 @@ namespace GW {
     typedef uint32_t ItemID;
     typedef Array<ItemID> MerchItemArray;
 
+    struct Item;
+
     namespace Merchant {
 
         struct TransactionInfo {
@@ -26,23 +28,28 @@ namespace GW {
         };
 
         enum class TransactionType : uint32_t {
-            MerchantBuy = 0x1,
+            AccountName,
+            MerchantBuy,
             CollectorBuy,
             CrafterBuy,
             WeaponsmithCustomize,
-            DonateFaction = 0x6,
-            SkillTrainer = 0xA,
+            Services,
+            DonateFaction,
+            Unused,
+            GuildRegistration,
+            GuildCape,
+            SkillTrainer,
             MerchantSell,
             TraderBuy,
             TraderSell,
-
-            UnlockRunePriestOfBalth = 0xF
+            UnlockHero,
+            UnlockItem,
+            UnlockSkill
         };
         GWCA_API bool TransactItems();
 
         GWCA_API bool RequestQuote(TransactionType type, uint32_t item_id);
 
-        // note: can contain pointers to random items from your inventory
-        GWCA_API MerchItemArray* GetMerchantItemsArray();
+        GWCA_API size_t GetMerchantItems(TransactionType type, size_t buffer_len = 0, uint32_t* buffer = 0);
     };
 }

@@ -40,9 +40,13 @@ namespace GW {
         GWCA_API bool ClearItems();
         GWCA_API bool RemoveItem(uint32_t child_offset_id);
         GWCA_API bool AddItem(uint32_t flags, uint32_t child_offset_id, GW::UI::UIInteractionCallback* callback);
-        GWCA_API bool GetItemFrameId(uint32_t child_offset_id, uint32_t* frame_id);
+        GWCA_API uint32_t GetItemFrameId(uint32_t child_offset_id);
         // Returns false if the request failed, or nothing is selected
         GWCA_API bool GetSelectedValue(uint32_t* selected_value);
+        GWCA_API uint32_t GetFirstChildFrameId(uint32_t* _offset_of_child_out = nullptr);
+        GWCA_API uint32_t GetNextChildFrameId(uint32_t _frame_id, uint32_t* _offset_of_child_out = nullptr);
+        GWCA_API uint32_t GetLastChildFrameId(uint32_t* _offset_of_child_out = nullptr);
+        GWCA_API uint32_t GetPrevChildFrameId(uint32_t _frame_id, uint32_t* _offset_of_child_out = nullptr);
         GWCA_API bool GetItemRect(uint32_t child_offset_id, float rect[4]);
         GWCA_API bool GetCount(uint32_t* size);
     };
@@ -107,7 +111,12 @@ namespace GW {
         GWCA_API uint32_t GetValue() override;
     };
 
-    struct TextLabelFrame final : UI::Frame {
+    struct TextLabelFrame : UI::Frame {
+        GWCA_API const wchar_t* GetEncodedLabel();
+        GWCA_API const wchar_t* GetDecodedLabel();
+        GWCA_API bool SetLabel(const wchar_t* enc_string);
+    };
+    struct MultiLineTextLabelFrame final : TextLabelFrame {
         GWCA_API const wchar_t* GetEncodedLabel();
         GWCA_API const wchar_t* GetDecodedLabel();
         GWCA_API bool SetLabel(const wchar_t* enc_string);
