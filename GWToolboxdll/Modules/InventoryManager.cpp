@@ -32,6 +32,7 @@
 
 #include <Windows/MaterialsWindow.h>
 #include <Windows/DailyQuestsWindow.h>
+#include <GWCA/GameEntities/Frame.h>
 
 namespace {
     InventoryManager& Instance()
@@ -840,6 +841,40 @@ namespace {
         RetAddItemRowToWindow(ecx, edx, frame, item_id);
         GW::Hook::LeaveHook();
     }
+
+    void UpdateQuoteHelpText()
+    {
+        auto SetFrameText = [](GW::UI::Frame* frame) {
+            const auto quote_help_text = (GW::TextLabelFrame*)frame;
+            if (!quote_help_text) return;
+            const auto current_text = quote_help_text->GetEncodedLabel();
+            if (!(current_text && wcslen(current_text) < 10)) return;
+            std::wstring new_text = std::format(L"{}\x2\x108\x107{}\x1", current_text, L"\n\nNeed to buy or sell in bulk? Hold Ctrl when clicking \"Request Quote\" to choose a quantity.");
+            quote_help_text->SetLabel(new_text.c_str());
+        };
+
+        auto frame = GW::UI::GetFrameByLabel(L"BtnSell");
+        if (frame) frame = GW::UI::GetChildFrame(frame->relation.GetParent(), 0x8);
+        SetFrameText(frame);
+
+        frame = GW::UI::GetFrameByLabel(L"BtnBuy");
+        if (frame) frame = GW::UI::GetChildFrame(frame->relation.GetParent(), 0x15);
+        SetFrameText(frame);
+    }
+
+    GW::HookEntry OnPostUIMessage_HookEntry;
+
+    void OnPostUIMessage(GW::HookStatus*, const GW::UI::UIMessage message_id, void*, void*) {
+        switch (message_id) {
+            case GW::UI::UIMessage::kVendorWindow: {
+                UpdateQuoteHelpText();
+            } break;
+        }
+    }
+
+
+
+
 } // namespace
 void InventoryManager::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
 {
@@ -946,6 +981,7 @@ void InventoryManager::Initialize()
     };
     for (const auto message_id : message_id_hooks) {
         RegisterUIMessageCallback(&ItemClick_Entry, message_id, OnUIMessage);
+        RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
     }
 
 
@@ -977,6 +1013,7 @@ void InventoryManager::Terminate()
     ClearPotentialItems();
     GW::Items::RemoveItemClickCallback(&ItemClick_Entry);
     GW::UI::RemoveUIMessageCallback(&ItemClick_Entry);
+    GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
     GW::Hook::RemoveHook(AddItemRowToWindow_Func);
     GW::Hook::RemoveHook(UICallback_ChooseQuantityPopup_Func);
 
