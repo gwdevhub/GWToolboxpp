@@ -826,7 +826,7 @@ namespace {
                 switch (packet->transaction_type) {
                     case GW::Merchant::TransactionType::CollectorBuy: {
                         // Find and use the collector's dialog context
-                        const auto collector_dialog = (GW::TextLabelFrame*)GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Vendor"), 0, 0, 2);
+                        const auto collector_dialog = (GW::MultiLineTextLabelFrame*)GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Vendor"), 0, 0, 2);
                         const auto enc_text = collector_dialog ? collector_dialog->GetEncodedLabel() : nullptr;
                         if (enc_text && *enc_text) GenerateVoiceFromEncodedString(new PendingNPCAudio(packet->unk, enc_text));
                     } break;
