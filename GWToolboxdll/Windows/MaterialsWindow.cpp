@@ -19,9 +19,9 @@
 #include <Windows/MaterialsWindow.h>
 #include <Modules/GwDatTextureModule.h>
 #include <Timer.h>
+#include <GWCA/GameEntities/Frame.h>
 
 namespace {
-    std::map<uint32_t, std::vector<uint32_t>> vendor_items;
 
     constexpr DWORD MIN_TIME_BETWEEN_RETRY = 160; // 10 frames
 
@@ -140,12 +140,6 @@ namespace {
 
     void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*) {
         switch (message_id) {
-        case GW::UI::UIMessage::kVendorItems: {
-            const auto packet = (GW::UI::UIPacket::kVendorItems*)wParam;
-            const auto transaction_type = (uint32_t)packet->transaction_type;
-            vendor_items[transaction_type].resize(packet->item_ids_count);
-            memcpy(vendor_items[transaction_type].data(), packet->item_ids_buffer1, packet->item_ids_count * sizeof(*packet->item_ids_buffer1));
-        } break;
         case GW::UI::UIMessage::kVendorQuote: {
             const auto packet = (GW::UI::UIPacket::kVendorQuote*)wParam;
             const auto current_transaction = GetCurrentTransaction();
@@ -166,14 +160,16 @@ namespace {
         }
     }
 
-    GW::Item* GetVendorItem(const GW::Constants::MaterialSlot material, const GW::Merchant::TransactionType transaction_type) {
-        const auto tt_uint = (uint32_t)transaction_type;
-        if (!(GetVendorFrame() && vendor_items.contains(tt_uint)))
-            return nullptr;
-        for (auto item_id : vendor_items[tt_uint]) {
+    GW::Item* GetVendorItem(const GW::Constants::MaterialSlot material, const GW::Merchant::TransactionType type)
+    {
+
+        std::vector<uint32_t> vendor_items;
+        vendor_items.resize(GW::Merchant::GetMerchantItems(type));
+        vendor_items.resize(GW::Merchant::GetMerchantItems(type, vendor_items.size(), vendor_items.data()));
+
+        for (auto item_id : vendor_items) {
             const auto item = GW::Items::GetItemById(item_id);
-            if (item && GW::Items::GetMaterialSlot(item) == material)
-                return item;
+            if (GW::Items::GetMaterialSlot(item) == material) return item;
         }
         return nullptr;
     }
@@ -364,7 +360,8 @@ void MaterialsWindow::Initialize()
 
     const GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kVendorQuote,
-        GW::UI::UIMessage::kVendorItems
+        GW::UI::UIMessage::kVendorItems, 
+        GW::UI::UIMessage::kVendorWindow
     };
     for (auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&PostUIMessage_Entry, message_id, OnPostUIMessage, 0x4000);
