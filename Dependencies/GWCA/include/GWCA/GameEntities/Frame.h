@@ -64,6 +64,14 @@ namespace GW {
         virtual bool SetValue(uint32_t value);
     };
 
+    struct EditableTextFrame : UI::Frame {
+        GWCA_API const wchar_t* GetValue();
+        GWCA_API bool SetValue(const wchar_t* value);
+        GWCA_API bool SetMaxLength(uint32_t max_length);
+        GWCA_API bool IsReadOnly();
+        GWCA_API bool SetReadOnly(bool readonly);
+    };
+
     struct ProgressBar final : ButtonFrame, FrameWithValue {
         GWCA_API uint32_t GetValue() override;
         GWCA_API bool SetValue(uint32_t value) override;

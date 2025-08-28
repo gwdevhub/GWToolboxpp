@@ -289,8 +289,10 @@ namespace GW {
             kDestroyFrame               = 0xb,
             kFrameMessage_0x13          = 0x13,
             kKeyDown                    = 0x1e, // wparam = UIPacket::kKeyAction*
+            kSetFocus                   = 0x1f, // wparam = 1 or 0
             kKeyUp                      = 0x20, // wparam = UIPacket::kKeyAction*
             kMouseClick                 = 0x22, // wparam = UIPacket::kMouseClick*
+            kMouseUp                    = 0x26, // wparam = UIPacket::kMouseAction*
             kMouseClick2                = 0x2e, // wparam = UIPacket::kMouseAction*
             kMouseAction                = 0x2f, // wparam = UIPacket::kMouseAction*
             kRenderFrame_0x30 = 0x30,
@@ -599,6 +601,7 @@ namespace GW {
                 uint32_t child_offset_id;
                 uint32_t current_state; // 0x5 = hovered, 0x6 = mouse down
                 void* wparam = 0;
+                void* lparam = 0;
             };
             struct kWriteToChatLog {
                 GW::Chat::Channel channel;
