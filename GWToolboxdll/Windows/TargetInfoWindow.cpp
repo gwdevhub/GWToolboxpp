@@ -140,8 +140,9 @@ namespace {
 
                 static constexpr ctll::fixed_string link_regex = R"(<a href="[^"]+" title="([^"]+)\")";
                 for (const auto& item_match : ctre::search_all<link_regex>(list_found)) {
-                    std::string title_attr = item_match.get<1>().to_string();
-                    if (!std::ranges::contains(items_dropped, title_attr)) items_dropped.push_back(title_attr);
+                    std::string item_dropped_html = item_match.get<1>().to_string();
+                    const auto item_dropped_text = native_html_to_text(item_dropped_html);
+                    if (!std::ranges::contains(items_dropped, item_dropped_text)) items_dropped.push_back(item_dropped_text);
                 }
             }
 
