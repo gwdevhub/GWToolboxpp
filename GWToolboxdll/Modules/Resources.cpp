@@ -89,6 +89,7 @@ namespace {
 
     std::map<std::string, IDirect3DTexture9**> damagetype_icons;
     std::map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
+    std::map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names;
     std::map<GW::Constants::MapID, GuiUtils::EncString*> region_names;
     std::unordered_map<GW::Constants::Language, std::unordered_map<uint32_t, GuiUtils::EncString*>> encoded_string_ids;
     std::filesystem::path current_settings_folder;
@@ -402,7 +403,8 @@ void Resources::Cleanup()
         }
     }
     encoded_string_ids.clear();
-    map_names.clear(); // NB: Map names are pointers to encoded_string_ids
+    map_names.clear(); // NB: pointers to encoded_string_ids, no need to free memory
+    skill_names.clear(); // NB: pointers to encoded_string_ids, no need to free memory
 }
 
 void Resources::Terminate()
@@ -952,6 +954,19 @@ IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p)
     return texture;
 }
 
+bool Resources::GetTextureSize(IDirect3DTexture9* texture, ImVec2* out)
+{
+    if (!(texture && out)) return false;
+
+    D3DSURFACE_DESC desc;
+    HRESULT hr = texture->GetLevelDesc(0, &desc);
+
+    if (FAILED(hr)) return false;
+
+    *out = {static_cast<float>(desc.Width), static_cast<float>(desc.Height)};
+    return true;
+}
+
 IDirect3DTexture9** Resources::GetDamagetypeImage(std::string dmg_type)
 {
     if (damagetype_icons.contains(dmg_type)) {
@@ -1158,6 +1173,11 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
         LoadTexture(texture, path_to_file, url, callback);
     });
     return texture;
+}
+
+GuiUtils::EncString* Resources::GetSkillName(const GW::Constants::SkillID skill_id)
+{
+    return DecodeStringId(GW::SkillbarMgr::GetSkillConstantData(skill_id)->name);
 }
 
 GuiUtils::EncString* Resources::GetMapName(const GW::Constants::MapID map_id)

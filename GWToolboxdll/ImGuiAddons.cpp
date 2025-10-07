@@ -25,6 +25,30 @@ namespace ImGui {
     int element_spacing_col_idx = 0;
     float* element_spacing_indent = nullptr;
 
+    void AddImageScaled(ImDrawList* draw_list, ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& size, float max_width, float max_height, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col)
+    {
+        if ((col & IM_COL32_A_MASK) == 0) return;
+
+        // Calculate scale to fit within max dimensions while preserving aspect ratio
+        float scale_x = max_width / size.x;
+        float scale_y = max_height / size.y;
+        float scale = (scale_x < scale_y) ? scale_x : scale_y;
+
+        // Don't upscale, only downscale
+        if (scale > 1.0f) scale = 1.0f;
+
+        ImVec2 scaled_size = ImVec2(size.x * scale, size.y * scale);
+        ImVec2 p_max = ImVec2(p_min.x + scaled_size.x, p_min.y + scaled_size.y);
+
+        const bool push_texture_id = user_texture_id != draw_list->_CmdHeader.TextureId;
+        if (push_texture_id) draw_list->PushTextureID(user_texture_id);
+
+        draw_list->PrimReserve(6, 4);
+        draw_list->PrimRectUV(p_min, p_max, uv_min, uv_max, col);
+
+        if (push_texture_id) draw_list->PopTextureID();
+    }
+
     bool InputText(const char* label, std::string& buf, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
     {
         if (InputText(label, buf.data(), (int)buf.capacity(), flags, callback, user_data)) {

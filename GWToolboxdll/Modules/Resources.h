@@ -88,6 +88,7 @@ public:
 
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetProfessionIcon(GW::Constants::Profession p);
+    static bool GetTextureSize(IDirect3DTexture9* texture, ImVec2* out);
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetDamagetypeImage(std::string dmg_type);
     // Fetches skill image from gw dat via file_id
@@ -96,6 +97,8 @@ public:
     // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetSkillImageFromGWW(GW::Constants::SkillID skill_id);
+
+    static GuiUtils::EncString* GetSkillName(const GW::Constants::SkillID skill_id);
 
     static IDirect3DTexture9** GetItemImage(GW::Item* item);
     // Fetches item page from GWW, parses out the image for the item then downloads that to disk
