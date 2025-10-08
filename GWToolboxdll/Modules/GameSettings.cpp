@@ -2251,16 +2251,17 @@ void GameSettings::DrawPartySettings()
 
 void GameSettings::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Hide email address on login screen", &hide_email_address);
-    ImGui::ShowHelp("When logging out to switch character, your email address is visible on the login screen; tick this to automatically hide it\n\nThis is useful when streaming your gameplay to hide your personal info.");
-    ImGui::Checkbox("Remember my online status when returning to character select screen", &remember_online_status);
-    ImGui::ShowHelp(
-        "Guild Wars doesn't remember your friend list status when you return to the character select screen,\n and sets your status to 'Online' when you select a character to play.\nTick this to avoid having to change it when you switch characters."
-    );
-    ImGui::Checkbox("Automatic /age on vanquish", &auto_age_on_vanquish);
-    ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
-    ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
-    ImGui::ShowHelp("GWToolbox++ will show /age2 time after /age is shown in chat");
+    ImGui::Checkbox("Apply Collector's Edition animations on player dance", &collectors_edition_emotes);
+    ImGui::ShowHelp("Only applies to your own character");
+
+    ImGui::Checkbox("Automatically cancel Unyielding Aura when re-casting", &drop_ua_on_cast);
+
+    ImGui::Checkbox("Automatically use available keys when interacting with locked chest", &auto_open_locked_chest_with_key);
+
+    ImGui::Checkbox("Automatically use lockpick when interacting with locked chest", &auto_open_locked_chest);
+
+    ImGui::Checkbox("Automatically return to outpost on defeat", &auto_return_on_defeat);
+    ImGui::ShowHelp("Automatically return party to outpost on party wipe if player is leading");
 
     ImGui::Checkbox("Automatically set 'Away' after ", &auto_set_away);
     ImGui::SameLine();
@@ -2274,23 +2275,68 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Checkbox("Automatically set 'Online' after an input to Guild Wars", &auto_set_online);
     ImGui::ShowHelp("Only if you were 'Away'");
 
+    ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
+
+    ImGui::Checkbox("Automatic /age on vanquish", &auto_age_on_vanquish);
+    ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
+
+    ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
+    ImGui::ShowHelp("GWToolbox++ will show /age2 time after /age is shown in chat");
+
+    ImGui::Checkbox("Block full screen message when entering a new area", &block_enter_area_message);
+
+    ImGui::Checkbox("Block full screen popup what shows when completing a vanquish", &block_vanquish_complete_popup);
+
+    ImGui::Checkbox("Block full screen popup what shows when opening a dungeon chest", &hide_dungeon_chest_popup);
+
+    ImGui::Checkbox("Block sparkle effect on dropped items", &block_sparkly_drops_effect);
+    ImGui::ShowHelp("Applies to drops that appear after this setting has been changed");
+
+    ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
+    ImGui::ShowHelp("The default mouse camera movement isn't instant, and instead smoothes the action when you move the mouse.\nTick this to disable this smoothing behaviour.");
+
+    if (ImGui::Checkbox("Disable Gold/Green items confirmation", &disable_gold_selling_confirmation)) {
+        gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
+    }
+    ImGui::ShowHelp("Disable the confirmation request when\n"
+                    "selling Gold and Green items introduced\n"
+                    "in February 5, 2019 update.");
+
+    ImGui::Checkbox("Hide email address on login screen", &hide_email_address);
+    ImGui::ShowHelp("When logging out to switch character, your email address is visible on the login screen; tick this to automatically hide it\n\nThis is useful when streaming your gameplay to hide your personal info.");
+
+    ImGui::Checkbox("Keep current quest when accepting a new one", &keep_current_quest_when_new_quest_added);
+    ImGui::ShowHelp(
+        "By default, Guild Wars changes your currently selected quest to the one you've just taken from an NPC.\nThis can be annoying if you don't realise your quest marker is now taking you somewhere different!\nTick this to make sure your current quest isn't changed when a new quest is added to your log."
+    );
+
+    ImGui::Checkbox("Limit signet of capture to 10 in skills window", &limit_signets_of_capture);
+    ImGui::ShowHelp("If your character has purchased more than 10 signets of capture, only show 10 of them in the skills window");
+
     ImGui::Checkbox("Only show non learned skills when using a tome", &show_unlearned_skill);
     ImGui::ShowHelp("When you double click on a tome, the skills window that appears has all skills available for that profession.\nTick this to hide skills that your current character already has.");
 
-    if (ImGui::Checkbox("Remove 1.5 second minimum for the cast bar to show.", &remove_min_skill_warmup_duration)) {
-        remove_skill_warmup_duration_patch.TogglePatch(remove_min_skill_warmup_duration);
-    }
-    ImGui::ShowHelp("When casting a skill, the in-game cast bar only shows up if the skill's cast time is more than 1.5 seconds.\nTick this to show the cast bar regardless of casting time.");
-    ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
-    ImGui::ShowHelp("The default mouse camera movement isn't instant, and instead smoothes the action when you move the mouse.\nTick this to disable this smoothing behaviour.");
+    ImGui::Checkbox("Prevent weapon spell skin showing on player weapons", &prevent_weapon_spell_animation_on_player);
 
     ImGui::Checkbox("Prompt if entering a mission you've already completed", &check_and_prompt_if_mission_already_completed);
     ImGui::ShowHelp(
         "Sometimes a player can forget to set Hard Mode/Normal Mode when starting a mission for their character.\nGwtoolbox can catch this and check your current character's achievements,\nand can show an 'Are you sure?' prompt if you're trying to do a mission\nthat you've already completed in the chosen mode."
     );
-    ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
-    ImGui::Checkbox("Automatically return to outpost on defeat", &auto_return_on_defeat);
-    ImGui::ShowHelp("Automatically return party to outpost on party wipe if player is leading");
+
+    ImGui::Checkbox("Remember my online status when returning to character select screen", &remember_online_status);
+    ImGui::ShowHelp(
+        "Guild Wars doesn't remember your friend list status when you return to the character select screen,\n and sets your status to 'Online' when you select a character to play.\nTick this to avoid having to change it when you switch characters."
+    );
+
+    if (ImGui::Checkbox("Remove 1.5 second minimum for the cast bar to show.", &remove_min_skill_warmup_duration)) {
+        remove_skill_warmup_duration_patch.TogglePatch(remove_min_skill_warmup_duration);
+    }
+    ImGui::ShowHelp("When casting a skill, the in-game cast bar only shows up if the skill's cast time is more than 1.5 seconds.\nTick this to show the cast bar regardless of casting time.");
+
+    if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &set_window_title_as_charname)) {
+        SetWindowTitle(set_window_title_as_charname);
+    }
+
     ImGui::Checkbox("Show warning when earned faction reaches ", &faction_warn_percent);
     ImGui::SameLine();
     ImGui::PushItemWidth(40.0f * ImGui::GetIO().FontGlobalScale);
@@ -2299,39 +2345,11 @@ void GameSettings::DrawSettingsInternal()
     ImGui::SameLine();
     ImGui::Text("%%");
     ImGui::ShowHelp("Displays when in a challenge mission or elite mission outpost");
+
     ImGui::Checkbox("Skip character name input when donating faction", &skip_entering_name_for_faction_donate);
 
-    if (ImGui::Checkbox("Disable Gold/Green items confirmation", &disable_gold_selling_confirmation)) {
-        gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
-    }
-    ImGui::ShowHelp(
-        "Disable the confirmation request when\n"
-        "selling Gold and Green items introduced\n"
-        "in February 5, 2019 update.");
     ImGui::Checkbox("Stop screen shake from skills or effects", &stop_screen_shake);
     ImGui::ShowHelp("e.g. Aftershock, Earth shaker, Avalanche effect");
-    if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &set_window_title_as_charname)) {
-        SetWindowTitle(set_window_title_as_charname);
-    }
-    ImGui::Checkbox("Apply Collector's Edition animations on player dance", &collectors_edition_emotes);
-    ImGui::ShowHelp("Only applies to your own character");
-    ImGui::Checkbox("Auto-cancel Unyielding Aura when re-casting", &drop_ua_on_cast);
-    ImGui::Checkbox("Auto use available keys when interacting with locked chest", &auto_open_locked_chest_with_key);
-    ImGui::Checkbox("Auto use lockpick when interacting with locked chest", &auto_open_locked_chest);
-    ImGui::Checkbox("Keep current quest when accepting a new one", &keep_current_quest_when_new_quest_added);
-    ImGui::ShowHelp(
-        "By default, Guild Wars changes your currently selected quest to the one you've just taken from an NPC.\nThis can be annoying if you don't realise your quest marker is now taking you somewhere different!\nTick this to make sure your current quest isn't changed when a new quest is added to your log."
-    );
-    ImGui::Checkbox("Block sparkle effect on dropped items", &block_sparkly_drops_effect);
-    ImGui::ShowHelp("Applies to drops that appear after this setting has been changed");
-    ImGui::Checkbox("Limit signet of capture to 10 in skills window", &limit_signets_of_capture);
-    ImGui::ShowHelp("If your character has purchased more than 10 signets of capture, only show 10 of them in the skills window");
-
-    ImGui::Checkbox("Prevent weapon spell skin showing on player weapons", &prevent_weapon_spell_animation_on_player);
-
-    ImGui::Checkbox("Block full screen message when entering a new area", &block_enter_area_message);
-    ImGui::Checkbox("Block full screen popup what shows when completing a vanquish", &block_vanquish_complete_popup);
-    ImGui::Checkbox("Block full screen popup what shows when opening a dungeon chest", &hide_dungeon_chest_popup);
 
     ImGui::NewLine();
     ImGui::Text("Block floating numbers above character when:");
