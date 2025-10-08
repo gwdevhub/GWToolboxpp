@@ -853,6 +853,14 @@ namespace {
             GW::UI::SelectDropdownOption(GW::UI::GetFrameByLabel(L"StatusOverride"), last_online_status);
         });
     }
+    void HideEmailAddress() {
+        GW::GameThread::Enqueue([] {
+            const auto frame = GW::UI::GetFrameByLabel(L"EditAccount");
+            if(!frame) return;
+            frame->visibility_flags |= 0x01000000;
+            GW::UI::TriggerFrameRedraw(frame);
+        });
+    }
 
     GW::HookEntry OnCreateUIComponent_Entry;
     // Flag email address entry field as a password format (e.g. asterisks instead of email)
@@ -1266,11 +1274,10 @@ namespace {
         auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"NPCInteract"), 0, 0);
         const auto sign_btn = GW::UI::GetChildFrame(frame, 2);
         if (!(sign_btn && sign_btn->IsVisible() && sign_btn->IsDisabled())) return; // If sign button isn't visible, the player doesn't have enough faction
-        const auto name_input = GW::UI::GetChildFrame(frame, 4, 2);
+        const auto name_input = (GW::EditableTextFrame*)GW::UI::GetChildFrame(frame, 4, 2);
         if (!name_input) return;
-        const auto agent_enc_name = GW::PlayerMgr::GetPlayerName();
         // Prefill and hide the name input
-        GW::UI::SendFrameUIMessage(name_input, GW::UI::UIMessage::kFrameMessage_0x4e, (void*)agent_enc_name);
+        name_input->SetValue(GW::PlayerMgr::GetPlayerName());
         GW::UI::SetFrameVisible(name_input, 0);
         // Show and enable the "Sign" button
         GW::UI::SetFrameDisabled(sign_btn, 0);
@@ -1331,11 +1338,38 @@ namespace {
         return xp_bar->SetLabel(label.c_str());
     }
 
+    GW::UI::UIInteractionCallback OnSkillTomeWindow_UIMessage_Func = 0, OnSkillTomeWindow_UIMessage_Ret = 0;
+    void OnSkillTomeWindow_UIMessage(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
+    {
+        GW::Hook::EnterHook();
+        if (message->message_id == GW::UI::UIMessage::kMouseClick2) {
+            const auto packet = (GW::UI::UIPacket::kMouseAction*)wParam;
+            if (packet->child_offset_id == 0 && packet->current_state == 0x6) {
+                const auto context = (uint32_t*)GW::UI::GetFrameContext(GW::UI::GetFrameById(message->frame_id));
+                const auto item = context ? GW::Items::GetItemById(context[1]) : nullptr;
+                GW::Items::UseItem(item); // Auto re-use tome when "Learn" is clicked
+            }
+        }
+
+        OnSkillTomeWindow_UIMessage_Ret(message, wParam, lParam);
+        GW::Hook::LeaveHook();
+    }
+
     void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*)
     {
         if (status->blocked)
             return;
         switch (message_id) {
+            case GW::UI::UIMessage::kTomeSkillSelection: {
+                HideLearntTomeSkills();
+                break;
+            } break;
+            case GW::UI::UIMessage::kPreBuildLoginScene: {
+                GW::GameThread::Enqueue([]() {
+                    hide_email_address && (HideEmailAddress(), true);
+                    OverrideDefaultOnlineStatus();
+                },true);        
+            } break;
             case GW::UI::UIMessage::kPartyShowConfirmDialog: {
                 const auto packet = (GW::UI::UIPacket::kPartyShowConfirmDialog*)wParam;
                 if (skip_characters_from_another_campaign_prompt && wcscmp(packet->prompt_enc_str, L"\x8101\x05d2") == 0) {
@@ -1643,6 +1677,8 @@ void GameSettings::Initialize()
 {
     ToolboxModule::Initialize();
 
+    OnSkillTomeWindow_UIMessage_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmSkTome.cpp", "selection.skillId", 0, 0),0xfff);
+    Log::Log("[GameSettings] OnSkillTomeWindow_UIMessage_Func = %p\n", OnSkillTomeWindow_UIMessage_Func);
 
     SkillList_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmCtlSkList.cpp", "!obj", 0xc71, 0));
     Log::Log("[GameSettings] SkillList_UICallback_Func = %p\n", SkillList_UICallback_Func);
@@ -1689,13 +1725,16 @@ void GameSettings::Initialize()
     ASSERT(SetGlobalNameTagVisibility_Func);
     ASSERT(GlobalNameTagVisibilityFlags);
     ASSERT(CharacterStatIncreased_Func);
+    ASSERT(OnSkillTomeWindow_UIMessage_Func);
 #endif
 
+    if (OnSkillTomeWindow_UIMessage_Func) {
+        GW::Hook::CreateHook((void**)&OnSkillTomeWindow_UIMessage_Func, OnSkillTomeWindow_UIMessage, reinterpret_cast<void**>(&OnSkillTomeWindow_UIMessage_Ret));
+        GW::Hook::EnableHooks(OnSkillTomeWindow_UIMessage_Func);
+    }
     if (SetFrameSkillDescription_Func) {
-        if (SetFrameSkillDescription_Func) {
-            GW::Hook::CreateHook((void**)&SetFrameSkillDescription_Func, OnSetFrameSkillDescription, reinterpret_cast<void**>(&SetFrameSkillDescription_Ret));
-            GW::Hook::EnableHooks(SetFrameSkillDescription_Func);
-        }
+        GW::Hook::CreateHook((void**)&SetFrameSkillDescription_Func, OnSetFrameSkillDescription, reinterpret_cast<void**>(&SetFrameSkillDescription_Ret));
+        GW::Hook::EnableHooks(SetFrameSkillDescription_Func);
     }
     if (SkillList_UICallback_Func) {
         GW::Hook::CreateHook((void**)&SkillList_UICallback_Func, OnSkillList_UICallback, reinterpret_cast<void**>(&SkillList_UICallback_Ret));
@@ -2072,6 +2111,8 @@ void GameSettings::Terminate()
         GW::Hook::RemoveHook(CharacterStatIncreased_Func);
     if (SetFrameSkillDescription_Func)
         GW::Hook::RemoveHook(SetFrameSkillDescription_Func);
+    if (OnSkillTomeWindow_UIMessage_Func) 
+        GW::Hook::RemoveHook(OnSkillTomeWindow_UIMessage_Func);
 
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
