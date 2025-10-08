@@ -13,6 +13,7 @@ namespace GW {
     extern Module UIModule;
 
     struct Effect;
+    struct Vec2f;
 
     enum class CallTargetType : uint32_t;
     enum class WorldActionId : uint32_t;
@@ -298,6 +299,8 @@ namespace GW {
             kRenderFrame_0x30 = 0x30,
             kRenderFrame_0x32 = 0x32,
             kSetLayout                  = 0x33,
+            kMeasureContent = 0x34,
+            kRefreshContent = 0x37,
             kRenderFrame_0x43 = 0x43,
             kFrameMessage_0x46          = 0x47,
             kFrameMessage_0x47, // Multiple uses depending on frame
@@ -378,6 +381,7 @@ namespace GW {
             kEquipmentSlotCleared       = 0x10000000 | 0xF0, // undocumented. Triggered when an item has been removed from a slot
             kPvPWindowContent           = 0x10000000 | 0xF8,
             kPreStartSalvage            = 0x10000000 | 0x100, // { uint32_t item_id, uint32_t kit_id }
+            kTomeSkillSelection         = 0x10000000 | 0x101, // wparam = UIPacket::kTomeSkillSelection*
             kTradePlayerUpdated         = 0x10000000 | 0x103, // wparam = GW::TraderPlayer*
             kItemUpdated                = 0x10000000 | 0x104, // wparam = UIPacket::kItemUpdated*
             kMapChange                  = 0x10000000 | 0x10F, // wparam = map id
@@ -400,6 +404,7 @@ namespace GW {
             kPreferenceFlagChanged      = 0x10000000 | 0x13F, // wparam = UiPacket::kPreferenceFlagChanged
             kPreferenceValueChanged     = 0x10000000 | 0x140, // wparam = UiPacket::kPreferenceValueChanged
             kUIPositionChanged          = 0x10000000 | 0x141, // wparam = UIPacket::kUIPositionChanged
+            kPreBuildLoginScene         = 0x10000000 | 0x142, // Called with no args right before login scene is drawn
             kQuestAdded                 = 0x10000000 | 0x149, // wparam = { quest_id, ... }
             kQuestDetailsChanged        = 0x10000000 | 0x14A, // wparam = { quest_id, ... }
             kQuestRemoved               = 0x10000000 | 0x14B, // wparam = { quest_id, ... }
@@ -466,6 +471,37 @@ namespace GW {
 
 
         namespace UIPacket {
+            struct kResize {
+                uint32_t h0000 = 0xffffffff;
+                float content_width;
+                float content_height;
+                float h000c = 0;
+                float h0010 = 0;
+                float content_width2;
+                float content_height2;
+                float margin_x;
+                float margin_y;
+                // ...
+            };
+            struct kTomeSkillSelection {
+                uint32_t item_id;
+                uint32_t h0004;
+                uint32_t h0008;
+            };
+            struct kMeasureContent {
+                float max_width;        // Maximum width constraint
+                float max_height;       // Maximum height constraint
+                float* size_output;     // Pointer to output buffer for calculated size
+                uint32_t flags;         // Layout flags (similar to the 0x100 flag we saw)
+            };
+            struct kSetLayout {
+                float field_0x0;
+                float field_0x4;
+                float field_0x8;
+                float field_0xc;
+                float available_width;
+                float available_height;
+            };
             struct kSetAgentProfession {
                 AgentID agent_id;
                 uint32_t primary;
@@ -488,10 +524,6 @@ namespace GW {
                 bool has_auto_target_changed;
                 uint32_t manual_target_id;
                 bool has_manual_target_changed;
-            };
-            struct kResize {
-                uint32_t h0000;
-                float h0004[9];
             };
             struct kSendLoadSkillTemplate {
                 uint32_t agent_id;
@@ -933,7 +965,7 @@ namespace GW {
             ControlAction_DropItem = 0xCD, // drops bundle item >> flags, ashes, etc
 
             // Chat
-            ControlAction_CharReply = 0xBE,
+            ControlAction_ChatReply = 0xBE,
             ControlAction_OpenChat = 0xA1,
             ControlAction_OpenAlliance = 0x88,
 
@@ -1155,6 +1187,7 @@ namespace GW {
         GWCA_API Frame* GetParentFrame(Frame* frame);
         GWCA_API Frame* GetFrameById(uint32_t frame_id);
         GWCA_API Frame* GetFrameByLabel(const wchar_t* frame_label);
+        GWCA_API bool Default_UICallback(InteractionMessage* interaction, void* wparam, void* lparam);
 
         GWCA_API bool SendFrameUIMessage(UI::Frame* frame, UI::UIMessage message_id, void* wParam, void* lParam = nullptr);
 
