@@ -52,6 +52,11 @@ namespace {
 
     };
 
+    GW::Constants::Language GetAudioLanguage()
+    {
+        return (GW::Constants::Language)GW::UI::GetPreference(GW::UI::NumberPreference::AudioLanguage);
+    }
+
         // Add OpenAI TTS function
     std::string GenerateVoiceOpenAI(PendingNPCAudio*);
     std::string GenerateVoiceElevenLabs(PendingNPCAudio*);
@@ -356,6 +361,7 @@ namespace {
         std::filesystem::path path;
         clock_t started = 0;
         clock_t duration = 0;
+        bool is_dialog_window = false;
         void* gw_handle = 0;
         bool IsPlaying() { 
             // NB: Duration of 0 implies the file is being generated, so for the purpose of this check, we assume it is about to play
@@ -363,7 +369,7 @@ namespace {
         }
         void Play();
         void Stop();
-        PendingNPCAudio(uint32_t _agent_id, const wchar_t* message);
+        PendingNPCAudio(uint32_t _agent_id, const wchar_t* message, bool _is_dialog_window = false);
         ~PendingNPCAudio();
     };
     std::vector<PendingNPCAudio*> pending_audio; // Maps agent ID to pending audio generation requests
@@ -423,7 +429,9 @@ namespace {
         VoiceLog("Playing audio file: %s (estimated duration: %dms)", path.filename().string().c_str(), duration);
         // 0x1400 means "this audio file in positional", so it will play in 3D space relative to the position given
         // 0x4 means "this is a dialog audio file"
-        if (!AudioSettings::PlaySound(path.wstring().c_str(), &pos, 0x1400 | 0x4, &gw_handle)) {
+        uint32_t flags = 0x4;
+        if (!is_dialog_window) flags |= 0x1400;
+        if (!AudioSettings::PlaySound(path.wstring().c_str(), &pos, flags, &gw_handle)) {
             delete this; // Too naughty?
             return;
         }
@@ -450,11 +458,11 @@ namespace {
             pending_audio.erase(found_pending);
         }
     }
-    PendingNPCAudio::PendingNPCAudio(uint32_t _agent_id, const wchar_t* message) : agent_id(_agent_id), started(0), duration(0)
+    PendingNPCAudio::PendingNPCAudio(uint32_t _agent_id, const wchar_t* message, bool _is_dialog_window) : agent_id(_agent_id), started(0), duration(0), is_dialog_window(_is_dialog_window)
     {
         encoded_message = PreprocessEncodedTextForTTS(message);
         profile = GetVoiceProfile(agent_id, GW::Map::GetMapID());
-        language = GW::UI::GetTextLanguage();
+        language = GetAudioLanguage();
         pending_audio.push_back(this);
     }
 
@@ -723,7 +731,7 @@ namespace {
             size_t random_index = rand() % num_goodbye_messages;
             const wchar_t* goodbye_msg = generic_goodbye_messages[random_index];
 
-            auto audio = new PendingNPCAudio(last_dialog_agent_id, L"");
+            auto audio = new PendingNPCAudio(last_dialog_agent_id, L"", true);
             audio->decoded_message = PreprocessTextForTTS(goodbye_msg);
             audio->profile = GetVoiceProfile(last_dialog_agent_id, GW::Map::GetMapID());
             if (audio->profile) {
@@ -786,7 +794,7 @@ namespace {
                 if (only_use_first_dialog && was_dialog_already_open) {
                     return; // Skip if already open and only using first dialog
                 }
-                GenerateVoiceFromEncodedString(new PendingNPCAudio(packet->agent_id, packet->message_enc));
+                GenerateVoiceFromEncodedString(new PendingNPCAudio(packet->agent_id, packet->message_enc, true));
             } break;
         }
     }
@@ -828,17 +836,17 @@ namespace {
                         // Find and use the collector's dialog context
                         const auto collector_dialog = (GW::MultiLineTextLabelFrame*)GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Vendor"), 0, 0, 2);
                         const auto enc_text = collector_dialog ? collector_dialog->GetEncodedLabel() : nullptr;
-                        if (enc_text && *enc_text) GenerateVoiceFromEncodedString(new PendingNPCAudio(packet->unk, enc_text));
+                        if (enc_text && *enc_text) GenerateVoiceFromEncodedString(new PendingNPCAudio(packet->unk, enc_text, true));
                     } break;
                     case GW::Merchant::TransactionType::SkillTrainer:
                     case GW::Merchant::TransactionType::MerchantBuy:
                     case GW::Merchant::TransactionType::CrafterBuy:
                     case GW::Merchant::TransactionType::WeaponsmithCustomize:
                     case GW::Merchant::TransactionType::TraderBuy: {
-                        if (GW::UI::GetTextLanguage() != GW::Constants::Language::English) return; // We only support English trader quotes for now
+                        if (GetAudioLanguage() != GW::Constants::Language::English) return; // We only support English trader quotes for now
                         if (!play_speech_from_vendors) return;                                     // Don't play vendor speech if disabled
                         // For traders, find out the name of the trader and determine which greeting to use
-                        auto audio = new PendingNPCAudio(packet->unk, L"");
+                        auto audio = new PendingNPCAudio(packet->unk, L"", true);
                         GetNPCName(
                             packet->unk,
                             [](void* param, const wchar_t* s) {
@@ -946,7 +954,7 @@ namespace {
         voice_settings["stability"] = audio->profile->stability;
         voice_settings["similarity_boost"] = audio->profile->similarity;
         voice_settings["style"] = audio->profile->style;
-        voice_settings["use_speaker_boost"] = false;
+        voice_settings["use_speaker_boost"] = true;
 
         request_body["voice_settings"] = voice_settings;
         request_body["language"] = LanguageToAbbreviation(audio->language);
