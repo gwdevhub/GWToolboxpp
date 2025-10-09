@@ -116,7 +116,7 @@ private:
 
     std::map<uint32_t, std::string> hide_from_merchant_items{};
     bool salvage_rare_mats = false;
-    bool salvage_nicholas_items = false;
+    bool salvage_nicholas_items = true;
     bool show_transact_quantity_popup = false;
     bool transaction_listeners_attached = false;
 

@@ -1360,10 +1360,6 @@ namespace {
         if (status->blocked)
             return;
         switch (message_id) {
-            case GW::UI::UIMessage::kTomeSkillSelection: {
-                HideLearntTomeSkills();
-                break;
-            } break;
             case GW::UI::UIMessage::kPreBuildLoginScene: {
                 GW::GameThread::Enqueue([]() {
                     hide_email_address && (HideEmailAddress(), true);
