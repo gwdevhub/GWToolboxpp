@@ -29,6 +29,10 @@
 #include <Utils/ToolboxUtils.h>
 #include <GWCA/GameEntities/Frame.h>
 
+#include <Functiondiscoverykeys_devpkey.h>
+#include <endpointvolume.h>
+#include <mmdeviceapi.h>
+
 namespace {
 
     const char* voice_id_human_male = "2EiwWnXFnvU5JabPnv8n";
@@ -155,6 +159,49 @@ namespace {
         const auto d1 = GW::UI::GetPreference(GW::UI::NumberPreference::DialogVolume);
         const auto d2 = GW::UI::GetPreference(GW::UI::NumberPreference::MasterVolume);
         return cached_dialog_volume = std::min(d1, d2), cached_dialog_volume;
+    }
+    float cached_system_volume = 1.f;
+    clock_t last_cached_system_volume = 0;
+    float GetSystemVolume(bool cache = true)
+    {
+        if (cache && TIMER_DIFF(last_cached_system_volume) < 10000) 
+            return cached_system_volume;
+
+        // Check Windows audio system
+        HRESULT hr = CoInitialize(nullptr);
+        bool needs_uninit = SUCCEEDED(hr);
+
+        IMMDeviceEnumerator* deviceEnumerator = nullptr;
+        IMMDevice* defaultDevice = nullptr;
+        IAudioEndpointVolume* endpointVolume = nullptr;
+
+        float systemVolume = .0f;
+        BOOL isMuted = FALSE;
+
+        do {
+            if (FAILED(hr)) break;
+            hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_INPROC_SERVER, __uuidof(IMMDeviceEnumerator), (void**)&deviceEnumerator);
+            if (FAILED(hr)) break;
+            hr = deviceEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &defaultDevice);
+            if (FAILED(hr)) break; // No audio device connected
+            hr = defaultDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, nullptr, (void**)&endpointVolume);
+            if (FAILED(hr)) break;
+            hr = endpointVolume->GetMute(&isMuted);
+            if (FAILED(hr)) isMuted = FALSE;
+            hr = endpointVolume->GetMasterVolumeLevelScalar(&systemVolume);
+            if (FAILED(hr)) systemVolume = 1.0f;
+        } while (false);
+
+        // Cleanup COM objects
+        if (endpointVolume) endpointVolume->Release();
+        if (defaultDevice) defaultDevice->Release();
+        if (deviceEnumerator) deviceEnumerator->Release();
+        if (needs_uninit) CoUninitialize();
+
+        if (isMuted) systemVolume = 0.f;
+
+        last_cached_system_volume = TIMER_INIT();
+        return cached_system_volume = systemVolume, cached_system_volume;
     }
 
 
@@ -1082,7 +1129,10 @@ namespace {
     {
         if (generating_voice || !audio) return;
         generating_voice = true;
-        if (!GetDialogVolume()) {
+
+        float volume = GetDialogVolume() * GetSystemVolume();
+
+        if (volume == 0.f) {
             VoiceLog("Dialog volume isn't on - check guild wars settings");
             delete audio;
             generating_voice = false;
