@@ -185,7 +185,7 @@ namespace {
     clock_t activity_timer = 0;
 
     bool auto_skip_cinematic = false;
-    bool show_unlearned_skill = false;
+    bool hide_known_skills = false;
     bool remove_min_skill_warmup_duration = false;
 
     bool faction_warn_percent = true;
@@ -233,10 +233,21 @@ namespace {
     void OnSkillList_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
     {
         GW::Hook::EnterHook();
-        const auto is_show_unlearned_skill = message->message_id == GW::UI::UIMessage::kFrameMessage_0x47 && (((uint32_t*)wParam)[1] & 0x3) != 0;
-        if (!(is_show_unlearned_skill && show_unlearned_skill)) {
-            SkillList_UICallback_Ret(message, wParam, lParam);
+        if (message->message_id == GW::UI::UIMessage::kFrameMessage_0x47) {
+            if (hide_known_skills && (((uint32_t*)wParam)[1] & 0x3) != 0) {
+                GW::Hook::LeaveHook();
+                return; // Only show unlearned skills from tomes and skill trainers
+            }
+            const auto parent = GW::UI::GetFrameByLabel(L"DlgSkillCapture");
+            if (parent && GW::UI::BelongsToFrame(parent, GW::UI::GetFrameById(message->frame_id))) {
+                const auto skill = GW::SkillbarMgr::GetSkillConstantData(*(GW::Constants::SkillID*)wParam);
+                if (skill && !skill->IsElite()) {
+                    GW::Hook::LeaveHook();
+                    return; // Hide non-elites when capturing skills
+                }
+            }
         }
+        SkillList_UICallback_Ret(message, wParam, lParam);
         GW::Hook::LeaveHook();
     }
 
@@ -1956,7 +1967,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(auto_return_on_defeat);
 
     LOAD_BOOL(remove_min_skill_warmup_duration);
-    LOAD_BOOL(show_unlearned_skill);
+    LOAD_BOOL(hide_known_skills);
     LOAD_BOOL(auto_skip_cinematic);
 
     LOAD_BOOL(faction_warn_percent);
@@ -2143,7 +2154,7 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(auto_set_online);
 
     SAVE_BOOL(remove_min_skill_warmup_duration);
-    SAVE_BOOL(show_unlearned_skill);
+    SAVE_BOOL(hide_known_skills);
     SAVE_BOOL(auto_skip_cinematic);
 
     SAVE_BOOL(faction_warn_percent);
@@ -2350,7 +2361,7 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Checkbox("Limit signet of capture to 10 in skills window", &limit_signets_of_capture);
     ImGui::ShowHelp("If your character has purchased more than 10 signets of capture, only show 10 of them in the skills window");
 
-    ImGui::Checkbox("Only show non learned skills when using a tome", &show_unlearned_skill);
+    ImGui::Checkbox("Hide known skills when using a tome, capturing a skill or talking to a skill trainer", &hide_known_skills);
     ImGui::ShowHelp("When you double click on a tome, the skills window that appears has all skills available for that profession.\nTick this to hide skills that your current character already has.");
 
     ImGui::Checkbox("Prevent weapon spell skin showing on player weapons", &prevent_weapon_spell_animation_on_player);
