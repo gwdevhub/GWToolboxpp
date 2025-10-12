@@ -802,7 +802,67 @@ const EliteBossLocation elite_boss_locations[] = {
     {GW::Constants::SkillID::Oath_Shot, 02, "Jade Bow", GW::Constants::MapID::Ice_Floe, {{945, 1521}, {994, 1568}, {1108, 1433}, {1154, 1419}}, "Despite being nameless, he is a boss\nHe shares four spawn locations with five other bosses, so he may not always appear"},
     {GW::Constants::SkillID::Life_Transfer, 02, "Mursaat Necromancer", GW::Constants::MapID::Ice_Floe, {{957, 1521}, {1006, 1568}, {1120, 1433}, {1166, 1419}}, "Despite being nameless, he is a boss\nHe shares four spawn locations with five other bosses, so he may not always appear"},
     {GW::Constants::SkillID::Energy_Surge, 02, "Mursaat Mesmer", GW::Constants::MapID::Ice_Floe, {{969, 1521}, {1018, 1568}, {1132, 1433}, {1178, 1419}}, "Despite being nameless, he is a boss\nHe shares four spawn locations with five other bosses, so he may not always appear"},
-};
+    
+    // Dungeon bosses that weren't added to MappingOut
+    {GW::Constants::SkillID::Flourish, 0xff, "Flame Djinn", GW::Constants::MapID::Catacombs_of_Kathandrax_Level_1, {{0, 0}},"one on level 3"},
+    {GW::Constants::SkillID::Savannah_Heat, 0xff, "Regent of Flame", GW::Constants::MapID::Catacombs_of_Kathandrax_Level_1, {{0, 0}},"one on level 1, two on level 2, one on level 3"},
+    {GW::Constants::SkillID::Scavengers_Focus, 0xff, "Beastmaster Korg", GW::Constants::MapID::Rragars_Menagerie_Level_1, {{0, 0}},"level 2"},
+    {GW::Constants::SkillID::Burning_Arrow, 0xff, "Charr Warden", GW::Constants::MapID::Rragars_Menagerie_Level_1, {{0, 0}},"4 on level 1"},
+    {GW::Constants::SkillID::Toxic_Chill, 0xff, "Flesheater", GW::Constants::MapID::Rragars_Menagerie_Level_1, {{0, 0}},"2 on level 3"},
+    {GW::Constants::SkillID::Cruel_Spear, 0xff, "Elder Nephilim", GW::Constants::MapID::Rragars_Menagerie_Level_1, {{0, 0}},"4 on level 2, 2 on level 3"},
+    {GW::Constants::SkillID::Power_Block, 0xff, "Faze Magekiller", GW::Constants::MapID::Cathedral_of_Flames_Level_1, {{0, 0}},"level 1"},
+    {GW::Constants::SkillID::Ether_Prodigy, 0xff, "Tyndir Flamecaller", GW::Constants::MapID::Cathedral_of_Flames_Level_1, {{0, 0}},"level 2"},
+    {GW::Constants::SkillID::Jagged_Bones, 0xff, "The Master", GW::Constants::MapID::Cathedral_of_Flames_Level_1, {{0, 0}},"level 2"},
+    {GW::Constants::SkillID::Life_Transfer, 0xff, "The Keeper", GW::Constants::MapID::Cathedral_of_Flames_Level_1, {{0, 0}},"level 1"},
+    {GW::Constants::SkillID::Corrupt_Enchantment, 0xff, "Murakai's Steward", GW::Constants::MapID::Cathedral_of_Flames_Level_1, {{0, 0}},"level 3"},
+    {GW::Constants::SkillID::Soldiers_Fury, 0xff, "Vraxx the Condemned", GW::Constants::MapID::Cathedral_of_Flames_Level_1, {{0, 0}},"level 2"},
+    {GW::Constants::SkillID::Headbutt, 0xff, "Ancient Ooze", GW::Constants::MapID::Ooze_Pit, {{0, 0}}},
+    {GW::Constants::SkillID::Water_Trident, 0xff, "Gloop", GW::Constants::MapID::Ooze_Pit, {{0, 0}}},
+    {GW::Constants::SkillID::Skull_Crack, 0xff, "Havok-kin", GW::Constants::MapID::Darkrime_Delves_Level_1, {{0, 0}},"two on level 1, one on level 2, one on level 3"},
+    {GW::Constants::SkillID::Skull_Crack, 0xff, "Grelk Icelash", GW::Constants::MapID::Darkrime_Delves_Level_1, {{0, 0}},"level 2"},
+    {GW::Constants::SkillID::Barrage, 0xff, "Frostmaw Spawn", GW::Constants::MapID::Frostmaws_Burrows_Level_1, {{0, 0}},"Two on level 2\nFour on level 3 (sometimes five in Hard Mode)\nTwo on level 4\nTwo on level 5"},
+    {GW::Constants::SkillID::Shatterstone, 0xff, "Fragment of Antiquities", GW::Constants::MapID::Sepulchre_of_Dragrimmar_Level_1, {{0, 0}},"level 1"},
+    {GW::Constants::SkillID::Shatterstone, 0xff, "Regent of Ice", GW::Constants::MapID::Sepulchre_of_Dragrimmar_Level_1, {{0, 0}},"about 5-6 on level 1"},
+    {GW::Constants::SkillID::Wounding_Strike, 0xff, "Reaper of Destruction", GW::Constants::MapID::Ravens_Point_Level_1, {{0, 0}},"one on level 1, one on level 2"},
+    {GW::Constants::SkillID::Shatterstone, 0xff, "Ancient Vaettir", GW::Constants::MapID::Ravens_Point_Level_1, {{0, 0}}, "two on level 1, three on level 2"},
+    {GW::Constants::SkillID::Invoke_Lightning, 0xff, "Shadow Spawn", GW::Constants::MapID::Ravens_Point_Level_1, {{0, 0}}, "only during Shadows in the Night"},
+    {GW::Constants::SkillID::Poison_Arrow, 0xff, "Xalnax", GW::Constants::MapID::Vloxen_Excavations_Level_1, {{0, 0}},"level 2"},
+    {GW::Constants::SkillID::Dwarven_Battle_Stance, 0xff, "Taskmaster Durgon", GW::Constants::MapID::Vloxen_Excavations_Level_1, {{0, 0}},"level 1"},
+    {GW::Constants::SkillID::Jagged_Bones, 0xff, "Taskmaster Bellok", GW::Constants::MapID::Vloxen_Excavations_Level_1, {{0, 0}}, "level 2"},
+    {GW::Constants::SkillID::Crippling_Anguish, 0xff, "Taskmaster Kurg", GW::Constants::MapID::Vloxen_Excavations_Level_1, {{0, 0}},"level 2"},
+    {GW::Constants::SkillID::Soldiers_Fury, 0xff, "Sotanaht the Tomb Guardian", GW::Constants::MapID::Vloxen_Excavations_Level_1, {{0, 0}}, "level 3"},
+    {GW::Constants::SkillID::Spirits_Strength, 0xff, "Gokir Patriarch", GW::Constants::MapID::Bogroot_Growths_Level_1, {{0, 0}}, "one on level 1, three on level 2, during Tekks's War"},
+    {GW::Constants::SkillID::Spirits_Strength, 0xff, "Ophil Patriarch", GW::Constants::MapID::Bogroot_Growths_Level_1, {{0, 0}}, "one on level 1, three on level 2, during Giriff's War"},
+    {GW::Constants::SkillID::Backbreaker, 0xff, "Crystal Ettin", GW::Constants::MapID::Bloodstone_Caves_Level_1, {{0, 0}}, "one on level 2"},
+    {GW::Constants::SkillID::Backbreaker, 0xff, "First Inscribed", GW::Constants::MapID::Bloodstone_Caves_Level_1, {{0, 0}}, "one on level 1, two on level 3"},
+    {GW::Constants::SkillID::Backbreaker, 0xff, "Paranoia Ettin", GW::Constants::MapID::Bloodstone_Caves_Level_1, {{0, 0}}, "one on level 1"},
+    {GW::Constants::SkillID::Blinding_Surge, 0xff, "Cursed Brigand", GW::Constants::MapID::Shards_of_Orr_Level_1, {{0, 0}}, "three on level 1, two on level 2, two on level 3"},
+    {GW::Constants::SkillID::Steady_Stance, 0xff, "Malfunctioning Shield Golem", GW::Constants::MapID::Oolas_Lab_Level_1, {{0, 0}}, "level 2"},
+    {GW::Constants::SkillID::Elemental_Attunement, 0xff, "Flame Guardian", GW::Constants::MapID::Oolas_Lab_Level_1, {{0, 0}}, "three on level 1, two on level 3"},
+    {GW::Constants::SkillID::Elemental_Attunement, 0xff, "Malfunctioning Regulator Golem", GW::Constants::MapID::Oolas_Lab_Level_1, {{0, 0}}, "two on level 2"},
+    {GW::Constants::SkillID::Shadow_Prison, 0xff, "Xien", GW::Constants::MapID::Shards_of_Orr_Level_1, {{0, 0}}, "level 1, only during Little Workshop of Horrors"},
+    {GW::Constants::SkillID::Crippling_Shot, 0xff, "Brood Warden", GW::Constants::MapID::Arachnis_Haunt_Level_1, {{0, 0}}, "level 1"},
+    {GW::Constants::SkillID::Stunning_Strike, 0xff, "Spider Matriarch", GW::Constants::MapID::Oolas_Lab_Level_1, {{0, 0}}, "two on level 1, one on level 2"},
+    {GW::Constants::SkillID::Savannah_Heat, 0xff, "Lok The Mischievous", GW::Constants::MapID::Shards_of_Orr_Level_1, {{0, 0}}, "level 1"},
+    {GW::Constants::SkillID::Tranquil_Was_Tanasen, 0xff, "Dark Watcher", GW::Constants::MapID::Slavers_Exile_Level_1, {{0, 0}}, "Forgewight's level"},
+    {GW::Constants::SkillID::Ray_of_Judgment, 0xff, "Gorlos Skinflayer", GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1, {{0, 0}}, "level 1"},
+    {GW::Constants::SkillID::Savannah_Heat, 0xff, "Magmus", GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1, {{0, 0}}, "level 3, except during Heart of the Shiverpeaks quest"},
+    {GW::Constants::SkillID::Song_of_Restoration, 0xff, "Erasklion the Prolific", GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1, {{0, 0}}, "level 1"},
+    {GW::Constants::SkillID::Toxic_Chill, 0xff, "Jacado the Putrid", GW::Constants::MapID::Shards_of_Orr_Level_1, {{0, 0}}, "level 1"},
+    {GW::Constants::SkillID::Virulence, 0xff, "Jacado the Putrid", GW::Constants::MapID::Shards_of_Orr_Level_1, {{0, 0}}, "level 1"},
+
+    {GW::Constants::SkillID::Battle_Rage, 0xff, "Avatar of Destruction", GW::Constants::MapID::Destructions_Depths_Level_1, {{0, 0}}, "level 1"},
+    {GW::Constants::SkillID::Onslaught, 0xff, "Avatar of Destruction", GW::Constants::MapID::Destructions_Depths_Level_1, {{0, 0}}, "level 2"},
+
+    {GW::Constants::SkillID::Stunning_Strike, 0xff, "Jadam Spearspinner", GW::Constants::MapID::Warband_of_Brothers_Level_1, {{0, 0}}, "level 2"},
+    {GW::Constants::SkillID::Eviscerate, 0xff, "Charr Prison Guard", GW::Constants::MapID::Warband_of_Brothers_Level_1, {{0, 0}}, "one on level 1, one on level 2, three on level 3"},
+    {GW::Constants::SkillID::Mind_Blast, 0xff, "Flamemaster Maultooth", GW::Constants::MapID::Warband_of_Brothers_Level_1, {{0, 0}}, "level 3"},
+
+    {GW::Constants::SkillID::Devastating_Hammer, 0xff, "Inscribed Sentry", GW::Constants::MapID::Finding_the_Bloodstone_Level_1, {{0, 0}}, "one on level 1, one on level 2"},
+    {GW::Constants::SkillID::Feast_of_Corruption, 0xff, "Inscribed Guardian", GW::Constants::MapID::Destructions_Depths_Level_1, {{0, 0}}, "Impossible to capture this boss' elite because the cinematic starts as soon as he dies"},
+
+    {GW::Constants::SkillID::Enraged_Smash, 0xff, "Indestructible Golem", GW::Constants::MapID::The_Elusive_Golemancer_Level_1, {{0, 0}},"level 2"},
+    };
 
 std::string BossInfo(const EliteBossLocation* hovered_boss)
 {
@@ -841,7 +901,7 @@ std::string BossInfo(const EliteBossLocation* hovered_boss)
     GuiUtils::EncString hovered_quest_description;
     const EliteBossLocation* hovered_boss = nullptr;
 
-    bool show_lines_on_world_map = true;
+    bool show_lines_on_world_map = false;
     bool showing_all_quests = true;
 
     bool MapContainsWorldPos(GW::Constants::MapID map_id, const GW::Vec2f& world_map_pos, GW::Constants::Campaign campaign)
@@ -1115,7 +1175,6 @@ std::string BossInfo(const EliteBossLocation* hovered_boss)
         GW::GameThread::Enqueue([] {
             const auto ctx = GW::Map::GetWorldMapContext();
             const auto frame = ctx ? GW::UI::GetFrameById(ctx->frame_id) : nullptr;
-            DEBUG_ASSERT(frame && "Failed to get world map frame in TriggerWorldMapRedraw");
             GW::UI::DestroyUIComponent(frame) && GW::UI::Keypress(GW::UI::ControlAction_OpenWorldMap), true;
         });
     }
@@ -1397,6 +1456,13 @@ std::string BossInfo(const EliteBossLocation* hovered_boss)
                     }
                 } break;
             }
+            if (boss.region_id == 0xff) {
+                boss_pos = GW::Vec2f((float)map_info->x - icon_size * 2.f, (float)map_info->y);
+                locations_assigned_to_outposts[boss.map_id]++;
+                boss_pos.x += icon_size * (locations_assigned_to_outposts[boss.map_id] - 1);
+                elites_scale = 1.f;
+            }
+
             boss_pos *= elites_scale;
             if (region_offset) {
                 boss_pos += *region_offset;
