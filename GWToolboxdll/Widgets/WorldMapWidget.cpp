@@ -1107,19 +1107,16 @@ std::string BossInfo(const EliteBossLocation* hovered_boss)
                 map_portals.clear();
                 AppendMapPortals();
                 break;
-                break;
         }
     }
 
     void TriggerWorldMapRedraw()
     {
         GW::GameThread::Enqueue([] {
-            // Trigger a benign ui message e.g. guild context update; world map subscribes to this, and automatically updates the view.
-            // GW::UI::SendUIMessage((GW::UI::UIMessage)0x100000ca); // disables guild/ally chat until reloading char/map
-            const auto world_map_context = GW::Map::GetWorldMapContext();
-            const auto frame = world_map_context ? GW::UI::GetFrameById(world_map_context->frame_id) : nullptr;
-            GW::UI::SendFrameUIMessage(frame, GW::UI::UIMessage::kMapLoaded, nullptr);
-            //GW::UI::SendFrameUIMessage(frame,(GW::UI::UIMessage)0x1000008e, nullptr);
+            const auto ctx = GW::Map::GetWorldMapContext();
+            const auto frame = ctx ? GW::UI::GetFrameById(ctx->frame_id) : nullptr;
+            DEBUG_ASSERT(frame && "Failed to get world map frame in TriggerWorldMapRedraw");
+            GW::UI::DestroyUIComponent(frame) && GW::UI::Keypress(GW::UI::ControlAction_OpenWorldMap), true;
         });
     }
 

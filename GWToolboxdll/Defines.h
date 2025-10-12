@@ -53,6 +53,11 @@ Notes:
 #ifndef ASSERT
 #define ASSERT(expr) ((void)(!!(expr) || (Log::FatalAssert(#expr, __FILE__, (unsigned)__LINE__), 0)))
 #endif
+#ifdef _DEBUG
+#define DEBUG_ASSERT(expr) ((void)(!!(expr) || (Log::FatalAssert(#expr, __FILE__, (unsigned)__LINE__), 0)))
+#else
+#define DEBUG_ASSERT
+#endif
 #ifndef IM_ASSERT
 #define IM_ASSERT(expr) ASSERT(expr)
 #endif
