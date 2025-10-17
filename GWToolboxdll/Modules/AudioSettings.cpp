@@ -140,6 +140,7 @@ void AudioSettings::Terminate()
     ToolboxModule::Terminate();
     if (PlaySound_Func) {
         GW::Hook::RemoveHook(PlaySound_Func);
+        PlaySound_Func = 0;
     }
     logged_sounds.clear();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);

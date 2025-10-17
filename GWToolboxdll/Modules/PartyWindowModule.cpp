@@ -524,7 +524,9 @@ namespace {
             case GW::UI::UIMessage::kPartyRemovePlayer:
             case GW::UI::UIMessage::kPartyAddPlayer: {
                 const auto party_id = *(uint32_t*)wparam;
-                if (party_id == 0 || party_id == GW::PartyMgr::GetPartyInfo()->party_id) RefreshPartySortHandler();
+                const auto my_party = GW::PartyMgr::GetPartyInfo();
+                if (!my_party) break;
+                if (party_id == 0 || party_id == my_party->party_id) RefreshPartySortHandler();
             } break;
             case GW::UI::UIMessage::kMapLoaded: {
                 RefreshPartySortHandler();
