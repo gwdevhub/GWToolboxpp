@@ -1533,12 +1533,14 @@ DWORD ObjectiveTimerWindow::ObjectiveSet::GetDuration()
     if (duration != TIME_UNKNOWN) {
         return duration;
     }
-    // Recent obj timer update didn't save run duration to disk. For failed runs we can't find duration...
-    if (objectives.empty() || !objectives.back()->IsDone()) {
-        return TIME_UNKNOWN;
+    Objective* last_objective_done = nullptr;
+    for (const auto objective : objectives) {
+        if (!objective->IsDone()) return TIME_UNKNOWN; 
+        if (!last_objective_done || last_objective_done->done < objective->done) 
+            last_objective_done = objective;
     }
     // ... but for completed runs, we can figure this out from the objectives.
-    return objectives.back()->done;
+    return last_objective_done ? last_objective_done->done : TIME_UNKNOWN;
 }
 
 const char* ObjectiveTimerWindow::ObjectiveSet::GetDurationStr()
