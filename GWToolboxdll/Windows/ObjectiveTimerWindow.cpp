@@ -344,22 +344,7 @@ void ObjectiveTimerWindow::Initialize()
             }
         });
 
-    /*GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveAdd>(&ObjectiveAdd_Entry,
-[this](GW::HookStatus* status, GW::Packet::StoC::ObjectiveAdd *packet) -> bool {
-            // type 12 is the "title" of the mission objective, should we ignore it or have a "title" objective ?
-    /*
-    Objective *obj = GetCurrentObjective(packet->objective_id);
-    if (obj) return false;
-    ObjectiveSet *os = objective_sets.back();
-    os->objectives.emplace_back(packet->objective_id);
-    obj = &os->objectives.back();
-    GW::UI::AsyncDecodeStr(packet->name, obj->name, sizeof(obj->name));
-    // If the name isn't "???" we consider that the objective started
-    if (wcsncmp(packet->name, L"\x8102\x3236", 2))
-        obj->SetStarted();
 
-    return false;
-});*/
 }
 
 void ObjectiveTimerWindow::Event(const EventType type, const uint32_t count, const wchar_t* msg) const
@@ -817,23 +802,38 @@ void ObjectiveTimerWindow::AddUWObjectiveSet()
 
 void ObjectiveTimerWindow::AddToPKObjectiveSet()
 {
-    const auto os = new ObjectiveSet;
-    os->name = Resources::GetMapName(GW::Constants::MapID::Tomb_of_the_Primeval_Kings)->string();
-    os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Underworld_PvP)->string().c_str()))
-      ->SetStarted()
-      ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Underworld_PvP))
-      ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Underworld_PvP));
-    os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::Scarred_Earth)->string().c_str()))
-      ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::Scarred_Earth))
-      ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::Scarred_Earth));
-    os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Courtyard)->string().c_str()))
-      ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Courtyard))
-      ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Courtyard));
-    os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Hall_of_Heroes)->string().c_str()))
-      ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Hall_of_Heroes))
-      ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Hall_of_Heroes));
+    // Pre-fetch map names for topk
+    Resources::GetMapName(GW::Constants::MapID::Scarred_Earth);
+    Resources::GetMapName(GW::Constants::MapID::The_Underworld_PvP);
+    Resources::GetMapName(GW::Constants::MapID::The_Courtyard);
+    Resources::GetMapName(GW::Constants::MapID::Tomb_of_the_Primeval_Kings);
+    Resources::GetMapName(GW::Constants::MapID::The_Hall_of_Heroes);
 
-    AddObjectiveSet(os);
+    // Enqueue for next thread to allow map names to be loaded
+    GW::GameThread::Enqueue(
+        []() {
+            const auto os = new ObjectiveSet;
+            os->name = Resources::GetMapName(GW::Constants::MapID::Tomb_of_the_Primeval_Kings)->string();
+            os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Underworld_PvP)->string().c_str()))
+                ->SetStarted()
+                ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Underworld_PvP))
+                ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Underworld_PvP));
+            os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::Scarred_Earth)->string().c_str()))
+                ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::Scarred_Earth))
+                ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::Scarred_Earth));
+            os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Courtyard)->string().c_str()))
+                ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Courtyard))
+                ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Courtyard));
+            os->AddObjective(new Objective(Resources::GetMapName(GW::Constants::MapID::The_Hall_of_Heroes)->string().c_str()))
+                ->AddStartEvent(EventType::InstanceLoadInfo, std::to_underlying(GW::Constants::MapID::The_Hall_of_Heroes))
+                ->AddEndEvent(EventType::CountdownStart, std::to_underlying(GW::Constants::MapID::The_Hall_of_Heroes));
+            Instance().AddObjectiveSet(os);
+        },
+        true
+    );
+
+
+    
 }
 
 void ObjectiveTimerWindow::Update(float)
