@@ -903,16 +903,14 @@ const EliteBossLocation elite_boss_locations[] = {
     {GW::Constants::SkillID::Enraged_Smash, 0xff, "Indestructible Golem", GW::Constants::MapID::The_Elusive_Golemancer_Level_1, {{0, 0}},"level 2"},
     };
 
-std::string BossInfo(const EliteBossLocation* hovered_boss)
-{
-    auto str = std::format("{} - {}\n{}", hovered_boss->boss_name, Resources::GetSkillName(hovered_boss->skill_id)->string(), Resources::GetMapName(hovered_boss->map_id)->string());
-    if (hovered_boss->note) {
-        str += std::format("\n{}", hovered_boss->note);
-    }
-    return str;
-}
-
-   
+    std::string BossInfo(const EliteBossLocation* boss)
+    {
+        auto str = std::format("{} - {}\n{}", boss->boss_name, Resources::GetSkillName(boss->skill_id)->string(), Resources::GetMapName(boss->map_id)->string());
+        if (boss->note) {
+            str += std::format("\n{}", boss->note);
+        }
+        return str;
+    }   
 
     uint32_t __cdecl GetCartographyFlagsForArea(uint32_t, uint32_t, uint32_t, uint32_t)
     {
@@ -921,10 +919,10 @@ std::string BossInfo(const EliteBossLocation* hovered_boss)
 
 
 
-    bool MapContainsWorldPos(GW::Constants::MapID map_id, const GW::Vec2f& world_map_pos, GW::Constants::Campaign campaign)
+    bool MapContainsWorldPos(GW::Constants::MapID map_id, const GW::Vec2f& world_map_pos, GW::Continent continent)
     {
         const auto map = GW::Map::GetMapInfo(map_id);
-        if (!(map && map->campaign == campaign))
+        if (!(map && map->continent == continent))
             return false;
         ImRect map_bounds;
         return GW::Map::GetMapWorldMapBounds(map, &map_bounds) && map_bounds.Contains(world_map_pos);
@@ -952,10 +950,6 @@ std::string BossInfo(const EliteBossLocation* hovered_boss)
     {
         if (!GW::Map::GetWorldMapContext())
             return false;
-        const auto c = ImGui::GetCurrentContext();
-        auto viewport_offset = c->CurrentViewport->Pos;
-        viewport_offset.x *= -1;
-        viewport_offset.y *= -1;
 
         ImGui::Text("%.2f, %.2f", world_map_click_pos.x, world_map_click_pos.y);
 #ifdef _DEBUG
@@ -1194,16 +1188,6 @@ std::string BossInfo(const EliteBossLocation* hovered_boss)
             const auto frame = ctx ? GW::UI::GetFrameById(ctx->frame_id) : nullptr;
             GW::UI::DestroyUIComponent(frame) && GW::UI::Keypress(GW::UI::ControlAction_OpenWorldMap), true;
         });
-    }
-
-    void HighlightFrame(GW::UI::Frame* frame)
-    {
-        if (!frame) return;
-        const auto root = GW::UI::GetRootFrame();
-        const auto top_left = frame->position.GetTopLeftOnScreen(root);
-        const auto bottom_right = frame->position.GetBottomRightOnScreen(root);
-        const auto draw_list = ImGui::GetBackgroundDrawList();
-        draw_list->AddRect({top_left.x, top_left.y}, {bottom_right.x, bottom_right.y}, IM_COL32_WHITE);
     }
 
     // Helper function to calculate rotated points
@@ -1584,8 +1568,8 @@ GW::Constants::MapID WorldMapWidget::GetMapIdForLocation(const GW::Vec2f& world_
     auto map_info = GW::Map::GetMapInfo();
     if (!map_info)
         return GW::Constants::MapID::None;
-    const auto campaign = map_info->campaign;
-    if (map_id != exclude_map_id && MapContainsWorldPos(map_id, world_map_pos, campaign))
+    const auto continent = map_info->continent;
+    if (map_id != exclude_map_id && MapContainsWorldPos(map_id, world_map_pos, continent))
         return map_id;
     for (size_t i = 1; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
         map_id = static_cast<GW::Constants::MapID>(i);
@@ -1594,7 +1578,7 @@ GW::Constants::MapID WorldMapWidget::GetMapIdForLocation(const GW::Vec2f& world_
         map_info = GW::Map::GetMapInfo(map_id);
         if (!(map_info && map_info->GetIsOnWorldMap()))
             continue;
-        if (MapContainsWorldPos(map_id, world_map_pos, campaign))
+        if (MapContainsWorldPos(map_id, world_map_pos, continent))
             return map_id;
     }
     return GW::Constants::MapID::None;
