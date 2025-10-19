@@ -42,9 +42,6 @@
 
 namespace {
 
-    const ImColor completed_bg = IM_COL32(0, 0x99, 0, 192);
-    const ImColor completed_text = IM_COL32(0xE5, 0xFF, 0xCC, 255);
-    
     struct EliteBossLocation {
         GW::Constants::SkillID skill_id;
         uint32_t region_id;
@@ -53,6 +50,48 @@ namespace {
         std::vector<GW::Vec2f> coords;
         const char* note = nullptr;
     };
+
+    const ImColor completed_bg = IM_COL32(0, 0x99, 0, 192);
+    const ImColor completed_text = IM_COL32(0xE5, 0xFF, 0xCC, 255);
+
+    ImRect controls_window_rect = {0, 0, 0, 0};
+
+    IDirect3DTexture9** quest_icon_texture = nullptr;
+    IDirect3DTexture9** player_icon_texture = nullptr;
+
+    bool showing_all_outposts = false;
+    bool apply_quest_colors = false;
+    bool show_any_elite_capture_locations = false;
+    bool show_elite_capture_locations[11];
+    bool hide_captured_elites = false;
+    bool drawn = false;
+    bool show_lines_on_world_map = false;
+    bool showing_all_quests = true;
+
+    GW::MemoryPatcher view_all_outposts_patch;
+    GW::MemoryPatcher view_all_carto_areas_patch;
+
+    bool world_map_clicking = false;
+    GW::Vec2f world_map_click_pos;
+
+    GW::Constants::QuestID hovered_quest_id = GW::Constants::QuestID::None;
+    GuiUtils::EncString hovered_quest_name;
+    GuiUtils::EncString hovered_quest_description;
+    const EliteBossLocation* hovered_boss = nullptr;
+
+    // Cached vars that are updated every draw; avoids having to do the calculation inside DrawQuestMarkerOnWorldMap
+    GW::Vec2f player_world_map_pos;
+    float player_rotation = .0f;
+    GW::Vec2f viewport_offset;
+    GW::Vec2f ui_scale;
+    float world_map_scale = 1.f;
+    GW::WorldMapContext* world_map_context = nullptr;
+    float quest_star_rotation_angle = .0f;
+    float quest_icon_size = 24.f;
+    float quest_icon_size_half = 12.f;
+    ImDrawList* draw_list = nullptr;
+    
+
     
 const EliteBossLocation elite_boss_locations[] = {
     {GW::Constants::SkillID::Prepared_Shot, 01, "Johon the Oxflinger", GW::Constants::MapID::Ice_Cliff_Chasms, {{1464, 1179}}},
@@ -873,36 +912,14 @@ std::string BossInfo(const EliteBossLocation* hovered_boss)
     return str;
 }
 
-    ImRect controls_window_rect = {0, 0, 0, 0};
-
-    IDirect3DTexture9** quest_icon_texture = nullptr;
-    IDirect3DTexture9** player_icon_texture = nullptr;
-
-    bool showing_all_outposts = false;
-    bool apply_quest_colors = false;
-    bool show_any_elite_capture_locations = false;
-    bool show_elite_capture_locations[11];
-    bool hide_captured_elites = false;
-    bool drawn = false;
-
-    GW::MemoryPatcher view_all_outposts_patch;
-    GW::MemoryPatcher view_all_carto_areas_patch;
+   
 
     uint32_t __cdecl GetCartographyFlagsForArea(uint32_t, uint32_t, uint32_t, uint32_t)
     {
         return 0xffffffff;
     }
 
-    bool world_map_clicking = false;
-    GW::Vec2f world_map_click_pos;
 
-    GW::Constants::QuestID hovered_quest_id = GW::Constants::QuestID::None;
-    GuiUtils::EncString hovered_quest_name;
-    GuiUtils::EncString hovered_quest_description;
-    const EliteBossLocation* hovered_boss = nullptr;
-
-    bool show_lines_on_world_map = false;
-    bool showing_all_quests = true;
 
     bool MapContainsWorldPos(GW::Constants::MapID map_id, const GW::Vec2f& world_map_pos, GW::Constants::Campaign campaign)
     {
@@ -1220,17 +1237,7 @@ std::string BossInfo(const EliteBossLocation* hovered_boss)
         uv_points[3] = {uv_start_x, 1.0f}; // Bottom-left
     }
 
-    // Cached vars that are updated every draw; avoids having to do the calculation inside DrawQuestMarkerOnWorldMap
-    GW::Vec2f player_world_map_pos;
-    float player_rotation = .0f;
-    GW::Vec2f viewport_offset;
-    GW::Vec2f ui_scale;
-    float world_map_scale = 1.f;
-    GW::WorldMapContext* world_map_context = nullptr;
-    float quest_star_rotation_angle = .0f;
-    float quest_icon_size = 24.f;
-    float quest_icon_size_half = 12.f;
-    ImDrawList* draw_list = nullptr;
+
 
     // Function to calculate viewport position
     ImVec2 CalculateViewportPos(const GW::Vec2f& marker_world_pos, const ImVec2& top_left)
