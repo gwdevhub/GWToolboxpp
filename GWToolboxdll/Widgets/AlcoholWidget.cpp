@@ -35,10 +35,11 @@ uint32_t AlcoholWidget::GetAlcoholTitlePoints()
     if (!gameContext || !gameContext->world || !gameContext->world->titles.valid()) {
         return 0; // Sanity checks; context not ready.
     }
-    if (gameContext->world->titles.size() < 8) {
+    constexpr auto title_idx = std::to_underlying(GW::Constants::TitleID::Drunkard);
+    if (!(gameContext->world->titles.size() > title_idx)) {
         return 0; // No alcohol title
     }
-    return gameContext->world->titles[7].current_points;
+    return gameContext->world->titles[title_idx].current_points;
 }
 
 uint32_t AlcoholWidget::GetAlcoholTitlePointsGained()

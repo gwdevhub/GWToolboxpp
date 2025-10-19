@@ -46,6 +46,7 @@ namespace GW {
 
     namespace Constants {
         enum class SkillID : uint32_t;
+        enum class TitleID : uint32_t;
     }
 
     template <typename T>
@@ -103,6 +104,8 @@ namespace GW {
     namespace Map {
         GW::Array<GW::MapProp*>* GetMapProps();
         bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out);
+        std::vector<GW::Constants::TitleID> GetBountyTitlesForMap(GW::Constants::MapID map_id);
+        GW::Constants::TitleID GetTitleForMap(GW::Constants::MapID map_id);
 
         void PingCompass(const GW::GamePos& position);
     } // namespace Map

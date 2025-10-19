@@ -105,12 +105,27 @@ namespace Colors {
                static_cast<Color>((i[3] & 0xFF) << IM_COL32_B_SHIFT);
     }
 
+    static bool IsVisible(Color color) {
+        return (color & IM_COL32_A_MASK) != 0;
+    }
+
     static bool DrawSettingHueWheel(const char* text, Color* color, const ImGuiColorEditFlags flags = 0)
     {
         // ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel) {
         ImVec4 col = ImGui::ColorConvertU32ToFloat4(*color);
         if (ImGui::ColorEdit4(text, &col.x, flags | ImGuiColorEditFlags_AlphaPreview)) {
             *color = ImGui::ColorConvertFloat4ToU32(col);
+            return true;
+        }
+        return false;
+    }
+    static bool ColorVisibleCheckbox(const char* text, Color* color) {
+        bool visible = IsVisible(*color);
+        if (ImGui::Checkbox(text, &visible)) {
+            if (visible)
+                *color |= IM_COL32_A_MASK;
+            else
+                *color ^= IM_COL32_A_MASK;
             return true;
         }
         return false;

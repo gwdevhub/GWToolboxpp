@@ -40,7 +40,6 @@
 #include <Modules/NPCVoiceModule.h>
 #include <Modules/LoginModule.h>
 #include <Modules/UIScaler.h>
-#include <Modules/TitleOrderModule.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -91,6 +90,7 @@
 #include <Widgets/ActiveQuestWidget.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/InventoryOverlayWidget.h>
+#include <Widgets/TitleTrackerWidget.h>
 #include "ToolboxSettings.h"
 
 
@@ -164,8 +164,7 @@ namespace {
         LoginModule::Instance(),
         NPCVoiceModule::Instance(),
         AudioSettings::Instance(),   
-        UIScaler::Instance(),          
-        TitleOrderModule::Instance()
+        UIScaler::Instance()         
     };
 
     std::vector<WidgetToggle> optional_widgets = {
@@ -189,6 +188,7 @@ namespace {
 #endif
         {HeroEquipmentModule::Instance(), false},
         ActiveQuestWidget::Instance(),
+        TitleTrackerWidget::Instance()
 
     };
 

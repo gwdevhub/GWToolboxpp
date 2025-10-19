@@ -35,8 +35,16 @@ namespace GW {
         constexpr uint32_t Campaign[6] = {
             0xa374, 0xa375, 0xa376, 0xa377, 0xe228, 0x11b81
         };
+        namespace Faction {
+            static const wchar_t* Kurzick = L"\x6D3D";
+            static const wchar_t* Luxon = L"\x6D3E";
+            static const wchar_t* Balthazar = L"\x6D3F";
+            static const wchar_t* Imperial = L"\x8102\x7692";
+        }
 
         namespace MapRegion {
+
+
             static const wchar_t* BattleIsles = L"\xE63";
 
             static const wchar_t* Kryta = L"\x3d62";
