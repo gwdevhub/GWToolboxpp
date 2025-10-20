@@ -1509,7 +1509,14 @@ void HotkeyAction::Execute()
     switch (action) {
         case OpenXunlaiChest:
             GW::GameThread::Enqueue([] {
-                GW::Items::OpenXunlaiWindow();
+                const auto frame = GW::UI::GetFrameByLabel(L"InvAccount");
+                if (frame) {
+                    GW::UI::DestroyUIComponent(frame);
+                }
+                else {
+                    GW::Items::OpenXunlaiWindow();
+                }
+                
                 });
             break;
         case DropGoldCoin:
