@@ -1006,7 +1006,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     }
     const auto callback = [filename_sanitised](const bool success, const std::wstring& error) {
         if (!success) {
-            Log::ErrorW(L"Failed to load Guild Wars Wiki file%S\n%s", filename_sanitised.c_str(), error.c_str());
+            Log::LogW(L"Failed to load Guild Wars Wiki file%S\n%s", filename_sanitised.c_str(), error.c_str());
         }
         else {
             Log::LogW(L"Loaded Guild Wars Wiki file %S", filename_sanitised.c_str());

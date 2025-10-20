@@ -203,7 +203,7 @@ namespace {
             ASSERT(context);
             auto ctx_agent_info = (AgentInfo*)context;
             if (!success) {
-                Log::Error(response.c_str());
+                Log::Log(response.c_str());
                 ctx_agent_info->state = TargetInfoState::Done;
             }
             else {
