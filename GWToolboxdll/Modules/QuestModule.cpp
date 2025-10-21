@@ -571,13 +571,15 @@ void QuestModule::DrawSettingsInternal()
 {
     ImGui::Checkbox("Double click a quest in the quest log window to travel to nearest outpost", &double_click_to_travel_to_quest);
     ImGui::Text("Draw path to quest marker on:");
-    ImGui::Checkbox("Terrain##drawquestpath", &draw_quest_path_on_terrain);
-    ImGui::Checkbox("Minimap##drawquestpath", &draw_quest_path_on_minimap);
-    ImGui::Checkbox("Mission Map##drawquestpath", &draw_quest_path_on_mission_map);
+    bool recalc_quest_paths = false;
+    recalc_quest_paths |= ImGui::Checkbox("Terrain##terrianquestpath", &draw_quest_path_on_terrain);
+    recalc_quest_paths |= ImGui::Checkbox("Minimap##minimapquestpath", &draw_quest_path_on_minimap);
+    recalc_quest_paths |= ImGui::Checkbox("Mission Map##missionmapquestpath", &draw_quest_path_on_mission_map);
 #ifdef _DEBUG
-    if (ImGui::Checkbox("Show paths to all quests##drawquestpath", &show_paths_to_all_quests))
-        RefreshAllQuestPaths();
+    recalc_quest_paths |= ImGui::Checkbox("Show paths to all quests##drawallquestpaths", &show_paths_to_all_quests);
 #endif
+    if(recalc_quest_paths)
+        RefreshAllQuestPaths();
     ImGui::DragFloat("Max distance between two points##max_visibility_range", &Pathing::max_visibility_range, 1'000.f, 1'000.f, 50'000.f);
     ImGui::ShowHelp("The higher this value, the more accurate the path will be, but the more CPU it will use.");
 }
