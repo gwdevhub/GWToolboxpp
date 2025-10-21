@@ -1684,63 +1684,32 @@ void ChatCommands::QuestPing::Update()
     }
 }
 
-void ChatCommands::SearchAgent::Init(const wchar_t* _search, const TargetType type)
+void ChatCommands::SearchAgent::Init(const wchar_t* _search, const uint32_t type)
 {
     Reset();
-    if (!_search || !_search[0]) {
-        return;
-    }
+    if (!_search || !_search[0]) return;
+
     search = TextUtils::ToLower(_search);
     started = TIMER_INIT();
+
     GW::AgentArray* agents = GW::Agents::GetAgentArray();
-    if (!agents) {
-        return;
-    }
+    if (!agents) return;
+
     for (const GW::Agent* agent : *agents) {
-        if (!agent) {
-            continue;
-        }
-        if (!GW::Agents::GetIsAgentTargettable(agent)) {
-            continue;
-        }
-        switch (type) {
-            case Item:
-                if (!agent->GetIsItemType()) {
-                    continue;
-                }
-                break;
-            case Gadget:
-                if (!agent->GetIsGadgetType()) {
-                    continue;
-                }
-                break;
-            case Player:
-                if (!agent->GetIsLivingType() || !agent->GetAsAgentLiving()->IsPlayer()) {
-                    continue;
-                }
-                break;
-            case Npc: {
-                const GW::AgentLiving* agent_living = agent->GetAsAgentLiving();
-                if (!agent_living || !agent_living->IsNPC() || !agent_living->GetIsAlive()) {
-                    continue;
-                }
-            }
-            break;
-            case Living: {
-                const GW::AgentLiving* agent_living = agent->GetAsAgentLiving();
-                if (!agent_living || !agent_living->GetIsAlive()) {
-                    continue;
-                }
-            }
-            break;
-            default:
-                continue;
-        }
+        if (!agent || !GW::Agents::GetIsAgentTargettable(agent)) continue;
+
+        const GW::AgentLiving* agent_living = agent->GetAsAgentLiving();
+        bool valid = false;
+
+        valid = ((type & Item) && agent->GetIsItemType()) || ((type & Gadget) && agent->GetIsGadgetType()) || ((type & Player) && agent_living && agent_living->IsPlayer()) ||
+                ((type & Npc) && agent_living && agent_living->IsNPC() && agent_living->GetIsAlive()) || ((type & Living) && agent_living && agent_living->GetIsAlive());
+
+        if (!valid) continue;
+
         const wchar_t* enc_name = GW::Agents::GetAgentEncName(agent);
-        if (!enc_name || !enc_name[0]) {
-            continue;
+        if (enc_name && enc_name[0]) {
+            npc_names.push_back({agent->agent_id, new GuiUtils::EncString(enc_name)});
         }
-        npc_names.push_back({agent->agent_id, new GuiUtils::EncString(enc_name)});
     }
 }
 
@@ -2488,7 +2457,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTarget)
         }
         GW::Agents::ChangeTarget(agent);
     }
-    return TargetNearest(GetRemainingArgsWstr(message, 1), Living);
+    return TargetNearest(GetRemainingArgsWstr(message, 1), Living | Gadget | Item);
 }
 
 void CHAT_CMD_FUNC(ChatCommands::CmdUseSkill)
@@ -2963,7 +2932,7 @@ bool ChatCommands::GetTargetTransmoInfo(PendingTransmo& transmo)
     return true;
 }
 
-void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, const TargetType type)
+void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, const uint32_t type)
 {
     uint32_t model_id = 0;
     uint32_t index = 0; // 0=nearest. 1=first by id, 2=second by id, etc.

@@ -35,13 +35,13 @@ public:
     };
 
     enum TargetType : uint32_t {
-        Gadget = 0,
-        Player,
-        Npc,
-        Item,
-        Living,
-        Enemy,
-        Ally
+        Gadget = 1,
+        Player = 2,
+        Npc = 4,
+        Item = 8,
+        Living = 16,
+        Enemy = 32,
+        Ally = 64
     };
 
     [[nodiscard]] const char* Name() const override { return "Chat Commands"; }
@@ -114,7 +114,7 @@ private:
     static bool GetNPCInfoByName(const std::wstring& name, PendingTransmo& transmo);
     static bool ParseScale(int scale, PendingTransmo& transmo);
     static bool GetTargetTransmoInfo(PendingTransmo& transmo);
-    static void TargetNearest(const wchar_t* model_id_or_name, TargetType type);
+    static void TargetNearest(const wchar_t* model_id_or_name, uint32_t type);
     static const wchar_t* GetRemainingArgsWstr(const wchar_t* message, int argc_start);
 
     static std::vector<ToolboxUIElement*> CHAT_CMD_FUNC(MatchingWindows);
@@ -128,7 +128,7 @@ private:
         clock_t started = 0;
         std::vector<std::pair<uint32_t, GuiUtils::EncString*>> npc_names;
         std::wstring search;
-        void Init(const wchar_t* search, TargetType type = Npc);
+        void Init(const wchar_t* _search, const uint32_t type = 0xffffffff);
         void Update();
         void Terminate() { Reset(); }
         void Reset()
