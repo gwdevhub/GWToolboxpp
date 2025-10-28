@@ -64,6 +64,9 @@
 #include <GWCA/Context/GameplayContext.h>
 #include <GWCA/Context/CharContext.h>
 #include <Utils/ArenaNetFileParser.h>
+#include <GWCA/Managers/EventMgr.h>
+
+#include <CircurlarBuffer.h>
 
 namespace {
 
@@ -96,6 +99,7 @@ namespace {
 
     bool record_textures = false;
     bool record_ui_messages = false;
+    bool record_event_messages = false;
     bool record_enc_strings = false;
 
     bool EncInfoField(const char* label, const wchar_t* enc_string)
@@ -516,7 +520,15 @@ namespace {
         bool skip_hooks;
     };
 
-    std::vector<UIMessagePacket> ui_message_packets_recorded;
+    CircularBuffer<UIMessagePacket> ui_message_packets_recorded;
+
+    struct EventPacket {
+        GW::EventMgr::EventID event_id;
+        void* packet;
+        uint32_t packet_size;
+    };
+    CircularBuffer<EventPacket> event_message_packets_recorded;
+
 
     struct RecordedAsyncDecode {
         std::wstring s; 
@@ -560,10 +572,14 @@ namespace {
     bool OnGWCASendUIMessage(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks) {
         GW::Hook::EnterHook();
         auto res = GWCA_SendUIMessage_Ret(msgid, wParam, lParam, skip_hooks);
-        if (record_ui_messages)
-            ui_message_packets_recorded.emplace_back(msgid, wParam, lParam, skip_hooks);
+        if (record_ui_messages) ui_message_packets_recorded.add({msgid, wParam, lParam, skip_hooks});
         GW::Hook::LeaveHook();
         return res;
+    }
+
+    void OnEventMessage(GW::HookStatus*, GW::EventMgr::EventID event_id, void* packet, uint32_t packet_size) {
+        if (record_event_messages) 
+            event_message_packets_recorded.add({event_id, packet, packet_size});
     }
 
 
@@ -646,6 +662,24 @@ namespace {
             GWCA_SendUIMessage_Func = 0;
         }
     }
+    GW::HookEntry* event_message_hook_entry = nullptr;
+    void HookOnGWCASendEventMessage(bool hook)
+    {
+        if (hook && event_message_hook_entry) return;
+        if (hook) {
+            event_message_hook_entry = new GW::HookEntry();
+            for (size_t i = 0; i < 0xff; i++) {
+                if (i == 2 || i == 1) continue;
+                GW::EventMgr::RegisterEventCallback(event_message_hook_entry, (GW::EventMgr::EventID)i, OnEventMessage);
+            }
+        }
+        else if (event_message_hook_entry) {
+            GW::EventMgr::RemoveEventCallback(event_message_hook_entry);
+            delete event_message_hook_entry;
+            event_message_hook_entry = 0;
+            event_message_packets_recorded.clear();
+        }
+    }
 
     void HighlightFrame(GW::UI::Frame* frame) {
         if (!frame) return;
@@ -675,6 +709,7 @@ namespace {
         HookOnCreateTexture(record_textures);
         HookOnValidateAsyncDecodeStr(record_enc_strings);
         HookOnGWCASendUIMessage(record_ui_messages);
+        HookOnGWCASendEventMessage(record_event_messages);
     }
     const uint32_t GetMapPropModelFileId(GW::MapProp* prop)
     {
@@ -775,6 +810,24 @@ namespace {
                 ImGui::SetScrollHereY();
             }
         }
+        if (ImGui::CollapsingHeader("Event Message Log")) {
+            record_event_messages = true;
+            ImGui::PushID(&event_message_packets_recorded);
+            if (ImGui::SmallButton("Reset")) {
+                event_message_packets_recorded.clear();
+            }
+            for (const auto packet : event_message_packets_recorded) {
+                ImGui::PushID(&packet);
+                ImGui::Text("0x%08x 0x%08x", packet.event_id, packet.packet);
+                ImGui::PopID();
+            }
+            ImGui::PopID();
+            if (ImGui::IsKeyDown(ImGuiMod_Alt)) {
+                ImGui::SetScrollHereY();
+            }
+        }
+
+        
 
         if (ImGui::CollapsingHeader("Async Str Log")) {
             record_enc_strings = true;
@@ -821,6 +874,15 @@ namespace {
                     ImGui::PopID();
                 }
                 ImGui::Unindent();
+            }
+        }
+        static bool game_master_mode = false;
+        if (ImGui::Checkbox("Game Master Mode", &game_master_mode)) {
+            if (game_master_mode) {
+                GW::GetCharContext()->player_flags |= 0x8;
+            }
+            else {
+                GW::GetCharContext()->player_flags ^= 0x8;
             }
         }
         if (ImGui::Button("Open Text Dev Window")) {
@@ -884,6 +946,9 @@ void InfoWindow::SignalTerminate() {
 void InfoWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+
+    ui_message_packets_recorded = CircularBuffer<UIMessagePacket>(512);
+    event_message_packets_recorded = CircularBuffer<EventPacket>(512);
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&InstanceLoadFile_Entry,
                                                                         [this](GW::HookStatus*, const GW::Packet::StoC::QuotedItemPrice* packet) -> void {
