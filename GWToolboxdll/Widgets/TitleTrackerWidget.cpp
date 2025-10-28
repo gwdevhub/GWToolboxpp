@@ -375,8 +375,6 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
     static float calculated_widget_height = 0.0f;
     ImGui::PushStyleColor(ImGuiCol_WindowBg, widget_background_color);
     ImGui::SetNextWindowSize(ImVec2(300.f, 0.0f), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSizeConstraints(ImVec2(300.0f, 64.0f), ImVec2(FLT_MAX, FLT_MAX));
-
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
         progress_bar_height = std::max(progress_bar_height, ImGui::GetTextLineHeight());
         const float available_width = ImGui::GetContentRegionAvail().x;

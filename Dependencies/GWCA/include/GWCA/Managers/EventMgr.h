@@ -12,11 +12,12 @@ namespace GW {
         enum class EventID {
             kRecvPing = 0x8,
             kSendFriendState = 0x26,
-            kRecvFriendState = 0x2c
+            kRecvFriendState = 0x2c,
 
+            kNone = 0xffff
         };
 
-        typedef HookCallback<EventID, void*, uint32_t> EventCallback;
+        typedef HookCallback<EventID, void*,uint32_t> EventCallback;
         GWCA_API void RegisterEventCallback(
             HookEntry *entry,
             EventID event_id,
@@ -24,6 +25,9 @@ namespace GW {
             int altitude = -0x8000);
 
         GWCA_API void RemoveEventCallback(
-            HookEntry *entry);
+            HookEntry *entry,
+            EventID event_id = EventID::kNone);
+
+        GWCA_API bool SendEventMessage(EventID, void*);
     };
 }

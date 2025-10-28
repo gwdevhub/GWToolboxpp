@@ -163,7 +163,7 @@ namespace {
                 GetActiveWeaponSet(&actual_active_weapon_set_id);
                 OnWeaponBarUICallback_Ret(message, wparam, lparam);
                 const auto packet = (GW::UI::UIPacket::kMouseAction*)wparam;
-                if (packet->child_offset_id < 0x10000000 || packet->current_state != 6) break;
+                if (packet->child_offset_id < 0x10000000 || packet->current_state != GW::UI::UIPacket::ActionState::MouseUp) break;
                 if (packet->child_offset_id < 0x10000000 + _countof(GW::Inventory::weapon_sets)) {
                     // Standard weapon set frame clicked
                     uint32_t this_weapon_set_id = packet->child_offset_id - 0x10000000;

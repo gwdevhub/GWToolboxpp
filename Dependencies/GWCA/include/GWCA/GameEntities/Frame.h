@@ -21,8 +21,8 @@ namespace GW {
         GWCA_API bool GetLabel(const wchar_t** enc_string);
         GWCA_API bool SetLabel(const wchar_t* enc_string);
         GWCA_API bool Click();
-        GWCA_API bool MouseDown();
-        GWCA_API bool MouseUp();
+        GWCA_API bool MouseAction(UI::UIPacket::ActionState action);
+        GWCA_API bool DoubleClick();
     };
 
     struct TabsFrame : UI::Frame {

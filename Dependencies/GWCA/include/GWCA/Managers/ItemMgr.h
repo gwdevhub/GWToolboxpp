@@ -23,6 +23,12 @@ namespace GW {
         enum class MaterialSlot : uint32_t;
     }
 
+    namespace UI {
+        namespace UIPacket {
+            struct kMouseAction;
+        }
+    }
+
     enum class EquipmentType : uint32_t {
         Cape = 0x0, Helm = 0x2, CostumeBody = 0x4, CostumeHeadpiece = 0x6, Unknown = 0xff
     };
@@ -138,7 +144,7 @@ namespace GW {
         GWCA_API bool GetIsStorageOpen(void);
 
         // The callback should return false if it want to foward the info to Gw.
-        typedef HookCallback<uint32_t, uint32_t, Bag *> ItemClickCallback;
+        typedef HookCallback<GW::UI::UIPacket::kMouseAction*,GW::Item*> ItemClickCallback;
         GWCA_API void RegisterItemClickCallback(
             HookEntry *entry,
             const ItemClickCallback& callback);
@@ -153,7 +159,7 @@ namespace GW {
         GWCA_API bool SetEquipmentVisibility(EquipmentType type, EquipmentStatus state);
 
         // Get pointer to the list of available item upgrades (insignias, runes, weapon mods etc) that can be unlocked for an account. Used in the PvP Equipment window.
-        GWCA_API const Array<PvPItemUpgradeInfo>& GetPvPItemUpgradesArray();
+        GWCA_API const BaseArray<PvPItemUpgradeInfo>& GetPvPItemUpgradesArray();
 
         // Get info for unlockable pvp item upgrade by index
         GWCA_API const PvPItemUpgradeInfo* GetPvPItemUpgrade(uint32_t pvp_item_upgrade_idx);
@@ -162,11 +168,11 @@ namespace GW {
         GWCA_API const PvPItemInfo* GetPvPItemInfo(uint32_t pvp_item_idx);
 
         //Get info for unlockable armor item by index.
-        GWCA_API const Array<PvPItemInfo>& GetPvPItemInfoArray();
+        GWCA_API const BaseArray<PvPItemInfo>& GetPvPItemInfoArray();
 
         GWCA_API const CompositeModelInfo* GetCompositeModelInfo(uint32_t model_file_id);
 
-        GWCA_API const Array<CompositeModelInfo>& GetCompositeModelInfoArray();
+        GWCA_API const BaseArray<CompositeModelInfo>& GetCompositeModelInfoArray();
 
         // Get encoded name of unlockable pvp item upgrade; returns false on failure
         GWCA_API bool GetPvPItemUpgradeEncodedName(uint32_t pvp_item_upgrade_idx, wchar_t** out);

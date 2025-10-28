@@ -21,6 +21,9 @@ namespace GW {
     }
     namespace UI {
         enum class UIMessage : uint32_t;
+        namespace UIPacket {
+            struct kMouseAction;
+        }
     }
     namespace Merchant {
         enum class TransactionType : uint32_t;
@@ -88,7 +91,7 @@ public:
     // Checks model info and struct info to make sure item is the same.
     static bool IsSameItem(const GW::Item* item1, const GW::Item* item2);
 
-    static void ItemClickCallback(GW::HookStatus*, uint32_t type, uint32_t slot, const GW::Bag* bag);
+    static void ItemClickCallback(GW::HookStatus*, GW::UI::UIPacket::kMouseAction*, GW::Item*);
     static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
 
 

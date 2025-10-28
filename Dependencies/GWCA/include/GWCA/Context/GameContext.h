@@ -17,12 +17,13 @@ namespace GW {
     struct WorldContext;
     struct GadgetContext;
     struct AccountContext;
+    struct EventContext;
 
     struct GameContext {
         /* +h0000 */ void* h0000;
         /* +h0004 */ void* h0004;
         /* +h0008 */ AgentContext* agent; // Most functions that access are prefixed with Agent.
-        /* +h000C */ void* h000C;
+        /* +h000C */ EventContext* event;
         /* +h0010 */ void* h0010;
         /* +h0014 */ MapContext* map; // Static object/collision data
         /* +h0018 */ TextParser *text_parser;

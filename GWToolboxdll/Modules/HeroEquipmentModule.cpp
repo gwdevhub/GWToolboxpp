@@ -189,8 +189,8 @@ namespace {
         switch (message->message_id) {
             case GW::UI::UIMessage::kMouseClick2: {
                 const auto packet = (GW::UI::UIPacket::kMouseAction*)wParam;
-                if ((packet->child_offset_id > 0xffffff && packet->child_offset_id < 0x2000000)
-                    && (packet->current_state == 8 && *(uint32_t*)packet->wparam == 0)) {
+                if ((packet->child_offset_id > 0xffffff && packet->child_offset_id < 0x2000000) 
+                    && (packet->current_state == GW::UI::UIPacket::ActionState::MouseDoubleClick && *(uint32_t*)packet->wparam == 0)) {
                     break; // Avatar image clicked; block the packet
                 }
                 OnAvatarList_UICallback_Ret(message, wParam, lParam);

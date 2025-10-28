@@ -12,6 +12,7 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/Managers/EventMgr.h>
 
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
@@ -75,14 +76,10 @@ namespace {
     {
         GW::Hook::EnterHook();
         if (message->message_id == GW::UI::UIMessage::kMouseAction && wparam) {
-            struct MouseParams {
-                uint32_t button_id;
-                uint32_t button_id_dupe;
-                uint32_t current_state; // 0x5 = hovered, 0x6 = mouse down
-            }* param = static_cast<MouseParams*>(wparam);
-            const auto frame = GW::UI::GetFrameByLabel(L"btnExit");
-            if (frame && frame->frame_id == message->frame_id && param->current_state == 0x6) {
-                param->current_state = 0x5; // Revert state to avoid GW closing the window on mouse up
+            const auto param = (GW::UI::UIPacket::kMouseAction*)wparam;
+            const auto frame = param->current_state == GW::UI::UIPacket::ActionState::MouseUp ? GW::UI::GetFrameByLabel(L"btnExit") : nullptr;
+            if (frame && frame->frame_id == message->frame_id) {
+                param->current_state = GW::UI::UIPacket::ActionState::MouseDown; // Revert state to avoid GW closing the window on mouse up
 
                 // Left button clicked, on the exit button (ID 0x3)
                 static bool closing_gw = false;

@@ -494,11 +494,6 @@ namespace {
         //    - If the item is stackable, search for incomplete stacks in the current storage page and completes them
         //    - If not everything was moved, move the remaining in the first empty slot of the current page.
 
-        // @Fix:
-        //  There is a bug in gw that doesn't "save" if the material storage
-        //  (or anniversary storage in the case when the player bought all other storage)
-        //  so we cannot know if they are the storage selected.
-        //  Sol: The solution is to patch the value 7 -> 9 at 0040E851 (EB 20 33 C0 BE 06 [-5])
         // @Cleanup: Bad
         if (item->model_file_id == 0x0002f301) {
             Log::Error("Ctrl+click doesn't work with birthday presents yet");
@@ -538,29 +533,13 @@ namespace {
     GW::HookEntry on_offer_item_hook;
     bool change_secondary_for_tome = true;
 
-    struct PreMoveItemStruct {
-        uint32_t item_id = 0;
-        uint32_t bag_id = 0;
-        uint32_t slot = 0;
-        bool prompt_split_stack = false;
-    };
-
     void prompt_split_stack(const GW::Item* item)
     {
         GW::GameThread::Enqueue([item] {
-            PreMoveItemStruct details{
-                .item_id = item->item_id,
-                .bag_id = std::to_underlying(GW::Constants::Bag::None),
-                .slot = 0,
-                .prompt_split_stack = true
-            };
-            // Doesn't matter where the prompt is asking to move to, as long as its not the same slot; we're going to override later.
-            if (item->bag->index == details.bag_id && item->slot == details.slot) {
-                details.slot++;
+            GW::UI::UIPacket::kMoveItem packet = {.item_id = item->item_id, .to_bag_index = item->bag->index, .to_slot = item->slot, .prompt = 1u};
+            if (SendUIMessage(GW::UI::UIMessage::kMoveItem, &packet)) {
+                InventoryManager::Instance().stack_prompt_item_id = item->item_id;
             }
-            SendUIMessage(GW::UI::UIMessage::kMoveItem, &details);
-            //OnPreMoveItem(7, &details);
-            InventoryManager::Instance().stack_prompt_item_id = item->item_id;
         });
     }
 
@@ -818,6 +797,8 @@ namespace {
             && !ImGui::IsKeyDown(ImGuiMod_Shift)))
             return GW::Hook::LeaveHook();
         const auto frame = GW::UI::GetFrameById(message->frame_id);
+        if(!frame || frame->child_offset_id != 0x2) 
+            return GW::Hook::LeaveHook(); // This isn't the prompt for trade stacks
         const auto max_btn = GW::UI::GetChildFrame(frame,4);
         const auto ok_btn = GW::UI::GetChildFrame(frame, 3);
         if (max_btn && ok_btn) {
@@ -871,10 +852,6 @@ namespace {
             } break;
         }
     }
-
-
-
-
 } // namespace
 void InventoryManager::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
 {
@@ -903,17 +880,15 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessa
         } break;
         // About to move an item
         case GW::UI::UIMessage::kSendMoveItem: {
-            const uint32_t* packet = static_cast<uint32_t*>(wparam);
-            const uint32_t item_id = packet[0];
-            const uint32_t quantity = packet[1];
+            const auto packet = (GW::UI::UIPacket::kSendMoveItem*)wparam;
 
-            if (item_id != instance.stack_prompt_item_id) {
+            if (packet->item_id != instance.stack_prompt_item_id) {
                 instance.stack_prompt_item_id = 0;
                 return;
             }
             instance.stack_prompt_item_id = 0;
             status->blocked = true;
-            move_item((InventoryManager::Item*)GW::Items::GetItemById(item_id), static_cast<uint16_t>(quantity));
+            move_item((InventoryManager::Item*)GW::Items::GetItemById(packet->item_id), static_cast<uint16_t>(packet->quantity));
         } break;
         // Quote for item has been received
         case GW::UI::UIMessage::kVendorQuote: {
@@ -1030,20 +1005,22 @@ bool InventoryManager::WndProc(const UINT message, const WPARAM, const LPARAM)
             GW::GameThread::Enqueue([item]() {
                 // Item right clicked - spoof a click event
                 GW::HookStatus status;
-                ItemClickCallback(&status, 999, item->slot, item->bag);
+                GW::UI::UIPacket::kMouseAction packet = {
+                    .child_offset_id = item->slot + 2u, 
+                    .current_state = (GW::UI::UIPacket::ActionState)999,
+                };
+                ItemClickCallback(&status, &packet, item);
                 });
         } break;
         case WM_LBUTTONDOWN:
         case WM_LBUTTONDBLCLK: {
             const auto item = GW::Items::GetHoveredItem();
             const auto bag = item ? item->bag : nullptr;
-            if (!bag) {
-                break;
-            }
-            if (static_cast<GW::Constants::Bag>(bag->index + 1) == GW::Constants::Bag::Material_Storage) {
+            if (bag && bag->IsMaterialStorage()) {
                 // Item in material storage pane clicked - spoof a click event
                 GW::HookStatus status;
-                ItemClickCallback(&status, message == WM_LBUTTONDOWN ? 7 : 8, item->slot, bag);
+                GW::UI::UIPacket::kMouseAction packet = {.child_offset_id = item->slot + 2u, .current_state = message == WM_LBUTTONDOWN ? GW::UI::UIPacket::ActionState::MouseUp : GW::UI::UIPacket::ActionState::MouseDoubleClick};
+                ItemClickCallback(&status, &packet, item);
                 return false;
             }
         }
@@ -2282,16 +2259,19 @@ end_popup:
     return true;
 }
 
-void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t type, const uint32_t slot, const GW::Bag* bag)
+void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacket::kMouseAction* action, GW::Item* gw_item)
 {
+#pragma warning(push)
+#pragma warning(disable : 4063) // case 'value' is not a valid value for switch of enum
+
     InventoryManager& im = Instance();
-    const Item* item = nullptr;
-    switch (type) {
-        case 7: // Left click
+    auto item = (InventoryManager::Item*)gw_item;
+    if (!item) return;
+    switch (action->current_state) {
+        case GW::UI::UIPacket::ActionState::MouseClick: // Left click
             if (ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
                 // Get any hovered item in order to get info about it for Ctrl+Click shortcuts.
                 // May be null, in which case said shortcuts are ignored.
-                item = static_cast<Item*>(GW::Items::GetHoveredItem());
 
                 if (item && identify_all_on_ctrl_click && item->IsIdentificationKit() && ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
                     // Ctrl+Click on identification kit: Identify all items
@@ -2318,16 +2298,6 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
                 }
                 else if (GameSettings::GetSettingBool("move_item_on_ctrl_click") && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
                     // Ctrl+Click: Move item to inventory/chest
-                    if (bag) {
-                        item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
-                    }
-                    else {
-                        item = static_cast<Item*>(GW::Items::GetHoveredItem());
-                    }
-                    if (!item) {
-                        return;
-                    }
-
                     if (ImGui::IsKeyDown(ImGuiMod_Shift) && item->quantity > 1) {
                         prompt_split_stack(item);
                     }
@@ -2339,7 +2309,6 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
             }
             if (ImGui::IsKeyDown(ImGuiMod_Alt) && move_to_trade_on_alt_click && IsTradeWindowOpen()) {
                 // Alt+Click: Add to trade window if available
-                item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
                 if (!item || !item->CanOfferToTrade()) {
                     return;
                 }
@@ -2353,11 +2322,10 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
                 pending_item_move_for_trade = item->item_id;
             }
             return;
-        case 8: // Double click
+        case GW::UI::UIPacket::ActionState::MouseDoubleClick: // Double click
             if (move_to_trade_on_double_click && IsTradeWindowOpen()) {
                 status->blocked = true;
                 // Alt+Click: Add to trade window if available
-                item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
                 if (!item || !item->CanOfferToTrade()) {
                     return;
                 }
@@ -2371,19 +2339,12 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
                 pending_item_move_for_trade = item->item_id;
             }
             return;
-        case 999: // Right click (via GWToolbox)
+        case static_cast<GW::UI::UIPacket::ActionState>(999u): // Right click (via GWToolbox)
             if (!Instance().right_click_context_menu_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
                 return;
             }
             if (!Instance().right_click_context_menu_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
                 return;
-            }
-
-            if (bag) {
-                item = static_cast<Item*>(GW::Items::GetItemBySlot(bag, slot + 1));
-            }
-            else {
-                item = static_cast<Item*>(GW::Items::GetHoveredItem());
             }
             if (!item) {
                 return;
@@ -2402,6 +2363,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, const uint32_t 
         default:
             return;
     }
+#pragma warning(pop)
 }
 
 void InventoryManager::ClearPotentialItems()

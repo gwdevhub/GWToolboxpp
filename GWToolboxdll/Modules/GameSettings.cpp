@@ -1355,7 +1355,7 @@ namespace {
         GW::Hook::EnterHook();
         if (message->message_id == GW::UI::UIMessage::kMouseClick2) {
             const auto packet = (GW::UI::UIPacket::kMouseAction*)wParam;
-            if (packet->child_offset_id == 0 && packet->current_state == 0x6) {
+            if (packet->child_offset_id == 0 && packet->current_state == GW::UI::UIPacket::ActionState::MouseUp) {
                 const auto context = (uint32_t*)GW::UI::GetFrameContext(GW::UI::GetFrameById(message->frame_id));
                 const auto item = context ? GW::Items::GetItemById(context[1]) : nullptr;
                 GW::Items::UseItem(item); // Auto re-use tome when "Learn" is clicked

@@ -70,7 +70,7 @@ namespace GW {
         };
 
         typedef void(__cdecl* UIInteractionCallback)(InteractionMessage* message, void* wParam, void* lParam);
-
+        typedef void(__fastcall* UICtlCallback)(void* frame_context, void* wParam, void* lParam);
 
         struct Frame;
 
@@ -471,6 +471,12 @@ namespace GW {
 
 
         namespace UIPacket {
+            struct kMoveItem {
+                uint32_t item_id;
+                uint32_t to_bag_index;
+                uint32_t to_slot;
+                uint32_t prompt;
+            };
             struct kResize {
                 uint32_t h0000 = 0xffffffff;
                 float content_width;
@@ -628,10 +634,18 @@ namespace GW {
                 uint32_t is_doubleclick;
                 uint32_t unknown_type_screen_pos;
             };
+            enum ActionState : uint32_t {
+                MouseDown = 0x5,
+                MouseUp = 0x6,
+                MouseClick = 0x7,
+                MouseDoubleClick = 0x8,
+                DragRelease = 0xa,
+                KeyDown = 0xd
+            };
             struct kMouseAction {
                 uint32_t frame_id;
                 uint32_t child_offset_id;
-                uint32_t current_state; // 0x5 = hovered, 0x6 = mouse down
+                ActionState current_state;
                 void* wparam = 0;
                 void* lparam = 0;
             };
@@ -680,7 +694,7 @@ namespace GW {
             struct kSendMoveItem {
                 uint32_t item_id;
                 uint32_t quantity;
-                uint32_t bag_id;
+                uint32_t bag_index;
                 uint32_t slot;
             };
             struct kSendMerchantRequestQuote {

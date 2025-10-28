@@ -12,6 +12,7 @@
 #include <Widgets/LatencyWidget.h>
 
 #include "Utils/FontLoader.h"
+#include <GWCA/Managers/EventMgr.h>
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
@@ -27,7 +28,7 @@ namespace {
 
     GW::HookEntry ChatCommand_Hook;
 
-    void OnServerPing(GW::HookStatus*, void* packet)
+    void OnServerPing(GW::HookStatus*, GW::EventMgr::EventID, void* packet, uint32_t)
     {
         const auto packet_as_uint_array = static_cast<uint32_t*>(packet);
         const uint32_t ping = packet_as_uint_array[1];
@@ -57,13 +58,13 @@ void LatencyWidget::SendPing() {
 void LatencyWidget::Initialize()
 {
     ToolboxWidget::Initialize();
-    GW::StoC::RegisterPacketCallback(&Ping_Entry, GAME_SMSG_PING_REPLY, OnServerPing, 0x800);
+    GW::EventMgr::RegisterEventCallback(&Ping_Entry, GW::EventMgr::EventID::kRecvPing, OnServerPing, 0x800);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"ping", CmdPing);
 }
 void LatencyWidget::Terminate() {
     ToolboxWidget::Terminate();
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
-    GW::StoC::RemoveCallback(GAME_SMSG_PING_REPLY, &Ping_Entry);
+    GW::EventMgr::RemoveEventCallback(&Ping_Entry);
 }
 
 void LatencyWidget::Update(const float) { }
