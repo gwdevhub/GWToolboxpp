@@ -40,12 +40,14 @@ public:
     [[nodiscard]] const char* Name() const override { return "Audio Settings"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_MUSIC; }
 
+    static bool PlayMusic(const wchar_t* filename, uint32_t flags = 0x83);
+
     static bool PlaySound(const wchar_t* filename, const GW::Vec3f* position = nullptr, uint32_t flags = 0, void** handle_out = nullptr);
     static bool StopSound(void* handle);
     static void RegisterPlaySoundCallback(GW::HookEntry* hook_entry, PlaySoundCallback callback);
     static void RemovePlaySoundCallback(GW::HookEntry* hook_entry);
     void Initialize() override;
-    void Terminate() override;
+    void SignalTerminate() override;
     void LoadSettings(ToolboxIni*) override;
     void SaveSettings(ToolboxIni*) override;
     void DrawSettingsInternal() override;
