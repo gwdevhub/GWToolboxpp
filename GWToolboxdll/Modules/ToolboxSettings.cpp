@@ -23,6 +23,7 @@
 #include <Modules/QuestModule.h>
 #include <Modules/KeyboardLanguageFix.h>
 #include <Modules/ExtraWeaponSets.h>
+#include <Modules/SteamModule.h>
 #if 0
 #include <Modules/GWFileRequester.h>
 #endif
@@ -164,7 +165,8 @@ namespace {
         LoginModule::Instance(),
         NPCVoiceModule::Instance(),
         AudioSettings::Instance(),   
-        UIScaler::Instance()         
+        UIScaler::Instance(),          
+        SteamModule::Instance()
     };
 
     std::vector<WidgetToggle> optional_widgets = {

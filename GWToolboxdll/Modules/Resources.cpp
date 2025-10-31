@@ -1074,6 +1074,19 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     return texture;
 }
 
+std::filesystem::path Resources::GetExePath()
+{
+    wchar_t buffer[MAX_PATH];
+    const DWORD length = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+
+    if (length == 0 || length == MAX_PATH) {
+        Log::LogW(L"Failed to get exe path, error %lu", GetLastError());
+        return {};
+    }
+
+    return std::filesystem::path(buffer);
+}
+
 IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id)
 {
     const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);

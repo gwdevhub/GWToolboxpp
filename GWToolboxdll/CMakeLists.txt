@@ -48,6 +48,7 @@ target_link_options(GWToolboxdll PRIVATE
     $<$<CONFIG:Debug>:/NODEFAULTLIB:LIBCMT>
     /IGNORE:4099 # pdb not found for github action
     "/DELAYLOAD:gwca.dll"
+    "/DELAYLOAD:steam_api.dll"
     )
 
 target_include_directories(GWToolboxdll PRIVATE
@@ -67,6 +68,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     imgui
     directxtex
     gwca
+    steamworks_sdk
     easywsclient
     ${CPP_GAME_SDK}
     nlohmann_json::nlohmann_json

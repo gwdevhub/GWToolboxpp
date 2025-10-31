@@ -110,6 +110,8 @@ public:
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetGuildWarsWikiImage(const char* filename, size_t width = 0, bool urlencode_filename = true);
 
+    static std::filesystem::path GetExePath();
+
     // Guaranteed to return a pointer, but may not yet be decoded.
     static GuiUtils::EncString* GetMapName(GW::Constants::MapID map_id);
 

@@ -1,0 +1,80 @@
+#include "stdafx.h"
+
+#include "SteamModule.h"
+
+#pragma warning(disable : 4828)
+#include <steamworks_sdk/public/steam/steam_api.h>
+#include "Resources.h"
+
+#include <GWCA/Managers/RenderMgr.h>
+
+#include <ImGuiAddons.h>
+
+#define STEAM_APP_ID 29720
+
+namespace {
+    bool steam_initialised_before_dx9 = false;
+    bool steam_api_loaded = false;
+    HMODULE steam_api_module = 0;
+
+    ImVec4 green = ImVec4(0, 1, 0, 1);
+    ImVec4 red = ImVec4(1, 0, 0, 1);
+    ImVec4 yellow = ImVec4(1, 1, 0, 1);
+
+    bool EnsureSteamAppIdFile()
+    {
+        const auto steam_appid_path = Resources::GetExePath().parent_path() / "steam_appid.txt";
+        if (std::filesystem::exists(steam_appid_path)) return true;
+        std::ofstream file(steam_appid_path);
+        if (!file.is_open()) return false;
+        file << STEAM_APP_ID;
+        return true;
+    }
+
+    HMODULE steam_api_dll = 0;
+
+    bool InitializeSteam()
+    {
+        if (steam_api_loaded) return true;
+        steam_initialised_before_dx9 = !GW::Render::GetDevice();
+        EnsureSteamAppIdFile();
+        steam_api_module = LoadLibraryA("steam_api.dll");
+        if (!steam_api_module) {
+            Log::Error("Failed to load steam_api.dll");
+            return false;
+        }
+        SteamErrMsg errMsg;
+        if (SteamAPI_InitFlat(&errMsg) != k_ESteamAPIInitResult_OK) {
+            Log::Error("Failed to init Steam.  %s", errMsg);
+            return false;
+        }
+        steam_api_loaded = true;
+        if (!steam_initialised_before_dx9) {
+            Log::Warning("Steam was initailised before the directx device was created, steam overlay wasn't able to hook!");
+        }
+        return true;
+    }
+
+} // namespace
+
+void SteamModule::Initialize()
+{
+    ToolboxModule::Initialize();
+    InitializeSteam();
+}
+
+void SteamModule::DrawSettingsInternal()
+{
+    ToolboxModule::DrawSettingsInternal();
+    ImGui::TextUnformatted("Status: ");
+    if (!steam_api_loaded) {
+        ImGui::TextColored(red, "Not Connected");
+    }
+    else if (steam_initialised_before_dx9) {
+        ImGui::TextColored(red, "Steam connected, but overlay not working");
+        ImGui::ShowHelp("Steam connection was intialised after DirectX device was created.\nThis means that steam isn't able to hook into the game\nto be able to draw the steam overlay.\n\nLaunch toolbox through gwlauncher to make it work!");
+    }
+    else {
+        ImGui::TextColored(red, "Steam connected");
+    }
+}

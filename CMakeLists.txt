@@ -53,6 +53,7 @@ include(imgui)
 include(gwtoolboxdll_plugins)
 include(nativefiledialog)
 include(wintoast)
+include(steamworks_sdk)
 
 find_library(GAME_SDK discord_game_sdk)
 find_path(GAME_SDK_INCLUDE discord-game-sdk/discord.h)
