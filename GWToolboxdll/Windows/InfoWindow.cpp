@@ -67,6 +67,7 @@
 #include <GWCA/Managers/EventMgr.h>
 
 #include <CircurlarBuffer.h>
+#include <Widgets/WorldMapWidget.h>
 
 namespace {
 
@@ -346,6 +347,10 @@ namespace {
         ImGui::ShowHelp("Agent ID is unique for each agent in the instance,\nIt's generated on spawn and will change in different instances.");
         InfoField("X pos", "%.2f", agent->pos.x);
         InfoField("Y pos", "%.2f", agent->pos.y);
+        GW::Vec2f world_map_pos;
+        WorldMapWidget::GamePosToWorldMap(agent->pos, world_map_pos);
+        InfoField("World Map X pos", "%.2f", world_map_pos.x);
+        InfoField("World Map Y pos", "%.2f", world_map_pos.y);
         const float speed = sqrtf(agent->move_x * agent->move_x + agent->move_y * agent->move_y);
         InfoField("Speed (Relative)", "%.2f (%.2f) ", speed, speed > 0.f ? speed / 288.0f : 0.f);
         if (living) {

@@ -21,6 +21,8 @@ namespace {
     ImVec4 red = ImVec4(1, 0, 0, 1);
     ImVec4 yellow = ImVec4(1, 1, 0, 1);
 
+    SteamErrMsg steam_connection_error;
+
     bool EnsureSteamAppIdFile()
     {
         const auto steam_appid_path = Resources::GetExePath().parent_path() / "steam_appid.txt";
@@ -43,9 +45,9 @@ namespace {
             Log::Error("Failed to load steam_api.dll");
             return false;
         }
-        SteamErrMsg errMsg;
-        if (SteamAPI_InitFlat(&errMsg) != k_ESteamAPIInitResult_OK) {
-            Log::Error("Failed to init Steam.  %s", errMsg);
+        *steam_connection_error = 0;
+        if (SteamAPI_InitFlat(&steam_connection_error) != k_ESteamAPIInitResult_OK) {
+            Log::Error("Failed to init Steam.  %s", steam_connection_error);
             return false;
         }
         steam_api_loaded = true;
@@ -67,14 +69,20 @@ void SteamModule::DrawSettingsInternal()
 {
     ToolboxModule::DrawSettingsInternal();
     ImGui::TextUnformatted("Status: ");
-    if (!steam_api_loaded) {
-        ImGui::TextColored(red, "Not Connected");
+    if (*steam_connection_error) {
+        ImGui::TextColored(red, "Failed to init Steam: %s", steam_connection_error);
     }
-    else if (steam_initialised_before_dx9) {
-        ImGui::TextColored(red, "Steam connected, but overlay not working");
+    else if (!steam_api_loaded) {
+        ImGui::TextColored(yellow, "Not Connected");
+    }
+    else if (!steam_initialised_before_dx9) {
+        ImGui::TextColored(yellow, "Steam connected, but overlay not working");
         ImGui::ShowHelp("Steam connection was intialised after DirectX device was created.\nThis means that steam isn't able to hook into the game\nto be able to draw the steam overlay.\n\nLaunch toolbox through gwlauncher to make it work!");
     }
     else {
         ImGui::TextColored(red, "Steam connected");
+    }
+    if (!steam_api_loaded && ImGui::Button("Retry")) {
+        InitializeSteam();
     }
 }
