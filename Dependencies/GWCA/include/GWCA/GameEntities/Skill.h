@@ -93,19 +93,26 @@ namespace GW {
     };
     static_assert(sizeof(SkillbarSkill) == 20, "struct SkillbarSkill has incorrect size");
 
+    struct SkillbarCast {
+        /* +h0000 */ uint16_t h0000;
+        /* +h0004 */ Constants::SkillID skill_id;
+        /* +h0008 */ uint32_t h0008;
+    };
+
+    typedef Array<SkillbarCast> SkillbarCastArray;
+
     struct Skillbar { // total: 0xBC/188
         /* +h0000 */ uint32_t agent_id; // id of the agent whose skillbar this is
         /* +h0004 */ SkillbarSkill skills[8];
         /* +h00A4 */ uint32_t disabled;
-        /* +h00A8 */ uint32_t h00A8[2];
-        /* +h00B0 */ uint32_t casting;
-        /* +h00B4 */ uint32_t h00B4[2];
+        /* +h00A8 */ SkillbarCastArray cast_array;
+        /* +h00B8 */ uint32_t h00B8;
 
         bool IsValid() const { return agent_id > 0; }
 
-        GWCA_API SkillbarSkill *GetSkillById(Constants::SkillID skill_id, size_t* slot_out = nullptr);
+        GWCA_API SkillbarSkill* GetSkillById(Constants::SkillID skill_id, size_t* slot_out = nullptr);
     };
-    static_assert(sizeof(Skillbar) == 188, "struct Skillbar has incorrect size");
+    static_assert(sizeof(Skillbar) == 0xbc, "struct Skillbar has incorrect size");
 
     typedef Array<Skillbar> SkillbarArray;
 

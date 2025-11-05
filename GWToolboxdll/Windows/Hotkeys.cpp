@@ -1155,7 +1155,7 @@ void HotkeyEquipItem::Execute()
         return;
     }
     const GW::Skillbar* s = GW::SkillbarMgr::GetPlayerSkillbar();
-    if (p->GetIsKnockedDown() || (s && s->casting)) {
+    if (p->GetIsKnockedDown() || (s && s->cast_array.size())) {
         ongoing = true;
         // Player knocked down or casting; wait.
         return;
