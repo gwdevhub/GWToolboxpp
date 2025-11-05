@@ -110,7 +110,7 @@ namespace {
         const auto player = GW::Agents::GetControlledCharacter();
         if(!(player && player->equip && *player->equip))
             return false;
-        return (*player->equip)->PendingFirstDraw() == false;
+        return (*player->equip)->equipment_flags == 0;
     }
     bool IsMapReady()
     {
