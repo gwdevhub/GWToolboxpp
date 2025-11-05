@@ -20,6 +20,11 @@
 #include <ImGuiAddons.h>
 #include <ToolboxWindow.h>
 
+#include <Utils/TextUtils.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/UIMgr.h>
+
+
 namespace GWArmory {
 
     bool use_global_color;
@@ -135,6 +140,13 @@ namespace GWArmory {
     {
         const auto player = GW::Agents::GetControlledCharacter();
         return player && player->equip && *player->equip ? *player->equip : nullptr;
+    }
+
+    GW::ItemData* GetSlotItemData(ItemSlot slot)
+    {
+        const auto equip = GetPlayerEquipment();
+        if (!equip) return nullptr;
+        return &equip->items[slot];
     }
 
     Armor* GetArmorsPerProfession(const GW::Constants::Profession prof, size_t* count)
@@ -400,6 +412,23 @@ namespace GWArmory {
         return bag ? bag->items[slot] : nullptr;
     }
 
+    const Armor* FindArmorItem(std::string_view item_name)
+    {
+        const auto me = GW::Agents::GetControlledCharacter();
+        if (!me) return nullptr;
+        size_t armor_cnt = 0;
+        const auto armors = GetArmorsPerProfession((GW::Constants::Profession)me->primary, &armor_cnt);
+        const auto lower_name = TextUtils::ToLower(item_name.data());
+        for (size_t i = 0; i < armor_cnt && armors; i++) {
+            const auto& armor = armors[i];
+            if (TextUtils::ToLower(armor.label).starts_with(lower_name)) return &armor;
+        }
+        // TODO: Costumes
+        return nullptr;
+    }
+
+
+
     void SetArmorItem(ItemSlot slot, uint32_t model_file_id, GW::DyeInfo dye, uint32_t interaction = 0, GW::Constants::ItemType type = GW::Constants::ItemType::Unknown) {      
         if (slot == ItemSlot::Unknown)
             return;
@@ -441,6 +470,7 @@ namespace GWArmory {
         //gameItemData = original;
 
     }
+
     bool IsBothHands(ItemType type) {
         switch (type) {
         case ItemType::Staff:
@@ -593,6 +623,73 @@ namespace GWArmory {
         }
 
     }
+
+    GW::HookEntry ChatCmd_HookEntry;
+
+    void CHAT_CMD_FUNC(CmdArmory)
+    {
+        const auto syntax = "Syntax: '/armory [armor_item_name] [dye1] [dye2] [dye3] [dye4]' (e.g. '/armory \"Elite Sunspear Raiment\"  2 1 10 4')";
+        if (argc <= 1) {
+            Log::Warning(syntax);
+            return;
+        }
+        const auto item_name = TextUtils::WStringToString(argv[1]);
+        const auto found = FindArmorItem(item_name);
+        if (!found) {
+            Log::Warning("Failed to find armor item: %s", item_name.c_str());
+            return;
+        }
+
+        const auto existing_item_data = GetSlotItemData(GetSlotFromItemType(found->type));
+        if (!existing_item_data) {
+            Log::Warning("Failed to find item data for armor item: %s", item_name.c_str());
+            return;
+        }
+
+        GW::ItemData data = *existing_item_data;
+        data.model_file_id = found->model_file_id;
+        data.type = found->type;
+        data.interaction = found->interaction;
+
+        uint32_t col = 0;
+        if (argc > 2) {
+            data.dye = {0};
+            if (!(TextUtils::ParseUInt(argv[3], &col, 10) && col <= std::to_underlying(GW::DyeColor::Pink))) {
+                Log::Warning(syntax);
+                return;
+            }
+            data.dye.dye1 = (GW::DyeColor)(col & 0xff);
+        }
+        if (argc > 3) {
+            if (!(TextUtils::ParseUInt(argv[3], &col, 10) && col <= std::to_underlying(GW::DyeColor::Pink))) {
+                Log::Warning(syntax);
+                return;
+            }
+            data.dye.dye2 = (GW::DyeColor)(col & 0xff);
+        }
+        if (argc > 4) {
+            if (!(TextUtils::ParseUInt(argv[4], &col, 10) && col <= std::to_underlying(GW::DyeColor::Pink))) {
+                Log::Warning(syntax);
+                return;
+            }
+            data.dye.dye3 = (GW::DyeColor)(col & 0xff);
+        }
+        if (argc > 5) {
+            if (!(TextUtils::ParseUInt(argv[5], &col, 10) && col <= std::to_underlying(GW::DyeColor::Pink))) {
+                Log::Warning(syntax);
+                return;
+            }
+            data.dye.dye4 = (GW::DyeColor)(col & 0xff);
+        }
+
+        data.dye.dye_tint = found->dye_tint;
+
+        GW::GameThread::Enqueue([cpy = data]() {
+            SetArmorItem(&cpy);
+        });
+    }
+
+
     void __fastcall OnRedrawAgentEquipment(GW::Equipment* equip, void* edx, const ItemSlot equipment_slot)
     {
         GW::Hook::EnterHook();
@@ -725,6 +822,39 @@ namespace GWArmory {
 
         return GwDatTextureModule::LoadTextureFromFileId(model_id_to_load);
     }
+    
+    
+    std::string GetChatCommand(Armor* armor, GW::ItemData* data)
+    {
+        return std::format("/armory \"{}\" {} {} {} {}", armor->label, std::to_underlying(data->dye.dye1), std::to_underlying(data->dye.dye2), std::to_underlying(data->dye.dye3), std::to_underlying(data->dye.dye4));
+    }
+
+    GW::ItemData context_menu_piece;
+    bool ArmorItemContextMenu(void* wparam)
+    {
+        const auto armor_item = (Armor*)wparam;
+        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
+        const auto size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
+        ImGui::TextUnformatted(armor_item->label);
+        const auto chat_cmd = GetChatCommand(armor_item, &context_menu_piece);
+        ImGui::TextDisabled(chat_cmd.c_str());
+        ImGui::Separator();
+        if (ImGui::Button("Copy chat command", size)) {
+            ImGui::CloseCurrentPopup();
+            ImGui::SetClipboardText(chat_cmd.c_str());
+            Log::Info("'%s' copied to clipboard", chat_cmd.c_str());
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar();
+            return false;
+        }
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+        return true;
+    }
+
+
+
 
     bool DrawArmorPieceNew(ItemSlot slot) {
         ImGui::PushID(slot);
@@ -849,7 +979,14 @@ namespace GWArmory {
             }
 
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip(piece->label);
+                ImGui::SetTooltip([piece, player_piece]() {
+                    ImGui::TextUnformatted(piece->label);
+                    ImGui::TextDisabled(GetChatCommand(piece, player_piece).c_str());
+                });
+            }
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+                context_menu_piece = *player_piece;
+                ImGui::SetContextMenu(ArmorItemContextMenu, piece);
             }
             ImGui::PopID();
         }
@@ -911,6 +1048,7 @@ namespace GWArmory {
         ImGui::PopID();
         return value_changed;
     }
+
 }
 
 using namespace GWArmory;
@@ -1004,6 +1142,8 @@ void ArmoryWindow::Initialize()
     ASSERT(costume_data_ptr);
     ASSERT(festival_hat_data_ptr);
 #endif
+
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"armory", CmdArmory);
 }
 
 void ArmoryWindow::Terminate()
@@ -1017,4 +1157,5 @@ void ArmoryWindow::Terminate()
         GW::Hook::RemoveHook(UndrawAgentEquipment_Func);
         UndrawAgentEquipment_Func = nullptr;
     }
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }

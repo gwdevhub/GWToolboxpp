@@ -29,8 +29,7 @@ namespace GW {
 
     // Courtesy of DerMonech14
     struct Equipment {
-
-        /* +h0000 */ void     *vtable;
+        /* +h0000 */ void* vtable;
         /* +h0004 */ uint32_t h0004;            // always 2 ?
         /* +h0008 */ uint32_t h0008;            // Ptr PlayerModelFile?
         /* +h000C */ uint32_t h000C;            // 
@@ -43,17 +42,17 @@ namespace GW {
         /* +h0022 */ uint8_t head_map;          // Head        None = 9, Headpiece Ele = 4
         /* +h0023 */ uint8_t shield_map;        // Shield      None = 9, Shield = 1
         union {
-        /* +h0024 */ ItemData items[9];
+            /* +h0024 */ ItemData items[9];
             struct {
-        /* +h0024 */ ItemData weapon;
-        /* +h0034 */ ItemData offhand;
-        /* +h0044 */ ItemData chest;
-        /* +h0054 */ ItemData legs;
-        /* +h0064 */ ItemData head;
-        /* +h0074 */ ItemData feet;
-        /* +h0084 */ ItemData hands;
-        /* +h0094 */ ItemData costume_body;
-        /* +h00A4 */ ItemData costume_head;
+                /* +h0024 */ ItemData weapon;
+                /* +h0034 */ ItemData offhand;
+                /* +h0044 */ ItemData chest;
+                /* +h0054 */ ItemData legs;
+                /* +h0064 */ ItemData head;
+                /* +h0074 */ ItemData feet;
+                /* +h0084 */ ItemData hands;
+                /* +h0094 */ ItemData costume_body;
+                /* +h00A4 */ ItemData costume_head;
             };
         };
         union {
@@ -70,7 +69,23 @@ namespace GW {
                 /* +h00D4 */ ItemID item_id_costume_head;
             };
         };
+        /* +h00D8 */ uint32_t h00D8[0xC0];   // Padding (192 uint32_t = 0x300 bytes)
+        /* +h03D8 */ uint32_t equipment_flags; // Equipment redraw flags (bits set for slots that need redraw)
+        /* +h03DC */ uint32_t h03DC;         // 4 bytes padding
+        /* +h03E0 */ uint32_t visibility_flags; // Equipment visibility flags (bit 0 = show/hide certain items, bits 0-2 control visibility)
+        /* +h03E4 */ uint32_t h03E4[5];      // Padding to reach 0x3F8 (20 bytes)
+
+
+        // Check if any equipment is waiting for redraw (any bits set)
+        inline bool PendingRedraw() {
+            return equipment_flags != 0;
+        }
+        inline bool PendingFirstDraw() {
+            return equipment_flags == 0xffffffff;
+        }
     };
+
+    static_assert(sizeof(Equipment) == 0x3f8);
 
     struct TagInfo {
         /* +h0000 */ uint16_t guild_id;

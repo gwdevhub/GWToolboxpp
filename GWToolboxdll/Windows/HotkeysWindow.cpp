@@ -103,11 +103,20 @@ namespace {
     bool IsFrameCreated(GW::UI::Frame* frame) {
         return frame && frame->IsCreated();
     }
+    
+    
+    bool IsPlayerEquipmentReady()
+    {
+        const auto player = GW::Agents::GetControlledCharacter();
+        if(!(player && player->equip && *player->equip))
+            return false;
+        return (*player->equip)->PendingFirstDraw() == false;
+    }
     bool IsMapReady()
     {
         return GW::Map::GetIsMapLoaded() 
             && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading 
-            && !GW::Map::GetIsObserving()
+            && !GW::Map::GetIsObserving() && IsPlayerEquipmentReady()
             && IsFrameCreated(GW::UI::GetFrameByLabel(L"Skillbar"));
     }
 
