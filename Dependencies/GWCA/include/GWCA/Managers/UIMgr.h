@@ -471,6 +471,11 @@ namespace GW {
 
 
         namespace UIPacket {
+            struct kShowXunlaiChest {
+                uint32_t h0000 = 0;
+                bool storage_pane_unlocked = true;
+                bool anniversary_pane_unlocked = true;
+            };
             struct kMoveItem {
                 uint32_t item_id;
                 uint32_t to_bag_index;

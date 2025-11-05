@@ -113,18 +113,18 @@ namespace GWArmory {
     }
 
     // Record of armor pieces actually drawn; this will differ from the Equipment because we spoof it.
-    GW::ItemData drawn_pieces[_countof(GW::Equipment::items)];
+    GW::ItemData drawn_pieces[_countof(GW::NPCEquipment::items)];
 
-    GW::ItemData gwarmory_window_pieces[_countof(GW::Equipment::items)];
+    GW::ItemData gwarmory_window_pieces[_countof(GW::NPCEquipment::items)];
 
-    GW::ItemData original_armor_pieces[_countof(GW::Equipment::items)];
+    GW::ItemData original_armor_pieces[_countof(GW::NPCEquipment::items)];
 
     ComboListState combo_list_states[_countof(drawn_pieces)];
 
     GW::Constants::Profession current_profession = GW::Constants::Profession::None;
     Campaign current_campaign = Campaign::BonusMissionPack;
 
-    using EquipmentSlotAction_pt = void(__fastcall *)(GW::Equipment* equip, void* edx, ItemSlot equipment_slot);
+    using EquipmentSlotAction_pt = void(__fastcall *)(GW::NPCEquipment* equip, void* edx, ItemSlot equipment_slot);
     EquipmentSlotAction_pt RedrawAgentEquipment_Func = nullptr;
     EquipmentSlotAction_pt RedrawAgentEquipment_Ret = nullptr;
 
@@ -136,7 +136,7 @@ namespace GWArmory {
 
     bool Reset();
 
-    GW::Equipment* GetPlayerEquipment()
+    GW::NPCEquipment* GetPlayerEquipment()
     {
         const auto player = GW::Agents::GetControlledCharacter();
         return player && player->equip && *player->equip ? *player->equip : nullptr;
@@ -394,8 +394,7 @@ namespace GWArmory {
 
             // Clear the slot(s)
             gwarmory_setitem = true;
-            if(UndrawAgentEquipment_Func)
-                UndrawAgentEquipment_Func(equip, nullptr, slot);
+            equip->UndrawEquipmentSlot(slot);
             gwarmory_setitem = false;
 
             // Swap the data back
@@ -462,8 +461,7 @@ namespace GWArmory {
 
         // Draw the slot again
         gwarmory_setitem = true;
-        if(RedrawAgentEquipment_Func)
-            RedrawAgentEquipment_Func(equip, nullptr, slot);
+        equip->RedrawEquipmentSlot(slot);
         gwarmory_setitem = false;
 
         // Swap the data back
@@ -690,7 +688,7 @@ namespace GWArmory {
     }
 
 
-    void __fastcall OnRedrawAgentEquipment(GW::Equipment* equip, void* edx, const ItemSlot equipment_slot)
+    void __fastcall OnRedrawAgentEquipment(GW::NPCEquipment* equip, void* edx, const ItemSlot equipment_slot)
     {
         GW::Hook::EnterHook();
         RedrawAgentEquipment_Ret(equip, edx, equipment_slot);
@@ -715,7 +713,7 @@ namespace GWArmory {
         UpdateArmorsFilter();
     }
 
-    void __fastcall OnUndrawAgentEquipment(GW::Equipment* equip, void* edx, const ItemSlot equipment_slot)
+    void __fastcall OnUndrawAgentEquipment(GW::NPCEquipment* equip, void* edx, const ItemSlot equipment_slot)
     {
         GW::Hook::EnterHook();
         if (equip && equip->items[equipment_slot].model_file_id)
@@ -814,11 +812,6 @@ namespace GWArmory {
         }
         if (!model_id_to_load)
             model_id_to_load = model_file_id;
-        if (model_file_id == 0x0F6) {
-            const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
-            //model_id_to_load = 0x00015537;
-            (model_file_info);
-        }
 
         return GwDatTextureModule::LoadTextureFromFileId(model_id_to_load);
     }

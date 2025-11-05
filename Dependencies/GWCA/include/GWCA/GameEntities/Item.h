@@ -189,7 +189,7 @@ namespace GW {
             };
         };
         /* +h005C */ Item *bundle;
-        /* +h0060 */ uint32_t h0060;
+        /* +h0060 */ uint32_t storage_panes_unlocked;
         union {
         /* +h0064 */ WeaponSet weapon_sets[4];
             struct {

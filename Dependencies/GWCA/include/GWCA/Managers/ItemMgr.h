@@ -86,7 +86,7 @@ namespace GW {
 
         // Opens the storage window from anywhere.
         // Can only interact with the storage in an outpost with a xunlai chest inside, sorry no exploiting.
-        GWCA_API void OpenXunlaiWindow(bool anniversary_pane_unlocked = true);
+        GWCA_API bool OpenXunlaiWindow(bool anniversary_pane_unlocked = true, bool storage_pane_unlocked = true);
 
         // Drop amount gold on ground.
         GWCA_API bool DropGold(uint32_t amount = 1);
