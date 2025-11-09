@@ -32,6 +32,7 @@
 
 #include <Windows/MaterialsWindow.h>
 #include <Windows/DailyQuestsWindow.h>
+#include <Windows/ArmoryWindow.h>
 #include <GWCA/GameEntities/Frame.h>
 
 namespace {
@@ -2247,10 +2248,19 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
             goto end_popup;
         }
     }
+
+
     context_item.wiki_name->wstring();
     if (wiki_link_on_context_menu && ImGui::Button("Guild Wars Wiki", size)) {
         ImGui::CloseCurrentPopup();
         GuiUtils::SearchWiki(context_item.wiki_name->wstring());
+    }
+    if (ArmoryWindow::CanPreviewItem(context_item.item())) {
+        if (ImGui::Button("Preview Item", size)) {
+            ImGui::CloseCurrentPopup();
+            ArmoryWindow::PreviewItem(context_item.item());
+            goto end_popup;
+        }
     }
 end_popup:
     ImGui::PopStyleColor();

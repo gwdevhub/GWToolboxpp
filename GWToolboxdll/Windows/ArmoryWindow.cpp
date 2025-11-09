@@ -74,6 +74,7 @@ namespace GWArmory {
             case ItemType::Staff:
             case ItemType::Bow:
             case ItemType::Hammer:
+            case ItemType::Offhand:
                 return true;
             default:
                 return false;
@@ -192,6 +193,7 @@ namespace GWArmory {
     void GwItemToItemData(const GW::Item* in, GW::ItemData* out)
     {
         memset(out, 0, sizeof(*out));
+        if (!in) return;
         out->dye = in->dye;
         out->interaction = in->interaction;
         out->model_file_id = in->model_file_id;
@@ -1132,6 +1134,26 @@ namespace GWArmory {
 }
 
 using namespace GWArmory;
+
+bool ArmoryWindow::CanPreviewItem(GW::Item* item) {
+    if (!item) return false;
+    if (IsWeapon(item->type)) return true;
+    if (!equip_cached) return false; // aka not initialised?
+    // TODO: Check armor item can be previewed by this profession!
+    return false;
+}
+
+void ArmoryWindow::PreviewItem(GW::Item* item) {
+    
+    GW::GameThread::Enqueue([item]() {
+        if (!CanPreviewItem(item)) 
+            return;
+        GW::ItemData data;
+        GwItemToItemData(item, &data);
+        if(data.model_file_id)
+            SetArmorItem(&data);
+        });
+}
 
 void ArmoryWindow::Update(float) {
     if (pending_initialise_equipment) {

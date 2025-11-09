@@ -2,6 +2,9 @@
 
 #include <ToolboxWindow.h>
 
+namespace GW {
+    struct Item;
+}
 class ArmoryWindow : public ToolboxWindow {
 public:
     static ArmoryWindow& Instance()
@@ -21,4 +24,6 @@ public:
 
     void Draw(IDirect3DDevice9* pDevice) override;
     void Update(float) override;
+    static void PreviewItem(GW::Item*);
+    static bool CanPreviewItem(GW::Item*);
 };
