@@ -82,11 +82,7 @@ namespace {
                 param->current_state = GW::UI::UIPacket::ActionState::MouseDown; // Revert state to avoid GW closing the window on mouse up
 
                 // Left button clicked, on the exit button (ID 0x3)
-                static bool closing_gw = false;
-                if (!closing_gw) {
-                    SendMessage(gw_window_handle, WM_CLOSE, NULL, NULL);
-                }
-                closing_gw = true;
+                SendMessage(gw_window_handle, WM_CLOSE, NULL, NULL);
                 GW::Hook::LeaveHook();
                 return;
             }

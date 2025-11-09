@@ -1544,6 +1544,7 @@ namespace GWArmory {
     };
     Armor weapons[] = {
         // Axes
+        {"Celestial Axe", 0x2AF80, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 0, 0x22130001},
         {"Chaos Axe", 0x213B9, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Eaglecrest Axe", 0x5370C, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Envoy Axe", 0x5A525, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1558,6 +1559,7 @@ namespace GWArmory {
         {"Drago's Flatbow", 0x2598A, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Dryad Bow", 0x5370F, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Eternal Bow", 0x213B0, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Flatbow", 0x24A4, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 4, 0x22330001},
         {"Scorpion Bow", 0x2546F, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Scorpion's Lust", 0x2693D, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Silverwing Bow", 0x49A90, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1568,7 +1570,10 @@ namespace GWArmory {
         {"Chimeric Prism", 0x235AE, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Deldrimor Focus", 0x5263B, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Forgotten Fan", 0x2B11F, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Grim Cesta", 0x1E1DF, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 0, 0x1},
         {"Heaven's Arch", 0x25487, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Inscribed Chakram", 0x15DD2, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 0, 0x20000001},
+        {"Jeweled Chalice", 0x15DD8, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x2C020001},
         {"Jug", 0x2B14B, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Luminescent Lantern", 0x385CD, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Paper Fan", 0x2B125, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1576,6 +1581,7 @@ namespace GWArmory {
         {"Rose Focus", 0x49A60, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Storm Ember", 0x25484, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Tiger's Pride", 0x26948, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Tormented Soul Reaping Focus", 0x4343C, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 0, 0x28020001},
 
         // Hammers
         {"Anniversary Hammer \"Verdict\"", 0x2AFB1, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x2A221201},
@@ -1583,6 +1589,8 @@ namespace GWArmory {
 
         // Scythes
         {"Banana Scythe", 0x3868D, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Bronze Scythe", 0x386B0, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 2, 0x2E330001},
+        {"Decade Scythe \"Funeral Fang\"", 0x38686, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x22330011},
         {"Dhuum's Soul Reaper", 0x564F2, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Envoy Scythe", 0x5A524, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Soulbreaker", 0x3247B, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1593,6 +1601,7 @@ namespace GWArmory {
         {"Aegis of Terror", 0x3870B, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2000C611},
         {"Amber Aegis", 0x2AFC6, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20020041},
         {"Amethyst Aegis", 0x49B23, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2C120441},
+        {"Anniversary Shield \"Curtain\"", 0x2B1A7, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x28020001},
         {"Aureate Aegis", 0x386F2, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Bladed Shield", 0x2AF29, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Canthan Targe", 0x24ECD, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1604,12 +1613,14 @@ namespace GWArmory {
         {"Echovald Shield", 0x2B231, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Eternal Shield", 0x21406, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Exalted Aegis", 0x2B215, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Gloom Shield", 0x2B1A2, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2C020001},
         {"Guardian of the Hunt", 0x2B218, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Iridescent Aegis", 0x2AF33, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3},
         {"Istani Shield", 0x38729, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Japan 1st Anniversary Shield", 0x4402F, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Kappa Shield", 0x2AFD3, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Magmas Shield", 0x21412, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Militia Shield", 0x9B58, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 7, 0x2C120001},
         {"Mursaat Shield", 0x5274D, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Ominous Aegis", 0x2EBDE, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Outcast Shield", 0x2AEBC, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1617,6 +1628,7 @@ namespace GWArmory {
         {"Spider's Gluttony", 0x26962, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Tormented Shield", 0x43493, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Wintergreen Shield", 0x40E60, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Zodiac Shield", 0x2B1B6, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2C020001},
 
         // Spears
         {"Spirit of the Forgotten", 0x38762, Profession::None, ItemType::Spear, Campaign::BonusMissionPack, 0, 0x2210C611},
@@ -1625,6 +1637,7 @@ namespace GWArmory {
         {"Voltaic Spear", 0x49B32, Profession::None, ItemType::Spear, Campaign::BonusMissionPack, 3, 0x2E130441},
 
         // Staves
+        {"Anniversary Staff \"Unveil\"", 0x38728, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x2E330001},
         {"Bedlam Staff", 0x387B2, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Bo Staff", 0x2AE68, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Bone Dragon Staff", 0x53756, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1639,6 +1652,7 @@ namespace GWArmory {
         {"Togo's Staff", 0x2AE0C, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 2, 0x2A200401},
 
         // Swords
+        {"Celestial Sword", 0x2AFD0, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 0, 0x2E130001},
         {"Colossal Scimitar", 0x387F8, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Crystalline Sword", 0x383E, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Embersteel Blade", 0x49C17, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x2E134441},
@@ -1661,11 +1675,14 @@ namespace GWArmory {
         // Wands
         {"Channeling Rod", 0x2B208, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x22020041},
         {"Frog Scepter", 0x53733, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x2E120641},
+        {"Gazing Scepter", 0x2B1CE, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x22020001},
         {"Holy Rod", 0x172B8, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 0, 0x22000001},
         {"Jellyfish Wand", 0x2B1B8, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Koi Scepter", 0x2B1BD, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Peacock's Wrath", 0x2695A, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Platinum Wand", 0x2B19F, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x2E120441},
+        {"Quicksilver", 0x2547A, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 0, 0x2E020001},
+        {"Tormented Soul Reaping Scepter", 0x4343F, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 0, 0x2A020001},
         {"Unicorn's Wrath", 0x26957, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Wayward Wand", 0x2B17E, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Wintergreen Wand", 0x40E5C, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 0, 0x2A021600}
