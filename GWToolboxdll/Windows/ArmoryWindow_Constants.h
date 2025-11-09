@@ -33,7 +33,7 @@ namespace GWArmory {
         {0.95f, 0.5f, 0.95f, 0.f},  // Pink
     };
 
-    enum ItemSlot {
+    enum ItemSlot : uint8_t {
         RightHand,
         LeftHand,
         Chestpiece,
@@ -43,6 +43,7 @@ namespace GWArmory {
         Gloves,
         CostumeBody,
         CostumeHead,
+        None,
         Unknown = 0xff
     };
 
@@ -1541,12 +1542,46 @@ namespace GWArmory {
         {"Dragonguard", 0xd6b, Profession::None, ItemType::Costume, Campaign::BonusMissionPack, 0},
         {"Aegis of Unity", 0xd70, Profession::None, ItemType::Costume, Campaign::BonusMissionPack, 0},
     };
-    Armor swords[] = {
+    Armor weapons[] = {
+        // Axe
+        {"Pyroclastic Axe", 0x49A6A, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x2E130441},
+
+        // Hammer
+        {"Anniversary Hammer \"Verdict\"", 0x2AFB1, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x2A221201},
+        {"Kanaxai's Mallet", 0x2B16F, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 0, 0x2231C210},
+
+        // Scythe
+        {"Wintergreen Scythe", 0x40E5D, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 0, 0x2A331601},
+
+        // Shield
+        {"Aegis of Aaaaarrrrrrggghhh", 0x386F2, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2000C611},
+        {"Aegis of Terror", 0x3870B, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2000C611},
+        {"Amber Aegis", 0x2AFC6, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20020041},
+        {"Amethyst Aegis", 0x49B23, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2C120441},
+        {"Draconic Aegis", 0x53742, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2C120641},
+        {"Iridescent Aegis", 0x2AF33, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2C120441},
+
+        // Spear
+        {"Spirit of the Forgotten", 0x38762, Profession::None, ItemType::Spear, Campaign::BonusMissionPack, 0, 0x2210C611},
+        {"Voltaic Spear", 0x49B32, Profession::None, ItemType::Spear, Campaign::BonusMissionPack, 3, 0x2E130441},
+
+        // Staff
+        {"Onyx Staff", 0x49B94, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 4, 0x2E330441},
+        {"Platinum Staff", 0x2B256, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x2E330441},
+        {"Togo's Staff", 0x2AE0C, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 2, 0x2A200401},
+
+        // Sword
+        {"Embersteel Blade", 0x49C17, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x2E134441},
+        {"Fellblade", 0x2142D, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x22030041},
         {"Jade Sword", 0x2B2A9, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x2E130441},
+        {"Vampiric Dragon Sword", 0x55777, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x2A024201},
+        {"Wintergreen Sword", 0x40E63, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 0, 0x2A021600},
 
-    };
-    Armor shields[] = {
-        {"Draconic Aegis", 0x53742, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3,0x2C120641},
-
+        // Wand
+        {"Channeling Rod", 0x2B208, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x22020041},
+        {"Frog Scepter", 0x53733, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x2E120641},
+        {"Holy Rod", 0x172B8, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 0, 0x22000001},
+        {"Platinum Wand", 0x2B19F, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x2E120441},
+        {"Wintergreen Wand", 0x40E5C, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 0, 0x2A021600}
     };
 }

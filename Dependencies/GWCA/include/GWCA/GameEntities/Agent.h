@@ -27,17 +27,17 @@ namespace GW {
 
     typedef TList<VisibleEffect> VisibleEffectList;
 
+    struct NPCEquipment;
     struct EquipmentVTable {
-        void(__fastcall* Destroy)(void* this_ptr);
-        void(__fastcall* GetItemClassFlags)(void* this_ptr, uint32_t edx, uint32_t slot);
-        void(__fastcall* EquipItem)(void* this_ptr, uint32_t edx, uint32_t slot);
-        void(__fastcall* LoadModelMaybe)(void* this_ptr, uint32_t edx, uint32_t slot);
-        void(__fastcall* RemoveItem)(void* this_ptr, uint32_t edx, uint32_t slot);
-        void(__fastcall* RefreshModelMaybe)(void* this_ptr);
-        bool(__fastcall* ModelRelatedBooleanCheck)(void* this_ptr);
-        uint32_t(__fastcall* GetType)(void* this_ptr);
+        void(__fastcall* Destroy)(NPCEquipment* this_ptr);
+        void(__fastcall* GetItemClassFlags)(NPCEquipment* this_ptr, uint32_t edx, uint32_t slot);
+        void(__fastcall* EquipItem)(NPCEquipment* this_ptr, uint32_t edx, uint32_t slot);
+        void(__fastcall* LoadModelMaybe)(NPCEquipment* this_ptr, uint32_t edx, uint32_t slot);
+        void(__fastcall* RemoveItem)(NPCEquipment* this_ptr, uint32_t edx, uint32_t slot);
+        void(__fastcall* RefreshModelMaybe)(NPCEquipment* this_ptr);
+        bool(__fastcall* ModelRelatedBooleanCheck)(NPCEquipment* this_ptr);
+        uint32_t(__fastcall* GetType)(NPCEquipment* this_ptr);
     };
-
     // Courtesy of DerMonech14
     struct NPCEquipment {
         /* +h0000 */ EquipmentVTable* vtable;
@@ -80,7 +80,13 @@ namespace GW {
                 /* +h00D4 */ ItemID item_id_costume_head;
             };
         };
-        /* +h00D8 */ uint32_t h00D8[0xD];   // Padding to reach 0x10C (52 bytes = 13 uint32_t)
+        /* +h00D8 */ uint32_t h00D8[0x7];   // Padding (28 bytes = 7 uint32_t)
+        /* +h00F4 */ uint8_t h00F4[5];      // Padding (5 bytes)
+        /* +h00F9 */ uint8_t weapon_item_type;      // Weapon item type for stance/animation
+        /* +h00FA */ uint16_t weapon_item_id;       // Weapon item id for stance/animation  
+        /* +h00FC */ uint8_t h00FC[0xD];    // Padding (13 bytes)
+        /* +h0109 */ uint8_t offhand_item_type;     // Offhand item type for stance/animation
+        /* +h010A */ uint16_t offhand_item_id;      // Offhand item id for stance/animation
 
         inline uint32_t GetType() {
             return vtable->GetType(this);
@@ -88,7 +94,7 @@ namespace GW {
         inline bool RedrawEquipmentSlot(uint32_t slot) {
             if (!(slot < _countof(items) && items[slot].model_file_id))
                 return false;
-            return vtable->EquipItem(this,0,slot), true;
+            return vtable->EquipItem(this, 0, slot), true;
         }
         inline bool UndrawEquipmentSlot(uint32_t slot) {
             if (!(slot < _countof(items) && items[slot].model_file_id))
