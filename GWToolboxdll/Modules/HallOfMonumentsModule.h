@@ -234,18 +234,19 @@ struct HallOfMonumentsAchievements {
 
     enum class State {
         Pending,
-        Loading,
+        Loading, 
+        Fetching,
         Error,
         Done
     } state = State::Pending;
 
-    ~HallOfMonumentsAchievements() {
-        ASSERT(state != State::Loading);
+    ~HallOfMonumentsAchievements() { 
+        ASSERT(state != State::Fetching);
     }
 
     [[nodiscard]] bool isReady() const { return state == State::Done; }
     [[nodiscard]] bool isPending() const { return state == State::Pending; }
-    [[nodiscard]] bool isLoading() const { return state == State::Loading; }
+    [[nodiscard]] bool isLoading() const { return state == State::Loading || state == State::Fetching; }
     char hom_code[128] = {0};
     void OpenInBrowser();
     // Details of which armors have or haven't been dedicated, indexed by ResilienceDetail

@@ -305,8 +305,10 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& char
     std::string char_name_escaped;
     EscapeUrl(char_name_escaped, character_name_s.c_str());
     const auto url_str = std::format("https://hom.guildwars2.com/character/{}", char_name_escaped);
-
-    Resources::Instance().Download(url_str, [out, callback](const bool success, const std::string& response, void*) {
+    Resources::Instance().EnqueueWorkerTask([cpy = url_str, out, callback]() {
+        out->state = HallOfMonumentsAchievements::State::Fetching;
+        std::string response;
+        bool success = Resources::Instance().Download(cpy, response);
         if (!success) {
             Log::Log("Failed to load account hom code %s\n%s", out->character_name.c_str(), response.c_str());
             out->state = HallOfMonumentsAchievements::State::Error;
@@ -343,6 +345,7 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& char
             }
         }
     });
+    
 }
 
 void HallOfMonumentsAchievements::OpenInBrowser()
