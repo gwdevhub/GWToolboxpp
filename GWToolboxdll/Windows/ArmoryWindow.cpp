@@ -914,7 +914,8 @@ namespace GWArmory {
 
     void __fastcall OnEquipItem(GW::NPCEquipment* equip, uint32_t edx, uint32_t slot) {
         GW::Hook::EnterHook();
-        EquipItem_Ret(equip, edx, slot);
+        if(equip->items[slot].model_file_id)
+            EquipItem_Ret(equip, edx, slot);
         GW::Hook::LeaveHook();
         if (equip != GetPlayerEquipment()) return;
         if (equip != equip_cached) {
@@ -933,7 +934,8 @@ namespace GWArmory {
     void __fastcall OnClearItem(GW::NPCEquipment* equip, uint32_t edx, uint32_t slot)
     {
         GW::Hook::EnterHook();
-        ClearItem_Ret(equip, edx, slot);
+        if (equip->items[slot].model_file_id)
+            ClearItem_Ret(equip, edx, slot);
         GW::Hook::LeaveHook();
         if (equip != GetPlayerEquipment()) return;
         if (equip != equip_cached) {
