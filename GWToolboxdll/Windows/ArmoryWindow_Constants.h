@@ -1543,45 +1543,131 @@ namespace GWArmory {
         {"Aegis of Unity", 0xd70, Profession::None, ItemType::Costume, Campaign::BonusMissionPack, 0},
     };
     Armor weapons[] = {
-        // Axe
+        // Axes
+        {"Chaos Axe", 0x213B9, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Eaglecrest Axe", 0x5370C, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Envoy Axe", 0x5A525, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Fiery Blade Axe", 0x3850F, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Icy Blade Axe", 0x3852D, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Pyroclastic Axe", 0x49A6A, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x2E130441},
+        {"Serpentine Reaver", 0x53709, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Tormented Axe", 0x43481, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
 
-        // Hammer
+        // Bows
+        {"Black Hawk's Lust", 0x26940, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Drago's Flatbow", 0x2598A, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Dryad Bow", 0x5370F, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Eternal Bow", 0x213B0, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Scorpion Bow", 0x2546F, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Scorpion's Lust", 0x2693D, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Silverwing Bow", 0x49A90, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Storm Bow", 0x213D5, Profession::None, ItemType::Bow, Campaign::BonusMissionPack, 3, 0x20000000},
+
+        // Foci
+        {"Celestial Compass", 0x5371d, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Chimeric Prism", 0x235AE, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Deldrimor Focus", 0x5263B, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Forgotten Fan", 0x2B11F, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Heaven's Arch", 0x25487, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Jug", 0x2B14B, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Luminescent Lantern", 0x385CD, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Paper Fan", 0x2B125, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Paper Lantern", 0x2B13C, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Rose Focus", 0x49A60, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Storm Ember", 0x25484, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Tiger's Pride", 0x26948, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
+
+        // Hammers
         {"Anniversary Hammer \"Verdict\"", 0x2AFB1, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 3, 0x2A221201},
         {"Kanaxai's Mallet", 0x2B16F, Profession::None, ItemType::Hammer, Campaign::BonusMissionPack, 0, 0x2231C210},
 
-        // Scythe
+        // Scythes
+        {"Banana Scythe", 0x3868D, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Dhuum's Soul Reaper", 0x564F2, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Envoy Scythe", 0x5A524, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Soulbreaker", 0x3247B, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Tormented Scythe", 0x4348D, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Wintergreen Scythe", 0x40E5D, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 0, 0x2A331601},
 
-        // Shield
-        {"Aegis of Aaaaarrrrrrggghhh", 0x386F2, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2000C611},
+        // Shields
         {"Aegis of Terror", 0x3870B, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2000C611},
         {"Amber Aegis", 0x2AFC6, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20020041},
         {"Amethyst Aegis", 0x49B23, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2C120441},
+        {"Aureate Aegis", 0x386F2, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Bladed Shield", 0x2AF29, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Canthan Targe", 0x24ECD, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Celestial Shield", 0x2AFC9, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Crude Shield", 0x3C59, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Darkwing Defender", 0x3870B, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Diamond Aegis", 0x2AF2E, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Draconic Aegis", 0x53742, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2C120641},
-        {"Iridescent Aegis", 0x2AF33, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2C120441},
+        {"Echovald Shield", 0x2B231, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Eternal Shield", 0x21406, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Exalted Aegis", 0x2B215, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Guardian of the Hunt", 0x2B218, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Iridescent Aegis", 0x2AF33, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3},
+        {"Istani Shield", 0x38729, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Japan 1st Anniversary Shield", 0x4402F, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Kappa Shield", 0x2AFD3, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Magmas Shield", 0x21412, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Mursaat Shield", 0x5274D, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Ominous Aegis", 0x2EBDE, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Outcast Shield", 0x2AEBC, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Shadow Shield", 0x2140B, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Spider's Gluttony", 0x26962, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Tormented Shield", 0x43493, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Wintergreen Shield", 0x40E60, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},
 
-        // Spear
+        // Spears
         {"Spirit of the Forgotten", 0x38762, Profession::None, ItemType::Spear, Campaign::BonusMissionPack, 0, 0x2210C611},
+        {"Sunspear", 0x32485, Profession::None, ItemType::Spear, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Tormented Spear", 0x43490, Profession::None, ItemType::Spear, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Voltaic Spear", 0x49B32, Profession::None, ItemType::Spear, Campaign::BonusMissionPack, 3, 0x2E130441},
 
-        // Staff
+        // Staves
+        {"Bedlam Staff", 0x387B2, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Bo Staff", 0x2AE68, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Bone Dragon Staff", 0x53756, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Dragon's Envy", 0x26968, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Envoy Staff", 0x2AE80, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Firebrand", 0x5D84, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Hourglass Staff", 0x49A51, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Onyx Staff", 0x49B94, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 4, 0x2E330441},
         {"Platinum Staff", 0x2B256, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x2E330441},
+        {"Snake's Envy", 0x26965, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Spiritbinder", 0x2ADF1, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Togo's Staff", 0x2AE0C, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 2, 0x2A200401},
 
-        // Sword
+        // Swords
+        {"Colossal Scimitar", 0x387F8, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Crystalline Sword", 0x383E, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Embersteel Blade", 0x49C17, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x2E134441},
+        {"Envoy Sword", 0x2AE83, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Eternal Blade", 0x17B20, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Fellblade", 0x2142D, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x22030041},
+        {"Glacial Blade", 0x49A56, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Icy Dragon Sword", 0x26ABA, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Jade Sword", 0x2B2A9, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x2E130441},
+        {"Obsidian Edge", 0x53A92, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Oni Blade", 0x2AFF8, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Plagueborn Sword", 0x2B002, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Shiro's Sword", 0x2AE62, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Tormented Sword", 0x43487, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Turai's Sword", 0x5266A, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Vampiric Dragon Sword", 0x55777, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x2A024201},
+        {"Vertebreaker", 0x2B2A4, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Wintergreen Sword", 0x40E63, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 0, 0x2A021600},
 
-        // Wand
+        // Wands
         {"Channeling Rod", 0x2B208, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x22020041},
         {"Frog Scepter", 0x53733, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x2E120641},
         {"Holy Rod", 0x172B8, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 0, 0x22000001},
+        {"Jellyfish Wand", 0x2B1B8, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Koi Scepter", 0x2B1BD, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Peacock's Wrath", 0x2695A, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Platinum Wand", 0x2B19F, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x2E120441},
+        {"Unicorn's Wrath", 0x26957, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Wayward Wand", 0x2B17E, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Wintergreen Wand", 0x40E5C, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 0, 0x2A021600}
     };
 }
