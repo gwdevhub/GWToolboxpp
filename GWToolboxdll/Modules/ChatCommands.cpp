@@ -811,6 +811,23 @@ namespace {
         }
     }
 
+    const auto button_syntax = "'/button [button_label] [button_label...]' e.g. /button \"BtnBuy\" \"BtnAccept\" \"BtnOk\"\n"
+                               "Allows you to interact with UI buttons on-screen if you know the labels";
+
+    void CHAT_CMD_FUNC(CmdButtonPress)
+    {
+        if (argc < 2) {
+            Log::Warning(button_syntax);
+            return;
+        }
+        for (int i = 1; i < argc; i++) {
+            std::wstring label = argv[i];
+            GW::GameThread::Enqueue([cpy = label]() {
+                GW::UI::ButtonClick(GW::UI::GetFrameByLabel(cpy.c_str()));
+            });
+        }
+    }
+
     std::vector<std::pair<const wchar_t*, GW::Chat::ChatCommandCallback>> chat_commands;
 
     const wchar_t* settings_via_chat_commands_cmd = L"tb_setting";
@@ -904,6 +921,8 @@ namespace {
         ImGui::Text("'/bonds [remove|add] [party_member_index|all] [all|skill_id]' remove or add bonds from a single party member, or all party members");
         ImGui::Bullet();
         ImGui::Text("'/borderless [on|off]' toggles, enables or disables borderless window.");
+        ImGui::Bullet();
+        ImGui::Text(button_syntax);
         ImGui::Bullet();
         ImGui::Text("'/call' ping current target.");
         ImGui::Bullet();
@@ -1408,6 +1427,7 @@ void ChatCommands::Initialize()
 
     //TODO: Move all of these callbacks into pvt namespace
     chat_commands = {
+        {L"button", CmdButtonPress},
         {L"chat", CmdChatTab},
         {L"enter", CmdEnterMission},
         {L"age2", CmdAge2},

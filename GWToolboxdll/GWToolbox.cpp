@@ -77,8 +77,8 @@ namespace {
         GW::Hook::EnterHook();
         if (message->message_id == GW::UI::UIMessage::kMouseAction && wparam) {
             const auto param = (GW::UI::UIPacket::kMouseAction*)wparam;
-            const auto frame = param->current_state == GW::UI::UIPacket::ActionState::MouseUp ? GW::UI::GetFrameByLabel(L"btnExit") : nullptr;
-            if (frame && frame->frame_id == message->frame_id) {
+            if (param->current_state == GW::UI::UIPacket::ActionState::MouseUp 
+                && param->child_offset_id == 0x3) {
                 param->current_state = GW::UI::UIPacket::ActionState::MouseDown; // Revert state to avoid GW closing the window on mouse up
 
                 // Left button clicked, on the exit button (ID 0x3)
