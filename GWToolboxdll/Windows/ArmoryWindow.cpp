@@ -80,6 +80,7 @@ namespace GWArmory {
                 return false;
         }
     }
+
     bool IsBodyArmor(ItemSlot slot)
     {
         switch (slot) {
@@ -91,7 +92,27 @@ namespace GWArmory {
         }
         return false;
     }
-
+    bool IsArmor(ItemType type)
+    {
+        switch (type) {
+            case ItemType::Headpiece:
+            case ItemType::Gloves:
+            case ItemType::Boots:
+            case ItemType::Chestpiece:
+            case ItemType::Leggings:
+                return true;
+            default:
+                return false;
+        }
+    }
+    GW::Constants::ProfessionByte GetItemProfession(GW::Item* item) {
+        if ((item->interaction & 0x4) == 0) 
+            return GW::Constants::ProfessionByte::None;
+        const auto model_file_info = GW::Items::GetCompositeModelInfo(item->model_file_id);
+        if (!model_file_info) 
+            return GW::Constants::ProfessionByte::None;
+        return (GW::Constants::ProfessionByte)((model_file_info->class_flags >> 0x12) & 0xf);
+    }
 
     FestivalHatData* festival_hat_data_ptr = nullptr;
 
@@ -959,6 +980,7 @@ namespace GWArmory {
         const auto equip = GetPlayerEquipment();
         if (!equip)
             return false;
+        equip_cached = equip;
         EquipItem_Func = equip->vtable->EquipItem;
         GW::Hook::CreateHook((void**)&EquipItem_Func, OnEquipItem, (void**)&EquipItem_Ret);
         GW::Hook::EnableHooks(EquipItem_Func);
@@ -1139,7 +1161,13 @@ bool ArmoryWindow::CanPreviewItem(GW::Item* item) {
     if (!item) return false;
     if (IsWeapon(item->type)) return true;
     if (!equip_cached) return false; // aka not initialised?
-    // TODO: Check armor item can be previewed by this profession!
+    if (IsArmor(item->type)) {
+        const auto profession = GetItemProfession(item);
+        return profession == GW::Constants::ProfessionByte::None || profession == (GW::Constants::ProfessionByte)GetPlayerProfession();
+    }
+    if (item->type == ItemType::Costume || item->type == ItemType::Costume_Headpiece) {
+        return true;
+    }
     return false;
 }
 
@@ -1159,6 +1187,7 @@ void ArmoryWindow::Update(float) {
     if (pending_initialise_equipment) {
         const auto equip = GetPlayerEquipment();
         if (equip) {
+            equip_cached = equip;
             memcpy(&original_pieces, &equip->items, sizeof(original_pieces));
             memcpy(&drawn_pieces, &equip->items, sizeof(drawn_pieces));
             memcpy(&imgui_armor_pieces, &equip->items, sizeof(imgui_armor_pieces));
