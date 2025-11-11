@@ -7,6 +7,55 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 7.14
+* [New] Added weapon skins to Armory window
+* [New] Added `/armory` chat command to set armor pieces on map load
+* [New] Added "Preview Item" to item context menu for trying on weapons and armor before buying/trading
+* [New] Added `/button` chat command
+* [New] Added Steam module to allow steam to recognise gw as a running game properly.
+* [New] Added TitleTrackerWidget for monitoring title progress
+* [New] Added module to sort account titles in a useful way
+* [New] Added elite skill capture locations to world map
+* [New] Added auto party sorting by map and/or party size
+* [New] Added feature to log, block and play music based on events
+* [New] Added strict key combo setting to only trigger hotkeys with exact key combinations
+* [New] Added bulk consume context menu for Krytan Brandy and similar items
+* [New] Added option to change experience bar label to show experience progress rather than level
+* [New] Added extra text indicators for bulk buying/selling at traders
+* [New] Added world position location to agent info in info window
+* [New] Added tooltip on build names in builds window
+* [New] Prefill build code when adding builds in builds window
+* [Minor] Extended `/target <name>` to check items and gadgets as well as NPC names
+* [Minor] Auto re-open tome when a skill is learned
+* [Minor] "Only show learned skills" now works with skill trainers
+* [Minor] Hide non-elite skills when capturing from a boss
+* [Minor] Open Xunlai Chest hotkey now toggles chest on/off
+* [Minor] UseItem hotkey/command can now be used for kits
+* [Minor] Don't use positional audio for GUI TTS
+* [Minor] Check system volume to reduce TTS credit usage
+* [Minor] "Show all areas" now completely reloads world map on change
+* [Minor] Removed level cap check for experience bar label
+* [Minor] Tidied up click handling logic in inventory manager
+* [Minor] Removed xunlai storage patch - this was fixed in a recent gw update
+* [Minor] Exposed GetPartyWindowHealthBars functionality
+* [Minor] Updated cast struct definitions
+* [Fix] Fixed armory chat command bug
+* [Fix] Fixed close signal not firing in some contexts
+* [Fix] Fixed crash when observing matches with Toolbox running
+* [Fix] Fixed some miniatures showing incorrectly in completion window
+* [Fix] Fixed crash with large number values in NPC voice module
+* [Fix] Fixed login screen connection issues
+* [Fix] Fixed bug preventing materials window from bulk selling/buying in some situations
+* [Fix] Fixed bug preventing quest marker path checkboxes from working in quest module
+* [Fix] Fixed bug preventing objective names showing up on objective timer for DoA
+* [Fix] Fixed bug causing wrong overall time to show for FoW/UW runs
+* [Fix] Fixed bug preventing correct profession icon on hover for character completion
+* [Fix] Fixed bug preventing EotN locations being identified on world map when right-clicking in Prophecies areas and vice versa
+* [Fix] Fixed raw input assertion errors when using emulation software e.g. wine
+* [Fix] Code tweak to avoid early assertion failure on exit
+* [Fix] Reduced spam from target info window when GWW is unresponsive
+* [Fix] Reverted some modules not being loaded by default
+
 ## Version 7.13
 * [Fix] Fixed crashing on startup for some players
 * [Fix] Fixed flagging hotkeys not working for players that don't have the in-game gw compass displayed

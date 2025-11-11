@@ -23,6 +23,8 @@ namespace {
 
     SteamErrMsg steam_connection_error;
 
+    std::string last_error;
+
     bool EnsureSteamAppIdFile()
     {
         const auto steam_appid_path = Resources::GetExePath().parent_path() / "steam_appid.txt";
@@ -47,12 +49,13 @@ namespace {
         }
         *steam_connection_error = 0;
         if (SteamAPI_InitFlat(&steam_connection_error) != k_ESteamAPIInitResult_OK) {
-            Log::Error("Failed to init Steam.  %s", steam_connection_error);
+            last_error = std::format("Failed to init Steam. {}", steam_connection_error);
             return false;
         }
         steam_api_loaded = true;
+        last_error = "";
         if (!steam_initialised_before_dx9) {
-            Log::Warning("Steam was initailised before the directx device was created, steam overlay wasn't able to hook!");
+            last_error = "Steam was initailised before the directx device was created, steam overlay wasn't able to hook!";
         }
         return true;
     }
