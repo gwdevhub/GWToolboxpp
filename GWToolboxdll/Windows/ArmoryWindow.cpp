@@ -549,21 +549,21 @@ namespace GWArmory {
             return;
         }
 
-        const auto existing_item_data = GetSlotItemData(GetSlotFromItemType(found->type));
-        if (!existing_item_data) {
-            Log::Warning("Failed to find item data for armor item: %s", item_name.c_str());
-            return;
-        }
+        GW::ItemData data = {
+            .model_file_id = found->model_file_id, 
+            .type = found->type,
+            .interaction = found->interaction,
+        };
 
-        GW::ItemData data = *existing_item_data;
-        data.model_file_id = found->model_file_id;
-        data.type = found->type;
-        data.interaction = found->interaction;
+        const auto existing_item_data = GetSlotItemData(GetSlotFromItemType(found->type));
+        if (existing_item_data) {
+            data.dye = existing_item_data->dye;
+        }
+        data.dye.dye_tint = found->dye_tint;
 
         uint32_t col = 0;
         if (argc > 2) {
-            data.dye = {0};
-            if (!(TextUtils::ParseUInt(argv[3], &col, 10) && col <= std::to_underlying(GW::DyeColor::Pink))) {
+            if (!(TextUtils::ParseUInt(argv[2], &col, 10) && col <= std::to_underlying(GW::DyeColor::Pink))) {
                 Log::Warning(syntax);
                 return;
             }
@@ -590,8 +590,6 @@ namespace GWArmory {
             }
             data.dye.dye4 = (GW::DyeColor)(col & 0xff);
         }
-
-        data.dye.dye_tint = found->dye_tint;
 
         GW::GameThread::Enqueue([cpy = data]() {
             SetArmorItem(&cpy);

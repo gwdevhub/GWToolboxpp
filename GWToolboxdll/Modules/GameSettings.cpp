@@ -2523,7 +2523,6 @@ void GameSettings::FactionEarnedCheckAndWarn()
 
 void GameSettings::Update(float)
 {
-    GW::GetCharContext()->player_flags |= (1 << 3);
     UpdateSkillTooltip();
     UpdateReinvite();
     UpdateItemTooltip();
