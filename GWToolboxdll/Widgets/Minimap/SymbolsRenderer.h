@@ -17,6 +17,7 @@ public:
 private:
     void Initialize(IDirect3DDevice9* device) override;
     Color color_quest = 0;
+    Color color_quest_line = 0;
     Color color_other_quests = 0;
     Color color_north = 0;
     Color color_modifier = 0;

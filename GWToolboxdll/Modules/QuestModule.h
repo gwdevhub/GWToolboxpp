@@ -70,5 +70,6 @@ public:
     static void EmulateQuestSelected(GW::Constants::QuestID);
 
     static ImU32& GetQuestColor(GW::Constants::QuestID);
+    static ImU32& GetQuestLineColor(GW::Constants::QuestID);
     static std::vector<QuestObjective> ParseQuestObjectives(GW::Constants::QuestID quest_id);
 };
