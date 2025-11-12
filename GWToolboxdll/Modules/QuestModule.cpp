@@ -151,7 +151,7 @@ namespace {
                 l->draw_on_minimap = draw_quest_path_on_minimap;
                 l->draw_on_mission_map = draw_quest_path_on_mission_map;
                 l->created_by_toolbox = true;
-                l->color = QuestModule::GetQuestColor(quest_id);
+                l->color = QuestModule::GetQuestLineColor(quest_id);
                 minimap_lines.push_back(l);
             }
             GameWorldRenderer::TriggerSyncAllMarkers();
@@ -563,6 +563,14 @@ ImU32& QuestModule::GetQuestColor(GW::Constants::QuestID quest_id)
 {
     if (GW::QuestMgr::GetActiveQuestId() == quest_id) {
         return Minimap::Instance().symbols_renderer.color_quest;
+    }
+    return Minimap::Instance().symbols_renderer.color_other_quests;
+}
+
+ImU32& QuestModule::GetQuestLineColor(GW::Constants::QuestID quest_id)
+{
+    if (GW::QuestMgr::GetActiveQuestId() == quest_id) {
+        return Minimap::Instance().symbols_renderer.color_quest_line;
     }
     return Minimap::Instance().symbols_renderer.color_other_quests;
 }
