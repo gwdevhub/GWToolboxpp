@@ -18,10 +18,6 @@ public:
     [[nodiscard]] const char* Name() const override { return "Latency"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_STOPWATCH; }
 
-    void Initialize() override;
-    void Terminate() override;
-    void Update(float delta) override;
-
     static void SendPing();
     static uint32_t GetPing();
     static uint32_t GetAveragePing();

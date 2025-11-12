@@ -13,6 +13,7 @@
 
 #include "Utils/FontLoader.h"
 #include <GWCA/Managers/EventMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
@@ -28,20 +29,27 @@ namespace {
 
     GW::HookEntry ChatCommand_Hook;
 
-    void OnServerPing(GW::HookStatus*, GW::EventMgr::EventID, void* packet, uint32_t)
-    {
-        const auto packet_as_uint_array = static_cast<uint32_t*>(packet);
-        const uint32_t ping = packet_as_uint_array[1];
-        if (ping > 4999) {
-            return; // GW checks this too.
+    struct LatencyFrameContext {
+        void* vtable;
+        uint32_t frame_id;
+        void* h0008;
+        uint32_t frame_id_dupe;
+        GW::Array<uint32_t> h0010;
+        uint32_t average_ping;
+        uint32_t h0024;
+        uint32_t current_ping;
+        uint32_t h002C;
+        uint32_t state;
+        uint32_t h0034;
+    };
+    static_assert(sizeof(LatencyFrameContext) == 0x38);
+
+    LatencyFrameContext* cached_frame_context = 0;
+    LatencyFrameContext* GetLatencyFrameContext() {
+        if (!cached_frame_context) {
+            cached_frame_context = (LatencyFrameContext*)GW::UI::GetFrameContext(GW::UI::GetFrameByLabel(L"DnStat"));
         }
-        if (ping_history[ping_index]) {
-            ping_index++;
-            if (ping_index == ping_history_len) {
-                ping_index = 0;
-            }
-        }
-        ping_history[ping_index] = ping;
+        return cached_frame_context;
     }
 
     void CHAT_CMD_FUNC(CmdPing)
@@ -50,36 +58,22 @@ namespace {
     }
 }
 
-void LatencyWidget::SendPing() {
+void LatencyWidget::SendPing()
+{
     char buffer[48];
     snprintf(buffer, sizeof(buffer), "Current Ping: %ums, Avg Ping: %ums", LatencyWidget::GetPing(), LatencyWidget::GetAveragePing());
     GW::Chat::SendChat('#', buffer);
 }
-void LatencyWidget::Initialize()
-{
-    ToolboxWidget::Initialize();
-    GW::EventMgr::RegisterEventCallback(&Ping_Entry, GW::EventMgr::EventID::kRecvPing, OnServerPing, 0x800);
-    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"ping", CmdPing);
-}
-void LatencyWidget::Terminate() {
-    ToolboxWidget::Terminate();
-    GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
-    GW::EventMgr::RemoveEventCallback(&Ping_Entry);
-}
 
-void LatencyWidget::Update(const float) { }
-
-uint32_t LatencyWidget::GetPing() { return ping_history[ping_index]; }
+uint32_t LatencyWidget::GetPing() { 
+    const auto context = GetLatencyFrameContext();
+    return context ? context->current_ping : 0;
+}
 
 uint32_t LatencyWidget::GetAveragePing()
 {
-    size_t count = 0;
-    size_t sum = 0;
-    for (size_t i = 0; ping_history[i] && i < ping_history_len; i++) {
-        count++;
-        sum += ping_history[i];
-    }
-    return count ? sum / count : 0;
+    const auto context = GetLatencyFrameContext();
+    return context ? context->average_ping : 0;
 }
 
 void LatencyWidget::Draw(IDirect3DDevice9*)
@@ -88,6 +82,7 @@ void LatencyWidget::Draw(IDirect3DDevice9*)
         return;
     }
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
+        cached_frame_context = 0;
         return;
     }
 
