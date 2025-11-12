@@ -1842,9 +1842,9 @@ void GameSettings::Initialize()
 
     last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
 
-    Log::Log("[GameSettings] Enqueueing CheckRemoveWindowBorder");
-    GW::GameThread::Enqueue(CheckRemoveWindowBorder);
-    Log::Log("[GameSettings] Enqueued CheckRemoveWindowBorder");
+    //Log::Log("[GameSettings] Enqueueing CheckRemoveWindowBorder");
+    //GW::GameThread::Enqueue(CheckRemoveWindowBorder);
+    //Log::Log("[GameSettings] Enqueued CheckRemoveWindowBorder");
 
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();

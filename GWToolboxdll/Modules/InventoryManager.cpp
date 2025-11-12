@@ -2278,7 +2278,8 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
     auto item = (InventoryManager::Item*)gw_item;
     if (!item) return;
     switch (action->current_state) {
-        case GW::UI::UIPacket::ActionState::MouseClick: // Left click
+        case GW::UI::UIPacket::ActionState::MouseClick:
+        case GW::UI::UIPacket::ActionState::MouseUp: // Left click
             if (ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
                 // Get any hovered item in order to get info about it for Ctrl+Click shortcuts.
                 // May be null, in which case said shortcuts are ignored.
