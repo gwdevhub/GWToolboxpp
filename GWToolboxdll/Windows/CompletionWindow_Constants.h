@@ -273,7 +273,7 @@ namespace CompletionWindow_Constants {
         L"\x8101\xF7E\x95BD\xB2B4\x51E7",  // Oni
         L"\x8102\x4511",                   // Ooze
         L"\x8101\x7304",                   // Palawa Joko
-        L"\x108\x107Miniature Panda\x1",        // Panda
+        L"\x8101\xf7f\x8670\x899e\x3c46",   // Panda
         L"\x8101\x66FC\xC207\xBD26\x40CB", // Pig
         L"\x8101\x3C78",                   // Polar Bear
         L"\x8101\x3EF\xE477\xD632\x3AC",   // Prince Rurik
