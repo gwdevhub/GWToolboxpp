@@ -10,46 +10,38 @@
 
 namespace {
 
-    typedef void(__cdecl* ClampFps_pt)(uint32_t frame_limit);
-    ClampFps_pt ClampFps_Func = 0, ClampFps_Ret = 0;
-    void OnClampFps(uint32_t frame_limit) {
+    typedef void(__cdecl* SetFrameLimit_pt)(uint32_t frame_limit);
+    SetFrameLimit_pt SetFrameLimit_Func = 0, SetFrameLimit_Ret = 0;
+    void OnSetFrameLimit(uint32_t frame_limit)
+    {
         GW::Hook::EnterHook();
-        uint32_t old_fps_limit = 0;
-        if (!GW::UI::GetCommandLinePref(L"fps", &old_fps_limit) || old_fps_limit) {
-            ClampFps_Ret(frame_limit);
-            GW::Hook::LeaveHook();
-            return;
+
+        if (frame_limit == 90) {
+            uint32_t monitor_frame_rate = GW::Render::GetGraphicsRendererValue(GW::Render::Metric::MonitorRefreshRate);
+            monitor_frame_rate = 400;
+            if (monitor_frame_rate > frame_limit) {
+                frame_limit = monitor_frame_rate;
+            }
         }
-        
-        uint32_t monitor_frame_rate = GW::Render::GetGraphicsRendererValue(GW::Render::Metric::MonitorRefreshRate);
-        uint32_t vsync_enabled = GetGraphicsRendererValue(GW::Render::Metric::Vsync);
-        uint32_t pref = GW::UI::GetPreference(GW::UI::EnumPreference::FrameLimiter);
-        if (monitor_frame_rate && (pref == 3 || vsync_enabled)) {
-            GW::UI::SetCommandLinePref(L"fps", monitor_frame_rate);
-            ClampFps_Ret(frame_limit);
-            GW::UI::SetCommandLinePref(L"fps", old_fps_limit);
-            GW::Hook::LeaveHook();
-            return;
-        }
-        ClampFps_Ret(frame_limit);
+        SetFrameLimit_Ret(frame_limit);
         GW::Hook::LeaveHook();
     }
 }
 void FpsFix::Initialize() {
     ToolboxModule::Initialize();
 
-    ClampFps_Func = (ClampFps_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x75\x00\xbe\x5a\x00\x00\x00", "x?xxxxx", 0));
-    if (ClampFps_Func) {
-        GW::Hook::CreateHook((void**)&ClampFps_Func, OnClampFps, (void**)&ClampFps_Ret);
-        GW::Hook::EnableHooks(ClampFps_Func);
+    SetFrameLimit_Func = (SetFrameLimit_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x6a\x00\x68\x40\x42\x0f\x00\xe8", "xxxxxxxx", 0));
+    if (SetFrameLimit_Func) {
+        GW::Hook::CreateHook((void**)&SetFrameLimit_Func, OnSetFrameLimit, (void**)&SetFrameLimit_Ret);
+        GW::Hook::EnableHooks(SetFrameLimit_Func);
     }
 #ifdef _DEBUG
-    ASSERT(ClampFps_Func);
+    ASSERT(SetFrameLimit_Func);
 #endif
 }
 void FpsFix::Terminate()
 {
     ToolboxModule::Terminate();
 
-    GW::Hook::RemoveHook(ClampFps_Func);
+    GW::Hook::RemoveHook(SetFrameLimit_Func);
 }

@@ -14,7 +14,7 @@ public:
     }
 
     [[nodiscard]] const char* Name() const override { return "Fps Fix"; }
-    [[nodiscard]] const char* Description() const override { return "Guild Wars limits FPS to 90 even if your monitor refresh rate is higher.\nThis module fixes it to allow 'Monitor Refresh Rate' in F11 settings to work."; }
+    [[nodiscard]] const char* Description() const override { return "Guild Wars limits FPS to 90 even if your monitor refresh rate is higher; this fixes it."; }
 
     void Initialize() override;
     void Terminate() override;
