@@ -18,7 +18,6 @@ namespace {
 
         if (frame_limit == 90) {
             uint32_t monitor_frame_rate = GW::Render::GetGraphicsRendererValue(GW::Render::Metric::MonitorRefreshRate);
-            monitor_frame_rate = 400;
             if (monitor_frame_rate > frame_limit) {
                 frame_limit = monitor_frame_rate;
             }
