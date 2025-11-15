@@ -41,6 +41,7 @@
 #include <Modules/NPCVoiceModule.h>
 #include <Modules/LoginModule.h>
 #include <Modules/UIScaler.h>
+#include <Modules/FpsFix.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -166,7 +167,8 @@ namespace {
         NPCVoiceModule::Instance(),
         AudioSettings::Instance(),   
         UIScaler::Instance(),          
-        SteamModule::Instance()
+        SteamModule::Instance(),
+        FpsFix::Instance()
     };
 
     std::vector<WidgetToggle> optional_widgets = {
@@ -191,7 +193,6 @@ namespace {
         {HeroEquipmentModule::Instance(), false},
         ActiveQuestWidget::Instance(),
         TitleTrackerWidget::Instance()
-
     };
 
     std::vector<WindowToggle> optional_windows = {

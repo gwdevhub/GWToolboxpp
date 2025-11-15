@@ -33,6 +33,7 @@
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/RenderMgr.h>
 
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
@@ -380,7 +381,7 @@ namespace {
     void CHAT_CMD_FUNC(CmdFps)
     {
         if (argc < 2) {
-            const auto current_limit = GW::UI::GetFrameLimit();
+            const auto current_limit = GW::Render::GetFrameLimit();
             if (!current_limit) {
                 Log::Flash("Frame limit is not set");
             }
@@ -398,7 +399,7 @@ namespace {
         if (frame_limit && frame_limit > 400) {
             frame_limit = 400;
         }
-        GW::UI::SetFrameLimit(frame_limit);
+        GW::Render::SetFrameLimit(frame_limit);
     }
 
     const char* pref_syntax = "'/pref [preference] [number (0-4)]' set the in-game preference setting in Guild Wars.\n'/pref list' to list the preferences available to set.";

@@ -1252,11 +1252,8 @@ namespace GW {
 
         GWCA_API bool GetCommandLinePref(const wchar_t* label, wchar_t** out);
         GWCA_API bool GetCommandLinePref(const wchar_t* label, uint32_t* out);
-
-        // Returns actual hard frame limit, factoring in vsync, monitor refresh rate and in-game preferences
-        GWCA_API uint32_t GetFrameLimit();
-        // Set a hard upper limit for frame rate. Actual limit may be lower (but not higher) depending on vsync/in-game preference
-        GWCA_API bool SetFrameLimit(uint32_t value);
+        GWCA_API bool SetCommandLinePref(const wchar_t* label, wchar_t* value);
+        GWCA_API bool SetCommandLinePref(const wchar_t* label, uint32_t value);
 
         //GWCA_API void SetPreference(Preference pref, uint32_t value);
         GWCA_API bool SetFrameVisible(UI::Frame* frame, bool flag);
