@@ -318,6 +318,12 @@ namespace {
 
     bool CanRenderToolbox()
     {
+        const auto device = GW::Render::GetDevice();
+        const HRESULT hr = device ? device->TestCooperativeLevel() : D3DERR_DEVICELOST;
+        if (hr != D3D_OK) {
+            // Device is lost or not ready - skip all rendering
+            return false;
+        }
         return !gwtoolbox_disabled
                && !GW::GetPreGameContext()
                && !GW::Map::GetIsInCinematic()
