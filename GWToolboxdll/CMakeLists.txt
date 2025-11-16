@@ -91,8 +91,6 @@ if(NOT FXC)
     message(SEND_ERROR "unable to find Fxc.exe for HLSL compilation")
 endif(NOT FXC)
 
-add_custom_target(shaders)
-
 file(GLOB HLSL_VERTEX_SHADER_FILES
     Widgets/Minimap/Shaders/*_vs.hlsl
 )
@@ -107,12 +105,16 @@ foreach(FILE ${HLSL_VERTEX_SHADER_FILES} ${HLSL_PIXEL_SHADER_FILES})
   get_filename_component(FILE_NOEXT ${FILE} NAME_WE)
   get_filename_component(FILE_DIR ${FILE} DIRECTORY)
   get_source_file_property(shadertype ${FILE} ShaderType)
-  add_custom_command(TARGET shaders
-                     COMMAND ${FXC} /nologo /E main /T ${shadertype}_3_0 /Vn ${FILE_NOEXT} /O3 /Zi /Fh ${FILE_DIR}/${FILE_NOEXT}.h ${FILE}
+  set(OUTPUT_FILE ${FILE_DIR}/${FILE_NOEXT}.h)
+  add_custom_command(OUTPUT ${OUTPUT_FILE}
+                     COMMAND ${FXC} /nologo /E main /T ${shadertype}_3_0 /Vn ${FILE_NOEXT} /O3 /Zi /Fh ${OUTPUT_FILE} ${FILE}
                      MAIN_DEPENDENCY ${FILE}
                      COMMENT "HLSL ${FILE}"
                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                      VERBATIM)
-endforeach(FILE)
+  list(APPEND SHADER_OUTPUTS ${OUTPUT_FILE})
+endforeach()
 
-add_dependencies(GWToolboxdll shaders)
+add_custom_target(compile_shaders DEPENDS ${SHADER_OUTPUTS})
+
+add_dependencies(GWToolboxdll compile_shaders)
