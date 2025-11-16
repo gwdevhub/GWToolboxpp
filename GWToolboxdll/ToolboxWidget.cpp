@@ -3,7 +3,7 @@
 #include <ToolboxWidget.h>
 #include <Modules/ToolboxSettings.h>
 
-ImGuiWindowFlags ToolboxWidget::GetWinFlags(ImGuiWindowFlags flags) const
+ImGuiWindowFlags ToolboxWidget::GetWinFlags(const ImGuiWindowFlags flags) const
 {
     return GetWinFlags(flags, false);
 }
