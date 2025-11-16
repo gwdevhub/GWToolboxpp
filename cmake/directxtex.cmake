@@ -1,6 +1,7 @@
 include_guard()
 include(FetchContent)
 
+cmake_policy(SET CMP0169 OLD)
 FetchContent_Declare(
     DirectXTex
     GIT_REPOSITORY https://github.com/microsoft/DirectXTex
