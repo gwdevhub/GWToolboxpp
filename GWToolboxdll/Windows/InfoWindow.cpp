@@ -884,22 +884,22 @@ namespace {
         static bool game_master_mode = false;
         if (ImGui::Checkbox("Game Master Mode", &game_master_mode)) {
             if (game_master_mode) {
-                GW::GetCharContext()->player_flags |= 0x7;
+                GW::GetCharContext()->player_flags |= 0x8;
             }
             else {
-                GW::GetCharContext()->player_flags ^= 0x7;
+                GW::GetCharContext()->player_flags ^= 0x8;
             }
         }
         if (ImGui::Button("Open Text Dev Window")) {
             GW::GameThread::Enqueue([] {
-                GW::GetCharContext()->player_flags |= 0x7;
+                GW::GetCharContext()->player_flags |= 0x8;
                 GW::UI::Keypress((GW::UI::ControlAction)0x25);
-                GW::GetCharContext()->player_flags ^= 0x7;
+                GW::GetCharContext()->player_flags ^= 0x8;
             });
         }
         if (ImGui::Button("Open GM Start Menu?")) {
             GW::GameThread::Enqueue([] {
-                GW::GetCharContext()->player_flags |= 0x7;
+                GW::GetCharContext()->player_flags |= 0x8;
                 GW::UI::SendUIMessage((GW::UI::UIMessage)0x1000008a, 0, 0);
                 //GW::GetCharContext()->player_flags ^= 0x8;
             });
