@@ -117,6 +117,7 @@ private:
     bool hide_weapon_sets_and_customized_items = false;
     bool hide_golds_from_merchant = false;
 
+
     std::map<uint32_t, std::string> hide_from_merchant_items{};
     bool salvage_rare_mats = false;
     bool salvage_nicholas_items = true;
@@ -185,7 +186,7 @@ public:
         {
             return (interaction & 1) != 0;
         }
-        [[nodiscard]] bool CanBeIdentified() const { return (interaction & 0x800000) != 0; }
+        [[nodiscard]] bool CanBeIdentified() const { return !GetIsIdentified() && (interaction & 0x800000) != 0; }
         [[nodiscard]] bool IsPrefixUpgradable() const
         {
             return ((interaction >> 14) & 1) == 0;

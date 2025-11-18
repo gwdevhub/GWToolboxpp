@@ -50,6 +50,8 @@ namespace {
     bool move_to_trade_on_alt_click = false;
     bool salvage_all_on_ctrl_click = false;
     bool identify_all_on_ctrl_click = false;
+    bool auto_reuse_salvage_kit = false;
+    bool auto_reuse_id_kit = false;
 
     const char* bag_names[5] = {
         "None",
@@ -846,10 +848,47 @@ namespace {
 
     GW::HookEntry OnPostUIMessage_HookEntry;
 
-    void OnPostUIMessage(GW::HookStatus*, const GW::UI::UIMessage message_id, void*, void*) {
+    struct LastKitUsed {
+        uint32_t item_id = 0;
+        clock_t used_at = 0;
+        uint32_t uses = 0;
+    };
+    LastKitUsed last_salvage_kit_used = { 0 };
+    LastKitUsed last_id_kit_used = {0};
+
+    void OnPostUIMessage(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
+    {
+        if (status->blocked)
+            return;
         switch (message_id) {
             case GW::UI::UIMessage::kVendorWindow: {
                 UpdateQuoteHelpText();
+            } break;
+            case GW::UI::UIMessage::kPreStartSalvage: {
+                const auto kit = (InventoryManager::Item*)GW::Items::GetItemById(((uint32_t*)wparam)[1]);
+                if (auto_reuse_salvage_kit && kit) {
+                    last_salvage_kit_used = {.item_id = kit->item_id, .used_at = TIMER_INIT(), .uses = kit->GetUses()};
+                }
+            } break;
+            case GW::UI::UIMessage::kItemUpdated: {
+                const auto packet = (GW::UI::UIPacket::kItemUpdated*)wparam;
+                clear_pending_move(packet->item_id);
+                if (packet->item_id == last_salvage_kit_used.item_id 
+                    && last_salvage_kit_used.used_at != 0 && TIMER_DIFF(last_salvage_kit_used.used_at) < 500) {
+                        const auto updated_kit = (InventoryManager::Item*)GW::Items::GetItemById(packet->item_id);
+                    if (updated_kit && updated_kit->GetUses() != last_salvage_kit_used.uses) {
+                        last_salvage_kit_used = {0};
+                        GW::Items::UseItem(updated_kit) || (Log::Log("Failed to re-use kit automatically"), false);
+                    }
+                }
+                if (packet->item_id == last_id_kit_used.item_id && last_id_kit_used.used_at != 0 && TIMER_DIFF(last_id_kit_used.used_at) < 500) {
+                    const auto updated_kit = (InventoryManager::Item*)GW::Items::GetItemById(packet->item_id);
+                    if (updated_kit && updated_kit->GetUses() != last_id_kit_used.uses) {
+                        last_id_kit_used = {0};
+                        GW::Items::UseItem(updated_kit) || (Log::Log("Failed to re-use kit automatically"), false);
+                    }
+                }
+
             } break;
         }
     }
@@ -858,11 +897,22 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessa
 {
     auto& instance = Instance();
     switch (message_id) {
-        case GW::UI::UIMessage::kItemUpdated: {
-            clear_pending_move((uint32_t)wparam);
-        } break;
         case GW::UI::UIMessage::kVendorWindow: {
             merchant_list_tab = *static_cast<uint32_t*>(wparam);
+        } break;
+        case GW::UI::UIMessage::kIdentifyItem: {
+            const auto kit = (InventoryManager::Item*)GW::Items::GetItemById(((uint32_t*)wparam)[1]);
+            if (!(auto_reuse_id_kit && kit)) break;
+            const auto item = (InventoryManager::Item*)GW::Items::GetItemById(((uint32_t*)wparam)[0]);
+            if (!(item && item->CanBeIdentified()) && kit && kit->GetUses()) {
+                status->blocked = true;
+                // Run next frame to allow current cursor to be cleared otherwise it'll assert
+                GW::GameThread::Enqueue([kit]() {
+                    GW::Items::UseItem(kit);
+                    });
+                break;
+            }
+            last_id_kit_used = {.item_id = kit->item_id, .used_at = TIMER_INIT(), .uses = kit->GetUses()};
         } break;
         // About to request a quote for an item
         case GW::UI::UIMessage::kSendMerchantRequestQuote: {
@@ -926,8 +976,6 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessa
         case GW::UI::UIMessage::kSendUseItem: {
             OnUseItem(status, (uint32_t)wparam);
         } break;
-        default:
-            ASSERT(false); // Subscribed to a UI message that we don't use!
     }
 }
 
@@ -953,7 +1001,9 @@ void InventoryManager::Initialize()
         GW::UI::UIMessage::kMoveItem,
         GW::UI::UIMessage::kSendUseItem,
         GW::UI::UIMessage::kItemUpdated,
-        GW::UI::UIMessage::kVendorWindow
+        GW::UI::UIMessage::kVendorWindow,        
+        GW::UI::UIMessage::kPreStartSalvage,
+        GW::UI::UIMessage::kIdentifyItem
     };
     for (const auto message_id : message_id_hooks) {
         RegisterUIMessageCallback(&ItemClick_Entry, message_id, OnUIMessage);
@@ -1055,6 +1105,8 @@ void InventoryManager::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(move_to_trade_on_alt_click);
     SAVE_BOOL(salvage_all_on_ctrl_click);
     SAVE_BOOL(identify_all_on_ctrl_click);
+    SAVE_BOOL(auto_reuse_salvage_kit);
+    SAVE_BOOL(auto_reuse_id_kit);
 
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_backpack), bags_to_salvage_from[GW::Constants::Bag::Backpack]);
     ini->SetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
@@ -1082,6 +1134,8 @@ void InventoryManager::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(move_to_trade_on_alt_click);
     LOAD_BOOL(salvage_all_on_ctrl_click);
     LOAD_BOOL(identify_all_on_ctrl_click);
+    LOAD_BOOL(auto_reuse_salvage_kit);
+    LOAD_BOOL(auto_reuse_id_kit);
 
     bags_to_salvage_from[GW::Constants::Bag::Backpack] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_backpack), bags_to_salvage_from[GW::Constants::Bag::Backpack]);
     bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
@@ -1781,7 +1835,10 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::ShowHelp("Control+Click a salvage kit to open the Salvage All window");
     ImGui::Checkbox("Identify All with Control+Click", &identify_all_on_ctrl_click);
     ImGui::ShowHelp("Control+Click an identification kit to identify all items with it");
-
+    ImGui::Checkbox("Auto re-use salvage kit", &auto_reuse_salvage_kit);
+    ImGui::ShowHelp("When a salvage kit is used up immediately by salvaging without a popup,\ncheck this box to 're-use' the kit ready for the next item.");
+    ImGui::Checkbox("Auto re-use identification kit", &auto_reuse_id_kit);
+    ImGui::ShowHelp("When a identification kit is used up immediately by identifying an item,\ncheck this box to 're-use' the kit ready for the next item.");
     ImGui::Separator();
     ImGui::Text("Hide items from merchant sell window:");
     ImGui::BeginChild("hide_from_merchant_items", ImVec2(0.0F, hide_from_merchant_items.size() * 25.0F));
