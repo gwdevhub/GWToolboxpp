@@ -293,7 +293,8 @@ namespace GW {
             kSetFocus                   = 0x1f, // wparam = 1 or 0
             kKeyUp                      = 0x20, // wparam = UIPacket::kKeyAction*
             kMouseClick                 = 0x22, // wparam = UIPacket::kMouseClick*
-            kMouseUp                    = 0x26, // wparam = UIPacket::kMouseAction*
+            kMouseCoordsClick           = 0x24,  // wparam = UIPacket::kMouseCoordsClick*
+            kMouseUp                    = 0x26, // wparam = UIPacket::kMouseCoordsClick*
             kMouseClick2                = 0x2e, // wparam = UIPacket::kMouseAction*
             kMouseAction                = 0x2f, // wparam = UIPacket::kMouseAction*
             kRenderFrame_0x30 = 0x30,
@@ -462,7 +463,8 @@ namespace GW {
             kRecvWhisper                = 0x30000000 | 0x1E, // wparam = UIPacket::kRecvWhisper*
             kPrintChatMessage           = 0x30000000 | 0x1F, // wparam = UIPacket::kPrintChatMessage*. Triggered when a message wants to be added to the in-game chat window.
             kSendWorldAction            = 0x30000000 | 0x20, // wparam = UIPacket::kSendWorldAction*
-            kSetRendererValue           = 0x30000000 | 0x21 // wparam = UIPacket::kSetRendererValue
+            kSetRendererValue           = 0x30000000 | 0x21, // wparam = UIPacket::kSetRendererValue
+            kIdentifyItem               = 0x30000000 | 0x22  // wparam = UIPacket::kIdentifyItem
         };
         enum class FlagPreference : uint32_t;
         enum class NumberPreference : uint32_t;
@@ -471,6 +473,18 @@ namespace GW {
 
 
         namespace UIPacket {
+            struct kMouseCoordsClick {
+                float offset_x;
+                float offset_y;
+                uint32_t h0008;
+                uint32_t h000c;
+                uint32_t* h0010;
+                uint32_t h0014;
+            };
+            struct kIdentifyItem {
+                uint32_t item_id;
+                uint32_t kit_id;
+            };
             struct kShowXunlaiChest {
                 uint32_t h0000 = 0;
                 bool storage_pane_unlocked = true;

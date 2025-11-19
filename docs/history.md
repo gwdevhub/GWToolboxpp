@@ -25,6 +25,7 @@ the latest version, go to the [Home Page](./) instead.
 * [New] Added world position location to agent info in info window
 * [New] Added tooltip on build names in builds window
 * [New] Prefill build code when adding builds in builds window
+* [New] Added an option to Inventory Settings to auto re-use id/salvage kit to avoid having to double click it every time
 * [Minor] Extended `/target <name>` to check items and gadgets as well as NPC names
 * [Minor] Auto re-open tome when a skill is learned
 * [Minor] "Only show learned skills" now works with skill trainers
