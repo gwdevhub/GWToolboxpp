@@ -69,6 +69,10 @@ struct MusicData {
             if (std::ranges::find(logged_music, filename) == logged_music.end()) {
                 logged_music.push_back(filename);
             }
+            if (std::ranges::find(blocked_sounds, filename) != blocked_sounds.end()) {
+                GW::Hook::LeaveHook();
+                return;
+            }
         }
         PlayMusicFromSoundScript_Ret(sound_script, flags1, flags2, flags3, music_idx);
         GW::Hook::LeaveHook();
