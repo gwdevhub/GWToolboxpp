@@ -124,15 +124,6 @@ void LatencyWidget::LoadSettings(ToolboxIni* ini)
     LOAD_UINT(red_threshold);
     LOAD_BOOL(show_avg_ping);
     LOAD_FLOAT(text_size);
-    // Legacy font size
-    LOAD_UINT(font_size);
-    switch (font_size) {
-    case static_cast<int>(FontLoader::FontSize::widget_label):
-    case static_cast<int>(FontLoader::FontSize::widget_small):
-    case static_cast<int>(FontLoader::FontSize::widget_large):
-        text_size = static_cast<float>(font_size);
-        break;
-    }
 }
 
 void LatencyWidget::SaveSettings(ToolboxIni* ini)
