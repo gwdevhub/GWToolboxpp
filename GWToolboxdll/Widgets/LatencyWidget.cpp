@@ -50,7 +50,7 @@ namespace {
         return cached_frame_context;
     }
 
-    void OnMapChange(GW::HookStatus* status, GW::UI::UIMessage message, void*, void*)
+    void OnMapChange(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
     {
         cached_frame_context = nullptr;
     }
