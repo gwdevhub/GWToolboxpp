@@ -1,10 +1,8 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/Packets/Opcodes.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <Defines.h>
@@ -12,7 +10,6 @@
 #include <Widgets/LatencyWidget.h>
 
 #include "Utils/FontLoader.h"
-#include <GWCA/Managers/EventMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 namespace {
@@ -21,6 +18,7 @@ namespace {
     uint32_t ping_history[ping_history_len] = {0};
     size_t ping_index = 0;
 
+    GW::HookEntry ContextCallback_Entry;
     GW::HookEntry Ping_Entry;
     int red_threshold = 250;
     bool show_avg_ping = false;
@@ -44,12 +42,17 @@ namespace {
     };
     static_assert(sizeof(LatencyFrameContext) == 0x38);
 
-    LatencyFrameContext* cached_frame_context = 0;
+    LatencyFrameContext* cached_frame_context = nullptr;
     LatencyFrameContext* GetLatencyFrameContext() {
         if (!cached_frame_context) {
             cached_frame_context = (LatencyFrameContext*)GW::UI::GetFrameContext(GW::UI::GetFrameByLabel(L"DnStat"));
         }
         return cached_frame_context;
+    }
+
+    void OnMapChange(GW::HookStatus* status, GW::UI::UIMessage message, void*, void*)
+    {
+        cached_frame_context = nullptr;
     }
 
     void CHAT_CMD_FUNC(CmdPing)
@@ -82,7 +85,6 @@ void LatencyWidget::Draw(IDirect3DDevice9*)
         return;
     }
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
-        cached_frame_context = 0;
         return;
     }
 
@@ -139,6 +141,18 @@ void LatencyWidget::SaveSettings(ToolboxIni* ini)
     SAVE_UINT(red_threshold);
     SAVE_BOOL(show_avg_ping);
     SAVE_FLOAT(text_size);
+}
+
+void LatencyWidget::Initialize()
+{
+    ToolboxWidget::Initialize();
+    GW::UI::RegisterUIMessageCallback(&ContextCallback_Entry, GW::UI::UIMessage::kMapChange, OnMapChange);
+}
+
+void LatencyWidget::SignalTerminate()
+{
+    GW::UI::RemoveUIMessageCallback(&ContextCallback_Entry, GW::UI::UIMessage::kMapChange);
+    ToolboxWidget::SignalTerminate();
 }
 
 void LatencyWidget::DrawSettingsInternal()
