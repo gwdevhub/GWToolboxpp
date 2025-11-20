@@ -1095,17 +1095,9 @@ void InfoWindow::Draw(IDirect3DDevice9*)
                             Resources::SaveTextureToFile(*texture, write_to);
                             return false;
                         }
-                        if (ImGui::Button("Download as DDS (naming by crc32 hash for gMod)")) {
-                            const auto hash = Resources::GetTextureHash(*texture, false);
+                        if (ImGui::Button("Download as DDS (naming by hash for gMod)")) {
+                            const auto hash = Resources::GetTexmodHash(*texture);
                             const auto filename = std::format("GW.EXE_0x{:08X}.dds", hash);
-                            const auto write_to = Resources::GetPath("extracted_textures", filename);
-                            Resources::EnsureFolderExists(Resources::GetPath("extracted_textures"));
-                            Resources::SaveTextureToFile(*texture, write_to);
-                            return false;
-                        }
-                        if (ImGui::Button("Download as DDS (naming by crc64 hash for gMod)")) {
-                            const auto hash = Resources::GetTextureHash(*texture, true);
-                            const auto filename = std::format("GW.EXE_0x{:016X}.dds", hash);
                             const auto write_to = Resources::GetPath("extracted_textures", filename);
                             Resources::EnsureFolderExists(Resources::GetPath("extracted_textures"));
                             Resources::SaveTextureToFile(*texture, write_to);
