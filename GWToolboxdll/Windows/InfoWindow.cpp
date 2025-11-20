@@ -756,49 +756,7 @@ namespace {
             DrawItemInfo(GW::Items::GetItemById(quoted_item_id), &quoted_name);
         }
 
-        if (ImGui::CollapsingHeader("Loaded Textures")) {
-            record_textures = true;
-            ImGui::PushID(&textures_created);
-            constexpr ImVec2 scaled_size = { 64.f,64.f };
-            constexpr ImVec4 tint(1, 1, 1, 1);
-            const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
-            constexpr auto uv0 = ImVec2(0, 0);
-
-            if (ImGui::SmallButton("Reset")) {
-                textures_created_by_file_id.clear();
-                textures_created.clear();
-                texture_file_ids.clear();
-            }
-
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-            ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-
-            ImGui::StartSpacedElements(scaled_size.x);
-
-            for (const auto texture : textures_created) {
-                ImGui::PushID(texture);
-                if (!texture || !*texture) {
-                    ImGui::PopID();
-                    continue;
-                }
-
-                const auto uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
-                ImGui::NextSpacedElement();
-                ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, normal_bg, tint);
-                if (ImGui::IsItemHovered()) {
-                    static wchar_t out[3];
-                    ArenaNetFileParser::FileIdToFileHash(texture_file_ids[texture], out);
-                    ImGui::SetTooltip("File ID: 0x%08x\nFile Hash: 0x%04x 0x%04x", texture_file_ids[texture], out[0], out[1]);
-                }
-                ImGui::PopID();
-            }
-
-            ImGui::PopStyleColor();
-            ImGui::PopStyleVar();
-            ImGui::PopStyleVar();
-            ImGui::PopID();
-        }
+        
         if (ImGui::CollapsingHeader("UI Message Log")) {
             record_ui_messages = true;
             ImGui::PushID(&ui_message_packets_recorded);
@@ -1092,6 +1050,77 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             ImGui::Text("First item in inventory");
             static GuiUtils::EncString item_name;
             DrawItemInfo(GW::Items::GetItemBySlot(GW::Items::GetBag(GW::Constants::Bag::Backpack), 1), &item_name);
+        }
+        if (ImGui::CollapsingHeader("Loaded Textures")) {
+            record_textures = true;
+            ImGui::PushID(&textures_created);
+            constexpr ImVec2 scaled_size = {64.f, 64.f};
+            constexpr ImVec4 tint(1, 1, 1, 1);
+            const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
+            constexpr auto uv0 = ImVec2(0, 0);
+
+            if (ImGui::SmallButton("Reset")) {
+                textures_created_by_file_id.clear();
+                textures_created.clear();
+                texture_file_ids.clear();
+            }
+
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+            ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
+
+            ImGui::StartSpacedElements(scaled_size.x);
+
+            for (const auto texture : textures_created) {
+                ImGui::PushID(texture);
+                if (!texture || !*texture) {
+                    ImGui::PopID();
+                    continue;
+                }
+
+                const auto uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
+                ImGui::NextSpacedElement();
+                const auto clicked = ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, normal_bg, tint);
+                static wchar_t out[3];
+                if (ImGui::IsItemHovered()) {
+                    ArenaNetFileParser::FileIdToFileHash(texture_file_ids[texture], out);
+                    ImGui::SetTooltip("File ID: 0x%08x\nFile Hash: 0x%04x 0x%04x", texture_file_ids[texture], out[0], out[1]);
+                }
+                if (clicked) {
+                    ImGui::SetContextMenu([texture](void*) {
+                        if (ImGui::Button("Download as DDS (naming by gw file id)")) {
+                            const auto filename = std::format("{:#010x}.dds", texture_file_ids[texture]);
+                            const auto write_to = Resources::GetPath("extracted_textures", filename);
+                            Resources::EnsureFolderExists(Resources::GetPath("extracted_textures"));
+                            Resources::SaveTextureToFile(*texture, write_to);
+                            return false;
+                        }
+                        if (ImGui::Button("Download as DDS (naming by crc32 hash for gMod)")) {
+                            const auto hash = Resources::GetTextureHash(*texture, false);
+                            const auto filename = std::format("GW.EXE_0x{:08X}.dds", hash);
+                            const auto write_to = Resources::GetPath("extracted_textures", filename);
+                            Resources::EnsureFolderExists(Resources::GetPath("extracted_textures"));
+                            Resources::SaveTextureToFile(*texture, write_to);
+                            return false;
+                        }
+                        if (ImGui::Button("Download as DDS (naming by crc64 hash for gMod)")) {
+                            const auto hash = Resources::GetTextureHash(*texture, true);
+                            const auto filename = std::format("GW.EXE_0x{:016X}.dds", hash);
+                            const auto write_to = Resources::GetPath("extracted_textures", filename);
+                            Resources::EnsureFolderExists(Resources::GetPath("extracted_textures"));
+                            Resources::SaveTextureToFile(*texture, write_to);
+                            return false;
+                        }
+                        return true;
+                    });
+                }
+                ImGui::PopID();
+            }
+
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar();
+            ImGui::PopStyleVar();
+            ImGui::PopID();
         }
         if (show_quest && ImGui::CollapsingHeader("Quest")) {
             const GW::Quest* q = GW::QuestMgr::GetActiveQuest();

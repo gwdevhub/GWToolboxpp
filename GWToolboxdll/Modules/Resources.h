@@ -105,6 +105,7 @@ public:
     // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetItemImage(const std::wstring& item_name);
+    static bool SaveTextureToFile(IDirect3DTexture9* texture, const std::filesystem::path& file_path);
     // Fetches File page from GWW, parses out the image for the file given
     // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
@@ -146,6 +147,37 @@ public:
 
     // Stops the worker thread once it's done with the current jobs.
     void EndLoading() const;
+
+    /**
+     * @brief Calculate a hash of a DirectX 9 texture
+     * @param texture The DirectX 9 texture to hash
+     * @param use_crc64 If true, uses CRC64 instead of CRC32
+     * @return The hash value (CRC32 or CRC64)
+     */
+    static uint64_t GetTextureHash(IDirect3DTexture9* texture, bool use_crc64 = false);
+
+    /**
+     * @brief Get the bits per pixel for a D3D format
+     * @param format The D3D format
+     * @return Number of bits per pixel
+     */
+    static int GetBitsPerPixel(D3DFORMAT format);
+
+    /**
+     * @brief Calculate CRC32 hash
+     * @param data Pointer to data
+     * @param size Size of data in bytes
+     * @return CRC32 hash
+     */
+    static uint32_t CalculateCRC32(const char* data, size_t size);
+
+    /**
+     * @brief Calculate CRC64 hash
+     * @param data Pointer to data
+     * @param size Size of data in bytes
+     * @return CRC64 hash
+     */
+    static uint64_t CalculateCRC64(const char* data, size_t size);
 
 private:
     static void Cleanup();

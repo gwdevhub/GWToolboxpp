@@ -67,6 +67,9 @@ namespace ArenaNetFileParser {
     const bool ArenaNetFile::isValid() {
         return GameAssetFile::isValid() && strncmp(fileType(), "ffna", 4) == 0;
     }
+    const bool ATexFile::isValid() { 
+        return GameAssetFile::isValid() && strncmp(fileType(), "ATEX", 4) == 0; 
+    }
     const Chunk* ArenaNetFile::FindChunk(ChunkType chunk_type)
     {
         ASSERT(isValid());
