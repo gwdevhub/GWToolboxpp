@@ -652,6 +652,8 @@ namespace GW {
                 uint32_t mouse_button; // 0x0 = left, 0x1 = middle, 0x2 = right
                 uint32_t is_doubleclick;
                 uint32_t unknown_type_screen_pos;
+                uint32_t h000c;
+                uint32_t h0010;
             };
             enum ActionState : uint32_t {
                 MouseDown = 0x5,

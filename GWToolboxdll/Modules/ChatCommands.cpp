@@ -34,6 +34,7 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
@@ -193,8 +194,6 @@ namespace {
             SafeChangeTarget(agents->at(closest)->agent_id);
         }
     }
-
-
 
     bool IsNearestStr(const wchar_t* str)
     {
@@ -365,6 +364,31 @@ namespace {
             GW::StoC::EmulatePacket(packet);
             delete packet;
         });
+    }
+
+    const char* dropbuff_syntax = "'/dropbuff [skill_id]' drops the first instance of an upkept skill/buff";
+    void CHAT_CMD_FUNC(CmdDropBuff)
+    {
+        if (argc < 2) {
+            Log::Warning(dropbuff_syntax);
+            return;
+        }
+        uint32_t skill_id = 0;
+        if (!TextUtils::ParseUInt(argv[1], &skill_id)) {
+            Log::Warning(dropbuff_syntax);
+            return;
+        }
+        const auto skill = GW::SkillbarMgr::GetSkillConstantData((GW::Constants::SkillID)skill_id);
+        if (!skill) {
+            Log::Warning(dropbuff_syntax);
+            return;
+        }
+        const auto buff = GW::Effects::GetPlayerBuffBySkillId(skill->skill_id);
+        if (!buff) return;
+        if (!GW::Effects::DropBuff(buff->buff_id)) {
+            Log::Warning("Failed to drop buff!");
+            return;
+        }
     }
 
     HallOfMonumentsAchievements hom_achievements;
@@ -953,6 +977,8 @@ namespace {
         ImGui::Text("'/dialog <id>' sends a dialog id to the current NPC you're talking to.\n"
             "'/dailog take' automatically takes the first available quest/reward from the NPC you're talking to.");
         ImGui::Bullet();
+        ImGui::Text(dropbuff_syntax);
+        ImGui::Bullet();
         ImGui::Text("'/enter [fow|uw]' to enter the mission for your outpost.\n"
             "If in embark, toa, urgoz or deep, it will use a scroll.\n"
             "If in an outpost with an available mission, it will begin the mission countdown.");
@@ -1475,7 +1501,8 @@ void ChatCommands::Initialize()
         {L"pref", CmdPref},
         {L"call", CmdCallTarget},
         {L"config", CmdConfig},
-        {settings_via_chat_commands_cmd, CmdSettingViaChatCommand}
+        {settings_via_chat_commands_cmd, CmdSettingViaChatCommand},
+        {L"dropbuff",CmdDropBuff}
     };
 
 
