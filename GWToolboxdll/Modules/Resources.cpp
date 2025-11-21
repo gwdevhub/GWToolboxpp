@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <DirectXTex.h>
 #include <DDSTextureLoader/DDSTextureLoader9.h>
 #include <WICTextureLoader/WICTextureLoader9.h>
 
@@ -29,6 +30,7 @@
 #include <nfd_common.c>
 #include <nfd_win.cpp>
 #pragma warning(pop)
+#include <dxgiformat.h>
 #include <wolfssl/wolfcrypt/asn.h>
 
 #include <Modules/GwDatTextureModule.h>
@@ -1409,58 +1411,16 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
         return false;
     }
 
-    FILE* file = nullptr;
-    const auto err = _wfopen_s(&file, file_path.c_str(), L"wb");
-    if (err || !file) {
-        texture->UnlockRect(0);
-        Log::Warning("SaveTextureToFile: Failed to open file for writing: %s", file_path.string().c_str());
-        return false;
-    }
+    DirectX::Image img = {};
+    img.width = desc.Width;
+    img.height = desc.Height;
+    img.format = static_cast<DXGI_FORMAT>(desc.Format);
+    img.rowPitch = lockedRect.Pitch;
+    img.slicePitch = lockedRect.Pitch * desc.Height;
+    img.pixels = static_cast<uint8_t*>(lockedRect.pBits);
 
-    // Write DDS header
-    uint32_t magic = 0x20534444; // "DDS "
-    fwrite(&magic, 4, 1, file);
+    DirectX::SaveToDDSFile(img, DirectX::DDS_FLAGS_NONE, file_path.c_str());
 
-    // DDS_HEADER structure (124 bytes)
-    struct DDS_HEADER {
-        uint32_t dwSize = 124;
-        uint32_t dwFlags = 0x1 | 0x2 | 0x4 | 0x1000; // CAPS | HEIGHT | WIDTH | PIXELFORMAT
-        uint32_t dwHeight;
-        uint32_t dwWidth;
-        uint32_t dwPitchOrLinearSize;
-        uint32_t dwDepth = 0;
-        uint32_t dwMipMapCount = 1;
-        uint32_t dwReserved1[11] = {0};
-        struct {
-            uint32_t dwSize = 32;
-            uint32_t dwFlags = 0x41; // ALPHAPIXELS | RGB
-            uint32_t dwFourCC = 0;
-            uint32_t dwRGBBitCount = 32;
-            uint32_t dwRBitMask = 0x00FF0000;
-            uint32_t dwGBitMask = 0x0000FF00;
-            uint32_t dwBBitMask = 0x000000FF;
-            uint32_t dwABitMask = 0xFF000000;
-        } ddspf;
-        uint32_t dwCaps = 0x1000; // TEXTURE
-        uint32_t dwCaps2 = 0;
-        uint32_t dwCaps3 = 0;
-        uint32_t dwCaps4 = 0;
-        uint32_t dwReserved2 = 0;
-    } header;
-
-    header.dwHeight = desc.Height;
-    header.dwWidth = desc.Width;
-    header.dwPitchOrLinearSize = desc.Width * 4;
-
-    fwrite(&header, sizeof(header), 1, file);
-
-    // Write pixel data
-    for (UINT y = 0; y < desc.Height; y++) {
-        uint8_t* row = static_cast<uint8_t*>(lockedRect.pBits) + y * lockedRect.Pitch;
-        fwrite(row, 1, desc.Width * 4, file);
-    }
-
-    fclose(file);
     texture->UnlockRect(0);
 
     Log::Info("Successfully saved texture to %s (%dx%d)", file_path.string().c_str(), desc.Width, desc.Height);
