@@ -1569,43 +1569,6 @@ void ChatCommands::Terminate()
     cmd_aliases.clear();
 }
 
-bool ChatCommands::WndProc(const UINT Message, const WPARAM wParam, const LPARAM)
-{
-    if (!GW::CameraMgr::GetCameraUnlock()) {
-        return false;
-    }
-    if (GW::Chat::GetIsTyping()) {
-        return false;
-    }
-    if (ImGui::GetIO().WantTextInput) {
-        return false;
-    }
-
-    switch (Message) {
-        case WM_KEYDOWN:
-        case WM_KEYUP:
-            switch (wParam) {
-                case VK_A:
-                case VK_D:
-                case VK_E:
-                case VK_Q:
-                case VK_R:
-                case VK_S:
-                case VK_W:
-                case VK_X:
-                case VK_Z:
-
-                case VK_ESCAPE:
-                case VK_UP:
-                case VK_DOWN:
-                case VK_LEFT:
-                case VK_RIGHT:
-                    return true;
-            }
-    }
-    return false;
-}
-
 void ChatCommands::Update(const float delta)
 {
     if (title_names.empty()) {
@@ -1636,61 +1599,6 @@ void ChatCommands::Update(const float delta)
 
     if (delta == 0.f) {
         return;
-    }
-
-    if (GW::CameraMgr::GetCameraUnlock()
-        && !GW::Chat::GetIsTyping()
-        && !ImGui::GetIO().WantTextInput) {
-        static bool keep_forward;
-
-        float forward = 0;
-        float vertical = 0;
-        float rotate = 0;
-        float side = 0;
-        if (ImGui::IsKeyDown(ImGuiKey_W) || ImGui::IsKeyDown(ImGuiKey_UpArrow) || keep_forward) {
-            forward += 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_S) || ImGui::IsKeyDown(ImGuiKey_DownArrow)) {
-            forward -= 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_Q)) {
-            side += 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_E)) {
-            side -= 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_Z)) {
-            vertical -= 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_X)) {
-            vertical += 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_A) || ImGui::IsKeyDown(ImGuiKey_LeftArrow)) {
-            rotate += 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_D) || ImGui::IsKeyDown(ImGuiKey_RightArrow)) {
-            rotate -= 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_R)) {
-            keep_forward = true;
-        }
-
-        if (ImGui::IsKeyDown(ImGuiKey_W) || ImGui::IsKeyDown(ImGuiKey_UpArrow) ||
-            ImGui::IsKeyDown(ImGuiKey_S) || ImGui::IsKeyDown(ImGuiKey_DownArrow) ||
-            ImGui::IsKeyDown(ImGuiKey_Escape)) {
-            keep_forward = false;
-        }
-
-        if (GWToolbox::Instance().right_mouse_down && rotate != 0.f) {
-            side = rotate;
-            rotate = 0.f;
-        }
-
-        GW::CameraMgr::ForwardMovement(forward * delta * cam_speed, !forward_fix_z);
-        GW::CameraMgr::VerticalMovement(vertical * delta * cam_speed);
-        GW::CameraMgr::RotateMovement(rotate * delta * ROTATION_SPEED);
-        GW::CameraMgr::SideMovement(side * delta * cam_speed);
-        GW::CameraMgr::UpdateCameraPos();
     }
     skill_to_use.Update();
     npc_to_find.Update();

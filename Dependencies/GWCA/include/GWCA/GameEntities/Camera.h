@@ -38,6 +38,28 @@ namespace GW {
         /* +h00B4 */ Vec3f look_at_to_go;
         /* +h00C0 */ float field_of_view;
         /* +h00C4 */ float field_of_view2;
+        /* +h00C8 */ uint32_t h00C8;
+        /* +h00CC */ uint32_t h00CC;
+        /* +h00D0 */ uint32_t h00D0;
+        /* +h00D4 */ uint32_t h00D4;
+        /* +h00D8 */ uint32_t h00D8; // Camera controller/mode handler pointer
+        /* +h00DC */ uint32_t h00DC;
+        /* +h00E0 */ uint32_t h00E0;
+        /* +h00E4 */ uint32_t h00E4;
+        /* +h00E8 */ uint32_t h00E8;
+        /* +h00EC */ uint32_t h00EC;
+        /* +h00F0 */ uint32_t h00F0;
+        /* +h00F4 */ uint32_t h00F4;
+        /* +h00F8 */ uint32_t h00F8;
+        /* +h00FC */ uint32_t h00FC;
+        /* +h0100 */ uint32_t h0100;
+        /* +h0104 */ uint32_t h0104;
+        /* +h0108 */ uint32_t h0108;
+        /* +h010C */ uint32_t h010C;
+        /* +h0110 */ uint32_t h0110;
+        /* +h0114 */ uint32_t h0114;
+        /* +h0118 */ uint32_t h0118;
+        /* +h011C */ uint32_t camera_mode; // 0=default, 1=?, 2=follow, 3=unlocked, 4=?, 5=?, 6=?, 7=?, 8=?, 9=?
         // ...
 
         float GetYaw()          const { return yaw; }
@@ -46,6 +68,8 @@ namespace GW {
         /// \brief This is not the FoV that GW uses to render
         /// see GW::Render::GetFieldOfView()
         float GetFieldOfView()  const { return field_of_view; }
+
+        bool IsCameraUnlocked() const { return camera_mode == 3; }
 
         void SetYaw(float _yaw) {
             yaw_to_go = _yaw;

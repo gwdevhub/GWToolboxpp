@@ -27,6 +27,10 @@ namespace GW {
         // Pattern find between a start and end address. If end is less than start, will scan backward.
         GWCA_API uintptr_t FindInRange(const char* pattern, const char* mask, int offset, DWORD start, DWORD end);
 
+        GWCA_API uintptr_t FindUseOfAddress(uintptr_t address, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+
+        GWCA_API uintptr_t FindUseOfString(const char* str, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+
         // Actual pattern finder.
         GWCA_API uintptr_t Find(const char* pattern, const char* mask = 0, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
 

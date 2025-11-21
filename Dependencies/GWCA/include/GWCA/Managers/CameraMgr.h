@@ -13,11 +13,6 @@ namespace GW {
         // ==== Camera ====
         GWCA_API Camera *GetCamera();
 
-        GWCA_API bool ForwardMovement(float amount, bool true_forward);
-        GWCA_API bool VerticalMovement(float amount);
-        GWCA_API bool RotateMovement(float angle);
-        GWCA_API bool SideMovement(float amount);
-
         // Change max zoom dist
         GWCA_API bool SetMaxDist(float dist = 900.0f);
 
@@ -29,7 +24,6 @@ namespace GW {
 
         GWCA_API float GetFieldOfView();
         GWCA_API float GetYaw();
-        GWCA_API float GetCurrentYaw();
 
         // ==== Camera patches ====
         // Unlock camera & return the new state of it

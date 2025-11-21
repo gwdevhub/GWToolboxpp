@@ -20,7 +20,6 @@ public:
     uintptr_t FindInRange(const char* pattern, const char* mask, int offset, uint32_t start, uint32_t end);
     uintptr_t Find(const char* pattern, const char* mask, int offset, GW::ScannerSection section = GW::ScannerSection::Section_TEXT);
 
-
     GW::ScannerSectionOffset sections[GW::ScannerSection::Section_Count] = {};
 private:
     const void *FileMapping = nullptr;
