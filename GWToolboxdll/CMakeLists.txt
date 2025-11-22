@@ -66,7 +66,8 @@ target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
     RestClient
     imgui
-    directxtex
+    Microsoft::DirectXTex
+	directxtexloader
     gwca
     steamworks_sdk
     easywsclient

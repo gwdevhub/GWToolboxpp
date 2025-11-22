@@ -25,7 +25,6 @@ add_compile_definitions(
     "NOMINMAX"
     "_WIN32_WINNT=_WIN32_WINNT_WIN7"
     "WIN32_LEAN_AND_MEAN"
-    "_HAS_ITERATOR_DEBUGGING=0"
 
     "GWTOOLBOXEXE_VERSION=\"${GWTOOLBOXEXE_VERSION}\""
     "GWTOOLBOXEXE_MODULE_VERSION=${GWTOOLBOXEXE_MODULE_VERSION}"
@@ -47,7 +46,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin/")
 
 include(gwca)
-include(directxtex)
+include(directxtexloader)
 include(easywsclient)
 include(imgui)
 include(gwtoolboxdll_plugins)
@@ -63,6 +62,7 @@ find_package(wolfssl CONFIG REQUIRED)
 find_package(minhook CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(ctre CONFIG REQUIRED)
+find_package(directxtex CONFIG REQUIRED)
 
 add_subdirectory(GWToolboxdll)
 add_subdirectory(Core)
