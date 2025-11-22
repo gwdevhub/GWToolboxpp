@@ -955,8 +955,6 @@ namespace {
         ImGui::Bullet();
         ImGui::Text("'/camera fog (on|off)' sets game fog effect on or off.");
         ImGui::Bullet();
-        ImGui::Text("'/camera speed <value>' sets the unlocked camera speed.");
-        ImGui::Bullet();
         ImGui::Text(chat_tab_syntax);
         ImGui::Bullet();
         ImGui::Text("'/chest' opens xunlai in outposts.");
@@ -2187,7 +2185,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdCamera)
         }
         else if (arg1 == L"unlock") {
             GW::CameraMgr::UnlockCam(true);
-            Log::Flash("Use Q/E, A/D, W/S, X/Z, R and arrows for camera movement");
         }
         else if (arg1 == L"fog") {
             if (argc == 3) {
@@ -2197,28 +2194,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdCamera)
                 }
                 else if (arg2 == L"off") {
                     GW::CameraMgr::SetFog(false);
-                }
-            }
-        }
-        else if (arg1 == L"speed") {
-            if (argc < 3) {
-                Instance().cam_speed = Instance().DEFAULT_CAM_SPEED;
-            }
-            else {
-                const std::wstring arg2 = TextUtils::ToLower(argv[2]);
-                if (arg2 == L"default") {
-                    Instance().cam_speed = Instance().DEFAULT_CAM_SPEED;
-                }
-                else {
-                    float speed = 0.0f;
-                    if (!TextUtils::ParseFloat(arg2.c_str(), &speed)) {
-                        Log::Error(
-                            "Invalid argument '%ls', please use a float value",
-                            argv[2]);
-                        return;
-                    }
-                    Instance().cam_speed = speed;
-                    Log::Flash("Camera speed is now %f", speed);
                 }
             }
         }
