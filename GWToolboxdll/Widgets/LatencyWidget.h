@@ -29,9 +29,6 @@ public:
 
     void SaveSettings(ToolboxIni* ini) override;
 
-    void Initialize() override;
-    void SignalTerminate() override;
-
     void DrawSettingsInternal() override;
 
     static ImColor GetColorForPing(uint32_t ping);

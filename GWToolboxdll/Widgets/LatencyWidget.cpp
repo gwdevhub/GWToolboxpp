@@ -11,6 +11,7 @@
 
 #include "Utils/FontLoader.h"
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Utilities/Hooker.h>
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
@@ -43,16 +44,34 @@ namespace {
     static_assert(sizeof(LatencyFrameContext) == 0x38);
 
     LatencyFrameContext* cached_frame_context = nullptr;
-    LatencyFrameContext* GetLatencyFrameContext() {
-        if (!cached_frame_context) {
-            cached_frame_context = (LatencyFrameContext*)GW::UI::GetFrameContext(GW::UI::GetFrameByLabel(L"DnStat"));
+
+    GW::UI::UIInteractionCallback OnLatencyFrame_UICallback_Func = 0, OnLatencyFrame_UICallback_Ret = 0;
+    void OnLatencyFrame_UICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
+    {
+        GW::Hook::EnterHook();
+        OnLatencyFrame_UICallback_Ret(message, wparam, lparam);
+        switch (message->message_id) {
+            case GW::UI::UIMessage::kDestroyFrame: {
+                cached_frame_context = 0;
+            } break;
+            default: {
+                if (!cached_frame_context && message->wParam)
+                    cached_frame_context = *(LatencyFrameContext**)message->wParam;
+            } break;
         }
-        return cached_frame_context;
+        GW::Hook::LeaveHook();
     }
 
-    void OnMapChange(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
-    {
-        cached_frame_context = nullptr;
+    LatencyFrameContext* GetLatencyFrameContext() {
+        if (OnLatencyFrame_UICallback_Func) return cached_frame_context;
+        const auto frame = GW::UI::GetFrameByLabel(L"DnStat");
+        if (!(frame && frame->frame_callbacks.size())) return 0;
+        OnLatencyFrame_UICallback_Func = frame->frame_callbacks[0].callback;
+
+        GW::Hook::CreateHook((void**)&OnLatencyFrame_UICallback_Func, OnLatencyFrame_UICallback, (void**)&OnLatencyFrame_UICallback_Ret);
+        GW::Hook::EnableHooks(OnLatencyFrame_UICallback_Func);
+        cached_frame_context = (LatencyFrameContext*)GW::UI::GetFrameContext(frame);
+        return cached_frame_context;
     }
 
     void CHAT_CMD_FUNC(CmdPing)
@@ -132,18 +151,6 @@ void LatencyWidget::SaveSettings(ToolboxIni* ini)
     SAVE_UINT(red_threshold);
     SAVE_BOOL(show_avg_ping);
     SAVE_FLOAT(text_size);
-}
-
-void LatencyWidget::Initialize()
-{
-    ToolboxWidget::Initialize();
-    GW::UI::RegisterUIMessageCallback(&ContextCallback_Entry, GW::UI::UIMessage::kMapChange, OnMapChange);
-}
-
-void LatencyWidget::SignalTerminate()
-{
-    GW::UI::RemoveUIMessageCallback(&ContextCallback_Entry, GW::UI::UIMessage::kMapChange);
-    ToolboxWidget::SignalTerminate();
 }
 
 void LatencyWidget::DrawSettingsInternal()
