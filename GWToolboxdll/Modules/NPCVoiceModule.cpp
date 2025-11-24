@@ -1034,10 +1034,9 @@ namespace {
         else {
             voice_name = "en-US-Studio-Q";
         }
-
         request_body["voice"] = nlohmann::json::object();
         request_body["voice"]["name"] = voice_name;
-        request_body["voice"]["languageCode"] = LanguageToAbbreviation(audio->language);
+        request_body["voice"]["languageCode"] = "en-US"; // Language code is tied to voice chosen
 
         // Audio config section
         request_body["audioConfig"] = nlohmann::json::object();
