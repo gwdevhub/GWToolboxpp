@@ -143,8 +143,7 @@ namespace Pathing {
         void GenerateTeleportGraph();
         MilePath::point CreatePoint(const GW::GamePos& pos);
 
-        bool HasLineOfSight(const point& start, const point& goal,
-                            std::vector<const AABB*>& open, std::vector<bool>& visited,
+        bool HasLineOfSight(const point& start, const point& goal, std::unique_ptr<const AABB*[]>& open, std::unique_ptr<bool[]>& visited,
                             std::vector<uint32_t>* blocking_ids = nullptr);
 
         const AABB* FindAABB(const GW::GamePos& pos);
@@ -235,7 +234,7 @@ namespace Pathing {
 
         void InsertPointIntoVisGraph(MilePath::point& point) const;
 
-        Error BuildPath(const MilePath::point& start, const MilePath::point& goal, const std::vector<MilePath::point::Id>& came_from);
+        Error BuildPath(const MilePath::point& start, const MilePath::point& goal, const std::unique_ptr<MilePath::point::Id[]>& came_from);
 
         inline float TeleporterHeuristic(const MilePath::point& start, const MilePath::point& goal) const;
 

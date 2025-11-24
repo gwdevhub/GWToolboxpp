@@ -608,7 +608,7 @@ namespace Pathing {
         }
     }
 
-    bool MilePath::HasLineOfSight(const point& start, const point& goal, std::vector<const AABB*>& , std::vector<bool>&,
+    bool MilePath::HasLineOfSight(const point& start, const point& goal, std::unique_ptr<const AABB*[]>& open, std::unique_ptr<bool[]>& visited,
                                   std::vector<uint32_t>* blocking_ids)
     {
         if (start.box && goal.box) {
@@ -632,11 +632,9 @@ namespace Pathing {
             }
             return true; // internal point are visible
         }
+        // Clear visited array
+        memset(&visited[0], 0, sizeof(visited[0]) * m_aabbs.size());
 
-            // Use unique_ptr for automatic cleanup
-        const size_t max_size = m_aabbs.size();
-        std::unique_ptr<const AABB*[]> open(new const AABB*[max_size]);
-        std::unique_ptr<bool[]> visited(new bool[max_size]()); // () for zero-init
 
         uint32_t open_count = 0;
         if (start.box) open[open_count++] = start.box;
@@ -776,8 +774,11 @@ namespace Pathing {
 
         // Function to be executed by each thread
         auto worker = [&](const size_t start, const size_t end) {
-            std::vector<const AABB*> open;
-            auto visited = std::vector<bool>(0xd00, false);
+
+            const size_t max_size = m_aabbs.size();
+            std::unique_ptr<const AABB*[]> open(new const AABB*[max_size]);
+            std::unique_ptr<bool[]> visited(new bool[max_size]()); // () for zero-init
+
             auto blocking_ids = std::vector<uint32_t>(0);
             auto local_updates = std::vector<VisGraphUpdate>();
             local_updates.reserve(vis_graph_size * 2);
@@ -809,7 +810,6 @@ namespace Pathing {
                         }
                     }
 
-                    open.reserve(m_aabbs.size()); // Add this reserve in the caller
                     if (HasLineOfSight(*p1, *p2, open, visited, &blocking_ids)) {
                         const float dist = sqrtf(sqdist);
 
@@ -850,10 +850,12 @@ namespace Pathing {
 
     void MilePath::insertTeleportPointIntoVisGraph(point& point, teleport_point_type type)
     {
-        std::vector<const AABB*> open;
-        std::vector<bool> visited;
+        const size_t max_size = m_aabbs.size();
+        std::unique_ptr<const AABB*[]> open(new const AABB*[max_size]);
+        std::unique_ptr<bool[]> visited(new bool[max_size]()); // () for zero-init
+        std::vector<uint32_t> blocking_ids;
         for (const auto& p : m_points) {
-            std::vector<uint32_t> blocking_ids;
+            blocking_ids.resize(0);
             if (!HasLineOfSight(p, point, open, visited, &blocking_ids)) continue;
 
             float distance = GetDistance(point.pos, p.pos);
@@ -935,8 +937,9 @@ namespace Pathing {
     {
         auto& vis_graph = m_mp->m_visGraph;
         const float sqrange = max_visibility_range * max_visibility_range;
-        std::vector<const AABB*> open;
-        std::vector<bool> visited;
+        const size_t max_size = m_mp->m_aabbs.size();
+        std::unique_ptr<const AABB*[]> open(new const AABB*[max_size]);
+        std::unique_ptr<bool[]> visited(new bool[max_size]()); // () for zero-init
         for (const auto& it : m_mp->m_points) {
             const float sqdistance = GetSquareDistance(it.pos, point.pos);
             if (sqdistance > sqrange)
@@ -953,8 +956,7 @@ namespace Pathing {
     }
 
     // https://github.com/Rikora/A-star/blob/master/src/AStar.cpp
-    Error AStar::BuildPath(const MilePath::point& start, const MilePath::point& goal,
-                           const std::vector<MilePath::point::Id>& came_from)
+    Error AStar::BuildPath(const MilePath::point& start, const MilePath::point& goal, const std::unique_ptr<MilePath::point::Id[]>& came_from)
     {
         MilePath::point current(goal);
 
@@ -1065,8 +1067,9 @@ namespace Pathing {
         }
 
         {
-            std::vector<const AABB*> open;
-            std::vector<bool> visited;
+            const size_t max_size = m_mp->m_aabbs.size();
+            std::unique_ptr<const AABB*[]> open(new const AABB*[max_size]);
+            std::unique_ptr<bool[]> visited(new bool[max_size]()); // () for zero-init
             std::vector<uint32_t> blocking_ids;
             if (m_mp->HasLineOfSight(start, goal, open, visited, &blocking_ids)) {
                 if (!std::ranges::any_of(blocking_ids, [&block](auto& id) { return block[id]; })) {
@@ -1094,7 +1097,7 @@ namespace Pathing {
         }
 
         std::vector<float> cost_so_far(m_mp->m_points.size() + 2, -INFINITY);
-        std::vector<MilePath::point::Id> came_from(m_mp->m_points.size() + 2);
+        std::unique_ptr<MilePath::point::Id[]> came_from(new MilePath::point::Id[m_mp->m_points.size() + 2]());
         MyPQueue open(m_mp->m_points.size() + 2);
 
         cost_so_far[start.id] = 0.0f;
