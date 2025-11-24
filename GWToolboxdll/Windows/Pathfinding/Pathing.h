@@ -101,7 +101,7 @@ namespace Pathing {
         class Portal {
         public:
             Portal(const GW::Vec2f& start, const GW::Vec2f& goal, const AABB* box1, const AABB* box2);
-            inline bool intersect(const GW::Vec2f& p1, const GW::Vec2f& p2) const;
+            __forceinline bool intersect(const GW::Vec2f& p1, const GW::Vec2f& p2) const;
 
             const AABB* m_box1,* m_box2;
             GW::Vec2f m_start, m_goal;
