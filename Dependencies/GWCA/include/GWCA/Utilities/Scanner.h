@@ -21,6 +21,8 @@ namespace GW {
         GWCA_API void Initialize(const char* moduleName = NULL);
         GWCA_API void Initialize(HMODULE hModule);
 
+        GWCA_API DWORD GetGameTlsIndex();
+
         // Find reference in GW memory to a specific assertion message
         GWCA_API uintptr_t FindAssertion(const char* assertion_file, const char* assertion_msg, uint32_t line_number, int offset);
 

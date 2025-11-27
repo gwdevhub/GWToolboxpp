@@ -7,6 +7,7 @@ namespace GW {
     namespace Constants {
         enum class Language;
         enum class MapID : uint32_t;
+        enum class InstanceType;
     }
     struct CharContext;
     GWCA_API CharContext* GetCharContext();
@@ -46,8 +47,8 @@ namespace GW {
         /* +h0224 */ GW::Constants::Language language;
         /* +h0228 */ GW::Constants::MapID observe_map_id;
         /* +h022C */ GW::Constants::MapID current_map_id;
-        /* +h0230 */ uint32_t observe_map_type;
-        /* +h0234 */ uint32_t current_map_type;
+        /* +h0230 */ Constants::InstanceType observe_map_type;
+        /* +h0234 */ Constants::InstanceType current_map_type;
         /* +h0238 */ uint32_t h0238[5];
         /* +h024C */ Array<ObserverMatch*> observer_matches;
         /* +h025C */ uint32_t h025C[17];

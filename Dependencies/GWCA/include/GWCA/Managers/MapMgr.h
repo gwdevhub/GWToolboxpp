@@ -108,9 +108,6 @@ namespace GW {
         // Get current region you are in.
         GWCA_API GW::Constants::ServerRegion GetRegion();
 
-        // Can be used to get the instance type for auth server request
-        GWCA_API MapTypeInstanceInfo* GetMapTypeInstanceInfo(RegionType map_type);
-
         // Get current language you are in.
         GWCA_API GW::Constants::Language GetLanguage();
 
