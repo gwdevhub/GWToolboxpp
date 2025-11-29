@@ -32,6 +32,8 @@
 #include <Windows/PconsWindow.h>
 #include <Utils/TextUtils.h>
 #include "HotkeysWindow.h"
+#include <sstream>
+#include <random>
 
 bool TBHotkey::show_active_in_header = true;
 bool TBHotkey::show_run_in_header = true;
@@ -417,7 +419,7 @@ bool TBHotkey::Draw(Op* op)
         ShowHeaderButtons();
         ImGui::Indent();
         ImGui::PushID(static_cast<int>(ui_id));
-        ImGui::PushItemWidth(-140.0f * scale);
+        ImGui::PushItemWidth(-250.0f * scale);
         // === Specific section ===
         hotkey_changed |= Draw();
 
@@ -773,29 +775,100 @@ void HotkeySendChat::Execute()
 HotkeyUseItem::HotkeyUseItem(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
-    item_id = static_cast<size_t>(ini->GetLongValue(section, "ItemID", 0));
     strcpy_s(name, ini->GetValue(section, "ItemName", ""));
+    
+    // Load comma-separated item IDs from ItemID field
+    const std::string item_ids_str_from_ini = ini->GetValue(section, "ItemID", "");
+    if (!item_ids_str_from_ini.empty()) {
+        strcpy_s(item_ids_str, item_ids_str_from_ini.c_str());
+        // Parse comma-separated IDs
+        std::vector<uint32_t> parsed_ids;
+        std::stringstream ss(item_ids_str_from_ini);
+        std::string token;
+        while (std::getline(ss, token, ',')) {
+            // Trim whitespace
+            token.erase(0, token.find_first_not_of(" \t\n\r"));
+            token.erase(token.find_last_not_of(" \t\n\r") + 1);
+            if (!token.empty()) {
+                try {
+                    uint32_t id = static_cast<uint32_t>(std::stoul(token));
+                    if (id > 0) {
+                        parsed_ids.push_back(id);
+                    }
+                } catch (...) {
+                    // Invalid number, skip
+                }
+            }
+        }
+        item_ids = parsed_ids;
+    }
+    
+    // Additional fallback: if no items loaded and there might be old data, try to migrate
+    if (item_ids.empty()) {
+        // Check if there's any legacy data that needs migration
+        uint32_t old_item_id = static_cast<uint32_t>(ini->GetLongValue(section, "item_id", 0));
+        if (old_item_id > 0) {
+            item_ids.push_back(old_item_id);
+            snprintf(item_ids_str, _countof(item_ids_str), "%u", old_item_id);
+        }
+    }
 }
 
 void HotkeyUseItem::Save(ToolboxIni* ini, const char* section) const
 {
     TBHotkey::Save(ini, section);
-    ini->SetLongValue(section, "ItemID", item_id);
+    ini->SetValue(section, "ItemID", item_ids_str);
     ini->SetValue(section, "ItemName", name);
 }
 
 int HotkeyUseItem::Description(char* buf, const size_t bufsz)
 {
     if (!name[0]) {
-        return snprintf(buf, bufsz, "Use #%d", item_id);
+        if (item_ids.size() == 1) {
+            return snprintf(buf, bufsz, "Use #%u", item_ids[0]);
+        } else {
+            return snprintf(buf, bufsz, "Use random item (%zu IDs)", item_ids.size());
+        }
     }
-    return snprintf(buf, bufsz, "Use %s", name);
+    if (item_ids.size() == 1) {
+        return snprintf(buf, bufsz, "Use %s", name);
+    } else {
+        return snprintf(buf, bufsz, "Use random %s (%zu IDs)", name, item_ids.size());
+    }
 }
 
 bool HotkeyUseItem::Draw()
 {
-    bool hotkey_changed = ImGui::InputInt("Item Model ID", (int*)&item_id);
-    hotkey_changed |= ImGui::InputText("Item Name", name, _countof(name));
+    bool hotkey_changed = false;
+    
+    // Input for comma-separated item IDs
+    if (ImGui::InputText("Item Model IDs", item_ids_str, _countof(item_ids_str))) {
+        // Parse the input string
+        std::vector<uint32_t> parsed_ids;
+        std::stringstream ss(item_ids_str);
+        std::string token;
+        while (std::getline(ss, token, ',')) {
+            // Trim whitespace
+            token.erase(0, token.find_first_not_of(" \t\n\r"));
+            token.erase(token.find_last_not_of(" \t\n\r") + 1);
+            if (!token.empty()) {
+                try {
+                    uint32_t id = static_cast<uint32_t>(std::stoul(token));
+                    if (id > 0) {
+                        parsed_ids.push_back(id);
+                    }
+                } catch (...) {
+                    // Invalid number, skip
+                }
+            }
+        }
+        item_ids = parsed_ids;
+        hotkey_changed = true;
+    }
+    
+    ImGui::ShowHelp("Enter item model IDs, separated by commas (e.g., 1234,5678,9012) to use a random one");
+    
+    hotkey_changed |= ImGui::InputText("Hotkey name", name, _countof(name));
     hotkey_changed |= ImGui::Checkbox("Display error message on failure", &show_error_on_failure);
     return hotkey_changed;
 }
@@ -805,19 +878,29 @@ void HotkeyUseItem::Execute()
     if (!CanUse()) {
         return;
     }
-    if (item_id == 0) {
+    if (item_ids.empty()) {
         return;
     }
 
-    bool used = GW::Items::UseItemByModelId(item_id, 1, 4);
+    // Pick a random item ID from the list
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<size_t> dist(0, item_ids.size() - 1);
+    uint32_t selected_item_id = item_ids[dist(gen)];
+
+    bool used = GW::Items::UseItemByModelId(selected_item_id, 1, 4);
     if (!used &&
         GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-        used = GW::Items::UseItemByModelId(item_id, 8, 16);
+        used = GW::Items::UseItemByModelId(selected_item_id, 8, 16);
     }
 
     if (!used && show_error_on_failure) {
         if (name[0] == '\0') {
-            Log::Error("Item #%d not found!", item_id);
+            if (item_ids.size() == 1) {
+                Log::Error("Item #%u not found!", selected_item_id);
+            } else {
+                Log::Error("Random item #%u (from %zu IDs) not found!", selected_item_id, item_ids.size());
+            }
         }
         else {
             Log::Error("%s not found!", name);

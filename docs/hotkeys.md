@@ -36,7 +36,13 @@ The other controls are for setting up the parameters of the hotkey, and are of c
 Select a channel to send the message to, and type your message. You can use Guild Wars commands (such as `/resign` or `/stuck`), as well as Toolbox commands (such as `/pcons` or `/cam unlock`).
 
 ## Use Item
-Specify the item's Model ID and optionally a name to help you remember what the item is. This works for consumable items, including those in your Xunlai storage when you're in an outpost.
+Specify the item's Model ID(s) and optionally a name for the hotkey. This works for consumable items, including those in your Xunlai storage when you're in an outpost.
+
+- **Single Item:** Enter one Model ID (e.g., `32529`)
+- **Multiple Items:** Enter comma-separated Model IDs (e.g., `32529,32528,22754`) to randomly select one when the hotkey triggers
+- **Hotkey name:** Optional display name for the hotkey
+
+When multiple item IDs are provided, the hotkey will randomly select and use one of the specified items each time it's activated.
 
 ## Drop or Use Buff
 This has a dual function: if you are currently maintaining the selected enchantment, you will dismiss it. Otherwise, you will cast it on the target. You can choose from Recall, Unyielding Aura, Holy Veil, or specify a custom skill ID.
