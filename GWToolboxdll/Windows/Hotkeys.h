@@ -172,7 +172,8 @@ public:
 // hotkey to use an item
 // will use the item in explorable areas, and display a warning with given name if not found
 class HotkeyUseItem : public TBHotkey {
-    UINT item_id = 0;
+    std::vector<uint32_t> item_ids{};
+    char item_ids_str[256]{}; // Store comma-separated string for UI
     char name[140]{};
 
 public:
@@ -183,7 +184,7 @@ public:
 
     void Save(ToolboxIni* ini, const char* section) const override;
 
-    bool CanUse() override { return TBHotkey::CanUse() && item_id != 0; }
+    bool CanUse() override { return TBHotkey::CanUse() && !item_ids.empty(); }
 
     bool Draw() override;
     int Description(char* buf, size_t bufsz) override;
