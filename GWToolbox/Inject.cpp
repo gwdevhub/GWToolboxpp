@@ -74,7 +74,7 @@ static void GetGuildWarsProcesses(std::vector<Process>& processes)
     GetProcesses(processes, L"Gw.exe");
 
     std::vector<Process> buffer;
-    GetProcessesFromWindowClass(buffer, L"ArenaNet_Dx_Window_Class");
+    GetProcessesFromWindowClass(buffer, L"ArenaNet_Dialog_Class");
 
     for (Process& process : buffer) {
         const DWORD pid = process.GetProcessId();
