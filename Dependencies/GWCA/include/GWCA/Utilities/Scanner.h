@@ -33,6 +33,14 @@ namespace GW {
 
         GWCA_API uintptr_t FindUseOfString(const char* str, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
 
+        GWCA_API uintptr_t FindNthUseOfString(const char* str, size_t nth, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+
+        GWCA_API uintptr_t FindUseOfString(const wchar_t* str, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+
+        GWCA_API uintptr_t FindNthUseOfString(const wchar_t* str, size_t nth, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+
+        GWCA_API uintptr_t FindNthUseOfAddress(uintptr_t address, size_t nth = 0, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+
         // Actual pattern finder.
         GWCA_API uintptr_t Find(const char* pattern, const char* mask = 0, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
 

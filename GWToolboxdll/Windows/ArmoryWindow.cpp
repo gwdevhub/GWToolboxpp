@@ -1257,22 +1257,10 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
 void ArmoryWindow::Initialize()
 {
     ToolboxWindow::Initialize();
-    UpdateWeaponAnimation_Func = (UpdateWeaponAnimation_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\xc6\x86\xb6\x01\x00\x00\x04", "xxxxxxx", 0), 0xfff);
+    UpdateWeaponAnimation_Func = (UpdateWeaponAnimation_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\xc6\x86\xba\x01\x00\x00\x04", "xxxxxxx", 0), 0xfff);
     
-    uintptr_t address = GW::Scanner::Find("\x81\xc6\xa0\x00\x00\x00\x83\xf8\x17", "xxxxxxxxx", -0xb);
-    if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address, GW::ScannerSection::Section_RDATA)) {
-        address = *(uintptr_t*)address;
-        address -= 0xC;
-        costume_data_ptr = (CostumeData*)address;
-    }
-    address = GW::Scanner::Find("\x83\xc1\x28\x83\xf8\x3b", "xxxxxx", -0xf);
-    if (address) {
-        address = *(uintptr_t*)address;
-        address -= 0x28;
-        if (GW::Scanner::IsValidPtr(address, GW::ScannerSection::Section_RDATA)) {
-            festival_hat_data_ptr = (FestivalHatData*)address;
-        }
-    }
+    costume_data_ptr = (CostumeData*)GW::Scanner::Find("\xe5\x09\x00\x00\xf0\x09\x00\x00", "xxxxxxxx", 0, GW::ScannerSection::Section_RDATA);
+    festival_hat_data_ptr = (FestivalHatData*)GW::Scanner::Find("\xe3\x09\x00\x00\xef\x09\x00\x00", "xxxxxxxx", 0, GW::ScannerSection::Section_RDATA);
 
 #ifdef _DEBUG 
     ASSERT(UpdateWeaponAnimation_Func);

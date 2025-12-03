@@ -148,60 +148,67 @@ namespace GW {
             uint32_t field22_0x58;
             uint32_t field23_0x5c;
             uint32_t field24_0x60;
-            uint32_t field25_0x64;
-            uint32_t field26_0x68;
-            uint32_t field27_0x6c;
-            uint32_t field28_0x70;
-            uint32_t field29_0x74;
-            uint32_t field30_0x78;
-            GW::Array<void*> field31_0x7c;
-            uint32_t field32_0x8c;
-            uint32_t field33_0x90;
-            uint32_t field34_0x94;
-            uint32_t field35_0x98;
-            uint32_t field36_0x9c;
+            uint32_t field24a_0x64;
+            uint32_t field24b_0x68;
+            uint32_t field25_0x6c;
+            uint32_t field26_0x70;
+            uint32_t field27_0x74;
+            uint32_t field28_0x78;
+            uint32_t field29_0x7c;
+            uint32_t field30_0x80;
+            GW::Array<void*> field31_0x84;
+            uint32_t field32_0x94;
+            uint32_t field33_0x98;
+            uint32_t field34_0x9c;
+            uint32_t field35_0xa0;
+            uint32_t field36_0xa4;
             GW::Array<FrameInteractionCallback> frame_callbacks;
             uint32_t child_offset_id; // Offset of this child in relation to its parent
             uint32_t frame_id; // Offset in the global frame array
-            uint32_t field40_0xb8;
-            uint32_t field41_0xbc;
-            uint32_t field42_0xc0;
-            uint32_t field43_0xc4;
-            uint32_t field44_0xc8;
-            uint32_t field45_0xcc;
+            uint32_t field40_0xc0;
+            uint32_t field41_0xc4;
+            uint32_t field42_0xc8;
+            uint32_t field43_0xcc;
+            uint32_t field44_0xd0;
+            uint32_t field45_0xd4;
             FramePosition position;
-            uint32_t field63_0x114;
-            uint32_t field64_0x118;
-            uint32_t field65_0x11c;
+            uint32_t field63_0x11c;
+            uint32_t field64_0x120;
+            uint32_t field65_0x124;
             FrameRelation relation;
-            uint32_t field73_0x13c;
-            uint32_t field74_0x140;
-            uint32_t field75_0x144;
-            uint32_t field76_0x148;
-            uint32_t field77_0x14c;
-            uint32_t field78_0x150;
-            uint32_t field79_0x154;
-            uint32_t field80_0x158;
-            uint32_t field81_0x15c;
-            uint32_t field82_0x160;
-            uint32_t field83_0x164;
-            uint32_t field84_0x168;
-            uint32_t field85_0x16c;
-            uint32_t field86_0x170;
-            uint32_t field87_0x174;
-            uint32_t field88_0x178;
-            uint32_t field89_0x17c;
-            uint32_t field90_0x180;
+            uint32_t field73_0x144;
+            uint32_t field74_0x148;
+            uint32_t field75_0x14c;
+            uint32_t field76_0x150;
+            uint32_t field77_0x154;
+            uint32_t field78_0x158;
+            uint32_t field79_0x15c;
+            uint32_t field80_0x160;
+            uint32_t field81_0x164;
+            uint32_t field82_0x168;
+            uint32_t field83_0x16c;
+            uint32_t field84_0x170;
+            uint32_t field85_0x174;
+            uint32_t field86_0x178;
+            uint32_t field87_0x17c;
+            uint32_t field88_0x180;
+            uint32_t field89_0x184;
+            uint32_t field90_0x188;
             uint32_t frame_state;
-            uint32_t field92_0x188;
-            uint32_t field93_0x18c;
-            uint32_t field94_0x190;
-            uint32_t field95_0x194;
-            uint32_t field96_0x198;
-            uint32_t field97_0x19c;
-            uint32_t field98_0x1a0;
+            uint32_t field92_0x190;
+            uint32_t field93_0x194;
+            uint32_t field94_0x198;
+            uint32_t field95_0x19c;
+            uint32_t field96_0x1a0;
+            uint32_t field97_0x1a4;
+            uint32_t field98_0x1a8;
             TooltipInfo* tooltip_info;
-            uint32_t field100_0x1a8;
+            uint32_t field100_0x1b0;
+            uint32_t field101_0x1b4;
+            uint32_t field102_0x1b8;
+            uint32_t field103_0x1bc;
+            uint32_t field104_0x1c0;
+            uint32_t field105_0x1c4;
 
             bool IsCreated() const {
                 return (frame_state & 0x4) != 0;
@@ -212,14 +219,13 @@ namespace GW {
             bool IsHidden() const {
                 return (frame_state & 0x200) != 0;
             }
-
             bool IsDisabled() const {
                 return (frame_state & 0x10) != 0;
             }
         };
-        static_assert(sizeof(Frame) == 0x1ac);
+        static_assert(sizeof(Frame) == 0x1c8);
 
-        static_assert(offsetof(Frame, relation) == 0x120);
+        static_assert(offsetof(Frame, relation) == 0x128);
 
         struct AgentNameTagInfo {
             /* +h0000 */ uint32_t agent_id;
