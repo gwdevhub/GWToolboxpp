@@ -69,7 +69,10 @@ namespace {
         "CameraRotationSpeed",
         "ScreenBorderless",
         "VolMaster",
-        "ClockMode"
+        "ClockMode",
+        "MobileUiScale",
+        "GamepadCursorSpeed",
+        "LastLoginMethod"
     };
     static_assert(_countof(number_pref_names) == std::to_underlying(GW::UI::NumberPreference::Count));
 

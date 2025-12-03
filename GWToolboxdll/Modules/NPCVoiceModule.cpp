@@ -56,7 +56,7 @@ namespace {
 
     GW::Constants::Language GetAudioLanguage()
     {
-        return (GW::Constants::Language)GW::UI::GetPreference(GW::UI::NumberPreference::AudioLanguage);
+        return (GW::Constants::Language)GW::UI::GetPreference(GW::UI::NumberPreference::LanguageAudio);
     }
 
         // Add OpenAI TTS function
@@ -154,8 +154,8 @@ namespace {
     uint32_t GetDialogVolume(bool cache = true) {
         if (cache && cached_dialog_volume != 0xff) 
             return cached_dialog_volume;
-        const auto d1 = GW::UI::GetPreference(GW::UI::NumberPreference::DialogVolume);
-        const auto d2 = GW::UI::GetPreference(GW::UI::NumberPreference::MasterVolume);
+        const auto d1 = GW::UI::GetPreference(GW::UI::NumberPreference::VolDialog);
+        const auto d2 = GW::UI::GetPreference(GW::UI::NumberPreference::VolMaster);
         return cached_dialog_volume = std::min(d1, d2), cached_dialog_volume;
     }
     float cached_system_volume = 1.f;

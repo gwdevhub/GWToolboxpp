@@ -227,7 +227,7 @@ void CrashHandler::Initialize()
 {
     ToolboxModule::Initialize();
     GW::RegisterPanicHandler(GWCAPanicHandler, nullptr);
-    HandleCrash_Func = (HandleCrash_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindUseOfString("DbgHelp.dll"),0xfff);
+    HandleCrash_Func = (HandleCrash_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindNthUseOfString(L"Crash.dmp",1), 0xfff);
     if (HandleCrash_Func) {
         GW::Hook::CreateHook((void**)&HandleCrash_Func, OnGWCrash, (void**)&RetHandleCrash);
         GW::Hook::EnableHooks(HandleCrash_Func);

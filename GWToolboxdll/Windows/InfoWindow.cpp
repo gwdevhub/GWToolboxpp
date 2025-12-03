@@ -172,8 +172,6 @@ namespace {
                 InfoField("Region", "%d", map_info->region);
                 InfoField("Type", "%d", map_info->type);
                 InfoField("Mission Complete?", "%d", ToolboxUtils::GetMissionState(GW::Map::GetMapID(), GW::PartyMgr::GetIsPartyInHardMode()));
-                const auto instance_info = GW::Map::GetMapTypeInstanceInfo(map_info->type);
-                InfoField("Instance Info Type", "%d", instance_info ? instance_info->request_instance_map_type : 0);
                 InfoField("Flags", "0x%X", map_info->flags);
                 InfoField("Thumbnail ID", "%d", map_info->thumbnail_id);
                 const auto m = GW::GetMapContext();

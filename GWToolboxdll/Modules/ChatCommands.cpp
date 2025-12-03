@@ -589,17 +589,17 @@ namespace {
                 {GW::UI::EnumPreference::Reflections, GW::EncStrings::Reflections},
                 {GW::UI::EnumPreference::ShadowQuality, GW::EncStrings::ShadowQuality},
                 {GW::UI::EnumPreference::InterfaceSize, GW::EncStrings::InterfaceSize},
-                {GW::UI::NumberPreference::TextureQuality, GW::EncStrings::TextureQuality},
-                {GW::UI::NumberPreference::TextLanguage, GW::EncStrings::TextLanguage},
-                {GW::UI::NumberPreference::AudioLanguage, GW::EncStrings::AudioLanguage},
+                {GW::UI::NumberPreference::TextureLod, GW::EncStrings::TextureQuality},
+                {GW::UI::NumberPreference::Language, GW::EncStrings::TextLanguage},
+                {GW::UI::NumberPreference::LanguageAudio, GW::EncStrings::AudioLanguage},
                 {GW::UI::NumberPreference::ClockMode, GW::EncStrings::InGameClock},
                 {GW::UI::FlagPreference::ChannelAlliance, GW::EncStrings::ChannelAlliance},
                 {GW::UI::FlagPreference::ChannelGuild, GW::EncStrings::ChannelGuild},
                 {GW::UI::FlagPreference::ChannelGroup, GW::EncStrings::ChannelTeam},
                 {GW::UI::FlagPreference::ChannelEmotes, GW::EncStrings::ChannelEmotes},
                 {GW::UI::FlagPreference::ChannelTrade, GW::EncStrings::ChannelTrade},
-                {GW::UI::NumberPreference::MasterVolume, GW::EncStrings::MasterVolume},
-                {GW::UI::NumberPreference::MusicVolume, GW::EncStrings::MusicVolume},
+                {GW::UI::NumberPreference::VolMaster, GW::EncStrings::MasterVolume},
+                {GW::UI::NumberPreference::VolMusic, GW::EncStrings::MusicVolume},
                 {GW::UI::FlagPreference::DisableMouseWalking, GW::EncStrings::DisableMouseWalking},
                 {GW::UI::FlagPreference::AlwaysShowFoeNames, L"\x108\x107Show Foe Names\x1"},
                 {GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1"},
@@ -3174,28 +3174,28 @@ void CHAT_CMD_FUNC(ChatCommands::CmdVolume)
     GW::UI::NumberPreference pref;
     switch (argc) {
         case 2:
-            pref = GW::UI::NumberPreference::MasterVolume;
+            pref = GW::UI::NumberPreference::VolMaster;
             value = argv[1];
             break;
         case 3: {
             const wchar_t* pref_str = argv[1];
             if (wcscmp(pref_str, L"master") == 0) {
-                pref = GW::UI::NumberPreference::MasterVolume;
+                pref = GW::UI::NumberPreference::VolMaster;
             }
             else if (wcscmp(pref_str, L"music") == 0) {
-                pref = GW::UI::NumberPreference::MusicVolume;
+                pref = GW::UI::NumberPreference::VolMusic;
             }
             else if (wcscmp(pref_str, L"background") == 0) {
-                pref = GW::UI::NumberPreference::BackgroundVolume;
+                pref = GW::UI::NumberPreference::VolBackground;
             }
             else if (wcscmp(pref_str, L"effects") == 0) {
-                pref = GW::UI::NumberPreference::EffectsVolume;
+                pref = GW::UI::NumberPreference::VolEffect;
             }
             else if (wcscmp(pref_str, L"dialog") == 0) {
-                pref = GW::UI::NumberPreference::DialogVolume;
+                pref = GW::UI::NumberPreference::VolDialog;
             }
             else if (wcscmp(pref_str, L"ui") == 0) {
-                pref = GW::UI::NumberPreference::UIVolume;
+                pref = GW::UI::NumberPreference::VolUi;
             }
             else {
                 return Log::Error(syntax);
