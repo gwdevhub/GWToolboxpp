@@ -179,10 +179,10 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
         UserStreamParam->UserStreamArray = s;
     }
     if (pExceptionPointers) {
-        ExpParam = new MINIDUMP_EXCEPTION_INFORMATION;
+        /* ExpParam = new MINIDUMP_EXCEPTION_INFORMATION;
         ExpParam->ThreadId = ThreadId;
         ExpParam->ExceptionPointers = pExceptionPointers;
-        ExpParam->ClientPointers = false;
+        ExpParam->ClientPointers = false;*/
     }
     const BOOL success = MiniDumpWriteDump(
         GetCurrentProcess(), ProcessId, hFile,

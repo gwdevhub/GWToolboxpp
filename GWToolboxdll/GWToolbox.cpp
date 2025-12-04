@@ -32,7 +32,6 @@
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/ItemDescriptionHandler.h>
-#include <Modules/LoginModule.h>
 #include <Modules/Updater.h>
 #include <Windows/SettingsWindow.h>
 
@@ -1099,7 +1098,6 @@ void GWToolbox::UpdateInitialising(float)
     ToggleModule(ChatSettings::Instance());
     ToggleModule(InventoryManager::Instance());
     ToggleModule(HallOfMonumentsModule::Instance());
-    ToggleModule(LoginModule::Instance());
     ToggleModule(AprilFools::Instance());
     ToggleModule(SettingsWindow::Instance());
 

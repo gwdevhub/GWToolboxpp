@@ -65,11 +65,10 @@ namespace {
     GW::UI::UIInteractionCallback OnPartyWindowHealthBars_UICallback_Ret = 0, OnPartyWindowHealthBars_UICallback_Func = 0;
     void __cdecl OnPartyWindowHealthBars_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam) {
         GW::Hook::EnterHook();
-        switch (static_cast<uint32_t>(message->message_id)) {
-        case 0xb:
-        case 0x13:
-        case 0x30:
-        case 0x33:
+        switch (message->message_id) {
+        case GW::UI::UIMessage::kDestroyFrame:
+        case GW::UI::UIMessage::kFrameMessage_0x15:
+        case GW::UI::UIMessage::kSetLayout:
             party_window_health_bars = nullptr; // Forces a recalculation
             break;
         }

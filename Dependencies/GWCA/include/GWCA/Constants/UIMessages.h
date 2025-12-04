@@ -106,9 +106,9 @@ namespace GW {
             kFrameMessage_0x44 = 0x51,
             kFrameMessage_0x45,
             kFrameMessage_0x46,
-            kFrameMessage_0x47,             // 0x47, Multiple uses depending on frame
+            kFrameMessage_0x47 = 0x55,             // 0x47, Multiple uses depending on frame
             kFrameMessage_0x48,             // 0x48, Multiple uses depending on frame
-            kFrameMessage_0x49 = 0x57,             // 0x49, Multiple uses depending on frame
+            kFrameMessage_0x49,             // 0x49, Multiple uses depending on frame
             kFrameMessage_0x4a,             // 0x4a, Multiple uses depending on frame
             kFrameMessage_0x4b,             // 0x4b, Multiple uses depending on frame
             kFrameMessage_0x4c,             // 0x4c, Multiple uses depending on frame

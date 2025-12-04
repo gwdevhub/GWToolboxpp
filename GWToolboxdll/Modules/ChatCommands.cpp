@@ -1259,11 +1259,6 @@ void ChatCommands::DrawHelp()
 
 void ChatCommands::DrawSettingsInternal()
 {
-    ImGui::Text("'/cam unlock' options");
-    ImGui::Indent();
-    ImGui::Checkbox("Fix height when moving forward", &forward_fix_z);
-    ImGui::InputFloat("Camera speed", &cam_speed);
-    ImGui::Unindent();
     std::string preview = "Select...";
     switch (default_title_id) {
         case CMDTITLE_KEEP_CURRENT:
