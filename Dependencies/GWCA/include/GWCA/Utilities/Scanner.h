@@ -21,11 +21,25 @@ namespace GW {
         GWCA_API void Initialize(const char* moduleName = NULL);
         GWCA_API void Initialize(HMODULE hModule);
 
+        GWCA_API DWORD GetGameTlsIndex();
+
         // Find reference in GW memory to a specific assertion message
         GWCA_API uintptr_t FindAssertion(const char* assertion_file, const char* assertion_msg, uint32_t line_number, int offset);
 
         // Pattern find between a start and end address. If end is less than start, will scan backward.
         GWCA_API uintptr_t FindInRange(const char* pattern, const char* mask, int offset, DWORD start, DWORD end);
+
+        GWCA_API uintptr_t FindUseOfAddress(uintptr_t address, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+
+        GWCA_API uintptr_t FindUseOfString(const char* str, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+
+        GWCA_API uintptr_t FindNthUseOfString(const char* str, size_t nth, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+
+        GWCA_API uintptr_t FindUseOfString(const wchar_t* str, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+
+        GWCA_API uintptr_t FindNthUseOfString(const wchar_t* str, size_t nth, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
+
+        GWCA_API uintptr_t FindNthUseOfAddress(uintptr_t address, size_t nth = 0, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);
 
         // Actual pattern finder.
         GWCA_API uintptr_t Find(const char* pattern, const char* mask = 0, int offset = 0, ScannerSection section = ScannerSection::Section_TEXT);

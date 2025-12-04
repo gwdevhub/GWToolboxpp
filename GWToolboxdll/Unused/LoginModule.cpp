@@ -432,7 +432,8 @@ void LoginModule::Initialize()
 
     PortalAccountLogin_Func = (PortalAccountLogin_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\xc7\x45\xe8\x38\x00\x00\x00\x89\x4d\xf0", "xxxxxxxxxx"));
     if (!PortalAccountLogin_Func) {
-        return InitialiationFailure("Failed to initialize PortalAccountLogin_Func");
+        Log::Warning("The fix to pre-select a character isn't working; portal login process may have changed.\nThis was here to allow reconnect dialog if you're on a diff char, check is this is fixed in vanilla!");
+        //return InitialiationFailure("Failed to initialize PortalAccountLogin_Func");
     }
 
     GetStringParameter_Func = (GetStringParameter_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("Param.cpp", "string - PARAM_STRING_FIRST < (sizeof(s_strings) / sizeof((s_strings)[0]))",0,0));
@@ -440,9 +441,12 @@ void LoginModule::Initialize()
         return InitialiationFailure("Failed to initialize GetStringParameter_Func");
     }
     {
-        int res = GW::Hook::CreateHook((void**)&PortalAccountLogin_Func, OnPortalAccountLogin, (void**)&PortalAccountLogin_Ret);
-        if (res == -1) {
-            return InitialiationFailure("Failed to hook PortalAccountLogin_Func");
+        int res = 0;
+        if (PortalAccountLogin_Func) {
+            res = GW::Hook::CreateHook((void**)&PortalAccountLogin_Func, OnPortalAccountLogin, (void**)&PortalAccountLogin_Ret);
+            if (res == -1) {
+                return InitialiationFailure("Failed to hook PortalAccountLogin_Func");
+            }
         }
 
         res = GW::Hook::CreateHook((void**)&GetStringParameter_Func, OnGetStringParameter, (void**)&GetStringParameter_Ret);
@@ -536,9 +540,9 @@ void LoginModule::DrawSettingsInternal() {
 void LoginModule::Terminate()
 {
 
-    GW::Hook::RemoveHook(GetStringParameter_Func);
-    GW::Hook::RemoveHook(PortalAccountLogin_Func);
-    GW::Hook::RemoveHook(PreGameScene_UICallback_Func);
+    if(GetStringParameter_Func) GW::Hook::RemoveHook(GetStringParameter_Func);
+    if(PortalAccountLogin_Func) GW::Hook::RemoveHook(PortalAccountLogin_Func);
+    if(PreGameScene_UICallback_Func) GW::Hook::RemoveHook(PreGameScene_UICallback_Func);
 }
 
 void LoginModule::Update(float)

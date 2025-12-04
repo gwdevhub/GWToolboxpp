@@ -241,9 +241,7 @@ void GwDatTextureModule::Initialize()
 
     AllocateImage_func = (AllocateImage_pt)Scanner::ToFunctionStart(Scanner::Find("\x7c\x11\x6a\x5c", "xxxx"));
 
-    address = Scanner::ToFunctionStart(Scanner::Find("\x68\xf2\x0c\x00\x00", "xxxxx"));
-    Depalletize_func = (Depalletize_pt)address;
-
+    Depalletize_func = (Depalletize_pt)Scanner::ToFunctionStart(Scanner::FindNthUseOfString("destPalette", 1));
 
     Log::Log("[GwDatTextureModule] FileHashToRecObj_func = %p", FileHashToRecObj_func);
     Log::Log("[GwDatTextureModule] ReadFileBuffer_Func = %p", ReadFileBuffer_Func);

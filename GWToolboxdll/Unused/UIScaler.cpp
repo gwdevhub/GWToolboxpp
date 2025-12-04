@@ -113,8 +113,12 @@ void UIScaler::Initialize()
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"setuiscale", CmdSetUIScale);
     initialised = true;
     #ifdef _DEBUG
-        ASSERT(GetUIScaleFloat_Func);
-        ASSERT(GetFontMetrics_Func);
+        //ASSERT(GetUIScaleFloat_Func);
+        //ASSERT(GetFontMetrics_Func);
+    if (!GetUIScaleFloat_Func) {
+        GetUIScaleFloat_Func || (Log::Warning("GetUIScaleFloat_Func missing"), true);
+        GetFontMetrics_Func || (Log::Warning("GetFontMetrics_Func missing"),true);
+    }
     #endif
     UIScaleUpdated();
 }

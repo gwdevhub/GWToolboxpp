@@ -1060,7 +1060,7 @@ namespace {
         switch (message_id) {
         case GW::UI::UIMessage::kPreferenceValueChanged:
             const auto packet = (GW::UI::UIPacket::kPreferenceValueChanged*)wparam;
-            if (packet->preference_id == GW::UI::NumberPreference::TextLanguage)
+            if (packet->preference_id == GW::UI::NumberPreference::Language)
                 OnLanguageChanged((GW::Constants::Language)packet->new_value);
         }
     }

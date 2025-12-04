@@ -109,6 +109,10 @@ namespace GW {
         // Note: returns -1 if it doesn't know yet
         GWCA_API int GetIsFullscreen();
 
+        GWCA_API bool SetFog(bool enabled);
+
+        GWCA_API HWND GetWindowHandle();
+
         GWCA_API IDirect3DDevice9* GetDevice();
 
         GWCA_API bool GetIsInRenderLoop();

@@ -3032,7 +3032,7 @@ namespace GW {
             Weapons_of_Three_Forges,
             Vow_of_Revolution,
             Heroic_Refrain,
-            Count = 0xD69
+            Count = 0xD6a
         };
 
         enum class SkillType {

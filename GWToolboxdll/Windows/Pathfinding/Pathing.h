@@ -101,7 +101,7 @@ namespace Pathing {
         class Portal {
         public:
             Portal(const GW::Vec2f& start, const GW::Vec2f& goal, const AABB* box1, const AABB* box2);
-            inline bool intersect(const GW::Vec2f& p1, const GW::Vec2f& p2) const;
+            __forceinline bool intersect(const GW::Vec2f& p1, const GW::Vec2f& p2) const;
 
             const AABB* m_box1,* m_box2;
             GW::Vec2f m_start, m_goal;
@@ -143,8 +143,7 @@ namespace Pathing {
         void GenerateTeleportGraph();
         MilePath::point CreatePoint(const GW::GamePos& pos);
 
-        bool HasLineOfSight(const point& start, const point& goal,
-                            std::vector<const AABB*>& open, std::vector<bool>& visited,
+        bool HasLineOfSight(const point& start, const point& goal, std::unique_ptr<const AABB*[]>& open, std::unique_ptr<bool[]>& visited,
                             std::vector<uint32_t>* blocking_ids = nullptr);
 
         const AABB* FindAABB(const GW::GamePos& pos);
@@ -235,7 +234,7 @@ namespace Pathing {
 
         void InsertPointIntoVisGraph(MilePath::point& point) const;
 
-        Error BuildPath(const MilePath::point& start, const MilePath::point& goal, const std::vector<MilePath::point::Id>& came_from);
+        Error BuildPath(const MilePath::point& start, const MilePath::point& goal, const std::unique_ptr<MilePath::point::Id[]>& came_from);
 
         inline float TeleporterHeuristic(const MilePath::point& start, const MilePath::point& goal) const;
 

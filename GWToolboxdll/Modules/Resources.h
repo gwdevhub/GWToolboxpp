@@ -105,6 +105,7 @@ public:
     // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetItemImage(const std::wstring& item_name);
+    static bool SaveTextureToFile(IDirect3DTexture9* texture, const std::filesystem::path& file_path);
     // Fetches File page from GWW, parses out the image for the file given
     // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
@@ -146,6 +147,12 @@ public:
 
     // Stops the worker thread once it's done with the current jobs.
     void EndLoading() const;
+
+    static uint32_t GetTexmodHash(IDirect3DTexture9* texture);
+
+    static int GetBitsPerPixel(D3DFORMAT format);
+
+    static uint32_t GetTexmodHash(const char* data, size_t size);
 
 private:
     static void Cleanup();

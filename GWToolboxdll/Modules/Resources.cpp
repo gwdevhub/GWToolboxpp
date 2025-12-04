@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <DirectXTex.h>
 #include <DDSTextureLoader/DDSTextureLoader9.h>
 #include <WICTextureLoader/WICTextureLoader9.h>
 
@@ -29,6 +30,7 @@
 #include <nfd_common.c>
 #include <nfd_win.cpp>
 #pragma warning(pop)
+#include <dxgiformat.h>
 #include <wolfssl/wolfcrypt/asn.h>
 
 #include <Modules/GwDatTextureModule.h>
@@ -1385,4 +1387,230 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
         LoadTexture(texture, path_to_file, url, callback);
     });
     return texture;
+}
+bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesystem::path& file_path)
+{
+    if (!texture) {
+        Log::Warning("SaveTextureToFile: texture is null");
+        return false;
+    }
+
+    // Get texture description
+    D3DSURFACE_DESC desc;
+    HRESULT hr = texture->GetLevelDesc(0, &desc);
+    if (FAILED(hr)) {
+        Log::Warning("SaveTextureToFile: Failed to get texture description: 0x%X", hr);
+        return false;
+    }
+
+    // Lock the texture
+    D3DLOCKED_RECT lockedRect;
+    hr = texture->LockRect(0, &lockedRect, nullptr, D3DLOCK_READONLY);
+    if (FAILED(hr)) {
+        Log::Warning("SaveTextureToFile: Failed to lock texture: 0x%X", hr);
+        return false;
+    }
+
+    DirectX::Image img = {};
+    img.width = desc.Width;
+    img.height = desc.Height;
+    img.format = static_cast<DXGI_FORMAT>(desc.Format);
+    img.rowPitch = lockedRect.Pitch;
+    img.slicePitch = lockedRect.Pitch * desc.Height;
+    img.pixels = static_cast<uint8_t*>(lockedRect.pBits);
+
+    DirectX::SaveToDDSFile(img, DirectX::DDS_FLAGS_NONE, file_path.c_str());
+
+    texture->UnlockRect(0);
+
+    Log::Info("Successfully saved texture to %s (%dx%d)", file_path.string().c_str(), desc.Width, desc.Height);
+    return true;
+}
+uint32_t Resources::GetTexmodHash(IDirect3DTexture9* texture)
+{
+    if (!texture) {
+        return 0;
+    }
+
+    D3DSURFACE_DESC desc;
+    if (texture->GetLevelDesc(0, &desc) != D3D_OK) {
+        Log::Warning("GetTextureHash: Failed to get texture description");
+        return 0;
+    }
+
+    D3DLOCKED_RECT d3dlr;
+    IDirect3DSurface9* pOffscreenSurface = nullptr;
+    IDirect3DSurface9* pResolvedSurface = nullptr;
+
+    // Handle D3DPOOL_DEFAULT textures (render targets)
+    if (desc.Pool == D3DPOOL_DEFAULT) {
+        IDirect3DDevice9* device = nullptr;
+        texture->GetDevice(&device);
+        if (!device) {
+            Log::Warning("GetTextureHash: Failed to get device");
+            return 0;
+        }
+
+        IDirect3DSurface9* pSurfaceLevel_orig = nullptr;
+        if (texture->GetSurfaceLevel(0, &pSurfaceLevel_orig) != D3D_OK) {
+            device->Release();
+            Log::Warning("GetTextureHash: Failed to get surface level");
+            return 0;
+        }
+
+        // Handle multisampled textures
+        if (desc.MultiSampleType != D3DMULTISAMPLE_NONE) {
+            if (device->CreateRenderTarget(desc.Width, desc.Height, desc.Format, D3DMULTISAMPLE_NONE, 0, FALSE, &pResolvedSurface, nullptr) != D3D_OK) {
+                pSurfaceLevel_orig->Release();
+                device->Release();
+                Log::Warning("GetTextureHash: Failed to create render target");
+                return 0;
+            }
+            if (device->StretchRect(pSurfaceLevel_orig, nullptr, pResolvedSurface, nullptr, D3DTEXF_NONE) != D3D_OK) {
+                pSurfaceLevel_orig->Release();
+                pResolvedSurface->Release();
+                device->Release();
+                Log::Warning("GetTextureHash: Failed to stretch rect");
+                return 0;
+            }
+            pSurfaceLevel_orig->Release();
+            pSurfaceLevel_orig = pResolvedSurface;
+        }
+
+        // Create offscreen surface to read the data
+        if (device->CreateOffscreenPlainSurface(desc.Width, desc.Height, desc.Format, D3DPOOL_SYSTEMMEM, &pOffscreenSurface, nullptr) != D3D_OK) {
+            pSurfaceLevel_orig->Release();
+            device->Release();
+            Log::Warning("GetTextureHash: Failed to create offscreen surface");
+            return 0;
+        }
+
+        if (device->GetRenderTargetData(pSurfaceLevel_orig, pOffscreenSurface) != D3D_OK) {
+            pSurfaceLevel_orig->Release();
+            pOffscreenSurface->Release();
+            device->Release();
+            Log::Warning("GetTextureHash: Failed to get render target data");
+            return 0;
+        }
+        pSurfaceLevel_orig->Release();
+
+        if (pOffscreenSurface->LockRect(&d3dlr, nullptr, D3DLOCK_READONLY) != D3D_OK) {
+            pOffscreenSurface->Release();
+            device->Release();
+            Log::Warning("GetTextureHash: Failed to lock offscreen surface");
+            return 0;
+        }
+        device->Release();
+    }
+    // Handle regular managed textures
+    else if (texture->LockRect(0, &d3dlr, nullptr, D3DLOCK_READONLY) != D3D_OK) {
+        // Try via surface level
+        if (texture->GetSurfaceLevel(0, &pResolvedSurface) != D3D_OK) {
+            Log::Warning("GetTextureHash: Failed to get surface level (fallback)");
+            return 0;
+        }
+        if (pResolvedSurface->LockRect(&d3dlr, nullptr, D3DLOCK_READONLY) != D3D_OK) {
+            pResolvedSurface->Release();
+            Log::Warning("GetTextureHash: Failed to lock surface (fallback)");
+            return 0;
+        }
+    }
+
+    // CRITICAL: Calculate size based on actual pixel dimensions, not pitch
+    // This matches the uMod calculation exactly
+    const int bits_per_pixel = GetBitsPerPixel(desc.Format);
+    const int total_size = (bits_per_pixel * desc.Width * desc.Height) / 8;
+
+    // CRITICAL FIX: Copy data row by row, skipping pitch padding
+    // This matches how the DDS file is saved (without padding)
+    std::vector<uint8_t> compact_data;
+    compact_data.reserve(total_size);
+
+    const int bytes_per_pixel = bits_per_pixel / 8;
+    const int row_size = desc.Width * bytes_per_pixel;
+
+    for (UINT y = 0; y < desc.Height; y++) {
+        uint8_t* row = static_cast<uint8_t*>(d3dlr.pBits) + y * d3dlr.Pitch;
+        compact_data.insert(compact_data.end(), row, row + row_size);
+    }
+
+    // Now hash the compact data (without pitch padding)
+    uint32_t hash = GetTexmodHash(reinterpret_cast<const char*>(compact_data.data()), compact_data.size());
+
+    // Cleanup
+    if (pOffscreenSurface != nullptr) {
+        pOffscreenSurface->UnlockRect();
+        pOffscreenSurface->Release();
+        if (pResolvedSurface != nullptr) {
+            pResolvedSurface->Release();
+        }
+    }
+    else if (pResolvedSurface != nullptr) {
+        pResolvedSurface->UnlockRect();
+        pResolvedSurface->Release();
+    }
+    else {
+        texture->UnlockRect(0);
+    }
+
+    return hash;
+}
+
+int Resources::GetBitsPerPixel(D3DFORMAT format)
+{
+    switch (format) {
+        case D3DFMT_A8R8G8B8:
+        case D3DFMT_X8R8G8B8:
+        case D3DFMT_A8B8G8R8:
+        case D3DFMT_X8B8G8R8:
+        case D3DFMT_G16R16:
+        case D3DFMT_A2R10G10B10:
+        case D3DFMT_A2B10G10R10:
+            return 32;
+        case D3DFMT_R8G8B8:
+            return 24;
+        case D3DFMT_R5G6B5:
+        case D3DFMT_X1R5G5B5:
+        case D3DFMT_A1R5G5B5:
+        case D3DFMT_A4R4G4B4:
+        case D3DFMT_X4R4G4B4:
+        case D3DFMT_A8R3G3B2:
+        case D3DFMT_A8L8:
+        case D3DFMT_L16:
+        case D3DFMT_D16_LOCKABLE:
+        case D3DFMT_D16:
+        case D3DFMT_D15S1:
+            return 16;
+        case D3DFMT_A8:
+        case D3DFMT_L8:
+        case D3DFMT_P8:
+        case D3DFMT_R3G3B2:
+        case D3DFMT_A4L4:
+            return 8;
+        case D3DFMT_DXT1:
+            return 4;
+        case D3DFMT_DXT2:
+        case D3DFMT_DXT3:
+        case D3DFMT_DXT4:
+        case D3DFMT_DXT5:
+            return 8;
+        default:
+            return 32; // Default assumption
+    }
+}
+uint32_t Resources::GetTexmodHash(const char* data, size_t size)
+{
+    // uMod CRC32 - bit-by-bit calculation, NO final inversion
+    constexpr static auto crc32_poly = 0xEDB88320u;
+    constexpr static auto ul_crc_in = 0xffffffffu;
+    unsigned int crc = ul_crc_in;
+
+    for (size_t idx = 0u; idx < size; idx++) {
+        unsigned int data_byte = static_cast<unsigned char>(data[idx]);
+        for (unsigned int bit = 0u; bit < 8u; bit++, data_byte >>= 1) {
+            crc = crc >> 1 ^ ((crc ^ data_byte) & 1 ? crc32_poly : 0);
+        }
+    }
+
+    return crc; // IMPORTANT: NO final XOR with 0xFFFFFFFF
 }

@@ -56,9 +56,10 @@ namespace GW {
         /* +h0088 */ uint32_t projectile_animation_2_id;
         /* +h008C */ uint32_t icon_file_id;
         /* +h0090 */ uint32_t icon_file_id_2;
-        /* +h0094 */ uint32_t name; // String id
-        /* +h0098 */ uint32_t concise; // String id
-        /* +h009C */ uint32_t description; // String id
+        /* +h0094 */ uint32_t icon_file_id_hi_res;
+        /* +h0098 */ uint32_t name; // String id
+        /* +h009C */ uint32_t concise; // String id
+        /* +h00A0 */ uint32_t description; // String id
 
         uint8_t GetEnergyCost() const {
             switch (energy_cost) {
@@ -80,7 +81,7 @@ namespace GW {
         [[nodiscard]] bool IsNonStacking() const { return (special & 0x20000) != 0; }
         [[nodiscard]] bool IsUnused() const;
     };
-    static_assert(sizeof(Skill) == 0xa0, "struct Skill has incorrect size");
+    static_assert(sizeof(Skill) == 0xa4, "struct Skill has incorrect size");
 
     struct SkillbarSkill { // total: 0x14/20
         /* +h0000 */ uint32_t adrenaline_a;
