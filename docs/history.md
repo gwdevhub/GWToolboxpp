@@ -7,7 +7,7 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
-## Version 8.0
+## Version 8.1
 * [Fix] Fixes to work with reforged
 * [Fix] Launcher updated to work with reforged
 * [Fix] Fixed items not moving to storage tabs when dropped
