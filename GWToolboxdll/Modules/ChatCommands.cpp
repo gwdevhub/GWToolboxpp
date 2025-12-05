@@ -925,6 +925,15 @@ namespace {
         found->second->ChatCommandCallback(status, message, argc, argv);
     }
 
+    void HookOnChatInteraction() {
+        if (OnChatInteraction_Callback_Func) return;
+        const auto frame = GW::UI::GetFrameByLabel(L"Chat");
+        if (!(frame && frame->frame_callbacks.size())) return;
+        OnChatInteraction_Callback_Func = frame->frame_callbacks[0].callback;
+        GW::Hook::CreateHook((void**)&OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
+        GW::Hook::EnableHooks(OnChatInteraction_Callback_Func);
+    }
+
     void DrawChatCommandsHelp()
     {
         if (!ImGui::TreeNodeEx("Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
@@ -1517,11 +1526,7 @@ void ChatCommands::Initialize()
 
 #endif
 
-    GW::WaitForFrame(L"Chat", [](GW::UI::Frame* frame) {
-        OnChatInteraction_Callback_Func = frame->frame_callbacks[0].callback;
-        GW::Hook::CreateHook((void**)&OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
-        GW::Hook::EnableHooks(OnChatInteraction_Callback_Func);
-    });
+    HookOnChatInteraction();
 
 #ifdef _DEBUG
     ASSERT(SetMuted_Func);
@@ -1564,6 +1569,7 @@ void ChatCommands::Terminate()
 
 void ChatCommands::Update(const float delta)
 {
+    HookOnChatInteraction();
     if (title_names.empty()) {
         const auto* titles = GetTitles();
         for (size_t i = 0; titles && i < titles->size(); i++) {

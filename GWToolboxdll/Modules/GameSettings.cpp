@@ -1760,10 +1760,10 @@ void GameSettings::Initialize()
         });*/
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&TradeStart_Entry, OnPlayEffect);
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PartyPlayerAdd_Entry, OnPartyInviteReceived);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, bind_member(this, &GameSettings::OnPartyPlayerJoined));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, OnPartyPlayerJoined);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, OnMapTravel);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CinematicPlay>(&CinematicPlay_Entry, OnCinematic);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&VanquishComplete_Entry, bind_member(this, &GameSettings::OnDungeonReward));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&VanquishComplete_Entry, OnDungeonReward);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&PlayerJoinInstance_Entry, OnMapLoaded);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerJoinInstance>(&PlayerJoinInstance_Entry, OnPlayerJoinInstance);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerLeaveInstance>(&PlayerLeaveInstance_Entry, OnPlayerLeaveInstance);
@@ -1776,7 +1776,7 @@ void GameSettings::Initialize()
         [&](const GW::HookStatus*, GW::Packet::StoC::PartyPlayerRemove*) {
             check_message_on_party_change = true;
         });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, bind_member(this, &GameSettings::OnScreenShake));
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, OnScreenShake);
 
     RegisterUIMessageCallback(&OnChangeTarget_Entry, GW::UI::UIMessage::kChangeTarget, OnChangeTarget);
     RegisterUIMessageCallback(&OnWriteChat_Entry, GW::UI::UIMessage::kWriteToChatLog, OnWriteChat);
@@ -2776,7 +2776,7 @@ void GameSettings::OnServerMessage(const GW::HookStatus*, GW::Packet::StoC::Mess
     }
 }
 
-void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::DungeonReward*) const
+void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::DungeonReward*)
 {
     if (hide_dungeon_chest_popup) {
         status->blocked = true;
@@ -2784,7 +2784,7 @@ void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::Dun
 }
 
 // Stop screen shake from aftershock etc
-void GameSettings::OnScreenShake(GW::HookStatus* status, const void*) const
+void GameSettings::OnScreenShake(GW::HookStatus* status, const void*)
 {
     if (stop_screen_shake) {
         status->blocked = true;

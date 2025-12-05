@@ -611,6 +611,15 @@ namespace {
     }
 
 
+    void HookCloseButton() {
+        if (OnMinOrRestoreOrExitBtnClicked_Func) return;
+        const auto frame = GW::UI::GetFrameByLabel(L"BtnRestore");
+        if (!(frame && frame->frame_callbacks.size())) return;
+        OnMinOrRestoreOrExitBtnClicked_Func = frame->frame_callbacks[0].callback;
+        GW::Hook::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
+        GW::Hook::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
+    }
+
     FARPROC WINAPI CustomDliHook(const unsigned dliNotify, PDelayLoadInfo pdli)
     {
         switch (dliNotify) {
@@ -755,11 +764,7 @@ void GWToolbox::Initialize(LPVOID module)
     AttachRenderCallback();
     GW::EnableHooks();
 
-    GW::WaitForFrame(L"BtnRestore", [](GW::UI::Frame* frame) {
-        OnMinOrRestoreOrExitBtnClicked_Func = frame->frame_callbacks[0].callback;
-        GW::Hook::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
-        GW::Hook::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
-    });
+    HookCloseButton();
 
     UpdateInitialising(.0f);
     AttachGameLoopCallback();
@@ -922,6 +927,8 @@ void GWToolbox::Update(GW::HookStatus*)
         default:
             return;
     }
+
+    HookCloseButton();
 
     UpdateModulesTerminating(delta_f);
 
