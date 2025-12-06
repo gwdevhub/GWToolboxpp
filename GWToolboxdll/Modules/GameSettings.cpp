@@ -186,6 +186,7 @@ namespace {
 
     bool auto_skip_cinematic = false;
     bool hide_known_skills = false;
+    bool hide_nonelites_on_capture = false;
     bool remove_min_skill_warmup_duration = false;
 
     bool faction_warn_percent = true;
@@ -217,6 +218,7 @@ namespace {
     bool skip_entering_name_for_faction_donate = false;
     bool stop_screen_shake = false;
     bool disable_camera_smoothing = false;
+    bool disable_camera_smoothing_with_controller = false;
 
     bool check_message_on_party_change = true;
 
@@ -238,12 +240,15 @@ namespace {
                 GW::Hook::LeaveHook();
                 return; // Only show unlearned skills from tomes and skill trainers
             }
-            const auto parent = GW::UI::GetFrameByLabel(L"DlgSkillCapture");
-            if (parent && GW::UI::BelongsToFrame(parent, GW::UI::GetFrameById(message->frame_id))) {
-                const auto skill = GW::SkillbarMgr::GetSkillConstantData(*(GW::Constants::SkillID*)wParam);
-                if (skill && !skill->IsElite()) {
-                    GW::Hook::LeaveHook();
-                    return; // Hide non-elites when capturing skills
+
+            if (hide_nonelites_on_capture) {
+                const auto parent = GW::UI::GetFrameByLabel(L"DlgSkillCapture");
+                if (parent && GW::UI::BelongsToFrame(parent, GW::UI::GetFrameById(message->frame_id))) {
+                    const auto skill = GW::SkillbarMgr::GetSkillConstantData(*(GW::Constants::SkillID*)wParam);
+                    if (skill && !skill->IsElite()) {
+                        GW::Hook::LeaveHook();
+                        return; // Hide non-elites when capturing skills
+                    }
                 }
             }
         }
@@ -1925,6 +1930,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
 
 
     LOAD_BOOL(disable_camera_smoothing);
+    LOAD_BOOL(disable_camera_smoothing_with_controller);
     LOAD_BOOL(tick_is_toggle);
 
     LOAD_BOOL(shorthand_item_ping);
@@ -1948,6 +1954,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
 
     LOAD_BOOL(remove_min_skill_warmup_duration);
     LOAD_BOOL(hide_known_skills);
+    LOAD_BOOL(hide_nonelites_on_capture);
     LOAD_BOOL(auto_skip_cinematic);
 
     LOAD_BOOL(faction_warn_percent);
@@ -2112,6 +2119,7 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(tick_is_toggle);
 
     SAVE_BOOL(disable_camera_smoothing);
+    SAVE_BOOL(disable_camera_smoothing_with_controller);
     SAVE_BOOL(auto_return_on_defeat);
 
     SAVE_BOOL(shorthand_item_ping);
@@ -2135,6 +2143,7 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
 
     SAVE_BOOL(remove_min_skill_warmup_duration);
     SAVE_BOOL(hide_known_skills);
+    SAVE_BOOL(hide_nonelites_on_capture);
     SAVE_BOOL(auto_skip_cinematic);
 
     SAVE_BOOL(faction_warn_percent);
@@ -2320,9 +2329,11 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Checkbox("Block sparkle effect on dropped items", &block_sparkly_drops_effect);
     ImGui::ShowHelp("Applies to drops that appear after this setting has been changed");
 
-    ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
-    ImGui::ShowHelp("The default mouse camera movement isn't instant, and instead smoothes the action when you move the mouse.\nTick this to disable this smoothing behaviour.");
-
+    const char* hint = "The default mouse camera movement isn't instant, and instead smoothes the action when you move the mouse.\nTick this to disable this smoothing behaviour.";
+    ImGui::Checkbox("Disable camera smoothing with mouse", &disable_camera_smoothing);
+    ImGui::ShowHelp(hint);
+    ImGui::Checkbox("Disable camera smoothing with controller", &disable_camera_smoothing_with_controller);
+    ImGui::ShowHelp(hint);
     if (ImGui::Checkbox("Disable Gold/Green items confirmation", &disable_gold_selling_confirmation)) {
         gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
     }
@@ -2343,6 +2354,8 @@ void GameSettings::DrawSettingsInternal()
 
     ImGui::Checkbox("Hide known skills when using a tome, capturing a skill or talking to a skill trainer", &hide_known_skills);
     ImGui::ShowHelp("When you double click on a tome, the skills window that appears has all skills available for that profession.\nTick this to hide skills that your current character already has.");
+
+    ImGui::Checkbox("Hide all non-elite skills when capturing a skill", &hide_nonelites_on_capture);
 
     ImGui::Checkbox("Prevent weapon spell skin showing on player weapons", &prevent_weapon_spell_animation_on_player);
 
@@ -2547,7 +2560,7 @@ void GameSettings::Update(float)
     //UpdateFOV();
     FactionEarnedCheckAndWarn();
 
-    if (disable_camera_smoothing && !GW::CameraMgr::GetCameraUnlock()) {
+    if (((disable_camera_smoothing && !GW::UI::IsInControllerMode()) || (disable_camera_smoothing_with_controller && GW::UI::IsInControllerMode())) && !GW::CameraMgr::GetCameraUnlock()) {
         GW::Camera* cam = GW::CameraMgr::GetCamera();
         if (cam) {
             cam->position = cam->camera_pos_to_go;
