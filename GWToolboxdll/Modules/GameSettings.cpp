@@ -186,6 +186,7 @@ namespace {
 
     bool auto_skip_cinematic = false;
     bool hide_known_skills = false;
+    bool hide_nonelites_on_capture = false;
     bool remove_min_skill_warmup_duration = false;
 
     bool faction_warn_percent = true;
@@ -239,12 +240,15 @@ namespace {
                 GW::Hook::LeaveHook();
                 return; // Only show unlearned skills from tomes and skill trainers
             }
-            const auto parent = GW::UI::GetFrameByLabel(L"DlgSkillCapture");
-            if (parent && GW::UI::BelongsToFrame(parent, GW::UI::GetFrameById(message->frame_id))) {
-                const auto skill = GW::SkillbarMgr::GetSkillConstantData(*(GW::Constants::SkillID*)wParam);
-                if (skill && !skill->IsElite()) {
-                    GW::Hook::LeaveHook();
-                    return; // Hide non-elites when capturing skills
+
+            if (hide_nonelites_on_capture) {
+                const auto parent = GW::UI::GetFrameByLabel(L"DlgSkillCapture");
+                if (parent && GW::UI::BelongsToFrame(parent, GW::UI::GetFrameById(message->frame_id))) {
+                    const auto skill = GW::SkillbarMgr::GetSkillConstantData(*(GW::Constants::SkillID*)wParam);
+                    if (skill && !skill->IsElite()) {
+                        GW::Hook::LeaveHook();
+                        return; // Hide non-elites when capturing skills
+                    }
                 }
             }
         }
@@ -1950,6 +1954,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
 
     LOAD_BOOL(remove_min_skill_warmup_duration);
     LOAD_BOOL(hide_known_skills);
+    LOAD_BOOL(hide_nonelites_on_capture);
     LOAD_BOOL(auto_skip_cinematic);
 
     LOAD_BOOL(faction_warn_percent);
@@ -2138,6 +2143,7 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
 
     SAVE_BOOL(remove_min_skill_warmup_duration);
     SAVE_BOOL(hide_known_skills);
+    SAVE_BOOL(hide_nonelites_on_capture);
     SAVE_BOOL(auto_skip_cinematic);
 
     SAVE_BOOL(faction_warn_percent);
@@ -2348,6 +2354,8 @@ void GameSettings::DrawSettingsInternal()
 
     ImGui::Checkbox("Hide known skills when using a tome, capturing a skill or talking to a skill trainer", &hide_known_skills);
     ImGui::ShowHelp("When you double click on a tome, the skills window that appears has all skills available for that profession.\nTick this to hide skills that your current character already has.");
+
+    ImGui::Checkbox("Hide all non-elite skills when capturing a skill", &hide_nonelites_on_capture);
 
     ImGui::Checkbox("Prevent weapon spell skin showing on player weapons", &prevent_weapon_spell_animation_on_player);
 
