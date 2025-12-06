@@ -199,11 +199,14 @@ namespace {
         if (!CheckSetValidHotkeys()) {
             return false;
         }
+        bool is_in_controller_mode = GW::UI::IsInControllerMode();
         // NB: CheckSetValidHotkeys() has already checked validity of char/map etc
         for (TBHotkey* hk : valid_hotkeys) {
             if (((hk->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable)
                     || (hk->trigger_on_outpost && mt == GW::Constants::InstanceType::Outpost))
-                && !hk->pressed) {
+                && !hk->pressed 
+                && hk->trigger_in_controller_mode == is_in_controller_mode
+                && hk->trigger_in_desktop_mode != is_in_controller_mode) {
                 hk->pressed = true;
                 current_hotkey = hk;
                 hk->Execute();
@@ -661,17 +664,21 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
         wndproc_keys_held.reset();
         return false;
     }
-    auto check_trigger = [](TBHotkey* hk, bool is_key_up, uint32_t keyData) {
+    auto check_trigger = [](TBHotkey* hk, bool is_key_up, uint32_t keyData, bool is_in_controller_mode) {
         if (hk->pressed) return false;
         if (hk->trigger_on_key_up != is_key_up) return false;
         if (!hk->key_combo.test(keyData)) return false; // The triggering key isn't included in this hotkey's combo
         if (hk->strict_key_combo) return hk->key_combo == wndproc_keys_held;
+        if (hk->trigger_in_controller_mode != is_in_controller_mode) return false;
+        if (hk->trigger_in_desktop_mode == is_in_controller_mode) return false;
         return (hk->key_combo & wndproc_keys_held) == hk->key_combo;
     };
 
     auto check_triggers = [check_trigger](bool is_key_up, uint32_t keyData) {
         std::vector<TBHotkey*> matching_hotkeys;
         size_t max_modifier_count = 0;
+
+        bool is_in_controller_mode = GW::UI::IsInControllerMode();
 
         // Step 1: Find all hotkeys that match the currently pressed keys
         for (TBHotkey* hk : valid_hotkeys) {
@@ -682,7 +689,7 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
             // - It should trigger on key-up (if we're processing a key-up event)
             // - All its required keys are currently held (`hk->key_combo & wndproc_keys_held == hk->key_combo`)
             // - The key that was just pressed/released is part of this hotkey (`hk->key_combo.test(keyData)`)
-            if (check_trigger(hk,is_key_up,keyData)) {
+            if (check_trigger(hk, is_key_up, keyData, is_in_controller_mode)) {
                 // Count how many keys (modifiers + main key) are required for this hotkey
                 size_t modifier_count = hk->key_combo.count();
                 matching_hotkeys.push_back(hk);

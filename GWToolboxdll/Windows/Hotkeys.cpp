@@ -216,7 +216,8 @@ TBHotkey::TBHotkey(const ToolboxIni* ini, const char* section)
         trigger_on_key_up = ini->GetBoolValue(section, VAR_NAME(trigger_on_key_up), trigger_on_key_up);
         strict_key_combo = ini->GetBoolValue(section, VAR_NAME(strict_key_combo), strict_key_combo);
 
-
+        trigger_in_controller_mode = ini->GetBoolValue(section, VAR_NAME(trigger_in_controller_mode), trigger_in_controller_mode);
+        trigger_in_desktop_mode = ini->GetBoolValue(section, VAR_NAME(trigger_in_desktop_mode), trigger_in_desktop_mode);
 
         in_range_of_distance = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(in_range_of_distance), in_range_of_distance));
         in_range_of_npc_id = ini->GetLongValue(section, VAR_NAME(in_range_of_npc_id), in_range_of_npc_id);
@@ -452,6 +453,9 @@ bool TBHotkey::Draw(Op* op)
         hotkey_changed |= ImGui::Checkbox("Trigger hotkey when Guild Wars loses focus", &trigger_on_lose_focus);
         ImGui::SameLine(offset_sameline);
         hotkey_changed |= ImGui::Checkbox("Trigger hotkey when Guild Wars gains focus", &trigger_on_gain_focus);
+        hotkey_changed |= ImGui::Checkbox("Trigger hotkey when using keyboard/mouse", &trigger_in_desktop_mode);
+        ImGui::SameLine(offset_sameline);
+        hotkey_changed |= ImGui::Checkbox("Trigger hotkey when using a gamepad", &trigger_in_controller_mode);
         ImGui::Separator();
         ImGui::Text("Instance Type: ");
         ImGui::SameLine();

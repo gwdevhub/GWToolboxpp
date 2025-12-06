@@ -52,6 +52,9 @@ public:
     bool trigger_on_gain_focus = false;        // Trigger when GW window is focussed
     bool can_trigger_on_map_change = true;     // Some hotkeys cant trigger on map change e.g. Guild Wars Key
 
+    bool trigger_in_desktop_mode = true;       // Trigger this hotkey in desktop mode
+    bool trigger_in_controller_mode = true; // Trigger this hotkey in controller mode
+
     std::vector<uint32_t> map_ids{};
     std::vector<std::string> player_names{};
     bool prof_ids[11]{};

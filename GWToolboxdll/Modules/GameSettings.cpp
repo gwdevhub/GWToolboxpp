@@ -217,6 +217,7 @@ namespace {
     bool skip_entering_name_for_faction_donate = false;
     bool stop_screen_shake = false;
     bool disable_camera_smoothing = false;
+    bool disable_camera_smoothing_with_controller = false;
 
     bool check_message_on_party_change = true;
 
@@ -1925,6 +1926,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
 
 
     LOAD_BOOL(disable_camera_smoothing);
+    LOAD_BOOL(disable_camera_smoothing_with_controller);
     LOAD_BOOL(tick_is_toggle);
 
     LOAD_BOOL(shorthand_item_ping);
@@ -2112,6 +2114,7 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(tick_is_toggle);
 
     SAVE_BOOL(disable_camera_smoothing);
+    SAVE_BOOL(disable_camera_smoothing_with_controller);
     SAVE_BOOL(auto_return_on_defeat);
 
     SAVE_BOOL(shorthand_item_ping);
@@ -2320,9 +2323,11 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Checkbox("Block sparkle effect on dropped items", &block_sparkly_drops_effect);
     ImGui::ShowHelp("Applies to drops that appear after this setting has been changed");
 
-    ImGui::Checkbox("Disable camera smoothing", &disable_camera_smoothing);
-    ImGui::ShowHelp("The default mouse camera movement isn't instant, and instead smoothes the action when you move the mouse.\nTick this to disable this smoothing behaviour.");
-
+    const char* hint = "The default mouse camera movement isn't instant, and instead smoothes the action when you move the mouse.\nTick this to disable this smoothing behaviour.";
+    ImGui::Checkbox("Disable camera smoothing with mouse", &disable_camera_smoothing);
+    ImGui::ShowHelp(hint);
+    ImGui::Checkbox("Disable camera smoothing with controller", &disable_camera_smoothing_with_controller);
+    ImGui::ShowHelp(hint);
     if (ImGui::Checkbox("Disable Gold/Green items confirmation", &disable_gold_selling_confirmation)) {
         gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
     }
@@ -2547,7 +2552,7 @@ void GameSettings::Update(float)
     //UpdateFOV();
     FactionEarnedCheckAndWarn();
 
-    if (disable_camera_smoothing && !GW::CameraMgr::GetCameraUnlock()) {
+    if (((disable_camera_smoothing && !GW::UI::IsInControllerMode()) || (disable_camera_smoothing_with_controller && GW::UI::IsInControllerMode())) && !GW::CameraMgr::GetCameraUnlock()) {
         GW::Camera* cam = GW::CameraMgr::GetCamera();
         if (cam) {
             cam->position = cam->camera_pos_to_go;
