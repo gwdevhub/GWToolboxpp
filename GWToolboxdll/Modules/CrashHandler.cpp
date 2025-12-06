@@ -24,9 +24,49 @@ namespace {
 
     static_assert(sizeof(GWDebugInfo) == 0x80210, "struct GWDebugInfo has incorrect size");
 
-    typedef void (__cdecl*HandleCrash_pt)(GWDebugInfo* details, uint32_t param_2, void* pExceptionPointers, char* exception_message, char* exception_file, uint32_t exception_line);
-    HandleCrash_pt HandleCrash_Func = nullptr;
-    HandleCrash_pt RetHandleCrash = nullptr;
+    typedef void(__cdecl* AppendStackTraceToCrashMessage_pt)(GWDebugInfo*, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+    AppendStackTraceToCrashMessage_pt AppendStackTraceToCrashMessage_Func = 0, AppendStackTraceToCrashMessage_Ret = 0;
+
+    void OnAppendStackTraceToCrashMessage(GWDebugInfo* message_buffer, uint32_t param_1, uint32_t param_2, uint32_t param_3, uint32_t param_4, uint32_t param_5, uint32_t param_6)
+    {
+        GW::Hook::EnterHook();
+        AppendStackTraceToCrashMessage_Ret(message_buffer, param_1, param_2, param_3, param_4, param_5, param_6);
+
+        if (!tb_exception_message && message_buffer && message_buffer->buffer && *message_buffer->buffer) {
+            const auto start_of_error = strstr(message_buffer->buffer, "*-->");
+            const auto end_of_error = start_of_error ? strstr(&start_of_error[1], "*-->") : nullptr;
+
+            if (end_of_error) {
+                size_t length_of_error = end_of_error - start_of_error;
+                tb_exception_message = new char[length_of_error + 1];
+                strncpy(tb_exception_message, start_of_error, length_of_error);
+                tb_exception_message[length_of_error] = 0;
+            }
+        }
+
+
+
+        PCONTEXT pContext = reinterpret_cast<PCONTEXT>(param_4);
+
+        // Create EXCEPTION_POINTERS structure
+        EXCEPTION_RECORD exceptionRecord = {0};
+        EXCEPTION_POINTERS exceptionPointers = {0};
+
+        // Fill in exception record with info from CONTEXT
+        exceptionRecord.ExceptionCode = EXCEPTION_BREAKPOINT; // Or appropriate code
+        exceptionRecord.ExceptionFlags = EXCEPTION_NONCONTINUABLE;
+        exceptionRecord.ExceptionAddress = reinterpret_cast<PVOID>(pContext->Eip);
+        exceptionRecord.NumberParameters = 0;
+
+        // Set up exception pointers
+        exceptionPointers.ExceptionRecord = &exceptionRecord;
+        exceptionPointers.ContextRecord = pContext;
+
+        EXCEPTION_POINTERS* pExceptionPointers = &exceptionPointers;
+        // this function will create a minidump for us
+        CrashHandler::Crash(pExceptionPointers, message_buffer->buffer);
+        GW::Hook::LeaveHook();
+    }
 
     GWDebugInfo* gw_debug_info = nullptr;
 
@@ -47,36 +87,10 @@ namespace {
 
     void Cleanup()
     {
-        if (HandleCrash_Func) {
-            GW::Hook::RemoveHook(HandleCrash_Func);
-            HandleCrash_Func = nullptr;
+        if (AppendStackTraceToCrashMessage_Func) {
+            GW::Hook::RemoveHook(AppendStackTraceToCrashMessage_Func);
+            AppendStackTraceToCrashMessage_Func = nullptr;
         }
-    }
-
-    void OnGWCrash(GWDebugInfo* details, const uint32_t param_2, EXCEPTION_POINTERS* pExceptionPointers, char* exception_message, char* exception_file, const uint32_t exception_line)
-    {
-        GW::Hook::EnterHook();
-        if (!gw_debug_info) {
-            gw_debug_info = details;
-        }
-        if (!pExceptionPointers) {
-            CrashHandler::FatalAssert(exception_message, exception_file, exception_line);
-        }
-#ifdef _DEBUG
-        __try {
-            // Debug break here to catch stack trace in debug mode before dumping
-            __debugbreak();
-        } __except (EXCEPTION_CONTINUE_EXECUTION) {}
-#endif
-        // Assertion here will throw a GWToolbox exception if pExceptionPointers isn't found; this will give us the correct call stack for a GW Assertion failure in the subsequent crash dump.
-        if (CrashHandler::Crash(pExceptionPointers)) {
-            abort();
-        }
-        gw_debug_info = nullptr;
-        RetHandleCrash(details, param_2, pExceptionPointers, exception_message, exception_file, exception_line);
-
-        GW::Hook::LeaveHook();
-        abort();
     }
 }
 
@@ -97,16 +111,13 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigne
         const size_t len = snprintf(nullptr, 0, fmt, expr, file, line);
         tb_exception_message = new char[len + 1];
         snprintf(tb_exception_message, len + 1, fmt, expr, file, line);
-#ifdef _DEBUG
-        __debugbreak();
-#endif
         throw std::runtime_error(tb_exception_message);
     } __except (EXCEPT_EXPRESSION_ENTRY) {}
 
     abort();
 }
 
-LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
+LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const char* extra_info)
 {
 #ifndef _DEBUG
     // Check if user is running the latest version
@@ -141,7 +152,6 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
                                    stLocalTime.wDay, stLocalTime.wHour, stLocalTime.wMinute, stLocalTime.wSecond, ProcessId, ThreadId);
 
     MINIDUMP_USER_STREAM_INFORMATION* UserStreamParam = nullptr;
-    char* extra_info = nullptr;
 
     MINIDUMP_EXCEPTION_INFORMATION* ExpParam = nullptr;
     const HANDLE hFile = CreateFileW(szFileName, GENERIC_READ | GENERIC_WRITE,
@@ -163,27 +173,24 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
     if (fn_print < 0) {
         return failed("Failed to swprintf crash file name");
     }
-    if (gw_debug_info) {
-        extra_info = gw_debug_info->buffer;
-    }
-    else if (tb_exception_message) {
-        extra_info = tb_exception_message;
-    }
     if (extra_info) {
         UserStreamParam = new MINIDUMP_USER_STREAM_INFORMATION();
         const auto s = new MINIDUMP_USER_STREAM();
         s->Type = CommentStreamA;
-        s->Buffer = extra_info;
+        s->Buffer = (void*)extra_info;
         s->BufferSize = static_cast<ULONG>(strlen(extra_info) + 1);
         UserStreamParam->UserStreamCount = 1;
         UserStreamParam->UserStreamArray = s;
     }
     if (pExceptionPointers) {
-        /* ExpParam = new MINIDUMP_EXCEPTION_INFORMATION;
+        ExpParam = new MINIDUMP_EXCEPTION_INFORMATION;
         ExpParam->ThreadId = ThreadId;
         ExpParam->ExceptionPointers = pExceptionPointers;
-        ExpParam->ClientPointers = false;*/
+        ExpParam->ClientPointers = false;
     }
+#ifdef _DEBUG
+    __debugbreak();
+#endif
     const BOOL success = MiniDumpWriteDump(
         GetCurrentProcess(), ProcessId, hFile,
         static_cast<MINIDUMP_TYPE>(MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithDataSegs),
@@ -227,12 +234,13 @@ void CrashHandler::Initialize()
 {
     ToolboxModule::Initialize();
     GW::RegisterPanicHandler(GWCAPanicHandler, nullptr);
-    HandleCrash_Func = (HandleCrash_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindNthUseOfString(L"Crash.dmp",1), 0xfff);
-    if (HandleCrash_Func) {
-        GW::Hook::CreateHook((void**)&HandleCrash_Func, OnGWCrash, (void**)&RetHandleCrash);
-        GW::Hook::EnableHooks(HandleCrash_Func);
+
+    AppendStackTraceToCrashMessage_Func = (AppendStackTraceToCrashMessage_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindUseOfString("%p  %08x %08x %08x %08x "), 0xfff);
+    if (AppendStackTraceToCrashMessage_Func) {
+        GW::Hook::CreateHook((void**)&AppendStackTraceToCrashMessage_Func, OnAppendStackTraceToCrashMessage, (void**)&AppendStackTraceToCrashMessage_Ret);
+        GW::Hook::EnableHooks(AppendStackTraceToCrashMessage_Func);
     }
 #ifdef _DEBUG
-    ASSERT(HandleCrash_Func);
+    ASSERT(AppendStackTraceToCrashMessage_Func);
 #endif
 }

@@ -775,6 +775,8 @@ namespace GW {
 
         GWCA_API bool SetFramePosition(UI::Frame* frame, UI::FramePosition& position);
 
+        GWCA_API bool IsInControllerMode();
+
         typedef HookCallback<uint32_t> KeyCallback;
         // Listen for a gw hotkey press
         GWCA_API void RegisterKeydownCallback(

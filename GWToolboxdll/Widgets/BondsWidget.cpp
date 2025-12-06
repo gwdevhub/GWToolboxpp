@@ -374,7 +374,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
         if (GW::BuffArray* buffs = GW::Effects::GetPlayerBuffs()) {
             for (const auto& buff : *buffs) {
                 DrawBondImage(buff.target_agent_id, buff.skill_id, &bond_top_left, &bond_bottom_right);
-                if (!handled_click && ImGui::IsMouseHoveringRect(bond_top_left, bond_bottom_right, false) && ImGui::IsMouseReleased(0)) {
+                if (!handled_click && ImGui::IsMouseHoveringRect(bond_top_left, bond_bottom_right, false) && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                     if(click_to_drop)
                         DropBuffs(buff.target_agent_id, buff.skill_id);
                     handled_click = true;
@@ -421,7 +421,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
                     if (!ImGui::IsMouseHoveringRect(bond_top_left, bond_bottom_right, false))
                         continue;
                     draw_list->AddRect(bond_top_left, bond_bottom_right, IM_COL32(255, 255, 255, 255));
-                    if (ImGui::IsMouseReleased(0)) {
+                    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                         if(click_to_cast)
                             UseBuff(agent_id, skill_id);
                         handled_click = true;

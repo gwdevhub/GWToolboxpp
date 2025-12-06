@@ -36,8 +36,43 @@
 #include <Modules/GwDatTextureModule.h>
 #include <Constants/EncStrings.h>
 #include <Utils/TextUtils.h>
+#include <wincodec.h>
 
 namespace {
+
+
+    DXGI_FORMAT ConvertD3D9FormatToDXGI(D3DFORMAT d3d9Format)
+    {
+        switch (d3d9Format) {
+            case D3DFMT_A8R8G8B8:
+                return DXGI_FORMAT_B8G8R8A8_UNORM;
+            case D3DFMT_X8R8G8B8:
+                return DXGI_FORMAT_B8G8R8X8_UNORM;
+            case D3DFMT_R5G6B5:
+                return DXGI_FORMAT_B5G6R5_UNORM;
+            case D3DFMT_A1R5G5B5:
+                return DXGI_FORMAT_B5G5R5A1_UNORM;
+            case D3DFMT_A4R4G4B4:
+                return DXGI_FORMAT_B4G4R4A4_UNORM;
+            case D3DFMT_R8G8B8:
+                return DXGI_FORMAT_UNKNOWN; // No direct equivalent
+            case D3DFMT_A8:
+                return DXGI_FORMAT_A8_UNORM;
+            case D3DFMT_DXT1:
+                return DXGI_FORMAT_BC1_UNORM;
+            case D3DFMT_DXT2:
+                return DXGI_FORMAT_BC2_UNORM;
+            case D3DFMT_DXT3:
+                return DXGI_FORMAT_BC2_UNORM;
+            case D3DFMT_DXT4:
+                return DXGI_FORMAT_BC3_UNORM;
+            case D3DFMT_DXT5:
+                return DXGI_FORMAT_BC3_UNORM;
+            default:
+                return DXGI_FORMAT_UNKNOWN;
+        }
+    }
+
     bool initialised_curl = false;
 
     const char* d3dErrorMessage(HRESULT code)
@@ -1094,6 +1129,11 @@ IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id)
     const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
     return skill && skill->icon_file_id ? GwDatTextureModule::LoadTextureFromFileId(skill->icon_file_id) : &empty_texture_ptr;
 }
+IDirect3DTexture9** Resources::GetSkillHiResImage(GW::Constants::SkillID skill_id)
+{
+    const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+    return skill && skill->icon_file_id_hi_res ? GwDatTextureModule::LoadTextureFromFileId(skill->icon_file_id_hi_res) : &empty_texture_ptr;
+}
 
 IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill_id)
 {
@@ -1388,6 +1428,7 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
     });
     return texture;
 }
+
 bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesystem::path& file_path)
 {
     if (!texture) {
@@ -1395,7 +1436,6 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
         return false;
     }
 
-    // Get texture description
     D3DSURFACE_DESC desc;
     HRESULT hr = texture->GetLevelDesc(0, &desc);
     if (FAILED(hr)) {
@@ -1403,25 +1443,98 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
         return false;
     }
 
-    // Lock the texture
-    D3DLOCKED_RECT lockedRect;
-    hr = texture->LockRect(0, &lockedRect, nullptr, D3DLOCK_READONLY);
-    if (FAILED(hr)) {
-        Log::Warning("SaveTextureToFile: Failed to lock texture: 0x%X", hr);
+    auto ext = file_path.extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+    if (ext == ".dds") {
+        // Original DDS path
+        D3DLOCKED_RECT lockedRect;
+        hr = texture->LockRect(0, &lockedRect, nullptr, D3DLOCK_READONLY);
+        if (FAILED(hr)) {
+            Log::Warning("SaveTextureToFile: Failed to lock texture: 0x%X", hr);
+            return false;
+        }
+
+        DirectX::Image img = {};
+        img.width = desc.Width;
+        img.height = desc.Height;
+        img.format = ConvertD3D9FormatToDXGI(desc.Format);
+        img.rowPitch = lockedRect.Pitch;
+        img.slicePitch = lockedRect.Pitch * desc.Height;
+        img.pixels = static_cast<uint8_t*>(lockedRect.pBits);
+
+        hr = DirectX::SaveToDDSFile(img, DirectX::DDS_FLAGS_NONE, file_path.c_str());
+        texture->UnlockRect(0);
+
+        if (FAILED(hr)) {
+            Log::Warning("SaveTextureToFile: Failed to save DDS: 0x%X", hr);
+            return false;
+        }
+    }
+    else if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp") {
+        // Lock the texture
+        D3DLOCKED_RECT lockedRect;
+        hr = texture->LockRect(0, &lockedRect, nullptr, D3DLOCK_READONLY);
+        if (FAILED(hr)) {
+            Log::Warning("SaveTextureToFile: Failed to lock texture: 0x%X", hr);
+            return false;
+        }
+
+        DirectX::Image srcImage = {};
+        srcImage.width = desc.Width;
+        srcImage.height = desc.Height;
+        srcImage.format = ConvertD3D9FormatToDXGI(desc.Format);
+        srcImage.rowPitch = lockedRect.Pitch;
+        srcImage.slicePitch = lockedRect.Pitch * desc.Height;
+        srcImage.pixels = static_cast<uint8_t*>(lockedRect.pBits);
+
+        if (srcImage.format == DXGI_FORMAT_UNKNOWN) {
+            texture->UnlockRect(0);
+            Log::Warning("SaveTextureToFile: Unsupported D3D9 format: 0x%X", desc.Format);
+            return false;
+        }
+
+        DirectX::ScratchImage scratchImage;
+
+        // Check if format needs decompression
+        if (DirectX::IsCompressed(srcImage.format)) {
+            hr = DirectX::Decompress(srcImage, DXGI_FORMAT_R8G8B8A8_UNORM, scratchImage);
+        }
+        else {
+            // Just copy the image data
+            hr = scratchImage.InitializeFromImage(srcImage);
+        }
+
+        texture->UnlockRect(0);
+
+        if (FAILED(hr)) {
+            Log::Warning("SaveTextureToFile: Failed to prepare texture: 0x%X", hr);
+            return false;
+        }
+
+        // Determine codec GUID
+        GUID guid;
+        if (ext == ".png") {
+            guid = GUID_ContainerFormatPng;
+        }
+        else if (ext == ".jpg" || ext == ".jpeg") {
+            guid = GUID_ContainerFormatJpeg;
+        }
+        else if (ext == ".bmp") {
+            guid = GUID_ContainerFormatBmp;
+        }
+
+        hr = DirectX::SaveToWICFile(*scratchImage.GetImage(0, 0, 0), DirectX::WIC_FLAGS_NONE, guid, file_path.c_str());
+
+        if (FAILED(hr)) {
+            Log::Warning("SaveTextureToFile: Failed to save image: 0x%X", hr);
+            return false;
+        }
+    }
+    else {
+        Log::Warning("SaveTextureToFile: Unsupported file format: %s", ext.c_str());
         return false;
     }
-
-    DirectX::Image img = {};
-    img.width = desc.Width;
-    img.height = desc.Height;
-    img.format = static_cast<DXGI_FORMAT>(desc.Format);
-    img.rowPitch = lockedRect.Pitch;
-    img.slicePitch = lockedRect.Pitch * desc.Height;
-    img.pixels = static_cast<uint8_t*>(lockedRect.pBits);
-
-    DirectX::SaveToDDSFile(img, DirectX::DDS_FLAGS_NONE, file_path.c_str());
-
-    texture->UnlockRect(0);
 
     Log::Info("Successfully saved texture to %s (%dx%d)", file_path.string().c_str(), desc.Width, desc.Height);
     return true;
