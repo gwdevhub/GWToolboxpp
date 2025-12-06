@@ -34,29 +34,35 @@ namespace {
         file << STEAM_APP_ID;
         return true;
     }
+    bool DeleteSteamAppIdFile() {
+        const auto steam_appid_path = Resources::GetExePath().parent_path() / "steam_appid.txt";
+        if (std::filesystem::exists(steam_appid_path)) {
+            std::filesystem::remove(steam_appid_path);
+        }
+        return !std::filesystem::exists(steam_appid_path);
+    }
 
     HMODULE steam_api_dll = 0;
 
     bool InitializeSteam()
     {
         if (steam_api_loaded) return true;
-        steam_initialised_before_dx9 = !GW::Render::GetDevice();
         EnsureSteamAppIdFile();
         steam_api_module = LoadLibraryA("steam_api.dll");
         if (!steam_api_module) {
+            DeleteSteamAppIdFile();
             Log::Error("Failed to load steam_api.dll");
             return false;
         }
         *steam_connection_error = 0;
         if (SteamAPI_InitFlat(&steam_connection_error) != k_ESteamAPIInitResult_OK) {
             last_error = std::format("Failed to init Steam. {}", steam_connection_error);
+            DeleteSteamAppIdFile();
             return false;
         }
+        DeleteSteamAppIdFile();
         steam_api_loaded = true;
         last_error = "";
-        if (!steam_initialised_before_dx9) {
-            last_error = "Steam was initailised before the directx device was created, steam overlay wasn't able to hook!";
-        }
         return true;
     }
 
@@ -78,7 +84,7 @@ void SteamModule::DrawSettingsInternal()
     else if (!steam_api_loaded) {
         ImGui::TextColored(yellow, "Not Connected");
     }
-    else if (!steam_initialised_before_dx9) {
+    else if (!SteamUtils()->IsOverlayEnabled()) {
         ImGui::TextColored(yellow, "Steam connected, but overlay not working");
         ImGui::ShowHelp("Steam connection was intialised after DirectX device was created.\nThis means that steam isn't able to hook into the game\nto be able to draw the steam overlay.\n\nLaunch toolbox through gwlauncher to make it work!");
     }
@@ -87,5 +93,9 @@ void SteamModule::DrawSettingsInternal()
     }
     if (!steam_api_loaded && ImGui::Button("Retry")) {
         InitializeSteam();
+    }
+    if (ImGui::Button("Disconnect Steam") && steam_api_loaded) {
+        SteamAPI_Shutdown();
+        steam_api_loaded = false;
     }
 }

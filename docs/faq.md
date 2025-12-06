@@ -8,13 +8,13 @@ layout: default
 **Will I get banned for using GWToolbox++?** \\
 GWToolbox++ is a third party tool that can automate aspects of gameplay for a range of uses including auto-responding to incoming whipsers using the `/afk` command, automatically maintaining pcons in an explorable area, loading hero team builds and salvaging/purchasing items in bulk. 
 
-Although many of these automations can be seen as quality-of-life improvements to the game, this software goes against part of the [NCSoft Code of Conduct](https://us.ncsoft.com/en-gb/legal/ncsoft/code-of-conduct): 
+Although many of these automations can be seen as quality-of-life improvements to the game, this software goes against part of the [ArenaNet Code of Conduct](https://www.arena.net/en/legal/code-of-conduct): 
 
 "You may not use any third-party program (such as a "bot") to automate gameplay functions, including playing, chatting, interacting, or gathering items within our Games"
 
 "You will not attempt to interfere with, hack into, or decipher any transmissions to or from the servers or other facilities running the Services."
 
-...and is also mentioned in the [NCSoft User Agreement](https://us.ncsoft.com/en-gb/legal/ncsoft/user-agreement):
+...and is also mentioned in the [ArenaNet User Agreement](https://www.arena.net/en/legal/user-agreement):
 
 "We do not permit the use of any third-party software, tools, or programs that interact with the Services that give one player an unintended, unnatural, or unfair advantage over another player. Such prohibited third-party software, tools, or programs include those that alter Game-balance in favor of one player over another, automate actions within the Services, promote unattended gameplay, or have an adverse effect on other users of the Services. Prohibited third-party programs will be determined at our sole discretion."
 

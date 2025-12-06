@@ -919,10 +919,13 @@ void Mission::OnHover()
             ImGui::TextUnformatted("Characters who have not completed this area:");
             auto icon_size = ImGui::CalcTextSize(" ");
             icon_size.x = icon_size.y;
+            const auto map = GW::Map::GetMapInfo(outpost);
             for (auto char_completion : chars_without_completed) {
                 ImGui::Image(*Resources::GetProfessionIcon(char_completion->profession), icon_size);
+                bool is_hm_complete = ::IsAreaComplete(TextUtils::StringToWString(char_completion->name_str).c_str(), outpost, CompletionCheck::HardMode, map);
+                bool is_nm_complete = ::IsAreaComplete(TextUtils::StringToWString(char_completion->name_str).c_str(), outpost, CompletionCheck::NormalMode, map);
                 ImGui::SameLine();
-                ImGui::TextUnformatted(char_completion->name_str.c_str());
+                ImGui::Text("%s (%s)", char_completion->name_str.c_str(), TextUtils::Join({is_nm_complete ? "" : "NM", is_hm_complete ? "" : "HM"}, ",").c_str());
             }
         }
     });

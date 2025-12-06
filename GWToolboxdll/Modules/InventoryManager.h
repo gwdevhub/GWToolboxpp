@@ -186,7 +186,7 @@ public:
         {
             return (interaction & 1) != 0;
         }
-        [[nodiscard]] bool CanBeIdentified() const { return !GetIsIdentified() && (interaction & 0x800000) != 0; }
+        [[nodiscard]] bool CanBeIdentified() const;
         [[nodiscard]] bool IsPrefixUpgradable() const
         {
             return ((interaction >> 14) & 1) == 0;

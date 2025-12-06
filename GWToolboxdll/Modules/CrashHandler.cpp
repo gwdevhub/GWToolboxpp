@@ -179,10 +179,10 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers)
         UserStreamParam->UserStreamArray = s;
     }
     if (pExceptionPointers) {
-        ExpParam = new MINIDUMP_EXCEPTION_INFORMATION;
+        /* ExpParam = new MINIDUMP_EXCEPTION_INFORMATION;
         ExpParam->ThreadId = ThreadId;
         ExpParam->ExceptionPointers = pExceptionPointers;
-        ExpParam->ClientPointers = false;
+        ExpParam->ClientPointers = false;*/
     }
     const BOOL success = MiniDumpWriteDump(
         GetCurrentProcess(), ProcessId, hFile,
@@ -227,7 +227,7 @@ void CrashHandler::Initialize()
 {
     ToolboxModule::Initialize();
     GW::RegisterPanicHandler(GWCAPanicHandler, nullptr);
-    HandleCrash_Func = (HandleCrash_pt)GW::Scanner::Find("\x68\x00\x00\x08\x00\xff\x75\x1c", "xxxxxxxx", -0x4C);
+    HandleCrash_Func = (HandleCrash_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindNthUseOfString(L"Crash.dmp",1), 0xfff);
     if (HandleCrash_Func) {
         GW::Hook::CreateHook((void**)&HandleCrash_Func, OnGWCrash, (void**)&RetHandleCrash);
         GW::Hook::EnableHooks(HandleCrash_Func);

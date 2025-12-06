@@ -57,8 +57,6 @@ public:
 
     static void CreateAlias(const wchar_t* from, const wchar_t* to);
 
-    bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
-
     // Update. Will always be called every frame.
     void Update(float delta) override;
 

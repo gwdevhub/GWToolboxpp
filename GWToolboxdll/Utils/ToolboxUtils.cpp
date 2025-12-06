@@ -53,24 +53,6 @@ namespace {
 }
 
 namespace GW {
-    void WaitForFrame(const wchar_t* frame_label, OnGotFrame_Callback callback)
-    {
-        if (const auto frame = GW::UI::GetFrameByLabel(frame_label)) {
-            callback(frame);
-        }
-        else {
-            GW::UI::RegisterCreateUIComponentCallback((GW::HookEntry*)callback, [frame_label, callback](GW::UI::CreateUIComponentPacket* packet) {
-                if (packet && packet->component_label && wcscmp(packet->component_label, frame_label) == 0) {
-                    const auto frame = GW::UI::GetFrameByLabel(frame_label);
-                    ASSERT(frame);
-                    callback(frame);
-                    GW::GameThread::Enqueue([callback]() {
-                        GW::UI::RemoveCreateUIComponentCallback((GW::HookEntry*)callback);
-                    });
-                }
-            }, 0x4000);
-        }
-    }
 
     namespace Map {
         bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out)

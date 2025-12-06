@@ -220,7 +220,7 @@ void ResignLogModule::Initialize() {
         GW::UI::RegisterUIMessageCallback(&ResignLog_HookEntry, message_id, OnUIMessage, 0x8000);
     }
 
-    GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"resignlog", CmdResignLog);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"resignlog", CmdResignLog);
 
     UpdatePlayerStates();
 

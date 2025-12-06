@@ -69,6 +69,10 @@ struct MusicData {
             if (std::ranges::find(logged_music, filename) == logged_music.end()) {
                 logged_music.push_back(filename);
             }
+            if (std::ranges::find(blocked_sounds, filename) != blocked_sounds.end()) {
+                GW::Hook::LeaveHook();
+                return;
+            }
         }
         PlayMusicFromSoundScript_Ret(sound_script, flags1, flags2, flags3, music_idx);
         GW::Hook::LeaveHook();
@@ -212,7 +216,7 @@ void AudioSettings::Initialize()
         GW::Hook::CreateHook((void**)&CloseHandle_Func, OnCloseHandle, reinterpret_cast<void**>(&CloseHandle_Ret));
         GW::Hook::EnableHooks(CloseHandle_Func);
     }
-    StopSound_Func = (StopSound_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("SndMain.cpp", "handle", 0x3d2, 0));
+    StopSound_Func = (StopSound_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("SndMain.cpp", "handle", 0x3d8, 0));
 
     #ifdef _DEBUG
     ASSERT(PlaySound_Func);

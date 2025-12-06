@@ -48,7 +48,6 @@ target_link_options(GWToolboxdll PRIVATE
     $<$<CONFIG:Debug>:/NODEFAULTLIB:LIBCMT>
     /IGNORE:4099 # pdb not found for github action
     "/DELAYLOAD:gwca.dll"
-    "/DELAYLOAD:steam_api.dll"
     )
 
 target_include_directories(GWToolboxdll PRIVATE
@@ -56,7 +55,7 @@ target_include_directories(GWToolboxdll PRIVATE
     "${PROJECT_SOURCE_DIR}/Dependencies/GWCA/include"
     "${CMAKE_CURRENT_SOURCE_DIR}"
 	"${SIMPLEINI_INCLUDE_DIRS}"
-    )
+    ) 
 
 include(imgui_fonts)
 
@@ -66,7 +65,8 @@ target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
     RestClient
     imgui
-    directxtex
+    Microsoft::DirectXTex
+	directxtexloader
     gwca
     steamworks_sdk
     easywsclient
@@ -117,4 +117,4 @@ endforeach()
 
 add_custom_target(compile_shaders DEPENDS ${SHADER_OUTPUTS})
 
-add_dependencies(GWToolboxdll compile_shaders)
+add_dependencies(GWToolboxdll compile_shaders) 

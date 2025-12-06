@@ -23,7 +23,6 @@
 #include <Modules/QuestModule.h>
 #include <Modules/KeyboardLanguageFix.h>
 #include <Modules/ExtraWeaponSets.h>
-#include <Modules/SteamModule.h>
 #if 0
 #include <Modules/GWFileRequester.h>
 #endif
@@ -39,8 +38,6 @@
 #include <Modules/AudioSettings.h>
 #include <Modules/HeroEquipmentModule.h>
 #include <Modules/NPCVoiceModule.h>
-#include <Modules/LoginModule.h>
-#include <Modules/UIScaler.h>
 #include <Modules/FpsFix.h>
 
 #include <Windows/PconsWindow.h>
@@ -163,11 +160,8 @@ namespace {
 #if 0
         ExtraWeaponSets::Instance(),
 #endif
-        LoginModule::Instance(),
         NPCVoiceModule::Instance(),
         AudioSettings::Instance(),   
-        UIScaler::Instance(),          
-        SteamModule::Instance(),
         FpsFix::Instance()
     };
 

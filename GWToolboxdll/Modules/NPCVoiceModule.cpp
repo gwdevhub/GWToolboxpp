@@ -39,8 +39,6 @@ namespace {
     const char* voice_id_human_female = "EXAVITQu4vr4xnSDxMaL";
     const char* voice_id_dwarven_male = "N2lVS1w4EtoT3dr4eOWO";
 
-    constexpr std::string empty_string = "";
-
     struct PendingNPCAudio;
     typedef std::string (*GenerateVoiceCallback)(PendingNPCAudio* audio);
 
@@ -58,7 +56,7 @@ namespace {
 
     GW::Constants::Language GetAudioLanguage()
     {
-        return (GW::Constants::Language)GW::UI::GetPreference(GW::UI::NumberPreference::AudioLanguage);
+        return (GW::Constants::Language)GW::UI::GetPreference(GW::UI::NumberPreference::LanguageAudio);
     }
 
         // Add OpenAI TTS function
@@ -156,8 +154,8 @@ namespace {
     uint32_t GetDialogVolume(bool cache = true) {
         if (cache && cached_dialog_volume != 0xff) 
             return cached_dialog_volume;
-        const auto d1 = GW::UI::GetPreference(GW::UI::NumberPreference::DialogVolume);
-        const auto d2 = GW::UI::GetPreference(GW::UI::NumberPreference::MasterVolume);
+        const auto d1 = GW::UI::GetPreference(GW::UI::NumberPreference::VolDialog);
+        const auto d2 = GW::UI::GetPreference(GW::UI::NumberPreference::VolMaster);
         return cached_dialog_volume = std::min(d1, d2), cached_dialog_volume;
     }
     float cached_system_volume = 1.f;
@@ -1036,10 +1034,9 @@ namespace {
         else {
             voice_name = "en-US-Studio-Q";
         }
-
         request_body["voice"] = nlohmann::json::object();
         request_body["voice"]["name"] = voice_name;
-        request_body["voice"]["languageCode"] = LanguageToAbbreviation(audio->language);
+        request_body["voice"]["languageCode"] = "en-US"; // Language code is tied to voice chosen
 
         // Audio config section
         request_body["audioConfig"] = nlohmann::json::object();

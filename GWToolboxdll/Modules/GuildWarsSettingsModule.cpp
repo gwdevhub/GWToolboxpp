@@ -69,7 +69,10 @@ namespace {
         "CameraRotationSpeed",
         "ScreenBorderless",
         "VolMaster",
-        "ClockMode"
+        "ClockMode",
+        "MobileUiScale",
+        "GamepadCursorSpeed",
+        "LastLoginMethod"
     };
     static_assert(_countof(number_pref_names) == std::to_underlying(GW::UI::NumberPreference::Count));
 
@@ -191,43 +194,6 @@ namespace {
     std::map<std::wstring, bool> quest_entry_group_visibility;
 
     GW::HookEntry ChatCmd_HookEntry;
-
-    struct QuestEntryGroup {
-        void* vtable;
-        wchar_t* encoded_name;
-        uint32_t props[0x5];
-        bool is_visible;
-    };
-
-    static_assert(sizeof(QuestEntryGroup) == 0x20);
-
-    struct QuestEntryGroupContext {
-        GW::TList<QuestEntryGroup> quest_entries;
-    };
-
-    QuestEntryGroupContext* quest_entry_group_context = nullptr;
-
-    QuestEntryGroup* GetQuestEntryGroup(const wchar_t* quest_entry_encoded_name)
-    {
-        if (!(quest_entry_encoded_name && *quest_entry_encoded_name && quest_entry_group_context)) {
-            return nullptr;
-        }
-        auto& quest_entries = quest_entry_group_context->quest_entries;
-        const auto found = std::ranges::find_if(quest_entries, [quest_entry_encoded_name](auto& entry) {
-            return wcscmp(entry.encoded_name, quest_entry_encoded_name) == 0;
-        });
-        return found == std::ranges::end(quest_entries) ? nullptr : &*found;
-    }
-
-    QuestEntryGroup* GetQuestEntryGroup(const GW::Constants::QuestID quest_id)
-    {
-        if (quest_id == static_cast<GW::Constants::QuestID>(0)) {
-            return nullptr;
-        }
-        wchar_t out[128];
-        return GW::QuestMgr::GetQuestEntryGroupName(quest_id, out, _countof(out)) ? GetQuestEntryGroup(out) : nullptr;
-    }
-
 
     struct PreferencesStruct {
         std::vector<uint32_t> preference_values{};
@@ -453,87 +419,7 @@ namespace {
         OnPreferencesLoadFileChosen(filename.string().c_str());
     }
 
-    enum class PendingAction {
-        NONE,
-        EXPAND_ALL,
-        COLLAPSE_ALL,
-        WAIT_REFRESH_LOG,
-        REFRESH_LOG,
-        OPEN_LOG
-    } pending_action = PendingAction::NONE;
-
-    void ToggleQuestEntrySection(QuestEntryGroup* entry, const bool is_visible, const bool refresh_log = true)
-    {
-        if (!(entry && entry->is_visible != is_visible)) {
-            return;
-        }
-        entry->is_visible = is_visible;
-        quest_entry_group_visibility[entry->encoded_name] = is_visible;
-        if (refresh_log) {
-            pending_action = PendingAction::WAIT_REFRESH_LOG;
-        }
-    }
-
-    using GetOrCreateQuestEntryGroup_pt = QuestEntryGroup*(__fastcall*)(QuestEntryGroupContext* context, void* edx, wchar_t* quest_entry_group_name);
-    GetOrCreateQuestEntryGroup_pt GetOrCreateQuestEntryGroup_Func = nullptr;
-    GetOrCreateQuestEntryGroup_pt GetOrCreateQuestEntryGroup_Ret = nullptr;
-    // NB: Don't call this from gwtoolbox; it'll create a quest entry group if it doesn't find one. Instead use GetQuestEntryGroup
-    QuestEntryGroup* __fastcall OnGetOrCreateQuestEntryGroup(QuestEntryGroupContext* context, void* edx, wchar_t* quest_entry_group_name)
-    {
-        GW::Hook::EnterHook();
-        const bool is_creating = GetQuestEntryGroup(quest_entry_group_name) == nullptr;
-        QuestEntryGroup* group = GetOrCreateQuestEntryGroup_Ret(context, edx, quest_entry_group_name);
-        const auto current_quest_group = GetQuestEntryGroup(GW::QuestMgr::GetActiveQuestId());
-        if (!is_creating) {
-            goto ret;
-        }
-
-        if (group == current_quest_group) {
-            // Current quest group, leave open
-            goto ret;
-        }
-        if (quest_entry_group_visibility.contains(group->encoded_name)) {
-            // Override collapsed state, GW has just created this quest entry group and defaults to open
-            group->is_visible = quest_entry_group_visibility[group->encoded_name];
-        }
-    ret:
-        GW::Hook::LeaveHook();
-        return group;
-    }
-
-    using OnQuestEntryGroupInteract_pt = void(__fastcall*)(void* context, void* edx, uint32_t* wparam);
-    OnQuestEntryGroupInteract_pt OnQuestEntryGroupInteract_Func = nullptr;
-    OnQuestEntryGroupInteract_pt OnQuestEntryGroupInteract_Ret = nullptr;
-
-    void __fastcall OnQuestEntryGroupInteract(uint32_t* context, void* edx, uint32_t* wparam)
-    {
-        GW::Hook::EnterHook();
-        if (wparam[1] == 0 && wparam[2] == 6) {
-            // Player manually toggled visibility
-            const bool is_visible = static_cast<bool>(wparam[3]);
-            const auto quest_entry_group_name = (wchar_t*)context[2];
-            quest_entry_group_visibility[quest_entry_group_name] = is_visible;
-            if (ImGui::IsKeyDown(ImGuiKey_LeftShift)) {
-                // Collapse or expand all
-                if (is_visible) {
-                    pending_action = PendingAction::EXPAND_ALL;
-                }
-                else {
-                    pending_action = PendingAction::COLLAPSE_ALL;
-                }
-            }
-        }
-        OnQuestEntryGroupInteract_Ret(context, edx, wparam);
-        GW::Hook::LeaveHook();
-    }
-
     const char* section_name = "GuildWarsSettingsModule:Quest Log Entries Visible";
-
-    GW::MemoryPatcher display_graphics_version_ui_component;
-
-    using CreateUIComponent_pt = uint32_t(__cdecl*)(int frame_id,int behavior,int child_frame_id,void *ui_callback,void *name_enc, wchar_t *label);
-
-    CreateUIComponent_pt CreateUIComponent = nullptr;
 
     bool DoesDeviceSupportInterface(IDirect3DDevice9* d3d9Device, const GUID interface_iid) {
         if (!d3d9Device)
@@ -630,7 +516,7 @@ namespace {
         return L"DirectX 9";
     }
 
-    uint32_t OnCreateUIComponent_GraphicsVersion( int frame_id,int behavior,int child_frame_id,void *ui_callback,wchar_t *, wchar_t *label) {
+    uint32_t OnCreateUIComponent_GraphicsVersion( int ,int ,int ,void *,wchar_t *, wchar_t *) {
         std::string dll_product_name;
         std::string dll_product_version;
         std::string dll_base_name;
@@ -668,7 +554,8 @@ namespace {
         }
         new_name_enc += L"\x1";
 
-        return CreateUIComponent(frame_id, behavior, child_frame_id, ui_callback, new_name_enc.data(), label);
+        return 0;
+        //CreateUIComponent(frame_id, behavior, child_frame_id, ui_callback, new_name_enc.data(), label);
     }
 }
 
@@ -680,37 +567,8 @@ void GuildWarsSettingsModule::Initialize()
     if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address)) {
         key_mappings_array = *(uint32_t**)address;
     }
-
-    address = GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("QuestEntryGroup.cpp", "staticData", 0xf6, 0),0x200);
-    if (address) {
-        OnQuestEntryGroupInteract_Func = (OnQuestEntryGroupInteract_pt)address;
-        GW::Hook::CreateHook((void**)&OnQuestEntryGroupInteract_Func, OnQuestEntryGroupInteract, (void**)&OnQuestEntryGroupInteract_Ret);
-        GW::Hook::EnableHooks(OnQuestEntryGroupInteract_Func);
-
-        quest_entry_group_context = *(QuestEntryGroupContext**)(address + 0x12f);
-
-        GetOrCreateQuestEntryGroup_Func = (GetOrCreateQuestEntryGroup_pt)GW::Scanner::FunctionFromNearCall(address + 0x136);
-        if (GetOrCreateQuestEntryGroup_Func) {
-            GW::Hook::CreateHook((void**)&GetOrCreateQuestEntryGroup_Func, OnGetOrCreateQuestEntryGroup, (void**)&GetOrCreateQuestEntryGroup_Ret);
-            GW::Hook::EnableHooks(GetOrCreateQuestEntryGroup_Func);
-        }
-    }
-
-
-    address = GW::Scanner::Find("\x6a\x0a\x68\x5a\x05\x00\x00", "xxxxxxx", 0x1e);
-    if (address) {
-        CreateUIComponent = (CreateUIComponent_pt)GW::Scanner::FunctionFromNearCall(address);
-        if (CreateUIComponent) {
-            display_graphics_version_ui_component.SetRedirect(address, OnCreateUIComponent_GraphicsVersion);
-            display_graphics_version_ui_component.TogglePatch(true);
-        }
-
-    }
 #ifdef _DEBUG
     ASSERT(key_mappings_array);
-    ASSERT(OnQuestEntryGroupInteract_Func);
-    ASSERT(GetOrCreateQuestEntryGroup_Func);
-    ASSERT(display_graphics_version_ui_component.IsValid());
 #endif
 
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"saveprefs", CmdSave);
@@ -718,93 +576,10 @@ void GuildWarsSettingsModule::Initialize()
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"loadprefs", CmdLoad);
 }
 
-void GuildWarsSettingsModule::Update(float)
-{
-    switch (pending_action) {
-        case PendingAction::WAIT_REFRESH_LOG:
-            // In some cases, we have to wait a frame before toggling the log e.g. taking a new quest
-            pending_action = PendingAction::REFRESH_LOG;
-            break;
-        case PendingAction::REFRESH_LOG: {
-            const auto window_pos = GetWindowPosition(GW::UI::WindowID_QuestLog);
-            if (window_pos && window_pos->visible()) {
-                Keypress(GW::UI::ControlAction_OpenQuestLog);
-                pending_action = PendingAction::OPEN_LOG;
-            }
-        }
-        break;
-        case PendingAction::OPEN_LOG:
-            Keypress(GW::UI::ControlAction_OpenQuestLog);
-            pending_action = PendingAction::NONE;
-            break;
-        case PendingAction::EXPAND_ALL:
-            if (quest_entry_group_context) {
-                auto& quest_entries = quest_entry_group_context->quest_entries;
-                for (auto& entry : quest_entries) {
-                    ToggleQuestEntrySection(&entry, true);
-                }
-            }
-            pending_action = PendingAction::REFRESH_LOG;
-            break;
-        case PendingAction::COLLAPSE_ALL:
-            if (quest_entry_group_context) {
-                auto& quest_entries = quest_entry_group_context->quest_entries;
-                for (auto& entry : quest_entries) {
-                    ToggleQuestEntrySection(&entry, false);
-                }
-            }
-            pending_action = PendingAction::REFRESH_LOG;
-            break;
-    }
-}
-
-void GuildWarsSettingsModule::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxModule::LoadSettings(ini);
-    CSimpleIni::TNamesDepend keys;
-
-    const auto current_quest_group = GetQuestEntryGroup(GW::QuestMgr::GetActiveQuestId());
-    if (ini->GetAllKeys(section_name, keys)) {
-        std::wstring quest_entry_group_name;
-        for (const auto& key : keys) {
-            if (!GuiUtils::IniToArray(key.pItem, quest_entry_group_name)) {
-                continue; // @Cleanup: error handling
-            }
-            const bool is_visible = ini->GetBoolValue(section_name, key.pItem, true);
-            quest_entry_group_visibility[quest_entry_group_name] = is_visible;
-            const auto group = GetQuestEntryGroup(quest_entry_group_name.c_str());
-            if (current_quest_group != group) {
-                ToggleQuestEntrySection(group, is_visible);
-            }
-        }
-    }
-}
-
-void GuildWarsSettingsModule::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxModule::SaveSettings(ini);
-    CSimpleIni::TNamesDepend keys;
-
-    std::string tmp;
-    for (const auto& it : quest_entry_group_visibility) {
-        if (!GuiUtils::ArrayToIni(it.first, &tmp)) {
-            continue; // @Cleanup: error handling
-        }
-        ini->SetBoolValue(section_name, tmp.c_str(), it.second);
-    }
-}
-
 void GuildWarsSettingsModule::Terminate()
 {
     ToolboxModule::Terminate();
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
-    if (OnQuestEntryGroupInteract_Func) {
-        GW::Hook::RemoveHook(OnQuestEntryGroupInteract_Func);
-    }
-    if (GetOrCreateQuestEntryGroup_Func) {
-        GW::Hook::RemoveHook(GetOrCreateQuestEntryGroup_Func);
-    }
-    display_graphics_version_ui_component.Reset();
 }
 
 void GuildWarsSettingsModule::DrawSettingsInternal()
@@ -822,5 +597,4 @@ void GuildWarsSettingsModule::DrawSettingsInternal()
         filename = Resources::GetPath(filename);
         Resources::SaveFileDialog(OnPreferencesSaveFileChosen, "ini", filename.string().c_str());
     }
-    quest_entry_group_context;
 }

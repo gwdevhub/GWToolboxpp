@@ -7,6 +7,8 @@
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/Managers/MerchantMgr.h>
 
+#include <GWCA/Constants/UIMessages.h>
+
 namespace GW {
 
     struct Module;
@@ -148,60 +150,67 @@ namespace GW {
             uint32_t field22_0x58;
             uint32_t field23_0x5c;
             uint32_t field24_0x60;
-            uint32_t field25_0x64;
-            uint32_t field26_0x68;
-            uint32_t field27_0x6c;
-            uint32_t field28_0x70;
-            uint32_t field29_0x74;
-            uint32_t field30_0x78;
-            GW::Array<void*> field31_0x7c;
-            uint32_t field32_0x8c;
-            uint32_t field33_0x90;
-            uint32_t field34_0x94;
-            uint32_t field35_0x98;
-            uint32_t field36_0x9c;
+            uint32_t field24a_0x64;
+            uint32_t field24b_0x68;
+            uint32_t field25_0x6c;
+            uint32_t field26_0x70;
+            uint32_t field27_0x74;
+            uint32_t field28_0x78;
+            uint32_t field29_0x7c;
+            uint32_t field30_0x80;
+            GW::Array<void*> field31_0x84;
+            uint32_t field32_0x94;
+            uint32_t field33_0x98;
+            uint32_t field34_0x9c;
+            uint32_t field35_0xa0;
+            uint32_t field36_0xa4;
             GW::Array<FrameInteractionCallback> frame_callbacks;
             uint32_t child_offset_id; // Offset of this child in relation to its parent
             uint32_t frame_id; // Offset in the global frame array
-            uint32_t field40_0xb8;
-            uint32_t field41_0xbc;
-            uint32_t field42_0xc0;
-            uint32_t field43_0xc4;
-            uint32_t field44_0xc8;
-            uint32_t field45_0xcc;
+            uint32_t field40_0xc0;
+            uint32_t field41_0xc4;
+            uint32_t field42_0xc8;
+            uint32_t field43_0xcc;
+            uint32_t field44_0xd0;
+            uint32_t field45_0xd4;
             FramePosition position;
-            uint32_t field63_0x114;
-            uint32_t field64_0x118;
-            uint32_t field65_0x11c;
+            uint32_t field63_0x11c;
+            uint32_t field64_0x120;
+            uint32_t field65_0x124;
             FrameRelation relation;
-            uint32_t field73_0x13c;
-            uint32_t field74_0x140;
-            uint32_t field75_0x144;
-            uint32_t field76_0x148;
-            uint32_t field77_0x14c;
-            uint32_t field78_0x150;
-            uint32_t field79_0x154;
-            uint32_t field80_0x158;
-            uint32_t field81_0x15c;
-            uint32_t field82_0x160;
-            uint32_t field83_0x164;
-            uint32_t field84_0x168;
-            uint32_t field85_0x16c;
-            uint32_t field86_0x170;
-            uint32_t field87_0x174;
-            uint32_t field88_0x178;
-            uint32_t field89_0x17c;
-            uint32_t field90_0x180;
+            uint32_t field73_0x144;
+            uint32_t field74_0x148;
+            uint32_t field75_0x14c;
+            uint32_t field76_0x150;
+            uint32_t field77_0x154;
+            uint32_t field78_0x158;
+            uint32_t field79_0x15c;
+            uint32_t field80_0x160;
+            uint32_t field81_0x164;
+            uint32_t field82_0x168;
+            uint32_t field83_0x16c;
+            uint32_t field84_0x170;
+            uint32_t field85_0x174;
+            uint32_t field86_0x178;
+            uint32_t field87_0x17c;
+            uint32_t field88_0x180;
+            uint32_t field89_0x184;
+            uint32_t field90_0x188;
             uint32_t frame_state;
-            uint32_t field92_0x188;
-            uint32_t field93_0x18c;
-            uint32_t field94_0x190;
-            uint32_t field95_0x194;
-            uint32_t field96_0x198;
-            uint32_t field97_0x19c;
-            uint32_t field98_0x1a0;
+            uint32_t field92_0x190;
+            uint32_t field93_0x194;
+            uint32_t field94_0x198;
+            uint32_t field95_0x19c;
+            uint32_t field96_0x1a0;
+            uint32_t field97_0x1a4;
+            uint32_t field98_0x1a8;
             TooltipInfo* tooltip_info;
-            uint32_t field100_0x1a8;
+            uint32_t field100_0x1b0;
+            uint32_t field101_0x1b4;
+            uint32_t field102_0x1b8;
+            uint32_t field103_0x1bc;
+            uint32_t field104_0x1c0;
+            uint32_t field105_0x1c4;
 
             bool IsCreated() const {
                 return (frame_state & 0x4) != 0;
@@ -212,14 +221,13 @@ namespace GW {
             bool IsHidden() const {
                 return (frame_state & 0x200) != 0;
             }
-
             bool IsDisabled() const {
                 return (frame_state & 0x10) != 0;
             }
         };
-        static_assert(sizeof(Frame) == 0x1ac);
+        static_assert(sizeof(Frame) == 0x1c8);
 
-        static_assert(offsetof(Frame, relation) == 0x120);
+        static_assert(offsetof(Frame, relation) == 0x128);
 
         struct AgentNameTagInfo {
             /* +h0000 */ uint32_t agent_id;
@@ -282,523 +290,9 @@ namespace GW {
             void* ecx;
             void* edx;
         };
-
-        enum class UIMessage : uint32_t {
-            kNone = 0x0,
-            kResize                     = 0x8,
-            kInitFrame                  = 0x9,
-            kDestroyFrame               = 0xb,
-            kFrameMessage_0x13          = 0x13,
-            kKeyDown                    = 0x1e, // wparam = UIPacket::kKeyAction*
-            kSetFocus                   = 0x1f, // wparam = 1 or 0
-            kKeyUp                      = 0x20, // wparam = UIPacket::kKeyAction*
-            kMouseClick                 = 0x22, // wparam = UIPacket::kMouseClick*
-            kMouseCoordsClick           = 0x24,  // wparam = UIPacket::kMouseCoordsClick*
-            kMouseUp                    = 0x26, // wparam = UIPacket::kMouseCoordsClick*
-            kMouseClick2                = 0x2e, // wparam = UIPacket::kMouseAction*
-            kMouseAction                = 0x2f, // wparam = UIPacket::kMouseAction*
-            kRenderFrame_0x30 = 0x30,
-            kRenderFrame_0x32 = 0x32,
-            kSetLayout                  = 0x33,
-            kMeasureContent = 0x34,
-            kRefreshContent = 0x37,
-            kRenderFrame_0x43 = 0x43,
-            kFrameMessage_0x46          = 0x47,
-            kFrameMessage_0x47, // Multiple uses depending on frame
-            kFrameMessage_0x48, // Multiple uses depending on frame
-            kFrameMessage_0x49, // Multiple uses depending on frame
-            kFrameMessage_0x4a, // Multiple uses depending on frame
-            kFrameMessage_0x4b, // Multiple uses depending on frame
-            kFrameMessage_0x4c, // Multiple uses depending on frame
-            kFrameMessage_0x4d, // Multiple uses depending on frame
-            kFrameMessage_0x4e, // Multiple uses depending on frame
-            kFrameMessage_0x4f, // Multiple uses depending on frame
-            kFrameMessage_0x50, // Multiple uses depending on frame
-            kFrameMessage_0x51, // Multiple uses depending on frame
-            kFrameMessage_0x52, // Multiple uses depending on frame
-            kFrameMessage_0x53, // Multiple uses depending on frame
-            kFrameMessage_0x54, // Multiple uses depending on frame
-            kFrameMessage_0x55, // Multiple uses depending on frame
-            kFrameMessage_0x56, // Multiple uses depending on frame
-            kFrameMessage_0x57, // Multiple uses depending on frame
-            kUpdateAgentEffects         = 0x10000000 | 0x9,
-            kRerenderAgentModel         = 0x10000000 | 0x7, // wparam = uint32_t agent_id
-            kAgentSpeechBubble          = 0x10000000 | 0x17, 
-            kShowAgentNameTag           = 0x10000000 | 0x19, // wparam = AgentNameTagInfo*
-            kHideAgentNameTag           = 0x10000000 | 0x1A,
-            kSetAgentNameTagAttribs     = 0x10000000 | 0x1B, // wparam = AgentNameTagInfo*
-            kSetAgentProfession         = 0x10000000 | 0x1D, // wparam = UIPacket::kSetAgentProfession*
-            kChangeTarget               = 0x10000000 | 0x20, // wparam = UIPacket::kChangeTarget*
-            kAgentStartCasting          = 0x10000000 | 0x27, // wparam = UIPacket::kAgentStartCasting*
-            kShowMapEntryMessage        = 0x10000000 | 0x29, // wparam = { wchar_t* title, wchar_t* subtitle }
-            kSetCurrentPlayerData       = 0x10000000 | 0x2A, // fired after setting the worldcontext player name
-            kPostProcessingEffect       = 0x10000000 | 0x34, // Triggered when drunk. wparam = UIPacket::kPostProcessingEffect
-            kHeroAgentAdded             = 0x10000000 | 0x38, // hero assigned to agent/inventory/ai mode
-            kHeroDataAdded              = 0x10000000 | 0x39, // hero info received from server (name, level etc)
-            kShowXunlaiChest            = 0x10000000 | 0x40,
-            kMinionCountUpdated         = 0x10000000 | 0x46,
-            kMoraleChange               = 0x10000000 | 0x47, // wparam = {agent id, morale percent }
-            kLoginStateChanged          = 0x10000000 | 0x50, // wparam = {bool is_logged_in, bool unk }
-            kEffectAdd                  = 0x10000000 | 0x55, // wparam = {agent_id, GW::Effect*}
-            kEffectRenew                = 0x10000000 | 0x56, // wparam = GW::Effect*
-            kEffectRemove               = 0x10000000 | 0x57, // wparam = effect id
-            kSkillActivated             = 0x10000000 | 0x5b, // wparam ={ uint32_t agent_id , uint32_t skill_id }
-            kUpdateSkillbar             = 0x10000000 | 0x5E, // wparam ={ uint32_t agent_id , ... }
-            kUpdateSkillsAvailable      = 0x10000000 | 0x5f, // Triggered on a skill unlock, profession change or map load
-            kPlayerTitleChanged         = 0x10000000 | 0x64, // wparam = { uint32_t player_id, uint32_t title_id }
-            kTitleProgressUpdated       = 0x10000000 | 0x65, // wparam = title_id
-            kExperienceGained           = 0x10000000 | 0x66, // wparam = experience amount
-            kWriteToChatLog             = 0x10000000 | 0x7E, // wparam = UIPacket::kWriteToChatLog*. Triggered by the game when it wants to add a new message to chat.
-            kWriteToChatLogWithSender   = 0x10000000 | 0x7f, // wparam = UIPacket::kWriteToChatLogWithSender*. Triggered by the game when it wants to add a new message to chat.
-			kAllyOrGuildMessage         = 0x10000000 | 0x80, // wparam = UIPacket::kAllyOrGuildMessage*
-            kPlayerChatMessage          = 0x10000000 | 0x81, // wparam = UIPacket::kPlayerChatMessage*
-            kFloatingWindowMoved        = 0x10000000 | 0x83, // wparam = frame_id
-            kFriendUpdated              = 0x10000000 | 0x89, // wparam = { GW::Friend*, ... }
-            kMapLoaded                  = 0x10000000 | 0x8A,
-            kOpenWhisper                = 0x10000000 | 0x90, // wparam = wchar* name
-            kLogout                     = 0x10000000 | 0x9b, // wparam = { bool unknown, bool character_select }
-            kCompassDraw                = 0x10000000 | 0x9c, // wparam = UIPacket::kCompassDraw*
-            kOnScreenMessage            = 0x10000000 | 0xA0, // wparam = wchar_** encoded_string
-            kDialogBody                 = 0x10000000 | 0xA4, // wparam = DialogBodyInfo*
-            kDialogButton               = 0x10000000 | 0xA1, // wparam = DialogButtonInfo*
-            kTargetNPCPartyMember       = 0x10000000 | 0xB1, // wparam = { uint32_t unk, uint32_t agent_id }
-            kTargetPlayerPartyMember    = 0x10000000 | 0xB2, // wparam = { uint32_t unk, uint32_t player_number }
-            kVendorWindow               = 0x10000000 | 0xB3, // wparam = UIPacket::kVendorWindow
-            kVendorItems                = 0x10000000 | 0xB7, // wparam = UIPacket::kVendorItems
-            kVendorTransComplete        = 0x10000000 | 0xB9, // wparam = *TransactionType
-            kVendorQuote                = 0x10000000 | 0xBB, // wparam = UIPacket::kVendorQuote
-            kStartMapLoad               = 0x10000000 | 0xC0, // wparam = { uint32_t map_id, ...}
-            kWorldMapUpdated            = 0x10000000 | 0xC5, // Triggered when an area in the world map has been discovered/updated
-            kGuildMemberUpdated         = 0x10000000 | 0xD8, // wparam = { GuildPlayer::name_ptr }
-            kShowHint                   = 0x10000000 | 0xDF, // wparam = { uint32_t icon_type, wchar_t* message_enc }
-            kWeaponSetSwapComplete      = 0x10000000 | 0xE7, // wparam = UIPacket::kWeaponSwap*
-            kWeaponSetSwapCancel        = 0x10000000 | 0xE8, 
-			kWeaponSetUpdated           = 0x10000000 | 0xE9,
-            kUpdateGoldCharacter        = 0x10000000 | 0xEA, // wparam = { uint32_t unk, uint32_t gold_character }
-            kUpdateGoldStorage          = 0x10000000 | 0xEB, // wparam = { uint32_t unk, uint32_t gold_storage }
-            kInventorySlotUpdated       = 0x10000000 | 0xEC, // undocumented. Triggered when an item is moved into a slot
-            kEquipmentSlotUpdated       = 0x10000000 | 0xED, // undocumented. Triggered when an item is moved into a slot
-            kInventorySlotCleared       = 0x10000000 | 0xEF, // undocumented. Triggered when an item has been removed from a slot
-            kEquipmentSlotCleared       = 0x10000000 | 0xF0, // undocumented. Triggered when an item has been removed from a slot
-            kPvPWindowContent           = 0x10000000 | 0xF8,
-            kPreStartSalvage            = 0x10000000 | 0x100, // { uint32_t item_id, uint32_t kit_id }
-            kTomeSkillSelection         = 0x10000000 | 0x101, // wparam = UIPacket::kTomeSkillSelection*
-            kTradePlayerUpdated         = 0x10000000 | 0x103, // wparam = GW::TraderPlayer*
-            kItemUpdated                = 0x10000000 | 0x104, // wparam = UIPacket::kItemUpdated*
-            kMapChange                  = 0x10000000 | 0x10F, // wparam = map id
-            kCalledTargetChange         = 0x10000000 | 0x113, // wparam = { player_number, target_id }
-            kErrorMessage               = 0x10000000 | 0x117, // wparam = { int error_index, wchar_t* error_encoded_string }
-            kPartyHardModeChanged       = 0x10000000 | 0x118, // wparam = { int is_hard_mode }
-            kPartyAddHenchman           = 0x10000000 | 0x119,
-            kPartyRemoveHenchman        = 0x10000000 | 0x11a,
-            kPartyAddHero               = 0x10000000 | 0x11c,
-            kPartyRemoveHero            = 0x10000000 | 0x11d,
-            kPartyAddPlayer             = 0x10000000 | 0x122,
-            kPartyRemovePlayer          = 0x10000000 | 0x124,
-            kDisableEnterMissionBtn     = 0x10000000 | 0x128, // wparam = boolean (1 = disabled, 0 = enabled)
-            kShowCancelEnterMissionBtn  = 0x10000000 | 0x12b,
-            kPartyDefeated              = 0x10000000 | 0x12d,
-            kPartySearchInviteReceived  = 0x10000000 | 0x135, // wparam = UIPacket::kPartySearchInviteReceived*
-            kPartySearchInviteSent      = 0x10000000 | 0x137,
-            kPartyShowConfirmDialog     = 0x10000000 | 0x138, // wparam = UIPacket::kPartyShowConfirmDialog
-            kPreferenceEnumChanged      = 0x10000000 | 0x13E, // wparam = UiPacket::kPreferenceEnumChanged
-            kPreferenceFlagChanged      = 0x10000000 | 0x13F, // wparam = UiPacket::kPreferenceFlagChanged
-            kPreferenceValueChanged     = 0x10000000 | 0x140, // wparam = UiPacket::kPreferenceValueChanged
-            kUIPositionChanged          = 0x10000000 | 0x141, // wparam = UIPacket::kUIPositionChanged
-            kPreBuildLoginScene         = 0x10000000 | 0x142, // Called with no args right before login scene is drawn
-            kQuestAdded                 = 0x10000000 | 0x149, // wparam = { quest_id, ... }
-            kQuestDetailsChanged        = 0x10000000 | 0x14A, // wparam = { quest_id, ... }
-            kQuestRemoved               = 0x10000000 | 0x14B, // wparam = { quest_id, ... }
-            kClientActiveQuestChanged   = 0x10000000 | 0x14C, // wparam = { quest_id, ... }. Triggered when the game requests the current quest to change
-            kServerActiveQuestChanged   = 0x10000000 | 0x14E, // wparam = UIPacket::kServerActiveQuestChanged*. Triggered when the server requests the current quest to change
-            kUnknownQuestRelated        = 0x10000000 | 0x14F, 
-            kDungeonComplete            = 0x10000000 | 0x151, // undocumented 
-            kMissionComplete            = 0x10000000 | 0x152, // undocumented
-            kVanquishComplete           = 0x10000000 | 0x154, // undocumented
-            kObjectiveAdd               = 0x10000000 | 0x155, // wparam = UIPacket::kObjectiveAdd*
-            kObjectiveComplete          = 0x10000000 | 0x156, // wparam = UIPacket::kObjectiveComplete*
-            kObjectiveUpdated           = 0x10000000 | 0x157, // wparam = UIPacket::kObjectiveUpdated*
-            kTradeSessionStart          = 0x10000000 | 0x160, // wparam = { trade_state, player_number }
-            kTradeSessionUpdated        = 0x10000000 | 0x166, // no args
-            kTriggerLogoutPrompt        = 0x10000000 | 0x16C, // no args
-			kToggleOptionsWindow        = 0x10000000 | 0x16D, // no args
-            kCheckUIState               = 0x10000000 | 0x170, // Undocumented
-            kRedrawItem                 = 0x10000000 | 0x172, // wparam = uint32_t item_id
-            kCloseSettings              = 0x10000000 | 0x174, // Undocumented
-            kChangeSettingsTab          = 0x10000000 | 0x175, // wparam = uint32_t is_interface_tab
-            kGuildHall                  = 0x10000000 | 0x177, // wparam = gh key (uint32_t[4])
-            kLeaveGuildHall             = 0x10000000 | 0x179,
-            kTravel                     = 0x10000000 | 0x17A,
-            kOpenWikiUrl                = 0x10000000 | 0x17B, // wparam = char* url
-            kAppendMessageToChat        = 0x10000000 | 0x189, // wparam = wchar_t* message
-            kHideHeroPanel              = 0x10000000 | 0x197, // wparam = hero_id
-            kShowHeroPanel              = 0x10000000 | 0x198, // wparam = hero_id
-            kGetInventoryAgentId        = 0x10000000 | 0x19c, // wparam = 0, lparam = uint32_t* agent_id_out. Used to fetch which agent is selected
-            kEquipItem                  = 0x10000000 | 0x19d, // wparam = { item_id, agent_id }
-            kMoveItem                   = 0x10000000 | 0x19e, // wparam = { item_id, to_bag, to_slot, bool prompt }
-            kInitiateTrade              = 0x10000000 | 0x1A0,
-			kInventoryAgentChanged      = 0x10000000 | 0x1b0, // Triggered when inventory needs updating due to agent change; no args
-            kOpenTemplate               = 0x10000000 | 0x1B9, // wparam = GW::UI::ChatTemplate*
-
-            // GWCA Client to Server commands. Only added the ones that are used for hooks, everything else goes straight into GW
-            
-            kSendLoadSkillTemplate      = 0x30000000 | 0x3,  // wparam = SkillbarMgr::SkillTemplate*
-            kSendPingWeaponSet          = 0x30000000 | 0x4,  // wparam = UIPacket::kSendPingWeaponSet*
-            kSendMoveItem               = 0x30000000 | 0x5,  // wparam = UIPacket::kSendMoveItem*
-            kSendMerchantRequestQuote   = 0x30000000 | 0x6,  // wparam = UIPacket::kSendMerchantRequestQuote*
-            kSendMerchantTransactItem   = 0x30000000 | 0x7,  // wparam = UIPacket::kSendMerchantTransactItem*
-            kSendUseItem                = 0x30000000 | 0x8,  // wparam = UIPacket::kSendUseItem*
-            kSendSetActiveQuest         = 0x30000000 | 0x9,  // wparam = uint32_t quest_id
-            kSendAbandonQuest           = 0x30000000 | 0xA, // wparam = uint32_t quest_id
-            kSendChangeTarget           = 0x30000000 | 0xB, // wparam = UIPacket::kSendChangeTarget* // e.g. tell the gw client to focus on a different target
-            kSendCallTarget             = 0x30000000 | 0x13, // wparam = { uint32_t call_type, uint32_t agent_id } // also used to broadcast morale, death penalty, "I'm following X", etc
-            kSendDialog                 = 0x30000000 | 0x16, // wparam = dialog_id // internal use
-
-
-            kStartWhisper               = 0x30000000 | 0x17, // wparam = UIPacket::kStartWhisper*
-            kGetSenderColor             = 0x30000000 | 0x18, // wparam = UIPacket::kGetColor* // Get chat sender color depending on channel, output object passed by reference
-            kGetMessageColor            = 0x30000000 | 0x19, // wparam = UIPacket::kGetColor* // Get chat message color depending on channel, output object passed by reference
-            kSendChatMessage            = 0x30000000 | 0x1B, // wparam = UIPacket::kSendChatMessage*
-            kLogChatMessage             = 0x30000000 | 0x1D, // wparam = UIPacket::kLogChatMessage*. Triggered when a message wants to be added to the persistent chat log.
-            kRecvWhisper                = 0x30000000 | 0x1E, // wparam = UIPacket::kRecvWhisper*
-            kPrintChatMessage           = 0x30000000 | 0x1F, // wparam = UIPacket::kPrintChatMessage*. Triggered when a message wants to be added to the in-game chat window.
-            kSendWorldAction            = 0x30000000 | 0x20, // wparam = UIPacket::kSendWorldAction*
-            kSetRendererValue           = 0x30000000 | 0x21, // wparam = UIPacket::kSetRendererValue
-            kIdentifyItem               = 0x30000000 | 0x22  // wparam = UIPacket::kIdentifyItem
-        };
         enum class FlagPreference : uint32_t;
         enum class NumberPreference : uint32_t;
         enum class EnumPreference : uint32_t;
-
-
-
-        namespace UIPacket {
-            struct kMouseCoordsClick {
-                float offset_x;
-                float offset_y;
-                uint32_t h0008;
-                uint32_t h000c;
-                uint32_t* h0010;
-                uint32_t h0014;
-            };
-            struct kIdentifyItem {
-                uint32_t item_id;
-                uint32_t kit_id;
-            };
-            struct kShowXunlaiChest {
-                uint32_t h0000 = 0;
-                bool storage_pane_unlocked = true;
-                bool anniversary_pane_unlocked = true;
-            };
-            struct kMoveItem {
-                uint32_t item_id;
-                uint32_t to_bag_index;
-                uint32_t to_slot;
-                uint32_t prompt;
-            };
-            struct kResize {
-                uint32_t h0000 = 0xffffffff;
-                float content_width;
-                float content_height;
-                float h000c = 0;
-                float h0010 = 0;
-                float content_width2;
-                float content_height2;
-                float margin_x;
-                float margin_y;
-                // ...
-            };
-            struct kTomeSkillSelection {
-                uint32_t item_id;
-                uint32_t h0004;
-                uint32_t h0008;
-            };
-            struct kMeasureContent {
-                float max_width;        // Maximum width constraint
-                float max_height;       // Maximum height constraint
-                float* size_output;     // Pointer to output buffer for calculated size
-                uint32_t flags;         // Layout flags (similar to the 0x100 flag we saw)
-            };
-            struct kSetLayout {
-                float field_0x0;
-                float field_0x4;
-                float field_0x8;
-                float field_0xc;
-                float available_width;
-                float available_height;
-            };
-            struct kSetAgentProfession {
-                AgentID agent_id;
-                uint32_t primary;
-                uint32_t secondary;
-            };
-            struct kWeaponSwap {
-                uint32_t weapon_bar_frame_id;
-                uint32_t weapon_set_id;
-            };
-            struct kWeaponSetChanged {
-                uint32_t h0000;
-                uint32_t h0004;
-                uint32_t h0008;
-                uint32_t h000c;
-            };
-            struct kChangeTarget {
-                uint32_t evaluated_target_id;
-                bool has_evaluated_target_changed;
-                uint32_t auto_target_id;
-                bool has_auto_target_changed;
-                uint32_t manual_target_id;
-                bool has_manual_target_changed;
-            };
-            struct kSendLoadSkillTemplate {
-                uint32_t agent_id;
-                SkillbarMgr::SkillTemplate* skill_template;
-            };
-            struct kVendorWindow {
-                Merchant::TransactionType transaction_type;
-                uint32_t unk;
-                uint32_t merchant_agent_id;
-                uint32_t is_pending;
-            };
-            struct kVendorQuote {
-                uint32_t item_id;
-                uint32_t price;
-            };
-            struct kVendorItems {
-                Merchant::TransactionType transaction_type;
-                uint32_t item_ids_count;
-                uint32_t* item_ids_buffer1; // world->merchant_items.buffer
-                uint32_t* item_ids_buffer2; // world->merchant_items2.buffer
-            };
-            struct kSetRendererValue {
-                uint32_t renderer_mode; // 0 for window, 2 for full screen
-                uint32_t metric_id; // TODO: Enum this!
-                uint32_t value;
-            };
-            struct kEffectAdd {
-                uint32_t agent_id;
-                Effect* effect;
-            };
-            struct kAgentSpeechBubble {
-                uint32_t agent_id;
-                wchar_t* message;
-                uint32_t h0008;
-                uint32_t h000c;
-            };
-            struct kAgentStartCasting {
-                uint32_t agent_id;
-                Constants::SkillID skill_id;
-                float duration;
-                uint32_t h000c;
-            };
-            struct kPreStartSalvage {
-                uint32_t item_id;
-                uint32_t kit_id;
-            };
-            struct kServerActiveQuestChanged {
-                GW::Constants::QuestID quest_id;
-                GW::GamePos marker;
-                uint32_t h0024;
-                GW::Constants::MapID map_id;
-                uint32_t log_state;
-            };
-            struct kPrintChatMessage {
-                GW::Chat::Channel channel;
-                wchar_t* message;
-                FILETIME timestamp;
-                uint32_t is_reprint;
-            };
-            struct kPartyShowConfirmDialog {
-                uint32_t ui_message_to_send_to_party_frame;
-                uint32_t prompt_identitifier;
-                wchar_t* prompt_enc_str;
-            };
-            struct kUIPositionChanged {
-                uint32_t window_id;
-                UI::WindowPosition* position;
-            };
-            struct kPreferenceFlagChanged {
-                UI::FlagPreference preference_id;
-                uint32_t new_value;
-            };
-            struct kPreferenceValueChanged {
-                UI::NumberPreference preference_id;
-                uint32_t new_value;
-            };
-            struct kPreferenceEnumChanged {
-                UI::EnumPreference preference_id;
-                uint32_t enum_index;
-            };
-            struct kPartySearchInvite {
-                uint32_t source_party_search_id;
-                uint32_t dest_party_search_id;
-            };
-            struct kPostProcessingEffect {
-                uint32_t tint;
-                float amount;
-            };
-            struct kLogout {
-                uint32_t unknown;
-                uint32_t character_select;
-            };
-            static_assert(sizeof(kLogout) == 0x8);
-
-            struct kKeyAction {
-                uint32_t gw_key;
-                uint32_t h0004 = 0x4000;
-                uint32_t h0008 = 6;
-            };
-            struct kMouseClick {
-                uint32_t mouse_button; // 0x0 = left, 0x1 = middle, 0x2 = right
-                uint32_t is_doubleclick;
-                uint32_t unknown_type_screen_pos;
-            };
-            enum ActionState : uint32_t {
-                MouseDown = 0x5,
-                MouseUp = 0x6,
-                MouseClick = 0x7,
-                MouseDoubleClick = 0x8,
-                DragRelease = 0xa,
-                KeyDown = 0xd
-            };
-            struct kMouseAction {
-                uint32_t frame_id;
-                uint32_t child_offset_id;
-                ActionState current_state;
-                void* wparam = 0;
-                void* lparam = 0;
-            };
-            struct kWriteToChatLog {
-                GW::Chat::Channel channel;
-                wchar_t* message;
-                GW::Chat::Channel channel_dupe;
-            };
-            struct kPlayerChatMessage {
-                GW::Chat::Channel channel;
-                wchar_t* message;
-                uint32_t player_number;
-            };
-
-            struct kInteractAgent {
-                uint32_t agent_id;
-                bool call_target;
-            };
-
-            struct kSendChangeTarget {
-                uint32_t target_id;
-                uint32_t auto_target_id;
-            };
-
-            struct kSendCallTarget {
-                CallTargetType call_type;
-                uint32_t agent_id;
-            };
-
-            struct kGetColor {
-                Chat::Color* color;
-                GW::Chat::Channel channel;
-            };
-
-            struct kWriteToChatLogWithSender {
-                uint32_t channel;
-                wchar_t* message;
-                wchar_t* sender_enc;
-            };
-
-            struct kSendPingWeaponSet {
-                uint32_t agent_id;
-                uint32_t weapon_item_id;
-                uint32_t offhand_item_id;
-            };
-            struct kSendMoveItem {
-                uint32_t item_id;
-                uint32_t quantity;
-                uint32_t bag_index;
-                uint32_t slot;
-            };
-            struct kSendMerchantRequestQuote {
-				Merchant::TransactionType type;
-                uint32_t item_id;
-            };
-            struct kSendMerchantTransactItem {
-                Merchant::TransactionType type;
-                uint32_t h0004;
-                Merchant::QuoteInfo give;
-                uint32_t gold_recv;
-                Merchant::QuoteInfo recv;
-            };
-            struct kSendUseItem {
-                uint32_t item_id;
-                uint16_t quantity; // Unused, but would be cool
-            };
-            struct kSendChatMessage {
-                wchar_t* message;
-                uint32_t agent_id;
-            };
-            struct kLogChatMessage {
-                wchar_t* message;
-                GW::Chat::Channel channel;
-            };
-            struct kRecvWhisper {
-                uint32_t transaction_id;
-                wchar_t* from;
-                wchar_t* message;
-            };
-            struct kStartWhisper {
-                wchar_t* player_name;
-            };
-            struct kCompassDraw {
-                uint32_t player_number;
-                uint32_t session_id;
-                uint32_t number_of_points;
-                CompassPoint* points;
-            };
-            struct kObjectiveAdd {
-                uint32_t objective_id;
-                wchar_t* name;
-                uint32_t type;
-            };
-            struct kObjectiveComplete {
-                uint32_t objective_id;
-            };
-            struct kObjectiveUpdated {
-                uint32_t objective_id;
-            };
-            // Straight passthru of GW::Packets::StoC::ItemGeneral
-            struct kItemUpdated {
-                uint32_t item_id;
-                uint32_t model_file_id;
-                uint32_t type;
-                uint32_t unk1;
-                uint32_t extra_id; // Dye color
-                uint32_t materials;
-                uint32_t unk2;
-                uint32_t interaction; // Flags
-                uint32_t price;
-                uint32_t model_id;
-                uint32_t quantity;
-                wchar_t* enc_name;
-                uint32_t mod_struct_size;
-                uint32_t* mod_struct;
-            };
-            struct kInventorySlotUpdated {
-                uint32_t unk;
-                uint32_t item_id;
-                uint32_t bag_index;
-                uint32_t slot_id;
-            };
-            struct kSendWorldAction {
-                WorldActionId action_id;
-                GW::AgentID agent_id;
-                bool suppress_call_target; // 1 to block "I'm targetting X", but will also only trigger if the key thing is down
-            };
-            struct kAllyOrGuildMessage {
-                GW::Chat::Channel channel;
-                wchar_t* message;
-				wchar_t* sender;
-                wchar_t* guild_tag;
-            };
-        }
 
         enum class NumberCommandLineParameter : uint32_t {
             Unk1,
@@ -827,49 +321,51 @@ namespace GW {
         };
 
         enum class NumberPreference : uint32_t {
-            // number preferences
             AutoTournPartySort,
-            ChatState, // 1 == showing chat window, 0 = not showing chat window
+            ChatState,
             ChatTab,
             DistrictLastVisitedLanguage,
             DistrictLastVisitedLanguage2,
             DistrictLastVisitedNonInternationalLanguage,
             DistrictLastVisitedNonInternationalLanguage2,
-            DamageTextSize, // 0 to 100
-            FullscreenGamma, // 0 to 100
-            InventoryBag, // Selected bag in inventory window
-            TextLanguage,
-            AudioLanguage,
-            ChatFilterLevel,
-            RefreshRate,
+            FloaterScale,
+            FullscreenGamma,
+            InventoryBag,
+            Language,
+            LanguageAudio,
+            LastDevice,
+            Refresh,
             ScreenSizeX,
             ScreenSizeY,
             SkillListFilterRarity,
             SkillListSortMethod,
             SkillListViewMode,
-            SoundQuality, // 0 to 100
+            SoundQuality,
             StorageBagPage,
             Territory,
-            TextureQuality, // TextureLod
-            UseBestTextureFiltering,
-            BackgroundVolume, // 0 to 100
-            DialogVolume, // 0 to 100
-            EffectsVolume, // 0 to 100
-            MusicVolume, // 0 to 100
-            UIVolume, // 0 to 100
+            TextureLod,
+            TexFilterMode,
+            VolBackground,
+            VolDialog,
+            VolEffect,
+            VolMusic,
+            VolUi,
             Vote,
             WindowPosX,
             WindowPosY,
             WindowSizeX,
             WindowSizeY,
-            SealedSeed, // Used in codex arena
-            SealedCount, // Used in codex arena
-            FieldOfView, // 0 to 100
-            CameraRotationSpeed, // 0 to 100
-            ScreenBorderless, // 0x1 = Windowed Borderless, 0x2 = Windowed Fullscreen
-            MasterVolume, // 0 to 100
+            SealedSeed,
+            SealedCount,
+            CameraFov,
+            CameraRotationSpeed,
+            ScreenBorderless,
+            VolMaster,
             ClockMode,
-            Count = 0x29
+            MobileUiScale,
+            GamepadCursorSpeed,
+            LastLoginMethod,
+            Count = 44
         };
         enum class FlagPreference : uint32_t {
             // boolean preferences

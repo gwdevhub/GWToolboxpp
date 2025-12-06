@@ -1,10 +1,8 @@
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/Packets/Opcodes.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <Defines.h>
@@ -12,8 +10,8 @@
 #include <Widgets/LatencyWidget.h>
 
 #include "Utils/FontLoader.h"
-#include <GWCA/Managers/EventMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Utilities/Hooker.h>
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
@@ -21,6 +19,7 @@ namespace {
     uint32_t ping_history[ping_history_len] = {0};
     size_t ping_index = 0;
 
+    GW::HookEntry ContextCallback_Entry;
     GW::HookEntry Ping_Entry;
     int red_threshold = 250;
     bool show_avg_ping = false;
@@ -44,11 +43,34 @@ namespace {
     };
     static_assert(sizeof(LatencyFrameContext) == 0x38);
 
-    LatencyFrameContext* cached_frame_context = 0;
-    LatencyFrameContext* GetLatencyFrameContext() {
-        if (!cached_frame_context) {
-            cached_frame_context = (LatencyFrameContext*)GW::UI::GetFrameContext(GW::UI::GetFrameByLabel(L"DnStat"));
+    LatencyFrameContext* cached_frame_context = nullptr;
+
+    GW::UI::UIInteractionCallback OnLatencyFrame_UICallback_Func = 0, OnLatencyFrame_UICallback_Ret = 0;
+    void OnLatencyFrame_UICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
+    {
+        GW::Hook::EnterHook();
+        OnLatencyFrame_UICallback_Ret(message, wparam, lparam);
+        switch (message->message_id) {
+            case GW::UI::UIMessage::kDestroyFrame: {
+                cached_frame_context = 0;
+            } break;
+            default: {
+                if (!cached_frame_context && message->wParam)
+                    cached_frame_context = *(LatencyFrameContext**)message->wParam;
+            } break;
         }
+        GW::Hook::LeaveHook();
+    }
+
+    LatencyFrameContext* GetLatencyFrameContext() {
+        if (OnLatencyFrame_UICallback_Func) return cached_frame_context;
+        const auto frame = GW::UI::GetFrameByLabel(L"DnStat");
+        if (!(frame && frame->frame_callbacks.size())) return 0;
+        OnLatencyFrame_UICallback_Func = frame->frame_callbacks[0].callback;
+
+        GW::Hook::CreateHook((void**)&OnLatencyFrame_UICallback_Func, OnLatencyFrame_UICallback, (void**)&OnLatencyFrame_UICallback_Ret);
+        GW::Hook::EnableHooks(OnLatencyFrame_UICallback_Func);
+        cached_frame_context = (LatencyFrameContext*)GW::UI::GetFrameContext(frame);
         return cached_frame_context;
     }
 
@@ -82,7 +104,6 @@ void LatencyWidget::Draw(IDirect3DDevice9*)
         return;
     }
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
-        cached_frame_context = 0;
         return;
     }
 
@@ -122,15 +143,6 @@ void LatencyWidget::LoadSettings(ToolboxIni* ini)
     LOAD_UINT(red_threshold);
     LOAD_BOOL(show_avg_ping);
     LOAD_FLOAT(text_size);
-    // Legacy font size
-    LOAD_UINT(font_size);
-    switch (font_size) {
-    case static_cast<int>(FontLoader::FontSize::widget_label):
-    case static_cast<int>(FontLoader::FontSize::widget_small):
-    case static_cast<int>(FontLoader::FontSize::widget_large):
-        text_size = static_cast<float>(font_size);
-        break;
-    }
 }
 
 void LatencyWidget::SaveSettings(ToolboxIni* ini)

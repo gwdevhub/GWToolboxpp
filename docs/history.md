@@ -7,6 +7,12 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.1
+* [Fix] Fixes to work with reforged
+* [Fix] Launcher updated to work with reforged
+* [Fix] Fixed items not moving to storage tabs when dropped
+* [Fix] Fixed crash when bulk id'ing when "reuse kit" options are enabled
+
 ## Version 7.14
 * [New] Added weapon skins to Armory window
 * [New] Added `/armory` chat command to set armor pieces on map load

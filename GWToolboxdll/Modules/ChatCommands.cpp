@@ -34,6 +34,7 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
@@ -193,8 +194,6 @@ namespace {
             SafeChangeTarget(agents->at(closest)->agent_id);
         }
     }
-
-
 
     bool IsNearestStr(const wchar_t* str)
     {
@@ -365,6 +364,31 @@ namespace {
             GW::StoC::EmulatePacket(packet);
             delete packet;
         });
+    }
+
+    const char* dropbuff_syntax = "'/dropbuff [skill_id]' drops the first instance of an upkept skill/buff";
+    void CHAT_CMD_FUNC(CmdDropBuff)
+    {
+        if (argc < 2) {
+            Log::Warning(dropbuff_syntax);
+            return;
+        }
+        uint32_t skill_id = 0;
+        if (!TextUtils::ParseUInt(argv[1], &skill_id)) {
+            Log::Warning(dropbuff_syntax);
+            return;
+        }
+        const auto skill = GW::SkillbarMgr::GetSkillConstantData((GW::Constants::SkillID)skill_id);
+        if (!skill) {
+            Log::Warning(dropbuff_syntax);
+            return;
+        }
+        const auto buff = GW::Effects::GetPlayerBuffBySkillId(skill->skill_id);
+        if (!buff) return;
+        if (!GW::Effects::DropBuff(buff->buff_id)) {
+            Log::Warning("Failed to drop buff!");
+            return;
+        }
     }
 
     HallOfMonumentsAchievements hom_achievements;
@@ -565,17 +589,17 @@ namespace {
                 {GW::UI::EnumPreference::Reflections, GW::EncStrings::Reflections},
                 {GW::UI::EnumPreference::ShadowQuality, GW::EncStrings::ShadowQuality},
                 {GW::UI::EnumPreference::InterfaceSize, GW::EncStrings::InterfaceSize},
-                {GW::UI::NumberPreference::TextureQuality, GW::EncStrings::TextureQuality},
-                {GW::UI::NumberPreference::TextLanguage, GW::EncStrings::TextLanguage},
-                {GW::UI::NumberPreference::AudioLanguage, GW::EncStrings::AudioLanguage},
+                {GW::UI::NumberPreference::TextureLod, GW::EncStrings::TextureQuality},
+                {GW::UI::NumberPreference::Language, GW::EncStrings::TextLanguage},
+                {GW::UI::NumberPreference::LanguageAudio, GW::EncStrings::AudioLanguage},
                 {GW::UI::NumberPreference::ClockMode, GW::EncStrings::InGameClock},
                 {GW::UI::FlagPreference::ChannelAlliance, GW::EncStrings::ChannelAlliance},
                 {GW::UI::FlagPreference::ChannelGuild, GW::EncStrings::ChannelGuild},
                 {GW::UI::FlagPreference::ChannelGroup, GW::EncStrings::ChannelTeam},
                 {GW::UI::FlagPreference::ChannelEmotes, GW::EncStrings::ChannelEmotes},
                 {GW::UI::FlagPreference::ChannelTrade, GW::EncStrings::ChannelTrade},
-                {GW::UI::NumberPreference::MasterVolume, GW::EncStrings::MasterVolume},
-                {GW::UI::NumberPreference::MusicVolume, GW::EncStrings::MusicVolume},
+                {GW::UI::NumberPreference::VolMaster, GW::EncStrings::MasterVolume},
+                {GW::UI::NumberPreference::VolMusic, GW::EncStrings::MusicVolume},
                 {GW::UI::FlagPreference::DisableMouseWalking, GW::EncStrings::DisableMouseWalking},
                 {GW::UI::FlagPreference::AlwaysShowFoeNames, L"\x108\x107Show Foe Names\x1"},
                 {GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1"},
@@ -901,6 +925,15 @@ namespace {
         found->second->ChatCommandCallback(status, message, argc, argv);
     }
 
+    void HookOnChatInteraction() {
+        if (OnChatInteraction_Callback_Func) return;
+        const auto frame = GW::UI::GetFrameByLabel(L"Chat");
+        if (!(frame && frame->frame_callbacks.size())) return;
+        OnChatInteraction_Callback_Func = frame->frame_callbacks[0].callback;
+        GW::Hook::CreateHook((void**)&OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
+        GW::Hook::EnableHooks(OnChatInteraction_Callback_Func);
+    }
+
     void DrawChatCommandsHelp()
     {
         if (!ImGui::TreeNodeEx("Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
@@ -931,8 +964,6 @@ namespace {
         ImGui::Bullet();
         ImGui::Text("'/camera fog (on|off)' sets game fog effect on or off.");
         ImGui::Bullet();
-        ImGui::Text("'/camera speed <value>' sets the unlocked camera speed.");
-        ImGui::Bullet();
         ImGui::Text(chat_tab_syntax);
         ImGui::Bullet();
         ImGui::Text("'/chest' opens xunlai in outposts.");
@@ -952,6 +983,8 @@ namespace {
         ImGui::Bullet();
         ImGui::Text("'/dialog <id>' sends a dialog id to the current NPC you're talking to.\n"
             "'/dailog take' automatically takes the first available quest/reward from the NPC you're talking to.");
+        ImGui::Bullet();
+        ImGui::Text(dropbuff_syntax);
         ImGui::Bullet();
         ImGui::Text("'/enter [fow|uw]' to enter the mission for your outpost.\n"
             "If in embark, toa, urgoz or deep, it will use a scroll.\n"
@@ -1235,11 +1268,6 @@ void ChatCommands::DrawHelp()
 
 void ChatCommands::DrawSettingsInternal()
 {
-    ImGui::Text("'/cam unlock' options");
-    ImGui::Indent();
-    ImGui::Checkbox("Fix height when moving forward", &forward_fix_z);
-    ImGui::InputFloat("Camera speed", &cam_speed);
-    ImGui::Unindent();
     std::string preview = "Select...";
     switch (default_title_id) {
         case CMDTITLE_KEEP_CURRENT:
@@ -1475,7 +1503,8 @@ void ChatCommands::Initialize()
         {L"pref", CmdPref},
         {L"call", CmdCallTarget},
         {L"config", CmdConfig},
-        {settings_via_chat_commands_cmd, CmdSettingViaChatCommand}
+        {settings_via_chat_commands_cmd, CmdSettingViaChatCommand},
+        {L"dropbuff",CmdDropBuff}
     };
 
 
@@ -1497,11 +1526,7 @@ void ChatCommands::Initialize()
 
 #endif
 
-    GW::WaitForFrame(L"Chat", [](GW::UI::Frame* frame) {
-        OnChatInteraction_Callback_Func = frame->frame_callbacks[0].callback;
-        GW::Hook::CreateHook((void**)&OnChatInteraction_Callback_Func, OnChatUI_Callback, (void**)&OnChatInteraction_Callback_Ret);
-        GW::Hook::EnableHooks(OnChatInteraction_Callback_Func);
-    });
+    HookOnChatInteraction();
 
 #ifdef _DEBUG
     ASSERT(SetMuted_Func);
@@ -1542,45 +1567,9 @@ void ChatCommands::Terminate()
     cmd_aliases.clear();
 }
 
-bool ChatCommands::WndProc(const UINT Message, const WPARAM wParam, const LPARAM)
-{
-    if (!GW::CameraMgr::GetCameraUnlock()) {
-        return false;
-    }
-    if (GW::Chat::GetIsTyping()) {
-        return false;
-    }
-    if (ImGui::GetIO().WantTextInput) {
-        return false;
-    }
-
-    switch (Message) {
-        case WM_KEYDOWN:
-        case WM_KEYUP:
-            switch (wParam) {
-                case VK_A:
-                case VK_D:
-                case VK_E:
-                case VK_Q:
-                case VK_R:
-                case VK_S:
-                case VK_W:
-                case VK_X:
-                case VK_Z:
-
-                case VK_ESCAPE:
-                case VK_UP:
-                case VK_DOWN:
-                case VK_LEFT:
-                case VK_RIGHT:
-                    return true;
-            }
-    }
-    return false;
-}
-
 void ChatCommands::Update(const float delta)
 {
+    HookOnChatInteraction();
     if (title_names.empty()) {
         const auto* titles = GetTitles();
         for (size_t i = 0; titles && i < titles->size(); i++) {
@@ -1609,61 +1598,6 @@ void ChatCommands::Update(const float delta)
 
     if (delta == 0.f) {
         return;
-    }
-
-    if (GW::CameraMgr::GetCameraUnlock()
-        && !GW::Chat::GetIsTyping()
-        && !ImGui::GetIO().WantTextInput) {
-        static bool keep_forward;
-
-        float forward = 0;
-        float vertical = 0;
-        float rotate = 0;
-        float side = 0;
-        if (ImGui::IsKeyDown(ImGuiKey_W) || ImGui::IsKeyDown(ImGuiKey_UpArrow) || keep_forward) {
-            forward += 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_S) || ImGui::IsKeyDown(ImGuiKey_DownArrow)) {
-            forward -= 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_Q)) {
-            side += 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_E)) {
-            side -= 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_Z)) {
-            vertical -= 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_X)) {
-            vertical += 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_A) || ImGui::IsKeyDown(ImGuiKey_LeftArrow)) {
-            rotate += 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_D) || ImGui::IsKeyDown(ImGuiKey_RightArrow)) {
-            rotate -= 1.0f;
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_R)) {
-            keep_forward = true;
-        }
-
-        if (ImGui::IsKeyDown(ImGuiKey_W) || ImGui::IsKeyDown(ImGuiKey_UpArrow) ||
-            ImGui::IsKeyDown(ImGuiKey_S) || ImGui::IsKeyDown(ImGuiKey_DownArrow) ||
-            ImGui::IsKeyDown(ImGuiKey_Escape)) {
-            keep_forward = false;
-        }
-
-        if (GWToolbox::Instance().right_mouse_down && rotate != 0.f) {
-            side = rotate;
-            rotate = 0.f;
-        }
-
-        GW::CameraMgr::ForwardMovement(forward * delta * cam_speed, !forward_fix_z);
-        GW::CameraMgr::VerticalMovement(vertical * delta * cam_speed);
-        GW::CameraMgr::RotateMovement(rotate * delta * ROTATION_SPEED);
-        GW::CameraMgr::SideMovement(side * delta * cam_speed);
-        GW::CameraMgr::UpdateCameraPos();
     }
     skill_to_use.Update();
     npc_to_find.Update();
@@ -2252,7 +2186,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdCamera)
         }
         else if (arg1 == L"unlock") {
             GW::CameraMgr::UnlockCam(true);
-            Log::Flash("Use Q/E, A/D, W/S, X/Z, R and arrows for camera movement");
         }
         else if (arg1 == L"fog") {
             if (argc == 3) {
@@ -2262,28 +2195,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdCamera)
                 }
                 else if (arg2 == L"off") {
                     GW::CameraMgr::SetFog(false);
-                }
-            }
-        }
-        else if (arg1 == L"speed") {
-            if (argc < 3) {
-                Instance().cam_speed = Instance().DEFAULT_CAM_SPEED;
-            }
-            else {
-                const std::wstring arg2 = TextUtils::ToLower(argv[2]);
-                if (arg2 == L"default") {
-                    Instance().cam_speed = Instance().DEFAULT_CAM_SPEED;
-                }
-                else {
-                    float speed = 0.0f;
-                    if (!TextUtils::ParseFloat(arg2.c_str(), &speed)) {
-                        Log::Error(
-                            "Invalid argument '%ls', please use a float value",
-                            argv[2]);
-                        return;
-                    }
-                    Instance().cam_speed = speed;
-                    Log::Flash("Camera speed is now %f", speed);
                 }
             }
         }
@@ -3264,28 +3175,28 @@ void CHAT_CMD_FUNC(ChatCommands::CmdVolume)
     GW::UI::NumberPreference pref;
     switch (argc) {
         case 2:
-            pref = GW::UI::NumberPreference::MasterVolume;
+            pref = GW::UI::NumberPreference::VolMaster;
             value = argv[1];
             break;
         case 3: {
             const wchar_t* pref_str = argv[1];
             if (wcscmp(pref_str, L"master") == 0) {
-                pref = GW::UI::NumberPreference::MasterVolume;
+                pref = GW::UI::NumberPreference::VolMaster;
             }
             else if (wcscmp(pref_str, L"music") == 0) {
-                pref = GW::UI::NumberPreference::MusicVolume;
+                pref = GW::UI::NumberPreference::VolMusic;
             }
             else if (wcscmp(pref_str, L"background") == 0) {
-                pref = GW::UI::NumberPreference::BackgroundVolume;
+                pref = GW::UI::NumberPreference::VolBackground;
             }
             else if (wcscmp(pref_str, L"effects") == 0) {
-                pref = GW::UI::NumberPreference::EffectsVolume;
+                pref = GW::UI::NumberPreference::VolEffect;
             }
             else if (wcscmp(pref_str, L"dialog") == 0) {
-                pref = GW::UI::NumberPreference::DialogVolume;
+                pref = GW::UI::NumberPreference::VolDialog;
             }
             else if (wcscmp(pref_str, L"ui") == 0) {
-                pref = GW::UI::NumberPreference::UIVolume;
+                pref = GW::UI::NumberPreference::VolUi;
             }
             else {
                 return Log::Error(syntax);

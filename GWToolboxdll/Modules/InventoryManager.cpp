@@ -1523,13 +1523,7 @@ InventoryManager::Item* InventoryManager::GetNextUnidentifiedItem(const Item* st
         GW::ItemArray& items = bag->items;
         for (size_t i = slot, size = items.size(); i < size; i++) {
             const auto item = static_cast<Item*>(items[i]);
-            if (!item) {
-                continue;
-            }
-            if (item->GetIsIdentified()) {
-                continue;
-            }
-            if (item->IsGreen() || item->type == GW::Constants::ItemType::Minipet) {
+            if (!(item && item->CanBeIdentified())) {
                 continue;
             }
             switch (identify_all_type) {
@@ -2454,6 +2448,18 @@ bool InventoryManager::Item::CanOfferToTrade() const
         return false;
     }
     return IsTradable() && IsTradeWindowOpen() && !IsOfferedInTrade() && player_items->size() < 7;
+}
+
+bool InventoryManager::Item::CanBeIdentified() const
+{
+    if (GetIsIdentified()) return false;
+    if ((interaction & 0x800000) == 0) return false;
+    if (IsGreen() || type == GW::Constants::ItemType::Minipet) return false;
+    switch (model_file_id) {
+        case 0x44CAC:
+            return false;
+    }
+    return true;
 }
 
 bool InventoryManager::Item::IsSalvagable(bool check_bag)

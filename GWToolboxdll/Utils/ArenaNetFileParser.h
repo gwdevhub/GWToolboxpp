@@ -197,6 +197,6 @@ namespace ArenaNetFileParser {
     };
 
     struct ATexFile : GameAssetFile {
-        const bool isValid() override { return GameAssetFile::isValid() && strncmp(fileType(), "atex", 4) == 0; }
+        const bool isValid() override;
     };
 };
