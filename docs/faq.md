@@ -50,7 +50,7 @@ There may be different reasons for this. Try the following, in no particular ord
 * Launch both Guild Wars and Toolbox as administrator.
 * Launch Toolbox while Guild Wars is running in windowed mode, not minimized or fullscreen.
 * Avoid using other programs that interact with Guild Wars (TexMod, uMod, MultiLaunch, screen recording software, game overlays such as steam, fraps, etc)
-* Add GWToolbox.exe and gw.exe to your antivirus whitelist. Although usually not needed, you may want to also add `GWToolbox.dll` to your whitelist. You can find it in the [settings folder](settings#storage) (`C:\Users\[Username]\AppData\Local\GWToolboxpp`). 
+* Add GWToolbox.exe and gw.exe to your antivirus whitelist. Although usually not needed, you may want to also add `GWToolbox.dll` to your whitelist. You can find it in the [settings folder](settings#storage) (`C:\Users\[Username]\Documents\GWToolboxpp`).
 
 **I run the launcher and I get the message “GWToolbox.dll was not loaded, unknown error” or "exit code 0"** \\
 This error typically means that some security feature is preventing Toolbox to access Guild Wars. It might be caused by any of the following:
