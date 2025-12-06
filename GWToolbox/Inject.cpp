@@ -103,14 +103,24 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
         return InjectReply_NoProcess;
     }
 
-    uintptr_t charname_rva;
-    const ProcessScanner scanner(processes.data());
-    if (!scanner.FindPatternRva("\x8B\xF8\x6A\x03\x68\x0F\x00\x00\xC0\x8B\xCF\xE8", "xxxxxxxxxxxx", -0x42, &charname_rva)) {
-        return InjectReply_PatternError;
+    uintptr_t charname_rva = 0;
+    uintptr_t email_rva = 0;
+
+    for (int i = 0; i < processes.size(); i++) {
+        const ProcessScanner scanner(&processes[i]);
+        if (!scanner.FindPatternRva("\x8B\xF8\x6A\x03\x68\x0F\x00\x00\xC0\x8B\xCF\xE8", "xxxxxxxxxxxx", -0x42, &charname_rva)) {
+            continue;
+        }
+
+        if (!scanner.FindPatternRva("\x33\xC0\x5D\xC2\x10\x00\xCC\x68\x80\x00\x00\x00", "xxxxxxxxxxxx", 0xE, &email_rva)) {
+            continue;
+        }
+
+        break;
     }
 
-    uintptr_t email_rva;
-    if (!scanner.FindPatternRva("\x33\xC0\x5D\xC2\x10\x00\xCC\x68\x80\x00\x00\x00", "xxxxxxxxxxxx", 0xE, &email_rva)) {
+    if (!charname_rva || !email_rva) {
+        fprintf(stderr, "Couldn't find charname/email RVAs in any potential process\n");
         return InjectReply_PatternError;
     }
 
