@@ -35,6 +35,7 @@ namespace GW {
     // NB: Theres more target types, and they're in the code, but not used for our context
     enum class CallTargetType : uint32_t {
         Following = 0x3,
+        HardMode = 0x4,
         Morale = 0x7,
         AttackingOrTargetting = 0xA,
         None = 0xFF

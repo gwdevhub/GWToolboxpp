@@ -31,46 +31,6 @@ void PrintUsage(const bool terminate)
     }
 }
 
-void ParseRegSettings()
-{
-    HKEY SettingsKey;
-    if (!OpenSettingsKey(&SettingsKey)) {
-        fprintf(stderr, "OpenSettingsKey failed\n");
-        return;
-    }
-
-    DWORD asadmin;
-    if (RegReadDWORD(SettingsKey, L"asadmin", &asadmin)) {
-        settings.asadmin = asadmin != 0;
-    }
-
-    DWORD noupdate;
-    if (RegReadDWORD(SettingsKey, L"noupdate", &noupdate)) {
-        settings.noupdate = noupdate != 0;
-    }
-
-    RegCloseKey(SettingsKey);
-}
-
-static void WriteRegSettings()
-{
-    HKEY SettingsKey;
-    if (!OpenSettingsKey(&SettingsKey)) {
-        fprintf(stderr, "OpenUninstallKey failed\n");
-        return;
-    }
-
-    if (RegWriteDWORD(SettingsKey, L"asadmin", settings.asadmin)) {
-        fprintf(stderr, "Failed to write 'asadmin' registry key\n");
-    }
-
-    if (RegWriteDWORD(SettingsKey, L"noupdate", settings.noupdate)) {
-        fprintf(stderr, "Failed to write 'noupdate' registry key\n");
-    }
-
-    RegCloseKey(SettingsKey);
-}
-
 static bool IsOneOrZeroOf3(const bool b1, const bool b2, const bool b3)
 {
     int count = 0;
@@ -407,10 +367,8 @@ void SettingsWindow::OnCommand(HWND hWnd, LONG ControlId, LONG NotificateCode) c
 {
     if (hWnd == m_hNoUpdate) {
         settings.noupdate = ToggleCheckbox(m_hNoUpdate);
-        WriteRegSettings();
     }
     else if (hWnd == m_hStartAsAdmin) {
         settings.asadmin = ToggleCheckbox(m_hStartAsAdmin);
-        WriteRegSettings();
     }
 }

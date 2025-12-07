@@ -20,7 +20,6 @@ extern Settings settings;
 
 void PrintUsage(bool terminate);
 
-void ParseRegSettings();
 void ParseCommandLine();
 
 bool IsRunningAsAdmin();
