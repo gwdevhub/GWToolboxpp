@@ -281,15 +281,6 @@ namespace GW {
             uint32_t dialog_id;
             uint32_t skill_id; // Default 0xFFFFFFF
         };
-
-        struct DecodingString {
-            std::wstring encoded;
-            std::wstring decoded;
-            void* original_callback;
-            void* original_param;
-            void* ecx;
-            void* edx;
-        };
         enum class FlagPreference : uint32_t;
         enum class NumberPreference : uint32_t;
         enum class EnumPreference : uint32_t;
