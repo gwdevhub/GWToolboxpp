@@ -68,9 +68,6 @@ namespace {
 
             embedded_button.message = msg.data();
             OnDialogButtonAdded(&embedded_button);
-
-            // Correct way to move subject forward using std::distance()
-            subject.remove_prefix(std::distance(subject.begin(), m.get<0>().end()));
         }
     }
 

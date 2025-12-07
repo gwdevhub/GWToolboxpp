@@ -7,7 +7,7 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
-## Version 8.2
+## Version 8.3
 * [New] Added extra settings to hotkeys to trigger in controller mode or not
 * [New] Added extra setting to camera smoothing in game settings to turn off in controller mode
 * [Minor] Hide non-elite skills when capturing from a boss now has a setting to turn it off
