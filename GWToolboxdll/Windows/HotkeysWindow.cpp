@@ -205,8 +205,8 @@ namespace {
             if (((hk->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable)
                     || (hk->trigger_on_outpost && mt == GW::Constants::InstanceType::Outpost))
                 && !hk->pressed 
-                && hk->trigger_in_controller_mode == is_in_controller_mode
-                && hk->trigger_in_desktop_mode != is_in_controller_mode) {
+                &&
+                ((is_in_controller_mode && hk->trigger_in_controller_mode) || (!is_in_controller_mode && hk->trigger_in_desktop_mode))) {
                 hk->pressed = true;
                 current_hotkey = hk;
                 hk->Execute();
@@ -669,8 +669,8 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
         if (hk->trigger_on_key_up != is_key_up) return false;
         if (!hk->key_combo.test(keyData)) return false; // The triggering key isn't included in this hotkey's combo
         if (hk->strict_key_combo) return hk->key_combo == wndproc_keys_held;
-        if (hk->trigger_in_controller_mode != is_in_controller_mode) return false;
-        if (hk->trigger_in_desktop_mode == is_in_controller_mode) return false;
+        if (is_in_controller_mode && !hk->trigger_in_controller_mode) return false;
+        if (!is_in_controller_mode && !hk->trigger_in_desktop_mode) return false;
         return (hk->key_combo & wndproc_keys_held) == hk->key_combo;
     };
 
