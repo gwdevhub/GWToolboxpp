@@ -79,6 +79,10 @@ namespace {
     
     bool initialized = false;
     bool enable_cursor_fix = false;
+
+    bool ShouldFixCursor() {
+        return enable_cursor_fix && !GW::UI::IsInControllerMode();
+    }
     int cursor_size = 32;
     HCURSOR current_cursor = nullptr;
     bool cursor_size_hooked = false;
@@ -86,7 +90,7 @@ namespace {
     void OnSetCursorPosCenter(GwMouseMove* gwmm)
     {
         GW::Hook::EnterHook();
-        if (!enable_cursor_fix)
+        if (!ShouldFixCursor())
             return GW::Hook::LeaveHook();
         // @Enhancement: Maybe assert that gwmm == gw_mouse_move?
         const HWND gw_window_handle = GetFocus();
@@ -106,7 +110,7 @@ namespace {
     bool OnProcessInput(uint32_t* wParam, uint32_t* lParam)
     {
         GW::Hook::EnterHook();
-        if (!(enable_cursor_fix && HasRegisteredTrackMouseEvent && gw_mouse_move)) {
+        if (!(ShouldFixCursor() && HasRegisteredTrackMouseEvent && gw_mouse_move)) {
             goto forward_call; // Failed to find addresses for variables
         }
         if (!(wParam && wParam[1] == 0x200)) {
@@ -136,7 +140,7 @@ namespace {
         if (!(Message == WM_INPUT && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam)) {
             return; // Not raw input
         }
-        if (!gw_mouse_move) {
+        if (!ShouldFixCursor()) {
             return; // No gw mouse move ptr; this shouldn't happen
         }
 
@@ -499,7 +503,7 @@ void MouseFix::DrawSettingsInternal()
 
 bool MouseFix::WndProc(const UINT Message, const WPARAM wParam, const LPARAM lParam)
 {
-    if (!enable_cursor_fix) {
+    if (!ShouldFixCursor()) {
         return false;
     }
     if (!initialized) {
