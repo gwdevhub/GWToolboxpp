@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #ifndef VC_EXTRALEAN
 #define VC_EXTRALEAN
@@ -61,13 +61,6 @@
 
 #include <d3d9.h>
 #include <DirectXMath.h>
-
-// libraries
-#include <ToolboxIni.h>
-
-#include <IconsFontAwesome5.h>
-#include <mp3.h>
-#include <nlohmann/json.hpp>
 
 #include <imgui.h>
 #include <imgui_internal.h>

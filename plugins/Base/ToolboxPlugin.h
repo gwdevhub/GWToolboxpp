@@ -1,6 +1,7 @@
 #pragma once
 
 #include "stl.h"
+#include <SimpleIni.h>
 
 #ifndef DLLAPI
 #ifdef BUILD_DLL

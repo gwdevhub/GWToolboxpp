@@ -68,8 +68,6 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
-    GWDebugInfo* gw_debug_info = nullptr;
-
     int failed(const char* failure_message)
     {
         wchar_t error_info[512];

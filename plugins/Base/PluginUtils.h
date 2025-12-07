@@ -1,6 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include <GWCA/Constants/Constants.h>
+#include <ToolboxIni.h>
+#include <nlohmann/json.hpp>
 
 namespace PluginUtils {
     template <typename T>

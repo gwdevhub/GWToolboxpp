@@ -15,7 +15,7 @@ FetchContent_MakeAvailable(imgui)
 
 # Apply the patch without halting the build on failure, in case it's already applied
 execute_process(
-    COMMAND git apply ${PROJECT_SOURCE_DIR}/cmake/patches/imgui_transparent_viewports.patch
+    COMMAND git apply "${CMAKE_CURRENT_LIST_DIR}/../cmake/patches/imgui_transparent_viewports.patch"
     WORKING_DIRECTORY ${imgui_SOURCE_DIR}
     RESULT_VARIABLE patch_result
     ERROR_VARIABLE patch_error
@@ -42,10 +42,10 @@ set(SOURCES
 source_group(TREE "${imgui_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(imgui PRIVATE ${SOURCES})
 target_include_directories(imgui PUBLIC
-    "${PROJECT_SOURCE_DIR}/Dependencies"
+    "${CMAKE_CURRENT_LIST_DIR}/../Dependencies"
     "${imgui_SOURCE_DIR}"
 	)
 target_compile_definitions(imgui PUBLIC 
-    IMGUI_USER_CONFIG="${PROJECT_SOURCE_DIR}/GWToolboxdll/imconfig.h")
+    IMGUI_USER_CONFIG="${CMAKE_CURRENT_LIST_DIR}/../GWToolboxdll/imconfig.h")
 
-set_target_properties(imgui PROPERTIES FOLDER "Dependencies/")
+set_target_properties(imgui PROPERTIES FOLDER "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/")

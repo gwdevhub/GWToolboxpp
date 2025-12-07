@@ -1,6 +1,6 @@
 include_guard()
 
-set(GWCA_FOLDER "${PROJECT_SOURCE_DIR}/Dependencies/GWCA")
+set(GWCA_FOLDER "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/GWCA")
 
 find_package(minhook CONFIG REQUIRED)
 
