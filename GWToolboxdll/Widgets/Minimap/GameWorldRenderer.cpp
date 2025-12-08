@@ -94,13 +94,15 @@ namespace {
             return false;
 
         const auto z_plane0 = poly.vertices_zplanes[0];
-        GW::Map::QueryAltitude({vertices[0].x, vertices[0].y, z_plane0}, 5.f, altitude);
+        GW::GamePos p = {vertices[0].x, vertices[0].y, z_plane0};
+        GW::Map::QueryAltitude(&p, 5.f, &altitude);
         const auto altitude0 = altitude;
         ++poly.vertices_processed;
         vertices[0].z = altitude;
 
         const auto z_planeZ = poly.vertices_zplanes[vertices.size() - 1];
-        GW::Map::QueryAltitude({vertices[vertices.size() - 1].x, vertices[vertices.size() - 1].y, z_planeZ}, 5.f, altitude);
+        p = {vertices[vertices.size() - 1].x, vertices[vertices.size() - 1].y, z_planeZ};
+        GW::Map::QueryAltitude(&p, 5.f, &altitude);
         const auto altitudeZ = altitude;
         vertices[vertices.size() - 1].z = altitude;
 
@@ -116,7 +118,8 @@ namespace {
 
             // @Cleanup: zplane needs setting properly here!
             const auto z_plane = poly.vertices_zplanes[i];
-            GW::Map::QueryAltitude({vertices[i].x, vertices[i].y, z_plane}, 5.f, altitude);
+            p = {vertices[i].x, vertices[i].y, z_plane};
+            GW::Map::QueryAltitude(&p, 5.f, &altitude);
 
             if (altitude < vertices[i].z) {
                 // recall that the Up camera component is inverted
@@ -127,7 +130,8 @@ namespace {
             if (std::abs(altitude - guessed_altitude) > 20.f) {
                 auto min_diff = std::abs(altitude - guessed_altitude);
                 for (unsigned zplane = pathing_map->size() - 1; zplane >= 1; --zplane) {
-                    GW::Map::QueryAltitude({vertices[i].x, vertices[i].y, zplane}, 5.f, altitude);
+                    p = {vertices[i].x, vertices[i].y, zplane};
+                    GW::Map::QueryAltitude(&p, 5.f, &altitude);
                     const auto cur_diff = std::abs(altitude - guessed_altitude);
                     if (cur_diff < min_diff && altitude < vertices[i].z) {
                         min_diff = cur_diff;

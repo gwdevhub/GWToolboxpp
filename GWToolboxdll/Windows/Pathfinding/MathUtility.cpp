@@ -70,7 +70,7 @@ namespace MathUtil {
         }
 
         GW::Vec3f pos{ gp.x, gp.y, 0.0f };
-        GW::Map::QueryAltitude(gp, 5.0f, pos.z);
+        GW::Map::QueryAltitude(&gp, 5.0f, &pos.z);
         return pos;
     }
 

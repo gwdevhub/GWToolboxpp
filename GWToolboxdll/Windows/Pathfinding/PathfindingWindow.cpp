@@ -56,7 +56,7 @@ namespace {
 
     void OnMapLoaded(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
     {
-        GetMilepathForCurrentMap();
+        PathfindingWindow::ReadyForPathing();
     }
 
     GW::GamePos* GetPlayerPos()
@@ -108,6 +108,8 @@ namespace {
 
 bool PathfindingWindow::ReadyForPathing()
 {
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) 
+        return false;
     const auto m = GetMilepathForCurrentMap();
     return m && m->ready();
 }

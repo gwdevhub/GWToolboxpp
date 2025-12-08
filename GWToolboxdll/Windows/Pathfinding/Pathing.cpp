@@ -127,7 +127,8 @@ namespace Pathing {
     static float height(const Vec2f& p, int layer)
     {
         float height = .0f;
-        Map::QueryAltitude(GamePos(p.x, p.y, layer), 5, height);
+        GamePos pos(p.x, p.y, layer);
+        Map::QueryAltitude(&pos, 5, &height);
         return height;
     }
 
