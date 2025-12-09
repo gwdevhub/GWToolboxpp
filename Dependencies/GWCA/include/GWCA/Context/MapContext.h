@@ -11,6 +11,9 @@ namespace GW {
     struct MapProp;
     struct PropByType;
     struct PropModelInfo;
+    namespace Constants {
+        enum class MapID : uint32_t;
+    }
 
     typedef Array<PathingMap> PathingMapArray;
 
@@ -57,7 +60,7 @@ namespace GW {
         /* +h0080 */ uint32_t h0080;
         /* +h0084 */ uint32_t nextTrapezoidId; // Starts at 0, increment everytime a trapezoid is created. It's used to assign a unique trapezoid id to every trapezoid. Used for path finding.
         /* +h0088 */ uint32_t h0088;
-        /* +h008C */ uint32_t h008C;
+        /* +h008C */ GW::Constants::MapID map_id;
         /* +h0090 */ uint32_t h0090;
         /* +h0094 */ uint32_t h0094;
         /* +h0098 */ uint32_t h0098;
@@ -136,20 +139,60 @@ namespace GW {
     struct MapContext {
         /* +h0000 */ float map_boundaries[5];
         /* +h0014 */ uint32_t h0014[6];
-        /* +h002C */ Array<void *> spawns1; // Seem to be arena spawns. struct is X,Y,unk 4 byte value,unk 4 byte value.
-        /* +h003C */ Array<void *> spawns2; // Same as above
-        /* +h004C */ Array<void *> spawns3; // Same as above
+        /* +h002C */ Array<void*> spawns1; // Seem to be arena spawns. struct is X,Y,unk 4 byte value,unk 4 byte value.
+        /* +h003C */ Array<void*> spawns2; // Same as above
+        /* +h004C */ Array<void*> spawns3; // Same as above
         /* +h005C */ float h005C[6]; // Some trapezoid i think.
-        /* +h0074 */ PathContext *path;
+        /* +h0074 */ PathContext* path;
         /* +h0078 */ PathEngineContext* path_engine;
-        /* +h007C */ PropsContext *props;
+        /* +h007C */ PropsContext* props;
         /* +h0080 */ uint32_t h0080;
         /* +h0084 */ void* terrain;
-        /* +h0088 */ uint32_t h0088[42];
+        /* +h0088 */ uint32_t h0088;
+        /* +h008C */ GW::Constants::MapID map_id;
+        /* +h0090 */ uint32_t h0090;
+        /* +h0094 */ uint32_t h0094;
+        /* +h0098 */ uint32_t h0098;
+        /* +h009C */ uint32_t h009C;
+        /* +h00A0 */ uint32_t h00A0;
+        /* +h00A4 */ uint32_t h00A4;
+        /* +h00A8 */ uint32_t h00A8;
+        /* +h00AC */ uint32_t h00AC;
+        /* +h00B0 */ uint32_t h00B0;
+        /* +h00B4 */ uint32_t h00B4;
+        /* +h00B8 */ uint32_t h00B8;
+        /* +h00BC */ uint32_t h00BC;
+        /* +h00C0 */ uint32_t h00C0;
+        /* +h00C4 */ uint32_t h00C4;
+        /* +h00C8 */ uint32_t h00C8;
+        /* +h00CC */ uint32_t h00CC;
+        /* +h00D0 */ uint32_t h00D0;
+        /* +h00D4 */ uint32_t h00D4;
+        /* +h00D8 */ uint32_t h00D8;
+        /* +h00DC */ uint32_t h00DC;
+        /* +h00E0 */ uint32_t h00E0;
+        /* +h00E4 */ uint32_t h00E4;
+        /* +h00E8 */ uint32_t h00E8;
+        /* +h00EC */ uint32_t h00EC;
+        /* +h00F0 */ uint32_t h00F0;
+        /* +h00F4 */ uint32_t h00F4;
+        /* +h00F8 */ uint32_t h00F8;
+        /* +h00FC */ uint32_t h00FC;
+        /* +h0100 */ uint32_t h0100;
+        /* +h0104 */ uint32_t h0104;
+        /* +h0108 */ uint32_t h0108;
+        /* +h010C */ uint32_t h010C;
+        /* +h0110 */ uint32_t h0110;
+        /* +h0114 */ uint32_t h0114;
+        /* +h0118 */ uint32_t h0118;
+        /* +h011C */ uint32_t h011C;
+        /* +h0120 */ uint32_t h0120;
+        /* +h0124 */ uint32_t h0124;
+        /* +h0128 */ uint32_t h0128;
+        /* +h012C */ uint32_t h012C;
         /* +h0130 */ void* zones;
         /* +h0134 */ uint32_t h0134;
     };
     static_assert(sizeof(MapContext) == 0x138, "struct MapContext has incorrect size");
-
     GWCA_API MapContext* GetMapContext();
 }

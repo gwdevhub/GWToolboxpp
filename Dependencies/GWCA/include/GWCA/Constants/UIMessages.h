@@ -12,6 +12,7 @@ namespace GW {
     namespace Constants {
         enum class Language;
         enum class MapID : uint32_t;
+        enum class InstanceType;
         enum class QuestID : uint32_t;
         enum class SkillID : uint32_t;
     }
@@ -275,7 +276,7 @@ namespace GW {
             kFrameMessage_0x10000093,
             kFrameMessage_0x10000094,
             kFrameMessage_0x10000095,
-            kFrameMessage_0x10000096,
+            kLoadMapContext,               // wparam = UIPacket::kLoadMapContext
             kFrameMessage_0x10000097,
             kFrameMessage_0x10000098,
             kFrameMessage_0x10000099,
@@ -596,6 +597,16 @@ namespace GW {
         };
 
         namespace UIPacket {
+            struct kLoadMapContext {
+                const wchar_t* file_name;
+                Constants::MapID map_id;
+                Constants::InstanceType map_type;
+                Vec2f spawn_point;
+                uint32_t h0014;
+                uint32_t h0018;
+                bool* success;
+            };
+            static_assert(sizeof(kLoadMapContext) == 0x20);
             struct kMouseCoordsClick {
                 float offset_x;
                 float offset_y;
