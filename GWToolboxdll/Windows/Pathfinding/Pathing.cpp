@@ -854,9 +854,8 @@ namespace Pathing {
         const size_t max_size = m_aabbs.size();
         std::unique_ptr<const AABB*[]> open(new const AABB*[max_size]);
         std::unique_ptr<bool[]> visited(new bool[max_size]()); // () for zero-init
-        std::vector<uint32_t> blocking_ids;
         for (const auto& p : m_points) {
-            blocking_ids.resize(0);
+            std::vector<uint32_t> blocking_ids;
             if (!HasLineOfSight(p, point, open, visited, &blocking_ids)) continue;
 
             float distance = GetDistance(point.pos, p.pos);
