@@ -40,7 +40,7 @@ namespace {
             code(_code) {
             name.reserve(128);
             code.reserve(128);
-            memset(&skill_template, sizeof(skill_template), 0);
+            memset(&skill_template, 0, sizeof(skill_template));
         };
         Build(TeamBuild& _tbuild, const std::string_view _name, const std::string_view _code) : Build(_name, _code) {
             tbuild = &_tbuild;
