@@ -137,7 +137,9 @@ namespace GW {
     static_assert(sizeof(PathEngineContext) == 0x18, "struct PathEngineContext has incorrect size");
 
     struct MapContext {
-        /* +h0000 */ float map_boundaries[5];
+        /* +h0000 */ uint32_t h0000;
+        /* +h0004 */ Vec2f start_pos;
+        /* +h000c */ Vec2f end_pos;
         /* +h0014 */ uint32_t h0014[6];
         /* +h002C */ Array<void*> spawns1; // Seem to be arena spawns. struct is X,Y,unk 4 byte value,unk 4 byte value.
         /* +h003C */ Array<void*> spawns2; // Same as above

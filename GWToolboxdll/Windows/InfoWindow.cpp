@@ -176,7 +176,7 @@ namespace {
                 InfoField("Thumbnail ID", "%d", map_info->thumbnail_id);
                 const auto m = GW::GetMapContext();
                 if (m) {
-                    InfoField("Map Boundaries", "%.0f, %.0f, %.0f, %.0f, %.0f", m->map_boundaries[0],m->map_boundaries[1],m->map_boundaries[2],m->map_boundaries[3],m->map_boundaries[4]);
+                    InfoField("Map Boundaries", "%.0f, %.0f, %.0f, %.0f, %.0f", m->start_pos.x, m->start_pos.y, m->end_pos.x, m->end_pos.y);
                 }
                 GW::Vec2f pos = {static_cast<float>(map_info->x), static_cast<float>(map_info->y)};
                 InfoField("Map Pos", "%.2f, %.2f", pos.x, pos.y);

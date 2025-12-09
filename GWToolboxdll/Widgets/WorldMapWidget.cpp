@@ -1627,8 +1627,10 @@ bool WorldMapWidget::WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GameP
         return false;
 
     const auto game_map_rect = ImRect({
-        current_map_context->map_boundaries[1], current_map_context->map_boundaries[2],
-        current_map_context->map_boundaries[3], current_map_context->map_boundaries[4],
+        current_map_context->start_pos.x, 
+        current_map_context->start_pos.y, 
+        current_map_context->end_pos.x, 
+        current_map_context->end_pos.y
     });
 
     constexpr auto gwinches_per_unit = 96.f;
@@ -1658,8 +1660,10 @@ bool WorldMapWidget::GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2
         return false;
 
     const auto game_map_rect = ImRect({
-        current_map_context->map_boundaries[1], current_map_context->map_boundaries[2],
-        current_map_context->map_boundaries[3], current_map_context->map_boundaries[4],
+        current_map_context->start_pos.x,
+        current_map_context->start_pos.y,
+        current_map_context->end_pos.x,
+        current_map_context->end_pos.y
     });
 
     // NB: World map is 96 gwinches per unit, this is hard coded in the GW source

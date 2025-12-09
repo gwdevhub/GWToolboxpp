@@ -15,6 +15,8 @@ namespace GW {
     typedef Array<PathingMap> PathingMapArray;
     typedef Array<MissionMapIcon> MissionMapIconArray;
 
+    struct MapContext;
+
     namespace Constants {
         enum class MapID : uint32_t;
         enum class District;
@@ -95,7 +97,7 @@ namespace GW {
 
         GWCA_API WorldMapContext* GetWorldMapContext();
 
-        GWCA_API int QueryAltitude(const GamePos* pos, float radius, float* alt, Vec3f* terrain_normal = nullptr);
+        GWCA_API float QueryAltitude(const GamePos* pos, float radius = 5.f, GW::MapContext* context = 0);
 
         GWCA_API bool GetIsMapLoaded();
 

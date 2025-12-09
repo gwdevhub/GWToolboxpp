@@ -126,10 +126,8 @@ namespace Pathing {
     // Gets height of map at current position and layer
     static float height(const Vec2f& p, int layer)
     {
-        float height = .0f;
         GamePos pos(p.x, p.y, layer);
-        Map::QueryAltitude(&pos, 5, &height);
-        return height;
+        return Map::QueryAltitude(&pos);
     }
 
     SimplePT::adjacentSide SimplePT::TouchingHeight(const SimplePT& rhs, float max_height_diff) const

@@ -632,8 +632,10 @@ namespace {
             }
             break;
             case dliFailGetProc: {
+                if (_stricmp(pdli->szDll, "gwca.dll") != 0) break;
                 ASSERT(pdli && *(pdli->dlp.szProcName));
                 Log::Log("Something is trying to access %ls, but failed", pdli->dlp.szProcName);
+                ASSERT(false && "Failed to find a valid proc address in GWCA. Ensure you're running the correct version, or delete gwca.dll in your toolbox folder!");
             }
             break;
             // Add other sliNotify cases for debugging if you need to later
