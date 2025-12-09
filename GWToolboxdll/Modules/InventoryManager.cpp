@@ -870,6 +870,19 @@ namespace {
                     last_salvage_kit_used = {.item_id = kit->item_id, .used_at = TIMER_INIT(), .uses = kit->GetUses()};
                 }
             } break;
+            case GW::UI::UIMessage::kIdentifyItem: {
+                const auto kit = (InventoryManager::Item*)GW::Items::GetItemById(((uint32_t*)wparam)[1]);
+                if (!(auto_reuse_id_kit && kit)) break;
+                const auto item = (InventoryManager::Item*)GW::Items::GetItemById(((uint32_t*)wparam)[0]);
+                if (!(item && item->CanBeIdentified()) && kit && kit->GetUses()) {
+                    //  Run next frame to allow current cursor to be cleared otherwise it'll assert
+                    GW::GameThread::Enqueue([kit]() {
+                        GW::Items::UseItem(kit);
+                    });
+                    break;
+                }
+                last_id_kit_used = {.item_id = kit->item_id, .used_at = TIMER_INIT(), .uses = kit->GetUses()};
+            } break;
             case GW::UI::UIMessage::kItemUpdated: {
                 const auto packet = (GW::UI::UIPacket::kItemUpdated*)wparam;
                 clear_pending_move(packet->item_id);
@@ -899,20 +912,6 @@ void InventoryManager::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessa
     switch (message_id) {
         case GW::UI::UIMessage::kVendorWindow: {
             merchant_list_tab = *static_cast<uint32_t*>(wparam);
-        } break;
-        case GW::UI::UIMessage::kIdentifyItem: {
-            const auto kit = (InventoryManager::Item*)GW::Items::GetItemById(((uint32_t*)wparam)[1]);
-            if (!(auto_reuse_id_kit && kit)) break;
-            const auto item = (InventoryManager::Item*)GW::Items::GetItemById(((uint32_t*)wparam)[0]);
-            if (!(item && item->CanBeIdentified()) && kit && kit->GetUses()) {
-                status->blocked = true;
-                // Run next frame to allow current cursor to be cleared otherwise it'll assert
-                GW::GameThread::Enqueue([kit]() {
-                    GW::Items::UseItem(kit);
-                    });
-                break;
-            }
-            last_id_kit_used = {.item_id = kit->item_id, .used_at = TIMER_INIT(), .uses = kit->GetUses()};
         } break;
         // About to request a quote for an item
         case GW::UI::UIMessage::kSendMerchantRequestQuote: {
@@ -2453,8 +2452,7 @@ bool InventoryManager::Item::CanOfferToTrade() const
 bool InventoryManager::Item::CanBeIdentified() const
 {
     if (GetIsIdentified()) return false;
-    if ((interaction & 0x800000) == 0) return false;
-    if (IsGreen() || type == GW::Constants::ItemType::Minipet) return false;
+    if (IsSalvagable(false)) return true;
     switch (model_file_id) {
         case 0x44CAC:
             return false;
@@ -2462,7 +2460,7 @@ bool InventoryManager::Item::CanBeIdentified() const
     return true;
 }
 
-bool InventoryManager::Item::IsSalvagable(bool check_bag)
+bool InventoryManager::Item::IsSalvagable(bool check_bag) const
 {
     if (item_formula == 0x5da) {
         return false;
@@ -2496,7 +2494,7 @@ bool InventoryManager::Item::IsSalvagable(bool check_bag)
     return false;
 }
 
-bool InventoryManager::Item::IsWeapon()
+bool InventoryManager::Item::IsWeapon() const
 {
     switch (static_cast<GW::Constants::ItemType>(type)) {
         case GW::Constants::ItemType::Axe:
@@ -2516,7 +2514,7 @@ bool InventoryManager::Item::IsWeapon()
     }
 }
 
-bool InventoryManager::Item::IsArmor()
+bool InventoryManager::Item::IsArmor() const
 {
     switch (static_cast<GW::Constants::ItemType>(type)) {
         case GW::Constants::ItemType::Headpiece:
@@ -2530,7 +2528,7 @@ bool InventoryManager::Item::IsArmor()
     }
 }
 
-bool InventoryManager::Item::IsHiddenFromMerchants()
+bool InventoryManager::Item::IsHiddenFromMerchants() const
 {
     if (Instance().hide_unsellable_items && !value) {
         return true;

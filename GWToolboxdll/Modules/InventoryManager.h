@@ -165,10 +165,10 @@ public:
         bool IsLesserKit() const;
         bool IsExpertSalvageKit() const;
         bool IsPerfectSalvageKit() const;
-        bool IsWeapon();
-        bool IsArmor();
-        bool IsSalvagable(bool check_bag = true);
-        bool IsHiddenFromMerchants();
+        bool IsWeapon() const;
+        bool IsArmor() const;
+        bool IsSalvagable(bool check_bag = true) const;
+        bool IsHiddenFromMerchants() const;
 
         bool IsInventoryItem() const;
         bool IsStorageItem() const;
