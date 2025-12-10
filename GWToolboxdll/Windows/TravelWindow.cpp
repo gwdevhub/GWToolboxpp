@@ -977,6 +977,18 @@ void TravelWindow::ScrollToOutpost(const GW::Constants::MapID outpost_id, const 
 bool TravelWindow::TravelNearest(const GW::Constants::MapID map_id)
 {
     const auto outpost = GetNearestOutpost(map_id);
+    if (outpost == GW::Constants::MapID::None) {
+        const GW::AreaInfo* map = GW::Map::GetMapInfo(map_id);
+        wchar_t map_name_buf[8];
+        constexpr wchar_t err_message_buf[256] = L"[Error] Failed to find a nearby unlocked outpost";
+        if (map && map->name_id && GW::UI::UInt32ToEncStr(map->name_id, map_name_buf, 8)) {
+            Log::ErrorW(L"[Error] Failed to find an unlocked outpost near \x1\x2%s", map_name_buf);
+        }
+        else {
+            Log::ErrorW(err_message_buf);
+        }
+        return false;
+    }
     return Travel(outpost);
 }
 
