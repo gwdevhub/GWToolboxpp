@@ -627,7 +627,9 @@ namespace GW {
             ControlAction_UseSkill5,
             ControlAction_UseSkill6,
             ControlAction_UseSkill7,
-            ControlAction_UseSkill8
+            ControlAction_UseSkill8,
+
+            ControlAction_ToggleGamepadCursorMode = 0x13d, // right dpad
 
         };
         struct FloatingWindow {
@@ -766,7 +768,11 @@ namespace GW {
 
         GWCA_API bool SetFramePosition(UI::Frame* frame, UI::FramePosition& position);
 
+        // When the player is actively using a game controller
         GWCA_API bool IsInControllerMode();
+
+        // When the player is using a game controller and is in cursor mode
+        GWCA_API bool IsInControllerCursorMode();
 
         typedef HookCallback<uint32_t> KeyCallback;
         // Listen for a gw hotkey press
