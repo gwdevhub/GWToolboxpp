@@ -124,7 +124,6 @@ namespace {
 
     bool disable_item_descriptions_in_outpost = false;
     bool disable_item_descriptions_in_explorable = false;
-    bool hide_email_address = false;
     bool disable_skill_descriptions_in_outpost = false;
     bool disable_skill_descriptions_in_explorable = false;
     bool block_faction_gain = false;
@@ -869,28 +868,7 @@ namespace {
             GW::UI::SelectDropdownOption(GW::UI::GetFrameByLabel(L"StatusOverride"), last_online_status);
         });
     }
-    void HideEmailAddress() {
-        GW::GameThread::Enqueue([] {
-            const auto frame = GW::UI::GetFrameByLabel(L"EditAccount");
-            if(!frame) return;
-            frame->visibility_flags |= 0x01000000;
-            GW::UI::TriggerFrameRedraw(frame);
-        });
-    }
 
-    GW::HookEntry OnCreateUIComponent_Entry;
-    // Flag email address entry field as a password format (e.g. asterisks instead of email)
-    void OnCreateUIComponent(GW::UI::CreateUIComponentPacket* msg)
-    {
-        if (!(msg && msg->component_label))
-            return;
-        if (hide_email_address && wcscmp(msg->component_label, L"EditAccount") == 0) {
-            msg->component_flags |= 0x01000000;
-        }
-        if (wcscmp(msg->component_label, L"StatusOverride") == 0) {
-            OverrideDefaultOnlineStatus();
-        }
-    }
 
     void OnKeyDownAction(GW::HookStatus*, uint32_t key)
     {
@@ -1378,7 +1356,6 @@ namespace {
         switch (message_id) {
             case GW::UI::UIMessage::kPreBuildLoginScene: {
                 GW::GameThread::Enqueue([]() {
-                    hide_email_address && (HideEmailAddress(), true);
                     OverrideDefaultOnlineStatus();
                 },true);        
             } break;
@@ -1839,8 +1816,6 @@ void GameSettings::Initialize()
 
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"reinvite", CmdReinvite);
 
-    RegisterCreateUIComponentCallback(&OnCreateUIComponent_Entry, OnCreateUIComponent);
-
     set_window_title_delay = TIMER_INIT();
 
     player_requested_active_quest_id = GW::QuestMgr::GetActiveQuestId();
@@ -2004,7 +1979,6 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
 
     LOAD_BOOL(disable_item_descriptions_in_outpost);
     LOAD_BOOL(disable_item_descriptions_in_explorable);
-    LOAD_BOOL(hide_email_address);
     LOAD_BOOL(disable_skill_descriptions_in_outpost);
     LOAD_BOOL(disable_skill_descriptions_in_explorable);
 
@@ -2192,8 +2166,6 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(disable_item_descriptions_in_outpost);
     SAVE_BOOL(disable_item_descriptions_in_explorable);
 
-    SAVE_BOOL(hide_email_address);
-
     SAVE_BOOL(disable_skill_descriptions_in_outpost);
     SAVE_BOOL(disable_skill_descriptions_in_explorable);
 
@@ -2341,7 +2313,6 @@ void GameSettings::DrawSettingsInternal()
                     "selling Gold and Green items introduced\n"
                     "in February 5, 2019 update.");
 
-    ImGui::Checkbox("Hide email address on login screen", &hide_email_address);
     ImGui::ShowHelp("When logging out to switch character, your email address is visible on the login screen; tick this to automatically hide it\n\nThis is useful when streaming your gameplay to hide your personal info.");
 
     ImGui::Checkbox("Keep current quest when accepting a new one", &keep_current_quest_when_new_quest_added);
