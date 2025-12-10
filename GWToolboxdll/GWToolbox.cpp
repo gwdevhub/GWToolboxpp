@@ -577,6 +577,27 @@ namespace {
 
     bool event_handler_attached = false;
 
+    RAWINPUTDEVICE rid[2];
+    // RegisterRawInputDevices to be able to receive WM_INPUT via WndProc
+    bool RegisterRawInputs(bool enable = true) {
+        if (!gw_window_handle) return false;
+        
+        // Mouse
+        rid[0].usUsagePage = 0x01;
+        rid[0].usUsage = 0x02;
+        rid[0].dwFlags = enable ? RIDEV_INPUTSINK : RIDEV_REMOVE;
+        rid[0].hwndTarget = enable ? gw_window_handle : nullptr;
+
+
+        // Keyboard
+        rid[1].usUsagePage = 0x01;
+        rid[1].usUsage = 0x06;
+        rid[1].dwFlags = enable ? RIDEV_INPUTSINK : RIDEV_REMOVE;
+        rid[1].hwndTarget = enable ? gw_window_handle : nullptr;
+
+        return RegisterRawInputDevices(rid, 2, sizeof(RAWINPUTDEVICE));
+    }
+
     bool AttachWndProcHandler()
     {
         if (event_handler_attached) {
@@ -587,13 +608,8 @@ namespace {
         OldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(SafeWndProc)));
         Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
 
-        // RegisterRawInputDevices to be able to receive WM_INPUT via WndProc
-        static RAWINPUTDEVICE rid;
-        rid.usUsagePage = HID_USAGE_PAGE_GENERIC;
-        rid.usUsage = HID_USAGE_GENERIC_MOUSE;
-        rid.dwFlags = RIDEV_INPUTSINK;
-        rid.hwndTarget = gw_window_handle;
-        ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
+        
+        DEBUG_ASSERT(RegisterRawInputs(true));
 
         event_handler_attached = true;
         return true;
@@ -605,6 +621,9 @@ namespace {
             return true;
         }
         Log::Log("Restoring input hook\n");
+        // NB: Don't unregister the raw input - Guild Wars needs it
+        //DEBUG_ASSERT(RegisterRawInputs(false));
+
         SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(OldWndProc));
         event_handler_attached = false;
         return true;

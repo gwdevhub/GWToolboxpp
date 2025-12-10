@@ -225,7 +225,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
         ExpParam->ExceptionPointers = pExceptionPointers;
         ExpParam->ClientPointers = false;
     }
-    const BOOL success = MiniDumpWriteDump(GetCurrentProcess(), ProcessId, hFile, static_cast<MINIDUMP_TYPE>(MiniDumpWithDataSegs | MiniDumpWithFullMemory), ExpParam, UserStreamParam, nullptr);
+    const BOOL success = MiniDumpWriteDump(GetCurrentProcess(), ProcessId, hFile, static_cast<MINIDUMP_TYPE>(MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithDataSegs), ExpParam, UserStreamParam, nullptr);
 
     DWORD lastError = GetLastError();
     CloseHandle(hFile);

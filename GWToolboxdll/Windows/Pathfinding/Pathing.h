@@ -8,7 +8,7 @@
 namespace Pathing {
     inline static auto max_visibility_range = 5000.0f;
 
-    #define PATHING_MAX_PLANE_COUNT 64 // Be sure to ASSERT if this is ever higher!
+    #define PATHING_MAX_PLANE_COUNT 128 // Be sure to ASSERT if this is ever higher!
 
     using BlockedPlaneBitset = std::bitset<PATHING_MAX_PLANE_COUNT>;
 
