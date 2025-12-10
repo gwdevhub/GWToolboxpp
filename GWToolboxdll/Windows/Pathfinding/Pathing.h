@@ -8,6 +8,10 @@
 namespace Pathing {
     inline static auto max_visibility_range = 5000.0f;
 
+    #define PATHING_MAX_PLANE_COUNT 64 // Be sure to ASSERT if this is ever higher!
+
+    using BlockedPlaneBitset = std::bitset<PATHING_MAX_PLANE_COUNT>;
+
     enum class Error : uint32_t {
         OK,
         Unknown,
@@ -125,7 +129,7 @@ namespace Pathing {
         struct PointVisElement {
             point::Id point_id; // other point
             float distance;
-            std::vector<uint32_t> blocking_ids; // Holds all layer changes; for checking if it's passable or blocked.
+            BlockedPlaneBitset planes_traversed; // Holds all layer changes; for checking if it's passable or blocked.
         } ;
 
         std::vector<AABB> m_aabbs;
@@ -143,8 +147,7 @@ namespace Pathing {
         void GenerateTeleportGraph();
         MilePath::point CreatePoint(const GW::GamePos& pos);
 
-        bool HasLineOfSight(const point& start, const point& goal, std::unique_ptr<const AABB*[]>& open, std::unique_ptr<bool[]>& visited,
-                            std::vector<uint32_t>* blocking_ids = nullptr);
+        bool HasLineOfSight(const point& start, const point& goal, std::unique_ptr<const AABB*[]>& open, std::unique_ptr<bool[]>& visited, const BlockedPlaneBitset& planes_currently_blocked, BlockedPlaneBitset* planes_traversed);
 
         const AABB* FindAABB(const GW::GamePos& pos);
         bool IsOnPathingTrapezoid(const GW::Vec2f& p, const SimplePT** pt = nullptr);

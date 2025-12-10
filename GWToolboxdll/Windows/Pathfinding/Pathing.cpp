@@ -19,13 +19,13 @@ namespace {
 
 
     // Grab a copy of map_context->sub1->pathing_map_block for processing on a different thread - Blocks until copy is complete
-    Pathing::Error CopyPathingMapBlocks(std::vector<uint32_t>& block)
+    Pathing::Error CopyPathingMapBlocks(Pathing::BlockedPlaneBitset* dest)
     {
         volatile Pathing::Error res = Pathing::Error::Unknown;
         std::mutex mutex;
-        auto block_pt = &block;
+        *dest = { 0 };
         // Enqueue
-        GW::GameThread::Enqueue([block_pt, &res, &mutex] {
+        GW::GameThread::Enqueue([dest, &res, &mutex] {
             const std::lock_guard lock(mutex);
             GW::MapContext* mapContext = GW::GetMapContext();
             if (!mapContext) {
@@ -33,7 +33,10 @@ namespace {
                 return;
             }
             auto& block = mapContext->path->blockedPlanes;
-            if (block.size()) block_pt->assign(&block[0], &block[0] + block.size());
+            ASSERT(block.size() < dest->size());
+            for (size_t i = 0; i < block.size(); i++) {
+                dest->set(i, block[i] != 0);
+            }
             res = Pathing::Error::OK;
         });
         // Wait
@@ -600,44 +603,48 @@ namespace Pathing {
         return nullptr;
     }
 
-    __forceinline void addBlockingId(std::vector<uint32_t>* blocking_ids, const AABB* box)
+    __forceinline void addBlockingId(BlockedPlaneBitset* blocking_ids, const AABB* box)
     {
         if (box && box->m_t && box->m_t->layer) {
-            blocking_ids->push_back(box->m_t->layer);
+            ASSERT(box->m_t->layer < blocking_ids->size());
+            blocking_ids->set(box->m_t->layer, 1);
         }
     }
 
-    bool MilePath::HasLineOfSight(const point& start, const point& goal, std::unique_ptr<const AABB*[]>& open, std::unique_ptr<bool[]>& visited,
-                                  std::vector<uint32_t>* blocking_ids)
+    bool MilePath::HasLineOfSight(const point& start, const point& goal, std::unique_ptr<const AABB*[]>& open, std::unique_ptr<bool[]>& visited, const BlockedPlaneBitset& planes_currently_blocked, BlockedPlaneBitset* planes_traversed = nullptr)
     {
-        if ((start.box && goal.box && start.box->m_id == goal.box->m_id)
-            || (start.box && goal.box2 && start.box->m_id == goal.box2->m_id)
-            || (start.box2 && goal.box && start.box2->m_id == goal.box->m_id)
-            || (start.box2 && goal.box2 && start.box2->m_id == goal.box2->m_id)) {
-            if (blocking_ids) {
-                addBlockingId(blocking_ids, start.box);
-                addBlockingId(blocking_ids, start.box2);
-                addBlockingId(blocking_ids, goal.box);
-                addBlockingId(blocking_ids, goal.box2);
+        if ((start.box && goal.box && start.box->m_id == goal.box->m_id) 
+            || (start.box && goal.box2 && start.box->m_id == goal.box2->m_id) 
+            || (start.box2 && goal.box && start.box2->m_id == goal.box->m_id) ||
+            (start.box2 && goal.box2 && start.box2->m_id == goal.box2->m_id)) {
+            // Start and end are within the same box
+            if (planes_traversed) {
+                addBlockingId(planes_traversed, start.box);
+                addBlockingId(planes_traversed, start.box2);
+                addBlockingId(planes_traversed, goal.box);
+                addBlockingId(planes_traversed, goal.box2);
             }
-            return true; // internal point are visible
+            return true;
         }
-        // Clear visited array
+
         memset(&visited[0], 0, sizeof(visited[0]) * m_aabbs.size());
 
-
         uint32_t open_count = 0;
-        if (start.box) open[open_count++] = start.box;
-        if (start.box2) open[open_count++] = start.box2;
+        if (start.box) {
+            visited[start.box->m_id] = 1; // Add this
+            open[open_count++] = start.box;
+        }
+        if (start.box2) {
+            visited[start.box2->m_id] = 1; // Add this
+            open[open_count++] = start.box2;
+        }
         uint32_t last_layer = 0;
 
         while (open_count > 0) {
             const AABB* current = open[--open_count];
-            if (visited[current->m_id]) continue;
-            visited[current->m_id] = 1;
 
             if ((goal.box && current->m_id == goal.box->m_id) || (goal.box2 && current->m_id == goal.box2->m_id)) {
-                return true; // unique_ptr cleans up automatically
+                return true;
             }
 
             auto& portals = m_PTPortalGraph[current->m_t->id];
@@ -645,17 +652,34 @@ namespace Pathing {
                 if (start.portal == portal) continue;
                 if (!portal->intersect(start.pos, goal.pos)) continue;
 
-                if (blocking_ids && last_layer != current->m_t->layer) {
+                if (last_layer != current->m_t->layer) {
                     last_layer = current->m_t->layer;
-                    if (last_layer) blocking_ids->push_back(last_layer);
-                }
+                    if (last_layer) {
+                        // Check if this layer is blocked - return false immediately
+                        ASSERT(last_layer < planes_currently_blocked.size());
+                        if (planes_currently_blocked[last_layer]) {
+                            return false; // Path is blocked!
+                        }
 
-                if (current != portal->m_box1 && !visited[portal->m_box1->m_id]) open[open_count++] = portal->m_box1;
-                if (current != portal->m_box2 && !visited[portal->m_box2->m_id]) open[open_count++] = portal->m_box2;
+                        // Collect planes traversed if requested
+                        if (planes_traversed) {
+                            planes_traversed->set(last_layer,1);
+                        }
+                    }
+
+                }
+                if (current != portal->m_box1 && !visited[portal->m_box1->m_id]) {
+                    visited[portal->m_box1->m_id] = 1; // Mark as visited immediately
+                    open[open_count++] = portal->m_box1;
+                }
+                if (current != portal->m_box2 && !visited[portal->m_box2->m_id]) {
+                    visited[portal->m_box2->m_id] = 1; // Mark as visited immediately
+                    open[open_count++] = portal->m_box2;
+                }
             }
         }
 
-        return false; // unique_ptr cleans up automatically
+        return false;
     }
 
 #if 0
@@ -759,7 +783,7 @@ namespace Pathing {
             size_t id1{};
             size_t id2{};
             float distl{};
-            std::vector<uint32_t> blocks{};
+            BlockedPlaneBitset traversed_planes;
         };
 
         // Function to be executed by each thread
@@ -769,7 +793,8 @@ namespace Pathing {
             std::unique_ptr<const AABB*[]> open(new const AABB*[max_size]);
             std::unique_ptr<bool[]> visited(new bool[max_size]()); // () for zero-init
 
-            auto blocking_ids = std::vector<uint32_t>(0);
+            BlockedPlaneBitset blocking_ids;
+            BlockedPlaneBitset unused;
             auto local_updates = std::vector<VisGraphUpdate>();
             local_updates.reserve(vis_graph_size * 2);
 
@@ -800,7 +825,7 @@ namespace Pathing {
                         }
                     }
 
-                    if (HasLineOfSight(*p1, *p2, open, visited, &blocking_ids)) {
+                    if (HasLineOfSight(*p1, *p2, open, visited, unused, &blocking_ids)) {
                         const float dist = sqrtf(sqdist);
 
                         // Collect updates (copy in worker thread)
@@ -843,10 +868,11 @@ namespace Pathing {
         const size_t max_size = m_aabbs.size();
         std::unique_ptr<const AABB*[]> open(new const AABB*[max_size]);
         std::unique_ptr<bool[]> visited(new bool[max_size]()); // () for zero-init
-        std::vector<uint32_t> blocking_ids;
+        BlockedPlaneBitset blocking_ids;
+        BlockedPlaneBitset unused;
         for (const auto& p : m_points) {
-            blocking_ids.resize(0);
-            if (!HasLineOfSight(p, point, open, visited, &blocking_ids)) continue;
+            blocking_ids = { 0 };
+            if (!HasLineOfSight(p, point, open, visited, unused, &blocking_ids)) continue;
 
             float distance = GetDistance(point.pos, p.pos);
             if (type == teleport_point_type::both) {
@@ -930,18 +956,20 @@ namespace Pathing {
         const size_t max_size = m_mp->m_aabbs.size();
         std::unique_ptr<const AABB*[]> open(new const AABB*[max_size]);
         std::unique_ptr<bool[]> visited(new bool[max_size]()); // () for zero-init
+        BlockedPlaneBitset unused;
         for (const auto& it : m_mp->m_points) {
             const float sqdistance = GetSquareDistance(it.pos, point.pos);
             if (sqdistance > sqrange)
                 continue;
 
-            std::vector<uint32_t> blocking_ids;
-            if (!m_mp->HasLineOfSight(it, point, open, visited, &blocking_ids))
+            BlockedPlaneBitset planes_traversed;
+            
+            if (!m_mp->HasLineOfSight(it, point, open, visited, unused, &planes_traversed))
                 continue;
 
             float distance = sqrtf(sqdistance);
-            vis_graph[point.id].emplace_back(it.id, distance, blocking_ids);
-            vis_graph[it.id].emplace_back(point.id, distance, std::move(blocking_ids));
+            vis_graph[point.id].emplace_back(it.id, distance, planes_traversed);
+            vis_graph[it.id].emplace_back(point.id, distance, std::move(planes_traversed));
         }
     }
 
@@ -1018,8 +1046,8 @@ namespace Pathing {
     {
         std::lock_guard lock(pathing_mutex);
 
-        std::vector<uint32_t> block;
-        const Error res = CopyPathingMapBlocks(block);
+        BlockedPlaneBitset current_blocked_planes;
+        const Error res = CopyPathingMapBlocks(&current_blocked_planes);
 
         if (res != Error::OK)
             return res;
@@ -1060,15 +1088,12 @@ namespace Pathing {
             const size_t max_size = m_mp->m_aabbs.size();
             std::unique_ptr<const AABB*[]> open(new const AABB*[max_size]);
             std::unique_ptr<bool[]> visited(new bool[max_size]()); // () for zero-init
-            std::vector<uint32_t> blocking_ids;
-            if (m_mp->HasLineOfSight(start, goal, open, visited, &blocking_ids)) {
-                if (!std::ranges::any_of(blocking_ids, [&block](auto& id) { return block[id]; })) {
-                    m_path.insertPoint(start);
-                    m_path.insertPoint(goal);
-                    m_path.setCost(GetDistance(start_pos, goal_pos));
-                    m_path.finalize();
-                    return Error::OK;
-                }
+            if (m_mp->HasLineOfSight(start, goal, open, visited, current_blocked_planes)) {
+                m_path.insertPoint(start);
+                m_path.insertPoint(goal);
+                m_path.setCost(GetDistance(start_pos, goal_pos));
+                m_path.finalize();
+                return Error::OK;
             }
         }
 
@@ -1076,7 +1101,6 @@ namespace Pathing {
         const clock_t start_timestamp = clock();
 #endif
 
-        // TODO: Maybe I'm not using milepath for its intended purpose, but this function will ALWAYS add more points to the graph!!
         if (new_start) {
             m_mp->m_points.push_back(start);
             InsertPointIntoVisGraph(start);
@@ -1103,8 +1127,10 @@ namespace Pathing {
                 break;
 
             for (const auto& vis : m_mp->m_visGraph[current]) {
-                if (std::ranges::any_of(vis.blocking_ids, [&block](auto& id) { return block[id]; }))
+                // Skip this path if it crosses any blocked planes
+                if ((vis.planes_traversed & current_blocked_planes).any()) {
                     continue;
+                }
 
                 const float new_cost = cost_so_far[current] + vis.distance;
                 if (cost_so_far[vis.point_id] == -INFINITY || new_cost < cost_so_far[vis.point_id]) {
