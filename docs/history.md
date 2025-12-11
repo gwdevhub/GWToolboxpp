@@ -7,6 +7,20 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.4
+* [Fix] Fixed crash on launch reported by some users (restarting windows usually fixed it!)
+* [Fix] Drop gold hotkey working again
+* [Fix] Fixed crashes related to quest pathing
+* [Fix] Fixed bugs related to gw settings not loading/saving properly
+* [Fix] Fixed bug preventing minimap from showing if compass was hidden
+* [Fix] Fixed bug preventing gamepads from working as intended when toolbox is running
+* [Fix] Fixed bug preventing white items from being identified when toolbox is running
+* [Fix] Fixed costume previews not working in armory
+* [Fix] Fixed bug preventing "flag all" from working when in an explorable area with only henchmen
+* [Minor] Removed checkbox to hide email address on login screen (this is part of the game now)
+* [Minor] Added chat commands to hide armor pieces via armory
+* [New] Ordered Jon a new keyboard because all these bug fixes have broken his ctrl key
+
 ## Version 8.3
 * [New] Added extra settings to hotkeys to trigger in controller mode or not
 * [New] Added extra setting to camera smoothing in game settings to turn off in controller mode
