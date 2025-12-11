@@ -70,6 +70,19 @@ namespace GWArmory {
         Armor* current_piece = nullptr;
     };
 
+    Armor unequipped_armors[] = {
+        // Empty slots
+        { "NoHead", 0, Profession::None, ItemType::Headpiece, Campaign::Core, 0 },
+        { "NoChest", 0, Profession::None, ItemType::Chestpiece, Campaign::Core, 0 },
+        { "NoGloves", 0, Profession::None, ItemType::Gloves, Campaign::Core, 0 },
+        { "NoLegs", 0, Profession::None, ItemType::Leggings, Campaign::Core, 0 },
+        { "NoBoots", 0, Profession::None, ItemType::Boots, Campaign::Core, 0 },
+        { "NoCostumeHead", 0, Profession::None, ItemType::Costume_Headpiece, Campaign::Core, 0 },
+        { "NoCostume", 0, Profession::None, ItemType::Costume, Campaign::Core, 0 },
+        { "NoLeftHand", 0, Profession::None, ItemType::Offhand, Campaign::Core, 0 },
+        { "NoRightHand", 0, Profession::None, ItemType::Axe, Campaign::Core, 0 },
+    };
+
     Armor warrior_armors[] = {
         // Core
         {"Obsidian Helm", 0x20D, Profession::Warrior, ItemType::Headpiece, Campaign::Core, 3},
@@ -1606,7 +1619,6 @@ namespace GWArmory {
         {"Wintergreen Scythe", 0x40E5D, Profession::None, ItemType::Scythe, Campaign::BonusMissionPack, 0, 0x2A331601},
 
         // Shields
-        {"Aegis of Terror", 0x3870B, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2000C611},
         {"Amber Aegis", 0x2AFC6, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20020041},
         {"Amethyst Aegis", 0x49B23, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x2C120441},
         {"Aureate Aegis", 0x386F2, Profession::None, ItemType::Shield, Campaign::BonusMissionPack, 3, 0x20000000},

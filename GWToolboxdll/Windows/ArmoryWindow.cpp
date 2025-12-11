@@ -484,9 +484,24 @@ namespace GWArmory {
         const auto lower_name = TextUtils::ToLower(item_name.data());
         for (size_t i = 0; i < armor_cnt && armors; i++) {
             const auto& armor = armors[i];
-            if (TextUtils::ToLower(armor.label).starts_with(lower_name)) return &armor;
+            if (TextUtils::ToLower(armor.label) == lower_name) return &armor;
         }
-        // TODO: Costumes
+        for (size_t i = 0; i < _countof(costumes); i++) {
+            const auto& armor = costumes[i];
+            if (TextUtils::ToLower(armor.label) == lower_name) return &armor;
+        }
+        for (size_t i = 0; i < _countof(costume_heads); i++) {
+            const auto& armor = costume_heads[i];
+            if (TextUtils::ToLower(armor.label) == lower_name) return &armor;
+        }
+        for (size_t i = 0; i < _countof(weapons); i++) {
+            const auto& weapon = weapons[i];
+            if (TextUtils::ToLower(weapon.label) == lower_name) return &weapon;
+        }
+        for (size_t i = 0; i < _countof(unequipped_armors); i++) {
+            const auto& armor = unequipped_armors[i];
+            if (TextUtils::ToLower(armor.label) == lower_name) return &armor;
+        }
         return nullptr;
     }
 
@@ -713,6 +728,18 @@ namespace GWArmory {
         return true;
     }
 
+    const std::map<ItemSlot, std::string_view> empty_slot_names = std::map<ItemSlot, std::string_view> {
+        { ItemSlot::Headpiece, "NoHead" },
+        { ItemSlot::Chestpiece, "NoChest" },
+        { ItemSlot::Gloves, "NoGloves" },
+        { ItemSlot::Leggings, "NoLegs" },
+        { ItemSlot::Boots, "NoBoots" },
+        { ItemSlot::CostumeHead, "NoCostumeHead" },
+        { ItemSlot::CostumeBody, "NoCostume" },
+        { ItemSlot::LeftHand, "NoLeftHand" },
+        { ItemSlot::RightHand, "NoRightHand" }
+    };
+
     bool DrawArmorPieceNew(ItemSlot slot) {
         ImGui::PushID(slot);
         const auto state = &combo_list_states[slot];
@@ -759,9 +786,14 @@ namespace GWArmory {
             player_piece->model_file_id = 0;
             value_changed = true;
         }
-        ImGui::PopID();
-        
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip([slot]() {
+                ImGui::TextUnformatted("Empty Slot");
+                ImGui::TextDisabled("/armory %s", empty_slot_names.at(slot).data());
+            });
+        }
 
+        ImGui::PopID();
         
         constexpr ImVec4 tint(1, 1, 1, 1);
         constexpr auto uv0 = ImVec2(0, 0);
@@ -1088,7 +1120,7 @@ namespace GWArmory {
             if (slot == ItemSlot::CostumeHead && GetFileIdForFestivalHat(drawn_pieces[slot].model_file_id, current_profession)) {
                 ClearArmorItem(ItemSlot::Headpiece);
             }
-            if (slot == ItemSlot::CostumeBody) {
+            if (slot == ItemSlot::CostumeBody || slot == ItemSlot::Chestpiece || slot == ItemSlot::Gloves || slot == ItemSlot::Leggings || slot == ItemSlot::Boots) {
                 RevertCostumePieces();
             }
             ClearArmorItem(slot);
