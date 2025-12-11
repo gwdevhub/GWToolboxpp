@@ -1259,7 +1259,7 @@ void ArmoryWindow::Initialize()
     ToolboxWindow::Initialize();
     UpdateWeaponAnimation_Func = (UpdateWeaponAnimation_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\xc6\x86\xba\x01\x00\x00\x04", "xxxxxxx", 0), 0xfff);
     
-    costume_data_ptr = (CostumeData*)GW::Scanner::Find("\xe5\x09\x00\x00\xf0\x09\x00\x00", "xxxxxxxx", 0, GW::ScannerSection::Section_RDATA);
+    costume_data_ptr = (CostumeData*)GW::Scanner::Find("\xe5\x09\x00\x00\xf0\x09\x00\x00", "xxxxxxxx", -0xc, GW::ScannerSection::Section_RDATA);
     festival_hat_data_ptr = (FestivalHatData*)GW::Scanner::Find("\xe3\x09\x00\x00\xef\x09\x00\x00", "xxxxxxxx", 0, GW::ScannerSection::Section_RDATA);
 
 #ifdef _DEBUG 
