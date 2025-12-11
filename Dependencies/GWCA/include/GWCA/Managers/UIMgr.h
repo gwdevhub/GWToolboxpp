@@ -385,10 +385,10 @@ namespace GW {
             AutoTargetNPCs,
             AlwaysShowNearbyNamesPvP,
             FadeDistantNameTags,
+            WaitForVSync = 0x41,
             DoNotCloseWindowsOnEscape = 0x45,
             ShowMinimapOnWorldMap,
-            WaitForVSync = 0x54,
-            WhispersFromFriendsEtcOnly,
+            WhispersFromFriendsEtcOnly = 0x55,
             ShowChatTimestamps,
             ShowCollapsedBags,
             ItemRarityBorder,
@@ -396,6 +396,7 @@ namespace GW {
             AlwaysShowFoeNames,
             LockCompassRotation = 0x5c,
             EnableGamepad = 0x5d,
+            
             Count = 0x6c
         };
         // Used with GetWindowPosition
