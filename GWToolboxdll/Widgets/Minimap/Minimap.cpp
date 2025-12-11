@@ -394,7 +394,7 @@ namespace {
         if (!snap_to_compass)
             return false;
         const auto frame = GetCompassFrame();
-        if (!(frame && frame->IsVisible()))
+        if (!frame)
             return false;
         const float compass_padding = 1.05f;
         auto top_left = frame->position.GetTopLeftOnScreen(frame);
