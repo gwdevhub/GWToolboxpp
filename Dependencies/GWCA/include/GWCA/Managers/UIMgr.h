@@ -396,7 +396,7 @@ namespace GW {
             AlwaysShowFoeNames,
             LockCompassRotation = 0x5c,
             EnableGamepad = 0x5d,
-            Count = 0x5e
+            Count = 0x6c
         };
         // Used with GetWindowPosition
         enum WindowID : uint32_t {
@@ -447,7 +447,7 @@ namespace GW {
             WindowID_Hero5 = 0x5F,
             WindowID_Hero6 = 0x60,
             WindowID_Hero7 = 0x61,
-            WindowID_Count = 0x66
+            WindowID_Count = 0x69
         };
 
         enum ControlAction : uint32_t {
