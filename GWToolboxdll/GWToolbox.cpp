@@ -608,8 +608,8 @@ namespace {
         OldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(SafeWndProc)));
         Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
 
-        
-        DEBUG_ASSERT(RegisterRawInputs(true));
+        // NB: Inputs are being listened to in reforged
+        //DEBUG_ASSERT(RegisterRawInputs(true));
 
         event_handler_attached = true;
         return true;
