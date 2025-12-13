@@ -267,9 +267,16 @@ namespace {
                 str_placeholder = std::format(L"{}\x10a\x8101\x29C\x101{}\x102{}\x1", title_info->h0020, current_points_buf, points_needed_buf);
             }
             else if (title_info->is_percentage_based()) {
+                const auto rounded_percent = std::round(percent * 1000) / 10; // Round to 1dp
+                const auto integer_part = (uint32_t)rounded_percent;
+                const auto fractional_part = (uint32_t)std::round((rounded_percent - integer_part) * 10);
+
                 wchar_t percent_buf[3];
-                GW::UI::UInt32ToEncStr((uint32_t)(percent * 100), percent_buf, _countof(percent_buf));
-                str_placeholder = std::format(L"{}\x10a\x8101\x379\x101{}\x102\x100\x1", title_info->h0020, percent_buf);
+                GW::UI::UInt32ToEncStr(integer_part, percent_buf, _countof(percent_buf));
+                wchar_t decimal_buf[3];
+                GW::UI::UInt32ToEncStr(fractional_part, decimal_buf, _countof(decimal_buf));
+
+                str_placeholder = std::format(L"{}\x10a\x8101\x379\x101{}\x102{}\x1", title_info->h0020, percent_buf, decimal_buf);
             }
             else {
                 wchar_t current_points_buf[3];
