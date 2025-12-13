@@ -2453,6 +2453,15 @@ bool InventoryManager::Item::CanBeIdentified() const
 {
     if (GetIsIdentified()) return false;
     if (IsSalvagable(false)) return true;
+    switch (type) {
+        case GW::Constants::ItemType::Bundle:
+        case GW::Constants::ItemType::Usable:
+        case GW::Constants::ItemType::Quest_Item:
+        case GW::Constants::ItemType::Storybook:
+            return false;
+    }
+    if (IsWeapon() || IsArmor()) return true;
+    if (IsGreen()) return false;
     switch (model_file_id) {
         case 0x44CAC:
             return false;
