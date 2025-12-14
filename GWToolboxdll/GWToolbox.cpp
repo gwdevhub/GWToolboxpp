@@ -68,27 +68,30 @@ namespace {
     std::recursive_mutex module_management_mutex;
 
 
-    GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Func = nullptr;
-    GW::UI::UIInteractionCallback OnMinOrRestoreOrExitBtnClicked_Ret = nullptr;
+    GW::UI::UIInteractionCallback OnUiRoot_UICallback_Func = 0, OnUiRoot_UICallback_Ret = 0;
 
-    void OnMinOrRestoreOrExitBtnClicked(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
+    // Hook the "Exit Game" button on logout prompt to ensure toolbox closes gracefully
+    void OnUiRoot_UICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
     {
         GW::Hook::EnterHook();
-        if (message->message_id == GW::UI::UIMessage::kMouseAction && wparam) {
-            const auto param = (GW::UI::UIPacket::kMouseAction*)wparam;
-            if (param->current_state == GW::UI::UIPacket::ActionState::MouseUp 
-                && param->child_offset_id == 0x3
-                && GW::UI::GetFrameById(param->frame_id) == GW::UI::GetFrameByLabel(L"btnExit")) {
-                param->current_state = GW::UI::UIPacket::ActionState::MouseDown; // Revert state to avoid GW closing the window on mouse up
-
-                // Left button clicked, on the exit button (ID 0x3)
-                SendMessage(gw_window_handle, WM_CLOSE, NULL, NULL);
-                GW::Hook::LeaveHook();
-                return;
-            }
+        if (message->message_id == GW::UI::UIMessage::kDestroyFrame) {
+            GWToolbox::SaveSettings();
         }
-        OnMinOrRestoreOrExitBtnClicked_Ret(message, wparam, lparam);
+        OnUiRoot_UICallback_Ret(message, wparam, lparam);
         GW::Hook::LeaveHook();
+    }
+
+    bool HookUiRoot()
+    {
+        if (OnUiRoot_UICallback_Func) 
+            return true;
+        const auto frame = GW::UI::GetParentFrame(GW::UI::GetFrameByLabel(L"Game"));
+        if (!(frame && frame->frame_callbacks.size()))
+            return false;
+        OnUiRoot_UICallback_Func = frame->frame_callbacks[0].callback;
+        GW::Hook::CreateHook((void**)&OnUiRoot_UICallback_Func, OnUiRoot_UICallback, (void**)&OnUiRoot_UICallback_Ret);
+        GW::Hook::EnableHooks(OnUiRoot_UICallback_Func);
+        return true;
     }
 
     bool render_callback_attached = false;
@@ -626,16 +629,6 @@ namespace {
         return true;
     }
 
-
-    void HookCloseButton() {
-        if (OnMinOrRestoreOrExitBtnClicked_Func) return;
-        const auto frame = GW::UI::GetFrameByLabel(L"BtnRestore");
-        if (!(frame && frame->frame_callbacks.size())) return;
-        OnMinOrRestoreOrExitBtnClicked_Func = frame->frame_callbacks[0].callback;
-        GW::Hook::CreateHook((void**)&OnMinOrRestoreOrExitBtnClicked_Func, OnMinOrRestoreOrExitBtnClicked, reinterpret_cast<void**>(&OnMinOrRestoreOrExitBtnClicked_Ret));
-        GW::Hook::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
-    }
-
     FARPROC WINAPI CustomDliHook(const unsigned dliNotify, PDelayLoadInfo pdli)
     {
         switch (dliNotify) {
@@ -782,8 +775,6 @@ void GWToolbox::Initialize(LPVOID module)
     AttachRenderCallback();
     GW::EnableHooks();
 
-    HookCloseButton();
-
     UpdateInitialising(.0f);
     AttachGameLoopCallback();
     pending_detach_dll = false;
@@ -907,8 +898,7 @@ void GWToolbox::Disable()
         return;
     GW::DisableHooks();
     GW::Render::EnableHooks();
-    if (OnMinOrRestoreOrExitBtnClicked_Func)
-        GW::Hook::EnableHooks(OnMinOrRestoreOrExitBtnClicked_Func);
+    if (OnUiRoot_UICallback_Func) GW::Hook::EnableHooks(OnUiRoot_UICallback_Func);
     AttachRenderCallback();
     gwtoolbox_disabled = true;
 }
@@ -946,7 +936,7 @@ void GWToolbox::Update(GW::HookStatus*)
             return;
     }
 
-    HookCloseButton();
+    HookUiRoot();
 
     UpdateModulesTerminating(delta_f);
 
