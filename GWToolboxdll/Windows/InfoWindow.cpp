@@ -509,7 +509,7 @@ namespace {
     typedef uint32_t*(__cdecl* CreateTexture_pt)(wchar_t* file_name, uint32_t flags);
     CreateTexture_pt CreateTexture_Func = 0, CreateTexture_Ret = 0;
 
-    typedef void(__fastcall* DoAsyncDecodeStr_pt)(void* ecx, void* edx, const wchar_t* encoded_str, void* cb, void* wParam);
+    typedef void(__cdecl* DoAsyncDecodeStr_pt)(const wchar_t* s, void* cb, void* wParam);
     DoAsyncDecodeStr_pt ValidateAsyncDecodeStr_Func = 0, ValidateAsyncDecodeStr_Ret = 0;
 
     // Why reinvent the wheel?
@@ -548,22 +548,21 @@ namespace {
         e->decoded_str = TextUtils::WStringToString(e->decoded);
     }
 
-    void __fastcall OnValidateAsyncDecodeStr(void* ecx, void* edx, const wchar_t* s, void* cb, void* wParam) {
+    void __cdecl OnValidateAsyncDecodeStr(const wchar_t* s, void* cb, void* wParam) {
         GW::Hook::EnterHook();
-        if (s && enc_strings_recorded.find(s) == enc_strings_recorded.end()) {
+        if (s && wcsncmp(s, L"\x8103\xBB3", 2) != 0 && wcsncmp(s, L"\x55b\x101", 2) != 0 
+            && enc_strings_recorded.find(s) == enc_strings_recorded.end()) {
             auto e = new RecordedAsyncDecode();
             e->s = s;
             e->cb = cb;
             e->wParam = wParam;
-
             enc_strings_recorded[s] = e;
-
-            if (s && wcsncmp(s, L"\x8103\xBB3", 2) != 0) // Ignore the time thing
-                ValidateAsyncDecodeStr_Ret(ecx, edx, e->s.c_str(), OnRecordedAsyncDecode_Decoded, e);
+            ValidateAsyncDecodeStr_Ret(e->s.c_str(), OnRecordedAsyncDecode_Decoded, e);
+                
         }
 
 
-        ValidateAsyncDecodeStr_Ret(ecx, edx, s, cb, wParam);
+        ValidateAsyncDecodeStr_Ret(s, cb, wParam);
 
         GW::Hook::LeaveHook();
     }
@@ -614,7 +613,7 @@ namespace {
         if (hook && ValidateAsyncDecodeStr_Func)
             return;
         if (hook) {
-            ValidateAsyncDecodeStr_Func = (DoAsyncDecodeStr_pt)GW::Scanner::Find("\x8b\x47\x14\x8d\x9f\x80\xfe\xff\xff", "xxxxxxxxx", -0x8);
+            ValidateAsyncDecodeStr_Func = (DoAsyncDecodeStr_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindUseOfString("(codedString[0] & ~WORD_BIT_MORE) >= WORD_VALUE_BASE"));
             if (ValidateAsyncDecodeStr_Func) {
                 GW::Hook::CreateHook((void**)&ValidateAsyncDecodeStr_Func, OnValidateAsyncDecodeStr, (void**)&ValidateAsyncDecodeStr_Ret);
                 GW::Hook::EnableHooks(ValidateAsyncDecodeStr_Func);
