@@ -414,10 +414,7 @@ namespace {
         if (Message == WM_RBUTTONUP) {
             if (right_mouse_down && !mouse_moved_whilst_right_clicking && !io.WantCaptureMouse) {
                 // Tell imgui that the mouse cursor is in its original clicked position - GW messes with the cursor in-game
-                io.MousePos = {static_cast<float>(GET_X_LPARAM(right_click_lparam)), static_cast<float>(GET_Y_LPARAM(right_click_lparam))};
-                for (const auto m : tb.GetAllModules()) {
-                    m->WndProc(WM_GW_RBUTTONCLICK, 0, right_click_lparam);
-                }
+                SendMessage(hWnd, WM_GW_RBUTTONCLICK, 0, right_click_lparam);
             }
             mouse_moved_whilst_right_clicking = 0;
             right_mouse_down = false;
@@ -555,7 +552,7 @@ namespace {
                 break;
             default:
                 // Custom messages registered via RegisterWindowMessage
-                if (Message >= 0xC000 && Message <= 0xFFFF) {
+                if (Message >= 0x8000 && Message <= 0xFFFF) {
                     for (const auto m : tb.GetAllModules()) {
                         m->WndProc(Message, wParam, lParam);
                     }

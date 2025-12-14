@@ -39,6 +39,7 @@
 #include <Modules/HeroEquipmentModule.h>
 #include <Modules/NPCVoiceModule.h>
 #include <Modules/FpsFix.h>
+#include <Modules/GamepadModule.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -162,7 +163,8 @@ namespace {
 #endif
         NPCVoiceModule::Instance(),
         AudioSettings::Instance(),   
-        FpsFix::Instance()
+        FpsFix::Instance(),          
+        GamepadModule::Instance()
     };
 
     std::vector<WidgetToggle> optional_widgets = {
