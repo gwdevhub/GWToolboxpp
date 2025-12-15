@@ -219,6 +219,7 @@ namespace {
             case 0x2f1a1: // Razah
             case 0x37614: // Istan paragon
             case 0x37794: // Istan derv
+            case 0x13EF3: // Proph monk
                 return Gender::Male;
             case 0x2f17e:
             case 0x97fa:
