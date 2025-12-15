@@ -55,7 +55,6 @@ namespace {
     HMODULE gwcamodule = nullptr;
     HMODULE dllmodule = nullptr;
     WNDPROC OldWndProc = nullptr;
-    bool defer_close = false;
     HWND gw_window_handle = nullptr;
 
     utf8::string imgui_inifile;
@@ -394,18 +393,6 @@ namespace {
     {
         static bool right_mouse_down = false;
 
-        if (Message == WM_CLOSE || (Message == WM_SYSCOMMAND && wParam == SC_CLOSE)) {
-            // This is naughty, but we need to defer the closing signal until toolbox has terminated properly.
-            // we can't sleep here, because toolbox modules will probably be using the render loop to close off things
-            // like hooks
-            defer_close = true;
-            GWToolbox::SignalTerminate();
-
-            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
-                return 0;
-            }
-        }
-
         if (!(CanRenderToolbox() && GWToolbox::IsInitialized())) {
             return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
         }
@@ -742,10 +729,7 @@ DWORD __stdcall GWToolbox::MainLoop(LPVOID module) noexcept
         Sleep(160);
 
         UnloadGWCADll();
-        if (defer_close) {
-            // Toolbox was closed by a user closing GW - close it here for the by sending the `WM_CLOSE` message again.
-            SendMessage(gw_window_handle, WM_CLOSE, NULL, NULL);
-        }
+
     } __except (EXCEPT_EXPRESSION_ENTRY) {
         Log::Log("SafeThreadEntry __except body\n");
     }
