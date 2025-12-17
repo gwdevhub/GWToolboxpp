@@ -597,27 +597,26 @@ namespace {
     TextureRelease_pt TextureRelease_Func = nullptr;
     TextureRelease_pt TextureRelease_Ret = nullptr;
 
-    std::unordered_set<IDirect3DTexture9*> valid_textures;
-
     IDirect3DTexture9* LastCreatedTexture = nullptr;
-    std::mutex texture_queue_mutex;
-    std::vector<IDirect3DTexture9*> textures_to_hash;
 
         // Hook Release to clean up tracking
     ULONG WINAPI OnD3D9TextureRelease(IDirect3DTexture9* texture)
     {
+        GW::Hook::EnterHook();
         ULONG ref = TextureRelease_Ret(texture);
-        if (ref != 0) return ref;
-        if (texture == LastCreatedTexture) LastCreatedTexture = 0;
-        // Remove from hash map if present
-        for (auto it = dx9_textures_created_by_hash.begin(); it != dx9_textures_created_by_hash.end();) {
-            if (it->second == texture) {
-                it = dx9_textures_created_by_hash.erase(it);
-            }
-            else {
-                ++it;
+        if (ref == 0) {
+            if (texture == LastCreatedTexture) LastCreatedTexture = 0;
+            // Remove from hash map if present
+            for (auto it = dx9_textures_created_by_hash.begin(); it != dx9_textures_created_by_hash.end();) {
+                if (it->second == texture) {
+                    it = dx9_textures_created_by_hash.erase(it);
+                }
+                else {
+                    ++it;
+                }
             }
         }
+        GW::Hook::LeaveHook();
 
         return ref;
     }
@@ -816,7 +815,6 @@ namespace {
                 TextureRelease_Func = nullptr;
             }
             dx9_textures_created_by_hash.clear();
-            valid_textures.clear();
             LastCreatedTexture = nullptr;
         }
     }
