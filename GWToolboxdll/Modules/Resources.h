@@ -149,6 +149,8 @@ public:
     // Stops the worker thread once it's done with the current jobs.
     void EndLoading() const;
 
+    static uint32_t GetTexmodHashCube(IDirect3DCubeTexture9* cubeTexture);
+
     static uint32_t GetTexmodHash(IDirect3DTexture9* texture);
 
     static int GetBitsPerPixel(D3DFORMAT format);

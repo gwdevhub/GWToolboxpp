@@ -38,8 +38,12 @@
 #include <Utils/TextUtils.h>
 #include <wincodec.h>
 
-namespace {
+#include <d3d9.h>
 
+
+
+namespace {
+    // Define the IID if not already defined
 
     DXGI_FORMAT ConvertD3D9FormatToDXGI(D3DFORMAT d3d9Format)
     {
@@ -1539,133 +1543,127 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
     Log::Info("Successfully saved texture to %s (%dx%d)", file_path.string().c_str(), desc.Width, desc.Height);
     return true;
 }
-uint32_t Resources::GetTexmodHash(IDirect3DTexture9* texture)
+
+uint32_t Resources::GetTexmodHashCube(IDirect3DCubeTexture9* cubeTexture)
 {
-    if (!texture) {
+    if (!cubeTexture) {
         return 0;
     }
 
     D3DSURFACE_DESC desc;
-    if (texture->GetLevelDesc(0, &desc) != D3D_OK) {
-        Log::Warning("GetTextureHash: Failed to get texture description");
+    if (cubeTexture->GetLevelDesc(0, &desc) != D3D_OK) {
+        Log::Warning("GetTexmodHashCube: Failed to get texture description");
         return 0;
     }
 
     D3DLOCKED_RECT d3dlr;
-    IDirect3DSurface9* pOffscreenSurface = nullptr;
     IDirect3DSurface9* pResolvedSurface = nullptr;
 
-    // Handle D3DPOOL_DEFAULT textures (render targets)
-    if (desc.Pool == D3DPOOL_DEFAULT) {
-        IDirect3DDevice9* device = nullptr;
-        texture->GetDevice(&device);
-        if (!device) {
-            Log::Warning("GetTextureHash: Failed to get device");
-            return 0;
-        }
-
-        IDirect3DSurface9* pSurfaceLevel_orig = nullptr;
-        if (texture->GetSurfaceLevel(0, &pSurfaceLevel_orig) != D3D_OK) {
-            device->Release();
-            Log::Warning("GetTextureHash: Failed to get surface level");
-            return 0;
-        }
-
-        // Handle multisampled textures
-        if (desc.MultiSampleType != D3DMULTISAMPLE_NONE) {
-            if (device->CreateRenderTarget(desc.Width, desc.Height, desc.Format, D3DMULTISAMPLE_NONE, 0, FALSE, &pResolvedSurface, nullptr) != D3D_OK) {
-                pSurfaceLevel_orig->Release();
-                device->Release();
-                Log::Warning("GetTextureHash: Failed to create render target");
-                return 0;
-            }
-            if (device->StretchRect(pSurfaceLevel_orig, nullptr, pResolvedSurface, nullptr, D3DTEXF_NONE) != D3D_OK) {
-                pSurfaceLevel_orig->Release();
-                pResolvedSurface->Release();
-                device->Release();
-                Log::Warning("GetTextureHash: Failed to stretch rect");
-                return 0;
-            }
-            pSurfaceLevel_orig->Release();
-            pSurfaceLevel_orig = pResolvedSurface;
-        }
-
-        // Create offscreen surface to read the data
-        if (device->CreateOffscreenPlainSurface(desc.Width, desc.Height, desc.Format, D3DPOOL_SYSTEMMEM, &pOffscreenSurface, nullptr) != D3D_OK) {
-            pSurfaceLevel_orig->Release();
-            device->Release();
-            Log::Warning("GetTextureHash: Failed to create offscreen surface");
-            return 0;
-        }
-
-        if (device->GetRenderTargetData(pSurfaceLevel_orig, pOffscreenSurface) != D3D_OK) {
-            pSurfaceLevel_orig->Release();
-            pOffscreenSurface->Release();
-            device->Release();
-            Log::Warning("GetTextureHash: Failed to get render target data");
-            return 0;
-        }
-        pSurfaceLevel_orig->Release();
-
-        if (pOffscreenSurface->LockRect(&d3dlr, nullptr, D3DLOCK_READONLY) != D3D_OK) {
-            pOffscreenSurface->Release();
-            device->Release();
-            Log::Warning("GetTextureHash: Failed to lock offscreen surface");
-            return 0;
-        }
-        device->Release();
-    }
-    // Handle regular managed textures
-    else if (texture->LockRect(0, &d3dlr, nullptr, D3DLOCK_READONLY) != D3D_OK) {
-        // Try via surface level
-        if (texture->GetSurfaceLevel(0, &pResolvedSurface) != D3D_OK) {
-            Log::Warning("GetTextureHash: Failed to get surface level (fallback)");
+    // CRITICAL: Only hash the POSITIVE_X face to match gmod behavior!
+    // gmod's uMod_IDirect3DCubeTexture9::GetHash() only hashes D3DCUBEMAP_FACE_POSITIVE_X
+    if (cubeTexture->LockRect(D3DCUBEMAP_FACE_POSITIVE_X, 0, &d3dlr, nullptr, D3DLOCK_READONLY) != D3D_OK) {
+        // Try via surface level as fallback
+        if (cubeTexture->GetCubeMapSurface(D3DCUBEMAP_FACE_POSITIVE_X, 0, &pResolvedSurface) != D3D_OK) {
+            Log::Warning("GetTexmodHashCube: Failed to get cube map surface");
             return 0;
         }
         if (pResolvedSurface->LockRect(&d3dlr, nullptr, D3DLOCK_READONLY) != D3D_OK) {
             pResolvedSurface->Release();
-            Log::Warning("GetTextureHash: Failed to lock surface (fallback)");
+            Log::Warning("GetTexmodHashCube: Failed to lock surface");
             return 0;
         }
     }
 
-    // CRITICAL: Calculate size based on actual pixel dimensions, not pitch
-    // This matches the uMod calculation exactly
+    // Calculate size based on actual pixel dimensions, not pitch
     const int bits_per_pixel = GetBitsPerPixel(desc.Format);
     const int total_size = (bits_per_pixel * desc.Width * desc.Height) / 8;
-
-    // CRITICAL FIX: Copy data row by row, skipping pitch padding
-    // This matches how the DDS file is saved (without padding)
-    std::vector<uint8_t> compact_data;
-    compact_data.reserve(total_size);
-
     const int bytes_per_pixel = bits_per_pixel / 8;
     const int row_size = desc.Width * bytes_per_pixel;
 
-    for (UINT y = 0; y < desc.Height; y++) {
-        uint8_t* row = static_cast<uint8_t*>(d3dlr.pBits) + y * d3dlr.Pitch;
-        compact_data.insert(compact_data.end(), row, row + row_size);
+    std::vector<uint8_t> compact_data(total_size);
+    size_t offset = 0;
+
+    for (UINT y = 0; y < desc.Height; ++y) {
+        const uint8_t* row = static_cast<const uint8_t*>(d3dlr.pBits) + y * d3dlr.Pitch;
+        memcpy(compact_data.data() + offset, row, row_size);
+        offset += row_size;
     }
 
-    // Now hash the compact data (without pitch padding)
+    // Hash the compact data (without pitch padding)
     uint32_t hash = GetTexmodHash(reinterpret_cast<const char*>(compact_data.data()), compact_data.size());
 
     // Cleanup
-    if (pOffscreenSurface != nullptr) {
-        pOffscreenSurface->UnlockRect();
-        pOffscreenSurface->Release();
-        if (pResolvedSurface != nullptr) {
-            pResolvedSurface->Release();
-        }
-    }
-    else if (pResolvedSurface != nullptr) {
+    if (pResolvedSurface != nullptr) {
         pResolvedSurface->UnlockRect();
         pResolvedSurface->Release();
     }
     else {
-        texture->UnlockRect(0);
+        cubeTexture->UnlockRect(D3DCUBEMAP_FACE_POSITIVE_X, 0);
     }
 
+    Log::Info("GetTexmodHashCube: Hash 0x%08X for cube texture (%dx%d, format %d)", hash, desc.Width, desc.Height, desc.Format);
+
+    return hash;
+}
+uint32_t Resources::GetTexmodHash(IDirect3DTexture9* texture)
+{
+    if (!texture) return 0;
+
+    D3DSURFACE_DESC desc;
+    HRESULT hr = texture->GetLevelDesc(0, &desc);
+    if (FAILED(hr)) return 0;
+
+    D3DLOCKED_RECT d3dlr;
+    hr = texture->LockRect(0, &d3dlr, nullptr, D3DLOCK_READONLY);
+    if (FAILED(hr) || !d3dlr.pBits) {
+        return 0;
+    }
+
+    uint32_t hash = 0;
+
+    // For compressed formats (DXT1/3/5), calculate the actual compressed data size
+    if (desc.Format == D3DFMT_DXT1) {
+        // DXT1: 8 bytes per 4x4 block
+        const UINT block_size = 8;
+        const UINT num_blocks_wide = (desc.Width + 3) / 4;
+        const UINT num_blocks_high = (desc.Height + 3) / 4;
+        const UINT total_size = num_blocks_wide * num_blocks_high * block_size;
+
+        hash = GetTexmodHash(static_cast<const char*>(d3dlr.pBits), total_size);
+    }
+    else if (desc.Format == D3DFMT_DXT3 || desc.Format == D3DFMT_DXT5) {
+        // DXT3/5: 16 bytes per 4x4 block
+        const UINT block_size = 16;
+        const UINT num_blocks_wide = (desc.Width + 3) / 4;
+        const UINT num_blocks_high = (desc.Height + 3) / 4;
+        const UINT total_size = num_blocks_wide * num_blocks_high * block_size;
+
+        hash = GetTexmodHash(static_cast<const char*>(d3dlr.pBits), total_size);
+    }
+    else {
+        // Uncompressed formats - use your existing row-by-row code
+        const int bits_per_pixel = GetBitsPerPixel(desc.Format);
+        if (bits_per_pixel == 0) {
+            texture->UnlockRect(0);
+            return 0;
+        }
+
+        const int bytes_per_pixel = bits_per_pixel / 8;
+        const int row_size = desc.Width * bytes_per_pixel;
+
+        std::vector<uint8_t> compact_data(desc.Height * row_size);
+        size_t offset = 0;
+
+        for (UINT y = 0; y < desc.Height; ++y) {
+            const uint8_t* row = static_cast<const uint8_t*>(d3dlr.pBits) + y * d3dlr.Pitch;
+            memcpy(compact_data.data() + offset, row, row_size);
+            offset += row_size;
+        }
+
+        hash = GetTexmodHash(reinterpret_cast<const char*>(compact_data.data()), compact_data.size());
+    }
+
+    texture->UnlockRect(0);
     return hash;
 }
 
