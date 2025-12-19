@@ -129,7 +129,8 @@ namespace {
         if (!title_max_points_needed || current_tier) {
             title_max_points_needed = title->points_needed_next_rank;
         }
-        return (float)title->current_points / (float)title_max_points_needed;
+        const auto result = (float)title->current_points / (float)title_max_points_needed;
+        return result < 1.f ? result : 1.f;
     }
     
     bool CompareTitleProgress(const TitleProgress* t1, const TitleProgress* t2)
@@ -255,7 +256,7 @@ namespace {
         }
 
         const auto title_info = GW::PlayerMgr::GetTitleTrack(title_id);
-        if (title_info && title_info->h0020 && *title_info->h0020) {
+        if (title_info && title_info->points_desc && *title_info->points_desc) {
             
             if (title_info->has_tiers()) {
                 // N/N
@@ -264,7 +265,7 @@ namespace {
                 GW::UI::UInt32ToEncStr(title_info->current_points, current_points_buf, _countof(current_points_buf));
                 wchar_t points_needed_buf[3];
                 GW::UI::UInt32ToEncStr(points_needed, points_needed_buf, _countof(points_needed_buf));
-                str_placeholder = std::format(L"{}\x10a\x8101\x29C\x101{}\x102{}\x1", title_info->h0020, current_points_buf, points_needed_buf);
+                str_placeholder = std::format(L"{}\x10a\x8101\x29C\x101{}\x102{}\x1", title_info->points_desc, current_points_buf, points_needed_buf);
             }
             else if (title_info->is_percentage_based()) {
                 const auto rounded_percent = std::round(percent * 1000) / 10; // Round to 1dp
@@ -276,12 +277,12 @@ namespace {
                 wchar_t decimal_buf[3];
                 GW::UI::UInt32ToEncStr(fractional_part, decimal_buf, _countof(decimal_buf));
 
-                str_placeholder = std::format(L"{}\x10a\x8101\x379\x101{}\x102{}\x1", title_info->h0020, percent_buf, decimal_buf);
+                str_placeholder = std::format(L"{}\x10a\x8101\x379\x101{}\x102{}\x1", title_info->points_desc, percent_buf, decimal_buf);
             }
             else {
                 wchar_t current_points_buf[3];
                 GW::UI::UInt32ToEncStr(title_info->current_points, current_points_buf, _countof(current_points_buf));
-                str_placeholder = std::format(L"{}\x10a\x104\x101{}\x1", title_info->h0020, current_points_buf);
+                str_placeholder = std::format(L"{}\x10a\x104\x101{}\x1", title_info->points_desc, current_points_buf);
             }
             if (!str_placeholder.empty()) {
                 if (overlay_label) overlay_label->Release();

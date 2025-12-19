@@ -1762,7 +1762,7 @@ void GameSettings::Initialize()
 
     RegisterUIMessageCallback(&OnChangeTarget_Entry, GW::UI::UIMessage::kChangeTarget, OnChangeTarget);
     RegisterUIMessageCallback(&OnWriteChat_Entry, GW::UI::UIMessage::kWriteToChatLog, OnWriteChat);
-    RegisterUIMessageCallback(&OnAgentStartCast_Entry, GW::UI::UIMessage::kAgentStartCasting, OnAgentStartCast);
+    RegisterUIMessageCallback(&OnAgentStartCast_Entry, GW::UI::UIMessage::kAgentSkillStartedCast, OnAgentStartCast);
     RegisterUIMessageCallback(&OnOpenWikiUrl_Entry, GW::UI::UIMessage::kOpenWikiUrl, OnOpenWiki);
     RegisterUIMessageCallback(&OnAgentNameTag_Entry, GW::UI::UIMessage::kShowAgentNameTag, OnAgentNameTag);
     RegisterUIMessageCallback(&OnAgentNameTag_Entry, GW::UI::UIMessage::kSetAgentNameTagAttribs, OnAgentNameTag);

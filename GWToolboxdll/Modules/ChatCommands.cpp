@@ -336,36 +336,6 @@ namespace {
 
     bool* is_muted = nullptr;
 
-    void CHAT_CMD_FUNC(CmdSkillImage)
-    {
-        uint32_t skill_id = 0;
-        TextUtils::ParseUInt(argv[1], &skill_id);
-        auto s = new GW::Packet::StoC::UpdateSkillbarSkill();
-        s->agent_id = GW::Agents::GetControlledCharacterId();
-        s->skill_slot = 0;
-        s->skill_id = skill_id;
-        GW::GameThread::Enqueue([s] {
-            GW::StoC::EmulatePacket(s);
-            delete s;
-        });
-    }
-
-    void CHAT_CMD_FUNC(CmdPlayEffect)
-    {
-        const auto player = GW::Agents::GetObservingAgent();
-        if (!player) return;
-        auto packet = new GW::Packet::StoC::PlayEffect();
-        memset(packet, 0, sizeof(*packet));
-        packet->header = GW::Packet::StoC::PlayEffect::STATIC_HEADER;
-        packet->agent_id = player->agent_id;
-        packet->coords = player->pos;
-        TextUtils::ParseUInt(argv[1], &packet->effect_id);
-        GW::GameThread::Enqueue([packet] {
-            GW::StoC::EmulatePacket(packet);
-            delete packet;
-        });
-    }
-
     const char* dropbuff_syntax = "'/dropbuff [skill_id]' drops the first instance of an upkept skill/buff";
     void CHAT_CMD_FUNC(CmdDropBuff)
     {
@@ -1497,7 +1467,6 @@ void ChatCommands::Initialize()
         {L"normalmode", CmdSetNormalMode},
         {L"hm", CmdSetHardMode},
         {L"hardmode", CmdSetHardMode},
-        {L"animation", CmdAnimation},
         {L"hom", CmdHom},
         {L"fps", CmdFps},
         {L"pref", CmdPref},
@@ -1514,7 +1483,6 @@ void ChatCommands::Initialize()
 #if _DEBUG
     // Experimental chat commands
     uintptr_t address = 0;
-    chat_commands.push_back({L"skillimage", CmdSkillImage});
     address = GW::Scanner::Find("\x83\xc4\x04\xc7\x45\x08\x00\x00\x00\x00", "xxxxxxxxxx", -5);
     if (address) {
         SetMuted_Func = (SetMuted_pt)GW::Scanner::FunctionFromNearCall(address);
@@ -1522,7 +1490,6 @@ void ChatCommands::Initialize()
         is_muted = *(bool**)((uintptr_t)SetMuted_Func + 0x6);
     }
     chat_commands.push_back({L"mute", CmdMute}); // Doesn't unmute!
-    chat_commands.push_back({L"effect", CmdPlayEffect});
 
 #endif
 
@@ -3228,46 +3195,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdSetHardMode)
 void CHAT_CMD_FUNC(ChatCommands::CmdSetNormalMode)
 {
     GW::PartyMgr::SetHardMode(false);
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdAnimation)
-{
-    const auto syntax = "Syntax: '/animation [me|target] [animation_id (1-2076)]'";
-
-    if (argc < 3) {
-        return Log::Error(syntax);
-    }
-
-    uint32_t agentid;
-    const std::wstring arg1 = TextUtils::ToLower(argv[1]);
-
-    if (arg1 == L"me") {
-        const GW::AgentLiving* agent = GW::Agents::GetControlledCharacter();
-        agentid = agent->agent_id;
-    }
-    else if (arg1 == L"target") {
-        const GW::AgentLiving* agent = GW::Agents::GetTargetAsAgentLiving();
-        if (!agent) {
-            return Log::Error("No target chosen");
-        }
-        agentid = agent->agent_id;
-    }
-    else {
-        return Log::Error(syntax);
-    }
-
-    uint32_t animationid = 0;
-    if (!TextUtils::ParseUInt(argv[2], &animationid) || animationid < 1 || animationid > 2076) {
-        return Log::Error(syntax);
-    }
-
-    GW::GameThread::Enqueue([animationid, agentid] {
-        GW::Packet::StoC::GenericValue packet;
-        packet.value_id = 20;
-        packet.agent_id = agentid;
-        packet.value = animationid;
-        GW::StoC::EmulatePacket(&packet);
-    });
 }
 
 void CHAT_CMD_FUNC(ChatCommands::CmdMute)

@@ -57,7 +57,6 @@ namespace {
 
     int history_length = 5;
     int history_timeout = 5000;
-    std::unordered_map<uint32_t, GW::HookEntry*> packet_hooks;
 
     Color GetColor(const SkillActivationStatus status)
     {
@@ -83,137 +82,120 @@ namespace {
         casttime_map[caster_id] = value;
     }
 
-}
-
-void SkillMonitorWidget::OnStoCPacket(GW::HookStatus* status, GW::Packet::StoC::PacketBase* base) {
-    if (status->blocked)
-        return;
-    switch (base->header) {
-    case GW::Packet::StoC::InstanceLoadInfo::STATIC_HEADER: {
-        history.clear();
-        casttime_map.clear();
-    } break;
-
-    case GW::Packet::StoC::GenericModifier::STATIC_HEADER: {
-        const auto packet = (GW::Packet::StoC::GenericModifier*)base;
-        CasttimeCallback(packet->type, packet->target_id, packet->value);
-    } break;
-
-    case GW::Packet::StoC::GenericFloat::STATIC_HEADER: {
-        const auto packet = (GW::Packet::StoC::GenericFloat*)base;
-        CasttimeCallback(packet->type, packet->agent_id, packet->value);
-    } break;
-
-    case GW::Packet::StoC::GenericValue::STATIC_HEADER: {
-        const auto packet = (GW::Packet::StoC::GenericValue*)base;
-        SkillCallback(packet->value_id, packet->agent_id, packet->value);
-    } break;
-
-    case GW::Packet::StoC::GenericValueTarget::STATIC_HEADER: {
-        using namespace GW::Packet::StoC::GenericValueID;
-
-        const auto packet = (GW::Packet::StoC::GenericValueTarget*)base;
-        const auto value_id = packet->Value_id;
-        const auto caster_id = packet->caster;
-        const auto target_id = packet->target;
-
-        const bool isSwapped = value_id == skill_activated || value_id == attack_skill_activated;
-        SkillCallback(value_id, isSwapped ? target_id : caster_id, packet->value);
-    } break;
-
-    }
-}
-void SkillMonitorWidget::SkillCallback(const uint32_t value_id, const uint32_t caster_id, const uint32_t value)
-{
-    if (!party_indeces_by_agent_id.contains(caster_id))
-        return;
-    using namespace GW::Packet::StoC;
-
-    const auto skill_history = &history[caster_id];
-    if (!skill_history) {
-        return;
-    }
-
-    switch (value_id) {
-    case GenericValueID::instant_skill_activated:
-    case GenericValueID::attack_skill_activated:
-    case GenericValueID::skill_activated: {
-        float casttime = casttime_map[caster_id];
-        const bool is_instant = value_id == GenericValueID::instant_skill_activated;
-        if (!is_instant && !casttime) {
-            if (const auto skill = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(value))) {
-                casttime = skill->activation;
-            }
+    GW::HookEntry PostUIMessage_Entry;
+    void OnSkillStartedCast(uint32_t agent_id, GW::Constants::SkillID skill_id, float duration)
+    {
+        const auto skill_history = &history[agent_id];
+        if (!skill_history) {
+            return;
         }
-
+        casttime_map[agent_id] = duration;
         skill_history->push_back({
-            static_cast<GW::Constants::SkillID>(value),
-            is_instant ? COMPLETED : CASTING,
+            skill_id,
+            CASTING,
             TIMER_INIT(),
             TIMER_INIT(),
-            casttime,
+            duration,
+        });
+    }
+    void OnSkillCompleted(uint32_t agent_id, GW::Constants::SkillID skill_id)
+    {
+        const auto skill_history = &history[agent_id];
+        if (!skill_history) {
+            return;
+        }
+        const auto casting = find_if(skill_history->begin(), skill_history->end(), [&](const SkillActivation& skill_activation) {
+            return skill_activation.status == CASTING && skill_activation.id == skill_id;
+        });
+        float casttime = 0.f;
+        if (casttime_map.contains(agent_id)) {
+            casttime = casttime_map[agent_id];
+        }
+        else {
+            const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+            ASSERT(skill);
+            casttime = skill->activation;
+        }
+        if (casting != skill_history->end()) {
+            casting->status = COMPLETED;
+            casttime_map.erase(agent_id);
+        }
+        else {
+            skill_history->push_back({
+                skill_id,
+                CANCELLED,
+                TIMER_INIT(),
+                TIMER_INIT(),
+                casttime,
             });
-
-        casttime_map.erase(caster_id);
-        break;
-    }
-    case GenericValueID::skill_stopped:
-    case GenericValueID::skill_finished:
-    case GenericValueID::attack_skill_finished: {
-        const auto casting = find_if(skill_history->begin(), skill_history->end(),
-            [&](const SkillActivation& skill_activation) { return skill_activation.status == CASTING; });
-        if (casting == skill_history->end()) {
-            break;
         }
-        casting->status = value_id == GenericValueID::skill_stopped
-            ? CANCELLED
-            : COMPLETED;
-        casting->last_update = TIMER_INIT();
-        break;
     }
-    case GenericValueID::interrupted: {
-        const auto cancelled = find_if(skill_history->begin(), skill_history->end(),
-            [&](const SkillActivation& skill_activation) { return skill_activation.status == CANCELLED; });
-        if (cancelled == skill_history->end()) {
-            break;
+    void OnSkillCancelledOrInterrupted(uint32_t agent_id, GW::Constants::SkillID skill_id)
+    {
+        const auto skill_history = &history[agent_id];
+        if (!skill_history) {
+            return;
         }
+        const auto casting = find_if(skill_history->begin(), skill_history->end(), [&](const SkillActivation& skill_activation) {
+            return skill_activation.status == CASTING && skill_activation.id == skill_id;
+        });
+        float casttime = 0.f;
+        if (casttime_map.contains(agent_id)) {
+            casttime = casttime_map[agent_id];
+        }
+        else {
+            const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+            ASSERT(skill);
+            casttime = skill->activation;
+        }
+        if (casting != skill_history->end()) {
+            casting->status = CANCELLED;
+            casttime_map.erase(agent_id);
+        }
+        else {
+            skill_history->push_back({
+                skill_id,
+                CANCELLED,
+                TIMER_INIT(),
+                TIMER_INIT(),
+                casttime,
+            });
+        }
+    }
 
-        cancelled->status = INTERRUPTED;
-        cancelled->last_update = TIMER_INIT();
-        break;
+    void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
+        switch (message_id) {
+            case GW::UI::UIMessage::kAgentSkillStartedCast: {
+                const auto packet = (GW::UI::UIPacket::kAgentSkillStartedCast*)wparam;
+                OnSkillStartedCast(packet->agent_id, packet->skill_id, packet->duration);
+            } break;
+            case GW::UI::UIMessage::kAgentSkillActivatedInstantly:
+            case GW::UI::UIMessage::kAgentSkillActivated: {
+                const auto packet = (GW::UI::UIPacket::kAgentSkillPacket*)wparam;
+                OnSkillCompleted(packet->agent_id, packet->skill_id);
+            } break;
+            case GW::UI::UIMessage::kAgentSkillCancelled: {
+                const auto packet = (GW::UI::UIPacket::kAgentSkillPacket*)wparam;
+                OnSkillCancelledOrInterrupted(packet->agent_id, packet->skill_id);
+            } break;
+        }
     }
-    default:
-        return;
-    }
+
 }
 
 void SkillMonitorWidget::Initialize()
 {
     SnapsToPartyWindow::Initialize();
-
-    uint32_t packet_headers_to_hook[] = {
-        GW::Packet::StoC::GenericModifier::STATIC_HEADER,
-        GW::Packet::StoC::GenericFloat::STATIC_HEADER,
-        GW::Packet::StoC::GenericValue::STATIC_HEADER,
-        GW::Packet::StoC::GenericValueTarget::STATIC_HEADER,
-        GW::Packet::StoC::InstanceLoadInfo::STATIC_HEADER
-    };
-
-    for (const auto header : packet_headers_to_hook) {
-        const auto entry = new GW::HookEntry;
-        packet_hooks[header] = entry;
-        GW::StoC::RegisterPostPacketCallback(entry, header, OnStoCPacket);
+    GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kAgentSkillActivated, GW::UI::UIMessage::kAgentSkillActivatedInstantly, GW::UI::UIMessage::kAgentSkillCancelled, GW::UI::UIMessage::kAgentSkillStartedCast};
+    for (auto message_id : ui_messages) {
+        GW::UI::RegisterUIMessageCallback(&PostUIMessage_Entry, message_id, OnPostUIMessage, 0x4000);
     }
 }
 
 void SkillMonitorWidget::Terminate()
 {
     SnapsToPartyWindow::Terminate();
-    for (const auto& it : packet_hooks) {
-        GW::StoC::RemoveCallback(it.first, it.second);
-        delete it.second;
-    }
-    packet_hooks.clear();
+    GW::UI::RemoveUIMessageCallback(&PostUIMessage_Entry);
 }
 
 void SkillMonitorWidget::Draw(IDirect3DDevice9*)

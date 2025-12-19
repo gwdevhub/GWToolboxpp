@@ -7,6 +7,15 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.5
+* [New] Added directx texture list to info window for exporting textures to gMod easily
+* [Fix] Working with gw build 38015
+* [Fix] Fixed bug preventing gamepads from working as intended when toolbox is running (again)
+* [Fix] Fixed decimal point issue when showing title progress widget
+* [Fix] Fixed more issues identifying items in error
+* [Fix] Fixed /call command not working
+* [Fix] Fixed toolbox settings not being saved when closing the game via new F12 menu
+
 ## Version 8.4
 * [Fix] Fixed crash on launch reported by some users (restarting windows usually fixed it!)
 * [Fix] Drop gold hotkey working again

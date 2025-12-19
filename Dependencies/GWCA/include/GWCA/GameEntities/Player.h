@@ -17,16 +17,17 @@ namespace GW {
         /* +h0028 */ wchar_t *name;
         /* +h002C */ uint32_t party_leader_player_number;
         /* +h0030 */ uint32_t active_title_tier;
-        /* +h0034 */ uint32_t player_number;
-        /* +h0038 */ uint32_t party_size;
-        /* +h003C */ Array<void*> h003C;
-
+        /* +h0034 */ uint32_t reforged_or_dhuums_flags;
+        /* +h0038 */ uint32_t player_number;
+        /* +h003C */ uint32_t party_size;
+        /* +h0040 */ Array<void*> h0040;
+        
         inline bool IsPvP() {
             return (flags & 0x800) != 0;
         }
 
     };
-    static_assert(sizeof(Player) == 0x4c, "struct Player has incorrect size");
+    static_assert(sizeof(Player) == 0x50, "struct Player has incorrect size");
 
     typedef Array<Player> PlayerArray;
 }

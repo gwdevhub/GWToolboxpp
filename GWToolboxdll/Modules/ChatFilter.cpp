@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include <Defines.h>
-#include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Map.h>
@@ -9,7 +8,6 @@
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 

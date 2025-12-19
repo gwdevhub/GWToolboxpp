@@ -100,7 +100,6 @@ private:
     static void CHAT_CMD_FUNC(CmdVolume);
     static void CHAT_CMD_FUNC(CmdSetHardMode);
     static void CHAT_CMD_FUNC(CmdSetNormalMode);
-    static void CHAT_CMD_FUNC(CmdAnimation);
     static void CHAT_CMD_FUNC(CmdMute);
     // Trigger hall of monuments info for current target or given player name
     static void CHAT_CMD_FUNC(CmdHom);

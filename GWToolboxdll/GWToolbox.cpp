@@ -25,7 +25,6 @@
 #include <Modules/ToolboxSettings.h>
 #include <Modules/CrashHandler.h>
 #include <Modules/DialogModule.h>
-#include <Modules/AprilFools.h>
 #include <Modules/ChatSettings.h>
 #include <Modules/GameSettings.h>
 #include <Modules/GwDatTextureModule.h>
@@ -1097,7 +1096,6 @@ void GWToolbox::UpdateInitialising(float)
     ToggleModule(ChatSettings::Instance());
     ToggleModule(InventoryManager::Instance());
     ToggleModule(HallOfMonumentsModule::Instance());
-    ToggleModule(AprilFools::Instance());
     ToggleModule(SettingsWindow::Instance());
 
     ToolboxSettings::LoadModules(ini); // initialize all other modules as specified by the user

@@ -13,7 +13,6 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
-#include <GWCA/Packets/StoC.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
@@ -231,8 +230,6 @@ namespace {
     DiscordActivity activity{};
     DiscordActivity last_activity{};
 
-    std::vector<StoCCallback> stoc_callbacks;
-
     void DISCORD_API UpdateActivityCallback(void*, const EDiscordResult result)
     {
         Log::Log(result == DiscordResult_Ok ? "Activity updated successfully.\n" : "Activity update FAILED!\n");
@@ -369,7 +366,6 @@ namespace {
                     join_in_progress.district_id,
                     static_cast<GW::Constants::Language>(join_in_progress.language_id));
             }
-            // 5s timeout for any GW::Packet::StoC::ErrorMessage packets e.g. "Cannot enter outpost"
             join_party_next_action = time(nullptr) + 5;
             return;
         }
@@ -386,45 +382,38 @@ namespace {
         join_in_progress.map_id = 0;
     }
 
-    void OnStoC_InstanceLoadInfo(const GW::HookStatus*, const GW::Packet::StoC::PacketBase*) {
-        zone_entered_time = time(nullptr); // Because you cant rely on instance time at this point.
-        pending_activity_update = true;
-        if (!discord_connected) {
-            pending_discord_connect = true; // Connect in Update() loop instead of StoC callback, just incase its blocking
-        }
-        join_party_next_action = time(nullptr) + 2; // 2 seconds for other packets to be received e.g. players, guild info
-    }
-    void OnStoC_PartyPlayerAdd(const GW::HookStatus*, const GW::Packet::StoC::PacketBase* pak) {
-        const auto packet = (GW::Packet::StoC::PartyPlayerAdd*)pak;
-        const auto player_agent = GW::Agents::GetControlledCharacter();
-        if (player_agent && packet->player_id == player_agent->player_number) {
-            pending_activity_update = true; // Update if this is me
-            return;
-        }
-        const GW::PartyInfo* p = GW::PartyMgr::GetPartyInfo();
-        if (p && packet->party_id == p->party_id) {
-            pending_activity_update = true; // Update if this is my party
-        }
-    }
-    void OnStoC_PartyUpdateSize(const GW::HookStatus*, const GW::Packet::StoC::PacketBase* pak) {
-        const auto packet = (GW::Packet::StoC::PartyUpdateSize*)pak;
-        const auto p = GW::PartyMgr::GetPartyInfo();
-        if (p && packet->player_id == p->players[0].login_number) {
-            pending_activity_update = true; // Update if this is my leader
-        }
-    }
-    void OnStoC_ErrorMessage(const GW::HookStatus*, const GW::Packet::StoC::PacketBase* pak) {
-        if (!join_in_progress.map_id) {
-            return;
-        }
-        const auto packet = (GW::Packet::StoC::ErrorMessage*)pak;
-        switch (packet->message_id) {
-        case 0x35: // Cannot enter outpost (e.g. char has no access to outpost or GH)
-            FailedJoin("Cannot enter outpost on this character");
-            break;
-        case 0x3C: // Already in active district (try to join party)
-            JoinParty();
-            break;
+    GW::HookEntry PostUIMessage_HookEntry;
+
+    void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
+        switch (message_id) {
+            case GW::UI::UIMessage::kMapLoaded: {
+                zone_entered_time = time(nullptr); // Because you cant rely on instance time at this point.
+                pending_activity_update = true;
+                if (!discord_connected) {
+                    pending_discord_connect = true; // Connect in Update() loop instead of callback, just incase its blocking
+                }
+                join_party_next_action = time(nullptr) + 2; // 2 seconds for other packets to be received e.g. players, guild info
+            } break;
+            case GW::UI::UIMessage::kErrorMessage: {
+                const auto packet = (GW::UI::UIPacket::kErrorMessage*)wparam;
+                Log::Warning("TODO: GW::UI::UIPacket::kErrorMessage");
+                switch (packet->error_id) {
+                    case 0x35: // Cannot enter outpost (e.g. char has no access to outpost or GH)
+                        FailedJoin("Cannot enter outpost on this character");
+                        break;
+                    case 0x3C: // Already in active district (try to join party)
+                        JoinParty();
+                        break;
+                }
+            } break;
+            case GW::UI::UIMessage::kPartyAddPlayer:
+            case GW::UI::UIMessage::kPartyRemovePlayer:
+            case GW::UI::UIMessage::kPartyAddHenchman:
+            case GW::UI::UIMessage::kPartyRemoveHenchman:
+            case GW::UI::UIMessage::kPartyAddHero:
+            case GW::UI::UIMessage::kPartyRemoveHero: {
+                pending_activity_update = true;
+            } break;
         }
     }
 
@@ -715,10 +704,7 @@ void DiscordModule::Terminate()
 {
     ToolboxModule::Terminate();
 
-    for (auto& it : stoc_callbacks) {
-        it.detach();
-    }
-    stoc_callbacks.clear();
+    GW::UI::RemoveUIMessageCallback(&PostUIMessage_HookEntry);
     Disconnect();
     ASSERT(UnloadDll());
 }
@@ -748,13 +734,12 @@ void DiscordModule::Initialize()
 
     map_name_decoded.language(GW::Constants::Language::English);
 
-    stoc_callbacks.push_back({ GW::Packet::StoC::InstanceLoadInfo::STATIC_HEADER, OnStoC_InstanceLoadInfo });
-    stoc_callbacks.push_back({ GW::Packet::StoC::PartyPlayerAdd::STATIC_HEADER, OnStoC_PartyPlayerAdd });
-    stoc_callbacks.push_back({ GW::Packet::StoC::PartyUpdateSize::STATIC_HEADER, OnStoC_PartyUpdateSize });
-    stoc_callbacks.push_back({ GW::Packet::StoC::ErrorMessage::STATIC_HEADER, OnStoC_ErrorMessage });
+    const GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kMapLoaded,           GW::UI::UIMessage::kPartyAddPlayer, GW::UI::UIMessage::kPartyRemovePlayer, GW::UI::UIMessage::kPartyAddHenchman,
+                                             GW::UI::UIMessage::kPartyRemoveHenchman, GW::UI::UIMessage::kPartyAddHero,   GW::UI::UIMessage::kPartyRemoveHero};
 
-    for (auto& it : stoc_callbacks) {
-        it.attach();
+
+    for (auto message_id : ui_messages) {
+        GW::UI::RegisterUIMessageCallback(&PostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x4000);
     }
 
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {

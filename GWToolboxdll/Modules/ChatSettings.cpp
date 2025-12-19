@@ -196,31 +196,7 @@ namespace {
         rewritten_message.insert(end_idx + 5, L"</a>");
 
         status->blocked = true;
-        GW::GameThread::Enqueue([channel = packet->channel, message = rewritten_message, sender = std::wstring(sender->name_enc)] {
-            GW::Chat::WriteChatEnc(channel, message.c_str(), sender.c_str());
-            });
-    }
-
-    // Print NPC speech bubbles to emote chat.
-    void OnSpeechBubble(const GW::HookStatus*, const GW::Packet::StoC::SpeechBubble* pak)
-    {
-        if (!npc_speech_bubbles_as_chat || !pak->message || !pak->agent_id) {
-            return; // Disabled, invalid, or pending another speech bubble
-        }
-        size_t len = 0;
-        for (size_t i = 0; pak->message[i] != 0; i++) {
-            len = i + 1;
-        }
-        if (len < 3) {
-            return; // Shout skill etc
-        }
-        const auto agent = reinterpret_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
-        if (!agent || agent->login_number) {
-            return; // Agent not found or Speech bubble from player e.g. drunk message.
-        }
-        GW::GameThread::Enqueue([message = std::wstring(pak->message), sender = std::wstring(GW::Agents::GetAgentEncName(agent))] {
-            GW::Chat::WriteChatEnc(GW::Chat::Channel::CHANNEL_EMOTE, message.c_str(), sender.c_str());
-            });
+        GW::Chat::WriteChatEnc(packet->channel, rewritten_message.c_str(), sender->name_enc);
     }
 
     // NPC dialog messages to emote chat
@@ -344,8 +320,17 @@ namespace {
             case GW::UI::UIMessage::kAgentSpeechBubble: {
                 const auto packet = static_cast<GW::UI::UIPacket::kAgentSpeechBubble*>(wParam);
                 const auto source_living = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
-                if (hide_all_friendly_speech_bubbles && source_living && source_living->GetIsLivingType() && source_living->allegiance != GW::Constants::Allegiance::Enemy)
+                if (hide_all_friendly_speech_bubbles && source_living && source_living->GetIsLivingType() && source_living->allegiance != GW::Constants::Allegiance::Enemy) {
                     status->blocked = true;
+                    break;
+                }
+                // NB: Shout skill etc is wcslen < 3, don't worry about player messages e.g. drunk
+                if (npc_speech_bubbles_as_chat && source_living && !source_living->login_number && packet->message && wcslen(packet->message) >= 3) {
+                    status->blocked = true;
+                    const auto sender = GW::Agents::GetAgentEncName(packet->agent_id);
+                    GW::Chat::WriteChatEnc(GW::Chat::Channel::CHANNEL_EMOTE, packet->message, sender);
+                    break;
+                }
             } break;
             case GW::UI::UIMessage::kPreferenceFlagChanged: {
                 // Remember user setting for chat timestamps
@@ -412,8 +397,11 @@ void ChatSettings::Initialize()
 {
     ToolboxModule::Initialize();
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry, OnSpeechBubble);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, OnSpeechDialogue);
+    //GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry, OnSpeechDialogue);
+
+    #ifdef _DEBUG
+    Log::Warning("TODO: OnSpeechDialogue UI message");
+    #endif
 
     constexpr GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kAgentSpeechBubble,
@@ -423,7 +411,8 @@ void ChatSettings::Initialize()
         GW::UI::UIMessage::kWriteToChatLogWithSender,
         GW::UI::UIMessage::kRecvWhisper,
         GW::UI::UIMessage::kStartWhisper,
-        GW::UI::UIMessage::kSendChatMessage
+        GW::UI::UIMessage::kSendChatMessage,
+        GW::UI::UIMessage::kAgentSpeechBubble
     };
     for (const auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);
@@ -439,9 +428,6 @@ void ChatSettings::Initialize()
 void ChatSettings::Terminate()
 {
     ToolboxModule::Terminate();
-
-    GW::StoC::RemoveCallback<GW::Packet::StoC::SpeechBubble>(&SpeechBubble_Entry);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry);
 
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_Entry);
     if (ColorHexOrLabelToColor_Func) {

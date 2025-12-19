@@ -17,14 +17,15 @@ namespace GW {
         /* +h0014 */ uint32_t points_needed_next_rank;
         /* +h0018 */ uint32_t max_title_rank;
         /* +h001C */ uint32_t max_title_tier_index;
-        /* +h0020 */ wchar_t* h0020; // Pretty sure these are ptrs to title hash strings
-        /* +h0024 */ wchar_t* h0024; // Pretty sure these are ptrs to title hash strings
+        /* +h0020 */ uint32_t h0020;
+        /* +h0024 */ wchar_t* points_desc; // Pretty sure these are ptrs to title hash strings
+        /* +h0028 */ wchar_t* h0028; // Pretty sure these are ptrs to title hash strings
 
         inline bool is_percentage_based() { return (props & 1) != 0; };
         inline bool has_tiers() { return (props & 3) == 2; };
 
     };
-    static_assert(sizeof(Title) == 40, "struct Title has incorrect size");
+    static_assert(sizeof(Title) == 0x2c, "struct Title has incorrect size");
 
     struct TitleTier {
         uint32_t props;
