@@ -685,10 +685,8 @@ void Minimap::Initialize()
         GW::UI::UIMessage::kMapChange,
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kChangeTarget,
-        GW::UI::UIMessage::kSkillActivated,
-        GW::UI::UIMessage::kCompassDraw,
-        GW::UI::UIMessage::kCloseSettings,
-        GW::UI::UIMessage::kChangeSettingsTab
+        GW::UI::UIMessage::kSkillActivated, 
+        GW::UI::UIMessage::kEnableUIPositionOverlay,
     };
     for (const auto message_id : hook_messages) {
         RegisterUIMessageCallback(&Generic_HookEntry, message_id, OnUIMessage);
@@ -711,15 +709,12 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
     auto& instance = Instance();
     instance.pingslines_renderer.OnUIMessage(status, msgid, wParam, lParam);
     switch (msgid) {
-        case GW::UI::UIMessage::kCloseSettings:
-            in_interface_settings = false;
-            compass_position_dirty = true;
-        break;
-        case GW::UI::UIMessage::kChangeSettingsTab:
+        case GW::UI::UIMessage::kEnableUIPositionOverlay:
             in_interface_settings = (uint32_t)wParam == 1;
             compass_position_dirty = true;
         break;
         case GW::UI::UIMessage::kCompassDraw: {
+            ASSERT(wParam);
             if (hide_compass_drawings)
                 status->blocked = true;
         }
@@ -735,12 +730,10 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
         }
         break;
         case GW::UI::UIMessage::kSkillActivated: {
-            const struct Payload {
-                uint32_t agent_id;
-                GW::Constants::SkillID skill_id;
-            }* payload = static_cast<Payload*>(wParam);
-            if (payload->agent_id == GW::Agents::GetControlledCharacterId()) {
-                if (payload->skill_id == GW::Constants::SkillID::Shadow_of_Haste || payload->skill_id == GW::Constants::SkillID::Shadow_Walk) {
+            const auto packet = (GW::UI::UIPacket::kAgentSkillPacket*)wParam;
+            ASSERT(packet && packet->skill_id < GW::Constants::SkillID::Count && packet->agent_id);
+            if (packet->agent_id == GW::Agents::GetControlledCharacterId()) {
+                if (packet->skill_id == GW::Constants::SkillID::Shadow_of_Haste || packet->skill_id == GW::Constants::SkillID::Shadow_Walk) {
                     shadowstep_location = GW::Agents::GetControlledCharacter()->pos;
                 }
             }
