@@ -78,15 +78,11 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
 #endif
         const float w = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2;
         if (ImGui::Button("Open current settings folder", ImVec2(w, 0))) {
-            if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE))) {
-                ShellExecuteW(nullptr, L"open", Resources::GetSettingsFolderPath().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-            }
+            ShellExecuteW(nullptr, L"open", Resources::GetSettingsFolderPath().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
         }
         ImGui::SameLine();
         if (ImGui::Button("Open GWToolbox++ Website", ImVec2(w, 0))) {
-            if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE))) {
-                ShellExecuteA(nullptr, "open", GWTOOLBOX_WEBSITE, nullptr, nullptr, SW_SHOWNORMAL);
-            }
+            ShellExecuteA(nullptr, "open", GWTOOLBOX_WEBSITE, nullptr, nullptr, SW_SHOWNORMAL);
         }
 
         ToolboxSettings::DrawFreezeSetting();

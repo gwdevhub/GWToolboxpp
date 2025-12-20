@@ -27,6 +27,8 @@ public:
     void SaveUILayout();
     void LoadUILayout();
 
+    void ApplyWindowSettings(ToolboxIni* ini, const char* section, ImGuiWindow* window);
+
     void DrawSettingsInternal() override;
 
     ToolboxIni* GetLayoutIni(bool reload = true);

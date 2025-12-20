@@ -73,7 +73,7 @@ namespace {
     {
         GW::Hook::EnterHook();
         if (message->message_id == GW::UI::UIMessage::kDestroyFrame) {
-            GWToolbox::SaveSettings();
+            GWToolbox::ForceTerminate();
         }
         OnUiRoot_UICallback_Ret(message, wparam, lparam);
         GW::Hook::LeaveHook();
@@ -852,7 +852,22 @@ std::filesystem::path GWToolbox::SaveSettings()
     settings_folder_changed = false;
     return ini->location_on_disk;
 }
+void GWToolbox::ForceTerminate() {
+    ASSERT(DetachWndProcHandler());
+    ASSERT(DetachGameLoopCallback());
 
+    SignalTerminate();
+    DrawTerminating(nullptr);
+    UpdateTerminating(0.f);
+
+    for (const auto m : modules_enabled) {
+        m->Terminate();
+    }
+
+    GW::DisableHooks();
+
+    gwtoolbox_state = GWToolboxState::Terminated;
+}
 void GWToolbox::SignalTerminate(bool detach_dll)
 {
     switch (gwtoolbox_state) {

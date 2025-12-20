@@ -423,6 +423,8 @@ void Resources::Initialize()
 void Resources::Cleanup()
 {
     for (const auto worker : workers) {
+        while (worker->is_running)
+            Sleep(10);
         delete worker;
     }
     workers.clear();

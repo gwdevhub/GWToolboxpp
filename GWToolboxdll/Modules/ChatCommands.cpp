@@ -2383,10 +2383,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdUseSkill)
 
 void CHAT_CMD_FUNC(ChatCommands::CmdSCWiki)
 {
-    const auto res = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-    if (!SUCCEEDED(res)) {
-        return;
-    }
     if (argc == 1) {
         ShellExecuteW(nullptr, L"open", L"https://wiki.fbgmguild.com/wiki/Main_Page", nullptr, nullptr, SW_SHOWNORMAL);
     }

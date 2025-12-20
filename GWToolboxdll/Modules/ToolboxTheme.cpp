@@ -129,16 +129,24 @@ void ToolboxTheme::SaveUILayout()
     const auto window_ini_section = "Windows";
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     for (const ImGuiWindow* window : windows) {
+        if (!window) 
+            continue;
         char key[128];
-        snprintf(key, 128, "_%s_X", window->Name);
-        ini->SetDoubleValue(window_ini_section, key, window->Pos.x);
-        snprintf(key, 128, "_%s_Y", window->Name);
-        ini->SetDoubleValue(window_ini_section, key, window->Pos.y);
-        snprintf(key, 128, "_%s_W", window->Name);
+        auto pos = &window->OuterRectClipped.Min;
+        if (pos->x == 0.f && pos->y == 0.f) {
+            // If SaveUILayout was called outside of the ImGui draw loop, Pos may be zeroed out.
+            pos = &window->OuterRectClipped.Min;
+        }
+
+        snprintf(key, _countof(key), "_%s_X", window->Name);
+        ini->SetDoubleValue(window_ini_section, key, pos->x);
+        snprintf(key, _countof(key), "_%s_Y", window->Name);
+        ini->SetDoubleValue(window_ini_section, key, pos->y);
+        snprintf(key, _countof(key), "_%s_W", window->Name);
         ini->SetDoubleValue(window_ini_section, key, window->SizeFull.x);
-        snprintf(key, 128, "_%s_H", window->Name);
+        snprintf(key, _countof(key), "_%s_H", window->Name);
         ini->SetDoubleValue(window_ini_section, key, window->SizeFull.y);
-        snprintf(key, 128, "_%s_Collapsed", window->Name);
+        snprintf(key, _countof(key), "_%s_Collapsed", window->Name);
         ini->SetBoolValue(window_ini_section, key, window->Collapsed);
     }
     ASSERT(Resources::SaveIniToFile(Resources::GetSettingFile(WindowPositionsFilename), ini) == 0);
@@ -163,32 +171,106 @@ void ToolboxTheme::LoadUILayout()
     ImGui::GetStyle() = ini_style;
     // Copy window positions over
     ImGui::GetIO().FontGlobalScale = font_global_scale;
+
     const auto ini = GetLayoutIni();
-    ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     const auto window_ini_section = "Windows";
+
+    // First, handle existing windows
+    ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     for (ImGuiWindow* window : windows) {
         if (!window) {
             continue;
         }
-        ImVec2 pos = window->Pos;
-        ImVec2 size = window->Size;
-        char key[128];
-        snprintf(key, 128, "_%s_X", window->Name);
-        pos.x = static_cast<float>(ini->GetDoubleValue(window_ini_section, key, pos.x));
-        snprintf(key, 128, "_%s_Y", window->Name);
-        pos.y = static_cast<float>(ini->GetDoubleValue(window_ini_section, key, pos.y));
-        snprintf(key, 128, "_%s_W", window->Name);
-        size.x = static_cast<float>(ini->GetDoubleValue(window_ini_section, key, size.x));
-        snprintf(key, 128, "_%s_H", window->Name);
-        size.y = static_cast<float>(ini->GetDoubleValue(window_ini_section, key, size.y));
-        snprintf(key, 128, "_%s_Collapsed", window->Name);
-        const bool collapsed = ini->GetBoolValue(window_ini_section, key, false);
-        ImGui::SetWindowPos(window, pos);
-        ImGui::SetWindowSize(window, size);
-        ImGui::SetWindowCollapsed(window, collapsed);
+        ApplyWindowSettings(ini, window_ini_section, window);
     }
+
+    // Second, pre-populate settings for windows that don't exist yet
+    // This uses ImGui's internal settings system
+    CSimpleIniA::TNamesDepend keys;
+    ini->GetAllKeys(window_ini_section, keys);
+
+    for (const auto& key : keys) {
+        if (key.pItem[0] != '_') continue; // Skip non-window keys
+
+        // Extract window name from key (format: _WindowName_X, _WindowName_Y, etc.)
+        std::string key_str(key.pItem);
+        size_t first_underscore = key_str.find('_', 1);
+        if (first_underscore == std::string::npos) continue;
+
+        std::string window_name = key_str.substr(1, first_underscore - 1);
+
+        // Check if this window already exists
+        bool exists = false;
+        for (ImGuiWindow* window : windows) {
+            if (window && strcmp(window->Name, window_name.c_str()) == 0) {
+                exists = true;
+                break;
+            }
+        }
+
+        if (!exists) {
+            // Create settings entry for windows that don't exist yet
+            const ImGuiID window_id = ImHashStr(window_name.c_str());
+            ImGuiWindowSettings* settings = ImGui::FindWindowSettingsByID(window_id);
+
+            if (!settings) {
+                settings = ImGui::CreateNewWindowSettings(window_name.c_str());
+            }
+
+            if (settings) {
+                char key_buf[128];
+
+                // Read positions from INI (these are stored as floats in your INI)
+                snprintf(key_buf, sizeof(key_buf), "_%s_X", window_name.c_str());
+                float x = static_cast<float>(ini->GetDoubleValue(window_ini_section, key_buf, 0.0f));
+                snprintf(key_buf, sizeof(key_buf), "_%s_Y", window_name.c_str());
+                float y = static_cast<float>(ini->GetDoubleValue(window_ini_section, key_buf, 0.0f));
+                snprintf(key_buf, sizeof(key_buf), "_%s_W", window_name.c_str());
+                float w = static_cast<float>(ini->GetDoubleValue(window_ini_section, key_buf, 0.0f));
+                snprintf(key_buf, sizeof(key_buf), "_%s_H", window_name.c_str());
+                float h = static_cast<float>(ini->GetDoubleValue(window_ini_section, key_buf, 0.0f));
+
+                // Convert to ImVec2ih (short integers)
+                // Note: Pos should be relative to viewport, but if you're storing absolute positions,
+                // you might need to adjust this. For single-viewport setups, they're often the same.
+                settings->Pos.x = (short)x;
+                settings->Pos.y = (short)y;
+                settings->Size.x = (short)w;
+                settings->Size.y = (short)h;
+
+                snprintf(key_buf, sizeof(key_buf), "_%s_Collapsed", window_name.c_str());
+                settings->Collapsed = ini->GetBoolValue(window_ini_section, key_buf, false);
+
+                // Important: Tell ImGui to apply these settings when the window is created
+                settings->WantApply = true;
+            }
+        }
+    }
+
     layout_dirty = false;
     imgui_style_loaded = true;
+}
+
+void ToolboxTheme::ApplyWindowSettings(ToolboxIni* ini, const char* section, ImGuiWindow* window)
+{
+    ImVec2 pos = window->Pos;
+    ImVec2 size = window->Size;
+    char key[128];
+
+    snprintf(key, sizeof(key), "_%s_X", window->Name);
+    pos.x = static_cast<float>(ini->GetDoubleValue(section, key, pos.x));
+    snprintf(key, sizeof(key), "_%s_Y", window->Name);
+    pos.y = static_cast<float>(ini->GetDoubleValue(section, key, pos.y));
+    snprintf(key, sizeof(key), "_%s_W", window->Name);
+    size.x = static_cast<float>(ini->GetDoubleValue(section, key, size.x));
+    snprintf(key, sizeof(key), "_%s_H", window->Name);
+    size.y = static_cast<float>(ini->GetDoubleValue(section, key, size.y));
+    snprintf(key, sizeof(key), "_%s_Collapsed", window->Name);
+    const bool collapsed = ini->GetBoolValue(section, key, false);
+
+    ImGui::SetWindowPos(window, pos);
+    ImGui::SetWindowSize(window, size);
+    ImGui::SetWindowCollapsed(window, collapsed);
 }
 
 void ToolboxTheme::SaveSettings(ToolboxIni* ini)

@@ -412,7 +412,7 @@ namespace {
         switch (message_id) {
         case GW::UI::UIMessage::kTradeSessionStart:
             // NB: At this point, the trade invitation window isn't drawn in the UI, so trying to cancel in the current frame would fail.
-            if (FriendListWindow::GetIsPlayerIgnored(((uint32_t*)wparam)[1])) {
+            if (wparam && FriendListWindow::GetIsPlayerIgnored(((uint32_t*)wparam)[1])) {
                 pending_cancel_trade = TIMER_INIT();
                 // Block it globally, but trigger for the game control frame - this still creates the trade dialog allowing CancelTrade() to pass
                 status->blocked = true;

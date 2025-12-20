@@ -40,6 +40,7 @@ public:
 
     static ToolboxIni* OpenSettingsFile();
     static std::filesystem::path SaveSettings();
+    static void ForceTerminate();
     static std::filesystem::path LoadSettings();
     static bool SetSettingsFolder(const std::filesystem::path& path);
 

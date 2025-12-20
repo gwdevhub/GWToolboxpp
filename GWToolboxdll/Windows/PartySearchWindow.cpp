@@ -742,9 +742,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
         snprintf(buf, 128, "Powered by %s", https_host);
     }
     if (ImGui::Button(buf, ImVec2(ImGui::GetContentRegionAvail().x, 20.0f))) {
-        if (SUCCEEDED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE))) {
-            ShellExecuteA(nullptr, "open", https_host, nullptr, nullptr, SW_SHOWNORMAL);
-        }
+        ShellExecuteA(nullptr, "open", https_host, nullptr, nullptr, SW_SHOWNORMAL);
     }
     ImGui::End();
 }
