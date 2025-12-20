@@ -61,6 +61,8 @@ include(imgui_fonts)
 
 find_package(minhook CONFIG REQUIRED)
 
+find_package(unofficial-uwebsockets CONFIG REQUIRED)
+
 target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
     RestClient
@@ -79,6 +81,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     wolfssl::wolfssl
 	minhook::minhook
 	ctre::ctre
+    unofficial::uwebsockets::uwebsockets
 
     # libs:
     Dbghelp.lib # for MiniDump

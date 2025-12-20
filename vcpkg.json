@@ -13,6 +13,7 @@
     "minhook",
     "nlohmann-json",
     "simpleini",
+    "uwebsockets",
     "wolfssl"
   ],
   "overrides": [

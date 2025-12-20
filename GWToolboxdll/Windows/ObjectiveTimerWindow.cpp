@@ -192,6 +192,12 @@ void ObjectiveTimerWindow::Terminate() {
         run_loader.join();
     }
     ClearObjectiveSets();
+    websocket_app->close();
+    delete websocket_app;
+    websocket_app = nullptr;
+    if (websocket_server.joinable()) {
+        websocket_server.join();
+    }
 }
 void ObjectiveTimerWindow::Initialize()
 {
@@ -345,6 +351,36 @@ void ObjectiveTimerWindow::Initialize()
         });
 
 
+    websocket_server = std::thread([this]() {
+        // The app needs to be created in the thread that is supposed to handle the websocket connections
+        websocket_app = new uWS::App();
+        websocket_app
+            ->ws<int>(
+                "/*",
+                {/* Settings */
+                 .compression = uWS::SHARED_COMPRESSOR,
+                 .maxPayloadLength = 16 * 1024,
+                 .idleTimeout = 10,
+                 .maxBackpressure = 1 * 1024 * 1024,
+                 .sendPingsAutomatically = true,
+                 /* Handlers */
+                 .upgrade = nullptr,
+                 .open =
+                     [](auto ws) {
+                         ws->subscribe("objective_events");
+                     }
+                }
+            )
+            .listen(
+                9001,
+                [](auto* listen_socket) {
+                    if (listen_socket) {
+                        Log::Info("Listening on port %d", 9001);
+                    }
+                }
+            )
+            .run();
+    });
 }
 
 void ObjectiveTimerWindow::Event(const EventType type, const uint32_t count, const wchar_t* msg) const
@@ -490,6 +526,8 @@ void ObjectiveTimerWindow::AddObjectiveSet(const GW::Constants::MapID map_id)
             break;
     }
     // clang-format on
+    Instance().websocket_app->publish("objective_events", "{\"command\":\"reset\"}", uWS::OpCode::TEXT);
+    Instance().websocket_app->publish("objective_events", "{\"command\":\"start\"}", uWS::OpCode::TEXT);
 }
 
 void ObjectiveTimerWindow::ObjectiveSet::StopObjectives()
@@ -1099,6 +1137,7 @@ void ObjectiveTimerWindow::StopObjectives()
 {
     if (current_objective_set) {
         current_objective_set->StopObjectives();
+        Instance().websocket_app->publish("objective_events", "{\"command\":\"reset\"}", uWS::OpCode::TEXT);
     }
     current_objective_set = nullptr;
 }
@@ -1378,6 +1417,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(const EventType type, const uint3
                         Objective* other = objectives[j];
                         if (!other->IsDone()) {
                             other->SetDone();
+                            Instance().websocket_app->publish("objective_events", "{\"command\":\"split\"}", uWS::OpCode::TEXT);
                         }
                     }
                     break;
@@ -1405,6 +1445,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(const EventType type, const uint3
     }
 
     if (just_set_something_done) {
+        Instance().websocket_app->publish("objective_events", "{\"command\":\"split\"}", uWS::OpCode::TEXT);
         CheckSetDone();
     }
 }
