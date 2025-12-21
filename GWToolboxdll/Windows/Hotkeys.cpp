@@ -547,6 +547,8 @@ bool TBHotkey::Draw(Op* op)
                 if (ImGui::Button("X")) {
                     player_names.erase(it);
                     hotkey_changed = true;
+                    ImGui::PopID();
+                    break;
                 }
                 ImGui::PopID();
             }
