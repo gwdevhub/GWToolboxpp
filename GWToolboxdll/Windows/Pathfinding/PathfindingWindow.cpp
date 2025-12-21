@@ -18,6 +18,7 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <Modules/Resources.h>
 #include <Utils/ToolboxUtils.h>
+#include <GWCA/Context/MapContext.h>
 
 
 namespace {
@@ -25,12 +26,12 @@ namespace {
     // Returns milepath pointer for the current map, nullptr if we're not in a valid state
     Pathing::MilePath* GetMilepathForCurrentMap()
     {
-        ImRect map_bounds;
-        if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds))
-            return nullptr;
+        if (!GW::Map::GetIsMapLoaded()) return nullptr;
+        const auto mc = GW::GetMapContext();
+        if (!(mc && mc->path && mc->path->staticData)) return nullptr;
 
-        auto hash = static_cast<uint64_t>(map_bounds.Min.y);
-        hash |= ((uint64_t)map_bounds.Min.x) << 32;
+        auto hash = static_cast<uint64_t>(mc->path->staticData->map_id);
+        hash |= ((uint64_t)mc->path->staticData->map.size()) << 32;
 
         if (mile_paths_by_coords.contains(hash))
             return mile_paths_by_coords[hash];
