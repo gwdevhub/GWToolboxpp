@@ -5,7 +5,10 @@
 #include <GWCA/Packets/StoC.h>
 
 #include <ToolboxWindow.h>
+#include <thread>
 #include <vector>
+
+#include <uWebsockets/App.h>
 
 /*
 each objective can have a duration (start and end) or a single timestamp
@@ -44,6 +47,8 @@ public:
 
 private:
     std::thread run_loader;
+    std::thread websocket_server;
+    uWS::App* websocket_app = nullptr;
     bool loading = false;
 
     bool map_load_pending = false;
