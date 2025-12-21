@@ -193,113 +193,113 @@ namespace GW {
                 constexpr int LordJadoth = 5144;
 
                 // stygian lords
-                constexpr int StygianLordNecro = 5145;
-                constexpr int StygianLordMesmer = 5146;
-                constexpr int StygianLordEle = 5147;
-                constexpr int StygianLordMonk = 5148;
-                constexpr int StygianLordDerv = 5163;
-                constexpr int StygianLordRanger = 5164;
+                constexpr int StygianLordNecro = 5196;
+                constexpr int StygianLordMesmer = 5197;
+                constexpr int StygianLordEle = 5198;
+                constexpr int StygianLordMonk = 5199;
+                constexpr int StygianLordDerv = 5213;
+                constexpr int StygianLordRanger = 5214;
 
                 // margonites
-                constexpr int MargoniteAnurKaya = 5166;
-                constexpr int MargoniteAnurDabi = 5167;
-                constexpr int MargoniteAnurSu = 5168;
-                constexpr int MargoniteAnurKi = 5169;
-                constexpr int MargoniteAnurVu = 5170;
-                constexpr int MargoniteAnurTuk = 5171;
-                constexpr int MargoniteAnurRuk = 5172;
-                constexpr int MargoniteAnurRund = 5173;
-                constexpr int MargoniteAnurMank = 5174;
+                constexpr int MargoniteAnurKaya = 5206;
+                constexpr int MargoniteAnurDabi = 5207;
+                constexpr int MargoniteAnurSu = 5208;
+                constexpr int MargoniteAnurKi = 5209;
+                constexpr int MargoniteAnurVu = 5220;
+                constexpr int MargoniteAnurTuk = 5222;
+                constexpr int MargoniteAnurRuk = 5223;
+                constexpr int MargoniteAnurRund = 5224;
+                constexpr int MargoniteAnurMank = 5225;
 
                 // stygians
-                constexpr int StygianHunger = 5175;
-                constexpr int StygianBrute = 5176;
-                constexpr int StygianGolem = 5177;
-                constexpr int StygianHorror = 5178;
-                constexpr int StygianFiend = 5179;
+                constexpr int StygianHunger = 5226;
+                constexpr int StygianBrute = 5227;
+                constexpr int StygianGolem = 5228;
+                constexpr int StygianHorror = 5229;
+                constexpr int StygianFiend = 5230;
 
                 // tormentors in veil
-                constexpr int VeilMindTormentor = 5180;
-                constexpr int VeilSoulTormentor = 5181;
-                constexpr int VeilWaterTormentor = 5182;
-                constexpr int VeilHeartTormentor = 5183;
-                constexpr int VeilFleshTormentor = 5184;
-                constexpr int VeilSpiritTormentor = 5185;
-                constexpr int VeilEarthTormentor = 5186;
-                constexpr int VeilSanityTormentor = 5187;
+                constexpr int VeilMindTormentor = 5231;
+                constexpr int VeilSoulTormentor = 5232;
+                constexpr int VeilWaterTormentor = 5233;
+                constexpr int VeilHeartTormentor = 5234;
+                constexpr int VeilFleshTormentor = 5235;
+                constexpr int VeilSpiritTormentor = 5236;
+                constexpr int VeilEarthTormentor = 5237;
+                constexpr int VeilSanityTormentor = 5238;
                 // tormentors
-                constexpr int MindTormentor = 5204;
-                constexpr int SoulTormentor = 5205;
-                constexpr int WaterTormentor = 5206;
-                constexpr int HeartTormentor = 5207;
-                constexpr int FleshTormentor = 5208;
-                constexpr int SpiritTormentor = 5209;
-                constexpr int EarthTormentor = 5210;
-                constexpr int SanityTormentor = 5212;
+                constexpr int MindTormentor = 5254;
+                constexpr int SoulTormentor = 5255;
+                constexpr int WaterTormentor = 5256;
+                constexpr int HeartTormentor = 5257;
+                constexpr int FleshTormentor = 5258;
+                constexpr int SpiritTormentor = 5259;
+                constexpr int EarthTormentor = 5260;
+                constexpr int SanityTormentor = 5261;
 
                 // titans
-                constexpr int MiseryTitan = 5195;
-                constexpr int RageTitan = 5196;
-                constexpr int DementiaTitan = 5197;
-                constexpr int AnguishTitan = 5198;
-                constexpr int DespairTitan = 5199;
-                constexpr int FuryTitan = 5200;
-                constexpr int RageTitan2 = 5201;
-                constexpr int DementiaTitan2 = 5202;
+                constexpr int MiseryTitan = 5246;
+                constexpr int RageTitan = 5252;
+                constexpr int DementiaTitan = 5253;
+                constexpr int AnguishTitan = 5254;
+                constexpr int DespairTitan = 5250;
+                constexpr int FuryTitan = 5251;
+                constexpr int RageTitan2 = 5247;
+                constexpr int DementiaTitan2 = 5248;
                 constexpr int DespairTitan2 = 5203;
 
-                constexpr int TorturewebDryder = 5215;
-                constexpr int GreaterDreamRider = 5216;
-                constexpr int GreaterDreamRider2 = 5217;
+                constexpr int TorturewebDryder = 5266;
+                constexpr int GreaterDreamRider = 5267;
+                constexpr int GreaterDreamRider2 = 5268;
             }
 
             namespace UW {
-                constexpr int ChainedSoul = 2317;
-                constexpr int DyingNightmare = 2318;
-                constexpr int ObsidianBehemoth = 2319;
-                constexpr int ObsidianGuardian = 2320;
-                constexpr int TerrorwebDryder = 2321;
-                constexpr int TerrorwebDryderSilver = 2322;
-                constexpr int KeeperOfSouls = 2323;
-                constexpr int TerrorwebQueen = 2324; // boss-like
-                constexpr int SmiteCrawler = 2325;
-                constexpr int WailingLord = 2326;       // Note: same as FoW::Banshee
-                constexpr int BanishedDreamRider = 2327;
+                constexpr int ChainedSoul = 2367;
+                constexpr int DyingNightmare = 2368;
+                constexpr int ObsidianBehemoth = 2369;
+                constexpr int ObsidianGuardian = 2370;
+                constexpr int TerrorwebDryder = 2371;
+                constexpr int TerrorwebDryderSilver = 2372;
+                constexpr int KeeperOfSouls = 2373;
+                constexpr int TerrorwebQueen = 2374; // boss-like
+                constexpr int SmiteCrawler = 2375;
+                constexpr int WailingLord = 2376;       // Note: same as FoW::Banshee
+                constexpr int BanishedDreamRider = 2377;
                 // 2324 ?
-                constexpr int FourHorseman = 2329; // all four share the same id
-                constexpr int MindbladeSpectre = 2330;
+                constexpr int FourHorseman = 2379; // all four share the same id
+                constexpr int MindbladeSpectre = 2380;
 
-                constexpr int DeadCollector = 2332;
-                constexpr int DeadThresher = 2333;
-                constexpr int ColdfireNight = 2334;
-                constexpr int StalkingNight = 2335;
+                constexpr int DeadCollector = 2382;
+                constexpr int DeadThresher = 2383;
+                constexpr int ColdfireNight = 2384;
+                constexpr int StalkingNight = 2385;
                 // 2332 ?
-                constexpr int ChargedBlackness = 2337;
-                constexpr int GraspingDarkness = 2338;
-                constexpr int BladedAatxe = 2339;
+                constexpr int ChargedBlackness = 2387;
+                constexpr int GraspingDarkness = 2388;
+                constexpr int BladedAatxe = 2389;
                 // 2336 ?
-                constexpr int Slayer = 2341;
-                constexpr int SkeletonOfDhuum1 = 2342;
-                constexpr int SkeletonOfDhuum2 = 2343;
-                constexpr int ChampionOfDhuum = 2344;
-                constexpr int MinionOfDhuum = 2345;
-                constexpr int Dhuum = 2346;
+                constexpr int Slayer = 2392;
+                constexpr int SkeletonOfDhuum1 = 2393;
+                constexpr int SkeletonOfDhuum2 = 2394;
+                constexpr int ChampionOfDhuum = 2394;
+                constexpr int MinionOfDhuum = 2395;
+                constexpr int Dhuum = 2396;
 
-                constexpr int Reapers = 2348; // outside dhuum chamber
-                constexpr int ReapersAtDhuum = 2349; // in dhuum chamber
-                constexpr int IceElemental = 2350; // friendly, during waste quest near dhuum.
-                constexpr int KingFrozenwind = 2352;
-                constexpr int TorturedSpirit1 = 2353; // friendly, during quest
-                constexpr int Escort1 = 2356; // souls npc spawned by escort quest
-                constexpr int Escort2 = 2357;
-                constexpr int Escort3 = 2358;
-                constexpr int Escort4 = 2359;
-                constexpr int Escort5 = 2360;
-                constexpr int Escort6 = 2361;
-                constexpr int PitsSoul1 = 2362;
-                constexpr int PitsSoul2 = 2363;
-                constexpr int PitsSoul3 = 2364;
-                constexpr int PitsSoul4 = 2365;
+                constexpr int Reapers = 2398; // outside dhuum chamber
+                constexpr int ReapersAtDhuum = 2399; // in dhuum chamber
+                constexpr int IceElemental = 2400; // friendly, during waste quest near dhuum.
+                constexpr int KingFrozenwind = 2402;
+                constexpr int TorturedSpirit1 = 2403; // friendly, during quest
+                constexpr int Escort1 = 2406; // souls npc spawned by escort quest
+                constexpr int Escort2 = 2407;
+                constexpr int Escort3 = 2408;
+                constexpr int Escort4 = 2409;
+                constexpr int Escort5 = 2410;
+                constexpr int Escort6 = 2411;
+                constexpr int PitsSoul1 = 2412;
+                constexpr int PitsSoul2 = 2413;
+                constexpr int PitsSoul3 = 2414;
+                constexpr int PitsSoul4 = 2415;
 
                 constexpr int TorturedSpirit = 2371;
                 constexpr int MajorAlgheri = 2373;
@@ -309,92 +309,92 @@ namespace GW {
                 constexpr int NimrosTheHunter = 1482;
                 constexpr int MikoTheUnchained = 1965;
 
-                constexpr int Banshee = 2326;           // Note: same as UW::WailingLord
+                constexpr int Banshee = 2376;           // Note: same as UW::WailingLord
 
-                constexpr int MahgoHydra = 2796;
-                constexpr int ArmoredCaveSpider = 2800;
-                constexpr int SmokeWalker = 2801;
-                constexpr int ObsidianFurnanceDrake = 2802;
-                constexpr int DoubtersDryder = 2803;
-                constexpr int ShadowMesmer = 2804;
-                constexpr int ShadowElemental = 2805;
-                constexpr int ShadowMonk = 2806;
-                constexpr int ShadowWarrior = 2807;
-                constexpr int ShadowRanger = 2808;
-                constexpr int ShadowBeast = 2809;
-                constexpr int Abyssal = 2810;           // Note: same as ShadowOverlord.
-                constexpr int ShadowOverlord = 2810;    // Note: same as Abyssal.
-                constexpr int SeedOfCorruption = 2811;
-                constexpr int SpiritWood = 2812;
-                constexpr int SpiritShepherd = 2813;
-                constexpr int AncientSkale = 2814;
-                constexpr int SnarlingDriftwood = 2815;
-                constexpr int SkeletalEtherBreaker = 2816;
-                constexpr int SkeletalIcehand = 2817;
-                constexpr int SkeletalBond = 2818;
-                constexpr int SkeletalBerserker = 2819;
-                constexpr int SkeletalImpaler = 2820;
-                constexpr int RockBorerWorm = 2821;
-                constexpr int InfernalWurm = 2822;
-                constexpr int DragonLich = 2823;
-                constexpr int Menzies = 2824;
+                constexpr int MahgoHydra = 2846;
+                constexpr int ArmoredCaveSpider = 2850;
+                constexpr int SmokeWalker = 2851;
+                constexpr int ObsidianFurnanceDrake = 2852;
+                constexpr int DoubtersDryder = 2853;
+                constexpr int ShadowMesmer = 2854;
+                constexpr int ShadowElemental = 2855;
+                constexpr int ShadowMonk = 2856;
+                constexpr int ShadowWarrior = 2857;
+                constexpr int ShadowRanger = 2858;
+                constexpr int ShadowBeast = 2859;
+                constexpr int Abyssal = 2861;           // Note: same as ShadowOverlord.
+                constexpr int ShadowOverlord = 2861;    // Note: same as Abyssal.
+                constexpr int SeedOfCorruption = 2862;
+                constexpr int SpiritWood = 2863;
+                constexpr int SpiritShepherd = 2864;
+                constexpr int AncientSkale = 2865;
+                constexpr int SnarlingDriftwood = 2866;
+                constexpr int SkeletalEtherBreaker = 2867;
+                constexpr int SkeletalIcehand = 2868;
+                constexpr int SkeletalBond = 2869;
+                constexpr int SkeletalBerserker = 2870;
+                constexpr int SkeletalImpaler = 2871;
+                constexpr int RockBorerWorm = 2872;
+                constexpr int InfernalWurm = 2873;
+                constexpr int DragonLich = 2874;
+                constexpr int Menzies = 2875;
                 // 2821 ?
-                constexpr int Rastigan = 2826;          // Friendly NPC
-                constexpr int Griffons = 2827;          // Friendly NPC
-                constexpr int LordKhobay = 2828;        // Unfriendly NPC
-                constexpr int Forgemaster = 2829;       // Friendly NPC
+                constexpr int Rastigan = 2876;          // Friendly NPC
+                constexpr int Griffons = 2877;          // Friendly NPC
+                constexpr int LordKhobay = 2878;        // Unfriendly NPC
+                constexpr int Forgemaster = 2879;       // Friendly NPC
                 // 2826 ?
-                constexpr int TraitorousTempleGuard1 = 2831;
-                constexpr int TraitorousTempleGuard2 = 2832;
-                constexpr int TraitorousTempleGuard3 = 2833;
+                constexpr int TraitorousTempleGuard1 = 2881;
+                constexpr int TraitorousTempleGuard2 = 2882;
+                constexpr int TraitorousTempleGuard3 = 2883;
                 // 2830 ?
-                constexpr int ShardWolf = 2835;
+                constexpr int ShardWolf = 2885;
             }
 
             namespace Urgoz {
-                constexpr int HoppingVampire = 3745;
-                constexpr int Urgoz = 3754;
+                constexpr int HoppingVampire = 3795;
+                constexpr int Urgoz = 3804;
             }
 
             namespace Deep {
-                constexpr int Kanaxai = 4059;
-                constexpr int KanaxaiAspect = 4060;
+                constexpr int Kanaxai = 4109;
+                constexpr int KanaxaiAspect = 4110;
             }
 
             namespace EotnDungeons {
-                constexpr int DiscOfChaos = 6071;
-                constexpr int PlagueOfDestruction = 6083;
-                constexpr int ZhimMonns = 6246;
-                constexpr int Khabuus = 6248;
-                constexpr int DuncanTheBlack = 6405;
-                constexpr int JusticiarThommis = 6406;
-                constexpr int RandStormweaver = 6407;
-                constexpr int Selvetarm = 6408;
-                constexpr int Forgewright = 6409;
-                constexpr int HavokSoulwail = 6427;
-                constexpr int RragarManeater3 = 6558; // lvl 3
-                constexpr int RragarManeater12 = 6559; // lvl 1 and 2
-                constexpr int Arachni = 6793;
-                constexpr int Hidesplitter = 6801;
-                constexpr int PrismaticOoze = 6806;
-                constexpr int IlsundurLordofFire = 6814;
-                constexpr int EldritchEttin = 6821;
-                constexpr int TPSRegulartorGolem = 6832;
-                constexpr int MalfunctioningEnduringGolem = 6834;
-                constexpr int StormcloudIncubus = 6851;
-                constexpr int CyndrTheMountainHeart = 6914;
-                constexpr int InfernalSiegeWurm = 6927; // kath lvl1 boss
-                constexpr int Frostmaw = 6932;
-                constexpr int RemnantOfAntiquities = 6934;
-                constexpr int MurakaiLadyOfTheNight = 7008;
-                constexpr int ZoldarkTheUnholy = 7010;
+                constexpr int DiscOfChaos = 6121;
+                constexpr int PlagueOfDestruction = 6123;
+                constexpr int ZhimMonns = 6296;
+                constexpr int Khabuus = 6298;
+                constexpr int DuncanTheBlack = 6455;
+                constexpr int JusticiarThommis = 6456;
+                constexpr int RandStormweaver = 6457;
+                constexpr int Selvetarm = 6458;
+                constexpr int Forgewright = 6459;
+                constexpr int HavokSoulwail = 6477;
+                constexpr int RragarManeater3 = 6608; // lvl 3
+                constexpr int RragarManeater12 = 6609; // lvl 1 and 2
+                constexpr int Arachni = 6843;
+                constexpr int Hidesplitter = 6851;
+                constexpr int PrismaticOoze = 6856;
+                constexpr int IlsundurLordofFire = 6864;
+                constexpr int EldritchEttin = 6871;
+                constexpr int TPSRegulartorGolem = 6882;
+                constexpr int MalfunctioningEnduringGolem = 6884;
+                constexpr int StormcloudIncubus = 6901;
+                constexpr int CyndrTheMountainHeart = 6964;
+                constexpr int InfernalSiegeWurm = 6977; // kath lvl1 boss
+                constexpr int Frostmaw = 6982;
+                constexpr int RemnantOfAntiquities = 6984;
+                constexpr int MurakaiLadyOfTheNight = 7058;
+                constexpr int ZoldarkTheUnholy = 7060;
 
-                constexpr int Brigand = 7009; // soo
-                constexpr int FendiNin = 7013;
-                constexpr int SoulOfFendiNin = 7014;
+                constexpr int Brigand = 7059; // soo
+                constexpr int FendiNin = 7063;
+                constexpr int SoulOfFendiNin = 7064;
 
-                constexpr int KeymasterOfMurakai = 7018;
-                constexpr int AngrySnowman = 7411;
+                constexpr int KeymasterOfMurakai = 7068;
+                constexpr int AngrySnowman = 741;
             }
 
             namespace BonusMissionPack {
@@ -418,8 +418,8 @@ namespace GW {
             namespace PolymockSummon {
                 enum {
                     // Polymocks
-                    MursaatElementalist = 5847,
-                    FlameDjinn,
+                    MursaatElementalist = 5897,
+                    FlameDjinn = 5899,
                     IceImp,
                     NagaShaman
                 };
