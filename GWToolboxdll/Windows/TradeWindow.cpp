@@ -326,7 +326,7 @@ void TradeWindow::Update(const float)
         ws_window->poll();
     }
     const bool search_pending = !pending_query_string.empty();
-    const bool maintain_socket = (visible && !collapsed) || ((print_game_chat || print_game_chat_asc) && GetPreference(GW::UI::FlagPreference::ChannelTrade) == 0) || search_pending;
+    const bool maintain_socket = (visible && !collapsed) || ((print_game_chat || print_game_chat_asc) && GW::Map::GetIsMapLoaded() && GetPreference(GW::UI::FlagPreference::ChannelTrade) == 0) || search_pending;
     if (maintain_socket && !ws_window) {
         AsyncWindowConnect();
     }

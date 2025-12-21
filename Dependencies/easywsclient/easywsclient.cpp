@@ -512,6 +512,16 @@ easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, 
         free(ptConnCtx);
         return NULL;
     }
+    // After line 514, before SSL handshake
+#ifdef _WIN32
+    DWORD timeout = 5000; // 5 seconds
+    setsockopt(ptConnCtx->sockfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+#else
+    struct timeval timeout;
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 0;
+    setsockopt(ptConnCtx->sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+#endif
 
     if (is_ssl) {
         auto err_out = [ptConnCtx] {
