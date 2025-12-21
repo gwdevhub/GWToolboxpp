@@ -392,6 +392,11 @@ namespace {
     {
         static bool right_mouse_down = false;
 
+        if (Message == WM_CLOSE) {
+            GWToolbox::ForceTerminate();
+            return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
+        }
+
         if (!(CanRenderToolbox() && GWToolbox::IsInitialized())) {
             return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
         }
