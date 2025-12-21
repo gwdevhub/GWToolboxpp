@@ -72,8 +72,6 @@ namespace GuiUtils {
     size_t IniToArray(const char* in, std::vector<std::string>& out, char separator = ',');
     size_t IniToArray(const std::string& in, uint32_t* out, size_t out_len);
     size_t IniToArray(const std::string& in, std::vector<uint32_t>& out);
-    // Takes a string of hex values separated by spaces, and returns a wstring respresentation
-    std::wstring IniToWString(std::string in);
 
     char* StrCopy(char* dest, const char* src, size_t dest_size);
 
