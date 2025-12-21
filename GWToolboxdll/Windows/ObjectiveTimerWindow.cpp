@@ -44,6 +44,13 @@ namespace {
     bool save_to_disk = true;
     bool show_past_runs = false;
 
+    bool loading = false;
+
+    bool map_load_pending = false;
+    GW::Packet::StoC::InstanceLoadInfo* InstanceLoadInfo = nullptr;
+    GW::Packet::StoC::InstanceLoadFile* InstanceLoadFile = nullptr;
+    GW::Packet::StoC::InstanceTimer* InstanceTimer = nullptr;
+
     //@Cleanup: These IDs should be wchar_t[]'s e.g. L"\x8101\x273F" and the doa event should be a wchar_t comparison instead of something bespoke.
     enum DoA_ObjId : uint32_t {
         Foundry = 0x273F,
@@ -168,6 +175,63 @@ namespace {
     {
         return static_cast<DWORD>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
     }
+
+    std::thread* websocket_server = nullptr;
+    uWS::App* websocket_app = nullptr;
+    int websocket_server_port = 9001;
+    bool enable_websocket_server = false;
+    void EnableWebsocketServer(bool enable) {
+        websocket_server_port = std::max(websocket_server_port, 0);
+        if (!enable) {
+            if (websocket_app) {
+                websocket_app->close();
+                delete websocket_app;
+                websocket_app = nullptr;
+            }
+            if (websocket_server) {
+                ASSERT(websocket_server->joinable());
+                websocket_server->join();
+                delete websocket_server;
+                websocket_server = nullptr;
+            }
+            
+        }
+        else {
+            if (websocket_server) return;
+            EnableWebsocketServer(false);
+            websocket_server = new std::thread([]() {
+                // The app needs to be created in the thread that is supposed to handle the websocket connections
+                websocket_app = new uWS::App();
+                websocket_app
+                    ->ws<int>(
+                        "/*",
+                        {/* Settings */
+                         .compression = uWS::SHARED_COMPRESSOR,
+                         .maxPayloadLength = 16 * 1024,
+                         .idleTimeout = 10,
+                         .maxBackpressure = 1 * 1024 * 1024,
+                         .sendPingsAutomatically = true,
+                         /* Handlers */
+                         .upgrade = nullptr,
+                         .open =
+                             [](auto ws) {
+                                 ws->subscribe("objective_events");
+                             }
+                        }
+                    )
+                    .listen(
+                        websocket_server_port,
+                        [](auto* listen_socket) {
+                            if (listen_socket) {
+                                Log::Log("EnableWebsocketServer listening on port %d", websocket_server_port);
+                            }
+                        }
+                    )
+                    .run();
+            });
+        }
+
+    }
 } // namespace
 
 void ObjectiveTimerWindow::CheckIsMapLoaded()
@@ -188,16 +252,11 @@ void ObjectiveTimerWindow::CheckIsMapLoaded()
 
 void ObjectiveTimerWindow::Terminate() {
     ToolboxWindow::Terminate();
-    if (run_loader.joinable()) {
-        run_loader.join();
+    while (loading) {
+        Sleep(10);
     }
     ClearObjectiveSets();
-    websocket_app->close();
-    delete websocket_app;
-    websocket_app = nullptr;
-    if (websocket_server.joinable()) {
-        websocket_server.join();
-    }
+    EnableWebsocketServer(false);
 }
 void ObjectiveTimerWindow::Initialize()
 {
@@ -349,38 +408,8 @@ void ObjectiveTimerWindow::Initialize()
                 os->CheckSetDone();
             }
         });
+    EnableWebsocketServer(enable_websocket_server);
 
-
-    websocket_server = std::thread([this]() {
-        // The app needs to be created in the thread that is supposed to handle the websocket connections
-        websocket_app = new uWS::App();
-        websocket_app
-            ->ws<int>(
-                "/*",
-                {/* Settings */
-                 .compression = uWS::SHARED_COMPRESSOR,
-                 .maxPayloadLength = 16 * 1024,
-                 .idleTimeout = 10,
-                 .maxBackpressure = 1 * 1024 * 1024,
-                 .sendPingsAutomatically = true,
-                 /* Handlers */
-                 .upgrade = nullptr,
-                 .open =
-                     [](auto ws) {
-                         ws->subscribe("objective_events");
-                     }
-                }
-            )
-            .listen(
-                9001,
-                [](auto* listen_socket) {
-                    if (listen_socket) {
-                        Log::Info("Listening on port %d", 9001);
-                    }
-                }
-            )
-            .run();
-    });
 }
 
 void ObjectiveTimerWindow::Event(const EventType type, const uint32_t count, const wchar_t* msg) const
@@ -526,8 +555,12 @@ void ObjectiveTimerWindow::AddObjectiveSet(const GW::Constants::MapID map_id)
             break;
     }
     // clang-format on
-    Instance().websocket_app->publish("objective_events", "{\"command\":\"reset\"}", uWS::OpCode::TEXT);
-    Instance().websocket_app->publish("objective_events", "{\"command\":\"start\"}", uWS::OpCode::TEXT);
+    if (websocket_app) {
+        // @Cleanup: Should we be sending this from a different thread to the websocket? Doesn't seem right...
+        websocket_app->publish("objective_events", "{\"command\":\"reset\"}", uWS::OpCode::TEXT);
+        websocket_app->publish("objective_events", "{\"command\":\"start\"}", uWS::OpCode::TEXT);
+    }
+
 }
 
 void ObjectiveTimerWindow::ObjectiveSet::StopObjectives()
@@ -981,6 +1014,28 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
     ImGui::ShowHelp(
         "As soon as final objective is complete, send /age command to game server to receive server-side completion time.");
     ComputeNColumns();
+    if (ImGui::Checkbox("Enable LiveSplit websocket server", &enable_websocket_server)) {
+        EnableWebsocketServer(enable_websocket_server);
+    }
+    if (enable_websocket_server) {
+        ImGui::Indent();
+        if (ImGui::InputInt("LiveSplit Websocket server port", &websocket_server_port)) {
+            EnableWebsocketServer(false);
+            EnableWebsocketServer(enable_websocket_server);
+        }
+        // Display websocket server status
+        ImGui::Text("LiveSplit Server status: %s", websocket_app && websocket_server ? "Running" : "Stopped");
+        if (websocket_app && websocket_server) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "(Port %d)", websocket_server_port);
+        }
+        if (ImGui::SmallButton("Restart")) {
+            EnableWebsocketServer(false);
+            EnableWebsocketServer(enable_websocket_server);
+        }
+        ImGui::Unindent();
+    }
+
 }
 
 void ObjectiveTimerWindow::LoadSettings(ToolboxIni* ini)
@@ -996,6 +1051,8 @@ void ObjectiveTimerWindow::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_past_runs);
     LOAD_BOOL(show_start_date_time);
     LOAD_BOOL(show_detailed_objectives);
+    LOAD_UINT(websocket_server_port);
+    LOAD_BOOL(enable_websocket_server);
     ComputeNColumns();
     LoadRuns();
 }
@@ -1013,6 +1070,8 @@ void ObjectiveTimerWindow::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(save_to_disk);
     SAVE_BOOL(show_past_runs);
     SAVE_BOOL(show_detailed_objectives);
+    SAVE_UINT(websocket_server_port);
+    SAVE_BOOL(enable_websocket_server);
     SaveRuns();
 }
 
@@ -1023,11 +1082,11 @@ void ObjectiveTimerWindow::LoadRuns()
     }
     // Because this does a load of file reads and JSON decoding, its on a separate thread; it could delay rendering by
     // seconds
-    if (run_loader.joinable()) {
-        run_loader.join();
+    while (loading) {
+        Sleep(10);
     }
     loading = true;
-    run_loader = std::thread([] {
+    Resources::EnqueueWorkerTask([] {
         ObjectiveTimerWindow& instance = Instance();
         // ClearObjectiveSets();
         Resources::EnsureFolderExists(Resources::GetPath(L"runs"));
@@ -1046,8 +1105,7 @@ void ObjectiveTimerWindow::LoadRuns()
         FindClose(hFind);
 
         // Output the list of names found
-        for (auto it = obj_timer_files.rbegin();
-             it != obj_timer_files.rend() && instance.objective_sets.size() < max_objectives_in_memory; ++it) {
+        for (auto it = obj_timer_files.rbegin(); it != obj_timer_files.rend() && instance.objective_sets.size() < max_objectives_in_memory; ++it) {
             try {
                 std::ifstream file;
                 std::wstring fn = Resources::GetPath(L"runs", *it);
@@ -1055,8 +1113,7 @@ void ObjectiveTimerWindow::LoadRuns()
                 if (file.is_open()) {
                     nlohmann::json os_json_arr;
                     file >> os_json_arr;
-                    for (auto json_it = os_json_arr.begin(); json_it != os_json_arr.end();
-                         ++json_it) {
+                    for (auto json_it = os_json_arr.begin(); json_it != os_json_arr.end(); ++json_it) {
                         ObjectiveSet* os = ObjectiveSet::FromJson(json_it.value());
                         if (instance.objective_sets.contains(os->system_time)) {
                             delete os;
@@ -1073,7 +1130,7 @@ void ObjectiveTimerWindow::LoadRuns()
                 Log::Error("Failed to load ObjectiveSets from json");
             }
         }
-        instance.loading = false;
+        loading = false;
     });
 }
 
@@ -1082,11 +1139,11 @@ void ObjectiveTimerWindow::SaveRuns()
     if (!save_to_disk || objective_sets.empty()) {
         return;
     }
-    if (run_loader.joinable()) {
-        run_loader.join();
+    while (loading) {
+        Sleep(10);
     }
     loading = true;
-    run_loader = std::thread([] {
+    Resources::EnqueueWorkerTask([] {
         ObjectiveTimerWindow& instance = Instance();
         Resources::EnsureFolderExists(Resources::GetPath(L"runs"));
         std::map<std::wstring, std::vector<ObjectiveSet*>> objective_sets_by_file;
@@ -1100,8 +1157,7 @@ void ObjectiveTimerWindow::SaveRuns()
             if (!structtime) {
                 continue;
             }
-            swprintf(filename, 36, L"ObjectiveTimerRuns_%02d-%02d-%02d.json", structtime->tm_year + 1900,
-                     structtime->tm_mon + 1, structtime->tm_mday);
+            swprintf(filename, 36, L"ObjectiveTimerRuns_%02d-%02d-%02d.json", structtime->tm_year + 1900, structtime->tm_mon + 1, structtime->tm_mday);
             objective_sets_by_file[filename].push_back(os.second);
         }
         for (auto& it : objective_sets_by_file) {
@@ -1121,7 +1177,7 @@ void ObjectiveTimerWindow::SaveRuns()
             }
         }
         runs_dirty = false;
-        instance.loading = false;
+        loading = false;
     });
 }
 
@@ -1137,7 +1193,10 @@ void ObjectiveTimerWindow::StopObjectives()
 {
     if (current_objective_set) {
         current_objective_set->StopObjectives();
-        Instance().websocket_app->publish("objective_events", "{\"command\":\"reset\"}", uWS::OpCode::TEXT);
+        if (websocket_app) {
+            // @Cleanup: Should we be sending this from a different thread to the websocket? Doesn't seem right...
+            websocket_app->publish("objective_events", "{\"command\":\"reset\"}", uWS::OpCode::TEXT);
+        }
     }
     current_objective_set = nullptr;
 }
@@ -1417,7 +1476,10 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(const EventType type, const uint3
                         Objective* other = objectives[j];
                         if (!other->IsDone()) {
                             other->SetDone();
-                            Instance().websocket_app->publish("objective_events", "{\"command\":\"split\"}", uWS::OpCode::TEXT);
+                            if (websocket_app) {
+                                // @Cleanup: Should we be sending this from a different thread to the websocket? Doesn't seem right...
+                                websocket_app->publish("objective_events", "{\"command\":\"split\"}", uWS::OpCode::TEXT);
+                            }
                         }
                     }
                     break;
@@ -1445,7 +1507,10 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(const EventType type, const uint3
     }
 
     if (just_set_something_done) {
-        Instance().websocket_app->publish("objective_events", "{\"command\":\"split\"}", uWS::OpCode::TEXT);
+        if (websocket_app) {
+            // @Cleanup: Should we be sending this from a different thread to the websocket? Doesn't seem right...
+            websocket_app->publish("objective_events", "{\"command\":\"split\"}", uWS::OpCode::TEXT);
+        }
         CheckSetDone();
     }
 }

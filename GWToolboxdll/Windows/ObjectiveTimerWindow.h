@@ -46,15 +46,7 @@ public:
     void SaveRuns();
 
 private:
-    std::thread run_loader;
-    std::thread websocket_server;
-    uWS::App* websocket_app = nullptr;
-    bool loading = false;
 
-    bool map_load_pending = false;
-    GW::Packet::StoC::InstanceLoadInfo* InstanceLoadInfo = nullptr;
-    GW::Packet::StoC::InstanceLoadFile* InstanceLoadFile = nullptr;
-    GW::Packet::StoC::InstanceTimer* InstanceTimer = nullptr;
     // Checks that we've received all of the packets needed to start an objective set, then triggers necessary events
     void CheckIsMapLoaded();
 
