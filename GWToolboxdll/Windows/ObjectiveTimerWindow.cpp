@@ -180,6 +180,11 @@ namespace {
     uWS::App* websocket_app = nullptr;
     int websocket_server_port = 9001;
     bool enable_websocket_server = false;
+    enum WebsocketMode {
+        LiveSplitOneJSON = 0,
+        LiveSplitServerCommand
+    };
+    int websocket_mode = LiveSplitOneJSON;
     void EnableWebsocketServer(bool enable) {
         websocket_server_port = std::max(websocket_server_port, 0);
         if (!enable) {
@@ -231,6 +236,18 @@ namespace {
             });
         }
 
+    }
+
+    void WebsocketSendMessage(std::string_view message) {
+        if (websocket_app) {
+            // @Cleanup: Should we be sending this from a different thread to the websocket? Doesn't seem right...
+            if(websocket_mode == LiveSplitOneJSON) {
+                std::string command = "{\"command\": \"" + std::string(message) + "\"}";
+                websocket_app->publish("objective_events", command, uWS::OpCode::TEXT);
+            } else {
+                websocket_app->publish("objective_events", message, uWS::OpCode::TEXT);
+            }
+        }
     }
 } // namespace
 
@@ -555,11 +572,8 @@ void ObjectiveTimerWindow::AddObjectiveSet(const GW::Constants::MapID map_id)
             break;
     }
     // clang-format on
-    if (websocket_app) {
-        // @Cleanup: Should we be sending this from a different thread to the websocket? Doesn't seem right...
-        websocket_app->publish("objective_events", "{\"command\":\"reset\"}", uWS::OpCode::TEXT);
-        websocket_app->publish("objective_events", "{\"command\":\"start\"}", uWS::OpCode::TEXT);
-    }
+    WebsocketSendMessage("reset");
+    WebsocketSendMessage("start");
 
 }
 
@@ -1033,6 +1047,8 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
             EnableWebsocketServer(false);
             EnableWebsocketServer(enable_websocket_server);
         }
+        ImGui::RadioButton("LiveSplit One JSON Format", (int*)&websocket_mode, static_cast<int>(WebsocketMode::LiveSplitOneJSON));
+        ImGui::RadioButton("LiveSplit Server Command Format", (int*)&websocket_mode, static_cast<int>(WebsocketMode::LiveSplitServerCommand));
         ImGui::Unindent();
     }
 
@@ -1053,6 +1069,7 @@ void ObjectiveTimerWindow::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_detailed_objectives);
     LOAD_UINT(websocket_server_port);
     LOAD_BOOL(enable_websocket_server);
+    LOAD_UINT(websocket_mode);
     ComputeNColumns();
     LoadRuns();
 }
@@ -1072,6 +1089,7 @@ void ObjectiveTimerWindow::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_detailed_objectives);
     SAVE_UINT(websocket_server_port);
     SAVE_BOOL(enable_websocket_server);
+    SAVE_UINT(websocket_mode);
     SaveRuns();
 }
 
@@ -1193,10 +1211,7 @@ void ObjectiveTimerWindow::StopObjectives()
 {
     if (current_objective_set) {
         current_objective_set->StopObjectives();
-        if (websocket_app) {
-            // @Cleanup: Should we be sending this from a different thread to the websocket? Doesn't seem right...
-            websocket_app->publish("objective_events", "{\"command\":\"reset\"}", uWS::OpCode::TEXT);
-        }
+        WebsocketSendMessage("reset");
     }
     current_objective_set = nullptr;
 }
@@ -1476,10 +1491,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(const EventType type, const uint3
                         Objective* other = objectives[j];
                         if (!other->IsDone()) {
                             other->SetDone();
-                            if (websocket_app) {
-                                // @Cleanup: Should we be sending this from a different thread to the websocket? Doesn't seem right...
-                                websocket_app->publish("objective_events", "{\"command\":\"split\"}", uWS::OpCode::TEXT);
-                            }
+                            WebsocketSendMessage("split");
                         }
                     }
                     break;
@@ -1507,10 +1519,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(const EventType type, const uint3
     }
 
     if (just_set_something_done) {
-        if (websocket_app) {
-            // @Cleanup: Should we be sending this from a different thread to the websocket? Doesn't seem right...
-            websocket_app->publish("objective_events", "{\"command\":\"split\"}", uWS::OpCode::TEXT);
-        }
+        WebsocketSendMessage("split");
         CheckSetDone();
     }
 }
