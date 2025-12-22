@@ -7,6 +7,16 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.6
+* [Fix] Fixed bug preventing window positions from being saved on close
+* [Fix] Fixed flagging cursor not being cleared when flagging on the minimap
+* [Fix] Fixed hanging process when kamadan trade chat isn't responding
+* [Fix] Fixed crash when removing a player name from a hotkey
+* [Fix] Fixed crash when trying to load a build that doesn't match your primary profession
+* [Fix] Fixed agent colours not correctly being assigned on minimap due to agent model id changes
+* [Fix] Fixed crash when trade with another player is completed
+* [New] Added LiveSplit websocket to objective timer, wip
+
 ## Version 8.5
 * [New] Added directx texture list to info window for exporting textures to gMod easily
 * [Fix] Working with gw build 38015
