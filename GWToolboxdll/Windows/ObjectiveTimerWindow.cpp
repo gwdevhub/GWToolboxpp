@@ -179,12 +179,13 @@ namespace {
     std::thread* websocket_server = nullptr;
     uWS::App* websocket_app = nullptr;
     int websocket_server_port = 9001;
-    bool enable_websocket_server = false;
     enum WebsocketMode {
-        LiveSplitOneJSON = 0,
-        LiveSplitServerCommand
+        None,
+        LiveSplitOneJSON,
+        LiveSplitServerCommand,
+        Count
     };
-    int websocket_mode = LiveSplitOneJSON;
+    WebsocketMode websocket_mode = None;
     void EnableWebsocketServer(bool enable) {
         websocket_server_port = std::max(websocket_server_port, 0);
         if (!enable) {
@@ -425,7 +426,7 @@ void ObjectiveTimerWindow::Initialize()
                 os->CheckSetDone();
             }
         });
-    EnableWebsocketServer(enable_websocket_server);
+    EnableWebsocketServer(websocket_mode != WebsocketMode::None);
 
 }
 
@@ -1028,7 +1029,10 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
     ImGui::ShowHelp(
         "As soon as final objective is complete, send /age command to game server to receive server-side completion time.");
     ComputeNColumns();
-    if (ImGui::Checkbox("Enable LiveSplit websocket server", &enable_websocket_server)) {
+    
+    bool enable_websocket_server = websocket_mode != WebsocketMode::None;
+    if (ImGui::Checkbox("Enable LiveSplit websocket server", &enable_websocket_server)) { 
+        websocket_mode = enable_websocket_server ? WebsocketMode::LiveSplitOneJSON : WebsocketMode::None;
         EnableWebsocketServer(enable_websocket_server);
     }
     if (enable_websocket_server) {
@@ -1068,8 +1072,10 @@ void ObjectiveTimerWindow::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_start_date_time);
     LOAD_BOOL(show_detailed_objectives);
     LOAD_UINT(websocket_server_port);
-    LOAD_BOOL(enable_websocket_server);
-    LOAD_UINT(websocket_mode);
+    auto ini_websocket_mode = (uint32_t)ini->GetLongValue(Name(), VAR_NAME(websocket_mode), (long)websocket_mode);
+    if (ini_websocket_mode >= (uint32_t)WebsocketMode::Count) 
+        ini_websocket_mode = (uint32_t)WebsocketMode::None;
+    websocket_mode = (WebsocketMode)ini_websocket_mode;
     ComputeNColumns();
     LoadRuns();
 }
@@ -1088,7 +1094,6 @@ void ObjectiveTimerWindow::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_past_runs);
     SAVE_BOOL(show_detailed_objectives);
     SAVE_UINT(websocket_server_port);
-    SAVE_BOOL(enable_websocket_server);
     SAVE_UINT(websocket_mode);
     SaveRuns();
 }
