@@ -668,6 +668,7 @@ void TravelWindow::Draw(IDirect3DDevice9*)
             TravelButton(GW::Constants::MapID::Foibles_Fair_outpost, 0);
             TravelButton(GW::Constants::MapID::Fort_Ranik_pre_Searing_outpost, 1);
             TravelButton(GW::Constants::MapID::The_Barradin_Estate_outpost, 0);
+            TravelButton(GW::Constants::MapID::Piken_Square_pre_Searing_outpost, 1);
         }
         else {
             ImGui::PushItemWidth(-1.0f);

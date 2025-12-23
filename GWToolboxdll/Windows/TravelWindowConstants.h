@@ -67,7 +67,8 @@ constexpr std::array presearing_map_ids = {
     GW::Constants::MapID::Ascalon_City_pre_searing,
     GW::Constants::MapID::Foibles_Fair_outpost,
     GW::Constants::MapID::Fort_Ranik_pre_Searing_outpost,
-    GW::Constants::MapID::The_Barradin_Estate_outpost
+    GW::Constants::MapID::The_Barradin_Estate_outpost, 
+    GW::Constants::MapID::Piken_Square_pre_Searing_outpost
 };
 
 constexpr std::array presearing_map_names = {
@@ -75,7 +76,8 @@ constexpr std::array presearing_map_names = {
     "ascalon city",
     "foibles fair",
     "fort ranik",
-    "barradin estate"
+    "barradin estate", 
+    "piken square"
 };
 
 constexpr std::array dungeon_map_ids{

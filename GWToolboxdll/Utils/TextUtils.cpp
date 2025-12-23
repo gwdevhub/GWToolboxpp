@@ -1,6 +1,11 @@
 #include "stdafx.h"
 #include "TextUtils.h"
 
+bool wcseq(const wchar_t* a, const wchar_t* b)
+{
+    return a && b && wcscmp(a, b) == 0;
+}
+
 namespace {
     constexpr auto diacritics = std::to_array<const wchar_t*>({
         L"A\x0041\x0410\x24B6\xFF21\x00C0\x00C1\x00C2\x1EA6\x1EA4\x1EAA\x1EA8\x00C3\x0100\x0102\x1EB0\x1EAE\x1EB4\x1EB2\x0226\x01E0\x00C4\x01DE\x1EA2\x00C5\x01FA\x01CD\x0200\x0202\x1EA0\x1EAC\x1EB6\x1E00\x0104\x023A\x2C6F",

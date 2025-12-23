@@ -429,14 +429,17 @@ void Resources::Cleanup()
     }
     workers.clear();
     for (const auto& tex : skill_images | std::views::values) {
+        if(tex && *tex) (*tex)->Release();
         delete tex;
     }
     skill_images.clear();
     for (const auto& tex : item_images | std::views::values) {
+        if (tex && *tex) (*tex)->Release();
         delete tex;
     }
     item_images.clear();
     for (const auto& img : guild_wars_wiki_images | std::views::values) {
+        if (img && *img) (*img)->Release();
         delete img;
     }
     guild_wars_wiki_images.clear();
@@ -463,18 +466,6 @@ void Resources::Terminate()
     if (co_initialized) {
         CoUninitialize();
     }
-    for (const auto& tex : skill_images | std::views::values) {
-        delete tex;
-    }
-    skill_images.clear();
-    for (const auto& tex : item_images | std::views::values) {
-        delete tex;
-    }
-    item_images.clear();
-    for (const auto& tex : map_names | std::views::values) {
-        delete tex;
-    }
-    map_names.clear();
 }
 
 bool Resources::CanTerminate()

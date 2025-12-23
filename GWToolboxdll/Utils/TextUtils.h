@@ -4,6 +4,9 @@
 #include <ctre.hpp>
 #undef __forceinline
 
+
+bool wcseq(const wchar_t* a, const wchar_t* b);
+
 namespace TextUtils {
     std::string WStringToString(std::wstring_view str);
     std::wstring StringToWString(std::string_view str);

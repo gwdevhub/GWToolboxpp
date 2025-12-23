@@ -42,6 +42,10 @@ namespace GW {
             static const wchar_t* Imperial = L"\x8102\x7692";
         }
 
+        static const wchar_t* SpiritOfExtinction = L"\xF8E\xA89B\xF683\x12CA";
+        static const wchar_t* SpiritOfQuickeningZephyr = L"\xF98\x84F2\xC816\x298E";
+        static const wchar_t* SpiritOfWinnowing = L"\xF8D\xFF3F\x91EC\x5753";
+
         namespace MapRegion {
 
 

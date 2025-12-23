@@ -689,6 +689,8 @@ namespace GW {
             A_Gate_Too_Far_mission,
             The_Elusive_Golemancer_mission,
 
+            Piken_Square_pre_Searing_outpost = 779,
+
             Secret_Lair_of_the_Snowmen2 = 781,  // ?
             Secret_Lair_of_the_Snowmen3,        // ?
             Droknars_Forge_cinematic,           // ?
