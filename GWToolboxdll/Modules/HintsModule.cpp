@@ -56,11 +56,17 @@ namespace {
     struct HintUIMessage {
         uint32_t message_id = 0x10000000; // Used internally to avoid queueing more than 1 of the same hint
         wchar_t* message_encoded;
-        uint32_t image_file_id = 0; // e.g. mouse imaage, light bulb, exclamation mark
+        wchar_t* scaled_message_encoded = 0;
+        wchar_t* gamepad_message_encoded = 0;
+        uint32_t default_image_file_id = 0; // e.g. mouse imaage, light bulb, exclamation mark
+        uint32_t scaled_image_file_id = 0;
+        uint32_t gamepad_image_file_id = 0;
         uint32_t message_timeout_ms = 15000;
         uint32_t style_bitmap = 0x12; // 0x18 = hint with left padding
+
         HintUIMessage(const wchar_t* message, const uint32_t duration = 30000, uint32_t _message_id = 0)
         {
+            ASSERT(message);
             size_t strlen = (wcslen(message) + 1) * sizeof(wchar_t);
             if (message[0] == 0x108) {
                 message_encoded = new wchar_t[strlen];
@@ -84,7 +90,12 @@ namespace {
 
         ~HintUIMessage()
         {
-            delete[] message_encoded;
+            if (message_encoded)
+                delete[] message_encoded;
+            if (scaled_message_encoded) 
+                delete[] message_encoded;
+            if (gamepad_message_encoded) 
+                delete[] message_encoded;
         }
 
         void Show()
@@ -97,6 +108,7 @@ namespace {
             delayed_hints.push_back(std::pair(clock() + delay_ms, new HintUIMessage(message_encoded, message_timeout_ms, message_id)));
         }
     };
+    static_assert(sizeof(HintUIMessage) == 0x24);
 
     struct LastQuote {
         uint32_t item_id = 0;
