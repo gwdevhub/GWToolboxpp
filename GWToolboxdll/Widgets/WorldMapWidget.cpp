@@ -20,11 +20,13 @@
 #include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
 
 #include <Widgets/WorldMapWidget.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/Resources.h>
+#include <Windows/CompletionWindow.h>
 #include <Windows/TravelWindow.h>
 
 #include <Utils/GuiUtils.h>
@@ -1331,7 +1333,6 @@ const EliteBossLocation elite_boss_locations[] = {
 
     std::unordered_map<GW::Constants::MapID, uint32_t> locations_assigned_to_outposts;
 
-
     bool DrawBossLocationOnWorldMap(const EliteBossLocation& boss)
     {
         if (!show_any_elite_capture_locations) return false;
@@ -1347,8 +1348,18 @@ const EliteBossLocation elite_boss_locations[] = {
         if (!show_elite_capture_locations[(uint32_t)skill->profession]) return false;
         if (hide_captured_elites) {
             const auto me = GW::Agents::GetControlledCharacter();
-            if (me->primary != (uint8_t)skill->profession && me->secondary != (uint8_t)skill->profession) return false;
-            if (GW::SkillbarMgr::GetIsSkillLearnt(boss.skill_id)) return false;
+            if (me->primary == (uint8_t)skill->profession || me->secondary == (uint8_t)skill->profession) {
+                if (GW::SkillbarMgr::GetIsSkillLearnt(boss.skill_id)) return false;
+            }
+            else {
+                const auto my_name = GW::PlayerMgr::GetPlayerName();
+                const auto& completion = CompletionWindow::Instance().GetCharacterCompletion(my_name, false);
+                if (completion) {
+                    if (CompletionWindow::IsSkillUnlocked(my_name, skill->skill_id)) return false;
+                }
+                else
+                    return false;
+            }
         }
 
         const auto texture = Resources::GetSkillImage(boss.skill_id);
@@ -1803,8 +1814,11 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         }
         ImGui::PopStyleVar();
         ImGui::Checkbox("Hide elites already captured", &hide_captured_elites);
-        if (hide_captured_elites) 
-            ImGui::TextDisabled("Limited to your primary/secondary profession");
+        if (hide_captured_elites) {
+            const auto& completion = CompletionWindow::Instance().GetCharacterCompletion(GW::PlayerMgr::GetPlayerName(), false);
+            if (!completion)
+                ImGui::TextDisabled("Limited to your primary/secondary profession if Completion Window is disabled");
+        }
         ImGui::Unindent();
     }
     //ImGui::InputFloat("region.x", &tarnished_coast.x, 10.f);
