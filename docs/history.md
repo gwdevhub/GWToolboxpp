@@ -15,6 +15,9 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Fixed crash when trying to load a build that doesn't match your primary profession
 * [Fix] Fixed agent colours not correctly being assigned on minimap due to agent model id changes
 * [Fix] Fixed crash when trade with another player is completed
+* [Fix] Fixed crash when in-game hints are displayed via toolbox
+* [Minor] Extended unlocked elites on world map to use completion window
+* [Minor] Added piken square to pre searing travel window
 * [New] Added LiveSplit websocket to objective timer, wip
 
 ## Version 8.5
