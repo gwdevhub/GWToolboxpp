@@ -16,7 +16,7 @@ bool PathGetExeFileName(std::wstring& out);
 
 bool PathGetProgramDirectory(std::filesystem::path& out);
 
-bool PathGetDocumentsPath(std::filesystem::path& out, const wchar_t* suffix);
+bool PathGetDocumentsPath(std::filesystem::path& out, const wchar_t* suffix = nullptr);
 
 // create_directories without catch; returns false on failure
 bool PathCreateDirectorySafe(const std::filesystem::path& path);

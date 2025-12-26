@@ -38,7 +38,7 @@ bool PathGetProgramDirectory(std::filesystem::path& out)
     return true;
 }
 
-bool PathGetDocumentsPath(fs::path& out, const wchar_t* suffix = nullptr)
+bool PathGetDocumentsPath(fs::path& out, const wchar_t* suffix)
 {
     wchar_t temp[MAX_PATH];
     const HRESULT result = SHGetFolderPathW(nullptr, CSIDL_MYDOCUMENTS, nullptr, 0, temp);
