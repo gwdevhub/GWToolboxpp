@@ -108,7 +108,7 @@ namespace {
 
     static_assert(hard_coded_vanguard_names.size() == VANGUARD_COUNT);
 
-    std::unordered_map<DailyQuests::QuestData*, uint16_t> nicholas_sandford_item_collected_count;
+    std::unordered_map<std::wstring, uint16_t> nicholas_sandford_item_collected_count;
 
     DailyQuests::QuestData nicholas_sandford_cycles[] = {
         { MapID::None, GW::EncStrings::GrawlNecklaces },
@@ -1071,16 +1071,24 @@ namespace {
 
     size_t GetNicholasSandfordCollectedQuantity(DailyQuests::QuestData* quest_data)
     {
-        static clock_t last_inv_check_sandford = 0;        
-        if (!last_inv_check_sandford || TIMER_DIFF(last_inv_check_sandford) > 10000) {
-            // Check inventory for all Nicholas Sandford items
+        static clock_t last_inv_check_sandford = 0;
+        
+        // If the map is empty, populate it with unique keys from the cycle array
+        if (nicholas_sandford_item_collected_count.empty()) {
             for (auto& item : nicholas_sandford_cycles) {
-                nicholas_sandford_item_collected_count[&item] = InventoryManager::CountItemsByName(item.enc_name.c_str());
+                nicholas_sandford_item_collected_count[item.enc_name] = 0;
+            }
+        }
+        
+        if (!last_inv_check_sandford || TIMER_DIFF(last_inv_check_sandford) > 10000) {
+            // Check inventory for each Nicholas Sandford item
+            for (const auto& [enc_name, count] : nicholas_sandford_item_collected_count) {
+                nicholas_sandford_item_collected_count[enc_name] = InventoryManager::CountItemsByName(enc_name.c_str());
             }
             last_inv_check_sandford = TIMER_INIT();
         }
         
-        const auto found = nicholas_sandford_item_collected_count.find(quest_data);
+        const auto found = nicholas_sandford_item_collected_count.find(quest_data->GetQuestNameEnc());
         ASSERT(found != nicholas_sandford_item_collected_count.end());
         return found->second;
     }
