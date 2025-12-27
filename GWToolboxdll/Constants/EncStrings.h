@@ -253,6 +253,16 @@ namespace GW {
         static const wchar_t* FrigidMandragorHusks = L"\x8102\x26DF\xF8E8\x8ACB\x58B4";
         static const wchar_t* BoltsofLinen = L"\x22D5\x8371\x8ED5\x56B4";
         static const wchar_t* CharrCarvings = L"\x28EE";
+        static const wchar_t* GrawlNecklaces = L"\x290A";
+        static const wchar_t* BakedHusks = L"\x290C";
+        static const wchar_t* SkeletalLimbs = L"\x2907";
+        static const wchar_t* UnnaturalSeeds = L"\x2903";
+        static const wchar_t* EnchantedLodestones = L"\x2908";
+        static const wchar_t* SkaleFins = L"\x2906";
+        static const wchar_t* GargoyleSkulls = L"\x28F8";
+        static const wchar_t* DullCarapaces = L"\x28F0";
+        static const wchar_t* WornBelts = L"\x28FE";
+        static const wchar_t* SpiderLegs = L"\x28EA";
 
         static const wchar_t* GuildVersusGuild = L"\x8102\x58B6\xFE7C\xB94E\x2209";
         static const wchar_t* AllianceBattles = L"\x108\x107" L"Alliance Battles\x1"; // TODO: find this, subtitle when entering zone

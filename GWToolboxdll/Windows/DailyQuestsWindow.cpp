@@ -108,68 +108,68 @@ namespace {
 
     static_assert(hard_coded_vanguard_names.size() == VANGUARD_COUNT);
 
-    constexpr std::array hard_coded_nicholas_sandford_names = {
-        "Grawl Necklaces",
-        "Baked Husks",
-        "Skeletal Limbs",
-        "Unnatural Seeds",
-        "Enchanted Lodestones",
-        "Skale Fins",
-        "Icy Lodestones",
-        "Gargoyle Skulls",
-        "Dull Carapaces",
-        "Baked Husks",
-        "Red Iris Flowers",
-        "Spider Legs",
-        "Skeletal Limbs",
-        "Charr Carvings",
-        "Enchanted Lodestones",
-        "Grawl Necklaces",
-        "Icy Lodestones",
-        "Worn Belts",
-        "Gargoyle Skulls",
-        "Unnatural Seeds",
-        "Skale Fins",
-        "Red Iris Flowers",
-        "Enchanted Lodestones",
-        "Skeletal Limbs",
-        "Charr Carvings",
-        "Spider Legs",
-        "Baked Husks",
-        "Gargoyle Skulls",
-        "Unnatural Seeds",
-        "Icy Lodestones",
-        "Grawl Necklaces",
-        "Enchanted Lodestones",
-        "Worn Belts",
-        "Dull Carapaces",
-        "Spider Legs",
-        "Gargoyle Skulls",
-        "Icy Lodestones",
-        "Unnatural Seeds",
-        "Worn Belts",
-        "Grawl Necklaces",
-        "Baked Husks",
-        "Skeletal Limbs",
-        "Red Iris Flowers",
-        "Charr Carvings",
-        "Skale Fins",
-        "Dull Carapaces",
-        "Enchanted Lodestones",
-        "Charr Carvings",
-        "Spider Legs",
-        "Red Iris Flowers",
-        "Worn Belts",
-        "Dull Carapaces"
-    };
+    std::unordered_map<std::wstring, uint16_t> nicholas_sandford_item_collected_count;
 
-    static_assert(hard_coded_nicholas_sandford_names.size() == NICHOLAS_PRE_COUNT);
+    DailyQuests::QuestData nicholas_sandford_cycles[] = {
+        { MapID::None, GW::EncStrings::GrawlNecklaces },
+        { MapID::None, GW::EncStrings::BakedHusks },
+        { MapID::None, GW::EncStrings::SkeletalLimbs },
+        { MapID::None, GW::EncStrings::UnnaturalSeeds },
+        { MapID::None, GW::EncStrings::EnchantedLodestones },
+        { MapID::None, GW::EncStrings::SkaleFins },
+        { MapID::None, GW::EncStrings::IcyLodestones },
+        { MapID::None, GW::EncStrings::GargoyleSkulls },
+        { MapID::None, GW::EncStrings::DullCarapaces },
+        { MapID::None, GW::EncStrings::BakedHusks },
+        { MapID::None, GW::EncStrings::RedIrisFlowers },
+        { MapID::None, GW::EncStrings::SpiderLegs },
+        { MapID::None, GW::EncStrings::SkeletalLimbs },
+        { MapID::None, GW::EncStrings::CharrCarvings },
+        { MapID::None, GW::EncStrings::EnchantedLodestones },
+        { MapID::None, GW::EncStrings::GrawlNecklaces },
+        { MapID::None, GW::EncStrings::IcyLodestones },
+        { MapID::None, GW::EncStrings::WornBelts },
+        { MapID::None, GW::EncStrings::GargoyleSkulls },
+        { MapID::None, GW::EncStrings::UnnaturalSeeds },
+        { MapID::None, GW::EncStrings::SkaleFins },
+        { MapID::None, GW::EncStrings::RedIrisFlowers },
+        { MapID::None, GW::EncStrings::EnchantedLodestones },
+        { MapID::None, GW::EncStrings::SkeletalLimbs },
+        { MapID::None, GW::EncStrings::CharrCarvings },
+        { MapID::None, GW::EncStrings::SpiderLegs },
+        { MapID::None, GW::EncStrings::BakedHusks },
+        { MapID::None, GW::EncStrings::GargoyleSkulls },
+        { MapID::None, GW::EncStrings::UnnaturalSeeds },
+        { MapID::None, GW::EncStrings::IcyLodestones },
+        { MapID::None, GW::EncStrings::GrawlNecklaces },
+        { MapID::None, GW::EncStrings::EnchantedLodestones },
+        { MapID::None, GW::EncStrings::WornBelts },
+        { MapID::None, GW::EncStrings::DullCarapaces },
+        { MapID::None, GW::EncStrings::SpiderLegs },
+        { MapID::None, GW::EncStrings::GargoyleSkulls },
+        { MapID::None, GW::EncStrings::IcyLodestones },
+        { MapID::None, GW::EncStrings::UnnaturalSeeds },
+        { MapID::None, GW::EncStrings::WornBelts },
+        { MapID::None, GW::EncStrings::GrawlNecklaces },
+        { MapID::None, GW::EncStrings::BakedHusks },
+        { MapID::None, GW::EncStrings::SkeletalLimbs },
+        { MapID::None, GW::EncStrings::RedIrisFlowers },
+        { MapID::None, GW::EncStrings::CharrCarvings },
+        { MapID::None, GW::EncStrings::SkaleFins },
+        { MapID::None, GW::EncStrings::DullCarapaces },
+        { MapID::None, GW::EncStrings::EnchantedLodestones },
+        { MapID::None, GW::EncStrings::CharrCarvings },
+        { MapID::None, GW::EncStrings::SpiderLegs },
+        { MapID::None, GW::EncStrings::RedIrisFlowers },
+        { MapID::None, GW::EncStrings::WornBelts },
+        { MapID::None, GW::EncStrings::DullCarapaces }
+    };
+    static_assert(_countof(nicholas_sandford_cycles) == NICHOLAS_PRE_COUNT);
 
     // these vectors are built inside Initialise() because the strings are hard coded
 
     std::vector<WantedQuestData> wanted_by_shining_blade_cycles;
     std::vector<DailyQuests::QuestData> vanguard_cycles;
-    std::vector<DailyQuests::QuestData> nicholas_sandford_cycles;
 
     ZaishenQuestData zaishen_bounty_cycles[] = {
         { GW::Constants::MapID::Poisoned_Outcrops, L"Droajam, Mage of the Sands"},
@@ -749,6 +749,8 @@ namespace {
     bool subscribed_wanted_quests[WANTED_COUNT] = {false};
     bool subscribed_weekly_bonus_pve[WEEKLY_BONUS_PVE_COUNT] = {false};
     bool subscribed_weekly_bonus_pvp[WEEKLY_BONUS_PVP_COUNT] = {false};
+    bool subscribed_vanguard[VANGUARD_COUNT] = {false};
+    bool subscribed_nicholas_sandford[NICHOLAS_PRE_COUNT] = {false};
 
     bool show_zaishen_bounty_in_window = true;
     bool show_zaishen_combat_in_window = true;
@@ -758,6 +760,7 @@ namespace {
     bool show_nicholas_in_window = true;
     bool show_weekly_bonus_pve_in_window = true;
     bool show_weekly_bonus_pvp_in_window = true;
+    bool show_presearing_dailies_in_window = false;
 
     uint32_t subscriptions_lookahead_days = 7;
 
@@ -773,6 +776,7 @@ namespace {
     const ImColor subscribed_color(102, 187, 238, 255);
     const ImColor normal_color(255, 255, 255, 255);
     const ImColor incomplete_color(102, 238, 187, 255);
+    const ImColor complete_color(102, 247, 126, 255);
 
     DailyQuests::QuestData* pending_quest_take = nullptr;
 
@@ -1065,6 +1069,29 @@ namespace {
         }
     }
 
+    size_t GetNicholasSandfordCollectedQuantity(DailyQuests::QuestData* quest_data)
+    {
+        static clock_t last_inv_check_sandford = 0;
+        
+        // If the map is empty, populate it with unique keys from the cycle array
+        if (nicholas_sandford_item_collected_count.empty()) {
+            for (auto& item : nicholas_sandford_cycles) {
+                nicholas_sandford_item_collected_count[item.enc_name] = 0;
+            }
+        }
+        
+        if (!last_inv_check_sandford || TIMER_DIFF(last_inv_check_sandford) > 10000) {
+            // Check inventory for each Nicholas Sandford item
+            for (const auto& [enc_name, count] : nicholas_sandford_item_collected_count) {
+                nicholas_sandford_item_collected_count[enc_name] = InventoryManager::CountItemsByName(enc_name.c_str());
+            }
+            last_inv_check_sandford = TIMER_INIT();
+        }
+        
+        const auto found = nicholas_sandford_item_collected_count.find(quest_data->GetQuestNameEnc());
+        ASSERT(found != nicholas_sandford_item_collected_count.end());
+        return found->second;
+    }
 }
 
 const MapID ZaishenQuestData::GetQuestGiverOutpost()
@@ -1106,40 +1133,53 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     const float ws_width = 180.0f * ImGui::GetIO().FontGlobalScale;
     const float nicholas_width = 180.0f * ImGui::GetIO().FontGlobalScale;
     const float wbe_width = 145.0f * ImGui::GetIO().FontGlobalScale;
+    const float vanguard_width = 180.0f * ImGui::GetIO().FontGlobalScale;
+    const float sandford_width = 200.0f * ImGui::GetIO().FontGlobalScale;
+    
+    const bool show_presearing = GetIsPreSearing() && show_presearing_dailies_in_window;
 
     ImGui::Text("Date");
     ImGui::SameLine(offset += short_text_width);
-    if (show_zaishen_missions_in_window) {
-        ImGui::Text("Zaishen Mission");
-        ImGui::SameLine(offset += zm_width);
+    if (show_presearing) {
+        ImGui::Text("Vanguard Quest");
+        ImGui::SameLine(offset += vanguard_width);
+
+        ImGui::Text("Nicholas Sandford");
+        ImGui::SameLine(offset += sandford_width);
     }
-    if (show_zaishen_bounty_in_window) {
-        ImGui::Text("Zaishen Bounty");
-        ImGui::SameLine(offset += zb_width);
-    }
-    if (show_zaishen_combat_in_window) {
-        ImGui::Text("Zaishen Combat");
-        ImGui::SameLine(offset += zc_width);
-    }
-    if (show_zaishen_vanquishes_in_window) {
-        ImGui::Text("Zaishen Vanquish");
-        ImGui::SameLine(offset += zv_width);
-    }
-    if (show_wanted_quests_in_window) {
-        ImGui::Text("Wanted");
-        ImGui::SameLine(offset += ws_width);
-    }
-    if (show_nicholas_in_window) {
-        ImGui::Text("Nicholas the Traveler");
-        ImGui::SameLine(offset += nicholas_width);
-    }
-    if (show_weekly_bonus_pve_in_window) {
-        ImGui::Text("Weekly Bonus PvE");
-        ImGui::SameLine(offset += wbe_width);
-    }
-    if (show_weekly_bonus_pvp_in_window) {
-        ImGui::Text("Weekly Bonus PvP");
-        ImGui::SameLine(offset += long_text_width);
+    else {
+        if (show_zaishen_missions_in_window) {
+            ImGui::Text("Zaishen Mission");
+            ImGui::SameLine(offset += zm_width);
+        }
+        if (show_zaishen_bounty_in_window) {
+            ImGui::Text("Zaishen Bounty");
+            ImGui::SameLine(offset += zb_width);
+        }
+        if (show_zaishen_combat_in_window) {
+            ImGui::Text("Zaishen Combat");
+            ImGui::SameLine(offset += zc_width);
+        }
+        if (show_zaishen_vanquishes_in_window) {
+            ImGui::Text("Zaishen Vanquish");
+            ImGui::SameLine(offset += zv_width);
+        }
+        if (show_wanted_quests_in_window) {
+            ImGui::Text("Wanted");
+            ImGui::SameLine(offset += ws_width);
+        }
+        if (show_nicholas_in_window) {
+            ImGui::Text("Nicholas the Traveler");
+            ImGui::SameLine(offset += nicholas_width);
+        }
+        if (show_weekly_bonus_pve_in_window) {
+            ImGui::Text("Weekly Bonus PvE");
+            ImGui::SameLine(offset += wbe_width);
+        }
+        if (show_weekly_bonus_pvp_in_window) {
+            ImGui::Text("Weekly Bonus PvP");
+            ImGui::SameLine(offset += long_text_width);
+        }
     }
     ImGui::NewLine();
     ImGui::Separator();
@@ -1196,60 +1236,92 @@ void DailyQuests::Draw(IDirect3DDevice9*)
 
 
         ImGui::SameLine(offset += short_text_width);
-        if (show_zaishen_missions_in_window) {
-            idx = GetZaishenMissionIdx(&unix);
-            write_daily_info(&subscribed_zaishen_missions[idx], GetZaishenMission(unix), true);
-            ImGui::SameLine(offset += zm_width);
-        }
-        if (show_zaishen_bounty_in_window) {
-            idx = GetZaishenBountyIdx(&unix);
-            write_daily_info(&subscribed_zaishen_bounties[idx], GetZaishenBounty(unix), true);
-            ImGui::SameLine(offset += zb_width);
-        }
-        if (show_zaishen_combat_in_window) {
-            idx = GetZaishenCombatIdx(&unix);
-            write_daily_info(&subscribed_zaishen_combats[idx], GetZaishenCombat(unix), false);
-            ImGui::SameLine(offset += zc_width);
-        }
-        if (show_zaishen_vanquishes_in_window) {
-            idx = GetZaishenVanquishIdx(&unix);
-            write_daily_info(&subscribed_zaishen_vanquishes[idx], GetZaishenVanquish(unix), true);
-            ImGui::SameLine(offset += zv_width);
-        }
-        if (show_wanted_quests_in_window) {
-            idx = GetWantedByShiningBladeIdx(&unix);
-            write_daily_info(&subscribed_wanted_quests[idx], GetWantedByShiningBlade(unix), false);
-            ImGui::SameLine(offset += ws_width);
-        }
-        if (show_nicholas_in_window) {
-            const auto nick = GetNicholasTheTraveller(unix);
-            ImGui::TextUnformatted(nick->GetQuestName());
-            auto rmb_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
-            const auto hovered = ImGui::IsItemHovered();
-            const auto collected = nick->GetCollectedQuantity();
+        if (show_presearing) {
+            // Show Pre-Searing Vanguard Quests
+            idx = GetVanguardIdx(&unix);
+            write_daily_info(&subscribed_vanguard[idx], GetVanguardQuest(unix), false);
+            ImGui::SameLine(offset += vanguard_width);
+
+            // Show Pre-Searing Nicholas Sandford Quests
+            idx = GetNicholasSandfordIdx(&unix);
+            bool prev = subscribed_nicholas_sandford[idx]; // Save the previous subscription state for syncing
+            const auto sandford_quest = GetNicholasSandford(unix);
+            write_daily_info(&subscribed_nicholas_sandford[idx], sandford_quest, false);
+            const auto collected = GetNicholasSandfordCollectedQuantity(sandford_quest);
             if (collected > 0) {
-                ImGui::SameLine();
+                ImGui::SameLine(0, 0);
                 auto col = &normal_color;
-                if (collected >= nick->quantity) col = &incomplete_color;
-                ImGui::TextColored(*col, "(%d/%d)", collected, nick->quantity);
+                if (collected >= 5) col = &incomplete_color; // Nicholas Sandford always requires 5 items
+                if (collected >= 25) col = &complete_color; // 5 gifts per day is the maximum
+                ImGui::TextColored(*col, " (%d/5)", static_cast<int>(collected));
             }
-            if (rmb_clicked) {
-                ImGui::SetContextMenu(OnNicholasContextMenu, nick);
+            ImGui::SameLine(offset += sandford_width);
+            
+            // If the subscription state has changed, sync the subscription for all quests with the same quest name
+            if (subscribed_nicholas_sandford[idx] != prev) {
+                for (size_t j = 0; j < NICHOLAS_PRE_COUNT; ++j) {
+                    if (nicholas_sandford_cycles[j].GetQuestNameEnc() && wcscmp(nicholas_sandford_cycles[j].GetQuestNameEnc(), sandford_quest->GetQuestNameEnc()) == 0) {
+                        subscribed_nicholas_sandford[j] = subscribed_nicholas_sandford[idx];
+                    }
+                }
             }
-            if (hovered) {
-                ImGui::SetTooltip("%s in %s", nick->GetQuestName(),nick->GetMapName());
-            }
-            ImGui::SameLine(offset += nicholas_width);
         }
-        if (show_weekly_bonus_pve_in_window) {
-            idx = GetWeeklyBonusPvEIdx(&unix);
-            write_daily_info(&subscribed_weekly_bonus_pve[idx], &pve_weekly_bonus_cycles[idx], false);
-            ImGui::SameLine(offset += wbe_width);
-        }
-        if (show_weekly_bonus_pvp_in_window) {
-            idx = GetWeeklyBonusPvPIdx(&unix);
-            write_daily_info(&subscribed_weekly_bonus_pvp[idx], &pvp_weekly_bonus_cycles[idx], false);
-            ImGui::SameLine(offset += long_text_width);
+        else {
+            if (show_zaishen_missions_in_window) {
+                idx = GetZaishenMissionIdx(&unix);
+                write_daily_info(&subscribed_zaishen_missions[idx], GetZaishenMission(unix), true);
+                ImGui::SameLine(offset += zm_width);
+            }
+            if (show_zaishen_bounty_in_window) {
+                idx = GetZaishenBountyIdx(&unix);
+                write_daily_info(&subscribed_zaishen_bounties[idx], GetZaishenBounty(unix), true);
+                ImGui::SameLine(offset += zb_width);
+            }
+            if (show_zaishen_combat_in_window) {
+                idx = GetZaishenCombatIdx(&unix);
+                write_daily_info(&subscribed_zaishen_combats[idx], GetZaishenCombat(unix), false);
+                ImGui::SameLine(offset += zc_width);
+            }
+            if (show_zaishen_vanquishes_in_window) {
+                idx = GetZaishenVanquishIdx(&unix);
+                write_daily_info(&subscribed_zaishen_vanquishes[idx], GetZaishenVanquish(unix), true);
+                ImGui::SameLine(offset += zv_width);
+            }
+            if (show_wanted_quests_in_window) {
+                idx = GetWantedByShiningBladeIdx(&unix);
+                write_daily_info(&subscribed_wanted_quests[idx], GetWantedByShiningBlade(unix), false);
+                ImGui::SameLine(offset += ws_width);
+            }
+            if (show_nicholas_in_window) {
+                const auto nick = GetNicholasTheTraveller(unix);
+                ImGui::TextUnformatted(nick->GetQuestName());
+                auto rmb_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+                const auto hovered = ImGui::IsItemHovered();
+                const auto collected = nick->GetCollectedQuantity();
+                if (collected > 0) {
+                    ImGui::SameLine();
+                    auto col = &normal_color;
+                    if (collected >= nick->quantity) col = &incomplete_color;
+                    ImGui::TextColored(*col, "(%d/%d)", collected, nick->quantity);
+                }
+                if (rmb_clicked) {
+                    ImGui::SetContextMenu(OnNicholasContextMenu, nick);
+                }
+                if (hovered) {
+                    ImGui::SetTooltip("%s in %s", nick->GetQuestName(),nick->GetMapName());
+                }
+                ImGui::SameLine(offset += nicholas_width);
+            }
+            if (show_weekly_bonus_pve_in_window) {
+                idx = GetWeeklyBonusPvEIdx(&unix);
+                write_daily_info(&subscribed_weekly_bonus_pve[idx], &pve_weekly_bonus_cycles[idx], false);
+                ImGui::SameLine(offset += wbe_width);
+            }
+            if (show_weekly_bonus_pvp_in_window) {
+                idx = GetWeeklyBonusPvPIdx(&unix);
+                write_daily_info(&subscribed_weekly_bonus_pvp[idx], &pvp_weekly_bonus_cycles[idx], false);
+                ImGui::SameLine(offset += long_text_width);
+            }
         }
         ImGui::NewLine();
         unix += 86400;
@@ -1261,11 +1333,15 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     ImGui::SameLine(0, 0);
     ImGui::TextColored(subscribed_color, "this color");
     ImGui::SameLine(0, 0);
-    ImGui::TextDisabled(". Areas that you haven't completed on this player are highlighted in ");
-    ImGui::SameLine(0, 0);
-    ImGui::TextColored(incomplete_color, "this color");
-    ImGui::SameLine(0, 0);
     ImGui::TextDisabled(".");
+    if (!show_presearing) {
+        ImGui::SameLine(0, 0);
+        ImGui::TextDisabled(" Areas that you haven't completed on this player are highlighted in ");
+        ImGui::SameLine(0, 0);
+        ImGui::TextColored(incomplete_color, "this color");
+        ImGui::SameLine(0, 0);
+        ImGui::TextDisabled(".");
+    }
 
     return ImGui::End();
 }
@@ -1326,6 +1402,9 @@ void DailyQuests::DrawSettingsInternal()
     ImGui::Checkbox("Weekly Bonus (PvP)", &show_weekly_bonus_pvp_in_window);
 
     ImGui::Unindent();
+    
+    ImGui::Checkbox("Show presearing dailies when in presearing", &show_presearing_dailies_in_window);
+    ImGui::ShowHelp("When enabled and you are in presearing, the window will show Vanguard Quest and Nicholas Sandford instead of the regular dailies.");
 }
 
 void DailyQuests::LoadSettings(ToolboxIni* ini)
@@ -1340,6 +1419,7 @@ void DailyQuests::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_nicholas_in_window);
     LOAD_BOOL(show_weekly_bonus_pve_in_window);
     LOAD_BOOL(show_weekly_bonus_pvp_in_window);
+    LOAD_BOOL(show_presearing_dailies_in_window);
 
     const char* zms = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_missions), "0");
     const std::bitset<ZAISHEN_MISSION_COUNT> zmb(zms);
@@ -1382,6 +1462,18 @@ void DailyQuests::LoadSettings(ToolboxIni* ini)
     for (auto i = 0u; i < wbpb.size(); i++) {
         subscribed_weekly_bonus_pvp[i] = wbpb[i] == 1;
     }
+
+    const char* vgs = ini->GetValue(Name(), VAR_NAME(subscribed_vanguard), "0");
+    const std::bitset<VANGUARD_COUNT> vgb(vgs);
+    for (auto i = 0u; i < vgb.size(); i++) {
+        subscribed_vanguard[i] = vgb[i] == 1;
+    }
+
+    const char* nss = ini->GetValue(Name(), VAR_NAME(subscribed_nicholas_sandford), "0");
+    const std::bitset<NICHOLAS_PRE_COUNT> nsb(nss);
+    for (auto i = 0u; i < nsb.size(); i++) {
+        subscribed_nicholas_sandford[i] = nsb[i] == 1;
+    }
 }
 
 void DailyQuests::SaveSettings(ToolboxIni* ini)
@@ -1396,6 +1488,7 @@ void DailyQuests::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_nicholas_in_window);
     SAVE_BOOL(show_weekly_bonus_pve_in_window);
     SAVE_BOOL(show_weekly_bonus_pvp_in_window);
+    SAVE_BOOL(show_presearing_dailies_in_window);
     std::bitset<ZAISHEN_MISSION_COUNT> zmb;
     for (auto i = 0u; i < zmb.size(); i++) {
         zmb[i] = subscribed_zaishen_missions[i] ? 1 : 0;
@@ -1437,6 +1530,18 @@ void DailyQuests::SaveSettings(ToolboxIni* ini)
         wbpb[i] = subscribed_weekly_bonus_pvp[i] ? 1 : 0;
     }
     ini->SetValue(Name(), VAR_NAME(subscribed_weekly_bonus_pvp), wbpb.to_string().c_str());
+
+    std::bitset<VANGUARD_COUNT> vgb;
+    for (auto i = 0u; i < vgb.size(); i++) {
+        vgb[i] = subscribed_vanguard[i] ? 1 : 0;
+    }
+    ini->SetValue(Name(), VAR_NAME(subscribed_vanguard), vgb.to_string().c_str());
+
+    std::bitset<NICHOLAS_PRE_COUNT> nsb;
+    for (auto i = 0u; i < nsb.size(); i++) {
+        nsb[i] = subscribed_nicholas_sandford[i] ? 1 : 0;
+    }
+    ini->SetValue(Name(), VAR_NAME(subscribed_nicholas_sandford), nsb.to_string().c_str());
 }
 
 void DailyQuests::Initialize()
@@ -1462,14 +1567,6 @@ void DailyQuests::Initialize()
         for (const auto hard_coded_name : hard_coded_vanguard_names) {
             const auto wrapped = std::format(L"\x108\x107{}\x1", TextUtils::StringToWString(hard_coded_name));
             vanguard_cycles.push_back({MapID::None, wrapped.c_str()});
-        }
-    }
-
-    if (nicholas_sandford_cycles.empty()) {
-        // TODO: Find the encoded names and maps for these
-        for (const auto hard_coded_name : hard_coded_nicholas_sandford_names) {
-            const auto wrapped = std::format(L"\x108\x107{}\x1", TextUtils::StringToWString(hard_coded_name));
-            nicholas_sandford_cycles.push_back({MapID::None, wrapped.c_str()});
         }
     }
 
