@@ -899,8 +899,8 @@ const EliteBossLocation elite_boss_locations[] = {
     {GW::Constants::SkillID::Ray_of_Judgment, 0xff, "Gorlos Skinflayer", GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1, {{0, 0}}, "level 1"},
     {GW::Constants::SkillID::Savannah_Heat, 0xff, "Magmus", GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1, {{0, 0}}, "level 3, except during Heart of the Shiverpeaks quest"},
     {GW::Constants::SkillID::Song_of_Restoration, 0xff, "Erasklion the Prolific", GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1, {{0, 0}}, "level 1"},
-    {GW::Constants::SkillID::Toxic_Chill, 0xff, "Jacado the Putrid", GW::Constants::MapID::Shards_of_Orr_Level_1, {{0, 0}}, "level 1"},
-    {GW::Constants::SkillID::Virulence, 0xff, "Jacado the Putrid", GW::Constants::MapID::Shards_of_Orr_Level_1, {{0, 0}}, "level 1"},
+    {GW::Constants::SkillID::Toxic_Chill, 0xff, "Jacado the Putrid", GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1, {{0, 0}}, "level 1"},
+    {GW::Constants::SkillID::Virulence, 0xff, "Jacado the Putrid", GW::Constants::MapID::Heart_of_the_Shiverpeaks_Level_1, {{0, 0}}, "level 1"},
 
     {GW::Constants::SkillID::Battle_Rage, 0xff, "Avatar of Destruction", GW::Constants::MapID::Destructions_Depths_Level_1, {{0, 0}}, "level 1"},
     {GW::Constants::SkillID::Onslaught, 0xff, "Avatar of Destruction", GW::Constants::MapID::Destructions_Depths_Level_1, {{0, 0}}, "level 2"},
