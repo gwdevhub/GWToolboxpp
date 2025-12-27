@@ -137,7 +137,7 @@ namespace GW {
     static_assert(sizeof(PathEngineContext) == 0x18, "struct PathEngineContext has incorrect size");
 
     struct MapContext {
-        /* +h0000 */ uint32_t h0000;
+        /* +h0000 */ uint32_t map_type; // less than 4
         /* +h0004 */ Vec2f start_pos;
         /* +h000c */ Vec2f end_pos;
         /* +h0014 */ uint32_t h0014[6];
