@@ -473,7 +473,7 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
                     label += "\n\n";
                     label += p->secondary_label->string();
                 }
-                ImGui::SetTooltip(label.c_str());
+                ImGui::SetTooltip("%s", label.c_str());
             }
 
             // Move cursor past the progress bar
