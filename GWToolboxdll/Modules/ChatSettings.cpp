@@ -221,47 +221,49 @@ namespace {
         const auto channel = GW::Chat::GetChannel(*packet->message);
         auto msg = &packet->message[1];
         switch (channel) {
-        case GW::Chat::Channel::CHANNEL_WHISPER: {
-            // msg == "Whisper Target Name,msg"
-            const auto sep = wcschr(msg, ',');
-            if (!sep)
-                return; // Invalid format for message; no separator between recipient and message
-            msg = &sep[1];
-        } break;
-        case GW::Chat::Channel::CHANNEL_GUILD:
-        case GW::Chat::Channel::CHANNEL_ALLIANCE:
-        case GW::Chat::Channel::CHANNEL_TRADE:
-        case GW::Chat::Channel::CHANNEL_GROUP:
-            break;
-        default:
-            return; // Channel doesn't support templates
+            case GW::Chat::Channel::CHANNEL_WHISPER: {
+                // msg == "Whisper Target Name,msg"
+                const auto sep = wcschr(msg, ',');
+                if (!sep) return; // Invalid format for message; no separator between recipient and message
+                msg = &sep[1];
+            } break;
+            case GW::Chat::Channel::CHANNEL_GUILD:
+            case GW::Chat::Channel::CHANNEL_ALLIANCE:
+            case GW::Chat::Channel::CHANNEL_TRADE:
+            case GW::Chat::Channel::CHANNEL_GROUP:
+                break;
+            default:
+                return; // Channel doesn't support templates
         }
 
-        auto url_found = wcsstr(msg, L"http://");
-        if(!url_found)
-            url_found = wcsstr(msg, L"https://");
-        if (!url_found)
-            return;
+        // Match http(s):// URLs that are NOT already in skill templates [url;code]
+        // Negative lookbehind (?<!\[) ensures URL doesn't start with '['
+        // Negative lookahead (?!;[^\]]+\]) ensures URL doesn't have ';code]' pattern following it
+        // Match http(s):// URLs that are NOT already in skill templates [url;code]
+        static std::wregex url_pattern = std::wregex(LR"((^|[^\[])(https?://[^\s\[\]]+)(?![;\]]))", std::regex_constants::icase);
 
-        const auto unused_msg_length = 121 - wcslen(packet->message);
-        if (unused_msg_length < 5)
-            return; // No space to convert into a template
-
-        auto url_end = wcschr(url_found, ' ');
-        if (!url_end) {
-            url_end = url_found + wcslen(url_found);
-        }
-        GW::UI::UIPacket::kSendChatMessage new_packet = *packet;
+        std::wstring msg_str(msg);
         std::wstring new_msg;
-        // Prefix
-        new_msg.append(packet->message, url_found - packet->message);
-        // URL via equipment template
-        new_msg.append(L"[");
-        new_msg.append(url_found, url_end - url_found);
-        new_msg.append(L";xx]");
-        // Suffix
-        new_msg.append(url_end);
-        new_packet.message = new_msg.data();
+
+        // Use regex_replace to wrap all matching URLs
+        new_msg = std::regex_replace(msg_str, url_pattern, L"$1[$2;xx]");
+
+        if (new_msg == msg_str) {
+            return; // No changes made
+        }
+
+        // Build full message with channel prefix
+        std::wstring full_msg;
+        full_msg.append(packet->message, msg - packet->message);
+        full_msg.append(new_msg);
+
+        if (full_msg.length() > 121) {
+            return; // Message too long
+        }
+
+        GW::UI::UIPacket::kSendChatMessage new_packet = *packet;
+        new_packet.message = full_msg.data();
+
         status->blocked = true;
         converting_message_into_url = true;
         GW::UI::SendUIMessage(GW::UI::UIMessage::kSendChatMessage, &new_packet);
@@ -317,6 +319,11 @@ namespace {
         if (status->blocked)
             return;
         switch (message_id) {
+            case GW::UI::UIMessage::kDialogueMessage: {
+                auto packet = (uint32_t*)wParam;
+                (packet);
+                break;
+            } break;
             case GW::UI::UIMessage::kAgentSpeechBubble: {
                 const auto packet = static_cast<GW::UI::UIPacket::kAgentSpeechBubble*>(wParam);
                 const auto source_living = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
@@ -405,6 +412,7 @@ void ChatSettings::Initialize()
 
     constexpr GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kAgentSpeechBubble,
+        GW::UI::UIMessage::kDialogueMessage,
         GW::UI::UIMessage::kPreferenceFlagChanged,
         GW::UI::UIMessage::kPlayerChatMessage,
         GW::UI::UIMessage::kWriteToChatLog,
