@@ -240,13 +240,11 @@ namespace {
         // Negative lookbehind (?<!\[) ensures URL doesn't start with '['
         // Negative lookahead (?!;[^\]]+\]) ensures URL doesn't have ';code]' pattern following it
         // Match http(s):// URLs that are NOT already in skill templates [url;code]
-        static std::wregex url_pattern = std::wregex(LR"((^|[^\[])(https?://[^\s\[\]]+)(?![;\]]))", std::regex_constants::icase);
+        static constexpr ctll::fixed_string url_regex = LR"((^|[^\[])(https?://[^\s\[\]]+)(?![;\]]))";
 
         std::wstring msg_str(msg);
-        std::wstring new_msg;
-
         // Use regex_replace to wrap all matching URLs
-        new_msg = std::regex_replace(msg_str, url_pattern, L"$1[$2;xx]");
+        std::wstring new_msg = TextUtils::ctre_regex_replace<url_regex, L"$1[$2;xx]">(msg_str);
 
         if (new_msg == msg_str) {
             return; // No changes made
