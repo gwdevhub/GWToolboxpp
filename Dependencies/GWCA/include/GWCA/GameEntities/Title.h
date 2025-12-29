@@ -13,11 +13,11 @@ namespace GW {
         /* +h0004 */ uint32_t current_points;
         /* +h0008 */ uint32_t current_title_tier_index;
         /* +h000C */ uint32_t points_needed_current_rank;
-        /* +h0010 */ uint32_t next_title_tier_index;
-        /* +h0014 */ uint32_t points_needed_next_rank;
-        /* +h0018 */ uint32_t max_title_rank;
-        /* +h001C */ uint32_t max_title_tier_index;
-        /* +h0020 */ uint32_t h0020;
+        /* +h0010 */ uint32_t h0010;
+        /* +h0014 */ uint32_t next_title_tier_index;
+        /* +h0018 */ uint32_t points_needed_next_rank;
+        /* +h001c */ uint32_t max_title_rank;
+        /* +h0020 */ uint32_t max_title_tier_index;
         /* +h0024 */ wchar_t* points_desc; // Pretty sure these are ptrs to title hash strings
         /* +h0028 */ wchar_t* h0028; // Pretty sure these are ptrs to title hash strings
 

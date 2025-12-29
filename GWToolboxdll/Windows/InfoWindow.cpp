@@ -819,6 +819,40 @@ namespace {
         }
     }
 
+    bool DownloadStringFiles()
+    {
+        wchar_t** file_ids = 0;
+        ArenaNetFileParser::GameAssetFile asset;
+        auto addr = GW::Scanner::FindUseOfString("index < arrsize(s_fileId)", 0x11);
+        if (!(addr && GW::Scanner::IsValidPtr(*(uintptr_t*)addr, GW::ScannerSection::Section_DATA))) {
+            return false;
+        }
+        file_ids = *(wchar_t***)addr;
+        // wchar_t *[18][99] s_fileId
+        Resources::EnsureFolderExists(Resources::GetPath("language_files"));
+        for (size_t language_id = 0; language_id < 18; language_id++) {
+            wchar_t** language_files = &file_ids[language_id * 99];
+            for (size_t file_idx = 0; file_idx < 99; file_idx++) {
+                const auto file_name = language_files[file_idx];
+                if (!(file_name && *file_name)) 
+                    continue;
+                if (!asset.readFromDat(file_name)) 
+                    return false;
+                const auto filename = std::format("language_file_{}_{}.txt", language_id, file_idx);
+                const auto write_to = Resources::GetPath("language_files", filename);
+
+                if (std::filesystem::exists(write_to)) {
+                    std::filesystem::remove(write_to);
+                }
+                auto handle = fopen(write_to.string().c_str(), "wb");
+                if (!handle) return false;
+                fwrite(asset.data.data(), asset.data.size(), 1, handle);
+                fclose(handle);
+            }
+        }
+        return true;
+    }
+
     void PostDraw() {
         HookOnCreateDx9Texture(record_dx9_textures);
         HookOnCreateTexture(record_textures);
@@ -942,7 +976,7 @@ namespace {
                     ImGui::SameLine(256.f);
                     const auto label = std::format("{}, {}", prop->position.x, prop->position.y);
                     if (ImGui::Button(label.c_str())) {
-                        GW::Map::PingCompass(GW::GamePos({ prop->position.x, prop->position.y ,0}));
+                        GW::Map::PingCompass(GW::GamePos({ prop->position.x, prop->position.y ,0 }));
                     }
                     ImGui::PopID();
                 }
@@ -952,7 +986,7 @@ namespace {
         if (ImGui::CollapsingHeader("Loaded Textures by GW File")) {
             record_textures = true;
             ImGui::PushID(&textures_created);
-            constexpr ImVec2 scaled_size = {64.f, 64.f};
+            constexpr ImVec2 scaled_size = { 64.f, 64.f };
             constexpr ImVec4 tint(1, 1, 1, 1);
             const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
             constexpr auto uv0 = ImVec2(0, 0);
@@ -1002,7 +1036,7 @@ namespace {
                             return false;
                         }
                         return true;
-                    });
+                        });
                 }
                 ImGui::PopID();
             }
@@ -1026,13 +1060,21 @@ namespace {
                 GW::GetCharContext()->player_flags |= 0x8;
                 GW::UI::Keypress((GW::UI::ControlAction)0x25);
                 GW::GetCharContext()->player_flags ^= 0x8;
-            });
+                });
         }
         if (ImGui::Button("Open GM Start Menu?")) {
             GW::GameThread::Enqueue([] {
                 GW::GetCharContext()->player_flags |= 0x8;
                 GW::UI::SendUIMessage((GW::UI::UIMessage)0x1000008a, 0, 0);
                 //GW::GetCharContext()->player_flags ^= 0x8;
+                });
+        }
+        // DownloadStringFiles
+        if (ImGui::Button("DownloadStringFiles")) {
+            Resources::EnqueueWorkerTask([]() {
+                Log::Info("Downloading strings...");
+                DownloadStringFiles() || (Log::Error("Failed to DownloadStringFiles"), true);
+                Log::Info("Done");
             });
         }
 
@@ -1069,6 +1111,9 @@ namespace {
 
 #endif
     }
+
+
+
 }
 
 void InfoWindow::Terminate()
