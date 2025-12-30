@@ -35,32 +35,6 @@ namespace {
         GW::AgentID owner;
     };
 
-    struct PendingDrop {
-        uint32_t item_id;
-        uint32_t agent_id;
-        uint32_t owner_id;
-        uint32_t model_id;
-        uint16_t quantity;
-        uint16_t value;
-        uint32_t player_count;
-        uint32_t hero_count;
-        uint32_t henchman_count;
-        std::wstring map_name;
-        std::wstring type;
-        std::wstring rarity;
-        std::wstring game_mode;
-        std::wstring item_name;
-        std::wstring info_string;
-        const wchar_t* info_string_enc;
-        const wchar_t* map_name_enc;
-        wchar_t map_name_enc_buf[8];
-        std::wstring damage_type;
-        uint16_t min_damage = 0;
-        uint16_t max_damage = 0;
-        std::wstring requirement_attribute;
-        uint8_t requirement_value = 0;
-    };
-
     struct ParsedItemInfo {
         std::wstring damage_type;
         uint16_t min_damage = 0;
@@ -467,11 +441,12 @@ namespace {
         return parsed;
     }
 
-    void WritePendingDropToCSV(PendingDrop* drop)
+    void WritePendingDropToCSV(ItemDrops::PendingDrop* drop)
     {
         const auto filename = Resources::GetPath(L"drops.csv");
         auto path = Resources::GetPath(filename);
         const bool file_exists = std::filesystem::exists(path);
+        ItemDrops::Instance().GetDropHistory().push_back(*drop);
 
         try {
             std::wofstream my_file(filename, std::ios::app);
@@ -501,13 +476,13 @@ namespace {
         delete drop;
     }
 
-    void DecodeMapName(PendingDrop* drop)
+    void DecodeMapName(ItemDrops::PendingDrop* drop)
     {
         if (drop->map_name_enc) {
             GW::UI::AsyncDecodeStr(
                 drop->map_name_enc,
                 [](void* param, const wchar_t* decoded) {
-                    auto* pending = static_cast<PendingDrop*>(param);
+                    auto* pending = static_cast<ItemDrops::PendingDrop*>(param);
                     pending->map_name = decoded ? decoded : L"";
                     WritePendingDropToCSV(pending);
                 },
@@ -520,13 +495,13 @@ namespace {
         }
     }
 
-    void DecodeInfoString(PendingDrop* drop)
+    void DecodeInfoString(ItemDrops::PendingDrop* drop)
     {
         if (drop->info_string_enc) {
             GW::UI::AsyncDecodeStr(
                 drop->info_string_enc,
                 [](void* param, const wchar_t* decoded) {
-                    auto* pending = static_cast<PendingDrop*>(param);
+                    auto* pending = static_cast<ItemDrops::PendingDrop*>(param);
                     pending->info_string = decoded ? decoded : L"";
 
                     auto parsed = ParseInfoString(pending->info_string);
@@ -547,13 +522,13 @@ namespace {
         }
     }
 
-    void DecodeItemName(PendingDrop* drop, const wchar_t* name_enc)
+    void DecodeItemName(ItemDrops::PendingDrop* drop, const wchar_t* name_enc)
     {
         if (name_enc) {
             GW::UI::AsyncDecodeStr(
                 name_enc,
                 [](void* param, const wchar_t* decoded) {
-                    auto* pending = static_cast<PendingDrop*>(param);
+                    auto* pending = static_cast<ItemDrops::PendingDrop*>(param);
                     pending->item_name = decoded ? decoded : L"";
                     DecodeInfoString(pending);
                 },
@@ -572,10 +547,8 @@ namespace {
             return;
         }
 
-        
-     
-        auto* drop = new PendingDrop();
-
+        auto* drop = new ItemDrops::PendingDrop();
+        drop->timestamp = std::chrono::system_clock::now();
         drop->item_id = item->item_id;
         drop->agent_id = item->agent_id;
         drop->owner_id = owner_id;
@@ -882,4 +855,20 @@ void ItemDrops::DrawSettingsInternal()
         ImGui::PopID();
     }
     style.Colors[ImGuiCol_Header] = old_color;
+}
+
+
+std::vector<ItemDrops::PendingDrop>& ItemDrops::GetDropHistory()
+{
+    return drop_history;
+}
+
+void ItemDrops::ClearDropHistory()
+{
+    drop_history.clear();
+}
+
+bool ItemDrops::IsTrackingEnabled() const
+{
+    return track_drops;
 }
