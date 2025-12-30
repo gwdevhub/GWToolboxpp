@@ -129,6 +129,7 @@ namespace GW {
             kAgentUpdate        = 0x10000007,        // 0x10000007, wparam = uint32_t agent_id
             kAgentDestroy       = 0x10000008,        // 0x10000008, wparam = uint32_t agent_id
             kUpdateAgentEffects = 0x10000009,        // 0x10000009
+            kDialogueMessage = 0x1000000c,     // 0x10000009
             kAgentSpeechBubble = 0x10000017,         // 0x10000017
             kShowAgentNameTag = 0x10000019,          // 0x10000019, wparam = AgentNameTagInfo*
             kHideAgentNameTag = 0x1000001A,          // 0x1000001A
@@ -284,6 +285,13 @@ namespace GW {
         };
 
         namespace UIPacket {
+            struct kDialogueMessage {
+                uint32_t agent_id;
+                wchar_t* sender;
+                wchar_t* message;
+                uint32_t h000c;
+                uint32_t h0010;
+            };
             struct kErrorMessage {
                 uint32_t error_id;
                 wchar_t* message;
