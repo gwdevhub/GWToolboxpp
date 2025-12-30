@@ -1,5 +1,8 @@
 #include "stdafx.h"
+#include <chrono>
+#include <iomanip>
 
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/GameEntities/Item.h>
@@ -8,12 +11,16 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 
 #include <GWCA/Packets/StoC.h>
 
 #include <Utils/GuiUtils.h>
+#include <Utils/ToolboxUtils.h>
 
-#include <Modules/ItemFilter.h>
+#include <Modules/ItemDrops.h>
+#include <Modules/Resources.h>
 
 #define LOAD_BOOL(var) var = ini->GetBoolValue(Name(), #var, var);
 #define SAVE_BOOL(var) ini->SetBoolValue(Name(), #var, var);
@@ -26,6 +33,40 @@ namespace {
     struct ItemOwner {
         GW::ItemID item;
         GW::AgentID owner;
+    };
+
+    struct PendingDrop {
+        uint32_t item_id;
+        uint32_t agent_id;
+        uint32_t owner_id;
+        uint32_t model_id;
+        uint16_t quantity;
+        uint16_t value;
+        uint32_t player_count;
+        uint32_t hero_count;
+        uint32_t henchman_count;
+        std::wstring map_name;
+        std::wstring type;
+        std::wstring rarity;
+        std::wstring game_mode;
+        std::wstring item_name;
+        std::wstring info_string;
+        const wchar_t* info_string_enc;
+        const wchar_t* map_name_enc;
+        wchar_t map_name_enc_buf[8];
+        std::wstring damage_type;
+        uint16_t min_damage = 0;
+        uint16_t max_damage = 0;
+        std::wstring requirement_attribute;
+        uint8_t requirement_value = 0;
+    };
+
+    struct ParsedItemInfo {
+        std::wstring damage_type;
+        uint16_t min_damage = 0;
+        uint16_t max_damage = 0;
+        std::wstring requirement_attribute;
+        uint8_t requirement_value = 0;
     };
 
     using ItemModelID = decltype(GW::Item::model_id);
@@ -42,6 +83,7 @@ namespace {
     bool hide_party_purple = false;
     bool hide_party_gold = false;
     bool hide_party_green = false;
+    bool track_drops = false;
     std::map<ItemModelID, std::string> dont_hide_for_player{};
     std::map<ItemModelID, std::string> dont_hide_for_party{};
 
@@ -82,6 +124,104 @@ namespace {
                 return Rarity::Green;
             default:
                 return Rarity::Unknown;
+        }
+    }
+
+    const wchar_t* GetRarityString(const Rarity rarity)
+    {
+        switch (rarity) {
+            case Rarity::White:
+                return L"White";
+            case Rarity::Blue:
+                return L"Blue";
+            case Rarity::Purple:
+                return L"Purple";
+            case Rarity::Gold:
+                return L"Gold";
+            case Rarity::Green:
+                return L"Green";
+            case Rarity::Unknown:
+            default:
+                return L"Unknown";
+        }
+    }
+
+    const wchar_t* GetItemTypeString(const GW::Constants::ItemType type)
+    {
+        switch (type) {
+            case GW::Constants::ItemType::Salvage:
+                return L"Salvage";
+            case GW::Constants::ItemType::Axe:
+                return L"Axe";
+            case GW::Constants::ItemType::Bag:
+                return L"Bag";
+            case GW::Constants::ItemType::Boots:
+                return L"Boots";
+            case GW::Constants::ItemType::Bow:
+                return L"Bow";
+            case GW::Constants::ItemType::Bundle:
+                return L"Bundle";
+            case GW::Constants::ItemType::Chestpiece:
+                return L"Chestpiece";
+            case GW::Constants::ItemType::Rune_Mod:
+                return L"Rune_Mod";
+            case GW::Constants::ItemType::Usable:
+                return L"Usable";
+            case GW::Constants::ItemType::Dye:
+                return L"Dye";
+            case GW::Constants::ItemType::Materials_Zcoins:
+                return L"Materials_Zcoins";
+            case GW::Constants::ItemType::Offhand:
+                return L"Offhand";
+            case GW::Constants::ItemType::Gloves:
+                return L"Gloves";
+            case GW::Constants::ItemType::Hammer:
+                return L"Hammer";
+            case GW::Constants::ItemType::Headpiece:
+                return L"Headpiece";
+            case GW::Constants::ItemType::CC_Shards:
+                return L"CC_Shards";
+            case GW::Constants::ItemType::Key:
+                return L"Key";
+            case GW::Constants::ItemType::Leggings:
+                return L"Leggings";
+            case GW::Constants::ItemType::Gold_Coin:
+                return L"Gold_Coin";
+            case GW::Constants::ItemType::Quest_Item:
+                return L"Quest_Item";
+            case GW::Constants::ItemType::Wand:
+                return L"Wand";
+            case GW::Constants::ItemType::Shield:
+                return L"Shield";
+            case GW::Constants::ItemType::Staff:
+                return L"Staff";
+            case GW::Constants::ItemType::Sword:
+                return L"Sword";
+            case GW::Constants::ItemType::Kit:
+                return L"Kit";
+            case GW::Constants::ItemType::Trophy:
+                return L"Trophy";
+            case GW::Constants::ItemType::Scroll:
+                return L"Scroll";
+            case GW::Constants::ItemType::Daggers:
+                return L"Daggers";
+            case GW::Constants::ItemType::Present:
+                return L"Present";
+            case GW::Constants::ItemType::Minipet:
+                return L"Minipet";
+            case GW::Constants::ItemType::Scythe:
+                return L"Scythe";
+            case GW::Constants::ItemType::Spear:
+                return L"Spear";
+            case GW::Constants::ItemType::Storybook:
+                return L"Storybook";
+            case GW::Constants::ItemType::Costume:
+                return L"Costume";
+            case GW::Constants::ItemType::Costume_Headpiece:
+                return L"Costume_Headpiece";
+            case GW::Constants::ItemType::Unknown:
+            default:
+                return L"Unknown";
         }
     }
 
@@ -275,6 +415,193 @@ namespace {
         return false;
     }
 
+    std::wstring SanitizeForCSV(const std::wstring& str)
+    {
+        std::wstring result;
+        bool needs_quotes = false;
+
+        for (wchar_t c : str) {
+            if (c == L'"') {
+                result += L"\"\"";
+                needs_quotes = true;
+            }
+            else if (c == L',' || c == L'\n' || c == L'\r') {
+                if (c == L'\n' || c == L'\r') {
+                    result += L' ';
+                }
+                else {
+                    result += c;
+                }
+                needs_quotes = true;
+            }
+            else {
+                result += c;
+            }
+        }
+
+        if (needs_quotes) {
+            return L"\"" + result + L"\"";
+        }
+        return result;
+    }
+
+    ParsedItemInfo ParseInfoString(const std::wstring& info)
+    {
+        ParsedItemInfo parsed;
+
+        std::wregex damage_regex(L"(\\w+) Dmg: (\\d+)-(\\d+)");
+        std::wsmatch damage_match;
+        if (std::regex_search(info, damage_match, damage_regex)) {
+            parsed.damage_type = damage_match[1].str();
+            parsed.min_damage = static_cast<uint16_t>(std::stoi(damage_match[2].str()));
+            parsed.max_damage = static_cast<uint16_t>(std::stoi(damage_match[3].str()));
+        }
+
+        std::wregex req_regex(L"Requires (\\d+) ([^)<]+)");
+        std::wsmatch req_match;
+        if (std::regex_search(info, req_match, req_regex)) {
+            parsed.requirement_value = static_cast<uint8_t>(std::stoi(req_match[1].str()));
+            parsed.requirement_attribute = req_match[2].str();
+        }
+
+        return parsed;
+    }
+
+    void WritePendingDropToCSV(PendingDrop* drop)
+    {
+        const auto filename = Resources::GetPath(L"drops.csv");
+        auto path = Resources::GetPath(filename);
+        const bool file_exists = std::filesystem::exists(path);
+
+        try {
+            std::wofstream my_file(filename, std::ios::app);
+            if (!my_file.is_open()) {
+                delete drop;
+                return;
+            }
+
+            if (!file_exists) {
+                my_file << L"timestamp,item_id,item_name,item_type,rarity,quantity,map,value,damage_type,min_damage,max_damage,requirement_attribute,requirement_value,item_agent_id,owner_id,model_id,player_count,hero_count,henchman_count,game_mode\n";
+            }
+
+            const auto now = std::chrono::system_clock::now();
+            const auto time = std::chrono::system_clock::to_time_t(now);
+            std::tm tm_buf{};
+            localtime_s(&tm_buf, &time);
+
+            const auto safe_name = SanitizeForCSV(drop->item_name);
+
+            my_file << std::put_time(&tm_buf, L"%Y-%m-%d %H:%M:%S") << L"," << drop->item_id << L"," << safe_name << L"," << drop->type << L"," << drop->rarity << L"," << drop->quantity << L"," << drop->map_name << L"," << drop->value << L","
+                    << drop->damage_type << L","
+                    << drop->min_damage << L"," << drop->max_damage << L"," << drop->requirement_attribute << L"," << static_cast<int>(drop->requirement_value) << L"," << drop->agent_id << L"," << drop->owner_id << L"," << drop->model_id << L","
+                    << drop->player_count << L"," << drop->hero_count << L"," << drop->henchman_count << L"," << drop->game_mode << L"\n";
+            my_file.flush();
+            my_file.close();
+        } catch (...) {}
+        delete drop;
+    }
+
+    void DecodeMapName(PendingDrop* drop)
+    {
+        if (drop->map_name_enc) {
+            GW::UI::AsyncDecodeStr(
+                drop->map_name_enc,
+                [](void* param, const wchar_t* decoded) {
+                    auto* pending = static_cast<PendingDrop*>(param);
+                    pending->map_name = decoded ? decoded : L"";
+                    WritePendingDropToCSV(pending);
+                },
+                drop
+            );
+        }
+        else {
+            drop->map_name = L"";
+            WritePendingDropToCSV(drop);
+        }
+    }
+
+    void DecodeInfoString(PendingDrop* drop)
+    {
+        if (drop->info_string_enc) {
+            GW::UI::AsyncDecodeStr(
+                drop->info_string_enc,
+                [](void* param, const wchar_t* decoded) {
+                    auto* pending = static_cast<PendingDrop*>(param);
+                    pending->info_string = decoded ? decoded : L"";
+
+                    auto parsed = ParseInfoString(pending->info_string);
+                    pending->damage_type = parsed.damage_type;
+                    pending->min_damage = parsed.min_damage;
+                    pending->max_damage = parsed.max_damage;
+                    pending->requirement_attribute = parsed.requirement_attribute;
+                    pending->requirement_value = parsed.requirement_value;
+
+                    DecodeMapName(pending);
+                },
+                drop
+            );
+        }
+        else {
+            drop->info_string = L"";
+            DecodeMapName(drop);
+        }
+    }
+
+    void DecodeItemName(PendingDrop* drop, const wchar_t* name_enc)
+    {
+        if (name_enc) {
+            GW::UI::AsyncDecodeStr(
+                name_enc,
+                [](void* param, const wchar_t* decoded) {
+                    auto* pending = static_cast<PendingDrop*>(param);
+                    pending->item_name = decoded ? decoded : L"";
+                    DecodeInfoString(pending);
+                },
+                drop
+            );
+        }
+        else {
+            drop->item_name = L"";
+            DecodeInfoString(drop);
+        }
+    }
+
+    void WriteDropToCSV(const GW::Item* item, const GW::AgentID owner_id)
+    {
+        if (!item || !item->item_id || !item->name_enc) {
+            return;
+        }
+
+        
+     
+        auto* drop = new PendingDrop();
+
+        drop->item_id = item->item_id;
+        drop->agent_id = item->agent_id;
+        drop->owner_id = owner_id;
+        drop->model_id = item->model_id;
+        drop->quantity = item->quantity;
+        drop->type = GetItemTypeString(item->type);
+        drop->rarity = GetRarityString(GetRarity(*item));
+        drop->player_count = GW::PartyMgr::GetPartyPlayerCount();
+        drop->hero_count = GW::PartyMgr::GetPartyHeroCount();
+        drop->henchman_count = GW::PartyMgr::GetPartyHenchmanCount();
+        drop->game_mode = GW::PartyMgr::GetIsPartyInHardMode() ? L"Hard Mode" : L"Normal Mode";
+        drop->value = item->value;
+        drop->info_string_enc = item->info_string;
+
+        const auto* map = GW::Map::GetCurrentMapInfo();
+        if (map) {
+            GW::UI::UInt32ToEncStr(map->name_id, drop->map_name_enc_buf, 8);
+            drop->map_name_enc = drop->map_name_enc_buf;
+        }
+        else {
+            drop->map_name_enc = nullptr;
+        }
+
+        DecodeItemName(drop, item->name_enc);
+    }
+
     void OnAgentAdd(GW::HookStatus* status, const GW::Packet::StoC::AgentAdd* packet)
     {
         const auto* item = GetItemFromPacket(*packet);
@@ -287,6 +614,10 @@ namespace {
         const auto owner_id = GetItemOwner(item->item_id);
         const auto can_pick_up = owner_id == 0                    // not reserved
                                  || owner_id == my_agent_id; // reserved for user
+
+        if (track_drops) {
+            WriteDropToCSV(item, owner_id);
+        }
 
         if (WantToHide(*item, can_pick_up)) {
             status->blocked = true;
@@ -357,7 +688,7 @@ namespace {
     }
 } // namespace
 
-void ItemFilter::Initialize()
+void ItemDrops::Initialize()
 {
     ToolboxModule::Initialize();
 
@@ -372,7 +703,7 @@ void ItemFilter::Initialize()
     });
 }
 
-void ItemFilter::SignalTerminate()
+void ItemDrops::SignalTerminate()
 {
     ToolboxModule::SignalTerminate();
 
@@ -386,12 +717,12 @@ void ItemFilter::SignalTerminate()
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
-bool ItemFilter::CanTerminate()
+bool ItemDrops::CanTerminate()
 {
     return suppressed_packets.empty();
 }
 
-void ItemFilter::LoadSettings(ToolboxIni* ini)
+void ItemDrops::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
     LOAD_BOOL(hide_player_white);
@@ -404,12 +735,13 @@ void ItemFilter::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(hide_party_purple);
     LOAD_BOOL(hide_party_gold);
     LOAD_BOOL(hide_party_green);
+    LOAD_BOOL(track_drops);
 
     dont_hide_for_player = GuiUtils::IniToMap<decltype(dont_hide_for_player)>(ini, Name(), "dont_hide_for_player", default_dont_hide_for_player);
     dont_hide_for_party = GuiUtils::IniToMap<decltype(dont_hide_for_party)>(ini, Name(), "dont_hide_for_party", default_dont_hide_for_party);
 }
 
-void ItemFilter::SaveSettings(ToolboxIni* ini)
+void ItemDrops::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(hide_player_white);
@@ -422,13 +754,20 @@ void ItemFilter::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(hide_party_purple);
     SAVE_BOOL(hide_party_gold);
     SAVE_BOOL(hide_party_green);
+    SAVE_BOOL(track_drops);
 
     GuiUtils::MapToIni(ini, Name(), "dont_hide_for_player", dont_hide_for_player);
     GuiUtils::MapToIni(ini, Name(), "dont_hide_for_party", dont_hide_for_party);
 }
 
-void ItemFilter::DrawSettingsInternal()
+void ItemDrops::DrawSettingsInternal()
 {
+    ImGui::Text("Drop Tracking Settings");
+    ImGui::Checkbox("Drop Tracking Enabled", &track_drops);
+    ImGui::ShowHelp("This creates a CSV at DIRECTORY which contains all the information about drops you've gotten.");
+    ImGui::Separator();
+    ImGui::Text("Item Filter Settings");
+    ImGui::NewLine();
     ImGui::Text("Block the following item drops:");
     ImGui::Separator();
     ImGui::TextDisabled("First column is for items you can pick up, second for items reserved for a party member");

@@ -3,11 +3,11 @@
 #include <ToolboxModule.h>
 
 
-class ItemFilter : public ToolboxModule {
+class ItemDrops : public ToolboxModule {
 public:
-    static ItemFilter& Instance()
+    static ItemDrops& Instance()
     {
-        static ItemFilter instance;
+        static ItemDrops instance;
         return instance;
     }
 

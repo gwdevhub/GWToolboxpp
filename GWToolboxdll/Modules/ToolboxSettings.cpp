@@ -11,7 +11,7 @@
 #include <Modules/Updater.h>
 #include <Modules/Resources.h>
 #include <Modules/ChatFilter.h>
-#include <Modules/ItemFilter.h>
+#include <Modules/ItemDrops.h>
 #include <Modules/DiscordModule.h>
 #include <Modules/TwitchModule.h>
 #include <Modules/PartyWindowModule.h>
@@ -63,6 +63,7 @@
 #include <Windows/ArmoryWindow.h>
 #include <Windows/EnemyWindow.h>
 #include <Windows/Pathfinding/PathfindingWindow.h>
+#include <Windows/DropTrackerWindow.h>
 #ifdef _DEBUG
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/DoorMonitorWindow.h>
@@ -138,7 +139,7 @@ namespace {
 #endif
         PluginModule::Instance(),
         ChatFilter::Instance(),
-        ItemFilter::Instance(),
+        ItemDrops::Instance(),
         PartyWindowModule::Instance(),
         ToastNotifications::Instance(),
         DiscordModule::Instance(),
@@ -212,7 +213,8 @@ namespace {
         DupingWindow::Instance(),
         ArmoryWindow::Instance(),
         EnemyWindow::Instance(),
-        TargetInfoWindow::Instance()
+        TargetInfoWindow::Instance(),
+        DropTrackerWindow::Instance()
     };
 
     bool modules_sorted = false;
