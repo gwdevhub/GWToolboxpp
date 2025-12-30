@@ -31,6 +31,22 @@ void DropTrackerWindow::Terminate()
     ToolboxWindow::Terminate();
 }
 
+ImVec4 GetRarityColor(const std::wstring& rarity)
+{
+    if (rarity == L"White")
+        return ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
+    else if (rarity == L"Blue")
+        return ImVec4(0.145f, 0.588f, 0.745f, 1.0f);
+    else if (rarity == L"Purple")
+        return ImVec4(0.486f, 0.373f, 0.659f, 1.0f);
+    else if (rarity == L"Gold")
+        return ImVec4(0.992f, 0.792f, 0.325f, 1.0f);
+    else if (rarity == L"Green")
+        return ImVec4(0.0f, 0.9f, 0.0f, 1.0f);
+    else
+        return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+}
+
 bool IsWeapon(const ItemDrops::PendingDrop& drop)
 {
     return drop.type == L"Axe" || drop.type == L"Sword" || drop.type == L"Hammer" || drop.type == L"Bow" || drop.type == L"Staff" || drop.type == L"Wand" || drop.type == L"Daggers" || drop.type == L"Scythe" || drop.type == L"Spear";
@@ -94,7 +110,8 @@ void DrawDefaultTable(std::vector<ItemDrops::PendingDrop> drops)
             ImGui::TableNextColumn();
             ImGui::Text("%s", time_str);
             ImGui::TableNextColumn();
-            ImGui::Text("%ls", drop.item_name.c_str());
+
+            ImGui::TextColored(GetRarityColor(drop.rarity), "%ls", drop.item_name.c_str());
             ImGui::TableNextColumn();
             ImGui::Text("%ls", drop.type.c_str());
             ImGui::TableNextColumn();
@@ -159,9 +176,10 @@ void DrawDefaultGroupTable(const std::map<std::wstring, std::vector<const ItemDr
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
                     }
-
-                    ImGui::Text("  %s - %ls x%d", time_str, drop->item_name.c_str(), drop->quantity);
+                    ImGui::Text("%s", time_str);
+                    ImGui::TextColored(GetRarityColor(drop->rarity), "%ls", drop->item_name.c_str());
                     ImGui::TableNextColumn();
+                    ImGui::Text("%d", drop->quantity);
                     ImGui::TableNextColumn();
 
                     ImGui::PopID();
@@ -259,9 +277,9 @@ void DrawWeaponsTable(const std::map<std::wstring, std::vector<const ItemDrops::
                     ImGui::TableNextColumn();
 
                     // Show item details with weapon stats
-                    ImGui::Text("  %s - %ls", time_str, drop->item_name.c_str());
-
+                    ImGui::TextColored(GetRarityColor(drop->rarity), "%ls", drop->item_name.c_str());
                     ImGui::TableNextColumn();
+                    ImGui::Text("%d", drop->quantity);
                     ImGui::TableNextColumn();
                     if (drop->min_damage > 0 && drop->max_damage > 0) {
                         ImGui::Text("%d-%d", drop->min_damage, drop->max_damage);
