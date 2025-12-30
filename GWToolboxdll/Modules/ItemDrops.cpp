@@ -466,10 +466,25 @@ namespace {
 
             const auto safe_name = SanitizeForCSV(drop->item_name);
 
-            my_file << std::put_time(&tm_buf, L"%Y-%m-%d %H:%M:%S") << L"," << drop->item_id << L"," << safe_name << L"," << drop->type << L"," << drop->rarity << L"," << drop->quantity << L"," << drop->map_name << L"," << drop->value << L","
+            my_file << std::put_time(&tm_buf, L"%Y-%m-%d %H:%M:%S") << L"," 
+                    << drop->item_id << L"," << safe_name << L"," 
+                    << drop->type << L"," 
+                    << drop->rarity << L"," 
+                    << drop->quantity << L"," 
+                    << drop->map_name << L"," 
+                    << drop->value << L","
                     << drop->damage_type << L","
-                    << drop->min_damage << L"," << drop->max_damage << L"," << drop->requirement_attribute << L"," << static_cast<int>(drop->requirement_value) << L"," << drop->agent_id << L"," << drop->owner_id << L"," << drop->model_id << L","
-                    << drop->player_count << L"," << drop->hero_count << L"," << drop->henchman_count << L"," << drop->game_mode << L"\n";
+                    << drop->min_damage << L"," 
+                    << drop->max_damage << L"," 
+                    << drop->requirement_attribute << L","
+                    << static_cast<int>(drop->requirement_value) << L"," 
+                    << drop->agent_id << L"," 
+                    << drop->owner_id << L"," 
+                    << drop->model_id << L","
+                    << drop->player_count << L"," 
+                    << drop->hero_count << L"," 
+                    << drop->henchman_count << L","
+                    << drop->game_mode << L"\n";
             my_file.flush();
             my_file.close();
         } catch (...) {}
@@ -856,7 +871,6 @@ void ItemDrops::DrawSettingsInternal()
     }
     style.Colors[ImGuiCol_Header] = old_color;
 }
-
 
 std::vector<ItemDrops::PendingDrop>& ItemDrops::GetDropHistory()
 {

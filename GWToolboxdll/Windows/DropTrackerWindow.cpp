@@ -23,6 +23,7 @@ namespace {
     GroupMode current_group_mode = GroupMode::None;
     const char* group_mode_names[] = {"None", "Item Name", "Map", "Rarity", "Type", "Weapon"};
     float icon_size = 48;
+    float run_count = 0;
 }
 
 void DropTrackerWindow::Terminate()
@@ -365,10 +366,12 @@ void DropTrackerWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
     LOAD_FLOAT(icon_size);
+    LOAD_FLOAT(run_count);
 }
 
 void DropTrackerWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    SAVE_FLOAT(icon_size)
+    SAVE_FLOAT(icon_size);
+    SAVE_FLOAT(run_count);
 }
