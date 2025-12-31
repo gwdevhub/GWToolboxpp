@@ -132,8 +132,7 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigne
 LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const char* extra_info)
 {
 #ifdef _DEBUG
-    if (IsDebuggerPresent())
-        __debugbreak();
+    __debugbreak();
 #endif
 
     // Disable WER right at the start of crash handling
