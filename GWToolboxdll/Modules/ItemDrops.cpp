@@ -88,6 +88,22 @@ namespace {
     using namespace GW::Constants::ItemID;
 
 
+    std::map<std::wstring, GuiUtils::EncString*> cached_item_names;
+    GuiUtils::EncString* GetItemName(const wchar_t* enc_string) {
+        if (!enc_string) return nullptr;
+        if (!cached_item_names.contains(enc_string)) {
+            auto enc_str = (new GuiUtils::EncString(enc_string))->language(GW::Constants::Language::English);
+            cached_item_names[enc_string] = enc_str;
+        }
+        return cached_item_names[enc_string];
+    }
+    void ClearItemNames()
+    {
+        for (auto i : cached_item_names) {
+            i.second->Release();
+        }
+        cached_item_names.clear();
+    }
 
 
     GW::Item* GetItemFromPacket(const GW::Packet::StoC::AgentAdd& packet)
@@ -283,15 +299,8 @@ namespace {
 
     std::map<uint32_t, bool> already_seen_items;
 
-    uint32_t GetItemAgentHash(GW::Item* item) {
-        if (!item) return 0;
-        const auto agent = (GW::AgentItem*)GW::Agents::GetAgentByID(item->agent_id);
-        if (!agent) return 0;
-        uint32_t hash = agent->agent_id;
-        hash ^= static_cast<uint32_t>(agent->pos.x * 1000.0f);
-        hash ^= (static_cast<uint32_t>(agent->pos.y * 1000.0f) << 16);
-
-        return hash;
+    bool ShouldTrackItem(GW::Item* item) {
+        return track_drops && item && item->type != GW::Constants::ItemType::Bundle;
     }
 
     void OnAgentAdd(GW::HookStatus* status, const GW::Packet::StoC::AgentAdd* packet)
@@ -307,7 +316,7 @@ namespace {
         const auto can_pick_up = owner_id == 0                    // not reserved
                                  || owner_id == my_agent_id; // reserved for user
 
-        if (track_drops) {
+        if (ShouldTrackItem(item)) {
             uint32_t hash = packet->agent_id;
             hash ^= static_cast<uint32_t>(packet->position.x * 1000.0f);
             hash ^= (static_cast<uint32_t>(packet->position.y * 1000.0f) << 16);
@@ -345,7 +354,9 @@ namespace {
         already_seen_items.clear();
         suppressed_packets.clear();
         item_owners.clear();
+        ClearItemNames();
     }
+
 
     void OnItemReuseId(GW::HookStatus*, GW::Packet::StoC::ItemGeneral_ReuseID* packet)
     {
@@ -407,7 +418,7 @@ void ItemDrops::Initialize()
 void ItemDrops::Update(float) {
     if (!pending_write_to_csv.empty() && (!last_drops_written || TIMER_DIFF(last_drops_written) > 5000)) {
         for (auto pending : pending_write_to_csv) {
-            if (pending->item_name.IsDecoding()) 
+            if (GetItemName(pending->item_name_enc)->IsDecoding()) 
                 return;
         }
         last_drops_written = TIMER_INIT();
@@ -444,6 +455,7 @@ void ItemDrops::SignalTerminate()
 
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
     ClearDropHistory();
+    ClearItemNames();
 }
 
 bool ItemDrops::CanTerminate()
@@ -637,28 +649,38 @@ ItemDrops::PendingDrop::PendingDrop(GW::Item* _item)
     ASSERT(_item);
     auto item = (InventoryManager::Item*)_item;
     instance_time = GW::Map::GetInstanceTime();
-    model_id = item->model_id;
-    model_file_id = item->model_file_id;
-    interaction = item->interaction;
-    quantity = item->quantity;
+    quantity = item->quantity & 0xff;
     type = item->type;
     rarity = GW::Items::GetRarity(item);
-    player_count = GW::PartyMgr::GetPartyPlayerCount() & 0xff;
-    hero_count = GW::PartyMgr::GetPartyHeroCount() & 0xff;
-    henchman_count = GW::PartyMgr::GetPartyHenchmanCount() & 0xff;
+    player_count = GW::PartyMgr::GetPartyPlayerCount() & 0xf;
+    hero_count = GW::PartyMgr::GetPartyHeroCount() & 0xf;
+    henchman_count = GW::PartyMgr::GetPartyHenchmanCount() & 0xf;
     hard_mode = GW::PartyMgr::GetIsPartyInHardMode();
     value = item->value;
     map_id = GW::Map::GetMapID();
     icon = Resources::GetItemImage(item);
     Resources::GetMapName(map_id)->wstring();
-    item_name.reset(item->name_enc, false)->wstring();
+
+    const wchar_t* item_name_pt = L"\x101";
+    if (item->single_item_name && *item->single_item_name) {
+        item_name_pt = item->single_item_name;
+    }
+    else if (item->name_enc && *item->name_enc) {
+        item_name_pt = item->name_enc;
+    }
+
+    const auto len = wcslen(item_name_pt);
+    item_name_enc = new wchar_t[len + 1];
+    wcscpy(item_name_enc, item_name_pt);
+
+    ::GetItemName(item_name_enc)->wstring(); // Trigger decode.
 
     time(&system_time);
 
     auto mod = item->GetModifier(0x2798);
     if (mod) {
         requirement_attribute = (GW::Constants::AttributeByte)mod->arg1();
-        requirement_value = (uint8_t)mod->arg2() & 0xff;
+        requirement_value = mod->arg2() & 0xf;
     }
     mod = item->GetModifier(0xa7a8);
     if (mod) {
@@ -671,12 +693,21 @@ ItemDrops::PendingDrop::PendingDrop(GW::Item* _item)
     }
 }
 
+ItemDrops::PendingDrop::~PendingDrop() {
+    delete[] item_name_enc;
+}
+
 const wchar_t* ItemDrops::PendingDrop::GetCSVHeader()
 {
-    return L"Timestamp,Map,ItemName,ModelID,ModelFileID,Interaction,Quantity,Value,"
+    return L"Timestamp,Map,ItemName,Quantity,Value,"
            L"ItemType,Rarity,DamageType,MinDamage,MaxDamage,"
            L"RequirementAttribute,RequirementValue,"
            L"PlayerCount,HeroCount,HenchmanCount,HardMode";
+}
+
+GuiUtils::EncString* ItemDrops::PendingDrop::GetItemName()
+{
+    return ::GetItemName(item_name_enc);
 }
 
 const std::wstring ItemDrops::PendingDrop::toCSV()
@@ -684,10 +715,7 @@ const std::wstring ItemDrops::PendingDrop::toCSV()
     std::wstringstream ss;
     ss << instance_time << L",";
     ss << TextUtils::SanitizeForCSV(Resources::GetMapName(map_id)->wstring()) << L",";
-    ss << TextUtils::SanitizeForCSV(item_name.wstring()) << L",";
-    ss << model_id << L",";
-    ss << model_file_id << L",";
-    ss << interaction;
+    ss << TextUtils::SanitizeForCSV(GetItemName()->wstring()) << L",";
     ss << quantity << L",";
     ss << value << L",";
     ss << GW::Items::GetItemTypeName(type) << L",";
@@ -700,6 +728,6 @@ const std::wstring ItemDrops::PendingDrop::toCSV()
     ss << player_count << L",";
     ss << hero_count << L",";
     ss << henchman_count << L",";
-    ss << (hard_mode ? L"1" : L"0") << L",";
+    ss << (hard_mode ? L"1" : L"0");
     return ss.str();
 }

@@ -94,7 +94,7 @@ namespace {
                 ImGui::Text("%s", time_str);
                 ImGui::TableNextColumn();
 
-                ImGui::TextColored(GW::Items::GetRarityColor(drop->rarity), "%s", drop->item_name.string().c_str());
+                ImGui::TextColored(GW::Items::GetRarityColor(drop->rarity), "%s", drop->GetItemName()->string().c_str());
                 ImGui::TableNextColumn();
                 ImGui::Text("%ls", GW::Items::GetItemTypeName(drop->type));
                 ImGui::TableNextColumn();
@@ -159,7 +159,7 @@ namespace {
                             ImGui::TableNextColumn();
                         }
                         ImGui::Text("%s", time_str);
-                        ImGui::TextColored(GW::Items::GetRarityColor(drop->rarity), "%s", drop->item_name.string().c_str());
+                        ImGui::TextColored(GW::Items::GetRarityColor(drop->rarity), "%s", drop->GetItemName()->string().c_str());
                         ImGui::TableNextColumn();
                         ImGui::Text("%d", drop->quantity);
                         ImGui::TableNextColumn();
@@ -258,7 +258,7 @@ namespace {
                         ImGui::TableNextColumn();
 
                         // Show item details with weapon stats
-                        ImGui::TextColored(GW::Items::GetRarityColor(drop->rarity), "%s", drop->item_name.string().c_str());
+                        ImGui::TextColored(GW::Items::GetRarityColor(drop->rarity), "%s", drop->GetItemName()->string().c_str());
                         ImGui::TableNextColumn();
                         ImGui::Text("%d", drop->quantity);
                         ImGui::TableNextColumn();
@@ -324,11 +324,11 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
         else {
             std::map<std::wstring, std::vector<ItemDrops::PendingDrop*>> grouped;
 
-            for (const auto& drop : drops) {
+            for (auto drop : drops) {
                 std::wstring key;
                 switch (current_group_mode) {
                     case GroupMode::ItemName:
-                        key = drop->item_name.encoded();
+                        key = drop->GetItemName()->wstring();
                         break;
                     case GroupMode::Map:
                         key = Resources::GetMapName(drop->map_id)->wstring();
