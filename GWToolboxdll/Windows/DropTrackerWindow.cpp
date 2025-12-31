@@ -1,13 +1,8 @@
-#include <Color.h>
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Context/WorldContext.h>
-#include <GWCA/GameEntities/Agent.h>
-#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/PartyMgr.h>
 
 #include <Timer.h>
 #include <Utils/GuiUtils.h>
@@ -15,6 +10,8 @@
 #include <Modules/ItemDrops.h>
 #include <map>
 #include <Modules/Resources.h>
+
+#include "Utils/TextUtils.h"
 
 
 namespace {
@@ -24,10 +21,7 @@ namespace {
     const char* group_mode_names[] = {"None", "Item Name", "Map", "Rarity", "Type", "Weapon"};
     float icon_size = 48;
     float run_count = 0;
-
     
-    
-
     bool IsWeapon(const ItemDrops::PendingDrop* drop)
     {
         switch (drop->type) {
@@ -309,12 +303,28 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
             ItemDrops::Instance().ClearDropHistory();
         }
         ImGui::SameLine();
+        if (ImGui::Button("Copy to Clipboard")) {
+            std::wstring csv = ItemDrops::PendingDrop::GetCSVHeader();
+            csv += L"\n";
+            for (const auto& drop : drops) {
+                csv += drop->toCSV();
+                csv += L"\n";
+            }
+            ImGui::SetClipboardText(TextUtils::WStringToString(csv).c_str());
+            Log::Info("Copied %zu drops to clipboard", drops.size());
+        }
+        ImGui::SameLine();
         ImGui::Text("Total drops: %zu", drops.size());
         ImGui::SameLine();
         ImGui::Text("Group By:");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(120.0f);
         ImGui::Combo("##GroupByCombo", reinterpret_cast<int*>(&current_group_mode), group_mode_names, IM_ARRAYSIZE(group_mode_names));
+        ImGui::SameLine();
+        ImGui::Text("Total Gold Value:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(120.0f);
+        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%d", ItemDrops::Instance().GetTotalGoldValue());
 
         ImGui::Separator();
 
@@ -339,7 +349,7 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
                     case GroupMode::Type:
                         key = GW::Items::GetItemTypeName(drop->type);
                         break;
-                    case GroupMode::Weapon: // ADD THIS CASE
+                    case GroupMode::Weapon:
                         key = GetWeaponCategory(drop);
                         break;
                     default:

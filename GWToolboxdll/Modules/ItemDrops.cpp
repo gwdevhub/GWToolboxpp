@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include <chrono>
-#include <iomanip>
 
-#include <GWCA/GameEntities/Map.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/GameEntities/Item.h>
@@ -623,6 +621,15 @@ void ItemDrops::DrawSettingsInternal()
         ImGui::PopID();
     }
     style.Colors[ImGuiCol_Header] = old_color;
+}
+
+int ItemDrops::GetTotalGoldValue()
+{
+    int value = 0;
+    for (auto drop : drop_history) {
+        value += drop->value * drop->quantity;  
+    }
+    return value;
 }
 
 std::vector<ItemDrops::PendingDrop*>& ItemDrops::GetDropHistory()
