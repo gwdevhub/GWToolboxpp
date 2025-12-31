@@ -57,7 +57,9 @@ namespace {
 
     void DrawItemIcon(const ItemDrops::PendingDrop* drop)
     {
-        ImGui::Image(reinterpret_cast<ImTextureID>(*drop->icon), ImVec2(icon_size, icon_size));
+        if (icon_size > 0) {
+            ImGui::Image(reinterpret_cast<ImTextureID>(*drop->icon), ImVec2(icon_size, icon_size));
+        }
     }
 
     void DrawDefaultTable(std::vector<ItemDrops::PendingDrop*>& drops)
@@ -303,15 +305,14 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
             ItemDrops::Instance().ClearDropHistory();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Copy to Clipboard")) {
-            std::wstring csv = ItemDrops::PendingDrop::GetCSVHeader();
-            csv += L"\n";
-            for (const auto& drop : drops) {
-                csv += drop->toCSV();
-                csv += L"\n";
-            }
-            ImGui::SetClipboardText(TextUtils::WStringToString(csv).c_str());
-            Log::Info("Copied %zu drops to clipboard", drops.size());
+        if (ImGui::Button("Save to disk")) {
+            std::filesystem::path filename = "drops.csv";
+            filename = Resources::GetPath(filename);
+            Resources::SaveFileDialog([](const char* chosen_path) {
+                if (chosen_path) {
+                    ItemDrops::Instance().AddPendingExport(std::string(chosen_path));
+                }
+            }, "csv", filename.string().c_str());
         }
         ImGui::SameLine();
         ImGui::Text("Total drops: %zu", drops.size());
@@ -370,7 +371,7 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
 }
 
 void DropTrackerWindow::DrawSettingsInternal() {
-    ImGui::DragFloat("Item Icon Size", &icon_size, 16, 16, 64);
+    ImGui::DragFloat("Item Icon Size", &icon_size, 16, 0, 64);
 }
 
 void DropTrackerWindow::LoadSettings(ToolboxIni* ini)

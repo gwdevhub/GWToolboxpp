@@ -43,7 +43,6 @@ namespace {
         uint8_t requirement_value = 0;
     };
 
-
     const wchar_t* drops_filename = L"drops.csv";
     clock_t last_drops_written = 0;
 
@@ -54,6 +53,7 @@ namespace {
 
     std::vector<ItemDrops::PendingDrop*> drop_history;
     std::vector<ItemDrops::PendingDrop*> pending_write_to_csv;
+    std::vector<std::string> pending_full_exports;
 
     bool hide_player_white = false;
     bool hide_player_blue = false;
@@ -437,7 +437,33 @@ void ItemDrops::Update(float) {
         my_file.flush();
         my_file.close();
     }
-
+    
+    if (!pending_full_exports.empty()) {
+        for (auto pending : drop_history) {
+            if (GetItemName(pending->item_name_enc)->IsDecoding()) {
+                return;
+            }
+        }
+        
+        for (auto it = pending_full_exports.begin(); it != pending_full_exports.end(); ) {
+            const auto filename = Resources::GetPath(*it);
+            auto path = Resources::GetPath(filename);
+            const bool file_exists = std::filesystem::exists(path);
+            std::wofstream my_file(filename, std::ios::app);
+            if (!my_file.is_open()) {
+                return;
+            }
+            if (!file_exists) {
+                my_file << ItemDrops::PendingDrop::GetCSVHeader() << L"\n";
+            }
+            for (auto pending : drop_history) {
+                my_file << pending->toCSV() << L"\n";
+            }
+            my_file.flush();
+            my_file.close();
+            it = pending_full_exports.erase(it);
+        }
+    }
 }
 
 void ItemDrops::SignalTerminate()
@@ -715,6 +741,11 @@ const wchar_t* ItemDrops::PendingDrop::GetCSVHeader()
 GuiUtils::EncString* ItemDrops::PendingDrop::GetItemName()
 {
     return ::GetItemName(item_name_enc);
+}
+
+void ItemDrops::AddPendingExport(std::string chosen_path)
+{
+    pending_full_exports.push_back(chosen_path);
 }
 
 const std::wstring ItemDrops::PendingDrop::toCSV()

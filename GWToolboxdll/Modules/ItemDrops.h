@@ -60,4 +60,5 @@ public:
     int GetTotalGoldValue();
     void ClearDropHistory();
     bool IsTrackingEnabled() const;
+    void AddPendingExport(std::string);
 };
