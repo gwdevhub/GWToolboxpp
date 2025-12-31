@@ -411,6 +411,36 @@ namespace TextUtils {
         return result;
     }
 
+    std::wstring SanitizeForCSV(const std::wstring_view str)
+    {
+        std::wstring result;
+        bool needs_quotes = false;
+
+        for (wchar_t c : str) {
+            if (c == L'"') {
+                result += L"\"\"";
+                needs_quotes = true;
+            }
+            else if (c == L',' || c == L'\n' || c == L'\r') {
+                if (c == L'\n' || c == L'\r') {
+                    result += L' ';
+                }
+                else {
+                    result += c;
+                }
+                needs_quotes = true;
+            }
+            else {
+                result += c;
+            }
+        }
+
+        if (needs_quotes) {
+            return L"\"" + result + L"\"";
+        }
+        return result;
+    }
+
     // Extract first unencoded substring from gw encoded string. Pass second and third args to know where the player name was found in the original string.
     std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out, const wchar_t** end_pos_out)
     {

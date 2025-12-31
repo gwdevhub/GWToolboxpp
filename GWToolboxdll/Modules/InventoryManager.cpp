@@ -34,6 +34,7 @@
 #include <Windows/DailyQuestsWindow.h>
 #include <Windows/ArmoryWindow.h>
 #include <GWCA/GameEntities/Frame.h>
+#include <Utils/ToolboxUtils.h>
 
 namespace {
     InventoryManager& Instance()
@@ -2625,19 +2626,7 @@ bool InventoryManager::Item::IsStorageItem() const
 
 GW::Constants::Rarity InventoryManager::Item::GetRarity() const
 {
-    if (IsGreen()) {
-        return GW::Constants::Rarity::Green;
-    }
-    if (IsGold()) {
-        return GW::Constants::Rarity::Gold;
-    }
-    if (IsPurple()) {
-        return GW::Constants::Rarity::Purple;
-    }
-    if (IsBlue()) {
-        return GW::Constants::Rarity::Blue;
-    }
-    return GW::Constants::Rarity::White;
+    return GW::Items::GetRarity(this);
 }
 
 bool InventoryManager::PendingItem::set(const Item* item)

@@ -10,14 +10,9 @@
 
 namespace GW {
     namespace Constants {
-        enum class Rarity : uint8_t {
-            White,
-            Blue,
-            Purple,
-            Gold,
-            Green
-        };
+
         enum class Bag : uint8_t;
+        enum class Rarity : uint8_t;
     }
     namespace UI {
         enum class UIMessage : uint32_t;

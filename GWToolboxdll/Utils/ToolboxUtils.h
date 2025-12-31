@@ -27,6 +27,7 @@ public:
 };
 
 struct ImRect;
+struct ImColor;
 
 namespace GW {
     struct MapProp;
@@ -47,6 +48,31 @@ namespace GW {
     namespace Constants {
         enum class SkillID : uint32_t;
         enum class TitleID : uint32_t;
+
+        enum class DamageType : uint8_t {
+            Blunt,
+            Piercing,
+            Slashing,
+            Icy,
+            Shocking,
+            Fiery,
+            Chaotic,
+            Unholy,
+            Holy,
+            Wooden,
+            Sacrificial,
+            Ebon,
+            Magical,
+            UnholyDupe,
+            Count,
+            None = 0xff
+        };
+        static_assert(static_cast<uint8_t>(DamageType::Count) == 0xe);
+
+        enum class Rarity : uint8_t { White, Blue, Purple, Gold, Green, Unknown };
+
+        enum class ItemType : uint8_t;
+        enum class AttributeByte : uint8_t;
     }
 
     template <typename T>
@@ -141,6 +167,15 @@ namespace GW {
     }
     namespace Agents {
         void AsyncGetAgentName(const Agent* agent, std::wstring& out);
+    }
+    namespace Items {
+        GW::Constants::Rarity GetRarity(const GW::Item* item);
+        ImColor GetRarityColor(const GW::Constants::Rarity rarity);
+        const wchar_t* GetItemTypeName(const GW::Constants::ItemType item_type);
+        const wchar_t* GetAttributeName(const GW::Constants::AttributeByte attribute);
+        const wchar_t* GetDamageTypeName(const GW::Constants::DamageType type);
+        const wchar_t* GetRarityName(const GW::Constants::Rarity rarity);
+        const wchar_t* GetItemTypeName(const GW::Constants::ItemType type);
     }
 }
 

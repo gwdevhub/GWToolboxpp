@@ -21,6 +21,8 @@
 
 #include <Modules/ItemDrops.h>
 #include <Modules/Resources.h>
+#include <Timer.h>
+#include <Utils/TextUtils.h>
 
 #define LOAD_BOOL(var) var = ini->GetBoolValue(Name(), #var, var);
 #define SAVE_BOOL(var) ini->SetBoolValue(Name(), #var, var);
@@ -43,9 +45,17 @@ namespace {
         uint8_t requirement_value = 0;
     };
 
+
+    const wchar_t* drops_filename = L"drops.csv";
+    clock_t last_drops_written = 0;
+
+
     using ItemModelID = decltype(GW::Item::model_id);
     std::vector<GW::Packet::StoC::AgentAdd> suppressed_packets{};
     std::vector<ItemOwner> item_owners{};
+
+    std::vector<ItemDrops::PendingDrop*> drop_history;
+    std::vector<ItemDrops::PendingDrop*> pending_write_to_csv;
 
     bool hide_player_white = false;
     bool hide_player_blue = false;
@@ -75,131 +85,12 @@ namespace {
     GW::HookEntry OnItemUpdateOwner_Entry;
 
 
-    enum class Rarity : uint8_t { White, Blue, Purple, Gold, Green, Unknown };
-
     using namespace GW::Constants::ItemID;
 
-    Rarity GetRarity(const GW::Item& item)
-    {
-        if (item.complete_name_enc == nullptr) {
-            return Rarity::Unknown;
-        }
 
-        switch (item.complete_name_enc[0]) {
-            case 2621:
-                return Rarity::White;
-            case 2623:
-                return Rarity::Blue;
-            case 2626:
-                return Rarity::Purple;
-            case 2624:
-                return Rarity::Gold;
-            case 2627:
-                return Rarity::Green;
-            default:
-                return Rarity::Unknown;
-        }
-    }
 
-    const wchar_t* GetRarityString(const Rarity rarity)
-    {
-        switch (rarity) {
-            case Rarity::White:
-                return L"White";
-            case Rarity::Blue:
-                return L"Blue";
-            case Rarity::Purple:
-                return L"Purple";
-            case Rarity::Gold:
-                return L"Gold";
-            case Rarity::Green:
-                return L"Green";
-            case Rarity::Unknown:
-            default:
-                return L"Unknown";
-        }
-    }
 
-    const wchar_t* GetItemTypeString(const GW::Constants::ItemType type)
-    {
-        switch (type) {
-            case GW::Constants::ItemType::Salvage:
-                return L"Salvage";
-            case GW::Constants::ItemType::Axe:
-                return L"Axe";
-            case GW::Constants::ItemType::Bag:
-                return L"Bag";
-            case GW::Constants::ItemType::Boots:
-                return L"Boots";
-            case GW::Constants::ItemType::Bow:
-                return L"Bow";
-            case GW::Constants::ItemType::Bundle:
-                return L"Bundle";
-            case GW::Constants::ItemType::Chestpiece:
-                return L"Chestpiece";
-            case GW::Constants::ItemType::Rune_Mod:
-                return L"Rune_Mod";
-            case GW::Constants::ItemType::Usable:
-                return L"Usable";
-            case GW::Constants::ItemType::Dye:
-                return L"Dye";
-            case GW::Constants::ItemType::Materials_Zcoins:
-                return L"Materials_Zcoins";
-            case GW::Constants::ItemType::Offhand:
-                return L"Offhand";
-            case GW::Constants::ItemType::Gloves:
-                return L"Gloves";
-            case GW::Constants::ItemType::Hammer:
-                return L"Hammer";
-            case GW::Constants::ItemType::Headpiece:
-                return L"Headpiece";
-            case GW::Constants::ItemType::CC_Shards:
-                return L"CC_Shards";
-            case GW::Constants::ItemType::Key:
-                return L"Key";
-            case GW::Constants::ItemType::Leggings:
-                return L"Leggings";
-            case GW::Constants::ItemType::Gold_Coin:
-                return L"Gold_Coin";
-            case GW::Constants::ItemType::Quest_Item:
-                return L"Quest_Item";
-            case GW::Constants::ItemType::Wand:
-                return L"Wand";
-            case GW::Constants::ItemType::Shield:
-                return L"Shield";
-            case GW::Constants::ItemType::Staff:
-                return L"Staff";
-            case GW::Constants::ItemType::Sword:
-                return L"Sword";
-            case GW::Constants::ItemType::Kit:
-                return L"Kit";
-            case GW::Constants::ItemType::Trophy:
-                return L"Trophy";
-            case GW::Constants::ItemType::Scroll:
-                return L"Scroll";
-            case GW::Constants::ItemType::Daggers:
-                return L"Daggers";
-            case GW::Constants::ItemType::Present:
-                return L"Present";
-            case GW::Constants::ItemType::Minipet:
-                return L"Minipet";
-            case GW::Constants::ItemType::Scythe:
-                return L"Scythe";
-            case GW::Constants::ItemType::Spear:
-                return L"Spear";
-            case GW::Constants::ItemType::Storybook:
-                return L"Storybook";
-            case GW::Constants::ItemType::Costume:
-                return L"Costume";
-            case GW::Constants::ItemType::Costume_Headpiece:
-                return L"Costume_Headpiece";
-            case GW::Constants::ItemType::Unknown:
-            default:
-                return L"Unknown";
-        }
-    }
-
-    const GW::Item* GetItemFromPacket(const GW::Packet::StoC::AgentAdd& packet)
+    GW::Item* GetItemFromPacket(const GW::Packet::StoC::AgentAdd& packet)
     {
         // filter non-item-agents
         if (packet.type != 4 || packet.unk3 != 0) {
@@ -325,274 +216,87 @@ namespace {
         return it == item_owners.end() ? 0 : it->owner;
     }
 
-    bool WantToHide(const GW::Item& item, const bool can_pick_up)
+    bool WantToHide(const GW::Item* item, const bool can_pick_up)
     {
         using GW::Constants::ItemType;
-        switch (static_cast<ItemType>(item.type)) {
+        switch (item->type) {
             case ItemType::Bundle:
             case ItemType::Quest_Item:
             case ItemType::Minipet:
                 return false;
             case ItemType::Key:
-                if (!item.value)
+                if (!item->value)
                     return false; // Dungeon keys
                 break;
             case ItemType::Trophy:
-                if (!item.value)
+                if (!item->value)
                     return false; // Mission keys and Nightfall "treasures"
             default:
                 break;
         }
 
-        const auto rarity = GetRarity(item);
+        const auto rarity = GW::Items::GetRarity(item);
 
         if (can_pick_up) {
-            if (dont_hide_for_player.contains(item.model_id)) {
+            if (dont_hide_for_player.contains(item->model_id)) {
                 return false;
             }
 
             switch (rarity) {
-                case Rarity::White:
+                case GW::Constants::Rarity::White:
                     return hide_player_white;
-                case Rarity::Blue:
+                case GW::Constants::Rarity::Blue:
                     return hide_player_blue;
-                case Rarity::Purple:
+                case GW::Constants::Rarity::Purple:
                     return hide_player_purple;
-                case Rarity::Gold:
+                case GW::Constants::Rarity::Gold:
                     return hide_player_gold;
-                case Rarity::Green:
+                case GW::Constants::Rarity::Green:
                     return hide_player_green;
-                case Rarity::Unknown:
-                    return false;
             }
         }
 
-        if (dont_hide_for_party.contains(item.model_id)) {
+        if (dont_hide_for_party.contains(item->model_id)) {
             return false;
         }
 
         switch (rarity) {
-            case Rarity::White:
+            case GW::Constants::Rarity::White:
                 return hide_party_white;
-            case Rarity::Blue:
+            case GW::Constants::Rarity::Blue:
                 return hide_party_blue;
-            case Rarity::Purple:
+            case GW::Constants::Rarity::Purple:
                 return hide_party_purple;
-            case Rarity::Gold:
+            case GW::Constants::Rarity::Gold:
                 return hide_party_gold;
-            case Rarity::Green:
+            case GW::Constants::Rarity::Green:
                 return hide_party_green;
-            case Rarity::Unknown:
-                return false;
         }
 
         return false;
     }
 
-    std::wstring SanitizeForCSV(const std::wstring& str)
+    void WriteDropToCSV(ItemDrops::PendingDrop* item)
     {
-        std::wstring result;
-        bool needs_quotes = false;
-
-        for (wchar_t c : str) {
-            if (c == L'"') {
-                result += L"\"\"";
-                needs_quotes = true;
-            }
-            else if (c == L',' || c == L'\n' || c == L'\r') {
-                if (c == L'\n' || c == L'\r') {
-                    result += L' ';
-                }
-                else {
-                    result += c;
-                }
-                needs_quotes = true;
-            }
-            else {
-                result += c;
-            }
-        }
-
-        if (needs_quotes) {
-            return L"\"" + result + L"\"";
-        }
-        return result;
+        pending_write_to_csv.push_back(item);
     }
 
-    ParsedItemInfo ParseInfoString(const std::wstring& info)
-    {
-        ParsedItemInfo parsed;
+    std::map<uint32_t, bool> already_seen_items;
 
-        std::wregex damage_regex(L"(\\w+) Dmg: (\\d+)-(\\d+)");
-        std::wsmatch damage_match;
-        if (std::regex_search(info, damage_match, damage_regex)) {
-            parsed.damage_type = damage_match[1].str();
-            parsed.min_damage = static_cast<uint16_t>(std::stoi(damage_match[2].str()));
-            parsed.max_damage = static_cast<uint16_t>(std::stoi(damage_match[3].str()));
-        }
+    uint32_t GetItemAgentHash(GW::Item* item) {
+        if (!item) return 0;
+        const auto agent = (GW::AgentItem*)GW::Agents::GetAgentByID(item->agent_id);
+        if (!agent) return 0;
+        uint32_t hash = agent->agent_id;
+        hash ^= static_cast<uint32_t>(agent->pos.x * 1000.0f);
+        hash ^= (static_cast<uint32_t>(agent->pos.y * 1000.0f) << 16);
 
-        std::wregex req_regex(L"Requires (\\d+) ([^)<]+)");
-        std::wsmatch req_match;
-        if (std::regex_search(info, req_match, req_regex)) {
-            parsed.requirement_value = static_cast<uint8_t>(std::stoi(req_match[1].str()));
-            parsed.requirement_attribute = req_match[2].str();
-        }
-
-        return parsed;
-    }
-
-    void WritePendingDropToCSV(ItemDrops::PendingDrop* drop)
-    {
-        const auto filename = Resources::GetPath(L"drops.csv");
-        auto path = Resources::GetPath(filename);
-        const bool file_exists = std::filesystem::exists(path);
-        ItemDrops::Instance().GetDropHistory().push_back(*drop);
-
-        try {
-            std::wofstream my_file(filename, std::ios::app);
-            if (!my_file.is_open()) {
-                delete drop;
-                return;
-            }
-
-            if (!file_exists) {
-                my_file << L"timestamp,item_id,item_name,item_type,rarity,quantity,map,value,damage_type,min_damage,max_damage,requirement_attribute,requirement_value,item_agent_id,owner_id,model_id,player_count,hero_count,henchman_count,game_mode\n";
-            }
-
-            const auto now = std::chrono::system_clock::now();
-            const auto time = std::chrono::system_clock::to_time_t(now);
-            std::tm tm_buf{};
-            localtime_s(&tm_buf, &time);
-
-            const auto safe_name = SanitizeForCSV(drop->item_name);
-
-            my_file << std::put_time(&tm_buf, L"%Y-%m-%d %H:%M:%S") << L"," 
-                    << drop->item_id << L"," << safe_name << L"," 
-                    << drop->type << L"," 
-                    << drop->rarity << L"," 
-                    << drop->quantity << L"," 
-                    << drop->map_name << L"," 
-                    << drop->value << L","
-                    << drop->damage_type << L","
-                    << drop->min_damage << L"," 
-                    << drop->max_damage << L"," 
-                    << drop->requirement_attribute << L","
-                    << static_cast<int>(drop->requirement_value) << L"," 
-                    << drop->agent_id << L"," 
-                    << drop->owner_id << L"," 
-                    << drop->model_id << L","
-                    << drop->player_count << L"," 
-                    << drop->hero_count << L"," 
-                    << drop->henchman_count << L","
-                    << drop->game_mode << L"\n";
-            my_file.flush();
-            my_file.close();
-        } catch (...) {}
-        delete drop;
-    }
-
-    void DecodeMapName(ItemDrops::PendingDrop* drop)
-    {
-        if (drop->map_name_enc) {
-            GW::UI::AsyncDecodeStr(
-                drop->map_name_enc,
-                [](void* param, const wchar_t* decoded) {
-                    auto* pending = static_cast<ItemDrops::PendingDrop*>(param);
-                    pending->map_name = decoded ? decoded : L"";
-                    WritePendingDropToCSV(pending);
-                },
-                drop
-            );
-        }
-        else {
-            drop->map_name = L"";
-            WritePendingDropToCSV(drop);
-        }
-    }
-
-    void DecodeInfoString(ItemDrops::PendingDrop* drop)
-    {
-        if (drop->info_string_enc) {
-            GW::UI::AsyncDecodeStr(
-                drop->info_string_enc,
-                [](void* param, const wchar_t* decoded) {
-                    auto* pending = static_cast<ItemDrops::PendingDrop*>(param);
-                    pending->info_string = decoded ? decoded : L"";
-
-                    auto parsed = ParseInfoString(pending->info_string);
-                    pending->damage_type = parsed.damage_type;
-                    pending->min_damage = parsed.min_damage;
-                    pending->max_damage = parsed.max_damage;
-                    pending->requirement_attribute = parsed.requirement_attribute;
-                    pending->requirement_value = parsed.requirement_value;
-
-                    DecodeMapName(pending);
-                },
-                drop
-            );
-        }
-        else {
-            drop->info_string = L"";
-            DecodeMapName(drop);
-        }
-    }
-
-    void DecodeItemName(ItemDrops::PendingDrop* drop, const wchar_t* name_enc)
-    {
-        if (name_enc) {
-            GW::UI::AsyncDecodeStr(
-                name_enc,
-                [](void* param, const wchar_t* decoded) {
-                    auto* pending = static_cast<ItemDrops::PendingDrop*>(param);
-                    pending->item_name = decoded ? decoded : L"";
-                    DecodeInfoString(pending);
-                },
-                drop
-            );
-        }
-        else {
-            drop->item_name = L"";
-            DecodeInfoString(drop);
-        }
-    }
-
-    void WriteDropToCSV(const GW::Item* item, const GW::AgentID owner_id)
-    {
-        if (!item || !item->item_id || !item->name_enc) {
-            return;
-        }
-
-        auto* drop = new ItemDrops::PendingDrop();
-        drop->timestamp = std::chrono::system_clock::now();
-        drop->item_id = item->item_id;
-        drop->agent_id = item->agent_id;
-        drop->owner_id = owner_id;
-        drop->model_id = item->model_id;
-        drop->quantity = item->quantity;
-        drop->type = GetItemTypeString(item->type);
-        drop->rarity = GetRarityString(GetRarity(*item));
-        drop->player_count = GW::PartyMgr::GetPartyPlayerCount();
-        drop->hero_count = GW::PartyMgr::GetPartyHeroCount();
-        drop->henchman_count = GW::PartyMgr::GetPartyHenchmanCount();
-        drop->game_mode = GW::PartyMgr::GetIsPartyInHardMode() ? L"Hard Mode" : L"Normal Mode";
-        drop->value = item->value;
-        drop->info_string_enc = item->info_string;
-
-        const auto* map = GW::Map::GetCurrentMapInfo();
-        if (map) {
-            GW::UI::UInt32ToEncStr(map->name_id, drop->map_name_enc_buf, 8);
-            drop->map_name_enc = drop->map_name_enc_buf;
-        }
-        else {
-            drop->map_name_enc = nullptr;
-        }
-
-        DecodeItemName(drop, item->name_enc);
+        return hash;
     }
 
     void OnAgentAdd(GW::HookStatus* status, const GW::Packet::StoC::AgentAdd* packet)
     {
-        const auto* item = GetItemFromPacket(*packet);
+        auto* item = GetItemFromPacket(*packet);
         if (!item) {
             return;
         }
@@ -604,10 +308,18 @@ namespace {
                                  || owner_id == my_agent_id; // reserved for user
 
         if (track_drops) {
-            WriteDropToCSV(item, owner_id);
+            uint32_t hash = packet->agent_id;
+            hash ^= static_cast<uint32_t>(packet->position.x * 1000.0f);
+            hash ^= (static_cast<uint32_t>(packet->position.y * 1000.0f) << 16);
+            if (hash && !already_seen_items.contains(hash)) {
+                already_seen_items[hash] = true;
+                auto drop = new ItemDrops::PendingDrop(item);
+                drop_history.push_back(drop);
+                WriteDropToCSV(drop);
+            }
         }
 
-        if (WantToHide(*item, can_pick_up)) {
+        if (WantToHide(item, can_pick_up)) {
             status->blocked = true;
             suppressed_packets.push_back(*packet);
         }
@@ -630,6 +342,7 @@ namespace {
 
     void OnMapLoad(GW::HookStatus*, GW::Packet::StoC::MapLoaded*)
     {
+        already_seen_items.clear();
         suppressed_packets.clear();
         item_owners.clear();
     }
@@ -691,6 +404,33 @@ void ItemDrops::Initialize()
     });
 }
 
+void ItemDrops::Update(float) {
+    if (!pending_write_to_csv.empty() && (!last_drops_written || TIMER_DIFF(last_drops_written) > 5000)) {
+        for (auto pending : pending_write_to_csv) {
+            if (pending->item_name.IsDecoding()) 
+                return;
+        }
+        last_drops_written = TIMER_INIT();
+        const auto filename = Resources::GetPath(drops_filename);
+        auto path = Resources::GetPath(filename);
+        const bool file_exists = std::filesystem::exists(path);
+        std::wofstream my_file(filename, std::ios::app);
+        if (!my_file.is_open()) {
+            return;
+        }
+        if (!file_exists) {
+            my_file << ItemDrops::PendingDrop::GetCSVHeader() << L"\n";
+        }
+        for (auto pending : pending_write_to_csv) {
+            my_file << pending->toCSV() << L"\n";
+        }
+        pending_write_to_csv.clear();
+        my_file.flush();
+        my_file.close();
+    }
+
+}
+
 void ItemDrops::SignalTerminate()
 {
     ToolboxModule::SignalTerminate();
@@ -703,6 +443,7 @@ void ItemDrops::SignalTerminate()
     GW::StoC::RemoveCallback<GW::Packet::StoC::ItemUpdateOwner>(&OnItemUpdateOwner_Entry);
 
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
+    ClearDropHistory();
 }
 
 bool ItemDrops::CanTerminate()
@@ -872,17 +613,93 @@ void ItemDrops::DrawSettingsInternal()
     style.Colors[ImGuiCol_Header] = old_color;
 }
 
-std::vector<ItemDrops::PendingDrop>& ItemDrops::GetDropHistory()
+std::vector<ItemDrops::PendingDrop*>& ItemDrops::GetDropHistory()
 {
     return drop_history;
 }
 
 void ItemDrops::ClearDropHistory()
 {
+    pending_write_to_csv.clear();
+    for (auto drop : drop_history) {
+        delete drop;
+    }
     drop_history.clear();
 }
 
 bool ItemDrops::IsTrackingEnabled() const
 {
     return track_drops;
+}
+
+ItemDrops::PendingDrop::PendingDrop(GW::Item* _item)
+{
+    ASSERT(_item);
+    auto item = (InventoryManager::Item*)_item;
+    instance_time = GW::Map::GetInstanceTime();
+    model_id = item->model_id;
+    model_file_id = item->model_file_id;
+    interaction = item->interaction;
+    quantity = item->quantity;
+    type = item->type;
+    rarity = GW::Items::GetRarity(item);
+    player_count = GW::PartyMgr::GetPartyPlayerCount() & 0xff;
+    hero_count = GW::PartyMgr::GetPartyHeroCount() & 0xff;
+    henchman_count = GW::PartyMgr::GetPartyHenchmanCount() & 0xff;
+    hard_mode = GW::PartyMgr::GetIsPartyInHardMode();
+    value = item->value;
+    map_id = GW::Map::GetMapID();
+    icon = Resources::GetItemImage(item);
+    Resources::GetMapName(map_id)->wstring();
+    item_name.reset(item->name_enc, false)->wstring();
+
+    time(&system_time);
+
+    auto mod = item->GetModifier(0x2798);
+    if (mod) {
+        requirement_attribute = (GW::Constants::AttributeByte)mod->arg1();
+        requirement_value = (uint8_t)mod->arg2() & 0xff;
+    }
+    mod = item->GetModifier(0xa7a8);
+    if (mod) {
+        min_damage = mod->arg2() & 0xff;
+        max_damage = mod->arg1() & 0xff;
+    }
+    mod = item->GetModifier(0x24b8);
+    if (mod) {
+        damage_type = (GW::Constants::DamageType)mod->arg1();
+    }
+}
+
+const wchar_t* ItemDrops::PendingDrop::GetCSVHeader()
+{
+    return L"Timestamp,Map,ItemName,ModelID,ModelFileID,Interaction,Quantity,Value,"
+           L"ItemType,Rarity,DamageType,MinDamage,MaxDamage,"
+           L"RequirementAttribute,RequirementValue,"
+           L"PlayerCount,HeroCount,HenchmanCount,HardMode";
+}
+
+const std::wstring ItemDrops::PendingDrop::toCSV()
+{
+    std::wstringstream ss;
+    ss << instance_time << L",";
+    ss << TextUtils::SanitizeForCSV(Resources::GetMapName(map_id)->wstring()) << L",";
+    ss << TextUtils::SanitizeForCSV(item_name.wstring()) << L",";
+    ss << model_id << L",";
+    ss << model_file_id << L",";
+    ss << interaction;
+    ss << quantity << L",";
+    ss << value << L",";
+    ss << GW::Items::GetItemTypeName(type) << L",";
+    ss << GW::Items::GetRarityName(rarity) << L",";
+    ss << GW::Items::GetDamageTypeName(damage_type) << L",";
+    ss << min_damage << L",";
+    ss << max_damage << L",";
+    ss << GW::Items::GetAttributeName(requirement_attribute) << L",";
+    ss << requirement_value << L",";
+    ss << player_count << L",";
+    ss << hero_count << L",";
+    ss << henchman_count << L",";
+    ss << (hard_mode ? L"1" : L"0") << L",";
+    return ss.str();
 }

@@ -34,6 +34,7 @@ namespace TextUtils {
     std::wstring RemoveDiacritics(std::wstring_view s);
 
     std::wstring SanitizePlayerName(std::wstring_view str);
+    std::wstring SanitizeForCSV(const std::wstring_view str);
     std::string SanitizePlayerName(std::string_view str);
     std::wstring GetPlayerNameFromEncodedString(const wchar_t* message, const wchar_t** start_pos_out = nullptr, const wchar_t** end_pos_out = nullptr);
 

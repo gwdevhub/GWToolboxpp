@@ -17,8 +17,6 @@ public:
     [[nodiscard]] const char* Description() const override { return "Shows you what drops you've gotten"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_COINS; }
 
-    void Terminate() override;
-
     void Update(float) override {}
 
     void Draw(IDirect3DDevice9* pDevice) override;

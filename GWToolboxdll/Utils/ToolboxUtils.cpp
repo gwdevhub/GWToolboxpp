@@ -519,6 +519,233 @@ namespace GW {
         {
             UI::AsyncDecodeStr(GetAgentEncName(agent), &out);
         }
+    } // namespace Agents
+    namespace Items {
+        GW::Constants::Rarity GetRarity(const GW::Item* item)
+        {
+            if(!item)
+                return GW::Constants::Rarity::Unknown;
+            if ((item->interaction & 0x10) != 0) 
+                return GW::Constants::Rarity::Green;
+            if ((item->interaction & 0x400000) != 0) 
+                return GW::Constants::Rarity::Purple;
+            if ((item->interaction & 0x20000) != 0) 
+                return GW::Constants::Rarity::Gold;
+            if (item->single_item_name && item->single_item_name[0] == 0xA3F) 
+                return GW::Constants::Rarity::Blue;
+            return GW::Constants::Rarity::White;
+        }
+
+        ImColor GetRarityColor(const GW::Constants::Rarity rarity)
+        {
+            switch (rarity) {
+                case GW::Constants::Rarity::White:
+                    return IM_COL32(230, 230, 230, 255);
+                case GW::Constants::Rarity::Blue:
+                    return IM_COL32(37, 150, 190, 255);
+                case GW::Constants::Rarity::Purple:
+                    return IM_COL32(124, 95, 168, 255);
+                case GW::Constants::Rarity::Gold:
+                    return IM_COL32(253, 202, 83, 255);
+                case GW::Constants::Rarity::Green:
+                    return IM_COL32(0, 230, 0, 255);
+            }
+            return IM_COL32(128, 128, 128, 255);
+        }
+
+        const wchar_t* GetItemTypeName(const GW::Constants::ItemType item_type)
+        {
+            using GW::Constants::ItemType;
+
+            switch (item_type) {
+                case ItemType::Salvage:
+                    return L"Salvage Item";
+                case ItemType::Axe:
+                    return L"Axe";
+                case ItemType::Bag:
+                    return L"Bag";
+                case ItemType::Boots:
+                    return L"Boots";
+                case ItemType::Bow:
+                    return L"Bow";
+                case ItemType::Bundle:
+                    return L"Bundle";
+                case ItemType::Chestpiece:
+                    return L"Chestpiece";
+                case ItemType::Rune_Mod:
+                    return L"Rune";
+                case ItemType::Usable:
+                    return L"Usable Item";
+                case ItemType::Dye:
+                    return L"Dye";
+                case ItemType::Materials_Zcoins:
+                    return L"Materials";
+                case ItemType::Offhand:
+                    return L"Offhand";
+                case ItemType::Gloves:
+                    return L"Gloves";
+                case ItemType::Hammer:
+                    return L"Hammer";
+                case ItemType::Headpiece:
+                    return L"Headpiece";
+                case ItemType::CC_Shards:
+                    return L"Shards";
+                case ItemType::Key:
+                    return L"Key";
+                case ItemType::Leggings:
+                    return L"Leggings";
+                case ItemType::Gold_Coin:
+                    return L"Gold";
+                case ItemType::Quest_Item:
+                    return L"Quest Item";
+                case ItemType::Wand:
+                    return L"Wand";
+                case ItemType::Shield:
+                    return L"Shield";
+                case ItemType::Staff:
+                    return L"Staff";
+                case ItemType::Sword:
+                    return L"Sword";
+                case ItemType::Kit:
+                    return L"Kit";
+                case ItemType::Trophy:
+                    return L"Trophy";
+                case ItemType::Scroll:
+                    return L"Scroll";
+                case ItemType::Daggers:
+                    return L"Daggers";
+                case ItemType::Present:
+                    return L"Present";
+                case ItemType::Minipet:
+                    return L"Miniature";
+                case ItemType::Scythe:
+                    return L"Scythe";
+                case ItemType::Spear:
+                    return L"Spear";
+                case ItemType::Storybook:
+                    return L"Storybook";
+                case ItemType::Costume:
+                    return L"Costume";
+                case ItemType::Costume_Headpiece:
+                    return L"Costume Headpiece";
+                case ItemType::Unknown:
+                default:
+                    return L"Unknown";
+            }
+        }
+
+        const wchar_t* GetAttributeName(const GW::Constants::AttributeByte attribute)
+        {
+            static const wchar_t* attribute_names[] = {
+                L"Fast Casting",
+                L"Illusion Magic",
+                L"Domination Magic",
+                L"Inspiration Magic", // 0-3: Mesmer
+                L"Blood Magic",
+                L"Death Magic",
+                L"Soul Reaping",
+                L"Curses", // 4-7: Necro
+                L"Air Magic",
+                L"Earth Magic",
+                L"Fire Magic",
+                L"Water Magic",
+                L"Energy Storage", // 8-12: Ele
+                L"Healing Prayers",
+                L"Smiting Prayers",
+                L"Protection Prayers",
+                L"Divine Favor", // 13-16: Monk
+                L"Strength",
+                L"Axe Mastery",
+                L"Hammer Mastery",
+                L"Swordsmanship",
+                L"Tactics", // 17-21: Warrior
+                L"Beast Mastery",
+                L"Expertise",
+                L"Wilderness Survival",
+                L"Marksmanship", // 22-25: Ranger
+                L"",
+                L"",
+                L"", // 26-28: unused
+                L"Dagger Mastery",
+                L"Deadly Arts",
+                L"Shadow Arts", // 29-31: Assassin
+                L"Communing",
+                L"Restoration Magic",
+                L"Channeling Magic", // 32-34: Ritualist
+                L"Critical Strikes",
+                L"Spawning Power", // 35-36: Sin/Rit primary
+                L"Spear Mastery",
+                L"Command",
+                L"Motivation",
+                L"Leadership", // 37-40: Paragon
+                L"Scythe Mastery",
+                L"Wind Prayers",
+                L"Earth Prayers",
+                L"Mysticism" // 41-44: Dervish
+            };
+
+            const uint8_t idx = static_cast<uint8_t>(attribute);
+            if (idx >= 0 && idx <= (uint8_t)GW::Constants::Attribute::Mysticism) {
+                return attribute_names[idx];
+            }
+            return L"";
+        }
+
+        const wchar_t* GetDamageTypeName(const GW::Constants::DamageType type)
+        {
+            switch (type) {
+                case GW::Constants::DamageType::Blunt:
+                    return L"Blunt";
+                case GW::Constants::DamageType::Piercing:
+                    return L"Piercing";
+                case GW::Constants::DamageType::Slashing:
+                    return L"Slashing";
+                case GW::Constants::DamageType::Icy:
+                    return L"Icy";
+                case GW::Constants::DamageType::Shocking:
+                    return L"Shocking";
+                case GW::Constants::DamageType::Fiery:
+                    return L"Fiery";
+                case GW::Constants::DamageType::Chaotic:
+                    return L"Chaotic";
+                case GW::Constants::DamageType::Unholy:
+                    return L"Unholy";
+                case GW::Constants::DamageType::Holy:
+                    return L"Holy";
+                case GW::Constants::DamageType::Wooden:
+                    return L"Wooden";
+                case GW::Constants::DamageType::Sacrificial:
+                    return L"Sacrificial";
+                case GW::Constants::DamageType::Ebon:
+                    return L"Ebon";
+                case GW::Constants::DamageType::Magical:
+                    return L"Magical";
+                case GW::Constants::DamageType::UnholyDupe:
+                    return L"Unholy"; // Duplicate, same name
+                case GW::Constants::DamageType::None:
+                    return L"None";
+                default:
+                    return L"Unknown";
+            }
+        }
+
+        const wchar_t* GetRarityName(const GW::Constants::Rarity rarity)
+        {
+            switch (rarity) {
+                case GW::Constants::Rarity::White:
+                    return L"White";
+                case GW::Constants::Rarity::Blue:
+                    return L"Blue";
+                case GW::Constants::Rarity::Purple:
+                    return L"Purple";
+                case GW::Constants::Rarity::Gold:
+                    return L"Gold";
+                case GW::Constants::Rarity::Green:
+                    return L"Green";
+            }
+            return L"Unknown";
+        }
+
     }
 }
 
