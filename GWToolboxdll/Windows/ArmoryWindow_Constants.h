@@ -1584,11 +1584,12 @@ namespace GWArmory {
         {"Tormented Daggers", 0x43487, Profession::None, ItemType::Daggers, Campaign::BonusMissionPack, 3, 0x20000000},  
 
         // Foci
+        {"Bone Idol", 0x2B136, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Celestial Compass", 0x5371d, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Chimeric Prism", 0x235AE, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Deldrimor Focus", 0x5263B, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Forgotten Fan", 0x2B11F, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Grim Cesta", 0x1E1DF, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 0, 0x20000000},
+        {"Grim Cesta", 0x1553D, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 0, 0x20000000},
         {"Heaven's Arch", 0x25487, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Inscribed Chakram", 0x15DD2, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 0, 0x20000000},
         {"Jeweled Chalice", 0x15DD8, Profession::None, ItemType::Offhand, Campaign::BonusMissionPack, 3, 0x2C020000},
@@ -1663,7 +1664,9 @@ namespace GWArmory {
         {"Envoy Staff", 0x2AE80, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Earthbound Staff/Magmus' Staff", 0x28405, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Firebrand", 0x5D84, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Holy Staff", 0x1B5D1, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Hourglass Staff", 0x49A51, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
+        {"Inscribed Staff", 0x9F29, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000}, 
         {"Jade Staff", 0x28424, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Onyx Staff", 0x49B94, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 4, 0x2E330441},
         {"Plagueborn Staff", 0x2841f, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x2E330441},
@@ -1676,6 +1679,7 @@ namespace GWArmory {
         
 
         // Swords
+        {"Butterfly Sword", 0x3843, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 0, 0x20000000},
         {"Celestial Sword", 0x2AFD0, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 0, 0x2E130001},
         {"Colossal Scimitar", 0x387F8, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Crystalline Sword", 0x383E, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1708,7 +1712,7 @@ namespace GWArmory {
         {"Peacock's Wrath", 0x2695A, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Platinum Wand", 0x2B19F, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x2E120441},
         {"Plagueborn Scepter", 0x2840d, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
-        {"Quicksilver", 0x2547A, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 0, 0x2E020001},
+        {"Quicksilver", 0x2548A, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 0, 0x2E020001},
         {"Tormented Scepter", 0x4349F, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 0, 0x2A020001},
         {"Unicorn's Wrath", 0x26957, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Wayward Wand", 0x2B17E, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},
