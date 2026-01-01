@@ -686,6 +686,7 @@ void Minimap::Initialize()
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kChangeTarget,
         GW::UI::UIMessage::kSkillActivated, 
+        GW::UI::UIMessage::kCompassDraw,
         GW::UI::UIMessage::kEnableUIPositionOverlay,
     };
     for (const auto message_id : hook_messages) {
