@@ -301,7 +301,7 @@ void PartyDamage::Terminate()
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
     for (auto str : party_names_by_index) {
-        delete str;
+        str->Release();
     }
     party_names_by_index.clear();
 

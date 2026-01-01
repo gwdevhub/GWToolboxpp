@@ -4,6 +4,8 @@
 
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Player.h>
+
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
@@ -109,7 +111,7 @@ bool SnapsToPartyWindow::FetchPartyInfo()
             return false; // Wait for last pass before retry
     }
 
-    auto append_agent = [&](uint32_t agent_id) {
+    auto append_agent = [&](uint32_t agent_id, const wchar_t* enc_name = nullptr) {
         if (party_indeces_by_agent_id.contains(agent_id))
             return;
         party_indeces_by_agent_id[agent_id] = party_agent_ids_by_index.size();
@@ -118,12 +120,15 @@ bool SnapsToPartyWindow::FetchPartyInfo()
             party_names_by_index.push_back(new GuiUtils::EncString());
         }
         const auto str = party_names_by_index[party_agent_ids_by_index.size() - 1];
-        str->reset(GW::Agents::GetAgentEncName(agent_id))
+        str->reset(enc_name ? enc_name : GW::Agents::GetAgentEncName(agent_id))
             ->wstring(); // Trigger decode
         };
 
     for (const auto& player : info->players) {
-        append_agent(GW::PlayerMgr::GetPlayerAgentId(player.login_number));
+        // NB: Player may have left the game, meaning GW::Agents::GetAgentEncName(agent_id) would fail because agent is gone. Pass enc_name. 
+        if (const auto gwplayer = GW::PlayerMgr::GetPlayerByID(player.login_number)) {
+            append_agent(gwplayer->agent_id, gwplayer->name_enc);
+        }
         for (const auto& hero : info->heroes) {
             if (hero.owner_player_id == player.login_number) {
                 append_agent(hero.agent_id);
