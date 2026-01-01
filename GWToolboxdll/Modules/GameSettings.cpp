@@ -2857,18 +2857,15 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
 // Auto-drop UA when recasting
 void GameSettings::OnAgentStartCast(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*)
 {
-    if (!(wParam && drop_ua_on_cast)) {
-        return;
-    }
-    const struct Casting {
-        uint32_t agent_id;
-        GW::Constants::SkillID skill_id;
-    }* casting = static_cast<Casting*>(wParam);
-    if (casting->agent_id == GW::Agents::GetControlledCharacterId() && casting->skill_id == GW::Constants::SkillID::Unyielding_Aura) {
-        // Cancel UA before recast
-        const GW::Buff* buff = GW::Effects::GetPlayerBuffBySkillId(casting->skill_id);
-        if (buff && buff->skill_id != GW::Constants::SkillID::No_Skill) {
-            GW::Effects::DropBuff(buff->buff_id);
+    const auto packet = (GW::UI::UIPacket::kAgentSkillPacket*)wParam;
+    if (drop_ua_on_cast && packet && packet->skill_id == GW::Constants::SkillID::Unyielding_Aura) {
+        const auto buffs = GW::Effects::GetAgentBuffs(packet->agent_id);
+        if (buffs) {
+            for (auto& buff : *buffs) {
+                if (buff.skill_id == packet->skill_id) {
+                    GW::Effects::DropBuff(buff.buff_id);
+                }
+            }
         }
     }
 };
