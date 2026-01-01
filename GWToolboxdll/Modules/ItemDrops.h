@@ -57,6 +57,8 @@ public:
     static_assert(sizeof(PendingDrop) == 40);
 
     std::vector<PendingDrop*>& GetDropHistory();
+    int GetTotalGoldValue();
     void ClearDropHistory();
     bool IsTrackingEnabled() const;
+    void AddPendingExport(std::string);
 };

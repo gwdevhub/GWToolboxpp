@@ -1,13 +1,8 @@
-#include <Color.h>
 #include "stdafx.h"
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Context/WorldContext.h>
-#include <GWCA/GameEntities/Agent.h>
-#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/PartyMgr.h>
 
 #include <Timer.h>
 #include <Utils/GuiUtils.h>
@@ -15,6 +10,8 @@
 #include <Modules/ItemDrops.h>
 #include <map>
 #include <Modules/Resources.h>
+
+#include "Utils/TextUtils.h"
 
 
 namespace {
@@ -24,10 +21,7 @@ namespace {
     const char* group_mode_names[] = {"None", "Item Name", "Map", "Rarity", "Type", "Weapon"};
     float icon_size = 48;
     float run_count = 0;
-
     
-    
-
     bool IsWeapon(const ItemDrops::PendingDrop* drop)
     {
         switch (drop->type) {
@@ -63,7 +57,9 @@ namespace {
 
     void DrawItemIcon(const ItemDrops::PendingDrop* drop)
     {
-        ImGui::Image(reinterpret_cast<ImTextureID>(*drop->icon), ImVec2(icon_size, icon_size));
+        if (icon_size > 0) {
+            ImGui::Image(reinterpret_cast<ImTextureID>(*drop->icon), ImVec2(icon_size, icon_size));
+        }
     }
 
     void DrawDefaultTable(std::vector<ItemDrops::PendingDrop*>& drops)
@@ -309,12 +305,27 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
             ItemDrops::Instance().ClearDropHistory();
         }
         ImGui::SameLine();
+        if (ImGui::Button("Save to disk")) {
+            std::filesystem::path filename = "drops.csv";
+            filename = Resources::GetPath(filename);
+            Resources::SaveFileDialog([](const char* chosen_path) {
+                if (chosen_path) {
+                    ItemDrops::Instance().AddPendingExport(std::string(chosen_path));
+                }
+            }, "csv", filename.string().c_str());
+        }
+        ImGui::SameLine();
         ImGui::Text("Total drops: %zu", drops.size());
         ImGui::SameLine();
         ImGui::Text("Group By:");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(120.0f);
         ImGui::Combo("##GroupByCombo", reinterpret_cast<int*>(&current_group_mode), group_mode_names, IM_ARRAYSIZE(group_mode_names));
+        ImGui::SameLine();
+        ImGui::Text("Total Gold Value:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(120.0f);
+        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%d", ItemDrops::Instance().GetTotalGoldValue());
 
         ImGui::Separator();
 
@@ -339,7 +350,7 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
                     case GroupMode::Type:
                         key = GW::Items::GetItemTypeName(drop->type);
                         break;
-                    case GroupMode::Weapon: // ADD THIS CASE
+                    case GroupMode::Weapon:
                         key = GetWeaponCategory(drop);
                         break;
                     default:
@@ -360,7 +371,7 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
 }
 
 void DropTrackerWindow::DrawSettingsInternal() {
-    ImGui::DragFloat("Item Icon Size", &icon_size, 16, 16, 64);
+    ImGui::DragFloat("Item Icon Size", &icon_size, 16, 0, 64);
 }
 
 void DropTrackerWindow::LoadSettings(ToolboxIni* ini)
