@@ -2313,8 +2313,6 @@ void GameSettings::DrawSettingsInternal()
                     "selling Gold and Green items introduced\n"
                     "in February 5, 2019 update.");
 
-    ImGui::ShowHelp("When logging out to switch character, your email address is visible on the login screen; tick this to automatically hide it\n\nThis is useful when streaming your gameplay to hide your personal info.");
-
     ImGui::Checkbox("Keep current quest when accepting a new one", &keep_current_quest_when_new_quest_added);
     ImGui::ShowHelp(
         "By default, Guild Wars changes your currently selected quest to the one you've just taken from an NPC.\nThis can be annoying if you don't realise your quest marker is now taking you somewhere different!\nTick this to make sure your current quest isn't changed when a new quest is added to your log."
