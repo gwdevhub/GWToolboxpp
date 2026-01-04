@@ -331,7 +331,6 @@ namespace {
                 }
                 // NB: Shout skill etc is wcslen < 3, don't worry about player messages e.g. drunk
                 if (npc_speech_bubbles_as_chat && source_living && !source_living->login_number && packet->message && wcslen(packet->message) >= 3) {
-                    status->blocked = true;
                     const auto sender = GW::Agents::GetAgentEncName(packet->agent_id);
                     GW::Chat::WriteChatEnc(GW::Chat::Channel::CHANNEL_EMOTE, packet->message, sender);
                     break;
