@@ -653,7 +653,11 @@ int ItemDrops::GetTotalGoldValue()
 {
     int value = 0;
     for (auto drop : drop_history) {
-        value += drop->value * drop->quantity;  
+        if (drop->type == GW::Constants::ItemType::Gold_Coin) {
+            value += drop->value;
+        }else {
+            value += drop->value * drop->quantity;  
+        }
     }
     return value;
 }
