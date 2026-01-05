@@ -250,10 +250,16 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         }
     }
     if (reply == InjectReply_NoProcess) {
+        const auto gw2_processes = GetGuildWars2Processes();
+        const wchar_t* error_message = L"Couldn't find any valid process to start GWToolboxpp.\n"
+                                       L"Ensure Guild Wars is running before trying to run GWToolbox.\n";
+                      ;
+        if (!gw2_processes.empty()) {
+            error_message = L"Couldn't find any valid process to start GWToolboxpp.\n"
+                            L"GWToolboxpp is for Guild Wars Reforged, NOT Guild Wars 2!\n";
+        }
         const int iRet = MessageBoxW(
-            nullptr,
-            L"Couldn't find any valid process to start GWToolboxpp.\n"
-            L"Ensure Guild Wars is running before trying to run GWToolbox.\n",
+            nullptr, error_message,
             L"GWToolbox - Error",
             MB_RETRYCANCEL | MB_TOPMOST);
         if (iRet == IDCANCEL) {

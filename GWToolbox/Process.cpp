@@ -2,6 +2,17 @@
 
 #include "Process.h"
 
+namespace {
+    void AddProcess(Process& process, std::vector<Process>& processes)
+    {
+        const auto pid = process.GetProcessId();
+        for (auto& existing : processes) {
+            if (existing.GetProcessId() == pid) return;
+        }
+        processes.push_back(std::move(process));
+    }
+}
+
 Process::Process(const uint32_t pid, const DWORD rights) noexcept
 {
     Open(pid, rights);
@@ -227,8 +238,7 @@ DWORD Process::GetProcessId() const
     assert(m_Rights & (PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_QUERY_INFORMATION));
     return ::GetProcessId(m_hProcess);
 }
-
-bool GetProcesses(std::vector<Process>& processes, const wchar_t* name, const DWORD rights)
+bool GetProcessesByName(std::vector<Process>& processes, const wchar_t* name, const DWORD rights)
 {
     assert(name != nullptr);
 
@@ -253,12 +263,11 @@ bool GetProcesses(std::vector<Process>& processes, const wchar_t* name, const DW
     for (const DWORD pid : pids) {
         Process proc(pid, rights);
         std::wstring pname;
-        if (!(proc.IsOpen() && proc.GetName(pname))) {
+        if (!(proc.IsOpen() && proc.GetName(pname)))
             continue;
-        }
-        if (_wcsicmp(pname.c_str(), name) == 0) {
-            processes.push_back(std::move(proc));
-        }
+        if (_wcsicmp(pname.c_str(), name) != 0) 
+            continue;
+        AddProcess(proc, processes);
     }
 
     return true;
@@ -292,14 +301,13 @@ static BOOL CALLBACK EnumWindowsProc(HWND hWnd, const LPARAM lParam)
             fprintf(stderr, "Couldn't open process: %lu with rights 0x%lX\n", ProcessId, UserParam->rights);
             return TRUE;
         }
-
-        UserParam->processes->emplace_back(std::move(process));
+        AddProcess(process, *UserParam->processes);
     }
 
     return TRUE;
 }
 
-bool GetProcessesFromWindowClass(std::vector<Process>& processes, const wchar_t* classname, const DWORD rights)
+bool GetProcessesByWindowClass(std::vector<Process>& processes, const wchar_t* classname, const DWORD rights)
 {
     EnumWindowUserParam UserParam;
     UserParam.rights = rights;

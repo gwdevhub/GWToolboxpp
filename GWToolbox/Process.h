@@ -37,8 +37,8 @@ private:
     DWORD m_Rights = 0;
 };
 
-bool GetProcesses(std::vector<Process>& processes, const wchar_t* name, DWORD rights = PROCESS_ALL_ACCESS);
-bool GetProcessesFromWindowClass(std::vector<Process>& processes, const wchar_t* classname, DWORD rights = PROCESS_ALL_ACCESS);
+bool GetProcessesByName(std::vector<Process>& processes, const wchar_t* name, DWORD rights = PROCESS_ALL_ACCESS);
+bool GetProcessesByWindowClass(std::vector<Process>& processes, const wchar_t* classname, DWORD rights = PROCESS_ALL_ACCESS);
 
 class ProcessScanner {
 public:

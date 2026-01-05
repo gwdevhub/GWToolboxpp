@@ -7,7 +7,7 @@
 enum InjectReply {
     InjectReply_Inject,
     InjectReply_Cancel,
-    InjectReply_NoProcess,
+    InjectReply_NoProcess, 
     InjectReply_PatternError,
     InjectReply_NoValidProcess
 };
@@ -46,3 +46,6 @@ private:
 };
 
 bool InjectRemoteThread(const Process* process, LPCWSTR ImagePath, LPDWORD lpExitCode);
+
+std::vector<Process> GetGuildWarsProcesses();
+std::vector<Process> GetGuildWars2Processes();
