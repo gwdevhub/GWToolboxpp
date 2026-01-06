@@ -237,30 +237,38 @@ namespace {
         });
     }
 
-    bool IsValidGWCADll(const std::filesystem::path& dll_path_str)
+    bool IsValidGWCADll(const std::filesystem::path& dll_path_str, const EmbeddedResource& resource_dll)
     {
-        if (!std::filesystem::exists(dll_path_str))
+        if (!std::filesystem::exists(dll_path_str)) return false;
+
+        // Check file size if we have a resource module to compare against
+        #ifndef _DEBUG
+        if (!resource_dll.data()) 
             return false;
+        std::error_code ec;
+        const auto file_size = std::filesystem::file_size(dll_path_str, ec);
+        if (ec || file_size != resource_dll.size())
+            return false;
+        #endif
+
         DWORD handle;
         DWORD version_info_size = GetFileVersionInfoSizeW(dll_path_str.c_str(), &handle);
-        if (!version_info_size)
+        if (!version_info_size) 
             return false;
         std::vector<BYTE> version_data(version_info_size);
-        if (!GetFileVersionInfoW(dll_path_str.c_str(), handle, version_info_size, version_data.data()))
+        if (!GetFileVersionInfoW(dll_path_str.c_str(), handle, version_info_size, version_data.data())) 
             return false;
         VS_FIXEDFILEINFO* file_info;
         UINT len;
-        if (!VerQueryValueA(version_data.data(), "\\", (LPVOID*)&file_info, &len))
+        if (!VerQueryValueA(version_data.data(), "\\", (LPVOID*)&file_info, &len)) 
             return false;
-
         WORD file_version_major = HIWORD(file_info->dwFileVersionMS);
         WORD file_version_minor = LOWORD(file_info->dwFileVersionMS);
         WORD file_version_patch = HIWORD(file_info->dwFileVersionLS);
         [[maybe_unused]] WORD file_version_build = LOWORD(file_info->dwFileVersionLS);
-
-        return (file_version_major == GWCA::VersionMajor &&
-                file_version_minor == GWCA::VersionMinor &&
-                file_version_patch == GWCA::VersionPatch);
+        return (file_version_major == GWCA::VersionMajor 
+            && file_version_minor == GWCA::VersionMinor 
+            && file_version_patch == GWCA::VersionPatch);
     }
 
     HMODULE LoadGWCADll(HMODULE resource_module)
@@ -270,14 +278,13 @@ namespace {
         const auto gwca_dll_path = Resources::GetPath("gwca.dll");
         const auto dll_path_str = gwca_dll_path.wstring();
 
-        if (!IsValidGWCADll(gwca_dll_path)) {
-            // Write new dll
-            const EmbeddedResource resource(IDR_GWCA_DLL, RT_RCDATA, resource_module);
-            if (!resource.data()) {
-                Log::Log("[LoadGWCADll] resource fail, couldn't get dll from resources");
-                return NULL;
-            }
+        const EmbeddedResource resource(IDR_GWCA_DLL, RT_RCDATA, resource_module);
+        if (!resource.data()) {
+            Log::Log("[LoadGWCADll] resource fail, couldn't get dll from resources");
+            return NULL;
+        }
 
+        if (!IsValidGWCADll(gwca_dll_path, resource)) {
             std::filesystem::remove(gwca_dll_path);
             if (std::filesystem::exists(gwca_dll_path)) {
                 Log::Log("[LoadGWCADll] std::filesystem::remove fail, file still exists - permission error?");
@@ -296,7 +303,7 @@ namespace {
                 return NULL;
             }
         }
-        if (!IsValidGWCADll(gwca_dll_path)) {
+        if (!IsValidGWCADll(gwca_dll_path, resource)) {
             Log::Log("[LoadGWCADll] resource fail, GWCA not valid after replacing");
             return NULL;
         }
