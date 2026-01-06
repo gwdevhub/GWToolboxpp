@@ -268,7 +268,8 @@ void Updater::CheckForUpdate(const bool forced)
             return;
         }
 
-        if (latest_release.version == current_release.version) {
+        if (latest_release.version == current_release.version
+            && latest_release.size == current_release.size) {
             // Version and size match
             step = Done;
             is_latest_version = true;
