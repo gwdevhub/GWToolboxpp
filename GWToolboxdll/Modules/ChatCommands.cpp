@@ -918,8 +918,6 @@ namespace {
         ImGui::Bullet();
         ImGui::Text("'/age2' prints the instance time to chat.");
         ImGui::Bullet();
-        ImGui::Text("'/animation [me|target] [animation_id (1-2076)]' to make you (or a target) do a specific animation");
-        ImGui::Bullet();
         ImGui::Text("'/armor' is an alias for '/pingitem armor'.");
         ImGui::Bullet();
         ImGui::Text("'/bonds [remove|add] [party_member_index|all] [all|skill_id]' remove or add bonds from a single party member, or all party members");
