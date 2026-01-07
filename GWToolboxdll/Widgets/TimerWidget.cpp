@@ -71,7 +71,8 @@ namespace {
         {GW::Constants::SkillID::Displacement, "Displacement"},
         {GW::Constants::SkillID::Life, "Life"},
         {GW::Constants::SkillID::Recuperation, "Recuperation"},
-        {GW::Constants::SkillID::Winds, "Winds"}
+        {GW::Constants::SkillID::Winds, "Winds"},
+        {GW::Constants::SkillID::Frozen_Soil, "Frozen Soil"}
     };
 
     bool hide_in_outpost = false;
