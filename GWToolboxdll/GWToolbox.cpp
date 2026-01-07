@@ -237,7 +237,7 @@ namespace {
         });
     }
 
-    bool IsValidGWCADll(const std::filesystem::path& dll_path_str, const EmbeddedResource& resource_dll)
+    bool IsValidGWCADll(const std::filesystem::path& dll_path_str, [[maybe_unused]] const EmbeddedResource& resource_dll)
     {
         if (!std::filesystem::exists(dll_path_str)) return false;
 

@@ -10,6 +10,7 @@
 #include "Install.h"
 #include "Process.h"
 #include "Settings.h"
+#include "WindowsDefender.h"
 
 static void ShowError(const wchar_t* message)
 {
@@ -134,6 +135,15 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     }
 
     AsyncRestScopeInit RestInitializer;
+
+    // Check and add Windows Defender exclusion if needed
+    std::filesystem::path install_path;
+    if (PathGetDocumentsPath(install_path, L"GWToolboxpp")) {
+        if (!IsPathExcludedFromDefender(install_path)) {
+            // Only prompt if not already excluded
+            AddDefenderExclusion(install_path, settings.quiet);
+        }
+    }
 
     Process proc;
     if (settings.install) {

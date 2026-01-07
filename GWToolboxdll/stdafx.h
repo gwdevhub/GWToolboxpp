@@ -90,4 +90,5 @@
 
 #pragma warning(disable: 4201) // nonstandard extension used : nameless struct/union
 #pragma warning(disable: 4505) // 'function' : unreferenced local function has been removed
-#pragma warning(disable: 28159) // Consider using 'GetTickCount64' instead of 'GetTickCount'.
+#pragma warning(disable: 4864) // expected 'template' keyword before dependent template name
+#pragma warning(disable: 28159) // Consider using 'GetTickCount64' instead of 'GetTickCount'
