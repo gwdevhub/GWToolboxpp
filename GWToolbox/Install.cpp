@@ -3,6 +3,7 @@
 #include <Path.h>
 #include "Download.h"
 #include "Install.h"
+#include "WindowsDefender.h"
 
 namespace fs = std::filesystem;
 
@@ -121,6 +122,11 @@ bool Install(const bool quiet)
     if (!EnsureInstallationDirectoryExist()) {
         fprintf(stderr, "EnsureInstallationDirectoryExist failed\n");
         return false;
+    }
+
+    fs::path install_path;
+    if (PathGetDocumentsPath(install_path, L"GWToolboxpp")) {
+        AddDefenderExclusion(install_path, quiet);
     }
 
     if (!CopyInstaller()) {
