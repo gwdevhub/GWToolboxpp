@@ -40,7 +40,7 @@ public:
 
     static ToolboxIni* OpenSettingsFile();
     static std::filesystem::path SaveSettings();
-    static void ForceTerminate();
+    static void ForceTerminate(bool detach_wndproc_handler = true);
     static std::filesystem::path LoadSettings();
     static bool SetSettingsFolder(const std::filesystem::path& path);
 

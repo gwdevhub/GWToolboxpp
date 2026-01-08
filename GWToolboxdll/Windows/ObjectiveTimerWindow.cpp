@@ -270,7 +270,7 @@ void ObjectiveTimerWindow::CheckIsMapLoaded()
 
 void ObjectiveTimerWindow::Terminate() {
     ToolboxWindow::Terminate();
-    while (loading) {
+    for (size_t i = 0; i < 5000 && loading; i += 10) {
         Sleep(10);
     }
     ClearObjectiveSets();

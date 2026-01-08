@@ -66,7 +66,7 @@ namespace {
     std::recursive_mutex module_management_mutex;
 
 
-    GW::UI::UIInteractionCallback OnUiRoot_UICallback_Func = 0, OnUiRoot_UICallback_Ret = 0;
+    GW::UI::UIInteractionCallback OnUiRoot_UICallback_Func = nullptr, OnUiRoot_UICallback_Ret = nullptr;
 
     // Hook the "Exit Game" button on logout prompt to ensure toolbox closes gracefully
     void OnUiRoot_UICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
@@ -81,7 +81,7 @@ namespace {
 
     bool HookUiRoot()
     {
-        if (OnUiRoot_UICallback_Func) 
+        if (OnUiRoot_UICallback_Func)
             return true;
         const auto frame = GW::UI::GetParentFrame(GW::UI::GetFrameByLabel(L"Game"));
         if (!(frame && frame->frame_callbacks.size()))
@@ -221,7 +221,7 @@ namespace {
         Disabled
     };
 
-    GWToolboxState gwtoolbox_state = GWToolboxState::Terminated;
+    auto gwtoolbox_state = GWToolboxState::Terminated;
     bool gwtoolbox_disabled = false;
 
     bool pending_detach_dll = false;
@@ -243,33 +243,33 @@ namespace {
 
         // Check file size if we have a resource module to compare against
         (resource_dll);
-        #ifndef _DEBUG
-        if (!resource_dll.data()) 
+#ifndef _DEBUG
+        if (!resource_dll.data())
             return false;
         std::error_code ec;
         const auto file_size = std::filesystem::file_size(dll_path_str, ec);
         if (ec || file_size != resource_dll.size())
             return false;
-        #endif
+#endif
 
         DWORD handle;
         DWORD version_info_size = GetFileVersionInfoSizeW(dll_path_str.c_str(), &handle);
-        if (!version_info_size) 
+        if (!version_info_size)
             return false;
         std::vector<BYTE> version_data(version_info_size);
-        if (!GetFileVersionInfoW(dll_path_str.c_str(), handle, version_info_size, version_data.data())) 
+        if (!GetFileVersionInfoW(dll_path_str.c_str(), handle, version_info_size, version_data.data()))
             return false;
         VS_FIXEDFILEINFO* file_info;
         UINT len;
-        if (!VerQueryValueA(version_data.data(), "\\", (LPVOID*)&file_info, &len)) 
+        if (!VerQueryValueA(version_data.data(), "\\", (LPVOID*)&file_info, &len))
             return false;
         WORD file_version_major = HIWORD(file_info->dwFileVersionMS);
         WORD file_version_minor = LOWORD(file_info->dwFileVersionMS);
         WORD file_version_patch = HIWORD(file_info->dwFileVersionLS);
         [[maybe_unused]] WORD file_version_build = LOWORD(file_info->dwFileVersionLS);
-        return (file_version_major == GWCA::VersionMajor 
-            && file_version_minor == GWCA::VersionMinor 
-            && file_version_patch == GWCA::VersionPatch);
+        return (file_version_major == GWCA::VersionMajor
+                && file_version_minor == GWCA::VersionMinor
+                && file_version_patch == GWCA::VersionPatch);
     }
 
     HMODULE LoadGWCADll(HMODULE resource_module)
@@ -282,37 +282,37 @@ namespace {
         const EmbeddedResource resource(IDR_GWCA_DLL, RT_RCDATA, resource_module);
         if (!resource.data()) {
             Log::Log("[LoadGWCADll] resource fail, couldn't get dll from resources");
-            return NULL;
+            return nullptr;
         }
 
         if (!IsValidGWCADll(gwca_dll_path, resource)) {
             std::filesystem::remove(gwca_dll_path);
             if (std::filesystem::exists(gwca_dll_path)) {
                 Log::Log("[LoadGWCADll] std::filesystem::remove fail, file still exists - permission error?");
-                return NULL;
+                return nullptr;
             }
 
             FILE* fp = fopen(gwca_dll_path.string().c_str(), "wb");
             if (!fp) {
                 Log::Log("[LoadGWCADll] fopen fail, %d", GetLastError());
-                return NULL;
+                return nullptr;
             }
             const auto written = fwrite(resource.data(), resource.size(), 1, fp);
             fclose(fp);
             if (written != 1) {
                 Log::Log("[LoadGWCADll] fwrite fail, %d", GetLastError());
-                return NULL;
+                return nullptr;
             }
         }
         if (!IsValidGWCADll(gwca_dll_path, resource)) {
             Log::Log("[LoadGWCADll] resource fail, GWCA not valid after replacing");
-            return NULL;
+            return nullptr;
         }
 
         gwcamodule = LoadLibraryW(gwca_dll_path.wstring().c_str());
         if (!gwcamodule) {
             Log::Log("[LoadGWCADll] LoadLibraryW fail, %d", GetLastError());
-            return NULL;
+            return nullptr;
         }
         Log::Log("[LoadGWCADll] success, module ptr %p", gwcamodule);
         return gwcamodule;
@@ -401,7 +401,7 @@ namespace {
         static bool right_mouse_down = false;
 
         if (Message == WM_CLOSE) {
-            GWToolbox::ForceTerminate();
+            GWToolbox::ForceTerminate(false);
             return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
         }
 
@@ -418,13 +418,13 @@ namespace {
                 // Tell imgui that the mouse cursor is in its original clicked position - GW messes with the cursor in-game
                 SendMessage(hWnd, WM_GW_RBUTTONCLICK, 0, right_click_lparam);
             }
-            mouse_moved_whilst_right_clicking = 0;
+            mouse_moved_whilst_right_clicking = false;
             right_mouse_down = false;
         }
         if (Message == WM_RBUTTONDOWN) {
             right_mouse_down = true;
             right_click_lparam = lParam;
-            mouse_moved_whilst_right_clicking = 0;
+            mouse_moved_whilst_right_clicking = false;
         }
         if (Message == WM_RBUTTONDBLCLK) {
             right_mouse_down = true;
@@ -450,13 +450,12 @@ namespace {
         switch (Message) {
             case WM_MOUSELEAVE:
             case WM_NCMOUSELEAVE:
-                if (::GetCapture() == nullptr && ImGui::IsMouseDown(ImGuiMouseButton_Left))
-                    ::SetCapture(hWnd);
+                if (GetCapture() == nullptr && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+                    SetCapture(hWnd);
                 break;
             // Send button up mouse events to everything, to avoid being stuck on mouse-down
             case WM_INPUT: {
                 if (right_mouse_down && !mouse_moved_whilst_right_clicking && GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT && lParam) {
-                    
                     BYTE lpb[128];
                     UINT dwSize = _countof(lpb);
                     ASSERT(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) < dwSize);
@@ -464,7 +463,7 @@ namespace {
                     const RAWINPUT* raw = (RAWINPUT*)lpb;
                     if ((raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) == 0 && raw->data.mouse.lLastX && raw->data.mouse.lLastY) {
                         // If its a relative mouse move, process the action
-                        mouse_moved_whilst_right_clicking = 1;
+                        mouse_moved_whilst_right_clicking = true;
                     }
                 }
 
@@ -500,9 +499,9 @@ namespace {
                     return true;
                 }
             }
-            //if (!skip_mouse_capture) {
+                //if (!skip_mouse_capture) {
 
-            //}
+                //}
             break;
 
             // keyboard messages
@@ -543,10 +542,10 @@ namespace {
                     return true;
                 }
             }
-            // note: capturing those events would prevent typing if you have a hotkey assigned to normal letters.
-            // We may want to not send events to toolbox if the player is typing in-game
-            // Otherwise, we may want to capture events.
-            // For that, we may want to only capture *successfull* hotkey activations.
+                // note: capturing those events would prevent typing if you have a hotkey assigned to normal letters.
+                // We may want to not send events to toolbox if the player is typing in-game
+                // Otherwise, we may want to capture events.
+                // For that, we may want to only capture *successfull* hotkey activations.
             break;
 
             case WM_SIZE:
@@ -578,9 +577,10 @@ namespace {
 
     RAWINPUTDEVICE rid[2];
     // RegisterRawInputDevices to be able to receive WM_INPUT via WndProc
-    bool RegisterRawInputs(bool enable = true) {
+    bool RegisterRawInputs(bool enable = true)
+    {
         if (!gw_window_handle) return false;
-        
+
         // Mouse
         rid[0].usUsagePage = 0x01;
         rid[0].usUsage = 0x02;
@@ -646,9 +646,9 @@ namespace {
                 ASSERT(false && "Failed to find a valid proc address in GWCA. Ensure you're running the correct version, or delete gwca.dll in your toolbox folder!");
             }
             break;
-            // Add other sliNotify cases for debugging if you need to later
+                // Add other sliNotify cases for debugging if you need to later
         }
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -708,7 +708,7 @@ DWORD __stdcall GWToolbox::MainLoop(LPVOID module) noexcept
 {
     dllmodule = static_cast<HMODULE>(module);
     __try {
-        GWToolbox::Initialize(module);
+        Initialize(module);
         while (gwtoolbox_state != GWToolboxState::Terminated) {
             // wait until destruction
             Sleep(100);
@@ -741,7 +741,6 @@ DWORD __stdcall GWToolbox::MainLoop(LPVOID module) noexcept
         Sleep(160);
 
         UnloadGWCADll();
-
     } __except (EXCEPT_EXPRESSION_ENTRY) {
         Log::Log("SafeThreadEntry __except body\n");
     }
@@ -768,6 +767,7 @@ void GWToolbox::Initialize(LPVOID module)
     GW::Initialize();
     Log::InitializeChat();
 
+    HookUiRoot();
     AttachRenderCallback();
     GW::EnableHooks();
 
@@ -834,7 +834,7 @@ ToolboxIni* GWToolbox::OpenSettingsFile()
 {
     static ToolboxIni* inifile = nullptr;
     const auto full_path = Resources::GetSettingFile(GWTOOLBOX_INI_FILENAME);
-    if (!GWToolbox::SettingsFolderChanged() && inifile) {
+    if (!SettingsFolderChanged() && inifile) {
         return inifile;
     }
     auto tmp = new ToolboxIni(false, false, false);
@@ -865,9 +865,11 @@ std::filesystem::path GWToolbox::SaveSettings()
     settings_folder_changed = false;
     return ini->location_on_disk;
 }
-void GWToolbox::ForceTerminate() {
-    ASSERT(DetachWndProcHandler());
+
+void GWToolbox::ForceTerminate(bool detach_wndproc_handler)
+{
     ASSERT(DetachGameLoopCallback());
+    ASSERT(!detach_wndproc_handler || DetachWndProcHandler());
 
     SignalTerminate();
     DrawTerminating(nullptr);
@@ -881,6 +883,7 @@ void GWToolbox::ForceTerminate() {
 
     gwtoolbox_state = GWToolboxState::Terminated;
 }
+
 void GWToolbox::SignalTerminate(bool detach_dll)
 {
     switch (gwtoolbox_state) {
@@ -888,6 +891,7 @@ void GWToolbox::SignalTerminate(bool detach_dll)
         case GWToolboxState::Terminating:
         case GWToolboxState::Initialised:
         case GWToolboxState::Initialising:
+        case GWToolboxState::DrawInitialising:
             gwtoolbox_state = GWToolboxState::DrawTerminating;
             AttachGameLoopCallback();
             AttachRenderCallback();
@@ -947,8 +951,6 @@ void GWToolbox::Update(GW::HookStatus*)
             return;
     }
 
-    HookUiRoot();
-
     UpdateModulesTerminating(delta_f);
 
     // Update loop
@@ -961,7 +963,7 @@ void GWToolbox::Update(GW::HookStatus*)
         if (c && c->player_name) {
             Log::Flash("Hello!");
             greeted = true;
-            
+
             // we wants here to alert the player if he inits GWToolbox++ in a PvP area that it's disabled 
             // check here if the player is in a PvP area
             if (ShouldDisableToolbox()) {
@@ -1002,7 +1004,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         }
         return;
     }
-    else if (ShouldDisableToolbox()) {
+    if (ShouldDisableToolbox()) {
         Disable();
         return;
     }

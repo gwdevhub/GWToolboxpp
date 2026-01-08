@@ -24,8 +24,8 @@ namespace {
 
     static_assert(sizeof(GWDebugInfo) == 0x80210, "struct GWDebugInfo has incorrect size");
 
-    typedef void(__cdecl* AppendStackTraceToCrashMessage_pt)(GWDebugInfo*, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
-    AppendStackTraceToCrashMessage_pt AppendStackTraceToCrashMessage_Func = 0, AppendStackTraceToCrashMessage_Ret = 0;
+    using AppendStackTraceToCrashMessage_pt = void(__cdecl*)(GWDebugInfo*, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+    AppendStackTraceToCrashMessage_pt AppendStackTraceToCrashMessage_Func = nullptr, AppendStackTraceToCrashMessage_Ret = nullptr;
 
     void OnAppendStackTraceToCrashMessage(GWDebugInfo* message_buffer, uint32_t param_1, uint32_t param_2, uint32_t param_3, uint32_t param_4, uint32_t param_5, uint32_t param_6)
     {
@@ -46,11 +46,11 @@ namespace {
 
 
 
-        PCONTEXT pContext = reinterpret_cast<PCONTEXT>(param_4);
+        auto pContext = reinterpret_cast<PCONTEXT>(param_4);
 
         // Create EXCEPTION_POINTERS structure
         EXCEPTION_RECORD exceptionRecord = {0};
-        EXCEPTION_POINTERS exceptionPointers = {0};
+        EXCEPTION_POINTERS exceptionPointers = {nullptr};
 
         // Fill in exception record with info from CONTEXT
         exceptionRecord.ExceptionCode = EXCEPTION_BREAKPOINT; // Or appropriate code
@@ -91,6 +91,7 @@ namespace {
             AppendStackTraceToCrashMessage_Func = nullptr;
         }
     }
+
     LONG WINAPI TopLevelExceptionFilter(EXCEPTION_POINTERS* pExceptionPointers)
     {
         // Handle the crash here - this runs BEFORE Windows Error Reporting
@@ -114,7 +115,7 @@ void CrashHandler::GWCAPanicHandler(
 void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigned line)
 {
     __try {
-        const char* fmt = "Assertion Error: '%s' in '%s' line %u";
+        auto fmt = "Assertion Error: '%s' in '%s' line %u";
         const size_t len = snprintf(nullptr, 0, fmt, expr, file, line);
         tb_exception_message = new char[len + 1];
         snprintf(tb_exception_message, len + 1, fmt, expr, file, line);
@@ -129,6 +130,7 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigne
     // Should never reach here
     TerminateProcess(GetCurrentProcess(), 1);
 }
+
 LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const char* extra_info)
 {
 #ifdef _DEBUG
@@ -138,7 +140,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     // Disable WER right at the start of crash handling
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
 
-    typedef BOOL(WINAPI * SetProcessUserModeExceptionPolicy_t)(DWORD dwFlags);
+    using SetProcessUserModeExceptionPolicy_t = BOOL(WINAPI *)(DWORD dwFlags);
     HMODULE hKernel32 = GetModuleHandleA("kernel32.dll");
     if (hKernel32) {
         auto SetProcessUserModeExceptionPolicy = (SetProcessUserModeExceptionPolicy_t)GetProcAddress(hKernel32, "SetProcessUserModeExceptionPolicy");
@@ -151,16 +153,16 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
 #ifndef _DEBUG
     if (!Updater::IsLatestVersion()) {
         const std::wstring error_message = L"YOU ARE NOT USING THE LATEST VERSION OF GWTOOLBOX++!\n\n"
-                                           L"Please update to the latest version before reporting any issues.\n"
-                                           L"No crash dump will be created because the issue may have already been fixed.";
+            L"Please update to the latest version before reporting any issues.\n"
+            L"No crash dump will be created because the issue may have already been fixed.";
 
         MessageBoxW(nullptr, error_message.c_str(), L"GWToolbox++ - Outdated Version", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
     if (!PluginModule::GetPlugins().empty()) {
         const std::wstring error_message = L"YOU ARE USING PLUGINS!\n\n"
-                                           L"Do not report issues that happen while you are using plugins.\n"
-                                           L"No crash dump will be created because the issue may not come from Toolbox.";
+            L"Do not report issues that happen while you are using plugins.\n"
+            L"No crash dump will be created because the issue may not come from Toolbox.";
 
         MessageBoxW(nullptr, error_message.c_str(), L"GWToolbox++ - Plugins used", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
@@ -269,6 +271,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
 
     return EXCEPTION_EXECUTE_HANDLER;
 }
+
 void CrashHandler::Terminate()
 {
     ToolboxModule::Terminate();
@@ -281,8 +284,8 @@ void CrashHandler::Initialize()
     // Disable WER
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
 
-    typedef BOOL(WINAPI * SetProcessUserModeExceptionPolicy_t)(DWORD dwFlags);
-    typedef BOOL(WINAPI * GetProcessUserModeExceptionPolicy_t)(LPDWORD lpFlags);
+    using SetProcessUserModeExceptionPolicy_t = BOOL(WINAPI *)(DWORD dwFlags);
+    using GetProcessUserModeExceptionPolicy_t = BOOL(WINAPI *)(LPDWORD lpFlags);
 
     HMODULE hKernel32 = GetModuleHandleA("kernel32.dll");
     if (hKernel32) {
