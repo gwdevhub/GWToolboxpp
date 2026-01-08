@@ -165,7 +165,7 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
         }
         if (!charname[0]) {
             fprintf(stderr, "Character name in process %lu is empty\n", process.GetProcessId());
-            continue;
+            wcscpy_s(charname, sizeof(L"<No character selected>"), L"<No character selected>");
         }
 
         const size_t charname_len = wcsnlen(charname, _countof(charname));
