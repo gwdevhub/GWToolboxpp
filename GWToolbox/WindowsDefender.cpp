@@ -13,7 +13,7 @@ namespace {
     {
         std::wifstream file(path);
         if (!file.is_open()) {
-            throw std::runtime_error("Failed to open file");
+            return L"";
         }
 
         std::wstringstream buffer;

@@ -59,7 +59,9 @@ static bool InjectInstalledDllInProcess(const Process* process, std::wstring& er
         if (!PathGetProgramDirectory(dllpath))
             return error = L"PathGetProgramDirectory failed", false;
         dllpath = dllpath / L"GWToolboxdll.dll";
-        return error = std::format(L"Application @ {} not found.\n\nEnsure your copy of GWToolboxdll.dll is local to {} or run {} without the /localdll argument.", dllpath.wstring(), exe_filename, exe_filename), false;
+        if (!exists(dllpath)) {
+            return error = std::format(L"Application @ {} not found.\n\nEnsure your copy of {} is local to {} or run {} without the /localdll argument.", dllpath.wstring(), dllpath.filename().wstring(), exe_filename, exe_filename), false;
+        }
     }
     dllpath = GetInstallationDir();
     if (dllpath.empty())
@@ -192,6 +194,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         if (iRet == IDYES) {
             // @Cleanup: Check return value
             if (!Install(settings.quiet, error)) {
+                ShowError(std::format(L"Failed to install GWToolbox:\n\n{}", error).c_str());
                 fprintf(stderr, "Failed to install\n");
                 return 1;
             }
