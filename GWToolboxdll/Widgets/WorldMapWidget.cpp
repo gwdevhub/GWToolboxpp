@@ -116,7 +116,7 @@ const EliteBossLocation elite_boss_locations[] = {
     {GW::Constants::SkillID::Mind_Freeze, 01, "Lord Glacius the Eternal", GW::Constants::MapID::Bjora_Marches, {{1523, 390}}, "He can only be encountered if the group of Stone Summit dwarves found at the map location are allowed to complete their ritual and summon him."},
     {GW::Constants::SkillID::Eviscerate, 01, "Tenagg Flametroller", GW::Constants::MapID::Bjora_Marches, {{1514, 343}}, "Only during \"Blood Washes Blood\" mission."},
     {GW::Constants::SkillID::Eviscerate, 01, "Lissah the Packleader", GW::Constants::MapID::Bjora_Marches, {{1500, 598}}},
-    {GW::Constants::SkillID::Devastating_Hammer, 01, "Krak Flamewhip", GW::Constants::MapID::Jaga_Moraine, {{1123, 382}}, "Only during \"Krak's Cavalry\" quest."},
+    {GW::Constants::SkillID::Dwarven_Battle_Stance, 01, "Krak Flamewhip", GW::Constants::MapID::Jaga_Moraine, {{1123, 382}}, "Only during \"Krak's Cavalry\" quest."},
     {GW::Constants::SkillID::Jagged_Bones, 01, "Avarr the Fallen", GW::Constants::MapID::Jaga_Moraine, {{1033, 66}}, "He needs to be killed as part of the \"Anything You Can Do\" quest."},
     {GW::Constants::SkillID::Shockwave, 01, "Ssissth the Leviathan", GW::Constants::MapID::Jaga_Moraine, {{1226, 68}}, "Can be found prior to completing \"Prenuptial Disagreement\" quest.\nAfterwards a different elementalist boss spawns."},
     {GW::Constants::SkillID::Shatterstone, 01, "Whiteout", GW::Constants::MapID::Jaga_Moraine, {{1112, 84}}, "He needs to be killed as a part of the \"Anything You Can Do\" quest."},
