@@ -37,32 +37,34 @@ bool GetFileSize(const wchar_t* path, uint64_t* file_size)
     return true;
 }
 
-bool EnsureInstallationDirectoryExist()
+fs::path GetInstallationDir()
 {
-    fs::path docpath;
+    std::filesystem::path docpath;
     if (!PathGetDocumentsPath(docpath, L"GWToolboxpp")) {
-        return false;
+        return {};
     }
     std::filesystem::path computer_name;
     if (!PathGetComputerName(computer_name)) {
-        return false;
+        return {};
     }
-    docpath = docpath / computer_name; // %USERPROFILE%\Documents\GWToolboxpp\<Computername>
+    return docpath / computer_name;
+}
 
-    if (!PathCreateDirectorySafe(docpath)) {
-        return false;
-    }
-
-    return true;
+fs::path EnsureInstallationDirectoryExist()
+{
+    const auto installation_dir = GetInstallationDir();
+    if (!installation_dir.empty() && PathCreateDirectorySafe(installation_dir))
+        return installation_dir;
+    return {};
 }
 
 bool CopyInstaller()
 {
-    std::filesystem::path dest_path;
-
-    if (!PathGetDocumentsPath(dest_path, L"GWToolboxpp\\GWToolbox.exe")) {
+    std::filesystem::path dest_path = GetInstallationDir();
+    if (dest_path.empty())
         return false;
-    }
+    dest_path = dest_path.parent_path() / L"GWToolbox.exe";
+
     std::filesystem::path source_path;
     if (!PathGetExeFullPath(source_path)) {
         return false;
@@ -79,7 +81,7 @@ bool CopyInstaller()
     return true;
 }
 
-bool DeleteInstallationDirectory()
+bool DeleteInstallationDirectory(std::wstring& error)
 {
     // @Remark:
     // "SHFileOperationW" expect the path to be double-null terminated.
@@ -87,10 +89,10 @@ bool DeleteInstallationDirectory()
     // Moreover, the path should be a full path otherwise, the folder won't be
     // moved to the recycle bin regardless of "FOF_ALLOWUNDO".
 
-    std::filesystem::path fspath;
-    if (!PathGetDocumentsPath(fspath, L"GWToolboxpp\\*")) {
-        return false;
-    }
+    const auto install_dir = GetInstallationDir();
+    if (install_dir.empty())
+        return error = L"Failed to GetInstallationDir() in DeleteInstallationDirectory()", false;
+    const auto fspath = install_dir / "*";
 
     const auto str = fspath.wstring();
     SHFILEOPSTRUCTW FileOp = {nullptr};
@@ -101,44 +103,36 @@ bool DeleteInstallationDirectory()
     FileOp.lpszProgressTitle = L"GWToolbox uninstallation";
 
     const int iRet = SHFileOperationW(&FileOp);
-    if (iRet != 0) {
-        fprintf(stderr, "SHFileOperationW failed: 0x%X, GetLastError 0x%X\n", iRet, GetLastError());
-        return false;
-    }
-    if (FileOp.fAnyOperationsAborted) {
-        fprintf(stderr, "SHFileOperationW failed: fAnyOperationsAborted\n");
-        return false;
-    }
-
+    if (iRet != 0)
+        return error = std::format(L"SHFileOperationW failed: {:#X}, GetLastError {:#X}", iRet, GetLastError()), false;
+    if (FileOp.fAnyOperationsAborted)
+        return error = std::format(L"SHFileOperationW failed: fAnyOperationsAborted"), false;
     return true;
 }
 
-bool Install(const bool quiet)
+bool Install(const bool quiet, std::wstring& error)
 {
-    if (IsInstalled()) {
+    if (IsInstalled())
         return true;
-    }
+    fs::path install_path = EnsureInstallationDirectoryExist();
+    if (install_path.empty())
+        return error = L"EnsureInstallationDirectoryExist failed", false;
 
-    if (!EnsureInstallationDirectoryExist()) {
-        fprintf(stderr, "EnsureInstallationDirectoryExist failed\n");
+    if (!CopyInstaller())
+        return error = L"CopyInstaller failed", false;
+
+    if (!DownloadWindow::DownloadAllFiles(error))
         return false;
+    const auto dll_path = install_path.parent_path() / "GWToolboxdll.dll";
+    if (!exists(dll_path)) {
+        return error = std::format(L"Application @ {} not found after installation; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch.", dll_path.wstring(),
+                                   dll_path.parent_path().wstring()), false;
     }
-
-    fs::path install_path;
-    if (PathGetDocumentsPath(install_path, L"GWToolboxpp")) {
-        AddDefenderExclusion(install_path, quiet);
+    AddDefenderExclusion(install_path.parent_path(), quiet, error); // Silent fail, it'll show messages etc
+    if (!IsInstalled()) {
+        return error = std::format(L"IsInstalled() returned false after installation; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch.", dll_path.wstring(),
+                                   dll_path.parent_path().wstring()), false;
     }
-
-    if (!CopyInstaller()) {
-        fprintf(stderr, "CopyInstaller failed\n");
-        return false;
-    }
-
-    if (!DownloadWindow::DownloadAllFiles()) {
-        fprintf(stderr, "DownloadWindow::DownloadAllFiles failed\n");
-        return false;
-    }
-
     if (!quiet) {
         MessageBoxW(nullptr, L"Installation successful", L"Installation", 0);
     }
@@ -146,7 +140,7 @@ bool Install(const bool quiet)
     return true;
 }
 
-bool Uninstall(const bool quiet)
+bool Uninstall(const bool quiet, std::wstring& error)
 {
     bool DeleteAllFiles = true;
     if (quiet == false) {
@@ -163,7 +157,7 @@ bool Uninstall(const bool quiet)
 
     if (DeleteAllFiles) {
         // Delete all files
-        DeleteInstallationDirectory();
+        DeleteInstallationDirectory(error);
     }
 
     if (quiet == false) {
@@ -175,22 +169,11 @@ bool Uninstall(const bool quiet)
 
 bool IsInstalled()
 {
-    fs::path dllpath;
-    fs::path computername;
-    if (!PathGetDocumentsPath(dllpath, L"GWToolboxpp")) {
+    const auto install_path = GetInstallationDir();
+    if (install_path.empty())
         return false;
-    }
-    if (!PathGetComputerName(computername)) {
-        return false;
-    }
-    const fs::path computerpath = dllpath / computername;
 
-    if (!exists(dllpath / L"GWToolboxdll.dll")) {
-        return false;
-    }
-    if (!exists(dllpath / L"GWToolbox.exe")) {
-        return false;
-    }
-
-    return true;
+    const auto dllpath = install_path.parent_path();
+    return exists(dllpath / L"GWToolboxdll.dll")
+           && exists(dllpath / L"GWToolbox.exe");
 }

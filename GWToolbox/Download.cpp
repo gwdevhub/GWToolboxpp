@@ -6,10 +6,12 @@
 #include <RestClient.h>
 #include "Download.h"
 
+#include "Install.h"
+
 class AsyncFileDownloader : public AsyncRestClient {
 public:
     AsyncFileDownloader()
-        : m_DownloadLength{0} { }
+        : m_DownloadLength{0} {}
 
     AsyncFileDownloader(const AsyncFileDownloader&) = delete;
 
@@ -163,63 +165,66 @@ std::string GetDllRelease(const std::filesystem::path& dllpath)
         return {};
     }
     sprintf_s(buffer, "%lu.%lu.%lu.%lu", pvi->dwProductVersionMS >> 16, pvi->dwFileVersionMS & 0xFFFF,
-            pvi->dwFileVersionLS >> 16, pvi->dwFileVersionLS & 0xFFFF);
+              pvi->dwFileVersionLS >> 16, pvi->dwFileVersionLS & 0xFFFF);
     delete[] buf;
     return {buffer};
 }
 
-bool DownloadWindow::DownloadAllFiles()
+bool DownloadWindow::DownloadAllFiles(std::wstring& error)
 {
+    std::filesystem::path dllpath = GetInstallationDir();
+    if (dllpath.empty())
+        return error = L"GetInstallPath failed", false;
+    dllpath = dllpath.parent_path() / "GWToolboxdll.dll";
+
     std::string content;
     if (!Download(content, "https://api.github.com/repos/gwdevhub/GWToolboxpp/releases/latest")) {
-        fprintf(stderr, "Couldn't download the latest release of GWToolboxpp\n");
         // @Remark:
         // We may not be able to grep Github api. (For instance, if we spam it)
-        return true;
+        return error = L"Couldn't download the latest release of GWToolboxpp", true;
     }
 
     Release release;
-    if (!ParseRelease(content, &release)) {
-        fprintf(stderr, "ParseRelease failed\n");
-        return false;
-    }
+    if (!ParseRelease(content, &release))
+        return error = L"ParseRelease failed", false;
 
-    std::filesystem::path dllpath;
-    PathGetDocumentsPath(dllpath, L"GWToolboxpp\\GWToolboxdll.dll");
-    const auto release_string = GetDllRelease(dllpath);
-    if (!release_string.empty()) {
-        std::string release_tag = release.tag_name;
-        const auto current_version = std::regex_replace(release_tag, std::regex(R"([^0-9.])"), "");
-        if (release_string.starts_with(current_version)) {
-            return true;
-        }
-    }
-
-    std::filesystem::path dll_path;
-    if (!PathGetDocumentsPath(dll_path, L"GWToolboxpp\\GWToolboxdll.dll")) {
-        return false;
-    }
-
-    char buffer[64];
-    snprintf(buffer, 64, "Downloading version '%s'", release.tag_name.c_str());
-    MessageBoxA(nullptr, buffer, "Downloading...", 0);
-
-    std::string url;
-    size_t file_size = 0;
+    Asset* release_dll_asset = nullptr;
     for (auto& asset : release.assets) {
         if (asset.name == "GWToolbox.dll" || asset.name == "GWToolboxdll.dll") {
-            fprintf(stderr, "browser_download_url: '%s'\n", asset.browser_download_url.c_str());
-            const char* purl = asset.browser_download_url.c_str();
-            file_size = asset.size;
-            url = std::string(purl, purl + asset.browser_download_url.size());
+            release_dll_asset = &asset;
             break;
         }
     }
-
-    if (url.empty()) {
-        fprintf(stderr, "Didn't find GWTooolboxdll.dll\n");
-        return false;
+    if (!release_dll_asset) {
+        return error = L"Failed to find dll in latest release", false;
     }
+    if (std::filesystem::exists(dllpath)) {
+        const auto current_filesize = std::filesystem::file_size(dllpath);
+        if (current_filesize == release_dll_asset->size) {
+            const auto current_version = GetDllRelease(dllpath);
+            const auto available_version = std::regex_replace(release.tag_name, std::regex(R"([^0-9.])"), "");
+            if (current_version == available_version
+                && current_filesize == release_dll_asset->size) {
+                return true;
+            }
+            if (current_version.starts_with(available_version)) {
+                // NB: This allows 8.6 Beta1, 8.6 Beta123 etc
+                return true;
+            }
+        }
+    }
+
+    // Convert tag_name to wstring for MessageBox
+    std::wstring tag_name_w(release.tag_name.begin(), release.tag_name.end());
+    std::wstring buffer = std::format(L"Downloading version '{}'", tag_name_w);
+    MessageBoxW(nullptr, buffer.c_str(), L"Downloading...", 0);
+
+    if (release_dll_asset->browser_download_url.empty())
+        return error = L"Didn't find GWTooolboxdll.dll", false;
+
+
+    const auto& url = release_dll_asset->browser_download_url;
+    const auto& file_size = release_dll_asset->size;
 
     DownloadWindow window;
     window.Create();
@@ -238,16 +243,19 @@ bool DownloadWindow::DownloadAllFiles()
         }
         else {
             if (!downloader.IsSuccessful()) {
-                fprintf(stderr, "Failed to download '%s'. (Status: %s, StatusCode: %d)\n",
-                        url.c_str(), downloader.GetStatusStr(), downloader.GetStatusCode());
-                return false;
+                // Convert error message to wstring
+                std::wstring url_w(url.begin(), url.end());
+                std::string status_str = downloader.GetStatusStr();
+                std::wstring status_w(status_str.begin(), status_str.end());
+                return error = std::format(L"Failed to download '{}'. (Status: {}, StatusCode: {})",
+                                           url_w, status_w, downloader.GetStatusCode()), false;
             }
 
             std::string& file_content = downloader.GetContent();
-            if (!WriteEntireFile(dll_path.wstring().c_str(), file_content.c_str(), file_content.size())) {
-                fwprintf(stderr, L"WriteEntireFile failed on '%s' with %zu bytes\n",
-                         dll_path.wstring().c_str(), file_content.size());
-                return false;
+            if (!WriteEntireFile(dllpath.wstring().c_str(), file_content.c_str(), file_content.size())) {
+                std::wstring dllpath_str = dllpath.wstring();
+                return error = std::format(L"WriteEntireFile failed on '{}' with {} bytes",
+                                           dllpath_str, file_content.size()), false;
             }
 
             downloader.Clear();
@@ -350,8 +358,8 @@ void DownloadWindow::OnCreate(HWND hWnd, UINT, WPARAM, LPARAM)
         WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON,
         400, // x
         235, // y
-        80,  // width
-        25,  // height
+        80, // width
+        25, // height
         hWnd,
         nullptr,
         m_hInstance,

@@ -1,5 +1,13 @@
 #pragma once
 
+#ifndef UNICODE
+#define UNICODE
+#endif
+
+#ifndef _UNICODE
+#define _UNICODE
+#endif
+
 #pragma warning(disable: 4619) // there is no warning number 'number'
 
 #pragma warning(push)

@@ -14,7 +14,7 @@ public:
     DownloadWindow& operator=(const DownloadWindow&) = delete;
 
     bool Create() override;
-    static bool DownloadAllFiles();
+    static bool DownloadAllFiles(std::wstring& error);
     void SetChangelog(const char* str, size_t length) const;
 
 private:
@@ -22,7 +22,6 @@ private:
 
     void OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-private:
     HWND m_hProgressBar = nullptr;
     HWND m_hCloseButton = nullptr;
     HWND m_hChangelog = nullptr;

@@ -21,6 +21,15 @@ static void ShowError(const wchar_t* message)
         0);
 }
 
+static void ShowError(const char* message)
+{
+    MessageBoxA(
+        nullptr,
+        message,
+        "GWToolbox - Error",
+        0);
+}
+
 static bool RestartAsAdminForInjection(const uint32_t target_pid)
 {
     wchar_t args[64];
@@ -28,12 +37,16 @@ static bool RestartAsAdminForInjection(const uint32_t target_pid)
     return RestartAsAdmin(args);
 }
 
-static bool InjectInstalledDllInProcess(const Process* process)
+static bool InjectInstalledDllInProcess(const Process* process, std::wstring& error)
 {
+    std::wstring exe_filename;
+    if (!PathGetExeFileName(exe_filename))
+        return error = L"PathGetExeFileName failed", false;
+
+    error.clear();
     ProcessModule module;
     if (process->GetModule(&module, L"GWToolboxdll.dll")) {
-        MessageBoxW(nullptr, L"GWToolbox is already running in this process", L"GWToolbox", 0);
-        return true;
+        return error = L"GWToolbox is already running in this process", true;
     }
 
     if (!EnableDebugPrivilege() && !IsRunningAsAdmin()) {
@@ -43,30 +56,33 @@ static bool InjectInstalledDllInProcess(const Process* process)
 
     std::filesystem::path dllpath;
     if (settings.localdll) {
-        if (!PathGetProgramDirectory(dllpath)) {
-            fprintf(stderr, "PathGetProgramDirectory failed.\n");
-            return false;
-        }
+        if (!PathGetProgramDirectory(dllpath))
+            return error = L"PathGetProgramDirectory failed", false;
         dllpath = dllpath / L"GWToolboxdll.dll";
+        return error = std::format(L"Application @ {} not found.\n\nEnsure your copy of GWToolboxdll.dll is local to {} or run {} without the /localdll argument.", dllpath.wstring(), exe_filename, exe_filename), false;
     }
-    else {
-        if (!PathGetDocumentsPath(dllpath)) {
-            fprintf(stderr, "PathGetDocumentsPath failed.\n");
-            return false;
-        }
-        dllpath = dllpath / L"GWToolboxpp" / L"GWToolboxdll.dll";
-    }
+    dllpath = GetInstallationDir();
+    if (dllpath.empty())
+        return error = L"GetInstallationDir failed", false;
+    dllpath = dllpath.parent_path() / L"GWToolboxdll.dll";
 
     if (!exists(dllpath)) {
-        fprintf(stderr, "No GWToolboxdll.dll file exists.\n");
-        return false;
+        if (settings.noinstall) {
+            return error = std::format(L"Application @ {} not found.\n\nYou may need to install GWToolbox by running {} without the /noinstall argument.", dllpath.wstring(), exe_filename), false;
+        }
+        return error = std::format(L"Application @ {} not found; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(), dllpath.parent_path().wstring(),
+                                   exe_filename), false;
     }
 
     DWORD ExitCode;
-    if (!InjectRemoteThread(process, dllpath.wstring().c_str(), &ExitCode)) {
-        fprintf(stderr, "InjectRemoteThread failed (ExitCode: %lu)\n", ExitCode);
-        return false;
-    }
+    if (!InjectRemoteThread(process, dllpath.wstring().c_str(), &ExitCode))
+        return error = std::format(L"InjectRemoteThread failed (ExitCode: {})", ExitCode), false;
+    if (!exists(dllpath))
+        return error = std::format(L"Application @ {} did exist, but now it doesn't; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(),
+                                   dllpath.parent_path().wstring(), exe_filename), false;
+    if (!process->GetModule(&module, L"GWToolboxdll.dll"))
+        return error = std::format(L"Application @ {} failed to inject; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(),
+                                   dllpath.parent_path().wstring(), exe_filename), false;
 
     return true;
 }
@@ -106,6 +122,7 @@ int main()
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 #endif
 {
+    std::wstring error;
     std::filesystem::path log_file_path;
     if (!PathGetExeFullPath(log_file_path)) {
         MessageBoxW(nullptr, L"Failed to get qualified path for logs file.", L"GWToolbox", MB_OK | MB_TOPMOST);
@@ -136,27 +153,21 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     AsyncRestScopeInit RestInitializer;
 
-    // Check and add Windows Defender exclusion if needed
-    std::filesystem::path install_path;
-    if (PathGetDocumentsPath(install_path, L"GWToolboxpp")) {
-        AddDefenderExclusion(install_path, settings.quiet);
-    }
-
     Process proc;
     if (settings.install) {
-        Install(settings.quiet);
+        Install(settings.quiet, error);
         return 0;
     }
     if (settings.uninstall) {
-        Uninstall(settings.quiet);
+        Uninstall(settings.quiet, error);
         return 0;
     }
     if (settings.reinstall) {
         // @Enhancement:
         // Uninstall shouldn't remove the existing data, that would instead be a
         // "repair" or something along those lines.
-        Uninstall(settings.quiet);
-        Install(settings.quiet);
+        Uninstall(settings.quiet, error);
+        Install(settings.quiet, error);
         return 0;
     }
 
@@ -180,15 +191,16 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
         if (iRet == IDYES) {
             // @Cleanup: Check return value
-            if (!Install(settings.quiet)) {
+            if (!Install(settings.quiet, error)) {
                 fprintf(stderr, "Failed to install\n");
                 return 1;
             }
         }
     }
     else if (!settings.noupdate) {
-        if (!DownloadWindow::DownloadAllFiles()) {
-            ShowError(L"Failed to download GWToolbox DLL");
+        std::wstring error;
+        if (!DownloadWindow::DownloadAllFiles(error)) {
+            ShowError(std::format(L"Failed to download GWToolbox DLL: {}", error).c_str());
             fprintf(stderr, "DownloadWindow::DownloadAllFiles failed\n");
             return 1;
         }
@@ -200,7 +212,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             return 1;
         }
 
-        if (!InjectInstalledDllInProcess(&proc)) {
+        if (!InjectInstalledDllInProcess(&proc, error)) {
             fprintf(stderr, "InjectInstalledDllInProcess failed\n");
             return 1;
         }
@@ -235,7 +247,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             fprintf(stderr, "InjectWindow::AskInjectName failed\n");
             return 0;
         }
-// @Enhancement:
+        // @Enhancement:
         // Add UAC shield to the yes button
         const int iRet = MessageBoxW(
             nullptr,
@@ -258,12 +270,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     }
     if (reply == InjectReply_NoProcess) {
         const auto gw2_processes = GetGuildWars2Processes();
-        const wchar_t* error_message = L"Couldn't find any valid process to start GWToolboxpp.\n"
-                                       L"Ensure Guild Wars is running before trying to run GWToolbox.\n";
-                      ;
+        auto error_message = L"Couldn't find any valid process to start GWToolboxpp.\n"
+            L"Ensure Guild Wars is running before trying to run GWToolbox.\n";
         if (!gw2_processes.empty()) {
             error_message = L"Couldn't find any valid process to start GWToolboxpp.\n"
-                            L"GWToolboxpp is for Guild Wars Reforged, NOT Guild Wars 2!\n";
+                L"GWToolboxpp is for Guild Wars Reforged, NOT Guild Wars 2!\n";
         }
         const int iRet = MessageBoxW(
             nullptr, error_message,
@@ -280,8 +291,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         }
     }
 
-    if (!InjectInstalledDllInProcess(&proc)) {
-        ShowError(L"Couldn't find any appropriate target to start GWToolbox");
+    if (!InjectInstalledDllInProcess(&proc, error)) {
+        ShowError(error.c_str());
         fprintf(stderr, "InjectInstalledDllInProcess failed\n");
         return 1;
     }

@@ -242,6 +242,7 @@ namespace {
         if (!std::filesystem::exists(dll_path_str)) return false;
 
         // Check file size if we have a resource module to compare against
+        (resource_dll);
         #ifndef _DEBUG
         if (!resource_dll.data()) 
             return false;
