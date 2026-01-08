@@ -6,6 +6,6 @@ show_downloads: true
 google_analytics: UA-75239620-2
 theme: jekyll-theme-midnight
 
-download_url: https://github.com/gwdevhub/GWToolboxpp/releases/download/8.3_Release/gwtoolbox.exe
+download_url: https://github.com/gwdevhub/GWToolboxpp/releases/download/4.5_Exe/gwtoolbox.exe
 discord_url: https://discord.gg/pGS5pFn
 toolbox_version: "8.6"
