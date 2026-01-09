@@ -498,6 +498,8 @@ bool TBHotkey::Draw(Op* op)
                 if (ImGui::Button("X")) {
                     map_ids.erase(it);
                     hotkey_changed = true;
+                    ImGui::PopID();
+                    break;
                 }
                 ImGui::PopID();
             }
