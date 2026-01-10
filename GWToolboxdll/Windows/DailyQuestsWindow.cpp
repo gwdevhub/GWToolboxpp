@@ -231,7 +231,7 @@ namespace {
         { GW::Constants::MapID::The_Deep, L"Kanaxai"},
         { GW::Constants::MapID::Bogroot_Growths_Level_1, L"Khabuus"},
         { GW::Constants::MapID::Dalada_Uplands, L"Molotov Rocktail"},
-        { GW::Constants::MapID::Tomb_of_the_Primeval_Kings, L"The Stygian Lords"},
+        { GW::Constants::MapID::Domain_of_Anguish, L"The Stygian Lords"},
         { GW::Constants::MapID::The_Fissure_of_Woe, L"Dragon Lich"},
         { GW::Constants::MapID::Darkrime_Delves_Level_1, L"Havok Soulwail"},
         { GW::Constants::MapID::Xaquang_Skyway, L"Ghial the Bone Dancer"},
