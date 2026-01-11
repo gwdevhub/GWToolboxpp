@@ -55,6 +55,10 @@ static bool InjectInstalledDllInProcess(const Process* process, std::wstring& er
     }
 
     std::filesystem::path dllpath;
+    dllpath = GetInstallationDir();
+    if (dllpath.empty()) 
+        return error = L"GetInstallationDir failed", false;
+    dllpath = dllpath.parent_path() / L"GWToolboxdll.dll";
     if (settings.localdll) {
         if (!PathGetProgramDirectory(dllpath))
             return error = L"PathGetProgramDirectory failed", false;
@@ -63,10 +67,6 @@ static bool InjectInstalledDllInProcess(const Process* process, std::wstring& er
             return error = std::format(L"Application @ {} not found.\n\nEnsure your copy of {} is local to {} or run {} without the /localdll argument.", dllpath.wstring(), dllpath.filename().wstring(), exe_filename, exe_filename), false;
         }
     }
-    dllpath = GetInstallationDir();
-    if (dllpath.empty())
-        return error = L"GetInstallationDir failed", false;
-    dllpath = dllpath.parent_path() / L"GWToolboxdll.dll";
 
     if (!exists(dllpath)) {
         if (settings.noinstall) {
