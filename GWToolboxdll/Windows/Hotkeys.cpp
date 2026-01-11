@@ -1993,7 +1993,9 @@ bool HotkeyGWKey::Draw()
 void HotkeyGWKey::Execute()
 {
     GW::GameThread::Enqueue([&] {
-        Keypress(action);
+        const auto frame = GW::UI::GetFrameByLabel(L"Game");
+        Keypress(action, GW::UI::GetChildFrame(frame,6));
+        Keypress(action, GW::UI::GetParentFrame(frame));
     });
 }
 
