@@ -39,6 +39,9 @@ namespace {
     const char* voice_id_human_female = "EXAVITQu4vr4xnSDxMaL";
     const char* voice_id_dwarven_male = "N2lVS1w4EtoT3dr4eOWO";
 
+    const char* gwtts_hostname = "https://tts.gwtoolbox.com";
+    //const char* gwtts_hostname = "http://localhost:8081";
+
     struct PendingNPCAudio;
     typedef std::string (*GenerateVoiceCallback)(PendingNPCAudio* audio);
 
@@ -60,6 +63,10 @@ namespace {
         // @Enhancement: Guild Wars only officially supports 6 audio languages, so this will spit out english even if the player is using chinese text.
         return (GW::Constants::Language)GW::UI::GetPreference(GW::UI::NumberPreference::LanguageAudio);
     }
+
+    enum class GWRace : uint8_t { Human, Charr, Norn, Asura, Tengu, Dwarf, Centaur, Count }; // namespace GWRace
+
+    std::map<GWRace, bool> play_speech_from_race;
 
         // Add OpenAI TTS function
     std::string GenerateVoiceOpenAI(PendingNPCAudio*);
@@ -97,7 +104,6 @@ namespace {
     char custom_npc_id_buffer[32] = {0};
     char custom_voice_id_buffer[256] = {0};
 
-    enum class GWRace : uint8_t { Human, Charr, Norn, Asura, Tengu, Dwarf, Centaur }; // namespace GWRace
 
 
     enum class Gender : uint8_t { Male, Female, Unknown };
@@ -263,6 +269,7 @@ namespace {
 
             case 0x12b3d: // Male centaur
 
+            case 0x6ef5: // Male charr
             case 0x4f19: // Male charr
 
             case 0x4a4a8: // Male norn
@@ -301,6 +308,9 @@ namespace {
                 return GWRace::Norn;
             case 0x12b3d:
                 return GWRace::Centaur;
+            case 0x6ef5:
+            case 0x4f19:
+                return GWRace::Charr;
         }
         return GWRace::Human;
     }
@@ -450,6 +460,8 @@ namespace {
     bool play_speech_bubbles_from_party_members = false;
     float npc_speech_bubble_range = GW::Constants::Range::Adjacent;
     bool play_speech_from_vendors = true;
+    bool play_tts_in_explorable_areas = true;
+    bool play_tts_in_outposts = true;
 
     uint32_t last_dialog_agent_id = 0;
 
@@ -1139,7 +1151,7 @@ namespace {
         if (!audio->encoded_npc_name.empty()) {
             nlohmann::json encoded_npc_name_arr = nlohmann::json::array();
             for (const auto& c : audio->encoded_npc_name) {
-                decoded_array.push_back(static_cast<uint32_t>(c));
+                encoded_npc_name_arr.push_back(static_cast<uint32_t>(c));
             }
             request_body["npc_name"] = encoded_npc_name_arr;
         }
@@ -1151,7 +1163,7 @@ namespace {
 
         RestClient client;
         client.SetHeader("Accept", "audio/mpeg");
-        const auto audio_data = PostJson(client, "https://tts.gwtoolbox.com/decode.mp3", request_body, "GWDevHub");
+        const auto audio_data = PostJson(client, std::format("{}/decode.mp3",gwtts_hostname).c_str(), request_body, "GWDevHub");
 
         if (!audio_data.empty()) {
             VoiceLog("GWDevHub voice generation successful, received %zu bytes", audio_data.size());
@@ -1284,6 +1296,24 @@ return audio_data;
             generating_voice = false;
             return;
         }
+        if (!play_speech_from_race[audio->race]) {
+            VoiceLog("Blocked Gender %s",GetRaceName(audio->race));
+            delete audio;
+            generating_voice = false;
+            return;
+        }
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !play_tts_in_outposts) {
+            VoiceLog("Blocked TTS in outposts");
+            delete audio;
+            generating_voice = false;
+            return;
+        }
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable && !play_tts_in_outposts) {
+            VoiceLog("Blocked TTS in explorable areas");
+            delete audio;
+            generating_voice = false;
+            return;
+        }
 
         float volume = GetDialogVolume() * GetSystemVolume();
 
@@ -1381,6 +1411,12 @@ return audio_data;
 void NPCVoiceModule::Initialize()
 {
     ToolboxModule::Initialize();
+
+    if (play_speech_from_race.empty()) {
+        for (size_t i = 0; i < (size_t)GWRace::Count; i++) {
+            play_speech_from_race[(GWRace)i] = true;
+        }
+    }
 
     voice_matrix.clear();
     special_npc_voices.clear();
@@ -1813,9 +1849,10 @@ void NPCVoiceModule::DrawSettingsInternal()
     ImGui::Text("API Configuration:");
     const ImColor col(102, 187, 238, 255);
     auto api_config = GetCurrentAPIConfig();
+    bool is_api_locked_down = !(api_config && *api_config->signup_url);
     if (api_config)
     {
-        if (*api_config->signup_url)
+        if (!is_api_locked_down)
         {
             ImGui::Text("%s API Key: ", api_config->name);
             ImGui::SameLine();
@@ -1836,10 +1873,14 @@ void NPCVoiceModule::DrawSettingsInternal()
         if (api_config->note && *api_config->note) ImGui::TextColored(ImColor(255, 255, 0), api_config->note);
     }
 
+    
+
     ImGui::Separator();
 
     bool show_warning = false;
-    if (api_config  && *api_config->signup_url) {
+
+    if (!is_api_locked_down) {
+        ImGui::NextSpacedElement();
         ImGui::Checkbox("Only process the first sentence of a dialog", &only_use_first_sentence);
         ImGui::ShowHelp("If enabled, only the first sentence of an NPC dialog will be processed.");
         show_warning |= !only_use_first_sentence;
@@ -1847,7 +1888,6 @@ void NPCVoiceModule::DrawSettingsInternal()
     else {
         ImGui::TextDisabled("Note: With the chosen TTS API, only the first sentence of an NPC's dialog will be processed.");
     }
-
 
     ImGui::Checkbox("Only process the first dialog of an NPC", &only_use_first_dialog);
     ImGui::ShowHelp("If enabled, only the first dialog of an NPC conversation will be processed.");
@@ -1857,41 +1897,63 @@ void NPCVoiceModule::DrawSettingsInternal()
     ImGui::ShowHelp("If enabled, NPCs will say a random goodbye when you close their dialog.\n\nNote: Only english language is currently supported.");
     show_warning |= play_goodbye_messages;
 
-    ImGui::Checkbox("Stop speech when dialog window is closed", &stop_speech_when_dialog_closed);
-
     ImGui::Checkbox("Play greetings from merchants and traders", &play_speech_from_vendors);
     ImGui::ShowHelp("Note: For some types of traders, Only english language is currently supported.");
 
+    ImGui::Checkbox("Stop speech when dialog window is closed", &stop_speech_when_dialog_closed);
 
-    ImGui::Checkbox("Play speech bubbles when in an outpost", &play_speech_bubbles_in_outpost);
+    ImGui::TextUnformatted("Play speech in:");
+    ImGui::Indent();
+    ImGui::StartSpacedElements(264.f);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Explorable Areas", &play_tts_in_explorable_areas);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Outposts", &play_tts_in_outposts);
+    ImGui::Unindent();
+
+    ImGui::TextUnformatted("Play speech bubbles:");
+    ImGui::Indent();
+    ImGui::StartSpacedElements(264.f);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("When in an outpost", &play_speech_bubbles_in_outpost);
     ImGui::ShowHelp("If enabled, speech bubbles above an NPC when in an outpost will be processed");
 
-    ImGui::Checkbox("Play speech bubbles when in an explorable area", &play_speech_bubbles_in_explorable);
-    show_warning |= play_speech_bubbles_in_explorable;
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("When in an explorable area", &play_speech_bubbles_in_explorable);
     ImGui::ShowHelp("If enabled, speech bubbles from skills and quotes from enemies and allies within speech bubble range will be processed.");
+    show_warning |= play_speech_bubbles_in_explorable;
 
-    ImGui::Checkbox("Play speech bubbles from party members", &play_speech_bubbles_from_party_members);
-    show_warning |= play_speech_bubbles_from_party_members;
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("From other party members", &play_speech_bubbles_from_party_members);
     ImGui::ShowHelp("If enabled, speech bubbles from skills and quotes from party members within speech bubble range will be processed.");
+    show_warning |= play_speech_bubbles_from_party_members;
 
-    
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("From non-friendly NPCs", &play_speech_from_non_friendly_npcs);
+    show_warning |= play_speech_from_non_friendly_npcs;
 
+    ImGui::Unindent();
     if (ImGui::InputFloat("NPC speech bubble range", &npc_speech_bubble_range, GW::Constants::Range::Adjacent, GW::Constants::Range::Adjacent)) {
         npc_speech_bubble_range = std::max(npc_speech_bubble_range, 0.f);
         npc_speech_bubble_range = std::min(npc_speech_bubble_range, 2500.f);
     }
+    ImGui::ShowHelp("The range at which NPC speech bubbles will be processed. Set to 0 to disable.");
     show_warning |= (npc_speech_bubble_range > 166.f);
 
-    ImGui::ShowHelp("The range at which NPC speech bubbles will be processed. Set to 0 to disable.");
-    ImGui::Checkbox("Play speech bubbles from non-friendly NPCs", &play_speech_from_non_friendly_npcs);
-    show_warning |= play_speech_from_non_friendly_npcs;
-
-    if (show_warning) {
+    if (show_warning && !is_api_locked_down) {
         ImGui::TextColored(ImColor(IM_COL32(245, 245, 0, 255)), "Warning: Processing more lines of dialog will use up more API credits!");
     }
 
+    ImGui::TextUnformatted("Play speech from:");
+    ImGui::Indent();
+    ImGui::StartSpacedElements(264.f);
+    for (auto& it : play_speech_from_race) {
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox(GetRaceName(it.first), (bool*) & it.second);
+    }
+
 // Custom NPC Voice Assignment Section
-    if (api_config && *api_config->signup_url) {
+    if (!is_api_locked_down) {
         ImGui::Separator();
         ImGui::Text("Custom NPC Voice Assignment:");
         ImGui::Text("Assign specific voices to individual NPCs by their NPC ID.");
