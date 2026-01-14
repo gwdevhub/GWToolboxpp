@@ -35,8 +35,8 @@
 #include <GWCA/GameEntities/Frame.h>
 
 namespace {
-    typedef UUID* (__cdecl*PortalGetUserId_pt)();
-    PortalGetUserId_pt PortalGetUserId_Func = 0;
+
+    GUID* account_uuid = 0;
 
     GW::Array<GW::AvailableCharacterInfo>* available_chars_ptr = nullptr;
 
@@ -464,11 +464,14 @@ namespace GW {
 
         const UUID* GetPortalAccountUuid()
         {
-            if (!PortalGetUserId_Func) {
-                HMODULE hPortalDll = GetModuleHandle("GwLoginClient.dll");
-                PortalGetUserId_Func = hPortalDll ? (PortalGetUserId_pt)GetProcAddress(hPortalDll, "PortalGetUserId") : nullptr;
+            if (!account_uuid) {
+                auto address = GW::Scanner::Find("\x50\x6a\x18\x6a\x02\xff\x15", "xxxxxxx", 0x7);
+                if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address, GW::ScannerSection::Section_DATA)) {
+                    address = *(uintptr_t*)address;
+                    account_uuid = (GUID*)(address + 0x90);
+                }
             }
-            return PortalGetUserId_Func ? PortalGetUserId_Func() : nullptr;
+            return account_uuid;
         }
 
         AvailableCharacterInfo* GetAvailableCharacter(const wchar_t* name)
