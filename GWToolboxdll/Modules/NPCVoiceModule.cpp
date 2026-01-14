@@ -45,6 +45,35 @@ namespace {
     struct PendingNPCAudio;
     typedef std::string (*GenerateVoiceCallback)(PendingNPCAudio* audio);
 
+    struct DialogueFrameContext {
+        GW::UI::UICtlCallback* vtable;
+        uint32_t frame_id;
+        uint32_t flags;
+        uint32_t agent_id;
+        float duration;
+    };
+    static_assert(sizeof(DialogueFrameContext) == 0x14);
+
+    uint32_t current_dialogue_1_agent_id = 0;
+
+    DialogueFrameContext* GetCurrentlyShowingDialogue() {
+        struct UIFrameQueue_Context {
+            GW::Array<void*> h0000;
+            uint32_t showing_frame_id;
+            uint32_t count;
+        };
+        static_assert(sizeof(UIFrameQueue_Context) == 0x18);
+        auto frame = GW::UI::GetFrameByLabel(L"NpcDialogue1");
+        if (frame && frame->frame_callbacks.size() > 0) {
+            const auto context = (UIFrameQueue_Context*)frame->frame_callbacks[1].uictl_context;
+            if (context->showing_frame_id) {
+                const auto current = GW::UI::GetFrameById(context->showing_frame_id);
+                return (DialogueFrameContext*)GW::UI::GetFrameContext(current);
+            }
+        }
+        return nullptr;
+    }
+
 
     // API Configuration structure
     struct APIConfig {
@@ -951,6 +980,23 @@ namespace {
             case GW::UI::UIMessage::kPreferenceValueChanged: {
                 GetDialogVolume(false);
             } break;
+            case GW::UI::UIMessage::kDialogueMessageUpdated: {
+
+                const auto current = wParam ? GetCurrentlyShowingDialogue() : nullptr;
+                if(current) {
+                    const auto frame = GW::UI::GetFrameById(current->frame_id);
+                    const auto message_frame = (GW::MultiLineTextLabelFrame*)GW::UI::GetChildFrame(frame, 1);
+                    const auto message_enc = message_frame ? message_frame->GetEncodedLabel() : nullptr;
+                    if (message_enc && current->agent_id) {
+                        CancelDialogSpeech(current_dialogue_1_agent_id);
+                        GenerateVoiceFromEncodedString(new PendingNPCAudio(current->agent_id, message_enc,true));
+                        current_dialogue_1_agent_id = current->agent_id;
+                        break;
+                    }
+                }
+                CancelDialogSpeech(current_dialogue_1_agent_id);
+                current_dialogue_1_agent_id = 0;
+            } break;
             case GW::UI::UIMessage::kMapChange:
             case GW::UI::UIMessage::kMapLoaded: {
                 ClearSounds();
@@ -1712,7 +1758,8 @@ void NPCVoiceModule::Initialize()
         GW::UI::UIMessage::kAgentSpeechBubble, 
         GW::UI::UIMessage::kMapChange, 
         GW::UI::UIMessage::kMapLoaded, 
-        GW::UI::UIMessage::kPreferenceValueChanged
+        GW::UI::UIMessage::kPreferenceValueChanged, 
+        GW::UI::UIMessage::kDialogueMessageUpdated
     };
 
     for (auto message_id : messages) {

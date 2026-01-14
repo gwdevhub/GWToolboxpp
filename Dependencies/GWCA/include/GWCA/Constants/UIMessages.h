@@ -170,6 +170,7 @@ namespace GW {
             kMapLoaded = 0x1000008C,                     // 0x1000008C
             kOpenWhisper = 0x10000092,                   // 0x10000092, wparam = wchar* name
             kLoadMapContext = 0x10000098,                // 0x10000098, wparam = UIPacket::kLoadMapContext
+            kDialogueMessageUpdated = 0x1000009c,
             kLogout = 0x1000009D,                        // 0x1000009D, wparam = { bool unknown, bool character_select }
             kCompassDraw = 0x1000009E,                   // 0x1000009E, wparam = UIPacket::kCompassDraw*
             kOnScreenMessage = 0x100000A2,               // 0x100000A2, wparam = wchar_** encoded_string
@@ -289,8 +290,8 @@ namespace GW {
                 uint32_t agent_id;
                 wchar_t* sender;
                 wchar_t* message;
-                uint32_t h000c;
-                uint32_t h0010;
+                uint32_t duration;
+                uint32_t is_dialogue_1_or_2;
             };
             struct kErrorMessage {
                 uint32_t error_id;
