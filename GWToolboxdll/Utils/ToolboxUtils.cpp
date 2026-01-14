@@ -700,28 +700,27 @@ namespace GW {
                     return L"Piercing";
                 case GW::Constants::DamageType::Slashing:
                     return L"Slashing";
-                case GW::Constants::DamageType::Icy:
-                    return L"Icy";
-                case GW::Constants::DamageType::Shocking:
-                    return L"Shocking";
-                case GW::Constants::DamageType::Fiery:
-                    return L"Fiery";
-                case GW::Constants::DamageType::Chaotic:
-                    return L"Chaotic";
-                case GW::Constants::DamageType::Unholy:
-                    return L"Unholy";
+                case GW::Constants::DamageType::Cold:
+                    return L"Cold";
+                case GW::Constants::DamageType::Lightning:
+                    return L"Lightning";
+                case GW::Constants::DamageType::Fire:
+                    return L"Fire";
+                case GW::Constants::DamageType::Chaos:
+                    return L"Chaos";
+                case GW::Constants::DamageType::Dark:
+                case GW::Constants::DamageType::DarkDupe:
+                    return L"Dark";
                 case GW::Constants::DamageType::Holy:
                     return L"Holy";
-                case GW::Constants::DamageType::Wooden:
-                    return L"Wooden";
-                case GW::Constants::DamageType::Sacrificial:
-                    return L"Sacrificial";
-                case GW::Constants::DamageType::Ebon:
-                    return L"Ebon";
-                case GW::Constants::DamageType::Magical:
-                    return L"Magical";
-                case GW::Constants::DamageType::UnholyDupe:
-                    return L"Unholy"; // Duplicate, same name
+                case GW::Constants::DamageType::Nature:
+                    return L"Nature";
+                case GW::Constants::DamageType::Sacrifice:
+                    return L"Sacrifice";
+                case GW::Constants::DamageType::Earth:
+                    return L"Earth";
+                case GW::Constants::DamageType::Generic:
+                    return L"Generic";
                 case GW::Constants::DamageType::None:
                     return L"None";
                 default:

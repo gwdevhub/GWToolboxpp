@@ -48,22 +48,22 @@ namespace GW {
     namespace Constants {
         enum class SkillID : uint32_t;
         enum class TitleID : uint32_t;
-
+        // Blunt, Piercing, Slashing, Cold, Lightning, Fire, Chaos, Dark, Holy, Nature, Sacrifice, Earth, Generic, Dark
         enum class DamageType : uint8_t {
             Blunt,
             Piercing,
-            Slashing,
-            Icy,
-            Shocking,
-            Fiery,
-            Chaotic,
-            Unholy,
+            Slashing, 
+            Cold, 
+            Lightning,
+            Fire,
+            Chaos,
+            Dark,
             Holy,
-            Wooden,
-            Sacrificial,
-            Ebon,
-            Magical,
-            UnholyDupe,
+            Nature, 
+            Sacrifice,
+            Earth,
+            Generic,
+            DarkDupe,
             Count,
             None = 0xff
         };
