@@ -42,8 +42,7 @@ namespace {
         std::wstring requirement_attribute;
         uint8_t requirement_value = 0;
     };
-
-    const wchar_t* drops_filename = L"drops.csv";
+    std::wstring drops_filename;
     clock_t last_drops_written = 0;
 
 
@@ -402,6 +401,19 @@ void ItemDrops::Initialize()
 {
     ToolboxModule::Initialize();
 
+    // Generate filename with current date
+    const auto now = std::chrono::system_clock::now();
+    const auto time = std::chrono::system_clock::to_time_t(now);
+    std::tm tm;
+    localtime_s(&tm, &time);
+
+    wchar_t date_buffer[32];
+    std::wcsftime(date_buffer, sizeof(date_buffer) / sizeof(wchar_t), L"%Y-%m-%d", &tm);
+    std::wstring drops_basename = std::wstring(date_buffer) + L"_drops.csv";
+
+    drops_filename = Resources::GetPath(drops_basename);
+
+
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAgentAdd_Entry, OnAgentAdd);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&OnAgentRemove_Entry, OnAgentRemove);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&OnMapLoad_Entry, OnMapLoad);
@@ -420,10 +432,8 @@ void ItemDrops::Update(float) {
                 return;
         }
         last_drops_written = TIMER_INIT();
-        const auto filename = Resources::GetPath(drops_filename);
-        auto path = Resources::GetPath(filename);
-        const bool file_exists = std::filesystem::exists(path);
-        std::wofstream my_file(filename, std::ios::app);
+        const bool file_exists = std::filesystem::exists(drops_filename);
+        std::wofstream my_file(drops_filename.c_str(), std::ios::app);
         if (!my_file.is_open()) {
             return;
         }
@@ -736,7 +746,7 @@ ItemDrops::PendingDrop::~PendingDrop() {
 
 const wchar_t* ItemDrops::PendingDrop::GetCSVHeader()
 {
-    return L"Timestamp,Map,ItemName,Quantity,Value,"
+    return L"SystemTime,InstanceTime,Map,ItemName,Quantity,Value,"
            L"ItemType,Rarity,DamageType,MinDamage,MaxDamage,"
            L"RequirementAttribute,RequirementValue,"
            L"PlayerCount,HeroCount,HenchmanCount,HardMode";
@@ -755,17 +765,18 @@ void ItemDrops::AddPendingExport(std::string chosen_path)
 const std::wstring ItemDrops::PendingDrop::toCSV()
 {
     std::wstringstream ss;
+    ss << system_time << L",";
     ss << instance_time << L",";
-    ss << TextUtils::SanitizeForCSV(Resources::GetMapName(map_id)->wstring()) << L",";
+    ss << (uint32_t)map_id << L",";
     ss << TextUtils::SanitizeForCSV(GetItemName()->wstring()) << L",";
     ss << quantity << L",";
     ss << value << L",";
-    ss << GW::Items::GetItemTypeName(type) << L",";
-    ss << GW::Items::GetRarityName(rarity) << L",";
-    ss << GW::Items::GetDamageTypeName(damage_type) << L",";
+    ss << (uint32_t)type << L",";
+    ss << (uint32_t)rarity << L",";
+    ss << (uint32_t)damage_type << L",";
     ss << min_damage << L",";
     ss << max_damage << L",";
-    ss << GW::Items::GetAttributeName(requirement_attribute) << L",";
+    ss << (uint32_t)requirement_attribute << L",";
     ss << requirement_value << L",";
     ss << player_count << L",";
     ss << hero_count << L",";
