@@ -276,6 +276,9 @@ namespace {
             GetDeathSoundForModelFileId(npc->model_file_id, &file_id);
             sound_file_by_model_file_id[npc->model_file_id] = file_id;
         }
+        if (!sound_file_by_model_file_id[npc->model_file_id]) {
+            return npc->files_count > 0 ? npc->model_files[0] : 0;
+        }
         return sound_file_by_model_file_id[npc->model_file_id];
     }
     Gender GetGenderByFileId(const uint32_t file_id)
@@ -302,6 +305,8 @@ namespace {
             case 0x4f19: // Male charr
 
             case 0x4a4a8: // Male norn
+
+            case 0x2D145: // Skin model for togo (can't find death sound from animation file)
                 return Gender::Male;
 
 
@@ -981,38 +986,27 @@ namespace {
                 GetDialogVolume(false);
             } break;
             case GW::UI::UIMessage::kDialogueMessageUpdated: {
-
-                const auto current = wParam ? GetCurrentlyShowingDialogue() : nullptr;
-                if(current) {
-                    const auto frame = GW::UI::GetFrameById(current->frame_id);
-                    const auto message_frame = (GW::MultiLineTextLabelFrame*)GW::UI::GetChildFrame(frame, 1);
-                    const auto message_enc = message_frame ? message_frame->GetEncodedLabel() : nullptr;
-                    if (message_enc && current->agent_id) {
-                        CancelDialogSpeech(current_dialogue_1_agent_id);
-                        GenerateVoiceFromEncodedString(new PendingNPCAudio(current->agent_id, message_enc,true));
-                        current_dialogue_1_agent_id = current->agent_id;
-                        break;
+                // Enqueue for next thread; GetCurrentlyShowingDialogue hasn't been cleared just yet.
+                GW::GameThread::Enqueue([]() {
+                    const auto current = GetCurrentlyShowingDialogue();
+                    CancelDialogSpeech(current_dialogue_1_agent_id);
+                    if (current) {
+                        const auto frame = GW::UI::GetFrameById(current->frame_id);
+                        const auto message_frame = (GW::MultiLineTextLabelFrame*)GW::UI::GetChildFrame(frame, 1);
+                        const auto message_enc = message_frame ? message_frame->GetEncodedLabel() : nullptr;
+                        if (message_enc && current->agent_id) {
+                            CancelDialogSpeech(current->agent_id);
+                            GenerateVoiceFromEncodedString(new PendingNPCAudio(current->agent_id, message_enc, true));
+                            current_dialogue_1_agent_id = current->agent_id;
+                            return;
+                        }
                     }
-                }
-                CancelDialogSpeech(current_dialogue_1_agent_id);
-                current_dialogue_1_agent_id = 0;
+                    current_dialogue_1_agent_id = 0;
+                });
             } break;
             case GW::UI::UIMessage::kMapChange:
             case GW::UI::UIMessage::kMapLoaded: {
                 ClearSounds();
-            } break;
-            case GW::UI::UIMessage::kAgentSpeechBubble: {
-                // Some NPCs don't have a dialog window, but they can still have speech bubbles
-                if (!play_speech_bubbles_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) break;
-                if (!play_speech_bubbles_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) break;
-                const auto packet = (GW::UI::UIPacket::kAgentSpeechBubble*)wParam;
-                if (!(packet && packet->message && *packet->message)) break;
-                if (!play_speech_bubbles_from_party_members && GW::PartyMgr::IsAgentInParty(packet->agent_id)) break;
-                const auto agent = GW::Agents::GetAgentByID(packet->agent_id);
-                if (GW::GetDistance(agent->pos, GetPlayerPosition()) > npc_speech_bubble_range) {
-                    return; // Ignore distant NPCs
-                }
-                GenerateVoiceFromEncodedString(new PendingNPCAudio(packet->agent_id, packet->message));
             } break;
             case GW::UI::UIMessage::kVendorWindow: {
                 HookNPCInteractFrame();
@@ -1452,6 +1446,39 @@ return audio_data;
         }
     }
 
+    GW::UI::UIInteractionCallback OnAgentSpeechBubble_UICallback_Func = 0, OnAgentSpeechBubble_UICallback_Ret = 0;
+    void OnAgentSpeechBubble_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
+    {
+        GW::Hook::EnterHook();
+        
+        OnAgentSpeechBubble_UICallback_Ret(message, wParam, lParam);
+        switch (message->message_id) {
+            case GW::UI::UIMessage::kInitFrame: {
+                const auto frame = GW::UI::GetFrameById(message->frame_id);
+                if (!frame) break;
+                uint32_t agent_id = frame->child_offset_id & 0xfffff;
+                const auto message_frame = (GW::TextLabelFrame*)GW::UI::GetChildFrame(frame, 3);
+                const auto message_enc = message_frame ? message_frame->GetEncodedLabel() : nullptr;
+                if (!message_enc) break;
+                const auto agent = GW::Agents::GetAgentByID(agent_id);
+                if (!agent) break;
+
+                // Some NPCs don't have a dialog window, but they can still have speech bubbles
+                if (!play_speech_bubbles_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) 
+                    break;
+                if (!play_speech_bubbles_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) 
+                    break;
+                if (!play_speech_bubbles_from_party_members && GW::PartyMgr::IsAgentInParty(agent_id)) 
+                    break;
+                if (GW::GetDistance(agent->pos, GetPlayerPosition()) > npc_speech_bubble_range)
+                    break; // Ignore distant NPCs
+                GenerateVoiceFromEncodedString(new PendingNPCAudio(agent_id, message_enc));
+            } break;
+        }
+        GW::Hook::LeaveHook();
+    }
+    
+
 } // namespace
 
 void NPCVoiceModule::Initialize()
@@ -1752,21 +1779,21 @@ void NPCVoiceModule::Initialize()
     merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::OtherItemCrafter}] = L"Greetings, I use techniques from across the world.";
     merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::SkillTrainer}] = L"Welcome! I teach arts from every tradition.";
 
-    const GW::UI::UIMessage messages[] = {
-        GW::UI::UIMessage::kDialogBody, 
-        GW::UI::UIMessage::kVendorWindow, 
-        GW::UI::UIMessage::kAgentSpeechBubble, 
-        GW::UI::UIMessage::kMapChange, 
-        GW::UI::UIMessage::kMapLoaded, 
-        GW::UI::UIMessage::kPreferenceValueChanged, 
-        GW::UI::UIMessage::kDialogueMessageUpdated
-    };
+    const GW::UI::UIMessage messages[] = {GW::UI::UIMessage::kDialogBody, GW::UI::UIMessage::kVendorWindow,           GW::UI::UIMessage::kAgentSpeechBubble,     GW::UI::UIMessage::kMapChange,
+                                          GW::UI::UIMessage::kMapLoaded,  GW::UI::UIMessage::kPreferenceValueChanged, GW::UI::UIMessage::kDialogueMessageUpdated};
 
     for (auto message_id : messages) {
         GW::UI::RegisterUIMessageCallback(&PreUIMessage_HookEntry, message_id, OnPreUIMessage, -0x1);
         GW::UI::RegisterUIMessageCallback(&UIMessage_HookEntry, message_id, OnPostUIMessage, 0x4000);
     }
     AudioSettings::RegisterPlaySoundCallback(&UIMessage_HookEntry, OnPlaySound);
+
+    OnAgentSpeechBubble_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("AtMonolog.cpp", "msg.createParam",0,0),0xfff);
+    if (OnAgentSpeechBubble_UICallback_Func) {
+        GW::Hook::CreateHook((void**)&OnAgentSpeechBubble_UICallback_Func, OnAgentSpeechBubble_UICallback, (void**)&OnAgentSpeechBubble_UICallback_Ret);
+        GW::Hook::EnableHooks(OnAgentSpeechBubble_UICallback_Func);
+    }
+    DEBUG_ASSERT(OnAgentSpeechBubble_UICallback_Func);
 }
 
 void NPCVoiceModule::Terminate()
@@ -1777,6 +1804,10 @@ void NPCVoiceModule::Terminate()
     GW::UI::RemoveUIMessageCallback(&UIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&PreUIMessage_HookEntry);
     AudioSettings::RemovePlaySoundCallback(&UIMessage_HookEntry);
+    if (OnAgentSpeechBubble_UICallback_Func) {
+        GW::Hook::RemoveHook(OnAgentSpeechBubble_UICallback_Func);
+        OnAgentSpeechBubble_UICallback_Func = 0;
+    }
 }
 
 void NPCVoiceModule::LoadSettings(ToolboxIni* ini)

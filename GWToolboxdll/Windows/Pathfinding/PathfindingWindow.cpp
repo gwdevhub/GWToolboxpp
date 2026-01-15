@@ -31,7 +31,7 @@ namespace {
         if (!(mc && mc->path && mc->path->staticData)) return nullptr;
 
         auto hash = static_cast<uint64_t>(mc->path->staticData->map_id);
-        hash |= ((uint64_t)mc->path->staticData->map.size()) << 32;
+        hash |= ((uint64_t)mc->path->pathNodes.size()) << 32;
 
         if (mile_paths_by_coords.contains(hash))
             return mile_paths_by_coords[hash];
