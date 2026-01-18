@@ -604,9 +604,6 @@ void TradeWindow::Draw(IDirect3DDevice9*)
         /* Display trade messages */
         const bool show_time = ImGui::GetWindowWidth() > 600.0f;
 
-        char timetext[128];
-        const time_t now = time(nullptr);
-
         const float& innerspacing = ImGui::GetStyle().ItemInnerSpacing.x;
         const float time_width = (show_time ? 100.0f : 0.0f) * font_scale;
         const float playername_left = time_width + innerspacing; // player button left align
@@ -620,29 +617,12 @@ void TradeWindow::Draw(IDirect3DDevice9*)
 
             // ==== time elapsed column ====
             if (show_time) {
-                // negative numbers have came from this before, it is probably just server client desync
-                const int time_since_message = static_cast<int>(now) - static_cast<int>(msg.timestamp);
 
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.7f, .7f, .7f, 1.0f));
 
-                // decide if days, hours, minutes, seconds...
-                if (time_since_message / (60 * 60 * 24)) {
-                    const int days = time_since_message / (60 * 60 * 24);
-                    _snprintf(timetext, 128, "%d %s ago", days, days > 1 ? "days" : "day");
-                }
-                else if (time_since_message / (60 * 60)) {
-                    const int hours = time_since_message / (60 * 60);
-                    _snprintf(timetext, 128, "%d %s ago", hours, hours > 1 ? "hours" : "hour");
-                }
-                else if (time_since_message / 60) {
-                    const int minutes = time_since_message / 60;
-                    _snprintf(timetext, 128, "%d %s ago", minutes, minutes > 1 ? "minutes" : "minute");
-                }
-                else {
-                    _snprintf(timetext, 128, "%d %s ago", time_since_message, time_since_message > 1 ? "seconds" : "second");
-                }
-                ImGui::SetCursorPosX(playername_left - innerspacing - ImGui::CalcTextSize(timetext).x);
-                ImGui::Text(timetext);
+                const auto timetext = TextUtils::RelativeTime(msg.timestamp);
+                ImGui::SetCursorPosX(playername_left - innerspacing - ImGui::CalcTextSize(timetext.c_str()).x);
+                ImGui::TextUnformatted(timetext.c_str());
                 ImGui::PopStyleColor();
             }
 

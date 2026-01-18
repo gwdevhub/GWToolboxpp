@@ -525,6 +525,31 @@ namespace TextUtils {
         return str != end && errno != ERANGE;
     }
 
+    std::string RelativeTime(time_t utc_timestamp)
+    {
+        time_t now;
+        time(&now);
+        auto time_since_message = now - utc_timestamp;
+        char timetext[128];
+        const char* fmt = "%lld %s ago";
+        // decide if days, hours, minutes, seconds...
+        if (time_since_message / (60 * 60 * 24)) {
+            const auto days = time_since_message / (60 * 60 * 24);
+            snprintf(timetext, _countof(timetext), fmt, (long long)days, days > 1 ? "days" : "day");
+        }
+        else if (time_since_message / (60 * 60)) {
+            const auto hours = time_since_message / (60 * 60);
+            snprintf(timetext, _countof(timetext), fmt, (long long)hours, hours > 1 ? "hours" : "hour");
+        }
+        else if (time_since_message / 60) {
+            const auto minutes = time_since_message / 60;
+            snprintf(timetext, _countof(timetext), fmt, (long long)minutes, minutes > 1 ? "minutes" : "minute");
+        }
+        else {
+            snprintf(timetext, _countof(timetext), fmt, (long long)time_since_message, time_since_message > 1 ? "seconds" : "second");
+        }
+        return timetext;
+    }
     std::string TimeToString(time_t utc_timestamp, bool include_seconds)
     {
         const time_t now = time(nullptr);

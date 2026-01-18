@@ -45,6 +45,8 @@ namespace TextUtils {
     bool ParseFloat(const char* str, float* val);
     bool ParseFloat(const wchar_t* str, float* val);
 
+    // e.g. 8 Days ago
+    std::string RelativeTime(time_t utc_timestamp);
     std::string TimeToString(time_t utc_timestamp = 0, bool include_seconds = false);
     std::string TimeToString(uint32_t utc_timestamp, bool include_seconds = false);
     std::string TimeToString(FILETIME utc_timestamp, bool include_seconds = false);
