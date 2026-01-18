@@ -71,6 +71,7 @@
 #include <Windows/SkillListingWindow.h>
 #endif
 #include <Windows/TargetInfoWindow.h>
+#include <Windows/GWMarketWindow.h>
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
@@ -214,7 +215,8 @@ namespace {
         ArmoryWindow::Instance(),
         EnemyWindow::Instance(),
         TargetInfoWindow::Instance(),
-        DropTrackerWindow::Instance()
+        DropTrackerWindow::Instance(),
+        GWMarketWindow::Instance()
     };
 
     bool modules_sorted = false;
