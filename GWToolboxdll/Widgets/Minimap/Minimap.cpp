@@ -42,6 +42,7 @@
 #include <Modules/Resources.h>
 #include <Modules/QuestModule.h>
 #include <Utils/TextUtils.h>
+#include <GWCA/Context/GameplayContext.h>
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
@@ -85,12 +86,20 @@ namespace {
     GW::UI::UIInteractionCallback OnCompassFrame_UICallback_Ret = 0, OnCompassFrame_UICallback_Func = 0;
     bool compass_position_dirty = true;
 
+    
+    GW::UI::Frame* mission_map_frame = nullptr;
+    GW::UI::UIInteractionCallback OnMissionMapFrame_UICallback_Ret = 0, OnMissionMapFrame_UICallback_Func = 0;
+    GW::MissionMapContext* mission_map_context = nullptr;
+    GW::UI::Frame* root_frame = nullptr;
+    bool mission_map_position_dirty = true;
+
     // Flagged when terminating minimap
     bool terminating = false;
 
     Vec2i location;
     Vec2i size;
     bool snap_to_compass = false;
+    bool snap_to_mission_map = false;
 
     bool mousedown = false;
     bool camera_currently_reversed = false;
@@ -270,6 +279,7 @@ namespace {
     }
     bool ResetWindowPosition(GW::UI::WindowID, GW::UI::Frame*);
     bool RepositionMinimapToCompass();
+    bool RepositionMinimapToMissionMap();
 
 
 
@@ -391,6 +401,76 @@ namespace {
         return compass_frame;
     }
 
+    void __cdecl OnMissionMapFrame_UICallback(GW::UI::InteractionMessage* message, void* wParam, void* lParam)
+    {
+        GW::Hook::EnterHook();
+
+        mission_map_context = message->wParam ? *(GW::MissionMapContext**)message->wParam : nullptr;
+        switch (message->message_id) {
+            case GW::UI::UIMessage::kDestroyFrame:
+                OnMissionMapFrame_UICallback_Ret(message, wParam, lParam);
+                mission_map_context = nullptr;
+                mission_map_frame = nullptr;
+                mission_map_position_dirty = true;
+                break;
+            case GW::UI::UIMessage::kResize:
+            case GW::UI::UIMessage::kFrameMessage_0x44:
+            case GW::UI::UIMessage::kFrameMessage_0x4c:
+            case GW::UI::UIMessage::kUIPositionChanged:
+            case GW::UI::UIMessage::kFrameMessage_0x13:
+            case GW::UI::UIMessage::kRenderFrame_0x30:
+            case GW::UI::UIMessage::kFrameVisibilityChanged:
+            case GW::UI::UIMessage::kSetLayout:
+                OnMissionMapFrame_UICallback_Ret(message, wParam, lParam);
+                mission_map_position_dirty = true; // Forces a recalculation
+                break;
+            case GW::UI::UIMessage::kQuestAdded:
+            case GW::UI::UIMessage::kClientActiveQuestChanged:
+            case GW::UI::UIMessage::kServerActiveQuestChanged:
+            case GW::UI::UIMessage::kUnknownQuestRelated: {
+                const auto prev = message->message_id;
+                message->message_id = GW::UI::UIMessage::kQuestRemoved;
+                OnMissionMapFrame_UICallback_Ret(message, wParam, lParam);
+                message->message_id = prev;
+                break;
+            }
+            default:
+                OnMissionMapFrame_UICallback_Ret(message, wParam, lParam);
+                break;
+        }
+
+        GW::Hook::LeaveHook();
+    }
+
+    
+    GW::UI::Frame* GetMissionMapFrame()
+    {
+        if (mission_map_frame) 
+            return mission_map_frame;
+
+        mission_map_context = GW::Map::GetMissionMapContext();
+        mission_map_frame = mission_map_context ? GW::UI::GetFrameById(mission_map_context->frame_id) : nullptr;
+        if (mission_map_frame) {
+            ASSERT(mission_map_frame->frame_callbacks.size());
+            if (!OnMissionMapFrame_UICallback_Func) {
+                OnMissionMapFrame_UICallback_Func = mission_map_frame->frame_callbacks[0].callback;
+                GW::Hook::CreateHook((void**)&OnMissionMapFrame_UICallback_Func, OnMissionMapFrame_UICallback, reinterpret_cast<void**>(&OnMissionMapFrame_UICallback_Ret));
+                GW::Hook::EnableHooks(OnMissionMapFrame_UICallback_Func);
+            }
+            mission_map_position_dirty = true;
+        }
+
+        return mission_map_frame;
+    }
+
+    GW::UI::Frame* GetRootFrame()
+    {
+        if (root_frame) return root_frame;
+
+        root_frame = GW::UI::GetRootFrame();
+        return root_frame;
+    }
+
     bool IsKeyDown(MinimapModifierBehaviour mmb)
     {
         return (key_none_behavior == mmb && !ImGui::IsKeyDown(ImGuiMod_Ctrl) &&
@@ -418,6 +498,38 @@ namespace {
         top_left.x += diff;
         bottom_right.y -= diff;
         bottom_right.x -= diff;
+
+        location = {static_cast<int>(top_left.x), static_cast<int>(top_left.y)};
+
+        const ImVec2 sz = {bottom_right.x - top_left.x, bottom_right.y - top_left.y};
+        size = {static_cast<int>(sz.x), static_cast<int>(sz.y)};
+
+        ImGui::SetWindowPos({static_cast<float>(location.x), static_cast<float>(location.y)});
+        ImGui::SetWindowSize({static_cast<float>(size.x), static_cast<float>(size.y)});
+        return true;
+    }
+
+    bool RepositionMinimapToMissionMap()
+    {
+        if (!snap_to_mission_map) return false;
+        const auto frame = GetMissionMapFrame();
+        if (!frame) return false;
+        const auto gameplay_context = GW::GetGameplayContext();
+        const auto root = GetRootFrame();
+        auto top_left = frame->position.GetContentTopLeft(root);
+        auto bottom_right = frame->position.GetContentBottomRight(root);
+        scale = gameplay_context->mission_map_zoom/6.8f;
+
+        /* const auto height = (bottom_right.y - top_left.y);
+
+        top_left.y += height;
+        top_left.x += height;   
+        bottom_right.y -= height;
+        bottom_right.x -= height;*/
+
+        /* const auto pan_offset = mission_map_context->h003c->mission_map_pan_offset;
+        translation.x = pan_offset.x;
+        translation.y = pan_offset.y;*/
 
         location = {static_cast<int>(top_left.x), static_cast<int>(top_left.y)};
 
@@ -866,13 +978,22 @@ void Minimap::DrawSettingsInternal()
 {
     constexpr auto minimap_modifier_behavior_combo_str = "Disabled\0Draw\0Target\0Move\0Walk\0\0";
 
-    if (snap_to_compass) {
+    if (snap_to_compass || snap_to_mission_map) {
         ImGui::NextSpacedElement();
     }
-    if (ImGui::Checkbox("Snap to GW compass", &snap_to_compass)) {
-        compass_position_dirty = true;
+    if (!snap_to_mission_map) {
+        if (ImGui::Checkbox("Snap to GW compass", &snap_to_compass)) {
+            compass_position_dirty = true;
+        }
+        ImGui::ShowHelp("Resize and position minimap to match in-game compass size and position.");
     }
-    ImGui::ShowHelp("Resize and position minimap to match in-game compass size and position.");
+
+    if (!snap_to_compass) {
+        if (ImGui::Checkbox("Snap to GW Mission map", &snap_to_mission_map)) {
+            mission_map_position_dirty = true;
+        }
+        ImGui::ShowHelp("Resize and position minimap to match in-game mission map size and position.");
+    }
     ImGui::Checkbox("Hide GW compass agents", &hide_compass_agents);
     if(ImGui::Checkbox("Hide GW compass quest marker", &hide_compass_quest_marker)) {
         pending_refresh_quest_marker = true;
@@ -891,7 +1012,7 @@ void Minimap::DrawSettingsInternal()
     }
     ImGui::ShowHelp("Takes effect on map change. Doesn't work in PvP as Toolbox is disabled there.");
 
-    is_movable = is_resizable = !snap_to_compass;
+    is_movable = is_resizable = !snap_to_compass && !snap_to_mission_map;
     if (is_resizable) {
         ImVec2 winsize(100.0f, 100.0f);
         if (const auto window = ImGui::FindWindowByName(Name())) {
@@ -989,9 +1110,11 @@ void Minimap::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
     ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Circular", &circular_map);
-    ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
+    if (!snap_to_mission_map) { // doesn't make sense to have circular map if we're snapping to the mission map, which is square
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Circular", &circular_map);
+        ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
+    }
 }
 
 void Minimap::LoadSettings(ToolboxIni* ini)
@@ -1019,6 +1142,7 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(smooth_rotation);
     LOAD_BOOL(circular_map);
     LOAD_BOOL(snap_to_compass);
+    LOAD_BOOL(snap_to_mission_map);
     LOAD_BOOL(hide_compass_agents);
     LOAD_BOOL(render_all_quests);
     LOAD_BOOL(hide_compass_quest_marker);
@@ -1064,6 +1188,7 @@ void Minimap::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(smooth_rotation);
     SAVE_BOOL(circular_map);
     SAVE_BOOL(snap_to_compass);
+    SAVE_BOOL(snap_to_mission_map);
     SAVE_BOOL(hide_compass_agents);
     SAVE_BOOL(hide_compass_quest_marker);
     SAVE_BOOL(hide_compass_drawings);
@@ -1170,8 +1295,17 @@ void Minimap::Draw(IDirect3DDevice9*)
         }
     }
 
-    // if not center and want to move, move center towards player
-    if ((translation.x != 0 || translation.y != 0) && (me->move_x != 0 || me->move_y != 0) && TIMER_DIFF(last_moved) > ms_before_back) {
+    
+    if (snap_to_mission_map && mission_map_context) {
+        const auto offset = mission_map_context->h003c->mission_map_pan_offset - mission_map_context->player_mission_map_pos;
+        const auto mission_map_scale = mission_map_frame->position.GetViewportScale(GetRootFrame());
+        translation = GW::Vec2f(-offset.x, offset.y);
+
+       /* const auto offset = (world_map_position - current_pan_offset);
+        const auto scaled_offset = GW::Vec2f(offset.x * mission_map_scale.x, offset.y * mission_map_scale.y);
+        screen_coords = (scaled_offset * mission_map_zoom + mission_map_screen_pos);*/
+
+    }else if ((translation.x != 0 || translation.y != 0) && (me->move_x != 0 || me->move_y != 0) && TIMER_DIFF(last_moved) > ms_before_back) {
         const GW::Vec2f v(translation.x, translation.y);
         const auto speed = std::min(static_cast<float>(TIMER_DIFF(last_moved) - ms_before_back) * acceleration, 500.0f);
         GW::Vec2f d = v;
@@ -1188,20 +1322,24 @@ void Minimap::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowSize(ImVec2(500.0f, 500.0f), ImGuiCond_FirstUseEver);
 
     auto win_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus;
-    if (snap_to_compass) {
+    if (snap_to_compass || snap_to_mission_map) {
         win_flags |= ImGuiWindowFlags_NoInputs;
     }
-    if (compass_position_dirty) {
+    if (compass_position_dirty && snap_to_compass) {
         RepositionMinimapToCompass();
         OverrideCompassVisibility();
         compass_position_dirty = false;
+    }
+    if (mission_map_position_dirty && snap_to_mission_map) {
+        RepositionMinimapToMissionMap();
+        mission_map_position_dirty = false;
     }
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(win_flags, true))) {
         // window pos are already rounded by imgui, so casting is no big deal
         const auto pos = ImGui::GetWindowPos();
         const auto sz = ImGui::GetWindowSize();
 
-        if (!snap_to_compass) {
+        if (!snap_to_compass && !snap_to_mission_map) {
             location.x = static_cast<int>(pos.x);
             location.y = static_cast<int>(pos.y);
             size.x = static_cast<int>(sz.x);
@@ -1386,7 +1524,7 @@ void Minimap::Render(IDirect3DDevice9* device)
     const D3DCOLOR background = instance.pmap_renderer.GetBackgroundColor();
     device->SetScissorRect(&clipping); // always clip to rect as a fallback if the stenciling fails
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
-    if (circular_map) {
+    if (circular_map && !snap_to_mission_map) {
         device->SetRenderState(D3DRS_STENCILENABLE, true); // enable stencil testing
         device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
         device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
@@ -1450,7 +1588,7 @@ void Minimap::Render(IDirect3DDevice9* device)
 
     instance.pingslines_renderer.Render(device);
 
-    if (circular_map) {
+    if (circular_map && !snap_to_mission_map) {
         device->SetRenderState(D3DRS_STENCILREF, 0);
         device->SetRenderState(D3DRS_STENCILWRITEMASK, 0x00000000);
         device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_NEVER);
@@ -1617,7 +1755,7 @@ bool Minimap::OnMouseDown(const UINT, const WPARAM, const LPARAM lParam)
         return true;
     }
 
-    if (!lock_move && !snap_to_compass) {
+    if (!lock_move && !snap_to_compass && !snap_to_mission_map) {
         return true;
     }
 
