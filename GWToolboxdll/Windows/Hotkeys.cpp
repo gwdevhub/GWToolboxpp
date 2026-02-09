@@ -316,40 +316,75 @@ const char* TBHotkey::professions[] = {"Any", "Warrior", "Ranger",
                                        "Paragon", "Dervish"};
 const char* TBHotkey::instance_types[] = {"Any", "Outpost", "Explorable"};
 
-bool TBHotkey::Draw(Op* op)
+bool TBHotkey::Draw(Op* op, bool first, bool last)
 {
-
     bool hotkey_changed = false;
     const float scale = ImGui::GetIO().FontGlobalScale;
-    auto ShowHeaderButtons = [&] {
-        if (show_active_in_header || show_run_in_header) {
-            ImGui::PushID(static_cast<int>(ui_id));
-            ImGui::PushID("header");
-            const ImGuiStyle& style = ImGui::GetStyle();
-            const float btn_width = 64.0f * scale;
-            if (show_active_in_header) {
-                ImGui::SameLine(
-                    ImGui::GetContentRegionAvail().x -
-                    ImGui::GetTextLineHeight() - style.FramePadding.y * 2 -
-                    (show_run_in_header
-                         ? btn_width + ImGui::GetStyle().ItemSpacing.x
-                         : 0));
-                hotkey_changed |= ImGui::Checkbox("", &active);
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip(
-                        "The hotkey can trigger only when selected");
-                }
-            }
-            if (show_run_in_header) {
-                ImGui::SameLine(ImGui::GetContentRegionAvail().x -
-                                btn_width);
-                if (ImGui::Button(ongoing ? "Stop" : "Run", ImVec2(btn_width, 0.0f))) {
-                    Toggle();
-                }
-            }
-            ImGui::PopID();
-            ImGui::PopID();
+    const auto show_header_buttons = [&] {
+        ImGui::PushID(static_cast<int>(ui_id));
+        ImGui::PushID("header");
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const float btn_size = ImGui::GetFrameHeight();
+        const float spacing = style.ItemSpacing.x;
+        const float run_btn_width = 64.0f * scale;
+
+        float offset = 0.0f;
+        if (show_run_in_header) offset += run_btn_width + spacing;
+
+        // Up/Down buttons
+        offset += btn_size * 2 + spacing;
+
+        // Active checkbox
+        if (show_active_in_header) offset += btn_size + spacing;
+
+        if (group[0] != '\0') {
+            offset -= 21; // @Jon idk how to get this value from ImGuiStyle
         }
+
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - offset);
+
+        if (show_active_in_header) {
+            hotkey_changed |= ImGui::Checkbox("##active", &active);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip(
+                    "The hotkey can trigger only when selected");
+            }
+            ImGui::SameLine();
+        }
+
+        if (first) {
+            ImGui::Dummy(ImVec2(btn_size, btn_size));
+        } else {
+            if (ImGui::Button(ICON_FA_ARROW_UP, ImVec2(btn_size, btn_size))) {
+                *op = Op_MoveUp;
+                hotkey_changed = true;
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Move the hotkey up in the list");
+            }
+        }
+        ImGui::SameLine();
+
+        if (last) {
+            ImGui::Dummy(ImVec2(btn_size, btn_size));
+        } else {
+            if (ImGui::Button(ICON_FA_ARROW_DOWN, ImVec2(btn_size, btn_size))) {
+                *op = Op_MoveDown;
+                hotkey_changed = true;
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Move the hotkey down in the list");
+            }
+        }
+
+        if (show_run_in_header) {
+            ImGui::SameLine();
+            if (ImGui::Button(ongoing ? "Stop" : "Run", ImVec2(run_btn_width, 0.0f))) {
+                Toggle();
+            }
+        }
+        ImGui::PopID();
+        ImGui::PopID();
     };
 
     // === Header ===
@@ -408,14 +443,12 @@ bool TBHotkey::Draw(Op* op)
     const auto keybuf_s = ModKeyName(key_combo);
 
     ASSERT(snprintf(&header[written], _countof(header) - written, " [%s]###header%u", keybuf_s.c_str(), ui_id) != -1);
-    const ImGuiTreeNodeFlags flags = show_active_in_header || show_run_in_header
-                                         ? ImGuiTreeNodeFlags_AllowOverlap
-                                         : 0;
+    constexpr ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_AllowOverlap;
     if (!ImGui::CollapsingHeader(header, flags)) {
-        ShowHeaderButtons();
+        show_header_buttons();
     }
     else {
-        ShowHeaderButtons();
+        show_header_buttons();
         ImGui::Indent();
         ImGui::PushID(static_cast<int>(ui_id));
         ImGui::PushItemWidth(-140.0f * scale);
@@ -570,11 +603,13 @@ bool TBHotkey::Draw(Op* op)
         }
 
         ImGui::Separator();
-        hotkey_changed |= ImGui::Checkbox("###active", &active);
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("The hotkey can trigger only when selected");
+        if (!show_active_in_header) {
+            hotkey_changed |= ImGui::Checkbox("###active", &active);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("The hotkey can trigger only when selected");
+            }
+            ImGui::SameLine();
         }
-        ImGui::SameLine();
         const auto keybuf2 = std::format("Hotkey: {}", keybuf_s);
         const auto control_width = 140.0f * scale;
         if (ImGui::Button(keybuf2.c_str(), ImVec2(control_width * -3.f, 0))) {
@@ -599,34 +634,18 @@ e.g. A hotkey with Ctrl + H will NOT trigger if you've got the W key held aswell
             ImGui::SetTooltip("Hotkeys usually trigger as soon as the key combination is pressed.\nYou can change this to instead only trigger when the key is released");
         }
         ImGui::SameLine();
-        if (ImGui::Button(ongoing ? "Stop" : "Run", ImVec2(control_width, 0.0f))) {
-            Toggle();
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Execute the hotkey now");
+        if (!show_run_in_header) {
+            if (ImGui::Button(ongoing ? "Stop" : "Run", ImVec2(control_width, 0.0f))) {
+                Toggle();
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Execute the hotkey now");
+            }
         }
         ImGui::PopItemWidth();
 
-        const auto btn_width = ImGui::GetContentRegionAvail().x / 3.0f;
-
         // === Move and delete buttons ===
-        if (ImGui::Button("Move Up", ImVec2(btn_width, 0))) {
-            *op = Op_MoveUp;
-            hotkey_changed = true;
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Move the hotkey up in the list");
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Move Down", ImVec2(btn_width, 0))) {
-            *op = Op_MoveDown;
-            hotkey_changed = true;
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Move the hotkey down in the list");
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Delete", ImVec2(btn_width, 0))) {
+        if (ImGui::Button("Delete", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
             ImGui::OpenPopup("Delete Hotkey?");
         }
         if (ImGui::IsItemHovered()) {
@@ -1994,7 +2013,7 @@ void HotkeyGWKey::Execute()
 {
     GW::GameThread::Enqueue([&] {
         const auto frame = GW::UI::GetFrameByLabel(L"Game");
-        Keypress(action, GW::UI::GetChildFrame(frame,6));
+        Keypress(action, GW::UI::GetChildFrame(frame, 6));
         Keypress(action, GW::UI::GetParentFrame(frame));
     });
 }

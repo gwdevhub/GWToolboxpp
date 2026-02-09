@@ -1,8 +1,8 @@
 #include "stdafx.h"
 
 #include <queue>
+#include <atomic>
 
-#include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/PartyContext.h>
 
 #include <GWCA/Managers/AgentMgr.h>
@@ -14,28 +14,20 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Player.h>
 
-#include <GWCA/Utilities/Hooker.h>
-#include <GWCA/Utilities/Scanner.h>
-
 #include <Modules/PartyBroadcastModule.h>
 #include <Modules/Resources.h>
 #include <Modules/Updater.h>
 
-#include <Utils/GuiUtils.h>
 #include <Utils/TextUtils.h>
 
 #include <easywsclient/easywsclient.hpp>
 #include <nlohmann/json.hpp>
 
-#include <Defines.h>
-#include <GWCA/Context/AccountContext.h>
-#include <GWCA/Context/GameContext.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <Timer.h>
 #include <Utils/RateLimiter.h>
 #include <Utils/ToolboxUtils.h>
-#include <base64.h>
 #include <wincrypt.h>
 #include "ToolboxSettings.h"
 
@@ -49,10 +41,10 @@ namespace {
     clock_t need_to_send_party_searches = 0;
     clock_t failed_to_send_ts = 0;
 
-    WSAData wsaData = {0};
+    WSAData wsaData = {};
 
-    static constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
-    static constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
+    constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
+    constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
 
     RateLimiter window_rate_limiter;
     easywsclient::WebSocket* ws = nullptr;
@@ -60,6 +52,7 @@ namespace {
     std::queue<std::string> websocket_send_queue;
     std::recursive_mutex websocket_mutex;
     std::thread* websocket_thread = nullptr;
+    std::atomic websocket_thread_done = true;
     bool pending_websocket_disconnect = false;
     bool terminating = false;
 
@@ -193,7 +186,7 @@ namespace {
                 ad.language = static_cast<uint8_t>(district_language);
                 ad.primary = static_cast<uint8_t>(player.primary);
                 ad.secondary = static_cast<uint8_t>(player.secondary);
-                ad.level = static_cast<uint8_t>(agent->level);
+                ad.level = agent->level;
                 ad.sender = std::move(sender);
                 ads.push_back(ad);
             }
@@ -202,7 +195,7 @@ namespace {
         return ads;
     }
 
-    std::string last_party_searches_payload = "";
+    std::string last_party_searches_payload;
     // Run on game thread!
     bool send_all_party_searches()
     {
@@ -294,7 +287,7 @@ namespace {
 
     void on_websocket_closed()
     {
-        std::lock_guard<std::recursive_mutex> lk(websocket_mutex);
+        std::lock_guard lk(websocket_mutex);
         while (!websocket_send_queue.empty())
             websocket_send_queue.pop();
         last_update_content = "";
@@ -353,7 +346,7 @@ namespace {
             while (ws && !websocket_send_queue.empty()) {
                 std::string cpy;
                 {
-                    std::lock_guard<std::recursive_mutex> lk(websocket_mutex);
+                    std::lock_guard lk(websocket_mutex);
                     if (websocket_send_queue.empty()) break;
                     cpy = std::move(websocket_send_queue.front());
                     websocket_send_queue.pop();
@@ -365,6 +358,7 @@ namespace {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
         disconnect_ws();
+        websocket_thread_done = true;
     }
 
     // Run on worker thread!
@@ -373,8 +367,9 @@ namespace {
         if (pending_websocket_disconnect) return false;
         if (!websocket_thread) {
             websocket_thread = new std::thread(websocket_thread_loop);
+            websocket_thread_done = false;
         }
-        std::lock_guard<std::recursive_mutex> lk(websocket_mutex);
+        std::lock_guard lk(websocket_mutex);
         websocket_send_queue.push(payload);
         return true;
     }
@@ -391,6 +386,9 @@ void PartyBroadcast::Update(float)
 {
     if (pending_websocket_disconnect) {
         if (websocket_thread) {
+            if (!websocket_thread_done.load()) {
+                return; // Wait for worker thread to finish without blocking the game thread.
+            }
             ASSERT(websocket_thread->joinable());
             websocket_thread->join();
             delete websocket_thread;
@@ -435,7 +433,7 @@ void PartyBroadcast::Initialize()
 
     need_to_send_party_searches = TIMER_INIT();
 
-    const GW::UI::UIMessage ui_messages[] = {
+    constexpr GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kMapLoaded,           
         (GW::UI::UIMessage)((uint32_t)GW::UI::UIMessage::kMoraleChange + 1), // wparam = player_id
         GW::UI::UIMessage::kPartySearchRemoved,
@@ -443,7 +441,7 @@ void PartyBroadcast::Initialize()
         GW::UI::UIMessage::kPartySearchCreated, // Party search updated
         GW::UI::UIMessage::kPartySearchIdChanged // Party search Remove
     };
-    for (auto message_id : ui_messages) {
+    for (const auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&OnUIMessage_Hook, message_id, OnUIMessage, 0x8000);
     }
 }
@@ -454,7 +452,7 @@ void PartyBroadcast::Terminate()
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_Hook);
     if (wsaData.wVersion) {
         WSACleanup();
-        wsaData = {0};
+        wsaData = {};
     }
     ASSERT(!websocket_thread);
 }

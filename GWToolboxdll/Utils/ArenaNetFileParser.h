@@ -115,17 +115,87 @@ namespace ArenaNetFileParser {
         uint16_t f0x52;
     };
 
-    enum ChunkType { 
-        GEOMETRY = 0xFA0, 
-        ANIMATION = 0xFA1, 
-        ATEXFILE = 0xFA3,
-        FILENAMES_FA5 = 0xFA5, 
-        FILENAMES_FA6 = 0xFA6, 
-        FILENAMES_FAD = 0xFAD, 
-        FILENAMES_BBC = 0xbbc, 
-        FILENAMES_BBD = 0xbbd, 
-        SOUND_FILES_1 = 0x1, 
-        UNKNOWN 
+enum class ChunkType : uint32_t {
+        BB8_Geometry = 0xBB8,
+        BB9_Animation = 0xBB9,
+        BBA_TextureRefs = 0xBBA,
+        BBB_FileReferences = 0xBBB,
+        BBC_FileReferences = 0xBBC,
+        BBD_AnimationRefs = 0xBBD,
+        BBE_VersionData = 0xBBE,
+        BBF_IndexBuffer = 0xBBF,
+        BC0_AdditionalData = 0xBC0,
+        BC1_AdditionalData = 0xBC1,
+
+        FA0_Geometry = 0xFA0,
+        FA1_Animation = 0xFA1,
+        FA3_InlineTextureDXT3 = 0xFA3,
+        FA4_TextureRefs = 0xFA4,
+        FA5_FileReferences = 0xFA5,
+        FA6_FileReferences = 0xFA6,
+        FA7_BoundingCylinders = 0xFA7,
+        FA8_SkeletonRefs = 0xFA8,
+        FA9_VersionData = 0xFA9,
+        FAA_InlineTextureDXTA = 0xFAA,
+        FAB_IndexBuffer = 0xFAB,
+        FAC_Metadata = 0xFAC,
+        FAD_AdditionalData = 0xFAD,
+        FAE_AdditionalData = 0xFAE,
+
+        Type8_AssetRefs = 0x01,
+        Type8_Metadata = 0x02,
+
+        Map_Header = 0x20000000,
+        Map_Terrain = 0x20000002,
+        Map_Zones = 0x20000003,
+        Map_PropInfo = 0x20000004,
+        Map_Unknown06 = 0x20000006,
+        Map_Unknown07 = 0x20000007,
+        Map_Pathfinding = 0x20000008,
+        Map_Environment = 0x20000009,
+        Map_Unknown0A = 0x2000000A,
+        Map_Info = 0x2000000C,
+        Map_Unknown0E = 0x2000000E,
+        Map_Unknown0F = 0x2000000F,
+        Map_Shore = 0x20000010,
+        Map_EnvironmentExtra = 0x20000011,
+        Map_AudioZones = 0x20000012,
+        Map_Unknown13 = 0x20000013,
+        Map_Unknown14 = 0x20000014,
+
+        Map_TerrainFilenames = 0x21000002,
+        Map_ZoneFilenames = 0x21000003,
+        Map_PropFilenames = 0x21000004,
+        Map_UnknownFilenames06 = 0x21000006,
+        Map_EnvironmentFilenames = 0x21000009,
+        Map_ShoreFilenames = 0x21000010,
+        Map_AudioFilenames = 0x21000012,
+
+        Map_HeaderStub = 0x10000000,
+        Map_TerrainStub = 0x10000002,
+        Map_ZonesStub = 0x10000003,
+        Map_PropInfoStub = 0x10000004,
+        Map_Unknown06Stub = 0x10000006,
+        Map_Unknown07Stub = 0x10000007,
+        Map_PathfindingStub = 0x10000008,
+        Map_EnvironmentStub = 0x10000009,
+        Map_Unknown0AStub = 0x1000000A,
+        Map_InfoStub = 0x1000000C,
+        Map_Unknown0EStub = 0x1000000E,
+        Map_Unknown0FStub = 0x1000000F,
+        Map_ShoreStub = 0x10000010,
+        Map_EnvironmentExtraStub = 0x10000011,
+        Map_AudioStub = 0x10000012,
+        Map_Unknown13Stub = 0x10000013,
+        Map_Unknown14Stub = 0x10000014,
+
+        Map_TerrainFilenamesStub = 0x11000002,
+        Map_ZoneFilenamesStub = 0x11000003,
+        Map_PropFilenamesStub = 0x11000004,
+        Map_UnknownFilenames06Stub = 0x11000006,
+        Map_EnvironmentFilenamesStub = 0x11000009,
+        Map_ShoreFilenamesStub = 0x11000010,
+        Map_AudioFilenamesStub = 0x11000012
     };
 
     // Memory-mapped structures (these map directly to file data)
@@ -134,9 +204,10 @@ namespace ArenaNetFileParser {
 #pragma warning(disable : 4200)
     struct Chunk {
         ChunkType chunk_id;
-        uint32_t chunk_size;
+        uint32_t chunk_size; // Not including id or size fields
         // Data follows...
     };
+    static_assert(sizeof(Chunk) == 8);
     struct GeometryChunk : Chunk {
         Chunk1Sub1 sub_1;
         // Data follows...
@@ -179,8 +250,8 @@ namespace ArenaNetFileParser {
         virtual bool parse(std::vector<uint8_t>& _data);
 
         virtual const bool isValid() { return fileType() != 0; }
-        bool readFromDat(const wchar_t* file_hash);
-        bool readFromDat(const uint32_t file_id);
+        bool readFromDat(const wchar_t* file_hash, uint32_t stream_id = 0);
+        bool readFromDat(const uint32_t file_id, uint32_t stream_id = 0);
     };
 
     struct ArenaNetFile : GameAssetFile {

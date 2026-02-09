@@ -53,6 +53,7 @@ The World Map Widget adds extra functionality to the in-game world map.
 
 - Option to show all areas on the map, including those you haven't unlocked
 - Quick toggle for Hard Mode
+- Option to show Elite Skill capture locations.
 - Only visible when the world map is open
 
 These widgets can be toggled on/off and customized in the GWToolbox++ settings menu.

@@ -1,17 +1,246 @@
 #include "stdafx.h"
 
-#include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Context/MapContext.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 
 #include <Logger.h>
 #include "MathUtility.h"
 #include "Pathing.h"
+#include "constant_vector.hpp"
 
 namespace {
+    __forceinline float Cross(const GW::Vec2f& lhs, const GW::Vec2f& rhs)
+    {
+        return (lhs.x * rhs.y) - (lhs.y * rhs.x);
+    }
+
+    __forceinline float Dot(const GW::Vec2f& lhs, const GW::Vec2f& rhs)
+    {
+        return (lhs.x * rhs.x) + (lhs.y * rhs.y);
+    }
+
+    class Timing {
+#ifdef DEBUG_PATHING
+        std::string label;
+        std::chrono::time_point<std::chrono::high_resolution_clock> start;
+
+    public:
+        Timing(std::string_view label) : label(std::move(label)), start(std::chrono::high_resolution_clock::now()) {}
+        ~Timing()
+        {
+            auto elapsed = std::chrono::high_resolution_clock::now() - start;
+            Log::Info("%s: %ld ms.", label.c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed));
+        }
+#else
+    public:
+        Timing(...) {};
+#endif
+    };
+} // namespace
+
+
+namespace Pathing {
+    bool IsOnPathingTrapezoid(const GW::PathingTrapezoid* pt, const GW::Vec2f& p)
+    {
+        if (pt->YT < p.y || pt->YB > p.y) return false;
+        if (pt->XBL > p.x && pt->XTL > p.x) return false;
+        if (pt->XBR < p.x && pt->XTR < p.x) return false;
+        GW::Vec2f a{pt->XTL, pt->YT}, b{pt->XBL, pt->YB}, c{pt->XBR, pt->YB}, d{pt->XTR, pt->YT};
+        GW::Vec2f ab = b - a, cd = d - c;
+        GW::Vec2f pa = p - a, pc = p - c;
+        const float tolerance = -1.0f;
+        if (Cross(ab, pa) < tolerance) return false;
+        if (Cross(cd, pc) < tolerance) return false;
+        return true;
+    }
+
+
+    GW::PathingTrapezoid* FindTrapezoid(const GW::GamePos& point, GW::PathingMapArray* map)
+    {
+        if (!(map && map->size() <= point.zplane)) return nullptr;
+
+        auto& pm = (*map)[point.zplane];
+        GW::Node* n = pm.root_node;
+
+        int cnt = 50000;
+        while (n && cnt--) {
+            switch (n->type) {
+                case 0: // XNode = 0,
+                {
+                    GW::XNode* xn = static_cast<GW::XNode*>(n);
+                    float d = (point.y - xn->pos.y) * xn->dir.x - (point.x - xn->pos.x) * xn->dir.y;
+
+                    if (d >= 0.0f) {
+                        n = xn->right;
+                    }
+                    else {
+                        n = xn->left;
+                    }
+                    break;
+                }
+                case 1: // YNode = 1,
+                {
+                    GW::YNode* yn = static_cast<GW::YNode*>(n);
+                    if (point.y > yn->pos.y) {
+                        n = yn->above;
+                    }
+                    else if (point.y < yn->pos.y) {
+                        n = yn->below;
+                    }
+                    else if (point.x >= yn->pos.x) {
+                        n = yn->above;
+                    }
+                    else {
+                        n = yn->below;
+                    }
+                    break;
+                }
+                case 2: // SinkNode = 2
+                {
+                    GW::SinkNode* sn = static_cast<GW::SinkNode*>(n);
+                    return sn ? sn->trapezoid : nullptr;
+                }
+            }
+        }
+
+        return nullptr;
+    }
+
+
+    GW::PathingTrapezoid* FindClosestTrapezoid(const GW::GamePos& point, GW::PathingMapArray* map)
+    {
+        if (!(map && map->size())) return nullptr;
+
+        GW::PathingTrapezoid* closest = FindTrapezoid(point, map);
+        if (closest) return closest;
+
+        float closest_dist = std::numeric_limits<float>::infinity();
+        constexpr float tolerance = 50.0f;
+
+        std::vector<GW::Node*> open;
+
+        for (uint32_t i = 0; i < map->size(); ++i) {
+            auto& pm = (*map)[i];
+            open.push_back(pm.root_node);
+
+            int cnt = 50000;
+            while (open.size() && cnt--) {
+                GW::Node* n = std::move(open.back());
+                open.pop_back();
+
+                if (!n) continue;
+
+                switch (n->type) {
+                    case 0: // XNode = 0,
+                    {
+                        GW::XNode* xn = static_cast<GW::XNode*>(n);
+                        float d = ((point.y - xn->pos.y) * xn->dir.x - (point.x - xn->pos.x) * xn->dir.y) / GW::GetNorm(xn->dir);
+
+                        if ((d > tolerance) || (open.push_back(xn->left), (d >= -tolerance))) {
+                            open.push_back(xn->right);
+                        }
+                        break;
+                    }
+                    case 1: // YNode = 1,
+                    {
+                        GW::YNode* yn = static_cast<GW::YNode*>(n);
+                        float d = point.y - yn->pos.y;
+                        if ((d > tolerance) || (open.push_back(yn->below), (d >= -tolerance))) {
+                            open.push_back(yn->above);
+                        }
+                        break;
+                    }
+                    case 2: // SinkNode = 2
+                    {
+                        GW::SinkNode* sn = static_cast<GW::SinkNode*>(n);
+                        if (!sn->trapezoid) continue;
+                        GW::PathingTrapezoid* pt = reinterpret_cast<GW::PathingTrapezoid*>(sn->trapezoid);
+
+                        bool onTrap = IsOnPathingTrapezoid(pt, point);
+                        if (onTrap) {
+                            return pt;
+                        }
+                        else {
+                            float d1 = MathUtil::getDistanceFromLine({pt->XTL, pt->YT}, {pt->XTR, pt->YT}, point);
+                            float d2 = MathUtil::getDistanceFromLine({pt->XTR, pt->YT}, {pt->XBR, pt->YB}, point);
+                            float d3 = MathUtil::getDistanceFromLine({pt->XBR, pt->YB}, {pt->XBL, pt->YB}, point);
+                            float d4 = MathUtil::getDistanceFromLine({pt->XBL, pt->YB}, {pt->XTL, pt->YT}, point);
+                            float d = std::min({d1, d2, d3, d4});
+                            if (closest_dist > d) {
+                                closest_dist = d;
+                                closest = pt;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        return closest;
+    }
+
+    GW::PathingTrapezoid* FindClosestPositionOnTrapezoid(GW::GamePos& point, GW::PathingMapArray* map)
+    {
+        if (!(map && map->size())) return nullptr;
+
+        GW::PathingTrapezoid* pt = FindClosestTrapezoid(point, map);
+        if (pt) return pt;
+
+        float closest_dist = std::numeric_limits<float>::infinity();
+        GW::PathingTrapezoid* closest = nullptr;
+
+        for (uint32_t z = 0; z < map->size(); ++z) {
+            const auto& m = (*map)[z];
+            for (uint32_t i = 0; i < m.trapezoid_count; ++i) {
+                pt = &m.trapezoids[i];
+                float d1 = MathUtil::getDistanceFromLine({pt->XTL, pt->YT}, {pt->XTR, pt->YT}, point);
+                float d2 = MathUtil::getDistanceFromLine({pt->XTR, pt->YT}, {pt->XBR, pt->YB}, point);
+                float d3 = MathUtil::getDistanceFromLine({pt->XBR, pt->YB}, {pt->XBL, pt->YB}, point);
+                float d4 = MathUtil::getDistanceFromLine({pt->XBL, pt->YB}, {pt->XTL, pt->YT}, point);
+                float d = std::min({d1, d2, d3, d4});
+                if (closest_dist > d) {
+                    closest_dist = d;
+                    closest = pt;
+                    point.zplane = z;
+                }
+            }
+        }
+        if (!closest) return nullptr;
+
+        // Located outside pathing trapezoids. Find closest point lying on the edge of trapezoid.
+        GW::Vec2f p0, p1;
+        if (closest_dist == MathUtil::getDistanceFromLine({closest->XTL, closest->YT}, {closest->XTR, closest->YT}, point)) {
+            p0 = {closest->XTL, closest->YT};
+            p1 = {closest->XTR, closest->YT};
+        }
+        else if (closest_dist == MathUtil::getDistanceFromLine({closest->XTR, closest->YT}, {closest->XBR, closest->YB}, point)) {
+            p0 = {closest->XTR, closest->YT};
+            p1 = {closest->XBR, closest->YB};
+        }
+        else if (closest_dist == MathUtil::getDistanceFromLine({closest->XBR, closest->YB}, {closest->XBL, closest->YB}, point)) {
+            p0 = {closest->XBR, closest->YB};
+            p1 = {closest->XBL, closest->YB};
+        }
+        else /*(closest_dist == MathUtil::getDistanceFromLine({ closest->XTR, closest->YT }, { closest->XBR, closest->YB }, point))*/ {
+            p0 = {closest->XBL, closest->YB};
+            p1 = {closest->XTL, closest->YT};
+        }
+
+        // Calculate new point by projecting start point on the closest line segment.
+        auto ba = p1 - p0, pa = point - p0;
+        float h = std::clamp(Dot(pa, ba) / Dot(ba, ba), 0.0f, 1.0f);
+        point = p0 + h * ba;
+
+        return closest;
+    }
+
+
     std::mutex pathing_mutex;
 
-    GW::Array<GW::MapProp*>* GetMapProps() {
+    GW::Array<GW::MapProp*>* GetMapProps()
+    {
         const auto m = GW::GetMapContext();
         const auto p = m ? m->props : nullptr;
         return p ? &p->propArray : nullptr;
@@ -19,19 +248,17 @@ namespace {
 
 
     // Grab a copy of map_context->sub1->pathing_map_block for processing on a different thread - Blocks until copy is complete
-    Pathing::Error CopyPathingMapBlocks(Pathing::BlockedPlaneBitset* dest)
+    Pathing::Error CopyPathingMapBlocks(GW::MapContext* mapContext, Pathing::BlockedPlaneBitset* dest)
     {
         volatile Pathing::Error res = Pathing::Error::Unknown;
         std::mutex mutex;
-        *dest = { 0 };
+        *dest = {0};
+        if (!(mapContext && mapContext->path)) {
+            return Pathing::Error::InvalidMapContext;
+        }
         // Enqueue
-        GW::GameThread::Enqueue([dest, &res, &mutex] {
+        GW::GameThread::Enqueue([mapContext, dest, &res, &mutex] {
             const std::lock_guard lock(mutex);
-            GW::MapContext* mapContext = GW::GetMapContext();
-            if (!mapContext) {
-                res = Pathing::Error::InvalidMapContext;
-                return;
-            }
             auto& block = mapContext->path->blockedPlanes;
             ASSERT(block.size() < dest->size());
             for (size_t i = 0; i < block.size(); i++) {
@@ -42,18 +269,36 @@ namespace {
         // Wait
         do {
             const std::lock_guard lock(mutex);
-            if (res != Pathing::Error::Unknown)
-                break;
+            if (res != Pathing::Error::Unknown) break;
         } while (true);
         return res;
     }
 
+    // Overload that gets MapContext automatically
+    Pathing::Error CopyPathingMapBlocks(Pathing::BlockedPlaneBitset* dest)
+    {
+        return CopyPathingMapBlocks(GW::GetMapContext(), dest);
+    }
+
+    // Helper wrappers that get the map from the current MapContext
+    GW::PathingTrapezoid* FindClosestTrapezoid(const GW::GamePos& point)
+    {
+        auto* mapContext = GW::GetMapContext();
+        if (!mapContext || !mapContext->path || !mapContext->path->staticData) return nullptr;
+        return FindClosestTrapezoid(point, &mapContext->path->staticData->map);
+    }
+
+    GW::PathingTrapezoid* FindClosestPositionOnTrapezoid(GW::GamePos& point)
+    {
+        auto* mapContext = GW::GetMapContext();
+        if (!mapContext || !mapContext->path || !mapContext->path->staticData) return nullptr;
+        return FindClosestPositionOnTrapezoid(point, &mapContext->path->staticData->map);
+    }
+
     uint32_t FileHashToFileId(wchar_t* param_1)
     {
-        if (!param_1)
-            return 0;
-        if (((0xff < *param_1) && (0xff < param_1[1])) &&
-            ((param_1[2] == 0 || ((0xff < param_1[2] && (param_1[3] == 0)))))) {
+        if (!param_1) return 0;
+        if (((0xff < *param_1) && (0xff < param_1[1])) && ((param_1[2] == 0 || ((0xff < param_1[2] && (param_1[3] == 0)))))) {
             return (*param_1 - 0xff00ff) + (uint32_t)param_1[1] * 0xff00;
         }
         return 0;
@@ -61,8 +306,7 @@ namespace {
 
     const uint32_t GetMapPropModelFileId(GW::MapProp* prop)
     {
-        if (!(prop && prop->h0034[4]))
-            return 0;
+        if (!(prop && prop->h0034[4])) return 0;
         uint32_t* sub_deets = (uint32_t*)prop->h0034[4];
         return FileHashToFileId((wchar_t*)sub_deets[1]);
     };
@@ -70,7 +314,7 @@ namespace {
     {
         if (!prop) return false;
         switch (GetMapPropModelFileId(prop)) {
-            case 0xefd0:  // Crystal desert
+            case 0xefd0: // Crystal desert
                 return true;
         }
         return false;
@@ -86,924 +330,1184 @@ namespace {
         }
         return false;
     }
-}
+
+    bool IsPathValid(const GW::PathContext* path)
+    {
+        return path && path->staticData && path->staticData->map.size();
+    }
+
+    typedef struct {
+        float distance;
+        BlockedPlaneBitset blocked_planes;
+        PointId point_id; // other point
+    } PointVisElement;
+
+    struct DefferedTeleport {
+        PointId m_enter, m_exit;
+        MapSpecific::Teleport::direction m_directionality;
+    };
+    std::vector<DefferedTeleport> m_defferedPortalLinks;
+
+    enum class Edge : uint8_t { top, right, bottom, left };
+
+    class Portal {
+    public:
+        typedef uint16_t id;
+        Portal(Portal::id id, Portal::id other_id, PointId start_id, PointId goal_id, const GW::PathingTrapezoid* pt, uint8_t pt_layer, Edge edge);
+        const GW::PathingTrapezoid* m_pt; // pathing trapezoid id
+        PointId m_point[2];
+        Portal::id m_id;
+        Portal::id m_other_id;
+        uint8_t m_pt_layer;
+        Edge m_edge; // deprecated
+    };
+
+    Portal::Portal(Portal::id id, Portal::id other_id, PointId start_id, PointId goal_id, const GW::PathingTrapezoid* pt, uint8_t pt_layer, Edge edge)
+        : m_id(id), m_other_id(other_id), m_point{start_id, goal_id}, m_pt(pt), m_pt_layer(pt_layer), m_edge(edge)
+    {}
+
+    class Point {
+    public:
+        Point() : m_id{}, m_pos{}, m_portals{}, is_viable{} {}
+        Point(const GW::Vec2f& pos, PointId id, Portal::id portal1_id, Portal::id portal2_id, bool is_viable) : m_id(id), m_pos(pos), m_portals{portal1_id, portal2_id}, is_viable(is_viable) {};
+        GW::Vec2f m_pos;
+        Portal::id m_portals[2];
+        PointId m_id;
+        bool is_viable;
+    };
+
+    typedef struct {
+        const GW::PathingTrapezoid* t;
+        uint8_t layer;
+        Edge loc;
+    } Neighbour;
+
+    typedef struct {
+        const GW::PathingTrapezoid* t;
+        const GW::PathingTrapezoid* came_from;
+    } Explore;
+
+    struct node {
+        BlockedPlaneBitset blocked_planes;
+        size_t visited_checkpoint; // rollback checkpoint
+        GW::Vec2f funnel[2];
+        Portal::id next;
+    };
+
+    struct VisitedState {
+        cv::vector<uint16_t> visited; // size = portals.size()
+        cv::vector<Portal::id> stack; // change history
+        uint16_t stamp = 1;
+
+        void init(size_t n)
+        {
+            visited.resize(n);
+            stack.reserve(2048);
+            stamp = 1;
+        }
+
+        inline bool is_visited(Portal::id id) const { return visited[static_cast<uint16_t>(id)] == stamp; }
+
+        inline void visit(Portal::id id)
+        {
+            if (visited[static_cast<uint16_t>(id)] != stamp) {
+                visited[id] = stamp;
+                stack.push_back(id);
+            }
+        }
+
+        inline size_t checkpoint() const { return stack.size(); }
+
+        inline void rollback(size_t checkpoint)
+        {
+            while (stack.size() > checkpoint) {
+                visited[stack.back()] = 0;
+                stack.pop_back();
+            }
+        }
+    };
+
+
+    struct VisitedPoints {
+        cv::vector<uint32_t> gen;
+        uint32_t cur = 1;
+
+        void init(size_t n)
+        {
+            gen.resize(n);
+            cur = 1;
+        }
+
+        inline void reset()
+        {
+            ++cur;
+            if (cur == 0) { // overflow safety
+                std::fill(gen.begin(), gen.end(), 0);
+                cur = 1;
+            }
+        }
+
+        inline bool test_and_set(PointId id)
+        {
+            if (gen[id] == cur) return false;
+            gen[id] = cur;
+            return true;
+        }
+    };
+
+    struct Impl {
+        Impl() : m_msd(), m_visGraph(), points(), portals(), pt_portal_map(), portal_pt_map(), portal_portal_map(), tmp_portal_pt_map(), ptneighbours(), m_teleports(), travel_portals(), m_teleportGraph(), m_copiedMapData() {}
+
+        ~Impl() { CleanupCopiedMapData(); }
+
+        MapSpecific::MapSpecificData m_msd;
+        std::vector<std::vector<PointVisElement>> m_visGraph;                          // PointId
+        std::vector<Point> points;                                                     // PointId
+        std::vector<Portal> portals;                                                   // Portal::id
+        std::vector<std::vector<Portal::id>> pt_portal_map;                            // PathingTrapezoid->id
+        std::vector<const GW::PathingTrapezoid*> portal_pt_map;                        // Portal::id
+        std::vector<std::vector<Portal::id>> portal_portal_map;                        // Portal::id
+        std::unordered_map<Portal::id, const GW::PathingTrapezoid*> tmp_portal_pt_map; // Portal::id
+        std::unordered_map<const GW::PathingTrapezoid*, std::vector<Neighbour>> ptneighbours;
+        MapSpecific::Teleports m_teleports;
+        std::vector<GW::MapProp*> travel_portals;
+        std::vector<MapSpecific::teleport_node> m_teleportGraph;
+        volatile bool m_terminateThread = false;
+
+        // Runtime/tmp vars that would otherwise have been static for cca - maybe add mutex?
+        std::unordered_map<const GW::PathingTrapezoid*, bool> GetTrapezoidNeighbours_visited;
+        std::vector<Explore> GetTrapezoidNeighbours_to_explore;
+        std::vector<Neighbour> isNeighbourOf_neighbours;
+
+        // Deep copied map data - NO external pointers allowed!
+        struct CopiedPathingMap {
+            uint32_t trapezoid_count;
+            GW::PathingTrapezoid* trapezoids;
+            uint32_t portal_count;
+            GW::Portal* portals;
+            GW::Node* root_node; // We'll keep tree nodes from game (they're const data)
+            uint32_t zplane;
+
+            CopiedPathingMap() : trapezoid_count(0), trapezoids(nullptr), portal_count(0), portals(nullptr), root_node(nullptr), zplane(0) {}
+        };
+
+        struct CopiedMapData {
+            std::vector<CopiedPathingMap> maps;
+            uint32_t pathNodeSize;
+        };
+
+        CopiedMapData m_copiedMapData;
+
+        void CleanupCopiedMapData()
+        {
+            for (auto& map : m_copiedMapData.maps) {
+                if (map.trapezoids) {
+                    delete[] map.trapezoids;
+                    map.trapezoids = nullptr;
+                }
+                if (map.portals) {
+                    // First delete the trapezoid pointer arrays in each portal
+                    for (uint32_t i = 0; i < map.portal_count; ++i) {
+                        if (map.portals[i].trapezoids) {
+                            delete[] map.portals[i].trapezoids;
+                        }
+                    }
+                    delete[] map.portals;
+                    map.portals = nullptr;
+                }
+                // root_node points to game memory - don't delete
+            }
+            m_copiedMapData.maps.clear();
+        }
+
+        void CopyMapData(const GW::PathContext* src)
+        {
+            if (!src || !src->staticData) return;
+
+            CleanupCopiedMapData();
+
+            const auto& srcMaps = src->staticData->map;
+            m_copiedMapData.maps.resize(srcMaps.size());
+            m_copiedMapData.pathNodeSize = src->pathNodes.size();
+
+            // Build ID->pointer mappings for fixup
+            std::unordered_map<uint32_t, GW::PathingTrapezoid*> idToTrapezoid;
+            std::unordered_map<const GW::Portal*, GW::Portal*> oldToNewPortal;
+
+            // Pass 1: Copy all trapezoids and build ID map
+            for (size_t mapIdx = 0; mapIdx < srcMaps.size(); ++mapIdx) {
+                const auto& srcMap = srcMaps[mapIdx];
+                auto& dstMap = m_copiedMapData.maps[mapIdx];
+
+                dstMap.zplane = srcMap.zplane;
+                dstMap.trapezoid_count = srcMap.trapezoid_count;
+                dstMap.portal_count = srcMap.portal_count;
+
+                // Copy trapezoids
+                if (srcMap.trapezoids && srcMap.trapezoid_count > 0) {
+                    dstMap.trapezoids = new GW::PathingTrapezoid[srcMap.trapezoid_count];
+                    for (uint32_t i = 0; i < srcMap.trapezoid_count; ++i) {
+                        // Copy the trapezoid data
+                        dstMap.trapezoids[i] = srcMap.trapezoids[i];
+                        // Clear adjacent pointers for now - will fix up in pass 2
+                        dstMap.trapezoids[i].adjacent[0] = nullptr;
+                        dstMap.trapezoids[i].adjacent[1] = nullptr;
+                        dstMap.trapezoids[i].adjacent[2] = nullptr;
+                        dstMap.trapezoids[i].adjacent[3] = nullptr;
+
+                        // Build ID map
+                        idToTrapezoid[srcMap.trapezoids[i].id] = &dstMap.trapezoids[i];
+                    }
+                }
+
+                // Copy portals (before fixup)
+                if (srcMap.portals && srcMap.portal_count > 0) {
+                    dstMap.portals = new GW::Portal[srcMap.portal_count];
+                    for (uint32_t i = 0; i < srcMap.portal_count; ++i) {
+                        // Copy portal data
+                        dstMap.portals[i] = srcMap.portals[i];
+                        dstMap.portals[i].pair = nullptr;       // Will fix up in pass 2
+                        dstMap.portals[i].trapezoids = nullptr; // Will fix up in pass 2
+
+                        // Build portal map
+                        oldToNewPortal[&srcMap.portals[i]] = &dstMap.portals[i];
+                    }
+                }
+            }
+
+            // Pass 2: Fix up all pointers using IDs/maps
+            for (size_t mapIdx = 0; mapIdx < srcMaps.size(); ++mapIdx) {
+                const auto& srcMap = srcMaps[mapIdx];
+                auto& dstMap = m_copiedMapData.maps[mapIdx];
+
+                // Fix up adjacent pointers in trapezoids
+                if (srcMap.trapezoids && srcMap.trapezoid_count > 0) {
+                    for (uint32_t i = 0; i < srcMap.trapezoid_count; ++i) {
+                        for (int j = 0; j < 4; ++j) {
+                            if (srcMap.trapezoids[i].adjacent[j]) {
+                                uint32_t adjacentId = srcMap.trapezoids[i].adjacent[j]->id;
+                                auto it = idToTrapezoid.find(adjacentId);
+                                if (it != idToTrapezoid.end()) {
+                                    dstMap.trapezoids[i].adjacent[j] = it->second;
+                                }
+                                // else leave as nullptr
+                            }
+                        }
+                    }
+                }
+
+                // Fix up portal pointers
+                if (srcMap.portals && srcMap.portal_count > 0) {
+                    for (uint32_t i = 0; i < srcMap.portal_count; ++i) {
+                        // Fix up pair pointer
+                        if (srcMap.portals[i].pair) {
+                            auto it = oldToNewPortal.find(srcMap.portals[i].pair);
+                            if (it != oldToNewPortal.end()) {
+                                dstMap.portals[i].pair = it->second;
+                            }
+                            // else leave as nullptr
+                        }
+
+                        // Fix up trapezoid pointers in portal
+                        if (srcMap.portals[i].trapezoids && srcMap.portals[i].count > 0) {
+                            auto newTrapPtrs = new GW::PathingTrapezoid*[srcMap.portals[i].count];
+                            for (uint32_t j = 0; j < srcMap.portals[i].count; ++j) {
+                                if (srcMap.portals[i].trapezoids[j]) {
+                                    uint32_t trapId = srcMap.portals[i].trapezoids[j]->id;
+                                    auto it = idToTrapezoid.find(trapId);
+                                    if (it != idToTrapezoid.end()) {
+                                        newTrapPtrs[j] = it->second;
+                                    }
+                                    else {
+                                        newTrapPtrs[j] = nullptr;
+                                    }
+                                }
+                                else {
+                                    newTrapPtrs[j] = nullptr;
+                                }
+                            }
+                            dstMap.portals[i].trapezoids = newTrapPtrs;
+                        }
+                        else {
+                            dstMap.portals[i].trapezoids = nullptr;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Helper to get pathNodes size for reserving
+        size_t GetPathNodesSize() const { return m_copiedMapData.pathNodeSize; }
+
+        // Helper to check if map data is valid
+        bool HasMapData() const { return !m_copiedMapData.maps.empty(); }
+
+        // Helper to get map count
+        size_t GetMapCount() const { return m_copiedMapData.maps.size(); }
+
+        // Helper to get specific map
+        const CopiedPathingMap& GetMap(size_t index) const { return m_copiedMapData.maps[index]; }
+
+        void createPortalPair(const GW::PathingTrapezoid* pt1, uint8_t pt1_layer, const GW::PathingTrapezoid* pt2, uint8_t pt2_layer, GW::Vec2f p1, bool p1_viability, GW::Vec2f p2, bool p2_viability, Edge edge)
+        {
+            auto id = static_cast<Portal::id>(portals.size());
+            auto p_id = static_cast<PointId>(points.size());
+
+            points.emplace_back(p1, static_cast<PointId>(points.size()), id, id + 1, p1_viability);
+
+            points.emplace_back(p2, static_cast<PointId>(points.size()), id, id + 1, p2_viability);
+
+            portals.emplace_back(id, id + 1, p_id, p_id + 1, pt1, pt1_layer, edge);
+
+            portals.emplace_back(id + 1, id, p_id + 1, p_id, pt2, pt2_layer, (Edge)(((uint32_t)edge + 2u) % 4u));
+
+            pt_portal_map[pt1->id].push_back(id);
+            pt_portal_map[pt2->id].push_back(id + 1);
+            tmp_portal_pt_map[id] = pt1;
+            tmp_portal_pt_map[id + 1] = pt2;
+        }
+
+        void GetTrapezoidNeighbours(const CopiedPathingMap& m, const GW::PathingTrapezoid* trapezoid, uint8_t trapezoid_layer, std::vector<Neighbour>& neighbours)
+        {
+            using namespace MathUtil;
+            if (!trapezoid) return;
+            if (trapezoid->YB == trapezoid->YT) return;
+
+            auto& visited = GetTrapezoidNeighbours_visited;
+            auto& to_explore = GetTrapezoidNeighbours_to_explore;
+
+
+            to_explore.clear();
+            to_explore.reserve(10);
+            visited.clear();                     // and reserve an unordered map. -> cca. 20x faster
+            visited.reserve(GetPathNodesSize()); //
+
+            to_explore.push_back({trapezoid, nullptr});
+            visited[trapezoid] = true;
+
+            while (to_explore.size()) {
+                const Explore n = std::move(to_explore.back());
+                to_explore.pop_back();
+
+                if (n.t->portal_left < m.portal_count) {
+                    auto portal = &m.portals[n.t->portal_left];
+                    if (portal && portal->pair) {
+                        portal = portal->pair;
+                        if (portal->flags & 0x04) continue;
+
+                        GW::PathingTrapezoid** begin = portal->trapezoids;
+                        GW::PathingTrapezoid** end = begin + portal->count;
+                        for (auto it = begin; it < end; ++it) {
+                            if (!it || !(*it)) continue;
+                            if (visited[(*it)]) continue;
+                            if ((*it)->YB == (*it)->YT) { // Trapezoid is degenerate
+                                if (between(trapezoid->XTL, (*it)->XBL, (*it)->XBR) || between(trapezoid->XTR, (*it)->XBL, (*it)->XBR) || between((*it)->XBR, trapezoid->XTL, trapezoid->XTR) || between((*it)->XBL, trapezoid->XTL, trapezoid->XTR)) {
+                                    to_explore.emplace_back(*it, n.t);
+                                    visited[(*it)] = true;
+                                }
+                            }
+                            else {
+                                if (onSegment({trapezoid->XTL, trapezoid->YT}, {(*it)->XTR, (*it)->YT}, {trapezoid->XBL, trapezoid->YB}) || onSegment({trapezoid->XTL, trapezoid->YT}, {(*it)->XBR, (*it)->YB}, {trapezoid->XBL, trapezoid->YB}) ||
+                                    onSegment({(*it)->XTR, (*it)->YT}, {trapezoid->XTL, trapezoid->YT}, {(*it)->XBR, (*it)->YB}) || onSegment({(*it)->XTR, (*it)->YT}, {trapezoid->XTL, trapezoid->YT}, {(*it)->XBR, (*it)->YB})) {
+                                    neighbours.emplace_back(*it, (uint8_t)portal->portal_plane, Edge::left);
+                                    visited[(*it)] = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (n.t->portal_right < m.portal_count) {
+                    auto portal = &m.portals[n.t->portal_right];
+                    if (portal && portal->pair) {
+                        portal = portal->pair;
+                        if (portal->flags & 0x04) continue;
+
+                        GW::PathingTrapezoid** begin = portal->trapezoids;
+                        GW::PathingTrapezoid** end = begin + portal->count;
+                        for (auto it = begin; it < end; ++it) {
+                            if (!it || !(*it)) continue;
+                            if (visited[(*it)]) continue;
+                            if ((*it)->YT == (*it)->YB) {
+                                if (between(trapezoid->XBL, (*it)->XTL, (*it)->XTR) || between(trapezoid->XBR, (*it)->XTL, (*it)->XTR) || between((*it)->XTR, trapezoid->XBL, trapezoid->XBR) || between((*it)->XTL, trapezoid->XBL, trapezoid->XBR)) {
+                                    to_explore.emplace_back(*it, n.t);
+                                    visited[(*it)] = true;
+                                }
+                            }
+                            else {
+                                if (onSegment({trapezoid->XTR, trapezoid->YT}, {(*it)->XTL, (*it)->YT}, {trapezoid->XBR, trapezoid->YB}) || onSegment({trapezoid->XTR, trapezoid->YT}, {(*it)->XBL, (*it)->YB}, {trapezoid->XBR, trapezoid->YB}) ||
+                                    onSegment({(*it)->XTL, (*it)->YT}, {trapezoid->XTR, trapezoid->YT}, {(*it)->XBL, (*it)->YB}) || onSegment({(*it)->XTL, (*it)->YT}, {trapezoid->XTR, trapezoid->YT}, {(*it)->XBL, (*it)->YB})) {
+                                    neighbours.emplace_back(*it, (uint8_t)portal->neighbor_plane, Edge::right);
+                                    visited[(*it)] = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                auto ProcessTrapezoid = [&](const GW::PathingTrapezoid* t, Edge loc, const GW::PathingTrapezoid* came_from) {
+                    if (!t || t == came_from) return;
+                    if (visited[t]) return;
+                    if (t->YB == t->YT) {
+                        to_explore.emplace_back(t, came_from);
+                        visited[t] = true;
+                    }
+                    else {
+                        neighbours.emplace_back(t, trapezoid_layer, loc);
+                        visited[t] = true;
+                    }
+                };
+
+                ProcessTrapezoid(n.t->adjacent[0], Edge::top, n.t);
+                ProcessTrapezoid(n.t->adjacent[1], Edge::top, n.t);
+                ProcessTrapezoid(n.t->adjacent[2], Edge::bottom, n.t);
+                ProcessTrapezoid(n.t->adjacent[3], Edge::bottom, n.t);
+            }
+        }
+
+
+        bool isNeighbourOf(const GW::PathingTrapezoid* pt1, uint8_t pt1_layer, const GW::PathingTrapezoid* pt2)
+        {
+            auto& neighbours = isNeighbourOf_neighbours;
+
+            neighbours.clear();
+            if (!HasMapData() || pt1_layer >= GetMapCount()) return false;
+
+            auto& m = GetMap(pt1_layer);
+            GetTrapezoidNeighbours(m, pt1, pt1_layer, neighbours);
+            return std::ranges::any_of(neighbours, [&](const auto& n) {
+                return n.t == pt2;
+            });
+        }
+
+        void linkTrapezoids(const GW::PathingTrapezoid* pt1, uint8_t pt1_layer, const Neighbour& n)
+        {
+            const float tolerance = 0.1f;
+
+            const GW::PathingTrapezoid* pt2 = n.t;
+            uint8_t pt2_layer = n.layer;
+            Edge edge = n.loc; // neighbour location relative to pt1
+
+            // Definitios of portals and points
+            //         \        \        
+        //     _____\a......b\____
+            //     |                 a|___
+            // ____|b                 .
+            //     .                  .
+            //     .                 b.___
+            // ____.a                 |
+            //     |____b..........a__|
+            //          /         /
+
+            bool point1_viability = false; // pt1_layer != pt2_layer;
+            bool point2_viability = false;
+
+            if (edge == Edge::top) {
+                if (pt1->YT != pt2->YB) return;
+
+                auto ax = std::max(pt1->XTL, pt2->XBL);
+                auto bx = std::min(pt1->XTR, pt2->XBR);
+                if (fabsf(ax - bx) < tolerance) return;
+
+                GW::Vec2f dtl, dbl, dtr, dbr; // diff top left, diff bottom left, diff top right, diff top right
+                auto a = GW::Vec2f{ax, pt1->YT};
+                auto b = GW::Vec2f{bx, pt1->YT};
+
+                if (pt1->XTL > pt2->XBL) { // Top left trapezoid is longer than pt1.
+                    point1_viability = true;
+                }
+                else if (pt1->XTL < pt2->XBL) { // Top left trapezoid is shorther than pt1.
+                    point1_viability = true;
+                }
+                else {                                              // if (pt1->XTL == pt2->XBL)
+                    auto p1 = GW::Vec2f{pt2->XTL, pt2->YT};         // p1\   PT2        //     /p1   PT2    //   |p1   PT2
+                    auto p2 = GW::Vec2f{pt1->XBL, pt1->YB};         //    \             //    /             //   |
+                                                                    //     \_______     // a /_______       // a |_______
+                    dtl = p1 - a;                                   //     /a           //   \              //   |
+                    dbl = p2 - a;                                   // p2 /     PT1     //  p2\     PT1     // p2|     PT1
+                                                                    //                  //                  //
+                    point1_viability = Cross(dtl, dbl) > tolerance; // determine if they form convex shape
+                    if (Cross(dtl, dbl) < -tolerance) {
+                        point1_viability |= pt1->portal_left != 0xFFFF;
+                        point1_viability |= pt2->portal_left != 0xFFFF;
+                    }
+                }
+
+                if (pt1->XTR < pt2->XBR) { // Top right trapezoid is logner than pt1.
+                    point2_viability = true;
+                }
+                else if (pt1->XTR > pt2->XBR) { // Top right trapezoid is shorther than pt1.
+                    point2_viability = true;
+                }
+                else {                                               // if (pt1->XTR == pt2->XBR)
+                    auto p1 = GW::Vec2f{pt2->XTR, pt2->YT};          // PT2 \p1         // PT2     /p1      // PT2   |p1
+                    auto p2 = GW::Vec2f{pt1->XBR, pt1->YB};          //      \          //        /         //       |
+                                                                     // ______\         // ______/          // ______|
+                    dtr = p1 - b;                                    // PT1   /b        // PT1   \b         // PT1   |b
+                    dbr = p2 - b;                                    //      /          //        \         //       |
+                                                                     //     /p2         //         \p2      //       |p2
+                    point2_viability = Cross(dtr, dbr) < -tolerance; // determine if they form convex shape
+                    if (Cross(dtr, dbr) > tolerance) {
+                        point2_viability |= pt1->portal_right != 0xFFFF;
+                        point2_viability |= pt2->portal_right != 0xFFFF;
+                    }
+                }
+
+                createPortalPair(pt1, pt1_layer, pt2, pt2_layer, a, point1_viability, b, point2_viability, edge);
+            }
+            else if (edge == Edge::bottom) {
+                if (pt1->YB != pt2->YT) return;
+
+                auto ax = std::min(pt1->XBR, pt2->XTR);
+                auto bx = std::max(pt1->XBL, pt2->XTL);
+                if (fabsf(ax - bx) < tolerance) return;
+
+                GW::Vec2f dtl, dbl, dtr, dbr;
+                auto a = GW::Vec2f{ax, pt1->YB};
+                auto b = GW::Vec2f{bx, pt1->YB};
+
+                if (pt1->XBR > pt2->XTR) { // Bottom right trapezoid is shorter than pt1.
+                    point1_viability = true;
+                }
+                else if (pt1->XBR < pt2->XTR) { // Bottom right trapezoid is longer than pt1.
+                    point1_viability = true;
+                }
+                else {                                      // if (pt1->XTR == pt2->XBR)
+                    auto p1 = GW::Vec2f{pt1->XTR, pt1->YT}; // PT1 \p1         // PT1     /p1      // PT1   |p1
+                    auto p2 = GW::Vec2f{pt2->XBR, pt2->YB}; //      \          //        /         //       |
+                                                            // ______\         // ______/          // ______|
+                    dtr = p1 - a;                           // PT2   /a        // PT2   \a         // PT2   |a
+                    dbr = p2 - a;                           //      /          //        \         //       |
+                                                            //     /p2         //         \p2      //       |p2
+                    point1_viability = Cross(dtr, dbr) < -tolerance;
+                    if (Cross(dtr, dbr) > tolerance) {
+                        point1_viability |= pt1->portal_right != 0xFFFF;
+                        point1_viability |= pt2->portal_right != 0xFFFF;
+                    }
+                }
+
+                if (pt1->XBL > pt2->XTL) { // Bottom left trapezoid is longer than pt1.
+                    point2_viability = true;
+                }
+                else if (pt1->XBL < pt2->XTL) { // Bottom left trapezoid is shorther than pt1.
+                    point2_viability = true;
+                }
+                else {                                      // if (pt1->XTL == pt2->XBL)
+                    auto p1 = GW::Vec2f{pt1->XTL, pt1->YT}; // p1\   PT1        //     /p1   PT1    //   |p1   PT1
+                    auto p2 = GW::Vec2f{pt2->XBL, pt2->YB}; //    \             //    /             //   |
+                                                            //     \_______     // b /_______       // b |_______
+                    dtl = p1 - b;                           //     /b           //   \              //   |
+                    dbl = p2 - b;                           // p2 /     PT2     //  p2\     PT2     // p2|     PT2
+                                                            //                  //                  //
+                    point2_viability = Cross(dtl, dbl) > tolerance;
+                    if (Cross(dtl, dbl) < -tolerance) {
+                        point2_viability |= pt1->portal_left != 0xFFFF;
+                        point2_viability |= pt2->portal_left != 0xFFFF;
+                    }
+                }
+
+                createPortalPair(pt1, pt1_layer, pt2, pt2_layer, a, point1_viability, b, point2_viability, edge);
+            }
+            else if (edge == Edge::left) {
+                if (pt1->YT < pt2->YB || pt1->YB > pt2->YT) return;
+
+                GW::Vec2f a;
+                if (pt1->YB <= pt2->YB) {
+                    a = {pt2->XBR, pt2->YB};
+                }
+                else {
+                    a = {pt1->XBL, pt1->YB};
+                }
+                GW::Vec2f b;
+                if (pt1->YT <= pt2->YT) {
+                    b = {pt1->XTL, pt1->YT};
+                }
+                else {
+                    b = {pt2->XTR, pt2->YT};
+                }
+
+                if (pt1->YB < pt2->YB) { // bottom of trapezoid on left of pt1 is higher.
+                    point1_viability = !(isNeighbourOf(pt2->bottom_left, n.layer, pt1) || isNeighbourOf(pt2->bottom_right, n.layer, pt1));
+                }
+                else if (pt1->YB > pt2->YB) { // bottom of trapezoid on left of pt1 is lower.
+                    point1_viability = !(isNeighbourOf(pt1->bottom_left, pt1_layer, pt2) || isNeighbourOf(pt1->bottom_right, pt1_layer, pt2));
+                }
+                else { // pt1->YB == pt2->YB
+                    point1_viability = pt1_layer != pt2_layer;
+                }
+
+                if (pt1->YT < pt2->YT) { // top of trapezoid on left of pt1 is higher.
+                    point2_viability = !(isNeighbourOf(pt1->top_left, pt1_layer, pt2) || isNeighbourOf(pt1->top_right, pt1_layer, pt2));
+                }
+                else if (pt1->YT > pt2->YT) { // top of trapezoid on left of pt1 is lower.
+                    point2_viability = !(isNeighbourOf(pt2->top_left, pt1_layer, pt1) || isNeighbourOf(pt2->top_right, pt1_layer, pt1));
+                }
+                else { // if (pt1->YT == pt2->YT)
+                    point2_viability = pt1_layer != pt2_layer;
+                }
+
+                createPortalPair(pt1, pt1_layer, pt2, pt2_layer, a, point1_viability, b, point2_viability, edge);
+            }
+            else if (edge == Edge::right) {
+                if (pt1->YT < pt2->YB || pt1->YB > pt2->YT) return;
+
+                GW::Vec2f a;
+                if (pt1->YT <= pt2->YT) {
+                    a = {pt1->XTR, pt1->YT};
+                }
+                else {
+                    a = {pt2->XTL, pt2->YT};
+                }
+                GW::Vec2f b;
+                if (pt1->YB <= pt2->YB) {
+                    b = {pt2->XBL, pt2->YB};
+                }
+                else {
+                    b = {pt1->XBR, pt1->YB};
+                }
+
+                if (pt1->YT < pt2->YT) { // top of trapezoid on right of pt1 is higher.
+                    point1_viability = !(isNeighbourOf(pt1->top_left, pt1_layer, pt2) || isNeighbourOf(pt1->top_right, pt1_layer, pt2));
+                }
+                else if (pt1->YT > pt2->YT) { // top of trapezoid on right of pt1 is lower.
+                    point1_viability = !(isNeighbourOf(pt2->top_left, n.layer, pt1) || isNeighbourOf(pt2->top_right, n.layer, pt1));
+                }
+                else { // if (pt1->YT == pt2->YT)
+                    point1_viability = pt1_layer != pt2_layer;
+                }
+
+                if (pt1->YB < pt2->YB) { // bottom of trapezoid on right of pt1 is higher.
+                    point2_viability = !(isNeighbourOf(pt2->bottom_left, n.layer, pt1) || isNeighbourOf(pt2->bottom_right, n.layer, pt1));
+                }
+                else if (pt1->YB > pt2->YB) { // bottom of trapezoid on right of pt1 is lower.
+                    point2_viability = !(isNeighbourOf(pt1->bottom_left, pt1_layer, pt2) || isNeighbourOf(pt1->bottom_right, pt1_layer, pt2));
+                }
+                else { // pt1->YB == pt2->YB
+                    point2_viability = pt1_layer != pt2_layer;
+                }
+
+                createPortalPair(pt1, pt1_layer, pt2, pt2_layer, a, point1_viability, b, point2_viability, edge);
+            }
+            else {
+                Log::Error("linkTrapezoids(): edge == Edge::none");
+            }
+        }
+
+        void GenerateTrapezoidNeighbours()
+        {
+            Timing time(__FUNCTION__);
+            if (!HasMapData()) return;
+
+            ptneighbours.clear();
+            ptneighbours.reserve(GetPathNodesSize());
+
+            auto size = GetMapCount();
+            for (uint8_t i = 0; i < size; ++i) {
+                auto& m = GetMap(i);
+                for (uint32_t j = 0; j < m.trapezoid_count; j++) {
+                    const GW::PathingTrapezoid* t = &m.trapezoids[j];
+                    auto& n = ptneighbours[t];
+                    GetTrapezoidNeighbours(m, t, i, n);
+                }
+            }
+        }
+
+
+        void GeneratePortals()
+        {
+            Timing time(__FUNCTION__);
+            if (!HasMapData()) return;
+
+            auto reserved_points = static_cast<int>(GetPathNodesSize() * 2.2) + m_teleports.size() * 2;
+            points.clear();
+            points.reserve(reserved_points);
+            portals.clear();
+            portals.reserve(reserved_points);
+            pt_portal_map.clear();
+            pt_portal_map.resize(GetPathNodesSize());
+
+            portal_pt_map.clear();
+
+            int pitch = GetPathNodesSize();
+
+            std::vector<uint8_t> visited(pitch * pitch);
+
+            for (uint8_t i = 0; i < GetMapCount(); ++i) {
+                const auto& m = GetMap(i);
+                for (uint32_t j = 0; j < m.trapezoid_count; j++) {
+                    const auto* t = &m.trapezoids[j];
+
+                    for (const auto& n : ptneighbours[t]) {
+                        if (visited[t->id * pitch + n.t->id]) continue;
+                        visited[t->id * pitch + n.t->id] = true;
+                        visited[t->id + n.t->id * pitch] = true;
+
+                        linkTrapezoids(t, i, n);
+                    }
+                }
+            }
+
+            // Some old stuff; check if anything below here can be removed:
+            portal_portal_map.clear();
+            portal_portal_map.resize(tmp_portal_pt_map.size() + m_teleports.size() * 2 + 2);
+            portal_pt_map.resize(tmp_portal_pt_map.size() + m_teleports.size() * 2 + 2);
+
+            std::ranges::for_each(tmp_portal_pt_map, [&](auto& kvp) {
+                portal_pt_map[kvp.first] = std::move(kvp.second);
+            });
+            tmp_portal_pt_map.clear();
+
+            int idx = 0;
+            std::ranges::for_each(portal_pt_map, [&](const auto& pt) {
+                if (!pt) return;
+                const auto& pts = pt_portal_map[pt->id];
+                std::ranges::for_each(pts, [&](const auto& pt) {
+                    portal_portal_map[idx].push_back(pt);
+                });
+                idx++;
+            });
+
+#ifdef DEBUG_PATHING
+            Log::Info("total trapezoid count: %d", mapContex->path->pathNodes.size());
+            Log::Info("new portals: %d", portals.size());
+            Log::Info("viable points: %d", std::ranges::count_if(points, [](const auto& point) {
+                          return point.is_viable;
+                      }));
+            Log::Info("total points: %d", points.size());
+            ;
+#endif
+        }
+
+        // Generate distance graph among teleports
+        void GenerateTeleportGraph()
+        {
+            if (m_terminateThread) return;
+
+            using namespace MapSpecific;
+
+            m_defferedPortalLinks.clear();
+            for (const auto& teleport : m_teleports) {
+                auto pt = Pathing::FindClosestTrapezoid(teleport.m_enter);
+                if (!pt) continue;
+                auto& enter_id = createSinglePointPortal(pt, teleport.m_enter);
+
+                pt = Pathing::FindClosestTrapezoid(teleport.m_exit);
+                if (!pt) continue;
+                auto& exit_id = createSinglePointPortal(pt, teleport.m_enter);
+                m_defferedPortalLinks.emplace_back(enter_id.m_id, exit_id.m_id, teleport.m_directionality);
+            }
+
+            m_teleportGraph.clear();
+
+            auto size = m_teleports.size();
+            for (size_t i = 0; i < size; ++i) {
+                auto& p1 = m_teleports[i];
+                for (size_t j = i; j < size; ++j) {
+                    auto& p2 = m_teleports[j];
+
+                    if (p1.m_directionality == Teleport::direction::both_ways && p2.m_directionality == Teleport::direction::both_ways) {
+                        float dist = std::min({GetDistance(p1.m_enter, p2.m_exit), GetDistance(p1.m_exit, p2.m_enter), GetDistance(p1.m_exit, p2.m_exit), GetDistance(p1.m_enter, p2.m_enter)});
+                        m_teleportGraph.push_back({&p1, &p2, dist});
+                        if (&p1 == &p2) continue;
+                        m_teleportGraph.push_back({&p2, &p1, dist});
+                    }
+                    else if (p1.m_directionality == Teleport::direction::both_ways) {
+                        float dist = std::min(GetDistance(p1.m_enter, p2.m_enter), GetDistance(p1.m_exit, p2.m_enter));
+                        m_teleportGraph.push_back({&p1, &p2, dist});
+                        dist = std::min(GetDistance(p2.m_exit, p1.m_enter), GetDistance(p2.m_exit, p1.m_exit));
+                        m_teleportGraph.push_back({&p2, &p1, dist});
+                    }
+                    else if (p2.m_directionality == Teleport::direction::both_ways) {
+                        float dist = std::min(GetDistance(p2.m_enter, p1.m_enter), GetDistance(p2.m_exit, p1.m_enter));
+                        m_teleportGraph.push_back({&p2, &p1, dist});
+                        dist = std::min(GetDistance(p1.m_exit, p2.m_enter), GetDistance(p1.m_exit, p2.m_exit));
+                        m_teleportGraph.push_back({&p1, &p2, dist});
+                    }
+                    else {
+                        float dist = GetDistance(p1.m_exit, p2.m_enter);
+                        m_teleportGraph.push_back({&p1, &p2, dist});
+                        if (&p1 == &p2) continue;
+                        dist = GetDistance(p2.m_exit, p1.m_enter);
+                        m_teleportGraph.push_back({&p2, &p1, dist});
+                    }
+                }
+            }
+        }
+
+        inline void process_portal(std::vector<node>& open, size_t& sp, VisitedState& visited, const Portal& portal, Portal::id other_portal_id)
+        {
+            size_t checkpoint = visited.checkpoint();
+
+            visited.visit(portal.m_id);
+            visited.visit(other_portal_id);
+
+            for (auto pid : portal_portal_map[portal.m_id]) {
+                if (pid == portal.m_id || pid == other_portal_id) continue;
+
+                if (sp >= open.size()) return; // safety guard
+
+                node& n = open[sp++];
+                n.next = pid;
+                n.visited_checkpoint = checkpoint;
+
+                n.blocked_planes.reset();
+                if (portal.m_pt_layer) n.blocked_planes.set(portal.m_pt_layer, true);
+
+                n.funnel[0] = points[portals[pid].m_point[0]].m_pos;
+                n.funnel[1] = points[portals[pid].m_point[1]].m_pos;
+            }
+        }
+
+        inline void process_point(std::vector<node>& open, size_t& sp, VisitedState& visited, const Point& point)
+        {
+            process_portal(open, sp, visited, portals[point.m_portals[0]], point.m_portals[1]);
+
+            if (point.m_portals[0] != point.m_portals[1]) {
+                process_portal(open, sp, visited, portals[point.m_portals[1]], point.m_portals[0]);
+            }
+        }
+
+        Point& createSinglePointPortal(const GW::PathingTrapezoid* pt, const GW::GamePos& gp)
+        {
+            auto point_id = static_cast<PointId>(points.size());
+            auto id = static_cast<Portal::id>(portals.size());
+            points.emplace_back(gp, point_id, id, id, true);
+
+            portals.emplace_back(id, id, point_id, point_id, pt, static_cast<uint8_t>(gp.zplane), Edge::top);
+
+            portal_pt_map[id] = pt;
+
+            for (const auto& pid : pt_portal_map[pt->id]) {
+                portal_portal_map[id].push_back(pid);
+                portal_portal_map[pid].push_back(id);
+            }
+            pt_portal_map[pt->id].push_back(id);
+
+            return points[point_id];
+        }
+
+        void VisGraphInsertPoint(std::vector<node>& open, const Point& point)
+        {
+            // Timing time(__FUNCTION__);
+
+            size_t sp = 0;
+
+            VisitedState visited; // portals (rollback)
+            visited.init(portals.size());
+
+            if (!point.is_viable) return;
+
+            sp = 0;
+            visited.stack.clear();
+            visited.stamp++;
+
+            process_point(open, sp, visited, point);
+
+            int cnt = 20000;
+            const auto& p = point;
+            while (sp && --cnt) {
+                node cur = open[--sp];
+                visited.rollback(cur.visited_checkpoint); // rollback to this node's state
+
+                const auto& portal = portals[cur.next];
+                if (visited.is_visited(portal.m_id)) continue;
+
+                visited.visit(portal.m_id);
+
+                if (portal.m_pt_layer) cur.blocked_planes.set(portal.m_pt_layer, true);
+
+                const auto& p0 = points[portal.m_point[0]];
+                const auto& p1 = points[portal.m_point[1]];
+
+                auto& f0 = cur.funnel[0];
+                auto& f1 = cur.funnel[1];
+
+                auto fl = f0 - p.m_pos;
+                auto fr = f1 - p.m_pos;
+                auto nl = p0.m_pos - p.m_pos;
+                auto nr = p1.m_pos - p.m_pos;
+
+                float fl_nl = Cross(fl, nl);
+                float fr_nr = Cross(fr, nr);
+                float fl_nr = Cross(fl, nr);
+                float fr_nl = Cross(fr, nl);
+
+                constexpr float tolerance = 1.0f;
+                if (fr_nl < -tolerance || fl_nr > tolerance) continue;
+
+                if (fl_nl <= tolerance) {
+                    if (p0.is_viable) {
+                        float dist = GW::GetDistance(p.m_pos, p0.m_pos);
+                        m_visGraph[p.m_id].emplace_back(dist, cur.blocked_planes, p0.m_id);
+                        m_visGraph[p0.m_id].emplace_back(dist, cur.blocked_planes, p.m_id);
+                    }
+                    f0 = p0.m_pos;
+                }
+
+                if (fr_nr >= -tolerance) {
+                    if (p1.is_viable) {
+                        float dist = GW::GetDistance(p.m_pos, p1.m_pos);
+                        m_visGraph[p.m_id].emplace_back(dist, cur.blocked_planes, p1.m_id);
+                        m_visGraph[p1.m_id].emplace_back(dist, cur.blocked_planes, p.m_id);
+                    }
+                    f1 = p1.m_pos;
+                }
+
+                size_t cp = visited.checkpoint();
+                visited.visit(portal.m_other_id);
+
+                for (auto pid : portal_portal_map[portal.m_other_id]) {
+                    if (visited.is_visited(pid)) continue;
+
+                    if (sp >= open.size()) break;
+
+                    node& child = open[sp++];
+                    child = cur;
+                    child.next = pid;
+                    child.visited_checkpoint = cp;
+                }
+            }
+        }
+
+#pragma optimize("gty", on) // Enable optimizations
+        void GenerateVisGraph()
+        {
+            Timing time(__FUNCTION__);
+
+            m_visGraph.clear();
+            m_visGraph.resize(points.size() + 2); // reserve also for start and goal points
+
+            for (auto& v : m_visGraph)
+                v.reserve(32);
+
+#pragma omp parallel
+            {
+                std::vector<node> open;
+                open.resize(2000); // max DFS depth
+                size_t sp = 0;
+
+                VisitedState visited;     // portals (rollback)
+                VisitedPoints vis_points; // points (per source)
+                visited.init(portals.size());
+                vis_points.init(points.size());
+                auto size = (int)points.size();
+
+#pragma omp for schedule(static, 4)
+                for (int i = 0; i < size; ++i) {
+                    if (m_terminateThread) break;
+                    const auto& point = points[i];
+                    if (!point.is_viable) continue;
+
+                    vis_points.reset();
+
+                    sp = 0;
+                    visited.stack.clear();
+                    visited.stamp++;
+
+                    process_point(open, sp, visited, point);
+
+                    int cnt = 20000;
+                    const auto& p = point;
+                    while (sp && --cnt) {
+                        node cur = open[--sp];
+
+                        visited.rollback(cur.visited_checkpoint); // rollback to this node's state
+
+                        const auto& portal = portals[cur.next];
+                        if (visited.is_visited(portal.m_id)) continue;
+
+                        visited.visit(portal.m_id);
+
+                        if (portal.m_pt_layer) cur.blocked_planes.set(portal.m_pt_layer, true);
+
+                        const auto& p0 = points[portal.m_point[0]];
+                        const auto& p1 = points[portal.m_point[1]];
+
+                        auto& f0 = cur.funnel[0];
+                        auto& f1 = cur.funnel[1];
+
+                        auto fl = f0 - p.m_pos;       // funnel left direction
+                        auto fr = f1 - p.m_pos;       // funnel right direction
+                        auto nl = p0.m_pos - p.m_pos; // portal left direction
+                        auto nr = p1.m_pos - p.m_pos; // portal right direction
+
+                        constexpr float tolerance = 1.0f;
+                        if (Cross(fr, nl) < -tolerance || Cross(fl, nr) > tolerance) continue;
+
+                        if (Cross(fl, nl) <= tolerance) {
+                            if (p0.is_viable && vis_points.test_and_set(p0.m_id)) {
+                                {
+                                    float dist = GW::GetDistance(p.m_pos, p0.m_pos);
+                                    m_visGraph[p.m_id].emplace_back(dist, cur.blocked_planes, p0.m_id);
+                                }
+                            }
+                            f0 = p0.m_pos;
+                        }
+
+                        if (Cross(fr, nr) >= -tolerance) {
+                            if (p1.is_viable && vis_points.test_and_set(p1.m_id)) {
+                                {
+                                    float dist = GW::GetDistance(p.m_pos, p1.m_pos);
+                                    m_visGraph[p.m_id].emplace_back(dist, cur.blocked_planes, p1.m_id);
+                                }
+                            }
+                            f1 = p1.m_pos;
+                        }
+
+                        size_t checkpoint = visited.checkpoint();
+                        visited.visit(portal.m_other_id);
+
+                        for (auto pid : portal_portal_map[portal.m_other_id]) {
+                            if (visited.is_visited(pid)) continue;
+
+                            if (sp >= open.size()) break;
+
+                            node& child = open[sp++];
+                            child = cur;
+                            child.next = pid;
+                            child.visited_checkpoint = checkpoint;
+                        }
+                    }
+                }
+            }
+
+            // could not link portals earlier because vis graph is cleared at the beginning of this function.
+            for (const auto& dp : m_defferedPortalLinks) {
+                auto dist = GW::GetDistance(points[dp.m_enter].m_pos, points[dp.m_exit].m_pos);
+
+                BlockedPlaneBitset bp;
+                m_visGraph[dp.m_enter].emplace_back(dist * 0.01f, bp, dp.m_exit);
+                if (dp.m_directionality == MapSpecific::Teleport::direction::both_ways) m_visGraph[dp.m_exit].emplace_back(dist * 0.01f, bp, dp.m_enter);
+            }
+
+            uint32_t total = 0;
+            for (const auto& v : m_visGraph) {
+                total += v.size();
+            }
+
+#ifdef DEBUG_PATHING
+            Log::Info("m_visGraph total elements = %d", total);
+#endif
+        }
+#pragma optimize("", on) // Restore global optimizations to project default
+
+#define mImpl ((Impl*)opaque)
+    }; // Impl
+} // namespace Pathing
 
 namespace Pathing {
-    using namespace GW;
-    using namespace MathUtil;
+    // using namespace MathUtil;
 
-    SimplePT::SimplePT(const PathingTrapezoid& pt, uint32_t layer)
-        : id(pt.id),
-          a(pt.XTL, pt.YT),
-          b(pt.XBL, pt.YB),
-          c(pt.XBR, pt.YB),
-          d(pt.XTR, pt.YT),
-          layer(layer) {}
-
-    SimplePT::adjacentSide SimplePT::Touching(const SimplePT& rhs) const
-    {
-        if (a.x != d.x && rhs.b.x != rhs.c.x && a.y == b.y) {
-            //a bot, b top
-            if (collinear(a, d, rhs.b, rhs.c)) {
-                return adjacentSide::aBottom_bTop;
-            }
-        }
-        if (b.x != c.x && rhs.a.x != rhs.d.x && b.y == rhs.a.y) {
-            //a top, b bot
-            if (collinear(c, b, rhs.d, rhs.a)) {
-                return adjacentSide::aTop_bBottom;
-            }
-        }
-
-        //a right, b left
-        if (collinear(a, b, rhs.c, rhs.d)) {
-            return adjacentSide::aRight_bLeft;
-        }
-        //a left, b right
-        if (collinear(d, c, rhs.b, rhs.a)) {
-            return adjacentSide::aLeft_bRight;
-        }
-        return adjacentSide::none;
-    }
-
-    // Gets height of map at current position and layer
-    static float height(const Vec2f& p, int layer)
-    {
-        GamePos pos(p.x, p.y, layer);
-        return Map::QueryAltitude(&pos);
-    }
-
-    SimplePT::adjacentSide SimplePT::TouchingHeight(const SimplePT& rhs, float max_height_diff) const
-    {
-        if (a.x != d.x && rhs.b.x != rhs.c.x && a.y == rhs.b.y) {
-            // a bot, b top
-            if (collinear(a, d, rhs.b, rhs.c)) {
-                float dh = (fabsf(height(a, layer) - height(rhs.b, rhs.layer)) + fabsf(height(d, layer) - height(rhs.c, rhs.layer))) / 2.0f;
-                if (dh > max_height_diff)
-                    return adjacentSide::none;
-                return adjacentSide::aBottom_bTop;
-            }
-        }
-        if (b.x != c.x && rhs.a.x != rhs.d.x && b.y == rhs.a.y) {
-            // a top, b bot
-            if (collinear(c, b, rhs.d, rhs.a)) {
-                float dh = (fabsf(height(b, layer) - height(rhs.a, rhs.layer)) + fabsf(height(c, layer) - height(rhs.d, rhs.layer))) / 2.0f;
-                if (dh > max_height_diff)
-                    return adjacentSide::none;
-                return adjacentSide::aTop_bBottom;
-            }
-        }
-
-        // a right, b left
-        if (collinear(a, b, rhs.c, rhs.d)) {
-            float dh = (fabsf(height(a, layer) - height(rhs.d, rhs.layer)) + fabsf(height(b, layer) - height(rhs.c, rhs.layer))) / 2.0f;
-            if (dh > max_height_diff)
-                return adjacentSide::none;
-            return adjacentSide::aRight_bLeft;
-        }
-        // a left, b right
-        if (collinear(d, c, rhs.b, rhs.a)) {
-            float dh = (fabsf(height(c, layer) - height(rhs.b, rhs.layer)) + fabsf(height(d, layer) - height(rhs.a, rhs.layer))) / 2.0f;
-            if (dh > max_height_diff)
-                return adjacentSide::none;
-            return adjacentSide::aLeft_bRight;
-        }
-        return adjacentSide::none;
-    }
-
-    const bool SimplePT::IsOnPathingTrapezoid(const Vec2f& p) const
-    {
-        constexpr float tolerance = 2.0f;
-        if (a.y < p.y || b.y > p.y) return false;
-        if (b.x > p.x && a.x > p.x) return false;
-        if (c.x < p.x && d.x < p.x) return false;
-        Vec2f ab = b - a, bc = c - b, cd = d - c, da = a - d;
-        Vec2f pa = a - p, pb = b - p, pc = c - p, pd = d - p;
-        if (Cross(ab, pa) > tolerance) return false;
-        // if (Cross(bc, pb) > tolerance) return false;
-        if (Cross(cd, pc) > tolerance) return false;
-        // if (Cross(da, pd) > tolerance) return false;
-        return true;
-    }
-
-    AABB::AABB(const SimplePT& t)
-        : m_id(0),
-          m_t(&t)
-    {
-        float min_x = std::min(t.b.x, t.a.x);
-        float max_x = std::max(t.c.x, t.d.x);
-        m_pos = {(min_x + max_x) / 2, (t.a.y + t.b.y) / 2};
-        m_half = {(max_x - min_x) / 2, (t.a.y - t.b.y) / 2};
-    }
-
-    // point
-    bool AABB::intersect(const Vec2f& rhs) const
-    {
-        auto d = rhs - m_pos;
-        float px = m_half.x - fabsf(d.x);
-        if (px <= 0.0f) return false;
-
-        float py = m_half.y - fabsf(d.y);
-        if (py <= 0.0f) return false;
-        return true;
-    }
-
-    // circle
-    bool AABB::intersect(const Vec2f& rhs, float radius) const
-    {
-        auto d = rhs - m_pos;
-        float px = m_half.x + radius - fabsf(d.x);
-        if (px <= 0.0f) return false;
-
-        float py = m_half.y + radius - fabsf(d.y);
-        if (py <= 0.0f) return false;
-        return true;
-    }
-
-    // segment
-    bool AABB::intersect(const Vec2f& a, const Vec2f& b, Vec2f padding) const
-    {
-        Vec2f dist = m_half + padding;
-        if (a.x > m_pos.x + dist.x && b.x > m_pos.x + dist.x) return false;
-        if (a.x < m_pos.x - dist.x && b.x < m_pos.x - dist.x) return false;
-        if (a.y > m_pos.y + dist.y && b.y > m_pos.y + dist.y) return false;
-        if (a.y < m_pos.y - dist.y && b.y < m_pos.y - dist.y) return false;
-
-        auto delta = b - a;
-        auto scale = 1.0f / delta;
-        auto sig = sign(scale);
-        auto sq = Hadamard(sig, dist);
-        auto nearTime = Hadamard(sq, scale);
-        auto farTime = Hadamard(sq, scale);
-
-        if (nearTime.x > farTime.y || nearTime.y > farTime.x) {
-            return false;
-        }
-        if (std::max(nearTime.x, nearTime.y) >= 1.0f || std::min(farTime.x, farTime.y) <= 0.0f) {
-            return false;
-        }
-        return true;
-    }
-
-    bool AABB::intersect(const AABB& rhs, Vec2f padding) const
-    {
-        auto d = rhs.m_pos - m_pos;
-        float px = (rhs.m_half.x + m_half.x + padding.x) - fabsf(d.x);
-        if (px <= 0.0f) return false;
-
-        float py = (rhs.m_half.y + m_half.y + padding.y) - fabsf(d.y);
-        if (py <= 0.0f) return false;
-        return true;
-    }
     // Traverse map props and copy an array of valid in-game portals; later used for travel calcs
     void MilePath::LoadMapSpecificData()
     {
-        travel_portals.clear();
         MapSpecific::MapSpecificData map_data(GW::Map::GetMapID());
-        m_teleports = map_data.m_teleports;
+        mImpl->m_teleports = map_data.m_teleports;
+        mImpl->travel_portals.clear();
         const auto props = GetMapProps();
         if (!props) return;
         for (const auto prop : *props) {
             if (IsTravelPortal(prop)) {
                 // NB: May need to guess height and width for these - 1100.f ?
-                travel_portals.push_back(prop);
+                mImpl->travel_portals.push_back(prop);
             }
         }
-
     }
 
-    MilePath::MilePath()
+    MilePath::MilePath([[maybe_unused]] GW::MapContext* map_context)
     {
+        //constexpr size_t sz = sizeof(Impl);
+        static_assert(sizeof(opaque) >= sizeof(Impl));
+        new (opaque) Impl();
+
         m_processing = true;
-        GW::GameThread::Enqueue([&] {
-            const clock_t start = clock();
+        const clock_t start = clock();
+
+        // Copy map data from game into Impl
+        auto* mapContext = GW::GetMapContext();
+        if (mapContext && mapContext->path) {
+            mImpl->CopyMapData(mapContext->path);
+        }
+
+        ASSERT(!worker_thread);
+        worker_thread = new std::thread([&, start] {
             LoadMapSpecificData();
-            GenerateAABBs();
-            GenerateAABBGraph(); //not threaded because it relies on gw client Query altitude.
-            ASSERT(!worker_thread);
-            worker_thread = new std::thread([&, start] {
-                GeneratePoints();
-                GenerateVisibilityGraph();
-                GenerateTeleportGraph();
-                InsertTeleportsIntoVisibilityGraph();
+            mImpl->GenerateTrapezoidNeighbours(); // needs to run in game thread
+            mImpl->GeneratePortals();             // needs to run in game thread
+            mImpl->GenerateTeleportGraph();
+            mImpl->GenerateVisGraph();
 #ifdef _DEBUG
-                const clock_t stop = clock();
-                Log::Flash("Processing %s in %d ms", m_terminateThread ? "terminated" : "done", stop - start);
+            const clock_t stop = clock();
+            Log::Flash("Processing %s in %d ms", mImpl->m_terminateThread ? "terminated" : "done", stop - start);
 #endif
-                m_processing = false;
-                m_done = true;
-                m_progress = 100;
-            });
-            worker_thread->detach();
+            m_processing = false;
+            m_done = true;
+            m_progress = 100;
         });
+        worker_thread->detach();
     }
 
-    MilePath::Portal::Portal(const Vec2f& start, const Vec2f& goal, const AABB* box1, const AABB* box2)
-        : m_start(start),
-          m_goal(goal),
-          m_box1(box1),
-          m_box2(box2)
+    MilePath::~MilePath()
     {
-        Vec2f diff(goal - start);
+        shutdown();
+        mImpl->~Impl();
     }
 
-    bool MilePath::Portal::intersect(const Vec2f& p1, const Vec2f& p2) const
+    void MilePath::stopProcessing()
     {
-        return Intersect(m_start, m_goal, p1, p2);
+        mImpl->m_terminateThread = true;
     }
 
-    // Generate distance graph among teleports
-    void MilePath::GenerateTeleportGraph()
+
+    AStar::AStar(MilePath* mp) : m_path(this)
     {
-        if (m_terminateThread) return;
-
-        using namespace MapSpecific;
-
-        m_teleportGraph.clear();
-
-        for (size_t i = 0; i < m_teleports.size(); ++i) {
-            auto& p1 = m_teleports[i];
-            for (size_t j = i; j < m_teleports.size(); ++j) {
-                auto& p2 = m_teleports[j];
-
-                if (p1.m_directionality == Teleport::direction::both_ways &&
-                    p2.m_directionality == Teleport::direction::both_ways) {
-                    float dist = std::min({
-                        GetDistance(p1.m_enter, p2.m_exit),
-                        GetDistance(p1.m_exit, p2.m_enter),
-                        GetDistance(p1.m_exit, p2.m_exit),
-                        GetDistance(p1.m_enter, p2.m_enter)
-                    });
-                    m_teleportGraph.push_back({&p1, &p2, dist});
-                    if (&p1 == &p2) continue;
-                    m_teleportGraph.push_back({&p2, &p1, dist});
-                }
-                else if (p1.m_directionality == Teleport::direction::both_ways) {
-                    float dist = std::min(GetDistance(p1.m_enter, p2.m_enter), GetDistance(p1.m_exit, p2.m_enter));
-                    m_teleportGraph.push_back({&p1, &p2, dist});
-                    dist = std::min(GetDistance(p2.m_exit, p1.m_enter), GetDistance(p2.m_exit, p1.m_exit));
-                    m_teleportGraph.push_back({&p2, &p1, dist});
-                }
-                else if (p2.m_directionality == Teleport::direction::both_ways) {
-                    float dist = std::min(GetDistance(p2.m_enter, p1.m_enter), GetDistance(p2.m_exit, p1.m_enter));
-                    m_teleportGraph.push_back({&p2, &p1, dist});
-                    dist = std::min(GetDistance(p1.m_exit, p2.m_enter), GetDistance(p1.m_exit, p2.m_exit));
-                    m_teleportGraph.push_back({&p1, &p2, dist});
-                }
-                else {
-                    float dist = GetDistance(p1.m_exit, p2.m_enter);
-                    m_teleportGraph.push_back({&p1, &p2, dist});
-                    if (&p1 == &p2) continue;
-                    dist = GetDistance(p2.m_exit, p1.m_enter);
-                    m_teleportGraph.push_back({&p2, &p1, dist});
-                }
-            }
-        }
-    }
-
-    MilePath::point MilePath::CreatePoint(const GamePos& pos)
-    {
-        point point;
-        point.pos = pos;
-        point.box = FindAABB(pos);
-        if (!point.box) {
-            return point;
-        }
-        point.id = 0;
-        return point;
-    }
-
-    // Generate Axis Aligned Bounding Boxes around trapezoids
-    // This is used for quick intersection checks.
-    // AABB related stuff could be entirely omitted.
-    void MilePath::GenerateAABBs()
-    {
-        PathingMapArray* map = Map::GetPathingMap();
-        MapContext* mapContex = GetMapContext();
-        if (!map || !mapContex) return;
-        ASSERT(mapContex->path);
-        const auto total_trapezoid_count = mapContex->path->pathNodes.size();
-
-        m_aabbs.clear();
-        m_aabbs.reserve(total_trapezoid_count); // h0014[0] == total trapezoid count
-        m_trapezoids.clear();
-        m_trapezoids.reserve(total_trapezoid_count);
-
-        for (uint32_t i = 0; i < map->size(); ++i) {
-            auto& m = (*map)[i];
-            for (uint32_t j = 0; j < m.trapezoid_count; j++) {
-                const PathingTrapezoid* t = &m.trapezoids[j];
-                if (t->YB == t->YT) continue;
-                m_trapezoids.emplace_back(*t, i);
-                m_aabbs.emplace_back(m_trapezoids.back());
-            }
-        }
-        std::sort(m_aabbs.begin(), m_aabbs.end(), [](const AABB& a, const AABB& b) { return a.m_pos.y - a.m_half.y > b.m_pos.y - b.m_half.y; });
-        AABB::box_id id = 0;
-        for (auto& box : m_aabbs) {
-            box.m_id = id++;
-        }
-        m_aabbs.shrink_to_fit();
-    }
-
-    bool MilePath::CreatePortal(const AABB* box1, const AABB* box2, const SimplePT::adjacentSide& ts)
-    {
-        const SimplePT* pt1 = box1->m_t;
-        const SimplePT* pt2 = box2->m_t;
-
-        // ignore portals smaller than tolerance.
-        constexpr float tolerance = 32.f;
-        constexpr float square_tolerance = tolerance * tolerance;
-
-        switch (ts) {
-            case SimplePT::adjacentSide::aBottom_bTop: {
-                auto a = std::max(pt1->a.x, pt2->b.x);
-                auto b = std::min(pt1->d.x, pt2->c.x);
-                if (fabsf(a - b) < tolerance)
-                    return false;
-                Vec2f p1{a, pt1->a.y};
-                Vec2f p2{b, pt1->a.y};
-                m_portals.emplace_back(p1, p2, box1, box2);
-            }
-            break;
-            case SimplePT::adjacentSide::aTop_bBottom: {
-                auto a = std::max(pt1->b.x, pt2->a.x);
-                auto b = std::min(pt1->c.x, pt2->d.x);
-                if (fabsf(a - b) < tolerance)
-                    return false;
-                Vec2f p1{a, pt1->b.y};
-                Vec2f p2{b, pt1->b.y};
-                m_portals.emplace_back(p1, p2, box1, box2);
-            }
-            break;
-            case SimplePT::adjacentSide::aLeft_bRight: {
-                bool o1 = onSegment(pt1->c, pt2->a, pt1->d);
-                bool o2 = onSegment(pt1->c, pt2->b, pt1->d);
-                if (o1 && o2) {
-                    if (GetSquareDistance(pt2->a, pt2->b) < square_tolerance)
-                        return false;
-                    m_portals.emplace_back(pt2->a, pt2->b, box1, box2);
-                }
-                else if (o1) {
-                    if (GetSquareDistance(pt2->a, pt1->c) < square_tolerance)
-                        return false;
-                    m_portals.emplace_back(pt2->a, pt1->c, box1, box2);
-                }
-                else if (o2) {
-                    if (GetSquareDistance(pt1->d, pt2->b) < square_tolerance)
-                        return false;
-                    m_portals.emplace_back(pt1->d, pt2->b, box1, box2);
-                }
-                else {
-                    if (GetSquareDistance(pt1->c, pt1->d) < square_tolerance)
-                        return false;
-                    m_portals.emplace_back(pt1->c, pt1->d, box1, box2);
-                }
-            }
-            break;
-            case SimplePT::adjacentSide::aRight_bLeft: {
-                bool o1 = onSegment(pt1->a, pt2->c, pt1->b);
-                bool o2 = onSegment(pt1->a, pt2->d, pt1->b);
-                if (o1 && o2) {
-                    if (GetSquareDistance(pt2->c, pt2->d) < square_tolerance)
-                        return false;
-                    m_portals.emplace_back(pt2->c, pt2->d, box1, box2);
-                }
-                else if (o1) {
-                    if (GetSquareDistance(pt2->c, pt1->a) < square_tolerance)
-                        return false;
-                    m_portals.emplace_back(pt2->c, pt1->a, box1, box2);
-                }
-                else if (o2) {
-                    if (GetSquareDistance(pt1->b, pt2->d) < square_tolerance)
-                        return false;
-                    m_portals.emplace_back(pt1->b, pt2->d, box1, box2);
-                }
-                else {
-                    if (GetSquareDistance(pt1->a, pt1->b) < square_tolerance)
-                        return false;
-                    m_portals.emplace_back(pt1->a, pt1->b, box1, box2);
-                }
-            }
-            break;
-            default:
-                return false;
-        }
-
-        m_PTPortalGraph[pt1->id].emplace_back(&m_portals.back());
-        m_PTPortalGraph[pt2->id].emplace_back(&m_portals.back());
-        return true;
-    }
-
-    // Connect trapezoid AABBS.
-    void MilePath::GenerateAABBGraph()
-    {
-        if (m_terminateThread) return;
-
-        m_AABBgraph.clear();
-        m_AABBgraph.resize(m_aabbs.size());
-
-        m_portals.clear();
-        m_portals.reserve(m_aabbs.size() * 3);
-        m_PTPortalGraph.clear();
-        m_PTPortalGraph.resize(m_aabbs.size() * 2);
-
-        for (size_t i = 0; i < m_aabbs.size(); ++i) {
-            for (size_t j = i + 1; j < m_aabbs.size(); ++j) {
-                if (m_terminateThread) return;
-                // coarse intersection
-                if (!m_aabbs[i].intersect(m_aabbs[j], {1.0f, 1.0f})) continue;
-                auto* a = &m_aabbs[i],* b = &m_aabbs[j];
-
-                // fine intersection
-                SimplePT::adjacentSide ts;
-                if (a->m_t->layer == b->m_t->layer)
-                    ts = a->m_t->Touching(*b->m_t);
-                else
-                    ts = a->m_t->TouchingHeight(*b->m_t);
-                if (ts == SimplePT::adjacentSide::none) continue;
-                if (CreatePortal(a, b, ts)) {
-                    m_AABBgraph[a->m_id].emplace_back(b);
-                    m_AABBgraph[b->m_id].emplace_back(a);
-                }
-            }
-        }
-#ifdef _DEBUG
-        Log::Flash("Portal count: %d", m_portals.size());
-#endif
-    }
-
-    void MilePath::GeneratePoints()
-    {
-        if (m_terminateThread) return;
-
-        m_points.clear();
-        m_points.reserve(m_portals.size() * 2 + m_teleports.size() * 2);
-
-        for (const auto& portal : m_portals) {
-            m_points.emplace_back(0, portal.m_start, portal.m_box1, portal.m_box2, &portal);
-            m_points.emplace_back(0, portal.m_goal, portal.m_box1, portal.m_box2, &portal);
-        }
-
-        // Not needed. But if they are sorted binary search can be used.
-        std::ranges::sort(m_points, [](const point& a, const point& b) { return a.pos.y > b.pos.y; });
-        for (size_t i = 0; i < m_points.size(); ++i) {
-            m_points[i].id = i;
-        }
-#ifdef _DEBUG
-        Log::Flash("Number of points: %d", m_points.size());
-#endif
-        m_points.shrink_to_fit();
-    }
-
-    bool MilePath::IsOnPathingTrapezoid(const Vec2f& p, const SimplePT** ppt)
-    {
-        //note: maybe use GW client O(logn) algorithm?
-        //constexpr float tolerance = 2.0f;
-        //auto lower = std::lower_bound(aabbs.begin(), aabbs.end(), p.y,
-        //    [](const AABB &box, const float &val) { return box.m_pos.y - box.m_half.y - tolerance < val; });
-        //auto upper = std::upper_bound(lower, aabbs.end(), p.y,
-        //    [](const float &val, const AABB &box) { return val < box.m_pos.y + box.m_half.y + tolerance; });
-
-        //for (auto it = lower; it < aabbs.end()/*upper*/; ++it) {
-        //    const SimplePT *pt = (*it).m_t;
-        //    if (IsOnPathingTrapezoid(pt, p)) {
-        //        if (ppt) *ppt = pt;
-        //        return true;
-        //    }
-        //}
-        const auto& aabbs = m_aabbs;
-        for (const auto& box : aabbs) {
-            const SimplePT* pt = box.m_t;
-            if (pt->IsOnPathingTrapezoid(p)) {
-                if (ppt) *ppt = pt;
-                return true;
-            }
-        }
-        if (ppt) *ppt = nullptr;
-        return false;
-    }
-
-    bool IntersectPt(const SimplePT& pt, const Vec2f& start, const Vec2f& goal)
-    {
-        if (Intersect(pt.a, pt.b, start, goal)) return true;
-        if (Intersect(pt.b, pt.c, start, goal)) return true;
-        if (Intersect(pt.c, pt.d, start, goal)) return true;
-        if (Intersect(pt.d, pt.a, start, goal)) return true;
-        return false;
-    }
-
-    const AABB* MilePath::FindAABB(const GamePos& pos)
-    {
-        const auto& aabbs = m_aabbs;
-        for (const auto& a : aabbs) {
-            if (pos.zplane == a.m_t->layer && a.m_t->IsOnPathingTrapezoid(pos))
-                return &a;
-        }
-        return nullptr;
-    }
-
-    __forceinline void addBlockingId(BlockedPlaneBitset* blocking_ids, const AABB* box)
-    {
-        if (box && box->m_t && box->m_t->layer) {
-            ASSERT(box->m_t->layer < blocking_ids->size());
-            blocking_ids->set(box->m_t->layer, 1);
-        }
-    }
-
-    bool MilePath::HasLineOfSight(const point& start, const point& goal, std::unique_ptr<const AABB*[]>& open, std::unique_ptr<bool[]>& visited, const BlockedPlaneBitset& planes_currently_blocked, BlockedPlaneBitset* planes_traversed = nullptr)
-    {
-        if ((start.box && goal.box && start.box->m_id == goal.box->m_id) 
-            || (start.box && goal.box2 && start.box->m_id == goal.box2->m_id) 
-            || (start.box2 && goal.box && start.box2->m_id == goal.box->m_id) ||
-            (start.box2 && goal.box2 && start.box2->m_id == goal.box2->m_id)) {
-            // Start and end are within the same box
-            if (planes_traversed) {
-                addBlockingId(planes_traversed, start.box);
-                addBlockingId(planes_traversed, start.box2);
-                addBlockingId(planes_traversed, goal.box);
-                addBlockingId(planes_traversed, goal.box2);
-            }
-            return true;
-        }
-
-        memset(&visited[0], 0, sizeof(visited[0]) * m_aabbs.size());
-
-        uint32_t open_count = 0;
-        if (start.box) {
-            visited[start.box->m_id] = 1; // Add this
-            open[open_count++] = start.box;
-        }
-        if (start.box2) {
-            visited[start.box2->m_id] = 1; // Add this
-            open[open_count++] = start.box2;
-        }
-        uint32_t last_layer = 0;
-
-        while (open_count > 0) {
-            const AABB* current = open[--open_count];
-
-            if ((goal.box && current->m_id == goal.box->m_id) || (goal.box2 && current->m_id == goal.box2->m_id)) {
-                return true;
-            }
-
-            auto& portals = m_PTPortalGraph[current->m_t->id];
-            for (const auto* portal : portals) {
-                if (start.portal == portal) continue;
-                if (!portal->intersect(start.pos, goal.pos)) continue;
-
-                if (last_layer != current->m_t->layer) {
-                    last_layer = current->m_t->layer;
-                    if (last_layer) {
-                        // Check if this layer is blocked - return false immediately
-                        ASSERT(last_layer < planes_currently_blocked.size());
-                        if (planes_currently_blocked[last_layer]) {
-                            return false; // Path is blocked!
-                        }
-
-                        // Collect planes traversed if requested
-                        if (planes_traversed) {
-                            planes_traversed->set(last_layer,1);
-                        }
-                    }
-
-                }
-                if (current != portal->m_box1 && !visited[portal->m_box1->m_id]) {
-                    visited[portal->m_box1->m_id] = 1; // Mark as visited immediately
-                    open[open_count++] = portal->m_box1;
-                }
-                if (current != portal->m_box2 && !visited[portal->m_box2->m_id]) {
-                    visited[portal->m_box2->m_id] = 1; // Mark as visited immediately
-                    open[open_count++] = portal->m_box2;
-                }
-            }
-        }
-
-        return false;
-    }
-
-#if 0
-    void MilePath::GenerateVisibilityGraph() {
-        if (m_terminateThread) return;
-
-        // note: naive VG generation is O(n^3)
-        // TODO: great speedup if only checking visibility of convex points.
-
-        m_visGraph.clear();
-        m_visGraph.resize(m_portals.size() * 2 + m_teleports.size() * 2 + 2);
-        for (auto& it : m_visGraph) {
-            it.reserve(0x100);
-        }
-        float range = max_visibility_range;
-        float sqrange = range * range;
-
-        std::vector<const AABB*> open;
-        std::vector<bool> visited;
-        visited.reserve(0xd00);
-        std::vector<uint32_t> blocking_ids;
-        size_t size = m_points.size();
-        float min_range, max_range, sqdist, dist;
-        Pathing::MilePath::point* p1;
-        Pathing::MilePath::point* p2;
-        for (size_t i = 0; i < size; ++i) {
-            p1 = &m_points[i];
-            min_range = p1->pos.y - range;
-            max_range = p1->pos.y + range;
-
-            for (size_t j = i + 1; j < size; ++j) {
-                p2 = &m_points[j];
-
-                if (min_range > p2->pos.y || max_range < p2->pos.y)
-                    continue;
-
-                sqdist = GetSquareDistance(p1->pos, p2->pos);
-                if (sqdist > sqrange)
-                    continue;
-
-                if (std::any_of(
-                    std::begin(m_visGraph[p1->id]),
-                    std::end(m_visGraph[p1->id]),
-                    [p2](const PointVisElement& a) { return a.point_id == p2->id; })) continue;
-
-                blocking_ids.clear();
-                if (HasLineOfSight(*p1, *p2, open, visited, &blocking_ids)) {
-                    dist = sqrtf(sqdist);
-                    m_visGraph[p1->id].emplace_back(p2->id, dist, blocking_ids);
-                    m_visGraph[p2->id].emplace_back(p1->id, dist, blocking_ids);
-                }
-            }
-            m_progress = (i * 100) / size;
-            if (m_terminateThread) return;
-        }
-    }
-#else
-
-    GW::GamePos MilePath::GetClosestPoint(const GW::GamePos& pos)
-    {
-        if (FindAABB(pos)) {
-            return pos; // Already on pathing map
-        }
-        float min_distance = std::numeric_limits<float>::max();
-        const MilePath::point* closest = nullptr;
-
-        for (const auto& point : m_points) {
-            float sq_dist = GetSquareDistance(pos, point.pos);
-
-            if (sq_dist < min_distance) {
-                min_distance = sq_dist;
-                closest = &point;
-            }
-        }
-
-        return closest ? *closest : GW::GamePos();
-    }
-
-#pragma optimize("gty", on)  // Enable optimizations
-    void MilePath::GenerateVisibilityGraph()
-    {
-        if (m_terminateThread) return;
-
-        const size_t vis_graph_size = m_portals.size() * 2 + m_teleports.size() * 2 + 2;
-
-        m_visGraph.clear();
-        m_visGraph.resize(vis_graph_size);
-        for (auto& it : m_visGraph) {
-            it.reserve(0x50);
-        }
-
-        const float range = max_visibility_range;
-        const float sqrange = range * range;
-
-        const size_t size = m_points.size();
-        std::mutex visGraphMutex;
-        std::mutex progressMutex;
-        std::mutex terminateMutex;
-
-        struct VisGraphUpdate {
-            size_t id1{};
-            size_t id2{};
-            float distl{};
-            BlockedPlaneBitset traversed_planes;
-        };
-
-        // Function to be executed by each thread
-        auto worker = [&](const size_t start, const size_t end) {
-
-            const size_t max_size = m_aabbs.size();
-            std::unique_ptr<const AABB*[]> open(new const AABB*[max_size]);
-            std::unique_ptr<bool[]> visited(new bool[max_size]()); // () for zero-init
-
-            BlockedPlaneBitset blocking_ids;
-            BlockedPlaneBitset unused;
-            auto local_updates = std::vector<VisGraphUpdate>();
-            local_updates.reserve(vis_graph_size * 2);
-
-            for (size_t i = start; i < end; ++i) {
-                {
-                    std::lock_guard lock(terminateMutex);
-                    if (m_terminateThread) return; // Check termination flag
-                }
-
-                point* p1 = &m_points[i];
-                float min_range = p1->pos.y - range;
-                float max_range = p1->pos.y + range;
-
-                for (size_t j = i + 1; j < size; ++j) {
-                    point* p2 = &m_points[j];
-
-                    if (min_range > p2->pos.y || max_range < p2->pos.y)
-                        continue;
-
-                    const float sqdist = GetSquareDistance(p1->pos, p2->pos);
-                    if (sqdist > sqrange)
-                        continue;
-
-                    {
-                        std::lock_guard lock(visGraphMutex);
-                        if (std::ranges::any_of(m_visGraph[p1->id], [p2](const PointVisElement& a) { return a.point_id == p2->id; })) {
-                            continue;
-                        }
-                    }
-
-                    if (HasLineOfSight(*p1, *p2, open, visited, unused, &blocking_ids)) {
-                        const float dist = sqrtf(sqdist);
-
-                        // Collect updates (copy in worker thread)
-                        local_updates.emplace_back(p2->id, p1->id, dist, blocking_ids);
-                        local_updates.emplace_back(p1->id, p2->id, dist, std::move(blocking_ids));
-                    }
-                }
-
-                {
-                    std::lock_guard lock(progressMutex);
-                    m_progress = (i * 100) / size;
-                }
-            }
-
-            // Apply collected updates
-            {
-                std::lock_guard lock(visGraphMutex);
-                for (auto& [id1, id2, distl, blocks] : local_updates) {
-                    m_visGraph[id1].emplace_back(id2, distl, std::move(blocks));
-                }
-            }
-        };
-
-        const size_t num_threads = std::thread::hardware_concurrency(); // Get number of supported hardware threads
-        std::vector<std::jthread> threads;
-        // Determine the range of work each thread will handle
-        size_t chunk_size = size / num_threads;
-
-        for (size_t t = 0; t < num_threads; ++t) {
-            size_t start = t * chunk_size;
-            size_t end = (t == num_threads - 1) ? size : (t + 1) * chunk_size;
-            threads.emplace_back(worker, start, end);
-        }
-    }
-#pragma optimize("", on) // Restore global optimizations to project default
-#endif
-
-    void MilePath::insertTeleportPointIntoVisGraph(point& point, teleport_point_type type)
-    {
-        const size_t max_size = m_aabbs.size();
-        std::unique_ptr<const AABB*[]> open(new const AABB*[max_size]);
-        std::unique_ptr<bool[]> visited(new bool[max_size]()); // () for zero-init
-        BlockedPlaneBitset blocking_ids;
-        BlockedPlaneBitset unused;
-        for (const auto& p : m_points) {
-            blocking_ids = { 0 };
-            if (!HasLineOfSight(p, point, open, visited, unused, &blocking_ids)) continue;
-
-            float distance = GetDistance(point.pos, p.pos);
-            if (type == teleport_point_type::both) {
-                m_visGraph[p.id].emplace_back(point.id, distance, blocking_ids);
-                m_visGraph[point.id].emplace_back(p.id, distance, blocking_ids);
-            }
-            else if (type == teleport_point_type::enter) {
-                m_visGraph[p.id].emplace_back(point.id, distance, blocking_ids);
-            }
-            else if (type == teleport_point_type::exit) {
-                m_visGraph[point.id].emplace_back(p.id, distance, blocking_ids);
-            }
-        }
-    }
-
-    void MilePath::InsertTeleportsIntoVisibilityGraph()
-    {
-        if (m_terminateThread) return;
-
-        using namespace MapSpecific;
-
-        for (const auto& teleport : m_teleports) {
-            const bool bidir = teleport.m_directionality == Teleport::direction::both_ways;
-
-            auto point_enter = CreatePoint(teleport.m_enter);
-            point_enter.id = m_points.size();
-            m_points.emplace_back(point_enter);
-            insertTeleportPointIntoVisGraph(m_points.back(), bidir ? teleport_point_type::both : teleport_point_type::enter);
-
-            auto point_exit = CreatePoint(teleport.m_exit);
-            point_exit.id = m_points.size();
-            m_points.emplace_back(point_exit);
-            insertTeleportPointIntoVisGraph(m_points.back(), bidir ? teleport_point_type::both : teleport_point_type::exit);
-
-            // although the distance between teleports is 0, a tiny value is used as a penalty for various reasons.
-            float dist = GetDistance(teleport.m_enter, teleport.m_exit) * 0.01f;
-            m_visGraph[point_enter.id].emplace_back(m_points[point_exit.id].id, dist);
-            if (bidir)
-                m_visGraph[point_exit.id].emplace_back(m_points[point_enter.id].id, dist * 0.01f);
-        }
-    }
-
-    using PQElement = std::pair<float, MilePath::point::Id>;
-
-    class MyPQueue : public std::priority_queue<PQElement, std::vector<PQElement>, std::greater<PQElement>> {
-    public:
-        MyPQueue(size_t reserve_size)
-        {
-            this->c.reserve(reserve_size);
-        }
-    };
-
-    AStar::AStar(MilePath* mp)
-        : m_path(this),
-          m_mp(mp)
-    {
-        // Visibility graph challenge: integrating start and goal points requires careful
-        // handling to prevent continuous graph expansion and search slowdown.
-        // Previous method involved copying the entire graph for each search.
-        // There's a slight improvement in performance by directly inserting and
-        // subsequently removing start and stop points in the visibility graph.
-
-        // create temporary vis graph to hold start and goal points
-        // m_visGraph.resize(m_mp->m_points.size() + 2);
-        // for (size_t i = 0; i < m_mp->m_points.size(); ++i) {
-        //     m_visGraph[i] = m_mp->m_visGraph[i];
-        // }
+        m_path.m_mp = mp;
     };
 
     class Path {
     public:
-        std::vector<MilePath::point> points{};
+        std::vector<GW::GamePos> points{};
         float cost{}; // distance
         int visited_index{};
     };
 
-    void AStar::InsertPointIntoVisGraph(MilePath::point& point) const
-    {
-        auto& vis_graph = m_mp->m_visGraph;
-        const float sqrange = max_visibility_range * max_visibility_range;
-        const size_t max_size = m_mp->m_aabbs.size();
-        std::unique_ptr<const AABB*[]> open(new const AABB*[max_size]);
-        std::unique_ptr<bool[]> visited(new bool[max_size]()); // () for zero-init
-        BlockedPlaneBitset unused;
-        for (const auto& it : m_mp->m_points) {
-            const float sqdistance = GetSquareDistance(it.pos, point.pos);
-            if (sqdistance > sqrange)
-                continue;
-
-            BlockedPlaneBitset planes_traversed;
-            
-            if (!m_mp->HasLineOfSight(it, point, open, visited, unused, &planes_traversed))
-                continue;
-
-            float distance = sqrtf(sqdistance);
-            vis_graph[point.id].emplace_back(it.id, distance, planes_traversed);
-            vis_graph[it.id].emplace_back(point.id, distance, std::move(planes_traversed));
-        }
-    }
-
     // https://github.com/Rikora/A-star/blob/master/src/AStar.cpp
-    Error AStar::BuildPath(const MilePath::point& start, const MilePath::point& goal, const std::unique_ptr<MilePath::point::Id[]>& came_from)
+    Error BuildPath(AStar& astar, const Point& start, const Point& goal, const std::vector<PointId>& came_from)
     {
-        MilePath::point current(goal);
+        Point current(goal);
 
-        m_path.clear();
+        astar.m_path.clear();
+        auto* mp = (Impl*)astar.m_path.m_mp->GetImpl();
 
         int count = 0;
-        while (current.id != start.id) {
+        while (current.m_id != start.m_id) {
             if (count++ > 256) {
                 Log::Error("build path failed\n");
                 return Error::BuildPathLengthExceeded;
             }
-            if (current.id < 0) {
+            if (current.m_id < 0) {
                 break;
             }
-            m_path.insertPoint(current);
-            auto& id = came_from[current.id];
-            if (id == start.id)
-                break;
-            current = m_mp->m_points[id];
+
+            // Finding zplane here and in this way is more of a workaround:
+            auto zplane = std::max(mp->portals[current.m_portals[0]].m_pt_layer, mp->portals[current.m_portals[1]].m_pt_layer);
+            astar.m_path.insertPoint({current.m_pos.x, current.m_pos.y, zplane});
+
+            auto& id = came_from[current.m_id];
+            if (id == start.m_id) break;
+
+            current = mp->points[id];
         }
-        m_path.insertPoint(start);
-        m_path.finalize();
+
+        auto zplane = std::max(mp->portals[start.m_portals[0]].m_pt_layer, mp->portals[start.m_portals[1]].m_pt_layer);
+        astar.m_path.insertPoint({start.m_pos.x, start.m_pos.y, zplane});
+
         return Error::OK;
     }
 
-    float AStar::TeleporterHeuristic(const MilePath::point& start, const MilePath::point& goal) const
+    float TeleporterHeuristic(const MapSpecific::Teleports& teleports, const std::vector<MapSpecific::teleport_node>& teleportGraph, const Point& start, const Point& goal)
     {
-        if (m_mp->m_teleports.empty())
-            return 0.0f;
+        if (teleports.empty()) return 0.0f;
 
         using namespace MapSpecific;
 
@@ -1012,19 +1516,17 @@ namespace Pathing {
         const Teleport* tg = nullptr;
         float dist_start = cost;
         float dist_goal = cost;
-        for (const auto& tp : m_mp->m_teleports) {
-            float dist = GetSquareDistance(start.pos, tp.m_enter);
-            if (tp.m_directionality == Teleport::direction::both_ways)
-                dist = std::min(dist, GetSquareDistance(start.pos, tp.m_exit));
+        for (const auto& tp : teleports) {
+            float dist = GW::GetSquareDistance(start.m_pos, tp.m_enter);
+            if (tp.m_directionality == Teleport::direction::both_ways) dist = std::min(dist, GW::GetSquareDistance(start.m_pos, tp.m_exit));
 
             if (dist_start > dist) {
                 dist_start = dist;
                 ts = &tp;
             }
 
-            dist = GetSquareDistance(goal.pos, tp.m_exit);
-            if (tp.m_directionality == Teleport::direction::both_ways)
-                dist = std::min(dist, GetSquareDistance(goal.pos, tp.m_enter));
+            dist = GW::GetSquareDistance(goal.m_pos, tp.m_exit);
+            if (tp.m_directionality == Teleport::direction::both_ways) dist = std::min(dist, GW::GetSquareDistance(goal.m_pos, tp.m_enter));
 
             if (dist_goal > dist) {
                 dist_goal = dist;
@@ -1032,7 +1534,7 @@ namespace Pathing {
             }
         }
 
-        for (const auto& ttd : m_mp->m_teleportGraph) {
+        for (const auto& ttd : teleportGraph) {
             if (ttd.tp1 == ts && ttd.tp2 == tg) {
                 // cost = sqrtf(dist_start) + ttd.distance + sqrtf(dist_goal);
                 cost = sqrtf(dist_start);
@@ -1042,185 +1544,145 @@ namespace Pathing {
         return cost;
     }
 
-    Error AStar::Search(const GamePos& _start_pos, const GamePos& _goal_pos)
+    typedef std::pair<float, PointId> PQElement;
+    class MyPQueue : public std::priority_queue<PQElement, std::vector<PQElement>, std::greater<PQElement>> {
+    public:
+        MyPQueue(size_t reserve_size) { this->c.reserve(reserve_size); }
+    };
+
+    Error AStar::Search(const GW::GamePos& _start_pos, const GW::GamePos& _goal_pos)
     {
+        Timing time(__FUNCTION__);
+
         std::lock_guard lock(pathing_mutex);
 
         BlockedPlaneBitset current_blocked_planes;
         const Error res = CopyPathingMapBlocks(&current_blocked_planes);
 
-        if (res != Error::OK)
-            return res;
-        MilePath::point::Id point_id = m_mp->m_points.size();
-        MilePath::point start;
-        bool new_start = false;
-        m_path.clear();
+        if (res != Error::OK) return res;
 
-        // Start or goal may not actually be in the pmap e.g. objective marker leading to portal
-        const auto start_pos = m_mp->GetClosestPoint(_start_pos);
-        const auto goal_pos = m_mp->GetClosestPoint(_goal_pos);
+        auto start_pos = _start_pos;
+        auto goal_pos = _goal_pos;
+        auto spt = FindClosestPositionOnTrapezoid(start_pos);
+        auto gpt = FindClosestPositionOnTrapezoid(goal_pos);
+        if (!spt) return Error::FailedToFindStartPathingTrapezoid;
+        if (!gpt) return Error::FailedToFindGoalPathingTrapezoid;
 
-        //if (m_mp->m_pointLookup.contains(start_pos)) {
-        //    start = *m_mp->m_pointLookup.at(start_pos);
-        //} else
+        auto* mp = (Impl*)m_path.m_mp->GetImpl();
+
+        auto cleanup = [&](const Point& point) {
+            auto& elements = mp->m_visGraph[point.m_id];
+            for (auto& elem : elements) {
+                std::erase_if(mp->m_visGraph[elem.point_id], [&point](auto& elem) {
+                    return elem.point_id == point.m_id;
+                });
+            }
+            elements.clear();
+
+            mp->points.pop_back();
+
+            auto& adjacent = mp->portal_portal_map[point.m_portals[0]];
+            for (auto& a : adjacent) {
+                std::erase_if(mp->portal_portal_map[a], [&point](auto& portal) {
+                    return portal == point.m_portals[0];
+                });
+            }
+            adjacent.clear();
+
+            auto pt = std::exchange(mp->portal_pt_map[point.m_portals[0]], nullptr);
+            std::erase_if(mp->pt_portal_map[pt->id], [&point](auto& portal) {
+                return portal == point.m_portals[0];
+            });
+
+            mp->portals.pop_back();
+        };
+
+        Point start = mp->createSinglePointPortal(spt, start_pos);
+        Point goal = mp->createSinglePointPortal(gpt, goal_pos);
+
         {
-            start = m_mp->CreatePoint(start_pos);
-            if (!start.box)
-                return Error::FailedToFindStartBox;
-            start.id = point_id++;
-            new_start = true;
+            std::vector<node> open_points;
+            open_points.resize(2000);
+            mp->VisGraphInsertPoint(open_points, start);
+            open_points.clear();
+            open_points.resize(2000);
+            mp->VisGraphInsertPoint(open_points, goal);
         }
 
-        MilePath::point goal;
-        bool new_goal = false;
-        //if (m_mp->m_pointLookup.contains(goal_pos)) {
-        //    goal = *m_mp->m_pointLookup.at(goal_pos);
-        //} else
-        {
-            goal = m_mp->CreatePoint(goal_pos);
-            if (!goal.box)
-                return Error::FailedToFindGoalBox;
-            goal.id = point_id;
-            new_goal = true;
+        if (mp->m_visGraph.size() <= start.m_id || mp->m_visGraph.size() <= goal.m_id) {
+            m_path.insertPoint(start_pos);
+            m_path.insertPoint(goal_pos);
+            m_path.setCost(GW::GetDistance(start_pos, goal_pos));
+            m_path.finalize();
+
+            // Log::Error("invalid index into vis graph: m_visGraph.size(): %d, start.m_id: %d, goal.m_id: %d", m_visGraph.size(), start.m_id, goal.m_id);
+
+            cleanup(goal);
+            cleanup(start);
+            return Error::FailedToFinializePath;
         }
 
-        {
-            const size_t max_size = m_mp->m_aabbs.size();
-            std::unique_ptr<const AABB*[]> open(new const AABB*[max_size]());
-            std::unique_ptr<bool[]> visited(new bool[max_size]()); // () for zero-init
-            if (m_mp->HasLineOfSight(start, goal, open, visited, current_blocked_planes)) {
-                m_path.insertPoint(start);
-                m_path.insertPoint(goal);
-                m_path.setCost(GetDistance(start_pos, goal_pos));
+        // Check if points have a direct line of sight
+        for (const auto& vis : mp->m_visGraph[start.m_id]) {
+            if (vis.point_id != goal.m_id) continue;
+            if ((vis.blocked_planes & current_blocked_planes).none()) {
+                m_path.insertPoint(start_pos);
+                m_path.insertPoint(goal_pos);
+                m_path.setCost(vis.distance);
                 m_path.finalize();
+
+                cleanup(goal);
+                cleanup(start);
                 return Error::OK;
             }
-        }
+        };
 
-#ifdef DEBUG_PATHING
-        const clock_t start_timestamp = clock();
-#endif
+        std::vector<float> cost_so_far;
+        std::vector<PointId> came_from;
+        MyPQueue open(mp->points.size() + 2);
 
-        if (new_start) {
-            m_mp->m_points.push_back(start);
-            InsertPointIntoVisGraph(start);
-        }
-        if (new_goal) {
-            m_mp->m_points.push_back(goal);
-            InsertPointIntoVisGraph(goal);
-        }
+        cost_so_far.resize(mp->points.size() + 2, -INFINITY);
+        cost_so_far[start.m_id] = 0.0f;
 
-        std::vector<float> cost_so_far(m_mp->m_points.size() + 2, -INFINITY);
-        std::unique_ptr<MilePath::point::Id[]> came_from(new MilePath::point::Id[m_mp->m_points.size() + 2]());
-        MyPQueue open(m_mp->m_points.size() + 2);
+        came_from.resize(mp->points.size() + 2);
+        came_from[start.m_id] = start.m_id;
+        open.emplace(0.0f, start.m_id);
 
-        cost_so_far[start.id] = 0.0f;
-        came_from[start.id] = start.id;
-        open.emplace(0.0f, start.id);
-
-        const bool teleports = !m_mp->m_teleports.empty();
-        MilePath::point::Id current = 0;
+        bool teleports = mp->m_teleports.size();
+        PointId current = 0;
         while (!open.empty()) {
             current = open.top().second;
             open.pop();
-            if (current == goal.id)
-                break;
+            if (current == goal.m_id) break;
 
-            for (const auto& vis : m_mp->m_visGraph[current]) {
-                // Skip this path if it crosses any blocked planes
-                if ((vis.planes_traversed & current_blocked_planes).any()) {
-                    continue;
-                }
-
-                const float new_cost = cost_so_far[current] + vis.distance;
+            for (auto& vis : mp->m_visGraph[current]) {
+                if ((vis.blocked_planes & current_blocked_planes).any()) continue;
+                float new_cost = cost_so_far[current] + vis.distance;
                 if (cost_so_far[vis.point_id] == -INFINITY || new_cost < cost_so_far[vis.point_id]) {
                     cost_so_far[vis.point_id] = new_cost;
                     came_from[vis.point_id] = current;
 
                     float priority = new_cost;
                     if (teleports) {
-                        const auto& point = m_mp->m_points[vis.point_id];
-                        float tp_cost = TeleporterHeuristic(point, goal);
-                        priority += std::min(GetDistance(point.pos, goal.pos), tp_cost);
+                        auto& point = mp->points[vis.point_id];
+                        float tp_cost = TeleporterHeuristic(mp->m_teleports, mp->m_teleportGraph, point, goal);
+                        priority += std::min(GetDistance(point.m_pos, goal.m_pos), tp_cost);
                     }
                     open.emplace(priority, vis.point_id);
                 }
             }
         }
 
-        if (current == goal.id) {
-            BuildPath(start, goal, came_from);
+        if (current == goal.m_id) {
             m_path.setCost(cost_so_far[current]);
-        }
-
-        // TODO: Implement a pop list so there is no need to search every node?
-        if (new_goal) {
-            auto& other_elements = m_mp->m_visGraph[goal.id];
-
-            for (const auto& elem : other_elements) {
-                auto& points = m_mp->m_visGraph[elem.point_id];
-                std::erase_if(points, [&goal](const auto& elem) { return elem.point_id == goal.id; });
+            if (BuildPath(*this, start, goal, came_from) == Error::OK) {
+                m_path.finalize();
             }
-            m_mp->m_points.pop_back();
-            m_mp->m_visGraph[goal.id].clear();
-        }
-        if (new_start) {
-            const auto& other_elements = m_mp->m_visGraph[start.id];
-
-            for (const auto& elem : other_elements) {
-                auto& points = m_mp->m_visGraph[elem.point_id];
-                std::erase_if(points, [&start](const auto& point) { return point.point_id == start.id; });
-            }
-            m_mp->m_points.pop_back();
-            m_mp->m_visGraph[start.id].clear();
         }
 
-#ifdef DEBUG_PATHING
-        const clock_t stop_timestamp = clock();
-        Log::Log("Find path: %d ms\n", stop_timestamp - start_timestamp);
-#endif
-        m_path.finalize();
+        cleanup(goal);
+        cleanup(start);
+
         return m_path.ready() ? Error::OK : Error::FailedToFinializePath;
     }
-
-    GamePos AStar::GetClosestPoint(const Vec2f& pos)
-    {
-        return GetClosestPoint(m_path, pos);
-    }
-
-    GamePos AStar::GetClosestPoint(Path& path, const Vec2f& pos)
-    {
-        auto& points = path.points();
-        const size_t size = points.size();
-        if (!size) return {};
-        if (size < 2)
-            return {points.front().pos.x, points.front().pos.y, points.front().box->m_t->layer};
-
-        struct pqdist {
-            float distance = 0.0f;
-            MilePath::point point = {};
-            size_t index = 0;
-        };
-
-        std::vector<pqdist> pq(size);
-
-        for (size_t i = 1; i < size; ++i) {
-            Vec2f AP = pos - points[i - 1].pos;
-            Vec2f AB = points[i].pos - points[i - 1].pos;
-            float mag = GetSquaredNorm(AB);
-            float ABAP = Dot(AP, AB);
-            const float distance = std::clamp(ABAP / mag, 0.0f, 1.0f);
-
-            pqdist& e = pq[i];
-            e.point.box = points[i - 1].box;
-            e.point.pos = points[i - 1].pos + AB * distance;
-            e.distance = GetDistance(pos, e.point.pos);
-        }
-
-        const auto min_element = std::ranges::min_element(pq, [](const auto& lhs, const auto& rhs) {
-            return lhs.distance < rhs.distance;
-        });
-
-        return {min_element->point.pos.x, min_element->point.pos.y, min_element->point.box->m_t->layer};
-    }
-}
+} // namespace Pathing

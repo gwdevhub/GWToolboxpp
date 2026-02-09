@@ -348,7 +348,6 @@ namespace {
                     break;
                 }
             }
-            subject.remove_prefix(std::distance(subject.begin(), m.get<0>().end()));
         }
         static constexpr ctll::fixed_string available_miniatures = L"\x2\x109\x2([^\x109\x2]+)";
         for (auto m : ctre::search_all<available_miniatures>(subject)) {
@@ -359,7 +358,6 @@ namespace {
                     break;
                 }
             }
-            subject.remove_prefix(std::distance(subject.begin(), m.get<0>().end()));
         }
         Instance().CheckProgress();
     }

@@ -3,18 +3,23 @@ layout: default
 ---
 
 # Camera
-Toolbox has several features that interact with the game's camera, allowing you to view the game from different points of view. These can all be accessed via [chat commands](commands).
+Toolbox includes several features that interact with the game's camera, allowing you to view the world from different perspectives. All camera functions can be accessed via [chat commands](commands).
 
 ## Camera Unlock
-* Typing `/cam unlock` or `/camera unlock` allows you to freely move your point of view around the map, without moving your character. 
-* Use `W` (forwards), `A` (sidestep left), `S` (backwards), `D` (sidestep right) to move the camera. Hold down the right mouse button to pan and tilt the camera using the mouse.
-* `/cam lock` or `/camera lock` to lock the camera and return to your character's point of view.
+* Typing `/cam unlock` or `/camera unlock` allows you to freely move your point of view around the map without moving your character.
+* Typing `/cam lock` or `/camera lock` locks the camera again and returns your view to your character.
 
-## Other features
-* `/cam fog on` or `/cam fog off` to enable or disable fog.
-* When the camera is unlocked, it detaches from your character, allowing you to move it freely through the environment as if you were controlling a separate viewpoint.
-* The camera moves relative to an invisible fixed point in the world. This can make panning and tilting feel unintuitive at times. To make movement easier, zoom in completely using the mouse wheel. This aligns the camera with the fixed point. This improves control, but your own character will no longer be visible.
-* There is no option to move up and down directly.
-* All settings reset to default when you zone.
+## Movement
+While the camera is unlocked:
+* Use the **horizontal axis** controls to move the camera across the ground plane:  
+  `W` (forward), `E` or `D` (strafe right), `S` (backward), `Q` or `A` (strafe left).
+* Use the **vertical axis** controls to move the camera up and down:  
+  `Z` (up) and `X` (down).
+* Hold the **right mouse button** to pan and tilt the camera using the mouse.
+* Press `R` to move forward automatically until cancelled by pressing `W` or `S`.
+
+## Other Features
+* `/cam fog on` or `/cam fog off` enables or disables fog.
+* `/cam speed #` adjusts the camera movement speed. The default value is 100.
 
 [back](./)

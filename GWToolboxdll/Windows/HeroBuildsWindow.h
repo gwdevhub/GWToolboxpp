@@ -95,6 +95,8 @@ public:
 
     static void CHAT_CMD_FUNC(CmdHeroTeamBuild);
 
+    // Returns ptr to party member of this hero, optionally fills out out_hero_index to be the index of this hero for the player.
+    static GW::HeroPartyMember* GetPartyHeroByID(GW::Constants::HeroID hero_id, size_t* out_hero_index);
 private:
     bool hide_when_entering_explorable = false;
     bool one_teambuild_at_a_time = false;
@@ -108,9 +110,6 @@ private:
     static void View(const TeamHeroBuild& tbuild, unsigned int idx);
     static void HeroBuildName(const TeamHeroBuild& tbuild, unsigned int idx, std::string* out);
     TeamHeroBuild* GetTeambuildByName(const std::string& argBuildname);
-
-    // Returns ptr to party member of this hero, optionally fills out out_hero_index to be the index of this hero for the player.
-    static GW::HeroPartyMember* GetPartyHeroByID(GW::Constants::HeroID hero_id, size_t* out_hero_index);
 
     bool builds_changed = false;
     std::vector<TeamHeroBuild> teambuilds{};

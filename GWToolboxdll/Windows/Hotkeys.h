@@ -79,7 +79,7 @@ public:
 
     virtual void Save(ToolboxIni* ini, const char* section) const;
 
-    bool Draw(Op* op);
+    bool Draw(Op* op, bool first = false, bool last = false);
 
     [[nodiscard]] virtual const char* Name() const = 0;
     virtual bool Draw() = 0;

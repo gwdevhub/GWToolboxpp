@@ -1,5 +1,8 @@
 #include "stdafx.h"
 
+#include <fstream>
+#include <sstream>
+
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/Constants/Skills.h>
 
@@ -43,12 +46,74 @@
 #include <Utils/ArenaNetFileParser.h>
 #include <Utils/TextUtils.h>
 #include <corecrt_math_defines.h>
+#include <Windows/Pathfinding/PathingMapDataLoader.h>
 
 
 
 
 namespace {
     using namespace WorldMapWidget_Constants;
+
+    struct MapPortal;
+
+    uint32_t current_map_file_id = 0;
+    GW::Constants::MapID current_map_id = GW::Constants::MapID::None;
+
+    struct MapFileInfo {
+        GW::Continent continent;
+        GW::Vec2f world_pos_start; // top left of bounds
+        GW::Vec2f world_pos_end;   // bottom right of bounds
+        uint32_t map_file_id;      // unique identifier for this map
+        GW::Constants::MapID map_id = GW::Constants::MapID::None;
+        std::vector<MapPortal> portals;
+    };
+
+    std::map<uint32_t, MapFileInfo> map_info_by_file_id;
+
+
+    struct MapPortal {
+        GW::Vec2f world_pos;
+        uint32_t map_file_id = 0;
+        uint32_t prop_index = 0;
+        
+        uint32_t linked_portal_map_file_id = 0;
+        uint32_t linked_portal_prop_index = 0;
+
+        const MapPortal* linkedPortal() const
+        {
+            const auto found = map_info_by_file_id.find(linked_portal_map_file_id);
+            if (found == map_info_by_file_id.end()) return nullptr;
+
+            const auto& other_map_portals = found->second.portals;
+
+            const auto other_portal = std::ranges::find_if(other_map_portals.begin(), other_map_portals.end(), [this](const MapPortal& other) {
+                return other.linked_portal_prop_index == this->prop_index;
+            });
+            return other_portal == other_map_portals.end() ? nullptr : &other_portal[0];
+        }
+
+        void checkForLinkedPortal(GW::Continent continent)
+        {
+            if (linked_portal_map_file_id) return;
+            for (auto& it : map_info_by_file_id) {
+                if (it.second.continent != continent) continue;
+                auto& other_map_portals = it.second.portals;
+                auto other_portal = std::ranges::find_if(other_map_portals.begin(), other_map_portals.end(), [this](const MapPortal& other) {
+                    return other.map_file_id != this->map_file_id && other.world_pos.x == this->world_pos.x && other.world_pos.y == this->world_pos.y;
+                });
+                if (other_portal != other_map_portals.end()) {
+                    linked_portal_map_file_id = other_portal->map_file_id;
+                    linked_portal_prop_index = other_portal->prop_index;
+                    other_portal->linked_portal_map_file_id = map_file_id;
+                    other_portal->linked_portal_prop_index = prop_index;
+                    return;
+                }
+            }
+        }
+    };
+
+
+
 
 
     const ImColor completed_bg = IM_COL32(0, 0x99, 0, 192);
@@ -58,6 +123,7 @@ namespace {
 
     IDirect3DTexture9** quest_icon_texture = nullptr;
     IDirect3DTexture9** player_icon_texture = nullptr;
+    IDirect3DTexture9** portal_icon_texture = nullptr;
 
     bool showing_all_outposts = false;
     bool apply_quest_colors = false;
@@ -78,6 +144,7 @@ namespace {
     GuiUtils::EncString hovered_quest_name;
     GuiUtils::EncString hovered_quest_description;
     const EliteBossLocation* hovered_boss = nullptr;
+    const MapPortal* hovered_map_portal = nullptr;
 
     // Cached vars that are updated every draw; avoids having to do the calculation inside DrawQuestMarkerOnWorldMap
     GW::Vec2f player_world_map_pos;
@@ -106,25 +173,39 @@ namespace {
                 break;
         }
 
-        auto str = std::format(
-            "{} - {}\n{}{}",
-            boss->boss_name,
-            Resources::GetSkillName(boss->skill_id)->string(),
-            Resources::GetMapName(boss->map_id)->string(),
-            mission_suffix
-        );
+        auto str = std::format("{} - {}\n{}{}", boss->boss_name, Resources::GetSkillName(boss->skill_id)->string(), Resources::GetMapName(boss->map_id)->string(), mission_suffix);
         if (boss->note) {
             str += std::format("\n{}", boss->note);
         }
         return str;
+    }
+    void DrawMapPortalInfo(const MapPortal* portal, bool include_linked = true)
+    {
+        auto& world_map_pos = portal->world_pos;
+
+        ImGui::Text("%.2f, %.2f", world_map_pos.x, world_map_pos.y);
+#ifdef _DEBUG
+        GW::GamePos game_pos;
+        if (WorldMapWidget::WorldMapToGamePos(world_map_pos, game_pos)) {
+            ImGui::Text("%.2f, %.2f", game_pos.x, game_pos.y);
+        }
+#endif
+
+        ImGui::Text("Prop Index: %d", portal->prop_index);
+        ImGui::Text("Map File ID: %d", portal->map_file_id);
+        if (include_linked) {
+            if (const auto linked = portal->linkedPortal()) {
+                ImGui::Text("Linked with:");
+                ImGui::Separator();
+                DrawMapPortalInfo(linked, false);
+            }
+        }
     }
 
     uint32_t __cdecl GetCartographyFlagsForArea(uint32_t, uint32_t, uint32_t, uint32_t)
     {
         return 0xffffffff;
     }
-
-
 
     bool MapContainsWorldPos(GW::Constants::MapID map_id, const GW::Vec2f& world_map_pos, GW::Continent continent)
     {
@@ -258,6 +339,16 @@ namespace {
         return true;
     }
 
+    bool MapPortalContextMenu(void* wparam)
+    {
+        if (!GW::Map::GetWorldMapContext()) return false;
+        const auto portal = (MapPortal*)wparam;
+        if (!portal) return false;
+
+        DrawMapPortalInfo(portal);
+        return true;
+    }
+
     uint32_t GetMapPropModelFileId(GW::MapProp* prop)
     {
         if (!(prop && prop->h0034[4])) return 0;
@@ -296,14 +387,6 @@ namespace {
         return true;
     }
 
-    struct MapPortal {
-        GW::Constants::MapID from;
-        GW::Constants::MapID to;
-        GW::Vec2f world_pos;
-    };
-
-    std::vector<MapPortal> map_portals;
-
     GW::Constants::MapID GetClosestMapToPoint(const GW::Vec2f& world_map_point)
     {
         for (size_t i = 0; i < (size_t)GW::Constants::MapID::Count; i++) {
@@ -339,34 +422,55 @@ namespace {
         return found;
     }
 
-    bool AppendMapPortals()
+    void AppendMapFileInfo()
     {
+        if (!current_map_file_id || map_info_by_file_id.contains(current_map_file_id)) 
+            return;
+        MapFileInfo info;
+        const auto map_context = GW::GetMapContext();
+        info.map_file_id = current_map_file_id;
+        info.map_id = map_context->map_id;
+        info.continent = GW::Map::GetMapInfo(info.map_id)->continent;
+
+        std::vector<MapPortal> portals;
         const auto props = GW::Map::GetMapProps();
-        const auto map_id = GW::Map::GetMapID();
-        if (!props) return false;
+
+        if (!props) return;
         for (auto prop : *props) {
             if (IsTravelPortal(prop)) {
                 GW::Vec2f world_pos;
                 if (!WorldMapWidget::GamePosToWorldMap({prop->position.x, prop->position.y}, world_pos)) continue;
-                map_portals.push_back({map_id, GetClosestMapToPoint(world_pos), world_pos});
+                portals.push_back({world_pos, current_map_file_id, prop->prop_index});
             }
         }
-        return true;
+        for (auto& portal : portals) {
+            portal.checkForLinkedPortal(info.continent);
+        }
+
+        WorldMapWidget::GamePosToWorldMap(map_context->start_pos, info.world_pos_start);
+        WorldMapWidget::GamePosToWorldMap(map_context->end_pos, info.world_pos_end);
+        info.portals = std::move(portals);
+
+        map_info_by_file_id[current_map_file_id] = info;
     }
 
 
     GW::HookEntry OnUIMessage_HookEntry;
 
-    void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void*, void*)
+    void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*)
     {
         if (status->blocked) return;
-
         switch (message_id) {
-            case GW::UI::UIMessage::kMapLoaded:
-                map_portals.clear();
-                AppendMapPortals();
+            case GW::UI::UIMessage::kLoadMapContext: {
+                const auto packet = (GW::UI::UIPacket::kLoadMapContext*)wParam;
+                current_map_file_id = 0;
+                current_map_id = GW::Constants::MapID::None;
+                if (packet->file_name && *packet->file_name) {
+                    current_map_file_id = ArenaNetFileParser::FileHashToFileId(packet->file_name);
+                }
+                AppendMapFileInfo();
                 QuestModule::FetchMissingQuestInfo();
-                break;
+            } break;
         }
     }
 
@@ -719,6 +823,37 @@ namespace {
         }
         return is_hovered;
     }
+    void DrawAreaOverlays()
+    {
+        if (!world_map_context) return;
+        if (world_map_context->zoom != 1.f && world_map_context->zoom != .0f) return; // Map is animating
+
+        for (const auto& [file_id, info] : map_info_by_file_id) {
+            // Filter to the continent currently shown on the world map.
+            const auto map_info = GW::Map::GetMapInfo(info.map_id);
+            if (!(map_info && map_info->continent == world_map_context->continent)) continue;
+
+            const ImVec2 screen_min = CalculateViewportPos(info.world_pos_start, world_map_context->top_left);
+            const ImVec2 screen_max = CalculateViewportPos(info.world_pos_end, world_map_context->top_left);
+
+            draw_list->AddRectFilled(screen_min, screen_max, IM_COL32(0, 153, 0, 64));
+            draw_list->AddRect(screen_min, screen_max, IM_COL32(0, 200, 0, 128));
+        }
+    }
+
+    bool DrawPortalOnWorldMap(const MapPortal& portal)
+    {
+        if (!world_map_context) return false;
+        if (world_map_context->zoom != 1.f && world_map_context->zoom != .0f) return false; // Map is animating
+
+        auto& pos = portal.world_pos;
+        const auto viewport_pos = CalculateViewportPos(pos, world_map_context->top_left);
+        const ImRect icon_rect = {{viewport_pos.x - quest_icon_size_half, viewport_pos.y - quest_icon_size_half}, {viewport_pos.x + quest_icon_size_half, viewport_pos.y + quest_icon_size_half}};
+
+        draw_list->AddImage(*quest_icon_texture, icon_rect.Min, icon_rect.Max);
+
+        return icon_rect.Contains(ImGui::GetMousePos());
+    }
 } // namespace
 
 GW::Constants::MapID WorldMapWidget::GetMapIdForLocation(const GW::Vec2f& world_map_pos, GW::Constants::MapID exclude_map_id)
@@ -745,6 +880,7 @@ void WorldMapWidget::Initialize()
     memset(show_elite_capture_locations, true, sizeof(show_elite_capture_locations));
     quest_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x1b4d5);
     player_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x5d3b);
+    portal_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x246c); // IDirect3DTexture9**
 
     uintptr_t address = GW::Scanner::Find("\x8b\x45\xfc\xf7\x40\x10\x00\x00\x01\x00", "xxxxxxxxxx", 0xa);
     if (address) {
@@ -758,10 +894,13 @@ void WorldMapWidget::Initialize()
     ASSERT(view_all_outposts_patch.IsValid());
     ASSERT(view_all_carto_areas_patch.IsValid());
 
-    const GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kQuestAdded, GW::UI::UIMessage::kSendSetActiveQuest, GW::UI::UIMessage::kMapLoaded, GW::UI::UIMessage::kOnScreenMessage, GW::UI::UIMessage::kSendAbandonQuest};
+    const GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kQuestAdded,      GW::UI::UIMessage::kSendSetActiveQuest, GW::UI::UIMessage::kMapLoaded,
+                                             GW::UI::UIMessage::kOnScreenMessage, GW::UI::UIMessage::kSendAbandonQuest,   GW::UI::UIMessage::kLoadMapContext};
     for (auto ui_message : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, ui_message, OnUIMessage,0x8000);
+        GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, ui_message, OnUIMessage, 0x8000);
     }
+
+    AppendMapFileInfo();
 }
 
 bool WorldMapWidget::WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GamePos& game_map_pos)
@@ -843,6 +982,44 @@ void WorldMapWidget::LoadSettings(ToolboxIni* ini)
         show_elite_capture_locations[i] = ((show_elite_capture_locations_val >> i) & 0x1) != 0;
     }
     ShowAllOutposts(showing_all_outposts);
+
+
+    const std::filesystem::path map_info_by_file_id_file = Resources::GetPath(L"MapInfoByFileId.txt");
+    std::ifstream in(map_info_by_file_id_file);
+    if (in.is_open()) {
+        std::string line;
+        while (std::getline(in, line)) {
+            if (line.substr(0, 4) == "MAP ") {
+                std::istringstream ss(line.substr(4));
+                MapFileInfo info;
+                size_t portal_count = 0;
+                uint32_t map_id = 0;
+                uint32_t continent = 0;
+                if (!(ss >> continent >> info.map_file_id >> info.world_pos_start.x >> info.world_pos_start.y >> info.world_pos_end.x >> info.world_pos_end.y >> portal_count >> map_id)) continue;
+                info.map_id = static_cast<GW::Constants::MapID>(map_id);
+                info.continent = static_cast<GW::Continent>(continent);
+                info.portals.reserve(portal_count);
+                for (size_t i = 0; i < portal_count && std::getline(in, line); i++) {
+                    if (line.substr(0, 7) != "PORTAL ") {
+                        --i;
+                        continue;
+                    }
+                    std::istringstream pss(line.substr(7));
+                    MapPortal portal;
+                    if (!(pss >> portal.map_file_id >> portal.prop_index >> portal.world_pos.x >> portal.world_pos.y)) continue;
+                    info.portals.push_back(portal);
+                }
+                map_info_by_file_id[info.map_file_id] = std::move(info);
+            }
+        }
+        // Linked portals span across maps, so resolve them in a second pass
+        // once the entire file has been loaded.
+        for (auto& [_, info] : map_info_by_file_id) {
+            for (auto& portal : info.portals) {
+                portal.checkForLinkedPortal(info.continent);
+            }
+        }
+    }
 }
 
 void WorldMapWidget::SaveSettings(ToolboxIni* ini)
@@ -861,6 +1038,20 @@ void WorldMapWidget::SaveSettings(ToolboxIni* ini)
         }
     }
     SAVE_UINT(show_elite_capture_locations_val);
+
+    const std::filesystem::path map_info_by_file_id_file = Resources::GetPath(L"MapInfoByFileId.txt");
+    // File format (plain text, one map block per entry):
+    //   MAP <map_file_id> <world_pos_start.x> <world_pos_start.y> <world_pos_end.x> <world_pos_end.y> <portal_count> <map_id>
+    //   PORTAL <map_file_id> <prop_model_file_id> <world_pos.x> <world_pos.y>
+    //   ...
+    std::ofstream out(map_info_by_file_id_file);
+    if (!out.is_open()) return;
+    for (const auto& [file_id, info] : map_info_by_file_id) {
+        out << "MAP " << static_cast<uint32_t>(info.map_id)  << info.map_file_id << " " << info.world_pos_start.x << " " << info.world_pos_start.y << " " << info.world_pos_end.x << " " << info.world_pos_end.y << " " << info.portals.size() << " " << static_cast<uint32_t>(info.map_id) << "\n";
+        for (const auto& portal : info.portals) {
+            out << "PORTAL " << portal.map_file_id << " " << portal.prop_index << " " << portal.world_pos.x << " " << portal.world_pos.y << "\n";
+        }
+    }
 }
 
 void WorldMapWidget::Draw(IDirect3DDevice9*)
@@ -951,8 +1142,20 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         controls_window_rect = window->Rect();
         controls_window_rect.Translate(mouse_offset);
     }
+    hovered_map_portal = 0;
+    #ifdef _DEBUG
+    DrawAreaOverlays();
+    const auto current_map_info = GW::Map::GetMapInfo();
+    for (auto& [_, map_info] : map_info_by_file_id) {
+        if (!(current_map_info && map_info.continent == current_map_info->continent)) continue;
+        for (auto& portal : map_info.portals) {
+            if (DrawPortalOnWorldMap(portal)) {
+                hovered_map_portal = &portal;
+            }
+        }
+    }
+    #endif
 
-    AppendMapPortals();
 
     hovered_boss = nullptr;
     locations_assigned_to_outposts.clear();
@@ -986,6 +1189,11 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     }
     if (hovered_boss) {
         ImGui::SetTooltip("%s", BossInfo(hovered_boss).c_str());
+    }
+    if (hovered_map_portal) {
+        ImGui::SetTooltip([]() {
+            if (hovered_map_portal) DrawMapPortalInfo(hovered_map_portal);
+        });
     }
 
     /*for (const auto& portal : map_portals) {
@@ -1059,6 +1267,10 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
             world_map_click_pos.y += world_map_context->top_left.y;
             if (hovered_boss) {
                 ImGui::SetContextMenu(EliteBossLocationContextMenu, (void*)hovered_boss);
+                break;
+            }
+            if (hovered_map_portal) {
+                ImGui::SetContextMenu(MapPortalContextMenu, (void*)hovered_map_portal);
                 break;
             }
             ImGui::SetContextMenu(WorldMapContextMenu);

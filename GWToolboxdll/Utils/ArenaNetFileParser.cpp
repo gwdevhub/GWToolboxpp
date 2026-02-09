@@ -48,16 +48,16 @@ namespace ArenaNetFileParser {
         data_size = data.size();
         return isValid();
     }
-    bool GameAssetFile::readFromDat(const uint32_t file_id)
+    bool GameAssetFile::readFromDat(const uint32_t file_id, uint32_t stream_id)
     {
         wchar_t fileHash[4] = {0};
         FileIdToFileHash(file_id, fileHash);
-        return readFromDat(fileHash);
+        return readFromDat(fileHash, stream_id);
     }
-    bool GameAssetFile::readFromDat(const wchar_t* file_hash)
+    bool GameAssetFile::readFromDat(const wchar_t* file_hash, uint32_t stream_id)
     {
         std::vector<uint8_t> bytes;
-        if (!GwDatTextureModule::ReadDatFile(file_hash, &bytes)) return false;
+        if (!GwDatTextureModule::ReadDatFile(file_hash, &bytes, stream_id)) return false;
         return parse(bytes);
     }
     const uint8_t ArenaNetFile::getFFNAType() const

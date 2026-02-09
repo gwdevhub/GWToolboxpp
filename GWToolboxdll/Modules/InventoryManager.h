@@ -103,7 +103,7 @@ public:
         bool IsPerfectSalvageKit() const;
         bool IsWeapon() const;
         bool IsArmor() const;
-        bool IsSalvagable(bool check_bag = true) const;
+        bool IsSalvagable(bool check_bag = true, bool check_blocked_from_being_salvaged = true) const;
         bool IsHiddenFromMerchants() const;
 
         bool IsInventoryItem() const;

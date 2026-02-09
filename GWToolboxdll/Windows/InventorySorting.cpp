@@ -81,7 +81,7 @@ namespace {
         }
 
         // Fisrt 8 bits are priority, then next 8 bits is item type, then 16 bits are model_id
-        return (static_cast<uint32_t>(priority_by_type & 0xFF) << 24) | (static_cast<uint32_t>(std::to_underlying(item->type) & 0xFF) << 16) | (item->model_id & 0xFFFF);
+        return (static_cast<uint32_t>(priority_by_type & 0xFF) << 24) | (item->model_file_id & 0xffFFFF);
     }
 
     /**

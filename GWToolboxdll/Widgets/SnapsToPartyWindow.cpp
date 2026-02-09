@@ -250,7 +250,7 @@ bool SnapsToPartyWindow::RecalculatePartyPositions() {
         for (auto& hero : party->heroes) {
             if (hero.owner_player_id != player.login_number)
                 continue;
-            agent_health_bar = GW::UI::GetChildFrame(player_container, 4 + hero.agent_id);
+            agent_health_bar = GW::UI::GetChildFrame(player_container, 5 + hero.agent_id);
             if (!agent_health_bar)
                 continue;
             GetFramePosition(agent_health_bar, relative_to, &top_left, &bottom_right);

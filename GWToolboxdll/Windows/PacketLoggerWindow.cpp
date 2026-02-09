@@ -809,7 +809,7 @@ void PacketLoggerWindow::Initialize()
     ToolboxWindow::Initialize();
     GW::GameThread::Enqueue([] {
         InitStoC();
-        });
+        },true);
     if (logger_enabled) {
         logger_enabled = false;
         Enable();

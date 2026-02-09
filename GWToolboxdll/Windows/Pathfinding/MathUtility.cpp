@@ -8,55 +8,6 @@
 #include <GWCA/Context/MapContext.h>
 
 namespace MathUtil {
-    //Interception on a straight line segment. This function assumes that there are no obstacles for any agent.
-    GW::Vec2f intercept(const GW::Vec2f &chaser, const float &chaser_vel, 
-        const GW::Vec2f &target, const GW::Vec2f &direction, const float &target_vel, float radius) {
-        //aliases:
-        auto &vc = chaser_vel;
-        auto v =  direction * target_vel;
-        auto &vt = target_vel;
-        auto x = target - chaser;
-        auto &r = radius;
-
-        if (vc == 0.0f) [[unlikely]] {
-            return chaser;
-        }
-
-        float a = vc * vc - vt * vt; //vt*vt == v*v
-        float b = -2.0f * (Dot(x, v) + vt * r);
-        float c = -Dot(x, x) - 2.0f * r * Dot(x, direction) - r * r; // (r * r * Dot(v, v) / (vt * vt));
-
-        float t;
-        if (fabsf(a) < 0.001f) {
-            if (fabsf(b) < 0.0001f) {
-                return target + r * direction;
-            }
-            t = -c / b;
-            t = (std::max)(t, 0.0f);
-        }
-        else {
-            float s = b * b - 4.0f * a * c;
-            if (s < 0.0f) {
-                s = 0.0f; // return target + r * direction;
-            }
-            s = sqrtf(s);
-            a =  1.0f / (2.0f * a);
-
-            float t1 = (-b + s) * a;
-            float t2 = (-b - s) * a;
-            if (t1 > 0.0f && t2 > 0.0f) {
-                t = (std::min)(t1, t2);
-            }
-            else {
-                t = (std::max)(t1, t2);
-                t = (std::max)(t, 0.0f);
-            }  
-        }
-
-        GW::Vec2f p = x + v * t + r * direction;
-        return chaser + p;
-    }
-
     GW::Vec2f GetVec2f(const GW::Vec3f &r) {
         return { r.x, r.y };
     }
@@ -152,5 +103,14 @@ namespace MathUtil {
             return false;
 
         return onSegment(a1, b1, a2) || onSegment(a1, b2, a2) || onSegment(b1, a1, b2) || onSegment(b1, a2, b2);
+    }
+
+    float getDistanceFromLine(const GW::Vec2f& a1, const GW::Vec2f& a2, const GW::Vec2f& p)
+    {
+        auto ba = a2 - a1, pa = p - a1;
+        float h = std::clamp(Dot(pa, ba) / Dot(ba, ba), 0.0f, 1.0f);
+        auto q = pa - h * ba;
+        float d = GW::GetNorm(q);
+        return d;
     }
 }

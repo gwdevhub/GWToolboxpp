@@ -33,7 +33,7 @@ public:
     // False if still calculating current map
     static bool ReadyForPathing();
     // False if still calculating current map
-    static bool CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args = nullptr);
+    static clock_t CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args = nullptr);
 
 private:
     GW::GamePos m_saved_pos;

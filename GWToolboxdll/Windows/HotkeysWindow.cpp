@@ -47,6 +47,7 @@ namespace {
     std::unordered_map<int, std::vector<TBHotkey*>> by_instance_type;
     std::unordered_map<std::string, std::vector<TBHotkey*>> by_player_name;
     std::unordered_map<std::string, std::vector<TBHotkey*>> by_group;
+    std::vector<std::string> group_order;
 
     bool clickerActive = false;   // clicker is active or not
     bool dropCoinsActive = false; // coin dropper is active or not
@@ -144,6 +145,7 @@ namespace {
         by_instance_type.clear();
         by_player_name.clear();
         by_group.clear();
+        group_order.clear();
         for (auto* hotkey : hotkeys) {
             if (hotkey->IsValid(player_name.c_str(), instance_type, primary, map_id, is_pvp)) {
                 valid_hotkeys.push_back(hotkey);
@@ -177,6 +179,7 @@ namespace {
             }
             if (!by_group.contains(hotkey->group)) {
                 by_group[hotkey->group] = std::vector<TBHotkey*>();
+                group_order.push_back(hotkey->group);
             }
             by_group[hotkey->group].push_back(hotkey);
         }
@@ -470,14 +473,27 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
             bool these_hotkeys_changed = false;
             for (unsigned int i = 0; i < in.size(); ++i) {
                 TBHotkey::Op op = TBHotkey::Op_None;
-                these_hotkeys_changed |= in[i]->Draw(&op);
+                these_hotkeys_changed |= in[i]->Draw(&op, i == 0, i == in.size() - 1);
                 switch (op) {
                     case TBHotkey::Op_None:
                         break;
                     case TBHotkey::Op_MoveUp: {
                         const auto it = std::ranges::find(hotkeys, in[i]);
                         if (it != hotkeys.end() && it != hotkeys.begin()) {
-                            std::swap(*it, *(it - 1));
+                            auto prev = it - 1;
+                            if (group_by == GroupBy::Group) {
+                                if (strcmp((*it)->group, (*prev)->group) != 0) {
+                                    while (prev != hotkeys.begin()) {
+                                        if (strcmp((*(prev - 1))->group, (*prev)->group) != 0)
+                                            break;
+                                        --prev;
+                                    }
+                                    std::rotate(prev, it, it + 1);
+                                    these_hotkeys_changed = true;
+                                    break;
+                                }
+                            }
+                            std::swap(*it, *prev);
                             these_hotkeys_changed = true;
                         }
                     }
@@ -485,7 +501,20 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
                     case TBHotkey::Op_MoveDown: {
                         const auto it = std::ranges::find(hotkeys, in[i]);
                         if (it != hotkeys.end() && it != hotkeys.end() - 1) {
-                            std::swap(*it, *(it + 1));
+                            auto next = it + 1;
+                            if (group_by == GroupBy::Group) {
+                                if (strcmp((*it)->group, (*next)->group) != 0) {
+                                    while (next != hotkeys.end() - 1) {
+                                        if (strcmp((*(next + 1))->group, (*next)->group) != 0)
+                                            break;
+                                        ++next;
+                                    }
+                                    std::rotate(it, it + 1, next + 1);
+                                    these_hotkeys_changed = true;
+                                    break;
+                                }
+                            }
+                            std::swap(*it, *next);
                             these_hotkeys_changed = true;
                         }
                     }
@@ -507,7 +536,9 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
         };
         switch (group_by) {
             case GroupBy::Group:
-                for (auto& [group, tb_hotkeys] : by_group) {
+                for (size_t i = 0; i < group_order.size(); ++i) {
+                    const auto& group = group_order[i];
+                    auto& tb_hotkeys = by_group[group];
                     if (group == "") {
                         // No collapsing header for hotkeys without a group.
                         if (draw_hotkeys_vec(tb_hotkeys)) {
@@ -515,14 +546,95 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
                             break;
                         }
                     }
-                    else if (ImGui::CollapsingHeader(group.c_str())) {
-                        ImGui::Indent();
-                        if (draw_hotkeys_vec(tb_hotkeys)) {
+                    else {
+                        ImGui::PushID(group.c_str());
+                        bool all_active = true;
+                        for (const auto hk : tb_hotkeys) if (!hk->active) { all_active = false; break; }
+
+                        const float btn_size = ImGui::GetFrameHeight();
+                        const float spacing = ImGui::GetStyle().ItemSpacing.x;
+
+                        const std::string header_label = "[Group: " + group + "]";
+                        const bool open = ImGui::CollapsingHeader(header_label.c_str(), ImGuiTreeNodeFlags_AllowOverlap);
+                        ImGui::SameLine(ImGui::GetContentRegionAvail().x - (btn_size * 3 + spacing * 2));
+
+                        if (ImGui::Checkbox("##active", &all_active)) {
+                            for (auto* hk : tb_hotkeys) hk->active = all_active;
                             hotkeys_changed = true;
-                            ImGui::Unindent();
-                            break;
                         }
-                        ImGui::Unindent();
+                        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toggle all hotkeys in this group");
+
+                        ImGui::SameLine();
+                        if (i > 0) {
+                            if (ImGui::Button(ICON_FA_ARROW_UP "##up")) {
+                                if (!tb_hotkeys.empty()) {
+                                    auto it_first = std::ranges::find(hotkeys, tb_hotkeys.front());
+                                    const auto it_last = std::ranges::find(hotkeys, tb_hotkeys.back());
+
+                                    if (std::distance(it_first, it_last) + 1 != static_cast<ptrdiff_t>(tb_hotkeys.size())) {
+                                        Log::Error("Cannot move group: hotkeys are not contiguous in list");
+                                    }
+                                    else if (it_first != hotkeys.begin()) {
+                                        auto prev = it_first - 1;
+                                        const std::string prev_group = (*prev)->group;
+                                        while (prev != hotkeys.begin()) {
+                                            if (strcmp((*(prev - 1))->group, prev_group.c_str()) != 0)
+                                                break;
+                                            --prev;
+                                        }
+                                        std::rotate(prev, it_first, it_last + 1);
+                                        hotkeys_changed = true;
+                                        ImGui::PopID();
+                                        break;
+                                    }
+                                }
+                            }
+                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move group up");
+                        } else {
+                            ImGui::Dummy(ImVec2(btn_size, btn_size));
+                        }
+
+                        ImGui::SameLine();
+                        if (i < group_order.size() - 1) {
+                            if (ImGui::Button(ICON_FA_ARROW_DOWN "##down")) {
+                                if (!tb_hotkeys.empty()) {
+                                    const auto it_first = std::ranges::find(hotkeys, tb_hotkeys.front());
+                                    auto it_last = std::ranges::find(hotkeys, tb_hotkeys.back());
+
+                                    if (std::distance(it_first, it_last) + 1 != static_cast<ptrdiff_t>(tb_hotkeys.size())) {
+                                        Log::Error("Cannot move group: hotkeys are not contiguous in list");
+                                    }
+                                    else if (it_last != hotkeys.end() - 1) {
+                                        auto next = it_last + 1;
+                                        const std::string next_group = (*next)->group;
+                                        while (next != hotkeys.end() - 1) {
+                                            if (strcmp((*(next + 1))->group, next_group.c_str()) != 0)
+                                                break;
+                                            ++next;
+                                        }
+                                        std::rotate(it_first, it_last + 1, next + 1);
+                                        hotkeys_changed = true;
+                                        ImGui::PopID();
+                                        break;
+                                    }
+                                }
+                            }
+                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move group down");
+                        } else {
+                            ImGui::Dummy(ImVec2(btn_size, btn_size));
+                        }
+
+                        if (open) {
+                            ImGui::Indent();
+                            if (draw_hotkeys_vec(tb_hotkeys)) {
+                                hotkeys_changed = true;
+                                ImGui::Unindent();
+                                ImGui::PopID();
+                                break;
+                            }
+                            ImGui::Unindent();
+                        }
+                        ImGui::PopID();
                     }
                 }
                 break;

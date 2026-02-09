@@ -25,6 +25,7 @@
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
+#include <Color.h>
 
 namespace {
 
@@ -32,6 +33,8 @@ namespace {
     struct Build;
     std::vector<TeamBuild*> teambuilds{};
     std::vector<Build*> preferred_skill_order_builds{};
+
+    Color build_edit_pcon_enabled_color = Colors::ARGB(102, 0, 255, 0);
 
     struct Build {
 
@@ -460,35 +463,31 @@ namespace {
         delete build;
         builds_changed = true;
     }
-
+    Build* editing_build = 0;
     void DrawBuildSection(Build* build)
     {
-        auto tbuild = build->tbuild;
         const auto idx = (int)build->index();
         const float font_scale = ImGui::GetIO().FontGlobalScale;
         const float btn_width = 50.0f * font_scale;
         const float del_width = 24.0f * font_scale;
         const float spacing = ImGui::GetStyle().ItemSpacing.y;
         const float btn_offset = ImGui::GetContentRegionAvail().x - del_width - btn_width * 3 - spacing * 3;
+        const auto editing = editing_build == build;
+
         ImGui::Text("#%d", idx + 1);
-        ImGui::PushItemWidth((btn_offset - btn_width - spacing * 2) / 2);
+        ImGui::PushItemWidth(btn_offset - btn_width - spacing * 2);
         ImGui::SameLine(btn_width, 0);
         if (ImGui::InputText("###name", build->name)) {
             builds_changed = true;
         }
-        if (ImGui::IsItemHovered()&& !build->name.empty()) {
-            ImGui::SetTooltip("%s", build->name.c_str());
-        }
-        ImGui::SameLine(0, spacing);
-        if (ImGui::InputText("###code", build->code)) {
-            builds_changed = true;
-        }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip([build]() {
+                ImGui::TextUnformatted(build->name.c_str());
                 GuiUtils::DrawSkillbar(build->code.c_str());
-                });
+            });
         }
         ImGui::PopItemWidth();
+ 
         ImGui::SameLine(btn_offset);
         if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "View", ImVec2(btn_width, 0))) {
             if (ImGui::GetIO().KeyCtrl) {
@@ -509,77 +508,84 @@ namespace {
             ImGui::SetTooltip(!build->pcons.empty() ? "Click to load build template and pcons" : "Click to load build template");
         }
         ImGui::SameLine(0, spacing);
-        const bool pcons_editing = tbuild->edit_pcons == static_cast<int>(idx);
-        if (pcons_editing) {
+        if (editing) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
         }
-        if (build->pcons.empty()) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        if (ImGui::Button("Edit", ImVec2(btn_width, 0))) {
+            if (editing_build == build) {
+                editing_build = 0;
+            }
+            else {
+                editing_build = build;
+            }
         }
-        if (ImGui::Button("Pcons", ImVec2(btn_width, 0))) {
-            tbuild->edit_pcons = pcons_editing ? -1 : static_cast<int>(idx);
-        }
-        if (pcons_editing) {
-            ImGui::PopStyleColor();
-        }
-        if (build->pcons.empty()) {
+        if (editing) {
             ImGui::PopStyleColor();
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Click to modify pcons for this build");
+            ImGui::SetTooltip("Click to edit this build");
         }
         ImGui::SameLine(0, spacing);
-        if (ImGui::Button("x", ImVec2(del_width, 0))) {
-            if (delete_builds_without_prompt) {
-                OnDeleteBuildConfirmed(true, build);
-            }
-            else {
-                ImGui::ConfirmDialog("Delete Build\n\nAre you sure you want to delete this build?\nThis operation cannot be undone.", OnDeleteBuildConfirmed, build);
-            }
+        bool delete_confirmed = false;
+        if (ImGui::ConfirmButton(ICON_FA_TRASH, &delete_confirmed, "Delete Build\n\nAre you sure you want to delete this build?\nThis operation cannot be undone.")) {
+            OnDeleteBuildConfirmed(true, build);
+            return;
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Delete build");
         }
-        if (tbuild->edit_pcons != idx) {
-            return; // Not editing this build.
-        }
-        const float indent = btn_width - ImGui::GetStyle().ItemSpacing.x;
-        ImGui::Indent(indent);
-        if (ImGui::Button("Send Pcons", ImVec2(btn_width * 2, 0))) {
-            SendPcons(build, true);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Send this build's Pcons to team chat");
-        }
-        const auto& pcons = PconsWindow::Instance().pcons;
-
-        float pos_x = 0;
-        const float third_w = ImGui::GetContentRegionAvail().x / 3;
-        unsigned int offset = 0;
-        for (size_t i = 0; i < pcons.size(); i++) {
-            const auto pcon = pcons[i];
-            bool active = build->pcons.contains(pcon->ini);
-            ImGui::SameLine(indent, pos_x += third_w);
-            offset++;
-            if (i % 3 == 0) {
-                ImGui::NewLine();
-                offset = 1;
-                pos_x = 0;
-            }
-
-            char pconlabel[128];
-            snprintf(pconlabel, 128, "%s###pcon_%s", pcon->chat.c_str(), pcon->ini.c_str());
-            if (ImGui::Checkbox(pconlabel, &active)) {
-                if (active) {
-                    build->pcons.emplace(pcon->ini);
-                }
-                else {
-                    build->pcons.erase(pcon->ini);
-                }
+        if (editing) {
+            // Edit mode
+            const float indent = btn_width;
+            ImGui::Indent(indent);
+            ImGui::TextUnformatted("Build Code:");
+            ImGui::SameLine();
+            if (ImGui::InputText("###code", build->code)) {
                 builds_changed = true;
             }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip([build]() {
+                    GuiUtils::DrawSkillbar(build->code.c_str());
+                });
+            }
+            // Pcons
+            ImGui::TextUnformatted("Pcons:");
+            ImGui::ShowHelp("Enable or disable pcons that will be activated in the pcons window when this build is loaded");
+            const auto& pcons = PconsWindow::Instance().pcons;
+
+            
+            const float skill_height = ImGui::CalcTextSize(" ").y * 2.f;
+            const auto skill_size = ImVec2(skill_height, skill_height);
+            ImGui::StartSpacedElements(skill_height + ImGui::GetStyle().ItemSpacing.x);
+            for (const auto pcon : pcons) {
+                ImGui::PushID(pcon);
+                const auto active = build->pcons.contains(pcon->ini);
+                ImGui::NextSpacedElement();
+                if (active) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, build_edit_pcon_enabled_color);
+                }
+                if (ImGui::IconButton("", *pcon->GetTexture(), {skill_height, skill_height})) {
+                    if (!active) {
+                        build->pcons.emplace(pcon->ini);
+                    }
+                    else {
+                        build->pcons.erase(pcon->ini);
+                    }
+                    builds_changed = true;
+                }
+                if (active) {
+                    ImGui::PopStyleColor();
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip(pcon->chat.c_str());
+                }
+                ImGui::PopID();
+            }
+            
+            ImGui::Unindent(indent);
+
         }
-        ImGui::Unindent(indent);
+       
     }
 
     bool GetCurrentSkillBar(char* out, const size_t out_len)
@@ -903,6 +909,18 @@ void BuildsWindow::DrawSettingsInternal()
     }
 }
 
+void SetTooltipFromTeambuild(const TeamBuild* tbuild) {
+    ImGui::SetTooltip([tbuild]() {
+        for (auto build : tbuild->builds) {
+            if (build->name.empty() && build->code.empty()) continue;
+            ImGui::Spacing();
+            ImGui::TextUnformatted(build->name.c_str());
+            GuiUtils::DrawSkillbar(build->code.c_str(),false);
+            ImGui::Spacing();
+        }
+    });
+}
+
 void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
 {
     DrawPreferredSkillOrders(pDevice);
@@ -935,6 +953,9 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
                         }
                     }
                     tbuild->edit_open = !tbuild->edit_open;
+                }
+                if (ImGui::IsItemHovered()) {
+                    SetTooltipFromTeambuild(tbuild);
                 }
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.5f, 0.5f);
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
@@ -975,19 +996,29 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
                 builds_changed = true;
             }
             ImGui::PopItemWidth();
+            bool tmp_builds_changed = builds_changed;
+            builds_changed = false;
             for (const auto build : tbuild->builds) {
                 ImGui::PushID(build);
                 DrawBuildSection(build);
                 ImGui::PopID();
+                if (builds_changed) break;
             }
+            builds_changed |= tmp_builds_changed;
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
             if (ImGui::Checkbox("Show numbers", &tbuild->show_numbers)) {
                 builds_changed = true;
             }
-            ImGui::SameLine(ImGui::GetContentRegionAvail().x * 0.6f);
-            if (ImGui::Button("Add Build", ImVec2(ImGui::GetContentRegionAvail().x * 0.4f, 0))) {
+            ImGui::SameLine();
+            const auto btn_width = 140.f;
+            ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x - btn_width);
+            if (ImGui::Button("Add Build", ImVec2(btn_width, 0))) {
                 const auto b = new Build(*tbuild, "", "");
                 PrefillBuildFromAgent(GW::Agents::GetControlledCharacterId(), b);
                 tbuild->builds.push_back(b);
+                editing_build = b;
                 builds_changed = true;
             }
             if (ImGui::IsItemHovered()) {
@@ -995,7 +1026,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
             }
             ImGui::Spacing();
 
-            if (ImGui::SmallButton("Up") && i > 0) {
+            if (ImGui::Button("Up") && i > 0) {
                 std::swap(teambuilds[i - 1], teambuilds[i]);
                 builds_changed = true;
             }
@@ -1003,7 +1034,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
                 ImGui::SetTooltip("Move the teambuild up in the list");
             }
             ImGui::SameLine();
-            if (ImGui::SmallButton("Down") && i + 1 < teambuilds.size()) {
+            if (ImGui::Button("Down") && i + 1 < teambuilds.size()) {
                 std::swap(teambuilds[i], teambuilds[i + 1]);
                 builds_changed = true;
             }
@@ -1011,32 +1042,11 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
                 ImGui::SetTooltip("Move the teambuild down in the list");
             }
             ImGui::SameLine();
-            if (ImGui::SmallButton("Delete")) {
-                ImGui::OpenPopup("Delete Teambuild?");
-            }
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Delete the teambuild");
-            }
-            ImGui::SameLine(ImGui::GetContentRegionAvail().x * 0.6f);
-            if (ImGui::Button("Close", ImVec2(ImGui::GetContentRegionAvail().x * 0.4f, 0))) {
-                tbuild->edit_open = false;
-            }
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Close this window");
-            }
-
-            if (ImGui::BeginPopupModal("Delete Teambuild?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-                ImGui::Text("Are you sure?\nThis operation cannot be undone.\n\n");
-                if (ImGui::Button("OK", ImVec2(120, 0))) {
-                    delete tbuild;
-                    builds_changed = true;
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::EndPopup();
+            bool delete_tbuild = false;
+            if (ImGui::ConfirmButton("Delete", &delete_tbuild, "Delete Teambuild?\n\nAre you sure?\nThis operation cannot be undone.\n\n")) {
+                delete tbuild;
+                builds_changed = true;
+                ImGui::CloseCurrentPopup();
             }
         }
         ImGui::End();

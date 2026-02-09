@@ -74,7 +74,7 @@
 
 namespace {
 
-    DWORD mapfile = 0;
+    wchar_t mapfile[8] = {0};
     std::map<std::wstring, HallOfMonumentsAchievements*> target_achievements;
     clock_t send_timer = 0;
     uint32_t last_hovered_item_id = 0;
@@ -129,12 +129,6 @@ namespace {
         return ImGui::InputTextEx(label, nullptr, info_string, _countof(info_string), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
     }
 
-    void OnInstanceLoad(GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile* packet)
-    {
-        quoted_item_id = 0;
-        mapfile = packet->map_fileID;
-    }
-
     void GetIdsFromFileId(const uint32_t param_1, short* param_2)
     {
         param_2[1] = static_cast<short>((param_1 - 1) / 0xff00) + 0x100;
@@ -162,10 +156,7 @@ namespace {
         InfoField("Map Region", "%d", GW::Map::GetRegion());
         InfoField("Map District", "%d", GW::Map::GetDistrict());
         InfoField("Map Type", type);
-        InfoField("model_file_id", "0x%X", mapfile);
-        short file_str[8] = { 0 };
-        GetIdsFromFileId(mapfile, file_str);
-        EncInfoField("model_file_id str", (wchar_t*)file_str);
+        EncInfoField("Map File ID", mapfile);
         ImGui::ShowHelp("Map file is unique for each pathing map (e.g. used by minimap).\nMany different maps use the same map file");
         if (ImGui::TreeNodeEx("Advanced", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             const GW::AreaInfo* map_info = GW::Map::GetMapInfo(map_id);
@@ -1116,7 +1107,14 @@ namespace {
 #endif
     }
 
-
+    void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*) {
+        switch (message_id) {
+            case GW::UI::UIMessage::kLoadMapContext: {
+                const auto packet = (GW::UI::UIPacket::kLoadMapContext*)wParam;
+                wcscpy(mapfile, packet->file_name);
+            } break;
+        }
+    }
 
 }
 
@@ -1146,7 +1144,7 @@ void InfoWindow::Initialize()
                                                                         [this](GW::HookStatus*, const GW::Packet::StoC::QuotedItemPrice* packet) -> void {
                                                                             quoted_item_id = packet->itemid;
                                                                         });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, OnInstanceLoad);
+    GW::UI::RegisterUIMessageCallback(&InstanceLoadFile_Entry, GW::UI::UIMessage::kLoadMapContext, OnPostUIMessage, 0x8000);
 }
 
 void InfoWindow::Draw(IDirect3DDevice9*)

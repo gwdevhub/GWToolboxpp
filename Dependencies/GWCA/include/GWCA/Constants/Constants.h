@@ -280,7 +280,8 @@ namespace GW {
             constexpr float Area = 322.0f;
             constexpr float Earshot = 1012.0f;
             constexpr float Spellcast = 1248.0f;
-            constexpr float Spirit = 2500.0f;
+            constexpr float Spirit = 2512.0f;
+            constexpr float SpiritExtended = 3500.0f;
             constexpr float Compass = 5000.0f;
         };
 

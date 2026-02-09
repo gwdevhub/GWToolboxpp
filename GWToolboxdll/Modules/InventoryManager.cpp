@@ -2527,19 +2527,34 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
             goto end_popup;
         }
     }
-    if (context_item_actual->name_enc && *context_item_actual->name_enc && context_item_actual->IsSalvagable()) {
+    if (context_item_actual->name_enc && *context_item_actual->name_enc && context_item_actual->IsSalvagable(true,false)) {
         context_item.single_item_name->string(); // Pre-decode
-        if (ImGui::Button("Ignore this when salvaging", size)) {
+        const auto identifier = context_item_actual->name_enc;
+        bool flagged = block_from_being_salvaged.contains(identifier);
+        if (ImGui::Button(!flagged ? "Hide this when salvaging" : "Show this when salvaging", size)) {
             ImGui::CloseCurrentPopup();
-            block_from_being_salvaged[context_item_actual->name_enc] = context_item.single_item_name->string();
+            if (flagged) {
+                block_from_being_salvaged.erase(identifier);
+            }
+            else {
+                block_from_being_salvaged[identifier] = context_item.single_item_name->string();
+            }
+            
             goto end_popup;
         }
     }
     if (context_item_actual->model_id && context_item_actual->value) {
         context_item.single_item_name->string(); // Pre-decode
-        if (ImGui::Button("Hide this when selling", size)) {
+        const auto identifier = context_item_actual->model_id;
+        bool flagged = hide_from_merchant_items.contains(identifier);
+        if (ImGui::Button(!flagged ? "Hide this when selling" : "Show this when selling", size)) {
             ImGui::CloseCurrentPopup();
-            hide_from_merchant_items[context_item_actual->model_id] = context_item.single_item_name->string();
+            if (flagged) {
+                hide_from_merchant_items.erase(identifier);
+            }
+            else {
+                hide_from_merchant_items[identifier] = context_item.single_item_name->string();
+            }
             goto end_popup;
         }
     }
@@ -2707,7 +2722,7 @@ bool InventoryManager::Item::IsOldSchool() const
     return IsWeapon() && !IsPrefixUpgradable();
 }
 
-bool InventoryManager::Item::IsSalvagable(bool check_bag) const
+bool InventoryManager::Item::IsSalvagable(bool check_bag, bool check_blocked_from_being_salvaged) const
 {
     if (item_formula == 0x5da) {
         return false;
@@ -2724,7 +2739,7 @@ bool InventoryManager::Item::IsSalvagable(bool check_bag) const
     if (check_bag && bag->index + 1 == std::to_underlying(GW::Constants::Bag::Equipment_Pack)) {
         return false;
     }
-    if (name_enc && *name_enc && block_from_being_salvaged.contains(name_enc)) {
+    if (check_blocked_from_being_salvaged && name_enc && *name_enc && block_from_being_salvaged.contains(name_enc)) {
         return false;
     }
     switch (static_cast<GW::Constants::ItemType>(type)) {

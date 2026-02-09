@@ -12,7 +12,6 @@
 
 namespace {
 
-    class RecObj;
 
     struct Vec2i {
         int x = 0;
@@ -35,19 +34,27 @@ namespace {
 
     typedef uint8_t* gw_image_bits; // array of pointers to mipmap images
 
-    typedef RecObj*(__cdecl* FileIdToRecObj_pt)(const wchar_t* fileHash, int unk1_1, int unk2_0);
+    
+
+    typedef GW::RecObject*(__cdecl* OpenFileByFileId_pt)(uint32_t archive, uint32_t file_id,uint32_t stream_id, uint32_t flags, uint32_t* error_out);
+    OpenFileByFileId_pt OpenFileByFileId_func;
+
+    typedef GW::RecObject*(__cdecl* OpenFileByFilename_pt)(const wchar_t* fileHash, int unk1_1, int unk2_0);
+    OpenFileByFilename_pt OpenFileByFilename_func;
+
+    typedef GW::RecObject*(__cdecl* FileIdToRecObj_pt)(const wchar_t* fileHash, int unk1_1, int unk2_0);
     FileIdToRecObj_pt FileHashToRecObj_func;
 
-    typedef uint8_t*(__cdecl* GetRecObjectBytes_pt)(RecObj* rec, int* size_out);
+    typedef uint8_t*(__cdecl* GetRecObjectBytes_pt)(GW::RecObject* rec, int* size_out);
     GetRecObjectBytes_pt ReadFileBuffer_Func;
 
     typedef uint32_t(__cdecl* DecodeImage_pt)(int size, uint8_t* bytes, gw_image_bits* bits, uint8_t* pallete, GR_FORMAT* format, Vec2i* dims, int* levels);
     DecodeImage_pt DecodeImage_func;
 
-    typedef void(__cdecl* UnkRecObjBytes_pt)(RecObj* rec, uint8_t* bytes);
+    typedef void(__cdecl* UnkRecObjBytes_pt)(GW::RecObject* rec, uint8_t* bytes);
     UnkRecObjBytes_pt FreeFileBuffer_Func;
 
-    typedef void(__cdecl* CloseRecObj_pt)(RecObj* rec);
+    typedef void(__cdecl* CloseRecObj_pt)(GW::RecObject* rec);
     CloseRecObj_pt CloseRecObj_func;
 
     typedef gw_image_bits(__cdecl* AllocateImage_pt)(GR_FORMAT format, Vec2i* destDims, uint32_t levels, uint32_t unk2);
@@ -104,7 +111,7 @@ namespace {
             const auto anet_file = (ArenaNetFileParser::ArenaNetFile*)&asset;
             if (!anet_file->isValid())
                 return 0;
-            const auto chunk = (ArenaNetFileParser::UnknownChunk*)anet_file->FindChunk(ArenaNetFileParser::ChunkType::ATEXFILE);
+            const auto chunk = (ArenaNetFileParser::UnknownChunk*)anet_file->FindChunk(ArenaNetFileParser::ChunkType::FA3_InlineTextureDXT3);
             if (!chunk) 
                 return 0;
             image_bytes = chunk->data;
@@ -191,15 +198,23 @@ namespace {
     std::map<uint32_t,GwImg*> textures_by_file_id;
 } // namespace
 
-bool GwDatTextureModule::CloseHandle(void* handle) {
-    return handle && CloseRecObj_func ? CloseRecObj_func((RecObj*)handle), true : false;
+bool GwDatTextureModule::CloseHandle(GW::RecObject* handle) {
+    return handle && CloseRecObj_func ? CloseRecObj_func(handle), true : false;
 }
 
-bool GwDatTextureModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8_t>* bytes_out)
+bool GwDatTextureModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8_t>* bytes_out, uint32_t stream_id)
 {
     if (!(file_name && *file_name && CloseRecObj_func && FileHashToRecObj_func && FreeFileBuffer_Func)) 
         return false;
-    auto rec = FileHashToRecObj_func ? FileHashToRecObj_func(file_name, 1, 0) : 0;
+
+    uint32_t file_id = ArenaNetFileParser::FileHashToFileId(file_name);
+    GW::RecObject* rec = 0;
+    if (file_id) {
+        rec = OpenFileByFileId_func ? OpenFileByFileId_func(0, file_id, stream_id, 1, 0) : 0;
+    }
+    if (!rec) {
+        rec = FileHashToRecObj_func ? FileHashToRecObj_func(file_name, 1, 0) : 0;
+    }
     if (!rec) return false;
     int size = 0;
     const auto bytes = ReadFileBuffer_Func(rec, &size);
@@ -235,7 +250,9 @@ void GwDatTextureModule::Initialize()
         address = Scanner::FindInRange("\xe8", "x", 0, address - 1, address - 0xff);
         FreeFileBuffer_Func = (UnkRecObjBytes_pt)Scanner::FunctionFromNearCall(address);
     }
-    
+
+    OpenFileByFileId_func = (OpenFileByFileId_pt)Scanner::ToFunctionStart(Scanner::FindAssertion("File.cpp", "!(flags & (FILE_OPEN_READ | FILE_OPEN_WRITE) & ~source.m_flags)", 0, 0), 0xfff);
+
     address = (uintptr_t)DecodeImage_func;
 
 

@@ -572,7 +572,7 @@ bool Resources::Download(const std::filesystem::path& path_to_file, const std::s
     if (!fp) {
         return StrSwprintf(response, L"Failed to call fopen for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
     }
-    const auto written = fwrite(content.data(), content.size() + 1, 1, fp);
+    const auto written = fwrite(content.data(), content.size(), 1, fp);
     fclose(fp);
     if (written != 1) {
         return StrSwprintf(response, L"Failed to call fwrite for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;

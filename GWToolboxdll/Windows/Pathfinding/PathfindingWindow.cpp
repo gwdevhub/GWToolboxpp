@@ -17,8 +17,11 @@
 #include <Windows/Pathfinding/Pathing.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Modules/Resources.h>
-#include <Utils/ToolboxUtils.h>
 #include <GWCA/Context/MapContext.h>
+#include <Utils/ArenaNetFileParser.h>
+
+#include "PathingMapData.h"
+#include "PathingMapDataLoader.h"
 
 
 namespace {
@@ -26,17 +29,18 @@ namespace {
     // Returns milepath pointer for the current map, nullptr if we're not in a valid state
     Pathing::MilePath* GetMilepathForCurrentMap()
     {
-        if (!GW::Map::GetIsMapLoaded()) return nullptr;
+        //todo: maybe use bool GetIsMapReady() from other modules?
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Map::GetIsMapLoaded()) return nullptr;
         const auto mc = GW::GetMapContext();
         if (!(mc && mc->path && mc->path->staticData)) return nullptr;
 
         auto hash = static_cast<uint64_t>(mc->path->staticData->map_id);
-        hash |= ((uint64_t)mc->path->pathNodes.size()) << 32;
+        hash |= static_cast<uint64_t>(mc->path->pathNodes.size()) << 32;
 
         if (mile_paths_by_coords.contains(hash))
             return mile_paths_by_coords[hash];
 
-        auto m = new Pathing::MilePath();
+        const auto m = new Pathing::MilePath(mc);
         mile_paths_by_coords[hash] = m;
         return m;
     }
@@ -55,11 +59,7 @@ namespace {
 
     std::vector<CustomRenderer::CustomLine*> minimap_lines;
 
-    void OnMapLoaded(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
-    {
-        PathfindingWindow::ReadyForPathing();
-    }
-
+ 
     GW::GamePos* GetPlayerPos()
     {
         const auto p = GW::Agents::GetObservingAgent();
@@ -86,7 +86,7 @@ namespace {
             if (!milepath) {
                 return;
             }
-            auto tmpAstar = new Pathing::AStar(milepath);
+            const auto tmpAstar = new Pathing::AStar(milepath);
             const auto res = tmpAstar->Search(from, to);
             if (res != Pathing::Error::OK) {
                 Log::Error("Pathing failed; Pathing::Error code %d", res);
@@ -103,6 +103,55 @@ namespace {
             last_draw = 0;
             astar = tmpAstar;
         });
+    }
+
+    void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*)
+    {
+        if (status->blocked) return;
+        switch (message_id) {
+            case GW::UI::UIMessage::kLoadMapContext: {
+                [[maybe_unused]] const auto packet = static_cast<GW::UI::UIPacket::kLoadMapContext*>(wParam);
+                #ifdef _DEBUG
+                // Load from map context, but also load from the DAT - save both to JSON to review and compare the data.
+                if (packet->file_name && *packet->file_name) {
+                    const uint32_t map_file_id = ArenaNetFileParser::FileHashToFileId(packet->file_name);
+
+                    auto from_dat = new Pathing::PathingMapData();
+                    if (!Pathing::LoadPathingMapDataFromDAT(map_file_id, from_dat)) {
+                        delete from_dat;
+                        return;
+                    }
+                    auto from_context = new Pathing::PathingMapData();
+                    if (!Pathing::LoadFromMapContext(GW::GetMapContext(), map_file_id, from_context)) {
+                        delete from_dat;
+                        delete from_context;
+                        return;
+                    }
+                    Resources::EnqueueWorkerTask([from_dat, from_context]() {
+                        auto write_to = std::format(L"pathing_map_data_from_file_{:#}.json", from_dat->map_file_id);
+                        auto fp = fopen(Resources::GetPath(write_to).string().c_str(), "wb");
+                        if (fp) {
+                            const nlohmann::json json = *from_dat;
+                            const auto str = json.dump(2);
+                            fwrite(str.data(), str.size(), 1, fp);
+                            fclose(fp);
+                        }
+                        write_to = std::format(L"pathing_map_data_from_context_{:#}.json", from_context->map_file_id);
+                        fp = fopen(Resources::GetPath(write_to).string().c_str(), "wb");
+                        if (fp) {
+                            const nlohmann::json json = *from_context;
+                            const auto str = json.dump(2);
+                            fwrite(str.data(), str.size(), 1, fp);
+                            fclose(fp);
+                        }
+                        delete from_dat;
+                        delete from_context;
+                    });
+                }
+                #endif
+                PathfindingWindow::ReadyForPathing();
+            } break;
+        }
     }
 
 }
@@ -143,7 +192,7 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
         return ImGui::End();
     }
 
-    auto player = GW::Agents::GetObservingAgent();
+    const auto player = GW::Agents::GetObservingAgent();
     if (!player) {
         return ImGui::End();
     }
@@ -235,13 +284,13 @@ bool PathfindingWindow::CanTerminate()
     return true;
 }
 
-bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args)
+clock_t PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args)
 {
     if (pending_terminate)
-        return false;
+        return 0;
 
     if (!ReadyForPathing())
-        return false;
+        return 0;
 
     pending_worker_task = true;
 
@@ -253,12 +302,15 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
         const auto milepath = GetMilepathForCurrentMap();
         if (milepath && milepath->ready()) {
             auto astr = Pathing::AStar(milepath);
+
             const auto res = astr.Search(from, to);
             if (res != Pathing::Error::OK) {
                 Log::Error("Pathing failed; Pathing::Error code %d", res);
+                return;
             }
             if (!astr.m_path.ready()) {
-                Log::Error("Pathing failed; astar.m_path not ready");
+                Log::Log("Pathing failed; astar.m_path not ready");
+                return;
             }
             const auto& points = astr.m_path.points();
             auto waypoints = new std::vector<GW::GamePos>();
@@ -274,7 +326,7 @@ bool PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos
         }
         pending_worker_task = false;
     });
-    return true;
+    return TIMER_INIT();
 }
 
 void PathfindingWindow::Terminate()
@@ -292,5 +344,5 @@ void PathfindingWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 
-    GW::UI::RegisterUIMessageCallback(&gw_ui_hookentry, GW::UI::UIMessage::kLoadMapContext, OnMapLoaded, 0x4000);
+    GW::UI::RegisterUIMessageCallback(&gw_ui_hookentry, GW::UI::UIMessage::kLoadMapContext, OnUIMessage, 0x4000);
 }

@@ -36,10 +36,10 @@ The other controls are for setting up the parameters of the hotkey, and are of c
 Select a channel to send the message to, and type your message. You can use Guild Wars commands (such as `/resign` or `/stuck`), as well as Toolbox commands (such as `/pcons` or `/cam unlock`).
 
 ## Use Item
-Specify the item's Model ID and optionally a name to help you remember what the item is. This works for consumable items, including those in your Xunlai storage when you're in an outpost.
+Specify the item's Model ID [^1] and optionally a name to help you remember what the item is. This works for consumable items, including those in your Xunlai storage when you're in an outpost.
 
 ## Drop or Use Buff
-This has a dual function: if you are currently maintaining the selected enchantment, you will dismiss it. Otherwise, you will cast it on the target. You can choose from Recall, Unyielding Aura, Holy Veil, or specify a custom skill ID.
+This has a dual function: if you are currently maintaining the selected enchantment, you will dismiss it. Otherwise, you will cast it on the target. You can choose from Recall, Unyielding Aura, Holy Veil, or specify a custom skill ID [^1].
 
 ## Toggle...
 This activates and de-activates one of four features:
@@ -59,7 +59,7 @@ This triggers one of several features:
 * **Enter Challenge** activates the Enter Mission button in certain outposts.
 
 ## Target
-This automatically targets a particular pre-specified NPC, signpost, or item based on its ID.
+This automatically targets a particular pre-specified NPC, signpost, or item based on its ID[^1].
 
 ## Move to
 This will move your character to a pre-specified point on the map. You can set the coordinates and specify a range within which the hotkey will work.
@@ -84,5 +84,7 @@ This allows you to bind a hotkey to trigger a specific Guild Wars control action
 
 ## Command Pet
 This allows you to set your pet's behavior (Fight, Guard, or Avoid Combat) with a hotkey.
+
+[^1]: ID can be found using the Info Module. See Info documentation.
 
 [back](./)

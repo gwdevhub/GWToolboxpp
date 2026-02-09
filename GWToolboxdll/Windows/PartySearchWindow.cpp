@@ -281,15 +281,15 @@ void PartySearchWindow::Initialize()
     GW::StoC::RegisterPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_AGENT_DESTROY_PLAYER, OnRegionPartyUpdated);
 
     GW::StoC::RegisterPostPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_INSTANCE_LOADED, [](GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
-        Instance().refresh_parties = clock() + 2000;
+        Instance().refresh_parties = clock() + 2 * CLOCKS_PER_SEC;
     });
     refresh_parties = clock();
 }
 
 void PartySearchWindow::ClearParties()
 {
-    for (const auto& it : party_advertisements) {
-        delete it.second;
+    for (const auto& advertisement : party_advertisements | std::views::values) {
+        delete advertisement;
     }
     party_advertisements.clear();
 }

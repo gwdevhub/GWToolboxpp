@@ -287,8 +287,9 @@ namespace {
         }
 
         if (!IsValidGWCADll(gwca_dll_path, resource)) {
-            std::filesystem::remove(gwca_dll_path);
-            if (std::filesystem::exists(gwca_dll_path)) {
+            std::error_code ec;
+            std::filesystem::remove(gwca_dll_path, ec);
+            if (std::filesystem::exists(gwca_dll_path, ec)) {
                 Log::Log("[LoadGWCADll] std::filesystem::remove fail, file still exists - permission error?");
                 return nullptr;
             }
@@ -364,8 +365,10 @@ namespace {
             return false; // Not finished terminating
         }
         vec.push_back(&m);
+        Log::Log("ToggleTBModule: Initializing %s...", m.Name());
         m.Initialize();
         m.LoadSettings(GWToolbox::OpenSettingsFile());
+        Log::Log("ToggleTBModule: Initialised %s !!", m.Name());
         ReorderModules(vec);
         return true; // Added successfully
     }

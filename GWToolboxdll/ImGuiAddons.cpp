@@ -309,7 +309,7 @@ namespace ImGui {
         }
         if (BeginPopupModal(id_buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             Text(confirm_content);
-            if (Button("OK", ImVec2(120, 0))) {
+            if (Button("OK", ImVec2(120, 0)) || ImGui::IsKeyReleased(ImGuiKey_Enter)) {
                 *confirm_bool = true;
                 CloseCurrentPopup();
             }

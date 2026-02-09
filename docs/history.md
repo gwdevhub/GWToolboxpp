@@ -7,6 +7,13 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.10
+* [Fix] Fixed toolbox for gw 38127
+* [Fix] Fixed occasional incorrect path generation
+* [Fix] Fixed minimap markers not loading unless toggled on and off
+* [Minor] Adjusted spirit ranges to new patch
+* [Minor] Added support for self-hosted Kokoro TTS
+
 ## Version 8.9
 * [Fix] Fixed crash when trying to save a skillbar in-game whilst toolbox is running
 * [Fix] Fixed issues with title display/use after gw update 38106

@@ -99,12 +99,17 @@ namespace GW {
     static_assert(sizeof(PropModelInfo) == 0x18, "struct PropModelInfo has incorrect size");
 
     struct RecObject {
-        /* +h0000 */ uint32_t h0000;
-        /* +h0004 */ uint32_t h0004;
+        /* +h0000 */ void* vtable;
+        /* +h0004 */ uint32_t ref_count;
         /* +h0008 */ uint32_t accessKey; // This is used by the game to make sure the data from the DAT matches the data in game
-        // ...
+        /* +h000c */ uint32_t standalone;
+        /* +h0010 */ uint32_t file_id;
+        /* +h0014 */ uint32_t stream_id;
+        /* +h0018 */ uint32_t flags;
+        /* +h001c */ uint32_t opened;
+        /* +h0020 */ uint32_t ref_count2;
     };
-    static_assert(sizeof(RecObject) == 0xC, "struct RecObject has incorrect size");
+    static_assert(sizeof(RecObject) == 0x24, "struct RecObject has incorrect size");
 
     struct MapProp { // total: 0x54/84
         /* +h0000 */ uint32_t h0000[5];

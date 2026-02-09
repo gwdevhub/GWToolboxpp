@@ -747,16 +747,16 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
         }
         switch (agent->player_number) {
             case GW::Constants::ModelID::EoE:
-                Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_eoe);
+                Enqueue(BigCircle, agent, GW::Constants::Range::SpiritExtended, color_eoe);
                 break;
             case GW::Constants::ModelID::QZ:
-                Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_qz);
+                Enqueue(BigCircle, agent, GW::Constants::Range::SpiritExtended, color_qz);
                 break;
             case GW::Constants::ModelID::Winnowing:
-                Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_winnowing);
+                Enqueue(BigCircle, agent, GW::Constants::Range::SpiritExtended, color_winnowing);
                 break;
             case GW::Constants::ModelID::FrozenSoil:
-                Enqueue(BigCircle, agent, GW::Constants::Range::Spirit, color_frozen_soil);
+                Enqueue(BigCircle, agent, GW::Constants::Range::SpiritExtended, color_frozen_soil);
                 break;
             default:
                 break;

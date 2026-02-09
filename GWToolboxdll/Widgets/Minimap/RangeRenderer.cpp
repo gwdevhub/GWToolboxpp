@@ -23,6 +23,7 @@ void RangeRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
     color_range_aggro = Colors::Load(ini, section, "color_range_aggro", color_range_aggro);
     color_range_cast = Colors::Load(ini, section, "color_range_cast", color_range_cast);
     color_range_spirit = Colors::Load(ini, section, "color_range_spirit", color_range_spirit);
+    color_range_spirit_extended = Colors::Load(ini, section, "color_range_spirit_extended", color_range_spirit_extended);
     color_range_compass = Colors::Load(ini, section, "color_range_compass", color_range_compass);
     color_range_chain_aggro = Colors::Load(ini, section, "color_range_chain_aggro", color_range_chain_aggro);
     color_range_res_aggro = Colors::Load(ini, section, "color_range_res_aggro", color_range_res_aggro);
@@ -36,7 +37,7 @@ void RangeRenderer::LoadDefaults()
     color_range_hos = 0xFF881188;
     color_range_aggro = 0xFF994444;
     color_range_cast = 0xFF117777;
-    color_range_spirit = 0xFF337733;
+    color_range_spirit = color_range_spirit_extended = 0xFF337733;
     color_range_compass = 0xFF666611;
     color_range_chain_aggro = 0x00994444;
     color_range_res_aggro = 0x64D6D6D6;
@@ -51,6 +52,7 @@ void RangeRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
     Colors::Save(ini, section, "color_range_aggro", color_range_aggro);
     Colors::Save(ini, section, "color_range_cast", color_range_cast);
     Colors::Save(ini, section, "color_range_spirit", color_range_spirit);
+    Colors::Save(ini, section, "color_range_spirit_extended", color_range_spirit_extended);
     Colors::Save(ini, section, "color_range_compass", color_range_compass);
     ini->SetDoubleValue(section, "range_line_thickness", line_thickness);
     Colors::Save(ini, section, "color_range_chain_aggro", color_range_chain_aggro);
@@ -71,6 +73,7 @@ void RangeRenderer::DrawSettings()
     changed |= Colors::DrawSettingHueWheel("Aggro range", &color_range_aggro);
     changed |= Colors::DrawSettingHueWheel("Cast range", &color_range_cast);
     changed |= Colors::DrawSettingHueWheel("Spirit range", &color_range_spirit);
+    changed |= Colors::DrawSettingHueWheel("Extended Spirit range", &color_range_spirit_extended);
     changed |= Colors::DrawSettingHueWheel("Compass range", &color_range_compass);
     changed |= Colors::DrawSettingHueWheel("Chain Aggro range", &color_range_chain_aggro);
     changed |= Colors::DrawSettingHueWheel("Res Aggro range", &color_range_res_aggro);
@@ -127,6 +130,11 @@ void RangeRenderer::Initialize(IDirect3DDevice9* device)
     // Spirit range
     radius = GW::Constants::Range::Spirit;
     vertices += CreateCircle(vertices, radius, color_range_spirit);
+    ASSERT(vertices < vertices_max);
+
+    // Spirit extended range
+    radius = GW::Constants::Range::SpiritExtended;
+    vertices += CreateCircle(vertices, radius, color_range_spirit_extended);
     ASSERT(vertices < vertices_max);
 
     // Spellcast range
@@ -204,6 +212,10 @@ void RangeRenderer::Render(IDirect3DDevice9* device)
     vertices_offset += circle_points;
 
     // Spirit range
+    device->DrawPrimitive(type, vertices_offset, circle_triangles);
+    vertices_offset += circle_points;
+
+    // Spirit Extended range
     device->DrawPrimitive(type, vertices_offset, circle_triangles);
     vertices_offset += circle_points;
 

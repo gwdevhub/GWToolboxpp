@@ -4,7 +4,7 @@
 #include <Widgets/Minimap/VBuffer.h>
 
 class RangeRenderer : public VBuffer {
-    static constexpr size_t num_circles = 8;
+    static constexpr size_t num_circles = 9;
     static constexpr size_t circle_points = 192;
     static constexpr size_t circle_triangles = circle_points - 2;
 
@@ -38,6 +38,7 @@ private:
     Color color_range_aggro = 0;
     Color color_range_cast = 0;
     Color color_range_spirit = 0;
+    Color color_range_spirit_extended = 0;
     Color color_range_compass = 0;
     Color color_range_shadowstep_aggro = 0;
 };

@@ -119,6 +119,7 @@ namespace {
     std::string GenerateVoiceGoogle(PendingNPCAudio*);
     std::string GenerateVoicePlayHT(PendingNPCAudio* );
     std::string GenerateVoiceGWDevHub(PendingNPCAudio*);
+    std::string GenerateVoiceKokoro(PendingNPCAudio*);
 
     // Static API configurations
     APIConfig api_configs[] = {
@@ -127,6 +128,7 @@ namespace {
         {GenerateVoiceOpenAI ,"OpenAI", "https://platform.openai.com/api-keys"},
         {GenerateVoiceGoogle ,"Google Cloud", "https://console.cloud.google.com/apis/credentials", "Note: Make sure to enable the Text-to-Speech API in your Google Cloud project"},
         {GenerateVoicePlayHT ,"Play.ht", "https://elevenlabs.io/app/settings/api-keys", "Note: Play.ht requires both an API Key and User ID", true},
+        {GenerateVoiceKokoro, "Kokoro (Self-Hosted)", "https://github.com/remsky/Kokoro-FastAPI", "Enter your Kokoro-FastAPI server URL in the API Key field (default: http://localhost:8880)"},
     };
 
     // TTS Provider settings
@@ -195,15 +197,15 @@ namespace {
         ArenaNetFileParser::ArenaNetFile asset;
         if (!asset.readFromDat(file_id)) return false;
 
-        auto animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBC);
+        auto animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::BBC_FileReferences);
         if (!animations_chunk) {
-            animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBD);
+            animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::BBD_AnimationRefs);
             if (!(animations_chunk && asset.readFromDat(animations_chunk->filenames[0].filename))) return false;
-            animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::FILENAMES_BBC);
+            animations_chunk = (ArenaNetFileParser::FileNamesChunk*)asset.FindChunk(ArenaNetFileParser::ChunkType::BBC_FileReferences);
         }
         if (!(animations_chunk && asset.readFromDat(animations_chunk->filenames[0].filename))) return false;
         if (asset.getFFNAType() != 8) return false;
-        const auto soundtracks_chunk = (ArenaNetFileParser::FileNamesChunkWithoutLength*)asset.FindChunk(ArenaNetFileParser::ChunkType::SOUND_FILES_1);
+        const auto soundtracks_chunk = (ArenaNetFileParser::FileNamesChunkWithoutLength*)asset.FindChunk(ArenaNetFileParser::ChunkType::Type8_AssetRefs);
         if (!(soundtracks_chunk && soundtracks_chunk->num_filenames() > 0)) return false;
         *file_id_out = ArenaNetFileParser::FileHashToFileId(soundtracks_chunk->filenames[0].filename);
         return true;
@@ -1238,6 +1240,54 @@ namespace {
 
         if (!audio_data.empty()) {
             VoiceLog("GWDevHub voice generation successful, received %zu bytes", audio_data.size());
+        }
+        return audio_data;
+    }
+
+    std::string GenerateVoiceKokoro(PendingNPCAudio* audio)
+    {
+        if (!(audio && audio->profile)) {
+            return VoiceLog("No Audio Profile"), "";
+        }
+        const auto api_config = GetCurrentAPIConfig();
+        if (!api_config) {
+            return VoiceLog("No API config"), "";
+        }
+
+        // Uses the api_key field for the URL since none of the others have a customizable url
+        std::string base_url = *api_config->api_key ? api_config->api_key : "http://localhost:8880";
+
+        if (!base_url.empty() && base_url.back() == '/') {
+            base_url.pop_back();
+        }
+
+        nlohmann::json request_body;
+        request_body["model"] = "kokoro";
+        request_body["input"] = TextUtils::WStringToString(audio->decoded_message);
+        
+        std::string voice_name = (audio->gender == Gender::Female) ? "af_bella" : "am_adam";
+        request_body["voice"] = voice_name;
+        request_body["response_format"] = "mp3";
+        request_body["speed"] = audio->profile->speaking_rate;
+
+        // Kokoro uses single-letter language codes:
+        // a=American English, b=British English, e=Spanish, f=French, i=Italian, j=Japanese, z=Mandarin Chinese
+        std::string lang_code;
+        switch (audio->language) {
+            case GW::Constants::Language::English:            lang_code = "a"; break;
+            case GW::Constants::Language::Spanish:            lang_code = "e"; break;
+            case GW::Constants::Language::French:             lang_code = "f"; break;
+            case GW::Constants::Language::Italian:            lang_code = "i"; break;
+            case GW::Constants::Language::Japanese:           lang_code = "j"; break;
+            case GW::Constants::Language::TraditionalChinese: lang_code = "z"; break;
+            default:                                          lang_code = "a"; break;
+        }
+        request_body["lang_code"] = lang_code;
+
+        RestClient client;
+        const auto audio_data = PostJson(client, base_url + "/v1/audio/speech", request_body, api_config->name);
+        if (!audio_data.empty()) {
+            VoiceLog("Kokoro voice generation successful, received %zu bytes", audio_data.size());
         }
         return audio_data;
     }

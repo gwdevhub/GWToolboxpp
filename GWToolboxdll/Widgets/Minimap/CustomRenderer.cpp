@@ -635,7 +635,7 @@ void CustomRenderer::Initialize(IDirect3DDevice9* device)
 void CustomRenderer::Terminate()
 {
     VBuffer::Terminate();
-    for (auto l : lines) {
+    for (const auto l : lines) {
         delete l;
     }
     lines.clear();

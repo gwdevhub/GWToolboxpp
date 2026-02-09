@@ -126,7 +126,10 @@ namespace {
         clock_t calculated_at = 0;
         uint32_t current_waypoint = 0;
         GW::Constants::QuestID quest_id{};
-        bool calculating = false;
+        clock_t calculating = 0;
+        bool IsCalculating() { 
+            return calculating && TIMER_DIFF(calculating) < 5000;
+        }
 
         void ClearMinimapLines()
         {
@@ -185,7 +188,7 @@ namespace {
         {
             if (calculated_at &&
                 from == calculated_from && calculated_to == original_quest_marker) {
-                calculating = true;
+                calculating = TIMER_INIT();
                 OnQuestPathRecalculated(waypoints, (void*)quest_id); // No need to recalculate
                 return;
             }
@@ -195,20 +198,20 @@ namespace {
                 if (waypoints.size()) {
                     // Quest marker has changed to infinity; clear any current markers
                     waypoints.clear();
-                    calculating = true;
+                    calculating = TIMER_INIT();
                     OnQuestPathRecalculated(waypoints, (void*)quest_id); // No need to recalculate
                 }
                 return;
             }
             calculating = PathfindingWindow::CalculatePath(calculated_from, calculated_to, OnQuestPathRecalculated, (void*)quest_id);
-            if (!calculating) {
+            if (!IsCalculating()) {
                 calculated_at = 0;
             }
         }
 
         bool Update(const GW::GamePos& from)
         {
-            if (calculating) {
+            if (IsCalculating()) {
                 return false;
             }
             const auto quest = GetQuest();
@@ -339,7 +342,7 @@ namespace {
             }
         }
         cqp->calculated_at = TIMER_INIT();
-        cqp->calculating = false;
+        cqp->calculating = 0;
         cqp->UpdateUI();
     }
 
@@ -591,7 +594,6 @@ void QuestModule::DrawSettingsInternal()
 #endif
     if(recalc_quest_paths)
         RefreshAllQuestPaths();
-    ImGui::DragFloat("Max distance between two points##max_visibility_range", &Pathing::max_visibility_range, 1'000.f, 1'000.f, 50'000.f);
     ImGui::ShowHelp("The higher this value, the more accurate the path will be, but the more CPU it will use.");
 }
 
@@ -603,7 +605,6 @@ void QuestModule::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(draw_quest_path_on_terrain);
     LOAD_BOOL(show_paths_to_all_quests);
     using namespace Pathing;
-    LOAD_FLOAT(max_visibility_range);
     float custom_quest_marker_world_pos_x = .0f;
     float custom_quest_marker_world_pos_y = .0f;
     LOAD_FLOAT(custom_quest_marker_world_pos_x);
@@ -623,7 +624,6 @@ void QuestModule::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(draw_quest_path_on_terrain);
     SAVE_BOOL(show_paths_to_all_quests);
     using namespace Pathing;
-    SAVE_FLOAT(max_visibility_range);
     float custom_quest_marker_world_pos_x = custom_quest_marker_world_pos.x;
     float custom_quest_marker_world_pos_y = custom_quest_marker_world_pos.y;
     SAVE_FLOAT(custom_quest_marker_world_pos_x);

@@ -1474,8 +1474,10 @@ namespace {
                 if (auto_screenshot_on_title_maxed) {
                     const auto title_id = static_cast<GW::Constants::TitleID>(reinterpret_cast<uint32_t>(wParam));
                     const auto title = GW::PlayerMgr::GetTitleTrack(title_id);
+                    // @Cleanup: I don't think this behaves itself.
                     if (title && title->max_title_tier_index == title->current_title_tier_index && last_recorded_tiers.contains(title_id) && last_recorded_tiers[title_id] != title->current_title_tier_index) {
                         pending_screenshot = TIMER_INIT();
+                        last_recorded_tiers[title_id] = title->current_title_tier_index;
                     }
                 }
             } break;

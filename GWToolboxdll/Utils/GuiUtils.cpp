@@ -115,7 +115,7 @@ namespace GuiUtils {
         return max_places;
     }
 
-    void DrawSkillbar(const char* build_code) {
+    void DrawSkillbar(const char* build_code, bool show_attributes) {
         GW::SkillbarMgr::SkillTemplate skill_template;
         if (!(build_code && *build_code && GW::SkillbarMgr::DecodeSkillTemplate(skill_template, build_code)))
             return;
@@ -124,23 +124,24 @@ namespace GuiUtils {
         const float skill_height = text_size * 2.f;
         const auto skill_size = ImVec2(skill_height, skill_height);
 
-        std::string attributes_str;
+        if (show_attributes) {
+            std::string attributes_str;
 
-        size_t cnt = 0;
-        for(size_t i=0;i<_countof(skill_template.attribute_values);i++) {
-            if (!skill_template.attribute_values[i])
-                continue;
-            const auto attribute_data = GetAttributeInfo(skill_template.attribute_ids[i]);
-            const auto attribute_str = Resources::DecodeStringId(attribute_data.name_id)->string().c_str();
-            if (!attributes_str.empty())
-                attributes_str += ", ";
-            if (cnt > 0 && (cnt % 2) == 0) {
-                attributes_str += "\n";
+            size_t cnt = 0;
+            for (size_t i = 0; i < _countof(skill_template.attribute_values); i++) {
+                if (!skill_template.attribute_values[i]) continue;
+                const auto attribute_data = GetAttributeInfo(skill_template.attribute_ids[i]);
+                const auto attribute_str = Resources::DecodeStringId(attribute_data.name_id)->string().c_str();
+                if (!attributes_str.empty()) attributes_str += ", ";
+                if (cnt > 0 && (cnt % 2) == 0) {
+                    attributes_str += "\n";
+                }
+                attributes_str += std::format("{} {}", attribute_str, skill_template.attribute_values[i]);
+                cnt++;
             }
-            attributes_str += std::format("{} {}", attribute_str, skill_template.attribute_values[i]);
-            cnt++;
+            ImGui::TextUnformatted(attributes_str.c_str());
         }
-        ImGui::TextUnformatted(attributes_str.c_str());
+
 
 
         const auto primary_icon = Resources::GetProfessionIcon(skill_template.primary);

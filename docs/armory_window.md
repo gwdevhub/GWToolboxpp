@@ -19,7 +19,7 @@ The Armory Window is a powerful feature that allows you to preview all armor in 
 5. Use the color pickers to change the dye colors for each part of the armor piece.
 6. Use the campaign filter to narrow down the armor options if desired.
 
-Note that every armor piece can also be applied using a chat command. The correct command format is shown when you hover over an item in the Armory Window. For example: `/armory "Imposing Mask" 3 3 3 3`. The text in quotes is the internal armor identifier, and the four numbers after it are the dye channels applied to that piece, which together apply the selected item to your character using the specified dye color values.
+Note that every armor piece can also be applied using a chat command. The correct command format is shown when you hover over an item in the Armory Window. For example: `/armory "Imposing Mask" 3 3 3 3`. The text in quotes is the internal armor identifier, and the four numbers after it are the dye channels applied to that piece, which together apply the selected item to your character using the specified dye color values. Right click an item and press "Copy chat command" to copy the command. Note that the chat command `/armory reset` will reset to the original character outfit.
 
 ## Notes
 
@@ -27,6 +27,7 @@ Note that every armor piece can also be applied using a chat command. The correc
 - Some special armors or costumes may not be available for preview.
 - Weapon previews are currently not supported.
 - There is currently no way to keep the applied armor appearance permanently. However, you can automatically reapply it every time you zone by using the Hotkey module. See the Tips section below.
+
 
 Remember to click the "Reset" button if you want to revert all changes and return to your originally equipped armor.
 
@@ -39,7 +40,7 @@ There is currently no built‑in way to keep your previewed armor applied perman
 
 To set this up:
 
-1. Collect all the chat commands for the outfit you want to use by hovering over the items in the Armory Window. For example, as a Mesmer:
+1. Collect all the chat commands for the outfit you want to use by hovering over the items in the Armory Window.  Right click the item and press "Copy chat command" to copy the command. For example, as a Mesmer:
 ```
 /armory "Imposing Mask" 3 3 3 3
 /armory "Obsidian Attire" 3 3 12 12
@@ -56,3 +57,4 @@ To set this up:
 
 * Note that the game window must be in focus for the trigger to activate.
 * You can also group hotkeys to keep your Hotkey window organized. Refer to the Hotkey module documentation for details.
+* The armor will be reset to the original for cutscenes.

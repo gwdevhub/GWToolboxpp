@@ -130,7 +130,7 @@ struct MusicData {
     void OnCloseHandle(GW::RecObject* handle)
     {
         GW::Hook::EnterHook();
-        if (handle && handle->h0000) CloseHandle_Ret(handle);
+        if (handle && handle->vtable) CloseHandle_Ret(handle);
         GW::Hook::LeaveHook();
     }
 

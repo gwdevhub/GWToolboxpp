@@ -2,6 +2,10 @@
 
 #include <ToolboxModule.h>
 
+namespace GW {
+    struct RecObject;
+}
+
 class GwDatTextureModule : public ToolboxModule {
     GwDatTextureModule() = default;
     ~GwDatTextureModule() override = default;
@@ -21,8 +25,8 @@ public:
     
     void Terminate() override;
 
-    static bool CloseHandle(void* handle);
-    static bool ReadDatFile(const wchar_t* fileHash, std::vector<uint8_t>* bytes_out);
+    static bool CloseHandle(GW::RecObject* handle);
+    static bool ReadDatFile(const wchar_t* fileHash, std::vector<uint8_t>* bytes_out, uint32_t stream_id = 0);
 
     static IDirect3DTexture9** LoadTextureFromFileId(uint32_t file_id);
 };

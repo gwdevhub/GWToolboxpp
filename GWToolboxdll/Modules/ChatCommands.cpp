@@ -3041,14 +3041,14 @@ void GetFlaggableHeroNames(std::function<void(std::map<uint32_t, std::wstring>*)
 
 void CHAT_CMD_FUNC(ChatCommands::CmdHeroBehaviour)
 {
-    const char* syntax = "Syntax: /hero [avoid|guard|attack|target] [hero_name]";
+    const wchar_t* syntax = L"Syntax: /hero [avoid|guard|attack|target] [hero_name|hero_index]";
 
     GW::WorldContext* w = GW::GetWorldContext();
     GW::HeroFlagArray* flags = w ? &w->hero_flags : nullptr;
     if (!flags) return;
     // Argument validation
     if (argc < 2) {
-        return Log::Error(syntax);
+        return Log::ErrorW(syntax);
     }
     // set behavior based on command message
     auto behaviour = 0xff;
@@ -3066,7 +3066,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdHeroBehaviour)
         behaviour = 0xff; // target
     }
     else {
-        return Log::Error(syntax);
+        return Log::ErrorW(syntax);
     }
 
     auto flag_hero = [behaviour](uint32_t agent_id) {
@@ -3084,16 +3084,37 @@ void CHAT_CMD_FUNC(ChatCommands::CmdHeroBehaviour)
         }
         return;
     }
-    std::wstring* name_arg = new std::wstring(argv[2]);    
-    GetFlaggableHeroNames([name_arg, flag_hero](std::map<uint32_t, std::wstring>* hero_names) {
+    std::wstring hero_name = argv[2];
+    size_t hero_index = 0; // This is 1 based!
+    if (TextUtils::ParseUInt(hero_name.c_str(), &hero_index)) {
+        if (hero_index < 1 || hero_index > flags->size()) {
+            Log::ErrorW(L"Failed to find hero %d", hero_index);
+            return;
+        }
+        size_t out_index = 0;
+        for (const auto& flag : *flags) {
+            const auto hero_id = static_cast<GW::Constants::HeroID>(flag.hero_id);
+            HeroBuildsWindow::GetPartyHeroByID(hero_id, &out_index);
+            if (out_index == hero_index) {
+                flag_hero(flag.agent_id);
+                return;
+            }
+        }
+        return;
+    }
+    GetFlaggableHeroNames([hero_name, flag_hero](std::map<uint32_t, std::wstring>* hero_names) {
+        bool flagged = false;
         if (hero_names) {
             for (const auto& [agent_id, name] : *hero_names) {
-                if (name.starts_with(*name_arg)) {
+                if (name.starts_with(hero_name)) {
                     flag_hero(agent_id);
+                    flagged = true;
                 }
             }
         }
-        delete name_arg;
+        if (!flagged) {
+            Log::ErrorW(L"Failed to find hero %s", hero_name.c_str());
+        }
     });
 
 }
