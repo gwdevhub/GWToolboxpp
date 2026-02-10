@@ -1069,16 +1069,16 @@ void Minimap::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
     ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Map Rotation", &rotate_minimap);
-    ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Flip when reversed", &flip_on_reverse);
-    ImGui::ShowHelp("Whether the minimap rotation should flip 180 degrees when you reverse your camera.");
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
-    ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
-    if (!snap_to_mission_map) { // doesn't make sense to have circular map if we're snapping to the mission map, which is square
+    if (!snap_to_mission_map) {
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Map Rotation", &rotate_minimap);
+        ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Flip when reversed", &flip_on_reverse);
+        ImGui::ShowHelp("Whether the minimap rotation should flip 180 degrees when you reverse your camera.");
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
+        ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
         ImGui::NextSpacedElement();
         ImGui::Checkbox("Circular", &circular_map);
         ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
@@ -1215,6 +1215,10 @@ size_t Minimap::GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::Agen
 float Minimap::GetMapRotation() const
 {
     float yaw = 1.5708f;
+    if (snap_to_mission_map) {
+        return yaw;
+    }
+
     if (rotate_minimap) {
         yaw = smooth_rotation ? GW::CameraMgr::GetCamera()->GetCurrentYaw() : GW::CameraMgr::GetYaw();
     }
