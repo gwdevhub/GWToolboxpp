@@ -82,6 +82,7 @@ namespace {
     Vec2i size;
     float aspect_ratio;
     bool snap_to_compass = false;
+    bool set_compass_scale = false;
     bool snap_to_mission_map = false;
 
     bool mousedown = false;
@@ -478,11 +479,15 @@ namespace {
         bottom_right.y -= diff;
         bottom_right.x -= diff;
 
+        if (set_compass_scale) {
+            scale = mission_map_frame->position.GetViewportScale(GetRootFrame()).x;
+        }
+
         location = {static_cast<int>(top_left.x), static_cast<int>(top_left.y)};
 
         const ImVec2 sz = {bottom_right.x - top_left.x, bottom_right.y - top_left.y};
-        size = {static_cast<int>(sz.x), static_cast<int>(sz.y)};
-        aspect_ratio = sz.x / sz.y;
+        size = {static_cast<int>(sz.x), static_cast<int>(sz.x)};
+        aspect_ratio = 1;
 
         ImGui::SetWindowPos({static_cast<float>(location.x), static_cast<float>(location.y)});
         ImGui::SetWindowSize({static_cast<float>(size.x), static_cast<float>(size.y)});
@@ -949,8 +954,40 @@ void Minimap::DrawSettingsInternal()
 {
     constexpr auto minimap_modifier_behavior_combo_str = "Disabled\0Draw\0Target\0Move\0Walk\0\0";
 
-    if (snap_to_compass || snap_to_mission_map) {
+    is_movable = is_resizable = !snap_to_compass && !snap_to_mission_map;
+
+    if (!snap_to_mission_map) {
+        if (snap_to_compass) {
+            if (ImGui::Checkbox("Set Scale to the same as the compass", &set_compass_scale)) {
+                if (set_compass_scale) scale = mission_map_frame->position.GetViewportScale(GetRootFrame()).x;
+            }
+        }
+        if (!set_compass_scale || !snap_to_compass) {
+            ImGui::DragFloat("Scale", &scale, 0.01f, 0.1f, 10.f);
+        }
+
+
+        ImGui::Text("Config");
+        ImGui::Indent();
+        ImGui::Checkbox("Flip when reversed", &flip_on_reverse);
+        ImGui::ShowHelp("Whether the minimap rotation should flip 180 degrees when you reverse your camera.");
+
+        ImGui::Checkbox("Circular", &circular_map);
+        ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
+
+        ImGui::Checkbox("Map Rotation", &rotate_minimap);
+        ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
+        if (rotate_minimap) {
         ImGui::NextSpacedElement();
+            ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
+            ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
+        }
+        ImGui::Unindent();
+    }
+
+    ImGui::Separator();
+    ImGui::Text("Snapping");
+    if (snap_to_compass || snap_to_mission_map) {
         snap_to_mission_map = !snap_to_compass;
     }
     if (!snap_to_mission_map) {
@@ -958,6 +995,7 @@ void Minimap::DrawSettingsInternal()
             compass_position_dirty = true;
         }
         ImGui::ShowHelp("Resize and position minimap to match in-game compass size and position.");
+        if (!snap_to_compass) ImGui::NextSpacedElement();
     }
 
     if (!snap_to_compass) {
