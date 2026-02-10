@@ -193,7 +193,7 @@ namespace {
         v *= w;
 
         // translate by camera
-        v -= translation;
+        v -= GW::Vec2f(translation.x, translation.y*aspect_ratio);
 
         // scale by camera
         v /= scale;
