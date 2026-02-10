@@ -1026,7 +1026,7 @@ void Minimap::DrawSettingsInternal()
         if (ImGui::Checkbox("Compass flagging controls", &hide_flagging_controls)) {
             hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
         }
-        ImGui::ShowHelp("Takes effect on map change. Doesn't work in PvP as Toolbox is disabled there."); 
+        ImGui::ShowHelp("Takes effect on map change. Doesn't work in PvP as Toolbox is disabled there.");
         ImGui::TreePop();
     }
 

@@ -16,12 +16,7 @@
 #include <Widgets/Minimap/SymbolsRenderer.h>
 
 class Minimap final : public ToolboxWidget {
-
-
-    Minimap()
-    {
-        is_resizable = false;
-    }
+    Minimap() { is_resizable = false; }
 
     ~Minimap() override = default;
 
@@ -88,7 +83,6 @@ public:
     [[nodiscard]] static bool IsActive();
 
 private:
-
     [[nodiscard]] bool IsInside(int x, int y) const;
     // returns true if the map is visible, valid, not loading, etc
 
