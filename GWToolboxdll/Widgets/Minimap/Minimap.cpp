@@ -978,7 +978,7 @@ void Minimap::DrawSettingsInternal()
         ImGui::Checkbox("Map Rotation", &rotate_minimap);
         ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
         if (rotate_minimap) {
-        ImGui::NextSpacedElement();
+            ImGui::NextSpacedElement();
             ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
             ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
         }
@@ -1004,46 +1004,32 @@ void Minimap::DrawSettingsInternal()
         }
         ImGui::ShowHelp("Resize and position minimap to match in-game mission map size and position.");
     }
-    ImGui::Checkbox("Hide GW compass agents", &hide_compass_agents);
-    if (ImGui::Checkbox("Hide GW compass quest marker", &hide_compass_quest_marker)) {
-        pending_refresh_quest_marker = true;
-    }
-    if (ImGui::Checkbox("Hide GW mission map quest marker", &hide_mission_map_quest_marker)) {
-        pending_refresh_quest_marker = true;
-    }
-    ImGui::ShowHelp("To disable the toolbox minimap quest marker, set the quest marker color to transparent in the Symbols section below.");
-    ImGui::Checkbox("Draw all quest markers", &render_all_quests);
-    ImGui::ShowHelp("Draw quest markers for all quests in your quest log, not just the active quest");
 
-    ImGui::Checkbox("Hide GW compass drawings", &hide_compass_drawings);
-    ImGui::ShowHelp("Drawings made by other players will be visible on the minimap, but not the compass");
-    if (ImGui::Checkbox("Hide GW compass when minimap is visible", &hide_compass_when_minimap_draws)) {
-        GW::GameThread::Enqueue(OverrideCompassVisibility);
-    }
-    if (ImGui::Checkbox("Hide GW compass flagging controls", &hide_flagging_controls)) {
-        hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
-    }
-    ImGui::ShowHelp("Takes effect on map change. Doesn't work in PvP as Toolbox is disabled there.");
 
-    is_movable = is_resizable = !snap_to_compass && !snap_to_mission_map;
-    if (is_resizable) {
-        ImVec2 winsize(100.0f, 100.0f);
-        if (const auto window = ImGui::FindWindowByName(Name())) {
-            winsize = window->Size;
+    ImGui::Separator();
+    ImGui::Text("Drawing");
+    if (ImGui::TreeNodeEx("Hide GW default icons")) {
+        ImGui::Checkbox("Compass agents", &hide_compass_agents);
+        if (ImGui::Checkbox("Mission map quest marker", &hide_mission_map_quest_marker)) {
+            pending_refresh_quest_marker = true;
         }
-        if (ImGui::DragFloat("Size", &winsize.x, 1.0f, 0.0f, 0.0f, "%.0f")) {
-            winsize.y = winsize.x;
-            ImGui::SetWindowSize(Name(), winsize);
+        if (ImGui::Checkbox("Compass quest marker", &hide_compass_quest_marker)) {
+            pending_refresh_quest_marker = true;
         }
+        ImGui::ShowHelp("To disable the toolbox minimap quest marker, set the quest marker color to transparent in the Symbols section below.");
+
+        ImGui::Checkbox("Compass drawings", &hide_compass_drawings);
+        ImGui::ShowHelp("Drawings made by other players will be visible on the minimap, but not the compass");
+        if (ImGui::Checkbox("Compass when minimap is visible", &hide_compass_when_minimap_draws)) {
+            GW::GameThread::Enqueue(OverrideCompassVisibility);
+        }
+        if (ImGui::Checkbox("Compass flagging controls", &hide_flagging_controls)) {
+            hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
+        }
+        ImGui::ShowHelp("Takes effect on map change. Doesn't work in PvP as Toolbox is disabled there."); 
+        ImGui::TreePop();
     }
 
-    ImGui::Text("General");
-    if (!snap_to_mission_map) {
-        static float a = scale;
-        if (ImGui::DragFloat("Scale", &a, 0.01f, 0.1f, 10.f)) {
-            scale = a;
-        }
-    }
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
     // agent_rendered has its own TreeNodes
     agent_renderer.DrawSettings();
@@ -1082,16 +1068,19 @@ void Minimap::DrawSettingsInternal()
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);
-    ImGui::NextSpacedElement();
+
     ImGui::Checkbox("Show hidden NPCs", &agent_renderer.show_hidden_npcs);
     ImGui::ShowHelp("Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show symbol for quest NPCs", &agent_renderer.show_quest_npcs_on_minimap);
     ImGui::ShowHelp("Show a star for NPCs that have quest progress available");
 
-    ImGui::SliderFloat("Agent Border thickness", &agent_renderer.agent_border_thickness, 0.f, 100.f, "%.0f");
-    ImGui::SliderFloat("Target Border thickness", &agent_renderer.target_border_thickness, 0.f, 100.f, "%.0f");
+    ImGui::Checkbox("Show all quest markers", &render_all_quests);
+    ImGui::ShowHelp("Draw quest markers for all quests in your quest log, not just the active quest");
 
+    ImGui::Separator();
+    ImGui::Text("Controls");
+    ImGui::Indent();
     ImGui::Text("Allow mouse click-through in:");
     ImGui::Indent();
     ImGui::StartSpacedElements(200.f);
@@ -1112,24 +1101,15 @@ void Minimap::DrawSettingsInternal()
     ImGui::Combo("Shift", reinterpret_cast<int*>(&key_shift_behavior), minimap_modifier_behavior_combo_str);
     ImGui::Combo("Alt", reinterpret_cast<int*>(&key_alt_behavior), minimap_modifier_behavior_combo_str);
 
+
+    ImGui::Unindent();
+    ImGui::Separator();
+
+    ImGui::Text("Utils");
     ImGui::StartSpacedElements(256.f);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
     ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
-    if (!snap_to_mission_map) {
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Map Rotation", &rotate_minimap);
-        ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Flip when reversed", &flip_on_reverse);
-        ImGui::ShowHelp("Whether the minimap rotation should flip 180 degrees when you reverse your camera.");
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
-        ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Circular", &circular_map);
-        ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
-    }
 }
 
 void Minimap::LoadSettings(ToolboxIni* ini)
@@ -1346,8 +1326,8 @@ void Minimap::Draw(IDirect3DDevice9*)
     }
     if (mission_map_position_dirty && snap_to_mission_map) {
         if (RepositionMinimapToMissionMap()) {
-        mission_map_position_dirty = false;
-    }
+            mission_map_position_dirty = false;
+        }
     }
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(win_flags, true))) {
         // window pos are already rounded by imgui, so casting is no big deal

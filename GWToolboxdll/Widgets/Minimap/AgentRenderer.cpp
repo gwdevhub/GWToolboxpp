@@ -357,141 +357,146 @@ void AgentRenderer::LoadDefaultColors()
 
 void AgentRenderer::DrawSettings()
 {
+    if (ImGui::TreeNodeEx("Agents", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
 #ifdef _DEBUG
-    ImGui::Checkbox("Show props on minimap", &show_props_on_minimap);
+        ImGui::Checkbox("Show props on minimap", &show_props_on_minimap);
 #endif
-    if (ImGui::TreeNodeEx("Agent Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n", 
-            [&](bool result, void*) {
-            if (result) {
-                LoadDefaultColors();
-            }
+        if (ImGui::TreeNodeEx("Agent Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n", [&](bool result, void*) {
+                if (result) {
+                    LoadDefaultColors();
+                }
             });
-        Colors::DrawSettingHueWheel("EoE", &color_eoe);
-        ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
-        Colors::DrawSettingHueWheel("QZ", &color_qz);
-        ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
-        Colors::DrawSettingHueWheel("Winnowing", &color_winnowing, 0);
-        ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
-        Colors::DrawSettingHueWheel("Frozen Soil", &color_frozen_soil, 0);
-        ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
-        Colors::DrawSettingHueWheel("Target", &color_target);
-        Colors::DrawSettingHueWheel("Player (alive)", &color_player);
-        Colors::DrawSettingHueWheel("Player (dead)", &color_player_dead);
-        Colors::DrawSettingHueWheel("Signpost", &color_signpost);
-        Colors::DrawSettingHueWheel("Item", &color_item);
-        Colors::DrawSettingHueWheel("Hostile (>90% HP)", &color_hostile);
-        Colors::DrawSettingHueWheel("Hostile (dead)", &color_hostile_dead);
-        Colors::DrawSettingHueWheel("Neutral", &color_neutral);
-        Colors::DrawSettingHueWheel("Ally (player)", &color_ally);
-        Colors::DrawSettingHueWheel("Ally (NPC)", &color_ally_npc);
-        Colors::DrawSettingHueWheel("Ally (NPC Quest Giver)", &color_ally_npc_quest);
-        Colors::DrawSettingHueWheel("Ally (spirit)", &color_ally_spirit);
-        Colors::DrawSettingHueWheel("Ally (minion)", &color_ally_minion);
-        Colors::DrawSettingHueWheel("Ally (dead)", &color_ally_dead);
-        Colors::DrawSettingHueWheel("Agent modifier", &color_agent_modifier);
-        ImGui::ShowHelp("Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded.");
-        Colors::DrawSettingHueWheel("Agent damaged modifier", &color_agent_damaged_modifier);
-        ImGui::ShowHelp("Each hostile agent has this value subtracted from it when under 90% HP.");
-        Colors::DrawSettingHueWheel("Marked Target", &color_marked_target);
-        ImGui::ShowHelp("Agents highlighted as marked target via /marktarget command");
-        ImGui::TreePop();
-    }
+            Colors::DrawSettingHueWheel("EoE", &color_eoe);
+            ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
+            Colors::DrawSettingHueWheel("QZ", &color_qz);
+            ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
+            Colors::DrawSettingHueWheel("Winnowing", &color_winnowing, 0);
+            ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
+            Colors::DrawSettingHueWheel("Frozen Soil", &color_frozen_soil, 0);
+            ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
+            Colors::DrawSettingHueWheel("Target", &color_target);
+            Colors::DrawSettingHueWheel("Player (alive)", &color_player);
+            Colors::DrawSettingHueWheel("Player (dead)", &color_player_dead);
+            Colors::DrawSettingHueWheel("Signpost", &color_signpost);
+            Colors::DrawSettingHueWheel("Item", &color_item);
+            Colors::DrawSettingHueWheel("Hostile (>90% HP)", &color_hostile);
+            Colors::DrawSettingHueWheel("Hostile (dead)", &color_hostile_dead);
+            Colors::DrawSettingHueWheel("Neutral", &color_neutral);
+            Colors::DrawSettingHueWheel("Ally (player)", &color_ally);
+            Colors::DrawSettingHueWheel("Ally (NPC)", &color_ally_npc);
+            Colors::DrawSettingHueWheel("Ally (NPC Quest Giver)", &color_ally_npc_quest);
+            Colors::DrawSettingHueWheel("Ally (spirit)", &color_ally_spirit);
+            Colors::DrawSettingHueWheel("Ally (minion)", &color_ally_minion);
+            Colors::DrawSettingHueWheel("Ally (dead)", &color_ally_dead);
+            Colors::DrawSettingHueWheel("Agent modifier", &color_agent_modifier);
+            ImGui::ShowHelp("Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded.");
+            Colors::DrawSettingHueWheel("Agent damaged modifier", &color_agent_damaged_modifier);
+            ImGui::ShowHelp("Each hostile agent has this value subtracted from it when under 90% HP.");
+            Colors::DrawSettingHueWheel("Marked Target", &color_marked_target);
+            ImGui::ShowHelp("Agents highlighted as marked target via /marktarget command");
+            ImGui::TreePop();
+        }
 
-    if (ImGui::TreeNodeEx("Agent Sizes", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n",
-            [&](const bool result, void*) {
+        if (ImGui::TreeNodeEx("Agent Sizes", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n", [&](const bool result, void*) {
                 if (result) {
                     LoadDefaultSizes();
                 }
             });
-        ImGui::DragFloat("Default Size", &size_default, 1.0f, 1.0f, 0.0f, "%.0f");
-        ImGui::DragFloat("Player Size", &size_player, 1.0f, 1.0f, 0.0f, "%.0f");
-        ImGui::DragFloat("Signpost Size", &size_signpost, 1.0f, 1.0f, 0.0f, "%.0f");
-        ImGui::DragFloat("Item Size", &size_item, 1.0f, 1.0f, 0.0f, "%.0f");
-        ImGui::DragFloat("Boss Size", &size_boss, 1.0f, 1.0f, 0.0f, "%.0f");
-        ImGui::DragFloat("Minion Size", &size_minion, 1.0f, 1.0f, 0.0f, "%.0f");
-        ImGui::DragFloat("Marked Target Size", &size_marked_target, 1.0f, 1.0f, 0.0f, "%.0f");
-        ImGui::ShowHelp("Agents highlighted as marked target via /marktarget command");
-        static std::array items = {"Tear", "Circle", "Square", "Big Circle"};
-        ImGui::Combo("Default Shape", reinterpret_cast<int*>(&default_shape), items.data(), items.size());
-        ImGui::Combo("Player Shape", reinterpret_cast<int*>(&shape_player), items.data(), items.size());
-        ImGui::Combo("Other Player Shape", reinterpret_cast<int*>(&shape_players), items.data(), items.size());
-        ImGui::ShowHelp("The default shape of agents.");
+            ImGui::DragFloat("Default Size", &size_default, 1.0f, 1.0f, 0.0f, "%.0f");
+            ImGui::DragFloat("Player Size", &size_player, 1.0f, 1.0f, 0.0f, "%.0f");
+            ImGui::DragFloat("Signpost Size", &size_signpost, 1.0f, 1.0f, 0.0f, "%.0f");
+            ImGui::DragFloat("Item Size", &size_item, 1.0f, 1.0f, 0.0f, "%.0f");
+            ImGui::DragFloat("Boss Size", &size_boss, 1.0f, 1.0f, 0.0f, "%.0f");
+            ImGui::DragFloat("Minion Size", &size_minion, 1.0f, 1.0f, 0.0f, "%.0f");
+            ImGui::DragFloat("Marked Target Size", &size_marked_target, 1.0f, 1.0f, 0.0f, "%.0f");
+            ImGui::ShowHelp("Agents highlighted as marked target via /marktarget command");
+            static std::array items = {"Tear", "Circle", "Square", "Big Circle"};
+            ImGui::Combo("Default Shape", reinterpret_cast<int*>(&default_shape), items.data(), items.size());
+            ImGui::Combo("Player Shape", reinterpret_cast<int*>(&shape_player), items.data(), items.size());
+            ImGui::Combo("Other Player Shape", reinterpret_cast<int*>(&shape_players), items.data(), items.size());
+            ImGui::ShowHelp("The default shape of agents.");
 
-        ImGui::TreePop();
-    }
+            ImGui::TreePop();
+        }
 
-    if (ImGui::TreeNodeEx("Custom Agents", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        bool changed = false;
-        for (unsigned i = 0; i < custom_agents.size(); ++i) {
-            CustomAgent* custom = custom_agents[i];
-            if (!custom) {
-                continue;
-            }
-
-            ImGui::PushID(static_cast<int>(custom->ui_id));
-
-            auto op = CustomAgent::Operation::None;
-            if (custom->DrawSettings(op)) {
-                changed = true;
-            }
-
-            ImGui::PopID();
-
-            switch (op) {
-                case CustomAgent::Operation::None:
-                    break;
-                case CustomAgent::Operation::MoveUp:
-                    if (i > 0) {
-                        std::swap(custom_agents[i], custom_agents[i - 1]);
-                    }
-                    break;
-                case CustomAgent::Operation::MoveDown:
-                    if (i < custom_agents.size() - 1) {
-                        std::swap(custom_agents[i], custom_agents[i + 1]);
-                        // render the moved one and increase i
-                        ++i;
-                        ImGui::PushID(static_cast<int>(custom_agents[i]->ui_id));
-                        auto op2 = CustomAgent::Operation::None;
-                        custom_agents[i]->DrawSettings(op2);
-                        ImGui::PopID();
-                    }
-                    break;
-                case CustomAgent::Operation::Delete:
-                    custom_agents.erase(custom_agents.begin() + static_cast<int>(i));
-                    delete custom;
-                    --i;
-                    break;
-                case CustomAgent::Operation::ModelIdChange: {
-                    changed = true;
-                    break;
+        if (ImGui::TreeNodeEx("Custom Agents", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            bool changed = false;
+            for (unsigned i = 0; i < custom_agents.size(); ++i) {
+                CustomAgent* custom = custom_agents[i];
+                if (!custom) {
+                    continue;
                 }
-                default:
-                    break;
-            }
 
-            switch (op) {
-                case CustomAgent::Operation::MoveUp:
-                case CustomAgent::Operation::MoveDown:
-                case CustomAgent::Operation::Delete:
-                    for (size_t j = 0; j < custom_agents.size(); ++j) {
-                        custom_agents[j]->index = j;
-                    }
+                ImGui::PushID(static_cast<int>(custom->ui_id));
+
+                auto op = CustomAgent::Operation::None;
+                if (custom->DrawSettings(op)) {
                     changed = true;
-                default:
-                    break;
+                }
+
+                ImGui::PopID();
+
+                switch (op) {
+                    case CustomAgent::Operation::None:
+                        break;
+                    case CustomAgent::Operation::MoveUp:
+                        if (i > 0) {
+                            std::swap(custom_agents[i], custom_agents[i - 1]);
+                        }
+                        break;
+                    case CustomAgent::Operation::MoveDown:
+                        if (i < custom_agents.size() - 1) {
+                            std::swap(custom_agents[i], custom_agents[i + 1]);
+                            // render the moved one and increase i
+                            ++i;
+                            ImGui::PushID(static_cast<int>(custom_agents[i]->ui_id));
+                            auto op2 = CustomAgent::Operation::None;
+                            custom_agents[i]->DrawSettings(op2);
+                            ImGui::PopID();
+                        }
+                        break;
+                    case CustomAgent::Operation::Delete:
+                        custom_agents.erase(custom_agents.begin() + static_cast<int>(i));
+                        delete custom;
+                        --i;
+                        break;
+                    case CustomAgent::Operation::ModelIdChange: {
+                        changed = true;
+                        break;
+                    }
+                    default:
+                        break;
+                }
+
+                switch (op) {
+                    case CustomAgent::Operation::MoveUp:
+                    case CustomAgent::Operation::MoveDown:
+                    case CustomAgent::Operation::Delete:
+                        for (size_t j = 0; j < custom_agents.size(); ++j) {
+                            custom_agents[j]->index = j;
+                        }
+                        changed = true;
+                    default:
+                        break;
+                }
             }
+            if (changed) {
+                agentcolors_changed = true;
+                BuildCustomAgentsMap();
+            }
+            if (ImGui::Button("Add Agent Custom Color")) {
+                custom_agents.push_back(new CustomAgent(0, color_hostile, "<name>"));
+                custom_agents.back()->index = custom_agents.size() - 1;
+                agentcolors_changed = true;
+            }
+            ImGui::TreePop();
         }
-        if (changed) {
-            agentcolors_changed = true;
-            BuildCustomAgentsMap();
-        }
-        if (ImGui::Button("Add Agent Custom Color")) {
-            custom_agents.push_back(new CustomAgent(0, color_hostile, "<name>"));
-            custom_agents.back()->index = custom_agents.size() - 1;
-            agentcolors_changed = true;
-        }
+
+        ImGui::SliderFloat("Agent Border thickness", &agent_border_thickness, 0.f, 100.f, "%.0f");
+        ImGui::SliderFloat("Target Border thickness", &target_border_thickness, 0.f, 100.f, "%.0f");
+
         ImGui::TreePop();
     }
 }
