@@ -263,7 +263,7 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     world = translate;
     device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
 
-    if (Minimap::ShouldDrawNorthMarker()) {
+    if (!Minimap::IsDrawnOnMissionMap()) {
         device->DrawPrimitive(type, north_offset, north_ntriangles);
     }
 }

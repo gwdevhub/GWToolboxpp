@@ -82,7 +82,7 @@ public:
 
     static bool ShouldMarkersDrawOnMap();
     static bool ShouldDrawAllQuests();
-    static bool ShouldDrawNorthMarker();
+    static bool IsDrawnOnMissionMap();
     static void Render(IDirect3DDevice9* device);
 
     [[nodiscard]] static bool IsActive();

@@ -154,7 +154,7 @@ namespace {
                 );
                 l->from_player_pos = i == start_idx;
                 l->draw_on_terrain = draw_quest_path_on_terrain;
-                l->draw_on_minimap = draw_quest_path_on_minimap;
+                l->draw_on_minimap = draw_quest_path_on_minimap && !Minimap::IsDrawnOnMissionMap();
                 l->draw_on_mission_map = draw_quest_path_on_mission_map;
                 l->created_by_toolbox = true;
                 l->color = QuestModule::GetQuestLineColor(quest_id);
@@ -587,7 +587,9 @@ void QuestModule::DrawSettingsInternal()
     ImGui::Text("Draw path to quest marker on:");
     bool recalc_quest_paths = false;
     recalc_quest_paths |= ImGui::Checkbox("Terrain##terrianquestpath", &draw_quest_path_on_terrain);
-    recalc_quest_paths |= ImGui::Checkbox("Minimap##minimapquestpath", &draw_quest_path_on_minimap);
+    if (!Minimap::IsDrawnOnMissionMap()) {
+        recalc_quest_paths |= ImGui::Checkbox("Minimap##minimapquestpath", &draw_quest_path_on_minimap);
+    } 
     recalc_quest_paths |= ImGui::Checkbox("Mission Map##missionmapquestpath", &draw_quest_path_on_mission_map);
 #ifdef _DEBUG
     recalc_quest_paths |= ImGui::Checkbox("Show paths to all quests##drawallquestpaths", &show_paths_to_all_quests);

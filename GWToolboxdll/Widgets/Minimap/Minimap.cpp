@@ -194,7 +194,7 @@ namespace {
         v *= w;
 
         // translate by camera
-        v -= GW::Vec2f(translation.x, translation.y*aspect_ratio);
+        v -= GW::Vec2f(translation.x, translation.y * aspect_ratio);
 
         // scale by camera
         v /= scale;
@@ -1413,10 +1413,10 @@ bool Minimap::ShouldDrawAllQuests()
     return render_all_quests;
 }
 
-bool Minimap::ShouldDrawNorthMarker()
+bool Minimap::IsDrawnOnMissionMap()
 {
-    // The mission map is already north-up, so no need for a marker.
-    return !snap_to_mission_map;
+    // Things like the North marker or the quest lines are redundant if drawn on the mission map and minimap
+    return snap_to_mission_map && IsActive();
 }
 
 void Minimap::Render(IDirect3DDevice9* device)
