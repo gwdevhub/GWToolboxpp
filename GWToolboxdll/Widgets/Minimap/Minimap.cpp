@@ -98,6 +98,7 @@ namespace {
 
     Vec2i location;
     Vec2i size;
+    float aspect_ratio;
     bool snap_to_compass = false;
     bool snap_to_mission_map = false;
 
@@ -110,6 +111,7 @@ namespace {
     Vec2i drag_start;
     GW::Vec2f translation;
     float scale = 0.f;
+    float viewport_scale = 0.f;
 
     // vars for minimap movement
     clock_t last_moved = 0;
@@ -198,11 +200,10 @@ namespace {
 
         // Invert viewport projection
         v.x = v.x - static_cast<float>(location.x);
-        v.y = static_cast<float>(location.y) - v.y;
+        v.y = static_cast<float>(location.y) - v.y; 
 
-        // go from [0, width][0, height] to [-1, 1][-1, 1]
         v.x = 2.0f * v.x / static_cast<float>(size.x) - 1.0f;
-        v.y = 2.0f * v.y / static_cast<float>(size.x) + 1.0f;
+        v.y = 2.0f * v.y / static_cast<float>(size.y) + 1.0f;
 
         // scale up to [-w, w]
         constexpr float w = 5000.0f;
@@ -213,6 +214,7 @@ namespace {
 
         // scale by camera
         v /= scale;
+        v.y /= aspect_ratio;
 
         // rotate by current camera rotation
         const float angle = Minimap::Instance().GetMapRotation() - DirectX::XM_PIDIV2;
@@ -235,7 +237,7 @@ namespace {
 
         // go from [0, width][0, height] to [-1, 1][-1, 1]
         v.x = 2.0f * v.x / static_cast<float>(size.x);
-        v.y = 2.0f * v.y / static_cast<float>(size.x);
+        v.y = 2.0f * v.y / static_cast<float>(size.y);
 
         // scale up to [-w, w]
         constexpr float w = 5000.0f;
@@ -279,6 +281,7 @@ namespace {
     }
     bool ResetWindowPosition(GW::UI::WindowID, GW::UI::Frame*);
     bool RepositionMinimapToCompass();
+    float GetMissionMapScale();
     bool RepositionMinimapToMissionMap();
 
 
@@ -502,38 +505,38 @@ namespace {
 
         const ImVec2 sz = {bottom_right.x - top_left.x, bottom_right.y - top_left.y};
         size = {static_cast<int>(sz.x), static_cast<int>(sz.y)};
+        aspect_ratio = sz.x / sz.y;
 
         ImGui::SetWindowPos({static_cast<float>(location.x), static_cast<float>(location.y)});
         ImGui::SetWindowSize({static_cast<float>(size.x), static_cast<float>(size.y)});
         return true;
     }
 
+    float GetMissionMapScale()
+    {
+        const auto root = GetRootFrame();
+        const auto gameplay_context = GW::GetGameplayContext();
+        return gameplay_context->mission_map_zoom * mission_map_frame->position.GetViewportScale(root).x;
+    }
+
+
     bool RepositionMinimapToMissionMap()
     {
         if (!snap_to_mission_map) return false;
         const auto frame = GetMissionMapFrame();
         if (!frame) return false;
-        const auto gameplay_context = GW::GetGameplayContext();
         const auto root = GetRootFrame();
-        auto top_left = frame->position.GetContentTopLeft(root);
-        auto bottom_right = frame->position.GetContentBottomRight(root);
-        scale = gameplay_context->mission_map_zoom/6.8f;
+        const auto top_left = frame->position.GetContentTopLeft(root);
+        const auto bottom_right = frame->position.GetContentBottomRight(root);
 
-        /* const auto height = (bottom_right.y - top_left.y);
-
-        top_left.y += height;
-        top_left.x += height;   
-        bottom_right.y -= height;
-        bottom_right.x -= height;*/
-
-        /* const auto pan_offset = mission_map_context->h003c->mission_map_pan_offset;
-        translation.x = pan_offset.x;
-        translation.y = pan_offset.y;*/
+        const auto mission_map_scale = GetMissionMapScale();
+        scale = mission_map_scale / viewport_scale * 0.0304f; // Not sure why 0.0304 fits nicely, probably the relationship between map -> GWinches -> minimap rendering
 
         location = {static_cast<int>(top_left.x), static_cast<int>(top_left.y)};
 
         const ImVec2 sz = {bottom_right.x - top_left.x, bottom_right.y - top_left.y};
         size = {static_cast<int>(sz.x), static_cast<int>(sz.y)};
+        aspect_ratio = sz.x / sz.y;
 
         ImGui::SetWindowPos({static_cast<float>(location.x), static_cast<float>(location.y)});
         ImGui::SetWindowSize({static_cast<float>(size.x), static_cast<float>(size.y)});
@@ -979,6 +982,7 @@ void Minimap::DrawSettingsInternal()
 
     if (snap_to_compass || snap_to_mission_map) {
         ImGui::NextSpacedElement();
+        snap_to_mission_map = !snap_to_compass;
     }
     if (!snap_to_mission_map) {
         if (ImGui::Checkbox("Snap to GW compass", &snap_to_compass)) {
@@ -1024,9 +1028,11 @@ void Minimap::DrawSettingsInternal()
     }
 
     ImGui::Text("General");
-    static float a = scale;
-    if (ImGui::DragFloat("Scale", &a, 0.01f, 0.1f, 10.f)) {
-        scale = a;
+    if (!snap_to_mission_map) {
+        static float a = scale;
+        if (ImGui::DragFloat("Scale", &a, 0.01f, 0.1f, 10.f)) {
+            scale = a;
+        }
     }
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
     // agent_rendered has its own TreeNodes
@@ -1270,7 +1276,7 @@ void Minimap::Draw(IDirect3DDevice9*)
     }
 
     const GW::Agent* me = GW::Agents::GetObservingAgent();
-    if (me == nullptr) {
+    if (me == nullptr) { 
         return;
     }
 
@@ -1297,14 +1303,10 @@ void Minimap::Draw(IDirect3DDevice9*)
     
     if (snap_to_mission_map && mission_map_context) {
         const auto offset = mission_map_context->h003c->mission_map_pan_offset - mission_map_context->player_mission_map_pos;
-        const auto mission_map_scale = mission_map_frame->position.GetViewportScale(GetRootFrame());
-        translation = GW::Vec2f(-offset.x, offset.y);
+        const auto mission_map_scale = GetMissionMapScale();
+        translation = GW::Vec2f(-offset.x, offset.y) * mission_map_scale / viewport_scale / 0.343f; // Once again, not sure why 0.343 is the magic number here, but it is.
 
-       /* const auto offset = (world_map_position - current_pan_offset);
-        const auto scaled_offset = GW::Vec2f(offset.x * mission_map_scale.x, offset.y * mission_map_scale.y);
-        screen_coords = (scaled_offset * mission_map_zoom + mission_map_screen_pos);*/
-
-    }else if ((translation.x != 0 || translation.y != 0) && (me->move_x != 0 || me->move_y != 0) && TIMER_DIFF(last_moved) > ms_before_back) {
+    }else if ((translation.x != 0 || translation.y != 0) && (me->move_x != 0 || me->move_y != 0) && TIMER_DIFF(last_moved) > ms_before_back) { 
         const GW::Vec2f v(translation.x, translation.y);
         const auto speed = std::min(static_cast<float>(TIMER_DIFF(last_moved) - ms_before_back) * acceleration, 500.0f);
         GW::Vec2f d = v;
@@ -1443,7 +1445,7 @@ void Minimap::Render(IDirect3DDevice9* device)
 {
     if (pending_refresh_quest_marker && RefreshQuestMarker())
         pending_refresh_quest_marker = false;
-    if (!IsActive()) {
+    if (!IsActive() || (snap_to_mission_map && !mission_map_context)  ) {
         return;
     }
 
@@ -1569,13 +1571,21 @@ void Minimap::Render(IDirect3DDevice9* device)
     instance.range_renderer.Render(device);
     device->SetTransform(D3DTS_WORLD, &reset_world);
 
-    if (translation.x != 0 || translation.y != 0) {
-        const auto view2 = scaleM;
-        device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view2));
-        instance.range_renderer.SetDrawCenter(true);
-        instance.range_renderer.Render(device);
-        instance.range_renderer.SetDrawCenter(false);
-        device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view));
+    if (translation.x != 0 || translation.y != 0)
+    {
+        bool draw = true;
+        if (snap_to_mission_map && mission_map_context) {
+            const float distance_to_player = GetDistance(mission_map_context->h003c->mission_map_pan_offset, mission_map_context->h003c->player_mission_map_pos);
+            draw = distance_to_player > 7.5f;
+        }
+        if (draw) {
+            const auto view2 = scaleM;
+            device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view2));  
+            instance.range_renderer.SetDrawCenter(true);
+            instance.range_renderer.Render(device);
+            instance.range_renderer.SetDrawCenter(false);
+            device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view));
+        }
     }
 
     instance.symbols_renderer.Render(device);
@@ -1663,6 +1673,11 @@ bool Minimap::WndProc(const UINT Message, const WPARAM wParam, const LPARAM lPar
     if (mouse_clickthrough_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         if (!IsKeyDown(MinimapModifierBehaviour::Target) && !IsKeyDown(MinimapModifierBehaviour::Walk) &&
             !IsKeyDown(MinimapModifierBehaviour::Move)) {
+            return false;
+        }
+    }
+    if (snap_to_mission_map) {
+        if (!IsKeyDown(MinimapModifierBehaviour::Target) && !IsKeyDown(MinimapModifierBehaviour::Walk) && !IsKeyDown(MinimapModifierBehaviour::Draw)) {
             return false;
         }
     }
@@ -1824,7 +1839,7 @@ bool Minimap::OnMouseMove(const UINT, const WPARAM, const LPARAM lParam)
         return true;
     }
 
-    if (IsKeyDown(MinimapModifierBehaviour::Move)) {
+    if (IsKeyDown(MinimapModifierBehaviour::Move) && !snap_to_mission_map) {
         const auto diff = Vec2i(x - drag_start.x, y - drag_start.y);
         translation += InterfaceToWorldVector(diff);
         drag_start = Vec2i(x, y);
@@ -1850,7 +1865,7 @@ bool Minimap::OnMouseWheel(const UINT, const WPARAM wParam, const LPARAM)
 
     const int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
 
-    if (IsKeyDown(MinimapModifierBehaviour::Move)) {
+    if (IsKeyDown(MinimapModifierBehaviour::Move) && !snap_to_mission_map) {
         const float delta = zDelta > 0 ? 1.024f : 0.9765625f;
         scale *= delta;
         return true;
@@ -1916,9 +1931,11 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9* device)
     const float xscale = static_cast<float>(size.x) / width_f;
     const float yscale = static_cast<float>(size.x) / height_f;
     const float xtrans = static_cast<float>(location.x * 2 + size.x) / width_f - 1.0f;
-    const float ytrans = -static_cast<float>(location.y * 2 + size.x) / height_f + 1.0f;
+    const float ytrans = -static_cast<float>(location.y * 2 + size.y) / height_f + 1.0f;
     ////IMPORTANT: we are basically setting z-near to 0 and z-far to 1
     const DirectX::XMMATRIX viewport_matrix(xscale, 0, 0, 0, 0, yscale, 0, 0, 0, 0, 1, 0, xtrans, ytrans, 0, 1);
+
+    viewport_scale = xscale;
 
     const auto proj = ortho_matrix * viewport_matrix;
 
