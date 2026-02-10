@@ -123,6 +123,7 @@ namespace {
     bool hide_compass_agents = false;
     bool hide_compass_drawings = false;
     bool hide_compass_quest_marker = false;
+    bool hide_mission_map_quest_marker = false;
     bool render_all_quests = false;
 
     bool in_interface_settings = false;
@@ -407,11 +408,16 @@ namespace {
             case GW::UI::UIMessage::kClientActiveQuestChanged:
             case GW::UI::UIMessage::kServerActiveQuestChanged:
             case GW::UI::UIMessage::kUnknownQuestRelated: {
-                const auto prev = message->message_id;
-                message->message_id = GW::UI::UIMessage::kQuestRemoved;
-                OnMissionMapFrame_UICallback_Ret(message, wParam, lParam);
-                message->message_id = prev;
-                break;
+                if (!hide_mission_map_quest_marker) {
+                    OnMissionMapFrame_UICallback_Ret(message, wParam, lParam);
+                }
+                else {
+                    const auto prev = message->message_id;
+                    message->message_id = GW::UI::UIMessage::kQuestRemoved;
+                    OnMissionMapFrame_UICallback_Ret(message, wParam, lParam);
+                    message->message_id = prev;
+                    break;
+                }
             }
             default:
                 OnMissionMapFrame_UICallback_Ret(message, wParam, lParam);
@@ -964,6 +970,9 @@ void Minimap::DrawSettingsInternal()
     if (ImGui::Checkbox("Hide GW compass quest marker", &hide_compass_quest_marker)) {
         pending_refresh_quest_marker = true;
     }
+    if (ImGui::Checkbox("Hide GW mission map quest marker", &hide_mission_map_quest_marker)) {
+        pending_refresh_quest_marker = true;
+    }
     ImGui::ShowHelp("To disable the toolbox minimap quest marker, set the quest marker color to transparent in the Symbols section below.");
     ImGui::Checkbox("Draw all quest markers", &render_all_quests);
     ImGui::ShowHelp("Draw quest markers for all quests in your quest log, not just the active quest");
@@ -1111,6 +1120,7 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(hide_compass_agents);
     LOAD_BOOL(render_all_quests);
     LOAD_BOOL(hide_compass_quest_marker);
+    LOAD_BOOL(hide_mission_map_quest_marker);
     LOAD_BOOL(hide_compass_drawings);
     LOAD_BOOL(hide_flagging_controls);
     LOAD_BOOL(hide_compass_when_minimap_draws);
@@ -1156,6 +1166,7 @@ void Minimap::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(snap_to_mission_map);
     SAVE_BOOL(hide_compass_agents);
     SAVE_BOOL(hide_compass_quest_marker);
+    SAVE_BOOL(hide_mission_map_quest_marker);
     SAVE_BOOL(hide_compass_drawings);
     SAVE_BOOL(render_all_quests);
     SAVE_BOOL(hide_flagging_controls);
@@ -1400,6 +1411,12 @@ bool Minimap::ShouldDrawAllQuests()
 {
     // NB: Drawing all quest markers is unstable; there are a bunch of times when the quest marker is stale and we don't know about it. Disable unless debug.
     return render_all_quests;
+}
+
+bool Minimap::ShouldDrawNorthMarker()
+{
+    // The mission map is already north-up, so no need for a marker.
+    return !snap_to_mission_map;
 }
 
 void Minimap::Render(IDirect3DDevice9* device)

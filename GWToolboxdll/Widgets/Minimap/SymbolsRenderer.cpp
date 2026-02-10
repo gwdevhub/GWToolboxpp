@@ -262,5 +262,8 @@ void SymbolsRenderer::Render(IDirect3DDevice9* device)
     translate = DirectX::XMMatrixTranslation(me->pos.x, me->pos.y + 5000.0f, 0);
     world = translate;
     device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
-    device->DrawPrimitive(type, north_offset, north_ntriangles);
+
+    if (Minimap::ShouldDrawNorthMarker()) {
+        device->DrawPrimitive(type, north_offset, north_ntriangles);
+    }
 }
