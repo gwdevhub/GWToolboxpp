@@ -1345,8 +1345,9 @@ void Minimap::Draw(IDirect3DDevice9*)
         compass_position_dirty = false;
     }
     if (mission_map_position_dirty && snap_to_mission_map) {
-        RepositionMinimapToMissionMap();
+        if (RepositionMinimapToMissionMap()) {
         mission_map_position_dirty = false;
+    }
     }
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(win_flags, true))) {
         // window pos are already rounded by imgui, so casting is no big deal
