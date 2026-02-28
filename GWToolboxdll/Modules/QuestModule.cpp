@@ -777,18 +777,13 @@ void QuestModule::Update(float)
         // NB: We only do this once the loading splash screen is gone
         fetch_missing_quest_info_queued = 0;
         GW::GameThread::Enqueue([] {
-            const auto current_map = GW::Map::GetMapInfo();
-            if (!current_map) return;
             bool requested = false;
             const auto quest_log = GW::QuestMgr::GetQuestLog();
             player_chosen_quest_id = GW::QuestMgr::GetActiveQuestId();
             if (!quest_log) return;
             for (auto& quest : *quest_log) {
-                if (quest.map_to == GW::Constants::MapID::Count) continue;
                 if ((quest.log_state & 1)) continue;
-                const auto map = GW::Map::GetMapInfo(quest.map_to);
-                if (!(map && map->continent == current_map->continent)) continue;
-                GW::QuestMgr::RequestQuestInfo(&quest, true);
+                GW::QuestMgr::RequestQuestInfoId(quest.quest_id, true);
                 requested = true;
             }
             if (requested) {
