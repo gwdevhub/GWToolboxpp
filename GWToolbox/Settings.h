@@ -13,7 +13,8 @@ struct Settings {
     bool noupdate = false;
     bool noinstall = false;
     bool localdll = false;
-    uint32_t pid;
+    uint32_t pid = 0;
+    std::wstring hotreload_dll; // path to DLL to hot-reload
 };
 
 extern Settings settings;
