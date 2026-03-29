@@ -86,7 +86,7 @@ jobs:
       run: |
         git remote add upstream https://github.com/gwdevhub/GWToolboxpp.git
         git fetch upstream
-        git checkout -b dev
+        git checkout dev
         git reset --hard origin/master
         git config --global user.email "bot@github.com"
         git config --global user.name "GitHub Actions Bot"
