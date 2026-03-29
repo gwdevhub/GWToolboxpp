@@ -93,4 +93,3 @@ endmacro()
 
 add_tb_plugin(RawDialogs)
 add_tb_plugin(SpeedrunScriptingTools)
-add_tb_plugin(TargetEverything)
