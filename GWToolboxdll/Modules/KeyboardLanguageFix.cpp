@@ -64,8 +64,8 @@ void KeyboardLanguageFix::Initialize()
             return;
         }
         if (strcmp(layout_name, en_us_keyboard_name) == 0) {
-            // Found en-US, but call LoadKeyboardLayoutA just in case windows has set a substitute language.
-            *address = LoadKeyboardLayoutA(en_us_keyboard_name, 0);
+            // Found en-US, but do not call LoadKeyboardLayoutA just in case windows has set a substitute language.
+            // *address = LoadKeyboardLayoutA(en_us_keyboard_name, 0);
             return;
         }
     }

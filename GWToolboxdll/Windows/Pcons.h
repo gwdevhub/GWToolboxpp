@@ -123,7 +123,7 @@ protected:
     [[nodiscard]] virtual bool CanUseByInstanceType() const;
     [[nodiscard]] virtual bool CanUseByEffect() const = 0;
     virtual void OnButtonClick() { Toggle(); }
-    virtual size_t QuantityForEach(const GW::Item* item) const = 0;
+    virtual size_t PointsPerUse(const GW::Item* item) const = 0;
 
 private:
     IDirect3DTexture9** texture = nullptr;
@@ -153,7 +153,7 @@ public:
 
 protected:
     [[nodiscard]] bool CanUseByEffect() const override;
-    size_t QuantityForEach(const GW::Item* item) const override;
+    size_t PointsPerUse(const GW::Item* item) const override;
     void OnButtonClick() override;
 
 private:
@@ -195,7 +195,7 @@ public:
     [[nodiscard]] bool CanUseByInstanceType() const override;
     [[nodiscard]] bool IsVisible() const override;
     [[nodiscard]] bool CanUseByEffect() const override;
-    size_t QuantityForEach(const GW::Item* item) const override;
+    size_t PointsPerUse(const GW::Item* item) const override;
 };
 
 // Used only in outposts for refilling
@@ -232,7 +232,7 @@ public:
         return visible && (!hide_city_pcons_in_explorable_areas || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable);
     }
     void Draw(IDirect3DDevice9* device) override;
-    size_t QuantityForEach(const GW::Item* item) const override { return item->model_id == itemID ? 1u : 0u; }
+    size_t PointsPerUse(const GW::Item* item) const override { return item->model_id == itemID ? 1u : 0u; }
 
 private:
     const DWORD itemID;
@@ -252,7 +252,7 @@ public:
     PconAlcohol(const PconAlcohol&) = delete;
 
     [[nodiscard]] bool CanUseByEffect() const override;
-    size_t QuantityForEach(const GW::Item* item) const override;
+    size_t PointsPerUse(const GW::Item* item) const override;
     void ForceUse();
 };
 
@@ -271,7 +271,7 @@ public:
 
     void Update(int delay = -1) override;
     [[nodiscard]] bool CanUseByEffect() const override;
-    size_t QuantityForEach(const GW::Item* item) const override;
+    size_t PointsPerUse(const GW::Item* item) const override;
 };
 
 class PconScroll : public Pcon {
@@ -288,5 +288,5 @@ public:
     PconScroll(const PconCity&) = delete;
 
     [[nodiscard]] bool CanUseByEffect() const override;
-    size_t QuantityForEach(const GW::Item* item) const override;
+    size_t PointsPerUse(const GW::Item* item) const override;
 };

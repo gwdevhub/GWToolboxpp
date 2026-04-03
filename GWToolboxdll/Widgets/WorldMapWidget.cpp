@@ -615,7 +615,7 @@ namespace {
         if (!show_elite_capture_locations[(uint32_t)skill->profession]) return false;
         if (hide_captured_elites) {
             const auto me = GW::Agents::GetControlledCharacter();
-            if (me->primary == (uint8_t)skill->profession || me->secondary == (uint8_t)skill->profession) {
+            if (me->primary == skill->profession || me->secondary == skill->profession) {
                 if (GW::SkillbarMgr::GetIsSkillLearnt(boss.skill_id)) return false;
             }
             else {
@@ -1143,7 +1143,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         controls_window_rect.Translate(mouse_offset);
     }
     hovered_map_portal = 0;
-    #ifdef _DEBUG
+    #if 0
     DrawAreaOverlays();
     const auto current_map_info = GW::Map::GetMapInfo();
     for (auto& [_, map_info] : map_info_by_file_id) {

@@ -311,6 +311,32 @@ namespace TextUtils {
         return out;
     }
 
+    std::wstring PrintRelativeTime(const time_t& timestamp)
+    {
+        const auto current_time = time(nullptr);
+        if (timestamp < current_time) return L"the past";
+
+        auto amount = timestamp - current_time;
+        auto time_format = [](time_t amt, const wchar_t* unit) {
+            if (amt != 1) return std::format(L"{} {}s", amt, unit);
+            return std::format(L"{} {}", amt, unit);
+        };
+
+        if (amount < 60) return L"less than a minute";
+        amount /= 60;
+        if (amount < 60) return time_format(amount, L"minute");
+        amount /= 60;
+        if (amount < 24) return time_format(amount, L"hour");
+        amount /= 24;
+        if (amount < 14) return time_format(amount, L"day");
+        amount /= 7;
+        if (amount < 8) return time_format(amount, L"week");
+        amount /= 4;
+        if (amount < 24) return time_format(amount, L"month");
+        amount /= 12;
+        return time_format(amount, L"year");
+    }
+
     std::wstring SanitiseFilename(const std::wstring_view str)
     {
         const auto invalid_chars = L"<>:\"/\\|?*";
@@ -385,6 +411,13 @@ namespace TextUtils {
             return it == diacritics_charmap.end() ? wc : it->second;
         });
         return out;
+    }
+    std::wstring FormatFloat(float value, int max_decimal_places)
+    {
+        auto str = std::format(L"{:.{}f}", value, max_decimal_places);
+        str.erase(str.find_last_not_of(L'0') + 1);
+        if (str.back() == L'.') str.pop_back();
+        return str;
     }
 
     std::string SanitizePlayerName(const std::string_view str)
@@ -538,30 +571,65 @@ namespace TextUtils {
         return str != end && errno != ERANGE;
     }
 
-    std::string RelativeTime(time_t utc_timestamp)
+
+    std::string RelativeTime(time_t utc_timestamp, RelativeTimeFormat fmt)
     {
-        time_t now;
-        time(&now);
-        auto time_since_message = now - utc_timestamp;
-        char timetext[128];
-        const char* fmt = "%lld %s ago";
-        // decide if days, hours, minutes, seconds...
-        if (time_since_message / (60 * 60 * 24)) {
-            const auto days = time_since_message / (60 * 60 * 24);
-            snprintf(timetext, _countof(timetext), fmt, (long long)days, days > 1 ? "days" : "day");
+        return WStringToString(RelativeTimeW(utc_timestamp, fmt));
+    }
+    std::wstring RelativeTimeW(time_t utc_timestamp, RelativeTimeFormat fmt)
+    {
+        const time_t now = time(nullptr);
+        const time_t diff = now - utc_timestamp;
+        const bool is_past = diff >= 0;
+        const time_t amount = is_past ? diff : -diff;
+
+        static constexpr time_t ONE_MINUTE = 60LL;
+        static constexpr time_t ONE_HOUR = 60LL * 60;
+        static constexpr time_t ONE_DAY = 60LL * 60 * 24;
+        static constexpr time_t ONE_WEEK = 60LL * 60 * 24 * 7;
+        static constexpr time_t ONE_MONTH = 60LL * 60 * 24 * 30;
+        static constexpr time_t ONE_YEAR = 60LL * 60 * 24 * 365;
+
+        // Thresholds: below this amount, use the finer unit to the right
+        static constexpr time_t USE_SECONDS = ONE_MINUTE;  //  < 1 min  → seconds
+        static constexpr time_t USE_MINUTES = ONE_HOUR;    //  < 1 hr   → minutes
+        static constexpr time_t USE_HOURS = ONE_DAY * 2;   //  < 2 days → hours
+        static constexpr time_t USE_DAYS = ONE_WEEK * 2;   //  < 2 wks  → days
+        static constexpr time_t USE_WEEKS = ONE_MONTH * 3; //  < 3 mos  → weeks
+        static constexpr time_t USE_MONTHS = ONE_YEAR * 2; //  < 2 yrs  → months
+        //                                                          >= 2 yrs  → years
+
+        struct Unit {
+            time_t threshold;
+            time_t divisor;
+            const wchar_t* name;
+        };
+        static constexpr Unit units[] = {
+            {USE_SECONDS, 1LL, L"second"}, {USE_MINUTES, ONE_MINUTE, L"minute"}, {USE_HOURS, ONE_HOUR, L"hour"}, {USE_DAYS, ONE_DAY, L"day"}, {USE_WEEKS, ONE_WEEK, L"week"}, {USE_MONTHS, ONE_MONTH, L"month"},
+        };
+
+        auto format_unit = [](time_t n, const wchar_t* unit) {
+            return std::format(L"{} {}{}", n, unit, n == 1 ? L"" : L"s");
+        };
+
+        if (fmt == RelativeTimeFormat::Narrow && amount < USE_SECONDS) return L"just now";
+
+        for (const auto& [threshold, divisor, name] : units) {
+            if (amount < threshold) {
+                auto label = format_unit(amount / divisor, name);
+                if (fmt == RelativeTimeFormat::Narrow) return label + L" ago";
+                return is_past ? label + L" ago" : L"in " + label;
+            }
         }
-        else if (time_since_message / (60 * 60)) {
-            const auto hours = time_since_message / (60 * 60);
-            snprintf(timetext, _countof(timetext), fmt, (long long)hours, hours > 1 ? "hours" : "hour");
-        }
-        else if (time_since_message / 60) {
-            const auto minutes = time_since_message / 60;
-            snprintf(timetext, _countof(timetext), fmt, (long long)minutes, minutes > 1 ? "minutes" : "minute");
-        }
-        else {
-            snprintf(timetext, _countof(timetext), fmt, (long long)time_since_message, time_since_message > 1 ? "seconds" : "second");
-        }
-        return timetext;
+
+        // fallthrough: years
+        auto label = format_unit(amount / ONE_YEAR, L"year");
+        if (fmt == RelativeTimeFormat::Narrow) return label + L" ago";
+        return is_past ? label + L" ago" : L"in " + label;
+    }
+    std::wstring TimeToStringW(time_t utc_timestamp, bool include_seconds)
+    {
+        return StringToWString(TimeToString(utc_timestamp, include_seconds));
     }
     std::string TimeToString(time_t utc_timestamp, bool include_seconds)
     {

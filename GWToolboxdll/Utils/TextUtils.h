@@ -34,6 +34,7 @@ namespace TextUtils {
     std::string ToLower(std::string s);
     std::wstring ToLower(std::wstring s);
     std::wstring RemoveDiacritics(std::wstring_view s);
+    std::wstring FormatFloat(float value, int max_decimal_places = 3);
 
     std::wstring SanitizePlayerName(std::wstring_view str);
     std::wstring SanitizeForCSV(const std::wstring_view str);
@@ -48,7 +49,9 @@ namespace TextUtils {
     bool ParseFloat(const wchar_t* str, float* val);
 
     // e.g. 8 Days ago
-    std::string RelativeTime(time_t utc_timestamp);
+    enum class RelativeTimeFormat { Narrow, Full };
+    std::string RelativeTime(time_t utc_timestamp, RelativeTimeFormat fmt = RelativeTimeFormat::Full);
+    std::wstring RelativeTimeW(time_t utc_timestamp, RelativeTimeFormat fmt = RelativeTimeFormat::Full);
     std::string TimeToString(time_t utc_timestamp = 0, bool include_seconds = false);
     std::string TimeToString(uint32_t utc_timestamp, bool include_seconds = false);
     std::string TimeToString(FILETIME utc_timestamp, bool include_seconds = false);

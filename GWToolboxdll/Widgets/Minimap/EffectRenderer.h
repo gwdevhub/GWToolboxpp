@@ -4,9 +4,9 @@
 
 #include <GWCA/Packets/StoC.h>
 
-#include <Widgets/Minimap/VBuffer.h>
+#include <D3DContainers.h>
 
-class EffectRenderer : public VBuffer {
+class EffectRenderer : public D3DVertexBuffer {
     friend class Minimap;
 
 public:

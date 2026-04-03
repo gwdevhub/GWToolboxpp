@@ -7,9 +7,9 @@
 #include <Color.h>
 #include <Timer.h>
 
-#include <Widgets/Minimap/VBuffer.h>
+#include <D3DContainers.h>
 
-class PingsLinesRenderer : public VBuffer {
+class PingsLinesRenderer : public D3DVertexBuffer {
     friend class Minimap;
     const float drawing_scale = 96.0f;
     const clock_t drawing_timeout = 5000;
@@ -79,14 +79,14 @@ class PingsLinesRenderer : public VBuffer {
         [[nodiscard]] bool ShowInner() const override { return false; }
     };
 
-    class PingCircle : public VBuffer {
+    class PingCircle : public D3DVertexBuffer {
         void Initialize(IDirect3DDevice9* device) override;
 
     public:
         Color color = 0;
     };
 
-    class Marker : public VBuffer {
+    class Marker : public D3DVertexBuffer {
         void Initialize(IDirect3DDevice9* device) override;
 
     public:
@@ -100,7 +100,7 @@ public:
 
     void Invalidate() override
     {
-        VBuffer::Invalidate();
+        D3DVertexBuffer::Invalidate();
         ping_circle.Invalidate();
         for (const Ping* p : pings) {
             delete p;

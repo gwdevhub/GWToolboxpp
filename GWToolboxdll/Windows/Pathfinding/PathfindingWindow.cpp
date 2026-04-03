@@ -134,21 +134,14 @@ namespace {
                     }
                     Resources::EnqueueWorkerTask([from_dat, from_context]() {
                         auto write_to = std::format(L"pathing_map_data_from_file_{:#}.json", from_dat->map_file_id);
-                        auto fp = fopen(Resources::GetPath(write_to).string().c_str(), "wb");
-                        if (fp) {
-                            const nlohmann::json json = *from_dat;
-                            const auto str = json.dump(2);
-                            fwrite(str.data(), str.size(), 1, fp);
-                            fclose(fp);
-                        }
+                        nlohmann::json json = *from_dat;
+                        auto str = json.dump(2);
+                        Resources::WriteFile(Resources::GetPath(write_to), str);
+
                         write_to = std::format(L"pathing_map_data_from_context_{:#}.json", from_context->map_file_id);
-                        fp = fopen(Resources::GetPath(write_to).string().c_str(), "wb");
-                        if (fp) {
-                            const nlohmann::json json = *from_context;
-                            const auto str = json.dump(2);
-                            fwrite(str.data(), str.size(), 1, fp);
-                            fclose(fp);
-                        }
+                        json = *from_dat;
+                        str = json.dump(2);
+                        Resources::WriteFile(Resources::GetPath(write_to), str);
                         delete from_dat;
                         delete from_context;
                     });

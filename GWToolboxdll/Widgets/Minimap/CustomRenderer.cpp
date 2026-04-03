@@ -20,6 +20,7 @@
 #include <Color.h>
 #include <GWToolbox.h>
 #include <Utils/GuiUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 #define BTN_WIDTH 20.0f
 
@@ -229,8 +230,14 @@ void CustomRenderer::SaveMarkers()
 
 void CustomRenderer::Invalidate()
 {
-    VBuffer::Invalidate();
+    D3DVertexBuffer::Invalidate();
     linecircle.Invalidate();
+    for (auto& m : markers) {
+        m.Invalidate();
+    }
+    for (auto& m : polygons) {
+        m.Invalidate();
+    }
 }
 
 void CustomRenderer::SetTooltipMapID(const GW::Constants::MapID& map_id)
@@ -711,221 +718,93 @@ void CustomRenderer::DrawSettings()
 
 void CustomRenderer::Initialize(IDirect3DDevice9* device)
 {
-    if (!buffer) {
-        initialized = false;
-    }
-    if (initialized) {
-        return;
-    }
-    initialized = true;
     type = D3DPT_LINELIST;
-    vertices_max = 0x100; // support for up to 256 line segments, should be enough
-    vertices = nullptr;
-
-    const HRESULT hr = device->CreateVertexBuffer(
-        sizeof(D3DVertex) * vertices_max, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
-    if (FAILED(hr)) {
-        printf("Error setting up CustomRenderer vertex buffer: HRESULT: 0x%lX\n", hr);
-    }
+    D3DVertexBuffer::Initialize(device);
 }
 
 void CustomRenderer::Terminate()
 {
-    VBuffer::Terminate();
+    D3DVertexBuffer::Terminate();
     for (const auto l : lines) {
         delete l;
     }
     lines.clear();
+    polygons.clear();
+    markers.clear();
 }
-
 void CustomRenderer::CustomPolygon::Initialize(IDirect3DDevice9* device)
 {
-    if (filled && points.size() < max_points_filled) {
-        if (points.size() < 3) {
-            return; // can't draw a triangle with less than 3 vertices
-        }
+    vertices.clear();
+    if (filled) {
+        if (points.size() < 3) return;
         type = D3DPT_TRIANGLELIST;
-
         const auto poly = std::vector{{points}};
-        point_indices.clear();
-        point_indices = mapbox::earcut<unsigned>(poly);
-
-        const auto vertex_count = point_indices.size();
-        D3DVertex* _vertices = nullptr;
-
-        if (buffer) {
-            buffer->Release();
+        const auto point_indices = mapbox::earcut<unsigned>(poly);
+        vertices.reserve(point_indices.size());
+        for (const auto idx : point_indices) {
+            vertices.push_back({points[idx].x, points[idx].y, 0.f, color});
         }
-        device->CreateVertexBuffer(
-            sizeof(D3DVertex) * vertex_count, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
-        buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
-
-        for (auto i = 0u; i < point_indices.size(); i++) {
-            _vertices[i].x = points.at(point_indices.at(i)).x;
-            _vertices[i].y = points.at(point_indices.at(i)).y;
-            _vertices[i].z = 0.f;
-            _vertices[i].color = color;
-        }
-
-        buffer->Unlock();
     }
     else {
-        if (points.size() < 2) {
-            return;
-        }
+        if (points.size() < 2) return;
         type = D3DPT_LINESTRIP;
-
-        const auto vertex_count = points.size() + 1;
-        D3DVertex* _vertices = nullptr;
-
-        if (buffer) {
-            buffer->Release();
+        vertices.reserve(points.size() + 1);
+        for (const auto& p : points) {
+            vertices.push_back({p.x, p.y, 0.f, color});
         }
-        device->CreateVertexBuffer(
-            sizeof(D3DVertex) * vertex_count, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
-        buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
-
-        for (auto i = 0u; i < points.size(); i++) {
-            _vertices[i].x = points.at(i).x;
-            _vertices[i].y = points.at(i).y;
-            _vertices[i].z = 0.f;
-            _vertices[i].color = color;
-        }
-
-        buffer->Unlock();
+        vertices.push_back(vertices.front());
     }
-    initialized = true;
+    D3DVertexBuffer::Initialize(device);
 }
 
 void CustomRenderer::CustomPolygon::Render(IDirect3DDevice9* device)
 {
-    if (!initialized) {
-        Initialize(device);
+    if (filled ? points.size() < 3 : points.size() < 2) return;
+    if (!visible) return;
+    if (map != GW::Constants::MapID::None && map != GW::Map::GetMapID()) return;
+    D3DVertexBuffer::Render(device);
+}
+void CustomRenderer::CustomMarker::SyncGeometry()
+{
+    const Color colour = (color & IM_COL32_A_MASK) == 0 ? CustomRenderer::color : color;
+    if (shape == Shape::FullCircle) {
+        const Color centre_color = Colors::Sub(colour, Colors::ARGB(50, 0, 0, 0));
+        fill_circle.SetColor(colour);
+        fill_circle.SetCenterColor(centre_color);
+        fill_circle.SetRadius(1.f);
     }
-    if (filled && points.size() < 3 || !filled && points.size() < 2) {
-        return;
-    }
-
-    if (visible && (map == GW::Constants::MapID::None || map == GW::Map::GetMapID())) {
-        const auto primitive_count = filled ? point_indices.size() / 3 : points.size() - 1;
-        device->SetFVF(D3DFVF_CUSTOMVERTEX);
-        device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
-        device->DrawPrimitive(type, 0, primitive_count);
+    else {
+        line_circle.SetColor(colour);
+        line_circle.SetRadius(1.f);
     }
 }
 
-void CustomRenderer::CustomMarker::Initialize(IDirect3DDevice9* device)
+void CustomRenderer::CustomMarker::Invalidate()
 {
-    const auto colour = (color & IM_COL32_A_MASK) == 0 ? CustomRenderer::color : color;
-    if (shape == Shape::FullCircle) {
-        type = D3DPT_TRIANGLEFAN;
-        count = 48;
-        const unsigned vertex_count = count + 2;
-        D3DVertex* _vertices = nullptr;
-
-        if (buffer) {
-            buffer->Release();
-        }
-        device->CreateVertexBuffer(
-            sizeof(D3DVertex) * vertex_count, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
-        buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
-
-        _vertices[0].x = 0.0f;
-        _vertices[0].y = 0.0f;
-        _vertices[0].z = 0.0f;
-        _vertices[0].color = Colors::Sub(colour, Colors::ARGB(50, 0, 0, 0));
-        for (auto i = 1u; i < vertex_count; i++) {
-            constexpr auto pi = DirectX::XM_PI;
-            const float angle = (i - 1) * (2 * pi / static_cast<float>(count));
-            _vertices[i].x = std::cos(angle);
-            _vertices[i].y = std::sin(angle);
-            _vertices[i].z = 0.0f;
-            _vertices[i].color = colour;
-        }
-
-        buffer->Unlock();
-    }
-    else {
-        type = D3DPT_LINESTRIP;
-        count = 48;
-        const auto vertex_count = count + 1;
-        D3DVertex* _vertices = nullptr;
-
-        if (buffer) {
-            buffer->Release();
-        }
-        device->CreateVertexBuffer(
-            sizeof(D3DVertex) * vertex_count, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
-        buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
-
-        for (auto i = 0u; i < count; i++) {
-            constexpr auto pi = DirectX::XM_PI;
-            const float angle = i * (2 * pi / (count + 1));
-            _vertices[i].x = std::cos(angle);
-            _vertices[i].y = std::sin(angle);
-            _vertices[i].z = 0.0f;
-            _vertices[i].color = colour;
-        }
-        _vertices[count] = _vertices[0];
-
-        buffer->Unlock();
-    }
-    initialized = true;
+    fill_circle.Invalidate();
+    line_circle.Invalidate();
 }
 
 void CustomRenderer::CustomMarker::Render(IDirect3DDevice9* device)
 {
-    if (!initialized) {
-        Initialize(device);
-    }
-
     if (!visible || (map != GW::Constants::MapID::None && map != GW::Map::GetMapID())) {
         return;
     }
+    SyncGeometry();
 
     const auto translate = DirectX::XMMatrixTranslation(pos.x, pos.y, 0.0f);
     const auto scale = DirectX::XMMatrixScaling(size, size, 1.0f);
     const auto world = scale * translate;
     device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
 
-    device->SetFVF(D3DFVF_CUSTOMVERTEX);
-    device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
-    device->DrawPrimitive(type, 0, count);
-}
-
-void CustomRenderer::LineCircle::Initialize(IDirect3DDevice9* device)
-{
-    type = D3DPT_LINESTRIP;
-    count = 48; // poly count
-    const auto vertex_count = count + 1;
-    D3DVertex* _vertices = nullptr;
-
-    if (buffer) {
-        buffer->Release();
-    }
-    device->CreateVertexBuffer(
-        sizeof(D3DVertex) * vertex_count, 0, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
-    buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&_vertices), D3DLOCK_DISCARD);
-
-    for (size_t i = 0; i < count; i++) {
-        const float angle = i * (DirectX::XM_2PI / (count + 1));
-        _vertices[i].x = std::cos(angle);
-        _vertices[i].y = std::sin(angle);
-        _vertices[i].z = 0.0f;
-        _vertices[i].color = color; // 0xFF666677;
-    }
-    _vertices[count] = _vertices[0];
-
-    buffer->Unlock();
+    if (shape == Shape::FullCircle)
+        fill_circle.Render(device);
+    else
+        line_circle.Render(device);
 }
 
 void CustomRenderer::Render(IDirect3DDevice9* device)
 {
-    Initialize(device);
-    if (!initialized) {
-        return;
-    }
-
     if (markers_changed) {
         GameWorldRenderer::TriggerSyncAllMarkers();
         marker_file_dirty = true;
@@ -936,22 +815,9 @@ void CustomRenderer::Render(IDirect3DDevice9* device)
 
     DrawCustomMarkers(device);
 
-    vertices_count = 0;
-    if (const HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, reinterpret_cast<void**>(&vertices), D3DLOCK_DISCARD); FAILED(res)) {
-        printf("CustomRenderer Lock() error: HRESULT: 0x%lX\n", res);
-    }
-
     DrawCustomLines(device);
 
-    const auto xmi = DirectX::XMMatrixIdentity();
-    device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&xmi));
-
-    buffer->Unlock();
-    if (vertices_count != 0) {
-        device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
-        device->DrawPrimitive(type, 0, vertices_count / 2);
-        vertices_count = 0;
-    }
+    D3DVertexBuffer::Render(device);
 }
 
 void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
@@ -960,16 +826,20 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
         return;
     }
 
+    // Custom polygons
     for (CustomPolygon& polygon : polygons) {
         polygon.Render(device);
     }
 
+    // Custom markers
     for (CustomMarker& marker : markers) {
         marker.Render(device);
     }
 
+    // Hero flag circles
     if (GW::HeroFlagArray& flags = GW::GetGameContext()->world->hero_flags; flags.valid()) {
         for (const auto& flag : flags) {
+            if (!std::isfinite(flag.flag.x)) continue;
             const auto translate = DirectX::XMMatrixTranslation(flag.flag.x, flag.flag.y, 0.0f);
             const auto scale = DirectX::XMMatrixScaling(200.0f, 200.0f, 1.0f);
             const auto world = scale * translate;
@@ -977,37 +847,34 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
             linecircle.Render(device);
         }
     }
-    const GW::Vec3f allflag = GW::GetGameContext()->world->all_flag;
-    const auto translate = DirectX::XMMatrixTranslation(allflag.x, allflag.y, 0.0f);
-    const auto scale = DirectX::XMMatrixScaling(300.0f, 300.0f, 1.0f);
-    const auto world = scale * translate;
-    device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
-    linecircle.Render(device);
+    if (const GW::Vec3f allflag = GW::GetGameContext()->world->all_flag; std::isfinite(allflag.x)) {
+        const auto translate = DirectX::XMMatrixTranslation(allflag.x, allflag.y, 0.0f);
+        const auto scale = DirectX::XMMatrixScaling(300.0f, 300.0f, 1.0f);
+        const auto world = scale * translate;
+        device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
+        linecircle.Render(device);
+    }
+    const auto xmi = DirectX::XMMatrixIdentity();
+    device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&xmi));
 }
 
 void CustomRenderer::DrawCustomLines(const IDirect3DDevice9*)
 {
     const auto doa_outpost = GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable && GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish;
-
+    const auto my_pos = GW::PlayerMgr::GetPlayerPosition();
+    vertices.clear();
     for (const auto line : lines) {
-        // Draw everywhere besides the DoA outpost. Only draw the lines with draw_everywhere in DoA
-        if (line->visible && line->draw_on_minimap && (line->map == GW::Constants::MapID::None || line->map == GW::Map::GetMapID()) &&
-            (!doa_outpost || line->draw_everywhere)) {
-            EnqueueVertex(line->p1.x, line->p1.y, line->color);
-            EnqueueVertex(line->p2.x, line->p2.y, line->color);
-        }
-    }
-}
+        if (!line->visible || !line->draw_on_minimap) continue;
+        if (line->map != GW::Constants::MapID::None && line->map != GW::Map::GetMapID()) continue;
+        if (doa_outpost && !line->draw_everywhere) continue;
 
-void CustomRenderer::EnqueueVertex(const float x, const float y, const Color _color)
-{
-    if (vertices_count == vertices_max) {
-        return;
+        if (line->from_player_pos && my_pos) {
+            vertices.push_back({my_pos->x, my_pos->y, 0.f, line->color});
+        }
+        else {
+            vertices.push_back({line->p1.x, line->p1.y, 0.f, line->color});
+        }
+        vertices.push_back({line->p2.x, line->p2.y, 0.f, line->color});
+        dirty = true;
     }
-    vertices[0].x = x;
-    vertices[0].y = y;
-    vertices[0].z = 0.0f;
-    vertices[0].color = _color;
-    ++vertices;
-    ++vertices_count;
 }

@@ -287,24 +287,8 @@ namespace {
         }
 
         if (!IsValidGWCADll(gwca_dll_path, resource)) {
-            std::error_code ec;
-            std::filesystem::remove(gwca_dll_path, ec);
-            if (std::filesystem::exists(gwca_dll_path, ec)) {
-                Log::Log("[LoadGWCADll] std::filesystem::remove fail, file still exists - permission error?");
-                return nullptr;
-            }
-
-            FILE* fp = fopen(gwca_dll_path.string().c_str(), "wb");
-            if (!fp) {
-                Log::Log("[LoadGWCADll] fopen fail, %d", GetLastError());
-                return nullptr;
-            }
-            const auto written = fwrite(resource.data(), resource.size(), 1, fp);
-            fclose(fp);
-            if (written != 1) {
-                Log::Log("[LoadGWCADll] fwrite fail, %d", GetLastError());
-                return nullptr;
-            }
+            std::wstring err;
+            Resources::ResourceToFile(IDR_GWCA_DLL, gwca_dll_path,err);
         }
         if (!IsValidGWCADll(gwca_dll_path, resource)) {
             Log::Log("[LoadGWCADll] resource fail, GWCA not valid after replacing");
@@ -1047,6 +1031,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     io.AddKeyEvent(ImGuiMod_Alt, (GetKeyState(VK_MENU) & 0x8000) != 0);
 
     if (GW::UI::GetIsUIDrawn()) {
+        ToolboxUIElement::UpdateCachedFrameStates();
         std::lock_guard lock(module_management_mutex);
         // NB: Don't use an iterator here, because it could be invalidated during draw
         for (size_t i = 0; i < ui_elements_enabled.size(); i++) {
@@ -1054,6 +1039,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
             if (world_map_showing && !uielement->ShowOnWorldMap()) {
                 continue;
             }
+            uielement->UpdateLocationAgainstSnappedFrame();
             uielement->Draw(device);
         }
 

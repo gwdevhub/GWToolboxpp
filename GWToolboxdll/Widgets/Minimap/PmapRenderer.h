@@ -1,11 +1,11 @@
 #pragma once
 
 #include <Color.h>
-#include <Widgets/Minimap/VBuffer.h>
+#include <D3DContainers.h>
 
 struct MinimapRenderContext;
 
-class PmapRenderer : public VBuffer {
+class PmapRenderer : public D3DVertexBuffer {
 public:
     // Triangle 1: (XTL, YT) (XTR, YT), (XBL, YB)
     // Triangle 2: (XBL, YB), (XTR, YT), (XBR, YB)

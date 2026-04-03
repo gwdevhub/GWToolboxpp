@@ -1,6 +1,6 @@
 find_package(CURL REQUIRED)
 
-FILE(GLOB SOURCES
+FILE(GLOB SOURCES CONFIGURE_DEPENDS
     "*.h"
     "*.cpp")
 

@@ -7,6 +7,7 @@ namespace GW {
     typedef uint32_t AgentID;
     namespace Constants {
         enum HeroID : uint32_t;
+        enum class Profession : uint32_t;
     }
 
     enum class HeroBehavior : uint32_t {
@@ -29,8 +30,8 @@ namespace GW {
         /* +h0000 */ GW::Constants::HeroID hero_id;
         /* +h0004 */ uint32_t agent_id;
         /* +h0008 */ uint32_t level;
-        /* +h000C */ uint32_t primary;
-        /* +h0010 */ uint32_t secondary;
+        /* +h000C */ GW::Constants::Profession primary;
+        /* +h0010 */ GW::Constants::Profession secondary;
         /* +h0014 */ uint32_t hero_file_id;
         /* +h0018 */ uint32_t model_file_id;
         /* +h001C */ uint32_t h001C;

@@ -2,9 +2,8 @@
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/GamePos.h>
+#include <D3DContainers.h>
 #include <ToolboxIni.h>
-#include <Widgets/Minimap/D3DVertex.h>
-#include <stacktrace>
 
 class GameWorldRenderer {
 public:

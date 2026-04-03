@@ -2,6 +2,8 @@
 
 #include <ToolboxModule.h>
 
+typedef long clock_t;
+
 class ChatFilter : public ToolboxModule {
     ChatFilter() = default;
 
@@ -19,6 +21,7 @@ public:
 
     void Initialize() override;
     void Terminate() override;
+    static void BlockMessageForMs(const wchar_t* message_contains, clock_t ms);
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;

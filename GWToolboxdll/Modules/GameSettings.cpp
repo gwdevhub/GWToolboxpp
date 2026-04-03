@@ -122,8 +122,7 @@ namespace {
 
     clock_t instance_entered_at = 0;
 
-    bool disable_item_descriptions_in_outpost = false;
-    bool disable_item_descriptions_in_explorable = false;
+
     bool disable_skill_descriptions_in_outpost = false;
     bool disable_skill_descriptions_in_explorable = false;
     bool block_faction_gain = false;
@@ -485,10 +484,6 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
-    // Key held to show/hide item descriptions
-    constexpr int modifier_key_item_descriptions = VK_MENU;
-    int modifier_key_item_descriptions_key_state = 0;
-
     // Key held to show/hide skill descriptions
     constexpr int modifier_key_skill_descriptions = VK_MENU;
     int modifier_key_skill_descriptions_key_state = 0;
@@ -513,7 +508,7 @@ namespace {
         constexpr auto frame_set_text_ui_message = GW::UI::UIMessage::kFrameMessage_0x52;
         const auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameById(param->frame_id), 0xb);
         bool block_description = disable_skill_descriptions_in_outpost && IsOutpost() || disable_skill_descriptions_in_explorable && IsExplorable();
-        block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
+        block_description = block_description && GetKeyState(modifier_key_skill_descriptions) >= 0;
         if (block_description) {
             GW::UI::SendFrameUIMessage(frame, frame_set_text_ui_message, (void*)L"\x101");
             GW::Hook::LeaveHook();
@@ -780,65 +775,7 @@ namespace {
         pending_reinvite.reset();
     }
 
-    // Check and re-render item tooltips if modifier key held
-    void UpdateItemTooltip()
-    {
-        if (GetKeyState(modifier_key_item_descriptions) == modifier_key_item_descriptions_key_state) {
-            return;
-        }
-        modifier_key_item_descriptions_key_state = GetKeyState(modifier_key_item_descriptions);
-        if (IsExplorable()) {
-            if (!disable_item_descriptions_in_explorable) {
-                return;
-            }
-        }
-        else if (IsOutpost()) {
-            if (!disable_item_descriptions_in_outpost) {
-                return;
-            }
-        }
-        else {
-            return; // Loading
-        }
-        const auto tooltip = GW::UI::GetCurrentTooltip();
-        if (!tooltip)
-            return;
-        // Trigger re-render of item tooltip
-        const auto hovered_item = GW::Items::GetHoveredItem();
-        if (!hovered_item) {
-            return;
-        }
-        uint32_t items_triggered[2]{};
-        const auto inv = GW::Items::GetInventory();
-        if (hovered_item == inv->weapon_set0 || hovered_item == inv->offhand_set0) {
-            items_triggered[0] = inv->weapon_set0 ? inv->weapon_set0->item_id : 0;
-            items_triggered[1] = inv->offhand_set0 ? inv->offhand_set0->item_id : 0;
-        }
-        else if (hovered_item == inv->weapon_set1 || hovered_item == inv->offhand_set1) {
-            items_triggered[0] = inv->weapon_set1 ? inv->weapon_set1->item_id : 0;
-            items_triggered[1] = inv->offhand_set1 ? inv->offhand_set1->item_id : 0;
-        }
-        else if (hovered_item == inv->weapon_set2 || hovered_item == inv->offhand_set2) {
-            items_triggered[0] = inv->weapon_set2 ? inv->weapon_set2->item_id : 0;
-            items_triggered[1] = inv->offhand_set2 ? inv->offhand_set2->item_id : 0;
-        }
-        else if (hovered_item == inv->weapon_set3 || hovered_item == inv->offhand_set3) {
-            items_triggered[0] = inv->weapon_set3 ? inv->weapon_set3->item_id : 0;
-            items_triggered[1] = inv->offhand_set3 ? inv->offhand_set3->item_id : 0;
-        }
-        else {
-            items_triggered[0] = hovered_item->item_id;
-            items_triggered[1] = 0;
-        }
-        GW::GameThread::Enqueue([items = items_triggered] {
-            if (items[0]) {
-                GW::UI::SendFrameUIMessage(GW::UI::GetChildFrame(GW::UI::GetRootFrame(), 0xffffffff), GW::UI::UIMessage::kItemUpdated, &items[0]);
-            }
-            if (items[1]) {
-                GW::UI::SendFrameUIMessage(GW::UI::GetChildFrame(GW::UI::GetRootFrame(), 0xffffffff), GW::UI::UIMessage::kItemUpdated, &items[0]);
-            }
-        });
-    }
+
 
     // Check and re-render item tooltips if modifier key held
     void UpdateSkillTooltip()
@@ -1101,17 +1038,6 @@ namespace {
     void OnPlayEffect(GW::HookStatus* status, const GW::Packet::StoC::PlayEffect* pak)
     {
         status->blocked |= ShouldBlockEffect(pak->effect_id);
-    }
-
-    // Block full item descriptions
-    void OnGetItemDescription(uint32_t, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc)
-    {
-        bool block_description = disable_item_descriptions_in_outpost && IsOutpost() || disable_item_descriptions_in_explorable && IsExplorable();
-        block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
-
-        if (block_description && out_desc) {
-            *out_desc = nullptr;
-        }
     }
 
     const wchar_t* GetPartySearchLeader(uint32_t party_search_id)
@@ -1700,8 +1626,6 @@ void GameSettings::Initialize()
         remove_skill_warmup_duration_patch.SetPatch(address, "\x90\x90", 2);
     Log::Log("[GameSettings] remove_skill_warmup_duration_patch = %p\n", remove_skill_warmup_duration_patch.GetAddress());
 
-    ItemDescriptionHandler::RegisterDescriptionCallback(OnGetItemDescription, 9999);
-
     // Call our CreateCodedTextLabel function instead of default CreateCodedTextLabel for patching skill descriptions
     SetFrameSkillDescription_Func = (SetFrameSkillDescription_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmTipSkill.cpp", "No valid case for switch variable \'m_powerType\'", 0, 0));
 
@@ -2024,8 +1948,6 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(block_experience_gain);
     LOAD_BOOL(block_zero_experience_gain);
 
-    LOAD_BOOL(disable_item_descriptions_in_outpost);
-    LOAD_BOOL(disable_item_descriptions_in_explorable);
     LOAD_BOOL(disable_skill_descriptions_in_outpost);
     LOAD_BOOL(disable_skill_descriptions_in_explorable);
 
@@ -2216,8 +2138,6 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(block_faction_gain);
     SAVE_BOOL(block_experience_gain);
     SAVE_BOOL(block_zero_experience_gain);
-    SAVE_BOOL(disable_item_descriptions_in_outpost);
-    SAVE_BOOL(disable_item_descriptions_in_explorable);
 
     SAVE_BOOL(disable_skill_descriptions_in_outpost);
     SAVE_BOOL(disable_skill_descriptions_in_explorable);
@@ -2284,18 +2204,8 @@ void GameSettings::DrawInventorySettings()
 
     ImGui::Checkbox("Lazy chest looting", &lazy_chest_looting);
     ImGui::ShowHelp("Toolbox will try to target any nearby reserved items\nwhen using the 'target nearest item' key next to a chest\nto pick stuff up.");
-    ImGui::Text("Hide item descriptions in:");
-    ImGui::ShowHelp("When hovering an item in inventory or weapon sets,\nonly show the item name in the tooltip that appears.");
-    ImGui::Indent();
-    ImGui::Checkbox("Explorable Area###disable_item_descriptions_in_explorable", &disable_item_descriptions_in_explorable);
-    ImGui::SameLine();
-    ImGui::Checkbox("Outpost###disable_item_descriptions_in_outpost", &disable_item_descriptions_in_outpost);
-    if (disable_item_descriptions_in_explorable || disable_item_descriptions_in_outpost) {
-        ImGui::Indent();
-        ImGui::TextDisabled("Hold Alt when hovering an item to show full description");
-        ImGui::Unindent();
-    }
-    ImGui::Unindent();
+
+
 }
 
 void GameSettings::DrawPartySettings()
@@ -2577,7 +2487,6 @@ void GameSettings::Update(float)
 
     UpdateSkillTooltip();
     UpdateReinvite();
-    UpdateItemTooltip();
     if (set_window_title_delay && TIMER_DIFF(set_window_title_delay) > 3000) {
         SetWindowTitle(set_window_title_as_charname);
         set_window_title_delay = 0;

@@ -627,7 +627,7 @@ namespace {
 
             if (show_character_info) {
                 sprintf(activity.assets.small_image, "profession_%d_512px", a->primary);
-                sprintf(activity.assets.small_text, "%S (%s)", GW::GetGameContext()->character->player_name, profession_names[a->primary]);
+                sprintf(activity.assets.small_text, "%S (%s)", GW::GetGameContext()->character->player_name, profession_names[std::to_underlying(a->primary)]);
             }
 
             if (show_location_info) {

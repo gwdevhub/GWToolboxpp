@@ -7,6 +7,7 @@
 #include <GWCA/Managers/PartyMgr.h>
 
 #include <Widgets/VanquishWidget.h>
+#include <Widgets/MissionMapWidget.h>
 
 #include "Utils/FontLoader.h"
 
@@ -55,13 +56,22 @@ void VanquishWidget::Draw(IDirect3DDevice9*)
         const ImVec2 min = ImGui::GetWindowPos();
         const ImVec2 max(min.x + size.x, min.y + size.y);
         if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
+            int alive = 0, stale = 0;
+            MissionMapWidget::GetTrackedEnemyCounts(alive, stale);
+            const int located = alive + stale;
             char buffer[256];
-            snprintf(buffer, sizeof(buffer),
-                     "We have vanquished %lu %s! %lu %s remaining.",
-                     killed,
-                     killed == 1 ? "foe" : "foes",
-                     tokill,
-                     tokill == 1 ? "foe" : "foes");
+            if (located > 0) {
+                snprintf(buffer, sizeof(buffer),
+                         "We have vanquished %lu %s! %lu %s remaining, %d located.",
+                         killed, killed == 1 ? "foe" : "foes",
+                         tokill, tokill == 1 ? "foe" : "foes",
+                         located);
+            } else {
+                snprintf(buffer, sizeof(buffer),
+                         "We have vanquished %lu %s! %lu %s remaining.",
+                         killed, killed == 1 ? "foe" : "foes",
+                         tokill, tokill == 1 ? "foe" : "foes");
+            }
             GW::Chat::SendChat('#', buffer);
         }
     }

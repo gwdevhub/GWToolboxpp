@@ -248,7 +248,6 @@ namespace WorldMapWidget_Constants {
         {GW::Constants::SkillID::Master_of_Magic, 02, "Captain Mwende", GW::Constants::MapID::Consulate_Docks, {{883, 1352}}},
         {GW::Constants::SkillID::Cautery_Signet, 02, "Captain Lumanda", GW::Constants::MapID::Consulate_Docks, {{790, 1351}}},
         {GW::Constants::SkillID::Pious_Renewal, 02, "Captain Denduru", GW::Constants::MapID::Consulate_Docks, {{822, 1344}}},
-        {GW::Constants::SkillID::Magehunter_Strike, 02, "Executioner Vekil", GW::Constants::MapID::Pogahn_Passage, {{900, 1218}}},
         {GW::Constants::SkillID::Enchanters_Conundrum, 02, "Lieutenant Nali", GW::Constants::MapID::Pogahn_Passage, {{906, 1328}}},
         {GW::Constants::SkillID::Master_of_Magic, 02, "Captain Nebo", GW::Constants::MapID::Pogahn_Passage, {{823, 1366}}},
         {GW::Constants::SkillID::Pious_Renewal, 03, "Corporal Suli", GW::Constants::MapID::Yatendi_Canyons, {{771, 1273}}},
@@ -1102,6 +1101,12 @@ namespace WorldMapWidget_Constants {
         {GW::Constants::SkillID::Melandrus_Arrows, 0xff, "Taskmaster Larn", GW::Constants::MapID::Battledepths_Level_1, {{0, 0}}, "Only during \"Attack on Jalis's Camp\" quest."},
         {GW::Constants::SkillID::Jagged_Bones, 0xff, "Taskmaster Nard", GW::Constants::MapID::Battledepths_Level_1, {{0, 0}}, "Only during \"Attack on Jalis's Camp\" quest."},
         {GW::Constants::SkillID::Crippling_Anguish, 0xff, "Taskmaster Beld", GW::Constants::MapID::Battledepths_Level_1, {{0, 0}}, "Only during \"Attack on Jalis's Camp\" quest."},
+
+        {GW::Constants::SkillID::Devastating_Hammer, 1, "Hand of Destruction", GW::Constants::MapID::Glints_Challenge_mission, {{1140, 1877}}},
+        {GW::Constants::SkillID::Flourish, 1, "Heart of Destruction", GW::Constants::MapID::Glints_Challenge_mission, {{1163, 1877}}},
+        {GW::Constants::SkillID::Skull_Crack, 1, "Heart of Destruction", GW::Constants::MapID::Glints_Challenge_mission, {{1186, 1877}}},
+        {GW::Constants::SkillID::Soul_Leech, 1, "Flesh of Destruction", GW::Constants::MapID::Glints_Challenge_mission, {{1209, 1877}}},
+        {GW::Constants::SkillID::Hex_Eater_Vortex, 1, "Mind of Destruction", GW::Constants::MapID::Glints_Challenge_mission, {{1232, 1877}}},
 
         // Kryta bosses that weren't added to MappingOut
         {GW::Constants::SkillID::Power_Block, 5, "Justiciar Sevaan", GW::Constants::MapID::War_in_Kryta_Divinity_Coast, {{500, 145}}, "Only during \"War in Kryta\"."},

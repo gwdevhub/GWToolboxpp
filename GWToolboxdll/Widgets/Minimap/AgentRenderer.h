@@ -4,7 +4,8 @@
 
 #include <GWCA/GameContainers/GamePos.h>
 
-#include <Widgets/Minimap/VBuffer.h>
+#include <D3DContainers.h>
+
 
 namespace GW {
     struct Agent;
@@ -18,7 +19,7 @@ namespace GW {
 
 using Color = uint32_t;
 
-class AgentRenderer : public VBuffer {
+class AgentRenderer : public D3DVertexBuffer {
     static constexpr int num_triangles = 32;
 
 public:
@@ -46,6 +47,8 @@ public:
 
     uint32_t auto_target_id = 0;
 
+    DWORD last_check = 0;
+
 private:
     static AgentRenderer* instance;
 
@@ -62,6 +65,9 @@ private:
         // user defined
         CircleCenter // alpha -50
     };
+
+    enum CombatState { InCombat, NotInCombat, EitherCombat };
+    enum WeaponState { HasWeapon, NoWeapon, EitherWeapon };
 
     class CustomAgent {
         static unsigned int cur_ui_id;
@@ -91,6 +97,8 @@ private:
         char name[128]{};
         DWORD modelId = 0;
         DWORD mapId = 0; // 0 for 'any map'
+        CombatState combat_state = CombatState::EitherCombat;
+        WeaponState weapon_state = WeaponState::EitherWeapon;
 
         // attributes to change
         Color color = 0xFFF00000;
@@ -137,10 +145,6 @@ private:
 
     std::vector<const CustomAgent*>* GetCustomAgentsToDraw(const GW::Agent* agent);
 
-    D3DVertex* vertices = nullptr;    // vertices array
-    unsigned int vertices_count = 0;  // count of vertices
-    unsigned int vertices_max = 0;    // max number of vertices to draw in one call
-    unsigned int max_shape_verts = 0; // max number of triangles in a single shape
 
     Color color_agent_modifier = 0;
     Color color_agent_damaged_modifier = 0;
@@ -190,6 +194,7 @@ private:
     float size_boss = 125.f;
     float size_minion = 50.f;
     float size_marked_target = 75.f;
+    bool marked_target_inherit_custom_agents = false;
     Shape_e default_shape = Tear;
     Shape_e shape_player = Tear;
     Shape_e shape_players = Tear;

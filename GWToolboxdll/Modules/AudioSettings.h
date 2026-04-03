@@ -43,6 +43,7 @@ public:
     static bool PlayMusic(const wchar_t* filename, uint32_t flags = 0x83);
 
     static bool PlaySound(const wchar_t* filename, const GW::Vec3f* position = nullptr, uint32_t flags = 0, void** handle_out = nullptr);
+    static bool PlaySoundFileId(const uint32_t file_id, const GW::Vec3f* position = nullptr, uint32_t flags = 0, void** handle_out = nullptr);
     static bool StopSound(void* handle);
     static void RegisterPlaySoundCallback(GW::HookEntry* hook_entry, PlaySoundCallback callback);
     static void RemovePlaySoundCallback(GW::HookEntry* hook_entry);

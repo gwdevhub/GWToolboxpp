@@ -87,16 +87,14 @@ namespace {
 
     void PrintTimestamp()
     {
-        time_t rawtime{};
-        time(&rawtime);
-
-        tm timeinfo{};
-        localtime_s(&timeinfo, &rawtime);
-
-        char buffer[16];
-        strftime(buffer, sizeof(buffer), "%H:%M:%S", &timeinfo);
-
-        fprintf(logfile, "[%s] ", buffer);
+        // note - why not just use current_zone()->to_local(now()) ?
+        // this has a small but non trivial perf cost - since the time zone conversion can depend on the time point (think daylight saving time starting or ending),
+        // to_local has to do some logic to figure out how to convert every single time point independently
+        // for logging purposes, we don't really care about accurate time zone conversions - in fact, monotonicity of timestamps is more convenient than having an accurate wall-clock time
+        // consider that if DST changes mid session, we'd rather have some timestamps off by an hour than have gaps or non-monotonicity in timestamps
+        // so just cache the timezone offset at first call and use it forever
+        static const auto tzoffset = std::chrono::current_zone()->get_info(std::chrono::system_clock::now()).offset;
+        std::print(logfile, "[{:%T}] ", std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() + tzoffset));
     }
 
 
@@ -250,6 +248,13 @@ void Log::LogW(const wchar_t* msg, ...)
     va_end(args);
     if (msg[wcslen(msg) - 1] != '\n') {
         fprintf(logfile, "\n");
+    }
+}
+
+void Log::FlushFile()
+{
+    if (logfile) {
+        fflush(logfile);
     }
 }
 

@@ -1,5 +1,4 @@
 #pragma once
-#define GWCA_ASSERT(expr) ((void)(!!(expr) || (GW::FatalAssert(#expr, __FILE__, (unsigned)__LINE__, __FUNCTION__), 0)))
 #ifdef _DEBUG
     #define GWCA_TRACE(fmt, ...) GW::LogMessage(GW::LEVEL_TRACE, __FILE__, (unsigned)__LINE__, __FUNCTION__, fmt, __VA_ARGS__)
     #define GWCA_DEBUG(fmt, ...) GW::LogMessage(GW::LEVEL_DEBUG, __FILE__, (unsigned)__LINE__, __FUNCTION__, fmt, __VA_ARGS__)
@@ -7,14 +6,18 @@
     #define GWCA_WARN(fmt, ...) GW::LogMessage(GW::LEVEL_WARN, __FILE__, (unsigned)__LINE__, __FUNCTION__, fmt, __VA_ARGS__)
     #define GWCA_ERR(fmt, ...) GW::LogMessage(GW::LEVEL_ERR, __FILE__, (unsigned)__LINE__, __FUNCTION__, fmt, __VA_ARGS__)
     #define GWCA_CRITICAL(fmt, ...) GW::LogMessage(GW::LEVEL_CRITICAL, __FILE__, (unsigned)__LINE__, __FUNCTION__, fmt, __VA_ARGS__)
+    #define GWCA_ASSERT(expr) ((void)(!!(expr) || (GW::FatalAssert(#expr, __FILE__, (unsigned)__LINE__, __FUNCTION__), 0)))
 #else
-
+    #define GWCA_ASSERT(expr) ((void)(!!(expr) || (GW::FatalAssert("", "", __COUNTER__, ""), 0)))
     #define GWCA_TRACE(fmt, ...)
     #define GWCA_DEBUG(fmt, ...)
     #define GWCA_INFO(fmt, ...)
     #define GWCA_WARN(fmt, ...)
     #define GWCA_ERR(fmt, ...)
     #define GWCA_CRITICAL(fmt, ...)
+    #define __FILE__ ""
+    #define __LINE__ 0
+    #define __FUNCTION__ ""
 #endif
 
 #include <GWCA/Utilities/Export.h>

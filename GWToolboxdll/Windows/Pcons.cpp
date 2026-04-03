@@ -26,8 +26,10 @@
 
 #include <Utils/FontLoader.h>
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 #include "Color.h"
+
 
 float Pcon::size = 46.0f;
 int Pcon::pcons_delay = 5000;
@@ -235,7 +237,7 @@ void Pcon::Update(int delay)
 
 void Pcon::ItemUpdated(const GW::Item* item)
 {
-    if (item && QuantityForEach(item))
+    if (item && PointsPerUse(item))
         ResetCounts();
 }
 
@@ -411,7 +413,7 @@ void Pcon::UpdateRefill()
     }
     if (pending_move_to_quantity) {
         const GW::Item* item = GW::Items::GetItemBySlot(pending_move_to_bag, pending_move_to_slot + 1);
-        if (!item || !QuantityForEach(item) || item->quantity != pending_move_to_quantity) {
+        if (!item || !PointsPerUse(item) || item->quantity != pending_move_to_quantity) {
             return; // Still waiting for move.
         }
         UnreserveSlotForMove(item->bag->index, item->slot);
@@ -444,7 +446,7 @@ void Pcon::UpdateRefill()
             if (storageItem == nullptr) {
                 continue; // No item, skip
             }
-            const size_t points_per_item = QuantityForEach(storageItem);
+            const size_t points_per_item = PointsPerUse(storageItem);
             if (points_per_item < 1) {
                 continue; // This is not the pcon you're looking for...
             }
@@ -495,7 +497,7 @@ int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, const size_t from_bag
             if (item == nullptr) {
                 continue; // No item, skip
             }
-            const size_t qtyea = QuantityForEach(item);
+            const size_t qtyea = PointsPerUse(item);
             if (qtyea < 1) {
                 continue; // This is not the pcon you're looking for...
             }
@@ -503,7 +505,7 @@ int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, const size_t from_bag
                 *used = true;
                 used_qty = qtyea;
             }
-            count += qtyea * item->quantity;
+            count += qtyea * GW::Items::GetUses(item);
         }
     }
     if (used_qty_ptr) {
@@ -586,7 +588,7 @@ void Pcon::SaveSettings(ToolboxIni* inifile, const char* section) const
 }
 
 // ================================================
-size_t PconGeneric::QuantityForEach(const GW::Item* item) const
+size_t PconGeneric::PointsPerUse(const GW::Item* item) const
 {
     if (item->model_id == static_cast<DWORD>(itemID)) {
         return 1;
@@ -724,7 +726,7 @@ bool PconCity::IsVisible() const
     return visible && (!hide_city_pcons_in_explorable_areas || maptype == GW::Constants::InstanceType::Outpost);
 }
 
-size_t PconCity::QuantityForEach(const GW::Item* item) const
+size_t PconCity::PointsPerUse(const GW::Item* item) const
 {
     using namespace GW::Constants;
     switch (item->model_id) {
@@ -748,43 +750,9 @@ bool PconAlcohol::CanUseByEffect() const
     return AlcoholWidget::Instance().GetAlcoholLevel() <= 1;
 }
 
-size_t PconAlcohol::QuantityForEach(const GW::Item* item) const
+size_t PconAlcohol::PointsPerUse(const GW::Item* item) const
 {
-    using namespace GW::Constants;
-    switch (item->model_id) {
-        case ItemID::Eggnog:
-        case ItemID::DwarvenAle:
-        case ItemID::HuntersAle:
-        case ItemID::Absinthe:
-        case ItemID::WitchsBrew:
-        case ItemID::Ricewine:
-        case ItemID::ShamrockAle:
-        case ItemID::Cider:
-            return 1;
-        case ItemID::Grog:
-        case ItemID::SpikedEggnog:
-        case ItemID::AgedDwarvenAle:
-        case ItemID::AgedHuntersAle:
-        case ItemID::FlaskOfFirewater:
-        case ItemID::KrytanBrandy:
-            return 5;
-        case ItemID::Keg: {
-            const GW::ItemModifier* mod = item->mod_struct;
-            if (mod == nullptr) {
-                return 5; // we don't think this will ever happen
-            }
-
-            for (DWORD i = 0; i < item->mod_struct_size; i++) {
-                if (mod->identifier() == 0x2458) {
-                    return mod->arg2() * 5;
-                }
-                mod++;
-            }
-            return 5; // this should never happen, but we keep it as a fallback
-        }
-        default:
-            return 0;
-    }
+    return GW::Items::GetAlcoholPointsPerUse(item);
 }
 
 void PconAlcohol::ForceUse()
@@ -809,7 +777,7 @@ void PconLunar::Update(const int)
     Pcon::Update(lunar_delay);
 }
 
-size_t PconLunar::QuantityForEach(const GW::Item* item) const
+size_t PconLunar::PointsPerUse(const GW::Item* item) const
 {
     using namespace GW::Constants;
     switch (item->model_id) {
@@ -862,7 +830,7 @@ bool PconScroll::CanUseByEffect() const
     return true;
 }
 
-size_t PconScroll::QuantityForEach(const GW::Item* item) const
+size_t PconScroll::PointsPerUse(const GW::Item* item) const
 {
     using namespace GW::Constants;
     if (!item)

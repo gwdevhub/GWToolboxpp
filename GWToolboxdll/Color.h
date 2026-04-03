@@ -57,7 +57,7 @@ namespace Colors {
     static constexpr Color BlueGrey() { return RGB(96, 125, 139); }
     static constexpr Color Grey() { return RGB(158, 158, 158); }
 
-    static Color Load(const ToolboxIni* ini, const char* section, const char* key, const Color def)
+    static Color Load(const CSimpleIni* ini, const char* section, const char* key, const Color def)
     {
         auto ParseUInt = [](const char* str, unsigned int* val, const int base)
         {
@@ -82,7 +82,7 @@ namespace Colors {
         return def;
     }
 
-    static void Save(ToolboxIni* ini, const char* section, const char* key, const Color val)
+    static void Save(CSimpleIni* ini, const char* section, const char* key, const Color val)
     {
         char buf[11];
         snprintf(buf, sizeof(buf), "0x%X", val);

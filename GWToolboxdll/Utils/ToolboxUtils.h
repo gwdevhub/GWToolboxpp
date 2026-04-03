@@ -48,6 +48,7 @@ namespace GW {
     namespace Constants {
         enum class SkillID : uint32_t;
         enum class TitleID : uint32_t;
+        enum class MaterialSlot : uint32_t;
         // Blunt, Piercing, Slashing, Cold, Lightning, Fire, Chaos, Dark, Holy, Nature, Sacrifice, Earth, Generic, Dark
         enum class DamageType : uint8_t {
             Blunt,
@@ -162,6 +163,7 @@ namespace GW {
     }
     namespace UI {
         struct Frame;
+        void AsyncDecodeStrS(const wchar_t* enc_str, std::string* out, GW::Constants::Language language_id = (GW::Constants::Language)0xff);
         void AsyncDecodeStr(const wchar_t* enc_str, std::wstring* out, GW::Constants::Language language_id = (GW::Constants::Language)0xff);
         bool BelongsToFrame(GW::UI::Frame* parent, GW::UI::Frame* child);
 
@@ -170,9 +172,11 @@ namespace GW {
     } // namespace UI
     namespace PlayerMgr {
         bool IsMelandrusAccord();
+        GW::GamePos* GetPlayerPosition();
     }
     namespace Agents {
         bool IsAgentCarryingBundle(uint32_t agent_id);
+        void AsyncGetAgentName(const uint32_t agent_id, std::wstring& out);
         void AsyncGetAgentName(const Agent* agent, std::wstring& out);
     }
     namespace Items {
@@ -183,13 +187,26 @@ namespace GW {
         const char* GetRarityName(const GW::Constants::Rarity rarity);
         const char* GetItemTypeName(const GW::Constants::ItemType item_type);
 
-        uint32_t GetUses(GW::Item* item);
-        uint32_t GetAlcoholPointsPerUse(GW::Item* item);
-        bool IsAlcohol(GW::Item* item);
+        struct MaterialInfo {
+            const wchar_t* enc_name; // for tooltip display
+            int model_id;            // for price lookup
+        };
+
+        const MaterialInfo* GetMaterialInfo(GW::Constants::MaterialSlot slot);
+
+        uint32_t GetUses(const GW::Item* item);
+        uint32_t GetAlcoholPointsPerUse(const GW::Item* item);
+        bool IsAlcohol(const GW::Item* item);
     }
 }
 
 namespace ToolboxUtils {
+
+    // Helper function to limit some functions to only check every n frames
+    bool FrameRateCheck(clock_t& last_checked, clock_t target_fps);
+
+    // e.g passing 200 would return the encoded string for "3 minutes"
+    std::wstring TimeToEncString(clock_t time_in_seconds);
 
     bool ArrayBoolAt(const GW::Array<uint32_t>&, uint32_t);
     // Map

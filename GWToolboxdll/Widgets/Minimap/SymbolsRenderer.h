@@ -1,14 +1,13 @@
 #pragma once
 
-#include <Widgets/Minimap/VBuffer.h>
+#include <D3DContainers.h>
 
-class SymbolsRenderer : public VBuffer {
+class SymbolsRenderer : public D3DVertexBuffer {
     friend class QuestModule;
 
 public:
     SymbolsRenderer() = default;
 
-    void Invalidate() override;
     void Render(IDirect3DDevice9* device, float zoom = 1.f);
     void Render(IDirect3DDevice9* device) override { Render(device, 1.f); };
 

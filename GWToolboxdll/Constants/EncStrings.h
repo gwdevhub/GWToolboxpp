@@ -311,6 +311,12 @@ namespace GW {
             static const wchar_t* TheLastHeirophant = L"\x8102\x10b5\xbc2f\xb47f\x30a7";
         }
 
+        namespace HeroBehavior {
+            static const wchar_t* Fight = L"\x8101\x5E27";
+            static const wchar_t* Guard = L"\x8101\x5E28";
+            static const wchar_t* Avoid = L"\x8101\x5E29";
+        }
+
         // General settings
         static const uint32_t TextLanguage = 0x561;
         static const uint32_t AudioLanguage = 0xdbe2;

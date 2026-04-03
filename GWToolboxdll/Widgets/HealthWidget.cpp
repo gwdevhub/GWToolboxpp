@@ -232,7 +232,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
             if (font_size_perc_value > 0.f) {
                 ImGui::PushFont(FontLoader::GetFontByPx(font_size_perc_value));
                 cur = ImGui::GetCursorPos();
-                const auto health_perc = target->hp >= 0 ? std::format("{:.0f} %%", target->hp * 100.0f) : "-";
+                const auto health_perc = target->hp >= 0 ? std::format("{:.0f}%%", target->hp * 100.0f) : "-";
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
                 ImGui::TextColored(background, health_perc.c_str());
                 ImGui::SetCursorPos(cur);
@@ -259,7 +259,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                         if (!agent_name_ping.empty()) {
                             const std::string agent_name_str = TextUtils::WStringToString(agent_name_ping);
                             const auto current_hp = static_cast<int>(target->hp * target->max_hp);
-                            const auto message = std::format("{}'s Health is {} of {}. ({:.0f} %%)", agent_name_str.c_str(), current_hp, target->max_hp, target->hp * 100.f);
+                            const auto message = std::format("{}'s health is {} of {} ({:.0f}%).", agent_name_str.c_str(), current_hp, target->max_hp, target->hp * 100.f);
                             GW::Chat::SendChat('#', message.c_str());
                         }
                     }
