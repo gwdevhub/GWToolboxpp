@@ -3000,8 +3000,19 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, const GW::Agen
     size_t count = 0;
 
     for (const GW::Agent* agent : *agents) {
-        if (agent == me || !GW::Agents::GetAgentMatchesFlags(agent, type))
+        if (!agent || agent == me)
             continue;
+
+        if (model_id != 0) {
+            auto living = agent->GetAsAgentLiving();
+            if (living && living->player_number != model_id)
+                continue;
+        }
+        else {
+            if (!GW::Agents::GetAgentMatchesFlags(agent, type))
+                continue;
+        }
+
         if (index == 0) {
             // target closest
             const float new_distance = GetSquareDistance(me->pos, agent->pos);
