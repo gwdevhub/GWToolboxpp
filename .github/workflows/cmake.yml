@@ -217,6 +217,7 @@ jobs:
         # Prepare artifacts
         BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
         cp "$BIN_DIR/GWToolboxdll.dll" .
+        cp "$BIN_DIR/DialogsWindow.dll" .
         cp "$BIN_DIR/RawDialogs.dll" .
         cp "$BIN_DIR/SpeedrunScriptingTools.dll" .
         cp "${{runner.workspace}}/GWToolboxpp/Dependencies/GWCA/bin/gwca.dll" .
@@ -230,10 +231,10 @@ jobs:
             --title "commit-$DEV_COMMIT_SHORT" \
             --notes "[$DEV_COMMIT_SHORT](https://github.com/gwdevhub/GWToolboxpp/commit/$DEV_COMMIT)" \
             --prerelease \
-            GWToolboxdll.dll RawDialogs.dll SpeedrunScriptingTools.dll GWToolboxdll.pdb.gz gwca.dll
+            GWToolboxdll.dll DialogsWindow.dll RawDialogs.dll SpeedrunScriptingTools.dll GWToolboxdll.pdb.gz gwca.dll
         else
           gh release create "$TAG_NAME" \
             --title "$TAG_NAME" \
             --notes "$RELEASE_NOTES" \
-            GWToolboxdll.dll RawDialogs.dll SpeedrunScriptingTools.dll GWToolboxdll.pdb.gz gwca.dll
+            GWToolboxdll.dll DialogsWindow.dll RawDialogs.dll SpeedrunScriptingTools.dll GWToolboxdll.pdb.gz gwca.dll
         fi
