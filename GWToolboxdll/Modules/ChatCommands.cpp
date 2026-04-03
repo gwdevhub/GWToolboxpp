@@ -3032,6 +3032,13 @@ void ChatCommands::TargetNearest(const wchar_t* model_id_or_name, const GW::Agen
             auto living = agent->GetAsAgentLiving();
             if (living && living->player_number != model_id)
                 continue;
+
+            if (type == GW::TargetFilter::AnyLiving) {
+                if (!living || living->GetIsDead()) continue;
+            }
+            else if (type == (GW::TargetFilter::AnyLiving & ~GW::AgentTargetFlags::Accept_Player)) {
+                if (!living || living->GetIsDead()) continue;
+            }
         }
         else {
             if (!GW::Agents::GetAgentMatchesFlags(agent, type))
