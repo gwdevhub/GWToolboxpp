@@ -1161,35 +1161,43 @@ namespace {
         
     }
     struct SkillToUse {
-        uint32_t slot = 0; // 1-8 range
-        float skill_usage_delay = 0.f;
-        clock_t skill_timer = clock();
+        struct Entry {
+            bool active = false;
+            float skill_usage_delay = 0.f;
+            clock_t skill_timer = clock();
+        };
+        Entry entries[8];
         void Update();
+        void Clear();
+        bool AnyActive() const;
     } skill_to_use;
     const char* useskill_syntax = "'/useskill [slot]' starts using the skill on recharge.\n"
                                   "Use the skill number instead of [slot] (e.g. '/useskill 5').\n"
-                                  "Use '/useskill [stop|off|slot|0]' to stop the skill.";
+                                  "Use '/useskill [slot]' to stop the skill.\n"
+                                  "Use '/useskill [0|stop|off]' to stop all skills.";
     void CHAT_CMD_FUNC(CmdUseSkill)
     {
-        if (!IsMapReady()) {
-            return;
-        }
-        if (argc < 2) {
-            Log::Warning(useskill_syntax);
-            return;
-        }
-        const std::wstring arg1 = TextUtils::ToLower(argv[1]);
-        if (arg1 == L"stop" || arg1 == L"off") {
-            skill_to_use.slot = 0;
-            return;
-        }
         uint32_t num = 0;
-        if (!TextUtils::ParseUInt(argv[1], &num) || num > 8) {
-            Log::Warning(useskill_syntax);
+        if (IsMapReady() && argc >= 2) {
+            const std::wstring arg1 = TextUtils::ToLower(argv[1]);
+            if (arg1 != L"stop" && arg1 != L"off") {
+                if (!TextUtils::ParseUInt(argv[1], &num) || num > 8) {
+                    Log::Warning(useskill_syntax);
+                    return;
+                }
+            }
+        }
+        if (num == 0) {
+            if (argc < 2) {
+                Log::Warning(useskill_syntax);
+                return;
+            }
+            skill_to_use.Clear();
             return;
-        } 
-        skill_to_use.slot = (skill_to_use.slot == num) ? 0 : num;
-        skill_to_use.skill_usage_delay = .0f;
+        }
+        const uint32_t index = num - 1;
+        skill_to_use.entries[index].active = !skill_to_use.entries[index].active;
+        skill_to_use.entries[index].skill_usage_delay = .0f;
     }
 
     void HookOnChatInteraction() {
@@ -1965,34 +1973,51 @@ void ChatCommands::SearchAgent::Update()
 
 void SkillToUse::Update()
 {
-    if (!slot) {
+    if (!AnyActive()) {
         return;
     }
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable || GW::Map::GetIsObserving()) {
-        slot = 0;
-        return;
-    }
-    if ((clock() - skill_timer) / 1000.0f < skill_usage_delay) {
+        Clear();
         return;
     }
     const auto skillbar = GW::SkillbarMgr::GetPlayerSkillbar();
     if (!skillbar || !skillbar->IsValid()) {
-        slot = 0;
-        return;
-    }
-    const auto lslot = slot - 1;
-    const GW::SkillbarSkill& skill = skillbar->skills[lslot];
-    if (skill.skill_id == GW::Constants::SkillID::No_Skill) {
-        slot = 0;
+        Clear();
         return;
     }
     if (skillbar->cast_array.size()) return; // Don't use skill if we've got anything queued
-    const GW::Skill& skilldata = *GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
-    if ((skilldata.adrenaline == 0 && skill.GetRecharge() == 0) || (skilldata.adrenaline > 0 && skill.adrenaline_a == skilldata.adrenaline)) {
-        GW::SkillbarMgr::UseSkill(lslot, GW::Agents::GetTargetId());
-        skill_usage_delay = std::max(skilldata.activation + skilldata.aftercast, 0.25f); // a small flat delay of .3s for ping and to avoid spamming in case of bad target
-        skill_timer = clock();
+    for (uint32_t i = 0; i < 8; i++) {
+        auto& entry = entries[i];
+        if (!entry.active) {
+            continue;
+        }
+        if ((clock() - entry.skill_timer) / 1000.0f < entry.skill_usage_delay) {
+            continue;
+        }
+        const GW::SkillbarSkill& skill = skillbar->skills[i];
+        if (skill.skill_id == GW::Constants::SkillID::No_Skill) {
+            entry.active = false;
+            continue;
+        }
+        const GW::Skill& skilldata = *GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
+        if ((skilldata.adrenaline == 0 && skill.GetRecharge() == 0) || (skilldata.adrenaline > 0 && skill.adrenaline_a == skilldata.adrenaline)) {
+            GW::SkillbarMgr::UseSkill(i, GW::Agents::GetTargetId());
+            entry.skill_usage_delay = std::max(skilldata.activation + skilldata.aftercast, 0.25f);
+            entry.skill_timer = clock();
+        }
     }
+}
+
+void SkillToUse::Clear()
+{
+    for (auto& entry : entries) {
+        entry.active = false;
+    }
+}
+
+bool SkillToUse::AnyActive() const
+{
+    return std::ranges::any_of(entries, [](const Entry& e) { return e.active; });
 }
 
 bool ChatCommands::ReadTemplateFile(const std::wstring& path, char* buff, const size_t buffSize)
