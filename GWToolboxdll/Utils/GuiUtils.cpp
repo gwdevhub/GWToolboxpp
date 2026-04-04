@@ -515,7 +515,7 @@ namespace GuiUtils {
     {
         if (!sanitised && !decoded_ws.empty()) {
             sanitised = true;
-            decoded_ws = TextUtils::StripTags(decoded_ws);
+            decoded_ws = TextUtils::StripTags(TextUtils::Replace(decoded_ws, L"<brx>", L"\n"));
         }
     }
 

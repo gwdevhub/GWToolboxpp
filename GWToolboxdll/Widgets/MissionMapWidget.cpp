@@ -397,7 +397,7 @@ namespace {
         GW::GamePos best_pos = {};
         bool found = false;
 
-        for (size_t agent_id = 0, len = highest_trackable_agent_id; agent_id < len; agent_id++) {
+        for (size_t agent_id = 0, len = highest_trackable_agent_id; agent_id <= len; agent_id++) {
             const auto& enemy = tracked_enemies_by_agent_id[agent_id];
             if (enemy.state == EnemyState::NotApplicable) continue;
             const float dist_sq = GW::GetDistance(enemy.pos, player_pos);
