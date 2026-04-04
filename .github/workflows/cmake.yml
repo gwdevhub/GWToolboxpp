@@ -126,12 +126,12 @@ jobs:
 
     - name: Patch GWCA
       run: |
-        git clone https://github.com/gwtasdevs/GWCA.git
-        cp .\Dependencies\GWCA\bin\gwca.dll .\GWCA\gwca.dll
-        cd .\GWCA
+        git clone https://github.com/gwtasdevs/gwca-patcher.git
+        cp .\Dependencies\GWCA\bin\gwca.dll .\gwca-patcher\gwca.dll
+        cd .\gwca-patcher
         cargo run
         cd ..
-        cp .\GWCA\gwca.dll .\Dependencies\GWCA\bin\gwca.dll
+        cp .\gwca-patcher\gwca.dll .\Dependencies\GWCA\bin\gwca.dll
 
     - name: Set VCPKG_ROOT
       run: |
