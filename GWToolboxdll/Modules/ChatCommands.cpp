@@ -146,9 +146,10 @@ namespace {
 
         GW::Agent* closest = nullptr;
         for (const auto agent : *agents) {
-            if (agent == me || !GW::Agents::GetAgentMatchesFlags(agent, GW::TargetFilter::AnyLiving)) {
-                continue;
-            }
+            if (!agent || agent == me) continue;
+            auto living = agent->GetAsAgentLiving();
+            if (!living || living->GetIsDead()) continue;
+
             const float this_distance = GetSquareDistance(me->pos, agent->pos);
             if (this_distance > max_distance) {
                 continue;
