@@ -11,6 +11,7 @@
 #include <SerializationIncrement.h>
 #include <ScriptVariables.h>
 
+#include <BackupManager.h>
 #include <PluginUtils.h>
 
 #include <GWCA/GWCA.h>
@@ -69,6 +70,62 @@ namespace {
         const auto sst = reinterpret_cast<SpeedrunScriptingTools*>(instancePtr);
         
         sst->triggerScripts(Trigger::DisplayDialog, [&](const Script& s){ return !s.triggerData.message.empty() && WStringToString(decoded).contains(s.triggerData.message); });
+    }
+
+    static void __cdecl OnRestoreChatCommand(GW::HookStatus* status, const wchar_t*, int argc, const LPWSTR* argv)
+    {
+        const auto instance = static_cast<SpeedrunScriptingTools*>(ToolboxPluginInstance());
+        if (!instance || argc < 2) {
+            status->blocked = false;
+            return;
+        }
+        const auto arg1 = PluginUtils::ToLower(argv[1]);
+        const auto pluginName = PluginUtils::StringToWString(instance->Name());
+
+        std::filesystem::path iniToLoad;
+        if (arg1 != PluginUtils::ToLower(pluginName) && arg1 != L"sst") {
+            status->blocked = false;
+            return;
+        }
+        if (argc < 3 || PluginUtils::ToLower(argv[2]) == L"recent") {
+            logMessage("Restore most recent backup", instance->Name());
+            iniToLoad = BackupManager::getInstance().load(pluginName, BackupManager::LoadType::Latest);
+        }
+        else if (PluginUtils::ToLower(argv[2]) == L"largest") {
+            logMessage("Restore largest backup", instance->Name());
+            iniToLoad = BackupManager::getInstance().load(pluginName, BackupManager::LoadType::Largest);
+        }
+        else if (PluginUtils::ToLower(argv[2]) == L"list") {
+            logMessage("Available backups:", instance->Name());
+            const auto paths = BackupManager::getInstance().list(pluginName);
+            for (const auto& path : paths) {
+                const auto name = path.filename().string().substr(0, 1);
+                const auto time = std::format("{:%Y-%m-%d %H:%M}", std::filesystem::last_write_time(path));
+                const auto size = std::filesystem::file_size(path);
+                logMessage(std::format("Backup {}, Last change {}, File size {}", name, time, size), instance->Name());
+            }
+        }
+        else if (PluginUtils::ToLower(argv[2]) == L"help") {
+            logMessage("Type \"/restore SST recent\" to restore the most recent backup", instance->Name());
+            logMessage("Type \"/restore SST largest\" to restore the largest backup", instance->Name());
+            logMessage("Type \"/restore SST list\" to show the available backups", instance->Name());
+            logMessage("Type \"/restore SST $NUMBER\" to restore a specific backup", instance->Name());
+            logMessage("Type \"/restore SST help\" to show this menu", instance->Name());
+        }
+        else {
+            try {
+                const auto index = std::stoi(argv[2]);
+                logMessage("Restore backup " + std::to_string(index), instance->Name());
+                iniToLoad = BackupManager::getInstance().load(pluginName, BackupManager::LoadType::Index, index);
+            }
+            catch (...) {
+                status->blocked = false;
+                return;
+            }
+        }
+        if (!iniToLoad.empty()) {
+            instance->loadFromIniFile(iniToLoad.c_str());
+        }
     }
 
     // Versions 1-7: Prerelease, can be ignored
@@ -829,7 +886,11 @@ void SpeedrunScriptingTools::loadFromIniFile(const wchar_t* file)
 void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
 {
     ToolboxPlugin::LoadSettings(folder);
+    BackupManager::getInstance().initialize(folder);
     loadFromIniFile(GetSettingFile(folder).c_str());
+    if (m_scripts.empty() && m_groups.empty() && BackupManager::getInstance().backupCount(PluginUtils::StringToWString(Name())) > 0) {
+        logMessage("No scripts loaded, but automatic backups found. Type \"/restore SST help\" to see options for restoring backups", Name());
+    }
 }
 
 void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
@@ -863,6 +924,9 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
         }
     }
     PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+    if (!m_scripts.empty() || !m_groups.empty()) {
+        BackupManager::getInstance().save(PluginUtils::StringToWString(Name()), GetSettingFile(folder));
+    }
 }
 
 void SpeedrunScriptingTools::Update(float delta)
@@ -1201,53 +1265,7 @@ void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, const ImGuiAllocFns a
         }
     });
 
-    GW::Chat::CreateCommand(&RestoreChatCmd_HookEntry, L"restore", [](GW::HookStatus* status, const wchar_t*, const int argc, const LPWSTR* argv) {
-        const auto instance = static_cast<SpeedrunScriptingTools*>(ToolboxPluginInstance());
-        if (!instance || argc < 2) {
-            status->blocked = false;
-            return;
-        }
-        const auto arg1 = PluginUtils::ToLower(argv[1]);
-        const auto pluginName = PluginUtils::StringToWString(instance->Name());
-
-        std::filesystem::path iniToLoad;
-        if (arg1 != PluginUtils::ToLower(pluginName) && arg1 != L"sst") {
-            status->blocked = false;
-            return;
-        }
-        /*if (argc < 3 || PluginUtils::ToLower(argv[2]) == L"recent") {
-            PluginUtils::logMessage("Restore most recent backup", instance->Name());
-            iniToLoad = BackupManager::getInstance().load(pluginName, BackupManager::LoadType::Latest);
-        }
-        else if (PluginUtils::ToLower(argv[2]) == L"largest") {
-            PluginUtils::logMessage("Restore largest backup", instance->Name());
-            iniToLoad = BackupManager::getInstance().load(pluginName, BackupManager::LoadType::Largest);
-        }
-        else if (PluginUtils::ToLower(argv[2]) == L"list") {
-            PluginUtils::logMessage("Available backups:", instance->Name());
-            const auto paths = BackupManager::getInstance().list(pluginName);
-            for (const auto& path : paths) {
-                const auto name = path.filename().string().substr(0, 1);
-                const auto time = std::format("{:%Y-%m-%d %H:%M}", std::filesystem::last_write_time(path));
-                const auto size = std::filesystem::file_size(path);
-                PluginUtils::logMessage(std::format("Backup {}, Last change {}, File size {}", name, time, size), instance->Name());
-            }
-        }
-        else if (PluginUtils::ToLower(argv[2]) == L"help") {
-            PluginUtils::logMessage("Type \"/restore SST recent\" to restore the most recent backup", instance->Name());
-            PluginUtils::logMessage("Type \"/restore SST largest\" to restore the largest backup", instance->Name());
-            PluginUtils::logMessage("Type \"/restore SST list\" to show the available backups", instance->Name());
-            PluginUtils::logMessage("Type \"/restore SST $NUMBER\" to restore a specific backup", instance->Name());
-            PluginUtils::logMessage("Type \"/restore SST help\" to show this menu", instance->Name());
-        }*/
-        else {
-            status->blocked = false;
-            return;
-        }
-        //if (!iniToLoad.empty()) {
-        //    instance->loadFromIniFile(iniToLoad.c_str());
-        //}
-    });
+    GW::Chat::CreateCommand(&RestoreChatCmd_HookEntry, L"restore", OnRestoreChatCommand);
 
     InstanceInfo::getInstance().initialize();
     QuestInfo::getInstance().initialize();
