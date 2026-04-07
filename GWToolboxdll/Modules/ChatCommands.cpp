@@ -181,9 +181,10 @@ namespace {
 
         GW::Agent* closest = nullptr;
         for (const auto agent : *agents) {
-            if (agent == me || !GW::Agents::GetAgentMatchesFlags(agent, GW::TargetFilter::AnyLiving)) {
-                continue;
-            }
+            if (!agent || agent == me) continue;
+            auto living = agent->GetAsAgentLiving();
+            if (!living || living->GetIsDead()) continue;
+
             const float this_distance = GetSquareDistance(me->pos, agent->pos);
             if (this_distance > max_distance) {
                 continue;
@@ -220,9 +221,10 @@ namespace {
 
         GW::Agent* closest = nullptr;
         for (const auto agent : *agents) {
-            if (agent == me || !GW::Agents::GetAgentMatchesFlags(agent, AgentEETargetType)) {
-                continue;
-            }
+            if (!agent || agent == me) continue;
+            auto living = agent->GetAsAgentLiving();
+            if (!living || living->GetIsDead()) continue;
+
             const float this_distance = GetSquareDistance(me->pos, agent->pos);
             if (this_distance > max_distance || distance > this_distance) {
                 continue;
@@ -812,8 +814,23 @@ namespace {
         size_t count = 0;
 
         for (const GW::Agent* agent : *agents) {
-            if (agent == me || !GW::Agents::GetAgentMatchesFlags(agent, type)) continue;
-            if (model_id && GetAgentModelId(agent) != model_id) continue;
+            if (!agent || agent == me) continue;
+
+            if (model_id) {
+                if (GetAgentModelId(agent) != model_id) continue;
+
+                auto living = agent->GetAsAgentLiving();
+                if (type == GW::TargetFilter::AnyLiving) {
+                    if (!living || living->GetIsDead()) continue;
+                }
+                else if (type == (GW::TargetFilter::AnyLiving & ~GW::AgentTargetFlags::Accept_Player)) {
+                    if (!living || living->GetIsDead()) continue;
+                }
+            }
+            else {
+                if (!GW::Agents::GetAgentMatchesFlags(agent, type)) continue;
+            }
+
             if (index == 0) {
                 // target closest
                 const float new_distance = GetSquareDistance(me->pos, agent->pos);
