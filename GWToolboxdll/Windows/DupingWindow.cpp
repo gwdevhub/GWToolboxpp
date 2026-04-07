@@ -1,37 +1,45 @@
 #include "stdafx.h"
+#include <algorithm>
+#include <set>
 
 #include <GWCA/Constants/Constants.h>
-
-#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Context/WorldContext.h>
-
+#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Packets/StoC.h>
 
 #include <Color.h>
+#include <Timer.h>
 #include <Utils/GuiUtils.h>
 #include <Windows/DupingWindow.h>
 
-#include <Timer.h>
 
 namespace {
-    struct DupeInfo {
-        DupeInfo(const GW::AgentID agent_id)
-            : agent_id(agent_id) { }
-
-
-        GW::AgentID agent_id;
+    struct TrackedEnemy {
         clock_t last_duped = 0;
         size_t dupe_count = 0;
+        uint32_t aggro_group = 0;
+        bool will_follow = false;
     };
+    std::unordered_map<GW::AgentID, TrackedEnemy> tracked_enemies{};
 
-    GW::AgentLiving* GetAgentLivingByID(const uint32_t agent_id)
-    {
-        const auto a = GW::Agents::GetAgentByID(agent_id);
-        return a ? a->GetAsAgentLiving() : nullptr;
-    }
+    float range = 1600.0f;
+    const float sqr_aggro_range = GW::Constants::Range::Earshot * GW::Constants::Range::Earshot;
+    const float sqr_lost_aggro_range = GW::Constants::Range::Spellcast * GW::Constants::Range::Spellcast;
+
+    bool hide_when_nothing = true;
+    bool show_souls_counter = true;
+    bool show_waters_counter = true;
+    bool show_minds_counter = true;
+    float souls_threshhold = 0.6f;
+    float waters_threshhold = 0.5f;
+    float minds_threshhold = 0.0f;
+    GW::AgentID last_attacked_agent_id;
+    GW::HookEntry AgentAttack_Entry;
 
     uint32_t GetAgentMaxHP(const GW::AgentLiving* agent)
     {
@@ -65,25 +73,66 @@ namespace {
         return static_cast<int>(pips);
     }
 
-    bool OrderDupeInfo(const DupeInfo& a, const DupeInfo& b)
+    void DrawTrackedEnemy(int agent_id, const TrackedEnemy* info)
     {
-        const auto agentA = GetAgentLivingByID(a.agent_id);
-        const auto agentB = agentA ? GetAgentLivingByID(b.agent_id) : nullptr;
+        const auto agent = GW::Agents::GetAgentByID(agent_id);
+        if (!agent) return;
 
-        if (!agentB) {
-            return false;
+        const auto living = agent->GetAsAgentLiving();
+        if (!living) return;
+
+        const GW::Agent* target = GW::Agents::GetTarget();
+        const auto selected = target && target->agent_id == living->agent_id;
+
+        ImGui::PushID(agent_id);
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+
+        if (ImGui::Selectable("", selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap, ImVec2(0, 23))) {
+            if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+                GW::GameThread::Enqueue([living] {
+                    GW::Agents::ChangeTarget(living);
+                });
+            }
         }
 
-        if (agentA->hp > 0.35f && agentB->hp > 0.35f) {
-            return agentA->hp_pips > agentB->hp_pips;
+        ImGui::TableSetColumnIndex(1);
+        ImGui::ProgressBar(living->hp);
+
+        ImGui::TableSetColumnIndex(2);
+        const auto pips = GetHealthRegenPips(living);
+        if (pips > 0 && pips < 11) {
+            ImGui::Text("%.*s", pips > 0 && pips < 11 ? pips : 0, ">>>>>>>>>>");
         }
 
-        return agentA->hp > agentB->hp;
+        ImGui::TableSetColumnIndex(3);
+        ImGui::Text("%d", info->dupe_count);
+
+        ImGui::TableSetColumnIndex(4);
+        if (info->last_duped > 0) {
+            const auto seconds_ago = static_cast<int>((TIMER_DIFF(info->last_duped) / CLOCKS_PER_SEC));
+            if (seconds_ago < 5) {
+                ImGui::PushStyleColor(ImGuiCol_Text, Colors::ARGB(205, 102, 153, 230));
+            }
+
+            const auto [quot, rem] = std::div(seconds_ago, 60);
+            ImGui::Text("%d:%02d", quot, rem);
+
+            if (seconds_ago < 5) {
+                ImGui::PopStyleColor();
+            }
+        }
+        else {
+            ImGui::Text("-");
+        }
+
+        ImGui::PopID();
     }
 
-    void DrawDuping(const char* label, const std::vector<DupeInfo>& vec)
+    void DrawEnemies(const char* label, const std::vector<std::pair<int, const TrackedEnemy*>>& enemies)
     {
-        if (vec.empty()) {
+        if (enemies.empty()) {
             return;
         }
 
@@ -96,97 +145,206 @@ namespace {
             ImGui::TableSetupColumn("Dupe Count", ImGuiTableColumnFlags_WidthFixed, 20, 2);
             ImGui::TableSetupColumn("Last Duped", ImGuiTableColumnFlags_WidthFixed, 40, 3);
 
-            const GW::Agent* target = GW::Agents::GetTarget();
-
-            for (const auto& dupe_info : vec) {
-                const auto living = GetAgentLivingByID(dupe_info.agent_id);
-                if (!living) {
-                    continue;
-                }
-                const auto selected = target && target->agent_id == living->agent_id;
-
-                ImGui::PushID(dupe_info.agent_id);
-                ImGui::TableNextRow();
-
-                ImGui::TableSetColumnIndex(0);
-
-                if (ImGui::Selectable("", selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap, ImVec2(0, 23))) {
-                    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-                        GW::GameThread::Enqueue([living] {
-                            GW::Agents::ChangeTarget(living);
-                        });
-                    }
-                }
-
-                ImGui::TableSetColumnIndex(1);
-                ImGui::ProgressBar(living->hp);
-
-                ImGui::TableSetColumnIndex(2);
-                const auto pips = GetHealthRegenPips(living);
-                if (pips > 0 && pips < 11) {
-                    ImGui::Text("%.*s", pips > 0 && pips < 11 ? pips : 0, ">>>>>>>>>>");
-                }
-
-                ImGui::TableSetColumnIndex(3);
-                ImGui::Text("%d", dupe_info.dupe_count);
-
-                ImGui::TableSetColumnIndex(4);
-                if (dupe_info.last_duped > 0) {
-                    const auto seconds_ago = static_cast<int>((TIMER_DIFF(dupe_info.last_duped) / CLOCKS_PER_SEC));
-                    if (seconds_ago < 5) {
-                        ImGui::PushStyleColor(ImGuiCol_Text, Colors::ARGB(205, 102, 153, 230));
-                    }
-
-                    const auto [quot, rem] = std::div(seconds_ago, 60);
-                    ImGui::Text("%d:%02d", quot, rem);
-
-                    if (seconds_ago < 5) {
-                        ImGui::PopStyleColor();
-                    }
-                }
-                else {
-                    ImGui::Text("-");
-                }
-
-                ImGui::PopID();
+            for (const auto& [id, info] : enemies) {
+                DrawTrackedEnemy(id, info);
             }
 
             ImGui::EndTable();
         }
     }
 
-    std::vector<DupeInfo> souls{};
-    std::vector<DupeInfo> waters{};
-    std::vector<DupeInfo> minds{};
-
-    std::set<GW::AgentID> all_souls;
-    std::set<GW::AgentID> all_waters;
-    std::set<GW::AgentID> all_minds;
-
-    void ClearDupes()
+    void DrawEnemies(const char* label, const std::vector<std::vector<std::pair<int, const TrackedEnemy*>>>& grouped_enemies)
     {
-        souls.clear();
-        waters.clear();
-        minds.clear();
-        all_souls.clear();
-        all_waters.clear();
-        all_minds.clear();
+        if (grouped_enemies.empty()) {
+            return;
+        }
+
+        ImGui::Spacing();
+        ImGui::Text(label);
+
+        bool is_first = true;
+        for (const auto& enemies : grouped_enemies) {
+            if (!is_first) {
+                ImGui::Spacing();
+                ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
+                is_first = false;
+            }
+
+            if (ImGui::BeginTable(label, 5)) {
+                ImGui::TableSetupColumn("Selection", ImGuiTableColumnFlags_WidthFixed, 0, 0);
+                ImGui::TableSetupColumn("HP", ImGuiTableColumnFlags_WidthStretch, -1, 0);
+                ImGui::TableSetupColumn("Regen", ImGuiTableColumnFlags_WidthFixed, 70, 1);
+                ImGui::TableSetupColumn("Dupe Count", ImGuiTableColumnFlags_WidthFixed, 20, 2);
+                ImGui::TableSetupColumn("Last Duped", ImGuiTableColumnFlags_WidthFixed, 40, 3);
+
+
+                for (const auto& [id, info] : enemies) {
+                    DrawTrackedEnemy(id, info);
+                }
+
+                ImGui::EndTable();
+            }
+        }
     }
 
-    float range = 1600.0f;
-    bool hide_when_nothing = true;
-    bool show_souls_counter = true;
-    bool show_waters_counter = true;
-    bool show_minds_counter = true;
-    float souls_threshhold = 0.6f;
-    float waters_threshhold = 0.5f;
-    float minds_threshhold = 0.0f;
+    void GainedAggro(const GW::AgentLiving* aggro_agent)
+    {
+        std::vector<GW::Agent*> chained_agents{};
+        uint32_t aggro_group = 0;
+
+        const GW::AgentArray* agents = GW::Agents::GetAgentArray();
+        for (auto* agent : *agents) {
+            const GW::AgentLiving* living = agent ? agent->GetAsAgentLiving() : nullptr;
+            if (!living ||
+                !living->GetIsAlive() ||
+                living->allegiance != GW::Constants::Allegiance::Enemy ||
+                GetSquareDistance(aggro_agent->pos, living->pos) > sqr_aggro_range
+            ) {
+                continue;
+            }
+
+            auto& info = tracked_enemies[agent->agent_id];
+            if (info.aggro_group == 0) {
+                // this agent got chain aggro
+                chained_agents.push_back(agent);
+            } else {
+                // this agent was already in aggro, so the newly aggroed enemy and all enemies
+                // that got chain aggro should join the same aggro group.
+                // TODO: figure out which group it should join if there are multiple different
+                // groups in earshot - for now defaulting to the max value.
+                aggro_group = std::max(aggro_group, info.aggro_group);
+            }
+        }
+
+        if (aggro_group == 0) {
+            // we need a new aggro group because there is no existing one to join
+            auto it = std::max_element(
+                tracked_enemies.begin(),
+                tracked_enemies.end(),
+                [](const auto& a, const auto& b) { return a.second.aggro_group < b.second.aggro_group; }
+            );
+            if (it == tracked_enemies.end()) {
+                aggro_group = 1;
+            } else {
+                aggro_group = it->second.aggro_group + 1;
+            }
+        }
+
+        // update the aggro group for the enemy and all chained enemies
+        tracked_enemies[aggro_agent->agent_id].aggro_group = aggro_group;
+        for (auto* agent : chained_agents) {
+            auto& dupe_info = tracked_enemies[agent->agent_id];
+            dupe_info.aggro_group = aggro_group;
+        }
+    }
+
+    void LostAggro(const GW::AgentLiving* agent)
+    {
+        tracked_enemies[agent->agent_id].aggro_group = 0;
+        tracked_enemies[agent->agent_id].will_follow = false;
+    }
+} // namespace
+
+void DupingWindow::Initialize()
+{
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&AgentAttack_Entry, [](GW::HookStatus*, const GW::Packet::StoC::GenericValue* packet) {
+        if (packet->agent_id != GW::Agents::GetObservingId() || packet->value_id != 8 || packet->value != 1) {
+            return;
+        }
+
+        const auto agent = GW::Agents::GetTarget();
+        if (agent) {
+            const auto living = agent->GetAsAgentLiving();
+            if (living && living->GetIsAlive() && living->allegiance == GW::Constants::Allegiance::Enemy) {
+                last_attacked_agent_id = living->agent_id;
+            }
+        }
+    });
+
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentProjectileLaunched>(&AgentAttack_Entry, [](GW::HookStatus*, const GW::Packet::StoC::AgentProjectileLaunched* packet) {
+        if (packet->agent_id != GW::Agents::GetObservingId() || !packet->is_attack || last_attacked_agent_id == 0) {
+            return;
+        }
+
+        const auto agent = GW::Agents::GetAgentByID(last_attacked_agent_id);
+        if (!agent) return;
+
+        const auto living = agent->GetAsAgentLiving();
+        if (living && living->GetIsAlive() && living->allegiance == GW::Constants::Allegiance::Enemy) {
+            bool has_aggro = tracked_enemies.contains(living->agent_id) && tracked_enemies[living->agent_id].aggro_group > 0;
+            if (!has_aggro) {
+                GainedAggro(living);
+            }
+        }
+    });
 }
 
 void DupingWindow::Terminate()
 {
     ToolboxWindow::Terminate();
-    ClearDupes();
+    tracked_enemies.clear();
+}
+
+void DupingWindow::Update(float)
+{
+    const bool is_in_doa = GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish &&
+        GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
+    if (!is_in_doa) {
+        tracked_enemies.clear();
+        return;
+    }
+
+    const GW::AgentArray* agents = GW::Agents::GetAgentArray();
+    const GW::Agent* me = agents ? GW::Agents::GetObservingAgent() : nullptr;
+
+    if (!me)
+        return;
+
+    const float sqr_range = range * range;
+    std::set<GW::AgentID> tracked_enemy_ids{};
+    for (auto* agent : *agents) {
+        const auto living = agent ? agent->GetAsAgentLiving() : nullptr;
+        if (!living ||
+            !living->GetIsAlive() ||
+            living->allegiance != GW::Constants::Allegiance::Enemy ||
+            GetSquareDistance(me->pos, living->pos) > sqr_range
+        ) {
+            continue;
+        }
+
+        tracked_enemy_ids.insert(living->agent_id);
+
+        auto& dupe_info = tracked_enemies[living->agent_id];
+
+        if (dupe_info.aggro_group == 0) {
+            if (GetSquareDistance(me->pos, living->pos) <= sqr_aggro_range) {
+                GainedAggro(living);
+            }
+        } else {
+            if (GetSquareDistance(me->pos, living->pos) > sqr_lost_aggro_range) {
+                LostAggro(living);
+            }
+        }
+
+        // update duping data
+        const bool is_duping = living->skill == static_cast<uint16_t>(GW::Constants::SkillID::Call_to_the_Torment);
+        if (is_duping && TIMER_DIFF(dupe_info.last_duped) > 5000) {
+            dupe_info.last_duped = TIMER_INIT();
+            dupe_info.dupe_count += 1;
+        }
+
+        // update other data
+        if (dupe_info.aggro_group > 0 && !dupe_info.will_follow) {
+            if (living->GetInCombatStance() && (living->weapon_type == 0 || living->weapon_type == 512)) {
+                dupe_info.will_follow = true;
+            }
+        }
+    }
+
+    // cleanup dupe info for enemies that are no longer in range / dead etc.
+    std::erase_if(tracked_enemies, [tracked_enemy_ids](auto& pair) {
+        return !tracked_enemy_ids.contains(pair.first);
+    });
 }
 
 void DupingWindow::Draw(IDirect3DDevice9*)
@@ -199,98 +357,64 @@ void DupingWindow::Draw(IDirect3DDevice9*)
         return;
     }
 
-    const float sqr_range = range * range;
-    int soul_count = 0;
-    int water_count = 0;
-    int mind_count = 0;
+    std::unordered_map<int, std::vector<std::pair<int, const TrackedEnemy*>>> souls_by_aggro_group;
+    std::vector<std::pair<int, const TrackedEnemy*>> waters;
+    std::vector<std::pair<int, const TrackedEnemy*>> minds;
+    int following_soul_count = 0;
+    int total_soul_count = 0;
+    int total_water_count = 0;
+    int total_mind_count = 0;
+    for (const auto& [id, info] : tracked_enemies) {
+        auto agent = GW::Agents::GetAgentByID(id);
+        if (!agent) continue;
 
-    // ==== Calculate the data ====
-    if (!is_in_doa) {
-        ClearDupes();
-    }
+        auto living = agent->GetAsAgentLiving();
+        if (!living || living->GetIsDead()) continue;
 
-    all_souls.clear();
-    all_waters.clear();
-    all_minds.clear();
+        switch (living->player_number) {
+            case GW::Constants::ModelID::DoA::SoulTormentor:
+            case GW::Constants::ModelID::DoA::VeilSoulTormentor:
+                total_soul_count++;
 
-    const GW::AgentArray* agents = GW::Agents::GetAgentArray();
-    const GW::Agent* player = agents ? GW::Agents::GetObservingAgent() : nullptr;
+                if (info.aggro_group > 0 && info.will_follow)
+                    following_soul_count++;
 
-    if (player && is_in_doa) {
-        std::vector<DupeInfo>* duped_agents_of_type = nullptr;
-        std::set<GW::AgentID>* all_agents_of_type = nullptr;
-        for (auto* agent : *agents) {
-            float threshold = .0f;
-            const GW::AgentLiving* living = agent ? agent->GetAsAgentLiving() : nullptr;
+                if (living->hp <= souls_threshhold)
+                    souls_by_aggro_group[info.aggro_group].push_back(std::make_pair(id, &info));
+                break;
+            case GW::Constants::ModelID::DoA::WaterTormentor:
+            case GW::Constants::ModelID::DoA::VeilWaterTormentor:
+                total_water_count++;
 
-            if (!living || living->allegiance != GW::Constants::Allegiance::Enemy || !living->GetIsAlive() || GetSquareDistance(player->pos, living->pos) > sqr_range) {
-                continue;
-            }
+                if (living->hp <= waters_threshhold)
+                    waters.push_back(std::make_pair(id, &info));
+                break;
+            case GW::Constants::ModelID::DoA::MindTormentor:
+            case GW::Constants::ModelID::DoA::VeilMindTormentor:
+                total_mind_count++;
 
-            switch (living->player_number) {
-                case GW::Constants::ModelID::DoA::SoulTormentor:
-                case GW::Constants::ModelID::DoA::VeilSoulTormentor:
-                    all_agents_of_type = &all_souls;
-                    duped_agents_of_type = &souls;
-                    threshold = souls_threshhold;
-                    soul_count++;
-                    break;
-                case GW::Constants::ModelID::DoA::WaterTormentor:
-                case GW::Constants::ModelID::DoA::VeilWaterTormentor:
-                    all_agents_of_type = &all_waters;
-                    duped_agents_of_type = &waters;
-                    threshold = waters_threshhold;
-                    water_count++;
-                    break;
-                case GW::Constants::ModelID::DoA::MindTormentor:
-                case GW::Constants::ModelID::DoA::VeilMindTormentor:
-                    all_agents_of_type = &all_minds;
-                    duped_agents_of_type = &minds;
-                    threshold = minds_threshhold;
-                    mind_count++;
-                    break;
-                default:
-                    continue;
-            }
-
-            if (living->hp <= threshold) {
-                all_agents_of_type->insert(living->agent_id);
-
-                const bool is_duping = living->skill == static_cast<uint16_t>(GW::Constants::SkillID::Call_to_the_Torment);
-
-                auto found_dupe_info = std::ranges::find_if(*duped_agents_of_type, [living](const DupeInfo& info) {
-                    return info.agent_id == living->agent_id;
-                });
-                if (found_dupe_info == duped_agents_of_type->end()) {
-                    duped_agents_of_type->push_back(living->agent_id);
-                    found_dupe_info = duped_agents_of_type->end() - 1;
-                }
-                if (is_duping && TIMER_DIFF(found_dupe_info->last_duped) > 5000) {
-                    found_dupe_info->last_duped = TIMER_INIT();
-                    found_dupe_info->dupe_count += 1;
-                }
-            }
+                if (living->hp <= minds_threshhold)
+                    minds.push_back(std::make_pair(id, &info));
+                break;
         }
-
-        std::erase_if(souls, [](auto& info) { return !all_souls.contains(info.agent_id); });
-        std::erase_if(waters, [](auto& info) { return !all_waters.contains(info.agent_id); });
-        std::erase_if(minds, [](auto& info) { return !all_minds.contains(info.agent_id); });
-
-        std::ranges::sort(souls, &OrderDupeInfo);
-        std::ranges::sort(waters, &OrderDupeInfo);
-        std::ranges::sort(minds, &OrderDupeInfo);
     }
 
-    if (hide_when_nothing
-        && !(show_souls_counter && soul_count > 0)
-        && souls.size() == 0
-        && !(show_waters_counter && water_count > 0)
-        && waters.size() == 0
-        && !(show_minds_counter && mind_count > 0)
-        && minds.size() == 0
+    if (hide_when_nothing &&
+        (!show_souls_counter || total_soul_count == 0) &&
+        (!show_waters_counter || total_water_count == 0) &&
+        (!show_minds_counter || total_mind_count == 0)
     ) {
         return;
     }
+
+    std::vector<std::vector<std::pair<int, const TrackedEnemy*>>> soul_groups;
+    for (auto& [aggro_group, souls] : souls_by_aggro_group) {
+        std::ranges::sort(souls, {}, &std::pair<int, const TrackedEnemy*>::first);
+        soul_groups.push_back(souls);
+    }
+
+    std::ranges::sort(waters, {}, &std::pair<int, const TrackedEnemy*>::first);
+    std::ranges::sort(minds, {}, &std::pair<int, const TrackedEnemy*>::first);
 
     // ==== Draw the window ====
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
@@ -302,9 +426,11 @@ void DupingWindow::Draw(IDirect3DDevice9*)
 
         if (total_counters > 0) {
             const auto total_width = ImGui::GetContentRegionAvail().x;
-            const auto souls_text = std::format("{} Souls", soul_count);
-            const auto waters_text = std::format("{} Waters", water_count);
-            const auto minds_text = std::format("{} Minds", mind_count);
+            const auto souls_text = total_soul_count > following_soul_count
+                ? std::format("{} / {} Souls", following_soul_count, total_soul_count)
+                : std::format("{} Souls", total_soul_count);
+            const auto waters_text = std::format("{} Waters", total_water_count);
+            const auto minds_text = std::format("{} Minds", total_mind_count);
             const auto souls_width = ImGui::CalcTextSize(souls_text.c_str()).x;
             const auto waters_width = ImGui::CalcTextSize(waters_text.c_str()).x;
             const auto minds_width = ImGui::CalcTextSize(minds_text.c_str()).x;
@@ -332,9 +458,9 @@ void DupingWindow::Draw(IDirect3DDevice9*)
             }
         }
 
-        DrawDuping("Souls", souls);
-        DrawDuping("Waters", waters);
-        DrawDuping("Minds", minds);
+        DrawEnemies("Souls", soul_groups);
+        DrawEnemies("Waters", waters);
+        DrawEnemies("Minds", minds);
     }
     ImGui::End();
 }
