@@ -25,6 +25,7 @@ namespace {
     bool draw_all_terrain_lines = false;
     bool draw_all_minimap_lines = true;
     bool show_vq_overlay = false; // master toggle for all VQ features on mission map
+    bool show_vq_toggle_button = true;
 
     // VQ overlay colours — configurable via settings
     Color vq_color_inaccessible = IM_COL32(0, 0, 0, 190);
@@ -943,6 +944,7 @@ void MissionMapWidget::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(draw_all_terrain_lines);
     LOAD_BOOL(draw_all_minimap_lines);
     LOAD_BOOL(show_vq_overlay);
+    LOAD_BOOL(show_vq_toggle_button);
 
     LOAD_COLOR(vq_color_inaccessible);
     LOAD_COLOR(vq_color_fog_unexplored);
@@ -961,6 +963,7 @@ void MissionMapWidget::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(draw_all_terrain_lines);
     SAVE_BOOL(draw_all_minimap_lines);
     SAVE_BOOL(show_vq_overlay);
+    SAVE_BOOL(show_vq_toggle_button);
 
     SAVE_COLOR(vq_color_inaccessible);
     SAVE_COLOR(vq_color_fog_unexplored);
@@ -980,7 +983,7 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
     SubmitVertexBuffers(dx_device);
     if (should_draw_vq_overlay) 
         DrawEnemyCountLabel();
-    if (ToolboxUtils::IsExplorable())
+    if (show_vq_toggle_button && ToolboxUtils::IsExplorable())
         DrawVanquishToggleButton();
 }
 void MissionMapWidget::Update(float)
@@ -1052,6 +1055,7 @@ void MissionMapWidget::DrawSettingsInternal()
 {
     ImGui::Checkbox("Draw all terrain lines", &draw_all_terrain_lines);
     ImGui::Checkbox("Draw all minimap lines", &draw_all_minimap_lines);
+    ImGui::Checkbox("Show VQ toggle button on mission map", &show_vq_toggle_button);
     ImGui::Checkbox("Vanquish Overlay", &show_vq_overlay);
     ImGui::ShowHelp("Tracks enemy positions as they enter compass range.\nBlue = alive, Orange = last known (moved away).\nArrows on orange markers show last movement direction.\nAlso highlights areas you've explored during this session on the mission map.");
 
