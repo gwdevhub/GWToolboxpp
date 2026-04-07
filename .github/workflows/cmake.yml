@@ -65,6 +65,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+        ref: ${{ needs.check.outputs.run == 'dev' && 'dev' || 'master' }}
 
     - name: Merge from upstream master
       if: needs.check.outputs.run == 'true'
