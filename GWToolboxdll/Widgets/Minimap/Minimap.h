@@ -5,6 +5,7 @@
 #include <ToolboxWidget.h>
 
 #include "Defines.h"
+#include "gwtoolboxdll_export.h"
 
 #include <Utils/GuiUtils.h>
 
@@ -43,6 +44,24 @@ struct MinimapRenderContext : RectF {
     {
         return {static_cast<LONG>(top_left.x), static_cast<LONG>(top_left.y), static_cast<LONG>(bottom_right.x), static_cast<LONG>(bottom_right.y)};
     }
+};
+
+// subclass this structure and register an instance to have plugins draw extra stuff on a minimap
+class GWTOOLBOXDLL_EXPORT MinimapRenderer {
+public:
+    MinimapRenderer() = default;
+    virtual ~MinimapRenderer() = default;
+
+    // minimap holds pointers to registered renderers, so move is forbidden
+    MinimapRenderer(const MinimapRenderer&) = delete;
+    MinimapRenderer(MinimapRenderer&&) = delete;
+    MinimapRenderer& operator=(const MinimapRenderer&) = delete;
+    MinimapRenderer& operator=(MinimapRenderer&&) = delete;
+
+    // implement this to draw your data on the minimap
+    // the view matrix is set up to transform game world positions to minimap appropriately, make sure to restore it if you touch it
+    // the world matrix is undefined and can be left in any state
+    virtual void RenderMinimap(IDirect3DDevice9* device, const MinimapRenderContext& context) = 0;
 };
 
 class Minimap final : public ToolboxWidget {
@@ -86,6 +105,9 @@ public:
     // Setup projection matrix for a given context
     static void RenderSetupProjection(IDirect3DDevice9* device, const MinimapRenderContext& context);
 
+    GWTOOLBOXDLL_EXPORT static void RegisterRenderer(MinimapRenderer* renderer);
+    GWTOOLBOXDLL_EXPORT static void UnregisterRenderer(MinimapRenderer* renderer);
+
     bool FlagHeros(LPARAM lParam);
     bool OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam);
     [[nodiscard]] bool OnMouseDblClick(UINT Message, WPARAM wParam, LPARAM lParam) const;
@@ -112,6 +134,7 @@ public:
     SymbolsRenderer symbols_renderer;
     CustomRenderer custom_renderer;
     EffectRenderer effect_renderer;
+    std::vector<MinimapRenderer*> registered_renderers;
 
     static bool ShouldMarkersDrawOnMap();
     static bool ShouldDrawAllQuests();

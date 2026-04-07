@@ -2,79 +2,40 @@
 
 #include <Defines.h>
 #include <Logger.h>
-#include <ctime>
 
 #include <GWCA/GameEntities/Item.h>
 
 #include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
 
 #include <GWCA/Constants/Constants.h>
 
-#include <GWCA/Utilities/Hook.h>
-
-#include <Modules/GameSettings.h>
-#include <Modules/ItemDescriptionHandler.h>
+#include <Modules/InventoryManager.h>
 #include <Modules/PriceCheckerModule.h>
 #include <Modules/Resources.h>
-#include <Modules/InventoryManager.h>
 
-#include <Constants/EncStrings.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 #include <Timer.h>
-#include <Utils/GuiUtils.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
-#include <GWCA/Managers/GameThreadMgr.h>
 
 using nlohmann::json;
 
 namespace {
-    float high_price_threshold = 1000;
+
     bool fetching_prices;
     const char* trader_quotes_url = "https://kamadan.gwtoolbox.com/trader_quotes";
 
-    constexpr clock_t request_interval = CLOCKS_PER_SEC * 60 * 5;
-    clock_t last_request_time = 0;
+    constexpr clock_t request_interval = 1000 * 60 * 5;
+    clock_t last_request_time = -request_interval;
     std::unordered_map<std::string, uint32_t> prices_by_identifier;
 
-    constexpr Color text_color_default = GW::Chat::TextColor::ColorItemDull;
-    Color text_color = text_color_default;
-    bool show_prices_in_item_description = true;
     bool show_merchant_price_for_melandrus_accord_instead = true;
 
-    void SignalItemDescriptionUpdated()
-    {
-        // Now we've got the wiki info parsed, trigger an item update ui message; this will refresh the item tooltip
-        GW::GameThread::Enqueue([] {
-            const auto item = GW::Items::GetHoveredItem();
-            if (!item) return;
-            GW::UI::SendFrameUIMessage(GW::UI::GetChildFrame(GW::UI::GetRootFrame(), 0xffffffff), GW::UI::UIMessage::kItemUpdated, item);
-        });
-    }
+    // -------------------------------------------------------------------------
+    // Price lookup tables
+    // -------------------------------------------------------------------------
 
-    bool ParsePriceJson(const std::string& prices_json_str)
-    {
-        const json& prices_json = json::parse(prices_json_str, nullptr, false);
-        if (prices_json == json::value_t::discarded) {
-            return false;
-        }
-
-        prices_by_identifier.clear();
-        const auto& it_buy = prices_json.find("sell");
-        if (it_buy == prices_json.end() || !it_buy->is_object()) {
-            return false;
-        }
-
-        const auto& buy = it_buy.value();
-
-        for (auto it = buy.begin(); it != buy.end(); it++) {
-            const auto& identifier = it.key();
-            if (!it->is_object()) continue;
-            const auto& price_value = it->find("p");
-            if (!(price_value != it->end() && price_value->is_number_unsigned())) continue;
-            prices_by_identifier[identifier] = price_value->get<uint32_t>();
-        }
-        return !prices_by_identifier.empty();
-    }
     struct PriceInfo {
         const char* name;
         const char* id;
@@ -315,211 +276,116 @@ namespace {
 
     int MaterialSlotToModelID(GW::Constants::MaterialSlot mat)
     {
-        using namespace GW::Constants;
-        static const int material_slot_model_ids[] = {
-            ItemID::Bone,                 // 0
-            ItemID::IronIngot,            // 1
-            ItemID::TannedHideSquare,     // 2
-            ItemID::Scale,                // 3
-            ItemID::ChitinFragment,       // 4
-            ItemID::BoltofCloth,          // 5
-            ItemID::WoodPlank,            // 6
-            0,                            // 7 (gap)
-            ItemID::GraniteSlab,          // 8
-            ItemID::PileofGlitteringDust, // 9
-            ItemID::PlantFiber,           // 10
-            ItemID::Feather,              // 11
-            ItemID::FurSquare,            // 12
-            ItemID::BoltofLinen,          // 13
-            ItemID::BoltofDamask,         // 14
-            ItemID::BoltofSilk,           // 15
-            ItemID::GlobofEctoplasm,      // 16
-            ItemID::SteelIngot,           // 17
-            ItemID::DeldrimorSteelIngot,  // 18
-            ItemID::MonstrousClaw,        // 19
-            ItemID::MonstrousEye,         // 20
-            ItemID::MonstrousFang,        // 21
-            ItemID::Ruby,                 // 22
-            ItemID::Sapphire,             // 23
-            ItemID::Diamond,              // 24
-            ItemID::OnyxGemstone,         // 25
-            ItemID::LumpofCharcoal,       // 26
-            ItemID::ObsidianShard,        // 27
-            0,                            // 28 (gap)
-            ItemID::TemperedGlassVial,    // 29
-            ItemID::LeatherSquare,        // 30
-            ItemID::ElonianLeatherSquare, // 31
-            ItemID::VialofInk,            // 32
-            ItemID::RollofParchment,      // 33
-            ItemID::RollofVellum,         // 34
-            ItemID::SpiritwoodPlank,      // 35
-            ItemID::AmberChunk,           // 36
-            ItemID::JadeiteShard,         // 37
-        };
-        const auto idx = static_cast<size_t>(mat);
-        return idx < _countof(material_slot_model_ids) ? material_slot_model_ids[idx] : 0;
+        const auto info = GW::Items::GetMaterialInfo(mat);
+        return info ? info->model_id : 0;
     }
 
-    GW::Constants::MaterialSlot GetItemMaterialSlot(const GW::Item* item) {
-        if (!item) return (GW::Constants::MaterialSlot)0xff;
-        const auto mod = ((InventoryManager::Item*)item)->GetModifier(0x2508);
-        if (!mod) return (GW::Constants::MaterialSlot)0xff;
-        return (GW::Constants::MaterialSlot)mod->arg1();
-    }
-
-
-    bool IsCommonMaterial(const GW::Item* item)
+    GW::Constants::MaterialSlot GetItemMaterialSlot(const GW::Item* item)
     {
-        return GetItemMaterialSlot(item) <= GW::Constants::MaterialSlot::Feather;
+        if (!item) return static_cast<GW::Constants::MaterialSlot>(0xff);
+        const auto mod = static_cast<const InventoryManager::Item*>(item)->GetModifier(0x2508);
+        if (!mod) return static_cast<GW::Constants::MaterialSlot>(0xff);
+        return static_cast<GW::Constants::MaterialSlot>(mod->arg1());
     }
+
     uint32_t GetPriceById(const char* id)
     {
-        const auto prices = PriceCheckerModule::FetchPrices();
+        const auto& prices = PriceCheckerModule::FetchPrices();
         const auto found = prices.find(id);
-        if (found != prices.end()) {
-            return found->second;
-        }
-        return 0;
+        return found != prices.end() ? found->second : 0u;
     }
-    uint32_t GetPriceByItem(const GW::Item* item, std::string* item_name_out = nullptr, unsigned int mod_start_index = 0)
+
+    bool ParsePriceJson(const std::string& prices_json_str)
     {
-        if (item->type == GW::Constants::ItemType::Materials_Zcoins) {
-            uint32_t mod = (std::to_underlying(item->type) << 16) | (item->model_id & 0xffff);
-            const auto found = price_info_by_unique_mod_struct.find(mod);
-            if (found == price_info_by_unique_mod_struct.end()) return 0;
-            if (GW::PlayerMgr::IsMelandrusAccord() && show_merchant_price_for_melandrus_accord_instead) return PriceCheckerModule::GetMerchantSellPrice(GetItemMaterialSlot(item));
-            return GetPriceById(found->second.id);
-        }
+        const json& prices_json = json::parse(prices_json_str, nullptr, false);
+        if (prices_json == json::value_t::discarded) return false;
 
-        size_t found_count = 0;
-        for (size_t i = 0; i < item->mod_struct_size; i++) {
-            const auto mod = item->mod_struct[i].mod;
-            const auto found = price_info_by_unique_mod_struct.find(mod);
-            if (found == price_info_by_unique_mod_struct.end()) continue;
-            if (found_count == mod_start_index) {
-                if (item_name_out)
-                    *item_name_out = found->second.name;
-                return GetPriceById(found->second.id);
-            }
-            found_count++;
+        prices_by_identifier.clear();
+        const auto& it_buy = prices_json.find("sell");
+        if (it_buy == prices_json.end() || !it_buy->is_object()) return false;
+
+        for (auto it = it_buy.value().begin(); it != it_buy.value().end(); ++it) {
+            if (!it->is_object()) continue;
+            const auto& price_value = it->find("p");
+            if (price_value == it->end() || !price_value->is_number_unsigned()) continue;
+            prices_by_identifier[it.key()] = price_value->get<uint32_t>();
         }
-        return 0;
+        return !prices_by_identifier.empty();
     }
 
-
-
-    std::wstring PrintPrice(const uint32_t price, const char* name = nullptr)
+    void SignalItemDescriptionUpdated()
     {
-        auto color = GW::EncStrings::ItemDull;
-        if (price > high_price_threshold) {
-            color = GW::EncStrings::ItemRare;
-        }
-
-        const uint32_t plat = price / 1000;
-        const uint32_t gold = price % 1000;
-
-        std::wstring currency_string;
-        if (price == 0) {
-            // 0 gold
-            currency_string = L"\xAC2\x100";
-        }
-        else if (plat > 0 && gold > 0) {
-            // N platinum, N gold
-            currency_string = std::format(L"\xAC4\x101{}\x102{}", (wchar_t)(0x100 + plat), (wchar_t)(0x100 + gold));
-        }
-        else if (gold > 0) {
-            // N gold
-            currency_string = std::format(L"\xAC2\x101{}", (wchar_t)(0x100 + gold));
-        }
-        else {
-            // N platinum
-            currency_string = std::format(L"\xAC3\x101{}", (wchar_t)(0x100 + plat));
-        }
-
-        std::wstring subject;
-        subject = std::format(L"\x108\x107{}\x1", name && *name ? TextUtils::StringToWString(name) : L"Trader Value");
-
-        return std::format(L"\x108\x107<c={}>\x1\x2\xA8A\x10A{}\x1\x10B{}\x10A{}\x1\x1\x2\x108\x107</c>\x1", text_color, subject, color, currency_string);
+        GW::GameThread::Enqueue([] {
+            const auto item = GW::Items::GetHoveredItem();
+            if (!item) return;
+            GW::UI::SendFrameUIMessage(GW::UI::GetChildFrame(GW::UI::GetRootFrame(), 0xffffffff), GW::UI::UIMessage::kItemUpdated, item);
+        });
     }
-    void UpdateDescription(const uint32_t item_id, std::wstring& description)
-    {
-        const auto item = GW::Items::GetItemById(item_id);
-        if (!item) return;
 
-        std::string first_item_name;
-        std::string second_item_name;
-        const auto price_first = GetPriceByItem(item, &first_item_name, 0);
-        const auto price_second = GetPriceByItem(item, &second_item_name, 1);
-        if (!price_first && !price_second) return;
-
-        std::wstring prices_out = L"";
-
-        if (price_first > 0) {
-            if (!prices_out.empty()) prices_out += L"\x2\x102\x2";
-            prices_out.append(PrintPrice(price_first, first_item_name.empty() ? nullptr : first_item_name.c_str()));
-        }
-        if (price_second > 0 && first_item_name != second_item_name) {
-            if (!prices_out.empty()) prices_out += L"\x2\x102\x2";
-            prices_out.append(PrintPrice(price_second, second_item_name.empty() ? nullptr : second_item_name.c_str()));
-        }
-        if (!prices_out.empty()) {
-            if (!description.empty()) description += L"\x2";
-            description += L"\x108\x107<brx>\x1\x2";
-            description += prices_out;
-        } 
-    }
-    std::wstring tmp_item_description;
-    void OnGetItemDescription(const uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc)
-    {
-        if (!(show_prices_in_item_description && out_desc && *out_desc)) return;
-        if (*out_desc != tmp_item_description.data()) {
-            tmp_item_description.assign(*out_desc);
-        }
-        UpdateDescription(item_id, tmp_item_description);
-        *out_desc = tmp_item_description.data();
-    }
 } // namespace
-
 
 void PriceCheckerModule::Initialize()
 {
     ToolboxModule::Initialize();
-
-    ItemDescriptionHandler::RegisterDescriptionCallback(OnGetItemDescription, 100);
-
     FetchPrices();
 }
 
 void PriceCheckerModule::Terminate()
 {
     ToolboxModule::Terminate();
-
-    ItemDescriptionHandler::UnregisterDescriptionCallback(OnGetItemDescription);
 }
-
 
 void PriceCheckerModule::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
-    SAVE_FLOAT(high_price_threshold);
-    SAVE_COLOR(text_color);
-    SAVE_BOOL(show_prices_in_item_description);
+    SAVE_BOOL(show_merchant_price_for_melandrus_accord_instead);
+}
+
+void PriceCheckerModule::LoadSettings(ToolboxIni* ini)
+{
+    ToolboxModule::LoadSettings(ini);
+    LOAD_BOOL(show_merchant_price_for_melandrus_accord_instead);
+}
+
+void PriceCheckerModule::DrawSettingsInternal()
+{
+    ImGui::Checkbox("Show merchant price for Melandru's Accord instead of trader price", &show_merchant_price_for_melandrus_accord_instead);
+    ImGui::ShowHelp("In Melandru's Accord, show fixed merchant prices for materials instead of live trader prices");
+}
+
+const std::unordered_map<std::string, uint32_t>& PriceCheckerModule::FetchPrices()
+{
+    if (TIMER_DIFF(last_request_time) > request_interval) {
+        last_request_time = TIMER_INIT();
+        Resources::Download(trader_quotes_url, [](bool success, const std::string& response, void*) {
+            if (!success) {
+                last_request_time -= request_interval;
+                return;
+            }
+            ParsePriceJson(response);
+            SignalItemDescriptionUpdated();
+        });
+    }
+    return prices_by_identifier;
 }
 
 uint32_t PriceCheckerModule::GetTraderSellPrice(const GW::Item* item)
 {
     return GetPriceByItem(item);
 }
+
 uint32_t PriceCheckerModule::GetTraderSellPrice(const GW::Constants::MaterialSlot material)
 {
-    if (GW::PlayerMgr::IsMelandrusAccord() && show_merchant_price_for_melandrus_accord_instead) return PriceCheckerModule::GetMerchantSellPrice(material);
+    if (GW::PlayerMgr::IsMelandrusAccord() && show_merchant_price_for_melandrus_accord_instead) return GetMerchantSellPrice(material);
     GW::Item item;
     memset(&item, 0, sizeof(item));
     item.type = GW::Constants::ItemType::Materials_Zcoins;
     item.model_id = MaterialSlotToModelID(material);
     return GetTraderSellPrice(&item);
 }
-uint32_t PriceCheckerModule::GetMerchantSellPrice(const GW::Constants::MaterialSlot material) {
+
+uint32_t PriceCheckerModule::GetMerchantSellPrice(const GW::Constants::MaterialSlot material)
+{
     using namespace GW::Constants;
     if (material == MaterialSlot::IronIngot) return 5;
     if (material == MaterialSlot::WoodPlank) return 4;
@@ -554,43 +420,26 @@ uint32_t PriceCheckerModule::GetMerchantSellPrice(const GW::Constants::MaterialS
     return 30;
 }
 
-void PriceCheckerModule::LoadSettings(ToolboxIni* ini)
+uint32_t PriceCheckerModule::GetPriceByItem(const GW::Item* item, std::string* item_name_out, unsigned int mod_start_index)
 {
-    ToolboxModule::SaveSettings(ini);
-    LOAD_FLOAT(high_price_threshold);
-    LOAD_COLOR(text_color);
-    LOAD_BOOL(show_prices_in_item_description);
-}
+    if (item->type == GW::Constants::ItemType::Materials_Zcoins) {
+        uint32_t mod = (std::to_underlying(item->type) << 16) | (item->model_id & 0xffff);
+        const auto found = price_info_by_unique_mod_struct.find(mod);
+        if (found == price_info_by_unique_mod_struct.end()) return 0;
+        if (GW::PlayerMgr::IsMelandrusAccord() && show_merchant_price_for_melandrus_accord_instead) return GetMerchantSellPrice(GetItemMaterialSlot(item));
+        return GetPriceById(found->second.id);
+    }
 
-void PriceCheckerModule::DrawSettingsInternal()
-{
-    ImGui::Checkbox("Show trader prices in item description tooltips", &show_prices_in_item_description);
-    ImGui::ShowHelp("Current rune, dye and mod prices are fetched from https://kamadan.gwtoolbox.com.");
-    if (show_prices_in_item_description) {
-        ImGui::Indent();
-        ImGui::TextUnformatted("Text color:");
-        ImGui::SameLine();
-        ImGui::ColorButtonPicker("Choose text color", &text_color);
-        ImGui::SameLine();
-        bool reset_color = false;
-        if (ImGui::ConfirmButton("Reset", &reset_color)) {
-            text_color = text_color_default;
+    size_t found_count = 0;
+    for (size_t i = 0; i < item->mod_struct_size; i++) {
+        const auto mod = item->mod_struct[i].mod;
+        const auto found = price_info_by_unique_mod_struct.find(mod);
+        if (found == price_info_by_unique_mod_struct.end()) continue;
+        if (found_count == mod_start_index) {
+            if (item_name_out) *item_name_out = found->second.name;
+            return GetPriceById(found->second.id);
         }
-        ImGui::SliderFloat("High price threshold", &high_price_threshold, 100, 50000);
-        ImGui::ShowHelp("When an item price is found to be above this price threshold, the mod price will be gold when an item is hovered.");
-        ImGui::Unindent();
+        found_count++;
     }
-}
-
-const std::unordered_map<std::string, uint32_t>& PriceCheckerModule::FetchPrices()
-{
-    if (TIMER_DIFF(last_request_time) > request_interval) {
-        last_request_time = TIMER_INIT();
-        Resources::Download(trader_quotes_url, [](bool success, const std::string& response, void*) {
-            if (!success) return;
-            ParsePriceJson(response);
-            SignalItemDescriptionUpdated();
-        });
-    }
-    return prices_by_identifier;
+    return 0;
 }

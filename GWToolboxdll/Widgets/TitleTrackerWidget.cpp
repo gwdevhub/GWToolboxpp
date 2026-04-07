@@ -256,6 +256,10 @@ namespace {
         }
 
         const auto title_info = GW::PlayerMgr::GetTitleTrack(title_id);
+        if (!title_info) {
+            if (overlay_label) overlay_label->Release();
+            overlay_label = new GuiUtils::EncString(L"\x101", false);
+        }
         if (title_info && title_info->points_desc && *title_info->points_desc) {
             
             if (title_info->has_tiers()) {

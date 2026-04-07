@@ -427,14 +427,14 @@ namespace {
 
         auto CalcSortPos = [sorting_size](GW::AgentLiving* agent, size_t* sort_pos_out, int* match_quality_out) {
             for (size_t i = 0; i < sorting_size; i++) {
-                uint8_t sorting_primary = chosen_sorting_vector->sorting_by_profession[i] >> 8;
-                uint8_t sorting_secondary = chosen_sorting_vector->sorting_by_profession[i] & 0xff;
+                GW::Constants::ProfessionByte sorting_primary = (GW::Constants::ProfessionByte)(chosen_sorting_vector->sorting_by_profession[i] >> 8);
+                GW::Constants::ProfessionByte sorting_secondary = (GW::Constants::ProfessionByte)(chosen_sorting_vector->sorting_by_profession[i] & 0xff);
 
                 int match_quality = 0;
-                if (sorting_primary != 0 && sorting_primary == agent->primary) {
+                if (sorting_primary != GW::Constants::ProfessionByte::None && sorting_primary == agent->primary) {
                     match_quality++; // Primary match is worth 2 points
                 }
-                if (sorting_secondary != 0 && sorting_secondary == agent->secondary) {
+                if (sorting_secondary != GW::Constants::ProfessionByte::None && sorting_secondary == agent->secondary) {
                     match_quality++; // Secondary match is worth 1 point
                 }
 

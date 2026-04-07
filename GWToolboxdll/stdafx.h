@@ -75,7 +75,7 @@
 #include <easywsclient.hpp>
 #include <mp3.h>
 #include <IconsFontAwesome5.h>
-#include <mapbox/earcut.hpp>
+#include <mapbox_earcut.h>
 
 #define __forceinline
 #include <ctre.hpp>

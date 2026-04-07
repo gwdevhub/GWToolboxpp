@@ -33,7 +33,7 @@ namespace {
         Churning_earth       = 994
     };
 
-    class EffectCircle : public VBuffer {
+    class EffectCircle : public D3DVertexBuffer {
         void Initialize(IDirect3DDevice9* device) override;
 
     public:
@@ -52,6 +52,7 @@ namespace {
             circle.range = range;
             circle.color = _color;
         }
+        ~Effect() { circle.Terminate();}
         clock_t start;
         const uint32_t effect_id;
         const GW::Vec2f pos;
@@ -126,7 +127,7 @@ void EffectRenderer::LoadDefaults()
 
 void EffectRenderer::Terminate()
 {
-    VBuffer::Terminate();
+    D3DVertexBuffer::Terminate();
     for (const auto& settings : aoe_effect_settings) {
         delete settings.second;
     }
@@ -139,7 +140,7 @@ void EffectRenderer::Terminate()
 
 void EffectRenderer::Invalidate()
 {
-    VBuffer::Invalidate();
+    D3DVertexBuffer::Invalidate();
     for (const auto p : aoe_effects) {
         delete p;
     }
@@ -358,27 +359,17 @@ void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device)
 
 void EffectCircle::Initialize(IDirect3DDevice9* device)
 {
+    constexpr size_t poly_count = 16;
     type = D3DPT_LINESTRIP;
-    count = 16; // polycount
-    const auto vertex_count = count + 1;
-    D3DVertex* vertices = nullptr;
 
-    if (buffer) {
-        buffer->Release();
+    vertices.resize(poly_count + 1);
+    for (size_t i = 0; i < poly_count; i++) {
+        const float angle = i * (DirectX::XM_2PI / poly_count);
+        vertices[i] = {std::cos(angle), std::sin(angle), 0.f, *color};
     }
-    device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, 0,
-                               D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
-    buffer->Lock(0, sizeof(D3DVertex) * vertex_count,
-                 (VOID**)&vertices, D3DLOCK_DISCARD);
+    vertices[poly_count] = vertices[0];
 
-    for (size_t i = 0; i < count; i++) {
-        const float angle = i * (DirectX::XM_2PI / count);
-        vertices[i].x = std::cos(angle);
-        vertices[i].y = std::sin(angle);
-        vertices[i].z = 0.0f;
-        vertices[i].color = *color;
-    }
-    vertices[count] = vertices[0];
+    D3DVertexBuffer::Initialize(device);
 
-    buffer->Unlock();
+    count = poly_count;
 }

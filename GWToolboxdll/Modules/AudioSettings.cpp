@@ -13,6 +13,8 @@
 #include <Utils/GuiUtils.h>
 #include <Timer.h>
 
+#include <Utils/ArenaNetFileParser.h>
+
 namespace {
 
     std::vector<std::wstring> blocked_sounds;
@@ -163,6 +165,14 @@ bool AudioSettings::PlayMusic(const wchar_t* filename, uint32_t flags)
     });
     return true;
 }
+bool AudioSettings::PlaySoundFileId(const uint32_t file_id, const GW::Vec3f* position, uint32_t flags, void** handle_out) {
+    wchar_t buf[3] = {0};
+    if(file_id)
+        ArenaNetFileParser::FileIdToFileHash(file_id, buf);
+    return wcslen(buf) == 2 && PlaySound(buf, position, flags, handle_out);
+}
+
+
 bool AudioSettings::PlaySound(const wchar_t* filename, const GW::Vec3f* position, uint32_t flags, void** handle_out)
 {
     if (!(PlaySound_Func && filename))

@@ -15,9 +15,16 @@ public:
         return instance;
     }
 
+    static constexpr const char* camera_syntax = "'/camera (lock|unlock)' to lock or unlock the camera.\n"
+                                                 "'/camera fog (on|off)' sets game fog effect on or off.\n"
+                                                 "'/camera speed [number|default]' sets camera speed when camera is unlocked.\n"
+                                                 "'/camera distance [number|default]' sets camera max distance in gwinches.";
+
     [[nodiscard]] const char* Name() const override { return "Camera Unlock"; }
-    [[nodiscard]] const char* Description() const override { return "Allows free-roaming camera functionality via /cam unlock"; }
+    [[nodiscard]] const char* Description() const override { return "Allows free-roaming camera functionality via /cam unlock, and other camera related functions"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_CAMERA; }
+    [[nodiscard]] const char* SettingsName() const override { return "Camera Settings"; }
+
     void Initialize() override;
 
     void Terminate() override;

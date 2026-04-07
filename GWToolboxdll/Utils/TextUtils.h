@@ -27,6 +27,19 @@ namespace TextUtils {
 
     std::string GuidToString(const GUID* guid);
 
+    std::string parseStringFromJson(const nlohmann::json& j, const char* key, const std::string& default_val);
+    int parseIntFromJson(const nlohmann::json& j, const char* key, const int& default_val);
+    bool parseBoolFromJson(const nlohmann::json& j, const char* key, const bool& default_val);
+    uint64_t parseUint64FromJson(const nlohmann::json& j, const char* key, const uint64_t& default_val);
+    float parseFloatFromJson(const nlohmann::json& j, const char* key, const float& default_val);
+
+
+    std::string VStrPrintf(const char* format, va_list argv);
+    std::wstring VStrPrintfW(const wchar_t* format, va_list argv);
+    std::string StrPrintf(const char* format, ...);
+    std::wstring StrPrintfW(const wchar_t* format, ...);
+
+
     std::string RemovePunctuation(std::string s);
     std::wstring RemovePunctuation(std::wstring s);
     std::string ToSlug(std::string s);
@@ -34,6 +47,7 @@ namespace TextUtils {
     std::string ToLower(std::string s);
     std::wstring ToLower(std::wstring s);
     std::wstring RemoveDiacritics(std::wstring_view s);
+    std::wstring FormatFloat(float value, int max_decimal_places = 3);
 
     std::wstring SanitizePlayerName(std::wstring_view str);
     std::wstring SanitizeForCSV(const std::wstring_view str);
@@ -48,10 +62,12 @@ namespace TextUtils {
     bool ParseFloat(const wchar_t* str, float* val);
 
     // e.g. 8 Days ago
-    std::string RelativeTime(time_t utc_timestamp);
-    std::string TimeToString(time_t utc_timestamp = 0, bool include_seconds = false);
-    std::string TimeToString(uint32_t utc_timestamp, bool include_seconds = false);
-    std::string TimeToString(FILETIME utc_timestamp, bool include_seconds = false);
+    enum class RelativeTimeFormat { Narrow, Full };
+    std::string RelativeTime(time_t utc_timestamp, RelativeTimeFormat fmt = RelativeTimeFormat::Full);
+    std::wstring RelativeTimeW(time_t utc_timestamp, RelativeTimeFormat fmt = RelativeTimeFormat::Full);
+    std::string TimeToString(time_t utc_timestamp = 0, bool include_seconds = false, int milliseconds = -1);
+    std::string TimeToString(uint32_t utc_timestamp, bool include_seconds = false, int milliseconds = -1);
+    std::string TimeToString(FILETIME utc_timestamp, bool include_seconds = false, int milliseconds = -1);
 
     std::vector<std::string> Split(const std::string& in, const std::string& token);
     std::vector<std::wstring> Split(const std::wstring& in, const std::wstring& token);

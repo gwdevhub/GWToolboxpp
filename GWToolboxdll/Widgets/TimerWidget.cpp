@@ -65,7 +65,6 @@ namespace {
         {GW::Constants::SkillID::Famine, "Famine"},
         {GW::Constants::SkillID::Symbiosis, "Symbiosis"},
         {GW::Constants::SkillID::Winnowing, "Winnowing"},
-        {GW::Constants::SkillID::Frozen_Soil, "Frozen Soil"},
         {GW::Constants::SkillID::Union, "Union"},
         {GW::Constants::SkillID::Shelter, "Shelter"},
         {GW::Constants::SkillID::Displacement, "Displacement"},

@@ -144,7 +144,7 @@ namespace {
     void CHAT_CMD_FUNC(CmdPricecheck)
     {
         if (argc < 2) {
-            return Log::Error("Try '/pc <item>'");
+            return Log::Error("Try '/pc [item]'");
         }
 
         std::string item_to_search;

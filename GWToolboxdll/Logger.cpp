@@ -44,13 +44,12 @@ namespace {
                 color = GWTOOLBOX_INFO_COL;
                 break;
         }
-        const size_t len = 5 + wcslen(GWTOOLBOX_SENDER) + 4 + 13 + wcslen(message) + 4 + 1;
-        auto to_send = new wchar_t[len];
-        ASSERT(swprintf(to_send, len, L"<a=1>%s</a><c=#%6X>: %s</c>", GWTOOLBOX_SENDER, color, message) != -1);
+        auto to_send = new std::wstring();
+        to_send->assign(std::format(L"<a=1>{}</a><c=#{:X}>: {}</c>", GWTOOLBOX_SENDER, color, message));
 
         GW::GameThread::Enqueue([to_send, add_to_log = log_transient] {
-            WriteChat(GWTOOLBOX_CHAN, to_send, nullptr, add_to_log);
-            delete[] to_send;
+            WriteChat(GWTOOLBOX_CHAN, to_send->c_str(), nullptr, add_to_log);
+            delete to_send;
         });
 
         const wchar_t* c = [](const LogType log_type) -> const wchar_t* {
@@ -70,33 +69,21 @@ namespace {
 
     void _vchatlogW(const LogType log_type, const wchar_t* format, const va_list argv)
     {
-        wchar_t buf1[512];
-        vswprintf(buf1, 512, format, argv);
-        _chatlog(log_type, buf1);
+        const std::wstring buf = TextUtils::VStrPrintfW(format, argv);
+        if (!buf.empty()) _chatlog(log_type, buf.c_str());
     }
 
     void _vchatlog(const LogType log_type, const char* format, const va_list argv)
     {
-        const size_t len = vsnprintf(nullptr, 0, format, argv);
-        const auto buf = new char[len + 1];
-        vsnprintf(buf, len + 1, format, argv);
-        const std::wstring sbuf2 = TextUtils::StringToWString(buf);
-        delete[] buf;
-        _chatlog(log_type, sbuf2.c_str());
+        const std::string buf = TextUtils::VStrPrintf(format, argv);
+        if (!buf.empty()) _chatlog(log_type, TextUtils::StringToWString(buf).c_str());
     }
-
     void PrintTimestamp()
     {
-        time_t rawtime{};
-        time(&rawtime);
-
-        tm timeinfo{};
-        localtime_s(&timeinfo, &rawtime);
-
-        char buffer[16];
-        strftime(buffer, sizeof(buffer), "%H:%M:%S", &timeinfo);
-
-        fprintf(logfile, "[%s] ", buffer);
+        if (!logfile) return;
+        const auto now = std::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now());
+        const auto ms = now.time_since_epoch().count() % 1000;
+        fprintf(logfile, "[%s] ", TextUtils::TimeToString(std::chrono::system_clock::to_time_t(now), true, static_cast<int>(ms)).c_str());
     }
 
 
@@ -250,6 +237,13 @@ void Log::LogW(const wchar_t* msg, ...)
     va_end(args);
     if (msg[wcslen(msg) - 1] != '\n') {
         fprintf(logfile, "\n");
+    }
+}
+
+void Log::FlushFile()
+{
+    if (logfile) {
+        fflush(logfile);
     }
 }
 

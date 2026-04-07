@@ -134,6 +134,9 @@ public:
     static bool ReadFile(const std::filesystem::path& path, std::string& response);
     // Read file on disk
     static bool ReadFile(const std::filesystem::path& path, std::wstring& response);
+    // Write file to disk
+    static bool WriteFile(const std::filesystem::path& path_to_file, const std::string& content, bool append = false);
+
     // download to memory, blocking. If an error occurs, details are held in response string
     static bool Download(const std::string& url, std::string& response, int& statusCode);
     // download to memory, async, calls callback on completion. If an error occurs, details are held in response string
@@ -156,6 +159,8 @@ public:
     static int GetBitsPerPixel(D3DFORMAT format);
 
     static uint32_t GetTexmodHash(const char* data, size_t size);
+    // Copy from compiled resource binary to file on local disk.
+    static bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error);
 
 private:
     static void Cleanup();
@@ -163,8 +168,7 @@ private:
     static HRESULT TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::wstring& error);
     // Assign IDirect3DTexture9* from resource
     static HRESULT TryCreateTexture(IDirect3DDevice9* pDevice, HMODULE hSrcModule, LPCSTR pSrcResource, IDirect3DTexture9** texture, std::wstring& error);
-    // Copy from compiled resource binary to file on local disk.
-    static bool ResourceToFile(WORD id, const std::filesystem::path& path_to_file, std::wstring& error);
+
 
     bool co_initialized = false;
 };

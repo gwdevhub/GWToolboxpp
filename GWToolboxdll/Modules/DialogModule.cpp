@@ -353,8 +353,16 @@ uint32_t DialogModule::AcceptFirstAvailableQuest()
         return 0;
     }
     std::vector<uint32_t> available_quests;
+    uint32_t tick_dialog_id = 0;
     for (const auto dialog_button : dialog_buttons) {
         const uint32_t dialog_id = dialog_button->dialog_id;
+        switch (dialog_button->button_icon) {
+            case 0xb:
+            case 0xd:
+            case 0x18:
+                tick_dialog_id = dialog_id;
+                break;
+        }
         if (!IsQuest(dialog_id)) {
             continue;
         }
@@ -390,6 +398,10 @@ uint32_t DialogModule::AcceptFirstAvailableQuest()
     }
     if (!available_quests.empty()) {
         return take_quest(available_quests[0]);
+    }
+    if (tick_dialog_id) {
+        SendDialog(tick_dialog_id);
+        return tick_dialog_id;
     }
     return 0;
 }

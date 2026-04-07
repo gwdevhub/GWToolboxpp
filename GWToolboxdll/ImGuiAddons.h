@@ -51,6 +51,8 @@ namespace ImGui {
     // Shows current text with a drop shadow
     IMGUI_API void TextShadowed(const char* label, ImVec2 offset = {1, 1}, const ImVec4& shadow_color = {0, 0, 0, 1});
 
+    IMGUI_API void TextOutlined(const char* label, float offset, ImU32 outline_color);
+
     IMGUI_API void SetNextWindowCenter(ImGuiWindowFlags flags);
 
     IMGUI_API const std::vector<ImGuiKey>& GetPressedKeys();

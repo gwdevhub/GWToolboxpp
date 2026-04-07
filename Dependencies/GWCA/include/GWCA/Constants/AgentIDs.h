@@ -1,99 +1,95 @@
 #pragma once
 
-namespace GW
-{
-    namespace Constants
-    {
-        namespace ModelID
-        {
+namespace GW {
+    namespace Constants {
+        namespace ModelID {
             // this is actually agent->PlayerNumber for agents
-            namespace Minipet
-            {
+            namespace Minipet {
                 // First Year
-                constexpr int Charr = 230; // Miniature Charr Shaman (purple)
-                constexpr int Dragon = 231; // Miniature Bone Dragon (green)
-                constexpr int Rurik = 232; // Miniature Prince Rurik (gold)
-                constexpr int Shiro = 233; // Miniature Shiro (gold)
-                constexpr int Titan = 234; // Miniature Burning Titan (purple)
-                constexpr int Kirin = 235; // Miniature Kirin (purple)
-                constexpr int NecridHorseman = 236; // Miniature Necrid Horseman (white)
-                constexpr int JadeArmor = 237; // Miniature Jade Armor (white)
-                constexpr int Hydra = 238; // Miniature Hydra (white)
-                constexpr int FungalWallow = 239; // Miniature Fungal Wallow (white)
-                constexpr int SiegeTurtle = 240; // Miniature Siege Turtle (white)
-                constexpr int TempleGuardian = 241; // Miniature Temple Guardian (white)
-                constexpr int JungleTroll = 242; // Miniature Jungle Troll (white)
+                constexpr int Charr = 230;            // Miniature Charr Shaman (purple)
+                constexpr int Dragon = 231;           // Miniature Bone Dragon (green)
+                constexpr int Rurik = 232;            // Miniature Prince Rurik (gold)
+                constexpr int Shiro = 233;            // Miniature Shiro (gold)
+                constexpr int Titan = 234;            // Miniature Burning Titan (purple)
+                constexpr int Kirin = 235;            // Miniature Kirin (purple)
+                constexpr int NecridHorseman = 236;   // Miniature Necrid Horseman (white)
+                constexpr int JadeArmor = 237;        // Miniature Jade Armor (white)
+                constexpr int Hydra = 238;            // Miniature Hydra (white)
+                constexpr int FungalWallow = 239;     // Miniature Fungal Wallow (white)
+                constexpr int SiegeTurtle = 240;      // Miniature Siege Turtle (white)
+                constexpr int TempleGuardian = 241;   // Miniature Temple Guardian (white)
+                constexpr int JungleTroll = 242;      // Miniature Jungle Troll (white)
                 constexpr int WhiptailDevourer = 243; // Miniature Whiptail Devourer (white)
                 // Second Year
-                constexpr int Gwen = 244; // Miniature Gwen (green)
-                constexpr int GwenDoll = 245; // Miniature Gwen Doll (??)
-                constexpr int WaterDjinn = 246; // Miniature Water Djinn (gold)
-                constexpr int Lich = 247; // Miniature Lich (gold)
-                constexpr int Elf = 248; // Miniature Elf (purple)
-                constexpr int PalawaJoko = 249; // Miniature Palawa Joko (purple)
-                constexpr int Koss = 250; // Miniature Koss (purple)
+                constexpr int Gwen = 244;         // Miniature Gwen (green)
+                constexpr int GwenDoll = 245;     // Miniature Gwen Doll (??)
+                constexpr int WaterDjinn = 246;   // Miniature Water Djinn (gold)
+                constexpr int Lich = 247;         // Miniature Lich (gold)
+                constexpr int Elf = 248;          // Miniature Elf (purple)
+                constexpr int PalawaJoko = 249;   // Miniature Palawa Joko (purple)
+                constexpr int Koss = 250;         // Miniature Koss (purple)
                 constexpr int MandragorImp = 251; // Miniature Mandragor Imp (white)
                 constexpr int HeketWarrior = 252; // Miniature Heket Warrior (white)
-                constexpr int HarpyRanger = 253; // Miniature Harpy Ranger (white)
-                constexpr int Juggernaut = 254; // Miniature Juggernaut (white)
-                constexpr int WindRider = 255; // Miniature Wind Rider (white)
-                constexpr int FireImp = 256; // Miniature Fire Imp (white)
-                constexpr int Aatxe = 257; // Miniature Aatxe (white)
-                constexpr int ThornWolf = 258; // Miniature Thorn Wolf (white)
+                constexpr int HarpyRanger = 253;  // Miniature Harpy Ranger (white)
+                constexpr int Juggernaut = 254;   // Miniature Juggernaut (white)
+                constexpr int WindRider = 255;    // Miniature Wind Rider (white)
+                constexpr int FireImp = 256;      // Miniature Fire Imp (white)
+                constexpr int Aatxe = 257;        // Miniature Aatxe (white)
+                constexpr int ThornWolf = 258;    // Miniature Thorn Wolf (white)
                 // Third Year
-                constexpr int Abyssal = 259; // Miniature Abyssal (white)
-                constexpr int BlackBeast = 260; // Miniature Black Beast of Aaaaarrrrrrgghh (gold)
-                constexpr int Freezie = 261; // Miniature Freezie (purple)
-                constexpr int Irukandji = 262; // Miniature Irukandji (white)
-                constexpr int MadKingThorn = 263; // Miniature Mad King Thorn (green)
-                constexpr int ForestMinotaur = 264; // Miniature Forest Minotaur (white)
-                constexpr int Mursaat = 265; // Miniature Mursaat (white)
-                constexpr int Nornbear = 266; // Miniature Nornbear (purple)
-                constexpr int Ooze = 267; // Miniature Ooze (purple)
-                constexpr int Raptor = 268; // Miniature Raptor (white)
-                constexpr int RoaringEther = 269; // Miniature Roaring Ether (white)
+                constexpr int Abyssal = 259;            // Miniature Abyssal (white)
+                constexpr int BlackBeast = 260;         // Miniature Black Beast of Aaaaarrrrrrgghh (gold)
+                constexpr int Freezie = 261;            // Miniature Freezie (purple)
+                constexpr int Irukandji = 262;          // Miniature Irukandji (white)
+                constexpr int MadKingThorn = 263;       // Miniature Mad King Thorn (green)
+                constexpr int ForestMinotaur = 264;     // Miniature Forest Minotaur (white)
+                constexpr int Mursaat = 265;            // Miniature Mursaat (white)
+                constexpr int Nornbear = 266;           // Miniature Nornbear (purple)
+                constexpr int Ooze = 267;               // Miniature Ooze (purple)
+                constexpr int Raptor = 268;             // Miniature Raptor (white)
+                constexpr int RoaringEther = 269;       // Miniature Roaring Ether (white)
                 constexpr int CloudtouchedSimian = 270; // Miniature Cloudtouched Simian (white)
-                constexpr int CaveSpider = 271; // Miniature Cave Spider (white)
-                constexpr int WhiteRabbit = 272; // White Rabbit (gold)
+                constexpr int CaveSpider = 271;         // Miniature Cave Spider (white)
+                constexpr int WhiteRabbit = 272;        // White Rabbit (gold)
                 // Fourth Year
-                constexpr int WordofMadness = 273; // Miniature Word of Madness (white)
-                constexpr int DredgeBrute = 274; // Miniature Dredge Brute (white)
-                constexpr int TerrorwebDryder = 275; // Miniature Terrorweb Dryder (white)
-                constexpr int Abomination = 276; // Miniature Abomination (white)
-                constexpr int KraitNeoss = 277; // Miniature Krait Neoss (white)
-                constexpr int DesertGriffon = 278; // Miniature Desert Griffon (white)
-                constexpr int Kveldulf = 279; // Miniature Kveldulf (white)
-                constexpr int QuetzalSly = 280; // Miniature Quetzal Sly (white)
-                constexpr int Jora = 281; // Miniature Jora (purple)
+                constexpr int WordofMadness = 273;      // Miniature Word of Madness (white)
+                constexpr int DredgeBrute = 274;        // Miniature Dredge Brute (white)
+                constexpr int TerrorwebDryder = 275;    // Miniature Terrorweb Dryder (white)
+                constexpr int Abomination = 276;        // Miniature Abomination (white)
+                constexpr int KraitNeoss = 277;         // Miniature Krait Neoss (white)
+                constexpr int DesertGriffon = 278;      // Miniature Desert Griffon (white)
+                constexpr int Kveldulf = 279;           // Miniature Kveldulf (white)
+                constexpr int QuetzalSly = 280;         // Miniature Quetzal Sly (white)
+                constexpr int Jora = 281;               // Miniature Jora (purple)
                 constexpr int FlowstoneElemental = 282; // Miniature Flowstone Elemental (purple)
-                constexpr int Nian = 283; // Miniature Nian (purple)
-                constexpr int DagnarStonepate = 284; // Miniature Dagnar Stonepate (gold)
-                constexpr int FlameDjinn = 285; // Miniature Flame Djinn (gold)
-                constexpr int EyeOfJanthir = 286; // Miniature Eye of Janthir (green)
+                constexpr int Nian = 283;               // Miniature Nian (purple)
+                constexpr int DagnarStonepate = 284;    // Miniature Dagnar Stonepate (gold)
+                constexpr int FlameDjinn = 285;         // Miniature Flame Djinn (gold)
+                constexpr int EyeOfJanthir = 286;       // Miniature Eye of Janthir (green)
                 // Fifth Year
-                constexpr int Seer = 287; // Miniature Seer (white)
-                constexpr int SiegeDevourer = 288; // Miniature Siege Devourer (white)
-                constexpr int ShardWolf = 289; // Miniature Shard Wolf (white)
-                constexpr int FireDrake = 290; // Miniature Fire Drake (white)
+                constexpr int Seer = 287;              // Miniature Seer (white)
+                constexpr int SiegeDevourer = 288;     // Miniature Siege Devourer (white)
+                constexpr int ShardWolf = 289;         // Miniature Shard Wolf (white)
+                constexpr int FireDrake = 290;         // Miniature Fire Drake (white)
                 constexpr int SummitGiantHerder = 291; // Miniature Summit Giant Herder (white)
-                constexpr int OphilNahualli = 292; // Miniature Ophil Nahualli (white)
-                constexpr int CobaltScabara = 293; // Miniature Cobalt Scabara (white)
-                constexpr int ScourgeManta = 294; // Miniature Scourge Manta (white)
-                constexpr int Ventari = 295; // Miniature Ventari (purple)
-                constexpr int Oola = 296; // Miniature Oola (purple)
-                constexpr int CandysmithMarley = 297; // Miniature CandysmithMarley (purple)
-                constexpr int ZhuHanuku = 298; // Miniature Zhu Hanuku (gold)
-                constexpr int KingAdelbern = 299; // Miniature King Adelbern (gold)
-                constexpr int MOX1 = 300; // Miniature M.O.X. (color?)
-                constexpr int MOX2 = 301; // Miniature M.O.X. (color?)
-                constexpr int MOX3 = 302; // Miniature M.O.X. (green)
-                constexpr int MOX4 = 303; // Miniature M.O.X. (color?)
-                constexpr int MOX5 = 304; // Miniature M.O.X. (color?)
-                constexpr int MOX6 = 305; // Miniature M.O.X. (color?)
+                constexpr int OphilNahualli = 292;     // Miniature Ophil Nahualli (white)
+                constexpr int CobaltScabara = 293;     // Miniature Cobalt Scabara (white)
+                constexpr int ScourgeManta = 294;      // Miniature Scourge Manta (white)
+                constexpr int Ventari = 295;           // Miniature Ventari (purple)
+                constexpr int Oola = 296;              // Miniature Oola (purple)
+                constexpr int CandysmithMarley = 297;  // Miniature CandysmithMarley (purple)
+                constexpr int ZhuHanuku = 298;         // Miniature Zhu Hanuku (gold)
+                constexpr int KingAdelbern = 299;      // Miniature King Adelbern (gold)
+                constexpr int MOX1 = 300;              // Miniature M.O.X. (color?)
+                constexpr int MOX2 = 301;              // Miniature M.O.X. (color?)
+                constexpr int MOX3 = 302;              // Miniature M.O.X. (green)
+                constexpr int MOX4 = 303;              // Miniature M.O.X. (color?)
+                constexpr int MOX5 = 304;              // Miniature M.O.X. (color?)
+                constexpr int MOX6 = 305;              // Miniature M.O.X. (color?)
 
                 // In-game rewards and promotionals
                 constexpr int BrownRabbit = 306; // Miniature Brown Rabbit
-                constexpr int Yakkington = 307; // Miniature Yakkington
+                constexpr int Yakkington = 307;  // Miniature Yakkington
                 // constexpr int Unknown308 = 308;
                 constexpr int CollectorsEditionKuunavang = 309; // Miniature Kuunavang (green)
                 constexpr int GrayGiant = 310;
@@ -145,10 +141,9 @@ namespace GW
                 constexpr int HighPriestZhang = 348;
                 constexpr int GhostlyPriest = 349;
                 constexpr int RiftWarden = 350;
-            }
+            } // namespace Minipet
 
-            namespace SummoningStone
-            {
+            namespace SummoningStone {
                 constexpr int MercantileMerchant = 467;
                 constexpr int ZaishenArcher = 468;
                 constexpr int ZaishenAvatarOfBalthazar = 469;
@@ -174,25 +169,17 @@ namespace GW
                 constexpr int MischievousGrentch = 522;
                 constexpr int FrostySnowman = 523;
                 constexpr int GhastlyDreamRider = 524;
-            }
+            } // namespace SummoningStone
 
             // New bosses 2020-04-22
-            enum
-            {
-                AbaddonsCursed = 1338,
-                BladeAncientSyuShai = 1339,
-                YoannhTheRebuilber = 1340,
-                FureystSharpsight = 1341
-            };
+            enum { AbaddonsCursed = 1338, BladeAncientSyuShai = 1339, YoannhTheRebuilber = 1340, FureystSharpsight = 1341 };
 
-            namespace FoW
-            {
+            namespace FoW {
                 constexpr int NimrosTheHunter = 1485;
                 constexpr int MikoTheUnchained = 2015;
-            }
+            } // namespace FoW
 
-            namespace UW
-            {
+            namespace UW {
                 constexpr int ChainedSoul = 2317;
                 constexpr int DyingNightmare = 2318;
                 constexpr int ObsidianBehemoth = 2319;
@@ -225,12 +212,12 @@ namespace GW
                 constexpr int MinionOfDhuum = 2395;
                 constexpr int Dhuum = 2396;
 
-                constexpr int Reapers = 2399; // outside dhuum chamber
+                constexpr int Reapers = 2399;        // outside dhuum chamber
                 constexpr int ReapersAtDhuum = 2400; // in dhuum chamber
-                constexpr int IceElemental = 2401; // friendly, during waste quest near dhuum.
+                constexpr int IceElemental = 2401;   // friendly, during waste quest near dhuum.
                 constexpr int KingFrozenwind = 2403;
                 constexpr int TorturedSpirit1 = 2404; // friendly, during quest
-                constexpr int Escort1 = 2407; // souls npc spawned by escort quest
+                constexpr int Escort1 = 2407;         // souls npc spawned by escort quest
                 constexpr int Escort2 = 2408;
                 constexpr int Escort3 = 2409;
                 constexpr int Escort4 = 2410;
@@ -243,10 +230,9 @@ namespace GW
 
                 constexpr int TorturedSpirit = 2422;
                 constexpr int MajorAlgheri = 2424;
-            }
+            } // namespace UW
 
-            namespace FoW
-            {
+            namespace FoW {
                 constexpr int Banshee = 2377; // Note: same as UW::WailingLord
 
                 constexpr int MahgoHydra = 2847;
@@ -260,7 +246,7 @@ namespace GW
                 constexpr int ShadowWarrior = 2858;
                 constexpr int ShadowRanger = 2859;
                 constexpr int ShadowBeast = 2860;
-                constexpr int Abyssal = 2861; // Note: same as ShadowOverlord.
+                constexpr int Abyssal = 2861;        // Note: same as ShadowOverlord.
                 constexpr int ShadowOverlord = 2861; // Note: same as Abyssal.
                 constexpr int SeedOfCorruption = 2862;
                 constexpr int SpiritWood = 2863;
@@ -277,9 +263,9 @@ namespace GW
                 constexpr int DragonLich = 2874;
                 constexpr int Menzies = 2875;
                 // 2821 ?
-                constexpr int Rastigan = 2877; // Friendly NPC
-                constexpr int Griffons = 2878; // Friendly NPC
-                constexpr int LordKhobay = 2879; // Unfriendly NPC
+                constexpr int Rastigan = 2877;    // Friendly NPC
+                constexpr int Griffons = 2878;    // Friendly NPC
+                constexpr int LordKhobay = 2879;  // Unfriendly NPC
                 constexpr int Forgemaster = 2880; // Friendly NPC
                 // 2826 ?
                 constexpr int TraitorousTempleGuard1 = 2882;
@@ -287,7 +273,7 @@ namespace GW
                 constexpr int TraitorousTempleGuard3 = 2884;
                 // 2830 ?
                 constexpr int ShardWolf = 2886;
-            }
+            } // namespace FoW
 
             constexpr int Rotscale = 2888;
 
@@ -296,24 +282,21 @@ namespace GW
             constexpr int FrozenSoil = 2933;
             constexpr int QZ = 2937;
 
-            namespace Urgoz
-            {
+            namespace Urgoz {
                 constexpr int HoppingVampire = 3796;
                 constexpr int Urgoz = 3805;
-            }
+            } // namespace Urgoz
 
-            namespace Deep
-            {
+            namespace Deep {
                 constexpr int Kanaxai = 4110;
                 constexpr int KanaxaiAspect = 4111;
-            }
+            } // namespace Deep
 
             constexpr int Lacerate = 4283;
             constexpr int Equinox = 4287;
             constexpr int Famine = 4289;
 
-            namespace DoA
-            {
+            namespace DoA {
                 // Friendly
                 constexpr int FoundrySnakes = 5272;
 
@@ -381,7 +364,7 @@ namespace GW
                 constexpr int TorturewebDryder = 5266;
                 constexpr int GreaterDreamRider = 5267;
                 constexpr int GreaterDreamRider2 = 5268;
-            }
+            } // namespace DoA
 
             constexpr int ProphetVaresh = 5343;
             constexpr int CommanderVaresh = 5344;
@@ -390,10 +373,8 @@ namespace GW
             constexpr int InfuriatingHeat = 5766;
             constexpr int Quicksand = 5769;
 
-            namespace PolymockSummon
-            {
-                enum
-                {
+            namespace PolymockSummon {
+                enum {
                     // Polymocks
                     MursaatElementalist = 5898,
                     FlameDjinn = 5899,
@@ -404,8 +385,7 @@ namespace GW
 
             constexpr int EbonVanguardAssassin = 5903;
 
-            namespace EotnDungeons
-            {
+            namespace EotnDungeons {
                 constexpr int DiscOfChaos = 6122;
                 constexpr int PlagueOfDestruction = 6134;
                 constexpr int ZhimMonns = 6297;
@@ -416,7 +396,7 @@ namespace GW
                 constexpr int Selvetarm = 6459;
                 constexpr int Forgewright = 6460;
                 constexpr int HavokSoulwail = 6478;
-                constexpr int RragarManeater3 = 6609; // lvl 3
+                constexpr int RragarManeater3 = 6609;  // lvl 3
                 constexpr int RragarManeater12 = 6610; // lvl 1 and 2
                 constexpr int Arachni = 6844;
                 constexpr int Hidesplitter = 6852;
@@ -438,10 +418,9 @@ namespace GW
                 constexpr int SoulOfFendiNin = 7065;
 
                 constexpr int KeymasterOfMurakai = 7069;
-            }
+            } // namespace EotnDungeons
 
-            namespace BonusMissionPack
-            {
+            namespace BonusMissionPack {
                 constexpr int WarAshenskull = 7130;
                 constexpr int RoxAshreign = 7131;
                 constexpr int AnrakTindershot = 7132;
@@ -458,10 +437,9 @@ namespace GW
                 constexpr int MasterRiyo = 7198;
                 constexpr int CaptainSunpu = 7200;
                 constexpr int MinisterWona = 7201;
-            }
+            } // namespace BonusMissionPack
 
-            namespace EotnDungeons
-            {
+            namespace EotnDungeons {
                 constexpr int AngrySnowman = 7462;
             }
 
@@ -469,16 +447,14 @@ namespace GW
 
             /* Birthday Minis */
             /* unknowns are commented as a guess as inventory name but fit a pattern of id schema */
-            namespace Minipet
-            {
+            namespace Minipet {
                 // More in-game drops and rewards
                 constexpr int MiniatureLegionnaire = 8035;
-            }
+            } // namespace Minipet
 
             constexpr int LockedChest = 8192; // this is actually ->ExtraType
 
-            namespace Minipet
-            {
+            namespace Minipet {
                 constexpr int MiniatureConfessorDorian = 8344;
                 constexpr int MiniaturePrincessSalma = 8349;
                 constexpr int MiniatureLivia = 8350;
@@ -488,10 +464,9 @@ namespace GW
                 constexpr int MiniaturePeacekeeperEnforcer = 8354;
                 constexpr int MiniatureMinisterReiko = 9038;
                 constexpr int MiniatureEcclesiateXunRao = 9039;
-            }
+            } // namespace Minipet
 
-            namespace SummoningStone
-            {
+            namespace SummoningStone {
                 constexpr int ImperialCripplingSlash = 9043;
                 constexpr int ImperialTripleChop = 9044;
                 constexpr int ImperialBarrage = 9045;
@@ -512,7 +487,7 @@ namespace GW
                 constexpr int TenguPanic = 9060;
                 constexpr int TenguAuraOftheLich = 9061;
                 constexpr int TenguDefiantWasXinrae = 9062;
-            }
-        }
-    }
-}
+            } // namespace SummoningStone
+        } // namespace ModelID
+    } // namespace Constants
+} // namespace GW

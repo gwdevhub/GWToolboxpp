@@ -133,9 +133,7 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigne
 
 LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const char* extra_info)
 {
-#ifdef _DEBUG
-    __debugbreak();
-#endif
+
 
     // Disable WER right at the start of crash handling
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
@@ -268,13 +266,14 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     MessageBoxW(nullptr, error_info.c_str(), success ? L"GWToolbox++ crash dump created!" : L"GWToolbox++ crash dump failed!", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND | MB_TOPMOST);
 
     #ifdef _DEBUG
+    if (IsDebuggerPresent()) {
+        __debugbreak();
+    }
     abort();
     #else
     TerminateProcess(GetCurrentProcess(), 1);
     return EXCEPTION_EXECUTE_HANDLER;
     #endif
-
-
 }
 
 void CrashHandler::Terminate()

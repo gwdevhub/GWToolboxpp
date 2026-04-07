@@ -1,5 +1,5 @@
 
-FILE(GLOB SOURCES
+FILE(GLOB SOURCES CONFIGURE_DEPENDS
     "*.h"
     "*.cpp"
     "GWToolbox.rc")

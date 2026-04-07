@@ -239,13 +239,11 @@ enum class ChunkType : uint32_t {
     #pragma warning(pop)
     struct GameAssetFile {
         std::vector<uint8_t> data; // Reference to the original data
-        size_t data_size;          // Size of the data
-        GameAssetFile() {
-            data.clear();
-            data_size = 0;
-        }
-        GameAssetFile(std::vector<uint8_t>& _data) : GameAssetFile() { parse(_data); }
-        char* fileType();
+        size_t data_size = 0;          // Size of the data
+        uint32_t file_id = 0;
+        GameAssetFile() = default;
+        GameAssetFile(std::vector<uint8_t>& _data) { parse(_data); }
+        const char* fileType() const;
 
         virtual bool parse(std::vector<uint8_t>& _data);
 

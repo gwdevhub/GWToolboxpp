@@ -27,6 +27,8 @@
 #include <Windows/TravelWindowConstants.h>
 #include <Utils/TextUtils.h>
 #include <GWCA/Managers/QuestMgr.h>
+#include <Utils/ToolboxUtils.h>
+#include <Widgets/WorldMapWidget.h>
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
@@ -443,7 +445,6 @@ namespace {
             return;
         }
 
-
         if (argOutpost == L"zv") {
             GW::Chat::SendChat('/', L"zv travel");
             return;
@@ -458,9 +459,13 @@ namespace {
         }
 
         TravelWindow& instance = Instance();
+        if (argOutpost == L"outpost") {
+            instance.TravelNearest(TravelWindow::GetNearestOutpostToPlayer());
+            return;
+        }
         if (argOutpost == L"nick" || argOutpost == L"nicholas") {
             const auto nick = DailyQuests::GetNicholasTheTraveller();
-            instance.TravelNearest(nick->map_id);
+            instance.TravelNearest(nick.quest->map_id);
             return;
         }
         if (argOutpost == L"quest") {
@@ -839,6 +844,54 @@ void TravelWindow::Update(const float)
     }
 }
 
+bool GetMapLabelPos(const GW::AreaInfo* map, GW::Vec2f* out)
+{
+    if (!map) return false;
+    *out = {static_cast<float>(map->x), static_cast<float>(map->y)};
+    if (!out->x) {
+        out->x = static_cast<float>(map->icon_start_x + (map->icon_end_x - map->icon_start_x) / 2);
+        out->y = static_cast<float>(map->icon_start_y + (map->icon_end_y - map->icon_start_y) / 2);
+    }
+    if (!out->x) {
+        out->x = static_cast<float>(map->icon_start_x_dupe + (map->icon_end_x_dupe - map->icon_start_x_dupe) / 2);
+        out->y = static_cast<float>(map->icon_start_y_dupe + (map->icon_end_y_dupe - map->icon_start_y_dupe) / 2);
+    }
+    return out->x != 0.f;
+}
+
+GW::Constants::MapID TravelWindow::GetNearestOutpostToLocation(const GW::AreaInfo* origin, const GW::Vec2f& world_map_pos) {
+    if (!origin) return GW::Constants::MapID::None;
+    float nearest_distance = std::numeric_limits<float>::max();
+    auto nearest_map_id = GW::Constants::MapID::None;
+    GW::Vec2f map_pos;
+    for (size_t i = 0; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
+        const auto& map_id = static_cast<GW::Constants::MapID>(i);
+        if (!GW::Map::GetIsMapUnlocked(map_id)) continue;
+        if (!(IsValidOutpost(map_id) && GW::Map::GetMapInfo(map_id)->GetIsOnWorldMap())) continue;
+        const auto map_info = GW::Map::GetMapInfo(map_id);
+        if (!(map_info && map_info->continent == origin->continent && map_info->campaign == origin->campaign)) continue;
+        // if ((map_info->flags & 0x5000000) != 0)
+        //    continue; // e.g. "wrong" augury rock is map 119, no NPCs
+        if (!GetMapLabelPos(map_info, &map_pos)) continue;
+        const float dist = GetDistance(world_map_pos, map_pos);
+        if (dist < nearest_distance) {
+            nearest_distance = dist;
+            nearest_map_id = static_cast<GW::Constants::MapID>(i);
+        }
+    }
+    return nearest_map_id;
+}
+
+GW::Constants::MapID TravelWindow::GetNearestOutpostToPlayer()
+{
+    const auto my_pos = GW::PlayerMgr::GetPlayerPosition();
+    if (!my_pos) return GW::Constants::MapID::None;
+    GW::Vec2f world_map_pos;
+    if (!WorldMapWidget::GamePosToWorldMap(*my_pos, world_map_pos)) return GW::Constants::MapID::None;
+    return GetNearestOutpostToLocation(GW::Map::GetMapInfo(), world_map_pos);
+}
+
+
 GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID map_to)
 {
     static const auto special_cases = std::map<GW::Constants::MapID, GW::Constants::MapID>{
@@ -858,44 +911,11 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
 
     const GW::AreaInfo* this_map = GW::Map::GetMapInfo(map_to);
     if (!this_map) return GW::Constants::MapID::None;
-    float nearest_distance = std::numeric_limits<float>::max();
-    auto nearest_map_id = GW::Constants::MapID::None;
 
-    auto get_pos = [](const GW::AreaInfo* map) {
-        GW::Vec2f pos = {static_cast<float>(map->x), static_cast<float>(map->y)};
-        if (!pos.x) {
-            pos.x = static_cast<float>(map->icon_start_x + (map->icon_end_x - map->icon_start_x) / 2);
-            pos.y = static_cast<float>(map->icon_start_y + (map->icon_end_y - map->icon_start_y) / 2);
-        }
-        if (!pos.x) {
-            pos.x = static_cast<float>(map->icon_start_x_dupe + (map->icon_end_x_dupe - map->icon_start_x_dupe) / 2);
-            pos.y = static_cast<float>(map->icon_start_y_dupe + (map->icon_end_y_dupe - map->icon_start_y_dupe) / 2);
-        }
-        return pos;
-    };
-
-    GW::Vec2f this_pos = get_pos(this_map);
-    if (!this_pos.x) {
-        this_pos = {static_cast<float>(this_map->icon_start_x), static_cast<float>(this_map->icon_start_y)};
-    }
-    for (size_t i = 0; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
-        const auto& map_id = static_cast<GW::Constants::MapID>(i);
-        if (!GW::Map::GetIsMapUnlocked(map_id))
-            continue;
-        if (!(IsValidOutpost(map_id) && GW::Map::GetMapInfo(map_id)->GetIsOnWorldMap()))
-            continue;
-        const auto map_info = GW::Map::GetMapInfo(map_id);
-        if (!(map_info && map_info->continent == this_map->continent))
-            continue;
-        //if ((map_info->flags & 0x5000000) != 0)
-        //   continue; // e.g. "wrong" augury rock is map 119, no NPCs
-        const float dist = GetDistance(this_pos, get_pos(map_info));
-        if (dist < nearest_distance) {
-            nearest_distance = dist;
-            nearest_map_id = static_cast<GW::Constants::MapID>(i);
-        }
-    }
-    return nearest_map_id;
+    GW::Vec2f world_map_location;
+    if(!GetMapLabelPos(this_map,&world_map_location))
+        return GW::Constants::MapID::None;
+    return GetNearestOutpostToLocation(this_map, world_map_location);
 }
 
 bool TravelWindow::IsWaitingForMapTravel()
@@ -994,7 +1014,7 @@ bool TravelWindow::TravelNearest(const GW::Constants::MapID map_id)
 
 bool TravelWindow::Travel(const GW::Constants::MapID map_id, const GW::Constants::District _district /*= 0*/, const uint32_t _district_number)
 {
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || map_id == GW::Constants::MapID::None) {
         return false;
     }
     if (!GW::Map::GetIsMapUnlocked(map_id)) {

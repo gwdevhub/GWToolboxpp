@@ -37,10 +37,10 @@ namespace ArenaNetFileParser {
         return 0;
     }
 
-    char* GameAssetFile::fileType()
+    const char* GameAssetFile::fileType() const
     {
         if (data_size < 4) return 0;
-        return (char*)data.data(); // Read file type from the first 4 bytes
+        return (const char*)data.data(); // Read file type from the first 4 bytes
     }
     bool GameAssetFile::parse(std::vector<uint8_t>& _data)
     {
@@ -48,15 +48,18 @@ namespace ArenaNetFileParser {
         data_size = data.size();
         return isValid();
     }
-    bool GameAssetFile::readFromDat(const uint32_t file_id, uint32_t stream_id)
+    bool GameAssetFile::readFromDat(const uint32_t _file_id, uint32_t stream_id)
     {
         wchar_t fileHash[4] = {0};
-        FileIdToFileHash(file_id, fileHash);
+        FileIdToFileHash(_file_id, fileHash);
         return readFromDat(fileHash, stream_id);
     }
     bool GameAssetFile::readFromDat(const wchar_t* file_hash, uint32_t stream_id)
     {
         std::vector<uint8_t> bytes;
+        file_id = FileHashToFileId(file_hash);
+        data_size = 0;
+        data.clear();
         if (!GwDatTextureModule::ReadDatFile(file_hash, &bytes, stream_id)) return false;
         return parse(bytes);
     }

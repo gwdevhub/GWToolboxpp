@@ -29,7 +29,7 @@
 #include <Modules/MouseFix.h>
 #include <Modules/GuildWarsSettingsModule.h>
 #include <Modules/PriceCheckerModule.h>
-#include <Modules/SalvageInfoModule.h>
+#include <Modules/ItemTooltipModule.h>
 #include <Modules/ResignLogModule.h>
 #include <Modules/PartyBroadcastModule.h>
 #include <Modules/CodeOptimiserModule.h>
@@ -94,6 +94,7 @@
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/InventoryOverlayWidget.h>
 #include <Widgets/TitleTrackerWidget.h>
+#include <Widgets/FavorTracker.h>
 #include "ToolboxSettings.h"
 
 
@@ -156,7 +157,7 @@ namespace {
         KeyboardLanguageFix::Instance(),
         GuildWarsSettingsModule::Instance(),
         PriceCheckerModule::Instance(),
-        SalvageInfoModule::Instance(),
+        ItemTooltipModule::Instance(),
         ResignLogModule::Instance(),
         QuestModule::Instance(),
         PartyBroadcast::Instance(),
@@ -215,7 +216,8 @@ namespace {
         TargetInfoWindow::Instance(),
         DropTrackerWindow::Instance(),
         GWMarketWindow::Instance(),
-        InventorySorting::Instance()
+        InventorySorting::Instance(),
+        FavorTracker::Instance()
     };
 
     bool modules_sorted = false;

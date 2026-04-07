@@ -825,7 +825,6 @@ namespace {
         }
         file_ids = *(wchar_t***)addr;
         // wchar_t *[18][99] s_fileId
-        Resources::EnsureFolderExists(Resources::GetPath("language_files"));
         for (size_t language_id = 0; language_id < 18; language_id++) {
             wchar_t** language_files = &file_ids[language_id * 99];
             for (size_t file_idx = 0; file_idx < 99; file_idx++) {
@@ -837,13 +836,10 @@ namespace {
                 const auto filename = std::format("language_file_{}_{}.txt", language_id, file_idx);
                 const auto write_to = Resources::GetPath("language_files", filename);
 
-                if (std::filesystem::exists(write_to)) {
-                    std::filesystem::remove(write_to);
+                if (!Resources::WriteFile(write_to, std::string(reinterpret_cast<const char*>(asset.data.data()), asset.data.size()))) {
+                    Log::Warning("Failed to write to disk in DownloadStringFiles");
+                    return false;
                 }
-                auto handle = fopen(write_to.string().c_str(), "wb");
-                if (!handle) return false;
-                fwrite(asset.data.data(), asset.data.size(), 1, handle);
-                fclose(handle);
             }
         }
         return true;
@@ -1080,6 +1076,7 @@ namespace {
 
         // For debugging changes to flags/arrays etc
         [[maybe_unused]] const GW::GameContext* g = GW::GetGameContext();
+        if (!g) return;
         [[maybe_unused]] const GW::GuildContext* gu = g->guild;
         [[maybe_unused]] const GW::CharContext* c = g->character;
         [[maybe_unused]] const GW::WorldContext* w = g->world;

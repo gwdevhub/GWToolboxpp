@@ -248,8 +248,8 @@ namespace GW {
         /* +h0104 */ uint32_t h0104; // New variable added here
         /* +h0108 */ TagInfo* tags; // struct { uint16_t guild_id, uint8_t primary, uint8_t secondary, uint16_t level
         /* +h010C */ uint16_t  h010C;
-        /* +h010E */ uint8_t  primary; // Primary profession 0-10 (None,W,R,Mo,N,Me,E,A,Rt,P,D)
-        /* +h010F */ uint8_t  secondary; // Secondary profession 0-10 (None,W,R,Mo,N,Me,E,A,Rt,P,D)
+        /* +h010E */ GW::Constants::ProfessionByte  primary; // Primary profession 0-10 (None,W,R,Mo,N,Me,E,A,Rt,P,D)
+        /* +h010F */ GW::Constants::ProfessionByte  secondary; // Secondary profession 0-10 (None,W,R,Mo,N,Me,E,A,Rt,P,D)
         /* +h0110 */ uint8_t  level; // Duh!
         /* +h0111 */ uint8_t  team_id; // 0=None, 1=Blue, 2=Red, 3=Yellow
         /* +h0112 */ uint8_t  h0112[2];
@@ -369,6 +369,25 @@ namespace GW {
         else
             return nullptr;
     }
+    // Stores info about some agents even if they're not in compass range
+    struct AgentCharData {
+        uint16_t h0000;
+        GW::Constants::ProfessionByte primary;
+        GW::Constants::ProfessionByte secondary;
+        uint32_t level;
+        uint32_t h0008;
+        uint32_t h000c;
+        float h0010;
+        float h0014;
+        uint32_t h0018;
+        uint32_t h001c;
+        uint32_t h0020;
+        float h0024;
+        float h0028;
+        uint32_t h002c;
+        uint32_t h0030;
+    };
+    static_assert(sizeof(AgentCharData) == 0x34, "struct AgentCharData has incorrect size");
 
     struct MapAgent {
         /* +h0000 */ float cur_energy;

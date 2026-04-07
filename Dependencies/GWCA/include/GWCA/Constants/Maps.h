@@ -892,7 +892,7 @@ namespace GW {
             Lakeside_County_1070_AE,
             Ashford_Catacombs_1070_AE,
 
-            Count = 0x370,
+            Count = 0x373,
         };
     }
 }

@@ -73,7 +73,7 @@ target_compile_definitions(scripting INTERFACE BUILD_DLL)
 
 macro(add_tb_plugin PLUGIN)
     add_library(${PLUGIN} SHARED)
-    file(GLOB SOURCES
+    file(GLOB SOURCES CONFIGURE_DEPENDS
         "${PROJECT_SOURCE_DIR}/plugins/${PLUGIN}/*.h"
         "${PROJECT_SOURCE_DIR}/plugins/${PLUGIN}/*.cpp")
     target_sources(${PLUGIN} PRIVATE ${SOURCES})

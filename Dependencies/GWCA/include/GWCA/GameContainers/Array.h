@@ -31,6 +31,10 @@ namespace GW {
             return m_buffer[index];
         }
 
+        T* get(size_t index) const {
+            return m_buffer && index < m_size ? &m_buffer[index] : nullptr;
+        }
+
         const T& at(size_t index) const {
             GWCA_ASSERT(m_buffer && index < m_size);
             return m_buffer[index];

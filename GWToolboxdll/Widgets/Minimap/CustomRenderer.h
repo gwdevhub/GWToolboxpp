@@ -2,7 +2,7 @@
 
 #include <GWCA/GameContainers/GamePos.h>
 
-#include <Widgets/Minimap/VBuffer.h>
+#include <D3DContainers.h>
 
 namespace GW::Constants {
     enum class MapID : uint32_t;
@@ -10,39 +10,7 @@ namespace GW::Constants {
 
 using Color = uint32_t;
 
-namespace mapbox::util {
-    template <>
-    struct nth<0, GW::GamePos> {
-        static auto get(const GW::GamePos& t) { return t.x; }
-    };
-
-    template <>
-    struct nth<1, GW::GamePos> {
-        static auto get(const GW::GamePos& t) { return t.y; }
-    };
-
-    template <>
-    struct nth<0, GW::Vec2f> {
-        static auto get(const GW::Vec2f& t) { return t.x; }
-    };
-
-    template <>
-    struct nth<1, GW::Vec2f> {
-        static auto get(const GW::Vec2f& t) { return t.y; }
-    };
-
-    template <>
-    struct nth<0, GW::Vec3f> {
-        static auto get(const GW::Vec3f& t) { return t.x; }
-    };
-
-    template <>
-    struct nth<1, GW::Vec3f> {
-        static auto get(const GW::Vec3f& t) { return t.y; }
-    };
-}
-
-class CustomRenderer : public VBuffer {
+class CustomRenderer : public D3DVertexBuffer {
     friend class AgentRenderer;
     friend class GameWorldRenderer;
 
@@ -51,29 +19,34 @@ class CustomRenderer : public VBuffer {
         FullCircle
     };
 
-    struct CustomMarker final : VBuffer {
+    struct CustomMarker final {
         CustomMarker(float x, float y, float s, Shape sh, GW::Constants::MapID m, const char* _name);
         explicit CustomMarker(const char* name);
+
         GW::GamePos pos;
-        float size;
-        Shape shape;
-        GW::Constants::MapID map;
+        float size = 1.f;
+        Shape shape = Shape::LineCircle;
+        GW::Constants::MapID map = (GW::Constants::MapID)0;
         bool visible = true;
         bool draw_on_terrain = false;
         char name[128]{};
         Color color{0x00FFFFFF};
         Color color_sub{0x00FFFFFF};
-        void Render(IDirect3DDevice9* device) override;
+
+        void Invalidate();
+        void Render(IDirect3DDevice9* device);
         [[nodiscard]] bool IsFilled() const { return shape == Shape::FullCircle; }
 
     private:
-        void Initialize(IDirect3DDevice9* device) override;
+        void SyncGeometry();
+
+        D3DFillCircle fill_circle;
+        D3DLineCircle line_circle;
     };
 
-    struct CustomPolygon final : VBuffer {
+struct CustomPolygon final : D3DVertexBuffer {
         CustomPolygon(GW::Constants::MapID m, const char* n);
         explicit CustomPolygon(const char* name);
-
         std::vector<GW::GamePos> points{};
         GW::Constants::MapID map;
         bool visible = true;
@@ -89,7 +62,6 @@ class CustomRenderer : public VBuffer {
 
     private:
         void Initialize(IDirect3DDevice9* device) override;
-        std::vector<unsigned> point_indices{};
     };
 
 public:
@@ -136,7 +108,6 @@ private:
 
     void DrawCustomMarkers(IDirect3DDevice9* device);
     void DrawCustomLines(const IDirect3DDevice9* device);
-    void EnqueueVertex(float x, float y, Color color);
     void SetTooltipMapID(const GW::Constants::MapID& map_id);
 
     struct MapTooltip {
@@ -145,15 +116,9 @@ private:
         char tooltip_str[128]{};
     } map_id_tooltip;
 
-    class LineCircle : public VBuffer {
-        void Initialize(IDirect3DDevice9* device) override;
-    } linecircle;
-
+    D3DLineCircle linecircle{1.f, 0xFF666677};
+    
     inline static Color color{0xFF00FFFF};
-
-    D3DVertex* vertices = nullptr;
-    unsigned int vertices_count = 0;
-    unsigned int vertices_max = 0;
 
     int show_polygon_details = -1;
     bool markers_changed = false;

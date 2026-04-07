@@ -1,9 +1,9 @@
 #pragma once
 
 #include <Color.h>
-#include <Widgets/Minimap/VBuffer.h>
+#include <D3DContainers.h>
 
-class RangeRenderer : public VBuffer {
+class RangeRenderer : public D3DVertexBuffer {
     static constexpr size_t num_circles = 9;
     static constexpr size_t circle_points = 192;
     static constexpr size_t circle_triangles = circle_points - 2;
@@ -17,8 +17,6 @@ public:
     void LoadSettings(const ToolboxIni* ini, const char* section);
     void SaveSettings(ToolboxIni* ini, const char* section) const;
     void LoadDefaults();
-    // Returns number of vertices used.
-    size_t CreateCircle(D3DVertex* vertices, float radius, DWORD color) const;
 
 private:
     void Initialize(IDirect3DDevice9* device) override;

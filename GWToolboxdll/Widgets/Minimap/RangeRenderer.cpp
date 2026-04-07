@@ -84,98 +84,45 @@ void RangeRenderer::DrawSettings()
     }
 }
 
-size_t RangeRenderer::CreateCircle(D3DVertex* vertices, const float radius, const DWORD color) const
-{
-    const auto xdiff = static_cast<float>(line_thickness) / gwinches_per_pixel;
-    const auto ydiff = static_cast<float>(line_thickness) / gwinches_per_pixel;
-    for (auto i = 0; i <= circle_triangles; i += 2) {
-        const auto angle = i / static_cast<float>(circle_triangles) * DirectX::XM_2PI;
-        vertices[i].x = radius * cos(angle);
-        vertices[i].y = radius * sin(angle);
-        vertices[i + 1].x = (radius - xdiff) * cos(angle);
-        vertices[i + 1].y = (radius - ydiff) * sin(angle);
-        vertices[i].z = vertices[i + 1].z = 0.0f;
-        vertices[i].color = vertices[i + 1].color = color;
-    }
-    return circle_points;
-}
-
 void RangeRenderer::Initialize(IDirect3DDevice9* device)
 {
-    if (initialized) {
-        return;
-    }
-    initialized = true;
-    count = circle_points * num_circles;
     type = D3DPT_TRIANGLESTRIP;
-
     checkforhos_ = true;
     havehos_ = false;
 
-    D3DVertex* vertices = nullptr;
-    const size_t vertex_count = count + 6;
+    clear();
+    vertices.reserve(circle_points * num_circles + 6);
 
-    device->CreateVertexBuffer(sizeof(D3DVertex) * vertex_count, D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
-    buffer->Lock(0, sizeof(D3DVertex) * vertex_count, reinterpret_cast<void**>(&vertices), D3DLOCK_DISCARD);
-    ASSERT(vertices != nullptr);
+    auto CreateCircle =
+        [&](const float radius, const DWORD color) {
+            const auto xdiff = static_cast<float>(line_thickness) / gwinches_per_pixel;
+            const auto ydiff = static_cast<float>(line_thickness) / gwinches_per_pixel;
+            for (auto i = 0; i <= circle_triangles; i += 2) {
+                const auto angle = i / static_cast<float>(circle_triangles) * DirectX::XM_2PI;
+                vertices.push_back({radius * cos(angle), radius * sin(angle), 0.f, color});
+                vertices.push_back({(radius - xdiff) * cos(angle), (radius - ydiff) * sin(angle), 0.f, color});
+            }
+        };
 
-    const D3DVertex* vertices_max = vertices + vertex_count;
-
-    // Compass range
-    float radius = GW::Constants::Range::Compass;
-    vertices += CreateCircle(vertices, radius, color_range_compass);
-    ASSERT(vertices < vertices_max);
-
-    // Spirit range
-    radius = GW::Constants::Range::Spirit;
-    vertices += CreateCircle(vertices, radius, color_range_spirit);
-    ASSERT(vertices < vertices_max);
-
-    // Spirit extended range
-    radius = GW::Constants::Range::SpiritExtended;
-    vertices += CreateCircle(vertices, radius, color_range_spirit_extended);
-    ASSERT(vertices < vertices_max);
-
-    // Spellcast range
-    radius = GW::Constants::Range::Spellcast;
-    vertices += CreateCircle(vertices, radius, color_range_cast);
-    ASSERT(vertices < vertices_max);
-
-    // Aggro range
-    radius = GW::Constants::Range::Earshot;
-    vertices += CreateCircle(vertices, radius, color_range_aggro);
-    ASSERT(vertices < vertices_max);
-
-    // HoS range
-    radius = 360.0f;
-    vertices += CreateCircle(vertices, radius, color_range_hos);
-    ASSERT(vertices < vertices_max);
-
-    // Chain aggro range
-    radius = 700.f;
-    vertices += CreateCircle(vertices, radius, color_range_chain_aggro);
-    ASSERT(vertices < vertices_max);
-
-    // Res aggro range
-    radius = GW::Constants::Range::Earshot;
-    vertices += CreateCircle(vertices, radius, color_range_res_aggro);
-    ASSERT(vertices < vertices_max);
-
-    // Shadowstep location aggro range
-    radius = GW::Constants::Range::Earshot;
-    vertices += CreateCircle(vertices, radius, color_range_shadowstep_aggro);
-    ASSERT(vertices < vertices_max);
+    CreateCircle(GW::Constants::Range::Compass, color_range_compass);
+    CreateCircle(GW::Constants::Range::Spirit, color_range_spirit);
+    CreateCircle(GW::Constants::Range::SpiritExtended, color_range_spirit_extended);
+    CreateCircle(GW::Constants::Range::Spellcast, color_range_cast);
+    CreateCircle(GW::Constants::Range::Earshot, color_range_aggro);
+    CreateCircle(360.f, color_range_hos);
+    CreateCircle(700.f, color_range_chain_aggro);
+    CreateCircle(GW::Constants::Range::Earshot, color_range_res_aggro);
+    CreateCircle(GW::Constants::Range::Earshot, color_range_shadowstep_aggro);
 
     // HoS line
-    ASSERT(vertices + 5 < vertices_max);
-    vertices[0] = {260.f, 0.f, 0.f, color_range_hos};
-    vertices[1] = {460.f, 0.f, 0.f, color_range_hos};
-    vertices[2] = {-150.f, 0.f, 0.f, color_range_hos};
-    vertices[3] = {150, 0.f, 0.f, color_range_hos};
-    vertices[4] = {0, -150.f, 0.f, color_range_hos};
-    vertices[5] = {0.f, 150.f, 0.f, color_range_hos};
+    vertices.push_back({260.f, 0.f, 0.f, color_range_hos});
+    vertices.push_back({460.f, 0.f, 0.f, color_range_hos});
+    vertices.push_back({-150.f, 0.f, 0.f, color_range_hos});
+    vertices.push_back({150.f, 0.f, 0.f, color_range_hos});
+    vertices.push_back({0.f, -150.f, 0.f, color_range_hos});
+    vertices.push_back({0.f, 150.f, 0.f, color_range_hos});
 
-    buffer->Unlock();
+    D3DVertexBuffer::Initialize(device);
 }
 
 void RangeRenderer::Render(IDirect3DDevice9* device, float _gwinches_per_pixel)
@@ -185,7 +132,11 @@ void RangeRenderer::Render(IDirect3DDevice9* device, float _gwinches_per_pixel)
         gwinches_per_pixel = _gwinches_per_pixel;
     }
 
-    Initialize(device);
+    if (!initialized) {
+        initialized = true;
+        Initialize(device);
+    }
+    if (!buffer) return;
 
     switch (GW::Map::GetInstanceType()) {
         case GW::Constants::InstanceType::Explorable:
@@ -209,101 +160,79 @@ void RangeRenderer::Render(IDirect3DDevice9* device, float _gwinches_per_pixel)
     device->SetFVF(D3DFVF_CUSTOMVERTEX);
     device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
 
-    size_t vertices_offset = 0;
+    const auto DrawCircle = [&](size_t& offset) {
+        device->DrawPrimitive(type, offset, circle_triangles);
+        offset += circle_points;
+    };
+    const auto DrawCircleAt = [&](size_t& offset, float x, float y) {
+        D3DMATRIX oldworld;
+        device->GetTransform(D3DTS_WORLD, &oldworld);
+        const auto translate = DirectX::XMMatrixTranslation(x, y, 0.f);
+        device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&translate));
+        device->DrawPrimitive(type, offset, circle_triangles);
+        device->SetTransform(D3DTS_WORLD, &oldworld);
+        offset += circle_points;
+    };
 
-    // Compass range
-    device->DrawPrimitive(type, vertices_offset, circle_triangles);
-    vertices_offset += circle_points;
+    size_t offset = 0;
 
-    // Spirit range
-    device->DrawPrimitive(type, vertices_offset, circle_triangles);
-    vertices_offset += circle_points;
+    DrawCircle(offset); // Compass
+    DrawCircle(offset); // Spirit
+    DrawCircle(offset); // Spirit Extended
+    DrawCircle(offset); // Cast
+    DrawCircle(offset); // Aggro
 
-    // Spirit Extended range
-    device->DrawPrimitive(type, vertices_offset, circle_triangles);
-    vertices_offset += circle_points;
-
-    // Cast range
-    device->DrawPrimitive(type, vertices_offset, circle_triangles);
-    vertices_offset += circle_points;
-
-    // Aggro range
-    device->DrawPrimitive(type, vertices_offset, circle_triangles);
-    vertices_offset += circle_points;
-
-    // Draw Hos range
-    if (havehos_) {
-        device->DrawPrimitive(type, vertices_offset, circle_triangles);
-    }
-    vertices_offset += circle_points;
+    // HoS range
+    if (havehos_) device->DrawPrimitive(type, offset, circle_triangles);
+    offset += circle_points;
 
     const GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
 
-    // Aggro range
-    if ((color_range_chain_aggro & IM_COL32_A_MASK) != 0
-        && target
-        && target->allegiance == GW::Constants::Allegiance::Enemy) {
-        D3DMATRIX oldworld;
-        device->GetTransform(D3DTS_WORLD, &oldworld);
-        const auto translate = DirectX::XMMatrixTranslation(target->x, target->y, 0.0f);
-        device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&translate));
-        device->DrawPrimitive(type, vertices_offset, circle_triangles);
-        device->SetTransform(D3DTS_WORLD, &oldworld);
+    // Chain aggro (on target)
+    if ((color_range_chain_aggro & IM_COL32_A_MASK) && target && target->allegiance == GW::Constants::Allegiance::Enemy) {
+        DrawCircleAt(offset, target->x, target->y);
     }
-    vertices_offset += circle_points;
-
-    // Res aggro range
-    if ((color_range_res_aggro & IM_COL32_A_MASK) != 0
-        && target
-        && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable
-        && target->allegiance == GW::Constants::Allegiance::Ally_NonAttackable
-        && target->GetIsDead()) {
-        D3DMATRIX oldworld;
-        device->GetTransform(D3DTS_WORLD, &oldworld);
-        const auto translate = DirectX::XMMatrixTranslation(target->x, target->y, 0.0f);
-        device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&translate));
-        device->DrawPrimitive(type, vertices_offset, circle_triangles);
-        device->SetTransform(D3DTS_WORLD, &oldworld);
+    else {
+        offset += circle_points;
     }
-    vertices_offset += circle_points;
 
-    // Draw shadowstep range i.e. shadowwalk aggro
+    // Res aggro (on dead ally)
+    if ((color_range_res_aggro & IM_COL32_A_MASK) && target && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable && target->allegiance == GW::Constants::Allegiance::Ally_NonAttackable && target->GetIsDead()) {
+        DrawCircleAt(offset, target->x, target->y);
+    }
+    else {
+        offset += circle_points;
+    }
+
+    // Shadowstep aggro
     const GW::Vec2f& shadowstep_location = Minimap::Instance().ShadowstepLocation();
-    if ((color_range_shadowstep_aggro & IM_COL32_A_MASK) != 0
-        && (shadowstep_location.x != 0.f || shadowstep_location.y != 0.f)) {
-        D3DMATRIX oldworld;
-        device->GetTransform(D3DTS_WORLD, &oldworld);
-        const auto translate = DirectX::XMMatrixTranslation(shadowstep_location.x, shadowstep_location.y, 0.0f);
-        device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&translate));
-        device->DrawPrimitive(type, vertices_offset, circle_triangles);
-        device->SetTransform(D3DTS_WORLD, &oldworld);
+    if ((color_range_shadowstep_aggro & IM_COL32_A_MASK) && (shadowstep_location.x != 0.f || shadowstep_location.y != 0.f)) {
+        DrawCircleAt(offset, shadowstep_location.x, shadowstep_location.y);
     }
-    vertices_offset += circle_points;
+    else {
+        offset += circle_points;
+    }
 
-    // Draw hos line
+    // HoS line
     if (havehos_) {
         const auto me = target ? GW::Agents::GetControlledCharacter() : nullptr;
-
         if (me && me != target && !me->GetIsDead() && !target->GetIsDead() && GetSquareDistance(target->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {
             GW::Vec2f v = me->pos - target->pos;
-            const float angle = std::atan2(v.y, v.x);
-
             D3DMATRIX oldworld;
             device->GetTransform(D3DTS_WORLD, &oldworld);
-            const auto rotate = DirectX::XMMatrixRotationZ(angle);
+            const auto rotate = DirectX::XMMatrixRotationZ(std::atan2(v.y, v.x));
             const auto newworld = rotate * XMLoadFloat4x4(reinterpret_cast<const DirectX::XMFLOAT4X4*>(&oldworld));
             device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&newworld));
-            device->DrawPrimitive(D3DPT_LINESTRIP, vertices_offset, 1);
+            device->DrawPrimitive(D3DPT_LINESTRIP, offset, 1);
             device->SetTransform(D3DTS_WORLD, &oldworld);
         }
     }
-    vertices_offset += 2;
+    offset += 2;
 
     if (draw_center_) {
-        device->DrawPrimitive(D3DPT_LINESTRIP, vertices_offset, 1);
-        vertices_offset += 2;
-        device->DrawPrimitive(D3DPT_LINESTRIP, vertices_offset, 1);
-        vertices_offset += 2;
+        device->DrawPrimitive(D3DPT_LINESTRIP, offset, 1);
+        offset += 2;
+        device->DrawPrimitive(D3DPT_LINESTRIP, offset, 1);
     }
 }
 

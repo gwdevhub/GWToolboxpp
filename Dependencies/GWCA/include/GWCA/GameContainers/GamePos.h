@@ -240,7 +240,7 @@ namespace GW {
         return res;
     }
 
-    Vec2f Rotate(Vec2f v, float rotation);
+    GWCA_API Vec2f Rotate(Vec2f v, float rotation);
 
     struct GamePos {
         float    x;

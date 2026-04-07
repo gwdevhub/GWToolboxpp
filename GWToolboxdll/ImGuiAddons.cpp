@@ -202,6 +202,28 @@ namespace ImGui {
         TextUnformatted(label);
     }
 
+    void TextOutlined(const char* label, float offset, ImU32 outline_color)
+    {
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        const ImVec2 pos = ImGui::GetCursorScreenPos();
+        ImFont* font = ImGui::GetFont();
+        const float size = ImGui::GetFontSize();
+
+        // Draw outline passes
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                if (dx == 0 && dy == 0) continue;
+                dl->AddText(font, size, ImVec2(pos.x + dx * offset, pos.y + dy * offset), outline_color, label);
+            }
+        }
+
+        // Draw foreground text
+        dl->AddText(font, size, pos, ImGui::GetColorU32(ImGuiCol_Text), label);
+
+        // Advance cursor as normal
+        ImGui::Dummy(ImGui::CalcTextSize(label));
+    }
+
     void SetNextWindowCenter(const ImGuiWindowFlags flags)
     {
         const auto& io = GetIO();
@@ -396,9 +418,11 @@ namespace ImGui {
 
     bool ColorButtonPicker(const char* label, Color* imcol, const ImGuiColorEditFlags flags)
     {
-        return Colors::DrawSettingHueWheel(label, imcol,
-                                           flags | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoLabel |
-                                           ImGuiColorEditFlags_NoInputs);
+        auto swatch = Colors::DrawSettingHueWheel(label, imcol, flags | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoInputs);
+        if (ImGui::IsItemHovered() && label && *label) {
+            ImGui::SetTooltip(label);
+        }
+        return swatch;
     }
 
     bool MyCombo(const char* label, const char* preview_text, int* current_item, bool (*items_getter)(void*, int, const char**),

@@ -19,7 +19,10 @@ class PartyDamage : public SnapsToPartyWindow {
 protected:
     struct PlayerDamage;
     static std::vector<PartyDamage::PlayerDamage> damage;
+    static std::vector<PartyDamage::PlayerDamage> departed_damage;
+    static std::vector<uint32_t> prev_party_agent_ids;
 
+    static void ReconcileDamageIndices();
     static void WriteDamageOf(size_t index, uint32_t rank = 0);
     static void WritePartyDamage();
     static void WriteOwnDamage();

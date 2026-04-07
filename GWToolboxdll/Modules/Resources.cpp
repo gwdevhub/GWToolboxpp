@@ -114,11 +114,11 @@ namespace {
         "5/5e/Paragon-tango-icon-48",
         "3/38/Dervish-tango-icon-48"
     };
-    std::map<uint32_t, IDirect3DTexture9**> profession_icons;
-    std::map<GW::Constants::SkillID, IDirect3DTexture9**> skill_images;
-    std::map<std::wstring, IDirect3DTexture9**> item_images;
-    std::map<std::string, IDirect3DTexture9**> guild_wars_wiki_images;
-    const std::map<std::string, const char*> damagetype_icon_urls = {
+    std::unordered_map<uint32_t, IDirect3DTexture9**> profession_icons;
+    std::unordered_map<GW::Constants::SkillID, IDirect3DTexture9**> skill_images;
+    std::unordered_map<std::wstring, IDirect3DTexture9**> item_images;
+    std::unordered_map<std::string, IDirect3DTexture9**> guild_wars_wiki_images;
+    const std::unordered_map<std::string, const char*> damagetype_icon_urls = {
         {"Blunt damage", "1/19/Blunt_damage.png/60px-Blunt_damage.png"},
         {"Piercing damage", "1/1a/Piercing_damage.png/60px-Piercing_damage.png"},
         {"Slashing damage", "3/3c/Slashing_damage.png/60px-Slashing_damage.png"},
@@ -128,10 +128,10 @@ namespace {
         {"Lightning damage", "0/06/Lightning_damage.png/60px-Lightning_damage.png"},
     };
 
-    std::map<std::string, IDirect3DTexture9**> damagetype_icons;
-    std::map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
-    std::map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names;
-    std::map<GW::Constants::MapID, GuiUtils::EncString*> region_names;
+    std::unordered_map<std::string, IDirect3DTexture9**> damagetype_icons;
+    std::unordered_map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
+    std::unordered_map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names;
+    std::unordered_map<GW::Constants::MapID, GuiUtils::EncString*> region_names;
     std::unordered_map<GW::Constants::Language, std::unordered_map<uint32_t, GuiUtils::EncString*>> encoded_string_ids;
     std::filesystem::path current_settings_folder;
     constexpr size_t MAX_WORKERS = 20;
@@ -547,20 +547,14 @@ std::filesystem::path Resources::GetPath(const std::filesystem::path& folder, co
 
 bool Resources::EnsureFolderExists(const std::filesystem::path& path)
 {
-    return exists(path) || create_directories(path);
+    if (path.empty()) return false;
+    if (exists(path)) return true;
+    std::error_code ec;
+    return create_directories(path, ec);
 }
 
 bool Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring& response)
 {
-    if (exists(path_to_file)) {
-        if (!std::filesystem::remove(path_to_file)) {
-            return StrSwprintf(response, L"Failed to delete existing file %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
-        }
-    }
-    if (exists(path_to_file)) {
-        return StrSwprintf(response, L"File already exists @ %s", path_to_file.wstring().c_str()), false;
-    }
-
     std::string content;
     if (!Download(url, content)) {
         return StrSwprintf(response, L"%S", content.c_str()), false;
@@ -568,16 +562,7 @@ bool Resources::Download(const std::filesystem::path& path_to_file, const std::s
     if (!content.length()) {
         return StrSwprintf(response, L"Failed to download %S, no content length", url.c_str()), false;
     }
-    FILE* fp = fopen(path_to_file.string().c_str(), "wb");
-    if (!fp) {
-        return StrSwprintf(response, L"Failed to call fopen for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
-    }
-    const auto written = fwrite(content.data(), content.size(), 1, fp);
-    fclose(fp);
-    if (written != 1) {
-        return StrSwprintf(response, L"Failed to call fwrite for %s, err %d", path_to_file.wstring().c_str(), GetLastError()), false;
-    }
-    return true;
+    return WriteFile(path_to_file, content);
 }
 
 void Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, const AsyncLoadCallback& callback) const
@@ -621,6 +606,17 @@ bool Resources::ReadFile(const std::filesystem::path& path, std::wstring& respon
     ss << file.rdbuf();
     response = ss.str();
     return !response.empty();
+}
+bool Resources::WriteFile(const std::filesystem::path& path_to_file, const std::string& content, const bool append)
+{
+    if (path_to_file.empty()) return false;
+    if (!EnsureFolderExists(path_to_file.parent_path())) return false;
+    const auto flags = std::ios::binary | (append ? std::ios::app : std::ios::out);
+    std::ofstream f(path_to_file, flags);
+    if (!f) return false;
+    f.write(content.data(), static_cast<std::streamsize>(content.size()));
+    if (!f) return false;
+    return true;
 }
 
 bool Resources::Download(const std::string& url, std::string& response)
@@ -670,27 +666,6 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
             return file_time;
         };
 
-        const auto load_from_cache = [](const std::filesystem::path& file_name) -> std::optional<std::string> {
-            std::ifstream cache_file(file_name);
-            if (!cache_file.is_open()) {
-                return {};
-            }
-
-            std::string contents((std::istreambuf_iterator<char>(cache_file)), std::istreambuf_iterator<char>());
-            return contents;
-        };
-
-        const auto save_to_cache = [](const std::filesystem::path& file_name, const std::string& content) -> bool {
-            std::filesystem::create_directories(file_name.parent_path());
-            std::ofstream cache_file(file_name);
-            if (!cache_file.is_open()) {
-                return false;
-            }
-
-            cache_file << content;
-            return true;
-        };
-
         const auto remove_protocol = [](const std::string& url) -> std::string {
             const std::string http = "http://";
             const std::string https = "https://";
@@ -706,12 +681,11 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
         };
         const auto cache_path = Resources::GetPath("cache") / HashStr(remove_protocol(url));
         const auto expiration = get_cache_modified_time(cache_path);
-        if (expiration.has_value() &&
-            expiration.value() - std::chrono::file_clock::now() < cache_duration) {
-            const auto response = load_from_cache(cache_path);
-            if (response.has_value()) {
+        if (expiration.has_value() && expiration.value() - std::chrono::file_clock::now() < cache_duration) {
+            std::string response;
+            if (ReadFile(cache_path,response)) {
                 EnqueueMainTask([callback, context, response] {
-                    callback(true, response.value(), context);
+                    callback(true, response, context);
                 });
                 return;
             }
@@ -719,9 +693,8 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
         std::string response;
         int statusCode = 0;
         bool ok = Download(url, response, statusCode);
-        if (ok ||
-            (statusCode >= 300 && statusCode < 500)) {
-            save_to_cache(cache_path, response);
+        if (ok || (statusCode >= 300 && statusCode < 500)) {
+            WriteFile(cache_path, response);
         }
         EnqueueMainTask([callback, ok, response, context] {
             callback(ok, response, context);
@@ -883,37 +856,12 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
 
 bool Resources::ResourceToFile(const WORD id, const std::filesystem::path& path_to_file, std::wstring& error)
 {
-    // otherwise try to install it from resource
-    const HRSRC hResInfo = FindResourceA(GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), RT_RCDATA);
-    if (!hResInfo) {
-        StrSwprintf(error, L"Error calling FindResourceA on resource id %u - Error is %lu", id, GetLastError());
+    const EmbeddedResource resource(id, RT_RCDATA, GWToolbox::GetDLLModule());
+    if (!resource.data()) {
+        StrSwprintf(error, L"Error calling on resource id %u - Error is %lu", id, GetLastError());
         return false;
     }
-    const HGLOBAL hRes = LoadResource(GWToolbox::GetDLLModule(), hResInfo);
-    if (!hRes) {
-        StrSwprintf(error, L"Error calling LoadResource on resource id %u - Error is %lu", id, GetLastError());
-        return false;
-    }
-    const DWORD size = SizeofResource(GWToolbox::GetDLLModule(), hResInfo);
-    if (!size) {
-        StrSwprintf(error, L"Error calling SizeofResource on resource id %u - Error is %lu", id, GetLastError());
-        return false;
-    }
-    // write to file so the user can customize his icons
-    const HANDLE hFile = CreateFileW(path_to_file.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    DWORD bytesWritten;
-    const BOOL wfRes = WriteFile(hFile, hRes, size, &bytesWritten, nullptr);
-    if (wfRes != TRUE) {
-        StrSwprintf(error, L"Error writing file %s - Error is %lu", TextUtils::PrintFilename(path_to_file.filename().wstring()).c_str(), GetLastError());
-        return false;
-    }
-    if (bytesWritten != size) {
-        StrSwprintf(error, L"Wrote %lu of %lu bytes for %s", bytesWritten, size, path_to_file.filename().wstring().c_str());
-        return false;
-    }
-
-    CloseHandle(hFile);
-    return true;
+    return WriteFile(path_to_file, std::string(static_cast<char*>(resource.data()), resource.size()));
 }
 
 // Load from absolute file path on disk with 3 retries

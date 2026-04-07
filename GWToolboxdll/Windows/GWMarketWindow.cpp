@@ -19,7 +19,7 @@
 #include <Utils/GuiUtils.h>
 #include <Utils/RateLimiter.h>
 
-#include <easywsclient.hpp>
+#include <Utils/ThreadedWebSocket.h>
 #include <nlohmann/json.hpp>
 
 
@@ -28,23 +28,22 @@
 #include <Modules/Resources.h>
 
 #include <GWCA/Context/CharContext.h>
+#include <GWCA/GameEntities/Frame.h>
 #include <Timer.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
 #include <algorithm>
 #include <chrono>
 #include <iomanip>
-#include <queue>
 #include <sstream>
-#include <thread>
 #include <unordered_set>
-#include <GWCA/GameEntities/Frame.h>
+
+#include <Modules/ChatFilter.h>
 
 // API for shops isn't good enough, stick to browsing for now.
 #define GWMARKET_SELLING_ENABLED 0
 
 namespace {
-    using easywsclient::WebSocket;
     using json = nlohmann::json;
 
     const char* market_host = "gwmarket.net";
@@ -65,44 +64,6 @@ namespace {
 
     enum class OrderSortMode : uint8_t { MostRecent = 0, Currency = 1 };
     Currency order_view_currency = Currency::All;
-
-    // Safe string extraction helper
-    std::string parseStringFromJson(const json& j, const char* key, const std::string& default_val)
-    {
-        if (!j.is_discarded() && j.contains(key) && j[key].is_string()) {
-            return j[key].get<std::string>();
-        }
-        return default_val;
-    };
-    int parseIntFromJson(const json& j, const char* key, const int& default_val)
-    {
-        if (!j.is_discarded() && j.contains(key) && j[key].is_number_integer()) {
-            return j[key].get<int>();
-        }
-        return default_val;
-    };
-    bool parseBoolFromJson(const json& j, const char* key, const bool& default_val)
-    {
-        if (!j.is_discarded() && j.contains(key) && j[key].is_boolean()) {
-            return j[key].get<bool>();
-        }
-        return default_val;
-    };
-    uint64_t parseUint64FromJson(const json& j, const char* key, const uint64_t& default_val)
-    {
-        if (!j.is_discarded() && j.contains(key) && j[key].is_number_unsigned()) {
-            return j[key].get<uint64_t>();
-        }
-        return default_val;
-    };
-    float parseFloatFromJson(const json& j, const char* key, const float& default_val)
-    {
-        if (!j.is_discarded() && j.contains(key)) {
-            if (j[key].is_number_float()) return j[key].get<float>();
-            if (j[key].is_number_integer()) return (float)j[key].get<int>();
-        }
-        return default_val;
-    };
 
     const char* GetPriceTypeString(Currency currency)
     {
@@ -243,10 +204,10 @@ namespace {
         static Price FromJson(const json& j)
         {
             Price p;
-            p.type = static_cast<Currency>(parseIntFromJson(j, "type", 0));
-            p.quantity = (float)parseIntFromJson(j, "quantity", 0);
-            p.quantity = parseFloatFromJson(j, "unit", p.quantity);
-            p.price = parseFloatFromJson(j, "price", 0.f);
+            p.type = static_cast<Currency>(TextUtils::parseIntFromJson(j, "type", 0));
+            p.quantity = (float)TextUtils::parseIntFromJson(j, "quantity", 0);
+            p.quantity = TextUtils::parseFloatFromJson(j, "unit", p.quantity);
+            p.price = TextUtils::parseFloatFromJson(j, "price", 0.f);
             return p;
         }
         json ToJson() const
@@ -270,12 +231,12 @@ namespace {
         static WeaponDetails FromJson(const json& j)
         {
             WeaponDetails p;
-            p.attribute = AttributeFromString(parseStringFromJson(j, "attribute", ""));
+            p.attribute = AttributeFromString(TextUtils::parseStringFromJson(j, "attribute", ""));
 
 
 
-            p.requirement = parseIntFromJson(j, "requirement", 0) & 0xf;
-            p.inscribable = parseBoolFromJson(j, "inscription", false);
+            p.requirement = TextUtils::parseIntFromJson(j, "requirement", 0) & 0xf;
+            p.inscribable = TextUtils::parseBoolFromJson(j, "inscription", false);
             return p;
         }
 
@@ -323,17 +284,17 @@ namespace {
             MarketItem item;
             if (j.is_discarded()) return item;
 
-            item.name = parseStringFromJson(j, "name", "");
-            item.player = parseStringFromJson(j, "player", "");
-            item.description = parseStringFromJson(j, "description", "");
-            item.orderType = static_cast<OrderType>(parseIntFromJson(j, "orderType", 0));
-            item.quantity = parseIntFromJson(j, "quantity", 0);
+            item.name = TextUtils::parseStringFromJson(j, "name", "");
+            item.player = TextUtils::parseStringFromJson(j, "player", "");
+            item.description = TextUtils::parseStringFromJson(j, "description", "");
+            item.orderType = static_cast<OrderType>(TextUtils::parseIntFromJson(j, "orderType", 0));
+            item.quantity = TextUtils::parseIntFromJson(j, "quantity", 0);
 
             if (j.contains("weaponDetails") && j["weaponDetails"].is_object()) {
                 item.weaponDetails = WeaponDetails::FromJson(j["weaponDetails"]);
             }
 
-            uint64_t lastRefresh_ms = parseUint64FromJson(j, "lastRefresh", 0ULL);
+            uint64_t lastRefresh_ms = TextUtils::parseUint64FromJson(j, "lastRefresh", 0ULL);
             item.lastRefresh = lastRefresh_ms ? lastRefresh_ms / 1000 : 0;
 
             if (j.contains("prices") && j["prices"].is_array()) {
@@ -397,8 +358,8 @@ namespace {
             ShopItem item = MarketItem::FromJson(j);
             if (j.contains("orderDetails") && j["orderDetails"].is_object()) {
                 const auto& od = j["orderDetails"];
-                item.dedicated = parseBoolFromJson(od, "dedicated", false);
-                item.pre = parseBoolFromJson(od, "pre", false);
+                item.dedicated = TextUtils::parseBoolFromJson(od, "dedicated", false);
+                item.pre = TextUtils::parseBoolFromJson(od, "pre", false);
             }
             return item;
         }
@@ -418,10 +379,10 @@ namespace {
             MarketShop shop;
             if (j.is_discarded()) return shop;
 
-            shop.player = parseStringFromJson(j, "player", "");
-            shop.uuid = parseStringFromJson(j, "uuid", "");
+            shop.player = TextUtils::parseStringFromJson(j, "player", "");
+            shop.uuid = TextUtils::parseStringFromJson(j, "uuid", "");
 
-            uint64_t lastRefresh_ms = parseUint64FromJson(j, "lastRefresh", 0ULL);
+            uint64_t lastRefresh_ms = TextUtils::parseUint64FromJson(j, "lastRefresh", 0ULL);
             shop.lastRefresh = lastRefresh_ms ? lastRefresh_ms / 1000 : 0;
 
             if (j.contains("items") && j["items"].is_array()) {
@@ -477,15 +438,7 @@ namespace {
     int refresh_interval = 60;
 
     // WebSocket
-    WebSocket* ws = nullptr;
-    bool ws_connecting = false;
-    WSAData wsaData = {0};
-    RateLimiter ws_rate_limiter;
-
-    // Thread
-    std::queue<std::function<void()>> thread_jobs{};
-    bool should_stop = false;
-    std::thread* worker = nullptr;
+    ThreadedWebSocket market_ws;
 
     // Data
     std::vector<AvailableItem> available_items;
@@ -523,8 +476,8 @@ namespace {
     void HandleSocketIOHandshake(const std::string& message);
     void OnNamespaceConnected();
     void OnWebSocketMessage(const std::string& message);
-    void DeleteWebSocket(WebSocket* socket);
-    void ConnectWebSocket(const bool force);
+    void InitWebSocket();
+    void Disconnect();
     void DrawItemList();
     void DrawFavoritesList();
     void DrawItemDetails();
@@ -605,7 +558,7 @@ namespace {
 
     bool IsSocketIOReady()
     {
-        return ws && ws->getReadyState() == WebSocket::OPEN && socket_io_ready;
+        return market_ws.IsReady() && socket_io_ready;
     }
 
     std::string EncodeSocketIOMessage(const std::string& event, const std::string& data = "")
@@ -653,8 +606,8 @@ namespace {
             AvailableItem item;
             const auto& j = it.value();
             item.name = InternString(it.key());
-            item.sellOrders = parseIntFromJson(j, "sellWeek", 0);
-            item.buyOrders = parseIntFromJson(j, "buyWeek", 0);
+            item.sellOrders = TextUtils::parseIntFromJson(j, "sellWeek", 0);
+            item.buyOrders = TextUtils::parseIntFromJson(j, "buyWeek", 0);
             available_items.push_back(item);
             if (favorite_items.contains(*item.name)) {
                 favorite_items[*item.name] = item;
@@ -709,7 +662,7 @@ namespace {
     {
         if (!IsSocketIOReady()) return;
         std::string msg = EncodeSocketIOMessage("getPublicShop", uuid);
-        ws->send(msg);
+        market_ws.Send(msg);
         Log::Log("[SEND] %s", msg.c_str());
     }
     void OnShopInfo(const json& data)
@@ -728,7 +681,7 @@ namespace {
         MigrateShop(shop, my_shop);
         if (!old_uuid.empty() && old_uuid != my_shop.uuid) {
             CloseShop(shop);
-            SaveShop(my_shop);
+            SaveShop(my_shop, true);
         }
     }
     void OnShopError(const json& data)
@@ -753,10 +706,8 @@ namespace {
 
         Log::Log("Handshake: ping %dms, timeout %dms", ping_interval, ping_timeout);
 
-        if (ws && ws->getReadyState() == WebSocket::OPEN) {
-            ws->send("40");
-            Log::Log("[SEND] 40 (connecting to namespace)");
-        }
+        market_ws.Send("40");
+        Log::Log("[SEND] 40 (connecting to namespace)");
 
         last_ping_time = clock();
     }
@@ -792,10 +743,8 @@ namespace {
                 Log::Warning("Server close");
                 break;
             case '2':
-                if (ws && ws->getReadyState() == WebSocket::OPEN) {
-                    ws->send("3");
-                    Log::Log("[SEND] 3");
-                }
+                market_ws.Send("3");
+                Log::Log("[SEND] 3");
                 break;
             case '3':
                 Log::Log("Pong received");
@@ -833,7 +782,7 @@ namespace {
     {
         if (!IsSocketIOReady()) return;
         std::string msg = EncodeSocketIOMessage("SocketStarted");
-        ws->send(msg);
+        market_ws.Send(msg);
         Log::Log("[SEND] %s", msg.c_str());
     }
 
@@ -841,7 +790,7 @@ namespace {
     {
         if (!IsSocketIOReady()) return;
         std::string msg = EncodeSocketIOMessage("getAvailableOrders");
-        ws->send(msg);
+        market_ws.Send(msg);
         Log::Log("[SEND] %s", msg.c_str());
     }
 
@@ -849,27 +798,30 @@ namespace {
     {
         if (!IsSocketIOReady()) return;
         std::string msg = EncodeSocketIOMessage("getLastItemsByFamily", family);
-        ws->send(msg);
+        market_ws.Send(msg);
         Log::Log("[SEND] %s", msg.c_str());
     }
 
     void SendAskForCertification()
     {
         if (!IsSocketIOReady()) return;
-        std::string msg = EncodeSocketIOMessage("askPlayerCertification", std::string("some-garbage-id"));
-        ws->send(msg);
+
+
+        std::string msg = EncodeSocketIOMessage("askPlayerCertification", my_shop.uuid);
+        market_ws.Send(msg);
         Log::Log("[SEND] %s", msg.c_str());
     }
     void OnShopCertificationSecret(const json& data)
     {
-        const auto secret = parseStringFromJson(data, "secret", "");
-        const auto uuid = parseStringFromJson(data, "uuid", "");
+        const auto secret = TextUtils::parseStringFromJson(data, "secret", "");
+        const auto uuid = TextUtils::parseStringFromJson(data, "uuid", "");
         if (secret.empty() || uuid.empty()) {
             Log::Warning("OnShopCertificationSecret: uuid or secret empty!");
             return;
         }
         const auto msg = TextUtils::StringToWString(std::format("{}|{}", uuid, secret));
         GW::GameThread::Enqueue([cpy = msg]() {
+            ChatFilter::BlockMessageForMs(L"Gwmarket Auth",500);
             GW::Chat::SendChat(L"Gwmarket Auth", cpy.c_str());
         });
     }
@@ -878,17 +830,15 @@ namespace {
     {
         if (!IsSocketIOReady()) return;
         std::string msg = EncodeSocketIOMessage("getItemOrders", item_name);
-        ws->send(msg);
+        market_ws.Send(msg);
         Log::Log("[SEND] %s", msg.c_str());
     }
 
     void SendPing()
     {
-        if (ws && ws->getReadyState() == WebSocket::OPEN) {
-            ws->send("2");
-            last_ping_time = clock();
-            Log::Log("[SEND] 2");
-        }
+        market_ws.Send("2");
+        last_ping_time = clock();
+        Log::Log("[SEND] 2");
     }
 
     void MigrateShop(const MarketShop& from, MarketShop& to)
@@ -917,8 +867,7 @@ namespace {
         json data = shop.ToJson();
 
         std::string msg = EncodeSocketIOMessage("refreshShop", data);
-        ws->send(msg);
-
+        market_ws.Send(msg);
         Log::Log("[SEND] %s", msg.c_str());
     }
     void DeleteShop(MarketShop& shop)
@@ -926,73 +875,40 @@ namespace {
         if (!shop.valid()) return;
         if (shop.items.empty()) return;
         shop.items = {};
-        SaveShop(shop);
-        if (shop.uuid != my_shop.uuid && my_shop.valid()) SaveShop(my_shop);
+        SaveShop(shop, true);
+        if (shop.uuid != my_shop.uuid && my_shop.valid()) SaveShop(my_shop, true);
     }
     void CloseShop(const MarketShop& shop)
     {
         if (!IsSocketIOReady() || shop.uuid.empty()) return;
         std::string msg = EncodeSocketIOMessage("closeShop", shop.uuid);
-        ws->send(msg);
+        market_ws.Send(msg);
         Log::Log("[SEND] %s", msg.c_str());
     }
 
-    void DeleteWebSocket(WebSocket* socket)
+    void InitWebSocket()
     {
-        if (!socket) return;
-        if (socket->getReadyState() == WebSocket::OPEN) socket->close();
-        while (socket->getReadyState() != WebSocket::CLOSED)
-            socket->poll();
-        delete socket;
+        market_ws.SetUrl(std::format("wss://{}/socket.io/?EIO=4&transport=websocket", market_host));
+        market_ws.SetReconnectCost(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS);
+        market_ws.SetOnMessage([](const std::string& msg) {
+            OnWebSocketMessage(msg);
+        });
+        market_ws.SetOnOpen([] {
+            //Log::Log("Connected");
+            socket_io_ready = false;
+            last_ping_time = clock();
+        });
+        market_ws.SetOnClose([] {
+            //Log::Warning("Disconnected");
+            socket_io_ready = false;
+        });
     }
 
-    void ConnectWebSocket(const bool force = false)
+    void Disconnect()
     {
-        if (ws || ws_connecting) return;
-
-        if (!force && !ws_rate_limiter.AddTime(COST_PER_CONNECTION_MS, COST_PER_CONNECTION_MAX_MS)) {
-            return;
-        }
-        should_stop = true;
-        if (worker && worker->joinable()) worker->join();
-        delete worker;
-        should_stop = false;
-        worker = new std::thread([] {
-            while (!should_stop) {
-                std::function<void()> job;
-                bool found = false;
-
-                if (!thread_jobs.empty()) {
-                    job = thread_jobs.front();
-                    thread_jobs.pop();
-                    found = true;
-                }
-
-                if (found) job();
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-        });
-
-        int res;
-        if (!wsaData.wVersion && (res = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
-            Log::Error("WSAStartup failed: %d", res);
-            return;
-        }
-
-        ws_connecting = true;
-        thread_jobs.push([] {
-            std::string ws_host = std::format("wss://{}/socket.io/?EIO=4&transport=websocket", market_host);
-            ws = WebSocket::from_url(ws_host);
-            if (ws) {
-                Log::Log("Connected");
-                socket_io_ready = false;
-                last_ping_time = clock();
-            }
-            else {
-                Log::Error("Connection failed");
-            }
-            ws_connecting = false;
-        });
+        CloseShop(my_shop);
+        market_ws.Disconnect();
+        socket_io_ready = false;
     }
 
     void DrawItemList()
@@ -1231,7 +1147,7 @@ namespace {
                 GW::GameThread::Enqueue([cpy] {
                     std::wstring name_ws = TextUtils::StringToWString(cpy->player);
                     std::wstring item_ws = TextUtils::StringToWString(cpy->name);
-                    
+
                     GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)name_ws.c_str());
                     const auto frame = (GW::EditableTextFrame*)GW::UI::GetFrameByLabel(L"EditMessage");
                     std::wstring message;
@@ -1301,7 +1217,7 @@ namespace {
             const auto& price = order.prices[0];
 
             ImGui::PushID(&order);
-            //const auto top = ImGui::GetCursorPosY();
+            // const auto top = ImGui::GetCursorPosY();
 
             // Player name and time
             ImGui::TextUnformatted(order.player.c_str());
@@ -1377,8 +1293,9 @@ namespace {
 
     void Refresh()
     {
-        if (!socket_io_ready) return;
+        if (!IsSocketIOReady()) return;
         SendGetAvailableOrders();
+        SaveShop(my_shop, true);
     }
 
 
@@ -1414,7 +1331,7 @@ namespace {
 
     bool ShouldConnect()
     {
-        return GWMarketWindow::Instance().visible && !collapsed;
+        return show_my_shop_window || (GWMarketWindow::Instance().visible && !collapsed);
     }
 
     void DrawShopItem(const MarketItem& item, size_t index)
@@ -1559,15 +1476,15 @@ namespace {
 
 
             // Quantity
-            ImGui::InputInt("Quantity", &editing_item.item.quantity);
-            if (editing_item.item.quantity < 0) editing_item.item.quantity = 0;
+            ImGui::InputFloat("Quantity", &editing_item.price.quantity, 1.f, 10.f, "%.0f");
+            if (editing_item.price.quantity < 0.f) editing_item.price.quantity = 0.f;
 
             // Price type
             const char* price_types[] = {"Platinum", "Ecto", "Zkeys", "Arms"};
             ImGui::Combo("Currency", (int*)&editing_item.price.type, price_types, IM_ARRAYSIZE(price_types));
 
             // Price amount
-            ImGui::InputFloat("Price", &editing_item.price.price, 1.f, 5.f, "%.0f");
+            ImGui::InputFloat("Price Per", &editing_item.price.price, 1.f, 5.f, "%.0f");
             if (editing_item.price.price < 0) editing_item.price.price = 0;
 
             ImGui::EndChild();
@@ -1652,19 +1569,6 @@ namespace {
             }
         }
         ImGui::End();
-    }
-
-    void Disconnect()
-    {
-        if (!ws) return;
-        should_stop = true;
-        CloseShop(my_shop);
-        if (worker && worker->joinable()) worker->join();
-        delete worker;
-        worker = 0;
-        DeleteWebSocket(ws);
-        ws = nullptr;
-        ws_connecting = socket_io_ready = false;
     }
 
     GW::HookEntry OnPostUIMessage_HookEntry;
@@ -1755,11 +1659,14 @@ namespace {
         editing_item_index = 0xffffffff;
         show_edit_item_window = true;
     }
+
+
 } // namespace
 
 void GWMarketWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    InitWebSocket();
 
     const GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kMapLoaded};
     for (auto ui_message : ui_messages) {
@@ -1779,34 +1686,28 @@ void GWMarketWindow::Update(float delta)
 {
     ToolboxWindow::Update(delta);
 
-    if (ws) {
-        if (!ShouldConnect()) {
-            Disconnect();
-            ws_rate_limiter = {};
-            return;
-        }
-        ws->poll();
-        ws->dispatch([](const std::string& msg) {
-            OnWebSocketMessage(msg);
-        });
-
-        // Don't send our own pings - just respond to server pings with pongs
-        // The server will ping us every 25 seconds
-
-        if (ws->getReadyState() == WebSocket::CLOSED) {
-            Log::Warning("Disconnected");
-            Disconnect();
-            return;
-        }
-        if (auto_refresh && socket_io_ready) {
-            refresh_timer += delta;
-            if (refresh_timer >= refresh_interval) {
-                refresh_timer = 0.0f;
-                Refresh();
-            }
-        }
+    // Join worker thread if it finished (e.g. after a Disconnect())
+    if (market_ws.Update()) {
+        // Thread just stopped cleanly; re-init callbacks for next connect
+        InitWebSocket();
     }
-    if (!ws && ShouldConnect()) ConnectWebSocket();
+
+    if (!ShouldConnect()) {
+        if (!market_ws.IsIdle()) Disconnect();
+        return;
+    }
+
+    // Ensure the socket is connecting/connected whenever the window is visible
+    if (market_ws.IsIdle()) {
+        InitWebSocket();
+        market_ws.Connect();
+    }
+
+    refresh_timer += delta;
+    if (refresh_timer >= refresh_interval) {
+        refresh_timer = 0.0f;
+        if (auto_refresh) Refresh();
+    }
 }
 
 bool GWMarketWindow::CanSellItem(GW::Item* _item)
@@ -1832,7 +1733,8 @@ void GWMarketWindow::SearchItem(const std::string& item_name)
     current_viewing_item = item_name;
     if (IsSocketIOReady()) {
         SendGetItemOrders(item_name);
-    } else {
+    }
+    else {
         pending_search_item = item_name;
     }
 }
@@ -1896,7 +1798,7 @@ void GWMarketWindow::DrawSettingsInternal()
     if (socket_io_ready) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Connected");
     }
-    else if (ws_connecting) {
+    else if (!market_ws.IsIdle()) {
         ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Connecting...");
     }
     else {
@@ -1910,12 +1812,12 @@ void GWMarketWindow::DrawSettingsInternal()
 
 void GWMarketWindow::Draw(IDirect3DDevice9*)
 {
-    // Draw shop windows
-	#if (GWMARKET_SELLING_ENABLED)
-		DrawMyShopWindow();
-		DrawEditItemWindow();
-		CheckPendingAddToSell();
-	#endif
+// Draw shop windows
+#if (GWMARKET_SELLING_ENABLED)
+    DrawMyShopWindow();
+    DrawEditItemWindow();
+    CheckPendingAddToSell();
+#endif
     if (!visible) return;
 
     ImGui::SetNextWindowSize(ImVec2(900, 700), ImGuiCond_FirstUseEver);
@@ -1924,7 +1826,7 @@ void GWMarketWindow::Draw(IDirect3DDevice9*)
         if (socket_io_ready) {
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Connected");
         }
-        else if (ws_connecting) {
+        else if (!market_ws.IsIdle()) {
             ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Connecting...");
         }
         else {
@@ -1935,12 +1837,12 @@ void GWMarketWindow::Draw(IDirect3DDevice9*)
         if (ImGui::Button("Refresh")) {
             Refresh();
         }
-		#if (GWMARKET_SELLING_ENABLED)
+#if (GWMARKET_SELLING_ENABLED)
         ImGui::SameLine();
         if (ImGui::Button("My Shop")) {
             show_my_shop_window = true;
         }
-		#endif
+#endif
 
         ImGui::Separator();
 

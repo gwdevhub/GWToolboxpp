@@ -2,6 +2,7 @@
 
 using SectionDrawCallback = std::function<void(const std::string& section, bool is_showing)>;
 class ToolboxModule;
+class ToolboxIni;
 
 struct SectionDrawCallbackInfo {
     float weighting{};

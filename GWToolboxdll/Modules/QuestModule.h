@@ -67,7 +67,7 @@ public:
 
     static void SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_active = false);
     // Fake an action of the user selecting an active quest, without making any server request.
-    static void EmulateQuestSelected(GW::Constants::QuestID);
+    static bool SetActiveQuestId(GW::Constants::QuestID quest_id, bool notify_server = true);
 
     static ImU32& GetQuestColor(GW::Constants::QuestID);
     static ImU32& GetQuestLineColor(GW::Constants::QuestID);

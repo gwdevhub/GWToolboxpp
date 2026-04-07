@@ -75,23 +75,15 @@ namespace {
         HeroID::Merc5,
         HeroID::Merc6,
         HeroID::Merc7,
-        HeroID::Merc8
+        HeroID::Merc8,
+        HeroID::Devona,
+        HeroID::GhostofAlthea
     };
 
-    const char* HeroName[] = {
-        "No Hero", "Norgu", "Goren", "Tahlkora",
-        "Master Of Whispers", "Acolyte Jin", "Koss", "Dunkoro",
-        "Acolyte Sousuke", "Melonni", "Zhed Shadowhoof",
-        "General Morgahn", "Margrid The Sly", "Zenmai",
-        "Olias", "Razah", "MOX", "Keiran Thackeray", "Jora",
-        "Pyre Fierceshot", "Anton", "Livia", "Hayda",
-        "Kahmu", "Gwen", "Xandra", "Vekk", "Ogden",
-        "Mercenary Hero 1", "Mercenary Hero 2", "Mercenary Hero 3",
-        "Mercenary Hero 4", "Mercenary Hero 5", "Mercenary Hero 6",
-        "Mercenary Hero 7", "Mercenary Hero 8", "Miku", "Zei Ri"
-    };
-
-    char MercHeroNames[8][20] = {0};
+    GuiUtils::EncString* GetHeroEncName(GW::Constants::HeroID hero_id) {
+        const auto c = GW::PartyMgr::GetHeroConstData(hero_id);
+        return Resources::DecodeStringId(c ? c->name_id : 1);
+    }
 
     const size_t GetPlayerHeroCount()
     {
@@ -320,24 +312,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                             if (idx >= static_cast<int>(HeroIndexToID.size())) {
                                 return false;
                             }
-                            const auto id = HeroIndexToID.at(idx);
-                            if (id < HeroID::Merc1 || id > HeroID::Merc8) {
-                                *out_text = HeroName[HeroIndexToID.at(idx)];
-                                return true;
-                            }
-                            bool match = false;
-                            const auto ctx = GW::GetGameContext();
-                            auto& hero_array = ctx->world->hero_info;
-                            for (const auto& hero : hero_array) {
-                                if (hero.hero_id == id) {
-                                    match = true;
-                                    wcstombs(MercHeroNames[id - HeroID::Merc1], hero.name, 20);
-                                    *out_text = MercHeroNames[id - HeroID::Merc1];
-                                }
-                            }
-                            if (!match) {
-                                *out_text = HeroName[id];
-                            }
+                            *out_text = GetHeroEncName(HeroIndexToID.at(idx))->string().c_str();
                             return true;
                         },
                         nullptr, HeroIndexToID.size())) {
@@ -542,31 +517,13 @@ void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, const size_t i
     const std::string name(build.name);
     const std::string code(build.code);
     constexpr int buffer_size = 128;
-    char buffer[buffer_size];
-    const auto id = idx > 0 && build.hero_index > 0 ? HeroIndexToID.at(build.hero_index) : 0;
+    char buffer[buffer_size] = {0};
+    const auto id = idx > 0 && build.hero_index > 0 ? HeroIndexToID.at(build.hero_index) : HeroID::NoHero;
     if (name.empty() && code.empty() && id == HeroID::NoHero) {
         return; // nothing to do here
     }
-    auto c = "";
-    if (id < HeroID::Merc1 || id > HeroID::Merc8) {
-        c = HeroName[id];
-    }
-    else if (idx > 0) {
-        bool match = false;
-        const auto ctx = GW::GetGameContext();
-        auto& hero_array = ctx->world->hero_info;
-        for (const auto& hero : hero_array) {
-            if (hero.hero_id != id) {
-                continue;
-            }
-            wcstombs(MercHeroNames[id - HeroID::Merc1], hero.name, 20);
-            c = MercHeroNames[id - HeroID::Merc1];
-            match = true;
-        }
-        if (!match) {
-            c = HeroName[id];
-        }
-    }
+    const char* c = GetHeroEncName(id)->string().c_str();
+
     if (name.empty()) {
         if (idx > 0) {
             snprintf(buffer, buffer_size, "%s", c);
