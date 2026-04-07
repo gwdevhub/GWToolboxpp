@@ -1,5 +1,7 @@
 add_library(plugin_base INTERFACE)
 target_sources(plugin_base INTERFACE
+    "plugins/Base/BackupManager.h"
+    "plugins/Base/BackupManager.cpp"
     "plugins/Base/dllmain.cpp"
     "plugins/Base/stl.h"
     "plugins/Base/ToolboxPlugin.h"
@@ -91,5 +93,6 @@ macro(add_tb_plugin PLUGIN)
     set_target_properties(${PLUGIN} PROPERTIES FOLDER "plugins/")
 endmacro()
 
+add_tb_plugin(DialogsWindow)
 add_tb_plugin(RawDialogs)
 add_tb_plugin(SpeedrunScriptingTools)
