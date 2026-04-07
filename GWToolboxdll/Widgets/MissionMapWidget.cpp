@@ -35,6 +35,7 @@ namespace {
     Color vq_color_enemy_alive = IM_COL32(70, 130, 255, 255);
     Color vq_color_enemy_stale = IM_COL32(255, 180, 50, 180);
     Color vq_color_enemy_outline = IM_COL32(0, 0, 0, 200);
+    float vq_enemy_marker_size = 9.0f;
 
     // Enemy tracking for VQ assistance
 
@@ -498,7 +499,7 @@ namespace {
         if (nav_active) NavigateToClosestEnemy();
         enemy_vertex_buffer.clear();
 
-        const float radius = 9.0f * cached_px_to_game;
+        const float radius = vq_enemy_marker_size * cached_px_to_game;
         const float radius_outer = radius + cached_px_to_game;
         teardrop_fill.SetRadius(radius);
         teardrop_outline.SetRadius(radius_outer);
@@ -951,6 +952,7 @@ void MissionMapWidget::LoadSettings(ToolboxIni* ini)
     LOAD_COLOR(vq_color_enemy_alive);
     LOAD_COLOR(vq_color_enemy_stale);
     LOAD_COLOR(vq_color_enemy_outline);
+    LOAD_FLOAT(vq_enemy_marker_size);
 }
 
 void MissionMapWidget::SaveSettings(ToolboxIni* ini)
@@ -968,6 +970,7 @@ void MissionMapWidget::SaveSettings(ToolboxIni* ini)
     SAVE_COLOR(vq_color_enemy_alive);
     SAVE_COLOR(vq_color_enemy_stale);
     SAVE_COLOR(vq_color_enemy_outline);
+    SAVE_FLOAT(vq_enemy_marker_size);
 }
 
 void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
@@ -1066,6 +1069,7 @@ void MissionMapWidget::DrawSettingsInternal()
         Colors::DrawSettingHueWheel("Enemy (alive)", &vq_color_enemy_alive);
         Colors::DrawSettingHueWheel("Enemy (last known position)", &vq_color_enemy_stale);
         Colors::DrawSettingHueWheel("Enemy outline", &vq_color_enemy_outline);
+        ImGui::SliderFloat("Enemy marker size", &vq_enemy_marker_size, 3.0f, 20.0f, "%.0f");
         ImGui::Unindent();
 
         if (static_changed) BuildStaticMapGeometry();

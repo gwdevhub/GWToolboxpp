@@ -302,6 +302,18 @@ namespace GW {
             });
         }
 
+        bool IsPreSearing(const GW::Constants::MapID map_id)
+        {
+            const auto map_info = GW::Map::GetMapInfo(map_id);
+            if (!map_info) return false;
+            constexpr std::array presearing_dungeon_ids = {
+                GW::Constants::MapID::Forsaken_Tunnels_Presearing_Level1,
+                GW::Constants::MapID::Forsaken_Tunnels_Presearing_Level2,
+                GW::Constants::MapID::Forsaken_Tunnels_Presearing_Level3,
+            };
+            return map_info->region == GW::Region::Region_Presearing || std::find(presearing_dungeon_ids.begin(), presearing_dungeon_ids.end(), map_id) != presearing_dungeon_ids.end();
+        }
+
         GW::Array<GW::MapProp*>* GetMapProps()
         {
             const auto m = GetMapContext();

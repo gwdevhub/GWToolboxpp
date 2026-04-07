@@ -76,8 +76,7 @@ namespace {
         HeroID::Merc6,
         HeroID::Merc7,
         HeroID::Merc8,
-        HeroID::Devona,
-        HeroID::GhostofAlthea
+        HeroID::Devona
     };
 
     GuiUtils::EncString* GetHeroEncName(GW::Constants::HeroID hero_id) {

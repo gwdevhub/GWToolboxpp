@@ -711,13 +711,6 @@ namespace {
 
     GW::HookEntry ChatCmd_HookEntry;
 
-
-    bool GetIsPreSearing()
-    {
-        const GW::AreaInfo* i = GW::Map::GetCurrentMapInfo();
-        return i && i->region == GW::Region::Region_Presearing;
-    }
-
     // rollover: the timestamp when this quest will be replaced by the next one.
     // Pass 0 to indicate the current quest (no date shown).
     void PrintDaily(const wchar_t* quest_type_enc, const wchar_t* quest_name_enc, const time_t rollover, const bool as_wiki_link = true)
@@ -791,7 +784,7 @@ namespace {
         const time_t query_time = is_tomorrow ? now + 86400 : now;
         std::wstring buf;
 
-        if (GetIsPreSearing()) {
+        if (GW::Map::IsPreSearing()) {
             const auto [quest, rollover] = DailyQuests::GetNicholasSandford(query_time);
             buf = std::format(L"\x108\x107{} \x1\x2{}", 5, quest->GetQuestNameEnc());
             PrintDaily(L"\x108\x107Nicholas Sandford\x1", buf.c_str(), is_tomorrow ? rollover : 0, false);
@@ -1039,7 +1032,7 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     const float vanguard_width = 180.0f * ImGui::GetIO().FontGlobalScale;
     const float sandford_width = 200.0f * ImGui::GetIO().FontGlobalScale;
 
-    const bool show_presearing = GetIsPreSearing() && show_presearing_dailies_in_window;
+    const bool show_presearing = GW::Map::IsPreSearing() && show_presearing_dailies_in_window;
 
     ImGui::Text("Date");
     ImGui::SameLine(offset += short_text_width);
@@ -1514,7 +1507,7 @@ void DailyQuests::Initialize()
          {L"weekly", CmdWeeklyBonus},
          {L"today",
           [](GW::HookStatus*, const wchar_t*, const int, const LPWSTR*) -> void {
-              if (GetIsPreSearing()) {
+              if (GW::Map::IsPreSearing()) {
                   GW::Chat::SendChat('/', "vanguard");
                   GW::Chat::SendChat('/', "nicholas");
                   return;
@@ -1536,7 +1529,7 @@ void DailyQuests::Initialize()
               GW::Chat::SendChat('/', "today");
           }},
          {L"tomorrow", [](GW::HookStatus*, const wchar_t*, const int, const LPWSTR*) -> void {
-              if (GetIsPreSearing()) {
+              if (GW::Map::IsPreSearing()) {
                   GW::Chat::SendChat('/', "vanguard tomorrow");
                   GW::Chat::SendChat('/', "nicholas tomorrow");
                   return;

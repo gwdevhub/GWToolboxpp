@@ -82,7 +82,6 @@ namespace GuiUtils {
     void SearchWiki(const std::wstring& term);
     std::string SanitizeWikiUrl(std::string s);
 
-    float GetPartyHealthbarHeight();
     float GetGWScaleMultiplier(bool force = false);
 
     // Reposition a rect within its container to make sure it isn't overflowing it.

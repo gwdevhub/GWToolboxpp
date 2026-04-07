@@ -121,7 +121,7 @@ namespace {
     bool ImInPresearing() {
         static bool isInPresearing = false;
         if (GW::Map::GetIsMapLoaded()) {
-            isInPresearing = GW::Map::GetCurrentMapInfo()->region == GW::Region::Region_Presearing;
+            isInPresearing = GW::Map::IsPreSearing();
         }
         return isInPresearing;
     }
@@ -147,11 +147,7 @@ namespace {
                && (!_district_number || _district_number == static_cast<uint32_t>(GW::Map::GetDistrict()));
     }
 
-    bool IsPreSearing(GW::Constants::MapID map_id)
-    {
-        const auto map_info = GW::Map::GetMapInfo(map_id);
-        return map_info && map_info->region == GW::Region::Region_Presearing;
-    }
+
 
     bool IsValidOutpost(const GW::Constants::MapID map_id)
     {
@@ -830,7 +826,7 @@ void TravelWindow::Update(const float)
     switch (fetched_searchable_outposts) {
         case FetchedMapNames::Pending: {
             BuildSearchableAreas(searchable_outposts, [](const GW::Constants::MapID map_id, const GW::AreaInfo*) {
-                return IsValidOutpost(map_id) && !IsPreSearing(map_id);
+                return IsValidOutpost(map_id) && !GW::Map::IsPreSearing(map_id);
             });
             fetched_searchable_outposts = FetchedMapNames::Decoding;
         }

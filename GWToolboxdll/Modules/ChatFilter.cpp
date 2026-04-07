@@ -380,7 +380,8 @@ namespace {
             case 0x777:
                 return false; // I'm level x and x% of the way earning my next skill point  (author is not part of the message)
             case 0x76F: // I'm attacking x           (author is not part of the message)
-            case 0x781: // I'm targeting x            (author is not part of the message)
+            case 0x781: // I'm targeting x.            (author is not part of the message)
+            case 0x782: // I'm targeting x!            (author is not part of the message)
             case 0x783: // I'm targeting myself!      (author is not part of the message)
             case 0x778: // I'm following x            (author is not part of the message)
                 return IsCurrentPlayerName(sender) ? targetting_messages_from_me : targetting_messages_from_others;

@@ -594,8 +594,7 @@ namespace {
                 cc->account = email;
                 cc->profession = static_cast<Profession>(character.primary());
                 cc->is_pvp = character.is_pvp();
-                const auto map_info = GW::Map::GetMapInfo(character.map_id());
-                cc->is_pre_searing = map_info && map_info->region == GW::Region::Region_Presearing;
+                cc->is_pre_searing = GW::Map::IsPreSearing(character.map_id());
             }
             // Remove any account chars that no longer exist
             auto it = character_completion.begin();
@@ -618,8 +617,7 @@ namespace {
             const auto cc = CompletionWindow::GetCharacterCompletion(pn);
             if (cc) {
                 cc->account = email;
-                const auto map_info = GW::Map::GetMapInfo();
-                cc->is_pre_searing = map_info && map_info->region == GW::Region::Region_Presearing;
+                cc->is_pre_searing = GW::Map::IsPreSearing();
             }
         }
         return true;
@@ -1360,6 +1358,7 @@ void CompletionWindow::Initialize()
     for (const auto campaign : outposts | std::views::keys) {
         for (size_t i = 1; i < static_cast<size_t>(MapID::Count); i++) {
             const auto map_id = static_cast<MapID>(i);
+            if (GW::Map::IsPreSearing(map_id)) continue;
             if (map_id == MapID::Titans_Tears)
                 continue;
             const auto info = GW::Map::GetMapInfo(map_id);
@@ -1368,7 +1367,6 @@ void CompletionWindow::Initialize()
             if (dupes.contains(info->name_id))
                 continue;
             if (info->campaign != campaign) continue;
-            if (info->region == GW::Region::Region_Presearing) continue;
             switch (info->type) {
                 case GW::RegionType::CooperativeMission:
                 case GW::RegionType::MissionOutpost:

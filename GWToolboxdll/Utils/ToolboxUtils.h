@@ -46,6 +46,7 @@ namespace GW {
     enum class FriendStatus : uint32_t;
 
     namespace Constants {
+        enum class MapID : uint32_t;
         enum class SkillID : uint32_t;
         enum class TitleID : uint32_t;
         enum class MaterialSlot : uint32_t;
@@ -133,6 +134,8 @@ namespace GW {
         GW::Constants::TitleID GetTitleForMap(GW::Constants::MapID map_id);
 
         void PingCompass(const GW::GamePos& position);
+
+        bool IsPreSearing(const GW::Constants::MapID map_id = (GW::Constants::MapID)0);
     } // namespace Map
     namespace LoginMgr {
         const bool IsCharSelectReady();
