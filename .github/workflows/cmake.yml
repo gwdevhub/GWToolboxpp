@@ -19,7 +19,7 @@ jobs:
       run: ${{ steps.check.outputs.run }}
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
         fetch-tags: true
@@ -62,7 +62,7 @@ jobs:
       contents: write
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
         ssh-key: ${{ secrets.ACTIONS_BOT_DEPLOY_KEY }}
