@@ -360,6 +360,8 @@ namespace GW {
 
             const auto len = ctx->chars.size();
 
+            if (selected_idx >= len) selected_idx = 0;
+
             bool chosen = false;
             for (size_t i = 0; !chosen && i < len; i++) {
                 const auto c = ctx->chars[i];

@@ -39,6 +39,7 @@
 #include <Modules/FpsFix.h>
 #include <Modules/GamepadModule.h>
 #include <Modules/CameraUnlockModule.h>
+#include <Modules/LoginModule.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -217,7 +218,8 @@ namespace {
         DropTrackerWindow::Instance(),
         GWMarketWindow::Instance(),
         InventorySorting::Instance(),
-        FavorTracker::Instance()
+        FavorTracker::Instance(),
+        LoginModule::Instance()
     };
 
     bool modules_sorted = false;
