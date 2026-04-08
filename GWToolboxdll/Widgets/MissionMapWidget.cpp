@@ -47,7 +47,7 @@ namespace {
         EnemyState state = EnemyState::NotApplicable;
     };
     std::vector<TrackedEnemy> tracked_enemies_by_agent_id; // agent_id -> tracked enemy
-    size_t highest_trackable_agent_id = 0;
+    int highest_trackable_agent_id = -1;
 
     GW::Constants::MapID tracked_enemies_map_id = static_cast<GW::Constants::MapID>(0);
     GW::Constants::InstanceType tracked_enemies_instance_type = GW::Constants::InstanceType::Loading;
@@ -399,7 +399,7 @@ namespace {
         GW::GamePos best_pos = {};
         bool found = false;
 
-        for (size_t agent_id = 0, len = highest_trackable_agent_id; agent_id <= len; agent_id++) {
+        for (int agent_id = 0; agent_id <= highest_trackable_agent_id; agent_id++) {
             const auto& enemy = tracked_enemies_by_agent_id[agent_id];
             if (enemy.state == EnemyState::NotApplicable) continue;
             const float dist_sq = GW::GetDistance(enemy.pos, player_pos);
@@ -432,7 +432,7 @@ namespace {
         if (map_id != tracked_enemies_map_id || instance_type != tracked_enemies_instance_type) {
             tracked_enemies_by_agent_id.assign(tracked_enemies_by_agent_id.size(), {});
             tracked_enemies_map_id = map_id;
-            highest_trackable_agent_id = 0;
+            highest_trackable_agent_id = -1;
             tracked_enemies_instance_type = instance_type;
         }
 
@@ -506,7 +506,7 @@ namespace {
         teardrop_outline.SetRadius(radius_outer);
         teardrop_outline.SetColor(vq_color_enemy_outline);
 
-        for (size_t i = 0, len = highest_trackable_agent_id; i <= len; i++) {
+        for (int i = 0; i <= highest_trackable_agent_id; i++) {
             auto& enemy = tracked_enemies_by_agent_id[i];
             if (enemy.state == EnemyState::NotApplicable) continue;
             const DWORD color = enemy.state == EnemyState::Stale ? vq_color_enemy_stale : vq_color_enemy_alive;
@@ -735,7 +735,7 @@ namespace {
         if (!show_vq_overlay) return;
 
         int alive_count = 0, stale_count = 0;
-        for (size_t i = 0, len = highest_trackable_agent_id; i <= len; i++) {
+        for (int i = 0; i <= highest_trackable_agent_id; i++) {
             const auto& enemy = tracked_enemies_by_agent_id[i];
             if (enemy.state == EnemyState::Alive)
                 alive_count++;
@@ -1037,7 +1037,7 @@ void MissionMapWidget::Update(float)
             tracked_enemies_by_agent_id.assign(tracked_enemies_by_agent_id.size(), {});
             tracked_enemies_map_id = GW::Constants::MapID::None;
             tracked_enemies_instance_type = GW::Constants::InstanceType::Loading;
-            highest_trackable_agent_id = 0;
+            highest_trackable_agent_id = -1;
             enemy_vertex_buffer.clear();
         }
         // Reset exploration so fog of war restarts on the next explorable instance
@@ -1115,7 +1115,7 @@ void MissionMapWidget::GetTrackedEnemyCounts(int& alive, int& stale)
 {
     alive = 0;
     stale = 0;
-    for (size_t i = 0, len = highest_trackable_agent_id; i <= len && i < tracked_enemies_by_agent_id.size(); i++) {
+    for (int i = 0; i <= highest_trackable_agent_id && i < static_cast<int>(tracked_enemies_by_agent_id.size()); i++) {
         const auto& enemy = tracked_enemies_by_agent_id[i];
         if (enemy.state == EnemyState::Alive) alive++;
         else if (enemy.state == EnemyState::Stale) stale++;
