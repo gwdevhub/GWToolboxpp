@@ -193,8 +193,8 @@ const std::string& Updater::GetServerVersion()
 const GWToolboxRelease* Updater::GetCurrentVersionInfo(GWToolboxRelease* out)
 {
     // server and client versions match
-    char path[MAX_PATH];
-    if (GetModuleFileNameA(GWToolbox::GetDLLModule(), path, sizeof(path)) == 0) {
+    wchar_t path[MAX_PATH];
+    if (GetModuleFileNameW(GWToolbox::GetDLLModule(), path, _countof(path)) == 0) {
         return nullptr;
     }
     auto size_bytes = std::filesystem::file_size(path);
