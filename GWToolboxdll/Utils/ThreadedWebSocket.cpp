@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "ThreadedWebSocket.h"
+#include <Timer.h>
 
 ThreadedWebSocket::ThreadedWebSocket()
 {
@@ -10,12 +11,7 @@ ThreadedWebSocket::ThreadedWebSocket()
 ThreadedWebSocket::~ThreadedWebSocket()
 {
     // Best-effort cleanup; caller should have called Disconnect() + polled Update() to idle.
-    pending_disconnect_ = true;
-    if (thread_) {
-        if (thread_->joinable()) thread_->join();
-        delete thread_;
-        thread_ = nullptr;
-    }
+    Disconnect(true);
     if (wsa_ok_) {
         WSACleanup();
         wsa_ok_ = false;
@@ -91,9 +87,16 @@ bool ThreadedWebSocket::Send(std::string payload)
     return true;
 }
 
-void ThreadedWebSocket::Disconnect()
+void ThreadedWebSocket::Disconnect(bool blocking)
 {
     pending_disconnect_ = true;
+    if (blocking) {
+        for (clock_t i = TIMER_INIT(), timeout = i + 3000; i < timeout && !IsIdle(); i = TIMER_INIT()) {
+            Update();
+        }
+        ASSERT(IsIdle() && "Failed to Disconnect websocket after 3000ms");
+    }
+
 }
 
 bool ThreadedWebSocket::Update()

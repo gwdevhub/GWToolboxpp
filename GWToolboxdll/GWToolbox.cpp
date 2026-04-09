@@ -863,11 +863,7 @@ void GWToolbox::ForceTerminate(bool detach_wndproc_handler)
 
     SignalTerminate();
     DrawTerminating(nullptr);
-    UpdateTerminating(0.f);
-
-    for (const auto m : modules_enabled) {
-        m->Terminate();
-    }
+    UpdateTerminating(0.f,true);
 
     GW::DisableHooks();
 
@@ -1124,11 +1120,11 @@ void GWToolbox::UpdateInitialising(float)
     gwtoolbox_state = GWToolboxState::DrawInitialising;
 }
 
-void GWToolbox::UpdateModulesTerminating(float delta_f)
+void GWToolbox::UpdateModulesTerminating(float delta_f, bool panicking)
 {
 terminate_modules:
     for (const auto m : modules_terminating) {
-        if (m->CanTerminate()) {
+        if (m->CanTerminate() || panicking) {
             m->Terminate();
             const auto found = std::ranges::find(modules_terminating, m);
             ASSERT(found != modules_terminating.end());
@@ -1139,7 +1135,7 @@ terminate_modules:
     }
 }
 
-void GWToolbox::UpdateTerminating(float delta_f)
+void GWToolbox::UpdateTerminating(float delta_f, bool panicking)
 {
     ASSERT(gwtoolbox_state == GWToolboxState::Terminating);
 
@@ -1147,7 +1143,7 @@ void GWToolbox::UpdateTerminating(float delta_f)
         ASSERT(ToggleModule(*modules_enabled[0], false) == false);
     }
     ASSERT(modules_enabled.empty());
-    UpdateModulesTerminating(delta_f);
+    UpdateModulesTerminating(delta_f, panicking);
     if (!modules_terminating.empty())
         return;
 

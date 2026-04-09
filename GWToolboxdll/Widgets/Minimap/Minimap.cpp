@@ -774,27 +774,15 @@ void Minimap::DrawHelp()
 void Minimap::SignalTerminate()
 {
     terminating = true;
-    GW::GameThread::Enqueue([] {
-        RefreshQuestMarker();
-        ResetWindowPosition(GW::UI::WindowID_Compass, compass_frame);
-        terminating = false;
-    });
-}
-
-void Minimap::Terminate()
-{
     GW::UI::RemoveKeydownCallback(&Generic_HookEntry);
     GW::UI::RemoveKeyupCallback(&Generic_HookEntry);
     GW::StoC::RemoveCallbacks(&Generic_HookEntry);
     GW::UI::RemoveUIMessageCallback(&Generic_HookEntry);
-
     GW::Hook::RemoveHook(DrawCompassAgentsByType_Func);
-
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
     hide_flagging_controls_patch.Reset();
 
-    ToolboxWidget::Terminate();
     range_renderer.Terminate();
     pmap_renderer.Terminate();
     agent_renderer.Terminate();
@@ -803,6 +791,11 @@ void Minimap::Terminate()
     custom_renderer.Terminate();
     effect_renderer.Terminate();
     GameWorldRenderer::Terminate();
+    GW::GameThread::Enqueue([] {
+        RefreshQuestMarker();
+        ResetWindowPosition(GW::UI::WindowID_Compass, compass_frame);
+        terminating = false;
+    });
 }
 
 bool Minimap::CanTerminate()

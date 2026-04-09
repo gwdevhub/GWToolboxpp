@@ -85,7 +85,7 @@ public:
 
     // Request a graceful shutdown. Non-blocking: the thread will finish its current
     // poll loop iteration, then close the socket and invoke on_close_.
-    void Disconnect();
+    void Disconnect(bool blocking = false);
 
     // Call once per tick from your owner/game thread.
     // Joins and cleans up the worker thread after it has finished.

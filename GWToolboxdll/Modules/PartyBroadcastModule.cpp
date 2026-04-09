@@ -364,5 +364,5 @@ void PartyBroadcast::Terminate()
 {
     ToolboxModule::Terminate();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_Hook);
-    ASSERT(party_ws.IsIdle());
+    party_ws.Disconnect(true);
 }

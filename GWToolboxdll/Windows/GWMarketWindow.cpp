@@ -477,7 +477,7 @@ namespace {
     void OnNamespaceConnected();
     void OnWebSocketMessage(const std::string& message);
     void InitWebSocket();
-    void Disconnect();
+    void Disconnect(bool blocking = false);
     void DrawItemList();
     void DrawFavoritesList();
     void DrawItemDetails();
@@ -904,10 +904,10 @@ namespace {
         });
     }
 
-    void Disconnect()
+    void Disconnect(bool blocking)
     {
         CloseShop(my_shop);
-        market_ws.Disconnect();
+        market_ws.Disconnect(blocking);
         socket_io_ready = false;
     }
 
@@ -1677,7 +1677,7 @@ void GWMarketWindow::Initialize()
 
 void GWMarketWindow::Terminate()
 {
-    Disconnect();
+    Disconnect(true);
     ToolboxWindow::Terminate();
     GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
 }

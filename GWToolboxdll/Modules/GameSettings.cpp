@@ -1286,12 +1286,8 @@ namespace {
         switch (message_id) {
             case GW::UI::UIMessage::kGetPreGameContext_Value0: {
                 hide_store_page_on_char_select && GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"Purchase"), false);
+                OverrideDefaultOnlineStatus();
             } break;
-            case GW::UI::UIMessage::kPreBuildLoginScene: {
-                GW::GameThread::Enqueue([] {
-                    OverrideDefaultOnlineStatus();
-                }, true);
-            }
             break;
             case GW::UI::UIMessage::kPartyShowConfirmDialog: {
                 const auto packet = static_cast<GW::UI::UIPacket::kPartyShowConfirmDialog*>(wParam);

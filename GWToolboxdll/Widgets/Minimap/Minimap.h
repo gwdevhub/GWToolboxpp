@@ -94,7 +94,6 @@ public:
     void Initialize() override;
     void SignalTerminate() override;
     bool CanTerminate() override;
-    void Terminate() override;
 
     // Widget-based rendering (uses internal state)
     void Draw(IDirect3DDevice9* device) override;
