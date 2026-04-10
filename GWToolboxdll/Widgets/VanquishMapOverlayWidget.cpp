@@ -806,7 +806,7 @@ void VanquishMapOverlayWidget::DrawSettingsInternal()
 
 bool VanquishMapOverlayWidget::ContextMenuItems()
 {
-    if (!show_vq_overlay) return true;
+    if (!show_vq_overlay || !ToolboxUtils::IsExplorable()) return true;
     if (nav_active) {
         if (ImGui::Button("Stop navigating")) {
             StopNavigating();
