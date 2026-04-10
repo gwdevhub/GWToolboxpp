@@ -134,6 +134,22 @@ public:
     void SetCenterColor(DWORD c);
     void SetRadius(float r);
 };
+struct D3DStateGuard {
+    IDirect3DStateBlock9* block = nullptr;
+    explicit D3DStateGuard(IDirect3DDevice9* dev) { dev->CreateStateBlock(D3DSBT_ALL, &block); }
+    ~D3DStateGuard()
+    {
+        if (block) {
+            block->Apply();
+            block->Release();
+        }
+    }
+    D3DStateGuard(const D3DStateGuard&) = delete;
+    D3DStateGuard& operator=(const D3DStateGuard&) = delete;
+};
+
+D3DMATRIX MakeOrthoProjection(float w, float h);
+
 class D3DLineCircle : public D3DVertexBuffer {
 public:
     D3DLineCircle(float radius = 10.f, DWORD color = 0xffffffff, int segments = 64);

@@ -588,6 +588,11 @@ void QuestModule::SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_acti
     RefreshQuestPath(custom_quest_id);
 }
 
+void QuestModule::ClearCustomQuestMarker()
+{
+    SetCustomQuestMarker({0, 0});
+}
+
 std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::QuestID quest_id)
 {
     const auto quest = GW::QuestMgr::GetQuest(quest_id);

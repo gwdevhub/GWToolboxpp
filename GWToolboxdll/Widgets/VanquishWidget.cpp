@@ -7,7 +7,7 @@
 #include <GWCA/Managers/PartyMgr.h>
 
 #include <Widgets/VanquishWidget.h>
-#include <Widgets/MissionMapWidget.h>
+#include <Widgets/VanquishMapOverlayWidget.h>
 
 #include "Utils/FontLoader.h"
 
@@ -57,7 +57,7 @@ void VanquishWidget::Draw(IDirect3DDevice9*)
         const ImVec2 max(min.x + size.x, min.y + size.y);
         if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsMouseHoveringRect(min, max)) {
             int alive = 0, stale = 0;
-            MissionMapWidget::GetTrackedEnemyCounts(alive, stale);
+            VanquishMapOverlayWidget::GetTrackedEnemyCounts(alive, stale);
             const int located = alive + stale;
             char buffer[256];
             if (located > 0) {

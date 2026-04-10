@@ -40,6 +40,7 @@
 #include <Modules/GamepadModule.h>
 #include <Modules/CameraUnlockModule.h>
 #include <Modules/LoginModule.h>
+#include <Widgets/VanquishMapOverlayWidget.h>
 
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
@@ -161,6 +162,7 @@ namespace {
         ItemTooltipModule::Instance(),
         ResignLogModule::Instance(),
         QuestModule::Instance(),
+        VanquishMapOverlayWidget::Instance(),
         PartyBroadcast::Instance(),
         CodeOptimiserModule::Instance(),
 #if 0

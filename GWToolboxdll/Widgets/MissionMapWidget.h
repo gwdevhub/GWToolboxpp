@@ -1,6 +1,10 @@
 #pragma once
 
 #include <ToolboxWidget.h>
+#include <d3d9types.h>
+#include <GWCA/GameContainers/GamePos.h>
+
+namespace GW::UI { struct Frame; }
 
 class MissionMapWidget : public ToolboxWidget {
     MissionMapWidget()
@@ -31,5 +35,12 @@ public:
     void Terminate() override;
     bool WndProc(UINT Message, WPARAM, LPARAM lParam) override;
 
-    static void GetTrackedEnemyCounts(int& alive, int& stale);
+    // Expose mission map rendering context for overlay widgets
+    static bool IsRenderReady();
+    static const D3DMATRIX& GetGameToScreenMatrix();
+    static GW::Vec2f GetTopLeft();
+    static GW::Vec2f GetBottomRight();
+    static GW::UI::Frame* GetFrame();
+    static float GetPxToGame();
+    static float GetZoom();
 };
