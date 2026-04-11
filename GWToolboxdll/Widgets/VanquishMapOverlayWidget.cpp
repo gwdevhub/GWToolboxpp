@@ -486,12 +486,11 @@ namespace {
                 }
                 continue;
             }
-            const auto* living = agent->GetAsAgentLiving();
-
-            if (!living || living->allegiance != GW::Constants::Allegiance::Enemy || !living->GetIsAlive()) {
+            if (!GW::Agents::GetAgentMatchesFlags(agent, GW::TargetFilter::Enemies)) {
                 tracked.state = EnemyState::NotApplicable;
                 continue;
             }
+            const auto* living = agent->GetAsAgentLiving();
             auto* npc = GW::Agents::GetNPCByID(living->player_number);
             if (npc && (npc->IsSpirit() || npc->IsMinion())) {
                 tracked.state = EnemyState::NotApplicable;
