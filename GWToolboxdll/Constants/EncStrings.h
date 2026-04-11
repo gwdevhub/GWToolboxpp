@@ -79,6 +79,8 @@ namespace GW {
             static const wchar_t* DepthsOfTyria = L"\x8101\x76FD";
         }
 
+        static const wchar_t* LockedChest = L"\x8101\x6303\xf5ca\x9a4c\x71ff";
+
         static const wchar_t* Bone = L"\x22D0\xBEB5\xC462\x64B5";
         static const wchar_t* IronIngot = L"\x22EB\xC6B0\xBD46\x2DAD";
         static const wchar_t* TannedHideSquare = L"\x22E3\xD3A9\xC22C\x285A";

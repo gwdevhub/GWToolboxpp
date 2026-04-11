@@ -44,6 +44,7 @@
 #include "Minimap.h"
 #include <Utils/FontLoader.h>
 #include <Utils/ToolboxUtils.h>
+#include <Constants/EncStrings.h>
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
@@ -1674,7 +1675,7 @@ void Minimap::SelectTarget(const GW::Vec2f pos)
     const GW::Agent* closest = nullptr;
 
     for (const auto* agent : *agents) {
-        const auto agent_is_locked_chest = agent && agent->GetIsGadgetType() && agent->GetAsAgentGadget()->gadget_id == GW::Constants::ModelID::LockedChest;
+        const auto agent_is_locked_chest = agent && agent->GetIsGadgetType() && wcseq(GW::Agents::GetAgentEncName(agent->agent_id), GW::EncStrings::LockedChest);
         if (!agent_is_locked_chest && !(agent && agent->GetIsLivingType())) continue;
         const float new_distance = GetSquareDistance(pos, agent->pos);
         if (distance > new_distance) {

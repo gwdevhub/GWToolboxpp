@@ -543,7 +543,7 @@ class D3DFogBuffer : public D3DTriangleBuffer {
         GW::GamePos best_pos = {};
         bool found = false;
 
-        for (size_t agent_id = 0, len = highest_trackable_agent_id; agent_id <= len; agent_id++) {
+        for (size_t agent_id = 0, len = std::min(tracked_enemies_by_agent_id.size(), highest_trackable_agent_id + 1); agent_id < len; agent_id++) {
             const auto& enemy = tracked_enemies_by_agent_id[agent_id];
             if (enemy.state == EnemyState::NotApplicable) continue;
             const float dist_sq = GW::GetDistance(enemy.pos, player_pos);
@@ -650,7 +650,7 @@ class D3DFogBuffer : public D3DTriangleBuffer {
         teardrop_outline.SetRadius(radius_outer);
         teardrop_outline.SetColor(vq_color_enemy_outline);
 
-        for (size_t i = 0, len = std::min(tracked_enemies_by_agent_id.size(),highest_trackable_agent_id + 1); i < len; i++) {
+        for (size_t i = 0, len = std::min(tracked_enemies_by_agent_id.size(), highest_trackable_agent_id + 1); i < len; i++) {
             auto& enemy = tracked_enemies_by_agent_id[i];
             if (enemy.state == EnemyState::NotApplicable) continue;
             const DWORD color = enemy.state == EnemyState::Stale ? vq_color_enemy_stale : vq_color_enemy_alive;
@@ -879,7 +879,7 @@ class D3DFogBuffer : public D3DTriangleBuffer {
         if (!show_vq_overlay) return;
 
         int alive_count = 0, stale_count = 0;
-        for (size_t i = 0, len = std::min(tracked_enemies_by_agent_id.size(),highest_trackable_agent_id + 1); i < len; i++) {
+        for (size_t i = 0, len = std::min(tracked_enemies_by_agent_id.size(), highest_trackable_agent_id + 1); i < len; i++) {
             const auto& enemy = tracked_enemies_by_agent_id[i];
             if (enemy.state == EnemyState::Alive)
                 alive_count++;
@@ -1214,7 +1214,7 @@ void MissionMapWidget::GetTrackedEnemyCounts(int& alive, int& stale)
 {
     alive = 0;
     stale = 0;
-    for (size_t i = 0, len = highest_trackable_agent_id; i <= len && i < tracked_enemies_by_agent_id.size(); i++) {
+    for (size_t i = 0, len = std::min(tracked_enemies_by_agent_id.size(), highest_trackable_agent_id + 1); i < len; i++) {
         const auto& enemy = tracked_enemies_by_agent_id[i];
         if (enemy.state == EnemyState::Alive) alive++;
         else if (enemy.state == EnemyState::Stale) stale++;
