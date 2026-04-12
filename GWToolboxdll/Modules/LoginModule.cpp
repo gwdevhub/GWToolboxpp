@@ -27,7 +27,7 @@ namespace {
         wchar_t* cmp = nullptr;
         [[maybe_unused]] const bool ok = GW::UI::GetCommandLinePref(L"character", &cmp);
         DEBUG_ASSERT(ok);
-        if (cmp == parameter_value) {
+        if (cmp && cmp == parameter_value && wcslen(cmp) > 0) {
             // charname parameter
             original_charname_parameter = parameter_value;
             parameter_value = const_cast<wchar_t*>(L" ");
