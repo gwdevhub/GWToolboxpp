@@ -220,7 +220,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
             ImVec2 cur = ImGui::GetCursorPos();
             if (font_size_header > 0.f && show_titlebar) {
                 // 'health'
-                ImGui::PushFont(FontLoader::GetFontByPx(font_size_header));
+                ImGui::PushFont(FontLoader::GetFont(), font_size_header);
                 ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
                 ImGui::TextColored(background, "Health");
                 ImGui::SetCursorPos(cur);
@@ -230,7 +230,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
 
             // perc
             if (font_size_perc_value > 0.f) {
-                ImGui::PushFont(FontLoader::GetFontByPx(font_size_perc_value));
+                ImGui::PushFont(FontLoader::GetFont(), font_size_perc_value);
                 cur = ImGui::GetCursorPos();
                 const auto health_perc = target->hp >= 0 ? std::format("{:.0f}%%", target->hp * 100.0f) : "-";
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
@@ -242,7 +242,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
 
             // abs
             if (font_size_abs_value > 0.f) {
-                ImGui::PushFont(FontLoader::GetFontByPx(font_size_abs_value));
+                ImGui::PushFont(FontLoader::GetFont(), font_size_abs_value);
                 cur = ImGui::GetCursorPos();
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
                 const auto health_abs = target->max_hp > 0 ? std::format("{:.0f} / {}", target->hp * target->max_hp, target->max_hp) : "-";

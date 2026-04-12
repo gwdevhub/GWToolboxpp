@@ -675,7 +675,7 @@ void TimerWidget::Draw(IDirect3DDevice9*)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
-        const auto font = FontLoader::GetFontByPx(font_size);
+        const auto font = FontLoader::GetFont();
         // Main timer:
         print_time(GetTimer(), show_decimals, 32, timer_buffer);
         ImGui::PushFont(font, font_size);
@@ -702,7 +702,7 @@ void TimerWidget::Draw(IDirect3DDevice9*)
             }
         };
         if (font_size_extra_timers > 0.f) {
-            const auto extra_timer_font = FontLoader::GetFontByPx(font_size_extra_timers);
+            const auto extra_timer_font = FontLoader::GetFont();
             ImGui::PushFont(extra_timer_font, font_size_extra_timers);
 
             if (show_deep_timer && GetDeepTimer()) {

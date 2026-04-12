@@ -126,7 +126,7 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
             constexpr auto background = ImColor(Colors::Black());
             // 'distance'
             if (font_size_header > 0.f && show_titlebar) {
-                ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header1));
+                ImGui::PushFont(FontLoader::GetFont(), static_cast<float>(FontLoader::FontSize::header1));
                 ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
                 ImGui::TextColored(background, "Distance");
                 ImGui::SetCursorPos(cur);
@@ -136,7 +136,7 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
 
             // perc
             if (font_size_perc_value > 0.f) {
-                ImGui::PushFont(FontLoader::GetFontByPx(font_size_perc_value));
+                ImGui::PushFont(FontLoader::GetFont(), font_size_perc_value);
                 cur = ImGui::GetCursorPos();
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
                 const auto dist_perc = std::format("{:2.0f} %%", dist * 100 / GW::Constants::Range::Compass);
@@ -148,7 +148,7 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
 
             // abs
             if (font_size_abs_value > 0.f) {
-                ImGui::PushFont(FontLoader::GetFontByPx(font_size_abs_value));
+                ImGui::PushFont(FontLoader::GetFont(), font_size_abs_value);
                 cur = ImGui::GetCursorPos();
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
                 const auto dist_abs = std::format("{:.0f}", dist);

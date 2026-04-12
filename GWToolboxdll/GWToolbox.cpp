@@ -151,14 +151,13 @@ namespace {
         io.IniFilename = imgui_inifile.bytes;
         //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
         io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
-        io.ConfigFlags |= ImGuiConfigFlags_NavNoCaptureKeyboard;
+        io.ConfigNavCaptureKeyboard = false;
 
         //ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
         ImGui_ImplDX9_Init(device);
         ImGui_ImplWin32_Init(GW::MemoryMgr::GetGWWindowHandle());
 
         GW::Render::SetResetCallback([](IDirect3DDevice9*) {
-            FontLoader::ReleaseFontTextures();
             ImGui_ImplDX9_InvalidateDeviceObjects();
         });
 

@@ -67,7 +67,7 @@ namespace {
             // If the label is wider than the frame, scale text size.
             const auto scale_factor = skill_frame_size.x / label_size.x;
             const auto scaled_size = scale_factor * font_effects;
-            overridden_font = FontLoader::GetFontByPx(scaled_size);
+            overridden_font = FontLoader::GetFont();
             ImGui::PushFont(overridden_font, draw_list, scaled_size);
             label_size *= scale_factor;
         }
@@ -116,7 +116,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     }
     viewport = ImGui::GetMainViewport();
     draw_list = ImGui::GetBackgroundDrawList(viewport);
-    const auto font = FontLoader::GetFontByPx(font_effects);
+    const auto font = FontLoader::GetFont();
     ImGui::PushFont(font, draw_list, font_effects);
 
     const auto hard_mode_frame = GW::UI::GetChildFrame(effects_frame, 1);

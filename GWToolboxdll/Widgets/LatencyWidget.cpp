@@ -113,7 +113,7 @@ void LatencyWidget::Draw(IDirect3DDevice9*)
 
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !ctrl_pressed))) {
         const ImVec2 cur = ImGui::GetCursorPos();
-        ImGui::PushFont(FontLoader::GetFontByPx(text_size), text_size);
+        ImGui::PushFont(FontLoader::GetFont(), text_size);
         ImGui::SetCursorPos(cur);
         uint32_t ping = GetPing();
         ImGui::TextColored(GetColorForPing(ping), "%ums", ping);

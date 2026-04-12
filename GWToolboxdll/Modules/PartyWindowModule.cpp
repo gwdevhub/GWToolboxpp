@@ -536,7 +536,7 @@ namespace {
 
     void DrawCustomNPCSettings() {
         ImGui::TextDisabled("Only works in an explorable area. Only works on NPCs; not enemies, minions or spirits.");
-        const float fontScale = ImGui::GetIO().FontGlobalScale;
+        const float fontScale = ImGui::FontScale();
         const float cols[3] = {256.0f * fontScale, 352.0f * fontScale, 448.0f * fontScale};
 
         ImGui::Text("Name");
@@ -599,7 +599,7 @@ namespace {
     }
 
     void DrawCustomPartySortingSettings() {
-        const float fontScale = ImGui::GetIO().FontGlobalScale;
+        const float fontScale = ImGui::FontScale();
 
         static int edit_sorting_index = -1;
         static int edit_map_id = 0;

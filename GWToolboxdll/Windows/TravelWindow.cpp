@@ -726,7 +726,7 @@ void TravelWindow::Draw(IDirect3DDevice9*)
             static int editing = -1;
 #
             const auto spacing = ImGui::GetStyle().ItemSpacing.x;
-            const auto btn_w = (ImGui::GetIO().FontGlobalScale * 30.f);
+            const auto btn_w = (ImGui::FontScale() * 30.f);
             for (size_t i = 0, size = favourites.size(); i < size; i++) {
                 ImGui::PushID(i);
                 const auto map_id = favourites[i];

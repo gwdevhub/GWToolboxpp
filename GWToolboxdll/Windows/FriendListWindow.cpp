@@ -1070,9 +1070,8 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
         return;
     }
     ImGui::SetNextWindowPos(ImVec2(0.0f, 72.0f), ImGuiCond_FirstUseEver);
-    const ImGuiIO* io = &ImGui::GetIO();
-    const auto window_size = ImVec2(540.0f * io->FontGlobalScale, 512.0f * io->FontGlobalScale);
-    const float cols[3] = {180.0f * io->FontGlobalScale, 360.0f * io->FontGlobalScale, 540.0f * io->FontGlobalScale};
+    const auto window_size = ImVec2(540.0f * ImGui::FontScale(), 512.0f * ImGui::FontScale());
+    const float cols[3] = {180.0f * ImGui::FontScale(), 360.0f * ImGui::FontScale(), 540.0f * ImGui::FontScale()};
     ImGui::SetNextWindowSize(window_size, ImGuiCond_FirstUseEver);
     if (is_widget) {
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(0).Value);
@@ -1234,7 +1233,7 @@ void FriendListWindow::DrawSettingsInternal()
     ImGui::Checkbox("Lock size as widget", &lock_size_as_widget);
     ImGui::SameLine();
     ImGui::Checkbox("Lock move as widget", &lock_move_as_widget);
-    const float dropdown_width = 160.0f * ImGui::GetIO().FontGlobalScale;
+    const float dropdown_width = 160.0f * ImGui::FontScale();
     ImGui::Text("Show as");
     ImGui::SameLine();
     ImGui::PushItemWidth(dropdown_width);

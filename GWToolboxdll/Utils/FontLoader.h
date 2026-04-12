@@ -31,17 +31,11 @@ namespace FontLoader {
     };
     constexpr std::array font_size_names = {"16", "18", "20", "24", "40", "48"};
 
-    // Cycle through our own fonts, release any valid textures
-    bool ReleaseFontTextures();
-    // Cycle through our own fonts, create any missing textures
-    bool CreateFontTextures();
     bool FontsLoaded();
     void LoadFonts(bool force = false);
-    DLLAPI ImFont* GetFont(FontSize size);
 
-    // Given an ideal font size in px, return the best fit font.
-    // NOTE: This font will NOT be automatically resized to the desired scale.
-    DLLAPI ImFont* GetFontByPx(float size_in_px, bool include_global_font_scale = true);
+    // Returns the loaded font (or the default ImGui font if not yet loaded).
+    DLLAPI ImFont* GetFont();
 
     void Terminate();
 }

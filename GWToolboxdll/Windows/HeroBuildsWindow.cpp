@@ -174,7 +174,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-            const float btn_width = 60.0f * ImGui::GetIO().FontGlobalScale;
+            const float btn_width = 60.0f * ImGui::FontScale();
             const float& item_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
             for (TeamHeroBuild& tbuild : teambuilds) {
                 ImGui::PushID(static_cast<int>(tbuild.ui_id));
@@ -262,7 +262,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
         if (ImGui::Begin(winname, &tbuild.edit_open)) {
             constexpr size_t name_buffer_size = 128;
             builds_changed |= ImGui::InputText("Hero Build Name", tbuild.name, name_buffer_size);
-            const float btn_width = 50.0f * ImGui::GetIO().FontGlobalScale;
+            const float btn_width = 50.0f * ImGui::FontScale();
             const float icon_btn_width = btn_width / 1.75f;
             const float panel_width = btn_width + 12.0f;
             const float item_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
@@ -409,7 +409,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             const static char* modes[] = {"Don't change", "Normal Mode", "Hard Mode"};
             ImGui::Combo("Mode", &tbuild.mode, modes, 3);
             ImGui::PopItemWidth();
-            ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - ImGui::GetStyle().WindowPadding.x - 40);
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - 40);
             if (ImGui::Button("Close", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 tbuild.edit_open = false;
             }

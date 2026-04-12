@@ -40,13 +40,14 @@ namespace ImGui {
         ImVec2 scaled_size = ImVec2(size.x * scale, size.y * scale);
         ImVec2 p_max = ImVec2(p_min.x + scaled_size.x, p_min.y + scaled_size.y);
 
-        const bool push_texture_id = user_texture_id != draw_list->_CmdHeader.TextureId;
-        if (push_texture_id) draw_list->PushTextureID(user_texture_id);
+        ImTextureRef tex_ref(user_texture_id);
+        const bool push_texture = tex_ref.GetTexID() != draw_list->_CmdHeader.TexRef.GetTexID();
+        if (push_texture) draw_list->PushTexture(tex_ref);
 
         draw_list->PrimReserve(6, 4);
         draw_list->PrimRectUV(p_min, p_max, uv_min, uv_max, col);
 
-        if (push_texture_id) draw_list->PopTextureID();
+        if (push_texture) draw_list->PopTexture();
     }
 
     bool InputText(const char* label, std::string& buf, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
@@ -72,34 +73,24 @@ namespace ImGui {
         return g.CurrentWindow->DC.Indent.x;
     }
 
-    void PushFont(ImFont* font, float font_size) {
-        ImGui::PushFont(font);
-        ImGuiContext& g = *GImGui;
-        if (font_size >= 0.f) {
-            g.FontBaseSize = g.IO.FontGlobalScale * font_size * g.Font->Scale;
-            g.FontSize = g.FontBaseSize;
-            g.DrawListSharedData.FontSize = g.FontSize;
-        }
-    }
-
     void PushFont(ImFont* font, ImDrawList* draw_list, float font_size) {
         ImGui::PushFont(font, font_size);
         ImGuiContext& g = *GImGui;
         if (g.CurrentWindow && g.CurrentWindow->DrawList != draw_list) {
-            draw_list->PushTextureID(font->ContainerAtlas->TexID);
+            draw_list->PushTexture(g.Font->OwnerAtlas->TexRef);
         }
     }
     void PopFont(ImDrawList* draw_list) {
-        ImGui::PopFont();
         ImGuiContext& g = *GImGui;
         if (g.CurrentWindow && g.CurrentWindow->DrawList != draw_list) {
-            draw_list->PopTextureID();
+            draw_list->PopTexture();
         }
+        ImGui::PopFont();
     }
 
     const float& FontScale()
     {
-        return GetIO().FontGlobalScale;
+        return GetStyle().FontScaleMain;
     }
 
     void StartSpacedElements(const float width, const bool include_font_scaling)
@@ -356,7 +347,7 @@ namespace ImGui {
             ClosePopup(popup_id);
     }
 
-    bool CompositeIconButton(const char* label, const ImTextureID* icons, size_t icons_len, const ImVec2& size, const ImGuiButtonFlags flags, const ImVec2& icon_size, const ImVec2& uv0, ImVec2 uv1)
+    bool CompositeIconButton(const char* label, ImTextureID* icons, size_t icons_len, const ImVec2& size, const ImGuiButtonFlags flags, const ImVec2& icon_size, const ImVec2& uv0, ImVec2 uv1)
     {
         char button_id[128];
         sprintf(button_id, "###icon_button_%s", label);
@@ -396,13 +387,14 @@ namespace ImGui {
         const auto bottom_right = ImVec2(img_x + img_size.x, img_y + img_size.y);
         const auto draw_list = GetWindowDrawList();
         for (size_t i = 0; i < icons_len; i++) {
-            if (!icons[i])
+            ImTextureID tex = icons[i];
+            if (!tex)
                 continue;
             if (uv0.x == uv1.x && uv0.y == uv1.y) {
-                draw_list->AddImage(icons[i], top_left, bottom_right, uv0, CalculateUvCrop(icons[i], img_size));
+                draw_list->AddImage(tex, top_left, bottom_right, uv0, CalculateUvCrop(tex, img_size));
             }
             else {
-                draw_list->AddImage(icons[i], top_left, bottom_right, uv0, uv1);
+                draw_list->AddImage(tex, top_left, bottom_right, uv0, uv1);
             }
         }
         if (label) {
@@ -411,14 +403,14 @@ namespace ImGui {
         return clicked;
     }
 
-    bool IconButton(const char* label, const ImTextureID icon, const ImVec2& size, const ImGuiButtonFlags flags, const ImVec2& icon_size)
+    bool IconButton(const char* label, ImTextureID icon, const ImVec2& size, const ImGuiButtonFlags flags, const ImVec2& icon_size)
     {
         return CompositeIconButton(label, &icon, 1, size, flags, icon_size);
     }
 
     bool ColorButtonPicker(const char* label, Color* imcol, const ImGuiColorEditFlags flags)
     {
-        auto swatch = Colors::DrawSettingHueWheel(label, imcol, flags | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoInputs);
+        auto swatch = Colors::DrawSettingHueWheel(label, imcol, flags | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoInputs);
         if (ImGui::IsItemHovered() && label && *label) {
             ImGui::SetTooltip(label);
         }
@@ -543,7 +535,7 @@ namespace ImGui {
     
 
     // Get float ratio for height/width of image, e.g. image 200px x 100px would be 2.0f ratio
-    float GetImageRatio(const ImTextureID user_texture_id) {
+    float GetImageRatio(ImTextureID user_texture_id) {
         if (!user_texture_id)
             return .0f;
         const auto texture = static_cast<IDirect3DTexture9*>(user_texture_id);
@@ -555,7 +547,7 @@ namespace ImGui {
     }
 
 
-    ImVec2 CalculateUvCrop(const ImTextureID user_texture_id, const ImVec2& size)
+    ImVec2 CalculateUvCrop(ImTextureID user_texture_id, const ImVec2& size)
     {
         ImVec2 uv1 = {1.f, 1.f};
         float image_ratio = GetImageRatio(user_texture_id);
@@ -574,7 +566,7 @@ namespace ImGui {
     }
 
     // Given a texture, sprite size in px and the offset of the sprite we want, fill out uv0 and uv1 coords for percentage offsets. False on failure.
-    bool GetSpriteUvCoords(const ImTextureID user_texture_id, const ImVec2& single_sprite_size, uint32_t sprite_offset[2], ImVec2* uv0_out, ImVec2* uv1_out)
+    bool GetSpriteUvCoords(ImTextureID user_texture_id, const ImVec2& single_sprite_size, uint32_t sprite_offset[2], ImVec2* uv0_out, ImVec2* uv1_out)
     {
         if (!user_texture_id)
             return false;
@@ -605,11 +597,11 @@ namespace ImGui {
         return true;
     }
 
-    void ImageCropped(const ImTextureID user_texture_id, const ImVec2& size)
+    void ImageCropped(ImTextureID user_texture_id, const ImVec2& size)
     {
         Image(user_texture_id, size, {0, 0}, CalculateUvCrop(user_texture_id, size));
     }
-    void ImageFit(const ImTextureID user_texture_id, const ImVec2& size_of_container) {
+    void ImageFit(ImTextureID user_texture_id, const ImVec2& size_of_container) {
         const auto texture_ratio = GetImageRatio(user_texture_id);
         if (texture_ratio == .0f) return;
 
@@ -645,7 +637,8 @@ namespace ImGui {
         if (window->SkipItems)
             return false;
 
-        return ImageButtonEx(window->GetID(user_texture_id ? user_texture_id : window), user_texture_id, image_size, uv0, uv1, bg_col, tint_col);
+        const auto id_ptr = user_texture_id ? user_texture_id : window;
+        return ImageButtonEx(window->GetID(id_ptr), ImTextureRef(user_texture_id), image_size, uv0, uv1, bg_col, tint_col);
     }
     bool IsKeyDown(long key) {
         return IsKeyDown(static_cast<ImGuiKey>(key));
@@ -657,7 +650,7 @@ namespace ImGui {
         return rect.Contains(GetIO().MousePos);
     }
 
-    void AddImageCropped(const ImTextureID user_texture_id, const ImVec2& top_left, const ImVec2& bottom_right)
+    void AddImageCropped(ImTextureID user_texture_id, const ImVec2& top_left, const ImVec2& bottom_right)
     {
         const ImVec2 size = {bottom_right.x - top_left.x, bottom_right.y - top_left.y};
         GetWindowDrawList()->AddImage(user_texture_id, top_left, bottom_right, {0, 0}, CalculateUvCrop(user_texture_id, size));
@@ -681,10 +674,10 @@ namespace ImGui {
             }
         }
 
-        if (flags & ImGuiColorEditFlags_AlphaPreview) {
+        if (!(flags & ImGuiColorEditFlags_AlphaOpaque)) {
             constexpr ImVec4 col;
             PushID(count);
-            if (ColorButton("", col, ImGuiColorEditFlags_AlphaPreview)) {
+            if (ColorButton("", col)) {
                 *palette_index = count;
                 value_changed = true;
             }
@@ -834,7 +827,7 @@ namespace ImGui {
                             const ImVec2& center_pos, ImU32 textColor, ImU32 shadowColor,
                             float shadowOffset)
     {
-        ImGui::PushFont(font);
+        ImGui::PushFont(font, font ? font->LegacySize : 0.0f);
         const ImVec2 label_size = ImGui::CalcTextSize(text);
         ImVec2 label_pos(center_pos.x - label_size.x / 2, center_pos.y - label_size.y / 2);
 
@@ -849,7 +842,7 @@ namespace ImGui {
                                  const ImVec2& center_pos, ImU32 textColor, ImU32 outlineColor,
                                  float thickness)
     {
-        ImGui::PushFont(font);
+        ImGui::PushFont(font, font ? font->LegacySize : 0.0f);
         const ImVec2 label_size = ImGui::CalcTextSize(text);
         ImVec2 label_pos(center_pos.x - label_size.x / 2, center_pos.y - label_size.y / 2);
 

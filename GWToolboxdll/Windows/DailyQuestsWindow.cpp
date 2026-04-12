@@ -871,7 +871,7 @@ namespace {
 
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
         ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
-        const auto size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
+        const auto size = ImVec2(250.0f * ImGui::FontScale(), 0);
         ImGui::Separator();
         bool travel = ImGui::Button("Travel to nearest outpost", size);
         bool wiki = ImGui::Button("Guild Wars Wiki", size);
@@ -897,7 +897,7 @@ namespace {
 
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
         ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
-        const auto size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
+        const auto size = ImVec2(250.0f * ImGui::FontScale(), 0);
         if (has_quest) {
             ImGui::TextColored(incomplete_color, you_have_this_quest);
         }
@@ -1020,17 +1020,17 @@ void DailyQuests::Draw(IDirect3DDevice9*)
         return ImGui::End();
     }
     float offset = 0.0f;
-    const float short_text_width = 120.0f * ImGui::GetIO().FontGlobalScale;
-    const float long_text_width = text_width * ImGui::GetIO().FontGlobalScale;
-    const float zm_width = 170.0f * ImGui::GetIO().FontGlobalScale;
-    const float zb_width = 185.0f * ImGui::GetIO().FontGlobalScale;
-    const float zc_width = 135.0f * ImGui::GetIO().FontGlobalScale;
-    const float zv_width = 200.0f * ImGui::GetIO().FontGlobalScale;
-    const float ws_width = 180.0f * ImGui::GetIO().FontGlobalScale;
-    const float nicholas_width = 180.0f * ImGui::GetIO().FontGlobalScale;
-    const float wbe_width = 145.0f * ImGui::GetIO().FontGlobalScale;
-    const float vanguard_width = 180.0f * ImGui::GetIO().FontGlobalScale;
-    const float sandford_width = 200.0f * ImGui::GetIO().FontGlobalScale;
+    const float short_text_width = 120.0f * ImGui::FontScale();
+    const float long_text_width = text_width * ImGui::FontScale();
+    const float zm_width = 170.0f * ImGui::FontScale();
+    const float zb_width = 185.0f * ImGui::FontScale();
+    const float zc_width = 135.0f * ImGui::FontScale();
+    const float zv_width = 200.0f * ImGui::FontScale();
+    const float ws_width = 180.0f * ImGui::FontScale();
+    const float nicholas_width = 180.0f * ImGui::FontScale();
+    const float wbe_width = 145.0f * ImGui::FontScale();
+    const float vanguard_width = 180.0f * ImGui::FontScale();
+    const float sandford_width = 200.0f * ImGui::FontScale();
 
     const bool show_presearing = GW::Map::IsPreSearing() && show_presearing_dailies_in_window;
 
@@ -1079,7 +1079,7 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     }
     ImGui::NewLine();
     ImGui::Separator();
-    ImGui::BeginChild("dailies_scroll", ImVec2(0, -1 * (40.0f * ImGui::GetIO().FontGlobalScale) - ImGui::GetStyle().ItemInnerSpacing.y));
+    ImGui::BeginChild("dailies_scroll", ImVec2(0, -1 * (40.0f * ImGui::FontScale()) - ImGui::GetStyle().ItemInnerSpacing.y));
     time_t unix = time(nullptr);
     uint32_t idx = 0;
 

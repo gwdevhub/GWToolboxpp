@@ -299,9 +299,9 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
 
     const auto font_size = ImMin(font_recharge, m_skill_width);
 
-    const auto font = FontLoader::GetFontByPx(font_size);
+    const auto font = FontLoader::GetFont();
     const auto draw_list = ImGui::GetBackgroundDrawList();
-    
+
 
     for (size_t i = 0; i < m_skills.size(); i++) {
         const Skill& skill = m_skills[i];
@@ -339,7 +339,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
 
 void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
 {
-    const auto font = FontLoader::GetFontByPx(font_effects);
+    const auto font = FontLoader::GetFont();
     const auto draw_list = ImGui::GetBackgroundDrawList();
     ImGui::PushFont(font, draw_list, font_effects);
 
@@ -518,7 +518,7 @@ void SkillbarWidget::DrawDurationThresholds()
 {
     ImGui::Indent();
     ImGui::Text("Skill duration thresholds");
-    const float width = 150.f * ImGui::GetIO().FontGlobalScale;
+    const float width = 150.f * ImGui::FontScale();
     ImGui::PushID("long");
     ImGui::Text("Long: ");
     ImGui::SameLine(width);

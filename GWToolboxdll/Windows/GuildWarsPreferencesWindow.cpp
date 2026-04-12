@@ -206,7 +206,7 @@ void GWPreferences::Draw()
     }
     if (ImGui::TreeNodeEx("In-Game Preferences", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         const float avail_width = ImGui::GetContentRegionAvail().x;
-        const float font_scale = ImGui::GetIO().FontGlobalScale;
+        const float font_scale = ImGui::FontScale();
 
         const float name_width = avail_width - 80.f * font_scale;
         ImGui::Text(" ");
@@ -221,7 +221,7 @@ void GWPreferences::Draw()
     }
     if (ImGui::TreeNodeEx("GUI positions", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         const float avail_width = ImGui::GetContentRegionAvail().x;
-        const float font_scale = ImGui::GetIO().FontGlobalScale;
+        const float font_scale = ImGui::FontScale();
 
         const float atts_width = 80.f * font_scale;
         const float name_width = avail_width - atts_width * 3;

@@ -758,7 +758,7 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9*)
                 ImGui::NewLine();
             }
             ImGui::SameLine(offset, 0);
-            offset += 80.0f * ImGui::GetIO().FontGlobalScale;
+            offset += 80.0f * ImGui::FontScale();
             char buf[30];
             sprintf(buf, "%zu###ignore_packet_%zu", i, i);
             bool p = ignored_packets[i];
@@ -789,7 +789,7 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9*)
                 ImGui::NewLine();
             }
             ImGui::SameLine(offset, 0);
-            offset += 80.0f * ImGui::GetIO().FontGlobalScale;
+            offset += 80.0f * ImGui::FontScale();
             char buf[30];
             sprintf(buf, "%zu###block_packet_%zu", i, i);
             bool p = blocked_packets[i];

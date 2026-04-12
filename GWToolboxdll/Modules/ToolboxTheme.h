@@ -37,7 +37,7 @@ public:
 private:
     static ImGuiStyle DefaultTheme();
 
-    float font_global_scale = 1.0;
+    float font_scale_main = 1.0;
     ImGuiStyle ini_style;
     bool layout_dirty = false;
     bool imgui_style_loaded = false;

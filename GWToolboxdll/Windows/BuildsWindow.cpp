@@ -467,7 +467,7 @@ namespace {
     void DrawBuildSection(Build* build)
     {
         const auto idx = (int)build->index();
-        const float font_scale = ImGui::GetIO().FontGlobalScale;
+        const float font_scale = ImGui::FontScale();
         const float btn_width = 50.0f * font_scale;
         const float del_width = 24.0f * font_scale;
         const float spacing = ImGui::GetStyle().ItemSpacing.y;
@@ -946,7 +946,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
             for (const auto tbuild : teambuilds) {
                 ImGui::PushID(static_cast<int>(tbuild->ui_id));
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
-                if (ImGui::Button(tbuild->name.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemInnerSpacing.x - 60.0f * ImGui::GetIO().FontGlobalScale, 0))) {
+                if (ImGui::Button(tbuild->name.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemInnerSpacing.x - 60.0f * ImGui::FontScale(), 0))) {
                     if (one_teambuild_at_a_time && !tbuild->edit_open) {
                         for (auto& tb : teambuilds) {
                             tb->edit_open = false;
@@ -959,7 +959,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
                 }
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.5f, 0.5f);
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-                if (ImGui::Button("Send", ImVec2(60.0f * ImGui::GetIO().FontGlobalScale, 0))) {
+                if (ImGui::Button("Send", ImVec2(60.0f * ImGui::FontScale(), 0))) {
                     Send(tbuild);
                 }
                 ImGui::PopID();

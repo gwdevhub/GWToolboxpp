@@ -2226,7 +2226,7 @@ void InventoryManager::Draw(IDirect3DDevice9*)
             // Are you sure prompt; at this point we've already got the list of items via FetchPotentialItems()
             ImGui::Text("You're about to salvage %d item%s:", potential_salvage_all_items.size(), potential_salvage_all_items.size() == 1 ? "" : "s");
             ImGui::TextDisabled("Untick an item to skip salvaging");
-            const float& font_scale = ImGui::GetIO().FontGlobalScale;
+            const float& font_scale = ImGui::FontScale();
             const float wiki_btn_width = 50.0f * font_scale;
             static float longest_item_name_length = 280.0f * font_scale;
             const GW::Bag* bag = nullptr;
@@ -2345,7 +2345,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
     }
     ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
     ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
-    const auto size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
+    const auto size = ImVec2(250.0f * ImGui::FontScale(), 0);
     /*IDirect3DTexture9** tex = Resources::GetItemImage(context_item.wiki_name.wstring());
     if (tex && *tex) {
         const float text_height = ImGui::CalcTextSize(" ").y;

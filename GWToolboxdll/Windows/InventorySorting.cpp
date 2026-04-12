@@ -294,7 +294,7 @@ void InventorySorting::Draw(IDirect3DDevice9*)
 void InventorySorting::DrawSettingsInternal()
 {
     ImGui::PushID("inventory_sorting_settings");
-    bool open = ImGui::CollapsingHeader("Change Storage Inventory Sorting Order", ImGuiTreeNodeFlags_SpanTextWidth);
+    bool open = ImGui::CollapsingHeader("Change Storage Inventory Sorting Order", ImGuiTreeNodeFlags_SpanLabelWidth);
     ImGui::SameLine(0.f, 20.f);
     bool sort_inv = false;
     if (ImGui::ConfirmButton("Sort Storage Inventory!", &sort_inv)) {

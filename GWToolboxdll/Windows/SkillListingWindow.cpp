@@ -164,8 +164,8 @@ void SkillListingWindow::Draw(IDirect3DDevice9*)
         return ImGui::End();
     }
     float offset = 0.0f;
-    const float tiny_text_width = 50.0f * ImGui::GetIO().FontGlobalScale;
-    const float long_text_width = 200.0f * ImGui::GetIO().FontGlobalScale;
+    const float tiny_text_width = 50.0f * ImGui::FontScale();
+    const float long_text_width = 200.0f * ImGui::FontScale();
 
     ImGui::Text("#");
     ImGui::SameLine(offset += tiny_text_width + tiny_text_width);

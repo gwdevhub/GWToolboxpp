@@ -403,7 +403,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             ImGui::ImageFit(*current_agent_info->image, ImGui::GetContentRegionAvail());
         }
         ImGui::TableNextColumn();
-        ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header2));
+        ImGui::PushFont(FontLoader::GetFont(), static_cast<float>(FontLoader::FontSize::header2));
         ImGui::TextUnformatted(current_agent_info->name.string().c_str());
         ImGui::PopFont();
         ImGui::Separator();

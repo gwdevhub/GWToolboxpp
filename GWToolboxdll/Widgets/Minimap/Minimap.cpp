@@ -624,8 +624,7 @@ namespace {
         // -------------------------------------------------------------------------
         // Cardinal direction labels (N / S / E / W) — ImGui background draw list
         //
-        // Font is chosen via FontLoader::GetFontByPx so we always render at a
-        // baked atlas size and avoid sub-pixel scaling blur.
+        // Font is dynamically scaled via ImGui 1.92's dynamic font atlas.
         //
         // Two modes controlled by cardinal_upright:
         //   true  — labels always read upright relative to the screen (default).
@@ -635,11 +634,10 @@ namespace {
         // -------------------------------------------------------------------------
         ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
 
-        // Pick the smallest baked font >= the requested size.
-        // Render at its native FontSize — no scaling artefacts.
-        ImFont* font = FontLoader::GetFontByPx(cardinal_font_size, true);
-        const float render_size = font->FontSize;
-        const float text_scale = cardinal_font_size / render_size; // always 1.0f; kept for clarity
+        // Single font with dynamic scaling to the desired cardinal size.
+        ImFont* font = FontLoader::GetFont();
+        const float render_size = cardinal_font_size;
+        ImFontBaked* baked = font->GetFontBaked(render_size);
 
         const float radius = GW::Constants::Range::Compass + cardinal_offset;
 
@@ -703,38 +701,38 @@ namespace {
                     return {pivot.x + ox * ca - oy * sa, pivot.y + ox * sa + oy * ca};
                 };
 
-                const float half_h = font->FontSize * text_scale * 0.5f;
+                const float half_h = baked->Size * 0.5f;
 
                 // Total advance width for horizontal centring
                 float total_w = 0.f;
                 for (const char* p = text; *p;) {
                     unsigned int cp;
                     p += ImTextCharFromUtf8(&cp, p, nullptr);
-                    const ImFontGlyph* g = font->FindGlyph(static_cast<ImWchar>(cp));
-                    if (g) total_w += g->AdvanceX * text_scale;
+                    const ImFontGlyph* g = baked->FindGlyph(static_cast<ImWchar>(cp));
+                    if (g) total_w += g->AdvanceX;
                 }
 
-                draw_list->PushTextureID(font->ContainerAtlas->TexID);
+                draw_list->PushTexture(font->OwnerAtlas->TexRef);
 
                 float cursor_x = -total_w * 0.5f;
                 for (const char* p = text; *p;) {
                     unsigned int cp;
                     p += ImTextCharFromUtf8(&cp, p, nullptr);
-                    const ImFontGlyph* g = font->FindGlyph(static_cast<ImWchar>(cp));
+                    const ImFontGlyph* g = baked->FindGlyph(static_cast<ImWchar>(cp));
                     if (!g) continue;
 
-                    const float x0 = cursor_x + g->X0 * text_scale;
-                    const float y0 = -half_h + g->Y0 * text_scale;
-                    const float x1 = cursor_x + g->X1 * text_scale;
-                    const float y1 = -half_h + g->Y1 * text_scale;
+                    const float x0 = cursor_x + g->X0;
+                    const float y0 = -half_h + g->Y0;
+                    const float x1 = cursor_x + g->X1;
+                    const float y1 = -half_h + g->Y1;
 
                     draw_list->PrimReserve(6, 4);
                     draw_list->PrimQuadUV(rot(x0, y0), rot(x1, y0), rot(x1, y1), rot(x0, y1), {g->U0, g->V0}, {g->U1, g->V0}, {g->U1, g->V1}, {g->U0, g->V1}, col);
 
-                    cursor_x += g->AdvanceX * text_scale;
+                    cursor_x += g->AdvanceX;
                 }
 
-                draw_list->PopTextureID();
+                draw_list->PopTexture();
             };
 
             for (const auto& c : cardinals) {

@@ -37,12 +37,11 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(300.0f, 200.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        const ImVec2 cmax = ImGui::GetWindowContentRegionMax();
-        const ImVec2 cmin = ImGui::GetWindowContentRegionMin();
-        const auto font = FontLoader::GetFontByPx(font_size);
+        const ImVec2 avail = ImGui::GetContentRegionAvail();
+        const auto font = FontLoader::GetFont();
         ImGui::PushFont(font, font_size);
         if (ImGui::InputTextMultiline("##source", text_buffer, text_buffer_length,
-                                      ImVec2(cmax.x - cmin.x, cmax.y - cmin.y), ImGuiInputTextFlags_AllowTabInput)) {
+                                      avail, ImGuiInputTextFlags_AllowTabInput)) {
             filedirty = true;
         }
         ImGui::PopFont();

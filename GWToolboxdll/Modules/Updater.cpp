@@ -239,7 +239,7 @@ void Updater::SaveSettings(ToolboxIni* ini)
 void Updater::DrawSettingsInternal()
 {
     ImGui::Text("Release channel:");
-    const float btnWidth = 180.0f * ImGui::GetIO().FontGlobalScale;
+    const float btnWidth = 180.0f * ImGui::FontScale();
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - btnWidth);
     if (ImGui::Button(step == Checking ? "Checking..." : "Check for updates", ImVec2(btnWidth, 0)) && step != Checking) {
         CheckForUpdate(true);

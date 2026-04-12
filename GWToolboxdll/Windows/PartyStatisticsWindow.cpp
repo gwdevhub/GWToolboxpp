@@ -221,7 +221,7 @@ namespace {
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
             if (ImGui::BeginTable(table_name, party_member.skills.size())) {
                 const float column_width = width / party_member.skills.size();
-                const float scale = ImGui::GetIO().FontGlobalScale;
+                const float scale = ImGui::FontScale();
                 const ImVec2 icon_size = {32.f * scale, 32.f * scale};
                 for (size_t i = 0; i < party_member.skills.size(); i++) {
                     char column_name[32];

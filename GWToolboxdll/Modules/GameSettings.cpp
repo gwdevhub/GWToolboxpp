@@ -2319,7 +2319,7 @@ void GameSettings::DrawSettingsInternal()
 
     ImGui::Checkbox("Show warning when earned faction reaches ", &faction_warn_percent);
     ImGui::SameLine();
-    ImGui::PushItemWidth(40.0f * ImGui::GetIO().FontGlobalScale);
+    ImGui::PushItemWidth(40.0f * ImGui::FontScale());
     ImGui::InputInt("##faction_warn_percent_amount", &faction_warn_percent_amount, 0);
     ImGui::PopItemWidth();
     ImGui::SameLine();
@@ -2377,7 +2377,7 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Text("In-game name tag colors:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
-    constexpr uint32_t flags = ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoInputs;
+    constexpr uint32_t flags = ImGuiColorEditFlags_NoInputs;
     ImGui::NextSpacedElement();
     Colors::DrawSettingHueWheel("Myself", &nametag_color_player_self, flags);
     ImGui::NextSpacedElement();
