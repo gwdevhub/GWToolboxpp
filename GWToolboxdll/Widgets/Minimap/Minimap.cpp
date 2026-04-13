@@ -1681,8 +1681,9 @@ void Minimap::SelectTarget(const GW::Vec2f pos)
     const GW::Agent* closest = nullptr;
 
     for (const auto* agent : *agents) {
-        const auto agent_is_locked_chest = agent && agent->GetIsGadgetType() && agent->GetAsAgentGadget()->gadget_id == GW::Constants::ModelID::LockedChest;
-        if (!agent_is_locked_chest && !(agent && agent->GetIsLivingType())) continue;
+        if (!agent) continue;
+        if (!agent->GetIsLivingType()) continue;
+        if (agent->GetAsAgentLiving()->GetIsDead()) continue;
         const float new_distance = GetSquareDistance(pos, agent->pos);
         if (distance > new_distance) {
             distance = new_distance;
