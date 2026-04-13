@@ -147,25 +147,8 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
         }
     }
 
-
-#ifndef _DEBUG
-    if (!Updater::IsLatestVersion()) {
-        const std::wstring error_message = L"YOU ARE NOT USING THE LATEST VERSION OF GWTOOLBOX++!\n\n"
-            L"Please update to the latest version before reporting any issues.\n"
-            L"No crash dump will be created because the issue may have already been fixed.";
-
-        MessageBoxW(nullptr, error_message.c_str(), L"GWToolbox++ - Outdated Version", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
-        TerminateProcess(GetCurrentProcess(), 1);
-    }
-    if (!PluginModule::GetPlugins().empty()) {
-        const std::wstring error_message = L"YOU ARE USING PLUGINS!\n\n"
-            L"Do not report issues that happen while you are using plugins.\n"
-            L"No crash dump will be created because the issue may not come from Toolbox.";
-
-        MessageBoxW(nullptr, error_message.c_str(), L"GWToolbox++ - Plugins used", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
-        TerminateProcess(GetCurrentProcess(), 1);
-    }
-#endif
+    const bool outdated_version = !Updater::IsLatestVersion();
+    const bool plugins_loaded = !PluginModule::GetPlugins().empty();
 
     const std::wstring crash_folder = Resources::GetPath(L"crashes");
 
@@ -242,6 +225,16 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     }
     else {
         error_info = L"Guild Wars crashed!\n\n";
+
+        if (outdated_version) {
+            error_info += L"WARNING: You are not using the latest version of GWToolbox++.\n"
+                L"Please update before reporting any issues, as the crash may have already been fixed.\n\n";
+        }
+
+        if (plugins_loaded) {
+            error_info += L"WARNING: Plugins were loaded. The crash may not be caused by GWToolbox.\n"
+                L"Do not report this issue to the GWToolbox developers unless you can reproduce it without plugins.\n\n";
+        }
 
         if (tb_exception_message && *tb_exception_message) {
             error_info += std::format(L"{}\n\n", TextUtils::StringToWString(tb_exception_message));
