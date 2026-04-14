@@ -555,7 +555,7 @@ namespace {
     {
         __try {
             return WndProc(hWnd, Message, wParam, lParam);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
+        } __except (EXCEPT_EXPRESSION_ENTRY) {
             return CallWindowProc(OldWndProc, hWnd, Message, wParam, lParam);
         }
     }

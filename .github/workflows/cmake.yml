@@ -15,7 +15,9 @@ jobs:
     outputs:
       body: ${{ steps.check.outputs.body }}
       dev_commit: ${{ steps.check.outputs.dev_commit }}
+      dev_commit_short: ${{ steps.check.outputs.dev_commit_short }}
       tag: ${{ steps.check.outputs.tag }}
+      beta_tag: ${{ steps.check.outputs.beta_tag }}
       run: ${{ steps.check.outputs.run }}
     steps:
     - name: Checkout repository
@@ -32,6 +34,7 @@ jobs:
         BODY=$(gh api repos/gwdevhub/GWToolboxpp/releases/latest --jq .body)
         TAG=$(gh api repos/gwdevhub/GWToolboxpp/releases/latest --jq .tag_name)
         DEV_COMMIT=$(gh api repos/gwdevhub/GWToolboxpp/commits/dev --jq .sha)
+        DEV_COMMIT_SHORT=${DEV_COMMIT::7}
         echo "Latest upstream release tag: $TAG"
         {
           echo "body<<EOF"
@@ -40,14 +43,16 @@ jobs:
         } >> "$GITHUB_OUTPUT"
         echo "tag=$TAG" >> "$GITHUB_OUTPUT"
         echo "dev_commit=$DEV_COMMIT" >> "$GITHUB_OUTPUT"
+        echo "dev_commit_short=$DEV_COMMIT_SHORT" >> "$GITHUB_OUTPUT"
 
         if git show-ref --tags --quiet --verify "refs/tags/$TAG"; then
-          if git show-ref --tags --quiet --verify "refs/tags/commit-$DEV_COMMIT"; then
+          if [[ -n "$(git tag -l "*_$DEV_COMMIT_SHORT")" ]]; then
             echo "Already processed."
             echo "run=false" >> "$GITHUB_OUTPUT"
           else
             echo "New dev version detected."
             echo "run=dev" >> "$GITHUB_OUTPUT"
+            echo "beta_tag=_Beta_$DEV_COMMIT_SHORT" >> "$GITHUB_OUTPUT"
           fi
         else
           echo "New stable version detected."
@@ -157,10 +162,17 @@ jobs:
       # access regardless of the host operating system
       shell: bash
       working-directory: ${{runner.workspace}}/GWToolboxpp/build
-      run: cmake $GITHUB_WORKSPACE --preset=vcpkg
+      run: |
+        CMAKE_ARGS="--preset=vcpkg"
+        if [ "$IS_DEV_BUILD" = "true" ]; then
+          CMAKE_ARGS="$CMAKE_ARGS -DGWTOOLBOXDLL_VERSION_BETA=$BETA_TAG"
+        fi
+        cmake $GITHUB_WORKSPACE $CMAKE_ARGS
       env:
         VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
         VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+        IS_DEV_BUILD: ${{ needs.check.outputs.run == 'dev' }}
+        BETA_TAG: ${{ needs.check.outputs.beta_tag }}
 
     - name: Build
       working-directory: ${{runner.workspace}}/GWToolboxpp/build
@@ -178,7 +190,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         RELEASE_NOTES: ${{ needs.check.outputs.body }}
-        DEV_COMMIT: ${{ needs.check.outputs.run == 'dev' && needs.check.outputs.dev_commit || '' }}
+        DEV_COMMIT_SHORT: ${{ needs.check.outputs.run == 'dev' && needs.check.outputs.dev_commit_short || '' }}
+        BETA_TAG: ${{ needs.check.outputs.beta_tag }}
       run: |
         VERSION=$(sed -n 's/.*set(GWTOOLBOXDLL_VERSION "\(.*\)").*/\1/p' CMakeLists.txt | tr -d '\r')
         BETA=$(sed -n 's/.*set(GWTOOLBOXDLL_VERSION_BETA "\(.*\)").*/\1/p' CMakeLists.txt | tr -d '\r')
@@ -188,8 +201,8 @@ jobs:
           exit 1
         fi
 
-        if [ -n "$DEV_COMMIT" ]; then
-          TAG_NAME="commit-$DEV_COMMIT"
+        if [ -n "$DEV_COMMIT_SHORT" ]; then
+          TAG_NAME="${VERSION}${BETA_TAG}"
         else
           if [ -z "$BETA" ]; then
             TAG_NAME="${VERSION}_Release"
@@ -226,12 +239,10 @@ jobs:
         gzip -c "$BIN_DIR/GWToolboxdll.pdb" > GWToolboxdll.pdb.gz
 
         # Create release
-        if [ -n "$DEV_COMMIT" ]; then
-          DEV_COMMIT_SHORT=${DEV_COMMIT::7}
-
+        if [ -n "$DEV_COMMIT_SHORT" ]; then
           gh release create "$TAG_NAME" \
             --title "commit-$DEV_COMMIT_SHORT" \
-            --notes "[$DEV_COMMIT_SHORT](https://github.com/gwdevhub/GWToolboxpp/commit/$DEV_COMMIT)" \
+            --notes "[$DEV_COMMIT_SHORT](https://github.com/gwdevhub/GWToolboxpp/commit/$DEV_COMMIT_SHORT)" \
             --prerelease \
             GWToolboxdll.dll DialogsWindow.dll RawDialogs.dll SpeedrunScriptingTools.dll GWToolboxdll.pdb.gz gwca.dll
         else
