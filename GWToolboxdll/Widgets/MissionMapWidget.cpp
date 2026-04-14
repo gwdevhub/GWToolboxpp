@@ -167,7 +167,7 @@ namespace {
     {
         const auto gameplay_context = GW::GetGameplayContext();
         const auto mission_map_context = GW::Map::GetMissionMapContext();
-        if (!(gameplay_context && mission_map_frame && mission_map_frame->IsVisible())) return false;
+        if (!(gameplay_context && mission_map_context && mission_map_frame && mission_map_frame->IsVisible())) return false;
 
         const auto root = GW::UI::GetRootFrame();
         mission_map_top_left = mission_map_frame->position.GetContentTopLeft(root);
