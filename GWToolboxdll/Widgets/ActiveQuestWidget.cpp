@@ -133,13 +133,13 @@ void ActiveQuestWidget::Draw(IDirect3DDevice9*)
 
         ImGui::SameLine();
 
-        ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::widget_label));
+        ImGui::PushFont(FontLoader::GetFont(), static_cast<float>(FontLoader::FontSize::widget_label));
         ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR_ACTIVE);
         ImGui::TextUnformatted(active_quest_name.string().c_str());
         ImGui::PopStyleColor();
         ImGui::PopFont();
 
-        ImGui::PushFont(FontLoader::GetFont(FontLoader::FontSize::header2));
+        ImGui::PushFont(FontLoader::GetFont(), static_cast<float>(FontLoader::FontSize::header2));
         for (auto& objective : active_quest_objectives) {
             auto& [_, obj_str, completed] = objective;
 

@@ -794,9 +794,9 @@ namespace GW {
             MISSION_CINEMATIC_MISSION_PACK_GWX_INTRODUCTION,
             Piken_Square_pre_Searing_outpost,
 
-            // Map 780 has invalid continent, name and description
+            Forsaken_Tunnels_Presearing_Level1,
             
-            Secret_Lair_of_the_Snowmen2 = 781,  // ?
+            Secret_Lair_of_the_Snowmen2,  // ?
             Secret_Lair_of_the_Snowmen3,        // ?
             Droknars_Forge_cinematic,           // ?
             Isle_of_the_Nameless_PvP,
@@ -891,6 +891,14 @@ namespace GW {
             The_Final_Confrontation,
             Lakeside_County_1070_AE,
             Ashford_Catacombs_1070_AE,
+
+            Forsaken_Tunnels_Presearing_Level2,
+            Forsaken_Tunnels_Presearing_Level3,
+
+            Forsaken_Tunnels_Level1,
+            Forsaken_Tunnels_Level2,
+            Forsaken_Tunnels_Level3,
+            Forsaken_Tunnels_Level4, 
 
             Count = 0x373,
         };

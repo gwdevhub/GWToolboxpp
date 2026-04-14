@@ -162,7 +162,7 @@ namespace {
         n_columns = 0 + (show_start_column ? 1 : 0) + (show_end_column ? 1 : 0) + (show_time_column ? 1 : 0);
     }
 
-    float GetTimestampWidth() { return 65.0f * ImGui::GetIO().FontGlobalScale; }
+    float GetTimestampWidth() { return 65.0f * ImGui::FontScale(); }
 
     float GetLabelWidth()
     {

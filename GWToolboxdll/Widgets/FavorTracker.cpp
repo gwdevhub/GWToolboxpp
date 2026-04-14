@@ -198,11 +198,11 @@ void FavorTracker::Draw(IDirect3DDevice9*)
         const auto start_pos = ImGui::GetCursorPosY();
         ImGui::PushStyleColor(ImGuiCol_Text, text_color);
         const auto label_fs = text_size * 0.55f;
-        ImGui::PushFont(FontLoader::GetFontByPx(label_fs), label_fs);
+        ImGui::PushFont(FontLoader::GetFont(), label_fs);
         ImGui::TextShadowed(Resources::GetSkillName(GW::Constants::SkillID::Favor_of_the_Gods)->string().c_str());
         ImGui::PopFont();
         ImGui::SetCursorPosY(start_pos + text_size * 0.45f);
-        ImGui::PushFont(FontLoader::GetFontByPx(text_size), text_size);
+        ImGui::PushFont(FontLoader::GetFont(), text_size);
         ImGui::TextShadowed(favor_str.c_str());
         ImGui::PopFont();
         ImGui::PopStyleColor();

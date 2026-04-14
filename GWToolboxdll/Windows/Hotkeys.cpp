@@ -321,7 +321,7 @@ const char* TBHotkey::instance_types[] = {"Any", "Outpost", "Explorable"};
 bool TBHotkey::Draw(Op* op, bool first, bool last)
 {
     bool hotkey_changed = false;
-    const float scale = ImGui::GetIO().FontGlobalScale;
+    const float scale = ImGui::FontScale();
     const auto show_header_buttons = [&] {
         ImGui::PushID(static_cast<int>(ui_id));
         ImGui::PushID("header");

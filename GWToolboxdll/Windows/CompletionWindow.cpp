@@ -594,8 +594,7 @@ namespace {
                 cc->account = email;
                 cc->profession = static_cast<Profession>(character.primary());
                 cc->is_pvp = character.is_pvp();
-                const auto map_info = GW::Map::GetMapInfo(character.map_id());
-                cc->is_pre_searing = map_info && map_info->region == GW::Region::Region_Presearing;
+                cc->is_pre_searing = GW::Map::IsPreSearing(character.map_id());
             }
             // Remove any account chars that no longer exist
             auto it = character_completion.begin();
@@ -618,8 +617,7 @@ namespace {
             const auto cc = CompletionWindow::GetCharacterCompletion(pn);
             if (cc) {
                 cc->account = email;
-                const auto map_info = GW::Map::GetMapInfo();
-                cc->is_pre_searing = map_info && map_info->region == GW::Region::Region_Presearing;
+                cc->is_pre_searing = GW::Map::IsPreSearing();
             }
         }
         return true;
@@ -821,7 +819,7 @@ size_t Mission::GetLoadedIcons(IDirect3DTexture9* icons_out[4])
 
 bool Mission::Draw(IDirect3DDevice9*)
 {
-    const float scale = ImGui::GetIO().FontGlobalScale;
+    const float scale = ImGui::FontScale();
 
     ImVec2 s(icon_size.x * scale, icon_size.y * scale);
     auto bg = ImVec4(0, 0, 0, 0);
@@ -872,7 +870,7 @@ bool Mission::Draw(IDirect3DDevice9*)
 
     if (is_completed && bonus && show_as_list) {
         const ImVec2 cursor_pos2 = ImGui::GetCursorPos();
-        ImVec2 icon_size_scaled = {icon_size.x * ImGui::GetIO().FontGlobalScale, icon_size.y * ImGui::GetIO().FontGlobalScale};
+        ImVec2 icon_size_scaled = {icon_size.x * ImGui::FontScale(), icon_size.y * ImGui::FontScale()};
         if (show_as_list) {
             icon_size_scaled.x /= 2.f;
             icon_size_scaled.y /= 2.f;
@@ -1195,7 +1193,7 @@ bool PvESkill::Draw(IDirect3DDevice9* device)
     }
     if (is_completed && !show_as_list) {
         const ImVec2 cursor_pos2 = ImGui::GetCursorPos();
-        ImVec2 icon_size_scaled = {icon_size.x * ImGui::GetIO().FontGlobalScale, icon_size.y * ImGui::GetIO().FontGlobalScale};
+        ImVec2 icon_size_scaled = {icon_size.x * ImGui::FontScale(), icon_size.y * ImGui::FontScale()};
         if (show_as_list) {
             icon_size_scaled.x /= 2.f;
             icon_size_scaled.y /= 2.f;
@@ -1360,6 +1358,7 @@ void CompletionWindow::Initialize()
     for (const auto campaign : outposts | std::views::keys) {
         for (size_t i = 1; i < static_cast<size_t>(MapID::Count); i++) {
             const auto map_id = static_cast<MapID>(i);
+            if (GW::Map::IsPreSearing(map_id)) continue;
             if (map_id == MapID::Titans_Tears)
                 continue;
             const auto info = GW::Map::GetMapInfo(map_id);
@@ -1368,7 +1367,6 @@ void CompletionWindow::Initialize()
             if (dupes.contains(info->name_id))
                 continue;
             if (info->campaign != campaign) continue;
-            if (info->region == GW::Region::Region_Presearing) continue;
             switch (info->type) {
                 case GW::RegionType::CooperativeMission:
                 case GW::RegionType::MissionOutpost:
@@ -2161,7 +2159,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         CheckProgress();
     }
 
-    const float gscale = ImGui::GetIO().FontGlobalScale;
+    const float gscale = ImGui::FontScale();
     ImGui::Text("Choose Character");
     ImGui::SameLine();
     ImGui::PushItemWidth(200.f * gscale);
@@ -2218,8 +2216,8 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     if (show_as_list) {
         single_item_width *= 5.f;
     }
-    int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + ImGui::GetStyle().ItemSpacing.x)));
-    const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
+    int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::FontScale() * single_item_width + ImGui::GetStyle().ItemSpacing.x)));
+    const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::FontScale();
     auto draw_missions = [missions_per_row, device](auto& camp_missions, size_t end = 0) {
         if (end == 0) {
             end = camp_missions.size();
@@ -2538,8 +2536,8 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device)
     if (show_as_list) {
         single_item_width *= 5.f;
     }
-    const int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::GetIO().FontGlobalScale * single_item_width + ImGui::GetStyle().ItemSpacing.x)));
-    const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::GetIO().FontGlobalScale;
+    const int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::FontScale() * single_item_width + ImGui::GetStyle().ItemSpacing.x)));
+    const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::FontScale();
     ImGui::Text("Hall of Monuments");
     ImGui::SameLine(checkbox_offset);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});

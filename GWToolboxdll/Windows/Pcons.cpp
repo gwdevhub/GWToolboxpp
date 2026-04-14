@@ -143,9 +143,8 @@ void Pcon::Draw(IDirect3DDevice9*)
         ImGui::SetTooltip(out);
     }
     if (maptype != GW::Constants::InstanceType::Loading) {
-        ImFont* f = FontLoader::GetFont(FontLoader::FontSize::header1);
         const ImVec2 nextPos = ImGui::GetCursorPos();
-        ImGui::PushFont(f);
+        ImGui::PushFont(FontLoader::GetFont(), static_cast<float>(FontLoader::FontSize::header1));
         ImVec4 color;
         if (quantity == 0) {
             color = ImVec4(1, 0, 0, 1);

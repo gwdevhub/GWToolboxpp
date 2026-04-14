@@ -4,7 +4,7 @@ include(FetchContent)
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.90.9-docking
+    GIT_TAG v1.92.7-docking
     PATCH_COMMAND ${CMAKE_CURRENT_LIST_DIR}/patches/apply_patch.bat imgui_transparent_viewports.patch
     LOG_PATCH true
     LOG_MERGED_STDOUTERR true

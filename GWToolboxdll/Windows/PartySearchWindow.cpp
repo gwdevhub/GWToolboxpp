@@ -595,7 +595,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
 {
     /* Alerts window */
     if (show_alert_window) {
-        const float& font_scale = ImGui::GetIO().FontGlobalScale;
+        const float& font_scale = ImGui::FontScale();
         ImGui::SetNextWindowSize(ImVec2(250.f * font_scale, 220.f), ImGuiCond_FirstUseEver);
         if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
             DrawAlertsWindowContent(true);
@@ -614,7 +614,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
         return;
     }
     /* Search bar header */
-    const float& font_scale = ImGui::GetIO().FontGlobalScale;
+    const float& font_scale = ImGui::FontScale();
     const float btn_width = 100.0f * font_scale;
     constexpr bool display_messages = true;
     /* Main trade chat area */

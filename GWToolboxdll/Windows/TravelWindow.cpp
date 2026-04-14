@@ -121,7 +121,7 @@ namespace {
     bool ImInPresearing() {
         static bool isInPresearing = false;
         if (GW::Map::GetIsMapLoaded()) {
-            isInPresearing = GW::Map::GetCurrentMapInfo()->region == GW::Region::Region_Presearing;
+            isInPresearing = GW::Map::IsPreSearing();
         }
         return isInPresearing;
     }
@@ -147,11 +147,7 @@ namespace {
                && (!_district_number || _district_number == static_cast<uint32_t>(GW::Map::GetDistrict()));
     }
 
-    bool IsPreSearing(GW::Constants::MapID map_id)
-    {
-        const auto map_info = GW::Map::GetMapInfo(map_id);
-        return map_info && map_info->region == GW::Region::Region_Presearing;
-    }
+
 
     bool IsValidOutpost(const GW::Constants::MapID map_id)
     {
@@ -730,7 +726,7 @@ void TravelWindow::Draw(IDirect3DDevice9*)
             static int editing = -1;
 #
             const auto spacing = ImGui::GetStyle().ItemSpacing.x;
-            const auto btn_w = (ImGui::GetIO().FontGlobalScale * 30.f);
+            const auto btn_w = (ImGui::FontScale() * 30.f);
             for (size_t i = 0, size = favourites.size(); i < size; i++) {
                 ImGui::PushID(i);
                 const auto map_id = favourites[i];
@@ -830,7 +826,7 @@ void TravelWindow::Update(const float)
     switch (fetched_searchable_outposts) {
         case FetchedMapNames::Pending: {
             BuildSearchableAreas(searchable_outposts, [](const GW::Constants::MapID map_id, const GW::AreaInfo*) {
-                return IsValidOutpost(map_id) && !IsPreSearing(map_id);
+                return IsValidOutpost(map_id) && !GW::Map::IsPreSearing(map_id);
             });
             fetched_searchable_outposts = FetchedMapNames::Decoding;
         }

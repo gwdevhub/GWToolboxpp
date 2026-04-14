@@ -483,7 +483,7 @@ void TradeWindow::Draw(IDirect3DDevice9*)
 {
     /* Alerts window */
     if (show_alert_window) {
-        const float& font_scale = ImGui::GetIO().FontGlobalScale;
+        const float& font_scale = ImGui::FontScale();
         ImGui::SetNextWindowSize(ImVec2(768.f * font_scale, 768.f * font_scale), ImGuiCond_FirstUseEver);
         if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
             DrawAlertsWindowContent(true);
@@ -502,7 +502,7 @@ void TradeWindow::Draw(IDirect3DDevice9*)
         return;
     }
     /* Search bar header */
-    const float& font_scale = ImGui::GetIO().FontGlobalScale;
+    const float& font_scale = ImGui::FontScale();
     const float btn_width = 80.0f * font_scale;
     const float search_bar_width = ImGui::GetContentRegionAvail().x - btn_width * 4 - ImGui::GetStyle().ItemInnerSpacing.x * 7;
     if (GetInKamadanAE1(false) || GetInAscalonAE1(false)) {
@@ -698,7 +698,7 @@ void TradeWindow::DrawChatSettings(const bool ownwindow)
     ImGui::Checkbox("Apply trade filters to local trade messages", &filter_local_trade);
     ImGui::ShowHelp("If enabled, only trade messages matching your alerts will be shown in chat");
     if (!ownwindow) {
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 120.f * ImGui::GetIO().FontGlobalScale, 0);
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 120.f * ImGui::FontScale(), 0);
         if (ImGui::Button("Show Trade Alerts")) {
             show_alert_window = !show_alert_window;
         }

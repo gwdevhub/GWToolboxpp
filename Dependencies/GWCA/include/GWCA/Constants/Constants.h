@@ -138,7 +138,7 @@ namespace GW {
             MargridTheSly, Zenmai, Olias, Razah, MOX, KeiranThackeray, Jora,
             PyreFierceshot, Anton, Livia, Hayda, Kahmu, Gwen, Xandra, Vekk,
             Ogden, Merc1, Merc2, Merc3, Merc4, Merc5, Merc6, Merc7, Merc8,
-            Miku, ZeiRi, Devona, GhostofAlthea, Count
+            Miku, ZeiRi, Devona, Count
         };
 
         enum class MaterialSlot : uint32_t {
@@ -157,49 +157,6 @@ namespace GW {
             BronzeZCoin, SilverZCoin, GoldZCoin,
 
             Count
-        };
-
-        constexpr std::array HeroProfs = {
-            Profession::None,
-            Profession::Mesmer, // Norgu
-            Profession::Warrior,// Goren
-            Profession::Monk, // Tahlkora
-            Profession::Necromancer, // Master Of Whispers
-            Profession::Ranger, // Acolyte Jin
-            Profession::Warrior, // Koss
-            Profession::Monk, // Dunkoro
-            Profession::Elementalist, // Acolyte Sousuke
-            Profession::Dervish, // Melonni
-            Profession::Elementalist, // Zhed Shadowhoof
-            Profession::Paragon, // General Morgahn
-            Profession::Ranger, // Magrid The Sly
-            Profession::Assassin, // Zenmai
-            Profession::Necromancer, // Olias
-            Profession::None, // Razah
-            Profession::Dervish, // MOX
-            Profession::Paragon, // Keiran Thackeray
-            Profession::Warrior, // Jora
-            Profession::Ranger, // Pyre Fierceshot
-            Profession::Assassin, // Anton
-            Profession::Necromancer, // Livia
-            Profession::Paragon, // Hayda
-            Profession::Dervish, // Kahmu
-            Profession::Mesmer, // Gwen
-            Profession::Ritualist, // Xandra
-            Profession::Elementalist, // Vekk
-            Profession::Monk, // Ogden
-            Profession::None, // Mercenary Hero 1
-            Profession::None, // Mercenary Hero 2
-            Profession::None, // Mercenary Hero 3
-            Profession::None, // Mercenary Hero 4
-            Profession::None, // Mercenary Hero 5
-            Profession::None, // Mercenary Hero 6
-            Profession::None, // Mercenary Hero 7
-            Profession::None, // Mercenary Hero 8
-            Profession::Assassin, // Miku
-            Profession::Ritualist, // Zei Ri
-            Profession::Warrior, // Devona
-            Profession::Mesmer // Ghost of Althea
         };
 
         enum class TitleID : uint32_t {
@@ -224,12 +181,6 @@ namespace GW {
         enum class Tick { NOT_READY, READY };
 
         enum class InterfaceSize { SMALL = -1, NORMAL, LARGE, LARGER };
-        namespace HealthbarHeight {
-            constexpr size_t Small = 24;
-            constexpr size_t Normal = 22;
-            constexpr size_t Large = 26;
-            constexpr size_t Larger = 30;
-        }
 
         // travel, region, districts
         enum class ServerRegion {
@@ -350,12 +301,5 @@ namespace GW {
             ritualist_symbol = 35,
             dervish_symbol = 36,
         };
-
-        namespace Camera {
-            constexpr float FIRST_PERSON_DIST = 2.f;
-            constexpr float DEFAULT_DIST = 750.f;
-        }
-
-        constexpr size_t SkillMax = 0xd69;
     }
 }

@@ -115,7 +115,7 @@ namespace {
         for (size_t i = 0; enc_string && enc_string[i] && offset < size_reqd - 1; i++) {
             offset += sprintf(&info_string[offset], "0x%X ", enc_string[i]);
         }
-        return ImGui::InputTextEx(label, nullptr, info_string.data(), info_string.size(), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
+        return ImGui::InputTextEx(label, nullptr, info_string.data(), info_string.size(), ImVec2(-160.f * ImGui::FontScale(), 0), ImGuiInputTextFlags_ReadOnly);
     }
 
     bool InfoField(const char* label, const char* fmt, ...)
@@ -126,7 +126,7 @@ namespace {
         vsnprintf(info_string, _countof(info_string), fmt, vl);
         info_string[127] = 0;
         va_end(vl);
-        return ImGui::InputTextEx(label, nullptr, info_string, _countof(info_string), ImVec2(-160.f * ImGui::GetIO().FontGlobalScale, 0), ImGuiInputTextFlags_ReadOnly);
+        return ImGui::InputTextEx(label, nullptr, info_string, _countof(info_string), ImVec2(-160.f * ImGui::FontScale(), 0), ImGuiInputTextFlags_ReadOnly);
     }
 
     void GetIdsFromFileId(const uint32_t param_1, short* param_2)
@@ -158,14 +158,29 @@ namespace {
         InfoField("Map Type", type);
         EncInfoField("Map File ID", mapfile);
         ImGui::ShowHelp("Map file is unique for each pathing map (e.g. used by minimap).\nMany different maps use the same map file");
-        if (ImGui::TreeNodeEx("Advanced", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            const GW::AreaInfo* map_info = GW::Map::GetMapInfo(map_id);
+        const GW::AreaInfo* map_info = GW::Map::GetMapInfo(map_id);
+        if (map_info) {
+            static wchar_t name_enc[8];
+            if (GW::UI::UInt32ToEncStr(map_info->name_id, name_enc, 8)) {
+                EncInfoField("Name Enc", name_enc);
+                InfoField("Name", "%s", Resources::DecodeStringId(map_info->name_id)->string().c_str());
+            }
+
+            static wchar_t desc_enc[8];
+            if (GW::UI::UInt32ToEncStr(map_info->description_id, desc_enc, 8)) {
+                EncInfoField("Desc Enc", desc_enc);
+                InfoField("Desc", "%s", Resources::DecodeStringId(map_info->description_id)->string().c_str());
+            }
+        }
+
+        if (ImGui::TreeNodeEx("Advanced##map_advanced", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            
             if (map_info) {
                 InfoField("Campaign", "%d", map_info->campaign);
                 InfoField("Continent", "%d", map_info->continent);
                 InfoField("Region", "%d", map_info->region);
                 InfoField("Type", "%d", map_info->type);
-                InfoField("Mission Complete?", "%d", ToolboxUtils::GetMissionState(GW::Map::GetMapID(), GW::PartyMgr::GetIsPartyInHardMode()));
+                InfoField("Mission Complete?", "%d", ToolboxUtils::GetMissionState(map_id, GW::PartyMgr::GetIsPartyInHardMode()));
                 InfoField("Flags", "0x%X", map_info->flags);
                 InfoField("Thumbnail ID", "%d", map_info->thumbnail_id);
                 const auto m = GW::GetMapContext();
@@ -183,14 +198,6 @@ namespace {
                     pos.y = static_cast<float>(map_info->icon_start_y_dupe + (map_info->icon_end_y_dupe - map_info->icon_start_y_dupe) / 2);
                 }
                 InfoField("Calculated Pos", "%.2f, %.2f", pos.x, pos.y);
-                static wchar_t name_enc[8];
-                if (GW::UI::UInt32ToEncStr(map_info->name_id, name_enc, 8)) {
-                    EncInfoField("Name Enc", name_enc);
-                }
-                static wchar_t desc_enc[8];
-                if (GW::UI::UInt32ToEncStr(map_info->description_id, desc_enc, 8)) {
-                    EncInfoField("Desc Enc", desc_enc);
-                }
             }
             ImGui::TreePop();
         }

@@ -21,11 +21,8 @@ namespace ImGui {
 
     IMGUI_API void DrawConfirmDialog();
 
-    // Push font, but with a different size to the default one.
-    IMGUI_API void PushFont(ImFont* font, float font_size);
-
     // If we're using a draw list that isn't the current window one, we need to explicitly state it
-    IMGUI_API void PushFont(ImFont* font, ImDrawList* draw_list, float font_size = -1.f);
+    IMGUI_API void PushFont(ImFont* font, ImDrawList* draw_list, float font_size = 0.f);
     // Remove a font added to an explicit draw list
     IMGUI_API void PopFont(ImDrawList* draw_list);
 
@@ -39,7 +36,7 @@ namespace ImGui {
 
     IMGUI_API float GetIndent();
 
-    // Shorthand for ImGui::GetIO().GlobalFontScale
+    // Shorthand for ImGui::GetStyle().FontScaleMain
     IMGUI_API const float& FontScale();
     // Initialise available width etc for adding spaced elements. Must be called before calling NextSpacedElement()
     IMGUI_API void StartSpacedElements(float width, bool include_font_scaling = true);
@@ -74,14 +71,14 @@ namespace ImGui {
     IMGUI_API void ClosePopup(const char* popup_id);
 
     // Button with 1 or more icon textures overlaid
-    IMGUI_API bool CompositeIconButton(const char* label, const ImTextureID* icons, size_t icons_len, const ImVec2& size, ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ImVec2& icon_size = {0.f, 0.f}, const ImVec2& uv0 = {0.f, 0.f},
+    IMGUI_API bool CompositeIconButton(const char* label, ImTextureID* icons, size_t icons_len, const ImVec2& size, ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ImVec2& icon_size = {0.f, 0.f}, const ImVec2& uv0 = {0.f, 0.f},
                                        ImVec2 uv1 = {0.f, 0.f});
 
     IMGUI_API bool ColorButtonPicker(const char*, Color*, ImGuiColorEditFlags = 0);
     // Add cropped image to current window
     IMGUI_API void ImageCropped(ImTextureID user_texture_id, const ImVec2& size);
 
-    IMGUI_API void ImageFit(const ImTextureID user_texture_id, const ImVec2& size_of_container);
+    IMGUI_API void ImageFit(ImTextureID user_texture_id, const ImVec2& size_of_container);
 
     // Shim to cast
     IMGUI_API bool IsKeyDown(long key);

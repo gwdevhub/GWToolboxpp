@@ -12,24 +12,7 @@
 #include "fonts/fontawesome5.h"
 
 namespace {
-    ImFont* font_widget_large = nullptr;
-    ImFont* font_widget_small = nullptr;
-    ImFont* font_widget_label = nullptr;
-    ImFont* font_header1 = nullptr;
-    ImFont* font_header2 = nullptr;
-    ImFont* font_text = nullptr;
-
-    std::vector<ImFont*> GetFonts()
-    {
-        return {
-            font_text,
-            font_header2,
-            font_header1,
-            font_widget_label,
-            font_widget_small,
-            font_widget_large
-        };
-    }
+    ImFont* loaded_font = nullptr;
 
     bool fonts_loading = false;
     bool fonts_loaded = false;
@@ -40,112 +23,6 @@ namespace {
     };
 
     const std::vector<ImWchar> fontawesome5_glyph_ranges = {ICON_MIN_FA, ICON_MAX_FA, 0};
-
-    [[maybe_unused]] ImFontGlyphRangesBuilder GetGWGlyphRange()
-    {
-        ImFontGlyphRangesBuilder builder;
-
-        using GetGlyphRanges_pt = uint32_t*(*)();
-        GetGlyphRanges_pt GetGlyphRanges_Func = 0;
-        uintptr_t address = GW::Scanner::Find("\x50\x8d\x45\xc8\x50\x6a\x0d", "xxxxxxx", -0x5);
-        GetGlyphRanges_Func = (GetGlyphRanges_pt)GW::Scanner::FunctionFromNearCall(address);
-
-        uint32_t gw_glyph_range_count = 0xd; // Glyph ranges are in pairs
-
-        if (GetGlyphRanges_Func) {
-            const auto res = GetGlyphRanges_Func();
-            std::vector<ImWchar> ranges;
-            for (size_t i = 0, size = (gw_glyph_range_count * 2); i < size; i++) {
-                ranges.push_back(static_cast<ImWchar>(res[i]));
-            }
-            if (ranges.empty() || ranges.back()) {
-                ranges.push_back(0);
-            }
-            if (ranges[0] == 33) {
-                ranges[0] = 32;
-            }
-            builder.AddRanges(ranges.data());
-        }
-        return builder;
-    }
-
-    bool CreateFontTexture(ImFontAtlas* atlas)
-    {
-        // Upload texture to graphics system
-
-        auto device = GW::Render::GetDevice();
-
-        unsigned char* pixels;
-        int width, height, bytes_per_pixel;
-        atlas->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);
-
-        LPDIRECT3DTEXTURE9 new_texture = 0;
-        auto err = D3DERR_INVALIDDEVICE;
-        for (size_t i = 0; i < 3 && err != D3D_OK; i++) {
-            err = device->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &new_texture, nullptr);
-        }
-        if (err != D3D_OK)
-            return false;
-        D3DLOCKED_RECT tex_locked_rect = {0};
-        err = D3DERR_INVALIDDEVICE;
-        for (size_t i = 0; i < 3 && err != D3D_OK; i++) {
-            err = new_texture->LockRect(0, &tex_locked_rect, nullptr, 0);
-        }
-        if (err != D3D_OK) {
-            new_texture->Release();
-            return false;
-        }
-
-        for (int y = 0; y < height; y++)
-            memcpy((unsigned char*)tex_locked_rect.pBits + (size_t)tex_locked_rect.Pitch * y, pixels + (size_t)width * bytes_per_pixel * y, (size_t)width * bytes_per_pixel);
-        new_texture->UnlockRect(0);
-
-        LPDIRECT3DTEXTURE9 old_texture = (LPDIRECT3DTEXTURE9)atlas->TexID;
-        if (old_texture) {
-            old_texture->Release();
-        }
-        atlas->TexID = new_texture;
-        return true;
-    }
-
-
-    using ImGui_ImplDX9_InvalidateDeviceObjects_pt = void(*)();
-    ImGui_ImplDX9_InvalidateDeviceObjects_pt ImGui_ImplDX9_InvalidateDeviceObjects_Ret = nullptr, ImGui_ImplDX9_InvalidateDeviceObjects_Func = nullptr;
-
-    using ImGui_ImplDX9_CreateFontsTexture_pt = bool(*)();
-    ImGui_ImplDX9_CreateFontsTexture_pt ImGui_ImplDX9_CreateFontsTexture_Ret = nullptr, ImGui_ImplDX9_CreateFontsTexture_Func = nullptr;
-
-    // Also create any missing fonts from our own array
-    bool OnImGui_ImplDX9_CreateFontsTexture()
-    {
-        GW::Hook::EnterHook();
-        bool ret = FontLoader::CreateFontTextures() && ImGui_ImplDX9_CreateFontsTexture_Ret();
-        GW::Hook::LeaveHook();
-        return ret;
-    }
-
-    // Also release any fonts from our own array
-    void OnImGui_ImplDX9_InvalidateDeviceObjects()
-    {
-        GW::Hook::EnterHook();
-        FontLoader::ReleaseFontTextures();
-        ImGui_ImplDX9_InvalidateDeviceObjects_Ret();
-        GW::Hook::LeaveHook();
-    }
-
-    void Hook_ImGui_ImplDX9_Functions()
-    {
-        if (!ImGui_ImplDX9_InvalidateDeviceObjects_Ret) {
-            ImGui_ImplDX9_InvalidateDeviceObjects_Func = ImGui_ImplDX9_InvalidateDeviceObjects;
-            GW::Hook::CreateHook((void**)&ImGui_ImplDX9_InvalidateDeviceObjects_Func, OnImGui_ImplDX9_InvalidateDeviceObjects, (void**)&ImGui_ImplDX9_InvalidateDeviceObjects_Ret);
-            GW::Hook::EnableHooks(ImGui_ImplDX9_InvalidateDeviceObjects_Func);
-        }
-        if (!ImGui_ImplDX9_CreateFontsTexture_Ret) {
-            ImGui_ImplDX9_CreateFontsTexture_Func = ImGui_ImplDX9_CreateFontsTexture;
-            GW::Hook::CreateHook((void**)&ImGui_ImplDX9_CreateFontsTexture_Func, OnImGui_ImplDX9_CreateFontsTexture, (void**)&ImGui_ImplDX9_CreateFontsTexture_Ret);
-            GW::Hook::EnableHooks(ImGui_ImplDX9_CreateFontsTexture_Func);
-        }
-    }
 
     constexpr std::vector<ImWchar> ConstGetGlyphRangesLatin()
     {
@@ -255,31 +132,6 @@ namespace {
         return intersection;
     }
 
-    void ReleaseFontTexture(ImFont* font)
-    {
-        if (!font || !font->ContainerAtlas)
-            return;
-        LPDIRECT3DTEXTURE9 texture = (LPDIRECT3DTEXTURE9)font->ContainerAtlas->TexID;
-        if (texture) {
-            texture->Release();
-            font->ContainerAtlas->SetTexID(0);
-        }
-    }
-
-    void ReleaseFont(ImFont* font)
-    {
-        if (!font) return;
-        if (font->ContainerAtlas && font->ContainerAtlas == ImGui::GetIO().Fonts)
-            return;
-        ReleaseFontTexture(font);
-        if (font->ContainerAtlas) {
-            IM_DELETE(font->ContainerAtlas);
-        }
-        else {
-            IM_DELETE(font);
-        }
-    }
-
     std::vector<FontData>& GetFontData()
     {
         static std::vector<FontData> font_data;
@@ -305,162 +157,50 @@ namespace {
         return font_data;
     }
 
-
+    // Build a single font by merging all available font files.
     ImFont* BuildFont(const float size, const bool default_only = false)
     {
-        const auto atlas = IM_NEW(ImFontAtlas);
+        ImFontAtlas* atlas = ImGui::GetIO().Fonts;
 
-        ImFontAtlasFlags flags = 0;
-        flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;
-        flags |= ImFontAtlasFlags_NoMouseCursors;
-        flags |= ImFontAtlasFlags_NoBakedLines;
-
-        atlas->Flags = flags;
-
-        static ImFontConfig cfg;
+        ImFontConfig cfg;
         cfg.PixelSnapH = true;
-        cfg.OversampleH = 1; // OversampleH = 2 for base text size (harder to read if OversampleH < 2)
+        cfg.OversampleH = 1;
         cfg.OversampleV = 1;
-
-        // Always load the default font
         cfg.MergeMode = false;
 
         if (default_only) {
-            atlas->AddFontFromMemoryCompressedTTF(toolbox_default_font_compressed_data, toolbox_default_font_compressed_size, size, &cfg, toolbox_default_font_glyph_ranges);
-        }
-        else {
-            // Load more fonts from disk, overriding glyph ranges from original
-            for (const auto& [glyph_ranges, font_name] : GetFontData()) {
-                size_t data_size;
-
-                ASSERT(!font_name.empty() && "Font name is empty, this shouldn't happen. Contact the developers.");
-                const auto font_name_str = TextUtils::WStringToString(font_name);
-                void* data = ImFileLoadToMemory(font_name_str.c_str(), "rb", &data_size, 0);
-
-                if (!data)
-                    continue; // Failed to load data from disk
-                atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, glyph_ranges.data());
-                cfg.MergeMode = true;
-            }
-        }
-        if (size <= 20.f) {
+            auto* font = atlas->AddFontFromMemoryCompressedTTF(toolbox_default_font_compressed_data, toolbox_default_font_compressed_size, size, &cfg, toolbox_default_font_glyph_ranges);
             cfg.MergeMode = true;
             atlas->AddFontFromMemoryCompressedTTF(fontawesome5_compressed_data, fontawesome5_compressed_size, size, &cfg, fontawesome5_glyph_ranges.data());
+            cfg.MergeMode = false;
+            return font;
         }
-        atlas->Build();
-        unsigned char* unused = nullptr;
-        // Preload the data for this font
-        atlas->GetTexDataAsRGBA32(&unused, nullptr, nullptr, nullptr);
-        return atlas->Fonts.back();
+
+        ImFont* font = nullptr;
+        // Load fonts from disk, merging glyph ranges
+        for (const auto& [glyph_ranges, font_name] : GetFontData()) {
+            size_t data_size;
+
+            ASSERT(!font_name.empty() && "Font name is empty, this shouldn't happen. Contact the developers.");
+            const auto font_name_str = TextUtils::WStringToString(font_name);
+            void* data = ImFileLoadToMemory(font_name_str.c_str(), "rb", &data_size, 0);
+
+            if (!data)
+                continue; // Failed to load data from disk
+            font = atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, glyph_ranges.data());
+            cfg.MergeMode = true;
+        }
+
+        // Merge fontawesome icons
+        cfg.MergeMode = true;
+        atlas->AddFontFromMemoryCompressedTTF(fontawesome5_compressed_data, fontawesome5_compressed_size, size, &cfg, fontawesome5_glyph_ranges.data());
+
+        return font;
     }
 
-    // Load fonts into memory; run on a separate thread.
-    void LoadFontsThread()
-    {
-        Hook_ImGui_ImplDX9_Functions();
-
-        fonts_loading = true;
-        fonts_loaded = false;
-
-        // Language decides glyph range
-        //const auto current_language = (GW::Constants::Language)GW::UI::GetPreference(GW::UI::NumberPreference::TextLanguage);
-
-        while (!GImGui) {
-            Sleep(16);
-        }
-
-        printf("Loading fonts\n");
-
-        struct FontPending {
-            ImFont** dst_font;
-            FontLoader::FontSize font_size;
-            ImFont* src_font = nullptr;
-
-            FontPending(ImFont** dst_font, FontLoader::FontSize font_size)
-                : dst_font(dst_font),
-                  font_size(font_size) {}
-
-            void build(const bool default_font_only = false)
-            {
-                src_font = BuildFont(static_cast<float>(font_size), default_font_only);
-            }
-        };
-
-        const auto assign_fonts = [](const std::vector<FontPending>& fonts_built) {
-            ImGui_ImplDX9_InvalidateDeviceObjects();
-            for (auto& pending : fonts_built) {
-                ReleaseFont(*pending.dst_font);
-            }
-            IM_DELETE(ImGui::GetIO().Fonts);
-            for (auto& pending : fonts_built) {
-                *pending.dst_font = pending.src_font;
-            }
-            ImGui::GetIO().Fonts = fonts_built.at(0).src_font->ContainerAtlas;
-        };
-
-        FontPending default_font = {&font_text, FontLoader::FontSize::text};
-        default_font.build(true);
-
-        Resources::EnqueueDxTask([assign_fonts, default_font](IDirect3DDevice9*) {
-            assign_fonts({default_font});
-            printf("Loaded default font\n");
-            fonts_loaded = true;
-            fonts_loading = false;
-        });
-
-        auto all_fonts = std::vector<FontPending>{
-            {&font_text, FontLoader::FontSize::text},
-            {&font_header2, FontLoader::FontSize::header2},
-            {&font_header1, FontLoader::FontSize::header1},
-            {&font_widget_label, FontLoader::FontSize::widget_label},
-            {&font_widget_small, FontLoader::FontSize::widget_small},
-            {&font_widget_large, FontLoader::FontSize::widget_large}
-        };
-        for (auto& pending : all_fonts) {
-            pending.build();
-        }
-
-        Resources::EnqueueDxTask([assign_fonts, fonts = std::move(all_fonts)](IDirect3DDevice9*) {
-            assign_fonts(fonts);
-            printf("Loaded all fonts\n");
-        });
-    }
 }
 
 namespace FontLoader {
-    bool ReleaseFontTextures()
-    {
-        if (!GImGui)
-            return false;
-
-        for (const auto font : GetFonts()) {
-            if (font && font->ContainerAtlas == ImGui::GetIO().Fonts)
-                continue;
-            ReleaseFontTexture(font);
-        }
-        return true;
-    }
-
-    bool CreateFontTextures()
-    {
-        if (!GImGui)
-            return false;
-        if (fonts_loading)
-            return false;
-
-        for (const auto font : GetFonts()) {
-            if (!(font && font->ContainerAtlas))
-                continue;
-            if (font->ContainerAtlas == ImGui::GetIO().Fonts)
-                continue; // Fallback function will handle this one
-            if (font->ContainerAtlas->TexID)
-                continue; // Already generated
-            if (!CreateFontTexture(font->ContainerAtlas))
-                return false;
-        }
-        return true;
-    }
-
     // Has LoadFonts() finished?
     bool FontsLoaded()
     {
@@ -468,7 +208,7 @@ namespace FontLoader {
     }
 
     // Loads fonts asynchronously. CJK font files can be over 20mb in size!
-    void LoadFonts([[maybe_unused]] const bool force) // todo: reload fonts when this is true
+    void LoadFonts([[maybe_unused]] const bool force)
     {
         if (fonts_loading) {
             return;
@@ -481,71 +221,33 @@ namespace FontLoader {
         fonts_loading = true;
         fonts_loaded = false;
 
-        Resources::EnqueueWorkerTask(LoadFontsThread);
+        constexpr float base_size = static_cast<float>(FontSize::text);
+
+        Resources::EnqueueDxTask([base_size](IDirect3DDevice9*) {
+            loaded_font = BuildFont(base_size, true);
+            fonts_loaded = true;
+            fonts_loading = false;
+            printf("Loaded default font\n");
+        });
+
+        Resources::EnqueueDxTask([base_size](IDirect3DDevice9*) {
+            auto* font = BuildFont(base_size);
+            if (font) {
+                loaded_font = font;
+            }
+            printf("Loaded all fonts\n");
+        });
     }
 
     void Terminate()
     {
-        ImFont** fonts[] = {
-            &font_widget_large,
-            &font_widget_small,
-            &font_widget_label,
-            &font_header1,
-            &font_header2,
-            &font_text
-        };
-
-
-        for (auto font : fonts) {
-            if (*font && (*font)->ContainerAtlas == ImGui::GetIO().Fonts)
-                continue;
-            ReleaseFont(*font);
-            *font = nullptr;
-        }
+        loaded_font = nullptr;
     }
 
-    ImFont* GetFontByPx(float size_in_px, const bool include_global_font_scale)
+    ImFont* GetFont()
     {
-        if (include_global_font_scale)
-            size_in_px *= ImGui::GetIO().FontGlobalScale;
-
-        const auto fonts = GetFonts(); // Smallest to largest!!
-        ImFont* chosen = nullptr;
-        for (auto font : fonts) {
-            if (!(font && font->IsLoaded()))
-                continue;
-            chosen = font;
-            if (font->FontSize >= size_in_px)
-                break;
-        }
-        if (!chosen)
-            chosen = ImGui::GetIO().Fonts->Fonts[0];
-        return chosen;
-    }
-
-    ImFont* GetFont(const FontSize size)
-    {
-        ImFont* font = [](const FontSize size) -> ImFont* {
-            switch (size) {
-                case FontSize::widget_large:
-                    return font_widget_large;
-                case FontSize::widget_small:
-                    return font_widget_small;
-                case FontSize::widget_label:
-                    return font_widget_label;
-                case FontSize::header1:
-                    return font_header1;
-                case FontSize::header2:
-                    return font_header2;
-                case FontSize::text:
-                    return font_text;
-                default:
-                    return nullptr;
-            }
-        }(size);
-
-        if (font && font->IsLoaded()) {
-            return font;
+        if (loaded_font && loaded_font->IsLoaded()) {
+            return loaded_font;
         }
 
         const auto& io = ImGui::GetIO();

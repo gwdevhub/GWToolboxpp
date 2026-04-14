@@ -263,7 +263,7 @@ namespace {
 
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
         ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
-        const auto size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
+        const auto size = ImVec2(250.0f * ImGui::FontScale(), 0);
         ImGui::Separator();
         const bool set_active = ImGui::Button("Set active quest", size);
         const bool travel = ImGui::Button("Travel to nearest outpost", size);
@@ -304,7 +304,7 @@ namespace {
 
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
         ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
-        const auto size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
+        const auto size = ImVec2(250.0f * ImGui::FontScale(), 0);
         ImGui::Separator();
 
         const bool travel = ImGui::Button("Travel to nearest outpost", size);

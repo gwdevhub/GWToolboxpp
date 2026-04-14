@@ -45,6 +45,9 @@
 //---- Include imgui_user.h at the end of imgui.h as a convenience
 //#define IMGUI_INCLUDE_IMGUI_USER_H
 
+//---- Use void* as ImTextureID so we can pass IDirect3DTexture9* directly without casts.
+#define ImTextureID void*
+
 //---- Pack colors to BGRA8 instead of RGBA8 (to avoid converting from one to another)
 #define IMGUI_USE_BGRA_PACKED_COLOR
 #define IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT struct ImDrawVert { ImVec2 pos; float z = 0.0f; ImU32 col; ImVec2 uv; }
@@ -111,5 +114,4 @@ namespace ImGui
 }
 */
 
-#define IMGUI_DISABLE_OBSOLETE_KEYIO 1 // disable old IO api
 #define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD 1 // no gamepad

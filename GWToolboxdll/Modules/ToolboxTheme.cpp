@@ -6,6 +6,7 @@
 #include <Modules/ToolboxTheme.h>
 
 #include "GWToolbox.h"
+#include <ImGuiAddons.h>
 
 constexpr auto IniFilename = L"Theme.ini";
 // @Enhancement: Allow users to save different layouts by changing this variable in settings
@@ -88,7 +89,7 @@ void ToolboxTheme::LoadSettings(ToolboxIni* ini)
         return;
     }
 
-    font_global_scale = static_cast<float>(inifile->GetDoubleValue(IniSection, "FontGlobalScale", font_global_scale));
+    font_scale_main = static_cast<float>(inifile->GetDoubleValue(IniSection, "FontGlobalScale", font_scale_main));
 
     ini_style.Alpha = static_cast<float>(inifile->GetDoubleValue(IniSection, "GlobalAlpha", ini_style.Alpha));
     ini_style.Alpha = std::min(std::max(ini_style.Alpha, 0.2f), 1.0f); // clamp to [0.2, 1.0]
@@ -170,7 +171,7 @@ void ToolboxTheme::LoadUILayout()
     // Copy theme over
     ImGui::GetStyle() = ini_style;
     // Copy window positions over
-    ImGui::GetIO().FontGlobalScale = font_global_scale;
+    ImGui::GetStyle().FontScaleMain = font_scale_main;
 
     const auto ini = GetLayoutIni();
     const auto window_ini_section = "Windows";
@@ -284,7 +285,7 @@ void ToolboxTheme::SaveSettings(ToolboxIni* ini)
     const ImGuiStyle& style = ImGui::GetStyle();
     const auto inifile = GetThemeIni(false);
 
-    inifile->SetDoubleValue(IniSection, "FontGlobalScale", ImGui::GetIO().FontGlobalScale);
+    inifile->SetDoubleValue(IniSection, "FontGlobalScale", ImGui::FontScale());
     inifile->SetDoubleValue(IniSection, "GlobalAlpha", style.Alpha);
     inifile->SetDoubleValue(IniSection, "WindowPaddingX", style.WindowPadding.x);
     inifile->SetDoubleValue(IniSection, "WindowPaddingY", style.WindowPadding.y);
@@ -333,7 +334,7 @@ void ToolboxTheme::DrawSettingsInternal()
     ImGui::Text("Note: theme is stored in 'Theme.ini' in settings folder. You can share the file or parts of it with other people.");
     ImGui::DragFloat("Global Alpha", &style.Alpha, 0.005f, 0.20f, 1.0f, "%.2f");
     style.Alpha = std::clamp(style.Alpha, 0.2f, 1.f);
-    ImGui::DragFloat("Global Font Scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.1f");
+    ImGui::DragFloat("Global Font Scale", &ImGui::GetStyle().FontScaleMain, 0.005f, 0.3f, 2.0f, "%.2f");
     ImGui::Text("Sizes");
     ImGui::SliderFloat2("Window Padding", reinterpret_cast<float*>(&style.WindowPadding), 0.0f, 20.0f, "%.0f");
     ImGui::SliderFloat("Window Rounding", &style.WindowRounding, 0.0f, 16.0f, "%.0f");

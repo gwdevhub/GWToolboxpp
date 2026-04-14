@@ -21,7 +21,7 @@ void DoorMonitorWindow::Draw(IDirect3DDevice9*)
         return ImGui::End();
     }
 
-    const float colWidth = 100.0f * ImGui::GetIO().FontGlobalScale;
+    const float colWidth = 100.0f * ImGui::FontScale();
     float offset = 0.0f;
 
     ImGui::Text("Door ID");

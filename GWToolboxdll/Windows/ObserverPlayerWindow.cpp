@@ -217,7 +217,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
             }
         }
 
-        const float global = ImGui::GetIO().FontGlobalScale;
+        const float global = ImGui::FontScale();
         text_long = 220.0f * global;
         text_medium = 150.0f * global;
         text_short = 80.0f * global;

@@ -711,13 +711,6 @@ namespace {
 
     GW::HookEntry ChatCmd_HookEntry;
 
-
-    bool GetIsPreSearing()
-    {
-        const GW::AreaInfo* i = GW::Map::GetCurrentMapInfo();
-        return i && i->region == GW::Region::Region_Presearing;
-    }
-
     // rollover: the timestamp when this quest will be replaced by the next one.
     // Pass 0 to indicate the current quest (no date shown).
     void PrintDaily(const wchar_t* quest_type_enc, const wchar_t* quest_name_enc, const time_t rollover, const bool as_wiki_link = true)
@@ -791,7 +784,7 @@ namespace {
         const time_t query_time = is_tomorrow ? now + 86400 : now;
         std::wstring buf;
 
-        if (GetIsPreSearing()) {
+        if (GW::Map::IsPreSearing()) {
             const auto [quest, rollover] = DailyQuests::GetNicholasSandford(query_time);
             buf = std::format(L"\x108\x107{} \x1\x2{}", 5, quest->GetQuestNameEnc());
             PrintDaily(L"\x108\x107Nicholas Sandford\x1", buf.c_str(), is_tomorrow ? rollover : 0, false);
@@ -878,7 +871,7 @@ namespace {
 
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
         ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
-        const auto size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
+        const auto size = ImVec2(250.0f * ImGui::FontScale(), 0);
         ImGui::Separator();
         bool travel = ImGui::Button("Travel to nearest outpost", size);
         bool wiki = ImGui::Button("Guild Wars Wiki", size);
@@ -904,7 +897,7 @@ namespace {
 
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
         ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
-        const auto size = ImVec2(250.0f * ImGui::GetIO().FontGlobalScale, 0);
+        const auto size = ImVec2(250.0f * ImGui::FontScale(), 0);
         if (has_quest) {
             ImGui::TextColored(incomplete_color, you_have_this_quest);
         }
@@ -1027,19 +1020,19 @@ void DailyQuests::Draw(IDirect3DDevice9*)
         return ImGui::End();
     }
     float offset = 0.0f;
-    const float short_text_width = 120.0f * ImGui::GetIO().FontGlobalScale;
-    const float long_text_width = text_width * ImGui::GetIO().FontGlobalScale;
-    const float zm_width = 170.0f * ImGui::GetIO().FontGlobalScale;
-    const float zb_width = 185.0f * ImGui::GetIO().FontGlobalScale;
-    const float zc_width = 135.0f * ImGui::GetIO().FontGlobalScale;
-    const float zv_width = 200.0f * ImGui::GetIO().FontGlobalScale;
-    const float ws_width = 180.0f * ImGui::GetIO().FontGlobalScale;
-    const float nicholas_width = 180.0f * ImGui::GetIO().FontGlobalScale;
-    const float wbe_width = 145.0f * ImGui::GetIO().FontGlobalScale;
-    const float vanguard_width = 180.0f * ImGui::GetIO().FontGlobalScale;
-    const float sandford_width = 200.0f * ImGui::GetIO().FontGlobalScale;
+    const float short_text_width = 120.0f * ImGui::FontScale();
+    const float long_text_width = text_width * ImGui::FontScale();
+    const float zm_width = 170.0f * ImGui::FontScale();
+    const float zb_width = 185.0f * ImGui::FontScale();
+    const float zc_width = 135.0f * ImGui::FontScale();
+    const float zv_width = 200.0f * ImGui::FontScale();
+    const float ws_width = 180.0f * ImGui::FontScale();
+    const float nicholas_width = 180.0f * ImGui::FontScale();
+    const float wbe_width = 145.0f * ImGui::FontScale();
+    const float vanguard_width = 180.0f * ImGui::FontScale();
+    const float sandford_width = 200.0f * ImGui::FontScale();
 
-    const bool show_presearing = GetIsPreSearing() && show_presearing_dailies_in_window;
+    const bool show_presearing = GW::Map::IsPreSearing() && show_presearing_dailies_in_window;
 
     ImGui::Text("Date");
     ImGui::SameLine(offset += short_text_width);
@@ -1086,7 +1079,7 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     }
     ImGui::NewLine();
     ImGui::Separator();
-    ImGui::BeginChild("dailies_scroll", ImVec2(0, -1 * (40.0f * ImGui::GetIO().FontGlobalScale) - ImGui::GetStyle().ItemInnerSpacing.y));
+    ImGui::BeginChild("dailies_scroll", ImVec2(0, -1 * (40.0f * ImGui::FontScale()) - ImGui::GetStyle().ItemInnerSpacing.y));
     time_t unix = time(nullptr);
     uint32_t idx = 0;
 
@@ -1514,7 +1507,7 @@ void DailyQuests::Initialize()
          {L"weekly", CmdWeeklyBonus},
          {L"today",
           [](GW::HookStatus*, const wchar_t*, const int, const LPWSTR*) -> void {
-              if (GetIsPreSearing()) {
+              if (GW::Map::IsPreSearing()) {
                   GW::Chat::SendChat('/', "vanguard");
                   GW::Chat::SendChat('/', "nicholas");
                   return;
@@ -1536,7 +1529,7 @@ void DailyQuests::Initialize()
               GW::Chat::SendChat('/', "today");
           }},
          {L"tomorrow", [](GW::HookStatus*, const wchar_t*, const int, const LPWSTR*) -> void {
-              if (GetIsPreSearing()) {
+              if (GW::Map::IsPreSearing()) {
                   GW::Chat::SendChat('/', "vanguard tomorrow");
                   GW::Chat::SendChat('/', "nicholas tomorrow");
                   return;
