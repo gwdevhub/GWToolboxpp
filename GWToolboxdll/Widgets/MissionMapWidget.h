@@ -43,4 +43,10 @@ public:
     static GW::UI::Frame* GetFrame();
     static float GetPxToGame();
     static float GetZoom();
+
+    // Draw callback system — registered callbacks are invoked with D3D render state
+    // (scissor, blend, transforms) already configured for mission map rendering
+    using DrawCallback = void(*)(IDirect3DDevice9*);
+    static void AddDrawCallback(DrawCallback cb);
+    static void RemoveDrawCallback(DrawCallback cb);
 };

@@ -24,6 +24,7 @@ public:
     [[nodiscard]] const char* Name() const override { return "Vanquish Overlay"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_SKULL; }
 
+    void Initialize() override;
     void Draw(IDirect3DDevice9* pDevice) override;
     void Update(float delta) override;
     void Terminate() override;

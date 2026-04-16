@@ -22,6 +22,8 @@ namespace {
     bool draw_all_terrain_lines = false;
     bool draw_all_minimap_lines = true;
 
+    std::vector<MissionMapWidget::DrawCallback> draw_callbacks;
+
     // Pixel-to-game-unit scale — converts pixel thickness to game units
     float cached_px_to_game = 1.f;
 
@@ -243,6 +245,10 @@ namespace {
         dx_device->SetTransform(D3DTS_PROJECTION, &ortho);
 
         minimap_lines.Render(dx_device);
+
+        for (const auto& cb : draw_callbacks) {
+            cb(dx_device);
+        }
     }
 
     void EnqueueMinimapLines(GW::Constants::MapID map_id)
@@ -347,3 +353,6 @@ GW::Vec2f MissionMapWidget::GetBottomRight() { return mission_map_bottom_right; 
 GW::UI::Frame* MissionMapWidget::GetFrame() { return mission_map_frame; }
 float MissionMapWidget::GetPxToGame() { return cached_px_to_game; }
 float MissionMapWidget::GetZoom() { return mission_map_zoom; }
+
+void MissionMapWidget::AddDrawCallback(DrawCallback cb) { draw_callbacks.push_back(cb); }
+void MissionMapWidget::RemoveDrawCallback(DrawCallback cb) { std::erase(draw_callbacks, cb); }

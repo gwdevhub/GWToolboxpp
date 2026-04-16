@@ -112,8 +112,6 @@ namespace {
     GW::Constants::MapID border_map_id = static_cast<GW::Constants::MapID>(0);
     float border_cached_zoom = 0.0f;
 
-    const D3DMATRIX IDENTITY_MATRIX = {{1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f}};
-
     bool IsFrontierEdge(int idx)
     {
         if (!explored_cells) return false;
@@ -615,41 +613,11 @@ namespace {
         ImGui::End();
         ImGui::PopStyleVar(2);
     }
-} // namespace
+    void OnMissionMapDraw(IDirect3DDevice9* dx_device)
+    {
+        if (!should_draw) return;
 
-void VanquishMapOverlayWidget::Draw(IDirect3DDevice9* dx_device)
-{
-    if (!visible || !MissionMapWidget::IsRenderReady() || !ToolboxUtils::IsExplorable()) return;
-
-    const auto& gameToScreen = MissionMapWidget::GetGameToScreenMatrix();
-    const auto mm_top_left = MissionMapWidget::GetTopLeft();
-    const auto mm_bottom_right = MissionMapWidget::GetBottomRight();
-
-    if (should_draw) {
-        const D3DStateGuard guard(dx_device);
-
-        dx_device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
-        dx_device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-        dx_device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-        dx_device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-        dx_device->SetRenderState(D3DRS_LIGHTING, FALSE);
-        dx_device->SetRenderState(D3DRS_ZENABLE, FALSE);
-
-        RECT scissorRect;
-        scissorRect.left = static_cast<LONG>(ceilf(mm_top_left.x));
-        scissorRect.top = static_cast<LONG>(ceilf(mm_top_left.y));
-        scissorRect.right = static_cast<LONG>(floorf(mm_bottom_right.x));
-        scissorRect.bottom = static_cast<LONG>(floorf(mm_bottom_right.y));
-        dx_device->SetScissorRect(&scissorRect);
-
-        D3DVIEWPORT9 vp;
-        dx_device->GetViewport(&vp);
-        const D3DMATRIX ortho = MakeOrthoProjection(static_cast<float>(vp.Width), static_cast<float>(vp.Height));
-
-        dx_device->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
-        dx_device->SetTransform(D3DTS_WORLD, &gameToScreen);
-        dx_device->SetTransform(D3DTS_VIEW, &IDENTITY_MATRIX);
-        dx_device->SetTransform(D3DTS_PROJECTION, &ortho);
+        const auto& gameToScreen = MissionMapWidget::GetGameToScreenMatrix();
 
         inaccessible_area_and_borders.Render(dx_device);
         fog_buffer.Render(dx_device);
@@ -663,9 +631,21 @@ void VanquishMapOverlayWidget::Draw(IDirect3DDevice9* dx_device)
                 compassMatrix._42 = roundf(gameToScreen._42 + player->pos.x * gameToScreen._12 + player->pos.y * gameToScreen._22);
                 dx_device->SetTransform(D3DTS_WORLD, &compassMatrix);
                 compass_circle.Render(dx_device);
+                dx_device->SetTransform(D3DTS_WORLD, &gameToScreen);
             }
         }
     }
+} // namespace
+
+void VanquishMapOverlayWidget::Initialize()
+{
+    ToolboxWidget::Initialize();
+    MissionMapWidget::AddDrawCallback(&OnMissionMapDraw);
+}
+
+void VanquishMapOverlayWidget::Draw(IDirect3DDevice9*)
+{
+    if (!visible || !MissionMapWidget::IsRenderReady() || !ToolboxUtils::IsExplorable()) return;
 
     // ImGui overlays
     if (should_draw)
@@ -731,6 +711,8 @@ void VanquishMapOverlayWidget::Update(float)
 void VanquishMapOverlayWidget::Terminate()
 {
     ToolboxWidget::Terminate();
+    MissionMapWidget::RemoveDrawCallback(&OnMissionMapDraw);
+
     delete[] cached_walkable_grid;
     cached_walkable_grid = nullptr;
     delete[] explored_cells;
