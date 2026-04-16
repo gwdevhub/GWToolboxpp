@@ -364,6 +364,7 @@ namespace {
     GW::Vec2f nav_marker_pos;
     bool nav_marker_set = false;
     bool nav_marker_hidden = false;
+    bool self_changing_marker = false;
 
     constexpr float MARKER_UPDATE_DIST = 500.0f * 500.f;
 
@@ -374,7 +375,11 @@ namespace {
         nav_marker_pos = {};
         nav_marker_set = false;
         nav_marker_hidden = false;
-        GW::GameThread::Enqueue([] { QuestModule::ClearCustomQuestMarker(); });
+        GW::GameThread::Enqueue([] {
+            self_changing_marker = true;
+            QuestModule::ClearCustomQuestMarker();
+            self_changing_marker = false;
+        });
     }
 
     void SetNavTarget(const GW::Vec2f& target)
@@ -389,7 +394,9 @@ namespace {
 
             if (in_compass && !nav_marker_hidden) {
                 nav_marker_hidden = true;
+                self_changing_marker = true;
                 QuestModule::ClearCustomQuestMarker();
+                self_changing_marker = false;
                 return;
             }
             if (in_compass) return;
@@ -407,7 +414,9 @@ namespace {
         GW::Vec2f world_pos;
         if (WorldMapWidget::GamePosToWorldMap(target, world_pos)) {
             GW::GameThread::Enqueue([world_pos] {
+                self_changing_marker = true;
                 QuestModule::SetCustomQuestMarker(world_pos, true);
+                self_changing_marker = false;
             });
         }
     }
@@ -436,7 +445,9 @@ namespace {
         if (!found) {
             if (!nav_marker_hidden) {
                 nav_marker_hidden = true;
+                self_changing_marker = true;
                 QuestModule::ClearCustomQuestMarker();
+                self_changing_marker = false;
             }
             return;
         }
@@ -613,6 +624,18 @@ namespace {
         ImGui::End();
         ImGui::PopStyleVar(2);
     }
+    void OnCustomMarkerChanged()
+    {
+        if (self_changing_marker || !nav_active) return;
+        // Another system changed the custom quest marker — stop navigating
+        // but don't clear the marker (it belongs to whoever set it now)
+        nav_active = false;
+        nav_target_pos = {};
+        nav_marker_pos = {};
+        nav_marker_set = false;
+        nav_marker_hidden = false;
+    }
+
     void OnMissionMapDraw(IDirect3DDevice9* dx_device)
     {
         if (!should_draw) return;
@@ -641,6 +664,8 @@ void VanquishMapOverlayWidget::Initialize()
 {
     ToolboxWidget::Initialize();
     MissionMapWidget::AddDrawCallback(&OnMissionMapDraw);
+    MissionMapWidget::AddContextMenuCallback(&VanquishMapOverlayWidget::ContextMenuItems);
+    QuestModule::AddCustomMarkerChangedCallback(&OnCustomMarkerChanged);
 }
 
 void VanquishMapOverlayWidget::Draw(IDirect3DDevice9*)
@@ -712,6 +737,8 @@ void VanquishMapOverlayWidget::Terminate()
 {
     ToolboxWidget::Terminate();
     MissionMapWidget::RemoveDrawCallback(&OnMissionMapDraw);
+    MissionMapWidget::RemoveContextMenuCallback(&VanquishMapOverlayWidget::ContextMenuItems);
+    QuestModule::RemoveCustomMarkerChangedCallback(&OnCustomMarkerChanged);
 
     delete[] cached_walkable_grid;
     cached_walkable_grid = nullptr;

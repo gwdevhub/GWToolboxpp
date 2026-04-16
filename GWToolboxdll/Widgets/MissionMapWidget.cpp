@@ -10,7 +10,6 @@
 
 #include <ImGuiAddons.h>
 #include <Modules/QuestModule.h>
-#include <Widgets/VanquishMapOverlayWidget.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/WorldMapWidget.h>
@@ -23,6 +22,7 @@ namespace {
     bool draw_all_minimap_lines = true;
 
     std::vector<MissionMapWidget::DrawCallback> draw_callbacks;
+    std::vector<MissionMapWidget::ContextMenuCallback> context_menu_callbacks;
 
     // Pixel-to-game-unit scale — converts pixel thickness to game units
     float cached_px_to_game = 1.f;
@@ -199,19 +199,20 @@ namespace {
         }
 #endif
         if (ImGui::Button("Place Marker")) {
-            VanquishMapOverlayWidget::StopNavigating();
             GW::GameThread::Enqueue([] {
                 QuestModule::SetCustomQuestMarker(world_map_click_pos, true);
             });
             return false;
         }
-        if (QuestModule::GetCustomQuestMarker() && !VanquishMapOverlayWidget::IsNavigating()) {
+        if (QuestModule::GetCustomQuestMarker()) {
             if (ImGui::Button("Remove Marker")) {
                 GW::GameThread::Enqueue([] { QuestModule::ClearCustomQuestMarker(); });
                 return false;
             }
         }
-        if (!VanquishMapOverlayWidget::ContextMenuItems()) return false;
+        for (const auto& cb : context_menu_callbacks) {
+            if (!cb()) return false;
+        }
 
         return true;
     }
@@ -356,3 +357,5 @@ float MissionMapWidget::GetZoom() { return mission_map_zoom; }
 
 void MissionMapWidget::AddDrawCallback(DrawCallback cb) { draw_callbacks.push_back(cb); }
 void MissionMapWidget::RemoveDrawCallback(DrawCallback cb) { std::erase(draw_callbacks, cb); }
+void MissionMapWidget::AddContextMenuCallback(ContextMenuCallback cb) { context_menu_callbacks.push_back(cb); }
+void MissionMapWidget::RemoveContextMenuCallback(ContextMenuCallback cb) { std::erase(context_menu_callbacks, cb); }

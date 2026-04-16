@@ -39,6 +39,8 @@ namespace {
 
     bool fetch_missing_quest_info_queued = false;
 
+    std::vector<QuestModule::CustomMarkerChangedCallback> custom_marker_callbacks;
+
     GW::HookEntry pre_ui_message_entry;
     GW::HookEntry post_ui_message_entry;
     bool initialised = false;
@@ -528,8 +530,10 @@ void QuestModule::SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_acti
         GW::StoC::EmulatePacket(&quest_remove_packet);
         memset(&custom_quest_marker, 0, sizeof(custom_quest_marker));
     }
-    if (custom_quest_marker_world_pos.x == 0 && custom_quest_marker_world_pos.y == 0)
+    if (custom_quest_marker_world_pos.x == 0 && custom_quest_marker_world_pos.y == 0) {
+        for (const auto& cb : custom_marker_callbacks) cb();
         return;
+    }
 
     setting_custom_quest_marker = true;
 
@@ -586,12 +590,16 @@ void QuestModule::SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_acti
     if (set_active)
         GW::QuestMgr::SetActiveQuestId(custom_quest_id);
     RefreshQuestPath(custom_quest_id);
+    for (const auto& cb : custom_marker_callbacks) cb();
 }
 
 void QuestModule::ClearCustomQuestMarker()
 {
     SetCustomQuestMarker({0, 0});
 }
+
+void QuestModule::AddCustomMarkerChangedCallback(CustomMarkerChangedCallback cb) { custom_marker_callbacks.push_back(cb); }
+void QuestModule::RemoveCustomMarkerChangedCallback(CustomMarkerChangedCallback cb) { std::erase(custom_marker_callbacks, cb); }
 
 std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::QuestID quest_id)
 {

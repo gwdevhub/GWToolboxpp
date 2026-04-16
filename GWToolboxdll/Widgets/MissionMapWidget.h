@@ -49,4 +49,10 @@ public:
     using DrawCallback = void(*)(IDirect3DDevice9*);
     static void AddDrawCallback(DrawCallback cb);
     static void RemoveDrawCallback(DrawCallback cb);
+
+    // Context menu callback system — registered callbacks contribute items to the
+    // mission map right-click context menu. Return false to close the menu.
+    using ContextMenuCallback = bool(*)();
+    static void AddContextMenuCallback(ContextMenuCallback cb);
+    static void RemoveContextMenuCallback(ContextMenuCallback cb);
 };
