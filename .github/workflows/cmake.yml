@@ -64,7 +64,10 @@ jobs:
     needs: check
     if: needs.check.outputs.run != 'false'
     permissions:
+      artifact-metadata: write
+      attestations: write
       contents: write
+      id-token: write
     steps:
     - name: Checkout repository
       uses: actions/checkout@v6
@@ -185,6 +188,39 @@ jobs:
       with:
         path: ${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo/
 
+    - name: Generate app token to access private plugins
+      id: private-plugins-app-token
+      continue-on-error: true
+      uses: actions/create-github-app-token@v3
+      with:
+        app-id: ${{ vars.PRIVATE_PLUGINS_CLIENT_ID }}
+        private-key: ${{ secrets.PRIVATE_PLUGINS_KEY }}
+        owner: gwtasdevs
+        repositories: DialogsPlugins
+
+    - name: Download private plugin assets
+      id: private-plugins-download
+      continue-on-error: true
+      env:
+        GH_TOKEN: ${{ steps.private-plugins-app-token.outputs.token }}
+      run: |
+        mkdir -p ./output-artifacts
+        gh release download --repo gwtasdevs/DialogsPlugins --pattern "*.dll" --pattern "*.sigstore.json" --dir ./output-artifacts
+
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@v4.1.1
+
+    - name: Attest private plugins
+      run: |
+        for file in ./output-artifacts/*.dll; do
+          cosign verify-blob \
+            --bundle "${file}.sigstore.json" \
+            --certificate-identity-regexp "https://github.com/gwtasdevs/DialogsPlugins" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$file"
+        done
+        rm -rf ./output-artifacts/*.sigstore.json
+
     - name: Check version and create release
       shell: bash
       env:
@@ -230,13 +266,12 @@ jobs:
         git push origin "$TAG_NAME"
 
         # Prepare artifacts
+        mkdir -p ./output-artifacts
         BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
-        cp "$BIN_DIR/GWToolboxdll.dll" .
-        cp "$BIN_DIR/DialogsWindow.dll" .
-        cp "$BIN_DIR/RawDialogs.dll" .
-        cp "$BIN_DIR/SpeedrunScriptingTools.dll" .
-        cp "${{runner.workspace}}/GWToolboxpp/Dependencies/GWCA/bin/gwca.dll" .
-        gzip -c "$BIN_DIR/GWToolboxdll.pdb" > GWToolboxdll.pdb.gz
+        cp "$BIN_DIR/GWToolboxdll.dll" ./output-artifacts
+        cp "$BIN_DIR/SpeedrunScriptingTools.dll" ./output-artifacts
+        cp "${{runner.workspace}}/GWToolboxpp/Dependencies/GWCA/bin/gwca.dll" ./output-artifacts
+        gzip -c "$BIN_DIR/GWToolboxdll.pdb" > ./output-artifacts/GWToolboxdll.pdb.gz
 
         # Create release
         if [ -n "$DEV_COMMIT_SHORT" ]; then
@@ -244,10 +279,15 @@ jobs:
             --title "commit-$DEV_COMMIT_SHORT" \
             --notes "[$DEV_COMMIT_SHORT](https://github.com/gwdevhub/GWToolboxpp/commit/$DEV_COMMIT_SHORT)" \
             --prerelease \
-            GWToolboxdll.dll DialogsWindow.dll RawDialogs.dll SpeedrunScriptingTools.dll GWToolboxdll.pdb.gz gwca.dll
+            ./output-artifacts/*
         else
           gh release create "$TAG_NAME" \
             --title "$TAG_NAME" \
             --notes "$RELEASE_NOTES" \
-            GWToolboxdll.dll DialogsWindow.dll RawDialogs.dll SpeedrunScriptingTools.dll GWToolboxdll.pdb.gz gwca.dll
+            ./output-artifacts/*
         fi
+
+    - name: Attest
+      uses: actions/attest@v4
+      with:
+        subject-path: ./output-artifacts/*
