@@ -400,6 +400,36 @@ void Pcon::Refill(const bool do_refill)
     ResetCounts();
 }
 
+std::vector<DWORD> Pcon::GetPrioritizedModelIdsFromInventory() const
+{
+    std::vector<DWORD> prioritized_ids;
+    GW::Bag** bags = GW::Items::GetBagArray();
+    if (!bags) {
+        return prioritized_ids;
+    }
+    for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Backpack);
+         bagIndex <= static_cast<size_t>(GW::Constants::Bag::Bag_2); ++bagIndex) {
+        GW::Bag* storageBag = bags[bagIndex];
+        if (!storageBag) {
+            continue; // No bag, skip
+        }
+        GW::ItemArray& items = storageBag->items;
+        if (!items.valid()) {
+            continue; // No item array, skip
+        }
+        for (size_t i = 0; i < items.size(); i++) {
+            const GW::Item* item = items[i];
+            if (!item || PointsPerUse(item) < 1) {
+                continue;
+            }
+            if (std::ranges::find(prioritized_ids, item->model_id) == prioritized_ids.end()) {
+                prioritized_ids.push_back(item->model_id);
+            }
+        }
+    }
+    return prioritized_ids;
+}
+
 void Pcon::UpdateRefill()
 {
     if (!refilling) {
@@ -431,46 +461,65 @@ void Pcon::UpdateRefill()
         pcon_quantity_checked = false;
         return;
     }
-    for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {
-        GW::Bag* storageBag = bags[bagIndex];
-        if (storageBag == nullptr) {
-            continue; // No bag, skip
+
+    // Lambda that scans storage for a matching item and moves it to inventory.
+    // If preferred_model_id != 0, only items with that model_id are considered.
+    // Returns true if a move was initiated, false if no matching item was found.
+    auto try_move_from_storage = [&](DWORD preferred_model_id) -> bool {
+        for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {
+            GW::Bag* storageBag = bags[bagIndex];
+            if (storageBag == nullptr) {
+                continue; // No bag, skip
+            }
+            GW::ItemArray& storageItems = storageBag->items;
+            if (!storageItems.valid()) {
+                continue; // No item array, skip
+            }
+            for (size_t i = 0; i < storageItems.size() && storageItems.valid(); i++) {
+                const GW::Item* storageItem = storageItems[i];
+                if (storageItem == nullptr) {
+                    continue; // No item, skip
+                }
+                if (preferred_model_id != 0 && storageItem->model_id != preferred_model_id) {
+                    continue;
+                }
+                const size_t points_per_item = PointsPerUse(storageItem);
+                if (points_per_item < 1) {
+                    continue; // This is not the pcon you're looking for...
+                }
+                const GW::Item* inventoryItem = FindVacantStackOrSlotInInventory(storageItem); // Now find a slot in inventory to move them to.
+                if (inventoryItem == nullptr) {
+                    printf("No more space for %s", chat.c_str());
+                    Refill(false);
+                    pcon_quantity_checked = false;
+                    return true; // Signal that we handled the situation (no space).
+                }
+                auto quantity_to_move = static_cast<size_t>(ceil(static_cast<float>(points_needed) / static_cast<float>(points_per_item)));
+                if (quantity_to_move > storageItem->quantity) {
+                    quantity_to_move = storageItem->quantity;
+                }
+                const size_t slot_to = inventoryItem->slot;
+                GW::Bag* bag_to = inventoryItem->bag;
+                pending_move_to_quantity = inventoryItem->quantity + MoveItem(storageItem, bag_to, slot_to, quantity_to_move);
+                if (inventoryItem->quantity == 0) {
+                    delete inventoryItem; // Empty slot was returned; free memory here.
+                }
+                pending_move_to_bag = bag_to;
+                pending_move_to_slot = slot_to;
+                return true;
+            }
         }
-        GW::ItemArray& storageItems = storageBag->items;
-        if (!storageItems.valid()) {
-            continue; // No item array, skip
-        }
-        for (size_t i = 0; i < storageItems.size() && storageItems.valid(); i++) {
-            const GW::Item* storageItem = storageItems[i];
-            if (storageItem == nullptr) {
-                continue; // No item, skip
-            }
-            const size_t points_per_item = PointsPerUse(storageItem);
-            if (points_per_item < 1) {
-                continue; // This is not the pcon you're looking for...
-            }
-            const GW::Item* inventoryItem = FindVacantStackOrSlotInInventory(storageItem); // Now find a slot in inventory to move them to.
-            if (inventoryItem == nullptr) {
-                printf("No more space for %s", chat.c_str());
-                Refill(false);
-                pcon_quantity_checked = false;
-                return;
-            }
-            auto quantity_to_move = static_cast<size_t>(ceil(static_cast<float>(points_needed) / static_cast<float>(points_per_item)));
-            if (quantity_to_move > storageItem->quantity) {
-                quantity_to_move = storageItem->quantity;
-            }
-            const size_t slot_to = inventoryItem->slot;
-            GW::Bag* bag_to = inventoryItem->bag;
-            pending_move_to_quantity = inventoryItem->quantity + MoveItem(storageItem, bag_to, slot_to, quantity_to_move);
-            if (inventoryItem->quantity == 0) {
-                delete inventoryItem; // Empty slot was returned; free memory here.
-            }
-            pending_move_to_bag = bag_to;
-            pending_move_to_slot = slot_to;
+        return false;
+    };
+
+    const auto prioritized_ids = GetPrioritizedModelIdsFromInventory();
+    for (const DWORD model_id : prioritized_ids) {
+        if (try_move_from_storage(model_id)) {
             return;
         }
     }
+    // Fallback: any matching item in storage order (e.g. inventory is empty).
+    try_move_from_storage(0);
 }
 
 int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, const size_t from_bag,
