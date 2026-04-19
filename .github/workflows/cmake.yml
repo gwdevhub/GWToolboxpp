@@ -76,16 +76,19 @@ jobs:
         ssh-key: ${{ secrets.ACTIONS_BOT_DEPLOY_KEY }}
         ref: ${{ needs.check.outputs.run == 'dev' && 'dev' || 'master' }}
 
+    - name: Setup git
+      run: |
+        git remote add upstream https://github.com/gwdevhub/GWToolboxpp.git
+        git fetch upstream
+        git config --global user.email "bot@github.com"
+        git config --global user.name "GitHub Actions Bot"
+
     - name: Merge from upstream master
       if: needs.check.outputs.run == 'true'
       env:
         TAG: ${{ needs.check.outputs.tag }}
       run: |
-        git remote add upstream https://github.com/gwdevhub/GWToolboxpp.git
-        git fetch upstream
         git checkout master
-        git config --global user.email "bot@github.com"
-        git config --global user.name "GitHub Actions Bot"
         git merge "refs/tags/${TAG}" --no-edit
         git push origin master
 
@@ -94,11 +97,7 @@ jobs:
       env:
         DEV_COMMIT: ${{ needs.check.outputs.dev_commit }}
       run: |
-        git remote add upstream https://github.com/gwdevhub/GWToolboxpp.git
-        git fetch upstream
         git checkout dev
-        git config --global user.email "bot@github.com"
-        git config --global user.name "GitHub Actions Bot"
         git merge $DEV_COMMIT --no-edit
         git push origin dev
 
@@ -203,14 +202,22 @@ jobs:
       continue-on-error: true
       env:
         GH_TOKEN: ${{ steps.private-plugins-app-token.outputs.token }}
+        IS_DEV_BUILD: ${{ needs.check.outputs.run == 'dev' }}
       run: |
         mkdir -p ./output-artifacts
-        gh release download --repo gwtasdevs/DialogsPlugins --pattern "*.dll" --pattern "*.sigstore.json" --dir ./output-artifacts
+        DOWNLOAD_ARGS=(--repo gwtasdevs/DialogsPlugins --pattern "*.dll" --pattern "*.sigstore.json" --dir ./output-artifacts)
+        if [ "$IS_DEV_BUILD" = "true" ]; then
+          TAG=$(gh api repos/gwtasdevs/DialogsPlugins/releases --jq '[.[] | select(.prerelease)][0].tag_name')
+          DOWNLOAD_ARGS+=("$TAG")
+        fi
+        gh release download "${DOWNLOAD_ARGS[@]}"
 
     - name: Install Cosign
+      if: steps.private-plugins-download.outcome == 'success'
       uses: sigstore/cosign-installer@v4.1.1
 
     - name: Attest private plugins
+      if: steps.private-plugins-download.outcome == 'success'
       run: |
         for file in ./output-artifacts/*.dll; do
           cosign verify-blob \
