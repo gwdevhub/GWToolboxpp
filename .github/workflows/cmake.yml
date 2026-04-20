@@ -278,8 +278,7 @@ jobs:
         # Prepare artifacts
         mkdir -p ./output-artifacts
         BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
-        cp "$BIN_DIR/GWToolboxdll.dll" ./output-artifacts
-        cp "$BIN_DIR/SpeedrunScriptingTools.dll" ./output-artifacts
+        cp "$BIN_DIR/*.dll" ./output-artifacts
         cp "${{runner.workspace}}/GWToolboxpp/Dependencies/GWCA/bin/gwca.dll" ./output-artifacts
         gzip -c "$BIN_DIR/GWToolboxdll.pdb" > ./output-artifacts/GWToolboxdll.pdb.gz
 
