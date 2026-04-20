@@ -199,6 +199,7 @@ jobs:
 
     - name: Download private plugin assets
       id: private-plugins-download
+      shell: bash
       env:
         GH_TOKEN: ${{ steps.private-plugins-app-token.outputs.token }}
         IS_DEV_BUILD: ${{ needs.check.outputs.run == 'dev' }}
@@ -216,6 +217,7 @@ jobs:
       uses: sigstore/cosign-installer@v4.1.1
 
     - name: Attest private plugins
+      shell: bash
       run: |
         for file in ./output-artifacts/*.dll; do
           cosign verify-blob \
