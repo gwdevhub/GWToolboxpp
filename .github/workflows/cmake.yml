@@ -34,7 +34,7 @@ jobs:
         BODY=$(gh api repos/gwdevhub/GWToolboxpp/releases/latest --jq .body)
         TAG=$(gh api repos/gwdevhub/GWToolboxpp/releases/latest --jq .tag_name)
         DEV_COMMIT=$(gh api repos/gwdevhub/GWToolboxpp/commits/dev --jq .sha)
-        DEV_COMMIT_SHORT=${DEV_COMMIT::7}
+        DEV_COMMIT_SHORT=${DEV_COMMIT::8}
         echo "Latest upstream release tag: $TAG"
         {
           echo "body<<EOF"
