@@ -40,7 +40,7 @@ class CustomRenderer : public D3DVertexBuffer {
     private:
         void SyncGeometry();
 
-        D3DFillCircle fill_circle;
+        D3DFillCircle fill_circle{{}, 1.f};
         D3DLineCircle line_circle;
     };
 
