@@ -278,7 +278,9 @@ jobs:
         # Prepare artifacts
         mkdir -p ./output-artifacts
         BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
-        cp "$BIN_DIR/*.dll" ./output-artifacts
+        for file in $BIN_DIR/*.dll; do
+          cp "$file" ./output-artifacts
+        done
         cp "${{runner.workspace}}/GWToolboxpp/Dependencies/GWCA/bin/gwca.dll" ./output-artifacts
         gzip -c "$BIN_DIR/GWToolboxdll.pdb" > ./output-artifacts/GWToolboxdll.pdb.gz
 
