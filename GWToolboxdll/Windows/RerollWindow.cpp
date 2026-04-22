@@ -360,16 +360,24 @@ namespace {
             }
         }
 
-        // Search by character name
+        // Search by character name (exact match first, then substring)
+        const wchar_t* substring_match = nullptr;
         for (const auto& available_char : *available_characters) {
             const auto player_name = available_char.player_name;
             if (IsExcludedFromReroll(player_name)) {
                 continue;
             }
-            if (!wcsstr(TextUtils::ToLower(player_name).c_str(), character_or_profession.c_str())) {
-                continue;
+            const auto lower_name = TextUtils::ToLower(player_name);
+            if (lower_name == character_or_profession) {
+                Reroll(available_char.player_name, travel_to_same_location_after_rerolling, rejoin_party_after_rerolling);
+                return;
             }
-            Reroll(available_char.player_name, travel_to_same_location_after_rerolling, rejoin_party_after_rerolling);
+            if (!substring_match && wcsstr(lower_name.c_str(), character_or_profession.c_str())) {
+                substring_match = available_char.player_name;
+            }
+        }
+        if (substring_match) {
+            Reroll(substring_match, travel_to_same_location_after_rerolling, rejoin_party_after_rerolling);
             return;
         }
         Log::Error("Failed to match profession or character name for command");
