@@ -42,6 +42,7 @@
 #include <Modules/LoginModule.h>
 #include <Widgets/VanquishMapOverlayWidget.h>
 
+#include <Windows/AccountInventoryWindow.h>
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
 #include <Windows/BuildsWindow.h>
@@ -221,7 +222,8 @@ namespace {
         GWMarketWindow::Instance(),
         InventorySorting::Instance(),
         FavorTracker::Instance(),
-        LoginModule::Instance()
+        LoginModule::Instance(),
+        {AccountInventoryWindow::Instance(), false}
     };
 
     bool modules_sorted = false;
