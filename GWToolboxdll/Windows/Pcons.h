@@ -50,6 +50,8 @@ protected:
     static bool IsControllingCurrentChar();
 
     void UpdateRefill();
+    // Returns ordered list of model IDs from inventory that this pcon matches, for prioritized refill.
+    std::vector<DWORD> GetPrioritizedModelIdsFromInventory() const;
 
     GW::Bag* pending_move_to_bag = nullptr;
     uint32_t pending_move_to_slot = 0;
