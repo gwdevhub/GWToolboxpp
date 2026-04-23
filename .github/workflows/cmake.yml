@@ -59,19 +59,26 @@ jobs:
           echo "run=true" >> "$GITHUB_OUTPUT"
         fi
 
-  merge:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: windows-latest
     needs: check
     if: needs.check.outputs.run != 'false'
+    timeout-minutes: 30
     permissions:
+      artifact-metadata: write
+      attestations: write
       contents: write
+      id-token: write
+    env:
+      BRANCH: ${{ needs.check.outputs.run == 'dev' && 'dev' || 'master' }}
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v6
       with:
         fetch-depth: 0
         ssh-key: ${{ secrets.ACTIONS_BOT_DEPLOY_KEY }}
-        ref: ${{ needs.check.outputs.run == 'dev' && 'dev' || 'master' }}
+        ref: ${{ env.BRANCH }}
 
     - name: Setup git
       run: |
@@ -80,47 +87,17 @@ jobs:
         git config --global user.email "bot@github.com"
         git config --global user.name "GitHub Actions Bot"
 
-    - name: Merge from upstream master
-      if: needs.check.outputs.run == 'true'
+    - name: Merge from upstream
       env:
-        TAG: ${{ needs.check.outputs.tag }}
+        MERGE_FROM: ${{ needs.check.outputs.run == 'dev' && ('refs/tags/' + needs.check.outputs.tag) || needs.check.outputs.dev_commit }}
       run: |
-        git checkout master
-        git merge "refs/tags/${TAG}" --no-edit
-        git push origin master
+        git checkout $BRANCH
+        git merge "${MERGE_FROM}" --no-edit
 
-    - name: Merge from upstream dev
-      if: needs.check.outputs.run == 'dev'
-      env:
-        DEV_COMMIT: ${{ needs.check.outputs.dev_commit }}
-      run: |
-        git checkout dev
-        git merge $DEV_COMMIT --no-edit
-        git push origin dev
-
-  build:
-    runs-on: windows-latest
-    needs: [check, merge]
-    if: needs.check.outputs.run != 'false'
-    timeout-minutes: 30
-    permissions:
-      artifact-metadata: write
-      attestations: write
-      contents: write
-      id-token: write
-
-    steps:
     - name: Setup Windows 10 SDK Action
       uses: GuillaumeFalourd/setup-windows10-sdk-action@v2
       with:
         sdk-version: 22621
-
-    - name: Checkout repository
-      uses: actions/checkout@v6
-      with:
-        fetch-depth: 0
-        ssh-key: ${{ secrets.ACTIONS_BOT_DEPLOY_KEY }}
-        ref: ${{ needs.check.outputs.run == 'dev' && 'dev' || 'master' }}
 
     - name: Checkout submodules
       shell: bash
@@ -264,6 +241,10 @@ jobs:
           echo "Tag $TAG_NAME already exists. Skipping release."
           exit 0
         fi
+
+        echo "Pushing merge commit..."
+
+        git push origin $BRANCH
 
         echo "Tag $TAG_NAME does not exist. Creating..."
 
