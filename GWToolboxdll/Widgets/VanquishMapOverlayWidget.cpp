@@ -20,8 +20,6 @@
 #include <Widgets/WorldMapWidget.h>
 
 namespace {
-    bool show_vq_overlay = false;
-
     // VQ overlay colours
     Color vq_color_inaccessible = IM_COL32(0, 0, 0, 190);
     Color vq_color_fog_unexplored = IM_COL32(0, 0, 0, 140);
@@ -596,34 +594,7 @@ namespace {
         draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255), label);
     }
 
-    void DrawVanquishToggleButton()
-    {
-        const auto mm_top_left = MissionMapWidget::GetTopLeft();
-        const auto mm_bottom_right = MissionMapWidget::GetBottomRight();
 
-        constexpr float PADDING = 4.0f;
-        const float btn_size = ImGui::GetTextLineHeight() + PADDING * 2;
-        const ImVec2 btn_pos(mm_top_left.x + PADDING, mm_bottom_right.y - btn_size - PADDING);
-
-        ImGui::SetNextWindowPos(btn_pos);
-        ImGui::SetNextWindowSize({0, 0});
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {2, 2});
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, {0, 0});
-        if (ImGui::Begin("##vq_toggle", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings)) {
-            if (show_vq_overlay) {
-                if (ImGui::Button(ICON_FA_SKULL "##vq_off")) show_vq_overlay = false;
-                if (ImGui::IsItemHovered()) ImGui::SetTooltip("VQ overlay active. Click to hide.");
-            }
-            else {
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
-                if (ImGui::Button(ICON_FA_SKULL "##vq_on")) show_vq_overlay = true;
-                ImGui::PopStyleColor();
-                if (ImGui::IsItemHovered()) ImGui::SetTooltip("VQ overlay hidden. Click to show.");
-            }
-        }
-        ImGui::End();
-        ImGui::PopStyleVar(2);
-    }
     void OnCustomMarkerChanged()
     {
         if (self_changing_marker || !nav_active) return;
@@ -670,12 +641,34 @@ void VanquishMapOverlayWidget::Initialize()
 
 void VanquishMapOverlayWidget::Draw(IDirect3DDevice9*)
 {
-    if (!visible || !MissionMapWidget::IsRenderReady() || !ToolboxUtils::IsExplorable()) return;
-
-    // ImGui overlays
-    if (should_draw)
-        DrawEnemyCountLabel();
     DrawVanquishToggleButton();
+    DrawEnemyCountLabel();
+}
+
+void VanquishMapOverlayWidget::DrawVanquishToggleButton()
+{
+    if (!MissionMapWidget::IsRenderReady() || !ToolboxUtils::IsExplorable()) return;
+
+    const auto mm_top_left = MissionMapWidget::GetTopLeft();
+    const auto mm_bottom_right = MissionMapWidget::GetBottomRight();
+
+    constexpr float PADDING = 4.0f;
+    const float btn_size = ImGui::GetTextLineHeight() + PADDING * 2;
+    const ImVec2 btn_pos(mm_top_left.x + PADDING, mm_bottom_right.y - btn_size - PADDING);
+
+    ImGui::SetNextWindowPos(btn_pos);
+    ImGui::SetNextWindowSize({0, 0});
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {2, 2});
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, {0, 0});
+    if (ImGui::Begin("##vq_toggle", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings)) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(visible ? ImGuiCol_Text : ImGuiCol_TextDisabled));
+        if (ImGui::Button(ICON_FA_SKULL "##vq_toggler")) visible = !visible;
+        if(ImGui::IsItemHovered())
+            ImGui::SetTooltip(visible ? "VQ overlay active. Click to hide." : "VQ overlay hidden. Click to show.");
+        ImGui::PopStyleColor();
+    }
+    ImGui::End();
+    ImGui::PopStyleVar(2);
 }
 
 void VanquishMapOverlayWidget::Update(float)
@@ -684,7 +677,7 @@ void VanquishMapOverlayWidget::Update(float)
 
     cached_px_to_game = MissionMapWidget::GetPxToGame();
     const float zoom = MissionMapWidget::GetZoom();
-    should_draw = visible && show_vq_overlay && ToolboxUtils::IsExplorable();
+    should_draw = visible && ToolboxUtils::IsExplorable();
 
     const auto map_id = GW::Map::GetMapID();
     const auto instance_type = GW::Map::GetInstanceType();
@@ -753,7 +746,6 @@ void VanquishMapOverlayWidget::Terminate()
 void VanquishMapOverlayWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
-    LOAD_BOOL(show_vq_overlay);
 
     LOAD_COLOR(vq_color_inaccessible);
     LOAD_COLOR(vq_color_fog_unexplored);
@@ -769,7 +761,6 @@ void VanquishMapOverlayWidget::LoadSettings(ToolboxIni* ini)
 void VanquishMapOverlayWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
-    SAVE_BOOL(show_vq_overlay);
 
     SAVE_COLOR(vq_color_inaccessible);
     SAVE_COLOR(vq_color_fog_unexplored);
@@ -784,37 +775,32 @@ void VanquishMapOverlayWidget::SaveSettings(ToolboxIni* ini)
 
 void VanquishMapOverlayWidget::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Vanquish Overlay", &show_vq_overlay);
-    ImGui::ShowHelp("Tracks enemy positions as they enter compass range.\nBlue = alive, Orange = last known (moved away).\nArrows on orange markers show last movement direction.\nAlso highlights areas you've explored during this session on the mission map.");
+    ImGui::TextDisabled("Tracks enemy positions as they enter compass range.\nBlue = alive, Orange = last known (moved away).\nArrows on orange markers show last movement direction.\nAlso highlights areas you've explored during this session on the mission map.");
+    bool static_changed = false;
+    bool fog_changed = false;
 
-    if (show_vq_overlay) {
-        ImGui::Indent();
-        bool static_changed = false;
-        bool fog_changed = false;
+    static_changed |= Colors::DrawSettingHueWheel("Inaccessible area", &vq_color_inaccessible);
+    static_changed |= Colors::DrawSettingHueWheel("Map border", &vq_color_border);
+    fog_changed |= Colors::DrawSettingHueWheel("Unexplored fog", &vq_color_fog_unexplored);
+    fog_changed |= Colors::DrawSettingHueWheel("Frontier edge", &vq_color_frontier);
+    bool rebuild_compass = Colors::DrawSettingHueWheel("Compass range", &vq_color_compass);
+    Colors::DrawSettingHueWheel("Enemy (alive)", &vq_color_enemy_alive);
+    Colors::DrawSettingHueWheel("Enemy (last known position)", &vq_color_enemy_stale);
+    Colors::DrawSettingHueWheel("Enemy outline", &vq_color_enemy_outline);
+    ImGui::SliderFloat("Enemy marker size", &vq_enemy_marker_size, 3.0f, 20.0f, "%.0f");
+    ImGui::Unindent();
 
-        static_changed |= Colors::DrawSettingHueWheel("Inaccessible area", &vq_color_inaccessible);
-        static_changed |= Colors::DrawSettingHueWheel("Map border", &vq_color_border);
-        fog_changed |= Colors::DrawSettingHueWheel("Unexplored fog", &vq_color_fog_unexplored);
-        fog_changed |= Colors::DrawSettingHueWheel("Frontier edge", &vq_color_frontier);
-        bool rebuild_compass = Colors::DrawSettingHueWheel("Compass range", &vq_color_compass);
-        Colors::DrawSettingHueWheel("Enemy (alive)", &vq_color_enemy_alive);
-        Colors::DrawSettingHueWheel("Enemy (last known position)", &vq_color_enemy_stale);
-        Colors::DrawSettingHueWheel("Enemy outline", &vq_color_enemy_outline);
-        ImGui::SliderFloat("Enemy marker size", &vq_enemy_marker_size, 3.0f, 20.0f, "%.0f");
-        ImGui::Unindent();
-
-        if (static_changed) BuildStaticMapGeometry();
-        if (fog_changed) {
-            InitFogBuffer();
-            RebuildFrontierBorder();
-        }
-        if (rebuild_compass) RebuildCompassCircle();
+    if (static_changed) BuildStaticMapGeometry();
+    if (fog_changed) {
+        InitFogBuffer();
+        RebuildFrontierBorder();
     }
+    if (rebuild_compass) RebuildCompassCircle();
 }
 
 bool VanquishMapOverlayWidget::ContextMenuItems()
 {
-    if (!show_vq_overlay || !ToolboxUtils::IsExplorable()) return true;
+    if (!Instance().visible || !ToolboxUtils::IsExplorable()) return true;
     if (nav_active) {
         if (ImGui::Button("Stop navigating")) {
             StopNavigating();
