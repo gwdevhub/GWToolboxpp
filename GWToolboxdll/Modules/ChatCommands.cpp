@@ -2193,9 +2193,11 @@ void SkillToUse::Update()
         slot = 0;
         return;
     }
-    if (skillbar->cast_array.size()) return; // Don't use skill if we've got anything queued
     const GW::Skill& skilldata = *GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
     if ((skilldata.adrenaline == 0 && skill.GetRecharge() == 0) || (skilldata.adrenaline > 0 && skill.adrenaline_a == skilldata.adrenaline)) {
+        const auto wait_for_queue = !(skilldata.type == GW::Constants::SkillType::Shout || skilldata.type == GW::Constants::SkillType::Stance || skilldata.type == GW::Constants::SkillType::PetAttack);
+        if (wait_for_queue && skillbar->cast_array.size()) 
+            return; // Don't use skill if we've got something queued
         GW::SkillbarMgr::UseSkill(lslot, GW::Agents::GetTargetId());
         skill_usage_delay = std::max(skilldata.activation + skilldata.aftercast, 0.25f); // a small flat delay of .3s for ping and to avoid spamming in case of bad target
         skill_timer = clock();

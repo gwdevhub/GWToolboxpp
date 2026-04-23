@@ -1103,10 +1103,10 @@ namespace {
         [[maybe_unused]] const auto mission_map_frame = mission_map_context ? GW::UI::GetFrameById(mission_map_context->frame_id) : nullptr;
         [[maybe_unused]] const auto world_map_context = GW::Map::GetWorldMapContext();
 
-        [[maybe_unused]]  const auto campaign = ac ? ac->campaign() : 0;
+        [[maybe_unused]]  const auto campaign = ac ? ac->campaign() : (GW::Constants::Campaign)0;
         [[maybe_unused]]  const auto level = ac ? ac->level() : 0;
-        [[maybe_unused]]  const auto primary = ac ? ac->primary() : 0;
-        [[maybe_unused]] const auto secondary = ac ? ac->secondary() : 0;
+        [[maybe_unused]] const auto primary = ac ? ac->primary() : (GW::Constants::Profession)0;
+        [[maybe_unused]] const auto secondary = ac ? ac->secondary() : (GW::Constants::Profession)0;
         [[maybe_unused]] const auto salvage_session = GW::Items::GetSalvageSessionInfo();
 #ifdef _DEBUG
         auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Vendor"), 0,0,2);
