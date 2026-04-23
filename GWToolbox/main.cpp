@@ -37,6 +37,94 @@ static bool RestartAsAdminForInjection(const uint32_t target_pid)
     return RestartAsAdmin(args);
 }
 
+static bool HotReloadDll(const std::wstring& new_dll_path)
+{
+    // Find all GW processes with toolbox loaded
+    std::vector<Process> gw_processes;
+    GetProcessesByWindowClass(gw_processes, L"ArenaNet_Dx_Window_Class");
+
+    std::vector<DWORD> target_pids;
+    for (auto& proc : gw_processes) {
+        ProcessModule module;
+        if (proc.GetModule(&module, L"GWToolboxdll.dll")) {
+            target_pids.push_back(proc.GetProcessId());
+        }
+    }
+    gw_processes.clear(); // Close handles so DLL can unload
+
+    if (!target_pids.empty()) {
+        // Signal all instances to unload (manual-reset event, all instances see it)
+        HANDLE event = OpenEventA(EVENT_MODIFY_STATE, FALSE, "GWToolboxHotReload");
+        if (!event) {
+            fprintf(stderr, "Could not open GWToolboxHotReload event (error %lu)\n", GetLastError());
+            return false;
+        }
+        if (!SetEvent(event)) {
+            fprintf(stderr, "SetEvent failed (error %lu)\n", GetLastError());
+            CloseHandle(event);
+            return false;
+        }
+
+        // Wait for all instances to unload
+        bool unloaded = false;
+        for (int i = 0; i < 300; i++) { // up to 30 seconds
+            Sleep(100);
+            bool all_unloaded = true;
+            for (const auto pid : target_pids) {
+                Process proc;
+                if (!proc.Open(pid, PROCESS_QUERY_INFORMATION | PROCESS_VM_READ)) continue;
+                ProcessModule check;
+                if (proc.GetModule(&check, L"GWToolboxdll.dll")) {
+                    all_unloaded = false;
+                    break;
+                }
+            }
+            if (all_unloaded) { unloaded = true; break; }
+        }
+        ResetEvent(event);
+        CloseHandle(event);
+        if (!unloaded) {
+            fprintf(stderr, "Timeout waiting for DLLs to unload\n");
+            return false;
+        }
+        Sleep(200); // Brief pause to ensure file handles are released
+    }
+
+    // Determine install path and copy the new DLL
+    std::filesystem::path install_dll = GetInstallationDir();
+    if (install_dll.empty()) {
+        fprintf(stderr, "GetInstallationDir failed\n");
+        return false;
+    }
+    install_dll = install_dll.parent_path() / L"GWToolboxdll.dll";
+
+    std::error_code ec;
+    std::filesystem::copy_file(new_dll_path, install_dll,
+        std::filesystem::copy_options::overwrite_existing, ec);
+    if (ec) {
+        fprintf(stderr, "Failed to copy DLL: %s\n", ec.message().c_str());
+        return false;
+    }
+
+    // Re-inject into all processes
+    bool any_failed = false;
+    for (const auto pid : target_pids) {
+        Process proc;
+        if (!proc.Open(pid)) {
+            any_failed = true;
+            continue;
+        }
+        DWORD exit_code;
+        if (!InjectRemoteThread(&proc, install_dll.wstring().c_str(), &exit_code)) {
+            fprintf(stderr, "Re-injection into process %lu failed\n", pid);
+            any_failed = true;
+            continue;
+        }
+    }
+
+    return !any_failed;
+}
+
 static bool InjectInstalledDllInProcess(const Process* process, std::wstring& error)
 {
     std::wstring exe_filename;
@@ -156,6 +244,13 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     AsyncRestScopeInit RestInitializer;
 
     Process proc;
+    if (!settings.hotreload_dll.empty()) {
+        if (!HotReloadDll(settings.hotreload_dll)) {
+            fprintf(stderr, "Hot reload failed\n");
+            return 1;
+        }
+        return 0;
+    }
     if (settings.install) {
         Install(settings.quiet, error);
         return 0;
