@@ -315,3 +315,14 @@ void D3DLineCircle::SetRadius(float r)
     vertices[n] = vertices[0];
     dirty = true;
 }
+
+D3DMATRIX MakeOrthoProjection(float w, float h)
+{
+    D3DMATRIX m = {{
+         2.f/w,   0.f,  0.f, 0.f,
+          0.f,  -2.f/h, 0.f, 0.f,
+          0.f,   0.f,  1.f, 0.f,
+         -1.f,   1.f,  0.f, 1.f
+    }};
+    return m;
+}

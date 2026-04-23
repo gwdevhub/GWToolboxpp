@@ -1201,7 +1201,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
             return "";
         }
 
-        std::string audio_data = TextUtils::Base64Decode(base64_audio);
+        std::string audio_data = TextUtils::Base64Decode<char>(base64_audio);
         VoiceLog("Google voice generation successful, decoded %zu bytes", audio_data.size());
         return audio_data;
     }

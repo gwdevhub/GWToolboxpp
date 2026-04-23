@@ -265,7 +265,7 @@ namespace {
         reroll_stage = PendingLogout;
     }
 
-    bool Reroll(const wchar_t* character_name, bool _same_map, const bool _same_party = true)
+    bool Reroll(const wchar_t* character_name, bool _same_map, const bool _same_party = true, const bool _ignore_current_character = false, const bool _do_not_prompt = false)
     {
         reroll_stage = None;
         reverting_reroll = false;
@@ -275,7 +275,10 @@ namespace {
         }
         wcscpy(reroll_to_player_name, character_name);
         const wchar_t* player_name = GW::AccountMgr::GetCurrentPlayerName();
-        if (!player_name || wcscmp(player_name, character_name) == 0) {
+        if (!player_name) {
+            return false;
+        }
+        if (!_ignore_current_character && wcscmp(player_name, character_name) == 0) {
             return false;
         }
         wcscpy(initial_player_name, player_name);
@@ -301,7 +304,7 @@ namespace {
         same_map = _same_map;
         same_party = _same_party;
         reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
-        reroll_stage = PromptPendingLogout;
+        reroll_stage = _do_not_prompt ? PendingLogout : PromptPendingLogout;
         return true;
     }
 
@@ -686,9 +689,9 @@ bool RerollWindow::Reroll(const wchar_t* character_name, const GW::Constants::Ma
     return ::Reroll(character_name, _map_id);
 }
 
-bool RerollWindow::Reroll(const wchar_t* character_name, bool _same_map, const bool _same_party)
+bool RerollWindow::Reroll(const wchar_t* character_name, bool _same_map, const bool _same_party, const bool _ignore_current_character, const bool _do_not_prompt)
 {
-    return ::Reroll(character_name, _same_map, _same_party);
+    return ::Reroll(character_name, _same_map, _same_party, _ignore_current_character, _do_not_prompt);
 }
 
 void RerollWindow::LoadSettings(ToolboxIni* ini)

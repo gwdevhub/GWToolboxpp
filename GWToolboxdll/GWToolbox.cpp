@@ -64,6 +64,8 @@ namespace {
     bool must_self_destruct = false; // is true when toolbox should quit
     GW::HookEntry Update_Entry;
 
+    HANDLE hot_reload_event = nullptr;
+
     std::recursive_mutex module_management_mutex;
 
 
@@ -728,6 +730,11 @@ DWORD __stdcall GWToolbox::MainLoop(LPVOID module) noexcept
         Sleep(160);
 
         UnloadGWCADll();
+
+        if (hot_reload_event) {
+            CloseHandle(hot_reload_event);
+            hot_reload_event = nullptr;
+        }
     } __except (EXCEPT_EXPRESSION_ENTRY) {
         Log::Log("SafeThreadEntry __except body\n");
     }
@@ -761,6 +768,10 @@ void GWToolbox::Initialize(LPVOID module)
     UpdateInitialising(.0f);
     AttachGameLoopCallback();
     pending_detach_dll = false;
+
+    if (!hot_reload_event) {
+        hot_reload_event = CreateEventA(nullptr, TRUE, FALSE, "GWToolboxHotReload");
+    }
 }
 
 std::filesystem::path GWToolbox::LoadSettings()
@@ -934,6 +945,13 @@ void GWToolbox::Update(GW::HookStatus*)
             break;
         default:
             return;
+    }
+
+    // Check for hot reload signal
+    if (hot_reload_event && WaitForSingleObject(hot_reload_event, 0) == WAIT_OBJECT_0) {
+        Log::Info("Hot reload requested, unloading...");
+        SignalTerminate();
+        return;
     }
 
     UpdateModulesTerminating(delta_f);

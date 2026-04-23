@@ -40,7 +40,9 @@
 #include <Modules/GamepadModule.h>
 #include <Modules/CameraUnlockModule.h>
 #include <Modules/LoginModule.h>
+#include <Widgets/VanquishMapOverlayWidget.h>
 
+#include <Windows/AccountInventoryWindow.h>
 #include <Windows/PconsWindow.h>
 #include <Windows/HotkeysWindow.h>
 #include <Windows/BuildsWindow.h>
@@ -161,6 +163,7 @@ namespace {
         ItemTooltipModule::Instance(),
         ResignLogModule::Instance(),
         QuestModule::Instance(),
+        VanquishMapOverlayWidget::Instance(),
         PartyBroadcast::Instance(),
         CodeOptimiserModule::Instance(),
 #if 0
@@ -219,7 +222,8 @@ namespace {
         GWMarketWindow::Instance(),
         InventorySorting::Instance(),
         FavorTracker::Instance(),
-        LoginModule::Instance()
+        LoginModule::Instance(),
+        {AccountInventoryWindow::Instance(), false}
     };
 
     bool modules_sorted = false;

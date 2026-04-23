@@ -175,5 +175,6 @@ public:
         }
     };
 
+    static uint16_t MoveItem(const Item* item, const uint16_t quantity = 1000u);
     static Item* GetNextUnsalvagedItem(const Item* salvage_kit = nullptr, const Item* start_after_item = nullptr);
 };
