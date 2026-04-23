@@ -19,7 +19,65 @@ namespace TextUtils {
     std::wstring Replace(const std::wstring_view subject, const std::wstring& pattern, const std::wstring& replacement);
     std::string Replace(const std::string_view subject, const std::string& pattern, const std::string& replacement);
 
-    std::string Base64Decode(std::string_view str);
+    template<typename CharT>
+    std::basic_string<CharT> Base64Decode(std::string_view encoded)
+    {
+        const std::string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        std::basic_string<CharT> decoded;
+        std::vector<int> T(256, -1);
+
+        for (int i = 0; i < 64; i++)
+            T[chars[i]] = i;
+
+        int bits = sizeof(CharT) * 8;
+        int val = 0, valb = -bits;
+        for (unsigned char c : encoded) {
+            if (T[c] == -1) break;
+            val = (val << 6) + T[c];
+            valb += 6;
+            if (valb >= 0) {
+                decoded.push_back(CharT(val >> valb));
+                valb -= bits;
+            }
+        }
+        return decoded;
+    }
+
+    template<typename CharT>
+    std::string Base64Encode(std::basic_string_view<CharT> decoded)
+    {
+        const std::string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        std::string encoded;
+        std::vector<int> T(64);
+
+        for (int i = 0; i < 64; i++)
+            T[i] = chars[i];
+
+        int bits = sizeof(CharT) * 8;
+        int val = 0, valb = -6;
+        for (CharT c : decoded) {
+            val = (val << bits) + c;
+            valb += bits;
+            while (valb >= 0) {
+                encoded.push_back(char(T[(val >> valb) & 0x3F]));
+                valb -= 6;
+            }
+        }
+        if (valb != -6) {
+            val = (val << 8);
+            valb += 8;
+            encoded.push_back(char(T[(val >> valb) & 0x3F]));
+            valb -= 6;
+        }
+        while (valb != -6) {
+            if (0 > valb && valb > -6) {
+                valb += 8;
+            }
+            encoded.push_back('=');
+            valb -= 6;
+        }
+        return encoded;
+    }
 
     std::string GetFormattedDateTime();
 
