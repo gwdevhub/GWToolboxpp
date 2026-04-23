@@ -24,7 +24,6 @@ void PrintUsage(const bool terminate)
             "    /localdll                  Check launcher directory for toolbox dll, won't try to install or update\n\n"
 
             "    /pid <process id>          Process id of the target in which to inject\n"
-            "    /hotreload <dll path>      Signal running toolbox to unload, copy DLL, and re-inject\n"
     );
 
     if (terminate) {
@@ -103,15 +102,6 @@ void ParseCommandLine()
         }
         else if (wcscmp(arg, L"/localdll") == 0) {
             settings.localdll = true;
-            settings.noupdate = true;
-            settings.noinstall = true;
-        }
-        else if (wcscmp(arg, L"/hotreload") == 0) {
-            if (++i == argc) {
-                fprintf(stderr, "'/hotreload' must be followed by a DLL path\n");
-                PrintUsage(true);
-            }
-            settings.hotreload_dll = argv[i];
             settings.noupdate = true;
             settings.noinstall = true;
         }
