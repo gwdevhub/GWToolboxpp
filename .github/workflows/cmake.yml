@@ -287,7 +287,7 @@ jobs:
         # Create release
         if [ -n "$DEV_COMMIT_SHORT" ]; then
           gh release create "$TAG_NAME" \
-            --title "commit-$DEV_COMMIT_SHORT" \
+            --title "$TAG_NAME" \
             --notes "[$DEV_COMMIT_SHORT](https://github.com/gwdevhub/GWToolboxpp/commit/$DEV_COMMIT_SHORT)" \
             --prerelease \
             ./output-artifacts/*
