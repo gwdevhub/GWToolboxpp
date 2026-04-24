@@ -88,6 +88,7 @@ jobs:
         git config --global user.name "GitHub Actions Bot"
 
     - name: Merge from upstream
+      shell: bash
       env:
         MERGE_FROM: ${{ needs.check.outputs.run == 'dev' && needs.check.outputs.dev_commit || format('refs/tags/{0}', needs.check.outputs.tag) }}
       run: |
