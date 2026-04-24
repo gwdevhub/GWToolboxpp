@@ -171,7 +171,7 @@ jobs:
       continue-on-error: true
       uses: actions/create-github-app-token@v3
       with:
-        app-id: ${{ vars.PRIVATE_PLUGINS_CLIENT_ID }}
+        client-id: ${{ vars.PRIVATE_PLUGINS_CLIENT_ID }}
         private-key: ${{ secrets.PRIVATE_PLUGINS_KEY }}
         owner: gwtasdevs
         repositories: DialogsPlugins
@@ -259,12 +259,11 @@ jobs:
 
         # Prepare artifacts
         mkdir -p ./output-artifacts
-        BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
-        for file in $BIN_DIR/*.dll; do
+        for file in ./bin/RelWithDebInfo/*.dll; do
           cp "$file" ./output-artifacts
         done
-        cp "${{runner.workspace}}/GWToolboxpp/Dependencies/GWCA/bin/gwca.dll" ./output-artifacts
-        gzip -c "$BIN_DIR/GWToolboxdll.pdb" > ./output-artifacts/GWToolboxdll.pdb.gz
+        cp ./Dependencies/GWCA/bin/gwca.dll ./output-artifacts
+        gzip -c "./bin/RelWithDebInfo/GWToolboxdll.pdb" > ./output-artifacts/GWToolboxdll.pdb.gz
 
         # Create release
         if [ -n "$DEV_COMMIT_SHORT" ]; then
