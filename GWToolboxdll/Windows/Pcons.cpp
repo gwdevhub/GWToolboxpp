@@ -297,12 +297,12 @@ void Pcon::AfterUsed(const bool used, const int qty)
     }
 }
 
-GW::Item* Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem)
+bool Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem, GW::Item* result)
 {
     // Scan bags, find an incomplete stack, or otherwise an empty slot.
     GW::Bag** bags = GW::Items::GetBagArray();
     if (bags == nullptr) {
-        return nullptr;
+        return false;
     }
     auto emptySlotIdx = static_cast<size_t>(-1);
     GW::Bag* emptyBag = nullptr;
@@ -343,19 +343,20 @@ GW::Item* Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem)
                 {
                     UnreserveSlotForMove(emptyBag->index, emptySlotIdx);
                 }
-                return item; // Found a stack with space.
+                *result = *item;
+                return true; // Found a stack with space.
             }
         }
     }
     if (!emptyBag) {
-        return nullptr;
+        return false;
     }
-    const auto item = new GW::Item(); // Create a "fake" item...
-    item->bag = emptyBag;             // ...that belongs in the empty bag/slot we found...
-    item->slot = static_cast<uint8_t>(emptySlotIdx);
-    item->quantity = 0; // ...with 250 available slots.
-    item->item_id = 0;  // item_id to 0 for comparison
-    return item;
+    memset(result, 0, sizeof(*result)); // Create a "fake" item...
+    result->bag = emptyBag;           // ...that belongs in the empty bag/slot we found...
+    result->slot = static_cast<uint8_t>(emptySlotIdx);
+    result->quantity = 0; // ...with 250 available slots.
+    result->item_id = 0;  // item_id to 0 for comparison
+    return true;
 }
 
 uint32_t Pcon::MoveItem(const GW::Item* item, GW::Bag* bag, const size_t slot, size_t quantity)
@@ -378,7 +379,7 @@ uint32_t Pcon::MoveItem(const GW::Item* item, GW::Bag* bag, const size_t slot, s
     if (quantity > 1 && vacantQuantity < quantity) {
         quantity = vacantQuantity;
     }
-    GW::Items::MoveItem(item, bag, slot, quantity);
+    ASSERT(GW::Items::MoveItem(item, bag, slot, quantity));
     return quantity;
 }
 
@@ -389,12 +390,13 @@ void Pcon::Refill(const bool do_refill)
     }
     refilling = do_refill;
     if (!refilling) {
-        if (pending_move_to_bag) {
-            UnreserveSlotForMove(pending_move_to_bag->index, pending_move_to_slot);
+        if (const auto bag = GW::Items::GetBag(pending_move_to_bag)) {
+            UnreserveSlotForMove(bag->index, pending_move_to_slot);
         }
-        pending_move_to_bag = nullptr;
+        pending_move_to_bag = GW::Constants::Bag::None;
         pending_move_to_slot = 0;
         pending_move_to_quantity = 0;
+        pending_move_to_started = 0;
         return;
     }
     ResetCounts();
@@ -440,8 +442,17 @@ void Pcon::UpdateRefill()
         pcon_quantity_checked = false;
         return;
     }
-    if (pending_move_to_quantity) {
-        const GW::Item* item = GW::Items::GetItemBySlot(pending_move_to_bag, pending_move_to_slot + 1);
+    if (GW::UI::IsLoadingScreenShown()) {
+        return;
+    }
+    if (pending_move_to_started) {
+        if (TIMER_DIFF(pending_move_to_started) > 20000) {
+            Log::Warning("Timed out refilling pcon %s", chat.c_str());
+            Refill(false);
+            pcon_quantity_checked = false;
+            return;
+        }
+        const GW::Item* item = GW::Items::GetItemBySlot(GW::Items::GetBag(pending_move_to_bag), pending_move_to_slot + 1);
         if (!item || !PointsPerUse(item) || item->quantity != pending_move_to_quantity) {
             return; // Still waiting for move.
         }
@@ -466,6 +477,7 @@ void Pcon::UpdateRefill()
     // If preferred_model_id != 0, only items with that model_id are considered.
     // Returns true if a move was initiated, false if no matching item was found.
     auto try_move_from_storage = [&](DWORD preferred_model_id) -> bool {
+        GW::Item inventoryItem;
         for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {
             GW::Bag* storageBag = bags[bagIndex];
             if (storageBag == nullptr) {
@@ -487,8 +499,7 @@ void Pcon::UpdateRefill()
                 if (points_per_item < 1) {
                     continue; // This is not the pcon you're looking for...
                 }
-                const GW::Item* inventoryItem = FindVacantStackOrSlotInInventory(storageItem); // Now find a slot in inventory to move them to.
-                if (inventoryItem == nullptr) {
+                if (!FindVacantStackOrSlotInInventory(storageItem, &inventoryItem)) { // Now find a slot in inventory to move them to.
                     printf("No more space for %s", chat.c_str());
                     Refill(false);
                     pcon_quantity_checked = false;
@@ -498,13 +509,11 @@ void Pcon::UpdateRefill()
                 if (quantity_to_move > storageItem->quantity) {
                     quantity_to_move = storageItem->quantity;
                 }
-                const size_t slot_to = inventoryItem->slot;
-                GW::Bag* bag_to = inventoryItem->bag;
-                pending_move_to_quantity = inventoryItem->quantity + MoveItem(storageItem, bag_to, slot_to, quantity_to_move);
-                if (inventoryItem->quantity == 0) {
-                    delete inventoryItem; // Empty slot was returned; free memory here.
-                }
-                pending_move_to_bag = bag_to;
+                const size_t slot_to = inventoryItem.slot;
+                GW::Bag* bag_to = inventoryItem.bag;
+                pending_move_to_quantity = inventoryItem.quantity + MoveItem(storageItem, bag_to, slot_to, quantity_to_move);
+                pending_move_to_bag = bag_to->bag_id();
+                pending_move_to_started = TIMER_INIT();
                 pending_move_to_slot = slot_to;
                 return true;
             }
