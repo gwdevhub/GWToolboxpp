@@ -504,6 +504,7 @@ namespace {
                 continue;
             }
 
+            if (isnan(living->pos.x) || isnan(living->pos.y)) continue;
             tracked.pos = {living->pos.x, living->pos.y};
             tracked.rotation = living->rotation_angle;
             tracked.state = EnemyState::Alive;
