@@ -53,9 +53,10 @@ protected:
     // Returns ordered list of model IDs from inventory that this pcon matches, for prioritized refill.
     std::vector<DWORD> GetPrioritizedModelIdsFromInventory() const;
 
-    GW::Bag* pending_move_to_bag = nullptr;
+    GW::Constants::Bag pending_move_to_bag = GW::Constants::Bag::None;
     uint32_t pending_move_to_slot = 0;
     uint32_t pending_move_to_quantity = 0;
+    clock_t pending_move_to_started = 0;
 
     void Terminate();
 public:
@@ -105,7 +106,7 @@ public:
 protected:
     std::string desc;
     // Cycles through character's inventory to find a matching (incomplete) stack, or an empty pane.
-    static GW::Item* FindVacantStackOrSlotInInventory(const GW::Item* likeItem = nullptr);
+    static bool FindVacantStackOrSlotInInventory(const GW::Item* likeItem, GW::Item* result);
     GW::AgentLiving* player = nullptr;
 
     // "default" is the fallback
