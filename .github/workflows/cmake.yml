@@ -89,7 +89,7 @@ jobs:
 
     - name: Merge from upstream
       env:
-        MERGE_FROM: ${{ needs.check.outputs.run == 'dev' && format('refs/tags/{0}', needs.check.outputs.tag) || needs.check.outputs.dev_commit }}
+        MERGE_FROM: ${{ needs.check.outputs.run == 'dev' && needs.check.outputs.dev_commit || format('refs/tags/{0}', needs.check.outputs.tag) }}
       run: |
         git checkout $BRANCH
         git merge "${MERGE_FROM}" --no-edit
