@@ -26,6 +26,7 @@ public:
 
     void Initialize() override;
     void Draw(IDirect3DDevice9* pDevice) override;
+    
     void Update(float delta) override;
     void Terminate() override;
     void LoadSettings(ToolboxIni* ini) override;
@@ -37,4 +38,6 @@ public:
     static bool IsNavigating();
     static void StopNavigating();
     static bool ContextMenuItems();
+private:
+    void DrawVanquishToggleButton();
 };
