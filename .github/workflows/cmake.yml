@@ -259,9 +259,7 @@ jobs:
 
         # Prepare artifacts
         mkdir -p ./output-artifacts
-        for file in ./bin/RelWithDebInfo/*.dll; do
-          cp "$file" ./output-artifacts
-        done
+        cp ./bin/RelWithDebInfo/*.dll ./output-artifacts
         cp ./Dependencies/GWCA/bin/gwca.dll ./output-artifacts
         gzip -c "./bin/RelWithDebInfo/GWToolboxdll.pdb" > ./output-artifacts/GWToolboxdll.pdb.gz
 
