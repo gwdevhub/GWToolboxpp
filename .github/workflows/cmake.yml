@@ -60,7 +60,7 @@ jobs:
         fi
 
   build:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     needs: check
     if: needs.check.outputs.run != 'false'
     timeout-minutes: 30
