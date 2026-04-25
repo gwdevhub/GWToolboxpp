@@ -187,7 +187,10 @@ void Pcon::Update(int delay)
         maptype = GW::Map::GetInstanceType();
         SetPlayerName();
         ResetCounts();
-        Refill(refill_if_below_threshold && IsEnabled() && PconsWindow::Instance().GetEnabled());
+        Refill(false);
+        if (maptype == GW::Constants::InstanceType::Outpost) {
+            Refill(refill_if_below_threshold && IsEnabled() && PconsWindow::Instance().GetEnabled());
+        }
     }
     // Refill pcons if needed.
     UpdateRefill();

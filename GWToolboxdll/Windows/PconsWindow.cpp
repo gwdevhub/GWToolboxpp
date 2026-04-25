@@ -664,10 +664,6 @@ void PconsWindow::MapChanged()
 
     player = nullptr;
     elite_area_disable_triggered = false;
-    // Refill pcons automatically when entering an outpost if enabled.
-    if (instance_type == InstanceType::Outpost) {
-        Refill(enabled && Pcon::refill_if_below_threshold);
-    }
     // Find out which objectives we need to complete for this map.
     const auto map_objectives_it = objectives_to_complete_by_map_id.find(map_id);
     if (map_objectives_it != objectives_to_complete_by_map_id.end()) {
