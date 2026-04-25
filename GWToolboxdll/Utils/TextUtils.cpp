@@ -312,6 +312,30 @@ namespace TextUtils {
         return out;
     }
 
+    GUID ConvertWStringToGuid(const std::wstring& str)
+    {
+        uint32_t h1 = 0x6ba7b810, h2 = 0x9dad11d1, h3 = 0x80b400c0, h4 = 0x4fd430c8;
+        for (wchar_t c : str) {
+            h1 = h1 * 31 + c;
+            h2 = h2 * 37 + c;
+            h3 = h3 * 41 + c;
+            h4 = h4 * 43 + c;
+        }
+        GUID guid = {};
+        guid.Data1 = h1;
+        guid.Data2 = (uint16_t)(h2 >> 16);
+        guid.Data3 = (uint16_t)(h3 >> 16) & 0x0FFF | 0x5000;
+        guid.Data4[0] = (h2 & 0xFF) | 0x80;
+        guid.Data4[1] = (h3 & 0xFF);
+        guid.Data4[2] = (h4 >> 24) & 0xFF;
+        guid.Data4[3] = (h4 >> 16) & 0xFF;
+        guid.Data4[4] = (h4 >> 8) & 0xFF;
+        guid.Data4[5] = (h4) & 0xFF;
+        guid.Data4[6] = (h1 >> 8) & 0xFF;
+        guid.Data4[7] = (h1 >> 16) & 0xFF;
+        return guid;
+    }
+
     std::string GuidToString(const GUID* guid)
     {
         ASSERT(guid);
@@ -324,6 +348,14 @@ namespace TextUtils {
             guid->Data4[3], guid->Data4[4], guid->Data4[5],
             guid->Data4[6], guid->Data4[7]);
         return guid_string;
+    }
+    bool StringToGuid(const std::string& str, GUID* guid)
+    {
+        ASSERT(guid);
+        return sscanf(
+                   str.c_str(), "%08x-%04hx-%04hx-%02hhx%02hhx-%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx", &guid->Data1, &guid->Data2, &guid->Data3, &guid->Data4[0], &guid->Data4[1], &guid->Data4[2], &guid->Data4[3], &guid->Data4[4], &guid->Data4[5],
+                   &guid->Data4[6], &guid->Data4[7]
+               ) == 11;
     }
 
     // Convert an UTF8 string to a wide Unicode String

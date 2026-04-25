@@ -84,6 +84,8 @@ namespace TextUtils {
     std::wstring StripTags(std::wstring_view str);
 
     std::string GuidToString(const GUID* guid);
+    bool StringToGuid(const std::string& str, GUID* guid);
+    GUID ConvertWStringToGuid(const std::wstring& str);
 
     std::string parseStringFromJson(const nlohmann::json& j, const char* key, const std::string& default_val);
     int parseIntFromJson(const nlohmann::json& j, const char* key, const int& default_val);
