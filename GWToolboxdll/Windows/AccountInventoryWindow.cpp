@@ -698,7 +698,16 @@ void AccountInventoryWindow::OnInventoryItemClicked(InventoryItem *i, bool move)
     if (item_is_in_chest && item_to_move) {
         MoveItem();
     } else if (item_is_in_chest && !item_to_move) {
-        GW::GameThread::Enqueue([]() { GW::Items::OpenXunlaiWindow(); });
+        const uint32_t bag_id = i->bag_id;
+        GW::GameThread::Enqueue([bag_id]() {
+            uint32_t pane;
+            if (bag_id == (uint32_t)GW::Constants::Bag::Material_Storage)
+                pane = (uint32_t)GW::Constants::StoragePane::Material_Storage;
+            else
+                pane = bag_id - (uint32_t)GW::Constants::Bag::Storage_1;
+            GW::UI::SetPreference(GW::UI::NumberPreference::StorageBagPage, pane);
+            GW::Items::OpenXunlaiWindow();
+        });
     } else if (item_is_on_current_character && item_is_on_hero) {
         // MoveItem will be triggered through StepReroll if the hero is already present.
         // Otherwise through AddItem, once the heroes inventory has been added by GW
