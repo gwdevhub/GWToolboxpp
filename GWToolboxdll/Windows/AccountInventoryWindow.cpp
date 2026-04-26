@@ -1234,12 +1234,13 @@ struct MergeStack;
                 (*it)->occupied_inventory--;
             }
         }
+        auto ini_id = GetIniID(i->account, i->character);
         if (auto it = inventory.find(i); it != inventory.end()) {
             inventory.erase(it);
         }
         inventory_lookup.erase(item_id);
         needs_sorting = true;
-        inventory_dirty.insert(GetIniID(i->account, i->character));
+        inventory_dirty.insert(std::move(ini_id));
         save_dirty_inventories_timer = TIMER_INIT();
         return true;
     }
