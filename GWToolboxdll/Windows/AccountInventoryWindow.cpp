@@ -215,8 +215,6 @@ const char* HERO_NAME[] = {
         IDirect3DTexture9** texture; // output of GetItemImage
         std::string location{};     // (Player) <Storage Pane> or <Hero Name>
 
-        bool valid() { return bag_id > GW::Constants::Bag::None && bag_id < GW::Constants::Bag::Max;}
-
         void CopyKeyTo(InventoryItem* i)
         {
             i->account = account;
@@ -469,7 +467,7 @@ struct MergeStack;
     clock_t map_loaded_delayed_timer{};
     clock_t save_dirty_inventories_timer{};
     bool map_loaded_delayed_trigger = false;
-    InventoryItem item_to_move;
+    std::optional<InventoryItem> item_to_move;
 
     // config options
     bool detailed_view = false;
@@ -607,9 +605,9 @@ struct MergeStack;
 
     void MoveItem()
     {
-        if (!item_to_move.valid()) return;
-        auto it = inventory.find(&item_to_move);
-        memset(&item_to_move, 0, sizeof(item_to_move));
+        if (!item_to_move) return;
+        auto it = inventory.find(&*item_to_move);
+        item_to_move.reset();
         if (it == inventory.end()) return;
 
         const auto item = it->get();
@@ -639,8 +637,8 @@ struct MergeStack;
         if (!memeq(&i->account,&current_account)) return;
         if (move) {
             if (IsHeroArmor(i->hero_id, i->slot)) return; // can not unequip hero armor
-            memset(&item_to_move, 0, sizeof(item_to_move));
-            i->CopyKeyTo(&item_to_move);
+            item_to_move.emplace();
+            i->CopyKeyTo(&*item_to_move);
         }
         bool item_is_in_chest = IsChestBag(i->bag_id);
         bool item_is_on_current_character = i->character == current_character;
@@ -650,10 +648,10 @@ struct MergeStack;
             cached_heroes.push_back(i->hero_id);
         }
 
-        if (item_is_in_chest && item_to_move.valid()) {
+        if (item_is_in_chest && item_to_move) {
             MoveItem();
         }
-        else if (item_is_in_chest && !item_to_move.valid()) {
+        else if (item_is_in_chest && !item_to_move) {
             GW::GameThread::Enqueue([bag_id = i->bag_id]() {
                 uint32_t pane;
                 if (bag_id == GW::Constants::Bag::Material_Storage)
@@ -670,7 +668,7 @@ struct MergeStack;
             reroll_stage = RerollStage::RerollToItem;
             StepReroll();
         }
-        else if (item_is_on_current_character && !item_is_on_hero && item_to_move.valid()) {
+        else if (item_is_on_current_character && !item_is_on_hero && item_to_move) {
             MoveItem();
         }
         else if (!item_is_on_current_character) {
@@ -681,7 +679,7 @@ struct MergeStack;
             if (!RerollWindow::Instance().Reroll(TextUtils::StringToWString(i->character).c_str(), false, false, true, false)) {
                 // reroll failed, abort
                 reroll_stage = RerollStage::None;
-                memset(&item_to_move, 0, sizeof(item_to_move));
+                item_to_move.reset();
             }
         }
     }
@@ -1192,7 +1190,7 @@ struct MergeStack;
         save_dirty_inventories_timer = TIMER_INIT();
         needs_sorting = true;
 
-        if (item_to_move.valid() && GW::Constants::HeroID::NoHero != i_raw->hero_id && ItemEqual{}(&item_to_move, i_raw)) {
+        if (item_to_move && GW::Constants::HeroID::NoHero != i_raw->hero_id && ItemEqual{}(&*item_to_move, i_raw)) {
             // If we had to change characters and item_to_move is on a player character,
             // then we get here during loading before MoveItem can work.
             // In that case StepReroll will take care of moving the item.
@@ -1234,12 +1232,13 @@ struct MergeStack;
                 (*it)->occupied_inventory--;
             }
         }
+        auto ini_id = GetIniID(i->account, i->character);
         if (auto it = inventory.find(i); it != inventory.end()) {
             inventory.erase(it);
         }
         inventory_lookup.erase(item_id);
         needs_sorting = true;
-        inventory_dirty.insert(GetIniID(i->account, i->character));
+        inventory_dirty.insert(std::move(ini_id));
         save_dirty_inventories_timer = TIMER_INIT();
         return true;
     }
@@ -1377,7 +1376,7 @@ void AccountInventoryWindow::Update(float)
     }
     if (reroll_stage == RerollStage::WaitForHeroWithItem && TIMER_DIFF(add_hero_timer) > ADD_HERO_TIMEOUT) {
         // failed to load hero in time, forget item_to_move
-        memset(&item_to_move, 0, sizeof(item_to_move));
+        item_to_move.reset();
         reroll_stage = RerollStage::None;
     }
     if (save_dirty_inventories_timer && !inventory_dirty.empty() && TIMER_DIFF(save_dirty_inventories_timer) > SAVE_DIRTY_INVENTORIES_TIMEOUT) {
