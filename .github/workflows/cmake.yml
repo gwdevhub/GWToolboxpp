@@ -260,6 +260,7 @@ jobs:
         # Prepare artifacts
         mkdir -p ./output-artifacts
         cp ./bin/RelWithDebInfo/*.dll ./output-artifacts
+        rm -f ./output-artifacts/ExamplePlugin.dll
         cp ./Dependencies/GWCA/bin/gwca.dll ./output-artifacts
         gzip -c "./bin/RelWithDebInfo/GWToolboxdll.pdb" > ./output-artifacts/GWToolboxdll.pdb.gz
 
