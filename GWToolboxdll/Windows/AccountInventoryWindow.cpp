@@ -162,10 +162,20 @@ const char* HERO_NAME[] = {
         }
     }
 
-    void RightAlignText(const std::string& text)
+    void RightAlignText(const char* text)
     {
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize(text.c_str()).x - ImGui::GetScrollX());
-        ImGui::Text("%s", text.c_str());
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize(text).x - ImGui::GetScrollX());
+        ImGui::TextUnformatted(text);
+    }
+
+    void RightAlignTextF(const char* fmt, ...)
+    {
+        char buf[256];
+        va_list args;
+        va_start(args, fmt);
+        vsnprintf(buf, sizeof(buf), fmt, args);
+        va_end(args);
+        RightAlignText(buf);
     }
 
     ImVec4 HSVRotate(ImVec4 color, float hue = -1.f, float sat_factor = 1.f)
@@ -492,19 +502,26 @@ struct MergeStack;
     ImVec4 color_chest_item{};
     ImVec4 color_chest_item_hovered{};
     ImVec4 color_chest_item_active{};
+
     ImVec4 color_hero_item{};
     ImVec4 color_hero_item_hovered{};
     ImVec4 color_hero_item_active{};
+
     ImVec4 color_item_foreign{};
     ImVec4 color_item_hovered_foreign{};
     ImVec4 color_item_active_foreign{};
+
     ImVec4 color_chest_item_foreign{};
     ImVec4 color_chest_item_hovered_foreign{};
     ImVec4 color_chest_item_active_foreign{};
+
     ImVec4 color_hero_item_foreign{};
     ImVec4 color_hero_item_hovered_foreign{};
     ImVec4 color_hero_item_active_foreign{};
+
     ImVec4 cached_button_color{};
+
+    static constexpr ImU32 color_quantity = IM_COL32(250, 247, 153, 255);
     
     void SaveHeroes()
     {
@@ -1410,7 +1427,7 @@ void AccountInventoryWindow::PreMapLoad()
                 for (const auto& available_char : *available_characters) {
                     if (!min || wcscmp(available_char.player_name, min) < 0) min = available_char.player_name;
                 }
-                free_slot_p->account_representing_character = TextUtils::WStringToString(min);
+                free_slot_p->account_representing_character = TextUtils::WStringToString(min ? min : L"");
             }
         }
         if (character == current_character) {
@@ -1679,9 +1696,8 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
     const auto font_scale = ImGui::FontScale();
     auto& style = ImGui::GetStyle();
     const float item_spacing = style.ItemInnerSpacing.x;
-    float checkbox_max_width = 160.f * font_scale;
+    const float checkbox_max_width = 160.f * font_scale;
     if (memcmp(&style.Colors[ImGuiCol_Button], &cached_button_color, sizeof(ImVec4)) != 0) {
-        // Only update colours when theme changes
         cached_button_color = style.Colors[ImGuiCol_Button];
         color_chest_item = HSVRotate(style.Colors[ImGuiCol_Button], 0.333f);
         color_chest_item_hovered = HSVRotate(style.Colors[ImGuiCol_ButtonHovered], 0.333f);
@@ -1711,251 +1727,270 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         }
         ImGui::End();
     }
-    if (visible) {
-        ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(760.f * font_scale, 400.f * font_scale), ImGuiCond_FirstUseEver);
-        if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()) || ImGui::IsWindowCollapsed()) {
+
+    if (!visible) return;
+
+    ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(760.f * font_scale, 400.f * font_scale), ImGuiCond_FirstUseEver);
+    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags()) || ImGui::IsWindowCollapsed()) {
+        ImGui::End();
+        return;
+    }
+
+    // view related settings
+    ImGui::Checkbox("Detailed View", &detailed_view);
+    ImGui::SameLine();
+    if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
+    if (ImGui::Checkbox("Merge Stacks", &merge_stacks)) needs_sorting = true;
+    ImGui::SameLine();
+    if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
+    if (ImGui::Checkbox("Hide other Accounts", &hide_other_accounts)) needs_sorting = true;
+    ImGui::SameLine();
+    if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
+    if (ImGui::Checkbox("Hide Equipment", &hide_equipment)) needs_sorting = true;
+    ImGui::SameLine();
+    if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
+    if (ImGui::Checkbox("Hide Equipment Packs", &hide_equipment_pack)) needs_sorting = true;
+    ImGui::SameLine();
+    if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
+    if (ImGui::Checkbox("Hide Hero Armor", &hide_hero_armor)) needs_sorting = true;
+    ImGui::SameLine();
+    if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
+    if (ImGui::Checkbox("Hide unclaimed Items", &hide_unclaimed_items)) needs_sorting = true;
+    ImGui::SameLine();
+    if (ImGui::GetContentRegionAvail().x < 110.f * font_scale) ImGui::NewLine();
+    if (ImGui::Button("Gather Inventories")) {
+        ImGui::ConfirmDialog("In order to load all available items, this will cycle\nthrough all characters and all heroes.\nThis will take a few minutes if you have many characters.\nAre you sure?", [](bool result, void*) {
+            if (result) AccountInventoryWindow::Instance().GatherAllInventories();
+        });
+    }
+
+    const auto color_disabled = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+
+    if (ImGui::CollapsingHeader("Free Slots")) {
+        if (!ImGui::BeginTable("###freeslots", SlotColumnID_Max, ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti | ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_SizingFixedFit)) {
             ImGui::End();
             return;
         }
-
-        // view related settings
-        ImGui::Checkbox("Detailed View", &detailed_view);
-        ImGui::SameLine();
-        if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-        if (ImGui::Checkbox("Merge Stacks", &merge_stacks)) needs_sorting = true;
-        ImGui::SameLine();
-        if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-        if (ImGui::Checkbox("Hide other Accounts", &hide_other_accounts)) needs_sorting = true;
-        ImGui::SameLine();
-        if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-        if (ImGui::Checkbox("Hide Equipment", &hide_equipment)) needs_sorting = true;
-        ImGui::SameLine();
-        if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-        if (ImGui::Checkbox("Hide Equipment Packs", &hide_equipment_pack)) needs_sorting = true;
-        ImGui::SameLine();
-        if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-        if (ImGui::Checkbox("Hide Hero Armor", &hide_hero_armor)) needs_sorting = true;
-        ImGui::SameLine();
-        if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-        if (ImGui::Checkbox("Hide unclaimed Items", &hide_unclaimed_items)) needs_sorting = true;
-        ImGui::SameLine();
-        if (ImGui::GetContentRegionAvail().x < 110.f * font_scale) ImGui::NewLine();
-        if (ImGui::Button("Gather Inventories")) {
-            ImGui::ConfirmDialog("In order to load all available items, this will cycle\nthrough all characters and all heroes.\nThis will take a few minutes if you have many characters.\nAre you sure?", [](bool result, void*) {
-                if (result) AccountInventoryWindow::Instance().GatherAllInventories();
-            });
-        }
-
-        if (ImGui::CollapsingHeader("Free Slots")) {
-            if (!ImGui::BeginTable("###freeslots", SlotColumnID_Max, ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti | ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_SizingFixedFit)) {
-                ImGui::End();
-                return;
-            }
-            ImGui::TableSetupColumn("Character", ImGuiTableColumnFlags_WidthFixed, 0.f, SlotColumnID_Character);
-            ImGui::TableSetupColumn("Inventory", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_WidthFixed, 0.f, SlotColumnID_Inventory);
-            ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending, 0.f, SlotColumnID_InventorySize);
-            ImGui::TableSetupColumn("Equipment", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending, 0.f, SlotColumnID_Equipment);
-            ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending, 0.f, SlotColumnID_EquipmentSize);
-            ImGui::TableHeadersRow();
-            ImGui::TableNextRow();
-            ImGuiTableSortSpecs* slot_sort_specs = ImGui::TableGetSortSpecs();
-            if (needs_sorting || (slot_sort_specs && slot_sort_specs->SpecsDirty)) {
-                SortSlots(slot_sort_specs);
-            }
-            for (auto& free_slot : free_slots_sorted) {
-                auto free_equipment = free_slot->max_equipment - free_slot->occupied_equipment;
-                auto free_inventory = free_slot->max_inventory - free_slot->occupied_inventory;
-                auto is_current_account = memeq(&free_slot->account, &current_account);
-                bool is_chest = free_slot->character == "(Chest)";
-                std::string suffix = "";
-                int style_count = 0;
-                if (!is_current_account) {
-                    style_count = 1;
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-                    if (is_chest && !free_slot->account_representing_character.empty()) {
-                        suffix = " [" + free_slot->account_representing_character + "]";
-                    }
-                }
-                ImGui::TableNextColumn();
-                if (is_current_account) {
-                    if (ImGui::Button(free_slot->character.c_str())) {
-                        InventoryItem i;
-                        i.account = free_slot->account;
-                        i.character = free_slot->character;
-                        i.bag_id = is_chest ? GW::Constants::Bag::Storage_1 : GW::Constants::Bag::None;
-                        OnInventoryItemClicked(&i, false);
-                    }
-                }
-                else {
-                    ImGui::Text("%s%s", free_slot->character.c_str(), suffix.c_str());
-                }
-                ImGui::TableNextColumn();
-                if (free_slot->max_inventory) RightAlignText(std::to_string(free_inventory) + "/");
-                ImGui::TableNextColumn();
-                if (free_slot->max_inventory) ImGui::Text("%d", free_slot->max_inventory);
-                ImGui::TableNextColumn();
-                if (free_slot->max_equipment) RightAlignText(std::to_string(free_equipment) + "/");
-                ImGui::TableNextColumn();
-                if (free_slot->max_equipment) ImGui::Text("%d", free_slot->max_equipment);
-                ImGui::PopStyleColor(style_count);
-            }
-            ImGui::EndTable();
-        }
-
-        float items_table_height = std::max(ImGui::GetContentRegionAvail().y, ITEMS_TABLE_MIN_HEIGHT);
-        float inner_width = ImGui::GetContentRegionAvail().x - item_spacing;
-        ImGuiTableFlags flags = ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_NoBordersInBody;
-        if (detailed_view) {
-            flags |= ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_RowBg;
-        }
-        else {
-            items_table_height = 2 * ImGui::GetFrameHeight();
-            flags |= ImGuiTableFlags_SizingFixedFit;
-        }
-        if (!ImGui::BeginTable("###itemstable", ItemColumnID_Max, flags, ImVec2(inner_width, items_table_height))) {
-            ImGui::End();
-            return;
-        }
-        ImGui::TableSetupColumn("Character", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_Character);
-        ImGui::TableSetupColumn("Location / Hero", ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_Location);
-        ImGui::TableSetupColumn("Model ID", ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_ModelID);
-        ImGui::TableSetupColumn("Item", ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_Description);
-        ImGui::TableSetupScrollFreeze(3, 2);
+        ImGui::TableSetupColumn("Character", ImGuiTableColumnFlags_WidthFixed, 0.f, SlotColumnID_Character);
+        ImGui::TableSetupColumn("Inventory", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_WidthFixed, 0.f, SlotColumnID_Inventory);
+        ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending, 0.f, SlotColumnID_InventorySize);
+        ImGui::TableSetupColumn("Equipment", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending, 0.f, SlotColumnID_Equipment);
+        ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending, 0.f, SlotColumnID_EquipmentSize);
         ImGui::TableHeadersRow();
         ImGui::TableNextRow();
-
-        ImGui::TableNextColumn();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::InputText("###name_filter", name_filter_buf, _countof(name_filter_buf))) needs_sorting = true;
-
-        ImGui::TableNextColumn();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::InputText("###location_filter", location_filter_buf, _countof(location_filter_buf))) needs_sorting = true;
-
-        ImGui::TableNextColumn();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::InputText("###model_ID_filter", model_ID_filter_buf, _countof(model_ID_filter_buf))) needs_sorting = true;
-
-        ImGui::TableNextColumn();
-        ImGui::SetNextItemWidth(300.f * font_scale);
-        if (ImGui::InputText("###item_filter", item_filter_buf, _countof(item_filter_buf))) needs_sorting = true;
-        ImGui::SameLine();
-        ImGui::Text("Filter   %d/%d Items", filtered_item_count, inventory_sorted.size());
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-
-        ImGuiTableSortSpecs* item_sort_specs = ImGui::TableGetSortSpecs();
-        if (needs_sorting || (item_sort_specs && item_sort_specs->SpecsDirty)) {
-            SortAndFilterInventory(item_sort_specs);
+        ImGuiTableSortSpecs* slot_sort_specs = ImGui::TableGetSortSpecs();
+        if (needs_sorting || (slot_sort_specs && slot_sort_specs->SpecsDirty)) {
+            SortSlots(slot_sort_specs);
         }
-
-        if (!detailed_view) {
-            ImGui::EndTable();
-            if (!ImGui::BeginTable(
-                    "###itemgrid", std::max(1, (int)(inner_width / (3.3f * ImGui::GetTextLineHeight() + item_spacing))), ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_ScrollY,
-                    ImVec2(inner_width, std::max(ImGui::GetContentRegionAvail().y, ITEMS_TABLE_MIN_HEIGHT))
-                )) {
-                ImGui::End();
-                return;
-            }
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-        }
-
-        int render_index = 0;
-        for (auto& ims : inventory_sorted) {
-            auto i_front = *(ims.i.begin());
-
-            bool clicked = false;
-            ImGui::PushID(++render_index);
+        for (auto& free_slot : free_slots_sorted) {
+            const auto free_equipment = free_slot->max_equipment - free_slot->occupied_equipment;
+            const auto free_inventory = free_slot->max_inventory - free_slot->occupied_inventory;
+            const auto is_current_account = memeq(&free_slot->account, &current_account);
+            const bool is_chest = free_slot->character == "(Chest)";
+            std::string suffix;
             int style_count = 0;
-            if (!memeq(&i_front->account, &current_account)) {
-                style_count += 1;
-                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-                if (IsChestBag(i_front->bag_id)) {
-                    style_count += 3;
-                    ImGui::PushStyleColor(ImGuiCol_Button, color_chest_item_foreign);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color_chest_item_hovered_foreign);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, color_chest_item_active_foreign);
-                }
-                else if (IsOnHero(i_front->hero_id)) {
-                    style_count += 3;
-                    ImGui::PushStyleColor(ImGuiCol_Button, color_hero_item_foreign);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color_hero_item_hovered_foreign);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, color_hero_item_active_foreign);
-                }
-                else {
-                    style_count += 3;
-                    ImGui::PushStyleColor(ImGuiCol_Button, color_item_foreign);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color_item_hovered_foreign);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, color_item_active_foreign);
+            if (!is_current_account) {
+                style_count = 1;
+                ImGui::PushStyleColor(ImGuiCol_Text, color_disabled);
+                if (is_chest && !free_slot->account_representing_character.empty()) suffix = " [" + free_slot->account_representing_character + "]";
+            }
+            ImGui::TableNextColumn();
+            if (is_current_account) {
+                if (ImGui::Button(free_slot->character.c_str())) {
+                    InventoryItem i;
+                    i.account = free_slot->account;
+                    i.character = free_slot->character;
+                    i.bag_id = is_chest ? GW::Constants::Bag::Storage_1 : GW::Constants::Bag::None;
+                    OnInventoryItemClicked(&i, false);
                 }
             }
             else {
-                if (IsChestBag(i_front->bag_id)) {
-                    style_count += 3;
-                    ImGui::PushStyleColor(ImGuiCol_Button, color_chest_item);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color_chest_item_hovered);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, color_chest_item_active);
-                }
-                else if (IsOnHero(i_front->hero_id)) {
-                    style_count += 3;
-                    ImGui::PushStyleColor(ImGuiCol_Button, color_hero_item);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color_hero_item_hovered);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, color_hero_item_active);
-                }
+                ImGui::Text("%s%s", free_slot->character.c_str(), suffix.c_str());
             }
-            if (detailed_view) {
-                std::string suffix = (ims.i.size() > 1) ? " +" : "";
-                ImGui::Text("%s%s", i_front->character.c_str(), suffix.c_str());
-                ImGui::TableNextColumn();
-                ImGui::Text("%s%s", i_front->location.c_str(), suffix.c_str());
-                ImGui::TableNextColumn();
-                ImGui::Text("%d", i_front->model_id);
-                ImGui::TableNextColumn();
-                style.ButtonTextAlign = ImVec2(0.f, 0.5f);
-                const auto description_one_line = ims.GetDescription();
-                clicked = ImGui::Button(description_one_line.c_str());
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip([ms = &ims]() {
-                        OnItemTooltip(ms);
-                    });
-                }
-                ImGui::TableNextColumn();
-            }
-            else {
-                const ImVec2 pos = ImGui::GetCursorPos();
-                auto w = 3.3f * ImGui::GetTextLineHeight();
-                if (i_front->texture && *(i_front->texture)) {
-                    clicked = ImGui::IconButton("", *i_front->texture, ImVec2(w, w), ImGuiButtonFlags_None, ImVec2(w, w));
-                }
-                else {
-                    clicked = ImGui::Button("???", ImVec2(w, w));
-                }
-                if (ims.quantity > 1) {
-                    ImGui::SetCursorPos(ImVec2(pos.x + item_spacing, pos.y));
-                    ImGui::TextColored(ImVec4(0.98f, 0.97f, 0.6f, 1.f), "%d", ims.quantity);
-                    ImGui::SetCursorPos(pos);
-                    ImGui::Dummy(ImVec2(w, w));
-                }
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip([ms = &ims]() {
-                        OnItemTooltip(ms);
-                    });
-                }
-                ImGui::TableNextColumn();
-            }
+            ImGui::TableNextColumn();
+            if (free_slot->max_inventory) RightAlignTextF("%d/", free_inventory);
+            ImGui::TableNextColumn();
+            if (free_slot->max_inventory) ImGui::Text("%d", free_slot->max_inventory);
+            ImGui::TableNextColumn();
+            if (free_slot->max_equipment) RightAlignTextF("%d/", free_equipment);
+            ImGui::TableNextColumn();
+            if (free_slot->max_equipment) ImGui::Text("%d", free_slot->max_equipment);
             ImGui::PopStyleColor(style_count);
-            ImGui::PopID();
-
-            if (clicked) {
-                OnInventoryItemClicked(i_front, ImGui::IsKeyDown(ImGuiMod_Ctrl));
-            }
         }
         ImGui::EndTable();
-        ImGui::End();
     }
+
+    const float items_table_height = std::max(ImGui::GetContentRegionAvail().y, ITEMS_TABLE_MIN_HEIGHT);
+    const float inner_width = ImGui::GetContentRegionAvail().x - item_spacing;
+    const float button_height = 3.3f * ImGui::GetTextLineHeight();
+    const ImVec2 button_size = ImVec2(button_height, button_height);
+    
+
+    ImGuiTableFlags flags = ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_NoBordersInBody;
+    if (detailed_view) {
+        flags |= ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_RowBg;
+    }
+    else {
+        flags |= ImGuiTableFlags_SizingFixedFit;
+    }
+
+    // filter/sort header table
+    if (!ImGui::BeginTable("###itemstable", ItemColumnID_Max, flags, ImVec2(inner_width, detailed_view ? items_table_height : 2 * ImGui::GetFrameHeight()))) {
+        ImGui::End();
+        return;
+    }
+    ImGui::TableSetupColumn("Character", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_Character);
+    ImGui::TableSetupColumn("Location / Hero", ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_Location);
+    ImGui::TableSetupColumn("Model ID", ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_ModelID);
+    ImGui::TableSetupColumn("Item", ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_Description);
+    ImGui::TableSetupScrollFreeze(3, 2);
+    ImGui::TableHeadersRow();
+    ImGui::TableNextRow();
+
+    ImGui::TableNextColumn();
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    if (ImGui::InputText("###name_filter", name_filter_buf, _countof(name_filter_buf))) needs_sorting = true;
+
+    ImGui::TableNextColumn();
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    if (ImGui::InputText("###location_filter", location_filter_buf, _countof(location_filter_buf))) needs_sorting = true;
+
+    ImGui::TableNextColumn();
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    if (ImGui::InputText("###model_ID_filter", model_ID_filter_buf, _countof(model_ID_filter_buf))) needs_sorting = true;
+
+    ImGui::TableNextColumn();
+    ImGui::SetNextItemWidth(300.f * font_scale);
+    if (ImGui::InputText("###item_filter", item_filter_buf, _countof(item_filter_buf))) needs_sorting = true;
+    ImGui::SameLine();
+    ImGui::Text("Filter   %d/%d Items", filtered_item_count, inventory_sorted.size());
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+
+    ImGuiTableSortSpecs* item_sort_specs = ImGui::TableGetSortSpecs();
+    if (needs_sorting || (item_sort_specs && item_sort_specs->SpecsDirty)) {
+        SortAndFilterInventory(item_sort_specs);
+    }
+
+    const int item_count = static_cast<int>(inventory_sorted.size());
+
+    auto render_item = [&](int idx) {
+        auto& ims = inventory_sorted[idx];
+        const auto i_front = *(ims.i.begin());
+        bool clicked = false;
+
+        ImGui::PushID(idx);
+        int style_count = 0;
+        const bool is_foreign = !memeq(&i_front->account, &current_account);
+        if (is_foreign) {
+            style_count += 1;
+            ImGui::PushStyleColor(ImGuiCol_Text, color_disabled);
+        }
+
+        const ImVec4* btn_colors = nullptr;
+        if (IsChestBag(i_front->bag_id))
+            btn_colors = is_foreign ? &color_chest_item_foreign : &color_chest_item;
+        else if (IsOnHero(i_front->hero_id))
+            btn_colors = is_foreign ? &color_hero_item_foreign : &color_hero_item;
+        else if (is_foreign)
+            btn_colors = &color_item_foreign;
+
+        if (btn_colors) {
+            style_count += 3;
+            ImGui::PushStyleColor(ImGuiCol_Button, btn_colors[0]);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, btn_colors[1]);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, btn_colors[2]);
+        }
+
+        if (detailed_view) {
+            const std::string suffix = (ims.i.size() > 1) ? " +" : "";
+            ImGui::Text("%s%s", i_front->character.c_str(), suffix.c_str());
+            ImGui::TableNextColumn();
+            ImGui::Text("%s%s", i_front->location.c_str(), suffix.c_str());
+            ImGui::TableNextColumn();
+            ImGui::Text("%d", i_front->model_id);
+            ImGui::TableNextColumn();
+            style.ButtonTextAlign = ImVec2(0.f, 0.5f);
+            const auto description_one_line = ims.GetDescription();
+            clicked = ImGui::Button(description_one_line.c_str());
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip([ms = &ims]() {
+                    OnItemTooltip(ms);
+                });
+            }
+            ImGui::TableNextColumn();
+        }
+        else {
+            const auto pos = ImGui::GetCursorPos();
+            if (i_front->texture && *(i_front->texture))
+                clicked = ImGui::IconButton(nullptr, *i_front->texture, button_size, ImGuiButtonFlags_None, button_size);
+            else
+                clicked = ImGui::Button("???", button_size);
+
+            if (ims.quantity > 1) {
+                const auto rect_min = ImGui::GetItemRectMin();
+                char qty_buf[8];
+                snprintf(qty_buf, sizeof(qty_buf), "%d", ims.quantity);
+                ImGui::GetWindowDrawList()->AddText({rect_min.x + item_spacing, rect_min.y}, color_quantity, qty_buf);
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip([ms = &ims]() {
+                    OnItemTooltip(ms);
+                });
+            }
+        }
+
+        ImGui::PopStyleColor(style_count);
+        ImGui::PopID();
+
+        if (clicked) OnInventoryItemClicked(i_front, ImGui::IsKeyDown(ImGuiMod_Ctrl));
+    };
+
+    if (detailed_view) {
+        ImGuiListClipper clipper;
+        clipper.Begin(item_count, ImGui::GetTextLineHeightWithSpacing());
+        while (clipper.Step()) {
+            for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                render_item(i);
+            }
+        }
+        clipper.End();
+        ImGui::EndTable();
+    }
+    else {
+        ImGui::EndTable(); // end the filter/sort header table
+        const int cols = std::max(1, (int)(inner_width / (button_height + item_spacing)));
+        const int row_count = (item_count + cols - 1) / cols;
+
+        ImGui::BeginChild("###itemgrid", ImVec2(inner_width, std::max(ImGui::GetContentRegionAvail().y, ITEMS_TABLE_MIN_HEIGHT)));
+
+        const float cell_size = button_height + item_spacing;
+
+        int rendered_cells = 0;
+
+        ImGuiListClipper clipper;
+        clipper.Begin(row_count, cell_size);
+        while (clipper.Step()) {
+            for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
+                for (int col = 0; col < cols; col++) {
+                    const int idx = row * cols + col;
+                    if (idx >= item_count) break;
+                    ImGui::SetCursorPos({col * cell_size, row * cell_size});
+                    render_item(idx);
+                    rendered_cells++;
+                }
+            }
+        }
+        clipper.End();
+
+        ImGui::EndChild();
+        //ImGui::Text("Rendered: %d / %d", rendered_cells, item_count);
+    }
+
+    ImGui::End();
 }
 
 void AccountInventoryWindow::DrawSettingsInternal()
