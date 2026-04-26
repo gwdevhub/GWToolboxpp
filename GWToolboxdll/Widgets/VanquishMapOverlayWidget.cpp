@@ -83,8 +83,20 @@ namespace {
         }
     };
 
+    // Thin wrapper to allow direct vertex/dirty access for bulk flush.
+    class FrontierBuffer : public D3DTriangleBuffer {
+    public:
+        void FlushFrom(const std::unordered_map<int, std::vector<D3DVertex>>& cell_edges)
+        {
+            vertices.clear();
+            for (const auto& [idx, verts] : cell_edges)
+                vertices.insert(vertices.end(), verts.begin(), verts.end());
+            dirty = true;
+        }
+    };
+
     D3DFogBuffer fog_buffer;
-    D3DTriangleBuffer frontier_border;
+    FrontierBuffer frontier_border;
     D3DTriangleBuffer inaccessible_area_and_borders;
     D3DTriangleBuffer enemy_vertex_buffer;
     D3DCircle compass_circle;
@@ -124,6 +136,8 @@ namespace {
         return ly * cached_grid_w + lx;
     }
 
+    std::vector<int> newly_explored_cells;
+
     bool UpdateExploration(const GW::GamePos* player_pos)
     {
         static GW::GamePos last_check = {};
@@ -142,7 +156,7 @@ namespace {
         if (!explored_cells && cached_walkable_grid_size > 0) explored_cells = new bool[cached_walkable_grid_size]();
         if (!explored_cells) return false;
 
-        bool any_new = false;
+        newly_explored_cells.clear();
         constexpr int range_cells = static_cast<int>(COMPASS_RANGE / EXPLORE_CELL_SIZE) + 1;
         const int player_cx = static_cast<int>(floorf(player_pos->x / EXPLORE_CELL_SIZE));
         const int player_cy = static_cast<int>(floorf(player_pos->y / EXPLORE_CELL_SIZE));
@@ -161,11 +175,11 @@ namespace {
                 if (idx >= 0 && !explored_cells[idx]) {
                     explored_cells[idx] = true;
                     fog_buffer.SetCellColor(idx, 0x00000000);
-                    any_new = true;
+                    newly_explored_cells.push_back(idx);
                 }
             }
         }
-        return any_new;
+        return !newly_explored_cells.empty();
     }
 
     void InitFogBuffer()
@@ -189,33 +203,79 @@ namespace {
         }
     }
 
-    void RebuildFrontierBorder()
-    {
-        frontier_border.clear();
-        if (!explored_cells || !cached_walkable_grid) return;
+    // Per-cell frontier edge storage for incremental updates.
+    // Key = local cell index of an unexplored walkable cell that borders explored cells.
+    std::unordered_map<int, std::vector<D3DVertex>> frontier_cell_edges;
 
+    void ComputeCellFrontierEdges(int idx, std::vector<D3DVertex>& out)
+    {
+        out.clear();
+        if (!cached_walkable_grid[idx] || explored_cells[idx]) return;
+
+        const int ly = idx / cached_grid_w;
+        const int lx = idx % cached_grid_w;
         const float FRONTIER_HALF_THICKNESS = cached_px_to_game;
         const float grid_origin_x = cached_grid_x0 * EXPLORE_CELL_SIZE;
         const float grid_origin_y = cached_grid_y0 * EXPLORE_CELL_SIZE;
+        const float wx0 = grid_origin_x + lx * EXPLORE_CELL_SIZE;
+        const float wx1 = wx0 + EXPLORE_CELL_SIZE;
+        const float wy0 = grid_origin_y + ly * EXPLORE_CELL_SIZE;
+        const float wy1 = wy0 + EXPLORE_CELL_SIZE;
 
-        for (int ly = 0; ly < cached_grid_h; ly++) {
-            const float wy0 = grid_origin_y + ly * EXPLORE_CELL_SIZE;
-            const float wy1 = wy0 + EXPLORE_CELL_SIZE;
-            const int row_base = ly * cached_grid_w;
-            for (int lx = 0; lx < cached_grid_w; lx++) {
-                const int idx = row_base + lx;
-                if (!cached_walkable_grid[idx] || explored_cells[idx]) continue;
-                const float wx0 = grid_origin_x + lx * EXPLORE_CELL_SIZE;
-                const float wx1 = wx0 + EXPLORE_CELL_SIZE;
-                const auto edge = [&](bool cond, int neighbour_idx, float ax, float ay, float bx, float by) {
-                    if (cond && IsFrontierEdge(neighbour_idx)) frontier_border.push_back(D3DLine({ax, ay}, {bx, by}, FRONTIER_HALF_THICKNESS, vq_color_frontier));
-                };
-                edge(ly > 0, idx - cached_grid_w, wx0, wy0, wx1, wy0);
-                edge(ly < cached_grid_h - 1, idx + cached_grid_w, wx0, wy1, wx1, wy1);
-                edge(lx > 0, idx - 1, wx0, wy0, wx0, wy1);
-                edge(lx < cached_grid_w - 1, idx + 1, wx1, wy0, wx1, wy1);
+        const auto edge = [&](bool cond, int neighbour_idx, float ax, float ay, float bx, float by) {
+            if (cond && IsFrontierEdge(neighbour_idx)) {
+                D3DLine line({ax, ay}, {bx, by}, FRONTIER_HALF_THICKNESS, vq_color_frontier);
+                for (const auto& tri : line.t)
+                    out.insert(out.end(), tri.v, tri.v + 3);
             }
+        };
+        edge(ly > 0, idx - cached_grid_w, wx0, wy0, wx1, wy0);
+        edge(ly < cached_grid_h - 1, idx + cached_grid_w, wx0, wy1, wx1, wy1);
+        edge(lx > 0, idx - 1, wx0, wy0, wx0, wy1);
+        edge(lx < cached_grid_w - 1, idx + 1, wx1, wy0, wx1, wy1);
+    }
+
+    void RebuildFrontierBorder()
+    {
+        frontier_cell_edges.clear();
+        frontier_border.clear();
+        if (!explored_cells || !cached_walkable_grid) return;
+
+        std::vector<D3DVertex> cell_verts;
+        for (int idx = 0; idx < cached_grid_w * cached_grid_h; idx++) {
+            ComputeCellFrontierEdges(idx, cell_verts);
+            if (!cell_verts.empty())
+                frontier_cell_edges[idx] = cell_verts;
         }
+        frontier_border.FlushFrom(frontier_cell_edges);
+    }
+
+    void UpdateFrontierIncremental()
+    {
+        if (!explored_cells || !cached_walkable_grid) return;
+
+        // Collect cells that need re-evaluation: each newly explored cell
+        // plus its 4 neighbors.
+        std::unordered_set<int> dirty_cells;
+        for (const int idx : newly_explored_cells) {
+            const int ly = idx / cached_grid_w;
+            const int lx = idx % cached_grid_w;
+            dirty_cells.insert(idx);
+            if (ly > 0) dirty_cells.insert(idx - cached_grid_w);
+            if (ly < cached_grid_h - 1) dirty_cells.insert(idx + cached_grid_w);
+            if (lx > 0) dirty_cells.insert(idx - 1);
+            if (lx < cached_grid_w - 1) dirty_cells.insert(idx + 1);
+        }
+
+        std::vector<D3DVertex> cell_verts;
+        for (const int idx : dirty_cells) {
+            ComputeCellFrontierEdges(idx, cell_verts);
+            if (cell_verts.empty())
+                frontier_cell_edges.erase(idx);
+            else
+                frontier_cell_edges[idx] = cell_verts;
+        }
+        frontier_border.FlushFrom(frontier_cell_edges);
     }
 
     bool IsGridCellWalkable(int gx, int gy)
@@ -287,6 +347,8 @@ namespace {
     void RebuildMapBorder()
     {
         cached_border_segments.clear();
+        frontier_cell_edges.clear();
+        frontier_border.clear();
         delete[] cached_walkable_grid;
         cached_walkable_grid = nullptr;
         cached_walkable_grid_size = 0;
@@ -708,7 +770,7 @@ void VanquishMapOverlayWidget::Update(float)
     if (ToolboxUtils::IsExplorable()) {
         UpdateEnemyTracking();
         if (UpdateExploration(player_pos))
-            RebuildFrontierBorder();
+            UpdateFrontierIncremental();
     } else {
         if (nav_active) StopNavigating();
         if (tracked_enemies_map_id != GW::Constants::MapID::None) {
