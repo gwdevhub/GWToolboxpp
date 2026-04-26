@@ -320,6 +320,31 @@ namespace GW {
             const auto p = m ? m->props : nullptr;
             return p ? &p->propArray : nullptr;
         }
+        
+        bool IsFestivalOutpost(const GW::Constants::MapID map_id)
+        {
+            using namespace GW::Constants;
+            switch (map_id) {
+                case MapID::Kamadan_Jewel_of_Istan_Halloween_outpost:
+                case MapID::Kamadan_Jewel_of_Istan_Wintersday_outpost:
+                case MapID::Kamadan_Jewel_of_Istan_Canthan_New_Year_outpost:
+                case MapID::Lions_Arch_Halloween_outpost:
+                case MapID::Lions_Arch_Wintersday_outpost:
+                case MapID::Lions_Arch_Canthan_New_Year_outpost:
+                case MapID::Ascalon_City_Wintersday_outpost:
+                case MapID::Droknars_Forge_Halloween_outpost:
+                case MapID::Droknars_Forge_Wintersday_outpost:
+                case MapID::Tomb_of_the_Primeval_Kings_Halloween_outpost:
+                case MapID::Shing_Jea_Monastery_Dragon_Festival_outpost:
+                case MapID::Shing_Jea_Monastery_Canthan_New_Year_outpost:
+                case MapID::Kaineng_Center_Canthan_New_Year_outpost:
+                case MapID::Eye_of_the_North_outpost_Wintersday_outpost:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
     } // namespace Map
     namespace LoginMgr {
         const bool IsCharSelectReady()
