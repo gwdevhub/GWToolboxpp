@@ -1562,7 +1562,7 @@ namespace {
             } break;
             case PendingTransaction::State::Quoting:
                 // Check for timeout having asked for a quote.
-                if (TIMER_DIFF(pending_transaction.state_timestamp) > 1000) {
+                if (TIMER_DIFF(pending_transaction.state_timestamp) > 3000) {
                     if (pending_transaction.retries > 0) {
                         Log::ErrorW(L"Timeout waiting for item quote");
                         CancelTransaction();
@@ -1589,7 +1589,7 @@ namespace {
             } break;
             case PendingTransaction::State::Transacting:
                 // Check for timeout having agreed to buy or sell
-                if (TIMER_DIFF(pending_transaction.state_timestamp) > 1000) {
+                if (TIMER_DIFF(pending_transaction.state_timestamp) > 3000) {
                     if (pending_transaction.retries > 0) {
                         Log::ErrorW(L"Timeout waiting for item sell/buy");
                         CancelTransaction();
