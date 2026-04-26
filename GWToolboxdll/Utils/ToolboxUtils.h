@@ -135,6 +135,8 @@ namespace GW {
         std::vector<GW::Constants::TitleID> GetBountyTitlesForMap(GW::Constants::MapID map_id);
         GW::Constants::TitleID GetTitleForMap(GW::Constants::MapID map_id);
 
+        bool IsFestivalOutpost(const GW::Constants::MapID map_id);
+
         void PingCompass(const GW::GamePos& position);
 
         bool IsPreSearing(const GW::Constants::MapID map_id = (GW::Constants::MapID)0);
