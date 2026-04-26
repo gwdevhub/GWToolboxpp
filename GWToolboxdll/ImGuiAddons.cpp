@@ -349,57 +349,45 @@ namespace ImGui {
 
     bool CompositeIconButton(const char* label, ImTextureID* icons, size_t icons_len, const ImVec2& size, const ImGuiButtonFlags flags, const ImVec2& icon_size, const ImVec2& uv0, ImVec2 uv1)
     {
+        const ImVec2 pos = GetCursorScreenPos();
+        const bool has_label = label && *label;
+        const ImVec2 textsize = has_label ? CalcTextSize(label) : ImVec2(0.f, 0.f);
+
+        // build button id - skip sprintf, just use the label directly as the id suffix
         char button_id[128];
-        sprintf(button_id, "###icon_button_%s", label);
-        const ImVec2& pos = GetCursorScreenPos();
-        const ImVec2& textsize = CalcTextSize(label);
+        snprintf(button_id, sizeof(button_id), "###icon_button_%s", label ? label : "");
         const bool clicked = ButtonEx(button_id, size, flags);
 
         ImGuiContext& g = *GImGui;
         const auto clip_rect = g.LastItemData.Rect.ToVec4();
+        const ImVec2 button_size = GetItemRectSize();
 
-        const ImVec2& button_size = GetItemRectSize();
-        ImVec2 img_size = icon_size;
-        if (icon_size.x > 0.f) {
-            img_size.x = icon_size.x;
-        }
-        if (icon_size.y > 0.f) {
-            img_size.y = icon_size.y;
-        }
-        if (img_size.y == 0.f) {
-            img_size.y = button_size.y - 2.f;
-        }
-        if (img_size.x == 0.f) {
-            img_size.x = img_size.y;
-        }
+        const float img_h = icon_size.y > 0.f ? icon_size.y : button_size.y - 2.f;
+        const float img_w = icon_size.x > 0.f ? icon_size.x : img_h;
+
         const ImGuiStyle& style = GetStyle();
-        const float content_width = img_size.x + textsize.x + style.FramePadding.x * 2.f;
+        const float content_width = img_w + textsize.x + style.FramePadding.x * 2.f;
         float content_x = pos.x + style.FramePadding.x;
-        if (content_width < button_size.x) {
-            const float avail_space = button_size.x - content_width;
-            content_x += avail_space * style.ButtonTextAlign.x;
-        }
+        if (content_width < button_size.x) content_x += (button_size.x - content_width) * style.ButtonTextAlign.x;
+
         const float img_x = content_x;
-        const float img_y = pos.y + (button_size.y - img_size.y) / 2.f;
-        const float text_x = img_x + img_size.x + 3.f;
+        const float img_y = pos.y + (button_size.y - img_h) / 2.f;
+        const float text_x = img_x + img_w + 3.f;
         const float text_y = pos.y + (button_size.y - textsize.y) * style.ButtonTextAlign.y;
-        const auto top_left = ImVec2(img_x, img_y);
-        const auto bottom_right = ImVec2(img_x + img_size.x, img_y + img_size.y);
-        const auto draw_list = GetWindowDrawList();
+        const ImVec2 top_left = ImVec2(img_x, img_y);
+        const ImVec2 bottom_right = ImVec2(img_x + img_w, img_y + img_h);
+
+        // hoist draw list and uv check outside the loop
+        ImDrawList* draw_list = GetWindowDrawList();
+        const bool use_custom_uv = uv0.x != uv1.x || uv0.y != uv1.y;
         for (size_t i = 0; i < icons_len; i++) {
             ImTextureID tex = icons[i];
-            if (!tex)
-                continue;
-            if (uv0.x == uv1.x && uv0.y == uv1.y) {
-                draw_list->AddImage(tex, top_left, bottom_right, uv0, CalculateUvCrop(tex, img_size));
-            }
-            else {
-                draw_list->AddImage(tex, top_left, bottom_right, uv0, uv1);
-            }
+            if (!tex) continue;
+            draw_list->AddImage(tex, top_left, bottom_right, uv0, use_custom_uv ? uv1 : CalculateUvCrop(tex, ImVec2(img_w, img_h)));
         }
-        if (label) {
-            draw_list->AddText(NULL, 0.0f, ImVec2(text_x, text_y), ImColor(style.Colors[ImGuiCol_Text]), label, nullptr, 0.0f, &clip_rect);
-        }
+
+        if (has_label) draw_list->AddText(nullptr, 0.f, ImVec2(text_x, text_y), ImColor(style.Colors[ImGuiCol_Text]), label, nullptr, 0.f, &clip_rect);
+
         return clicked;
     }
 
