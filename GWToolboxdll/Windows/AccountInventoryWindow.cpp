@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <bit>
 #include <fileapi.h>
 
 #include <GWCA/GameEntities/Agent.h>
@@ -26,6 +27,15 @@
 
 
 namespace {
+
+    // Based on boost::hash_combine
+    template <typename... Args>
+    std::size_t hash_combine(const Args&... args)
+    {
+        std::size_t seed = 0;
+        ((seed ^= std::hash<Args>{}(args) + 0x9e3779b9 + (seed << 6) + (seed >> 2)), ...);
+        return seed;
+    }
 
     constexpr float ITEMS_TABLE_MIN_HEIGHT = 220.f;
     constexpr int CHEST_ARMOR_INVENTORY_SLOT = 2;
@@ -319,12 +329,9 @@ struct MergeStack;
         std::size_t operator()(const InventoryItem* const* const i) const noexcept { return operator()(*i); }
         std::size_t operator()(const InventoryItem* const i) const noexcept
         {
-            std::size_t h1 = std::hash<uint32_t>{}(i->account.Data1) ^ std::hash<uint32_t>{}(i->account.Data2) ^ std::hash<uint32_t>{}(i->account.Data3);
-            std::size_t h2 = std::hash<std::string>{}(i->character);
-            std::size_t h3 = std::hash<uint32_t>{}(i->hero_id);
-            std::size_t h4 = std::hash<uint32_t>{}(static_cast<uint32_t>(i->bag_id));
-            std::size_t h5 = std::hash<uint32_t>{}(i->slot);
-            return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3) ^ (h5 << 4);
+            return hash_combine(i->account.Data1, i->account.Data2, i->account.Data3,
+                std::bit_cast<uint64_t>(i->account.Data4),
+                i->character, i->hero_id, static_cast<uint32_t>(i->bag_id), i->slot);
         }
     };
 
@@ -395,10 +402,8 @@ struct MergeStack;
         std::size_t operator()(const CharacterFreeSlots* const* const i) const noexcept { return operator()(*i); }
         std::size_t operator()(const CharacterFreeSlots* const i) const noexcept
         {
-            const uint64_t* parts = reinterpret_cast<const uint64_t*>(&i->account);
-            std::size_t h1 = std::hash<uint64_t>{}(parts[0]) ^ (std::hash<uint64_t>{}(parts[1]) << 1);
-            std::size_t h2 = std::hash<std::string>{}(i->character);
-            return h1 ^ (h2 << 1);
+            return hash_combine(i->account.Data1, i->account.Data2, i->account.Data3,
+                std::bit_cast<uint64_t>(i->account.Data4), i->character);
         }
     };
 
