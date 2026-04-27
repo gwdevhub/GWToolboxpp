@@ -736,30 +736,31 @@ void VanquishMapOverlayWidget::DrawVanquishToggleButton()
 
 void VanquishMapOverlayWidget::Update(float)
 {
-    if (!MissionMapWidget::IsRenderReady()) return;
+    const bool render_ready = MissionMapWidget::IsRenderReady();
+    should_draw = render_ready && visible && ToolboxUtils::IsExplorable();
 
-    cached_px_to_game = MissionMapWidget::GetPxToGame();
-    const float zoom = MissionMapWidget::GetZoom();
-    should_draw = visible && ToolboxUtils::IsExplorable();
+    if (render_ready) {
+        cached_px_to_game = MissionMapWidget::GetPxToGame();
+        const float zoom = MissionMapWidget::GetZoom();
 
-    const auto map_id = GW::Map::GetMapID();
-    const auto instance_type = GW::Map::GetInstanceType();
-    static GW::Constants::InstanceType border_instance_type = GW::Constants::InstanceType::Loading;
-    const bool map_changed = map_id != border_map_id || instance_type != border_instance_type;
-    const bool zoom_changed = zoom != border_cached_zoom;
-    const auto player_pos = GW::PlayerMgr::GetPlayerPosition();
+        const auto map_id = GW::Map::GetMapID();
+        const auto instance_type = GW::Map::GetInstanceType();
+        static GW::Constants::InstanceType border_instance_type = GW::Constants::InstanceType::Loading;
+        const bool map_changed = map_id != border_map_id || instance_type != border_instance_type;
+        const bool zoom_changed = zoom != border_cached_zoom;
 
-    if (map_changed || zoom_changed) {
-        border_cached_zoom = zoom;
-        RebuildCompassCircle();
-        if (map_changed) {
-            border_map_id = map_id;
-            border_instance_type = instance_type;
-            RebuildMapBorder(); // calls BuildStaticMapGeometry + InitFogBuffer
-        }
-        else {
-            BuildStaticMapGeometry(); // zoom changed, rebuild with new thickness
-            RebuildFrontierBorder();
+        if (map_changed || zoom_changed) {
+            border_cached_zoom = zoom;
+            RebuildCompassCircle();
+            if (map_changed) {
+                border_map_id = map_id;
+                border_instance_type = instance_type;
+                RebuildMapBorder(); // calls BuildStaticMapGeometry + InitFogBuffer
+            }
+            else {
+                BuildStaticMapGeometry(); // zoom changed, rebuild with new thickness
+                RebuildFrontierBorder();
+            }
         }
     }
 
@@ -767,6 +768,7 @@ void VanquishMapOverlayWidget::Update(float)
     static clock_t last_check = TIMER_INIT();
     if (!ToolboxUtils::FrameRateCheck(last_check, 30)) return;
 
+    const auto player_pos = GW::PlayerMgr::GetPlayerPosition();
     if (ToolboxUtils::IsExplorable()) {
         UpdateEnemyTracking();
         if (UpdateExploration(player_pos))
