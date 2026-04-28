@@ -94,6 +94,10 @@ jobs:
       run: |
         git checkout $BRANCH
         git merge "${MERGE_FROM}" --no-edit
+        if [ "$BRANCH" = "master" ]; then
+          echo "New release on master, merging in origin/dev"
+          git merge origin/dev --no-edit
+        fi
 
     - name: Setup Windows 10 SDK Action
       uses: GuillaumeFalourd/setup-windows10-sdk-action@v2
