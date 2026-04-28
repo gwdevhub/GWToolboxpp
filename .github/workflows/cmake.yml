@@ -239,15 +239,20 @@ jobs:
 
         # Check if tag exists
         if git show-ref --tags --quiet --verify "refs/tags/$TAG_NAME"; then
-          echo "Tag $TAG_NAME already exists. Skipping release."
-          exit 0
+          if [ -n "$DEV_COMMIT_SHORT" ]; then
+            echo "Tag for dev release $TAG_NAME already exists. Skipping release."
+            exit 0
+          fi
+
+          echo "Tag $TAG_NAME already exists, deleting it..."
+          git tag -d $TAG_NAME
         fi
 
         echo "Pushing merge commit..."
 
         git push origin $BRANCH
 
-        echo "Tag $TAG_NAME does not exist. Creating..."
+        echo "Creating tag $TAG_NAME ..."
 
         # Create tag
         git config user.name "GitHub Actions"
