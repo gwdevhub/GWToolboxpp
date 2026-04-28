@@ -2888,7 +2888,7 @@ void GetAchievements(const std::wstring& player_name)
     if (!(!player_name.empty() && player_name.size() < 20)) {
         return Log::Error("Invalid player name for hall of monuments command");
     }
-    memset(&hom_achievements, 0, sizeof(hom_achievements));
+    hom_achievements = HallOfMonumentsAchievements{};
     HallOfMonumentsModule::AsyncGetAccountAchievements(
         player_name, &hom_achievements, OnAchievementsLoaded);
 }

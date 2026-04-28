@@ -33,6 +33,6 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
 
-    bool Reroll(const wchar_t* character_name, bool same_map = true, bool same_party = true);
+    bool Reroll(const wchar_t* character_name, bool same_map = true, bool same_party = true, const bool ignore_current_character = false, const bool do_not_prompt = false);
     bool Reroll(const wchar_t* character_name, GW::Constants::MapID _map_id);
 };

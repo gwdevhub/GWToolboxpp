@@ -1310,10 +1310,12 @@ void CompletionWindow::Initialize()
         {Campaign::Core, {}},
     };
     heros = {
+        {Campaign::Prophecies, {}},
         {Campaign::Factions, {}},
         {Campaign::Nightfall, {}},
         {Campaign::EyeOfTheNorth, {}}
     };
+
     for (size_t i = 0; i < _countof(encoded_minipet_names); i++) {
         minipets.push_back(new MinipetAchievement(i, encoded_minipet_names[i]));
     }
@@ -1358,7 +1360,7 @@ void CompletionWindow::Initialize()
     for (const auto campaign : outposts | std::views::keys) {
         for (size_t i = 1; i < static_cast<size_t>(MapID::Count); i++) {
             const auto map_id = static_cast<MapID>(i);
-            if (GW::Map::IsPreSearing(map_id)) continue;
+            if (GW::Map::IsPreSearing(map_id) || GW::Map::IsFestivalOutpost(map_id)) continue;
             if (map_id == MapID::Titans_Tears)
                 continue;
             const auto info = GW::Map::GetMapInfo(map_id);
@@ -1674,6 +1676,10 @@ void CompletionWindow::Initialize_Prophecies()
     eskills.push_back(new PvESkill(SkillID::Thunderclap));
     eskills.push_back(new PvESkill(SkillID::Ward_Against_Harm));
     eskills.push_back(new PvESkill(SkillID::Water_Trident));
+
+    auto& h = heros.at(Campaign::Prophecies);
+    h.push_back(new HeroUnlock(Devona));
+    h.push_back(new HeroUnlock(GhostOfAlthea));
 }
 
 void CompletionWindow::Initialize_Factions()

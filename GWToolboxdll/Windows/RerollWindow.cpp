@@ -265,7 +265,7 @@ namespace {
         reroll_stage = PendingLogout;
     }
 
-    bool Reroll(const wchar_t* character_name, bool _same_map, const bool _same_party = true)
+    bool Reroll(const wchar_t* character_name, bool _same_map, const bool _same_party = true, const bool _ignore_current_character = false, const bool _do_not_prompt = false)
     {
         reroll_stage = None;
         reverting_reroll = false;
@@ -275,7 +275,10 @@ namespace {
         }
         wcscpy(reroll_to_player_name, character_name);
         const wchar_t* player_name = GW::AccountMgr::GetCurrentPlayerName();
-        if (!player_name || wcscmp(player_name, character_name) == 0) {
+        if (!player_name) {
+            return false;
+        }
+        if (!_ignore_current_character && wcscmp(player_name, character_name) == 0) {
             return false;
         }
         wcscpy(initial_player_name, player_name);
@@ -301,7 +304,7 @@ namespace {
         same_map = _same_map;
         same_party = _same_party;
         reroll_timeout = (reroll_stage_set = TIMER_INIT()) + 20000;
-        reroll_stage = PromptPendingLogout;
+        reroll_stage = _do_not_prompt ? PendingLogout : PromptPendingLogout;
         return true;
     }
 
@@ -327,7 +330,7 @@ namespace {
             Log::Error("Failed to get available characters");
             return;
         }
-        const std::wstring character_or_profession = TextUtils::ToLower(GetRemainingArgsWstr(message, 1));
+        const auto character_or_profession = TextUtils::ToLower(GetRemainingArgsWstr(message, 1));
         constexpr std::array to_find = {
             L"",
             L"warrior",
@@ -342,34 +345,35 @@ namespace {
             L"dervish"
         };
 
+        GW::Constants::Profession profession_match = GW::Constants::Profession::None;
+
         // Search by profession
-        for (size_t i = 0; i < to_find.size(); i++) {
-            if (!wcsstr(to_find.at(i), character_or_profession.c_str())) {
-                continue;
-            }
-            for (auto& available_char : *available_characters) {
-                if (available_char.primary() != i) {
-                    continue;
-                }
-                const auto player_name = available_char.player_name;
-                if (IsExcludedFromReroll(player_name)) {
-                    continue;
-                }
-                Reroll(player_name, travel_to_same_location_after_rerolling, rejoin_party_after_rerolling);
-                return;
+        for (size_t i = 1; i < to_find.size(); i++) {
+            if (wcsstr(to_find.at(i), character_or_profession.c_str())) {
+                profession_match = (GW::Constants::Profession)i;
+                break;
             }
         }
 
-        // Search by character name
+        // Search by character name (exact match first, then substring)
+        const wchar_t* substring_match = nullptr;
         for (const auto& available_char : *available_characters) {
             const auto player_name = available_char.player_name;
             if (IsExcludedFromReroll(player_name)) {
                 continue;
             }
-            if (!wcsstr(TextUtils::ToLower(player_name).c_str(), character_or_profession.c_str())) {
-                continue;
+            if (profession_match != GW::Constants::Profession::None && profession_match == available_char.primary()) {
+                substring_match = player_name;
+                break;
             }
-            Reroll(available_char.player_name, travel_to_same_location_after_rerolling, rejoin_party_after_rerolling);
+            const auto lower_name = TextUtils::ToLower(player_name);
+            if (!substring_match && wcsstr(lower_name.c_str(), character_or_profession.c_str())) {
+                substring_match = player_name;
+                if (lower_name == character_or_profession) break;
+            }
+        }
+        if (substring_match) {
+            Reroll(substring_match, travel_to_same_location_after_rerolling, rejoin_party_after_rerolling);
             return;
         }
         Log::Error("Failed to match profession or character name for command");
@@ -450,7 +454,7 @@ void RerollWindow::Draw(IDirect3DDevice9*)
         });
         for (const auto& [idx, character] : available_chars_vector | std::views::enumerate) {
             const wchar_t* player_name = character.player_name;
-            uint32_t profession = character.primary();
+            const auto profession = character.primary();
             buf = TextUtils::WStringToString(player_name);
             if (idx % 2 != 0) {
                 ImGui::SameLine();
@@ -460,7 +464,7 @@ void RerollWindow::Draw(IDirect3DDevice9*)
                 ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.f));
             }
-            if (ImGui::IconButton(buf.c_str(), *Resources::GetProfessionIcon(static_cast<GW::Constants::Profession>(profession)), btn_dim)) {
+            if (ImGui::IconButton(buf.c_str(), *Resources::GetProfessionIcon(profession), btn_dim)) {
                 const bool _same_map = travel_to_same_location_after_rerolling;
                 bool _same_party = travel_to_same_location_after_rerolling && rejoin_party_after_rerolling;
                 if (rejoin_party_after_rerolling && !_same_party) {
@@ -678,9 +682,9 @@ bool RerollWindow::Reroll(const wchar_t* character_name, const GW::Constants::Ma
     return ::Reroll(character_name, _map_id);
 }
 
-bool RerollWindow::Reroll(const wchar_t* character_name, bool _same_map, const bool _same_party)
+bool RerollWindow::Reroll(const wchar_t* character_name, bool _same_map, const bool _same_party, const bool _ignore_current_character, const bool _do_not_prompt)
 {
-    return ::Reroll(character_name, _same_map, _same_party);
+    return ::Reroll(character_name, _same_map, _same_party, _ignore_current_character, _do_not_prompt);
 }
 
 void RerollWindow::LoadSettings(ToolboxIni* ini)

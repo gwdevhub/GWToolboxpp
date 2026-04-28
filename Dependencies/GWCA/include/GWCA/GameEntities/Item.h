@@ -22,6 +22,7 @@ namespace GW {
     }
 
     struct Item;
+    struct Inventory;
     typedef Array<Item *> ItemArray;
 
     enum class DyeColor : uint8_t {
@@ -80,7 +81,7 @@ namespace GW {
         /* +h0008 */ uint32_t _unknown0;
         /* +h000C */ uint32_t container_item;
         /* +h0010 */ uint32_t items_count;
-        /* +h0014 */ Bag      *bag_array;
+        /* +h0014 */ Inventory *inventory;
         /* +h0018 */ ItemArray items;
 
         bool IsInventoryBag()       const { return bag_type == Constants::BagType::Inventory; }
@@ -207,6 +208,11 @@ namespace GW {
         /* +h0088 */ uint32_t h0088[2];
         /* +h0090 */ uint32_t gold_character;
         /* +h0094 */ uint32_t gold_storage;
+
+        [[nodiscard]] uint32_t inventory_id() const
+        {
+            return (uint32_t)unused_bag; // Fucked ourselves with this one; bag ids depend on the array starting at the inventory id...
+        }
     };
     static_assert(sizeof(Inventory) == 152, "struct Inventory has incorrect size");
 

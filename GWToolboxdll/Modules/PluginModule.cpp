@@ -263,7 +263,7 @@ void PluginModule::LoadSettings(ToolboxIni* ini)
     // Find any plugins that are currently loaded but not supposed to be
     auto to_unload = std::views::filter(plugins_loaded, [&](auto plugin) {
         return !std::ranges::contains(plugins_loaded_from_ini, plugin);
-    });
+    }) | std::ranges::to<std::vector>();
     for (const auto plugin : std::views::reverse(to_unload)) {
         UnloadPlugin(plugin);
     }
@@ -310,7 +310,8 @@ void PluginModule::Update(const float delta)
 void PluginModule::SignalTerminate()
 {
     ToolboxUIElement::SignalTerminate();
-    for (const auto plugin : plugins_loaded) {
+    const auto snapshot = plugins_loaded;
+    for (const auto plugin : snapshot) {
         UnloadPlugin(plugin);
     }
 }

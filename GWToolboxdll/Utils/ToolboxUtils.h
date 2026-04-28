@@ -46,6 +46,8 @@ namespace GW {
     enum class FriendStatus : uint32_t;
 
     namespace Constants {
+        enum class Profession : uint32_t;
+        enum class Campaign : uint32_t;
         enum class MapID : uint32_t;
         enum class SkillID : uint32_t;
         enum class TitleID : uint32_t;
@@ -99,18 +101,18 @@ namespace GW {
             return static_cast<GW::Constants::MapID>((props[0] >> 16) & 0xffff);
         }
 
-        uint32_t primary() const
-        {
-            return ((props[2] >> 20) & 0xf);
+        GW::Constants::Profession primary() const
+        { 
+            return (GW::Constants::Profession)((props[2] >> 20) & 0xf);
         }
-        uint32_t secondary() const
+        GW::Constants::Profession secondary() const
         {
-            return ((props[7] >> 10) & 0xf);
+            return (GW::Constants::Profession)((props[7] >> 10) & 0xf);
         }
 
-        uint32_t campaign() const
+        GW::Constants::Campaign campaign() const
         {
-            return (props[7] & 0xf);
+            return (GW::Constants::Campaign)(props[7] & 0xf);
         }
 
         uint32_t level() const
@@ -132,6 +134,8 @@ namespace GW {
         bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out);
         std::vector<GW::Constants::TitleID> GetBountyTitlesForMap(GW::Constants::MapID map_id);
         GW::Constants::TitleID GetTitleForMap(GW::Constants::MapID map_id);
+
+        bool IsFestivalOutpost(const GW::Constants::MapID map_id);
 
         void PingCompass(const GW::GamePos& position);
 

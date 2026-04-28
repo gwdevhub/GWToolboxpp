@@ -66,6 +66,12 @@ public:
     static const GW::Quest* GetCustomQuestMarker();
 
     static void SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_active = false);
+    static void ClearCustomQuestMarker();
+
+    // Callback fired when the custom quest marker is set or cleared.
+    using CustomMarkerChangedCallback = void(*)();
+    static void AddCustomMarkerChangedCallback(CustomMarkerChangedCallback cb);
+    static void RemoveCustomMarkerChangedCallback(CustomMarkerChangedCallback cb);
     // Fake an action of the user selecting an active quest, without making any server request.
     static bool SetActiveQuestId(GW::Constants::QuestID quest_id, bool notify_server = true);
 
