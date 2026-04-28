@@ -812,15 +812,7 @@ void SpeedrunScriptingTools::DrawSettings()
     ImGui::SameLine();
     ImGui::Checkbox("Block hotkey keys even if conditions not met", &alwaysBlockHotkeyKeys);
 
-    ImGui::Text("Version 2.5. For new releases, feature requests and bug reports check out");
-    ImGui::SameLine();
-
-    constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
-    ImGui::TextColored(ImColor{102, 187, 238, 255}, discordInviteLink);
-    if (ImGui::IsItemClicked()) 
-    {
-        ShellExecute(nullptr, "open", discordInviteLink, nullptr, nullptr, SW_SHOWNORMAL);
-    }
+    ImGui::Text("Version 3.0.1");
 
     const auto executeScriptMoveAction = [&](std::optional<ScriptMoveAction> action) 
     {
@@ -1170,9 +1162,8 @@ bool SpeedrunScriptingTools::WndProc(const UINT Message, const WPARAM wParam, LP
 void SpeedrunScriptingTools::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, HMODULE toolbox_dll)
 {
     ToolboxPlugin::Initialize(ctx, allocator_fns, toolbox_dll);
-    GW::Initialize();
 
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*) 
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile*)
     {
         ScriptVariableManager::getInstance().clear();
         isInLoadingScreen = false;
@@ -1310,17 +1301,5 @@ void SpeedrunScriptingTools::SignalTerminate()
     GW::UI::RemoveUIMessageCallback(&BeginSkillCast_Entry, GW::UI::UIMessage::kAgentSkillStartedCast);
     GW::UI::RemoveUIMessageCallback(&GotoTargetDialog_Entry, GW::UI::UIMessage::kDialogBody);
 
-    GW::DisableHooks();
     ToolboxPlugin::SignalTerminate();
-}
-
-bool SpeedrunScriptingTools::CanTerminate()
-{
-    return GW::Hook::GetInHookCount() == 0;
-}
-
-void SpeedrunScriptingTools::Terminate()
-{
-    ToolboxPlugin::Terminate();
-    GW::Terminate();
 }

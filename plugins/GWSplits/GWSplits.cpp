@@ -6,8 +6,10 @@
 #include <enumUtils.h>
 #include <Keys.h>
 
-//#include <BackupManager.h>
+#include <BackupManager.h>
 #include <PluginUtils.h>
+#include <Utils/FontLoader.h>
+#include <io.h>
 
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/Constants/Constants.h>
@@ -17,12 +19,12 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 
 #include <GWCA/GWCA.h>
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Hook.h>
 
-#include <imgui.h>
 #include <ImGuiCppWrapper.h>
 
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
@@ -37,8 +39,7 @@ namespace {
     GW::HookEntry DisplayDialogue_Entry;
     GW::HookEntry DungeonReward_Entry;
     GW::HookEntry DoACompleteZone_Entry;
-    GW::HookEntry RestoreChatCmd_HookEntry;
-    GW::HookEntry ResetrunChatCmd_HookEntry;
+    GW::HookEntry ChatCmd_HookEntry;
 
     static void onDisplayDialogDecoded(void* instancePtr, const wchar_t* decoded)
     {
@@ -690,7 +691,7 @@ void GWSplits::Draw(IDirect3DDevice9* pDevice)
 
     ImGui::SetNextWindowSize(ImVec2(100, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        ImGui::PushFont(FontLoader::GetFont(FontLoader::font_sizes[fontSizeIndex]));
+        ImGui::PushFont(nullptr, static_cast<float>(FontLoader::font_sizes[fontSizeIndex]));
         if (settingsFolder && !isCurrentRunTracked)
         {
             if (std::ranges::any_of(currentSplits, &Split::isPB)) {
@@ -811,7 +812,7 @@ void GWSplits::Draw(IDirect3DDevice9* pDevice)
             ImGui::Separator();
         if (showRunTime)
         {
-            ImGui::PushFont(FontLoader::GetFont(FontLoader::font_sizes[fontSizeIndex + 2]));
+            ImGui::PushFont(nullptr, static_cast<float>(FontLoader::font_sizes[fontSizeIndex + 2]));
             ImGui::PushStyleColor(ImGuiCol_Text, lastSegmentColor);
             rightAlignedText(timeToString(runTime));
             ImGui::PopStyleColor();
@@ -944,13 +945,7 @@ void GWSplits::DrawSettings()
         }
     }
 
-    ImGui::Text("Version 1.3.3. For new releases, feature requests and bug reports check out");
-    ImGui::SameLine();
-    constexpr auto discordInviteLink = "https://discord.gg/ZpKzer4dK9";
-    ImGui::TextColored(ImColor{102, 187, 238, 255}, discordInviteLink);
-    if (ImGui::IsItemClicked()) {
-        ShellExecute(nullptr, "open", discordInviteLink, nullptr, nullptr, SW_SHOWNORMAL);
-    }
+    ImGui::Text("Version 1.3.4");
 }
 
 void GWSplits::loadFromIniFile(const wchar_t* filePath)
@@ -992,15 +987,15 @@ void GWSplits::loadFromIniFile(const wchar_t* filePath)
 void GWSplits::LoadSettings(const wchar_t* folder)
 {
     ToolboxUIPlugin::LoadSettings(folder);
-    //BackupManager::getInstance().initialize(folder);
+    BackupManager::getInstance().initialize(folder);
     settingsFolder = folder;
 
     loadFromIniFile(GetSettingFile(folder).c_str());
 
-    //if (runs.empty() && BackupManager::getInstance().backupCount(PluginUtils::StringToWString(Name())) > 0) 
-    //{
-    //    logMessage("No runs loaded, but automatic backups found. Type \"/restore " + std::string{Name()} + " help\" to see options for restoring backups", Name());
-    //}
+    if (runs.empty() && BackupManager::getInstance().backupCount(PluginUtils::StringToWString(Name())) > 0) 
+    {
+        logMessage("No runs loaded, but automatic backups found. Type \"/restore " + std::string{Name()} + " help\" to see options for restoring backups", Name());
+    }
 }
 
 bool GWSplits::WndProc(const UINT Message, const WPARAM wParam, LPARAM lparam)
@@ -1098,8 +1093,8 @@ void GWSplits::SaveSettings(const wchar_t* folder)
     }
     
     PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
-    /*if (runs.size())
-        BackupManager::getInstance().save(PluginUtils::StringToWString(Name()), GetSettingFile(folder));*/
+    if (runs.size())
+        BackupManager::getInstance().save(PluginUtils::StringToWString(Name()), GetSettingFile(folder));
 }
 
 void GWSplits::handleTrigger(Trigger triggerType, std::function<bool(const Split&)> extraConditions)
@@ -1160,7 +1155,7 @@ void GWSplits::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_
         handleTrigger(Trigger::DoaZoneComplete, [&](const Split& s){ return s.triggerData.doaZone == doaZone; });
     });
 
- /*   GW::Chat::CreateCommand(&RestoreChatCmd_HookEntry, L"restore", [](GW::HookStatus* status, const wchar_t*, const int argc, const LPWSTR* argv) {
+    /*GW::Chat::CreateCommand(L"restore", [](GW::HookStatus* status, const wchar_t*, const int argc, const LPWSTR* argv) {
         const auto instance = static_cast<GWSplits*>(ToolboxPluginInstance());
         if (!instance || argc < 2) {
             status->blocked = false;
@@ -1222,7 +1217,7 @@ void GWSplits::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_
         }
     });*/
 
-    GW::Chat::CreateCommand(&ResetrunChatCmd_HookEntry, L"resetrun", [](GW::HookStatus*, const wchar_t*, const int, const LPWSTR*) {
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"resetrun", [](GW::HookStatus*, const wchar_t*, const int, const LPWSTR*) {
         const auto instance = static_cast<GWSplits*>(ToolboxPluginInstance());
         if (!instance) return;
 
@@ -1238,15 +1233,14 @@ void GWSplits::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_
 
 void GWSplits::SignalTerminate()
 {
-    //GW::Chat::DeleteCommand(&RestoreChatCmd_HookEntry);
-    GW::Chat::DeleteCommand(&ResetrunChatCmd_HookEntry);
+    ToolboxUIPlugin::SignalTerminate();
 
     GW::StoC::RemovePostCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceLoadStart_Entry);
     GW::StoC::RemovePostCallback<GW::Packet::StoC::InstanceLoadInfo>(&InstanceTimer_Entry);
     GW::StoC::RemovePostCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry);
     GW::StoC::RemovePostCallback<GW::Packet::StoC::DungeonReward>(&DungeonReward_Entry);
     GW::StoC::RemovePostCallback<GW::Packet::StoC::DoACompleteZone>(&DoACompleteZone_Entry);
-    ToolboxUIPlugin::SignalTerminate();
+    GW::Chat::DeleteCommand(&ChatCmd_HookEntry, L"resetrun");
 
     InstanceInfo::getInstance().terminate();
     QuestInfo::getInstance().terminate();

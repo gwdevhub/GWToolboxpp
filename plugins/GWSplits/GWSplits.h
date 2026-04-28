@@ -2,11 +2,10 @@
 
 #include <Condition.h>
 #include <ToolboxUIPlugin.h>
-#include <Utils/FontLoader.h>
 #include <Enums.h>
 
-#include <chrono>
 #include <IconsFontAwesome5.h>
+#include <chrono>
 
 struct Split 
 {

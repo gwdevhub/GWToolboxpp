@@ -527,7 +527,7 @@ struct MergeStack;
     ImVec4 cached_button_color{};
 
     static constexpr ImU32 color_quantity = IM_COL32(250, 247, 153, 255);
-    
+
     void SaveHeroes()
     {
         if (!cached_heroes.empty()) return;
@@ -1830,7 +1830,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
     const float inner_width = ImGui::GetContentRegionAvail().x - item_spacing;
     const float button_height = 3.3f * ImGui::GetTextLineHeight();
     const ImVec2 button_size = ImVec2(button_height, button_height);
-    
+
 
     ImGuiTableFlags flags = ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_NoBordersInBody;
     if (detailed_view) {
