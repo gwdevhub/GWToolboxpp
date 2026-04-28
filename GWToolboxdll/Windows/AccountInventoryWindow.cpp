@@ -1136,7 +1136,7 @@ struct MergeStack;
         // item->bag->bag_array is a separate array for each hero with only the Equipped_Items bag set, but seemingly no reference back to the hero.
         // The workaround uses the fact that items are added by GW in the order of the respective heroes in the party.
         i->hero_id = GW::Constants::HeroID::NoHero;
-        if (i->bag_id == GW::Constants::Bag::Equipped_Items && (GW::Inventory*)item->bag->bag_array != GW::Items::GetInventory()) {
+        if (i->bag_id == GW::Constants::Bag::Equipped_Items && (GW::Inventory*)item->bag->inventory != GW::Items::GetInventory()) {
             // If we are loaded on a map when this module gets initialized, we will visit items in an arbitrary order
             // and therefore we are unable to guess which hero an item belongs to.
             // In this case we can add items on heroes only once we load into a new map or if the heroes are

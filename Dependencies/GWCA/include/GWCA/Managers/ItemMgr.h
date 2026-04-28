@@ -21,6 +21,7 @@ namespace GW {
         enum class Bag : uint8_t;
         enum class StoragePane : uint8_t;
         enum class MaterialSlot : uint32_t;
+        enum HeroID : uint32_t;
     }
 
     namespace UI {
@@ -43,6 +44,7 @@ namespace GW {
         GWCA_API SalvageSessionInfo* GetSalvageSessionInfo();
         GWCA_API ItemArray* GetItemArray();
         GWCA_API Inventory* GetInventory();
+        GWCA_API Inventory* GetHeroInventory(GW::Constants::HeroID hero_id);
         GWCA_API Bag** GetBagArray();
         GWCA_API Bag* GetBag(Constants::Bag bag_id);
         GWCA_API Bag* GetBagByIndex(uint32_t bag_index);
