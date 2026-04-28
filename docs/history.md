@@ -7,6 +7,23 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Verion 8.16
+
+* [Fix] Working with 38511
+* [Fix] Fixed bug preventing /useskill working for stances/shouts/pet attacks if you've got a skill queued.
+* [Fix] Removed Wintersday LA from completion window
+* [Fix] Fixed crash in hero builds window related to new heroes
+* [Fix] Fixed bug preventing targetting message from being filtered when checked
+* [Fix] Fixed bug hiding damage percent
+* [Fix] TB remembers last login status on login screen again
+* [Fix] Various other bug fixes and mem leak fixes
+* [Minor] Added support for forsaken tunnels
+* [Minor] Global font scale renders text better
+* [Minor] Re-added reconnect qol fix
+* [Minor] Improvements to vanquish widget improve FPS
+* [Minor] Added Althea to hero list
+* [New] Added Account Inventory window to track items across characters
+
 ## Version 8.15
 
 * [Fix] Fixed various features not working since gw 38359 e.g. tick as toggle, /enter command

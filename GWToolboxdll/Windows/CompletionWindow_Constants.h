@@ -8,7 +8,30 @@ namespace CompletionWindow_Constants {
 
     const char* CampaignName(const Campaign camp) { return campaign_names[std::to_underlying(camp)]; }
     constexpr std::array hero_names = {"", "Norgu", "Goren", "Tahlkora", "Master of Whispers", "Acolyte Jin", "Koss", "Dunkoro", "Acolyte Sousuke", "Melonni", "Zhed Shadowhoof", "General Morgahn", "Margrid the Sly", "Zenmai", "Olias", "Razah", "M.O.X.",
-                                "Keiran Thackeray", "Jora", "Pyre Fierceshot", "Anton", "Livia", "Hayda", "Kahmu", "Gwen", "Xandra", "Vekk", "Ogden Stonehealer", "", "", "", "", "", "", "", "", "Miku", "Zei Ri"};
+        "Keiran Thackeray",
+        "Jora",
+        "Pyre Fierceshot",
+        "Anton",
+        "Livia",
+        "Hayda",
+        "Kahmu",
+        "Gwen",
+        "Xandra",
+        "Vekk",
+        "Ogden Stonehealer",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Miku",
+        "Zei Ri",
+        "Devona",
+        "Ghost of Althea"
+    };
 
 
     // GW loads these icons as an array of file hashes once, and then keeps it in memory - I can't find where these are in RDATA reliably, so have to define them here :(
