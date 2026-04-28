@@ -527,7 +527,7 @@ struct MergeStack;
     ImVec4 cached_button_color{};
 
     static constexpr ImU32 color_quantity = IM_COL32(250, 247, 153, 255);
-    
+
     void SaveHeroes()
     {
         if (!cached_heroes.empty()) return;
@@ -1141,7 +1141,7 @@ struct MergeStack;
         // item->bag->bag_array is a separate array for each hero with only the Equipped_Items bag set, but seemingly no reference back to the hero.
         // The workaround uses the fact that items are added by GW in the order of the respective heroes in the party.
         i->hero_id = GW::Constants::HeroID::NoHero;
-        if (i->bag_id == GW::Constants::Bag::Equipped_Items && (GW::Inventory*)item->bag->bag_array != GW::Items::GetInventory()) {
+        if (i->bag_id == GW::Constants::Bag::Equipped_Items && (GW::Inventory*)item->bag->inventory != GW::Items::GetInventory()) {
             // If we are loaded on a map when this module gets initialized, we will visit items in an arbitrary order
             // and therefore we are unable to guess which hero an item belongs to.
             // In this case we can add items on heroes only once we load into a new map or if the heroes are
@@ -1830,7 +1830,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
     const float inner_width = ImGui::GetContentRegionAvail().x - item_spacing;
     const float button_height = 3.3f * ImGui::GetTextLineHeight();
     const ImVec2 button_size = ImVec2(button_height, button_height);
-    
+
 
     ImGuiTableFlags flags = ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_NoBordersInBody;
     if (detailed_view) {
