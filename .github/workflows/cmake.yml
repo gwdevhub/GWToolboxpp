@@ -253,9 +253,12 @@ jobs:
           git tag -d $TAG_NAME
         fi
 
-        echo "Pushing merge commit..."
-
-        git push origin $BRANCH
+        if [ "$(git rev-parse $BRANCH)" != "$(git rev-parse origin/$BRANCH)" ]; then
+          echo "Pushing merge commit to $BRANCH ..."
+          git push origin $BRANCH
+        else
+          echo "Already up to date, no need to push $BRANCH"
+        fi
 
         echo "Creating tag $TAG_NAME ..."
 
