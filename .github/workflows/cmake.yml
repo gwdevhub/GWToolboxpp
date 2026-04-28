@@ -52,7 +52,7 @@ jobs:
           else
             echo "New dev version detected."
             echo "run=dev" >> "$GITHUB_OUTPUT"
-            echo "beta_tag=_Beta_$DEV_COMMIT_SHORT" >> "$GITHUB_OUTPUT"
+            echo "beta_tag=Beta_$DEV_COMMIT_SHORT" >> "$GITHUB_OUTPUT"
           fi
         else
           echo "New stable version detected."
@@ -224,7 +224,7 @@ jobs:
         fi
 
         if [ -n "$DEV_COMMIT_SHORT" ]; then
-          TAG_NAME="${VERSION}${BETA_TAG}"
+          TAG_NAME="${VERSION}_${BETA_TAG}"
         else
           if [ -z "$BETA" ]; then
             TAG_NAME="${VERSION}_Release"
@@ -235,6 +235,7 @@ jobs:
 
         echo "Detected version: $VERSION"
         echo "Detected beta: $BETA"
+        echo "Detected dev commit: $DEV_COMMIT_SHORT"
         echo "Target tag: $TAG_NAME"
 
         # Check if tag exists
