@@ -17,7 +17,7 @@ namespace GW {
     struct HeroFlag { // total: 0x20/36
         /* +h0000 */ GW::Constants::HeroID hero_id;
         /* +h0004 */ AgentID  agent_id;
-        /* +h0008 */ uint32_t level;
+        /* +h0008 */ uint32_t inventory_id;
         /* +h000C */ HeroBehavior hero_behavior;
         /* +h0010 */ Vec2f flag;
         /* +h0018 */ uint32_t h0018;

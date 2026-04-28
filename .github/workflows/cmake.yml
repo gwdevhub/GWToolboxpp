@@ -52,7 +52,7 @@ jobs:
           else
             echo "New dev version detected."
             echo "run=dev" >> "$GITHUB_OUTPUT"
-            echo "beta_tag=_Beta_$DEV_COMMIT_SHORT" >> "$GITHUB_OUTPUT"
+            echo "beta_tag=Beta_$DEV_COMMIT_SHORT" >> "$GITHUB_OUTPUT"
           fi
         else
           echo "New stable version detected."
@@ -224,7 +224,7 @@ jobs:
         fi
 
         if [ -n "$DEV_COMMIT_SHORT" ]; then
-          TAG_NAME="${VERSION}${BETA_TAG}"
+          TAG_NAME="${VERSION}_${BETA_TAG}"
         else
           if [ -z "$BETA" ]; then
             TAG_NAME="${VERSION}_Release"
@@ -235,19 +235,25 @@ jobs:
 
         echo "Detected version: $VERSION"
         echo "Detected beta: $BETA"
+        echo "Detected dev commit: $DEV_COMMIT_SHORT"
         echo "Target tag: $TAG_NAME"
 
         # Check if tag exists
         if git show-ref --tags --quiet --verify "refs/tags/$TAG_NAME"; then
-          echo "Tag $TAG_NAME already exists. Skipping release."
-          exit 0
+          if [ -n "$DEV_COMMIT_SHORT" ]; then
+            echo "Tag for dev release $TAG_NAME already exists. Skipping release."
+            exit 0
+          fi
+
+          echo "Tag $TAG_NAME already exists, deleting it..."
+          git tag -d $TAG_NAME
         fi
 
         echo "Pushing merge commit..."
 
         git push origin $BRANCH
 
-        echo "Tag $TAG_NAME does not exist. Creating..."
+        echo "Creating tag $TAG_NAME ..."
 
         # Create tag
         git config user.name "GitHub Actions"

@@ -493,99 +493,100 @@ namespace GW {
             kMessage_0x1000016c,            // 0x1000016c
             kMessage_0x1000016d,            // 0x1000016d
             kMessage_0x1000016e,            // 0x1000016e
-            kMessage_0x1000016f,            // 0x1000016f
-            kMessage_0x10000170,            // 0x10000170
-            kMessage_0x10000171,            // 0x10000171
-            kMessage_0x10000172,            // 0x10000172
-            kMessage_0x10000173,            // 0x10000173
-            kMessage_0x10000174,            // 0x10000174
-            kCheckUIState,                  // 0x10000175
-            kMessage_0x10000176,            // 0x10000176
-            kMessage_0x10000177,            // 0x10000177
-            kMessage_0x10000178,            // 0x10000178
-            kMessage_0x10000178_1,          // 0x10000179, added to GW 2026-02-26
-            kMessage_0x10000178_2,          // 0x1000017a, added to GW 2026-02-26
-            kMessage_0x10000178_3,          // 0x1000017b, added to GW 2026-02-26
-            kDestroyUIPositionOverlay,      // 0x1000017c
-            kEnableUIPositionOverlay,       // 0x1000017d, wparam = uint32_t enable
-            kMessage_0x1000017b,            // 0x1000017e
-            kGuildHall,                     // 0x1000017f, wparam = gh key (uint32_t[4])
-            kMessage_0x1000017d,            // 0x10000180
-            kLeaveGuildHall,                // 0x10000181
-            kTravel,                        // 0x10000182
-            kOpenWikiUrl,                   // 0x10000183, wparam = char* url
-            kMessage_0x10000181,            // 0x10000184
-            kMessage_0x10000182,            // 0x10000185
-            kSetPreGameContext_Value0,      // 0x10000186, wparam = uint32_t value
-            kMessage_0x10000184,            // 0x10000187
-            kGetPreGameContext_Value0,      // 0x10000188, lparam = *uint32_t value_out
-            kSetPreGameContext_Value1,      // 0x10000189, wparam = uint32_t value     , added to GW 2026-02-06
-            kGetPreGameContext_Value1,      // 0x1000018a, lparam = *uint32_t value_out, added to GW 2026-02-06
-            kMessage_0x10000186,            // 0x1000018b
-            kMessage_0x10000187,            // 0x1000018c
-            kMessage_0x10000188,            // 0x1000018d
-            kMessage_0x10000189,            // 0x1000018e
-            kMessage_0x1000018a,            // 0x1000018f
-            kMessage_0x1000018b,            // 0x10000190
-            kMessage_0x1000018c,            // 0x10000191
-            kMessage_0x1000018d,            // 0x10000192
-            kAppendMessageToChat,           // 0x10000193, wparam = wchar_t* message
-            kMessage_0x1000018f,            // 0x10000194
-            kMessage_0x10000190,            // 0x10000195
-            kMessage_0x10000191,            // 0x10000196
-            kMessage_0x10000192,            // 0x10000197
-            kMessage_0x10000193,            // 0x10000198
-            kMessage_0x10000194,            // 0x10000199
-            kMessage_0x10000195,            // 0x1000019a
-            kMessage_0x10000196,            // 0x1000019b
-            kMessage_0x10000197,            // 0x1000019c
-            kMessage_0x10000198,            // 0x1000019d
-            kMessage_0x10000199,            // 0x1000019e
-            kMessage_0x1000019a,            // 0x1000019f
-            kMessage_0x1000019b,            // 0x100001a0
-            kHideHeroPanel,                 // 0x100001a1, wparam = hero_id
-            kShowHeroPanel,                 // 0x100001a2, wparam = hero_id
-            kMessage_0x1000019e,            // 0x100001a3
-            kMessage_0x1000019f,            // 0x100001a4
-            kMessage_0x100001a0,            // 0x100001a5
-            kGetInventoryAgentId,           // 0x100001a6, wparam = 0, lparam = uint32_t* agent_id_out. Used to fetch which agent is selected
-            kInventoryRelated1,             // 0x100001a7, added to GW 2026-02-26
-            kInventoryRelated2,             // 0x100001a8, added to GW 2026-02-26
-            kInventoryRelated3,             // 0x100001a9, added to GW 2026-02-26
-            kEquipItem,                     // 0x100001aa, wparam = { item_id, agent_id }
-            kMoveItem,                      // 0x100001ab, wparam = { item_id, to_bag, to_slot, bool prompt }
-            kItemRelated_1,                 // 0x100001ac
-            kItemTooltip,                   // 0x100001ad
-            kItemRelated_3,                 // 0x100001ae, added to GW 2026-02-26
-            kItemRelated_4,                 // 0x100001af, added to GW 2026-02-26
-            kInitiateTrade,                 // 0x100001b0
-            kMessage_0x100001a7,            // 0x100001b1
-            kMessage_0x100001a8,            // 0x100001b2
-            kMessage_0x100001a9,            // 0x100001b3
-            kMessage_0x100001aa,            // 0x100001b4
-            kMessage_0x100001ab,            // 0x100001b5
-            kMessage_0x100001ac,            // 0x100001b6
-            kMessage_0x100001ad,            // 0x100001b7
-            kMessage_0x100001ae,            // 0x100001b8
-            kMessage_0x100001af,            // 0x100001b9
-            kMessage_0x100001b0,            // 0x100001ba
-            kMessage_0x100001b1,            // 0x100001bb
-            kMessage_0x100001b2,            // 0x100001bc
-            kMessage_0x100001b3,            // 0x100001bd
-            kMessage_0x100001b4,            // 0x100001be
-            kMessage_0x100001b5,            // 0x100001bf
-            kInventoryAgentChanged,         // 0x100001c0, Triggered when inventory needs updating due to agent change; no args
-            kInventoryRelated_1,            // 0x100001c1
-            kInventoryRelated_2,            // 0x100001c2
-            kMissionStatusRelated,          // 0x100001c3
-            kUnused_1c2,                    // 0x100001c4
-            kCollapseExpandSkillListSection,  // 0x100001c5
-            kTemplateRelated_1,             // 0x100001c6
-            kTemplateRelated_2,             // 0x100001c7
-            kPromptSaveTemplate,            // 0x100001c8
-            kOpenTemplate,                  // 0x100001c9, wparam = GW::UI::ChatTemplate*
-            kTemplateRelated_3,             // 0x100001ca
-            kTemplateRelated_4,             // 0x100001cb
+            kMessage_0x1000016e_1,          // 0x1000016f, added to GW 2026-04-28
+            kMessage_0x1000016f,            // 0x10000170
+            kMessage_0x10000170,            // 0x10000171
+            kMessage_0x10000171,            // 0x10000172
+            kMessage_0x10000172,            // 0x10000173
+            kMessage_0x10000173,            // 0x10000174
+            kMessage_0x10000174,            // 0x10000175
+            kCheckUIState,                  // 0x10000176
+            kMessage_0x10000176,            // 0x10000177
+            kMessage_0x10000177,            // 0x10000178
+            kMessage_0x10000178,            // 0x10000179
+            kMessage_0x10000178_1,          // 0x1000017a, added to GW 2026-02-26
+            kMessage_0x10000178_2,          // 0x1000017b, added to GW 2026-02-26
+            kMessage_0x10000178_3,          // 0x1000017c, added to GW 2026-02-26
+            kDestroyUIPositionOverlay,      // 0x1000017d
+            kEnableUIPositionOverlay,       // 0x1000017e, wparam = uint32_t enable
+            kMessage_0x1000017b,            // 0x1000017f
+            kGuildHall,                     // 0x10000180, wparam = gh key (uint32_t[4])
+            kMessage_0x1000017d,            // 0x10000181
+            kLeaveGuildHall,                // 0x10000182
+            kTravel,                        // 0x10000183
+            kOpenWikiUrl,                   // 0x10000184, wparam = char* url
+            kMessage_0x10000181,            // 0x10000185
+            kMessage_0x10000182,            // 0x10000186
+            kSetPreGameContext_Value0,      // 0x10000187, wparam = uint32_t value
+            kMessage_0x10000184,            // 0x10000188
+            kGetPreGameContext_Value0,      // 0x10000189, lparam = *uint32_t value_out
+            kSetPreGameContext_Value1,      // 0x1000018a, wparam = uint32_t value     , added to GW 2026-02-06
+            kGetPreGameContext_Value1,      // 0x1000018b, lparam = *uint32_t value_out, added to GW 2026-02-06
+            kMessage_0x10000186,            // 0x1000018c
+            kMessage_0x10000187,            // 0x1000018d
+            kMessage_0x10000188,            // 0x1000018e
+            kMessage_0x10000189,            // 0x1000018f
+            kMessage_0x1000018a,            // 0x10000190
+            kMessage_0x1000018b,            // 0x10000191
+            kMessage_0x1000018c,            // 0x10000192
+            kMessage_0x1000018d,            // 0x10000193
+            kAppendMessageToChat,           // 0x10000194, wparam = wchar_t* message
+            kMessage_0x1000018f,            // 0x10000195
+            kMessage_0x10000190,            // 0x10000196
+            kMessage_0x10000191,            // 0x10000197
+            kMessage_0x10000192,            // 0x10000198
+            kMessage_0x10000193,            // 0x10000199
+            kMessage_0x10000194,            // 0x1000019a
+            kMessage_0x10000195,            // 0x1000019b
+            kMessage_0x10000196,            // 0x1000019c
+            kMessage_0x10000197,            // 0x1000019d
+            kMessage_0x10000198,            // 0x1000019e
+            kMessage_0x10000199,            // 0x1000019f
+            kMessage_0x1000019a,            // 0x100001a0
+            kMessage_0x1000019b,            // 0x100001a1
+            kHideHeroPanel,                 // 0x100001a2, wparam = hero_id
+            kShowHeroPanel,                 // 0x100001a3, wparam = hero_id
+            kMessage_0x1000019e,            // 0x100001a4
+            kMessage_0x1000019f,            // 0x100001a5
+            kMessage_0x100001a0,            // 0x100001a6
+            kGetInventoryAgentId,           // 0x100001a7, wparam = 0, lparam = uint32_t* agent_id_out. Used to fetch which agent is selected
+            kInventoryRelated1,             // 0x100001a8, added to GW 2026-02-26
+            kInventoryRelated2,             // 0x100001a9, added to GW 2026-02-26
+            kInventoryRelated3,             // 0x100001aa, added to GW 2026-02-26
+            kEquipItem,                     // 0x100001ab, wparam = { item_id, agent_id }
+            kMoveItem,                      // 0x100001ac, wparam = { item_id, to_bag, to_slot, bool prompt }
+            kItemRelated_1,                 // 0x100001ad
+            kItemTooltip,                   // 0x100001ae
+            kItemRelated_3,                 // 0x100001af, added to GW 2026-02-26
+            kItemRelated_4,                 // 0x100001b0, added to GW 2026-02-26
+            kInitiateTrade,                 // 0x100001b1
+            kMessage_0x100001a7,            // 0x100001b2
+            kMessage_0x100001a8,            // 0x100001b3
+            kMessage_0x100001a9,            // 0x100001b4
+            kMessage_0x100001aa,            // 0x100001b5
+            kMessage_0x100001ab,            // 0x100001b6
+            kMessage_0x100001ac,            // 0x100001b7
+            kMessage_0x100001ad,            // 0x100001b8
+            kMessage_0x100001ae,            // 0x100001b9
+            kMessage_0x100001af,            // 0x100001ba
+            kMessage_0x100001b0,            // 0x100001bb
+            kMessage_0x100001b1,            // 0x100001bc
+            kMessage_0x100001b2,            // 0x100001bd
+            kMessage_0x100001b3,            // 0x100001be
+            kMessage_0x100001b4,            // 0x100001bf
+            kMessage_0x100001b5,            // 0x100001c0
+            kInventoryAgentChanged,         // 0x100001c1, Triggered when inventory needs updating due to agent change; no args
+            kInventoryRelated_1,            // 0x100001c2
+            kInventoryRelated_2,            // 0x100001c3
+            kMissionStatusRelated,          // 0x100001c4
+            kUnused_1c2,                    // 0x100001c5
+            kCollapseExpandSkillListSection,  // 0x100001c6
+            kTemplateRelated_1,             // 0x100001c7
+            kTemplateRelated_2,             // 0x100001c8
+            kPromptSaveTemplate,            // 0x100001c9
+            kOpenTemplate,                  // 0x100001ca, wparam = GW::UI::ChatTemplate*
+            kTemplateRelated_3,             // 0x100001cb
+            kTemplateRelated_4,             // 0x100001cc
 
             // GWCA Client to Server commands. Only added the ones that are used for hooks, everything else goes straight into GW
 
