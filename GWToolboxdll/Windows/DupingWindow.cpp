@@ -14,9 +14,9 @@
 
 #include <Color.h>
 #include <Timer.h>
-#include <Utils/GuiUtils.h>
+#include <Modules/Resources.h>
 #include <Windows/DupingWindow.h>
-
+#include <Utils/GuiUtils.h>
 
 namespace {
     struct TrackedEnemy {
@@ -247,6 +247,8 @@ namespace {
 
 void DupingWindow::Initialize()
 {
+    RegisterSettingsContent();
+
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&AgentAttack_Entry, [](GW::HookStatus*, const GW::Packet::StoC::GenericValue* packet) {
         if (packet->agent_id != GW::Agents::GetObservingId() || packet->value_id != 8 || packet->value != 1) {
             return;

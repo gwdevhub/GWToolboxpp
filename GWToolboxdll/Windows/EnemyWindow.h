@@ -15,7 +15,7 @@ public:
 
     [[nodiscard]] const char* Name() const override { return "Enemy Window"; }
     [[nodiscard]] const char* Description() const override { return "Keeps track of enemies"; }
-    [[nodiscard]] const char* Icon() const override { return ICON_FA_COPY; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_ANGRY; }
 
     void Terminate() override;
 
