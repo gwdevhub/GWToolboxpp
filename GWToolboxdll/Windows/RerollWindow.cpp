@@ -232,17 +232,6 @@ namespace {
         }
     }
 
-    bool IsCharSelectReady()
-    {
-        const GW::PreGameContext* pgc = GW::GetPreGameContext();
-        if (!pgc || !pgc->chars.valid()) {
-            return false;
-        }
-        uint32_t ui_state = 10;
-        SendUIMessage(GW::UI::UIMessage::kCheckUIState, nullptr, &ui_state);
-        return ui_state == 2;
-    }
-
     void RerollFailed(const wchar_t* reason)
     {
         if (reroll_stage < WaitingForCharSelect) {

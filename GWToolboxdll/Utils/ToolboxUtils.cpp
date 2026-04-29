@@ -349,7 +349,10 @@ namespace GW {
     namespace LoginMgr {
         const bool IsCharSelectReady()
         {
-            return GW::UI::GetFrameContext(GetSelectorFrame());
+            uint32_t ui_state = 10;
+            SendUIMessage(GW::UI::UIMessage::kCheckUIState, nullptr, &ui_state);
+            const auto frame = GetSelectorFrame();
+            return ui_state == 2 && frame && frame->IsVisible() && GW::UI::GetFrameContext(frame);
         }
 
         const bool SelectCharacterToPlay(const wchar_t* name, bool play)
