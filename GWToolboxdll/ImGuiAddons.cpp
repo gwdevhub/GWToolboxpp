@@ -651,7 +651,7 @@ namespace ImGui {
         bool value_changed = false;
         for (size_t i = 0; i < count; i++) {
             PushID(i);
-            if (ColorButton("", palette[i])) {
+            if (ColorButton("", palette[i], flags)) {
                 *palette_index = i;
                 value_changed = true;
             }
@@ -664,7 +664,7 @@ namespace ImGui {
         if (!(flags & ImGuiColorEditFlags_AlphaOpaque)) {
             constexpr ImVec4 col;
             PushID(count);
-            if (ColorButton("", col)) {
+            if (ColorButton("", col, flags)) {
                 *palette_index = count;
                 value_changed = true;
             }
