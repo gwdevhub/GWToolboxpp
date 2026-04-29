@@ -183,6 +183,7 @@ bool AudioSettings::PlaySound(const wchar_t* filename, const GW::Vec3f* position
     }
     props->flags = flags;
     GW::GameThread::Enqueue([cpy = std::wstring(filename), props, handle_out]() {
+        if (!PlaySound_Func) return;
         force_play_sound = true;
         const auto handle = PlaySound_Func(cpy.c_str(), props);
         if (handle_out)

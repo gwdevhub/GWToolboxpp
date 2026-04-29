@@ -299,7 +299,6 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
 
     const auto font_size = ImMin(font_recharge, m_skill_width);
 
-    const auto font = FontLoader::GetFont();
     const auto draw_list = ImGui::GetBackgroundDrawList();
 
 
@@ -317,14 +316,13 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
 
         // label
         if (*skill.cooldown) {
-            ImGui::PushFont(font, draw_list, font_size);
+            ImGui::PushFont(NULL, draw_list, font_size);
+            const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown);
+            ImVec2 label_pos(top_left.x + m_skill_width / 2 - label_size.x / 2, top_left.y + m_skill_width / 2 - label_size.y / 2);
             if (IM_COL32_A_MASK & color_text_outline) {
-                ImVec2 center_pos(top_left.x + m_skill_width / 2, top_left.y + m_skill_width / 2);
-                ImGui::DrawTextWithOutline(draw_list, font, skill.cooldown, center_pos, color_text_recharge, color_text_outline);
+                ImGui::DrawTextWithOutline(draw_list, skill.cooldown, label_pos, color_text_recharge, color_text_outline);
             }
             else {
-                const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown);
-                ImVec2 label_pos(top_left.x + m_skill_width / 2 - label_size.x / 2, top_left.y + m_skill_width / 2 - label_size.y / 2);
                 draw_list->AddText(label_pos, color_text_recharge, skill.cooldown);
             }
             ImGui::PopFont(draw_list);
@@ -339,9 +337,8 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
 
 void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
 {
-    const auto font = FontLoader::GetFont();
     const auto draw_list = ImGui::GetBackgroundDrawList();
-    ImGui::PushFont(font, draw_list, font_effects);
+    ImGui::PushFont(NULL, draw_list, font_effects);
 
     const auto widget_height = ImMax(font_effects, effect_monitor_size);
 

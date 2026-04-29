@@ -101,27 +101,8 @@ namespace ImGui {
     IMGUI_API void ClampAllWindowsToScreen(bool clamp);
 
     IMGUI_API bool ButtonWithHint(const char* label, const char* tooltip, const ImVec2& size_arg);
-
-    IMGUI_API void DrawTextWithShadow(const char* text, const ImVec2& pos,
-                                      ImU32 textColor = IM_COL32(255, 255, 255, 255),
-                                      ImU32 shadowColor = IM_COL32(0, 0, 0, 255),
-                                      float shadowOffset = 1.0f);
-    IMGUI_API void DrawTextWithShadow(const char* text,
-                                      ImU32 textColor = IM_COL32(255, 255, 255, 255),
-                                      ImU32 shadowColor = IM_COL32(0, 0, 0, 255),
-                                      float shadowOffset = 1.0f);
-    IMGUI_API void DrawTextWithOutline(const char* text, const ImVec2& pos,
+    IMGUI_API void DrawTextWithOutline(ImDrawList* draw_list, const char* text, const ImVec2& pos,
                                        ImU32 textColor = IM_COL32(255, 255, 255, 255),
                                        ImU32 outlineColor = IM_COL32(0, 0, 0, 255),
-                                       float thickness = 1.0f);
-    IMGUI_API void DrawTextWithOutline(const char* text,
-                                       ImU32 textColor = IM_COL32(255, 255, 255, 255),
-                                       ImU32 outlineColor = IM_COL32(0, 0, 0, 255),
-                                       float thickness = 1.0f);
-    IMGUI_API void DrawTextWithShadow(ImDrawList* draw_list, ImFont* font, const char* text,
-                                      const ImVec2& center_pos, ImU32 textColor, ImU32 shadowColor,
-                                      float shadowOffset = 1.0f);
-    IMGUI_API void DrawTextWithOutline(ImDrawList* draw_list, ImFont* font, const char* text,
-                                       const ImVec2& center_pos, ImU32 textColor, ImU32 outlineColor,
                                        float thickness = 1.0f);
 }
