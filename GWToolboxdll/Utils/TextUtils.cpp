@@ -417,7 +417,6 @@ namespace TextUtils {
     // https://docs.microsoft.com/en-gb/windows/win32/fileio/naming-a-file
     std::string SanitiseFilename(const std::string_view str)
     {
-        // https://docs.microsoft.com/en-gb/windows/win32/fileio/naming-a-file
         const auto invalid_chars = "<>:\"/\\|?*";
         std::string out;
         out.reserve(str.length());
