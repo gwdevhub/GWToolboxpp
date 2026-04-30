@@ -1733,7 +1733,14 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         ImGui::End();
     }
 
-    if (!visible) return;
+    if (!visible) {
+        name_filter_buf[0] = '\0';
+        location_filter_buf[0] = '\0';
+        model_ID_filter_buf[0] = '\0';
+        item_filter_buf[0] = '\0';
+        needs_sorting = true;
+        return;
+    }
 
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(760.f * font_scale, 400.f * font_scale), ImGuiCond_FirstUseEver);
