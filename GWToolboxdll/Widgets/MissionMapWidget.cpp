@@ -108,10 +108,11 @@ namespace {
         const auto* mm_ctx = GW::Map::GetMissionMapContext();
         if (!mm_ctx || !mm_ctx->h003c) return;
 
-        const auto player_pos = GW::PlayerMgr::GetPlayerPosition();
-        if (!player_pos) return;
-        const float px = player_pos->x;
-        const float py = player_pos->y;
+        const GW::Vec2f mm_pos = mm_ctx->h003c->player_mission_map_pos;
+        GW::GamePos anchor_pos;
+        if (!WorldMapWidget::WorldMapToGamePos(mm_pos, anchor_pos)) return;
+        const float px = anchor_pos.x;
+        const float py = anchor_pos.y;
 
         if (mission_map_zoom != cached_basis_zoom || !valid) {
             cached_basis_zoom = mission_map_zoom;
@@ -128,14 +129,13 @@ namespace {
             by = (s01.y - s00.y) / STEP;
         }
 
-        const GW::Vec2f mm_pos = mm_ctx->h003c->player_mission_map_pos;
         const GW::Vec2f mm_offset = mm_pos - current_pan_offset;
         const GW::Vec2f mm_scaled = {mm_offset.x * mission_map_scale.x, mm_offset.y * mission_map_scale.y};
-        const GW::Vec2f player_screen = {mm_scaled.x * mission_map_zoom + mission_map_screen_pos.x,
+        const GW::Vec2f anchor_screen = {mm_scaled.x * mission_map_zoom + mission_map_screen_pos.x,
                                          mm_scaled.y * mission_map_zoom + mission_map_screen_pos.y};
 
-        ox = roundf(player_screen.x - px * ax - py * bx);
-        oy = roundf(player_screen.y - px * ay - py * by);
+        ox = roundf(anchor_screen.x - px * ax - py * bx);
+        oy = roundf(anchor_screen.y - px * ay - py * by);
         valid = true;
     }
 
