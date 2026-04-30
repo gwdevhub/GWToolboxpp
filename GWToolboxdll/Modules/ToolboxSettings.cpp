@@ -77,6 +77,7 @@
 #include <Windows/TargetInfoWindow.h>
 #include <Windows/GWMarketWindow.h>
 #include <Windows/InventorySorting.h>
+#include <Windows/PerformanceWindow.h>
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
@@ -223,7 +224,8 @@ namespace {
         InventorySorting::Instance(),
         FavorTracker::Instance(),
         LoginModule::Instance(),
-        {AccountInventoryWindow::Instance(), false}
+        {AccountInventoryWindow::Instance(), false},
+        {PerformanceWindow::Instance(), false}
     };
 
     bool modules_sorted = false;
