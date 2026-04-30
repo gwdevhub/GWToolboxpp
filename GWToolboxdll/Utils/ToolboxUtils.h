@@ -167,6 +167,7 @@ namespace GW {
     }
     namespace MemoryMgr {
         bool GetPersonalDir(std::wstring& out);
+        std::filesystem::path GetBuildsDir();
     }
     namespace UI {
         struct Frame;

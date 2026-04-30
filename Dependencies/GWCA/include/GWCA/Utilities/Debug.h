@@ -15,9 +15,6 @@
     #define GWCA_WARN(fmt, ...)
     #define GWCA_ERR(fmt, ...)
     #define GWCA_CRITICAL(fmt, ...)
-    #define __FILE__ ""
-    #define __LINE__ 0
-    #define __FUNCTION__ ""
 #endif
 
 #include <GWCA/Utilities/Export.h>
