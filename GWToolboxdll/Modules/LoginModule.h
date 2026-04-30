@@ -15,6 +15,7 @@ public:
 
     [[nodiscard]] const char* Name() const override { return "Login Module"; }
     [[nodiscard]] const char* Description() const override { return "Allows fix to allow reconnect when starting GW with charname argument."; }
+    [[nodiscard]] bool HasSettings() override { return false; }
 
     void Initialize() override;
     void Terminate() override;
