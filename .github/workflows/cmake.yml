@@ -148,11 +148,10 @@ jobs:
       shell: bash
       working-directory: ${{runner.workspace}}/GWToolboxpp/build
       run: |
-        CMAKE_ARGS="--preset=vcpkg"
         if [ "$IS_DEV_BUILD" = "true" ]; then
-          CMAKE_ARGS="$CMAKE_ARGS -DGWTOOLBOXDLL_VERSION_BETA=$BETA_TAG"
+          sed -i "s/.*set(GWTOOLBOXDLL_VERSION_BETA \"[^\"]*\").*/set(GWTOOLBOXDLL_VERSION_BETA \"$BETA_TAG\")/" CMakeLists.txt
         fi
-        cmake $GITHUB_WORKSPACE $CMAKE_ARGS
+        cmake $GITHUB_WORKSPACE --preset=vcpkg
       env:
         VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
         VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
