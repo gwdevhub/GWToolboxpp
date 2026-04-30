@@ -85,6 +85,9 @@ public:
     void RegisterSettingsContent(
         const char* section, const char* icon, const SectionDrawCallback& callback, float weighting);
 
+    uint64_t last_update_time_us_ = 0;
+    uint64_t last_draw_time_us_ = 0;
+
 protected:
     // Weighting used to decide where to position the DrawSettingInternal() for this module. Useful when more than 1 module has the same SettingsName().
     virtual float SettingsWeighting() { return 1.0f; }
