@@ -229,10 +229,10 @@ namespace {
         dx_device->SetRenderState(D3DRS_ZENABLE, FALSE);
 
         RECT scissorRect;
-        scissorRect.left = static_cast<LONG>(ceilf(mission_map_top_left.x));
-        scissorRect.top = static_cast<LONG>(ceilf(mission_map_top_left.y));
-        scissorRect.right = static_cast<LONG>(floorf(mission_map_bottom_right.x));
-        scissorRect.bottom = static_cast<LONG>(floorf(mission_map_bottom_right.y));
+        scissorRect.left = static_cast<LONG>(floorf(mission_map_top_left.x));
+        scissorRect.top = static_cast<LONG>(floorf(mission_map_top_left.y));
+        scissorRect.right = static_cast<LONG>(ceilf(mission_map_bottom_right.x));
+        scissorRect.bottom = static_cast<LONG>(ceilf(mission_map_bottom_right.y));
         dx_device->SetScissorRect(&scissorRect);
 
         D3DVIEWPORT9 vp;
