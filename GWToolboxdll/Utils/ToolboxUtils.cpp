@@ -557,6 +557,15 @@ namespace GW {
             out.resize(wcslen(out.data()));
             return !out.empty();
         }
+        std::filesystem::path GetBuildsDir() {
+            std::wstring builds_folder;
+            GetPersonalDir(builds_folder);
+            if (builds_folder.empty()) return L"";
+            return std::filesystem::path(builds_folder) /
+                   L"Guild Wars" / 
+                   L"Templates" /
+                   L"Skills";
+        }
     } // namespace MemoryMgr
 
     namespace UI {

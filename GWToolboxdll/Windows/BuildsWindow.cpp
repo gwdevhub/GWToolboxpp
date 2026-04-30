@@ -685,6 +685,11 @@ namespace {
         return nullptr;
     }
 
+    // Load builds from the Guild Wars Templates directory
+    bool LoadFromBuildsFolder();
+    // Save toolbox builds to Guild Wars Templates directory
+    bool SaveToBuildsFolder();
+
     void LoadFromFile()
     {
         // clear builds from toolbox
@@ -745,8 +750,135 @@ namespace {
             });
         }
         builds_changed = false;
+        LoadFromBuildsFolder();
+    }
+    std::filesystem::path GetBuildsFolder() {
+        const auto gw_builds_folder = GW::MemoryMgr::GetBuildsDir();
+        if (gw_builds_folder.empty()) return L"";
+        return gw_builds_folder / L"GWToolbox" / L"Builds";
+    }
+    bool SaveToBuildsFolder()
+    {
+        const auto tb_builds_folder = GetBuildsFolder();
+        if (tb_builds_folder.empty()) return false;
+
+        std::set<std::filesystem::path> expected_paths;
+        expected_paths.emplace(tb_builds_folder);
+
+        for (const auto tbuild : teambuilds) {
+            if (tbuild->name.empty()) continue;
+
+            const std::filesystem::path tbuild_folder = tb_builds_folder / TextUtils::SanitiseFilename(tbuild->name);
+            expected_paths.emplace(tbuild_folder);
+
+            const auto tbuild_name_path = tbuild_folder / "tbuild.name";
+            if (!Resources::WriteFile(tbuild_name_path, tbuild->name)) return false;
+            expected_paths.emplace(tbuild_name_path);
+
+            for (const auto build : tbuild->builds) {
+                if (build->name.empty() && build->code.empty()) continue;
+
+                const std::string file_stem = TextUtils::SanitiseFilename(build->name.empty() ? std::format("Build_{}", build->index() + 1) : build->name);
+
+                if (!build->name.empty()) {
+                    const auto p = tbuild_folder / (file_stem + ".name");
+                    if (!Resources::WriteFile(p, build->name)) return false;
+                    expected_paths.emplace(p);
+                }
+                if (!build->code.empty()) {
+                    const auto p = tbuild_folder / (file_stem + ".txt");
+                    if (!Resources::WriteFile(p, build->code)) return false;
+                    expected_paths.emplace(p);
+                }
+                if (!build->pcons.empty()) {
+                    const auto p = tbuild_folder / (file_stem + ".pcons");
+                    if (!Resources::WriteFile(p, TextUtils::Join({build->pcons.begin(), build->pcons.end()}, "\n"))) return false;
+                    expected_paths.emplace(p);
+                }
+            }
+        }
+
+        if (std::filesystem::is_directory(tb_builds_folder)) {
+            for (const auto& entry : std::filesystem::recursive_directory_iterator(tb_builds_folder)) {
+                if (!expected_paths.contains(entry.path())) {
+                    std::error_code ec;
+                    std::filesystem::remove(entry.path(), ec);
+                    if (ec) Log::Warning("Failed to remove stale build file: %s", ec.message().c_str());
+                }
+            }
+        }
+
+        return true;
     }
 
+    bool LoadFromBuildsFolder()
+    {
+        const auto tb_builds_folder = GetBuildsFolder();
+        if (tb_builds_folder.empty() || !std::filesystem::is_directory(tb_builds_folder)) return false;
+
+        for (const auto& tbuild_entry : std::filesystem::directory_iterator(tb_builds_folder)) {
+            if (!tbuild_entry.is_directory()) continue;
+
+            // Prefer the original name from tbuild.name, fall back to the folder name
+            std::string tbuild_name;
+            const auto tbuild_name_path = tbuild_entry.path() / "tbuild.name";
+            if (!Resources::ReadFile(tbuild_name_path, tbuild_name)) 
+                tbuild_name = TextUtils::WStringToString(tbuild_entry.path().filename().wstring());
+            tbuild_name = TextUtils::trim(tbuild_name);
+
+            auto it = std::ranges::find_if(teambuilds, [&](const TeamBuild* tb) {
+                return _stricmp(tb->name.c_str(), tbuild_name.c_str()) == 0;
+            });
+            auto tbuild = it != teambuilds.end() ? *it : nullptr;
+            if (!tbuild) {
+                tbuild = new TeamBuild(tbuild_name);
+                teambuilds.push_back(tbuild);
+            }
+
+            for (const auto& file_entry : std::filesystem::directory_iterator(tbuild_entry.path())) {
+                if (!file_entry.is_regular_file()) continue;
+                const auto& path = file_entry.path();
+                if (path.extension() != L".txt") continue;
+
+                std::string code;
+                if (!Resources::ReadFile(path, code)) continue;
+                code = TextUtils::trim(code);
+                if (code.empty()) continue;
+
+                const auto stem = path.stem().wstring();
+
+                // Prefer the original name from .name file, fall back to the filename stem
+                std::string build_name;
+                const auto name_path = path.parent_path() / (stem + L".name");
+                if (!Resources::ReadFile(name_path, build_name)) build_name = TextUtils::WStringToString(stem);
+                build_name = TextUtils::trim(build_name);
+
+                auto bit = std::ranges::find_if(tbuild->builds, [&](const Build* b) {
+                    return _stricmp(b->name.c_str(), build_name.c_str()) == 0;
+                });
+                auto build = bit != tbuild->builds.end() ? *bit : nullptr;
+                if (build) {
+                    build->code = code;
+                    build->pcons.clear();
+                }
+                else {
+                    build = new Build(*tbuild, build_name, code);
+                    tbuild->builds.push_back(build);
+                }
+
+                const auto pcons_path = path.parent_path() / (stem + L".pcons");
+                std::string pcons_content;
+                if (Resources::ReadFile(pcons_path, pcons_content)) {
+                    for (const auto& pcon : TextUtils::Split(TextUtils::trim(pcons_content), "\n"))
+                        if (!pcon.empty()) build->pcons.emplace(pcon);
+                }
+            }
+        }
+
+        builds_changed = false;
+        return true;
+    }
+    
     void SaveToFile()
     {
         if (!(builds_changed || GWToolbox::SettingsFolderChanged()))
@@ -796,6 +928,7 @@ namespace {
             }
             ASSERT(inifile->SaveFile(Resources::GetSettingFile(INI_FILENAME).c_str()) == SI_OK);
         }
+        SaveToBuildsFolder();
     }
 
     bool MoveOldBuilds(ToolboxIni* ini)
