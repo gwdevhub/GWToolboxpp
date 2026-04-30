@@ -65,6 +65,8 @@ public:
 
     static bool ToggleModule(ToolboxModule& m, bool enable = true);
 
+    static void SetProfilingEnabled(bool enabled);
+
 private:
     static void DrawInitialising(IDirect3DDevice9* device);
     static void DrawTerminating(IDirect3DDevice9* device);

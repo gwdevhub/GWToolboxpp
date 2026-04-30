@@ -114,6 +114,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     if (!effects_frame) {
         return;
     }
+    DummyWindow();
     viewport = ImGui::GetMainViewport();
     draw_list = ImGui::GetBackgroundDrawList(viewport);
     const auto font = FontLoader::GetFont();
@@ -136,11 +137,9 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     if (effects) {
         std::unordered_map<GW::Constants::SkillID, DWORD> time_remaining_by_effect;
         for (auto& effect : *effects) {
-            if (effect.duration <= 0)
-                continue;
+            if (effect.duration <= 0) continue;
             const auto remaining = effect.GetTimeRemaining();
-            if (remaining <= 0)
-                continue;
+            if (remaining <= 0) continue;
             const auto found = time_remaining_by_effect.find(effect.skill_id);
             if (found == time_remaining_by_effect.end() || found->second < remaining) {
                 time_remaining_by_effect[effect.skill_id] = remaining;
@@ -148,15 +147,14 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
         }
         for (auto& [skill_id, remaining] : time_remaining_by_effect) {
             const auto skill_frame = GW::UI::GetChildFrame(effects_frame, (uint32_t)skill_id + 0x4);
-            if (!skill_frame)
-                continue;
+            if (!skill_frame) continue;
             std::array<char, 16> remaining_str;
-            if (UptimeToString(remaining_str.data(), static_cast<int>(remaining)) > 0)
-                DrawTextOverlay(remaining_str.data(), skill_frame);
+            if (UptimeToString(remaining_str.data(), static_cast<int>(remaining)) > 0) DrawTextOverlay(remaining_str.data(), skill_frame);
         }
     }
 
     ImGui::PopFont(draw_list);
+    ImGui::End();
 }
 
 void EffectsMonitorWidget::Initialize()

@@ -156,7 +156,9 @@ namespace {
 
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
     {
+        skillbar_frame = nullptr;
         skillbar_position_dirty = true;
+        
     }
 
     ToolboxUIElement& Instance()
@@ -298,10 +300,10 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     }
 
     const auto font_size = ImMin(font_recharge, m_skill_width);
+    
+    DummyWindow();
 
     const auto draw_list = ImGui::GetBackgroundDrawList();
-
-
     for (size_t i = 0; i < m_skills.size(); i++) {
         const Skill& skill = m_skills[i];
         // NB: Y axis inverted for imgui
@@ -332,7 +334,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
             DrawEffect(i, top_left);
         }
     }
-    
+    ImGui::End();
 }
 
 void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
