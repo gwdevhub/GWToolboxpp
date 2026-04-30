@@ -143,12 +143,12 @@ void ActiveQuestWidget::Draw(IDirect3DDevice9*)
         for (auto& objective : active_quest_objectives) {
             auto& [_, obj_str, completed] = objective;
 
-            if(completed) {
+            if (completed) {
                 ImGui::PushStyleColor(ImGuiCol_Text, TEXT_COLOR_COMPLETED);
             }
             ImGui::Bullet();
             ImGui::TextUnformatted(objective.objective_enc->string().c_str());
-            if(completed) {
+            if (completed) {
                 ImGui::PopStyleColor();
             }
         }

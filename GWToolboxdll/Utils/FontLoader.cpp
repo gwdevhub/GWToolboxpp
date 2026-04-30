@@ -1,9 +1,5 @@
 #include "stdafx.h"
 
-#include <GWCA/Managers/RenderMgr.h>
-#include <GWCA/Utilities/Hooker.h>
-#include <GWCA/Utilities/Scanner.h>
-
 #include "FontLoader.h"
 #include <Modules/Resources.h>
 #include <Utils/TextUtils.h>
@@ -167,12 +163,15 @@ namespace {
         cfg.OversampleH = 1;
         cfg.OversampleV = 1;
         cfg.MergeMode = false;
+        // imgui 1.92's new backend resolves merged glyphs from the first
+        // source, exclude font awesome's glyph ranges when adding regular fonts
+        cfg.GlyphExcludeRanges = fontawesome5_glyph_ranges.data();
 
         if (default_only) {
             auto* font = atlas->AddFontFromMemoryCompressedTTF(toolbox_default_font_compressed_data, toolbox_default_font_compressed_size, size, &cfg, toolbox_default_font_glyph_ranges);
             cfg.MergeMode = true;
+            cfg.GlyphExcludeRanges = nullptr;
             atlas->AddFontFromMemoryCompressedTTF(fontawesome5_compressed_data, fontawesome5_compressed_size, size, &cfg, fontawesome5_glyph_ranges.data());
-            cfg.MergeMode = false;
             return font;
         }
 
@@ -193,6 +192,7 @@ namespace {
 
         // Merge fontawesome icons
         cfg.MergeMode = true;
+        cfg.GlyphExcludeRanges = nullptr;
         atlas->AddFontFromMemoryCompressedTTF(fontawesome5_compressed_data, fontawesome5_compressed_size, size, &cfg, fontawesome5_glyph_ranges.data());
 
         return font;
@@ -231,9 +231,16 @@ namespace FontLoader {
         });
 
         Resources::EnqueueDxTask([base_size](IDirect3DDevice9*) {
-            auto* font = BuildFont(base_size);
-            if (font) {
+            ImFontAtlas* atlas = ImGui::GetIO().Fonts;
+            ImFont* fallback = atlas->Fonts.Size > 0 ? atlas->Fonts[0] : nullptr;
+            if (auto* font = BuildFont(base_size)) {
                 loaded_font = font;
+                // ImGui::GetIO().FontDefault = font;
+                // remove first-pass default built in font
+                if (fallback && fallback != font) {
+                    atlas->RemoveFont(fallback);
+                    atlas->CompactCache();
+                }
             }
             printf("Loaded all fonts\n");
         });

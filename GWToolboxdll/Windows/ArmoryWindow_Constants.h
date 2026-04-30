@@ -19,18 +19,18 @@ namespace GWArmory {
 
 
     constexpr ImVec4 palette[] = {
-        {0.f, 0.f, 1.f, 0.f},       // Blue
-        {0.f, 0.75f, 0.f, 0.f},     // Green
-        {0.5f, 0.f, 0.5f, 0.f},     // Purple
-        {1.f, 0.f, 0.f, 0.f},       // Red
-        {1.f, 1.f, 0.f, 0.f},       // Yellow
-        {0.5f, 0.25f, 0.f, 0.f},    // Brown
-        {1.f, 0.65f, 0.f, 0.f},     // Orange
-        {0.75f, 0.75f, 0.75f, 0.f}, // Silver
-        {0.f, 0.f, 0.f, 0.f},       // Black
-        {0.5f, 0.5f, 0.5f, 0.f},    // Gray
-        {1.f, 1.f, 1.f, 0.f},       // White
-        {0.95f, 0.5f, 0.95f, 0.f},  // Pink
+        {0.f, 0.f, 1.f, 1.f},       // Blue
+        {0.f, 0.75f, 0.f, 1.f},     // Green
+        {0.5f, 0.f, 0.5f, 1.f},     // Purple
+        {1.f, 0.f, 0.f, 1.f},       // Red
+        {1.f, 1.f, 0.f, 1.f},       // Yellow
+        {0.5f, 0.25f, 0.f, 1.f},    // Brown
+        {1.f, 0.65f, 0.f, 1.f},     // Orange
+        {0.75f, 0.75f, 0.75f, 1.f}, // Silver
+        {0.f, 0.f, 0.f, 1.f},       // Black
+        {0.5f, 0.5f, 0.5f, 1.f},    // Gray
+        {1.f, 1.f, 1.f, 1.f},       // White
+        {0.95f, 0.5f, 0.95f, 1.f},  // Pink
     };
 
     enum ItemSlot : uint8_t {
