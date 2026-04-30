@@ -13,4 +13,7 @@ public:
     [[nodiscard]] virtual ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0) const override;
 
     [[nodiscard]] virtual ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags, bool noinput_if_frozen) const;
+
+protected:
+    bool DummyWindow(ImGuiWindowFlags flags = 0);
 };

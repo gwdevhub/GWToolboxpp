@@ -18,3 +18,10 @@ ImGuiWindowFlags ToolboxWidget::GetWinFlags(ImGuiWindowFlags flags, const bool n
     }
     return flags;
 }
+// Everything needs a window in ImGui, even if its a widget that technically isn't contrained to a window like space. If you dont do it, ImGui will create a Debug window on-screen. Don't forget ImGui::End() when done.
+bool ToolboxWidget::DummyWindow(ImGuiWindowFlags flags)
+{
+    ImGui::SetNextWindowSize({0, 0});
+    ImGui::SetNextWindowBgAlpha(0.f);
+    return ImGui::Begin(Name(), nullptr, GetWinFlags(flags | ImGuiWindowFlags_NoInputs,false));
+}

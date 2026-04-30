@@ -7,6 +7,17 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Verion 8.17
+
+* [Fix] Fixed disconnect on reroll when gw was started with -character arg
+* [Fix] Fixed crashing on withdrawing/depositing gold, trading players and viewing/saving templates, equipping items
+* [Fix] World map widget showing up again
+* [Fix] Fixed font sizes not working properly with some widgets
+* [Fix] Armory widget colours working properly
+* [Fix] Fixed messed up fonts
+* [Minor] Builds from gwtoolbox are also saved to the Guild Wars / Templates / Builds folder to be able to access them in-game without running tb
+* [Minor] Added performance window to see in real time how shit our code is
+
 ## Verion 8.16
 
 * [Fix] Working with 38511

@@ -64,6 +64,13 @@ namespace {
     bool must_self_destruct = false; // is true when toolbox should quit
     GW::HookEntry Update_Entry;
 
+    bool profiling_enabled = false;
+
+    uint64_t QpcToMicroseconds(LONGLONG ticks)
+    {
+        static LARGE_INTEGER freq = [] { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f; }();
+        return static_cast<uint64_t>(ticks * 1000000 / freq.QuadPart);
+    }
     std::recursive_mutex module_management_mutex;
 
 
@@ -667,6 +674,10 @@ const std::vector<ToolboxWidget*>& GWToolbox::GetWidgets()
     return widgets_enabled;
 }
 
+void GWToolbox::SetProfilingEnabled(bool enabled)
+{
+    profiling_enabled = enabled;
+}
 
 bool GWToolbox::ShouldDisableToolbox(GW::Constants::MapID map_id)
 {
@@ -940,7 +951,15 @@ void GWToolbox::Update(GW::HookStatus*)
 
     // Update loop
     for (const auto m : modules_enabled) {
-        m->Update(delta_f);
+        if (profiling_enabled) {
+            LARGE_INTEGER t0, t1;
+            QueryPerformanceCounter(&t0);
+            m->Update(delta_f);
+            QueryPerformanceCounter(&t1);
+            m->last_update_time_us_ = QpcToMicroseconds(t1.QuadPart - t0.QuadPart);
+        } else {
+            m->Update(delta_f);
+        }
     }
 
     if (!greeted && GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) {
@@ -994,6 +1013,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         Disable();
         return;
     }
+
     // Draw loop
     Resources::DxUpdate(device);
 
@@ -1035,7 +1055,15 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
                 continue;
             }
             uielement->UpdateLocationAgainstSnappedFrame();
-            uielement->Draw(device);
+            if (profiling_enabled) {
+                LARGE_INTEGER t0, t1;
+                QueryPerformanceCounter(&t0);
+                uielement->Draw(device);
+                QueryPerformanceCounter(&t1);
+                uielement->last_draw_time_us_ = QpcToMicroseconds(t1.QuadPart - t0.QuadPart);
+            } else {
+                uielement->Draw(device);
+            }
         }
 
 #ifdef _DEBUG

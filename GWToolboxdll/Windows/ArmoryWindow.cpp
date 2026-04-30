@@ -652,7 +652,7 @@ namespace GWArmory {
                 ImGui::Separator();
             }
             size_t palette_index;
-            if (ImGui::ColorPalette("##picker", &palette_index, palette, _countof(palette), 7, 0)) {
+            if (ImGui::ColorPalette("##picker", &palette_index, palette, _countof(palette), 7, ImGuiColorEditFlags_NoAlpha)) {
                 if (palette_index < _countof(palette)) {
                     *color = DyeColorFromInt(palette_index + static_cast<size_t>(GW::DyeColor::Blue));
                 }

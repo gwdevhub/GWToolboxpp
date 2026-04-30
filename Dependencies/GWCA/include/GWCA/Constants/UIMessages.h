@@ -553,40 +553,42 @@ namespace GW {
             kInventoryRelated1,             // 0x100001a8, added to GW 2026-02-26
             kInventoryRelated2,             // 0x100001a9, added to GW 2026-02-26
             kInventoryRelated3,             // 0x100001aa, added to GW 2026-02-26
-            kEquipItem,                     // 0x100001ab, wparam = { item_id, agent_id }
-            kMoveItem,                      // 0x100001ac, wparam = { item_id, to_bag, to_slot, bool prompt }
-            kItemRelated_1,                 // 0x100001ad
-            kItemTooltip,                   // 0x100001ae
-            kItemRelated_3,                 // 0x100001af, added to GW 2026-02-26
-            kItemRelated_4,                 // 0x100001b0, added to GW 2026-02-26
-            kInitiateTrade,                 // 0x100001b1
-            kMessage_0x100001a7,            // 0x100001b2
-            kMessage_0x100001a8,            // 0x100001b3
-            kMessage_0x100001a9,            // 0x100001b4
-            kMessage_0x100001aa,            // 0x100001b5
-            kMessage_0x100001ab,            // 0x100001b6
-            kMessage_0x100001ac,            // 0x100001b7
-            kMessage_0x100001ad,            // 0x100001b8
-            kMessage_0x100001ae,            // 0x100001b9
-            kMessage_0x100001af,            // 0x100001ba
-            kMessage_0x100001b0,            // 0x100001bb
-            kMessage_0x100001b1,            // 0x100001bc
-            kMessage_0x100001b2,            // 0x100001bd
-            kMessage_0x100001b3,            // 0x100001be
-            kMessage_0x100001b4,            // 0x100001bf
-            kMessage_0x100001b5,            // 0x100001c0
-            kInventoryAgentChanged,         // 0x100001c1, Triggered when inventory needs updating due to agent change; no args
-            kInventoryRelated_1,            // 0x100001c2
-            kInventoryRelated_2,            // 0x100001c3
-            kMissionStatusRelated,          // 0x100001c4
-            kUnused_1c2,                    // 0x100001c5
-            kCollapseExpandSkillListSection,  // 0x100001c6
-            kTemplateRelated_1,             // 0x100001c7
-            kTemplateRelated_2,             // 0x100001c8
-            kPromptSaveTemplate,            // 0x100001c9
-            kOpenTemplate,                  // 0x100001ca, wparam = GW::UI::ChatTemplate*
-            kTemplateRelated_3,             // 0x100001cb
-            kTemplateRelated_4,             // 0x100001cc
+            kInventoryRelated4,             // 0x100001ab, added to GW 2026-04-28
+            kEquipItem,                     // 0x100001ac, wparam = { item_id, agent_id }
+            kMoveItem,                      // 0x100001ad, wparam = { item_id, to_bag, to_slot, bool prompt }
+            kItemRelated_1,                 // 0x100001ae
+            kItemTooltip,                   // 0x100001af
+            kItemRelated_3,                 // 0x100001b0, added to GW 2026-02-26
+            kItemRelated_4,                 // 0x100001b1, added to GW 2026-02-26
+            kItemRelated_5,                 // 0x100001b2, added to GW 2026-04-28
+            kInitiateTrade,                 // 0x100001b3
+            kMessage_0x100001a7,            // 0x100001b4
+            kMessage_0x100001a8,            // 0x100001b5
+            kMessage_0x100001a9,            // 0x100001b6
+            kMessage_0x100001aa,            // 0x100001b7
+            kMessage_0x100001ab,            // 0x100001b8
+            kMessage_0x100001ac,            // 0x100001b9
+            kMessage_0x100001ad,            // 0x100001ba
+            kMessage_0x100001ae,            // 0x100001bb
+            kMessage_0x100001af,            // 0x100001bc
+            kMessage_0x100001b0,            // 0x100001bd
+            kMessage_0x100001b1,            // 0x100001be
+            kMessage_0x100001b2,            // 0x100001bf
+            kMessage_0x100001b3,            // 0x100001c0
+            kMessage_0x100001b4,            // 0x100001c1
+            kMessage_0x100001b5,            // 0x100001c2
+            kInventoryAgentChanged,         // 0x100001c3, Triggered when inventory needs updating due to agent change; no args
+            kInventoryRelated_1,            // 0x100001c4
+            kInventoryRelated_2,            // 0x100001c5
+            kMissionStatusRelated,          // 0x100001c6
+            kUnused_1c2,                    // 0x100001c7
+            kCollapseExpandSkillListSection,  // 0x100001c8
+            kTemplateRelated_1,             // 0x100001c9
+            kTemplateRelated_2,             // 0x100001ca
+            kPromptSaveTemplate,            // 0x100001cb
+            kOpenTemplate,                  // 0x100001cc, wparam = GW::UI::ChatTemplate*
+            kTemplateRelated_3,             // 0x100001cd
+            kTemplateRelated_4,             // 0x100001ce
 
             // GWCA Client to Server commands. Only added the ones that are used for hooks, everything else goes straight into GW
 

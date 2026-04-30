@@ -418,17 +418,25 @@ namespace TextUtils {
     std::string SanitiseFilename(const std::string_view str)
     {
         const auto invalid_chars = "<>:\"/\\|?*";
-        size_t len = 0;
         std::string out;
-        out.resize(str.length());
-        for (const char i : str) {
-            if (strchr(invalid_chars, i)) {
-                continue;
-            }
-            out[len] = i;
-            len++;
+        out.reserve(str.length());
+        for (const char c : str) {
+            if (strchr(invalid_chars, c) || static_cast<unsigned char>(c) <= 0x1F) continue;
+            out += c;
         }
-        out.resize(len);
+
+        // Reserved device names (case-insensitive, with or without extension)
+        static constexpr std::array reserved = {"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
+        for (const auto& name : reserved) {
+            if (_stricmp(out.c_str(), name) == 0) {
+                out += "_";
+                break;
+            }
+        }
+        // Trim trailing spaces and dots (Windows silently strips them)
+        while (!out.empty() && (out.back() == ' ' || out.back() == '.'))
+            out.pop_back();
+
         return out;
     }
 

@@ -1733,7 +1733,14 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         ImGui::End();
     }
 
-    if (!visible) return;
+    if (!visible) {
+        name_filter_buf[0] = '\0';
+        location_filter_buf[0] = '\0';
+        model_ID_filter_buf[0] = '\0';
+        item_filter_buf[0] = '\0';
+        needs_sorting = true;
+        return;
+    }
 
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(760.f * font_scale, 400.f * font_scale), ImGuiCond_FirstUseEver);
@@ -1869,7 +1876,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextItemWidth(300.f * font_scale);
     if (ImGui::InputText("###item_filter", item_filter_buf, _countof(item_filter_buf))) needs_sorting = true;
     ImGui::SameLine();
-    ImGui::Text("Filter   %d/%d Items", filtered_item_count, inventory_sorted.size());
+    ImGui::Text("Filter   %d/%d Items", filtered_item_count, inventory.size());
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
 

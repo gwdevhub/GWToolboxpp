@@ -349,7 +349,10 @@ namespace GW {
     namespace LoginMgr {
         const bool IsCharSelectReady()
         {
-            return GW::UI::GetFrameContext(GetSelectorFrame());
+            uint32_t ui_state = 10;
+            SendUIMessage(GW::UI::UIMessage::kCheckUIState, nullptr, &ui_state);
+            const auto frame = GetSelectorFrame();
+            return ui_state == 2 && frame && frame->IsVisible() && GW::UI::GetFrameContext(frame);
         }
 
         const bool SelectCharacterToPlay(const wchar_t* name, bool play)
@@ -553,6 +556,15 @@ namespace GW {
             if (!GetPersonalDir(out.capacity(), out.data())) return false;
             out.resize(wcslen(out.data()));
             return !out.empty();
+        }
+        std::filesystem::path GetBuildsDir() {
+            std::wstring builds_folder;
+            GetPersonalDir(builds_folder);
+            if (builds_folder.empty()) return L"";
+            return std::filesystem::path(builds_folder) /
+                   L"Guild Wars" / 
+                   L"Templates" /
+                   L"Skills";
         }
     } // namespace MemoryMgr
 
