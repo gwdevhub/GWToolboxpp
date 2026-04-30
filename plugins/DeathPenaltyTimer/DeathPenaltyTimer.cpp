@@ -214,6 +214,7 @@ void DeathPenaltyTimer::Draw(IDirect3DDevice9* pDevice)
         const auto circlePortion = (float)msSinceRevive / 15'000;
         drawCircleSegment(circlePortion, thickness);
     }
+    ImGui::End();
 }
 
 void DeathPenaltyTimer::DrawSettings()
