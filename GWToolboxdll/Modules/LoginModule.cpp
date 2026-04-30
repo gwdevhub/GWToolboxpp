@@ -37,7 +37,11 @@ namespace {
         return parameter_value;
     }
     GW::HookEntry UIMessage_HookEntry;
-    void OnPostUIMessage(GW::HookStatus*,GW::UI::UIMessage, void*, void*) {
+    bool did_initial_charname_select = false;
+    void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
+        // only honour the -character launch arg on the first visit to char select, otherwise we screw our own rerolls
+        if (did_initial_charname_select) return;
+        did_initial_charname_select = true;
         GW::GameThread::Enqueue([]() {
             original_charname_parameter && *original_charname_parameter&& GW::LoginMgr::SelectCharacterToPlay(original_charname_parameter, false);
         },true);
