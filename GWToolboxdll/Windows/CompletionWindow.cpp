@@ -2160,7 +2160,8 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 
     const std::wstring* sel = nullptr;
     if (chosen_player_name_s.empty()) {
-        chosen_player_name = GetPlayerName() || L"";
+        const auto pn = GetPlayerName();
+        chosen_player_name = pn ? pn : L"";
         chosen_player_name_s = TextUtils::WStringToString(chosen_player_name);
         CheckProgress();
     }
