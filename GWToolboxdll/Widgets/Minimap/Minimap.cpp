@@ -1895,8 +1895,13 @@ bool Minimap::OnMouseWheel(const UINT, const WPARAM wParam, const LPARAM)
 
 bool Minimap::IsInside(const int x, const int y) const
 {
-    // if outside square, return false
-
+    // if outside the minimap window rect, return false
+    const auto& tl = default_minimap_context.top_left;
+    const auto& br = default_minimap_context.bottom_right;
+    if (static_cast<float>(x) < tl.x || static_cast<float>(x) > br.x ||
+        static_cast<float>(y) < tl.y || static_cast<float>(y) > br.y) {
+        return false;
+    }
 
     // if centered, use radar range
     if (translation.x == 0 && translation.y == 0) {
