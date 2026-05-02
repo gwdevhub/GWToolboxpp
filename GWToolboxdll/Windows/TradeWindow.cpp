@@ -21,6 +21,7 @@
 #include <Utils/GuiUtils.h>
 
 #include <Modules/Resources.h>
+#include <Windows/FriendListWindow.h>
 #include <Windows/TradeWindow.h>
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
@@ -445,6 +446,9 @@ void TradeWindow::fetch()
 
         if (print_message) {
             std::wstring name_ws = TextUtils::StringToWString(msg.name);
+            if (FriendListWindow::GetIsPlayerIgnored(name_ws)) {
+                return; // Skip messages from ignored players
+            }
             std::wstring msg_ws = std::format(L"<c=#f96677><quote>{}",TextUtils::StringToWString(msg.message));
             external_trade_message = true;
             WriteChat(GW::Chat::Channel::CHANNEL_TRADE, msg_ws.c_str(),name_ws.c_str());
