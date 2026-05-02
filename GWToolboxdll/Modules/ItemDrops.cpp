@@ -736,10 +736,7 @@ ItemDrops::PendingDrop::PendingDrop(GW::Item* _item)
     quantity = item->quantity & 0xff;
     type = item->type;
     rarity = GW::Items::GetRarity(item);
-    model_id = item->model_id;
     model_file_id = item->model_file_id;
-    interaction = item->interaction;
-    dye_tint = item->dye.dye_tint;
     player_count = GW::PartyMgr::GetPartyPlayerCount() & 0xf;
     hero_count = GW::PartyMgr::GetPartyHeroCount() & 0xf;
     henchman_count = GW::PartyMgr::GetPartyHenchmanCount() & 0xf;
@@ -791,7 +788,7 @@ const wchar_t* ItemDrops::PendingDrop::GetCSVHeader()
            L"ItemType,Rarity,DamageType,MinDamage,MaxDamage,"
            L"RequirementAttribute,RequirementValue,"
            L"PlayerCount,HeroCount,HenchmanCount,HardMode,"
-           L"ModelID,ModelFileID,Interaction,DyeTint";
+           L"ModelFileID";
 }
 
 GuiUtils::EncString* ItemDrops::PendingDrop::GetItemName()
@@ -824,9 +821,6 @@ const std::wstring ItemDrops::PendingDrop::toCSV()
     ss << hero_count << L",";
     ss << henchman_count << L",";
     ss << (hard_mode ? L"1" : L"0") << L",";
-    ss << model_id << L",";
-    ss << model_file_id << L",";
-    ss << interaction << L",";
-    ss << (uint32_t)dye_tint;
+    ss << model_file_id;
     return ss.str();
 }
