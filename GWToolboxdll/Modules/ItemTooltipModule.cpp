@@ -8,6 +8,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Constants/Constants.h>
@@ -179,19 +180,34 @@ namespace {
     void AppendNicholasInfo(const uint32_t item_id, std::wstring& description)
     {
         const auto item = GW::Items::GetItemById(item_id);
-        const auto nicholas_info = DailyQuests::GetNicholasItemInfo(item->name_enc);
-        if (!nicholas_info) return;
-
-        const auto collection_time = DailyQuests::GetTimestampFromNicholasTheTraveller(nicholas_info);
-        const auto current_time = time(nullptr);
+        if (!item) return;
 
         std::wstring text;
-        if (collection_time <= current_time) {
-            text = std::format(L"Nicholas The Traveler collects {} of these right now!", nicholas_info->quantity);
+        const auto current_time = time(nullptr);
+        if (GW::Map::IsPreSearing()) {
+            const auto sandford_info = DailyQuests::GetNicholasSandfordItemInfo(item->name_enc);
+            if (!sandford_info) return;
+            constexpr uint32_t sandford_quantity = 5; // Nicholas Sandford always asks for 5
+            const auto collection_time = DailyQuests::GetTimestampFromNicholasSandford(sandford_info);
+            if (collection_time <= current_time) {
+                text = std::format(L"Nicholas Sandford collects {} of these right now!", sandford_quantity);
+            }
+            else {
+                text = std::format(L"Nicholas Sandford collects {} of these {}!", sandford_quantity, TextUtils::RelativeTimeW(collection_time));
+            }
         }
         else {
-            text = std::format(L"Nicholas The Traveler collects {} of these {}!", nicholas_info->quantity, TextUtils::RelativeTimeW(collection_time));
+            const auto nicholas_info = DailyQuests::GetNicholasItemInfo(item->name_enc);
+            if (!nicholas_info) return;
+            const auto collection_time = DailyQuests::GetTimestampFromNicholasTheTraveller(nicholas_info);
+            if (collection_time <= current_time) {
+                text = std::format(L"Nicholas The Traveler collects {} of these right now!", nicholas_info->quantity);
+            }
+            else {
+                text = std::format(L"Nicholas The Traveler collects {} of these {}!", nicholas_info->quantity, TextUtils::RelativeTimeW(collection_time));
+            }
         }
+
         if (!description.empty())
             description += L"\x2";
         description += EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(text), nicholas_color);
