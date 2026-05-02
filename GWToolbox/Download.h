@@ -25,4 +25,5 @@ private:
     HWND m_hProgressBar = nullptr;
     HWND m_hCloseButton = nullptr;
     HWND m_hChangelog = nullptr;
+    HWND m_hStatusLabel = nullptr;
 };

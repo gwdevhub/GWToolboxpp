@@ -233,15 +233,16 @@ bool DownloadWindow::DownloadAllFiles(std::wstring& error)
     AsyncFileDownloader downloader;
     AsyncDownload(url.c_str(), &downloader);
 
+    bool download_complete = false;
     while (!window.ShouldClose()) {
         window.PollMessages(16);
 
-        if (!downloader.IsCompleted()) {
+        if (!download_complete && !downloader.IsCompleted()) {
             size_t BytesDownloaded = downloader.GetDownloadCount();
             const auto progress = BytesDownloaded * 100 / file_size;
             SendMessageW(window.m_hProgressBar, PBM_SETPOS, progress, 0);
         }
-        else {
+        else if (!download_complete) {
             if (!downloader.IsSuccessful()) {
                 // Convert error message to wstring
                 std::wstring url_w(url.begin(), url.end());
@@ -260,7 +261,9 @@ bool DownloadWindow::DownloadAllFiles(std::wstring& error)
 
             downloader.Clear();
             SendMessageW(window.m_hProgressBar, PBM_SETPOS, 100, 0);
-            SendMessageW(window.m_hWnd, WM_CLOSE, 0, 0);
+            SetWindowTextW(window.m_hStatusLabel, L"Download complete! Review the release notes above, then click 'Continue' to proceed.");
+            SetWindowTextW(window.m_hCloseButton, L"Continue");
+            download_complete = true;
         }
     }
 
@@ -373,10 +376,24 @@ void DownloadWindow::OnCreate(HWND hWnd, UINT, WPARAM, LPARAM)
         5,
         5,
         475,
-        175,
+        170,
         hWnd,
         nullptr,
         m_hInstance,
         nullptr);
     SendMessageW(m_hChangelog, WM_SETFONT, reinterpret_cast<WPARAM>(m_hFont), MAKELPARAM(TRUE, 0));
+
+    m_hStatusLabel = CreateWindowW(
+        WC_STATICW,
+        L"Downloading...",
+        WS_VISIBLE | WS_CHILD | SS_LEFT,
+        5,
+        180,
+        475,
+        30,
+        hWnd,
+        nullptr,
+        m_hInstance,
+        nullptr);
+    SendMessageW(m_hStatusLabel, WM_SETFONT, reinterpret_cast<WPARAM>(m_hFont), MAKELPARAM(TRUE, 0));
 }
