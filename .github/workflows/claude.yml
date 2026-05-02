@@ -39,4 +39,10 @@ jobs:
       - name: Run Claude Code
         uses: anthropics/claude-code-action@v1
         with:
+          # Authenticate against your Claude Code subscription so usage
+          # comes out of the existing Max plan rather than API credits.
+          # Generate the token locally with `claude setup-token` and store
+          # it as a repository secret named CLAUDE_CODE_OAUTH_TOKEN.
+          # Fall back to ANTHROPIC_API_KEY if the OAuth token is missing.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
