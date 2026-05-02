@@ -34,6 +34,7 @@ class CustomRenderer : public D3DVertexBuffer {
         Color color_sub{0x00FFFFFF};
 
         void Invalidate();
+        void Terminate();
         void Render(IDirect3DDevice9* device);
         [[nodiscard]] bool IsFilled() const { return shape == Shape::FullCircle; }
 

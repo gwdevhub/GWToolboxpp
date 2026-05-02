@@ -725,11 +725,18 @@ void CustomRenderer::Initialize(IDirect3DDevice9* device)
 void CustomRenderer::Terminate()
 {
     D3DVertexBuffer::Terminate();
+    linecircle.Terminate();
     for (const auto l : lines) {
         delete l;
     }
     lines.clear();
+    for (auto& p : polygons) {
+        p.D3DVertexBuffer::Terminate();
+    }
     polygons.clear();
+    for (auto& m : markers) {
+        m.Terminate();
+    }
     markers.clear();
 }
 void CustomRenderer::CustomPolygon::Initialize(IDirect3DDevice9* device)
@@ -783,6 +790,12 @@ void CustomRenderer::CustomMarker::Invalidate()
 {
     fill_circle.Invalidate();
     line_circle.Invalidate();
+}
+
+void CustomRenderer::CustomMarker::Terminate()
+{
+    fill_circle.Terminate();
+    line_circle.Terminate();
 }
 
 void CustomRenderer::CustomMarker::Render(IDirect3DDevice9* device)

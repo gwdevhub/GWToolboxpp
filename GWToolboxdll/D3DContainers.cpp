@@ -1,5 +1,6 @@
 #include "D3DContainers.h"
 #include "stdafx.h"
+#include "Defines.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -63,7 +64,7 @@ D3DVelocityArrow::D3DVelocityArrow(const D3DVec2f& pos, const D3DVec2f& velocity
 }
 
 D3DVertexBuffer::~D3DVertexBuffer() {
-    Terminate();
+    DEBUG_ASSERT(!buffer);
 }
 
 // D3DVertexBuffer
