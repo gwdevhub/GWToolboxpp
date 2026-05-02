@@ -2375,6 +2375,7 @@ void GameSettings::DrawSettingsInternal()
     ImGui::NewLine();
     ImGui::Checkbox("Show 'You have N Lockpicks' on Locked Chest name tags", &show_amount_of_lockpicks_under_locked_chest_nametag);
     ImGui::Text("In-game name tag colors:");
+    ImGui::ShowHelp("These set global name tag colors by category.\nTo set a custom color for a specific agent, see Minimap > Custom Agents > Text Color.");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
     constexpr uint32_t flags = ImGuiColorEditFlags_NoInputs;
