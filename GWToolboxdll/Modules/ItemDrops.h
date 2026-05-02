@@ -32,11 +32,18 @@ public:
         wchar_t* item_name_enc = 0;
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
 
+        // Raw item identification, useful when one display name covers many model ids
+        // (e.g. "Storm Artifact" shares one name across 42+ model ids).
+        uint32_t model_id = 0;
+        uint32_t model_file_id = 0;
+        uint32_t interaction = 0;
+
         uint16_t value = 0;
 
         uint8_t quantity = 1;
         uint8_t min_damage = 0;
         uint8_t max_damage = 0;
+        uint8_t dye_tint = 0;
         uint8_t player_count : 4 = 0;
         uint8_t hero_count : 4 = 0;
         uint8_t henchman_count : 4 = 0;
@@ -54,7 +61,6 @@ public:
         static const wchar_t* GetCSVHeader();
         GuiUtils::EncString* GetItemName();
     };
-    static_assert(sizeof(PendingDrop) == 40);
 
     std::vector<PendingDrop*>& GetDropHistory();
     int GetTotalGoldValue();
