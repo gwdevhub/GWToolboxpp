@@ -46,3 +46,6 @@ jobs:
           # Fall back to ANTHROPIC_API_KEY if the OAuth token is missing.
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Branch off and target dev for any PRs Claude opens, since
+          # master is reserved for releases and dev is the integration branch.
+          base_branch: dev
