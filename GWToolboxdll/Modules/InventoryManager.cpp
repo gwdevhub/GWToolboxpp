@@ -2046,9 +2046,9 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::Checkbox("Identify All with Control+Click", &identify_all_on_ctrl_click);
     ImGui::ShowHelp("Control+Click an identification kit to identify all items with it");
     ImGui::Checkbox("Auto re-use salvage kit", &auto_reuse_salvage_kit);
-    ImGui::ShowHelp("When a salvage kit is used up immediately by salvaging without a popup,\ncheck this box to 're-use' the kit ready for the next item.");
+    ImGui::ShowHelp("When a salvage kit is used without right-clicking,\nthe kit will immediately be readied for 're-use' after each item has been salvaged.");
     ImGui::Checkbox("Auto re-use identification kit", &auto_reuse_id_kit);
-    ImGui::ShowHelp("When a identification kit is used up immediately by identifying an item,\ncheck this box to 're-use' the kit ready for the next item.");
+    ImGui::ShowHelp("When an identification kit is used without right-clicking,\nthe kit will immediately be readied for 're-use' after each item has been identified.");
     DrawMerchantHiddenItemsSettings();
 }
 
