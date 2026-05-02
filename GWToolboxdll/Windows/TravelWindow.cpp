@@ -204,6 +204,7 @@ namespace {
     // ==== options ====
     bool close_on_travel = false;
     bool collapse_on_travel = false;
+    bool show_default_destinations = true;
 
     // ==== scroll to outpost ====
     GW::Constants::MapID scroll_to_outpost_id = GW::Constants::MapID::None;   // Which outpost do we want to end up in?
@@ -699,28 +700,30 @@ void TravelWindow::Draw(IDirect3DDevice9*)
             }
             ImGui::PopItemWidth();
 
-            TravelButton(GW::Constants::MapID::Temple_of_the_Ages, 0);
-            TravelButton(GW::Constants::MapID::Domain_of_Anguish, 1);
-            TravelButton(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, 0);
-            TravelButton(GW::Constants::MapID::Embark_Beach, 1);
-            TravelButton(GW::Constants::MapID::Vloxs_Falls, 0);
-            TravelButton(GW::Constants::MapID::Gadds_Encampment_outpost, 1);
-            TravelButton(GW::Constants::MapID::Urgozs_Warren, 0);
-            TravelButton(GW::Constants::MapID::The_Deep, 1);
-            const float w = (ImGui::GetWindowWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2 - 2.f * ImGui::GetStyle().WindowPadding.x;
-            if (ImGui::Button("Zaishen Bounty", {w, 0})) {
-                GW::Chat::SendChat('/', "tp zb");
-            }
-            ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-            if (ImGui::Button("Zaishen Mission", {w, 0})) {
-                GW::Chat::SendChat('/', "tp zm");
-            }
-            if (ImGui::Button("Zaishen Vanquish", {w, 0})) {
-                GW::Chat::SendChat('/', "tp zv");
-            }
-            ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-            if (ImGui::Button("Zaishen Combat", {w, 0})) {
-                GW::Chat::SendChat('/', "tp zc");
+            if (show_default_destinations) {
+                TravelButton(GW::Constants::MapID::Temple_of_the_Ages, 0);
+                TravelButton(GW::Constants::MapID::Domain_of_Anguish, 1);
+                TravelButton(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, 0);
+                TravelButton(GW::Constants::MapID::Embark_Beach, 1);
+                TravelButton(GW::Constants::MapID::Vloxs_Falls, 0);
+                TravelButton(GW::Constants::MapID::Gadds_Encampment_outpost, 1);
+                TravelButton(GW::Constants::MapID::Urgozs_Warren, 0);
+                TravelButton(GW::Constants::MapID::The_Deep, 1);
+                const float w = (ImGui::GetWindowWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2 - 2.f * ImGui::GetStyle().WindowPadding.x;
+                if (ImGui::Button("Zaishen Bounty", {w, 0})) {
+                    GW::Chat::SendChat('/', "tp zb");
+                }
+                ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+                if (ImGui::Button("Zaishen Mission", {w, 0})) {
+                    GW::Chat::SendChat('/', "tp zm");
+                }
+                if (ImGui::Button("Zaishen Vanquish", {w, 0})) {
+                    GW::Chat::SendChat('/', "tp zv");
+                }
+                ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+                if (ImGui::Button("Zaishen Combat", {w, 0})) {
+                    GW::Chat::SendChat('/', "tp zc");
+                }
             }
 
             static int editing = -1;
@@ -1071,6 +1074,8 @@ void TravelWindow::DrawSettingsInternal()
     ImGui::ShowHelp("Use /tp stop to stop retrying.");
     ImGui::Checkbox("Use English map names", &search_in_english);
     ImGui::ShowHelp("If this is unchecked, the /tp command will use the localized map names based on your current language.");
+    ImGui::Checkbox("Show default destinations", &show_default_destinations);
+    ImGui::ShowHelp("Show the built-in destinations (Temple of the Ages, Domain of Anguish, Kamadan, Embark Beach, etc.) and Zaishen Daily buttons in the Travel window.");
 }
 
 void TravelWindow::LoadSettings(ToolboxIni* ini)
@@ -1092,6 +1097,7 @@ void TravelWindow::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(collapse_on_travel);
     LOAD_BOOL(retry_map_travel);
     LOAD_BOOL(search_in_english);
+    LOAD_BOOL(show_default_destinations);
 }
 
 void TravelWindow::SaveSettings(ToolboxIni* ini)
@@ -1108,4 +1114,5 @@ void TravelWindow::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(collapse_on_travel);
     SAVE_BOOL(retry_map_travel);
     SAVE_BOOL(search_in_english);
+    SAVE_BOOL(show_default_destinations);
 }
