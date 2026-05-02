@@ -479,6 +479,7 @@ struct MergeStack;
     std::vector<uint32_t> cached_heroes{};
     clock_t add_hero_timer{};
     clock_t save_hero_timer{};
+    uint32_t heroes_expected_count{};
     clock_t map_loaded_delayed_timer{};
     clock_t save_dirty_inventories_timer{};
     bool map_loaded_delayed_trigger = false;
@@ -585,12 +586,22 @@ struct MergeStack;
                     StepReroll();
                     return;
                 }
-                reroll_stage = RerollStage::WaitForHeroLoad;
-                next_hero = reroll_hero_queue.back();
-                reroll_hero_queue.pop_back();
-                GW::PartyMgr::KickAllHeroes();
-                GW::PartyMgr::AddHero((GW::Constants::HeroID)next_hero);
-                add_hero_timer = TIMER_INIT();
+                {
+                    const auto map_info = GW::Map::GetMapInfo();
+                    const uint32_t max_heroes_per_batch = map_info && map_info->max_party_size > 1
+                        ? map_info->max_party_size - 1
+                        : 1;
+                    GW::PartyMgr::KickAllHeroes();
+                    heroes_expected_count = 0;
+                    while (!reroll_hero_queue.empty() && heroes_expected_count < max_heroes_per_batch) {
+                        next_hero = reroll_hero_queue.back();
+                        reroll_hero_queue.pop_back();
+                        GW::PartyMgr::AddHero((GW::Constants::HeroID)next_hero);
+                        heroes_expected_count++;
+                    }
+                    reroll_stage = RerollStage::WaitForHeroLoad;
+                    add_hero_timer = TIMER_INIT();
+                }
                 return;
             case RerollStage::RerollToItem:
                 reroll_stage = RerollStage::None;
@@ -1668,8 +1679,12 @@ void AccountInventoryWindow::OnPartyAddHero(GW::Constants::HeroID hero_id)
     if (reroll_stage == RerollStage::None) return;
     switch (reroll_stage) {
         case RerollStage::WaitForHeroLoad:
-            reroll_stage = RerollStage::DoneHeroLoad;
-            StepReroll();
+            if (heroes_expected_count > 0) heroes_expected_count--;
+            add_hero_timer = TIMER_INIT();
+            if (heroes_expected_count == 0) {
+                reroll_stage = RerollStage::DoneHeroLoad;
+                StepReroll();
+            }
             return;
         case RerollStage::DoRestoreHeroes:
             const GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
