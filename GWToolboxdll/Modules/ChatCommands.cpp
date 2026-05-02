@@ -319,7 +319,9 @@ namespace {
     constexpr auto fps_syntax = "'/fps [limit (15-400)]' sets a hard frame limit for Guild Wars. Pass '0' to remove the limit.\n'/fps' shows current frame limit";
     constexpr auto pref_syntax = "'/pref [preference] [number (0-4)]' set the in-game preference setting in Guild Wars.\n'/pref list' to list the preferences available to set.";
 
-    constexpr auto tb_syntax = "'/tb [name>]' toggles the window or widget titled <name>.\n"
+    constexpr auto tb_syntax = "'/tb <name>' toggles the window or widget titled <name>.\n"
+                               "'/tb save [profile]' saves current Toolbox settings to disk; if [profile] is given, write to that profile, otherwise write to the default config.\n"
+                               "'/tb load [profile]' loads Toolbox settings from disk; if [profile] is given, read from that profile, otherwise read from the default config.\n"
                                "'/tb reset' moves Toolbox and Settings window to the top-left corner.\n"
                                "'/tb quit' or '/tb exit' completely closes toolbox and all its windows.";
 
