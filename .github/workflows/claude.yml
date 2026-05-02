@@ -1,0 +1,48 @@
+name: Claude
+
+# Triggers Claude Code on @claude mentions in issues and pull requests.
+# Restricted to repository members so randoms can't burn API spend by
+# pinging Claude in a public issue.
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  issues:
+    types: [opened, assigned]
+
+jobs:
+  claude:
+    if: |
+      (
+        (github.event_name == 'issue_comment'              && contains(github.event.comment.body, '@claude') && (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'COLLABORATOR')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') && (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'COLLABORATOR')) ||
+        (github.event_name == 'pull_request_review'         && contains(github.event.review.body,  '@claude') && (github.event.review.author_association  == 'OWNER' || github.event.review.author_association  == 'MEMBER' || github.event.review.author_association  == 'COLLABORATOR')) ||
+        (github.event_name == 'issues'                       && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) && (github.event.issue.author_association == 'OWNER' || github.event.issue.author_association == 'MEMBER' || github.event.issue.author_association == 'COLLABORATOR'))
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          # Authenticate against your Claude Code subscription so usage
+          # comes out of the existing Max plan rather than API credits.
+          # Generate the token locally with `claude setup-token` and store
+          # it as a repository secret named CLAUDE_CODE_OAUTH_TOKEN.
+          # Fall back to ANTHROPIC_API_KEY if the OAuth token is missing.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
