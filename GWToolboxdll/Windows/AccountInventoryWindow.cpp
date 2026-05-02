@@ -3,10 +3,9 @@
 #include <fileapi.h>
 
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/Context/CharContext.h>
-#include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/ItemContext.h>
-#include <GWCA/Context/WorldContext.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
@@ -479,6 +478,7 @@ struct MergeStack;
     std::vector<uint32_t> cached_heroes{};
     clock_t add_hero_timer{};
     clock_t save_hero_timer{};
+    std::vector<uint32_t> heroes_pending_load{};
     clock_t map_loaded_delayed_timer{};
     clock_t save_dirty_inventories_timer{};
     bool map_loaded_delayed_trigger = false;
@@ -585,12 +585,22 @@ struct MergeStack;
                     StepReroll();
                     return;
                 }
-                reroll_stage = RerollStage::WaitForHeroLoad;
-                next_hero = reroll_hero_queue.back();
-                reroll_hero_queue.pop_back();
-                GW::PartyMgr::KickAllHeroes();
-                GW::PartyMgr::AddHero((GW::Constants::HeroID)next_hero);
-                add_hero_timer = TIMER_INIT();
+                {
+                    const auto map_info = GW::Map::GetMapInfo();
+                    const uint32_t max_heroes_per_batch = map_info && map_info->max_party_size > 1
+                        ? map_info->max_party_size - 1
+                        : 1;
+                    GW::PartyMgr::KickAllHeroes();
+                    heroes_pending_load.clear();
+                    while (!reroll_hero_queue.empty() && heroes_pending_load.size() < max_heroes_per_batch) {
+                        next_hero = reroll_hero_queue.back();
+                        reroll_hero_queue.pop_back();
+                        GW::PartyMgr::AddHero((GW::Constants::HeroID)next_hero);
+                        heroes_pending_load.push_back(next_hero);
+                    }
+                    reroll_stage = RerollStage::WaitForHeroLoad;
+                    add_hero_timer = TIMER_INIT();
+                }
                 return;
             case RerollStage::RerollToItem:
                 reroll_stage = RerollStage::None;
@@ -1393,6 +1403,7 @@ void AccountInventoryWindow::Update(float)
     if (reroll_stage == RerollStage::WaitForHeroLoad && TIMER_DIFF(add_hero_timer) > ADD_HERO_TIMEOUT) {
         // failed to load hero in time, continue rerolling
         // this happens if mercenary heroes are available but not set up or possibly with koss when he's gone
+        heroes_pending_load.clear();
         reroll_stage = RerollStage::DoneHeroLoad;
         StepReroll();
     }
@@ -1667,10 +1678,18 @@ void AccountInventoryWindow::OnPartyAddHero(GW::Constants::HeroID hero_id)
     HandleHeroBag(hero_id);
     if (reroll_stage == RerollStage::None) return;
     switch (reroll_stage) {
-        case RerollStage::WaitForHeroLoad:
-            reroll_stage = RerollStage::DoneHeroLoad;
-            StepReroll();
+        case RerollStage::WaitForHeroLoad: {
+            const auto hero_id_val = static_cast<uint32_t>(hero_id);
+            const auto it = std::find(heroes_pending_load.begin(), heroes_pending_load.end(), hero_id_val);
+            if (it == heroes_pending_load.end()) return;
+            heroes_pending_load.erase(it);
+            add_hero_timer = TIMER_INIT();
+            if (heroes_pending_load.empty()) {
+                reroll_stage = RerollStage::DoneHeroLoad;
+                StepReroll();
+            }
             return;
+        }
         case RerollStage::DoRestoreHeroes:
             const GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
             if (party_info) {

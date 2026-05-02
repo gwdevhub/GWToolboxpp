@@ -2303,6 +2303,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             }
             filtered.push_back(outpost);
         }
+        if (hide_completed_missions && filtered.empty()) {
+            continue;
+        }
         char label[128];
         snprintf(label, _countof(label), "%s (%d of %d unlocked) - %.0f%%###campaign_outposts_%d",
                  CampaignName(campaign), completed, unlockable_outposts.size(), static_cast<float>(completed) / static_cast<float>(unlockable_outposts.size()) * 100.f, campaign);
@@ -2327,6 +2330,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
                 }
             }
             filtered.push_back(camp_missions[i]);
+        }
+        if (hide_completed_missions && filtered.empty()) {
+            continue;
         }
         char label[128];
         snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_missions_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
@@ -2354,6 +2360,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
                 }
             }
             filtered.push_back(camp_missions[i]);
+        }
+        if (hide_completed_vanquishes && filtered.empty()) {
+            continue;
         }
         char label[128];
         snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_vanquishes_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f,
@@ -2395,6 +2404,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             }
             filtered.push_back(camp_missions[i]);
         }
+        if (hide_unlocked_skills && filtered.empty()) {
+            continue;
+        }
         char label[128];
         snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_eskills_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
@@ -2414,6 +2426,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
                 }
             }
             filtered.push_back(camp_missions[i]);
+        }
+        if (hide_unlocked_skills && filtered.empty()) {
+            continue;
         }
         char label[128];
         snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_skills_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);

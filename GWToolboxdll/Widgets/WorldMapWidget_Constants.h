@@ -453,7 +453,7 @@ namespace WorldMapWidget_Constants {
         {GW::Constants::SkillID::Ray_of_Judgment, 01, "Rei Bi", GW::Constants::MapID::Dragons_Throat_area__What_Waits_in_Shadow, {{1169, 376}}, "Only during \"What Waits in Shadow\" quest."},
         {GW::Constants::SkillID::Stolen_Speed, 01, "Seiran of the Cards", GW::Constants::MapID::Dragons_Throat_area__What_Waits_in_Shadow, {{1191, 376}}, "Only during \"What Waits in Shadow\" quest."},
         {GW::Constants::SkillID::Temple_Strike, 01, "Lai, Graceful Blade", GW::Constants::MapID::Dragons_Throat_area__What_Waits_in_Shadow, {{1213, 376}}, "Only during \"What Waits in Shadow\" quest."},
-        {GW::Constants::SkillID::Triple_Chop, 01, "Wing, Three Blade", GW::Constants::MapID::Bukdek_Byway, {{481, 338}}},
+        {GW::Constants::SkillID::Triple_Chop, 01, "Wing, Three Blade", GW::Constants::MapID::Bukdek_Byway, {{481, 338}}, "Not during \"Chasing Zenmai\" quest."},
         {GW::Constants::SkillID::Expel_Hexes, 01, "Jin, the Purifier", GW::Constants::MapID::Bukdek_Byway, {{531, 371}}, "Not during \"Chasing Zenmai\" quest."},
         {GW::Constants::SkillID::Elemental_Attunement, 01, "Chung, the Attuned", GW::Constants::MapID::Bukdek_Byway, {{550, 422}}, "Only during \"Eliminate the Am Fah\" quest."},
         {GW::Constants::SkillID::Palm_Strike,

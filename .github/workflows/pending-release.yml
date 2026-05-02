@@ -1,0 +1,64 @@
+name: Pending Release Label
+
+# When a PR merges with closing keywords ("fixes #123", "closes <issue url>",
+# etc.), tag the linked issues with "Pending Release"
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  label-linked-issues:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: read
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const number = context.payload.pull_request.number;
+
+            const query = `
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    closingIssuesReferences(first: 50) {
+                      nodes { number repository { nameWithOwner } }
+                    }
+                  }
+                }
+              }
+            `;
+            const result = await github.graphql(query, { owner, repo, number });
+            const issues = (result.repository.pullRequest.closingIssuesReferences.nodes || [])
+              .filter(n => n.repository.nameWithOwner === `${owner}/${repo}`)
+              .map(n => n.number);
+
+            core.info(`Linked issues: ${issues.join(', ') || '(none)'}`);
+            if (issues.length === 0) return;
+
+            try {
+              await github.rest.issues.createLabel({
+                owner, repo,
+                name: 'Pending Release',
+                color: 'fbca04',
+                description: 'Fixed in code, awaiting release',
+              });
+            } catch (e) {
+              if (e.status !== 422) throw e; // 422 = already exists
+            }
+
+            for (const issue_number of issues) {
+              try {
+                await github.rest.issues.addLabels({
+                  owner, repo, issue_number,
+                  labels: ['Pending Release'],
+                });
+              } catch (e) {
+                core.warning(`Failed to label #${issue_number}: ${e.message}`);
+              }
+            }

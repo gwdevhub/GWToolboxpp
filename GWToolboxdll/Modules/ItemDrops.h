@@ -32,6 +32,10 @@ public:
         wchar_t* item_name_enc = 0;
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
 
+        // ModelFileID is the unique skin identifier; useful when one display
+        // name covers many skins (e.g. "Storm Artifact" has 42+ variants).
+        uint32_t model_file_id = 0;
+
         uint16_t value = 0;
 
         uint8_t quantity = 1;
@@ -54,7 +58,7 @@ public:
         static const wchar_t* GetCSVHeader();
         GuiUtils::EncString* GetItemName();
     };
-    static_assert(sizeof(PendingDrop) == 40);
+    static_assert(sizeof(PendingDrop) == 48);
 
     std::vector<PendingDrop*>& GetDropHistory();
     int GetTotalGoldValue();
