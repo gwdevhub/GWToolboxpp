@@ -43,17 +43,20 @@ namespace {
         GW::Constants::TitleID title_id;
         GuiUtils::EncString title_label;
         GuiUtils::EncString tier_label;
+        GuiUtils::EncString next_tier_label;
         GuiUtils::EncString* overlay_label = 0; // Because this can change quickly, we may need to recycle it faster than the frame rate can handle
         float percent = 0.f;
         float secondary_percent = 0.f;
         GuiUtils::EncString* secondary_label = 0;
+        uint32_t current_rank = 0; // 0 = no rank yet, otherwise tier_number from TitleTier
+        uint32_t next_rank_threshold = 0; // 0 if at max rank
         bool show = false;
-        TitleProgress(GW::Constants::TitleID _title_id) : title_id(_title_id) { 
+        TitleProgress(GW::Constants::TitleID _title_id) : title_id(_title_id) {
             overlay_label = new GuiUtils::EncString();
             secondary_label = new GuiUtils::EncString();
             RefreshLabels();
         };
-        ~TitleProgress() { 
+        ~TitleProgress() {
             if (overlay_label) overlay_label->Release();
             overlay_label = 0;
             if (secondary_label) secondary_label->Release();
@@ -221,7 +224,7 @@ namespace {
         std::ranges::sort(title_progress_by_title, [](TitleProgress* t1, TitleProgress* t2) {
             return t1->title_label.string() < t2->title_label.string();
         });
-        title_for_bounty = automatically_show_title_progress_for_current_map ? GW::Map::GetBountyTitlesForMap(GW::Map::GetMapID()) : std::vector<GW::Constants::TitleID>();
+        title_for_bounty = automatically_show_title_progress_for_current_map ? GW::Map::GetTitlesForMap(GW::Map::GetMapID()) : std::vector<GW::Constants::TitleID>();
     }
 
     void TitleProgress::RefreshProgress()
@@ -310,6 +313,17 @@ namespace {
         }
         const auto& current_tier = w->title_tiers[title_info->current_title_tier_index];
         tier_label.reset(current_tier.tier_name_enc);
+        current_rank = current_tier.tier_number;
+
+        // Look up the next tier (for tooltip / progress display)
+        next_tier_label.reset(static_cast<const wchar_t*>(nullptr));
+        next_rank_threshold = 0;
+        if (title_info->points_needed_next_rank != 0xFFFFFFFF
+            && w->title_tiers.size() > title_info->next_title_tier_index) {
+            const auto& next_tier = w->title_tiers[title_info->next_title_tier_index];
+            next_tier_label.reset(next_tier.tier_name_enc);
+            next_rank_threshold = title_info->points_needed_next_rank;
+        }
     }
 
 
@@ -423,10 +437,14 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
             }
             
             if (Colors::IsVisible(tier_label_color)) {
-                const auto sub_title_size = ImGui::CalcTextSize(sub_title_text.c_str());
+                std::string sub_title_with_rank = sub_title_text;
+                if (p->current_rank > 0) {
+                    sub_title_with_rank = std::format("{} ({})", sub_title_text, p->current_rank);
+                }
+                const auto sub_title_size = ImGui::CalcTextSize(sub_title_with_rank.c_str());
                 ImGui::SetCursorPos({available_width - sub_title_size.x, label_pos.y});
                 ImGui::PushStyleColor(ImGuiCol_Text, tier_label_color);
-                ImGui::TextShadowed(sub_title_text.c_str());
+                ImGui::TextShadowed(sub_title_with_rank.c_str());
                 ImGui::PopStyleColor();
             }
 
@@ -472,7 +490,10 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
                 draw_list->AddText({overlay_pos.x + 1.f, overlay_pos.y + 1.f}, progress_overlay_label_color, overlay_text.c_str());
             }
             if (ImGui::IsMouseHoveringRect(bar_pos, bar_pos_max)) {
-                auto label = std::format("{}\n{}\n{}",p->title_label.string(),p->tier_label.string(),p->overlay_label->string());
+                auto label = std::format("{}\n{}\n{}", p->title_label.string(), p->tier_label.string(), p->overlay_label->string());
+                if (p->next_rank_threshold > 0 && !p->next_tier_label.encoded().empty()) {
+                    label += std::format("\nNext: {} at {}", p->next_tier_label.string(), p->next_rank_threshold);
+                }
                 if (!p->secondary_label->encoded().empty()) {
                     label += "\n\n";
                     label += p->secondary_label->string();

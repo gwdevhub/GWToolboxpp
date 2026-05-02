@@ -157,6 +157,52 @@ namespace GW {
             return {};
         }
 
+        std::vector<GW::Constants::TitleID> GetTitlesForMap(GW::Constants::MapID map_id)
+        {
+            using namespace GW::Constants;
+
+            const auto map_info = GW::Map::GetMapInfo(map_id);
+            if (!map_info) return {};
+
+            // Bounty-specific maps win first (e.g. The Deep -> Luxon, Urgoz -> Kurzick).
+            // For everything else, return all titles "appropriate" to the area.
+            std::vector<TitleID> result;
+
+            // EotN (MotN) regions show all 5 EotN titles.
+            switch (map_info->region) {
+                case GW::Region::Region_TarnishedCoast:
+                case GW::Region::Region_FarShiverpeaks:
+                case GW::Region::Region_DepthsOfTyria:
+                case GW::Region::Region_CharrHomelands:
+                    result = {TitleID::Asuran, TitleID::Deldrimor, TitleID::Norn,
+                              TitleID::Vanguard, TitleID::MasterOfTheNorth};
+                    return result;
+                case GW::Region::Region_Kurzick:
+                case GW::Region::Region_Luxon:
+                case GW::Region::Region_Kaineng:
+                case GW::Region::Region_ShingJea:
+                    return {TitleID::Kurzick, TitleID::Luxon};
+                case GW::Region::Region_Vaabi:
+                case GW::Region::Region_Istan:
+                case GW::Region::Region_Kourna:
+                    return {TitleID::Sunspear};
+                case GW::Region::Region_Desolation:
+                    return {TitleID::Sunspear, TitleID::Lightbringer};
+            }
+
+            switch (map_info->continent) {
+                case GW::Continent::Cantha:
+                    return {TitleID::Kurzick, TitleID::Luxon};
+                case GW::Continent::Elona:
+                    return {TitleID::Sunspear};
+                case GW::Continent::RealmOfTorment:
+                    return {TitleID::Lightbringer};
+            }
+
+            // Fall back to the bounty-specific list (covers The Deep, Urgoz, etc.)
+            return GetBountyTitlesForMap(map_id);
+        }
+
         GW::Constants::TitleID GetTitleForMap(GW::Constants::MapID map_id)
         {
             switch (map_id) {

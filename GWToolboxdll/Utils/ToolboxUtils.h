@@ -133,6 +133,9 @@ namespace GW {
         GW::Array<GW::MapProp*>* GetMapProps();
         bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out);
         std::vector<GW::Constants::TitleID> GetBountyTitlesForMap(GW::Constants::MapID map_id);
+        // Returns all titles that can naturally be earned in the area's region/continent
+        // (e.g. all 5 EotN titles in any EotN region, both factions in Cantha, etc.).
+        std::vector<GW::Constants::TitleID> GetTitlesForMap(GW::Constants::MapID map_id);
         GW::Constants::TitleID GetTitleForMap(GW::Constants::MapID map_id);
 
         bool IsFestivalOutpost(const GW::Constants::MapID map_id);
