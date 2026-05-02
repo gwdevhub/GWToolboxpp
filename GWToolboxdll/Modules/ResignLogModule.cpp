@@ -172,7 +172,7 @@ namespace {
         bool pending_only = false;
         if (argc > 1) {
             const std::wstring arg1 = TextUtils::ToLower(argv[1]);
-            if (arg1 == L"pending" || arg1 == L"notresigned" || arg1 == L"unresigned") {
+            if (arg1 == L"pending" || arg1 == L"notresigned") {
                 pending_only = true;
             }
         }
