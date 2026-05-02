@@ -564,7 +564,7 @@ namespace {
                 if (active) {
                     ImGui::PushStyleColor(ImGuiCol_Button, build_edit_pcon_enabled_color);
                 }
-                if (ImGui::IconButton("", *pcon->GetTexture(), {skill_height, skill_height})) {
+                if (ImGui::IconButton("", pcon->GetTexture().Get(), {skill_height, skill_height})) {
                     if (!active) {
                         build->pcons.emplace(pcon->ini);
                     }
@@ -634,7 +634,7 @@ namespace {
                 if (i) {
                     ImGui::SameLine(0, 0);
                 }
-                ImGui::ImageCropped(*Resources::GetSkillImage(skills[i]), skill_size);
+                ImGui::ImageCropped(Resources::GetSkillImage(skills[i]).Get(), skill_size);
                 if (ImGui::IsItemHovered()) {
                     const GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(skills[i]);
                     if (s) {

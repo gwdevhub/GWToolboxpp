@@ -948,7 +948,7 @@ namespace {
             auto icon_size = ImGui::CalcTextSize(" ");
             icon_size.x = icon_size.y;
             for (auto char_completion : chars_without_completed) {
-                ImGui::Image(*Resources::GetProfessionIcon(char_completion->profession), icon_size);
+                ImGui::Image(Resources::GetProfessionIcon(char_completion->profession).Get(), icon_size);
                 ImGui::SameLine();
                 ImGui::TextUnformatted(char_completion->name_str.c_str());
             }

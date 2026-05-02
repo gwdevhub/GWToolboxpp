@@ -58,7 +58,8 @@ namespace {
     void DrawItemIcon(const ItemDrops::PendingDrop* drop)
     {
         if (icon_size > 0) {
-            ImGui::Image((ImTextureID)(intptr_t)*drop->icon, ImVec2(icon_size, icon_size));
+            if (drop->icon)
+                ImGui::Image(drop->icon.Get(), ImVec2(icon_size, icon_size));
         }
     }
 

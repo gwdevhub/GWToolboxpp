@@ -265,9 +265,9 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
                 const ImVec2 top_left = {history_flip_direction ? window_x + (i * img_size) : window_x + width - (i * img_size) - img_size, health_bar_pos->top_left.y};
                 const ImVec2 bottom_right = {top_left.x + img_size, top_left.y + img_size};
 
-                const auto texture = *Resources::GetSkillImage(skill_activation.id);
+                const auto& texture = Resources::GetSkillImage(skill_activation.id);
                 if (texture) {
-                    draw_list->AddImage(texture, top_left, bottom_right);
+                    draw_list->AddImage(texture.Get(), top_left, bottom_right);
                 }
 
                 if (status_border_thickness != 0) {

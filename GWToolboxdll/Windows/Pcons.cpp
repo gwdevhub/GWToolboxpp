@@ -116,24 +116,24 @@ wchar_t* Pcon::SetPlayerName()
     return c->player_name;
 }
 
-IDirect3DTexture9** Pcon::GetTexture()
+const Resources::Texture& Pcon::GetTexture()
 {
     if (!texture) {
         texture = Resources::GetItemImage(filename);
     }
     return texture;
-}   
+}
 
 void Pcon::Draw(IDirect3DDevice9*)
 {
-    const auto t = GetTexture();
-    if (!(t && *t)) return;
+    const auto& t = GetTexture();
+    if (!t) return;
     const ImVec2 pos = ImGui::GetCursorPos();
     const ImVec2 s(size, size);
     const ImVec4 bg = IsEnabled() ? ImColor(enabled_bg_color).Value : ImVec4(0, 0, 0, 0);
     constexpr ImVec4 tint(1, 1, 1, 1);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-    if (ImGui::ImageButton(*t, s, uv0, uv1, 0, bg, tint)) {
+    if (ImGui::ImageButton(t.Get(), s, uv0, uv1, 0, bg, tint)) {
         OnButtonClick();
     }
     ImGui::PopStyleColor();
@@ -176,7 +176,8 @@ void Pcon::Draw(IDirect3DDevice9*)
 
 void Pcon::Terminate()
 {
-    texture = nullptr;
+    texture = {};
+
 }
 
 void Pcon::Update(int delay)

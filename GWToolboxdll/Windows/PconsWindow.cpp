@@ -956,9 +956,9 @@ void PconsWindow::DrawSettingsInternal()
                 ImGui::PushID(pcon->ini.c_str());
                 ImGui::Checkbox("###checked", &pcon->visible);
                 ImGui::SameLine();
-                const auto tex = pcon->GetTexture();
+                const auto& tex = pcon->GetTexture();
                 if (tex) {
-                    ImGui::ImageFit(*tex, ImVec2(font_size, font_size));
+                    ImGui::ImageFit(tex.Get(), ImVec2(font_size, font_size));
                     ImGui::SameLine();
                 }
                 ImGui::TextUnformatted(pcon->chat.c_str());

@@ -51,7 +51,7 @@ namespace {
 
     IDirect3DTexture9* GetSkillImage(const GW::Constants::SkillID skill_id)
     {
-        return *Resources::GetSkillImage(skill_id);
+        return Resources::GetSkillImage(skill_id).Get();
     }
 
 

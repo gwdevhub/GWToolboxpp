@@ -674,7 +674,7 @@ namespace GWArmory {
         return player && player->GetIsFemale();
     }
 
-    IDirect3DTexture9** GetArmorPieceImage(uint32_t model_file_id, uint32_t interaction) {
+    Resources::Texture GetArmorPieceImage(uint32_t model_file_id, uint32_t interaction) {
         const bool is_composite_item = (interaction & 4) != 0;
 
         uint32_t model_id_to_load = 0;
@@ -855,15 +855,15 @@ namespace GWArmory {
             }
 
             const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction);
-            if (!texture || !*texture) {
+            if (!texture) {
                 ImGui::PopID();
                 continue;
             }
-    
-            const auto uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
+
+            const auto uv1 = ImGui::CalculateUvCrop(texture.Get(), scaled_size);
             const auto& bg = player_piece->model_file_id == piece->model_file_id ? equipped_color : normal_bg;
             ImGui::NextSpacedElement();
-            if (ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, bg, tint)) {
+            if (ImGui::ImageButton(texture.Get(), scaled_size, uv0, uv1, -1, bg, tint)) {
                 player_piece->model_file_id = piece->model_file_id;
                 player_piece->interaction = piece->interaction;
                 player_piece->type = piece->type;

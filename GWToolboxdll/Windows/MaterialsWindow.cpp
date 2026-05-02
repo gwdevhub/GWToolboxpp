@@ -25,11 +25,11 @@ namespace {
 
     constexpr DWORD MIN_TIME_BETWEEN_RETRY = 160; // 10 frames
 
-    IDirect3DTexture9** tex_essence = nullptr;
-    IDirect3DTexture9** tex_grail = nullptr;
-    IDirect3DTexture9** tex_armor = nullptr;
-    IDirect3DTexture9** tex_powerstone = nullptr;
-    IDirect3DTexture9** tex_resscroll = nullptr;
+    Resources::Texture tex_essence;
+    Resources::Texture tex_grail;
+    Resources::Texture tex_armor;
+    Resources::Texture tex_powerstone;
+    Resources::Texture tex_resscroll;
 
     // Negative values have special meanings:
     static constexpr auto PRICE_DEFAULT = -1;
@@ -406,7 +406,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         // while minimizing the rescaling
 
         // === Essence ===
-        ImGui::Image(*tex_essence, ImVec2(50, 50),
+        ImGui::Image(tex_essence.Get(), ImVec2(50, 50),
                      ImVec2(4.0f / 64, 9.0f / 64), ImVec2(47.0f / 64, 52.0f / 64));
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Essence of Celerity\nFeathers and Dust");
@@ -458,7 +458,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
 
         ImGui::Separator();
         // === Grail ===
-        ImGui::Image(*tex_grail, ImVec2(50, 50),
+        ImGui::Image(tex_grail.Get(), ImVec2(50, 50),
                      ImVec2(3.0f / 64, 11.0f / 64), ImVec2(49.0f / 64, 57.0f / 64));
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Grail of Might\nIron and Dust");
@@ -501,7 +501,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
 
         ImGui::Separator();
         // === Armor ===
-        ImGui::Image(*tex_armor, ImVec2(50, 50),
+        ImGui::Image(tex_armor.Get(), ImVec2(50, 50),
                      ImVec2(0, 1.0f / 64), ImVec2(59.0f / 64, 60.0f / 64));
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Armor of Salvation\nIron and Bones");
@@ -544,7 +544,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
 
         ImGui::Separator();
         // === Powerstone ===
-        ImGui::Image(*tex_powerstone, ImVec2(50, 50),
+        ImGui::Image(tex_powerstone.Get(), ImVec2(50, 50),
                      ImVec2(0, 6.0f / 64), ImVec2(54.0f / 64, 60.0f / 64));
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Powerstone of Courage\nGranite and Dust");
@@ -586,7 +586,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
 
         ImGui::Separator();
         // === Res scroll ===
-        ImGui::Image(*tex_resscroll, ImVec2(50, 50),
+        ImGui::Image(tex_resscroll.Get(), ImVec2(50, 50),
                      ImVec2(1.0f / 64, 4.0f / 64), ImVec2(56.0f / 64, 59.0f / 64));
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Scroll of Resurrection\nFibers and Bones");

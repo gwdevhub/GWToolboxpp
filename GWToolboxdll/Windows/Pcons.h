@@ -4,7 +4,9 @@
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/Managers/MapMgr.h>
 
+#include <Modules/Resources.h>
 #include <Timer.h>
+#include <Utils/ComPtr.h>
 
 class Pcon {
 public:
@@ -73,7 +75,7 @@ public:
     static uint32_t MoveItem(const GW::Item* item, GW::Bag* bag, size_t slot,
                              size_t quantity = 0);
     wchar_t* SetPlayerName();
-    IDirect3DTexture9** GetTexture();
+    const Resources::Texture& GetTexture();
     // Pass true to start refill, or false to stop.
     void Refill(bool do_refill = true);
     void SetEnabled(bool enabled);
@@ -129,7 +131,7 @@ protected:
     virtual size_t PointsPerUse(const GW::Item* item) const = 0;
 
 private:
-    IDirect3DTexture9** texture = nullptr;
+    Resources::Texture texture;
     const ImVec2 uv0 = {0, 0};
     const ImVec2 uv1 = {1, 1};
 };

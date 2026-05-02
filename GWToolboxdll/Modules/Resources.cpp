@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <future>
 #include <DirectXTex.h>
 #include <DDSTextureLoader/DDSTextureLoader9.h>
 #include <WICTextureLoader/WICTextureLoader9.h>
@@ -114,10 +115,9 @@ namespace {
         "5/5e/Paragon-tango-icon-48",
         "3/38/Dervish-tango-icon-48"
     };
-    std::unordered_map<uint32_t, IDirect3DTexture9**> profession_icons;
-    std::unordered_map<GW::Constants::SkillID, IDirect3DTexture9**> skill_images;
-    std::unordered_map<std::wstring, IDirect3DTexture9**> item_images;
-    std::unordered_map<std::string, IDirect3DTexture9**> guild_wars_wiki_images;
+    std::unordered_map<uint32_t, Resources::Texture> profession_icons;
+    std::unordered_map<GW::Constants::SkillID, Resources::Texture> skill_images;
+    std::unordered_map<std::wstring, Resources::Texture> item_images;
     const std::unordered_map<std::string, const char*> damagetype_icon_urls = {
         {"Blunt damage", "1/19/Blunt_damage.png/60px-Blunt_damage.png"},
         {"Piercing damage", "1/1a/Piercing_damage.png/60px-Piercing_damage.png"},
@@ -128,7 +128,7 @@ namespace {
         {"Lightning damage", "0/06/Lightning_damage.png/60px-Lightning_damage.png"},
     };
 
-    std::unordered_map<std::string, IDirect3DTexture9**> damagetype_icons;
+    std::unordered_map<std::string, Resources::Texture> damagetype_icons;
     std::unordered_map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
     std::unordered_map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names;
     std::unordered_map<GW::Constants::MapID, GuiUtils::EncString*> region_names;
@@ -152,7 +152,6 @@ namespace {
     // tasks to be done in main thread
     std::queue<std::function<void()>> main_jobs;
 
-    IDirect3DTexture9* empty_texture_ptr = nullptr;
     bool should_stop = false;
 
     // snprintf error message, pass to callback as a failure. Used internally.
@@ -244,9 +243,9 @@ namespace {
     };
 } // namespace
 
-extern "C" __declspec(dllexport) IDirect3DTexture9** __cdecl GetSkillImage(GW::Constants::SkillID skill_id)
+extern "C" __declspec(dllexport) const IDirect3DTexture9* __cdecl GetSkillImage(GW::Constants::SkillID skill_id)
 {
-    return Resources::GetSkillImage(skill_id);
+    return Resources::GetSkillImage(skill_id).Get();
 }
 
 Resources::Resources()
@@ -432,21 +431,10 @@ void Resources::Cleanup()
         delete worker; // Will trigger assertion
     }
     workers.clear();
-    for (const auto& tex : skill_images | std::views::values) {
-        if(tex && *tex) (*tex)->Release();
-        delete tex;
-    }
     skill_images.clear();
-    for (const auto& tex : item_images | std::views::values) {
-        if (tex && *tex) (*tex)->Release();
-        delete tex;
-    }
     item_images.clear();
-    for (const auto& img : guild_wars_wiki_images | std::views::values) {
-        if (img && *img) (*img)->Release();
-        delete img;
-    }
-    guild_wars_wiki_images.clear();
+    profession_icons.clear();
+    damagetype_icons.clear();
     for (const auto& enc_strings : encoded_string_ids | std::views::values) {
         for (const auto& enc_string : enc_strings | std::views::values) {
             enc_string->Release();
@@ -796,11 +784,17 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* pDevice, const HMODULE hSr
     return res;
 }
 
-void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback)
+Resources::Texture Resources::LoadTexture(const std::filesystem::path& path_to_file, AsyncLoadCallback callback)
 {
-    EnqueueDxTask([path_to_file, texture, callback](IDirect3DDevice9* device) {
+    auto promise = std::make_shared<std::promise<TBComPtr<IDirect3DTexture9>>>();
+    auto future = promise->get_future().share();
+    EnqueueDxTask([path_to_file, promise, callback](IDirect3DDevice9* device) {
         std::wstring error;
-        const HRESULT res = TryCreateTexture(device, path_to_file.c_str(), texture, error);
+        IDirect3DTexture9* raw = nullptr;
+        const HRESULT res = TryCreateTexture(device, path_to_file.c_str(), &raw, error);
+        TBComPtr<IDirect3DTexture9> tex;
+        if (raw) tex.Attach(raw);
+        promise->set_value(std::move(tex));
         const bool success = res == D3D_OK;
         if (callback) {
             callback(success, error);
@@ -809,13 +803,20 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
             Log::LogW(L"Failed to load texture from file %s\n%s", TextUtils::PrintFilename(path_to_file.wstring()).c_str(), error.c_str());
         }
     });
+    return Texture{std::move(future)};
 }
 
-void Resources::LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallback callback)
+Resources::Texture Resources::LoadTexture(WORD id, AsyncLoadCallback callback)
 {
-    EnqueueDxTask([id, texture, callback](IDirect3DDevice9* device) {
+    auto promise = std::make_shared<std::promise<TBComPtr<IDirect3DTexture9>>>();
+    auto future = promise->get_future().share();
+    EnqueueDxTask([id, promise, callback](IDirect3DDevice9* device) {
         std::wstring error{};
-        const bool success = TryCreateTexture(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), texture, error) == D3D_OK;
+        IDirect3DTexture9* raw = nullptr;
+        TBComPtr<IDirect3DTexture9> tex;
+        const bool success = TryCreateTexture(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), &raw, error) == D3D_OK;
+        if (raw) tex.Attach(raw);
+        promise->set_value(std::move(tex));
         if (callback) {
             callback(success, error);
         }
@@ -823,15 +824,33 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallb
             Log::LogW(L"Failed to load texture from id %d\n%s", id, error.c_str());
         }
     });
+    return Texture{std::move(future)};
 }
 
-void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
+Resources::Texture Resources::LoadTexture(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback)
 {
-    EnsureFileExists(path_to_file, url, [texture, path_to_file, callback](const bool success, const std::wstring& error) {
+    auto promise = std::make_shared<std::promise<TBComPtr<IDirect3DTexture9>>>();
+    auto future = promise->get_future().share();
+    EnsureFileExists(path_to_file, url, [promise, path_to_file, callback](const bool success, const std::wstring& error) {
         if (success) {
-            LoadTexture(texture, path_to_file, callback);
+            EnqueueDxTask([path_to_file, promise, callback](IDirect3DDevice9* device) {
+                std::wstring err;
+                IDirect3DTexture9* raw = nullptr;
+                const HRESULT res = TryCreateTexture(device, path_to_file.c_str(), &raw, err);
+                TBComPtr<IDirect3DTexture9> tex;
+                if (raw) tex.Attach(raw);
+                promise->set_value(std::move(tex));
+                const bool ok = res == D3D_OK;
+                if (callback) {
+                    callback(ok, err);
+                }
+                else if (!ok) {
+                    Log::LogW(L"Failed to load texture from file %s\n%s", TextUtils::PrintFilename(path_to_file.wstring()).c_str(), err.c_str());
+                }
+            });
         }
         else {
+            promise->set_value(TBComPtr<IDirect3DTexture9>{});
             if (callback) {
                 callback(success, error);
             }
@@ -840,18 +859,37 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
             }
         }
     });
+    return Texture{std::move(future)};
 }
 
-void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback)
+Resources::Texture Resources::LoadTexture(const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback)
 {
-    LoadTexture(texture, path_to_file, [texture, id, callback](const bool success, const std::wstring& error) {
-        if (!success) {
-            LoadTexture(texture, id, callback);
+    auto promise = std::make_shared<std::promise<TBComPtr<IDirect3DTexture9>>>();
+    auto future = promise->get_future().share();
+    EnqueueDxTask([path_to_file, id, promise, callback](IDirect3DDevice9* device) {
+        std::wstring error;
+        IDirect3DTexture9* raw = nullptr;
+        TBComPtr<IDirect3DTexture9> tex;
+        HRESULT res = TryCreateTexture(device, path_to_file.c_str(), &raw, error);
+        if (raw) {
+            tex.Attach(raw);
         }
-        else if (callback) {
+        else {
+            raw = nullptr;
+            error.clear();
+            res = TryCreateTexture(device, GWToolbox::GetDLLModule(), MAKEINTRESOURCE(id), &raw, error);
+            if (raw) tex.Attach(raw);
+        }
+        promise->set_value(std::move(tex));
+        const bool success = res == D3D_OK;
+        if (callback) {
             callback(success, error);
         }
+        else if (!success) {
+            Log::LogW(L"Failed to load texture from file %s or resource %d\n%s", TextUtils::PrintFilename(path_to_file.wstring()).c_str(), id, error.c_str());
+        }
     });
+    return Texture{std::move(future)};
 }
 
 bool Resources::ResourceToFile(const WORD id, const std::filesystem::path& path_to_file, std::wstring& error)
@@ -917,15 +955,14 @@ void Resources::Update(float)
     func();
 }
 
-IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p)
+auto Resources::GetProfessionIcon(GW::Constants::Profession p) -> Texture
 {
     const auto prof_id = std::to_underlying(p);
-    if (profession_icons.contains(prof_id)) {
-        return profession_icons.at(prof_id);
+    auto it = profession_icons.find(prof_id);
+    if (it != profession_icons.end()) {
+        return it->second;
     }
-    const auto texture = new IDirect3DTexture9*;
-    *texture = nullptr;
-    profession_icons[prof_id] = texture;
+    auto& entry = profession_icons[prof_id];
     if (profession_icon_urls[prof_id][0]) {
         const auto path = GetPath(PROF_ICONS_PATH);
         EnsureFolderExists(path);
@@ -933,13 +970,13 @@ IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p)
         swprintf(local_image, _countof(local_image), L"%s\\%d.png", path.c_str(), p);
         char remote_image[128];
         snprintf(remote_image, _countof(remote_image), "https://wiki.guildwars.com/images/%s.png", profession_icon_urls[prof_id]);
-        LoadTexture(texture, local_image, remote_image, [prof_id](const bool success, const std::wstring& error) {
+        entry = LoadTexture(local_image, remote_image, [prof_id](const bool success, const std::wstring& error) {
             if (!success) {
                 Log::ErrorW(L"Failed to load icon for profession %d\n%s", prof_id, error.c_str());
             }
         });
     }
-    return texture;
+    return entry;
 }
 
 bool Resources::GetTextureSize(IDirect3DTexture9* texture, ImVec2* out)
@@ -955,30 +992,29 @@ bool Resources::GetTextureSize(IDirect3DTexture9* texture, ImVec2* out)
     return true;
 }
 
-IDirect3DTexture9** Resources::GetDamagetypeImage(std::string dmg_type)
+auto Resources::GetDamagetypeImage(std::string dmg_type) -> Texture
 {
-    if (damagetype_icons.contains(dmg_type)) {
-        return damagetype_icons.at(dmg_type);
+    auto it = damagetype_icons.find(dmg_type);
+    if (it != damagetype_icons.end()) {
+        return it->second;
     }
-    const auto texture = new IDirect3DTexture9*;
-    *texture = nullptr;
-    damagetype_icons[dmg_type] = texture;
+    auto& entry = damagetype_icons[dmg_type];
     if (damagetype_icon_urls.contains(dmg_type)) {
         const auto path = GetPath(DMGTYPE_ICONS_PATH);
         EnsureFolderExists(path);
         const auto local_path = path / TextUtils::SanitiseFilename(dmg_type + ".png");
         const auto remote_path = std::format("https://wiki.guildwars.com/images/thumb/{}", damagetype_icon_urls.at(dmg_type));
-        LoadTexture(texture, local_path, remote_path, [dmg_type](const bool success, const std::wstring& error) {
+        entry = LoadTexture(local_path, remote_path, [dmg_type](const bool success, const std::wstring& error) {
             if (!success) {
                 const auto dmg_type_wstr = TextUtils::StringToWString(dmg_type);
                 Log::ErrorW(L"Failed to load icon for %d\n%s", dmg_type_wstr.c_str(), error.c_str());
             }
         });
     }
-    return texture;
+    return entry;
 }
 
-IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_t width, const bool urlencode_filename)
+auto Resources::GetGuildWarsWikiImage(const char* filename, size_t width, const bool urlencode_filename) -> Texture
 {
     ASSERT(filename && filename[0]);
     std::string filename_on_disk;
@@ -989,38 +1025,48 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
         filename_on_disk = filename;
     }
     const auto filename_sanitised = TextUtils::SanitiseFilename(filename_on_disk);
-    if (guild_wars_wiki_images.contains(filename_sanitised)) {
-        return guild_wars_wiki_images.at(filename_sanitised);
-    }
-    const auto callback = [filename_sanitised](const bool success, const std::wstring& error) {
+
+    auto promise = std::make_shared<std::promise<TBComPtr<IDirect3DTexture9>>>();
+    Texture handle{promise->get_future().share()};
+
+    // Capturing handle (a Texture containing a shared_future) keeps the
+    // shared state alive until the DX task completes and the promise is resolved.
+    const auto callback = [handle, filename_sanitised](const bool success, const std::wstring& error) {
         if (!success) {
-            Log::LogW(L"Failed to load Guild Wars Wiki file%S\n%s", filename_sanitised.c_str(), error.c_str());
+            Log::LogW(L"Failed to load Guild Wars Wiki file %S\n%s", filename_sanitised.c_str(), error.c_str());
         }
         else {
             Log::LogW(L"Loaded Guild Wars Wiki file %S", filename_sanitised.c_str());
         }
     };
-    const auto texture = new IDirect3DTexture9*;
-    *texture = nullptr;
-    guild_wars_wiki_images[filename] = texture;
     static std::filesystem::path path = GetPath(GUILD_WARS_WIKI_FILES_PATH);
     if (!EnsureFolderExists(path)) {
+        promise->set_value(TBComPtr<IDirect3DTexture9>{});
         trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());
-        return texture;
+        return handle;
     }
     const auto path_to_file = std::format("{}\\{}", path.string(), filename_sanitised);
     // Check for local file
     if (std::filesystem::exists(path_to_file)) {
-        LoadTexture(texture, path_to_file, callback);
-        return texture;
+        EnqueueDxTask([promise, path_to_file = std::filesystem::path{path_to_file}, callback](IDirect3DDevice9* device) {
+            std::wstring error;
+            IDirect3DTexture9* raw = nullptr;
+            TryCreateTexture(device, path_to_file.c_str(), &raw, error);
+            TBComPtr<IDirect3DTexture9> tex;
+            if (raw) tex.Attach(raw);
+            promise->set_value(std::move(tex));
+            callback(raw != nullptr, error);
+        });
+        return handle;
     }
     // No local file found; download from wiki via skill link URL
     std::string wiki_url = "https://wiki.guildwars.com/wiki/File:";
     wiki_url.append(urlencode_filename ? TextUtils::UrlEncode(filename, '_') : filename);
-    Instance().Download(wiki_url, [texture, filename_sanitised, callback, width](const bool ok, const std::string& response, void*) {
+    Instance().Download(wiki_url, [promise, handle, filename_sanitised, callback, width](const bool ok, const std::string& response, void*) {
         if (!ok) {
+            promise->set_value(TBComPtr<IDirect3DTexture9>{});
             callback(ok, TextUtils::StringToWString(response));
-            return; // Already logged whatever errors
+            return;
         }
 
         // Find a valid png or jpg image inside the HTML response
@@ -1043,6 +1089,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
                         m2.get<2>().to_string());
                 }
                 else {
+                    promise->set_value(TBComPtr<IDirect3DTexture9>{});
                     trigger_failure_callback(callback, L"Regex failed evaluating GWW thumbnail from %S", image_url.c_str());
                     return;
                 }
@@ -1053,13 +1100,30 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
                 image_url = std::format("https://wiki.guildwars.com{}", image_url);
             }
 
-            LoadTexture(texture, path_to_file2, image_url, callback);
+            EnsureFileExists(std::filesystem::path{path_to_file2}, image_url, [promise, path_to_file2, callback](const bool success, const std::wstring& error) {
+                if (success) {
+                    EnqueueDxTask([promise, path_to_file2, callback](IDirect3DDevice9* device) {
+                        std::wstring err;
+                        IDirect3DTexture9* raw = nullptr;
+                        TryCreateTexture(device, std::filesystem::path{path_to_file2}.c_str(), &raw, err);
+                        TBComPtr<IDirect3DTexture9> tex;
+                        if (raw) tex.Attach(raw);
+                        promise->set_value(std::move(tex));
+                        callback(raw != nullptr, err);
+                    });
+                }
+                else {
+                    promise->set_value(TBComPtr<IDirect3DTexture9>{});
+                    callback(false, error);
+                }
+            });
         }
         else {
+            promise->set_value(TBComPtr<IDirect3DTexture9>{});
             trigger_failure_callback(callback, L"Regex failed loading file %S", filename_sanitised.c_str());
         }
     });
-    return texture;
+    return handle;
 }
 
 std::filesystem::path Resources::GetExePath()
@@ -1075,22 +1139,31 @@ std::filesystem::path Resources::GetExePath()
     return std::filesystem::path(buffer);
 }
 
-IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id)
+auto Resources::GetSkillImage(GW::Constants::SkillID skill_id) -> Texture
 {
     const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-    return skill && skill->icon_file_id ? GwDatTextureModule::LoadTextureFromFileId(skill->icon_file_id) : &empty_texture_ptr;
+    if (skill && skill->icon_file_id) {
+        return GwDatTextureModule::LoadTextureFromFileId(skill->icon_file_id);
+    }
+    return Texture{};
 }
-IDirect3DTexture9** Resources::GetSkillHiResImage(GW::Constants::SkillID skill_id)
+auto Resources::GetSkillHiResImage(GW::Constants::SkillID skill_id) -> Texture
 {
     const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-    return skill && skill->icon_file_id_hi_res ? GwDatTextureModule::LoadTextureFromFileId(skill->icon_file_id_hi_res) : &empty_texture_ptr;
+    if (skill && skill->icon_file_id_hi_res) {
+        return GwDatTextureModule::LoadTextureFromFileId(skill->icon_file_id_hi_res);
+    }
+    return Texture{};
 }
 
-IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill_id)
+auto Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill_id) -> Texture
 {
-    if (skill_images.contains(skill_id)) {
-        return skill_images.at(skill_id);
+    auto it = skill_images.find(skill_id);
+    if (it != skill_images.end()) {
+        return it->second;
     }
+    auto promise = std::make_shared<std::promise<TBComPtr<IDirect3DTexture9>>>();
+    auto& texture = skill_images[skill_id] = Texture{promise->get_future().share()};
     const auto callback = [skill_id](const bool success, const std::wstring& error) {
         if (!success) {
             Log::ErrorW(L"Failed to load skill image %d\n%s", skill_id, error.c_str());
@@ -1099,14 +1172,13 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
             Log::LogW(L"Loaded skill image %d", skill_id);
         }
     };
-    const auto texture = new IDirect3DTexture9*;
-    *texture = nullptr;
-    skill_images[skill_id] = texture;
     if (skill_id == static_cast<GW::Constants::SkillID>(0)) {
+        promise->set_value(TBComPtr<IDirect3DTexture9>{});
         return texture;
     }
     static std::filesystem::path path = GetPath(SKILL_IMAGES_PATH);
     if (!EnsureFolderExists(path)) {
+        promise->set_value(TBComPtr<IDirect3DTexture9>{});
         trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());
         return texture;
     }
@@ -1114,20 +1186,37 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
     // Check for local jpg file
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.jpg", path.wstring().c_str(), skill_id);
     if (std::filesystem::exists(path_to_file)) {
-        LoadTexture(texture, path_to_file, callback);
+        EnqueueDxTask([promise, path_to_file = std::filesystem::path{path_to_file}, callback](IDirect3DDevice9* device) {
+            std::wstring error;
+            IDirect3DTexture9* raw = nullptr;
+            TryCreateTexture(device, path_to_file.c_str(), &raw, error);
+            TBComPtr<IDirect3DTexture9> tex;
+            if (raw) tex.Attach(raw);
+            promise->set_value(std::move(tex));
+            callback(raw != nullptr, error);
+        });
         return texture;
     }
     // Check for local png file
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.png", path.wstring().c_str(), skill_id);
     if (std::filesystem::exists(path_to_file)) {
-        LoadTexture(texture, path_to_file, callback);
+        EnqueueDxTask([promise, path_to_file = std::filesystem::path{path_to_file}, callback](IDirect3DDevice9* device) {
+            std::wstring error;
+            IDirect3DTexture9* raw = nullptr;
+            TryCreateTexture(device, path_to_file.c_str(), &raw, error);
+            TBComPtr<IDirect3DTexture9> tex;
+            if (raw) tex.Attach(raw);
+            promise->set_value(std::move(tex));
+            callback(raw != nullptr, error);
+        });
         return texture;
     }
     // No local file found; download from wiki via skill link URL
     char url[128];
     snprintf(url, _countof(url), "https://wiki.guildwars.com/wiki/Game_link:Skill_%d", skill_id);
-    Instance().Download(url, [texture, skill_id, callback](const bool ok, const std::string& response, void*) {
+    Instance().Download(url, [promise, skill_id, callback](const bool ok, const std::string& response, void*) {
         if (!ok) {
+            promise->set_value(TBComPtr<IDirect3DTexture9>{});
             callback(ok, TextUtils::StringToWString(response));
             return; // Already logged whatever errors
         }
@@ -1160,6 +1249,7 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
             image_extension = m3.get<2>().to_string();
         }
         else {
+            promise->set_value(TBComPtr<IDirect3DTexture9>{});
             trigger_failure_callback(callback, L"Regex failed loading skill id %d", skill_id);
             return;
         }
@@ -1176,7 +1266,23 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
             snprintf(url, _countof(url), "https://wiki.guildwars.com%s%s", image_path.c_str(), image_extension.c_str());
         }
 
-        LoadTexture(texture, path_to_file, url, callback);
+        EnsureFileExists(std::filesystem::path{path_to_file}, std::string{url}, [promise, path_to_file = std::filesystem::path{path_to_file}, callback](const bool success, const std::wstring& error) {
+            if (success) {
+                EnqueueDxTask([promise, path_to_file, callback](IDirect3DDevice9* device) {
+                    std::wstring err;
+                    IDirect3DTexture9* raw = nullptr;
+                    TryCreateTexture(device, path_to_file.c_str(), &raw, err);
+                    TBComPtr<IDirect3DTexture9> tex;
+                    if (raw) tex.Attach(raw);
+                    promise->set_value(std::move(tex));
+                    callback(raw != nullptr, err);
+                });
+            }
+            else {
+                promise->set_value(TBComPtr<IDirect3DTexture9>{});
+                callback(false, error);
+            }
+        });
     });
     return texture;
 }
@@ -1280,10 +1386,10 @@ GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id, GW::Co
     return enc_string;
 }
 
-IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
+auto Resources::GetItemImage(GW::Item* item) -> Texture
 {
     if (!(item && item->model_file_id))
-        return nullptr;
+        return Texture{};
     uint32_t model_id_to_load = 0;
     const bool is_composite_item = (item->interaction & 4) != 0;
 
@@ -1303,14 +1409,17 @@ IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
     // @Enhancement: How to apply dye_info to the result?
 }
 
-IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
+auto Resources::GetItemImage(const std::wstring& item_name) -> Texture
 {
     if (item_name.empty()) {
-        return nullptr;
+        return Texture{};
     }
-    if (item_images.contains(item_name)) {
-        return item_images.at(item_name);
+    auto it = item_images.find(item_name);
+    if (it != item_images.end()) {
+        return it->second;
     }
+    auto promise = std::make_shared<std::promise<TBComPtr<IDirect3DTexture9>>>();
+    auto& texture = item_images[item_name] = Texture{promise->get_future().share()};
     const auto callback = [item_name](const bool success, const std::wstring& error) {
         if (!success) {
             Log::LogW(L"Error: Failed to load item image %s\n%s", item_name.c_str(), error.c_str());
@@ -1319,9 +1428,6 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
             Log::LogW(L"Loaded item image %s", item_name.c_str());
         }
     };
-    const auto texture = new IDirect3DTexture9*;
-    *texture = nullptr;
-    item_images[item_name] = texture;
     static std::filesystem::path path = GetPath(ITEM_IMAGES_PATH);
     ASSERT(EnsureFolderExists(path));
 
@@ -1329,14 +1435,23 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
     // Check for local png image
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%s.png", path.c_str(), item_name.c_str());
     if (std::filesystem::exists(path_to_file)) {
-        LoadTexture(texture, path_to_file, callback);
+        EnqueueDxTask([promise, path_to_file = std::filesystem::path{path_to_file}, callback](IDirect3DDevice9* device) {
+            std::wstring error;
+            IDirect3DTexture9* raw = nullptr;
+            TryCreateTexture(device, path_to_file.c_str(), &raw, error);
+            TBComPtr<IDirect3DTexture9> tex;
+            if (raw) tex.Attach(raw);
+            promise->set_value(std::move(tex));
+            callback(raw != nullptr, error);
+        });
         return texture;
     }
 
     // No local file found; download from wiki via searching by the item name; the wiki will usually return a 302 redirect if its an exact item match
     const std::string search_str = GuiUtils::WikiUrl(item_name);
-    Instance().Download(search_str, [texture, item_name, callback](const bool ok, const std::string& response, void*) {
+    Instance().Download(search_str, [promise, item_name, callback](const bool ok, const std::string& response, void*) {
         if (!ok) {
+            promise->set_value(TBComPtr<IDirect3DTexture9>{});
             callback(ok, TextUtils::StringToWString(response));
             return;
         }
@@ -1352,12 +1467,14 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
             // Failed to find via item name; try via page title
             const std::regex title_finder("<title>(.*) - Guild Wars Wiki.*</title>");
             if (!std::regex_search(response, m, title_finder)) {
+                promise->set_value(TBComPtr<IDirect3DTexture9>{});
                 trigger_failure_callback(callback, L"Failed to find title HTML for %s from wiki", item_name.c_str());
                 return;
             }
             const std::string html_item_name = TextUtils::HtmlEncode(m[1].str());
             snprintf(regex_str, sizeof(regex_str), R"(<img[^>]+alt=['"][^>]*%s[^>]*['"][^>]+src=['"]([^"']+)([.](png)))", html_item_name.c_str());
             if (!std::regex_search(response, m, std::regex(regex_str))) {
+                promise->set_value(TBComPtr<IDirect3DTexture9>{});
                 trigger_failure_callback(callback, L"Failed to find image HTML for %s from wiki", item_name.c_str());
                 return;
             }
@@ -1375,7 +1492,23 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
             // Image URL is relative to domain
             snprintf(url, _countof(url), "https://wiki.guildwars.com%s%s", image_path.c_str(), image_extension.c_str());
         }
-        LoadTexture(texture, path_to_file, url, callback);
+        EnsureFileExists(std::filesystem::path{path_to_file}, std::string{url}, [promise, path_to_file = std::filesystem::path{path_to_file}, callback](const bool success, const std::wstring& error) {
+            if (success) {
+                EnqueueDxTask([promise, path_to_file, callback](IDirect3DDevice9* device) {
+                    std::wstring err;
+                    IDirect3DTexture9* raw = nullptr;
+                    TryCreateTexture(device, path_to_file.c_str(), &raw, err);
+                    TBComPtr<IDirect3DTexture9> tex;
+                    if (raw) tex.Attach(raw);
+                    promise->set_value(std::move(tex));
+                    callback(raw != nullptr, err);
+                });
+            }
+            else {
+                promise->set_value(TBComPtr<IDirect3DTexture9>{});
+                callback(false, error);
+            }
+        });
     });
     return texture;
 }

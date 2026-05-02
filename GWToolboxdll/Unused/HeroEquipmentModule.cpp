@@ -23,7 +23,7 @@ namespace {
 
     std::map<uint32_t, GW::UI::FramePosition> frame_layouts_by_child_id;
 
-    IDirect3DTexture9** icon_texture = nullptr;
+    Resources::Texture icon_texture;
     // Precompute UV coordinates for each state
     ImVec2 uv_normal[2], uv_hover[2], uv_active[2];
 
@@ -447,7 +447,7 @@ void HeroEquipmentModule::Draw(IDirect3DDevice9*)
 
     // Load the texture once outside the loop
 
-    if (!(icon_texture && *icon_texture)) return;
+    if (!icon_texture) return;
 
     const auto root = GW::UI::GetRootFrame();
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
@@ -502,7 +502,7 @@ void HeroEquipmentModule::Draw(IDirect3DDevice9*)
 
         // Draw the button texture
         ImGui::SetCursorScreenPos(btn_pos);
-        ImGui::Image(*icon_texture, btn_size, *uv_min, *uv_max);
+        ImGui::Image(icon_texture.Get(), btn_size, *uv_min, *uv_max);
 
         ImGui::End();
     }

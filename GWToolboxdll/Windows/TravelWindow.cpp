@@ -214,7 +214,7 @@ namespace {
 
     bool to_minimize = false;
 
-    IDirect3DTexture9** scroll_texture = nullptr;
+    Resources::Texture scroll_texture;
 
     /* Not used, but good to keep for reference!
     enum error_message_ids {
@@ -644,7 +644,7 @@ void TravelWindow::TravelButton(const GW::Constants::MapID mapid, const int x_id
     switch (mapid) {
         case GW::Constants::MapID::The_Deep:
         case GW::Constants::MapID::Urgozs_Warren:
-            clicked |= ImGui::IconButton(text, *scroll_texture, ImVec2(w, 0));
+            clicked |= ImGui::IconButton(text, scroll_texture.Get(), ImVec2(w, 0));
             break;
         default:
             clicked |= ImGui::Button(text, ImVec2(w, 0));

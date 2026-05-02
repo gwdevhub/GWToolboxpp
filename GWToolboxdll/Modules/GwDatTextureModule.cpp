@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <future>
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Managers/ItemMgr.h>
 
@@ -192,7 +193,7 @@ namespace {
     struct GwImg {
         uint32_t m_file_id = 0;
         Vec2i m_dims;
-        IDirect3DTexture9* m_tex = nullptr;
+        Resources::Texture m_tex;
     };
 
     std::map<uint32_t,GwImg*> textures_by_file_id;
@@ -280,17 +281,23 @@ void GwDatTextureModule::Initialize()
 
 
 
-IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id)
+Resources::Texture GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id)
 {
     auto found = textures_by_file_id.find(file_id);
     if (found != textures_by_file_id.end())
-        return &found->second->m_tex;
-    auto gwimg_ptr = new GwImg(file_id);
+        return found->second->m_tex;
+    auto gwimg_ptr = new GwImg{file_id};
     textures_by_file_id[file_id] = gwimg_ptr;
-    Resources::Instance().EnqueueDxTask([gwimg_ptr](IDirect3DDevice9* device) {
-        gwimg_ptr->m_tex = CreateTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims);
-        });
-    return &gwimg_ptr->m_tex;
+    auto promise = std::make_shared<std::promise<TBComPtr<IDirect3DTexture9>>>();
+    auto future = promise->get_future().share();
+    Resources::Instance().EnqueueDxTask([gwimg_ptr, promise](IDirect3DDevice9* device) {
+        TBComPtr<IDirect3DTexture9> tex;
+        auto* raw = CreateTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims);
+        if (raw) tex.Attach(raw);
+        promise->set_value(std::move(tex));
+    });
+    gwimg_ptr->m_tex = Resources::Texture{std::move(future)};
+    return gwimg_ptr->m_tex;
 }
 void GwDatTextureModule::Terminate()
 {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ToolboxModule.h>
+#include <Modules/Resources.h>
 
 namespace GW {
     struct RecObject;
@@ -22,11 +23,11 @@ public:
     bool HasSettings() override { return false; }
 
     void Initialize() override;
-    
+
     void Terminate() override;
 
     static bool CloseHandle(GW::RecObject* handle);
     static bool ReadDatFile(const wchar_t* fileHash, std::vector<uint8_t>* bytes_out, uint32_t stream_id = 0);
 
-    static IDirect3DTexture9** LoadTextureFromFileId(uint32_t file_id);
+    static Resources::Texture LoadTextureFromFileId(uint32_t file_id);
 };

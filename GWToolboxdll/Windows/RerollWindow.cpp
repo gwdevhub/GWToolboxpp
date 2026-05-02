@@ -453,7 +453,7 @@ void RerollWindow::Draw(IDirect3DDevice9*)
                 ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.f));
             }
-            if (ImGui::IconButton(buf.c_str(), *Resources::GetProfessionIcon(profession), btn_dim)) {
+            if (ImGui::IconButton(buf.c_str(), Resources::GetProfessionIcon(profession).Get(), btn_dim)) {
                 const bool _same_map = travel_to_same_location_after_rerolling;
                 bool _same_party = travel_to_same_location_after_rerolling && rejoin_party_after_rerolling;
                 if (rejoin_party_after_rerolling && !_same_party) {

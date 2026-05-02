@@ -36,7 +36,7 @@ namespace {
     GW::Constants::QuestID active_quest_id = GW::Constants::QuestID::None;
     GuiUtils::EncString active_quest_name;
     std::vector<QuestObjective> active_quest_objectives; // (index, objective, completed)
-    IDirect3DTexture9** p_quest_marker_texture;
+    Resources::Texture p_quest_marker_texture;
     bool force_update = false;
 
     void SetForceUpdate(GW::HookStatus*, GW::UI::UIMessage,void*,void*) {
@@ -46,13 +46,13 @@ namespace {
     void DrawQuestIcon() {
         static constexpr auto UV0 = ImVec2(0.0f, 0.0f);
         static constexpr auto ICON_SIZE = ImVec2(24.0f, 24.0f);
-        if(!p_quest_marker_texture || !*p_quest_marker_texture) {
+        if(!p_quest_marker_texture) {
             return;
         }
 
         ImGui::PushID("quest_icon");
-        auto uv1 = ImGui::CalculateUvCrop(*p_quest_marker_texture, ICON_SIZE);
-        ImGui::Image(*p_quest_marker_texture, ICON_SIZE, UV0, uv1);
+        auto uv1 = ImGui::CalculateUvCrop(p_quest_marker_texture.Get(), ICON_SIZE);
+        ImGui::Image(p_quest_marker_texture.Get(), ICON_SIZE, UV0, uv1);
         ImGui::PopID();
     }
 }

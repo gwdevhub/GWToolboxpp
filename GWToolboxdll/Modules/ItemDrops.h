@@ -2,7 +2,9 @@
 
 #include <ToolboxModule.h>
 #include "InventoryManager.h"
+#include <Modules/Resources.h>
 #include <Utils/ToolboxUtils.h>
+#include <Utils/ComPtr.h>
 
 
 class ItemDrops : public ToolboxModule {
@@ -28,7 +30,7 @@ public:
     struct PendingDrop {
         uint32_t instance_time = 0;
         time_t system_time = 0;
-        IDirect3DTexture9** icon = 0;
+        Resources::Texture icon;
         wchar_t* item_name_enc = 0;
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
 
@@ -58,7 +60,7 @@ public:
         static const wchar_t* GetCSVHeader();
         GuiUtils::EncString* GetItemName();
     };
-    static_assert(sizeof(PendingDrop) == 48);
+    // sizeof changed: icon is now a Texture (shared_future) instead of a raw pointer
 
     std::vector<PendingDrop*>& GetDropHistory();
     int GetTotalGoldValue();

@@ -93,9 +93,9 @@ namespace {
 
     std::wstring last_player_name;
 
-    void GetOutpostIcons(MapID map_id, IDirect3DTexture9** icons_out[4], uint8_t mission_state, bool is_hard_mode = false)
+    void GetOutpostIcons(MapID map_id, Resources::Texture icons_out[4], uint8_t mission_state, bool is_hard_mode = false)
     {
-        memset(icons_out, 0, sizeof(icons_out) * sizeof(*icons_out));
+        for (size_t i = 0; i < 4; i++) icons_out[i] = {};
 
         WorldMapIcon icon_file_ids[4] = {WorldMapIcon::None};
         uint32_t icon_idx = 0;
@@ -810,9 +810,7 @@ size_t Mission::GetLoadedIcons(IDirect3DTexture9* icons_out[4])
     for (size_t i = 0; i < _countof(icons) && icons_added < 4; i++) {
         if (!icons[i])
             break;
-        if (*icons[i]) {
-            icons_out[icons_added++] = *icons[i];
-        }
+        icons_out[icons_added++] = icons[i].Get();
     }
     return icons_added;
 }
@@ -924,7 +922,7 @@ void Mission::OnHover()
             icon_size.x = icon_size.y;
             const auto map = GW::Map::GetMapInfo(outpost);
             for (auto char_completion : chars_without_completed) {
-                ImGui::Image(*Resources::GetProfessionIcon(char_completion->profession), icon_size);
+                ImGui::Image(Resources::GetProfessionIcon(char_completion->profession).Get(), icon_size);
                 bool is_hm_complete = ::IsAreaComplete(TextUtils::StringToWString(char_completion->name_str).c_str(), outpost, CompletionCheck::HardMode, map);
                 bool is_nm_complete = ::IsAreaComplete(TextUtils::StringToWString(char_completion->name_str).c_str(), outpost, CompletionCheck::NormalMode, map);
                 ImGui::SameLine();
@@ -995,7 +993,7 @@ void OutpostUnlock::OnHover()
             auto icon_size = ImGui::CalcTextSize(" ");
             icon_size.x = icon_size.y;
             for (auto char_completion : chars_without_completed) {
-                ImGui::Image(*Resources::GetProfessionIcon(char_completion->profession), icon_size);
+                ImGui::Image(Resources::GetProfessionIcon(char_completion->profession).Get(), icon_size);
                 ImGui::SameLine();
                 ImGui::TextUnformatted(char_completion->name_str.c_str());
             }
@@ -1064,23 +1062,17 @@ const char* HeroUnlock::Name()
 size_t HeroUnlock::GetLoadedIcons(IDirect3DTexture9* icons_out[4])
 {
     if (!icons_loaded) {
-        *icons = new IDirect3DTexture9*();
         const auto path = Resources::GetPath(L"img/heros");
         Resources::EnsureFolderExists(path);
         wchar_t local_image[MAX_PATH];
         swprintf(local_image, _countof(local_image), L"%s/hero_%d.jpg", path.c_str(), skill_id);
         char remote_image[128];
         snprintf(remote_image, _countof(remote_image), "https://github.com/gwdevhub/GWToolboxpp/raw/master/resources/heros/hero_%d.jpg", skill_id);
-        Resources::LoadTexture(*icons, local_image, remote_image);
+        hero_texture = Resources::LoadTexture(std::filesystem::path{local_image}, std::string{remote_image});
+        *icons = hero_texture;
         icons_loaded = true;
     }
     return Mission::GetLoadedIcons(icons_out);
-}
-
-HeroUnlock::~HeroUnlock()
-{
-    if (*icons)
-        delete*icons;
 }
 
 void HeroUnlock::OnClick()
@@ -1177,7 +1169,7 @@ void PvESkill::OnHover()
             auto icon_size = ImGui::CalcTextSize(" ");
             icon_size.x = icon_size.y;
             for (auto char_completion : chars_without_completed) {
-                ImGui::Image(*Resources::GetProfessionIcon(char_completion->profession), icon_size);
+                ImGui::Image(Resources::GetProfessionIcon(char_completion->profession).Get(), icon_size);
                 ImGui::SameLine();
                 ImGui::TextUnformatted(char_completion->name_str.c_str());
             }

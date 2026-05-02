@@ -81,7 +81,7 @@ namespace {
         }
     }
 
-    IDirect3DTexture9** GetCurrencyImage(Currency currency)
+    Resources::Texture GetCurrencyImage(Currency currency)
     {
         switch (currency) {
             case Currency::Platinum:
@@ -93,7 +93,7 @@ namespace {
             case Currency::Arms:
                 return GwDatTextureModule::LoadTextureFromFileId(0x2ae18);
         }
-        return nullptr;
+        return {};
     }
 
     const char* GetOrderTypeString(OrderType type)
@@ -1121,7 +1121,7 @@ namespace {
             ImGui::SameLine(0, 0);
             const auto tex = GetCurrencyImage(price.type);
             if (tex) {
-                ImGui::ImageCropped((void*)*tex, {font_size.y, font_size.y});
+                ImGui::ImageCropped(tex.Get(), {font_size.y, font_size.y});
                 ImGui::SameLine(0, 0);
             }
             if (price.price == static_cast<int>(price.price)) {
@@ -1241,7 +1241,7 @@ namespace {
             ImGui::SameLine(0, 0);
             const auto tex = GetCurrencyImage(price.type);
             if (tex) {
-                ImGui::ImageCropped((void*)*tex, {font_size.y, font_size.y});
+                ImGui::ImageCropped(tex.Get(), {font_size.y, font_size.y});
                 ImGui::SameLine(0, 0);
             }
             if (price.price == static_cast<int>(price.price)) {
@@ -1349,8 +1349,8 @@ namespace {
         ImGui::SameLine(350);
         if (!item.prices.empty()) {
             const auto& price = item.prices[0];
-            if (auto* texture = GetCurrencyImage(price.type)) {
-                ImGui::Image(*texture, ImVec2(16, 16));
+            if (auto texture = GetCurrencyImage(price.type)) {
+                ImGui::Image(texture.Get(), ImVec2(16, 16));
                 ImGui::SameLine();
             }
             ImGui::Text("%.0f %s", price.price, GetPriceTypeString(price.type));

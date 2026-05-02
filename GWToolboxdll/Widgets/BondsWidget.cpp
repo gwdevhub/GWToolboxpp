@@ -268,9 +268,9 @@ void BondsWidget::Terminate()
 bool BondsWidget::DrawBondImage(uint32_t agent_id, GW::Constants::SkillID skill_id, ImVec2* top_left_out, ImVec2* bottom_right_out) {
     if (!GetBondPosition(agent_id, skill_id, top_left_out, bottom_right_out))
         return false;
-    const auto texture = *Resources::GetSkillImage(skill_id);
+    const auto& texture = Resources::GetSkillImage(skill_id);
     if (texture) {
-        ImGui::AddImageCropped(texture, *top_left_out, *bottom_right_out);
+        ImGui::AddImageCropped(texture.Get(), *top_left_out, *bottom_right_out);
         return true;
     }
     return false;

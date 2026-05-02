@@ -1,7 +1,9 @@
 #pragma once
 
+#include <future>
 #include <ToolboxModule.h>
 #include <Utf8.h>
+#include <Utils/ComPtr.h>
 
 namespace GuiUtils {
     class EncString;
@@ -77,40 +79,43 @@ public:
     // Callback for binary, usually only curl stuff; try to stick to wstrings where possible
     using AsyncLoadMbCallback = std::function<void(bool success, const std::string& response, void* context)>;
 
-    // Load from file to D3DTexture, runs callback on completion
-    static void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, AsyncLoadCallback callback = nullptr);
-    // Load from compiled resource id to D3DTexture, runs callback on completion
-    static void LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallback callback = nullptr);
-    // Load from file to D3DTexture, fallback to resource id, runs callback on completion
-    static void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback = nullptr);
-    // Load from file to D3DTexture, fallback to remote location, runs callback on completion
-    static void LoadTexture(IDirect3DTexture9** texture, const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback = nullptr);
+    // Wraps a shared_future that resolves to a D3D texture once loaded.
+    // .Get() returns the raw pointer (or nullptr if not yet loaded).
+    class Texture {
+        std::shared_future<TBComPtr<IDirect3DTexture9>> future;
+    public:
+        Texture() = default;
+        Texture(std::shared_future<TBComPtr<IDirect3DTexture9>> f) : future(std::move(f)) {}
+        IDirect3DTexture9* Get() const {
+            if (!future.valid()) return nullptr;
+            if (future.wait_for(std::chrono::seconds(0)) != std::future_status::ready) return nullptr;
+            return future.get().Get();
+        }
+        explicit operator bool() const { return Get() != nullptr; }
+    };
 
-    // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
-    static IDirect3DTexture9** GetProfessionIcon(GW::Constants::Profession p);
+    // Load a texture asynchronously, returns a future that resolves when the DX task completes
+    static Texture LoadTexture(const std::filesystem::path& path_to_file, AsyncLoadCallback callback = nullptr);
+    static Texture LoadTexture(WORD id, AsyncLoadCallback callback = nullptr);
+    static Texture LoadTexture(const std::filesystem::path& path_to_file, WORD id, AsyncLoadCallback callback = nullptr);
+    static Texture LoadTexture(const std::filesystem::path& path_to_file, const std::string& url, AsyncLoadCallback callback = nullptr);
+
+    static Texture GetProfessionIcon(GW::Constants::Profession p);
     static bool GetTextureSize(IDirect3DTexture9* texture, ImVec2* out);
-    // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
-    static IDirect3DTexture9** GetDamagetypeImage(std::string dmg_type);
-    // Fetches skill image from gw dat via file_id
-    static IDirect3DTexture9** GetSkillImage(GW::Constants::SkillID skill_id);
-    static IDirect3DTexture9** GetSkillHiResImage(GW::Constants::SkillID skill_id);
-    // Fetches skill page from GWW, parses out the image for the skill then downloads that to disk
-    // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
-    // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
-    static IDirect3DTexture9** GetSkillImageFromGWW(GW::Constants::SkillID skill_id);
+    static Texture GetDamagetypeImage(std::string dmg_type);
+    static Texture GetSkillImage(GW::Constants::SkillID skill_id);
+    static Texture GetSkillHiResImage(GW::Constants::SkillID skill_id);
+    static Texture GetSkillImageFromGWW(GW::Constants::SkillID skill_id);
 
     static GuiUtils::EncString* GetSkillName(const GW::Constants::SkillID skill_id);
 
-    static IDirect3DTexture9** GetItemImage(GW::Item* item);
-    // Fetches item page from GWW, parses out the image for the item then downloads that to disk
-    // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
-    // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
-    static IDirect3DTexture9** GetItemImage(const std::wstring& item_name);
+    static Texture GetItemImage(GW::Item* item);
+    static Texture GetItemImage(const std::wstring& item_name);
     static bool SaveTextureToFile(IDirect3DTexture9* texture, const std::filesystem::path& file_path);
-    // Fetches File page from GWW, parses out the image for the file given
-    // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
-    // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
-    static IDirect3DTexture9** GetGuildWarsWikiImage(const char* filename, size_t width = 0, bool urlencode_filename = true);
+
+    // Fetches File page from GWW, parses out the image for the file given.
+    // Caller owns the returned future; D3D texture is released when the last copy drops.
+    static Texture GetGuildWarsWikiImage(const char* filename, size_t width = 0, bool urlencode_filename = true);
 
     static std::filesystem::path GetExePath();
 

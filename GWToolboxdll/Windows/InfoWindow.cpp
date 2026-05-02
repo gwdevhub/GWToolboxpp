@@ -291,7 +291,7 @@ namespace {
         InfoField("Bag/Slot", "%s", slot);
         InfoField("ModelID", "%d", item->model_id);
         InfoField("Name", "%s", name->string().c_str());
-        ImGui::Image(*Resources::GetItemImage(item), { 48,48 });
+        ImGui::Image(Resources::GetItemImage(item).Get(), { 48,48 });
         auto draw_advanced = [&, item] {
             InfoField("Addr", "%p", item);
             InfoField("Id", "%d", item->item_id);
@@ -573,9 +573,9 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
-    std::unordered_map<uint32_t, IDirect3DTexture9**> textures_created_by_file_id;
-    std::unordered_map<IDirect3DTexture9**, uint32_t> texture_file_ids;
-    std::vector<IDirect3DTexture9**> textures_created;
+    std::unordered_map<uint32_t, Resources::Texture> textures_created_by_file_id;
+    std::unordered_map<uint32_t, uint32_t> texture_index_to_file_id;
+    std::vector<uint32_t> textures_created_order;
 
     std::map<uint32_t, IDirect3DTexture9*> dx9_textures_created_by_hash;
     bool record_dx9_textures = false;
@@ -668,10 +668,8 @@ namespace {
         const auto out = CreateTexture_Ret(file_name, flags);
         uint32_t file_id = FileHashToFileId(file_name);
         if (textures_created_by_file_id.find(file_id) == textures_created_by_file_id.end()) {
-            const auto f = GwDatTextureModule::LoadTextureFromFileId(file_id);
-            textures_created.push_back(f);
-            textures_created_by_file_id[file_id] = f;
-            texture_file_ids[f] = file_id;
+            textures_created_by_file_id[file_id] = GwDatTextureModule::LoadTextureFromFileId(file_id);
+            textures_created_order.push_back(file_id);
         }
         GW::Hook::LeaveHook();
         return out;
@@ -712,8 +710,7 @@ namespace {
             GW::Hook::RemoveHook(CreateTexture_Func);
             CreateTexture_Func = 0;
             textures_created_by_file_id.clear();
-            textures_created.clear();
-            texture_file_ids.clear();
+            textures_created_order.clear();
         }
     }
     void HookOnGWCASendUIMessage(bool hook) {
@@ -984,7 +981,7 @@ namespace {
         }
         if (ImGui::CollapsingHeader("Loaded Textures by GW File")) {
             record_textures = true;
-            ImGui::PushID(&textures_created);
+            ImGui::PushID(&textures_created_order);
             constexpr ImVec2 scaled_size = { 64.f, 64.f };
             constexpr ImVec4 tint(1, 1, 1, 1);
             const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
@@ -992,8 +989,7 @@ namespace {
 
             if (ImGui::SmallButton("Reset")) {
                 textures_created_by_file_id.clear();
-                textures_created.clear();
-                texture_file_ids.clear();
+                textures_created_order.clear();
             }
 
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -1002,36 +998,38 @@ namespace {
 
             ImGui::StartSpacedElements(scaled_size.x);
 
-            for (const auto texture : textures_created) {
-                ImGui::PushID(texture);
-                if (!texture || !*texture) {
+            for (const auto file_id : textures_created_order) {
+                ImGui::PushID(static_cast<int>(file_id));
+                auto it = textures_created_by_file_id.find(file_id);
+                if (it == textures_created_by_file_id.end() || !it->second) {
                     ImGui::PopID();
                     continue;
                 }
+                const auto& texture = it->second;
 
-                const auto uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
+                const auto uv1 = ImGui::CalculateUvCrop(texture.Get(), scaled_size);
                 ImGui::NextSpacedElement();
-                const auto clicked = ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, normal_bg, tint);
+                const auto clicked = ImGui::ImageButton(texture.Get(), scaled_size, uv0, uv1, -1, normal_bg, tint);
                 static wchar_t out[3];
                 if (ImGui::IsItemHovered()) {
-                    ArenaNetFileParser::FileIdToFileHash(texture_file_ids[texture], out);
-                    ImGui::SetTooltip("File ID: 0x%08x\nFile Hash: 0x%04x 0x%04x", texture_file_ids[texture], out[0], out[1]);
+                    ArenaNetFileParser::FileIdToFileHash(file_id, out);
+                    ImGui::SetTooltip("File ID: 0x%08x\nFile Hash: 0x%04x 0x%04x", file_id, out[0], out[1]);
                 }
                 if (clicked) {
-                    ImGui::SetContextMenu([texture](void*) {
+                    ImGui::SetContextMenu([file_id, &texture](void*) {
                         if (ImGui::Button("Download as DDS (naming by gw file id)")) {
-                            const auto filename = std::format("{:#010x}.dds", texture_file_ids[texture]);
+                            const auto filename = std::format("{:#010x}.dds", file_id);
                             const auto write_to = Resources::GetPath("extracted_textures", filename);
                             Resources::EnsureFolderExists(Resources::GetPath("extracted_textures"));
-                            Resources::SaveTextureToFile(*texture, write_to);
+                            Resources::SaveTextureToFile(texture.Get(), write_to);
                             return false;
                         }
                         if (ImGui::Button("Download as DDS (naming by hash for gMod)")) {
-                            const auto hash = Resources::GetTexmodHash(*texture);
+                            const auto hash = Resources::GetTexmodHash(texture.Get());
                             const auto filename = std::format("GW.EXE_0x{:08X}.dds", hash);
                             const auto write_to = Resources::GetPath("extracted_textures", filename);
                             Resources::EnsureFolderExists(Resources::GetPath("extracted_textures"));
-                            Resources::SaveTextureToFile(*texture, write_to);
+                            Resources::SaveTextureToFile(texture.Get(), write_to);
                             return false;
                         }
                         return true;

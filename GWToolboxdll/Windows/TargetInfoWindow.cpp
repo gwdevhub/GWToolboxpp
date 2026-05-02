@@ -62,7 +62,7 @@ namespace {
     struct AgentInfo {
         GuiUtils::EncString name;
         std::string image_url;
-        IDirect3DTexture9** image = nullptr;
+        Resources::Texture image;
         std::string wiki_content;
         std::string wiki_search_term;
         std::vector<GW::Constants::SkillID> wiki_skills;
@@ -407,7 +407,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
         ImGui::TextUnformatted("Target info pending...");
         return ImGui::End();
     }
-    const auto has_image = current_agent_info->image;
+    const auto has_image = static_cast<bool>(current_agent_info->image);
     if (ImGui::BeginTable("table1", has_image ? 2 : 1)) {
         ImGui::TableSetupColumn("col0", ImGuiTableColumnFlags_WidthStretch, 1.0f);
         if (has_image)
@@ -415,7 +415,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
         ImGui::TableNextRow();
         if (has_image) {
             ImGui::TableNextColumn();
-            ImGui::ImageFit(*current_agent_info->image, ImGui::GetContentRegionAvail());
+            ImGui::ImageFit(current_agent_info->image.Get(), ImGui::GetContentRegionAvail());
         }
         ImGui::TableNextColumn();
         ImGui::PushFont(FontLoader::GetFont(), static_cast<float>(FontLoader::FontSize::header2));
@@ -436,8 +436,8 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
                 const float btnw = ImGui::GetContentRegionAvail().x;
                 const ImVec2 btn_dims = {btnw, .0f};
                 const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-                const auto skill_img = Resources::GetSkillImage(skill_id);
-                if (ImGui::IconButton(Resources::DecodeStringId(skill->name)->string().c_str(), *skill_img, btn_dims)) {
+                const auto& skill_img = Resources::GetSkillImage(skill_id);
+                if (ImGui::IconButton(Resources::DecodeStringId(skill->name)->string().c_str(), skill_img.Get(), btn_dims)) {
                     wchar_t url_buf[64];
                     swprintf(url_buf, _countof(url_buf), L"Game_link:Skill_%d", skill_id);
                     GuiUtils::OpenWiki(url_buf);
@@ -455,8 +455,8 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
                 const float btnw = ImGui::GetContentRegionAvail().x;
                 const ImVec2 btn_dims = {btnw, .0f};
                 const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-                const auto skill_img = Resources::GetSkillImage(skill_id);
-                if (ImGui::IconButton(Resources::DecodeStringId(skill->name)->string().c_str(), *skill_img, btn_dims)) {
+                const auto& skill_img = Resources::GetSkillImage(skill_id);
+                if (ImGui::IconButton(Resources::DecodeStringId(skill->name)->string().c_str(), skill_img.Get(), btn_dims)) {
                     wchar_t url_buf[64];
                     swprintf(url_buf, _countof(url_buf), L"Game_link:Skill_%d", skill_id);
                     GuiUtils::OpenWiki(url_buf);
@@ -482,9 +482,9 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
                 };
                 ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
                 const auto label = std::format("{}: {}", damage_type, armour_rating);
-                if (const auto dmgtype_img = Resources::GetDamagetypeImage(damage_type)) {
+                if (const auto& dmgtype_img = Resources::GetDamagetypeImage(damage_type)) {
                     ImGui::PushID(damage_type.c_str());
-                    if (ImGui::IconButton(label.c_str(), *dmgtype_img, btn_dims)) {
+                    if (ImGui::IconButton(label.c_str(), dmgtype_img.Get(), btn_dims)) {
                         open_wiki();
                     }
                     ImGui::PopID();
@@ -508,8 +508,8 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
                 const float btnw = ImGui::GetContentRegionAvail().x;
                 const ImVec2 btn_dims = {btnw, .0f};
                 const auto item_name_ws = TextUtils::StringToWString(item_name);
-                const auto item_image = Resources::GetItemImage(item_name_ws);
-                if (ImGui::IconButton(item_name.c_str(), *item_image, btn_dims)) {
+                const auto& item_image = Resources::GetItemImage(item_name_ws);
+                if (ImGui::IconButton(item_name.c_str(), item_image.Get(), btn_dims)) {
                     GuiUtils::SearchWiki(item_name_ws.c_str());
                 }
             }

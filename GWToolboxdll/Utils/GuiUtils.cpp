@@ -147,19 +147,19 @@ namespace GuiUtils {
         const auto primary_icon = Resources::GetProfessionIcon(skill_template.primary);
 
         auto cursor_pos = ImGui::GetCursorPos();
-        ImGui::ImageCropped(*primary_icon, { text_size, text_size });
+        ImGui::ImageCropped(primary_icon.Get(), { text_size, text_size });
 
         if (skill_template.secondary != GW::Constants::Profession::None) {
             cursor_pos.y += text_size;
             ImGui::SetCursorPos(cursor_pos);
             const auto secondary_icon = Resources::GetProfessionIcon(skill_template.secondary);
-            ImGui::ImageCropped(*secondary_icon, { text_size, text_size });
+            ImGui::ImageCropped(secondary_icon.Get(), { text_size, text_size });
             cursor_pos.y -= text_size;
         }
         cursor_pos.x += text_size;
         for (auto& skill : skill_template.skills) {
             ImGui::SetCursorPos(cursor_pos);
-            ImGui::ImageCropped(*Resources::GetSkillImage(skill), skill_size);
+            ImGui::ImageCropped(Resources::GetSkillImage(skill).Get(), skill_size);
             cursor_pos.x += skill_size.x;
         }
     }

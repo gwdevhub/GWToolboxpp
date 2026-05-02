@@ -121,9 +121,9 @@ namespace {
 
     ImRect controls_window_rect = {0, 0, 0, 0};
 
-    IDirect3DTexture9** quest_icon_texture = nullptr;
-    IDirect3DTexture9** player_icon_texture = nullptr;
-    IDirect3DTexture9** portal_icon_texture = nullptr;
+    Resources::Texture quest_icon_texture;
+    Resources::Texture player_icon_texture;
+    Resources::Texture portal_icon_texture;
 
     bool showing_all_outposts = false;
     bool apply_quest_colors = false;
@@ -629,12 +629,12 @@ namespace {
             }
         }
 
-        const auto texture = Resources::GetSkillImage(boss.skill_id);
+        const auto& texture = Resources::GetSkillImage(boss.skill_id);
         // const auto texture = Resources::GetProfessionIcon((GW::Constants::Profession)skill->profession);
 
-        if (!(texture && *texture)) return false;
+        if (!texture) return false;
 
-        if (!Resources::GetTextureSize(*texture, &skill_texture_size)) return false;
+        if (!Resources::GetTextureSize(texture.Get(), &skill_texture_size)) return false;
 
         float icon_size = world_map_context->zoom == 1.f ? 32.f : 16.f;
         const auto half_size = icon_size / 2.f;
@@ -745,7 +745,7 @@ namespace {
 
             const ImRect icon_rect = {{viewport_quest_pos.x - half_size, viewport_quest_pos.y - half_size}, {viewport_quest_pos.x + half_size, viewport_quest_pos.y + half_size}};
 
-            ImGui::AddImageScaled(draw_list, *texture, icon_rect.Min, skill_texture_size, icon_size, icon_size);
+            ImGui::AddImageScaled(draw_list, texture.Get(), icon_rect.Min, skill_texture_size, icon_size, icon_size);
             hovered |= icon_rect.Contains(ImGui::GetMousePos());
         }
 
@@ -776,7 +776,7 @@ namespace {
             ImVec2 uv_points[4];
             CalculateUVCoords(0.0f, 0.5f, uv_points); // Left-hand side of the sprite map
 
-            draw_list->AddImageQuad(*quest_icon_texture, rotated_points[0], rotated_points[1], rotated_points[2], rotated_points[3], uv_points[0], uv_points[1], uv_points[2], uv_points[3], color & IM_COL32_A_MASK ? color : IM_COL32_WHITE);
+            draw_list->AddImageQuad(quest_icon_texture.Get(), rotated_points[0], rotated_points[1], rotated_points[2], rotated_points[3], uv_points[0], uv_points[1], uv_points[2], uv_points[3], color & IM_COL32_A_MASK ? color : IM_COL32_WHITE);
 
             return icon_rect.Contains(ImGui::GetMousePos());
         };
@@ -801,7 +801,7 @@ namespace {
             ImVec2 uv_points[4];
             CalculateUVCoords(0.5f, 1.0f, uv_points); // Right-hand side of the sprite map
 
-            draw_list->AddImageQuad(*quest_icon_texture, rotated_points[0], rotated_points[1], rotated_points[2], rotated_points[3], uv_points[0], uv_points[1], uv_points[2], uv_points[3], color & IM_COL32_A_MASK ? color : IM_COL32_WHITE);
+            draw_list->AddImageQuad(quest_icon_texture.Get(), rotated_points[0], rotated_points[1], rotated_points[2], rotated_points[3], uv_points[0], uv_points[1], uv_points[2], uv_points[3], color & IM_COL32_A_MASK ? color : IM_COL32_WHITE);
 
             return icon_rect.Contains(ImGui::GetMousePos());
         };
@@ -850,7 +850,7 @@ namespace {
         const auto viewport_pos = CalculateViewportPos(pos, world_map_context->top_left);
         const ImRect icon_rect = {{viewport_pos.x - quest_icon_size_half, viewport_pos.y - quest_icon_size_half}, {viewport_pos.x + quest_icon_size_half, viewport_pos.y + quest_icon_size_half}};
 
-        draw_list->AddImage(*quest_icon_texture, icon_rect.Min, icon_rect.Max);
+        draw_list->AddImage(quest_icon_texture.Get(), icon_rect.Min, icon_rect.Max);
 
         return icon_rect.Contains(ImGui::GetMousePos());
     }
@@ -880,7 +880,7 @@ void WorldMapWidget::Initialize()
     memset(show_elite_capture_locations, true, sizeof(show_elite_capture_locations));
     quest_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x1b4d5);
     player_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x5d3b);
-    portal_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x246c); // IDirect3DTexture9**
+    portal_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x246c);
 
     uintptr_t address = GW::Scanner::Find("\x8b\x45\xfc\xf7\x40\x10\x00\x00\x01\x00", "xxxxxxxxxx", 0xa);
     if (address) {
@@ -1112,12 +1112,12 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         ImGui::Indent();
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0.f, 0.f});
         for (size_t i = 1; i < _countof(show_elite_capture_locations); i++) {
-            const auto icon = Resources::GetProfessionIcon((GW::Constants::Profession)i);
-            if (!(icon && *icon)) continue;
+            const auto& icon = Resources::GetProfessionIcon((GW::Constants::Profession)i);
+            if (!icon) continue;
             if (i != 1) ImGui::SameLine();
             ImGui::PushID(i);
             ImGui::PushStyleColor(ImGuiCol_Button, show_elite_capture_locations[i] ? completed_bg.Value : ImGui::GetStyleColorVec4(ImGuiCol_Button));
-            if (ImGui::IconButton("", *icon, {24.f, 24.f})) {
+            if (ImGui::IconButton("", icon.Get(), {24.f, 24.f})) {
                 show_elite_capture_locations[i] = !show_elite_capture_locations[i];
             }
             ImGui::PopStyleColor();
@@ -1209,7 +1209,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             portal_pos, {portal_pos.x + ICON_SIZE.x, portal_pos.y + ICON_SIZE.y}
         };
 
-        draw_list->AddImage(*GwDatTextureModule::LoadTextureFromFileId(0x1b4d5), hover_rect.GetTL(), hover_rect.GetBR());
+        draw_list->AddImage(GwDatTextureModule::LoadTextureFromFileId(0x1b4d5).Get(), hover_rect.GetTL(), hover_rect.GetBR());
 
 
         if (hover_rect.Contains(ImGui::GetMousePos())) {

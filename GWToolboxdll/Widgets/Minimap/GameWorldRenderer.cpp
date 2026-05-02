@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <Utils/ComPtr.h>
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Camera.h>
@@ -29,9 +30,9 @@ namespace {
 
     GameWorldRenderer::RenderableVectors renderables;
     std::mutex renderables_mutex{};
-    IDirect3DVertexShader9* vshader = nullptr;
-    IDirect3DPixelShader9* pshader = nullptr;
-    IDirect3DVertexDeclaration9* vertex_declaration = nullptr;
+    TBComPtr<IDirect3DVertexShader9> vshader;
+    TBComPtr<IDirect3DPixelShader9> pshader;
+    TBComPtr<IDirect3DVertexDeclaration9> vertex_declaration;
 
     constexpr GW::Vec2f lerp(const GW::Vec2f& a, const GW::Vec2f& b, const float t)
     {
@@ -337,30 +338,39 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
     device->GetVertexShaderConstantF(4, old_proj_matrix, 4);
     device->GetPixelShaderConstantF(0, old_ps_constants, 3);
 
-    IDirect3DVertexShader9* vshader_old = nullptr;
-    IDirect3DPixelShader9* pshader_old = nullptr;
+    TBComPtr<IDirect3DVertexShader9> vshader_old;
+    TBComPtr<IDirect3DPixelShader9> pshader_old;
+    TBComPtr<IDirect3DVertexDeclaration9> old_vertex_declaration;
 
-    if (device->GetVertexShader(&vshader_old) != D3D_OK) {
+    IDirect3DVertexShader9* raw_vs = nullptr;
+    if (device->GetVertexShader(&raw_vs) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to GetVertexShader, aborting render.");
     }
-    if (device->GetPixelShader(&pshader_old) != D3D_OK) {
+    vshader_old.Attach(raw_vs);
+
+    IDirect3DPixelShader9* raw_ps = nullptr;
+    if (device->GetPixelShader(&raw_ps) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to GetPixelShader, aborting render.");
     }
+    pshader_old.Attach(raw_ps);
 
-    if (vshader == nullptr || device->SetVertexShader(vshader) != D3D_OK) {
+    if (!vshader || device->SetVertexShader(vshader.Get()) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to SetVertexShader, aborting render.");
         return;
     }
-    if (pshader == nullptr || device->SetPixelShader(pshader) != D3D_OK) {
+    if (!pshader || device->SetPixelShader(pshader.Get()) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to SetPixelShader, aborting render.");
         return;
     }
-    IDirect3DVertexDeclaration9* old_vertex_declaration = nullptr;
-    if (device->GetVertexDeclaration(&old_vertex_declaration) != D3D_OK) {
+
+    IDirect3DVertexDeclaration9* raw_decl = nullptr;
+    if (device->GetVertexDeclaration(&raw_decl) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to GetVertexShader declaration, aborting render.");
         return;
     }
-    if (device->SetVertexDeclaration(vertex_declaration) != D3D_OK) {
+    old_vertex_declaration.Attach(raw_decl);
+
+    if (device->SetVertexDeclaration(vertex_declaration.Get()) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to SetVertexShader declaration, aborting render.");
         return;
     }
@@ -420,23 +430,14 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
     device->SetVertexShaderConstantF(0, old_view_matrix, 4);
     device->SetVertexShaderConstantF(4, old_proj_matrix, 4);
     device->SetPixelShaderConstantF(0, old_ps_constants, 3);
-    if (device->SetVertexShader(vshader_old) != D3D_OK) {
+    if (device->SetVertexShader(vshader_old.Get()) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to reset SetVertexShader.");
     }
-    if (device->SetPixelShader(pshader_old) != D3D_OK) {
+    if (device->SetPixelShader(pshader_old.Get()) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to reset SetPixelShader.");
     }
-    if (device->SetVertexDeclaration(old_vertex_declaration) != D3D_OK) {
+    if (device->SetVertexDeclaration(old_vertex_declaration.Get()) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to set old SetVertexShader declaration, aborting render.");
-    }
-    if (old_vertex_declaration) {
-        old_vertex_declaration->Release();
-    }
-    if (vshader_old) {
-        vshader_old->Release();
-    }
-    if (pshader_old) {
-        pshader_old->Release();
     }
 }
 
@@ -446,19 +447,23 @@ bool GameWorldRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
         {0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
         {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0},
         D3DDECL_END()};
-    if (device->CreateVertexDeclaration(decl, &vertex_declaration) != D3D_OK) {
-        //Log::Error("GameWorldRenderer: unable to CreateVertexDeclaration");
+    IDirect3DVertexDeclaration9* raw_decl = nullptr;
+    if (device->CreateVertexDeclaration(decl, &raw_decl) != D3D_OK) {
         return false;
     }
+    vertex_declaration.Attach(raw_decl);
 
-    if (device->CreateVertexShader(reinterpret_cast<const DWORD*>(&game_world_renderer_vs), &vshader) != D3D_OK) {
-        //Log::Error("GameWorldRenderer: unable to CreateVertexShader");
+    IDirect3DVertexShader9* raw_vs = nullptr;
+    if (device->CreateVertexShader(reinterpret_cast<const DWORD*>(&game_world_renderer_vs), &raw_vs) != D3D_OK) {
         return false;
     }
-    if (device->CreatePixelShader(reinterpret_cast<const DWORD*>(&game_world_renderer_dotted_ps), &pshader) != D3D_OK) {
-        //Log::Error("GameWorldRenderer: unable to CreatePixelShader");
+    vshader.Attach(raw_vs);
+
+    IDirect3DPixelShader9* raw_ps = nullptr;
+    if (device->CreatePixelShader(reinterpret_cast<const DWORD*>(&game_world_renderer_dotted_ps), &raw_ps) != D3D_OK) {
         return false;
     }
+    pshader.Attach(raw_ps);
     need_configure_pipeline = false;
     return true;
 }
@@ -504,15 +509,9 @@ void GameWorldRenderer::Terminate()
 {
     // free up any vertex buffers
     renderables.clear();
-    if (vshader)
-        vshader->Release();
-    vshader = nullptr;
-    if (pshader)
-        pshader->Release();
-    pshader = nullptr;
-    if (vertex_declaration)
-        vertex_declaration->Release();
-    vertex_declaration = nullptr;
+    vshader.Reset();
+    pshader.Reset();
+    vertex_declaration.Reset();
 }
 
 void GameWorldRenderer::SyncAllMarkers()

@@ -231,7 +231,7 @@ const char* HERO_NAME[] = {
 
         uint32_t item_id{};
         // caches, do not serialize
-        IDirect3DTexture9** texture; // output of GetItemImage
+        Resources::Texture texture; // output of GetItemImage
         std::string location{};     // (Player) <Storage Pane> or <Hero Name>
 
         void CopyKeyTo(InventoryItem* i)
@@ -1954,8 +1954,8 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         }
         else {
             const auto pos = ImGui::GetCursorPos();
-            if (i_front->texture && *(i_front->texture))
-                clicked = ImGui::IconButton(nullptr, *i_front->texture, button_size, ImGuiButtonFlags_None, button_size);
+            if (i_front->texture)
+                clicked = ImGui::IconButton(nullptr, i_front->texture.Get(), button_size, ImGuiButtonFlags_None, button_size);
             else
                 clicked = ImGui::Button("???", button_size);
 

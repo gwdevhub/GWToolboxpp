@@ -3,6 +3,7 @@
 #include <GWCA/Constants/Constants.h>
 
 #include <Modules/HallOfMonumentsModule.h>
+#include <Modules/Resources.h>
 #include <ToolboxWindow.h>
 #include <Color.h>
 #include <Utils/GuiUtils.h>
@@ -21,8 +22,8 @@ namespace Missions {
         GW::Constants::QuestID zm_quest;
 
         uint8_t mission_state = 0;
-        // Array of placeholder pointers; the actual IDirect3DTexture9* is loaded from dx9
-        IDirect3DTexture9** icons[4] = { nullptr };
+        // Array of Texture values; populated asynchronously from dx9
+        Resources::Texture icons[4];
         bool icons_loaded = false;
         ImVec2 icon_uv_offset[2] = { { .0f,.0f },{0.f,0.f} };
 
@@ -77,9 +78,10 @@ namespace Missions {
     class HeroUnlock : public PvESkill {
     public:
         HeroUnlock(GW::Constants::HeroID _hero_id);
-        ~HeroUnlock();
 
         size_t GetLoadedIcons(IDirect3DTexture9* icons_out[4]) override;
+
+        Resources::Texture hero_texture;
 
         void OnClick() override;
         void OnHover() override { ImGui::SetTooltip(Name()); };
