@@ -61,6 +61,7 @@ public:
         static const wchar_t* GetCSVHeader();
         GuiUtils::EncString* GetItemName();
     };
+    static_assert(sizeof(PendingDrop) == 52);
 
     std::vector<PendingDrop*>& GetDropHistory();
     int GetTotalGoldValue();
