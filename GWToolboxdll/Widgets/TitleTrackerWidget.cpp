@@ -499,7 +499,9 @@ void TitleTrackerWidget::DrawSettingsInternal()
     if (ImGui::Checkbox("Automatically show title progress for current map", &automatically_show_title_progress_for_current_map)) {
         RefreshTitleProgress();
     }
-    ImGui::ShowHelp("e.g. when in an Asuran area, display title progress for the Asuran title track");
+    ImGui::ShowHelp("e.g. when in an Asuran area, display title progress for the Asuran title track.\n"
+                    "This only adds titles that are NOT ticked in the list below;\n"
+                    "ticked titles are always shown regardless of the current map.");
     ImGui::InputFloat("Progress bar height", &progress_bar_height, 1.f, 4.f, "%.f");
     ImGui::Text("Show/Hide Titles:");
     ImGui::Indent();
