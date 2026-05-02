@@ -7,6 +7,7 @@
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/ItemContext.h>
 #include <GWCA/Context/WorldContext.h>
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
