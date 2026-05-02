@@ -40,6 +40,9 @@ namespace {
     bool show_enable_button = true;
 
     bool disable_pcons_on_map_change = false;
+    bool disable_pcons_on_long_load = false;
+    int disable_pcons_long_load_threshold_seconds = 3;
+    clock_t loading_started_at = 0;
     bool disable_cons_on_vanquish_completion = true;
     bool disable_cons_on_dungeon_completion = true;
     bool disable_cons_on_mission_completion = true;
@@ -653,13 +656,34 @@ void PconsWindow::MapChanged()
     elite_area_check_timer = TIMER_INIT();
     map_id = GW::Map::GetMapID();
     Pcon::map_has_effects_array = false;
+    const auto old_instance_type = instance_type;
+    const auto new_instance_type = GW::Map::GetInstanceType();
+    // Track loading screen duration to optionally disable pcons on long loads.
+    if (new_instance_type == InstanceType::Loading && old_instance_type != InstanceType::Loading) {
+        loading_started_at = TIMER_INIT();
+    }
     if (instance_type != InstanceType::Loading) {
         previous_instance_type = instance_type;
     }
-    instance_type = GW::Map::GetInstanceType();
+    instance_type = new_instance_type;
     // If we've just come from an explorable area then disable pcons.
     if (disable_pcons_on_map_change && previous_instance_type == InstanceType::Explorable) {
         SetEnabled(false);
+    }
+    // If we just finished a long loading screen into an explorable area,
+    // disable pcons so the player doesn't burn them on a doomed run.
+    if (disable_pcons_on_long_load && old_instance_type == InstanceType::Loading
+        && new_instance_type == InstanceType::Explorable
+        && loading_started_at != 0
+        && TIMER_DIFF(loading_started_at) > disable_pcons_long_load_threshold_seconds * 1000) {
+        if (enabled) {
+            Log::Warning("Loading screen took longer than %d seconds; pcons auto-disabled.",
+                         disable_pcons_long_load_threshold_seconds);
+        }
+        SetEnabled(false);
+    }
+    if (new_instance_type != InstanceType::Loading) {
+        loading_started_at = 0;
     }
 
     player = nullptr;
@@ -816,6 +840,8 @@ void PconsWindow::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(shift_click_toggles_category);
 
     LOAD_BOOL(disable_pcons_on_map_change);
+    LOAD_BOOL(disable_pcons_on_long_load);
+    disable_pcons_long_load_threshold_seconds = ini->GetLongValue(Name(), VAR_NAME(disable_pcons_long_load_threshold_seconds), disable_pcons_long_load_threshold_seconds);
     LOAD_BOOL(disable_cons_on_vanquish_completion);
     LOAD_BOOL(disable_cons_on_dungeon_completion);
     LOAD_BOOL(disable_cons_on_mission_completion);
@@ -874,6 +900,8 @@ void PconsWindow::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_storage_quantity);
 
     SAVE_BOOL(disable_pcons_on_map_change);
+    SAVE_BOOL(disable_pcons_on_long_load);
+    ini->SetLongValue(Name(), VAR_NAME(disable_pcons_long_load_threshold_seconds), disable_pcons_long_load_threshold_seconds);
     SAVE_BOOL(disable_cons_on_vanquish_completion);
     SAVE_BOOL(disable_cons_on_dungeon_completion);
     SAVE_BOOL(disable_cons_on_mission_completion);
@@ -1022,4 +1050,15 @@ void PconsWindow::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Disable on map change", &disable_pcons_on_map_change);
     ImGui::ShowHelp("Toolbox will disable pcons when leaving an explorable area");
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Disable on long loading screen", &disable_pcons_on_long_load);
+    ImGui::ShowHelp("Toolbox will disable pcons when entering an explorable area\nif the loading screen took longer than the threshold below.\nUseful to avoid wasting pcons on a run that you'll have to restart.");
+    if (disable_pcons_on_long_load) {
+        ImGui::SameLine();
+        ImGui::PushItemWidth(120.f * ImGui::FontScale());
+        if (ImGui::DragInt("Threshold (s)###disable_pcons_long_load_threshold_seconds", &disable_pcons_long_load_threshold_seconds, 0.1f, 1, 60)) {
+            if (disable_pcons_long_load_threshold_seconds < 1) disable_pcons_long_load_threshold_seconds = 1;
+        }
+        ImGui::PopItemWidth();
+    }
 }
