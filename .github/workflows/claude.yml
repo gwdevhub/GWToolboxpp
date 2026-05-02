@@ -13,8 +13,40 @@ on:
     types: [submitted]
   issues:
     types: [opened, assigned]
+  pull_request_target:
+    types: [opened]
 
 jobs:
+  label-ai-pr:
+    # Claude doesn't open PRs itself — it commits to a claude/* branch and
+    # comments a pre-filled link that a human clicks. So the PR author is
+    # the human, but the branch name identifies it as a Claude PR.
+    if: github.event_name == 'pull_request_target' && startsWith(github.event.pull_request.head.ref, 'claude/')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            try {
+              await github.rest.issues.createLabel({
+                owner, repo,
+                name: 'AI',
+                color: '8a2be2',
+                description: 'Created by AI',
+              });
+            } catch (e) {
+              if (e.status !== 422) throw e; // 422 = already exists
+            }
+            await github.rest.issues.addLabels({
+              owner, repo,
+              issue_number: context.payload.pull_request.number,
+              labels: ['AI'],
+            });
+
   claude:
     if: |
       (
