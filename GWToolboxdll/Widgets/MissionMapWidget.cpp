@@ -107,12 +107,25 @@ namespace {
 
         const auto* mm_ctx = GW::Map::GetMissionMapContext();
         if (!mm_ctx || !mm_ctx->h003c) return;
-
         const GW::Vec2f mm_pos = mm_ctx->h003c->player_mission_map_pos;
-        GW::GamePos anchor_pos;
-        if (!WorldMapWidget::WorldMapToGamePos(mm_pos, anchor_pos)) return;
-        const float px = anchor_pos.x;
-        const float py = anchor_pos.y;
+
+        // Use the controlled character's position when not spectating (works on
+        // underground maps where WorldMapToGamePos returns wrong coordinates).
+        // When spectating, mm_pos tracks the observed character so we must convert
+        // it back to game coords to stay consistent with the origin calculation.
+        float px, py;
+        const auto* player = GW::Agents::GetControlledCharacter();
+        const bool spectating = player && GW::Agents::GetObservingId() != player->agent_id;
+        if (spectating) {
+            GW::GamePos anchor_pos;
+            if (!WorldMapWidget::WorldMapToGamePos(mm_pos, anchor_pos)) return;
+            px = anchor_pos.x;
+            py = anchor_pos.y;
+        } else {
+            if (!player) return;
+            px = player->pos.x;
+            py = player->pos.y;
+        }
 
         if (mission_map_zoom != cached_basis_zoom || !valid) {
             cached_basis_zoom = mission_map_zoom;
@@ -131,11 +144,11 @@ namespace {
 
         const GW::Vec2f mm_offset = mm_pos - current_pan_offset;
         const GW::Vec2f mm_scaled = {mm_offset.x * mission_map_scale.x, mm_offset.y * mission_map_scale.y};
-        const GW::Vec2f anchor_screen = {mm_scaled.x * mission_map_zoom + mission_map_screen_pos.x,
+        const GW::Vec2f player_screen = {mm_scaled.x * mission_map_zoom + mission_map_screen_pos.x,
                                          mm_scaled.y * mission_map_zoom + mission_map_screen_pos.y};
 
-        ox = roundf(anchor_screen.x - px * ax - py * bx);
-        oy = roundf(anchor_screen.y - px * ay - py * by);
+        ox = player_screen.x - px * ax - py * bx;
+        oy = player_screen.y - px * ay - py * by;
         valid = true;
     }
 
