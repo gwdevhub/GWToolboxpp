@@ -73,10 +73,13 @@ public:
     static DailyQuestResult GetNicholasTheTraveller(time_t unix = 0);
     static time_t GetTimestampFromNicholasTheTraveller(DailyQuests::NicholasCycleData* data);
     static DailyQuestResult GetNicholasSandford(time_t unix = 0);
+    static time_t GetTimestampFromNicholasSandford(DailyQuests::QuestData* data);
     static DailyQuestResult GetVanguardQuest(time_t unix = 0);
     static DailyQuestResult GetWantedByShiningBlade(time_t unix = 0);
     static DailyQuestResult GetWeeklyPvEBonus(time_t unix = 0);
     static DailyQuestResult GetWeeklyPvPBonus(time_t unix = 0);
     // Returns info about the nicholas item if the given item name matches
     static NicholasCycleData* GetNicholasItemInfo(const wchar_t* item_name_encoded);
+    // Returns info about the Nicholas Sandford (pre-searing) item if the given item name matches
+    static QuestData* GetNicholasSandfordItemInfo(const wchar_t* item_name_encoded);
 };

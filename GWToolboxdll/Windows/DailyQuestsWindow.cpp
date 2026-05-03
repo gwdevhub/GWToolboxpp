@@ -1793,6 +1793,31 @@ DailyQuests::NicholasCycleData* DailyQuests::GetNicholasItemInfo(const wchar_t* 
     return nullptr;
 }
 
+DailyQuests::QuestData* DailyQuests::GetNicholasSandfordItemInfo(const wchar_t* item_name_encoded)
+{
+    if (!item_name_encoded) return nullptr;
+    for (auto& sandford_item : nicholas_sandford_cycles) {
+        if (sandford_item.enc_name == item_name_encoded) {
+            return &sandford_item;
+        }
+    }
+    return nullptr;
+}
+
+time_t DailyQuests::GetTimestampFromNicholasSandford(QuestData* data)
+{
+    constexpr time_t NICHOLAS_PRE_START_DATE = 1239260400;
+    constexpr int SECONDSINADAY = 86400;
+    auto index = -1;
+    for (auto i = 0; i < static_cast<int>(NICHOLAS_PRE_COUNT); i++) {
+        if (&nicholas_sandford_cycles[i] == data) {
+            index = i;
+        }
+    }
+    assert(index != -1);
+    return GetNextEventTime(NICHOLAS_PRE_START_DATE, time(nullptr), index, NICHOLAS_PRE_COUNT, SECONDSINADAY);
+}
+
 DailyQuests::DailyQuestResult DailyQuests::GetNicholasTheTraveller(time_t unix)
 {
     constexpr time_t EPOCH = 1323097200;
