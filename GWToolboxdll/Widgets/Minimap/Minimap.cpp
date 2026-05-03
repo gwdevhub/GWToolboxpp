@@ -1113,6 +1113,33 @@ void Minimap::DrawSettingsInternal()
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);
+    if (agent_renderer.boss_colors) {
+        ImGui::Indent();
+        if (ImGui::TreeNodeEx("Boss profession colors", ImGuiTreeNodeFlags_FramePadding)) {
+            constexpr uint32_t color_flags = ImGuiColorEditFlags_NoInputs;
+            static const char* prof_names[] = {
+                nullptr,        // 0 = None, hidden
+                "Warrior",      // 1
+                "Ranger",       // 2
+                "Monk",         // 3
+                "Necromancer",  // 4
+                "Mesmer",       // 5
+                "Elementalist", // 6
+                "Assassin",     // 7
+                "Ritualist",    // 8
+                "Paragon",      // 9
+                "Dervish",      // 10
+            };
+            ImGui::StartSpacedElements(180.f);
+            for (size_t i = 1; i < _countof(prof_names); ++i) {
+                ImGui::NextSpacedElement();
+                Colors::DrawSettingHueWheel(prof_names[i], &agent_renderer.profession_colors[i], color_flags);
+            }
+            ImGui::TreePop();
+        }
+        ImGui::Unindent();
+        ImGui::StartSpacedElements(300.f);
+    }
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show hidden NPCs", &agent_renderer.show_hidden_npcs);
     ImGui::ShowHelp("Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");

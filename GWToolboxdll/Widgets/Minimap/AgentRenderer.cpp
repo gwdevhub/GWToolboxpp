@@ -201,6 +201,24 @@ void AgentRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
     LOAD_COLOR(color_ally_minion);
     LOAD_COLOR(color_ally_dead);
     LOAD_BOOL(boss_colors);
+    {
+        constexpr const char* keys[] = {
+            nullptr, // None
+            "color_profession_warrior",
+            "color_profession_ranger",
+            "color_profession_monk",
+            "color_profession_necromancer",
+            "color_profession_mesmer",
+            "color_profession_elementalist",
+            "color_profession_assassin",
+            "color_profession_ritualist",
+            "color_profession_paragon",
+            "color_profession_dervish",
+        };
+        for (size_t i = 1; i < _countof(keys); ++i) {
+            profession_colors[i] = Colors::Load(ini, Name(), keys[i], profession_colors[i]);
+        }
+    }
     LOAD_BOOL(show_quest_npcs_on_minimap);
 
 #ifdef _DEBUG
@@ -301,6 +319,24 @@ void AgentRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
 
     SAVE_BOOL(show_hidden_npcs);
     SAVE_BOOL(boss_colors);
+    {
+        constexpr const char* keys[] = {
+            nullptr, // None
+            "color_profession_warrior",
+            "color_profession_ranger",
+            "color_profession_monk",
+            "color_profession_necromancer",
+            "color_profession_mesmer",
+            "color_profession_elementalist",
+            "color_profession_assassin",
+            "color_profession_ritualist",
+            "color_profession_paragon",
+            "color_profession_dervish",
+        };
+        for (size_t i = 1; i < _countof(keys); ++i) {
+            Colors::Save(ini, Name(), keys[i], profession_colors[i]);
+        }
+    }
     SAVE_BOOL(show_quest_npcs_on_minimap);
     SaveCustomAgents();
 }
