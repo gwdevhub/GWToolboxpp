@@ -29,15 +29,15 @@ namespace {
     ImU32 ConditionedColor = IM_COL32(160, 117, 85, 255);
     ImU32 EnchantedColor = IM_COL32(224, 253, 94, 255);
 
-    std::unordered_map<uint32_t, GuiUtils::EncString*> agent_names_by_id;
+    std::unordered_map<uint32_t, std::unique_ptr<GuiUtils::EncString>> agent_names_by_id;
 
     std::string& GetAgentName(uint32_t agent_id)
     {
         const auto enc_name = GW::Agents::GetAgentEncName(agent_id);
         if (!agent_names_by_id.contains(agent_id)) {
-            agent_names_by_id[agent_id] = new GuiUtils::EncString();
+            agent_names_by_id[agent_id] = std::make_unique<GuiUtils::EncString>();
         }
-        auto enc_string = agent_names_by_id[agent_id];
+        auto* enc_string = agent_names_by_id[agent_id].get();
         enc_string->reset(enc_name);
         return enc_string->string();
     }
@@ -218,9 +218,6 @@ namespace {
     {
         enemies.clear();
         all_enemies.clear();
-        for (const auto enc_name : agent_names_by_id | std::views::values) {
-            delete enc_name;
-        }
         agent_names_by_id.clear();
     }
 } // namespace

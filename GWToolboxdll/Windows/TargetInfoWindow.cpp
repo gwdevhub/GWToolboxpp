@@ -20,7 +20,7 @@
 
 namespace {
     bool auto_hide = true;
-    std::map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names_by_id;
+    std::map<GW::Constants::SkillID, std::unique_ptr<GuiUtils::EncString>> skill_names_by_id;
     std::unordered_map<std::string, GW::Constants::SkillID> skill_ids_by_name;
 
     // Make sure you pass valid html e.g. start with a < tag
@@ -292,23 +292,22 @@ namespace {
                 const auto skill_data = GW::SkillbarMgr::GetSkillConstantData((GW::Constants::SkillID)i);
                 if (!(skill_data && skill_data->name && skill_ids_by_name_id.find(skill_data->name) == skill_ids_by_name_id.end()))
                     continue;
-                auto enc = new GuiUtils::EncString();
+                auto enc = std::make_unique<GuiUtils::EncString>();
                 enc->language(GW::Constants::Language::English);
                 enc->reset(skill_data->name);
                 enc->wstring();
-                skill_ids_by_name_id[skill_data->name] = enc;
-                skill_names_by_id[(GW::Constants::SkillID)i] = enc;
+                skill_ids_by_name_id[skill_data->name] = enc.get();
+                skill_names_by_id[(GW::Constants::SkillID)i] = std::move(enc);
             }
         }
-        for (auto it : skill_names_by_id) {
+        for (const auto& it : skill_names_by_id) {
             if (it.second->IsDecoding())
                 return;
         }
-        for (auto it : skill_names_by_id) {
+        for (const auto& it : skill_names_by_id) {
             // Only match the first of this name to the id
             if (!skill_ids_by_name.contains(it.second->string()))
                 skill_ids_by_name[it.second->string()] = it.first;
-            delete it.second;
         }
         skill_names_by_id.clear();
     }

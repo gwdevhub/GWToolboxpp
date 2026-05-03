@@ -99,7 +99,7 @@ namespace {
     GW::HookEntry OnSendDialog_Entry;
 
     int pending_map_names = 1;
-    std::unordered_map<uint32_t,GuiUtils::EncString*> encoded_name_id_to_string;
+    std::unordered_map<uint32_t, std::unique_ptr<GuiUtils::EncString>> encoded_name_id_to_string;
 
     bool record_textures = false;
     bool record_ui_messages = false;

@@ -50,7 +50,7 @@ namespace {
     struct SearchableArea {
     protected:
         char* name = nullptr;
-        GuiUtils::EncString* enc_name = nullptr;
+        std::unique_ptr<GuiUtils::EncString> enc_name;
 
     public:
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
@@ -63,7 +63,7 @@ namespace {
                 name = new char[1];
             }
             else {
-                enc_name = new GuiUtils::EncString(map_info->name_id);
+                enc_name = std::make_unique<GuiUtils::EncString>(map_info->name_id);
                 if (search_in_english)
                     enc_name->language(GW::Constants::Language::English);
                 enc_name->wstring();
@@ -72,7 +72,6 @@ namespace {
 
         ~SearchableArea()
         {
-            delete enc_name;
             delete[] name;
         }
 
@@ -91,8 +90,7 @@ namespace {
             const auto sanitised = SanitiseForSearch(enc_name->wstring());
             name = new char[sanitised.length() + 1];
             strcpy(name, sanitised.c_str());
-            delete enc_name;
-            enc_name = nullptr;
+            enc_name.reset();
             return name;
         }
     };

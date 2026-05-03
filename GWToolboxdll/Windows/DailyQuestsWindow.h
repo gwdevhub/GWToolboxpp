@@ -28,13 +28,15 @@ public:
 public:
     class QuestData {
     protected:
-        GuiUtils::EncString* name_english = nullptr;
-        GuiUtils::EncString* name_translated = nullptr;
+        std::unique_ptr<GuiUtils::EncString> name_english;
+        std::unique_ptr<GuiUtils::EncString> name_translated;
 
     public:
         const GW::Constants::MapID map_id;
         std::wstring enc_name;
         QuestData(GW::Constants::MapID map_id = (GW::Constants::MapID)0, const wchar_t* enc_name = nullptr);
+        QuestData(QuestData&&) noexcept = default;
+        QuestData& operator=(QuestData&&) noexcept = default;
         // Assert that encoded strings are nulled. Because QuestData structs are static, this destructor is not guaranteed to run!!
         ~QuestData();
         const char* GetMapName();

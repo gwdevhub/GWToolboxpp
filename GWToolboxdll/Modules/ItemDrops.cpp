@@ -84,20 +84,18 @@ namespace {
     using namespace GW::Constants::ItemID;
 
 
-    std::map<std::wstring, GuiUtils::EncString*> cached_item_names;
+    std::map<std::wstring, std::unique_ptr<GuiUtils::EncString>> cached_item_names;
     GuiUtils::EncString* GetItemName(const wchar_t* enc_string) {
         if (!enc_string) return nullptr;
         if (!cached_item_names.contains(enc_string)) {
-            auto enc_str = (new GuiUtils::EncString(enc_string))->language(GW::Constants::Language::English);
-            cached_item_names[enc_string] = enc_str;
+            auto enc_str = std::make_unique<GuiUtils::EncString>(enc_string);
+            enc_str->language(GW::Constants::Language::English);
+            cached_item_names[enc_string] = std::move(enc_str);
         }
-        return cached_item_names[enc_string];
+        return cached_item_names[enc_string].get();
     }
     void ClearItemNames()
     {
-        for (auto i : cached_item_names) {
-            i.second->Release();
-        }
         cached_item_names.clear();
     }
 
