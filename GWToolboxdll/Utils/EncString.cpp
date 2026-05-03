@@ -15,7 +15,6 @@ void EncString::AbandonDecode()
         pending_ctx_->owner = nullptr;
         pending_ctx_ = nullptr;
     }
-    decoding = false;
 }
 
 EncString* EncString::reset(const uint32_t enc_string_id, const bool sanitise)
@@ -60,7 +59,7 @@ EncString* EncString::reset(const wchar_t* enc_string, const bool sanitise)
     decoded_ws.clear();
     decoded_s.clear();
     decoded = false;
-    sanitised = !sanitise;
+    should_sanitise = sanitise;
     if (enc_string) {
         encoded_ws = enc_string;
     }
@@ -69,8 +68,7 @@ EncString* EncString::reset(const wchar_t* enc_string, const bool sanitise)
 
 void EncString::decode() const
 {
-    if (!decoded && !decoding && !encoded_ws.empty()) {
-        decoding = true;
+    if (!decoded && !pending_ctx_ && !encoded_ws.empty()) {
         pending_ctx_ = new DecodeContext{const_cast<EncString*>(this)};
         auto* ctx = pending_ctx_;
         GW::GameThread::Enqueue([ctx] {
@@ -86,20 +84,7 @@ void EncString::decode() const
 const std::wstring& EncString::wstring() const
 {
     decode();
-    sanitise();
     return decoded_ws;
-}
-
-void EncString::sanitise() const
-{
-    if (!sanitised && !decoded_ws.empty()) {
-        sanitised = true;
-        if (sanitise_cb) {
-            decoded_ws = sanitise_cb(std::move(decoded_ws));
-        } else {
-            decoded_ws = TextUtils::StripTags(TextUtils::Replace(decoded_ws, L"<brx>", L"\n"));
-        }
-    }
 }
 
 EncString::~EncString()
@@ -117,18 +102,24 @@ void EncString::OnStringDecoded(void* param, const wchar_t* decoded)
     auto* self = ctx->owner;
     self->pending_ctx_ = nullptr;
     if (decoded && decoded[0]) {
-        self->decoded_ws = decoded;
+        if (self->should_sanitise) {
+            if (self->sanitise_cb) {
+                self->decoded_ws = self->sanitise_cb(decoded);
+            } else {
+                self->decoded_ws = TextUtils::StripTags(TextUtils::Replace(decoded, L"<brx>", L"\n"));
+            }
+        } else {
+            self->decoded_ws = decoded;
+        }
     }
     self->decoded = true;
-    self->decoding = false;
     delete ctx;
 }
 
 const std::string& EncString::string() const
 {
     decode();
-    sanitise();
-    if (sanitised && !decoded_ws.empty() && decoded_s.empty()) {
+    if (decoded && !decoded_ws.empty() && decoded_s.empty()) {
         decoded_s = TextUtils::WStringToString(decoded_ws);
     }
     return decoded_s;

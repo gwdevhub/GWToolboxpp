@@ -15,11 +15,9 @@ namespace GuiUtils {
         std::wstring encoded_ws;
         mutable std::wstring decoded_ws;
         mutable std::string decoded_s;
-        mutable bool decoding = false;
         mutable bool decoded = false;
-        mutable bool sanitised = false;
+        bool should_sanitise = true;
         SanitiseCallback sanitise_cb;
-        void sanitise() const;
         void decode() const;
         GW::Constants::Language language_id = static_cast<GW::Constants::Language>(0xff);
         static void OnStringDecoded(void* param, const wchar_t* decoded);
@@ -28,14 +26,9 @@ namespace GuiUtils {
         void AbandonDecode();
 
     public:
-        // Set the language for decoding this encoded string. If the language has changed, resets the decoded result. Returns this for chaining.
         EncString* language(GW::Constants::Language l);
-        [[nodiscard]] bool IsDecoding() const { return decoding && decoded_ws.empty(); };
-        // Recycle this EncString by passing a new encoded string id to decode.
-        // Set sanitise to true to automatically remove guild tags etc from the string
+        [[nodiscard]] bool IsDecoding() const { return pending_ctx_ && decoded_ws.empty(); };
         EncString* reset(uint32_t enc_string_id = 0, bool sanitise = true);
-        // Recycle this EncString by passing a new string to decode.
-        // Set sanitise to true to automatically remove guild tags etc from the string
         EncString* reset(const wchar_t* enc_string = nullptr, bool sanitise = true);
         [[nodiscard]] const std::wstring& wstring() const;
         [[nodiscard]] const std::string& string() const;
