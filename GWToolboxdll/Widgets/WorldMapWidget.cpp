@@ -258,7 +258,7 @@ namespace {
         const auto quest_id = static_cast<GW::Constants::QuestID>(reinterpret_cast<uint32_t>(wparam));
         const auto quest = GW::QuestMgr::GetQuest(quest_id);
         if (!quest) return false;
-        if (!hovered_quest_name.IsDecoding()) hovered_quest_name.reset(quest->name);
+        if (!hovered_quest_name.IsDecoding()) hovered_quest_name = GuiUtils::EncString(quest->name);
         ImGui::TextUnformatted(hovered_quest_name.string().c_str());
 
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
@@ -1183,7 +1183,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     if (hovered_quest_id != GW::Constants::QuestID::None) {
         if (const auto hovered_quest = GW::QuestMgr::GetQuest(hovered_quest_id)) {
             static GuiUtils::EncString quest_name;
-            if (!quest_name.IsDecoding()) quest_name.reset(hovered_quest->name);
+            if (!quest_name.IsDecoding()) quest_name = GuiUtils::EncString(hovered_quest->name);
             ImGui::SetTooltip("%s", quest_name.string().c_str());
         }
     }

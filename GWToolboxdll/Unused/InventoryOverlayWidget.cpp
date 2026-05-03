@@ -106,7 +106,7 @@ void InventoryOverlayWidget::Draw(IDirect3DDevice9*)
             const ImVec2 text_pos = { top_left.x + x_offset, top_left.y };
             ImGui::GetBackgroundDrawList()->AddText(text_pos, text_color, item_id_str.c_str());
             if (ImGui::IsMouseHoveringRect(top_left, bottom_right, false)) {
-                info->name.reset(item->name_enc);
+                info->name = GuiUtils::EncString(item->name_enc);
                 ImGui::SetTooltip("%s", info->name.string().c_str());
             }
         }

@@ -1591,24 +1591,21 @@ namespace {
 
             item_id = item->item_id;
 
-            decoded_complete_name = std::make_unique<GuiUtils::EncString>();
             if (item->complete_name_enc && *item->complete_name_enc) {
-                decoded_complete_name->language(GW::Constants::Language::English);
-                decoded_complete_name->reset(item->complete_name_enc, false);
+                decoded_complete_name = std::make_unique<GuiUtils::EncString>(item->complete_name_enc, false, GW::Constants::Language::English);
                 decoded_complete_name->StartDecode();
+            } else {
+                decoded_complete_name = std::make_unique<GuiUtils::EncString>();
             }
 
-            decoded_name = std::make_unique<GuiUtils::EncString>();
-            decoded_name->language(GW::Constants::Language::English);
-            decoded_name->reset(item->name_enc, true);
+            decoded_name = std::make_unique<GuiUtils::EncString>(item->name_enc, true, GW::Constants::Language::English);
             decoded_name->StartDecode();
 
-            decoded_desc = std::make_unique<GuiUtils::EncString>();
-            decoded_desc->reset(nullptr, false);
             if (item->info_string && *item->info_string) {
-                decoded_desc->language(GW::Constants::Language::English);
-                decoded_desc->reset(item->info_string, false);
+                decoded_desc = std::make_unique<GuiUtils::EncString>(item->info_string, false, GW::Constants::Language::English);
                 decoded_desc->StartDecode();
+            } else {
+                decoded_desc = std::make_unique<GuiUtils::EncString>();
             }
         }
         ~PendingAddToSell() = default;

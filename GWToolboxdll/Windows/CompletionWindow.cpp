@@ -795,7 +795,7 @@ Mission::Mission(const MapID _outpost,
     map_to = outpost;
     const GW::AreaInfo* map_info = GW::Map::GetMapInfo(outpost);
     if (map_info) {
-        name.reset(map_info->name_id);
+        name = GuiUtils::EncString(map_info->name_id);
     }
 };
 
@@ -1096,8 +1096,7 @@ ItemAchievement::ItemAchievement(const size_t _encoded_name_index, const wchar_t
     : PvESkill(SkillID::No_Skill)
 {
     encoded_name_index = _encoded_name_index;
-    name.language(Language::English);
-    name.reset(encoded_name);
+    name = GuiUtils::EncString(encoded_name, true, Language::English);
 }
 
 const char* ItemAchievement::Name()
@@ -1151,7 +1150,7 @@ PvESkill::PvESkill(const SkillID _skill_id)
     if (_skill_id != SkillID::No_Skill) {
         const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
         if (skill) {
-            name.reset(skill->name);
+            name = GuiUtils::EncString(skill->name);
             profession = skill->profession;
         }
     }
@@ -1244,7 +1243,7 @@ FactionsPvESkill::FactionsPvESkill(const SkillID skill_id)
         buf.resize(wcslen(buf.data()) + 4, 0);
         GW::UI::UInt32ToEncStr(faction_id, buf.data() + buf.size() - 4, 4);
         buf.resize(wcslen(buf.data()) + 1, 0);
-        name.reset(buf.c_str());
+        name = GuiUtils::EncString(buf.c_str());
     }
 };
 
@@ -3254,12 +3253,12 @@ void UnlockedPvPItemUpgrade::LoadStrings()
     if (name.encoded().empty()) {
         wchar_t* tmp;
         if (GW::Items::GetPvPItemUpgradeEncodedName(encoded_name_index, &tmp)) {
-            name.reset(tmp);
+            name = GuiUtils::EncString(tmp);
             name.StartDecode();
         }
     }
     if (single_item_name.encoded().empty()) {
-        single_item_name.reset(info->name_id);
+        single_item_name = GuiUtils::EncString(info->name_id);
         single_item_name.StartDecode();
     }
 }

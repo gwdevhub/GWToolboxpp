@@ -80,7 +80,7 @@ namespace {
         dialog_buttons.clear();
         dialog_button_messages.clear();
 
-        dialog_body.reset(nullptr);
+        dialog_body = GuiUtils::EncString();
         dialog_info = {};
     }
 
@@ -159,7 +159,7 @@ void DialogModule::OnPostUIMessage(const GW::HookStatus* status, const GW::UI::U
                 return; // Dialog closed.
             }
             dialog_info = *new_dialog_info;
-            dialog_body.reset(dialog_info.message_enc);
+            dialog_body = GuiUtils::EncString(dialog_info.message_enc);
             dialog_info.message_enc = (wchar_t*)dialog_body.encoded().data();
             GW::UI::AsyncDecodeStr(dialog_info.message_enc, OnDialogBodyDecoded);
         }

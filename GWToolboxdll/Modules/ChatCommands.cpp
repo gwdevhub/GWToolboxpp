@@ -284,7 +284,7 @@ namespace {
         {
             const auto title_info = GW::PlayerMgr::GetTitleData(title);
             if (title_info)
-                name.reset(title_info->name_id);
+                name = GuiUtils::EncString(title_info->name_id);
         };
         GW::Constants::TitleID title;
         GuiUtils::EncString name;
@@ -592,8 +592,7 @@ namespace {
 
     std::unique_ptr<GuiUtils::EncString> MakePrefLabel(uint32_t enc_string_id)
     {
-        auto label = std::make_unique<GuiUtils::EncString>(enc_string_id, false);
-        label->language(GW::Constants::Language::English);
+        auto label = std::make_unique<GuiUtils::EncString>(enc_string_id, false, GW::Constants::Language::English);
         label->SetSanitiseCallback([](std::wstring s) {
             return TextUtils::RemovePunctuation(TextUtils::RemoveDiacritics(TextUtils::ToSlug(s)));
         });
@@ -602,8 +601,7 @@ namespace {
 
     std::unique_ptr<GuiUtils::EncString> MakePrefLabel(const wchar_t* enc_string)
     {
-        auto label = std::make_unique<GuiUtils::EncString>(enc_string, false);
-        label->language(GW::Constants::Language::English);
+        auto label = std::make_unique<GuiUtils::EncString>(enc_string, false, GW::Constants::Language::English);
         label->SetSanitiseCallback([](std::wstring s) {
             return TextUtils::RemovePunctuation(TextUtils::RemoveDiacritics(TextUtils::ToSlug(s)));
         });
@@ -2053,8 +2051,8 @@ void ChatCommands::QuestPing::Init()
     const auto* quest = GW::QuestMgr::GetActiveQuest();
     if (quest) {
         quest_id = quest->quest_id;
-        name.reset(quest->name);
-        objectives.reset(quest->objectives);
+        name = GuiUtils::EncString(quest->name);
+        objectives = GuiUtils::EncString(quest->objectives);
     }
 }
 
@@ -2073,13 +2071,13 @@ void ChatCommands::QuestPing::Update()
             swprintf(print_buf, _countof(print_buf), L" - %s", m.get<1>().to_string().c_str());
             GW::Chat::SendChat('#', print_buf);
         }
-        objectives.reset(nullptr);
+        objectives = GuiUtils::EncString();
     }
     if (!name.wstring().empty()) {
         wchar_t url_buf[64];
         swprintf(url_buf, _countof(url_buf), L"%SGame_link:Quest_%d", GuiUtils::WikiUrl(L"").c_str(), quest_id);
         GW::Chat::SendChat('#', url_buf);
-        name.reset(nullptr);
+        name = GuiUtils::EncString();
     }
 }
 

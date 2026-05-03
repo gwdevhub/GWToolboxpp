@@ -69,19 +69,18 @@ namespace {
         if (is_active && !was_active && play_sound_on_favor && favor_sound_file_id && TIMER_DIFF(initialised_at) > 3000) {
             AudioSettings::PlaySoundFileId(favor_sound_file_id);
         }
-        favor_enc_str.language(GW::UI::GetTextLanguage());
         if (favor_minutes_remaining > 0) {
             wchar_t buf[3];
             ASSERT(GW::UI::UInt32ToEncStr(favor_minutes_remaining, buf, _countof(buf)));
-            favor_enc_str.reset(std::format(L"\x8102\x223f\x101{}", buf).c_str(), false);
+            favor_enc_str = GuiUtils::EncString(std::format(L"\x8102\x223f\x101{}", buf).c_str(), false, GW::UI::GetTextLanguage());
         }
         else if (achievements_needed_for_favor > 0) {
             wchar_t buf[3];
             ASSERT(GW::UI::UInt32ToEncStr(achievements_needed_for_favor, buf, _countof(buf)));
-            favor_enc_str.reset(std::format(L"\x8102\x2240\x101{}", buf).c_str(),false);
+            favor_enc_str = GuiUtils::EncString(std::format(L"\x8102\x2240\x101{}", buf).c_str(), false, GW::UI::GetTextLanguage());
         }
         else {
-            favor_enc_str.reset(L"\x101", false);
+            favor_enc_str = GuiUtils::EncString(L"\x101", false, GW::UI::GetTextLanguage());
         }
     }
 

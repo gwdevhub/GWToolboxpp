@@ -882,8 +882,8 @@ HotkeyEquipItemAttributes::HotkeyEquipItemAttributes(const uint32_t _model_id, c
 HotkeyEquipItemAttributes* HotkeyEquipItemAttributes::set(const uint32_t _model_id, const wchar_t* _name_enc, const wchar_t* _info_string, const GW::ItemModifier* _mod_struct, const size_t _mod_struct_size)
 {
     model_id = _model_id;
-    enc_name.reset(_name_enc);
-    enc_desc.reset(_info_string);
+    enc_name = GuiUtils::EncString(_name_enc);
+    enc_desc = GuiUtils::EncString(_info_string);
     if (mod_struct) {
         delete mod_struct;
         mod_struct = nullptr;
@@ -2061,9 +2061,7 @@ namespace {
                                 merc_agent_ids[m] = heroes[i].agent_id;
                                 const wchar_t* enc = GW::Agents::GetAgentEncName(heroes[i].agent_id);
                                 if (enc) {
-                                    if (!merc_enc_names[m])
-                                        merc_enc_names[m] = std::make_unique<GuiUtils::EncString>();
-                                    merc_enc_names[m]->reset(enc);
+                                    merc_enc_names[m] = std::make_unique<GuiUtils::EncString>(enc);
                                 }
                             }
                             if (merc_enc_names[m]) {

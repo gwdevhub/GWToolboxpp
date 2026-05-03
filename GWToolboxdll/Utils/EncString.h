@@ -7,9 +7,14 @@ namespace GW::Constants {
 namespace GuiUtils {
     using SanitiseCallback = std::function<std::wstring(std::wstring)>;
 
+    // Thread safety: EncString relies on all construction, destruction, and
+    // decode callbacks running on the game thread. The DecodeContext poisons
+    // the owner pointer on destruction so a late callback is a harmless no-op,
+    // but there is no mutex — concurrent access from other threads is unsafe.
     class EncString final {
         struct DecodeContext {
             EncString* owner;
+            std::wstring encoded_copy;
         };
 
         std::wstring encoded_ws;
@@ -18,7 +23,6 @@ namespace GuiUtils {
         mutable bool decoded = false;
         bool should_sanitise = true;
         SanitiseCallback sanitise_cb;
-        void decode() const;
         GW::Constants::Language language_id = static_cast<GW::Constants::Language>(0xff);
         static void OnStringDecoded(void* param, const wchar_t* decoded);
 
@@ -26,15 +30,11 @@ namespace GuiUtils {
         void AbandonDecode();
 
     public:
-        EncString* language(GW::Constants::Language l);
         [[nodiscard]] bool IsDecoding() const { return pending_ctx_ && decoded_ws.empty(); };
-        EncString* reset(uint32_t enc_string_id = 0, bool sanitise = true);
-        EncString* reset(const wchar_t* enc_string = nullptr, bool sanitise = true);
         [[nodiscard]] const std::wstring& wstring() const;
         [[nodiscard]] const std::string& string() const;
 
-        // Kick off async decode without waiting for the result.
-        void StartDecode() const { decode(); }
+        void StartDecode() const;
 
         // Set a custom sanitise callback. Replaces the default tag-stripping.
         void SetSanitiseCallback(SanitiseCallback cb) { sanitise_cb = std::move(cb); }
@@ -44,18 +44,22 @@ namespace GuiUtils {
             return encoded_ws;
         };
 
-        EncString(const wchar_t* enc_string = nullptr, const bool sanitise = true)
+        EncString() = default;
+
+        explicit EncString(const wchar_t* enc_string, bool sanitise = true,
+            GW::Constants::Language language = static_cast<GW::Constants::Language>(0xff))
+            : should_sanitise(sanitise), language_id(language)
         {
-            reset(enc_string, sanitise);
+            if (enc_string) encoded_ws = enc_string;
         }
 
-        EncString(const uint32_t enc_string, const bool sanitise = true)
-        {
-            reset(enc_string, sanitise);
-        }
+        explicit EncString(uint32_t enc_string_id, bool sanitise = true,
+            GW::Constants::Language language = static_cast<GW::Constants::Language>(0xff));
 
         EncString(const EncString&) = delete;
         EncString& operator=(const EncString&) = delete;
+        EncString(EncString&& other) noexcept;
+        EncString& operator=(EncString&& other) noexcept;
         ~EncString();
     };
 }

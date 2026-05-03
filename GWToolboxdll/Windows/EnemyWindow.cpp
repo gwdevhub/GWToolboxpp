@@ -35,11 +35,9 @@ namespace {
     {
         const auto enc_name = GW::Agents::GetAgentEncName(agent_id);
         if (!agent_names_by_id.contains(agent_id)) {
-            agent_names_by_id[agent_id] = std::make_unique<GuiUtils::EncString>();
+            agent_names_by_id[agent_id] = std::make_unique<GuiUtils::EncString>(enc_name);
         }
-        auto* enc_string = agent_names_by_id[agent_id].get();
-        enc_string->reset(enc_name);
-        return enc_string->string();
+        return agent_names_by_id[agent_id]->string();
     }
 
     struct EnemyInfo {

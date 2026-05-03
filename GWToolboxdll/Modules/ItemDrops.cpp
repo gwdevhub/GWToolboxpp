@@ -88,8 +88,7 @@ namespace {
     GuiUtils::EncString* GetItemName(const wchar_t* enc_string) {
         if (!enc_string) return nullptr;
         if (!cached_item_names.contains(enc_string)) {
-            auto enc_str = std::make_unique<GuiUtils::EncString>(enc_string);
-            enc_str->language(GW::Constants::Language::English);
+            auto enc_str = std::make_unique<GuiUtils::EncString>(enc_string, true, GW::Constants::Language::English);
             cached_item_names[enc_string] = std::move(enc_str);
         }
         return cached_item_names[enc_string].get();

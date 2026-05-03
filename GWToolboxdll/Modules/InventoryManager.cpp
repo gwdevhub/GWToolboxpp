@@ -2904,14 +2904,13 @@ bool PendingItem::set(const InventoryManager::Item* item)
     quantity = item->quantity;
     uses = item->GetUses();
     bag = item->bag ? item->bag->bag_id() : GW::Constants::Bag::None;
-    name->reset(item->complete_name_enc ? item->complete_name_enc : item->name_enc);
-    single_item_name->reset(item->single_item_name);
+    *name = GuiUtils::EncString(item->complete_name_enc ? item->complete_name_enc : item->name_enc);
+    *single_item_name = GuiUtils::EncString(item->single_item_name);
     // NB: This doesn't work for inscriptions; gww doesn't have a page per inscription.
-    wiki_name->reset(ItemDescriptionHandler::GetItemEncNameWithoutMods(item).c_str());
-    wiki_name->language(GW::Constants::Language::English);
+    *wiki_name = GuiUtils::EncString(ItemDescriptionHandler::GetItemEncNameWithoutMods(item).c_str(), true, GW::Constants::Language::English);
     const auto plural_item_enc = std::format(L"\xa35\x101\x100\x10a{}\x1", item->name_enc);
-    plural_item_name->reset(plural_item_enc.c_str());
-    desc->reset(ItemDescriptionHandler::GetItemDescription(item).c_str());
+    *plural_item_name = GuiUtils::EncString(plural_item_enc.c_str());
+    *desc = GuiUtils::EncString(ItemDescriptionHandler::GetItemDescription(item).c_str());
     return true;
 }
 

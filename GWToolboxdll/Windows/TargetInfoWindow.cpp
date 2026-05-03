@@ -81,8 +81,7 @@ namespace {
         AgentInfo(const wchar_t* _name)
         {
             state = TargetInfoState::DecodingName;
-            name.language(GW::Constants::Language::English);
-            name.reset(_name);
+            name = GuiUtils::EncString(_name, true, GW::Constants::Language::English);
             name.StartDecode();
         }
 
@@ -292,9 +291,7 @@ namespace {
                 const auto skill_data = GW::SkillbarMgr::GetSkillConstantData((GW::Constants::SkillID)i);
                 if (!(skill_data && skill_data->name && skill_ids_by_name_id.find(skill_data->name) == skill_ids_by_name_id.end()))
                     continue;
-                auto enc = std::make_unique<GuiUtils::EncString>();
-                enc->language(GW::Constants::Language::English);
-                enc->reset(skill_data->name);
+                auto enc = std::make_unique<GuiUtils::EncString>(skill_data->name, true, GW::Constants::Language::English);
                 enc->StartDecode();
                 skill_ids_by_name_id[skill_data->name] = enc.get();
                 skill_names_by_id[(GW::Constants::SkillID)i] = std::move(enc);

@@ -131,7 +131,7 @@ namespace {
         WindowPreference(const GW::UI::WindowID _window_id, const GW::UI::WindowPosition* _position)
             : window_id(_window_id), position(*_position)
         {
-            name.reset(GetWindowNameID(window_id));
+            name = GuiUtils::EncString(GetWindowNameID(window_id));
         }
     };
 

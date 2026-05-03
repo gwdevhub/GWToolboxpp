@@ -120,7 +120,7 @@ bool SnapsToPartyWindow::FetchPartyInfo()
             party_names_by_index.push_back(std::make_unique<GuiUtils::EncString>());
         }
         auto* str = party_names_by_index[party_agent_ids_by_index.size() - 1].get();
-        str->reset(enc_name ? enc_name : GW::Agents::GetAgentEncName(agent_id));
+        *str = GuiUtils::EncString(enc_name ? enc_name : GW::Agents::GetAgentEncName(agent_id));
         str->StartDecode();
         };
 

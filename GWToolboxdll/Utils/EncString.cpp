@@ -4,6 +4,7 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
+#include <Defines.h>
 #include <Utils/EncString.h>
 #include <Utils/TextUtils.h>
 
@@ -17,63 +18,58 @@ void EncString::AbandonDecode()
     }
 }
 
-EncString* EncString::reset(const uint32_t enc_string_id, const bool sanitise)
+EncString::EncString(const uint32_t enc_string_id, const bool sanitise, const GW::Constants::Language language)
+    : should_sanitise(sanitise), language_id(language)
 {
-    if (enc_string_id && encoded_ws.length()) {
-        const uint32_t this_id = GW::UI::EncStrToUInt32(encoded_ws.c_str());
-        if (this_id == enc_string_id) {
-            return this;
-        }
-    }
-    reset(nullptr, sanitise);
     if (enc_string_id) {
         wchar_t out[8] = {0};
-        if (!GW::UI::UInt32ToEncStr(enc_string_id, out, _countof(out))) {
-            return this;
-        }
-        encoded_ws = out;
+        if (GW::UI::UInt32ToEncStr(enc_string_id, out, _countof(out)))
+            encoded_ws = out;
     }
-    return this;
 }
 
-EncString* EncString::language(const GW::Constants::Language l)
+EncString::EncString(EncString&& other) noexcept
+    : encoded_ws(std::move(other.encoded_ws))
+    , decoded_ws(std::move(other.decoded_ws))
+    , decoded_s(std::move(other.decoded_s))
+    , decoded(other.decoded)
+    , should_sanitise(other.should_sanitise)
+    , sanitise_cb(std::move(other.sanitise_cb))
+    , language_id(other.language_id)
+    , pending_ctx_(other.pending_ctx_)
 {
-    if (language_id == l) {
-        return this;
-    }
-    AbandonDecode();
-    language_id = l;
-    decoded_ws.clear();
-    decoded_s.clear();
-    decoded = false;
-    return this;
+    if (pending_ctx_) pending_ctx_->owner = this;
+    other.pending_ctx_ = nullptr;
+    other.decoded = false;
 }
 
-EncString* EncString::reset(const wchar_t* enc_string, const bool sanitise)
+EncString& EncString::operator=(EncString&& other) noexcept
 {
-    if (enc_string && wcscmp(enc_string, encoded_ws.c_str()) == 0) {
-        return this;
+    if (this != &other) {
+        AbandonDecode();
+        encoded_ws = std::move(other.encoded_ws);
+        decoded_ws = std::move(other.decoded_ws);
+        decoded_s = std::move(other.decoded_s);
+        decoded = other.decoded;
+        should_sanitise = other.should_sanitise;
+        sanitise_cb = std::move(other.sanitise_cb);
+        language_id = other.language_id;
+        pending_ctx_ = other.pending_ctx_;
+        if (pending_ctx_) pending_ctx_->owner = this;
+        other.pending_ctx_ = nullptr;
+        other.decoded = false;
     }
-    AbandonDecode();
-    encoded_ws.clear();
-    decoded_ws.clear();
-    decoded_s.clear();
-    decoded = false;
-    should_sanitise = sanitise;
-    if (enc_string) {
-        encoded_ws = enc_string;
-    }
-    return this;
+    return *this;
 }
 
-void EncString::decode() const
+void EncString::StartDecode() const
 {
     if (!decoded && !pending_ctx_ && !encoded_ws.empty()) {
-        pending_ctx_ = new DecodeContext{const_cast<EncString*>(this)};
+        pending_ctx_ = new DecodeContext{const_cast<EncString*>(this), encoded_ws};
         auto* ctx = pending_ctx_;
         GW::GameThread::Enqueue([ctx] {
             if (ctx->owner) {
-                GW::UI::AsyncDecodeStr(ctx->owner->encoded_ws.c_str(), OnStringDecoded, ctx, ctx->owner->language_id);
+                GW::UI::AsyncDecodeStr(ctx->encoded_copy.c_str(), OnStringDecoded, ctx, ctx->owner->language_id);
             } else {
                 delete ctx;
             }
@@ -83,7 +79,7 @@ void EncString::decode() const
 
 const std::wstring& EncString::wstring() const
 {
-    decode();
+    StartDecode();
     return decoded_ws;
 }
 
@@ -118,7 +114,7 @@ void EncString::OnStringDecoded(void* param, const wchar_t* decoded)
 
 const std::string& EncString::string() const
 {
-    decode();
+    StartDecode();
     if (decoded && !decoded_ws.empty() && decoded_s.empty()) {
         decoded_s = TextUtils::WStringToString(decoded_ws);
     }

@@ -72,7 +72,7 @@ namespace {
         PartyMember(const wchar_t* _name_enc, const uint32_t _agent_id, const uint32_t _party_idx)
             : name_enc(_name_enc), agent_id(_agent_id), party_idx(_party_idx)
         {
-            name.reset(name_enc.c_str());
+            name = GuiUtils::EncString(name_enc.c_str());
             name.StartDecode();
         }
 

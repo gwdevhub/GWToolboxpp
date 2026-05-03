@@ -819,8 +819,7 @@ namespace {
         bool processing = false;
         for (auto& entry : w->quest_log) {
             if (entry.name && !quest_log_names.contains(entry.quest_id)) {
-                auto enc_string = std::make_unique<GuiUtils::EncString>();
-                enc_string->reset(entry.name)->language(GW::Constants::Language::English);
+                auto enc_string = std::make_unique<GuiUtils::EncString>(entry.name, true, GW::Constants::Language::English);
                 enc_string->StartDecode();
                 quest_log_names[entry.quest_id] = std::move(enc_string);
             }
@@ -1695,19 +1694,17 @@ void DailyQuests::QuestData::Decode(bool force)
     if (name_translated && name_english && !force) return;
     if (!name_translated) name_translated = std::make_unique<GuiUtils::EncString>(nullptr, false);
     if (!name_english) name_english = std::make_unique<GuiUtils::EncString>(nullptr, false);
-    name_english->language(GW::Constants::Language::English);
-    name_translated->language(GW::UI::GetTextLanguage());
 
     if (enc_name.empty()) {
         const auto map_info = GW::Map::GetMapInfo(map_id);
         if (map_info && map_info->name_id) {
-            name_translated->reset(map_info->name_id);
-            name_english->reset(map_info->name_id);
+            *name_translated = GuiUtils::EncString(map_info->name_id, true, GW::UI::GetTextLanguage());
+            *name_english = GuiUtils::EncString(map_info->name_id, true, GW::Constants::Language::English);
         }
     }
     else {
-        name_translated->reset(enc_name.c_str());
-        name_english->reset(enc_name.c_str());
+        *name_translated = GuiUtils::EncString(enc_name.c_str(), true, GW::UI::GetTextLanguage());
+        *name_english = GuiUtils::EncString(enc_name.c_str(), true, GW::Constants::Language::English);
     }
     name_translated->StartDecode();
     name_english->StartDecode();

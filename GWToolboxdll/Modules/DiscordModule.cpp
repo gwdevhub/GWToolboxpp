@@ -632,7 +632,7 @@ namespace {
 
             if (show_location_info) {
                 // Details
-                map_name_decoded.reset(m->name_id);
+                map_name_decoded = GuiUtils::EncString(m->name_id, true, GW::Constants::Language::English);
                 if (map_name_decoded.wstring().empty()) {
                     return; // Map name not decoded yet.
                 }
@@ -731,8 +731,6 @@ void DiscordModule::Initialize()
     activities_events.on_activity_join = OnJoinParty;           // Need to join party
     params.network_events = &network_events;
     network_events.on_message = OnNetworkMessage;
-
-    map_name_decoded.language(GW::Constants::Language::English);
 
     const GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kMapLoaded,           GW::UI::UIMessage::kPartyAddPlayer, GW::UI::UIMessage::kPartyRemovePlayer, GW::UI::UIMessage::kPartyAddHenchman,
                                              GW::UI::UIMessage::kPartyRemoveHenchman, GW::UI::UIMessage::kPartyAddHero,   GW::UI::UIMessage::kPartyRemoveHero};

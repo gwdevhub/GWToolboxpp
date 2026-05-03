@@ -44,7 +44,7 @@ namespace {
         {
             // Because AvialableBond is used statically in toolbox, we need to explicitly call this function in the render loop - otherwise GetSkillConstantData won't be called at the right time.
             if (const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id)) {
-                skill_name.reset(skill->name);
+                skill_name = GuiUtils::EncString(skill->name);
             }
         }
     };

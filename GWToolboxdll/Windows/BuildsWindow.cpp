@@ -638,7 +638,7 @@ namespace {
                 if (ImGui::IsItemHovered()) {
                     const GW::Skill* s = GW::SkillbarMgr::GetSkillConstantData(skills[i]);
                     if (s) {
-                        preferred_skill_order_tooltip.reset(s->name);
+                        preferred_skill_order_tooltip = GuiUtils::EncString(s->name);
                         ImGui::SetTooltip("%s", preferred_skill_order_tooltip.string().c_str());
                     }
                 }

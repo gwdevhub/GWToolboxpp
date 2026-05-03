@@ -293,7 +293,7 @@ namespace {
         if (!w) return;
         const auto title_data = GW::PlayerMgr::GetTitleData(title_id);
         if (title_data) {
-            title_label.reset(title_data->name_id);
+            title_label = GuiUtils::EncString(title_data->name_id);
 
         }
         const auto title_info = GW::PlayerMgr::GetTitleTrack(title_id);
@@ -301,7 +301,7 @@ namespace {
             return;
         }
         const auto& current_tier = w->title_tiers[title_info->current_title_tier_index];
-        tier_label.reset(current_tier.tier_name_enc);
+        tier_label = GuiUtils::EncString(current_tier.tier_name_enc);
     }
 
 

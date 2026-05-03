@@ -90,14 +90,14 @@ void ActiveQuestWidget::Update(float)
         active_quest_id = qid;
 
         if (const auto quest = GW::QuestMgr::GetQuest(qid)) {
-            active_quest_name.reset(quest->name);
+            active_quest_name = GuiUtils::EncString(quest->name);
             active_quest_objectives = QuestModule::ParseQuestObjectives(qid);
         }
         else if (static_cast<int32_t>(qid) == -1) {
             // Mission objectives
             const auto world_context = GW::GetWorldContext();
             const auto area_info = GW::Map::GetCurrentMapInfo();
-            active_quest_name.reset(area_info && area_info->name_id ? area_info->name_id : 3);
+            active_quest_name = GuiUtils::EncString(area_info && area_info->name_id ? area_info->name_id : 3);
 
             active_quest_objectives.clear();
 
@@ -116,7 +116,7 @@ void ActiveQuestWidget::Update(float)
             }
         }
         else {
-            active_quest_name.reset(1);
+            active_quest_name = GuiUtils::EncString(1);
             active_quest_objectives.clear();
         }
     }

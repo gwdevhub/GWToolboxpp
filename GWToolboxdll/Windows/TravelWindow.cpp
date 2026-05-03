@@ -63,9 +63,7 @@ namespace {
                 name = new char[1];
             }
             else {
-                enc_name = std::make_unique<GuiUtils::EncString>(map_info->name_id);
-                if (search_in_english)
-                    enc_name->language(GW::Constants::Language::English);
+                enc_name = std::make_unique<GuiUtils::EncString>(map_info->name_id, true, search_in_english ? GW::Constants::Language::English : GW::UI::GetTextLanguage());
                 enc_name->StartDecode();
             }
         }

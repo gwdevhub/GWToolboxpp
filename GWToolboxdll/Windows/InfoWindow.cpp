@@ -209,7 +209,7 @@ namespace {
         if (!skill) {
             return;
         }
-        name->reset(skill->name);
+        *name = GuiUtils::EncString(skill->name);
         static char info_id[16];
         snprintf(info_id, _countof(info_id), "skill_info_%d", skill->skill_id);
         ImGui::PushID(info_id);
@@ -283,7 +283,7 @@ namespace {
         if (!item) {
             return;
         }
-        name->reset(item->single_item_name);
+        *name = GuiUtils::EncString(item->single_item_name);
         static char slot[8] = "-";
         if (item->bag) {
             snprintf(slot, _countof(slot), "%d/%d", item->bag->index + 1, item->slot + 1);
@@ -379,7 +379,7 @@ namespace {
                 if (player->active_title_tier) {
                     const GW::TitleTier& tier = GW::GetGameContext()->world->title_tiers[player->active_title_tier];
                     static GuiUtils::EncString title_enc_string;
-                    title_enc_string.reset(tier.tier_name_enc);
+                    title_enc_string = GuiUtils::EncString(tier.tier_name_enc);
                     InfoField("Current Title", "%s", title_enc_string.string().c_str());
                 }
                 ImGui::PopID();
