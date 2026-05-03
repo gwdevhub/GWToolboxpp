@@ -164,19 +164,14 @@ namespace GW {
             const auto map_info = GW::Map::GetMapInfo(map_id);
             if (!map_info) return {};
 
-            // Bounty-specific maps win first (e.g. The Deep -> Luxon, Urgoz -> Kurzick).
-            // For everything else, return all titles "appropriate" to the area.
-            std::vector<TitleID> result;
-
             // EotN (MotN) regions show all 5 EotN titles.
             switch (map_info->region) {
                 case GW::Region::Region_TarnishedCoast:
                 case GW::Region::Region_FarShiverpeaks:
                 case GW::Region::Region_DepthsOfTyria:
                 case GW::Region::Region_CharrHomelands:
-                    result = {TitleID::Asuran, TitleID::Deldrimor, TitleID::Norn,
-                              TitleID::Vanguard, TitleID::MasterOfTheNorth};
-                    return result;
+                    return {TitleID::Asuran, TitleID::Deldrimor, TitleID::Norn,
+                            TitleID::Vanguard, TitleID::MasterOfTheNorth};
                 case GW::Region::Region_Kurzick:
                 case GW::Region::Region_Luxon:
                 case GW::Region::Region_Kaineng:
@@ -199,7 +194,7 @@ namespace GW {
                     return {TitleID::Lightbringer};
             }
 
-            // Fall back to the bounty-specific list (covers The Deep, Urgoz, etc.)
+            // No region/continent match — try the bounty-specific list as a last resort.
             return GetBountyTitlesForMap(map_id);
         }
 
