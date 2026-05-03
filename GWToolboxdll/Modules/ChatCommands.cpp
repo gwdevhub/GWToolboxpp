@@ -74,7 +74,7 @@ namespace {
 
     struct SearchAgent {
         clock_t started = 0;
-        std::vector<std::pair<uint32_t, GuiUtils::EncString*>> npc_names;
+        std::vector<std::pair<uint32_t, std::unique_ptr<GuiUtils::EncString>>> npc_names;
         std::wstring search;
         void Init(const wchar_t* _search, const GW::AgentTargetFlags type);
         void Update();
@@ -83,9 +83,6 @@ namespace {
         {
             started = 0;
             search.clear();
-            for (const auto& name : npc_names | std::views::values) {
-                name->Release();
-            }
             npc_names.clear();
         }
     } npc_to_find;
@@ -596,69 +593,51 @@ namespace {
         Log::InfoW(L"Current preference value for %s is %d", argv[1], GetPreference(pref));
     }
 
-    class PrefLabel : public GuiUtils::EncString {
-    public:
-        PrefLabel(const wchar_t* _enc_string = nullptr)
-            : EncString(_enc_string, false) {};
-
-        PrefLabel(const uint32_t _enc_string)
-            : EncString(_enc_string, false) {};
-
-    protected:
-        static void OnPrefLabelDecoded(void* param, const wchar_t* decoded);
-
-        void decode() override
-        {
-            language(GW::Constants::Language::English);
-            if (!decoded && !decoding && !encoded_ws.empty()) {
-                decoding = true;
-                GW::GameThread::Enqueue([&] {
-                    GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnPrefLabelDecoded, this, language_id);
-                });
-            }
-        }
-    };
-
-    void PrefLabel::OnPrefLabelDecoded(void* param, const wchar_t* decoded)
+    std::unique_ptr<GuiUtils::EncString> MakePrefLabel(uint32_t enc_string_id)
     {
-        GuiUtils::EncString::OnStringDecoded(param, decoded);
-        const auto context = static_cast<PrefLabel*>(param);
-        context->decoded_ws = TextUtils::RemovePunctuation(TextUtils::RemoveDiacritics(TextUtils::ToSlug(context->decoded_ws)));
+        auto label = std::make_unique<GuiUtils::EncString>(enc_string_id, false);
+        label->language(GW::Constants::Language::English);
+        label->SetSanitiseCallback([](std::wstring s) {
+            return TextUtils::RemovePunctuation(TextUtils::RemoveDiacritics(TextUtils::ToSlug(s)));
+        });
+        return label;
+    }
+
+    std::unique_ptr<GuiUtils::EncString> MakePrefLabel(const wchar_t* enc_string)
+    {
+        auto label = std::make_unique<GuiUtils::EncString>(enc_string, false);
+        label->language(GW::Constants::Language::English);
+        label->SetSanitiseCallback([](std::wstring s) {
+            return TextUtils::RemovePunctuation(TextUtils::RemoveDiacritics(TextUtils::ToSlug(s)));
+        });
+        return label;
     }
 
     struct PrefMapCommand {
 
         PrefMapCommand(GW::UI::EnumPreference p, uint32_t enc_string_id)
-            : preference_id(std::to_underlying(p))
-        {
-            preference_callback = CmdEnumPref;
-            label = new PrefLabel(enc_string_id);
-        }
+            : preference_id(std::to_underlying(p)),
+              preference_callback(CmdEnumPref),
+              label(MakePrefLabel(enc_string_id)) {}
 
         PrefMapCommand(GW::UI::NumberPreference p, uint32_t enc_string_id)
-            : preference_id(std::to_underlying(p))
-        {
-            preference_callback = CmdValuePref;
-            label = new PrefLabel(enc_string_id);
-        }
+            : preference_id(std::to_underlying(p)),
+              preference_callback(CmdValuePref),
+              label(MakePrefLabel(enc_string_id)) {}
 
         PrefMapCommand(GW::UI::FlagPreference p, uint32_t enc_string_id)
-            : preference_id(std::to_underlying(p))
-        {
-            preference_callback = CmdFlagPref;
-            label = new PrefLabel(enc_string_id);
-        }
+            : preference_id(std::to_underlying(p)),
+              preference_callback(CmdFlagPref),
+              label(MakePrefLabel(enc_string_id)) {}
 
         PrefMapCommand(GW::UI::FlagPreference p, const wchar_t* enc_string_id)
-            : preference_id(std::to_underlying(p))
-        {
-            preference_callback = CmdFlagPref;
-            label = new PrefLabel(enc_string_id);
-        }
+            : preference_id(std::to_underlying(p)),
+              preference_callback(CmdFlagPref),
+              label(MakePrefLabel(enc_string_id)) {}
 
         uint32_t preference_id;
         CmdPrefCB preference_callback;
-        PrefLabel* label = nullptr;
+        std::unique_ptr<GuiUtils::EncString> label;
     };
 
     using PrefMap = std::vector<PrefMapCommand>;
@@ -667,31 +646,29 @@ namespace {
     const PrefMap& getPrefCommandOptions()
     {
         if (pref_map.empty()) {
-            pref_map = {
-                {GW::UI::FlagPreference::WaitForVSync, GW::EncStrings::VerticalSync},
-                {GW::UI::NumberPreference::FullscreenGamma, GW::EncStrings::FullScreenGamma},
-                {GW::UI::EnumPreference::AntiAliasing, GW::EncStrings::AntiAliasing},
-                {GW::UI::EnumPreference::ShaderQuality, GW::EncStrings::ShaderQuality},
-                {GW::UI::EnumPreference::TerrainQuality, GW::EncStrings::TerrainQuality},
-                {GW::UI::EnumPreference::Reflections, GW::EncStrings::Reflections},
-                {GW::UI::EnumPreference::ShadowQuality, GW::EncStrings::ShadowQuality},
-                {GW::UI::EnumPreference::InterfaceSize, GW::EncStrings::InterfaceSize},
-                {GW::UI::NumberPreference::TextureLod, GW::EncStrings::TextureQuality},
-                {GW::UI::NumberPreference::Language, GW::EncStrings::TextLanguage},
-                {GW::UI::NumberPreference::LanguageAudio, GW::EncStrings::AudioLanguage},
-                {GW::UI::NumberPreference::ClockMode, GW::EncStrings::InGameClock},
-                {GW::UI::FlagPreference::ChannelAlliance, GW::EncStrings::ChannelAlliance},
-                {GW::UI::FlagPreference::ChannelGuild, GW::EncStrings::ChannelGuild},
-                {GW::UI::FlagPreference::ChannelGroup, GW::EncStrings::ChannelTeam},
-                {GW::UI::FlagPreference::ChannelEmotes, GW::EncStrings::ChannelEmotes},
-                {GW::UI::FlagPreference::ChannelTrade, GW::EncStrings::ChannelTrade},
-                {GW::UI::NumberPreference::VolMaster, GW::EncStrings::MasterVolume},
-                {GW::UI::NumberPreference::VolMusic, GW::EncStrings::MusicVolume},
-                {GW::UI::FlagPreference::DisableMouseWalking, GW::EncStrings::DisableMouseWalking},
-                {GW::UI::FlagPreference::AlwaysShowFoeNames, L"\x108\x107Show Foe Names\x1"},
-                {GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1"},
-                {GW::UI::FlagPreference::EnableGamepad, L"\x108\x107" "Enable Gamepad\x1"},
-            };
+            pref_map.emplace_back(GW::UI::FlagPreference::WaitForVSync, GW::EncStrings::VerticalSync);
+            pref_map.emplace_back(GW::UI::NumberPreference::FullscreenGamma, GW::EncStrings::FullScreenGamma);
+            pref_map.emplace_back(GW::UI::EnumPreference::AntiAliasing, GW::EncStrings::AntiAliasing);
+            pref_map.emplace_back(GW::UI::EnumPreference::ShaderQuality, GW::EncStrings::ShaderQuality);
+            pref_map.emplace_back(GW::UI::EnumPreference::TerrainQuality, GW::EncStrings::TerrainQuality);
+            pref_map.emplace_back(GW::UI::EnumPreference::Reflections, GW::EncStrings::Reflections);
+            pref_map.emplace_back(GW::UI::EnumPreference::ShadowQuality, GW::EncStrings::ShadowQuality);
+            pref_map.emplace_back(GW::UI::EnumPreference::InterfaceSize, GW::EncStrings::InterfaceSize);
+            pref_map.emplace_back(GW::UI::NumberPreference::TextureLod, GW::EncStrings::TextureQuality);
+            pref_map.emplace_back(GW::UI::NumberPreference::Language, GW::EncStrings::TextLanguage);
+            pref_map.emplace_back(GW::UI::NumberPreference::LanguageAudio, GW::EncStrings::AudioLanguage);
+            pref_map.emplace_back(GW::UI::NumberPreference::ClockMode, GW::EncStrings::InGameClock);
+            pref_map.emplace_back(GW::UI::FlagPreference::ChannelAlliance, GW::EncStrings::ChannelAlliance);
+            pref_map.emplace_back(GW::UI::FlagPreference::ChannelGuild, GW::EncStrings::ChannelGuild);
+            pref_map.emplace_back(GW::UI::FlagPreference::ChannelGroup, GW::EncStrings::ChannelTeam);
+            pref_map.emplace_back(GW::UI::FlagPreference::ChannelEmotes, GW::EncStrings::ChannelEmotes);
+            pref_map.emplace_back(GW::UI::FlagPreference::ChannelTrade, GW::EncStrings::ChannelTrade);
+            pref_map.emplace_back(GW::UI::NumberPreference::VolMaster, GW::EncStrings::MasterVolume);
+            pref_map.emplace_back(GW::UI::NumberPreference::VolMusic, GW::EncStrings::MusicVolume);
+            pref_map.emplace_back(GW::UI::FlagPreference::DisableMouseWalking, GW::EncStrings::DisableMouseWalking);
+            pref_map.emplace_back(GW::UI::FlagPreference::AlwaysShowFoeNames, L"\x108\x107Show Foe Names\x1");
+            pref_map.emplace_back(GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1");
+            pref_map.emplace_back(GW::UI::FlagPreference::EnableGamepad, L"\x108\x107" "Enable Gamepad\x1");
             for (const auto& it : pref_map) {
                 it.label->wstring();
             }
@@ -2147,7 +2124,7 @@ void SearchAgent::Init(const wchar_t* _search, const GW::AgentTargetFlags type)
 
         const wchar_t* enc_name = GW::Agents::GetAgentEncName(agent);
         if (enc_name && enc_name[0]) {
-            npc_names.push_back({agent->agent_id, new GuiUtils::EncString(enc_name)});
+            npc_names.push_back({agent->agent_id, std::make_unique<GuiUtils::EncString>(enc_name)});
         }
     }
 }

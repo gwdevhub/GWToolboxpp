@@ -23,7 +23,7 @@ protected:
     static uint32_t allies_start_idx;
     static std::unordered_map<uint32_t,uint32_t> party_indeces_by_agent_id;
     static std::vector<uint32_t> party_agent_ids_by_index;
-    static std::vector<GuiUtils::EncString*> party_names_by_index;
+    static std::vector<std::unique_ptr<GuiUtils::EncString>> party_names_by_index;
 
     static bool RecalculatePartyPositions();
     static bool FetchPartyInfo();

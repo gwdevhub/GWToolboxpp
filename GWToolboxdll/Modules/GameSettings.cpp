@@ -151,7 +151,7 @@ namespace {
 
     bool block_enter_area_message = false;
 
-    EncString* pending_wiki_search_term = nullptr;
+    std::unique_ptr<EncString> pending_wiki_search_term;
 
     bool tick_is_toggle = false;
 
@@ -2492,8 +2492,7 @@ void GameSettings::Update(float)
     // See OnSendChat
     if (pending_wiki_search_term && pending_wiki_search_term->wstring().length()) {
         SearchWiki(pending_wiki_search_term->wstring());
-        delete pending_wiki_search_term;
-        pending_wiki_search_term = nullptr;
+        pending_wiki_search_term.reset();
     }
 
     if (auto_set_away
@@ -2868,7 +2867,7 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, const GW::UI::UIMessage me
         // Redirect /wiki to /wiki <current map name>
         status->blocked = true;
         const GW::AreaInfo* map = GW::Map::GetCurrentMapInfo();
-        pending_wiki_search_term = new EncString(map->name_id);
+        pending_wiki_search_term = std::make_unique<EncString>(map->name_id);
     }
     else if (strstr(url.c_str(), "?search=quest")) {
         // Redirect /wiki quest to /wiki <current quest name>
@@ -2888,7 +2887,7 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, const GW::UI::UIMessage me
         status->blocked = true;
         const GW::Agent* a = GW::Agents::GetTarget();
         if (a) {
-            pending_wiki_search_term = new EncString(GW::Agents::GetAgentEncName(a));
+            pending_wiki_search_term = std::make_unique<EncString>(GW::Agents::GetAgentEncName(a));
         }
         else {
             Log::Error("No current target");

@@ -43,22 +43,17 @@ namespace {
         GW::Constants::TitleID title_id;
         GuiUtils::EncString title_label;
         GuiUtils::EncString tier_label;
-        GuiUtils::EncString* overlay_label = 0; // Because this can change quickly, we may need to recycle it faster than the frame rate can handle
+        std::unique_ptr<GuiUtils::EncString> overlay_label; // Because this can change quickly, we may need to recycle it faster than the frame rate can handle
         float percent = 0.f;
         float secondary_percent = 0.f;
-        GuiUtils::EncString* secondary_label = 0;
+        std::unique_ptr<GuiUtils::EncString> secondary_label;
         bool show = false;
-        TitleProgress(GW::Constants::TitleID _title_id) : title_id(_title_id) { 
-            overlay_label = new GuiUtils::EncString();
-            secondary_label = new GuiUtils::EncString();
+        TitleProgress(GW::Constants::TitleID _title_id) : title_id(_title_id) {
+            overlay_label = std::make_unique<GuiUtils::EncString>();
+            secondary_label = std::make_unique<GuiUtils::EncString>();
             RefreshLabels();
         };
-        ~TitleProgress() { 
-            if (overlay_label) overlay_label->Release();
-            overlay_label = 0;
-            if (secondary_label) secondary_label->Release();
-            secondary_label = 0;
-        }
+        ~TitleProgress() = default;
         void RefreshProgress();
         void RefreshLabels();
         bool IsValid() { return overlay_label && !overlay_label->encoded().empty();}
@@ -251,17 +246,15 @@ namespace {
             wchar_t points_needed_buf[3];
             GW::UI::UInt32ToEncStr(faction_max, points_needed_buf, _countof(points_needed_buf));
             str_placeholder = std::format(L"{}\x2\x108\x107: \x1\x2\x8101\x29C\x101{}\x102{}", faction_name, current_points_buf, points_needed_buf);
-            if (secondary_label) secondary_label->Release();
-            secondary_label = new GuiUtils::EncString(str_placeholder.c_str(), false);
+            secondary_label = std::make_unique<GuiUtils::EncString>(str_placeholder.c_str(), false);
         }
 
         const auto title_info = GW::PlayerMgr::GetTitleTrack(title_id);
         if (!title_info) {
-            if (overlay_label) overlay_label->Release();
-            overlay_label = new GuiUtils::EncString(L"\x101", false);
+            overlay_label = std::make_unique<GuiUtils::EncString>(L"\x101", false);
         }
         if (title_info && title_info->points_desc && *title_info->points_desc) {
-            
+
             if (title_info->has_tiers()) {
                 // N/N
                 const auto points_needed = title_info->points_needed_next_rank == -1 ? title_info->points_needed_current_rank : title_info->points_needed_next_rank;
@@ -289,8 +282,7 @@ namespace {
                 str_placeholder = std::format(L"{}\x10a\x104\x101{}\x1", title_info->points_desc, current_points_buf);
             }
             if (!str_placeholder.empty()) {
-                if (overlay_label) overlay_label->Release();
-                overlay_label = new GuiUtils::EncString(str_placeholder.c_str(), false);
+                overlay_label = std::make_unique<GuiUtils::EncString>(str_placeholder.c_str(), false);
             }
         }
 

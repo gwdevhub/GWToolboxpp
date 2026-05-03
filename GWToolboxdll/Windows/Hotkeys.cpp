@@ -39,7 +39,7 @@ bool TBHotkey::hotkeys_changed = false;
 unsigned int TBHotkey::cur_ui_id = 0;
 std::unordered_map<WORD, HotkeyToggle*> HotkeyToggle::toggled;
 
-typedef std::pair<GW::UI::ControlAction, GuiUtils::EncString*> ControlLabelPair;
+typedef std::pair<GW::UI::ControlAction, std::unique_ptr<GuiUtils::EncString>> ControlLabelPair;
 std::vector<ControlLabelPair> HotkeyGWKey::control_labels;
 
 namespace {

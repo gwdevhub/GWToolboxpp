@@ -20,6 +20,7 @@ namespace GW {
 using Color = uint32_t;
 
 class AgentRenderer : public D3DVertexBuffer {
+    friend class Minimap;
     static constexpr int num_triangles = 32;
 
 public:

@@ -132,7 +132,7 @@ namespace {
     std::unordered_map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
     std::unordered_map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names;
     std::unordered_map<GW::Constants::MapID, GuiUtils::EncString*> region_names;
-    std::unordered_map<GW::Constants::Language, std::unordered_map<uint32_t, GuiUtils::EncString*>> encoded_string_ids;
+    std::unordered_map<GW::Constants::Language, std::unordered_map<uint32_t, std::unique_ptr<GuiUtils::EncString>>> encoded_string_ids;
     std::filesystem::path current_settings_folder;
     constexpr size_t MAX_WORKERS = 20;
     const wchar_t* GUILD_WARS_WIKI_FILES_PATH = L"img\\gww_files";
@@ -442,19 +442,11 @@ void Resources::Cleanup()
         delete tex;
     }
     item_images.clear();
-    for (const auto& img : guild_wars_wiki_images | std::views::values) {
-        if (img && *img) (*img)->Release();
-        delete img;
-    }
-    guild_wars_wiki_images.clear();
-    for (const auto& enc_strings : encoded_string_ids | std::views::values) {
-        for (const auto& enc_string : enc_strings | std::views::values) {
-            enc_string->Release();
-        }
-    }
-    encoded_string_ids.clear();
+    profession_icons.clear();
+    damagetype_icons.clear();
     map_names.clear(); // NB: pointers to encoded_string_ids, no need to free memory
     skill_names.clear(); // NB: pointers to encoded_string_ids, no need to free memory
+    encoded_string_ids.clear();
 }
 
 void Resources::Terminate()
@@ -1273,11 +1265,12 @@ GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id, GW::Co
     if (by_language != encoded_string_ids.end()) {
         const auto found = by_language->second.find(enc_str_id);
         if (found != by_language->second.end())
-            return found->second;
+            return found->second.get();
     }
-    const auto enc_string = new GuiUtils::EncString(enc_str_id, false);
-    encoded_string_ids[language][enc_str_id] = enc_string;
-    return enc_string;
+    auto enc_string = std::make_unique<GuiUtils::EncString>(enc_str_id, false);
+    const auto raw = enc_string.get();
+    encoded_string_ids[language][enc_str_id] = std::move(enc_string);
+    return raw;
 }
 
 IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)

@@ -892,7 +892,7 @@ namespace GWArmory {
 
     enum SnapshotState { Idle, Pending, WaitingForDecode };
     SnapshotState state = SnapshotState::Idle;
-    std::map<uint32_t, GuiUtils::EncString*> pending_decodes;
+    std::map<uint32_t, std::unique_ptr<GuiUtils::EncString>> pending_decodes;
     std::map<uint32_t, GW::Item*> pending_items;
 
     void SnapshotToFile()
@@ -901,9 +901,6 @@ namespace GWArmory {
             case SnapshotState::Idle:
                 return;
             case SnapshotState::Pending: {
-                for (auto& it : pending_decodes) {
-                    delete it.second;
-                }
                 pending_decodes.clear();
                 pending_items.clear();
                 for (uint8_t i = (uint8_t)GW::Constants::Bag::Backpack; i < (uint8_t)GW::Constants::Bag::Max; i++) {
@@ -912,7 +909,7 @@ namespace GWArmory {
                     for (auto item : bag->items) {
                         if (!(item && IsWeapon(item->type))) continue;
                         if (pending_items.contains(item->model_file_id)) continue;
-                        pending_decodes[item->model_file_id] = new GuiUtils::EncString(item->name_enc);
+                        pending_decodes[item->model_file_id] = std::make_unique<GuiUtils::EncString>(item->name_enc);
                         pending_decodes[item->model_file_id]->string(); // Trigger decode
                         pending_items[item->model_file_id] = item;
                     }
@@ -955,9 +952,6 @@ namespace GWArmory {
                 }
 
                 // Cleanup
-                for (auto& it : pending_decodes) {
-                    delete it.second;
-                }
                 pending_decodes.clear();
                 pending_items.clear();
                 state = SnapshotState::Idle;

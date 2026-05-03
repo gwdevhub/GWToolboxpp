@@ -493,9 +493,6 @@ void PartyDamage::Terminate()
     GW::StoC::RemoveCallbacks(&MapLoaded_Entry);
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
-    for (auto str : party_names_by_index) {
-        str->Release();
-    }
     party_names_by_index.clear();
 
     if (inifile) {

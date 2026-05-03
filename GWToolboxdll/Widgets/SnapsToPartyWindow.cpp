@@ -90,7 +90,7 @@ uint32_t SnapsToPartyWindow::pets_start_idx = 0xff;
 uint32_t SnapsToPartyWindow::allies_start_idx = 0xff;
 std::unordered_map<uint32_t, uint32_t> SnapsToPartyWindow::party_indeces_by_agent_id;
 std::vector<uint32_t> SnapsToPartyWindow::party_agent_ids_by_index;
-std::vector<GuiUtils::EncString*> SnapsToPartyWindow::party_names_by_index;
+std::vector<std::unique_ptr<GuiUtils::EncString>> SnapsToPartyWindow::party_names_by_index;
 
 SnapsToPartyWindow::PartyFramePosition* SnapsToPartyWindow::GetAgentHealthBarPosition(uint32_t agent_id) {
     if (!(agent_id && agent_health_bar_positions.contains(agent_id)))
@@ -106,7 +106,7 @@ bool SnapsToPartyWindow::FetchPartyInfo()
     if (!info) {
         return false;
     }
-    for (auto str : party_names_by_index) {
+    for (const auto& str : party_names_by_index) {
         if (str->IsDecoding())
             return false; // Wait for last pass before retry
     }
@@ -117,9 +117,9 @@ bool SnapsToPartyWindow::FetchPartyInfo()
         party_indeces_by_agent_id[agent_id] = party_agent_ids_by_index.size();
         party_agent_ids_by_index.push_back(agent_id);
         while (party_names_by_index.size() < party_agent_ids_by_index.size()) {
-            party_names_by_index.push_back(new GuiUtils::EncString());
+            party_names_by_index.push_back(std::make_unique<GuiUtils::EncString>());
         }
-        const auto str = party_names_by_index[party_agent_ids_by_index.size() - 1];
+        auto* str = party_names_by_index[party_agent_ids_by_index.size() - 1].get();
         str->reset(enc_name ? enc_name : GW::Agents::GetAgentEncName(agent_id))
             ->wstring(); // Trigger decode
         };
