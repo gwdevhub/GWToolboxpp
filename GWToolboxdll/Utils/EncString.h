@@ -5,19 +5,27 @@ namespace GW::Constants {
 }
 
 namespace GuiUtils {
-    class EncString {
-    protected:
+    using SanitiseCallback = std::function<std::wstring(std::wstring)>;
+
+    class EncString final {
+        struct DecodeContext {
+            EncString* owner;
+        };
+
         std::wstring encoded_ws;
         std::wstring decoded_ws;
         std::string decoded_s;
         bool decoding = false;
         bool decoded = false;
         bool sanitised = false;
-        bool release = false;
-        virtual void sanitise();
-        virtual void decode();
+        SanitiseCallback sanitise_cb;
+        void sanitise();
+        void decode();
         GW::Constants::Language language_id = static_cast<GW::Constants::Language>(0xff);
         static void OnStringDecoded(void* param, const wchar_t* decoded);
+
+        DecodeContext* pending_ctx_ = nullptr;
+        void AbandonDecode();
 
     public:
         // Set the language for decoding this encoded string. If the language has changed, resets the decoded result. Returns this for chaining.
@@ -32,8 +40,8 @@ namespace GuiUtils {
         std::wstring& wstring();
         std::string& string();
 
-        // Free memory used by this EncString.
-        void Release();
+        // Set a custom sanitise callback. Replaces the default tag-stripping.
+        void SetSanitiseCallback(SanitiseCallback cb) { sanitise_cb = std::move(cb); }
 
         [[nodiscard]] const std::wstring& encoded() const
         {
@@ -50,9 +58,8 @@ namespace GuiUtils {
             reset(enc_string, sanitise);
         }
 
-        // Disable object copying; decoded_ws is passed to GW by reference and would be bad to do this. Pass by pointer instead.
-        EncString(const EncString& temp_obj) = delete;
-        EncString& operator=(const EncString& temp_obj) = delete;
+        EncString(const EncString&) = delete;
+        EncString& operator=(const EncString&) = delete;
         ~EncString();
     };
 }

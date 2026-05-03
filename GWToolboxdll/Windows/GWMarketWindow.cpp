@@ -1579,34 +1579,31 @@ namespace {
 
     struct PendingAddToSell {
         uint32_t item_id;
-        GuiUtils::EncString* decoded_complete_name = 0;
-        GuiUtils::EncString* decoded_name = 0;
-        GuiUtils::EncString* decoded_desc = 0;
+        std::unique_ptr<GuiUtils::EncString> decoded_complete_name;
+        std::unique_ptr<GuiUtils::EncString> decoded_name;
+        std::unique_ptr<GuiUtils::EncString> decoded_desc;
         bool ready_to_add() { return decoded_name && !decoded_name->IsDecoding() && (!decoded_desc || !decoded_desc->IsDecoding()); }
         void reset(GW::Item* item)
         {
-            if (decoded_name) decoded_name->Release();
-            decoded_name = 0;
+            decoded_name.reset();
 
             if (!(item && item->name_enc && *item->name_enc)) return;
 
             item_id = item->item_id;
 
-            if (decoded_complete_name) decoded_complete_name->Release();
-            decoded_complete_name = new GuiUtils::EncString();
+            decoded_complete_name = std::make_unique<GuiUtils::EncString>();
             if (item->complete_name_enc && *item->complete_name_enc) {
                 decoded_complete_name->language(GW::Constants::Language::English);
                 decoded_complete_name->reset(item->complete_name_enc, false);
                 decoded_complete_name->string();
             }
 
-            decoded_name = new GuiUtils::EncString();
+            decoded_name = std::make_unique<GuiUtils::EncString>();
             decoded_name->language(GW::Constants::Language::English);
             decoded_name->reset(item->name_enc, true);
             decoded_name->string();
 
-            if (decoded_desc) decoded_desc->Release();
-            decoded_desc = new GuiUtils::EncString();
+            decoded_desc = std::make_unique<GuiUtils::EncString>();
             decoded_desc->reset(nullptr, false);
             if (item->info_string && *item->info_string) {
                 decoded_desc->language(GW::Constants::Language::English);
@@ -1614,12 +1611,7 @@ namespace {
                 decoded_desc->string();
             }
         }
-        ~PendingAddToSell()
-        {
-            if (decoded_complete_name) decoded_complete_name->Release();
-            if (decoded_name) decoded_name->Release();
-            if (decoded_desc) decoded_desc->Release();
-        }
+        ~PendingAddToSell() = default;
     } pending_add_to_sell;
 
     void CheckPendingAddToSell()

@@ -120,35 +120,28 @@ namespace {
         uint32_t uses = 0;
         uint32_t quantity = 0;
         bool set(const InventoryManager::Item* item = nullptr);
-        GuiUtils::EncString* name = nullptr;
-        GuiUtils::EncString* desc = nullptr;
-        GuiUtils::EncString* wiki_name = nullptr;
-        GuiUtils::EncString* single_item_name = nullptr;
+        std::unique_ptr<GuiUtils::EncString> name;
+        std::unique_ptr<GuiUtils::EncString> desc;
+        std::unique_ptr<GuiUtils::EncString> wiki_name;
+        std::unique_ptr<GuiUtils::EncString> single_item_name;
 
-        class PluralEncString : public GuiUtils::EncString {
-        protected:
-            void sanitise() override;
-        };
-
-        PluralEncString* plural_item_name = nullptr;
+        std::unique_ptr<GuiUtils::EncString> plural_item_name;
 
         InventoryManager::Item* item() const;
         PendingItem()
         {
-            single_item_name = new GuiUtils::EncString{};
-            plural_item_name = new PluralEncString{};
-            name = new GuiUtils::EncString{};
-            desc = new GuiUtils::EncString{};
-            wiki_name = new GuiUtils::EncString{};
+            single_item_name = std::make_unique<GuiUtils::EncString>();
+            plural_item_name = std::make_unique<GuiUtils::EncString>();
+            plural_item_name->SetSanitiseCallback([](std::wstring s) {
+                s = TextUtils::StripTags(TextUtils::Replace(s, L"<brx>", L"\n"));
+                if (s.size() > 2) s = s.substr(2);
+                return s;
+            });
+            name = std::make_unique<GuiUtils::EncString>();
+            desc = std::make_unique<GuiUtils::EncString>();
+            wiki_name = std::make_unique<GuiUtils::EncString>();
         }
-        ~PendingItem()
-        {
-            single_item_name->Release();
-            plural_item_name->Release();
-            name->Release();
-            desc->Release();
-            wiki_name->Release();
-        }
+        ~PendingItem() = default;
     };
     struct PotentialItem : PendingItem {
         bool proceed = true;
@@ -2948,13 +2941,3 @@ bool PendingTransaction::selling()
     return type == GW::Merchant::TransactionType::MerchantSell || type == GW::Merchant::TransactionType::TraderSell;
 }
 
-void PendingItem::PluralEncString::sanitise()
-{
-    if (sanitised) {
-        return;
-    }
-    EncString::sanitise();
-    if (sanitised) {
-        decoded_ws = decoded_ws.substr(2);
-    }
-}

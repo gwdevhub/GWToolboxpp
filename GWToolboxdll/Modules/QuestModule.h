@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include <IconsFontAwesome5.h>
 
 #include <ToolboxModule.h>
@@ -15,29 +16,17 @@ namespace GuiUtils {
 
 struct QuestObjective {
     QuestObjective(GW::Constants::QuestID quest_id, const wchar_t* objective_enc, bool is_completed);
-    ~QuestObjective();
+    ~QuestObjective() = default;
     // copy not allowed
     QuestObjective(const QuestObjective& other) = delete;
-    QuestObjective(QuestObjective&& other) noexcept {
-        quest_id = other.quest_id;
-        is_completed = other.is_completed;
-        objective_enc = other.objective_enc;
-        other.objective_enc = nullptr;
-    }
+    QuestObjective(QuestObjective&& other) noexcept = default;
 
     // copy not allowed
     QuestObjective& operator=(const QuestObjective& other) = delete;
-    QuestObjective& operator=(QuestObjective&& other) noexcept
-    {
-        quest_id = other.quest_id;
-        is_completed = other.is_completed;
-        objective_enc = other.objective_enc;
-        other.objective_enc = nullptr;
-        return *this;
-    }
+    QuestObjective& operator=(QuestObjective&& other) noexcept = default;
 
     GW::Constants::QuestID quest_id = (GW::Constants::QuestID)0;
-    GuiUtils::EncString* objective_enc = nullptr;
+    std::unique_ptr<GuiUtils::EncString> objective_enc;
     bool is_completed = false;
 };
 

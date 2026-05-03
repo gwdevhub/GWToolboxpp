@@ -35,7 +35,7 @@ namespace {
     constexpr wchar_t UNKNOWN_SKILL_NAME[] = L"Unknown Skill";
     constexpr wchar_t UNKNOWN_PLAYER_NAME[] = L"Unknown Player";
 
-    std::map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names;
+    std::map<GW::Constants::SkillID, std::unique_ptr<GuiUtils::EncString>> skill_names;
 
     GuiUtils::EncString* GetSkillName(const GW::Constants::SkillID skill_id)
     {
@@ -44,9 +44,9 @@ namespace {
         if (found_it == skill_names.end()) {
             const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
             ASSERT(skill_data);
-            skill_names[skill_id] = new GuiUtils::EncString(skill_data->name);
+            skill_names[skill_id] = std::make_unique<GuiUtils::EncString>(skill_data->name);
         }
-        return skill_names[skill_id];
+        return skill_names[skill_id].get();
     }
 
     IDirect3DTexture9* GetSkillImage(const GW::Constants::SkillID skill_id)
@@ -280,9 +280,6 @@ namespace {
         }
         party_members.clear();
 
-        for (const auto skill_name : skill_names | std::views::values) {
-            delete skill_name;
-        }
         skill_names.clear();
     }
 

@@ -9,6 +9,15 @@
 
 using GuiUtils::EncString;
 
+void EncString::AbandonDecode()
+{
+    if (pending_ctx_) {
+        pending_ctx_->owner = nullptr;
+        pending_ctx_ = nullptr;
+    }
+    decoding = false;
+}
+
 EncString* EncString::reset(const uint32_t enc_string_id, const bool sanitise)
 {
     if (enc_string_id && encoded_ws.length()) {
@@ -33,11 +42,11 @@ EncString* EncString::language(const GW::Constants::Language l)
     if (language_id == l) {
         return this;
     }
-    ASSERT(!decoding);
+    AbandonDecode();
     language_id = l;
     decoded_ws.clear();
     decoded_s.clear();
-    decoding = decoded = false;
+    decoded = false;
     return this;
 }
 
@@ -46,11 +55,11 @@ EncString* EncString::reset(const wchar_t* enc_string, const bool sanitise)
     if (enc_string && wcscmp(enc_string, encoded_ws.c_str()) == 0) {
         return this;
     }
-    ASSERT(!decoding);
+    AbandonDecode();
     encoded_ws.clear();
     decoded_ws.clear();
     decoded_s.clear();
-    decoding = decoded = false;
+    decoded = false;
     sanitised = !sanitise;
     if (enc_string) {
         encoded_ws = enc_string;
@@ -62,8 +71,14 @@ void EncString::decode()
 {
     if (!decoded && !decoding && !encoded_ws.empty()) {
         decoding = true;
-        GW::GameThread::Enqueue([&] {
-            GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnStringDecoded, this, language_id);
+        pending_ctx_ = new DecodeContext{this};
+        auto* ctx = pending_ctx_;
+        GW::GameThread::Enqueue([ctx] {
+            if (ctx->owner) {
+                GW::UI::AsyncDecodeStr(ctx->owner->encoded_ws.c_str(), OnStringDecoded, ctx, ctx->owner->language_id);
+            } else {
+                delete ctx;
+            }
         });
     }
 }
@@ -79,37 +94,34 @@ void EncString::sanitise()
 {
     if (!sanitised && !decoded_ws.empty()) {
         sanitised = true;
-        decoded_ws = TextUtils::StripTags(TextUtils::Replace(decoded_ws, L"<brx>", L"\n"));
-    }
-}
-
-void EncString::Release()
-{
-    release = true;
-    if (!decoding) {
-        delete this;
+        if (sanitise_cb) {
+            decoded_ws = sanitise_cb(std::move(decoded_ws));
+        } else {
+            decoded_ws = TextUtils::StripTags(TextUtils::Replace(decoded_ws, L"<brx>", L"\n"));
+        }
     }
 }
 
 EncString::~EncString()
 {
-    ASSERT(!decoding);
+    AbandonDecode();
 }
 
 void EncString::OnStringDecoded(void* param, const wchar_t* decoded)
 {
-    const auto context = static_cast<EncString*>(param);
-    if (!(context && context->decoding && !context->decoded)) {
-        return; // Not expecting a decoded string; may have been reset() before response was received.
+    auto* ctx = static_cast<DecodeContext*>(param);
+    if (!ctx->owner) {
+        delete ctx;
+        return;
     }
+    auto* self = ctx->owner;
+    self->pending_ctx_ = nullptr;
     if (decoded && decoded[0]) {
-        context->decoded_ws = decoded;
+        self->decoded_ws = decoded;
     }
-    context->decoded = true;
-    context->decoding = false;
-    if (context->release) {
-        delete context;
-    }
+    self->decoded = true;
+    self->decoding = false;
+    delete ctx;
 }
 
 std::string& EncString::string()

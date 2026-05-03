@@ -410,7 +410,7 @@ class HotkeyGWKey : public TBHotkey {
     int action_idx = -1;
 
 public:
-    static std::vector<std::pair<GW::UI::ControlAction, GuiUtils::EncString*>> control_labels;
+    static std::vector<std::pair<GW::UI::ControlAction, std::unique_ptr<GuiUtils::EncString>>> control_labels;
 
     static const char* IniSection() { return "GWHotkey"; }
     [[nodiscard]] const char* Name() const override { return IniSection(); }

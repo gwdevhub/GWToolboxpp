@@ -866,11 +866,5 @@ void QuestModule::Terminate()
 
 QuestObjective::QuestObjective(const GW::Constants::QuestID quest_id, const wchar_t* objective_enc, const bool is_completed)
     : quest_id(quest_id),
-      objective_enc(new GuiUtils::EncString(objective_enc)),
+      objective_enc(std::make_unique<GuiUtils::EncString>(objective_enc)),
       is_completed(is_completed) {}
-
-QuestObjective::~QuestObjective()
-{
-    if (objective_enc)
-        objective_enc->Release();
-}

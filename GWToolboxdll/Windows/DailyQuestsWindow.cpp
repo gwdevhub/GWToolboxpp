@@ -63,7 +63,7 @@ namespace {
 
 
     // Cache map
-    std::map<std::wstring, GuiUtils::EncString*> region_names;
+    std::map<std::wstring, std::unique_ptr<GuiUtils::EncString>> region_names;
 
     constexpr std::array hard_coded_wanted_by_shining_blade_names = {"Justiciar Kimii",        "Zaln the Jaded",          "Justiciar Sevaan",  "Insatiable Vakar",   "Amalek the Unmerciful",     "Carnak the Hungry", "Valis the Rampant",       "Cerris",
                                                                      "Sarnia the Red-Handed",  "Destor the Truth Seeker", "Selenas the Blunt", "Justiciar Amilyn",   "Maximilian the Meticulous", "Joh the Hostile",   "Barthimus the Provident", "Calamitous",
@@ -796,7 +796,7 @@ namespace {
         }
     }
 
-    using QuestLogNames = std::unordered_map<GW::Constants::QuestID, GuiUtils::EncString*>;
+    using QuestLogNames = std::unordered_map<GW::Constants::QuestID, std::unique_ptr<GuiUtils::EncString>>;
 
     bool IsQuestAvailable(DailyQuests::QuestData* info)
     {
@@ -809,9 +809,6 @@ namespace {
 
     void ClearQuestLogInfo()
     {
-        for (auto ptr : quest_log_names) {
-            delete ptr.second;
-        }
         quest_log_names.clear();
     }
 
@@ -822,9 +819,9 @@ namespace {
         bool processing = false;
         for (auto& entry : w->quest_log) {
             if (entry.name && !quest_log_names.contains(entry.quest_id)) {
-                const auto enc_string = new GuiUtils::EncString();
+                auto enc_string = std::make_unique<GuiUtils::EncString>();
                 enc_string->reset(entry.name)->language(GW::Constants::Language::English)->wstring();
-                quest_log_names[entry.quest_id] = enc_string;
+                quest_log_names[entry.quest_id] = std::move(enc_string);
             }
             if (!processing && quest_log_names[entry.quest_id]->IsDecoding()) {
                 processing = true;
@@ -1584,9 +1581,6 @@ void DailyQuests::Terminate()
         it.Terminate();
     }
 
-    for (const auto& it : region_names) {
-        it.second->Release();
-    }
     region_names.clear();
 
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
@@ -1691,17 +1685,15 @@ DailyQuests::QuestData::~QuestData()
 
 void DailyQuests::QuestData::Terminate()
 {
-    if (name_translated) delete name_translated;
-    name_translated = nullptr;
-    if (name_english) delete name_english;
-    name_english = nullptr;
+    name_translated.reset();
+    name_english.reset();
 }
 
 void DailyQuests::QuestData::Decode(bool force)
 {
     if (name_translated && name_english && !force) return;
-    if (!name_translated) name_translated = new GuiUtils::EncString(nullptr, false);
-    if (!name_english) name_english = new GuiUtils::EncString(nullptr, false);
+    if (!name_translated) name_translated = std::make_unique<GuiUtils::EncString>(nullptr, false);
+    if (!name_english) name_english = std::make_unique<GuiUtils::EncString>(nullptr, false);
     name_english->language(GW::Constants::Language::English);
     name_translated->language(GW::UI::GetTextLanguage());
 
@@ -1753,7 +1745,7 @@ const std::string& DailyQuests::QuestData::GetRegionName()
     const auto region_name = Resources::GetRegionName(map_id);
     auto found = region_names.find(region_name);
     if (found == region_names.end()) {
-        region_names[region_name] = new GuiUtils::EncString(region_name);
+        region_names[region_name] = std::make_unique<GuiUtils::EncString>(region_name);
         found = region_names.find(region_name);
     }
     return found->second->string();

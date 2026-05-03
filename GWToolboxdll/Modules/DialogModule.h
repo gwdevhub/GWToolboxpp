@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 
 #include <GWCA/Managers/UIMgr.h>
 
@@ -36,7 +37,7 @@ public:
     static void SendDialogs(std::initializer_list<uint32_t> dialog_ids);
     static uint32_t GetDialogAgent();
     static const std::vector<GW::UI::DialogButtonInfo*>& GetDialogButtons();
-    static const std::vector<GuiUtils::EncString*>& GetDialogButtonMessages();
+    static const std::vector<std::unique_ptr<GuiUtils::EncString>>& GetDialogButtonMessages();
     // Find and take the first available quest from the current dialog. Returns quest_id requested.
     static uint32_t AcceptFirstAvailableQuest();
     static uint32_t AcceptFirstAvailableBounty();
