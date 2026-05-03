@@ -992,6 +992,19 @@ void VanquishMapOverlayWidget::Update(float)
         else if (HaveBlockedPlanesChanged()) {
             RebuildMapBorder();
         }
+        else if (cached_walkable_grid && cached_walkable_grid_size > 0) {
+            // Detect teleport: if the player is standing on a cell that isn't
+            // walkable, the reachability set is stale (e.g. UW teleports).
+            const auto* player = GW::Agents::GetControlledCharacter();
+            if (player) {
+                const int px = static_cast<int>(floorf(player->pos.x / EXPLORE_CELL_SIZE));
+                const int py = static_cast<int>(floorf(player->pos.y / EXPLORE_CELL_SIZE));
+                const int idx = GetCellIndex(px, py);
+                if (idx < 0 || !cached_walkable_grid[idx]) {
+                    RebuildMapBorder();
+                }
+            }
+        }
     }
 
     // Frame rate check for expensive updates
