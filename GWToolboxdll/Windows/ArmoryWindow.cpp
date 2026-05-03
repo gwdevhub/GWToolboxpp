@@ -910,7 +910,7 @@ namespace GWArmory {
                         if (!(item && IsWeapon(item->type))) continue;
                         if (pending_items.contains(item->model_file_id)) continue;
                         pending_decodes[item->model_file_id] = std::make_unique<GuiUtils::EncString>(item->name_enc);
-                        pending_decodes[item->model_file_id]->string(); // Trigger decode
+                        pending_decodes[item->model_file_id]->StartDecode();
                         pending_items[item->model_file_id] = item;
                     }
                 }

@@ -31,7 +31,7 @@ namespace {
 
     std::unordered_map<uint32_t, std::unique_ptr<GuiUtils::EncString>> agent_names_by_id;
 
-    std::string& GetAgentName(uint32_t agent_id)
+    const std::string& GetAgentName(uint32_t agent_id)
     {
         const auto enc_name = GW::Agents::GetAgentEncName(agent_id);
         if (!agent_names_by_id.contains(agent_id)) {
@@ -163,7 +163,7 @@ namespace {
                 ImGui::ProgressBar(living->hp, ImVec2(-1, 0), "");
                 ImGui::PopStyleColor();
 
-                std::string* skill_name = nullptr;
+                const std::string* skill_name = nullptr;
 
                 if (enemy_info.last_skill != GW::Constants::SkillID::No_Skill) {
                     const auto skill_data = GW::SkillbarMgr::GetSkillConstantData(enemy_info.last_skill);

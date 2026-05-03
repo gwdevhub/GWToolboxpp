@@ -118,7 +118,7 @@ namespace {
     }
 
 
-    std::string* GetAttributeName(GW::Constants::Attribute attribute)
+    const std::string* GetAttributeName(GW::Constants::Attribute attribute)
     {
         const auto attrib_data = GW::SkillbarMgr::GetAttributeConstantData(attribute);
         if (attrib_data) {
@@ -1595,20 +1595,20 @@ namespace {
             if (item->complete_name_enc && *item->complete_name_enc) {
                 decoded_complete_name->language(GW::Constants::Language::English);
                 decoded_complete_name->reset(item->complete_name_enc, false);
-                decoded_complete_name->string();
+                decoded_complete_name->StartDecode();
             }
 
             decoded_name = std::make_unique<GuiUtils::EncString>();
             decoded_name->language(GW::Constants::Language::English);
             decoded_name->reset(item->name_enc, true);
-            decoded_name->string();
+            decoded_name->StartDecode();
 
             decoded_desc = std::make_unique<GuiUtils::EncString>();
             decoded_desc->reset(nullptr, false);
             if (item->info_string && *item->info_string) {
                 decoded_desc->language(GW::Constants::Language::English);
                 decoded_desc->reset(item->info_string, false);
-                decoded_desc->string();
+                decoded_desc->StartDecode();
             }
         }
         ~PendingAddToSell() = default;

@@ -67,11 +67,11 @@ EncString* EncString::reset(const wchar_t* enc_string, const bool sanitise)
     return this;
 }
 
-void EncString::decode()
+void EncString::decode() const
 {
     if (!decoded && !decoding && !encoded_ws.empty()) {
         decoding = true;
-        pending_ctx_ = new DecodeContext{this};
+        pending_ctx_ = new DecodeContext{const_cast<EncString*>(this)};
         auto* ctx = pending_ctx_;
         GW::GameThread::Enqueue([ctx] {
             if (ctx->owner) {
@@ -83,14 +83,14 @@ void EncString::decode()
     }
 }
 
-std::wstring& EncString::wstring()
+const std::wstring& EncString::wstring() const
 {
     decode();
     sanitise();
     return decoded_ws;
 }
 
-void EncString::sanitise()
+void EncString::sanitise() const
 {
     if (!sanitised && !decoded_ws.empty()) {
         sanitised = true;
@@ -124,9 +124,10 @@ void EncString::OnStringDecoded(void* param, const wchar_t* decoded)
     delete ctx;
 }
 
-std::string& EncString::string()
+const std::string& EncString::string() const
 {
-    wstring();
+    decode();
+    sanitise();
     if (sanitised && !decoded_ws.empty() && decoded_s.empty()) {
         decoded_s = TextUtils::WStringToString(decoded_ws);
     }

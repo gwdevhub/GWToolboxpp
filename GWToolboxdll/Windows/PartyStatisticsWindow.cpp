@@ -60,7 +60,7 @@ namespace {
             : id(_id)
         {
             name = GetSkillName(id);
-            name->wstring();
+            name->StartDecode();
         }
 
         GW::Constants::SkillID id = static_cast<GW::Constants::SkillID>(0);
@@ -73,7 +73,7 @@ namespace {
             : name_enc(_name_enc), agent_id(_agent_id), party_idx(_party_idx)
         {
             name.reset(name_enc.c_str());
-            name.wstring();
+            name.StartDecode();
         }
 
         std::wstring name_enc;

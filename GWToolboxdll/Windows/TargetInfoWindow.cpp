@@ -83,7 +83,7 @@ namespace {
             state = TargetInfoState::DecodingName;
             name.language(GW::Constants::Language::English);
             name.reset(_name);
-            name.wstring();
+            name.StartDecode();
         }
 
         void ParseContent()
@@ -295,7 +295,7 @@ namespace {
                 auto enc = std::make_unique<GuiUtils::EncString>();
                 enc->language(GW::Constants::Language::English);
                 enc->reset(skill_data->name);
-                enc->wstring();
+                enc->StartDecode();
                 skill_ids_by_name_id[skill_data->name] = enc.get();
                 skill_names_by_id[(GW::Constants::SkillID)i] = std::move(enc);
             }

@@ -66,7 +66,7 @@ namespace {
                 enc_name = std::make_unique<GuiUtils::EncString>(map_info->name_id);
                 if (search_in_english)
                     enc_name->language(GW::Constants::Language::English);
-                enc_name->wstring();
+                enc_name->StartDecode();
             }
         }
 

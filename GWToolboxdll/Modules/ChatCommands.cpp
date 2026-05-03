@@ -667,7 +667,7 @@ namespace {
             pref_map.emplace_back(GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1");
             pref_map.emplace_back(GW::UI::FlagPreference::EnableGamepad, L"\x108\x107" "Enable Gamepad\x1");
             for (const auto& it : pref_map) {
-                it.label->wstring();
+                it.label->StartDecode();
             }
         }
         return pref_map;
@@ -2024,7 +2024,7 @@ void ChatCommands::Update(const float delta)
             }
             auto dtn = new DecodedTitleName(static_cast<GW::Constants::TitleID>(i));
             title_names.push_back(dtn);
-            dtn->name.string(); // Trigger decode for sorting.
+            dtn->name.StartDecode();
         }
     }
     else if (!title_names_sorted) {

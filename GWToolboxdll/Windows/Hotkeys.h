@@ -135,10 +135,10 @@ public:
     GuiUtils::EncString enc_desc;
     GW::ItemModifier* mod_struct = nullptr;
     uint32_t mod_struct_size = 0;
-    std::string& name() { return enc_name.string(); }
-    std::wstring& name_ws() { return enc_name.wstring(); }
-    std::string& desc() { return enc_desc.string(); }
-    std::wstring& desc_ws() { return enc_desc.wstring(); }
+    const std::string& name() { return enc_name.string(); }
+    const std::wstring& name_ws() { return enc_name.wstring(); }
+    const std::string& desc() { return enc_desc.string(); }
+    const std::wstring& desc_ws() { return enc_desc.wstring(); }
 };
 
 class HotkeyEquipItem : public TBHotkey {

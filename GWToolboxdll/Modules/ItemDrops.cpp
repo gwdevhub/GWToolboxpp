@@ -742,7 +742,7 @@ ItemDrops::PendingDrop::PendingDrop(GW::Item* _item)
     value = item->value;
     map_id = GW::Map::GetMapID();
     icon = Resources::GetItemImage(item);
-    Resources::GetMapName(map_id)->wstring();
+    Resources::GetMapName(map_id)->StartDecode();
 
     const wchar_t* item_name_pt = L"\x101";
     if (item->single_item_name && *item->single_item_name) {
@@ -756,7 +756,7 @@ ItemDrops::PendingDrop::PendingDrop(GW::Item* _item)
     item_name_enc = new wchar_t[len + 1];
     wcscpy(item_name_enc, item_name_pt);
 
-    ::GetItemName(item_name_enc)->wstring(); // Trigger decode.
+    ::GetItemName(item_name_enc)->StartDecode();
 
     time(&system_time);
 

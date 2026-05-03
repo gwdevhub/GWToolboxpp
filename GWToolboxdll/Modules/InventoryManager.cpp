@@ -2237,7 +2237,7 @@ void InventoryManager::Draw(IDirect3DDevice9*)
                     ImGui::SetTooltip("%s", pi->desc->string().c_str());
                 }
                 ImGui::SameLine(longest_item_name_length + wiki_btn_width);
-                pi->wiki_name->wstring();
+                pi->wiki_name->StartDecode();
                 if (ImGui::Button("Wiki", ImVec2(wiki_btn_width, 0))) {
                     GuiUtils::SearchWiki(pi->wiki_name->wstring());
                 }
@@ -2482,7 +2482,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
     }
 
 
-    context_item.wiki_name->wstring();
+    context_item.wiki_name->StartDecode();
     if (wiki_link_on_context_menu && ImGui::Button("Guild Wars Wiki", size)) {
         ImGui::CloseCurrentPopup();
         GuiUtils::SearchWiki(context_item.wiki_name->wstring());
@@ -2506,7 +2506,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
         }
     }
     if (context_item_actual->name_enc && *context_item_actual->name_enc && context_item_actual->IsSalvagable(true,false)) {
-        context_item.single_item_name->string(); // Pre-decode
+        context_item.single_item_name->StartDecode();
         const auto identifier = context_item_actual->name_enc;
         bool flagged = block_from_being_salvaged.contains(identifier);
         if (ImGui::Button(!flagged ? "Hide this when salvaging" : "Show this when salvaging", size)) {
@@ -2522,7 +2522,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
         }
     }
     if (context_item_actual->model_id && context_item_actual->value) {
-        context_item.single_item_name->string(); // Pre-decode
+        context_item.single_item_name->StartDecode();
         const auto identifier = context_item_actual->model_id;
         bool flagged = hide_from_merchant_items.contains(identifier);
         if (ImGui::Button(!flagged ? "Hide this when selling" : "Show this when selling", size)) {

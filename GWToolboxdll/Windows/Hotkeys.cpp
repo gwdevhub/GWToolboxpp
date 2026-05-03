@@ -59,7 +59,7 @@ namespace {
             return true;
         bool waiting = false;
         for (const auto& it : HotkeyGWKey::control_labels) {
-            (it.second->string());
+            it.second->StartDecode();
             if (it.second->IsDecoding()) {
                 waiting = true;
                 break;

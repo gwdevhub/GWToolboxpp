@@ -820,7 +820,8 @@ namespace {
         for (auto& entry : w->quest_log) {
             if (entry.name && !quest_log_names.contains(entry.quest_id)) {
                 auto enc_string = std::make_unique<GuiUtils::EncString>();
-                enc_string->reset(entry.name)->language(GW::Constants::Language::English)->wstring();
+                enc_string->reset(entry.name)->language(GW::Constants::Language::English);
+                enc_string->StartDecode();
                 quest_log_names[entry.quest_id] = std::move(enc_string);
             }
             if (!processing && quest_log_names[entry.quest_id]->IsDecoding()) {
@@ -1708,8 +1709,8 @@ void DailyQuests::QuestData::Decode(bool force)
         name_translated->reset(enc_name.c_str());
         name_english->reset(enc_name.c_str());
     }
-    name_translated->wstring();
-    name_english->wstring();
+    name_translated->StartDecode();
+    name_english->StartDecode();
     GetMapName();
 }
 

@@ -3255,12 +3255,12 @@ void UnlockedPvPItemUpgrade::LoadStrings()
         wchar_t* tmp;
         if (GW::Items::GetPvPItemUpgradeEncodedName(encoded_name_index, &tmp)) {
             name.reset(tmp);
-            name.wstring();
+            name.StartDecode();
         }
     }
     if (single_item_name.encoded().empty()) {
         single_item_name.reset(info->name_id);
-        single_item_name.wstring();
+        single_item_name.StartDecode();
     }
 }
 
