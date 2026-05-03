@@ -22,6 +22,10 @@
 #include <Windows/RerollWindow.h>
 #include <Windows/AccountInventoryWindow.h>
 
+#include <Utils/ToolboxUtils.h>
+#include <GWCA/Context/WorldContext.h>
+#include <GWCA/Managers/PlayerMgr.h>
+
 #define memeq(a, b) (memcmp((a), (b), sizeof(*(a))) == 0)
 
 
@@ -212,7 +216,7 @@ const char* HERO_NAME[] = {
         SlotColumnID_Max,
     };
 
-    enum RerollStage { None, NextCharacter, WaitForCharacterLoad, DoSaveHeroes, DoneCharacterLoad, WaitForHeroLoad, DoneHeroLoad, DoRestoreHeroes, RerollToItem, WaitForHeroWithItem };
+    
 
     struct InventoryItem {
         // identifying attributes
@@ -432,11 +436,6 @@ struct MergeStack;
     void SortSlots(ImGuiTableSortSpecs* sort_specs);
     void DescriptionDecode(InventoryItem* i, GW::Item* item);
     void ClearMissingItem(const UUID* account, const std::string& character, const GW::Constants::HeroID hero_id, const GW::Constants::Bag bag_id, const uint32_t slot);
-    // state machine for rerolling to items, internal functions
-    void StepReroll();
-    void SaveHeroes();
-    void RestoreHeroes();
-    void MoveItem();
 
     // collective callback hook
     GW::HookEntry OnUIMessage_HookEntry{};
@@ -472,13 +471,81 @@ struct MergeStack;
     size_t filtered_item_count = 0;
     std::string last_character{};
     std::set<std::string> last_available_chars{};
-    RerollStage reroll_stage = RerollStage::None;
-    std::vector<GW::AvailableCharacterInfo> reroll_char_queue{};
-    std::vector<uint32_t> reroll_hero_queue{};
-    std::vector<uint32_t> cached_heroes{};
+
+    struct InventoryScanner {
+        enum Stage : uint32_t { None, Start, NextCharacter, WaitForCharacterLoad, WaitForEmptyParty, WaitForHeroLoad, DoRestoreHeroes };
+        Stage Get() const { return current_stage; }
+        void Set(Stage _stage)
+        {
+            if (current_stage == _stage) return;
+            stage_set_at = TIMER_INIT();
+            current_stage = _stage;
+        }
+        void Begin() { 
+            if (current_stage != Stage::None) return;
+            Set(Stage::Start);
+        }
+        void Update();
+        bool Cancel(const char* err = 0) { 
+            Set(Stage::None);
+            if (err) {
+                Log::Warning("%s", err);
+            }
+            return true;
+        }
+    private:
+        Stage current_stage = Stage::None;
+        clock_t stage_set_at = 0;
+
+        std::wstring original_player;
+        std::vector<GW::Constants::HeroID> original_player_heroes;
+        std::vector<std::wstring> reroll_char_queue{};
+        std::wstring current_reroll_char;
+        std::vector<GW::Constants::HeroID> queued_hero_ids{};
+        std::vector<GW::Constants::HeroID> original_heroes{};
+        std::vector<GW::Constants::HeroID> heroes_pending_load{};
+    };
+    InventoryScanner inventory_scan;
+
+    struct ItemReroller {
+        enum Stage : uint32_t { None, Start, WaitForCharacterLoad, WaitForHeroLoad };
+        Stage Get() const { return current_stage; }
+        void Set(Stage _stage)
+        {
+            if (current_stage == _stage) return;
+            stage_set_at = TIMER_INIT();
+            current_stage = _stage;
+        }
+        void Begin(InventoryItem* i, bool _move = false)
+        {
+            if (current_stage != Stage::None) return;
+            move = _move;
+            item = *i;
+            Set(Stage::Start);
+        }
+        void Update();
+        void Cancel(const char* err = 0)
+        {
+            Set(Stage::None);
+            if (err) {
+                Log::Warning("%s", err);
+            }
+        }
+
+    private:
+        Stage current_stage = Stage::None;
+        clock_t stage_set_at = 0;
+        InventoryItem item;
+        bool move = false;
+    };
+    ItemReroller item_reroll;
+
+
+
+
+
     clock_t add_hero_timer{};
     clock_t save_hero_timer{};
-    std::vector<uint32_t> heroes_pending_load{};
     clock_t map_loaded_delayed_timer{};
     clock_t save_dirty_inventories_timer{};
     bool map_loaded_delayed_trigger = false;
@@ -528,192 +595,24 @@ struct MergeStack;
 
     static constexpr ImU32 color_quantity = IM_COL32(250, 247, 153, 255);
     
-    void SaveHeroes()
+    std::vector<GW::Constants::HeroID> GetPartyHeroIDs()
     {
-        if (!cached_heroes.empty()) return;
         const GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
         const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
-        if (!(party_info && me)) return;
+        if (!(party_info && me)) return {};
+        std::vector<GW::Constants::HeroID> hero_ids;
         for (const auto& hero : party_info->heroes) {
             if (hero.owner_player_id != me->login_number) continue;
-            cached_heroes.push_back(hero.hero_id);
+            hero_ids.push_back(hero.hero_id);
         }
-    }
-
-    void RestoreHeroes()
-    {
-        GW::PartyMgr::KickAllHeroes();
-        if (cached_heroes.empty()) {
-            reroll_stage = RerollStage::NextCharacter;
-            StepReroll();
-            return;
-        }
-        for (auto hero_id : cached_heroes) {
-            GW::PartyMgr::AddHero((GW::Constants::HeroID)hero_id);
-        }
-    }
-
-    void StepReroll()
-    {
-        GW::AvailableCharacterInfo next_char{};
-        uint32_t next_hero{};
-        switch (reroll_stage) {
-            case RerollStage::NextCharacter:
-                if (reroll_char_queue.empty()) {
-                    reroll_stage = RerollStage::None;
-                    SaveToFiles(false);
-                    return;
-                }
-                reroll_stage = RerollStage::WaitForCharacterLoad;
-                next_char = reroll_char_queue.back();
-                reroll_char_queue.pop_back();
-                reroll_hero_queue = CompletionWindow::GetCharacterCompletion(next_char.player_name)->heroes;
-                if (!RerollWindow::Instance().Reroll(next_char.player_name, false, false, true, false)) {
-                    reroll_stage = RerollStage::None;
-                }
-                return;
-            case RerollStage::DoneHeroLoad:
-                if (reroll_hero_queue.empty()) {
-                    reroll_stage = RerollStage::DoRestoreHeroes;
-                    RestoreHeroes();
-                    return;
-                }
-                // fall through
-            case RerollStage::DoneCharacterLoad:
-                if (reroll_hero_queue.empty()) {
-                    reroll_stage = RerollStage::NextCharacter;
-                    StepReroll();
-                    return;
-                }
-                {
-                    const auto map_info = GW::Map::GetMapInfo();
-                    const uint32_t max_heroes_per_batch = map_info && map_info->max_party_size > 1
-                        ? map_info->max_party_size - 1
-                        : 1;
-                    GW::PartyMgr::KickAllHeroes();
-                    heroes_pending_load.clear();
-                    while (!reroll_hero_queue.empty() && heroes_pending_load.size() < max_heroes_per_batch) {
-                        next_hero = reroll_hero_queue.back();
-                        reroll_hero_queue.pop_back();
-                        GW::PartyMgr::AddHero((GW::Constants::HeroID)next_hero);
-                        heroes_pending_load.push_back(next_hero);
-                    }
-                    reroll_stage = RerollStage::WaitForHeroLoad;
-                    add_hero_timer = TIMER_INIT();
-                }
-                return;
-            case RerollStage::RerollToItem:
-                reroll_stage = RerollStage::None;
-                if (cached_heroes.empty()) {
-                    // no cached_heroes means we rerolled for an item on the player character
-                    // move the item, but skip any hero related setup
-                    MoveItem();
-                    return;
-                }
-                auto hero_id = cached_heroes.front();
-                // do not kick heroes, if the one we need is already added
-                bool hero_is_present = false;
-                for (auto it = bag_ptr_to_hero_id.begin(); it != bag_ptr_to_hero_id.end(); ++it) {
-                    if (it->second == hero_id) {
-                        hero_is_present = true;
-                        break;
-                    }
-                }
-                if (hero_is_present) {
-                    // hero is already in the party, just move the item
-                    MoveItem();
-                }
-                else {
-                    // MoveItem will be triggered through AddItem, once the item is available
-                    reroll_stage = RerollStage::WaitForHeroWithItem;
-                    GW::PartyMgr::KickAllHeroes();
-                    GW::PartyMgr::AddHero((GW::Constants::HeroID)hero_id);
-                    add_hero_timer = TIMER_INIT();
-                }
-                cached_heroes.clear();
-                return;
-        }
-    }
-
-    void MoveItem()
-    {
-        if (!item_to_move) return;
-        auto it = inventory.find(&*item_to_move);
-        item_to_move.reset();
-        if (it == inventory.end()) return;
-
-        const auto item = it->get();
-
-        // can only move from current player or from chest
-        if (item->character != current_character && !IsChestBag(item->bag_id)) return;
-
-        auto cpy = new InventoryItem();
-        *cpy = *item;
-
-        GW::GameThread::Enqueue([cpy] {
-            auto item = GW::Items::GetItemById(cpy->item_id);
-            // plausibilize that our item_id was up to date, this should only be false immediately after loading a new map
-            if (item && item->bag && item->slot == cpy->slot && item->bag->bag_id() == cpy->bag_id && item->model_id == cpy->model_id) {
-                if (!IsChestBag(cpy->bag_id)) GW::Items::OpenXunlaiWindow();
-                InventoryManager::MoveItem((InventoryManager::Item*)item);
-            }
-            delete cpy;
-        });
+        return hero_ids;
     }
 
     // jump to location of clicked item, i.e. open chest/add hero/change character
     // with Ctrl: move item to/from chest after jump
     void OnInventoryItemClicked(InventoryItem* i, bool move)
     {
-        if (map_loaded_delayed_trigger || reroll_stage != RerollStage::None || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
-        if (!memeq(&i->account,&current_account)) return;
-        if (move) {
-            if (IsHeroArmor(i->hero_id, i->slot)) return; // can not unequip hero armor
-            item_to_move.emplace();
-            i->CopyKeyTo(&*item_to_move);
-        }
-        bool item_is_in_chest = IsChestBag(i->bag_id);
-        bool item_is_on_current_character = i->character == current_character;
-        bool item_is_on_hero = GW::Constants::HeroID::NoHero != i->hero_id;
-        if (item_is_on_hero) {
-            cached_heroes.clear();
-            cached_heroes.push_back(i->hero_id);
-        }
-
-        if (item_is_in_chest && item_to_move) {
-            MoveItem();
-        }
-        else if (item_is_in_chest && !item_to_move) {
-            GW::GameThread::Enqueue([bag_id = i->bag_id]() {
-                uint32_t pane;
-                if (bag_id == GW::Constants::Bag::Material_Storage)
-                    pane = (uint32_t)GW::Constants::StoragePane::Material_Storage;
-                else
-                    pane = (uint32_t)bag_id - (uint32_t)GW::Constants::Bag::Storage_1;
-                GW::UI::SetPreference(GW::UI::NumberPreference::StorageBagPage, pane);
-                GW::Items::OpenXunlaiWindow();
-            });
-        }
-        else if (item_is_on_current_character && item_is_on_hero) {
-            // MoveItem will be triggered through StepReroll if the hero is already present.
-            // Otherwise through AddItem, once the heroes inventory has been added by GW
-            reroll_stage = RerollStage::RerollToItem;
-            StepReroll();
-        }
-        else if (item_is_on_current_character && !item_is_on_hero && item_to_move) {
-            MoveItem();
-        }
-        else if (!item_is_on_current_character) {
-            // MoveItem will be triggered through StepReroll if the item is on a player character or
-            // if the corresponding hero is already present.
-            // Otherwise through AddItem, once the heroes inventory has been added by GW
-            reroll_stage = RerollStage::RerollToItem;
-            if (!RerollWindow::Instance().Reroll(TextUtils::StringToWString(i->character).c_str(), false, false, true, false)) {
-                // reroll failed, abort
-                reroll_stage = RerollStage::None;
-                item_to_move.reset();
-            }
-        }
+        item_reroll.Begin(i, move);
     }
 
     void OnItemTooltip(const MergeStack* ms)
@@ -1221,13 +1120,6 @@ struct MergeStack;
         inventory_dirty.insert(GetIniID(i_raw->account, i_raw->character));
         save_dirty_inventories_timer = TIMER_INIT();
         needs_sorting = true;
-
-        if (item_to_move && GW::Constants::HeroID::NoHero != i_raw->hero_id && ItemEqual{}(&*item_to_move, i_raw)) {
-            // If we had to change characters and item_to_move is on a player character,
-            // then we get here during loading before MoveItem can work.
-            // In that case StepReroll will take care of moving the item.
-            MoveItem();
-        }
     }
     bool RemoveItem(uint32_t item_id);
     void ClearMissingItem(const UUID* account, const std::string& character, const GW::Constants::HeroID hero_id, const GW::Constants::Bag bag_id, const uint32_t slot)
@@ -1379,39 +1271,214 @@ void AccountInventoryWindow::Terminate()
     inventory_dirty.clear();
     free_slots.clear();
     free_slots_sorted.clear();
-    reroll_hero_queue.clear();
-    reroll_char_queue.clear();
     last_character = "";
     last_available_chars.clear();
-    reroll_stage = RerollStage::None;
     map_loaded_delayed_trigger = false;
     show_delete_note = false;
     ToolboxWindow::Terminate();
 }
 
+void InventoryScanner::Update()
+{
+    if (current_stage == InventoryScanner::Stage::None) return;
+    if (TIMER_DIFF(stage_set_at) > 10000) {
+        Log::Warning("InventoryScanner: timeout at stage %d", current_stage);
+        Cancel();
+        
+    }
+
+    const auto is_map_loaded = GW::Map::GetIsMapLoaded() && !GW::UI::IsLoadingScreenShown();
+    if (!is_map_loaded) return;
+    switch (current_stage) {
+        case InventoryScanner::Stage::Start: {
+            original_player = GW::AccountMgr::GetCurrentPlayerName();
+            original_heroes = GetPartyHeroIDs();
+            reroll_char_queue.clear();
+
+            reroll_char_queue.push_back(original_player);
+
+            auto available_characters = GW::AccountMgr::GetAvailableChars();
+            for (const auto& available_char : *available_characters) {
+                const auto reroll_to_player_current_map = available_char.map_id();
+                if (GWToolbox::ShouldDisableToolbox(reroll_to_player_current_map)) 
+                    continue;
+                if (original_player == available_char.player_name)
+                    continue;
+                reroll_char_queue.push_back(available_char.player_name);
+            }
+            Set(InventoryScanner::Stage::NextCharacter);
+        } break;
+        case InventoryScanner::Stage::NextCharacter: {
+            if (reroll_char_queue.empty()) {
+                // Restore original heroes
+                for (auto hero_id : original_player_heroes) {
+                    GW::PartyMgr::AddHero(hero_id);
+                }
+                SaveToFiles(false);
+                Cancel();
+                Log::Info("Inventory scan completed");
+                break;
+            }
+            current_reroll_char = reroll_char_queue.back();
+            reroll_char_queue.pop_back();
+            RerollWindow::Instance().Reroll(current_reroll_char.c_str(), false, false, true, false);
+            Set(InventoryScanner::Stage::WaitForCharacterLoad);
+        } break;
+        case InventoryScanner::Stage::WaitForCharacterLoad: {
+            if (!wcseq(GW::AccountMgr::GetCurrentPlayerName(), current_reroll_char.c_str())) break;
+            original_heroes = GetPartyHeroIDs();
+            queued_hero_ids.clear();
+            // Grab unlocked hero ids
+            const auto w = GW::GetWorldContext();
+            const auto h = w ? &w->hero_info : nullptr;
+            if (h) {
+                for (auto& hero : *h) {
+                    if (ToolboxUtils::IsHeroUnlocked(hero.hero_id))
+                        queued_hero_ids.push_back(hero.hero_id);
+                }
+            }
+            GW::PartyMgr::LeaveParty();
+            Set(InventoryScanner::Stage::WaitForEmptyParty);
+        } break;
+        case InventoryScanner::Stage::WaitForEmptyParty: {
+            const auto party = GW::PartyMgr::GetPartyInfo();
+            if (!(party && party->GetPartySize() == 1)) break; // Party not empty
+
+            // Add any queued heroes that need checking
+            if (queued_hero_ids.empty()) {
+                // Checked all heroes for this character, restore original heroes
+                for (auto hero_id : original_heroes) {
+                    GW::PartyMgr::AddHero(hero_id);
+                }
+                Set(InventoryScanner::Stage::DoRestoreHeroes);
+                break;
+            }
+            const auto map_info = GW::Map::GetMapInfo();
+            const auto max_heroes_per_batch = std::min(7u,map_info && map_info->max_party_size > 1 ? map_info->max_party_size - 1 : 1);
+
+            heroes_pending_load.clear();
+            while (!queued_hero_ids.empty() && heroes_pending_load.size() < max_heroes_per_batch) {
+                const auto next_hero = queued_hero_ids.back();
+                queued_hero_ids.pop_back();
+                if (!GW::PartyMgr::AddHero(next_hero)) {
+                    Cancel("Failed to add hero");
+                    break;
+                }
+                heroes_pending_load.push_back(next_hero);
+            }
+            Set(InventoryScanner::Stage::WaitForHeroLoad);
+        } break;
+        case InventoryScanner::Stage::WaitForHeroLoad: {
+            auto waiting = GetPartyHeroIDs() != heroes_pending_load;
+            for (auto hero_id : heroes_pending_load) {
+                if (!GW::Items::GetHeroInventory(hero_id)) {
+                    waiting = true;
+                    break;
+                }
+            }
+            if (waiting) break;
+            // Assume at this stage that our code has added the hero's inventory to our list?
+            GW::PartyMgr::KickAllHeroes();
+            Set(InventoryScanner::Stage::WaitForEmptyParty);
+        } break;
+        case InventoryScanner::Stage::DoRestoreHeroes: {
+            if (GetPartyHeroIDs() == original_heroes) 
+                Set(InventoryScanner::Stage::NextCharacter);
+        } break;
+    }
+}
+
+void ItemReroller::Update() {
+    if (current_stage == ItemReroller::Stage::None) return;
+    if (TIMER_DIFF(stage_set_at) > 10000) {
+        Log::Warning("ItemReroller: timeout at stage %d", current_stage);
+        Cancel();
+        
+    }
+
+    const auto is_map_loaded = GW::Map::GetIsMapLoaded() && !GW::UI::IsLoadingScreenShown();
+    if (!is_map_loaded) return;
+    switch (current_stage) {
+        case ItemReroller::Stage::Start: {
+            if (!memeq(&item.account, &current_account)) {
+                Cancel("Item belongs to another account");
+                break;
+            }
+            move = move && !IsHeroArmor(item.hero_id, item.slot);
+            if (!IsChestBag(item.bag_id)) {
+                const auto current_player = GW::AccountMgr::GetCurrentPlayerName();
+                if (TextUtils::WStringToString(current_player) != item.character) {
+                    RerollWindow::Instance().Reroll(TextUtils::StringToWString(item.character).c_str(), false, false, true, false);
+                }
+            }
+
+            Set(ItemReroller::Stage::WaitForCharacterLoad);
+        } break;
+        case ItemReroller::Stage::WaitForCharacterLoad: {
+            if (!IsChestBag(item.bag_id)) {
+                const auto current_player = GW::AccountMgr::GetCurrentPlayerName();
+                if (TextUtils::WStringToString(current_player) != item.character) break;
+            }
+            if (item.hero_id == GW::Constants::HeroID::NoHero) {
+                Set(ItemReroller::Stage::WaitForHeroLoad);
+                break;
+            }
+            const auto hero_agent = GW::PartyMgr::GetHeroInfo(item.hero_id);
+            if (hero_agent && GW::PartyMgr::IsAgentInParty(hero_agent->agent_id)) {
+                Set(ItemReroller::Stage::WaitForHeroLoad);
+                break;
+            }
+            const auto map_info = GW::Map::GetMapInfo();
+            const auto party_info = GW::PartyMgr::GetPartyInfo();
+            if (map_info && party_info && map_info->max_party_size == party_info->GetPartySize()) {
+                for (auto& h : party_info->heroes) {
+                    if (h.owner_player_id == GW::PlayerMgr::GetPlayerNumber()) {
+                        GW::PartyMgr::KickHero(h.hero_id);
+                        break;
+                    }
+                }
+            }
+            GW::PartyMgr::AddHero(item.hero_id);
+            Set(ItemReroller::Stage::WaitForHeroLoad);
+        } break;
+        case ItemReroller::Stage::WaitForHeroLoad: {
+            if (item.hero_id != GW::Constants::HeroID::NoHero) {
+                const auto hero_agent = GW::PartyMgr::GetHeroInfo(item.hero_id);
+                if (!(hero_agent && GW::PartyMgr::IsAgentInParty(hero_agent->agent_id))) 
+                    break;
+            }
+            if (IsChestBag(item.bag_id)) {
+                uint32_t pane;
+                if (item.bag_id == GW::Constants::Bag::Material_Storage)
+                    pane = (uint32_t)GW::Constants::StoragePane::Material_Storage;
+                else
+                    pane = (uint32_t)item.bag_id - (uint32_t)GW::Constants::Bag::Storage_1;
+                GW::UI::SetPreference(GW::UI::NumberPreference::StorageBagPage, pane);
+                GW::Items::OpenXunlaiWindow();
+            }
+            if (move) {
+                auto it = inventory.find(&item);
+                if (it == inventory.end()) break;
+
+                const auto found = it->get();
+
+                // can only move from current player or from chest
+                if (found->character != GetCurrentPlayerNameS() && !IsChestBag(found->bag_id)) {
+                    Cancel();
+                    break;
+                }
+                InventoryManager::MoveItem((InventoryManager::Item*)GW::Items::GetItemById(found->item_id));
+            }
+            Cancel();
+            // Done.            
+        } break;
+    }
+}
+
 void AccountInventoryWindow::Update(float)
 {
-    if (map_loaded_delayed_trigger && TIMER_DIFF(map_loaded_delayed_timer) > MAP_LOADED_DELAYED_TIMEOUT) {
-        OnMapLoadedDelayed();
-    }
-    // wait until after OnMapLoadedDelayed to continue rerolling
-    if (!map_loaded_delayed_trigger && reroll_stage == RerollStage::DoSaveHeroes && TIMER_DIFF(save_hero_timer) > SAVE_HERO_TIMEOUT) {
-        SaveHeroes();
-        reroll_stage = RerollStage::DoneCharacterLoad;
-        StepReroll();
-    }
-    if (reroll_stage == RerollStage::WaitForHeroLoad && TIMER_DIFF(add_hero_timer) > ADD_HERO_TIMEOUT) {
-        // failed to load hero in time, continue rerolling
-        // this happens if mercenary heroes are available but not set up or possibly with koss when he's gone
-        heroes_pending_load.clear();
-        reroll_stage = RerollStage::DoneHeroLoad;
-        StepReroll();
-    }
-    if (reroll_stage == RerollStage::WaitForHeroWithItem && TIMER_DIFF(add_hero_timer) > ADD_HERO_TIMEOUT) {
-        // failed to load hero in time, forget item_to_move
-        item_to_move.reset();
-        reroll_stage = RerollStage::None;
-    }
+    inventory_scan.Update();
+    item_reroll.Update();
     if (save_dirty_inventories_timer && !inventory_dirty.empty() && TIMER_DIFF(save_dirty_inventories_timer) > SAVE_DIRTY_INVENTORIES_TIMEOUT) {
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
             SaveToFiles(false);
@@ -1450,11 +1517,6 @@ void AccountInventoryWindow::PreMapLoad()
             free_slot_p->occupied_equipment = 0;
         }
         free_slot_p->occupied_inventory = 0;
-    }
-    if (!(reroll_stage == RerollStage::None || reroll_stage == RerollStage::WaitForCharacterLoad || reroll_stage >= RerollStage::RerollToItem)) {
-        // map load at an inappropriate time during GatherAllInventories, e.g. due to manual intervention or network issues
-        // abort rerolling
-        reroll_stage = RerollStage::None;
     }
 }
 
@@ -1585,30 +1647,6 @@ void AccountInventoryWindow::PostMapLoad()
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         SaveToFiles(false); // save inventory in outposts only to avoid impacting gameplay
     }
-    switch (reroll_stage) {
-        case RerollStage::None:
-            break;
-        case RerollStage::WaitForCharacterLoad:
-            save_hero_timer = TIMER_INIT();
-            reroll_stage = RerollStage::DoSaveHeroes;
-            break;
-        // RerollStage::RerollToItem is handled in OnMapLoadedDelayed as it might call MoveItem,
-        // which does not work immediately after loading into a map
-    }
-}
-
-void AccountInventoryWindow::OnMapLoadedDelayed()
-{
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
-        // not done loading, retry later
-        map_loaded_delayed_timer = TIMER_INIT();
-        return;
-    }
-    map_loaded_delayed_trigger = false;
-    if (reroll_stage == RerollStage::RerollToItem) {
-        StepReroll();
-        return;
-    }
 }
 
 void AccountInventoryWindow::HandleHeroBag(GW::Constants::HeroID hero_id)
@@ -1634,72 +1672,12 @@ void AccountInventoryWindow::HandleHeroBag(GW::Constants::HeroID hero_id)
 
 void AccountInventoryWindow::GatherAllInventories()
 {
-    reroll_hero_queue.clear();
-    reroll_char_queue.clear();
-    cached_heroes.clear();
-    auto available_characters = GW::AccountMgr::GetAvailableChars();
-    for (const auto& available_char : *available_characters) {
-        const auto char_select_info = GW::AccountMgr::GetAvailableCharacter(available_char.player_name);
-        if (!char_select_info) {
-            continue;
-        }
-        if (wcscmp(available_char.player_name, GW::AccountMgr::GetCurrentPlayerName()) == 0) {
-            // process current char last, so we automatically end up back where we started.
-            reroll_char_queue.insert(reroll_char_queue.begin(), available_char);
-        } else {
-            reroll_char_queue.push_back(available_char);
-            const auto reroll_to_player_current_map = char_select_info->map_id();
-            if (GWToolbox::ShouldDisableToolbox(reroll_to_player_current_map)) {
-                const auto charname_str = TextUtils::WStringToString(char_select_info->player_name);
-                const auto msg = std::format("{} is currently in {}.\n"
-                    "This is an outpost that toolbox won't work in.\n"
-                    "All characters must be in outposts where toolbox can work,\n"
-                    "e.g. Great Temple of Balthazar.\n\n"
-                    "Reroll to {} so you can move it to another outpost?",
-                    charname_str, Resources::GetMapName(reroll_to_player_current_map)->string(), charname_str);
-                ImGui::ConfirmDialog(msg.c_str(), [](bool result, void*){if (result) AccountInventoryWindow::Instance().OnRerollPromptReply();});
-                return;
-            }
-        }
-    }
-    reroll_stage = RerollStage::NextCharacter;
-    StepReroll();
-}
-
-void AccountInventoryWindow::OnRerollPromptReply()
-{
-    auto next_char = reroll_char_queue.back();
-    reroll_char_queue.clear();
-    RerollWindow::Instance().Reroll(next_char.player_name, false, false, true, true);
+    inventory_scan.Begin();
 }
 
 void AccountInventoryWindow::OnPartyAddHero(GW::Constants::HeroID hero_id)
 {
     HandleHeroBag(hero_id);
-    if (reroll_stage == RerollStage::None) return;
-    switch (reroll_stage) {
-        case RerollStage::WaitForHeroLoad: {
-            const auto hero_id_val = static_cast<uint32_t>(hero_id);
-            const auto it = std::find(heroes_pending_load.begin(), heroes_pending_load.end(), hero_id_val);
-            if (it == heroes_pending_load.end()) return;
-            heroes_pending_load.erase(it);
-            add_hero_timer = TIMER_INIT();
-            if (heroes_pending_load.empty()) {
-                reroll_stage = RerollStage::DoneHeroLoad;
-                StepReroll();
-            }
-            return;
-        }
-        case RerollStage::DoRestoreHeroes:
-            const GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
-            if (party_info) {
-                if (party_info->heroes.size() < cached_heroes.size()) return;
-            }
-            cached_heroes.clear();
-            reroll_stage = RerollStage::NextCharacter;
-            StepReroll();
-            return;
-    }
 }
 
 GW::Bag* AccountInventoryWindow::OnPartyRemoveHero(GW::Constants::HeroID hero_id)
@@ -1739,14 +1717,14 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         color_hero_item_hovered_foreign = HSVRotate(style.Colors[ImGuiCol_ButtonHovered], 0.166f, 0.4f);
         color_hero_item_active_foreign = HSVRotate(style.Colors[ImGuiCol_ButtonActive], 0.166f, 0.4f);
     }
-
-    if (RerollStage::None < reroll_stage && reroll_stage < RerollStage::RerollToItem) {
+    const auto reroll_stage = inventory_scan.Get();
+    if (reroll_stage != InventoryScanner::Stage::None) {
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300.f * font_scale, 0.f), ImGuiCond_FirstUseEver);
         if (ImGui::Begin("Account Inventory loading in progress")) {
             ImGui::TextWrapped("Please do not interrupt inventory loading.");
             if (ImGui::Button("Abort!")) {
-                reroll_stage = RerollStage::None;
+                inventory_scan.Cancel();
             }
         }
         ImGui::End();

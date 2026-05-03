@@ -1126,6 +1126,31 @@ namespace ToolboxUtils {
         return false;
     }
 
+    bool IsHeroUnlocked(GW::Constants::HeroID hero_id)
+    {
+        const auto w = GW::GetWorldContext();
+        if (!(w && w->hero_info.size())) {
+            return false;
+        }
+        for (auto& a : w->hero_info) {
+            if (a.hero_id != hero_id)
+                continue;
+            switch (hero_id) {
+                case GW::Constants::HeroID::Merc1:
+                case GW::Constants::HeroID::Merc2:
+                case GW::Constants::HeroID::Merc3:
+                case GW::Constants::HeroID::Merc4:
+                case GW::Constants::HeroID::Merc5:
+                case GW::Constants::HeroID::Merc6:
+                case GW::Constants::HeroID::Merc7:
+                case GW::Constants::HeroID::Merc8:
+                    if (!(a.name && !a.name)) return false; // Unlocked, but not assigned.
+            }
+            return true;
+        }
+        return false;
+    }
+
 
     GW::Array<GW::PartyInfo*>* GetParties()
     {

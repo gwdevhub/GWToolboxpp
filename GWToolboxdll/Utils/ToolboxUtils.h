@@ -46,6 +46,7 @@ namespace GW {
     enum class FriendStatus : uint32_t;
 
     namespace Constants {
+        enum HeroID : uint32_t;
         enum class Profession : uint32_t;
         enum class Campaign : uint32_t;
         enum class MapID : uint32_t;
@@ -258,6 +259,8 @@ namespace ToolboxUtils {
     // Heros
     bool IsHenchman(uint32_t agent_id);
     bool IsHero(uint32_t agent_id, GW::HeroInfo** info_out = nullptr);
+
+    bool IsHeroUnlocked(GW::Constants::HeroID hero_id);
 
     // Party related
 
