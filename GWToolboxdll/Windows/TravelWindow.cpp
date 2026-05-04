@@ -25,6 +25,7 @@
 #include <Windows/DailyQuestsWindow.h>
 #include <Windows/TravelWindow.h>
 #include <Windows/TravelWindowConstants.h>
+#include <Constants/MapAdjacency.h>
 #include <Utils/TextUtils.h>
 #include <GWCA/Managers/QuestMgr.h>
 #include <Utils/ToolboxUtils.h>
@@ -800,6 +801,8 @@ void TravelWindow::Draw(IDirect3DDevice9*)
     ImGui::End();
 }
 
+bool GetMapLabelPos(const GW::AreaInfo* map, GW::Vec2f* out);
+
 void TravelWindow::Update(const float)
 {
     if (scroll_to_outpost_id != GW::Constants::MapID::None) {
@@ -891,27 +894,75 @@ GW::Constants::MapID TravelWindow::GetNearestOutpostToPlayer()
 
 GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID map_to)
 {
-    static const auto special_cases = std::map<GW::Constants::MapID, GW::Constants::MapID>{
-        {GW::Constants::MapID::Kessex_Peak, GW::Constants::MapID::Temple_of_the_Ages},
-        {GW::Constants::MapID::Cursed_Lands, GW::Constants::MapID::Temple_of_the_Ages},
-        {GW::Constants::MapID::The_Arid_Sea, GW::Constants::MapID::Dunes_of_Despair}, // could also be augury rock
-        {GW::Constants::MapID::Dry_Top, GW::Constants::MapID::Aurora_Glade},
-        {GW::Constants::MapID::Iron_Horse_Mine, GW::Constants::MapID::Yaks_Bend_outpost},
-        {GW::Constants::MapID::Fahranur_The_First_City, GW::Constants::MapID::Blacktide_Den}, // 8 player outpost is better to start with
-        {GW::Constants::MapID::Cliffs_of_Dohjok, GW::Constants::MapID::Blacktide_Den},        // 8 player outpost is better to start with
-    };
+    // BFS over the map adjacency graph to find the nearest unlocked outpost.
+    // When multiple outposts are found at the same BFS depth, use Euclidean
+    // distance on the world map as a tiebreaker.
+    using MapID = GW::Constants::MapID;
+    std::vector<MapID> queue;
+    std::vector<uint32_t> depth(static_cast<size_t>(MapID::Count), UINT32_MAX);
 
-    if (special_cases.contains(map_to)) {
-        const auto nearest_outpost = special_cases.at(map_to);
-        if (GW::Map::GetIsMapUnlocked(nearest_outpost)) return nearest_outpost;
+    queue.push_back(map_to);
+    depth[static_cast<size_t>(map_to)] = 0;
+
+    // Get world map position of the target for tiebreaking
+    const GW::AreaInfo* origin_info = GW::Map::GetMapInfo(map_to);
+    GW::Vec2f origin_pos{};
+    const bool has_origin_pos = origin_info && GetMapLabelPos(origin_info, &origin_pos);
+
+    MapID best = MapID::None;
+    uint32_t best_depth = UINT32_MAX;
+    float best_distance = std::numeric_limits<float>::max();
+
+    for (size_t head = 0; head < queue.size(); head++) {
+        const auto current = queue[head];
+        const auto current_depth = depth[static_cast<size_t>(current)];
+
+        // Stop exploring once we've passed the depth of the best outpost found
+        if (best != MapID::None && current_depth > best_depth)
+            break;
+
+        if (current != map_to && IsValidOutpost(current) && GW::Map::GetIsMapUnlocked(current)) {
+            if (!has_origin_pos) {
+                // No world map position — take the first outpost found (adjacency order)
+                if (best == MapID::None) {
+                    best = current;
+                    best_depth = current_depth;
+                }
+            } else {
+                // Use Euclidean distance as tiebreaker, but only for same-continent outposts
+                const auto* cur_info = GW::Map::GetMapInfo(current);
+                float dist = std::numeric_limits<float>::max();
+                GW::Vec2f outpost_pos;
+                if (cur_info && cur_info->continent == origin_info->continent && GetMapLabelPos(cur_info, &outpost_pos)) {
+                    dist = GetDistance(origin_pos, outpost_pos);
+                }
+                if (best == MapID::None || dist < best_distance) {
+                    best = current;
+                    best_depth = current_depth;
+                    best_distance = dist;
+                }
+            }
+        }
+
+        for (const auto neighbor : MapAdjacency::GetNeighbors(current)) {
+            const auto idx = static_cast<size_t>(neighbor);
+            if (idx < depth.size() && depth[idx] == UINT32_MAX) {
+                depth[idx] = current_depth + 1;
+                queue.push_back(neighbor);
+            }
+        }
     }
 
+    if (best != MapID::None)
+        return best;
+
+    // Fall back to Euclidean distance on the world map if not reachable via adjacency
     const GW::AreaInfo* this_map = GW::Map::GetMapInfo(map_to);
-    if (!this_map) return GW::Constants::MapID::None;
+    if (!this_map) return MapID::None;
 
     GW::Vec2f world_map_location;
-    if(!GetMapLabelPos(this_map,&world_map_location))
-        return GW::Constants::MapID::None;
+    if (!GetMapLabelPos(this_map, &world_map_location))
+        return MapID::None;
     return GetNearestOutpostToLocation(this_map, world_map_location);
 }
 
