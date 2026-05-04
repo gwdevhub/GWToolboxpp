@@ -2,6 +2,7 @@
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/Utilities/Export.h>
+#include <GWCA/GameContainers/Hash.h>
 
 namespace GW {
     struct ItemContext;
@@ -53,14 +54,9 @@ namespace GW {
         /* +h00C8 */ uint32_t h00C8;
         /* +h00CC */ uint32_t h00CC;
         /* +h00D0 */ uint32_t h00D0;
-        /* +h00D4 */ uint32_t h00D4;
-        /* +h00D8 */ uint32_t h00D8;
-        /* +h00DC */ uint32_t h00DC;
-        /* +h00E0 */ uint32_t h00E0;
-        /* +h00E4 */ Array<InventoryTableEntry> inventory_table;
-        /* +h00F4 */ uint32_t h00F4;
-        /* +h00F8 */ Inventory* inventory;
+        /* +h00D4 */ THash<Inventory> inventory_table; // 0x24 bytes, keyed by agent_id
+        /* +h00F8 */ Inventory* inventory;             // shortcut to player's own inventory
         /* +h00FC */ Array<void*> h00FC;
     };
-    static_assert(sizeof(ItemContext) == 0x10c);
+    static_assert(sizeof(ItemContext) == 0x10C, "struct ItemContext has incorrect size");
 }

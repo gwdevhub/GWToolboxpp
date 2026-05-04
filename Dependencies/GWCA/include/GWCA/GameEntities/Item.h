@@ -208,13 +208,16 @@ namespace GW {
         /* +h0088 */ uint32_t h0088[2];
         /* +h0090 */ uint32_t gold_character;
         /* +h0094 */ uint32_t gold_storage;
+        /* +0x098 */ uint32_t cached_hash;  // at m_slotSize offset
+        /* +0x09C */ uint32_t next_offset;  // = 0x9c
+        /* +0x0A0 */ Inventory* next;       // chain pointer
 
         [[nodiscard]] uint32_t inventory_id() const
         {
             return (uint32_t)unused_bag; // Fucked ourselves with this one; bag ids depend on the array starting at the inventory id...
         }
     };
-    static_assert(sizeof(Inventory) == 152, "struct Inventory has incorrect size");
+    static_assert(sizeof(Inventory) == 0xa4, "struct Inventory has incorrect size");
 
     // Static struct for info about available item upgrade info, used for PvP Equipment window
     struct PvPItemUpgradeInfo {
