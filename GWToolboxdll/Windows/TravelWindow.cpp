@@ -911,6 +911,7 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
 
     MapID best = MapID::None;
     uint32_t best_depth = UINT32_MAX;
+    uint32_t best_party_size = 0;
     float best_distance = std::numeric_limits<float>::max();
 
     for (size_t head = 0; head < queue.size(); head++) {
@@ -922,25 +923,27 @@ GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID 
             break;
 
         if (current != map_to && IsValidOutpost(current) && GW::Map::GetIsMapUnlocked(current)) {
-            if (!has_origin_pos) {
-                // No world map position — take the first outpost found (adjacency order)
-                if (best == MapID::None) {
-                    best = current;
-                    best_depth = current_depth;
-                }
-            } else {
-                // Use Euclidean distance as tiebreaker, but only for same-continent outposts
-                const auto* cur_info = GW::Map::GetMapInfo(current);
-                float dist = std::numeric_limits<float>::max();
+            const auto* cur_info = GW::Map::GetMapInfo(current);
+            const uint32_t party_size = cur_info ? cur_info->max_party_size : 0;
+
+            // Tiebreak: prefer larger party size, then Euclidean distance (same-continent),
+            // then adjacency array order when no world map position is available
+            float dist = std::numeric_limits<float>::max();
+            if (has_origin_pos && cur_info && cur_info->continent == origin_info->continent) {
                 GW::Vec2f outpost_pos;
-                if (cur_info && cur_info->continent == origin_info->continent && GetMapLabelPos(cur_info, &outpost_pos)) {
+                if (GetMapLabelPos(cur_info, &outpost_pos))
                     dist = GetDistance(origin_pos, outpost_pos);
-                }
-                if (best == MapID::None || dist < best_distance) {
-                    best = current;
-                    best_depth = current_depth;
-                    best_distance = dist;
-                }
+            }
+
+            const bool is_better = best == MapID::None
+                || (current_depth == best_depth && party_size > best_party_size)
+                || (current_depth == best_depth && party_size == best_party_size && dist < best_distance);
+
+            if (is_better) {
+                best = current;
+                best_depth = current_depth;
+                best_party_size = party_size;
+                best_distance = dist;
             }
         }
 
