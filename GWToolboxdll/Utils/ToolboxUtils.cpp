@@ -357,6 +357,7 @@ namespace GW {
 
         const bool SelectCharacterToPlay(const wchar_t* name, bool play)
         {
+            if (!IsCharSelectReady()) return false;
             struct CharSelectorChar {
                 uint32_t h0000;
                 uint32_t h0004;
