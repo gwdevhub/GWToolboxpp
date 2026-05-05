@@ -18,10 +18,11 @@ class HeroBuildsWindow : public ToolboxWindow {
     // and 1+ for heroes, order is in HeroIndexToID array
     struct HeroBuild {
         HeroBuild() = default;
-        HeroBuild(const std::string_view n, const std::string_view c, const int index = -1, const int panel = 0, const uint32_t _behavior = 1)
+        HeroBuild(const std::string_view n, const std::string_view c, const int index = -1, const int panel = 0, const uint32_t _behavior = 1, const uint8_t _disabled_skills = 0)
             : hero_index(index)
             , behavior(_behavior)
             , show_panel(panel)
+            , disabled_skills(_disabled_skills)
         {
             std::snprintf(name, _countof(name), "%s", n.data());
             std::snprintf(code, _countof(code), "%s", c.data());
@@ -32,6 +33,7 @@ class HeroBuildsWindow : public ToolboxWindow {
         int hero_index{};
         uint32_t behavior = 1;
         bool show_panel = false;
+        uint8_t disabled_skills = 0; // bitmask: bit k means skill slot k+1 is disabled on load
     };
 
     struct TeamHeroBuild {
@@ -126,12 +128,14 @@ private:
         GW::Constants::HeroID heroid = GW::Constants::HeroID::NoHero;
         int show_panel = 0;
         GW::HeroBehavior behavior = GW::HeroBehavior::Guard;
+        uint8_t disabled_skills = 0;
         clock_t started = 0;
 
-        CodeOnHero(const char* c = "", const GW::Constants::HeroID i = GW::Constants::HeroID::NoHero, const int _show_panel = 0, uint32_t _behavior = 1)
+        CodeOnHero(const char* c = "", const GW::Constants::HeroID i = GW::Constants::HeroID::NoHero, const int _show_panel = 0, uint32_t _behavior = 1, uint8_t _disabled_skills = 0)
             : heroid(i)
             , show_panel(_show_panel)
             , behavior(static_cast<GW::HeroBehavior>(_behavior))
+            , disabled_skills(_disabled_skills)
         {
             snprintf(code, BUFFER_SIZE, "%s", c);
             if (behavior > GW::HeroBehavior::AvoidCombat) {
