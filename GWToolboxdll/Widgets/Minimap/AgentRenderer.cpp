@@ -371,19 +371,19 @@ void AgentRenderer::SaveCustomAgents() const
 
 void AgentRenderer::LoadDefaultSizes()
 {
-    size_default = 75.0f;
-    size_player = 100.0f;
-    size_signpost = 50.0f;
-    size_item = 25.0f;
-    size_boss = 125.0f;
-    size_minion = 50.0f;
-    size_marked_target = 75.0f;
-    size_hostile = 75.0f;
-    size_neutral = 75.0f;
-    size_ally = 75.0f;
-    size_ally_npc = 75.0f;
-    size_ally_npc_quest = 75.0f;
-    size_ally_spirit = 75.0f;
+    size_default = 100.0f;
+    size_player = size_default;
+    size_signpost = size_default * .5f;
+    size_item = size_default * .25f;
+    size_boss = size_default * 1.25f;
+    size_minion = size_default * .5f;
+    size_marked_target = size_default;
+    size_hostile = size_default;
+    size_neutral = size_default;
+    size_ally = size_default;
+    size_ally_npc = size_ally;
+    size_ally_npc_quest = size_ally_npc_quest;
+    size_ally_spirit = size_ally;
     agent_border_thickness = 0.f;
     target_border_thickness = 50.0f;
 }
@@ -420,68 +420,67 @@ void AgentRenderer::DrawSettings()
     ImGui::Checkbox("Show props on minimap", &show_props_on_minimap);
 #endif
     if (ImGui::TreeNodeEx("Agent Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n", 
-            [&](bool result, void*) {
+        ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?\nThis will reset all agent sizes to the default values.\nThis operation cannot be undone.\n\n", [&](bool result, void*) {
             if (result) {
                 LoadDefaultColors();
+                LoadDefaultSizes();
             }
-            });
-        Colors::DrawSettingHueWheel("EoE", &color_eoe);
-        ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
-        Colors::DrawSettingHueWheel("QZ", &color_qz);
-        ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
-        Colors::DrawSettingHueWheel("Winnowing", &color_winnowing, 0);
-        ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
-        Colors::DrawSettingHueWheel("Frozen Soil", &color_frozen_soil, 0);
-        ImGui::ShowHelp("This is the color at the edge, the color in the middle is the same, with alpha-50");
-        Colors::DrawSettingHueWheel("Target", &color_target);
-        Colors::DrawSettingHueWheel("Player (alive)", &color_player);
-        Colors::DrawSettingHueWheel("Player (dead)", &color_player_dead);
-        Colors::DrawSettingHueWheel("Signpost", &color_signpost);
-        Colors::DrawSettingHueWheel("Item", &color_item);
-        {
-            const float size_w = ImGui::GetTextLineHeight() * 4.f;
-            const float spacing = ImGui::GetStyle().ItemSpacing.x;
-            struct AgentTypeRow {
-                const char* label;
-                Color* color;
-                float* size;         // nullptr = color only, no size control
-                const char* size_tooltip;
-            };
-            const AgentTypeRow rows[] = {
-                {"Hostile (>90% HP)",    &color_hostile,       &size_hostile,       "Hostile agent size"},
-                {"Hostile (dead)",       &color_hostile_dead,  nullptr,             nullptr},
-                {"Neutral",              &color_neutral,       &size_neutral,       "Neutral agent size"},
-                {"Ally (player)",        &color_ally,          &size_ally,          "Ally (player) size"},
-                {"Ally (NPC)",           &color_ally_npc,      &size_ally_npc,      "Ally (NPC) size"},
-                {"Ally (NPC Quest Giver)", &color_ally_npc_quest, &size_ally_npc_quest, "Ally (NPC Quest Giver) size"},
-                {"Ally (spirit)",        &color_ally_spirit,   &size_ally_spirit,   "Ally (spirit) size"},
-            };
-            for (const auto& row : rows) {
-                if (row.size) {
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - size_w - spacing);
-                }
-                Colors::DrawSettingHueWheel(row.label, row.color);
-                if (row.size) {
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(size_w);
-                    ImGui::PushID(row.label);
-                    ImGui::DragFloat("##size", row.size, 1.0f, 1.0f, 0.0f, "%.0f");
-                    ImGui::PopID();
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip("%s", row.size_tooltip);
-                    }
+        });
+
+        
+
+        struct AgentColorRow {
+            const char* label;
+            Color* color;
+            float* size;
+            const char* color_tooltip;
+            const char* size_tooltip;
+        };
+
+        const AgentColorRow rows[] = {
+            {"EoE", &color_eoe, nullptr, nullptr, "This is the color at the edge, the color in the middle is the same, with alpha-50"},
+            {"QZ", &color_qz, nullptr, nullptr, "This is the color at the edge, the color in the middle is the same, with alpha-50"},
+            {"Winnowing", &color_winnowing, nullptr, nullptr, "This is the color at the edge, the color in the middle is the same, with alpha-50"},
+            {"Frozen Soil", &color_frozen_soil, nullptr, nullptr, "This is the color at the edge, the color in the middle is the same, with alpha-50"},
+            {"Target", &color_target, nullptr, nullptr, nullptr},
+            {"Player (alive)", &color_player, nullptr, nullptr, nullptr},
+            {"Player (dead)", &color_player_dead, nullptr, nullptr, nullptr},
+            {"Signpost", &color_signpost, nullptr, nullptr, nullptr},
+            {"Item", &color_item, nullptr, nullptr, nullptr},
+            {"Hostile (>90% HP)", &color_hostile, &size_hostile, nullptr, "Hostile agent size"},
+            {"Hostile (dead)", &color_hostile_dead, nullptr, nullptr, nullptr},
+            {"Neutral", &color_neutral, &size_neutral, nullptr, "Neutral agent size"},
+            {"Ally (player)", &color_ally, &size_ally, nullptr, "Ally (player) size"},
+            {"Ally (NPC)", &color_ally_npc, &size_ally_npc, nullptr, "Ally (NPC) size"},
+            {"Ally (NPC Quest Giver)", &color_ally_npc_quest, &size_ally_npc_quest, nullptr, "Ally (NPC Quest Giver) size"},
+            {"Ally (spirit)", &color_ally_spirit, &size_ally_spirit, nullptr, "Ally (spirit) size"},
+            {"Ally (minion)", &color_ally_minion, nullptr, nullptr, nullptr},
+            {"Ally (dead)", &color_ally_dead, nullptr, nullptr, nullptr},
+            {"Agent modifier", &color_agent_modifier, nullptr, nullptr, "Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded."},
+            {"Agent damaged modifier", &color_agent_damaged_modifier, nullptr, nullptr, "Each hostile agent has this value subtracted from it when under 90% HP."},
+            {"Marked Target", &color_marked_target, nullptr, nullptr, "Agents highlighted as marked target via /marktarget command"},
+        };
+        const auto color_w = (ImGui::GetContentRegionAvail().x - 260.f) * 0.6f;
+        const auto size_w = ImGui::GetTextLineHeight() * 4.f;
+
+        for (const auto& row : rows) {
+            ImGui::SetNextItemWidth(color_w);
+            Colors::DrawSettingHueWheel(row.label, row.color);
+            if (row.color_tooltip) {
+                ImGui::ShowHelp(row.color_tooltip);
+            }
+            if (row.size) {
+                ImGui::SameLine(color_w + 260.f);
+                ImGui::SetNextItemWidth(size_w);
+                ImGui::PushID(row.label);
+                ImGui::DragFloat("Size##size", row.size, 1.0f, 1.0f, 0.0f, "%.0f");
+                ImGui::PopID();
+                if (row.size_tooltip && ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("%s", row.size_tooltip);
                 }
             }
         }
-        Colors::DrawSettingHueWheel("Ally (minion)", &color_ally_minion);
-        Colors::DrawSettingHueWheel("Ally (dead)", &color_ally_dead);
-        Colors::DrawSettingHueWheel("Agent modifier", &color_agent_modifier);
-        ImGui::ShowHelp("Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded.");
-        Colors::DrawSettingHueWheel("Agent damaged modifier", &color_agent_damaged_modifier);
-        ImGui::ShowHelp("Each hostile agent has this value subtracted from it when under 90% HP.");
-        Colors::DrawSettingHueWheel("Marked Target", &color_marked_target);
-        ImGui::ShowHelp("Agents highlighted as marked target via /marktarget command");
+
         ImGui::TreePop();
     }
 
