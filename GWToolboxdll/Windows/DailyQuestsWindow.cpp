@@ -689,7 +689,6 @@ namespace {
     bool show_nicholas_in_window = true;
     bool show_weekly_bonus_pve_in_window = true;
     bool show_weekly_bonus_pvp_in_window = true;
-    bool show_presearing_dailies_in_window = false;
     bool show_other_searing_dailies = false;
 
     uint32_t subscriptions_lookahead_days = 7;
@@ -1031,7 +1030,7 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     const float sandford_width = 200.0f * ImGui::FontScale();
 
     const bool is_pre = GW::Map::IsPreSearing();
-    const bool show_presearing = is_pre && show_presearing_dailies_in_window;
+    const bool show_presearing = is_pre;
 
     // Checkbox in top-right corner
     const char* other_label = is_pre ? "Show post searing dailies" : "Show pre searing dailies";
@@ -1461,8 +1460,6 @@ void DailyQuests::DrawSettingsInternal()
 
     ImGui::Unindent();
 
-    ImGui::Checkbox("Show presearing dailies when in presearing", &show_presearing_dailies_in_window);
-    ImGui::ShowHelp("When enabled and you are in presearing, the window will show Vanguard Quest and Nicholas Sandford instead of the regular dailies.");
 }
 
 void DailyQuests::LoadSettings(ToolboxIni* ini)
@@ -1477,7 +1474,6 @@ void DailyQuests::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_nicholas_in_window);
     LOAD_BOOL(show_weekly_bonus_pve_in_window);
     LOAD_BOOL(show_weekly_bonus_pvp_in_window);
-    LOAD_BOOL(show_presearing_dailies_in_window);
     LOAD_BOOL(show_other_searing_dailies);
 
     const char* zms = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_missions), "0");
@@ -1547,7 +1543,6 @@ void DailyQuests::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_nicholas_in_window);
     SAVE_BOOL(show_weekly_bonus_pve_in_window);
     SAVE_BOOL(show_weekly_bonus_pvp_in_window);
-    SAVE_BOOL(show_presearing_dailies_in_window);
     SAVE_BOOL(show_other_searing_dailies);
     std::bitset<ZAISHEN_MISSION_COUNT> zmb;
     for (auto i = 0u; i < zmb.size(); i++) {
