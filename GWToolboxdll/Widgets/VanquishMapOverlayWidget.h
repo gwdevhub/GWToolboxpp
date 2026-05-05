@@ -35,6 +35,9 @@ public:
 
     static void GetTrackedEnemyCounts(int& alive, int& stale);
     static bool IsOverlayActive();
+
+private:
+    void RenderMissionMapOverlay(IDirect3DDevice9* device);
     static bool IsNavigating();
     static void StopNavigating();
     static bool ContextMenuItems();

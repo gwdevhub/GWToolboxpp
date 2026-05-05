@@ -27,6 +27,7 @@ public:
     [[nodiscard]] const char* Name() const override { return "Mission Map"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE; }
 
+    void Initialize() override;
     void LoadSettings(ToolboxIni*) override;
     void SaveSettings(ToolboxIni*) override;
     void Draw(IDirect3DDevice9* pDevice) override;

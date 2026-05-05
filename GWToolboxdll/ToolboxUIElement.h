@@ -44,6 +44,7 @@ public:
     bool lock_size = false;
     bool show_menubutton = false;
     bool auto_size = false;
+    uint64_t unified_z_ = 0;
 
     bool* GetVisiblePtr()
     {

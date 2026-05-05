@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#include <map>
+
 #include <GWCA/Context/GameplayContext.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -16,6 +18,7 @@
 #include <Utils/ToolboxUtils.h>
 #include <GWCA/Context/WorldContext.h>
 #include <D3DContainers.h>
+#include <Utils/Compositor.h>
 
 namespace {
     bool draw_all_terrain_lines = false;
@@ -160,6 +163,12 @@ namespace {
         GW::Hook::EnterHook();
         if (message->message_id == GW::UI::UIMessage::kDestroyFrame) mission_map_frame = nullptr;
 
+        // Set a breakpoint on the next line and add condition: message->message_id == 0x35
+        if (message->message_id == GW::UI::UIMessage::kRenderFrame_0x31) {
+            volatile int break_here = 1; // <-- breakpoint here, then check Call Stack
+            (void)break_here;
+        }
+
         OnMissionMap_UICallback_Ret(message, wparam, lparam);
         if (message->message_id == GW::UI::UIMessage::kInitFrame) mission_map_frame = GW::UI::GetFrameById(message->frame_id);
         GW::Hook::LeaveHook();
@@ -287,6 +296,30 @@ namespace {
     }
 } // namespace
 
+void MissionMapWidget::Initialize()
+{
+    ToolboxWidget::Initialize();
+    Compositor::RegisterImGuiOverlay(L"MapWindow", [this](ImDrawList& draw_list) {
+        if (!visible || !render_ready || !mission_map_frame || !mission_map_frame->IsVisible()) return;
+        const auto& lines = Minimap::Instance().custom_renderer.GetLines();
+        const auto map_id = GW::Map::GetMapID();
+        const auto player_pos = GW::PlayerMgr::GetPlayerPosition();
+        for (const auto& line : lines) {
+            if (!line->visible) continue;
+            if (!line->draw_on_mission_map && !(draw_all_minimap_lines && line->draw_on_minimap) && !(draw_all_terrain_lines && line->draw_on_terrain)) continue;
+            if (line->map != map_id) continue;
+            float sx1, sy1, sx2, sy2;
+            if (line->from_player_pos && player_pos) {
+                g2s.Project(player_pos->x, player_pos->y, sx1, sy1);
+            } else {
+                g2s.Project(line->p1.x, line->p1.y, sx1, sy1);
+            }
+            g2s.Project(line->p2.x, line->p2.y, sx2, sy2);
+            draw_list.AddLine({sx1, sy1}, {sx2, sy2}, line->color, 2.0f);
+        }
+    });
+}
+
 void MissionMapWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
@@ -301,11 +334,9 @@ void MissionMapWidget::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(draw_all_minimap_lines);
 }
 
-void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
+void MissionMapWidget::Draw(IDirect3DDevice9*)
 {
     if (!visible || !GW::Map::GetIsMapLoaded() || !mission_map_frame || !mission_map_frame->IsVisible()) return;
-
-    SubmitVertexBuffers(dx_device);
     HookMissionMapFrame();
 }
 

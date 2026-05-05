@@ -1686,11 +1686,23 @@ void InventoryManager::Terminate()
 
 bool InventoryManager::WndProc(const UINT message, const WPARAM, const LPARAM)
 {
+    // Cache hovered item on right mouse down, because GW may dehover
+    // the item (e.g. by activating the mission map behind the inventory)
+    // before the click event fires.
+    static GW::Item* cached_rclick_item = nullptr;
+
     // GW Deliberately makes a WM_MOUSEMOVE event right after right button is pressed.
     // Does this to "hide" the cursor when looking around.
     switch (message) {
+        case WM_RBUTTONDOWN:
+            cached_rclick_item = GW::Items::GetHoveredItem();
+            break;
         case WM_GW_RBUTTONCLICK: {
-            const auto item = GW::Items::GetHoveredItem();
+            // Prefer live hovered item; fall back to cached if GW dehovers
+            // (e.g. mission map behind inventory activates on mouse-down).
+            auto item = GW::Items::GetHoveredItem();
+            if (!item) item = cached_rclick_item;
+            cached_rclick_item = nullptr;
             if (!item) break;
             GW::GameThread::Enqueue([item]() {
                 // Item right clicked - spoof a click event

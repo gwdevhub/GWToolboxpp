@@ -8,6 +8,7 @@
 #include <GWCA/GameEntities/Camera.h>
 #include <GWCA/Packets/StoC.h>
 
+
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Party.h>
@@ -633,7 +634,6 @@ namespace {
         //           is rotated.
         // -------------------------------------------------------------------------
         ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
-
         // Single font with dynamic scaling to the desired cardinal size.
         ImFont* font = FontLoader::GetFont();
         const float render_size = cardinal_font_size;
