@@ -442,61 +442,36 @@ void AgentRenderer::DrawSettings()
         {
             const float size_w = ImGui::GetTextLineHeight() * 4.f;
             const float spacing = ImGui::GetStyle().ItemSpacing.x;
-
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - size_w - spacing);
-            Colors::DrawSettingHueWheel("Hostile (>90% HP)", &color_hostile);
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(size_w);
-            ImGui::DragFloat("##size_hostile", &size_hostile, 1.0f, 1.0f, 0.0f, "%.0f");
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Hostile agent size");
-            }
-
-            Colors::DrawSettingHueWheel("Hostile (dead)", &color_hostile_dead);
-
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - size_w - spacing);
-            Colors::DrawSettingHueWheel("Neutral", &color_neutral);
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(size_w);
-            ImGui::DragFloat("##size_neutral", &size_neutral, 1.0f, 1.0f, 0.0f, "%.0f");
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Neutral agent size");
-            }
-
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - size_w - spacing);
-            Colors::DrawSettingHueWheel("Ally (player)", &color_ally);
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(size_w);
-            ImGui::DragFloat("##size_ally", &size_ally, 1.0f, 1.0f, 0.0f, "%.0f");
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Ally (player) size");
-            }
-
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - size_w - spacing);
-            Colors::DrawSettingHueWheel("Ally (NPC)", &color_ally_npc);
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(size_w);
-            ImGui::DragFloat("##size_ally_npc", &size_ally_npc, 1.0f, 1.0f, 0.0f, "%.0f");
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Ally (NPC) size");
-            }
-
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - size_w - spacing);
-            Colors::DrawSettingHueWheel("Ally (NPC Quest Giver)", &color_ally_npc_quest);
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(size_w);
-            ImGui::DragFloat("##size_ally_npc_quest", &size_ally_npc_quest, 1.0f, 1.0f, 0.0f, "%.0f");
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Ally (NPC Quest Giver) size");
-            }
-
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - size_w - spacing);
-            Colors::DrawSettingHueWheel("Ally (spirit)", &color_ally_spirit);
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(size_w);
-            ImGui::DragFloat("##size_ally_spirit", &size_ally_spirit, 1.0f, 1.0f, 0.0f, "%.0f");
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Ally (spirit) size");
+            struct AgentTypeRow {
+                const char* label;
+                Color* color;
+                float* size;         // nullptr = color only, no size control
+                const char* size_tooltip;
+            };
+            const AgentTypeRow rows[] = {
+                {"Hostile (>90% HP)",    &color_hostile,       &size_hostile,       "Hostile agent size"},
+                {"Hostile (dead)",       &color_hostile_dead,  nullptr,             nullptr},
+                {"Neutral",              &color_neutral,       &size_neutral,       "Neutral agent size"},
+                {"Ally (player)",        &color_ally,          &size_ally,          "Ally (player) size"},
+                {"Ally (NPC)",           &color_ally_npc,      &size_ally_npc,      "Ally (NPC) size"},
+                {"Ally (NPC Quest Giver)", &color_ally_npc_quest, &size_ally_npc_quest, "Ally (NPC Quest Giver) size"},
+                {"Ally (spirit)",        &color_ally_spirit,   &size_ally_spirit,   "Ally (spirit) size"},
+            };
+            for (const auto& row : rows) {
+                if (row.size) {
+                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - size_w - spacing);
+                }
+                Colors::DrawSettingHueWheel(row.label, row.color);
+                if (row.size) {
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(size_w);
+                    ImGui::PushID(row.label);
+                    ImGui::DragFloat("##size", row.size, 1.0f, 1.0f, 0.0f, "%.0f");
+                    ImGui::PopID();
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip("%s", row.size_tooltip);
+                    }
+                }
             }
         }
         Colors::DrawSettingHueWheel("Ally (minion)", &color_ally_minion);
@@ -517,14 +492,24 @@ void AgentRenderer::DrawSettings()
                     LoadDefaultSizes();
                 }
             });
-        ImGui::DragFloat("Default Size", &size_default, 1.0f, 1.0f, 0.0f, "%.0f");
-        ImGui::DragFloat("Player Size", &size_player, 1.0f, 1.0f, 0.0f, "%.0f");
-        ImGui::DragFloat("Signpost Size", &size_signpost, 1.0f, 1.0f, 0.0f, "%.0f");
-        ImGui::DragFloat("Item Size", &size_item, 1.0f, 1.0f, 0.0f, "%.0f");
-        ImGui::DragFloat("Boss Size", &size_boss, 1.0f, 1.0f, 0.0f, "%.0f");
-        ImGui::DragFloat("Minion Size", &size_minion, 1.0f, 1.0f, 0.0f, "%.0f");
-        ImGui::DragFloat("Marked Target Size", &size_marked_target, 1.0f, 1.0f, 0.0f, "%.0f");
-        ImGui::ShowHelp("Agents highlighted as marked target via /marktarget command");
+        {
+            struct SizeEntry { const char* label; float* size; const char* help; };
+            const SizeEntry entries[] = {
+                {"Default Size",       &size_default,       nullptr},
+                {"Player Size",        &size_player,        nullptr},
+                {"Signpost Size",      &size_signpost,      nullptr},
+                {"Item Size",          &size_item,          nullptr},
+                {"Boss Size",          &size_boss,          nullptr},
+                {"Minion Size",        &size_minion,        nullptr},
+                {"Marked Target Size", &size_marked_target, "Agents highlighted as marked target via /marktarget command"},
+            };
+            for (const auto& [label, sz, help] : entries) {
+                ImGui::DragFloat(label, sz, 1.0f, 1.0f, 0.0f, "%.0f");
+                if (help) {
+                    ImGui::ShowHelp(help);
+                }
+            }
+        }
         // Right-align the checkbox
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::CalcItemWidth() - ImGui::GetFrameHeight());
         ImGui::Checkbox("Marked Targets Inherit Custom Size/Shape", &marked_target_inherit_custom_agents);
