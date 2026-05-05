@@ -102,7 +102,7 @@
 #include "ToolboxSettings.h"
 
 
-#define USE_OBFUSCATOR _DEBUG
+#define USE_OBFUSCATOR 1
 #if USE_OBFUSCATOR
 #include <Modules/Obfuscator.h>
 #endif
