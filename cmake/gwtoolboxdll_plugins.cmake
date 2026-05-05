@@ -9,7 +9,9 @@ target_sources(plugin_base INTERFACE
     "plugins/Base/PluginUtils.h"
     "plugins/Base/PluginUtils.cpp"
     "plugins/Base/ToolboxUIPlugin.h"
-    "plugins/Base/ToolboxUIPlugin.cpp")
+    "plugins/Base/ToolboxUIPlugin.cpp"
+    "GWToolboxdll/RectF.h"
+    "GWToolboxdll/MinimapPlugin.h")
 target_include_directories(plugin_base INTERFACE
     "plugins/Base"
     "GWToolboxdll" # careful here, we only get access to exported and header functions!
