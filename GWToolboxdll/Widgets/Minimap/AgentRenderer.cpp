@@ -442,6 +442,7 @@ void AgentRenderer::DrawSettings()
         {
             const float size_w = ImGui::GetTextLineHeight() * 4.f;
             const float spacing = ImGui::GetStyle().ItemSpacing.x;
+
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - size_w - spacing);
             Colors::DrawSettingHueWheel("Hostile (>90% HP)", &color_hostile);
             ImGui::SameLine();
@@ -450,11 +451,9 @@ void AgentRenderer::DrawSettings()
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Hostile agent size");
             }
-        }
-        Colors::DrawSettingHueWheel("Hostile (dead)", &color_hostile_dead);
-        {
-            const float size_w = ImGui::GetTextLineHeight() * 4.f;
-            const float spacing = ImGui::GetStyle().ItemSpacing.x;
+
+            Colors::DrawSettingHueWheel("Hostile (dead)", &color_hostile_dead);
+
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - size_w - spacing);
             Colors::DrawSettingHueWheel("Neutral", &color_neutral);
             ImGui::SameLine();
@@ -463,10 +462,7 @@ void AgentRenderer::DrawSettings()
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Neutral agent size");
             }
-        }
-        {
-            const float size_w = ImGui::GetTextLineHeight() * 4.f;
-            const float spacing = ImGui::GetStyle().ItemSpacing.x;
+
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - size_w - spacing);
             Colors::DrawSettingHueWheel("Ally (player)", &color_ally);
             ImGui::SameLine();
@@ -475,10 +471,7 @@ void AgentRenderer::DrawSettings()
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Ally (player) size");
             }
-        }
-        {
-            const float size_w = ImGui::GetTextLineHeight() * 4.f;
-            const float spacing = ImGui::GetStyle().ItemSpacing.x;
+
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - size_w - spacing);
             Colors::DrawSettingHueWheel("Ally (NPC)", &color_ally_npc);
             ImGui::SameLine();
@@ -487,10 +480,7 @@ void AgentRenderer::DrawSettings()
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Ally (NPC) size");
             }
-        }
-        {
-            const float size_w = ImGui::GetTextLineHeight() * 4.f;
-            const float spacing = ImGui::GetStyle().ItemSpacing.x;
+
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - size_w - spacing);
             Colors::DrawSettingHueWheel("Ally (NPC Quest Giver)", &color_ally_npc_quest);
             ImGui::SameLine();
@@ -499,10 +489,7 @@ void AgentRenderer::DrawSettings()
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Ally (NPC Quest Giver) size");
             }
-        }
-        {
-            const float size_w = ImGui::GetTextLineHeight() * 4.f;
-            const float spacing = ImGui::GetStyle().ItemSpacing.x;
+
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - size_w - spacing);
             Colors::DrawSettingHueWheel("Ally (spirit)", &color_ally_spirit);
             ImGui::SameLine();
