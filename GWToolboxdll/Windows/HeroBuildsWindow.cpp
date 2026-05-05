@@ -109,6 +109,10 @@ namespace {
         return ret;
     }
 
+    void SetHeroSkillDisabled(uint32_t /*agent_id*/, uint32_t /*skill_slot*/, bool /*disabled*/) {
+        // TODO: Implement via GWCA when API is available
+    }
+
     const GW::HeroFlag* GetHeroFlagInfo(const uint32_t hero_id)
     {
         const GW::GameContext* g = GW::GetGameContext();
@@ -267,7 +271,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             const float icon_btn_width = btn_width / 1.75f;
             const float panel_width = btn_width + 12.0f;
             const float item_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-            const float text_item_width = (ImGui::GetContentRegionAvail().x - btn_width - btn_width - btn_width - panel_width - item_spacing * 3) / 3;
+            const float text_item_width = (ImGui::GetContentRegionAvail().x - btn_width - btn_width - btn_width - panel_width - icon_btn_width - item_spacing * 4) / 3;
             float offset = btn_width;
             ImGui::SetCursorPosX(offset);
             ImGui::Text("Name");
@@ -299,7 +303,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 ImGui::SameLine(offset += text_item_width + item_spacing);
                 if (j == 0) {
                     ImGui::TextDisabled("Player");
-                    ImGui::SameLine(offset += text_item_width + item_spacing + btn_width + 10.0f + item_spacing);
+                    ImGui::SameLine(offset += text_item_width + item_spacing + btn_width + 10.0f + icon_btn_width + item_spacing * 2);
                     ImGui::PopItemWidth();
                 }
                 else {
@@ -350,6 +354,45 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     }
                     if (ImGui::IsItemHovered()) {
                         ImGui::SetTooltip(hero_stance_tooltip);
+                    }
+                    ImGui::SameLine(offset += icon_btn_width + item_spacing);
+
+                    int enabled_count = 8;
+                    for (int k = 0; k < 8; k++) {
+                        if ((build.disabled_skills >> k) & 1) {
+                            enabled_count--;
+                        }
+                    }
+                    char skills_label[8];
+                    snprintf(skills_label, sizeof(skills_label), "%d/8", enabled_count);
+                    if (ImGui::Button(skills_label, ImVec2(icon_btn_width, 0))) {
+                        ImGui::OpenPopup("SkillsPopup");
+                    }
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip("Click to toggle which skills are disabled when loading this build");
+                    }
+                    if (ImGui::BeginPopup("SkillsPopup")) {
+                        ImGui::Text("Skills to load:");
+                        for (int k = 0; k < 8; k++) {
+                            bool enabled = !((build.disabled_skills >> k) & 1);
+                            char label[4];
+                            snprintf(label, sizeof(label), "%d", k + 1);
+                            ImGui::PushID(k);
+                            if (ImGui::Checkbox(label, &enabled)) {
+                                if (enabled) {
+                                    build.disabled_skills &= static_cast<uint8_t>(~(1u << k));
+                                }
+                                else {
+                                    build.disabled_skills |= static_cast<uint8_t>(1u << k);
+                                }
+                                builds_changed = true;
+                            }
+                            if (k < 7) {
+                                ImGui::SameLine();
+                            }
+                            ImGui::PopID();
+                        }
+                        ImGui::EndPopup();
                     }
                     ImGui::SameLine(offset += icon_btn_width + item_spacing);
                 }
@@ -599,7 +642,7 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, const size_t idx)
             return;
         }
 
-        pending_hero_loads.push_back({code.c_str(), heroid, build.show_panel, build.behavior});
+        pending_hero_loads.push_back({code.c_str(), heroid, build.show_panel, build.behavior, build.disabled_skills});
     }
 }
 
@@ -732,11 +775,13 @@ void HeroBuildsWindow::LoadFromFile()
             char heroindexkey[buffer_size];
             char showpanelkey[buffer_size];
             char behaviorkey[buffer_size];
+            char dskillskey[buffer_size];
             snprintf(namekey, buffer_size, "name%d", i);
             snprintf(templatekey, buffer_size, "template%d", i);
             snprintf(heroindexkey, buffer_size, "heroindex%d", i);
             snprintf(showpanelkey, buffer_size, "panel%d", i);
             snprintf(behaviorkey, buffer_size, "behavior%d", i);
+            snprintf(dskillskey, buffer_size, "dskills%d", i);
             const char* nameval = inifile->GetValue(section, namekey, "");
             const char* templateval = inifile->GetValue(section, templatekey, "");
             int hero_index = inifile->GetLongValue(section, heroindexkey, -1);
@@ -745,7 +790,8 @@ void HeroBuildsWindow::LoadFromFile()
             }
             const auto show_panel = inifile->GetLongValue(section, showpanelkey, 0);
             const uint32_t behavior = static_cast<uint32_t>(inifile->GetLongValue(section, behaviorkey, 1));
-            const HeroBuild build(nameval, templateval, hero_index, show_panel == 1 ? 1 : 0, behavior);
+            const uint8_t disabled_skills = static_cast<uint8_t>(inifile->GetLongValue(section, dskillskey, 0));
+            const HeroBuild build(nameval, templateval, hero_index, show_panel == 1 ? 1 : 0, behavior, disabled_skills);
             tb.builds[i] = build;
         }
 
@@ -780,16 +826,19 @@ void HeroBuildsWindow::SaveToFile() const
                 char heroindexkey[buffer_size];
                 char showpanelkey[buffer_size];
                 char behaviorkey[buffer_size];
+                char dskillskey[buffer_size];
                 snprintf(namekey, buffer_size, "name%d", j);
                 snprintf(templatekey, buffer_size, "template%d", j);
                 snprintf(heroindexkey, buffer_size, "heroindex%d", j);
                 snprintf(showpanelkey, buffer_size, "panel%d", j);
                 snprintf(behaviorkey, buffer_size, "behavior%d", j);
+                snprintf(dskillskey, buffer_size, "dskills%d", j);
                 inifile->SetValue(section, namekey, build.name);
                 inifile->SetValue(section, templatekey, build.code);
                 inifile->SetLongValue(section, heroindexkey, build.hero_index);
                 inifile->SetLongValue(section, showpanelkey, build.show_panel);
                 inifile->SetLongValue(section, behaviorkey, build.behavior);
+                inifile->SetLongValue(section, dskillskey, build.disabled_skills);
             }
         }
 
@@ -822,6 +871,11 @@ bool HeroBuildsWindow::CodeOnHero::Process()
             if (code[0]) // Build optional
             {
                 GW::SkillbarMgr::LoadSkillTemplate(hero->agent_id, code);
+            }
+            for (uint32_t k = 0; k < 8; k++) {
+                if ((disabled_skills >> k) & 1) {
+                    SetHeroSkillDisabled(hero->agent_id, k, true);
+                }
             }
             if (show_panel) {
                 SendUIMessage(GW::UI::UIMessage::kShowHeroPanel, (void*)heroid);
