@@ -1508,6 +1508,16 @@ void Minimap::UnregisterRenderer(MinimapRenderer* renderer)
     }
 }
 
+void MinimapRenderer::RegisterRenderer(MinimapRenderer* renderer)
+{
+    Minimap::RegisterRenderer(renderer);
+}
+
+void MinimapRenderer::UnregisterRenderer(MinimapRenderer* renderer)
+{
+    Minimap::UnregisterRenderer(renderer);
+}
+
 bool Minimap::ShouldMarkersDrawOnMap()
 {
     const auto map_has_outpost_and_explorable = [](const GW::Constants::MapID map_id) {
