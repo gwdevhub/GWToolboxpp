@@ -689,7 +689,7 @@ namespace {
     bool show_nicholas_in_window = true;
     bool show_weekly_bonus_pve_in_window = true;
     bool show_weekly_bonus_pvp_in_window = true;
-    bool show_presearing_dailies_in_window = false;
+    bool show_other_searing_dailies = false;
 
     uint32_t subscriptions_lookahead_days = 7;
 
@@ -1029,7 +1029,14 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     const float vanguard_width = 180.0f * ImGui::FontScale();
     const float sandford_width = 200.0f * ImGui::FontScale();
 
-    const bool show_presearing = GW::Map::IsPreSearing() && show_presearing_dailies_in_window;
+    const bool is_pre = GW::Map::IsPreSearing();
+    const bool show_presearing = is_pre;
+
+    // Checkbox in top-right corner
+    const char* other_label = is_pre ? "Show post searing dailies" : "Show pre searing dailies";
+    const float checkbox_w = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(other_label).x;
+    ImGui::SetCursorPosX(ImGui::GetWindowWidth() - checkbox_w - ImGui::GetStyle().WindowPadding.x);
+    ImGui::Checkbox(other_label, &show_other_searing_dailies);
 
     ImGui::Text("Date");
     ImGui::SameLine(offset += short_text_width);
@@ -1080,6 +1087,36 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     time_t unix = time(nullptr);
     uint32_t idx = 0;
 
+    auto write_daily_info = [](bool* subscribed, QuestData* info, bool check_completion) {
+        auto col = &normal_color;
+        if (check_completion && !CompletionWindow::IsAreaComplete(GW::AccountMgr::GetCurrentPlayerName(), info->map_id)) col = &incomplete_color;
+        if (*subscribed) col = &subscribed_color;
+        ImGui::TextColored(*col, info->GetQuestName());
+        auto lmb_clicked = ImGui::IsItemClicked();
+        auto rmb_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+        const auto hovered = ImGui::IsItemHovered();
+        if (HasDailyQuest(info->GetQuestName())) {
+            ImGui::SameLine();
+            ImGui::TextColored(incomplete_color, ICON_FA_EXCLAMATION);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip(you_have_this_quest);
+            }
+            lmb_clicked |= ImGui::IsItemClicked();
+            rmb_clicked |= ImGui::IsItemClicked(ImGuiMouseButton_Right);
+        }
+        if (rmb_clicked) {
+            ImGui::SetContextMenu(OnDailyQuestContextMenu, info);
+        }
+        if (lmb_clicked) {
+            *subscribed = !*subscribed;
+        }
+        if (hovered && check_completion) {
+            ImGui::SetTooltip([info]() {
+                OnDailyQuestTooltip(info);
+            });
+        }
+    };
+
     for (size_t i = 0; i < static_cast<size_t>(daily_quest_window_count); i++) {
         offset = 0.0f;
         switch (i) {
@@ -1095,37 +1132,6 @@ void DailyQuests::Draw(IDirect3DDevice9*)
                 ImGui::Text(mbstr);
                 break;
         }
-        auto write_daily_info = [](bool* subscribed, QuestData* info, bool check_completion) {
-            auto col = &normal_color;
-            if (check_completion && !CompletionWindow::IsAreaComplete(GW::AccountMgr::GetCurrentPlayerName(), info->map_id)) col = &incomplete_color;
-            if (*subscribed) col = &subscribed_color;
-            ImGui::TextColored(*col, info->GetQuestName());
-            auto lmb_clicked = ImGui::IsItemClicked();
-            auto rmb_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
-            const auto hovered = ImGui::IsItemHovered();
-            if (HasDailyQuest(info->GetQuestName())) {
-                ImGui::SameLine();
-                ImGui::TextColored(incomplete_color, ICON_FA_EXCLAMATION);
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip(you_have_this_quest);
-                }
-                lmb_clicked |= ImGui::IsItemClicked();
-                rmb_clicked |= ImGui::IsItemClicked(ImGuiMouseButton_Right);
-            }
-            if (rmb_clicked) {
-                ImGui::SetContextMenu(OnDailyQuestContextMenu, info);
-            }
-            if (lmb_clicked) {
-                *subscribed = !*subscribed;
-            }
-            if (hovered && check_completion) {
-                ImGui::SetTooltip([info]() {
-                    OnDailyQuestTooltip(info);
-                });
-            }
-        };
-
-
         ImGui::SameLine(offset += short_text_width);
         if (show_presearing) {
             // Show Pre-Searing Vanguard Quests
@@ -1217,6 +1223,166 @@ void DailyQuests::Draw(IDirect3DDevice9*)
         ImGui::NewLine();
         unix += 86400;
     }
+
+    if (show_other_searing_dailies) {
+        ImGui::Separator();
+        // Secondary searing header
+        float sec_offset = 0.0f;
+        ImGui::Text("Date");
+        ImGui::SameLine(sec_offset += short_text_width);
+        if (show_presearing) {
+            // Secondary is post-searing
+            if (show_zaishen_missions_in_window) {
+                ImGui::Text("Zaishen Mission");
+                ImGui::SameLine(sec_offset += zm_width);
+            }
+            if (show_zaishen_bounty_in_window) {
+                ImGui::Text("Zaishen Bounty");
+                ImGui::SameLine(sec_offset += zb_width);
+            }
+            if (show_zaishen_combat_in_window) {
+                ImGui::Text("Zaishen Combat");
+                ImGui::SameLine(sec_offset += zc_width);
+            }
+            if (show_zaishen_vanquishes_in_window) {
+                ImGui::Text("Zaishen Vanquish");
+                ImGui::SameLine(sec_offset += zv_width);
+            }
+            if (show_wanted_quests_in_window) {
+                ImGui::Text("Wanted");
+                ImGui::SameLine(sec_offset += ws_width);
+            }
+            if (show_nicholas_in_window) {
+                ImGui::Text("Nicholas the Traveler");
+                ImGui::SameLine(sec_offset += nicholas_width);
+            }
+            if (show_weekly_bonus_pve_in_window) {
+                ImGui::Text("Weekly Bonus PvE");
+                ImGui::SameLine(sec_offset += wbe_width);
+            }
+            if (show_weekly_bonus_pvp_in_window) {
+                ImGui::Text("Weekly Bonus PvP");
+                ImGui::SameLine(sec_offset += long_text_width);
+            }
+        }
+        else {
+            // Secondary is pre-searing
+            ImGui::Text("Vanguard Quest");
+            ImGui::SameLine(sec_offset += vanguard_width);
+            ImGui::Text("Nicholas Sandford");
+            ImGui::SameLine(sec_offset += sandford_width);
+        }
+        ImGui::NewLine();
+        ImGui::Separator();
+
+        // Secondary searing data rows
+        time_t sec_unix = time(nullptr);
+        for (size_t i = 0; i < static_cast<size_t>(daily_quest_window_count); i++) {
+            sec_offset = 0.0f;
+            switch (i) {
+                case 0:
+                    ImGui::Text("Today");
+                    break;
+                case 1:
+                    ImGui::Text("Tomorrow");
+                    break;
+                default:
+                    char mbstr2[100];
+                    std::strftime(mbstr2, sizeof(mbstr2), "%a %d %b", std::localtime(&sec_unix));
+                    ImGui::Text(mbstr2);
+                    break;
+            }
+            ImGui::SameLine(sec_offset += short_text_width);
+            if (show_presearing) {
+                // Secondary is post-searing
+                if (show_zaishen_missions_in_window) {
+                    idx = GetZaishenMissionIdx(&sec_unix);
+                    write_daily_info(&subscribed_zaishen_missions[idx], GetZaishenMission(sec_unix).quest, true);
+                    ImGui::SameLine(sec_offset += zm_width);
+                }
+                if (show_zaishen_bounty_in_window) {
+                    idx = GetZaishenBountyIdx(&sec_unix);
+                    write_daily_info(&subscribed_zaishen_bounties[idx], GetZaishenBounty(sec_unix).quest, true);
+                    ImGui::SameLine(sec_offset += zb_width);
+                }
+                if (show_zaishen_combat_in_window) {
+                    idx = GetZaishenCombatIdx(&sec_unix);
+                    write_daily_info(&subscribed_zaishen_combats[idx], GetZaishenCombat(sec_unix).quest, false);
+                    ImGui::SameLine(sec_offset += zc_width);
+                }
+                if (show_zaishen_vanquishes_in_window) {
+                    idx = GetZaishenVanquishIdx(&sec_unix);
+                    write_daily_info(&subscribed_zaishen_vanquishes[idx], GetZaishenVanquish(sec_unix).quest, true);
+                    ImGui::SameLine(sec_offset += zv_width);
+                }
+                if (show_wanted_quests_in_window) {
+                    idx = GetWantedByShiningBladeIdx(&sec_unix);
+                    write_daily_info(&subscribed_wanted_quests[idx], GetWantedByShiningBlade(sec_unix).quest, false);
+                    ImGui::SameLine(sec_offset += ws_width);
+                }
+                if (show_nicholas_in_window) {
+                    const auto nick = (NicholasCycleData*)GetNicholasTheTraveller(sec_unix).quest;
+                    ImGui::TextUnformatted(nick->GetQuestName());
+                    auto rmb_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+                    const auto hovered = ImGui::IsItemHovered();
+                    const auto collected = nick->GetCollectedQuantity();
+                    if (collected > 0) {
+                        ImGui::SameLine();
+                        auto col = &normal_color;
+                        if (collected >= nick->quantity) col = &incomplete_color;
+                        ImGui::TextColored(*col, "(%d/%d)", collected, nick->quantity);
+                    }
+                    if (rmb_clicked) {
+                        ImGui::SetContextMenu(OnNicholasContextMenu, nick);
+                    }
+                    if (hovered) {
+                        ImGui::SetTooltip("%s in %s", nick->GetQuestName(), nick->GetMapName());
+                    }
+                    ImGui::SameLine(sec_offset += nicholas_width);
+                }
+                if (show_weekly_bonus_pve_in_window) {
+                    idx = GetWeeklyBonusPvEIdx(&sec_unix);
+                    write_daily_info(&subscribed_weekly_bonus_pve[idx], &pve_weekly_bonus_cycles[idx], false);
+                    ImGui::SameLine(sec_offset += wbe_width);
+                }
+                if (show_weekly_bonus_pvp_in_window) {
+                    idx = GetWeeklyBonusPvPIdx(&sec_unix);
+                    write_daily_info(&subscribed_weekly_bonus_pvp[idx], &pvp_weekly_bonus_cycles[idx], false);
+                    ImGui::SameLine(sec_offset += long_text_width);
+                }
+            }
+            else {
+                // Secondary is pre-searing
+                idx = GetVanguardIdx(&sec_unix);
+                write_daily_info(&subscribed_vanguard[idx], GetVanguardQuest(sec_unix).quest, false);
+                ImGui::SameLine(sec_offset += vanguard_width);
+
+                idx = GetNicholasSandfordIdx(&sec_unix);
+                bool prev = subscribed_nicholas_sandford[idx];
+                const auto sandford_quest = GetNicholasSandford(sec_unix).quest;
+                write_daily_info(&subscribed_nicholas_sandford[idx], sandford_quest, false);
+                const auto collected = GetNicholasSandfordCollectedQuantity(sandford_quest);
+                if (collected > 0) {
+                    ImGui::SameLine(0, 0);
+                    auto col = &normal_color;
+                    if (collected >= 5) col = &incomplete_color;
+                    if (collected >= 25) col = &complete_color;
+                    ImGui::TextColored(*col, " (%d/5)", static_cast<int>(collected));
+                }
+                ImGui::SameLine(sec_offset += sandford_width);
+                if (subscribed_nicholas_sandford[idx] != prev) {
+                    for (size_t j = 0; j < NICHOLAS_PRE_COUNT; ++j) {
+                        if (nicholas_sandford_cycles[j].GetQuestNameEnc() && wcscmp(nicholas_sandford_cycles[j].GetQuestNameEnc(), sandford_quest->GetQuestNameEnc()) == 0) {
+                            subscribed_nicholas_sandford[j] = subscribed_nicholas_sandford[idx];
+                        }
+                    }
+                }
+            }
+            ImGui::NewLine();
+            sec_unix += 86400;
+        }
+    }
+
     ImGui::EndChild();
     ImGui::TextDisabled("Click on a daily quest to get notified when its coming up.");
 
@@ -1294,8 +1460,6 @@ void DailyQuests::DrawSettingsInternal()
 
     ImGui::Unindent();
 
-    ImGui::Checkbox("Show presearing dailies when in presearing", &show_presearing_dailies_in_window);
-    ImGui::ShowHelp("When enabled and you are in presearing, the window will show Vanguard Quest and Nicholas Sandford instead of the regular dailies.");
 }
 
 void DailyQuests::LoadSettings(ToolboxIni* ini)
@@ -1310,7 +1474,7 @@ void DailyQuests::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_nicholas_in_window);
     LOAD_BOOL(show_weekly_bonus_pve_in_window);
     LOAD_BOOL(show_weekly_bonus_pvp_in_window);
-    LOAD_BOOL(show_presearing_dailies_in_window);
+    LOAD_BOOL(show_other_searing_dailies);
 
     const char* zms = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_missions), "0");
     const std::bitset<ZAISHEN_MISSION_COUNT> zmb(zms);
@@ -1379,7 +1543,7 @@ void DailyQuests::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_nicholas_in_window);
     SAVE_BOOL(show_weekly_bonus_pve_in_window);
     SAVE_BOOL(show_weekly_bonus_pvp_in_window);
-    SAVE_BOOL(show_presearing_dailies_in_window);
+    SAVE_BOOL(show_other_searing_dailies);
     std::bitset<ZAISHEN_MISSION_COUNT> zmb;
     for (auto i = 0u; i < zmb.size(); i++) {
         zmb[i] = subscribed_zaishen_missions[i] ? 1 : 0;
