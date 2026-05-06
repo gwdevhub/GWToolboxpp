@@ -38,6 +38,10 @@ namespace {
     // Bottom-left sprite (col 0, row 1) = semi-transparent cross = "disabled" overlay
     IDirect3DTexture9** skill_toggle_sprite = nullptr;
 
+    // GW file 0x199f2: 256x128 sheet with 5 sprites of 56x56 each
+    // Second sprite (index 1, x=56) = "no skill" image
+    IDirect3DTexture9** no_skill_sprite = nullptr;
+
     using GW::Constants::HeroID;
 
     // hero index is an arbitrary index.
@@ -169,6 +173,7 @@ void HeroBuildsWindow::Initialize()
     ToolboxWindow::Initialize();
     send_timer = TIMER_INIT();
     skill_toggle_sprite = GwDatTextureModule::LoadTextureFromFileId(0x268f6);
+    no_skill_sprite = GwDatTextureModule::LoadTextureFromFileId(0x199f2);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"heroteam", &CmdHeroTeamBuild);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"herobuild", &CmdHeroTeamBuild);
 }
@@ -411,17 +416,27 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                             const ImVec2 p_max(pos.x + skill_btn_px, pos.y + skill_btn_px);
                             auto* draw_list = ImGui::GetWindowDrawList();
 
-                            if (skill_tex) {
+                            if (skill_id == GW::Constants::SkillID::No_Skill && no_skill_sprite && *no_skill_sprite) {
+                                // Second sprite in 256x128 sheet (5 sprites of 56x56): x=56, y=0
+                                constexpr float u0 = 56.0f / 256.0f, v0 = 0.0f;
+                                constexpr float u1 = 112.0f / 256.0f, v1 = 56.0f / 128.0f;
+                                draw_list->AddImage(reinterpret_cast<ImTextureID>(*no_skill_sprite), pos, p_max, ImVec2(u0, v0), ImVec2(u1, v1));
+                            }
+                            else if (skill_tex) {
                                 draw_list->AddImage(reinterpret_cast<ImTextureID>(skill_tex), pos, p_max);
                             }
                             else {
                                 draw_list->AddRectFilled(pos, p_max, IM_COL32(50, 50, 50, 255));
                             }
 
-                            // Bottom-left of sprite sheet (col 0, row 1): semi-transparent cross = disabled
-                            if (is_disabled && skill_toggle_sprite && *skill_toggle_sprite) {
-                                draw_list->AddImage(reinterpret_cast<ImTextureID>(*skill_toggle_sprite), pos, p_max,
-                                    ImVec2(0.0f, 0.5f), ImVec2(0.5f, 1.0f));
+                            // Dark overlay then semi-transparent cross to clearly show disabled state
+                            if (is_disabled) {
+                                draw_list->AddRectFilled(pos, p_max, IM_COL32(0, 0, 0, 140));
+                                if (skill_toggle_sprite && *skill_toggle_sprite) {
+                                    // Bottom-left of 0x268f6 sprite sheet (col 0, row 1): semi-transparent cross
+                                    draw_list->AddImage(reinterpret_cast<ImTextureID>(*skill_toggle_sprite), pos, p_max,
+                                        ImVec2(0.0f, 0.5f), ImVec2(0.5f, 1.0f));
+                                }
                             }
 
                             if (hovered) {
