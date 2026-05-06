@@ -43,9 +43,11 @@ namespace {
         GW::Constants::TitleID title_id;
         GuiUtils::EncString title_label;
         GuiUtils::EncString tier_label;
+        GuiUtils::EncString next_tier_label;
         std::unique_ptr<GuiUtils::EncString> overlay_label; // Because this can change quickly, we may need to recycle it faster than the frame rate can handle
         float percent = 0.f;
         float secondary_percent = 0.f;
+        uint32_t current_rank = 0;
         std::unique_ptr<GuiUtils::EncString> secondary_label;
         bool show = false;
         TitleProgress(GW::Constants::TitleID _title_id) : title_id(_title_id) {
@@ -216,7 +218,7 @@ namespace {
         std::ranges::sort(title_progress_by_title, [](TitleProgress* t1, TitleProgress* t2) {
             return t1->title_label.string() < t2->title_label.string();
         });
-        title_for_bounty = automatically_show_title_progress_for_current_map ? GW::Map::GetBountyTitlesForMap(GW::Map::GetMapID()) : std::vector<GW::Constants::TitleID>();
+        title_for_bounty = automatically_show_title_progress_for_current_map ? GW::Map::GetTitlesForMap(GW::Map::GetMapID()) : std::vector<GW::Constants::TitleID>();
     }
 
     void TitleProgress::RefreshProgress()
@@ -302,6 +304,13 @@ namespace {
         }
         const auto& current_tier = w->title_tiers[title_info->current_title_tier_index];
         tier_label.reset(current_tier.tier_name_enc);
+        current_rank = current_tier.tier_number;
+        if (title_info->points_needed_next_rank != 0xFFFFFFFF &&
+            w->title_tiers.size() > title_info->next_title_tier_index) {
+            next_tier_label.reset(w->title_tiers[title_info->next_title_tier_index].tier_name_enc);
+        } else {
+            next_tier_label.reset(nullptr);
+        }
     }
 
 
@@ -402,7 +411,9 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
             if (p->overlay_label->encoded().empty()) continue;
             // Get strings from EncString
             const auto& title_text = p->title_label.string();
-            const auto& sub_title_text = p->tier_label.string();
+            auto sub_title_text = p->tier_label.string();
+            if (p->current_rank > 0)
+                sub_title_text += std::format(" ({})", p->current_rank);
             const auto& overlay_text = p->overlay_label->string();
 
             // Draw title label (left aligned) and sub-title label (right aligned) on same line
@@ -464,7 +475,13 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
                 draw_list->AddText({overlay_pos.x + 1.f, overlay_pos.y + 1.f}, progress_overlay_label_color, overlay_text.c_str());
             }
             if (ImGui::IsMouseHoveringRect(bar_pos, bar_pos_max)) {
-                auto label = std::format("{}\n{}\n{}",p->title_label.string(),p->tier_label.string(),p->overlay_label->string());
+                auto label = std::format("{}\n{}\n{}", p->title_label.string(), sub_title_text, p->overlay_label->string());
+                if (!p->next_tier_label.encoded().empty()) {
+                    const auto title_info = GW::PlayerMgr::GetTitleTrack(p->title_id);
+                    if (title_info && title_info->points_needed_next_rank != 0xFFFFFFFF) {
+                        label += std::format("\nNext: {} at {}", p->next_tier_label.string(), title_info->points_needed_next_rank);
+                    }
+                }
                 if (!p->secondary_label->encoded().empty()) {
                     label += "\n\n";
                     label += p->secondary_label->string();
