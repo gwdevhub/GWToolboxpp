@@ -106,7 +106,10 @@ jobs:
           fetch-depth: 1
 
       - name: Run Claude Code
-        uses: anthropics/claude-code-action@v1
+        # Pinned to a commit before claude-code 2.1.131, which broke the
+        # native installer (binary missing at /home/runner/.local/bin/claude).
+        # Bump back to @v1 once upstream is fixed.
+        uses: anthropics/claude-code-action@2cc1ac1331eac7a6a96d716dd204dd2888d0fcd2 # v1 @ 2.1.128
         with:
           # Authenticate against your Claude Code subscription so usage
           # comes out of the existing Max plan rather than API credits.

@@ -158,8 +158,10 @@ namespace GuiUtils {
         }
         cursor_pos.x += text_size;
         for (auto& skill : skill_template.skills) {
-            ImGui::SetCursorPos(cursor_pos);
-            ImGui::ImageCropped(*Resources::GetSkillImage(skill), skill_size);
+            if (skill != GW::Constants::SkillID::No_Skill) {
+                ImGui::SetCursorPos(cursor_pos);
+                ImGui::ImageCropped(*Resources::GetSkillImage(skill), skill_size);
+            }
             cursor_pos.x += skill_size.x;
         }
     }

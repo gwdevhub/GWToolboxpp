@@ -9,6 +9,7 @@
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
 
+#include <GWCA/Constants/Skills.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -20,6 +21,7 @@
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
 
+#include <Modules/GwDatTextureModule.h>
 #include <Modules/Resources.h>
 #include <Windows/HeroBuildsWindow.h>
 
@@ -31,6 +33,10 @@ constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
+
+    // GW file 0x268f6: 2x2 sprite sheet (tick/cross overlays)
+    // Bottom-left sprite (col 0, row 1) = semi-transparent cross = "disabled" overlay
+    IDirect3DTexture9** skill_toggle_sprite = nullptr;
 
     using GW::Constants::HeroID;
 
@@ -162,6 +168,7 @@ void HeroBuildsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
     send_timer = TIMER_INIT();
+    skill_toggle_sprite = GwDatTextureModule::LoadTextureFromFileId(0x268f6);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"heroteam", &CmdHeroTeamBuild);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"herobuild", &CmdHeroTeamBuild);
 }
@@ -372,14 +379,26 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                         ImGui::SetTooltip("Click to toggle which skills are disabled when loading this build");
                     }
                     if (ImGui::BeginPopup("SkillsPopup")) {
-                        ImGui::Text("Skills to load:");
+                        GW::SkillbarMgr::SkillTemplate skill_template{};
+                        const bool decoded = build.code[0] && GW::SkillbarMgr::DecodeSkillTemplate(skill_template, build.code);
+
+                        constexpr float skill_btn_px = 48.0f;
+                        const ImVec2 btn_size(skill_btn_px, skill_btn_px);
+
                         for (int k = 0; k < 8; k++) {
-                            bool enabled = !((build.disabled_skills >> k) & 1);
-                            char label[4];
-                            snprintf(label, sizeof(label), "%d", k + 1);
+                            if (k > 0) {
+                                ImGui::SameLine(0, 0);
+                            }
+
+                            const bool is_disabled = (build.disabled_skills >> k) & 1;
+                            const auto skill_id = decoded ? skill_template.skills[k] : GW::Constants::SkillID::No_Skill;
+                            auto* skill_tex = *Resources::GetSkillImage(skill_id);
+
                             ImGui::PushID(k);
-                            if (ImGui::Checkbox(label, &enabled)) {
-                                if (enabled) {
+                            const ImVec2 pos = ImGui::GetCursorScreenPos();
+
+                            if (ImGui::InvisibleButton("##skill_slot", btn_size)) {
+                                if (is_disabled) {
                                     build.disabled_skills &= static_cast<uint8_t>(~(1u << k));
                                 }
                                 else {
@@ -387,9 +406,32 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                                 }
                                 builds_changed = true;
                             }
-                            if (k < 7) {
-                                ImGui::SameLine();
+                            const bool hovered = ImGui::IsItemHovered();
+
+                            const ImVec2 p_max(pos.x + skill_btn_px, pos.y + skill_btn_px);
+                            auto* draw_list = ImGui::GetWindowDrawList();
+
+                            if (skill_id != GW::Constants::SkillID::No_Skill && skill_tex) {
+                                draw_list->AddImage(reinterpret_cast<ImTextureID>(skill_tex), pos, p_max);
                             }
+                            else {
+                                draw_list->AddRectFilled(pos, p_max, IM_COL32(50, 50, 50, 255));
+                            }
+
+                            // Dark overlay then semi-transparent cross to clearly show disabled state
+                            if (is_disabled) {
+                                draw_list->AddRectFilled(pos, p_max, IM_COL32(0, 0, 0, 140));
+                                if (skill_toggle_sprite && *skill_toggle_sprite) {
+                                    // Bottom-left of 0x268f6 sprite sheet (col 0, row 1): semi-transparent cross
+                                    draw_list->AddImage(reinterpret_cast<ImTextureID>(*skill_toggle_sprite), pos, p_max,
+                                        ImVec2(0.0f, 0.5f), ImVec2(0.5f, 1.0f));
+                                }
+                            }
+
+                            if (hovered) {
+                                draw_list->AddRect(pos, p_max, IM_COL32(255, 255, 255, 200), 0.0f, 0, 2.0f);
+                            }
+
                             ImGui::PopID();
                         }
                         ImGui::EndPopup();
