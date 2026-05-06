@@ -9,6 +9,7 @@
 
 #include <GWCA/GameEntities/Map.h>
 
+#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
@@ -42,6 +43,7 @@
 #include "Utils/FontLoader.h"
 #include <Utils/ToolboxUtils.h>
 #include <Utils/TextUtils.h>
+#include <Utils/Compositor.h>
 
 #include <EmbeddedResource.h>
 #include "resource.h"
@@ -166,6 +168,7 @@ namespace {
 
         GW::Render::SetResetCallback([](IDirect3DDevice9*) {
             ImGui_ImplDX9_InvalidateDeviceObjects();
+            Compositor::ReleaseDeviceResources();
         });
 
         imgui_initialized = true;
@@ -190,6 +193,7 @@ namespace {
             return true;
         }
         GW::Render::SetResetCallback(nullptr);
+        Compositor::ReleaseDeviceResources();
         FontLoader::Terminate();
         ImGui_ImplDX9_Shutdown();
         ImGui_ImplWin32_Shutdown();
@@ -480,7 +484,39 @@ namespace {
             case WM_RBUTTONDBLCLK:
             case WM_MOUSEMOVE:
             case WM_MOUSEWHEEL: {
+                // Check if mouse is over a GW window occluding a TB window.
+                // Note: io.MousePos is stale here (updated during NewFrame, not WndProc),
+                // so use the real cursor position from the OS.
+                {
+                    POINT cursor_pt;
+                    GetCursorPos(&cursor_pt);
+                    ScreenToClient(gw_window_handle, &cursor_pt);
+                    float mx = (float)cursor_pt.x, my = (float)cursor_pt.y;
+                    uint64_t tb_z = Compositor::GetHoveredTBWindowZ();
+                    if (tb_z > 0 && Compositor::IsPointOccludedByGW(mx, my, tb_z)) {
+                        io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+                        if (Message == WM_LBUTTONDOWN || Message == WM_LBUTTONDBLCLK) {
+                            Compositor::GetUnifiedZOrder().OnGWWindowClicked(mx, my);
+                        }
+                        break;
+                    }
+                }
+
                 if (io.WantCaptureMouse && !skip_mouse_capture) {
+                    // Bump TB window z on click for unified z-order tracking
+                    if (Message == WM_LBUTTONDOWN || Message == WM_LBUTTONDBLCLK) {
+                        auto& zo = Compositor::GetUnifiedZOrder();
+                        for (auto* el : GWToolbox::GetUIElements()) {
+                            auto* win = ImGui::FindWindowByName(el->Name());
+                            if (!win || !win->Active || win->Hidden) continue;
+                            if (io.MousePos.x < win->Pos.x || io.MousePos.x > win->Pos.x + win->Size.x ||
+                                io.MousePos.y < win->Pos.y || io.MousePos.y > win->Pos.y + win->Size.y)
+                                continue;
+                            zo.OnWindowFocused(el->Name());
+                            el->unified_z_ = zo.GetZ(el->Name());
+                            break;
+                        }
+                    }
                     return true;
                 }
                 bool captured = false;
@@ -492,10 +528,11 @@ namespace {
                 if (captured) {
                     return true;
                 }
+                // Click is going to GW — bump the GW frame under cursor
+                if (Message == WM_LBUTTONDOWN || Message == WM_LBUTTONDBLCLK) {
+                    Compositor::GetUnifiedZOrder().OnGWWindowClicked(io.MousePos.x, io.MousePos.y);
+                }
             }
-                //if (!skip_mouse_capture) {
-
-                //}
             break;
 
             // keyboard messages
@@ -517,6 +554,41 @@ namespace {
             case WM_MBUTTONUP:
                 if (io.WantCaptureKeyboard || io.WantTextInput) {
                     return true; // if imgui wants them, send just to imgui (above)
+                }
+
+                // Esc closes the topmost unpinned window in unified z-order.
+                if (Message == WM_KEYDOWN && wParam == VK_ESCAPE && !GW::Chat::GetIsTyping()) {
+                    // Find topmost closeable unpinned TB window
+                    ToolboxUIElement* topmost_tb = nullptr;
+                    uint64_t topmost_tb_z = 0;
+                    for (auto* el : GWToolbox::GetUIElements()) {
+                        if (!el->IsWindow() || !el->visible || el->pinned
+                            || el->unified_z_ == 0 || !el->GetVisiblePtr())
+                            continue;
+                        if (el->unified_z_ > topmost_tb_z) {
+                            topmost_tb_z = el->unified_z_;
+                            topmost_tb = el;
+                        }
+                    }
+                    // Find topmost closeable unpinned GW dialog.
+                    // Closeable = callback flag bit 0x1; pinned = position.flags bit 0x20.
+                    uint64_t topmost_gw_z = 0;
+                    for (const auto& w : Compositor::GetUnifiedZOrder().GetGWWindows()) {
+                        if (w.frame->position.flags & 0x20) continue; // pinned
+                        bool closeable = false;
+                        for (size_t i = 0; i < w.frame->frame_callbacks.size(); i++) {
+                            if (w.frame->frame_callbacks[i].h0008 & 0x1) {
+                                closeable = true;
+                                break;
+                            }
+                        }
+                        if (closeable && w.unified_z > topmost_gw_z)
+                            topmost_gw_z = w.unified_z;
+                    }
+                    if (topmost_tb && topmost_tb_z > topmost_gw_z) {
+                        topmost_tb->visible = false;
+                        return true;
+                    }
                 }
 
                 // send input to chat commands for camera movement
@@ -984,41 +1056,14 @@ void GWToolbox::Update(GW::HookStatus*)
     last_tick_count = tick;
 }
 
-void GWToolbox::Draw(IDirect3DDevice9* device)
+// Runs the ImGui frame cycle: NewFrame → element Draw → Render.
+// Called from FrCacheRenderAll_Hook (for z-interleaved compositing) or
+// from Draw() as a fallback when the hook hasn't fired.
+static void DrawImGuiFrame(IDirect3DDevice9* device)
 {
-    HookUiRoot();
-    switch (gwtoolbox_state) {
-        case GWToolboxState::DrawTerminating:
-            return DrawTerminating(device);
-        case GWToolboxState::DrawInitialising:
-            return DrawInitialising(device);
-        case GWToolboxState::Initialised:
-            break;
-        default:
-            return;
-    }
-
-    if (imgui_inifile_changed) {
-        auto& io = ImGui::GetIO();
-        io.IniFilename = imgui_inifile.bytes;
-        imgui_inifile_changed = false;
-    }
-    if (gwtoolbox_disabled) {
-        if (!ShouldDisableToolbox()) {
-            Enable();
-        }
-        return;
-    }
-    if (ShouldDisableToolbox()) {
-        Disable();
-        return;
-    }
-
-    // Draw loop
+    if (gwtoolbox_disabled) return;
     Resources::DxUpdate(device);
-
-    if (!CanRenderToolbox())
-        return;
+    if (!CanRenderToolbox()) return;
 
     ImGui_ImplDX9_NewFrame();
     ImGui_ImplWin32_NewFrame();
@@ -1047,12 +1092,39 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 
     if (GW::UI::GetIsUIDrawn()) {
         ToolboxUIElement::UpdateCachedFrameStates();
+        Compositor::HookFrCacheRender();
+        Compositor::GetUnifiedZOrder().Update();
+
+        // Per-frame occlusion: hide mouse from ImGui on frames without WndProc events.
+        // Only applies when z-interleaving is active — if hooks failed, TB renders on
+        // top so there's nothing to occlude against.
+        if (Compositor::IsHooked()) {
+            POINT cursor_pt;
+            GetCursorPos(&cursor_pt);
+            ScreenToClient(gw_window_handle, &cursor_pt);
+            float mx = (float)cursor_pt.x, my = (float)cursor_pt.y;
+            uint64_t tb_z = Compositor::GetHoveredTBWindowZ();
+            if (tb_z > 0 && Compositor::IsPointOccludedByGW(mx, my, tb_z)) {
+                io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+            }
+        }
         std::lock_guard lock(module_management_mutex);
         // NB: Don't use an iterator here, because it could be invalidated during draw
         for (size_t i = 0; i < ui_elements_enabled.size(); i++) {
             const auto uielement = ui_elements_enabled[i];
             if (world_map_showing && !uielement->ShowOnWorldMap()) {
                 continue;
+            }
+            // Assign highest z when a TB window becomes visible
+            {
+                const bool was_visible = uielement->unified_z_ != 0;
+                if (uielement->visible && !was_visible) {
+                    auto& zo = Compositor::GetUnifiedZOrder();
+                    zo.OnWindowFocused(uielement->Name());
+                    uielement->unified_z_ = zo.GetZ(uielement->Name());
+                } else if (!uielement->visible && was_visible) {
+                    uielement->unified_z_ = 0;
+                }
             }
             uielement->UpdateLocationAgainstSnappedFrame();
             if (profiling_enabled) {
@@ -1064,6 +1136,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
             } else {
                 uielement->Draw(device);
             }
+            uielement->DrawPinButton();
         }
 
 #ifdef _DEBUG
@@ -1076,11 +1149,71 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
             ImGui::ClampAllWindowsToScreen(gwtoolbox_state < GWToolboxState::DrawTerminating && ToolboxSettings::clamp_windows_to_screen);
     }
+    // Prepare ImGui overlay draw lists while the frame is still active, so that
+    // draw_fns can call ImGui functions (e.g. SetTooltip).  The cached draw lists
+    // are rendered later during compositing in FrCacheRenderAll_Hook.
+    Compositor::PrepareOverlays();
     ImGui::EndFrame();
     ImGui::Render();
-    ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+    // Process pending texture uploads before rendering.
+    if (auto* draw_data = ImGui::GetDrawData(); draw_data && draw_data->Textures)
+        for (ImTextureData* tex : *draw_data->Textures)
+            if (tex->Status != ImTextureStatus_OK)
+                ImGui_ImplDX9_UpdateTexture(tex);
+}
+
+void GWToolbox::Draw(IDirect3DDevice9* device)
+{
+    HookUiRoot();
+    switch (gwtoolbox_state) {
+        case GWToolboxState::DrawTerminating:
+            return DrawTerminating(device);
+        case GWToolboxState::DrawInitialising:
+            return DrawInitialising(device);
+        case GWToolboxState::Initialised:
+            break;
+        default:
+            return;
+    }
+
+    Compositor::SetDevice(device);
+    Compositor::SetFrameDrawCallback(DrawImGuiFrame);
+
+    if (imgui_inifile_changed) {
+        auto& io = ImGui::GetIO();
+        io.IniFilename = imgui_inifile.bytes;
+        imgui_inifile_changed = false;
+    }
+    if (gwtoolbox_disabled) {
+        if (!ShouldDisableToolbox()) {
+            Enable();
+        }
+        return;
+    }
+    if (ShouldDisableToolbox()) {
+        Disable();
+        return;
+    }
+
+    // When hooked, DrawImGuiFrame runs from inside GW's render pipeline via the
+    // frame draw callback. Otherwise (hook failed or not yet installed), run it here.
+    if (!Compositor::IsHooked()) {
+        DrawImGuiFrame(device);
+    }
+
+    // Render remaining draw lists (tooltips, popups, etc.).
+    // TB windows rendered during FrCacheRenderAll_Hook have their draw lists cleared,
+    // so this only draws what's left.
+    // Gate on CanRenderToolbox: without it, stale draw data from the last in-game
+    // frame would be rendered at character select (where DrawImGuiFrame bails early
+    // without producing a new frame).
+    if (CanRenderToolbox()) {
+        if (auto* draw_data = ImGui::GetDrawData())
+            ImGui_ImplDX9_RenderDrawData(draw_data);
+    }
 
     // Update and Render additional Platform Windows
+    auto& io = ImGui::GetIO();
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();

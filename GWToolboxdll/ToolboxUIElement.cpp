@@ -10,6 +10,8 @@
 #include <GWCA/GameEntities/Frame.h>
 #include <Utils/ToolboxUtils.h>
 
+#include <imgui_internal.h>
+
 
 namespace {
     constexpr ImVec2 empty_imvec2 = {0, 0};
@@ -246,6 +248,10 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         ImGui::NextSpacedElement();
         ImGui::Checkbox("Show close button", &show_closebutton);
     }
+    if (has_pinbutton) {
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox("Show pin button", &show_pinbutton);
+    }
     if (can_show_in_main_window) {
         ImGui::NextSpacedElement();
         if (ImGui::Checkbox("Show in main window", &show_menubutton)) {
@@ -306,4 +312,102 @@ bool ToolboxUIElement::DrawTabButton(const bool show_icon, const bool show_text,
     }
     ImGui::PopStyleColor();
     return clicked;
+}
+
+void ToolboxUIElement::DrawPinButton()
+{
+    if (!has_pinbutton || !show_pinbutton || !has_titlebar || !show_titlebar || !visible
+        || !GetVisiblePtr())
+        return;
+
+    auto* window = ImGui::FindWindowByName(Name());
+    if (!window || !window->Active || window->Hidden || window->Collapsed)
+        return;
+
+    ImGuiContext& g = *ImGui::GetCurrentContext();
+    const auto& style = g.Style;
+    const float button_sz = g.FontSize;
+
+    // Calculate title bar rect (same as ImGui's Begin)
+    const ImRect title_bar(window->Pos, ImVec2(window->Pos.x + window->Size.x,
+                                                 window->Pos.y + g.FontSize + style.FramePadding.y * 2.0f));
+
+    // Calculate pad_r: skip close button if present
+    float pad_r = style.FramePadding.x;
+    if (GetVisiblePtr() != nullptr) {
+        pad_r += button_sz + style.ItemInnerSpacing.x; // close button
+    }
+
+    const ImVec2 pin_pos(title_bar.Max.x - window->WindowBorderSize - pad_r - button_sz,
+                          title_bar.Min.y + style.FramePadding.y);
+    const ImRect bb(pin_pos, ImVec2(pin_pos.x + button_sz, pin_pos.y + button_sz));
+
+    // Manual hit testing (no need for CurrentWindow context)
+    const auto& mouse = ImGui::GetIO().MousePos;
+    const bool hovered = mouse.x >= bb.Min.x && mouse.x <= bb.Max.x &&
+                          mouse.y >= bb.Min.y && mouse.y <= bb.Max.y;
+    if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+        pinned = !pinned;
+    }
+
+    // Draw button background: pressed look when pinned, raised when not.
+    auto* dl = window->DrawList;
+    if (pinned) {
+        // Pressed/depressed: dark inset background
+        dl->AddRectFilled(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_FrameBg));
+        dl->AddRect(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_Border));
+    } else if (hovered) {
+        dl->AddRectFilled(bb.Min, bb.Max, ImGui::GetColorU32(ImGui::IsMouseDown(ImGuiMouseButton_Left) ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered));
+    }
+
+    // Draw thumbtack icon.
+    // Pinned = pointing down (pushed in), unpinned = pointing left (pulled out).
+    const ImVec2 c = bb.GetCenter();
+    const ImU32 col = ImGui::GetColorU32(ImGuiCol_Text);
+    const float s = button_sz * 0.5f;
+    const float t = 1.0f * style._MainScale;
+
+    // Thumbtack shape: flat wide head, narrow body, thin needle.
+    // All coordinates relative to center, then rotated.
+    //   head:   wide horizontal bar (top)
+    //   body:   short tapered section
+    //   needle: thin line to tip
+    const float head_half_w = s * 0.55f;  // half-width of the flat head
+    const float head_h = s * 0.15f;       // height/thickness of head
+    const float body_h = s * 0.3f;        // height of body below head
+    const float body_half_w = s * 0.2f;   // half-width of body at top
+    const float needle_h = s * 0.45f;     // needle length
+
+    if (pinned) {
+        // Pointing down
+        const float top = c.y - s * 0.45f;
+        // Head (wide bar)
+        dl->AddRectFilled({c.x - head_half_w, top}, {c.x + head_half_w, top + head_h}, col);
+        // Body (trapezoid: wide at top, narrow at bottom)
+        dl->AddTriangleFilled(
+            {c.x - body_half_w, top + head_h},
+            {c.x + body_half_w, top + head_h},
+            {c.x, top + head_h + body_h}, col);
+        // Fill the rectangular part of the body
+        dl->AddRectFilled(
+            {c.x - body_half_w, top + head_h},
+            {c.x + body_half_w, top + head_h + body_h * 0.4f}, col);
+        // Needle
+        dl->AddLine({c.x, top + head_h + body_h}, {c.x, top + head_h + body_h + needle_h}, col, t);
+    } else {
+        // Pointing left (rotated 90° CW: down becomes left)
+        const float right = c.x + s * 0.45f;
+        // Head (tall bar on the right)
+        dl->AddRectFilled({right - head_h, c.y - head_half_w}, {right, c.y + head_half_w}, col);
+        // Body (trapezoid going left)
+        dl->AddTriangleFilled(
+            {right - head_h, c.y - body_half_w},
+            {right - head_h, c.y + body_half_w},
+            {right - head_h - body_h, c.y}, col);
+        dl->AddRectFilled(
+            {right - head_h - body_h * 0.4f, c.y - body_half_w},
+            {right - head_h, c.y + body_half_w}, col);
+        // Needle
+        dl->AddLine({right - head_h - body_h, c.y}, {right - head_h - body_h - needle_h, c.y}, col, t);
+    }
 }

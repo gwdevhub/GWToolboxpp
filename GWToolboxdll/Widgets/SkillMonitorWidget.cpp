@@ -246,7 +246,8 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
 
     if (ImGui::Begin(Name(), &visible, GetWinFlags())) {
         const auto draw_list = ImGui::GetWindowDrawList();
-
+        GW::UI::Frame* cast_party_frame = nullptr;
+        GetPartyWindowHealthBars(&cast_party_frame);
         for (auto& [agent_id, party_slot] : party_indeces_by_agent_id) {
 
             if (party_slot >= pets_start_idx && party_slot < allies_start_idx)

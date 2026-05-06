@@ -15,6 +15,7 @@ public:
     {
         ToolboxUIElement::Initialize();
         has_closebutton = true;
+        has_pinbutton = true;
         has_titlebar = true;
     }
 
@@ -22,11 +23,15 @@ public:
     {
         ToolboxUIElement::LoadSettings(ini);
         LOAD_BOOL(show_closebutton);
+        LOAD_BOOL(pinned);
+        LOAD_BOOL(show_pinbutton);
     }
 
     void SaveSettings(ToolboxIni* ini) override
     {
         ToolboxUIElement::SaveSettings(ini);
         SAVE_BOOL(show_closebutton);
+        SAVE_BOOL(pinned);
+        SAVE_BOOL(show_pinbutton);
     }
 };

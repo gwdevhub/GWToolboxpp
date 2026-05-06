@@ -15,6 +15,7 @@
 #include <ImGuiAddons.h>
 #include <Timer.h>
 #include <Modules/QuestModule.h>
+#include <Utils/Compositor.h>
 #include <Utils/ToolboxUtils.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/VanquishMapOverlayWidget.h>
@@ -149,6 +150,8 @@ namespace {
         }
         return false;
     }
+
+    const D3DMATRIX IDENTITY_MATRIX = {{1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f}};
 
     bool IsFrontierEdge(int idx)
     {
@@ -839,9 +842,9 @@ namespace {
         compass_circle = D3DCircle({0.f, 0.f}, COMPASS_RANGE, COMPASS_CIRCLE_THICKNESS_PX * cached_px_to_game, (DWORD)vq_color_compass, COMPASS_CIRCLE_SEGMENTS);
     }
 
-    void DrawEnemyCountLabel()
+    void DrawEnemyCountLabel(ImDrawList& draw_list)
     {
-        if (!should_draw) return;
+        if (!should_draw || !MissionMapWidget::IsRenderReady()) return;
 
         const auto mm_top_left = MissionMapWidget::GetTopLeft();
         const auto mm_bottom_right = MissionMapWidget::GetBottomRight();
@@ -875,12 +878,11 @@ namespace {
         const float btn_size = ImGui::GetTextLineHeight() + 12.0f;
         const ImVec2 text_pos(mm_top_left.x + PADDING + btn_size, mm_bottom_right.y - ImGui::GetTextLineHeight() - PADDING);
 
-        auto* draw_list = ImGui::GetBackgroundDrawList();
-        draw_list->AddText({text_pos.x + 1, text_pos.y + 1}, IM_COL32(0, 0, 0, 220), label);
-        draw_list->AddText({text_pos.x - 1, text_pos.y - 1}, IM_COL32(0, 0, 0, 220), label);
-        draw_list->AddText({text_pos.x + 1, text_pos.y - 1}, IM_COL32(0, 0, 0, 220), label);
-        draw_list->AddText({text_pos.x - 1, text_pos.y + 1}, IM_COL32(0, 0, 0, 220), label);
-        draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255), label);
+        draw_list.AddText({text_pos.x + 1, text_pos.y + 1}, IM_COL32(0, 0, 0, 220), label);
+        draw_list.AddText({text_pos.x - 1, text_pos.y - 1}, IM_COL32(0, 0, 0, 220), label);
+        draw_list.AddText({text_pos.x + 1, text_pos.y - 1}, IM_COL32(0, 0, 0, 220), label);
+        draw_list.AddText({text_pos.x - 1, text_pos.y + 1}, IM_COL32(0, 0, 0, 220), label);
+        draw_list.AddText(text_pos, IM_COL32(255, 255, 255, 255), label);
     }
 
 
@@ -896,42 +898,87 @@ namespace {
         nav_marker_hidden = false;
     }
 
-    void OnMissionMapDraw(IDirect3DDevice9* dx_device)
-    {
-        if (!should_draw) return;
-
-        const auto& gameToScreen = MissionMapWidget::GetGameToScreenMatrix();
-
-        inaccessible_area_and_borders.Render(dx_device);
-        fog_buffer.Render(dx_device);
-        frontier_border.Render(dx_device);
-        enemy_vertex_buffer.Render(dx_device);
-
-        if (!compass_circle.empty()) {
-            if (const auto* player = GW::Agents::GetControlledCharacter()) {
-                D3DMATRIX compassMatrix = gameToScreen;
-                compassMatrix._41 = roundf(gameToScreen._41 + player->pos.x * gameToScreen._11 + player->pos.y * gameToScreen._21);
-                compassMatrix._42 = roundf(gameToScreen._42 + player->pos.x * gameToScreen._12 + player->pos.y * gameToScreen._22);
-                dx_device->SetTransform(D3DTS_WORLD, &compassMatrix);
-                compass_circle.Render(dx_device);
-                dx_device->SetTransform(D3DTS_WORLD, &gameToScreen);
-            }
-        }
-    }
 } // namespace
 
 void VanquishMapOverlayWidget::Initialize()
 {
     ToolboxWidget::Initialize();
-    MissionMapWidget::AddDrawCallback(&OnMissionMapDraw);
     MissionMapWidget::AddContextMenuCallback(&VanquishMapOverlayWidget::ContextMenuItems);
     QuestModule::AddCustomMarkerChangedCallback(&OnCustomMarkerChanged);
+    Compositor::RegisterOverlayCallback(L"MapWindow",
+        [this](IDirect3DDevice9* device) { RenderMissionMapOverlay(device); });
+    Compositor::RegisterImGuiOverlay(L"MapWindow",
+        [this](ImDrawList& draw_list) { DrawEnemyCountLabel(draw_list); }, 2);
+    Compositor::RegisterOverlayCallback(L"MapWindow",
+        [](IDirect3DDevice9* device) { Compositor::RenderImGuiWindow(device, "##vq_toggle"); }, 2);
+}
+
+void VanquishMapOverlayWidget::RenderMissionMapOverlay(IDirect3DDevice9* device)
+{
+    if (!visible || !should_draw || !MissionMapWidget::IsRenderReady() || !ToolboxUtils::IsExplorable()) return;
+
+    const auto gameToScreen = MissionMapWidget::GetGameToScreenMatrix();
+    const auto mm_top_left = MissionMapWidget::GetTopLeft();
+    const auto mm_bottom_right = MissionMapWidget::GetBottomRight();
+
+    const D3DStateGuard guard(device);
+
+    device->SetPixelShader(nullptr);
+    device->SetVertexShader(nullptr);
+    device->SetTexture(0, nullptr);
+    device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+    device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+    device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+    device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+    device->SetRenderState(D3DRS_LIGHTING, FALSE);
+    device->SetRenderState(D3DRS_ZENABLE, FALSE);
+    device->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+    device->SetRenderState(D3DRS_STENCILENABLE, FALSE);
+    device->SetRenderState(D3DRS_FOGENABLE, FALSE);
+    device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+    device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
+    device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE);
+    device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+    device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_DIFFUSE);
+
+    RECT scissorRect;
+    scissorRect.left = static_cast<LONG>(floorf(mm_top_left.x));
+    scissorRect.top = static_cast<LONG>(floorf(mm_top_left.y));
+    scissorRect.right = static_cast<LONG>(ceilf(mm_bottom_right.x));
+    scissorRect.bottom = static_cast<LONG>(ceilf(mm_bottom_right.y));
+    device->SetScissorRect(&scissorRect);
+
+    const auto& io = ImGui::GetIO();
+    D3DVIEWPORT9 vp = {0, 0, (DWORD)io.DisplaySize.x, (DWORD)io.DisplaySize.y, 0, 1};
+    device->SetViewport(&vp);
+    const D3DMATRIX ortho = MakeOrthoProjection(io.DisplaySize.x, io.DisplaySize.y);
+
+    device->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
+    device->SetTransform(D3DTS_WORLD, &gameToScreen);
+    device->SetTransform(D3DTS_VIEW, &IDENTITY_MATRIX);
+    device->SetTransform(D3DTS_PROJECTION, &ortho);
+
+    inaccessible_area_and_borders.Render(device);
+    fog_buffer.Render(device);
+    frontier_border.Render(device);
+    enemy_vertex_buffer.Render(device);
+
+    if (!compass_circle.empty()) {
+        if (const auto* player = GW::Agents::GetControlledCharacter()) {
+            D3DMATRIX compassMatrix = gameToScreen;
+            compassMatrix._41 = roundf(gameToScreen._41 + player->pos.x * gameToScreen._11 + player->pos.y * gameToScreen._21);
+            compassMatrix._42 = roundf(gameToScreen._42 + player->pos.x * gameToScreen._12 + player->pos.y * gameToScreen._22);
+            device->SetTransform(D3DTS_WORLD, &compassMatrix);
+            compass_circle.Render(device);
+        }
+    }
 }
 
 void VanquishMapOverlayWidget::Draw(IDirect3DDevice9*)
 {
+    // Create the toggle button ImGui window — its draw list is rendered at the
+    // MapWindow z-level by the overlay callback registered in Initialize.
     DrawVanquishToggleButton();
-    DrawEnemyCountLabel();
 }
 
 void VanquishMapOverlayWidget::DrawVanquishToggleButton()
@@ -1037,7 +1084,6 @@ void VanquishMapOverlayWidget::Update(float)
 void VanquishMapOverlayWidget::Terminate()
 {
     ToolboxWidget::Terminate();
-    MissionMapWidget::RemoveDrawCallback(&OnMissionMapDraw);
     MissionMapWidget::RemoveContextMenuCallback(&VanquishMapOverlayWidget::ContextMenuItems);
     QuestModule::RemoveCustomMarkerChangedCallback(&OnCustomMarkerChanged);
 

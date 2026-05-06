@@ -40,10 +40,12 @@ public:
     virtual void DrawSizeAndPositionSettings();
 
     bool visible = false;
+    bool pinned = false;
     bool lock_move = false;
     bool lock_size = false;
     bool show_menubutton = false;
     bool auto_size = false;
+    uint64_t unified_z_ = 0;
 
     bool* GetVisiblePtr()
     {
@@ -53,10 +55,14 @@ public:
     bool has_titlebar = false;
     bool show_titlebar = true;
     bool show_closebutton = true;
+    bool show_pinbutton = true;
+
+    void DrawPinButton();
 
 protected:
     bool can_show_in_main_window = true;
     bool has_closebutton = false;
+    bool has_pinbutton = false;
     bool is_resizable = true;
     bool is_movable = true;
 
