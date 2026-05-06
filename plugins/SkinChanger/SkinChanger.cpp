@@ -14,6 +14,7 @@
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
@@ -26,6 +27,7 @@
 #include "PluginUtils.h"
 #include "ImGuiCppWrapper.h"
 #include "BackupManager.h"
+#include <io.h>
 
 #include <format>
 #include <sstream>
@@ -38,6 +40,7 @@ namespace
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry ItemGeneral_Entry;
     GW::HookEntry ItemGeneralReuse_Entry;
+    GW::HookEntry RestoreChatCmd_HookEntry;
 
     bool needToFetchBagItems = false;
 
@@ -928,13 +931,14 @@ void SkinChanger::Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMO
         minipetStatus.lastPop = std::chrono::steady_clock::now() - 1h;
     });
 
-    /*GW::Chat::CreateCommand(L"restore", [](GW::HookStatus* status, const wchar_t*, const int argc, const LPWSTR* argv) {
+    GW::Chat::CreateCommand(&RestoreChatCmd_HookEntry, L"restore", [](GW::HookStatus* status, const wchar_t*, const int argc, const LPWSTR* argv) {
         const auto instance = static_cast<SkinChanger*>(ToolboxPluginInstance());
         if (!instance || argc < 2) {
             status->blocked = false;
             return;
         }
         const auto arg1 = PluginUtils::ToLower(argv[1]);
+        const auto pluginName = PluginUtils::StringToWString(instance->Name());
 
 
         std::filesystem::path iniToLoad;
@@ -980,7 +984,7 @@ void SkinChanger::Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMO
         if (!iniToLoad.empty()) {
             instance->loadFromIniFile(iniToLoad.c_str());
         }
-    });*/
+    });
 
     // Use [this] instead of [&] to avoid capturing dangling references if the callback
     // fires after SignalTerminate has begun tearing down local state.
@@ -1053,4 +1057,5 @@ void SkinChanger::SignalTerminate()
     GW::StoC::RemovePostCallback<GW::Packet::StoC::ItemGeneral_ReuseID>(&ItemGeneralReuse_Entry);
     GW::UI::RemoveUIMessageCallback(&UseItem_Entry, GW::UI::UIMessage::kSendUseItem);
     GW::StoC::RemovePostCallback<GW::Packet::StoC::AgentAdd>(&AgentAdd_Entry);
+    GW::Chat::DeleteCommand(&RestoreChatCmd_HookEntry);
 }
