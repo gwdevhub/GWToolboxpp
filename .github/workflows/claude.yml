@@ -50,25 +50,31 @@ jobs:
               labels: ['AI'],
             });
 
-            const query = `
-              query($owner: String!, $repo: String!, $number: Int!) {
-                repository(owner: $owner, name: $repo) {
-                  pullRequest(number: $number) {
-                    closingIssuesReferences(first: 50) {
-                      nodes { number repository { nameWithOwner } }
-                    }
-                  }
-                }
-              }
-            `;
-            const result = await github.graphql(query, { owner, repo, number });
-            const issues = (result.repository.pullRequest.closingIssuesReferences.nodes || [])
-              .filter(n => n.repository.nameWithOwner === `${owner}/${repo}`)
-              .map(n => n.number);
+            // Claude's PRs use "refs #NNNN" rather than closing keywords,
+            // so closingIssuesReferences misses them. Fall back to scanning
+            // the PR title and body for any #NNNN mentions or same-repo
+            // issue URLs, then filter out anything that isn't an open/closed
+            // issue (e.g. other PRs).
+            const pr = context.payload.pull_request;
+            const text = `${pr.title || ''}\n${pr.body || ''}`;
+            const hashRefs = [...text.matchAll(/(?:^|[^&\w])#(\d+)\b/g)].map(m => Number(m[1]));
+            const urlPattern = new RegExp(
+              `https?://github\\.com/${owner}/${repo}/issues/(\\d+)`,
+              'gi',
+            );
+            const urlRefs = [...text.matchAll(urlPattern)].map(m => Number(m[1]));
+            const candidates = [...new Set([...hashRefs, ...urlRefs])].filter(n => n !== number);
 
-            core.info(`Linked issues: ${issues.join(', ') || '(none)'}`);
-            for (const issue_number of issues) {
+            core.info(`Referenced numbers: ${candidates.join(', ') || '(none)'}`);
+            for (const issue_number of candidates) {
               try {
+                const { data } = await github.rest.issues.get({
+                  owner, repo, issue_number,
+                });
+                if (data.pull_request) {
+                  core.info(`Skipping #${issue_number} (it's a PR)`);
+                  continue;
+                }
                 await github.rest.issues.addLabels({
                   owner, repo, issue_number,
                   labels: ['AI'],
@@ -100,7 +106,10 @@ jobs:
           fetch-depth: 1
 
       - name: Run Claude Code
-        uses: anthropics/claude-code-action@v1
+        # Pinned to a commit before claude-code 2.1.131, which broke the
+        # native installer (binary missing at /home/runner/.local/bin/claude).
+        # Bump back to @v1 once upstream is fixed.
+        uses: anthropics/claude-code-action@2cc1ac1331eac7a6a96d716dd204dd2888d0fcd2 # v1 @ 2.1.128
         with:
           # Authenticate against your Claude Code subscription so usage
           # comes out of the existing Max plan rather than API credits.
