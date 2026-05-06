@@ -381,9 +381,9 @@ void AgentRenderer::LoadDefaultSizes()
     size_hostile = size_default;
     size_neutral = size_default;
     size_ally = size_default;
-    size_ally_npc = size_ally;
-    size_ally_npc_quest = size_ally_npc_quest;
-    size_ally_spirit = size_ally;
+    size_ally_npc = size_default;
+    size_ally_npc_quest = size_default;
+    size_ally_spirit = size_default;
     agent_border_thickness = 0.f;
     target_border_thickness = 50.0f;
 }

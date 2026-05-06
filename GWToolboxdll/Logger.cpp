@@ -93,9 +93,7 @@ namespace {
     void OnLogWithArguments(uint32_t severity, const wchar_t* format, va_list argList)
     {
         GW::Hook::EnterHook();
-        _vchatlogW((LogType)severity, format, argList);
-        //Log::Info(format, argList);
-        // your hook logic here
+        vfwprintf(logfile, format, argList);
         LogWithArguments_Ret(severity, format, argList);
         GW::Hook::LeaveHook();
     }
