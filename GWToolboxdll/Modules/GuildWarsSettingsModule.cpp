@@ -379,20 +379,7 @@ namespace {
     std::filesystem::path GetDefaultFilename()
     {
         const auto uuid = GW::AccountMgr::GetAccountUuid();
-        const GUID empty{};
-        if (memcmp(&uuid, &empty, sizeof(uuid)) == 0) {
-            return L"GuildWarsSettings.ini";
-        }
-        const auto uuid_filename = std::filesystem::path(TextUtils::StringToWString(TextUtils::GuidToString(&uuid)) + L"_GuildWarsSettings.ini");
-        // Migration: prefer old email-based file if UUID file doesn't exist yet
-        const auto c = GW::GetCharContext();
-        if (c && c->player_email && *c->player_email) {
-            const auto email_filename = std::filesystem::path(std::wstring(c->player_email) + L"_GuildWarsSettings.ini");
-            if (std::filesystem::exists(Resources::GetPath(email_filename)) && !std::filesystem::exists(Resources::GetPath(uuid_filename))) {
-                return email_filename;
-            }
-        }
-        return uuid_filename;
+        return std::filesystem::path(TextUtils::StringToWString(TextUtils::GuidToString(&uuid)) + L"_GuildWarsSettings.ini");
     }
 
     void OnPreferencesSaveFileChosen(const char* result)
