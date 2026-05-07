@@ -26,6 +26,7 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <Modules/Resources.h>
+#include <Utils/ToolboxUtils.h>
 
 
 namespace GWArmory {
