@@ -23,6 +23,7 @@
 #include "GuildWarsSettingsModule.h"
 
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 namespace {
     uint32_t* key_mappings_array = nullptr;
@@ -377,7 +378,8 @@ namespace {
 
     std::filesystem::path GetDefaultFilename()
     {
-        return std::format(L"{}_GuildWarsSettings.ini", GW::GetCharContext()->player_email);
+        const auto uuid = GW::AccountMgr::GetAccountUuid();
+        return std::filesystem::path(TextUtils::StringToWString(TextUtils::GuidToString(&uuid)) + L"_GuildWarsSettings.ini");
     }
 
     void OnPreferencesSaveFileChosen(const char* result)

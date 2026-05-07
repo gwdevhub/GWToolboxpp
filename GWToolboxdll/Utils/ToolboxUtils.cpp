@@ -385,6 +385,14 @@ namespace GW {
             return account_uuid;
         }
 
+        GUID GetAccountUuid()
+        {
+            const auto uuid = GetPortalAccountUuid();
+            if (uuid) return *uuid;
+            const auto email = GetAccountEmail();
+            return email && *email ? TextUtils::ConvertWStringToGuid(email) : GUID{};
+        }
+
         AvailableCharacterInfo* GetAvailableCharacter(const wchar_t* name)
         {
             const auto characters = name ? GetAvailableChars() : nullptr;

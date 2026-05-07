@@ -15,6 +15,7 @@
 #include <Defines.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 namespace GW::Chat {
     constexpr size_t SENT_LOG_LENGTH = 0x32;
@@ -405,13 +406,25 @@ namespace {
         }
     }
 
-    // Load chat log from file via account email address
+    // Load chat log from file via account UUID string
     void Load(const std::wstring& _account)
     {
         Reset();
 
         // Recv log FIFO
         account = _account;
+        // Migration: if UUID-based log doesn't exist, rename old email-based logs
+        const auto c = GW::GetCharContext();
+        if (c && c->player_email && *c->player_email && !std::filesystem::exists(LogPath(L"recv"))) {
+            const std::wstring email_str = c->player_email;
+            Resources::EnsureFolderExists(Resources::GetPath(L"chat logs"));
+            for (const auto* prefix : {L"recv", L"sent"}) {
+                const auto old_path = Resources::GetPath(L"chat logs", (std::wstring(prefix) + L"_" + email_str + L".ini").c_str());
+                if (std::filesystem::exists(old_path)) {
+                    std::filesystem::rename(old_path, LogPath(prefix));
+                }
+            }
+        }
         ToolboxIni inifile;
         auto res = inifile.LoadIfExists(LogPath(L"recv"));
         for (size_t i = 0; i < 10 && res != SI_OK; i++) {
@@ -536,7 +549,8 @@ namespace {
         if (!c) {
             return false;
         }
-        const std::wstring this_account = c->player_email;
+        const auto uuid = GW::AccountMgr::GetAccountUuid();
+        const auto this_account = TextUtils::StringToWString(TextUtils::GuidToString(&uuid));
         if (this_account == account) {
             return false;
         }
