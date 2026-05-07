@@ -324,6 +324,13 @@ bool TBHotkey::Draw(Op* op, bool first, bool last)
     bool hotkey_changed = false;
     const float scale = ImGui::FontScale();
     const auto show_header_buttons = [&] {
+        // If no buttons will be drawn, avoid calling SameLine() — doing so without
+        // drawing anything after leaves ImGui's cursor at the header's Y, causing
+        // subsequent items (next header or expanded content) to render at the wrong position.
+        if (!show_run_in_header && first && last && !show_active_in_header) {
+            return;
+        }
+
         ImGui::PushID(static_cast<int>(ui_id));
         ImGui::PushID("header");
         const ImGuiStyle& style = ImGui::GetStyle();
