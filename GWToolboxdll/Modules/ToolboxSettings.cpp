@@ -78,6 +78,7 @@
 #include <Windows/GWMarketWindow.h>
 #include <Windows/InventorySorting.h>
 #include <Windows/PerformanceWindow.h>
+#include <Windows/SettingsWindow.h>
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
@@ -320,6 +321,9 @@ void ToolboxSettings::DrawFreezeSetting()
     ImGui::Checkbox("Clamp growing windows to screen bounds", &clamp_windows_to_screen);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Hide toolbox on loading screens", &hide_on_loading_screen);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show settings button in window title bars", &show_settings_cog);
+    ImGui::ShowHelp("Show a " ICON_FA_COG " button in the title bar of each window.\nClick it to quickly open that window's settings.");
 }
 
 void ToolboxSettings::LoadSettings(ToolboxIni* ini)
@@ -331,6 +335,7 @@ void ToolboxSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(clamp_windows_to_screen);
     LOAD_BOOL(hide_on_loading_screen);
     LOAD_BOOL(send_anonymous_gameplay_info);
+    LOAD_BOOL(show_settings_cog);
 
     for (auto& m : optional_modules) {
         m.enabled = ini->GetBoolValue(modules_ini_section, m.name, m.enabled);
@@ -347,6 +352,7 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(clamp_windows_to_screen);
     SAVE_BOOL(hide_on_loading_screen);
     SAVE_BOOL(send_anonymous_gameplay_info);
+    SAVE_BOOL(show_settings_cog);
 
     for (const auto& m : optional_modules) {
         ini->SetBoolValue(modules_ini_section, m.name, m.enabled);
@@ -356,6 +362,61 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini)
 void ToolboxSettings::Draw(IDirect3DDevice9*)
 {
     ImGui::GetStyle().WindowBorderSize = move_all ? 1.0f : 0.0f;
+    DrawSettingsCogButtons();
+}
+
+void ToolboxSettings::DrawSettingsCogButtons()
+{
+    if (!show_settings_cog) return;
+
+    const ImVec2 mouse_pos = ImGui::GetIO().MousePos;
+    ToolboxUIElement* hovered_elem = nullptr;
+
+    for (const auto* elem : GWToolbox::GetUIElements()) {
+        if (!elem->visible || !elem->show_titlebar) continue;
+
+        const ImGuiWindow* window = ImGui::FindWindowByName(elem->Name());
+        if (!window || (window->Flags & ImGuiWindowFlags_NoTitleBar)) continue;
+        if (!window->Viewport) continue;
+
+        const ImRect tb = window->TitleBarRect();
+        const float btn_h = tb.GetHeight();
+
+        // Leave room for the ImGui close button if one is shown
+        const bool close_btn_shown = elem->IsWindow() && elem->GetVisiblePtr() != nullptr;
+        const float close_offset = close_btn_shown ? btn_h : 0.f;
+
+        const ImVec2 btn_min = {tb.Max.x - close_offset - btn_h, tb.Min.y};
+        const ImVec2 btn_max = {btn_min.x + btn_h, tb.Max.y};
+
+        const bool hovered = mouse_pos.x >= btn_min.x && mouse_pos.x < btn_max.x
+                          && mouse_pos.y >= btn_min.y && mouse_pos.y < btn_max.y;
+
+        ImDrawList* dl = ImGui::GetForegroundDrawList(window->Viewport);
+
+        if (hovered) {
+            hovered_elem = const_cast<ToolboxUIElement*>(elem);
+            dl->AddRectFilled(btn_min, btn_max, IM_COL32(255, 255, 255, 30));
+
+            const ImVec2 drag = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+            if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && drag.x == 0.f && drag.y == 0.f) {
+                SettingsWindow::Instance().NavigateToSection(elem->SettingsName());
+            }
+        }
+
+        const ImVec2 text_size = ImGui::CalcTextSize(ICON_FA_COG);
+        const ImVec2 icon_pos = {
+            btn_min.x + (btn_h - text_size.x) * 0.5f,
+            tb.Min.y  + (btn_h - text_size.y) * 0.5f
+        };
+        ImVec4 col = ImGui::GetStyle().Colors[ImGuiCol_Text];
+        if (!hovered) col.w *= 0.5f;
+        dl->AddText(icon_pos, ImGui::ColorConvertFloat4ToU32(col), ICON_FA_COG);
+    }
+
+    if (hovered_elem) {
+        ImGui::SetTooltip("Open %s settings", hovered_elem->SettingsName());
+    }
 }
 
 void ToolboxSettings::Update(float)

@@ -14,6 +14,12 @@
 
 #include <ToolboxWidget.h>
 
+void SettingsWindow::NavigateToSection(const char* section)
+{
+    visible = true;
+    pending_navigate_to = section;
+}
+
 void SettingsWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
@@ -233,6 +239,7 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
         ImGui::PopTextWrapPos();
     }
     ImGui::End();
+    pending_navigate_to.clear(); // consumed inside DrawSettingsSection, or cleared if section wasn't found
 }
 
 bool SettingsWindow::DrawSettingsSection(const char* section)
@@ -260,6 +267,10 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     const auto pos = ImGui::GetCursorScreenPos();
     const auto padding = ImGui::GetStyle().FramePadding;
     float header_text_offset_x = text_height + padding.x * 3;
+    const bool should_navigate = !pending_navigate_to.empty() && pending_navigate_to == section;
+    if (should_navigate) {
+        ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+    }
     const bool is_showing = ImGui::CollapsingHeader(std::format("##{}",section).c_str(), ImGuiTreeNodeFlags_AllowOverlap);
     ImGui::SameLine(header_text_offset_x);
     if (icon) {
@@ -267,6 +278,10 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
         ImGui::SameLine(header_text_offset_x += text_height + padding.x);
     }
     ImGui::TextUnformatted(section);
+    if (should_navigate) {
+        ImGui::SetScrollHereY(0.0f);
+        pending_navigate_to.clear();
+    }
 
     ImGui::PushID(section);
     size_t i = 0;
