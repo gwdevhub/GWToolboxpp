@@ -1,7 +1,9 @@
 name: Pending Release Label
 
-# When a PR merges with closing keywords ("fixes #123", "closes <issue url>",
-# etc.), tag the linked issues with "Pending Release"
+# When a PR merges, tag any issues referenced in its title/body with
+# "Pending Release". Uses the find-linked-issues composite action since
+# GitHub's own closingIssuesReferences only populates for PRs targeting the
+# default branch — and ours target dev.
 
 on:
   pull_request:
@@ -15,30 +17,25 @@ jobs:
       issues: write
       pull-requests: read
     steps:
-      - uses: actions/github-script@v7
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Find linked issues
+        id: linked
+        uses: ./.github/actions/find-linked-issues
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+
+      - name: Label linked issues with "Pending Release"
+        uses: actions/github-script@v7
+        env:
+          LINKED_ISSUES: ${{ steps.linked.outputs.issues }}
         with:
           script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const number = context.payload.pull_request.number;
-
-            const query = `
-              query($owner: String!, $repo: String!, $number: Int!) {
-                repository(owner: $owner, name: $repo) {
-                  pullRequest(number: $number) {
-                    closingIssuesReferences(first: 50) {
-                      nodes { number repository { nameWithOwner } }
-                    }
-                  }
-                }
-              }
-            `;
-            const result = await github.graphql(query, { owner, repo, number });
-            const issues = (result.repository.pullRequest.closingIssuesReferences.nodes || [])
-              .filter(n => n.repository.nameWithOwner === `${owner}/${repo}`)
-              .map(n => n.number);
-
-            core.info(`Linked issues: ${issues.join(', ') || '(none)'}`);
+            const { owner, repo } = context.repo;
+            const issues = JSON.parse(process.env.LINKED_ISSUES);
             if (issues.length === 0) return;
 
             try {

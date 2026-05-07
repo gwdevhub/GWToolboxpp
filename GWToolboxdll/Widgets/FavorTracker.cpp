@@ -245,6 +245,8 @@ void FavorTracker::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
     LOAD_FLOAT(text_size);
+    LOAD_COLOR(text_color);
+    LOAD_BOOL(hide_if_no_favor);
     LOAD_BOOL(enabled);
     LOAD_BOOL(play_sound_on_favor);
     LOAD_UINT(favor_sound_file_id);
@@ -254,6 +256,8 @@ void FavorTracker::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
     SAVE_FLOAT(text_size);
+    SAVE_COLOR(text_color);
+    SAVE_BOOL(hide_if_no_favor);
     SAVE_BOOL(enabled);
     SAVE_BOOL(play_sound_on_favor);
     SAVE_UINT(favor_sound_file_id);
