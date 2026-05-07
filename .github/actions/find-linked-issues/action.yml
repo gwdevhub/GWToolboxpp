@@ -1,0 +1,62 @@
+name: 'Find Linked Issues'
+description: >
+  Scan a pull request's title and body for #N and full-URL issue references and
+  return the list of valid issue numbers in the same repository (PRs and the PR
+  itself are excluded). Used as a single source of truth for "what issues does
+  this PR fix?" since GitHub only honors closing keywords on default-branch PRs.
+
+inputs:
+  pr-number:
+    description: 'Pull request number to scan'
+    required: true
+
+outputs:
+  issues:
+    description: 'JSON array of referenced issue numbers (e.g. "[1934,1935]")'
+    value: ${{ steps.scan.outputs.issues }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: scan
+      uses: actions/github-script@v7
+      env:
+        PR_NUMBER: ${{ inputs.pr-number }}
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          const number = Number(process.env.PR_NUMBER);
+
+          const { data: pr } = await github.rest.pulls.get({
+            owner, repo, pull_number: number,
+          });
+          const text = `${pr.title || ''}\n${pr.body || ''}`;
+
+          const hashRefs = [...text.matchAll(/(?:^|[^&\w])#(\d+)\b/g)]
+            .map(m => Number(m[1]));
+          const urlPattern = new RegExp(
+            `https?://github\\.com/${owner}/${repo}/issues/(\\d+)`,
+            'gi',
+          );
+          const urlRefs = [...text.matchAll(urlPattern)].map(m => Number(m[1]));
+          const candidates = [...new Set([...hashRefs, ...urlRefs])]
+            .filter(n => n !== number);
+
+          const issues = [];
+          for (const issue_number of candidates) {
+            try {
+              const { data } = await github.rest.issues.get({
+                owner, repo, issue_number,
+              });
+              if (data.pull_request) {
+                core.info(`Skipping #${issue_number} (it's a PR)`);
+                continue;
+              }
+              issues.push(issue_number);
+            } catch (e) {
+              core.warning(`Failed to fetch #${issue_number}: ${e.message}`);
+            }
+          }
+
+          core.info(`Linked issues: ${issues.join(', ') || '(none)'}`);
+          core.setOutput('issues', JSON.stringify(issues));
