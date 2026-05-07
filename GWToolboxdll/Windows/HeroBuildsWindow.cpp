@@ -24,6 +24,7 @@
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/Resources.h>
 #include <Windows/HeroBuildsWindow.h>
+#include <Windows/Hotkeys.h>
 
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
@@ -89,22 +90,6 @@ namespace {
     GuiUtils::EncString* GetHeroEncName(GW::Constants::HeroID hero_id) {
         const auto c = GW::PartyMgr::GetHeroConstData(hero_id);
         return Resources::DecodeStringId(c ? c->name_id : 1);
-    }
-
-    const char* GetProfessionName(const GW::Constants::Profession prof) {
-        switch (prof) {
-            case GW::Constants::Profession::Warrior:      return "Warrior";
-            case GW::Constants::Profession::Ranger:       return "Ranger";
-            case GW::Constants::Profession::Monk:         return "Monk";
-            case GW::Constants::Profession::Necromancer:  return "Necromancer";
-            case GW::Constants::Profession::Mesmer:       return "Mesmer";
-            case GW::Constants::Profession::Elementalist: return "Elementalist";
-            case GW::Constants::Profession::Assassin:     return "Assassin";
-            case GW::Constants::Profession::Ritualist:    return "Ritualist";
-            case GW::Constants::Profession::Paragon:      return "Paragon";
-            case GW::Constants::Profession::Dervish:      return "Dervish";
-            default:                                      return "Unknown";
-        }
     }
 
     const size_t GetPlayerHeroCount()
@@ -206,7 +191,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             const auto player_profession = me ? static_cast<GW::Constants::Profession>(me->primary) : GW::Constants::Profession::None;
             if (player_profession != GW::Constants::Profession::None) {
                 char filter_label[64];
-                snprintf(filter_label, sizeof(filter_label), "Filter by %s", GetProfessionName(player_profession));
+                snprintf(filter_label, sizeof(filter_label), "Filter by %s", TBHotkey::professions[static_cast<size_t>(player_profession)]);
                 ImGui::Checkbox(filter_label, &filter_by_profession);
             }
             const float btn_width = 60.0f * ImGui::FontScale();
