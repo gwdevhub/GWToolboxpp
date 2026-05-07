@@ -91,6 +91,30 @@ namespace {
         return Resources::DecodeStringId(c ? c->name_id : 1);
     }
 
+    // Returns hero IDs sorted by name; re-sorts each frame until all names are decoded.
+    const std::vector<HeroID>& SortedHeroIDs() {
+        static std::vector<HeroID> sorted;
+        static bool is_sorted = false;
+        if (!is_sorted) {
+            sorted.clear();
+            for (const auto id : HeroIndexToID) {
+                if (id != HeroID::NoHero) sorted.push_back(id);
+            }
+            bool all_decoded = true;
+            for (const auto id : sorted) {
+                if (GetHeroEncName(id)->string().empty()) {
+                    all_decoded = false;
+                    break;
+                }
+            }
+            std::ranges::sort(sorted, [](const HeroID a, const HeroID b) {
+                return _stricmp(GetHeroEncName(a)->string().c_str(), GetHeroEncName(b)->string().c_str()) < 0;
+            });
+            is_sorted = all_decoded;
+        }
+        return sorted;
+    }
+
     const size_t GetPlayerHeroCount()
     {
         size_t ret = 0;
@@ -199,6 +223,20 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     }
                     tbuild.edit_open = !tbuild.edit_open;
                 }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip([&tbuild, this]() {
+                        for (size_t ti = 0; ti < tbuild.builds.size(); ti++) {
+                            const auto& build = tbuild.builds[ti];
+                            if (build.code[0] == 0 && build.name[0] == 0) continue;
+                            ImGui::Spacing();
+                            std::string name;
+                            HeroBuildName(tbuild, ti, &name);
+                            ImGui::TextUnformatted(name.empty() ? build.name : name.c_str());
+                            GuiUtils::DrawSkillbar(build.code, false);
+                            ImGui::Spacing();
+                        }
+                    });
+                }
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.5f, 0.5f);
                 ImGui::SameLine(0, item_spacing);
                 if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "Load", ImVec2(btn_width, 0))) {
@@ -223,15 +261,11 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     char buf[BUFFER_SIZE]{};
                     if (!GW::SkillbarMgr::EncodeSkillTemplate(skill_template, buf, BUFFER_SIZE)) continue;
                     const auto party_info = GW::PartyMgr::GetPartyInfo();
-                    const auto hero_id = party_info && party_info->heroes.size() > i - 1 ? party_info->heroes[i - 1].hero_id : HeroID::NoHero;
-                    const auto it = std::ranges::find_if(HeroIndexToID, [hero_id](const auto& p) {
-                        return p == hero_id;
-                    });
-                    const GW::HeroFlag* flag = GetHeroFlagInfo(hero_id);
-                    if (it != HeroIndexToID.end()) {
-                        const auto hero_idx = std::distance(HeroIndexToID.begin(), it);
-                        tb.builds[i] = HeroBuild("", buf, hero_idx, 0, static_cast<uint32_t>(flag ? flag->hero_behavior : GW::HeroBehavior::Guard));
-                    }
+                    const auto cur_hero_id = i > 0 && party_info && party_info->heroes.size() >= i
+                        ? party_info->heroes[i - 1].hero_id
+                        : HeroID::NoHero;
+                    const GW::HeroFlag* flag = cur_hero_id != HeroID::NoHero ? GetHeroFlagInfo(cur_hero_id) : nullptr;
+                    tb.builds[i] = HeroBuild("", buf, cur_hero_id, 0, static_cast<uint32_t>(flag ? flag->hero_behavior : GW::HeroBehavior::Guard));
                 }
 
                 builds_changed = true;
@@ -314,20 +348,26 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     ImGui::PopItemWidth();
                 }
                 else {
-                    if (ImGui::MyCombo(
-                        "###heroid", "Choose Hero", &build.hero_index,
-                        [](void*, const int idx, const char** out_text) -> bool {
-                            if (idx < 0) {
-                                return false;
-                            }
-                            if (idx >= static_cast<int>(HeroIndexToID.size())) {
-                                return false;
-                            }
-                            *out_text = GetHeroEncName(HeroIndexToID.at(idx))->string().c_str();
-                            return true;
-                        },
-                        nullptr, HeroIndexToID.size())) {
-                        builds_changed = true;
+                    {
+                        const auto& sorted_heroes = SortedHeroIDs();
+                        const auto hero_it = std::ranges::find(sorted_heroes, build.hero_id);
+                        int combo_idx = hero_it != sorted_heroes.end()
+                            ? static_cast<int>(std::distance(sorted_heroes.begin(), hero_it))
+                            : -1;
+                        if (ImGui::MyCombo(
+                            "###heroid", "Choose Hero", &combo_idx,
+                            [](void*, const int idx, const char** out_text) -> bool {
+                                const auto& heroes = SortedHeroIDs();
+                                if (idx < 0 || idx >= static_cast<int>(heroes.size())) return false;
+                                *out_text = GetHeroEncName(heroes[idx])->string().c_str();
+                                return true;
+                            },
+                            nullptr, static_cast<int>(sorted_heroes.size()))) {
+                            build.hero_id = combo_idx >= 0 && combo_idx < static_cast<int>(sorted_heroes.size())
+                                ? sorted_heroes[combo_idx]
+                                : HeroID::NoHero;
+                            builds_changed = true;
+                        }
                     }
                     ImGui::PopItemWidth();
                     ImGui::SameLine(offset += text_item_width + item_spacing);
@@ -603,7 +643,7 @@ void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, const size_t i
     const std::string code(build.code);
     constexpr int buffer_size = 128;
     char buffer[buffer_size] = {0};
-    const auto id = idx > 0 && build.hero_index > 0 ? HeroIndexToID.at(build.hero_index) : HeroID::NoHero;
+    const auto id = idx > 0 ? build.hero_id : HeroID::NoHero;
     if (name.empty() && code.empty() && id == HeroID::NoHero) {
         return; // nothing to do here
     }
@@ -668,23 +708,12 @@ void HeroBuildsWindow::Load(const TeamHeroBuild& tbuild, const size_t idx)
 
     if (idx == 0) {
         // Player
-        // note: build.hero_index should be -1
         if (!code.empty()) {
             GW::SkillbarMgr::LoadSkillTemplate(GW::Agents::GetControlledCharacterId(),build.code);
         }
     }
-    else if (build.hero_index > 0) {
-        if (build.hero_index < 0 || build.hero_index >= static_cast<int>(HeroIndexToID.size())) {
-            Log::Error("Bad hero index '%d' for build '%s'", build.hero_index, build.name);
-            return;
-        }
-        HeroID heroid = HeroIndexToID.at(build.hero_index);
-
-        if (heroid == HeroID::NoHero) {
-            return;
-        }
-
-        pending_hero_loads.push_back({code.c_str(), heroid, build.show_panel, build.behavior, build.disabled_skills});
+    else if (build.hero_id != HeroID::NoHero) {
+        pending_hero_loads.push_back({code.c_str(), build.hero_id, build.show_panel, build.behavior, build.disabled_skills});
     }
 }
 
@@ -814,27 +843,36 @@ void HeroBuildsWindow::LoadFromFile()
             constexpr size_t buffer_size = 16;
             char namekey[buffer_size];
             char templatekey[buffer_size];
+            char heroidkey[buffer_size];
             char heroindexkey[buffer_size];
             char showpanelkey[buffer_size];
             char behaviorkey[buffer_size];
             char dskillskey[buffer_size];
             snprintf(namekey, buffer_size, "name%d", i);
             snprintf(templatekey, buffer_size, "template%d", i);
+            snprintf(heroidkey, buffer_size, "heroid%d", i);
             snprintf(heroindexkey, buffer_size, "heroindex%d", i);
             snprintf(showpanelkey, buffer_size, "panel%d", i);
             snprintf(behaviorkey, buffer_size, "behavior%d", i);
             snprintf(dskillskey, buffer_size, "dskills%d", i);
             const char* nameval = inifile->GetValue(section, namekey, "");
             const char* templateval = inifile->GetValue(section, templatekey, "");
-            int hero_index = inifile->GetLongValue(section, heroindexkey, -1);
-            if (hero_index < -2) {
-                hero_index = -1; // can happen due to an old bug
+            // Try new heroid key first; fall back to old heroindex key for backward compat
+            HeroID hero_id = HeroID::NoHero;
+            const long saved_hero_id = inifile->GetLongValue(section, heroidkey, -1);
+            if (saved_hero_id >= 0) {
+                hero_id = static_cast<HeroID>(saved_hero_id);
+            }
+            else {
+                const long hero_index = inifile->GetLongValue(section, heroindexkey, -1);
+                if (hero_index > 0 && hero_index < static_cast<long>(HeroIndexToID.size())) {
+                    hero_id = HeroIndexToID.at(hero_index);
+                }
             }
             const auto show_panel = inifile->GetLongValue(section, showpanelkey, 0);
             const uint32_t behavior = static_cast<uint32_t>(inifile->GetLongValue(section, behaviorkey, 1));
             const uint8_t disabled_skills = static_cast<uint8_t>(inifile->GetLongValue(section, dskillskey, 0));
-            const HeroBuild build(nameval, templateval, hero_index, show_panel == 1 ? 1 : 0, behavior, disabled_skills);
-            tb.builds[i] = build;
+            tb.builds[i] = HeroBuild(nameval, templateval, hero_id, show_panel == 1 ? 1 : 0, behavior, disabled_skills);
         }
 
         // Check the binary to see if we should instead take the ptr to read everything to avoid the copy
@@ -865,19 +903,19 @@ void HeroBuildsWindow::SaveToFile() const
 
                 char namekey[buffer_size];
                 char templatekey[buffer_size];
-                char heroindexkey[buffer_size];
+                char heroidkey[buffer_size];
                 char showpanelkey[buffer_size];
                 char behaviorkey[buffer_size];
                 char dskillskey[buffer_size];
                 snprintf(namekey, buffer_size, "name%d", j);
                 snprintf(templatekey, buffer_size, "template%d", j);
-                snprintf(heroindexkey, buffer_size, "heroindex%d", j);
+                snprintf(heroidkey, buffer_size, "heroid%d", j);
                 snprintf(showpanelkey, buffer_size, "panel%d", j);
                 snprintf(behaviorkey, buffer_size, "behavior%d", j);
                 snprintf(dskillskey, buffer_size, "dskills%d", j);
                 inifile->SetValue(section, namekey, build.name);
                 inifile->SetValue(section, templatekey, build.code);
-                inifile->SetLongValue(section, heroindexkey, build.hero_index);
+                inifile->SetLongValue(section, heroidkey, static_cast<long>(build.hero_id));
                 inifile->SetLongValue(section, showpanelkey, build.show_panel);
                 inifile->SetLongValue(section, behaviorkey, build.behavior);
                 inifile->SetLongValue(section, dskillskey, build.disabled_skills);
