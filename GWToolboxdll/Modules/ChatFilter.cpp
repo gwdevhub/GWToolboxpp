@@ -571,6 +571,8 @@ namespace {
                         return ninerings;
                     case 0x3E3: // Spell failed. Spirits are not affected by this spell.
                         return invalid_target;
+                    case 0x6FD: // Target is immune to Spells. (Vow of Silence)
+                        return invalid_target;
                     case 0x679C:
                         return false; // You cannot use a <profession> tome because you are not a <profession> (Elite == message[5] == 0x6725)
                     case 0x72EB:

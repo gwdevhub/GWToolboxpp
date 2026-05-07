@@ -279,6 +279,29 @@ namespace {
                 && file_version_patch == GWCA::VersionPatch);
     }
 
+    void TerminateExistingGWCADll(HMODULE existing_gwca)
+    {
+        typedef void(__cdecl* GWFnVoid)();
+        const auto disable_hooks = (GWFnVoid)GetProcAddress(existing_gwca, "?DisableHooks@GW@@YAXXZ");
+        const auto terminate = (GWFnVoid)GetProcAddress(existing_gwca, "?Terminate@GW@@YAXXZ");
+        if (disable_hooks) {
+            Log::Log("[LoadGWCADll] Calling DisableHooks on old gwca.dll");
+            disable_hooks();
+        }
+        if (terminate) {
+            Log::Log("[LoadGWCADll] Calling Terminate on old gwca.dll");
+            terminate();
+        }
+        Sleep(160);
+        // Unload: may need multiple calls if ref count > 1
+        while (GetModuleHandleW(L"gwca.dll") == existing_gwca) {
+            if (!FreeLibrary(existing_gwca)) {
+                Log::Log("[LoadGWCADll] FreeLibrary failed for old gwca.dll: %d", GetLastError());
+                break;
+            }
+        }
+    }
+
     HMODULE LoadGWCADll(HMODULE resource_module)
     {
         if (gwcamodule)
@@ -290,6 +313,17 @@ namespace {
         if (!resource.data()) {
             Log::Log("[LoadGWCADll] resource fail, couldn't get dll from resources");
             return nullptr;
+        }
+
+        // If a gwca.dll is already loaded that isn't our expected version, terminate and unload it first
+        const HMODULE existing_gwca = GetModuleHandleW(L"gwca.dll");
+        if (existing_gwca) {
+            wchar_t existing_path[MAX_PATH] = {};
+            GetModuleFileNameW(existing_gwca, existing_path, MAX_PATH);
+            if (_wcsicmp(existing_path, dll_path_str.c_str()) != 0 || !IsValidGWCADll(gwca_dll_path, resource)) {
+                Log::Log("[LoadGWCADll] Found existing gwca.dll at %ls; terminating before loading correct version", existing_path);
+                TerminateExistingGWCADll(existing_gwca);
+            }
         }
 
         if (!IsValidGWCADll(gwca_dll_path, resource)) {
