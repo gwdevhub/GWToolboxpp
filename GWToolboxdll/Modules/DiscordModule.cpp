@@ -146,19 +146,6 @@ namespace {
         "Swat",
         "Dev Region"
     };
-    const char* profession_names[] = {
-        "No Profession",
-        "Warrior",
-        "Ranger",
-        "Monk",
-        "Necromancer",
-        "Mesmer",
-        "Elementalist",
-        "Assassin",
-        "Ritualist",
-        "Paragon",
-        "Dervish"
-    };
 
     const char* map_languages[] = {
         "English",
@@ -627,7 +614,7 @@ namespace {
 
             if (show_character_info) {
                 sprintf(activity.assets.small_image, "profession_%d_512px", a->primary);
-                sprintf(activity.assets.small_text, "%S (%s)", GW::GetGameContext()->character->player_name, profession_names[std::to_underlying(a->primary)]);
+                sprintf(activity.assets.small_text, "%S (%s)", GW::GetGameContext()->character->player_name, ToolboxUtils::GetProfessionName(static_cast<GW::Constants::Profession>(a->primary)).c_str());
             }
 
             if (show_location_info) {

@@ -1417,4 +1417,12 @@ namespace ToolboxUtils {
 
         return original;
     }
+
+    std::string GetProfessionName(const GW::Constants::Profession profession)
+    {
+        const auto idx = static_cast<size_t>(profession);
+        if (idx >= std::size(GW::EncStrings::Profession)) return "";
+        const auto* enc = Resources::DecodeStringId(GW::EncStrings::Profession[idx]);
+        return enc ? enc->string() : "";
+    }
 } // namespace ToolboxUtils

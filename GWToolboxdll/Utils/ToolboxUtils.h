@@ -284,4 +284,6 @@ namespace ToolboxUtils {
     GW::Friend* GetFriend(const wchar_t* account, const wchar_t* playing, GW::FriendType type, GW::FriendStatus status);
 
     std::wstring ShorthandItemDescription(GW::Item* item);
+
+    std::string GetProfessionName(GW::Constants::Profession profession);
 };

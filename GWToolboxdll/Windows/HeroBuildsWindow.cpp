@@ -24,7 +24,6 @@
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/Resources.h>
 #include <Windows/HeroBuildsWindow.h>
-#include <Windows/Hotkeys.h>
 
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
@@ -191,7 +190,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             const auto player_profession = me ? static_cast<GW::Constants::Profession>(me->primary) : GW::Constants::Profession::None;
             if (player_profession != GW::Constants::Profession::None) {
                 char filter_label[64];
-                snprintf(filter_label, sizeof(filter_label), "Filter by %s", TBHotkey::professions[static_cast<size_t>(player_profession)]);
+                snprintf(filter_label, sizeof(filter_label), "Filter by %s", ToolboxUtils::GetProfessionName(player_profession).c_str());
                 ImGui::Checkbox(filter_label, &filter_by_profession);
             }
             const float btn_width = 60.0f * ImGui::FontScale();

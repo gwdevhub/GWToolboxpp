@@ -321,35 +321,6 @@ namespace GWArmory {
         }
     }
 
-    const char* GetProfessionName(const GW::Constants::Profession prof)
-    {
-        switch (prof) {
-            case GW::Constants::Profession::None:
-                return "None";
-            case GW::Constants::Profession::Warrior:
-                return "Warrior";
-            case GW::Constants::Profession::Ranger:
-                return "Ranger";
-            case GW::Constants::Profession::Monk:
-                return "Monk";
-            case GW::Constants::Profession::Necromancer:
-                return "Necromancer";
-            case GW::Constants::Profession::Mesmer:
-                return "Mesmer";
-            case GW::Constants::Profession::Elementalist:
-                return "Elementalist";
-            case GW::Constants::Profession::Assassin:
-                return "Assassin";
-            case GW::Constants::Profession::Ritualist:
-                return "Ritualist";
-            case GW::Constants::Profession::Paragon:
-                return "Paragon";
-            case GW::Constants::Profession::Dervish:
-                return "Dervish";
-            default:
-                return "Unknown Profession";
-        }
-    }
 
     GW::Constants::Profession GetAgentProfession(GW::AgentLiving* agent)
     {
@@ -1242,7 +1213,7 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        ImGui::Text("Profession: %s", GetProfessionName(current_profession));
+        ImGui::Text("Profession: %s", ToolboxUtils::GetProfessionName(current_profession).c_str());
 
         ImGui::SameLine();
         ImGui::Checkbox("Use same colour for all pieces", &use_global_color);
