@@ -28,6 +28,9 @@ public:
 
     bool DrawSettingsSection(const char* section);
 
+    // Open this window and scroll/expand the given settings section
+    void NavigateToSection(const char* section);
+
     size_t sep_modules = 0;
     size_t sep_windows = 0;
     size_t sep_widgets = 0;
@@ -35,4 +38,5 @@ public:
 private:
     std::map<std::string, bool> drawn_settings{};
     bool hide_when_entering_explorable = false;
+    std::string pending_navigate_to;
 };
