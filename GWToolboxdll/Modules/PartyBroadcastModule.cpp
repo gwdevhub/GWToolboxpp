@@ -101,14 +101,6 @@ namespace {
         return true;
     }
 
-    bool get_uuid(std::string& out)
-    {
-        const auto account_uuid = GW::AccountMgr::GetPortalAccountUuid();
-        if (!account_uuid) return false;
-        out = TextUtils::GuidToString(account_uuid);
-        return true;
-    }
-
     void on_websocket_closed()
     {
         // NOTE: called on the worker thread by ThreadedWebSocket.
@@ -127,9 +119,10 @@ namespace {
         party_ws.SetReconnectCost(30'000, 60'000);
 
         party_ws.SetHeadersFactory([] {
-            std::string api_key, uuid;
+            std::string api_key;
             get_api_key(api_key);
-            get_uuid(uuid);
+            const auto acct_uuid = GW::AccountMgr::GetAccountUuid();
+            const auto uuid = TextUtils::GuidToString(&acct_uuid);
             easywsclient::HeaderKeyValuePair headers = {{"User-Agent", "GWToolboxpp"}, {"X-Api-Key", api_key}, {"X-Account-Uuid", uuid}, {"X-Bot-Version", "101"}};
             Log::Log("Connecting to wss://party.gwtoolbox.com (X-Api-Key: %s, X-Account-Uuid: %s)", api_key.c_str(), uuid.c_str());
             return headers;

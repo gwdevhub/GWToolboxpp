@@ -79,27 +79,12 @@ namespace {
         }
     }
 
-    const wchar_t* GetAccountEmail()
-    {
-        const auto c = GW::GetCharContext();
-        return c && *c->player_email ? c->player_email : nullptr;
-    }
-
-    // Returns the portal account UUID as a hex string, falling back to email if UUID is unavailable.
-    // UUID is preferred since it remains stable across email changes.
     std::wstring GetCurrentAccountId()
     {
-        if (const auto uuid = GW::AccountMgr::GetPortalAccountUuid()) {
-            wchar_t buf[33];
-            const auto d = uuid->Data4;
-            swprintf(buf, _countof(buf), L"%08X%04X%04X%02X%02X%02X%02X%02X%02X%02X%02X",
-                static_cast<uint32_t>(uuid->Data1), static_cast<uint32_t>(uuid->Data2),
-                static_cast<uint32_t>(uuid->Data3),
-                d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]);
-            return buf;
-        }
-        const auto email = GetAccountEmail();
-        return email ? email : L"";
+        const auto uuid = GW::AccountMgr::GetAccountUuid();
+        const GUID empty{};
+        if (memcmp(&uuid, &empty, sizeof(uuid)) == 0) return {};
+        return TextUtils::StringToWString(TextUtils::GuidToString(&uuid));
     }
 
     const wchar_t* GetPlayerName()
