@@ -91,6 +91,22 @@ namespace {
         return Resources::DecodeStringId(c ? c->name_id : 1);
     }
 
+    const char* GetProfessionName(const GW::Constants::Profession prof) {
+        switch (prof) {
+            case GW::Constants::Profession::Warrior:      return "Warrior";
+            case GW::Constants::Profession::Ranger:       return "Ranger";
+            case GW::Constants::Profession::Monk:         return "Monk";
+            case GW::Constants::Profession::Necromancer:  return "Necromancer";
+            case GW::Constants::Profession::Mesmer:       return "Mesmer";
+            case GW::Constants::Profession::Elementalist: return "Elementalist";
+            case GW::Constants::Profession::Assassin:     return "Assassin";
+            case GW::Constants::Profession::Ritualist:    return "Ritualist";
+            case GW::Constants::Profession::Paragon:      return "Paragon";
+            case GW::Constants::Profession::Dervish:      return "Dervish";
+            default:                                      return "Unknown";
+        }
+    }
+
     const size_t GetPlayerHeroCount()
     {
         size_t ret = 0;
@@ -186,9 +202,25 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+            const auto* me = GW::Agents::GetControlledCharacter();
+            const auto player_profession = me ? static_cast<GW::Constants::Profession>(me->primary) : GW::Constants::Profession::None;
+            if (player_profession != GW::Constants::Profession::None) {
+                char filter_label[64];
+                snprintf(filter_label, sizeof(filter_label), "Filter by %s", GetProfessionName(player_profession));
+                ImGui::Checkbox(filter_label, &filter_by_profession);
+            }
             const float btn_width = 60.0f * ImGui::FontScale();
             const float& item_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
             for (TeamHeroBuild& tbuild : teambuilds) {
+                if (filter_by_profession && player_profession != GW::Constants::Profession::None) {
+                    const char* player_code = tbuild.builds[0].code;
+                    if (player_code && player_code[0] != '\0') {
+                        GW::SkillbarMgr::SkillTemplate t{};
+                        if (GW::SkillbarMgr::DecodeSkillTemplate(t, player_code) && t.primary != player_profession) {
+                            continue;
+                        }
+                    }
+                }
                 ImGui::PushID(static_cast<int>(tbuild.ui_id));
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
                 if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetContentRegionAvail().x - item_spacing - btn_width, 0))) {
@@ -776,6 +808,7 @@ void HeroBuildsWindow::LoadSettings(ToolboxIni* ini)
     ToolboxWindow::LoadSettings(ini);
     LOAD_BOOL(hide_when_entering_explorable);
     LOAD_BOOL(one_teambuild_at_a_time);
+    LOAD_BOOL(filter_by_profession);
     LoadFromFile();
 }
 
@@ -791,6 +824,7 @@ void HeroBuildsWindow::SaveSettings(ToolboxIni* ini)
     ToolboxWindow::SaveSettings(ini);
     SAVE_BOOL(hide_when_entering_explorable);
     SAVE_BOOL(one_teambuild_at_a_time);
+    SAVE_BOOL(filter_by_profession);
     SaveToFile();
 }
 
