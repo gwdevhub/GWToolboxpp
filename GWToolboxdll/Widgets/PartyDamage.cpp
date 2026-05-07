@@ -17,6 +17,7 @@
 #include <Modules/ToolboxSettings.h>
 #include <Widgets/PartyDamage.h>
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 constexpr const wchar_t* INI_FILENAME = L"healthlog.ini";
 constexpr const char* IniSection = "health";
@@ -235,8 +236,8 @@ void PartyDamage::WriteDamageOf(size_t index, uint32_t rank)
     if (has_damage && has_healing) {
         swprintf_s(buffer, buffer_size, L"#%2d ~ %ls/%ls %ls ~ Dmg: %3.2f%% (%d) ~ Heal: %3.2f%% (%d)",
                    rank,
-                   GetWProfessionAcronym(damage[index].primary),
-                   GetWProfessionAcronym(damage[index].secondary),
+                   ToolboxUtils::GetProfessionAcronym(damage[index].primary)->wstring().c_str(),
+                   ToolboxUtils::GetProfessionAcronym(damage[index].secondary)->wstring().c_str(),
                    damage[index].name.c_str(),
                    GetPercentageOfTotal(damage[index].damage),
                    damage[index].damage,
@@ -246,8 +247,8 @@ void PartyDamage::WriteDamageOf(size_t index, uint32_t rank)
     else if (has_damage) {
         swprintf_s(buffer, buffer_size, L"#%2d ~ %ls/%ls %ls ~ Dmg: %3.2f%% (%d)",
                    rank,
-                   GetWProfessionAcronym(damage[index].primary),
-                   GetWProfessionAcronym(damage[index].secondary),
+                   ToolboxUtils::GetProfessionAcronym(damage[index].primary)->wstring().c_str(),
+                   ToolboxUtils::GetProfessionAcronym(damage[index].secondary)->wstring().c_str(),
                    damage[index].name.c_str(),
                    GetPercentageOfTotal(damage[index].damage),
                    damage[index].damage);
@@ -255,8 +256,8 @@ void PartyDamage::WriteDamageOf(size_t index, uint32_t rank)
     else if (has_healing) {
         swprintf_s(buffer, buffer_size, L"#%2d ~ %ls/%ls %ls ~ Heal: %3.2f%% (%d)",
                    rank,
-                   GetWProfessionAcronym(damage[index].primary),
-                   GetWProfessionAcronym(damage[index].secondary),
+                   ToolboxUtils::GetProfessionAcronym(damage[index].primary)->wstring().c_str(),
+                   ToolboxUtils::GetProfessionAcronym(damage[index].secondary)->wstring().c_str(),
                    damage[index].name.c_str(),
                    GetPercentageOfTotalHealing(damage[index].healing),
                    damage[index].healing);

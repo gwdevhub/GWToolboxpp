@@ -15,6 +15,7 @@
 #include <Defines.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 namespace GW::Chat {
     constexpr size_t SENT_LOG_LENGTH = 0x32;
@@ -405,7 +406,7 @@ namespace {
         }
     }
 
-    // Load chat log from file via account email address
+    // Load chat log from file via account UUID string
     void Load(const std::wstring& _account)
     {
         Reset();
@@ -536,7 +537,8 @@ namespace {
         if (!c) {
             return false;
         }
-        const std::wstring this_account = c->player_email;
+        const auto uuid = GW::AccountMgr::GetAccountUuid();
+        const auto this_account = TextUtils::StringToWString(TextUtils::GuidToString(&uuid));
         if (this_account == account) {
             return false;
         }

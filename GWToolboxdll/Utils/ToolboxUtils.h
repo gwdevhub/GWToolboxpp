@@ -163,6 +163,7 @@ namespace GW {
         // Try not to be a dick with this info
         const wchar_t* GetAccountEmail();
         const UUID* GetPortalAccountUuid();
+        GUID GetAccountUuid();
 
         AvailableCharacterInfo* GetAvailableCharacter(const wchar_t* name);
     }
@@ -207,6 +208,10 @@ namespace GW {
         uint32_t GetAlcoholPointsPerUse(const GW::Item* item);
         bool IsAlcohol(const GW::Item* item);
     }
+}
+
+namespace GuiUtils {
+    class EncString;
 }
 
 namespace ToolboxUtils {
@@ -284,4 +289,7 @@ namespace ToolboxUtils {
     GW::Friend* GetFriend(const wchar_t* account, const wchar_t* playing, GW::FriendType type, GW::FriendStatus status);
 
     std::wstring ShorthandItemDescription(GW::Item* item);
+
+    GuiUtils::EncString* GetProfessionName(GW::Constants::Profession profession);
+    GuiUtils::EncString* GetProfessionAcronym(GW::Constants::Profession profession);
 };

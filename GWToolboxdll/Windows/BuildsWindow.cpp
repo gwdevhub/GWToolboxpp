@@ -154,7 +154,7 @@ namespace {
             build->code = build_code;
         }
 
-        build->name = std::format("{}/{}", GetProfessionAcronym(skill_template.primary), GetProfessionAcronym(skill_template.secondary));
+        build->name = std::format("{}/{}", ToolboxUtils::GetProfessionAcronym(skill_template.primary)->string(), ToolboxUtils::GetProfessionAcronym(skill_template.secondary)->string());
 
 
         // Try to generate a name based on the elite skill or primary profession
@@ -293,7 +293,7 @@ namespace {
         const auto prof = static_cast<GW::Constants::Profession>(GW::Agents::GetControlledCharacter()->primary);
         const bool is_skill_template = DecodeSkillTemplate(t, build_name);
         if (is_skill_template && t.primary != prof) {
-            Log::Error("Invalid profession for %s (%s)", build_name, GetProfessionAcronym(t.primary));
+            Log::Error("Invalid profession for %s (%s)", build_name, ToolboxUtils::GetProfessionAcronym(t.primary)->string().c_str());
             return nullptr;
         }
         const std::string tbuild_ws = tbuild_name ? TextUtils::ToLower(tbuild_name) : "";

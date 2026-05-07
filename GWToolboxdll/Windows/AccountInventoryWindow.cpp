@@ -123,11 +123,6 @@ const char* HERO_NAME[] = {
         return player_name ? TextUtils::WStringToString(player_name) : "";
     }
 
-    UUID GetAccountGuid() {
-        const auto account_uuid = GW::AccountMgr::GetPortalAccountUuid();
-        return account_uuid ? *account_uuid : TextUtils::ConvertWStringToGuid(GW::AccountMgr::GetAccountEmail());
-    }
-
     bool IsChestBag(GW::Constants::Bag bag_id)
     {
         if (GW::Constants::Bag::Material_Storage == bag_id) return true;
@@ -1175,7 +1170,7 @@ void AccountInventoryWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 
-    current_account = GetAccountGuid();
+    current_account = GW::AccountMgr::GetAccountUuid();
     current_character = GetCurrentPlayerNameS();
 
     const GW::UI::UIMessage ui_messages[] = {
@@ -1490,7 +1485,7 @@ void AccountInventoryWindow::Update(float)
 
 void AccountInventoryWindow::PreMapLoad()
 {
-    current_account = GetAccountGuid();
+    current_account = GW::AccountMgr::GetAccountUuid();
     current_character = GetCurrentPlayerNameS();
     inventory_lookup.clear(); // discard now outdated id caches
     while (!hero_bag_generation_order.empty()) hero_bag_generation_order.pop();
@@ -1525,7 +1520,7 @@ void AccountInventoryWindow::PostMapLoad()
     bool character_changed = false;
     map_loaded_delayed_trigger = true;
     map_loaded_delayed_timer = TIMER_INIT();
-    current_account = GetAccountGuid();
+    current_account = GW::AccountMgr::GetAccountUuid();
     current_character = GetCurrentPlayerNameS();
     GW::Inventory* gw_inventory = GW::Items::GetInventory();
     if (last_character != current_character) {
@@ -2077,7 +2072,7 @@ void AccountInventoryWindow::DrawSettingsInternal()
 void AccountInventoryWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    current_account = GetAccountGuid();
+    current_account = GW::AccountMgr::GetAccountUuid();
     current_character = GetCurrentPlayerNameS();
 
     LOAD_BOOL(detailed_view);

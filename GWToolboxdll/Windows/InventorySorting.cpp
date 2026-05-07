@@ -2,6 +2,7 @@
 
 #include <Modules/Resources.h>
 #include <Windows/InventorySorting.h>
+#include <Windows/DailyQuestsWindow.h>
 #include <Modules/InventoryManager.h>
 
 #include <GWCA/Constants/Constants.h>
@@ -18,6 +19,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <ctime>
 #include <sstream>
 #include <thread>
 #include <Utils/ToolboxUtils.h>
@@ -62,26 +64,33 @@ namespace {
     // Sort order configuration
     std::vector<GW::Constants::ItemType> sort_order;
 
-    /**
-     * Gets the sort priority for an item (lower = higher priority).
-     */
+    // Primary key: item type (from sort_order). Secondary key: for Nicholas collectibles,
+    // weeks until Nick requests them (0 = this week); for all other items, model_file_id.
     uint32_t GetItemSortPriority(GW::Item* item)
     {
-        if (!item) return 0xFFFFFFFF; // Max value for items that don't exist
-
-        // TODO: Check if item is cons, return OrderType::Cons sort order
-        // TODO: Check if item is alcohol, return OrderType::Alcohol sort order
-
-        // TODO: Add custom sorting my model id
+        if (!item) return 0xFFFFFFFF;
 
         size_t priority_by_type = 0;
-        for (priority_by_type; priority_by_type < sort_order.size(); priority_by_type++) {
+        for (; priority_by_type < sort_order.size(); priority_by_type++) {
             if (std::to_underlying(sort_order[priority_by_type]) == std::to_underlying(item->type))
                 break;
         }
 
-        // Fisrt 8 bits are priority, then next 8 bits is item type, then 16 bits are model_id
-        return (static_cast<uint32_t>(priority_by_type & 0xFF) << 24) | (item->model_file_id & 0xffFFFF);
+        uint32_t secondary;
+        const auto* nick_info = DailyQuests::GetNicholasItemInfo(item->name_enc);
+        if (nick_info) {
+            const time_t now = time(nullptr);
+            const time_t next_active = DailyQuests::GetTimestampFromNicholasTheTraveller(
+                const_cast<DailyQuests::NicholasCycleData*>(nick_info));
+            secondary = next_active > now
+                ? static_cast<uint32_t>((next_active - now) / 604800)
+                : 0u;
+        }
+        else {
+            secondary = item->model_file_id & 0xFFFFFF;
+        }
+
+        return (static_cast<uint32_t>(priority_by_type & 0xFF) << 24) | secondary;
     }
 
     /**
@@ -270,6 +279,7 @@ void InventorySorting::LoadSettings(ToolboxIni* ini)
     if (sort_order.empty()) {
         ResetSortOrder();
     }
+
 }
 
 void InventorySorting::SaveSettings(ToolboxIni* ini)

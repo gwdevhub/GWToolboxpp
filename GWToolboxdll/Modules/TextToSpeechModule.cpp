@@ -1022,7 +1022,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         return total_size;
     }
 
-    std::string PostJson(RestClient& client, const std::string& url, const nlohmann::json& request_body, const std::string& service_name = "API")
+    std::string PostJson(RestClient& client, const std::string& url, const nlohmann::json& request_body, const std::string& service_name = "API", int timeout_sec = 2)
     {
         client.SetUrl(url.c_str());
         client.SetHeader("Content-Type", "application/json");
@@ -1030,7 +1030,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         client.SetFollowLocation(true);
         client.SetVerifyHost(false);
         client.SetVerifyPeer(false);
-        client.SetTimeoutSec(2);
+        client.SetTimeoutSec(timeout_sec);
         client.Execute();
         if (!client.IsSuccessful()) {
             VoiceLog("%s returned error code: %ld", service_name.c_str(), client.GetStatusCode());
@@ -1164,7 +1164,8 @@ Gender GetGenderByFileId(const uint32_t file_id)
         request_body["lang_code"] = lang_code;
 
         RestClient client;
-        const auto audio_data = PostJson(client, base_url + "/v1/audio/speech", request_body, api_config->name);
+        // Kokoro streams audio as it generates; long texts can take 60+ seconds on CPU hardware
+        const auto audio_data = PostJson(client, base_url + "/v1/audio/speech", request_body, api_config->name, 120);
         if (!audio_data.empty()) VoiceLog("Kokoro voice generation successful, received %zu bytes", audio_data.size());
         return audio_data;
     }
