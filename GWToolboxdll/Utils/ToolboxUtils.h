@@ -209,6 +209,10 @@ namespace GW {
     }
 }
 
+namespace GuiUtils {
+    class EncString;
+}
+
 namespace ToolboxUtils {
 
     // Helper function to limit some functions to only check every n frames
@@ -285,5 +289,6 @@ namespace ToolboxUtils {
 
     std::wstring ShorthandItemDescription(GW::Item* item);
 
-    std::string GetProfessionName(GW::Constants::Profession profession);
+    GuiUtils::EncString* GetProfessionName(GW::Constants::Profession profession);
+    GuiUtils::EncString* GetProfessionAcronym(GW::Constants::Profession profession);
 };

@@ -1418,11 +1418,17 @@ namespace ToolboxUtils {
         return original;
     }
 
-    std::string GetProfessionName(const GW::Constants::Profession profession)
+    GuiUtils::EncString* GetProfessionName(const GW::Constants::Profession profession)
     {
         const auto idx = static_cast<size_t>(profession);
-        if (idx >= std::size(GW::EncStrings::Profession)) return "";
-        const auto* enc = Resources::DecodeStringId(GW::EncStrings::Profession[idx]);
-        return enc ? enc->string() : "";
+        const auto str_id = idx < std::size(GW::EncStrings::Profession) ? GW::EncStrings::Profession[idx] : 1u;
+        return Resources::DecodeStringId(str_id);
+    }
+
+    GuiUtils::EncString* GetProfessionAcronym(const GW::Constants::Profession profession)
+    {
+        const auto idx = static_cast<size_t>(profession);
+        const auto str_id = idx < std::size(GW::EncStrings::ProfessionAcronym) ? GW::EncStrings::ProfessionAcronym[idx] : 1u;
+        return Resources::DecodeStringId(str_id);
     }
 } // namespace ToolboxUtils

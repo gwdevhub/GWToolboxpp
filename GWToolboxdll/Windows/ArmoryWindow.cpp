@@ -1213,7 +1213,7 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        ImGui::Text("Profession: %s", ToolboxUtils::GetProfessionName(current_profession).c_str());
+        ImGui::Text("Profession: %s", ToolboxUtils::GetProfessionName(current_profession)->string().c_str());
 
         ImGui::SameLine();
         ImGui::Checkbox("Use same colour for all pieces", &use_global_color);

@@ -100,7 +100,7 @@
 #include <Widgets/TitleTrackerWidget.h>
 #include <Widgets/FavorTracker.h>
 #include "ToolboxSettings.h"
-
+#include <Utils/ToolboxUtils.h>
 
 #define USE_OBFUSCATOR 1
 #if USE_OBFUSCATOR
@@ -397,11 +397,11 @@ void ToolboxSettings::Update(float)
         std::wstring prof_string;
         if (me) {
             prof_string += L" - ";
-            prof_string += GetWProfessionAcronym(
-                static_cast<GW::Constants::Profession>(me->primary));
+            prof_string += ToolboxUtils::GetProfessionAcronym(
+                static_cast<GW::Constants::Profession>(me->primary))->wstring();
             prof_string += L"-";
-            prof_string += GetWProfessionAcronym(
-                static_cast<GW::Constants::Profession>(me->secondary));
+            prof_string += ToolboxUtils::GetProfessionAcronym(
+                static_cast<GW::Constants::Profession>(me->secondary))->wstring();
         }
 
         SYSTEMTIME localtime;
