@@ -112,6 +112,7 @@ void ToolboxUIElement::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(auto_size);
     LOAD_BOOL(show_titlebar);
     LOAD_BOOL(show_closebutton);
+    LOAD_BOOL(show_breakout_button);
     LOAD_STRING(snapped_frame_label);
 }
 
@@ -125,6 +126,7 @@ void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(auto_size);
     SAVE_BOOL(show_titlebar);
     SAVE_BOOL(show_closebutton);
+    SAVE_BOOL(show_breakout_button);
     SAVE_STRING(snapped_frame_label);
 }
 
@@ -252,6 +254,9 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
             MainWindow::Instance().pending_refresh_buttons = true;
         }
     }
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show breakout button", &show_breakout_button);
+    ImGui::ShowHelp("Shows a small floating button on screen that toggles this window.\nRight-click the button to remove it.");
 }
 
 void ToolboxUIElement::ShowVisibleRadio()
@@ -269,6 +274,66 @@ void ToolboxUIElement::ShowVisibleRadio()
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
     ImGui::PopID();
+}
+
+void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
+{
+    if (!show_breakout_button) return;
+
+    char window_id[256];
+    snprintf(window_id, sizeof(window_id), "%s##breakout_btn", Name());
+
+    constexpr auto flags =
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoScrollWithMouse |
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoFocusOnAppearing |
+        ImGuiWindowFlags_NoNav;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {2.f, 2.f});
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, {10.f, 10.f});
+
+    if (ImGui::Begin(window_id, nullptr, flags)) {
+        const float btn_size = ImGui::GetTextLineHeight() + ImGui::GetStyle().FramePadding.y * 2.f;
+        const char* icon = Icon();
+
+        const auto& style = ImGui::GetStyle();
+        const auto active_col = style.Colors[ImGuiCol_ButtonActive];
+        const auto inactive_col = ImVec4(0.15f, 0.15f, 0.15f, 0.8f);
+        ImGui::PushStyleColor(ImGuiCol_Button, visible ? active_col : inactive_col);
+
+        bool clicked;
+        if (icon && *icon) {
+            clicked = ImGui::Button(icon, {btn_size, btn_size});
+        } else {
+            char label[4] = {};
+            const auto* name = Name();
+            for (size_t i = 0; i < 2 && name[i]; i++) {
+                label[i] = name[i];
+            }
+            clicked = ImGui::Button(label, {btn_size, btn_size});
+        }
+
+        ImGui::PopStyleColor();
+
+        if (clicked) {
+            ToggleVisible();
+        }
+
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", Name());
+        }
+
+        if (ImGui::BeginPopupContextWindow()) {
+            if (ImGui::MenuItem("Remove breakout button")) {
+                show_breakout_button = false;
+            }
+            ImGui::EndPopup();
+        }
+    }
+    ImGui::End();
+    ImGui::PopStyleVar(2);
 }
 
 bool ToolboxUIElement::DrawTabButton(const bool show_icon, const bool show_text, const bool center_align_text)

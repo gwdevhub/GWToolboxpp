@@ -1055,6 +1055,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
                 continue;
             }
             uielement->UpdateLocationAgainstSnappedFrame();
+            uielement->DrawBreakoutButton(device);
             if (profiling_enabled) {
                 LARGE_INTEGER t0, t1;
                 QueryPerformanceCounter(&t0);

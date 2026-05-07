@@ -29,6 +29,9 @@ public:
     // returns true if clicked
     virtual bool DrawTabButton(bool show_icon = true, bool show_text = true, bool center_align_text = true);
 
+    // Draw a small floating button that toggles this element's visibility
+    virtual void DrawBreakoutButton(IDirect3DDevice9*);
+
     virtual bool ToggleVisible() { return visible = !visible; }
 
     [[nodiscard]] virtual bool ShowOnWorldMap() const { return false; }
@@ -44,6 +47,7 @@ public:
     bool lock_size = false;
     bool show_menubutton = false;
     bool auto_size = false;
+    bool show_breakout_button = false;
 
     bool* GetVisiblePtr()
     {
