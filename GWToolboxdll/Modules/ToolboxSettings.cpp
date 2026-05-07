@@ -372,7 +372,7 @@ void ToolboxSettings::DrawSettingsCogButtons()
     const ImVec2 mouse_pos = ImGui::GetIO().MousePos;
     ToolboxUIElement* hovered_elem = nullptr;
 
-    for (const auto* elem : GWToolbox::GetUIElements()) {
+    for (auto* elem : GWToolbox::GetUIElements()) {
         if (!elem->visible || !elem->show_titlebar) continue;
 
         const ImGuiWindow* window = ImGui::FindWindowByName(elem->Name());
