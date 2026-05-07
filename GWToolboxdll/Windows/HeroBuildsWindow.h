@@ -11,15 +11,10 @@
 constexpr size_t BUFFER_SIZE = 128;
 
 class HeroBuildsWindow : public ToolboxWindow {
-    // hero_index is:
-    // -2 for player (although it doesn't really matter),
-    // -1 for 'choose hero',
-    // 0 for 'no hero',
-    // and 1+ for heroes, order is in HeroIndexToID array
     struct HeroBuild {
         HeroBuild() = default;
-        HeroBuild(const std::string_view n, const std::string_view c, const int index = -1, const int panel = 0, const uint32_t _behavior = 1, const uint8_t _disabled_skills = 0)
-            : hero_index(index)
+        HeroBuild(const std::string_view n, const std::string_view c, const GW::Constants::HeroID _hero_id = GW::Constants::HeroID::NoHero, const int panel = 0, const uint32_t _behavior = 1, const uint8_t _disabled_skills = 0)
+            : hero_id(_hero_id)
             , behavior(_behavior)
             , show_panel(panel)
             , disabled_skills(_disabled_skills)
@@ -30,7 +25,7 @@ class HeroBuildsWindow : public ToolboxWindow {
 
         char name[BUFFER_SIZE]{};
         char code[BUFFER_SIZE]{};
-        int hero_index{};
+        GW::Constants::HeroID hero_id = GW::Constants::HeroID::NoHero;
         uint32_t behavior = 1;
         bool show_panel = false;
         uint8_t disabled_skills = 0; // bitmask: bit k means skill slot k+1 is disabled on load
