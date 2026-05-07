@@ -22,6 +22,7 @@
 #include <Modules/ChatSettings.h>
 #include <Modules/Obfuscator.h>
 #include <Utils/GuiUtils.h>
+#include <Utils/ToolboxUtils.h>
 #include <Windows/FriendListWindow.h>
 
 #include <Defines.h>
@@ -251,7 +252,7 @@ namespace {
     std::wstring character_summary_obfuscated_name(20, 0);
     // Ease of access to avoid having to call ObfuscateName() every time.
     std::wstring player_guild_invited_name;
-    std::wstring player_email;
+    GUID current_account_uuid{};
     // Static variable; GW will use a pointer to this object for UI messages
     std::wstring ui_message_temp_message;
     std::wstring speech_message_temp_message;
@@ -535,11 +536,10 @@ namespace {
     {
         ObfuscateGuildRoster(pending_state == ObfuscatorState::Enabled);
         const auto c = GW::GetCharContext();
-        if (!c || c->player_email != player_email) {
+        const GUID uuid = c ? GW::AccountMgr::GetAccountUuid() : GUID{};
+        if (!c || memcmp(&uuid, &current_account_uuid, sizeof(uuid)) != 0) {
             player_guild_invited_name.clear();
-            if (c && c->player_email) {
-                player_email = c->player_email;
-            }
+            if (c) current_account_uuid = uuid;
         }
         std::ranges::shuffle(obfuscated_name_pool, dre);
         pool_index = 0;

@@ -2863,7 +2863,19 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
 
         const auto c = GetCharacterCompletion(name_ws.data(), true);
         c->profession = static_cast<Profession>(completion_ini.GetLongValue(ini_section, "profession", 0));
-        c->account = TextUtils::StringToWString(completion_ini.GetValue(ini_section, "account", ""));
+        // Migrate old email-format account IDs to UUID strings
+        {
+            const auto account_raw = TextUtils::StringToWString(completion_ini.GetValue(ini_section, "account", ""));
+            if (!account_raw.empty()) {
+                GUID guid;
+                if (TextUtils::StringToGuid(TextUtils::WStringToString(account_raw), &guid)) {
+                    c->account = account_raw;
+                } else {
+                    guid = TextUtils::ConvertWStringToGuid(account_raw);
+                    c->account = TextUtils::StringToWString(TextUtils::GuidToString(&guid));
+                }
+            }
+        }
         c->is_pvp = completion_ini.GetBoolValue(ini_section, "is_pvp", false);
         c->is_pre_searing = completion_ini.GetBoolValue(ini_section, "is_pre_searing", false);
 
