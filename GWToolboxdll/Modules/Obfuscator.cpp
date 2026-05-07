@@ -535,11 +535,10 @@ namespace {
     void Reset()
     {
         ObfuscateGuildRoster(pending_state == ObfuscatorState::Enabled);
-        const auto c = GW::GetCharContext();
-        const GUID uuid = c ? GW::AccountMgr::GetAccountUuid() : GUID{};
-        if (!c || memcmp(&uuid, &current_account_uuid, sizeof(uuid)) != 0) {
+        const GUID uuid = GW::AccountMgr::GetAccountUuid();
+        if (memcmp(&uuid, &current_account_uuid, sizeof(uuid)) != 0) {
             player_guild_invited_name.clear();
-            if (c) current_account_uuid = uuid;
+            current_account_uuid = uuid;
         }
         std::ranges::shuffle(obfuscated_name_pool, dre);
         pool_index = 0;
