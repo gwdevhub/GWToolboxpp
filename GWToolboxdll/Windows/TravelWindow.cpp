@@ -894,6 +894,10 @@ GW::Constants::MapID TravelWindow::GetNearestOutpostToPlayer()
 
 GW::Constants::MapID TravelWindow::GetNearestOutpost(const GW::Constants::MapID map_to)
 {
+    // If map_to is itself a valid unlocked outpost, just return it directly.
+    if (IsValidOutpost(map_to) && GW::Map::GetIsMapUnlocked(map_to))
+        return map_to;
+
     // BFS over the map adjacency graph to find the nearest unlocked outpost.
     // When multiple outposts are found at the same BFS depth, use Euclidean
     // distance on the world map as a tiebreaker.
