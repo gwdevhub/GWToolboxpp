@@ -27,11 +27,26 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - uses: actions/github-script@v7
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Find linked issues
+        id: linked
+        uses: ./.github/actions/find-linked-issues
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+
+      - name: Label PR and linked issues with "AI"
+        uses: actions/github-script@v7
+        env:
+          LINKED_ISSUES: ${{ steps.linked.outputs.issues }}
         with:
           script: |
             const { owner, repo } = context.repo;
             const number = context.payload.pull_request.number;
+            const issues = JSON.parse(process.env.LINKED_ISSUES);
 
             try {
               await github.rest.issues.createLabel({
@@ -50,31 +65,8 @@ jobs:
               labels: ['AI'],
             });
 
-            // Claude's PRs use "refs #NNNN" rather than closing keywords,
-            // so closingIssuesReferences misses them. Fall back to scanning
-            // the PR title and body for any #NNNN mentions or same-repo
-            // issue URLs, then filter out anything that isn't an open/closed
-            // issue (e.g. other PRs).
-            const pr = context.payload.pull_request;
-            const text = `${pr.title || ''}\n${pr.body || ''}`;
-            const hashRefs = [...text.matchAll(/(?:^|[^&\w])#(\d+)\b/g)].map(m => Number(m[1]));
-            const urlPattern = new RegExp(
-              `https?://github\\.com/${owner}/${repo}/issues/(\\d+)`,
-              'gi',
-            );
-            const urlRefs = [...text.matchAll(urlPattern)].map(m => Number(m[1]));
-            const candidates = [...new Set([...hashRefs, ...urlRefs])].filter(n => n !== number);
-
-            core.info(`Referenced numbers: ${candidates.join(', ') || '(none)'}`);
-            for (const issue_number of candidates) {
+            for (const issue_number of issues) {
               try {
-                const { data } = await github.rest.issues.get({
-                  owner, repo, issue_number,
-                });
-                if (data.pull_request) {
-                  core.info(`Skipping #${issue_number} (it's a PR)`);
-                  continue;
-                }
                 await github.rest.issues.addLabels({
                   owner, repo, issue_number,
                   labels: ['AI'],
