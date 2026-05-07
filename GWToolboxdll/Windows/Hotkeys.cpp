@@ -26,6 +26,7 @@
 #include <Logger.h>
 
 #include <Modules/Resources.h>
+#include <Utils/ToolboxUtils.h>
 #include <Windows/BuildsWindow.h>
 #include <Windows/HeroBuildsWindow.h>
 #include <Windows/Hotkeys.h>
@@ -415,7 +416,7 @@ bool TBHotkey::Draw(Op* op, bool first, bool last)
                 if (!prof_ids_written) {
                     format = "%s";
                 }
-                prof_ids_written += snprintf(&prof_ids_buf[prof_ids_written], _countof(prof_ids_buf) - prof_ids_written, format, GetProfessionAcronym(static_cast<GW::Constants::Profession>(i)));
+                prof_ids_written += snprintf(&prof_ids_buf[prof_ids_written], _countof(prof_ids_buf) - prof_ids_written, format, ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(i))->string().c_str());
             }
             written += snprintf(&header[written], _countof(header) - written, " [%s]", prof_ids_buf);
         }

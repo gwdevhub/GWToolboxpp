@@ -2638,9 +2638,9 @@ ObserverModule::ObservableAgent::ObservableAgent(ObserverModule& parent, const G
     GW::UI::AsyncDecodeStr(GW::Agents::GetAgentEncName(&agent_living), &_raw_name_w);
 
     if (primary != GW::Constants::Profession::None) {
-        std::string prof = GetProfessionAcronym(primary);
+        std::string prof = ToolboxUtils::GetProfessionAcronym(primary)->string();
         if (secondary != GW::Constants::Profession::None) {
-            const std::string s_prof = GetProfessionAcronym(secondary);
+            const std::string s_prof = ToolboxUtils::GetProfessionAcronym(secondary)->string();
             prof = prof + "/" + s_prof;
         }
         profession = prof;

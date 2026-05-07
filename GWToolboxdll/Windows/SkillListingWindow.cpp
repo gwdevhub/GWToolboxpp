@@ -12,6 +12,7 @@
 #include <Modules/Resources.h>
 #include <Windows/SkillListingWindow.h>
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 #include <Modules/GwDatTextureModule.h>
 
 static uintptr_t skill_array_addr;
@@ -227,7 +228,7 @@ void SkillListingWindow::Draw(IDirect3DDevice9*)
         ImGui::SameLine(offset += long_text_width);
         ImGui::Text("%d", skills[i]->skill->attribute);
         ImGui::SameLine(offset += tiny_text_width);
-        ImGui::Text("%s", GetProfessionAcronym(static_cast<GW::Constants::Profession>(skills[i]->skill->profession)));
+        ImGui::Text("%s", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(skills[i]->skill->profession))->string().c_str());
         ImGui::SameLine(offset += tiny_text_width);
         ImGui::Text("%d", skills[i]->skill->type);
         ImGui::SameLine();

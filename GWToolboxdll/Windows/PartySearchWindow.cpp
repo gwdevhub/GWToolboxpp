@@ -30,6 +30,7 @@
 
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 // Every connection cost 30 seconds.
 // You have 2 tries.
@@ -696,13 +697,13 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
             char label[64];
             if (party->secondary) {
                 snprintf(label, 64, "%s/%s %s",
-                         GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary)),
-                         GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->secondary)),
+                         ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary))->string().c_str(),
+                         ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->secondary))->string().c_str(),
                          party->player_name.c_str());
             }
             else {
                 snprintf(label, 64, "%s %s",
-                         GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary)),
+                         ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary))->string().c_str(),
                          party->player_name.c_str());
             }
 

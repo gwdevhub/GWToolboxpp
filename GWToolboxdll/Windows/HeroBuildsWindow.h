@@ -97,6 +97,7 @@ public:
 private:
     bool hide_when_entering_explorable = false;
     bool one_teambuild_at_a_time = false;
+    bool filter_by_profession = false;
 
     // Load a teambuild
     void Load(const TeamHeroBuild& tbuild);

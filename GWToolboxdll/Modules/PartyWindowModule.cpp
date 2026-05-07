@@ -478,7 +478,7 @@ namespace {
 
     const std::string GetProfessionName(uint8_t prof)
     {
-        return GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof));
+        return ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof))->string();
     }
 
     bool OverridePartySortOrder(bool _override = true)
@@ -725,9 +725,9 @@ namespace {
 
             // Primary profession combo
             ImGui::SetNextItemWidth(120.0f * fontScale);
-            if (ImGui::BeginCombo("##primary", GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(primary)))) {
+            if (ImGui::BeginCombo("##primary", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(primary))->string().c_str())) {
                 for (uint8_t prof = 0; prof <= 10; prof++) {
-                    if (ImGui::Selectable(GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof)), primary == prof)) {
+                    if (ImGui::Selectable(ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof))->string().c_str(), primary == prof)) {
                         primary = prof;
                         edit_profession_order[i] = (static_cast<uint16_t>(primary) << 8) | secondary;
                     }
@@ -741,9 +741,9 @@ namespace {
 
             // Secondary profession combo
             ImGui::SetNextItemWidth(120.0f * fontScale);
-            if (ImGui::BeginCombo("##secondary", GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(secondary)))) {
+            if (ImGui::BeginCombo("##secondary", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(secondary))->string().c_str())) {
                 for (uint8_t prof = 0; prof <= 10; prof++) {
-                    if (ImGui::Selectable(GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof)), secondary == prof)) {
+                    if (ImGui::Selectable(ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof))->string().c_str(), secondary == prof)) {
                         secondary = prof;
                         edit_profession_order[i] = (static_cast<uint16_t>(primary) << 8) | secondary;
                     }
